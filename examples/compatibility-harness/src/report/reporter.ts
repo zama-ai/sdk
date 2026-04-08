@@ -139,6 +139,75 @@ function renderCapability(state: CapabilityState): string {
   }
 }
 
+function sectionCounts(results: TestResult[]): Record<TestStatus, number> {
+  return {
+    PASS: results.filter((r) => r.status === "PASS").length,
+    FAIL: results.filter((r) => r.status === "FAIL").length,
+    UNSUPPORTED: results.filter((r) => r.status === "UNSUPPORTED").length,
+    UNTESTED: results.filter((r) => r.status === "UNTESTED").length,
+    BLOCKED: results.filter((r) => r.status === "BLOCKED").length,
+    INCONCLUSIVE: results.filter((r) => r.status === "INCONCLUSIVE").length,
+  };
+}
+
+function testOrder(name: string): number {
+  const ordered = [
+    "Adapter Initialization",
+    "Address Resolution",
+    "EIP-712 Signing",
+    "EIP-712 Recoverability",
+    "Raw Transaction Execution",
+    "Adapter Contract Read",
+    "Zama Authorization Flow",
+    "Zama Write Flow",
+  ];
+  const idx = ordered.indexOf(name);
+  return idx === -1 ? Number.MAX_SAFE_INTEGER : idx;
+}
+
+function resolveFinalVerdict(zamaResults: TestResult[]): string {
+  const authorization = zamaResults.find((r) => r.name === "Zama Authorization Flow");
+  const write = zamaResults.find((r) => r.name === "Zama Write Flow");
+
+  if (!authorization) {
+    return "PARTIALLY VALIDATED — AUTHORIZATION CHECK NOT RECORDED";
+  }
+
+  if (authorization.status === "FAIL") {
+    return "INCOMPATIBLE — ZAMA AUTHORIZATION FLOW FAILED";
+  }
+
+  if (authorization.status === "UNSUPPORTED") {
+    return "INCOMPATIBLE — ADAPTER DOES NOT SUPPORT ZAMA AUTHORIZATION";
+  }
+
+  if (authorization.status === "BLOCKED" || authorization.status === "INCONCLUSIVE") {
+    return "INCONCLUSIVE — AUTHORIZATION FLOW BLOCKED BY ENVIRONMENT OR INFRASTRUCTURE";
+  }
+
+  if (authorization.status === "UNTESTED") {
+    return "INCONCLUSIVE — AUTHORIZATION FLOW NOT TESTED";
+  }
+
+  // Authorization passed from here.
+  if (!write) {
+    return "ZAMA COMPATIBLE FOR AUTHORIZATION FLOWS — WRITE FLOW NOT TESTED";
+  }
+  if (write.status === "PASS") {
+    return "ZAMA COMPATIBLE FOR AUTHORIZATION AND WRITE FLOWS";
+  }
+  if (write.status === "UNSUPPORTED") {
+    return "PARTIALLY VALIDATED — AUTHORIZATION COMPATIBLE, WRITE FLOW UNSUPPORTED";
+  }
+  if (write.status === "UNTESTED") {
+    return "PARTIALLY VALIDATED — AUTHORIZATION COMPATIBLE, WRITE FLOW UNTESTED";
+  }
+  if (write.status === "BLOCKED" || write.status === "INCONCLUSIVE") {
+    return "PARTIALLY VALIDATED — AUTHORIZATION COMPATIBLE, WRITE FLOW BLOCKED";
+  }
+  return "INCOMPATIBLE — WRITE FLOW VALIDATION FAILED";
+}
+
 /** Print the final compatibility report to stdout. */
 export function printReport(): void {
   const results = readResults();
@@ -162,6 +231,7 @@ export function printReport(): void {
     console.log(`  Detected Type      ${profile.detectedArchitecture}`);
     console.log(`  Verification       ${profile.verificationModel}`);
     console.log(`  Init               ${profile.initializationStatus}`);
+    console.log(`  Capability Source  declared + observed test updates`);
     console.log(
       `  EIP-712            ${renderCapability(profile.capabilities.eip712Signing)} / recoverability ${renderCapability(profile.capabilities.recoverableEcdsa)}`,
     );
@@ -189,6 +259,7 @@ export function printReport(): void {
   for (const { title, key } of sections) {
     const sectionResults = results.filter((r) => r.section === key);
     if (sectionResults.length === 0) continue;
+    sectionResults.sort((a, b) => testOrder(a.name) - testOrder(b.name));
 
     const pad = Math.max(0, W - title.length - 5);
     console.log(`  ── ${title} ${"─".repeat(pad)}`);
@@ -216,31 +287,46 @@ export function printReport(): void {
         if (r.recommendation) console.log(`      Recommendation: ${r.recommendation}`);
       }
     }
+    const counts = sectionCounts(sectionResults);
+    const parts = [
+      counts.PASS > 0 ? `${counts.PASS} PASS` : null,
+      counts.FAIL > 0 ? `${counts.FAIL} FAIL` : null,
+      counts.UNSUPPORTED > 0 ? `${counts.UNSUPPORTED} UNSUPPORTED` : null,
+      counts.UNTESTED > 0 ? `${counts.UNTESTED} UNTESTED` : null,
+      counts.BLOCKED > 0 ? `${counts.BLOCKED} BLOCKED` : null,
+      counts.INCONCLUSIVE > 0 ? `${counts.INCONCLUSIVE} INCONCLUSIVE` : null,
+    ].filter(Boolean);
+    if (parts.length > 0) {
+      console.log(`  Summary            ${parts.join(" · ")}`);
+    }
     console.log();
   }
 
   // ── Verdict ────────────────────────────────────────────────────────────────
   const zamaResults = results.filter((r) => r.section === "zama");
-  const zamaFailed = zamaResults.filter((r) => r.status === "FAIL").length;
-  const zamaBlocked = zamaResults.filter(
-    (r) => r.status === "BLOCKED" || r.status === "INCONCLUSIVE",
-  ).length;
-  const zamaWrite = zamaResults.find((r) => r.name === "Zama Write Flow");
-  const zamaAuthorization = zamaResults.find((r) => r.name === "Zama Authorization Flow");
+  const verdict = resolveFinalVerdict(zamaResults);
+  const blockerCounts = results
+    .filter(
+      (r) =>
+        (r.status === "BLOCKED" || r.status === "INCONCLUSIVE") &&
+        (r.rootCauseCategory === "ENVIRONMENT" ||
+          r.rootCauseCategory === "RPC" ||
+          r.rootCauseCategory === "RELAYER" ||
+          r.rootCauseCategory === "REGISTRY"),
+    )
+    .reduce<Record<string, number>>((acc, r) => {
+      const key = r.rootCauseCategory ?? "UNKNOWN";
+      acc[key] = (acc[key] ?? 0) + 1;
+      return acc;
+    }, {});
 
   console.log(SUB);
-  if (zamaFailed > 0) {
-    console.log(`  Final: INCOMPATIBLE WITH VALIDATED ZAMA SURFACE ✗`);
-  } else if (zamaBlocked > 0) {
-    console.log(`  Final: INCONCLUSIVE — ZAMA VALIDATION BLOCKED`);
-  } else if (zamaAuthorization?.status === "PASS" && zamaWrite?.status === "PASS") {
-    console.log(`  Final: ZAMA-COMPATIBLE FOR AUTHORIZATION AND WRITE SURFACES ✓`);
-  } else if (zamaAuthorization?.status === "PASS") {
-    console.log(
-      `  Final: PARTIALLY VALIDATED — AUTHORIZATION COMPATIBLE, WRITE SURFACE NOT PROVEN`,
-    );
-  } else {
-    console.log(`  Final: PARTIALLY VALIDATED — SEE SECTION RESULTS`);
+  console.log(`  Final: ${verdict}`);
+  if (Object.keys(blockerCounts).length > 0) {
+    const rendered = Object.entries(blockerCounts)
+      .map(([k, v]) => `${k}=${v}`)
+      .join(", ");
+    console.log(`  Blockers: ${rendered}`);
   }
   console.log(`${FULL}\n`);
 }

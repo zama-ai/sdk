@@ -8,7 +8,7 @@ import {
   initializeAdapter,
 } from "../harness/adapter.js";
 import { classifyInfrastructureIssue, errorMessage } from "../harness/diagnostics.js";
-import { record, recordProfile } from "../report/reporter.js";
+import { record, readProfile, recordProfile } from "../report/reporter.js";
 
 let initError: string | null = null;
 
@@ -22,7 +22,11 @@ beforeAll(async () => {
 
 describe("Adapter Profile", () => {
   it("records adapter metadata, initialization, and address resolution", async () => {
-    const capabilities = { ...emptyCapabilities(), ...adapter.capabilities };
+    const existingProfile = readProfile();
+    const capabilities = existingProfile?.capabilities ?? {
+      ...emptyCapabilities(),
+      ...adapter.capabilities,
+    };
     const baseProfile = {
       name: adapter.metadata.name,
       source: adapterSource,
@@ -87,6 +91,13 @@ describe("Adapter Profile", () => {
         reason: message,
         rootCauseCategory: diagnostic.rootCauseCategory,
         recommendation: "Ensure the adapter can resolve its wallet address during initialization.",
+      });
+      recordProfile({
+        ...baseProfile,
+        capabilities: {
+          ...capabilities,
+          addressResolution: "UNSUPPORTED",
+        },
       });
       return;
     }

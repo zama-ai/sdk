@@ -97,8 +97,8 @@ describe("Identity and Verification", () => {
       });
       mergeProfile({
         capabilities: {
-          eip712Signing: "SUPPORTED",
-          recoverableEcdsa: "UNSUPPORTED",
+          eip712Signing: isInfra ? "UNKNOWN" : "SUPPORTED",
+          recoverableEcdsa: isInfra ? "UNKNOWN" : "UNSUPPORTED",
         },
       });
       if (!isInfra) {
