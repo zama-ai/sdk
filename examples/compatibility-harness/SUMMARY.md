@@ -72,7 +72,7 @@ Test order:
 1. Adapter profile (init + address resolution)
 2. EIP-712 signing and recoverability
 3. Raw EOA transaction execution (if supported)
-4. Adapter contract read (if supported)
+4. Contract read validation (adapter read when available, otherwise harness RPC fallback)
 5. Zama authorization (`sdk.allow()`)
 6. Zama write probe (operator approval write + on-chain verification)
 
@@ -91,6 +91,8 @@ Each failing or blocked item includes:
 - root-cause category,
 - recommendation.
 
+The infrastructure/environment section is synthesized from observed root causes across all checks.
+
 Root-cause categories:
 - `ADAPTER`
 - `SIGNER`
@@ -106,6 +108,7 @@ Verdicts are conservative and tied to validated Zama surface, for example:
 - `ZAMA COMPATIBLE FOR AUTHORIZATION AND WRITE FLOWS`
 - `ZAMA COMPATIBLE FOR AUTHORIZATION FLOWS — WRITE FLOW NOT TESTED`
 - `PARTIALLY VALIDATED — AUTHORIZATION COMPATIBLE, WRITE FLOW UNSUPPORTED`
+- `PARTIALLY VALIDATED — AUTHORIZATION PASSED, RECOVERABILITY NOT CONFIRMED`
 - `INCOMPATIBLE — ZAMA AUTHORIZATION FLOW FAILED`
 - `INCONCLUSIVE — AUTHORIZATION FLOW BLOCKED BY ENVIRONMENT OR INFRASTRUCTURE`
 
@@ -130,6 +133,13 @@ Current workflow remains lightweight:
 4. run tests,
 5. read structured report and scoped verdict.
 
+## Report Artifact
+
+An optional machine-readable report can be exported with:
+- `REPORT_JSON_PATH=./reports/latest.json npm test`
+
+Payload includes profile, raw check results, infrastructure summary, blockers, verdict, and run id.
+
 ## Scope Limits
 
 The harness is still a practical diagnostic tool, not a production certification authority.
@@ -138,4 +148,4 @@ Out of scope today:
 - non-Sepolia guarantees,
 - exhaustive Zama write/read behavior coverage,
 - full ERC-1271 validation matrix,
-- CI-grade JSON artifact output.
+- full certification-level CI policy automation.

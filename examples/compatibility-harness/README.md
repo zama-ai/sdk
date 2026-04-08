@@ -6,6 +6,7 @@ The harness is adapter-based (not signer-only) and reports:
 - what your integration exposes (capabilities),
 - what was actually validated (checks + statuses),
 - what claim is safe to make (conservative final verdict).
+- where validation was blocked by infrastructure vs adapter/signer behavior.
 
 ## What This Harness Can Prove
 
@@ -14,6 +15,7 @@ It can validate, depending on adapter support:
 - EIP-712 signing and `ecrecover` recoverability,
 - raw EOA transaction signing + broadcast,
 - adapter-routed contract execution,
+- contract reads either via adapter or harness RPC fallback (when adapter read is absent),
 - Zama authorization flow (`sdk.allow()`),
 - a practical Zama write probe (operator approval write + on-chain verification).
 
@@ -176,6 +178,7 @@ The harness emits nuanced verdicts, for example:
 - `ZAMA COMPATIBLE FOR AUTHORIZATION AND WRITE FLOWS`
 - `ZAMA COMPATIBLE FOR AUTHORIZATION FLOWS — WRITE FLOW NOT TESTED`
 - `PARTIALLY VALIDATED — AUTHORIZATION COMPATIBLE, WRITE FLOW UNSUPPORTED`
+- `PARTIALLY VALIDATED — AUTHORIZATION PASSED, RECOVERABILITY NOT CONFIRMED`
 - `INCOMPATIBLE — ZAMA AUTHORIZATION FLOW FAILED`
 - `INCONCLUSIVE — AUTHORIZATION FLOW BLOCKED BY ENVIRONMENT OR INFRASTRUCTURE`
 
@@ -192,6 +195,15 @@ The output is split into:
 - Final Verdict
 
 Each failing/blocked/inconclusive check includes cause and recommendation.
+The infrastructure section is synthesized from root-cause evidence across checks (RPC, relayer, registry, local env).
+
+### Optional JSON artifact
+
+Set `REPORT_JSON_PATH` to export a machine-readable report payload at the end of the run.
+
+```bash
+REPORT_JSON_PATH=./reports/latest.json npm test
+```
 
 ## Environment Variables
 
@@ -204,6 +216,7 @@ Common variables:
 - `RPC_URL` (optional; defaults to public Sepolia RPC)
 - `RELAYER_URL` (optional; defaults to Zama testnet relayer)
 - `RELAYER_API_KEY` (optional; needed for private/protected relayers)
+- `REPORT_JSON_PATH` (optional; write final report JSON to this file path)
 
 ## Integrator Workflow (Target: < 10 min)
 
