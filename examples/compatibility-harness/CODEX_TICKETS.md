@@ -255,6 +255,28 @@ Acceptance:
 Commit:
 - pending (current working tree)
 
+### T17 — Network Profile Scaffolding
+
+Status: `DONE`
+
+Objective:
+- Move from hardcoded Sepolia assumptions to explicit profile-based network configuration.
+
+Codex spec:
+1. Introduce `NETWORK_PROFILE` (`sepolia`, `mainnet`) with typed parsing/building.
+2. Keep Sepolia defaults backward compatible.
+3. Require explicit `RELAYER_URL` on mainnet profile.
+4. Surface profile/support metadata in diagnostics (`doctor`).
+5. Add unit tests for profile/config parsing and validation.
+
+Acceptance:
+- Default behavior remains unchanged on Sepolia.
+- Misconfigured mainnet profile fails fast with actionable error.
+- Network profile selection is documented in README and `.env.example`.
+
+Commit:
+- pending (current working tree)
+
 ## Definition of Done (Project-Level)
 
 - Adapter model remains capability-first and conservative.

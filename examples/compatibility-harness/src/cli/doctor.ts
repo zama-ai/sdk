@@ -47,6 +47,11 @@ async function runDoctor(): Promise<number> {
     note: `${adapter.metadata.name} (${adapterSource})`,
   });
   checks.push({
+    name: "Network Profile",
+    status: "PASS",
+    note: `${networkConfig.profile} (${networkConfig.profileLabel}, chainId=${networkConfig.chainId}, support=${networkConfig.zamaSupport})`,
+  });
+  checks.push({
     name: "Declared Capabilities",
     status: "PASS",
     note: Object.entries(adapterDeclaredCapabilities)

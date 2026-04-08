@@ -178,7 +178,7 @@ Versioned schema contract:
 The harness is still a practical diagnostic tool, not a production certification authority.
 
 Out of scope today:
-- non-Sepolia guarantees,
+- deterministic guarantees for all non-Sepolia environments (mainnet profile is currently marked experimental),
 - exhaustive Zama write/read behavior coverage,
 - full ERC-1271 validation matrix,
 - full certification-level CI policy automation.

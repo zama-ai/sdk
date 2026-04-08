@@ -107,7 +107,9 @@ export function buildSdk(): ZamaSDK {
 export async function discoverTokenAddress(sdk: ZamaSDK): Promise<Address> {
   const { items } = await sdk.registry.listPairs({ page: 1, pageSize: 1 });
   if (items.length === 0) {
-    throw new Error("No token pairs found in the registry on Sepolia");
+    throw new Error(
+      `No token pairs found in the registry for ${networkConfig.profileLabel} (chainId=${networkConfig.chainId}).`,
+    );
   }
   return items[0]!.tokenAddress;
 }

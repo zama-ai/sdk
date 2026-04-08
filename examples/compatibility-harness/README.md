@@ -352,17 +352,29 @@ See also: [`docs/report-consumption.md`](./docs/report-consumption.md) for CI pa
 Copy `.env.example` to `.env` and fill only what your adapter needs.
 
 Common variables:
+- `NETWORK_PROFILE` (optional; `sepolia` default, or `mainnet` with explicit `RELAYER_URL`)
 - `PRIVATE_KEY` (required for built-in EOA adapter)
 - `CROSSMINT_API_KEY` / `CROSSMINT_WALLET_LOCATOR` (Crossmint example)
 - `TURNKEY_ORG_ID` / `TURNKEY_PRIVATE_KEY_ID` / `TURNKEY_API_PUBLIC_KEY` / `TURNKEY_API_PRIVATE_KEY` (Turnkey example)
 - `OPENFORT_TEST_PRIVATE_KEY` (Openfort EOA baseline example)
 - `RPC_URL` (optional; defaults to public Sepolia RPC)
-- `RELAYER_URL` (optional; defaults to Zama testnet relayer)
+- `RELAYER_URL` (optional on Sepolia, required on `NETWORK_PROFILE=mainnet`)
 - `RELAYER_API_KEY` (optional; needed for private/protected relayers)
 - `REPORT_JSON_PATH` (optional; write final report JSON to this file path)
 - `HARNESS_MOCK_MODE` (optional; when enabled, marks network-dependent checks as `UNTESTED`)
 - `VALIDATION_POLICY_PATH` (optional; JSON policy for `npm run validate`)
 - `VALIDATION_ALLOW_PARTIAL` (optional; override policy to accept `PARTIAL` as pass)
+
+### Network Profiles
+
+- `NETWORK_PROFILE=sepolia`:
+  - default profile,
+  - defaults RPC/relayer to public testnet values,
+  - support level: `SUPPORTED`.
+- `NETWORK_PROFILE=mainnet`:
+  - requires explicit `RELAYER_URL`,
+  - support level: `EXPERIMENTAL`,
+  - intended for controlled partner/mainnet validation environments.
 
 ## Integrator Workflow (Target: < 10 min)
 
