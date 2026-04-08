@@ -214,4 +214,3 @@ export function rateContract(tokenAddress: Address) {
     args: [],
   } as const;
 }
-

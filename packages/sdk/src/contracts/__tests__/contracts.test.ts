@@ -209,4 +209,3 @@ describe("Wrapper contract builders", () => {
     expect(config.args).toEqual([userAddress, 1000n]);
   });
 });
-
