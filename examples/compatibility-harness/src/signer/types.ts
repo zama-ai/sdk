@@ -1,10 +1,11 @@
 /**
- * The only interface you need to implement.
+ * Legacy signer interface (backward compatibility).
  *
- * Replace the default implementation in `src/signer/index.ts` with your own.
- * All tests will use this signer — no other file needs to change.
+ * New integrations should export `adapter` from a module and run with
+ * SIGNER_MODULE=<path>. The harness still accepts `signer` exports and wraps
+ * them into an adapter automatically.
  *
- * ── Which methods do you need to implement? ─────────────────────────────────
+ * This interface remains documented to support existing integrations.
  *
  * `signTypedData` is REQUIRED. It is the only method the Zama SDK uses for
  * credential authorization (sdk.allow). Without it, Zama compatibility cannot
@@ -21,8 +22,7 @@
  *     transaction hash directly. Use this when your system does not expose raw
  *     transaction signing.
  *
- * If neither is provided, the transaction test is skipped. The Zama SDK does
- * not require raw transaction signing for credential flows.
+ * If neither is provided, write-surface checks are marked unsupported.
  */
 export interface Signer {
   /** The Ethereum address controlled by this signer. */

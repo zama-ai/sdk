@@ -1,169 +1,141 @@
 # Zama Compatibility Validation Harness — Technical Summary
 
-## Background
+## Purpose
 
-The Zama SDK enables confidential token operations on EVM chains through Fully Homomorphic
-Encryption (FHE). At the core of this flow is a credential authorization step (`sdk.allow()`)
-that requires the user's wallet to sign an EIP-712 typed data payload. This signature is
-submitted to the Zama relayer, which validates it and returns FHE keypair credentials tied
-to the user's address.
+This harness evaluates whether an integration system (wallet, MPC, custody API, smart-account stack) is compatible with the Zama SDK on Sepolia.
 
-The problem: this flow only works if the wallet's signing output is a **standard secp256k1
-EIP-712 signature** — recoverable via `ecrecover`. Many modern wallet providers (MPC
-custodians, smart contract wallets, threshold signing schemes) produce signatures that are
-structurally different, or route transaction execution through higher-level APIs that do not
-expose raw signing primitives. The compatibility surface is therefore non-trivial.
+The key objective is trustworthiness:
+- avoid overclaiming compatibility,
+- separate product incompatibility from infra failures,
+- report exactly what was validated.
 
-As Zama's ecosystem grows, infrastructure teams, custody providers, and wallet integrators
-need a way to **validate compatibility before committing to a full integration**.
+## Core Design
 
----
+The internal model is adapter-based:
+- primary export: `adapter` (preferred),
+- legacy support: `signer` auto-wrapped for backward compatibility.
 
-## Problem Statement
+Adapter shape includes:
+- metadata (name, declared architecture, verification model, chain support),
+- capability declarations,
+- operational primitives (`getAddress`, `signTypedData`, `signTransaction`, `writeContract`, optional reads/receipt tracking),
+- optional async initialization.
 
-There is currently no standardized way for a third-party wallet provider to verify that
-their signing stack is compatible with the Zama SDK. The alternative — attempting a
-full SDK integration and discovering failures late — is costly and creates friction for
-ecosystem adoption.
+## Capability and Status Models
 
-Specific failure modes that are non-obvious without testing:
+Capabilities are tracked independently from outcomes:
+- `addressResolution`
+- `eip712Signing`
+- `recoverableEcdsa`
+- `rawTransactionSigning`
+- `contractExecution`
+- `contractReads`
+- `transactionReceiptTracking`
+- `zamaAuthorizationFlow`
+- `zamaWriteFlow`
 
-- MPC wallets produce secp256k1 signatures but expose no raw transaction signing interface
-- Smart contract wallets (ERC-1271) produce signatures that are valid on-chain but not
-  recoverable via `ecrecover` — the SDK cannot use them for credential authorization
-- Custody APIs may silently transform EIP-712 payloads (stripping or reordering fields),
-  producing invalid signatures
-- Async wallet initialization (address resolution via API) can create race conditions in
-  synchronous test environments
+Capability state:
+- `SUPPORTED`
+- `UNSUPPORTED`
+- `UNKNOWN`
 
----
+Validation status:
+- `PASS`
+- `FAIL`
+- `UNTESTED`
+- `UNSUPPORTED`
+- `BLOCKED`
+- `INCONCLUSIVE`
 
-## Approach
+This prevents false binary conclusions.
 
-The harness is a self-contained TypeScript test suite (Vitest) with a single integration
-point: a `Signer` interface that the integrator implements once. The interface is intentionally
-minimal:
+## Classification Model
 
-```ts
-interface Signer {
-  address: string;
-  signTypedData(data): Promise<string>;   // required
-  signTransaction?(tx): Promise<string>;  // optional — EOA path
-  writeContract?(config): Promise<string>; // optional — MPC path
-}
-```
+Architectures:
+- `EOA`
+- `MPC`
+- `SMART_ACCOUNT`
+- `API_ROUTED_EXECUTION`
+- `UNKNOWN`
 
-The integrator provides a file that exports a `signer` object satisfying this interface,
-then points the harness to it via the `SIGNER_MODULE` environment variable — no source
-modification required:
+Verification models:
+- `RECOVERABLE_ECDSA`
+- `ERC1271`
+- `PROVIDER_MANAGED`
+- `UNKNOWN`
 
-```bash
-SIGNER_MODULE=./my-adapter.ts npm test
-```
+Classification combines declared metadata and observed behavior. Contradictions degrade to `UNKNOWN`.
 
-The harness intercepts `src/signer/index.ts` imports at the Vite alias layer and transparently
-substitutes the custom adapter at test time.
+## Validation Surface (Current)
 
-### Test pipeline
+Test order:
+1. Adapter profile (init + address resolution)
+2. EIP-712 signing and recoverability
+3. Raw EOA transaction execution (if supported)
+4. Adapter contract read (if supported)
+5. Zama authorization (`sdk.allow()`)
+6. Zama write probe (operator approval write + on-chain verification)
 
-Four tests run sequentially in a fixed order:
+## Reporting Model
 
-| # | Test | Section | Purpose |
-|---|------|---------|---------|
-| 1 | Signer Profile | (header) | Detect wallet type; never fails — diagnostic only |
-| 2 | EIP-712 Signature | Ethereum | Verify secp256k1 recoverability via `ecrecover` |
-| 3 | Transaction Execution | Ethereum | Sign + broadcast (EOA) or SKIP (MPC — writeContract path) |
-| 4 | Zama SDK Flow | Zama | Execute `sdk.allow()` end-to-end against the live relayer |
+The report is grouped into:
+- Adapter Profile
+- Ethereum Compatibility
+- Adapter-Routed Execution
+- Zama SDK Compatibility
+- Infrastructure / Environment
+- Final Verdict
 
-### Verdict logic
+Each failing or blocked item includes:
+- reason,
+- root-cause category,
+- recommendation.
 
-The final compatibility verdict is determined **exclusively by the Zama SDK section**.
-An Ethereum-level SKIP (e.g. an MPC wallet that cannot provide `signTransaction`) does
-not affect the outcome. This reflects the actual requirement: the Zama SDK only needs
-`signTypedData` to function; raw transaction signing is exercised separately through
-the `writeContract` path during token operations.
+Root-cause categories:
+- `ADAPTER`
+- `SIGNER`
+- `RPC`
+- `RELAYER`
+- `REGISTRY`
+- `ENVIRONMENT`
+- `HARNESS`
 
-### Pre-built adapters
+## Final Verdict Strategy
 
-The harness ships with reference adapters demonstrating the expected integration pattern
-for common wallet types. Each adapter serves both as a working example and as a
-compatibility baseline for the corresponding provider category.
+Verdicts are conservative and tied to validated Zama surface, for example:
+- `ZAMA COMPATIBLE FOR AUTHORIZATION AND WRITE FLOWS`
+- `ZAMA COMPATIBLE FOR AUTHORIZATION FLOWS — WRITE FLOW NOT TESTED`
+- `PARTIALLY VALIDATED — AUTHORIZATION COMPATIBLE, WRITE FLOW UNSUPPORTED`
+- `INCOMPATIBLE — ZAMA AUTHORIZATION FLOW FAILED`
+- `INCONCLUSIVE — AUTHORIZATION FLOW BLOCKED BY ENVIRONMENT OR INFRASTRUCTURE`
 
----
+No generic “COMPATIBLE” claim is emitted without scope.
 
-## Issues Encountered (v1)
+## Infrastructure Handling
 
-### Corporate proxy / TLS interception
+Infrastructure and environment failures are explicitly separated from adapter incompatibility:
+- configuration defects (`.env`, missing keys) -> `BLOCKED / ENVIRONMENT`
+- RPC/network issues -> `INCONCLUSIVE / RPC`
+- relayer availability/errors -> `INCONCLUSIVE / RELAYER`
+- token registry discovery issues -> `BLOCKED / REGISTRY`
 
-MPC adapter API calls fail in corporate network environments where an HTTPS proxy
-intercepts traffic and presents its own certificate. Node.js rejects this with
-`CERT_HAS_EXPIRED` or `UNABLE_TO_GET_ISSUER_CERT`. This is an environmental issue,
-not a code defect, but it prevents the harness from running end-to-end in such
-environments without setting `NODE_TLS_REJECT_UNAUTHORIZED=0`.
+This reduces false negatives for integrators.
 
-### BigInt serialization
+## Integrator Experience
 
-EIP-712 messages may contain `uint256` fields represented as `BigInt` in JavaScript.
-REST-based MPC adapters that pass these through `JSON.stringify` throw on `BigInt`
-values. Fixed with a custom replacer, but this highlights a broader concern: adapters
-must be careful about type mapping at the JS ↔ REST API boundary.
+Current workflow remains lightweight:
+1. clone,
+2. set `.env`,
+3. provide adapter (or use built-in / example),
+4. run tests,
+5. read structured report and scoped verdict.
 
-### Async address resolution race condition
+## Scope Limits
 
-MPC wallets that resolve their address via an API call (rather than deriving it from a
-key) create a timing problem: `signer.address` is synchronous, but the resolution is
-async. Solved via an exported `ready: Promise<void>` pattern awaited in `beforeAll`,
-with a `.catch()` guard to prevent unhandled rejection warnings.
+The harness is still a practical diagnostic tool, not a production certification authority.
 
----
-
-## Limitations
-
-- **Sepolia only.** The harness is hardcoded to Sepolia testnet. There is no mainnet or
-  Hoodi path.
-- **No ERC-1271 validation.** Smart contract wallets are *detected* (via failed `ecrecover`)
-  but not formally validated. The harness cannot currently call `isValidSignature()` to
-  confirm ERC-1271 compatibility.
-- **One adapter at a time.** A single `SIGNER_MODULE` is loaded per run. There is no
-  batch mode for comparing multiple signers in one report.
-- **Network dependency.** The Zama SDK Flow test requires live access to both an RPC node
-  and the Zama relayer. Offline or air-gapped validation is not possible.
-- **No machine-readable output.** The report is console-formatted only — no JSON or
-  structured output for CI artifact consumption.
-
----
-
-## v2 — What Would Make This Production-Ready
-
-- **ERC-1271 validation path.** Call `isValidSignature(hash, sig)` on the wallet contract
-  to formally verify smart account compatibility, classifying it as PASS rather than SKIP.
-- **Multi-chain support.** Parameterize the network (Sepolia, Hoodi, mainnet) via
-  environment variable, with corresponding relayer and registry addresses.
-- **More reference adapters.** Turnkey, Privy, Openfort, Safe — each with a
-  `COMPATIBILITY.md` documenting expected results and known limitations.
-- **JSON report output.** Emit a `report.json` alongside the console output so CI systems
-  can consume results programmatically (pass/fail gates, artifact uploads).
-- **Retry and timeout configuration.** Expose `RELAYER_TIMEOUT` and `MAX_RETRIES` env vars
-  to make the harness more resilient to network instability in CI environments.
-- **Proxy-aware HTTP client.** Respect `HTTPS_PROXY` / `NO_PROXY` env vars so the harness
-  works transparently in corporate network environments without disabling TLS verification.
-
----
-
-## End Goal
-
-The natural evolution of this harness is a zero-install compatibility check that any
-wallet provider can run against their stack without cloning the repository:
-
-```bash
-npx @zama-fhe/check --signer ./my-signer.ts --network sepolia
-```
-
-Paired with a machine-readable report format, this could integrate into Zama's developer
-portal as a self-service certification tool: a provider submits their adapter, runs the
-harness in a sandboxed environment, and receives a compatibility badge they can display
-in their documentation.
-
-The end goal is to reduce the integration barrier for custody providers and wallet
-infrastructure teams to near zero — making "does my wallet work with Zama?" a question
-that can be answered in under five minutes, with a clear, actionable report when it cannot.
+Out of scope today:
+- non-Sepolia guarantees,
+- exhaustive Zama write/read behavior coverage,
+- full ERC-1271 validation matrix,
+- CI-grade JSON artifact output.

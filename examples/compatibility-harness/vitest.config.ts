@@ -3,17 +3,19 @@ import { resolve } from "node:path";
 
 // ── Pluggable signer adapter ───────────────────────────────────────────────────
 //
-// By default the harness uses src/signer/index.ts (built-in EOA signer).
+// By default the harness uses src/adapter/index.ts (built-in EOA adapter).
 //
 // To use a different adapter without modifying any source file, set SIGNER_MODULE
-// to the path of any file that exports a `signer` object satisfying the Signer
-// interface (and optionally a `ready` promise for async init):
+// to the path of a module exporting:
+//   - `adapter` (preferred), or
+//   - `signer` (legacy compatibility wrapper),
+// and optionally `ready` for async initialization:
 //
 //   SIGNER_MODULE=./examples/crossmint/signer.ts npm test
 //
-// The alias below intercepts every import of src/signer/index.{ts,js} at the
-// Vite/vitest level and transparently redirects it to the specified file —
-// no file copying, no source modification.
+// The alias below intercepts imports of src/adapter/index.{ts,js} and
+// src/signer/index.{ts,js} at the Vite/vitest level and redirects them to the
+// specified module — no file copy and no harness source edits required.
 
 const signerModule = process.env.SIGNER_MODULE ? resolve(process.env.SIGNER_MODULE) : null;
 
