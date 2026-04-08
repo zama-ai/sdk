@@ -6,6 +6,33 @@ const normalizeAddresses = (addresses: Address[]): Address[] =>
   addresses.map((address) => getAddress(address));
 const normalizeAddress = (address?: Address): Address | undefined =>
   address === undefined ? undefined : getAddress(address);
+// ── Key builders ─────────────────────────────────────────────────
+
+/** Build `{ all, token }` for a simple token-scoped query key. */
+function tokenKey<N extends string>(name: N) {
+  const prefix = `zama.${name}` as const;
+  return {
+    all: [prefix] as const,
+    token: (tokenAddress: Address) => [prefix, { tokenAddress: getAddress(tokenAddress) }] as const,
+  };
+}
+
+/** Build a fee sub-key factory: `["zama.fees", { type, feeManagerAddress?, amount?, from?, to? }]`. */
+function feeKey<T extends string>(type: T) {
+  return (feeManagerAddress?: Address, amount?: string, from?: Address, to?: Address) =>
+    [
+      "zama.fees",
+      {
+        type,
+        ...(feeManagerAddress ? { feeManagerAddress: getAddress(feeManagerAddress) } : {}),
+        ...(amount === undefined ? {} : { amount }),
+        ...(from ? { from: getAddress(from) } : {}),
+        ...(to ? { to: getAddress(to) } : {}),
+      },
+    ] as const;
+}
+
+// ── Query keys ───────────────────────────────────────────────────
 
 /**
  * Canonical query-key namespace for `@zama-fhe/sdk/query`.
@@ -19,30 +46,21 @@ const normalizeAddress = (address?: Address): Address | undefined =>
  */
 export const zamaQueryKeys = {
   signerAddress: {
-    all: ["zama.signerAddress"] as const,
+    ...tokenKey("signerAddress"),
     scope: (scope: number) => ["zama.signerAddress", { scope }] as const,
-    token: (tokenAddress: Address) =>
-      ["zama.signerAddress", { tokenAddress: getAddress(tokenAddress) }] as const,
   },
 
   confidentialHandle: {
-    all: ["zama.confidentialHandle"] as const,
-    token: (tokenAddress: Address) =>
-      ["zama.confidentialHandle", { tokenAddress: getAddress(tokenAddress) }] as const,
+    ...tokenKey("confidentialHandle"),
     owner: (tokenAddress: Address, owner?: Address) =>
       [
         "zama.confidentialHandle",
-        {
-          tokenAddress: getAddress(tokenAddress),
-          ...(owner ? { owner: getAddress(owner) } : {}),
-        },
+        { tokenAddress: getAddress(tokenAddress), ...(owner ? { owner: getAddress(owner) } : {}) },
       ] as const,
   },
 
   confidentialBalance: {
-    all: ["zama.confidentialBalance"] as const,
-    token: (tokenAddress: Address) =>
-      ["zama.confidentialBalance", { tokenAddress: getAddress(tokenAddress) }] as const,
+    ...tokenKey("confidentialBalance"),
     owner: (tokenAddress: Address, owner?: Address, handle?: Handle) =>
       [
         "zama.confidentialBalance",
@@ -79,23 +97,10 @@ export const zamaQueryKeys = {
       ] as const,
   },
 
-  tokenMetadata: {
-    all: ["zama.tokenMetadata"] as const,
-    token: (tokenAddress: Address) =>
-      ["zama.tokenMetadata", { tokenAddress: getAddress(tokenAddress) }] as const,
-  },
-
-  isConfidential: {
-    all: ["zama.isConfidential"] as const,
-    token: (tokenAddress: Address) =>
-      ["zama.isConfidential", { tokenAddress: getAddress(tokenAddress) }] as const,
-  },
-
-  isWrapper: {
-    all: ["zama.isWrapper"] as const,
-    token: (tokenAddress: Address) =>
-      ["zama.isWrapper", { tokenAddress: getAddress(tokenAddress) }] as const,
-  },
+  tokenMetadata: tokenKey("tokenMetadata"),
+  isConfidential: tokenKey("isConfidential"),
+  isWrapper: tokenKey("isWrapper"),
+  totalSupply: tokenKey("totalSupply"),
 
   wrapperDiscovery: {
     all: ["zama.wrapperDiscovery"] as const,
@@ -115,9 +120,7 @@ export const zamaQueryKeys = {
   },
 
   underlyingAllowance: {
-    all: ["zama.underlyingAllowance"] as const,
-    token: (tokenAddress: Address) =>
-      ["zama.underlyingAllowance", { tokenAddress: getAddress(tokenAddress) }] as const,
+    ...tokenKey("underlyingAllowance"),
     scope: (tokenAddress: Address, owner?: Address, wrapperAddress?: Address) =>
       [
         "zama.underlyingAllowance",
@@ -150,16 +153,8 @@ export const zamaQueryKeys = {
     },
   },
 
-  totalSupply: {
-    all: ["zama.totalSupply"] as const,
-    token: (tokenAddress: Address) =>
-      ["zama.totalSupply", { tokenAddress: getAddress(tokenAddress) }] as const,
-  },
-
   activityFeed: {
-    all: ["zama.activityFeed"] as const,
-    token: (tokenAddress: Address) =>
-      ["zama.activityFeed", { tokenAddress: getAddress(tokenAddress) }] as const,
+    ...tokenKey("activityFeed"),
     scope: (tokenAddress: Address, userAddress?: Address, logsKey?: string, decrypt?: boolean) =>
       [
         "zama.activityFeed",
@@ -174,33 +169,13 @@ export const zamaQueryKeys = {
 
   fees: {
     all: ["zama.fees"] as const,
-    shieldFee: (feeManagerAddress?: Address, amount?: string, from?: Address, to?: Address) =>
-      [
-        "zama.fees",
-        {
-          type: "shield",
-          ...(feeManagerAddress ? { feeManagerAddress: getAddress(feeManagerAddress) } : {}),
-          ...(amount === undefined ? {} : { amount }),
-          ...(from ? { from: getAddress(from) } : {}),
-          ...(to ? { to: getAddress(to) } : {}),
-        },
-      ] as const,
-    unshieldFee: (feeManagerAddress?: Address, amount?: string, from?: Address, to?: Address) =>
-      [
-        "zama.fees",
-        {
-          type: "unshield",
-          ...(feeManagerAddress ? { feeManagerAddress: getAddress(feeManagerAddress) } : {}),
-          ...(amount === undefined ? {} : { amount }),
-          ...(from ? { from: getAddress(from) } : {}),
-          ...(to ? { to: getAddress(to) } : {}),
-        },
-      ] as const,
+    shieldFee: feeKey("shield"),
+    unshieldFee: feeKey("unshield"),
     batchTransferFee: (feeManagerAddress?: Address) =>
       [
         "zama.fees",
         {
-          type: "batchTransfer",
+          type: "batchTransfer" as const,
           ...(feeManagerAddress ? { feeManagerAddress: getAddress(feeManagerAddress) } : {}),
         },
       ] as const,
@@ -208,7 +183,7 @@ export const zamaQueryKeys = {
       [
         "zama.fees",
         {
-          type: "feeRecipient",
+          type: "feeRecipient" as const,
           ...(feeManagerAddress ? { feeManagerAddress: getAddress(feeManagerAddress) } : {}),
         },
       ] as const,
@@ -269,10 +244,7 @@ export const zamaQueryKeys = {
     tokenPairs: (registryAddress: Address) =>
       [
         "zama.wrappersRegistry",
-        {
-          type: "tokenPairs",
-          registryAddress: getAddress(registryAddress),
-        },
+        { type: "tokenPairs", registryAddress: getAddress(registryAddress) },
       ] as const,
     confidentialTokenAddress: (registryAddress: Address, tokenAddress: Address) =>
       [
@@ -295,10 +267,7 @@ export const zamaQueryKeys = {
     tokenPairsLength: (registryAddress: Address) =>
       [
         "zama.wrappersRegistry",
-        {
-          type: "tokenPairsLength",
-          registryAddress: getAddress(registryAddress),
-        },
+        { type: "tokenPairsLength", registryAddress: getAddress(registryAddress) },
       ] as const,
     tokenPairsSlice: (registryAddress: Address, fromIndex: string, toIndex: string) =>
       [
@@ -313,11 +282,7 @@ export const zamaQueryKeys = {
     tokenPair: (registryAddress: Address, index: string) =>
       [
         "zama.wrappersRegistry",
-        {
-          type: "tokenPair",
-          registryAddress: getAddress(registryAddress),
-          index,
-        },
+        { type: "tokenPair", registryAddress: getAddress(registryAddress), index },
       ] as const,
     isConfidentialTokenValid: (registryAddress: Address, confidentialTokenAddress: Address) =>
       [
