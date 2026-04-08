@@ -133,6 +133,11 @@ Current workflow remains lightweight:
 4. run tests,
 5. read structured report and scoped verdict.
 
+Reference examples currently included:
+- Crossmint API-routed adapter
+- Turnkey API key adapter
+- Openfort EOA baseline adapter (CLI compatibility baseline for EOA semantics)
+
 ## Report Artifact
 
 An optional machine-readable report can be exported with:

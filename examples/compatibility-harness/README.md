@@ -79,6 +79,22 @@ Equivalent:
 SIGNER_MODULE=./examples/turnkey/signer.ts npm test
 ```
 
+### Option D: Openfort baseline adapter (EOA semantics)
+
+Set `OPENFORT_TEST_PRIVATE_KEY` in `.env`, then run:
+
+```bash
+npm run test:openfort
+```
+
+Equivalent:
+
+```bash
+SIGNER_MODULE=./examples/openfort/signer.ts npm test
+```
+
+This adapter validates Openfort-compatible EOA signing/execution semantics in CLI. It does not validate embedded browser auth/session UX.
+
 ## Adapter Model (Primary Interface)
 
 Provide a module exporting `adapter` (preferred). The harness also accepts legacy `signer` exports for backward compatibility.
@@ -220,6 +236,7 @@ Common variables:
 - `PRIVATE_KEY` (required for built-in EOA adapter)
 - `CROSSMINT_API_KEY` / `CROSSMINT_WALLET_LOCATOR` (Crossmint example)
 - `TURNKEY_ORG_ID` / `TURNKEY_PRIVATE_KEY_ID` / `TURNKEY_API_PUBLIC_KEY` / `TURNKEY_API_PRIVATE_KEY` (Turnkey example)
+- `OPENFORT_TEST_PRIVATE_KEY` (Openfort EOA baseline example)
 - `RPC_URL` (optional; defaults to public Sepolia RPC)
 - `RELAYER_URL` (optional; defaults to Zama testnet relayer)
 - `RELAYER_API_KEY` (optional; needed for private/protected relayers)
@@ -240,6 +257,8 @@ See:
 - [`examples/crossmint/COMPATIBILITY.md`](./examples/crossmint/COMPATIBILITY.md)
 - [`examples/turnkey/signer.ts`](./examples/turnkey/signer.ts)
 - [`examples/turnkey/COMPATIBILITY.md`](./examples/turnkey/COMPATIBILITY.md)
+- [`examples/openfort/signer.ts`](./examples/openfort/signer.ts)
+- [`examples/openfort/COMPATIBILITY.md`](./examples/openfort/COMPATIBILITY.md)
 
 ## Legacy Compatibility
 
@@ -251,5 +270,6 @@ Legacy modules exporting `signer` are still supported via automatic wrapping, bu
 npm run typecheck
 npm test
 npm run test:crossmint
+npm run test:openfort
 npm run test:turnkey
 ```
