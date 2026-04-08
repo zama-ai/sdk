@@ -1,24 +1,17 @@
-/**
- * Test 1 — EIP-712 Signature Validation
- *
- * Verifies that signatures produced by the signer are recoverable via ecrecover
- * and that the recovered address matches signer.address.
- *
- * Failure indicates: non-standard signature format (MPC, ERC-1271, AA wallet)
- * that cannot be validated on-chain via standard ecrecover.
- */
-
-import { describe, it, expect } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { getAddress } from "viem";
-import { signer } from "../signer/index.js";
-import { recoverEIP712Signer } from "../utils/crypto.js";
+import { detectArchitecture, detectVerificationModel } from "../adapter/profile.js";
+import { emptyCapabilities } from "../adapter/types.js";
 import { networkConfig } from "../config/network.js";
-import { record } from "../report/reporter.js";
+import { adapter, getAdapterAddress, initializeAdapter } from "../harness/adapter.js";
+import { classifyInfrastructureIssue, errorMessage } from "../harness/diagnostics.js";
+import { mergeProfile, record } from "../report/reporter.js";
+import { recoverEIP712Signer } from "../utils/crypto.js";
 
 const TEST_TYPED_DATA = {
   domain: {
     name: "Zama Compatibility Harness",
-    version: "1",
+    version: "2",
     chainId: networkConfig.chainId,
     verifyingContract: "0x0000000000000000000000000000000000000001" as const,
   },
@@ -30,61 +23,167 @@ const TEST_TYPED_DATA = {
   },
   primaryType: "Validation" as const,
   message: {
-    purpose: "Zama compatibility check",
+    purpose: "identity-and-verification",
     timestamp: BigInt(Math.floor(Date.now() / 1000)),
   },
 };
 
-describe("EIP-712 Signature Validation", () => {
-  it("signature is recoverable and matches signer address", async () => {
-    let signature: string;
+let initError: string | null = null;
 
-    try {
-      signature = await signer.signTypedData(TEST_TYPED_DATA);
-    } catch (err) {
+beforeAll(async () => {
+  try {
+    await initializeAdapter();
+  } catch (err) {
+    initError = errorMessage(err);
+  }
+});
+
+describe("Identity and Verification", () => {
+  it("validates EIP-712 signing and recoverability", async () => {
+    const baseCapabilities = { ...emptyCapabilities(), ...adapter.capabilities };
+
+    if (initError) {
       record({
-        name: "EIP-712 Signature",
+        name: "EIP-712 Signing",
         section: "ethereum",
-        status: "FAIL",
-        reason: `signTypedData threw: ${err instanceof Error ? err.message : String(err)}`,
-        likelyCause: "The signer rejected or failed to process the EIP-712 payload",
-        recommendation: "Ensure your signer supports eth_signTypedData_v4",
+        status: "BLOCKED",
+        summary: "Adapter initialization failed before signing could be tested",
+        reason: initError,
+        rootCauseCategory: "ENVIRONMENT",
+        recommendation: "Resolve adapter initialization errors first.",
       });
-      expect.fail("signTypedData threw");
+      return;
+    }
+
+    if (!adapter.signTypedData) {
+      mergeProfile({
+        capabilities: {
+          eip712Signing: "UNSUPPORTED",
+          recoverableEcdsa: "UNSUPPORTED",
+          zamaAuthorizationFlow: "UNSUPPORTED",
+        },
+      });
+      record({
+        name: "EIP-712 Signing",
+        section: "ethereum",
+        status: "UNSUPPORTED",
+        summary: "Adapter does not expose EIP-712 signing",
+        reason: "signTypedData is not implemented by the adapter",
+        rootCauseCategory: "ADAPTER",
+        recommendation: "Implement signTypedData to validate Zama authorization compatibility.",
+      });
+      return;
+    }
+
+    let signature: string;
+    try {
+      signature = await adapter.signTypedData(TEST_TYPED_DATA);
+    } catch (err) {
+      const message = errorMessage(err);
+      const diagnostic = classifyInfrastructureIssue(message);
+      const isInfra =
+        diagnostic.rootCauseCategory === "ENVIRONMENT" || diagnostic.rootCauseCategory === "RPC";
+      record({
+        name: "EIP-712 Signing",
+        section: "ethereum",
+        status: isInfra ? diagnostic.status : "FAIL",
+        summary: isInfra
+          ? "EIP-712 signing validation blocked by environment/infrastructure"
+          : "Adapter failed to produce an EIP-712 signature",
+        reason: message,
+        rootCauseCategory: isInfra ? diagnostic.rootCauseCategory : "ADAPTER",
+        likelyCause: "The adapter rejected the typed-data payload or transformed it incorrectly.",
+        recommendation: "Ensure the adapter supports standard Ethereum EIP-712 signing.",
+      });
+      mergeProfile({
+        capabilities: {
+          eip712Signing: "SUPPORTED",
+          recoverableEcdsa: "UNSUPPORTED",
+        },
+      });
+      if (!isInfra) {
+        expect.fail(message);
+      }
       return;
     }
 
     const recovered = await recoverEIP712Signer(TEST_TYPED_DATA, signature);
-
     if (recovered === null) {
+      mergeProfile({
+        capabilities: {
+          eip712Signing: "SUPPORTED",
+          recoverableEcdsa: "UNSUPPORTED",
+        },
+        verificationModel: detectVerificationModel(adapter.metadata.verificationModel, {
+          ...baseCapabilities,
+          recoverableEcdsa: "UNSUPPORTED",
+        }),
+        detectedArchitecture: detectArchitecture(adapter.metadata.declaredArchitecture, {
+          ...baseCapabilities,
+          recoverableEcdsa: "UNSUPPORTED",
+        }),
+      });
       record({
-        name: "EIP-712 Signature",
+        name: "EIP-712 Recoverability",
         section: "ethereum",
         status: "FAIL",
-        reason: "Signature is not recoverable via ecrecover",
-        likelyCause: "Non-EOA signer (ERC-1271 smart contract wallet, MPC, or threshold signature)",
+        summary: "Signature is not recoverable via ecrecover",
+        reason: "recoverTypedDataAddress could not recover a matching address",
+        rootCauseCategory: "SIGNER",
+        likelyCause: "The verification model is not EOA-style recoverable ECDSA.",
         recommendation:
-          "Use an EOA-compatible signing method that produces a standard secp256k1 signature",
+          "If this is expected, declare the architecture explicitly and treat Zama authorization as incompatible until proven otherwise.",
       });
-      expect.fail("Signature not recoverable");
+      expect.fail("Signature was not recoverable");
       return;
     }
 
-    if (getAddress(recovered) !== getAddress(signer.address)) {
+    const address = await getAdapterAddress();
+    if (getAddress(recovered) !== getAddress(address)) {
+      mergeProfile({
+        capabilities: {
+          eip712Signing: "SUPPORTED",
+          recoverableEcdsa: "UNSUPPORTED",
+        },
+      });
       record({
-        name: "EIP-712 Signature",
+        name: "EIP-712 Recoverability",
         section: "ethereum",
         status: "FAIL",
-        reason: `Recovered address (${recovered}) does not match signer.address (${signer.address})`,
-        likelyCause: "Signer address is misreported, or signature was produced by a different key",
+        summary: "Recovered address does not match adapter identity",
+        reason: `Recovered ${recovered}, expected ${address}`,
+        rootCauseCategory: "SIGNER",
+        likelyCause: "The adapter is signing with a different key than the resolved address.",
         recommendation:
-          "Verify that signer.address corresponds to the private key used for signing",
+          "Verify that address resolution and signing are bound to the same wallet identity.",
       });
-      expect(getAddress(recovered)).toBe(getAddress(signer.address));
+      expect.fail("Recovered address mismatch");
       return;
     }
 
-    record({ name: "EIP-712 Signature", section: "ethereum", status: "PASS" });
-    expect(getAddress(recovered)).toBe(getAddress(signer.address));
+    const observedCapabilities = {
+      ...baseCapabilities,
+      eip712Signing: "SUPPORTED" as const,
+      recoverableEcdsa: "SUPPORTED" as const,
+      zamaAuthorizationFlow: "SUPPORTED" as const,
+    };
+    mergeProfile({
+      capabilities: observedCapabilities,
+      verificationModel: detectVerificationModel(
+        adapter.metadata.verificationModel,
+        observedCapabilities,
+      ),
+      detectedArchitecture: detectArchitecture(
+        adapter.metadata.declaredArchitecture,
+        observedCapabilities,
+      ),
+    });
+    record({
+      name: "EIP-712 Recoverability",
+      section: "ethereum",
+      status: "PASS",
+      summary: "Signature is recoverable and matches the adapter address",
+    });
+    expect(getAddress(recovered)).toBe(getAddress(address));
   });
 });

@@ -22,10 +22,10 @@ export default defineConfig({
     alias: signerModule
       ? [
           {
-            // Matches the entire import specifier ending with /signer/index.ts or .js
+            // Matches the entire import specifier ending with /adapter/index.ts or /signer/index.ts
             // ^.* is required so that id.replace(regex, replacement) substitutes
             // the whole string, not just the suffix (which would produce ../abs/path).
-            find: /^.*[/\\]signer[/\\]index\.(ts|js)$/,
+            find: /^.*[/\\](adapter|signer)[/\\]index\.(ts|js)$/,
             replacement: signerModule,
           },
         ]
@@ -38,16 +38,23 @@ export default defineConfig({
     testTimeout: 60_000, // network calls to relayer + RPC can be slow
     hookTimeout: 30_000,
     globalSetup: "./src/report/global-setup.ts",
+    fileParallelism: false,
     // Run test files sequentially so results appear in a predictable order.
     sequence: { concurrent: false },
     // Include files explicitly to control execution order:
-    // 1. Signer profile (always first — populates report header)
-    // 2. EIP-712 (fast, no network) — 3. Transaction — 4. Zama Flow
+    // 1. Adapter profile
+    // 2. Identity / verification
+    // 3. Raw transaction flow
+    // 4. Adapter execution
+    // 5. Zama authorization
+    // 6. Zama write flow
     include: [
-      "src/tests/signerType.test.ts",
+      "src/tests/adapterProfile.test.ts",
       "src/tests/eip712.test.ts",
       "src/tests/transaction.test.ts",
+      "src/tests/adapterExecution.test.ts",
       "src/tests/zamaFlow.test.ts",
+      "src/tests/zamaWriteFlow.test.ts",
     ],
   },
 });

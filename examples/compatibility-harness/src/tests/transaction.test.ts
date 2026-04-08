@@ -1,88 +1,101 @@
-/**
- * Transaction Execution
- *
- * Verifies that the signer can submit a transaction on-chain. Supports two paths:
- *
- *   EOA path   — signer.signTransaction is provided: signs a raw EIP-1559
- *                transaction and broadcasts it via sendRawTransaction.
- *
- *   MPC path   — signer.writeContract is provided but not signTransaction:
- *                test is SKIPPED with an informational note. Raw transaction
- *                signing is not required by the Zama SDK — the writeContract
- *                capability will be exercised during actual token operations.
- *
- *   No path    — neither method is provided: test is SKIPPED.
- *
- * Failure on the EOA path indicates: the signer cannot produce a valid signed
- * transaction, or the account has insufficient Sepolia ETH for gas.
- */
-
-import { describe, it, expect } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { parseGwei } from "viem";
-import { signer } from "../signer/index.js";
+import { mergeProfile, record } from "../report/reporter.js";
 import { publicClient } from "../utils/rpc.js";
 import { networkConfig } from "../config/network.js";
-import { record } from "../report/reporter.js";
+import { adapter, getAdapterAddress, initializeAdapter } from "../harness/adapter.js";
+import { classifyInfrastructureIssue, errorMessage } from "../harness/diagnostics.js";
 
-describe("Transaction Execution", () => {
-  it("can submit a transaction on-chain", async () => {
-    // ── MPC / writeContract path ────────────────────────────────────────────
-    if (!signer.signTransaction && signer.writeContract) {
+let initError: string | null = null;
+
+beforeAll(async () => {
+  try {
+    await initializeAdapter();
+  } catch (err) {
+    initError = errorMessage(err);
+  }
+});
+
+describe("Ethereum Raw Transaction Flow", () => {
+  it("signs and broadcasts a raw EIP-1559 transaction when supported", async () => {
+    if (initError) {
       record({
-        name: "Transaction Execution",
+        name: "Raw Transaction Execution",
         section: "ethereum",
-        status: "SKIP",
-        reason:
-          "writeContract path available — raw transaction signing not supported (expected for MPC wallets). " +
-          "On-chain execution will be verified during actual Zama token operations.",
+        status: "BLOCKED",
+        summary: "Adapter initialization failed before raw transaction validation",
+        reason: initError,
+        rootCauseCategory: "ENVIRONMENT",
+        recommendation: "Resolve adapter initialization first.",
       });
       return;
     }
 
-    // ── No transaction capability ───────────────────────────────────────────
-    if (!signer.signTransaction) {
+    if (!adapter.signTransaction) {
+      mergeProfile({
+        capabilities: {
+          rawTransactionSigning: "UNSUPPORTED",
+        },
+      });
       record({
-        name: "Transaction Execution",
+        name: "Raw Transaction Execution",
         section: "ethereum",
-        status: "SKIP",
-        reason: "Neither signTransaction nor writeContract is provided",
+        status: "UNSUPPORTED",
+        summary: "Adapter does not expose raw transaction signing",
+        reason: "signTransaction is not implemented by the adapter",
+        rootCauseCategory: "ADAPTER",
+        recommendation: "This is expected for API-routed execution systems.",
+      });
+      return;
+    }
+
+    let address;
+    try {
+      address = await getAdapterAddress();
+    } catch (err) {
+      const message = errorMessage(err);
+      const diagnostic = classifyInfrastructureIssue(message);
+      record({
+        name: "Raw Transaction Execution",
+        section: "ethereum",
+        status: diagnostic.status,
+        summary: "Address resolution blocked raw transaction validation",
+        reason: message,
+        rootCauseCategory: diagnostic.rootCauseCategory,
         recommendation:
-          "Implement signTransaction (EOA wallets) or writeContract (MPC / smart-account wallets) " +
-          "to enable on-chain transaction testing.",
+          "Fix adapter identity configuration before validating raw transaction signing.",
       });
       return;
     }
 
-    // ── EOA path: signTransaction → sendRawTransaction ──────────────────────
     let nonce: number;
     let gasPrice: { maxFeePerGas: bigint; maxPriorityFeePerGas: bigint };
-
     try {
-      nonce = await publicClient.getTransactionCount({
-        address: signer.address as `0x${string}`,
-      });
+      nonce = await publicClient.getTransactionCount({ address });
       const feeData = await publicClient.estimateFeesPerGas();
       gasPrice = {
         maxFeePerGas: feeData.maxFeePerGas ?? parseGwei("20"),
         maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ?? parseGwei("1"),
       };
     } catch (err) {
+      const message = errorMessage(err);
+      const diagnostic = classifyInfrastructureIssue(message);
       record({
-        name: "Transaction Execution",
+        name: "Raw Transaction Execution",
         section: "ethereum",
-        status: "FAIL",
-        reason: `Failed to fetch nonce or gas price: ${err instanceof Error ? err.message : String(err)}`,
-        likelyCause: "RPC endpoint unreachable or misconfigured",
-        recommendation: "Check RPC_URL in .env and ensure the node is reachable",
+        status: diagnostic.status,
+        summary: "RPC dependencies blocked raw transaction validation",
+        reason: message,
+        rootCauseCategory: diagnostic.rootCauseCategory,
+        recommendation: "Check RPC_URL connectivity and retry.",
       });
-      expect.fail("RPC setup failed");
       return;
     }
 
     const tx = {
-      to: signer.address as `0x${string}`,
+      to: address,
       value: 0n,
-      data: "0x" as `0x${string}`,
+      data: "0x" as const,
       gas: 21000n,
       maxFeePerGas: gasPrice.maxFeePerGas,
       maxPriorityFeePerGas: gasPrice.maxPriorityFeePerGas,
@@ -93,59 +106,72 @@ describe("Transaction Execution", () => {
 
     let signedTx: string;
     try {
-      signedTx = await signer.signTransaction(tx);
+      signedTx = await adapter.signTransaction(tx);
     } catch (err) {
+      const message = errorMessage(err);
       record({
-        name: "Transaction Execution",
+        name: "Raw Transaction Execution",
         section: "ethereum",
         status: "FAIL",
-        reason: `signTransaction threw: ${err instanceof Error ? err.message : String(err)}`,
-        likelyCause: "Signer does not support raw transaction signing, or rejected the request",
+        summary: "Adapter rejected raw transaction signing",
+        reason: message,
+        rootCauseCategory: "ADAPTER",
         recommendation:
-          "Ensure your signer implements signTransaction for EIP-1559 transactions. " +
-          "If your system uses a higher-level API, implement writeContract instead.",
+          "Implement signTransaction correctly or rely on contract execution instead.",
       });
-      expect.fail("signTransaction threw");
+      expect.fail(message);
       return;
     }
 
-    let txHash: `0x${string}`;
     try {
-      txHash = await publicClient.sendRawTransaction({
+      const txHash = await publicClient.sendRawTransaction({
         serializedTransaction: signedTx as `0x${string}`,
       });
+      const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+      if (receipt.status !== "success") {
+        record({
+          name: "Raw Transaction Execution",
+          section: "ethereum",
+          status: "FAIL",
+          summary: "Raw transaction was submitted but did not succeed",
+          reason: `Transaction reverted (hash: ${txHash})`,
+          rootCauseCategory: "SIGNER",
+          recommendation: "Inspect the transaction receipt on Sepolia.",
+        });
+        expect.fail(`Raw transaction reverted: ${txHash}`);
+        return;
+      }
     } catch (err) {
+      const message = errorMessage(err);
+      const blocked = message.toLowerCase().includes("insufficient funds");
       record({
-        name: "Transaction Execution",
+        name: "Raw Transaction Execution",
         section: "ethereum",
-        status: "FAIL",
-        reason: `sendRawTransaction failed: ${err instanceof Error ? err.message : String(err)}`,
-        likelyCause:
-          "Malformed signed transaction, or account has insufficient Sepolia ETH for gas",
-        recommendation:
-          "Get Sepolia ETH at sepoliafaucet.com, then verify signTransaction output " +
-          "is a valid RLP-encoded EIP-1559 transaction.",
+        status: blocked ? "BLOCKED" : "FAIL",
+        summary: blocked
+          ? "Raw transaction could not be funded"
+          : "Signed raw transaction could not be broadcast successfully",
+        reason: message,
+        rootCauseCategory: blocked ? "ENVIRONMENT" : "SIGNER",
+        recommendation: blocked
+          ? "Fund the account on Sepolia or use a sponsored execution path."
+          : "Verify that the signed transaction is a valid EIP-1559 payload.",
       });
-      expect.fail("sendRawTransaction failed");
+      expect.fail(message);
       return;
     }
 
-    const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-
-    if (receipt.status !== "success") {
-      record({
-        name: "Transaction Execution",
-        section: "ethereum",
-        status: "FAIL",
-        reason: `Transaction reverted (hash: ${txHash})`,
-        likelyCause: "Transaction was submitted but reverted on-chain",
-        recommendation: "Inspect the transaction on sepolia.etherscan.io for revert details",
-      });
-      expect(receipt.status).toBe("success");
-      return;
-    }
-
-    record({ name: "Transaction Execution", section: "ethereum", status: "PASS" });
-    expect(receipt.status).toBe("success");
+    mergeProfile({
+      capabilities: {
+        rawTransactionSigning: "SUPPORTED",
+      },
+    });
+    record({
+      name: "Raw Transaction Execution",
+      section: "ethereum",
+      status: "PASS",
+      summary: "Adapter signed and broadcast a raw EIP-1559 transaction successfully",
+    });
+    expect(true).toBe(true);
   });
 });
