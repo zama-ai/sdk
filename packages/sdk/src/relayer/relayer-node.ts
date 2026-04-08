@@ -9,6 +9,7 @@ import type { Address, Hex } from "viem";
 import { ConfigurationError, ZamaError } from "../errors";
 import { MemoryStorage } from "../storage/memory-storage";
 import type { GenericStorage } from "../types";
+import { PromiseLock } from "../utils/promise-lock";
 import { NodeWorkerPool, type NodeWorkerPoolConfig } from "../worker/worker.node-pool";
 import type { GenericLogger } from "../worker/worker.types";
 import { FheArtifactCache } from "./fhe-artifact-cache";
@@ -55,7 +56,7 @@ export class RelayerNode implements RelayerSDK, Disposable {
   readonly #config: RelayerNodeConfig;
   #pool: NodeWorkerPool | null = null;
   #initPromise: Promise<NodeWorkerPool> | null = null;
-  #ensureLock: Promise<NodeWorkerPool> | null = null;
+  #ensureLock = new PromiseLock<NodeWorkerPool>();
   #terminated = false;
   #resolvedChainId: number | null = null;
   #artifactCache: FheArtifactCache | null = null;
@@ -75,16 +76,62 @@ export class RelayerNode implements RelayerSDK, Disposable {
     };
   }
 
-  async #ensurePool(): Promise<NodeWorkerPool> {
-    if (this.#ensureLock) {
-      return this.#ensureLock;
-    }
-    this.#ensureLock = this.#ensurePoolInner();
-    try {
-      return await this.#ensureLock;
-    } finally {
-      this.#ensureLock = null;
-    }
+  #ensurePool(): Promise<NodeWorkerPool> {
+    return this.#ensureLock.run(async () => {
+      if (this.#terminated) {
+        throw new ConfigurationError("RelayerNode has been terminated");
+      }
+
+      const chainId = await this.#config.getChainId();
+
+      // Chain changed → tear down old pool, re-init
+      if (this.#resolvedChainId !== null && chainId !== this.#resolvedChainId) {
+        this.#tearDown();
+      }
+
+      this.#resolvedChainId = chainId;
+
+      // Create cache for current chain (when storage is provided)
+      if (!this.#artifactCache && this.#config.fheArtifactStorage) {
+        const config = Object.assign({}, DefaultConfigs[chainId], this.#config.transports[chainId]);
+        this.#artifactCache = new FheArtifactCache({
+          storage: this.#config.fheArtifactStorage,
+          chainId,
+          relayerUrl: config.relayerUrl,
+          ttl: this.#config.fheArtifactCacheTTL,
+          logger: this.#config.logger,
+        });
+      }
+
+      // Revalidate cached artifacts if due — never let revalidation block init
+      if (this.#artifactCache) {
+        let stale = false;
+        try {
+          stale = await this.#artifactCache.revalidateIfDue();
+        } catch (err) {
+          this.#config.logger?.warn(
+            "Artifact revalidation failed, proceeding with potentially stale cache",
+            { error: err instanceof Error ? err.message : String(err) },
+          );
+        }
+        if (stale) {
+          this.#config.logger?.info("Cached FHE artifacts are stale — reinitializing");
+          this.#tearDown();
+        }
+      }
+
+      if (!this.#initPromise) {
+        this.#initPromise = this.#initPool().catch((error) => {
+          this.#initPromise = null;
+          throw error instanceof ZamaError
+            ? error
+            : new ConfigurationError("Failed to initialize FHE worker pool", {
+                cause: error,
+              });
+        });
+      }
+      return this.#initPromise;
+    });
   }
 
   #tearDown(): void {
@@ -92,62 +139,6 @@ export class RelayerNode implements RelayerSDK, Disposable {
     this.#pool = null;
     this.#initPromise = null;
     this.#artifactCache = null;
-  }
-
-  async #ensurePoolInner(): Promise<NodeWorkerPool> {
-    if (this.#terminated) {
-      throw new ConfigurationError("RelayerNode has been terminated");
-    }
-
-    const chainId = await this.#config.getChainId();
-
-    // Chain changed → tear down old pool, re-init
-    if (this.#resolvedChainId !== null && chainId !== this.#resolvedChainId) {
-      this.#tearDown();
-    }
-
-    this.#resolvedChainId = chainId;
-
-    // Create cache for current chain (when storage is provided)
-    if (!this.#artifactCache && this.#config.fheArtifactStorage) {
-      const config = Object.assign({}, DefaultConfigs[chainId], this.#config.transports[chainId]);
-      this.#artifactCache = new FheArtifactCache({
-        storage: this.#config.fheArtifactStorage,
-        chainId,
-        relayerUrl: config.relayerUrl,
-        ttl: this.#config.fheArtifactCacheTTL,
-        logger: this.#config.logger,
-      });
-    }
-
-    // Revalidate cached artifacts if due — never let revalidation block init
-    if (this.#artifactCache) {
-      let stale = false;
-      try {
-        stale = await this.#artifactCache.revalidateIfDue();
-      } catch (err) {
-        this.#config.logger?.warn(
-          "Artifact revalidation failed, proceeding with potentially stale cache",
-          { error: err instanceof Error ? err.message : String(err) },
-        );
-      }
-      if (stale) {
-        this.#config.logger?.info("Cached FHE artifacts are stale — reinitializing");
-        this.#tearDown();
-      }
-    }
-
-    if (!this.#initPromise) {
-      this.#initPromise = this.#initPool().catch((error) => {
-        this.#initPromise = null;
-        throw error instanceof ZamaError
-          ? error
-          : new ConfigurationError("Failed to initialize FHE worker pool", {
-              cause: error,
-            });
-      });
-    }
-    return this.#initPromise;
   }
 
   async #initPool(): Promise<NodeWorkerPool> {
@@ -169,7 +160,7 @@ export class RelayerNode implements RelayerSDK, Disposable {
       this.#pool = null;
     }
     this.#initPromise = null;
-    this.#ensureLock = null;
+    this.#ensureLock.clear();
   }
 
   /** Calls {@link terminate}, shutting down the worker thread pool. */

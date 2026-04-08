@@ -8,6 +8,7 @@ import type { Address, Hex } from "viem";
 import { ConfigurationError, ZamaError } from "../errors";
 import { IndexedDBStorage } from "../storage/indexeddb-storage";
 import type { GenericStorage } from "../types";
+import { PromiseLock } from "../utils/promise-lock";
 import { RelayerWorkerClient, type WorkerClientConfig } from "../worker/worker.client";
 import { FheArtifactCache } from "./fhe-artifact-cache";
 import type { RelayerSDK } from "./relayer-sdk";
@@ -63,7 +64,7 @@ const CDN_INTEGRITY =
 export class RelayerWeb implements RelayerSDK, Disposable {
   #workerClient: RelayerWorkerClient | null = null;
   #initPromise: Promise<RelayerWorkerClient> | null = null;
-  #ensureLock: Promise<RelayerWorkerClient> | null = null;
+  #ensureLock = new PromiseLock<RelayerWorkerClient>();
   #terminated = false;
   #resolvedChainId: number | null = null;
   #artifactCache: FheArtifactCache | null = null;
@@ -123,16 +124,82 @@ export class RelayerWeb implements RelayerSDK, Disposable {
    * Uses a promise lock to prevent concurrent initialization.
    * Resets on failure to allow retries.
    */
-  async #ensureWorker(): Promise<RelayerWorkerClient> {
-    if (this.#ensureLock) {
-      return this.#ensureLock;
-    }
-    this.#ensureLock = this.#ensureWorkerInner();
-    try {
-      return await this.#ensureLock;
-    } finally {
-      this.#ensureLock = null;
-    }
+  #ensureWorker(): Promise<RelayerWorkerClient> {
+    return this.#ensureLock.run(async () => {
+      // Auto-restart after terminate() — supports React StrictMode's
+      // unmount→remount cycle and HMR without permanently killing the worker.
+      if (this.#terminated) {
+        this.#terminated = false;
+        this.#workerClient = null;
+        this.#initPromise = null;
+        this.#resolvedChainId = null;
+      }
+
+      const chainId = await this.#config.getChainId();
+
+      // Chain changed → tear down old worker, re-init
+      if (this.#resolvedChainId !== null && chainId !== this.#resolvedChainId) {
+        this.#tearDown();
+      }
+
+      this.#resolvedChainId = chainId;
+
+      // Create cache for current chain.
+      // Storage is chain-independent — reuse across chain switches.
+      if (!this.#artifactStorage) {
+        this.#artifactStorage =
+          this.#config.fheArtifactStorage ??
+          new IndexedDBStorage("FheArtifactCache", 1, "artifacts");
+      }
+      if (!this.#artifactCache) {
+        const config = Object.assign({}, DefaultConfigs[chainId], this.#config.transports[chainId]);
+        this.#artifactCache = new FheArtifactCache({
+          storage: this.#artifactStorage,
+          chainId,
+          relayerUrl: config.relayerUrl,
+          ttl: this.#config.fheArtifactCacheTTL,
+          logger: this.#config.logger,
+        });
+      }
+
+      // Revalidate cached artifacts if due — never let revalidation block init
+      if (this.#artifactCache) {
+        let stale = false;
+        try {
+          stale = await this.#artifactCache.revalidateIfDue();
+        } catch (err) {
+          this.#config.logger?.warn(
+            "Artifact revalidation failed, proceeding with potentially stale cache",
+            { error: err instanceof Error ? err.message : String(err) },
+          );
+        }
+        if (stale) {
+          this.#config.logger?.info("Cached FHE artifacts are stale — reinitializing");
+          this.#tearDown();
+        }
+      }
+
+      if (!this.#initPromise) {
+        this.#setStatus("initializing");
+        this.#initPromise = this.#initWorker()
+          .then((client) => {
+            this.#setStatus("ready");
+            return client;
+          })
+          .catch((error) => {
+            this.#initPromise = null;
+            const wrappedError =
+              error instanceof ZamaError
+                ? error
+                : new ConfigurationError("Failed to initialize FHE worker", {
+                    cause: error,
+                  });
+            this.#setStatus("error", wrappedError);
+            throw wrappedError;
+          });
+      }
+      return this.#initPromise;
+    });
   }
 
   #tearDown(): void {
@@ -140,81 +207,6 @@ export class RelayerWeb implements RelayerSDK, Disposable {
     this.#workerClient = null;
     this.#initPromise = null;
     this.#artifactCache = null;
-  }
-
-  async #ensureWorkerInner(): Promise<RelayerWorkerClient> {
-    // Auto-restart after terminate() — supports React StrictMode's
-    // unmount→remount cycle and HMR without permanently killing the worker.
-    if (this.#terminated) {
-      this.#terminated = false;
-      this.#workerClient = null;
-      this.#initPromise = null;
-      this.#resolvedChainId = null;
-    }
-
-    const chainId = await this.#config.getChainId();
-
-    // Chain changed → tear down old worker, re-init
-    if (this.#resolvedChainId !== null && chainId !== this.#resolvedChainId) {
-      this.#tearDown();
-    }
-
-    this.#resolvedChainId = chainId;
-
-    // Create cache for current chain.
-    // Storage is chain-independent — reuse across chain switches.
-    if (!this.#artifactStorage) {
-      this.#artifactStorage =
-        this.#config.fheArtifactStorage ?? new IndexedDBStorage("FheArtifactCache", 1, "artifacts");
-    }
-    if (!this.#artifactCache) {
-      const config = Object.assign({}, DefaultConfigs[chainId], this.#config.transports[chainId]);
-      this.#artifactCache = new FheArtifactCache({
-        storage: this.#artifactStorage,
-        chainId,
-        relayerUrl: config.relayerUrl,
-        ttl: this.#config.fheArtifactCacheTTL,
-        logger: this.#config.logger,
-      });
-    }
-
-    // Revalidate cached artifacts if due — never let revalidation block init
-    if (this.#artifactCache) {
-      let stale = false;
-      try {
-        stale = await this.#artifactCache.revalidateIfDue();
-      } catch (err) {
-        this.#config.logger?.warn(
-          "Artifact revalidation failed, proceeding with potentially stale cache",
-          { error: err instanceof Error ? err.message : String(err) },
-        );
-      }
-      if (stale) {
-        this.#config.logger?.info("Cached FHE artifacts are stale — reinitializing");
-        this.#tearDown();
-      }
-    }
-
-    if (!this.#initPromise) {
-      this.#setStatus("initializing");
-      this.#initPromise = this.#initWorker()
-        .then((client) => {
-          this.#setStatus("ready");
-          return client;
-        })
-        .catch((error) => {
-          this.#initPromise = null;
-          const wrappedError =
-            error instanceof ZamaError
-              ? error
-              : new ConfigurationError("Failed to initialize FHE worker", {
-                  cause: error,
-                });
-          this.#setStatus("error", wrappedError);
-          throw wrappedError;
-        });
-    }
-    return this.#initPromise;
   }
 
   /**
@@ -244,7 +236,7 @@ export class RelayerWeb implements RelayerSDK, Disposable {
       this.#workerClient = null;
     }
     this.#initPromise = null;
-    this.#ensureLock = null;
+    this.#ensureLock.clear();
   }
 
   /** Calls {@link terminate}, shutting down the Web Worker. */

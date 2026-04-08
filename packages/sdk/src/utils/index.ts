@@ -8,3 +8,4 @@ export {
   assertCondition,
   assertNonNullable,
 } from "./assertions";
+export { PromiseLock } from "./promise-lock";
