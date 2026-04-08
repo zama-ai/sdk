@@ -43,12 +43,12 @@ export function useActivityFeed(config: UseActivityFeedConfig) {
   const decrypt = decryptOpt ?? true;
   const logsKey = deriveActivityFeedLogsKey(logs);
 
-  return useQuery<ActivityItem[]>({
-    ...activityFeedQueryOptions(token, {
+  return useQuery<ActivityItem[]>(
+    activityFeedQueryOptions(token, {
       userAddress,
       logs,
       decrypt,
       logsKey,
     }),
-  });
+  );
 }

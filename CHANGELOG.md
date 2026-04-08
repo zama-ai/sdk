@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.3.1-alpha.1](https://github.com/zama-ai/sdk/compare/v2.3.0...v2.3.1-alpha.1) (2026-04-07)
+
+## [2.3.0](https://github.com/zama-ai/sdk/compare/v2.2.0...v2.3.0) (2026-04-07)
+
+### Features
+
+- Node+Web SDK E2E test infrastructure ([#178](https://github.com/zama-ai/sdk/issues/178)) ([09bf2f7]())
+- **sdk:** align delegation API with Delegated User Decryption spec ([#135](https://github.com/zama-ai/sdk/issues/135)) ([a80ad1f]())
+- **sdk:** validate balances before transfer, shield, and unshield (SDK-52) ([#147](https://github.com/zama-ai/sdk/issues/147)) ([d31ae17]()), closes [#assertConfidentialBalance]() [#waitAndFinalizeUnshield]() [#assertConfidentialBalance]() [#assertConfidentialBalance]() [#assertConfidentialBalance]()
+
+### Bug Fixes
+
+- align keypairTTL default with sessionTTL (30 days) ([#190](https://github.com/zama-ai/sdk/issues/190)) ([9c9791a]())
+- improve error handling and code quality ([#193](https://github.com/zama-ai/sdk/issues/193)) ([87e09d6]())
+
 ## [2.3.0-alpha.4](https://github.com/zama-ai/sdk/compare/v2.3.0-alpha.3...v2.3.0-alpha.4) (2026-04-02)
 
 ### Features
