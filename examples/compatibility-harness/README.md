@@ -95,6 +95,33 @@ SIGNER_MODULE=./examples/openfort/signer.ts npm test
 
 This adapter validates Openfort-compatible EOA signing/execution semantics in CLI. It does not validate embedded browser auth/session UX.
 
+## Preflight Doctor (Optional)
+
+Run a fast environment preflight before the full suite:
+
+```bash
+npm run doctor
+```
+
+With a custom adapter:
+
+```bash
+SIGNER_MODULE=./examples/turnkey/signer.ts npm run doctor
+```
+
+Doctor checks:
+- adapter module loading,
+- declared capabilities visibility,
+- adapter init and address resolution,
+- RPC connectivity + chain match,
+- relayer reachability.
+
+Exit codes:
+- `0`: all checks passed,
+- `2`: at least one `BLOCKED` issue (usually env/config),
+- `3`: at least one `INCONCLUSIVE` issue (usually infra/network),
+- `99`: unexpected harness/runtime error.
+
 ## Adapter Model (Primary Interface)
 
 Provide a module exporting `adapter` (preferred). The harness also accepts legacy `signer` exports for backward compatibility.
@@ -218,6 +245,11 @@ The output is split into:
 
 Each failing/blocked/inconclusive check includes cause and recommendation.
 The infrastructure section is synthesized from root-cause evidence across checks (RPC, relayer, registry, local env).
+Checks may include stable `errorCode` values (for CI triage), e.g.:
+- `ENV_MISSING_CONFIG`, `ENV_INVALID_CONFIG`, `ENV_INSUFFICIENT_FUNDS`
+- `RPC_CONNECTIVITY`, `RPC_RATE_LIMIT`
+- `RELAYER_UNAVAILABLE`
+- `REGISTRY_EMPTY`, `REGISTRY_UNAVAILABLE`
 
 ### Optional JSON artifact
 

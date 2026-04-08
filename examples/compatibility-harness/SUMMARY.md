@@ -94,6 +94,7 @@ The report is grouped into:
 Each failing or blocked item includes:
 - reason,
 - root-cause category,
+- stable error code,
 - recommendation.
 
 The infrastructure/environment section is synthesized from observed root causes across all checks.
@@ -106,6 +107,17 @@ Root-cause categories:
 - `REGISTRY`
 - `ENVIRONMENT`
 - `HARNESS`
+
+Error codes (current taxonomy):
+- `ENV_MISSING_CONFIG`
+- `ENV_INVALID_CONFIG`
+- `ENV_INSUFFICIENT_FUNDS`
+- `RPC_CONNECTIVITY`
+- `RPC_RATE_LIMIT`
+- `RELAYER_UNAVAILABLE`
+- `REGISTRY_EMPTY`
+- `REGISTRY_UNAVAILABLE`
+- `HARNESS_UNKNOWN`
 
 ## Final Verdict Strategy
 
@@ -134,9 +146,10 @@ This reduces false negatives for integrators.
 Current workflow remains lightweight:
 1. clone,
 2. set `.env`,
-3. provide adapter (or use built-in / example),
-4. run tests,
-5. read structured report and scoped verdict.
+3. (optional) run `npm run doctor` for preflight diagnostics,
+4. provide adapter (or use built-in / example),
+5. run tests,
+6. read structured report and scoped verdict.
 
 Reference examples currently included:
 - Crossmint API-routed adapter

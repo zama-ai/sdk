@@ -9,6 +9,7 @@
     "test:crossmint": "SIGNER_MODULE=./examples/crossmint/signer.ts vitest run --reporter=verbose",
     "test:openfort": "SIGNER_MODULE=./examples/openfort/signer.ts vitest run --reporter=verbose",
     "test:turnkey": "SIGNER_MODULE=./examples/turnkey/signer.ts vitest run --reporter=verbose",
+    "doctor": "node --import tsx src/cli/doctor.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
