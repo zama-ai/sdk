@@ -144,6 +144,33 @@ Exit codes:
 - `3`: at least one `INCONCLUSIVE` issue (usually infra/network),
 - `99`: unexpected harness/runtime error.
 
+## Adapter Quality Gate (Optional)
+
+Run a static adapter-spec quality check (no live Zama flow execution):
+
+```bash
+npm run adapter:check
+```
+
+With example adapters:
+
+```bash
+npm run adapter:check:openfort
+npm run adapter:check:turnkey
+npm run adapter:check:crossmint
+```
+
+This command validates:
+- metadata completeness (`name`, architecture, verification model, supported chains),
+- declared capability shape,
+- declared vs observed capability contradictions,
+- canonical check support preview (from declared capabilities).
+
+Exit codes:
+- `0`: no quality-gate failures,
+- `2`: adapter spec quality failures detected,
+- `99`: unexpected runtime failure.
+
 ## Validation Gate (CI-Friendly)
 
 Run the full harness and return a stable exit code based on the final `claim`:
@@ -421,6 +448,7 @@ Legacy modules exporting `signer` are still supported via automatic wrapping, bu
 ```bash
 npm run typecheck
 npm test
+npm run adapter:check
 npm run test:crossmint
 npm run test:openfort
 npm run test:turnkey

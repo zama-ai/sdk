@@ -148,9 +148,10 @@ Current workflow remains lightweight:
 1. clone,
 2. set `.env`,
 3. (optional) run `npm run doctor` for preflight diagnostics,
-4. provide adapter (or scaffold one via `npm run init:adapter`),
-5. run tests,
-6. read structured report and scoped verdict.
+4. (optional) run `npm run adapter:check` for static adapter quality checks,
+5. provide adapter (or scaffold one via `npm run init:adapter`),
+6. run tests,
+7. read structured report and scoped verdict.
 
 For deterministic local runs without RPC/relayer dependencies, set `HARNESS_MOCK_MODE=1`; network-dependent checks are recorded as `UNTESTED` instead of being conflated with compatibility failures.
 
