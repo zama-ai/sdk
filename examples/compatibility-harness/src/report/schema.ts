@@ -3,9 +3,10 @@ import type {
   RootCauseCategory,
   ValidationStatus,
 } from "../adapter/types.js";
+import type { ClaimResolution } from "../verdict/types.js";
 
 export const REPORT_KIND = "zama-compatibility-report" as const;
-export const REPORT_SCHEMA_VERSION = "1.0.0" as const;
+export const REPORT_SCHEMA_VERSION = "1.1.0" as const;
 
 export type ReportSection = "adapter" | "ethereum" | "execution" | "zama" | "environment";
 export type InfraRootCause = Extract<
@@ -39,5 +40,6 @@ export interface ReportArtifact {
   infrastructure: {
     blockers: Partial<Record<InfraRootCause, number>>;
   };
+  claim: ClaimResolution;
   finalVerdict: string;
 }

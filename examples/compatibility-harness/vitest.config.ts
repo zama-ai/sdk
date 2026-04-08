@@ -60,6 +60,7 @@ export default defineConfig({
     include: [
       "src/tests/unit/diagnostics.unit.test.ts",
       "src/tests/unit/profile.unit.test.ts",
+      "src/tests/unit/verdict.unit.test.ts",
       "src/tests/adapterProfile.test.ts",
       "src/tests/eip712.test.ts",
       "src/tests/transaction.test.ts",

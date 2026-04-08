@@ -1,0 +1,40 @@
+import type { ValidationStatus } from "../adapter/types.js";
+
+export type CanonicalCheckName =
+  | "Zama Authorization Flow"
+  | "Zama Write Flow"
+  | "EIP-712 Recoverability";
+
+export type CheckStatusOrMissing = ValidationStatus | "MISSING";
+
+export type ClaimId =
+  | "INCOMPATIBLE_AUTHORIZATION_FAILED"
+  | "INCOMPATIBLE_AUTHORIZATION_UNSUPPORTED"
+  | "INCONCLUSIVE_AUTHORIZATION_BLOCKED"
+  | "INCONCLUSIVE_AUTHORIZATION_UNTESTED"
+  | "PARTIAL_AUTHORIZATION_CHECK_MISSING"
+  | "INCOMPATIBLE_AUTHORIZATION_RECOVERABILITY"
+  | "PARTIAL_AUTHORIZATION_RECOVERABILITY_UNCONFIRMED"
+  | "ZAMA_AUTHORIZATION_AND_WRITE_COMPATIBLE"
+  | "PARTIAL_AUTHORIZATION_COMPATIBLE_WRITE_UNSUPPORTED"
+  | "PARTIAL_AUTHORIZATION_COMPATIBLE_WRITE_UNTESTED"
+  | "PARTIAL_AUTHORIZATION_COMPATIBLE_WRITE_BLOCKED"
+  | "PARTIAL_AUTHORIZATION_COMPATIBLE_WRITE_FAILED"
+  | "ZAMA_AUTHORIZATION_COMPATIBLE_WRITE_NOT_RECORDED";
+
+export interface ClaimResolution {
+  id: ClaimId;
+  verdictLabel: string;
+  rationale: string[];
+  evidence: Partial<Record<CanonicalCheckName, CheckStatusOrMissing>>;
+}
+
+export interface ClaimRule {
+  id: ClaimId;
+  verdictLabel: string;
+  requirements: Array<{
+    check: CanonicalCheckName;
+    oneOf: CheckStatusOrMissing[];
+  }>;
+  rationale: string[];
+}

@@ -21,6 +21,7 @@ import {
   type ReportArtifact,
   type ReportSection,
 } from "./schema.js";
+import { resolveClaimFromResults } from "../verdict/resolve.js";
 
 export type TestStatus = ValidationStatus;
 export type TestSection = ReportSection;
@@ -186,63 +187,6 @@ function testOrder(name: string): number {
   return idx === -1 ? Number.MAX_SAFE_INTEGER : idx;
 }
 
-function toMap(results: TestResult[]): Map<string, TestResult> {
-  return new Map(results.map((result) => [result.name, result]));
-}
-
-function resolveFinalVerdict(results: TestResult[]): string {
-  const byName = toMap(results);
-  const authorization = byName.get("Zama Authorization Flow");
-  const write = byName.get("Zama Write Flow");
-  const recoverability = byName.get("EIP-712 Recoverability");
-
-  if (!authorization) {
-    return "PARTIALLY VALIDATED — AUTHORIZATION CHECK NOT RECORDED";
-  }
-
-  if (authorization.status === "FAIL") {
-    return "INCOMPATIBLE — ZAMA AUTHORIZATION FLOW FAILED";
-  }
-
-  if (authorization.status === "UNSUPPORTED") {
-    return "INCOMPATIBLE — ADAPTER DOES NOT SUPPORT ZAMA AUTHORIZATION";
-  }
-
-  if (authorization.status === "BLOCKED" || authorization.status === "INCONCLUSIVE") {
-    return "INCONCLUSIVE — AUTHORIZATION FLOW BLOCKED BY ENVIRONMENT OR INFRASTRUCTURE";
-  }
-
-  if (authorization.status === "UNTESTED") {
-    return "INCONCLUSIVE — AUTHORIZATION FLOW NOT TESTED";
-  }
-
-  // Authorization passed from here, but recoverability still matters for claim quality.
-  if (!recoverability || recoverability.status !== "PASS") {
-    if (recoverability?.status === "FAIL") {
-      return "INCOMPATIBLE — AUTHORIZATION RECOVERABILITY FAILED";
-    }
-    return "PARTIALLY VALIDATED — AUTHORIZATION PASSED, RECOVERABILITY NOT CONFIRMED";
-  }
-
-  // Authorization + recoverability passed from here.
-  if (!write) {
-    return "ZAMA COMPATIBLE FOR AUTHORIZATION FLOWS — WRITE FLOW NOT TESTED";
-  }
-  if (write.status === "PASS") {
-    return "ZAMA COMPATIBLE FOR AUTHORIZATION AND WRITE FLOWS";
-  }
-  if (write.status === "UNSUPPORTED") {
-    return "PARTIALLY VALIDATED — AUTHORIZATION COMPATIBLE, WRITE FLOW UNSUPPORTED";
-  }
-  if (write.status === "UNTESTED") {
-    return "PARTIALLY VALIDATED — AUTHORIZATION COMPATIBLE, WRITE FLOW UNTESTED";
-  }
-  if (write.status === "BLOCKED" || write.status === "INCONCLUSIVE") {
-    return "PARTIALLY VALIDATED — AUTHORIZATION COMPATIBLE, WRITE FLOW BLOCKED";
-  }
-  return "PARTIALLY VALIDATED — AUTHORIZATION COMPATIBLE, WRITE FLOW FAILED";
-}
-
 function summarizeBlockers(results: TestResult[]): Partial<Record<InfraRootCause, number>> {
   return results
     .filter((r) => (r.status === "BLOCKED" || r.status === "INCONCLUSIVE") && r.rootCauseCategory)
@@ -310,7 +254,7 @@ function exportJsonReport(payload: {
   profile: AdapterProfile | null;
   results: TestResult[];
   environmentSummary: TestResult[];
-  verdict: string;
+  verdict: ReturnType<typeof resolveClaimFromResults>;
   blockers: Partial<Record<InfraRootCause, number>>;
 }): void {
   const outputPath = (process.env.REPORT_JSON_PATH ?? "").trim();
@@ -337,7 +281,8 @@ function exportJsonReport(payload: {
     infrastructure: {
       blockers: payload.blockers,
     },
-    finalVerdict: payload.verdict,
+    claim: payload.verdict,
+    finalVerdict: payload.verdict.verdictLabel,
   };
   try {
     mkdirSync(dirname(outputPath), { recursive: true });
@@ -446,11 +391,15 @@ export function printReport(): void {
   }
 
   // ── Verdict ────────────────────────────────────────────────────────────────
-  const verdict = resolveFinalVerdict(results);
+  const verdict = resolveClaimFromResults(results);
   const blockerCounts = summarizeBlockers(results);
 
   console.log(SUB);
-  console.log(`  Final: ${verdict}`);
+  console.log(`  Final: ${verdict.verdictLabel}`);
+  console.log(`  Claim: ${verdict.id}`);
+  for (const line of verdict.rationale) {
+    console.log(`  Why:   ${line}`);
+  }
   if (Object.keys(blockerCounts).length > 0) {
     const rendered = Object.entries(blockerCounts)
       .map(([k, v]) => `${k}=${v}`)
