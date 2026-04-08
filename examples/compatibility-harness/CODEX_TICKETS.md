@@ -304,3 +304,181 @@ Commit:
 - Infra/environment blockers are separated from compatibility failures.
 - Built-in examples (Crossmint, Turnkey, Openfort) are runnable and documented.
 - README remains <10-minute onboarding for new integrators.
+
+## Harness-Only Strong Validation Plan
+
+Objective:
+- Reach strong, trustworthy compatibility validation quickly without adding backend/hosted services.
+
+Execution rules:
+- One ticket = one reviewable commit when practical.
+- Keep integrator path simple (`doctor`, `test`, `validate`) and deterministic CI baseline.
+- No claim broadening without explicit evidence from checks.
+
+### Phase A — Conformance Engine Hardening
+
+### T19 — Canonical Check Registry
+
+Status: `TODO`
+
+Codex spec:
+1. Add a single source of truth for checks (`id`, display name, section, dependencies).
+2. Require report entries to reference canonical check IDs.
+3. Reject unknown check names in report assembly.
+
+Acceptance:
+- Reporter/build fails fast on unknown check names.
+- Unit tests verify registry coverage and dependency ordering.
+
+### T20 — Negative Test Matrix
+
+Status: `TODO`
+
+Codex spec:
+1. Add explicit negative-path tests per core surface:
+   - EIP-712 signing failure,
+   - recoverability mismatch/non-recoverable signature,
+   - authorization rejection,
+   - write submission failure.
+2. Ensure each path maps to expected `status`, `rootCauseCategory`, `errorCode`.
+
+Acceptance:
+- Each critical surface has at least one deterministic negative test.
+- No negative-path claim regression in verdict matrix tests.
+
+### T21 — Claim/Status Consistency Guard
+
+Status: `TODO`
+
+Codex spec:
+1. Add validator that checks claim evidence vs recorded statuses.
+2. Fail report export if claim references missing/incompatible checks.
+
+Acceptance:
+- Invalid claim/evidence combinations are caught in unit tests.
+- `validate` refuses inconsistent artifacts.
+
+### Phase B — Evidence and Diagnostics Strengthening
+
+### T22 — Structured Evidence Payloads
+
+Status: `TODO`
+
+Codex spec:
+1. Add `evidence.details` in claim payload:
+   - check ID,
+   - status,
+   - short reason category.
+2. Keep backward compatibility for existing `claim.evidence`.
+
+Acceptance:
+- JSON artifact includes machine-usable evidence detail records.
+- Parser/unit tests cover both required and optional evidence fields.
+
+### T23 — Recommendation Map v2
+
+Status: `TODO`
+
+Codex spec:
+1. Centralize recommendations by `errorCode`.
+2. Attach `nextCommand` hints where possible (`doctor`, `validate`, env fix).
+
+Acceptance:
+- BLOCKED/INCONCLUSIVE checks emit deterministic recommendation text.
+- Recommendation mapping covered by unit tests.
+
+### T24 — Artifact Compatibility Contract Tests
+
+Status: `TODO`
+
+Codex spec:
+1. Add fixture set for:
+   - current schema,
+   - previous supported schema (if any),
+   - malformed variants.
+2. Validate parser behavior and error messaging.
+
+Acceptance:
+- Parser behavior on malformed artifacts is deterministic and explicit.
+- Golden fixtures prevent accidental schema drift.
+
+### Phase C — Integrator Confidence Pack
+
+### T25 — Example Baseline Lockfiles
+
+Status: `TODO`
+
+Codex spec:
+1. Add expected-profile fixtures for Openfort/Turnkey/Crossmint.
+2. Add unit checks that claim outputs remain within expected ranges per example profile.
+
+Acceptance:
+- Example regressions are detected without live credentials.
+- Fixture docs explain expected PASS/PARTIAL/INCONCLUSIVE envelopes.
+
+### T26 — Adapter Quality Gate Command
+
+Status: `TODO`
+
+Codex spec:
+1. Add `npm run adapter:check`:
+   - validates adapter metadata completeness,
+   - validates declared capabilities shape,
+   - checks obvious contradictions.
+2. Reuse canonical check registry where relevant.
+
+Acceptance:
+- Mis-specified adapters fail fast before runtime tests.
+- Command output is actionable for external integrators.
+
+### T27 — CI Dual Mode (Deterministic + Optional Live)
+
+Status: `TODO`
+
+Codex spec:
+1. Keep deterministic workflow mandatory.
+2. Add optional live workflow (manual/nightly) with artifacts upload.
+3. Tag live runs as non-blocking by default.
+
+Acceptance:
+- Deterministic CI remains stable.
+- Live runs preserve JSON artifacts for debugging.
+
+### Phase D — Documentation for External Teams
+
+### T28 — Verdict Interpretation Playbook
+
+Status: `TODO`
+
+Codex spec:
+1. Add guide mapping each final claim to:
+   - what is proven,
+   - what is not proven,
+   - required next action.
+2. Include examples for partner conversations.
+
+Acceptance:
+- External engineer can interpret verdict scope without reading code.
+
+### T29 — Claim Catalog
+
+Status: `TODO`
+
+Codex spec:
+1. Document each claim ID, trigger conditions, and confidence scope.
+2. Link claim IDs to validation gate policy examples.
+
+Acceptance:
+- Claim semantics are stable, explicit, and docs-backed.
+
+### T30 — Release/Schema Discipline
+
+Status: `TODO`
+
+Codex spec:
+1. Define `schemaVersion` bump policy and changelog template.
+2. Add release checklist for harness-only quality gate.
+
+Acceptance:
+- Any schema-affecting change includes explicit versioning rationale.
+- Release notes are sufficient for downstream parser maintainers.
