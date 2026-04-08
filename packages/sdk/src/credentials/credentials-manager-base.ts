@@ -92,6 +92,7 @@ export abstract class BaseCredentialsManager<
   #createPromise: Promise<TCreds> | null = null;
   #createPromiseKey: string | null = null;
   #extendPromise: Promise<TCreds> | null = null;
+  #lastExtendResult: TCreds | null = null;
 
   constructor(config: CredentialsConfig) {
     this.signer = config.signer;
@@ -312,6 +313,7 @@ export abstract class BaseCredentialsManager<
   /** Override to also clear subclass-specific caches (e.g. key cache). */
   protected clearCaches(): void {
     this.crypto.clearCache();
+    this.#lastExtendResult = null;
   }
 
   // ── Credential creation helper ────────────────────────────────
@@ -366,6 +368,17 @@ export abstract class BaseCredentialsManager<
         return previous;
       }
       credentials = previous;
+    } else if (this.#lastExtendResult) {
+      // A previous extension completed — use its result as the base so
+      // concurrently-added contract addresses are not lost.
+      if (coversContracts(this.#lastExtendResult.contractAddresses, requiredContracts)) {
+        this.emit({
+          type: ZamaSDKEvents.CredentialsAllowed,
+          contractAddresses: requiredContracts,
+        });
+        return this.#lastExtendResult;
+      }
+      credentials = this.#lastExtendResult;
     }
 
     const promise = this.#extendCredentials({
@@ -375,7 +388,9 @@ export abstract class BaseCredentialsManager<
     });
     this.#extendPromise = promise;
     try {
-      return await promise;
+      const result = await promise;
+      this.#lastExtendResult = result;
+      return result;
     } finally {
       if (this.#extendPromise === promise) {
         this.#extendPromise = null;
