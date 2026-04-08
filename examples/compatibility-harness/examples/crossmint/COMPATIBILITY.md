@@ -7,7 +7,6 @@ This document describes the expected harness behavior for the Crossmint example 
 - Name: `Crossmint API-Routed Adapter`
 - Declared architecture: `API_ROUTED_EXECUTION`
 - Verification model: `UNKNOWN` (confirmed by tests if recoverable)
-- Key capabilities:
 - `eip712Signing`: `SUPPORTED`
 - `rawTransactionSigning`: `UNSUPPORTED`
 - `contractExecution`: `SUPPORTED`
@@ -23,7 +22,7 @@ Typical run (with valid credentials and healthy infra):
 - Adapter initialization/address resolution: `PASS`
 - EIP-712 recoverability: `PASS`
 - Raw transaction execution: `UNSUPPORTED` (expected)
-- Adapter contract read: `UNSUPPORTED` (expected in this example)
+- Adapter contract read: `PASS` (validated via harness RPC fallback because `readContract` is not exposed)
 - Zama authorization flow (`sdk.allow()`): `PASS`
 - Zama write flow probe: `PASS`
 
@@ -69,5 +68,6 @@ SIGNER_MODULE=./examples/crossmint/signer.ts npm test
 ## Interpretation Guidance
 
 - `UNSUPPORTED` raw transaction checks are normal for Crossmint and do not invalidate Zama compatibility claims when authorization + write probe pass.
+- `contractReads` capability remains `UNSUPPORTED` for the adapter itself even when the harness can validate read behavior through its RPC fallback.
 - A `PASS` on authorization alone is not enough to claim full write compatibility.
 - The harness verdict is scoped: trust the exact phrase emitted in `Final`.

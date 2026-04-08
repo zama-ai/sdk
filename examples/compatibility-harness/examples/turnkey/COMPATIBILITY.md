@@ -7,7 +7,6 @@ This document describes expected harness behavior for the Turnkey example adapte
 - Name: `Turnkey API Key Adapter`
 - Declared architecture: `API_ROUTED_EXECUTION`
 - Verification model: `UNKNOWN` (validated by observed recoverability checks)
-- Key capabilities:
 - `eip712Signing`: `SUPPORTED`
 - `rawTransactionSigning`: `UNSUPPORTED`
 - `contractExecution`: `SUPPORTED`
