@@ -213,6 +213,7 @@ Persistent cache for decrypted FHE plaintext values. Backed by the same `Generic
 Entries are scoped by `(requester, contractAddress, handle)` — a different signer cannot read another user's cached decryptions, mirroring the on-chain ACL. When the on-chain handle changes (e.g. after a transfer), the old entry is automatically a miss.
 
 The cache is cleared automatically on:
+
 - `revoke()` / `revokeSession()` — clears entries for the current signer
 - Wallet disconnect, account change, or chain change — clears all entries
 
@@ -295,19 +296,16 @@ console.log(values[balanceHandle]); // 1000n
 
 #### options
 
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| `onCredentialsReady` | `(() => void) \| undefined` | Fired after credentials are ready (cached or freshly signed), **before** relayer calls begin. Not called when all handles are already cached. |
-| `onDecrypted` | `((values: Record<Handle, ClearValueType>) => void) \| undefined` | Fired after all handles have been decrypted (including the all-cached path). |
+| Field                | Type                                                              | Description                                                                                                                                   |
+| -------------------- | ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `onCredentialsReady` | `(() => void) \| undefined`                                       | Fired after credentials are ready (cached or freshly signed), **before** relayer calls begin. Not called when all handles are already cached. |
+| `onDecrypted`        | `((values: Record<Handle, ClearValueType>) => void) \| undefined` | Fired after all handles have been decrypted (including the all-cached path).                                                                  |
 
 ```ts
-const values = await sdk.decrypt(
-  [{ handle: balanceHandle, contractAddress: cUSDT }],
-  {
-    onCredentialsReady: () => console.log("Credentials ready, decrypting..."),
-    onDecrypted: (result) => console.log("Done:", result),
-  },
-);
+const values = await sdk.decrypt([{ handle: balanceHandle, contractAddress: cUSDT }], {
+  onCredentialsReady: () => console.log("Credentials ready, decrypting..."),
+  onDecrypted: (result) => console.log("Done:", result),
+});
 ```
 
 {% hint style="info" %}
@@ -334,7 +332,6 @@ Clears session credentials **and** cached decrypted values for the current signe
 await sdk.revoke("0xTokenA", "0xTokenB");
 ```
 
-
 ### revokeSession
 
 `() => Promise<void>`
@@ -358,7 +355,6 @@ const allowed = await sdk.isAllowed();
 // Contract-level check (credentials cover these contracts?)
 const covered = await sdk.isAllowed("0xTokenA", "0xTokenB");
 ```
-
 
 ### dispose
 

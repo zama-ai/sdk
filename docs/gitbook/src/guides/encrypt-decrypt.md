@@ -24,9 +24,7 @@ function ConfidentialRoundTrip() {
   const sdk = useZamaSDK();
   const encrypt = useEncrypt();
   const { mutate: allow } = useAllow();
-  const [handles, setHandles] = useState<
-    { handle: string; contractAddress: `0x${string}` }[]
-  >([]);
+  const [handles, setHandles] = useState<{ handle: string; contractAddress: `0x${string}` }[]>([]);
 
   // useUserDecrypt fires automatically once allow() is called
   const { data: decrypted } = useUserDecrypt({ handles });
@@ -278,10 +276,7 @@ function DecryptExample() {
   return (
     <section>
       {!isAllowed && (
-        <button
-          onClick={() => allow(["0xYourConfidentialContract"])}
-          disabled={isAllowing}
-        >
+        <button onClick={() => allow(["0xYourConfidentialContract"])} disabled={isAllowing}>
           {isAllowing ? "Signing..." : "Authorize decryption"}
         </button>
       )}
