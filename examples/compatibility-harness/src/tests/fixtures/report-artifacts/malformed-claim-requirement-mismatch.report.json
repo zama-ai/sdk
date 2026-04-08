@@ -1,0 +1,60 @@
+{
+  "kind": "zama-compatibility-report",
+  "schemaVersion": "1.2.0",
+  "generatedAt": "2026-04-08T00:00:00.000Z",
+  "runId": "malformed-claim-requirement-mismatch",
+  "adapterProfile": null,
+  "checks": {
+    "recorded": [
+      {
+        "checkId": "ZAMA_AUTHORIZATION_FLOW",
+        "name": "Zama Authorization Flow",
+        "section": "zama",
+        "status": "PASS"
+      }
+    ],
+    "environmentSummary": [],
+    "all": [
+      {
+        "checkId": "ZAMA_AUTHORIZATION_FLOW",
+        "name": "Zama Authorization Flow",
+        "section": "zama",
+        "status": "PASS"
+      }
+    ]
+  },
+  "sections": {
+    "adapter": [],
+    "ethereum": [],
+    "execution": [],
+    "zama": [
+      {
+        "checkId": "ZAMA_AUTHORIZATION_FLOW",
+        "name": "Zama Authorization Flow",
+        "section": "zama",
+        "status": "PASS"
+      }
+    ],
+    "environment": []
+  },
+  "infrastructure": {
+    "blockers": {}
+  },
+  "claim": {
+    "id": "PARTIAL_AUTHORIZATION_CHECK_MISSING",
+    "verdictLabel": "PARTIALLY VALIDATED — AUTHORIZATION CHECK NOT RECORDED",
+    "rationale": ["Authorization flow result is missing from the executed checks."],
+    "evidence": {
+      "Zama Authorization Flow": "MISSING"
+    },
+    "evidenceDetails": [
+      {
+        "check": "Zama Authorization Flow",
+        "checkId": "ZAMA_AUTHORIZATION_FLOW",
+        "status": "MISSING",
+        "reasonCategory": "MISSING_EVIDENCE"
+      }
+    ]
+  },
+  "finalVerdict": "PARTIALLY VALIDATED — AUTHORIZATION CHECK NOT RECORDED"
+}

@@ -1,0 +1,73 @@
+{
+  "kind": "zama-compatibility-report",
+  "schemaVersion": "1.2.0",
+  "generatedAt": "2026-04-08T00:00:00.000Z",
+  "runId": "malformed-missing-check-id",
+  "adapterProfile": null,
+  "checks": {
+    "recorded": [
+      {
+        "name": "Zama Authorization Flow",
+        "section": "zama",
+        "status": "PASS"
+      }
+    ],
+    "environmentSummary": [],
+    "all": [
+      {
+        "checkId": "ZAMA_AUTHORIZATION_FLOW",
+        "name": "Zama Authorization Flow",
+        "section": "zama",
+        "status": "PASS"
+      }
+    ]
+  },
+  "sections": {
+    "adapter": [],
+    "ethereum": [],
+    "execution": [],
+    "zama": [
+      {
+        "checkId": "ZAMA_AUTHORIZATION_FLOW",
+        "name": "Zama Authorization Flow",
+        "section": "zama",
+        "status": "PASS"
+      }
+    ],
+    "environment": []
+  },
+  "infrastructure": {
+    "blockers": {}
+  },
+  "claim": {
+    "id": "ZAMA_AUTHORIZATION_COMPATIBLE_WRITE_NOT_RECORDED",
+    "verdictLabel": "ZAMA COMPATIBLE FOR AUTHORIZATION FLOWS — WRITE FLOW NOT TESTED",
+    "rationale": ["Authorization surface is compatible and no write result was recorded."],
+    "evidence": {
+      "Zama Authorization Flow": "PASS",
+      "EIP-712 Recoverability": "PASS",
+      "Zama Write Flow": "MISSING"
+    },
+    "evidenceDetails": [
+      {
+        "check": "Zama Authorization Flow",
+        "checkId": "ZAMA_AUTHORIZATION_FLOW",
+        "status": "PASS",
+        "reasonCategory": "VALIDATED"
+      },
+      {
+        "check": "EIP-712 Recoverability",
+        "checkId": "EIP712_RECOVERABILITY",
+        "status": "PASS",
+        "reasonCategory": "VALIDATED"
+      },
+      {
+        "check": "Zama Write Flow",
+        "checkId": "ZAMA_WRITE_FLOW",
+        "status": "MISSING",
+        "reasonCategory": "MISSING_EVIDENCE"
+      }
+    ]
+  },
+  "finalVerdict": "ZAMA COMPATIBLE FOR AUTHORIZATION FLOWS — WRITE FLOW NOT TESTED"
+}
