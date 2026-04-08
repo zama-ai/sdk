@@ -147,7 +147,7 @@ Current workflow remains lightweight:
 1. clone,
 2. set `.env`,
 3. (optional) run `npm run doctor` for preflight diagnostics,
-4. provide adapter (or use built-in / example),
+4. provide adapter (or scaffold one via `npm run init:adapter`),
 5. run tests,
 6. read structured report and scoped verdict.
 

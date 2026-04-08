@@ -214,6 +214,27 @@ Acceptance:
 Commit:
 - pending (current working tree)
 
+### T15 — Adapter Template Bootstrap Command
+
+Status: `DONE`
+
+Objective:
+- Reduce setup friction for new integrators creating a custom adapter module.
+
+Codex spec:
+1. Add `npm run init:adapter` CLI to scaffold a typed adapter template.
+2. Support custom output paths.
+3. Infer correct relative `Adapter` type import path for nested outputs.
+4. Add unit tests for template path resolution/rendering.
+
+Acceptance:
+- Running `npm run init:adapter` creates a compilable starter adapter file.
+- Custom path generation works without manual import fixes.
+- Unit tests pass.
+
+Commit:
+- pending (current working tree)
+
 ## Definition of Done (Project-Level)
 
 - Adapter model remains capability-first and conservative.

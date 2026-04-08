@@ -184,6 +184,24 @@ Validation gate exit codes:
 
 ## Adapter Model (Primary Interface)
 
+Bootstrap a custom adapter template:
+
+```bash
+npm run init:adapter
+```
+
+Optional custom output path:
+
+```bash
+npm run init:adapter -- ./examples/my-provider/signer.ts
+```
+
+Then run:
+
+```bash
+SIGNER_MODULE=./examples/my-provider/signer.ts npm test
+```
+
 Provide a module exporting `adapter` (preferred). The harness also accepts legacy `signer` exports for backward compatibility.
 
 ```ts
