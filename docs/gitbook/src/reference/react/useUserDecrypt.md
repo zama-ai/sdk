@@ -113,7 +113,7 @@ When all requested handles are already cached, `data` contains the cached values
 
 1. **Signer address** — resolves the connected wallet address.
 2. **isAllowed** — checks that cached credentials cover all contract addresses in `handles`. Returns `false` until `useAllow` has been called with those contracts.
-3. **Decrypt** — calls `sdk.decrypt(handles)` which checks the persistent cache, then hits the relayer for any uncached handles.
+3. **Decrypt** — calls `sdk.userDecrypt(handles)` which checks the persistent cache, then hits the relayer for any uncached handles.
 
 The decrypt query only fires when steps 1 and 2 succeed. This ensures no wallet signature popup is triggered by the query itself — all signing happens explicitly via `useAllow`.
 

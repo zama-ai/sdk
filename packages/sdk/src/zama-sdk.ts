@@ -14,7 +14,7 @@ import type { GenericSigner, GenericStorage, SignerLifecycleCallbacks } from "./
 import { toError } from "./utils";
 import { WrappersRegistry } from "./wrappers-registry";
 
-/** Options for {@link ZamaSDK.decrypt}. */
+/** Options for {@link ZamaSDK.userDecrypt}. */
 export interface DecryptOptions {
   /** Fired after credentials are ready (cached or freshly signed), before relayer calls. Not called when all handles are already cached. */
   onCredentialsReady?: () => void;
@@ -301,13 +301,13 @@ export class ZamaSDK {
    *
    * @example
    * ```ts
-   * const values = await sdk.decrypt([
+   * const values = await sdk.userDecrypt([
    *   { handle: balanceHandle, contractAddress: cUSDT },
    * ]);
    * console.log(values[balanceHandle]); // 1000n
    * ```
    */
-  async decrypt(
+  async userDecrypt(
     handles: DecryptHandle[],
     options?: DecryptOptions,
   ): Promise<Record<Handle, ClearValueType>> {

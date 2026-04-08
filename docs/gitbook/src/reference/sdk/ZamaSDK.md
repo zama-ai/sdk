@@ -278,7 +278,7 @@ const registry = sdk.createWrappersRegistry({ [31337]: "0xYourRegistry" });
 const pairs = await registry.getTokenPairs();
 ```
 
-### decrypt
+### userDecrypt
 
 `(handles: DecryptHandle[], options?: DecryptOptions) => Promise<Record<Handle, ClearValueType>>`
 
@@ -287,7 +287,7 @@ Decrypt one or more FHE handles. Returns cached values when available, only call
 Handles from different contracts can be mixed — they are grouped by `contractAddress` and batched into one relayer call per contract.
 
 ```ts
-const values = await sdk.decrypt([
+const values = await sdk.userDecrypt([
   { handle: balanceHandle, contractAddress: cUSDT },
   { handle: flagHandle, contractAddress: myContract },
 ]);
@@ -302,14 +302,14 @@ console.log(values[balanceHandle]); // 1000n
 | `onDecrypted`        | `((values: Record<Handle, ClearValueType>) => void) \| undefined` | Fired after all handles have been decrypted (including the all-cached path).                                                                  |
 
 ```ts
-const values = await sdk.decrypt([{ handle: balanceHandle, contractAddress: cUSDT }], {
+const values = await sdk.userDecrypt([{ handle: balanceHandle, contractAddress: cUSDT }], {
   onCredentialsReady: () => console.log("Credentials ready, decrypting..."),
   onDecrypted: (result) => console.log("Done:", result),
 });
 ```
 
 {% hint style="info" %}
-This is the SDK-level entry point for decryption. In React, use [`useUserDecrypt`](/reference/react/useUserDecrypt) which wraps this method with TanStack Query mutation semantics and passes its `onCredentialsReady` / `onDecrypted` callbacks through to `sdk.decrypt()`.
+This is the SDK-level entry point for user decryption. The method is named `userDecrypt` (not `decrypt`) because it requires the connected wallet's credentials — distinguishing it from gateway-level decryption that happens on-chain without user authentication. In React, use [`useUserDecrypt`](/reference/react/useUserDecrypt) which wraps this method with TanStack Query semantics.
 {% endhint %}
 
 ### allow

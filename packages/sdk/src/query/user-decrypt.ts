@@ -44,7 +44,7 @@ export function userDecryptQueryOptions(
 > {
   return {
     queryKey: zamaQueryKeys.decryption.handles(config.handles),
-    queryFn: () => sdk.decrypt(config.handles),
+    queryFn: () => sdk.userDecrypt(config.handles),
     staleTime: Infinity,
     enabled: config.handles.length > 0 && config.query?.enabled !== false,
   };
