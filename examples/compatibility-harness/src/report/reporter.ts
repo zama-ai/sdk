@@ -16,6 +16,7 @@ import type {
   CapabilityState,
 } from "../adapter/types.js";
 import { detectCapabilityContradictions } from "../adapter/contradictions.js";
+import { recommendationForDiagnostic } from "../harness/recommendations.js";
 import {
   REPORT_KIND,
   REPORT_SCHEMA_VERSION,
@@ -66,8 +67,14 @@ function isInfraRootCause(category: RootCauseCategory | undefined): category is 
 
 /** Append a test result to the shared results file. */
 export function record(result: TestResult): void {
-  assertCanonicalCheck(result);
-  appendFileSync(RESULTS_FILE, `${JSON.stringify(result)}\n`);
+  const recommendation = recommendationForDiagnostic({
+    status: result.status,
+    errorCode: result.errorCode,
+    rootCauseCategory: result.rootCauseCategory,
+  });
+  const normalized: TestResult = recommendation ? { ...result, recommendation } : result;
+  assertCanonicalCheck(normalized);
+  appendFileSync(RESULTS_FILE, `${JSON.stringify(normalized)}\n`);
 }
 
 /** Read all recorded results. */
@@ -260,13 +267,10 @@ function summarizeEnvironmentSection(results: TestResult[]): TestResult[] {
       reason: checks,
       rootCauseCategory: category,
       recommendation:
-        category === "ENVIRONMENT"
-          ? "Fix local credentials/environment variables and retry."
-          : category === "RPC"
-            ? "Verify RPC_URL, network connectivity, and rate limits."
-            : category === "RELAYER"
-              ? "Verify RELAYER_URL/API key and relayer availability."
-              : "Verify registry availability on the selected network and retry.",
+        recommendationForDiagnostic({
+          status,
+          rootCauseCategory: category,
+        }) ?? "Investigate environment dependencies and retry.",
     });
   }
 

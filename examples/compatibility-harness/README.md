@@ -338,6 +338,7 @@ The output is split into:
 
 Each failing/blocked/inconclusive check includes cause and recommendation.
 The infrastructure section is synthesized from root-cause evidence across checks (RPC, relayer, registry, local env).
+For `BLOCKED`/`INCONCLUSIVE`, recommendation text is deterministic by `errorCode` and includes next-command hints (`doctor` / `validate` / `test`).
 Checks may include stable `errorCode` values (for CI triage), e.g.:
 - `ENV_MISSING_CONFIG`, `ENV_INVALID_CONFIG`, `ENV_INSUFFICIENT_FUNDS`
 - `RPC_CONNECTIVITY`, `RPC_RATE_LIMIT`

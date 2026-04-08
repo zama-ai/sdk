@@ -59,6 +59,7 @@ export default defineConfig({
     // 7. Zama write flow
     include: [
       "src/tests/unit/diagnostics.unit.test.ts",
+      "src/tests/unit/recommendations.unit.test.ts",
       "src/tests/unit/networkConfig.unit.test.ts",
       "src/tests/unit/runtime.unit.test.ts",
       "src/tests/unit/contradictions.unit.test.ts",
