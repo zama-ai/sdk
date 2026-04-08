@@ -13,6 +13,17 @@ function withCapabilities(
 }
 
 describe("adapter.profile.detectArchitecture", () => {
+  it("keeps declared EOA when recoverability is not disproven", () => {
+    const detected = detectArchitecture(
+      "EOA",
+      withCapabilities({
+        recoverableEcdsa: "UNKNOWN",
+        rawTransactionSigning: "UNSUPPORTED",
+      }),
+    );
+    expect(detected).toBe("EOA");
+  });
+
   it("degrades declared EOA to UNKNOWN when capabilities contradict it", () => {
     const detected = detectArchitecture(
       "EOA",
@@ -24,36 +35,24 @@ describe("adapter.profile.detectArchitecture", () => {
     expect(detected).toBe("UNKNOWN");
   });
 
-  it("infers EOA from recoverable + raw transaction support", () => {
+  it("infers EOA from recoverable signatures even without raw transaction support", () => {
     const detected = detectArchitecture(
       undefined,
       withCapabilities({
         recoverableEcdsa: "SUPPORTED",
-        rawTransactionSigning: "SUPPORTED",
+        rawTransactionSigning: "UNSUPPORTED",
       }),
     );
     expect(detected).toBe("EOA");
   });
 
-  it("infers SMART_ACCOUNT from execution support without raw signing", () => {
+  it("infers API_ROUTED_EXECUTION from execution support without raw signing", () => {
     const detected = detectArchitecture(
       undefined,
       withCapabilities({
         contractExecution: "SUPPORTED",
         rawTransactionSigning: "UNSUPPORTED",
         recoverableEcdsa: "UNSUPPORTED",
-      }),
-    );
-    expect(detected).toBe("SMART_ACCOUNT");
-  });
-
-  it("infers API_ROUTED_EXECUTION when execution exists and recoverability stays unknown", () => {
-    const detected = detectArchitecture(
-      undefined,
-      withCapabilities({
-        contractExecution: "SUPPORTED",
-        rawTransactionSigning: "UNSUPPORTED",
-        recoverableEcdsa: "UNKNOWN",
       }),
     );
     expect(detected).toBe("API_ROUTED_EXECUTION");

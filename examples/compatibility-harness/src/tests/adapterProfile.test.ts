@@ -96,7 +96,7 @@ describe("Adapter Profile", () => {
         ...baseProfile,
         capabilities: {
           ...capabilities,
-          addressResolution: "UNSUPPORTED",
+          addressResolution: "UNKNOWN",
         },
       });
       return;

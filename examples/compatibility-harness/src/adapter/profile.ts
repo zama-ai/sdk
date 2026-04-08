@@ -19,22 +19,10 @@ function contradictsDeclared(
 ): boolean {
   switch (declared) {
     case "EOA":
-      return (
-        isUnsupported(capabilities.recoverableEcdsa) ||
-        isUnsupported(capabilities.rawTransactionSigning)
-      );
+      return isUnsupported(capabilities.recoverableEcdsa);
     case "SMART_ACCOUNT":
-      return isUnsupported(capabilities.contractExecution);
     case "MPC":
-      return (
-        isSupported(capabilities.rawTransactionSigning) &&
-        isSupported(capabilities.recoverableEcdsa)
-      );
     case "API_ROUTED_EXECUTION":
-      return (
-        isSupported(capabilities.rawTransactionSigning) &&
-        isUnsupported(capabilities.contractExecution)
-      );
     case "UNKNOWN":
       return false;
   }
@@ -51,19 +39,16 @@ export function detectArchitecture(
     return declared;
   }
 
-  if (
-    isSupported(capabilities.recoverableEcdsa) &&
-    isSupported(capabilities.rawTransactionSigning)
-  ) {
+  if (isSupported(capabilities.recoverableEcdsa)) {
     return "EOA";
   }
 
   if (
     isSupported(capabilities.contractExecution) &&
     isUnsupported(capabilities.rawTransactionSigning) &&
-    isUnsupported(capabilities.recoverableEcdsa)
+    capabilities.recoverableEcdsa !== "SUPPORTED"
   ) {
-    return "SMART_ACCOUNT";
+    return "API_ROUTED_EXECUTION";
   }
 
   if (
@@ -72,14 +57,6 @@ export function detectArchitecture(
     isUnsupported(capabilities.contractExecution)
   ) {
     return "MPC";
-  }
-
-  if (
-    isSupported(capabilities.contractExecution) &&
-    isUnsupported(capabilities.rawTransactionSigning) &&
-    capabilities.recoverableEcdsa === "UNKNOWN"
-  ) {
-    return "API_ROUTED_EXECUTION";
   }
 
   return "UNKNOWN";

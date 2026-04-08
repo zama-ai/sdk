@@ -339,8 +339,13 @@ function exportJsonReport(payload: {
     },
     finalVerdict: payload.verdict,
   };
-  mkdirSync(dirname(outputPath), { recursive: true });
-  writeFileSync(outputPath, JSON.stringify(artifact, null, 2));
+  try {
+    mkdirSync(dirname(outputPath), { recursive: true });
+    writeFileSync(outputPath, JSON.stringify(artifact, null, 2));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`  [report] Failed to write REPORT_JSON_PATH (${outputPath}): ${message}`);
+  }
 }
 
 /** Print the final compatibility report to stdout. */

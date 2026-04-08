@@ -184,7 +184,7 @@ Current checks:
 1. Adapter initialization and address resolution
 2. EIP-712 signing + recoverability
 3. Raw transaction execution (when supported)
-4. Adapter contract read (when supported)
+4. Contract read validation (adapter read when available, otherwise harness RPC fallback)
 5. Zama authorization flow (`sdk.allow()`)
 6. Zama write flow probe (operator approval write + verification)
 

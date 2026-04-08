@@ -95,12 +95,14 @@ describe("Identity and Verification", () => {
         likelyCause: "The adapter rejected the typed-data payload or transformed it incorrectly.",
         recommendation: "Ensure the adapter supports standard Ethereum EIP-712 signing.",
       });
-      mergeProfile({
-        capabilities: {
-          eip712Signing: isInfra ? "UNKNOWN" : "SUPPORTED",
-          recoverableEcdsa: isInfra ? "UNKNOWN" : "UNSUPPORTED",
-        },
-      });
+      if (!isInfra) {
+        mergeProfile({
+          capabilities: {
+            eip712Signing: "SUPPORTED",
+            recoverableEcdsa: "UNSUPPORTED",
+          },
+        });
+      }
       if (!isInfra) {
         expect.fail(message);
       }
