@@ -159,6 +159,10 @@ For CI and automated go/no-go checks, `npm run validate` executes the suite, rea
 
 `validate` also supports JSON policy files (`VALIDATION_POLICY_PATH`) for explicit claim allow-lists and partial-acceptance behavior, while enforcing the report schema contract before decisioning.
 
+GitHub Actions includes:
+- mandatory deterministic CI (`compatibility-harness-ci.yml`),
+- optional live manual/nightly run with artifact upload (`compatibility-harness-live.yml`, non-blocking by default).
+
 Reference examples currently included:
 - Crossmint API-routed adapter
 - Turnkey API key adapter

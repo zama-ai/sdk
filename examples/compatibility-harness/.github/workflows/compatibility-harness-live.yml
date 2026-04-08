@@ -1,0 +1,79 @@
+name: Compatibility Harness Live (Optional)
+
+on:
+  workflow_dispatch:
+    inputs:
+      signer_module:
+        description: "Adapter module path (optional)"
+        required: false
+        type: string
+      validation_target:
+        description: "Validation target"
+        required: false
+        default: AUTHORIZATION_AND_WRITE
+        type: choice
+        options:
+          - AUTHORIZATION
+          - AUTHORIZATION_AND_WRITE
+  schedule:
+    - cron: "0 3 * * *"
+
+jobs:
+  live-validate:
+    name: Live Validate (Non-Blocking)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: true
+    env:
+      PRIVATE_KEY: ${{ secrets.HARNESS_PRIVATE_KEY }}
+      RPC_URL: ${{ secrets.HARNESS_RPC_URL }}
+      RELAYER_URL: ${{ secrets.HARNESS_RELAYER_URL }}
+      RELAYER_API_KEY: ${{ secrets.HARNESS_RELAYER_API_KEY }}
+      NETWORK_PROFILE: ${{ secrets.HARNESS_NETWORK_PROFILE }}
+      REPORT_JSON_PATH: reports/live/latest-report.json
+      VALIDATION_TARGET: ${{ github.event.inputs.validation_target || 'AUTHORIZATION_AND_WRITE' }}
+      SIGNER_MODULE: ${{ github.event.inputs.signer_module }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Run live validation (capture exit code)
+        id: live_validate
+        run: |
+          mkdir -p reports/live
+          set +e
+          npm run validate 2>&1 | tee reports/live/validate.log
+          status=${PIPESTATUS[0]}
+          echo "$status" > reports/live/validate.exitcode
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Upload live artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compatibility-harness-live-${{ github.run_id }}
+          path: reports/live
+          if-no-files-found: warn
+
+      - name: Publish run summary
+        if: always()
+        run: |
+          echo "## Compatibility Harness Live Run" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Non-blocking: yes (continue-on-error job)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- validate exit code: ${{ steps.live_validate.outputs.exit_code }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Artifact: compatibility-harness-live-${{ github.run_id }}" >> "$GITHUB_STEP_SUMMARY"

@@ -213,6 +213,7 @@ Validation gate exit codes:
 
 Workflow file:
 - `.github/workflows/compatibility-harness-ci.yml`
+- `.github/workflows/compatibility-harness-live.yml` (optional manual/nightly, non-blocking)
 
 Pipeline stages:
 1. `npm ci`
@@ -222,6 +223,12 @@ Pipeline stages:
 
 The validate step accepts exit codes `0`, `10`, and `30` in deterministic mock mode.
 This keeps CI stable while still failing on true regressions (`20`, `21`, `31`, `97+`).
+
+Optional live workflow (`compatibility-harness-live.yml`):
+- triggers on `workflow_dispatch` and nightly schedule,
+- runs `npm run validate` with live env/secrets,
+- captures `validate` exit code without blocking the pipeline by default,
+- uploads `reports/live/*` artifacts (JSON + logs) for debugging and partner traces.
 
 ## Adapter Model (Primary Interface)
 
