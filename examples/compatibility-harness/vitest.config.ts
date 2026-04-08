@@ -50,13 +50,16 @@ export default defineConfig({
     // Run test files sequentially so results appear in a predictable order.
     sequence: { concurrent: false },
     // Include files explicitly to control execution order:
-    // 1. Adapter profile
-    // 2. Identity / verification
-    // 3. Raw transaction flow
-    // 4. Adapter execution
-    // 5. Zama authorization
-    // 6. Zama write flow
+    // 1. Unit tests for pure classification/diagnostics logic
+    // 2. Adapter profile
+    // 3. Identity / verification
+    // 4. Raw transaction flow
+    // 5. Adapter execution
+    // 6. Zama authorization
+    // 7. Zama write flow
     include: [
+      "src/tests/unit/diagnostics.unit.test.ts",
+      "src/tests/unit/profile.unit.test.ts",
       "src/tests/adapterProfile.test.ts",
       "src/tests/eip712.test.ts",
       "src/tests/transaction.test.ts",

@@ -138,7 +138,10 @@ Current workflow remains lightweight:
 An optional machine-readable report can be exported with:
 - `REPORT_JSON_PATH=./reports/latest.json npm test`
 
-Payload includes profile, raw check results, infrastructure summary, blockers, verdict, and run id.
+Versioned schema contract:
+- `kind`: `zama-compatibility-report`
+- `schemaVersion`: `1.0.0`
+- payload includes profile, recorded checks, synthesized environment summary, section views, blockers, verdict, and run id.
 
 ## Scope Limits
 

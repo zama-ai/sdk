@@ -205,6 +205,13 @@ Set `REPORT_JSON_PATH` to export a machine-readable report payload at the end of
 REPORT_JSON_PATH=./reports/latest.json npm test
 ```
 
+Current schema:
+- `kind`: `zama-compatibility-report`
+- `schemaVersion`: `1.0.0`
+- top-level sections: `adapterProfile`, `checks`, `sections`, `infrastructure`, `finalVerdict`
+
+`schemaVersion` is the compatibility contract for CI/partner tooling. Consumers should validate `schemaVersion` before parsing.
+
 ## Environment Variables
 
 Copy `.env.example` to `.env` and fill only what your adapter needs.
