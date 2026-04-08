@@ -5,6 +5,7 @@
 This harness evaluates whether an integration system (wallet, MPC, custody API, smart-account stack) is compatible with the Zama SDK, with Sepolia as the default validated profile and a mainnet profile scaffold marked experimental.
 
 The key objective is trustworthiness:
+
 - avoid overclaiming compatibility,
 - separate product incompatibility from infra failures,
 - report exactly what was validated.
@@ -12,10 +13,12 @@ The key objective is trustworthiness:
 ## Core Design
 
 The internal model is adapter-based:
+
 - primary export: `adapter` (preferred),
 - legacy support: `signer` auto-wrapped for backward compatibility.
 
 Adapter shape includes:
+
 - metadata (name, declared architecture, verification model, chain support),
 - capability declarations,
 - operational primitives (`getAddress`, `signTypedData`, `signTransaction`, `writeContract`, optional reads/receipt tracking),
@@ -24,6 +27,7 @@ Adapter shape includes:
 ## Capability and Status Models
 
 Capabilities are tracked independently from outcomes:
+
 - `addressResolution`
 - `eip712Signing`
 - `recoverableEcdsa`
@@ -35,16 +39,19 @@ Capabilities are tracked independently from outcomes:
 - `zamaWriteFlow`
 
 Capability state:
+
 - `SUPPORTED`
 - `UNSUPPORTED`
 - `UNKNOWN`
 
 Profile output separates:
+
 - `declaredCapabilities`
 - `observedCapabilities`
 - `contradictions` when declared and observed states diverge.
 
 Validation status:
+
 - `PASS`
 - `FAIL`
 - `UNTESTED`
@@ -57,6 +64,7 @@ This prevents false binary conclusions.
 ## Classification Model
 
 Architectures:
+
 - `EOA`
 - `MPC`
 - `SMART_ACCOUNT`
@@ -64,6 +72,7 @@ Architectures:
 - `UNKNOWN`
 
 Verification models:
+
 - `RECOVERABLE_ECDSA`
 - `ERC1271`
 - `PROVIDER_MANAGED`
@@ -74,6 +83,7 @@ Classification combines declared metadata and observed behavior. Contradictions 
 ## Validation Surface (Current)
 
 Test order:
+
 1. Adapter profile (init + address resolution)
 2. EIP-712 signing and recoverability
 3. Optional ERC-1271 verification for declared smart-account/ERC-1271 integrations
@@ -85,6 +95,7 @@ Test order:
 ## Reporting Model
 
 The report is grouped into:
+
 - Adapter Profile
 - Ethereum Compatibility
 - Adapter-Routed Execution
@@ -93,6 +104,7 @@ The report is grouped into:
 - Final Verdict
 
 Each failing or blocked item includes:
+
 - reason,
 - root-cause category,
 - stable error code,
@@ -101,6 +113,7 @@ Each failing or blocked item includes:
 The infrastructure/environment section is synthesized from observed root causes across all checks.
 
 Root-cause categories:
+
 - `ADAPTER`
 - `SIGNER`
 - `RPC`
@@ -110,6 +123,7 @@ Root-cause categories:
 - `HARNESS`
 
 Error codes (current taxonomy):
+
 - `ENV_MISSING_CONFIG`
 - `ENV_INVALID_CONFIG`
 - `ENV_INSUFFICIENT_FUNDS`
@@ -123,6 +137,7 @@ Error codes (current taxonomy):
 ## Final Verdict Strategy
 
 Verdicts are conservative and tied to validated Zama surface, for example:
+
 - `ZAMA COMPATIBLE FOR AUTHORIZATION AND WRITE FLOWS`
 - `ZAMA COMPATIBLE FOR AUTHORIZATION FLOWS — WRITE FLOW NOT TESTED`
 - `PARTIALLY VALIDATED — AUTHORIZATION COMPATIBLE, WRITE FLOW UNSUPPORTED`
@@ -135,6 +150,7 @@ No generic “COMPATIBLE” claim is emitted without scope.
 ## Infrastructure Handling
 
 Infrastructure and environment failures are explicitly separated from adapter incompatibility:
+
 - configuration defects (`.env`, missing keys) -> `BLOCKED / ENVIRONMENT`
 - RPC/network issues -> `INCONCLUSIVE / RPC`
 - relayer availability/errors -> `INCONCLUSIVE / RELAYER`
@@ -145,6 +161,7 @@ This reduces false negatives for integrators.
 ## Integrator Experience
 
 Current workflow remains lightweight:
+
 1. clone,
 2. set `.env`,
 3. (optional) run `npm run doctor` for preflight diagnostics,
@@ -160,15 +177,18 @@ For CI and automated go/no-go checks, `npm run validate` executes the suite, rea
 `validate` also supports JSON policy files (`VALIDATION_POLICY_PATH`) for explicit claim allow-lists and partial-acceptance behavior, while enforcing the report schema contract before decisioning.
 
 GitHub Actions includes:
+
 - mandatory deterministic CI (`compatibility-harness-ci.yml`),
 - optional live manual/nightly run with artifact upload (`compatibility-harness-live.yml`, non-blocking by default).
 
 Operational companion docs:
+
 - `docs/verdict-playbook.md`
 - `docs/claim-catalog.md`
 - `docs/schema-release-discipline.md`
 
 Reference examples currently included:
+
 - Crossmint API-routed adapter
 - Turnkey API key adapter
 - Openfort EOA baseline adapter (CLI compatibility baseline for EOA semantics)
@@ -176,9 +196,11 @@ Reference examples currently included:
 ## Report Artifact
 
 An optional machine-readable report can be exported with:
+
 - `REPORT_JSON_PATH=./reports/latest.json npm test`
 
 Versioned schema contract:
+
 - `kind`: `zama-compatibility-report`
 - `schemaVersion`: `1.2.0`
 - payload includes profile, recorded checks, synthesized environment summary, section views, blockers, claim metadata (`evidence` + optional `evidenceDetails`), verdict, and run id.
@@ -188,6 +210,7 @@ Versioned schema contract:
 The harness is still a practical diagnostic tool, not a production certification authority.
 
 Out of scope today:
+
 - deterministic guarantees for all non-Sepolia environments (mainnet profile is currently marked experimental),
 - exhaustive Zama write/read behavior coverage,
 - full ERC-1271 validation matrix,

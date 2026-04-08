@@ -5,10 +5,12 @@
 The Compatibility Validation Harness has evolved from a narrow proof-of-concept into a **capability-first diagnostic product prototype**.
 
 At this stage, it is best classified as:
+
 - **Partner-pilot ready** (for guided external integrations),
 - **Not yet GA-certified** (for broad self-serve external rollout without support).
 
 The harness now provides conservative, evidence-backed answers to:
+
 1. What integration architecture is this adapter?
 2. Which capabilities are declared and observed?
 3. Which compatibility surfaces were actually validated?
@@ -21,6 +23,7 @@ Core outcome: the project can now support credible internal and partner-facing c
 
 This summary is grounded in the implementation currently present in this repository branch.
 Key source-of-truth files used to verify claims:
+
 - `src/report/check-registry.ts` (canonical check model),
 - `src/report/schema.ts`, `src/report/parse.ts`, `src/report/reporter.ts` (artifact/report contract),
 - `src/verdict/claims.ts`, `src/verdict/resolve.ts`, `src/verdict/consistency.ts` (claim semantics + consistency guards),
@@ -31,6 +34,7 @@ Key source-of-truth files used to verify claims:
 - `examples/{crossmint,turnkey,openfort}` and baseline fixtures in `src/tests/fixtures/example-baselines`.
 
 Validation state at review time:
+
 - `npm run typecheck` passed,
 - `npm test` passed,
 - `npm run adapter:check` passed.
@@ -40,6 +44,7 @@ Validation state at review time:
 ### Product Goal
 
 Provide a practical, repeatable way for wallet/custody/infrastructure teams to validate compatibility with:
+
 - Ethereum signing model expectations,
 - EIP-712 recoverability semantics,
 - Zama SDK authorization and practical write-path probes.
@@ -57,6 +62,7 @@ This stage targets **fast and trustworthy partner pilot validation**, not final 
 ## 3) Why This Product Exists
 
 Real integrations are heterogeneous:
+
 - EOA wallets,
 - API-routed custody,
 - MPC systems,
@@ -64,6 +70,7 @@ Real integrations are heterogeneous:
 
 A signer-only model produced false negatives and misleading conclusions.  
 The harness now models compatibility using:
+
 - explicit adapter capabilities,
 - structured statuses beyond pass/fail,
 - scoped claims tied to observed evidence.
@@ -133,6 +140,7 @@ This improves consistency across engineering, solutions, and CI consumers.
 ### 5.1 Adapter-Centric Model
 
 An integration is represented as an `adapter` with:
+
 - metadata (name, declared architecture, verification model, supported chains),
 - capabilities (`SUPPORTED` / `UNSUPPORTED` / `UNKNOWN`),
 - operational primitives (`getAddress`, `signTypedData`, optional execution/read/receipt methods),
@@ -141,6 +149,7 @@ An integration is represented as an `adapter` with:
 ### 5.2 Validation Pipeline
 
 Execution flow:
+
 1. Adapter profile and initialization checks.
 2. Identity and verification checks (EIP-712, recoverability, optional ERC-1271 probe).
 3. Ethereum execution checks (raw tx when supported).
@@ -154,6 +163,7 @@ Execution flow:
 ### 5.3 Status and Verdict Semantics
 
 Status model:
+
 - `PASS`, `FAIL`, `UNTESTED`, `UNSUPPORTED`, `BLOCKED`, `INCONCLUSIVE`.
 
 Final verdict is claim-based and scoped.  
@@ -162,6 +172,7 @@ No generic “compatible” output is emitted without precise evidence.
 ### 5.4 Machine-Consumable Output
 
 Optional JSON artifact includes:
+
 - adapter profile,
 - canonical check records,
 - section views,
@@ -174,6 +185,7 @@ Optional JSON artifact includes:
 ### 6.1 Adapter Characteristics
 
 Turnkey example declares:
+
 - architecture: `API_ROUTED_EXECUTION`,
 - EIP-712 signing: supported,
 - raw transaction signing: unsupported,
@@ -182,10 +194,12 @@ Turnkey example declares:
 ### 6.2 Expected Interpretation Pattern
 
 A healthy run can still be **fully compatible** even with raw tx unsupported, because:
+
 - raw EOA-style tx signing is not required for every integration architecture,
 - authorization + recoverability + write probe provide stronger relevant evidence.
 
 Typical healthy envelope:
+
 - EIP-712 and recoverability pass,
 - raw tx check is `UNSUPPORTED` (expected),
 - Zama authorization pass,
@@ -193,6 +207,7 @@ Typical healthy envelope:
 - final claim can be `ZAMA_AUTHORIZATION_AND_WRITE_COMPATIBLE`.
 
 If relayer/RPC/registry fails:
+
 - results become `BLOCKED`/`INCONCLUSIVE`,
 - claim moves to inconclusive categories,
 - without incorrectly labeling adapter compatibility as failed.
@@ -218,6 +233,7 @@ To review this example with peer engineers:
    - `npm run validate:turnkey`
 
 Expected evidence envelope:
+
 - raw transaction execution can legitimately be `UNSUPPORTED`,
 - authorization and write claims are still allowed to pass if relevant checks pass,
 - infra outages should surface as `BLOCKED`/`INCONCLUSIVE` with infra-rooted error codes.
@@ -289,6 +305,7 @@ To move from partner-pilot ready to GA-grade external product:
 ## 11) Recommended Next Version Focus (vNext)
 
 Prioritize:
+
 1. Live-run reliability and artifact governance (stronger operational confidence).
 2. Policy presets per integration archetype (faster external adoption).
 3. Extended smart-account and advanced write-path scenario coverage.
@@ -299,6 +316,7 @@ Prioritize:
 The harness has reached a meaningful milestone: **trustworthy partner-pilot validation**.
 
 It now behaves as a serious diagnostic product:
+
 - architecture-aware,
 - evidence-first,
 - conservative in claims,

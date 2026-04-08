@@ -63,19 +63,23 @@ Use this template in release notes/PR description:
 ## Compatibility Harness Release
 
 ### Schema
+
 - schemaVersion: <old> -> <new>
 - Change type: Patch / Minor / Major
 - Consumer impact: <none | additive | breaking>
 
 ### Claim/Verdict Semantics
+
 - Changed claim IDs: <none | list>
 - Gate mapping impact: <none | describe>
 
 ### Validation Surface
+
 - New checks/capabilities: <list>
 - Deprecated checks/capabilities: <list>
 
 ### Migration Guidance
+
 - Required consumer actions:
   - <action 1>
   - <action 2>

@@ -3,6 +3,7 @@
 Diagnostic harness to evaluate whether a wallet/custody integration is compatible with the Zama SDK (Sepolia by default, mainnet profile available as experimental).
 
 The harness is adapter-based (not signer-only) and reports:
+
 - what your integration exposes (capabilities),
 - what was actually validated (checks + statuses),
 - what claim is safe to make (conservative final verdict).
@@ -11,6 +12,7 @@ The harness is adapter-based (not signer-only) and reports:
 ## What This Harness Can Prove
 
 It can validate, depending on adapter support:
+
 - identity and address resolution,
 - EIP-712 signing and `ecrecover` recoverability,
 - raw EOA transaction signing + broadcast,
@@ -20,6 +22,7 @@ It can validate, depending on adapter support:
 - a practical Zama write probe (operator approval write + on-chain verification).
 
 It can also separate incompatibility from infrastructure blockers:
+
 - adapter/signer defects,
 - RPC/network issues,
 - relayer issues,
@@ -132,6 +135,7 @@ SIGNER_MODULE=./examples/turnkey/signer.ts npm run doctor
 ```
 
 Doctor checks:
+
 - adapter module loading,
 - declared capabilities visibility,
 - adapter init and address resolution,
@@ -139,6 +143,7 @@ Doctor checks:
 - relayer reachability.
 
 Exit codes:
+
 - `0`: all checks passed,
 - `2`: at least one `BLOCKED` issue (usually env/config),
 - `3`: at least one `INCONCLUSIVE` issue (usually infra/network),
@@ -161,12 +166,14 @@ npm run adapter:check:crossmint
 ```
 
 This command validates:
+
 - metadata completeness (`name`, architecture, verification model, supported chains),
 - declared capability shape,
 - declared vs observed capability contradictions,
 - canonical check support preview (from declared capabilities).
 
 Exit codes:
+
 - `0`: no quality-gate failures,
 - `2`: adapter spec quality failures detected,
 - `99`: unexpected runtime failure.
@@ -192,11 +199,13 @@ VALIDATION_POLICY_PATH=./validation-policy.example.json npm run validate
 ```
 
 Policy behavior:
+
 - `VALIDATION_TARGET` overrides `policy.target` when both are set.
 - `VALIDATION_ALLOW_PARTIAL=true` can promote `PARTIAL` gate results to exit code `0`.
 - `policy.expectedClaims` can restrict accepted claim IDs.
 
 Validation gate exit codes:
+
 - `0`: requested compatibility target validated,
 - `10`: partially validated (typically auth passed, write not fully validated, strict target only),
 - `20`: incompatible,
@@ -212,10 +221,12 @@ Validation gate exit codes:
 ## GitHub Actions CI
 
 Workflow file:
+
 - `.github/workflows/compatibility-harness-ci.yml`
 - `.github/workflows/compatibility-harness-live.yml` (optional manual/nightly, non-blocking)
 
 Pipeline stages:
+
 1. `npm ci`
 2. `npm run typecheck`
 3. `HARNESS_MOCK_MODE=1 npm test`
@@ -225,6 +236,7 @@ The validate step accepts exit codes `0`, `10`, and `30` in deterministic mock m
 This keeps CI stable while still failing on true regressions (`20`, `21`, `31`, `97+`).
 
 Optional live workflow (`compatibility-harness-live.yml`):
+
 - triggers on `workflow_dispatch` and nightly schedule,
 - runs `npm run validate` with live env/secrets,
 - captures `validate` exit code without blocking the pipeline by default,
@@ -293,6 +305,7 @@ No harness source changes are required.
 ## Capability Model
 
 The harness tracks these capabilities independently from verdicts:
+
 - `addressResolution`
 - `eip712Signing`
 - `recoverableEcdsa`
@@ -304,11 +317,13 @@ The harness tracks these capabilities independently from verdicts:
 - `zamaWriteFlow`
 
 Capability state:
+
 - `SUPPORTED`
 - `UNSUPPORTED`
 - `UNKNOWN`
 
 The adapter profile reports both:
+
 - `declaredCapabilities` (what the adapter says it supports)
 - `observedCapabilities` (what the harness observed from behavior/tests)
 
@@ -317,6 +332,7 @@ When they diverge, the report includes explicit `contradictions`.
 ## Status Model
 
 Every check uses one status:
+
 - `PASS`
 - `FAIL`
 - `UNTESTED`
@@ -329,6 +345,7 @@ This avoids false pass/fail claims when something is unavailable or blocked by i
 ## Adapter Classification
 
 Architecture values:
+
 - `EOA`
 - `MPC`
 - `SMART_ACCOUNT`
@@ -340,6 +357,7 @@ The report combines declared metadata and observed behavior. If evidence is weak
 ## Test Surface
 
 Current checks:
+
 1. Adapter initialization and address resolution
 2. EIP-712 signing + recoverability
 3. Optional ERC-1271 signature verification (for declared smart-account/ERC-1271 adapters)
@@ -351,6 +369,7 @@ Current checks:
 ## Final Verdict Model
 
 The harness emits nuanced verdicts, for example:
+
 - `ZAMA COMPATIBLE FOR AUTHORIZATION AND WRITE FLOWS`
 - `ZAMA COMPATIBLE FOR AUTHORIZATION FLOWS — WRITE FLOW NOT TESTED`
 - `PARTIALLY VALIDATED — AUTHORIZATION COMPATIBLE, WRITE FLOW UNSUPPORTED`
@@ -363,6 +382,7 @@ Verdicts are based on what was actually validated, not on assumptions.
 ## Report Sections
 
 The output is split into:
+
 - Adapter Profile
 - Ethereum Compatibility
 - Adapter-Routed Execution
@@ -374,6 +394,7 @@ Each failing/blocked/inconclusive check includes cause and recommendation.
 The infrastructure section is synthesized from root-cause evidence across checks (RPC, relayer, registry, local env).
 For `BLOCKED`/`INCONCLUSIVE`, recommendation text is deterministic by `errorCode` and includes next-command hints (`doctor` / `validate` / `test`).
 Checks may include stable `errorCode` values (for CI triage), e.g.:
+
 - `ENV_MISSING_CONFIG`, `ENV_INVALID_CONFIG`, `ENV_INSUFFICIENT_FUNDS`
 - `RPC_CONNECTIVITY`, `RPC_RATE_LIMIT`
 - `RELAYER_UNAVAILABLE`
@@ -388,6 +409,7 @@ REPORT_JSON_PATH=./reports/latest.json npm test
 ```
 
 Current schema:
+
 - `kind`: `zama-compatibility-report`
 - `schemaVersion`: `1.2.0`
 - each check record includes a canonical `checkId` (stable machine key)
@@ -406,6 +428,7 @@ For schema/release contract policy, see [`docs/schema-release-discipline.md`](./
 Copy `.env.example` to `.env` and fill only what your adapter needs.
 
 Common variables:
+
 - `NETWORK_PROFILE` (optional; `sepolia` default, or `mainnet` with explicit `RELAYER_URL`)
 - `PRIVATE_KEY` (required for built-in EOA adapter)
 - `CROSSMINT_API_KEY` / `CROSSMINT_WALLET_LOCATOR` (Crossmint example)
@@ -441,6 +464,7 @@ Common variables:
 ## Example References
 
 See:
+
 - [`examples/crossmint/signer.ts`](./examples/crossmint/signer.ts)
 - [`examples/crossmint/COMPATIBILITY.md`](./examples/crossmint/COMPATIBILITY.md)
 - [`examples/turnkey/signer.ts`](./examples/turnkey/signer.ts)

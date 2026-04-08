@@ -21,6 +21,7 @@ This document describes expected harness behavior for the Openfort example adapt
 This adapter is a CLI baseline meant to validate Openfort integrations that run with **EOA semantics** (`wallet address === signing key`).
 
 It validates:
+
 - EIP-712 recoverability expectations used by Zama relayer flows
 - raw transaction + contract execution compatibility
 - Zama authorization and practical write probe in the harness runtime
@@ -28,6 +29,7 @@ It validates:
 ## What This Example Does Not Validate
 
 It does **not** validate Openfort front-end/runtime concerns such as:
+
 - `@openfort/react` embedded auth flows
 - browser connector lifecycle behavior
 - interactive wallet reconnect/recovery UX
@@ -46,6 +48,7 @@ Typical run (valid key, funded wallet, healthy infra):
 - Zama write flow probe: `PASS`
 
 Expected final verdict:
+
 - `ZAMA COMPATIBLE FOR AUTHORIZATION AND WRITE FLOWS`
 
 ### Baseline Lockfile (Regression Guard)
@@ -53,6 +56,7 @@ Expected final verdict:
 See `src/tests/fixtures/example-baselines/openfort.lock.json`.
 
 Claim envelope tracked by unit tests:
+
 - `PASS`: full auth+write compatibility
 - `PARTIAL`: write-surface degradations (blocked/failed/not-recorded)
 - `INCONCLUSIVE`: infra/env-blocked authorization outcomes

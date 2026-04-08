@@ -33,6 +33,7 @@ To separate infra blockers from compatibility defects:
 - inspect `infrastructure.blockers`
 
 Rule of thumb:
+
 - `BLOCKED`/`INCONCLUSIVE` with `RPC`/`RELAYER`/`REGISTRY`/`ENVIRONMENT` indicates infra or setup constraints.
 - `FAIL` with `SIGNER`/`ADAPTER` is usually a true compatibility issue.
 
