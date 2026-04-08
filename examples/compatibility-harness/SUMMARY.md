@@ -151,6 +151,8 @@ Current workflow remains lightweight:
 5. run tests,
 6. read structured report and scoped verdict.
 
+For deterministic local runs without RPC/relayer dependencies, set `HARNESS_MOCK_MODE=1`; network-dependent checks are recorded as `UNTESTED` instead of being conflated with compatibility failures.
+
 For CI and automated go/no-go checks, `npm run validate` executes the suite, reads the JSON artifact claim, and returns policy-oriented exit codes. Gate target is configurable via `VALIDATION_TARGET` (`AUTHORIZATION` or `AUTHORIZATION_AND_WRITE`).
 
 Reference examples currently included:

@@ -83,6 +83,27 @@ Commit:
 
 ## Next Priority
 
+### T12 — Deterministic Offline Harness Mode
+
+Status: `DONE`
+
+Objective:
+- Add deterministic local mode to prevent infra noise from polluting compatibility checks.
+
+Codex spec:
+1. Add runtime flag `HARNESS_MOCK_MODE`.
+2. For network/relayer/registry-dependent checks, record `UNTESTED` with explicit rationale when enabled.
+3. Document mode in `.env.example`, README, and summary docs.
+4. Add unit tests for runtime flag parsing behavior.
+
+Acceptance:
+- `HARNESS_MOCK_MODE=1 npm test` marks dependent checks as `UNTESTED`.
+- Standard mode behavior remains unchanged.
+- Typecheck and tests pass.
+
+Commit:
+- pending (current working tree)
+
 ### T9 — Turnkey Golden Scenario Fixture
 
 Status: `DONE`

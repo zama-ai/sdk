@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { isOperatorContract } from "@zama-fhe/sdk";
+import { isMockModeEnabled, mockModeNote } from "../config/runtime.js";
 import {
   adapter,
   buildGenericSigner,
@@ -34,6 +35,19 @@ describe("Adapter-Routed Execution Surface", () => {
         rootCauseCategory: diagnostic.rootCauseCategory,
         errorCode: diagnostic.errorCode,
         recommendation: "Resolve adapter initialization issues first.",
+      });
+      return;
+    }
+
+    if (isMockModeEnabled()) {
+      record({
+        name: "Adapter Contract Read",
+        section: "execution",
+        status: "UNTESTED",
+        summary: "Contract read validation skipped in mock mode",
+        reason: mockModeNote(),
+        rootCauseCategory: "HARNESS",
+        recommendation: "Disable HARNESS_MOCK_MODE to validate on-chain read behavior.",
       });
       return;
     }

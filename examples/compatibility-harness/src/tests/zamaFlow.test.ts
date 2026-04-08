@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
+import { isMockModeEnabled, mockModeNote } from "../config/runtime.js";
 import { mergeProfile, record } from "../report/reporter.js";
 import { buildSdk, discoverTokenAddress, initializeAdapter } from "../harness/adapter.js";
 import { classifyInfrastructureIssue, errorMessage } from "../harness/diagnostics.js";
@@ -45,6 +46,20 @@ describe("Zama Authorization Flow", () => {
         reason: "signTypedData is not implemented by the adapter",
         rootCauseCategory: "ADAPTER",
         recommendation: "Implement signTypedData to validate Zama authorization compatibility.",
+      });
+      return;
+    }
+
+    if (isMockModeEnabled()) {
+      record({
+        name: "Zama Authorization Flow",
+        section: "zama",
+        status: "UNTESTED",
+        summary: "Zama authorization validation skipped in mock mode",
+        reason: mockModeNote(),
+        rootCauseCategory: "HARNESS",
+        recommendation:
+          "Disable HARNESS_MOCK_MODE to validate relayer-backed authorization behavior.",
       });
       return;
     }

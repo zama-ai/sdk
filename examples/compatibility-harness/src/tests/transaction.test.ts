@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { parseGwei } from "viem";
+import { isMockModeEnabled, mockModeNote } from "../config/runtime.js";
 import { mergeProfile, record } from "../report/reporter.js";
 import { publicClient } from "../utils/rpc.js";
 import { networkConfig } from "../config/network.js";
@@ -47,6 +48,19 @@ describe("Ethereum Raw Transaction Flow", () => {
         reason: "signTransaction is not implemented by the adapter",
         rootCauseCategory: "ADAPTER",
         recommendation: "This is expected for API-routed execution systems.",
+      });
+      return;
+    }
+
+    if (isMockModeEnabled()) {
+      record({
+        name: "Raw Transaction Execution",
+        section: "ethereum",
+        status: "UNTESTED",
+        summary: "Raw transaction execution skipped in mock mode",
+        reason: mockModeNote(),
+        rootCauseCategory: "HARNESS",
+        recommendation: "Disable HARNESS_MOCK_MODE to validate broadcast behavior.",
       });
       return;
     }

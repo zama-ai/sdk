@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { getAddress } from "viem";
+import { isMockModeEnabled, mockModeNote } from "../config/runtime.js";
 import {
   adapter,
   buildSdk,
@@ -56,6 +57,19 @@ describe("Zama Write Flow", () => {
         rootCauseCategory: "ADAPTER",
         recommendation:
           "Use an adapter that can route contract execution to validate the write surface.",
+      });
+      return;
+    }
+
+    if (isMockModeEnabled()) {
+      record({
+        name: "Zama Write Flow",
+        section: "zama",
+        status: "UNTESTED",
+        summary: "Zama write-flow validation skipped in mock mode",
+        reason: mockModeNote(),
+        rootCauseCategory: "HARNESS",
+        recommendation: "Disable HARNESS_MOCK_MODE to validate write execution and verification.",
       });
       return;
     }

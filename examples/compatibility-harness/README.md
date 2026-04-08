@@ -51,6 +51,14 @@ Set `PRIVATE_KEY` in `.env` (Sepolia-funded account), then run:
 npm test
 ```
 
+Local deterministic mode (no network/relayer/registry dependency):
+
+```bash
+HARNESS_MOCK_MODE=1 npm test
+```
+
+In mock mode, network-dependent checks are explicitly marked `UNTESTED`.
+
 ### Option B: Crossmint example adapter
 
 Set `CROSSMINT_API_KEY` and `CROSSMINT_WALLET_LOCATOR` in `.env`, then run:
@@ -310,6 +318,7 @@ Common variables:
 - `RELAYER_URL` (optional; defaults to Zama testnet relayer)
 - `RELAYER_API_KEY` (optional; needed for private/protected relayers)
 - `REPORT_JSON_PATH` (optional; write final report JSON to this file path)
+- `HARNESS_MOCK_MODE` (optional; when enabled, marks network-dependent checks as `UNTESTED`)
 
 ## Integrator Workflow (Target: < 10 min)
 
