@@ -14,9 +14,16 @@ import type {
   ValidationStatus,
   CapabilityState,
 } from "../adapter/types.js";
+import {
+  REPORT_KIND,
+  REPORT_SCHEMA_VERSION,
+  type InfraRootCause,
+  type ReportArtifact,
+  type ReportSection,
+} from "./schema.js";
 
 export type TestStatus = ValidationStatus;
-export type TestSection = "adapter" | "ethereum" | "execution" | "zama" | "environment";
+export type TestSection = ReportSection;
 
 export interface TestResult {
   name: string;
@@ -37,7 +44,11 @@ const RUN_ID = (process.env.ZAMA_HARNESS_RUN_ID ?? "default").replace(/[^a-zA-Z0
 const RESULTS_FILE = join(tmpdir(), `zama-harness-results-${RUN_ID}.jsonl`);
 const PROFILE_FILE = join(tmpdir(), `zama-harness-profile-${RUN_ID}.json`);
 
-const INFRA_ROOT_CAUSES = new Set<RootCauseCategory>(["ENVIRONMENT", "RPC", "RELAYER", "REGISTRY"]);
+const INFRA_ROOT_CAUSES = new Set<InfraRootCause>(["ENVIRONMENT", "RPC", "RELAYER", "REGISTRY"]);
+
+function isInfraRootCause(category: RootCauseCategory | undefined): category is InfraRootCause {
+  return category !== undefined && INFRA_ROOT_CAUSES.has(category as InfraRootCause);
+}
 
 // ── Results ──────────────────────────────────────────────────────────────────
 
@@ -232,14 +243,13 @@ function resolveFinalVerdict(results: TestResult[]): string {
   return "PARTIALLY VALIDATED — AUTHORIZATION COMPATIBLE, WRITE FLOW FAILED";
 }
 
-function summarizeBlockers(results: TestResult[]): Partial<Record<RootCauseCategory, number>> {
+function summarizeBlockers(results: TestResult[]): Partial<Record<InfraRootCause, number>> {
   return results
     .filter((r) => (r.status === "BLOCKED" || r.status === "INCONCLUSIVE") && r.rootCauseCategory)
-    .filter((r): r is TestResult & { rootCauseCategory: RootCauseCategory } => {
-      const category = r.rootCauseCategory;
-      return category !== undefined && INFRA_ROOT_CAUSES.has(category);
+    .filter((r): r is TestResult & { rootCauseCategory: InfraRootCause } => {
+      return isInfraRootCause(r.rootCauseCategory);
     })
-    .reduce<Partial<Record<RootCauseCategory, number>>>((acc, result) => {
+    .reduce<Partial<Record<InfraRootCause, number>>>((acc, result) => {
       const key = result.rootCauseCategory;
       acc[key] = (acc[key] ?? 0) + 1;
       return acc;
@@ -247,27 +257,25 @@ function summarizeBlockers(results: TestResult[]): Partial<Record<RootCauseCateg
 }
 
 function summarizeEnvironmentSection(results: TestResult[]): TestResult[] {
-  const grouped = new Map<RootCauseCategory, TestResult[]>();
+  const grouped = new Map<InfraRootCause, TestResult[]>();
   for (const result of results) {
     if (result.section === "environment") continue;
-    if (!result.rootCauseCategory || !INFRA_ROOT_CAUSES.has(result.rootCauseCategory)) continue;
-    const bucket = grouped.get(result.rootCauseCategory);
+    if (!isInfraRootCause(result.rootCauseCategory)) continue;
+    const category = result.rootCauseCategory;
+    const bucket = grouped.get(category);
     if (bucket) {
       bucket.push(result);
       continue;
     }
-    grouped.set(result.rootCauseCategory, [result]);
+    grouped.set(category, [result]);
   }
 
   const sections: TestResult[] = [];
-  const categoryNames: Record<RootCauseCategory, string> = {
+  const categoryNames: Record<InfraRootCause, string> = {
     ENVIRONMENT: "Environment Configuration",
     RPC: "RPC Connectivity",
     RELAYER: "Relayer Reachability",
     REGISTRY: "Registry / Token Discovery",
-    ADAPTER: "Adapter",
-    SIGNER: "Signer",
-    HARNESS: "Harness",
   };
 
   for (const [category, impacted] of grouped.entries()) {
@@ -303,23 +311,36 @@ function exportJsonReport(payload: {
   results: TestResult[];
   environmentSummary: TestResult[];
   verdict: string;
-  blockers: Partial<Record<RootCauseCategory, number>>;
+  blockers: Partial<Record<InfraRootCause, number>>;
 }): void {
   const outputPath = (process.env.REPORT_JSON_PATH ?? "").trim();
   if (!outputPath) return;
+  const allResults = [...payload.results, ...payload.environmentSummary];
+  const artifact: ReportArtifact = {
+    kind: REPORT_KIND,
+    schemaVersion: REPORT_SCHEMA_VERSION,
+    generatedAt: new Date().toISOString(),
+    runId: RUN_ID,
+    adapterProfile: payload.profile,
+    checks: {
+      recorded: payload.results,
+      environmentSummary: payload.environmentSummary,
+      all: allResults,
+    },
+    sections: {
+      adapter: allResults.filter((r) => r.section === "adapter"),
+      ethereum: allResults.filter((r) => r.section === "ethereum"),
+      execution: allResults.filter((r) => r.section === "execution"),
+      zama: allResults.filter((r) => r.section === "zama"),
+      environment: allResults.filter((r) => r.section === "environment"),
+    },
+    infrastructure: {
+      blockers: payload.blockers,
+    },
+    finalVerdict: payload.verdict,
+  };
   mkdirSync(dirname(outputPath), { recursive: true });
-  writeFileSync(
-    outputPath,
-    JSON.stringify(
-      {
-        generatedAt: new Date().toISOString(),
-        runId: RUN_ID,
-        ...payload,
-      },
-      null,
-      2,
-    ),
-  );
+  writeFileSync(outputPath, JSON.stringify(artifact, null, 2));
 }
 
 /** Print the final compatibility report to stdout. */
