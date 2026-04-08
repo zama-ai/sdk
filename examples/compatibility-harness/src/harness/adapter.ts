@@ -38,10 +38,9 @@ export function buildGenericSigner(): GenericSigner {
       if (!adapter.signTypedData) {
         throw new Error("Adapter does not support EIP-712 signing");
       }
-      const { EIP712Domain: _domain, ...sigTypes } = typedData.types;
       const signature = await adapter.signTypedData({
         domain: typedData.domain,
-        types: sigTypes,
+        types: typedData.types,
         primaryType: typedData.primaryType,
         message: typedData.message,
       });

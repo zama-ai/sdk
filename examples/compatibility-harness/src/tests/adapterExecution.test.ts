@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { isOperatorContract } from "@zama-fhe/sdk";
 import {
   adapter,
+  buildGenericSigner,
   buildSdk,
   discoverTokenAddress,
   getAdapterAddress,
@@ -23,32 +24,15 @@ beforeAll(async () => {
 describe("Adapter-Routed Execution Surface", () => {
   it("reads a Zama contract via the adapter or harness RPC fallback", async () => {
     if (initError) {
+      const diagnostic = classifyInfrastructureIssue(initError);
       record({
         name: "Adapter Contract Read",
         section: "execution",
-        status: "BLOCKED",
+        status: diagnostic.status,
         summary: "Adapter initialization failed before contract read validation",
         reason: initError,
-        rootCauseCategory: "ENVIRONMENT",
+        rootCauseCategory: diagnostic.rootCauseCategory,
         recommendation: "Resolve adapter initialization issues first.",
-      });
-      return;
-    }
-
-    if (!adapter.readContract) {
-      mergeProfile({
-        capabilities: {
-          contractReads: "UNSUPPORTED",
-        },
-      });
-      record({
-        name: "Adapter Contract Read",
-        section: "execution",
-        status: "UNSUPPORTED",
-        summary: "Adapter does not expose contract reads",
-        reason: "readContract is not implemented by the adapter",
-        rootCauseCategory: "ADAPTER",
-        recommendation: "This is acceptable if the harness can rely on public RPC reads instead.",
       });
       return;
     }
@@ -57,7 +41,10 @@ describe("Adapter-Routed Execution Surface", () => {
     try {
       const tokenAddress = await discoverTokenAddress(sdk);
       const holder = await getAdapterAddress();
-      const result = await adapter.readContract(isOperatorContract(tokenAddress, holder, holder));
+      const readRequest = isOperatorContract(tokenAddress, holder, holder);
+      const result = adapter.readContract
+        ? await adapter.readContract(readRequest)
+        : await buildGenericSigner().readContract(readRequest as never);
       if (typeof result !== "boolean") {
         throw new Error("Contract read did not return a boolean value");
       }
@@ -80,14 +67,16 @@ describe("Adapter-Routed Execution Surface", () => {
     sdk.terminate();
     mergeProfile({
       capabilities: {
-        contractReads: "SUPPORTED",
+        contractReads: adapter.readContract ? "SUPPORTED" : "UNSUPPORTED",
       },
     });
     record({
       name: "Adapter Contract Read",
       section: "execution",
       status: "PASS",
-      summary: "Adapter read a Zama contract successfully",
+      summary: adapter.readContract
+        ? "Adapter read a Zama contract successfully"
+        : "Adapter read path validated through harness RPC fallback",
     });
     expect(true).toBe(true);
   });
