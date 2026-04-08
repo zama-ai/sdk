@@ -63,6 +63,20 @@ Equivalent:
 SIGNER_MODULE=./examples/crossmint/signer.ts npm test
 ```
 
+### Option C: Turnkey example adapter
+
+Set Turnkey credentials in `.env` (`TURNKEY_ORG_ID`, `TURNKEY_PRIVATE_KEY_ID`, `TURNKEY_API_PUBLIC_KEY`, `TURNKEY_API_PRIVATE_KEY`), then run:
+
+```bash
+npm run test:turnkey
+```
+
+Equivalent:
+
+```bash
+SIGNER_MODULE=./examples/turnkey/signer.ts npm test
+```
+
 ## Adapter Model (Primary Interface)
 
 Provide a module exporting `adapter` (preferred). The harness also accepts legacy `signer` exports for backward compatibility.
@@ -186,6 +200,7 @@ Copy `.env.example` to `.env` and fill only what your adapter needs.
 Common variables:
 - `PRIVATE_KEY` (required for built-in EOA adapter)
 - `CROSSMINT_API_KEY` / `CROSSMINT_WALLET_LOCATOR` (Crossmint example)
+- `TURNKEY_ORG_ID` / `TURNKEY_PRIVATE_KEY_ID` / `TURNKEY_API_PUBLIC_KEY` / `TURNKEY_API_PRIVATE_KEY` (Turnkey example)
 - `RPC_URL` (optional; defaults to public Sepolia RPC)
 - `RELAYER_URL` (optional; defaults to Zama testnet relayer)
 - `RELAYER_API_KEY` (optional; needed for private/protected relayers)
@@ -198,11 +213,13 @@ Common variables:
 4. Run `npm test`
 5. Read report by sections and final verdict
 
-## Crossmint Reference
+## Example References
 
 See:
 - [`examples/crossmint/signer.ts`](./examples/crossmint/signer.ts)
 - [`examples/crossmint/COMPATIBILITY.md`](./examples/crossmint/COMPATIBILITY.md)
+- [`examples/turnkey/signer.ts`](./examples/turnkey/signer.ts)
+- [`examples/turnkey/COMPATIBILITY.md`](./examples/turnkey/COMPATIBILITY.md)
 
 ## Legacy Compatibility
 
@@ -214,4 +231,5 @@ Legacy modules exporting `signer` are still supported via automatic wrapping, bu
 npm run typecheck
 npm test
 npm run test:crossmint
+npm run test:turnkey
 ```

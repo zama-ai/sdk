@@ -7,9 +7,13 @@
   "scripts": {
     "test": "vitest run --reporter=verbose",
     "test:crossmint": "SIGNER_MODULE=./examples/crossmint/signer.ts vitest run --reporter=verbose",
+    "test:turnkey": "SIGNER_MODULE=./examples/turnkey/signer.ts vitest run --reporter=verbose",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@turnkey/api-key-stamper": "^0.6.2",
+    "@turnkey/http": "^3.17.0",
+    "@turnkey/viem": "^0.14.25",
     "@zama-fhe/sdk": "2.3.0-alpha.4",
     "dotenv": "^16.4.0",
     "viem": "^2.30.0"
