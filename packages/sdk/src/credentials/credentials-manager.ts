@@ -80,8 +80,10 @@ export class CredentialsManager extends BaseCredentialsManager<
    * sequentially). The returned {@link CredentialSet} routes each address to
    * its batch transparently — callers only need `credSet.credentialFor(address)`.
    *
-   * @throws {@link SigningRejectedError} if the user rejects a wallet signature prompt
-   *   and there are no other batches (single-batch case).
+   * Signing failures (e.g. user rejection) are captured in
+   * {@link CredentialSet.failures} rather than thrown — `allow()` itself
+   * never rejects. Call `credSet.credentialFor(address)` to surface the
+   * error when actually using a credential.
    */
   async allow(...contractAddresses: Address[]): Promise<CredentialSet> {
     const normalized = normalizeAddresses(contractAddresses);

@@ -12,11 +12,13 @@ import {
 import { RelayerNode } from "@zama-fhe/sdk/node";
 
 test("operations after terminate throw", async ({ sdk }) => {
+  const addr = "0x0000000000000000000000000000000000000001" as `0x${string}`;
   sdk.terminate();
 
-  await expect(async () => {
-    await sdk.credentials.allow("0x0000000000000000000000000000000000000001" as `0x${string}`);
-  }).rejects.toThrow();
+  // allow() captures errors per-batch rather than throwing; the error surfaces
+  // on credentialFor() when the caller actually tries to use the credential.
+  const credSet = await sdk.credentials.allow(addr);
+  expect(() => credSet.credentialFor(addr)).toThrow();
 });
 
 test("matchZamaError routes to the correct handler", async () => {
