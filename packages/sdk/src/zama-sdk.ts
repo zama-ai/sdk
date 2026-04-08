@@ -11,6 +11,9 @@ import type { GenericSigner, GenericStorage, SignerLifecycleCallbacks } from "./
 import { toError } from "./utils";
 import { WrappersRegistry } from "./wrappers-registry";
 
+/** Maximum keypairTTL accepted by the fhevm ACL contract (365 days, in seconds). */
+const MAX_KEYPAIR_TTL = 365 * 86400; // 31_536_000 s
+
 /** Configuration for {@link ZamaSDK}. */
 export interface ZamaSDKConfig {
   /** FHE relayer backend (`RelayerWeb` for browser, `RelayerNode` for server). */
@@ -29,6 +32,8 @@ export interface ZamaSDKConfig {
    * How long the ML-KEM re-encryption keypair remains valid, in seconds.
    * Default: `2592000` (30 days). Must be a positive number — `0` is rejected
    * because the keypair is required to establish the relayer connection.
+   * Maximum: `31536000` (365 days) — the fhevm contract rejects `durationDays > 365`.
+   * Values above this maximum are automatically capped with a console warning.
    */
   keypairTTL?: number;
   /**
@@ -105,8 +110,15 @@ export class ZamaSDK {
       sessionStorage: this.sessionStorage,
       keypairTTL: (() => {
         const ttl = config.keypairTTL ?? 2592000;
-        if (ttl <= 0) {
+        if (ttl <= 0 || isNaN(ttl)) {
           throw new Error("keypairTTL must be a positive number (seconds)");
+        }
+        if (ttl > MAX_KEYPAIR_TTL) {
+          // oxlint-disable-next-line no-console
+          console.warn(
+            `[zama-sdk] keypairTTL (${ttl}s) exceeds the fhevm maximum of 365 days (${MAX_KEYPAIR_TTL}s); capping to ${MAX_KEYPAIR_TTL}s.`,
+          );
+          return MAX_KEYPAIR_TTL;
         }
         return ttl;
       })(),
