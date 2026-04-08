@@ -72,6 +72,19 @@ Equivalent:
 SIGNER_MODULE=./examples/turnkey/signer.ts npm test
 ```
 
+Optional preflight and CI gate:
+
+```bash
+npm run doctor:turnkey
+npm run validate:turnkey
+```
+
+Strict gate requiring authorization + write compatibility:
+
+```bash
+VALIDATION_TARGET=AUTHORIZATION_AND_WRITE npm run validate:turnkey
+```
+
 ## Interpretation Guidance
 
 - This example intentionally does not expose `signTransaction`; raw-transaction checks are expected to be `UNSUPPORTED`.

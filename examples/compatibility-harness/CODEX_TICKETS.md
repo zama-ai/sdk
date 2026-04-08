@@ -85,7 +85,7 @@ Commit:
 
 ### T9 — Turnkey Golden Scenario Fixture
 
-Status: `TODO`
+Status: `DONE`
 
 Objective:
 - Add deterministic Turnkey fixture docs and expected report profile for regression checks.
@@ -102,6 +102,9 @@ Codex spec:
 Acceptance:
 - Turnkey docs clearly separate adapter incompatibility from infra blockers.
 - `npm run validate:turnkey` works with standard env vars.
+
+Commit:
+- pending (current working tree)
 
 ### T10 — Openfort Adapter Parity
 

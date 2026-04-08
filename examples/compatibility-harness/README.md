@@ -79,6 +79,13 @@ Equivalent:
 SIGNER_MODULE=./examples/turnkey/signer.ts npm test
 ```
 
+Optional Turnkey-specific commands:
+
+```bash
+npm run doctor:turnkey
+npm run validate:turnkey
+```
+
 ### Option D: Openfort baseline adapter (EOA semantics)
 
 Set `OPENFORT_TEST_PRIVATE_KEY` in `.env`, then run:
