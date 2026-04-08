@@ -147,6 +147,27 @@ Acceptance:
 - Openfort example can be run with one command from README.
 - Documentation is explicit on proof boundaries.
 
+### T13 — Golden Report Regression Fixtures
+
+Status: `DONE`
+
+Objective:
+- Freeze representative report artifacts to catch parser/policy regressions.
+
+Codex spec:
+1. Add parseable golden report fixtures (full compatibility + infra-blocked scenario).
+2. Add unit tests validating:
+   - artifact schema parsing,
+   - claim-to-gate mapping behavior.
+3. Add strict runtime artifact parsing in `validate` CLI.
+
+Acceptance:
+- Golden fixture tests pass.
+- `validate` rejects malformed or schema-incompatible artifacts with explicit errors.
+
+Commit:
+- pending (current working tree)
+
 ### T11 — Report Consumer Guide
 
 Status: `TODO`

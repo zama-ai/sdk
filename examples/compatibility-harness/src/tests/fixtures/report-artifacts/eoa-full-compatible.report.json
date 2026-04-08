@@ -1,0 +1,75 @@
+{
+  "kind": "zama-compatibility-report",
+  "schemaVersion": "1.1.0",
+  "generatedAt": "2026-04-08T00:00:00.000Z",
+  "runId": "golden-eoa-full-compatible",
+  "adapterProfile": {
+    "name": "Golden EOA Adapter",
+    "source": "adapter",
+    "declaredArchitecture": "EOA",
+    "detectedArchitecture": "EOA",
+    "verificationModel": "RECOVERABLE_ECDSA",
+    "address": "0x0000000000000000000000000000000000000001",
+    "declaredCapabilities": {
+      "addressResolution": "SUPPORTED",
+      "eip712Signing": "SUPPORTED",
+      "recoverableEcdsa": "SUPPORTED",
+      "rawTransactionSigning": "SUPPORTED",
+      "contractExecution": "SUPPORTED",
+      "contractReads": "SUPPORTED",
+      "transactionReceiptTracking": "SUPPORTED",
+      "zamaAuthorizationFlow": "SUPPORTED",
+      "zamaWriteFlow": "SUPPORTED"
+    },
+    "observedCapabilities": {
+      "addressResolution": "SUPPORTED",
+      "eip712Signing": "SUPPORTED",
+      "recoverableEcdsa": "SUPPORTED",
+      "rawTransactionSigning": "SUPPORTED",
+      "contractExecution": "SUPPORTED",
+      "contractReads": "SUPPORTED",
+      "transactionReceiptTracking": "SUPPORTED",
+      "zamaAuthorizationFlow": "SUPPORTED",
+      "zamaWriteFlow": "SUPPORTED"
+    },
+    "contradictions": [],
+    "initializationStatus": "PASS"
+  },
+  "checks": {
+    "recorded": [
+      { "name": "Zama Authorization Flow", "section": "zama", "status": "PASS" },
+      { "name": "Zama Write Flow", "section": "zama", "status": "PASS" },
+      { "name": "EIP-712 Recoverability", "section": "ethereum", "status": "PASS" }
+    ],
+    "environmentSummary": [],
+    "all": [
+      { "name": "Zama Authorization Flow", "section": "zama", "status": "PASS" },
+      { "name": "Zama Write Flow", "section": "zama", "status": "PASS" },
+      { "name": "EIP-712 Recoverability", "section": "ethereum", "status": "PASS" }
+    ]
+  },
+  "sections": {
+    "adapter": [],
+    "ethereum": [{ "name": "EIP-712 Recoverability", "section": "ethereum", "status": "PASS" }],
+    "execution": [],
+    "zama": [
+      { "name": "Zama Authorization Flow", "section": "zama", "status": "PASS" },
+      { "name": "Zama Write Flow", "section": "zama", "status": "PASS" }
+    ],
+    "environment": []
+  },
+  "infrastructure": {
+    "blockers": {}
+  },
+  "claim": {
+    "id": "ZAMA_AUTHORIZATION_AND_WRITE_COMPATIBLE",
+    "verdictLabel": "ZAMA COMPATIBLE FOR AUTHORIZATION AND WRITE FLOWS",
+    "rationale": ["Authorization, recoverability, and write-path probe all passed."],
+    "evidence": {
+      "Zama Authorization Flow": "PASS",
+      "EIP-712 Recoverability": "PASS",
+      "Zama Write Flow": "PASS"
+    }
+  },
+  "finalVerdict": "ZAMA COMPATIBLE FOR AUTHORIZATION AND WRITE FLOWS"
+}

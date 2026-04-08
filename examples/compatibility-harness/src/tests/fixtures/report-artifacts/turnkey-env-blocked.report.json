@@ -1,0 +1,110 @@
+{
+  "kind": "zama-compatibility-report",
+  "schemaVersion": "1.1.0",
+  "generatedAt": "2026-04-08T00:00:00.000Z",
+  "runId": "golden-turnkey-env-blocked",
+  "adapterProfile": {
+    "name": "Turnkey API Key Adapter",
+    "source": "adapter",
+    "declaredArchitecture": "API_ROUTED_EXECUTION",
+    "detectedArchitecture": "API_ROUTED_EXECUTION",
+    "verificationModel": "UNKNOWN",
+    "address": "(unresolved)",
+    "declaredCapabilities": {
+      "addressResolution": "SUPPORTED",
+      "eip712Signing": "SUPPORTED",
+      "recoverableEcdsa": "UNKNOWN",
+      "rawTransactionSigning": "UNSUPPORTED",
+      "contractExecution": "SUPPORTED",
+      "contractReads": "SUPPORTED",
+      "transactionReceiptTracking": "SUPPORTED",
+      "zamaAuthorizationFlow": "SUPPORTED",
+      "zamaWriteFlow": "SUPPORTED"
+    },
+    "observedCapabilities": {
+      "addressResolution": "SUPPORTED",
+      "eip712Signing": "SUPPORTED",
+      "recoverableEcdsa": "UNKNOWN",
+      "rawTransactionSigning": "UNSUPPORTED",
+      "contractExecution": "SUPPORTED",
+      "contractReads": "SUPPORTED",
+      "transactionReceiptTracking": "SUPPORTED",
+      "zamaAuthorizationFlow": "SUPPORTED",
+      "zamaWriteFlow": "SUPPORTED"
+    },
+    "contradictions": [],
+    "initializationStatus": "BLOCKED"
+  },
+  "checks": {
+    "recorded": [
+      {
+        "name": "Zama Authorization Flow",
+        "section": "zama",
+        "status": "BLOCKED",
+        "rootCauseCategory": "ENVIRONMENT",
+        "errorCode": "ENV_MISSING_CONFIG"
+      }
+    ],
+    "environmentSummary": [
+      {
+        "name": "Environment Configuration",
+        "section": "environment",
+        "status": "BLOCKED",
+        "rootCauseCategory": "ENVIRONMENT"
+      }
+    ],
+    "all": [
+      {
+        "name": "Zama Authorization Flow",
+        "section": "zama",
+        "status": "BLOCKED",
+        "rootCauseCategory": "ENVIRONMENT",
+        "errorCode": "ENV_MISSING_CONFIG"
+      },
+      {
+        "name": "Environment Configuration",
+        "section": "environment",
+        "status": "BLOCKED",
+        "rootCauseCategory": "ENVIRONMENT"
+      }
+    ]
+  },
+  "sections": {
+    "adapter": [],
+    "ethereum": [],
+    "execution": [],
+    "zama": [
+      {
+        "name": "Zama Authorization Flow",
+        "section": "zama",
+        "status": "BLOCKED",
+        "rootCauseCategory": "ENVIRONMENT",
+        "errorCode": "ENV_MISSING_CONFIG"
+      }
+    ],
+    "environment": [
+      {
+        "name": "Environment Configuration",
+        "section": "environment",
+        "status": "BLOCKED",
+        "rootCauseCategory": "ENVIRONMENT"
+      }
+    ]
+  },
+  "infrastructure": {
+    "blockers": {
+      "ENVIRONMENT": 1
+    }
+  },
+  "claim": {
+    "id": "INCONCLUSIVE_AUTHORIZATION_BLOCKED",
+    "verdictLabel": "INCONCLUSIVE — AUTHORIZATION FLOW BLOCKED BY ENVIRONMENT OR INFRASTRUCTURE",
+    "rationale": [
+      "Authorization validation was blocked by environment or infrastructure conditions."
+    ],
+    "evidence": {
+      "Zama Authorization Flow": "BLOCKED"
+    }
+  },
+  "finalVerdict": "INCONCLUSIVE — AUTHORIZATION FLOW BLOCKED BY ENVIRONMENT OR INFRASTRUCTURE"
+}

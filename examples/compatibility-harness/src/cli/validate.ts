@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import type { ReportArtifact } from "../report/schema.js";
+import { parseReportArtifact } from "../report/parse.js";
 import {
   parseValidationTarget,
   resolveValidationGate,
@@ -45,14 +46,7 @@ function readArtifact(path: string): ReportArtifact {
     throw new Error(`Report artifact not found at ${path}.`);
   }
   const raw = readFileSync(path, "utf-8");
-  const artifact = JSON.parse(raw) as ReportArtifact;
-  if (artifact.kind !== "zama-compatibility-report") {
-    throw new Error(`Unexpected report kind "${artifact.kind}".`);
-  }
-  if (!artifact.claim?.id) {
-    throw new Error("Report does not include claim.id.");
-  }
-  return artifact;
+  return parseReportArtifact(raw);
 }
 
 function printValidationSummary(input: {

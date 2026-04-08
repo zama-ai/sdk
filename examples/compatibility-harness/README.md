@@ -161,6 +161,8 @@ Validation gate exit codes:
 - `98`: test runner execution failure,
 - `99`: unexpected CLI runtime failure.
 
+`validate` enforces report artifact contract (`kind` + `schemaVersion` + required claim fields) before applying gate policy.
+
 ## Adapter Model (Primary Interface)
 
 Provide a module exporting `adapter` (preferred). The harness also accepts legacy `signer` exports for backward compatibility.
