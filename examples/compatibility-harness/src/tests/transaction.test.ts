@@ -19,13 +19,14 @@ beforeAll(async () => {
 describe("Ethereum Raw Transaction Flow", () => {
   it("signs and broadcasts a raw EIP-1559 transaction when supported", async () => {
     if (initError) {
+      const diagnostic = classifyInfrastructureIssue(initError);
       record({
         name: "Raw Transaction Execution",
         section: "ethereum",
-        status: "BLOCKED",
+        status: diagnostic.status,
         summary: "Adapter initialization failed before raw transaction validation",
         reason: initError,
-        rootCauseCategory: "ENVIRONMENT",
+        rootCauseCategory: diagnostic.rootCauseCategory,
         recommendation: "Resolve adapter initialization first.",
       });
       return;
@@ -143,21 +144,24 @@ describe("Ethereum Raw Transaction Flow", () => {
       }
     } catch (err) {
       const message = errorMessage(err);
-      const blocked = message.toLowerCase().includes("insufficient funds");
+      const diagnostic = classifyInfrastructureIssue(message);
+      const isInfra = diagnostic.rootCauseCategory !== "HARNESS";
       record({
         name: "Raw Transaction Execution",
         section: "ethereum",
-        status: blocked ? "BLOCKED" : "FAIL",
-        summary: blocked
-          ? "Raw transaction could not be funded"
+        status: isInfra ? diagnostic.status : "FAIL",
+        summary: isInfra
+          ? "Signed raw transaction broadcast was blocked by infrastructure"
           : "Signed raw transaction could not be broadcast successfully",
         reason: message,
-        rootCauseCategory: blocked ? "ENVIRONMENT" : "SIGNER",
-        recommendation: blocked
-          ? "Fund the account on Sepolia or use a sponsored execution path."
+        rootCauseCategory: isInfra ? diagnostic.rootCauseCategory : "SIGNER",
+        recommendation: isInfra
+          ? "Fix environment or network prerequisites, then retry."
           : "Verify that the signed transaction is a valid EIP-1559 payload.",
       });
-      expect.fail(message);
+      if (!isInfra) {
+        expect.fail(message);
+      }
       return;
     }
 

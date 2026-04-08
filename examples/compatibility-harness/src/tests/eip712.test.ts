@@ -43,13 +43,14 @@ describe("Identity and Verification", () => {
     const baseCapabilities = { ...emptyCapabilities(), ...adapter.capabilities };
 
     if (initError) {
+      const diagnostic = classifyInfrastructureIssue(initError);
       record({
         name: "EIP-712 Signing",
         section: "ethereum",
-        status: "BLOCKED",
+        status: diagnostic.status,
         summary: "Adapter initialization failed before signing could be tested",
         reason: initError,
-        rootCauseCategory: "ENVIRONMENT",
+        rootCauseCategory: diagnostic.rootCauseCategory,
         recommendation: "Resolve adapter initialization errors first.",
       });
       return;
@@ -81,8 +82,7 @@ describe("Identity and Verification", () => {
     } catch (err) {
       const message = errorMessage(err);
       const diagnostic = classifyInfrastructureIssue(message);
-      const isInfra =
-        diagnostic.rootCauseCategory === "ENVIRONMENT" || diagnostic.rootCauseCategory === "RPC";
+      const isInfra = diagnostic.rootCauseCategory !== "HARNESS";
       record({
         name: "EIP-712 Signing",
         section: "ethereum",

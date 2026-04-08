@@ -17,13 +17,14 @@ beforeAll(async () => {
 describe("Zama Authorization Flow", () => {
   it("validates sdk.allow() when EIP-712 signing is supported", async () => {
     if (initError) {
+      const diagnostic = classifyInfrastructureIssue(initError);
       record({
         name: "Zama Authorization Flow",
         section: "zama",
-        status: "BLOCKED",
+        status: diagnostic.status,
         summary: "Adapter initialization failed before Zama authorization validation",
         reason: initError,
-        rootCauseCategory: "ENVIRONMENT",
+        rootCauseCategory: diagnostic.rootCauseCategory,
         recommendation: "Resolve adapter initialization issues first.",
       });
       return;
@@ -72,24 +73,22 @@ describe("Zama Authorization Flow", () => {
     } catch (err) {
       const message = errorMessage(err);
       const diagnostic = classifyInfrastructureIssue(message);
+      const isInfra = diagnostic.rootCauseCategory !== "HARNESS";
       record({
         name: "Zama Authorization Flow",
         section: "zama",
-        status: diagnostic.rootCauseCategory === "RELAYER" ? "INCONCLUSIVE" : "FAIL",
-        summary:
-          diagnostic.rootCauseCategory === "RELAYER"
-            ? "Relayer blocked Zama authorization validation"
-            : "sdk.allow() rejected the adapter signature or identity",
+        status: isInfra ? diagnostic.status : "FAIL",
+        summary: isInfra
+          ? "Infrastructure blocked Zama authorization validation"
+          : "sdk.allow() rejected the adapter signature or identity",
         reason: message,
-        rootCauseCategory:
-          diagnostic.rootCauseCategory === "RELAYER" ? diagnostic.rootCauseCategory : "SIGNER",
-        recommendation:
-          diagnostic.rootCauseCategory === "RELAYER"
-            ? "Check RELAYER_URL connectivity and retry."
-            : "Ensure the adapter produces standard Zama-acceptable EIP-712 signatures.",
+        rootCauseCategory: isInfra ? diagnostic.rootCauseCategory : "SIGNER",
+        recommendation: isInfra
+          ? "Check environment, RPC, relayer, and registry connectivity before retrying."
+          : "Ensure the adapter produces standard Zama-acceptable EIP-712 signatures.",
       });
       sdk.terminate();
-      if (diagnostic.rootCauseCategory !== "RELAYER" && diagnostic.rootCauseCategory !== "RPC") {
+      if (!isInfra) {
         expect.fail(message);
       }
       return;

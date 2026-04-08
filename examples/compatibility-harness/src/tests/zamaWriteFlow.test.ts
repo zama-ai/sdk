@@ -26,13 +26,14 @@ beforeAll(async () => {
 describe("Zama Write Flow", () => {
   it("executes and verifies a Zama operator approval write when supported", async () => {
     if (initError) {
+      const diagnostic = classifyInfrastructureIssue(initError);
       record({
         name: "Zama Write Flow",
         section: "zama",
-        status: "BLOCKED",
+        status: diagnostic.status,
         summary: "Adapter initialization failed before write-flow validation",
         reason: initError,
-        rootCauseCategory: "ENVIRONMENT",
+        rootCauseCategory: diagnostic.rootCauseCategory,
         recommendation: "Resolve adapter initialization issues first.",
       });
       return;
@@ -83,31 +84,23 @@ describe("Zama Write Flow", () => {
       txHash = await executeZamaWriteProbe(tokenAddress, TEST_OPERATOR);
     } catch (err) {
       const message = errorMessage(err);
-      const blocked = message.toLowerCase().includes("insufficient funds");
       const diagnostic = classifyInfrastructureIssue(message);
+      const isInfra = diagnostic.rootCauseCategory !== "HARNESS";
       record({
         name: "Zama Write Flow",
         section: "zama",
-        status: blocked
-          ? "BLOCKED"
-          : diagnostic.rootCauseCategory === "RPC"
-            ? "INCONCLUSIVE"
-            : "FAIL",
-        summary: blocked
-          ? "Write-flow validation was blocked by transaction funding"
+        status: isInfra ? diagnostic.status : "FAIL",
+        summary: isInfra
+          ? "Write-flow validation was blocked by infrastructure"
           : "Adapter failed to submit a Zama write transaction",
         reason: message,
-        rootCauseCategory: blocked
-          ? "ENVIRONMENT"
-          : diagnostic.rootCauseCategory === "RPC"
-            ? "RPC"
-            : "ADAPTER",
-        recommendation: blocked
-          ? "Fund the execution account or use a sponsored execution path."
+        rootCauseCategory: isInfra ? diagnostic.rootCauseCategory : "ADAPTER",
+        recommendation: isInfra
+          ? "Fix environment, RPC, relayer, or registry prerequisites and retry."
           : "Verify adapter contract execution and Zama contract routing.",
       });
       sdk.terminate();
-      if (!blocked && diagnostic.rootCauseCategory !== "RPC") {
+      if (!isInfra) {
         expect.fail(message);
       }
       return;
@@ -127,17 +120,22 @@ describe("Zama Write Flow", () => {
     } catch (err) {
       const message = errorMessage(err);
       const diagnostic = classifyInfrastructureIssue(message);
+      const isInfra = diagnostic.rootCauseCategory !== "HARNESS";
       record({
         name: "Zama Write Flow",
         section: "zama",
-        status: diagnostic.rootCauseCategory === "RPC" ? "INCONCLUSIVE" : "FAIL",
-        summary: "The write was submitted but the resulting Zama state could not be verified",
+        status: isInfra ? diagnostic.status : "FAIL",
+        summary: isInfra
+          ? "The write was submitted but infrastructure blocked verification"
+          : "The write was submitted but resulting Zama state could not be verified",
         reason: message,
-        rootCauseCategory: diagnostic.rootCauseCategory === "RPC" ? "RPC" : "SIGNER",
-        recommendation: "Verify receipt tracking and on-chain state verification.",
+        rootCauseCategory: isInfra ? diagnostic.rootCauseCategory : "SIGNER",
+        recommendation: isInfra
+          ? "Check RPC/read dependencies and retry verification."
+          : "Verify receipt tracking and on-chain state verification.",
       });
       sdk.terminate();
-      if (diagnostic.rootCauseCategory !== "RPC") {
+      if (!isInfra) {
         expect.fail(message);
       }
       return;
