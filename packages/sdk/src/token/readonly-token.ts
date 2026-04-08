@@ -1,4 +1,3 @@
-import type { ClearValueType } from "@zama-fhe/relayer-sdk/bundle";
 import { type Address, getAddress } from "viem";
 import { DecryptCache } from "../decrypt-cache";
 import {
@@ -30,7 +29,7 @@ import {
 import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
-import type { Handle } from "../relayer/relayer-sdk.types";
+import type { ClearValueType, Handle } from "../relayer/relayer-sdk.types";
 import type { GenericSigner, GenericStorage } from "../types";
 import { toError } from "../utils";
 import { assertBigint } from "../utils/assertions";
