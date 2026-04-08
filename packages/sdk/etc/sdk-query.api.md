@@ -1413,32 +1413,32 @@ export interface WrappersRegistryQueryConfig {
 // @public
 export const zamaQueryKeys: {
     readonly signerAddress: {
-        readonly all: readonly ["zama.signerAddress"];
         readonly scope: (scope: number) => readonly ["zama.signerAddress", {
             readonly scope: number;
         }];
+        readonly all: readonly ["zama.signerAddress"];
         readonly token: (tokenAddress: Address) => readonly ["zama.signerAddress", {
             readonly tokenAddress: `0x${string}`;
         }];
     };
     readonly confidentialHandle: {
-        readonly all: readonly ["zama.confidentialHandle"];
-        readonly token: (tokenAddress: Address) => readonly ["zama.confidentialHandle", {
-            readonly tokenAddress: `0x${string}`;
-        }];
         readonly owner: (tokenAddress: Address, owner?: Address) => readonly ["zama.confidentialHandle", {
             readonly owner?: `0x${string}` | undefined;
             readonly tokenAddress: `0x${string}`;
         }];
-    };
-    readonly confidentialBalance: {
-        readonly all: readonly ["zama.confidentialBalance"];
-        readonly token: (tokenAddress: Address) => readonly ["zama.confidentialBalance", {
+        readonly all: readonly ["zama.confidentialHandle"];
+        readonly token: (tokenAddress: Address) => readonly ["zama.confidentialHandle", {
             readonly tokenAddress: `0x${string}`;
         }];
+    };
+    readonly confidentialBalance: {
         readonly owner: (tokenAddress: Address, owner?: Address, handle?: Handle) => readonly ["zama.confidentialBalance", {
             readonly handle?: `0x${string}` | undefined;
             readonly owner?: `0x${string}` | undefined;
+            readonly tokenAddress: `0x${string}`;
+        }];
+        readonly all: readonly ["zama.confidentialBalance"];
+        readonly token: (tokenAddress: Address) => readonly ["zama.confidentialBalance", {
             readonly tokenAddress: `0x${string}`;
         }];
     };
@@ -1458,20 +1458,26 @@ export const zamaQueryKeys: {
         }];
     };
     readonly tokenMetadata: {
-        readonly all: readonly ["zama.tokenMetadata"];
-        readonly token: (tokenAddress: Address) => readonly ["zama.tokenMetadata", {
+        all: readonly ["zama.tokenMetadata"];
+        token: (tokenAddress: Address) => readonly ["zama.tokenMetadata", {
             readonly tokenAddress: `0x${string}`;
         }];
     };
     readonly isConfidential: {
-        readonly all: readonly ["zama.isConfidential"];
-        readonly token: (tokenAddress: Address) => readonly ["zama.isConfidential", {
+        all: readonly ["zama.isConfidential"];
+        token: (tokenAddress: Address) => readonly ["zama.isConfidential", {
             readonly tokenAddress: `0x${string}`;
         }];
     };
     readonly isWrapper: {
-        readonly all: readonly ["zama.isWrapper"];
-        readonly token: (tokenAddress: Address) => readonly ["zama.isWrapper", {
+        all: readonly ["zama.isWrapper"];
+        token: (tokenAddress: Address) => readonly ["zama.isWrapper", {
+            readonly tokenAddress: `0x${string}`;
+        }];
+    };
+    readonly totalSupply: {
+        all: readonly ["zama.totalSupply"];
+        token: (tokenAddress: Address) => readonly ["zama.totalSupply", {
             readonly tokenAddress: `0x${string}`;
         }];
     };
@@ -1484,13 +1490,13 @@ export const zamaQueryKeys: {
         }];
     };
     readonly underlyingAllowance: {
-        readonly all: readonly ["zama.underlyingAllowance"];
-        readonly token: (tokenAddress: Address) => readonly ["zama.underlyingAllowance", {
-            readonly tokenAddress: `0x${string}`;
-        }];
         readonly scope: (tokenAddress: Address, owner?: Address, wrapperAddress?: Address) => readonly ["zama.underlyingAllowance", {
             readonly wrapperAddress?: `0x${string}` | undefined;
             readonly owner?: `0x${string}` | undefined;
+            readonly tokenAddress: `0x${string}`;
+        }];
+        readonly all: readonly ["zama.underlyingAllowance"];
+        readonly token: (tokenAddress: Address) => readonly ["zama.underlyingAllowance", {
             readonly tokenAddress: `0x${string}`;
         }];
     };
@@ -1507,21 +1513,15 @@ export const zamaQueryKeys: {
             readonly tokenAddress?: `0x${string}` | undefined;
         }];
     };
-    readonly totalSupply: {
-        readonly all: readonly ["zama.totalSupply"];
-        readonly token: (tokenAddress: Address) => readonly ["zama.totalSupply", {
-            readonly tokenAddress: `0x${string}`;
-        }];
-    };
     readonly activityFeed: {
-        readonly all: readonly ["zama.activityFeed"];
-        readonly token: (tokenAddress: Address) => readonly ["zama.activityFeed", {
-            readonly tokenAddress: `0x${string}`;
-        }];
         readonly scope: (tokenAddress: Address, userAddress?: Address, logsKey?: string, decrypt?: boolean) => readonly ["zama.activityFeed", {
             readonly decrypt?: boolean | undefined;
             readonly logsKey?: string | undefined;
             readonly userAddress?: `0x${string}` | undefined;
+            readonly tokenAddress: `0x${string}`;
+        }];
+        readonly all: readonly ["zama.activityFeed"];
+        readonly token: (tokenAddress: Address) => readonly ["zama.activityFeed", {
             readonly tokenAddress: `0x${string}`;
         }];
     };
