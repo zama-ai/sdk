@@ -6,6 +6,7 @@ import {
   type CredentialsConfig,
   type SigningMeta,
 } from "./credentials-manager-base";
+import type { CredentialSet } from "./credential-set";
 import {
   type BaseEncryptedCredentials,
   assertDelegatedFields,
@@ -62,21 +63,33 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
   /**
    * Authorize FHE delegated credentials for one or more contract addresses.
    *
-   * @throws {@link SigningRejectedError} if the user rejects the wallet signature prompt.
-   * @throws {@link SigningFailedError} if the signing operation fails for any other reason.
+   * Addresses are split into batches of ≤ 10 internally (same fhevm limit as
+   * regular credentials). Each batch triggers its own EIP-712 wallet prompt,
+   * shown sequentially. Use {@link CredentialSet.credentialFor} to route each
+   * address to its batch.
+   *
+   * @throws {@link SigningRejectedError} if the user rejects a wallet signature prompt
+   *   and there are no other batches.
    */
   async allow(
     delegatorAddress: Address,
     ...contractAddresses: Address[]
-  ): Promise<DelegatedStoredCredentials> {
+  ): Promise<CredentialSet<DelegatedStoredCredentials>> {
     const normalizedDelegator = getAddress(delegatorAddress);
     const normalized = normalizeAddresses(contractAddresses);
     const key = await this.#storeKey(normalizedDelegator);
-    return this.resolveCredentials({
+
+    let sharedKeypair: { publicKey: Hex; privateKey: Hex } | null = null;
+
+    return this.resolveMulti({
       key,
       contracts: normalized,
-      createKey: `${normalizedDelegator}:${normalized.join(",")}`,
-      createFn: () => this.#create(normalizedDelegator, normalized),
+      createFn: async (batchAddresses: Address[], batchKey: string) => {
+        if (!sharedKeypair) {
+          sharedKeypair = await this.#relayer.generateKeypair();
+        }
+        return this.#createBatch(normalizedDelegator, batchAddresses, sharedKeypair, batchKey);
+      },
     });
   }
 
@@ -105,16 +118,17 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
 
   // ── Credential creation ───────────────────────────────────────
 
-  async #create(
+  async #createBatch(
     delegatorAddress: Address,
     contractAddresses: Address[],
+    keypair: { publicKey: Hex; privateKey: Hex },
+    overrideKey?: string,
   ): Promise<DelegatedStoredCredentials> {
-    const key = await this.#storeKey(delegatorAddress);
+    const key = overrideKey ?? (await this.#storeKey(delegatorAddress));
     return this.createCredentials({
       key,
       contractAddresses,
       createFn: async () => {
-        const keypair = await this.#relayer.generateKeypair();
         const delegateAddress = await this.signer.getAddress();
         const startTimestamp = Math.floor(Date.now() / 1000);
         const durationDays = Math.ceil(this.keypairTTL / 86400);

@@ -73,6 +73,7 @@ export {
   type CredentialsManagerConfig,
   DelegatedCredentialsManager,
   type DelegatedCredentialsManagerConfig,
+  type CredentialSet,
 } from "./credentials";
 export type {
   GenericSigner,

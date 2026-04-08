@@ -23,7 +23,8 @@ describe("CredentialsManager", () => {
   it("generates new credentials on first call", async ({ relayer, signer, credentialManager }) => {
     setupMocks(relayer, signer);
 
-    const creds = await credentialManager.allow(TOKEN_A);
+    const credSet = await credentialManager.allow(TOKEN_A);
+    const creds = credSet.credentialFor(TOKEN_A);
 
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
     expect(relayer.createEIP712).toHaveBeenCalledOnce();
@@ -54,7 +55,8 @@ describe("CredentialsManager", () => {
     setupMocks(relayer, signer);
 
     await credentialManager.allow(TOKEN_A);
-    const creds = await credentialManager.allow(TOKEN_A, TOKEN_B);
+    const credSet = await credentialManager.allow(TOKEN_A, TOKEN_B);
+    const creds = credSet.credentialFor(TOKEN_A);
 
     // Keypair is reused — only one generation
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
@@ -167,7 +169,8 @@ describe("CredentialsManager", () => {
       sessionStorage: createMockStorage(),
       keypairTTL: 86400,
     });
-    const creds2 = await manager2.allow(TOKEN_A);
+    const credSet2 = await manager2.allow(TOKEN_A);
+    const creds2 = credSet2.credentialFor(TOKEN_A);
 
     // Should have re-signed (1 original + 1 re-sign)
     expect(signer.signTypedData).toHaveBeenCalledTimes(2);
@@ -204,10 +207,10 @@ describe("CredentialsManager", () => {
       sessionStorage: createMockStorage(),
       keypairTTL: 604800,
     });
-    const creds = await manager2.allow(TOKEN_A);
+    const credSet = await manager2.allow(TOKEN_A);
 
     expect(relayer.generateKeypair).toHaveBeenCalledTimes(2);
-    expect(creds.publicKey).toBe("0xpub123");
+    expect(credSet.credentialFor(TOKEN_A).publicKey).toBe("0xpub123");
   }, 30000);
 
   it("clears credentials", async ({ relayer, signer, storage, credentialManager }) => {
@@ -221,7 +224,7 @@ describe("CredentialsManager", () => {
     expect(stored).toBeNull();
   });
 
-  it("throws SigningRejected when user rejects signature (rejected)", async ({
+  it("credentialFor() throws SigningRejected when user rejects signature (rejected)", async ({
     relayer,
     signer,
     credentialManager,
@@ -229,20 +232,17 @@ describe("CredentialsManager", () => {
     setupMocks(relayer, signer);
     vi.mocked(signer.signTypedData).mockRejectedValue(new Error("User rejected the request"));
 
-    await expect(credentialManager.allow(TOKEN_A)).rejects.toThrow(
+    const credSet = await credentialManager.allow(TOKEN_A);
+    expect(() => credSet.credentialFor(TOKEN_A)).toThrow(
       expect.objectContaining({
         code: ZamaErrorCode.SigningRejected,
       }),
     );
-
-    try {
-      await credentialManager.allow(TOKEN_A);
-    } catch (error) {
-      expect(error).toBeInstanceOf(ZamaError);
-    }
+    expect(credSet.failures.size).toBe(1);
+    expect(credSet.failures.get(TOKEN_A)).toBeInstanceOf(ZamaError);
   });
 
-  it("throws SigningRejected when user denies signature (denied)", async ({
+  it("credentialFor() throws SigningRejected when user denies signature (denied)", async ({
     relayer,
     signer,
     credentialManager,
@@ -250,20 +250,16 @@ describe("CredentialsManager", () => {
     setupMocks(relayer, signer);
     vi.mocked(signer.signTypedData).mockRejectedValue(new Error("User denied transaction"));
 
-    await expect(credentialManager.allow(TOKEN_A)).rejects.toThrow(
+    const credSet = await credentialManager.allow(TOKEN_A);
+    expect(() => credSet.credentialFor(TOKEN_A)).toThrow(
       expect.objectContaining({
         code: ZamaErrorCode.SigningRejected,
       }),
     );
-
-    try {
-      await credentialManager.allow(TOKEN_A);
-    } catch (error) {
-      expect(error).toBeInstanceOf(ZamaError);
-    }
+    expect(credSet.failures.get(TOKEN_A)).toBeInstanceOf(ZamaError);
   });
 
-  it("throws SigningFailed for other signing errors", async ({
+  it("credentialFor() throws SigningFailed for other signing errors", async ({
     relayer,
     signer,
     credentialManager,
@@ -271,20 +267,16 @@ describe("CredentialsManager", () => {
     setupMocks(relayer, signer);
     vi.mocked(signer.signTypedData).mockRejectedValue(new Error("network timeout"));
 
-    await expect(credentialManager.allow(TOKEN_A)).rejects.toThrow(
+    const credSet = await credentialManager.allow(TOKEN_A);
+    expect(() => credSet.credentialFor(TOKEN_A)).toThrow(
       expect.objectContaining({
         code: ZamaErrorCode.SigningFailed,
       }),
     );
-
-    try {
-      await credentialManager.allow(TOKEN_A);
-    } catch (error) {
-      expect(error).toBeInstanceOf(ZamaError);
-    }
+    expect(credSet.failures.get(TOKEN_A)).toBeInstanceOf(ZamaError);
   });
 
-  it("throws SigningFailed for non-Error exceptions", async ({
+  it("credentialFor() throws SigningFailed for non-Error exceptions", async ({
     relayer,
     signer,
     credentialManager,
@@ -292,20 +284,12 @@ describe("CredentialsManager", () => {
     setupMocks(relayer, signer);
     vi.mocked(signer.signTypedData).mockRejectedValue("unexpected");
 
-    await expect(credentialManager.allow(TOKEN_A)).rejects.toThrow(
-      expect.objectContaining({
-        code: ZamaErrorCode.SigningFailed,
-      }),
-    );
-
-    try {
-      await credentialManager.allow(TOKEN_A);
-    } catch (e) {
-      expect(e).toBeInstanceOf(ZamaError);
-      // Non-Error causes are preserved (not dropped) so downstream debugging
-      // retains the original value.
-      expect((e as ZamaError).cause).toBe("unexpected");
-    }
+    const credSet = await credentialManager.allow(TOKEN_A);
+    const error = credSet.failures.get(TOKEN_A);
+    expect(error).toBeInstanceOf(ZamaError);
+    // Non-Error causes are preserved (not dropped) so downstream debugging
+    // retains the original value.
+    expect((error as ZamaError).cause).toBe("unexpected");
   });
 
   it("regenerates when stored JSON is corrupted", async ({
@@ -320,11 +304,11 @@ describe("CredentialsManager", () => {
     // Write garbage to the store
     await storage.set(storeKey, "not-valid-json{{{{");
 
-    const creds = await credentialManager.allow(TOKEN_A);
+    const credSet = await credentialManager.allow(TOKEN_A);
 
     // Should regenerate fresh credentials
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
-    expect(creds.publicKey).toBe("0xpub123");
+    expect(credSet.credentialFor(TOKEN_A).publicKey).toBe("0xpub123");
 
     // Corrupted data should have been cleaned up
     const stored = await storage.get(storeKey);
@@ -411,8 +395,8 @@ describe("CredentialsManager", () => {
     });
 
     // Should still regenerate and return valid credentials
-    const creds = await credentialManager.allow(TOKEN_A);
-    expect(creds.publicKey).toBe("0xpub123");
+    const credSet = await credentialManager.allow(TOKEN_A);
+    expect(credSet.credentialFor(TOKEN_A).publicKey).toBe("0xpub123");
     expect(storage.delete).toHaveBeenCalledWith(storeKey);
   });
 
@@ -790,8 +774,10 @@ describe("contract address extension", () => {
   }) => {
     setupMocks(relayer, signer);
 
-    const first = await credentialManager.allow(TOKEN_A);
-    const extended = await credentialManager.allow(TOKEN_A, TOKEN_B);
+    const firstSet = await credentialManager.allow(TOKEN_A);
+    const extendedSet = await credentialManager.allow(TOKEN_A, TOKEN_B);
+    const first = firstSet.credentialFor(TOKEN_A);
+    const extended = extendedSet.credentialFor(TOKEN_A);
 
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
     expect(signer.signTypedData).toHaveBeenCalledTimes(2);
@@ -813,7 +799,8 @@ describe("contract address extension", () => {
 
     await credentialManager.allow(TOKEN_A);
     await credentialManager.revoke();
-    const extended = await credentialManager.allow(TOKEN_A, TOKEN_B);
+    const extendedSet = await credentialManager.allow(TOKEN_A, TOKEN_B);
+    const extended = extendedSet.credentialFor(TOKEN_A);
 
     // Keypair reused — only one generation
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
@@ -849,7 +836,8 @@ describe("contract address extension", () => {
       sessionStorage: createMockStorage(),
       keypairTTL: 86400,
     });
-    const extended = await manager2.allow(TOKEN_A, TOKEN_B);
+    const extendedSet = await manager2.allow(TOKEN_A, TOKEN_B);
+    const extended = extendedSet.credentialFor(TOKEN_A);
 
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
     // Original sign + old-address sign for decrypt + merged-address sign for extend
@@ -914,7 +902,8 @@ describe("contract address extension", () => {
 
     await credentialManager.allow(TOKEN_A);
     await credentialManager.allow(TOKEN_A, TOKEN_B);
-    const final = await credentialManager.allow(TOKEN_A, TOKEN_B, TOKEN_C);
+    const finalSet = await credentialManager.allow(TOKEN_A, TOKEN_B, TOKEN_C);
+    const final = finalSet.credentialFor(TOKEN_A);
 
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
     // 3 signatures: initial + extend to B + extend to C
@@ -1008,19 +997,19 @@ describe("contract address extension", () => {
     await credentialManager.allow(TOKEN_A);
 
     // Launch two extensions concurrently with different contracts
-    const [resultB, resultC] = await Promise.all([
+    const [setB, setC] = await Promise.all([
       credentialManager.allow(TOKEN_A, TOKEN_B),
       credentialManager.allow(TOKEN_A, TOKEN_C),
     ]);
 
     // The last result should cover all three contracts (no address dropped)
-    const finalContracts = resultC.contractAddresses.map((a) => getAddress(a));
+    const finalContracts = setC.credentialFor(TOKEN_A).contractAddresses.map((a) => getAddress(a));
     expect(finalContracts).toContain(getAddress(TOKEN_A));
     expect(finalContracts).toContain(getAddress(TOKEN_B));
     expect(finalContracts).toContain(getAddress(TOKEN_C));
 
     // First concurrent result covers at least A and B
-    const firstContracts = resultB.contractAddresses.map((a) => getAddress(a));
+    const firstContracts = setB.credentialFor(TOKEN_A).contractAddresses.map((a) => getAddress(a));
     expect(firstContracts).toContain(getAddress(TOKEN_A));
     expect(firstContracts).toContain(getAddress(TOKEN_B));
   });

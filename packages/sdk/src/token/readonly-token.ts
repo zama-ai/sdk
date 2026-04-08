@@ -273,8 +273,9 @@ export class ReadonlyToken {
       onError,
       maxConcurrency,
       obtainCreds: (uncachedAddresses) => firstToken.credentials.allow(...uncachedAddresses),
-      decrypt: (creds, handle, contractAddress) =>
-        sdk.userDecrypt({
+      decrypt: (credSet, handle, contractAddress) => {
+        const creds = credSet.credentialFor(contractAddress);
+        return sdk.userDecrypt({
           handles: [handle],
           contractAddress,
           signedContractAddresses: creds.contractAddresses,
@@ -284,7 +285,8 @@ export class ReadonlyToken {
           signerAddress,
           startTimestamp: creds.startTimestamp,
           durationDays: creds.durationDays,
-        }),
+        });
+      },
       errorPrefix: "Batch decryption",
     });
   }
@@ -337,8 +339,9 @@ export class ReadonlyToken {
       preFlightCheck: () => firstToken.#assertDelegationActive(delegatorAddress),
       obtainCreds: (uncachedAddresses) =>
         firstToken.delegatedCredentials.allow(delegatorAddress, ...uncachedAddresses),
-      decrypt: (creds, handle, contractAddress) =>
-        firstToken.relayer.delegatedUserDecrypt({
+      decrypt: (credSet, handle, contractAddress) => {
+        const creds = credSet.credentialFor(contractAddress);
+        return firstToken.relayer.delegatedUserDecrypt({
           handles: [handle],
           contractAddress,
           signedContractAddresses: creds.contractAddresses,
@@ -349,7 +352,8 @@ export class ReadonlyToken {
           delegateAddress: creds.delegateAddress,
           startTimestamp: creds.startTimestamp,
           durationDays: creds.durationDays,
-        }),
+        });
+      },
       errorPrefix: "Batch delegated decryption",
     });
   }
@@ -756,7 +760,9 @@ export class ReadonlyToken {
     try {
       this.emit({ type: ZamaSDKEvents.DecryptStart });
 
-      const creds = await this.delegatedCredentials.allow(normalizedDelegator, this.address);
+      const creds = (
+        await this.delegatedCredentials.allow(normalizedDelegator, this.address)
+      ).credentialFor(this.address);
 
       const result = await this.relayer.delegatedUserDecrypt({
         handles: [handle],
@@ -823,7 +829,7 @@ export class ReadonlyToken {
       return cached;
     }
 
-    const creds = await this.credentials.allow(this.address);
+    const creds = (await this.credentials.allow(this.address)).credentialFor(this.address);
 
     const t0 = Date.now();
     try {
@@ -886,7 +892,7 @@ export class ReadonlyToken {
       return results;
     }
 
-    const creds = await this.credentials.allow(this.address);
+    const creds = (await this.credentials.allow(this.address)).credentialFor(this.address);
 
     const t0 = Date.now();
     try {

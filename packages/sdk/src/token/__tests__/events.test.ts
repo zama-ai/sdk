@@ -1178,7 +1178,7 @@ describe("CredentialsManager event emissions", () => {
       keypairTTL: 86400,
     });
 
-    const creds = await manager.allow(TOKEN_A);
-    expect(creds.publicKey).toBe("0xpub");
+    const credSet = await manager.allow(TOKEN_A);
+    expect(credSet.credentialFor(TOKEN_A).publicKey).toBe("0xpub");
   });
 });

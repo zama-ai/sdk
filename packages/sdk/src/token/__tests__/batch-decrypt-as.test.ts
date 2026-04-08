@@ -28,7 +28,14 @@ function mockCredsResult(contractAddresses: Address[]) {
 }
 
 function stubDelegatedCredentials(token: ReadonlyToken, contractAddresses: Address[]) {
-  const allowMock = vi.fn().mockResolvedValue(mockCredsResult(contractAddresses));
+  const creds = mockCredsResult(contractAddresses);
+  const credSet = {
+    credentialFor: () => creds,
+    tryCredentialFor: () => creds,
+    batches: [creds],
+    failures: new Map(),
+  };
+  const allowMock = vi.fn().mockResolvedValue(credSet);
   // Override the lazy getter for testing
   Object.defineProperty(token, "delegatedCredentials", {
     value: { allow: allowMock },

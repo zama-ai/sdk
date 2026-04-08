@@ -7,6 +7,7 @@ import {
   type CredentialsConfig,
   type SigningMeta,
 } from "./credentials-manager-base";
+import type { CredentialSet } from "./credential-set";
 import {
   type BaseEncryptedCredentials,
   assertBaseEncryptedCredentials,
@@ -74,17 +75,30 @@ export class CredentialsManager extends BaseCredentialsManager<
   /**
    * Authorize FHE credentials for one or more contract addresses.
    *
-   * @throws {@link SigningRejectedError} if the user rejects the wallet signature prompt.
-   * @throws {@link SigningFailedError} if the signing operation fails for any other reason.
+   * Addresses are split into batches of ≤ 10 internally to satisfy the fhevm
+   * contract limit. Each batch triggers its own EIP-712 wallet prompt (shown
+   * sequentially). The returned {@link CredentialSet} routes each address to
+   * its batch transparently — callers only need `credSet.credentialFor(address)`.
+   *
+   * @throws {@link SigningRejectedError} if the user rejects a wallet signature prompt
+   *   and there are no other batches (single-batch case).
    */
-  async allow(...contractAddresses: Address[]): Promise<StoredCredentials> {
+  async allow(...contractAddresses: Address[]): Promise<CredentialSet> {
     const normalized = normalizeAddresses(contractAddresses);
     const key = await this.#storeKey();
-    return this.resolveCredentials({
+
+    // Shared keypair: generated once, reused across all new batches in this call.
+    let sharedKeypair: { publicKey: Hex; privateKey: Hex } | null = null;
+
+    return this.resolveMulti({
       key,
       contracts: normalized,
-      createKey: normalized.join(","),
-      createFn: () => this.create(normalized),
+      createFn: async (batchAddresses: Address[], batchKey: string) => {
+        if (!sharedKeypair) {
+          sharedKeypair = await this.#relayer.generateKeypair();
+        }
+        return this.#createBatch(batchAddresses, sharedKeypair, batchKey);
+      },
     });
   }
 
@@ -117,23 +131,40 @@ export class CredentialsManager extends BaseCredentialsManager<
   }
 
   /**
-   * Generate a fresh FHE keypair, create an EIP-712 authorization, and
-   * prompt the user to sign it.
+   * Generate fresh FHE credentials for one or more contract addresses and
+   * prompt the user to sign the EIP-712 authorization.
+   *
+   * For more than {@link MAX_CONTRACTS_PER_CREDENTIAL} addresses, prefer
+   * {@link allow} which batches transparently. This method operates on a
+   * single batch for a given storage key.
    */
   async create(contractAddresses: Address[]): Promise<StoredCredentials> {
     const normalized = normalizeAddresses(contractAddresses);
     const key = await this.#storeKey();
+    const keypair = await this.#relayer.generateKeypair();
+    return this.#createBatch(normalized, keypair, key);
+  }
+
+  /**
+   * Create credentials for a single batch, optionally reusing a pre-generated keypair.
+   * Called by {@link allow} for each batch so the keypair is shared across batches.
+   */
+  async #createBatch(
+    contractAddresses: Address[],
+    keypair: { publicKey: Hex; privateKey: Hex },
+    overrideKey?: string,
+  ): Promise<StoredCredentials> {
+    const key = overrideKey ?? (await this.#storeKey());
     return this.createCredentials({
       key,
-      contractAddresses: normalized,
+      contractAddresses,
       createFn: async () => {
-        const keypair = await this.#relayer.generateKeypair();
         const startTimestamp = Math.floor(Date.now() / 1000);
         const durationDays = Math.ceil(this.keypairTTL / 86400);
 
         const eip712 = await this.#relayer.createEIP712(
           keypair.publicKey,
-          normalized,
+          contractAddresses,
           startTimestamp,
           durationDays,
         );
@@ -143,7 +174,7 @@ export class CredentialsManager extends BaseCredentialsManager<
           publicKey: keypair.publicKey,
           privateKey: keypair.privateKey,
           signature,
-          contractAddresses: normalized,
+          contractAddresses,
           startTimestamp,
           durationDays,
         };

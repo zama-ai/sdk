@@ -5734,6 +5734,14 @@ export interface CredentialsCreatingEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.CredentialsCreating;
 }
 
+// @public
+export interface CredentialSet<T extends StoredCredentials = StoredCredentials> {
+    readonly batches: ReadonlyArray<T>;
+    credentialFor(address: Address): T;
+    readonly failures: ReadonlyMap<Address, Error>;
+    tryCredentialFor(address: Address): T | null;
+}
+
 // @public (undocumented)
 export interface CredentialsExpiredEvent extends BaseEvent {
     contractAddresses?: Address[];
@@ -5754,7 +5762,7 @@ export interface CredentialsLoadingEvent extends BaseEvent {
 // @public
 export class CredentialsManager extends BaseCredentialsManager<StoredCredentials, EncryptedCredentials$1> {
     constructor(config: CredentialsManagerConfig);
-    allow(...contractAddresses: Address[]): Promise<StoredCredentials>;
+    allow(...contractAddresses: Address[]): Promise<CredentialSet>;
     // (undocumented)
     protected assertEncrypted(data: unknown): asserts data is EncryptedCredentials$1;
     clear(): Promise<void>;
@@ -6025,7 +6033,7 @@ export const DefaultRegistryAddresses: Record<number, Address>;
 // @public
 export class DelegatedCredentialsManager extends BaseCredentialsManager<DelegatedStoredCredentials, EncryptedCredentials> {
     constructor(config: DelegatedCredentialsManagerConfig);
-    allow(delegatorAddress: Address, ...contractAddresses: Address[]): Promise<DelegatedStoredCredentials>;
+    allow(delegatorAddress: Address, ...contractAddresses: Address[]): Promise<CredentialSet<DelegatedStoredCredentials>>;
     // (undocumented)
     protected assertEncrypted(data: unknown): asserts data is EncryptedCredentials;
     clear(delegatorAddress: Address): Promise<void>;

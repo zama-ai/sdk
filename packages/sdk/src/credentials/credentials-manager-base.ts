@@ -1,4 +1,4 @@
-import type { Address, Hex } from "viem";
+import { getAddress, type Address, type Hex } from "viem";
 import { ZamaError } from "../errors/base";
 import { wrapSigningError } from "../errors/signing";
 import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
@@ -6,8 +6,11 @@ import { ZamaSDKEvents } from "../events/sdk-events";
 import type { GenericSigner, GenericStorage, StoredCredentials } from "../types";
 import { toError } from "../utils/error";
 import { CredentialCrypto } from "./credential-crypto";
+import { CredentialSetImpl, type CredentialSet } from "./credential-set";
 import type { BaseEncryptedCredentials } from "./credential-validation";
 import {
+  MAX_CONTRACTS_PER_CREDENTIAL,
+  chunkAddresses,
   coversContracts,
   isCredentialValid,
   isTimeValid,
@@ -265,22 +268,178 @@ export abstract class BaseCredentialsManager<
     return this.#createPromise;
   }
 
+  // ── Multi-batch credential resolution ─────────────────────────
+
+  /**
+   * Resolve credentials for any number of contract addresses, splitting into
+   * batches of ≤ {@link MAX_CONTRACTS_PER_CREDENTIAL} when needed.
+   *
+   * Each batch maps to a separate EIP-712 wallet signature. Signatures are
+   * requested sequentially to avoid presenting multiple wallet prompts at once.
+   * Partial failures (a batch whose signing was rejected) are captured in
+   * {@link CredentialSet.failures} rather than thrown, so callers can surface
+   * per-address errors rather than failing the whole operation.
+   *
+   * @param key       - Base storage key for this (wallet, chain) identity.
+   * @param contracts - All contract addresses that need to be covered.
+   * @param createFn  - Factory called for each new batch; receives the batch's
+   *   address slice and should generate (or reuse) a keypair + EIP-712 signature.
+   */
+  protected async resolveMulti({
+    key,
+    contracts,
+    createFn,
+  }: {
+    key: string;
+    contracts: Address[];
+    createFn: (batchAddresses: Address[], batchKey: string) => Promise<TCreds>;
+  }): Promise<CredentialSet<TCreds>> {
+    // 1. Load existing batch metadata (address lists, no decryption needed yet).
+    const existingBatches = await this.#scanBatchMeta(key);
+
+    // 2. Bin-pack: assign each required address to an existing or new batch.
+    const assignments = this.#computeBatchAssignments(existingBatches, contracts, key);
+
+    // 3. Resolve each batch in sequence (preserves single-prompt-at-a-time UX).
+    const results: Array<{ addresses: Address[]; result: TCreds | Error }> = [];
+    for (const { batchKey, addresses } of assignments) {
+      const normalizedAddresses = normalizeAddresses(addresses);
+      try {
+        const creds = await this.resolveCredentials({
+          key: batchKey,
+          contracts: normalizedAddresses,
+          createKey: `${batchKey}:${normalizedAddresses.join(",")}`,
+          createFn: () => createFn(normalizedAddresses, batchKey),
+        });
+        results.push({ addresses: normalizedAddresses, result: creds });
+      } catch (error) {
+        // Partial failure: capture per-batch, don't abort remaining batches.
+        results.push({ addresses: normalizedAddresses, result: toError(error) });
+      }
+    }
+
+    return new CredentialSetImpl<TCreds>(results);
+  }
+
+  /** Assign required addresses to existing batches (bin-packing) and overflow into new ones. */
+  #computeBatchAssignments(
+    existingBatches: Array<{ batchKey: string; addresses: Address[] }>,
+    required: Address[],
+    baseKey: string,
+  ): Array<{ batchKey: string; addresses: Address[] }> {
+    // Mutable copy — we may extend existing batches with new addresses.
+    const assignments: Array<{ batchKey: string; addresses: Address[] }> = existingBatches.map(
+      (b) => ({ batchKey: b.batchKey, addresses: [...b.addresses] }),
+    );
+
+    const covered = new Set<Address>(
+      existingBatches.flatMap((b) => b.addresses).map((a) => getAddress(a)),
+    );
+
+    // Identify new addresses not yet covered by any batch.
+    const newAddresses = required.map((a) => getAddress(a)).filter((a) => !covered.has(a));
+
+    // Bin-packing: fill existing batches with spare capacity first.
+    const overflow: Address[] = [];
+    for (const addr of newAddresses) {
+      let packed = false;
+      for (const batch of assignments) {
+        if (batch.addresses.length < MAX_CONTRACTS_PER_CREDENTIAL) {
+          batch.addresses.push(addr);
+          packed = true;
+          break;
+        }
+      }
+      if (!packed) {
+        overflow.push(addr);
+      }
+    }
+
+    // Create new batches for addresses that didn't fit.
+    const newBatches = chunkAddresses(overflow, MAX_CONTRACTS_PER_CREDENTIAL);
+    for (let i = 0; i < newBatches.length; i++) {
+      const batchIndex = existingBatches.length + i;
+      assignments.push({
+        batchKey: batchIndex === 0 ? baseKey : `${baseKey}:${batchIndex}`,
+        addresses: newBatches[i] ?? [],
+      });
+    }
+
+    return assignments;
+  }
+
+  /**
+   * Scan storage for all batches under `key`, returning their address lists.
+   * Batch 0 uses `key`; subsequent batches use `key:1`, `key:2`, …
+   * Stops at the first missing or corrupted entry.
+   */
+  async #scanBatchMeta(key: string): Promise<Array<{ batchKey: string; addresses: Address[] }>> {
+    const batches: Array<{ batchKey: string; addresses: Address[] }> = [];
+    for (let i = 0; ; i++) {
+      const k = i === 0 ? key : `${key}:${i}`;
+      const stored = await this.storage.get<TEncrypted>(k);
+      if (!stored) {
+        break;
+      }
+      try {
+        this.assertEncrypted(stored);
+        batches.push({ batchKey: k, addresses: stored.contractAddresses });
+      } catch {
+        break; // Corrupted entry — stop scanning.
+      }
+    }
+    return batches;
+  }
+
+  /**
+   * Return all storage keys for existing batches under `key`.
+   * Falls back to `[key]` when no batches are stored (covers the
+   * pre-batching case where session sigs were stored under the bare key).
+   */
+  async #scanBatchKeys(key: string): Promise<string[]> {
+    const meta = await this.#scanBatchMeta(key);
+    return meta.length > 0 ? meta.map((b) => b.batchKey) : [key];
+  }
+
   // ── Shared public method implementations ──────────────────────
 
   /**
    * Check whether stored credentials are expired or don't cover the given contract.
    * Returns `true` if stored credentials are expired or corrupted.
    * Returns `false` if no credentials exist yet.
+   * With multiple batches, returns `false` if any valid batch covers `contractAddress`.
    */
   protected async checkExpired(key: string, contractAddress?: Address): Promise<boolean> {
     try {
-      const stored = await this.storage.get<TEncrypted>(key);
-      if (!stored) {
-        return false;
+      const batchKeys = await this.#scanBatchKeys(key);
+      if (batchKeys.length === 0 || (batchKeys.length === 1 && batchKeys[0] === key)) {
+        // Single-batch path (or no credentials yet).
+        const stored = await this.storage.get<TEncrypted>(key);
+        if (!stored) {
+          return false;
+        }
+        this.assertEncrypted(stored);
+        const requiredContracts = contractAddress ? [contractAddress] : [];
+        return !isCredentialValid(stored, requiredContracts);
       }
-      this.assertEncrypted(stored);
-      const requiredContracts = contractAddress ? [contractAddress] : [];
-      return !isCredentialValid(stored, requiredContracts);
+      // Multi-batch path: not expired if at least one batch covers contractAddress (or if
+      // no contractAddress is requested, if all batches are time-valid).
+      const results = await Promise.all(
+        batchKeys.map(async (k) => {
+          const stored = await this.storage.get<TEncrypted>(k);
+          if (!stored) {
+            return false;
+          }
+          try {
+            this.assertEncrypted(stored);
+            const required = contractAddress ? [contractAddress] : [];
+            return isCredentialValid(stored, required);
+          } catch {
+            return false;
+          }
+        }),
+      );
+      return !results.some(Boolean);
     } catch (error) {
       // oxlint-disable-next-line no-console
       console.warn("[zama-sdk] isExpired check failed, treating as expired:", error);
@@ -288,9 +447,13 @@ export abstract class BaseCredentialsManager<
     }
   }
 
-  /** Delete the session signature and clear caches, forcing a fresh wallet signature on next use. */
+  /**
+   * Delete all session signatures for `key` (including all batch variants) and
+   * clear caches, forcing a fresh wallet signature on next use.
+   */
   protected async revokeSession(key: string, contractAddresses?: Address[]): Promise<void> {
-    await this.sessionSignatures.delete(key);
+    const batchKeys = await this.#scanBatchKeys(key);
+    await Promise.all(batchKeys.map((k) => this.sessionSignatures.delete(k)));
     this.clearCaches();
     this.emit({
       type: ZamaSDKEvents.CredentialsRevoked,
@@ -327,10 +490,14 @@ export abstract class BaseCredentialsManager<
     }
   }
 
+  /** Delete all batch credentials and their session signatures. */
   protected async clearAll(key: string): Promise<void> {
-    await this.sessionSignatures.delete(key);
+    const batchKeys = await this.#scanBatchKeys(key);
+    await Promise.all([
+      ...batchKeys.map((k) => this.sessionSignatures.delete(k)),
+      ...batchKeys.map((k) => this.#deleteCredentials(k)),
+    ]);
     this.clearCaches();
-    await this.#deleteCredentials(key);
   }
 
   /** Override to also clear subclass-specific caches (e.g. key cache). */

@@ -94,6 +94,25 @@ export function normalizeAddresses(addresses: Address[]): Address[] {
   return [...new Set(addresses.map((address) => getAddress(address)))].toSorted();
 }
 
+/**
+ * Maximum number of contract addresses per EIP-712 credential, as enforced by
+ * the fhevm ACL contract. Requests with more than this many addresses are
+ * automatically split into batches by the SDK.
+ */
+export const MAX_CONTRACTS_PER_CREDENTIAL = 10;
+
+/**
+ * Split an array of addresses into chunks of at most `size` elements.
+ * Used internally to produce batches that stay within {@link MAX_CONTRACTS_PER_CREDENTIAL}.
+ */
+export function chunkAddresses(addresses: Address[], size: number): Address[][] {
+  const chunks: Address[][] = [];
+  for (let i = 0; i < addresses.length; i += size) {
+    chunks.push(addresses.slice(i, i + size));
+  }
+  return chunks;
+}
+
 /** Compute a truncated SHA-256 store key from arbitrary identity segments. */
 export async function computeStoreKey(...segments: (string | number)[]): Promise<string> {
   const hash = await crypto.subtle.digest(

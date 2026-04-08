@@ -356,7 +356,8 @@ export interface CredentialsLoadingEvent extends BaseEvent {
 // @public
 export class CredentialsManager extends BaseCredentialsManager<StoredCredentials, EncryptedCredentials$1> {
     constructor(config: CredentialsManagerConfig);
-    allow(...contractAddresses: Address[]): Promise<StoredCredentials>;
+    // Warning: (ae-forgotten-export) The symbol "CredentialSet" needs to be exported by the entry point index.d.ts
+    allow(...contractAddresses: Address[]): Promise<CredentialSet>;
     // (undocumented)
     protected assertEncrypted(data: unknown): asserts data is EncryptedCredentials$1;
     clear(): Promise<void>;
