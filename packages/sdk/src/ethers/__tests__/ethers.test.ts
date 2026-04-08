@@ -69,7 +69,6 @@ import {
 // ── Test constants ───────────────────────────────────────────
 
 const SPENDER = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;
-const REGISTRY = "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e" as Address;
 const TX_HASH = "0xdeadbeef" as Hex;
 const MOCK_ADDRESS = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
 const MOCK_SIGNATURE = ("0x" + "12".repeat(65)) as Hex;
