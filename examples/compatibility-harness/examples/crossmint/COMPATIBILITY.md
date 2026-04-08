@@ -1,181 +1,73 @@
-# Crossmint MPC Wallet — Zama Compatibility Report
+# Crossmint Adapter Compatibility Notes
 
-This document shows the expected harness output for a Crossmint MPC wallet and explains
-how the adapter maps Crossmint APIs to the harness `Signer` interface.
+This document describes the expected harness behavior for the Crossmint example adapter at [`signer.ts`](./signer.ts).
 
----
+## Adapter Profile (Declared)
 
-## Context
+- Name: `Crossmint API-Routed Adapter`
+- Declared architecture: `API_ROUTED_EXECUTION`
+- Verification model: `UNKNOWN` (confirmed by tests if recoverable)
+- Key capabilities:
+- `eip712Signing`: `SUPPORTED`
+- `rawTransactionSigning`: `UNSUPPORTED`
+- `contractExecution`: `SUPPORTED`
+- `zamaAuthorizationFlow`: `SUPPORTED`
+- `zamaWriteFlow`: `SUPPORTED`
 
-[Crossmint](https://crossmint.com) provides MPC-based smart wallets via a server-side API.
-Their wallets:
+Crossmint is API-routed: no raw tx signing primitive is exposed, but write execution is supported through `/transactions`.
 
-- **Support** EIP-712 typed data signing via `POST /signatures`
-- **Support** contract execution via `POST /transactions`
-- **Do not expose** raw transaction signing (expected for MPC/custodial wallets)
+## Expected Validation Pattern
 
-The harness is designed to accommodate this: `signTransaction` is optional.
-MPC wallets that provide `writeContract` instead will skip the raw transaction test
-without affecting the final Zama compatibility verdict.
+Typical run (with valid credentials and healthy infra):
 
----
+- Adapter initialization/address resolution: `PASS`
+- EIP-712 recoverability: `PASS`
+- Raw transaction execution: `UNSUPPORTED` (expected)
+- Adapter contract read: `UNSUPPORTED` (expected in this example)
+- Zama authorization flow (`sdk.allow()`): `PASS`
+- Zama write flow probe: `PASS`
 
-## Signer profile
+Expected final verdict:
+- `ZAMA COMPATIBLE FOR AUTHORIZATION AND WRITE FLOWS`
 
-| Property         | Value                                   |
-| ---------------- | --------------------------------------- |
-| Type             | MPC                                     |
-| EIP-712          | Recoverable (standard secp256k1)        |
-| signTransaction  | Not provided                            |
-| writeContract    | Provided (via Crossmint `/transactions`)|
+If relayer/RPC/registry fails, statuses can become `BLOCKED` or `INCONCLUSIVE` without implying adapter incompatibility.
 
----
+## API Mapping Used by the Example
 
-## Test results
-
-| Section              | Test                  | Result | Notes                                                        |
-| -------------------- | --------------------- | ------ | ------------------------------------------------------------ |
-| Ethereum             | EIP-712 Signature     | PASS   | Signature verified via `ecrecover`                           |
-| Ethereum             | Transaction Execution | SKIP   | `writeContract` path — raw signing not required for Zama SDK |
-| Zama SDK             | Zama SDK Flow         | PASS   | `sdk.allow()` completed; EIP-712 payload accepted            |
-
-**Final: ZAMA COMPATIBLE ✓**
-
----
-
-## Full report output
-
-```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Zama Compatibility Report
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  Signer             0xcafe1234…abcd5678
-  Type               MPC
-  EIP-712            ✓ recoverable (secp256k1)
-  signTransaction    – not provided
-  writeContract      ✓ provided (MPC / smart-account path)
-
-  ── Ethereum Compatibility ─────────────────────────────
-  ✓ EIP-712 Signature                      PASS
-  – Transaction Execution                  SKIP
-      Note:           writeContract path available — raw transaction signing not supported
-                      (expected for MPC wallets). On-chain execution will be verified during
-                      actual Zama token operations.
-
-  ── Zama SDK Compatibility ─────────────────────────────
-  ✓ Zama SDK Flow                          PASS
-
-────────────────────────────────────────────────────────
-  Final: ZAMA COMPATIBLE ✓
-  Note:  1 Ethereum test skipped — not required for Zama SDK compatibility
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-```
-
----
-
-## How the adapter works
-
-### `signTypedData` → Crossmint Signatures API
-
-```
-POST /2022-06-09/wallets/{locator}/signatures
-{
-  "type": "evm-typed-data",
-  "params": {
-    "typedData": { domain, types, primaryType, message }
-  }
-}
-```
-
-The response includes an operation `id`. The adapter polls
-`GET /wallets/{locator}/signatures/{id}` every 2 s until `status === "succeeded"`,
-then returns `result.signature`.
-
-### `writeContract` → Crossmint Transactions API
-
-```
-POST /2022-06-09/wallets/{locator}/transactions
-{
-  "params": {
-    "calls": [{ "to": "0x…", "data": "0x…", "value": "0" }],
-    "chain": "ethereum-sepolia"
-  }
-}
-```
-
-Calldata is encoded with viem's `encodeFunctionData`. The adapter polls
-`GET /wallets/{locator}/transactions/{id}` until `status === "succeeded"`,
-then returns `result.onChain.txId`.
-
-### `signTransaction` — not implemented
-
-Crossmint does not expose raw transaction signing. The harness skips the raw
-transaction test when only `writeContract` is provided. This is expected behaviour
-for MPC wallets and does **not** affect the Zama SDK compatibility verdict.
-
----
+- `adapter.getAddress`:
+- `GET /wallets/{locator}` (unless `CROSSMINT_WALLET_ADDRESS` is preconfigured)
+- `adapter.signTypedData`:
+- `POST /wallets/{locator}/signatures` with `type: evm-typed-data`, then poll operation
+- `adapter.writeContract`:
+- encode calldata with viem
+- `POST /wallets/{locator}/transactions`, then poll operation
+- return on-chain transaction hash
 
 ## Setup
 
-### 1. Install dependencies
-
-```bash
-cd examples/compatibility-harness
-npm install
-```
-
-### 2. Configure environment variables
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env`:
+1. Configure `.env`:
 
 ```dotenv
-# Crossmint credentials
 CROSSMINT_API_KEY=your_server_side_api_key
 CROSSMINT_WALLET_LOCATOR=email:alice@example.com:evm-smart-wallet
-
-# Optional — set this to skip the GET /wallets/{locator} API call at startup.
-# If omitted, the address is resolved automatically before tests run.
+# Optional:
 # CROSSMINT_WALLET_ADDRESS=0x...
-
-# Network (Sepolia defaults work out of the box)
-# RPC_URL=https://ethereum-sepolia-rpc.publicnode.com
-# RELAYER_URL=https://relayer.testnet.zama.org/v2
 ```
 
-> **`CROSSMINT_WALLET_ADDRESS`**
-> If you already know your wallet's `0x` address (visible in the Crossmint dashboard),
-> set it here to skip the API lookup at startup. Useful in CI where startup time matters.
-
-> **Wallet locator formats**
-> - `email:alice@example.com:evm-smart-wallet`
-> - `userId:abc123:evm-smart-wallet`
-> - `phoneNumber:+1234567890:evm-smart-wallet`
->
-> See the [Crossmint wallet docs](https://docs.crossmint.com/wallets/smart-wallets/introduction) for details.
-
-### 3. Run the harness
+2. Run:
 
 ```bash
-# Recommended — uses the npm script (no file copy needed)
 npm run test:crossmint
+```
 
-# Equivalent — set the adapter path directly
+Equivalent:
+
+```bash
 SIGNER_MODULE=./examples/crossmint/signer.ts npm test
 ```
 
----
+## Interpretation Guidance
 
-## Key findings
-
-| Finding                          | Detail                                                                    |
-| -------------------------------- | ------------------------------------------------------------------------- |
-| EIP-712 signatures               | Crossmint produces standard secp256k1 signatures — fully recoverable     |
-| Raw transaction signing          | Not supported — use `writeContract` for on-chain operations               |
-| Zama SDK credential flow         | Works without modification — only `signTypedData` is required             |
-| Async operation model            | Both `/signatures` and `/transactions` require polling until `succeeded`  |
-| Address resolution               | Set `CROSSMINT_WALLET_ADDRESS` to skip the API call, or let it auto-resolve |
+- `UNSUPPORTED` raw transaction checks are normal for Crossmint and do not invalidate Zama compatibility claims when authorization + write probe pass.
+- A `PASS` on authorization alone is not enough to claim full write compatibility.
+- The harness verdict is scoped: trust the exact phrase emitted in `Final`.

@@ -1,73 +1,39 @@
-/**
- * Crossmint MPC Wallet — Zama Compatibility Harness Adapter
- * ──────────────────────────────────────────────────────────
- *
- * This file shows how to adapt a Crossmint MPC wallet to the harness Signer
- * interface. Copy it to src/signer/index.ts and fill in your credentials.
- *
- * ## What Crossmint supports
- *
- *   ✓  EIP-712 typed data signing  →  POST /signatures (evm-typed-data)
- *   ✓  Contract execution          →  POST /transactions (higher-level API)
- *   ✗  Raw transaction signing     →  not exposed (expected for MPC wallets)
- *
- * ## Adapter strategy
- *
- *   signTypedData   →  Crossmint /signatures endpoint
- *   writeContract   →  Crossmint /transactions endpoint (encodes calldata via viem)
- *   signTransaction →  NOT implemented (not needed for Zama credential flow)
- *
- * ## Expected harness result
- *
- *   Signer Type:          MPC
- *   EIP-712:              PASS
- *   Transaction:          SKIP (writeContract path — expected for MPC)
- *   Zama SDK Flow:        PASS
- *   Final:                ZAMA COMPATIBLE ✓
- *
- * ## Environment variables needed
- *
- *   CROSSMINT_API_KEY            Your Crossmint server-side API key
- *   CROSSMINT_WALLET_LOCATOR     e.g. "email:alice@example.com:evm-smart-wallet"
- *                                or   "userId:abc123:evm-smart-wallet"
- *   CROSSMINT_WALLET_ADDRESS     (optional) The wallet's 0x address.
- *                                If provided, skips the /wallets API lookup at startup.
- *                                If omitted, resolved automatically before tests run.
- *
- * See https://docs.crossmint.com/wallets/smart-wallets/introduction for details.
- */
-
 import { encodeFunctionData, getAddress } from "viem";
-import type { Signer } from "../../src/signer/types.js";
-
-// ── Configuration ─────────────────────────────────────────────────────────────
+import type { Hex } from "viem";
+import type { Adapter } from "../../src/adapter/types.js";
 
 const CROSSMINT_API_KEY = process.env.CROSSMINT_API_KEY ?? "";
 const CROSSMINT_WALLET_LOCATOR = process.env.CROSSMINT_WALLET_LOCATOR ?? "";
 const CROSSMINT_WALLET_ADDRESS = process.env.CROSSMINT_WALLET_ADDRESS ?? "";
 const CROSSMINT_API_BASE = "https://api.crossmint.com/2022-06-09";
-const CROSSMINT_CHAIN = "ethereum-sepolia"; // change to "ethereum" for mainnet
+const CROSSMINT_CHAIN = "ethereum-sepolia";
 
 if (!CROSSMINT_API_KEY) {
   throw new Error("CROSSMINT_API_KEY is not set. Add it to your .env file.");
 }
+
 if (!CROSSMINT_WALLET_LOCATOR) {
   throw new Error(
-    "CROSSMINT_WALLET_LOCATOR is not set. " + 'Example: "email:alice@example.com:evm-smart-wallet"',
+    "CROSSMINT_WALLET_LOCATOR is not set. Example: email:alice@example.com:evm-smart-wallet",
   );
 }
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
 
 const headers = {
   "X-API-KEY": CROSSMINT_API_KEY,
   "Content-Type": "application/json",
 };
 
-/**
- * Resolve the wallet address from the locator via the Crossmint API.
- * Only called when CROSSMINT_WALLET_ADDRESS is not set in the environment.
- */
+let resolvedAddress: string | null = CROSSMINT_WALLET_ADDRESS
+  ? getAddress(CROSSMINT_WALLET_ADDRESS)
+  : null;
+let resolveAddressPromise: Promise<string> | null = null;
+
+function jsonWithBigInt(value: unknown): string {
+  return JSON.stringify(value, (_key, candidate) =>
+    typeof candidate === "bigint" ? candidate.toString() : candidate,
+  );
+}
+
 async function resolveAddress(): Promise<string> {
   const res = await fetch(
     `${CROSSMINT_API_BASE}/wallets/${encodeURIComponent(CROSSMINT_WALLET_LOCATOR)}`,
@@ -76,134 +42,124 @@ async function resolveAddress(): Promise<string> {
   if (!res.ok) {
     throw new Error(`Failed to resolve wallet: ${res.status} ${await res.text()}`);
   }
-  const data = (await res.json()) as { address: string };
-  return getAddress(data.address);
+  const payload = (await res.json()) as { address?: string };
+  if (!payload.address) {
+    throw new Error("Crossmint wallet lookup response did not include an address");
+  }
+  return getAddress(payload.address);
 }
 
-/**
- * Poll a Crossmint operation (signature or transaction) until it reaches a
- * terminal state (succeeded / failed).
- */
+async function ensureAddress(): Promise<string> {
+  if (resolvedAddress) {
+    return resolvedAddress;
+  }
+  if (!resolveAddressPromise) {
+    resolveAddressPromise = resolveAddress().then((addr) => {
+      resolvedAddress = addr;
+      return addr;
+    });
+  }
+  return resolveAddressPromise;
+}
+
 async function pollOperation(
   operationId: string,
   kind: "signatures" | "transactions",
 ): Promise<Record<string, unknown>> {
   const url = `${CROSSMINT_API_BASE}/wallets/${encodeURIComponent(CROSSMINT_WALLET_LOCATOR)}/${kind}/${operationId}`;
-
-  for (let attempt = 0; attempt < 30; attempt++) {
-    await new Promise((r) => setTimeout(r, 2000));
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 2_000));
     const res = await fetch(url, { headers });
-    if (!res.ok) throw new Error(`Poll failed: ${res.status} ${await res.text()}`);
-    const data = (await res.json()) as Record<string, unknown>;
-    const status = String(data["status"] ?? "");
-    if (status === "succeeded") return data;
-    if (status === "failed") {
-      throw new Error(`Crossmint operation failed: ${JSON.stringify(data["error"] ?? data)}`);
+    if (!res.ok) {
+      throw new Error(`Crossmint poll failed: ${res.status} ${await res.text()}`);
     }
-    // pending / awaiting-approval → keep polling
+    const payload = (await res.json()) as Record<string, unknown>;
+    const status = String(payload.status ?? "");
+    if (status === "succeeded") {
+      return payload;
+    }
+    if (status === "failed") {
+      throw new Error(`Crossmint operation failed: ${JSON.stringify(payload.error ?? payload)}`);
+    }
   }
-  throw new Error("Crossmint operation timed out after 60 s");
+  throw new Error("Crossmint operation timed out after 60 seconds");
 }
 
-// ── Address resolution ────────────────────────────────────────────────────────
-//
-// Strategy:
-//   1. If CROSSMINT_WALLET_ADDRESS is set in .env, use it immediately (no API call).
-//   2. Otherwise, resolve asynchronously via the Crossmint API before tests start.
-//
-// The exported `ready` promise is awaited by the harness (signerType.test.ts
-// beforeAll) so that signer.address is guaranteed to be available synchronously
-// when any test runs.
+function parseTransactionHash(payload: Record<string, unknown>): Hex {
+  const onChain = payload.onChain as Record<string, unknown> | undefined;
+  const txHash = String(onChain?.txId ?? payload.txId ?? payload.transactionId ?? "");
+  if (!/^0x[0-9a-fA-F]{64}$/.test(txHash)) {
+    throw new Error(
+      `Crossmint did not return a valid transaction hash (got: ${txHash || "empty"})`,
+    );
+  }
+  return txHash as Hex;
+}
 
-let _address: string = CROSSMINT_WALLET_ADDRESS ? getAddress(CROSSMINT_WALLET_ADDRESS) : "";
-
-/**
- * Resolves when signer.address is ready to be accessed synchronously.
- *
- * The harness awaits this automatically in the first test's beforeAll.
- * You only need to import and await this directly if you access signer.address
- * outside of the normal test flow.
- */
-export const ready: Promise<void> = CROSSMINT_WALLET_ADDRESS
-  ? Promise.resolve()
-  : resolveAddress().then((addr) => {
-      _address = addr;
-    });
-
-// Attach a no-op catch so that Node.js does not report an "unhandled rejection"
-// if `ready` rejects before `beforeAll` has a chance to await it.
-// The rejection is still propagated to any caller that awaits `ready`.
-ready.catch(() => {});
-
-// ── Signer ────────────────────────────────────────────────────────────────────
-
-export const signer: Signer = {
-  get address(): string {
-    if (!_address) {
-      // This should not happen in normal harness usage because signerType.test.ts
-      // awaits `ready` in its beforeAll before accessing signer.address.
-      // If you see this, set CROSSMINT_WALLET_ADDRESS in your .env to skip the lookup.
-      throw new Error(
-        "signer.address is not yet available. " +
-          "Either set CROSSMINT_WALLET_ADDRESS in .env, " +
-          "or ensure the exported `ready` promise is awaited before accessing the address.",
-      );
-    }
-    return _address;
+export const adapter: Adapter = {
+  metadata: {
+    name: "Crossmint API-Routed Adapter",
+    declaredArchitecture: "API_ROUTED_EXECUTION",
+    verificationModel: "UNKNOWN",
+    supportedChainIds: [11155111],
+    notes: ["Crossmint smart wallet routed via /signatures and /transactions APIs."],
   },
-
-  /**
-   * Sign EIP-712 typed data via the Crossmint Signatures API.
-   *
-   * Crossmint API: POST /wallets/{locator}/signatures
-   * Body: { type: "evm-typed-data", params: { typedData: { ... } } }
-   */
+  capabilities: {
+    addressResolution: "SUPPORTED",
+    eip712Signing: "SUPPORTED",
+    recoverableEcdsa: "UNKNOWN",
+    rawTransactionSigning: "UNSUPPORTED",
+    contractExecution: "SUPPORTED",
+    contractReads: "UNSUPPORTED",
+    transactionReceiptTracking: "UNSUPPORTED",
+    zamaAuthorizationFlow: "SUPPORTED",
+    zamaWriteFlow: "SUPPORTED",
+  },
+  async init() {
+    await ensureAddress();
+  },
+  async getAddress() {
+    return ensureAddress();
+  },
   async signTypedData(data) {
-    // EIP-712 message values may contain BigInt (e.g. uint256 fields).
-    // JSON.stringify does not handle BigInt natively — serialize them as decimal strings.
-    const bigIntReplacer = (_: string, v: unknown) => (typeof v === "bigint" ? v.toString() : v);
-
+    await ensureAddress();
     const res = await fetch(
       `${CROSSMINT_API_BASE}/wallets/${encodeURIComponent(CROSSMINT_WALLET_LOCATOR)}/signatures`,
       {
         method: "POST",
         headers,
-        body: JSON.stringify(
-          {
-            type: "evm-typed-data",
-            params: {
-              typedData: {
-                domain: data.domain,
-                types: data.types,
-                primaryType: data.primaryType,
-                message: data.message,
-              },
+        body: jsonWithBigInt({
+          type: "evm-typed-data",
+          params: {
+            typedData: {
+              domain: data.domain,
+              types: data.types,
+              primaryType: data.primaryType,
+              message: data.message,
             },
           },
-          bigIntReplacer,
-        ),
+        }),
       },
     );
+
     if (!res.ok) {
       throw new Error(`Crossmint signature request failed: ${res.status} ${await res.text()}`);
     }
-    const { id } = (await res.json()) as { id: string };
-    const result = await pollOperation(id, "signatures");
-    return String(result["signature"]);
-  },
 
-  /**
-   * Execute a contract write via the Crossmint Transactions API.
-   *
-   * Crossmint does not expose raw transaction signing. Instead, it accepts
-   * the contract call configuration and submits the transaction on behalf of
-   * the wallet, returning the transaction hash once mined.
-   *
-   * Crossmint API: POST /wallets/{locator}/transactions
-   * Body: { params: { calls: [{ to, data, value }], chain } }
-   */
+    const payload = (await res.json()) as { id?: string };
+    if (!payload.id) {
+      throw new Error("Crossmint signature response did not include an operation id");
+    }
+
+    const result = await pollOperation(payload.id, "signatures");
+    const signature = String(result.signature ?? "");
+    if (!/^0x[0-9a-fA-F]+$/.test(signature)) {
+      throw new Error("Crossmint signature operation did not return a hex signature");
+    }
+    return signature;
+  },
   async writeContract(config) {
-    // Encode the calldata using viem — Crossmint expects raw calldata bytes.
+    await ensureAddress();
     const calldata = encodeFunctionData({
       abi: config.abi,
       functionName: config.functionName,
@@ -215,13 +171,13 @@ export const signer: Signer = {
       {
         method: "POST",
         headers,
-        body: JSON.stringify({
+        body: jsonWithBigInt({
           params: {
             calls: [
               {
-                to: config.address,
+                to: getAddress(config.address),
                 data: calldata,
-                value: config.value !== undefined ? config.value.toString() : "0",
+                value: config.value ?? 0n,
               },
             ],
             chain: CROSSMINT_CHAIN,
@@ -229,16 +185,17 @@ export const signer: Signer = {
         }),
       },
     );
+
     if (!res.ok) {
       throw new Error(`Crossmint transaction request failed: ${res.status} ${await res.text()}`);
     }
-    const { id } = (await res.json()) as { id: string };
-    const result = await pollOperation(id, "transactions");
-    // Crossmint returns the on-chain hash once the transaction is mined.
-    return String(result["onChain"]?.["txId"] ?? result["txId"] ?? result["transactionId"]);
-  },
 
-  // signTransaction is intentionally NOT implemented.
-  // Crossmint MPC wallets do not expose raw transaction signing.
-  // The harness transaction test will SKIP gracefully.
+    const payload = (await res.json()) as { id?: string };
+    if (!payload.id) {
+      throw new Error("Crossmint transaction response did not include an operation id");
+    }
+
+    const result = await pollOperation(payload.id, "transactions");
+    return parseTransactionHash(result);
+  },
 };
