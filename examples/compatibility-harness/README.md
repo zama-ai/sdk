@@ -326,6 +326,8 @@ Current schema:
 
 `schemaVersion` is the compatibility contract for CI/partner tooling. Consumers should validate `schemaVersion` before parsing.
 
+See also: [`docs/report-consumption.md`](./docs/report-consumption.md) for CI parsing and gating patterns.
+
 ## Environment Variables
 
 Copy `.env.example` to `.env` and fill only what your adapter needs.

@@ -173,7 +173,7 @@ Commit:
 
 ### T11 — Report Consumer Guide
 
-Status: `TODO`
+Status: `DONE`
 
 Objective:
 - Improve machine-consumer usability of report artifacts.
@@ -189,6 +189,9 @@ Codex spec:
 
 Acceptance:
 - A partner engineer can build a parser without reading source code.
+
+Commit:
+- pending (current working tree)
 
 ### T14 — Validate Policy File Support
 
