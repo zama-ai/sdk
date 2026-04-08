@@ -76,6 +76,17 @@ describe("cli.validate-policy.resolveValidationGate", () => {
     });
   });
 
+  it("treats recoverability-unconfirmed claims as INCONCLUSIVE", () => {
+    expect(
+      resolveValidationGate("PARTIAL_AUTHORIZATION_RECOVERABILITY_UNCONFIRMED", "AUTHORIZATION"),
+    ).toEqual({
+      target: "AUTHORIZATION",
+      status: "INCONCLUSIVE",
+      exitCode: 30,
+      summary: "Authorization compatibility is inconclusive.",
+    });
+  });
+
   it("returns unknown-claim INCONCLUSIVE fallback", () => {
     expect(resolveValidationGate("SOMETHING_NEW", "AUTHORIZATION")).toEqual({
       target: "AUTHORIZATION",

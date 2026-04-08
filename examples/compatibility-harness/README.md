@@ -397,6 +397,9 @@ Current schema:
 `schemaVersion` is the compatibility contract for CI/partner tooling. Consumers should validate `schemaVersion` before parsing.
 
 See also: [`docs/report-consumption.md`](./docs/report-consumption.md) for CI parsing and gating patterns.
+For partner-facing interpretation, see [`docs/verdict-playbook.md`](./docs/verdict-playbook.md).
+For stable claim semantics, see [`docs/claim-catalog.md`](./docs/claim-catalog.md).
+For schema/release contract policy, see [`docs/schema-release-discipline.md`](./docs/schema-release-discipline.md).
 
 ## Environment Variables
 

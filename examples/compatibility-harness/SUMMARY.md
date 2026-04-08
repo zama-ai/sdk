@@ -163,6 +163,11 @@ GitHub Actions includes:
 - mandatory deterministic CI (`compatibility-harness-ci.yml`),
 - optional live manual/nightly run with artifact upload (`compatibility-harness-live.yml`, non-blocking by default).
 
+Operational companion docs:
+- `docs/verdict-playbook.md`
+- `docs/claim-catalog.md`
+- `docs/schema-release-discipline.md`
+
 Reference examples currently included:
 - Crossmint API-routed adapter
 - Turnkey API key adapter
