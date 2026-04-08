@@ -1,4 +1,5 @@
 import { defineConfig } from "vitest/config";
+import { randomUUID } from "node:crypto";
 import { resolve } from "node:path";
 
 // ── Pluggable signer adapter ───────────────────────────────────────────────────
@@ -18,6 +19,11 @@ import { resolve } from "node:path";
 // specified module — no file copy and no harness source edits required.
 
 const signerModule = process.env.SIGNER_MODULE ? resolve(process.env.SIGNER_MODULE) : null;
+
+// Use a per-run ID so parallel runs in the same machine do not share report temp files.
+if (!process.env.ZAMA_HARNESS_RUN_ID) {
+  process.env.ZAMA_HARNESS_RUN_ID = `${Date.now()}-${randomUUID()}`;
+}
 
 export default defineConfig({
   resolve: {

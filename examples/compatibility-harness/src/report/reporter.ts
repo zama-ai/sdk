@@ -1,6 +1,13 @@
-import { appendFileSync, writeFileSync, readFileSync, existsSync, unlinkSync } from "node:fs";
+import {
+  appendFileSync,
+  writeFileSync,
+  readFileSync,
+  existsSync,
+  unlinkSync,
+  mkdirSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import type {
   ObservedAdapterProfile,
   RootCauseCategory,
@@ -26,8 +33,11 @@ export type AdapterProfile = ObservedAdapterProfile;
 
 // Temp files shared across all vitest worker processes.
 // Cleared by globalSetup at the start of each run.
-const RESULTS_FILE = join(tmpdir(), "zama-harness-results.json");
-const PROFILE_FILE = join(tmpdir(), "zama-harness-profile.json");
+const RUN_ID = (process.env.ZAMA_HARNESS_RUN_ID ?? "default").replace(/[^a-zA-Z0-9._-]/g, "_");
+const RESULTS_FILE = join(tmpdir(), `zama-harness-results-${RUN_ID}.jsonl`);
+const PROFILE_FILE = join(tmpdir(), `zama-harness-profile-${RUN_ID}.json`);
+
+const INFRA_ROOT_CAUSES = new Set<RootCauseCategory>(["ENVIRONMENT", "RPC", "RELAYER", "REGISTRY"]);
 
 // ── Results ──────────────────────────────────────────────────────────────────
 
@@ -165,9 +175,15 @@ function testOrder(name: string): number {
   return idx === -1 ? Number.MAX_SAFE_INTEGER : idx;
 }
 
-function resolveFinalVerdict(zamaResults: TestResult[]): string {
-  const authorization = zamaResults.find((r) => r.name === "Zama Authorization Flow");
-  const write = zamaResults.find((r) => r.name === "Zama Write Flow");
+function toMap(results: TestResult[]): Map<string, TestResult> {
+  return new Map(results.map((result) => [result.name, result]));
+}
+
+function resolveFinalVerdict(results: TestResult[]): string {
+  const byName = toMap(results);
+  const authorization = byName.get("Zama Authorization Flow");
+  const write = byName.get("Zama Write Flow");
+  const recoverability = byName.get("EIP-712 Recoverability");
 
   if (!authorization) {
     return "PARTIALLY VALIDATED — AUTHORIZATION CHECK NOT RECORDED";
@@ -189,7 +205,15 @@ function resolveFinalVerdict(zamaResults: TestResult[]): string {
     return "INCONCLUSIVE — AUTHORIZATION FLOW NOT TESTED";
   }
 
-  // Authorization passed from here.
+  // Authorization passed from here, but recoverability still matters for claim quality.
+  if (!recoverability || recoverability.status !== "PASS") {
+    if (recoverability?.status === "FAIL") {
+      return "INCOMPATIBLE — AUTHORIZATION RECOVERABILITY FAILED";
+    }
+    return "PARTIALLY VALIDATED — AUTHORIZATION PASSED, RECOVERABILITY NOT CONFIRMED";
+  }
+
+  // Authorization + recoverability passed from here.
   if (!write) {
     return "ZAMA COMPATIBLE FOR AUTHORIZATION FLOWS — WRITE FLOW NOT TESTED";
   }
@@ -205,14 +229,107 @@ function resolveFinalVerdict(zamaResults: TestResult[]): string {
   if (write.status === "BLOCKED" || write.status === "INCONCLUSIVE") {
     return "PARTIALLY VALIDATED — AUTHORIZATION COMPATIBLE, WRITE FLOW BLOCKED";
   }
-  return "INCOMPATIBLE — WRITE FLOW VALIDATION FAILED";
+  return "PARTIALLY VALIDATED — AUTHORIZATION COMPATIBLE, WRITE FLOW FAILED";
+}
+
+function summarizeBlockers(results: TestResult[]): Partial<Record<RootCauseCategory, number>> {
+  return results
+    .filter((r) => (r.status === "BLOCKED" || r.status === "INCONCLUSIVE") && r.rootCauseCategory)
+    .filter((r): r is TestResult & { rootCauseCategory: RootCauseCategory } => {
+      const category = r.rootCauseCategory;
+      return category !== undefined && INFRA_ROOT_CAUSES.has(category);
+    })
+    .reduce<Partial<Record<RootCauseCategory, number>>>((acc, result) => {
+      const key = result.rootCauseCategory;
+      acc[key] = (acc[key] ?? 0) + 1;
+      return acc;
+    }, {});
+}
+
+function summarizeEnvironmentSection(results: TestResult[]): TestResult[] {
+  const grouped = new Map<RootCauseCategory, TestResult[]>();
+  for (const result of results) {
+    if (result.section === "environment") continue;
+    if (!result.rootCauseCategory || !INFRA_ROOT_CAUSES.has(result.rootCauseCategory)) continue;
+    const bucket = grouped.get(result.rootCauseCategory);
+    if (bucket) {
+      bucket.push(result);
+      continue;
+    }
+    grouped.set(result.rootCauseCategory, [result]);
+  }
+
+  const sections: TestResult[] = [];
+  const categoryNames: Record<RootCauseCategory, string> = {
+    ENVIRONMENT: "Environment Configuration",
+    RPC: "RPC Connectivity",
+    RELAYER: "Relayer Reachability",
+    REGISTRY: "Registry / Token Discovery",
+    ADAPTER: "Adapter",
+    SIGNER: "Signer",
+    HARNESS: "Harness",
+  };
+
+  for (const [category, impacted] of grouped.entries()) {
+    const status: TestStatus = impacted.some((r) => r.status === "BLOCKED")
+      ? "BLOCKED"
+      : impacted.some((r) => r.status === "INCONCLUSIVE")
+        ? "INCONCLUSIVE"
+        : "UNTESTED";
+    const checks = impacted.map((r) => r.name).join(", ");
+    sections.push({
+      name: categoryNames[category],
+      section: "environment",
+      status,
+      summary: `${impacted.length} check(s) impacted by ${category.toLowerCase()}`,
+      reason: checks,
+      rootCauseCategory: category,
+      recommendation:
+        category === "ENVIRONMENT"
+          ? "Fix local credentials/environment variables and retry."
+          : category === "RPC"
+            ? "Verify RPC_URL, network connectivity, and rate limits."
+            : category === "RELAYER"
+              ? "Verify RELAYER_URL/API key and relayer availability."
+              : "Verify registry availability on the selected network and retry.",
+    });
+  }
+
+  return sections;
+}
+
+function exportJsonReport(payload: {
+  profile: AdapterProfile | null;
+  results: TestResult[];
+  environmentSummary: TestResult[];
+  verdict: string;
+  blockers: Partial<Record<RootCauseCategory, number>>;
+}): void {
+  const outputPath = (process.env.REPORT_JSON_PATH ?? "").trim();
+  if (!outputPath) return;
+  mkdirSync(dirname(outputPath), { recursive: true });
+  writeFileSync(
+    outputPath,
+    JSON.stringify(
+      {
+        generatedAt: new Date().toISOString(),
+        runId: RUN_ID,
+        ...payload,
+      },
+      null,
+      2,
+    ),
+  );
 }
 
 /** Print the final compatibility report to stdout. */
 export function printReport(): void {
-  const results = readResults();
+  const baseResults = readResults();
   const profile = readProfile();
-  if (results.length === 0 && profile === null) return;
+  if (baseResults.length === 0 && profile === null) return;
+
+  const environmentSummary = summarizeEnvironmentSection(baseResults);
+  const results = [...baseResults, ...environmentSummary];
 
   console.log(`\n${FULL}`);
   console.log("  Zama Compatibility Report");
@@ -303,22 +420,8 @@ export function printReport(): void {
   }
 
   // ── Verdict ────────────────────────────────────────────────────────────────
-  const zamaResults = results.filter((r) => r.section === "zama");
-  const verdict = resolveFinalVerdict(zamaResults);
-  const blockerCounts = results
-    .filter(
-      (r) =>
-        (r.status === "BLOCKED" || r.status === "INCONCLUSIVE") &&
-        (r.rootCauseCategory === "ENVIRONMENT" ||
-          r.rootCauseCategory === "RPC" ||
-          r.rootCauseCategory === "RELAYER" ||
-          r.rootCauseCategory === "REGISTRY"),
-    )
-    .reduce<Record<string, number>>((acc, r) => {
-      const key = r.rootCauseCategory ?? "UNKNOWN";
-      acc[key] = (acc[key] ?? 0) + 1;
-      return acc;
-    }, {});
+  const verdict = resolveFinalVerdict(results);
+  const blockerCounts = summarizeBlockers(results);
 
   console.log(SUB);
   console.log(`  Final: ${verdict}`);
@@ -328,5 +431,17 @@ export function printReport(): void {
       .join(", ");
     console.log(`  Blockers: ${rendered}`);
   }
+  const jsonPath = (process.env.REPORT_JSON_PATH ?? "").trim();
+  if (jsonPath) {
+    console.log(`  JSON: ${jsonPath}`);
+  }
   console.log(`${FULL}\n`);
+
+  exportJsonReport({
+    profile,
+    results: baseResults,
+    environmentSummary,
+    verdict,
+    blockers: blockerCounts,
+  });
 }
