@@ -196,6 +196,7 @@ function testOrder(name: string): number {
     "Address Resolution",
     "EIP-712 Signing",
     "EIP-712 Recoverability",
+    "ERC-1271 Verification",
     "Raw Transaction Execution",
     "Adapter Contract Read",
     "Zama Authorization Flow",

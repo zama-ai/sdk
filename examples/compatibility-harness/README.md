@@ -294,10 +294,11 @@ The report combines declared metadata and observed behavior. If evidence is weak
 Current checks:
 1. Adapter initialization and address resolution
 2. EIP-712 signing + recoverability
-3. Raw transaction execution (when supported)
-4. Contract read validation (adapter read when available, otherwise harness RPC fallback)
-5. Zama authorization flow (`sdk.allow()`)
-6. Zama write flow probe (operator approval write + verification)
+3. Optional ERC-1271 signature verification (for declared smart-account/ERC-1271 adapters)
+4. Raw transaction execution (when supported)
+5. Contract read validation (adapter read when available, otherwise harness RPC fallback)
+6. Zama authorization flow (`sdk.allow()`)
+7. Zama write flow probe (operator approval write + verification)
 
 ## Final Verdict Model
 

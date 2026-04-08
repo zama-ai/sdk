@@ -76,10 +76,11 @@ Classification combines declared metadata and observed behavior. Contradictions 
 Test order:
 1. Adapter profile (init + address resolution)
 2. EIP-712 signing and recoverability
-3. Raw EOA transaction execution (if supported)
-4. Contract read validation (adapter read when available, otherwise harness RPC fallback)
-5. Zama authorization (`sdk.allow()`)
-6. Zama write probe (operator approval write + on-chain verification)
+3. Optional ERC-1271 verification for declared smart-account/ERC-1271 integrations
+4. Raw EOA transaction execution (if supported)
+5. Contract read validation (adapter read when available, otherwise harness RPC fallback)
+6. Zama authorization (`sdk.allow()`)
+7. Zama write probe (operator approval write + on-chain verification)
 
 ## Reporting Model
 

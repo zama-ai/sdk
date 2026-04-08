@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { getAddress } from "viem";
+import { getAddress, hashTypedData, type Hex } from "viem";
 import { detectArchitecture, detectVerificationModel } from "../adapter/profile.js";
 import { emptyCapabilities } from "../adapter/types.js";
 import { networkConfig } from "../config/network.js";
@@ -12,6 +12,7 @@ import {
 import { classifyInfrastructureIssue, errorMessage } from "../harness/diagnostics.js";
 import { mergeProfile, record } from "../report/reporter.js";
 import { recoverEIP712Signer } from "../utils/crypto.js";
+import { publicClient } from "../utils/rpc.js";
 
 const TEST_TYPED_DATA = {
   domain: {
@@ -32,6 +33,21 @@ const TEST_TYPED_DATA = {
     timestamp: BigInt(Math.floor(Date.now() / 1000)),
   },
 };
+
+const ERC1271_ABI = [
+  {
+    name: "isValidSignature",
+    type: "function",
+    stateMutability: "view",
+    inputs: [
+      { name: "_hash", type: "bytes32" },
+      { name: "_signature", type: "bytes" },
+    ],
+    outputs: [{ name: "magicValue", type: "bytes4" }],
+  },
+] as const;
+
+const ERC1271_MAGIC_VALUE = "0x1626ba7e";
 
 let initError: string | null = null;
 
@@ -116,17 +132,97 @@ describe("Identity and Verification", () => {
       return;
     }
 
+    const shouldRunErc1271Check =
+      adapter.metadata.declaredArchitecture === "SMART_ACCOUNT" ||
+      adapter.metadata.verificationModel === "ERC1271";
+
+    async function runErc1271Check(adapterAddressHint?: string): Promise<boolean> {
+      let signerAddress = adapterAddressHint;
+      if (!signerAddress) {
+        try {
+          signerAddress = await getAdapterAddress();
+        } catch (err) {
+          const message = errorMessage(err);
+          const diagnostic = classifyInfrastructureIssue(message);
+          record({
+            name: "ERC-1271 Verification",
+            section: "ethereum",
+            status: diagnostic.status,
+            summary: "ERC-1271 verification could not resolve adapter address",
+            reason: message,
+            rootCauseCategory: diagnostic.rootCauseCategory,
+            errorCode: diagnostic.errorCode,
+            recommendation:
+              "Ensure contract-wallet identity can be resolved before ERC-1271 checks.",
+          });
+          return false;
+        }
+      }
+
+      try {
+        const typedDataHash = hashTypedData(TEST_TYPED_DATA);
+        const result = await publicClient.readContract({
+          address: getAddress(signerAddress),
+          abi: ERC1271_ABI,
+          functionName: "isValidSignature",
+          args: [typedDataHash, signature as Hex],
+        });
+        const magicValue = String(result).toLowerCase();
+        if (magicValue === ERC1271_MAGIC_VALUE) {
+          record({
+            name: "ERC-1271 Verification",
+            section: "ethereum",
+            status: "PASS",
+            summary: "Smart-account signature validated through ERC-1271",
+          });
+          return true;
+        }
+        record({
+          name: "ERC-1271 Verification",
+          section: "ethereum",
+          status: "FAIL",
+          summary: "Contract did not return ERC-1271 magic value",
+          reason: `Expected ${ERC1271_MAGIC_VALUE}, got ${magicValue}`,
+          rootCauseCategory: "SIGNER",
+          recommendation: "Verify contract-wallet signature validation semantics.",
+        });
+        return false;
+      } catch (err) {
+        const message = errorMessage(err);
+        const diagnostic = classifyInfrastructureIssue(message);
+        const isInfra = diagnostic.rootCauseCategory !== "HARNESS";
+        record({
+          name: "ERC-1271 Verification",
+          section: "ethereum",
+          status: isInfra ? diagnostic.status : "FAIL",
+          summary: isInfra
+            ? "ERC-1271 verification was blocked by environment/infrastructure"
+            : "ERC-1271 verification call failed",
+          reason: message,
+          rootCauseCategory: isInfra ? diagnostic.rootCauseCategory : "ADAPTER",
+          errorCode: isInfra ? diagnostic.errorCode : undefined,
+          recommendation: isInfra
+            ? "Check RPC and contract availability for ERC-1271 verification."
+            : "Verify the adapter address points to an ERC-1271-compatible contract.",
+        });
+        return false;
+      }
+    }
+
     const recovered = await recoverEIP712Signer(TEST_TYPED_DATA, signature);
     if (recovered === null) {
+      const erc1271Pass = shouldRunErc1271Check ? await runErc1271Check() : false;
       mergeProfile({
         observedCapabilities: {
           eip712Signing: "SUPPORTED",
           recoverableEcdsa: "UNSUPPORTED",
         },
-        verificationModel: detectVerificationModel(adapter.metadata.verificationModel, {
-          ...baseCapabilities,
-          recoverableEcdsa: "UNSUPPORTED",
-        }),
+        verificationModel: erc1271Pass
+          ? "ERC1271"
+          : detectVerificationModel(adapter.metadata.verificationModel, {
+              ...baseCapabilities,
+              recoverableEcdsa: "UNSUPPORTED",
+            }),
         detectedArchitecture: detectArchitecture(adapter.metadata.declaredArchitecture, {
           ...baseCapabilities,
           recoverableEcdsa: "UNSUPPORTED",
@@ -149,12 +245,16 @@ describe("Identity and Verification", () => {
 
     const address = await getAdapterAddress();
     if (getAddress(recovered) !== getAddress(address)) {
-      mergeProfile({
+      const erc1271Pass = shouldRunErc1271Check ? await runErc1271Check(address) : false;
+      const mismatchPatch = {
         observedCapabilities: {
-          eip712Signing: "SUPPORTED",
-          recoverableEcdsa: "UNSUPPORTED",
+          eip712Signing: "SUPPORTED" as const,
+          recoverableEcdsa: "UNSUPPORTED" as const,
         },
-      });
+      };
+      mergeProfile(
+        erc1271Pass ? { ...mismatchPatch, verificationModel: "ERC1271" } : mismatchPatch,
+      );
       record({
         name: "EIP-712 Recoverability",
         section: "ethereum",

@@ -235,6 +235,26 @@ Acceptance:
 Commit:
 - pending (current working tree)
 
+### T16 — Optional ERC-1271 Verification Probe
+
+Status: `DONE`
+
+Objective:
+- Improve smart-account diagnostics by probing ERC-1271 when declared by adapter metadata.
+
+Codex spec:
+1. Add optional `ERC-1271 Verification` check in identity/verification stage.
+2. Trigger when adapter declares `SMART_ACCOUNT` architecture or `ERC1271` verification model.
+3. Record pass/fail/blocked outcomes with infra-aware diagnostics.
+4. Keep recoverability failure semantics unchanged for Zama auth claims.
+
+Acceptance:
+- Harness reports explicit ERC-1271 check outcomes when applicable.
+- Smart-account diagnostics improve without overclaiming Zama authorization compatibility.
+
+Commit:
+- pending (current working tree)
+
 ## Definition of Done (Project-Level)
 
 - Adapter model remains capability-first and conservative.
