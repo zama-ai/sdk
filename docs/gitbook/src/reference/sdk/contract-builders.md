@@ -56,7 +56,6 @@ import {
   isConfidentialWrapperContract,
   isFinalizeUnwrapOperatorContract,
   setFinalizeUnwrapOperatorContract,
-  confidentialBatchTransferContract,
   delegateForUserDecryptionContract,
   revokeDelegationContract,
   getDelegationExpiryContract,
@@ -117,7 +116,6 @@ import {
 | `isConfidentialWrapperContract(token)`                               | Check if token is an ERC-7984 wrapper |
 | `isFinalizeUnwrapOperatorContract(token, holder, operator)`          | Check finalize-unwrap operator status |
 | `setFinalizeUnwrapOperatorContract(token, operator, timestamp?)`     | Set finalize-unwrap operator approval |
-| `confidentialBatchTransferContract(batcher, token, from, transfers)` | Batch encrypted transfers             |
 
 ## Registry
 
