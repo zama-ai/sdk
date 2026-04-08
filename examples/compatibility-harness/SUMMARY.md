@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This harness evaluates whether an integration system (wallet, MPC, custody API, smart-account stack) is compatible with the Zama SDK on Sepolia.
+This harness evaluates whether an integration system (wallet, MPC, custody API, smart-account stack) is compatible with the Zama SDK, with Sepolia as the default validated profile and a mainnet profile scaffold marked experimental.
 
 The key objective is trustworthiness:
 - avoid overclaiming compatibility,

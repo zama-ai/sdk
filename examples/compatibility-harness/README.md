@@ -1,6 +1,6 @@
 # Zama Compatibility Validation Harness
 
-Diagnostic harness to evaluate whether a wallet/custody integration is compatible with the Zama SDK on Sepolia.
+Diagnostic harness to evaluate whether a wallet/custody integration is compatible with the Zama SDK (Sepolia by default, mainnet profile available as experimental).
 
 The harness is adapter-based (not signer-only) and reports:
 - what your integration exposes (capabilities),
@@ -30,7 +30,7 @@ It can also separate incompatibility from infrastructure blockers:
 
 - Full production readiness of your integration.
 - Every possible Zama SDK write/read path.
-- Non-Sepolia behavior (this harness is currently Sepolia-focused).
+- Full deterministic guarantees for non-Sepolia environments (mainnet profile is currently experimental).
 
 If a surface is not tested or not supported by the adapter, the report says so explicitly (`UNTESTED` or `UNSUPPORTED`) and the verdict remains partial.
 
