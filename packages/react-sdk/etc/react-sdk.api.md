@@ -274,10 +274,9 @@ import { UnwrapSubmittedEvent } from '@zama-fhe/sdk';
 import { UseMutationOptions } from '@tanstack/react-query';
 import { UseMutationResult } from '@tanstack/react-query';
 import { UseQueryOptions } from '@tanstack/react-query';
-import { userDecryptMutationOptions } from '@zama-fhe/sdk/query';
-import { UserDecryptMutationParams } from '@zama-fhe/sdk/query';
-import { UserDecryptOptions } from '@zama-fhe/sdk/query';
 import { UserDecryptParams } from '@zama-fhe/sdk';
+import { UserDecryptQueryConfig } from '@zama-fhe/sdk/query';
+import { userDecryptQueryOptions } from '@zama-fhe/sdk/query';
 import { wrapContract } from '@zama-fhe/sdk';
 import { wrapETHContract } from '@zama-fhe/sdk';
 import { WrappedEvent } from '@zama-fhe/sdk';
@@ -1362,13 +1361,11 @@ export function usePublicKey(): _$_tanstack_react_query0.UseQueryResult<PublicKe
 // @public
 export function usePublicParams(bits: number): _$_tanstack_react_query0.UseQueryResult<PublicParamsData | null, Error>;
 
-export { userDecryptMutationOptions }
-
-export { UserDecryptMutationParams }
-
-export { UserDecryptOptions }
-
 export { UserDecryptParams }
+
+export { UserDecryptQueryConfig }
+
+export { userDecryptQueryOptions }
 
 // @public
 export function useReadonlyToken(address: Address): _$_zama_fhe_sdk0.ReadonlyToken;
@@ -1469,10 +1466,15 @@ export function useUnwrap(config: UseZamaConfig, options?: UseMutationOptions<Tr
 export function useUnwrapAll(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, void, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, void, `0x${string}`>;
 
 // @public
-export function useUserDecrypt(config?: UseUserDecryptConfig): _$_tanstack_react_query0.UseMutationResult<DecryptResult, Error, void | UserDecryptMutationParams, unknown>;
+export function useUserDecrypt(config: UseUserDecryptConfig): _$_tanstack_react_query0.UseQueryResult<DecryptResult, Error>;
 
 // @public
-export type UseUserDecryptConfig = UserDecryptOptions;
+export interface UseUserDecryptConfig {
+    handles: DecryptHandle[];
+    query?: {
+        enabled?: boolean;
+    };
+}
 
 // @public
 export type UseUserDecryptResult = ReturnType<typeof useUserDecrypt>;

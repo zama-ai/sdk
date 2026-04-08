@@ -6741,7 +6741,7 @@ export class CredentialsManager extends BaseCredentialsManager<StoredCredentials
     protected decryptCredentials(encrypted: EncryptedCredentials$1, signature: Hex): Promise<StoredCredentials>;
     // (undocumented)
     protected encryptCredentials(creds: StoredCredentials): Promise<EncryptedCredentials$1>;
-    isAllowed(): Promise<boolean>;
+    isAllowed(...contractAddresses: Address[]): Promise<boolean>;
     isExpired(contractAddress?: Address): Promise<boolean>;
     revoke(...contractAddresses: Address[]): Promise<void>;
     revokeByKey(key: string): Promise<void>;
@@ -6977,6 +6977,13 @@ export interface DecryptErrorEvent extends BaseEvent {
 // @public
 export class DecryptionFailedError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
+}
+
+// @public
+export interface DecryptOptions {
+    onCredentialsReady?: () => void;
+    // Warning: (ae-forgotten-export) The symbol "DecryptResult" needs to be exported by the entry point index.d.ts
+    onDecrypted?: (values: DecryptResult) => void;
 }
 
 // @public (undocumented)
@@ -30919,13 +30926,15 @@ export class ZamaSDK {
     // (undocumented)
     readonly credentials: CredentialsManager;
     // Warning: (ae-forgotten-export) The symbol "DecryptHandle" needs to be exported by the entry point index.d.ts
-    decrypt(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>>;
+    decrypt(handles: DecryptHandle[], options?: DecryptOptions): Promise<Record<Handle, ClearValueType>>;
     // (undocumented)
     readonly delegatedCredentials: DelegatedCredentialsManager;
     dispose(): void;
+    isAllowed(...contractAddresses: Address[]): Promise<boolean>;
     readonly registry: WrappersRegistry;
     // (undocumented)
     readonly relayer: RelayerSDK;
+    revoke(...contractAddresses: Address[]): Promise<void>;
     revokeSession(): Promise<void>;
     // (undocumented)
     readonly sessionStorage: GenericStorage;
