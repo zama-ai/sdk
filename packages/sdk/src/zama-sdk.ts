@@ -110,7 +110,7 @@ export class ZamaSDK {
       sessionStorage: this.sessionStorage,
       keypairTTL: (() => {
         const ttl = config.keypairTTL ?? 2592000;
-        if (ttl <= 0) {
+        if (ttl <= 0 || isNaN(ttl)) {
           throw new Error("keypairTTL must be a positive number (seconds)");
         }
         if (ttl > MAX_KEYPAIR_TTL) {

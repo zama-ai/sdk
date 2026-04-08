@@ -200,6 +200,12 @@ describe("ZamaSDK", () => {
       );
     });
 
+    it("throws when keypairTTL is NaN", ({ relayer, signer, storage }) => {
+      expect(() => new ZamaSDK({ relayer, signer, storage, keypairTTL: NaN })).toThrow(
+        "keypairTTL must be a positive number (seconds)",
+      );
+    });
+
     it("accepts keypairTTL exactly at the 365-day maximum without warning", ({
       relayer,
       signer,
