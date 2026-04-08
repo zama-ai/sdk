@@ -31,6 +31,15 @@ Expected final verdict:
 
 If relayer/RPC/registry fails, statuses can become `BLOCKED` or `INCONCLUSIVE` without implying adapter incompatibility.
 
+### Baseline Lockfile (Regression Guard)
+
+See `src/tests/fixtures/example-baselines/crossmint.lock.json`.
+
+Claim envelope tracked by unit tests:
+- `PASS`: full auth+write compatibility
+- `PARTIAL`: scoped write degradations (blocked/failed/not-recorded)
+- `INCONCLUSIVE`: infra/env-blocked authorization outcomes
+
 ## API Mapping Used by the Example
 
 - `adapter.getAddress`:

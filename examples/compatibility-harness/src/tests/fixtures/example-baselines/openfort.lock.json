@@ -1,0 +1,30 @@
+{
+  "id": "openfort",
+  "adapterModule": "./examples/openfort/signer.ts",
+  "importEnv": {},
+  "expectedProfile": {
+    "name": "Openfort EOA Baseline Adapter",
+    "declaredArchitecture": "EOA",
+    "verificationModel": "RECOVERABLE_ECDSA",
+    "capabilities": {
+      "addressResolution": "SUPPORTED",
+      "eip712Signing": "SUPPORTED",
+      "recoverableEcdsa": "SUPPORTED",
+      "rawTransactionSigning": "SUPPORTED",
+      "contractExecution": "SUPPORTED",
+      "contractReads": "SUPPORTED",
+      "transactionReceiptTracking": "SUPPORTED",
+      "zamaAuthorizationFlow": "SUPPORTED",
+      "zamaWriteFlow": "SUPPORTED"
+    }
+  },
+  "claimEnvelope": {
+    "PASS": ["ZAMA_AUTHORIZATION_AND_WRITE_COMPATIBLE"],
+    "PARTIAL": [
+      "PARTIAL_AUTHORIZATION_COMPATIBLE_WRITE_BLOCKED",
+      "PARTIAL_AUTHORIZATION_COMPATIBLE_WRITE_FAILED",
+      "ZAMA_AUTHORIZATION_COMPATIBLE_WRITE_NOT_RECORDED"
+    ],
+    "INCONCLUSIVE": ["INCONCLUSIVE_AUTHORIZATION_BLOCKED", "INCONCLUSIVE_AUTHORIZATION_UNTESTED"]
+  }
+}

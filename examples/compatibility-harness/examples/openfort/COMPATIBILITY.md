@@ -48,6 +48,15 @@ Typical run (valid key, funded wallet, healthy infra):
 Expected final verdict:
 - `ZAMA COMPATIBLE FOR AUTHORIZATION AND WRITE FLOWS`
 
+### Baseline Lockfile (Regression Guard)
+
+See `src/tests/fixtures/example-baselines/openfort.lock.json`.
+
+Claim envelope tracked by unit tests:
+- `PASS`: full auth+write compatibility
+- `PARTIAL`: write-surface degradations (blocked/failed/not-recorded)
+- `INCONCLUSIVE`: infra/env-blocked authorization outcomes
+
 ## Setup
 
 1. Configure `.env`:

@@ -410,6 +410,7 @@ See:
 - [`examples/turnkey/COMPATIBILITY.md`](./examples/turnkey/COMPATIBILITY.md)
 - [`examples/openfort/signer.ts`](./examples/openfort/signer.ts)
 - [`examples/openfort/COMPATIBILITY.md`](./examples/openfort/COMPATIBILITY.md)
+- baseline lockfiles used by regression tests: [`src/tests/fixtures/example-baselines`](./src/tests/fixtures/example-baselines)
 
 ## Legacy Compatibility
 

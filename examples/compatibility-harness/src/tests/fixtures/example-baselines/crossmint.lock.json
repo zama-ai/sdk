@@ -1,0 +1,33 @@
+{
+  "id": "crossmint",
+  "adapterModule": "./examples/crossmint/signer.ts",
+  "importEnv": {
+    "CROSSMINT_API_KEY": "baseline-key",
+    "CROSSMINT_WALLET_LOCATOR": "email:baseline@example.com:evm-smart-wallet"
+  },
+  "expectedProfile": {
+    "name": "Crossmint API-Routed Adapter",
+    "declaredArchitecture": "API_ROUTED_EXECUTION",
+    "verificationModel": "UNKNOWN",
+    "capabilities": {
+      "addressResolution": "SUPPORTED",
+      "eip712Signing": "SUPPORTED",
+      "recoverableEcdsa": "UNKNOWN",
+      "rawTransactionSigning": "UNSUPPORTED",
+      "contractExecution": "SUPPORTED",
+      "contractReads": "UNSUPPORTED",
+      "transactionReceiptTracking": "UNSUPPORTED",
+      "zamaAuthorizationFlow": "SUPPORTED",
+      "zamaWriteFlow": "SUPPORTED"
+    }
+  },
+  "claimEnvelope": {
+    "PASS": ["ZAMA_AUTHORIZATION_AND_WRITE_COMPATIBLE"],
+    "PARTIAL": [
+      "PARTIAL_AUTHORIZATION_COMPATIBLE_WRITE_BLOCKED",
+      "PARTIAL_AUTHORIZATION_COMPATIBLE_WRITE_FAILED",
+      "ZAMA_AUTHORIZATION_COMPATIBLE_WRITE_NOT_RECORDED"
+    ],
+    "INCONCLUSIVE": ["INCONCLUSIVE_AUTHORIZATION_BLOCKED", "INCONCLUSIVE_AUTHORIZATION_UNTESTED"]
+  }
+}

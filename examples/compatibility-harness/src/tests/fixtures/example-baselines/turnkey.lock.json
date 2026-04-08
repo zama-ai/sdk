@@ -1,0 +1,30 @@
+{
+  "id": "turnkey",
+  "adapterModule": "./examples/turnkey/signer.ts",
+  "importEnv": {},
+  "expectedProfile": {
+    "name": "Turnkey API Key Adapter",
+    "declaredArchitecture": "API_ROUTED_EXECUTION",
+    "verificationModel": "UNKNOWN",
+    "capabilities": {
+      "addressResolution": "SUPPORTED",
+      "eip712Signing": "SUPPORTED",
+      "recoverableEcdsa": "UNKNOWN",
+      "rawTransactionSigning": "UNSUPPORTED",
+      "contractExecution": "SUPPORTED",
+      "contractReads": "SUPPORTED",
+      "transactionReceiptTracking": "SUPPORTED",
+      "zamaAuthorizationFlow": "SUPPORTED",
+      "zamaWriteFlow": "SUPPORTED"
+    }
+  },
+  "claimEnvelope": {
+    "PASS": ["ZAMA_AUTHORIZATION_AND_WRITE_COMPATIBLE"],
+    "PARTIAL": [
+      "PARTIAL_AUTHORIZATION_COMPATIBLE_WRITE_BLOCKED",
+      "PARTIAL_AUTHORIZATION_COMPATIBLE_WRITE_FAILED",
+      "ZAMA_AUTHORIZATION_COMPATIBLE_WRITE_NOT_RECORDED"
+    ],
+    "INCONCLUSIVE": ["INCONCLUSIVE_AUTHORIZATION_BLOCKED", "INCONCLUSIVE_AUTHORIZATION_UNTESTED"]
+  }
+}
