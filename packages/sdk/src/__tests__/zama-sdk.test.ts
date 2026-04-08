@@ -121,7 +121,12 @@ describe("ZamaSDK", () => {
     sdk.terminate();
   });
 
-  it("revoke clears session storage", async ({ signer, relayer, storage, sessionStorage }) => {
+  it("credentials.revoke clears session storage", async ({
+    signer,
+    relayer,
+    storage,
+    sessionStorage,
+  }) => {
     const sdk = new ZamaSDK({ relayer, signer, storage, sessionStorage });
 
     // Simulate a cached session signature by computing the same store key
@@ -133,7 +138,7 @@ describe("ZamaSDK", () => {
     await sessionStorage.set(storeKey, "0xsomeSignature");
     expect(await sessionStorage.get(storeKey)).toBe("0xsomeSignature");
 
-    await sdk.revoke();
+    await sdk.credentials.revoke();
 
     expect(await sessionStorage.get(storeKey)).toBeNull();
   });

@@ -269,39 +269,6 @@ export class ZamaSDK {
   }
 
   /**
-   * Pre-authorize FHE credentials for one or more contract addresses.
-   * A single wallet signature covers all addresses, so subsequent decrypt
-   * operations on any of these contracts reuse cached credentials.
-   *
-   * @param contractAddresses - Contract addresses to authorize.
-   *
-   * @example
-   * ```ts
-   * await sdk.allow("0xContractA", "0xContractB");
-   * ```
-   */
-  async allow(...contractAddresses: Address[]): Promise<void> {
-    await this.credentials.allow(...contractAddresses);
-  }
-
-  /**
-   * Revoke the session signature for the current signer.
-   * The next decrypt operation will require a fresh wallet signature.
-   *
-   * @param contractAddresses - Optional addresses included in the
-   *   `credentials:revoked` event for observability.
-   *
-   * @example
-   * ```ts
-   * wallet.on("disconnect", () => sdk.revoke());
-   * await sdk.revoke("0xContractA", "0xContractB");
-   * ```
-   */
-  async revoke(...contractAddresses: Address[]): Promise<void> {
-    await this.credentials.revoke(...contractAddresses);
-  }
-
-  /**
    * Revoke the session signature for the current signer without requiring
    * contract addresses. Uses the tracked identity when available (safe during
    * account switches), falling back to querying the signer directly.
@@ -317,14 +284,6 @@ export class ZamaSDK {
     const chainId = this.#lastChainId ?? (await this.signer.getChainId());
     const storeKey = await CredentialsManager.computeStoreKey(address, chainId);
     await this.credentials.revokeByKey(storeKey);
-  }
-
-  /**
-   * Whether a session signature is currently cached for the connected wallet.
-   * Use this to check if decrypt operations can proceed without a wallet prompt.
-   */
-  async isAllowed(): Promise<boolean> {
-    return this.credentials.isAllowed();
   }
 
   /**
@@ -355,7 +314,7 @@ export class ZamaSDK {
    * ```ts
    * {
    *   using sdk = new ZamaSDK({ relayer, signer, storage });
-   *   await sdk.allow(cUSDT);
+   *   await sdk.credentials.allow(cUSDT);
    *   const balance = await sdk.createReadonlyToken(cUSDT).balanceOf();
    * } // sdk.terminate() called automatically here
    * ```
