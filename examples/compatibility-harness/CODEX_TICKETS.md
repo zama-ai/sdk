@@ -319,7 +319,7 @@ Execution rules:
 
 ### T19 — Canonical Check Registry
 
-Status: `TODO`
+Status: `DONE`
 
 Codex spec:
 1. Add a single source of truth for checks (`id`, display name, section, dependencies).
@@ -332,7 +332,7 @@ Acceptance:
 
 ### T20 — Negative Test Matrix
 
-Status: `TODO`
+Status: `DONE`
 
 Codex spec:
 1. Add explicit negative-path tests per core surface:
@@ -348,7 +348,7 @@ Acceptance:
 
 ### T21 — Claim/Status Consistency Guard
 
-Status: `TODO`
+Status: `DONE`
 
 Codex spec:
 1. Add validator that checks claim evidence vs recorded statuses.
@@ -362,7 +362,7 @@ Acceptance:
 
 ### T22 — Structured Evidence Payloads
 
-Status: `TODO`
+Status: `DONE`
 
 Codex spec:
 1. Add `evidence.details` in claim payload:
@@ -377,7 +377,7 @@ Acceptance:
 
 ### T23 — Recommendation Map v2
 
-Status: `TODO`
+Status: `DONE`
 
 Codex spec:
 1. Centralize recommendations by `errorCode`.
@@ -389,7 +389,7 @@ Acceptance:
 
 ### T24 — Artifact Compatibility Contract Tests
 
-Status: `TODO`
+Status: `DONE`
 
 Codex spec:
 1. Add fixture set for:
@@ -406,7 +406,7 @@ Acceptance:
 
 ### T25 — Example Baseline Lockfiles
 
-Status: `TODO`
+Status: `DONE`
 
 Codex spec:
 1. Add expected-profile fixtures for Openfort/Turnkey/Crossmint.
@@ -418,7 +418,7 @@ Acceptance:
 
 ### T26 — Adapter Quality Gate Command
 
-Status: `TODO`
+Status: `DONE`
 
 Codex spec:
 1. Add `npm run adapter:check`:
@@ -433,7 +433,7 @@ Acceptance:
 
 ### T27 — CI Dual Mode (Deterministic + Optional Live)
 
-Status: `TODO`
+Status: `DONE`
 
 Codex spec:
 1. Keep deterministic workflow mandatory.
@@ -448,7 +448,7 @@ Acceptance:
 
 ### T28 — Verdict Interpretation Playbook
 
-Status: `TODO`
+Status: `DONE`
 
 Codex spec:
 1. Add guide mapping each final claim to:
@@ -462,7 +462,7 @@ Acceptance:
 
 ### T29 — Claim Catalog
 
-Status: `TODO`
+Status: `DONE`
 
 Codex spec:
 1. Document each claim ID, trigger conditions, and confidence scope.
@@ -473,7 +473,7 @@ Acceptance:
 
 ### T30 — Release/Schema Discipline
 
-Status: `TODO`
+Status: `DONE`
 
 Codex spec:
 1. Define `schemaVersion` bump policy and changelog template.
