@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { parseValidationTarget, resolveValidationGate } from "../../cli/validate-policy.js";
+import {
+  applyValidationPolicy,
+  parseValidationTarget,
+  resolveValidationGate,
+} from "../../cli/validate-policy.js";
 
 describe("cli.validate-policy.parseValidationTarget", () => {
   it("defaults to AUTHORIZATION", () => {
@@ -78,6 +82,58 @@ describe("cli.validate-policy.resolveValidationGate", () => {
       status: "INCONCLUSIVE",
       exitCode: 31,
       summary: "Unknown claim. Compatibility gate is inconclusive.",
+    });
+  });
+});
+
+describe("cli.validate-policy.applyValidationPolicy", () => {
+  it("keeps base decision when no extra constraints are configured", () => {
+    const base = resolveValidationGate(
+      "ZAMA_AUTHORIZATION_AND_WRITE_COMPATIBLE",
+      "AUTHORIZATION_AND_WRITE",
+    );
+    expect(
+      applyValidationPolicy(base, "ZAMA_AUTHORIZATION_AND_WRITE_COMPATIBLE", {
+        allowPartial: false,
+        expectedClaims: [],
+      }),
+    ).toEqual({
+      status: "PASS",
+      exitCode: 0,
+      summary: "Authorization and write compatibility validated.",
+    });
+  });
+
+  it("fails when claim is not allowed by expectedClaims policy", () => {
+    const base = resolveValidationGate("INCONCLUSIVE_AUTHORIZATION_BLOCKED", "AUTHORIZATION");
+    expect(
+      applyValidationPolicy(base, "INCONCLUSIVE_AUTHORIZATION_BLOCKED", {
+        allowPartial: false,
+        expectedClaims: ["ZAMA_AUTHORIZATION_AND_WRITE_COMPATIBLE"],
+      }),
+    ).toEqual({
+      status: "FAIL",
+      exitCode: 21,
+      summary: 'Claim "INCONCLUSIVE_AUTHORIZATION_BLOCKED" is not allowed by policy.',
+      note: "Allowed claims: ZAMA_AUTHORIZATION_AND_WRITE_COMPATIBLE",
+    });
+  });
+
+  it("promotes partial to pass when allowPartial is enabled", () => {
+    const base = resolveValidationGate(
+      "PARTIAL_AUTHORIZATION_COMPATIBLE_WRITE_UNSUPPORTED",
+      "AUTHORIZATION_AND_WRITE",
+    );
+    expect(
+      applyValidationPolicy(base, "PARTIAL_AUTHORIZATION_COMPATIBLE_WRITE_UNSUPPORTED", {
+        allowPartial: true,
+        expectedClaims: [],
+      }),
+    ).toEqual({
+      status: "PASS",
+      exitCode: 0,
+      summary: "Partial validation accepted by policy.",
+      note: "allowPartial=true",
     });
   });
 });

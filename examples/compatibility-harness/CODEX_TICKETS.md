@@ -190,6 +190,27 @@ Codex spec:
 Acceptance:
 - A partner engineer can build a parser without reading source code.
 
+### T14 — Validate Policy File Support
+
+Status: `DONE`
+
+Objective:
+- Make validation gating configurable without code changes.
+
+Codex spec:
+1. Add `VALIDATION_POLICY_PATH` JSON policy support.
+2. Support claim allow-list and partial acceptance controls.
+3. Keep env overrides explicit (`VALIDATION_TARGET`, `VALIDATION_ALLOW_PARTIAL`).
+4. Add unit tests for config parsing and policy application.
+
+Acceptance:
+- `validate` can read policy files and enforce expected claim IDs.
+- `validate` can optionally accept partial outcomes via policy/env.
+- Invalid policies fail with explicit config errors.
+
+Commit:
+- pending (current working tree)
+
 ## Definition of Done (Project-Level)
 
 - Adapter model remains capability-first and conservative.

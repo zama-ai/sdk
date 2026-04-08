@@ -5,11 +5,8 @@ import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import type { ReportArtifact } from "../report/schema.js";
 import { parseReportArtifact } from "../report/parse.js";
-import {
-  parseValidationTarget,
-  resolveValidationGate,
-  type ValidationTarget,
-} from "./validate-policy.js";
+import { resolveValidationConfig } from "./validate-config.js";
+import { applyValidationPolicy, resolveValidationGate } from "./validate-policy.js";
 
 function resolveReportPath(): { path: string; ephemeral: boolean } {
   const configured = (process.env.REPORT_JSON_PATH ?? "").trim();
@@ -50,27 +47,41 @@ function readArtifact(path: string): ReportArtifact {
 }
 
 function printValidationSummary(input: {
-  target: ValidationTarget;
+  target: string;
   reportPath: string;
   claimId: string;
   finalVerdict: string;
   decision: ReturnType<typeof resolveValidationGate>;
+  effective: ReturnType<typeof applyValidationPolicy>;
+  policyPath?: string;
 }): void {
   console.log("\nValidation Gate");
   console.log("===============\n");
   console.log(`Target:       ${input.target}`);
+  if (input.policyPath) {
+    console.log(`Policy:       ${input.policyPath}`);
+  }
   console.log(`Claim:        ${input.claimId}`);
   console.log(`Verdict:      ${input.finalVerdict}`);
-  console.log(`Gate Status:  ${input.decision.status}`);
-  console.log(`Summary:      ${input.decision.summary}`);
-  console.log(`Exit code:    ${input.decision.exitCode}`);
+  console.log(`Gate Status:  ${input.effective.status}`);
+  console.log(`Summary:      ${input.effective.summary}`);
+  if (input.effective.note) {
+    console.log(`Policy note:  ${input.effective.note}`);
+  }
+  if (
+    input.decision.status !== input.effective.status ||
+    input.decision.exitCode !== input.effective.exitCode
+  ) {
+    console.log(`Base gate:    ${input.decision.status} (exit ${input.decision.exitCode})`);
+  }
+  console.log(`Exit code:    ${input.effective.exitCode}`);
   console.log(`Report JSON:  ${input.reportPath}\n`);
 }
 
 async function runValidate(): Promise<number> {
-  let target: ValidationTarget;
+  let config: ReturnType<typeof resolveValidationConfig>;
   try {
-    target = parseValidationTarget(process.env.VALIDATION_TARGET);
+    config = resolveValidationConfig(process.env);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`validate: ${message}`);
@@ -83,15 +94,18 @@ async function runValidate(): Promise<number> {
 
   try {
     const artifact = readArtifact(reportPath);
-    const decision = resolveValidationGate(artifact.claim.id, target);
+    const decision = resolveValidationGate(artifact.claim.id, config.target);
+    const effective = applyValidationPolicy(decision, artifact.claim.id, config.policy);
     printValidationSummary({
-      target,
+      target: config.target,
       reportPath,
       claimId: artifact.claim.id,
       finalVerdict: artifact.finalVerdict,
       decision,
+      effective,
+      policyPath: config.policyPath,
     });
-    return decision.exitCode;
+    return effective.exitCode;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`validate: ${message}`);

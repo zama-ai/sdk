@@ -155,6 +155,8 @@ For deterministic local runs without RPC/relayer dependencies, set `HARNESS_MOCK
 
 For CI and automated go/no-go checks, `npm run validate` executes the suite, reads the JSON artifact claim, and returns policy-oriented exit codes. Gate target is configurable via `VALIDATION_TARGET` (`AUTHORIZATION` or `AUTHORIZATION_AND_WRITE`).
 
+`validate` also supports JSON policy files (`VALIDATION_POLICY_PATH`) for explicit claim allow-lists and partial-acceptance behavior, while enforcing the report schema contract before decisioning.
+
 Reference examples currently included:
 - Crossmint API-routed adapter
 - Turnkey API key adapter

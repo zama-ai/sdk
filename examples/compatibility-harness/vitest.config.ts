@@ -65,6 +65,7 @@ export default defineConfig({
       "src/tests/unit/verdict.unit.test.ts",
       "src/tests/unit/goldenReports.unit.test.ts",
       "src/tests/unit/validatePolicy.unit.test.ts",
+      "src/tests/unit/validateConfig.unit.test.ts",
       "src/tests/adapterProfile.test.ts",
       "src/tests/eip712.test.ts",
       "src/tests/transaction.test.ts",

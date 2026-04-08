@@ -9,6 +9,18 @@ export interface ValidationGateDecision {
   summary: string;
 }
 
+export interface ValidationPolicy {
+  allowPartial: boolean;
+  expectedClaims: string[];
+}
+
+export interface EffectiveValidationGate {
+  status: ValidationGateStatus | "FAIL";
+  exitCode: number;
+  summary: string;
+  note?: string;
+}
+
 const INCOMPATIBLE_CLAIMS = new Set([
   "INCOMPATIBLE_AUTHORIZATION_FAILED",
   "INCOMPATIBLE_AUTHORIZATION_UNSUPPORTED",
@@ -97,5 +109,35 @@ export function resolveValidationGate(
     status: "INCONCLUSIVE",
     exitCode: 31,
     summary: "Unknown claim. Compatibility gate is inconclusive.",
+  };
+}
+
+export function applyValidationPolicy(
+  decision: ValidationGateDecision,
+  claimId: string,
+  policy: ValidationPolicy,
+): EffectiveValidationGate {
+  if (policy.expectedClaims.length > 0 && !policy.expectedClaims.includes(claimId)) {
+    return {
+      status: "FAIL",
+      exitCode: 21,
+      summary: `Claim "${claimId}" is not allowed by policy.`,
+      note: `Allowed claims: ${policy.expectedClaims.join(", ")}`,
+    };
+  }
+
+  if (decision.status === "PARTIAL" && policy.allowPartial) {
+    return {
+      status: "PASS",
+      exitCode: 0,
+      summary: "Partial validation accepted by policy.",
+      note: "allowPartial=true",
+    };
+  }
+
+  return {
+    status: decision.status,
+    exitCode: decision.exitCode,
+    summary: decision.summary,
   };
 }

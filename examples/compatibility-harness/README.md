@@ -158,10 +158,22 @@ By default, the gate target is `AUTHORIZATION`. You can require strict auth+writ
 VALIDATION_TARGET=AUTHORIZATION_AND_WRITE npm run validate
 ```
 
+You can also provide a JSON policy file:
+
+```bash
+VALIDATION_POLICY_PATH=./validation-policy.example.json npm run validate
+```
+
+Policy behavior:
+- `VALIDATION_TARGET` overrides `policy.target` when both are set.
+- `VALIDATION_ALLOW_PARTIAL=true` can promote `PARTIAL` gate results to exit code `0`.
+- `policy.expectedClaims` can restrict accepted claim IDs.
+
 Validation gate exit codes:
 - `0`: requested compatibility target validated,
 - `10`: partially validated (typically auth passed, write not fully validated, strict target only),
 - `20`: incompatible,
+- `21`: claim rejected by policy `expectedClaims`,
 - `30`: inconclusive (blocked/untested authorization claim),
 - `31`: unknown claim mapping,
 - `97`: invalid gate config or unreadable report artifact,
@@ -328,6 +340,8 @@ Common variables:
 - `RELAYER_API_KEY` (optional; needed for private/protected relayers)
 - `REPORT_JSON_PATH` (optional; write final report JSON to this file path)
 - `HARNESS_MOCK_MODE` (optional; when enabled, marks network-dependent checks as `UNTESTED`)
+- `VALIDATION_POLICY_PATH` (optional; JSON policy for `npm run validate`)
+- `VALIDATION_ALLOW_PARTIAL` (optional; override policy to accept `PARTIAL` as pass)
 
 ## Integrator Workflow (Target: < 10 min)
 
