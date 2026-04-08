@@ -56,6 +56,7 @@ describe("Identity and Verification", () => {
         summary: "Adapter initialization failed before signing could be tested",
         reason: initError,
         rootCauseCategory: diagnostic.rootCauseCategory,
+        errorCode: diagnostic.errorCode,
         recommendation: "Resolve adapter initialization errors first.",
       });
       return;
@@ -97,6 +98,7 @@ describe("Identity and Verification", () => {
           : "Adapter failed to produce an EIP-712 signature",
         reason: message,
         rootCauseCategory: isInfra ? diagnostic.rootCauseCategory : "ADAPTER",
+        errorCode: isInfra ? diagnostic.errorCode : undefined,
         likelyCause: "The adapter rejected the typed-data payload or transformed it incorrectly.",
         recommendation: "Ensure the adapter supports standard Ethereum EIP-712 signing.",
       });

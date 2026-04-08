@@ -9,6 +9,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import type {
+  DiagnosticCode,
   ObservedAdapterProfile,
   RootCauseCategory,
   ValidationStatus,
@@ -34,6 +35,7 @@ export interface TestResult {
   summary?: string;
   reason?: string;
   rootCauseCategory?: RootCauseCategory;
+  errorCode?: DiagnosticCode;
   likelyCause?: string;
   recommendation?: string;
 }
@@ -384,6 +386,7 @@ export function printReport(): void {
         if (r.summary) console.log(`      Summary:        ${r.summary}`);
         if (r.reason) console.log(`      Reason:         ${r.reason}`);
         if (r.rootCauseCategory) console.log(`      Root cause:     ${r.rootCauseCategory}`);
+        if (r.errorCode) console.log(`      Error code:     ${r.errorCode}`);
         if (r.likelyCause) console.log(`      Likely cause:   ${r.likelyCause}`);
         if (r.recommendation) console.log(`      Recommendation: ${r.recommendation}`);
         console.log();
@@ -397,6 +400,7 @@ export function printReport(): void {
         if (r.summary) console.log(`      Summary:        ${r.summary}`);
         console.log(`      Note:           ${r.reason}`);
         if (r.rootCauseCategory) console.log(`      Root cause:     ${r.rootCauseCategory}`);
+        if (r.errorCode) console.log(`      Error code:     ${r.errorCode}`);
         if (r.recommendation) console.log(`      Recommendation: ${r.recommendation}`);
       }
     }

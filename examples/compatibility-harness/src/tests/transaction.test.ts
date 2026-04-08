@@ -27,6 +27,7 @@ describe("Ethereum Raw Transaction Flow", () => {
         summary: "Adapter initialization failed before raw transaction validation",
         reason: initError,
         rootCauseCategory: diagnostic.rootCauseCategory,
+        errorCode: diagnostic.errorCode,
         recommendation: "Resolve adapter initialization first.",
       });
       return;
@@ -63,6 +64,7 @@ describe("Ethereum Raw Transaction Flow", () => {
         summary: "Address resolution blocked raw transaction validation",
         reason: message,
         rootCauseCategory: diagnostic.rootCauseCategory,
+        errorCode: diagnostic.errorCode,
         recommendation:
           "Fix adapter identity configuration before validating raw transaction signing.",
       });
@@ -88,6 +90,7 @@ describe("Ethereum Raw Transaction Flow", () => {
         summary: "RPC dependencies blocked raw transaction validation",
         reason: message,
         rootCauseCategory: diagnostic.rootCauseCategory,
+        errorCode: diagnostic.errorCode,
         recommendation: "Check RPC_URL connectivity and retry.",
       });
       return;
@@ -155,6 +158,7 @@ describe("Ethereum Raw Transaction Flow", () => {
           : "Signed raw transaction could not be broadcast successfully",
         reason: message,
         rootCauseCategory: isInfra ? diagnostic.rootCauseCategory : "SIGNER",
+        errorCode: isInfra ? diagnostic.errorCode : undefined,
         recommendation: isInfra
           ? "Fix environment or network prerequisites, then retry."
           : "Verify that the signed transaction is a valid EIP-1559 payload.",

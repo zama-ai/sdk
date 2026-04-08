@@ -1,4 +1,4 @@
-import type { RootCauseCategory, ValidationStatus } from "../adapter/types.js";
+import type { DiagnosticCode, RootCauseCategory, ValidationStatus } from "../adapter/types.js";
 
 export function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -32,6 +32,7 @@ export function isEnvironmentIssue(message: string): boolean {
       "wallet locator",
       "turnkey_",
       "crossmint_",
+      "openfort_",
       "relayer_api_key",
       "api key",
       "invalid private key",
@@ -84,21 +85,55 @@ export function isRegistryIssue(message: string): boolean {
 export function classifyInfrastructureIssue(message: string): {
   status: ValidationStatus;
   rootCauseCategory: RootCauseCategory;
+  errorCode: DiagnosticCode;
 } {
   if (isFundingIssue(message)) {
-    return { status: "BLOCKED", rootCauseCategory: "ENVIRONMENT" };
+    return {
+      status: "BLOCKED",
+      rootCauseCategory: "ENVIRONMENT",
+      errorCode: "ENV_INSUFFICIENT_FUNDS",
+    };
   }
   if (isEnvironmentIssue(message)) {
-    return { status: "BLOCKED", rootCauseCategory: "ENVIRONMENT" };
+    const lower = normalize(message);
+    const invalidPattern =
+      lower.includes("invalid") || lower.includes("malformed") || lower.includes("mismatch");
+    return {
+      status: "BLOCKED",
+      rootCauseCategory: "ENVIRONMENT",
+      errorCode: invalidPattern ? "ENV_INVALID_CONFIG" : "ENV_MISSING_CONFIG",
+    };
   }
   if (isRegistryIssue(message)) {
-    return { status: "BLOCKED", rootCauseCategory: "REGISTRY" };
+    return {
+      status: "BLOCKED",
+      rootCauseCategory: "REGISTRY",
+      errorCode: normalize(message).includes("no token pairs")
+        ? "REGISTRY_EMPTY"
+        : "REGISTRY_UNAVAILABLE",
+    };
   }
   if (isRelayerIssue(message)) {
-    return { status: "INCONCLUSIVE", rootCauseCategory: "RELAYER" };
+    return {
+      status: "INCONCLUSIVE",
+      rootCauseCategory: "RELAYER",
+      errorCode: "RELAYER_UNAVAILABLE",
+    };
   }
   if (isRpcIssue(message)) {
-    return { status: "INCONCLUSIVE", rootCauseCategory: "RPC" };
+    const lower = normalize(message);
+    return {
+      status: "INCONCLUSIVE",
+      rootCauseCategory: "RPC",
+      errorCode:
+        lower.includes("429") || lower.includes("rate limit")
+          ? "RPC_RATE_LIMIT"
+          : "RPC_CONNECTIVITY",
+    };
   }
-  return { status: "INCONCLUSIVE", rootCauseCategory: "HARNESS" };
+  return {
+    status: "INCONCLUSIVE",
+    rootCauseCategory: "HARNESS",
+    errorCode: "HARNESS_UNKNOWN",
+  };
 }

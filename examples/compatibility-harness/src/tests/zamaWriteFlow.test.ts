@@ -34,6 +34,7 @@ describe("Zama Write Flow", () => {
         summary: "Adapter initialization failed before write-flow validation",
         reason: initError,
         rootCauseCategory: diagnostic.rootCauseCategory,
+        errorCode: diagnostic.errorCode,
         recommendation: "Resolve adapter initialization issues first.",
       });
       return;
@@ -73,6 +74,7 @@ describe("Zama Write Flow", () => {
         summary: "Token discovery blocked Zama write validation",
         reason: message,
         rootCauseCategory: diagnostic.rootCauseCategory,
+        errorCode: diagnostic.errorCode,
         recommendation: "Ensure RPC and registry access are working on Sepolia.",
       });
       sdk.terminate();
@@ -95,6 +97,7 @@ describe("Zama Write Flow", () => {
           : "Adapter failed to submit a Zama write transaction",
         reason: message,
         rootCauseCategory: isInfra ? diagnostic.rootCauseCategory : "ADAPTER",
+        errorCode: isInfra ? diagnostic.errorCode : undefined,
         recommendation: isInfra
           ? "Fix environment, RPC, relayer, or registry prerequisites and retry."
           : "Verify adapter contract execution and Zama contract routing.",
@@ -130,6 +133,7 @@ describe("Zama Write Flow", () => {
           : "The write was submitted but resulting Zama state could not be verified",
         reason: message,
         rootCauseCategory: isInfra ? diagnostic.rootCauseCategory : "SIGNER",
+        errorCode: isInfra ? diagnostic.errorCode : undefined,
         recommendation: isInfra
           ? "Check RPC/read dependencies and retry verification."
           : "Verify receipt tracking and on-chain state verification.",

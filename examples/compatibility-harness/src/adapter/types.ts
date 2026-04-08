@@ -39,6 +39,17 @@ export type RootCauseCategory =
   | "ENVIRONMENT"
   | "HARNESS";
 
+export type DiagnosticCode =
+  | "ENV_MISSING_CONFIG"
+  | "ENV_INVALID_CONFIG"
+  | "ENV_INSUFFICIENT_FUNDS"
+  | "RPC_CONNECTIVITY"
+  | "RPC_RATE_LIMIT"
+  | "RELAYER_UNAVAILABLE"
+  | "REGISTRY_EMPTY"
+  | "REGISTRY_UNAVAILABLE"
+  | "HARNESS_UNKNOWN";
+
 export interface AdapterMetadata {
   name: string;
   declaredArchitecture?: AdapterArchitecture;

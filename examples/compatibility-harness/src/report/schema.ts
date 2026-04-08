@@ -1,4 +1,5 @@
 import type {
+  DiagnosticCode,
   ObservedAdapterProfile,
   RootCauseCategory,
   ValidationStatus,
@@ -21,6 +22,7 @@ export interface ReportCheck {
   summary?: string;
   reason?: string;
   rootCauseCategory?: RootCauseCategory;
+  errorCode?: DiagnosticCode;
   likelyCause?: string;
   recommendation?: string;
 }

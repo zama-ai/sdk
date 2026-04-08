@@ -32,6 +32,7 @@ describe("Adapter-Routed Execution Surface", () => {
         summary: "Adapter initialization failed before contract read validation",
         reason: initError,
         rootCauseCategory: diagnostic.rootCauseCategory,
+        errorCode: diagnostic.errorCode,
         recommendation: "Resolve adapter initialization issues first.",
       });
       return;
@@ -58,6 +59,7 @@ describe("Adapter-Routed Execution Surface", () => {
         summary: "Contract read validation failed",
         reason: message,
         rootCauseCategory: diagnostic.rootCauseCategory,
+        errorCode: diagnostic.errorCode,
         recommendation: "Verify RPC access and adapter read routing.",
       });
       sdk.terminate();

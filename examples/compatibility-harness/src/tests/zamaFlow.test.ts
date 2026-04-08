@@ -25,6 +25,7 @@ describe("Zama Authorization Flow", () => {
         summary: "Adapter initialization failed before Zama authorization validation",
         reason: initError,
         rootCauseCategory: diagnostic.rootCauseCategory,
+        errorCode: diagnostic.errorCode,
         recommendation: "Resolve adapter initialization issues first.",
       });
       return;
@@ -62,6 +63,7 @@ describe("Zama Authorization Flow", () => {
         summary: "Token discovery blocked authorization validation",
         reason: message,
         rootCauseCategory: diagnostic.rootCauseCategory,
+        errorCode: diagnostic.errorCode,
         recommendation: "Ensure RPC and registry access are working on Sepolia.",
       });
       sdk.terminate();
@@ -83,6 +85,7 @@ describe("Zama Authorization Flow", () => {
           : "sdk.allow() rejected the adapter signature or identity",
         reason: message,
         rootCauseCategory: isInfra ? diagnostic.rootCauseCategory : "SIGNER",
+        errorCode: isInfra ? diagnostic.errorCode : undefined,
         recommendation: isInfra
           ? "Check environment, RPC, relayer, and registry connectivity before retrying."
           : "Ensure the adapter produces standard Zama-acceptable EIP-712 signatures.",

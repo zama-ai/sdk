@@ -66,6 +66,7 @@ describe("Adapter Profile", () => {
         summary: "Adapter could not initialize",
         reason: initError,
         rootCauseCategory: diagnostic.rootCauseCategory,
+        errorCode: diagnostic.errorCode,
         recommendation: "Fix adapter configuration and retry the harness.",
       });
       return;
@@ -105,6 +106,7 @@ describe("Adapter Profile", () => {
         summary: "Adapter address could not be resolved",
         reason: message,
         rootCauseCategory: diagnostic.rootCauseCategory,
+        errorCode: diagnostic.errorCode,
         recommendation: "Ensure the adapter can resolve its wallet address during initialization.",
       });
       recordProfile({

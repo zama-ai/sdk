@@ -9,6 +9,7 @@ describe("diagnostics.classifyInfrastructureIssue", () => {
     expect(diagnostic).toEqual({
       status: "BLOCKED",
       rootCauseCategory: "ENVIRONMENT",
+      errorCode: "ENV_MISSING_CONFIG",
     });
   });
 
@@ -19,6 +20,7 @@ describe("diagnostics.classifyInfrastructureIssue", () => {
     expect(diagnostic).toEqual({
       status: "BLOCKED",
       rootCauseCategory: "ENVIRONMENT",
+      errorCode: "ENV_INSUFFICIENT_FUNDS",
     });
   });
 
@@ -29,6 +31,7 @@ describe("diagnostics.classifyInfrastructureIssue", () => {
     expect(diagnostic).toEqual({
       status: "BLOCKED",
       rootCauseCategory: "REGISTRY",
+      errorCode: "REGISTRY_EMPTY",
     });
   });
 
@@ -39,6 +42,7 @@ describe("diagnostics.classifyInfrastructureIssue", () => {
     expect(diagnostic).toEqual({
       status: "INCONCLUSIVE",
       rootCauseCategory: "RELAYER",
+      errorCode: "RELAYER_UNAVAILABLE",
     });
   });
 
@@ -47,6 +51,16 @@ describe("diagnostics.classifyInfrastructureIssue", () => {
     expect(diagnostic).toEqual({
       status: "INCONCLUSIVE",
       rootCauseCategory: "RPC",
+      errorCode: "RPC_CONNECTIVITY",
+    });
+  });
+
+  it("classifies rate limits as INCONCLUSIVE/RPC_RATE_LIMIT", () => {
+    const diagnostic = classifyInfrastructureIssue("RPC 429 rate limit exceeded");
+    expect(diagnostic).toEqual({
+      status: "INCONCLUSIVE",
+      rootCauseCategory: "RPC",
+      errorCode: "RPC_RATE_LIMIT",
     });
   });
 
@@ -57,6 +71,7 @@ describe("diagnostics.classifyInfrastructureIssue", () => {
     expect(diagnostic).toEqual({
       status: "INCONCLUSIVE",
       rootCauseCategory: "HARNESS",
+      errorCode: "HARNESS_UNKNOWN",
     });
   });
 });
