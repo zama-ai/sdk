@@ -122,6 +122,30 @@ Exit codes:
 - `3`: at least one `INCONCLUSIVE` issue (usually infra/network),
 - `99`: unexpected harness/runtime error.
 
+## Validation Gate (CI-Friendly)
+
+Run the full harness and return a stable exit code based on the final `claim`:
+
+```bash
+npm run validate
+```
+
+By default, the gate target is `AUTHORIZATION`. You can require strict auth+write validation:
+
+```bash
+VALIDATION_TARGET=AUTHORIZATION_AND_WRITE npm run validate
+```
+
+Validation gate exit codes:
+- `0`: requested compatibility target validated,
+- `10`: partially validated (typically auth passed, write not fully validated, strict target only),
+- `20`: incompatible,
+- `30`: inconclusive (blocked/untested authorization claim),
+- `31`: unknown claim mapping,
+- `97`: invalid gate config or unreadable report artifact,
+- `98`: test runner execution failure,
+- `99`: unexpected CLI runtime failure.
+
 ## Adapter Model (Primary Interface)
 
 Provide a module exporting `adapter` (preferred). The harness also accepts legacy `signer` exports for backward compatibility.
