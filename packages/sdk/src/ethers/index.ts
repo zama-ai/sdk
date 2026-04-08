@@ -16,9 +16,7 @@ export type {
 export { ProviderRpcError } from "viem";
 export {
   readConfidentialBalanceOfContract,
-  readWrapperForTokenContract,
   readUnderlyingTokenContract,
-  readWrapperExistsContract,
   readSupportsInterfaceContract,
   writeConfidentialTransferContract,
   writeUnwrapContract,

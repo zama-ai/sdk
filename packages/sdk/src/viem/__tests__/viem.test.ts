@@ -7,8 +7,6 @@ import {
   readConfidentialBalanceOfContract,
   readSupportsInterfaceContract,
   readUnderlyingTokenContract,
-  readWrapperExistsContract,
-  readWrapperForTokenContract,
   writeConfidentialTransferContract,
   writeFinalizeUnwrapContract,
   writeSetOperatorContract,
@@ -319,20 +317,6 @@ describe("Viem read contract helpers", () => {
   );
 
   vit(
-    "readWrapperForTokenContract calls readContract with correct config",
-    ({ tokenAddress, publicClient }) => {
-      readWrapperForTokenContract(publicClient, REGISTRY, tokenAddress);
-      expect(publicClient.readContract).toHaveBeenCalledWith(
-        expect.objectContaining({
-          address: REGISTRY,
-          functionName: "getWrapper",
-          args: [tokenAddress],
-        }),
-      );
-    },
-  );
-
-  vit(
     "readUnderlyingTokenContract calls readContract with correct config",
     ({ wrapperAddress, publicClient }) => {
       readUnderlyingTokenContract(publicClient, wrapperAddress);
@@ -340,20 +324,6 @@ describe("Viem read contract helpers", () => {
         expect.objectContaining({
           address: wrapperAddress,
           functionName: "underlying",
-        }),
-      );
-    },
-  );
-
-  vit(
-    "readWrapperExistsContract calls readContract with correct config",
-    ({ tokenAddress, publicClient }) => {
-      readWrapperExistsContract(publicClient, REGISTRY, tokenAddress);
-      expect(publicClient.readContract).toHaveBeenCalledWith(
-        expect.objectContaining({
-          address: REGISTRY,
-          functionName: "wrapperExists",
-          args: [tokenAddress],
         }),
       );
     },

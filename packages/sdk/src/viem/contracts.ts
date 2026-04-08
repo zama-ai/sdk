@@ -4,14 +4,12 @@ import {
   confidentialBalanceOfContract,
   confidentialTransferContract,
   finalizeUnwrapContract,
-  getWrapperContract,
   setOperatorContract,
   supportsInterfaceContract,
   underlyingContract,
   unwrapContract,
   unwrapFromBalanceContract,
   wrapContract,
-  wrapperExistsContract,
   getTokenPairsContract,
   getTokenPairsLengthContract,
   getTokenPairsSliceContract,
@@ -40,24 +38,8 @@ export function readConfidentialBalanceOfContract(
   return client.readContract(confidentialBalanceOfContract(tokenAddress, userAddress));
 }
 
-export function readWrapperForTokenContract(
-  client: PublicClient,
-  registryAddress: Address,
-  tokenAddress: Address,
-) {
-  return client.readContract(getWrapperContract(registryAddress, tokenAddress));
-}
-
 export function readUnderlyingTokenContract(client: PublicClient, wrapperAddress: Address) {
   return client.readContract(underlyingContract(wrapperAddress));
-}
-
-export function readWrapperExistsContract(
-  client: PublicClient,
-  registryAddress: Address,
-  tokenAddress: Address,
-) {
-  return client.readContract(wrapperExistsContract(registryAddress, tokenAddress));
 }
 
 export function readSupportsInterfaceContract(

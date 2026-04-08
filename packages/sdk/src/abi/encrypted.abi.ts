@@ -400,31 +400,6 @@ export const encryptedAbi = [
     anonymous: false,
     inputs: [
       {
-        indexed: true,
-        internalType: "address",
-        name: "holder",
-        type: "address",
-      },
-      {
-        indexed: true,
-        internalType: "address",
-        name: "operator",
-        type: "address",
-      },
-      {
-        indexed: false,
-        internalType: "uint48",
-        name: "until",
-        type: "uint48",
-      },
-    ],
-    name: "FinalizeUnwrapOperatorSet",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
         indexed: false,
         internalType: "uint64",
         name: "version",
@@ -1147,30 +1122,6 @@ export const encryptedAbi = [
       },
       {
         internalType: "address",
-        name: "operator",
-        type: "address",
-      },
-    ],
-    name: "isFinalizeUnwrapOperator",
-    outputs: [
-      {
-        internalType: "bool",
-        name: "",
-        type: "bool",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "holder",
-        type: "address",
-      },
-      {
-        internalType: "address",
         name: "spender",
         type: "address",
       },
@@ -1355,24 +1306,6 @@ export const encryptedAbi = [
       },
     ],
     stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "operator",
-        type: "address",
-      },
-      {
-        internalType: "uint48",
-        name: "until",
-        type: "uint48",
-      },
-    ],
-    name: "setFinalizeUnwrapOperator",
-    outputs: [],
-    stateMutability: "nonpayable",
     type: "function",
   },
   {

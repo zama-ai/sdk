@@ -8,9 +8,7 @@
 export { ViemSigner, type ViemSignerConfig } from "./viem-signer";
 export {
   readConfidentialBalanceOfContract,
-  readWrapperForTokenContract,
   readUnderlyingTokenContract,
-  readWrapperExistsContract,
   readSupportsInterfaceContract,
   writeConfidentialTransferContract,
   writeUnwrapContract,

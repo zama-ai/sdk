@@ -56,9 +56,7 @@ vi.mock(import("ethers"), () => {
 import { EthersSigner } from "../ethers-signer";
 import {
   readConfidentialBalanceOfContract,
-  readWrapperForTokenContract,
   readUnderlyingTokenContract,
-  readWrapperExistsContract,
   readSupportsInterfaceContract,
   writeConfidentialTransferContract,
   writeUnwrapContract,
@@ -513,28 +511,12 @@ describe("ethers read contract helpers", () => {
     expect(result).toBe(VALID_HANDLE);
   });
 
-  eit("readWrapperForTokenContract", async ({ tokenAddress }) => {
-    vi.mocked(mockProvider.call).mockResolvedValueOnce(
-      encodeAbiParameters([{ type: "address" }], [MOCK_ADDRESS]),
-    );
-    const result = await readWrapperForTokenContract(mockProvider, REGISTRY, tokenAddress);
-    expect(result).toBe(MOCK_ADDRESS);
-  });
-
   eit("readUnderlyingTokenContract", async ({ wrapperAddress }) => {
     vi.mocked(mockProvider.call).mockResolvedValueOnce(
       encodeAbiParameters([{ type: "address" }], [MOCK_ADDRESS]),
     );
     const result = await readUnderlyingTokenContract(mockProvider, wrapperAddress);
     expect(result).toBe(MOCK_ADDRESS);
-  });
-
-  eit("readWrapperExistsContract", async ({ tokenAddress }) => {
-    vi.mocked(mockProvider.call).mockResolvedValueOnce(
-      encodeAbiParameters([{ type: "bool" }], [true]),
-    );
-    const result = await readWrapperExistsContract(mockProvider, REGISTRY, tokenAddress);
-    expect(result).toBe(true);
   });
 
   eit("readSupportsInterfaceContract", async ({ tokenAddress }) => {

@@ -31,19 +31,12 @@ import {
   confidentialTotalSupplyContract,
   totalSupplyContract,
   rateContract,
-  deploymentCoordinatorContract,
-  isFinalizeUnwrapOperatorContract,
-  setFinalizeUnwrapOperatorContract,
 } from "../encrypted";
 
 // Wrapper
 import { finalizeUnwrapContract, underlyingContract, wrapContract } from "../wrapper";
 
-// Deployment coordinator
-import { getWrapperContract, wrapperExistsContract } from "../deployment-coordinator";
-
 const SPENDER = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;
-const COORDINATOR = "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e" as Address;
 
 describe("ERC-20 contract builders", () => {
   it("nameContract", ({ tokenAddress }) => {
@@ -192,31 +185,6 @@ describe("Encryption contract builders", () => {
     const config = rateContract(tokenAddress);
     expect(config.functionName).toBe("rate");
   });
-
-  it("deploymentCoordinatorContract", ({ tokenAddress }) => {
-    const config = deploymentCoordinatorContract(tokenAddress);
-    expect(config.functionName).toBe("deploymentCoordinator");
-  });
-
-  it("isFinalizeUnwrapOperatorContract", ({ tokenAddress, userAddress }) => {
-    const config = isFinalizeUnwrapOperatorContract(tokenAddress, userAddress, SPENDER);
-    expect(config.functionName).toBe("isFinalizeUnwrapOperator");
-    expect(config.args).toEqual([userAddress, SPENDER]);
-  });
-
-  it("setFinalizeUnwrapOperatorContract with explicit timestamp", ({ tokenAddress }) => {
-    const config = setFinalizeUnwrapOperatorContract(tokenAddress, SPENDER, 99999);
-    expect(config.functionName).toBe("setFinalizeUnwrapOperator");
-    expect(config.args).toEqual([SPENDER, 99999]);
-  });
-
-  it("setFinalizeUnwrapOperatorContract defaults timestamp", ({ tokenAddress }) => {
-    const before = Math.floor(Date.now() / 1000) + 3600;
-    const config = setFinalizeUnwrapOperatorContract(tokenAddress, SPENDER);
-    const after = Math.floor(Date.now() / 1000) + 3600;
-    expect(config.args[1]).toBeGreaterThanOrEqual(before);
-    expect(config.args[1]).toBeLessThanOrEqual(after);
-  });
 });
 
 describe("Wrapper contract builders", () => {
@@ -242,17 +210,3 @@ describe("Wrapper contract builders", () => {
   });
 });
 
-describe("Deployment coordinator contract builders", () => {
-  it("getWrapperContract", ({ tokenAddress }) => {
-    const config = getWrapperContract(COORDINATOR, tokenAddress);
-    expect(config.address).toBe(COORDINATOR);
-    expect(config.functionName).toBe("getWrapper");
-    expect(config.args).toEqual([tokenAddress]);
-  });
-
-  it("wrapperExistsContract", ({ tokenAddress }) => {
-    const config = wrapperExistsContract(COORDINATOR, tokenAddress);
-    expect(config.functionName).toBe("wrapperExists");
-    expect(config.args).toEqual([tokenAddress]);
-  });
-});

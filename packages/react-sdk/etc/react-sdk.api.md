@@ -112,7 +112,6 @@ import { DelegationSelfNotAllowedError } from '@zama-fhe/sdk';
 import { DelegationStatusData } from '@zama-fhe/sdk/query';
 import { DelegationStatusQueryConfig } from '@zama-fhe/sdk/query';
 import { delegationStatusQueryOptions } from '@zama-fhe/sdk/query';
-import { deploymentCoordinatorContract } from '@zama-fhe/sdk';
 import { EIP712TypedData } from '@zama-fhe/sdk';
 import { EncryptEndEvent } from '@zama-fhe/sdk';
 import { EncryptErrorEvent } from '@zama-fhe/sdk';
@@ -141,7 +140,6 @@ import { generateKeypairMutationOptions } from '@zama-fhe/sdk/query';
 import { GenericSigner } from '@zama-fhe/sdk';
 import { GenericStorage } from '@zama-fhe/sdk';
 import { getDelegationExpiryContract } from '@zama-fhe/sdk';
-import { getWrapperContract } from '@zama-fhe/sdk';
 import { Handle } from '@zama-fhe/sdk';
 import { HardhatConfig } from '@zama-fhe/sdk';
 import { hashFn } from '@zama-fhe/sdk/query';
@@ -156,7 +154,6 @@ import { isAllowedQueryOptions } from '@zama-fhe/sdk/query';
 import { isConfidentialQueryOptions } from '@zama-fhe/sdk/query';
 import { isConfidentialTokenContract } from '@zama-fhe/sdk';
 import { isConfidentialWrapperContract } from '@zama-fhe/sdk';
-import { isFinalizeUnwrapOperatorContract } from '@zama-fhe/sdk';
 import { isHandleDelegatedContract } from '@zama-fhe/sdk';
 import { isOperatorContract } from '@zama-fhe/sdk';
 import { isWrapperQueryOptions } from '@zama-fhe/sdk/query';
@@ -210,7 +207,6 @@ import { revokeSessionMutationOptions } from '@zama-fhe/sdk/query';
 import { savePendingUnshield } from '@zama-fhe/sdk';
 import { SepoliaConfig } from '@zama-fhe/sdk';
 import { SessionExpiredEvent } from '@zama-fhe/sdk';
-import { setFinalizeUnwrapOperatorContract } from '@zama-fhe/sdk';
 import { setOperatorContract } from '@zama-fhe/sdk';
 import { ShieldCallbacks } from '@zama-fhe/sdk';
 import { shieldMutationOptions } from '@zama-fhe/sdk/query';
@@ -269,7 +265,6 @@ import { UserDecryptParams } from '@zama-fhe/sdk';
 import { wrapContract } from '@zama-fhe/sdk';
 import { WrappedEvent } from '@zama-fhe/sdk';
 import { wrapperDiscoveryQueryOptions } from '@zama-fhe/sdk/query';
-import { wrapperExistsContract } from '@zama-fhe/sdk';
 import { WrappersRegistry } from '@zama-fhe/sdk';
 import { WrappersRegistryConfig } from '@zama-fhe/sdk';
 import { WriteContractArgs } from '@zama-fhe/sdk';
@@ -494,8 +489,6 @@ export { DelegationStatusQueryConfig }
 
 export { delegationStatusQueryOptions }
 
-export { deploymentCoordinatorContract }
-
 export { EIP712TypedData }
 
 export { EncryptEndEvent }
@@ -552,8 +545,6 @@ export { GenericStorage }
 
 export { getDelegationExpiryContract }
 
-export { getWrapperContract }
-
 export { Handle }
 
 export { HardhatConfig }
@@ -581,8 +572,6 @@ export { isConfidentialQueryOptions }
 export { isConfidentialTokenContract }
 
 export { isConfidentialWrapperContract }
-
-export { isFinalizeUnwrapOperatorContract }
 
 export { isHandleDelegatedContract }
 
@@ -708,8 +697,6 @@ export { savePendingUnshield }
 export { SepoliaConfig }
 
 export { SessionExpiredEvent }
-
-export { setFinalizeUnwrapOperatorContract }
 
 export { setOperatorContract }
 
@@ -1455,8 +1442,6 @@ export { wrapContract }
 export { WrappedEvent }
 
 export { wrapperDiscoveryQueryOptions }
-
-export { wrapperExistsContract }
 
 export { WrappersRegistry }
 

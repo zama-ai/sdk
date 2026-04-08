@@ -9,9 +9,6 @@ export {
   confidentialTotalSupplyContract,
   totalSupplyContract,
   rateContract,
-  deploymentCoordinatorContract,
-  isFinalizeUnwrapOperatorContract,
-  setFinalizeUnwrapOperatorContract,
 } from "./encrypted";
 
 export { finalizeUnwrapContract, underlyingContract, wrapContract } from "./wrapper";
@@ -26,7 +23,6 @@ export {
   approveContract,
 } from "./erc20";
 
-export { getWrapperContract, wrapperExistsContract } from "./deployment-coordinator";
 
 export {
   ERC7984_INTERFACE_ID,
