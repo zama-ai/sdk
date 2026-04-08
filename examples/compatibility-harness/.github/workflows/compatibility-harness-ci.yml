@@ -1,0 +1,46 @@
+name: Compatibility Harness CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test (deterministic mock mode)
+        env:
+          HARNESS_MOCK_MODE: "1"
+        run: npm test
+
+      - name: Validate gate (deterministic mock mode)
+        env:
+          HARNESS_MOCK_MODE: "1"
+        run: |
+          set +e
+          npm run validate
+          status=$?
+          echo "validate exit code: $status"
+          # In deterministic mock mode, authorization is untested by design.
+          # Accept PASS(0), PARTIAL(10), INCONCLUSIVE(30) as non-regression outcomes.
+          if [ "$status" -eq 0 ] || [ "$status" -eq 10 ] || [ "$status" -eq 30 ]; then
+            exit 0
+          fi
+          exit "$status"

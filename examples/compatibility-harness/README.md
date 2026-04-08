@@ -182,6 +182,20 @@ Validation gate exit codes:
 
 `validate` enforces report artifact contract (`kind` + `schemaVersion` + required claim fields) before applying gate policy.
 
+## GitHub Actions CI
+
+Workflow file:
+- `.github/workflows/compatibility-harness-ci.yml`
+
+Pipeline stages:
+1. `npm ci`
+2. `npm run typecheck`
+3. `HARNESS_MOCK_MODE=1 npm test`
+4. `HARNESS_MOCK_MODE=1 npm run validate`
+
+The validate step accepts exit codes `0`, `10`, and `30` in deterministic mock mode.
+This keeps CI stable while still failing on true regressions (`20`, `21`, `31`, `97+`).
+
 ## Adapter Model (Primary Interface)
 
 Bootstrap a custom adapter template:

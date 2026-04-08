@@ -277,6 +277,26 @@ Acceptance:
 Commit:
 - pending (current working tree)
 
+### T18 — GitHub Actions Baseline CI
+
+Status: `DONE`
+
+Objective:
+- Add a stable CI workflow that validates harness integrity without network flakiness.
+
+Codex spec:
+1. Add GitHub Actions workflow for install, typecheck, tests, and validate.
+2. Run tests in deterministic `HARNESS_MOCK_MODE=1`.
+3. Accept deterministic validate outcomes (`0`, `10`, `30`) and fail on hard errors.
+4. Document CI behavior in README.
+
+Acceptance:
+- CI is reproducible without requiring funded keys or live relayer dependency.
+- Workflow still fails on incompatibility/config/runtime regressions.
+
+Commit:
+- pending (current working tree)
+
 ## Definition of Done (Project-Level)
 
 - Adapter model remains capability-first and conservative.
