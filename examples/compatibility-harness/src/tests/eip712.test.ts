@@ -10,6 +10,10 @@ import {
   initializeAdapter,
 } from "../harness/adapter.js";
 import { classifyInfrastructureIssue, errorMessage } from "../harness/diagnostics.js";
+import {
+  classifyEip712SigningFailure,
+  classifyRecoverabilityFailure,
+} from "../harness/negative-paths.js";
 import { mergeProfile, record } from "../report/reporter.js";
 import { recoverEIP712Signer } from "../utils/crypto.js";
 import { publicClient } from "../utils/rpc.js";
@@ -105,23 +109,22 @@ describe("Identity and Verification", () => {
       signature = await adapter.signTypedData(TEST_TYPED_DATA);
     } catch (err) {
       const message = errorMessage(err);
-      const diagnostic = classifyInfrastructureIssue(message);
-      const isInfra = diagnostic.rootCauseCategory !== "HARNESS";
+      const failure = classifyEip712SigningFailure(message);
       record({
         checkId: "EIP712_SIGNING",
         name: "EIP-712 Signing",
         section: "ethereum",
-        status: isInfra ? diagnostic.status : "FAIL",
-        summary: isInfra
+        status: failure.status,
+        summary: failure.infrastructure
           ? "EIP-712 signing validation blocked by environment/infrastructure"
           : "Adapter failed to produce an EIP-712 signature",
         reason: message,
-        rootCauseCategory: isInfra ? diagnostic.rootCauseCategory : "ADAPTER",
-        errorCode: isInfra ? diagnostic.errorCode : undefined,
+        rootCauseCategory: failure.rootCauseCategory,
+        errorCode: failure.errorCode,
         likelyCause: "The adapter rejected the typed-data payload or transformed it incorrectly.",
         recommendation: "Ensure the adapter supports standard Ethereum EIP-712 signing.",
       });
-      if (!isInfra) {
+      if (!failure.infrastructure) {
         mergeProfile({
           observedCapabilities: {
             eip712Signing: "SUPPORTED",
@@ -129,7 +132,7 @@ describe("Identity and Verification", () => {
           },
         });
       }
-      if (!isInfra) {
+      if (!failure.infrastructure) {
         expect.fail(message);
       }
       return;
@@ -218,6 +221,7 @@ describe("Identity and Verification", () => {
 
     const recovered = await recoverEIP712Signer(TEST_TYPED_DATA, signature);
     if (recovered === null) {
+      const recoverabilityFailure = classifyRecoverabilityFailure();
       const erc1271Pass = shouldRunErc1271Check ? await runErc1271Check() : false;
       mergeProfile({
         observedCapabilities: {
@@ -239,10 +243,10 @@ describe("Identity and Verification", () => {
         checkId: "EIP712_RECOVERABILITY",
         name: "EIP-712 Recoverability",
         section: "ethereum",
-        status: "FAIL",
+        status: recoverabilityFailure.status,
         summary: "Signature is not recoverable via ecrecover",
         reason: "recoverTypedDataAddress could not recover a matching address",
-        rootCauseCategory: "SIGNER",
+        rootCauseCategory: recoverabilityFailure.rootCauseCategory,
         likelyCause: "The verification model is not EOA-style recoverable ECDSA.",
         recommendation:
           "If this is expected, declare the architecture explicitly and treat Zama authorization as incompatible until proven otherwise.",
@@ -253,6 +257,7 @@ describe("Identity and Verification", () => {
 
     const address = await getAdapterAddress();
     if (getAddress(recovered) !== getAddress(address)) {
+      const recoverabilityFailure = classifyRecoverabilityFailure();
       const erc1271Pass = shouldRunErc1271Check ? await runErc1271Check(address) : false;
       const mismatchPatch = {
         observedCapabilities: {
@@ -267,10 +272,10 @@ describe("Identity and Verification", () => {
         checkId: "EIP712_RECOVERABILITY",
         name: "EIP-712 Recoverability",
         section: "ethereum",
-        status: "FAIL",
+        status: recoverabilityFailure.status,
         summary: "Recovered address does not match adapter identity",
         reason: `Recovered ${recovered}, expected ${address}`,
-        rootCauseCategory: "SIGNER",
+        rootCauseCategory: recoverabilityFailure.rootCauseCategory,
         likelyCause: "The adapter is signing with a different key than the resolved address.",
         recommendation:
           "Verify that address resolution and signing are bound to the same wallet identity.",

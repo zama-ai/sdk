@@ -3,6 +3,7 @@ import { isMockModeEnabled, mockModeNote } from "../config/runtime.js";
 import { mergeProfile, record } from "../report/reporter.js";
 import { buildSdk, discoverTokenAddress, initializeAdapter } from "../harness/adapter.js";
 import { classifyInfrastructureIssue, errorMessage } from "../harness/diagnostics.js";
+import { classifyZamaAuthorizationFailure } from "../harness/negative-paths.js";
 import { adapter } from "../harness/adapter.js";
 
 let initError: string | null = null;
@@ -93,25 +94,24 @@ describe("Zama Authorization Flow", () => {
       await sdk.allow(tokenAddress);
     } catch (err) {
       const message = errorMessage(err);
-      const diagnostic = classifyInfrastructureIssue(message);
-      const isInfra = diagnostic.rootCauseCategory !== "HARNESS";
+      const failure = classifyZamaAuthorizationFailure(message);
       record({
         checkId: "ZAMA_AUTHORIZATION_FLOW",
         name: "Zama Authorization Flow",
         section: "zama",
-        status: isInfra ? diagnostic.status : "FAIL",
-        summary: isInfra
+        status: failure.status,
+        summary: failure.infrastructure
           ? "Infrastructure blocked Zama authorization validation"
           : "sdk.allow() rejected the adapter signature or identity",
         reason: message,
-        rootCauseCategory: isInfra ? diagnostic.rootCauseCategory : "SIGNER",
-        errorCode: isInfra ? diagnostic.errorCode : undefined,
-        recommendation: isInfra
+        rootCauseCategory: failure.rootCauseCategory,
+        errorCode: failure.errorCode,
+        recommendation: failure.infrastructure
           ? "Check environment, RPC, relayer, and registry connectivity before retrying."
           : "Ensure the adapter produces standard Zama-acceptable EIP-712 signatures.",
       });
       sdk.terminate();
-      if (!isInfra) {
+      if (!failure.infrastructure) {
         expect.fail(message);
       }
       return;

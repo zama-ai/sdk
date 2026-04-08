@@ -10,6 +10,7 @@ import {
   verifyZamaOperatorApproval,
 } from "../harness/adapter.js";
 import { classifyInfrastructureIssue, errorMessage } from "../harness/diagnostics.js";
+import { classifyZamaWriteSubmissionFailure } from "../harness/negative-paths.js";
 import { mergeProfile, record } from "../report/reporter.js";
 
 const TEST_OPERATOR = getAddress("0x000000000000000000000000000000000000dEaD");
@@ -104,25 +105,24 @@ describe("Zama Write Flow", () => {
       txHash = await executeZamaWriteProbe(tokenAddress, TEST_OPERATOR);
     } catch (err) {
       const message = errorMessage(err);
-      const diagnostic = classifyInfrastructureIssue(message);
-      const isInfra = diagnostic.rootCauseCategory !== "HARNESS";
+      const failure = classifyZamaWriteSubmissionFailure(message);
       record({
         checkId: "ZAMA_WRITE_FLOW",
         name: "Zama Write Flow",
         section: "zama",
-        status: isInfra ? diagnostic.status : "FAIL",
-        summary: isInfra
+        status: failure.status,
+        summary: failure.infrastructure
           ? "Write-flow validation was blocked by infrastructure"
           : "Adapter failed to submit a Zama write transaction",
         reason: message,
-        rootCauseCategory: isInfra ? diagnostic.rootCauseCategory : "ADAPTER",
-        errorCode: isInfra ? diagnostic.errorCode : undefined,
-        recommendation: isInfra
+        rootCauseCategory: failure.rootCauseCategory,
+        errorCode: failure.errorCode,
+        recommendation: failure.infrastructure
           ? "Fix environment, RPC, relayer, or registry prerequisites and retry."
           : "Verify adapter contract execution and Zama contract routing.",
       });
       sdk.terminate();
-      if (!isInfra) {
+      if (!failure.infrastructure) {
         expect.fail(message);
       }
       return;

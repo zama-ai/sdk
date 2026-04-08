@@ -63,6 +63,7 @@ export default defineConfig({
       "src/tests/unit/runtime.unit.test.ts",
       "src/tests/unit/contradictions.unit.test.ts",
       "src/tests/unit/checkRegistry.unit.test.ts",
+      "src/tests/unit/negativeMatrix.unit.test.ts",
       "src/tests/unit/profile.unit.test.ts",
       "src/tests/unit/verdict.unit.test.ts",
       "src/tests/unit/goldenReports.unit.test.ts",

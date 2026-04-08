@@ -27,6 +27,14 @@ describe("verdict.resolveClaimFromResults", () => {
     expect(claim.id).toBe("PARTIAL_AUTHORIZATION_CHECK_MISSING");
   });
 
+  it("returns incompatible when recoverability fails after auth pass", () => {
+    const claim = resolveClaimFromResults([
+      check("Zama Authorization Flow", "PASS"),
+      check("EIP-712 Recoverability", "FAIL"),
+    ]);
+    expect(claim.id).toBe("INCOMPATIBLE_AUTHORIZATION_RECOVERABILITY");
+  });
+
   it("requires recoverability pass before full compatibility claims", () => {
     const claim = resolveClaimFromResults([
       check("Zama Authorization Flow", "PASS"),
@@ -52,6 +60,15 @@ describe("verdict.resolveClaimFromResults", () => {
       check("Zama Write Flow", "INCONCLUSIVE"),
     ]);
     expect(claim.id).toBe("PARTIAL_AUTHORIZATION_COMPATIBLE_WRITE_BLOCKED");
+  });
+
+  it("returns partial write failed when write submission fails", () => {
+    const claim = resolveClaimFromResults([
+      check("Zama Authorization Flow", "PASS"),
+      check("EIP-712 Recoverability", "PASS"),
+      check("Zama Write Flow", "FAIL"),
+    ]);
+    expect(claim.id).toBe("PARTIAL_AUTHORIZATION_COMPATIBLE_WRITE_FAILED");
   });
 
   it("returns scoped authorization-compatible claim when write is missing", () => {
