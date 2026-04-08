@@ -10,8 +10,10 @@
     "test:openfort": "SIGNER_MODULE=./examples/openfort/signer.ts vitest run --reporter=verbose",
     "test:turnkey": "SIGNER_MODULE=./examples/turnkey/signer.ts vitest run --reporter=verbose",
     "doctor": "node --import tsx src/cli/doctor.ts",
+    "doctor:openfort": "SIGNER_MODULE=./examples/openfort/signer.ts node --import tsx src/cli/doctor.ts",
     "doctor:turnkey": "SIGNER_MODULE=./examples/turnkey/signer.ts node --import tsx src/cli/doctor.ts",
     "validate": "node --import tsx src/cli/validate.ts",
+    "validate:openfort": "SIGNER_MODULE=./examples/openfort/signer.ts node --import tsx src/cli/validate.ts",
     "validate:turnkey": "SIGNER_MODULE=./examples/turnkey/signer.ts node --import tsx src/cli/validate.ts",
     "typecheck": "tsc --noEmit"
   },

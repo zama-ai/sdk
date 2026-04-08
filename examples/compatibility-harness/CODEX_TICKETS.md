@@ -129,7 +129,7 @@ Commit:
 
 ### T10 — Openfort Adapter Parity
 
-Status: `TODO`
+Status: `DONE`
 
 Objective:
 - Bring Openfort example up to same quality level as Turnkey/Crossmint examples.
@@ -146,6 +146,9 @@ Codex spec:
 Acceptance:
 - Openfort example can be run with one command from README.
 - Documentation is explicit on proof boundaries.
+
+Commit:
+- pending (current working tree)
 
 ### T13 — Golden Report Regression Fixtures
 

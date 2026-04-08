@@ -110,6 +110,13 @@ SIGNER_MODULE=./examples/openfort/signer.ts npm test
 
 This adapter validates Openfort-compatible EOA signing/execution semantics in CLI. It does not validate embedded browser auth/session UX.
 
+Optional Openfort-specific commands:
+
+```bash
+npm run doctor:openfort
+npm run validate:openfort
+```
+
 ## Preflight Doctor (Optional)
 
 Run a fast environment preflight before the full suite:

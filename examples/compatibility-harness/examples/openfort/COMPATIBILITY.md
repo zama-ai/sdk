@@ -69,3 +69,22 @@ Equivalent:
 ```bash
 SIGNER_MODULE=./examples/openfort/signer.ts npm test
 ```
+
+Optional preflight and CI gate:
+
+```bash
+npm run doctor:openfort
+npm run validate:openfort
+```
+
+Strict gate requiring authorization + write compatibility:
+
+```bash
+VALIDATION_TARGET=AUTHORIZATION_AND_WRITE npm run validate:openfort
+```
+
+Deterministic local mode without network/relayer dependency:
+
+```bash
+HARNESS_MOCK_MODE=1 npm run test:openfort
+```
