@@ -27,6 +27,7 @@ describe("Adapter-Routed Execution Surface", () => {
     if (initError) {
       const diagnostic = classifyInfrastructureIssue(initError);
       record({
+        checkId: "ADAPTER_CONTRACT_READ",
         name: "Adapter Contract Read",
         section: "execution",
         status: diagnostic.status,
@@ -41,6 +42,7 @@ describe("Adapter-Routed Execution Surface", () => {
 
     if (isMockModeEnabled()) {
       record({
+        checkId: "ADAPTER_CONTRACT_READ",
         name: "Adapter Contract Read",
         section: "execution",
         status: "UNTESTED",
@@ -67,6 +69,7 @@ describe("Adapter-Routed Execution Surface", () => {
       const message = errorMessage(err);
       const diagnostic = classifyInfrastructureIssue(message);
       record({
+        checkId: "ADAPTER_CONTRACT_READ",
         name: "Adapter Contract Read",
         section: "execution",
         status: diagnostic.status,
@@ -87,6 +90,7 @@ describe("Adapter-Routed Execution Surface", () => {
       },
     });
     record({
+      checkId: "ADAPTER_CONTRACT_READ",
       name: "Adapter Contract Read",
       section: "execution",
       status: "PASS",

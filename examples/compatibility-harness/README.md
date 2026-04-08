@@ -354,7 +354,8 @@ REPORT_JSON_PATH=./reports/latest.json npm test
 
 Current schema:
 - `kind`: `zama-compatibility-report`
-- `schemaVersion`: `1.1.0`
+- `schemaVersion`: `1.2.0`
+- each check record includes a canonical `checkId` (stable machine key)
 - top-level sections: `adapterProfile`, `checks`, `sections`, `infrastructure`, `claim`, `finalVerdict`
 
 `schemaVersion` is the compatibility contract for CI/partner tooling. Consumers should validate `schemaVersion` before parsing.

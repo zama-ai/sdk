@@ -22,6 +22,7 @@ describe("Ethereum Raw Transaction Flow", () => {
     if (initError) {
       const diagnostic = classifyInfrastructureIssue(initError);
       record({
+        checkId: "RAW_TRANSACTION_EXECUTION",
         name: "Raw Transaction Execution",
         section: "ethereum",
         status: diagnostic.status,
@@ -41,6 +42,7 @@ describe("Ethereum Raw Transaction Flow", () => {
         },
       });
       record({
+        checkId: "RAW_TRANSACTION_EXECUTION",
         name: "Raw Transaction Execution",
         section: "ethereum",
         status: "UNSUPPORTED",
@@ -54,6 +56,7 @@ describe("Ethereum Raw Transaction Flow", () => {
 
     if (isMockModeEnabled()) {
       record({
+        checkId: "RAW_TRANSACTION_EXECUTION",
         name: "Raw Transaction Execution",
         section: "ethereum",
         status: "UNTESTED",
@@ -72,6 +75,7 @@ describe("Ethereum Raw Transaction Flow", () => {
       const message = errorMessage(err);
       const diagnostic = classifyInfrastructureIssue(message);
       record({
+        checkId: "RAW_TRANSACTION_EXECUTION",
         name: "Raw Transaction Execution",
         section: "ethereum",
         status: diagnostic.status,
@@ -98,6 +102,7 @@ describe("Ethereum Raw Transaction Flow", () => {
       const message = errorMessage(err);
       const diagnostic = classifyInfrastructureIssue(message);
       record({
+        checkId: "RAW_TRANSACTION_EXECUTION",
         name: "Raw Transaction Execution",
         section: "ethereum",
         status: diagnostic.status,
@@ -128,6 +133,7 @@ describe("Ethereum Raw Transaction Flow", () => {
     } catch (err) {
       const message = errorMessage(err);
       record({
+        checkId: "RAW_TRANSACTION_EXECUTION",
         name: "Raw Transaction Execution",
         section: "ethereum",
         status: "FAIL",
@@ -148,6 +154,7 @@ describe("Ethereum Raw Transaction Flow", () => {
       const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
       if (receipt.status !== "success") {
         record({
+          checkId: "RAW_TRANSACTION_EXECUTION",
           name: "Raw Transaction Execution",
           section: "ethereum",
           status: "FAIL",
@@ -164,6 +171,7 @@ describe("Ethereum Raw Transaction Flow", () => {
       const diagnostic = classifyInfrastructureIssue(message);
       const isInfra = diagnostic.rootCauseCategory !== "HARNESS";
       record({
+        checkId: "RAW_TRANSACTION_EXECUTION",
         name: "Raw Transaction Execution",
         section: "ethereum",
         status: isInfra ? diagnostic.status : "FAIL",
@@ -189,6 +197,7 @@ describe("Ethereum Raw Transaction Flow", () => {
       },
     });
     record({
+      checkId: "RAW_TRANSACTION_EXECUTION",
       name: "Raw Transaction Execution",
       section: "ethereum",
       status: "PASS",

@@ -1,6 +1,6 @@
 {
   "kind": "zama-compatibility-report",
-  "schemaVersion": "1.1.0",
+  "schemaVersion": "1.2.0",
   "generatedAt": "2026-04-08T00:00:00.000Z",
   "runId": "golden-eoa-full-compatible",
   "adapterProfile": {
@@ -37,24 +37,71 @@
   },
   "checks": {
     "recorded": [
-      { "name": "Zama Authorization Flow", "section": "zama", "status": "PASS" },
-      { "name": "Zama Write Flow", "section": "zama", "status": "PASS" },
-      { "name": "EIP-712 Recoverability", "section": "ethereum", "status": "PASS" }
+      {
+        "checkId": "ZAMA_AUTHORIZATION_FLOW",
+        "name": "Zama Authorization Flow",
+        "section": "zama",
+        "status": "PASS"
+      },
+      {
+        "checkId": "ZAMA_WRITE_FLOW",
+        "name": "Zama Write Flow",
+        "section": "zama",
+        "status": "PASS"
+      },
+      {
+        "checkId": "EIP712_RECOVERABILITY",
+        "name": "EIP-712 Recoverability",
+        "section": "ethereum",
+        "status": "PASS"
+      }
     ],
     "environmentSummary": [],
     "all": [
-      { "name": "Zama Authorization Flow", "section": "zama", "status": "PASS" },
-      { "name": "Zama Write Flow", "section": "zama", "status": "PASS" },
-      { "name": "EIP-712 Recoverability", "section": "ethereum", "status": "PASS" }
+      {
+        "checkId": "ZAMA_AUTHORIZATION_FLOW",
+        "name": "Zama Authorization Flow",
+        "section": "zama",
+        "status": "PASS"
+      },
+      {
+        "checkId": "ZAMA_WRITE_FLOW",
+        "name": "Zama Write Flow",
+        "section": "zama",
+        "status": "PASS"
+      },
+      {
+        "checkId": "EIP712_RECOVERABILITY",
+        "name": "EIP-712 Recoverability",
+        "section": "ethereum",
+        "status": "PASS"
+      }
     ]
   },
   "sections": {
     "adapter": [],
-    "ethereum": [{ "name": "EIP-712 Recoverability", "section": "ethereum", "status": "PASS" }],
+    "ethereum": [
+      {
+        "checkId": "EIP712_RECOVERABILITY",
+        "name": "EIP-712 Recoverability",
+        "section": "ethereum",
+        "status": "PASS"
+      }
+    ],
     "execution": [],
     "zama": [
-      { "name": "Zama Authorization Flow", "section": "zama", "status": "PASS" },
-      { "name": "Zama Write Flow", "section": "zama", "status": "PASS" }
+      {
+        "checkId": "ZAMA_AUTHORIZATION_FLOW",
+        "name": "Zama Authorization Flow",
+        "section": "zama",
+        "status": "PASS"
+      },
+      {
+        "checkId": "ZAMA_WRITE_FLOW",
+        "name": "Zama Write Flow",
+        "section": "zama",
+        "status": "PASS"
+      }
     ],
     "environment": []
   },

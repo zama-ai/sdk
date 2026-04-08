@@ -7,7 +7,7 @@ This guide explains how to consume the compatibility harness JSON artifact in CI
 Before reading business fields, verify:
 
 - `kind === "zama-compatibility-report"`
-- `schemaVersion === "1.1.0"`
+- `schemaVersion === "1.2.0"`
 
 If either check fails, treat the artifact as incompatible with your parser.
 
@@ -26,6 +26,7 @@ Use these top-level fields as canonical outputs:
 To separate infra blockers from compatibility defects:
 
 - inspect `checks.recorded[*].status`
+- inspect `checks.recorded[*].checkId` (canonical machine key)
 - inspect `checks.recorded[*].rootCauseCategory`
 - inspect `checks.recorded[*].errorCode`
 - inspect `infrastructure.blockers`

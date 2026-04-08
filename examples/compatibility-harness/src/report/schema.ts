@@ -5,9 +5,10 @@ import type {
   ValidationStatus,
 } from "../adapter/types.js";
 import type { ClaimResolution } from "../verdict/types.js";
+import type { CanonicalCheckId } from "./check-registry.js";
 
 export const REPORT_KIND = "zama-compatibility-report" as const;
-export const REPORT_SCHEMA_VERSION = "1.1.0" as const;
+export const REPORT_SCHEMA_VERSION = "1.2.0" as const;
 
 export type ReportSection = "adapter" | "ethereum" | "execution" | "zama" | "environment";
 export type InfraRootCause = Extract<
@@ -16,6 +17,7 @@ export type InfraRootCause = Extract<
 >;
 
 export interface ReportCheck {
+  checkId: CanonicalCheckId;
   name: string;
   section: ReportSection;
   status: ValidationStatus;

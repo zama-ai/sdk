@@ -66,6 +66,7 @@ describe("Identity and Verification", () => {
     if (initError) {
       const diagnostic = classifyInfrastructureIssue(initError);
       record({
+        checkId: "EIP712_SIGNING",
         name: "EIP-712 Signing",
         section: "ethereum",
         status: diagnostic.status,
@@ -87,6 +88,7 @@ describe("Identity and Verification", () => {
         },
       });
       record({
+        checkId: "EIP712_SIGNING",
         name: "EIP-712 Signing",
         section: "ethereum",
         status: "UNSUPPORTED",
@@ -106,6 +108,7 @@ describe("Identity and Verification", () => {
       const diagnostic = classifyInfrastructureIssue(message);
       const isInfra = diagnostic.rootCauseCategory !== "HARNESS";
       record({
+        checkId: "EIP712_SIGNING",
         name: "EIP-712 Signing",
         section: "ethereum",
         status: isInfra ? diagnostic.status : "FAIL",
@@ -145,6 +148,7 @@ describe("Identity and Verification", () => {
           const message = errorMessage(err);
           const diagnostic = classifyInfrastructureIssue(message);
           record({
+            checkId: "ERC1271_VERIFICATION",
             name: "ERC-1271 Verification",
             section: "ethereum",
             status: diagnostic.status,
@@ -170,6 +174,7 @@ describe("Identity and Verification", () => {
         const magicValue = String(result).toLowerCase();
         if (magicValue === ERC1271_MAGIC_VALUE) {
           record({
+            checkId: "ERC1271_VERIFICATION",
             name: "ERC-1271 Verification",
             section: "ethereum",
             status: "PASS",
@@ -178,6 +183,7 @@ describe("Identity and Verification", () => {
           return true;
         }
         record({
+          checkId: "ERC1271_VERIFICATION",
           name: "ERC-1271 Verification",
           section: "ethereum",
           status: "FAIL",
@@ -192,6 +198,7 @@ describe("Identity and Verification", () => {
         const diagnostic = classifyInfrastructureIssue(message);
         const isInfra = diagnostic.rootCauseCategory !== "HARNESS";
         record({
+          checkId: "ERC1271_VERIFICATION",
           name: "ERC-1271 Verification",
           section: "ethereum",
           status: isInfra ? diagnostic.status : "FAIL",
@@ -229,6 +236,7 @@ describe("Identity and Verification", () => {
         }),
       });
       record({
+        checkId: "EIP712_RECOVERABILITY",
         name: "EIP-712 Recoverability",
         section: "ethereum",
         status: "FAIL",
@@ -256,6 +264,7 @@ describe("Identity and Verification", () => {
         erc1271Pass ? { ...mismatchPatch, verificationModel: "ERC1271" } : mismatchPatch,
       );
       record({
+        checkId: "EIP712_RECOVERABILITY",
         name: "EIP-712 Recoverability",
         section: "ethereum",
         status: "FAIL",
@@ -288,6 +297,7 @@ describe("Identity and Verification", () => {
       ),
     });
     record({
+      checkId: "EIP712_RECOVERABILITY",
       name: "EIP-712 Recoverability",
       section: "ethereum",
       status: "PASS",

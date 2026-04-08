@@ -20,6 +20,7 @@ describe("Zama Authorization Flow", () => {
     if (initError) {
       const diagnostic = classifyInfrastructureIssue(initError);
       record({
+        checkId: "ZAMA_AUTHORIZATION_FLOW",
         name: "Zama Authorization Flow",
         section: "zama",
         status: diagnostic.status,
@@ -39,6 +40,7 @@ describe("Zama Authorization Flow", () => {
         },
       });
       record({
+        checkId: "ZAMA_AUTHORIZATION_FLOW",
         name: "Zama Authorization Flow",
         section: "zama",
         status: "UNSUPPORTED",
@@ -52,6 +54,7 @@ describe("Zama Authorization Flow", () => {
 
     if (isMockModeEnabled()) {
       record({
+        checkId: "ZAMA_AUTHORIZATION_FLOW",
         name: "Zama Authorization Flow",
         section: "zama",
         status: "UNTESTED",
@@ -72,6 +75,7 @@ describe("Zama Authorization Flow", () => {
       const message = errorMessage(err);
       const diagnostic = classifyInfrastructureIssue(message);
       record({
+        checkId: "ZAMA_AUTHORIZATION_FLOW",
         name: "Zama Authorization Flow",
         section: "zama",
         status: diagnostic.status,
@@ -92,6 +96,7 @@ describe("Zama Authorization Flow", () => {
       const diagnostic = classifyInfrastructureIssue(message);
       const isInfra = diagnostic.rootCauseCategory !== "HARNESS";
       record({
+        checkId: "ZAMA_AUTHORIZATION_FLOW",
         name: "Zama Authorization Flow",
         section: "zama",
         status: isInfra ? diagnostic.status : "FAIL",
@@ -119,6 +124,7 @@ describe("Zama Authorization Flow", () => {
       },
     });
     record({
+      checkId: "ZAMA_AUTHORIZATION_FLOW",
       name: "Zama Authorization Flow",
       section: "zama",
       status: "PASS",

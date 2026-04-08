@@ -23,12 +23,19 @@ import {
   type ReportArtifact,
   type ReportSection,
 } from "./schema.js";
+import {
+  assertCanonicalCheck,
+  checkOrder,
+  getCanonicalCheckById,
+  type CanonicalCheckId,
+} from "./check-registry.js";
 import { resolveClaimFromResults } from "../verdict/resolve.js";
 
 export type TestStatus = ValidationStatus;
 export type TestSection = ReportSection;
 
 export interface TestResult {
+  checkId: CanonicalCheckId;
   name: string;
   section: TestSection;
   status: TestStatus;
@@ -58,6 +65,7 @@ function isInfraRootCause(category: RootCauseCategory | undefined): category is 
 
 /** Append a test result to the shared results file. */
 export function record(result: TestResult): void {
+  assertCanonicalCheck(result);
   appendFileSync(RESULTS_FILE, `${JSON.stringify(result)}\n`);
 }
 
@@ -68,7 +76,11 @@ export function readResults(): TestResult[] {
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);
-  return raw.map((line) => JSON.parse(line) as TestResult);
+  return raw.map((line) => {
+    const parsed = JSON.parse(line) as TestResult;
+    assertCanonicalCheck(parsed);
+    return parsed;
+  });
 }
 
 /** Delete the results file (called by globalSetup at the start of each run). */
@@ -190,20 +202,8 @@ function sectionCounts(results: TestResult[]): Record<TestStatus, number> {
   };
 }
 
-function testOrder(name: string): number {
-  const ordered = [
-    "Adapter Initialization",
-    "Address Resolution",
-    "EIP-712 Signing",
-    "EIP-712 Recoverability",
-    "ERC-1271 Verification",
-    "Raw Transaction Execution",
-    "Adapter Contract Read",
-    "Zama Authorization Flow",
-    "Zama Write Flow",
-  ];
-  const idx = ordered.indexOf(name);
-  return idx === -1 ? Number.MAX_SAFE_INTEGER : idx;
+function testOrder(checkId: CanonicalCheckId): number {
+  return checkOrder(checkId);
 }
 
 function summarizeBlockers(results: TestResult[]): Partial<Record<InfraRootCause, number>> {
@@ -234,14 +234,16 @@ function summarizeEnvironmentSection(results: TestResult[]): TestResult[] {
   }
 
   const sections: TestResult[] = [];
-  const categoryNames: Record<InfraRootCause, string> = {
-    ENVIRONMENT: "Environment Configuration",
-    RPC: "RPC Connectivity",
-    RELAYER: "Relayer Reachability",
-    REGISTRY: "Registry / Token Discovery",
+  const categoryCheckId: Record<InfraRootCause, CanonicalCheckId> = {
+    ENVIRONMENT: "ENVIRONMENT_CONFIGURATION",
+    RPC: "RPC_CONNECTIVITY",
+    RELAYER: "RELAYER_REACHABILITY",
+    REGISTRY: "REGISTRY_TOKEN_DISCOVERY",
   };
 
   for (const [category, impacted] of grouped.entries()) {
+    const checkId = categoryCheckId[category];
+    const check = getCanonicalCheckById(checkId);
     const status: TestStatus = impacted.some((r) => r.status === "BLOCKED")
       ? "BLOCKED"
       : impacted.some((r) => r.status === "INCONCLUSIVE")
@@ -249,7 +251,8 @@ function summarizeEnvironmentSection(results: TestResult[]): TestResult[] {
         : "UNTESTED";
     const checks = impacted.map((r) => r.name).join(", ");
     sections.push({
-      name: categoryNames[category],
+      checkId,
+      name: check.name,
       section: "environment",
       status,
       summary: `${impacted.length} check(s) impacted by ${category.toLowerCase()}`,
@@ -375,7 +378,7 @@ export function printReport(): void {
   for (const { title, key } of sections) {
     const sectionResults = results.filter((r) => r.section === key);
     if (sectionResults.length === 0) continue;
-    sectionResults.sort((a, b) => testOrder(a.name) - testOrder(b.name));
+    sectionResults.sort((a, b) => testOrder(a.checkId) - testOrder(b.checkId));
 
     const pad = Math.max(0, W - title.length - 5);
     console.log(`  ── ${title} ${"─".repeat(pad)}`);

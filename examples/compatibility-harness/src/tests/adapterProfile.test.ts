@@ -60,6 +60,7 @@ describe("Adapter Profile", () => {
     if (initError) {
       const diagnostic = classifyInfrastructureIssue(initError);
       record({
+        checkId: "ADAPTER_INITIALIZATION",
         name: "Adapter Initialization",
         section: "adapter",
         status: diagnostic.status,
@@ -73,6 +74,7 @@ describe("Adapter Profile", () => {
     }
 
     record({
+      checkId: "ADAPTER_INITIALIZATION",
       name: "Adapter Initialization",
       section: "adapter",
       status: "PASS",
@@ -90,6 +92,7 @@ describe("Adapter Profile", () => {
         },
       });
       record({
+        checkId: "ADDRESS_RESOLUTION",
         name: "Address Resolution",
         section: "adapter",
         status: "PASS",
@@ -100,6 +103,7 @@ describe("Adapter Profile", () => {
       const message = errorMessage(err);
       const diagnostic = classifyInfrastructureIssue(message);
       record({
+        checkId: "ADDRESS_RESOLUTION",
         name: "Address Resolution",
         section: "adapter",
         status: diagnostic.status,

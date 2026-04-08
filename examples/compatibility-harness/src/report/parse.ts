@@ -1,4 +1,10 @@
-import { REPORT_KIND, REPORT_SCHEMA_VERSION, type ReportArtifact } from "./schema.js";
+import {
+  REPORT_KIND,
+  REPORT_SCHEMA_VERSION,
+  type ReportArtifact,
+  type ReportSection,
+} from "./schema.js";
+import { assertCanonicalCheck, isCanonicalCheckId } from "./check-registry.js";
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -15,6 +21,30 @@ function assertStringField(
     throw new Error(`Invalid ${context}.${field}: expected non-empty string.`);
   }
   return value;
+}
+
+function assertCheckArray(value: unknown, context: string): void {
+  if (!Array.isArray(value)) {
+    throw new Error(`Invalid ${context}: expected array.`);
+  }
+
+  for (let i = 0; i < value.length; i += 1) {
+    const check = asRecord(value[i]);
+    if (!check) {
+      throw new Error(`Invalid ${context}[${i}]: expected object.`);
+    }
+    const checkId = assertStringField(check, "checkId", `${context}[${i}]`);
+    if (!isCanonicalCheckId(checkId)) {
+      throw new Error(`Invalid ${context}[${i}].checkId: unknown id "${checkId}".`);
+    }
+    const name = assertStringField(check, "name", `${context}[${i}]`);
+    const section = assertStringField(check, "section", `${context}[${i}]`);
+    assertCanonicalCheck({
+      checkId,
+      name,
+      section: section as ReportSection,
+    });
+  }
 }
 
 export function parseReportArtifact(raw: string): ReportArtifact {
@@ -72,9 +102,7 @@ export function parseReportArtifact(raw: string): ReportArtifact {
     throw new Error("Invalid report.checks: expected object.");
   }
   for (const required of ["recorded", "environmentSummary", "all"]) {
-    if (!Array.isArray(checks[required])) {
-      throw new Error(`Invalid report.checks.${required}: expected array.`);
-    }
+    assertCheckArray(checks[required], `report.checks.${required}`);
   }
 
   const sections = asRecord(object.sections);
@@ -82,9 +110,7 @@ export function parseReportArtifact(raw: string): ReportArtifact {
     throw new Error("Invalid report.sections: expected object.");
   }
   for (const required of ["adapter", "ethereum", "execution", "zama", "environment"]) {
-    if (!Array.isArray(sections[required])) {
-      throw new Error(`Invalid report.sections.${required}: expected array.`);
-    }
+    assertCheckArray(sections[required], `report.sections.${required}`);
   }
 
   const infrastructure = asRecord(object.infrastructure);

@@ -29,6 +29,7 @@ describe("Zama Write Flow", () => {
     if (initError) {
       const diagnostic = classifyInfrastructureIssue(initError);
       record({
+        checkId: "ZAMA_WRITE_FLOW",
         name: "Zama Write Flow",
         section: "zama",
         status: diagnostic.status,
@@ -49,6 +50,7 @@ describe("Zama Write Flow", () => {
         },
       });
       record({
+        checkId: "ZAMA_WRITE_FLOW",
         name: "Zama Write Flow",
         section: "zama",
         status: "UNSUPPORTED",
@@ -63,6 +65,7 @@ describe("Zama Write Flow", () => {
 
     if (isMockModeEnabled()) {
       record({
+        checkId: "ZAMA_WRITE_FLOW",
         name: "Zama Write Flow",
         section: "zama",
         status: "UNTESTED",
@@ -82,6 +85,7 @@ describe("Zama Write Flow", () => {
       const message = errorMessage(err);
       const diagnostic = classifyInfrastructureIssue(message);
       record({
+        checkId: "ZAMA_WRITE_FLOW",
         name: "Zama Write Flow",
         section: "zama",
         status: diagnostic.status,
@@ -103,6 +107,7 @@ describe("Zama Write Flow", () => {
       const diagnostic = classifyInfrastructureIssue(message);
       const isInfra = diagnostic.rootCauseCategory !== "HARNESS";
       record({
+        checkId: "ZAMA_WRITE_FLOW",
         name: "Zama Write Flow",
         section: "zama",
         status: isInfra ? diagnostic.status : "FAIL",
@@ -139,6 +144,7 @@ describe("Zama Write Flow", () => {
       const diagnostic = classifyInfrastructureIssue(message);
       const isInfra = diagnostic.rootCauseCategory !== "HARNESS";
       record({
+        checkId: "ZAMA_WRITE_FLOW",
         name: "Zama Write Flow",
         section: "zama",
         status: isInfra ? diagnostic.status : "FAIL",
@@ -168,6 +174,7 @@ describe("Zama Write Flow", () => {
       },
     });
     record({
+      checkId: "ZAMA_WRITE_FLOW",
       name: "Zama Write Flow",
       section: "zama",
       status: "PASS",

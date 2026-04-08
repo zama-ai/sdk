@@ -1,6 +1,6 @@
 {
   "kind": "zama-compatibility-report",
-  "schemaVersion": "1.1.0",
+  "schemaVersion": "1.2.0",
   "generatedAt": "2026-04-08T00:00:00.000Z",
   "runId": "golden-turnkey-env-blocked",
   "adapterProfile": {
@@ -38,6 +38,7 @@
   "checks": {
     "recorded": [
       {
+        "checkId": "ZAMA_AUTHORIZATION_FLOW",
         "name": "Zama Authorization Flow",
         "section": "zama",
         "status": "BLOCKED",
@@ -47,6 +48,7 @@
     ],
     "environmentSummary": [
       {
+        "checkId": "ENVIRONMENT_CONFIGURATION",
         "name": "Environment Configuration",
         "section": "environment",
         "status": "BLOCKED",
@@ -55,6 +57,7 @@
     ],
     "all": [
       {
+        "checkId": "ZAMA_AUTHORIZATION_FLOW",
         "name": "Zama Authorization Flow",
         "section": "zama",
         "status": "BLOCKED",
@@ -62,6 +65,7 @@
         "errorCode": "ENV_MISSING_CONFIG"
       },
       {
+        "checkId": "ENVIRONMENT_CONFIGURATION",
         "name": "Environment Configuration",
         "section": "environment",
         "status": "BLOCKED",
@@ -75,6 +79,7 @@
     "execution": [],
     "zama": [
       {
+        "checkId": "ZAMA_AUTHORIZATION_FLOW",
         "name": "Zama Authorization Flow",
         "section": "zama",
         "status": "BLOCKED",
@@ -84,6 +89,7 @@
     ],
     "environment": [
       {
+        "checkId": "ENVIRONMENT_CONFIGURATION",
         "name": "Environment Configuration",
         "section": "environment",
         "status": "BLOCKED",
