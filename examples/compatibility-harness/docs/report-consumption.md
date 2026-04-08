@@ -18,6 +18,7 @@ Use these top-level fields as canonical outputs:
 - `claim.id`
 - `claim.verdictLabel`
 - `finalVerdict`
+- optional `claim.evidenceDetails` (structured per-check evidence records)
 
 `finalVerdict` is human-facing; `claim.id` is the stable machine-facing key for CI policy.
 

@@ -1,6 +1,12 @@
 import type { ValidationStatus } from "../adapter/types.js";
+import type { CanonicalCheckId } from "../report/check-registry.js";
 import { CLAIM_RULES } from "./claims.js";
-import type { CanonicalCheckName, CheckStatusOrMissing, ClaimResolution } from "./types.js";
+import type {
+  CanonicalCheckName,
+  CheckStatusOrMissing,
+  ClaimEvidenceReasonCategory,
+  ClaimResolution,
+} from "./types.js";
 
 export interface ClaimCheckStatus {
   name: string;
@@ -13,8 +19,26 @@ const CLAIM_CHECK_NAMES: readonly CanonicalCheckName[] = [
   "Zama Write Flow",
 ];
 
+const CLAIM_CHECK_IDS: Record<CanonicalCheckName, CanonicalCheckId> = {
+  "Zama Authorization Flow": "ZAMA_AUTHORIZATION_FLOW",
+  "EIP-712 Recoverability": "EIP712_RECOVERABILITY",
+  "Zama Write Flow": "ZAMA_WRITE_FLOW",
+};
+
 function isCanonicalClaimCheckName(value: string): value is CanonicalCheckName {
   return CLAIM_CHECK_NAMES.includes(value as CanonicalCheckName);
+}
+
+function isCheckStatusOrMissing(value: string): value is CheckStatusOrMissing {
+  return (
+    value === "PASS" ||
+    value === "FAIL" ||
+    value === "UNTESTED" ||
+    value === "UNSUPPORTED" ||
+    value === "BLOCKED" ||
+    value === "INCONCLUSIVE" ||
+    value === "MISSING"
+  );
 }
 
 function checkStatus(
@@ -22,6 +46,28 @@ function checkStatus(
   check: CanonicalCheckName,
 ): CheckStatusOrMissing {
   return checks.get(check) ?? "MISSING";
+}
+
+export function claimCheckId(name: CanonicalCheckName): CanonicalCheckId {
+  return CLAIM_CHECK_IDS[name];
+}
+
+export function evidenceReasonCategory(status: CheckStatusOrMissing): ClaimEvidenceReasonCategory {
+  switch (status) {
+    case "PASS":
+      return "VALIDATED";
+    case "FAIL":
+      return "COMPATIBILITY_FAILURE";
+    case "UNSUPPORTED":
+      return "UNSUPPORTED_SURFACE";
+    case "UNTESTED":
+      return "NOT_EXECUTED";
+    case "BLOCKED":
+    case "INCONCLUSIVE":
+      return "INFRA_OR_ENV_BLOCKER";
+    case "MISSING":
+      return "MISSING_EVIDENCE";
+  }
 }
 
 export function assertClaimConsistency(
@@ -51,13 +97,14 @@ export function assertClaimConsistency(
     statuses.set(check.name, check.status);
   }
 
-  const allowedEvidenceKeys = new Set(rule.requirements.map((requirement) => requirement.check));
-  for (const key of Object.keys(claim.evidence)) {
+  for (const [key, value] of Object.entries(claim.evidence)) {
     if (!isCanonicalClaimCheckName(key)) {
       throw new Error(`Unexpected claim evidence key "${key}".`);
     }
-    if (!allowedEvidenceKeys.has(key)) {
-      throw new Error(`Claim evidence key "${key}" is not required by claim ${claim.id}.`);
+    if (!isCheckStatusOrMissing(String(value))) {
+      throw new Error(
+        `Claim evidence for "${key}" has invalid status "${String(value)}" in claim ${claim.id}.`,
+      );
     }
   }
 
@@ -76,6 +123,46 @@ export function assertClaimConsistency(
     if (evidence !== status) {
       throw new Error(
         `Claim evidence mismatch for "${requirement.check}": expected "${status}", got "${evidence}".`,
+      );
+    }
+  }
+
+  if (!claim.evidenceDetails) return;
+
+  const detailsByCheck = new Map<CanonicalCheckName, (typeof claim.evidenceDetails)[number]>();
+  for (const detail of claim.evidenceDetails) {
+    if (!isCanonicalClaimCheckName(detail.check)) {
+      throw new Error(`Unexpected evidenceDetails.check "${detail.check}" in claim ${claim.id}.`);
+    }
+    if (detail.checkId !== claimCheckId(detail.check)) {
+      throw new Error(
+        `evidenceDetails.checkId mismatch for "${detail.check}": expected "${claimCheckId(detail.check)}", got "${detail.checkId}".`,
+      );
+    }
+    const expectedCategory = evidenceReasonCategory(detail.status);
+    if (detail.reasonCategory !== expectedCategory) {
+      throw new Error(
+        `evidenceDetails.reasonCategory mismatch for "${detail.check}": expected "${expectedCategory}", got "${detail.reasonCategory}".`,
+      );
+    }
+    const evidenceStatus = claim.evidence[detail.check];
+    if (evidenceStatus && evidenceStatus !== detail.status) {
+      throw new Error(
+        `evidenceDetails.status mismatch for "${detail.check}": evidence has "${evidenceStatus}", details has "${detail.status}".`,
+      );
+    }
+    if (detailsByCheck.has(detail.check)) {
+      throw new Error(
+        `Duplicate evidenceDetails entry for "${detail.check}" in claim ${claim.id}.`,
+      );
+    }
+    detailsByCheck.set(detail.check, detail);
+  }
+
+  for (const requirement of rule.requirements) {
+    if (!detailsByCheck.has(requirement.check)) {
+      throw new Error(
+        `Missing evidenceDetails entry for "${requirement.check}" in claim ${claim.id}.`,
       );
     }
   }

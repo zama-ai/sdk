@@ -41,6 +41,44 @@ describe("golden report fixtures", () => {
     );
   });
 
+  it("accepts optional structured evidenceDetails", () => {
+    const parsed = JSON.parse(readFixture("eoa-full-compatible.report.json")) as {
+      claim: { evidenceDetails?: unknown[] };
+    };
+    parsed.claim.evidenceDetails = [
+      {
+        check: "Zama Authorization Flow",
+        checkId: "ZAMA_AUTHORIZATION_FLOW",
+        status: "PASS",
+        reasonCategory: "VALIDATED",
+      },
+      {
+        check: "EIP-712 Recoverability",
+        checkId: "EIP712_RECOVERABILITY",
+        status: "PASS",
+        reasonCategory: "VALIDATED",
+      },
+      {
+        check: "Zama Write Flow",
+        checkId: "ZAMA_WRITE_FLOW",
+        status: "PASS",
+        reasonCategory: "VALIDATED",
+      },
+    ];
+    const report = parseReportArtifact(JSON.stringify(parsed));
+    expect(report.claim.evidenceDetails?.length).toBe(3);
+  });
+
+  it("rejects malformed optional evidenceDetails payloads", () => {
+    const parsed = JSON.parse(readFixture("eoa-full-compatible.report.json")) as {
+      claim: { evidenceDetails?: unknown };
+    };
+    parsed.claim.evidenceDetails = "bad-shape";
+    expect(() => parseReportArtifact(JSON.stringify(parsed))).toThrow(
+      "Invalid report.claim.evidenceDetails: expected array when provided.",
+    );
+  });
+
   it("rejects artifacts with inconsistent claim evidence", () => {
     const parsed = JSON.parse(readFixture("eoa-full-compatible.report.json")) as {
       claim: { evidence: Record<string, string> };

@@ -1,4 +1,5 @@
 import type { ValidationStatus } from "../adapter/types.js";
+import type { CanonicalCheckId } from "../report/check-registry.js";
 
 export type CanonicalCheckName =
   | "Zama Authorization Flow"
@@ -6,6 +7,20 @@ export type CanonicalCheckName =
   | "EIP-712 Recoverability";
 
 export type CheckStatusOrMissing = ValidationStatus | "MISSING";
+export type ClaimEvidenceReasonCategory =
+  | "VALIDATED"
+  | "COMPATIBILITY_FAILURE"
+  | "UNSUPPORTED_SURFACE"
+  | "NOT_EXECUTED"
+  | "INFRA_OR_ENV_BLOCKER"
+  | "MISSING_EVIDENCE";
+
+export interface ClaimEvidenceDetail {
+  check: CanonicalCheckName;
+  checkId: CanonicalCheckId;
+  status: CheckStatusOrMissing;
+  reasonCategory: ClaimEvidenceReasonCategory;
+}
 
 export type ClaimId =
   | "INCOMPATIBLE_AUTHORIZATION_FAILED"
@@ -27,6 +42,7 @@ export interface ClaimResolution {
   verdictLabel: string;
   rationale: string[];
   evidence: Partial<Record<CanonicalCheckName, CheckStatusOrMissing>>;
+  evidenceDetails?: ClaimEvidenceDetail[];
 }
 
 export interface ClaimRule {

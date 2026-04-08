@@ -111,6 +111,22 @@ export function parseReportArtifact(raw: string): ReportArtifact {
   if (!evidence) {
     throw new Error("Invalid report.claim.evidence: expected object.");
   }
+  const evidenceDetails = claim.evidenceDetails;
+  if (evidenceDetails !== undefined) {
+    if (!Array.isArray(evidenceDetails)) {
+      throw new Error("Invalid report.claim.evidenceDetails: expected array when provided.");
+    }
+    for (let i = 0; i < evidenceDetails.length; i += 1) {
+      const detail = asRecord(evidenceDetails[i]);
+      if (!detail) {
+        throw new Error(`Invalid report.claim.evidenceDetails[${i}]: expected object.`);
+      }
+      assertStringField(detail, "check", `report.claim.evidenceDetails[${i}]`);
+      assertStringField(detail, "checkId", `report.claim.evidenceDetails[${i}]`);
+      assertStringField(detail, "status", `report.claim.evidenceDetails[${i}]`);
+      assertStringField(detail, "reasonCategory", `report.claim.evidenceDetails[${i}]`);
+    }
+  }
 
   const checks = asRecord(object.checks);
   if (!checks) {

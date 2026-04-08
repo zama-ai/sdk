@@ -68,4 +68,26 @@ describe("verdict.assertClaimConsistency", () => {
       'requirement "Zama Write Flow" not satisfied',
     );
   });
+
+  it("rejects inconsistent evidenceDetails payloads when provided", () => {
+    const results = [
+      check("Zama Authorization Flow", "PASS"),
+      check("EIP-712 Recoverability", "PASS"),
+      check("Zama Write Flow", "FAIL"),
+    ];
+    const claim = resolveClaimFromResults(results);
+    const inconsistent: ClaimResolution = {
+      ...claim,
+      evidenceDetails: (claim.evidenceDetails ?? []).map((detail) => {
+        if (detail.check !== "Zama Write Flow") return detail;
+        return {
+          ...detail,
+          reasonCategory: "VALIDATED",
+        };
+      }),
+    };
+    expect(() => assertClaimConsistency(inconsistent, results)).toThrow(
+      'evidenceDetails.reasonCategory mismatch for "Zama Write Flow"',
+    );
+  });
 });

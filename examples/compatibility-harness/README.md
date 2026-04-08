@@ -356,6 +356,7 @@ Current schema:
 - `kind`: `zama-compatibility-report`
 - `schemaVersion`: `1.2.0`
 - each check record includes a canonical `checkId` (stable machine key)
+- claim payload includes `evidence` (stable map) and optional `evidenceDetails` (structured check records)
 - top-level sections: `adapterProfile`, `checks`, `sections`, `infrastructure`, `claim`, `finalVerdict`
 
 `schemaVersion` is the compatibility contract for CI/partner tooling. Consumers should validate `schemaVersion` before parsing.

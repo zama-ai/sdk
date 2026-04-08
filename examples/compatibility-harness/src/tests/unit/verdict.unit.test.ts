@@ -51,6 +51,26 @@ describe("verdict.resolveClaimFromResults", () => {
       check("Zama Write Flow", "PASS"),
     ]);
     expect(claim.id).toBe("ZAMA_AUTHORIZATION_AND_WRITE_COMPATIBLE");
+    expect(claim.evidenceDetails).toEqual([
+      {
+        check: "Zama Authorization Flow",
+        checkId: "ZAMA_AUTHORIZATION_FLOW",
+        status: "PASS",
+        reasonCategory: "VALIDATED",
+      },
+      {
+        check: "EIP-712 Recoverability",
+        checkId: "EIP712_RECOVERABILITY",
+        status: "PASS",
+        reasonCategory: "VALIDATED",
+      },
+      {
+        check: "Zama Write Flow",
+        checkId: "ZAMA_WRITE_FLOW",
+        status: "PASS",
+        reasonCategory: "VALIDATED",
+      },
+    ]);
   });
 
   it("returns partial write blocked when write is inconclusive", () => {

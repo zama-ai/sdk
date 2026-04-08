@@ -1,6 +1,7 @@
 import type { ValidationStatus } from "../adapter/types.js";
 import type { TestResult } from "../report/reporter.js";
 import { CLAIM_RULES } from "./claims.js";
+import { claimCheckId, evidenceReasonCategory } from "./consistency.js";
 import type {
   CanonicalCheckName,
   CheckStatusOrMissing,
@@ -41,28 +42,47 @@ export function resolveClaimFromResults(results: TestResult[]): ClaimResolution 
   for (const rule of CLAIM_RULES) {
     if (!ruleMatches(canonicalChecks, rule)) continue;
     const evidence = Object.fromEntries(
-      rule.requirements.map((requirement) => [
-        requirement.check,
-        checkStatus(canonicalChecks, requirement.check),
-      ]),
+      rule.requirements.map((requirement) => {
+        return [requirement.check, checkStatus(canonicalChecks, requirement.check)];
+      }),
     ) as ClaimResolution["evidence"];
+    const evidenceDetails = rule.requirements.map((requirement) => {
+      const status = checkStatus(canonicalChecks, requirement.check);
+      return {
+        check: requirement.check,
+        checkId: claimCheckId(requirement.check),
+        status,
+        reasonCategory: evidenceReasonCategory(status),
+      };
+    });
 
     return {
       id: rule.id,
       verdictLabel: rule.verdictLabel,
       rationale: rule.rationale,
       evidence,
+      evidenceDetails,
     };
   }
+
+  const fallbackStatus = checkStatus(canonicalChecks, "Zama Authorization Flow");
+  const fallbackEvidence: ClaimResolution["evidence"] = {
+    "Zama Authorization Flow": fallbackStatus,
+  };
+  const fallbackEvidenceDetails = [
+    {
+      check: "Zama Authorization Flow" as const,
+      checkId: claimCheckId("Zama Authorization Flow"),
+      status: fallbackStatus,
+      reasonCategory: evidenceReasonCategory(fallbackStatus),
+    },
+  ];
 
   return {
     id: "PARTIAL_AUTHORIZATION_CHECK_MISSING",
     verdictLabel: "PARTIALLY VALIDATED — AUTHORIZATION CHECK NOT RECORDED",
     rationale: ["No claim rule matched the observed result set."],
-    evidence: {
-      "Zama Authorization Flow": checkStatus(canonicalChecks, "Zama Authorization Flow"),
-      "EIP-712 Recoverability": checkStatus(canonicalChecks, "EIP-712 Recoverability"),
-      "Zama Write Flow": checkStatus(canonicalChecks, "Zama Write Flow"),
-    },
+    evidence: fallbackEvidence,
+    evidenceDetails: fallbackEvidenceDetails,
   };
 }
