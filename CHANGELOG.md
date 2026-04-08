@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.3.1-alpha.3](https://github.com/zama-ai/sdk/compare/v2.3.1-alpha.2...v2.3.1-alpha.3) (2026-04-08)
+
+### Bug Fixes
+
+- **sdk:** cap keypairTTL at the fhevm 365-day maximum ([#212](https://github.com/zama-ai/sdk/issues/212)) ([d11986f]())
+
+## [2.3.1-alpha.2](https://github.com/zama-ai/sdk/compare/v2.3.1-alpha.1...v2.3.1-alpha.2) (2026-04-08)
+
 ## [2.3.1-alpha.1](https://github.com/zama-ai/sdk/compare/v2.3.0...v2.3.1-alpha.1) (2026-04-07)
 
 ## [2.3.0](https://github.com/zama-ai/sdk/compare/v2.2.0...v2.3.0) (2026-04-07)
