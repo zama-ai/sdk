@@ -10,7 +10,7 @@ import {
   initializeAdapter,
 } from "../harness/adapter.js";
 import { classifyInfrastructureIssue, errorMessage } from "../harness/diagnostics.js";
-import { mergeProfile, record } from "../report/reporter.js";
+import { recordWithRuntimeObservation } from "../report/reporter.js";
 
 let initError: string | null = null;
 
@@ -26,7 +26,7 @@ describe("Adapter-Routed Execution Surface", () => {
   it("reads a Zama contract via the adapter or harness RPC fallback", async () => {
     if (initError) {
       const diagnostic = classifyInfrastructureIssue(initError);
-      record({
+      recordWithRuntimeObservation({
         checkId: "ADAPTER_CONTRACT_READ",
         name: "Adapter Contract Read",
         section: "execution",
@@ -41,7 +41,7 @@ describe("Adapter-Routed Execution Surface", () => {
     }
 
     if (isMockModeEnabled()) {
-      record({
+      recordWithRuntimeObservation({
         checkId: "ADAPTER_CONTRACT_READ",
         name: "Adapter Contract Read",
         section: "execution",
@@ -68,7 +68,7 @@ describe("Adapter-Routed Execution Surface", () => {
     } catch (err) {
       const message = errorMessage(err);
       const diagnostic = classifyInfrastructureIssue(message);
-      record({
+      recordWithRuntimeObservation({
         checkId: "ADAPTER_CONTRACT_READ",
         name: "Adapter Contract Read",
         section: "execution",
@@ -84,20 +84,20 @@ describe("Adapter-Routed Execution Surface", () => {
     }
 
     sdk.terminate();
-    mergeProfile({
-      observedCapabilities: {
+    recordWithRuntimeObservation(
+      {
+        checkId: "ADAPTER_CONTRACT_READ",
+        name: "Adapter Contract Read",
+        section: "execution",
+        status: "PASS",
+        summary: adapter.readContract
+          ? "Adapter read a Zama contract successfully"
+          : "Adapter read path validated through harness RPC fallback",
+      },
+      {
         contractReads: adapter.readContract ? "SUPPORTED" : "UNSUPPORTED",
       },
-    });
-    record({
-      checkId: "ADAPTER_CONTRACT_READ",
-      name: "Adapter Contract Read",
-      section: "execution",
-      status: "PASS",
-      summary: adapter.readContract
-        ? "Adapter read a Zama contract successfully"
-        : "Adapter read path validated through harness RPC fallback",
-    });
+    );
     expect(true).toBe(true);
   });
 });

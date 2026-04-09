@@ -11,7 +11,7 @@ import {
 } from "../harness/adapter.js";
 import { classifyInfrastructureIssue, errorMessage } from "../harness/diagnostics.js";
 import { classifyZamaWriteSubmissionFailure } from "../harness/negative-paths.js";
-import { mergeProfile, record } from "../report/reporter.js";
+import { recordWithRuntimeObservation } from "../report/reporter.js";
 
 const TEST_OPERATOR = getAddress("0x000000000000000000000000000000000000dEaD");
 
@@ -29,7 +29,7 @@ describe("Zama Write Flow", () => {
   it("executes and verifies a Zama operator approval write when supported", async () => {
     if (initError) {
       const diagnostic = classifyInfrastructureIssue(initError);
-      record({
+      recordWithRuntimeObservation({
         checkId: "ZAMA_WRITE_FLOW",
         name: "Zama Write Flow",
         section: "zama",
@@ -44,13 +44,7 @@ describe("Zama Write Flow", () => {
     }
 
     if (!adapter.writeContract) {
-      mergeProfile({
-        observedCapabilities: {
-          contractExecution: "UNSUPPORTED",
-          zamaWriteFlow: "UNSUPPORTED",
-        },
-      });
-      record({
+      recordWithRuntimeObservation({
         checkId: "ZAMA_WRITE_FLOW",
         name: "Zama Write Flow",
         section: "zama",
@@ -65,7 +59,7 @@ describe("Zama Write Flow", () => {
     }
 
     if (isMockModeEnabled()) {
-      record({
+      recordWithRuntimeObservation({
         checkId: "ZAMA_WRITE_FLOW",
         name: "Zama Write Flow",
         section: "zama",
@@ -85,7 +79,7 @@ describe("Zama Write Flow", () => {
     } catch (err) {
       const message = errorMessage(err);
       const diagnostic = classifyInfrastructureIssue(message);
-      record({
+      recordWithRuntimeObservation({
         checkId: "ZAMA_WRITE_FLOW",
         name: "Zama Write Flow",
         section: "zama",
@@ -106,7 +100,7 @@ describe("Zama Write Flow", () => {
     } catch (err) {
       const message = errorMessage(err);
       const failure = classifyZamaWriteSubmissionFailure(message);
-      record({
+      recordWithRuntimeObservation({
         checkId: "ZAMA_WRITE_FLOW",
         name: "Zama Write Flow",
         section: "zama",
@@ -143,7 +137,7 @@ describe("Zama Write Flow", () => {
       const message = errorMessage(err);
       const diagnostic = classifyInfrastructureIssue(message);
       const isInfra = diagnostic.rootCauseCategory !== "HARNESS";
-      record({
+      recordWithRuntimeObservation({
         checkId: "ZAMA_WRITE_FLOW",
         name: "Zama Write Flow",
         section: "zama",
@@ -166,20 +160,18 @@ describe("Zama Write Flow", () => {
     }
 
     sdk.terminate();
-    mergeProfile({
-      observedCapabilities: {
-        contractExecution: "SUPPORTED",
-        transactionReceiptTracking: adapter.waitForTransactionReceipt ? "SUPPORTED" : "UNKNOWN",
-        zamaWriteFlow: "SUPPORTED",
+    recordWithRuntimeObservation(
+      {
+        checkId: "ZAMA_WRITE_FLOW",
+        name: "Zama Write Flow",
+        section: "zama",
+        status: "PASS",
+        summary: "A Zama operator approval transaction was executed and verified on-chain",
       },
-    });
-    record({
-      checkId: "ZAMA_WRITE_FLOW",
-      name: "Zama Write Flow",
-      section: "zama",
-      status: "PASS",
-      summary: "A Zama operator approval transaction was executed and verified on-chain",
-    });
+      {
+        transactionReceiptTracking: adapter.waitForTransactionReceipt ? "SUPPORTED" : "UNKNOWN",
+      },
+    );
     expect(true).toBe(true);
   });
 });

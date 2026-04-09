@@ -18,6 +18,7 @@ import type {
 } from "../adapter/types.js";
 import { emptyCapabilities } from "../adapter/types.js";
 import { mergeCapabilityPatch, resolveFinalCapabilities } from "../adapter/capability-evidence.js";
+import { inferRuntimeCapabilityPatchFromCheck } from "../adapter/runtime-observation.js";
 import { detectCapabilityContradictions } from "../adapter/contradictions.js";
 import { recommendationForDiagnostic } from "../harness/recommendations.js";
 import {
@@ -80,6 +81,25 @@ export function record(result: TestResult): void {
   appendFileSync(RESULTS_FILE, `${JSON.stringify(normalized)}\n`);
 }
 
+export function recordWithRuntimeObservation(
+  result: TestResult,
+  runtimeOverride: Partial<AdapterProfile["observedRuntimeCapabilities"]> = {},
+): void {
+  record(result);
+  const inferred = inferRuntimeCapabilityPatchFromCheck({
+    checkId: result.checkId,
+    status: result.status,
+  });
+  const patch = {
+    ...inferred,
+    ...runtimeOverride,
+  };
+  if (Object.keys(patch).length === 0) return;
+  mergeProfile({
+    observedRuntimeCapabilities: patch,
+  });
+}
+
 /** Read all recorded results. */
 export function readResults(): TestResult[] {
   if (!existsSync(RESULTS_FILE)) return [];
@@ -133,16 +153,56 @@ export function mergeProfile(
   },
 ): void {
   const existing = readProfile();
+  const runtimePatch = {
+    ...patch.observedRuntimeCapabilities,
+    ...patch.observedCapabilities,
+  };
   if (!existing) {
-    if (
-      !patch.name ||
-      !patch.source ||
-      !patch.declaredArchitecture ||
-      !patch.detectedArchitecture
-    ) {
+    const hasCapabilityPatches =
+      !!patch.declaredCapabilities ||
+      !!patch.observedStructuralCapabilities ||
+      Object.keys(runtimePatch).length > 0;
+    const hasRequiredMetadata =
+      !!patch.name &&
+      !!patch.source &&
+      !!patch.declaredArchitecture &&
+      !!patch.detectedArchitecture;
+
+    if (!hasRequiredMetadata && !hasCapabilityPatches) {
       return;
     }
-    recordProfile(patch as AdapterProfile);
+
+    const declaredCapabilities = mergeCapabilityPatch({
+      base: emptyCapabilities(),
+      patch: patch.declaredCapabilities,
+    });
+    const observedStructuralCapabilities = mergeCapabilityPatch({
+      base: emptyCapabilities(),
+      patch: patch.observedStructuralCapabilities,
+    });
+    const observedRuntimeCapabilities = mergeCapabilityPatch({
+      base: emptyCapabilities(),
+      patch: runtimePatch,
+    });
+    const observedCapabilities = resolveFinalCapabilities({
+      structural: observedStructuralCapabilities,
+      runtime: observedRuntimeCapabilities,
+    });
+
+    recordProfile({
+      name: patch.name ?? "(pending adapter profile)",
+      source: patch.source ?? "adapter",
+      declaredArchitecture: patch.declaredArchitecture ?? "UNKNOWN",
+      detectedArchitecture: patch.detectedArchitecture ?? patch.declaredArchitecture ?? "UNKNOWN",
+      verificationModel: patch.verificationModel ?? "UNKNOWN",
+      address: patch.address ?? "(unresolved)",
+      declaredCapabilities,
+      observedStructuralCapabilities,
+      observedRuntimeCapabilities,
+      observedCapabilities,
+      contradictions: detectCapabilityContradictions(declaredCapabilities, observedCapabilities),
+      initializationStatus: patch.initializationStatus ?? "UNTESTED",
+    });
     return;
   }
   const declaredCapabilities = mergeCapabilityPatch({
@@ -155,10 +215,7 @@ export function mergeProfile(
   });
   const observedRuntimeCapabilities = mergeCapabilityPatch({
     base: profileRuntimeCapabilities(existing),
-    patch: {
-      ...patch.observedRuntimeCapabilities,
-      ...patch.observedCapabilities,
-    },
+    patch: runtimePatch,
   });
   const observedCapabilities = resolveFinalCapabilities({
     structural: observedStructuralCapabilities,

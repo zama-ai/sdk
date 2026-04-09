@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { parseGwei } from "viem";
 import { isMockModeEnabled, mockModeNote } from "../config/runtime.js";
-import { mergeProfile, record } from "../report/reporter.js";
+import { recordWithRuntimeObservation } from "../report/reporter.js";
 import { publicClient } from "../utils/rpc.js";
 import { networkConfig } from "../config/network.js";
 import { adapter, getAdapterAddress, initializeAdapter } from "../harness/adapter.js";
@@ -21,7 +21,7 @@ describe("Ethereum Raw Transaction Flow", () => {
   it("signs and broadcasts a raw EIP-1559 transaction when supported", async () => {
     if (initError) {
       const diagnostic = classifyInfrastructureIssue(initError);
-      record({
+      recordWithRuntimeObservation({
         checkId: "RAW_TRANSACTION_EXECUTION",
         name: "Raw Transaction Execution",
         section: "ethereum",
@@ -36,12 +36,7 @@ describe("Ethereum Raw Transaction Flow", () => {
     }
 
     if (!adapter.signTransaction) {
-      mergeProfile({
-        observedCapabilities: {
-          rawTransactionSigning: "UNSUPPORTED",
-        },
-      });
-      record({
+      recordWithRuntimeObservation({
         checkId: "RAW_TRANSACTION_EXECUTION",
         name: "Raw Transaction Execution",
         section: "ethereum",
@@ -55,7 +50,7 @@ describe("Ethereum Raw Transaction Flow", () => {
     }
 
     if (isMockModeEnabled()) {
-      record({
+      recordWithRuntimeObservation({
         checkId: "RAW_TRANSACTION_EXECUTION",
         name: "Raw Transaction Execution",
         section: "ethereum",
@@ -74,7 +69,7 @@ describe("Ethereum Raw Transaction Flow", () => {
     } catch (err) {
       const message = errorMessage(err);
       const diagnostic = classifyInfrastructureIssue(message);
-      record({
+      recordWithRuntimeObservation({
         checkId: "RAW_TRANSACTION_EXECUTION",
         name: "Raw Transaction Execution",
         section: "ethereum",
@@ -101,7 +96,7 @@ describe("Ethereum Raw Transaction Flow", () => {
     } catch (err) {
       const message = errorMessage(err);
       const diagnostic = classifyInfrastructureIssue(message);
-      record({
+      recordWithRuntimeObservation({
         checkId: "RAW_TRANSACTION_EXECUTION",
         name: "Raw Transaction Execution",
         section: "ethereum",
@@ -132,7 +127,7 @@ describe("Ethereum Raw Transaction Flow", () => {
       signedTx = await adapter.signTransaction(tx);
     } catch (err) {
       const message = errorMessage(err);
-      record({
+      recordWithRuntimeObservation({
         checkId: "RAW_TRANSACTION_EXECUTION",
         name: "Raw Transaction Execution",
         section: "ethereum",
@@ -153,7 +148,7 @@ describe("Ethereum Raw Transaction Flow", () => {
       });
       const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
       if (receipt.status !== "success") {
-        record({
+        recordWithRuntimeObservation({
           checkId: "RAW_TRANSACTION_EXECUTION",
           name: "Raw Transaction Execution",
           section: "ethereum",
@@ -170,7 +165,7 @@ describe("Ethereum Raw Transaction Flow", () => {
       const message = errorMessage(err);
       const diagnostic = classifyInfrastructureIssue(message);
       const isInfra = diagnostic.rootCauseCategory !== "HARNESS";
-      record({
+      recordWithRuntimeObservation({
         checkId: "RAW_TRANSACTION_EXECUTION",
         name: "Raw Transaction Execution",
         section: "ethereum",
@@ -190,13 +185,7 @@ describe("Ethereum Raw Transaction Flow", () => {
       }
       return;
     }
-
-    mergeProfile({
-      observedCapabilities: {
-        rawTransactionSigning: "SUPPORTED",
-      },
-    });
-    record({
+    recordWithRuntimeObservation({
       checkId: "RAW_TRANSACTION_EXECUTION",
       name: "Raw Transaction Execution",
       section: "ethereum",

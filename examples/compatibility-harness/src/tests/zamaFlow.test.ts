@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { isMockModeEnabled, mockModeNote } from "../config/runtime.js";
-import { mergeProfile, record } from "../report/reporter.js";
+import { recordWithRuntimeObservation } from "../report/reporter.js";
 import { buildSdk, discoverTokenAddress, initializeAdapter } from "../harness/adapter.js";
 import { classifyInfrastructureIssue, errorMessage } from "../harness/diagnostics.js";
 import { classifyZamaAuthorizationFailure } from "../harness/negative-paths.js";
@@ -20,7 +20,7 @@ describe("Zama Authorization Flow", () => {
   it("validates sdk.allow() when EIP-712 signing is supported", async () => {
     if (initError) {
       const diagnostic = classifyInfrastructureIssue(initError);
-      record({
+      recordWithRuntimeObservation({
         checkId: "ZAMA_AUTHORIZATION_FLOW",
         name: "Zama Authorization Flow",
         section: "zama",
@@ -35,12 +35,7 @@ describe("Zama Authorization Flow", () => {
     }
 
     if (!adapter.signTypedData) {
-      mergeProfile({
-        observedCapabilities: {
-          zamaAuthorizationFlow: "UNSUPPORTED",
-        },
-      });
-      record({
+      recordWithRuntimeObservation({
         checkId: "ZAMA_AUTHORIZATION_FLOW",
         name: "Zama Authorization Flow",
         section: "zama",
@@ -54,7 +49,7 @@ describe("Zama Authorization Flow", () => {
     }
 
     if (isMockModeEnabled()) {
-      record({
+      recordWithRuntimeObservation({
         checkId: "ZAMA_AUTHORIZATION_FLOW",
         name: "Zama Authorization Flow",
         section: "zama",
@@ -75,7 +70,7 @@ describe("Zama Authorization Flow", () => {
     } catch (err) {
       const message = errorMessage(err);
       const diagnostic = classifyInfrastructureIssue(message);
-      record({
+      recordWithRuntimeObservation({
         checkId: "ZAMA_AUTHORIZATION_FLOW",
         name: "Zama Authorization Flow",
         section: "zama",
@@ -95,7 +90,7 @@ describe("Zama Authorization Flow", () => {
     } catch (err) {
       const message = errorMessage(err);
       const failure = classifyZamaAuthorizationFailure(message);
-      record({
+      recordWithRuntimeObservation({
         checkId: "ZAMA_AUTHORIZATION_FLOW",
         name: "Zama Authorization Flow",
         section: "zama",
@@ -118,12 +113,7 @@ describe("Zama Authorization Flow", () => {
     }
 
     sdk.terminate();
-    mergeProfile({
-      observedCapabilities: {
-        zamaAuthorizationFlow: "SUPPORTED",
-      },
-    });
-    record({
+    recordWithRuntimeObservation({
       checkId: "ZAMA_AUTHORIZATION_FLOW",
       name: "Zama Authorization Flow",
       section: "zama",

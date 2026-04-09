@@ -14,7 +14,7 @@ import {
   classifyEip712SigningFailure,
   classifyRecoverabilityFailure,
 } from "../harness/negative-paths.js";
-import { mergeProfile, record } from "../report/reporter.js";
+import { mergeProfile, recordWithRuntimeObservation } from "../report/reporter.js";
 import { recoverEIP712Signer } from "../utils/crypto.js";
 import { publicClient } from "../utils/rpc.js";
 
@@ -69,7 +69,7 @@ describe("Identity and Verification", () => {
 
     if (initError) {
       const diagnostic = classifyInfrastructureIssue(initError);
-      record({
+      recordWithRuntimeObservation({
         checkId: "EIP712_SIGNING",
         name: "EIP-712 Signing",
         section: "ethereum",
@@ -84,23 +84,22 @@ describe("Identity and Verification", () => {
     }
 
     if (!adapter.signTypedData) {
-      mergeProfile({
-        observedCapabilities: {
-          eip712Signing: "UNSUPPORTED",
+      recordWithRuntimeObservation(
+        {
+          checkId: "EIP712_SIGNING",
+          name: "EIP-712 Signing",
+          section: "ethereum",
+          status: "UNSUPPORTED",
+          summary: "Adapter does not expose EIP-712 signing",
+          reason: "signTypedData is not implemented by the adapter",
+          rootCauseCategory: "ADAPTER",
+          recommendation: "Implement signTypedData to validate Zama authorization compatibility.",
+        },
+        {
           recoverableEcdsa: "UNSUPPORTED",
           zamaAuthorizationFlow: "UNSUPPORTED",
         },
-      });
-      record({
-        checkId: "EIP712_SIGNING",
-        name: "EIP-712 Signing",
-        section: "ethereum",
-        status: "UNSUPPORTED",
-        summary: "Adapter does not expose EIP-712 signing",
-        reason: "signTypedData is not implemented by the adapter",
-        rootCauseCategory: "ADAPTER",
-        recommendation: "Implement signTypedData to validate Zama authorization compatibility.",
-      });
+      );
       return;
     }
 
@@ -110,7 +109,7 @@ describe("Identity and Verification", () => {
     } catch (err) {
       const message = errorMessage(err);
       const failure = classifyEip712SigningFailure(message);
-      record({
+      recordWithRuntimeObservation({
         checkId: "EIP712_SIGNING",
         name: "EIP-712 Signing",
         section: "ethereum",
@@ -124,14 +123,6 @@ describe("Identity and Verification", () => {
         likelyCause: "The adapter rejected the typed-data payload or transformed it incorrectly.",
         recommendation: "Ensure the adapter supports standard Ethereum EIP-712 signing.",
       });
-      if (!failure.infrastructure) {
-        mergeProfile({
-          observedCapabilities: {
-            eip712Signing: "SUPPORTED",
-            recoverableEcdsa: "UNSUPPORTED",
-          },
-        });
-      }
       if (!failure.infrastructure) {
         expect.fail(message);
       }
@@ -150,7 +141,7 @@ describe("Identity and Verification", () => {
         } catch (err) {
           const message = errorMessage(err);
           const diagnostic = classifyInfrastructureIssue(message);
-          record({
+          recordWithRuntimeObservation({
             checkId: "ERC1271_VERIFICATION",
             name: "ERC-1271 Verification",
             section: "ethereum",
@@ -176,7 +167,7 @@ describe("Identity and Verification", () => {
         });
         const magicValue = String(result).toLowerCase();
         if (magicValue === ERC1271_MAGIC_VALUE) {
-          record({
+          recordWithRuntimeObservation({
             checkId: "ERC1271_VERIFICATION",
             name: "ERC-1271 Verification",
             section: "ethereum",
@@ -185,7 +176,7 @@ describe("Identity and Verification", () => {
           });
           return true;
         }
-        record({
+        recordWithRuntimeObservation({
           checkId: "ERC1271_VERIFICATION",
           name: "ERC-1271 Verification",
           section: "ethereum",
@@ -200,7 +191,7 @@ describe("Identity and Verification", () => {
         const message = errorMessage(err);
         const diagnostic = classifyInfrastructureIssue(message);
         const isInfra = diagnostic.rootCauseCategory !== "HARNESS";
-        record({
+        recordWithRuntimeObservation({
           checkId: "ERC1271_VERIFICATION",
           name: "ERC-1271 Verification",
           section: "ethereum",
@@ -224,7 +215,7 @@ describe("Identity and Verification", () => {
       const recoverabilityFailure = classifyRecoverabilityFailure();
       const erc1271Pass = shouldRunErc1271Check ? await runErc1271Check() : false;
       mergeProfile({
-        observedCapabilities: {
+        observedRuntimeCapabilities: {
           eip712Signing: "SUPPORTED",
           recoverableEcdsa: "UNSUPPORTED",
         },
@@ -239,7 +230,7 @@ describe("Identity and Verification", () => {
           recoverableEcdsa: "UNSUPPORTED",
         }),
       });
-      record({
+      recordWithRuntimeObservation({
         checkId: "EIP712_RECOVERABILITY",
         name: "EIP-712 Recoverability",
         section: "ethereum",
@@ -260,7 +251,7 @@ describe("Identity and Verification", () => {
       const recoverabilityFailure = classifyRecoverabilityFailure();
       const erc1271Pass = shouldRunErc1271Check ? await runErc1271Check(address) : false;
       const mismatchPatch = {
-        observedCapabilities: {
+        observedRuntimeCapabilities: {
           eip712Signing: "SUPPORTED" as const,
           recoverableEcdsa: "UNSUPPORTED" as const,
         },
@@ -268,7 +259,7 @@ describe("Identity and Verification", () => {
       mergeProfile(
         erc1271Pass ? { ...mismatchPatch, verificationModel: "ERC1271" } : mismatchPatch,
       );
-      record({
+      recordWithRuntimeObservation({
         checkId: "EIP712_RECOVERABILITY",
         name: "EIP-712 Recoverability",
         section: "ethereum",
@@ -284,24 +275,24 @@ describe("Identity and Verification", () => {
       return;
     }
 
-    const observedCapabilities = {
+    const observedRuntimeCapabilities = {
       ...baseCapabilities,
       eip712Signing: "SUPPORTED" as const,
       recoverableEcdsa: "SUPPORTED" as const,
       zamaAuthorizationFlow: "SUPPORTED" as const,
     };
     mergeProfile({
-      observedCapabilities,
+      observedRuntimeCapabilities,
       verificationModel: detectVerificationModel(
         adapter.metadata.verificationModel,
-        observedCapabilities,
+        observedRuntimeCapabilities,
       ),
       detectedArchitecture: detectArchitecture(
         adapter.metadata.declaredArchitecture,
-        observedCapabilities,
+        observedRuntimeCapabilities,
       ),
     });
-    record({
+    recordWithRuntimeObservation({
       checkId: "EIP712_RECOVERABILITY",
       name: "EIP-712 Recoverability",
       section: "ethereum",

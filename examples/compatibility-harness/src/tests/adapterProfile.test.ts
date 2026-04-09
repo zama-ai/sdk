@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { detectArchitecture, detectVerificationModel } from "../adapter/profile.js";
 import { emptyCapabilities } from "../adapter/types.js";
+import { resolveFinalCapabilities } from "../adapter/capability-evidence.js";
 import {
   adapter,
   adapterDeclaredCapabilities,
@@ -13,7 +14,12 @@ import {
 } from "../harness/adapter.js";
 import { detectCapabilityContradictions } from "../adapter/contradictions.js";
 import { classifyInfrastructureIssue, errorMessage } from "../harness/diagnostics.js";
-import { record, readProfile, recordProfile } from "../report/reporter.js";
+import {
+  mergeProfile,
+  readProfile,
+  recordProfile,
+  recordWithRuntimeObservation,
+} from "../report/reporter.js";
 
 let initError: string | null = null;
 
@@ -28,22 +34,29 @@ beforeAll(async () => {
 describe("Adapter Profile", () => {
   it("records adapter metadata, initialization, and address resolution", async () => {
     const existingProfile = readProfile();
-    const declaredCapabilities = existingProfile?.declaredCapabilities ?? {
+    const declaredCapabilities = {
       ...emptyCapabilities(),
       ...adapterDeclaredCapabilities,
+      ...(existingProfile?.declaredCapabilities ?? {}),
     };
-    const observedStructuralCapabilities = existingProfile?.observedStructuralCapabilities ?? {
+    const observedStructuralCapabilities = {
       ...emptyCapabilities(),
       ...adapterObservedStructuralCapabilities,
+      ...(existingProfile?.observedStructuralCapabilities ?? {}),
     };
-    const observedRuntimeCapabilities = existingProfile?.observedRuntimeCapabilities ?? {
+    const observedRuntimeCapabilities = {
       ...emptyCapabilities(),
       ...adapterObservedRuntimeCapabilities,
+      ...(existingProfile?.observedRuntimeCapabilities ?? {}),
     };
-    const observedCapabilities = existingProfile?.observedCapabilities ?? {
-      ...emptyCapabilities(),
-      ...adapterObservedCapabilities,
-    };
+    const observedCapabilities = resolveFinalCapabilities({
+      structural: {
+        ...emptyCapabilities(),
+        ...adapterObservedCapabilities,
+        ...observedStructuralCapabilities,
+      },
+      runtime: observedRuntimeCapabilities,
+    });
     const baseProfile = {
       name: adapter.metadata.name,
       source: adapterSource,
@@ -71,7 +84,7 @@ describe("Adapter Profile", () => {
 
     if (initError) {
       const diagnostic = classifyInfrastructureIssue(initError);
-      record({
+      recordWithRuntimeObservation({
         checkId: "ADAPTER_INITIALIZATION",
         name: "Adapter Initialization",
         section: "adapter",
@@ -85,7 +98,7 @@ describe("Adapter Profile", () => {
       return;
     }
 
-    record({
+    recordWithRuntimeObservation({
       checkId: "ADAPTER_INITIALIZATION",
       name: "Adapter Initialization",
       section: "adapter",
@@ -95,15 +108,13 @@ describe("Adapter Profile", () => {
 
     try {
       const address = await getAdapterAddress();
-      recordProfile({
-        ...baseProfile,
+      mergeProfile({
         address,
-        observedCapabilities: {
-          ...observedCapabilities,
+        observedRuntimeCapabilities: {
           addressResolution: "SUPPORTED",
         },
       });
-      record({
+      recordWithRuntimeObservation({
         checkId: "ADDRESS_RESOLUTION",
         name: "Address Resolution",
         section: "adapter",
@@ -114,7 +125,7 @@ describe("Adapter Profile", () => {
     } catch (err) {
       const message = errorMessage(err);
       const diagnostic = classifyInfrastructureIssue(message);
-      record({
+      recordWithRuntimeObservation({
         checkId: "ADDRESS_RESOLUTION",
         name: "Address Resolution",
         section: "adapter",
@@ -124,13 +135,6 @@ describe("Adapter Profile", () => {
         rootCauseCategory: diagnostic.rootCauseCategory,
         errorCode: diagnostic.errorCode,
         recommendation: "Ensure the adapter can resolve its wallet address during initialization.",
-      });
-      recordProfile({
-        ...baseProfile,
-        observedCapabilities: {
-          ...observedCapabilities,
-          addressResolution: "UNKNOWN",
-        },
       });
       return;
     }
