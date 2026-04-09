@@ -312,26 +312,6 @@ const values = await sdk.userDecrypt([{ handle: balanceHandle, contractAddress: 
 This is the SDK-level entry point for user decryption. The method is named `userDecrypt` (not `decrypt`) because it requires the connected wallet's credentials — distinguishing it from gateway-level decryption that happens on-chain without user authentication. In React, use [`useUserDecrypt`](/reference/react/useUserDecrypt) which wraps this method with TanStack Query semantics.
 {% endhint %}
 
-### allow
-
-`(...addresses: Address[]) => Promise<void>`
-
-Prompts the wallet to sign and caches session credentials for the given contract addresses. A single signature covers all addresses passed. Call early to avoid popups during balance decrypts.
-
-```ts
-await sdk.allow("0xTokenA", "0xTokenB");
-```
-
-### revoke
-
-`(...addresses: Address[]) => Promise<void>`
-
-Clears session credentials **and** cached decrypted values for the current signer. The addresses are included in the `credentials:revoked` event. The next decrypt requires a fresh wallet signature.
-
-```ts
-await sdk.revoke("0xTokenA", "0xTokenB");
-```
-
 ### revokeSession
 
 `() => Promise<void>`
@@ -340,20 +320,6 @@ Clears the session signature **and** cached decrypted values without specifying 
 
 ```ts
 await sdk.revokeSession();
-```
-
-### isAllowed
-
-`(...contractAddresses: Address[]) => Promise<boolean>`
-
-Returns whether the session has active credentials. When contract addresses are provided, also checks that the cached credentials cover all of them.
-
-```ts
-// Session-level check (any credentials cached?)
-const allowed = await sdk.isAllowed();
-
-// Contract-level check (credentials cover these contracts?)
-const covered = await sdk.isAllowed("0xTokenA", "0xTokenB");
 ```
 
 ### dispose
