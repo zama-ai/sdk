@@ -16,17 +16,17 @@ Here is a complete flow that encrypts a value, sends it to a custom FHE contract
 {% code title="ConfidentialRoundTrip.tsx" %}
 
 ```tsx
-import { useAllow, useEncrypt, useUserDecrypt, useZamaSDK } from "@zama-fhe/react-sdk";
+import { useEncrypt, useUserDecrypt, useZamaSDK } from "@zama-fhe/react-sdk";
 import { bytesToHex } from "viem";
 import { useState, type FormEvent } from "react";
 
 function ConfidentialRoundTrip() {
   const sdk = useZamaSDK();
   const encrypt = useEncrypt();
-  const { mutate: allow } = useAllow();
   const [handles, setHandles] = useState<{ handle: string; contractAddress: `0x${string}` }[]>([]);
 
-  // useUserDecrypt fires when handles are set
+  // Fires when handles are non-empty. If no credentials are cached,
+  // the SDK prompts the wallet for a signature.
   const { data: decrypted } = useUserDecrypt({ handles });
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -50,7 +50,7 @@ function ConfidentialRoundTrip() {
       args: [bytesToHex(encrypted.handles[0]!), bytesToHex(encrypted.inputProof)],
     });
 
-    // 3. Read the handle back from the contract
+    // 3. Read the handle back — setting handles triggers decryption
     const handle = (await sdk.signer.readContract({
       address: contractAddress,
       abi: yourContractABI,
@@ -58,9 +58,7 @@ function ConfidentialRoundTrip() {
       args: [userAddress],
     })) as string;
 
-    // 4. Set handles and authorize — decryption happens automatically
     setHandles([{ handle, contractAddress }]);
-    allow([contractAddress]);
   };
 
   return (
