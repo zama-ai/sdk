@@ -1320,7 +1320,12 @@ export function useFinalizeUnwrap(config: UseZamaConfig, options?: UseMutationOp
 export function useGenerateKeypair(): _$_tanstack_react_query0.UseMutationResult<_$_zama_fhe_sdk0.KeypairType<`0x${string}`>, Error, void, unknown>;
 
 // @public
-export function useIsAllowed(): _$_tanstack_react_query0.UseQueryResult<boolean, Error>;
+export function useIsAllowed(config: UseIsAllowedConfig): _$_tanstack_react_query0.UseQueryResult<boolean, Error>;
+
+// @public
+export interface UseIsAllowedConfig {
+    contractAddresses: Address[];
+}
 
 // @public
 export function useIsConfidential(tokenAddress: Address, options?: Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">): _$_tanstack_react_query0.UseQueryResult<boolean, Error>;
@@ -1466,15 +1471,10 @@ export function useUnwrap(config: UseZamaConfig, options?: UseMutationOptions<Tr
 export function useUnwrapAll(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, void, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, void, `0x${string}`>;
 
 // @public
-export function useUserDecrypt(config: UseUserDecryptConfig): _$_tanstack_react_query0.UseQueryResult<DecryptResult, Error>;
+export function useUserDecrypt(config: UserDecryptQueryConfig): _$_tanstack_react_query0.UseQueryResult<DecryptResult, Error>;
 
-// @public
-export interface UseUserDecryptConfig {
-    handles: DecryptHandle[];
-    query?: {
-        enabled?: boolean;
-    };
-}
+// @public @deprecated (undocumented)
+export type UseUserDecryptConfig = UserDecryptQueryConfig;
 
 // @public
 export type UseUserDecryptResult = ReturnType<typeof useUserDecrypt>;

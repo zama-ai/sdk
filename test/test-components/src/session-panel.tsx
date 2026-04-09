@@ -9,7 +9,7 @@ import {
 } from "@zama-fhe/react-sdk";
 
 export function SessionPanel({ tokenAddresses }: { tokenAddresses: Address[] }) {
-  const { data: isAllowed, isLoading } = useIsAllowed();
+  const { data: isAllowed, isLoading } = useIsAllowed({ contractAddresses: tokenAddresses });
   const { mutate: allow } = useAllow();
   const revoke = useRevoke();
   const revokeSession = useRevokeSession();

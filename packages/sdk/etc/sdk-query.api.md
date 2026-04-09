@@ -707,7 +707,7 @@ export function invalidateWalletLifecycleQueries(queryClient: QueryClientLike): 
 export interface IsAllowedQueryConfig {
     // (undocumented)
     account: Address;
-    contractAddresses?: Address[];
+    contractAddresses: Address[];
     // (undocumented)
     query?: {
         enabled?: boolean;
@@ -1565,8 +1565,9 @@ export const zamaQueryKeys: {
     };
     readonly isAllowed: {
         readonly all: readonly ["zama.isAllowed"];
-        readonly scope: (account: Address) => readonly ["zama.isAllowed", {
+        readonly scope: (account: Address, contractAddresses: Address[]) => readonly ["zama.isAllowed", {
             readonly account: `0x${string}`;
+            readonly contractAddresses: `0x${string}`[];
         }];
     };
     readonly publicKey: {
@@ -1747,7 +1748,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/index-CAvHPG34.d.ts:2562:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/esm/activity-DHSjoKo7.d.ts:2389:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 
