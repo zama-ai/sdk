@@ -37,9 +37,12 @@ export type ClaimId =
   | "PARTIAL_AUTHORIZATION_COMPATIBLE_WRITE_FAILED"
   | "ZAMA_AUTHORIZATION_COMPATIBLE_WRITE_NOT_RECORDED";
 
+export type VerdictConfidence = "HIGH" | "MEDIUM" | "LOW";
+
 export interface ClaimResolution {
   id: ClaimId;
   verdictLabel: string;
+  confidence?: VerdictConfidence;
   rationale: string[];
   evidence: Partial<Record<CanonicalCheckName, CheckStatusOrMissing>>;
   evidenceDetails?: ClaimEvidenceDetail[];

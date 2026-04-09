@@ -69,6 +69,7 @@ export default defineConfig({
       "src/tests/unit/negativeMatrix.unit.test.ts",
       "src/tests/unit/profile.unit.test.ts",
       "src/tests/unit/verdict.unit.test.ts",
+      "src/tests/unit/verdictConfidence.unit.test.ts",
       "src/tests/unit/artifactCompatibility.unit.test.ts",
       "src/tests/unit/goldenReports.unit.test.ts",
       "src/tests/unit/exampleBaselines.unit.test.ts",

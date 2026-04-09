@@ -36,6 +36,7 @@ import {
 } from "./check-registry.js";
 import { resolveClaimFromResults } from "../verdict/resolve.js";
 import { assertClaimConsistency } from "../verdict/consistency.js";
+import { resolveClaimConfidence } from "../verdict/confidence.js";
 
 export type TestStatus = ValidationStatus;
 export type TestSection = ReportSection;
@@ -588,12 +589,23 @@ export function printReport(): void {
     zamaWriteStatus,
     observation: readZamaWriteObservation(),
   });
+  const blockerCount = Object.values(blockerCounts).reduce((acc, count) => acc + (count ?? 0), 0);
+  const confidence = resolveClaimConfidence({
+    evidence: verdict.evidence,
+    writeValidationDepth,
+    blockerCount,
+  });
+  const verdictWithConfidence = {
+    ...verdict,
+    confidence,
+  };
 
   console.log(SUB);
-  console.log(`  Final: ${verdict.verdictLabel}`);
+  console.log(`  Final: ${verdictWithConfidence.verdictLabel}`);
   console.log(`  Write Validation Depth: ${writeValidationDepth}`);
-  console.log(`  Claim: ${verdict.id}`);
-  for (const line of verdict.rationale) {
+  console.log(`  Confidence: ${confidence}`);
+  console.log(`  Claim: ${verdictWithConfidence.id}`);
+  for (const line of verdictWithConfidence.rationale) {
     console.log(`  Why:   ${line}`);
   }
   if (Object.keys(blockerCounts).length > 0) {
@@ -612,7 +624,7 @@ export function printReport(): void {
     profile,
     results: baseResults,
     environmentSummary,
-    verdict,
+    verdict: verdictWithConfidence,
     blockers: blockerCounts,
     writeValidationDepth,
   });
