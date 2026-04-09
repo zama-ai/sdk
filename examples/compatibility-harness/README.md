@@ -76,6 +76,13 @@ Equivalent:
 SIGNER_MODULE=./examples/crossmint/signer.ts npm test
 ```
 
+Optional Crossmint-specific commands:
+
+```bash
+npm run doctor:crossmint
+npm run validate:crossmint
+```
+
 ### Option C: Turnkey example adapter
 
 Set Turnkey credentials in `.env` (`TURNKEY_ORG_ID`, `TURNKEY_PRIVATE_KEY_ID`, `TURNKEY_API_PUBLIC_KEY`, `TURNKEY_API_PRIVATE_KEY`), then run:
@@ -525,4 +532,7 @@ npm run adapter:check
 npm run test:crossmint
 npm run test:openfort
 npm run test:turnkey
+npm run validate:crossmint
+npm run validate:openfort
+npm run validate:turnkey
 ```

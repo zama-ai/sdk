@@ -11,6 +11,7 @@
     "test:turnkey": "SIGNER_MODULE=./examples/turnkey/signer.ts vitest run --reporter=verbose",
     "init:adapter": "node --import tsx src/cli/init-adapter.ts",
     "doctor": "node --import tsx src/cli/doctor.ts",
+    "doctor:crossmint": "SIGNER_MODULE=./examples/crossmint/signer.ts node --import tsx src/cli/doctor.ts",
     "doctor:openfort": "SIGNER_MODULE=./examples/openfort/signer.ts node --import tsx src/cli/doctor.ts",
     "doctor:turnkey": "SIGNER_MODULE=./examples/turnkey/signer.ts node --import tsx src/cli/doctor.ts",
     "adapter:check": "node --import tsx src/cli/adapter-check.ts",
@@ -18,6 +19,7 @@
     "adapter:check:openfort": "SIGNER_MODULE=./examples/openfort/signer.ts node --import tsx src/cli/adapter-check.ts",
     "adapter:check:turnkey": "SIGNER_MODULE=./examples/turnkey/signer.ts node --import tsx src/cli/adapter-check.ts",
     "validate": "node --import tsx src/cli/validate.ts",
+    "validate:crossmint": "SIGNER_MODULE=./examples/crossmint/signer.ts node --import tsx src/cli/validate.ts",
     "validate:openfort": "SIGNER_MODULE=./examples/openfort/signer.ts node --import tsx src/cli/validate.ts",
     "validate:turnkey": "SIGNER_MODULE=./examples/turnkey/signer.ts node --import tsx src/cli/validate.ts",
     "typecheck": "tsc --noEmit"

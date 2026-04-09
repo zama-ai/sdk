@@ -76,6 +76,19 @@ Equivalent:
 SIGNER_MODULE=./examples/crossmint/signer.ts npm test
 ```
 
+Optional preflight and CI gate:
+
+```bash
+npm run doctor:crossmint
+npm run validate:crossmint
+```
+
+Strict gate requiring authorization + write compatibility:
+
+```bash
+VALIDATION_TARGET=AUTHORIZATION_AND_WRITE npm run validate:crossmint
+```
+
 ## Interpretation Guidance
 
 - `UNSUPPORTED` raw transaction checks are normal for Crossmint and do not invalidate Zama compatibility claims when authorization + write probe pass.
