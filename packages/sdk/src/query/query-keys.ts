@@ -216,7 +216,14 @@ export const zamaQueryKeys = {
 
   isAllowed: {
     all: ["zama.isAllowed"] as const,
-    scope: (account: Address) => ["zama.isAllowed", { account: getAddress(account) }] as const,
+    scope: (account: Address, contractAddresses: Address[]) =>
+      [
+        "zama.isAllowed",
+        {
+          account: getAddress(account),
+          contractAddresses: normalizeAddresses(contractAddresses),
+        },
+      ] as const,
   },
 
   publicKey: {

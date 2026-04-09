@@ -6,8 +6,8 @@ import { filterQueryOptions } from "./utils";
 
 export interface IsAllowedQueryConfig {
   account: Address;
-  /** When provided, also checks that cached credentials cover these contracts. */
-  contractAddresses?: Address[];
+  /** Contract addresses to check credentials against. */
+  contractAddresses: Address[];
   query?: { enabled?: boolean };
 }
 
@@ -15,12 +15,12 @@ export function isAllowedQueryOptions(
   sdk: ZamaSDK,
   config: IsAllowedQueryConfig,
 ): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.isAllowed.scope>> {
-  const { account, contractAddresses = [], query = {} } = config;
+  const filteredQuery = filterQueryOptions(config.query ?? {});
   return {
-    ...filterQueryOptions(query),
-    queryKey: zamaQueryKeys.isAllowed.scope(account),
-    queryFn: () => sdk.credentials.isAllowed(...contractAddresses),
+    ...filteredQuery,
+    queryKey: zamaQueryKeys.isAllowed.scope(config.account, config.contractAddresses),
+    queryFn: () => sdk.credentials.isAllowed(...config.contractAddresses),
     staleTime: 30_000,
-    enabled: query?.enabled,
+    enabled: !!config.query?.enabled,
   } as const;
 }

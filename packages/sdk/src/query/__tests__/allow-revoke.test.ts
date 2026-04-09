@@ -70,10 +70,14 @@ describe("isAllowedQueryOptions", () => {
 
     const options = isAllowedQueryOptions(sdk, {
       account: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
+      contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"],
     });
     expect(options.queryKey).toEqual([
       "zama.isAllowed",
-      { account: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" },
+      {
+        account: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
+        contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"],
+      },
     ]);
 
     const result = await options.queryFn({
@@ -113,6 +117,7 @@ describe("isAllowedQueryOptions", () => {
 
     const options = isAllowedQueryOptions(sdk, {
       account: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
+      contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"],
     });
 
     expect(options.staleTime).toBe(30_000);
@@ -123,6 +128,7 @@ describe("isAllowedQueryOptions", () => {
 
     const options = isAllowedQueryOptions(sdk, {
       account: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
+      contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"],
       query: { enabled: false },
     });
 

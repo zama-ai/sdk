@@ -26,13 +26,7 @@ export interface UserDecryptQueryConfig {
   query?: { enabled?: boolean };
 }
 
-/**
- * Query factory for user decryption of FHE handles.
- *
- * Calls `sdk.decrypt()` which checks the persistent cache first, then
- * hits the relayer for uncached handles. Requires credentials to be
- * pre-acquired via `sdk.allow()` / `useAllow`.
- */
+/** Query factory for user decryption of FHE handles. */
 export function userDecryptQueryOptions(
   sdk: ZamaSDK,
   config: UserDecryptQueryConfig,

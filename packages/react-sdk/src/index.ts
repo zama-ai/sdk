@@ -174,7 +174,7 @@ export {
 
 // Authorization hooks (generic — any contract with encrypted state)
 export { useAllow } from "./authorization/use-allow";
-export { useIsAllowed } from "./authorization/use-is-allowed";
+export { useIsAllowed, type UseIsAllowedConfig } from "./authorization/use-is-allowed";
 export { useRevoke } from "./authorization/use-revoke";
 export { useRevokeSession } from "./authorization/use-revoke-session";
 

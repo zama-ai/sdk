@@ -18,9 +18,8 @@ import {
   type UnwrappedStartedEvent,
 } from "./events/onchain-events";
 import type { Address, Hex } from "viem";
-import type { Handle } from "./relayer/relayer-sdk.types";
+import type { ClearValueType, Handle } from "./relayer/relayer-sdk.types";
 import { ZERO_HANDLE } from "./token/readonly-token";
-import type { ClearValueType } from ".";
 import { assertBigint } from "./utils/assertions";
 
 // ---------------------------------------------------------------------------

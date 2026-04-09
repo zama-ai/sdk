@@ -392,20 +392,29 @@ export class ReadonlyToken {
 
     const results = new Map<Address, bigint>();
 
+    // Parallel cache lookups — avoids sequential IDB round-trips.
     const uncached: { token: ReadonlyToken; handle: Address }[] = [];
+    const cachedValues = await Promise.all(
+      tokens.map((token, i) => {
+        const handle = resolvedHandles[i]!;
+        if (token.isZeroHandle(handle)) {
+          return 0n;
+        }
+        return firstToken.cache.get(ownerAddress, token.address, handle);
+      }),
+    );
+
     for (let i = 0; i < tokens.length; i++) {
       const token = tokens[i]!;
       const handle = resolvedHandles[i]!;
-      if (token.isZeroHandle(handle)) {
-        results.set(token.address, 0n);
-        continue;
-      }
-      const cached = await firstToken.cache.get(ownerAddress, token.address, handle);
-      if (cached !== null) {
+      const cached = cachedValues[i];
+
+      if (cached !== null && cached !== undefined) {
         assertBigint(cached, "batchDecryptCore: cached");
         results.set(token.address, cached);
         continue;
       }
+
       uncached.push({ token, handle });
     }
 
