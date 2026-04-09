@@ -8,7 +8,7 @@ import { useZamaSDK } from "../provider";
 /**
  * Sign EIP-712 messages authorizing FHE decryption for a list of contract addresses.
  *
- * For ≤10 addresses the SDK produces a single wallet signature. For >10 addresses
+ * For ≤10 addresses the SDK produces a single wallet signature. For \>10 addresses
  * the SDK splits into batches of 10 and presents sequential signature prompts — one
  * per batch. The mutation rejects if any batch signing fails.
  *
