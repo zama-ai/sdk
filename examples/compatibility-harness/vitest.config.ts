@@ -63,6 +63,7 @@ export default defineConfig({
       "src/tests/unit/networkConfig.unit.test.ts",
       "src/tests/unit/runtime.unit.test.ts",
       "src/tests/unit/runtimeObservation.unit.test.ts",
+      "src/tests/unit/writeValidationDepth.unit.test.ts",
       "src/tests/unit/contradictions.unit.test.ts",
       "src/tests/unit/checkRegistry.unit.test.ts",
       "src/tests/unit/negativeMatrix.unit.test.ts",

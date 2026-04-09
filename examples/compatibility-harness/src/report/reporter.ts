@@ -54,12 +54,21 @@ export interface TestResult {
 }
 
 export type AdapterProfile = ObservedAdapterProfile;
+export type WriteValidationDepth = "FULL" | "PARTIAL" | "UNTESTED";
+
+interface ZamaWriteObservation {
+  submissionAttempted: boolean;
+  submissionSucceeded: boolean;
+  receiptObserved: boolean;
+  stateVerified: boolean;
+}
 
 // Temp files shared across all vitest worker processes.
 // Cleared by globalSetup at the start of each run.
 const RUN_ID = (process.env.ZAMA_HARNESS_RUN_ID ?? "default").replace(/[^a-zA-Z0-9._-]/g, "_");
 const RESULTS_FILE = join(tmpdir(), `zama-harness-results-${RUN_ID}.jsonl`);
 const PROFILE_FILE = join(tmpdir(), `zama-harness-profile-${RUN_ID}.json`);
+const ZAMA_WRITE_OBSERVATION_FILE = join(tmpdir(), `zama-harness-zama-write-${RUN_ID}.json`);
 
 const INFRA_ROOT_CAUSES = new Set<InfraRootCause>(["ENVIRONMENT", "RPC", "RELAYER", "REGISTRY"]);
 
@@ -251,6 +260,32 @@ export function clearProfile(): void {
   if (existsSync(PROFILE_FILE)) unlinkSync(PROFILE_FILE);
 }
 
+export function recordZamaWriteObservation(
+  patch: Partial<ZamaWriteObservation>,
+): ZamaWriteObservation {
+  const existing = readZamaWriteObservation() ?? {
+    submissionAttempted: false,
+    submissionSucceeded: false,
+    receiptObserved: false,
+    stateVerified: false,
+  };
+  const next = {
+    ...existing,
+    ...patch,
+  };
+  writeFileSync(ZAMA_WRITE_OBSERVATION_FILE, JSON.stringify(next, null, 2));
+  return next;
+}
+
+export function readZamaWriteObservation(): ZamaWriteObservation | null {
+  if (!existsSync(ZAMA_WRITE_OBSERVATION_FILE)) return null;
+  return JSON.parse(readFileSync(ZAMA_WRITE_OBSERVATION_FILE, "utf-8")) as ZamaWriteObservation;
+}
+
+export function clearZamaWriteObservation(): void {
+  if (existsSync(ZAMA_WRITE_OBSERVATION_FILE)) unlinkSync(ZAMA_WRITE_OBSERVATION_FILE);
+}
+
 // ── Report ───────────────────────────────────────────────────────────────────
 
 const W = 56;
@@ -363,12 +398,35 @@ function summarizeEnvironmentSection(results: TestResult[]): TestResult[] {
   return sections;
 }
 
+export function deriveWriteValidationDepth(input: {
+  zamaWriteStatus: TestStatus | null;
+  observation: ZamaWriteObservation | null;
+}): WriteValidationDepth {
+  const { zamaWriteStatus, observation } = input;
+  if (observation) {
+    if (observation.submissionSucceeded && observation.stateVerified) {
+      return "FULL";
+    }
+    if (
+      observation.submissionAttempted ||
+      observation.submissionSucceeded ||
+      observation.receiptObserved
+    ) {
+      return "PARTIAL";
+    }
+  }
+
+  if (zamaWriteStatus === "PASS") return "FULL";
+  return "UNTESTED";
+}
+
 function exportJsonReport(payload: {
   profile: AdapterProfile | null;
   results: TestResult[];
   environmentSummary: TestResult[];
   verdict: ReturnType<typeof resolveClaimFromResults>;
   blockers: Partial<Record<InfraRootCause, number>>;
+  writeValidationDepth: WriteValidationDepth;
 }): void {
   const outputPath = (process.env.REPORT_JSON_PATH ?? "").trim();
   if (!outputPath) return;
@@ -393,6 +451,9 @@ function exportJsonReport(payload: {
     },
     infrastructure: {
       blockers: payload.blockers,
+    },
+    zama: {
+      writeValidationDepth: payload.writeValidationDepth,
     },
     claim: payload.verdict,
     finalVerdict: payload.verdict.verdictLabel,
@@ -521,9 +582,16 @@ export function printReport(): void {
   const verdict = resolveClaimFromResults(results);
   assertClaimConsistency(verdict, results);
   const blockerCounts = summarizeBlockers(results);
+  const zamaWriteStatus =
+    results.find((result) => result.checkId === "ZAMA_WRITE_FLOW")?.status ?? null;
+  const writeValidationDepth = deriveWriteValidationDepth({
+    zamaWriteStatus,
+    observation: readZamaWriteObservation(),
+  });
 
   console.log(SUB);
   console.log(`  Final: ${verdict.verdictLabel}`);
+  console.log(`  Write Validation Depth: ${writeValidationDepth}`);
   console.log(`  Claim: ${verdict.id}`);
   for (const line of verdict.rationale) {
     console.log(`  Why:   ${line}`);
@@ -546,5 +614,6 @@ export function printReport(): void {
     environmentSummary,
     verdict,
     blockers: blockerCounts,
+    writeValidationDepth,
   });
 }

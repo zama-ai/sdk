@@ -15,6 +15,7 @@ export type InfraRootCause = Extract<
   RootCauseCategory,
   "ENVIRONMENT" | "RPC" | "RELAYER" | "REGISTRY"
 >;
+export type WriteValidationDepth = "FULL" | "PARTIAL" | "UNTESTED";
 
 export interface ReportCheck {
   checkId: CanonicalCheckId;
@@ -43,6 +44,9 @@ export interface ReportArtifact {
   sections: Record<ReportSection, ReportCheck[]>;
   infrastructure: {
     blockers: Partial<Record<InfraRootCause, number>>;
+  };
+  zama?: {
+    writeValidationDepth: WriteValidationDepth;
   };
   claim: ClaimResolution;
   finalVerdict: string;

@@ -11,7 +11,7 @@ import {
 } from "../harness/adapter.js";
 import { classifyInfrastructureIssue, errorMessage } from "../harness/diagnostics.js";
 import { classifyZamaWriteSubmissionFailure } from "../harness/negative-paths.js";
-import { recordWithRuntimeObservation } from "../report/reporter.js";
+import { recordWithRuntimeObservation, recordZamaWriteObservation } from "../report/reporter.js";
 
 const TEST_OPERATOR = getAddress("0x000000000000000000000000000000000000dEaD");
 
@@ -96,7 +96,13 @@ describe("Zama Write Flow", () => {
 
     let txHash: `0x${string}`;
     try {
+      recordZamaWriteObservation({
+        submissionAttempted: true,
+      });
       txHash = await executeZamaWriteProbe(tokenAddress, TEST_OPERATOR);
+      recordZamaWriteObservation({
+        submissionSucceeded: true,
+      });
     } catch (err) {
       const message = errorMessage(err);
       const failure = classifyZamaWriteSubmissionFailure(message);
@@ -129,10 +135,16 @@ describe("Zama Write Flow", () => {
       if (receipt && receipt.status !== "success") {
         throw new Error(`Transaction receipt status was ${String(receipt.status)}`);
       }
+      recordZamaWriteObservation({
+        receiptObserved: adapter.waitForTransactionReceipt ? true : false,
+      });
       const approved = await verifyZamaOperatorApproval(tokenAddress, TEST_OPERATOR);
       if (!approved) {
         throw new Error("On-chain operator approval was not observed after the write");
       }
+      recordZamaWriteObservation({
+        stateVerified: true,
+      });
     } catch (err) {
       const message = errorMessage(err);
       const diagnostic = classifyInfrastructureIssue(message);
