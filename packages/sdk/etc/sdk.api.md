@@ -814,10 +814,6 @@ export function confidentialBalanceOfContract(tokenAddress: Address, userAddress
         readonly name: "ZamaProtocolUnsupported";
         readonly type: "error";
     }, {
-        readonly inputs: readonly [];
-        readonly name: "ZeroAddressDeploymentCoordinator";
-        readonly type: "error";
-    }, {
         readonly anonymous: false;
         readonly inputs: readonly [{
             readonly indexed: true;
@@ -2093,10 +2089,6 @@ export function confidentialTotalSupplyContract(tokenAddress: Address): {
         readonly name: "ZamaProtocolUnsupported";
         readonly type: "error";
     }, {
-        readonly inputs: readonly [];
-        readonly name: "ZeroAddressDeploymentCoordinator";
-        readonly type: "error";
-    }, {
         readonly anonymous: false;
         readonly inputs: readonly [{
             readonly indexed: true;
@@ -3370,10 +3362,6 @@ export function confidentialTransferContract(encryptedErc20: Address, to: Addres
     }, {
         readonly inputs: readonly [];
         readonly name: "ZamaProtocolUnsupported";
-        readonly type: "error";
-    }, {
-        readonly inputs: readonly [];
-        readonly name: "ZeroAddressDeploymentCoordinator";
         readonly type: "error";
     }, {
         readonly anonymous: false;
@@ -4658,10 +4646,6 @@ export function confidentialTransferFromContract(encryptedErc20: Address, from: 
     }, {
         readonly inputs: readonly [];
         readonly name: "ZamaProtocolUnsupported";
-        readonly type: "error";
-    }, {
-        readonly inputs: readonly [];
-        readonly name: "ZeroAddressDeploymentCoordinator";
         readonly type: "error";
     }, {
         readonly anonymous: false;
@@ -9213,10 +9197,6 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
         readonly name: "ZamaProtocolUnsupported";
         readonly type: "error";
     }, {
-        readonly inputs: readonly [];
-        readonly name: "ZeroAddressDeploymentCoordinator";
-        readonly type: "error";
-    }, {
         readonly anonymous: false;
         readonly inputs: readonly [{
             readonly indexed: true;
@@ -10717,10 +10697,6 @@ export function rateContract(tokenAddress: Address): {
     }, {
         readonly inputs: readonly [];
         readonly name: "ZamaProtocolUnsupported";
-        readonly type: "error";
-    }, {
-        readonly inputs: readonly [];
-        readonly name: "ZeroAddressDeploymentCoordinator";
         readonly type: "error";
     }, {
         readonly anonymous: false;
@@ -12296,10 +12272,6 @@ export function setOperatorContract(tokenAddress: Address, spender: Address, tim
         readonly name: "ZamaProtocolUnsupported";
         readonly type: "error";
     }, {
-        readonly inputs: readonly [];
-        readonly name: "ZeroAddressDeploymentCoordinator";
-        readonly type: "error";
-    }, {
         readonly anonymous: false;
         readonly inputs: readonly [{
             readonly indexed: true;
@@ -13868,10 +13840,6 @@ export function totalSupplyContract(tokenAddress: Address): {
     }, {
         readonly inputs: readonly [];
         readonly name: "ZamaProtocolUnsupported";
-        readonly type: "error";
-    }, {
-        readonly inputs: readonly [];
-        readonly name: "ZeroAddressDeploymentCoordinator";
         readonly type: "error";
     }, {
         readonly anonymous: false;
@@ -16509,10 +16477,6 @@ export function unwrapContract(encryptedErc20: Address, from: Address, to: Addre
         readonly name: "ZamaProtocolUnsupported";
         readonly type: "error";
     }, {
-        readonly inputs: readonly [];
-        readonly name: "ZeroAddressDeploymentCoordinator";
-        readonly type: "error";
-    }, {
         readonly anonymous: false;
         readonly inputs: readonly [{
             readonly indexed: true;
@@ -17786,10 +17750,6 @@ export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address
     }, {
         readonly inputs: readonly [];
         readonly name: "ZamaProtocolUnsupported";
-        readonly type: "error";
-    }, {
-        readonly inputs: readonly [];
-        readonly name: "ZeroAddressDeploymentCoordinator";
         readonly type: "error";
     }, {
         readonly anonymous: false;
