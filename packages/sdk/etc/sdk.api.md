@@ -7010,7 +7010,7 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<Delegate
     protected decryptCredentials(encrypted: EncryptedCredentials, signature: Hex): Promise<DelegatedStoredCredentials>;
     // (undocumented)
     protected encryptCredentials(creds: DelegatedStoredCredentials): Promise<EncryptedCredentials>;
-    isAllowed(delegatorAddress: Address): Promise<boolean>;
+    isAllowed(delegatorAddress: Address, ...contractAddresses: Address[]): Promise<boolean>;
     isExpired(delegatorAddress: Address, contractAddress?: Address): Promise<boolean>;
     revoke(delegatorAddress: Address): Promise<void>;
     // Warning: (ae-forgotten-export) The symbol "DelegatedSigningMeta" needs to be exported by the entry point index.d.ts
