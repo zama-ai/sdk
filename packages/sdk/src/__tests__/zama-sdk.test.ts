@@ -726,7 +726,7 @@ describe("ZamaSDK", () => {
   describe("revoke clears decrypt cache", () => {
     const CONTRACT_A = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
 
-    it("revoke() clears cache — decrypt after revoke hits relayer again", async ({
+    it("credentials.revoke() + cache clear — decrypt after revoke hits relayer again", async ({
       sdk,
       relayer,
       handle,
@@ -736,7 +736,9 @@ describe("ZamaSDK", () => {
       await sdk.userDecrypt(handles);
       expect(relayer.userDecrypt).toHaveBeenCalledOnce();
 
-      await sdk.revoke();
+      await sdk.credentials.revoke();
+      const address = await sdk.signer.getAddress();
+      await sdk.cache.clearForRequester(address);
 
       // After revoke, cache should be cleared — relayer called again
       await sdk.userDecrypt(handles);
