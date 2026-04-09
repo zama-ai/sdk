@@ -56,12 +56,6 @@ export function readTokenPairsSliceContract(client: PublicClient, registry: Addr
 // @public (undocumented)
 export function readUnderlyingTokenContract(client: PublicClient, wrapperAddress: Address): Promise<`0x${string}`>;
 
-// @public (undocumented)
-export function readWrapperExistsContract(client: PublicClient, registryAddress: Address, tokenAddress: Address): Promise<boolean>;
-
-// @public (undocumented)
-export function readWrapperForTokenContract(client: PublicClient, registryAddress: Address, tokenAddress: Address): Promise<`0x${string}`>;
-
 // Warning: (ae-forgotten-export) The symbol "GenericSigner" needs to be exported by the entry point index.d.ts
 //
 // @public
@@ -104,11 +98,6 @@ export interface ViemSignerConfig {
     walletClient?: WalletClient;
 }
 
-// Warning: (ae-forgotten-export) The symbol "BatchTransferData" needs to be exported by the entry point index.d.ts
-//
-// @public (undocumented)
-export function writeConfidentialBatchTransferContract(client: WalletClient, batcherAddress: Address, tokenAddress: Address, fromAddress: Address, batchTransferData: BatchTransferData[], fees: bigint): Promise<`0x${string}`>;
-
 // @public (undocumented)
 export function writeConfidentialTransferContract(client: WalletClient, tokenAddress: Address, to: Address, handle: Uint8Array, inputProof: Uint8Array): Promise<`0x${string}`>;
 
@@ -128,9 +117,6 @@ export function writeUnwrapFromBalanceContract(client: WalletClient, encryptedEr
 
 // @public (undocumented)
 export function writeWrapContract(client: WalletClient, wrapperAddress: Address, to: Address, amount: bigint): Promise<`0x${string}`>;
-
-// @public (undocumented)
-export function writeWrapETHContract(client: WalletClient, wrapperAddress: Address, to: Address, amount: bigint, value: bigint): Promise<`0x${string}`>;
 
 // (No @packageDocumentation comment for this package)
 

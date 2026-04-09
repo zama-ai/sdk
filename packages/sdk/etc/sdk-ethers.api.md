@@ -105,18 +105,8 @@ export function readTokenPairsSliceContract(provider: EthersCallProvider, regist
 // @public (undocumented)
 export function readUnderlyingTokenContract(provider: EthersCallProvider, wrapperAddress: Address): Promise<unknown>;
 
-// @public (undocumented)
-export function readWrapperExistsContract(provider: EthersCallProvider, registryAddress: Address, tokenAddress: Address): Promise<unknown>;
-
-// @public (undocumented)
-export function readWrapperForTokenContract(provider: EthersCallProvider, registryAddress: Address, tokenAddress: Address): Promise<unknown>;
-
 // Warning: (ae-forgotten-export) The symbol "EthersTransactionSigner" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "BatchTransferData" needs to be exported by the entry point index.d.ts
 //
-// @public (undocumented)
-export function writeConfidentialBatchTransferContract(signer: EthersTransactionSigner, batcherAddress: Address, tokenAddress: Address, fromAddress: Address, batchTransferData: BatchTransferData[], fees: bigint): Promise<`0x${string}`>;
-
 // @public (undocumented)
 export function writeConfidentialTransferContract(signer: EthersTransactionSigner, tokenAddress: Address, to: Address, handle: Uint8Array, inputProof: Uint8Array): Promise<`0x${string}`>;
 
@@ -136,9 +126,6 @@ export function writeUnwrapFromBalanceContract(signer: EthersTransactionSigner, 
 
 // @public (undocumented)
 export function writeWrapContract(signer: EthersTransactionSigner, wrapperAddress: Address, to: Address, amount: bigint): Promise<`0x${string}`>;
-
-// @public (undocumented)
-export function writeWrapETHContract(signer: EthersTransactionSigner, wrapperAddress: Address, to: Address, amount: bigint, value: bigint): Promise<`0x${string}`>;
 
 // (No @packageDocumentation comment for this package)
 

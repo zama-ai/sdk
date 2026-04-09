@@ -61,28 +61,3 @@ export function wrapContract(wrapperAddress: Address, to: Address, amount: bigin
     args: [to, amount],
   } as const;
 }
-
-/**
- * Returns the contract config for wrapping native ETH into a confidential wrapper.
- *
- * @example
- * ```ts
- * const txHash = await signer.writeContract(
- *   wrapETHContract(wrapperAddress, to, amount, value),
- * );
- * ```
- */
-export function wrapETHContract(
-  wrapperAddress: Address,
-  to: Address,
-  amount: bigint,
-  value: bigint,
-) {
-  return {
-    address: wrapperAddress,
-    abi: wrapperAbi,
-    functionName: "wrapETH",
-    args: [to, amount],
-    value,
-  } as const;
-}

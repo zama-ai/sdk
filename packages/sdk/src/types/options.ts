@@ -11,8 +11,6 @@ export interface TransferOptions extends TransferCallbacks {
 export interface ShieldOptions extends ShieldCallbacks {
   /** ERC-20 approval strategy: `"exact"` approves only `amount`, `"max"` approves unlimited, `"skip"` assumes pre-existing approval. Default: `"exact"`. */
   approvalStrategy?: "max" | "exact" | "skip";
-  /** Extra ETH to send for native wrappers. */
-  fees?: bigint;
   /** Recipient address for the shielded tokens. Defaults to the connected wallet. */
   to?: Address;
 }

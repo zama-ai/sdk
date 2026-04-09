@@ -40,15 +40,6 @@ export {
   confidentialIsApprovedQueryOptions,
   type ConfidentialIsApprovedQueryConfig,
 } from "./confidential-is-approved";
-export {
-  shieldFeeQueryOptions,
-  unshieldFeeQueryOptions,
-  batchTransferFeeQueryOptions,
-  feeRecipientQueryOptions,
-  type FeeQueryConfig,
-  type ShieldFeeQueryConfig,
-  type UnshieldFeeQueryConfig,
-} from "./fees";
 export { publicKeyQueryOptions, type PublicKeyQueryConfig } from "./public-key";
 export { publicParamsQueryOptions, type PublicParamsQueryConfig } from "./public-params";
 export {
@@ -95,7 +86,6 @@ export {
 } from "./wrappers-registry";
 
 export { shieldMutationOptions, type ShieldParams } from "./shield";
-export { shieldETHMutationOptions, type ShieldETHParams } from "./shield-eth";
 export { confidentialTransferMutationOptions, type ConfidentialTransferParams } from "./transfer";
 export {
   confidentialTransferFromMutationOptions,
