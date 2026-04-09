@@ -565,6 +565,12 @@ export interface BatchDecryptOptions {
 }
 
 // @public
+export class Batcher {
+    constructor(batchSize: number);
+    execute<TItem, TResult>(items: TItem[], fn: (accumulated: TItem[]) => Promise<TResult>): Promise<TResult>;
+}
+
+// @public
 export interface BatchTransferData {
     // (undocumented)
     encryptedAmount: Handle;
