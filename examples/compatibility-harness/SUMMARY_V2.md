@@ -1,333 +1,201 @@
 # Zama Compatibility Validation Harness — Summary V2
 
-## 1) Executive Summary
+## 1) Purpose of This Document
 
-The Compatibility Validation Harness has evolved from a narrow proof-of-concept into a **capability-first diagnostic product prototype**.
+This document explains what the Compatibility Harness is, why it exists, and what it can reliably validate today.
 
-At this stage, it is best classified as:
-
-- **Partner-pilot ready** (for guided external integrations),
-- **Not yet GA-certified** (for broad self-serve external rollout without support).
-
-The harness now provides conservative, evidence-backed answers to:
-
-1. What integration architecture is this adapter?
-2. Which capabilities are declared and observed?
-3. Which compatibility surfaces were actually validated?
-4. What is proven vs not proven?
-5. Which failures are compatibility issues vs infrastructure blockers?
-
-Core outcome: the project can now support credible internal and partner-facing compatibility discussions without overclaiming.
-
-### Verification Basis for This Document
-
-This summary is grounded in the implementation currently present in this repository branch.
-Key source-of-truth files used to verify claims:
-
-- `src/report/check-registry.ts` (canonical check model),
-- `src/report/schema.ts`, `src/report/parse.ts`, `src/report/reporter.ts` (artifact/report contract),
-- `src/verdict/claims.ts`, `src/verdict/resolve.ts`, `src/verdict/consistency.ts` (claim semantics + consistency guards),
-- `src/harness/negative-paths.ts` (negative-path classification model),
-- `src/harness/recommendations.ts` (deterministic recommendation mapping),
-- `src/cli/adapter-check-core.ts`, `src/cli/adapter-check.ts` (adapter quality gate),
-- `.github/workflows/compatibility-harness-ci.yml`, `.github/workflows/compatibility-harness-live.yml` (CI/live workflows),
-- `examples/{crossmint,turnkey,openfort}` and baseline fixtures in `src/tests/fixtures/example-baselines`.
-
-Validation state at review time:
-
-- `npm run typecheck` passed,
-- `npm test` passed,
-- `npm run adapter:check` passed.
-
-## 2) Product Goal and Scope (Current Stage)
-
-### Product Goal
-
-Provide a practical, repeatable way for wallet/custody/infrastructure teams to validate compatibility with:
-
-- Ethereum signing model expectations,
-- EIP-712 recoverability semantics,
-- Zama SDK authorization and practical write-path probes.
-
-### Intended Audience
+Target audience:
 
 - Zama SDK engineers,
-- Partner solution engineers,
-- External integrator engineering teams (wallet providers, custody APIs, MPC platforms).
+- partner solutions engineers,
+- external integrator teams (wallet, custody, infra) evaluating compatibility.
 
-### Current Stage Target
+Goal of this version:
 
-This stage targets **fast and trustworthy partner pilot validation**, not final certification authority.
+- provide a clear, functional view of the product,
+- avoid overclaiming,
+- make review and adoption easier for technical peers.
 
-## 3) Why This Product Exists
+## 2) Context and Problem
 
-Real integrations are heterogeneous:
+Integrators ask one practical question:
+
+> Is our signing and execution system compatible with the Zama SDK?
+
+This is hard to answer because real systems are heterogeneous:
 
 - EOA wallets,
-- API-routed custody,
-- MPC systems,
-- smart-account patterns.
+- MPC-backed wallets,
+- API-routed custody systems,
+- smart-account based systems.
 
-A signer-only model produced false negatives and misleading conclusions.  
-The harness now models compatibility using:
+A binary pass/fail model is not enough. A system can fail one Ethereum primitive (for example raw transaction signing) and still be compatible with the Zama flow that matters in practice.
 
-- explicit adapter capabilities,
-- structured statuses beyond pass/fail,
-- scoped claims tied to observed evidence.
+The harness exists to provide a conservative answer based on observed evidence, not assumptions.
 
-Important modeling rule:
+## 3) Product Approach: The Compatibility Harness
 
-- architecture class alone does not determine compatibility.
-- an MPC or API-routed adapter can still be fully compatible if authorization, recoverability requirements (for the current flow), and write-path evidence are satisfied.
-- raw transaction signing may remain `UNSUPPORTED` without automatically implying incompatibility.
+The harness uses an adapter model instead of a signer-only model.
 
-## 4) What Was Implemented
+Each adapter declares metadata and capabilities, then the harness runs checks across four layers:
 
-### 4.1 Architecture and Validation Engine
+1. Identity and verification
+2. Ethereum execution primitives
+3. Adapter-routed execution
+4. Zama SDK flows (authorization and write probe)
 
-- Replaced implicit assumptions with a canonical check model:
-  - check IDs,
-  - section ownership,
-  - dependency ordering.
-- Enforced canonical checks in recording and parsing paths.
-- Added deterministic negative-path classification coverage for:
-  - EIP-712 signing failure,
-  - recoverability failure,
-  - authorization rejection,
-  - write submission failure.
-- Added strict claim/status consistency guards:
-  - report build fails on inconsistent claim evidence,
-  - artifact parsing rejects inconsistent claims.
+Each check is reported with a status:
 
-### 4.2 Reporting Contract and Evidence Quality
+- `PASS`
+- `FAIL`
+- `UNTESTED`
+- `UNSUPPORTED`
+- `BLOCKED`
+- `INCONCLUSIVE`
 
-- Artifact contract hardened (`schemaVersion: 1.2.0`).
-- Each check now carries canonical `checkId`.
-- Claim payload now supports:
-  - `claim.evidence` (stable map),
-  - `claim.evidenceDetails` (structured check-level records: check ID, status, reason category).
-- Added malformed and legacy artifact fixtures to prevent silent schema drift.
+The final verdict is scoped. The harness avoids generic claims like "compatible" when evidence is partial or blocked.
 
-### 4.3 Diagnostics and Recommendations
+## 4) Integrator Journey: How to Validate Compatibility
 
-- Centralized recommendation mapping by `errorCode`.
-- `BLOCKED`/`INCONCLUSIVE` checks now get deterministic, action-oriented recommendations with next-command hints.
-- Infrastructure causes are kept separate from compatibility causes (adapter/signer).
+This is the intended path for an external integrator.
 
-### 4.4 Integrator Confidence Tooling
+### Step 1: Setup
 
-- Added `npm run adapter:check`:
-  - validates adapter metadata completeness,
-  - validates capability shape and dependency consistency,
-  - flags declared vs observed contradictions,
-  - previews canonical check support.
-- Added example baseline lockfiles (Crossmint, Turnkey, Openfort) with regression guards:
-  - expected adapter metadata and declared capabilities,
-  - claim envelope bounds for PASS/PARTIAL/INCONCLUSIVE categories.
+```bash
+git clone <repo>
+cd examples/compatibility-harness
+npm install
+cp .env.example .env
+```
 
-### 4.5 CI and Operations
+### Step 2: Provide an adapter
 
-- Deterministic mandatory CI remains the baseline (`HARNESS_MOCK_MODE=1`).
-- Added optional live workflow (manual/nightly), non-blocking by default:
-  - runs live validation,
-  - captures exit code,
-  - uploads JSON/log artifacts for post-mortem review.
+Use either:
 
-### 4.6 Documentation Pack for Internal/Partner Review
+- one of the provided examples (`crossmint`, `turnkey`, `openfort`), or
+- a custom adapter generated with:
 
-- Claim catalog (stable semantics and gate mapping),
-- Verdict interpretation playbook,
-- Schema/release discipline policy.
+```bash
+npm run init:adapter
+```
 
-This improves consistency across engineering, solutions, and CI consumers.
+### Step 3: Run quick preflight checks
 
-## 5) How the System Works
+```bash
+npm run adapter:check
+npm run doctor
+```
 
-### 5.1 Adapter-Centric Model
+These commands validate adapter shape and environment readiness before live validation.
+If they report `BLOCKED` or `INCONCLUSIVE`, fix environment/infrastructure first.
 
-An integration is represented as an `adapter` with:
+### Step 4: Run compatibility validation
 
-- metadata (name, declared architecture, verification model, supported chains),
-- capabilities (`SUPPORTED` / `UNSUPPORTED` / `UNKNOWN`),
-- operational primitives (`getAddress`, `signTypedData`, optional execution/read/receipt methods),
-- optional async initialization.
+```bash
+npm test
+npm run validate
+```
 
-### 5.2 Validation Pipeline
+`validate` returns CI-friendly exit codes tied to compatibility claims.
 
-Execution flow:
+For deterministic local checks without live infra dependencies:
 
-1. Adapter profile and initialization checks.
-2. Identity and verification checks (EIP-712, recoverability, optional ERC-1271 probe).
-3. Ethereum execution checks (raw tx when supported).
-4. Adapter-routed execution checks (contract reads/writes where available).
-5. Zama checks:
-   - authorization flow (`sdk.allow()`),
-   - practical write probe + on-chain verification.
-6. Infrastructure summary synthesis.
-7. Claim resolution from canonical evidence.
+```bash
+HARNESS_MOCK_MODE=1 npm test
+HARNESS_MOCK_MODE=1 npm run validate
+```
 
-### 5.3 Status and Verdict Semantics
+### Step 5: Read the result by sections
 
-Status model:
+Report sections are:
 
-- `PASS`, `FAIL`, `UNTESTED`, `UNSUPPORTED`, `BLOCKED`, `INCONCLUSIVE`.
+- Adapter Profile
+- Ethereum Compatibility
+- Adapter-Routed Execution
+- Zama SDK Compatibility
+- Infrastructure / Environment
+- Final Verdict
 
-Final verdict is claim-based and scoped.  
-No generic “compatible” output is emitted without precise evidence.
+Interpretation rule:
 
-### 5.4 Machine-Consumable Output
+- if infra is failing, treat the run as blocked/inconclusive,
+- do not classify the adapter as incompatible unless compatibility checks actually fail.
 
-Optional JSON artifact includes:
+### Real example: Turnkey
 
-- adapter profile,
-- canonical check records,
-- section views,
-- infrastructure blockers,
-- claim (`id`, rationale, evidence, optional evidenceDetails),
-- human final verdict.
+Turnkey can be validated with:
 
-## 6) Concrete Example (Turnkey)
+```bash
+npm run adapter:check:turnkey
+npm run doctor:turnkey
+npm run test:turnkey
+npm run validate:turnkey
+```
 
-### 6.1 Adapter Characteristics
+Expected pattern for a healthy Turnkey run:
 
-Turnkey example declares:
+- EIP-712 verification passes,
+- raw transaction signing may be `UNSUPPORTED` by design,
+- Zama authorization passes,
+- Zama write probe passes when infrastructure is healthy,
+- final verdict can still be positive for the validated Zama surface even without raw EOA tx signing.
 
-- architecture: `API_ROUTED_EXECUTION`,
-- EIP-712 signing: supported,
-- raw transaction signing: unsupported,
-- contract execution/read/receipt support: available via Turnkey APIs/clients.
+## 5) What the Harness Can Validate Today
 
-### 6.2 Expected Interpretation Pattern
+Current strong value:
 
-A healthy run can still be **fully compatible** even with raw tx unsupported, because:
+- checks that matter for real SDK integration decisions,
+- conservative claim generation from check evidence,
+- separation of compatibility failures from infra/environment failures,
+- repeatable local and CI usage (`test`, `validate`, deterministic mock mode).
 
-- raw EOA-style tx signing is not required for every integration architecture,
-- authorization + recoverability + write probe provide stronger relevant evidence.
-- this applies equally to API-routed and MPC-backed integrations when exposed capabilities satisfy harness checks.
+Concretely, depending on adapter support, it can validate:
 
-Typical healthy envelope:
+- address resolution,
+- EIP-712 signature flow and recoverability,
+- raw tx signing/execution (when supported),
+- adapter-routed writes and reads,
+- Zama authorization flow (`sdk.allow()`),
+- practical write-path probe with on-chain verification.
 
-- EIP-712 and recoverability pass,
-- raw tx check is `UNSUPPORTED` (expected),
-- Zama authorization pass,
-- Zama write probe pass,
-- final claim can be `ZAMA_AUTHORIZATION_AND_WRITE_COMPATIBLE`.
+Typical claim outcomes include:
 
-If relayer/RPC/registry fails:
+- authorization and write compatible,
+- authorization compatible with write flow not validated/supported,
+- inconclusive because infrastructure or environment blocked execution.
 
-- results become `BLOCKED`/`INCONCLUSIVE`,
-- claim moves to inconclusive categories,
-- without incorrectly labeling adapter compatibility as failed.
+## 6) Current Limits and Non-Goals
 
-This behavior is exactly the intended product behavior for heterogeneous systems.
+Current limits:
 
-### 6.3 Reproducible Internal Review Flow (Turnkey)
+- not a global or final certification authority,
+- not exhaustive across every SDK path and every network condition,
+- mainnet profile is available but still marked experimental,
+- smart-account / ERC-1271 coverage is useful but not a full certification matrix,
+- it does not validate embedded frontend session/auth UX (for example provider-specific browser SDK flows).
 
-To review this example with peer engineers:
+Non-goal at this stage:
 
-1. Configure Turnkey credentials in `.env`:
-   - `TURNKEY_ORG_ID`,
-   - `TURNKEY_PRIVATE_KEY_ID`,
-   - `TURNKEY_API_PUBLIC_KEY`,
-   - `TURNKEY_API_PRIVATE_KEY`.
-2. Run static adapter quality gate:
-   - `npm run adapter:check:turnkey`
-3. Run preflight diagnostics:
-   - `npm run doctor:turnkey`
-4. Run harness:
-   - `npm run test:turnkey`
-5. Optional CI-like gate:
-   - `npm run validate:turnkey`
+- claiming permanent, universal compatibility from a single run.
 
-Expected evidence envelope:
+## 7) Open Questions and Next Iteration Options
 
-- raw transaction execution can legitimately be `UNSUPPORTED`,
-- authorization and write claims are still allowed to pass if relevant checks pass,
-- infra outages should surface as `BLOCKED`/`INCONCLUSIVE` with infra-rooted error codes.
+Open questions:
 
-## 7) What This Product Can and Cannot Claim Today
+1. What minimum evidence bundle should define internal "certified for partner pilot"?
+2. Which live checks should eventually become release-blocking in CI?
+3. How far should smart-account native validation go in this harness versus separate tooling?
 
-### 7.1 Strong Claims It Can Make
+Practical next options:
 
-- Whether authorization compatibility is validated, partial, incompatible, or blocked.
-- Whether write compatibility probe succeeded within harness scope.
-- Whether failures are likely adapter/signer defects or infra/environment blockers.
-- Whether declared adapter model is internally coherent.
+1. Add policy presets per integration archetype (EOA, API-routed custody, smart account).
+2. Harden live-run governance (stable env, artifact retention, clearer escalation rules).
+3. Expand controlled write/read scenarios to reduce residual blind spots.
 
-### 7.2 Claims It Explicitly Does Not Make
+## 8) Conclusion
 
-- Full production readiness certification.
-- Exhaustive coverage of all Zama SDK paths or all network conditions.
-- Deterministic guarantees across all non-Sepolia setups.
+The Compatibility Harness is now a serious diagnostic product for guided partner validation.
 
-## 8) Current Limitations
+It gives actionable and conservative answers to the real integration question: what is proven compatible today, what is blocked by infrastructure, and what remains unvalidated.
 
-1. Mainnet profile remains experimental from a validation confidence perspective.
-2. Write validation is practical but still not exhaustive across all token/network/relayer permutations.
-3. ERC-1271 coverage is diagnostic, not a full smart-account compatibility certification matrix.
-4. Live CI is non-blocking by design (good for signal collection, not strict release gating yet).
-5. External onboarding is strong but still assumes technically mature integrator teams.
-
-## 9) What Is Needed to Reach “Finished Product” (GA)
-
-To move from partner-pilot ready to GA-grade external product:
-
-1. Formal support policy:
-   - explicit supported environments and SDK/network matrix,
-   - defined compatibility guarantee boundaries.
-2. Hardened live validation governance:
-   - stable managed credentials/environments,
-   - required artifact review process,
-   - release blocking criteria for live regressions.
-3. Certification protocol definition:
-   - canonical policy files per integration class,
-   - required evidence bundle format,
-   - auditable run metadata and trace retention.
-4. Expanded coverage:
-   - broader smart-account/1271 matrix,
-   - stronger write/read scenario breadth under controlled fixtures.
-5. Security/operations hardening:
-   - stricter secret handling guidance and log redaction controls.
-6. Public-consumer stability commitments:
-   - release cadence,
-   - migration policy,
-   - compatibility window guarantees.
-
-## 10) Hypotheses and Open Questions
-
-### Hypotheses
-
-- H1: For partner onboarding, scoped compatibility claims are more useful than binary “compatible/incompatible”.
-- H2: Most false negatives in early partner runs are infrastructure-related, not cryptographic incompatibility.
-- H3: `adapter:check + doctor + validate` is the right minimal command path for rapid triage.
-
-### Open Questions
-
-1. Should some claim classes become release-blocking in live CI, and under which conditions?
-2. What minimum evidence bundle should define “Zama-validated partner” internally?
-3. How far should the harness go in smart-account-native verification before introducing additional tooling?
-4. Which partner archetypes require dedicated policy presets by default (MPC, API-routed custody, smart accounts)?
-5. What is the target support boundary for mainnet validation in vNext?
-
-## 11) Recommended Next Version Focus (vNext)
-
-Prioritize:
-
-1. Live-run reliability and artifact governance (stronger operational confidence).
-2. Policy presets per integration archetype (faster external adoption).
-3. Extended smart-account and advanced write-path scenario coverage.
-4. Internal certification rubric based on current claim/evidence contract.
-
-## 12) Conclusion
-
-The harness has reached a meaningful milestone: **trustworthy partner-pilot validation**.
-
-It now behaves as a serious diagnostic product:
-
-- architecture-aware,
-- evidence-first,
-- conservative in claims,
-- actionable in diagnostics,
-- CI-consumable and regression-protected.
-
-It is not yet a final certification product, but it is now in a strong state for internal peer review and guided partner integration pilots.
+This makes it suitable for internal technical review and partner pilot workflows, while keeping scope and claims explicit.
