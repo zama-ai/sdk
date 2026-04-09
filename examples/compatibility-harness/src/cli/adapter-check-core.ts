@@ -98,7 +98,7 @@ function summarizeMetadata(input: AdapterQualityInput): AdapterQualityCheck[] {
   if (!input.metadata.declaredArchitecture) {
     checks.push({
       id: "METADATA_ARCHITECTURE",
-      severity: "FAIL",
+      severity: "WARN",
       message: "Adapter metadata.declaredArchitecture is missing.",
       recommendation:
         "Declare adapter architecture (EOA, MPC, SMART_ACCOUNT, API_ROUTED_EXECUTION, UNKNOWN).",
@@ -114,7 +114,7 @@ function summarizeMetadata(input: AdapterQualityInput): AdapterQualityCheck[] {
   if (!input.metadata.verificationModel) {
     checks.push({
       id: "METADATA_VERIFICATION_MODEL",
-      severity: "FAIL",
+      severity: "WARN",
       message: "Adapter metadata.verificationModel is missing.",
       recommendation:
         "Declare verificationModel (RECOVERABLE_ECDSA, ERC1271, PROVIDER_MANAGED, UNKNOWN).",
@@ -131,7 +131,7 @@ function summarizeMetadata(input: AdapterQualityInput): AdapterQualityCheck[] {
   if (supportedChainIds.length === 0) {
     checks.push({
       id: "METADATA_CHAIN_IDS",
-      severity: "FAIL",
+      severity: "WARN",
       message: "Adapter metadata.supportedChainIds is missing or empty.",
       recommendation: "Declare at least one supported chain id.",
     });

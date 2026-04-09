@@ -123,4 +123,28 @@ describe("cli.adapter-check-core.evaluateAdapterQuality", () => {
     expect(rawTx?.state).toBe("UNSUPPORTED");
     expect(writeFlow?.state).toBe("SUPPORTED");
   });
+
+  it("treats missing non-critical metadata as warnings, not failures", () => {
+    const report = evaluateAdapterQuality({
+      source: "adapter",
+      metadata: {
+        name: "Minimal Adapter",
+      },
+      declaredCapabilities: capabilities(),
+      observedCapabilities: capabilities(),
+      chainId: 11155111,
+    });
+
+    const architectureCheck = report.checks.find((check) => check.id === "METADATA_ARCHITECTURE");
+    const verificationCheck = report.checks.find(
+      (check) => check.id === "METADATA_VERIFICATION_MODEL",
+    );
+    const chainCheck = report.checks.find((check) => check.id === "METADATA_CHAIN_IDS");
+
+    expect(architectureCheck?.severity).toBe("WARN");
+    expect(verificationCheck?.severity).toBe("WARN");
+    expect(chainCheck?.severity).toBe("WARN");
+    expect(report.checks.some((check) => check.severity === "FAIL")).toBe(false);
+    expect(adapterQualityExitCode(report)).toBe(0);
+  });
 });
