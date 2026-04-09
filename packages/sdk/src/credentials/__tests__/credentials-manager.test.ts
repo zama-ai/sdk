@@ -554,7 +554,7 @@ describe("CredentialsManager", () => {
     }) => {
       setupMocks(relayer, signer);
       await credentialManager.allow([TOKEN_A]);
-      await credentialManager.revoke([]);
+      await credentialManager.revoke();
 
       // Should still report not expired without needing the signature
       expect(await credentialManager.isExpired()).toBe(false);
@@ -593,7 +593,7 @@ describe("session allow/revoke", () => {
     await credentialManager.allow([TOKEN_A]);
     expect(signer.signTypedData).toHaveBeenCalledTimes(1);
 
-    await credentialManager.revoke([]);
+    await credentialManager.revoke();
 
     await credentialManager.allow([TOKEN_A]);
     expect(signer.signTypedData).toHaveBeenCalledTimes(2);
@@ -611,7 +611,7 @@ describe("session allow/revoke", () => {
     await credentialManager.allow([TOKEN_A]);
     expect(await credentialManager.isAllowed([TOKEN_A])).toBe(true);
 
-    await credentialManager.revoke([]);
+    await credentialManager.revoke();
     expect(await credentialManager.isAllowed([TOKEN_A])).toBe(false);
   });
 
@@ -684,7 +684,7 @@ describe("session allow/revoke", () => {
     });
 
     await manager2.allow([TOKEN_A]);
-    await manager2.revoke([]);
+    await manager2.revoke();
 
     expect(events).toContain(ZamaSDKEvents.CredentialsRevoked);
   });
@@ -722,7 +722,7 @@ describe("contract address extension", () => {
     setupMocks(relayer, signer);
 
     await credentialManager.allow([TOKEN_A]);
-    await credentialManager.revoke([]);
+    await credentialManager.revoke();
     const extended = await credentialManager.allow([TOKEN_A, TOKEN_B]);
 
     // Keypair reused — only one generation

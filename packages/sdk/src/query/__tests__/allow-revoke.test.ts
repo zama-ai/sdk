@@ -45,7 +45,7 @@ describe("revokeMutationOptions", () => {
     const addresses = ["0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a"] as Address[];
     await options.mutationFn(addresses);
 
-    expect(revokeSpy).toHaveBeenCalledWith(addresses);
+    expect(revokeSpy).toHaveBeenCalledWith(...addresses);
   });
 });
 

@@ -94,7 +94,7 @@ export class CredentialsManager extends BaseCredentialsManager<
   }
 
   /** Revoke the session signature. Next decrypt requires a fresh wallet signature. */
-  async revoke(contractAddresses: Address[]): Promise<void> {
+  async revoke(...contractAddresses: Address[]): Promise<void> {
     await this.revokeSession(
       await this.#storeKey(),
       contractAddresses.length > 0 ? contractAddresses : undefined,

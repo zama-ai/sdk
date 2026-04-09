@@ -6742,7 +6742,7 @@ export class CredentialsManager extends BaseCredentialsManager<StoredCredentials
     protected encryptCredentials(creds: StoredCredentials): Promise<EncryptedCredentials$1>;
     isAllowed(contractAddresses: Address[]): Promise<boolean>;
     isExpired(contractAddress?: Address): Promise<boolean>;
-    revoke(contractAddresses: Address[]): Promise<void>;
+    revoke(...contractAddresses: Address[]): Promise<void>;
     revokeByKey(key: string): Promise<void>;
     // Warning: (ae-forgotten-export) The symbol "SigningMeta" needs to be exported by the entry point index.d.ts
     //
@@ -18468,7 +18468,7 @@ export class ReadonlyToken {
     protected readConfidentialBalanceOf(owner: Address): Promise<Handle>;
     // (undocumented)
     protected readonly relayer: RelayerSDK;
-    revoke(contractAddresses?: Address[]): Promise<void>;
+    revoke(): Promise<void>;
     // (undocumented)
     readonly signer: GenericSigner;
     // (undocumented)

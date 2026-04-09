@@ -139,7 +139,7 @@ describe("ZamaSDK", () => {
     await sessionStorage.set(storeKey, "0xsomeSignature");
     expect(await sessionStorage.get(storeKey)).toBe("0xsomeSignature");
 
-    await sdk.credentials.revoke([]);
+    await sdk.credentials.revoke();
 
     expect(await sessionStorage.get(storeKey)).toBeNull();
   });
@@ -726,7 +726,7 @@ describe("ZamaSDK", () => {
   describe("revoke clears decrypt cache", () => {
     const CONTRACT_A = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
 
-    it("credentials.revoke([]) + cache clear — decrypt after revoke hits relayer again", async ({
+    it("credentials.revoke() + cache clear — decrypt after revoke hits relayer again", async ({
       sdk,
       relayer,
       handle,
@@ -736,7 +736,7 @@ describe("ZamaSDK", () => {
       await sdk.userDecrypt(handles);
       expect(relayer.userDecrypt).toHaveBeenCalledOnce();
 
-      await sdk.credentials.revoke([]);
+      await sdk.credentials.revoke();
       const address = await sdk.signer.getAddress();
       await sdk.cache.clearForRequester(address);
 

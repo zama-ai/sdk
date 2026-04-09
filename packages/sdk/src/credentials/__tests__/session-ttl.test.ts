@@ -204,7 +204,7 @@ describe("Session TTL", () => {
 
     // Disconnect (revoke) before TTL expires
     vi.advanceTimersByTime(10 * 60 * 1000); // 10 minutes
-    await manager.revoke([]);
+    await manager.revoke();
     expect(await manager.isAllowed([TOKEN_A])).toBe(false);
 
     // Next allow should re-sign (not regenerate)

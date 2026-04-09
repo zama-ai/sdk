@@ -586,8 +586,8 @@ export class ReadonlyToken {
    * Stored credentials remain intact, but the next decrypt operation
    * will require a fresh wallet signature.
    */
-  async revoke(contractAddresses: Address[] = []): Promise<void> {
-    await this.credentials.revoke(contractAddresses);
+  async revoke(): Promise<void> {
+    await this.credentials.revoke(this.address);
   }
 
   /**
