@@ -538,9 +538,6 @@ interface ContractCallConfig {
 | `confidentialTotalSupplyContract(token)`                                | Read encrypted total supply handle.       |
 | `totalSupplyContract(token)`                                            | Read plaintext total supply.              |
 | `rateContract(token)`                                                   | Read conversion rate.                     |
-| `deploymentCoordinatorContract(token)`                                  | Read deployment coordinator address.      |
-| `isFinalizeUnwrapOperatorContract(token, holder, operator)`             | Check finalize-unwrap operator status.    |
-| `setFinalizeUnwrapOperatorContract(token, operator, timestamp?)`        | Set finalize-unwrap operator.             |
 
 ### Wrapper
 
@@ -551,13 +548,6 @@ interface ContractCallConfig {
 | `unwrapFromBalanceContract(token, from, to, encryptedBalance)`   | Request unwrap using on-chain balance handle. |
 | `finalizeUnwrapContract(wrapper, burntAmount, cleartext, proof)` | Finalize unwrap with decryption proof.        |
 | `underlyingContract(wrapper)`                                    | Read underlying ERC-20 address.               |
-
-### Deployment Coordinator
-
-| Function                                    | Description                  |
-| ------------------------------------------- | ---------------------------- |
-| `getWrapperContract(coordinator, token)`    | Look up wrapper for a token. |
-| `wrapperExistsContract(coordinator, token)` | Check if wrapper exists.     |
 
 ### ERC-165
 
