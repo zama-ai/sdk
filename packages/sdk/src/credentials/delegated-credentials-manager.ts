@@ -76,12 +76,13 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
    * Addresses are split into batches of ≤ 10 internally (same fhevm limit as
    * regular credentials). Each batch triggers its own EIP-712 wallet prompt,
    * shown sequentially. Use {@link CredentialSet.credentialFor} to route each
-   * address to its batch.
+   * address to its batch transparently.
    *
-   * Signing failures (e.g. user rejection) are captured in
-   * {@link CredentialSet.failures} rather than thrown — `allow()` itself
-   * never rejects. Call `credSet.credentialFor(address)` to surface the
-   * error when actually using a credential.
+   * Already-signed batches are retained in storage on failure, so a retry only
+   * needs to sign the rejected batch.
+   *
+   * @throws {@link SigningRejectedError} if the user rejects any batch's wallet signature prompt.
+   * @throws {@link SigningFailedError} if a batch signing operation fails for any other reason.
    */
   async allow(
     delegatorAddress: Address,

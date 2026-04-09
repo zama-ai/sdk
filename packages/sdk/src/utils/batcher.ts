@@ -1,4 +1,6 @@
 /**
+ * @internal
+ *
  * Batches items to work around per-call size limits (e.g. ACL contract's
  * 10-address cap on `allow`).
  *
@@ -9,17 +11,6 @@
  *
  * @typeParam TItem - The item type being batched.
  * @typeParam TResult - The return type of each batch call.
- *
- * @example
- * ```ts
- * const batcher = new Batcher(10);
- *
- * // With CredentialsManager
- * const creds = await batcher.execute(addresses, (addrs) => credentials.allow(...addrs));
- *
- * // With DelegatedCredentialsManager
- * const creds = await batcher.execute(addresses, (addrs) => delegated.allow(delegator, ...addrs));
- * ```
  */
 export class Batcher {
   #batchSize: number;

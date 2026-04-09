@@ -33,7 +33,6 @@ function stubDelegatedCredentials(token: ReadonlyToken, contractAddresses: Addre
     credentialFor: () => creds,
     tryCredentialFor: () => creds,
     batches: [creds],
-    failures: new Map(),
   };
   const allowMock = vi.fn().mockResolvedValue(credSet);
   // Override the lazy getter for testing
