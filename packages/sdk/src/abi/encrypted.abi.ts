@@ -304,11 +304,6 @@ export const encryptedAbi = [
     type: "error",
   },
   {
-    inputs: [],
-    name: "ZeroAddressDeploymentCoordinator",
-    type: "error",
-  },
-  {
     anonymous: false,
     inputs: [
       {

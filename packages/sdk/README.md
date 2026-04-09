@@ -582,7 +582,7 @@ const txHash = await writeConfidentialTransferContract(
 );
 ```
 
-**Read helpers:** `readConfidentialBalanceOfContract`, `readUnderlyingTokenContract`, `readWrapperExistsContract`, `readSupportsInterfaceContract`, `readWrapperForTokenContract` (legacy — prefer `sdk.registry.getConfidentialToken()`).
+**Read helpers:** `readConfidentialBalanceOfContract`, `readUnderlyingTokenContract`, `readSupportsInterfaceContract` (legacy — prefer `sdk.registry.getConfidentialToken()`).
 
 **Write helpers:** `writeConfidentialTransferContract`, `writeUnwrapContract`, `writeUnwrapFromBalanceContract`, `writeFinalizeUnwrapContract`, `writeSetOperatorContract`, `writeWrapContract`.
 

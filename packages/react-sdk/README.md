@@ -843,37 +843,7 @@ queryClient.invalidateQueries({
 });
 ```
 
-## Wagmi Adapter Hooks
-
-`@zama-fhe/react-sdk/wagmi` exports low-level hooks that wrap wagmi's `useReadContract` and `useWriteContract` directly. These do **not** use the SDK provider for their contract calls — they operate through wagmi's `Config`. Use them for advanced scenarios where you need fine-grained control.
-
-### Read Hooks
-
-| Hook                                         | Parameters                      | Description                                                |
-| -------------------------------------------- | ------------------------------- | ---------------------------------------------------------- |
-| `useBalanceOf(token, user?)`                 | Token and optional user address | ERC-20 balance with symbol, decimals, and formatted value. |
-| `useConfidentialBalanceOf(token?, user?)`    | Token and user addresses        | Read encrypted balance handle.                             |
-| `useWrapperForToken(coordinator?, token?)`   | Coordinator and token addresses | Look up wrapper for token.                                 |
-| `useUnderlyingToken(wrapper?)`               | Wrapper address                 | Read underlying ERC-20 address.                            |
-| `useWrapperExists(coordinator?, token?)`     | Coordinator and token addresses | Check if wrapper exists.                                   |
-| `useSupportsInterface(token?, interfaceId?)` | Token address and interface ID  | ERC-165 support check.                                     |
-
-All read hooks are enabled only when their required parameters are defined. All read hooks have `*Suspense` variants for use with React Suspense boundaries.
-
-### Write Hooks
-
-All write hooks return `{ mutate, mutateAsync, ...mutation }` from wagmi's `useWriteContract`.
-
-| Hook                        | Mutation Parameters                              | Description                   |
-| --------------------------- | ------------------------------------------------ | ----------------------------- |
-| `useConfidentialTransfer()` | `(token, to, handle, inputProof)`                | Encrypted transfer.           |
-| `useUnwrap()`               | `(token, from, to, encryptedAmount, inputProof)` | Request unwrap.               |
-| `useUnwrapFromBalance()`    | `(token, from, to, encryptedBalance)`            | Unwrap using on-chain handle. |
-| `useFinalizeUnwrap()`       | `(wrapper, burntAmount, cleartext, proof)`       | Finalize unwrap.              |
-| `useSetOperator()`          | `(token, spender, timestamp?)`                   | Set operator approval.        |
-| `useShield()`               | `(wrapper, to, amount)`                          | Shield ERC-20 tokens.         |
-
-### Wagmi Signer Adapter
+## Wagmi Signer Adapter
 
 ```ts
 import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
