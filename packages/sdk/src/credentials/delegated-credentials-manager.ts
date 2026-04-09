@@ -12,7 +12,9 @@ import {
   assertDelegatedFields,
   normalizeAddresses,
   computeStoreKey,
+  MAX_CONTRACTS_PER_CREDENTIAL,
 } from "./credential-validation";
+import { Batcher } from "../utils/batcher";
 
 /** Internal storage shape — base fields plus delegator/delegate addresses. */
 interface EncryptedCredentials extends BaseEncryptedCredentials {
@@ -88,19 +90,21 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
     const normalizedDelegator = getAddress(delegatorAddress);
     const normalized = normalizeAddresses(contractAddresses);
     const key = await this.#storeKey(normalizedDelegator);
-
-    return this.resolveMulti({
-      key,
-      contracts: normalized,
-      createFn: async (batchAddresses: Address[], batchKey: string) => {
-        let keypair = this.#cachedKeypairs.get(key);
-        if (!keypair) {
-          keypair = await this.#relayer.generateKeypair();
-          this.#cachedKeypairs.set(key, keypair);
-        }
-        return this.#createBatch(normalizedDelegator, batchAddresses, keypair, batchKey);
-      },
-    });
+    const batcher = new Batcher(MAX_CONTRACTS_PER_CREDENTIAL);
+    return batcher.execute(normalized, (accumulated) =>
+      this.resolveMulti({
+        key,
+        contracts: accumulated,
+        createFn: async (batchAddresses: Address[], batchKey: string) => {
+          let keypair = this.#cachedKeypairs.get(key);
+          if (!keypair) {
+            keypair = await this.#relayer.generateKeypair();
+            this.#cachedKeypairs.set(key, keypair);
+          }
+          return this.#createBatch(normalizedDelegator, batchAddresses, keypair, batchKey);
+        },
+      }),
+    );
   }
 
   /** Check if stored delegated credentials are expired or unusable. */

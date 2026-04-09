@@ -15,77 +15,49 @@ import type { StoredCredentials } from "../types";
 export interface CredentialSet<T extends StoredCredentials = StoredCredentials> {
   /**
    * Return the credential batch that covers `address`.
-   * @throws If the batch failed (e.g. the user rejected the EIP-712 prompt).
+   * @throws If `address` was not passed to `allow()`.
    */
   credentialFor(address: Address): T;
 
   /**
-   * Return the credential batch that covers `address`, or `null` if the batch
-   * failed (e.g. signing rejected). Use this in error-tolerant paths.
+   * Return the credential batch that covers `address`, or `null` if the address
+   * was not passed to `allow()`. Use this in error-tolerant paths.
    */
   tryCredentialFor(address: Address): T | null;
 
-  /** All successfully signed credential batches in this set, in creation order. */
+  /** All credential batches in this set, in creation order. */
   readonly batches: ReadonlyArray<T>;
-
-  /**
-   * Addresses whose batch failed (e.g. user rejected the wallet prompt).
-   * The same error is re-thrown by {@link credentialFor} when called with
-   * one of these addresses.
-   * Keys are EIP-55 checksummed — use `getAddress(addr)` for lookups.
-   * Empty when all batches succeeded.
-   */
-  readonly failures: ReadonlyMap<Address, Error>;
 }
 
 /** @internal */
 export class CredentialSetImpl<T extends StoredCredentials> implements CredentialSet<T> {
-  readonly #index: Map<Address, T | Error>;
+  readonly #index: Map<Address, T>;
   readonly batches: ReadonlyArray<T>;
-  readonly failures: ReadonlyMap<Address, Error>;
 
-  constructor(results: ReadonlyArray<{ addresses: ReadonlyArray<Address>; result: T | Error }>) {
-    const index = new Map<Address, T | Error>();
-    const failures = new Map<Address, Error>();
-    const successBatches: T[] = [];
+  constructor(results: ReadonlyArray<{ addresses: ReadonlyArray<Address>; result: T }>) {
+    const index = new Map<Address, T>();
+    const allBatches: T[] = [];
 
     for (const { addresses, result } of results) {
-      if (result instanceof Error) {
-        for (const addr of addresses) {
-          const normalized = getAddress(addr);
-          index.set(normalized, result);
-          failures.set(normalized, result);
-        }
-      } else {
-        successBatches.push(result);
-        for (const addr of addresses) {
-          index.set(getAddress(addr), result);
-        }
+      allBatches.push(result);
+      for (const addr of addresses) {
+        index.set(getAddress(addr), result);
       }
     }
 
     this.#index = index;
-    this.batches = Object.freeze(successBatches);
-    this.failures = failures;
+    this.batches = Object.freeze(allBatches);
   }
 
   credentialFor(address: Address): T {
-    const normalized = getAddress(address);
-    const entry = this.#index.get(normalized);
+    const entry = this.#index.get(getAddress(address));
     if (entry === undefined) {
       throw new Error(`[zama-sdk] No credential found for address ${address}`);
-    }
-    if (entry instanceof Error) {
-      throw entry;
     }
     return entry;
   }
 
   tryCredentialFor(address: Address): T | null {
-    const entry = this.#index.get(getAddress(address));
-    if (entry === undefined || entry instanceof Error) {
-      return null;
-    }
-    return entry;
+    return this.#index.get(getAddress(address)) ?? null;
   }
 }

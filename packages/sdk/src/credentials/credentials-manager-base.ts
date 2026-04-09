@@ -73,22 +73,6 @@ interface CreateCredentialsOptions<TCreds> {
 }
 
 /**
- * Sentinel written to storage when a new batch's signing fails. Fills the gap so
- * that subsequent scans can continue past this slot and still find higher-indexed
- * batches that may have succeeded.
- */
-const BATCH_TOMBSTONE = { _batchTombstone: true } as const;
-
-function isBatchTombstone(value: unknown): boolean {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "_batchTombstone" in value &&
-    (value as Record<string, unknown>)["_batchTombstone"] === true
-  );
-}
-
-/**
  * Abstract base for credential managers. Contains the entire allow/extend/expire
  * state machine. Subclasses provide the assertion, signing, and encrypt/decrypt
  * hooks that differ between regular and delegated flows.
@@ -287,14 +271,12 @@ export abstract class BaseCredentialsManager<
   // ── Multi-batch credential resolution ─────────────────────────
 
   /**
-   * Resolve credentials for any number of contract addresses, splitting into
-   * batches of ≤ {@link MAX_CONTRACTS_PER_CREDENTIAL} when needed.
+   * Resolve credentials for a set of contract addresses, assigning each to an
+   * existing or new batch (bin-packing). Fails fast: if any batch's signing is
+   * rejected the error propagates immediately, leaving previously-signed batches
+   * in storage for efficient retry.
    *
-   * Each batch maps to a separate EIP-712 wallet signature. Signatures are
-   * requested sequentially to avoid presenting multiple wallet prompts at once.
-   * Partial failures (a batch whose signing was rejected) are captured in
-   * {@link CredentialSet.failures} rather than thrown, so callers can surface
-   * per-address errors rather than failing the whole operation.
+   * Called once per Batcher slice from the subclass `allow()` implementations.
    *
    * @param key       - Base storage key for this (wallet, chain) identity.
    * @param contracts - All contract addresses that need to be covered.
@@ -310,6 +292,10 @@ export abstract class BaseCredentialsManager<
     contracts: Address[];
     createFn: (batchAddresses: Address[], batchKey: string) => Promise<TCreds>;
   }): Promise<CredentialSet<TCreds>> {
+    if (contracts.length === 0) {
+      return new CredentialSetImpl<TCreds>([]);
+    }
+
     // 1. Load existing batch metadata (address lists, no decryption needed yet).
     const {
       batches: existingBatches,
@@ -319,8 +305,6 @@ export abstract class BaseCredentialsManager<
 
     // 2. Bin-pack: assign each required address to an existing or new batch.
     //    If a corrupted slot was found, reuse it (resolveCredentials will clean it up).
-    //    Otherwise start new batches beyond all seen slots (including tombstones) to
-    //    prevent index collisions after partial failures.
     const nextBatchIndex = corruptedIndex !== null ? corruptedIndex : highestIndex + 1;
     const assignments = this.#computeBatchAssignments(
       existingBatches,
@@ -328,29 +312,19 @@ export abstract class BaseCredentialsManager<
       key,
       nextBatchIndex,
     );
-    const existingBatchKeys = new Set(existingBatches.map((b) => b.batchKey));
 
     // 3. Resolve each batch in sequence (preserves single-prompt-at-a-time UX).
-    const results: Array<{ addresses: Address[]; result: TCreds | Error }> = [];
+    //    Fail-fast: any signing error propagates immediately.
+    const results: Array<{ addresses: Address[]; result: TCreds }> = [];
     for (const { batchKey, addresses } of assignments) {
       const normalizedAddresses = normalizeAddresses(addresses);
-      try {
-        const creds = await this.resolveCredentials({
-          key: batchKey,
-          contracts: normalizedAddresses,
-          createKey: `${batchKey}:${normalizedAddresses.join(",")}`,
-          createFn: () => createFn(normalizedAddresses, batchKey),
-        });
-        results.push({ addresses: normalizedAddresses, result: creds });
-      } catch (error) {
-        // Partial failure: capture per-batch, don't abort remaining batches.
-        // Write a tombstone for newly-created slots so subsequent scans can
-        // continue past this gap and find higher-indexed batches that succeeded.
-        if (!existingBatchKeys.has(batchKey)) {
-          await this.#writeTombstone(batchKey);
-        }
-        results.push({ addresses: normalizedAddresses, result: toError(error) });
-      }
+      const creds = await this.resolveCredentials({
+        key: batchKey,
+        contracts: normalizedAddresses,
+        createKey: `${batchKey}:${normalizedAddresses.join(",")}`,
+        createFn: () => createFn(normalizedAddresses, batchKey),
+      });
+      results.push({ addresses: normalizedAddresses, result: creds });
     }
 
     return new CredentialSetImpl<TCreds>(results);
@@ -406,12 +380,11 @@ export abstract class BaseCredentialsManager<
 
   /**
    * Scan storage for all valid credential batches under `key`.
-   * Returns valid batches with their address lists, the highest slot index seen
-   * (including tombstone slots from previous partial failures), and the index of
-   * the first corrupted slot (if any) so callers can reuse that slot for recovery.
+   * Returns valid batches with their address lists, the highest slot index seen,
+   * and the index of the first corrupted slot (if any) so callers can reuse that
+   * slot for recovery.
    *
    * Batch 0 uses `key`; subsequent batches use `key:1`, `key:2`, …
-   * Tombstone entries (from failed signings) are skipped but do NOT stop the scan.
    * Stops at the first completely absent slot or the first corrupted entry.
    */
   async #scanBatchMeta(key: string): Promise<{
@@ -428,9 +401,6 @@ export abstract class BaseCredentialsManager<
         break;
       }
       highestIndex = i;
-      if (isBatchTombstone(stored)) {
-        continue; // Gap from failed signing — skip but keep scanning
-      }
       try {
         this.assertEncrypted(stored as TEncrypted);
         batches.push({ batchKey: k, addresses: (stored as TEncrypted).contractAddresses });
@@ -745,16 +715,6 @@ export abstract class BaseCredentialsManager<
         type: ZamaSDKEvents.CredentialsPersistFailed,
         error: toError(error),
       });
-    }
-  }
-
-  /** Write a tombstone sentinel for a new batch slot that failed to be created. */
-  async #writeTombstone(key: string): Promise<void> {
-    try {
-      await this.storage.set(key, BATCH_TOMBSTONE);
-    } catch {
-      // Best-effort: a missing tombstone just means a possible gap in future scans,
-      // which may cause redundant keypair generation but not data loss.
     }
   }
 }

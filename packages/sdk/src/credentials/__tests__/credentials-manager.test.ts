@@ -224,7 +224,7 @@ describe("CredentialsManager", () => {
     expect(stored).toBeNull();
   });
 
-  it("credentialFor() throws SigningRejected when user rejects signature (rejected)", async ({
+  it("allow() throws SigningRejected when user rejects signature (rejected)", async ({
     relayer,
     signer,
     credentialManager,
@@ -232,17 +232,12 @@ describe("CredentialsManager", () => {
     setupMocks(relayer, signer);
     vi.mocked(signer.signTypedData).mockRejectedValue(new Error("User rejected the request"));
 
-    const credSet = await credentialManager.allow(TOKEN_A);
-    expect(() => credSet.credentialFor(TOKEN_A)).toThrow(
-      expect.objectContaining({
-        code: ZamaErrorCode.SigningRejected,
-      }),
+    await expect(credentialManager.allow(TOKEN_A)).rejects.toThrow(
+      expect.objectContaining({ code: ZamaErrorCode.SigningRejected }),
     );
-    expect(credSet.failures.size).toBe(1);
-    expect(credSet.failures.get(TOKEN_A)).toBeInstanceOf(ZamaError);
   });
 
-  it("credentialFor() throws SigningRejected when user denies signature (denied)", async ({
+  it("allow() throws SigningRejected when user denies signature (denied)", async ({
     relayer,
     signer,
     credentialManager,
@@ -250,16 +245,12 @@ describe("CredentialsManager", () => {
     setupMocks(relayer, signer);
     vi.mocked(signer.signTypedData).mockRejectedValue(new Error("User denied transaction"));
 
-    const credSet = await credentialManager.allow(TOKEN_A);
-    expect(() => credSet.credentialFor(TOKEN_A)).toThrow(
-      expect.objectContaining({
-        code: ZamaErrorCode.SigningRejected,
-      }),
+    await expect(credentialManager.allow(TOKEN_A)).rejects.toThrow(
+      expect.objectContaining({ code: ZamaErrorCode.SigningRejected }),
     );
-    expect(credSet.failures.get(TOKEN_A)).toBeInstanceOf(ZamaError);
   });
 
-  it("credentialFor() throws SigningFailed for other signing errors", async ({
+  it("allow() throws SigningFailed for other signing errors", async ({
     relayer,
     signer,
     credentialManager,
@@ -267,16 +258,12 @@ describe("CredentialsManager", () => {
     setupMocks(relayer, signer);
     vi.mocked(signer.signTypedData).mockRejectedValue(new Error("network timeout"));
 
-    const credSet = await credentialManager.allow(TOKEN_A);
-    expect(() => credSet.credentialFor(TOKEN_A)).toThrow(
-      expect.objectContaining({
-        code: ZamaErrorCode.SigningFailed,
-      }),
+    await expect(credentialManager.allow(TOKEN_A)).rejects.toThrow(
+      expect.objectContaining({ code: ZamaErrorCode.SigningFailed }),
     );
-    expect(credSet.failures.get(TOKEN_A)).toBeInstanceOf(ZamaError);
   });
 
-  it("credentialFor() throws SigningFailed for non-Error exceptions", async ({
+  it("allow() throws SigningFailed with preserved cause for non-Error exceptions", async ({
     relayer,
     signer,
     credentialManager,
@@ -284,8 +271,7 @@ describe("CredentialsManager", () => {
     setupMocks(relayer, signer);
     vi.mocked(signer.signTypedData).mockRejectedValue("unexpected");
 
-    const credSet = await credentialManager.allow(TOKEN_A);
-    const error = credSet.failures.get(TOKEN_A);
+    const error = await credentialManager.allow(TOKEN_A).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(ZamaError);
     // Non-Error causes are preserved (not dropped) so downstream debugging
     // retains the original value.

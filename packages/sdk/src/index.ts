@@ -101,6 +101,7 @@ export type {
 } from "./types";
 export type { Address, Hex } from "viem";
 export { ZamaSDKEvents } from "./events";
+export { Batcher } from "./utils";
 export type {
   ZamaSDKEventType,
   ZamaSDKEvent,

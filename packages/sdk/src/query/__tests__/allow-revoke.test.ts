@@ -17,7 +17,6 @@ describe("allowMutationOptions", () => {
     const sdk = new ZamaSDK({ relayer, signer, storage });
     const allowSpy = vi.spyOn(sdk.credentials, "allow").mockResolvedValue({
       batches: [],
-      failures: new Map(),
       credentialFor: () => {
         throw new Error("not used");
       },

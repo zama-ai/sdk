@@ -340,7 +340,6 @@ export interface CredentialsCreatingEvent extends BaseEvent {
 export interface CredentialSet<T extends StoredCredentials = StoredCredentials> {
     readonly batches: ReadonlyArray<T>;
     credentialFor(address: Address): T;
-    readonly failures: ReadonlyMap<Address, Error>;
     tryCredentialFor(address: Address): T | null;
 }
 
@@ -1659,7 +1658,11 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
+<<<<<<< HEAD
 // dist/esm/activity-CAZLy9Lp.d.ts:21475:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+=======
+// dist/esm/activity-BB_9qwaT.d.ts:2089:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+>>>>>>> 98bef700 (refactor(sdk): adopt Batcher utility and switch to fail-fast credential signing (SDK-43))
 
 // (No @packageDocumentation comment for this package)
 

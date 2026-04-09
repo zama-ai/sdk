@@ -10,7 +10,6 @@ import { test, createMockSigner, createMockStorage } from "../../test-fixtures";
 import type { createMockRelayer } from "../../test-fixtures";
 import { CredentialsManager } from "../credentials-manager";
 import { DelegatedCredentialsManager } from "../delegated-credentials-manager";
-import { ZamaErrorCode } from "../../errors";
 import { getAddress, type Address } from "viem";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -99,7 +98,6 @@ describe("credential batching", () => {
 
       expect(relayer.generateKeypair).toHaveBeenCalledOnce();
       expect(credSet.batches).toHaveLength(1);
-      expect(credSet.failures.size).toBe(0);
       for (const addr of addrs) {
         const creds = credSet.credentialFor(addr);
         expect(creds.contractAddresses).toContain(getAddress(addr));
@@ -115,7 +113,6 @@ describe("credential batching", () => {
       expect(relayer.generateKeypair).toHaveBeenCalledOnce();
       expect(signer.signTypedData).toHaveBeenCalledTimes(2);
       expect(credSet.batches).toHaveLength(2);
-      expect(credSet.failures.size).toBe(0);
       expect(credSet.batches[0]!.contractAddresses).toHaveLength(10);
       expect(credSet.batches[1]!.contractAddresses).toHaveLength(1);
 
@@ -250,54 +247,37 @@ describe("credential batching", () => {
     });
   });
 
-  // ── Partial failure ──────────────────────────────────────────────────────
+  // ── Fail-fast ────────────────────────────────────────────────────────────
 
-  describe("partial failure", () => {
-    test("signing rejection for batch 2 is captured in failures; batch 1 still succeeds", async ({
+  describe("fail-fast on signing rejection", () => {
+    test("signing rejection throws immediately; allow() rejects", async ({ relayer }) => {
+      const { manager, signer } = createManagerWithSigner(relayer);
+      vi.mocked(signer.signTypedData).mockRejectedValue(new Error("User rejected the request"));
+
+      await expect(manager.allow(...makeAddresses(11))).rejects.toThrow("User rejected");
+    });
+
+    test("rejection on second batch throws; retry reuses first batch from storage", async ({
       relayer,
     }) => {
       const { manager, signer } = createManagerWithSigner(relayer);
-      // Batch 0 (first 10) succeeds; batch 1 (11th address) rejected
       vi.mocked(signer.signTypedData)
         .mockResolvedValueOnce("0xsig_batch0")
         .mockRejectedValueOnce(new Error("User rejected the request"));
 
       const addrs = makeAddresses(11);
-      const [batch0Addrs, batch1Addr] = [addrs.slice(0, 10), addrs[10]!];
+      await expect(manager.allow(...addrs)).rejects.toThrow();
 
-      // allow() resolves (no throw) even when batch 1 fails
+      // Retry: batch 0 is in storage, only one new signature needed
+      vi.mocked(signer.signTypedData).mockResolvedValue("0xsig_retry");
       const credSet = await manager.allow(...addrs);
 
-      // Batch 0 succeeded
-      expect(credSet.batches).toHaveLength(1);
-      for (const addr of batch0Addrs) {
+      expect(credSet.batches).toHaveLength(2);
+      // Only 1 new signature on retry (batch 0 was cached)
+      expect(signer.signTypedData).toHaveBeenCalledTimes(3); // 1 ok + 1 rejected + 1 retry
+      for (const addr of addrs) {
         expect(() => credSet.credentialFor(addr)).not.toThrow();
-        expect(credSet.credentialFor(addr).signature).toBe("0xsig_batch0");
       }
-
-      // Batch 1 failed — credentialFor throws, tryCredentialFor returns null
-      expect(() => credSet.credentialFor(batch1Addr)).toThrow(
-        expect.objectContaining({ code: ZamaErrorCode.SigningRejected }),
-      );
-      expect(credSet.tryCredentialFor(batch1Addr)).toBeNull();
-      expect(credSet.failures.size).toBe(1);
-      // failures keys are checksummed (EIP-55)
-      expect(credSet.failures.has(getAddress(batch1Addr))).toBe(true);
-    });
-
-    test("tryCredentialFor returns the credential for a succeeded batch and null for a failed one", async ({
-      relayer,
-    }) => {
-      const { manager, signer } = createManagerWithSigner(relayer);
-      vi.mocked(signer.signTypedData)
-        .mockResolvedValueOnce("0xsig_ok")
-        .mockRejectedValueOnce(new Error("User rejected the request"));
-
-      const addrs = makeAddresses(11);
-      const credSet = await manager.allow(...addrs);
-
-      expect(credSet.tryCredentialFor(addrs[0]!)).not.toBeNull();
-      expect(credSet.tryCredentialFor(addrs[10]!)).toBeNull();
     });
   });
 
@@ -313,7 +293,6 @@ describe("credential batching", () => {
       expect(relayer.generateKeypair).toHaveBeenCalledOnce();
       expect(signer.signTypedData).toHaveBeenCalledTimes(2);
       expect(credSet.batches).toHaveLength(2);
-      expect(credSet.failures.size).toBe(0);
       expect(credSet.batches[0]!.contractAddresses).toHaveLength(10);
       expect(credSet.batches[1]!.contractAddresses).toHaveLength(5);
 
@@ -356,40 +335,6 @@ describe("credential batching", () => {
         expect(batch.publicKey).toBe("0xpub_delegated_single");
         expect(batch.privateKey).toBe("0xpriv_delegated_single");
       }
-    });
-  });
-
-  // ── Gap-safe scanning (tombstone handling) ───────────────────────────────
-
-  describe("gap-safe scanning (tombstone handling)", () => {
-    test("middle batch failure does not orphan later batches — subsequent allow() finds them", async ({
-      relayer,
-    }) => {
-      const { manager, signer } = createManagerWithSigner(relayer);
-      const addrs = makeAddresses(30); // 3 batches: A1-10, A11-20, A21-30
-
-      // Batch 1 (middle) is rejected; batches 0 and 2 succeed
-      vi.mocked(signer.signTypedData)
-        .mockResolvedValueOnce("0xsig_batch0") // batch 0 succeeds
-        .mockRejectedValueOnce(new Error("User rejected")) // batch 1 fails
-        .mockResolvedValueOnce("0xsig_batch2"); // batch 2 succeeds
-
-      const firstSet = await manager.allow(...addrs);
-
-      // Batch 0 and 2 succeeded; batch 1 failed
-      expect(firstSet.batches).toHaveLength(2);
-      expect(firstSet.failures.size).toBe(10); // 10 addresses in failed batch 1
-
-      // Second call: retry the failed batch's addresses
-      vi.mocked(signer.signTypedData).mockResolvedValue("0xsig_retry");
-
-      const secondSet = await manager.allow(...addrs);
-
-      // All 30 addresses should now be accessible
-      for (const addr of addrs) {
-        expect(() => secondSet.credentialFor(addr)).not.toThrow();
-      }
-      expect(secondSet.failures.size).toBe(0);
     });
   });
 
@@ -455,7 +400,6 @@ describe("credential batching", () => {
       const credSet = await manager.allow(...addrs);
 
       expect(credSet.batches).toHaveLength(2);
-      expect(credSet.failures.size).toBe(0);
 
       // Every address resolves without error
       for (const addr of addrs) {

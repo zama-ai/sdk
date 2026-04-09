@@ -13,7 +13,9 @@ import {
   assertBaseEncryptedCredentials,
   normalizeAddresses,
   computeStoreKey,
+  MAX_CONTRACTS_PER_CREDENTIAL,
 } from "./credential-validation";
+import { Batcher } from "../utils/batcher";
 
 /** Internal storage shape — same as BaseEncryptedCredentials. */
 type EncryptedCredentials = BaseEncryptedCredentials;
@@ -96,17 +98,19 @@ export class CredentialsManager extends BaseCredentialsManager<
   async allow(...contractAddresses: Address[]): Promise<CredentialSet> {
     const normalized = normalizeAddresses(contractAddresses);
     const key = await this.#storeKey();
-
-    return this.resolveMulti({
-      key,
-      contracts: normalized,
-      createFn: async (batchAddresses: Address[], batchKey: string) => {
-        if (!this.#cachedKeypair) {
-          this.#cachedKeypair = await this.#relayer.generateKeypair();
-        }
-        return this.#createBatch(batchAddresses, this.#cachedKeypair, batchKey);
-      },
-    });
+    const batcher = new Batcher(MAX_CONTRACTS_PER_CREDENTIAL);
+    return batcher.execute(normalized, (accumulated) =>
+      this.resolveMulti({
+        key,
+        contracts: accumulated,
+        createFn: async (batchAddresses: Address[], batchKey: string) => {
+          if (!this.#cachedKeypair) {
+            this.#cachedKeypair = await this.#relayer.generateKeypair();
+          }
+          return this.#createBatch(batchAddresses, this.#cachedKeypair, batchKey);
+        },
+      }),
+    );
   }
 
   /** Check if stored credentials are expired or unusable. */

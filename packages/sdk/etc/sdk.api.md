@@ -564,6 +564,27 @@ export interface BatchDecryptOptions {
 }
 
 // @public
+<<<<<<< HEAD
+=======
+export class Batcher {
+    constructor(batchSize: number);
+    execute<TItem, TResult>(items: TItem[], fn: (accumulated: TItem[]) => Promise<TResult>): Promise<TResult>;
+}
+
+// @public
+export interface BatchTransferData {
+    // (undocumented)
+    encryptedAmount: Handle;
+    // (undocumented)
+    inputProof: Hex;
+    // (undocumented)
+    retryFor: bigint;
+    // (undocumented)
+    to: Address;
+}
+
+// @public
+>>>>>>> 98bef700 (refactor(sdk): adopt Batcher utility and switch to fail-fast credential signing (SDK-43))
 export class ChromeSessionStorage implements GenericStorage {
     // (undocumented)
     delete(key: string): Promise<void>;
@@ -5738,7 +5759,6 @@ export interface CredentialsCreatingEvent extends BaseEvent {
 export interface CredentialSet<T extends StoredCredentials = StoredCredentials> {
     readonly batches: ReadonlyArray<T>;
     credentialFor(address: Address): T;
-    readonly failures: ReadonlyMap<Address, Error>;
     tryCredentialFor(address: Address): T | null;
 }
 
