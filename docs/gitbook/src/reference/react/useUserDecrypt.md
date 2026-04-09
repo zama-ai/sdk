@@ -23,31 +23,28 @@ import { useUserDecrypt } from "@zama-fhe/react-sdk";
 {% tab title="component.tsx" %}
 
 ```tsx
-import { useAllow, useUserDecrypt } from "@zama-fhe/react-sdk";
+import { useAllow, useIsAllowed, useUserDecrypt } from "@zama-fhe/react-sdk";
 
-function DecryptHandle() {
+const CONTRACT = "0xYourContract" as const;
+
+function DecryptHandle({ handle }: { handle: string }) {
   const { mutate: allow, isPending: isAllowing } = useAllow();
+  const { data: allowed } = useIsAllowed({ contractAddresses: [CONTRACT] });
   const { data, isPending } = useUserDecrypt({
-    handles: [
-      {
-        handle: "0xhandle...",
-        contractAddress: "0xYourContract",
-      },
-    ],
+    handles: [{ handle, contractAddress: CONTRACT }],
+    query: { enabled: !!allowed }, // gate: only decrypt once authorized
   });
 
-  return (
-    <section>
-      {/* Step 1: Authorize decryption (one-time wallet signature) */}
-      <button onClick={() => allow(["0xYourContract"])} disabled={isAllowing}>
+  if (!allowed) {
+    return (
+      <button onClick={() => allow([CONTRACT])} disabled={isAllowing}>
         {isAllowing ? "Signing..." : "Authorize"}
       </button>
+    );
+  }
 
-      {/* Step 2: Decrypted values appear automatically */}
-      {isPending && <p>Decrypting...</p>}
-      {data && <output>Value: {Object.values(data)[0]?.toString()}</output>}
-    </section>
-  );
+  if (isPending) return <p>Decrypting...</p>;
+  return <output>Value: {data?.[handle]?.toString()}</output>;
 }
 ```
 
@@ -90,7 +87,7 @@ const { data } = useUserDecrypt({
 ```
 
 {% hint style="warning" %}
-**All contract addresses must be authorized first.** Call `useAllow` with every contract address present in `handles` before the query will fire. If any contract is missing from the `allow()` call, the query stays disabled to avoid unexpected wallet prompts.
+**All contract addresses must be authorized first.** Call `useAllow` with every contract address present in `handles` before enabling the query. Use `useIsAllowed({ contractAddresses })` to check coverage and pass `query: { enabled: !!allowed }` to prevent unexpected wallet prompts.
 {% endhint %}
 
 ### query
@@ -109,13 +106,24 @@ When all requested handles are already cached, `data` contains the cached values
 
 ## How It Works
 
-`useUserDecrypt` chains three internal queries:
+`useUserDecrypt` chains two internal queries:
 
 1. **Signer address** — resolves the connected wallet address.
-2. **isAllowed** — checks that cached credentials cover all contract addresses in `handles`. Returns `false` until `useAllow` has been called with those contracts.
-3. **Decrypt** — calls `sdk.userDecrypt(handles)` which checks the persistent cache, then hits the relayer for any uncached handles.
+2. **Decrypt** — calls `sdk.userDecrypt(handles)` which checks the persistent cache, then hits the relayer for any uncached handles.
 
-The decrypt query only fires when steps 1 and 2 succeed. This ensures no wallet signature popup is triggered by the query itself — all signing happens explicitly via `useAllow`.
+{% hint style="warning" %}
+**`useUserDecrypt` does not automatically gate on credentials.** If credentials are not cached when the query fires, the SDK will prompt the user's wallet for a signature. To avoid unexpected popups, gate the query yourself using [`useIsAllowed`](/reference/react/useIsAllowed):
+
+```tsx
+const { data: allowed } = useIsAllowed({ contractAddresses: ["0xContract"] });
+const { data } = useUserDecrypt({
+  handles: [{ handle, contractAddress: "0xContract" }],
+  query: { enabled: !!allowed },
+});
+```
+
+This ensures the decrypt query only fires after `useAllow` has been called.
+{% endhint %}
 
 ## Credential Caching
 
