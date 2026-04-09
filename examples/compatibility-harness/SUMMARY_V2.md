@@ -1,201 +1,182 @@
 # Zama Compatibility Validation Harness — Summary V2
 
-## 1) Purpose of This Document
+## 1) Why This Project Exists
 
-This document explains what the Compatibility Harness is, why it exists, and what it can reliably validate today.
+Integrators regularly ask a simple question:
 
-Target audience:
+> Is our wallet / custody / execution stack compatible with the Zama SDK?
 
-- Zama SDK engineers,
-- partner solutions engineers,
-- external integrator teams (wallet, custody, infra) evaluating compatibility.
-
-Goal of this version:
-
-- provide a clear, functional view of the product,
-- avoid overclaiming,
-- make review and adoption easier for technical peers.
-
-## 2) Context and Problem
-
-Integrators ask one practical question:
-
-> Is our signing and execution system compatible with the Zama SDK?
-
-This is hard to answer because real systems are heterogeneous:
+In practice, this is hard to answer with a single binary test because integration systems are heterogeneous:
 
 - EOA wallets,
-- MPC-backed wallets,
-- API-routed custody systems,
-- smart-account based systems.
+- MPC-backed signers,
+- API-routed custody stacks,
+- smart-account and ERC-1271 systems.
 
-A binary pass/fail model is not enough. A system can fail one Ethereum primitive (for example raw transaction signing) and still be compatible with the Zama flow that matters in practice.
+A system can fail one Ethereum primitive (for example raw transaction signing) while still being usable for relevant Zama flows.  
+This harness exists to produce **conservative, evidence-based compatibility claims** instead of assumptions.
 
-The harness exists to provide a conservative answer based on observed evidence, not assumptions.
+## 2) What Was Built
 
-## 3) Product Approach: The Compatibility Harness
+The harness is now adapter-based and capability-driven (not signer-only).
 
-The harness uses an adapter model instead of a signer-only model.
+Core product characteristics:
 
-Each adapter declares metadata and capabilities, then the harness runs checks across four layers:
+- adapter metadata + capabilities model,
+- runtime observation model (declared vs structural vs runtime vs final capability view),
+- canonical check registry and deterministic check IDs,
+- multi-status outcome model:
+  - `PASS`
+  - `FAIL`
+  - `UNTESTED`
+  - `UNSUPPORTED`
+  - `BLOCKED`
+  - `INCONCLUSIVE`
+- scoped claim system (no generic unsafe "compatible" statements),
+- deterministic confidence level per final claim (`HIGH`, `MEDIUM`, `LOW`),
+- explicit Zama write validation depth (`FULL`, `PARTIAL`, `UNTESTED`),
+- infrastructure-aware diagnostics (`errorCode`, root-cause category, recommendation),
+- CI-oriented validation gate command (`npm run validate`).
 
-1. Identity and verification
-2. Ethereum execution primitives
-3. Adapter-routed execution
-4. Zama SDK flows (authorization and write probe)
+## 3) Validation Surfaces (What Is Actually Tested)
 
-Each check is reported with a status:
+The harness validates, depending on adapter support:
 
-- `PASS`
-- `FAIL`
-- `UNTESTED`
-- `UNSUPPORTED`
-- `BLOCKED`
-- `INCONCLUSIVE`
+1. Adapter bootstrapping and address resolution.
+2. EIP-712 signing and recoverability checks.
+3. Optional ERC-1271 probe for smart-account declared profiles.
+4. Raw transaction execution (when exposed by adapter).
+5. Adapter-routed execution/read surface (with fallback read strategy when applicable).
+6. Zama authorization flow.
+7. Practical Zama write probe with submission/receipt/state verification signals.
 
-The final verdict is scoped. The harness avoids generic claims like "compatible" when evidence is partial or blocked.
+Synthetic infrastructure checks are also produced from observed failures:
 
-## 4) Integrator Journey: How to Validate Compatibility
+- environment configuration,
+- RPC connectivity,
+- relayer reachability,
+- registry/token discovery.
 
-This is the intended path for an external integrator.
+This prevents infra outages from being mislabeled as signer incompatibility.
 
-### Step 1: Setup
+## 4) Integrator Workflow (Current UX)
 
-```bash
-git clone <repo>
-cd examples/compatibility-harness
-npm install
-cp .env.example .env
-```
+The intended external workflow remains short and operational:
 
-### Step 2: Provide an adapter
+1. Clone repository and configure `.env`.
+2. Generate or provide adapter.
+3. Run local quality and preflight checks.
+4. Run full compatibility suite.
+5. Use final claim + confidence + write-depth to make a decision.
 
-Use either:
-
-- one of the provided examples (`crossmint`, `turnkey`, `openfort`), or
-- a custom adapter generated with:
-
-```bash
-npm run init:adapter
-```
-
-### Step 3: Run quick preflight checks
-
-```bash
-npm run adapter:check
-npm run doctor
-```
-
-These commands validate adapter shape and environment readiness before live validation.
-If they report `BLOCKED` or `INCONCLUSIVE`, fix environment/infrastructure first.
-
-### Step 4: Run compatibility validation
+Typical command sequence:
 
 ```bash
-npm test
-npm run validate
+npm run init:adapter -- --template eoa --output ./examples/my-provider/signer.ts
+SIGNER_MODULE=./examples/my-provider/signer.ts npm run adapter:check
+SIGNER_MODULE=./examples/my-provider/signer.ts npm run doctor
+SIGNER_MODULE=./examples/my-provider/signer.ts npm test
+SIGNER_MODULE=./examples/my-provider/signer.ts npm run validate
 ```
 
-`validate` returns CI-friendly exit codes tied to compatibility claims.
+Available scaffold templates now include:
 
-For deterministic local checks without live infra dependencies:
+- `generic`
+- `eoa`
+- `mpc`
+- `api-routed`
+- `turnkey`
+- `crossmint`
+- `openfort`
 
-```bash
-HARNESS_MOCK_MODE=1 npm test
-HARNESS_MOCK_MODE=1 npm run validate
-```
+Provider presets are intentional starter scaffolds based on examples in this repository; they are not production certification by themselves.
 
-### Step 5: Read the result by sections
+## 5) Command Surface for Real Examples
 
-Report sections are:
+The repository now exposes aligned command paths for real demo adapters:
 
-- Adapter Profile
-- Ethereum Compatibility
-- Adapter-Routed Execution
-- Zama SDK Compatibility
-- Infrastructure / Environment
-- Final Verdict
+- Crossmint:
+  - `npm run test:crossmint`
+  - `npm run doctor:crossmint`
+  - `npm run validate:crossmint`
+- Turnkey:
+  - `npm run test:turnkey`
+  - `npm run doctor:turnkey`
+  - `npm run validate:turnkey`
+- Openfort:
+  - `npm run test:openfort`
+  - `npm run doctor:openfort`
+  - `npm run validate:openfort`
 
-Interpretation rule:
+This gives comparable operational workflows across reference integrations.
 
-- if infra is failing, treat the run as blocked/inconclusive,
-- do not classify the adapter as incompatible unless compatibility checks actually fail.
+## 6) Report Contract and Machine Consumption
 
-### Real example: Turnkey
+Artifact contract is now schema `1.3.0` (parser accepts `1.2.0` and `1.3.0`).
 
-Turnkey can be validated with:
+Key machine fields:
 
-```bash
-npm run adapter:check:turnkey
-npm run doctor:turnkey
-npm run test:turnkey
-npm run validate:turnkey
-```
+- `claim.id`
+- `claim.verdictLabel`
+- `claim.confidence`
+- `zama.writeValidationDepth`
+- `checks.recorded[*].checkId`
+- `checks.recorded[*].status`
+- `checks.recorded[*].rootCauseCategory`
+- `checks.recorded[*].errorCode`
 
-Expected pattern for a healthy Turnkey run:
+This enables stable CI gating and partner diagnostics while preserving backward parse support during transition.
 
-- EIP-712 verification passes,
-- raw transaction signing may be `UNSUPPORTED` by design,
-- Zama authorization passes,
-- Zama write probe passes when infrastructure is healthy,
-- final verdict can still be positive for the validated Zama surface even without raw EOA tx signing.
+## 7) Practical Example (Turnkey)
 
-## 5) What the Harness Can Validate Today
+A healthy Turnkey run typically yields:
 
-Current strong value:
+- `EIP-712 Signing`: `PASS`
+- `EIP-712 Recoverability`: `PASS` (when observed signatures are recoverable)
+- `Raw Transaction Execution`: usually `UNSUPPORTED` by declared adapter model
+- `Zama Authorization Flow`: `PASS`
+- `Zama Write Flow`: `PASS` (if relayer/RPC/registry/environment are healthy)
 
-- checks that matter for real SDK integration decisions,
-- conservative claim generation from check evidence,
-- separation of compatibility failures from infra/environment failures,
-- repeatable local and CI usage (`test`, `validate`, deterministic mock mode).
+Potential final outcome:
 
-Concretely, depending on adapter support, it can validate:
+- `Final: ZAMA COMPATIBLE FOR AUTHORIZATION AND WRITE FLOWS`
+- `Write Validation Depth: FULL`
+- `Confidence: HIGH`
 
-- address resolution,
-- EIP-712 signature flow and recoverability,
-- raw tx signing/execution (when supported),
-- adapter-routed writes and reads,
-- Zama authorization flow (`sdk.allow()`),
-- practical write-path probe with on-chain verification.
+If infra is degraded, final status should move to `BLOCKED`/`INCONCLUSIVE` classes rather than incorrectly marking adapter incompatibility.
 
-Typical claim outcomes include:
+## 8) What This Harness Can and Cannot Claim
 
-- authorization and write compatible,
-- authorization compatible with write flow not validated/supported,
-- inconclusive because infrastructure or environment blocked execution.
+What it can claim with good confidence:
 
-## 6) Current Limits and Non-Goals
+- scoped compatibility for explicitly validated Zama surfaces,
+- evidence-backed incompatibility for observed signer/adapter failures,
+- infra vs compatibility separation for triage.
 
-Current limits:
+What it does not claim:
 
-- not a global or final certification authority,
-- not exhaustive across every SDK path and every network condition,
-- mainnet profile is available but still marked experimental,
-- smart-account / ERC-1271 coverage is useful but not a full certification matrix,
-- it does not validate embedded frontend session/auth UX (for example provider-specific browser SDK flows).
+- universal, permanent compatibility certification,
+- exhaustive coverage of all SDK and network/runtime edge cases,
+- frontend UX correctness for embedded auth/session stacks.
 
-Non-goal at this stage:
+## 9) Next Iteration Options
 
-- claiming permanent, universal compatibility from a single run.
+Most useful next product increments:
 
-## 7) Open Questions and Next Iteration Options
+1. Expand archetype-specific policy presets for `validate` (EOA, API-routed custody, smart-account profiles).
+2. Add stricter live-run governance and artifact retention conventions for partner pilot programs.
+3. Increase coverage depth for smart-account specific paths (broader ERC-1271/AA scenario matrix).
+4. Add stronger adapter contract tests for generated templates to keep scaffolds aligned with production examples.
 
-Open questions:
+## 10) Conclusion
 
-1. What minimum evidence bundle should define internal "certified for partner pilot"?
-2. Which live checks should eventually become release-blocking in CI?
-3. How far should smart-account native validation go in this harness versus separate tooling?
+The harness is now a serious compatibility diagnostics tool, not a basic test script collection.
 
-Practical next options:
+It provides:
 
-1. Add policy presets per integration archetype (EOA, API-routed custody, smart account).
-2. Harden live-run governance (stable env, artifact retention, clearer escalation rules).
-3. Expand controlled write/read scenarios to reduce residual blind spots.
+- conservative, claim-based compatibility outputs,
+- explicit confidence and write-depth semantics,
+- better DX for external integrators (scaffold + doctor + validate),
+- machine-consumable artifacts suitable for CI and partner-facing technical reviews.
 
-## 8) Conclusion
-
-The Compatibility Harness is now a serious diagnostic product for guided partner validation.
-
-It gives actionable and conservative answers to the real integration question: what is proven compatible today, what is blocked by infrastructure, and what remains unvalidated.
-
-This makes it suitable for internal technical review and partner pilot workflows, while keeping scope and claims explicit.
+Current state is suitable for controlled partner pilots and internal technical review cycles, with clear boundaries on what remains outside certification scope.
