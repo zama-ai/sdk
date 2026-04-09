@@ -75,6 +75,12 @@ The harness now models compatibility using:
 - structured statuses beyond pass/fail,
 - scoped claims tied to observed evidence.
 
+Important modeling rule:
+
+- architecture class alone does not determine compatibility.
+- an MPC or API-routed adapter can still be fully compatible if authorization, recoverability requirements (for the current flow), and write-path evidence are satisfied.
+- raw transaction signing may remain `UNSUPPORTED` without automatically implying incompatibility.
+
 ## 4) What Was Implemented
 
 ### 4.1 Architecture and Validation Engine
@@ -197,6 +203,7 @@ A healthy run can still be **fully compatible** even with raw tx unsupported, be
 
 - raw EOA-style tx signing is not required for every integration architecture,
 - authorization + recoverability + write probe provide stronger relevant evidence.
+- this applies equally to API-routed and MPC-backed integrations when exposed capabilities satisfy harness checks.
 
 Typical healthy envelope:
 
