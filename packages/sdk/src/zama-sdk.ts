@@ -288,22 +288,6 @@ export class ZamaSDK {
   }
 
   /**
-   * Pre-authorize FHE credentials for one or more contract addresses.
-   * A single wallet signature covers all addresses, so subsequent decrypt
-   * operations on any of these contracts reuse cached credentials.
-   *
-   * @param contractAddresses - Contract addresses to authorize.
-   *
-   * @example
-   * ```ts
-   * await sdk.allow("0xContractA", "0xContractB");
-   * ```
-   */
-  async allow(...contractAddresses: Address[]): Promise<void> {
-    await this.credentials.allow(...contractAddresses);
-  }
-
-  /**
    * Decrypt one or more FHE handles. Results are cached — repeated calls
    * for the same handle skip the relayer round-trip.
    *
@@ -388,31 +372,6 @@ export class ZamaSDK {
   }
 
   /**
-   * Revoke the session signature for the current signer.
-   * The next decrypt operation will require a fresh wallet signature.
-   *
-   * @param contractAddresses - Optional addresses included in the
-   *   `credentials:revoked` event for observability.
-   *
-   * @example
-   * ```ts
-   * wallet.on("disconnect", () => sdk.revoke());
-   * await sdk.revoke("0xContractA", "0xContractB");
-   * ```
-   */
-  async revoke(...contractAddresses: Address[]): Promise<void> {
-    await this.credentials.revoke(...contractAddresses);
-    let address: Address;
-    try {
-      address = await this.signer.getAddress();
-    } catch {
-      // Signer not connected — no cached entries to clear
-      return;
-    }
-    await this.cache.clearForRequester(address);
-  }
-
-  /**
    * Revoke the session signature for the current signer without requiring
    * contract addresses. Uses the tracked identity when available (safe during
    * account switches), falling back to querying the signer directly.
@@ -429,14 +388,6 @@ export class ZamaSDK {
     const storeKey = await CredentialsManager.computeStoreKey(address, chainId);
     await this.credentials.revokeByKey(storeKey);
     await this.cache.clearForRequester(address);
-  }
-
-  /**
-   * Whether a session signature is currently cached for the connected wallet.
-   * Use this to check if decrypt operations can proceed without a wallet prompt.
-   */
-  async isAllowed(...contractAddresses: Address[]): Promise<boolean> {
-    return this.credentials.isAllowed(...contractAddresses);
   }
 
   /**
