@@ -12,11 +12,7 @@ export { ZamaProvider, useZamaSDK, type ZamaProviderProps } from "./provider";
 
 // SDK method hooks
 export { useEncrypt } from "./relayer/use-encrypt";
-export {
-  useUserDecrypt,
-  type UseUserDecryptConfig,
-  type UseUserDecryptResult,
-} from "./relayer/use-user-decrypt";
+export { useUserDecrypt, type UseUserDecryptResult } from "./relayer/use-user-decrypt";
 
 export { usePublicDecrypt } from "./relayer/use-public-decrypt";
 export { useGenerateKeypair } from "./relayer/use-generate-keypair";

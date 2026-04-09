@@ -1475,9 +1475,6 @@ export function useUserDecrypt(config: UserDecryptQueryConfig, options?: {
     enabled?: boolean;
 }): _$_tanstack_react_query0.UseQueryResult<DecryptResult, Error>;
 
-// @public @deprecated (undocumented)
-export type UseUserDecryptConfig = UserDecryptQueryConfig;
-
 // @public
 export type UseUserDecryptResult = ReturnType<typeof useUserDecrypt>;
 
