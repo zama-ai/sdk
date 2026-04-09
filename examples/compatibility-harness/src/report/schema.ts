@@ -8,7 +8,8 @@ import type { ClaimResolution } from "../verdict/types.js";
 import type { CanonicalCheckId } from "./check-registry.js";
 
 export const REPORT_KIND = "zama-compatibility-report" as const;
-export const REPORT_SCHEMA_VERSION = "1.2.0" as const;
+export const REPORT_SCHEMA_VERSION = "1.3.0" as const;
+export const SUPPORTED_REPORT_SCHEMA_VERSIONS = ["1.2.0", REPORT_SCHEMA_VERSION] as const;
 
 export type ReportSection = "adapter" | "ethereum" | "execution" | "zama" | "environment";
 export type InfraRootCause = Extract<

@@ -16,6 +16,8 @@ describe("golden report fixtures", () => {
   it("keeps full-compatibility fixture parseable and gate-pass", () => {
     const report = parseReportArtifact(readFixture("eoa-full-compatible.report.json"));
     expect(report.claim.id).toBe("ZAMA_AUTHORIZATION_AND_WRITE_COMPATIBLE");
+    expect(report.claim.confidence).toBe("HIGH");
+    expect(report.zama?.writeValidationDepth).toBe("FULL");
     expect(resolveValidationGate(report.claim.id, "AUTHORIZATION")).toMatchObject({
       status: "PASS",
       exitCode: 0,
@@ -29,6 +31,8 @@ describe("golden report fixtures", () => {
   it("keeps blocked fixture parseable and gate-inconclusive", () => {
     const report = parseReportArtifact(readFixture("turnkey-env-blocked.report.json"));
     expect(report.claim.id).toBe("INCONCLUSIVE_AUTHORIZATION_BLOCKED");
+    expect(report.claim.confidence).toBe("LOW");
+    expect(report.zama?.writeValidationDepth).toBe("UNTESTED");
     expect(resolveValidationGate(report.claim.id, "AUTHORIZATION")).toMatchObject({
       status: "INCONCLUSIVE",
       exitCode: 30,

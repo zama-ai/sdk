@@ -1,6 +1,6 @@
 {
   "kind": "zama-compatibility-report",
-  "schemaVersion": "1.2.0",
+  "schemaVersion": "1.3.0",
   "generatedAt": "2026-04-08T00:00:00.000Z",
   "runId": "golden-turnkey-env-blocked",
   "adapterProfile": {
@@ -20,6 +20,28 @@
       "transactionReceiptTracking": "SUPPORTED",
       "zamaAuthorizationFlow": "SUPPORTED",
       "zamaWriteFlow": "SUPPORTED"
+    },
+    "observedStructuralCapabilities": {
+      "addressResolution": "SUPPORTED",
+      "eip712Signing": "SUPPORTED",
+      "recoverableEcdsa": "UNKNOWN",
+      "rawTransactionSigning": "UNSUPPORTED",
+      "contractExecution": "SUPPORTED",
+      "contractReads": "SUPPORTED",
+      "transactionReceiptTracking": "SUPPORTED",
+      "zamaAuthorizationFlow": "SUPPORTED",
+      "zamaWriteFlow": "SUPPORTED"
+    },
+    "observedRuntimeCapabilities": {
+      "addressResolution": "UNKNOWN",
+      "eip712Signing": "UNKNOWN",
+      "recoverableEcdsa": "UNKNOWN",
+      "rawTransactionSigning": "UNKNOWN",
+      "contractExecution": "UNKNOWN",
+      "contractReads": "UNKNOWN",
+      "transactionReceiptTracking": "UNKNOWN",
+      "zamaAuthorizationFlow": "UNKNOWN",
+      "zamaWriteFlow": "UNKNOWN"
     },
     "observedCapabilities": {
       "addressResolution": "SUPPORTED",
@@ -102,9 +124,13 @@
       "ENVIRONMENT": 1
     }
   },
+  "zama": {
+    "writeValidationDepth": "UNTESTED"
+  },
   "claim": {
     "id": "INCONCLUSIVE_AUTHORIZATION_BLOCKED",
     "verdictLabel": "INCONCLUSIVE — AUTHORIZATION FLOW BLOCKED BY ENVIRONMENT OR INFRASTRUCTURE",
+    "confidence": "LOW",
     "rationale": [
       "Authorization validation was blocked by environment or infrastructure conditions."
     ],

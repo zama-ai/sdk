@@ -17,9 +17,13 @@ describe("report artifact compatibility contract", () => {
     expect(() => parseReportArtifact(readFixture("turnkey-env-blocked.report.json"))).not.toThrow();
   });
 
+  it("accepts legacy 1.2 fixtures during transition", () => {
+    expect(() => parseReportArtifact(readFixture("legacy-schema-1.2.report.json"))).not.toThrow();
+  });
+
   it("rejects legacy schema versions with explicit error", () => {
     expect(() => parseReportArtifact(readFixture("legacy-schema-1.1.report.json"))).toThrow(
-      'Unsupported schemaVersion "1.1.0". Expected "1.2.0".',
+      'Unsupported schemaVersion "1.1.0". Supported versions: 1.2.0, 1.3.0.',
     );
   });
 
@@ -33,5 +37,25 @@ describe("report artifact compatibility contract", () => {
     expect(() =>
       parseReportArtifact(readFixture("malformed-claim-requirement-mismatch.report.json")),
     ).toThrow('requirement "Zama Authorization Flow" not satisfied');
+  });
+
+  it("rejects schema 1.3 artifacts missing confidence/write-depth fields", () => {
+    const parsed = JSON.parse(readFixture("eoa-full-compatible.report.json")) as {
+      claim: Record<string, unknown>;
+      zama: Record<string, unknown>;
+    };
+    delete parsed.claim.confidence;
+    expect(() => parseReportArtifact(JSON.stringify(parsed))).toThrow(
+      "Invalid report.claim.confidence: expected non-empty string.",
+    );
+
+    const parsedWithoutDepth = JSON.parse(readFixture("eoa-full-compatible.report.json")) as {
+      claim: Record<string, unknown>;
+      zama: Record<string, unknown>;
+    };
+    delete parsedWithoutDepth.zama.writeValidationDepth;
+    expect(() => parseReportArtifact(JSON.stringify(parsedWithoutDepth))).toThrow(
+      "Invalid report.zama.writeValidationDepth: expected non-empty string.",
+    );
   });
 });

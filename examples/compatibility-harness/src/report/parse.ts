@@ -1,6 +1,7 @@
 import {
   REPORT_KIND,
   REPORT_SCHEMA_VERSION,
+  SUPPORTED_REPORT_SCHEMA_VERSIONS,
   type ReportArtifact,
   type ReportSection,
 } from "./schema.js";
@@ -16,6 +17,8 @@ const VALID_STATUSES = new Set<ValidationStatus>([
   "BLOCKED",
   "INCONCLUSIVE",
 ]);
+const VALID_CONFIDENCE = new Set(["HIGH", "MEDIUM", "LOW"]);
+const VALID_WRITE_DEPTH = new Set(["FULL", "PARTIAL", "UNTESTED"]);
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -81,9 +84,14 @@ export function parseReportArtifact(raw: string): ReportArtifact {
   }
 
   const schemaVersion = assertStringField(object, "schemaVersion", "report");
-  if (schemaVersion !== REPORT_SCHEMA_VERSION) {
+  if (
+    !SUPPORTED_REPORT_SCHEMA_VERSIONS.includes(
+      schemaVersion as (typeof SUPPORTED_REPORT_SCHEMA_VERSIONS)[number],
+    )
+  ) {
+    const supported = SUPPORTED_REPORT_SCHEMA_VERSIONS.join(", ");
     throw new Error(
-      `Unsupported schemaVersion "${schemaVersion}". Expected "${REPORT_SCHEMA_VERSION}".`,
+      `Unsupported schemaVersion "${schemaVersion}". Supported versions: ${supported}.`,
     );
   }
 
@@ -110,6 +118,12 @@ export function parseReportArtifact(raw: string): ReportArtifact {
   const evidence = asRecord(claim.evidence);
   if (!evidence) {
     throw new Error("Invalid report.claim.evidence: expected object.");
+  }
+  if (schemaVersion === REPORT_SCHEMA_VERSION) {
+    const confidence = assertStringField(claim, "confidence", "report.claim");
+    if (!VALID_CONFIDENCE.has(confidence)) {
+      throw new Error(`Invalid report.claim.confidence: unsupported value "${confidence}".`);
+    }
   }
   const evidenceDetails = claim.evidenceDetails;
   if (evidenceDetails !== undefined) {
@@ -151,6 +165,19 @@ export function parseReportArtifact(raw: string): ReportArtifact {
   const blockers = infrastructure.blockers;
   if (!asRecord(blockers)) {
     throw new Error("Invalid report.infrastructure.blockers: expected object.");
+  }
+
+  if (schemaVersion === REPORT_SCHEMA_VERSION) {
+    const zama = asRecord(object.zama);
+    if (!zama) {
+      throw new Error("Invalid report.zama: expected object for schema 1.3.0.");
+    }
+    const writeValidationDepth = assertStringField(zama, "writeValidationDepth", "report.zama");
+    if (!VALID_WRITE_DEPTH.has(writeValidationDepth)) {
+      throw new Error(
+        `Invalid report.zama.writeValidationDepth: unsupported value "${writeValidationDepth}".`,
+      );
+    }
   }
 
   assertClaimConsistency(
