@@ -1,7 +1,7 @@
 import { act } from "@testing-library/react";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { describe, expect, test, vi } from "../../test-fixtures";
-import { expectCacheRemoved } from "../../test-helpers";
+import { expectCacheInvalidated } from "../../test-helpers";
 import {
   OTHER_TOKEN,
   TOKEN,
@@ -17,13 +17,13 @@ describe("useRevoke", () => {
     expectDefaultMutationState(state);
   });
 
-  test("cache: removes isAllowed query after revoke", async ({ renderWithProviders }) => {
+  test("cache: invalidates isAllowed query after revoke", async ({ renderWithProviders }) => {
     const { result, queryClient } = renderWithProviders(() => useRevoke());
     queryClient.setQueryData(zamaQueryKeys.isAllowed.all, true);
 
     await act(() => result.current.mutateAsync([TOKEN, OTHER_TOKEN]));
 
-    expectCacheRemoved(queryClient, zamaQueryKeys.isAllowed.all);
+    expectCacheInvalidated(queryClient, zamaQueryKeys.isAllowed.all);
   });
 
   test("behavior: forwards onSuccess callback", async ({ renderWithProviders }) => {
@@ -37,6 +37,6 @@ describe("useRevoke", () => {
     expect(onSuccess).toHaveBeenCalledOnce();
     expect(onSuccess.mock.calls[0]?.[0]).toBeUndefined();
     expect(onSuccess.mock.calls[0]?.[1]).toEqual([TOKEN, OTHER_TOKEN]);
-    expectCacheRemoved(queryClient, zamaQueryKeys.isAllowed.all);
+    expectCacheInvalidated(queryClient, zamaQueryKeys.isAllowed.all);
   });
 });
