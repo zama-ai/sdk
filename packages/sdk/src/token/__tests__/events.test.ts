@@ -1053,7 +1053,7 @@ describe("CredentialsManager event emissions", () => {
       onEvent,
     });
 
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
 
     const types = events.map((e) => e.type);
     expect(types).toContain(ZamaSDKEvents.CredentialsLoading);
@@ -1074,11 +1074,11 @@ describe("CredentialsManager event emissions", () => {
       onEvent,
     });
 
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
     events.length = 0; // reset
 
     // Second call should hit cache
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
 
     const types = events.map((e) => e.type);
     expect(types).toContain(ZamaSDKEvents.CredentialsLoading);
@@ -1103,7 +1103,7 @@ describe("CredentialsManager event emissions", () => {
       onEvent,
     });
 
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
 
     // Tamper stored data to simulate expiration
     const storeKey = await CredentialsManager.computeStoreKey(
@@ -1126,7 +1126,7 @@ describe("CredentialsManager event emissions", () => {
       keypairTTL: 86400,
       onEvent,
     });
-    await manager2.allow(TOKEN_A);
+    await manager2.allow([TOKEN_A]);
 
     const types = events.map((e) => e.type);
     expect(types).toContain(ZamaSDKEvents.CredentialsExpired);
@@ -1151,7 +1151,7 @@ describe("CredentialsManager event emissions", () => {
       onEvent,
     });
 
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
 
     const credEvents = events.filter(
       (e) =>
@@ -1182,7 +1182,7 @@ describe("CredentialsManager event emissions", () => {
       onEvent,
     });
 
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
 
     for (const event of events) {
       expect(event.timestamp).toBeGreaterThan(0);
@@ -1203,7 +1203,7 @@ describe("CredentialsManager event emissions", () => {
       keypairTTL: 86400,
     });
 
-    const creds = await manager.allow(TOKEN_A);
+    const creds = await manager.allow([TOKEN_A]);
     expect(creds.publicKey).toBe("0xpub");
   });
 });

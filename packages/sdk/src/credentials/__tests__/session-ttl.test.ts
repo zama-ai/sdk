@@ -29,12 +29,12 @@ describe("Session TTL", () => {
       sessionStorage,
       keypairTTL: 604800,
     });
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
     expect(signer.signTypedData).toHaveBeenCalledOnce();
 
     // Advance 6 days — within default 30-day TTL and keypairTTL (7 days)
     vi.advanceTimersByTime(6 * 86400 * 1000);
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
     expect(signer.signTypedData).toHaveBeenCalledOnce(); // no re-sign
   });
 
@@ -54,12 +54,12 @@ describe("Session TTL", () => {
       keypairTTL: 604800,
       sessionTTL: 3600,
     });
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
     expect(signer.signTypedData).toHaveBeenCalledOnce();
 
     // Advance 30 minutes — still valid
     vi.advanceTimersByTime(30 * 60 * 1000);
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
     expect(signer.signTypedData).toHaveBeenCalledOnce(); // no re-sign
   });
 
@@ -82,12 +82,12 @@ describe("Session TTL", () => {
       sessionTTL: 3600,
       onEvent: (e) => emitted.push(e),
     });
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
     expect(signer.signTypedData).toHaveBeenCalledOnce();
 
     // Advance past TTL
     vi.advanceTimersByTime(3601 * 1000);
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
     expect(signer.signTypedData).toHaveBeenCalledTimes(2); // re-signed
 
     // SessionExpired event should have fired
@@ -112,13 +112,13 @@ describe("Session TTL", () => {
       keypairTTL: 604800,
       sessionTTL: 0,
     });
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
     expect(signer.signTypedData).toHaveBeenCalledOnce();
 
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
     expect(signer.signTypedData).toHaveBeenCalledTimes(2);
 
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
     expect(signer.signTypedData).toHaveBeenCalledTimes(3);
   });
 
@@ -138,14 +138,14 @@ describe("Session TTL", () => {
       keypairTTL: 604800,
       sessionTTL: "infinite",
     });
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
     expect(signer.signTypedData).toHaveBeenCalledOnce();
 
     // Advance 3 days — well within keypairTTL (7 days) but far beyond default sessionTTL (30 days won't matter here)
     // The key assertion: the session is NOT re-signed because sessionTTL is "infinite".
     vi.setSystemTime(new Date("2026-01-04T00:00:00Z"));
 
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
     expect(signer.signTypedData).toHaveBeenCalledOnce();
   });
 
@@ -165,7 +165,7 @@ describe("Session TTL", () => {
       keypairTTL: 604800,
       sessionTTL: 3600,
     });
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
 
     const address = await signer.getAddress();
     const chainId = await signer.getChainId();
@@ -175,7 +175,7 @@ describe("Session TTL", () => {
 
     // Expire the session
     vi.advanceTimersByTime(3601 * 1000);
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
 
     // Persistent storage should still have the FHE keypair
     const storedAfter = await storage.get(storeKey);
@@ -200,15 +200,15 @@ describe("Session TTL", () => {
       keypairTTL: 604800,
       sessionTTL: 3600,
     });
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
 
     // Disconnect (revoke) before TTL expires
     vi.advanceTimersByTime(10 * 60 * 1000); // 10 minutes
-    await manager.revoke();
-    expect(await manager.isAllowed(TOKEN_A)).toBe(false);
+    await manager.revoke([]);
+    expect(await manager.isAllowed([TOKEN_A])).toBe(false);
 
     // Next allow should re-sign (not regenerate)
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
     expect(signer.signTypedData).toHaveBeenCalledTimes(2);
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
   });
@@ -229,11 +229,11 @@ describe("Session TTL", () => {
       keypairTTL: 604800,
       sessionTTL: 3600,
     });
-    await manager.allow(TOKEN_A);
-    expect(await manager.isAllowed(TOKEN_A)).toBe(true);
+    await manager.allow([TOKEN_A]);
+    expect(await manager.isAllowed([TOKEN_A])).toBe(true);
 
     vi.advanceTimersByTime(3601 * 1000);
-    expect(await manager.isAllowed(TOKEN_A)).toBe(false);
+    expect(await manager.isAllowed([TOKEN_A])).toBe(false);
   });
 
   it("config change: old sessions use their recorded TTL", async ({
@@ -254,7 +254,7 @@ describe("Session TTL", () => {
       keypairTTL: 604800,
       sessionTTL: 3600,
     });
-    await manager1.allow(TOKEN_A);
+    await manager1.allow([TOKEN_A]);
 
     // Advance 30 minutes
     vi.advanceTimersByTime(30 * 60 * 1000);
@@ -270,7 +270,7 @@ describe("Session TTL", () => {
     });
 
     // Old session should still be valid (uses its recorded 3600s TTL)
-    await manager2.allow(TOKEN_A);
+    await manager2.allow([TOKEN_A]);
     expect(signer.signTypedData).toHaveBeenCalledOnce(); // no re-sign
   });
 
@@ -291,7 +291,7 @@ describe("Session TTL", () => {
       keypairTTL: 604800,
       sessionTTL: 3600,
     });
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
 
     // Switch chain — new signer returns different chainId
     const signer2 = createMockSigner({
@@ -308,12 +308,12 @@ describe("Session TTL", () => {
     });
 
     // Different chain — should generate new keypair
-    await manager2.allow(TOKEN_A);
+    await manager2.allow([TOKEN_A]);
     expect(relayer.generateKeypair).toHaveBeenCalledTimes(2);
 
     // Original chain session should still be valid
     vi.advanceTimersByTime(30 * 60 * 1000);
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
     expect(signer.signTypedData).toHaveBeenCalledOnce(); // original signer, no re-sign
   });
 });

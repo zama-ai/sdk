@@ -333,7 +333,7 @@ export class ZamaSDK {
 
     // Get unique contract addresses and acquire credentials
     const contractAddresses = [...new Set(uncached.map((h) => h.contractAddress))];
-    const creds = await this.credentials.allow(...contractAddresses);
+    const creds = await this.credentials.allow(contractAddresses);
     onCredentialsReady();
 
     // Group uncached handles by contract address
@@ -418,7 +418,7 @@ export class ZamaSDK {
    * ```ts
    * {
    *   using sdk = new ZamaSDK({ relayer, signer, storage });
-   *   await sdk.credentials.allow(cUSDT);
+   *   await sdk.credentials.allow([cUSDT]);
    *   const balance = await sdk.createReadonlyToken(cUSDT).balanceOf();
    * } // sdk.terminate() called automatically here
    * ```

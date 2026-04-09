@@ -77,7 +77,7 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     expect(balances.get(TOKEN_A)).toBe(100n);
     expect(balances.get(TOKEN_B)).toBe(200n);
     expect(allowMock).toHaveBeenCalledOnce();
-    expect(allowMock).toHaveBeenCalledWith(DELEGATOR, TOKEN_A, TOKEN_B);
+    expect(allowMock).toHaveBeenCalledWith(DELEGATOR, [TOKEN_A, TOKEN_B]);
     expect(relayer.delegatedUserDecrypt).toHaveBeenCalledTimes(2);
   });
 

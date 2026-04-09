@@ -57,7 +57,7 @@ describe("DelegatedCredentialsManager", () => {
   test("allow() generates fresh credentials for a delegator", async ({ relayer }) => {
     const { manager, signer } = createManager(relayer);
 
-    const creds = await manager.allow(DELEGATOR, TOKEN_A);
+    const creds = await manager.allow(DELEGATOR, [TOKEN_A]);
 
     expect(creds.delegatorAddress).toBe(DELEGATOR);
     expect(creds.delegateAddress).toBe(DELEGATE);
@@ -71,8 +71,8 @@ describe("DelegatedCredentialsManager", () => {
   test("allow() returns cached credentials on second call", async ({ relayer }) => {
     const { manager } = createManager(relayer);
 
-    const creds1 = await manager.allow(DELEGATOR, TOKEN_A);
-    const creds2 = await manager.allow(DELEGATOR, TOKEN_A);
+    const creds1 = await manager.allow(DELEGATOR, [TOKEN_A]);
+    const creds2 = await manager.allow(DELEGATOR, [TOKEN_A]);
 
     expect(creds1.publicKey).toBe(creds2.publicKey);
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
@@ -81,8 +81,8 @@ describe("DelegatedCredentialsManager", () => {
   test("allow() extends contract set for new tokens", async ({ relayer }) => {
     const { manager, signer } = createManager(relayer);
 
-    await manager.allow(DELEGATOR, TOKEN_A);
-    const creds = await manager.allow(DELEGATOR, TOKEN_A, TOKEN_B);
+    await manager.allow(DELEGATOR, [TOKEN_A]);
+    const creds = await manager.allow(DELEGATOR, [TOKEN_A, TOKEN_B]);
 
     expect(creds.contractAddresses).toContain(TOKEN_A);
     expect(creds.contractAddresses).toContain(TOKEN_B);
@@ -94,8 +94,8 @@ describe("DelegatedCredentialsManager", () => {
     const OTHER_DELEGATOR = "0xdDdDddDdDdddDDddDDddDDDDdDdDDdDDdDDDDDDd" as Address;
     const { manager } = createManager(relayer);
 
-    await manager.allow(DELEGATOR, TOKEN_A);
-    await manager.allow(OTHER_DELEGATOR, TOKEN_A);
+    await manager.allow(DELEGATOR, [TOKEN_A]);
+    await manager.allow(OTHER_DELEGATOR, [TOKEN_A]);
 
     expect(relayer.generateKeypair).toHaveBeenCalledTimes(2);
   });
@@ -104,9 +104,9 @@ describe("DelegatedCredentialsManager", () => {
   test("revoke() clears session, next allow() re-signs", async ({ relayer }) => {
     const { manager, signer } = createManager(relayer);
 
-    await manager.allow(DELEGATOR, TOKEN_A);
+    await manager.allow(DELEGATOR, [TOKEN_A]);
     await manager.revoke(DELEGATOR);
-    await manager.allow(DELEGATOR, TOKEN_A);
+    await manager.allow(DELEGATOR, [TOKEN_A]);
 
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
     expect(signer.signTypedData).toHaveBeenCalledTimes(2);
@@ -115,19 +115,19 @@ describe("DelegatedCredentialsManager", () => {
   test("isAllowed() returns true when session exists", async ({ relayer }) => {
     const { manager } = createManager(relayer);
 
-    expect(await manager.isAllowed(DELEGATOR)).toBe(false);
-    await manager.allow(DELEGATOR, TOKEN_A);
-    expect(await manager.isAllowed(DELEGATOR)).toBe(true);
+    expect(await manager.isAllowed(DELEGATOR, [])).toBe(false);
+    await manager.allow(DELEGATOR, [TOKEN_A]);
+    expect(await manager.isAllowed(DELEGATOR, [])).toBe(true);
     await manager.revoke(DELEGATOR);
-    expect(await manager.isAllowed(DELEGATOR)).toBe(false);
+    expect(await manager.isAllowed(DELEGATOR, [])).toBe(false);
   });
 
   test("clear() removes all stored credentials", async ({ relayer }) => {
     const { manager } = createManager(relayer);
 
-    await manager.allow(DELEGATOR, TOKEN_A);
+    await manager.allow(DELEGATOR, [TOKEN_A]);
     await manager.clear(DELEGATOR);
-    await manager.allow(DELEGATOR, TOKEN_A);
+    await manager.allow(DELEGATOR, [TOKEN_A]);
 
     expect(relayer.generateKeypair).toHaveBeenCalledTimes(2);
   });
@@ -136,25 +136,25 @@ describe("DelegatedCredentialsManager", () => {
     vi.useFakeTimers();
     const { manager } = createManager(relayer, { sessionTTL: "infinite" });
 
-    await manager.allow(DELEGATOR, TOKEN_A);
+    await manager.allow(DELEGATOR, [TOKEN_A]);
 
     // Advance time by 10 years
     vi.advanceTimersByTime(10 * 365 * 86400 * 1000);
 
     // Session should still be valid
-    expect(await manager.isAllowed(DELEGATOR)).toBe(true);
+    expect(await manager.isAllowed(DELEGATOR, [])).toBe(true);
   });
 
   test("sessionTTL: 0 means every operation triggers signing", async ({ relayer }) => {
     const { manager, signer } = createManager(relayer, { sessionTTL: 0 });
 
-    await manager.allow(DELEGATOR, TOKEN_A);
+    await manager.allow(DELEGATOR, [TOKEN_A]);
     expect(signer.signTypedData).toHaveBeenCalledOnce();
 
-    await manager.allow(DELEGATOR, TOKEN_A);
+    await manager.allow(DELEGATOR, [TOKEN_A]);
     expect(signer.signTypedData).toHaveBeenCalledTimes(2);
 
-    await manager.allow(DELEGATOR, TOKEN_A);
+    await manager.allow(DELEGATOR, [TOKEN_A]);
     expect(signer.signTypedData).toHaveBeenCalledTimes(3);
   });
 });

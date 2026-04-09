@@ -23,7 +23,7 @@ describe("CredentialsManager", () => {
   it("generates new credentials on first call", async ({ relayer, signer, credentialManager }) => {
     setupMocks(relayer, signer);
 
-    const creds = await credentialManager.allow(TOKEN_A);
+    const creds = await credentialManager.allow([TOKEN_A]);
 
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
     expect(relayer.createEIP712).toHaveBeenCalledOnce();
@@ -40,8 +40,8 @@ describe("CredentialsManager", () => {
   }) => {
     setupMocks(relayer, signer);
 
-    await credentialManager.allow(TOKEN_A);
-    await credentialManager.allow(TOKEN_A);
+    await credentialManager.allow([TOKEN_A]);
+    await credentialManager.allow([TOKEN_A]);
 
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
   });
@@ -53,8 +53,8 @@ describe("CredentialsManager", () => {
   }) => {
     setupMocks(relayer, signer);
 
-    await credentialManager.allow(TOKEN_A);
-    const creds = await credentialManager.allow(TOKEN_A, TOKEN_B);
+    await credentialManager.allow([TOKEN_A]);
+    const creds = await credentialManager.allow([TOKEN_A, TOKEN_B]);
 
     // Keypair is reused — only one generation
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
@@ -75,7 +75,7 @@ describe("CredentialsManager", () => {
     setupMocks(relayer, signer);
     const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
 
-    await credentialManager.allow(TOKEN_A);
+    await credentialManager.allow([TOKEN_A]);
 
     const stored = await storage.get(storeKey);
     expect(stored).not.toBeNull();
@@ -93,7 +93,7 @@ describe("CredentialsManager", () => {
   }) => {
     setupMocks(relayer, signer);
 
-    await credentialManager.allow(TOKEN_A);
+    await credentialManager.allow([TOKEN_A]);
 
     const rawKey = await signer.getAddress();
     const stored = await storage.get(rawKey);
@@ -115,7 +115,7 @@ describe("CredentialsManager", () => {
       keypairTTL: 86400,
     });
 
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
 
     // Simulate page reload: session signatures are lost
     const manager2 = new CredentialsManager({
@@ -125,7 +125,7 @@ describe("CredentialsManager", () => {
       sessionStorage: createMockStorage(),
       keypairTTL: 604800,
     });
-    await manager2.allow(TOKEN_A);
+    await manager2.allow([TOKEN_A]);
 
     // Keypair should NOT be regenerated — only re-signed
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
@@ -150,7 +150,7 @@ describe("CredentialsManager", () => {
     const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
 
     // Create credentials to get valid encrypted data
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
 
     // Read stored data and strip the signature field (simulate new format)
     const stored = await storage.get(storeKey);
@@ -167,7 +167,7 @@ describe("CredentialsManager", () => {
       sessionStorage: createMockStorage(),
       keypairTTL: 86400,
     });
-    const creds2 = await manager2.allow(TOKEN_A);
+    const creds2 = await manager2.allow([TOKEN_A]);
 
     // Should have re-signed (1 original + 1 re-sign)
     expect(signer.signTypedData).toHaveBeenCalledTimes(2);
@@ -187,7 +187,7 @@ describe("CredentialsManager", () => {
     const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
 
     // First call creates credentials — which get stored under the hashed key
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
 
     // Tamper the stored data to simulate expiration
@@ -204,7 +204,7 @@ describe("CredentialsManager", () => {
       sessionStorage: createMockStorage(),
       keypairTTL: 604800,
     });
-    const creds = await manager2.allow(TOKEN_A);
+    const creds = await manager2.allow([TOKEN_A]);
 
     expect(relayer.generateKeypair).toHaveBeenCalledTimes(2);
     expect(creds.publicKey).toBe("0xpub123");
@@ -214,7 +214,7 @@ describe("CredentialsManager", () => {
     setupMocks(relayer, signer);
     const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
 
-    await credentialManager.allow(TOKEN_A);
+    await credentialManager.allow([TOKEN_A]);
     await credentialManager.clear();
 
     const stored = await storage.get(storeKey);
@@ -229,14 +229,14 @@ describe("CredentialsManager", () => {
     setupMocks(relayer, signer);
     vi.mocked(signer.signTypedData).mockRejectedValue(new Error("User rejected the request"));
 
-    await expect(credentialManager.allow(TOKEN_A)).rejects.toThrow(
+    await expect(credentialManager.allow([TOKEN_A])).rejects.toThrow(
       expect.objectContaining({
         code: ZamaErrorCode.SigningRejected,
       }),
     );
 
     try {
-      await credentialManager.allow(TOKEN_A);
+      await credentialManager.allow([TOKEN_A]);
     } catch (error) {
       expect(error).toBeInstanceOf(ZamaError);
     }
@@ -250,14 +250,14 @@ describe("CredentialsManager", () => {
     setupMocks(relayer, signer);
     vi.mocked(signer.signTypedData).mockRejectedValue(new Error("User denied transaction"));
 
-    await expect(credentialManager.allow(TOKEN_A)).rejects.toThrow(
+    await expect(credentialManager.allow([TOKEN_A])).rejects.toThrow(
       expect.objectContaining({
         code: ZamaErrorCode.SigningRejected,
       }),
     );
 
     try {
-      await credentialManager.allow(TOKEN_A);
+      await credentialManager.allow([TOKEN_A]);
     } catch (error) {
       expect(error).toBeInstanceOf(ZamaError);
     }
@@ -271,14 +271,14 @@ describe("CredentialsManager", () => {
     setupMocks(relayer, signer);
     vi.mocked(signer.signTypedData).mockRejectedValue(new Error("network timeout"));
 
-    await expect(credentialManager.allow(TOKEN_A)).rejects.toThrow(
+    await expect(credentialManager.allow([TOKEN_A])).rejects.toThrow(
       expect.objectContaining({
         code: ZamaErrorCode.SigningFailed,
       }),
     );
 
     try {
-      await credentialManager.allow(TOKEN_A);
+      await credentialManager.allow([TOKEN_A]);
     } catch (error) {
       expect(error).toBeInstanceOf(ZamaError);
     }
@@ -292,14 +292,14 @@ describe("CredentialsManager", () => {
     setupMocks(relayer, signer);
     vi.mocked(signer.signTypedData).mockRejectedValue("unexpected");
 
-    await expect(credentialManager.allow(TOKEN_A)).rejects.toThrow(
+    await expect(credentialManager.allow([TOKEN_A])).rejects.toThrow(
       expect.objectContaining({
         code: ZamaErrorCode.SigningFailed,
       }),
     );
 
     try {
-      await credentialManager.allow(TOKEN_A);
+      await credentialManager.allow([TOKEN_A]);
     } catch (e) {
       expect(e).toBeInstanceOf(ZamaError);
       // Non-Error causes are preserved (not dropped) so downstream debugging
@@ -320,7 +320,7 @@ describe("CredentialsManager", () => {
     // Write garbage to the store
     await storage.set(storeKey, "not-valid-json{{{{");
 
-    const creds = await credentialManager.allow(TOKEN_A);
+    const creds = await credentialManager.allow([TOKEN_A]);
 
     // Should regenerate fresh credentials
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
@@ -350,7 +350,7 @@ describe("CredentialsManager", () => {
     const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
 
     await storage.set(storeKey, "corrupted-data{{{{");
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
 
     expect(events).toContain(ZamaSDKEvents.CredentialsCorrupted);
   });
@@ -384,7 +384,7 @@ describe("CredentialsManager", () => {
       return originalSet(...(args as Parameters<typeof originalSet>));
     });
 
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
 
     expect(events).toContain(ZamaSDKEvents.CredentialsPersistFailed);
   });
@@ -411,7 +411,7 @@ describe("CredentialsManager", () => {
     });
 
     // Should still regenerate and return valid credentials
-    const creds = await credentialManager.allow(TOKEN_A);
+    const creds = await credentialManager.allow([TOKEN_A]);
     expect(creds.publicKey).toBe("0xpub123");
     expect(storage.delete).toHaveBeenCalledWith(storeKey);
   });
@@ -432,7 +432,7 @@ describe("CredentialsManager", () => {
     });
     const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
 
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
 
     // Set startTimestamp to exactly keypairTTL ago (expired at boundary)
@@ -449,7 +449,7 @@ describe("CredentialsManager", () => {
       sessionStorage: createMockStorage(),
       keypairTTL: 86400,
     });
-    await manager2.allow(TOKEN_A);
+    await manager2.allow([TOKEN_A]);
 
     expect(relayer.generateKeypair).toHaveBeenCalledTimes(2);
   });
@@ -470,7 +470,7 @@ describe("CredentialsManager", () => {
       credentialManager,
     }) => {
       setupMocks(relayer, signer);
-      await credentialManager.allow(TOKEN_A);
+      await credentialManager.allow([TOKEN_A]);
       expect(await credentialManager.isExpired()).toBe(false);
     });
 
@@ -490,7 +490,7 @@ describe("CredentialsManager", () => {
       });
       const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
 
-      await manager.allow(TOKEN_A);
+      await manager.allow([TOKEN_A]);
 
       // Tamper stored data to simulate expiration
       const stored = await storage.get(storeKey);
@@ -523,7 +523,7 @@ describe("CredentialsManager", () => {
         keypairTTL: 86400,
       });
 
-      await manager.allow(TOKEN_A);
+      await manager.allow([TOKEN_A]);
 
       const manager2 = new CredentialsManager({
         relayer,
@@ -553,8 +553,8 @@ describe("CredentialsManager", () => {
       credentialManager,
     }) => {
       setupMocks(relayer, signer);
-      await credentialManager.allow(TOKEN_A);
-      await credentialManager.revoke();
+      await credentialManager.allow([TOKEN_A]);
+      await credentialManager.revoke([]);
 
       // Should still report not expired without needing the signature
       expect(await credentialManager.isExpired()).toBe(false);
@@ -570,11 +570,11 @@ describe("CredentialsManager", () => {
     setupMocks(relayer, signer);
     const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
 
-    await credentialManager.allow(TOKEN_A);
-    expect(await credentialManager.isAllowed(TOKEN_A)).toBe(true);
+    await credentialManager.allow([TOKEN_A]);
+    expect(await credentialManager.isAllowed([TOKEN_A])).toBe(true);
 
     await credentialManager.clear();
-    expect(await credentialManager.isAllowed(TOKEN_A)).toBe(false);
+    expect(await credentialManager.isAllowed([TOKEN_A])).toBe(false);
 
     // Storage should also be empty
     const stored = await storage.get(storeKey);
@@ -590,12 +590,12 @@ describe("session allow/revoke", () => {
   }) => {
     setupMocks(relayer, signer);
 
-    await credentialManager.allow(TOKEN_A);
+    await credentialManager.allow([TOKEN_A]);
     expect(signer.signTypedData).toHaveBeenCalledTimes(1);
 
-    await credentialManager.revoke();
+    await credentialManager.revoke([]);
 
-    await credentialManager.allow(TOKEN_A);
+    await credentialManager.allow([TOKEN_A]);
     expect(signer.signTypedData).toHaveBeenCalledTimes(2);
   });
 
@@ -606,13 +606,13 @@ describe("session allow/revoke", () => {
   }) => {
     setupMocks(relayer, signer);
 
-    expect(await credentialManager.isAllowed(TOKEN_A)).toBe(false);
+    expect(await credentialManager.isAllowed([TOKEN_A])).toBe(false);
 
-    await credentialManager.allow(TOKEN_A);
-    expect(await credentialManager.isAllowed(TOKEN_A)).toBe(true);
+    await credentialManager.allow([TOKEN_A]);
+    expect(await credentialManager.isAllowed([TOKEN_A])).toBe(true);
 
-    await credentialManager.revoke();
-    expect(await credentialManager.isAllowed(TOKEN_A)).toBe(false);
+    await credentialManager.revoke([]);
+    expect(await credentialManager.isAllowed([TOKEN_A])).toBe(false);
   });
 
   it("isAllowed(contracts) checks contract coverage", async ({
@@ -622,16 +622,16 @@ describe("session allow/revoke", () => {
   }) => {
     setupMocks(relayer, signer);
 
-    await credentialManager.allow(TOKEN_A);
+    await credentialManager.allow([TOKEN_A]);
 
     // Covered contract → true
-    expect(await credentialManager.isAllowed(TOKEN_A)).toBe(true);
+    expect(await credentialManager.isAllowed([TOKEN_A])).toBe(true);
     // Uncovered contract → false
-    expect(await credentialManager.isAllowed(TOKEN_B)).toBe(false);
+    expect(await credentialManager.isAllowed([TOKEN_B])).toBe(false);
     // Mix of covered and uncovered → false
-    expect(await credentialManager.isAllowed(TOKEN_A, TOKEN_B)).toBe(false);
+    expect(await credentialManager.isAllowed([TOKEN_A, TOKEN_B])).toBe(false);
     // All covered contracts → true
-    expect(await credentialManager.isAllowed(TOKEN_A)).toBe(true);
+    expect(await credentialManager.isAllowed([TOKEN_A])).toBe(true);
   });
 
   it("isAllowed(contracts) returns true after extending credentials", async ({
@@ -641,12 +641,12 @@ describe("session allow/revoke", () => {
   }) => {
     setupMocks(relayer, signer);
 
-    await credentialManager.allow(TOKEN_A);
-    expect(await credentialManager.isAllowed(TOKEN_B)).toBe(false);
+    await credentialManager.allow([TOKEN_A]);
+    expect(await credentialManager.isAllowed([TOKEN_B])).toBe(false);
 
     // Extend to cover TOKEN_B
-    await credentialManager.allow(TOKEN_A, TOKEN_B);
-    expect(await credentialManager.isAllowed(TOKEN_A, TOKEN_B)).toBe(true);
+    await credentialManager.allow([TOKEN_A, TOKEN_B]);
+    expect(await credentialManager.isAllowed([TOKEN_A, TOKEN_B])).toBe(true);
   });
 
   it("allow() pre-caches session signature without needing stored credentials", async ({
@@ -656,13 +656,13 @@ describe("session allow/revoke", () => {
   }) => {
     setupMocks(relayer, signer);
 
-    await credentialManager.allow(TOKEN_A);
+    await credentialManager.allow([TOKEN_A]);
 
     expect(signer.signTypedData).toHaveBeenCalledOnce();
-    expect(await credentialManager.isAllowed(TOKEN_A)).toBe(true);
+    expect(await credentialManager.isAllowed([TOKEN_A])).toBe(true);
 
     // Subsequent get() should not re-sign
-    await credentialManager.allow(TOKEN_A);
+    await credentialManager.allow([TOKEN_A]);
     expect(signer.signTypedData).toHaveBeenCalledOnce();
   }, 30000);
 
@@ -683,8 +683,8 @@ describe("session allow/revoke", () => {
       onEvent: (e) => events.push(e.type),
     });
 
-    await manager2.allow(TOKEN_A);
-    await manager2.revoke();
+    await manager2.allow([TOKEN_A]);
+    await manager2.revoke([]);
 
     expect(events).toContain(ZamaSDKEvents.CredentialsRevoked);
   });
@@ -700,8 +700,8 @@ describe("contract address extension", () => {
   }) => {
     setupMocks(relayer, signer);
 
-    const first = await credentialManager.allow(TOKEN_A);
-    const extended = await credentialManager.allow(TOKEN_A, TOKEN_B);
+    const first = await credentialManager.allow([TOKEN_A]);
+    const extended = await credentialManager.allow([TOKEN_A, TOKEN_B]);
 
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
     expect(signer.signTypedData).toHaveBeenCalledTimes(2);
@@ -721,9 +721,9 @@ describe("contract address extension", () => {
   }) => {
     setupMocks(relayer, signer);
 
-    await credentialManager.allow(TOKEN_A);
-    await credentialManager.revoke();
-    const extended = await credentialManager.allow(TOKEN_A, TOKEN_B);
+    await credentialManager.allow([TOKEN_A]);
+    await credentialManager.revoke([]);
+    const extended = await credentialManager.allow([TOKEN_A, TOKEN_B]);
 
     // Keypair reused — only one generation
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
@@ -749,7 +749,7 @@ describe("contract address extension", () => {
       sessionStorage: createMockStorage(),
       keypairTTL: 86400,
     });
-    await manager1.allow(TOKEN_A);
+    await manager1.allow([TOKEN_A]);
 
     // Simulate reload: new session storage, same persistent storage
     const manager2 = new CredentialsManager({
@@ -759,7 +759,7 @@ describe("contract address extension", () => {
       sessionStorage: createMockStorage(),
       keypairTTL: 86400,
     });
-    const extended = await manager2.allow(TOKEN_A, TOKEN_B);
+    const extended = await manager2.allow([TOKEN_A, TOKEN_B]);
 
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
     // Original sign + old-address sign for decrypt + merged-address sign for extend
@@ -776,9 +776,9 @@ describe("contract address extension", () => {
   }) => {
     setupMocks(relayer, signer);
 
-    await credentialManager.allow(TOKEN_A);
-    await credentialManager.allow(TOKEN_A, TOKEN_B);
-    await credentialManager.allow(TOKEN_A, TOKEN_B);
+    await credentialManager.allow([TOKEN_A]);
+    await credentialManager.allow([TOKEN_A, TOKEN_B]);
+    await credentialManager.allow([TOKEN_A, TOKEN_B]);
 
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
     // Only 2 signatures: initial + extend. Third call is cached.
@@ -801,8 +801,8 @@ describe("contract address extension", () => {
       sessionStorage: sharedSessionStorage,
       keypairTTL: 86400,
     });
-    await manager1.allow(TOKEN_A);
-    await manager1.allow(TOKEN_A, TOKEN_B);
+    await manager1.allow([TOKEN_A]);
+    await manager1.allow([TOKEN_A, TOKEN_B]);
 
     // Simulate page reload: fresh session storage, same persistent storage
     const manager2 = new CredentialsManager({
@@ -812,7 +812,7 @@ describe("contract address extension", () => {
       sessionStorage: createMockStorage(),
       keypairTTL: 86400,
     });
-    await manager2.allow(TOKEN_A, TOKEN_B);
+    await manager2.allow([TOKEN_A, TOKEN_B]);
 
     // Keypair reused, but re-signed due to lost session
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
@@ -822,9 +822,9 @@ describe("contract address extension", () => {
   it("extends incrementally: A → A,B → A,B,C", async ({ relayer, signer, credentialManager }) => {
     setupMocks(relayer, signer);
 
-    await credentialManager.allow(TOKEN_A);
-    await credentialManager.allow(TOKEN_A, TOKEN_B);
-    const final = await credentialManager.allow(TOKEN_A, TOKEN_B, TOKEN_C);
+    await credentialManager.allow([TOKEN_A]);
+    await credentialManager.allow([TOKEN_A, TOKEN_B]);
+    const final = await credentialManager.allow([TOKEN_A, TOKEN_B, TOKEN_C]);
 
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
     // 3 signatures: initial + extend to B + extend to C
@@ -842,8 +842,8 @@ describe("contract address extension", () => {
   }) => {
     setupMocks(relayer, signer);
 
-    await credentialManager.allow(TOKEN_A, TOKEN_B);
-    await credentialManager.allow(TOKEN_A); // subset
+    await credentialManager.allow([TOKEN_A, TOKEN_B]);
+    await credentialManager.allow([TOKEN_A]); // subset
 
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
     expect(signer.signTypedData).toHaveBeenCalledOnce();
@@ -869,7 +869,7 @@ describe("contract address extension", () => {
       await signer.getChainId(),
     );
 
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
 
     // Tamper stored data to simulate time expiration
     const stored = await storage.get(storeKey);
@@ -884,7 +884,7 @@ describe("contract address extension", () => {
       sessionStorage: createMockStorage(),
       keypairTTL: 86400,
     });
-    await manager2.allow(TOKEN_A, TOKEN_B);
+    await manager2.allow([TOKEN_A, TOKEN_B]);
 
     // Time-expired → full regeneration, not extension
     expect(relayer.generateKeypair).toHaveBeenCalledTimes(2);
@@ -897,8 +897,8 @@ describe("contract address extension", () => {
   }) => {
     setupMocks(relayer, signer);
 
-    await credentialManager.allow(TOKEN_A);
-    await credentialManager.allow(TOKEN_A, TOKEN_B);
+    await credentialManager.allow([TOKEN_A]);
+    await credentialManager.allow([TOKEN_A, TOKEN_B]);
 
     // Second createEIP712 call should include both tokens
     const secondCall = vi.mocked(relayer.createEIP712).mock.calls[1];
@@ -915,12 +915,12 @@ describe("contract address extension", () => {
   }) => {
     setupMocks(relayer, signer);
 
-    await credentialManager.allow(TOKEN_A);
+    await credentialManager.allow([TOKEN_A]);
 
     // Launch two extensions concurrently with different contracts
     const [resultB, resultC] = await Promise.all([
-      credentialManager.allow(TOKEN_A, TOKEN_B),
-      credentialManager.allow(TOKEN_A, TOKEN_C),
+      credentialManager.allow([TOKEN_A, TOKEN_B]),
+      credentialManager.allow([TOKEN_A, TOKEN_C]),
     ]);
 
     // The last result should cover all three contracts (no address dropped)
@@ -951,7 +951,7 @@ describe("contract address extension", () => {
       keypairTTL: 86400,
     });
 
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
 
     // After the initial allow(), record the order of set() calls during
     // the extension. storage.set = ciphertext write, sessionStorage.set = session write.
@@ -964,7 +964,7 @@ describe("contract address extension", () => {
       writeOrder.push("session");
     });
 
-    await manager.allow(TOKEN_A, TOKEN_B);
+    await manager.allow([TOKEN_A, TOKEN_B]);
 
     // Extension should write ciphertext before updating the session signature
     expect(writeOrder).toEqual(["ciphertext", "session"]);
@@ -980,10 +980,10 @@ describe("storeKey caching", () => {
     setupMocks(relayer, signer);
     const computeSpy = vi.spyOn(CredentialsManager, "computeStoreKey");
 
-    await credentialManager.allow(TOKEN_A);
+    await credentialManager.allow([TOKEN_A]);
     expect(computeSpy).toHaveBeenCalledOnce();
 
-    await credentialManager.allow(TOKEN_A);
+    await credentialManager.allow([TOKEN_A]);
     // Second allow() should not recompute the store key
     expect(computeSpy).toHaveBeenCalledOnce();
 
@@ -998,7 +998,7 @@ describe("storeKey caching", () => {
     setupMocks(relayer, signer);
     const computeSpy = vi.spyOn(CredentialsManager, "computeStoreKey");
 
-    await credentialManager.allow(TOKEN_A);
+    await credentialManager.allow([TOKEN_A]);
     expect(computeSpy).toHaveBeenCalledOnce();
 
     await credentialManager.isExpired();
@@ -1024,7 +1024,7 @@ describe("storeKey caching", () => {
     });
     const computeSpy = vi.spyOn(CredentialsManager, "computeStoreKey");
 
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
     expect(computeSpy).toHaveBeenCalledOnce();
 
     // Change the signer address
@@ -1032,7 +1032,7 @@ describe("storeKey caching", () => {
       "0xdDdDddDdDdddDDddDDddDDDDdDdDDdDDdDDDDDDd" as Address,
     );
 
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
     // Should have recomputed the store key for the new address
     expect(computeSpy).toHaveBeenCalledTimes(2);
 
@@ -1055,13 +1055,13 @@ describe("storeKey caching", () => {
     });
     const computeSpy = vi.spyOn(CredentialsManager, "computeStoreKey");
 
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
     expect(computeSpy).toHaveBeenCalledOnce();
 
     // Change the chain ID
     vi.mocked(signer.getChainId).mockResolvedValue(1);
 
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
     expect(computeSpy).toHaveBeenCalledTimes(2);
 
     computeSpy.mockRestore();
@@ -1083,14 +1083,14 @@ describe("storeKey caching", () => {
     });
     const computeSpy = vi.spyOn(CredentialsManager, "computeStoreKey");
 
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
     expect(computeSpy).toHaveBeenCalledOnce();
 
     // Change to the same address but with different casing (normalized form is 0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B)
     // Test that getAddress normalization means casing change doesn't invalidate cache
     vi.mocked(signer.getAddress).mockResolvedValue("0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B");
 
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
     // getAddress normalization means casing change doesn't invalidate cache
     expect(computeSpy).toHaveBeenCalledOnce();
 
@@ -1115,7 +1115,7 @@ describe("deriveKey caching", () => {
     });
 
     // First call creates and encrypts credentials
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
 
     // Simulate reload: new manager reads from storage and decrypts
     const manager2 = new CredentialsManager({
@@ -1125,13 +1125,13 @@ describe("deriveKey caching", () => {
       sessionStorage: createMockStorage(),
       keypairTTL: 86400,
     });
-    await manager2.allow(TOKEN_A);
+    await manager2.allow([TOKEN_A]);
 
     const deriveKeySpy = vi.spyOn(crypto.subtle, "deriveKey");
 
     // Extend to TOKEN_B — the signature (mock-deterministic "0xsig789") and
     // address haven't changed, so the cached derived key should be reused.
-    await manager2.allow(TOKEN_A, TOKEN_B);
+    await manager2.allow([TOKEN_A, TOKEN_B]);
 
     expect(deriveKeySpy).not.toHaveBeenCalled();
 
@@ -1153,7 +1153,7 @@ describe("deriveKey caching", () => {
       keypairTTL: 86400,
     });
 
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
 
     const deriveKeySpy = vi.spyOn(crypto.subtle, "deriveKey");
 
@@ -1169,7 +1169,7 @@ describe("deriveKey caching", () => {
       sessionStorage: createMockStorage(),
       keypairTTL: 86400,
     });
-    await manager2.allow(TOKEN_A);
+    await manager2.allow([TOKEN_A]);
 
     expect(deriveKeySpy).toHaveBeenCalled();
 
@@ -1193,7 +1193,7 @@ describe("unified #isValid", () => {
       keypairTTL: 86400,
     });
 
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
 
     // New manager without session — isExpired reads EncryptedCredentials directly
     const manager2 = new CredentialsManager({
@@ -1226,7 +1226,7 @@ describe("unified #isValid", () => {
     });
     const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
 
-    await manager.allow(TOKEN_A);
+    await manager.allow([TOKEN_A]);
 
     // Tamper stored data to simulate expiration
     const stored = await storage.get(storeKey);

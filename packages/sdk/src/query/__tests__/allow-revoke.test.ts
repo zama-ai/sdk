@@ -26,7 +26,7 @@ describe("allowMutationOptions", () => {
     ] as Address[];
     await options.mutationFn(addresses);
 
-    expect(allowSpy).toHaveBeenCalledWith(...addresses);
+    expect(allowSpy).toHaveBeenCalledWith(addresses);
   });
 });
 
@@ -45,7 +45,7 @@ describe("revokeMutationOptions", () => {
     const addresses = ["0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a"] as Address[];
     await options.mutationFn(addresses);
 
-    expect(revokeSpy).toHaveBeenCalledWith(...addresses);
+    expect(revokeSpy).toHaveBeenCalledWith(addresses);
   });
 });
 
@@ -109,7 +109,7 @@ describe("isAllowedQueryOptions", () => {
       queryKey: options.queryKey,
     } as Parameters<typeof options.queryFn>[0]);
 
-    expect(isAllowedSpy).toHaveBeenCalledWith(...contracts);
+    expect(isAllowedSpy).toHaveBeenCalledWith(contracts);
   });
 
   test("staleTime should be 30 seconds", ({ signer, relayer, storage }) => {
