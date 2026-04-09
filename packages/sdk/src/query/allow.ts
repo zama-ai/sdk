@@ -8,7 +8,13 @@ export function allowMutationOptions(
   return {
     mutationKey: ["zama.allow"],
     mutationFn: async (contractAddresses) => {
-      await sdk.credentials.allow(...contractAddresses);
+      const credSet = await sdk.credentials.allow(...contractAddresses);
+      if (credSet.failures.size > 0) {
+        // Surface the first signing failure so React Query error handlers treat
+        // a rejected wallet prompt as a mutation failure rather than silent success.
+        const [firstError] = credSet.failures.values();
+        throw firstError;
+      }
     },
   };
 }

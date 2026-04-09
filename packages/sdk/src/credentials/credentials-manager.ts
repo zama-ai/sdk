@@ -47,6 +47,14 @@ export class CredentialsManager extends BaseCredentialsManager<
   #relayer: RelayerSDK;
   #cachedStoreKey: string | null = null;
   #cachedStoreKeyIdentity: string | null = null;
+  /**
+   * FHE keypair cached across `allow()` calls for the lifetime of this manager
+   * instance. Generated on the first batch creation and reused for all subsequent
+   * new batches, so a single public key covers the entire credential set.
+   * Cleared by {@link clear}, {@link revoke}, and any operation that calls
+   * {@link clearCaches} (e.g. credential corruption recovery).
+   */
+  #cachedKeypair: { publicKey: Hex; privateKey: Hex } | null = null;
 
   /** Derive the deterministic storage key for a given wallet address and chain. */
   static async computeStoreKey(address: Address, chainId: number): Promise<string> {
@@ -89,17 +97,14 @@ export class CredentialsManager extends BaseCredentialsManager<
     const normalized = normalizeAddresses(contractAddresses);
     const key = await this.#storeKey();
 
-    // Shared keypair: generated once, reused across all new batches in this call.
-    let sharedKeypair: { publicKey: Hex; privateKey: Hex } | null = null;
-
     return this.resolveMulti({
       key,
       contracts: normalized,
       createFn: async (batchAddresses: Address[], batchKey: string) => {
-        if (!sharedKeypair) {
-          sharedKeypair = await this.#relayer.generateKeypair();
+        if (!this.#cachedKeypair) {
+          this.#cachedKeypair = await this.#relayer.generateKeypair();
         }
-        return this.#createBatch(batchAddresses, sharedKeypair, batchKey);
+        return this.#createBatch(batchAddresses, this.#cachedKeypair, batchKey);
       },
     });
   }
@@ -223,6 +228,7 @@ export class CredentialsManager extends BaseCredentialsManager<
   }
 
   protected override clearCaches(): void {
+    this.#cachedKeypair = null;
     this.#cachedStoreKey = null;
     this.#cachedStoreKeyIdentity = null;
     super.clearCaches();

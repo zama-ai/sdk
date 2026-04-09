@@ -73,6 +73,22 @@ interface CreateCredentialsOptions<TCreds> {
 }
 
 /**
+ * Sentinel written to storage when a new batch's signing fails. Fills the gap so
+ * that subsequent scans can continue past this slot and still find higher-indexed
+ * batches that may have succeeded.
+ */
+const BATCH_TOMBSTONE = { _batchTombstone: true } as const;
+
+function isBatchTombstone(value: unknown): boolean {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "_batchTombstone" in value &&
+    (value as Record<string, unknown>)["_batchTombstone"] === true
+  );
+}
+
+/**
  * Abstract base for credential managers. Contains the entire allow/extend/expire
  * state machine. Subclasses provide the assertion, signing, and encrypt/decrypt
  * hooks that differ between regular and delegated flows.
@@ -295,10 +311,24 @@ export abstract class BaseCredentialsManager<
     createFn: (batchAddresses: Address[], batchKey: string) => Promise<TCreds>;
   }): Promise<CredentialSet<TCreds>> {
     // 1. Load existing batch metadata (address lists, no decryption needed yet).
-    const existingBatches = await this.#scanBatchMeta(key);
+    const {
+      batches: existingBatches,
+      highestIndex,
+      corruptedIndex,
+    } = await this.#scanBatchMeta(key);
 
     // 2. Bin-pack: assign each required address to an existing or new batch.
-    const assignments = this.#computeBatchAssignments(existingBatches, contracts, key);
+    //    If a corrupted slot was found, reuse it (resolveCredentials will clean it up).
+    //    Otherwise start new batches beyond all seen slots (including tombstones) to
+    //    prevent index collisions after partial failures.
+    const nextBatchIndex = corruptedIndex !== null ? corruptedIndex : highestIndex + 1;
+    const assignments = this.#computeBatchAssignments(
+      existingBatches,
+      contracts,
+      key,
+      nextBatchIndex,
+    );
+    const existingBatchKeys = new Set(existingBatches.map((b) => b.batchKey));
 
     // 3. Resolve each batch in sequence (preserves single-prompt-at-a-time UX).
     const results: Array<{ addresses: Address[]; result: TCreds | Error }> = [];
@@ -314,6 +344,11 @@ export abstract class BaseCredentialsManager<
         results.push({ addresses: normalizedAddresses, result: creds });
       } catch (error) {
         // Partial failure: capture per-batch, don't abort remaining batches.
+        // Write a tombstone for newly-created slots so subsequent scans can
+        // continue past this gap and find higher-indexed batches that succeeded.
+        if (!existingBatchKeys.has(batchKey)) {
+          await this.#writeTombstone(batchKey);
+        }
         results.push({ addresses: normalizedAddresses, result: toError(error) });
       }
     }
@@ -326,6 +361,7 @@ export abstract class BaseCredentialsManager<
     existingBatches: Array<{ batchKey: string; addresses: Address[] }>,
     required: Address[],
     baseKey: string,
+    nextBatchIndex: number,
   ): Array<{ batchKey: string; addresses: Address[] }> {
     // Mutable copy — we may extend existing batches with new addresses.
     const assignments: Array<{ batchKey: string; addresses: Address[] }> = existingBatches.map(
@@ -358,7 +394,7 @@ export abstract class BaseCredentialsManager<
     // Create new batches for addresses that didn't fit.
     const newBatches = chunkAddresses(overflow, MAX_CONTRACTS_PER_CREDENTIAL);
     for (let i = 0; i < newBatches.length; i++) {
-      const batchIndex = existingBatches.length + i;
+      const batchIndex = nextBatchIndex + i;
       assignments.push({
         batchKey: batchIndex === 0 ? baseKey : `${baseKey}:${batchIndex}`,
         addresses: newBatches[i] ?? [],
@@ -369,36 +405,60 @@ export abstract class BaseCredentialsManager<
   }
 
   /**
-   * Scan storage for all batches under `key`, returning their address lists.
+   * Scan storage for all valid credential batches under `key`.
+   * Returns valid batches with their address lists, the highest slot index seen
+   * (including tombstone slots from previous partial failures), and the index of
+   * the first corrupted slot (if any) so callers can reuse that slot for recovery.
+   *
    * Batch 0 uses `key`; subsequent batches use `key:1`, `key:2`, …
-   * Stops at the first missing or corrupted entry.
+   * Tombstone entries (from failed signings) are skipped but do NOT stop the scan.
+   * Stops at the first completely absent slot or the first corrupted entry.
    */
-  async #scanBatchMeta(key: string): Promise<Array<{ batchKey: string; addresses: Address[] }>> {
+  async #scanBatchMeta(key: string): Promise<{
+    batches: Array<{ batchKey: string; addresses: Address[] }>;
+    highestIndex: number;
+    corruptedIndex: number | null;
+  }> {
     const batches: Array<{ batchKey: string; addresses: Address[] }> = [];
+    let highestIndex = -1;
     for (let i = 0; ; i++) {
       const k = i === 0 ? key : `${key}:${i}`;
-      const stored = await this.storage.get<TEncrypted>(k);
+      const stored = await this.storage.get(k);
       if (!stored) {
         break;
       }
+      highestIndex = i;
+      if (isBatchTombstone(stored)) {
+        continue; // Gap from failed signing — skip but keep scanning
+      }
       try {
-        this.assertEncrypted(stored);
-        batches.push({ batchKey: k, addresses: stored.contractAddresses });
+        this.assertEncrypted(stored as TEncrypted);
+        batches.push({ batchKey: k, addresses: (stored as TEncrypted).contractAddresses });
       } catch {
-        break; // Corrupted entry — stop scanning.
+        // Corrupted entry — stop scanning; caller can reuse this slot for recovery.
+        return { batches, highestIndex, corruptedIndex: i };
       }
     }
-    return batches;
+    return { batches, highestIndex, corruptedIndex: null };
   }
 
   /**
-   * Return all storage keys for existing batches under `key`.
-   * Falls back to `[key]` when no batches are stored (covers the
-   * pre-batching case where session sigs were stored under the bare key).
+   * Return all storage keys for existing batches under `key`, including tombstone
+   * slots from previous partial failures. Used by `clearAll` and `revokeSession`
+   * to ensure orphaned entries are cleaned up.
+   * Falls back to `[key]` when no entries are stored at all.
    */
   async #scanBatchKeys(key: string): Promise<string[]> {
-    const meta = await this.#scanBatchMeta(key);
-    return meta.length > 0 ? meta.map((b) => b.batchKey) : [key];
+    const keys: string[] = [];
+    for (let i = 0; ; i++) {
+      const k = i === 0 ? key : `${key}:${i}`;
+      const stored = await this.storage.get(k);
+      if (!stored) {
+        break;
+      }
+      keys.push(k);
+    }
+    return keys.length > 0 ? keys : [key];
   }
 
   // ── Shared public method implementations ──────────────────────
@@ -411,10 +471,24 @@ export abstract class BaseCredentialsManager<
    */
   protected async checkExpired(key: string, contractAddress?: Address): Promise<boolean> {
     try {
-      const batchKeys = await this.#scanBatchKeys(key);
-      if (batchKeys.length === 1) {
-        // Single-batch path (or no credentials yet).
-        const stored = await this.storage.get<TEncrypted>(key);
+      const { batches, highestIndex, corruptedIndex } = await this.#scanBatchMeta(key);
+
+      if (batches.length === 0) {
+        if (corruptedIndex !== null || highestIndex >= 0) {
+          // Slots exist but all were tombstones or corrupted — treat as expired.
+          return true;
+        }
+        // No stored credentials at all — not expired, just absent.
+        return false;
+      }
+
+      if (batches.length === 1) {
+        // Fast path: single batch.
+        const firstBatch = batches[0];
+        if (!firstBatch) {
+          return false;
+        }
+        const stored = await this.storage.get<TEncrypted>(firstBatch.batchKey);
         if (!stored) {
           return false;
         }
@@ -422,11 +496,11 @@ export abstract class BaseCredentialsManager<
         const requiredContracts = contractAddress ? [contractAddress] : [];
         return !isCredentialValid(stored, requiredContracts);
       }
-      // Multi-batch path: not expired if at least one batch covers contractAddress (or if
-      // no contractAddress is requested, if all batches are time-valid).
+
+      // Multi-batch: check each batch for validity.
       const results = await Promise.all(
-        batchKeys.map(async (k) => {
-          const stored = await this.storage.get<TEncrypted>(k);
+        batches.map(async ({ batchKey }) => {
+          const stored = await this.storage.get<TEncrypted>(batchKey);
           if (!stored) {
             return false;
           }
@@ -439,7 +513,13 @@ export abstract class BaseCredentialsManager<
           }
         }),
       );
-      return !results.some(Boolean);
+
+      if (contractAddress) {
+        // Expired for this address if no valid batch covers it.
+        return !results.some(Boolean);
+      }
+      // Expired overall if any batch is expired (conservative).
+      return !results.every(Boolean);
     } catch (error) {
       // oxlint-disable-next-line no-console
       console.warn("[zama-sdk] isExpired check failed, treating as expired:", error);
@@ -461,6 +541,7 @@ export abstract class BaseCredentialsManager<
     } as ZamaSDKEventInput);
   }
 
+<<<<<<< HEAD
   protected async checkAllowed(
     key: string,
     contractAddresses: [Address, ...Address[]],
@@ -486,6 +567,24 @@ export abstract class BaseCredentialsManager<
       this.assertEncrypted(stored);
       return isCredentialValid(stored, contractAddresses);
     } catch {
+=======
+  /**
+   * Returns `true` only when **all** existing batch sessions are valid (no
+   * wallet prompt would be needed for any address).
+   * Conservative by design: if any batch has an expired or missing session,
+   * returns `false` — even if the specific address you intend to use is
+   * covered by a still-valid batch.
+   */
+  protected async checkAllowed(key: string): Promise<boolean> {
+    const { batches } = await this.#scanBatchMeta(key);
+    if (batches.length === 0) {
+      return false;
+    }
+    const entries = await Promise.all(
+      batches.map(({ batchKey }) => this.sessionSignatures.get(batchKey)),
+    );
+    if (entries.every((e) => e === null)) {
+>>>>>>> f4a47ec1 (fix(sdk): address code review issues on credential batching (SDK-43))
       return false;
     }
   }
@@ -646,6 +745,16 @@ export abstract class BaseCredentialsManager<
         type: ZamaSDKEvents.CredentialsPersistFailed,
         error: toError(error),
       });
+    }
+  }
+
+  /** Write a tombstone sentinel for a new batch slot that failed to be created. */
+  async #writeTombstone(key: string): Promise<void> {
+    try {
+      await this.storage.set(key, BATCH_TOMBSTONE);
+    } catch {
+      // Best-effort: a missing tombstone just means a possible gap in future scans,
+      // which may cause redundant keypair generation but not data loss.
     }
   }
 }

@@ -115,10 +115,10 @@ Each session entry records its TTL at creation time. If you change the `sessionT
 
 Call `allow()` early — ideally right after wallet connect — to prompt the signature upfront rather than during a balance read.
 
-A single signature covers all contract addresses passed to `allow()`. The signed EIP-712 message includes the exact set of contracts. If you later call `allow()` with a contract not in the original set, the SDK generates a fresh keypair and requests a new wallet signature.
+For up to 10 addresses, a single signature covers all contracts passed to `allow()`. For more than 10, the SDK splits them into batches of 10 and requests one sequential signature per batch. The signed EIP-712 message for each batch includes the exact set of contracts in that batch. If you later call `allow()` with a contract not covered by any existing batch, the SDK packs it into a batch with spare capacity or creates a new one.
 
 {% hint style="warning" %}
-Batch all contract addresses into a single `allow()` call. Each call with a new contract set triggers a new keypair and wallet popup. Plan your allow calls to minimize signing prompts.
+Batch all contract addresses into a single `allow()` call when possible. For >10 addresses the SDK automatically splits into sequential prompts (one per 10-address batch). Adding new contracts to an existing authorization extends an existing batch when space allows, or creates a new one.
 {% endhint %}
 
 ### Revoke (clear session)
@@ -165,7 +165,7 @@ A single `allow()` call can cover multiple contracts:
 await sdk.credentials.allow("0xContractA", "0xContractB", "0xContractC");
 ```
 
-This produces one EIP-712 signature covering all three contracts. The signed message includes the full list of contract addresses, the start timestamp, and the duration. Any `balanceOf` call on ContractA, ContractB, or ContractC reuses the cached signature without additional popups.
+For three addresses this produces one EIP-712 signature covering all three contracts. For more than 10 addresses, the SDK batches in groups of 10 — each batch triggers one sequential wallet prompt. The signed message includes the full list of contract addresses, the start timestamp, and the duration. Any `balanceOf` call on ContractA, ContractB, or ContractC reuses the cached signature without additional popups.
 
 The tradeoff: if you later need to add ContractD, the SDK must generate a new keypair and request a fresh signature covering `[A, B, C, D]`. Plan your contract set upfront when possible.
 

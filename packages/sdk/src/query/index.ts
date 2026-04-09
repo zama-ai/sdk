@@ -169,6 +169,7 @@ export type { ZamaSDKConfig, DecryptOptions } from "../zama-sdk";
 export type { ZamaSDK } from "../zama-sdk";
 export type { CredentialsManager } from "../credentials/credentials-manager";
 export type { CredentialsManagerConfig } from "../credentials/credentials-manager";
+export type { CredentialSet } from "../credentials/credential-set";
 export type {
   GenericSigner,
   GenericStorage,

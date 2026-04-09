@@ -43,6 +43,14 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
   #relayer: RelayerSDK;
   #cachedStoreKey: string | null = null;
   #cachedStoreKeyIdentity: string | null = null;
+  /**
+   * FHE keypairs cached per delegator store key, persisted across `allow()` calls.
+   * Keyed by the result of {@link #storeKey} (scoped to delegate + delegator + chain),
+   * so each delegator maintains its own isolated keypair while sharing none with others.
+   * Cleared by {@link clear}, {@link revoke}, and any operation that calls
+   * {@link clearCaches}.
+   */
+  #cachedKeypairs = new Map<string, { publicKey: Hex; privateKey: Hex }>();
 
   /** Derive the deterministic storage key for a (delegate, delegator, chain) triple. */
   static async computeStoreKey(
@@ -81,16 +89,16 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
     const normalized = normalizeAddresses(contractAddresses);
     const key = await this.#storeKey(normalizedDelegator);
 
-    let sharedKeypair: { publicKey: Hex; privateKey: Hex } | null = null;
-
     return this.resolveMulti({
       key,
       contracts: normalized,
       createFn: async (batchAddresses: Address[], batchKey: string) => {
-        if (!sharedKeypair) {
-          sharedKeypair = await this.#relayer.generateKeypair();
+        let keypair = this.#cachedKeypairs.get(key);
+        if (!keypair) {
+          keypair = await this.#relayer.generateKeypair();
+          this.#cachedKeypairs.set(key, keypair);
         }
-        return this.#createBatch(normalizedDelegator, batchAddresses, sharedKeypair, batchKey);
+        return this.#createBatch(normalizedDelegator, batchAddresses, keypair, batchKey);
       },
     });
   }
@@ -195,6 +203,7 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
   }
 
   protected override clearCaches(): void {
+    this.#cachedKeypairs.clear();
     this.#cachedStoreKey = null;
     this.#cachedStoreKeyIdentity = null;
     super.clearCaches();

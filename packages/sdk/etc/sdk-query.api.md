@@ -336,6 +336,14 @@ export interface CredentialsCreatingEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.CredentialsCreating;
 }
 
+// @public
+export interface CredentialSet<T extends StoredCredentials = StoredCredentials> {
+    readonly batches: ReadonlyArray<T>;
+    credentialFor(address: Address): T;
+    readonly failures: ReadonlyMap<Address, Error>;
+    tryCredentialFor(address: Address): T | null;
+}
+
 // @public (undocumented)
 export interface CredentialsExpiredEvent extends BaseEvent {
     contractAddresses?: Address[];
@@ -356,7 +364,6 @@ export interface CredentialsLoadingEvent extends BaseEvent {
 // @public
 export class CredentialsManager extends BaseCredentialsManager<StoredCredentials, EncryptedCredentials$1> {
     constructor(config: CredentialsManagerConfig);
-    // Warning: (ae-forgotten-export) The symbol "CredentialSet" needs to be exported by the entry point index.d.ts
     allow(...contractAddresses: Address[]): Promise<CredentialSet>;
     // (undocumented)
     protected assertEncrypted(data: unknown): asserts data is EncryptedCredentials$1;

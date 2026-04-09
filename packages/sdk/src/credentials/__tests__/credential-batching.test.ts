@@ -189,10 +189,36 @@ describe("credential batching", () => {
 
       // One new signature for the new batch (the eleventh address)
       expect(signer.signTypedData).toHaveBeenCalledTimes(signCallsAfterFirst + 1);
+      // Keypair is reused from the first allow() call — generateKeypair called only once total
+      expect(relayer.generateKeypair).toHaveBeenCalledOnce();
       expect(credSet.batches).toHaveLength(2);
 
       for (const addr of [...first10, eleventh]) {
         expect(() => credSet.credentialFor(addr)).not.toThrow();
+      }
+    });
+
+    test("keypair is reused across separate allow() calls that create overflow batches", async ({
+      relayer,
+    }) => {
+      const { manager } = createManagerWithSigner(relayer);
+      vi.mocked(relayer.generateKeypair).mockResolvedValue({
+        publicKey: "0xpub_single",
+        privateKey: "0xpriv_single",
+      });
+
+      // First call: 10 addresses → 1 batch, keypair generated once
+      await manager.allow(...makeAddresses(10));
+      expect(relayer.generateKeypair).toHaveBeenCalledOnce();
+
+      // Second call: 11th address → overflow batch, same keypair reused (no new generateKeypair)
+      const credSet = await manager.allow(...makeAddresses(11));
+      expect(relayer.generateKeypair).toHaveBeenCalledOnce();
+
+      // Both batches share the same keypair
+      for (const batch of credSet.batches) {
+        expect(batch.publicKey).toBe("0xpub_single");
+        expect(batch.privateKey).toBe("0xpriv_single");
       }
     });
 
@@ -307,6 +333,63 @@ describe("credential batching", () => {
 
       // Two separate keypairs (one per delegator)
       expect(relayer.generateKeypair).toHaveBeenCalledTimes(2);
+    });
+
+    test("same delegator reuses keypair across allow() calls that create overflow batches", async ({
+      relayer,
+    }) => {
+      const { manager } = createDelegatedManagerWithSigner(relayer);
+      vi.mocked(relayer.generateKeypair).mockResolvedValue({
+        publicKey: "0xpub_delegated_single",
+        privateKey: "0xpriv_delegated_single",
+      });
+
+      // First call: 10 addresses → 1 batch, keypair generated once for this delegator
+      await manager.allow(DELEGATOR, ...makeAddresses(10));
+      expect(relayer.generateKeypair).toHaveBeenCalledOnce();
+
+      // Second call: 11th address → overflow batch, same keypair reused
+      const credSet = await manager.allow(DELEGATOR, ...makeAddresses(11));
+      expect(relayer.generateKeypair).toHaveBeenCalledOnce(); // still only once
+
+      for (const batch of credSet.batches) {
+        expect(batch.publicKey).toBe("0xpub_delegated_single");
+        expect(batch.privateKey).toBe("0xpriv_delegated_single");
+      }
+    });
+  });
+
+  // ── Gap-safe scanning (tombstone handling) ───────────────────────────────
+
+  describe("gap-safe scanning (tombstone handling)", () => {
+    test("middle batch failure does not orphan later batches — subsequent allow() finds them", async ({
+      relayer,
+    }) => {
+      const { manager, signer } = createManagerWithSigner(relayer);
+      const addrs = makeAddresses(30); // 3 batches: A1-10, A11-20, A21-30
+
+      // Batch 1 (middle) is rejected; batches 0 and 2 succeed
+      vi.mocked(signer.signTypedData)
+        .mockResolvedValueOnce("0xsig_batch0") // batch 0 succeeds
+        .mockRejectedValueOnce(new Error("User rejected")) // batch 1 fails
+        .mockResolvedValueOnce("0xsig_batch2"); // batch 2 succeeds
+
+      const firstSet = await manager.allow(...addrs);
+
+      // Batch 0 and 2 succeeded; batch 1 failed
+      expect(firstSet.batches).toHaveLength(2);
+      expect(firstSet.failures.size).toBe(10); // 10 addresses in failed batch 1
+
+      // Second call: retry the failed batch's addresses
+      vi.mocked(signer.signTypedData).mockResolvedValue("0xsig_retry");
+
+      const secondSet = await manager.allow(...addrs);
+
+      // All 30 addresses should now be accessible
+      for (const addr of addrs) {
+        expect(() => secondSet.credentialFor(addr)).not.toThrow();
+      }
+      expect(secondSet.failures.size).toBe(0);
     });
   });
 

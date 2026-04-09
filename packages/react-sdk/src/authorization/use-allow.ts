@@ -6,22 +6,21 @@ import { allowMutationOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 
 /**
- * Sign an EIP-712 message authorizing decryption of confidential handles
- * for a list of contract addresses. This is not token-specific — any
- * contract that uses FHE-encrypted values (tokens, DeFi vaults, games, etc.)
- * can be authorized in a single wallet signature. Subsequent decrypt
- * operations on any of these contracts reuse cached credentials.
+ * Sign EIP-712 messages authorizing FHE decryption for a list of contract addresses.
+ *
+ * For ≤10 addresses the SDK produces a single wallet signature. For >10 addresses
+ * the SDK splits into batches of 10 and presents sequential signature prompts — one
+ * per batch. The mutation rejects if any batch signing fails.
  *
  * Errors are {@link ZamaError} subclasses — use `instanceof` to handle specific failures:
- * - {@link SigningRejectedError} — user rejected the wallet prompt
+ * - {@link SigningRejectedError} — user rejected a wallet prompt
  * - {@link KeypairExpiredError} — the re-encryption keypair has expired
  *
  * @example
  * ```tsx
  * const { mutateAsync: allow, isPending } = useAllow();
  *
- * // Authorize decryption for any contracts with encrypted state:
- * // confidential tokens, auction contracts, governance contracts, etc.
+ * // Authorize decryption for any contracts with FHE-encrypted state:
  * await allow([tokenAddress, auctionAddress, governanceAddress]);
  * ```
  */
