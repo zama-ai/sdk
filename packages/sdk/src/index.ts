@@ -94,6 +94,7 @@ export type {
   TransferCallbacks,
   TransferOptions,
 } from "./types";
+export { Batcher } from "./utils";
 export type { Address, Hex } from "viem";
 export { ZamaSDKEvents } from "./events";
 export type {
