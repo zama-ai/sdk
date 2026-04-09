@@ -63,6 +63,9 @@ describe("cli.init-adapter.normalizeTemplate", () => {
     expect(normalizeTemplate("EOA")).toBe("eoa");
     expect(normalizeTemplate("api")).toBe("api-routed");
     expect(normalizeTemplate("api-routed")).toBe("api-routed");
+    expect(normalizeTemplate("turnkey")).toBe("turnkey");
+    expect(normalizeTemplate("crossmint")).toBe("crossmint");
+    expect(normalizeTemplate("openfort")).toBe("openfort");
   });
 
   it("throws on unsupported template values", () => {
@@ -107,5 +110,27 @@ describe("cli.init-adapter.templateFor", () => {
     expect(template).toContain('declaredArchitecture: "API_ROUTED_EXECUTION"');
     expect(template).toContain('verificationModel: "PROVIDER_MANAGED"');
     expect(template).toContain('eip712Signing: "UNKNOWN"');
+  });
+
+  it("renders Turnkey template with API-routed capabilities", () => {
+    const template = templateFor("./my-adapter.ts", "turnkey");
+    expect(template).toContain('name: "Turnkey API Key Adapter"');
+    expect(template).toContain('declaredArchitecture: "API_ROUTED_EXECUTION"');
+    expect(template).toContain('rawTransactionSigning: "UNSUPPORTED"');
+    expect(template).toContain("Implement signTypedData() via @turnkey/viem account");
+  });
+
+  it("renders Crossmint template with api-routed write flow", () => {
+    const template = templateFor("./my-adapter.ts", "crossmint");
+    expect(template).toContain('name: "Crossmint API-Routed Adapter"');
+    expect(template).toContain('contractReads: "UNSUPPORTED"');
+    expect(template).toContain("Crossmint transactions API");
+  });
+
+  it("renders Openfort template with EOA recoverability model", () => {
+    const template = templateFor("./my-adapter.ts", "openfort");
+    expect(template).toContain('name: "Openfort EOA Baseline Adapter"');
+    expect(template).toContain('declaredArchitecture: "EOA"');
+    expect(template).toContain('verificationModel: "RECOVERABLE_ECDSA"');
   });
 });

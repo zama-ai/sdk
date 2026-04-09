@@ -269,7 +269,12 @@ Optional template presets:
 npm run init:adapter -- --template eoa
 npm run init:adapter -- --template mpc
 npm run init:adapter -- --template api-routed
+npm run init:adapter -- --template turnkey
+npm run init:adapter -- --template crossmint
+npm run init:adapter -- --template openfort
 ```
+
+`turnkey`, `crossmint`, and `openfort` presets are scaffolding shortcuts based on the example adapters in this repository. They are starter files, not production-certified implementations.
 
 Show help:
 

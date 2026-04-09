@@ -5,7 +5,14 @@ import { fileURLToPath } from "node:url";
 const DEFAULT_OUTPUT_PATH = "./my-adapter.ts";
 const DEFAULT_TEMPLATE = "generic";
 
-export type AdapterTemplateKind = "generic" | "eoa" | "mpc" | "api-routed";
+export type AdapterTemplateKind =
+  | "generic"
+  | "eoa"
+  | "mpc"
+  | "api-routed"
+  | "turnkey"
+  | "crossmint"
+  | "openfort";
 
 export interface InitAdapterConfig {
   outputPath: string;
@@ -19,6 +26,9 @@ const TEMPLATE_ALIASES: Record<string, AdapterTemplateKind> = {
   mpc: "mpc",
   api: "api-routed",
   "api-routed": "api-routed",
+  turnkey: "turnkey",
+  crossmint: "crossmint",
+  openfort: "openfort",
 };
 
 export function normalizeTemplate(input: string | undefined): AdapterTemplateKind {
@@ -217,6 +227,129 @@ export function templateFor(
 `;
   }
 
+  if (template === "turnkey") {
+    return `${sharedHeader}export const adapter: Adapter = {
+  metadata: {
+    name: "Turnkey API Key Adapter",
+    declaredArchitecture: "API_ROUTED_EXECUTION",
+    verificationModel: "UNKNOWN",
+    supportedChainIds: [11155111],
+    notes: ["Generated via npm run init:adapter -- --template turnkey"],
+  },
+  capabilities: {
+    addressResolution: "SUPPORTED",
+    eip712Signing: "SUPPORTED",
+    recoverableEcdsa: "UNKNOWN",
+    rawTransactionSigning: "UNSUPPORTED",
+    contractExecution: "SUPPORTED",
+    contractReads: "SUPPORTED",
+    transactionReceiptTracking: "SUPPORTED",
+    zamaAuthorizationFlow: "SUPPORTED",
+    zamaWriteFlow: "SUPPORTED",
+  },
+  async init() {
+    // Optional async bootstrap for API client and account resolution.
+  },
+  async getAddress() {
+    throw new Error("Implement getAddress() from Turnkey account metadata");
+  },
+  async signTypedData(_data) {
+    throw new Error("Implement signTypedData() via @turnkey/viem account");
+  },
+  async writeContract(_config) {
+    throw new Error("Implement writeContract() via Turnkey wallet client");
+  },
+  async readContract(_config) {
+    throw new Error("Implement readContract() via viem public client");
+  },
+  async waitForTransactionReceipt(_hash) {
+    throw new Error("Implement waitForTransactionReceipt() via public client");
+  },
+};
+`;
+  }
+
+  if (template === "crossmint") {
+    return `${sharedHeader}export const adapter: Adapter = {
+  metadata: {
+    name: "Crossmint API-Routed Adapter",
+    declaredArchitecture: "API_ROUTED_EXECUTION",
+    verificationModel: "UNKNOWN",
+    supportedChainIds: [11155111],
+    notes: ["Generated via npm run init:adapter -- --template crossmint"],
+  },
+  capabilities: {
+    addressResolution: "SUPPORTED",
+    eip712Signing: "SUPPORTED",
+    recoverableEcdsa: "UNKNOWN",
+    rawTransactionSigning: "UNSUPPORTED",
+    contractExecution: "SUPPORTED",
+    contractReads: "UNSUPPORTED",
+    transactionReceiptTracking: "UNSUPPORTED",
+    zamaAuthorizationFlow: "SUPPORTED",
+    zamaWriteFlow: "SUPPORTED",
+  },
+  async init() {
+    // Optional async bootstrap for API auth and wallet discovery.
+  },
+  async getAddress() {
+    throw new Error("Implement getAddress() from Crossmint wallet endpoint");
+  },
+  async signTypedData(_data) {
+    throw new Error("Implement signTypedData() through Crossmint signatures API");
+  },
+  async writeContract(_config) {
+    throw new Error("Implement writeContract() through Crossmint transactions API");
+  },
+};
+`;
+  }
+
+  if (template === "openfort") {
+    return `${sharedHeader}export const adapter: Adapter = {
+  metadata: {
+    name: "Openfort EOA Baseline Adapter",
+    declaredArchitecture: "EOA",
+    verificationModel: "RECOVERABLE_ECDSA",
+    supportedChainIds: [11155111],
+    notes: ["Generated via npm run init:adapter -- --template openfort"],
+  },
+  capabilities: {
+    addressResolution: "SUPPORTED",
+    eip712Signing: "SUPPORTED",
+    recoverableEcdsa: "SUPPORTED",
+    rawTransactionSigning: "SUPPORTED",
+    contractExecution: "SUPPORTED",
+    contractReads: "SUPPORTED",
+    transactionReceiptTracking: "SUPPORTED",
+    zamaAuthorizationFlow: "SUPPORTED",
+    zamaWriteFlow: "SUPPORTED",
+  },
+  async init() {
+    // Optional async bootstrap.
+  },
+  async getAddress() {
+    throw new Error("Implement getAddress() from Openfort-controlled EOA key");
+  },
+  async signTypedData(_data) {
+    throw new Error("Implement signTypedData() with EOA semantics");
+  },
+  async signTransaction(_tx) {
+    throw new Error("Implement signTransaction() if raw signing is exposed");
+  },
+  async writeContract(_config) {
+    throw new Error("Implement writeContract() with your wallet client");
+  },
+  async readContract(_config) {
+    throw new Error("Implement readContract() with public client");
+  },
+  async waitForTransactionReceipt(_hash) {
+    throw new Error("Implement waitForTransactionReceipt() with public client");
+  },
+};
+`;
+  }
+
   return `${sharedHeader}export const adapter: Adapter = {
   metadata: {
     name: "My Adapter",
@@ -264,6 +397,9 @@ Templates:
   eoa          EOA-style adapter (raw transaction signing expected)
   mpc          MPC-style adapter (API-routed execution, no raw signing)
   api-routed   Provider-managed execution model
+  turnkey      Turnkey API-key execution baseline
+  crossmint    Crossmint API-routed execution baseline
+  openfort     Openfort EOA baseline
 `;
 }
 
