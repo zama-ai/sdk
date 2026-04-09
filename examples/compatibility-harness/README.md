@@ -256,7 +256,21 @@ Optional custom output path:
 npm run init:adapter -- ./examples/my-provider/signer.ts
 ```
 
-Then run:
+Optional template presets:
+
+```bash
+npm run init:adapter -- --template eoa
+npm run init:adapter -- --template mpc
+npm run init:adapter -- --template api-routed
+```
+
+Show help:
+
+```bash
+npm run init:adapter -- --help
+```
+
+Then point the harness to your file:
 
 ```bash
 SIGNER_MODULE=./examples/my-provider/signer.ts npm test
@@ -294,10 +308,31 @@ export const adapter: Adapter = {
 };
 ```
 
-Run with:
+Minimal integration flow for a first pass:
+
+1. Generate an EOA baseline template:
 
 ```bash
-SIGNER_MODULE=./my-adapter.ts npm test
+npm run init:adapter -- --template eoa --output ./examples/my-provider/signer.ts
+```
+
+2. Replace the `throw new Error(...)` placeholders with your SDK/provider calls.
+3. Run fast static checks:
+
+```bash
+SIGNER_MODULE=./examples/my-provider/signer.ts npm run adapter:check
+```
+
+4. Run preflight connectivity checks:
+
+```bash
+SIGNER_MODULE=./examples/my-provider/signer.ts npm run doctor
+```
+
+5. Run full harness tests:
+
+```bash
+SIGNER_MODULE=./examples/my-provider/signer.ts npm test
 ```
 
 No harness source changes are required.
@@ -411,9 +446,13 @@ REPORT_JSON_PATH=./reports/latest.json npm test
 Current schema:
 
 - `kind`: `zama-compatibility-report`
-- `schemaVersion`: `1.2.0`
+- `schemaVersion`: `1.3.0` (parser accepts `1.2.0` and `1.3.0`)
 - each check record includes a canonical `checkId` (stable machine key)
-- claim payload includes `evidence` (stable map) and optional `evidenceDetails` (structured check records)
+- claim payload includes:
+  - `evidence` (stable map)
+  - optional `evidenceDetails` (structured check records)
+  - `confidence` (`HIGH` | `MEDIUM` | `LOW`)
+- optional `zama` section includes `writeValidationDepth` (`FULL` | `PARTIAL` | `UNTESTED`)
 - top-level sections: `adapterProfile`, `checks`, `sections`, `infrastructure`, `claim`, `finalVerdict`
 
 `schemaVersion` is the compatibility contract for CI/partner tooling. Consumers should validate `schemaVersion` before parsing.

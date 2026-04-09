@@ -7,7 +7,7 @@ This guide explains how to consume the compatibility harness JSON artifact in CI
 Before reading business fields, verify:
 
 - `kind === "zama-compatibility-report"`
-- `schemaVersion === "1.2.0"`
+- `schemaVersion` is one of: `1.2.0`, `1.3.0`
 
 If either check fails, treat the artifact as incompatible with your parser.
 
@@ -17,7 +17,9 @@ Use these top-level fields as canonical outputs:
 
 - `claim.id`
 - `claim.verdictLabel`
+- `claim.confidence`
 - `finalVerdict`
+- optional `zama.writeValidationDepth`
 - optional `claim.evidenceDetails` (structured per-check evidence records)
 
 `finalVerdict` is human-facing; `claim.id` is the stable machine-facing key for CI policy.
@@ -30,6 +32,7 @@ To separate infra blockers from compatibility defects:
 - inspect `checks.recorded[*].checkId` (canonical machine key)
 - inspect `checks.recorded[*].rootCauseCategory`
 - inspect `checks.recorded[*].errorCode`
+- inspect `zama.writeValidationDepth`
 - inspect `infrastructure.blockers`
 
 Rule of thumb:
@@ -83,6 +86,7 @@ esac
 ## 5) Backward Compatibility Guidance
 
 - Treat `schemaVersion` as the compatibility boundary.
+- Treat fields introduced in later versions as optional when parsing older artifacts.
 - Do not parse undocumented internal fields for gating.
 - Prefer `claim.id` + `validate` exit codes over ad hoc string matching on report text.
 
