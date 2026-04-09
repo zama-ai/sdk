@@ -19,10 +19,7 @@ export function isAllowedQueryOptions(
   return {
     ...filteredQuery,
     queryKey: zamaQueryKeys.isAllowed.scope(config.account, config.contractAddresses),
-    queryFn: () => {
-      const first = config.contractAddresses[0] as Address;
-      return sdk.credentials.isAllowed(first, ...config.contractAddresses.slice(1));
-    },
+    queryFn: () => sdk.credentials.isAllowed(...config.contractAddresses),
     staleTime: 30_000,
     enabled: config.query?.enabled ?? true,
   } as const;
