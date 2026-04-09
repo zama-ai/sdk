@@ -26,7 +26,7 @@ describe("allowMutationOptions", () => {
     ] as Address[];
     await options.mutationFn(addresses);
 
-    expect(allowSpy).toHaveBeenCalledWith(addresses);
+    expect(allowSpy).toHaveBeenCalledWith(...addresses);
   });
 });
 
@@ -109,7 +109,7 @@ describe("isAllowedQueryOptions", () => {
       queryKey: options.queryKey,
     } as Parameters<typeof options.queryFn>[0]);
 
-    expect(isAllowedSpy).toHaveBeenCalledWith(contracts);
+    expect(isAllowedSpy).toHaveBeenCalledWith(...contracts);
   });
 
   test("staleTime should be 30 seconds", ({ signer, relayer, storage }) => {

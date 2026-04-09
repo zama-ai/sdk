@@ -272,7 +272,7 @@ export class ReadonlyToken {
       ownerAddress: signerAddress,
       onError,
       maxConcurrency,
-      obtainCreds: (uncachedAddresses) => firstToken.credentials.allow(uncachedAddresses),
+      obtainCreds: (uncachedAddresses) => firstToken.credentials.allow(...uncachedAddresses),
       decrypt: (creds, handle, contractAddress) =>
         sdk.userDecrypt({
           handles: [handle],
@@ -336,7 +336,7 @@ export class ReadonlyToken {
       maxConcurrency,
       preFlightCheck: () => firstToken.#assertDelegationActive(delegatorAddress),
       obtainCreds: (uncachedAddresses) =>
-        firstToken.delegatedCredentials.allow(delegatorAddress, uncachedAddresses),
+        firstToken.delegatedCredentials.allow(delegatorAddress, ...uncachedAddresses),
       decrypt: (creds, handle, contractAddress) =>
         firstToken.relayer.delegatedUserDecrypt({
           handles: [handle],
@@ -570,7 +570,7 @@ export class ReadonlyToken {
    * ```
    */
   async allow(): Promise<void> {
-    await this.credentials.allow([this.address]);
+    await this.credentials.allow(this.address);
   }
 
   /**
@@ -578,7 +578,7 @@ export class ReadonlyToken {
    * Use this to check if decrypt operations can proceed without a wallet prompt.
    */
   async isAllowed(): Promise<boolean> {
-    return this.credentials.isAllowed([this.address]);
+    return this.credentials.isAllowed(this.address);
   }
 
   /**
@@ -586,8 +586,8 @@ export class ReadonlyToken {
    * Stored credentials remain intact, but the next decrypt operation
    * will require a fresh wallet signature.
    */
-  async revoke(): Promise<void> {
-    await this.credentials.revoke(this.address);
+  async revoke(...contractAddresses: Address[]): Promise<void> {
+    await this.credentials.revoke(...contractAddresses);
   }
 
   /**
@@ -610,7 +610,7 @@ export class ReadonlyToken {
       return;
     }
     const allAddresses = tokens.map((t) => t.address);
-    await tokens[0]!.credentials.allow(allAddresses);
+    await tokens[0]!.credentials.allow(...allAddresses);
   }
 
   protected async getAclAddress(): Promise<Address> {
@@ -756,7 +756,7 @@ export class ReadonlyToken {
     try {
       this.emit({ type: ZamaSDKEvents.DecryptStart });
 
-      const creds = await this.delegatedCredentials.allow(normalizedDelegator, [this.address]);
+      const creds = await this.delegatedCredentials.allow(normalizedDelegator, this.address);
 
       const result = await this.relayer.delegatedUserDecrypt({
         handles: [handle],
@@ -823,7 +823,7 @@ export class ReadonlyToken {
       return cached;
     }
 
-    const creds = await this.credentials.allow([this.address]);
+    const creds = await this.credentials.allow(this.address);
 
     const t0 = Date.now();
     try {
@@ -886,7 +886,7 @@ export class ReadonlyToken {
       return results;
     }
 
-    const creds = await this.credentials.allow([this.address]);
+    const creds = await this.credentials.allow(this.address);
 
     const t0 = Date.now();
     try {

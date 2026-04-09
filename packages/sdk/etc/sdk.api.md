@@ -6728,7 +6728,7 @@ export interface CredentialsLoadingEvent extends BaseEvent {
 // @public
 export class CredentialsManager extends BaseCredentialsManager<StoredCredentials, EncryptedCredentials$1> {
     constructor(config: CredentialsManagerConfig);
-    allow(contractAddresses: Address[]): Promise<StoredCredentials>;
+    allow(...contractAddresses: Address[]): Promise<StoredCredentials>;
     // (undocumented)
     protected assertEncrypted(data: unknown): asserts data is EncryptedCredentials$1;
     clear(): Promise<void>;
@@ -6740,7 +6740,7 @@ export class CredentialsManager extends BaseCredentialsManager<StoredCredentials
     protected decryptCredentials(encrypted: EncryptedCredentials$1, signature: Hex): Promise<StoredCredentials>;
     // (undocumented)
     protected encryptCredentials(creds: StoredCredentials): Promise<EncryptedCredentials$1>;
-    isAllowed(contractAddresses: Address[]): Promise<boolean>;
+    isAllowed(...contractAddresses: Address[]): Promise<boolean>;
     isExpired(contractAddress?: Address): Promise<boolean>;
     revoke(...contractAddresses: Address[]): Promise<void>;
     revokeByKey(key: string): Promise<void>;
@@ -6999,7 +6999,7 @@ export const DefaultRegistryAddresses: Record<number, Address>;
 // @public
 export class DelegatedCredentialsManager extends BaseCredentialsManager<DelegatedStoredCredentials, EncryptedCredentials> {
     constructor(config: DelegatedCredentialsManagerConfig);
-    allow(delegatorAddress: Address, contractAddresses: Address[]): Promise<DelegatedStoredCredentials>;
+    allow(delegatorAddress: Address, ...contractAddresses: Address[]): Promise<DelegatedStoredCredentials>;
     // (undocumented)
     protected assertEncrypted(data: unknown): asserts data is EncryptedCredentials;
     clear(delegatorAddress: Address): Promise<void>;
@@ -7010,7 +7010,7 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<Delegate
     protected decryptCredentials(encrypted: EncryptedCredentials, signature: Hex): Promise<DelegatedStoredCredentials>;
     // (undocumented)
     protected encryptCredentials(creds: DelegatedStoredCredentials): Promise<EncryptedCredentials>;
-    isAllowed(delegatorAddress: Address, contractAddresses: Address[]): Promise<boolean>;
+    isAllowed(delegatorAddress: Address, ...contractAddresses: Address[]): Promise<boolean>;
     isExpired(delegatorAddress: Address, contractAddress?: Address): Promise<boolean>;
     revoke(delegatorAddress: Address): Promise<void>;
     // Warning: (ae-forgotten-export) The symbol "DelegatedSigningMeta" needs to be exported by the entry point index.d.ts
@@ -18468,7 +18468,7 @@ export class ReadonlyToken {
     protected readConfidentialBalanceOf(owner: Address): Promise<Handle>;
     // (undocumented)
     protected readonly relayer: RelayerSDK;
-    revoke(): Promise<void>;
+    revoke(...contractAddresses: Address[]): Promise<void>;
     // (undocumented)
     readonly signer: GenericSigner;
     // (undocumented)

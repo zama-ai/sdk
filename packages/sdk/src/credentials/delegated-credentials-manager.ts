@@ -67,7 +67,7 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
    */
   async allow(
     delegatorAddress: Address,
-    contractAddresses: Address[],
+    ...contractAddresses: Address[]
   ): Promise<DelegatedStoredCredentials> {
     const normalizedDelegator = getAddress(delegatorAddress);
     const normalized = normalizeAddresses(contractAddresses);
@@ -91,7 +91,7 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
   }
 
   /** Whether a session signature is currently cached and covers the given contracts. */
-  async isAllowed(delegatorAddress: Address, contractAddresses: Address[]): Promise<boolean> {
+  async isAllowed(delegatorAddress: Address, ...contractAddresses: Address[]): Promise<boolean> {
     return this.checkAllowed(await this.#storeKey(getAddress(delegatorAddress)), contractAddresses);
   }
 

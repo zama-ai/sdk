@@ -77,7 +77,7 @@ export class CredentialsManager extends BaseCredentialsManager<
    * @throws {@link SigningRejectedError} if the user rejects the wallet signature prompt.
    * @throws {@link SigningFailedError} if the signing operation fails for any other reason.
    */
-  async allow(contractAddresses: Address[]): Promise<StoredCredentials> {
+  async allow(...contractAddresses: Address[]): Promise<StoredCredentials> {
     const normalized = normalizeAddresses(contractAddresses);
     const key = await this.#storeKey();
     return this.resolveCredentials({
@@ -107,7 +107,7 @@ export class CredentialsManager extends BaseCredentialsManager<
   }
 
   /** Whether a session signature is currently cached and covers the given contracts. */
-  async isAllowed(contractAddresses: Address[]): Promise<boolean> {
+  async isAllowed(...contractAddresses: Address[]): Promise<boolean> {
     return this.checkAllowed(await this.#storeKey(), contractAddresses);
   }
 
