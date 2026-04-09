@@ -223,7 +223,7 @@ Read-only subset. No wrapper address needed.
 | `revoke()`                                                   | Clear the session signature for the connected wallet.                                  |
 | `credentials.allow(...addresses)`                            | Pre-authorize and cache the session signature for specific token addresses.            |
 | `credentials.revoke(...addresses?)`                          | Clear the session signature for the connected wallet.                                  |
-| `credentials.isAllowed()`                                    | Whether a session signature is currently cached.                                       |
+| `credentials.isAllowed(...addresses)`                        | Whether a session signature is currently cached and covers the given contracts.        |
 | `credentials.isExpired(address?)`                            | Whether stored credentials are past their expiration time.                             |
 | `credentials.clear()`                                        | Delete stored credentials for the connected wallet.                                    |
 | `decryptBalanceAs({ delegatorAddress, owner? })`             | Decrypt a delegator's balance as a delegate. ACL address resolved from relayer config. |

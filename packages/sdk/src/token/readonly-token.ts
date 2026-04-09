@@ -86,7 +86,7 @@ export interface ReadonlyTokenConfig {
   signer: GenericSigner;
   /** Credential storage backend. */
   storage: GenericStorage;
-  /** Session storage for wallet signatures. Shared across all tokens in the same SDK instance. */
+  /** Session storage for wallet signatures. Shared across all contracts in the same SDK instance. */
   sessionStorage: GenericStorage;
   /** Storage-backed cache for decrypted handle values. When omitted, a private instance is created. */
   cache?: DecryptCache;
@@ -448,7 +448,7 @@ export class ReadonlyToken {
             }
             assertBigint(value, "batchDecryptCore: result[handle]");
             results.set(token.address, value);
-            await firstToken.cache.set(ownerAddress, token.address, handle, value);
+            void firstToken.cache.set(ownerAddress, token.address, handle, value);
           })
           .catch((error) => {
             const err = toError(error);
@@ -578,7 +578,7 @@ export class ReadonlyToken {
    * Use this to check if decrypt operations can proceed without a wallet prompt.
    */
   async isAllowed(): Promise<boolean> {
-    return this.credentials.isAllowed();
+    return this.credentials.isAllowed(this.address);
   }
 
   /**

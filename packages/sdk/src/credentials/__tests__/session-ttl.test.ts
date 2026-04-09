@@ -205,7 +205,7 @@ describe("Session TTL", () => {
     // Disconnect (revoke) before TTL expires
     vi.advanceTimersByTime(10 * 60 * 1000); // 10 minutes
     await manager.revoke();
-    expect(await manager.isAllowed()).toBe(false);
+    expect(await manager.isAllowed(TOKEN_A)).toBe(false);
 
     // Next allow should re-sign (not regenerate)
     await manager.allow(TOKEN_A);
@@ -230,10 +230,10 @@ describe("Session TTL", () => {
       sessionTTL: 3600,
     });
     await manager.allow(TOKEN_A);
-    expect(await manager.isAllowed()).toBe(true);
+    expect(await manager.isAllowed(TOKEN_A)).toBe(true);
 
     vi.advanceTimersByTime(3601 * 1000);
-    expect(await manager.isAllowed()).toBe(false);
+    expect(await manager.isAllowed(TOKEN_A)).toBe(false);
   });
 
   it("config change: old sessions use their recorded TTL", async ({

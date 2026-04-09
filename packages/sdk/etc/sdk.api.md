@@ -6740,7 +6740,7 @@ export class CredentialsManager extends BaseCredentialsManager<StoredCredentials
     protected decryptCredentials(encrypted: EncryptedCredentials$1, signature: Hex): Promise<StoredCredentials>;
     // (undocumented)
     protected encryptCredentials(creds: StoredCredentials): Promise<EncryptedCredentials$1>;
-    isAllowed(...contractAddresses: Address[]): Promise<boolean>;
+    isAllowed(...contractAddresses: [Address, ...Address[]]): Promise<boolean>;
     isExpired(contractAddress?: Address): Promise<boolean>;
     revoke(...contractAddresses: Address[]): Promise<void>;
     revokeByKey(key: string): Promise<void>;

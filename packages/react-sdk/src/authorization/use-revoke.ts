@@ -27,9 +27,7 @@ export function useRevoke(options?: UseMutationOptions<void, Error, Address[]>) 
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       options?.onSuccess?.(data, variables, onMutateResult, context);
-      void context.client.invalidateQueries({
-        queryKey: zamaQueryKeys.isAllowed.all,
-      });
+      context.client.removeQueries({ queryKey: zamaQueryKeys.isAllowed.all });
       context.client.removeQueries({ queryKey: zamaQueryKeys.decryption.all });
     },
   });

@@ -10,13 +10,7 @@ export interface DecryptHandle {
   contractAddress: Address;
 }
 
-/**
- * A map of handles to their decrypted clear-text values.
- *
- * Keyed by {@link Handle} alone (no contract dimension). This is safe because
- * FHE handles are globally unique across contracts — two different contracts
- * never produce the same handle value.
- */
+/** A map of handles to their decrypted clear-text values. */
 export type DecryptResult = Record<Handle, ClearValueType>;
 
 export interface UserDecryptQueryConfig {

@@ -34,7 +34,7 @@ export interface ZamaSDKConfig {
   /** Credential storage backend (`IndexedDBStorage` for browser, `MemoryStorage` for tests). */
   storage: GenericStorage;
   /**
-   * Session storage for wallet signatures. Shared across all tokens created by this SDK instance.
+   * Session storage for wallet signatures. Shared across all contracts in this SDK instance.
    * Defaults to an in-memory store (lost on page reload). Pass a `chrome.storage.session`-backed
    * implementation for web extensions so signatures survive service worker restarts.
    */

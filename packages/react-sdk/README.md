@@ -826,7 +826,6 @@ const result = await decrypt.mutateAsync({
   ],
 });
 // result: { "0xabc...": 500n, "0xdef...": 1000n }
-// Results are automatically cached — read via useDecryptedValue / useDecryptedValues
 ```
 
 #### All Encryption & Decryption Hooks
@@ -853,24 +852,6 @@ const result = await decrypt.mutateAsync({
 | ------------------- | --------------- | ------------------------------------------ | ------------------------------------- |
 | `usePublicKey()`    | `void`          | `{ publicKeyId, publicKey } \| null`       | Get the TFHE compact public key.      |
 | `usePublicParams()` | `number` (bits) | `{ publicParams, publicParamsId } \| null` | Get public parameters for encryption. |
-
-### Decryption Cache
-
-`useUserDecrypt` populates the persistent decrypt cache. Use `useDecryptedValue` / `useDecryptedValues` to read cached values on mount (even after page reload):
-
-```tsx
-const decrypt = useUserDecrypt();
-const { data: balance } = useDecryptedValue({
-  handle: { handle: "0xHandleHash", contractAddress: "0xToken" },
-});
-
-// Trigger decryption — only uncached handles are sent to the relayer
-decrypt.mutate({
-  handles: [{ handle: "0xHandleHash", contractAddress: "0xToken" }],
-});
-
-// balance updates after decryption completes
-```
 
 ## Query Keys
 
