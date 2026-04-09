@@ -48,10 +48,10 @@ import { useIsAllowed, useAllow, useUserDecrypt } from "@zama-fhe/react-sdk";
 function GatedDecrypt({ handle, contractAddress }: { handle: string; contractAddress: `0x${string}` }) {
   const { data: allowed } = useIsAllowed({ contractAddresses: [contractAddress] });
   const { mutateAsync: allow } = useAllow();
-  const { data, isPending } = useUserDecrypt({
-    handles: [{ handle, contractAddress }],
-    query: { enabled: !!allowed }, // only decrypt once authorized
-  });
+  const { data, isPending } = useUserDecrypt(
+    { handles: [{ handle, contractAddress }] },
+    { enabled: !!allowed }, // only decrypt once authorized
+  );
 
   if (!allowed) {
     return <button onClick={() => allow([contractAddress])}>Authorize</button>;
@@ -80,7 +80,7 @@ const { data: allowed } = useIsAllowed({
 ```
 
 {% hint style="warning" %}
-**You must gate decrypt queries yourself.** `useUserDecrypt` does not automatically wait for credentials — if you call it before `useAllow`, the user sees an unexpected wallet popup. Use `useIsAllowed` to conditionally enable the decrypt query via `query: { enabled: !!allowed }`, or conditionally render the decrypt component only when `allowed` is `true`.
+**You must gate decrypt queries yourself.** `useUserDecrypt` does not automatically wait for credentials — if you call it before `useAllow`, the user sees an unexpected wallet popup. Use `useIsAllowed` to conditionally enable the decrypt query via `{ enabled: !!allowed }` as the second argument, or conditionally render the decrypt component only when `allowed` is `true`.
 {% endhint %}
 
 ## Return Type

@@ -1384,13 +1384,12 @@ export interface UserDecryptParams {
 // @public (undocumented)
 export interface UserDecryptQueryConfig {
     handles: DecryptHandle[];
-    query?: {
-        enabled?: boolean;
-    };
 }
 
 // @public
-export function userDecryptQueryOptions(sdk: ZamaSDK, config: UserDecryptQueryConfig): QueryFactoryOptions<DecryptResult, Error, DecryptResult, ReturnType<typeof zamaQueryKeys.decryption.handles>>;
+export function userDecryptQueryOptions(sdk: ZamaSDK, config: UserDecryptQueryConfig, options?: {
+    enabled?: boolean;
+}): QueryFactoryOptions<DecryptResult, Error, DecryptResult, ReturnType<typeof zamaQueryKeys.decryption.handles>>;
 
 // @public
 export interface WrappedEvent {
@@ -1745,7 +1744,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/activity-OpixA_cn.d.ts:2357:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/esm/activity-Bjfv65WL.d.ts:2355:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

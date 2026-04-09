@@ -12,9 +12,9 @@ export type UseUserDecryptConfig = UserDecryptQueryConfig;
  * React hook for FHE user decryption. Thin wrapper around
  * `userDecryptQueryOptions` with `useQuery` semantics.
  */
-export function useUserDecrypt(config: UserDecryptQueryConfig) {
+export function useUserDecrypt(config: UserDecryptQueryConfig, options?: { enabled?: boolean }) {
   const sdk = useZamaSDK();
-  return useQuery<DecryptResult>(userDecryptQueryOptions(sdk, config));
+  return useQuery<DecryptResult>(userDecryptQueryOptions(sdk, config, options));
 }
 
 /** Return type of {@link useUserDecrypt}. */

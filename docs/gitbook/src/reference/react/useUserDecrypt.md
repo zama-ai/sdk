@@ -30,10 +30,10 @@ const CONTRACT = "0xYourContract" as const;
 function DecryptHandle({ handle }: { handle: string }) {
   const { mutate: allow, isPending: isAllowing } = useAllow();
   const { data: allowed } = useIsAllowed({ contractAddresses: [CONTRACT] });
-  const { data, isPending } = useUserDecrypt({
-    handles: [{ handle, contractAddress: CONTRACT }],
-    query: { enabled: !!allowed }, // gate: only decrypt once authorized
-  });
+  const { data, isPending } = useUserDecrypt(
+    { handles: [{ handle, contractAddress: CONTRACT }] },
+    { enabled: !!allowed }, // gate: only decrypt once authorized
+  );
 
   if (!allowed) {
     return (
@@ -87,14 +87,14 @@ const { data } = useUserDecrypt({
 ```
 
 {% hint style="warning" %}
-**All contract addresses must be authorized first.** Call `useAllow` with every contract address present in `handles` before enabling the query. Use `useIsAllowed({ contractAddresses })` to check coverage and pass `query: { enabled: !!allowed }` to prevent unexpected wallet prompts.
+**All contract addresses must be authorized first.** Call `useAllow` with every contract address present in `handles` before enabling the query. Use `useIsAllowed({ contractAddresses })` to check coverage and pass `{ enabled: !!allowed }` as the second argument to prevent unexpected wallet prompts.
 {% endhint %}
 
-### query
+### options (second argument)
 
 `{ enabled?: boolean } | undefined`
 
-Pass `{ enabled: false }` to disable the query.
+Pass `{ enabled: false }` as the second argument to disable the query.
 
 ## Return Type
 
@@ -116,10 +116,10 @@ When all requested handles are already cached, `data` contains the cached values
 
 ```tsx
 const { data: allowed } = useIsAllowed({ contractAddresses: ["0xContract"] });
-const { data } = useUserDecrypt({
-  handles: [{ handle, contractAddress: "0xContract" }],
-  query: { enabled: !!allowed },
-});
+const { data } = useUserDecrypt(
+  { handles: [{ handle, contractAddress: "0xContract" }] },
+  { enabled: !!allowed },
+);
 ```
 
 This ensures the decrypt query only fires after `useAllow` has been called.

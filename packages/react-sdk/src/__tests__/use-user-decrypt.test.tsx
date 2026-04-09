@@ -75,12 +75,12 @@ describe("useUserDecrypt", () => {
     );
   });
 
-  it("respects query.enabled = false", async ({ tokenAddress, renderWithProviders }) => {
+  it("respects enabled = false", async ({ tokenAddress, renderWithProviders }) => {
     const { result } = renderWithProviders(() =>
-      useUserDecrypt({
-        handles: [{ handle: "0xh", contractAddress: tokenAddress }],
-        query: { enabled: false },
-      }),
+      useUserDecrypt(
+        { handles: [{ handle: "0xh", contractAddress: tokenAddress }] },
+        { enabled: false },
+      ),
     );
 
     await waitFor(() => expect(result.current.fetchStatus).toBe("idle"));

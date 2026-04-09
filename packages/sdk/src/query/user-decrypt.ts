@@ -22,14 +22,13 @@ export type DecryptResult = Record<Handle, ClearValueType>;
 export interface UserDecryptQueryConfig {
   /** The handles to decrypt. */
   handles: DecryptHandle[];
-  /** Pass `{ enabled: false }` to disable the query. */
-  query?: { enabled?: boolean };
 }
 
 /** Query factory for user decryption of FHE handles. */
 export function userDecryptQueryOptions(
   sdk: ZamaSDK,
   config: UserDecryptQueryConfig,
+  options?: { enabled?: boolean },
 ): QueryFactoryOptions<
   DecryptResult,
   Error,
@@ -40,6 +39,6 @@ export function userDecryptQueryOptions(
     queryKey: zamaQueryKeys.decryption.handles(config.handles),
     queryFn: () => sdk.userDecrypt(config.handles),
     staleTime: Infinity,
-    enabled: config.handles.length > 0 && config.query?.enabled !== false,
+    enabled: config.handles.length > 0 && options?.enabled !== false,
   };
 }
