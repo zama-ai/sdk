@@ -45,7 +45,13 @@ function AuthGuard() {
 ```tsx
 import { useIsAllowed, useAllow, useUserDecrypt } from "@zama-fhe/react-sdk";
 
-function GatedDecrypt({ handle, contractAddress }: { handle: string; contractAddress: `0x${string}` }) {
+function GatedDecrypt({
+  handle,
+  contractAddress,
+}: {
+  handle: string;
+  contractAddress: `0x${string}`;
+}) {
   const { data: allowed } = useIsAllowed({ contractAddresses: [contractAddress] });
   const { mutateAsync: allow } = useAllow();
   const { data, isPending } = useUserDecrypt(
