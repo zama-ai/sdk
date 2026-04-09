@@ -295,8 +295,8 @@ export abstract class BaseCredentialsManager<
     } as ZamaSDKEventInput);
   }
 
-  // Optional because DelegatedCredentialsManager calls without contract addresses
-  // (delegated credentials aren't scoped per-contract).
+  // Optional because DelegatedCredentialsManager.isAllowed only checks session
+  // existence without verifying contract coverage.
   protected async checkAllowed(key: string, contractAddresses?: Address[]): Promise<boolean> {
     const entry = await this.sessionSignatures.get(key);
     if (entry === null) {
