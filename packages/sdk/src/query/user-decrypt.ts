@@ -22,7 +22,6 @@ export interface UserDecryptQueryConfig {
 export function userDecryptQueryOptions(
   sdk: ZamaSDK,
   config: UserDecryptQueryConfig,
-  options?: { enabled?: boolean },
 ): QueryFactoryOptions<
   DecryptResult,
   Error,
@@ -33,6 +32,6 @@ export function userDecryptQueryOptions(
     queryKey: zamaQueryKeys.decryption.handles(config.handles),
     queryFn: () => sdk.userDecrypt(config.handles),
     staleTime: Infinity,
-    enabled: config.handles.length > 0 && options?.enabled !== false,
+    enabled: config.handles.length > 0,
   };
 }

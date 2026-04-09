@@ -26,7 +26,7 @@ function ConfidentialRoundTrip() {
   const { mutate: allow } = useAllow();
   const [handles, setHandles] = useState<{ handle: string; contractAddress: `0x${string}` }[]>([]);
 
-  // useUserDecrypt fires automatically once allow() is called
+  // useUserDecrypt fires when handles are set
   const { data: decrypted } = useUserDecrypt({ handles });
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -248,35 +248,30 @@ function ConfidentialAction() {
 
 {% endcode %}
 
-### 3. Authorize and decrypt with useAllow + useUserDecrypt
+### 3. Decrypt with useUserDecrypt
 
-Decryption is a two-step process:
-
-1. **`useAllow`** — signs an EIP-712 message authorizing decryption for specific contracts (triggers a wallet prompt once).
-2. **`useUserDecrypt`** — a query that automatically decrypts handles once credentials are available. No manual `mutate()` call needed.
+`useUserDecrypt` is a query hook that decrypts FHE handles. If no cached credentials exist, it triggers a wallet signature prompt. Use `useAllow` + `useIsAllowed` to pre-authorize and gate the query if you want to control when the prompt appears.
 
 {% code title="DecryptExample.tsx" %}
 
 ```tsx
 import { useAllow, useIsAllowed, useUserDecrypt } from "@zama-fhe/react-sdk";
 
+const CONTRACT = "0xYourConfidentialContract" as const;
+
 function DecryptExample() {
   const { mutate: allow, isPending: isAllowing } = useAllow();
-  const { data: isAllowed } = useIsAllowed();
+  const { data: isAllowed } = useIsAllowed({ contractAddresses: [CONTRACT] });
 
-  const { data, isPending } = useUserDecrypt({
-    handles: [
-      {
-        handle: "0xabc123...",
-        contractAddress: "0xYourConfidentialContract",
-      },
-    ],
-  });
+  const { data, isPending } = useUserDecrypt(
+    { handles: [{ handle: "0xabc123...", contractAddress: CONTRACT }] },
+    { enabled: !!isAllowed },
+  );
 
   return (
     <section>
       {!isAllowed && (
-        <button onClick={() => allow(["0xYourConfidentialContract"])} disabled={isAllowing}>
+        <button onClick={() => allow([CONTRACT])} disabled={isAllowing}>
           {isAllowing ? "Signing..." : "Authorize decryption"}
         </button>
       )}
@@ -291,13 +286,9 @@ function DecryptExample() {
 
 #### Decrypting handles from multiple contracts
 
-`useUserDecrypt` automatically groups handles by contract address and issues one decryption request per contract. Make sure all contracts are authorized via `useAllow`:
+`useUserDecrypt` automatically groups handles by contract address and issues one decryption request per contract:
 
 ```tsx
-// Authorize all contracts upfront
-allow(["0xTokenA", "0xTokenB"]);
-
-// useUserDecrypt fires once credentials cover both contracts
 const { data } = useUserDecrypt({
   handles: [
     { handle: "0xhandle1...", contractAddress: "0xTokenA" },

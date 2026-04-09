@@ -1471,9 +1471,7 @@ export function useUnwrap(config: UseZamaConfig, options?: UseMutationOptions<Tr
 export function useUnwrapAll(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, void, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, void, `0x${string}`>;
 
 // @public
-export function useUserDecrypt(config: UserDecryptQueryConfig, options?: {
-    enabled?: boolean;
-}): _$_tanstack_react_query0.UseQueryResult<DecryptResult, Error>;
+export function useUserDecrypt(config: UserDecryptQueryConfig, options?: Omit<UseQueryOptions<DecryptResult>, "queryKey" | "queryFn">): _$_tanstack_react_query0.UseQueryResult<DecryptResult, Error>;
 
 // @public
 export type UseUserDecryptResult = ReturnType<typeof useUserDecrypt>;

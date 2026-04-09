@@ -36,14 +36,12 @@ describe("userDecryptQueryOptions", () => {
     expect(options.enabled).toBe(false);
   });
 
-  test("respects enabled: false", ({ sdk }) => {
+  test("enabled when handles are provided", ({ sdk }) => {
     const handle = ("0x" + "01".repeat(32)) as `0x${string}`;
 
-    const options = userDecryptQueryOptions(
-      sdk,
-      { handles: [{ handle, contractAddress: CONTRACT }] },
-      { enabled: false },
-    );
-    expect(options.enabled).toBe(false);
+    const options = userDecryptQueryOptions(sdk, {
+      handles: [{ handle, contractAddress: CONTRACT }],
+    });
+    expect(options.enabled).toBe(true);
   });
 });
