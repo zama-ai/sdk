@@ -12,12 +12,15 @@ import type {
   VerificationModel,
 } from "./types.js";
 import { emptyCapabilities } from "./types.js";
+import { resolveFinalCapabilities } from "./capability-evidence.js";
 
 export interface LoadedAdapter {
   adapter: Adapter;
   init: () => Promise<void>;
   source: "adapter" | "legacy-signer";
   declaredCapabilities: AdapterCapabilities;
+  observedStructuralCapabilities: AdapterCapabilities;
+  observedRuntimeCapabilities: AdapterCapabilities;
   observedCapabilities: AdapterCapabilities;
 }
 
@@ -148,12 +151,19 @@ function assertAdapterModule(module: AdapterModuleShape): LoadedAdapter {
   if (module.adapter) {
     const adapter = module.adapter;
     const declaredCapabilities = normalizeDeclaredCapabilities(adapter);
-    const observedCapabilities = inferObservedCapabilitiesFromAdapter(adapter);
+    const observedStructuralCapabilities = inferObservedCapabilitiesFromAdapter(adapter);
+    const observedRuntimeCapabilities = emptyCapabilities();
+    const observedCapabilities = resolveFinalCapabilities({
+      structural: observedStructuralCapabilities,
+      runtime: observedRuntimeCapabilities,
+    });
     adapter.capabilities = observedCapabilities;
     return {
       adapter,
       source: "adapter",
       declaredCapabilities,
+      observedStructuralCapabilities,
+      observedRuntimeCapabilities,
       observedCapabilities,
       init: async () => {
         if (module.ready) await module.ready;
@@ -165,12 +175,19 @@ function assertAdapterModule(module: AdapterModuleShape): LoadedAdapter {
   if (module.signer) {
     const adapter = wrapLegacySigner(module.signer);
     const declaredCapabilities = normalizeDeclaredCapabilities(adapter);
-    const observedCapabilities = inferObservedCapabilitiesFromAdapter(adapter);
+    const observedStructuralCapabilities = inferObservedCapabilitiesFromAdapter(adapter);
+    const observedRuntimeCapabilities = emptyCapabilities();
+    const observedCapabilities = resolveFinalCapabilities({
+      structural: observedStructuralCapabilities,
+      runtime: observedRuntimeCapabilities,
+    });
     adapter.capabilities = observedCapabilities;
     return {
       adapter,
       source: "legacy-signer",
       declaredCapabilities,
+      observedStructuralCapabilities,
+      observedRuntimeCapabilities,
       observedCapabilities,
       init: async () => {
         if (module.ready) await module.ready;

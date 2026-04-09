@@ -14,7 +14,10 @@ import type {
   RootCauseCategory,
   ValidationStatus,
   CapabilityState,
+  AdapterCapabilities,
 } from "../adapter/types.js";
+import { emptyCapabilities } from "../adapter/types.js";
+import { mergeCapabilityPatch, resolveFinalCapabilities } from "../adapter/capability-evidence.js";
 import { detectCapabilityContradictions } from "../adapter/contradictions.js";
 import { recommendationForDiagnostic } from "../harness/recommendations.js";
 import {
@@ -103,10 +106,29 @@ export function recordProfile(profile: AdapterProfile): void {
   writeFileSync(PROFILE_FILE, JSON.stringify(profile, null, 2));
 }
 
+function profileStructuralCapabilities(profile: AdapterProfile): AdapterCapabilities {
+  return profile.observedStructuralCapabilities ?? profile.observedCapabilities;
+}
+
+function profileRuntimeCapabilities(profile: AdapterProfile): AdapterCapabilities {
+  return profile.observedRuntimeCapabilities ?? emptyCapabilities();
+}
+
 /** Merge a partial profile update into the recorded adapter profile. */
 export function mergeProfile(
-  patch: Partial<Omit<AdapterProfile, "declaredCapabilities" | "observedCapabilities">> & {
+  patch: Partial<
+    Omit<
+      AdapterProfile,
+      | "declaredCapabilities"
+      | "observedStructuralCapabilities"
+      | "observedRuntimeCapabilities"
+      | "observedCapabilities"
+    >
+  > & {
     declaredCapabilities?: Partial<AdapterProfile["declaredCapabilities"]>;
+    observedStructuralCapabilities?: Partial<AdapterProfile["observedStructuralCapabilities"]>;
+    observedRuntimeCapabilities?: Partial<AdapterProfile["observedRuntimeCapabilities"]>;
+    // Backward-compatible alias for runtime observations.
     observedCapabilities?: Partial<AdapterProfile["observedCapabilities"]>;
   },
 ): void {
@@ -123,30 +145,37 @@ export function mergeProfile(
     recordProfile(patch as AdapterProfile);
     return;
   }
+  const declaredCapabilities = mergeCapabilityPatch({
+    base: existing.declaredCapabilities,
+    patch: patch.declaredCapabilities,
+  });
+  const observedStructuralCapabilities = mergeCapabilityPatch({
+    base: profileStructuralCapabilities(existing),
+    patch: patch.observedStructuralCapabilities,
+  });
+  const observedRuntimeCapabilities = mergeCapabilityPatch({
+    base: profileRuntimeCapabilities(existing),
+    patch: {
+      ...patch.observedRuntimeCapabilities,
+      ...patch.observedCapabilities,
+    },
+  });
+  const observedCapabilities = resolveFinalCapabilities({
+    structural: observedStructuralCapabilities,
+    runtime: observedRuntimeCapabilities,
+  });
+
   writeFileSync(
     PROFILE_FILE,
     JSON.stringify(
       {
         ...existing,
         ...patch,
-        declaredCapabilities: {
-          ...existing.declaredCapabilities,
-          ...patch.declaredCapabilities,
-        },
-        observedCapabilities: {
-          ...existing.observedCapabilities,
-          ...patch.observedCapabilities,
-        },
-        contradictions: detectCapabilityContradictions(
-          {
-            ...existing.declaredCapabilities,
-            ...patch.declaredCapabilities,
-          },
-          {
-            ...existing.observedCapabilities,
-            ...patch.observedCapabilities,
-          },
-        ),
+        declaredCapabilities,
+        observedStructuralCapabilities,
+        observedRuntimeCapabilities,
+        observedCapabilities,
+        contradictions: detectCapabilityContradictions(declaredCapabilities, observedCapabilities),
       },
       null,
       2,
@@ -335,6 +364,9 @@ export function printReport(): void {
 
   // ── Adapter profile ────────────────────────────────────────────────────────
   if (profile) {
+    const structuralCapabilities = profileStructuralCapabilities(profile);
+    const runtimeCapabilities = profileRuntimeCapabilities(profile);
+    const finalCapabilities = profile.observedCapabilities;
     const shortAddr =
       profile.address.length > 20
         ? `${profile.address.slice(0, 10)}…${profile.address.slice(-8)}`
@@ -346,21 +378,21 @@ export function printReport(): void {
     console.log(`  Detected Type      ${profile.detectedArchitecture}`);
     console.log(`  Verification       ${profile.verificationModel}`);
     console.log(`  Init               ${profile.initializationStatus}`);
-    console.log(`  Capability Source  declared + observed`);
+    console.log(`  Capability Source  declared + structural + runtime + final`);
     console.log(
-      `  EIP-712            declared ${renderCapability(profile.declaredCapabilities.eip712Signing)} / observed ${renderCapability(profile.observedCapabilities.eip712Signing)}`,
+      `  EIP-712            declared ${renderCapability(profile.declaredCapabilities.eip712Signing)} / structural ${renderCapability(structuralCapabilities.eip712Signing)} / runtime ${renderCapability(runtimeCapabilities.eip712Signing)} / final ${renderCapability(finalCapabilities.eip712Signing)}`,
     );
     console.log(
-      `  Recoverability     declared ${renderCapability(profile.declaredCapabilities.recoverableEcdsa)} / observed ${renderCapability(profile.observedCapabilities.recoverableEcdsa)}`,
+      `  Recoverability     declared ${renderCapability(profile.declaredCapabilities.recoverableEcdsa)} / structural ${renderCapability(structuralCapabilities.recoverableEcdsa)} / runtime ${renderCapability(runtimeCapabilities.recoverableEcdsa)} / final ${renderCapability(finalCapabilities.recoverableEcdsa)}`,
     );
     console.log(
-      `  Execution          rawTx ${renderCapability(profile.observedCapabilities.rawTransactionSigning)} / write ${renderCapability(profile.observedCapabilities.contractExecution)}`,
+      `  Execution          rawTx ${renderCapability(finalCapabilities.rawTransactionSigning)} / write ${renderCapability(finalCapabilities.contractExecution)}`,
     );
     console.log(
-      `  Reads & Receipts   reads ${renderCapability(profile.observedCapabilities.contractReads)} / receipts ${renderCapability(profile.observedCapabilities.transactionReceiptTracking)}`,
+      `  Reads & Receipts   reads ${renderCapability(finalCapabilities.contractReads)} / receipts ${renderCapability(finalCapabilities.transactionReceiptTracking)}`,
     );
     console.log(
-      `  Zama Surface       auth ${renderCapability(profile.observedCapabilities.zamaAuthorizationFlow)} / write ${renderCapability(profile.observedCapabilities.zamaWriteFlow)}`,
+      `  Zama Surface       auth ${renderCapability(finalCapabilities.zamaAuthorizationFlow)} / write ${renderCapability(finalCapabilities.zamaWriteFlow)}`,
     );
     if (profile.contradictions.length > 0) {
       console.log("  Contradictions");

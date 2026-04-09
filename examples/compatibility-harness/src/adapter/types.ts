@@ -121,6 +121,8 @@ export interface ObservedAdapterProfile {
   verificationModel: VerificationModel;
   address: string;
   declaredCapabilities: AdapterCapabilities;
+  observedStructuralCapabilities: AdapterCapabilities;
+  observedRuntimeCapabilities: AdapterCapabilities;
   observedCapabilities: AdapterCapabilities;
   contradictions: string[];
   initializationStatus: ValidationStatus;

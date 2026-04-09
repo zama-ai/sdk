@@ -4,6 +4,8 @@ import { emptyCapabilities } from "../adapter/types.js";
 import {
   adapter,
   adapterDeclaredCapabilities,
+  adapterObservedStructuralCapabilities,
+  adapterObservedRuntimeCapabilities,
   adapterObservedCapabilities,
   adapterSource,
   getAdapterAddress,
@@ -30,6 +32,14 @@ describe("Adapter Profile", () => {
       ...emptyCapabilities(),
       ...adapterDeclaredCapabilities,
     };
+    const observedStructuralCapabilities = existingProfile?.observedStructuralCapabilities ?? {
+      ...emptyCapabilities(),
+      ...adapterObservedStructuralCapabilities,
+    };
+    const observedRuntimeCapabilities = existingProfile?.observedRuntimeCapabilities ?? {
+      ...emptyCapabilities(),
+      ...adapterObservedRuntimeCapabilities,
+    };
     const observedCapabilities = existingProfile?.observedCapabilities ?? {
       ...emptyCapabilities(),
       ...adapterObservedCapabilities,
@@ -48,6 +58,8 @@ describe("Adapter Profile", () => {
       ),
       address: "(unresolved)",
       declaredCapabilities,
+      observedStructuralCapabilities,
+      observedRuntimeCapabilities,
       observedCapabilities,
       contradictions: detectCapabilityContradictions(declaredCapabilities, observedCapabilities),
       initializationStatus: initError
