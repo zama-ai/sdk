@@ -295,9 +295,7 @@ export abstract class BaseCredentialsManager<
     } as ZamaSDKEventInput);
   }
 
-  // Optional because DelegatedCredentialsManager.isAllowed only checks session
-  // existence without verifying contract coverage.
-  protected async checkAllowed(key: string, contractAddresses?: Address[]): Promise<boolean> {
+  protected async checkAllowed(key: string, contractAddresses: Address[]): Promise<boolean> {
     const entry = await this.sessionSignatures.get(key);
     if (entry === null) {
       return false;
@@ -305,7 +303,7 @@ export abstract class BaseCredentialsManager<
     if (this.sessionSignatures.isExpired(entry)) {
       return false;
     }
-    if (contractAddresses && contractAddresses.length > 0) {
+    if (contractAddresses.length > 0) {
       try {
         const stored = await this.storage.get<TEncrypted>(key);
         if (!stored) {
