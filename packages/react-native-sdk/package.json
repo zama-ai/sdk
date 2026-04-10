@@ -1,0 +1,33 @@
+{
+  "name": "@zama-fhe/react-native-sdk",
+  "version": "2.4.0-alpha.2",
+  "description": "React Native hooks for Zama confidential token operations",
+  "license": "BSD-3-Clause-Clear",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zama-ai/sdk",
+    "directory": "packages/react-native-sdk"
+  },
+  "author": "Zama",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "files": [
+    "src/"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fhevm/react-native-sdk": "file:../../fhevm-react-native-sdk-0.1.0.tgz"
+  },
+  "peerDependencies": {
+    "@zama-fhe/sdk": "^2.4.0-alpha.2",
+    "@zama-fhe/react-sdk": "^2.4.0-alpha.2",
+    "@tanstack/react-query": ">=5",
+    "@react-native-async-storage/async-storage": ">=2.0.0",
+    "react": ">=18.0.0",
+    "expo": ">=52.0.0",
+    "react-native": ">=0.76.0"
+  }
+}

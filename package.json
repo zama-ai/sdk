@@ -13,6 +13,7 @@
     "build": "pnpm build:sdk && pnpm build:react-sdk",
     "build:sdk": "pnpm --filter @zama-fhe/sdk build",
     "build:react-sdk": "pnpm --filter @zama-fhe/react-sdk build",
+    "build:react-native-sdk": "pnpm --filter @zama-fhe/react-native-sdk typecheck",
     "build:test-nextjs": "pnpm --filter @zama-fhe/test-nextjs build",
     "build:test-vite": "pnpm --filter @zama-fhe/test-vite  build",
     "test": "vitest",

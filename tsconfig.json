@@ -10,7 +10,9 @@
       "@zama-fhe/sdk/node": ["./packages/sdk/src/node/index.ts"],
       "@zama-fhe/sdk/*": ["./packages/sdk/src/*"],
       "@zama-fhe/react-sdk": ["./packages/react-sdk/src/index.ts"],
-      "@zama-fhe/react-sdk/*": ["./packages/react-sdk/src/*"]
+      "@zama-fhe/react-sdk/*": ["./packages/react-sdk/src/*"],
+      "@zama-fhe/react-native-sdk": ["./packages/react-native-sdk/src/index.ts"],
+      "@zama-fhe/react-native-sdk/*": ["./packages/react-native-sdk/src/*"]
     }
   },
   "files": []
