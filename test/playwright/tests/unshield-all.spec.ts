@@ -4,7 +4,6 @@ test("should shield USDT then unshield all", async ({
   page,
   contracts,
   formatUnits,
-  computeFee,
   confidentialBalances,
 }) => {
   const shieldAmount = 1000n;
@@ -19,7 +18,7 @@ test("should shield USDT then unshield all", async ({
   await page.goto(`/unshield-all?token=${contracts.cUSDT}`);
 
   // Verify balance is shown before unshield
-  const balanceBefore = cUSDTBefore + shieldAmount - computeFee(shieldAmount);
+  const balanceBefore = cUSDTBefore + shieldAmount;
   await expect(page.getByTestId("current-balance")).toContainText(`Balance: ${balanceBefore}`);
 
   await page.getByTestId("unshield-all-button").click();
@@ -37,7 +36,6 @@ test("should shield USDC then unshield all", async ({
   page,
   contracts,
   formatUnits,
-  computeFee,
   confidentialBalances,
 }) => {
   const shieldAmount = 1000n;
@@ -52,7 +50,7 @@ test("should shield USDC then unshield all", async ({
   await page.goto(`/unshield-all?token=${contracts.cUSDC}`);
 
   // Verify balance is shown before unshield
-  const balanceBefore = cUSDCBefore + shieldAmount - computeFee(shieldAmount);
+  const balanceBefore = cUSDCBefore + shieldAmount;
   await expect(page.getByTestId("current-balance")).toContainText(`Balance: ${balanceBefore}`);
 
   await page.getByTestId("unshield-all-button").click();

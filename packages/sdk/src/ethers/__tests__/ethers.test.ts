@@ -56,25 +56,19 @@ vi.mock(import("ethers"), () => {
 import { EthersSigner } from "../ethers-signer";
 import {
   readConfidentialBalanceOfContract,
-  readWrapperForTokenContract,
   readUnderlyingTokenContract,
-  readWrapperExistsContract,
   readSupportsInterfaceContract,
   writeConfidentialTransferContract,
-  writeConfidentialBatchTransferContract,
   writeUnwrapContract,
   writeUnwrapFromBalanceContract,
   writeFinalizeUnwrapContract,
   writeSetOperatorContract,
   writeWrapContract,
-  writeWrapETHContract,
 } from "../contracts";
 
 // ── Test constants ───────────────────────────────────────────
 
 const SPENDER = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;
-const REGISTRY = "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e" as Address;
-const BATCHER = "0x7A7a7A7a7a7a7a7A7a7a7a7A7a7A7A7A7A7A7a7A" as Address;
 const TX_HASH = "0xdeadbeef" as Hex;
 const MOCK_ADDRESS = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
 const MOCK_SIGNATURE = ("0x" + "12".repeat(65)) as Hex;
@@ -516,28 +510,12 @@ describe("ethers read contract helpers", () => {
     expect(result).toBe(VALID_HANDLE);
   });
 
-  eit("readWrapperForTokenContract", async ({ tokenAddress }) => {
-    vi.mocked(mockProvider.call).mockResolvedValueOnce(
-      encodeAbiParameters([{ type: "address" }], [MOCK_ADDRESS]),
-    );
-    const result = await readWrapperForTokenContract(mockProvider, REGISTRY, tokenAddress);
-    expect(result).toBe(MOCK_ADDRESS);
-  });
-
   eit("readUnderlyingTokenContract", async ({ wrapperAddress }) => {
     vi.mocked(mockProvider.call).mockResolvedValueOnce(
       encodeAbiParameters([{ type: "address" }], [MOCK_ADDRESS]),
     );
     const result = await readUnderlyingTokenContract(mockProvider, wrapperAddress);
     expect(result).toBe(MOCK_ADDRESS);
-  });
-
-  eit("readWrapperExistsContract", async ({ tokenAddress }) => {
-    vi.mocked(mockProvider.call).mockResolvedValueOnce(
-      encodeAbiParameters([{ type: "bool" }], [true]),
-    );
-    const result = await readWrapperExistsContract(mockProvider, REGISTRY, tokenAddress);
-    expect(result).toBe(true);
   });
 
   eit("readSupportsInterfaceContract", async ({ tokenAddress }) => {
@@ -567,29 +545,6 @@ describe("ethers write contract helpers", () => {
       userAddress,
       handle,
       proof,
-    );
-    expect(hash).toBe(TX_HASH);
-  });
-
-  eit("writeConfidentialBatchTransferContract", async ({ tokenAddress, userAddress }) => {
-    vi.mocked(mockSigner.sendTransaction).mockResolvedValueOnce({
-      hash: TX_HASH,
-    });
-    const batchData = [
-      {
-        to: userAddress,
-        encryptedAmount: VALID_HANDLE,
-        inputProof: VALID_PROOF,
-        retryFor: 0n,
-      },
-    ];
-    const hash = await writeConfidentialBatchTransferContract(
-      mockSigner,
-      BATCHER,
-      tokenAddress,
-      userAddress,
-      batchData,
-      10n,
     );
     expect(hash).toBe(TX_HASH);
   });
@@ -657,14 +612,6 @@ describe("ethers write contract helpers", () => {
       hash: TX_HASH,
     });
     const hash = await writeWrapContract(mockSigner, wrapperAddress, userAddress, 1000n);
-    expect(hash).toBe(TX_HASH);
-  });
-
-  eit("writeWrapETHContract", async ({ wrapperAddress, userAddress }) => {
-    vi.mocked(mockSigner.sendTransaction).mockResolvedValueOnce({
-      hash: TX_HASH,
-    });
-    const hash = await writeWrapETHContract(mockSigner, wrapperAddress, userAddress, 500n, 500n);
     expect(hash).toBe(TX_HASH);
   });
 

@@ -11,6 +11,13 @@ import {
   decodeOnChainEvents,
   findUnwrapRequested,
   findWrapped,
+  AclTopics,
+  decodeDelegatedForUserDecryption,
+  decodeRevokedDelegationForUserDecryption,
+  decodeAclEvent,
+  decodeAclEvents,
+  findDelegatedForUserDecryption,
+  findRevokedDelegationForUserDecryption,
   type RawLog,
 } from "../events";
 
@@ -23,12 +30,9 @@ const bytes32 = (hex: string): Hex => `0x${hex.padStart(64, "0")}`;
 describe("Topic constants match keccak256", () => {
   const cases: [string, string][] = [
     ["ConfidentialTransfer(address,address,bytes32)", Topics.ConfidentialTransfer],
-    ["Wrapped(uint64,uint256,uint256,address,uint256)", Topics.Wrapped],
+    ["Wrapped(address,uint256)", Topics.Wrapped],
     ["UnwrapRequested(address,bytes32)", Topics.UnwrapRequested],
-    [
-      "UnwrappedFinalized(bytes32,bool,bool,uint64,uint256,uint256,uint256)",
-      Topics.UnwrappedFinalized,
-    ],
+    ["UnwrapFinalized(address,bytes32,uint64)", Topics.UnwrappedFinalized],
     [
       "UnwrappedStarted(bool,uint256,uint256,address,address,bytes32,bytes32)",
       Topics.UnwrappedStarted,
@@ -83,14 +87,11 @@ describe("decodeConfidentialTransfer", () => {
 
 describe("decodeWrapped", () => {
   const to = addr("dead");
-  const mintTxId = 42n;
-  const mintAmount = 1000n;
   const amountIn = 2000n;
-  const feeAmount = 50n;
 
   const log: RawLog = {
-    topics: [Topics.Wrapped, topic("dead"), topic(mintTxId.toString(16))],
-    data: `0x${word(mintAmount.toString(16))}${word(amountIn.toString(16))}${word(feeAmount.toString(16))}`,
+    topics: [Topics.Wrapped, topic("dead")],
+    data: `0x${word(amountIn.toString(16))}`,
   };
 
   it("decodes valid log", () => {
@@ -98,10 +99,7 @@ describe("decodeWrapped", () => {
     expect(event).toEqual({
       eventName: "Wrapped",
       to,
-      mintTxId,
-      mintAmount,
       amountIn,
-      feeAmount,
     });
   });
 
@@ -144,25 +142,23 @@ describe("decodeUnwrapRequested", () => {
 });
 
 describe("decodeUnwrappedFinalized", () => {
-  const burntHandle = bytes32("ab".repeat(32));
-  const nextTxId = 7n;
+  // UnwrapFinalized(address indexed receiver, bytes32 encryptedAmount, uint64 cleartextAmount)
+  const receiver = addr("aabb");
+  const encryptedHandle = bytes32("cd".repeat(32));
+  const cleartextAmount = 450n;
 
   const log: RawLog = {
-    topics: [Topics.UnwrappedFinalized, burntHandle, topic(nextTxId.toString(16))],
-    data: `0x${word("1")}${word("0")}${word(500n.toString(16))}${word(450n.toString(16))}${word(50n.toString(16))}`,
+    topics: [Topics.UnwrappedFinalized, topic(receiver.slice(2))],
+    data: `0x${word(encryptedHandle.slice(2))}${word(cleartextAmount.toString(16))}`,
   };
 
   it("decodes valid log", () => {
     const event = decodeUnwrappedFinalized(log);
     expect(event).toEqual({
       eventName: "UnwrappedFinalized",
-      burntAmountHandle: burntHandle,
-      nextTxId,
-      finalizeSuccess: true,
-      feeTransferSuccess: false,
-      burnAmount: 500n,
-      unwrapAmount: 450n,
-      feeAmount: 50n,
+      receiver,
+      encryptedAmount: encryptedHandle,
+      cleartextAmount,
     });
   });
 
@@ -293,16 +289,206 @@ describe("findWrapped", () => {
   it("finds first Wrapped in mixed logs", () => {
     const logs: RawLog[] = [
       {
-        topics: [Topics.Wrapped, topic("dead"), topic(42n.toString(16))],
-        data: `0x${word(1000n.toString(16))}${word(2000n.toString(16))}${word(50n.toString(16))}`,
+        topics: [Topics.Wrapped, topic("dead")],
+        data: `0x${word(2000n.toString(16))}`,
       },
     ];
     const event = findWrapped(logs);
     expect(event?.eventName).toBe("Wrapped");
-    expect(event?.mintAmount).toBe(1000n);
+    expect(event?.amountIn).toBe(2000n);
   });
 
   it("returns null when none found", () => {
     expect(findWrapped([])).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ACL delegation event decoders
+// ---------------------------------------------------------------------------
+
+describe("AclTopics constants match keccak256", () => {
+  const cases: [string, string][] = [
+    [
+      "DelegatedForUserDecryption(address,address,address,uint64,uint64,uint64)",
+      AclTopics.DelegatedForUserDecryption,
+    ],
+    [
+      "RevokedDelegationForUserDecryption(address,address,address,uint64,uint64)",
+      AclTopics.RevokedDelegationForUserDecryption,
+    ],
+  ];
+
+  for (const [sig, expected] of cases) {
+    it(sig, () => {
+      expect(keccak256(toHex(toBytes(sig)))).toBe(expected);
+    });
+  }
+});
+
+describe("decodeDelegatedForUserDecryption", () => {
+  const delegator = addr("aaa1");
+  const delegate = addr("bbb2");
+  const contractAddr = addr("ccc3");
+
+  const log: RawLog = {
+    topics: [AclTopics.DelegatedForUserDecryption, topic("aaa1"), topic("bbb2")],
+    data: `0x${word("ccc3")}${word("5")}${word("0")}${word("3e8")}`,
+  };
+
+  it("decodes valid log", () => {
+    const event = decodeDelegatedForUserDecryption(log);
+    expect(event).toEqual({
+      eventName: "DelegatedForUserDecryption",
+      delegator,
+      delegate,
+      contractAddress: contractAddr,
+      delegationCounter: 5n,
+      oldExpirationDate: 0n,
+      newExpirationDate: 1000n,
+    });
+  });
+
+  it("returns null for wrong topic", () => {
+    expect(
+      decodeDelegatedForUserDecryption({
+        ...log,
+        topics: [Topics.Wrapped, ...log.topics.slice(1)],
+      }),
+    ).toBeNull();
+  });
+
+  it("returns null for insufficient topics", () => {
+    expect(
+      decodeDelegatedForUserDecryption({
+        ...log,
+        topics: [AclTopics.DelegatedForUserDecryption],
+      }),
+    ).toBeNull();
+  });
+});
+
+describe("decodeRevokedDelegationForUserDecryption", () => {
+  const delegator = addr("aaa1");
+  const delegate = addr("bbb2");
+  const contractAddr = addr("ccc3");
+
+  const log: RawLog = {
+    topics: [AclTopics.RevokedDelegationForUserDecryption, topic("aaa1"), topic("bbb2")],
+    data: `0x${word("ccc3")}${word("3")}${word("3e8")}`,
+  };
+
+  it("decodes valid log", () => {
+    const event = decodeRevokedDelegationForUserDecryption(log);
+    expect(event).toEqual({
+      eventName: "RevokedDelegationForUserDecryption",
+      delegator,
+      delegate,
+      contractAddress: contractAddr,
+      delegationCounter: 3n,
+      oldExpirationDate: 1000n,
+    });
+  });
+
+  it("returns null for wrong topic", () => {
+    expect(
+      decodeRevokedDelegationForUserDecryption({
+        ...log,
+        topics: [Topics.Wrapped, ...log.topics.slice(1)],
+      }),
+    ).toBeNull();
+  });
+
+  it("returns null for insufficient topics", () => {
+    expect(
+      decodeRevokedDelegationForUserDecryption({
+        ...log,
+        topics: [AclTopics.RevokedDelegationForUserDecryption],
+      }),
+    ).toBeNull();
+  });
+});
+
+describe("decodeAclEvent", () => {
+  it("dispatches to DelegatedForUserDecryption decoder", () => {
+    const log: RawLog = {
+      topics: [AclTopics.DelegatedForUserDecryption, topic("aaa1"), topic("bbb2")],
+      data: `0x${word("ccc3")}${word("1")}${word("0")}${word("3e8")}`,
+    };
+    const event = decodeAclEvent(log);
+    expect(event?.eventName).toBe("DelegatedForUserDecryption");
+  });
+
+  it("dispatches to RevokedDelegationForUserDecryption decoder", () => {
+    const log: RawLog = {
+      topics: [AclTopics.RevokedDelegationForUserDecryption, topic("aaa1"), topic("bbb2")],
+      data: `0x${word("ccc3")}${word("1")}${word("3e8")}`,
+    };
+    const event = decodeAclEvent(log);
+    expect(event?.eventName).toBe("RevokedDelegationForUserDecryption");
+  });
+
+  it("returns null for unknown event", () => {
+    const log: RawLog = {
+      topics: [topic("00".repeat(32))],
+      data: "0x",
+    };
+    expect(decodeAclEvent(log)).toBeNull();
+  });
+});
+
+describe("decodeAclEvents", () => {
+  it("decodes array of mixed logs, skipping unknown", () => {
+    const logs: RawLog[] = [
+      {
+        topics: [AclTopics.DelegatedForUserDecryption, topic("aaa1"), topic("bbb2")],
+        data: `0x${word("ccc3")}${word("1")}${word("0")}${word("3e8")}`,
+      },
+      { topics: ["0xunknown" as Hex], data: "0x" as Hex },
+      {
+        topics: [AclTopics.RevokedDelegationForUserDecryption, topic("aaa1"), topic("bbb2")],
+        data: `0x${word("ccc3")}${word("1")}${word("3e8")}`,
+      },
+    ];
+    const events = decodeAclEvents(logs);
+    expect(events).toHaveLength(2);
+    expect(events[0].eventName).toBe("DelegatedForUserDecryption");
+    expect(events[1].eventName).toBe("RevokedDelegationForUserDecryption");
+  });
+});
+
+describe("findDelegatedForUserDecryption", () => {
+  it("finds first DelegatedForUserDecryption in mixed logs", () => {
+    const logs: RawLog[] = [
+      { topics: ["0xunknown" as Hex], data: "0x" as Hex },
+      {
+        topics: [AclTopics.DelegatedForUserDecryption, topic("aaa1"), topic("bbb2")],
+        data: `0x${word("ccc3")}${word("1")}${word("0")}${word("3e8")}`,
+      },
+    ];
+    const event = findDelegatedForUserDecryption(logs);
+    expect(event?.eventName).toBe("DelegatedForUserDecryption");
+    expect(event?.delegator).toBe(addr("aaa1"));
+  });
+
+  it("returns null when none found", () => {
+    expect(findDelegatedForUserDecryption([])).toBeNull();
+  });
+});
+
+describe("findRevokedDelegationForUserDecryption", () => {
+  it("finds first RevokedDelegationForUserDecryption in mixed logs", () => {
+    const logs: RawLog[] = [
+      {
+        topics: [AclTopics.RevokedDelegationForUserDecryption, topic("aaa1"), topic("bbb2")],
+        data: `0x${word("ccc3")}${word("1")}${word("3e8")}`,
+      },
+    ];
+    const event = findRevokedDelegationForUserDecryption(logs);
+    expect(event?.eventName).toBe("RevokedDelegationForUserDecryption");
+  });
+
+  it("returns null when none found", () => {
+    expect(findRevokedDelegationForUserDecryption([])).toBeNull();
   });
 });

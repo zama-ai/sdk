@@ -44,27 +44,17 @@ import {
   totalSupplyContract,
   rateContract,
   wrapContract,
-  wrapETHContract,
   unwrapContract,
   unwrapFromBalanceContract,
   finalizeUnwrapContract,
   underlyingContract,
-  getWrapperContract,
-  wrapperExistsContract,
-  deploymentCoordinatorContract,
   supportsInterfaceContract,
   isConfidentialTokenContract,
   isConfidentialWrapperContract,
-  isFinalizeUnwrapOperatorContract,
-  setFinalizeUnwrapOperatorContract,
-  getWrapFeeContract,
-  getUnwrapFeeContract,
-  getBatchTransferFeeContract,
-  getFeeRecipientContract,
-  confidentialBatchTransferContract,
   delegateForUserDecryptionContract,
   revokeDelegationContract,
   getDelegationExpiryContract,
+  isHandleDelegatedContract,
   getTokenPairsContract,
   getTokenPairsLengthContract,
   getTokenPairsSliceContract,
@@ -104,29 +94,18 @@ import {
 | Builder                                                          | What it does                   |
 | ---------------------------------------------------------------- | ------------------------------ |
 | `wrapContract(wrapper, to, amount)`                              | Wrap ERC-20 tokens             |
-| `wrapETHContract(wrapper, to, amount, value)`                    | Wrap native ETH                |
 | `unwrapContract(token, from, to, encryptedAmount, inputProof)`   | Request unwrap                 |
 | `unwrapFromBalanceContract(token, from, to, encryptedBalance)`   | Unwrap using on-chain handle   |
 | `finalizeUnwrapContract(wrapper, burntAmount, cleartext, proof)` | Finalize unwrap                |
 | `underlyingContract(wrapper)`                                    | Read underlying ERC-20 address |
 
-## Discovery, detection, and fees
+## Discovery and detection
 
-| Builder                                                                    | What it does                          |
-| -------------------------------------------------------------------------- | ------------------------------------- |
-| `getWrapperContract(coordinator, token)`                                   | Look up wrapper for a token           |
-| `wrapperExistsContract(coordinator, token)`                                | Check if wrapper exists               |
-| `deploymentCoordinatorContract(token)`                                     | Read the deployment coordinator       |
-| `supportsInterfaceContract(token, interfaceId)`                            | ERC-165 interface check               |
-| `isConfidentialTokenContract(token)`                                       | Check if token is ERC-7984 compliant  |
-| `isConfidentialWrapperContract(token)`                                     | Check if token is an ERC-7984 wrapper |
-| `isFinalizeUnwrapOperatorContract(token, holder, operator)`                | Check finalize-unwrap operator status |
-| `setFinalizeUnwrapOperatorContract(token, operator, timestamp?)`           | Set finalize-unwrap operator approval |
-| `getWrapFeeContract(feeManager, amount, from, to)`                         | Calculate wrap fee                    |
-| `getUnwrapFeeContract(feeManager, amount, from, to)`                       | Calculate unwrap fee                  |
-| `getBatchTransferFeeContract(feeManager)`                                  | Get batch transfer fee                |
-| `getFeeRecipientContract(feeManager)`                                      | Get fee recipient address             |
-| `confidentialBatchTransferContract(batcher, token, from, transfers, fees)` | Batch encrypted transfers             |
+| Builder                                         | What it does                          |
+| ----------------------------------------------- | ------------------------------------- |
+| `supportsInterfaceContract(token, interfaceId)` | ERC-165 interface check               |
+| `isConfidentialTokenContract(token)`            | Check if token is ERC-7984 compliant  |
+| `isConfidentialWrapperContract(token)`          | Check if token is an ERC-7984 wrapper |
 
 ## Registry
 
@@ -146,11 +125,12 @@ The [WrappersRegistry class](/reference/sdk/WrappersRegistry) wraps these builde
 
 ## Delegation
 
-| Builder                                                              | What it does                 |
-| -------------------------------------------------------------------- | ---------------------------- |
-| `delegateForUserDecryptionContract(acl, delegate, contract, expiry)` | Grant decryption delegation  |
-| `revokeDelegationContract(acl, delegate, contract)`                  | Revoke decryption delegation |
-| `getDelegationExpiryContract(acl, delegator, delegate, contract)`    | Read delegation expiry date  |
+| Builder                                                                 | What it does                               |
+| ----------------------------------------------------------------------- | ------------------------------------------ |
+| `delegateForUserDecryptionContract(acl, delegate, contract, expiry)`    | Grant decryption delegation                |
+| `revokeDelegationContract(acl, delegate, contract)`                     | Revoke decryption delegation               |
+| `getDelegationExpiryContract(acl, delegator, delegate, contract)`       | Read delegation expiry date                |
+| `isHandleDelegatedContract(acl, delegator, delegate, contract, handle)` | Check if a handle is covered by delegation |
 
 ## Executing calls
 

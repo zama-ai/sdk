@@ -174,7 +174,6 @@ test("should decrypt non-zero balance via full delegation round-trip", async ({
   account,
   viemClient,
   contracts,
-  computeFee,
   anvilPort,
 }) => {
   const { client: account1Client, account1 } = createAccount1Client(anvilPort);
@@ -220,7 +219,7 @@ test("should decrypt non-zero balance via full delegation round-trip", async ({
   await page.goto(`/delegation?token=${contracts.cUSDT}&delegator=${account1.address}`);
   await page.getByTestId("decrypt-delegate-button").click();
 
-  const expectedBalance = shieldAmount - computeFee(shieldAmount);
+  const expectedBalance = shieldAmount;
   await expect(page.getByTestId("delegated-balance")).toContainText(expectedBalance.toString());
 });
 
@@ -398,7 +397,6 @@ test("should fail to decrypt as delegate after revocation", async ({
   account,
   viemClient,
   contracts,
-  computeFee,
   anvilPort,
 }) => {
   const { client: account1Client, account1 } = createAccount1Client(anvilPort);
@@ -419,7 +417,7 @@ test("should fail to decrypt as delegate after revocation", async ({
   // 3. Verify decrypt works before revocation
   await page.goto(`/delegation?token=${contracts.cUSDT}&delegator=${account1.address}`);
   await page.getByTestId("decrypt-delegate-button").click();
-  const expectedBalance = shieldAmount - computeFee(shieldAmount);
+  const expectedBalance = shieldAmount;
   await expect(page.getByTestId("delegated-balance")).toContainText(expectedBalance.toString());
 
   // 4. Revoke the delegation

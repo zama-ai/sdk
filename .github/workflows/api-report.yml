@@ -40,12 +40,12 @@ jobs:
       - name: Extract base branch reports
         if: github.event_name == 'pull_request'
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
           mkdir -p /tmp/api-reports/base
-          git fetch --depth=1 origin "$BASE_SHA"
-          for f in $(git ls-tree -r --name-only "$BASE_SHA" -- packages/sdk/etc packages/react-sdk/etc 2>/dev/null | grep '\.api\.md$'); do
-            git show "$BASE_SHA:$f" > "/tmp/api-reports/base/$(basename "$f")" 2>/dev/null || true
+          git fetch --depth=1 origin "$BASE_REF"
+          for f in $(git ls-tree -r --name-only "origin/$BASE_REF" -- packages/sdk/etc packages/react-sdk/etc 2>/dev/null | grep '\.api\.md$'); do
+            git show "origin/$BASE_REF:$f" > "/tmp/api-reports/base/$(basename "$f")" 2>/dev/null || true
           done
 
       - name: Generate API diff
@@ -66,7 +66,7 @@ jobs:
 
       - name: Post or update PR comment
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         with:
           script: |
             const fs = require('fs');

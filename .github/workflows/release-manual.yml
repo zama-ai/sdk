@@ -28,6 +28,10 @@ jobs:
             exit 1
           fi
 
+  lint:
+    needs: [validate-branch]
+    uses: ./.github/workflows/lint.yml
+
   vitest:
     needs: [validate-branch]
     uses: ./.github/workflows/vitest.yml
@@ -37,7 +41,7 @@ jobs:
     uses: ./.github/workflows/playwright.yml
 
   release:
-    needs: [vitest, playwright]
+    needs: [lint, vitest, playwright]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -57,7 +61,7 @@ jobs:
 
       - name: Ensure npm 11
         run: |
-          npm i -g npm@^11
+          pnpm add -g npm@^11
           npm --version
 
       - name: Install dependencies
@@ -92,7 +96,7 @@ jobs:
           cd ../react-sdk
           npm publish --access public --tag "${npm_tag}"
         env:
-          NPM_CONFIG_PROVENANCE: false # Re-enable once repo is public
+          NPM_CONFIG_PROVENANCE: true
 
       - name: Verify release was published
         run: |

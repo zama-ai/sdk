@@ -11,16 +11,28 @@ describe("delegationStatusQueryOptions", () => {
     relayer,
     tokenAddress,
   }) => {
-    const missingToken = delegationStatusQueryOptions(signer, relayer, undefined, {
-      delegatorAddress: DELEGATOR,
-      delegateAddress: DELEGATE,
-    });
-    const missingDelegator = delegationStatusQueryOptions(signer, relayer, tokenAddress, {
-      delegateAddress: DELEGATE,
-    });
-    const missingDelegate = delegationStatusQueryOptions(signer, relayer, tokenAddress, {
-      delegatorAddress: DELEGATOR,
-    });
+    const missingToken = delegationStatusQueryOptions(
+      { signer, relayer },
+      {
+        tokenAddress: undefined,
+        delegatorAddress: DELEGATOR,
+        delegateAddress: DELEGATE,
+      },
+    );
+    const missingDelegator = delegationStatusQueryOptions(
+      { signer, relayer },
+      {
+        tokenAddress,
+        delegateAddress: DELEGATE,
+      },
+    );
+    const missingDelegate = delegationStatusQueryOptions(
+      { signer, relayer },
+      {
+        tokenAddress,
+        delegatorAddress: DELEGATOR,
+      },
+    );
 
     expect(missingToken.enabled).toBe(false);
     expect(missingDelegator.enabled).toBe(false);
@@ -36,10 +48,14 @@ describe("delegationStatusQueryOptions", () => {
     vi.mocked(relayer.getAclAddress).mockResolvedValue(aclAddress);
     vi.mocked(signer.readContract).mockResolvedValue(0n);
 
-    const options = delegationStatusQueryOptions(signer, relayer, tokenAddress, {
-      delegatorAddress: DELEGATOR,
-      delegateAddress: DELEGATE,
-    });
+    const options = delegationStatusQueryOptions(
+      { signer, relayer },
+      {
+        tokenAddress,
+        delegatorAddress: DELEGATOR,
+        delegateAddress: DELEGATE,
+      },
+    );
 
     const context = mockQueryContext(options.queryKey);
     const result = await options.queryFn!(context);
@@ -57,10 +73,14 @@ describe("delegationStatusQueryOptions", () => {
     vi.mocked(relayer.getAclAddress).mockResolvedValue(aclAddress);
     vi.mocked(signer.readContract).mockResolvedValue(MAX_UINT64);
 
-    const options = delegationStatusQueryOptions(signer, relayer, tokenAddress, {
-      delegatorAddress: DELEGATOR,
-      delegateAddress: DELEGATE,
-    });
+    const options = delegationStatusQueryOptions(
+      { signer, relayer },
+      {
+        tokenAddress,
+        delegatorAddress: DELEGATOR,
+        delegateAddress: DELEGATE,
+      },
+    );
 
     const context = mockQueryContext(options.queryKey);
     const result = await options.queryFn!(context);
@@ -80,10 +100,14 @@ describe("delegationStatusQueryOptions", () => {
     vi.mocked(signer.readContract).mockResolvedValue(futureTimestamp);
     vi.mocked(signer.getBlockTimestamp).mockResolvedValue(BigInt(Math.floor(Date.now() / 1000)));
 
-    const options = delegationStatusQueryOptions(signer, relayer, tokenAddress, {
-      delegatorAddress: DELEGATOR,
-      delegateAddress: DELEGATE,
-    });
+    const options = delegationStatusQueryOptions(
+      { signer, relayer },
+      {
+        tokenAddress,
+        delegatorAddress: DELEGATOR,
+        delegateAddress: DELEGATE,
+      },
+    );
 
     const context = mockQueryContext(options.queryKey);
     const result = await options.queryFn!(context);
@@ -103,10 +127,14 @@ describe("delegationStatusQueryOptions", () => {
     vi.mocked(signer.readContract).mockResolvedValue(pastTimestamp);
     vi.mocked(signer.getBlockTimestamp).mockResolvedValue(2000n);
 
-    const options = delegationStatusQueryOptions(signer, relayer, tokenAddress, {
-      delegatorAddress: DELEGATOR,
-      delegateAddress: DELEGATE,
-    });
+    const options = delegationStatusQueryOptions(
+      { signer, relayer },
+      {
+        tokenAddress,
+        delegatorAddress: DELEGATOR,
+        delegateAddress: DELEGATE,
+      },
+    );
 
     const context = mockQueryContext(options.queryKey);
     const result = await options.queryFn!(context);
@@ -119,10 +147,10 @@ describe("delegationStatusQueryOptions", () => {
     signer,
     relayer,
   }) => {
-    const options = delegationStatusQueryOptions(signer, relayer, undefined, {});
+    const options = delegationStatusQueryOptions({ signer, relayer }, { tokenAddress: undefined });
 
     await expect(options.queryFn!(mockQueryContext(options.queryKey))).rejects.toThrow(
-      "tokenAddress is required",
+      "delegationStatusQueryOptions: tokenAddress must not be null or undefined",
     );
   });
 });

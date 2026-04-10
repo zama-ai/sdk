@@ -30,10 +30,10 @@ function transferLog(from: string, to: string, handle: string): RawLog {
   };
 }
 
-function wrappedLog(to: string, amountIn: bigint, feeAmount: bigint): RawLog {
+function wrappedLog(to: string, amountIn: bigint): RawLog {
   return {
-    topics: [Topics.Wrapped, topic(to.slice(2)), topic("1")],
-    data: `0x${word(amountIn.toString(16))}${word(amountIn.toString(16))}${word(feeAmount.toString(16))}`,
+    topics: [Topics.Wrapped, topic(to.slice(2))],
+    data: `0x${word(amountIn.toString(16))}`,
   };
 }
 
@@ -56,14 +56,20 @@ function unwrappedStartedLog(to: string, requestedAmount: string): RawLog {
   };
 }
 
-function unwrappedFinalizedLog(unwrapAmount: bigint, feeAmount: bigint, success: boolean): RawLog {
+function unwrappedFinalizedLog(
+  receiver: Address,
+  encryptedHandle: string,
+  cleartextAmount: bigint,
+): RawLog {
+  // UnwrapFinalized(address indexed receiver, bytes32 encryptedAmount, uint64 cleartextAmount)
   return {
     topics: [
       Topics.UnwrappedFinalized,
-      bytes32("ab".repeat(32)), // burntAmountHandle
-      topic("7"), // nextTxId
+      topic(receiver.slice(2)), // indexed receiver
     ],
-    data: `0x${word(success ? "1" : "0")}${word("1")}${word("1f4")}${word(unwrapAmount.toString(16))}${word(feeAmount.toString(16))}`,
+    data: `0x${word(encryptedHandle.slice(2).padStart(64, "0"))}${word(cleartextAmount.toString(16))}` as ReturnType<
+      typeof bytes32
+    >,
   };
 }
 
@@ -113,14 +119,13 @@ describe("parseActivityFeed", () => {
   });
 
   it("parses a Wrapped event as shield", () => {
-    const logs = [wrappedLog(USER, 1000n, 50n)];
+    const logs = [wrappedLog(USER, 1000n)];
     const items = parseActivityFeed(logs, USER);
 
     expect(items).toHaveLength(1);
     expect(items[0].type).toBe("shield");
     expect(items[0].direction).toBe("incoming");
     expect(items[0].amount).toEqual({ type: "clear", value: 1000n });
-    expect(items[0].fee).toBe(50n);
   });
 
   it("parses an UnwrapRequested event", () => {
@@ -145,15 +150,27 @@ describe("parseActivityFeed", () => {
     expect(items[0].success).toBe(true);
   });
 
-  it("parses an UnwrappedFinalized event", () => {
-    const logs = [unwrappedFinalizedLog(450n, 50n, true)];
+  it("parses an UnwrapFinalized event", () => {
+    const handle = bytes32("ab".repeat(16));
+    const logs = [unwrappedFinalizedLog(USER, handle, 450n)];
     const items = parseActivityFeed(logs, USER);
 
     expect(items).toHaveLength(1);
     expect(items[0].type).toBe("unshield_finalized");
     expect(items[0].amount).toEqual({ type: "clear", value: 450n });
-    expect(items[0].fee).toBe(50n);
-    expect(items[0].success).toBe(true);
+    expect(items[0].to?.toLowerCase()).toBe(USER.toLowerCase());
+    // No sender on finalized events — direction is always "incoming" regardless of receiver
+    expect(items[0].direction).toBe("incoming");
+  });
+
+  it("classifies UnwrapFinalized as incoming when receiver is another address", () => {
+    const handle = bytes32("ab".repeat(16));
+    const logs = [unwrappedFinalizedLog(OTHER, handle, 300n)];
+    const items = parseActivityFeed(logs, USER);
+
+    expect(items).toHaveLength(1);
+    expect(items[0].direction).toBe("incoming");
+    expect(items[0].to?.toLowerCase()).toBe(OTHER.toLowerCase());
   });
 
   it("preserves metadata from logs", () => {
@@ -188,8 +205,8 @@ describe("parseActivityFeed", () => {
   it("parses mixed event types", () => {
     const logs = [
       transferLog(USER, OTHER, bytes32("cc".repeat(32))),
-      wrappedLog(USER, 500n, 10n),
-      unwrappedFinalizedLog(200n, 20n, false),
+      wrappedLog(USER, 500n),
+      unwrappedFinalizedLog(USER, bytes32("ab".repeat(16)), 200n),
     ];
     const items = parseActivityFeed(logs, USER);
 
@@ -223,7 +240,7 @@ describe("extractEncryptedHandles", () => {
   });
 
   it("skips clear amounts", () => {
-    const items = parseActivityFeed([wrappedLog(USER, 1000n, 50n)], USER);
+    const items = parseActivityFeed([wrappedLog(USER, 1000n)], USER);
     const handles = extractEncryptedHandles(items);
     expect(handles).toHaveLength(0);
   });
@@ -260,7 +277,7 @@ describe("applyDecryptedValues", () => {
   });
 
   it("leaves clear amounts unchanged", () => {
-    const items = parseActivityFeed([wrappedLog(USER, 1000n, 50n)], USER);
+    const items = parseActivityFeed([wrappedLog(USER, 1000n)], USER);
     const result = applyDecryptedValues(items, new Map());
 
     expect(result[0].amount).toEqual({ type: "clear", value: 1000n });

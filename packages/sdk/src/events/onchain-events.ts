@@ -20,12 +20,12 @@ export type { RawLog } from "../types/transaction";
 export const Topics = {
   /** `ConfidentialTransfer(address indexed from, address indexed to, bytes32 indexed amount)` */
   ConfidentialTransfer: "0x67500e8d0ed826d2194f514dd0d8124f35648ab6e3fb5e6ed867134cffe661e9",
-  /** `Wrapped(uint64 mintAmount, uint256 amountIn, uint256 feeAmount, address indexed to_, uint256 indexed mintTxId)` */
-  Wrapped: "0x1f7907f4d84043abe0fb7c74e8865ee5fe93fe4f691c54a7b8fa9d6fb17c7cba",
+  /** `Wrapped(address indexed to, uint256 amountIn)` */
+  Wrapped: "0x4700c1726b4198077cd40320a32c45265a1910521eb0ef713dd1d8412413d7fc",
   /** `UnwrapRequested(address indexed receiver, bytes32 amount)` */
   UnwrapRequested: "0x77d02d353c5629272875d11f1b34ec4c65d7430b075575b78cd2502034c469ee",
-  /** `UnwrappedFinalized(bytes32 indexed burntAmountHandle, ...)` */
-  UnwrappedFinalized: "0xc64e7c81b18b674fc5b037d8a0041bfe3332d86c780a4688f404ee01fbabb152",
+  /** `UnwrapFinalized(address indexed receiver, bytes32 encryptedAmount, uint64 cleartextAmount)` */
+  UnwrappedFinalized: "0x2d4edf3c2943002120f53dab3f8940043f34799f4a92ab90f2f81f7dd004a49e",
   /** `UnwrappedStarted(bool returnVal, uint256 indexed requestId, ...)` */
   UnwrappedStarted: "0x3838891d4843c6d7f9f494570b6fd8843f4e3c3ddb817c1411760bd31b819806",
 } as const;
@@ -48,16 +48,10 @@ export interface ConfidentialTransferEvent {
 /** Decoded `Wrapped` event — an ERC-20 shield (wrap) operation. */
 export interface WrappedEvent {
   readonly eventName: "Wrapped";
-  /** Confidential tokens minted. */
-  readonly mintAmount: bigint;
-  /** Underlying ERC-20 tokens deposited. */
-  readonly amountIn: bigint;
-  /** Fee deducted during wrapping. */
-  readonly feeAmount: bigint;
   /** Receiver of the minted confidential tokens. */
   readonly to: Address;
-  /** On-chain mint transaction ID. */
-  readonly mintTxId: bigint;
+  /** Underlying ERC-20 tokens deposited. */
+  readonly amountIn: bigint;
 }
 
 /** Decoded `UnwrapRequested` event — an unshield request submitted. */
@@ -69,23 +63,15 @@ export interface UnwrapRequestedEvent {
   readonly encryptedAmount: Handle;
 }
 
-/** Decoded `UnwrappedFinalized` event — an unshield completed on-chain. */
+/** Decoded `UnwrapFinalized` event — an unshield completed on-chain. */
 export interface UnwrappedFinalizedEvent {
   readonly eventName: "UnwrappedFinalized";
-  /** FHE handle of the burnt confidential balance. */
-  readonly burntAmountHandle: Handle;
-  /** Whether the finalization succeeded. */
-  readonly finalizeSuccess: boolean;
-  /** Whether the fee transfer succeeded. */
-  readonly feeTransferSuccess: boolean;
-  /** Amount of confidential tokens burnt. */
-  readonly burnAmount: bigint;
-  /** Amount of underlying ERC-20 tokens returned. */
-  readonly unwrapAmount: bigint;
-  /** Fee deducted during unwrapping. */
-  readonly feeAmount: bigint;
-  /** Next on-chain transaction ID. */
-  readonly nextTxId: bigint;
+  /** Address receiving the unwrapped ERC-20 tokens. */
+  readonly receiver: Address;
+  /** FHE ciphertext handle of the burnt confidential balance. */
+  readonly encryptedAmount: Handle;
+  /** Cleartext amount of underlying ERC-20 tokens returned. */
+  readonly cleartextAmount: bigint;
 }
 
 /** Decoded `UnwrappedStarted` event — the relayer began processing an unshield. */
@@ -181,25 +167,22 @@ export function decodeConfidentialTransfer(log: RawLog): ConfidentialTransferEve
 }
 
 /**
- * Wrapped(uint64 mintAmount, uint256 amountIn, uint256 feeAmount, address indexed to_, uint256 indexed mintTxId)
- * Indexed: to_ (topics[1]), mintTxId (topics[2])
- * Data: mintAmount (uint64, abi-encoded as uint256), amountIn, feeAmount
+ * Wrapped(address indexed to, uint256 amountIn)
+ * Indexed: to (topics[1])
+ * Data: amountIn (uint256)
  */
 export function decodeWrapped(log: RawLog): WrappedEvent | null {
   if (log.topics[0] !== Topics.Wrapped) {
     return null;
   }
-  if (log.topics.length < 3) {
+  if (log.topics.length < 2) {
     return null;
   }
 
   return {
     eventName: "Wrapped",
     to: topicToAddress(log.topics[1]!),
-    mintTxId: topicToBigInt(log.topics[2]!),
-    mintAmount: wordToBigInt(log.data, 0),
-    amountIn: wordToBigInt(log.data, 1),
-    feeAmount: wordToBigInt(log.data, 2),
+    amountIn: wordToBigInt(log.data, 0),
   };
 }
 
@@ -224,28 +207,23 @@ export function decodeUnwrapRequested(log: RawLog): UnwrapRequestedEvent | null 
 }
 
 /**
- * UnwrappedFinalized(bytes32 indexed burntAmountHandle, bool finalizeSuccess, bool feeTransferSuccess,
- *                    uint64 burnAmount, uint256 unwrapAmount, uint256 feeAmount, uint256 indexed nextTxId)
- * Indexed: burntAmountHandle (topics[1]), nextTxId (topics[2])
- * Data: finalizeSuccess, feeTransferSuccess, burnAmount, unwrapAmount, feeAmount
+ * UnwrapFinalized(address indexed receiver, bytes32 encryptedAmount, uint64 cleartextAmount)
+ * Indexed: receiver (topics[1])
+ * Data: encryptedAmount (bytes32 FHE handle, word 0), cleartextAmount (uint64, word 1)
  */
 export function decodeUnwrappedFinalized(log: RawLog): UnwrappedFinalizedEvent | null {
   if (log.topics[0] !== Topics.UnwrappedFinalized) {
     return null;
   }
-  if (log.topics.length < 3) {
+  if (log.topics.length < 2) {
     return null;
   }
 
   return {
     eventName: "UnwrappedFinalized",
-    burntAmountHandle: topicToBytes32(log.topics[1]!),
-    nextTxId: topicToBigInt(log.topics[2]!),
-    finalizeSuccess: wordToBool(log.data, 0),
-    feeTransferSuccess: wordToBool(log.data, 1),
-    burnAmount: wordToBigInt(log.data, 2),
-    unwrapAmount: wordToBigInt(log.data, 3),
-    feeAmount: wordToBigInt(log.data, 4),
+    receiver: topicToAddress(log.topics[1]!),
+    encryptedAmount: wordToBytes32(log.data, 0),
+    cleartextAmount: wordToBigInt(log.data, 1),
   };
 }
 
@@ -368,4 +346,177 @@ export const TOKEN_TOPICS = [
   Topics.UnwrapRequested,
   Topics.UnwrappedFinalized,
   Topics.UnwrappedStarted,
+] as const;
+
+// ---------------------------------------------------------------------------
+// ACL delegation event topic0 constants
+// ---------------------------------------------------------------------------
+
+/**
+ * ACL delegation event topic0 constants (keccak256 of the canonical Solidity signature).
+ * These are ACL events, NOT token events — they are emitted by the ACL contract.
+ */
+export const AclTopics = {
+  /** `DelegatedForUserDecryption(address indexed delegator, address indexed delegate, address contractAddress, uint64 delegationCounter, uint64 oldExpirationDate, uint64 newExpirationDate)` */
+  DelegatedForUserDecryption: "0x527b025d7ff06689c1ab9d32dfd7881c964cce72ce8ac5b2fe1d3be8cfda5bfc",
+  /** `RevokedDelegationForUserDecryption(address indexed delegator, address indexed delegate, address contractAddress, uint64 delegationCounter, uint64 oldExpirationDate)` */
+  RevokedDelegationForUserDecryption:
+    "0x7aca80b6b7928b9038f186e3d9922a0fc5d52c398fbf144725c142c52a5277e4",
+} as const;
+
+// ---------------------------------------------------------------------------
+// ACL delegation event interfaces
+// ---------------------------------------------------------------------------
+
+/** Decoded `DelegatedForUserDecryption` event — a delegation was created or renewed. */
+export interface DelegatedForUserDecryptionEvent {
+  readonly eventName: "DelegatedForUserDecryption";
+  /** Address of the delegator (the account granting access). */
+  readonly delegator: Address;
+  /** Address of the delegate (the account receiving access). */
+  readonly delegate: Address;
+  /** Contract address the delegation applies to. */
+  readonly contractAddress: Address;
+  /** Monotonic delegation counter. */
+  readonly delegationCounter: bigint;
+  /** Previous expiration timestamp (0 if first delegation). */
+  readonly oldExpirationDate: bigint;
+  /** New expiration timestamp. */
+  readonly newExpirationDate: bigint;
+}
+
+/** Decoded `RevokedDelegationForUserDecryption` event — a delegation was revoked. */
+export interface RevokedDelegationForUserDecryptionEvent {
+  readonly eventName: "RevokedDelegationForUserDecryption";
+  /** Address of the delegator. */
+  readonly delegator: Address;
+  /** Address of the delegate. */
+  readonly delegate: Address;
+  /** Contract address the revocation applies to. */
+  readonly contractAddress: Address;
+  /** Monotonic delegation counter. */
+  readonly delegationCounter: bigint;
+  /** Expiration date that was active before revocation. */
+  readonly oldExpirationDate: bigint;
+}
+
+/** Union of all decoded ACL delegation event types. */
+export type AclEvent = DelegatedForUserDecryptionEvent | RevokedDelegationForUserDecryptionEvent;
+
+// ---------------------------------------------------------------------------
+// ACL delegation event decoders
+// ---------------------------------------------------------------------------
+
+/**
+ * DelegatedForUserDecryption(address indexed delegator, address indexed delegate,
+ *   address contractAddress, uint64 delegationCounter, uint64 oldExpirationDate, uint64 newExpirationDate)
+ * Indexed: delegator (topics[1]), delegate (topics[2])
+ * Data: contractAddress, delegationCounter, oldExpirationDate, newExpirationDate
+ */
+export function decodeDelegatedForUserDecryption(
+  log: RawLog,
+): DelegatedForUserDecryptionEvent | null {
+  if (log.topics[0] !== AclTopics.DelegatedForUserDecryption) {
+    return null;
+  }
+  if (log.topics.length < 3) {
+    return null;
+  }
+
+  return {
+    eventName: "DelegatedForUserDecryption",
+    delegator: topicToAddress(log.topics[1]!),
+    delegate: topicToAddress(log.topics[2]!),
+    contractAddress: wordToAddress(log.data, 0),
+    delegationCounter: wordToBigInt(log.data, 1),
+    oldExpirationDate: wordToBigInt(log.data, 2),
+    newExpirationDate: wordToBigInt(log.data, 3),
+  };
+}
+
+/**
+ * RevokedDelegationForUserDecryption(address indexed delegator, address indexed delegate,
+ *   address contractAddress, uint64 delegationCounter, uint64 oldExpirationDate)
+ * Indexed: delegator (topics[1]), delegate (topics[2])
+ * Data: contractAddress, delegationCounter, oldExpirationDate
+ */
+export function decodeRevokedDelegationForUserDecryption(
+  log: RawLog,
+): RevokedDelegationForUserDecryptionEvent | null {
+  if (log.topics[0] !== AclTopics.RevokedDelegationForUserDecryption) {
+    return null;
+  }
+  if (log.topics.length < 3) {
+    return null;
+  }
+
+  return {
+    eventName: "RevokedDelegationForUserDecryption",
+    delegator: topicToAddress(log.topics[1]!),
+    delegate: topicToAddress(log.topics[2]!),
+    contractAddress: wordToAddress(log.data, 0),
+    delegationCounter: wordToBigInt(log.data, 1),
+    oldExpirationDate: wordToBigInt(log.data, 2),
+  };
+}
+
+/**
+ * Try all ACL delegation decoders on a single log and return the first match, or `null`.
+ */
+export function decodeAclEvent(log: RawLog): AclEvent | null {
+  return decodeDelegatedForUserDecryption(log) ?? decodeRevokedDelegationForUserDecryption(log);
+}
+
+/**
+ * Batch-decode an array of logs for ACL delegation events, skipping unrecognized entries.
+ */
+export function decodeAclEvents(logs: readonly RawLog[]): AclEvent[] {
+  const events: AclEvent[] = [];
+  for (const log of logs) {
+    const event = decodeAclEvent(log);
+    if (event) {
+      events.push(event);
+    }
+  }
+  return events;
+}
+
+/**
+ * Find the first {@link DelegatedForUserDecryptionEvent} in a logs array.
+ */
+export function findDelegatedForUserDecryption(
+  logs: readonly RawLog[],
+): DelegatedForUserDecryptionEvent | null {
+  for (const log of logs) {
+    const event = decodeDelegatedForUserDecryption(log);
+    if (event) {
+      return event;
+    }
+  }
+  return null;
+}
+
+/**
+ * Find the first {@link RevokedDelegationForUserDecryptionEvent} in a logs array.
+ */
+export function findRevokedDelegationForUserDecryption(
+  logs: readonly RawLog[],
+): RevokedDelegationForUserDecryptionEvent | null {
+  for (const log of logs) {
+    const event = decodeRevokedDelegationForUserDecryption(log);
+    if (event) {
+      return event;
+    }
+  }
+  return null;
+}
+
+/**
+ * Both ACL delegation event topic0 hashes.
+ * Pass to `getLogs({ topics: [ACL_TOPICS] })` to fetch
+ * all delegation events in a single RPC call.
+ */
+export const ACL_TOPICS = [
+  AclTopics.DelegatedForUserDecryption,
+  AclTopics.RevokedDelegationForUserDecryption,
 ] as const;

@@ -21,13 +21,17 @@ describe("Token.shield", () => {
       address: tokenAddress,
       wrapper: tokenAddress,
     });
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(0n);
+    vi.mocked(signer.readContract)
+      .mockResolvedValueOnce(UNDERLYING)
+      .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
+      .mockResolvedValueOnce(0n);
 
     const onApprovalSubmitted = vi.fn();
     const onShieldSubmitted = vi.fn();
 
     await token.shield(100n, {
-      callbacks: { onApprovalSubmitted, onShieldSubmitted },
+      onApprovalSubmitted,
+      onShieldSubmitted,
     });
 
     expect(onApprovalSubmitted).toHaveBeenCalledWith("0xtxhash");
@@ -51,13 +55,17 @@ describe("Token.shield", () => {
       address: tokenAddress,
       wrapper: tokenAddress,
     });
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(1000n);
+    vi.mocked(signer.readContract)
+      .mockResolvedValueOnce(UNDERLYING)
+      .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
+      .mockResolvedValueOnce(1000n); // allowance
 
     const onApprovalSubmitted = vi.fn();
     const onShieldSubmitted = vi.fn();
 
     await token.shield(100n, {
-      callbacks: { onApprovalSubmitted, onShieldSubmitted },
+      onApprovalSubmitted,
+      onShieldSubmitted,
     });
 
     expect(onApprovalSubmitted).not.toHaveBeenCalled();
@@ -81,16 +89,17 @@ describe("Token.shield", () => {
       address: tokenAddress,
       wrapper: tokenAddress,
     });
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(0n);
+    vi.mocked(signer.readContract)
+      .mockResolvedValueOnce(UNDERLYING)
+      .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
+      .mockResolvedValueOnce(0n);
 
     const result = await token.shield(100n, {
-      callbacks: {
-        onApprovalSubmitted: () => {
-          throw new Error("callback exploded");
-        },
-        onShieldSubmitted: () => {
-          throw new Error("callback exploded again");
-        },
+      onApprovalSubmitted: () => {
+        throw new Error("callback exploded");
+      },
+      onShieldSubmitted: () => {
+        throw new Error("callback exploded again");
       },
     });
 
@@ -114,7 +123,10 @@ describe("Token.shield", () => {
       address: tokenAddress,
       wrapper: tokenAddress,
     });
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(1000n);
+    vi.mocked(signer.readContract)
+      .mockResolvedValueOnce(UNDERLYING)
+      .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
+      .mockResolvedValueOnce(1000n); // allowance
 
     const recipient = "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address;
     await token.shield(100n, { to: recipient });
@@ -142,6 +154,7 @@ describe("Token.shield", () => {
     });
     vi.mocked(signer.readContract)
       .mockResolvedValueOnce(UNDERLYING)
+      .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
       .mockResolvedValueOnce(0n)
       .mockResolvedValueOnce(fixtureHandle);
 

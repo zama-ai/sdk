@@ -6,7 +6,6 @@
 
 import { Abi } from 'viem';
 import { Address } from 'viem';
-import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle';
 import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
@@ -59,7 +58,6 @@ export function activityFeedQueryOptions(token: ReadonlyToken, config: ActivityF
 export interface ActivityItem {
     readonly amount: ActivityAmount;
     readonly direction: ActivityDirection;
-    readonly fee?: bigint;
     readonly from?: Address;
     readonly metadata: ActivityLogMetadata;
     readonly rawEvent: OnChainEvent;
@@ -138,8 +136,8 @@ export interface BatchDecryptOptions {
     owner?: Address;
 }
 
-// @public (undocumented)
-export function batchTransferFeeQueryOptions(signer: GenericSigner, feeManagerAddress?: Address, config?: FeeQueryConfig): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.fees.batchTransferFee>>;
+// @public
+export type ClearValueType = bigint | boolean | `0x${string}`;
 
 // @public (undocumented)
 export function confidentialApproveMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.confidentialApprove", Address], ConfidentialApproveParams, TransactionResult>;
@@ -264,10 +262,9 @@ export interface ConfidentialTransferFromParams {
 export function confidentialTransferMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.confidentialTransfer", Address], ConfidentialTransferParams, TransactionResult>;
 
 // @public
-export interface ConfidentialTransferParams {
+export interface ConfidentialTransferParams extends TransferOptions {
     // (undocumented)
     amount: bigint;
-    callbacks?: TransferCallbacks;
     // (undocumented)
     to: Address;
 }
@@ -499,10 +496,15 @@ export interface DelegationStatusQueryConfig {
     delegatorAddress?: Address;
     // (undocumented)
     query?: Record<string, unknown>;
+    // (undocumented)
+    tokenAddress: Address | undefined;
 }
 
 // @public (undocumented)
-export function delegationStatusQueryOptions(signer: GenericSigner, relayer: RelayerSDK, tokenAddress: Address | undefined, config: DelegationStatusQueryConfig): QueryFactoryOptions<DelegationStatusData, Error, DelegationStatusData, ReturnType<typeof zamaQueryKeys.delegationStatus.scope>>;
+export function delegationStatusQueryOptions(sdk: {
+    signer: GenericSigner;
+    relayer: RelayerSDK;
+}, config: DelegationStatusQueryConfig): QueryFactoryOptions<DelegationStatusData, Error, DelegationStatusData, ReturnType<typeof zamaQueryKeys.delegationStatus.scope>>;
 
 // @public (undocumented)
 export interface DelegationSubmittedEvent extends BaseEvent {
@@ -598,15 +600,6 @@ export interface EncryptStartEvent extends BaseEvent {
     // (undocumented)
     type: typeof ZamaSDKEvents.EncryptStart;
 }
-
-// @public (undocumented)
-export interface FeeQueryConfig {
-    // (undocumented)
-    query?: Record<string, unknown>;
-}
-
-// @public (undocumented)
-export function feeRecipientQueryOptions(signer: GenericSigner, feeManagerAddress?: Address, config?: FeeQueryConfig): QueryFactoryOptions<Address, Error, Address, ReturnType<typeof zamaQueryKeys.fees.feeRecipient>>;
 
 // @public
 export function filterQueryOptions<TOptions extends Record<string, unknown>>(options: TOptions): Omit<TOptions, StrippedQueryOptionKeys>;
@@ -759,7 +752,7 @@ export function publicDecryptMutationOptions(sdk: ZamaSDK): MutationFactoryOptio
 
 // @public
 export type PublicDecryptResult = Omit<SDK.PublicDecryptResults, "clearValues"> & {
-    clearValues: Readonly<Record<Handle, SDK.ClearValueType>>;
+    clearValues: Readonly<Record<Handle, ClearValueType>>;
 };
 
 // @public (undocumented)
@@ -927,9 +920,7 @@ export function requestZKProofVerificationMutationOptions(sdk: ZamaSDK): Mutatio
 export function resumeUnshieldMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.resumeUnshield", Address], ResumeUnshieldParams, TransactionResult>;
 
 // @public
-export interface ResumeUnshieldParams {
-    // (undocumented)
-    callbacks?: UnshieldCallbacks;
+export interface ResumeUnshieldParams extends UnshieldCallbacks {
     // (undocumented)
     unwrapTxHash: Hex;
 }
@@ -971,43 +962,20 @@ export interface ShieldCallbacks {
 }
 
 // @public (undocumented)
-export function shieldETHMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.shieldETH", Address], ShieldETHParams, TransactionResult>;
-
-// @public
-export interface ShieldETHParams {
-    // (undocumented)
-    amount: bigint;
-    // (undocumented)
-    value?: bigint;
-}
-
-// @public (undocumented)
-export interface ShieldFeeQueryConfig extends FeeQueryConfig {
-    // (undocumented)
-    amount?: bigint;
-    // (undocumented)
-    feeManagerAddress?: Address;
-    // (undocumented)
-    from?: Address;
-    // (undocumented)
-    to?: Address;
-}
-
-// @public (undocumented)
-export function shieldFeeQueryOptions(signer: GenericSigner, config: ShieldFeeQueryConfig): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.fees.shieldFee>>;
-
-// @public (undocumented)
 export function shieldMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.shield", Address], ShieldParams, TransactionResult>;
 
 // @public
-export interface ShieldParams {
+export interface ShieldOptions extends ShieldCallbacks {
+    approvalStrategy?: "max" | "exact" | "skip";
+    to?: Address;
+}
+
+// @public
+export interface ShieldParams extends ShieldCallbacks {
     // (undocumented)
     amount: bigint;
     // (undocumented)
     approvalStrategy?: "max" | "exact" | "skip";
-    callbacks?: ShieldCallbacks;
-    // (undocumented)
-    fees?: bigint;
     to?: Address;
 }
 
@@ -1063,7 +1031,7 @@ export class Token extends ReadonlyToken {
         tokens: Token[];
         delegateAddress: Address;
     }): Promise<Map<Address, TransactionResult | ZamaError>>;
-    confidentialTransfer(to: Address, amount: bigint, callbacks?: TransferCallbacks): Promise<TransactionResult>;
+    confidentialTransfer(to: Address, amount: bigint, options?: TransferOptions): Promise<TransactionResult>;
     confidentialTransferFrom(from: Address, to: Address, amount: bigint, callbacks?: TransferCallbacks): Promise<TransactionResult>;
     delegateDecryption(input: {
         delegateAddress: Address;
@@ -1075,14 +1043,8 @@ export class Token extends ReadonlyToken {
     revokeDelegation(input: {
         delegateAddress: Address;
     }): Promise<TransactionResult>;
-    shield(amount: bigint, options?: {
-        approvalStrategy?: "max" | "exact" | "skip";
-        fees?: bigint; /** Recipient address for the shielded tokens. Defaults to the connected wallet. */
-        to?: Address; /** Progress callbacks for the multi-step shield flow. */
-        callbacks?: ShieldCallbacks;
-    }): Promise<TransactionResult>;
-    shieldETH(amount: bigint, value?: bigint): Promise<TransactionResult>;
-    unshield(amount: bigint, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
+    shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult>;
+    unshield(amount: bigint, options?: UnshieldOptions): Promise<TransactionResult>;
     unshieldAll(callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     unwrap(amount: bigint): Promise<TransactionResult>;
     unwrapAll(): Promise<TransactionResult>;
@@ -1193,6 +1155,11 @@ export interface TransferFromSubmittedEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.TransferFromSubmitted;
 }
 
+// @public
+export interface TransferOptions extends TransferCallbacks {
+    skipBalanceCheck?: boolean;
+}
+
 // @public (undocumented)
 export interface TransferSubmittedEvent extends BaseEvent {
     // (undocumented)
@@ -1218,10 +1185,7 @@ export function underlyingAllowanceQueryOptions(signer: GenericSigner, tokenAddr
 export function unshieldAllMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.unshieldAll", Address], UnshieldAllParams | void, TransactionResult>;
 
 // @public
-export interface UnshieldAllParams {
-    // (undocumented)
-    callbacks?: UnshieldCallbacks;
-}
+export interface UnshieldAllParams extends UnshieldCallbacks {}
 
 // @public
 export interface UnshieldCallbacks {
@@ -1231,29 +1195,17 @@ export interface UnshieldCallbacks {
 }
 
 // @public (undocumented)
-export interface UnshieldFeeQueryConfig extends FeeQueryConfig {
-    // (undocumented)
-    amount?: bigint;
-    // (undocumented)
-    feeManagerAddress?: Address;
-    // (undocumented)
-    from?: Address;
-    // (undocumented)
-    to?: Address;
-}
-
-// @public (undocumented)
-export function unshieldFeeQueryOptions(signer: GenericSigner, config: UnshieldFeeQueryConfig): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.fees.unshieldFee>>;
-
-// @public (undocumented)
 export function unshieldMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.unshield", Address], UnshieldParams, TransactionResult>;
 
 // @public
-export interface UnshieldParams {
+export interface UnshieldOptions extends UnshieldCallbacks {
+    skipBalanceCheck?: boolean;
+}
+
+// @public
+export interface UnshieldParams extends UnshieldOptions {
     // (undocumented)
     amount: bigint;
-    // (undocumented)
-    callbacks?: UnshieldCallbacks;
 }
 
 // @public (undocumented)
@@ -1292,15 +1244,11 @@ export interface UnwrapParams {
 
 // @public
 export interface UnwrappedFinalizedEvent {
-    readonly burnAmount: bigint;
-    readonly burntAmountHandle: Handle;
+    readonly cleartextAmount: bigint;
+    readonly encryptedAmount: Handle;
     // (undocumented)
     readonly eventName: "UnwrappedFinalized";
-    readonly feeAmount: bigint;
-    readonly feeTransferSuccess: boolean;
-    readonly finalizeSuccess: boolean;
-    readonly nextTxId: bigint;
-    readonly unwrapAmount: bigint;
+    readonly receiver: Address;
 }
 
 // @public
@@ -1374,9 +1322,6 @@ export interface WrappedEvent {
     readonly amountIn: bigint;
     // (undocumented)
     readonly eventName: "Wrapped";
-    readonly feeAmount: bigint;
-    readonly mintAmount: bigint;
-    readonly mintTxId: bigint;
     readonly to: Address;
 }
 
@@ -1515,31 +1460,6 @@ export const zamaQueryKeys: {
             readonly tokenAddress: `0x${string}`;
         }];
     };
-    readonly fees: {
-        readonly all: readonly ["zama.fees"];
-        readonly shieldFee: (feeManagerAddress?: Address, amount?: string, from?: Address, to?: Address) => readonly ["zama.fees", {
-            readonly to?: `0x${string}` | undefined;
-            readonly from?: `0x${string}` | undefined;
-            readonly amount?: string | undefined;
-            readonly feeManagerAddress?: `0x${string}` | undefined;
-            readonly type: "shield";
-        }];
-        readonly unshieldFee: (feeManagerAddress?: Address, amount?: string, from?: Address, to?: Address) => readonly ["zama.fees", {
-            readonly to?: `0x${string}` | undefined;
-            readonly from?: `0x${string}` | undefined;
-            readonly amount?: string | undefined;
-            readonly feeManagerAddress?: `0x${string}` | undefined;
-            readonly type: "unshield";
-        }];
-        readonly batchTransferFee: (feeManagerAddress?: Address) => readonly ["zama.fees", {
-            readonly feeManagerAddress?: `0x${string}` | undefined;
-            readonly type: "batchTransfer";
-        }];
-        readonly feeRecipient: (feeManagerAddress?: Address) => readonly ["zama.fees", {
-            readonly feeManagerAddress?: `0x${string}` | undefined;
-            readonly type: "feeRecipient";
-        }];
-    };
     readonly isAllowed: {
         readonly all: readonly ["zama.isAllowed"];
         readonly scope: (account: Address) => readonly ["zama.isAllowed", {
@@ -1626,8 +1546,8 @@ export const zamaQueryKeys: {
 
 // @public
 export class ZamaSDK {
+    [Symbol.dispose](): void;
     constructor(config: ZamaSDKConfig);
-    allow(...contractAddresses: Address[]): Promise<void>;
     createReadonlyToken(address: Address): ReadonlyToken;
     createToken(address: Address, wrapper?: Address): Token;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
@@ -1636,11 +1556,9 @@ export class ZamaSDK {
     // (undocumented)
     readonly delegatedCredentials: DelegatedCredentialsManager;
     dispose(): void;
-    isAllowed(): Promise<boolean>;
     readonly registry: WrappersRegistry;
     // (undocumented)
     readonly relayer: RelayerSDK;
-    revoke(...contractAddresses: Address[]): Promise<void>;
     revokeSession(): Promise<void>;
     // (undocumented)
     readonly sessionStorage: GenericStorage;
@@ -1712,7 +1630,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/activity-CcKSL6Oe.d.ts:1758:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/esm/activity-DbEbjVUg.d.ts:21161:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

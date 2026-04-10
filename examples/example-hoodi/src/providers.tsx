@@ -248,13 +248,16 @@ export function Providers({ children }: { children: ReactNode }) {
         sessionStorage={sessionDBStorage}
         signer={signer}
         onEvent={(event) => {
-          // ZamaSDKEvents.UnshieldPhase1Submitted fires right after the Phase 1 tx is submitted
-          // (before it is mined). Saving here ensures the pending state survives a tab close.
+          // ZamaSDKEvents.UnshieldPhase1Submitted fires after Phase 1 is mined (the SDK
+          // awaits the receipt before emitting). Saving here ensures the pending state
+          // survives a tab close between Phase 1 and Phase 2.
           // See activeUnshield.ts for why wrapperAddress is passed via a module-level ref.
           if (event.type === ZamaSDKEvents.UnshieldPhase1Submitted) {
             const wrapperAddress = getActiveUnshieldToken();
             if (wrapperAddress) {
-              savePendingUnshield(indexedDBStorage, wrapperAddress, event.txHash);
+              savePendingUnshield(indexedDBStorage, wrapperAddress, event.txHash).catch((err) =>
+                console.error("[Providers] Failed to persist pending unshield:", event.txHash, err),
+              );
               setActiveUnshieldToken(null);
             }
           }

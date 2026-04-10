@@ -28,7 +28,5 @@ export interface PublicKeyData {
  */
 export function usePublicKey() {
   const sdk = useZamaSDK();
-  return useQuery<PublicKeyData | null>({
-    ...publicKeyQueryOptions(sdk),
-  });
+  return useQuery<PublicKeyData | null>(publicKeyQueryOptions(sdk));
 }

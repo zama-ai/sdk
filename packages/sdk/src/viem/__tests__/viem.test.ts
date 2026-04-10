@@ -7,16 +7,12 @@ import {
   readConfidentialBalanceOfContract,
   readSupportsInterfaceContract,
   readUnderlyingTokenContract,
-  readWrapperExistsContract,
-  readWrapperForTokenContract,
-  writeConfidentialBatchTransferContract,
   writeConfidentialTransferContract,
   writeFinalizeUnwrapContract,
   writeSetOperatorContract,
   writeUnwrapContract,
   writeUnwrapFromBalanceContract,
   writeWrapContract,
-  writeWrapETHContract,
 } from "../contracts";
 import { ViemSigner } from "../viem-signer";
 
@@ -24,8 +20,6 @@ import { ViemSigner } from "../viem-signer";
 
 const ACCOUNT_ADDRESS = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
 const SPENDER = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;
-const REGISTRY = "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e" as Address;
-const BATCHER = "0x7A7a7A7a7a7a7a7A7a7a7a7A7a7A7A7A7A7A7a7A" as Address;
 const TX_HASH = "0xtxhash" as Hex;
 const MOCK_CHAIN = { id: 1, name: "mainnet" } as WalletClient["chain"];
 
@@ -322,20 +316,6 @@ describe("Viem read contract helpers", () => {
   );
 
   vit(
-    "readWrapperForTokenContract calls readContract with correct config",
-    ({ tokenAddress, publicClient }) => {
-      readWrapperForTokenContract(publicClient, REGISTRY, tokenAddress);
-      expect(publicClient.readContract).toHaveBeenCalledWith(
-        expect.objectContaining({
-          address: REGISTRY,
-          functionName: "getWrapper",
-          args: [tokenAddress],
-        }),
-      );
-    },
-  );
-
-  vit(
     "readUnderlyingTokenContract calls readContract with correct config",
     ({ wrapperAddress, publicClient }) => {
       readUnderlyingTokenContract(publicClient, wrapperAddress);
@@ -343,20 +323,6 @@ describe("Viem read contract helpers", () => {
         expect.objectContaining({
           address: wrapperAddress,
           functionName: "underlying",
-        }),
-      );
-    },
-  );
-
-  vit(
-    "readWrapperExistsContract calls readContract with correct config",
-    ({ tokenAddress, publicClient }) => {
-      readWrapperExistsContract(publicClient, REGISTRY, tokenAddress);
-      expect(publicClient.readContract).toHaveBeenCalledWith(
-        expect.objectContaining({
-          address: REGISTRY,
-          functionName: "wrapperExists",
-          args: [tokenAddress],
         }),
       );
     },
@@ -412,38 +378,6 @@ describe("Viem write contract helpers", () => {
           address: tokenAddress,
           functionName: "confidentialTransfer",
           args: [userAddress, "0xabcd", "0xef"],
-        }),
-      );
-    },
-  );
-
-  vit(
-    "writeConfidentialBatchTransferContract calls writeContract with correct config",
-    ({ tokenAddress, userAddress, walletClient }) => {
-      const batchData = [
-        {
-          to: userAddress,
-          encryptedAmount: "0xhandle" as Address,
-          inputProof: "0xproof" as Address,
-          retryFor: 0n,
-        },
-      ];
-      writeConfidentialBatchTransferContract(
-        walletClient,
-        BATCHER,
-        tokenAddress,
-        userAddress,
-        batchData,
-        10n,
-      );
-      expect(walletClient.writeContract).toHaveBeenCalledWith(
-        expect.objectContaining({
-          chain: MOCK_CHAIN,
-          account: walletClient.account,
-          address: BATCHER,
-          functionName: "confidentialBatchTransfer",
-          args: [tokenAddress, userAddress, batchData],
-          value: 10n,
         }),
       );
     },
@@ -554,41 +488,7 @@ describe("Viem write contract helpers", () => {
     },
   );
 
-  vit(
-    "writeWrapETHContract calls writeContract with correct config and value",
-    ({ wrapperAddress, userAddress, walletClient }) => {
-      writeWrapETHContract(walletClient, wrapperAddress, userAddress, 500n, 500n);
-      expect(walletClient.writeContract).toHaveBeenCalledWith(
-        expect.objectContaining({
-          chain: MOCK_CHAIN,
-          account: walletClient.account,
-          address: wrapperAddress,
-          functionName: "wrapETH",
-          args: [userAddress, 500n],
-          value: 500n,
-        }),
-      );
-    },
-  );
-
   describe("all write helpers throw without account", () => {
-    vit(
-      "writeConfidentialBatchTransferContract",
-      ({ tokenAddress, userAddress, createMockWalletClient }) => {
-        const noAccountClient = createMockWalletClient(false);
-        expect(() =>
-          writeConfidentialBatchTransferContract(
-            noAccountClient,
-            BATCHER,
-            tokenAddress,
-            userAddress,
-            [],
-            0n,
-          ),
-        ).toThrow("WalletClient has no account");
-      },
-    );
-
     vit("writeUnwrapContract", ({ tokenAddress, userAddress, createMockWalletClient }) => {
       const noAccountClient = createMockWalletClient(false);
       expect(() =>
@@ -644,13 +544,6 @@ describe("Viem write contract helpers", () => {
       expect(() => writeWrapContract(noAccountClient, wrapperAddress, userAddress, 0n)).toThrow(
         "WalletClient has no account",
       );
-    });
-
-    vit("writeWrapETHContract", ({ wrapperAddress, userAddress, createMockWalletClient }) => {
-      const noAccountClient = createMockWalletClient(false);
-      expect(() =>
-        writeWrapETHContract(noAccountClient, wrapperAddress, userAddress, 0n, 0n),
-      ).toThrow("WalletClient has no account");
     });
   });
 });
