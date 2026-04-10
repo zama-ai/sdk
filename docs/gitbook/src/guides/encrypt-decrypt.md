@@ -282,6 +282,103 @@ function DecryptExample() {
 
 {% endcode %}
 
+#### Pre-authorize once, decrypt anywhere
+
+A common pattern is to call `useAllow` once — for example right after the user connects their wallet — and then decrypt independently in any component, on any page, without triggering another wallet prompt. Credentials persist in IndexedDB, so they survive page reloads.
+
+{% tabs %}
+{% tab title="UserDecryptionGate.tsx" %}
+
+```tsx
+import { useAllow, useIsAllowed } from "@zama-fhe/react-sdk";
+
+/**
+ * Show once after wallet connect. After the user signs,
+ * every useUserDecrypt in the app works without prompts.
+ *
+ * Pass all contract addresses you want to decrypt upfront.
+ * When new contracts appear (e.g. from a registry), include
+ * them in the list — useIsAllowed returns false for any
+ * uncovered address, prompting a single re-authorization
+ * that extends the existing credential.
+ */
+function UserDecryptionGate({
+  contracts,
+  children,
+}: {
+  contracts: `0x${string}`[];
+  children: React.ReactNode;
+}) {
+  const { mutate: allow, isPending } = useAllow();
+  const { data: allowed } = useIsAllowed({
+    contractAddresses: contracts,
+  });
+
+  if (allowed) return <>{children}</>;
+
+  return (
+    <button onClick={() => allow(contracts)} disabled={isPending}>
+      {isPending ? "Signing..." : "Authorize decryption"}
+    </button>
+  );
+}
+```
+
+{% endtab %}
+{% tab title="ConfidentialBalance.tsx" %}
+
+```tsx
+import { useConfidentialBalance } from "@zama-fhe/react-sdk";
+
+/**
+ * Rendered inside <UserDecryptionGate> — credentials are already cached,
+ * so this fires immediately with no wallet interaction.
+ */
+function ConfidentialBalance({
+  contractAddress,
+}: {
+  contractAddress: `0x${string}`;
+}) {
+  const { data: balance, isPending } = useConfidentialBalance({
+    tokenAddress: contractAddress,
+  });
+
+  if (isPending) return <p>Decrypting...</p>;
+  return <output>{balance?.toString()}</output>;
+}
+```
+
+{% endtab %}
+{% tab title="App.tsx" %}
+
+```tsx
+import { useListPairs } from "@zama-fhe/react-sdk";
+
+/**
+ * Contracts can come from the on-chain wrappers registry.
+ * When new pairs are added, UserDecryptionGate detects the gap
+ * and shows a one-click re-authorization — the SDK extends the
+ * existing credential to cover the new addresses.
+ */
+function App() {
+  const { data: pairs } = useListPairs();
+  const contracts = pairs?.items.map((p) => p.confidentialTokenAddress) ?? [];
+
+  return (
+    <UserDecryptionGate contracts={contracts}>
+      {contracts.map((addr) => (
+        <ConfidentialBalance key={addr} contractAddress={addr} />
+      ))}
+    </UserDecryptionGate>
+  );
+}
+```
+
+{% endtab %}
+{% endtabs %}
+
+Because `UserDecryptionGate` only renders its children after `useIsAllowed` returns `true`, every nested `useUserDecrypt` call reuses the cached credentials — no `enabled` guard needed. When new contracts appear in the list, `useIsAllowed` returns `false` and the user is prompted once to extend their authorization.
+
 #### Decrypting handles from multiple contracts
 
 `useUserDecrypt` automatically groups handles by contract address and issues one decryption request per contract:
