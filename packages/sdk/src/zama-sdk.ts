@@ -338,7 +338,7 @@ export class ZamaSDK {
 
     // Group uncached handles by contract address
     const byContract = new Map<Address, Handle[]>();
-    for (const h of uncached) {
+    for (const h of contractAddresses) {
       const existing = byContract.get(h.contractAddress);
       if (existing) {
         existing.push(h.handle);
