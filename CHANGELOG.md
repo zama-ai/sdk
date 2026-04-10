@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.0-alpha.2](https://github.com/zama-ai/sdk/compare/v2.4.0-alpha.1...v2.4.0-alpha.2) (2026-04-10)
+
+### Features
+
+- **example-node-ethers:** upgrade to SDK 2.x with full ERC-7984 flows ([#170](https://github.com/zama-ai/sdk/issues/170)) ([3cdddab]())
+- **example-node-viem:** upgrade to SDK 2.x with full ERC-7984 flows ([#169](https://github.com/zama-ai/sdk/issues/169)) ([950756f]())
+
 ## [2.4.0-alpha.1](https://github.com/zama-ai/sdk/compare/v2.3.1-alpha.4...v2.4.0-alpha.1) (2026-04-09)
 
 ### Features
