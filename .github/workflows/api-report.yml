@@ -40,12 +40,12 @@ jobs:
       - name: Extract base branch reports
         if: github.event_name == 'pull_request'
         env:
-          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           mkdir -p /tmp/api-reports/base
-          git fetch --depth=1 origin "$BASE_REF"
-          for f in $(git ls-tree -r --name-only "origin/$BASE_REF" -- packages/sdk/etc packages/react-sdk/etc 2>/dev/null | grep '\.api\.md$'); do
-            git show "origin/$BASE_REF:$f" > "/tmp/api-reports/base/$(basename "$f")" 2>/dev/null || true
+          git fetch --depth=1 origin "$BASE_SHA"
+          for f in $(git ls-tree -r --name-only "$BASE_SHA" -- packages/sdk/etc packages/react-sdk/etc 2>/dev/null | grep '\.api\.md$'); do
+            git show "$BASE_SHA:$f" > "/tmp/api-reports/base/$(basename "$f")" 2>/dev/null || true
           done
 
       - name: Generate API diff
