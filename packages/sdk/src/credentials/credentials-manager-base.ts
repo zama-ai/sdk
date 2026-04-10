@@ -303,19 +303,19 @@ export abstract class BaseCredentialsManager<
     if (this.sessionSignatures.isExpired(entry)) {
       return false;
     }
-    if (contractAddresses.length > 0) {
-      try {
-        const stored = await this.storage.get<TEncrypted>(key);
-        if (!stored) {
-          return false;
-        }
-        this.assertEncrypted(stored);
-        return coversContracts(stored.contractAddresses, contractAddresses);
-      } catch {
+    if (contractAddresses.length === 0) {
+      return true;
+    }
+    try {
+      const stored = await this.storage.get<TEncrypted>(key);
+      if (!stored) {
         return false;
       }
+      this.assertEncrypted(stored);
+      return coversContracts(stored.contractAddresses, contractAddresses);
+    } catch {
+      return false;
     }
-    return true;
   }
 
   protected async clearAll(key: string): Promise<void> {
