@@ -1,3 +1,9 @@
+export function assertNonNullable<T>(value: T, context: string): asserts value is NonNullable<T> {
+  if (value === null || value === undefined) {
+    throw new TypeError(`${context} must not be null or undefined`);
+  }
+}
+
 export function assertObject(
   value: unknown,
   context: string,

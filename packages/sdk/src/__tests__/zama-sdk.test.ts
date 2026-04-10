@@ -61,6 +61,12 @@ describe("ZamaSDK", () => {
     expect(relayer.terminate).toHaveBeenCalledOnce();
   });
 
+  it("[Symbol.dispose] delegates to terminate", ({ relayer, signer, storage }) => {
+    const sdk = new ZamaSDK({ relayer, signer, storage });
+    sdk[Symbol.dispose]();
+    expect(relayer.terminate).toHaveBeenCalledOnce();
+  });
+
   it("calls signer.subscribe when available", ({
     createMockSigner,
     createMockRelayer,
@@ -115,7 +121,12 @@ describe("ZamaSDK", () => {
     sdk.terminate();
   });
 
-  it("revoke clears session storage", async ({ signer, relayer, storage, sessionStorage }) => {
+  it("credentials.revoke clears session storage", async ({
+    signer,
+    relayer,
+    storage,
+    sessionStorage,
+  }) => {
     const sdk = new ZamaSDK({ relayer, signer, storage, sessionStorage });
 
     // Simulate a cached session signature by computing the same store key
@@ -127,7 +138,7 @@ describe("ZamaSDK", () => {
     await sessionStorage.set(storeKey, "0xsomeSignature");
     expect(await sessionStorage.get(storeKey)).toBe("0xsomeSignature");
 
-    await sdk.revoke();
+    await sdk.credentials.revoke();
 
     expect(await sessionStorage.get(storeKey)).toBeNull();
   });
@@ -179,6 +190,64 @@ describe("ZamaSDK", () => {
     await sdk.revokeSession();
 
     expect(clearCachesSpy).toHaveBeenCalledOnce();
+  });
+
+  describe("keypairTTL validation", () => {
+    it("throws when keypairTTL is 0", ({ relayer, signer, storage }) => {
+      expect(() => new ZamaSDK({ relayer, signer, storage, keypairTTL: 0 })).toThrow(
+        "keypairTTL must be a positive number (seconds)",
+      );
+    });
+
+    it("throws when keypairTTL is negative", ({ relayer, signer, storage }) => {
+      expect(() => new ZamaSDK({ relayer, signer, storage, keypairTTL: -1 })).toThrow(
+        "keypairTTL must be a positive number (seconds)",
+      );
+    });
+
+    it("throws when keypairTTL is NaN", ({ relayer, signer, storage }) => {
+      expect(() => new ZamaSDK({ relayer, signer, storage, keypairTTL: NaN })).toThrow(
+        "keypairTTL must be a positive number (seconds)",
+      );
+    });
+
+    it("accepts keypairTTL exactly at the 365-day maximum without warning", ({
+      relayer,
+      signer,
+      storage,
+    }) => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const MAX = 365 * 86400;
+      const sdk = new ZamaSDK({ relayer, signer, storage, keypairTTL: MAX });
+      expect(sdk.credentials.keypairTTL).toBe(MAX);
+      expect(warnSpy).not.toHaveBeenCalled();
+      warnSpy.mockRestore();
+    });
+
+    it("caps keypairTTL above 365 days and emits a warning", ({ relayer, signer, storage }) => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const MAX = 365 * 86400;
+      const TOO_BIG = MAX + 1;
+      const sdk = new ZamaSDK({ relayer, signer, storage, keypairTTL: TOO_BIG });
+      expect(sdk.credentials.keypairTTL).toBe(MAX);
+      expect(warnSpy).toHaveBeenCalledOnce();
+      expect(warnSpy.mock.calls[0][0]).toContain("keypairTTL");
+      expect(warnSpy.mock.calls[0][0]).toContain("365 days");
+      warnSpy.mockRestore();
+    });
+
+    it("caps keypairTTL: Infinity to the 365-day maximum and emits a warning", ({
+      relayer,
+      signer,
+      storage,
+    }) => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const MAX = 365 * 86400;
+      const sdk = new ZamaSDK({ relayer, signer, storage, keypairTTL: Infinity });
+      expect(sdk.credentials.keypairTTL).toBe(MAX);
+      expect(warnSpy).toHaveBeenCalledOnce();
+      warnSpy.mockRestore();
+    });
   });
 
   describe("lifecycle auto-revoke", () => {

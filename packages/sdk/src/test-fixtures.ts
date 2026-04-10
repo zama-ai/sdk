@@ -252,7 +252,7 @@ export const test = base.extend<SdkFixtures>({
         signer: config.signer,
         storage: config.storage,
         sessionStorage: config.sessionStorage,
-        keypairTTL: config.keypairTTL ?? 86400,
+        keypairTTL: config.keypairTTL ?? 2592000,
         sessionTTL: config.sessionTTL ?? 2592000,
         onEvent: config.onEvent,
       });
@@ -266,7 +266,7 @@ export const test = base.extend<SdkFixtures>({
         signer: config.signer,
         storage: config.storage,
         sessionStorage: config.sessionStorage,
-        keypairTTL: config.keypairTTL ?? 86400,
+        keypairTTL: config.keypairTTL ?? 2592000,
         sessionTTL: config.sessionTTL ?? 2592000,
         onEvent: config.onEvent,
       });
@@ -328,7 +328,6 @@ export const test = base.extend<SdkFixtures>({
         approve: vi.fn().mockResolvedValue(txResult),
         approveUnderlying: vi.fn().mockResolvedValue(txResult),
         shield: vi.fn().mockResolvedValue(txResult),
-        shieldETH: vi.fn().mockResolvedValue(txResult),
         unwrap: vi.fn().mockResolvedValue(txResult),
         unwrapAll: vi.fn().mockResolvedValue(txResult),
         finalizeUnwrap: vi.fn().mockResolvedValue(txResult),

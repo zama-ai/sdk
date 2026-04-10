@@ -31,6 +31,11 @@ jobs:
             exit 1
           fi
 
+  lint:
+    needs: [validate-branch]
+    if: ${{ !cancelled() && !failure() }}
+    uses: ./.github/workflows/lint.yml
+
   vitest:
     needs: [validate-branch]
     if: ${{ !cancelled() && !failure() }}
@@ -47,7 +52,7 @@ jobs:
     uses: ./.github/workflows/api-report.yml
 
   release:
-    needs: [vitest, playwright, api-report]
+    needs: [lint, vitest, playwright, api-report]
     if: ${{ !cancelled() && !failure() }}
     runs-on: ubuntu-latest
     steps:
@@ -68,7 +73,7 @@ jobs:
 
       - name: Ensure npm 11
         run: |
-          npm i -g npm@^11
+          pnpm add -g npm@^11
           npm --version
 
       - name: Install dependencies
@@ -103,7 +108,7 @@ jobs:
           cd ../react-sdk
           npm publish --access public --tag "${npm_tag}"
         env:
-          NPM_CONFIG_PROVENANCE: false # Re-enable once repo is public
+          NPM_CONFIG_PROVENANCE: true
 
       - name: Verify release was published
         if: github.event_name == 'workflow_dispatch'

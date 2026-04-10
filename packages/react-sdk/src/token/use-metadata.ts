@@ -49,7 +49,5 @@ export function useMetadata(
 export function useMetadataSuspense(tokenAddress: Address) {
   const token = useReadonlyToken(tokenAddress);
 
-  return useSuspenseQuery<TokenMetadata>({
-    ...tokenMetadataQueryOptions(token.signer, tokenAddress),
-  });
+  return useSuspenseQuery<TokenMetadata>(tokenMetadataQueryOptions(token.signer, tokenAddress));
 }

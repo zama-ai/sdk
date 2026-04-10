@@ -48,9 +48,7 @@ export function useIsConfidential(
 export function useIsConfidentialSuspense(tokenAddress: Address) {
   const token = useReadonlyToken(tokenAddress);
 
-  return useSuspenseQuery<boolean>({
-    ...isConfidentialQueryOptions(token.signer, tokenAddress),
-  });
+  return useSuspenseQuery<boolean>(isConfidentialQueryOptions(token.signer, tokenAddress));
 }
 
 /**
@@ -93,7 +91,5 @@ export function useIsWrapper(
 export function useIsWrapperSuspense(tokenAddress: Address) {
   const token = useReadonlyToken(tokenAddress);
 
-  return useSuspenseQuery<boolean>({
-    ...isWrapperQueryOptions(token.signer, tokenAddress),
-  });
+  return useSuspenseQuery<boolean>(isWrapperQueryOptions(token.signer, tokenAddress));
 }

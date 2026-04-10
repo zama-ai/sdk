@@ -667,6 +667,12 @@ describe(RelayerCleartext, () => {
     expect(() => fhevm.terminate()).not.toThrow();
   });
 
+  it("[Symbol.dispose] delegates to terminate", () => {
+    const { fhevm } = createInstance();
+
+    expect(() => fhevm[Symbol.dispose]()).not.toThrow();
+  });
+
   it("createDelegatedUserDecryptEIP712 returns domain and message with delegatorAddress", async () => {
     const { fhevm } = createInstance();
 

@@ -347,6 +347,7 @@ describe("Token event emissions", () => {
       await token.confidentialTransfer(
         "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address,
         100n,
+        { skipBalanceCheck: true },
       );
 
       const types = events.map((e) => e.type);
@@ -381,6 +382,7 @@ describe("Token event emissions", () => {
       await token.confidentialTransfer(
         "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address,
         100n,
+        { skipBalanceCheck: true },
       );
 
       const submitted = events.find((e) => e.type === ZamaSDKEvents.TransferSubmitted);
@@ -410,6 +412,7 @@ describe("Token event emissions", () => {
       await token.confidentialTransfer(
         "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address,
         100n,
+        { skipBalanceCheck: true },
       );
 
       const endEvent = events.find((e) => e.type === ZamaSDKEvents.EncryptEnd);
@@ -439,7 +442,9 @@ describe("Token event emissions", () => {
       );
 
       await expect(
-        token.confidentialTransfer("0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address, 100n),
+        token.confidentialTransfer("0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address, 100n, {
+          skipBalanceCheck: true,
+        }),
       ).rejects.toThrow();
 
       const errorEvent = events.find((e) => e.type === ZamaSDKEvents.EncryptError);
@@ -471,7 +476,9 @@ describe("Token event emissions", () => {
       );
 
       await expect(
-        token.confidentialTransfer("0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address, 100n),
+        token.confidentialTransfer("0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address, 100n, {
+          skipBalanceCheck: true,
+        }),
       ).rejects.toThrow();
 
       const types = events.map((e) => e.type);
@@ -592,36 +599,11 @@ describe("Token event emissions", () => {
         sessionStorage,
         createToken,
       );
-      vi.mocked(signer.readContract).mockResolvedValueOnce(
-        "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c",
-      ); // underlying
+      vi.mocked(signer.readContract)
+        .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // underlying
+        .mockResolvedValueOnce(1000n); // ERC-20 balanceOf
 
       await token.shield(100n, { approvalStrategy: "skip" });
-
-      const types = events.map((e) => e.type);
-      expect(types).toContain(ZamaSDKEvents.ShieldSubmitted);
-    });
-
-    it("emits ShieldSubmitted for shieldETH", async ({
-      relayer,
-      signer,
-      tokenAddress,
-      storage,
-      sessionStorage,
-      createToken,
-    }) => {
-      const events: ZamaSDKEvent[] = [];
-      const onEvent: ZamaSDKEventListener = (event) => events.push(event);
-      const token = createTokenWithEvent(
-        relayer,
-        signer,
-        onEvent,
-        tokenAddress,
-        storage,
-        sessionStorage,
-        createToken,
-      );
-      await token.shieldETH(1000n);
 
       const types = events.map((e) => e.type);
       expect(types).toContain(ZamaSDKEvents.ShieldSubmitted);
@@ -809,7 +791,7 @@ describe("Token event emissions", () => {
       );
       mockReceiptWithUnwrapRequested(signer, userAddress);
 
-      await token.unshield(50n);
+      await token.unshield(50n, { skipBalanceCheck: true });
 
       const types = events.map((e) => e.type);
 
@@ -856,7 +838,7 @@ describe("Token event emissions", () => {
       );
       mockReceiptWithUnwrapRequested(signer, userAddress);
 
-      await token.unshield(50n);
+      await token.unshield(50n, { skipBalanceCheck: true });
 
       const phase1 = events.find((e) => e.type === ZamaSDKEvents.UnshieldPhase1Submitted);
       expect(phase1).toBeDefined();
@@ -889,7 +871,7 @@ describe("Token event emissions", () => {
       );
       mockReceiptWithUnwrapRequested(signer, userAddress);
 
-      await token.unshield(50n);
+      await token.unshield(50n, { skipBalanceCheck: true });
 
       const phaseEvents = events.filter(
         (e) =>
@@ -918,9 +900,9 @@ describe("Token event emissions", () => {
     }) => {
       const events: ZamaSDKEvent[] = [];
       const onEvent: ZamaSDKEventListener = (event) => events.push(event);
-      vi.mocked(signer.readContract).mockResolvedValueOnce(
-        "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c",
-      );
+      vi.mocked(signer.readContract)
+        .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // underlying
+        .mockResolvedValueOnce(1000n); // ERC-20 balanceOf
       vi.mocked(signer.writeContract).mockRejectedValue(new Error("shield failed"));
       const token = createTokenWithEvent(
         relayer,

@@ -25,7 +25,6 @@ test("should reveal exact cUSDT balance after shielding 500", async ({
   page,
   contracts,
   formatUnits,
-  computeFee,
   confidentialBalances,
 }) => {
   const shieldAmount = 500n;
@@ -37,7 +36,7 @@ test("should reveal exact cUSDT balance after shielding 500", async ({
   await page.getByTestId("shield-button").click();
   await expect(page.getByTestId("shield-success")).toBeVisible();
 
-  const expectedBalance = cUSDTBefore + shieldAmount - computeFee(shieldAmount);
+  const expectedBalance = cUSDTBefore + shieldAmount;
   await page.goto("/wallet");
   await page.getByTestId("reveal-button").click();
   await expect(page.getByTestId("token-row-cUSDT").getByTestId("balance")).toHaveText(
@@ -49,7 +48,6 @@ test("should reveal exact cUSDC balance after shielding 750", async ({
   page,
   contracts,
   formatUnits,
-  computeFee,
   confidentialBalances,
 }) => {
   const cUSDCBefore = confidentialBalances.cUSDC;
@@ -60,7 +58,7 @@ test("should reveal exact cUSDC balance after shielding 750", async ({
   await page.getByTestId("shield-button").click();
   await expect(page.getByTestId("shield-success")).toBeVisible();
 
-  const expectedBalance = cUSDCBefore + shieldAmount - computeFee(shieldAmount);
+  const expectedBalance = cUSDCBefore + shieldAmount;
   await page.goto("/wallet");
   await page.getByTestId("reveal-button").click();
   await expect(page.getByTestId("token-row-cERC20").getByTestId("balance")).toHaveText(
@@ -72,7 +70,6 @@ test("should reveal exact balance after shield 1000 and transfer 300", async ({
   page,
   contracts,
   formatUnits,
-  computeFee,
   confidentialBalances,
 }) => {
   const shieldAmount = 1000n;
@@ -94,7 +91,7 @@ test("should reveal exact balance after shield 1000 and transfer 300", async ({
   await expect(page.getByTestId("transfer-success")).toBeVisible();
 
   // Reveal exact balance
-  const expectedBalance = cUSDTBefore + shieldAmount - computeFee(shieldAmount) - transferAmount;
+  const expectedBalance = cUSDTBefore + shieldAmount - transferAmount;
   await page.goto("/wallet");
   await page.getByTestId("reveal-button").click();
   await expect(page.getByTestId("token-row-cUSDT").getByTestId("balance")).toHaveText(

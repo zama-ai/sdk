@@ -1,21 +1,90 @@
-# Zama SDK
+<p align="center">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/gitbook/.gitbook/assets/SDK-header-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="docs/gitbook/.gitbook/assets/SDK-header-light.png">
+  <img width=500 alt="Zama SDK" src="docs/gitbook/.gitbook/assets/SDK-header-light.png">
+</picture>
+</p>
 
-![Latest dev release](https://img.shields.io/npm/v/%40zama-fhe%2Fsdk/alpha?label=dev%20release)
-![Latest dev release last updated](https://img.shields.io/npm/last-update/%40zama-fhe%2Fsdk/alpha)
-![NPM License](https://img.shields.io/npm/l/%40zama-fhe%2Fsdk)
-[![Unit tests](https://github.com/zama-ai/sdk/actions/workflows/vitest.yml/badge.svg)](https://github.com/zama-ai/sdk/actions/workflows/vitest.yml)
-[![E2E tests](https://github.com/zama-ai/sdk/actions/workflows/playwright.yml/badge.svg)](https://github.com/zama-ai/sdk/actions/workflows/playwright.yml)
+<hr/>
 
-TypeScript SDKs for privacy-preserving confidential contract operations using [Fully Homomorphic Encryption on Zama Protocol](https://docs.zama.org/protocol/protocol/overview). Shield, transfer, and unshield tokens with encrypted balances — no one sees your amounts on-chain.
+<p align="center">
+  <a href="https://docs.zama.org/protocol"> 📒 Documentation</a> | <a href="https://zama.ai/community"> 💛 Community support</a> | <a href="https://github.com/zama-ai/awesome-zama"> 📚 FHE resources by Zama</a>
+</p>
 
-## Packages
+<p align="center">
+  <a href="https://www.npmjs.com/package/@zama-fhe/sdk">
+    <img src="https://img.shields.io/npm/v/%40zama-fhe%2Fsdk?label=latest%20release&style=flat-square" alt="Latest release"></a>
+  <a href="https://www.npmjs.com/package/@zama-fhe/sdk">
+    <img src="https://img.shields.io/npm/last-update/%40zama-fhe%2Fsdk/latest?style=flat-square" alt="Latest release last updated"></a>
+  <a href="https://github.com/zama-ai/sdk/blob/main/LICENSE">
+    <img src="https://img.shields.io/badge/License-BSD--3--Clause--Clear-%23ffb243?style=flat-square" alt="License"></a>
+  <a href="https://github.com/zama-ai/bounty-program">
+    <img src="https://img.shields.io/badge/Contribute-Zama%20Bounty%20Program-%23ffd208?style=flat-square" alt="Zama Bounty Program"></a>
+</p>
 
-| Package                                        | Description                                                                                                                 |
-| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| [`@zama-fhe/sdk`](./packages/sdk/)             | Core SDK — confidential contract operations, FHE relayer, contract call builders, viem/ethers adapters, Node.js worker pool |
-| [`@zama-fhe/react-sdk`](./packages/react-sdk/) | React hooks wrapping the core SDK via `@tanstack/react-query`, with viem/ethers/wagmi sub-paths                             |
+<p align="center">
+  <a href="https://www.npmjs.com/package/@zama-fhe/sdk">
+    <img src="https://img.shields.io/npm/v/%40zama-fhe%2Fsdk/alpha?label=dev%20release&style=flat-square" alt="Dev release"></a>
+  <a href="https://www.npmjs.com/package/@zama-fhe/sdk">
+    <img src="https://img.shields.io/npm/last-update/%40zama-fhe%2Fsdk/alpha?style=flat-square" alt="Dev release last updated"></a>
+  <a href="https://github.com/zama-ai/sdk/actions/workflows/vitest.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/zama-ai/sdk/vitest.yml?style=flat-square&label=unit%20tests" alt="Unit tests"></a>
+  <a href="https://github.com/zama-ai/sdk/actions/workflows/playwright.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/zama-ai/sdk/playwright.yml?style=flat-square&label=e2e%20tests" alt="E2E tests"></a>
+</p>
 
-## Install
+## About
+
+### What is Zama SDK?
+
+**Zama SDK** is a suite of TypeScript libraries for building privacy-preserving dApps on EVM-compatible blockchains powered by the _Zama Confidential Blockchain Protocol_. It provides everything you need to interact with confidential smart contracts using [Fully Homomorphic Encryption (FHE)](https://docs.zama.org/protocol/protocol/overview) — from encrypting inputs and decrypting results to managing access control — all from familiar TypeScript and React environments.
+
+Zama SDK is designed for developers who want to integrate confidential operations into their applications without learning cryptography:
+
+- **End-to-end encryption:** Transaction data and on-chain state remain encrypted at all times.
+- **Framework-agnostic core:** Works with viem, ethers, or any EVM library.
+- **React-ready:** First-class React hooks powered by `@tanstack/react-query`.
+
+### Table of contents
+
+- [About](#about)
+  - [What is Zama SDK?](#what-is-zama-sdk)
+  - [Table of contents](#table-of-contents)
+  - [Packages](#packages)
+  - [Main features](#main-features)
+- [Working with Zama SDK](#working-with-zama-sdk)
+  - [Install](#install)
+  - [Development](#development)
+  - [Claude Code Setup](#claude-code-setup)
+  - [Contributing](#contributing)
+  - [License](#license)
+- [Resources](#resources)
+- [Support](#support)
+
+### Packages
+
+| Package                                        | Description                                                                                                                |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| [`@zama-fhe/sdk`](./packages/sdk/)             | Core SDK — confidential contract operations, FHE relayer, contract call builders, viem/ethers adapters, Web Worker support |
+| [`@zama-fhe/react-sdk`](./packages/react-sdk/) | React hooks wrapping the core SDK via `@tanstack/react-query`, with wagmi sub-path                                         |
+
+### Main features
+
+- **TypeScript-first:** Fully typed APIs with tree-shakeable ESM builds for minimal bundle size.
+- **Privacy by design:** Encrypt inputs, decrypt outputs, and manage access control for confidential smart contracts.
+- **Multi-library support:** Adapters for both viem and ethers, so you can use whichever EVM library your project already depends on.
+- **React hooks:** Dedicated React package with hooks for encrypting, decrypting, reencrypting, and querying confidential state — all backed by `@tanstack/react-query` for caching and suspense.
+- **Workers:** Offload heavy FHE operations to workers in Web and Node.js environments for non-blocking performance.
+- **Wagmi integration:** Drop-in wagmi connector support for seamless wallet and provider management in React apps.
+
+<p align="right">
+  <a href="#about" > ↑ Back to top </a>
+</p>
+
+## Working with Zama SDK
+
+### Install
 
 ```bash
 # Core SDK (vanilla TypeScript)
@@ -27,60 +96,32 @@ pnpm add @zama-fhe/react-sdk @tanstack/react-query
 # or: npm install @zama-fhe/react-sdk @tanstack/react-query / yarn add @zama-fhe/react-sdk @tanstack/react-query
 ```
 
-## Documentation
+### Development
 
-Full documentation — tutorials, API reference, integration guides, and examples — is available via a local preview:
+**Prerequisites:** Node.js >= 22, pnpm >= 10
 
 ```bash
-pnpm install
-pnpm docs:preview
+pnpm install                # Install dependencies
+pnpm build                  # Build all (sdk first, then react-sdk)
+pnpm test                   # Watch mode
+pnpm test:run               # Single run
+pnpm typecheck              # Type checking
+pnpm lint                   # Linting
+pnpm format:check           # Formatting check
 ```
 
-> The docs will eventually be published to [docs.zama.org](https://docs.zama.org). Until then, serve them locally with the command above.
+**E2E tests:**
 
-## Development
+```bash
+pnpm e2e:test               # Run Playwright E2E tests
+pnpm e2e:test:ui            # Playwright UI mode
+```
+
+> **Note:** The `forge-fhevm` submodule and its soldeer dependencies are installed automatically by `pnpm install`.
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for the full contributor guide (branching, PRs, code style, architecture).
 
-### Prerequisites
-
-- Node.js >= 22
-- pnpm >= 10
-
-### Setup
-
-```bash
-pnpm install
-```
-
-### Build
-
-```bash
-pnpm build                  # Build all (sdk first, then react-sdk)
-pnpm build:sdk              # Build core SDK only
-pnpm build:react-sdk        # Build React SDK only
-```
-
-### Test
-
-```bash
-pnpm test              # Watch mode
-pnpm test:run          # Single run
-pnpm typecheck         # Type checking
-pnpm lint              # Linting
-pnpm format:check      # Formatting check
-```
-
-### E2E Tests
-
-```bash
-pnpm submodule:init    # Initialize hardhat submodule (first time)
-pnpm hardhat:install   # Install hardhat dependencies
-pnpm e2e:test          # Run E2E tests (auto-starts hardhat + next dev)
-pnpm e2e:test:ui       # Playwright UI mode
-```
-
-## Claude Code Setup
+### Claude Code Setup
 
 This repository includes an opt-in [Claude Code](https://docs.anthropic.com/en/docs/claude-code) configuration in `claude-setup/settings.json`. It provides:
 
@@ -92,6 +133,32 @@ This repository includes an opt-in [Claude Code](https://docs.anthropic.com/en/d
 
 To use it, install [Claude Code](https://docs.anthropic.com/en/docs/claude-code) and run `pnpm setup:claude`.
 
-## License
+### Contributing
 
-[BSD-3-Clause-Clear](./LICENSE)
+There are two ways to contribute to Zama SDK:
+
+- [Open issues](https://github.com/zama-ai/sdk/issues/new/choose) to report bugs and typos, or to suggest new ideas
+- Request to become an official contributor by emailing hello@zama.ai.
+
+Becoming an approved contributor involves signing our Contributor License Agreement (CLA). Only approved contributors can send pull requests, so please make sure to get in touch before you do!
+
+### License
+
+This software is distributed under the **BSD-3-Clause-Clear** license. Read [this](LICENSE) for more details.
+
+## Resources
+
+- [Documentation](https://docs.zama.org/protocol) — Official documentation of the Zama Confidential Blockchain Protocol.
+- [Awesome Zama – FHEVM](https://github.com/zama-ai/awesome-zama?tab=readme-ov-file#fhevm) — Curated articles, talks, and ecosystem projects.
+
+## Support
+
+🌟 If you find this project helpful or interesting, please consider giving it a star on GitHub! Your support helps to grow the community and motivates further development.
+
+<a target="_blank" href="https://community.zama.ai">
+  💛 Community forum on Discourse
+</a>
+
+<p align="right">
+  <a href="#about" > ↑ Back to top </a>
+</p>

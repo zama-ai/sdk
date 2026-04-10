@@ -26,6 +26,12 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# Kill any stale process on the port from a previous run
+if lsof -ti :"$PORT" >/dev/null 2>&1; then
+  lsof -ti :"$PORT" | xargs kill -9 2>/dev/null || true
+  sleep 1
+fi
+
 # Start anvil in the background
 anvil --port "$PORT" --chain-id 31337 --silent &
 ANVIL_PID=$!
@@ -61,6 +67,10 @@ while ! mkdir "$LOCK_DIR" 2>/dev/null; do
       rm -rf "$LOCK_DIR" 2>/dev/null || true
       continue
     fi
+  else
+    # Lock dir exists but no pid file — stale from a hard kill. Clean up.
+    rm -rf "$LOCK_DIR" 2>/dev/null || true
+    continue
   fi
   sleep 0.5
   lock_wait=$((lock_wait + 1))

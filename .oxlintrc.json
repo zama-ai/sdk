@@ -126,6 +126,7 @@
         "no-console": "off",
         "no-new": "off",
         "vitest/hoisted-apis-on-top": "off",
+        "vitest/require-mock-type-parameters": "off",
         "react/rules-of-hooks": "off"
       }
     },

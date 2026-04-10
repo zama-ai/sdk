@@ -32,25 +32,16 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --ignore-scripts
+        run: pnpm install --frozen-lockfile
 
       - name: Build packages
         run: pnpm build
-
-      - run: pnpm lint
-
-      - run: pnpm typecheck
-
-      - run: pnpm format:check
-
-      - name: Check bundle size
-        run: pnpm size
 
       - run: pnpm test:coverage
 
       - name: Coverage report
         if: github.event_name == 'pull_request'
-        uses: davelosert/vitest-coverage-report-action@2500dafcee7dd64f85ab689c0b83798a8359770e # v2.9.3
+        uses: davelosert/vitest-coverage-report-action@3c50566c523e04813df28de8f7c48dd97d663f1c # v2.11.2
         with:
           json-summary-path: coverage/coverage-summary.json
           json-final-path: coverage/coverage-final.json

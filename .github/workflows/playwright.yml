@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  test-nextjs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -26,6 +26,9 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@8789b3e21e6c11b2697f5eb56eddae542f746c10 # v1.7.0
 
+      - name: Install soldeer dependencies
+        run: cd contracts/lib/forge-fhevm && forge soldeer install
+
       - name: Restore Forge build cache
         id: forge-build-cache
         uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
@@ -33,8 +36,10 @@ jobs:
           path: |
             contracts/out
             contracts/cache
+            contracts/dependencies
             contracts/lib/forge-fhevm/out
-          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/lib/forge-fhevm/src/**/*.sol') }}
+            contracts/lib/forge-fhevm/dependencies
+          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml') }}
 
       - name: Install Soldeer dependencies
         if: steps.forge-build-cache.outputs.cache-hit != 'true'
@@ -57,8 +62,10 @@ jobs:
           path: |
             contracts/out
             contracts/cache
+            contracts/dependencies
             contracts/lib/forge-fhevm/out
-          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/lib/forge-fhevm/src/**/*.sol') }}
+            contracts/lib/forge-fhevm/dependencies
+          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml') }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
@@ -114,18 +121,193 @@ jobs:
           path: test/test-nextjs/.next/cache
           key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('test/test-nextjs/src/**/*.ts', 'test/test-nextjs/src/**/*.tsx', 'packages/sdk/src/**/*.ts', 'packages/sdk/src/**/*.tsx', 'packages/react-sdk/src/**/*.ts', 'packages/react-sdk/src/**/*.tsx') }}
 
-      - name: Build Vite test-vite
-        run: pnpm build:test-vite
-        env:
-          VITE_ANVIL_PORT: 8546
-
-      - name: Run Playwright tests
-        run: pnpm e2e:test
+      - name: Run Next.js Playwright tests
+        run: pnpm e2e:test:nextjs
 
       - name: Upload test results
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         if: ${{ !cancelled() }}
         with:
-          name: playwright-report
+          name: nextjs-test-report
           path: test/playwright/test-results/
+          retention-days: 7
+
+  test-vite:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Init submodules
+        run: git submodule update --init --recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@8789b3e21e6c11b2697f5eb56eddae542f746c10 # v1.7.0
+
+      - name: Install soldeer dependencies
+        run: cd contracts/lib/forge-fhevm && forge soldeer install
+
+      - name: Restore Forge build cache
+        id: forge-build-cache
+        uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        with:
+          path: |
+            contracts/out
+            contracts/cache
+            contracts/dependencies
+            contracts/lib/forge-fhevm/out
+            contracts/lib/forge-fhevm/dependencies
+          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml') }}
+
+      - name: Install Soldeer dependencies
+        if: steps.forge-build-cache.outputs.cache-hit != 'true'
+        run: |
+          cd contracts/lib/forge-fhevm && GIT_LFS_SKIP_SMUDGE=1 forge soldeer install
+          cd "$GITHUB_WORKSPACE/contracts" && GIT_LFS_SKIP_SMUDGE=1 forge soldeer install
+
+      - name: Build forge-fhevm contracts
+        if: steps.forge-build-cache.outputs.cache-hit != 'true'
+        run: cd contracts/lib/forge-fhevm && forge build
+
+      - name: Build contracts
+        if: steps.forge-build-cache.outputs.cache-hit != 'true'
+        run: cd contracts && forge build
+
+      - name: Save Forge build cache
+        if: steps.forge-build-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        with:
+          path: |
+            contracts/out
+            contracts/cache
+            contracts/dependencies
+            contracts/lib/forge-fhevm/out
+            contracts/lib/forge-fhevm/dependencies
+          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml') }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Restore Playwright browsers cache
+        id: playwright-cache
+        uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        with:
+          path: /home/runner/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm --filter @zama-fhe/playwright exec playwright install --with-deps chromium
+
+      - name: Save Playwright browsers cache
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        with:
+          path: /home/runner/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Build SDK packages
+        run: pnpm build
+
+      - name: Build Vite test-vite
+        run: pnpm build:test-vite
+        env:
+          VITE_ANVIL_PORT: 8546
+
+      - name: Run Vite Playwright tests
+        run: pnpm e2e:test:vite
+
+      - name: Upload test results
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        if: ${{ !cancelled() }}
+        with:
+          name: vite-test-report
+          path: test/playwright/test-results/
+          retention-days: 7
+
+  test-node:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Init submodules
+        run: git submodule update --init --recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@8789b3e21e6c11b2697f5eb56eddae542f746c10 # v1.7.0
+
+      - name: Install soldeer dependencies
+        run: cd contracts/lib/forge-fhevm && forge soldeer install
+
+      - name: Restore Forge build cache
+        id: forge-build-cache
+        uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        with:
+          path: |
+            contracts/out
+            contracts/cache
+            contracts/dependencies
+            contracts/lib/forge-fhevm/out
+            contracts/lib/forge-fhevm/dependencies
+          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml') }}
+
+      - name: Install Soldeer dependencies
+        if: steps.forge-build-cache.outputs.cache-hit != 'true'
+        run: |
+          cd contracts/lib/forge-fhevm && GIT_LFS_SKIP_SMUDGE=1 forge soldeer install
+          cd "$GITHUB_WORKSPACE/contracts" && GIT_LFS_SKIP_SMUDGE=1 forge soldeer install
+
+      - name: Build forge-fhevm contracts
+        if: steps.forge-build-cache.outputs.cache-hit != 'true'
+        run: cd contracts/lib/forge-fhevm && forge build
+
+      - name: Build contracts
+        if: steps.forge-build-cache.outputs.cache-hit != 'true'
+        run: cd contracts && forge build
+
+      - name: Save Forge build cache
+        if: steps.forge-build-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        with:
+          path: |
+            contracts/out
+            contracts/cache
+            contracts/dependencies
+            contracts/lib/forge-fhevm/out
+            contracts/lib/forge-fhevm/dependencies
+          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml') }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Node e2e tests
+        run: pnpm e2e:test:node
+
+      - name: Upload test results
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        if: ${{ !cancelled() }}
+        with:
+          name: node-test-report
+          path: test/playwright/test-results/node/
           retention-days: 7

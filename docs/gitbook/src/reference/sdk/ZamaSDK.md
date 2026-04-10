@@ -129,7 +129,7 @@ const sdk = new ZamaSDK({
 
 `number | undefined`
 
-FHE keypair validity duration in seconds. Default: `86400` (1 day). After expiry, the next decrypt prompts a wallet signature to regenerate the keypair.
+FHE keypair validity duration in seconds. Default: `2592000` (30 days). After expiry, the next decrypt prompts a wallet signature to regenerate the keypair.
 
 ```ts
 const sdk = new ZamaSDK({
@@ -174,7 +174,7 @@ const sdk = new ZamaSDK({
 
 `number | undefined`
 
-How long cached registry results remain valid, in seconds. Default: `86400` (24 hours). Consistent with `keypairTTL`.
+How long cached registry results remain valid, in seconds. Default: `86400` (24 hours).
 
 ```ts
 const sdk = new ZamaSDK({
@@ -256,26 +256,6 @@ const registry = sdk.createWrappersRegistry({ [31337]: "0xYourRegistry" });
 const pairs = await registry.getTokenPairs();
 ```
 
-### allow
-
-`(...addresses: Address[]) => Promise<void>`
-
-Prompts the wallet to sign and caches session credentials for the given contract addresses. A single signature covers all addresses passed. Call early to avoid popups during balance decrypts.
-
-```ts
-await sdk.allow("0xTokenA", "0xTokenB");
-```
-
-### revoke
-
-`(...addresses: Address[]) => Promise<void>`
-
-Clears session credentials. The addresses are included in the `credentials:revoked` event.
-
-```ts
-await sdk.revoke("0xTokenA", "0xTokenB");
-```
-
 ### revokeSession
 
 `() => Promise<void>`
@@ -284,16 +264,6 @@ Clears the session signature without specifying addresses. The next decrypt requ
 
 ```ts
 await sdk.revokeSession();
-```
-
-### isAllowed
-
-`() => Promise<boolean>`
-
-Returns whether the session has active credentials.
-
-```ts
-const allowed = await sdk.isAllowed();
 ```
 
 ### dispose

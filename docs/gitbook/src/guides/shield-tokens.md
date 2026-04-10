@@ -5,7 +5,7 @@ description: How to convert public ERC-20 tokens into their confidential form.
 
 # Shield Tokens
 
-Shielding converts public ERC-20 tokens into confidential tokens. The SDK handles the ERC-20 approval and the shield transaction in a single call via `token.shield()`. In React, use the `useShield` and `useShieldETH` hooks.
+Shielding converts public ERC-20 tokens into confidential tokens. The SDK handles the ERC-20 approval and the shield transaction in a single call via `token.shield()`. In React, use the `useShield` hook.
 
 ## Steps
 
@@ -60,6 +60,8 @@ const tokenWithWrapper = useToken({
 {% endtabs %}
 
 ### 2. Shield with exact approval (default)
+
+The SDK always validates the ERC-20 balance before submitting. If the balance is insufficient, it throws `InsufficientERC20BalanceError` with `requested`, `available`, and `token` properties -- no transaction is sent. This is a public read with no signing requirement, so it works for all wallet types including smart wallets.
 
 By default, `shield` approves the exact amount before wrapping. This is the safest option — it limits exposure if the contract is compromised:
 
@@ -138,35 +140,7 @@ await shield({ amount: 1000n, approvalStrategy: "skip" });
 
 This sends only the shield transaction. If the allowance is insufficient, the transaction reverts on-chain.
 
-### 5. Shield native ETH
-
-For ETH wrapper contracts that accept native ETH, use `shieldETH` instead. No ERC-20 approval is needed — the ETH value is sent directly with the transaction:
-
-{% tabs %}
-{% tab title="Core SDK" %}
-
-```ts
-await token.shieldETH(1000n);
-```
-
-{% endtab %}
-{% tab title="React" %}
-
-```tsx
-import { useShieldETH } from "@zama-fhe/react-sdk";
-
-const { mutateAsync: shieldETH } = useShieldETH({
-  tokenAddress: "0xEncryptedERC20Address",
-  wrapperAddress: "0xWrapperAddress", // omit if token is the wrapper
-});
-
-await shieldETH({ amount: 1000n });
-```
-
-{% endtab %}
-{% endtabs %}
-
-### 6. Track the transaction
+### 5. Track the transaction
 
 Both the core SDK and React hooks return the transaction hash. You can use it to wait for confirmation or show progress in your UI:
 
@@ -205,11 +179,8 @@ const txHash = await shield({ amount: 1000n });
 
 In React, balance caches are automatically invalidated after a successful shield. The `useConfidentialBalance` hook will pick up the new balance on its next poll cycle.
 
-For fee-aware shielding, you can query the shield fee before submitting the transaction using `useShieldFee` in React or the fee manager contract directly in the core SDK.
-
 ## Next steps
 
 - [Transfer Privately](/guides/transfer-privately) — send confidential tokens to another address
 - [Token.shield reference](/reference/sdk/Token#shield) — full API signature and options
 - [useShield reference](/reference/react/useShield) — React hook details
-- [useShieldETH reference](/reference/react/useShieldETH) — React hook for native ETH shielding

@@ -7,7 +7,6 @@ test("should shield, approve, then transfer-from on cUSDT", async ({
   page,
   contracts,
   formatUnits,
-  computeFee,
   confidentialBalances,
 }) => {
   const shieldAmount = 1000n;
@@ -37,7 +36,7 @@ test("should shield, approve, then transfer-from on cUSDT", async ({
   // Verify balance decreased by transfer amount
   await page.goto("/wallet");
   await page.getByTestId("reveal-button").click();
-  const expectedBalance = cUSDTBefore + shieldAmount - computeFee(shieldAmount) - transferAmount;
+  const expectedBalance = cUSDTBefore + shieldAmount - transferAmount;
   await expect(page.getByTestId("token-row-cUSDT").getByTestId("balance")).toHaveText(
     formatUnits(expectedBalance, 6),
   );

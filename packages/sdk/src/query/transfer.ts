@@ -1,14 +1,12 @@
 import type { Token } from "../token/token";
-import type { TransferCallbacks, TransactionResult } from "../types";
+import type { TransactionResult, TransferOptions } from "../types";
 import type { MutationFactoryOptions } from "./factory-types";
 import type { Address } from "viem";
 
 /** Variables for {@link confidentialTransferMutationOptions}. */
-export interface ConfidentialTransferParams {
+export interface ConfidentialTransferParams extends TransferOptions {
   to: Address;
   amount: bigint;
-  /** Optional progress callbacks for the multi-step transfer flow. */
-  callbacks?: TransferCallbacks;
 }
 
 export function confidentialTransferMutationOptions(
@@ -20,7 +18,7 @@ export function confidentialTransferMutationOptions(
 > {
   return {
     mutationKey: ["zama.confidentialTransfer", token.address] as const,
-    mutationFn: async ({ to, amount, callbacks }) =>
-      token.confidentialTransfer(to, amount, callbacks),
+    mutationFn: async ({ to, amount, ...options }) =>
+      token.confidentialTransfer(to, amount, options),
   };
 }

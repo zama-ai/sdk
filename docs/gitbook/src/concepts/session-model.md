@@ -76,7 +76,7 @@ The SDK has two separate time-to-live settings that control different aspects of
 
 ### `keypairTTL` — keypair regeneration
 
-Controls how long the FHE keypair remains valid. Default: 86,400 seconds (1 day).
+Controls how long the FHE keypair remains valid. Default: 2,592,000 seconds (30 days).
 
 When the keypair expires:
 
@@ -99,6 +99,10 @@ When the session expires:
 
 {% hint style="info" %}
 For high-security contexts, set `sessionTTL: 0` to require a wallet signature on every operation. This provides maximum security at the cost of frequent wallet popups.
+{% endhint %}
+
+{% hint style="info" %}
+**`sessionTTL` is clamped to `keypairTTL`.** If you set `sessionTTL` greater than `keypairTTL`, the SDK automatically reduces it to match `keypairTTL` and emits a console warning. This prevents a state where `isAllowed()` returns `true` (session still valid) but the FHE keypair has expired, which would cause unexpected wallet prompts.
 {% endhint %}
 
 Each session entry records its TTL at creation time. If you change the `sessionTTL` configuration between sessions, existing sessions use their original TTL, not the new value.
@@ -124,7 +128,7 @@ Revocation clears the cached signature. The encrypted keypair in persistent stor
 Three methods exist for different use cases:
 
 - `token.revoke()` — revoke from a specific token instance.
-- `sdk.revoke("0xTokenA", "0xTokenB")` — revoke with specific addresses (included in the `credentials:revoked` event).
+- `sdk.credentials.revoke("0xTokenA", "0xTokenB")` — revoke with specific addresses (included in the `credentials:revoked` event).
 - `sdk.revokeSession()` — revoke without specifying addresses.
 
 ## Wallet lifecycle events
@@ -158,7 +162,7 @@ Without wiring, cached signatures remain valid until TTL expiry. This is not a s
 A single `allow()` call can cover multiple contracts:
 
 ```ts
-await sdk.allow("0xContractA", "0xContractB", "0xContractC");
+await sdk.credentials.allow("0xContractA", "0xContractB", "0xContractC");
 ```
 
 This produces one EIP-712 signature covering all three contracts. The signed message includes the full list of contract addresses, the start timestamp, and the duration. Any `balanceOf` call on ContractA, ContractB, or ContractC reuses the cached signature without additional popups.

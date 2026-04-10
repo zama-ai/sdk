@@ -4,7 +4,6 @@ test("should shield USDT then unshield back to ERC20", async ({
   page,
   contracts,
   formatUnits,
-  computeFee,
   readErc20Balance,
   confidentialBalances,
 }) => {
@@ -28,28 +27,26 @@ test("should shield USDT then unshield back to ERC20", async ({
   // Verify confidential balance decreased by unshield amount
   await page.goto("/wallet");
   await page.getByTestId("reveal-button").click();
-  const expectedConfidential =
-    cUSDTBefore + shieldAmount - computeFee(shieldAmount) - unshieldAmount;
+  const expectedConfidential = cUSDTBefore + shieldAmount - unshieldAmount;
   await expect(page.getByTestId("token-row-cUSDT").getByTestId("balance")).toHaveText(
     formatUnits(expectedConfidential, 6),
   );
 
-  // ERC-20 balance should increase by unshield amount minus unshield fee
-  const expectedErc20 = usdtBefore - shieldAmount + unshieldAmount - computeFee(unshieldAmount);
+  // ERC-20 balance should increase by unshield amount
+  const expectedErc20 = usdtBefore - shieldAmount + unshieldAmount;
   await expect(page.getByTestId("token-row-USDT").getByTestId("balance")).toHaveText(
     formatUnits(expectedErc20, 6),
   );
 
   // On-chain: ERC-20 balance should reflect shield then unshield
   const onChainUsdt = await readErc20Balance(contracts.USDT);
-  expect(onChainUsdt).toBe(usdtBefore - shieldAmount + unshieldAmount - computeFee(unshieldAmount));
+  expect(onChainUsdt).toBe(usdtBefore - shieldAmount + unshieldAmount);
 });
 
 test("should shield USDC then unshield back to ERC20", async ({
   page,
   contracts,
   formatUnits,
-  computeFee,
   readErc20Balance,
   confidentialBalances,
 }) => {
@@ -73,19 +70,18 @@ test("should shield USDC then unshield back to ERC20", async ({
   // Verify confidential balance decreased by unshield amount
   await page.goto("/wallet");
   await page.getByTestId("reveal-button").click();
-  const expectedConfidential =
-    cUSDCBefore + shieldAmount - computeFee(shieldAmount) - unshieldAmount;
+  const expectedConfidential = cUSDCBefore + shieldAmount - unshieldAmount;
   await expect(page.getByTestId("token-row-cERC20").getByTestId("balance")).toHaveText(
     formatUnits(expectedConfidential, 6),
   );
 
-  // ERC-20 balance should increase by unshield amount minus unshield fee
-  const expectedErc20 = usdcBefore - shieldAmount + unshieldAmount - computeFee(unshieldAmount);
+  // ERC-20 balance should increase by unshield amount
+  const expectedErc20 = usdcBefore - shieldAmount + unshieldAmount;
   await expect(page.getByTestId("token-row-ERC20").getByTestId("balance")).toHaveText(
     formatUnits(expectedErc20, 6),
   );
 
   // On-chain: ERC-20 balance should reflect shield then unshield
   const onChainUsdc = await readErc20Balance(contracts.USDC);
-  expect(onChainUsdc).toBe(usdcBefore - shieldAmount + unshieldAmount - computeFee(unshieldAmount));
+  expect(onChainUsdc).toBe(usdcBefore - shieldAmount + unshieldAmount);
 });
