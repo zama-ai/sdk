@@ -316,13 +316,13 @@ export class ZamaSDK {
     const result: Record<Handle, ClearValueType> = {};
     const uncached: DecryptHandle[] = [];
 
-    // Check cache for each handle
     for (const h of handles) {
-      const cached = await this.cache.get(signerAddress, h.contractAddress, h.handle);
+      const addr = getAddress(h.contractAddress);
+      const cached = await this.cache.get(signerAddress, addr, h.handle);
       if (cached !== null) {
         result[h.handle] = cached;
       } else {
-        uncached.push(h);
+        uncached.push({ handle: h.handle, contractAddress: addr });
       }
     }
 
@@ -332,13 +332,13 @@ export class ZamaSDK {
     }
 
     // Get unique contract addresses and acquire credentials
-    const contractAddresses = [...new Set(uncached.map((h) => getAddress(h.contractAddress)))];
+    const contractAddresses = [...new Set(uncached.map((h) => h.contractAddress))];
     const creds = await this.credentials.allow(...contractAddresses);
     onCredentialsReady();
 
     // Group uncached handles by contract address
     const byContract = new Map<Address, Handle[]>();
-    for (const h of contractAddresses) {
+    for (const h of uncached) {
       const existing = byContract.get(h.contractAddress);
       if (existing) {
         existing.push(h.handle);
