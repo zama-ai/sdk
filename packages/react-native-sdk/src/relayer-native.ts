@@ -42,7 +42,9 @@ export class RelayerNative implements RelayerSDK {
   }
 
   async #getInstance(): Promise<FhevmInstance> {
-    if (this.#instance) {return this.#instance;}
+    if (this.#instance) {
+      return this.#instance;
+    }
     this.#pending ??= createInstance(this.#config).then((instance) => {
       this.#instance = instance;
       this.#pending = null;
@@ -186,9 +188,6 @@ function addToBuilder(builder: EncryptedInput, input: SDKEncryptInput): void {
   switch (input.type) {
     case "ebool":
       builder.addBool(input.value);
-      break;
-    case "euint4":
-      builder.add4(input.value);
       break;
     case "euint8":
       builder.add8(input.value);

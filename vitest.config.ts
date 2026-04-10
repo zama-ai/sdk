@@ -88,6 +88,16 @@ export default defineConfig({
         resolve: sharedResolve,
       },
       {
+        test: {
+          name: "react-native-sdk",
+          environment: "node",
+          include: ["packages/react-native-sdk/**/*.test.{ts,tsx}"],
+          exclude: ["**/node_modules/**"],
+          globals: true,
+        },
+        resolve: sharedResolve,
+      },
+      {
         plugins: [iifeStub()],
         test: {
           name: "react-sdk",
