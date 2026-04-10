@@ -166,6 +166,7 @@ export {
   DelegationContractIsSelfError,
   DelegationExpirationTooSoonError,
   DelegationNotPropagatedError,
+  PartialCredentialError,
   matchZamaError,
   matchAclRevert,
 } from "./errors";

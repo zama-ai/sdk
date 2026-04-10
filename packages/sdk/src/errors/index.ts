@@ -24,3 +24,4 @@ export {
   type BalanceErrorDetails,
 } from "./balance";
 export { matchAclRevert } from "./acl-revert";
+export { PartialCredentialError } from "./partial-credential";

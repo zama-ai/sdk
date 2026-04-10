@@ -564,27 +564,6 @@ export interface BatchDecryptOptions {
 }
 
 // @public
-<<<<<<< HEAD
-=======
-export class Batcher {
-    constructor(batchSize: number);
-    execute<TItem, TResult>(items: TItem[], fn: (accumulated: TItem[]) => Promise<TResult>): Promise<TResult>;
-}
-
-// @public
-export interface BatchTransferData {
-    // (undocumented)
-    encryptedAmount: Handle;
-    // (undocumented)
-    inputProof: Hex;
-    // (undocumented)
-    retryFor: bigint;
-    // (undocumented)
-    to: Address;
-}
-
-// @public
->>>>>>> 98bef700 (refactor(sdk): adopt Batcher utility and switch to fail-fast credential signing (SDK-43))
 export class ChromeSessionStorage implements GenericStorage {
     // (undocumented)
     delete(key: string): Promise<void>;
@@ -10510,6 +10489,12 @@ export interface PaginatedResult<T> {
 export function parseActivityFeed(logs: readonly (RawLog & Partial<ActivityLogMetadata>)[], userAddress: Address): ActivityItem[];
 
 // @public
+export class PartialCredentialError extends ZamaError {
+    constructor(partialResult: CredentialSet, cause: Error);
+    readonly partialResult: CredentialSet;
+}
+
+// @public
 export type PublicDecryptResult = Omit<SDK.PublicDecryptResults, "clearValues"> & {
     clearValues: Readonly<Record<Handle, ClearValueType>>;
 };
@@ -20274,7 +20259,8 @@ export const ZamaErrorCode: {
     readonly DelegationContractIsSelf: "DELEGATION_CONTRACT_IS_SELF"; /** The ACL contract is paused. */
     readonly AclPaused: "ACL_PAUSED"; /** Expiration date is too soon (must be at least 1 hour in the future). */
     readonly DelegationExpirationTooSoon: "DELEGATION_EXPIRATION_TOO_SOON"; /** Delegation exists on-chain but hasn't propagated to the gateway yet. */
-    readonly DelegationNotPropagated: "DELEGATION_NOT_PROPAGATED";
+    readonly DelegationNotPropagated: "DELEGATION_NOT_PROPAGATED"; /** Some credential batches were signed before a failure; partial result is available. */
+    readonly PartialBatchFailure: "PARTIAL_BATCH_FAILURE";
 };
 
 // @public

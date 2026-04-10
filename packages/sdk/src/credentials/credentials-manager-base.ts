@@ -1,5 +1,6 @@
 import { getAddress, type Address, type Hex } from "viem";
 import { ZamaError } from "../errors/base";
+import { PartialCredentialError } from "../errors/partial-credential";
 import { wrapSigningError } from "../errors/signing";
 import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
@@ -314,17 +315,25 @@ export abstract class BaseCredentialsManager<
     );
 
     // 3. Resolve each batch in sequence (preserves single-prompt-at-a-time UX).
-    //    Fail-fast: any signing error propagates immediately.
+    //    On failure, wrap with PartialCredentialError when at least one batch
+    //    already succeeded so callers can use and inspect the partial result.
     const results: Array<{ addresses: Address[]; result: TCreds }> = [];
     for (const { batchKey, addresses } of assignments) {
       const normalizedAddresses = normalizeAddresses(addresses);
-      const creds = await this.resolveCredentials({
-        key: batchKey,
-        contracts: normalizedAddresses,
-        createKey: `${batchKey}:${normalizedAddresses.join(",")}`,
-        createFn: () => createFn(normalizedAddresses, batchKey),
-      });
-      results.push({ addresses: normalizedAddresses, result: creds });
+      try {
+        const creds = await this.resolveCredentials({
+          key: batchKey,
+          contracts: normalizedAddresses,
+          createKey: `${batchKey}:${normalizedAddresses.join(",")}`,
+          createFn: () => createFn(normalizedAddresses, batchKey),
+        });
+        results.push({ addresses: normalizedAddresses, result: creds });
+      } catch (error) {
+        if (results.length > 0) {
+          throw new PartialCredentialError(new CredentialSetImpl(results), toError(error));
+        }
+        throw error;
+      }
     }
 
     return new CredentialSetImpl<TCreds>(results);
@@ -521,7 +530,6 @@ export abstract class BaseCredentialsManager<
     } as ZamaSDKEventInput);
   }
 
-<<<<<<< HEAD
   protected async checkAllowed(
     key: string,
     contractAddresses: [Address, ...Address[]],
@@ -532,39 +540,42 @@ export abstract class BaseCredentialsManager<
     if (contractAddresses.length === 0) {
       return false;
     }
-    const entry = await this.sessionSignatures.get(key);
-    if (entry === null) {
-      return false;
-    }
-    if (this.sessionSignatures.isExpired(entry)) {
-      return false;
-    }
     try {
-      const stored = await this.storage.get<TEncrypted>(key);
-      if (!stored) {
+      const { batches } = await this.#scanBatchMeta(key);
+      if (batches.length === 0) {
         return false;
       }
-      this.assertEncrypted(stored);
-      return isCredentialValid(stored, contractAddresses);
-    } catch {
-=======
-  /**
-   * Returns `true` only when **all** existing batch sessions are valid (no
-   * wallet prompt would be needed for any address).
-   * Conservative by design: if any batch has an expired or missing session,
-   * returns `false` — even if the specific address you intend to use is
-   * covered by a still-valid batch.
-   */
-  protected async checkAllowed(key: string): Promise<boolean> {
-    const { batches } = await this.#scanBatchMeta(key);
-    if (batches.length === 0) {
+
+      const uncovered = new Set(contractAddresses.map((address) => getAddress(address)));
+
+      for (const { batchKey } of batches) {
+        const entry = await this.sessionSignatures.get(batchKey);
+        if (entry === null || this.sessionSignatures.isExpired(entry)) {
+          continue;
+        }
+
+        const stored = await this.storage.get<TEncrypted>(batchKey);
+        if (!stored) {
+          continue;
+        }
+
+        try {
+          this.assertEncrypted(stored);
+          for (const contractAddress of [...uncovered]) {
+            if (isCredentialValid(stored, [contractAddress])) {
+              uncovered.delete(contractAddress);
+            }
+          }
+          if (uncovered.size === 0) {
+            return true;
+          }
+        } catch {
+          continue;
+        }
+      }
+
       return false;
-    }
-    const entries = await Promise.all(
-      batches.map(({ batchKey }) => this.sessionSignatures.get(batchKey)),
-    );
-    if (entries.every((e) => e === null)) {
->>>>>>> f4a47ec1 (fix(sdk): address code review issues on credential batching (SDK-43))
+    } catch {
       return false;
     }
   }

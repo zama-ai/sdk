@@ -83,8 +83,11 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
    * Already-signed batches are retained in storage on failure, so a retry only
    * needs to sign the rejected batch.
    *
-   * @throws {@link SigningRejectedError} if the user rejects any batch's wallet signature prompt.
-   * @throws {@link SigningFailedError} if a batch signing operation fails for any other reason.
+   * @throws {@link PartialCredentialError} if a batch fails after at least one batch succeeded.
+   *   The error carries a {@link PartialCredentialError.partialResult} with the credentials
+   *   already signed. Retrying `allow()` is safe — persisted batches are reused automatically.
+   * @throws {@link SigningRejectedError} if the first batch's wallet signature prompt is rejected.
+   * @throws {@link SigningFailedError} if the first batch signing operation fails for any other reason.
    */
   async allow(
     delegatorAddress: Address,

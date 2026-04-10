@@ -64,6 +64,8 @@ export const ZamaErrorCode = {
   DelegationExpirationTooSoon: "DELEGATION_EXPIRATION_TOO_SOON",
   /** Delegation exists on-chain but hasn't propagated to the gateway yet. */
   DelegationNotPropagated: "DELEGATION_NOT_PROPAGATED",
+  /** Some credential batches were signed before a failure; partial result is available. */
+  PartialBatchFailure: "PARTIAL_BATCH_FAILURE",
 } as const;
 
 /** Union of all {@link ZamaErrorCode} string values. */
