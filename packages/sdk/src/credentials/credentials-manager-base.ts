@@ -298,15 +298,15 @@ export abstract class BaseCredentialsManager<
     } as ZamaSDKEventInput);
   }
 
-  protected async checkAllowed(key: string, contractAddresses: Address[]): Promise<boolean> {
+  protected async checkAllowed(
+    key: string,
+    contractAddresses: [Address, ...Address[]],
+  ): Promise<boolean> {
     const entry = await this.sessionSignatures.get(key);
     if (entry === null) {
       return false;
     }
     if (this.sessionSignatures.isExpired(entry)) {
-      return false;
-    }
-    if (contractAddresses.length === 0) {
       return false;
     }
     try {

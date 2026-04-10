@@ -1263,7 +1263,7 @@ export function useIsAllowed(config: UseIsAllowedConfig): _$_tanstack_react_quer
 
 // @public
 export interface UseIsAllowedConfig {
-    contractAddresses: Address[];
+    contractAddresses: [Address, ...Address[]];
 }
 
 // @public

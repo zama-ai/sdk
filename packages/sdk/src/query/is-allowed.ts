@@ -7,7 +7,7 @@ import { filterQueryOptions } from "./utils";
 export interface IsAllowedQueryConfig {
   account: Address;
   /** Contract addresses to check credentials against. */
-  contractAddresses: Address[];
+  contractAddresses: [Address, ...Address[]];
   query?: Record<string, unknown>;
 }
 

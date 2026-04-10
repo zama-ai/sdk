@@ -5766,7 +5766,7 @@ export class CredentialsManager extends BaseCredentialsManager<StoredCredentials
     protected decryptCredentials(encrypted: EncryptedCredentials$1, signature: Hex): Promise<StoredCredentials>;
     // (undocumented)
     protected encryptCredentials(creds: StoredCredentials): Promise<EncryptedCredentials$1>;
-    isAllowed(...contractAddresses: Address[]): Promise<boolean>;
+    isAllowed(contractAddress: Address, ...moreAddresses: Address[]): Promise<boolean>;
     isExpired(contractAddress?: Address): Promise<boolean>;
     revoke(...contractAddresses: Address[]): Promise<void>;
     revokeByKey(key: string): Promise<void>;
@@ -6036,7 +6036,7 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<Delegate
     protected decryptCredentials(encrypted: EncryptedCredentials, signature: Hex): Promise<DelegatedStoredCredentials>;
     // (undocumented)
     protected encryptCredentials(creds: DelegatedStoredCredentials): Promise<EncryptedCredentials>;
-    isAllowed(delegatorAddress: Address, ...contractAddresses: Address[]): Promise<boolean>;
+    isAllowed(delegatorAddress: Address, contractAddress: Address, ...moreAddresses: Address[]): Promise<boolean>;
     isExpired(delegatorAddress: Address, contractAddress?: Address): Promise<boolean>;
     revoke(delegatorAddress: Address): Promise<void>;
     // Warning: (ae-forgotten-export) The symbol "DelegatedSigningMeta" needs to be exported by the entry point index.d.ts

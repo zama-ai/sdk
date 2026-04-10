@@ -122,13 +122,6 @@ describe("DelegatedCredentialsManager", () => {
     expect(await manager.isAllowed(DELEGATOR, TOKEN_A)).toBe(false);
   });
 
-  test("isAllowed() returns false when no contracts specified", async ({ relayer }) => {
-    const { manager } = createManager(relayer);
-
-    await manager.allow(DELEGATOR, TOKEN_A);
-    expect(await manager.isAllowed(DELEGATOR)).toBe(false);
-  });
-
   test("clear() removes all stored credentials", async ({ relayer }) => {
     const { manager } = createManager(relayer);
 

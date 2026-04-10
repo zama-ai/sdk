@@ -91,8 +91,15 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
   }
 
   /** Whether a session signature is currently cached and covers the given contracts. */
-  async isAllowed(delegatorAddress: Address, ...contractAddresses: Address[]): Promise<boolean> {
-    return this.checkAllowed(await this.#storeKey(getAddress(delegatorAddress)), contractAddresses);
+  async isAllowed(
+    delegatorAddress: Address,
+    contractAddress: Address,
+    ...moreAddresses: Address[]
+  ): Promise<boolean> {
+    return this.checkAllowed(await this.#storeKey(getAddress(delegatorAddress)), [
+      contractAddress,
+      ...moreAddresses,
+    ]);
   }
 
   /** Delete stored credentials for a delegator (best-effort). */

@@ -12,8 +12,8 @@ import { useZamaSDK } from "../provider";
 
 /** Configuration for {@link useIsAllowed}. */
 export interface UseIsAllowedConfig {
-  /** Contract addresses to check credentials against. */
-  contractAddresses: Address[];
+  /** Contract addresses to check credentials against (at least one required). */
+  contractAddresses: [Address, ...Address[]];
 }
 
 /**
