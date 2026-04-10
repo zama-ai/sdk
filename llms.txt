@@ -1,0 +1,135 @@
+# Zama SDK
+
+Zama SDK is a TypeScript and React SDK for confidential token flows and confidential smart contract interactions on EVM-compatible chains.
+
+Source of truth: official documentation in `docs/gitbook/src`, approved official examples, and package READMEs. API reports are fallback reference material and are intentionally excluded from this index.
+
+Use this file for discovery. Start with the official docs, then move to the approved examples that match the target stack.
+
+## Official Documentation
+
+### Introduction
+
+- [Zama SDK](README): TypeScript SDK for confidential smart contracts — shield, transfer, and unshield tokens with Fully Homomorphic Encryption.
+
+### Getting Started
+
+- [Getting Started](tutorials/README): Learn how to set up and build your first confidential dApp with the Zama SDK.
+- [Quick Start](tutorials/quick-start): Get from zero to a working confidential transfer in under 5 minutes.
+- [Build Your First Confidential dApp](tutorials/first-confidential-dapp): End-to-end tutorial building a token dashboard with React, wagmi, and the Zama React SDK.
+
+### Guides
+
+- [Guides](guides/README): Step-by-step guides for common tasks with the Zama SDK.
+- [Configuration](guides/configuration): How to set up the SDK's three required pieces — relayer, signer, and storage.
+- [Authentication](guides/authentication): How to authenticate with the relayer using a backend proxy or a direct API key.
+- [Shield Tokens](guides/shield-tokens): How to convert public ERC-20 tokens into their confidential form.
+- [Transfer Privately](guides/transfer-privately): How to send confidential tokens so the amount stays hidden on-chain.
+- [Unshield Tokens](guides/unshield-tokens): Convert confidential tokens back to public ERC-20 by unshielding them.
+- [Check Balances](guides/check-balances): Decrypt and read confidential token balances using the SDK and React hooks.
+- [Handle Errors](guides/handle-errors): Catch, match, and recover from SDK errors in your application.
+- [Activity Feeds](guides/activity-feeds): Parse on-chain events into a user-friendly activity feed with decrypted amounts.
+- [Node.js Backend](guides/node-js-backend): How to use the SDK in a Node.js server environment with worker threads and per-request isolation.
+- [Web Extensions](guides/web-extensions): How to use the SDK in MV3 Chrome extensions with persistent session storage.
+- [Local Development](guides/local-development): How to use the cleartext relayer for local Hardhat nodes and custom chain deployments without a KMS or gateway.
+- [Build with an LLM](guides/build-with-an-llm): How to give Claude Code and other agents high-quality Zama SDK context through llms files, an MCP server, and official Claude Code skills.
+- [Next.js / SSR](guides/nextjs-ssr): How to use the SDK with Next.js and server-side rendering frameworks.
+- [Operator Approvals](guides/operator-approvals): How to approve another address to act on your confidential tokens.
+- [Encrypt & Decrypt](guides/encrypt-decrypt): How to encrypt values and decrypt FHE ciphertext handles for custom confidential smart contracts that are not wrapped ERC-20 tokens.
+
+### SDK Reference
+
+- [SDK Reference](reference/sdk/README): API reference for the core Zama SDK classes and utilities.
+- [ZamaSDK](reference/sdk/ZamaSDK): Entry point for all confidential contract operations.
+- [Token](reference/sdk/Token): Read/write interface for confidential ERC-20 operations.
+- [ReadonlyToken](reference/sdk/ReadonlyToken): Read-only interface for confidential token queries and batch operations.
+- [WrappersRegistry](reference/sdk/WrappersRegistry): Query the on-chain token wrappers registry — list pairs, look up tokens, and validate confidential tokens.
+- [RelayerWeb](reference/sdk/RelayerWeb): Browser relayer that runs FHE operations in a Web Worker via WASM.
+- [RelayerNode](reference/sdk/RelayerNode): Node.js relayer that runs FHE operations in native worker threads.
+- [RelayerCleartext](reference/sdk/RelayerCleartext): Development relayer that operates in cleartext mode without FHE, KMS, or gateway dependencies.
+- [ViemSigner](reference/sdk/ViemSigner): Signer adapter that wraps viem wallet and public clients for the SDK.
+- [EthersSigner](reference/sdk/EthersSigner): Signer adapter that wraps ethers providers and signers for the SDK.
+- [WagmiSigner](reference/sdk/WagmiSigner): React-only signer adapter that wraps a wagmi config with automatic session revocation.
+- [GenericSigner](reference/sdk/GenericSigner): Interface that all signer adapters must implement for the SDK to interact with wallets.
+- [GenericStorage](reference/sdk/GenericStorage): Interface for async key-value storage used to persist FHE keypairs and session signatures.
+- [Error Types](reference/sdk/errors): All SDK error classes, codes, and the matchZamaError utility.
+- [Contract Call Builders](reference/sdk/contract-builders): Low-level builders that return raw contract call configs for viem, ethers, or custom execution layers.
+- [FheArtifactCache](reference/sdk/FheArtifactCache): Persistent cache for FHE public key and public parameters, avoiding re-downloads across sessions.
+- [Event Decoders](reference/sdk/event-decoders): Decode on-chain logs into typed event objects and build activity feeds.
+- [Delegated Decryption](reference/sdk/delegation): Delegation lets one address grant another address the right to decrypt its confidential balance.
+- [Network Presets](reference/sdk/network-presets): Pre-configured network settings for Ethereum Mainnet, Sepolia, and Hardhat.
+
+### React Reference
+
+- [React Reference](reference/react/README): API reference for the Zama React hooks and components.
+- [ZamaProvider](reference/react/ZamaProvider): Context provider that supplies the Zama SDK to all descendant hooks.
+- [useConfidentialBalance](reference/react/useConfidentialBalance): Decrypt and poll a single token's confidential balance.
+- [useConfidentialBalances](reference/react/useConfidentialBalances): Decrypt and poll multiple tokens' confidential balances in a single query.
+- [useConfidentialTransfer](reference/react/useConfidentialTransfer): Send confidential ERC-20 tokens privately.
+- [useConfidentialTransferFrom](reference/react/useConfidentialTransferFrom): Transfer confidential tokens on behalf of an owner who approved you as an operator.
+- [useShield](reference/react/useShield): Mutation hook that shields public ERC-20 tokens into confidential form.
+- [useUnshield](reference/react/useUnshield): Mutation hook that unshields confidential tokens back to public ERC-20.
+- [useUnshieldAll](reference/react/useUnshieldAll): Mutation hook that unshields the entire confidential balance.
+- [useResumeUnshield](reference/react/useResumeUnshield): Mutation hook that resumes an unshield interrupted between unwrap and finalize steps.
+- [useUnwrap](reference/react/useUnwrap): Low-level mutation hook that requests an unwrap for a specific amount.
+- [useUnwrapAll](reference/react/useUnwrapAll): Low-level mutation hook that requests an unwrap for the full confidential balance.
+- [useFinalizeUnwrap](reference/react/useFinalizeUnwrap): Low-level mutation hook that finalizes an unwrap with the decryption proof.
+- [useAllow](reference/react/useAllow): Mutation hook that signs an EIP-712 message authorizing decryption of confidential handles for any contract.
+- [useIsAllowed](reference/react/useIsAllowed): Query hook that checks whether a session signature is cached and valid.
+- [useRevoke](reference/react/useRevoke): Revoke the EIP-712 decrypt authorization for specific contract addresses.
+- [useRevokeSession](reference/react/useRevokeSession): Revoke the entire session for the connected wallet.
+- [useConfidentialApprove](reference/react/useConfidentialApprove): Approve an operator to act on your confidential tokens.
+- [useConfidentialIsApproved](reference/react/useConfidentialIsApproved): Check if a spender is approved as operator for your confidential tokens.
+- [useUnderlyingAllowance](reference/react/useUnderlyingAllowance): Read the ERC-20 allowance of the underlying public token for the wrapper contract.
+- [useWrapperDiscovery](reference/react/useWrapperDiscovery): Find the confidential wrapper contract address for an ERC-20 token via the on-chain registry.
+- [useWrappersRegistryAddress](reference/react/useWrappersRegistryAddress): Resolve the wrappers registry contract address for the current chain.
+- [useListPairs](reference/react/useListPairs): Fetch paginated token wrapper pairs from the on-chain registry, with optional metadata enrichment.
+- [useTokenPairsRegistry](reference/react/useTokenPairsRegistry): Fetch all token wrapper pairs from the on-chain registry.
+- [useTokenPairsLength](reference/react/useTokenPairsLength): Get the total number of token wrapper pairs in the registry.
+- [useTokenPairsSlice](reference/react/useTokenPairsSlice): Fetch a range of token wrapper pairs from the registry by index.
+- [useTokenPair](reference/react/useTokenPair): Fetch a single token wrapper pair by index from the registry.
+- [useConfidentialTokenAddress](reference/react/useConfidentialTokenAddress): Look up the confidential token address for a given plain ERC-20 token.
+- [useTokenAddress](reference/react/useTokenAddress): Reverse lookup -- find the plain ERC-20 address for a given confidential token.
+- [useIsConfidentialTokenValid](reference/react/useIsConfidentialTokenValid): Check whether a confidential token is registered and valid in the on-chain registry.
+- [useMetadata](reference/react/useMetadata): Get token name, symbol, and decimals in one call.
+- [useActivityFeed](reference/react/useActivityFeed): Parse event logs into a classified, optionally decrypted activity feed.
+- [useZamaSDK](reference/react/useZamaSDK): Hook to access the raw ZamaSDK instance from ZamaProvider context.
+- [useToken](reference/react/useToken): Hook to get a memoized Token instance for a given address.
+- [useReadonlyToken](reference/react/useReadonlyToken): Hook to get a memoized ReadonlyToken instance for read-only access.
+- [useEncrypt](reference/react/useEncrypt): Low-level mutation hook that encrypts a plaintext value using the relayer's FHE engine.
+- [useUserDecrypt](reference/react/useUserDecrypt): High-level mutation hook that orchestrates the full user decryption flow — credential management, wallet signature, and decryption — in a single call.
+- [useGenerateKeypair](reference/react/useGenerateKeypair): Low-level mutation hook that generates a fresh FHE keypair via the relayer.
+- [useDelegateDecryption](reference/react/useDelegateDecryption): Mutation hook that grants FHE decryption rights for a token to another address.
+- [useRevokeDelegation](reference/react/useRevokeDelegation): Mutation hook that revokes FHE decryption delegation for a token.
+- [useDelegationStatus](reference/react/useDelegationStatus): Query hook that checks whether a decryption delegation is active between two addresses.
+- [useDecryptBalanceAs](reference/react/useDecryptBalanceAs): Mutation hook that decrypts another user's confidential balance as a delegate.
+- [useBatchDecryptBalancesAs](reference/react/useBatchDecryptBalancesAs): Mutation hook that decrypts confidential balances across multiple tokens as a delegate.
+- [Query Keys](reference/react/query-keys): Reference for the zamaQueryKeys factory used for manual React Query cache control.
+
+### Concepts
+
+- [Concepts](concepts/README): Core concepts and architecture behind the Zama SDK.
+- [Architecture](concepts/architecture): The SDK is organized into layers, each with a clear responsibility. Higher layers depend on lower layers but never the reverse.
+- [Session Model](concepts/session-model): How the SDK manages FHE keypairs, wallet signatures, and session lifecycle.
+- [Two-Phase Balance Polling](concepts/two-phase-polling): How the SDK uses smart polling to minimize expensive FHE decryption while keeping balances up to date.
+- [Security Model](concepts/security-model): Threat model, trust assumptions, and security architecture of the Zama SDK.
+
+## Official Examples
+
+- [example-hoodi README](examples/example-hoodi/readme): Next.js app demonstrating ERC-7984 confidential token operations on the Hoodi testnet and ethers — including on-chain ACL delegation.
+- [example-hoodi WALKTHROUGH](examples/example-hoodi/walkthrough): ERC-7984 is a token standard that adds confidential balances and transfer amounts to ERC-20 tokens. Instead of storing plaintext balances on-chain, balances are stored as encrypted handles. Only the token owner can decrypt their own balance.
+- [node-ethers README](examples/node-ethers/readme): Minimal Node.js script using `@zama-fhe/sdk` with ethers v6.
+- [node-viem README](examples/node-viem/readme): Node.js script demonstrating the full ERC-7984 confidential token lifecycle using `@zama-fhe/sdk` with viem.
+- [node-viem WALKTHROUGH](examples/node-viem/walkthrough): ERC-7984 is a token standard that adds confidential balances and transfer amounts to ERC-20 tokens. Balances are stored as encrypted handles on-chain; only the token owner (or an authorized delegate) can decrypt them.
+- [react-ethers README](examples/react-ethers/readme): Next.js 16 example app demonstrating how to integrate `@zama-fhe/react-sdk` with ethers v6 on Sepolia testnet.
+- [react-ethers WALKTHROUGH](examples/react-ethers/walkthrough): A step-by-step guide to how this app integrates `@zama-fhe/react-sdk` using ethers v6.
+- [react-viem README](examples/react-viem/readme): Next.js 16 example app demonstrating how to integrate `@zama-fhe/react-sdk` with viem v2 on Sepolia testnet.
+- [react-viem WALKTHROUGH](examples/react-viem/walkthrough): A step-by-step guide to how this app integrates `@zama-fhe/react-sdk` using viem v2.
+- [react-wagmi README](examples/react-wagmi/readme): Next.js 16 example app demonstrating how to integrate `@zama-fhe/react-sdk` with wagmi v3 on Sepolia testnet.
+- [react-wagmi WALKTHROUGH](examples/react-wagmi/walkthrough): A step-by-step guide to how this app integrates `@zama-fhe/react-sdk` using wagmi v3.
+
+## Package READMEs
+
+- [Repository README](README): Monorepo overview, package layout, development workflow, and Claude Code setup for the Zama SDK.
+- [@zama-fhe/sdk](packages/sdk/README): Core TypeScript SDK for confidential token operations, relayers, signer adapters, and low-level contract APIs.
+- [@zama-fhe/react-sdk](packages/react-sdk/README): React SDK with ZamaProvider, confidential token hooks, and TanStack Query integration on top of the core SDK.

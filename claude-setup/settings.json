@@ -25,7 +25,13 @@
       "Bash(pnpm test:*)",
       "Bash(pnpm e2e:*)",
       "Bash(pnpm format)",
-      "Bash(pnpm format:*)"
+      "Bash(pnpm format:*)",
+      "Bash(pnpm llm:build)",
+      "Bash(pnpm llm:manifest)",
+      "Bash(pnpm llm:validate)",
+      "Bash(pnpm llm:skills:validate)",
+      "Bash(pnpm llm:mcp:test)",
+      "Bash(pnpm llm:test)"
     ],
     "ask": [
       "Bash(rm:*)",

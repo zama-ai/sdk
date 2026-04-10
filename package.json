@@ -51,6 +51,13 @@
     "api-report:check:sdk": "cd packages/sdk && api-extractor run -c api-extractor.json && api-extractor run -c api-extractor.viem.json && api-extractor run -c api-extractor.ethers.json && api-extractor run -c api-extractor.node.json && api-extractor run -c api-extractor.query.json",
     "api-report:check:react-sdk": "cd packages/react-sdk && api-extractor run -c api-extractor.json && api-extractor run -c api-extractor.wagmi.json",
     "setup:claude": "bash scripts/setup-claude.sh",
+    "llm:manifest": "node scripts/llm/build-manifest.mjs",
+    "llm:build": "pnpm llm:manifest && oxfmt docs/llm/corpus-manifest.json && node scripts/llm/build-llms.mjs",
+    "llm:validate": "node scripts/llm/validate-llms.mjs",
+    "llm:skills:validate": "node scripts/llm/validate-skills.mjs",
+    "llm:mcp": "node tools/zama-sdk-docs-mcp/server.mjs",
+    "llm:mcp:test": "node tools/zama-sdk-docs-mcp/test.mjs",
+    "llm:test": "pnpm llm:validate && pnpm llm:skills:validate && pnpm llm:mcp:test",
     "size": "size-limit",
     "size:json": "size-limit --json"
   },
