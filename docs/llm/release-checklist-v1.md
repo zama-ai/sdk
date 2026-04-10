@@ -25,16 +25,6 @@ All versioned and user-facing artifacts are written in English.
 - [x] `pnpm llm:skills:validate` passes
 - [x] API reports excluded from `llms.txt` and `llms-full.txt`
 
-## MCP Server
-
-- [x] MCP V1 spec written in `docs/llm/mcp-v1-spec.md`
-- [x] Local MCP server implemented in `tools/zama-sdk-docs-mcp/`
-- [x] `initialize` handshake succeeds
-- [x] `tools/list` returns the expected tool set
-- [x] `list_examples` returns approved examples such as `react-wagmi`
-- [x] `read_page` can read `guides/build-with-an-llm`
-- [x] Automated MCP test script passes
-
 ## Claude Code Skills
 
 - [x] Claude Code skill template written in `docs/llm/skill-template.md`

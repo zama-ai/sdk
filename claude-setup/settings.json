@@ -30,7 +30,6 @@
       "Bash(pnpm llm:manifest)",
       "Bash(pnpm llm:validate)",
       "Bash(pnpm llm:skills:validate)",
-      "Bash(pnpm llm:mcp:test)",
       "Bash(pnpm llm:test)"
     ],
     "ask": [

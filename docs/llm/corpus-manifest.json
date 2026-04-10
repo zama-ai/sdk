@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-10T09:40:36.147Z",
+  "generated_at": "2026-04-10T13:07:44.428Z",
   "approved_examples": [
     "example-hoodi",
     "node-ethers",
@@ -193,7 +193,7 @@
       "source_type": "official-doc",
       "category": "guides",
       "logical_path": "guides/build-with-an-llm",
-      "description": "How to give Claude Code and other agents high-quality Zama SDK context through llms files, an MCP server, and official Claude Code skills.",
+      "description": "How to give Claude Code and other agents high-quality Zama SDK context through llms files, approved examples, and official Claude Code skills.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },

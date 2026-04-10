@@ -58,7 +58,7 @@ These sources should not be treated as the primary learning path. They exist to 
 
 ## Excluded Content
 
-The following content must not appear in generated LLM artifacts or MCP responses unless a future ticket explicitly changes the scope:
+The following content must not appear in generated LLM artifacts unless a future ticket explicitly changes the scope:
 
 - `docs/gitbook/build`
 - `docs/gitbook/book`
@@ -97,16 +97,6 @@ The following content must not appear in generated LLM artifacts or MCP response
 - API reports
 - excluded examples
 - generated assets
-
-### MCP V1
-
-The MCP server must expose three logical source groups:
-
-- `docs`
-- `examples`
-- `api-reports`
-
-The MCP server may expose API reports in V1, but it must not present them as the preferred source for integration guidance.
 
 ### Claude Code Skills V1
 

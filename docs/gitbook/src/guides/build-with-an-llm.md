@@ -1,6 +1,6 @@
 ---
 title: Build with an LLM
-description: How to give Claude Code and other agents high-quality Zama SDK context through llms files, an MCP server, and official Claude Code skills.
+description: How to give Claude Code and other agents high-quality Zama SDK context through llms files, approved examples, and official Claude Code skills.
 ---
 
 # Build with an LLM
@@ -13,10 +13,9 @@ V1 ships:
 
 - `llms.txt` for lightweight discovery
 - `llms-full.txt` for full-context grounding
-- a local MCP server for structured docs/example/API report access
 - official **Claude Code** skills
 
-The Claude Code skills are V1-only for now. The `llms` files and MCP server are agent-agnostic, but the shipped skills currently target Claude Code only.
+The Claude Code skills are V1-only for now. The `llms` files are agent-agnostic, but the shipped skills currently target Claude Code only.
 
 ## Choose the right tool
 
@@ -24,10 +23,9 @@ Use the smallest tool that gives the agent enough context:
 
 - `llms.txt` for navigation and discovery
 - `llms-full.txt` for broad grounding
-- MCP for targeted reads and search
 - Claude Code skills for official workflow guidance on supported stacks
 
-For Claude Code on a supported stack, start with the matching skill and use `llms.txt` or the MCP server as supporting context.
+For Claude Code on a supported stack, start with the matching skill and use `llms.txt`, `llms-full.txt`, or the approved example docs as supporting context.
 
 ## Source of truth
 
@@ -54,7 +52,7 @@ This generates:
 - `./llms-full.txt`
 - `docs/llm/corpus-manifest.json`
 
-`pnpm llm:test` validates the generated artifacts, the Claude Code skills, and the local MCP server behavior.
+`pnpm llm:test` validates the generated artifacts and the Claude Code skills.
 
 ## Use `llms.txt`
 
@@ -79,34 +77,6 @@ It includes:
 - root and package README context
 
 It intentionally excludes API reports so the main bundle stays focused on the public learning path.
-
-## Use the MCP server
-
-Run the local docs MCP server from the repository root:
-
-```bash
-pnpm llm:mcp
-```
-
-Register that command as a local stdio MCP server in Claude Code or any other MCP-capable tool.
-
-The server exposes these tools:
-
-- `list_pages`
-- `read_page`
-- `search_docs`
-- `get_nav_tree`
-- `list_examples`
-- `read_example_doc`
-- `search_examples`
-- `list_package_readmes`
-- `read_package_readme`
-- `list_api_reports`
-- `read_api_report`
-
-Use the MCP server when your agent needs targeted reads or search instead of ingesting the full bundle.
-
-`list_pages` and `search_docs` also support an optional `category` filter when you want to narrow a lookup to guides, concepts, or reference sections.
 
 ## Use the Claude Code skills
 
@@ -133,6 +103,24 @@ Each skill is grounded in the official docs and approved examples from this repo
 
 The skills are intentionally prescriptive. They are meant to keep Claude Code on the official learning path rather than exploring internal SDK source or unapproved examples too early.
 
+## Use the approved example docs directly
+
+When `llms.txt` points you to an example, read the example docs directly in the repository:
+
+- `examples/example-hoodi/README.md`
+- `examples/example-hoodi/WALKTHROUGH.md`
+- `examples/node-ethers/README.md`
+- `examples/node-viem/README.md`
+- `examples/node-viem/WALKTHROUGH.md`
+- `examples/react-ethers/README.md`
+- `examples/react-ethers/WALKTHROUGH.md`
+- `examples/react-viem/README.md`
+- `examples/react-viem/WALKTHROUGH.md`
+- `examples/react-wagmi/README.md`
+- `examples/react-wagmi/WALKTHROUGH.md`
+
+Read the example docs before dropping into example source files.
+
 ## Recommended workflow
 
 ### For new integrations
@@ -140,12 +128,12 @@ The skills are intentionally prescriptive. They are meant to keep Claude Code on
 1. Start with `llms.txt`
 2. Read the closest approved example
 3. Use the relevant Claude Code skill
-4. Use the MCP server for focused follow-up reads
+4. Read the matching official guide or reference page directly in the repo when you need more detail
 
 ### For deeper grounding
 
 1. Give the agent `llms-full.txt`
-2. Use the MCP server for targeted lookup
+2. Read the matching official guide or example docs directly in the repo
 3. Fall back to API reports only when the docs and examples do not answer an exported-surface question
 
 ### For debugging

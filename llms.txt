@@ -32,7 +32,7 @@ Use this file for discovery. Start with the official docs, then move to the appr
 - [Node.js Backend](guides/node-js-backend): How to use the SDK in a Node.js server environment with worker threads and per-request isolation.
 - [Web Extensions](guides/web-extensions): How to use the SDK in MV3 Chrome extensions with persistent session storage.
 - [Local Development](guides/local-development): How to use the cleartext relayer for local Hardhat nodes and custom chain deployments without a KMS or gateway.
-- [Build with an LLM](guides/build-with-an-llm): How to give Claude Code and other agents high-quality Zama SDK context through llms files, an MCP server, and official Claude Code skills.
+- [Build with an LLM](guides/build-with-an-llm): How to give Claude Code and other agents high-quality Zama SDK context through llms files, approved examples, and official Claude Code skills.
 - [Next.js / SSR](guides/nextjs-ssr): How to use the SDK with Next.js and server-side rendering frameworks.
 - [Operator Approvals](guides/operator-approvals): How to approve another address to act on your confidential tokens.
 - [Encrypt & Decrypt](guides/encrypt-decrypt): How to encrypt values and decrypt FHE ciphertext handles for custom confidential smart contracts that are not wrapped ERC-20 tokens.

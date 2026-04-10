@@ -55,9 +55,7 @@
     "llm:build": "pnpm llm:manifest && oxfmt docs/llm/corpus-manifest.json && node scripts/llm/build-llms.mjs",
     "llm:validate": "node scripts/llm/validate-llms.mjs",
     "llm:skills:validate": "node scripts/llm/validate-skills.mjs",
-    "llm:mcp": "node tools/zama-sdk-docs-mcp/server.mjs",
-    "llm:mcp:test": "node tools/zama-sdk-docs-mcp/test.mjs",
-    "llm:test": "pnpm llm:validate && pnpm llm:skills:validate && pnpm llm:mcp:test",
+    "llm:test": "pnpm llm:validate && pnpm llm:skills:validate",
     "size": "size-limit",
     "size:json": "size-limit --json"
   },

@@ -114,7 +114,7 @@ function buildLlmsFull(manifest) {
     "2. Approved official examples",
     "3. Package READMEs for onboarding context",
     "",
-    "API reports are intentionally excluded from this file. They are available through the MCP server as fallback reference material.",
+    "API reports are intentionally excluded from this file. They remain available in the repository as fallback reference material.",
     "",
     "## Official Documentation",
     "",
