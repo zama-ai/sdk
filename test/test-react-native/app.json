@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "test-react-native",
+    "slug": "test-react-native",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "test-react-native",
+    "platforms": ["ios", "android"],
+    "ios": {
+      "bundleIdentifier": "ai.zama.test.reactnative"
+    },
+    "android": {
+      "package": "ai.zama.test.reactnative"
+    },
+    "plugins": ["@fhevm/react-native-sdk"]
+  }
+}
