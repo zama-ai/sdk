@@ -87,6 +87,13 @@ async function main() {
   const sdkA = new ZamaSDK({ relayer, signer: signerA, storage: new MemoryStorage() });
   const sdkB = new ZamaSDK({ relayer, signer: signerB, storage: new MemoryStorage() });
 
+  // Ensure cleanup runs in reverse order: sdkB.dispose() then sdkA.terminate().
+  // terminate() calls dispose() internally, so sdkA handles both its own
+  // listener teardown and the shared relayer shutdown.
+  using cleanup = new DisposableStack();
+  cleanup.defer(() => sdkA.terminate());
+  cleanup.defer(() => sdkB.dispose());
+
   // Resolve the confidential wrapper address via the on-chain registry.
   // getConfidentialToken() maps an ERC-20 address → its ERC-7984 wrapper.
   const registryResult = await sdkA.registry.getConfidentialToken(TOKEN_ADDRESS as Address);
@@ -102,170 +109,158 @@ async function main() {
   const tokenA = sdkA.createToken(confidentialTokenAddress);
   const tokenB = sdkB.createToken(confidentialTokenAddress);
 
-  try {
-    // ────────────────────────────────────────────────────────────────────────
-    // SECTION 2 — Mint
-    // Mint USDT directly on the ERC-20 mock contract so Account A has tokens
-    // to shield. On a production token this step would not be available.
-    // ────────────────────────────────────────────────────────────────────────
-    section("SECTION 2 — Mint");
+  // ──────────────────────────────────────────────────────────────────────────
+  // SECTION 2 — Mint
+  // Mint USDT directly on the ERC-20 mock contract so Account A has tokens
+  // to shield. On a production token this step would not be available.
+  // ──────────────────────────────────────────────────────────────────────────
+  section("SECTION 2 — Mint");
 
-    const erc20BalanceBefore = await publicClient.readContract({
-      address: TOKEN_ADDRESS as Address,
-      abi: ERC20_ABI,
-      functionName: "balanceOf",
-      args: [accountA.address],
-    });
-    console.log("ERC-20 balance before mint:", fmt(erc20BalanceBefore));
+  const erc20BalanceBefore = await publicClient.readContract({
+    address: TOKEN_ADDRESS as Address,
+    abi: ERC20_ABI,
+    functionName: "balanceOf",
+    args: [accountA.address],
+  });
+  console.log("ERC-20 balance before mint:", fmt(erc20BalanceBefore));
 
-    console.log(`Minting ${fmt(MINT_AMOUNT)} to Account A...`);
-    const mintHash = await walletClientA.writeContract({
-      address: TOKEN_ADDRESS as Address,
-      abi: ERC20_ABI,
-      functionName: "mint",
-      args: [accountA.address, MINT_AMOUNT],
-    });
-    console.log("  Mint tx:", mintHash);
-    await publicClient.waitForTransactionReceipt({ hash: mintHash });
+  console.log(`Minting ${fmt(MINT_AMOUNT)} to Account A...`);
+  const mintHash = await walletClientA.writeContract({
+    address: TOKEN_ADDRESS as Address,
+    abi: ERC20_ABI,
+    functionName: "mint",
+    args: [accountA.address, MINT_AMOUNT],
+  });
+  console.log("  Mint tx:", mintHash);
+  await publicClient.waitForTransactionReceipt({ hash: mintHash });
 
-    const erc20BalanceAfter = await publicClient.readContract({
-      address: TOKEN_ADDRESS as Address,
-      abi: ERC20_ABI,
-      functionName: "balanceOf",
-      args: [accountA.address],
-    });
-    console.log("ERC-20 balance after mint: ", fmt(erc20BalanceAfter));
+  const erc20BalanceAfter = await publicClient.readContract({
+    address: TOKEN_ADDRESS as Address,
+    abi: ERC20_ABI,
+    functionName: "balanceOf",
+    args: [accountA.address],
+  });
+  console.log("ERC-20 balance after mint: ", fmt(erc20BalanceAfter));
 
-    // ────────────────────────────────────────────────────────────────────────
-    // SECTION 3 — Confidential Token Lifecycle
-    // ────────────────────────────────────────────────────────────────────────
-    section("SECTION 3 — Confidential Token Lifecycle");
+  // ──────────────────────────────────────────────────────────────────────────
+  // SECTION 3 — Confidential Token Lifecycle
+  // ──────────────────────────────────────────────────────────────────────────
+  section("SECTION 3 — Confidential Token Lifecycle");
 
-    // 3a. Initial confidential balance
-    console.log("── 3a. Initial balances ──");
-    const balanceA0 = await tokenA.balanceOf();
-    const balanceB0 = await tokenB.balanceOf();
-    console.log("cUSDT balance (A):", fmt(balanceA0));
-    console.log("cUSDT balance (B):", fmt(balanceB0));
+  // 3a. Initial confidential balance
+  console.log("── 3a. Initial balances ──");
+  const balanceA0 = await tokenA.balanceOf();
+  const balanceB0 = await tokenB.balanceOf();
+  console.log("cUSDT balance (A):", fmt(balanceA0));
+  console.log("cUSDT balance (B):", fmt(balanceB0));
 
-    // 3b. Shield: ERC-20 USDT → confidential cUSDT
-    // shield() handles approval + wrap in a single call.
-    console.log("\n── 3b. Shield ──");
-    console.log(`Shielding ${fmt(SHIELD_AMOUNT)} USDT → cUSDT (Account A)...`);
-    await tokenA.shield(SHIELD_AMOUNT, {
-      onApprovalSubmitted: (tx) => console.log("  Approval submitted:", tx),
-      onShieldSubmitted: (tx) => console.log("  Shield submitted:  ", tx),
-    });
+  // 3b. Shield: ERC-20 USDT → confidential cUSDT
+  // shield() handles approval + wrap in a single call.
+  console.log("\n── 3b. Shield ──");
+  console.log(`Shielding ${fmt(SHIELD_AMOUNT)} USDT → cUSDT (Account A)...`);
+  await tokenA.shield(SHIELD_AMOUNT, {
+    onApprovalSubmitted: (tx) => console.log("  Approval submitted:", tx),
+    onShieldSubmitted: (tx) => console.log("  Shield submitted:  ", tx),
+  });
 
-    const balanceA1 = await tokenA.balanceOf();
-    console.log("cUSDT balance (A, after shield):", fmt(balanceA1));
+  const balanceA1 = await tokenA.balanceOf();
+  console.log("cUSDT balance (A, after shield):", fmt(balanceA1));
 
-    // 3c. Confidential transfer: A → B
-    // The amount is encrypted client-side before being sent on-chain.
-    console.log("\n── 3c. Confidential transfer ──");
-    console.log(`Transferring ${fmt(TRANSFER_AMOUNT)} cUSDT: A → B...`);
-    await tokenA.confidentialTransfer(accountB.address as Address, TRANSFER_AMOUNT, {
-      onEncryptComplete: () => console.log("  Encryption complete"),
-      onTransferSubmitted: (tx) => console.log("  Transfer submitted:", tx),
-    });
+  // 3c. Confidential transfer: A → B
+  // The amount is encrypted client-side before being sent on-chain.
+  console.log("\n── 3c. Confidential transfer ──");
+  console.log(`Transferring ${fmt(TRANSFER_AMOUNT)} cUSDT: A → B...`);
+  await tokenA.confidentialTransfer(accountB.address as Address, TRANSFER_AMOUNT, {
+    onEncryptComplete: () => console.log("  Encryption complete"),
+    onTransferSubmitted: (tx) => console.log("  Transfer submitted:", tx),
+  });
 
-    const balanceA2 = await tokenA.balanceOf();
-    const balanceB2 = await tokenB.balanceOf();
-    console.log("cUSDT balance (A, after transfer):", fmt(balanceA2));
-    console.log("cUSDT balance (B, after transfer):", fmt(balanceB2));
+  const balanceA2 = await tokenA.balanceOf();
+  const balanceB2 = await tokenB.balanceOf();
+  console.log("cUSDT balance (A, after transfer):", fmt(balanceA2));
+  console.log("cUSDT balance (B, after transfer):", fmt(balanceB2));
 
-    // 3d. Unshield: confidential cUSDT → ERC-20 USDT
-    // unshield() is a two-phase operation (unwrap + finalizeUnwrap).
-    // The callbacks let you track each phase; both are awaited automatically.
-    console.log("\n── 3d. Unshield ──");
-    console.log(`Unshielding ${fmt(UNSHIELD_AMOUNT)} cUSDT → USDT (Account A)...`);
-    await tokenA.unshield(UNSHIELD_AMOUNT, {
-      onUnwrapSubmitted: (tx) => console.log("  Unwrap submitted:   ", tx),
-      onFinalizing: () => console.log("  Waiting for finalization..."),
-      onFinalizeSubmitted: (tx) => console.log("  Finalize submitted:", tx),
-    });
+  // 3d. Unshield: confidential cUSDT → ERC-20 USDT
+  // unshield() is a two-phase operation (unwrap + finalizeUnwrap).
+  // The callbacks let you track each phase; both are awaited automatically.
+  console.log("\n── 3d. Unshield ──");
+  console.log(`Unshielding ${fmt(UNSHIELD_AMOUNT)} cUSDT → USDT (Account A)...`);
+  await tokenA.unshield(UNSHIELD_AMOUNT, {
+    onUnwrapSubmitted: (tx) => console.log("  Unwrap submitted:   ", tx),
+    onFinalizing: () => console.log("  Waiting for finalization..."),
+    onFinalizeSubmitted: (tx) => console.log("  Finalize submitted:", tx),
+  });
 
-    const balanceA3 = await tokenA.balanceOf();
-    const erc20BalanceFinal = await publicClient.readContract({
-      address: TOKEN_ADDRESS as Address,
-      abi: ERC20_ABI,
-      functionName: "balanceOf",
-      args: [accountA.address],
-    });
-    console.log("\ncUSDT balance (A, final):", fmt(balanceA3));
-    console.log("USDT  balance (A, final):", fmt(erc20BalanceFinal));
+  const balanceA3 = await tokenA.balanceOf();
+  const erc20BalanceFinal = await publicClient.readContract({
+    address: TOKEN_ADDRESS as Address,
+    abi: ERC20_ABI,
+    functionName: "balanceOf",
+    args: [accountA.address],
+  });
+  console.log("\ncUSDT balance (A, final):", fmt(balanceA3));
+  console.log("USDT  balance (A, final):", fmt(erc20BalanceFinal));
 
-    // ────────────────────────────────────────────────────────────────────────
-    // SECTION 4 — Delegation
-    // Account A grants Account B the right to decrypt A's confidential balance.
-    // This is useful in backend systems where a service account (B) needs to
-    // read balances on behalf of users (A) without holding their private key.
-    // ────────────────────────────────────────────────────────────────────────
-    section("SECTION 4 — Delegation");
+  // ──────────────────────────────────────────────────────────────────────────
+  // SECTION 4 — Delegation
+  // Account A grants Account B the right to decrypt A's confidential balance.
+  // This is useful in backend systems where a service account (B) needs to
+  // read balances on behalf of users (A) without holding their private key.
+  // ──────────────────────────────────────────────────────────────────────────
+  section("SECTION 4 — Delegation");
 
-    // 4a. Grant: A delegates decrypt rights to B
-    console.log("── 4a. Grant delegation: A → B ──");
-    await tokenA.delegateDecryption({ delegateAddress: accountB.address as Address });
+  // 4a. Grant: A delegates decrypt rights to B
+  console.log("── 4a. Grant delegation: A → B ──");
+  await tokenA.delegateDecryption({ delegateAddress: accountB.address as Address });
 
-    const isDelegated = await tokenA.isDelegated({
-      delegatorAddress: accountA.address as Address,
-      delegateAddress: accountB.address as Address,
-    });
-    console.log("Delegation active:", isDelegated);
+  const isDelegated = await tokenA.isDelegated({
+    delegatorAddress: accountA.address as Address,
+    delegateAddress: accountB.address as Address,
+  });
+  console.log("Delegation active:", isDelegated);
 
-    // 4b. Decrypt as delegate: B reads A's balance without A's private key
-    // The ACL grant must propagate across the infrastructure before the relayer
-    // can verify it. This typically takes 1–2 minutes on Sepolia.
-    console.log("\n── 4b. Decrypt as delegate ──");
-    console.log("Account B reading Account A's cUSDT balance...");
-    {
-      const MAX_RETRIES = 5;
-      const RETRY_DELAY_MS = 30_000;
-      let decrypted = false;
-      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-        try {
-          const balanceOfAasB = await tokenB.decryptBalanceAs({
-            delegatorAddress: accountA.address as Address,
-          });
-          console.log("cUSDT balance (A, seen by B):", fmt(balanceOfAasB));
-          decrypted = true;
-          break;
-        } catch (err) {
-          if (err instanceof DelegationNotPropagatedError && attempt < MAX_RETRIES) {
-            console.warn(
-              `  ACL grant not yet propagated (attempt ${attempt}/${MAX_RETRIES}), retrying in ${RETRY_DELAY_MS / 1_000}s...`,
-            );
-            await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
-          } else {
-            throw err;
-          }
+  // 4b. Decrypt as delegate: B reads A's balance without A's private key
+  // The ACL grant must propagate across the infrastructure before the relayer
+  // can verify it. This typically takes 1–2 minutes on Sepolia.
+  console.log("\n── 4b. Decrypt as delegate ──");
+  console.log("Account B reading Account A's cUSDT balance...");
+  {
+    const MAX_RETRIES = 5;
+    const RETRY_DELAY_MS = 30_000;
+    let decrypted = false;
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const balanceOfAasB = await tokenB.decryptBalanceAs({
+          delegatorAddress: accountA.address as Address,
+        });
+        console.log("cUSDT balance (A, seen by B):", fmt(balanceOfAasB));
+        decrypted = true;
+        break;
+      } catch (err) {
+        if (err instanceof DelegationNotPropagatedError && attempt < MAX_RETRIES) {
+          console.warn(
+            `  ACL grant not yet propagated (attempt ${attempt}/${MAX_RETRIES}), retrying in ${RETRY_DELAY_MS / 1_000}s...`,
+          );
+          await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+        } else {
+          throw err;
         }
       }
-      if (!decrypted) {
-        console.warn("  ⚠ Delegate decrypt did not succeed after retries.");
-      }
     }
-
-    // 4c. Revoke: A removes B's decrypt rights
-    console.log("\n── 4c. Revoke delegation ──");
-    await tokenA.revokeDelegation({ delegateAddress: accountB.address as Address });
-
-    const isDelegatedAfter = await tokenA.isDelegated({
-      delegatorAddress: accountA.address as Address,
-      delegateAddress: accountB.address as Address,
-    });
-    console.log("Delegation active after revoke:", isDelegatedAfter);
-  } finally {
-    // Always terminate to release Node.js worker threads.
-    // sdkB shares the same relayer instance — dispose() unsubscribes its
-    // signer listeners without killing the already-terminating relayer.
-    try {
-      sdkB.dispose();
-    } catch {
-      /* best-effort cleanup */
+    if (!decrypted) {
+      console.warn("  ⚠ Delegate decrypt did not succeed after retries.");
     }
-    sdkA.terminate();
   }
+
+  // 4c. Revoke: A removes B's decrypt rights
+  console.log("\n── 4c. Revoke delegation ──");
+  await tokenA.revokeDelegation({ delegateAddress: accountB.address as Address });
+
+  const isDelegatedAfter = await tokenA.isDelegated({
+    delegatorAddress: accountA.address as Address,
+    delegateAddress: accountB.address as Address,
+  });
+  console.log("Delegation active after revoke:", isDelegatedAfter);
 }
 
 main().catch((err) => {
