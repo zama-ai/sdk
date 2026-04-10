@@ -8,7 +8,7 @@ import {
   type Address,
 } from "@zama-fhe/react-sdk";
 
-export function SessionPanel({ tokenAddresses }: { tokenAddresses: Address[] }) {
+export function SessionPanel({ tokenAddresses }: { tokenAddresses: [Address, ...Address[]] }) {
   const { data: isAllowed, isLoading } = useIsAllowed({ contractAddresses: tokenAddresses });
   const { mutate: allow } = useAllow();
   const revoke = useRevoke();

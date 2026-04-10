@@ -9,7 +9,7 @@ export default async function SessionPage({
 }) {
   const params = await searchParams;
   const tokens = params.tokens
-    ? (params.tokens.split(",") as Address[])
+    ? (params.tokens.split(",") as [Address, ...Address[]])
     : CONFIDENTIAL_TOKEN_ADDRESSES;
 
   return (
