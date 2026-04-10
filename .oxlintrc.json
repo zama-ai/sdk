@@ -96,7 +96,6 @@
     "unicorn/require-post-message-target-origin": "off",
     "react/rules-of-hooks": "error",
     "react/react-in-jsx-scope": "off",
-    "react/jsx-uses-react": "off",
     "import/no-unassigned-import": "off",
     "import/no-nodejs-modules": "off",
     "unicorn/no-null": "off",

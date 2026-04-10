@@ -153,18 +153,15 @@ async function main() {
     console.log("\n── 3b. Shield ──");
     console.log(`Shielding ${fmt(SHIELD_AMOUNT)} USDT → cUSDT (Account A)...`);
     await tokenA.shield(SHIELD_AMOUNT, {
-      callbacks: {
-        onApprovalSubmitted: (tx) => console.log("  Approval submitted:", tx),
-        onShieldSubmitted: (tx) => console.log("  Shield submitted:  ", tx),
-      },
+      onApprovalSubmitted: (tx) => console.log("  Approval submitted:", tx),
+      onShieldSubmitted: (tx) => console.log("  Shield submitted:  ", tx),
     });
 
     const balanceA1 = await tokenA.balanceOf();
     console.log("cUSDT balance (A, after shield):", fmt(balanceA1));
 
     // 3c. Confidential transfer: A → B
-    // The amount is encrypted client-side before being sent on-chain —
-    // only the recipient and the token contract can read it.
+    // The amount is encrypted client-side before being sent on-chain.
     console.log("\n── 3c. Confidential transfer ──");
     console.log(`Transferring ${fmt(TRANSFER_AMOUNT)} cUSDT: A → B...`);
     await tokenA.confidentialTransfer(accountB.address as Address, TRANSFER_AMOUNT, {
@@ -217,24 +214,35 @@ async function main() {
     console.log("Delegation active:", isDelegated);
 
     // 4b. Decrypt as delegate: B reads A's balance without A's private key
-    // Note: the ACL grant must propagate from L1 to the Arbitrum gateway before
-    // the relayer can verify it. This typically takes 1–2 minutes. If decryptBalanceAs
-    // throws DelegationNotPropagatedError, wait and retry.
+    // The ACL grant must propagate across the infrastructure before the relayer
+    // can verify it. This typically takes 1–2 minutes on Sepolia.
     console.log("\n── 4b. Decrypt as delegate ──");
     console.log("Account B reading Account A's cUSDT balance...");
-    try {
-      const balanceOfAasB = await tokenB.decryptBalanceAs({
-        delegatorAddress: accountA.address as Address,
-      });
-      console.log("cUSDT balance (A, seen by B):", fmt(balanceOfAasB));
-    } catch (err) {
-      if (err instanceof DelegationNotPropagatedError) {
-        console.warn(
-          "  ⚠ ACL grant not yet propagated to the gateway — skipping delegate decrypt.\n" +
-            "  In production, implement retry with backoff. Wait 1–2 minutes and re-run to verify.",
-        );
-      } else {
-        throw err;
+    {
+      const MAX_RETRIES = 5;
+      const RETRY_DELAY_MS = 30_000;
+      let decrypted = false;
+      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          const balanceOfAasB = await tokenB.decryptBalanceAs({
+            delegatorAddress: accountA.address as Address,
+          });
+          console.log("cUSDT balance (A, seen by B):", fmt(balanceOfAasB));
+          decrypted = true;
+          break;
+        } catch (err) {
+          if (err instanceof DelegationNotPropagatedError && attempt < MAX_RETRIES) {
+            console.warn(
+              `  ACL grant not yet propagated (attempt ${attempt}/${MAX_RETRIES}), retrying in ${RETRY_DELAY_MS / 1_000}s...`,
+            );
+            await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+          } else {
+            throw err;
+          }
+        }
+      }
+      if (!decrypted) {
+        console.warn("  ⚠ Delegate decrypt did not succeed after retries.");
       }
     }
 
@@ -251,12 +259,16 @@ async function main() {
     // Always terminate to release Node.js worker threads.
     // sdkB shares the same relayer instance — dispose() unsubscribes its
     // signer listeners without killing the already-terminating relayer.
-    sdkB.dispose();
+    try {
+      sdkB.dispose();
+    } catch {
+      /* best-effort cleanup */
+    }
     sdkA.terminate();
   }
 }
 
 main().catch((err) => {
   console.error("Fatal:", err);
-  process.exit(1);
+  process.exitCode = 1;
 });
