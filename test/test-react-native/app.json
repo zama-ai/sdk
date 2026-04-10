@@ -12,6 +12,6 @@
     "android": {
       "package": "ai.zama.test.reactnative"
     },
-    "plugins": ["@fhevm/react-native-sdk"]
+    "plugins": []
   }
 }
