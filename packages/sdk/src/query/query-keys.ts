@@ -172,48 +172,6 @@ export const zamaQueryKeys = {
       ] as const,
   },
 
-  fees: {
-    all: ["zama.fees"] as const,
-    shieldFee: (feeManagerAddress?: Address, amount?: string, from?: Address, to?: Address) =>
-      [
-        "zama.fees",
-        {
-          type: "shield",
-          ...(feeManagerAddress ? { feeManagerAddress: getAddress(feeManagerAddress) } : {}),
-          ...(amount === undefined ? {} : { amount }),
-          ...(from ? { from: getAddress(from) } : {}),
-          ...(to ? { to: getAddress(to) } : {}),
-        },
-      ] as const,
-    unshieldFee: (feeManagerAddress?: Address, amount?: string, from?: Address, to?: Address) =>
-      [
-        "zama.fees",
-        {
-          type: "unshield",
-          ...(feeManagerAddress ? { feeManagerAddress: getAddress(feeManagerAddress) } : {}),
-          ...(amount === undefined ? {} : { amount }),
-          ...(from ? { from: getAddress(from) } : {}),
-          ...(to ? { to: getAddress(to) } : {}),
-        },
-      ] as const,
-    batchTransferFee: (feeManagerAddress?: Address) =>
-      [
-        "zama.fees",
-        {
-          type: "batchTransfer",
-          ...(feeManagerAddress ? { feeManagerAddress: getAddress(feeManagerAddress) } : {}),
-        },
-      ] as const,
-    feeRecipient: (feeManagerAddress?: Address) =>
-      [
-        "zama.fees",
-        {
-          type: "feeRecipient",
-          ...(feeManagerAddress ? { feeManagerAddress: getAddress(feeManagerAddress) } : {}),
-        },
-      ] as const,
-  },
-
   isAllowed: {
     all: ["zama.isAllowed"] as const,
     scope: (account: Address, contractAddresses: Address[]) =>

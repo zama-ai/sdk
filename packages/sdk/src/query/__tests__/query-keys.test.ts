@@ -1,9 +1,7 @@
 import { describe, expect, test } from "../../test-fixtures";
 import { getAddress } from "viem";
-import type { Address } from "viem";
 
 import { zamaQueryKeys } from "../query-keys";
-import { expectTypeOf } from "vitest";
 
 const TOKEN_LOWER = "0x52908400098527886e0f7030069857d2e4169ee7";
 const TOKEN_UPPER = "0x52908400098527886E0F7030069857D2E4169EE7";
@@ -32,7 +30,6 @@ describe("zamaQueryKeys", () => {
     ["confidentialIsApproved", zamaQueryKeys.confidentialIsApproved.all],
     ["totalSupply", zamaQueryKeys.totalSupply.all],
     ["activityFeed", zamaQueryKeys.activityFeed.all],
-    ["fees", zamaQueryKeys.fees.all],
     ["publicKey", zamaQueryKeys.publicKey.all],
     ["publicParams", zamaQueryKeys.publicParams.all],
     ["decryption", zamaQueryKeys.decryption.all],
@@ -93,33 +90,6 @@ describe("zamaQueryKeys", () => {
     expect(withoutHandles[1]).not.toHaveProperty("handles");
   });
 
-  test("fees.shieldFee includes optional amount/from/to only when amount is provided", () => {
-    const withAllParams = zamaQueryKeys.fees.shieldFee(
-      TOKEN_LOWER,
-      "100",
-      OWNER_LOWER,
-      WRAPPER_LOWER,
-    );
-    const withoutAmount = zamaQueryKeys.fees.shieldFee(TOKEN_LOWER);
-
-    expect(withAllParams).toEqual([
-      "zama.fees",
-      {
-        type: "shield",
-        feeManagerAddress: getAddress(TOKEN_LOWER),
-        amount: "100",
-        from: getAddress(OWNER_LOWER),
-        to: getAddress(WRAPPER_LOWER),
-      },
-    ]);
-
-    expect(withoutAmount).toEqual([
-      "zama.fees",
-      { type: "shield", feeManagerAddress: getAddress(TOKEN_LOWER) },
-    ]);
-    expect(withoutAmount[1]).not.toHaveProperty("amount");
-  });
-
   test("activityFeed.scope contains full cache identity", () => {
     expect(
       zamaQueryKeys.activityFeed.scope(TOKEN_LOWER, OWNER_LOWER, "0xtx1:0,0xtx2:1", true),
@@ -162,10 +132,6 @@ describe("zamaQueryKeys", () => {
       zamaQueryKeys.totalSupply.token(TOKEN_LOWER),
       zamaQueryKeys.activityFeed.token(TOKEN_LOWER),
       zamaQueryKeys.activityFeed.scope(TOKEN_LOWER, OWNER_LOWER, "log-key", false),
-      zamaQueryKeys.fees.shieldFee(TOKEN_LOWER, "100", OWNER_LOWER, WRAPPER_LOWER),
-      zamaQueryKeys.fees.unshieldFee(TOKEN_LOWER, "100", OWNER_LOWER, WRAPPER_LOWER),
-      zamaQueryKeys.fees.batchTransferFee(TOKEN_LOWER),
-      zamaQueryKeys.fees.feeRecipient(TOKEN_LOWER),
       zamaQueryKeys.publicParams.bits(2048),
       zamaQueryKeys.decryption.handle(HANDLE_A, WRAPPER_LOWER),
     ];
@@ -244,19 +210,6 @@ describe("zamaQueryKeys", () => {
       ],
       [zamaQueryKeys.totalSupply.token(TOKEN_LOWER), zamaQueryKeys.totalSupply.token(TOKEN_UPPER)],
       [
-        zamaQueryKeys.fees.shieldFee(TOKEN_LOWER, "100", OWNER_LOWER, WRAPPER_LOWER),
-        zamaQueryKeys.fees.shieldFee(TOKEN_UPPER, "100", OWNER_UPPER, WRAPPER_UPPER),
-      ],
-      [
-        zamaQueryKeys.fees.unshieldFee(TOKEN_LOWER, "100", OWNER_LOWER, WRAPPER_LOWER),
-        zamaQueryKeys.fees.unshieldFee(TOKEN_UPPER, "100", OWNER_UPPER, WRAPPER_UPPER),
-      ],
-      [
-        zamaQueryKeys.fees.batchTransferFee(TOKEN_LOWER),
-        zamaQueryKeys.fees.batchTransferFee(TOKEN_UPPER),
-      ],
-      [zamaQueryKeys.fees.feeRecipient(TOKEN_LOWER), zamaQueryKeys.fees.feeRecipient(TOKEN_UPPER)],
-      [
         zamaQueryKeys.decryption.handle(HANDLE_A, WRAPPER_LOWER),
         zamaQueryKeys.decryption.handle(HANDLE_A, WRAPPER_UPPER),
       ],
@@ -293,17 +246,5 @@ describe("zamaQueryKeys", () => {
         holder: getAddress(OWNER_LOWER),
       },
     ]);
-  });
-
-  test("fees keys type feeManagerAddress as Address | undefined", () => {
-    const shieldFeeKey = zamaQueryKeys.fees.shieldFee(TOKEN_LOWER);
-    const unshieldFeeKey = zamaQueryKeys.fees.unshieldFee(TOKEN_LOWER);
-    const batchTransferFeeKey = zamaQueryKeys.fees.batchTransferFee(TOKEN_LOWER);
-    const feeRecipientKey = zamaQueryKeys.fees.feeRecipient(TOKEN_LOWER);
-
-    expectTypeOf(shieldFeeKey[1].feeManagerAddress).toEqualTypeOf<Address | undefined>();
-    expectTypeOf(unshieldFeeKey[1].feeManagerAddress).toEqualTypeOf<Address | undefined>();
-    expectTypeOf(batchTransferFeeKey[1].feeManagerAddress).toEqualTypeOf<Address | undefined>();
-    expectTypeOf(feeRecipientKey[1].feeManagerAddress).toEqualTypeOf<Address | undefined>();
   });
 });

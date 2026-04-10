@@ -6,7 +6,6 @@ import type { Address } from "viem";
 /** Variables for {@link shieldMutationOptions}. */
 export interface ShieldParams extends ShieldCallbacks {
   amount: bigint;
-  fees?: bigint;
   approvalStrategy?: "max" | "exact" | "skip";
   /** Recipient address for the shielded tokens. Defaults to the connected wallet. */
   to?: Address;
