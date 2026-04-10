@@ -75,7 +75,9 @@
       },
       "default": "./dist/esm/node/index.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": {
+      "default": "./package.json"
+    }
   },
   "typesVersions": {
     "*": {

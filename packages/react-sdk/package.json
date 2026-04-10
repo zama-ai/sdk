@@ -23,7 +23,9 @@
       "import": "./dist/wagmi/index.js",
       "default": "./dist/wagmi/index.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": {
+      "default": "./package.json"
+    }
   },
   "files": [
     "dist",
