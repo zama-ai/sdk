@@ -428,7 +428,7 @@ export interface DecryptErrorEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.DecryptError;
 }
 
-// @public
+// @public (undocumented)
 export interface DecryptHandle {
     // (undocumented)
     contractAddress: Address;
@@ -442,7 +442,7 @@ export interface DecryptOptions {
     onDecrypted?: (values: DecryptResult) => void;
 }
 
-// @public
+// @public (undocumented)
 export type DecryptResult = Record<Handle, ClearValueType>;
 
 // @public (undocumented)
@@ -696,9 +696,7 @@ export interface IsAllowedQueryConfig {
     account: Address;
     contractAddresses: Address[];
     // (undocumented)
-    query?: {
-        enabled?: boolean;
-    };
+    query?: Record<string, unknown>;
 }
 
 // @public (undocumented)
@@ -1321,10 +1319,11 @@ export interface UserDecryptParams {
 
 // @public (undocumented)
 export interface UserDecryptQueryConfig {
+    // (undocumented)
     handles: DecryptHandle[];
 }
 
-// @public
+// @public (undocumented)
 export function userDecryptQueryOptions(sdk: ZamaSDK, config: UserDecryptQueryConfig): QueryFactoryOptions<DecryptResult, Error, DecryptResult, ReturnType<typeof zamaQueryKeys.decryption.handles>>;
 
 // @public
@@ -1652,7 +1651,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/activity-BTymMWy0.d.ts:21479:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/esm/activity-CeXc01Tz.d.ts:21475:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 
