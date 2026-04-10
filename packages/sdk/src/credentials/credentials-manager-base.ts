@@ -307,7 +307,7 @@ export abstract class BaseCredentialsManager<
       return false;
     }
     if (contractAddresses.length === 0) {
-      return true;
+      return false;
     }
     try {
       const stored = await this.storage.get<TEncrypted>(key);

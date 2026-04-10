@@ -112,13 +112,20 @@ describe("DelegatedCredentialsManager", () => {
     expect(signer.signTypedData).toHaveBeenCalledTimes(2);
   });
 
-  test("isAllowed() returns true when session exists", async ({ relayer }) => {
+  test("isAllowed() returns true when session covers the given contract", async ({ relayer }) => {
     const { manager } = createManager(relayer);
 
-    expect(await manager.isAllowed(DELEGATOR)).toBe(false);
+    expect(await manager.isAllowed(DELEGATOR, TOKEN_A)).toBe(false);
     await manager.allow(DELEGATOR, TOKEN_A);
-    expect(await manager.isAllowed(DELEGATOR)).toBe(true);
+    expect(await manager.isAllowed(DELEGATOR, TOKEN_A)).toBe(true);
     await manager.revoke(DELEGATOR);
+    expect(await manager.isAllowed(DELEGATOR, TOKEN_A)).toBe(false);
+  });
+
+  test("isAllowed() returns false when no contracts specified", async ({ relayer }) => {
+    const { manager } = createManager(relayer);
+
+    await manager.allow(DELEGATOR, TOKEN_A);
     expect(await manager.isAllowed(DELEGATOR)).toBe(false);
   });
 
@@ -141,8 +148,8 @@ describe("DelegatedCredentialsManager", () => {
     // Advance time by 10 years
     vi.advanceTimersByTime(10 * 365 * 86400 * 1000);
 
-    // Session should still be valid
-    expect(await manager.isAllowed(DELEGATOR)).toBe(true);
+    // Session should still be valid for the allowed contract
+    expect(await manager.isAllowed(DELEGATOR, TOKEN_A)).toBe(true);
   });
 
   test("sessionTTL: 0 means every operation triggers signing", async ({ relayer }) => {
