@@ -12,6 +12,7 @@ const shared = {
 
 const entryPoints = {
   index: "src/index.ts",
+  "react-native": "src/react-native.ts",
   "cleartext/index": "src/relayer/cleartext/index.ts",
   "query/index": "src/query/index.ts",
   "viem/index": "src/viem/index.ts",
