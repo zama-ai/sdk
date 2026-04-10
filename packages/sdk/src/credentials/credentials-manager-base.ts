@@ -404,8 +404,13 @@ export abstract class BaseCredentialsManager<
       try {
         this.assertEncrypted(stored as TEncrypted);
         batches.push({ batchKey: k, addresses: (stored as TEncrypted).contractAddresses });
-      } catch {
+      } catch (error) {
         // Corrupted entry — stop scanning; caller can reuse this slot for recovery.
+        // oxlint-disable-next-line no-console
+        console.warn(
+          `[zama-sdk] Corrupted credential batch at key "${k}", treating as recoverable:`,
+          error,
+        );
         return { batches, highestIndex, corruptedIndex: i };
       }
     }
@@ -478,7 +483,12 @@ export abstract class BaseCredentialsManager<
             this.assertEncrypted(stored);
             const required = contractAddress ? [contractAddress] : [];
             return isCredentialValid(stored, required);
-          } catch {
+          } catch (error) {
+            // oxlint-disable-next-line no-console
+            console.warn(
+              "[zama-sdk] Credential batch validation failed, treating as expired:",
+              error,
+            );
             return false;
           }
         }),

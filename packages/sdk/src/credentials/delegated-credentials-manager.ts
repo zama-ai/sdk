@@ -16,6 +16,8 @@ import {
 } from "./credential-validation";
 import { Batcher } from "../utils/batcher";
 
+const batcher = new Batcher(MAX_CONTRACTS_PER_CREDENTIAL);
+
 /** Internal storage shape — base fields plus delegator/delegate addresses. */
 interface EncryptedCredentials extends BaseEncryptedCredentials {
   delegatorAddress: Address;
@@ -91,19 +93,12 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
     const normalizedDelegator = getAddress(delegatorAddress);
     const normalized = normalizeAddresses(contractAddresses);
     const key = await this.#storeKey(normalizedDelegator);
-    const batcher = new Batcher(MAX_CONTRACTS_PER_CREDENTIAL);
     return batcher.execute(normalized, (accumulated) =>
       this.resolveMulti({
         key,
         contracts: accumulated,
-        createFn: async (batchAddresses: Address[], batchKey: string) => {
-          let keypair = this.#cachedKeypairs.get(key);
-          if (!keypair) {
-            keypair = await this.#relayer.generateKeypair();
-            this.#cachedKeypairs.set(key, keypair);
-          }
-          return this.#createBatch(normalizedDelegator, batchAddresses, keypair, batchKey);
-        },
+        createFn: (batchAddresses: Address[], batchKey: string) =>
+          this.#createBatch(normalizedDelegator, batchAddresses, key, batchKey),
       }),
     );
   }
@@ -133,10 +128,16 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
 
   // ── Credential creation ───────────────────────────────────────
 
+  /**
+   * Create credentials for a single batch. Reuses the cached FHE keypair for
+   * `storeKey` when available, or generates a fresh one. Keypair generation
+   * runs inside `createCredentials` so failures are wrapped by
+   * {@link wrapSigningError} with the correct context prefix.
+   */
   async #createBatch(
     delegatorAddress: Address,
     contractAddresses: Address[],
-    keypair: { publicKey: Hex; privateKey: Hex },
+    storeKey: string,
     overrideKey?: string,
   ): Promise<DelegatedStoredCredentials> {
     const key = overrideKey ?? (await this.#storeKey(delegatorAddress));
@@ -144,6 +145,11 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
       key,
       contractAddresses,
       createFn: async () => {
+        let keypair = this.#cachedKeypairs.get(storeKey);
+        if (!keypair) {
+          keypair = await this.#relayer.generateKeypair();
+          this.#cachedKeypairs.set(storeKey, keypair);
+        }
         const delegateAddress = await this.signer.getAddress();
         const startTimestamp = Math.floor(Date.now() / 1000);
         const durationDays = Math.ceil(this.keypairTTL / 86400);

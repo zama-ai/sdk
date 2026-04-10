@@ -106,6 +106,9 @@ export const MAX_CONTRACTS_PER_CREDENTIAL = 10;
  * Used internally to produce batches that stay within {@link MAX_CONTRACTS_PER_CREDENTIAL}.
  */
 export function chunkAddresses(addresses: Address[], size: number): Address[][] {
+  if (size < 1) {
+    throw new Error("chunkAddresses: size must be at least 1");
+  }
   const chunks: Address[][] = [];
   for (let i = 0; i < addresses.length; i += size) {
     chunks.push(addresses.slice(i, i + size));

@@ -17,6 +17,8 @@ import {
 } from "./credential-validation";
 import { Batcher } from "../utils/batcher";
 
+const batcher = new Batcher(MAX_CONTRACTS_PER_CREDENTIAL);
+
 /** Internal storage shape — same as BaseEncryptedCredentials. */
 type EncryptedCredentials = BaseEncryptedCredentials;
 
@@ -99,17 +101,12 @@ export class CredentialsManager extends BaseCredentialsManager<
   async allow(...contractAddresses: Address[]): Promise<CredentialSet> {
     const normalized = normalizeAddresses(contractAddresses);
     const key = await this.#storeKey();
-    const batcher = new Batcher(MAX_CONTRACTS_PER_CREDENTIAL);
     return batcher.execute(normalized, (accumulated) =>
       this.resolveMulti({
         key,
         contracts: accumulated,
-        createFn: async (batchAddresses: Address[], batchKey: string) => {
-          if (!this.#cachedKeypair) {
-            this.#cachedKeypair = await this.#relayer.generateKeypair();
-          }
-          return this.#createBatch(batchAddresses, this.#cachedKeypair, batchKey);
-        },
+        createFn: (batchAddresses: Address[], batchKey: string) =>
+          this.#createBatch(batchAddresses, batchKey),
       }),
     );
   }
@@ -153,17 +150,17 @@ export class CredentialsManager extends BaseCredentialsManager<
   async create(contractAddresses: Address[]): Promise<StoredCredentials> {
     const normalized = normalizeAddresses(contractAddresses);
     const key = await this.#storeKey();
-    const keypair = await this.#relayer.generateKeypair();
-    return this.#createBatch(normalized, keypair, key);
+    return this.#createBatch(normalized, key);
   }
 
   /**
-   * Create credentials for a single batch, optionally reusing a pre-generated keypair.
-   * Called by {@link allow} for each batch so the keypair is shared across batches.
+   * Create credentials for a single batch. Reuses the cached FHE keypair when
+   * available (set by a previous `allow()` call), or generates a fresh one.
+   * Keypair generation runs inside `createCredentials` so failures are wrapped
+   * by {@link wrapSigningError} with the correct context prefix.
    */
   async #createBatch(
     contractAddresses: Address[],
-    keypair: { publicKey: Hex; privateKey: Hex },
     overrideKey?: string,
   ): Promise<StoredCredentials> {
     const key = overrideKey ?? (await this.#storeKey());
@@ -171,6 +168,10 @@ export class CredentialsManager extends BaseCredentialsManager<
       key,
       contractAddresses,
       createFn: async () => {
+        if (!this.#cachedKeypair) {
+          this.#cachedKeypair = await this.#relayer.generateKeypair();
+        }
+        const keypair = this.#cachedKeypair;
         const startTimestamp = Math.floor(Date.now() / 1000);
         const durationDays = Math.ceil(this.keypairTTL / 86400);
 
