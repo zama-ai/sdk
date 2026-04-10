@@ -4,6 +4,7 @@ import { dts } from "rolldown-plugin-dts";
 export default defineConfig({
   input: {
     index: "src/index.ts",
+    "react-native": "src/react-native.ts",
     "wagmi/index": "src/wagmi/index.ts",
   },
   output: {
