@@ -1,9 +1,9 @@
 ---
-title: Check Balances
+title: Check balances
 description: Decrypt and read confidential token balances using the SDK and React hooks.
 ---
 
-# Check Balances
+# Check balances
 
 Confidential balances are stored on-chain as encrypted handles. To display a human-readable number, the SDK decrypts them using FHE credentials tied to the user's wallet. This guide walks through reading balances, understanding the caching layer, and working with multiple tokens.
 

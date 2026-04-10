@@ -49,11 +49,11 @@ function GenerateButton() {
 
 `useGenerateKeypair` takes no constructor parameters.
 
-## Mutation Variables
+## Mutation variables
 
 `mutate` / `mutateAsync` take no arguments.
 
-## Return Type
+## Return type
 
 ```ts
 import { type KeypairType } from "@zama-fhe/sdk";

@@ -62,7 +62,7 @@ useWrapperDiscovery({
 });
 ```
 
-## Return Type
+## Return type
 
 The `data` field resolves to `Address | null` -- the wrapper contract address for the given token, or `null` if no wrapper exists.
 

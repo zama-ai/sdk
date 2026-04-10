@@ -39,7 +39,7 @@ function RegistryInfo() {
 
 This hook takes no parameters. It reads registry addresses from the `ZamaSDK` instance provided by `ZamaProvider`.
 
-## Return Type
+## Return type
 
 `Address | undefined`
 

@@ -102,7 +102,7 @@ const { mutateAsync: transferFrom } = useConfidentialTransferFrom({
 
 {% include ".gitbook/includes/mutation-options.md" %}
 
-## Mutation Variables
+## Mutation variables
 
 The function passed to `mutate` / `mutateAsync` accepts:
 
@@ -138,7 +138,7 @@ await transferFrom({
 {% endtab %}
 {% endtabs %}
 
-## Return Type
+## Return type
 
 ```ts
 import { type UseConfidentialTransferFromReturnType } from "@zama-fhe/react-sdk";

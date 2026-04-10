@@ -90,7 +90,7 @@ const { mutateAsync: shieldETH } = useShieldETH({
 
 {% include ".gitbook/includes/mutation-options.md" %}
 
-## Mutation Variables
+## Mutation variables
 
 Passed to `mutate` / `mutateAsync` at call time.
 
@@ -104,7 +104,7 @@ Amount of ETH to shield (in wei).
 await shieldETH({ amount: 1000n });
 ```
 
-## Return Type
+## Return type
 
 ```ts
 import { type UseShieldETHReturnType } from "@zama-fhe/react-sdk";

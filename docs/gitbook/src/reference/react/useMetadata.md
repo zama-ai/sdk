@@ -49,7 +49,7 @@ Address of the token contract to read metadata from.
 const { data: meta } = useMetadata("0xToken");
 ```
 
-## Return Type
+## Return type
 
 The `data` field resolves to:
 

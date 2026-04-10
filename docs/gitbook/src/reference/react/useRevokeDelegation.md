@@ -62,7 +62,7 @@ const { mutateAsync: revoke } = useRevokeDelegation({
 
 {% include ".gitbook/includes/mutation-options.md" %}
 
-## Mutation Variables
+## Mutation variables
 
 Passed to `mutate` / `mutateAsync` at call time.
 
@@ -76,7 +76,7 @@ The address to revoke decryption rights from.
 await revoke({ delegateAddress: "0xDelegate" });
 ```
 
-## Return Type
+## Return type
 
 `data` resolves to `{ txHash: Hex, receipt: TransactionReceipt }`.
 

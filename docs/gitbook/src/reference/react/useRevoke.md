@@ -39,7 +39,7 @@ function RevokeButton({ contracts }: { contracts: `0x${string}`[] }) {
 
 `useRevoke` takes no constructor parameters.
 
-## Mutation Variables
+## Mutation variables
 
 ### addresses
 
@@ -53,7 +53,7 @@ const { mutate: revoke } = useRevoke();
 revoke(["0xContractA", "0xContractB"]);
 ```
 
-## Return Type
+## Return type
 
 {% include ".gitbook/includes/mutation-result.md" %}
 

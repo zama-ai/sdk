@@ -1,9 +1,9 @@
 ---
-title: Query Keys
+title: Query keys
 description: Reference for the zamaQueryKeys factory used for manual React Query cache control.
 ---
 
-# Query Keys
+# Query keys
 
 The `zamaQueryKeys` object is a factory for React Query cache keys. Use it to invalidate, prefetch, or remove cached data manually.
 
@@ -37,7 +37,7 @@ queryClient.invalidateQueries({
 });
 ```
 
-## Key Factories
+## Key factories
 
 ### `zamaQueryKeys.confidentialBalance`
 
@@ -145,7 +145,7 @@ import { decryptionKeys } from "@zama-fhe/react-sdk";
 | ---------------- | -------------------------------- |
 | `.value(handle)` | Single decrypted value by handle |
 
-## Common Patterns
+## Common patterns
 
 ### Invalidate after an external transaction
 

@@ -74,7 +74,7 @@ Address of the fee manager contract to query.
 const { data: recipient } = useFeeRecipient("0xFeeManager");
 ```
 
-## Return Type
+## Return type
 
 Standard `UseQueryResult` where `data` is `Address` — the address that receives collected fees.
 

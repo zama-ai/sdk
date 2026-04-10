@@ -39,7 +39,7 @@ function DisconnectPanel() {
 
 `useRevokeSession` takes no constructor parameters.
 
-## Mutation Variables
+## Mutation variables
 
 No mutation variables. Call `mutate()` or `mutateAsync()` with no arguments.
 
@@ -49,7 +49,7 @@ const { mutate: revokeSession } = useRevokeSession();
 revokeSession();
 ```
 
-## Return Type
+## Return type
 
 {% include ".gitbook/includes/mutation-result.md" %}
 

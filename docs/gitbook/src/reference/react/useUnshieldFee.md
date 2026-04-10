@@ -116,7 +116,7 @@ useUnshieldFee({
 });
 ```
 
-## Return Type
+## Return type
 
 The `data` field resolves to `bigint` -- the fee amount in token units.
 

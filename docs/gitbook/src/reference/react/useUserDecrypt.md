@@ -116,7 +116,7 @@ function DecryptWithProgress() {
 {% endtab %}
 {% endtabs %}
 
-## Mutation Variables
+## Mutation variables
 
 Passed to `mutate` / `mutateAsync` at call time.
 
@@ -154,7 +154,7 @@ const result = await decrypt.mutateAsync({
 // result: { "0xhandle1...": 500n, "0xhandle2...": 200n, "0xhandle3...": 1000n }
 ```
 
-## Return Type
+## Return type
 
 `data` resolves to `Record<Handle, ClearValueType>` — a map from each handle to its decrypted plaintext value (`bigint`, `boolean`, or `string`).
 
@@ -162,7 +162,7 @@ On success, results are written to the decryption cache so that [`useUserDecrypt
 
 {% include ".gitbook/includes/mutation-result.md" %}
 
-## Credential Caching
+## Credential caching
 
 `useUserDecrypt` uses the SDK's credential manager (`sdk.credentials`) to avoid unnecessary wallet prompts:
 

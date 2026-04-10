@@ -1,9 +1,9 @@
 ---
-title: Two-Phase Balance Polling
+title: Two-phase balance polling
 description: How the SDK uses smart polling to minimize expensive FHE decryption while keeping balances up to date.
 ---
 
-# Two-Phase Balance Polling
+# Two-phase balance polling
 
 FHE decryption is expensive. Each decrypt requires a round-trip to the relayer KMS, re-encryption under the user's public key, and local WASM decryption. This takes 2-5 seconds per balance. Polling the decrypted balance every few seconds would overwhelm the relayer and create a poor user experience.
 

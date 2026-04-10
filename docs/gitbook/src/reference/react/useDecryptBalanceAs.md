@@ -64,7 +64,7 @@ const { mutateAsync: decryptAs } = useDecryptBalanceAs("0xToken");
 
 {% include ".gitbook/includes/mutation-options.md" %}
 
-## Mutation Variables
+## Mutation variables
 
 Passed to `mutate` / `mutateAsync` at call time.
 
@@ -91,7 +91,7 @@ await decryptAs({
 });
 ```
 
-## Return Type
+## Return type
 
 `data` resolves to `bigint` — the decrypted token balance.
 

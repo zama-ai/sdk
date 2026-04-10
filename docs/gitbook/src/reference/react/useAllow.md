@@ -65,7 +65,7 @@ function AuthOnConnect({ contracts }: { contracts: `0x${string}`[] }) {
 
 `useAllow` takes no configuration parameters.
 
-## Mutation Variables
+## Mutation variables
 
 ### addresses
 
@@ -78,7 +78,7 @@ Array of contract addresses to authorize decryption for in a single wallet signa
 await allow([confidentialTokenAddress, auctionAddress, governanceAddress]);
 ```
 
-## Return Type
+## Return type
 
 Returns a standard TanStack Query `UseMutationResult<void, Error, Address[]>`.
 

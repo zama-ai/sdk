@@ -74,7 +74,7 @@ Address of the fee manager contract to query.
 const { data: fee } = useBatchTransferFee("0xFeeManager");
 ```
 
-## Return Type
+## Return type
 
 Standard `UseQueryResult` where `data` is `bigint` — the batch transfer fee amount.
 

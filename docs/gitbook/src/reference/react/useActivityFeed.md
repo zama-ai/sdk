@@ -129,7 +129,7 @@ useActivityFeed({
 });
 ```
 
-## Return Type
+## Return type
 
 The `data` field resolves to an array of activity items:
 

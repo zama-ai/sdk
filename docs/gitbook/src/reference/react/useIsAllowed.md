@@ -48,7 +48,7 @@ function AuthGuard({ tokenAddress }: { tokenAddress: `0x${string}` }) {
 const { data: allowed } = useIsAllowed();
 ```
 
-## Return Type
+## Return type
 
 ```ts
 // Returns UseQueryResult<boolean, Error>

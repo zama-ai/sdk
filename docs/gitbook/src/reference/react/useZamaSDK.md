@@ -71,7 +71,7 @@ const sdk = new ZamaSDK({
 
 None. The SDK instance is read from the nearest `ZamaProvider` context.
 
-## Return Type
+## Return type
 
 `ZamaSDK`
 

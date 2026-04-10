@@ -104,7 +104,7 @@ const { mutateAsync: resumeUnshield } = useResumeUnshield({
 
 {% include ".gitbook/includes/mutation-options.md" %}
 
-## Mutation Variables
+## Mutation variables
 
 Passed to `mutate` / `mutateAsync` at call time.
 
@@ -118,7 +118,7 @@ Transaction hash of the original unwrap transaction. Retrieved via `loadPendingU
 await resumeUnshield({ unwrapTxHash: "0xabc..." });
 ```
 
-## Recovery Pattern
+## Recovery pattern
 
 The full recovery flow uses three utilities together:
 
@@ -128,7 +128,7 @@ The full recovery flow uses three utilities together:
 
 Run this check on mount to handle any session that was interrupted.
 
-## Return Type
+## Return type
 
 ```ts
 import { type UseResumeUnshieldReturnType } from "@zama-fhe/react-sdk";

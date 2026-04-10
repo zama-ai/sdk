@@ -65,7 +65,7 @@ const { mutateAsync: delegate } = useDelegateDecryption({
 
 {% include ".gitbook/includes/mutation-options.md" %}
 
-## Mutation Variables
+## Mutation variables
 
 Passed to `mutate` / `mutateAsync` at call time.
 
@@ -88,7 +88,7 @@ await delegate({
 });
 ```
 
-## Return Type
+## Return type
 
 `data` resolves to `{ txHash: Hex, receipt: TransactionReceipt }`.
 

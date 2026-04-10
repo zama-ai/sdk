@@ -68,7 +68,7 @@ const { mutateAsync: finalize } = useFinalizeUnwrap({
 });
 ```
 
-## Mutation Variables
+## Mutation variables
 
 ### unwrapTxHash
 
@@ -80,7 +80,7 @@ The transaction hash returned by [`useUnwrap`](/reference/react/useUnwrap) or [`
 await finalize({ unwrapTxHash: "0xabc..." });
 ```
 
-## Return Type
+## Return type
 
 ```ts
 import { type UseFinalizeUnwrapReturnType } from "@zama-fhe/react-sdk";

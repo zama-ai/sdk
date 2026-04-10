@@ -65,7 +65,7 @@ const { mutateAsync: unwrap } = useUnwrap({
 });
 ```
 
-## Mutation Variables
+## Mutation variables
 
 ### amount
 
@@ -77,7 +77,7 @@ The amount of tokens to unwrap.
 await unwrap({ amount: 1000n });
 ```
 
-## Return Type
+## Return type
 
 ```ts
 import { type UseUnwrapReturnType } from "@zama-fhe/react-sdk";

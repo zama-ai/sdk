@@ -101,7 +101,7 @@ const { mutateAsync: transfer } = useConfidentialTransfer({
 
 {% include ".gitbook/includes/mutation-options.md" %}
 
-## Mutation Variables
+## Mutation variables
 
 The function passed to `mutate` / `mutateAsync` accepts:
 
@@ -144,7 +144,7 @@ await transfer({
 - `InsufficientConfidentialBalanceError` -- if the confidential balance is less than `amount` (exposes `requested`, `available`, `token`)
 - `BalanceCheckUnavailableError` -- if balance validation is required but decryption is not possible (no cached credentials). Call `allow()` first or use `skipBalanceCheck: true`
 
-## Return Type
+## Return type
 
 ```ts
 import { type UseConfidentialTransferReturnType } from "@zama-fhe/react-sdk";

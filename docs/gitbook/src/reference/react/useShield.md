@@ -90,7 +90,7 @@ const { mutateAsync: shield } = useShield({
 
 {% include ".gitbook/includes/mutation-options.md" %}
 
-## Mutation Variables
+## Mutation variables
 
 Passed to `mutate` / `mutateAsync` at call time.
 
@@ -139,7 +139,7 @@ await shield({
 
 - `InsufficientERC20BalanceError` -- if the ERC-20 balance is less than `amount` (exposes `requested`, `available`, `token`)
 
-## Return Type
+## Return type
 
 ```ts
 import { type ShieldParams } from "@zama-fhe/react-sdk";

@@ -54,7 +54,7 @@ function EncryptValue() {
 
 `useEncrypt` takes no constructor parameters.
 
-## Mutation Variables
+## Mutation variables
 
 Passed to `mutate` / `mutateAsync` at call time.
 
@@ -80,7 +80,7 @@ Address of the contract that will consume the encrypted value.
 
 Address of the user performing the encryption.
 
-## Return Type
+## Return type
 
 ```ts
 import { type EncryptResult } from "@zama-fhe/sdk";

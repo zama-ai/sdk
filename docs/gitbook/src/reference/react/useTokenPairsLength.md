@@ -39,7 +39,7 @@ function PairCount() {
 
 This hook takes no parameters. The registry address is resolved automatically from the connected chain.
 
-## Return Type
+## Return type
 
 The `data` field resolves to `bigint` -- the total number of registered pairs.
 

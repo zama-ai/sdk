@@ -93,7 +93,7 @@ const { mutateAsync: unshieldAll } = useUnshieldAll({
 
 {% include ".gitbook/includes/mutation-options.md" %}
 
-## Mutation Variables
+## Mutation variables
 
 Passed to `mutate` / `mutateAsync` at call time. All variables are optional.
 
@@ -115,7 +115,7 @@ await unshieldAll({
 });
 ```
 
-## Return Type
+## Return type
 
 ```ts
 import { type UseUnshieldAllReturnType } from "@zama-fhe/react-sdk";

@@ -53,7 +53,7 @@ The confidential token address to look up. Pass `undefined` to disable the query
 useTokenAddress({ confidentialTokenAddress: "0xcUSDC" });
 ```
 
-## Return Type
+## Return type
 
 The `data` field resolves to `readonly [boolean, Address]`:
 

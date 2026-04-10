@@ -54,7 +54,7 @@ const { mutateAsync: approve } = useConfidentialApprove({
 });
 ```
 
-## Mutation Variables
+## Mutation variables
 
 ### spender
 
@@ -85,7 +85,7 @@ await approve({
 });
 ```
 
-## Return Type
+## Return type
 
 The mutation resolves with a transaction hash (`Hex`).
 

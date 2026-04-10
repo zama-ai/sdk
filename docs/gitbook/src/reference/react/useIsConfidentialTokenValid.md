@@ -56,7 +56,7 @@ The confidential token address to validate. Pass `undefined` to disable the quer
 useIsConfidentialTokenValid({ confidentialTokenAddress: "0xcUSDC" });
 ```
 
-## Return Type
+## Return type
 
 The `data` field resolves to `boolean`:
 

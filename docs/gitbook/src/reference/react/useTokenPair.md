@@ -53,7 +53,7 @@ Zero-based pair index. Pass `undefined` to disable the query.
 useTokenPair({ index: 0n });
 ```
 
-## Return Type
+## Return type
 
 The `data` field resolves to `TokenWrapperPair`:
 

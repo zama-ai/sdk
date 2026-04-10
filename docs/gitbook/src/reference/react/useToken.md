@@ -105,7 +105,7 @@ const token = useToken({
 });
 ```
 
-## Return Type
+## Return type
 
 `Token`
 

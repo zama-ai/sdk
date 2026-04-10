@@ -76,7 +76,7 @@ const { data: allowance } = useUnderlyingAllowance({
 });
 ```
 
-## Return Type
+## Return type
 
 `data` is `bigint` — the current ERC-20 allowance in the token's smallest unit.
 

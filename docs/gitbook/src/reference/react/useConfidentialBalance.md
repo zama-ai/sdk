@@ -133,7 +133,7 @@ const { data } = useConfidentialBalance({
 
 {% include ".gitbook/includes/query-options.md" %}
 
-## Return Type
+## Return type
 
 ```ts
 import { type UseConfidentialBalanceOptions } from "@zama-fhe/react-sdk";

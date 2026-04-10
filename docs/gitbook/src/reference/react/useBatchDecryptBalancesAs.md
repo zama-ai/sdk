@@ -81,7 +81,7 @@ const { mutateAsync: batchDecryptAs } = useBatchDecryptBalancesAs(tokens);
 
 {% include ".gitbook/includes/mutation-options.md" %}
 
-## Mutation Variables
+## Mutation variables
 
 Passed to `mutate` / `mutateAsync` at call time.
 
@@ -130,7 +130,7 @@ await batchDecryptAs({
 });
 ```
 
-## Return Type
+## Return type
 
 `data` resolves to `Map<Address, bigint>` — a map from each token address to its decrypted balance.
 
