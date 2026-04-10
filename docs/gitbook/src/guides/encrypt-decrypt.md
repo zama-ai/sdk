@@ -25,8 +25,7 @@ function ConfidentialRoundTrip() {
   const encrypt = useEncrypt();
   const [handles, setHandles] = useState<{ handle: string; contractAddress: `0x${string}` }[]>([]);
 
-  // Fires when handles are non-empty. If no credentials are cached,
-  // the SDK prompts the wallet for a signature.
+  // Fires when handles are non-empty.
   const { data: decrypted } = useUserDecrypt({ handles });
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -297,10 +296,6 @@ import { useAllow, useIsAllowed } from "@zama-fhe/react-sdk";
  * every useUserDecrypt in the app works without prompts.
  *
  * Pass all contract addresses you want to decrypt upfront.
- * When new contracts appear (e.g. from a registry), include
- * them in the list — useIsAllowed returns false for any
- * uncovered address, prompting a single re-authorization
- * that extends the existing credential.
  */
 function UserDecryptionGate({
   contracts,

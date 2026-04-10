@@ -848,8 +848,8 @@ export class ReadonlyToken {
       if (value === undefined) {
         throw new DecryptionFailedError(`Decryption returned no value for handle ${handle}`);
       }
-      await this.cache.set(signerAddress, this.address, handle, value);
       assertBigint(value, "decryptBalance: result[handle]");
+      await this.cache.set(signerAddress, this.address, handle, value);
       return value;
     } catch (error) {
       this.emit({

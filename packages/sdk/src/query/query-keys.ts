@@ -179,7 +179,7 @@ export const zamaQueryKeys = {
         "zama.isAllowed",
         {
           account: getAddress(account),
-          contractAddresses: normalizeAddresses(contractAddresses),
+          contractAddresses: normalizeAddresses(contractAddresses).toSorted(),
         },
       ] as const,
   },

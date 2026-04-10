@@ -15,7 +15,12 @@ export function useUserDecrypt(
   options?: Omit<UseQueryOptions<DecryptResult>, "queryKey" | "queryFn">,
 ) {
   const sdk = useZamaSDK();
-  return useQuery<DecryptResult>({ ...userDecryptQueryOptions(sdk, config), ...options });
+  const queryOpts = userDecryptQueryOptions(sdk, config);
+  return useQuery<DecryptResult>({
+    ...queryOpts,
+    ...options,
+    enabled: queryOpts.enabled && (options?.enabled ?? true),
+  });
 }
 
 /** Return type of {@link useUserDecrypt}. */

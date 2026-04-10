@@ -332,7 +332,7 @@ export class ZamaSDK {
     }
 
     // Get unique contract addresses and acquire credentials
-    const contractAddresses = [...new Set(uncached.map((h) => h.contractAddress))];
+    const contractAddresses = [...new Set(uncached.map((h) => getAddress(h.contractAddress)))];
     const creds = await this.credentials.allow(...contractAddresses);
     onCredentialsReady();
 
