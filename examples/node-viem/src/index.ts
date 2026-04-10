@@ -71,7 +71,7 @@ async function main() {
   // RelayerNode uses Node.js worker_threads for FHE operations — pure backend,
   // no browser dependencies. A single instance can be shared across SDK objects.
   const relayer = new RelayerNode({
-    getChainId: () => signerA.getChainId(),
+    getChainId: async () => sepolia.id,
     transports: {
       [sepolia.id]: {
         network: SEPOLIA_RPC_URL,
@@ -84,15 +84,10 @@ async function main() {
   // MemoryStorage is sufficient here; in production use a persistent store
   // (e.g. Redis via a custom GenericStorage) to cache FHE credentials across
   // process restarts.
-  const sdkA = new ZamaSDK({ relayer, signer: signerA, storage: new MemoryStorage() });
-  const sdkB = new ZamaSDK({ relayer, signer: signerB, storage: new MemoryStorage() });
-
-  // Ensure cleanup runs in reverse order: sdkB.dispose() then sdkA.terminate().
-  // terminate() calls dispose() internally, so sdkA handles both its own
-  // listener teardown and the shared relayer shutdown.
-  using cleanup = new DisposableStack();
-  cleanup.defer(() => sdkA.terminate());
-  cleanup.defer(() => sdkB.dispose());
+  // `using` ensures terminate() is called when the scope exits (even on error).
+  // Both SDKs share the same relayer; relayer.terminate() is idempotent.
+  using sdkA = new ZamaSDK({ relayer, signer: signerA, storage: new MemoryStorage() });
+  using sdkB = new ZamaSDK({ relayer, signer: signerB, storage: new MemoryStorage() });
 
   // Resolve the confidential wrapper address via the on-chain registry.
   // getConfidentialToken() maps an ERC-20 address → its ERC-7984 wrapper.

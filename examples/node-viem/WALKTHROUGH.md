@@ -345,18 +345,14 @@ hardcoded wrapper address is required. If the USDT mock is redeployed, update
 ## Cleanup
 
 ```ts
-// Register cleanup via Explicit Resource Management (using).
-// DisposableStack runs deferred callbacks in LIFO order when the scope exits.
-using cleanup = new DisposableStack();
-cleanup.defer(() => sdkA.terminate()); // terminates the shared RelayerNode (kills worker_threads)
-cleanup.defer(() => sdkB.dispose());   // unsubscribes signer listeners, does NOT kill the relayer
+using sdkA = new ZamaSDK({ relayer, signer: signerA, storage: new MemoryStorage() });
+using sdkB = new ZamaSDK({ relayer, signer: signerB, storage: new MemoryStorage() });
 ```
 
-`dispose()` is for SDK instances that share a relayer with another instance still in
-use. `terminate()` shuts down the relayer entirely. Always call `terminate()` on the
-last SDK instance to avoid dangling worker threads. Using `DisposableStack` with
-`using` guarantees cleanup runs even if an error is thrown, without manual
-`try`/`finally` blocks.
+`ZamaSDK` implements `Symbol.dispose`, which calls `terminate()` — unsubscribing
+signer events and shutting down the relayer. `using` guarantees cleanup runs when
+the scope exits, even if an error is thrown. Both SDKs share the same relayer;
+`relayer.terminate()` is idempotent, so the second call is a safe no-op.
 
 ---
 
