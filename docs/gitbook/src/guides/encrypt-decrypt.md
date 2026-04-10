@@ -334,11 +334,7 @@ import { useConfidentialBalance } from "@zama-fhe/react-sdk";
  * Rendered inside <UserDecryptionGate> — credentials are already cached,
  * so this fires immediately with no wallet interaction.
  */
-function ConfidentialBalance({
-  contractAddress,
-}: {
-  contractAddress: `0x${string}`;
-}) {
+function ConfidentialBalance({ contractAddress }: { contractAddress: `0x${string}` }) {
   const { data: balance, isPending } = useConfidentialBalance({
     tokenAddress: contractAddress,
   });
