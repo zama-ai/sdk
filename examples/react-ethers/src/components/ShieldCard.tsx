@@ -94,6 +94,7 @@ export function ShieldCard({
             );
           } catch (err) {
             if (isError(err, "ACTION_REJECTED")) throw err; // user said no — stop here
+            if (!isError(err, "CALL_EXCEPTION")) throw err; // re-throw non-revert errors
             needsReset = true; // estimateGas reverted → USDT-style token
           }
           if (overwriteTxHash) {

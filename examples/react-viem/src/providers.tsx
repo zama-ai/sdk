@@ -148,7 +148,8 @@ export function Providers({ children }: { children: ReactNode }) {
           try {
             const hex = (await ethereum.request({ method: "eth_chainId" })) as string;
             return parseInt(hex, 16);
-          } catch {
+          } catch (err) {
+            console.error("[RelayerWeb] getChainId failed, falling back to Sepolia:", err);
             return SepoliaConfig.chainId;
           }
         },

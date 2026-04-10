@@ -35,7 +35,7 @@ DELEGATE_PRIVATE_KEY=0x<your_private_key_B>
 SEPOLIA_RPC_URL=https://sepolia.infura.io/v3/YOUR_KEY
 
 # ERC-20 token address — pre-set to the USDT mock, change if using a different token
-# TOKEN_ADDRESS=0xa7dA08FafDC9097Cc0E7D4f113A61e31d7e8e9b0
+TOKEN_ADDRESS=0xa7dA08FafDC9097Cc0E7D4f113A61e31d7e8e9b0
 
 # Optional — Sepolia testnet does not require authentication
 # RELAYER_API_KEY=your-api-key
