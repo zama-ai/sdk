@@ -98,7 +98,7 @@ library-agnostic way.
 
 ```ts
 const relayer = new RelayerNode({
-  getChainId: () => signerA.getChainId(),
+  getChainId: async () => SepoliaConfig.chainId,
   transports: {
     [SepoliaConfig.chainId]: {
       network: SEPOLIA_RPC_URL, // same RPC as the ethers provider — consistent view
@@ -186,10 +186,8 @@ session expires or `sdk.revoke()` is called).
 
 ```ts
 await tokenA.shield(SHIELD_AMOUNT, {
-  callbacks: {
-    onApprovalSubmitted: (tx) => console.log("Approval:", tx),
-    onShieldSubmitted: (tx) => console.log("Shield:", tx),
-  },
+  onApprovalSubmitted: (tx) => console.log("Approval:", tx),
+  onShieldSubmitted: (tx) => console.log("Shield:", tx),
 });
 ```
 
@@ -198,7 +196,7 @@ await tokenA.shield(SHIELD_AMOUNT, {
 1. `ERC20.approve(wrapper, amount)` — if the current allowance is insufficient.
 2. `ERC7984Wrapper.wrap(amount)` — moves ERC-20 tokens into the confidential pool.
 
-The `callbacks` option lets you observe each step. If approval is already sufficient,
+The callbacks are flat properties on the options object. If approval is already sufficient,
 only the wrap transaction is submitted.
 
 ### 3c — `confidentialTransfer`
@@ -211,7 +209,7 @@ await tokenA.confidentialTransfer(walletB.address, TRANSFER_AMOUNT, {
 ```
 
 The amount is encrypted client-side (via `RelayerNode`) before the transaction is built.
-Only the confidential token contract (via its ACL) can decrypt the amount on-chain.
+Only the recipient and authorized delegates can decrypt the transferred amount.
 From an observer's point of view, the transferred value is opaque.
 
 ### 3d — `unshield` (cToken → ERC-20)
@@ -325,8 +323,8 @@ hardcoded wrapper address is required. If the USDT mock is redeployed, update
   Redis or another durable store. See the SDK type definition:
   ```ts
   interface GenericStorage {
-    get(key: string): Promise<string | null>;
-    set(key: string, value: string): Promise<void>;
+    get<T = unknown>(key: string): Promise<T | null>;
+    set<T = unknown>(key: string, value: T): Promise<void>;
     delete(key: string): Promise<void>;
   }
   ```
@@ -336,15 +334,14 @@ hardcoded wrapper address is required. If the USDT mock is redeployed, update
 ## Cleanup
 
 ```ts
-} finally {
-  sdkB.dispose();   // unsubscribes signer listeners, does NOT kill the relayer
-  sdkA.terminate(); // terminates the shared RelayerNode (kills worker_threads)
-}
+using sdkA = new ZamaSDK({ relayer, signer: signerA, storage: new MemoryStorage() });
+using sdkB = new ZamaSDK({ relayer, signer: signerB, storage: new MemoryStorage() });
 ```
 
-`dispose()` is for SDK instances that share a relayer with another instance still in
-use. `terminate()` shuts down the relayer entirely. Always call `terminate()` on the
-last SDK instance to avoid dangling worker threads.
+`ZamaSDK` implements `Symbol.dispose`, which calls `terminate()` — unsubscribing
+signer events and shutting down the relayer. `using` guarantees cleanup runs when
+the scope exits, even if an error is thrown. Both SDKs share the same relayer;
+`relayer.terminate()` is idempotent, so the second call is a safe no-op.
 
 ---
 
