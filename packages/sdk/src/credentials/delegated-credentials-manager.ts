@@ -48,13 +48,13 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
   #cachedStoreKey: string | null = null;
   #cachedStoreKeyIdentity: string | null = null;
   /**
-   * FHE keypairs cached per delegator store key, persisted across `allow()` calls.
-   * Keyed by the result of {@link #storeKey} (scoped to delegate + delegator + chain),
-   * so each delegator maintains its own isolated keypair while sharing none with others.
-   * Cleared by {@link clear}, {@link revoke}, and any operation that calls
-   * {@link clearCaches}.
+   * FHE keypairs cached per delegator store key. Reused for all batches within a
+   * burst but invalidated once `keypairTTL` seconds have elapsed since generation,
+   * preventing a compromised keypair from being reused beyond its rotation window.
+   * Each delegator has an isolated entry. Also cleared by {@link clear},
+   * {@link revoke}, and {@link clearCaches}.
    */
-  #cachedKeypairs = new Map<string, { publicKey: Hex; privateKey: Hex }>();
+  #cachedKeypairs = new Map<string, { publicKey: Hex; privateKey: Hex; createdAt: number }>();
 
   /** Derive the deterministic storage key for a (delegate, delegator, chain) triple. */
   static async computeStoreKey(
@@ -145,9 +145,11 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
       key,
       contractAddresses,
       createFn: async () => {
+        const now = Math.floor(Date.now() / 1000);
         let keypair = this.#cachedKeypairs.get(storeKey);
-        if (!keypair) {
-          keypair = await this.#relayer.generateKeypair();
+        if (!keypair || now - keypair.createdAt >= this.keypairTTL) {
+          const kp = await this.#relayer.generateKeypair();
+          keypair = { ...kp, createdAt: now };
           this.#cachedKeypairs.set(storeKey, keypair);
         }
         const delegateAddress = await this.signer.getAddress();

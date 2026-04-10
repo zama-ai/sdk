@@ -52,13 +52,13 @@ export class CredentialsManager extends BaseCredentialsManager<
   #cachedStoreKey: string | null = null;
   #cachedStoreKeyIdentity: string | null = null;
   /**
-   * FHE keypair cached across `allow()` calls for the lifetime of this manager
-   * instance. Generated on the first batch creation and reused for all subsequent
-   * new batches, so a single public key covers the entire credential set.
-   * Cleared by {@link clear}, {@link revoke}, and any operation that calls
-   * {@link clearCaches} (e.g. credential corruption recovery).
+   * FHE keypair cached across `allow()` calls. Reused for all batches created
+   * within a single burst so they share a single public key, but invalidated
+   * once `keypairTTL` seconds have elapsed since generation to prevent a
+   * compromised keypair from being reused beyond its intended rotation window.
+   * Also cleared by {@link clear}, {@link revoke}, and {@link clearCaches}.
    */
-  #cachedKeypair: { publicKey: Hex; privateKey: Hex } | null = null;
+  #cachedKeypair: { publicKey: Hex; privateKey: Hex; createdAt: number } | null = null;
 
   /** Derive the deterministic storage key for a given wallet address and chain. */
   static async computeStoreKey(address: Address, chainId: number): Promise<string> {
@@ -168,8 +168,10 @@ export class CredentialsManager extends BaseCredentialsManager<
       key,
       contractAddresses,
       createFn: async () => {
-        if (!this.#cachedKeypair) {
-          this.#cachedKeypair = await this.#relayer.generateKeypair();
+        const now = Math.floor(Date.now() / 1000);
+        if (!this.#cachedKeypair || now - this.#cachedKeypair.createdAt >= this.keypairTTL) {
+          const kp = await this.#relayer.generateKeypair();
+          this.#cachedKeypair = { ...kp, createdAt: now };
         }
         const keypair = this.#cachedKeypair;
         const startTimestamp = Math.floor(Date.now() / 1000);
