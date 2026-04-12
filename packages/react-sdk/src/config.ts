@@ -299,7 +299,9 @@ function createDispatchRelayer(
     getPublicParams: (...args) => current().then((r) => r.getPublicParams(...args)),
     getAclAddress: () => current().then((r) => r.getAclAddress()),
     terminate: () => {
-      for (const r of new Set(allRelayers.values())) {r.terminate();}
+      for (const r of new Set(allRelayers.values())) {
+        r.terminate();
+      }
     },
   };
 }
@@ -374,16 +376,18 @@ export function relayer(
  *   wagmiConfig,
  *   transports: {
  *     [mainnet.id]: relayer("/api/relayer/1"),
- *     [hoodi.id]: cleartext({
- *       network: "https://rpc.hoodi.ethpandaops.io",
+ *     [hoodi.id]: cleartext("https://rpc.hoodi.ethpandaops.io", {
  *       executorAddress: "0x...",
  *     }),
  *   },
  * });
  * ```
  */
-export function cleartext(config: Omit<CleartextTransport, "__mode">): CleartextTransport {
-  return { __mode: "cleartext", ...config };
+export function cleartext(
+  network: CleartextConfig["network"],
+  config: Omit<CleartextTransport, "__mode" | "network">,
+): CleartextTransport {
+  return { __mode: "cleartext", network, ...config };
 }
 
 /**
