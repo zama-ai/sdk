@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { createZamaConfig, relayer } from "../config";
+import { createZamaConfig, fhevm } from "../config";
 import { createMockSigner, createMockStorage } from "../../../sdk/src/test-fixtures";
 import { RelayerWeb, SepoliaConfig } from "@zama-fhe/sdk";
 import { WagmiSigner } from "../wagmi/wagmi-signer";
@@ -202,14 +202,14 @@ describe("createZamaConfig", () => {
     });
   });
 
-  describe("relayer() helper", () => {
+  describe("fhevm() helper", () => {
     it("returns relayerUrl in a partial config", () => {
-      const result = relayer("/api/relayer/11155111");
+      const result = fhevm("/api/relayer/11155111");
       expect(result).toEqual({ relayerUrl: "/api/relayer/11155111" });
     });
 
     it("merges overrides on top of relayerUrl", () => {
-      const result = relayer("/api/relayer/11155111", {
+      const result = fhevm("/api/relayer/11155111", {
         network: "https://custom-rpc.com",
       });
       expect(result).toEqual({
@@ -219,7 +219,7 @@ describe("createZamaConfig", () => {
     });
 
     it("override can replace relayerUrl", () => {
-      const result = relayer("/api/relayer/11155111", {
+      const result = fhevm("/api/relayer/11155111", {
         relayerUrl: "https://override.com",
       });
       expect(result).toEqual({ relayerUrl: "https://override.com" });

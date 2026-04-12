@@ -11,7 +11,7 @@ import {
   indexedDBStorage,
   savePendingUnshield,
   createZamaConfig,
-  relayer,
+  fhevm,
 } from "@zama-fhe/react-sdk";
 import { sepolia as fheSepolia } from "@zama-fhe/sdk/chains";
 import { SEPOLIA_RPC_URL } from "@/lib/config";
@@ -39,7 +39,7 @@ const zamaConfig = createZamaConfig({
   chains: [fheSepolia],
   wagmiConfig,
   transports: {
-    [fheSepolia.id]: relayer(`${window.location.origin}/api/relayer`),
+    [fheSepolia.id]: fhevm(`${window.location.origin}/api/relayer`),
   },
   onEvent: (event) => {
     if (event.type === ZamaSDKEvents.UnshieldPhase1Submitted) {

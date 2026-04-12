@@ -315,7 +315,7 @@ function isCleartextTransport(t: TransportConfig): t is CleartextTransport {
  *   chains: [sepolia],
  *   wagmiConfig,
  *   transports: {
- *     [sepolia.id]: relayer("/api/relayer/11155111"),
+ *     [sepolia.id]: fhevm("/api/relayer/11155111"),
  *   },
  * });
  * ```
@@ -331,7 +331,7 @@ export interface WebTransportOverrides extends Partial<
 
 export type WebTransport = { relayerUrl: string } & WebTransportOverrides;
 
-export function relayer(relayerUrl: string, overrides?: WebTransportOverrides): WebTransport {
+export function fhevm(relayerUrl: string, overrides?: WebTransportOverrides): WebTransport {
   return { relayerUrl, ...overrides };
 }
 
@@ -346,7 +346,7 @@ export function relayer(relayerUrl: string, overrides?: WebTransportOverrides): 
  *   chains: [mainnet, hoodi],
  *   wagmiConfig,
  *   transports: {
- *     [mainnet.id]: relayer("/api/relayer/1"),
+ *     [mainnet.id]: fhevm("/api/relayer/1"),
  *     [hoodi.id]: cleartext("https://rpc.hoodi.ethpandaops.io", {
  *       executorAddress: "0x...",
  *     }),

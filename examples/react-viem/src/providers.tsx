@@ -8,7 +8,7 @@ import {
   indexedDBStorage,
   savePendingUnshield,
   createZamaConfig,
-  relayer,
+  fhevm,
 } from "@zama-fhe/react-sdk";
 import { sepolia as fheSepolia } from "@zama-fhe/sdk/chains";
 import {
@@ -102,7 +102,7 @@ export function Providers({ children }: { children: ReactNode }) {
       chains: [fheSepolia],
       viem: { publicClient, walletClient, ethereum: ethereum ?? undefined },
       transports: {
-        [fheSepolia.id]: relayer(`${window.location.origin}/api/relayer`, {
+        [fheSepolia.id]: fhevm(`${window.location.origin}/api/relayer`, {
           network: SEPOLIA_RPC_URL,
         }),
       },
