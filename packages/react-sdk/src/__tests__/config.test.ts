@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { createZamaConfig, fhevm } from "../config";
+import { createZamaConfig, web } from "../config";
 import { createMockSigner, createMockStorage } from "../../../sdk/src/test-fixtures";
 import { SepoliaConfig } from "@zama-fhe/sdk";
 import { WagmiSigner } from "../wagmi/wagmi-signer";
@@ -173,27 +173,27 @@ describe("createZamaConfig", () => {
     });
   });
 
-  describe("fhevm() helper", () => {
+  describe("web() helper", () => {
     it("returns tagged config with relayerUrl", () => {
-      const result = fhevm({ relayerUrl: "/api/relayer/11155111" });
-      expect(result).toEqual({ __mode: "fhevm", relayerUrl: "/api/relayer/11155111" });
+      const result = web({ relayerUrl: "/api/relayer/11155111" });
+      expect(result).toEqual({ __mode: "web", relayerUrl: "/api/relayer/11155111" });
     });
 
     it("merges all config fields", () => {
-      const result = fhevm({
+      const result = web({
         relayerUrl: "/api/relayer/11155111",
         network: "https://custom-rpc.com",
       });
       expect(result).toEqual({
-        __mode: "fhevm",
+        __mode: "web",
         relayerUrl: "/api/relayer/11155111",
         network: "https://custom-rpc.com",
       });
     });
 
     it("returns tagged empty config when called with no args", () => {
-      const result = fhevm();
-      expect(result).toEqual({ __mode: "fhevm" });
+      const result = web();
+      expect(result).toEqual({ __mode: "web" });
     });
   });
 

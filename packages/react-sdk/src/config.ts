@@ -17,7 +17,8 @@ import { WagmiSigner } from "./wagmi/wagmi-signer";
 
 // Re-export base config types and helpers
 export {
-  fhevm,
+  web,
+  node,
   cleartext,
   type ZamaConfig,
   type ZamaConfigBase,
@@ -26,8 +27,9 @@ export {
   type ZamaConfigCustomSigner,
   type ZamaConfigCustomRelayer,
   type TransportConfig,
-  type FhevmTransportConfig,
-  type CleartextTransport,
+  type WebTransportConfig,
+  type NodeTransportConfig,
+  type CleartextTransportConfig,
 } from "@zama-fhe/sdk";
 
 // ── Wagmi-specific config variant ────────────────────────────────────────────
@@ -67,7 +69,7 @@ export type CreateZamaConfigParams =
  * const config = createZamaConfig({
  *   chains: [sepolia],
  *   wagmiConfig,
- *   transports: { [sepolia.id]: fhevm({ relayerUrl: "/api/relayer/11155111" }) },
+ *   transports: { [sepolia.id]: web({ relayerUrl: "/api/relayer/11155111" }) },
  * });
  * ```
  */

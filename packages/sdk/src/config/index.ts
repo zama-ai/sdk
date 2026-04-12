@@ -1,5 +1,10 @@
-export { fhevm, cleartext } from "./transports";
-export type { FhevmTransportConfig, CleartextTransport, TransportConfig } from "./transports";
+export { web, node, cleartext } from "./transports";
+export type {
+  WebTransportConfig,
+  NodeTransportConfig,
+  CleartextTransportConfig,
+  TransportConfig,
+} from "./transports";
 
 export type {
   ZamaConfig,
@@ -27,7 +32,7 @@ import { resolveStorage, resolveSigner, resolveChainTransports, buildRelayer } f
  * const config = createZamaConfig({
  *   chains: [sepolia],
  *   signer,
- *   transports: { [sepolia.id]: fhevm({ relayerUrl: "https://relayer.testnet.zama.org/v2" }) },
+ *   transports: { [sepolia.id]: web({ relayerUrl: "https://relayer.testnet.zama.org/v2" }) },
  * });
  * const sdk = new ZamaSDK(config);
  * ```

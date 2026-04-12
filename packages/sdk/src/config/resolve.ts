@@ -1,10 +1,10 @@
 import type { Address } from "viem";
 import type { GenericSigner, GenericStorage } from "../types";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
-import type { RelayerWebSecurityConfig } from "../relayer/relayer-sdk.types";
 import type { ExtendedFhevmInstanceConfig } from "../relayer/relayer-utils";
 import type { CleartextConfig } from "../relayer/cleartext/types";
 import { RelayerWeb } from "../relayer/relayer-web";
+import { RelayerNode } from "../relayer/relayer-node";
 import { RelayerCleartext } from "../relayer/cleartext/relayer-cleartext";
 import { CompositeRelayer } from "../relayer/composite-relayer";
 import { MemoryStorage } from "../storage/memory-storage";
@@ -12,8 +12,8 @@ import { IndexedDBStorage } from "../storage/indexeddb-storage";
 import { ConfigurationError } from "../errors";
 import { ViemSigner } from "../viem";
 import { EthersSigner } from "../ethers";
-import type { TransportConfig } from "./transports";
-import { isCleartextTransport, isFhevmTransport } from "./transports";
+import type { TransportConfig, WebTransportConfig, NodeTransportConfig } from "./transports";
+import { isWebTransport, isNodeTransport, isCleartextTransport } from "./transports";
 import type { ZamaConfigViem, ZamaConfigEthers, ZamaConfigCustomSigner } from "./types";
 
 // ── Storage defaults ─────────────────────────────────────────────────────────
@@ -81,15 +81,11 @@ export function resolveChainTransports(
       }
       result.set(id, { chain: chainConfig, transport: userTransport });
     } else if (chainConfig) {
-      const base = { __mode: "fhevm" as const, ...chainConfig };
-      if (userTransport && isFhevmTransport(userTransport)) {
-        const { __mode: _, ...overrides } = userTransport;
-        result.set(id, {
-          chain: chainConfig,
-          transport: { ...base, ...overrides },
-        });
+      if (userTransport && (isWebTransport(userTransport) || isNodeTransport(userTransport))) {
+        result.set(id, { chain: chainConfig, transport: userTransport });
       } else {
-        result.set(id, { chain: chainConfig, transport: base });
+        // No transport specified — default to web
+        result.set(id, { chain: chainConfig, transport: { __mode: "web" as const } });
       }
     }
   }
@@ -99,67 +95,107 @@ export function resolveChainTransports(
 
 // ── Relayer building ─────────────────────────────────────────────────────────
 
+function buildCleartextRelayer(
+  chain: ExtendedFhevmInstanceConfig,
+  transport: {
+    network?: CleartextConfig["network"];
+    executorAddress: CleartextConfig["executorAddress"];
+    kmsSignerPrivateKey?: CleartextConfig["kmsSignerPrivateKey"];
+    inputSignerPrivateKey?: CleartextConfig["inputSignerPrivateKey"];
+  },
+): RelayerCleartext {
+  return new RelayerCleartext({
+    chainId: chain.chainId,
+    gatewayChainId: chain.gatewayChainId,
+    aclContractAddress: chain.aclContractAddress as Address,
+    verifyingContractAddressDecryption: chain.verifyingContractAddressDecryption as Address,
+    verifyingContractAddressInputVerification:
+      chain.verifyingContractAddressInputVerification as Address,
+    registryAddress: chain.registryAddress,
+    network: (transport.network ?? chain.network) as CleartextConfig["network"],
+    executorAddress: transport.executorAddress,
+    kmsSignerPrivateKey: transport.kmsSignerPrivateKey,
+    inputSignerPrivateKey: transport.inputSignerPrivateKey,
+  });
+}
+
 export function buildRelayer(
   chainTransports: Map<number, { chain: ExtendedFhevmInstanceConfig; transport: TransportConfig }>,
   resolveChainId: () => Promise<number>,
 ): RelayerSDK {
-  const webTransports: Record<number, Partial<ExtendedFhevmInstanceConfig>> = {};
-  const cleartextRelayers = new Map<number, RelayerCleartext>();
-  let security: RelayerWebSecurityConfig | undefined;
-  let threads: number | undefined;
+  const webChains: Record<number, Partial<ExtendedFhevmInstanceConfig>> = {};
+  const nodeChains: Record<number, Partial<ExtendedFhevmInstanceConfig>> = {};
+  const perChainRelayers = new Map<number, RelayerSDK>();
+
+  let webSecurity: WebTransportConfig["security"];
+  let webThreads: WebTransportConfig["threads"];
+  let nodePoolSize: NodeTransportConfig["poolSize"];
+  let nodeLogger: NodeTransportConfig["logger"];
+  let nodeFheArtifactStorage: NodeTransportConfig["fheArtifactStorage"];
+  let nodeFheArtifactCacheTTL: NodeTransportConfig["fheArtifactCacheTTL"];
 
   for (const [chainId, { chain, transport }] of chainTransports) {
     if (isCleartextTransport(transport)) {
-      cleartextRelayers.set(
-        chainId,
-        new RelayerCleartext({
-          chainId: chain.chainId,
-          gatewayChainId: chain.gatewayChainId,
-          aclContractAddress: chain.aclContractAddress as Address,
-          verifyingContractAddressDecryption: chain.verifyingContractAddressDecryption as Address,
-          verifyingContractAddressInputVerification:
-            chain.verifyingContractAddressInputVerification as Address,
-          registryAddress: chain.registryAddress,
-          network: (transport.network ?? chain.network) as CleartextConfig["network"],
-          executorAddress: transport.executorAddress,
-          kmsSignerPrivateKey: transport.kmsSignerPrivateKey,
-          inputSignerPrivateKey: transport.inputSignerPrivateKey,
-        }),
-      );
-    } else if (isFhevmTransport(transport)) {
-      const { __mode: _, security: s, threads: t, ...fhevmConfig } = transport;
-      if (s) {
-        security = s;
-      }
-      if (t) {
-        threads = t;
-      }
-      webTransports[chainId] = fhevmConfig;
+      perChainRelayers.set(chainId, buildCleartextRelayer(chain, transport));
+    } else if (isNodeTransport(transport)) {
+      const {
+        __mode: _,
+        poolSize,
+        logger,
+        fheArtifactStorage,
+        fheArtifactCacheTTL,
+        ...rest
+      } = transport;
+      if (poolSize) {nodePoolSize = poolSize;}
+      if (logger) {nodeLogger = logger;}
+      if (fheArtifactStorage) {nodeFheArtifactStorage = fheArtifactStorage;}
+      if (fheArtifactCacheTTL) {nodeFheArtifactCacheTTL = fheArtifactCacheTTL;}
+      nodeChains[chainId] = { ...chain, ...rest };
+    } else {
+      // web transport (default)
+      const { __mode: _, security, threads, ...rest } = transport as WebTransportConfig;
+      if (security) {webSecurity = security;}
+      if (threads) {webThreads = threads;}
+      webChains[chainId] = { ...chain, ...rest };
     }
   }
 
-  if (cleartextRelayers.size === 0) {
-    return new RelayerWeb({
+  // Build shared relayers for web and node chains
+  const hasWeb = Object.keys(webChains).length > 0;
+  const hasNode = Object.keys(nodeChains).length > 0;
+
+  if (hasWeb) {
+    const webRelayer = new RelayerWeb({
       getChainId: resolveChainId,
-      transports: webTransports,
-      security,
-      threads,
+      transports: webChains,
+      security: webSecurity,
+      threads: webThreads,
     });
+    for (const id of Object.keys(webChains)) {
+      perChainRelayers.set(Number(id), webRelayer);
+    }
   }
 
-  if (Object.keys(webTransports).length === 0) {
-    return new CompositeRelayer(resolveChainId, cleartextRelayers as Map<number, RelayerSDK>);
+  if (hasNode) {
+    const nodeRelayer = new RelayerNode({
+      getChainId: resolveChainId,
+      transports: nodeChains,
+      poolSize: nodePoolSize,
+      logger: nodeLogger,
+      fheArtifactStorage: nodeFheArtifactStorage,
+      fheArtifactCacheTTL: nodeFheArtifactCacheTTL,
+    });
+    for (const id of Object.keys(nodeChains)) {
+      perChainRelayers.set(Number(id), nodeRelayer);
+    }
   }
 
-  const webRelayer = new RelayerWeb({
-    getChainId: resolveChainId,
-    transports: webTransports,
-    security,
-    threads,
-  });
-  const allRelayers = new Map<number, RelayerSDK>(cleartextRelayers);
-  for (const id of Object.keys(webTransports)) {
-    allRelayers.set(Number(id), webRelayer);
+  // Single relayer — no dispatch needed
+  const uniqueRelayers = [...new Set(perChainRelayers.values())];
+  if (uniqueRelayers.length === 1 && uniqueRelayers[0]) {
+    return uniqueRelayers[0];
   }
-  return new CompositeRelayer(resolveChainId, allRelayers);
+
+  // Mixed — dispatch by chain
+  return new CompositeRelayer(resolveChainId, perChainRelayers);
 }

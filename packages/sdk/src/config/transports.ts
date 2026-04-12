@@ -1,9 +1,13 @@
 import type { RelayerWebSecurityConfig } from "../relayer/relayer-sdk.types";
+import type { GenericLogger } from "../worker/worker.types";
+import type { GenericStorage } from "../types";
 import type { CleartextConfig } from "../relayer/cleartext/types";
 
-/** Tagged transport: routes to RelayerWeb. */
-export interface FhevmTransportConfig {
-  readonly __mode: "fhevm";
+// ── Transport types ──────────────────────────────────────────────────────────
+
+/** Tagged transport: routes to RelayerWeb (browser). */
+export interface WebTransportConfig {
+  readonly __mode: "web";
   relayerUrl?: string;
   /** RelayerWeb security config (CSRF, integrity check). */
   security?: RelayerWebSecurityConfig;
@@ -11,8 +15,22 @@ export interface FhevmTransportConfig {
   threads?: number;
 }
 
-/** Tagged transport: routes to RelayerCleartext. */
-export interface CleartextTransport {
+/** Tagged transport: routes to RelayerNode (Node.js). */
+export interface NodeTransportConfig {
+  readonly __mode: "node";
+  relayerUrl?: string;
+  /** Worker thread pool size. Default: min(CPU cores, 4). */
+  poolSize?: number;
+  /** Logger for worker lifecycle and request timing. */
+  logger?: GenericLogger;
+  /** Persistent storage for caching FHE public key and params. */
+  fheArtifactStorage?: GenericStorage;
+  /** Cache TTL in seconds for FHE public material. Default: 86400 (24h). */
+  fheArtifactCacheTTL?: number;
+}
+
+/** Tagged transport: routes to RelayerCleartext (local dev / testnets). */
+export interface CleartextTransportConfig {
   readonly __mode: "cleartext";
   network?: CleartextConfig["network"];
   executorAddress: CleartextConfig["executorAddress"];
@@ -20,35 +38,51 @@ export interface CleartextTransport {
   inputSignerPrivateKey?: CleartextConfig["inputSignerPrivateKey"];
 }
 
-/** A per-chain transport entry — fhevm or cleartext mode. */
-export type TransportConfig = FhevmTransportConfig | CleartextTransport;
+/** A per-chain transport entry. */
+export type TransportConfig = WebTransportConfig | NodeTransportConfig | CleartextTransportConfig;
 
-export function isCleartextTransport(t: TransportConfig): t is CleartextTransport {
+// ── Type guards ──────────────────────────────────────────────────────────────
+
+export function isWebTransport(t: TransportConfig): t is WebTransportConfig {
+  return t.__mode === "web";
+}
+
+export function isNodeTransport(t: TransportConfig): t is NodeTransportConfig {
+  return t.__mode === "node";
+}
+
+export function isCleartextTransport(t: TransportConfig): t is CleartextTransportConfig {
   return t.__mode === "cleartext";
 }
 
-export function isFhevmTransport(t: TransportConfig): t is FhevmTransportConfig {
-  return t.__mode === "fhevm";
-}
+// ── Transport factories ──────────────────────────────────────────────────────
 
 /**
- * Create a per-chain transport for real FHE operations via RelayerWeb.
+ * Browser transport — routes to RelayerWeb (Web Worker + WASM).
  *
  * @example
  * ```ts
- * // Use chain defaults
- * transports: { [sepolia.id]: fhevm() }
- *
- * // Override relayer URL
- * transports: { [sepolia.id]: fhevm({ relayerUrl: "/api/relayer/11155111" }) }
+ * transports: { [sepolia.id]: web({ relayerUrl: "/api/relayer/11155111" }) }
  * ```
  */
-export function fhevm(config?: Omit<FhevmTransportConfig, "__mode">): FhevmTransportConfig {
-  return { __mode: "fhevm", ...config };
+export function web(config?: Omit<WebTransportConfig, "__mode">): WebTransportConfig {
+  return { __mode: "web", ...config };
 }
 
 /**
- * Create a per-chain transport for cleartext mode (no FHE infrastructure needed).
+ * Node.js transport — routes to RelayerNode (worker thread pool).
+ *
+ * @example
+ * ```ts
+ * transports: { [sepolia.id]: node({ relayerUrl: "https://relayer.testnet.zama.org/v2", poolSize: 4 }) }
+ * ```
+ */
+export function node(config?: Omit<NodeTransportConfig, "__mode">): NodeTransportConfig {
+  return { __mode: "node", ...config };
+}
+
+/**
+ * Cleartext transport — routes to RelayerCleartext (no FHE infrastructure).
  *
  * @example
  * ```ts
@@ -56,7 +90,9 @@ export function fhevm(config?: Omit<FhevmTransportConfig, "__mode">): FhevmTrans
  * ```
  */
 export function cleartext(
-  config: Omit<CleartextTransport, "__mode" | "network"> & { network?: CleartextConfig["network"] },
-): CleartextTransport {
+  config: Omit<CleartextTransportConfig, "__mode" | "network"> & {
+    network?: CleartextConfig["network"];
+  },
+): CleartextTransportConfig {
   return { __mode: "cleartext", network: config.network ?? "", ...config };
 }

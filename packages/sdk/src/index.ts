@@ -9,7 +9,8 @@
 // Config factory
 export {
   createZamaConfig,
-  fhevm,
+  web,
+  node,
   cleartext,
   resolveChainTransports,
   buildRelayer,
@@ -24,8 +25,9 @@ export type {
   ZamaConfigCustomRelayer,
   CreateZamaConfigBaseParams,
   TransportConfig,
-  FhevmTransportConfig,
-  CleartextTransport,
+  WebTransportConfig,
+  NodeTransportConfig,
+  CleartextTransportConfig,
 } from "./config";
 
 // Core SDK

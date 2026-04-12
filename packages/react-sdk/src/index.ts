@@ -11,7 +11,7 @@
 export { ZamaProvider, useZamaSDK, type ZamaProviderProps } from "./provider";
 
 // Config
-export { createZamaConfig, fhevm, cleartext } from "./config";
+export { createZamaConfig, web, node, cleartext } from "./config";
 export type {
   ZamaConfig,
   CreateZamaConfigParams,
