@@ -6,7 +6,9 @@ import {
   type ExtendedFhevmInstanceConfig,
 } from "../relayer/relayer-utils";
 
-export type FheChain = ExtendedFhevmInstanceConfig & { readonly id: number };
+export interface FheChain extends ExtendedFhevmInstanceConfig {
+  readonly id: number;
+}
 
 function withId<T extends ExtendedFhevmInstanceConfig>(config: T): T & { readonly id: number } {
   return { ...config, id: config.chainId };
