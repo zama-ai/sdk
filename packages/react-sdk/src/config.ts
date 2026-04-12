@@ -229,7 +229,7 @@ function buildRelayer(
         }),
       );
     } else {
-      const { security: s, threads: t, ...fhevmConfig } = transport as WebTransport;
+      const { security: s, threads: t, ...fhevmConfig } = transport as FhevmTransport;
       if (s) {
         security = s;
       }
@@ -320,7 +320,7 @@ function isCleartextTransport(t: TransportConfig): t is CleartextTransport {
  * });
  * ```
  */
-export interface WebTransportOverrides extends Partial<
+export interface FhevmTransportOverrides extends Partial<
   Omit<ExtendedFhevmInstanceConfig, "relayerUrl">
 > {
   /** RelayerWeb security config (CSRF, integrity check). */
@@ -329,9 +329,9 @@ export interface WebTransportOverrides extends Partial<
   threads?: number;
 }
 
-export type WebTransport = { relayerUrl: string } & WebTransportOverrides;
+export type FhevmTransport = { relayerUrl: string } & FhevmTransportOverrides;
 
-export function fhevm(relayerUrl: string, overrides?: WebTransportOverrides): WebTransport {
+export function fhevm(relayerUrl: string, overrides?: FhevmTransportOverrides): FhevmTransport {
   return { relayerUrl, ...overrides };
 }
 
