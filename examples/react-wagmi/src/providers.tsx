@@ -36,6 +36,7 @@ const wagmiConfig = createConfig({
 });
 
 const zamaConfig = createZamaConfig({
+  chains: [SepoliaConfig],
   wagmiConfig,
   transports: {
     [SepoliaConfig.chainId]: relayer(`${window.location.origin}/api/relayer`),

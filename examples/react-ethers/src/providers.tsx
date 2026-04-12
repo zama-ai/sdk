@@ -79,6 +79,7 @@ export function Providers({ children }: { children: ReactNode }) {
     };
 
     return createZamaConfig({
+      chains: [SepoliaConfig],
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ethers: { ethereum: provider as any },
       transports: {

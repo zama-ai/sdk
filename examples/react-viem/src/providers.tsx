@@ -99,6 +99,7 @@ export function Providers({ children }: { children: ReactNode }) {
       : undefined;
 
     return createZamaConfig({
+      chains: [SepoliaConfig],
       viem: { publicClient, walletClient, ethereum: ethereum ?? undefined },
       transports: {
         [SepoliaConfig.chainId]: relayer(`${window.location.origin}/api/relayer`, {

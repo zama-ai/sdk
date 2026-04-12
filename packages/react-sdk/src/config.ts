@@ -10,20 +10,16 @@ import type {
   ZamaSDKEventListener,
   ExtendedFhevmInstanceConfig,
 } from "@zama-fhe/sdk";
-import {
-  RelayerWeb,
-  MemoryStorage,
-  IndexedDBStorage,
-  DefaultConfigs,
-  ConfigurationError,
-} from "@zama-fhe/sdk";
+import { RelayerWeb, MemoryStorage, IndexedDBStorage, ConfigurationError } from "@zama-fhe/sdk";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 import { EthersSigner } from "@zama-fhe/sdk/ethers";
 import { WagmiSigner } from "./wagmi/wagmi-signer";
 
 /** Shared options across all adapter paths. */
 interface ZamaConfigBase {
-  /** Per-chain relayer transport overrides. Merged on top of auto-resolved defaults. */
+  /** FHE chain configurations. Defines which chains support FHE operations and their contract addresses. */
+  chains: ExtendedFhevmInstanceConfig[];
+  /** Per-chain relayer transport overrides. Merged on top of chain defaults. */
   transports?: Record<number, Partial<ExtendedFhevmInstanceConfig>>;
   /** Credential storage. Default: IndexedDBStorage("CredentialStore") in browser, MemoryStorage in Node. */
   storage?: GenericStorage;
@@ -91,7 +87,7 @@ export interface ZamaConfigCustomSigner extends ZamaConfigBase {
 /** Pre-built relayer — bring your own RelayerSDK (e.g. RelayerCleartext for local dev). */
 export interface ZamaConfigCustomRelayer extends Omit<
   ZamaConfigBase,
-  "security" | "threads" | "transports"
+  "security" | "threads" | "transports" | "chains"
 > {
   relayer: RelayerSDK;
   signer: GenericSigner;
@@ -150,15 +146,17 @@ type CreateZamaConfigWithTransports =
 function resolveTransports(
   params: CreateZamaConfigWithTransports,
 ): Record<number, Partial<ExtendedFhevmInstanceConfig>> {
+  const chainMap = Object.fromEntries(params.chains.map((c) => [c.chainId, c]));
+
   if ("wagmiConfig" in params && params.wagmiConfig) {
     const resolved: Record<number, Partial<ExtendedFhevmInstanceConfig>> = {};
     for (const chain of params.wagmiConfig.chains) {
-      const defaultConfig = DefaultConfigs[chain.id];
+      const chainConfig = chainMap[chain.id];
       const userOverride = params.transports?.[chain.id];
-      if (!defaultConfig && !userOverride) {
+      if (!chainConfig && !userOverride) {
         throw new ConfigurationError(
-          `Chain ${chain.id} (${chain.name}) has no default FHE config and no transport override was provided. ` +
-            `Either remove this chain from your wagmi config or provide a transport override via the transports option.`,
+          `Chain ${chain.id} (${chain.name}) has no FHE chain config in the chains array and no transport override was provided. ` +
+            `Either add this chain to the chains array or provide a transport override.`,
         );
       }
 
@@ -173,14 +171,20 @@ function resolveTransports(
         ?.value?.url;
 
       resolved[chain.id] = {
-        ...defaultConfig,
+        ...chainConfig,
         ...(inferredNetwork ? { network: inferredNetwork } : {}),
         ...userOverride,
       };
     }
     return resolved;
   }
-  return params.transports;
+
+  // Non-wagmi path: merge chains with transport overrides
+  const resolved: Record<number, Partial<ExtendedFhevmInstanceConfig>> = {};
+  for (const chain of params.chains) {
+    resolved[chain.chainId] = { ...chain, ...params.transports[chain.chainId] };
+  }
+  return resolved;
 }
 
 function resolveStorage(
@@ -219,7 +223,7 @@ function resolveGetChainId(
  */
 export function relayer(
   relayerUrl: string,
-  overrides?: Partial<ExtendedFhevmInstanceConfig>,
+  overrides?: Partial<Omit<ExtendedFhevmInstanceConfig, "relayerUrl">>,
 ): Partial<ExtendedFhevmInstanceConfig> {
   return { relayerUrl, ...overrides };
 }
