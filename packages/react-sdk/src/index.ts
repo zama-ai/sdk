@@ -121,7 +121,8 @@ export { savePendingUnshield, loadPendingUnshield, clearPendingUnshield } from "
 export { ZamaSDKEvents } from "@zama-fhe/sdk";
 
 // Re-export network preset configs
-export { HardhatConfig, MainnetConfig, SepoliaConfig } from "@zama-fhe/sdk";
+export { DefaultConfigs, HardhatConfig, MainnetConfig, SepoliaConfig } from "@zama-fhe/sdk";
+export type { ExtendedFhevmInstanceConfig } from "@zama-fhe/sdk";
 
 // Re-export constants
 export { ERC7984_INTERFACE_ID, ERC7984_WRAPPER_INTERFACE_ID } from "@zama-fhe/sdk";

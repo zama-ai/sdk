@@ -35,7 +35,13 @@ export type {
 export type { GenericLogger } from "./worker/worker.types";
 
 // Network preset configs
-export { HardhatConfig, MainnetConfig, SepoliaConfig } from "./relayer/relayer-utils";
+export {
+  DefaultConfigs,
+  HardhatConfig,
+  MainnetConfig,
+  SepoliaConfig,
+} from "./relayer/relayer-utils";
+export type { ExtendedFhevmInstanceConfig } from "./relayer/relayer-utils";
 
 // ERC-165 interface IDs
 export { ERC7984_INTERFACE_ID, ERC7984_WRAPPER_INTERFACE_ID } from "./contracts";
