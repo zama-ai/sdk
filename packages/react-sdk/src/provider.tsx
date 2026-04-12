@@ -1,12 +1,5 @@
 "use client";
 
-import type {
-  Address,
-  GenericSigner,
-  GenericStorage,
-  RelayerSDK,
-  ZamaSDKEventListener,
-} from "@zama-fhe/sdk";
 import { ZamaSDK } from "@zama-fhe/sdk";
 import { invalidateWalletLifecycleQueries } from "@zama-fhe/sdk/query";
 import { useQueryClient } from "@tanstack/react-query";
@@ -18,44 +11,12 @@ import {
   useMemo,
   useRef,
 } from "react";
+import type { ZamaConfig } from "./config";
 
 /** Props for {@link ZamaProvider}. */
 export interface ZamaProviderProps extends PropsWithChildren {
-  /** FHE relayer backend (RelayerWeb for browser, RelayerNode for server). */
-  relayer: RelayerSDK;
-  /** Wallet signer (`ViemSigner`, `EthersSigner`, or custom {@link GenericSigner}). */
-  signer: GenericSigner;
-  /** Credential storage backend (IndexedDBStorage for browser, MemoryStorage for tests). */
-  storage: GenericStorage;
-  /**
-   * Session storage for wallet signatures. Defaults to in-memory (lost on reload).
-   * Pass a `chrome.storage.session`-backed store for web extensions.
-   */
-  sessionStorage?: GenericStorage;
-  /**
-   * How long the ML-KEM re-encryption keypair remains valid, in seconds.
-   * Default: `86400` (1 day). Must be positive — `0` is rejected.
-   */
-  keypairTTL?: number;
-  /**
-   * Controls how long session signatures (EIP-712 wallet signatures) remain valid, in seconds.
-   * Default: `2592000` (30 days).
-   * - `0`: never persist — every operation triggers a signing prompt (high-security mode).
-   * - Positive number: seconds until the session signature expires and requires re-authentication.
-   */
-  sessionTTL?: number;
-  /**
-   * Per-chain wrappers registry address overrides, merged on top of built-in defaults.
-   * Use this for custom or local chains (e.g. Hardhat) where no default registry exists.
-   */
-  registryAddresses?: Record<number, Address>;
-  /**
-   * How long cached registry results remain valid, in seconds.
-   * Default: `86400` (24 hours).
-   */
-  registryTTL?: number;
-  /** Callback invoked on SDK lifecycle events. */
-  onEvent?: ZamaSDKEventListener;
+  /** Configuration object created by {@link createZamaConfig}. */
+  config: ZamaConfig;
 }
 
 const ZamaSDKContext = createContext<ZamaSDK | null>(null);
@@ -65,74 +26,50 @@ const ZamaSDKContext = createContext<ZamaSDK | null>(null);
  *
  * @example
  * ```tsx
- * <ZamaProvider relayer={relayer} signer={signer} storage={storage}>
+ * <ZamaProvider config={zamaConfig}>
  *   <App />
  * </ZamaProvider>
  * ```
  */
-export function ZamaProvider({
-  children,
-  relayer,
-  signer,
-  storage,
-  sessionStorage,
-  keypairTTL,
-  sessionTTL,
-  registryAddresses,
-  registryTTL,
-  onEvent,
-}: ZamaProviderProps) {
+export function ZamaProvider({ children, config }: ZamaProviderProps) {
   const queryClient = useQueryClient();
 
   // Stabilize onEvent so an inline arrow doesn't recreate the SDK every render.
-  const onEventRef = useRef(onEvent);
+  const onEventRef = useRef(config._onEvent);
 
   useEffect(() => {
-    onEventRef.current = onEvent;
+    onEventRef.current = config._onEvent;
   });
 
   const signerLifecycleCallbacks = useMemo(
     () =>
-      signer?.subscribe
+      config._signer?.subscribe
         ? {
             onDisconnect: () => invalidateWalletLifecycleQueries(queryClient),
             onAccountChange: () => invalidateWalletLifecycleQueries(queryClient),
             onChainChange: () => invalidateWalletLifecycleQueries(queryClient),
           }
         : undefined,
-    [queryClient, signer],
+    [queryClient, config._signer],
   );
 
   const sdk = useMemo(
     () =>
       new ZamaSDK({
-        relayer,
-        signer,
-        storage,
-        sessionStorage,
-        keypairTTL,
-        sessionTTL,
-        registryAddresses,
-        registryTTL,
+        relayer: config._relayer,
+        signer: config._signer,
+        storage: config._storage,
+        sessionStorage: config._sessionStorage,
+        keypairTTL: config._keypairTTL,
+        sessionTTL: config._sessionTTL,
+        registryAddresses: config._registryAddresses,
+        registryTTL: config._registryTTL,
         onEvent: onEventRef.current,
         signerLifecycleCallbacks,
       }),
-    [
-      relayer,
-      signer,
-      storage,
-      sessionStorage,
-      keypairTTL,
-      sessionTTL,
-      registryAddresses,
-      registryTTL,
-      signerLifecycleCallbacks,
-    ],
+    [config, signerLifecycleCallbacks],
   );
 
-  // Clean up signer subscriptions on unmount without terminating the
-  // caller-owned relayer. dispose() only unsubscribes from wallet events
-  // and is idempotent.
   useEffect(() => () => sdk.dispose(), [sdk]);
 
   return <ZamaSDKContext.Provider value={sdk}>{children}</ZamaSDKContext.Provider>;
@@ -140,7 +77,7 @@ export function ZamaProvider({
 
 /**
  * Access the {@link ZamaSDK} instance from context.
- * Throws if called outside a {@link ZamaProvider} or when no signer is provided.
+ * Throws if called outside a {@link ZamaProvider}.
  *
  * @example
  * ```tsx
@@ -154,7 +91,7 @@ export function useZamaSDK(): ZamaSDK {
   if (!context) {
     throw new Error(
       "useZamaSDK must be used within a <ZamaProvider>. " +
-        "Wrap your component tree in <ZamaProvider relayer={…} signer={…} storage={…}>.",
+        "Wrap your component tree in <ZamaProvider config={createZamaConfig(...)}>.",
     );
   }
 
