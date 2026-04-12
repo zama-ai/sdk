@@ -160,15 +160,24 @@ function resolveTransports(
         );
       }
 
-      const wagmiInternal = (
-        params.wagmiConfig as unknown as {
-          _internal?: {
-            transports?: Record<number, (ctx: { chain: unknown }) => { value?: { url?: string } }>;
-          };
-        }
-      )._internal;
-      const inferredNetwork: string | undefined = wagmiInternal?.transports?.[chain.id]?.({ chain })
-        ?.value?.url;
+      let inferredNetwork: string | undefined;
+      try {
+        // Best-effort: extract RPC URL from wagmi's internal transport config.
+        // This reaches into wagmi's private _internal API which may change between versions.
+        const wagmiInternal = (params.wagmiConfig as Record<string, unknown>)._internal as
+          | Record<string, unknown>
+          | undefined;
+        const transports = wagmiInternal?.transports as
+          | Record<number, (ctx: { chain: unknown }) => { value?: { url?: string } }>
+          | undefined;
+        inferredNetwork = transports?.[chain.id]?.({ chain })?.value?.url;
+      } catch {
+        // oxlint-disable-next-line no-console
+        console.warn(
+          `[zama-sdk] Failed to infer network URL from wagmi transport for chain ${chain.id}. ` +
+            `Pass network explicitly via relayer(url, { network: "..." }).`,
+        );
+      }
 
       resolved[chain.id] = {
         ...chainConfig,
