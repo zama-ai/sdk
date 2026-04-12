@@ -130,6 +130,25 @@ export const HardhatConfig = {
 } as const satisfies ExtendedFhevmInstanceConfig;
 
 /**
+ * Hoodi testnet configuration (chainId 560048).
+ *
+ * Hoodi does not have full FHE infrastructure — use with `cleartext()` transport.
+ * Contract addresses match the cleartext deployment.
+ */
+export const HoodiConfig = {
+  chainId: 560048,
+  gatewayChainId: 10901,
+  relayerUrl: "",
+  network: "https://rpc.hoodi.ethpandaops.io",
+  aclContractAddress: "0x6D3FAf6f86e1fF9F3B0831Dda920AbA1cBd5bd68",
+  kmsContractAddress: "0x901F8942346f7AB3a01F6D7613119Bca447Bb030",
+  inputVerifierContractAddress: "0x36772142b74871f255CbD7A3e89B401d3e45825f",
+  verifyingContractAddressDecryption: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64",
+  verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810",
+  registryAddress: "0x1807aE2f693F8530DFB126D0eF98F2F2518F292f",
+} as const satisfies ExtendedFhevmInstanceConfig;
+
+/**
  * Built-in network configurations keyed by chain ID.
  *
  * Includes Mainnet (1), Sepolia (11155111), and Hardhat (31337).

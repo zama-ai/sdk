@@ -2,6 +2,7 @@ import {
   SepoliaConfig,
   MainnetConfig,
   HardhatConfig,
+  HoodiConfig,
   type ExtendedFhevmInstanceConfig,
 } from "../relayer/relayer-utils";
 
@@ -14,3 +15,4 @@ function withId<T extends ExtendedFhevmInstanceConfig>(config: T): T & { readonl
 export const sepolia = withId(SepoliaConfig);
 export const mainnet = withId(MainnetConfig);
 export const hardhat = withId(HardhatConfig);
+export const hoodi = withId(HoodiConfig);
