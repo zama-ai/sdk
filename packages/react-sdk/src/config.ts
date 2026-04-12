@@ -11,7 +11,6 @@ import {
   type ZamaConfigEthers,
   type ZamaConfigCustomSigner,
   type ZamaConfigCustomRelayer,
-  type TransportConfig,
 } from "@zama-fhe/sdk";
 import { WagmiSigner } from "./wagmi/wagmi-signer";
 

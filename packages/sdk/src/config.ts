@@ -77,7 +77,8 @@ export function fhevm(
  *   chains: [hardhat],
  *   signer,
  *   transports: {
- *     [hardhat.id]: cleartext("http://127.0.0.1:8545", {
+ *     [hardhat.id]: cleartext({
+ *       network: "http://127.0.0.1:8545",
  *       executorAddress: "0xe3a9105a3a932253A70F126eb1E3b589C643dD24",
  *     }),
  *   },
@@ -85,10 +86,9 @@ export function fhevm(
  * ```
  */
 export function cleartext(
-  network: CleartextConfig["network"],
-  config: Omit<CleartextTransport, "__mode" | "network">,
+  config: Omit<CleartextTransport, "__mode" | "network"> & { network?: CleartextConfig["network"] },
 ): CleartextTransport {
-  return { __mode: "cleartext", network, ...config };
+  return { __mode: "cleartext", network: config.network ?? "", ...config };
 }
 
 // ── Config types ─────────────────────────────────────────────────────────────
