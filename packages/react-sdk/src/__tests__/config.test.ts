@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { createZamaConfig } from "../config";
+import { createZamaConfig, relayer } from "../config";
 import { createMockSigner, createMockStorage } from "../../../sdk/src/test-fixtures";
 import { RelayerWeb, SepoliaConfig } from "@zama-fhe/sdk";
 import { WagmiSigner } from "../wagmi/wagmi-signer";
@@ -141,23 +141,21 @@ describe("createZamaConfig", () => {
       );
     });
 
-    it("warns for unknown chains with no override", () => {
-      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-      createZamaConfig({
-        wagmiConfig: mockWagmiConfig([999999]),
-      });
-      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Chain 999999"));
-      warnSpy.mockRestore();
+    it("throws for unknown chains with no override", () => {
+      expect(() =>
+        createZamaConfig({
+          wagmiConfig: mockWagmiConfig([999999]),
+        }),
+      ).toThrow("Chain 999999");
     });
 
-    it("does not warn for unknown chains with user override", () => {
-      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-      createZamaConfig({
-        wagmiConfig: mockWagmiConfig([999999]),
-        transports: { [999999]: { relayerUrl: "https://custom.com" } },
-      });
-      expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining("Chain 999999"));
-      warnSpy.mockRestore();
+    it("does not throw for unknown chains with user override", () => {
+      expect(() =>
+        createZamaConfig({
+          wagmiConfig: mockWagmiConfig([999999]),
+          transports: { [999999]: { relayerUrl: "https://custom.com" } },
+        }),
+      ).not.toThrow();
     });
 
     it("uses explicit transports for non-wagmi paths", () => {
@@ -192,6 +190,30 @@ describe("createZamaConfig", () => {
       });
       expect(config.storage).toBe(sharedStorage);
       expect(config.sessionStorage).toBe(sharedStorage);
+    });
+  });
+
+  describe("relayer() helper", () => {
+    it("returns relayerUrl in a partial config", () => {
+      const result = relayer("/api/relayer/11155111");
+      expect(result).toEqual({ relayerUrl: "/api/relayer/11155111" });
+    });
+
+    it("merges overrides on top of relayerUrl", () => {
+      const result = relayer("/api/relayer/11155111", {
+        network: "https://custom-rpc.com",
+      });
+      expect(result).toEqual({
+        relayerUrl: "/api/relayer/11155111",
+        network: "https://custom-rpc.com",
+      });
+    });
+
+    it("override can replace relayerUrl", () => {
+      const result = relayer("/api/relayer/11155111", {
+        relayerUrl: "https://override.com",
+      });
+      expect(result).toEqual({ relayerUrl: "https://override.com" });
     });
   });
 

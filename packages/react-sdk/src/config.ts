@@ -10,7 +10,13 @@ import type {
   ZamaSDKEventListener,
   ExtendedFhevmInstanceConfig,
 } from "@zama-fhe/sdk";
-import { RelayerWeb, MemoryStorage, IndexedDBStorage, DefaultConfigs } from "@zama-fhe/sdk";
+import {
+  RelayerWeb,
+  MemoryStorage,
+  IndexedDBStorage,
+  DefaultConfigs,
+  ConfigurationError,
+} from "@zama-fhe/sdk";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 import { EthersSigner } from "@zama-fhe/sdk/ethers";
 import { WagmiSigner } from "./wagmi/wagmi-signer";
@@ -152,9 +158,9 @@ function resolveTransports(
       if (defaultConfig || userOverride) {
         resolved[chain.id] = { ...defaultConfig, ...userOverride };
       } else {
-        // oxlint-disable-next-line no-console
-        console.warn(
-          `[zama-sdk] Chain ${chain.id} (${chain.name}) has no default FHE config and no transport override was provided. FHE operations on this chain will fail.`,
+        throw new ConfigurationError(
+          `Chain ${chain.id} (${chain.name}) has no default FHE config and no transport override was provided. ` +
+            `Either remove this chain from your wagmi config or provide a transport override via the transports option.`,
         );
       }
     }
@@ -182,6 +188,26 @@ function resolveGetChainId(
     return () => Promise.resolve(getChainId(config));
   }
   return () => signer.getChainId();
+}
+
+/**
+ * Create a per-chain transport override with the given relayer proxy URL.
+ *
+ * @example
+ * ```ts
+ * createZamaConfig({
+ *   wagmiConfig,
+ *   transports: {
+ *     [sepolia.id]: relayer("/api/relayer/11155111"),
+ *   },
+ * });
+ * ```
+ */
+export function relayer(
+  relayerUrl: string,
+  overrides?: Partial<ExtendedFhevmInstanceConfig>,
+): Partial<ExtendedFhevmInstanceConfig> {
+  return { relayerUrl, ...overrides };
 }
 
 /**
