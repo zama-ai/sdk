@@ -4,6 +4,8 @@ import {
   createZamaConfig as createZamaConfigBase,
   resolveChainTransports,
   buildRelayer,
+  resolveStorage,
+  buildConfig,
   type GenericSigner,
   type ZamaConfig,
   type ZamaConfigBase,
@@ -82,27 +84,9 @@ export function createZamaConfig(params: CreateZamaConfigParams): ZamaConfig {
   const getChainIdFn = () => Promise.resolve(getChainId(wagmiConfig));
 
   const chainIds = wagmiConfig.chains.map((c: { id: number }) => c.id);
-  const chainNameResolver = (id: number) =>
-    (wagmiConfig.chains.find((c: { id: number }) => c.id === id) as { name: string } | undefined)
-      ?.name ?? id;
-
-  const chainTransports = resolveChainTransports(
-    params.chains,
-    params.transports,
-    chainIds,
-    chainNameResolver,
-  );
+  const { storage, sessionStorage } = resolveStorage(params.storage, params.sessionStorage);
+  const chainTransports = resolveChainTransports(params.chains, params.transports, chainIds);
   const relayer = buildRelayer(chainTransports, getChainIdFn);
 
-  return {
-    relayer,
-    signer,
-    storage: params.storage,
-    sessionStorage: params.sessionStorage,
-    keypairTTL: params.keypairTTL,
-    sessionTTL: params.sessionTTL,
-    registryAddresses: params.registryAddresses,
-    registryTTL: params.registryTTL,
-    onEvent: params.onEvent,
-  } as ZamaConfig;
+  return buildConfig(relayer, signer, storage, sessionStorage, params);
 }

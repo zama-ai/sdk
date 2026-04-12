@@ -55,7 +55,6 @@ export function resolveChainTransports(
   chains: ExtendedFhevmInstanceConfig[],
   transports: Record<number, TransportConfig> | undefined,
   chainIds: number[],
-  chainNameResolver?: (id: number) => string | number,
 ): Map<number, { chain: ExtendedFhevmInstanceConfig; transport: TransportConfig }> {
   const chainMap = new Map(chains.map((c) => [c.chainId, c]));
   const result = new Map<
@@ -68,10 +67,9 @@ export function resolveChainTransports(
     const userTransport = transports?.[id];
 
     if (!chainConfig && !userTransport) {
-      const name = chainNameResolver?.(id) ?? id;
       throw new ConfigurationError(
-        `Chain ${id} (${name}) has no FHE chain config in the chains array and no transport override was provided. ` +
-          `Either add this chain to the chains array or provide a transport override.`,
+        `Chain ${id} has no FHE chain config in the chains array and no transport override. ` +
+          `Add it to chains or provide a transport.`,
       );
     }
 
@@ -133,8 +131,12 @@ export function buildRelayer(
         threads: t,
         ...fhevmConfig
       } = transport as FhevmTransportConfig;
-      if (s) {security = s;}
-      if (t) {threads = t;}
+      if (s) {
+        security = s;
+      }
+      if (t) {
+        threads = t;
+      }
       webTransports[chainId] = fhevmConfig;
     }
   }

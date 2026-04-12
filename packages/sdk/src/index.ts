@@ -7,7 +7,15 @@
  */
 
 // Config factory
-export { createZamaConfig, fhevm, cleartext, resolveChainTransports, buildRelayer } from "./config";
+export {
+  createZamaConfig,
+  fhevm,
+  cleartext,
+  resolveChainTransports,
+  buildRelayer,
+  resolveStorage,
+  buildConfig,
+} from "./config";
 export type {
   ZamaConfig,
   ZamaConfigBase,

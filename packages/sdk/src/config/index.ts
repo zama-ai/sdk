@@ -11,7 +11,7 @@ export type {
   CreateZamaConfigBaseParams,
 } from "./types";
 
-export { resolveChainTransports, buildRelayer } from "./resolve";
+export { resolveChainTransports, buildRelayer, resolveStorage, buildConfig } from "./resolve";
 export type { ConfigWithTransports } from "./resolve";
 
 import type { CreateZamaConfigBaseParams, ZamaConfig } from "./types";
