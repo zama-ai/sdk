@@ -578,7 +578,7 @@ export class ReadonlyToken {
    * Use this to check if decrypt operations can proceed without a wallet prompt.
    */
   async isAllowed(): Promise<boolean> {
-    return this.credentials.isAllowed(this.address);
+    return this.credentials.isAllowed([this.address]);
   }
 
   /**

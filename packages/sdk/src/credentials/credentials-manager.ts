@@ -107,8 +107,8 @@ export class CredentialsManager extends BaseCredentialsManager<
   }
 
   /** Whether a session signature is currently cached and covers the given contracts. */
-  async isAllowed(contractAddress: Address, ...moreAddresses: Address[]): Promise<boolean> {
-    return this.checkAllowed(await this.#storeKey(), [contractAddress, ...moreAddresses]);
+  async isAllowed(contractAddresses: [Address, ...Address[]]): Promise<boolean> {
+    return this.checkAllowed(await this.#storeKey(), contractAddresses);
   }
 
   /** Delete stored credentials (best-effort). */
