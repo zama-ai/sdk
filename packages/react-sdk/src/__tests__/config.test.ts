@@ -175,12 +175,13 @@ describe("createZamaConfig", () => {
 
   describe("fhevm() helper", () => {
     it("returns relayerUrl in a partial config", () => {
-      const result = fhevm("/api/relayer/11155111");
+      const result = fhevm({ relayerUrl: "/api/relayer/11155111" });
       expect(result).toEqual({ relayerUrl: "/api/relayer/11155111" });
     });
 
-    it("merges overrides on top of relayerUrl", () => {
-      const result = fhevm("/api/relayer/11155111", {
+    it("merges all config fields", () => {
+      const result = fhevm({
+        relayerUrl: "/api/relayer/11155111",
         network: "https://custom-rpc.com",
       });
       expect(result).toEqual({
@@ -189,11 +190,9 @@ describe("createZamaConfig", () => {
       });
     });
 
-    it("override can replace relayerUrl", () => {
-      const result = fhevm("/api/relayer/11155111", {
-        relayerUrl: "https://override.com",
-      });
-      expect(result).toEqual({ relayerUrl: "https://override.com" });
+    it("returns empty object when called with no args", () => {
+      const result = fhevm();
+      expect(result).toEqual({});
     });
   });
 

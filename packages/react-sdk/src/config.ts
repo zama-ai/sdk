@@ -67,7 +67,7 @@ export type CreateZamaConfigParams =
  * const config = createZamaConfig({
  *   chains: [sepolia],
  *   wagmiConfig,
- *   transports: { [sepolia.id]: fhevm("/api/relayer/11155111") },
+ *   transports: { [sepolia.id]: fhevm({ relayerUrl: "/api/relayer/11155111" }) },
  * });
  * ```
  */

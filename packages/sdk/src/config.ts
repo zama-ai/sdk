@@ -47,23 +47,17 @@ export interface FhevmTransport extends FhevmTransportOverrides {
  *
  * @example
  * ```ts
- * createZamaConfig({
- *   chains: [sepolia],
- *   signer,
- *   transports: {
- *     [sepolia.id]: fhevm("https://relayer.testnet.zama.org/v2"),
- *   },
- * });
+ * // Use chain defaults
+ * transports: { [sepolia.id]: fhevm() }
+ *
+ * // Override relayer URL
+ * transports: { [sepolia.id]: fhevm({ relayerUrl: "/api/relayer/11155111" }) }
  * ```
  */
 export function fhevm(
-  relayerUrl?: string,
-  overrides?: FhevmTransportOverrides,
+  config?: FhevmTransportOverrides & { relayerUrl?: string },
 ): Partial<ExtendedFhevmInstanceConfig> & FhevmTransportOverrides {
-  if (relayerUrl) {
-    return { relayerUrl, ...overrides };
-  }
-  return { ...overrides };
+  return { ...config };
 }
 
 /**
@@ -353,7 +347,7 @@ function resolveSigner(params: ConfigWithTransports): GenericSigner {
  * const config = createZamaConfig({
  *   chains: [sepolia],
  *   signer,
- *   transports: { [sepolia.id]: fhevm("https://relayer.testnet.zama.org/v2") },
+ *   transports: { [sepolia.id]: fhevm({ relayerUrl: "https://relayer.testnet.zama.org/v2" }) },
  * });
  * const sdk = new ZamaSDK(config);
  * ```

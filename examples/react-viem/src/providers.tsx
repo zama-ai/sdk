@@ -102,7 +102,8 @@ export function Providers({ children }: { children: ReactNode }) {
       chains: [fheSepolia],
       viem: { publicClient, walletClient, ethereum: ethereum ?? undefined },
       transports: {
-        [fheSepolia.id]: fhevm(`${window.location.origin}/api/relayer`, {
+        [fheSepolia.id]: fhevm({
+          relayerUrl: `${window.location.origin}/api/relayer`,
           network: SEPOLIA_RPC_URL,
         }),
       },

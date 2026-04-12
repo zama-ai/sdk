@@ -39,7 +39,7 @@ const zamaConfig = createZamaConfig({
   chains: [fheSepolia],
   wagmiConfig,
   transports: {
-    [fheSepolia.id]: fhevm(`${window.location.origin}/api/relayer`),
+    [fheSepolia.id]: fhevm({ relayerUrl: `${window.location.origin}/api/relayer` }),
   },
   onEvent: (event) => {
     if (event.type === ZamaSDKEvents.UnshieldPhase1Submitted) {
