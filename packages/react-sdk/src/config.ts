@@ -5,7 +5,6 @@ import {
   resolveChainTransports,
   buildRelayer,
   resolveStorage,
-  buildConfig,
   type GenericSigner,
   type ZamaConfig,
   type ZamaConfigBase,
@@ -88,5 +87,15 @@ export function createZamaConfig(params: CreateZamaConfigParams): ZamaConfig {
   const chainTransports = resolveChainTransports(params.chains, params.transports, chainIds);
   const relayer = buildRelayer(chainTransports, getChainIdFn);
 
-  return buildConfig(relayer, signer, storage, sessionStorage, params);
+  return {
+    relayer,
+    signer,
+    storage,
+    sessionStorage,
+    keypairTTL: params.keypairTTL,
+    sessionTTL: params.sessionTTL,
+    registryAddresses: params.registryAddresses,
+    registryTTL: params.registryTTL,
+    onEvent: params.onEvent,
+  };
 }

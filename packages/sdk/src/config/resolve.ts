@@ -2,7 +2,6 @@ import type { Address } from "viem";
 import type { GenericSigner, GenericStorage } from "../types";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { RelayerWebSecurityConfig } from "../relayer/relayer-sdk.types";
-import type { ZamaSDKEventListener } from "../events";
 import type { ExtendedFhevmInstanceConfig } from "../relayer/relayer-utils";
 import type { CleartextConfig } from "../relayer/cleartext/types";
 import { RelayerWeb } from "../relayer/relayer-web";
@@ -13,9 +12,9 @@ import { IndexedDBStorage } from "../storage/indexeddb-storage";
 import { ConfigurationError } from "../errors";
 import { ViemSigner } from "../viem";
 import { EthersSigner } from "../ethers";
-import type { TransportConfig, FhevmTransportConfig } from "./transports";
+import type { TransportConfig } from "./transports";
 import { isCleartextTransport, isFhevmTransport } from "./transports";
-import type { ZamaConfig, ZamaConfigViem, ZamaConfigEthers, ZamaConfigCustomSigner } from "./types";
+import type { ZamaConfigViem, ZamaConfigEthers, ZamaConfigCustomSigner } from "./types";
 
 // ── Storage defaults ─────────────────────────────────────────────────────────
 
@@ -85,7 +84,10 @@ export function resolveChainTransports(
       const base = { __mode: "fhevm" as const, ...chainConfig };
       if (userTransport && isFhevmTransport(userTransport)) {
         const { __mode: _, ...overrides } = userTransport;
-        result.set(id, { chain: chainConfig, transport: { ...base, ...overrides } });
+        result.set(id, {
+          chain: chainConfig,
+          transport: { ...base, ...overrides },
+        });
       } else {
         result.set(id, { chain: chainConfig, transport: base });
       }
@@ -124,13 +126,8 @@ export function buildRelayer(
           inputSignerPrivateKey: transport.inputSignerPrivateKey,
         }),
       );
-    } else {
-      const {
-        __mode: _,
-        security: s,
-        threads: t,
-        ...fhevmConfig
-      } = transport as FhevmTransportConfig;
+    } else if (isFhevmTransport(transport)) {
+      const { __mode: _, security: s, threads: t, ...fhevmConfig } = transport;
       if (s) {
         security = s;
       }
@@ -165,32 +162,4 @@ export function buildRelayer(
     allRelayers.set(Number(id), webRelayer);
   }
   return new CompositeRelayer(resolveChainId, allRelayers);
-}
-
-// ── Config builder ───────────────────────────────────────────────────────────
-
-export function buildConfig(
-  relayer: RelayerSDK,
-  signer: GenericSigner,
-  storage: GenericStorage,
-  sessionStorage: GenericStorage,
-  params: {
-    keypairTTL?: number;
-    sessionTTL?: number | "infinite";
-    registryAddresses?: Record<number, Address>;
-    registryTTL?: number;
-    onEvent?: ZamaSDKEventListener;
-  },
-): ZamaConfig {
-  return {
-    relayer,
-    signer,
-    storage,
-    sessionStorage,
-    keypairTTL: params.keypairTTL,
-    sessionTTL: params.sessionTTL,
-    registryAddresses: params.registryAddresses,
-    registryTTL: params.registryTTL,
-    onEvent: params.onEvent,
-  };
 }

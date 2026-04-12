@@ -14,7 +14,6 @@ export {
   resolveChainTransports,
   buildRelayer,
   resolveStorage,
-  buildConfig,
 } from "./config";
 export type {
   ZamaConfig,
