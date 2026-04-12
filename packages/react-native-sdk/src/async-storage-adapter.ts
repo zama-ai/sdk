@@ -10,7 +10,9 @@ const KEY_PREFIX = "@zama-fhe:";
 export class AsyncStorageAdapter implements GenericStorage {
   async get<T = unknown>(key: string): Promise<T | null> {
     const raw = await AsyncStorage.getItem(`${KEY_PREFIX}${key}`);
-    if (raw === null) {return null;}
+    if (raw === null) {
+      return null;
+    }
     return JSON.parse(raw) as T;
   }
 

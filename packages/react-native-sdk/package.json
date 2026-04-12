@@ -19,7 +19,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@fhevm/react-native-sdk": "file:../../fhevm-react-native-sdk-0.1.0.tgz"
+    "@fhevm/react-native-sdk": "file:./fhevm-react-native-sdk-0.1.0.tgz"
   },
   "devDependencies": {
     "@zama-fhe/sdk": "workspace:*",
