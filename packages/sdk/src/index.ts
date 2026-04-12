@@ -8,6 +8,7 @@
 
 // Core SDK
 export { RelayerWeb } from "./relayer/relayer-web";
+export { CompositeRelayer } from "./relayer/composite-relayer";
 export type { RelayerSDK } from "./relayer/relayer-sdk";
 export type {
   RelayerWebConfig,

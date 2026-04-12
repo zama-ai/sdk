@@ -10,7 +10,13 @@ import type {
   ZamaSDKEventListener,
   ExtendedFhevmInstanceConfig,
 } from "@zama-fhe/sdk";
-import { RelayerWeb, MemoryStorage, IndexedDBStorage, ConfigurationError } from "@zama-fhe/sdk";
+import {
+  RelayerWeb,
+  CompositeRelayer,
+  MemoryStorage,
+  IndexedDBStorage,
+  ConfigurationError,
+} from "@zama-fhe/sdk";
 import { RelayerCleartext } from "@zama-fhe/sdk/cleartext";
 import type { CleartextConfig } from "@zama-fhe/sdk/cleartext";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
@@ -246,7 +252,7 @@ function buildRelayer(
 
   // All cleartext — no RelayerWeb needed
   if (Object.keys(webTransports).length === 0) {
-    return createDispatchRelayer(resolveChainId, new Map(), cleartextRelayers);
+    return new CompositeRelayer(resolveChainId, cleartextRelayers as Map<number, RelayerSDK>);
   }
 
   // Mixed — dispatch by chain
@@ -256,54 +262,11 @@ function buildRelayer(
     security,
     threads,
   });
-  const webRelayerMap = new Map(
-    Object.keys(webTransports).map((id) => [Number(id), webRelayer as RelayerSDK]),
-  );
-  return createDispatchRelayer(resolveChainId, webRelayerMap, cleartextRelayers);
-}
-
-/**
- * Create a RelayerSDK that dispatches to the correct relayer based on current chain ID.
- */
-function createDispatchRelayer(
-  resolveChainId: () => Promise<number>,
-  webRelayers: Map<number, RelayerSDK>,
-  cleartextRelayers: Map<number, RelayerSDK>,
-): RelayerSDK {
-  const allRelayers = new Map([...webRelayers, ...cleartextRelayers]);
-
-  async function current(): Promise<RelayerSDK> {
-    const chainId = await resolveChainId();
-    const r = allRelayers.get(chainId);
-    if (!r) {
-      throw new ConfigurationError(
-        `No relayer configured for chain ${chainId}. ` +
-          `Add it to the chains array and transports map.`,
-      );
-    }
-    return r;
+  const allRelayers = new Map<number, RelayerSDK>(cleartextRelayers);
+  for (const id of Object.keys(webTransports)) {
+    allRelayers.set(Number(id), webRelayer);
   }
-
-  return {
-    generateKeypair: () => current().then((r) => r.generateKeypair()),
-    createEIP712: (...args) => current().then((r) => r.createEIP712(...args)),
-    encrypt: (...args) => current().then((r) => r.encrypt(...args)),
-    userDecrypt: (...args) => current().then((r) => r.userDecrypt(...args)),
-    publicDecrypt: (...args) => current().then((r) => r.publicDecrypt(...args)),
-    createDelegatedUserDecryptEIP712: (...args) =>
-      current().then((r) => r.createDelegatedUserDecryptEIP712(...args)),
-    delegatedUserDecrypt: (...args) => current().then((r) => r.delegatedUserDecrypt(...args)),
-    requestZKProofVerification: (...args) =>
-      current().then((r) => r.requestZKProofVerification(...args)),
-    getPublicKey: () => current().then((r) => r.getPublicKey()),
-    getPublicParams: (...args) => current().then((r) => r.getPublicParams(...args)),
-    getAclAddress: () => current().then((r) => r.getAclAddress()),
-    terminate: () => {
-      for (const r of new Set(allRelayers.values())) {
-        r.terminate();
-      }
-    },
-  };
+  return new CompositeRelayer(resolveChainId, allRelayers);
 }
 
 function resolveStorage(
