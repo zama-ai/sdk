@@ -43,10 +43,6 @@ interface ZamaConfigBase {
   registryTTL?: number;
   /** SDK lifecycle event listener. */
   onEvent?: ZamaSDKEventListener;
-  /** RelayerWeb security config (CSRF, integrity check). */
-  security?: RelayerWebSecurityConfig;
-  /** WASM thread count for parallel FHE operations. */
-  threads?: number;
 }
 
 /** Wagmi-backed config — signer derived from wagmi Config. */
@@ -93,10 +89,7 @@ export interface ZamaConfigCustomSigner extends ZamaConfigBase {
 }
 
 /** Pre-built relayer — bring your own RelayerSDK (e.g. RelayerCleartext for local dev). */
-export interface ZamaConfigCustomRelayer extends Omit<
-  ZamaConfigBase,
-  "security" | "threads" | "transports" | "chains"
-> {
+export interface ZamaConfigCustomRelayer extends Omit<ZamaConfigBase, "transports" | "chains"> {
   relayer: RelayerSDK;
   signer: GenericSigner;
   wagmiConfig?: never;
@@ -211,11 +204,11 @@ function resolveChainTransports(
 function buildRelayer(
   chainTransports: Map<number, { chain: ExtendedFhevmInstanceConfig; transport: TransportConfig }>,
   resolveChainId: () => Promise<number>,
-  security: RelayerWebSecurityConfig | undefined,
-  threads: number | undefined,
 ): RelayerSDK {
   const webTransports: Record<number, Partial<ExtendedFhevmInstanceConfig>> = {};
   const cleartextRelayers = new Map<number, RelayerCleartext>();
+  let security: RelayerWebSecurityConfig | undefined;
+  let threads: number | undefined;
 
   for (const [chainId, { chain, transport }] of chainTransports) {
     if (isCleartextTransport(transport)) {
@@ -236,7 +229,14 @@ function buildRelayer(
         }),
       );
     } else {
-      webTransports[chainId] = transport as Partial<ExtendedFhevmInstanceConfig>;
+      const { security: s, threads: t, ...fhevmConfig } = transport as WebTransport;
+      if (s) {
+        security = s;
+      }
+      if (t) {
+        threads = t;
+      }
+      webTransports[chainId] = fhevmConfig;
     }
   }
 
@@ -320,10 +320,18 @@ function isCleartextTransport(t: TransportConfig): t is CleartextTransport {
  * });
  * ```
  */
-export function relayer(
-  relayerUrl: string,
-  overrides?: Partial<Omit<ExtendedFhevmInstanceConfig, "relayerUrl">>,
-): Partial<ExtendedFhevmInstanceConfig> {
+export interface WebTransportOverrides extends Partial<
+  Omit<ExtendedFhevmInstanceConfig, "relayerUrl">
+> {
+  /** RelayerWeb security config (CSRF, integrity check). */
+  security?: RelayerWebSecurityConfig;
+  /** WASM thread count for parallel FHE operations. */
+  threads?: number;
+}
+
+export type WebTransport = { relayerUrl: string } & WebTransportOverrides;
+
+export function relayer(relayerUrl: string, overrides?: WebTransportOverrides): WebTransport {
   return { relayerUrl, ...overrides };
 }
 
@@ -394,7 +402,7 @@ export function createZamaConfig(params: CreateZamaConfigParams): ZamaConfig {
   const chainTransports = resolveChainTransports(params);
 
   return {
-    relayer: buildRelayer(chainTransports, getChainIdFn, params.security, params.threads),
+    relayer: buildRelayer(chainTransports, getChainIdFn),
     signer,
     storage,
     sessionStorage,
