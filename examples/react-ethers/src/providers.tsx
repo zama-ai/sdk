@@ -8,6 +8,7 @@ import {
   indexedDBStorage,
   savePendingUnshield,
   createZamaConfig,
+  relayer,
 } from "@zama-fhe/react-sdk";
 import { SepoliaConfig } from "@zama-fhe/sdk";
 import { SEPOLIA_RPC_URL } from "@/lib/config";
@@ -81,11 +82,9 @@ export function Providers({ children }: { children: ReactNode }) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ethers: { ethereum: provider as any },
       transports: {
-        [SepoliaConfig.chainId]: {
-          ...SepoliaConfig,
-          relayerUrl: `${window.location.origin}/api/relayer`,
+        [SepoliaConfig.chainId]: relayer(`${window.location.origin}/api/relayer`, {
           network: SEPOLIA_RPC_URL,
-        },
+        }),
       },
       onEvent: (event) => {
         if (event.type === ZamaSDKEvents.UnshieldPhase1Submitted) {

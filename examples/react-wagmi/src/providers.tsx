@@ -11,6 +11,7 @@ import {
   indexedDBStorage,
   savePendingUnshield,
   createZamaConfig,
+  relayer,
 } from "@zama-fhe/react-sdk";
 import { SepoliaConfig } from "@zama-fhe/sdk";
 import { SEPOLIA_RPC_URL } from "@/lib/config";
@@ -37,10 +38,7 @@ const wagmiConfig = createConfig({
 const zamaConfig = createZamaConfig({
   wagmiConfig,
   transports: {
-    [SepoliaConfig.chainId]: {
-      relayerUrl: `${window.location.origin}/api/relayer`,
-      network: SEPOLIA_RPC_URL,
-    },
+    [SepoliaConfig.chainId]: relayer(`${window.location.origin}/api/relayer`),
   },
   onEvent: (event) => {
     if (event.type === ZamaSDKEvents.UnshieldPhase1Submitted) {
