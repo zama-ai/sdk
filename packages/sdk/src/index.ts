@@ -6,6 +6,20 @@
  * @packageDocumentation
  */
 
+// Config factory
+export { createZamaConfig, fhevm, cleartext, resolveChainTransports, buildRelayer } from "./config";
+export type {
+  ZamaConfig,
+  ZamaConfigBase,
+  ZamaConfigCustomSigner,
+  ZamaConfigCustomRelayer,
+  CreateZamaConfigBaseParams,
+  TransportConfig,
+  FhevmTransport,
+  FhevmTransportOverrides,
+  CleartextTransport,
+} from "./config";
+
 // Core SDK
 export { RelayerWeb } from "./relayer/relayer-web";
 export { CompositeRelayer } from "./relayer/composite-relayer";

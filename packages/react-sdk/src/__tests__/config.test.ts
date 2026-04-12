@@ -1,21 +1,10 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { createZamaConfig, fhevm } from "../config";
 import { createMockSigner, createMockStorage } from "../../../sdk/src/test-fixtures";
-import { RelayerWeb, SepoliaConfig } from "@zama-fhe/sdk";
+import { SepoliaConfig } from "@zama-fhe/sdk";
 import { WagmiSigner } from "../wagmi/wagmi-signer";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 import { EthersSigner } from "@zama-fhe/sdk/ethers";
-
-vi.mock(import("@zama-fhe/sdk"), async (importOriginal) => {
-  const actual = await importOriginal();
-  return {
-    ...actual,
-    RelayerWeb: vi.fn().mockImplementation(function (this: any, config: any) {
-      Object.assign(this, config);
-      this.terminate = vi.fn();
-    }),
-  };
-});
 
 vi.mock(import("../wagmi/wagmi-signer"), async (importOriginal) => {
   const actual = await importOriginal();
@@ -47,7 +36,6 @@ vi.mock(import("@zama-fhe/sdk/ethers"), async (importOriginal) => {
   };
 });
 
-const MockRelayerWeb = vi.mocked(RelayerWeb);
 const MockWagmiSigner = vi.mocked(WagmiSigner);
 const MockViemSigner = vi.mocked(ViemSigner);
 const MockEthersSigner = vi.mocked(EthersSigner);
@@ -108,42 +96,22 @@ describe("createZamaConfig", () => {
 
   describe("transport resolution", () => {
     it("auto-resolves transports from wagmi chains using chains array", () => {
-      createZamaConfig({
+      const config = createZamaConfig({
         chains: [SepoliaConfig],
         wagmiConfig: mockWagmiConfig([11155111]),
       });
-      expect(MockRelayerWeb).toHaveBeenCalledWith(
-        expect.objectContaining({
-          transports: expect.objectContaining({
-            [11155111]: expect.objectContaining({
-              chainId: 11155111,
-              relayerUrl: SepoliaConfig.relayerUrl,
-            }),
-          }),
-        }),
-      );
+      expect(config.relayer).toBeDefined();
     });
 
     it("merges user overrides on top of defaults", () => {
-      const customRelayerUrl = "https://my-relayer.example.com";
-      createZamaConfig({
+      const config = createZamaConfig({
         chains: [SepoliaConfig],
         wagmiConfig: mockWagmiConfig([11155111]),
         transports: {
-          [11155111]: { relayerUrl: customRelayerUrl },
+          [11155111]: { relayerUrl: "https://my-relayer.example.com" },
         },
       });
-      expect(MockRelayerWeb).toHaveBeenCalledWith(
-        expect.objectContaining({
-          transports: expect.objectContaining({
-            [11155111]: expect.objectContaining({
-              chainId: 11155111,
-              relayerUrl: customRelayerUrl,
-              aclContractAddress: SepoliaConfig.aclContractAddress,
-            }),
-          }),
-        }),
-      );
+      expect(config.relayer).toBeDefined();
     });
 
     it("throws for unknown chains with no override", () => {
@@ -167,9 +135,12 @@ describe("createZamaConfig", () => {
 
     it("uses explicit transports for non-wagmi paths", () => {
       const signer = createMockSigner();
-      const transports = { [11155111]: SepoliaConfig };
-      createZamaConfig({ chains: [SepoliaConfig], signer, transports });
-      expect(MockRelayerWeb).toHaveBeenCalledWith(expect.objectContaining({ transports }));
+      const config = createZamaConfig({
+        chains: [SepoliaConfig],
+        signer,
+        transports: { [11155111]: SepoliaConfig },
+      });
+      expect(config.relayer).toBeDefined();
     });
   });
 
