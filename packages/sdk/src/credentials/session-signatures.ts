@@ -27,6 +27,10 @@ export class SessionSignatures {
     this.#storage = storage;
   }
 
+  #key(key: string): string {
+    return `signature:${key}`;
+  }
+
   #assertSessionEntry(data: unknown): asserts data is SessionEntry {
     assertObject(data, "Session entry");
     assertString(data.signature, "session.signature");
@@ -42,7 +46,7 @@ export class SessionSignatures {
 
   /** Retrieve and validate a session entry, or `null` if none exists. */
   async get(key: string): Promise<SessionEntry | null> {
-    const raw = await this.#storage.get<SessionEntry>(key);
+    const raw = await this.#storage.get<SessionEntry>(this.#key(key));
     if (raw === null) {
       return null;
     }
@@ -57,12 +61,12 @@ export class SessionSignatures {
       createdAt: Math.floor(Date.now() / 1000),
       ttl: params.ttl,
     };
-    await this.#storage.set(params.key, entry);
+    await this.#storage.set(this.#key(params.key), entry);
   }
 
   /** Delete a session entry. */
   async delete(key: string): Promise<void> {
-    await this.#storage.delete(key);
+    await this.#storage.delete(this.#key(key));
   }
 
   /**

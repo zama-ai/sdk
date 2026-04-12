@@ -182,17 +182,16 @@ describe("createZamaConfig", () => {
       expect(config.sessionStorage).toBe(sessionStorage);
     });
 
-    it("warns when storage and sessionStorage are the same reference", () => {
-      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    it("accepts the same storage instance for both storage and sessionStorage", () => {
       const sharedStorage = createMockStorage();
-      createZamaConfig({
+      const config = createZamaConfig({
         signer: createMockSigner(),
         transports: { [11155111]: SepoliaConfig },
         storage: sharedStorage,
         sessionStorage: sharedStorage,
       });
-      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("same instance"));
-      warnSpy.mockRestore();
+      expect(config.storage).toBe(sharedStorage);
+      expect(config.sessionStorage).toBe(sharedStorage);
     });
   });
 

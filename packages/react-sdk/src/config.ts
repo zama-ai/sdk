@@ -167,19 +167,10 @@ function resolveStorage(
   storage: GenericStorage | undefined,
   sessionStorage: GenericStorage | undefined,
 ): { storage: GenericStorage; sessionStorage: GenericStorage } {
-  const resolvedStorage = storage ?? defaultStorage;
-  const resolvedSessionStorage = sessionStorage ?? defaultSessionStorage;
-
-  if (resolvedStorage === resolvedSessionStorage) {
-    // oxlint-disable-next-line no-console
-    console.warn(
-      "[zama-sdk] storage and sessionStorage point to the same instance. " +
-        "This will cause session entries to overwrite encrypted keypairs. " +
-        "Use two separate storage instances.",
-    );
-  }
-
-  return { storage: resolvedStorage, sessionStorage: resolvedSessionStorage };
+  return {
+    storage: storage ?? defaultStorage,
+    sessionStorage: sessionStorage ?? defaultSessionStorage,
+  };
 }
 
 function resolveGetChainId(
