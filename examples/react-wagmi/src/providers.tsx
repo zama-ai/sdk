@@ -13,7 +13,7 @@ import {
   createZamaConfig,
   relayer,
 } from "@zama-fhe/react-sdk";
-import { SepoliaConfig } from "@zama-fhe/sdk";
+import { sepolia as fheSepolia } from "@zama-fhe/sdk/chains";
 import { SEPOLIA_RPC_URL } from "@/lib/config";
 import { getActiveUnshieldToken, setActiveUnshieldToken } from "@/lib/activeUnshield";
 
@@ -36,10 +36,10 @@ const wagmiConfig = createConfig({
 });
 
 const zamaConfig = createZamaConfig({
-  chains: [SepoliaConfig],
+  chains: [fheSepolia],
   wagmiConfig,
   transports: {
-    [SepoliaConfig.chainId]: relayer(`${window.location.origin}/api/relayer`),
+    [fheSepolia.chainId]: relayer(`${window.location.origin}/api/relayer`),
   },
   onEvent: (event) => {
     if (event.type === ZamaSDKEvents.UnshieldPhase1Submitted) {

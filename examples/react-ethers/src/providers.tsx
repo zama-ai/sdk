@@ -10,7 +10,7 @@ import {
   createZamaConfig,
   relayer,
 } from "@zama-fhe/react-sdk";
-import { SepoliaConfig } from "@zama-fhe/sdk";
+import { sepolia as fheSepolia } from "@zama-fhe/sdk/chains";
 import { SEPOLIA_RPC_URL } from "@/lib/config";
 import { getActiveUnshieldToken, setActiveUnshieldToken } from "@/lib/activeUnshield";
 import { getEthereumProvider } from "@/lib/ethereum";
@@ -79,11 +79,11 @@ export function Providers({ children }: { children: ReactNode }) {
     };
 
     return createZamaConfig({
-      chains: [SepoliaConfig],
+      chains: [fheSepolia],
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ethers: { ethereum: provider as any },
       transports: {
-        [SepoliaConfig.chainId]: relayer(`${window.location.origin}/api/relayer`, {
+        [fheSepolia.chainId]: relayer(`${window.location.origin}/api/relayer`, {
           network: SEPOLIA_RPC_URL,
         }),
       },

@@ -10,7 +10,7 @@ import {
   createZamaConfig,
   relayer,
 } from "@zama-fhe/react-sdk";
-import { SepoliaConfig } from "@zama-fhe/sdk";
+import { sepolia as fheSepolia } from "@zama-fhe/sdk/chains";
 import {
   createWalletClient,
   createPublicClient,
@@ -99,10 +99,10 @@ export function Providers({ children }: { children: ReactNode }) {
       : undefined;
 
     return createZamaConfig({
-      chains: [SepoliaConfig],
+      chains: [fheSepolia],
       viem: { publicClient, walletClient, ethereum: ethereum ?? undefined },
       transports: {
-        [SepoliaConfig.chainId]: relayer(`${window.location.origin}/api/relayer`, {
+        [fheSepolia.chainId]: relayer(`${window.location.origin}/api/relayer`, {
           network: SEPOLIA_RPC_URL,
         }),
       },
