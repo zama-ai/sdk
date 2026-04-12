@@ -52,9 +52,17 @@ const MockWagmiSigner = vi.mocked(WagmiSigner);
 const MockViemSigner = vi.mocked(ViemSigner);
 const MockEthersSigner = vi.mocked(EthersSigner);
 
-function mockWagmiConfig(chainIds: number[] = [11155111]) {
+function mockWagmiConfig(chainIds: number[] = [11155111], rpcUrls?: Record<number, string>) {
   return {
     chains: chainIds.map((id) => ({ id, name: `Chain ${id}` })),
+    _internal: {
+      transports: Object.fromEntries(
+        chainIds.map((id) => [
+          id,
+          rpcUrls?.[id] ? () => ({ value: { url: rpcUrls[id] } }) : () => ({ value: undefined }),
+        ]),
+      ),
+    },
   } as any;
 }
 
@@ -163,6 +171,64 @@ describe("createZamaConfig", () => {
       const transports = { [11155111]: SepoliaConfig };
       createZamaConfig({ signer, transports });
       expect(MockRelayerWeb).toHaveBeenCalledWith(expect.objectContaining({ transports }));
+    });
+
+    it("infers network from wagmi http transport", () => {
+      createZamaConfig({
+        wagmiConfig: mockWagmiConfig([11155111], {
+          [11155111]: "https://sepolia.infura.io/v3/KEY",
+        }),
+        transports: {
+          [11155111]: relayer("/api/relayer/11155111"),
+        },
+      });
+      expect(MockRelayerWeb).toHaveBeenCalledWith(
+        expect.objectContaining({
+          transports: expect.objectContaining({
+            [11155111]: expect.objectContaining({
+              relayerUrl: "/api/relayer/11155111",
+              network: "https://sepolia.infura.io/v3/KEY",
+            }),
+          }),
+        }),
+      );
+    });
+
+    it("user override wins over inferred network", () => {
+      createZamaConfig({
+        wagmiConfig: mockWagmiConfig([11155111], {
+          [11155111]: "https://sepolia.infura.io/v3/KEY",
+        }),
+        transports: {
+          [11155111]: relayer("/api/relayer/11155111", {
+            network: "https://custom-rpc.com",
+          }),
+        },
+      });
+      expect(MockRelayerWeb).toHaveBeenCalledWith(
+        expect.objectContaining({
+          transports: expect.objectContaining({
+            [11155111]: expect.objectContaining({
+              network: "https://custom-rpc.com",
+            }),
+          }),
+        }),
+      );
+    });
+
+    it("does not infer network when wagmi transport has no url", () => {
+      createZamaConfig({
+        wagmiConfig: mockWagmiConfig([11155111]),
+      });
+      expect(MockRelayerWeb).toHaveBeenCalledWith(
+        expect.objectContaining({
+          transports: expect.objectContaining({
+            [11155111]: expect.objectContaining({
+              network: SepoliaConfig.network,
+            }),
+          }),
+        }),
+      );
     });
   });
 

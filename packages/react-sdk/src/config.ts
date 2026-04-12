@@ -155,14 +155,28 @@ function resolveTransports(
     for (const chain of params.wagmiConfig.chains) {
       const defaultConfig = DefaultConfigs[chain.id];
       const userOverride = params.transports?.[chain.id];
-      if (defaultConfig || userOverride) {
-        resolved[chain.id] = { ...defaultConfig, ...userOverride };
-      } else {
+      if (!defaultConfig && !userOverride) {
         throw new ConfigurationError(
           `Chain ${chain.id} (${chain.name}) has no default FHE config and no transport override was provided. ` +
             `Either remove this chain from your wagmi config or provide a transport override via the transports option.`,
         );
       }
+
+      const wagmiInternal = (
+        params.wagmiConfig as unknown as {
+          _internal?: {
+            transports?: Record<number, (ctx: { chain: unknown }) => { value?: { url?: string } }>;
+          };
+        }
+      )._internal;
+      const inferredNetwork: string | undefined = wagmiInternal?.transports?.[chain.id]?.({ chain })
+        ?.value?.url;
+
+      resolved[chain.id] = {
+        ...defaultConfig,
+        ...(inferredNetwork ? { network: inferredNetwork } : {}),
+        ...userOverride,
+      };
     }
     return resolved;
   }
