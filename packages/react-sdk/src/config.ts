@@ -117,6 +117,11 @@ export interface ZamaConfig {
 
 const isBrowser = typeof window !== "undefined";
 
+const defaultStorage = isBrowser ? new IndexedDBStorage("CredentialStore") : new MemoryStorage();
+const defaultSessionStorage = isBrowser
+  ? new IndexedDBStorage("SessionStore")
+  : new MemoryStorage();
+
 function resolveSigner(params: CreateZamaConfigWithTransports): GenericSigner {
   if ("wagmiConfig" in params && params.wagmiConfig) {
     return new WagmiSigner({ config: params.wagmiConfig });
@@ -162,10 +167,8 @@ function resolveStorage(
   storage: GenericStorage | undefined,
   sessionStorage: GenericStorage | undefined,
 ): { storage: GenericStorage; sessionStorage: GenericStorage } {
-  const resolvedStorage =
-    storage ?? (isBrowser ? new IndexedDBStorage("CredentialStore") : new MemoryStorage());
-  const resolvedSessionStorage =
-    sessionStorage ?? (isBrowser ? new IndexedDBStorage("SessionStore") : new MemoryStorage());
+  const resolvedStorage = storage ?? defaultStorage;
+  const resolvedSessionStorage = sessionStorage ?? defaultSessionStorage;
 
   if (resolvedStorage === resolvedSessionStorage) {
     // oxlint-disable-next-line no-console
