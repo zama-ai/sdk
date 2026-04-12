@@ -11,6 +11,8 @@ import type {
   ExtendedFhevmInstanceConfig,
 } from "@zama-fhe/sdk";
 import { RelayerWeb, MemoryStorage, IndexedDBStorage, ConfigurationError } from "@zama-fhe/sdk";
+import { RelayerCleartext } from "@zama-fhe/sdk/cleartext";
+import type { CleartextConfig } from "@zama-fhe/sdk/cleartext";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 import { EthersSigner } from "@zama-fhe/sdk/ethers";
 import { WagmiSigner } from "./wagmi/wagmi-signer";
@@ -20,7 +22,7 @@ interface ZamaConfigBase {
   /** FHE chain configurations. Defines which chains support FHE operations and their contract addresses. */
   chains: ExtendedFhevmInstanceConfig[];
   /** Per-chain relayer transport overrides. Merged on top of chain defaults. */
-  transports?: Record<number, Partial<ExtendedFhevmInstanceConfig>>;
+  transports?: Record<number, TransportConfig>;
   /** Credential storage. Default: IndexedDBStorage("CredentialStore") in browser, MemoryStorage in Node. */
   storage?: GenericStorage;
   /** Session storage. Default: IndexedDBStorage("SessionStore") in browser, MemoryStorage in Node. */
@@ -61,7 +63,7 @@ export interface ZamaConfigViem extends ZamaConfigBase {
   wagmiConfig?: never;
   signer?: never;
   ethers?: never;
-  transports: Record<number, Partial<ExtendedFhevmInstanceConfig>>;
+  transports: Record<number, TransportConfig>;
 }
 
 /** Ethers path — takes native ethers types. */
@@ -71,7 +73,7 @@ export interface ZamaConfigEthers extends ZamaConfigBase {
   wagmiConfig?: never;
   signer?: never;
   viem?: never;
-  transports: Record<number, Partial<ExtendedFhevmInstanceConfig>>;
+  transports: Record<number, TransportConfig>;
 }
 
 /** Escape hatch — raw GenericSigner for custom implementations. */
@@ -81,7 +83,7 @@ export interface ZamaConfigCustomSigner extends ZamaConfigBase {
   wagmiConfig?: never;
   viem?: never;
   ethers?: never;
-  transports: Record<number, Partial<ExtendedFhevmInstanceConfig>>;
+  transports: Record<number, TransportConfig>;
 }
 
 /** Pre-built relayer — bring your own RelayerSDK (e.g. RelayerCleartext for local dev). */
@@ -143,37 +145,163 @@ type CreateZamaConfigWithTransports =
   | ZamaConfigEthers
   | ZamaConfigCustomSigner;
 
-function resolveTransports(
+/**
+ * Resolve per-chain transport entries by merging chain defaults with user overrides.
+ * Returns a map of chainId → merged TransportConfig.
+ */
+function resolveChainTransports(
   params: CreateZamaConfigWithTransports,
-): Record<number, Partial<ExtendedFhevmInstanceConfig>> {
+): Map<number, { chain: ExtendedFhevmInstanceConfig; transport: TransportConfig }> {
   const chainMap = new Map(params.chains.map((c) => [c.chainId, c]));
+  const result = new Map<
+    number,
+    { chain: ExtendedFhevmInstanceConfig; transport: TransportConfig }
+  >();
 
-  if ("wagmiConfig" in params && params.wagmiConfig) {
-    const resolved: Record<number, Partial<ExtendedFhevmInstanceConfig>> = {};
-    for (const chain of params.wagmiConfig.chains) {
-      const chainConfig = chainMap.get(chain.id);
-      const userOverride = params.transports?.[chain.id];
-      if (!chainConfig && !userOverride) {
+  const chainIds =
+    "wagmiConfig" in params && params.wagmiConfig
+      ? params.wagmiConfig.chains.map((c: { id: number; name: string }) => c.id)
+      : params.chains.map((c) => c.chainId);
+
+  for (const id of chainIds) {
+    const chainConfig = chainMap.get(id);
+    const userTransport = params.transports?.[id];
+
+    if (!chainConfig && !userTransport) {
+      const name =
+        "wagmiConfig" in params
+          ? (params.wagmiConfig?.chains.find((c: { id: number }) => c.id === id)?.name ?? id)
+          : id;
+      throw new ConfigurationError(
+        `Chain ${id} (${name}) has no FHE chain config in the chains array and no transport override was provided. ` +
+          `Either add this chain to the chains array or provide a transport override.`,
+      );
+    }
+
+    if (userTransport && isCleartextTransport(userTransport)) {
+      if (!chainConfig) {
         throw new ConfigurationError(
-          `Chain ${chain.id} (${chain.name}) has no FHE chain config in the chains array and no transport override was provided. ` +
-            `Either add this chain to the chains array or provide a transport override.`,
+          `Chain ${id} uses cleartext transport but has no entry in the chains array. ` +
+            `Add the chain config to the chains array.`,
         );
       }
-
-      resolved[chain.id] = {
-        ...chainConfig,
-        ...userOverride,
-      };
+      result.set(id, { chain: chainConfig, transport: userTransport });
+    } else if (chainConfig) {
+      result.set(id, {
+        chain: chainConfig,
+        transport: userTransport ? { ...chainConfig, ...userTransport } : { ...chainConfig },
+      });
     }
-    return resolved;
   }
 
-  // Non-wagmi path: merge chains with transport overrides
-  const resolved: Record<number, Partial<ExtendedFhevmInstanceConfig>> = {};
-  for (const chain of params.chains) {
-    resolved[chain.chainId] = { ...chain, ...params.transports[chain.chainId] };
+  return result;
+}
+
+/**
+ * Build the appropriate RelayerSDK from resolved chain transports.
+ * If all chains are web → single RelayerWeb.
+ * If any chain is cleartext → dispatch relayer that routes by chain ID.
+ */
+function buildRelayer(
+  chainTransports: Map<number, { chain: ExtendedFhevmInstanceConfig; transport: TransportConfig }>,
+  resolveChainId: () => Promise<number>,
+  security: RelayerWebSecurityConfig | undefined,
+  threads: number | undefined,
+): RelayerSDK {
+  const webTransports: Record<number, Partial<ExtendedFhevmInstanceConfig>> = {};
+  const cleartextRelayers = new Map<number, RelayerCleartext>();
+
+  for (const [chainId, { chain, transport }] of chainTransports) {
+    if (isCleartextTransport(transport)) {
+      cleartextRelayers.set(
+        chainId,
+        new RelayerCleartext({
+          chainId: chain.chainId,
+          gatewayChainId: chain.gatewayChainId,
+          aclContractAddress: chain.aclContractAddress as Address,
+          verifyingContractAddressDecryption: chain.verifyingContractAddressDecryption as Address,
+          verifyingContractAddressInputVerification:
+            chain.verifyingContractAddressInputVerification as Address,
+          registryAddress: chain.registryAddress,
+          network: transport.network,
+          executorAddress: transport.executorAddress,
+          kmsSignerPrivateKey: transport.kmsSignerPrivateKey,
+          inputSignerPrivateKey: transport.inputSignerPrivateKey,
+        }),
+      );
+    } else {
+      webTransports[chainId] = transport as Partial<ExtendedFhevmInstanceConfig>;
+    }
   }
-  return resolved;
+
+  // All web — simple case
+  if (cleartextRelayers.size === 0) {
+    return new RelayerWeb({
+      getChainId: resolveChainId,
+      transports: webTransports,
+      security,
+      threads,
+    });
+  }
+
+  // All cleartext — no RelayerWeb needed
+  if (Object.keys(webTransports).length === 0) {
+    return createDispatchRelayer(resolveChainId, new Map(), cleartextRelayers);
+  }
+
+  // Mixed — dispatch by chain
+  const webRelayer = new RelayerWeb({
+    getChainId: resolveChainId,
+    transports: webTransports,
+    security,
+    threads,
+  });
+  const webRelayerMap = new Map(
+    Object.keys(webTransports).map((id) => [Number(id), webRelayer as RelayerSDK]),
+  );
+  return createDispatchRelayer(resolveChainId, webRelayerMap, cleartextRelayers);
+}
+
+/**
+ * Create a RelayerSDK that dispatches to the correct relayer based on current chain ID.
+ */
+function createDispatchRelayer(
+  resolveChainId: () => Promise<number>,
+  webRelayers: Map<number, RelayerSDK>,
+  cleartextRelayers: Map<number, RelayerSDK>,
+): RelayerSDK {
+  const allRelayers = new Map([...webRelayers, ...cleartextRelayers]);
+
+  async function current(): Promise<RelayerSDK> {
+    const chainId = await resolveChainId();
+    const r = allRelayers.get(chainId);
+    if (!r) {
+      throw new ConfigurationError(
+        `No relayer configured for chain ${chainId}. ` +
+          `Add it to the chains array and transports map.`,
+      );
+    }
+    return r;
+  }
+
+  return {
+    generateKeypair: () => current().then((r) => r.generateKeypair()),
+    createEIP712: (...args) => current().then((r) => r.createEIP712(...args)),
+    encrypt: (...args) => current().then((r) => r.encrypt(...args)),
+    userDecrypt: (...args) => current().then((r) => r.userDecrypt(...args)),
+    publicDecrypt: (...args) => current().then((r) => r.publicDecrypt(...args)),
+    createDelegatedUserDecryptEIP712: (...args) =>
+      current().then((r) => r.createDelegatedUserDecryptEIP712(...args)),
+    delegatedUserDecrypt: (...args) => current().then((r) => r.delegatedUserDecrypt(...args)),
+    requestZKProofVerification: (...args) =>
+      current().then((r) => r.requestZKProofVerification(...args)),
+    getPublicKey: () => current().then((r) => r.getPublicKey()),
+    getPublicParams: (...args) => current().then((r) => r.getPublicParams(...args)),
+    getAclAddress: () => current().then((r) => r.getAclAddress()),
+    terminate: () => {
+      for (const r of new Set(allRelayers.values())) {r.terminate();}
+    },
+  };
 }
 
 function resolveStorage(
@@ -197,12 +325,29 @@ function resolveGetChainId(
   return () => signer.getChainId();
 }
 
+/** Tagged transport: routes to RelayerCleartext. */
+export interface CleartextTransport {
+  readonly __mode: "cleartext";
+  network: CleartextConfig["network"];
+  executorAddress: CleartextConfig["executorAddress"];
+  kmsSignerPrivateKey?: CleartextConfig["kmsSignerPrivateKey"];
+  inputSignerPrivateKey?: CleartextConfig["inputSignerPrivateKey"];
+}
+
+/** A per-chain transport entry — either a relayer override (default) or cleartext mode. */
+export type TransportConfig = Partial<ExtendedFhevmInstanceConfig> | CleartextTransport;
+
+function isCleartextTransport(t: TransportConfig): t is CleartextTransport {
+  return "__mode" in t && t.__mode === "cleartext";
+}
+
 /**
- * Create a per-chain transport override with the given relayer proxy URL.
+ * Create a per-chain transport that routes to RelayerWeb.
  *
  * @example
  * ```ts
  * createZamaConfig({
+ *   chains: [sepolia],
  *   wagmiConfig,
  *   transports: {
  *     [sepolia.id]: relayer("/api/relayer/11155111"),
@@ -215,6 +360,30 @@ export function relayer(
   overrides?: Partial<Omit<ExtendedFhevmInstanceConfig, "relayerUrl">>,
 ): Partial<ExtendedFhevmInstanceConfig> {
   return { relayerUrl, ...overrides };
+}
+
+/**
+ * Create a per-chain transport that routes to RelayerCleartext.
+ * For local dev and testnets without FHE infrastructure.
+ *
+ * @example
+ * ```ts
+ * import { hoodi } from "@zama-fhe/sdk/chains";
+ * createZamaConfig({
+ *   chains: [mainnet, hoodi],
+ *   wagmiConfig,
+ *   transports: {
+ *     [mainnet.id]: relayer("/api/relayer/1"),
+ *     [hoodi.id]: cleartext({
+ *       network: "https://rpc.hoodi.ethpandaops.io",
+ *       executorAddress: "0x...",
+ *     }),
+ *   },
+ * });
+ * ```
+ */
+export function cleartext(config: Omit<CleartextTransport, "__mode">): CleartextTransport {
+  return { __mode: "cleartext", ...config };
 }
 
 /**
@@ -254,14 +423,11 @@ export function createZamaConfig(params: CreateZamaConfigParams): ZamaConfig {
   }
 
   const signer = resolveSigner(params);
+  const getChainIdFn = resolveGetChainId(params, signer);
+  const chainTransports = resolveChainTransports(params);
 
   return {
-    relayer: new RelayerWeb({
-      getChainId: resolveGetChainId(params, signer),
-      transports: resolveTransports(params),
-      security: params.security,
-      threads: params.threads,
-    }),
+    relayer: buildRelayer(chainTransports, getChainIdFn, params.security, params.threads),
     signer,
     storage,
     sessionStorage,
