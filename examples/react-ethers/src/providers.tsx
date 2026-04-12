@@ -83,7 +83,7 @@ export function Providers({ children }: { children: ReactNode }) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ethers: { ethereum: provider as any },
       transports: {
-        [fheSepolia.chainId]: relayer(`${window.location.origin}/api/relayer`, {
+        [fheSepolia.id]: relayer(`${window.location.origin}/api/relayer`, {
           network: SEPOLIA_RPC_URL,
         }),
       },
