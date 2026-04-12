@@ -25,8 +25,7 @@ export {
   type ZamaConfigCustomSigner,
   type ZamaConfigCustomRelayer,
   type TransportConfig,
-  type FhevmTransport,
-  type FhevmTransportOverrides,
+  type FhevmTransportConfig,
   type CleartextTransport,
 } from "@zama-fhe/sdk";
 

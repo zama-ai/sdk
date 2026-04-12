@@ -174,9 +174,9 @@ describe("createZamaConfig", () => {
   });
 
   describe("fhevm() helper", () => {
-    it("returns relayerUrl in a partial config", () => {
+    it("returns tagged config with relayerUrl", () => {
       const result = fhevm({ relayerUrl: "/api/relayer/11155111" });
-      expect(result).toEqual({ relayerUrl: "/api/relayer/11155111" });
+      expect(result).toEqual({ __mode: "fhevm", relayerUrl: "/api/relayer/11155111" });
     });
 
     it("merges all config fields", () => {
@@ -185,14 +185,15 @@ describe("createZamaConfig", () => {
         network: "https://custom-rpc.com",
       });
       expect(result).toEqual({
+        __mode: "fhevm",
         relayerUrl: "/api/relayer/11155111",
         network: "https://custom-rpc.com",
       });
     });
 
-    it("returns empty object when called with no args", () => {
+    it("returns tagged empty config when called with no args", () => {
       const result = fhevm();
-      expect(result).toEqual({});
+      expect(result).toEqual({ __mode: "fhevm" });
     });
   });
 

@@ -17,30 +17,27 @@ import { ConfigurationError } from "./errors";
 
 // ── Transport types ──────────────────────────────────────────────────────────
 
-/** Tagged transport: routes to RelayerCleartext. */
-export interface CleartextTransport {
-  readonly __mode: "cleartext";
-  network: CleartextConfig["network"];
-  executorAddress: CleartextConfig["executorAddress"];
-  kmsSignerPrivateKey?: CleartextConfig["kmsSignerPrivateKey"];
-  inputSignerPrivateKey?: CleartextConfig["inputSignerPrivateKey"];
-}
-
-/** A per-chain transport entry — either fhevm (default) or cleartext mode. */
-export type TransportConfig = Partial<ExtendedFhevmInstanceConfig> | CleartextTransport;
-
-export interface FhevmTransportOverrides extends Partial<
-  Omit<ExtendedFhevmInstanceConfig, "relayerUrl">
-> {
+/** Tagged transport: routes to RelayerWeb. */
+export interface FhevmTransportConfig {
+  readonly __mode: "fhevm";
+  relayerUrl?: string;
   /** RelayerWeb security config (CSRF, integrity check). */
   security?: RelayerWebSecurityConfig;
   /** WASM thread count for parallel FHE operations. */
   threads?: number;
 }
 
-export interface FhevmTransport extends FhevmTransportOverrides {
-  relayerUrl: string;
+/** Tagged transport: routes to RelayerCleartext. */
+export interface CleartextTransport {
+  readonly __mode: "cleartext";
+  network?: CleartextConfig["network"];
+  executorAddress: CleartextConfig["executorAddress"];
+  kmsSignerPrivateKey?: CleartextConfig["kmsSignerPrivateKey"];
+  inputSignerPrivateKey?: CleartextConfig["inputSignerPrivateKey"];
 }
+
+/** A per-chain transport entry — fhevm or cleartext mode. */
+export type TransportConfig = FhevmTransportConfig | CleartextTransport;
 
 /**
  * Create a per-chain transport for real FHE operations via RelayerWeb.
@@ -54,10 +51,8 @@ export interface FhevmTransport extends FhevmTransportOverrides {
  * transports: { [sepolia.id]: fhevm({ relayerUrl: "/api/relayer/11155111" }) }
  * ```
  */
-export function fhevm(
-  config?: FhevmTransportOverrides & { relayerUrl?: string },
-): Partial<ExtendedFhevmInstanceConfig> & FhevmTransportOverrides {
-  return { ...config };
+export function fhevm(config?: Omit<FhevmTransportConfig, "__mode">): FhevmTransportConfig {
+  return { __mode: "fhevm", ...config };
 }
 
 /**
@@ -178,6 +173,10 @@ function isCleartextTransport(t: TransportConfig): t is CleartextTransport {
   return "__mode" in t && t.__mode === "cleartext";
 }
 
+function isFhevmTransport(t: TransportConfig): t is FhevmTransportConfig {
+  return t.__mode === "fhevm";
+}
+
 function resolveStorage(
   storage: GenericStorage | undefined,
   sessionStorage: GenericStorage | undefined,
@@ -222,10 +221,13 @@ export function resolveChainTransports(
       }
       result.set(id, { chain: chainConfig, transport: userTransport });
     } else if (chainConfig) {
-      result.set(id, {
-        chain: chainConfig,
-        transport: userTransport ? { ...chainConfig, ...userTransport } : { ...chainConfig },
-      });
+      const base = { __mode: "fhevm" as const, ...chainConfig };
+      if (userTransport && isFhevmTransport(userTransport)) {
+        const { __mode: _, ...overrides } = userTransport;
+        result.set(id, { chain: chainConfig, transport: { ...base, ...overrides } });
+      } else {
+        result.set(id, { chain: chainConfig, transport: base });
+      }
     }
   }
 
@@ -254,14 +256,19 @@ export function buildRelayer(
           verifyingContractAddressInputVerification:
             chain.verifyingContractAddressInputVerification as Address,
           registryAddress: chain.registryAddress,
-          network: transport.network,
+          network: (transport.network ?? chain.network) as CleartextConfig["network"],
           executorAddress: transport.executorAddress,
           kmsSignerPrivateKey: transport.kmsSignerPrivateKey,
           inputSignerPrivateKey: transport.inputSignerPrivateKey,
         }),
       );
     } else {
-      const { security: s, threads: t, ...fhevmConfig } = transport as FhevmTransport;
+      const {
+        __mode: _,
+        security: s,
+        threads: t,
+        ...fhevmConfig
+      } = transport as FhevmTransportConfig;
       if (s) {
         security = s;
       }

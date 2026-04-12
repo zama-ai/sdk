@@ -17,8 +17,7 @@ export type {
   ZamaConfigCustomRelayer,
   CreateZamaConfigBaseParams,
   TransportConfig,
-  FhevmTransport,
-  FhevmTransportOverrides,
+  FhevmTransportConfig,
   CleartextTransport,
 } from "./config";
 
