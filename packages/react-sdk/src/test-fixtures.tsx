@@ -1,7 +1,13 @@
 /* eslint-disable no-empty-pattern */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, type RenderHookOptions } from "@testing-library/react";
-import type { GenericSigner, GenericStorage, RelayerSDK, Token } from "@zama-fhe/sdk";
+import type {
+  GenericSigner,
+  GenericStorage,
+  RelayerSDK,
+  Token,
+  ZamaSDKEventListener,
+} from "@zama-fhe/sdk";
 import type { PropsWithChildren } from "react";
 import React from "react";
 import { test as base } from "../../sdk/src/test-fixtures";
@@ -21,17 +27,19 @@ function buildMockZamaConfig(overrides: {
   signer?: GenericSigner;
   storage?: GenericStorage;
   sessionStorage?: GenericStorage;
+  keypairTTL?: number;
+  onEvent?: ZamaSDKEventListener;
 }): ZamaConfig {
   return {
     _relayer: overrides.relayer,
     _signer: overrides.signer,
     _storage: overrides.storage,
     _sessionStorage: overrides.sessionStorage,
-    _keypairTTL: undefined,
+    _keypairTTL: overrides.keypairTTL,
     _sessionTTL: undefined,
     _registryAddresses: undefined,
     _registryTTL: undefined,
-    _onEvent: undefined,
+    _onEvent: overrides.onEvent,
   } as unknown as ZamaConfig;
 }
 
@@ -59,6 +67,8 @@ interface ReactSdkFixtures {
     signer?: GenericSigner;
     storage?: GenericStorage;
     sessionStorage?: GenericStorage;
+    keypairTTL?: number;
+    onEvent?: ZamaSDKEventListener;
   }) => {
     Wrapper: React.FC<{ children?: React.ReactNode }>;
     queryClient: QueryClient;
@@ -95,6 +105,8 @@ export const test = base.extend<ReactSdkFixtures>({
       signer?: GenericSigner;
       storage?: GenericStorage;
       sessionStorage?: GenericStorage;
+      keypairTTL?: number;
+      onEvent?: ZamaSDKEventListener;
     }) {
       const mergedRelayer = overrides?.relayer ?? relayer;
       const mergedSigner = overrides?.signer ?? signer;
@@ -106,6 +118,8 @@ export const test = base.extend<ReactSdkFixtures>({
         signer: mergedSigner,
         storage: mergedStorage,
         sessionStorage: mergedSessionStorage,
+        keypairTTL: overrides?.keypairTTL,
+        onEvent: overrides?.onEvent,
       });
 
       function Wrapper({ children }: { children?: React.ReactNode }) {
