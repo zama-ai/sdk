@@ -46,8 +46,8 @@ Create `src/config.ts`. This file sets up wagmi, the signer, and the relayer -- 
 import { createConfig, http } from "wagmi";
 import { sepolia } from "wagmi/chains";
 import { QueryClient } from "@tanstack/react-query";
-import { RelayerWeb, indexedDBStorage } from "@zama-fhe/react-sdk";
-import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
+import { createZamaConfig } from "@zama-fhe/react-sdk";
+import { SepoliaConfig } from "@zama-fhe/sdk";
 
 export const wagmiConfig = createConfig({
   chains: [sepolia],
@@ -56,12 +56,10 @@ export const wagmiConfig = createConfig({
   },
 });
 
-export const signer = new WagmiSigner({ config: wagmiConfig });
-
-export const relayer = new RelayerWeb({
-  getChainId: () => signer.getChainId(),
+export const zamaConfig = createZamaConfig({
+  wagmiConfig,
   transports: {
-    [sepolia.id]: {
+    [SepoliaConfig.chainId]: {
       relayerUrl: "https://your-app.com/api/relayer/11155111",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
     },
@@ -69,8 +67,6 @@ export const relayer = new RelayerWeb({
 });
 
 export const queryClient = new QueryClient();
-
-export const storage = indexedDBStorage;
 
 export const TOKEN_ADDRESS = "0xYourEncryptedERC20" as const;
 
@@ -95,14 +91,14 @@ Replace the contents of `src/App.tsx`. We wrap the app in three providers: wagmi
 import { WagmiProvider } from "wagmi";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ZamaProvider } from "@zama-fhe/react-sdk";
-import { wagmiConfig, queryClient, relayer, signer, storage } from "./config";
+import { wagmiConfig, queryClient, zamaConfig } from "./config";
 import { Dashboard } from "./Dashboard";
 
 export default function App() {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <ZamaProvider relayer={relayer} signer={signer} storage={storage}>
+        <ZamaProvider config={zamaConfig}>
           <h1>Confidential Token Dashboard</h1>
           <Dashboard />
         </ZamaProvider>

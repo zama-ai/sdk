@@ -35,35 +35,35 @@ export function ZamaProvider({ children, config }: ZamaProviderProps) {
   const queryClient = useQueryClient();
 
   // Stabilize onEvent so an inline arrow doesn't recreate the SDK every render.
-  const onEventRef = useRef(config._onEvent);
+  const onEventRef = useRef(config.onEvent);
 
   useEffect(() => {
-    onEventRef.current = config._onEvent;
+    onEventRef.current = config.onEvent;
   });
 
   const signerLifecycleCallbacks = useMemo(
     () =>
-      config._signer?.subscribe
+      config.signer?.subscribe
         ? {
             onDisconnect: () => invalidateWalletLifecycleQueries(queryClient),
             onAccountChange: () => invalidateWalletLifecycleQueries(queryClient),
             onChainChange: () => invalidateWalletLifecycleQueries(queryClient),
           }
         : undefined,
-    [queryClient, config._signer],
+    [queryClient, config.signer],
   );
 
   const sdk = useMemo(
     () =>
       new ZamaSDK({
-        relayer: config._relayer,
-        signer: config._signer,
-        storage: config._storage,
-        sessionStorage: config._sessionStorage,
-        keypairTTL: config._keypairTTL,
-        sessionTTL: config._sessionTTL,
-        registryAddresses: config._registryAddresses,
-        registryTTL: config._registryTTL,
+        relayer: config.relayer,
+        signer: config.signer,
+        storage: config.storage,
+        sessionStorage: config.sessionStorage,
+        keypairTTL: config.keypairTTL,
+        sessionTTL: config.sessionTTL,
+        registryAddresses: config.registryAddresses,
+        registryTTL: config.registryTTL,
         onEvent: onEventRef.current,
         signerLifecycleCallbacks,
       }),

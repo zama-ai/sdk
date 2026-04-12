@@ -42,6 +42,7 @@ interface ZamaConfigBase {
 /** Wagmi-backed config — signer derived from wagmi Config. */
 export interface ZamaConfigWagmi extends ZamaConfigBase {
   wagmiConfig: Config;
+  relayer?: never;
   signer?: never;
   viem?: never;
   ethers?: never;
@@ -54,6 +55,7 @@ export interface ZamaConfigViem extends ZamaConfigBase {
     walletClient?: WalletClient;
     ethereum?: EIP1193Provider;
   };
+  relayer?: never;
   wagmiConfig?: never;
   signer?: never;
   ethers?: never;
@@ -63,6 +65,7 @@ export interface ZamaConfigViem extends ZamaConfigBase {
 /** Ethers path — takes native ethers types. */
 export interface ZamaConfigEthers extends ZamaConfigBase {
   ethers: { ethereum: EIP1193Provider } | { signer: Signer } | { provider: Provider };
+  relayer?: never;
   wagmiConfig?: never;
   signer?: never;
   viem?: never;
@@ -72,10 +75,23 @@ export interface ZamaConfigEthers extends ZamaConfigBase {
 /** Escape hatch — raw GenericSigner for custom implementations. */
 export interface ZamaConfigCustomSigner extends ZamaConfigBase {
   signer: GenericSigner;
+  relayer?: never;
   wagmiConfig?: never;
   viem?: never;
   ethers?: never;
   transports: Record<number, Partial<ExtendedFhevmInstanceConfig>>;
+}
+
+/** Pre-built relayer — bring your own RelayerSDK (e.g. RelayerCleartext for local dev). */
+export interface ZamaConfigCustomRelayer extends Omit<
+  ZamaConfigBase,
+  "security" | "threads" | "transports"
+> {
+  relayer: RelayerSDK;
+  signer: GenericSigner;
+  wagmiConfig?: never;
+  viem?: never;
+  ethers?: never;
 }
 
 /** Union of all config variants passed to {@link createZamaConfig}. */
@@ -83,7 +99,8 @@ export type CreateZamaConfigParams =
   | ZamaConfigWagmi
   | ZamaConfigViem
   | ZamaConfigEthers
-  | ZamaConfigCustomSigner;
+  | ZamaConfigCustomSigner
+  | ZamaConfigCustomRelayer;
 
 /** Opaque config object returned by {@link createZamaConfig}. Pass to `<ZamaProvider config={...}>`. */
 export interface ZamaConfig {
@@ -100,16 +117,12 @@ export interface ZamaConfig {
 
 const isBrowser = typeof window !== "undefined";
 
-function resolveSigner(params: CreateZamaConfigParams): GenericSigner {
+function resolveSigner(params: CreateZamaConfigWithTransports): GenericSigner {
   if ("wagmiConfig" in params && params.wagmiConfig) {
     return new WagmiSigner({ config: params.wagmiConfig });
   }
   if ("viem" in params && params.viem) {
-    return new ViemSigner({
-      publicClient: params.viem.publicClient,
-      walletClient: params.viem.walletClient,
-      ethereum: params.viem.ethereum,
-    });
+    return new ViemSigner(params.viem);
   }
   if ("ethers" in params && params.ethers) {
     return new EthersSigner(params.ethers);
@@ -117,8 +130,14 @@ function resolveSigner(params: CreateZamaConfigParams): GenericSigner {
   return params.signer;
 }
 
+type CreateZamaConfigWithTransports =
+  | ZamaConfigWagmi
+  | ZamaConfigViem
+  | ZamaConfigEthers
+  | ZamaConfigCustomSigner;
+
 function resolveTransports(
-  params: CreateZamaConfigParams,
+  params: CreateZamaConfigWithTransports,
 ): Record<number, Partial<ExtendedFhevmInstanceConfig>> {
   if ("wagmiConfig" in params && params.wagmiConfig) {
     const resolved: Record<number, Partial<ExtendedFhevmInstanceConfig>> = {};
@@ -161,7 +180,7 @@ function resolveStorage(
 }
 
 function resolveGetChainId(
-  params: CreateZamaConfigParams,
+  params: CreateZamaConfigWithTransports,
   signer: GenericSigner,
 ): () => Promise<number> {
   if ("wagmiConfig" in params && params.wagmiConfig) {
@@ -191,20 +210,31 @@ function resolveGetChainId(
  * ```
  */
 export function createZamaConfig(params: CreateZamaConfigParams): ZamaConfig {
-  const signer = resolveSigner(params);
-  const transports = resolveTransports(params);
   const { storage, sessionStorage } = resolveStorage(params.storage, params.sessionStorage);
-  const getChainIdFn = resolveGetChainId(params, signer);
 
-  const relayer = new RelayerWeb({
-    getChainId: getChainIdFn,
-    transports,
-    security: params.security,
-    threads: params.threads,
-  });
+  if ("relayer" in params && params.relayer) {
+    return {
+      relayer: params.relayer,
+      signer: params.signer,
+      storage,
+      sessionStorage,
+      keypairTTL: params.keypairTTL,
+      sessionTTL: params.sessionTTL,
+      registryAddresses: params.registryAddresses,
+      registryTTL: params.registryTTL,
+      onEvent: params.onEvent,
+    };
+  }
+
+  const signer = resolveSigner(params);
 
   return {
-    relayer,
+    relayer: new RelayerWeb({
+      getChainId: resolveGetChainId(params, signer),
+      transports: resolveTransports(params),
+      security: params.security,
+      threads: params.threads,
+    }),
     signer,
     storage,
     sessionStorage,

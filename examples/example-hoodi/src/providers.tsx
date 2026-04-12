@@ -8,6 +8,7 @@ import {
   IndexedDBStorage,
   indexedDBStorage,
   savePendingUnshield,
+  createZamaConfig,
 } from "@zama-fhe/react-sdk";
 import { RelayerCleartext, hoodiCleartextConfig } from "@zama-fhe/sdk/cleartext";
 import { EthersSigner } from "@zama-fhe/sdk/ethers";
@@ -22,8 +23,8 @@ import { getEthereumProvider } from "@/lib/ethereum";
 //
 //   const signer  = new EthersSigner({ ethereum });
 //   const relayer = new RelayerCleartext({ ...hoodiCleartextConfig, network: HOODI_RPC_URL });
-//   <ZamaProvider relayer={relayer} signer={signer}
-//     storage={indexedDBStorage} sessionStorage={sessionDBStorage}>
+//   const zamaConfig = createZamaConfig({ signer, relayer, storage, sessionStorage, ... });
+//   <ZamaProvider config={zamaConfig}>
 //
 // That is the minimal setup. This file adds three extra layers to handle issues
 // specific to MetaMask + Hoodi — you may not need all of them in your integration:
@@ -233,36 +234,37 @@ export function Providers({ children }: { children: ReactNode }) {
   );
 
   // Recreated on wallet switch so the new EthersSigner is bound to the new account address.
-  const signer = useMemo(() => {
+  const zamaConfig = useMemo(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const hybridEthereum = createHybridEthereum(getEthereumProvider(), liveAccountsRef) as any;
-    return new EthersSigner({ ethereum: hybridEthereum });
-  }, [walletKey]);
+    const signer = new EthersSigner({ ethereum: hybridEthereum });
+    return createZamaConfig({
+      signer,
+      relayer,
+      storage: indexedDBStorage,
+      sessionStorage: sessionDBStorage,
+      onEvent: (event) => {
+        // ZamaSDKEvents.UnshieldPhase1Submitted fires after Phase 1 is mined (the SDK
+        // awaits the receipt before emitting). Saving here ensures the pending state
+        // survives a tab close between Phase 1 and Phase 2.
+        // See activeUnshield.ts for why wrapperAddress is passed via a module-level ref.
+        if (event.type === ZamaSDKEvents.UnshieldPhase1Submitted) {
+          const wrapperAddress = getActiveUnshieldToken();
+          if (wrapperAddress) {
+            savePendingUnshield(indexedDBStorage, wrapperAddress, event.txHash).catch(
+              (err: unknown) =>
+                console.error("[Providers] Failed to persist pending unshield:", event.txHash, err),
+            );
+            setActiveUnshieldToken(null);
+          }
+        }
+      },
+    });
+  }, [walletKey, relayer]);
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ZamaProvider
-        key={walletKey}
-        relayer={relayer}
-        storage={indexedDBStorage}
-        sessionStorage={sessionDBStorage}
-        signer={signer}
-        onEvent={(event) => {
-          // ZamaSDKEvents.UnshieldPhase1Submitted fires after Phase 1 is mined (the SDK
-          // awaits the receipt before emitting). Saving here ensures the pending state
-          // survives a tab close between Phase 1 and Phase 2.
-          // See activeUnshield.ts for why wrapperAddress is passed via a module-level ref.
-          if (event.type === ZamaSDKEvents.UnshieldPhase1Submitted) {
-            const wrapperAddress = getActiveUnshieldToken();
-            if (wrapperAddress) {
-              savePendingUnshield(indexedDBStorage, wrapperAddress, event.txHash).catch((err) =>
-                console.error("[Providers] Failed to persist pending unshield:", event.txHash, err),
-              );
-              setActiveUnshieldToken(null);
-            }
-          }
-        }}
-      >
+      <ZamaProvider key={walletKey} config={zamaConfig}>
         {children}
       </ZamaProvider>
     </QueryClientProvider>

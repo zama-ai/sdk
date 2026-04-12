@@ -127,15 +127,15 @@ export type CreateZamaConfigParams =
 
 /** Opaque config object returned by {@link createZamaConfig}. Pass to `<ZamaProvider config={...}>`. */
 export interface ZamaConfig {
-  /** @internal */ readonly _relayer: RelayerWeb;
-  /** @internal */ readonly _signer: GenericSigner;
-  /** @internal */ readonly _storage: GenericStorage;
-  /** @internal */ readonly _sessionStorage: GenericStorage;
-  /** @internal */ readonly _keypairTTL: number | undefined;
-  /** @internal */ readonly _sessionTTL: number | "infinite" | undefined;
-  /** @internal */ readonly _registryAddresses: Record<number, Address> | undefined;
-  /** @internal */ readonly _registryTTL: number | undefined;
-  /** @internal */ readonly _onEvent: ZamaSDKEventListener | undefined;
+  /** @internal */ readonly relayer: RelayerWeb;
+  /** @internal */ readonly signer: GenericSigner;
+  /** @internal */ readonly storage: GenericStorage;
+  /** @internal */ readonly sessionStorage: GenericStorage;
+  /** @internal */ readonly keypairTTL: number | undefined;
+  /** @internal */ readonly sessionTTL: number | "infinite" | undefined;
+  /** @internal */ readonly registryAddresses: Record<number, Address> | undefined;
+  /** @internal */ readonly registryTTL: number | undefined;
+  /** @internal */ readonly onEvent: ZamaSDKEventListener | undefined;
 }
 
 const isBrowser = typeof window !== "undefined";
@@ -242,15 +242,15 @@ export function createZamaConfig(params: CreateZamaConfigParams): ZamaConfig {
   });
 
   return {
-    _relayer: relayer,
-    _signer: signer,
-    _storage: storage,
-    _sessionStorage: sessionStorage,
-    _keypairTTL: params.keypairTTL,
-    _sessionTTL: params.sessionTTL,
-    _registryAddresses: params.registryAddresses,
-    _registryTTL: params.registryTTL,
-    _onEvent: params.onEvent,
+    relayer: relayer,
+    signer: signer,
+    storage: storage,
+    sessionStorage: sessionStorage,
+    keypairTTL: params.keypairTTL,
+    sessionTTL: params.sessionTTL,
+    registryAddresses: params.registryAddresses,
+    registryTTL: params.registryTTL,
+    onEvent: params.onEvent,
   };
 }
 ````
@@ -454,7 +454,7 @@ describe("createZamaConfig", () => {
         signer,
         transports: { [11155111]: SepoliaConfig },
       });
-      expect(config._signer).toBe(signer);
+      expect(config.signer).toBe(signer);
     });
   });
 
@@ -463,7 +463,7 @@ describe("createZamaConfig", () => {
       const config = createZamaConfig({
         wagmiConfig: mockWagmiConfig([11155111]),
       });
-      expect(config._relayer).toBeDefined();
+      expect(config.relayer).toBeDefined();
       // RelayerWeb was called with transports containing SepoliaConfig
       expect(MockRelayerWeb).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -536,8 +536,8 @@ describe("createZamaConfig", () => {
         storage: new MemoryStorage(),
         sessionStorage: new MemoryStorage(),
       });
-      expect(config._storage).toBeInstanceOf(MemoryStorage);
-      expect(config._sessionStorage).toBeInstanceOf(MemoryStorage);
+      expect(config.storage).toBeInstanceOf(MemoryStorage);
+      expect(config.sessionStorage).toBeInstanceOf(MemoryStorage);
     });
 
     it("uses user-provided storage", () => {
@@ -549,8 +549,8 @@ describe("createZamaConfig", () => {
         storage,
         sessionStorage,
       });
-      expect(config._storage).toBe(storage);
-      expect(config._sessionStorage).toBe(sessionStorage);
+      expect(config.storage).toBe(storage);
+      expect(config.sessionStorage).toBe(sessionStorage);
     });
 
     it("warns when storage and sessionStorage are the same reference", () => {
@@ -580,11 +580,11 @@ describe("createZamaConfig", () => {
         registryTTL: 3600,
         onEvent,
       });
-      expect(config._keypairTTL).toBe(86400);
-      expect(config._sessionTTL).toBe("infinite");
-      expect(config._registryAddresses).toBe(registryAddresses);
-      expect(config._registryTTL).toBe(3600);
-      expect(config._onEvent).toBe(onEvent);
+      expect(config.keypairTTL).toBe(86400);
+      expect(config.sessionTTL).toBe("infinite");
+      expect(config.registryAddresses).toBe(registryAddresses);
+      expect(config.registryTTL).toBe(3600);
+      expect(config.onEvent).toBe(onEvent);
     });
   });
 });
@@ -652,35 +652,35 @@ export function ZamaProvider({ children, config }: ZamaProviderProps) {
   const queryClient = useQueryClient();
 
   // Stabilize onEvent so an inline arrow doesn't recreate the SDK every render.
-  const onEventRef = useRef(config._onEvent);
+  const onEventRef = useRef(config.onEvent);
 
   useEffect(() => {
-    onEventRef.current = config._onEvent;
+    onEventRef.current = config.onEvent;
   });
 
   const signerLifecycleCallbacks = useMemo(
     () =>
-      config._signer?.subscribe
+      config.signer?.subscribe
         ? {
             onDisconnect: () => invalidateWalletLifecycleQueries(queryClient),
             onAccountChange: () => invalidateWalletLifecycleQueries(queryClient),
             onChainChange: () => invalidateWalletLifecycleQueries(queryClient),
           }
         : undefined,
-    [queryClient, config._signer],
+    [queryClient, config.signer],
   );
 
   const sdk = useMemo(
     () =>
       new ZamaSDK({
-        relayer: config._relayer,
-        signer: config._signer,
-        storage: config._storage,
-        sessionStorage: config._sessionStorage,
-        keypairTTL: config._keypairTTL,
-        sessionTTL: config._sessionTTL,
-        registryAddresses: config._registryAddresses,
-        registryTTL: config._registryTTL,
+        relayer: config.relayer,
+        signer: config.signer,
+        storage: config.storage,
+        sessionStorage: config.sessionStorage,
+        keypairTTL: config.keypairTTL,
+        sessionTTL: config.sessionTTL,
+        registryAddresses: config.registryAddresses,
+        registryTTL: config.registryTTL,
         onEvent: onEventRef.current,
         signerLifecycleCallbacks,
       }),
@@ -769,15 +769,15 @@ function buildMockZamaConfig(overrides: {
   sessionStorage?: GenericStorage;
 }): ZamaConfig {
   return {
-    _relayer: overrides.relayer,
-    _signer: overrides.signer,
-    _storage: overrides.storage,
-    _sessionStorage: overrides.sessionStorage,
-    _keypairTTL: undefined,
-    _sessionTTL: undefined,
-    _registryAddresses: undefined,
-    _registryTTL: undefined,
-    _onEvent: undefined,
+    relayer: overrides.relayer,
+    signer: overrides.signer,
+    storage: overrides.storage,
+    sessionStorage: overrides.sessionStorage,
+    keypairTTL: undefined,
+    sessionTTL: undefined,
+    registryAddresses: undefined,
+    registryTTL: undefined,
+    onEvent: undefined,
   } as unknown as ZamaConfig;
 }
 
@@ -1381,7 +1381,7 @@ If any tests or type errors remain, fix them. Common issues:
 
 - Tests that import `ZamaProviderProps` and reference old fields
 - Tests that construct `ZamaProvider` JSX directly with old props
-- Type errors from `config._relayer` access (ensure `ZamaConfig` is imported)
+- Type errors from `config.relayer` access (ensure `ZamaConfig` is imported)
 
 - [ ] **Step 4: Final commit if fixes were needed**
 

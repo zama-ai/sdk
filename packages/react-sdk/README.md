@@ -32,8 +32,8 @@ yarn add @zama-fhe/react-sdk @tanstack/react-query
 import { WagmiProvider, createConfig, http } from "wagmi";
 import { mainnet, sepolia } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ZamaProvider, RelayerWeb, indexedDBStorage } from "@zama-fhe/react-sdk";
-import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
+import { ZamaProvider, createZamaConfig } from "@zama-fhe/react-sdk";
+import { MainnetConfig, SepoliaConfig } from "@zama-fhe/sdk";
 
 const wagmiConfig = createConfig({
   chains: [mainnet, sepolia],
@@ -43,16 +43,14 @@ const wagmiConfig = createConfig({
   },
 });
 
-const signer = new WagmiSigner({ config: wagmiConfig });
-
-const relayer = new RelayerWeb({
-  getChainId: () => signer.getChainId(),
+const zamaConfig = createZamaConfig({
+  wagmiConfig,
   transports: {
-    [mainnet.id]: {
+    [MainnetConfig.chainId]: {
       relayerUrl: "https://your-app.com/api/relayer/1",
       network: "https://mainnet.infura.io/v3/YOUR_KEY",
     },
-    [sepolia.id]: {
+    [SepoliaConfig.chainId]: {
       relayerUrl: "https://your-app.com/api/relayer/11155111",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
     },
@@ -65,7 +63,7 @@ function App() {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <ZamaProvider relayer={relayer} signer={signer} storage={indexedDBStorage}>
+        <ZamaProvider config={zamaConfig}>
           <TokenBalance />
         </ZamaProvider>
       </QueryClientProvider>
@@ -81,31 +79,23 @@ function TokenBalance() {
 }
 ```
 
-### With a custom signer
+### With a custom relayer
+
+Pass a pre-built `RelayerSDK` instance (e.g. `RelayerCleartext` for local dev) via the `relayer` option. When provided, `transports`, `security`, and `threads` are ignored.
 
 ```tsx
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { mainnet, sepolia } from "wagmi/chains"; // or define your own chain IDs
 import {
   ZamaProvider,
-  RelayerWeb,
+  createZamaConfig,
   useConfidentialBalance,
   useConfidentialTransfer,
-  memoryStorage,
 } from "@zama-fhe/react-sdk";
+import { RelayerCleartext, hardhatCleartextConfig } from "@zama-fhe/sdk/cleartext";
 
-const relayer = new RelayerWeb({
-  getChainId: () => yourCustomSigner.getChainId(),
-  transports: {
-    [mainnet.id]: {
-      relayerUrl: "https://your-app.com/api/relayer/1",
-      network: "https://mainnet.infura.io/v3/YOUR_KEY",
-    },
-    [sepolia.id]: {
-      relayerUrl: "https://your-app.com/api/relayer/11155111",
-      network: "https://sepolia.infura.io/v3/YOUR_KEY",
-    },
-  },
+const zamaConfig = createZamaConfig({
+  signer: yourCustomSigner,
+  relayer: new RelayerCleartext(hardhatCleartextConfig),
 });
 
 const queryClient = new QueryClient();
@@ -113,7 +103,7 @@ const queryClient = new QueryClient();
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ZamaProvider relayer={relayer} signer={yourCustomSigner} storage={memoryStorage}>
+      <ZamaProvider config={zamaConfig}>
         <TransferForm />
       </ZamaProvider>
     </QueryClientProvider>
@@ -144,20 +134,23 @@ function TransferForm() {
 
 ## Provider Setup
 
-All setups use `ZamaProvider`. Create a signer with the adapter for your library, then pass it directly.
+All setups use `ZamaProvider` with a config created by `createZamaConfig`.
 
 ```tsx
-import { ZamaProvider } from "@zama-fhe/react-sdk";
+import { ZamaProvider, createZamaConfig } from "@zama-fhe/react-sdk";
 
-<ZamaProvider
-  relayer={relayer} // RelayerSDK (RelayerWeb or RelayerNode instance)
-  signer={signer} // GenericSigner (WagmiSigner, ViemSigner, EthersSigner, or custom)
-  storage={storage} // GenericStorage
-  sessionStorage={sessionStorage} // Optional. Session storage for wallet signatures. Default: in-memory (lost on reload).
-  keypairTTL={2592000} // Optional. Seconds the ML-KEM keypair remains valid. Default: 2592000 (30 days).
-  sessionTTL={2592000} // Optional. Seconds the session signature remains valid. Default: 2592000 (30 days). 0 = re-sign every operation.
-  onEvent={(event) => console.debug(event)} // Optional. Structured event listener for debugging.
->
+const zamaConfig = createZamaConfig({
+  wagmiConfig,        // or: viem, ethers, signer — pick one adapter path
+  transports: { ... },
+  relayer,            // Optional. Pre-built RelayerSDK instance (e.g. RelayerCleartext).
+  storage,            // Optional. GenericStorage. Default: IndexedDB in browser, memory in Node.
+  sessionStorage,     // Optional. Session storage for wallet signatures. Default: separate IndexedDB instance.
+  keypairTTL: 2592000,  // Optional. Seconds the ML-KEM keypair remains valid. Default: 2592000 (30 days).
+  sessionTTL: 2592000,  // Optional. Seconds the session signature remains valid. Default: 2592000 (30 days).
+  onEvent: (event) => console.debug(event), // Optional. Structured event listener for debugging.
+});
+
+<ZamaProvider config={zamaConfig}>
   {children}
 </ZamaProvider>;
 ```

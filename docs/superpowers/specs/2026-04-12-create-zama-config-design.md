@@ -154,15 +154,15 @@ type CreateZamaConfigParams =
 ```ts
 /** Opaque config object — pass to <ZamaProvider config={zamaConfig}>. */
 interface ZamaConfig {
-  /** @internal */ readonly _relayer: RelayerWeb;
-  /** @internal */ readonly _signer: GenericSigner;
-  /** @internal */ readonly _storage: GenericStorage;
-  /** @internal */ readonly _sessionStorage: GenericStorage;
-  /** @internal */ readonly _keypairTTL: number | undefined;
-  /** @internal */ readonly _sessionTTL: number | "infinite" | undefined;
-  /** @internal */ readonly _registryAddresses: Record<number, Address> | undefined;
-  /** @internal */ readonly _registryTTL: number | undefined;
-  /** @internal */ readonly _onEvent: ZamaSDKEventListener | undefined;
+  /** @internal */ readonly relayer: RelayerWeb;
+  /** @internal */ readonly signer: GenericSigner;
+  /** @internal */ readonly storage: GenericStorage;
+  /** @internal */ readonly sessionStorage: GenericStorage;
+  /** @internal */ readonly keypairTTL: number | undefined;
+  /** @internal */ readonly sessionTTL: number | "infinite" | undefined;
+  /** @internal */ readonly registryAddresses: Record<number, Address> | undefined;
+  /** @internal */ readonly registryTTL: number | undefined;
+  /** @internal */ readonly onEvent: ZamaSDKEventListener | undefined;
 }
 ```
 
@@ -235,7 +235,7 @@ interface ZamaProviderProps extends PropsWithChildren {
 }
 ```
 
-Internally, the provider extracts `_relayer`, `_signer`, `_storage`, etc. from `config` and feeds them into `new ZamaSDK(...)` via the existing `useMemo` pattern. Lifecycle management (`dispose()` on unmount, query invalidation on wallet events) remains unchanged.
+Internally, the provider extracts `relayer`, `signer`, `storage`, etc. from `config` and feeds them into `new ZamaSDK(...)` via the existing `useMemo` pattern. Lifecycle management (`dispose()` on unmount, query invalidation on wallet events) remains unchanged.
 
 ## Files to Create / Modify
 
