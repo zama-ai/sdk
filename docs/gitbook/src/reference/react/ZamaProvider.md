@@ -22,8 +22,7 @@ import { ZamaProvider } from "@zama-fhe/react-sdk";
 import { WagmiProvider, createConfig, http } from "wagmi";
 import { sepolia } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ZamaProvider, createZamaConfig } from "@zama-fhe/react-sdk";
-import { SepoliaConfig } from "@zama-fhe/sdk";
+import { ZamaProvider, createZamaConfig, relayer } from "@zama-fhe/react-sdk";
 
 const wagmiConfig = createConfig({
   chains: [sepolia],
@@ -33,10 +32,7 @@ const wagmiConfig = createConfig({
 const zamaConfig = createZamaConfig({
   wagmiConfig,
   transports: {
-    [SepoliaConfig.chainId]: {
-      relayerUrl: "https://your-app.com/api/relayer/11155111",
-      network: "https://sepolia.infura.io/v3/YOUR_KEY",
-    },
+    [sepolia.id]: relayer("https://your-app.com/api/relayer/11155111"),
   },
 });
 const queryClient = new QueryClient();
@@ -61,7 +57,7 @@ function App() {
 import { createPublicClient, createWalletClient, custom, http } from "viem";
 import { sepolia } from "viem/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ZamaProvider, createZamaConfig } from "@zama-fhe/react-sdk";
+import { ZamaProvider, createZamaConfig, relayer } from "@zama-fhe/react-sdk";
 import { SepoliaConfig } from "@zama-fhe/sdk";
 
 const publicClient = createPublicClient({
@@ -76,10 +72,9 @@ const walletClient = createWalletClient({
 const zamaConfig = createZamaConfig({
   viem: { publicClient, walletClient },
   transports: {
-    [SepoliaConfig.chainId]: {
-      relayerUrl: "https://your-app.com/api/relayer/11155111",
+    [SepoliaConfig.chainId]: relayer("https://your-app.com/api/relayer/11155111", {
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
-    },
+    }),
   },
 });
 const queryClient = new QueryClient();

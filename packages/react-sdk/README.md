@@ -32,8 +32,7 @@ yarn add @zama-fhe/react-sdk @tanstack/react-query
 import { WagmiProvider, createConfig, http } from "wagmi";
 import { mainnet, sepolia } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ZamaProvider, createZamaConfig } from "@zama-fhe/react-sdk";
-import { MainnetConfig, SepoliaConfig } from "@zama-fhe/sdk";
+import { ZamaProvider, createZamaConfig, relayer } from "@zama-fhe/react-sdk";
 
 const wagmiConfig = createConfig({
   chains: [mainnet, sepolia],
@@ -46,14 +45,8 @@ const wagmiConfig = createConfig({
 const zamaConfig = createZamaConfig({
   wagmiConfig,
   transports: {
-    [MainnetConfig.chainId]: {
-      relayerUrl: "https://your-app.com/api/relayer/1",
-      network: "https://mainnet.infura.io/v3/YOUR_KEY",
-    },
-    [SepoliaConfig.chainId]: {
-      relayerUrl: "https://your-app.com/api/relayer/11155111",
-      network: "https://sepolia.infura.io/v3/YOUR_KEY",
-    },
+    [mainnet.id]: relayer("https://your-app.com/api/relayer/1"),
+    [sepolia.id]: relayer("https://your-app.com/api/relayer/11155111"),
   },
 });
 
