@@ -1,8 +1,11 @@
-import type { Address } from "viem";
+import type { Address, PublicClient, WalletClient, EIP1193Provider } from "viem";
+import type { Signer, Provider } from "ethers";
 import type { GenericSigner, GenericStorage } from "./types";
 import type { RelayerSDK } from "./relayer/relayer-sdk";
 import type { RelayerWebSecurityConfig } from "./relayer/relayer-sdk.types";
 import type { ZamaSDKEventListener } from "./events";
+import { ViemSigner } from "./viem";
+import { EthersSigner } from "./ethers";
 import type { ExtendedFhevmInstanceConfig } from "./relayer/relayer-utils";
 import type { CleartextConfig } from "./relayer/cleartext/types";
 import { RelayerWeb } from "./relayer/relayer-web";
@@ -106,10 +109,34 @@ export interface ZamaConfigBase {
   onEvent?: ZamaSDKEventListener;
 }
 
+/** Viem path — takes native viem clients. */
+export interface ZamaConfigViem extends ZamaConfigBase {
+  viem: {
+    publicClient: PublicClient;
+    walletClient?: WalletClient;
+    ethereum?: EIP1193Provider;
+  };
+  relayer?: never;
+  signer?: never;
+  ethers?: never;
+  transports: Record<number, TransportConfig>;
+}
+
+/** Ethers path — takes native ethers types. */
+export interface ZamaConfigEthers extends ZamaConfigBase {
+  ethers: { ethereum: EIP1193Provider } | { signer: Signer } | { provider: Provider };
+  relayer?: never;
+  signer?: never;
+  viem?: never;
+  transports: Record<number, TransportConfig>;
+}
+
 /** Custom GenericSigner with explicit transports. */
 export interface ZamaConfigCustomSigner extends ZamaConfigBase {
   signer: GenericSigner;
   relayer?: never;
+  viem?: never;
+  ethers?: never;
   transports: Record<number, TransportConfig>;
 }
 
@@ -119,8 +146,12 @@ export interface ZamaConfigCustomRelayer extends Omit<ZamaConfigBase, "transport
   signer: GenericSigner;
 }
 
-/** Base config params (no framework-specific adapters). */
-export type CreateZamaConfigBaseParams = ZamaConfigCustomSigner | ZamaConfigCustomRelayer;
+/** Config params accepted by the base SDK (no wagmi). */
+export type CreateZamaConfigBaseParams =
+  | ZamaConfigViem
+  | ZamaConfigEthers
+  | ZamaConfigCustomSigner
+  | ZamaConfigCustomRelayer;
 
 /** Opaque config object returned by {@link createZamaConfig}. */
 export interface ZamaConfig {
@@ -231,8 +262,12 @@ export function buildRelayer(
       );
     } else {
       const { security: s, threads: t, ...fhevmConfig } = transport as FhevmTransport;
-      if (s) {security = s;}
-      if (t) {threads = t;}
+      if (s) {
+        security = s;
+      }
+      if (t) {
+        threads = t;
+      }
       webTransports[chainId] = fhevmConfig;
     }
   }
@@ -289,6 +324,18 @@ function buildConfig(
   };
 }
 
+type ConfigWithTransports = ZamaConfigViem | ZamaConfigEthers | ZamaConfigCustomSigner;
+
+function resolveSigner(params: ConfigWithTransports): GenericSigner {
+  if ("viem" in params && params.viem) {
+    return new ViemSigner(params.viem);
+  }
+  if ("ethers" in params && params.ethers) {
+    return new EthersSigner(params.ethers);
+  }
+  return params.signer;
+}
+
 // ── Factory ──────────────────────────────────────────────────────────────────
 
 /**
@@ -312,13 +359,14 @@ export function createZamaConfig(params: CreateZamaConfigBaseParams): ZamaConfig
     return buildConfig(params.relayer, params.signer, storage, sessionStorage, params);
   }
 
-  const p = params as ZamaConfigCustomSigner;
+  const p = params as ConfigWithTransports;
+  const signer = resolveSigner(p);
   const chainTransports = resolveChainTransports(
     p.chains,
     p.transports,
     p.chains.map((c) => c.chainId),
   );
-  const relayer = buildRelayer(chainTransports, () => p.signer.getChainId());
+  const relayer = buildRelayer(chainTransports, () => signer.getChainId());
 
-  return buildConfig(relayer, p.signer, storage, sessionStorage, p);
+  return buildConfig(relayer, signer, storage, sessionStorage, p);
 }

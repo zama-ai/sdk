@@ -11,6 +11,8 @@ export { createZamaConfig, fhevm, cleartext, resolveChainTransports, buildRelaye
 export type {
   ZamaConfig,
   ZamaConfigBase,
+  ZamaConfigViem,
+  ZamaConfigEthers,
   ZamaConfigCustomSigner,
   ZamaConfigCustomRelayer,
   CreateZamaConfigBaseParams,
