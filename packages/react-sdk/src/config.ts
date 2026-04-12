@@ -329,7 +329,9 @@ export interface FhevmTransportOverrides extends Partial<
   threads?: number;
 }
 
-export type FhevmTransport = { relayerUrl: string } & FhevmTransportOverrides;
+export interface FhevmTransport extends FhevmTransportOverrides {
+  relayerUrl: string;
+}
 
 export function fhevm(relayerUrl: string, overrides?: FhevmTransportOverrides): FhevmTransport {
   return { relayerUrl, ...overrides };
