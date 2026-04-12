@@ -31,15 +31,15 @@ function buildMockZamaConfig(overrides: {
   onEvent?: ZamaSDKEventListener;
 }): ZamaConfig {
   return {
-    _relayer: overrides.relayer,
-    _signer: overrides.signer,
-    _storage: overrides.storage,
-    _sessionStorage: overrides.sessionStorage,
-    _keypairTTL: overrides.keypairTTL,
-    _sessionTTL: undefined,
-    _registryAddresses: undefined,
-    _registryTTL: undefined,
-    _onEvent: overrides.onEvent,
+    relayer: overrides.relayer,
+    signer: overrides.signer,
+    storage: overrides.storage,
+    sessionStorage: overrides.sessionStorage,
+    keypairTTL: overrides.keypairTTL,
+    sessionTTL: undefined,
+    registryAddresses: undefined,
+    registryTTL: undefined,
+    onEvent: overrides.onEvent,
   } as unknown as ZamaConfig;
 }
 

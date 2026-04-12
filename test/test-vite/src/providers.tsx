@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryStorage, ZamaProvider } from "@zama-fhe/react-sdk";
+import type { ZamaConfig } from "@zama-fhe/react-sdk";
 import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
 import type { ReactNode } from "react";
 import { createConfig, http, WagmiProvider } from "wagmi";
@@ -48,22 +49,27 @@ const relayer = new RelayerWeb({
 
 const storage = new MemoryStorage();
 
+const zamaConfig: ZamaConfig = {
+  relayer,
+  signer,
+  storage,
+  sessionStorage: new MemoryStorage(),
+  keypairTTL: undefined,
+  sessionTTL: undefined,
+  registryAddresses: {
+    [anvil.id]: getAddress(deployments.wrappersRegistry),
+  },
+  registryTTL: undefined,
+  onEvent: undefined,
+};
+
 const queryClient = new QueryClient();
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={wagmiConfig}>
-        <ZamaProvider
-          relayer={relayer}
-          storage={storage}
-          signer={signer}
-          registryAddresses={{
-            [anvil.id]: getAddress(deployments.wrappersRegistry),
-          }}
-        >
-          {children}
-        </ZamaProvider>
+        <ZamaProvider config={zamaConfig}>{children}</ZamaProvider>
       </WagmiProvider>
     </QueryClientProvider>
   );

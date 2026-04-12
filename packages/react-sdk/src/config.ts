@@ -5,6 +5,7 @@ import type { Signer, Provider } from "ethers";
 import type {
   GenericSigner,
   GenericStorage,
+  RelayerSDK,
   RelayerWebSecurityConfig,
   ZamaSDKEventListener,
   ExtendedFhevmInstanceConfig,
@@ -86,15 +87,15 @@ export type CreateZamaConfigParams =
 
 /** Opaque config object returned by {@link createZamaConfig}. Pass to `<ZamaProvider config={...}>`. */
 export interface ZamaConfig {
-  /** @internal */ readonly _relayer: RelayerWeb;
-  /** @internal */ readonly _signer: GenericSigner;
-  /** @internal */ readonly _storage: GenericStorage;
-  /** @internal */ readonly _sessionStorage: GenericStorage;
-  /** @internal */ readonly _keypairTTL: number | undefined;
-  /** @internal */ readonly _sessionTTL: number | "infinite" | undefined;
-  /** @internal */ readonly _registryAddresses: Record<number, Address> | undefined;
-  /** @internal */ readonly _registryTTL: number | undefined;
-  /** @internal */ readonly _onEvent: ZamaSDKEventListener | undefined;
+  /** @internal */ readonly relayer: RelayerSDK;
+  /** @internal */ readonly signer: GenericSigner;
+  /** @internal */ readonly storage: GenericStorage;
+  /** @internal */ readonly sessionStorage: GenericStorage;
+  /** @internal */ readonly keypairTTL: number | undefined;
+  /** @internal */ readonly sessionTTL: number | "infinite" | undefined;
+  /** @internal */ readonly registryAddresses: Record<number, Address> | undefined;
+  /** @internal */ readonly registryTTL: number | undefined;
+  /** @internal */ readonly onEvent: ZamaSDKEventListener | undefined;
 }
 
 const isBrowser = typeof window !== "undefined";
@@ -203,14 +204,14 @@ export function createZamaConfig(params: CreateZamaConfigParams): ZamaConfig {
   });
 
   return {
-    _relayer: relayer,
-    _signer: signer,
-    _storage: storage,
-    _sessionStorage: sessionStorage,
-    _keypairTTL: params.keypairTTL,
-    _sessionTTL: params.sessionTTL,
-    _registryAddresses: params.registryAddresses,
-    _registryTTL: params.registryTTL,
-    _onEvent: params.onEvent,
+    relayer,
+    signer,
+    storage,
+    sessionStorage,
+    keypairTTL: params.keypairTTL,
+    sessionTTL: params.sessionTTL,
+    registryAddresses: params.registryAddresses,
+    registryTTL: params.registryTTL,
+    onEvent: params.onEvent,
   };
 }

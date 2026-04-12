@@ -99,7 +99,7 @@ describe("createZamaConfig", () => {
         signer,
         transports: { [11155111]: SepoliaConfig },
       });
-      expect(config._signer).toBe(signer);
+      expect(config.signer).toBe(signer);
     });
   });
 
@@ -178,8 +178,8 @@ describe("createZamaConfig", () => {
         storage,
         sessionStorage,
       });
-      expect(config._storage).toBe(storage);
-      expect(config._sessionStorage).toBe(sessionStorage);
+      expect(config.storage).toBe(storage);
+      expect(config.sessionStorage).toBe(sessionStorage);
     });
 
     it("warns when storage and sessionStorage are the same reference", () => {
@@ -209,11 +209,11 @@ describe("createZamaConfig", () => {
         registryTTL: 3600,
         onEvent,
       });
-      expect(config._keypairTTL).toBe(86400);
-      expect(config._sessionTTL).toBe("infinite");
-      expect(config._registryAddresses).toBe(registryAddresses);
-      expect(config._registryTTL).toBe(3600);
-      expect(config._onEvent).toBe(onEvent);
+      expect(config.keypairTTL).toBe(86400);
+      expect(config.sessionTTL).toBe("infinite");
+      expect(config.registryAddresses).toBe(registryAddresses);
+      expect(config.registryTTL).toBe(3600);
+      expect(config.onEvent).toBe(onEvent);
     });
   });
 });
