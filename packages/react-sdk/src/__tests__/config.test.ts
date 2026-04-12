@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { createZamaConfig } from "../config";
-import { createMockSigner, createMockStorage } from "@zama-fhe/sdk/test-fixtures";
+import { createMockSigner, createMockStorage } from "../../../sdk/src/test-fixtures";
 import { RelayerWeb, SepoliaConfig } from "@zama-fhe/sdk";
 import { WagmiSigner } from "../wagmi/wagmi-signer";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
