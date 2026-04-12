@@ -56,8 +56,14 @@ export interface FhevmTransport extends FhevmTransportOverrides {
  * });
  * ```
  */
-export function fhevm(relayerUrl: string, overrides?: FhevmTransportOverrides): FhevmTransport {
-  return { relayerUrl, ...overrides };
+export function fhevm(
+  relayerUrl?: string,
+  overrides?: FhevmTransportOverrides,
+): Partial<ExtendedFhevmInstanceConfig> & FhevmTransportOverrides {
+  if (relayerUrl) {
+    return { relayerUrl, ...overrides };
+  }
+  return { ...overrides };
 }
 
 /**
