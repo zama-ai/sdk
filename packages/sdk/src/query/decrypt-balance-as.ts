@@ -1,5 +1,5 @@
 import type { Address } from "viem";
-import type { ReadonlyToken } from "../token/readonly-token";
+import type { Token } from "../token/token";
 import type { MutationFactoryOptions } from "./factory-types";
 
 /** Variables for {@link decryptBalanceAsMutationOptions}. */
@@ -9,15 +9,15 @@ export interface DecryptBalanceAsParams {
 }
 
 export function decryptBalanceAsMutationOptions(
-  readonlyToken: ReadonlyToken,
+  token: Token,
 ): MutationFactoryOptions<
   readonly ["zama.decryptBalanceAs", Address],
   DecryptBalanceAsParams,
   bigint
 > {
   return {
-    mutationKey: ["zama.decryptBalanceAs", readonlyToken.address] as const,
+    mutationKey: ["zama.decryptBalanceAs", token.address] as const,
     mutationFn: async ({ delegatorAddress, owner }) =>
-      readonlyToken.decryptBalanceAs({ delegatorAddress, owner }),
+      token.decryptBalanceAs({ delegatorAddress, owner }),
   };
 }

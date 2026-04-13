@@ -2,8 +2,8 @@ import { describe, expect, test } from "../../test-fixtures";
 import { decryptBalanceAsMutationOptions } from "../decrypt-balance-as";
 
 describe("decryptBalanceAsMutationOptions", () => {
-  test("delegates decryptBalanceAs", async ({ createMockReadonlyToken }) => {
-    const readonlyToken = createMockReadonlyToken();
+  test("delegates decryptBalanceAs", async ({ createMockToken }) => {
+    const readonlyToken = createMockToken();
     const options = decryptBalanceAsMutationOptions(readonlyToken);
 
     expect(options.mutationKey).toEqual(["zama.decryptBalanceAs", readonlyToken.address]);
@@ -16,8 +16,8 @@ describe("decryptBalanceAsMutationOptions", () => {
     });
   });
 
-  test("passes options through", async ({ createMockReadonlyToken }) => {
-    const readonlyToken = createMockReadonlyToken();
+  test("passes options through", async ({ createMockToken }) => {
+    const readonlyToken = createMockToken();
     const options = decryptBalanceAsMutationOptions(readonlyToken);
 
     await options.mutationFn({

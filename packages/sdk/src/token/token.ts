@@ -23,10 +23,12 @@ import { toError } from "../utils";
 import {
   ApprovalFailedError,
   BalanceCheckUnavailableError,
+  ConfigurationError,
   DecryptionFailedError,
   ERC20ReadFailedError,
   DelegationDelegateEqualsContractError,
   DelegationExpirationTooSoonError,
+  DelegationExpiredError,
   DelegationExpiryUnchangedError,
   DelegationNotFoundError,
   DelegationSelfNotAllowedError,
@@ -39,6 +41,7 @@ import {
 } from "../errors";
 import { ReadonlyToken, type ReadonlyTokenConfig, wrapDecryptError } from "./readonly-token";
 import { assertBigint } from "../utils/assertions";
+import { pLimit } from "./concurrency";
 import type {
   ShieldCallbacks,
   ShieldOptions,
@@ -48,6 +51,43 @@ import type {
   UnshieldCallbacks,
   UnshieldOptions,
 } from "../types";
+
+/** Options for {@link Token.batchDecryptBalances}. */
+export interface BatchDecryptOptions {
+  /** Pre-fetched encrypted handles. When omitted, handles are fetched from the chain. */
+  handles?: Handle[];
+  /** Balance owner address. Defaults to the connected signer. */
+  owner?: Address;
+  /**
+   * Called when decryption fails for a single token. Return a fallback bigint value.
+   * When omitted, errors are collected and thrown as an aggregated DecryptionFailedError.
+   *
+   * @example
+   * ```ts
+   * // Silent zero (old behavior):
+   * onError: () => 0n
+   * // Log and use zero:
+   * onError: (err, addr) => { console.error(addr, err); return 0n; }
+   * ```
+   */
+  onError?: (error: Error, address: Address) => bigint;
+  /** Maximum number of concurrent decrypt calls. Default: `Infinity` (no limit). */
+  maxConcurrency?: number;
+}
+
+/** Options for {@link Token.batchDecryptBalancesAs}. */
+export interface BatchDecryptAsOptions {
+  /** The address of the account that delegated decryption rights. */
+  delegatorAddress: Address;
+  /** Pre-fetched encrypted handles. When omitted, handles are fetched from the chain. */
+  handles?: Handle[];
+  /** Balance owner address. Defaults to the delegator address. */
+  owner?: Address;
+  /** Maximum number of concurrent decrypt calls. Default: Infinity. */
+  maxConcurrency?: number;
+  /** Called when decryption fails for a single token. Return a fallback bigint. */
+  onError?: (error: Error, address: Address) => bigint;
+}
 
 /**
  * ERC-20-like interface for a single confidential token.
@@ -257,6 +297,399 @@ export class Token extends ReadonlyToken {
     }
 
     return results;
+  }
+
+  /**
+   * Decrypt the balance of a delegator using delegated decryption credentials.
+   * The connected signer acts as the delegate who has been granted permission
+   * by the delegator to decrypt their balance.
+   *
+   * Decrypted values are cached in storage keyed by `(token, owner, handle)`.
+   * Cache write failures are silently ignored — they do not affect the returned value.
+   *
+   * @param delegatorAddress - The address of the account that delegated decryption rights.
+   * @param owner - Optional balance owner address. Defaults to the delegator address.
+   * @returns The decrypted plaintext balance as a bigint.
+   * @throws {@link DelegationNotFoundError} if no active delegation exists from the delegator to the connected signer.
+   * @throws {@link DelegationExpiredError} if the delegation has expired.
+   * @throws {@link DelegationNotPropagatedError} if the delegation exists on L1 but hasn't propagated to the gateway yet (typically 1–2 min after granting).
+   * @throws {@link DecryptionFailedError} if delegated decryption fails or the relayer returns no value.
+   * @throws {@link SigningRejectedError} if the user rejects the wallet signature prompt.
+   * @throws {@link SigningFailedError} if the signing operation fails.
+   * @throws {@link NoCiphertextError} if the relayer returns HTTP 400 (no ciphertext for this account).
+   * @throws {@link RelayerRequestFailedError} if the relayer returns a non-400 HTTP error.
+   *
+   * @example
+   * ```ts
+   * const balance = await token.decryptBalanceAs({
+   *   delegatorAddress: "0xDelegator",
+   * });
+   * ```
+   */
+  async decryptBalanceAs({
+    delegatorAddress,
+    owner,
+  }: {
+    delegatorAddress: Address;
+    owner?: Address;
+  }): Promise<bigint> {
+    const normalizedDelegator = getAddress(delegatorAddress);
+    const normalizedOwner = owner ? getAddress(owner) : normalizedDelegator;
+
+    const handle = await this.confidentialBalanceOf(normalizedOwner);
+    if (this.isZeroHandle(handle)) {
+      return 0n;
+    }
+
+    const cached = await this.cache.get(normalizedOwner, this.address, handle);
+    if (cached !== null) {
+      assertBigint(cached, "decryptBalanceAs: cached");
+      return cached;
+    }
+
+    // Pre-flight delegation check — avoids wasting a wallet signature on an
+    // expired or non-existent delegation.
+    await this.#assertDelegationActive(normalizedDelegator);
+
+    const t0 = Date.now();
+    try {
+      this.emit({ type: ZamaSDKEvents.DecryptStart });
+
+      const creds = await this.delegatedCredentials.allow(normalizedDelegator, this.address);
+
+      const result = await this.relayer.delegatedUserDecrypt({
+        handles: [handle],
+        contractAddress: this.address,
+        signedContractAddresses: creds.contractAddresses,
+        privateKey: creds.privateKey,
+        publicKey: creds.publicKey,
+        signature: creds.signature,
+        delegatorAddress: creds.delegatorAddress,
+        delegateAddress: creds.delegateAddress,
+        startTimestamp: creds.startTimestamp,
+        durationDays: creds.durationDays,
+      });
+
+      this.emit({
+        type: ZamaSDKEvents.DecryptEnd,
+        durationMs: Date.now() - t0,
+      });
+
+      const value = result[handle];
+      if (value === undefined) {
+        throw new DecryptionFailedError(
+          `Delegated decryption returned no value for handle ${handle}`,
+        );
+      }
+      assertBigint(value, "decryptBalanceAs: result[handle]");
+      await this.cache.set(normalizedOwner, this.address, handle, value);
+      return value;
+    } catch (error) {
+      this.emit({
+        type: ZamaSDKEvents.DecryptError,
+        error: toError(error),
+        durationMs: Date.now() - t0,
+      });
+      throw wrapDecryptError(error, "Failed to decrypt delegated balance", true);
+    }
+  }
+
+  /**
+   * Throws if there is no active delegation from `delegatorAddress` to the
+   * connected signer for this token contract.
+   */
+  async #assertDelegationActive(delegatorAddress: Address): Promise<void> {
+    const delegateAddress = await this.signer.getAddress();
+    const expiry = await this.getDelegationExpiry({
+      delegatorAddress,
+      delegateAddress,
+    });
+    if (expiry === 0n) {
+      throw new DelegationNotFoundError(
+        `No active delegation from ${delegatorAddress} to ${delegateAddress} for ${this.address}`,
+      );
+    }
+    if (expiry !== MAX_UINT64) {
+      const now = await this.signer.getBlockTimestamp();
+      if (expiry <= now) {
+        throw new DelegationExpiredError(
+          `Delegation from ${delegatorAddress} to ${delegateAddress} for ${this.address} has expired`,
+        );
+      }
+    }
+  }
+
+  // BATCH DECRYPT OPERATIONS
+
+  /**
+   * Decrypt multiple token balances in parallel.
+   * When `handles` are provided, decrypts them directly (useful for two-phase
+   * polling where handles are already known). When omitted, fetches handles
+   * from the chain first.
+   *
+   * **Error handling:** If a per-token decryption fails and no `onError` callback
+   * is provided, errors are collected and thrown as an aggregated
+   * `DecryptionFailedError`. When the relayer returns no value for a handle,
+   * a `DecryptionFailedError` is thrown for that token (never silently returns `0n`).
+   * Pass `onError: () => 0n` to opt into the silent zero behavior.
+   *
+   * @param tokens - Array of Token instances to decrypt balances for.
+   * @param options - Optional configuration for handles, owner, error handling, and concurrency.
+   * @returns A Map from token address to decrypted balance.
+   * @throws {@link DecryptionFailedError} if any decryption fails and no `onError` callback is provided.
+   * @throws {@link SigningRejectedError} if the user rejects the wallet signature prompt.
+   *
+   * @example
+   * ```ts
+   * // Simple one-shot:
+   * const balances = await Token.batchDecryptBalances(tokens);
+   *
+   * // With pre-fetched handles and error callback:
+   * const handles = await Promise.all(tokens.map(t => t.confidentialBalanceOf()));
+   * const balances = await Token.batchDecryptBalances(tokens, {
+   *   handles,
+   *   onError: (err, addr) => { console.error(addr, err); return 0n; },
+   * });
+   * ```
+   */
+  static async batchDecryptBalances(
+    tokens: Token[],
+    options?: BatchDecryptOptions,
+  ): Promise<Map<Address, bigint>> {
+    if (tokens.length === 0) {
+      return new Map();
+    }
+
+    const { handles, owner, onError, maxConcurrency } = options ?? {};
+    const firstToken = tokens[0]!;
+    const relayer = Token.#assertSameRelayer(tokens);
+    const signerAddress = owner ?? (await firstToken.signer.getAddress());
+
+    return Token.#batchDecryptCore({
+      tokens,
+      handles,
+      ownerAddress: signerAddress,
+      onError,
+      maxConcurrency,
+      obtainCreds: (uncachedAddresses) => firstToken.credentials.allow(...uncachedAddresses),
+      decrypt: (creds, handle, contractAddress) =>
+        relayer.userDecrypt({
+          handles: [handle],
+          contractAddress,
+          signedContractAddresses: creds.contractAddresses,
+          privateKey: creds.privateKey,
+          publicKey: creds.publicKey,
+          signature: creds.signature,
+          signerAddress,
+          startTimestamp: creds.startTimestamp,
+          durationDays: creds.durationDays,
+        }),
+      errorPrefix: "Batch decryption",
+    });
+  }
+
+  /**
+   * Batch decrypt confidential balances as a delegate across multiple tokens.
+   * Mirrors {@link batchDecryptBalances} but uses delegated credentials.
+   *
+   * **Error handling:** If a per-token decryption fails and no `onError` callback
+   * is provided, errors are collected and thrown as an aggregated
+   * `DecryptionFailedError`. When the relayer returns no value for a handle,
+   * a `DecryptionFailedError` is thrown for that token (never silently returns `0n`).
+   * Pass `onError: () => 0n` to opt into the silent zero behavior.
+   *
+   * @param tokens - Array of Token instances to decrypt balances for.
+   * @param options - Delegated decryption configuration.
+   * @returns A Map from token address to decrypted balance.
+   * @throws {@link DelegationNotFoundError} if no active delegation exists from the delegator to the connected signer.
+   * @throws {@link DelegationExpiredError} if the delegation has expired.
+   * @throws {@link DecryptionFailedError} if any decryption fails and no `onError` callback is provided.
+   * @throws {@link SigningRejectedError} if the user rejects the wallet signature prompt.
+   *
+   * @example
+   * ```ts
+   * const balances = await Token.batchDecryptBalancesAs(tokens, {
+   *   delegatorAddress: "0xDelegator",
+   *   onError: (err, addr) => { console.error(addr, err); return 0n; },
+   * });
+   * ```
+   */
+  static async batchDecryptBalancesAs(
+    tokens: Token[],
+    options: BatchDecryptAsOptions,
+  ): Promise<Map<Address, bigint>> {
+    if (tokens.length === 0) {
+      return new Map();
+    }
+
+    const { delegatorAddress, handles, owner, onError, maxConcurrency } = options;
+    const ownerAddress = owner ?? delegatorAddress;
+    const firstToken = tokens[0]!;
+    Token.#assertSameRelayer(tokens);
+
+    return Token.#batchDecryptCore({
+      tokens,
+      handles,
+      ownerAddress,
+      onError,
+      maxConcurrency,
+      preFlightCheck: () => firstToken.#assertDelegationActive(delegatorAddress),
+      obtainCreds: (uncachedAddresses) =>
+        firstToken.delegatedCredentials.allow(delegatorAddress, ...uncachedAddresses),
+      decrypt: (creds, handle, contractAddress) =>
+        firstToken.relayer.delegatedUserDecrypt({
+          handles: [handle],
+          contractAddress,
+          signedContractAddresses: creds.contractAddresses,
+          privateKey: creds.privateKey,
+          publicKey: creds.publicKey,
+          signature: creds.signature,
+          delegatorAddress: creds.delegatorAddress,
+          delegateAddress: creds.delegateAddress,
+          startTimestamp: creds.startTimestamp,
+          durationDays: creds.durationDays,
+        }),
+      errorPrefix: "Batch delegated decryption",
+    });
+  }
+
+  static async #batchDecryptCore<TCreds>(config: {
+    tokens: Token[];
+    handles: Handle[] | undefined;
+    ownerAddress: Address;
+    onError?: (error: Error, address: Address) => bigint;
+    maxConcurrency?: number;
+    preFlightCheck?: () => Promise<void>;
+    obtainCreds: (uncachedAddresses: Address[]) => Promise<TCreds>;
+    decrypt: (
+      creds: TCreds,
+      handle: Address,
+      contractAddress: Address,
+    ) => Promise<Record<string, unknown>>;
+    errorPrefix: string;
+  }): Promise<Map<Address, bigint>> {
+    const {
+      tokens,
+      handles,
+      ownerAddress,
+      onError,
+      maxConcurrency,
+      obtainCreds,
+      decrypt,
+      errorPrefix,
+    } = config;
+
+    const firstToken = tokens[0]!;
+    const resolvedHandles =
+      handles ?? (await Promise.all(tokens.map((t) => t.confidentialBalanceOf(ownerAddress))));
+
+    if (tokens.length !== resolvedHandles.length) {
+      throw new DecryptionFailedError(
+        `tokens.length (${tokens.length}) must equal handles.length (${resolvedHandles.length})`,
+      );
+    }
+
+    const results = new Map<Address, bigint>();
+
+    // Parallel cache lookups — avoids sequential IDB round-trips.
+    const uncached: { token: Token; handle: Address }[] = [];
+    const cachedValues = await Promise.all(
+      tokens.map((token, i) => {
+        const handle = resolvedHandles[i]!;
+        if (token.isZeroHandle(handle)) {
+          return 0n;
+        }
+        return firstToken.cache.get(ownerAddress, token.address, handle);
+      }),
+    );
+
+    for (let i = 0; i < tokens.length; i++) {
+      const token = tokens[i]!;
+      const handle = resolvedHandles[i]!;
+      const cached = cachedValues[i];
+
+      if (cached !== null && cached !== undefined) {
+        assertBigint(cached, "batchDecryptCore: cached");
+        results.set(token.address, cached);
+        continue;
+      }
+
+      uncached.push({ token, handle });
+    }
+
+    // All balances resolved from cache — no credentials needed.
+    if (uncached.length === 0) {
+      return results;
+    }
+
+    // Pre-flight check runs after cache lookups — skips RPC overhead when
+    // all balances are cached. Best-effort: checks the first token's contract
+    // only (delegations are typically granted per-delegator, not per-token).
+    if (config.preFlightCheck) {
+      await config.preFlightCheck();
+    }
+
+    const uncachedAddresses = uncached.map((entry) => entry.token.address);
+    const creds = await obtainCreds(uncachedAddresses);
+
+    const errors: { address: Address; error: Error }[] = [];
+    const decryptFns: (() => Promise<void>)[] = [];
+
+    for (const { token, handle } of uncached) {
+      decryptFns.push(() =>
+        decrypt(creds, handle, token.address)
+          .then(async (result) => {
+            const value = result[handle];
+            if (value === undefined) {
+              throw new DecryptionFailedError(
+                `${errorPrefix} returned no value for handle ${handle} on token ${token.address}`,
+              );
+            }
+            assertBigint(value, "batchDecryptCore: result[handle]");
+            results.set(token.address, value);
+            void firstToken.cache.set(ownerAddress, token.address, handle, value);
+          })
+          .catch((error) => {
+            const err = toError(error);
+            if (onError) {
+              try {
+                results.set(token.address, onError(err, token.address));
+              } catch (callbackError) {
+                errors.push({
+                  address: token.address,
+                  error: toError(callbackError),
+                });
+              }
+            } else {
+              errors.push({ address: token.address, error: err });
+            }
+          }),
+      );
+    }
+
+    await pLimit(decryptFns, maxConcurrency);
+
+    if (errors.length > 0) {
+      const message = errors.map((e) => `${e.address}: ${e.error.message}`).join("; ");
+      throw new DecryptionFailedError(
+        `${errorPrefix} failed for ${errors.length} token(s): ${message}`,
+      );
+    }
+
+    return results;
+  }
+
+  /** Verify all tokens share the same relayer and return it. */
+  static #assertSameRelayer(tokens: Token[]) {
+    const relayer = tokens[0]!.relayer;
+    for (let i = 1; i < tokens.length; i++) {
+      if (tokens[i]!.relayer !== relayer) {
+        throw new ConfigurationError(
+          "All tokens in a batch operation must share the same relayer instance",
+        );
+      }
+    }
+    return relayer;
   }
 
   // WRITE OPERATIONS

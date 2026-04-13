@@ -1,6 +1,6 @@
 import { createMockRelayer, describe, expect, it, vi } from "../../test-fixtures";
-import { ReadonlyToken, ZERO_HANDLE } from "../readonly-token";
 import { Token } from "../token";
+import { ZERO_HANDLE } from "../readonly-token";
 import { MemoryStorage } from "../../storage/memory-storage";
 import { getAddress, type Address } from "viem";
 import { MAX_UINT64 } from "../../contracts/constants";
@@ -8,7 +8,7 @@ import { MAX_UINT64 } from "../../contracts/constants";
 describe("delegation read methods", () => {
   it("getDelegationExpiry reads from ACL contract", async ({
     signer,
-    readonlyToken,
+    token,
     aclAddress,
     tokenAddress,
     delegatorAddress,
@@ -16,7 +16,7 @@ describe("delegation read methods", () => {
   }) => {
     vi.mocked(signer.readContract).mockResolvedValue(1700000000n);
 
-    const expiry = await readonlyToken.getDelegationExpiry({
+    const expiry = await token.getDelegationExpiry({
       delegatorAddress,
       delegateAddress,
     });
@@ -33,47 +33,47 @@ describe("delegation read methods", () => {
 
   it("isDelegated returns true when expiry is in the future", async ({
     signer,
-    readonlyToken,
+    token,
     delegatorAddress,
     delegateAddress,
   }) => {
     const futureTimestamp = BigInt(Math.floor(Date.now() / 1000) + 3600);
     vi.mocked(signer.readContract).mockResolvedValue(futureTimestamp);
 
-    expect(await readonlyToken.isDelegated({ delegatorAddress, delegateAddress })).toBe(true);
+    expect(await token.isDelegated({ delegatorAddress, delegateAddress })).toBe(true);
   });
 
   it("isDelegated returns false when expiry is 0", async ({
     signer,
-    readonlyToken,
+    token,
     delegatorAddress,
     delegateAddress,
   }) => {
     vi.mocked(signer.readContract).mockResolvedValue(0n);
 
-    expect(await readonlyToken.isDelegated({ delegatorAddress, delegateAddress })).toBe(false);
+    expect(await token.isDelegated({ delegatorAddress, delegateAddress })).toBe(false);
   });
 
   it("isDelegated returns false when expiry is in the past", async ({
     signer,
-    readonlyToken,
+    token,
     delegatorAddress,
     delegateAddress,
   }) => {
     vi.mocked(signer.readContract).mockResolvedValue(1000n);
 
-    expect(await readonlyToken.isDelegated({ delegatorAddress, delegateAddress })).toBe(false);
+    expect(await token.isDelegated({ delegatorAddress, delegateAddress })).toBe(false);
   });
 
   it("isDelegated short-circuits for permanent delegation without fetching block timestamp", async ({
     signer,
-    readonlyToken,
+    token,
     delegatorAddress,
     delegateAddress,
   }) => {
     vi.mocked(signer.readContract).mockResolvedValue(MAX_UINT64);
 
-    expect(await readonlyToken.isDelegated({ delegatorAddress, delegateAddress })).toBe(true);
+    expect(await token.isDelegated({ delegatorAddress, delegateAddress })).toBe(true);
     // getBlockTimestamp should NOT have been called — permanent delegation skips it.
     expect(signer.getBlockTimestamp).not.toHaveBeenCalled();
   });
@@ -89,7 +89,7 @@ describe("delegation read methods", () => {
     const relayerNoAcl = createMockRelayer({
       getAclAddress: vi.fn().mockRejectedValue(new Error("no transport config")),
     });
-    const token = new ReadonlyToken({
+    const token = new Token({
       relayer: relayerNoAcl,
       signer,
       storage,
@@ -292,12 +292,12 @@ describe("decryptBalanceAs", () => {
   it("returns 0n for zero handle without calling relayer", async ({
     signer,
     relayer,
-    readonlyToken,
+    token,
     delegatorAddress,
   }) => {
     vi.mocked(signer.readContract).mockResolvedValue(ZERO_HANDLE);
 
-    const balance = await readonlyToken.decryptBalanceAs({ delegatorAddress });
+    const balance = await token.decryptBalanceAs({ delegatorAddress });
 
     expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
     expect(balance).toBe(0n);
@@ -306,7 +306,7 @@ describe("decryptBalanceAs", () => {
   it("calls delegatedUserDecrypt with correct params", async ({
     signer,
     relayer,
-    readonlyToken,
+    token,
     handle,
     tokenAddress,
     delegatorAddress,
@@ -336,7 +336,7 @@ describe("decryptBalanceAs", () => {
       [handle]: 500n,
     });
 
-    const balance = await readonlyToken.decryptBalanceAs({ delegatorAddress });
+    const balance = await token.decryptBalanceAs({ delegatorAddress });
 
     expect(balance).toBe(500n);
     expect(relayer.generateKeypair).toHaveBeenCalled();
@@ -359,7 +359,7 @@ describe("decryptBalanceAs", () => {
   it("propagates SigningFailedError from credential creation", async ({
     signer,
     relayer,
-    readonlyToken,
+    token,
     handle,
     delegatorAddress,
   }) => {
@@ -368,7 +368,7 @@ describe("decryptBalanceAs", () => {
       .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry (permanent → active)
     vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockRejectedValue(new Error("fail"));
 
-    await expect(readonlyToken.decryptBalanceAs({ delegatorAddress })).rejects.toThrow(
+    await expect(token.decryptBalanceAs({ delegatorAddress })).rejects.toThrow(
       expect.objectContaining({ code: "SIGNING_FAILED" }),
     );
   });
@@ -376,7 +376,7 @@ describe("decryptBalanceAs", () => {
   it("caches by owner, not delegator, when options.owner differs", async ({
     signer,
     relayer,
-    readonlyToken,
+    token,
     handle,
     tokenAddress,
     delegatorAddress,
@@ -409,14 +409,14 @@ describe("decryptBalanceAs", () => {
     });
 
     // First call populates cache keyed by owner (userAddress), not delegator.
-    await readonlyToken.decryptBalanceAs({
+    await token.decryptBalanceAs({
       delegatorAddress,
       owner: userAddress,
     });
     expect(relayer.delegatedUserDecrypt).toHaveBeenCalledTimes(1);
 
     // Second call with same owner should hit cache — no second decrypt call.
-    const balance = await readonlyToken.decryptBalanceAs({
+    const balance = await token.decryptBalanceAs({
       delegatorAddress,
       owner: userAddress,
     });
@@ -427,7 +427,7 @@ describe("decryptBalanceAs", () => {
   it("throws DelegationNotFoundError when no delegation exists", async ({
     signer,
     relayer,
-    readonlyToken,
+    token,
     handle,
     delegatorAddress,
     tokenAddress,
@@ -436,7 +436,7 @@ describe("decryptBalanceAs", () => {
       .mockResolvedValueOnce(handle) // confidentialBalanceOf
       .mockResolvedValueOnce(0n); // getDelegationExpiry → no delegation
 
-    await expect(readonlyToken.decryptBalanceAs({ delegatorAddress })).rejects.toThrow(
+    await expect(token.decryptBalanceAs({ delegatorAddress })).rejects.toThrow(
       expect.objectContaining({
         code: "DELEGATION_NOT_FOUND",
         message: expect.stringContaining(tokenAddress),
@@ -448,7 +448,7 @@ describe("decryptBalanceAs", () => {
   it("throws DelegationExpiredError when delegation has expired", async ({
     signer,
     relayer,
-    readonlyToken,
+    token,
     handle,
     delegatorAddress,
     tokenAddress,
@@ -457,7 +457,7 @@ describe("decryptBalanceAs", () => {
       .mockResolvedValueOnce(handle) // confidentialBalanceOf
       .mockResolvedValueOnce(1000n); // getDelegationExpiry → expired (past timestamp)
 
-    await expect(readonlyToken.decryptBalanceAs({ delegatorAddress })).rejects.toThrow(
+    await expect(token.decryptBalanceAs({ delegatorAddress })).rejects.toThrow(
       expect.objectContaining({
         code: "DELEGATION_EXPIRED",
         message: expect.stringContaining(tokenAddress),
@@ -469,7 +469,7 @@ describe("decryptBalanceAs", () => {
   it("preserves non-Error cause from relayer rejection", async ({
     signer,
     relayer,
-    readonlyToken,
+    token,
     handle,
     tokenAddress,
     delegatorAddress,
@@ -498,7 +498,7 @@ describe("decryptBalanceAs", () => {
     vi.mocked(relayer.delegatedUserDecrypt).mockRejectedValueOnce("raw string error");
 
     try {
-      await readonlyToken.decryptBalanceAs({ delegatorAddress });
+      await token.decryptBalanceAs({ delegatorAddress });
       expect.unreachable("should have thrown");
     } catch (err: unknown) {
       // wrapDecryptError must preserve non-Error causes (not drop them as undefined)
@@ -509,7 +509,7 @@ describe("decryptBalanceAs", () => {
   it("preserves object cause with statusCode from relayer rejection", async ({
     signer,
     relayer,
-    readonlyToken,
+    token,
     handle,
     tokenAddress,
     delegatorAddress,
@@ -539,7 +539,7 @@ describe("decryptBalanceAs", () => {
     vi.mocked(relayer.delegatedUserDecrypt).mockRejectedValueOnce(objError);
 
     try {
-      await readonlyToken.decryptBalanceAs({ delegatorAddress });
+      await token.decryptBalanceAs({ delegatorAddress });
       expect.unreachable("should have thrown");
     } catch (err: unknown) {
       expect((err as { cause: unknown }).cause).toBe(objError);
@@ -550,7 +550,7 @@ describe("decryptBalanceAs", () => {
   it("throws DelegationNotPropagatedError when relayer returns 500 in delegated context", async ({
     signer,
     relayer,
-    readonlyToken,
+    token,
     handle,
     tokenAddress,
     delegatorAddress,
@@ -576,7 +576,7 @@ describe("decryptBalanceAs", () => {
     vi.mocked(relayer.delegatedUserDecrypt).mockRejectedValueOnce(serverError);
 
     try {
-      await readonlyToken.decryptBalanceAs({ delegatorAddress });
+      await token.decryptBalanceAs({ delegatorAddress });
       expect.unreachable("should have thrown");
     } catch (err: unknown) {
       expect((err as { code: string }).code).toBe("DELEGATION_NOT_PROPAGATED");
@@ -849,11 +849,11 @@ describe("batchDecryptBalancesAs edge cases", () => {
   const TOKEN2 = "0xeDeDeDeDeDeDeDeDeDeDeDeDeDeDeDeDeDeDeDeD" as Address;
 
   it("throws when handles length does not match tokens length", async ({
-    readonlyToken,
+    token,
     delegatorAddress,
   }) => {
     await expect(
-      ReadonlyToken.batchDecryptBalancesAs([readonlyToken], {
+      Token.batchDecryptBalancesAs([token], {
         delegatorAddress,
         handles: [],
       }),
@@ -864,11 +864,11 @@ describe("batchDecryptBalancesAs edge cases", () => {
     signer,
     storage,
     sessionStorage,
-    readonlyToken,
+    token,
     delegatorAddress,
   }) => {
     const otherRelayer = createMockRelayer();
-    const token2 = new ReadonlyToken({
+    const token2 = new Token({
       relayer: otherRelayer,
       signer,
       storage,
@@ -877,7 +877,7 @@ describe("batchDecryptBalancesAs edge cases", () => {
     });
 
     await expect(
-      ReadonlyToken.batchDecryptBalancesAs([readonlyToken, token2], {
+      Token.batchDecryptBalancesAs([token, token2], {
         delegatorAddress,
       }),
     ).rejects.toThrow("All tokens in a batch operation must share the same relayer instance");

@@ -19,7 +19,7 @@ vi.mock("../../utils/query", async () => {
 vi.mock("../../provider", () => ({
   useZamaSDK: vi.fn(() => ({
     signer: { getAddress: vi.fn().mockResolvedValue(OWNER) },
-    createReadonlyToken: vi.fn((address: Address) => ({ address })),
+    createToken: vi.fn((address: Address) => ({ address })),
   })),
 }));
 

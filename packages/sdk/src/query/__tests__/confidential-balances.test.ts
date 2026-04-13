@@ -1,5 +1,5 @@
 import { describe, expect, test, vi, mockQueryContext } from "../../test-fixtures";
-import { ReadonlyToken } from "../../token/readonly-token";
+import { Token } from "../../token/token";
 import { DecryptionFailedError } from "../../errors";
 
 import { confidentialBalancesQueryOptions } from "../confidential-balances";
@@ -11,9 +11,9 @@ describe("confidentialBalancesQueryOptions", () => {
   const tokenB = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C";
   const owner = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B";
 
-  test("uses expected key shape and staleTime Infinity", ({ createMockReadonlyToken }) => {
-    const t1 = createMockReadonlyToken(tokenA);
-    const t2 = createMockReadonlyToken(tokenB);
+  test("uses expected key shape and staleTime Infinity", ({ createMockToken }) => {
+    const t1 = createMockToken(tokenA);
+    const t2 = createMockToken(tokenB);
     const options = confidentialBalancesQueryOptions([t1, t2], {
       owner,
       handles: [
@@ -36,8 +36,8 @@ describe("confidentialBalancesQueryOptions", () => {
     expect(options.staleTime).toBe(Infinity);
   });
 
-  test("enabled is false when owner is missing", ({ createMockReadonlyToken }) => {
-    const t1 = createMockReadonlyToken(tokenA);
+  test("enabled is false when owner is missing", ({ createMockToken }) => {
+    const t1 = createMockToken(tokenA);
     const options = confidentialBalancesQueryOptions([t1], {});
 
     expect(options.enabled).toBe(false);
@@ -49,8 +49,8 @@ describe("confidentialBalancesQueryOptions", () => {
     expect(options.enabled).toBe(false);
   });
 
-  test("enabled is false when query.enabled is false", ({ createMockReadonlyToken }) => {
-    const t1 = createMockReadonlyToken(tokenA);
+  test("enabled is false when query.enabled is false", ({ createMockToken }) => {
+    const t1 = createMockToken(tokenA);
     const options = confidentialBalancesQueryOptions([t1], {
       owner,
       query: { enabled: false },
@@ -59,8 +59,8 @@ describe("confidentialBalancesQueryOptions", () => {
     expect(options.enabled).toBe(false);
   });
 
-  test("enabled is false when handles are missing", ({ createMockReadonlyToken }) => {
-    const t1 = createMockReadonlyToken(tokenA);
+  test("enabled is false when handles are missing", ({ createMockToken }) => {
+    const t1 = createMockToken(tokenA);
     const options = confidentialBalancesQueryOptions([t1], {
       owner,
     });
@@ -68,16 +68,16 @@ describe("confidentialBalancesQueryOptions", () => {
     expect(options.enabled).toBe(false);
   });
 
-  test("queryFn delegates to ReadonlyToken.batchDecryptBalances and returns ConfidentialBalancesData", async ({
-    createMockReadonlyToken,
+  test("queryFn delegates to Token.batchDecryptBalances and returns ConfidentialBalancesData", async ({
+    createMockToken,
   }) => {
-    const t1 = createMockReadonlyToken(tokenA);
-    const t2 = createMockReadonlyToken(tokenB);
+    const t1 = createMockToken(tokenA);
+    const t2 = createMockToken(tokenB);
     const raw = new Map<Address, bigint>([
       [tokenA as Address, 10n],
       [tokenB as Address, 20n],
     ]);
-    const batchSpy = vi.spyOn(ReadonlyToken, "batchDecryptBalances").mockResolvedValue(raw);
+    const batchSpy = vi.spyOn(Token, "batchDecryptBalances").mockResolvedValue(raw);
 
     const options = confidentialBalancesQueryOptions([t1, t2], {
       owner,
@@ -112,10 +112,10 @@ describe("confidentialBalancesQueryOptions", () => {
     batchSpy.mockRestore();
   });
 
-  test("queryFn uses handles from context.queryKey", async ({ createMockReadonlyToken }) => {
-    const t1 = createMockReadonlyToken(tokenA);
+  test("queryFn uses handles from context.queryKey", async ({ createMockToken }) => {
+    const t1 = createMockToken(tokenA);
     const raw = new Map<Address, bigint>([[tokenA as Address, 10n]]);
-    const batchSpy = vi.spyOn(ReadonlyToken, "batchDecryptBalances").mockResolvedValue(raw);
+    const batchSpy = vi.spyOn(Token, "batchDecryptBalances").mockResolvedValue(raw);
 
     const options = confidentialBalancesQueryOptions([t1], {
       owner,
@@ -138,16 +138,14 @@ describe("confidentialBalancesQueryOptions", () => {
     batchSpy.mockRestore();
   });
 
-  test("queryFn returns partial error when some tokens fail", async ({
-    createMockReadonlyToken,
-  }) => {
-    const t1 = createMockReadonlyToken(tokenA);
-    const t2 = createMockReadonlyToken(tokenB);
+  test("queryFn returns partial error when some tokens fail", async ({ createMockToken }) => {
+    const t1 = createMockToken(tokenA);
+    const t2 = createMockToken(tokenB);
     const decryptError = new DecryptionFailedError("decrypt failed for tokenB");
 
     // Mock batchDecryptBalances to invoke the onError callback for tokenB
     const batchSpy = vi
-      .spyOn(ReadonlyToken, "batchDecryptBalances")
+      .spyOn(Token, "batchDecryptBalances")
       .mockImplementation(async (_tokens, opts) => {
         // Simulate: tokenA succeeds, tokenB fails via onError
         opts?.onError?.(decryptError, tokenB as Address);
@@ -175,16 +173,14 @@ describe("confidentialBalancesQueryOptions", () => {
     batchSpy.mockRestore();
   });
 
-  test("queryFn throws when ALL tokens fail (total failure)", async ({
-    createMockReadonlyToken,
-  }) => {
-    const t1 = createMockReadonlyToken(tokenA);
-    const t2 = createMockReadonlyToken(tokenB);
+  test("queryFn throws when ALL tokens fail (total failure)", async ({ createMockToken }) => {
+    const t1 = createMockToken(tokenA);
+    const t2 = createMockToken(tokenB);
     const errorA = new DecryptionFailedError("fail A");
     const errorB = new DecryptionFailedError("fail B");
 
     const batchSpy = vi
-      .spyOn(ReadonlyToken, "batchDecryptBalances")
+      .spyOn(Token, "batchDecryptBalances")
       .mockImplementation(async (_tokens, opts) => {
         opts?.onError?.(errorA, tokenA as Address);
         opts?.onError?.(errorB, tokenB as Address);

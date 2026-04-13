@@ -1,4 +1,4 @@
-import { ReadonlyToken, type BatchDecryptAsOptions } from "../token/readonly-token";
+import { Token, type BatchDecryptAsOptions } from "../token/token";
 import type { Address } from "viem";
 import type { MutationFactoryOptions } from "./factory-types";
 
@@ -6,7 +6,7 @@ import type { MutationFactoryOptions } from "./factory-types";
 export type BatchDecryptBalancesAsParams = BatchDecryptAsOptions;
 
 export function batchDecryptBalancesAsMutationOptions(
-  tokens: ReadonlyToken[],
+  tokens: Token[],
 ): MutationFactoryOptions<
   readonly ["zama.batchDecryptBalancesAs", ...Address[]],
   BatchDecryptBalancesAsParams,
@@ -14,6 +14,6 @@ export function batchDecryptBalancesAsMutationOptions(
 > {
   return {
     mutationKey: ["zama.batchDecryptBalancesAs", ...tokens.map((t) => t.address)] as const,
-    mutationFn: async (params) => ReadonlyToken.batchDecryptBalancesAs(tokens, params),
+    mutationFn: async (params) => Token.batchDecryptBalancesAs(tokens, params),
   };
 }

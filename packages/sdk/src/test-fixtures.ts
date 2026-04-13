@@ -336,6 +336,23 @@ export const test = base.extend<SdkFixtures>({
         resumeUnshield: vi.fn().mockResolvedValue(txResult),
         delegateDecryption: vi.fn().mockResolvedValue(txResult),
         revokeDelegation: vi.fn().mockResolvedValue(txResult),
+        balanceOf: vi.fn().mockResolvedValue(123n),
+        decryptBalance: vi.fn().mockResolvedValue(123n),
+        decryptBalanceAs: vi.fn().mockResolvedValue(123n),
+        decryptHandles: vi.fn().mockResolvedValue(new Map()),
+        confidentialBalanceOf: vi.fn().mockResolvedValue(("0x" + "aa".repeat(32)) as Handle),
+        isDelegated: vi.fn().mockResolvedValue(false),
+        getDelegationExpiry: vi.fn().mockResolvedValue(0n),
+        name: vi.fn().mockResolvedValue("Test"),
+        symbol: vi.fn().mockResolvedValue("TST"),
+        decimals: vi.fn().mockResolvedValue(18),
+        isConfidential: vi.fn().mockResolvedValue(true),
+        isWrapper: vi.fn().mockResolvedValue(false),
+        allowance: vi.fn().mockResolvedValue(0n),
+        isApproved: vi.fn().mockResolvedValue(false),
+        allow: vi.fn().mockResolvedValue(undefined),
+        isAllowed: vi.fn().mockResolvedValue(false),
+        revoke: vi.fn().mockResolvedValue(undefined),
       } as unknown as Token;
     }
     await use(factory);

@@ -95,9 +95,9 @@ describe("activityFeedQueryOptions", () => {
   });
 
   test("queryFn parses, decrypts handles, applies decrypted values, and sorts", async ({
-    createMockReadonlyToken,
+    createMockToken,
   }) => {
-    const token = createMockReadonlyToken(TOKEN);
+    const token = createMockToken(TOKEN);
     const handleA = bytes32("aa".repeat(32));
     const handleB = bytes32("bb".repeat(32));
     vi.mocked(token.decryptHandles).mockResolvedValue(
@@ -144,8 +144,8 @@ describe("activityFeedQueryOptions", () => {
     });
   });
 
-  test("queryFn skips decryption when decrypt is false", async ({ createMockReadonlyToken }) => {
-    const token = createMockReadonlyToken(TOKEN);
+  test("queryFn skips decryption when decrypt is false", async ({ createMockToken }) => {
+    const token = createMockToken(TOKEN);
     const handle = bytes32("cc".repeat(32));
     const logs = [{ ...transferLog(USER, OTHER, handle), blockNumber: 1n, logIndex: 0 }];
 

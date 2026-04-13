@@ -1,4 +1,4 @@
-import { ReadonlyToken } from "../token/readonly-token";
+import { Token } from "../token/token";
 import { DecryptionFailedError } from "../errors";
 import { assertNonNullable } from "../utils/assertions";
 
@@ -27,7 +27,7 @@ export interface ConfidentialBalancesQueryConfig {
 }
 
 export function confidentialBalancesQueryOptions(
-  tokens: ReadonlyToken[],
+  tokens: Token[],
   config?: ConfidentialBalancesQueryConfig,
 ): QueryFactoryOptions<
   ConfidentialBalancesData,
@@ -55,7 +55,7 @@ export function confidentialBalancesQueryOptions(
       assertNonNullable(keyHandles, "confidentialBalancesQueryOptions: handles");
       const perTokenErrors = new Map<Address, Error>();
 
-      const raw = await ReadonlyToken.batchDecryptBalances(tokens, {
+      const raw = await Token.batchDecryptBalances(tokens, {
         owner: keyOwner,
         handles: keyHandles,
         maxConcurrency: config?.maxConcurrency,

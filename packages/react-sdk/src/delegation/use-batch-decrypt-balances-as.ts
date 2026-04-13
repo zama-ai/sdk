@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, type UseMutationOptions } from "@tanstack/react-query";
-import type { Address, ReadonlyToken } from "@zama-fhe/sdk";
+import type { Address, Token } from "@zama-fhe/sdk";
 import {
   batchDecryptBalancesAsMutationOptions,
   type BatchDecryptBalancesAsParams,
@@ -23,7 +23,7 @@ import {
  * ```
  */
 export function useBatchDecryptBalancesAs(
-  tokens: ReadonlyToken[],
+  tokens: Token[],
   options?: UseMutationOptions<Map<Address, bigint>, Error, BatchDecryptBalancesAsParams>,
 ) {
   return useMutation<Map<Address, bigint>, Error, BatchDecryptBalancesAsParams>({

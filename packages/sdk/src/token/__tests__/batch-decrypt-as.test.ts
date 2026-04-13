@@ -1,6 +1,6 @@
 import { describe, expect, vi } from "vitest";
 import { test, createMockSigner } from "../../test-fixtures";
-import { ReadonlyToken } from "../readonly-token";
+import { Token } from "../token";
 import { DecryptCache } from "../../decrypt-cache";
 import { MemoryStorage } from "../../storage/memory-storage";
 import { MAX_UINT64 } from "../../contracts/constants";
@@ -27,7 +27,7 @@ function mockCredsResult(contractAddresses: Address[]) {
   };
 }
 
-function stubDelegatedCredentials(token: ReadonlyToken, contractAddresses: Address[]) {
+function stubDelegatedCredentials(token: Token, contractAddresses: Address[]) {
   const allowMock = vi.fn().mockResolvedValue(mockCredsResult(contractAddresses));
   // Override the lazy getter for testing
   Object.defineProperty(token, "delegatedCredentials", {
@@ -37,7 +37,7 @@ function stubDelegatedCredentials(token: ReadonlyToken, contractAddresses: Addre
   return allowMock;
 }
 
-describe("ReadonlyToken.batchDecryptBalancesAs", () => {
+describe("Token.batchDecryptBalancesAs", () => {
   test("decrypts balances for multiple tokens using delegated credentials", async ({ relayer }) => {
     const signer = createMockSigner(DELEGATE);
     const storage = new MemoryStorage();
@@ -53,14 +53,14 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
       .mockResolvedValueOnce({ [HANDLE_A]: 100n })
       .mockResolvedValueOnce({ [HANDLE_B]: 200n });
 
-    const tokenA = new ReadonlyToken({
+    const tokenA = new Token({
       relayer,
       signer,
       storage,
       sessionStorage,
       address: TOKEN_A,
     });
-    const tokenB = new ReadonlyToken({
+    const tokenB = new Token({
       relayer,
       signer,
       storage,
@@ -70,7 +70,7 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
 
     const allowMock = stubDelegatedCredentials(tokenA, [TOKEN_A, TOKEN_B]);
 
-    const balances = await ReadonlyToken.batchDecryptBalancesAs([tokenA, tokenB], {
+    const balances = await Token.batchDecryptBalancesAs([tokenA, tokenB], {
       delegatorAddress: DELEGATOR,
     });
 
@@ -82,7 +82,7 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
   });
 
   test("returns empty map for empty token list", async () => {
-    const result = await ReadonlyToken.batchDecryptBalancesAs([], {
+    const result = await Token.batchDecryptBalancesAs([], {
       delegatorAddress: DELEGATOR,
     });
     expect(result.size).toBe(0);
@@ -97,7 +97,7 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     // Only confidentialBalanceOf — zero handle means all cached, no preFlightCheck
     vi.mocked(signer.readContract).mockResolvedValueOnce(ZERO);
 
-    const token = new ReadonlyToken({
+    const token = new Token({
       relayer,
       signer,
       storage,
@@ -105,7 +105,7 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
       address: TOKEN_A,
     });
 
-    const balances = await ReadonlyToken.batchDecryptBalancesAs([token], {
+    const balances = await Token.batchDecryptBalancesAs([token], {
       delegatorAddress: DELEGATOR,
     });
 
@@ -126,7 +126,7 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
 
     vi.mocked(signer.readContract).mockResolvedValueOnce(HANDLE_A); // confidentialBalanceOf
 
-    const token = new ReadonlyToken({
+    const token = new Token({
       relayer,
       signer,
       storage,
@@ -135,7 +135,7 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
       cache,
     });
 
-    const balances = await ReadonlyToken.batchDecryptBalancesAs([token], {
+    const balances = await Token.batchDecryptBalancesAs([token], {
       delegatorAddress: DELEGATOR,
     });
 
@@ -156,7 +156,7 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
       .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry → permanent
     vi.mocked(relayer.delegatedUserDecrypt).mockRejectedValueOnce(new Error("decrypt failed"));
 
-    const token = new ReadonlyToken({
+    const token = new Token({
       relayer,
       signer,
       storage,
@@ -166,7 +166,7 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     stubDelegatedCredentials(token, [TOKEN_A]);
     const onError = vi.fn().mockReturnValue(0n);
 
-    const balances = await ReadonlyToken.batchDecryptBalancesAs([token], {
+    const balances = await Token.batchDecryptBalancesAs([token], {
       delegatorAddress: DELEGATOR,
       onError,
     });
@@ -187,7 +187,7 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
       .mockResolvedValueOnce(HANDLE_A) // confidentialBalanceOf → non-zero, goes to uncached
       .mockResolvedValueOnce(0n); // getDelegationExpiry → no delegation
 
-    const token = new ReadonlyToken({
+    const token = new Token({
       relayer,
       signer,
       storage,
@@ -196,7 +196,7 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     });
 
     await expect(
-      ReadonlyToken.batchDecryptBalancesAs([token], {
+      Token.batchDecryptBalancesAs([token], {
         delegatorAddress: DELEGATOR,
       }),
     ).rejects.toThrow(
@@ -219,7 +219,7 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
       .mockResolvedValueOnce(1000n); // getDelegationExpiry → past timestamp
     vi.mocked(signer.getBlockTimestamp).mockResolvedValue(2000n);
 
-    const token = new ReadonlyToken({
+    const token = new Token({
       relayer,
       signer,
       storage,
@@ -228,7 +228,7 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     });
 
     await expect(
-      ReadonlyToken.batchDecryptBalancesAs([token], {
+      Token.batchDecryptBalancesAs([token], {
         delegatorAddress: DELEGATOR,
       }),
     ).rejects.toThrow(
@@ -253,7 +253,7 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
       [HANDLE_A]: 42n,
     });
 
-    const token = new ReadonlyToken({
+    const token = new Token({
       relayer,
       signer,
       storage,
@@ -262,7 +262,7 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     });
     stubDelegatedCredentials(token, [TOKEN_A]);
 
-    const balances = await ReadonlyToken.batchDecryptBalancesAs([token], {
+    const balances = await Token.batchDecryptBalancesAs([token], {
       delegatorAddress: DELEGATOR,
     });
 
@@ -283,7 +283,7 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
       .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry → permanent
     vi.mocked(relayer.delegatedUserDecrypt).mockRejectedValueOnce(new Error("decrypt failed"));
 
-    const token = new ReadonlyToken({
+    const token = new Token({
       relayer,
       signer,
       storage,
@@ -298,7 +298,7 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
 
     // After fix: callback error is caught and aggregated as a DecryptionFailedError
     await expect(
-      ReadonlyToken.batchDecryptBalancesAs([token], {
+      Token.batchDecryptBalancesAs([token], {
         delegatorAddress: DELEGATOR,
         onError: throwingOnError,
       }),
@@ -320,7 +320,7 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
       [HANDLE_A]: 99n,
     });
 
-    const token = new ReadonlyToken({
+    const token = new Token({
       relayer,
       signer,
       storage,
@@ -332,7 +332,7 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     // Sabotage the storage to make saveCachedBalance fail
     vi.spyOn(storage, "set").mockRejectedValue(new Error("storage full"));
 
-    const balances = await ReadonlyToken.batchDecryptBalancesAs([token], {
+    const balances = await Token.batchDecryptBalancesAs([token], {
       delegatorAddress: DELEGATOR,
     });
 

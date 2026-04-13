@@ -71,7 +71,7 @@ export function useConfidentialBalances(
   const owner = addressQuery.data;
 
   const tokens = useMemo(
-    () => tokenAddresses.map((addr) => sdk.createReadonlyToken(addr)),
+    () => tokenAddresses.map((addr) => sdk.createToken(addr)),
     [sdk, tokenAddresses],
   );
 

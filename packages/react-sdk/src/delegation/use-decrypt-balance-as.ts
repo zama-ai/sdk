@@ -3,7 +3,7 @@
 import { useMutation, type UseMutationOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
 import { decryptBalanceAsMutationOptions, type DecryptBalanceAsParams } from "@zama-fhe/sdk/query";
-import { useReadonlyToken } from "../token/use-readonly-token";
+import { useToken } from "../token/use-token";
 
 /**
  * Decrypt another user's confidential balance as a delegate.
@@ -22,10 +22,10 @@ export function useDecryptBalanceAs(
   tokenAddress: Address,
   options?: UseMutationOptions<bigint, Error, DecryptBalanceAsParams>,
 ) {
-  const readonlyToken = useReadonlyToken(tokenAddress);
+  const token = useToken({ tokenAddress });
 
   return useMutation<bigint, Error, DecryptBalanceAsParams>({
-    ...decryptBalanceAsMutationOptions(readonlyToken),
+    ...decryptBalanceAsMutationOptions(token),
     ...options,
   });
 }
