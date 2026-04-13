@@ -166,7 +166,6 @@ function splitTransport(transport: TransportConfig): {
 }
 
 interface ChainEntry {
-  chainId: number;
   chain: ExtendedFhevmInstanceConfig;
   chainFields: Record<string, unknown>;
   options: Record<string, unknown>;
@@ -221,7 +220,6 @@ export function buildRelayer(
     }
     const { chainFields, relayerFields } = splitTransport(transport);
     const entry: ChainEntry = {
-      chainId,
       chain,
       chainFields,
       options: relayerFields,
@@ -246,14 +244,14 @@ export function buildRelayer(
         groups.set(key, [entry]);
       }
     }
-    for (const [first, ...rest] of groups.values()) {
+    for (const group of groups.values()) {
+      const first = group[0];
       if (!first) {
         continue;
       }
-      const group = [first, ...rest];
       const transports: Record<number, Partial<ExtendedFhevmInstanceConfig>> = {};
       for (const entry of group) {
-        transports[entry.chainId] = { ...entry.chain, ...entry.chainFields };
+        transports[entry.chain.chainId] = { ...entry.chain, ...entry.chainFields };
       }
       const relayer = new Relayer({
         getChainId: resolveChainId,
@@ -261,7 +259,7 @@ export function buildRelayer(
         ...first.options,
       });
       for (const entry of group) {
-        perChainRelayers.set(entry.chainId, relayer);
+        perChainRelayers.set(entry.chain.chainId, relayer);
       }
     }
   };
