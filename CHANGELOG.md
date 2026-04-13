@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.4.0-alpha.4](https://github.com/zama-ai/sdk/compare/v2.4.0-alpha.3...v2.4.0-alpha.4) (2026-04-10)
+
+### Reverts
+
+- **ci:** PR [#217](https://github.com/zama-ai/sdk/issues/217) ([16301d5]())
+
+## [2.4.0-alpha.3](https://github.com/zama-ai/sdk/compare/v2.4.0-alpha.2...v2.4.0-alpha.3) (2026-04-10)
+
 ## [2.4.0-alpha.2](https://github.com/zama-ai/sdk/compare/v2.4.0-alpha.1...v2.4.0-alpha.2) (2026-04-10)
 
 ### Features
