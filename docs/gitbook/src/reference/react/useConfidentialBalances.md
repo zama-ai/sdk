@@ -19,11 +19,7 @@ import { useConfidentialBalances } from "@zama-fhe/react-sdk";
 {% tab title="component.tsx" %}
 
 ```tsx
-import {
-  useAllow,
-  useConfidentialBalances,
-  useIsAllowed,
-} from "@zama-fhe/react-sdk";
+import { useAllow, useConfidentialBalances, useIsAllowed } from "@zama-fhe/react-sdk";
 
 function Portfolio({ tokens }: { tokens: `0x${string}`[] }) {
   const { mutate: allow, isPending: isAllowing } = useAllow();
