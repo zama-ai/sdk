@@ -105,17 +105,6 @@ Classified activity feed.
 | `.token(addr)`                                | Feed for one token      |
 | `.scope(addr, userAddress, logsKey, decrypt)` | Fully scoped feed query |
 
-### `zamaQueryKeys.fees`
-
-Fee queries.
-
-| Key                                             | Scope                 |
-| ----------------------------------------------- | --------------------- |
-| `.shieldFee(feeManager, amount?, from?, to?)`   | Shield fee estimate   |
-| `.unshieldFee(feeManager, amount?, from?, to?)` | Unshield fee estimate |
-| `.batchTransferFee(feeManager)`                 | Batch transfer fee    |
-| `.feeRecipient(feeManager)`                     | Fee recipient address |
-
 ### `zamaQueryKeys.wrappersRegistry`
 
 On-chain wrappers registry queries.
@@ -135,7 +124,7 @@ On-chain wrappers registry queries.
 
 ### `decryptionKeys`
 
-Cached decrypted values. Populated by [`useUserDecrypt`](/reference/react/useUserDecrypt) and read by `useUserDecryptedValue`.
+Cached decrypted values. Populated by [`useUserDecrypt`](/reference/react/useUserDecrypt).
 
 ```ts
 import { decryptionKeys } from "@zama-fhe/react-sdk";

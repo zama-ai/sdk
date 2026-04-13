@@ -395,22 +395,6 @@ await shield({ amount: 1000n });
 await shield({ amount: 1000n, approvalStrategy: "max" });
 ```
 
-#### `useShieldETH`
-
-Shield native ETH into confidential tokens. Use when the underlying token is the zero address (native ETH).
-
-```ts
-function useShieldETH(
-  config: UseZamaConfig,
-  options?: UseMutationOptions<Address, Error, ShieldETHParams>,
-): UseMutationResult<Address, Error, ShieldETHParams>;
-
-interface ShieldETHParams {
-  amount: bigint;
-  value?: bigint; // defaults to amount
-}
-```
-
 ### Unshield Hooks (Combined)
 
 These hooks orchestrate the full unshield flow in a single call: unwrap → wait for receipt → parse event → finalizeUnwrap. Use these for the simplest integration.
@@ -736,61 +720,6 @@ feed?.forEach((item) => {
 });
 ```
 
-### Fee Hooks
-
-#### `useShieldFee`
-
-Read the shield (wrap) fee for a given amount and address pair.
-
-```ts
-function useShieldFee(
-  config: UseFeeConfig,
-  options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
-): UseQueryResult<bigint, Error>;
-
-interface UseFeeConfig {
-  feeManagerAddress: Address;
-  amount: bigint;
-  from: Address;
-  to: Address;
-}
-```
-
-```tsx
-const { data: fee } = useShieldFee({
-  feeManagerAddress: "0xFeeManager",
-  amount: 1000n,
-  from: "0xSender",
-  to: "0xReceiver",
-});
-```
-
-#### `useUnshieldFee`
-
-Read the unshield (unwrap) fee for a given amount and address pair. Same signature as `useShieldFee`.
-
-#### `useBatchTransferFee`
-
-Read the batch transfer fee from the fee manager.
-
-```ts
-function useBatchTransferFee(
-  feeManagerAddress: Address,
-  options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
-): UseQueryResult<bigint, Error>;
-```
-
-#### `useFeeRecipient`
-
-Read the fee recipient address from the fee manager.
-
-```ts
-function useFeeRecipient(
-  feeManagerAddress: Address,
-  options?: Omit<UseQueryOptions<Address, Error>, "queryKey" | "queryFn">,
-): UseQueryResult<Address, Error>;
-```
-
 ### Low-Level FHE Hooks
 
 These hooks are for **custom FHE contracts** (non-token contracts that use encrypted types directly). For confidential ERC-20 tokens, use the high-level token hooks above instead. For detailed usage examples, see the [Encrypt & Decrypt guide](../../docs/gitbook/src/guides/encrypt-decrypt.md).
@@ -811,22 +740,19 @@ const { handles, inputProof } = await encrypt.mutateAsync({
 
 #### Decryption (`useUserDecrypt`)
 
-`useUserDecrypt` manages the full decrypt orchestration — keypair generation, EIP-712, wallet signature — and reuses cached credentials when available, avoiding redundant wallet prompts:
+`useUserDecrypt` is a TanStack Query hook that manages the full decrypt orchestration — keypair generation, EIP-712, wallet signature — and reuses cached credentials when available, avoiding redundant wallet prompts. It is **disabled by default**; pass `enabled: true` to fire the query.
 
 ```tsx
-const decrypt = useUserDecrypt({
-  onCredentialsReady: () => setStep("decrypting"),
-  onDecrypted: (values) => setStep("done"),
-});
-
-const result = await decrypt.mutateAsync({
-  handles: [
-    { handle: "0xabc...", contractAddress: "0xTokenA" },
-    { handle: "0xdef...", contractAddress: "0xTokenB" },
-  ],
-});
-// result: { "0xabc...": 500n, "0xdef...": 1000n }
-// Results are automatically cached for useUserDecryptedValue
+const { data, isPending, isSuccess } = useUserDecrypt(
+  {
+    handles: [
+      { handle: "0xabc...", contractAddress: "0xTokenA" },
+      { handle: "0xdef...", contractAddress: "0xTokenB" },
+    ],
+  },
+  { enabled: shouldDecrypt },
+);
+// data: { "0xabc...": 500n, "0xdef...": 1000n }
 ```
 
 #### All Encryption & Decryption Hooks
@@ -834,7 +760,7 @@ const result = await decrypt.mutateAsync({
 | Hook                        | Input                        | Output                   | Description                                                                  |
 | --------------------------- | ---------------------------- | ------------------------ | ---------------------------------------------------------------------------- |
 | `useEncrypt()`              | `EncryptParams`              | `EncryptResult`          | Encrypt values for smart contract calls.                                     |
-| `useUserDecrypt()`          | `DecryptParams`              | `Record<string, bigint>` | Full decrypt orchestration with progress callbacks. Populates cache.         |
+| `useUserDecrypt()`          | `UserDecryptQueryConfig`     | `DecryptResult`          | User decryption query with TanStack Query semantics. Results cached.         |
 | `usePublicDecrypt()`        | `string[]` (handles)         | `PublicDecryptResult`    | Public decryption (no authorization needed). Populates the decryption cache. |
 | `useDelegatedUserDecrypt()` | `DelegatedUserDecryptParams` | `Record<string, bigint>` | Decrypt via delegation.                                                      |
 
@@ -854,32 +780,6 @@ const result = await decrypt.mutateAsync({
 | `usePublicKey()`    | `void`          | `{ publicKeyId, publicKey } \| null`       | Get the TFHE compact public key.      |
 | `usePublicParams()` | `number` (bits) | `{ publicParams, publicParamsId } \| null` | Get public parameters for encryption. |
 
-### Decryption Cache Hooks
-
-`useUserDecrypt` and `usePublicDecrypt` populate a shared React Query cache. These hooks read from that cache without triggering new decryption requests.
-
-```ts
-// Single handle
-function useUserDecryptedValue(handle: string | undefined): UseQueryResult<bigint>;
-
-// Multiple handles
-function useUserDecryptedValues(handles: string[]): {
-  data: Record<string, bigint | undefined>;
-  results: UseQueryResult<bigint>[];
-};
-```
-
-```tsx
-// First, trigger decryption (populates the cache)
-const decrypt = useUserDecrypt();
-await decrypt.mutateAsync({
-  handles: [{ handle: "0xHandleHash", contractAddress: "0xToken" }],
-});
-
-// Then read cached results anywhere in the tree — no new decryption
-const { data: value } = useUserDecryptedValue("0xHandleHash");
-```
-
 ## Query Keys
 
 Use `zamaQueryKeys` for manual cache management (invalidation, prefetching, removal).
@@ -888,17 +788,16 @@ Use `zamaQueryKeys` for manual cache management (invalidation, prefetching, remo
 import { zamaQueryKeys, decryptionKeys } from "@zama-fhe/react-sdk";
 ```
 
-| Factory                              | Keys                                                                                     | Description                         |
-| ------------------------------------ | ---------------------------------------------------------------------------------------- | ----------------------------------- |
-| `zamaQueryKeys.confidentialBalance`  | `.all`, `.token(address)`, `.owner(address, owner)`                                      | Single-token decrypted balance.     |
-| `zamaQueryKeys.confidentialBalances` | `.all`, `.tokens(addresses, owner)`                                                      | Multi-token batch balances.         |
-| `zamaQueryKeys.confidentialHandle`   | `.all`, `.token(address)`, `.owner(address, owner)`                                      | Single-token encrypted handle.      |
-| `zamaQueryKeys.confidentialHandles`  | `.all`, `.tokens(addresses, owner)`                                                      | Multi-token batch handles.          |
-| `zamaQueryKeys.isAllowed`            | `.all`                                                                                   | Session signature status.           |
-| `zamaQueryKeys.underlyingAllowance`  | `.all`, `.token(address)`, `.scope(address, owner, wrapper)`                             | Underlying ERC-20 allowance.        |
-| `zamaQueryKeys.activityFeed`         | `.all`, `.token(address)`, `.scope(address, userAddress, logsKey, decrypt)`              | Activity feed items.                |
-| `zamaQueryKeys.fees`                 | `.shieldFee(...)`, `.unshieldFee(...)`, `.batchTransferFee(addr)`, `.feeRecipient(addr)` | Fee manager queries.                |
-| `decryptionKeys`                     | `.value(handle)`                                                                         | Individual decrypted handle values. |
+| Factory                              | Keys                                                                        | Description                         |
+| ------------------------------------ | --------------------------------------------------------------------------- | ----------------------------------- |
+| `zamaQueryKeys.confidentialBalance`  | `.all`, `.token(address)`, `.owner(address, owner)`                         | Single-token decrypted balance.     |
+| `zamaQueryKeys.confidentialBalances` | `.all`, `.tokens(addresses, owner)`                                         | Multi-token batch balances.         |
+| `zamaQueryKeys.confidentialHandle`   | `.all`, `.token(address)`, `.owner(address, owner)`                         | Single-token encrypted handle.      |
+| `zamaQueryKeys.confidentialHandles`  | `.all`, `.tokens(addresses, owner)`                                         | Multi-token batch handles.          |
+| `zamaQueryKeys.isAllowed`            | `.all`                                                                      | Session signature status.           |
+| `zamaQueryKeys.underlyingAllowance`  | `.all`, `.token(address)`, `.scope(address, owner, wrapper)`                | Underlying ERC-20 allowance.        |
+| `zamaQueryKeys.activityFeed`         | `.all`, `.token(address)`, `.scope(address, userAddress, logsKey, decrypt)` | Activity feed items.                |
+| `decryptionKeys`                     | `.value(handle)`                                                            | Individual decrypted handle values. |
 
 ```tsx
 import { useQueryClient } from "@tanstack/react-query";
@@ -915,39 +814,7 @@ queryClient.invalidateQueries({
 });
 ```
 
-## Wagmi Adapter Hooks
-
-`@zama-fhe/react-sdk/wagmi` exports low-level hooks that wrap wagmi's `useReadContract` and `useWriteContract` directly. These do **not** use the SDK provider for their contract calls — they operate through wagmi's `Config`. Use them for advanced scenarios where you need fine-grained control.
-
-### Read Hooks
-
-| Hook                                         | Parameters                      | Description                                                |
-| -------------------------------------------- | ------------------------------- | ---------------------------------------------------------- |
-| `useBalanceOf(token, user?)`                 | Token and optional user address | ERC-20 balance with symbol, decimals, and formatted value. |
-| `useConfidentialBalanceOf(token?, user?)`    | Token and user addresses        | Read encrypted balance handle.                             |
-| `useWrapperForToken(coordinator?, token?)`   | Coordinator and token addresses | Look up wrapper for token.                                 |
-| `useUnderlyingToken(wrapper?)`               | Wrapper address                 | Read underlying ERC-20 address.                            |
-| `useWrapperExists(coordinator?, token?)`     | Coordinator and token addresses | Check if wrapper exists.                                   |
-| `useSupportsInterface(token?, interfaceId?)` | Token address and interface ID  | ERC-165 support check.                                     |
-
-All read hooks are enabled only when their required parameters are defined. All read hooks have `*Suspense` variants for use with React Suspense boundaries.
-
-### Write Hooks
-
-All write hooks return `{ mutate, mutateAsync, ...mutation }` from wagmi's `useWriteContract`.
-
-| Hook                             | Mutation Parameters                              | Description                   |
-| -------------------------------- | ------------------------------------------------ | ----------------------------- |
-| `useConfidentialTransfer()`      | `(token, to, handle, inputProof)`                | Encrypted transfer.           |
-| `useConfidentialBatchTransfer()` | `(batcher, token, from, transfers, fees)`        | Batch encrypted transfer.     |
-| `useUnwrap()`                    | `(token, from, to, encryptedAmount, inputProof)` | Request unwrap.               |
-| `useUnwrapFromBalance()`         | `(token, from, to, encryptedBalance)`            | Unwrap using on-chain handle. |
-| `useFinalizeUnwrap()`            | `(wrapper, burntAmount, cleartext, proof)`       | Finalize unwrap.              |
-| `useSetOperator()`               | `(token, spender, timestamp?)`                   | Set operator approval.        |
-| `useShield()`                    | `(wrapper, to, amount)`                          | Shield ERC-20 tokens.         |
-| `useShieldETH()`                 | `(wrapper, to, amount, value)`                   | Shield native ETH.            |
-
-### Wagmi Signer Adapter
+## Wagmi Signer Adapter
 
 ```ts
 import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
@@ -1075,13 +942,13 @@ All public exports from `@zama-fhe/sdk` are re-exported from the main entry poin
 
 **Pending unshield:** `savePendingUnshield`, `loadPendingUnshield`, `clearPendingUnshield`.
 
-**Types:** `Address`, `ZamaSDKConfig`, `ReadonlyTokenConfig`, `NetworkType`, `RelayerSDK`, `RelayerSDKStatus`, `EncryptResult`, `EncryptParams`, `UserDecryptParams`, `PublicDecryptResult`, `KeypairType`, `EIP712TypedData`, `DelegatedUserDecryptParams`, `KmsDelegatedUserDecryptEIP712Type`, `ZKProofLike`, `InputProofBytesType`, `BatchTransferData`, `StoredCredentials`, `GenericSigner`, `GenericStorage`, `TransactionReceipt`, `TransactionResult`, `UnshieldCallbacks`.
+**Types:** `Address`, `ZamaSDKConfig`, `ReadonlyTokenConfig`, `NetworkType`, `RelayerSDK`, `RelayerSDKStatus`, `EncryptResult`, `EncryptParams`, `UserDecryptParams`, `PublicDecryptResult`, `KeypairType`, `EIP712TypedData`, `DelegatedUserDecryptParams`, `KmsDelegatedUserDecryptEIP712Type`, `ZKProofLike`, `InputProofBytesType`, `StoredCredentials`, `GenericSigner`, `GenericStorage`, `TransactionReceipt`, `TransactionResult`, `UnshieldCallbacks`.
 
 **Errors:** `ZamaError`, `ZamaErrorCode`, `SigningRejectedError`, `SigningFailedError`, `EncryptionFailedError`, `DecryptionFailedError`, `ApprovalFailedError`, `TransactionRevertedError`, `InvalidKeypairError`, `NoCiphertextError`, `RelayerRequestFailedError`, `matchZamaError`.
 
 **Constants:** `ZERO_HANDLE`, `ERC7984_INTERFACE_ID`, `ERC7984_WRAPPER_INTERFACE_ID`.
 
-**ABIs:** `ERC20_ABI`, `ERC20_METADATA_ABI`, `DEPLOYMENT_COORDINATOR_ABI`, `ERC165_ABI`, `ENCRYPTION_ABI`, `FEE_MANAGER_ABI`, `TRANSFER_BATCHER_ABI`, `WRAPPER_ABI`, `BATCH_SWAP_ABI`.
+**ABIs:** `ERC20_ABI`, `ERC20_METADATA_ABI`, `DEPLOYMENT_COORDINATOR_ABI`, `ERC165_ABI`, `ENCRYPTION_ABI`, `TRANSFER_BATCHER_ABI`, `WRAPPER_ABI`, `BATCH_SWAP_ABI`.
 
 **Events:** `RawLog`, `ConfidentialTransferEvent`, `WrappedEvent`, `UnwrapRequestedEvent`, `UnwrappedFinalizedEvent`, `UnwrappedStartedEvent`, `OnChainEvent`, `Topics`, `TOKEN_TOPICS`.
 
@@ -1089,4 +956,4 @@ All public exports from `@zama-fhe/sdk` are re-exported from the main entry poin
 
 **Activity feed:** `ActivityDirection`, `ActivityType`, `ActivityAmount`, `ActivityLogMetadata`, `ActivityItem`, `parseActivityFeed`, `extractEncryptedHandles`, `applyDecryptedValues`, `sortByBlockNumber`.
 
-**Contract call builders:** All 31 builders — `confidentialBalanceOfContract`, `confidentialTransferContract`, `confidentialTransferFromContract`, `isOperatorContract`, `confidentialBatchTransferContract`, `unwrapContract`, `unwrapFromBalanceContract`, `finalizeUnwrapContract`, `setOperatorContract`, `getWrapperContract`, `wrapperExistsContract`, `underlyingContract`, `wrapContract`, `wrapETHContract`, `supportsInterfaceContract`, `nameContract`, `symbolContract`, `decimalsContract`, `allowanceContract`, `approveContract`, `confidentialTotalSupplyContract`, `totalSupplyContract`, `rateContract`, `deploymentCoordinatorContract`, `isFinalizeUnwrapOperatorContract`, `setFinalizeUnwrapOperatorContract`, `getWrapFeeContract`, `getUnwrapFeeContract`, `getBatchTransferFeeContract`, `getFeeRecipientContract`.
+**Contract call builders:** `confidentialBalanceOfContract`, `confidentialTransferContract`, `confidentialTransferFromContract`, `isOperatorContract`, `unwrapContract`, `unwrapFromBalanceContract`, `finalizeUnwrapContract`, `setOperatorContract`, `underlyingContract`, `wrapContract`, `supportsInterfaceContract`, `isConfidentialTokenContract`, `isConfidentialWrapperContract`, `nameContract`, `symbolContract`, `decimalsContract`, `allowanceContract`, `approveContract`, `confidentialTotalSupplyContract`, `totalSupplyContract`, `rateContract`.

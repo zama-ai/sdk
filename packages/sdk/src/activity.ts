@@ -18,8 +18,9 @@ import {
   type UnwrappedStartedEvent,
 } from "./events/onchain-events";
 import type { Address, Hex } from "viem";
-import type { Handle } from "./relayer/relayer-sdk.types";
+import type { ClearValueType, Handle } from "./relayer/relayer-sdk.types";
 import { ZERO_HANDLE } from "./token/readonly-token";
+import { assertBigint } from "./utils/assertions";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -71,9 +72,7 @@ export interface ActivityItem {
   readonly from?: Address;
   /** Receiver address (if applicable). */
   readonly to?: Address;
-  /** Fee deducted (for shield/unshield events). */
-  readonly fee?: bigint;
-  /** Whether the on-chain operation succeeded (for unshield events). */
+  /** Whether the on-chain operation succeeded (for unshield_started events). */
   readonly success?: boolean;
   /** On-chain metadata (tx hash, block number, log index). */
   readonly metadata: ActivityLogMetadata;
@@ -121,7 +120,9 @@ function eventToActivityItem(
     case "UnwrappedStarted":
       return buildUnshieldStarted(event, userAddress, metadata);
     case "UnwrappedFinalized":
-      return buildUnshieldFinalized(event, metadata);
+      return buildUnshieldFinalized(event, userAddress, metadata);
+    default:
+      throw new Error(`Unknown event: ${(event as OnChainEvent).eventName}`);
   }
 }
 
@@ -151,7 +152,6 @@ function buildShield(
     direction: classifyDirection(userAddress, undefined, event.to),
     amount: { type: "clear", value: event.amountIn },
     to: event.to,
-    fee: event.feeAmount,
     metadata,
     rawEvent: event,
   };
@@ -190,15 +190,14 @@ function buildUnshieldStarted(
 
 function buildUnshieldFinalized(
   event: UnwrappedFinalizedEvent,
+  userAddress: Address,
   metadata: ActivityLogMetadata,
 ): ActivityItem {
   return {
     type: "unshield_finalized",
-    // Finalized events don't carry from/to addresses, always treat as incoming
-    direction: "incoming",
-    amount: { type: "clear", value: event.unwrapAmount },
-    fee: event.feeAmount,
-    success: event.finalizeSuccess,
+    direction: classifyDirection(userAddress, undefined, event.receiver),
+    amount: { type: "clear", value: event.cleartextAmount },
+    to: event.receiver,
     metadata,
     rawEvent: event,
   };
@@ -256,7 +255,7 @@ export function extractEncryptedHandles(items: readonly ActivityItem[]): Handle[
  */
 export function applyDecryptedValues(
   items: readonly ActivityItem[],
-  decryptedMap: ReadonlyMap<Handle, bigint>,
+  decryptedMap: ReadonlyMap<Handle, ClearValueType>,
 ): ActivityItem[] {
   return items.map((item) => {
     if (item.amount.type !== "encrypted") {
@@ -267,6 +266,8 @@ export function applyDecryptedValues(
     if (value === undefined) {
       return item;
     }
+
+    assertBigint(value, "applyDecryptedValues: value");
 
     return {
       ...item,

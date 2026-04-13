@@ -608,31 +608,6 @@ describe("Token event emissions", () => {
       const types = events.map((e) => e.type);
       expect(types).toContain(ZamaSDKEvents.ShieldSubmitted);
     });
-
-    it("emits ShieldSubmitted for shieldETH", async ({
-      relayer,
-      signer,
-      tokenAddress,
-      storage,
-      sessionStorage,
-      createToken,
-    }) => {
-      const events: ZamaSDKEvent[] = [];
-      const onEvent: ZamaSDKEventListener = (event) => events.push(event);
-      const token = createTokenWithEvent(
-        relayer,
-        signer,
-        onEvent,
-        tokenAddress,
-        storage,
-        sessionStorage,
-        createToken,
-      );
-      await token.shieldETH(1000n);
-
-      const types = events.map((e) => e.type);
-      expect(types).toContain(ZamaSDKEvents.ShieldSubmitted);
-    });
   });
 
   describe("unwrap events", () => {

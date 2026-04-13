@@ -4,7 +4,6 @@ test("should shield USDT, unwrap, then resume unshield", async ({
   page,
   contracts,
   formatUnits,
-  computeFee,
   confidentialBalances,
 }) => {
   const shieldAmount = 500n;
@@ -34,7 +33,7 @@ test("should shield USDT, unwrap, then resume unshield", async ({
   // Verify confidential balance decreased
   await page.goto("/wallet");
   await page.getByTestId("reveal-button").click();
-  const expectedBalance = cUSDTBefore + shieldAmount - computeFee(shieldAmount) - unshieldAmount;
+  const expectedBalance = cUSDTBefore + shieldAmount - unshieldAmount;
   await expect(page.getByTestId("token-row-cUSDT").getByTestId("balance")).toHaveText(
     formatUnits(expectedBalance, 6),
   );

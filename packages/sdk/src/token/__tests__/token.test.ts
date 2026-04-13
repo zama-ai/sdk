@@ -453,21 +453,6 @@ describe("Token", () => {
     });
   });
 
-  describe("shieldETH", () => {
-    it("sends shieldETH with value", async ({ signer, token }) => {
-      const result = await token.shieldETH(1000n);
-
-      expect(signer.writeContract).toHaveBeenCalledWith(
-        expect.objectContaining({
-          functionName: "wrapETH",
-          value: 1000n,
-        }),
-      );
-      expect(result.txHash).toBe("0xtxhash");
-      expect(result.receipt).toEqual({ logs: [] });
-    });
-  });
-
   describe("unwrap", () => {
     it("encrypts amount and sends unwrap to userAddress address", async ({
       relayer,
@@ -886,39 +871,6 @@ describe("Token", () => {
   });
 
   describe("wrap (additional branches)", () => {
-    const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as Address;
-
-    it("calls shieldETH when underlying is zero address", async ({ signer, token }) => {
-      vi.mocked(signer.readContract).mockResolvedValueOnce(ZERO_ADDRESS); // #getUnderlying
-
-      const result = await token.shield(100n);
-
-      expect(signer.writeContract).toHaveBeenCalledWith(
-        expect.objectContaining({
-          functionName: "wrapETH",
-          value: 100n,
-        }),
-      );
-      expect(result.txHash).toBe("0xtxhash");
-      expect(result.receipt).toEqual({ logs: [] });
-    });
-
-    it("passes amount + fees as value when underlying is zero address with fees", async ({
-      signer,
-      token,
-    }) => {
-      vi.mocked(signer.readContract).mockResolvedValueOnce(ZERO_ADDRESS); // #getUnderlying
-
-      await token.shield(100n, { fees: 10n });
-
-      expect(signer.writeContract).toHaveBeenCalledWith(
-        expect.objectContaining({
-          functionName: "wrapETH",
-          value: 110n,
-        }),
-      );
-    });
-
     it("approves max uint256 with approvalStrategy max", async ({ signer, token }) => {
       vi.mocked(signer.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // #getUnderlying
@@ -999,39 +951,6 @@ describe("Token", () => {
       await expect(token.shield(100n)).rejects.toSatisfy((err: ZamaError) => {
         return err instanceof ZamaError && err.code === ZamaErrorCode.ApprovalFailed;
       });
-    });
-  });
-
-  describe("shieldETH (error wrapping)", () => {
-    it("wraps ZamaError thrown by writeContract", async ({ signer, token }) => {
-      vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("tx failed"));
-
-      await expect(token.shieldETH(1000n)).rejects.toMatchObject({
-        code: ZamaErrorCode.TransactionReverted,
-        message: "Shield ETH transaction failed",
-      });
-    });
-
-    it("re-throws ZamaError as-is", async ({ signer, token }) => {
-      const original = new ZamaError(ZamaErrorCode.EncryptionFailed, "already wrapped");
-      vi.mocked(signer.writeContract).mockRejectedValueOnce(original);
-
-      await expect(token.shieldETH(1000n)).rejects.toBe(original);
-    });
-  });
-
-  describe("shieldETH (additional branches)", () => {
-    it("uses custom value parameter when provided", async ({ signer, token }) => {
-      const result = await token.shieldETH(1000n, 2000n);
-
-      expect(signer.writeContract).toHaveBeenCalledWith(
-        expect.objectContaining({
-          functionName: "wrapETH",
-          value: 2000n,
-        }),
-      );
-      expect(result.txHash).toBe("0xtxhash");
-      expect(result.receipt).toEqual({ logs: [] });
     });
   });
 
@@ -1491,9 +1410,10 @@ describe("Token", () => {
       handle,
       storage,
     }) => {
-      // Seed the balance cache with a sufficient balance
-      const cacheKey = `zama:balance:${getAddress(token.address)}:${getAddress(await signer.getAddress())}:${handle.toLowerCase()}`;
-      await storage.set(cacheKey, "200");
+      // Seed the decrypt cache with a sufficient balance
+      const owner = getAddress(await signer.getAddress());
+      const cacheKey = `zama:decrypt:${owner}:${getAddress(token.address)}:${handle.toLowerCase()}`;
+      await storage.set(cacheKey, 200n);
 
       vi.mocked(signer.readContract).mockResolvedValueOnce(handle); // confidentialBalanceOf
 
@@ -1508,8 +1428,9 @@ describe("Token", () => {
       handle,
       storage,
     }) => {
-      const cacheKey = `zama:balance:${getAddress(token.address)}:${getAddress(await signer.getAddress())}:${handle.toLowerCase()}`;
-      await storage.set(cacheKey, "50");
+      const owner = getAddress(await signer.getAddress());
+      const cacheKey = `zama:decrypt:${owner}:${getAddress(token.address)}:${handle.toLowerCase()}`;
+      await storage.set(cacheKey, 50n);
 
       vi.mocked(signer.readContract).mockResolvedValueOnce(handle); // confidentialBalanceOf
 

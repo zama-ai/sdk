@@ -12,13 +12,8 @@ export { ZamaProvider, useZamaSDK, type ZamaProviderProps } from "./provider";
 
 // SDK method hooks
 export { useEncrypt } from "./relayer/use-encrypt";
-export {
-  useUserDecrypt,
-  type DecryptHandle,
-  type DecryptParams,
-  type DecryptCallbacks,
-  type UseUserDecryptConfig,
-} from "./relayer/use-user-decrypt";
+export { useUserDecrypt, type UseUserDecryptResult } from "./relayer/use-user-decrypt";
+
 export { usePublicDecrypt } from "./relayer/use-public-decrypt";
 export { useGenerateKeypair } from "./relayer/use-generate-keypair";
 export { useCreateEIP712 } from "./relayer/use-create-eip712";
@@ -29,10 +24,6 @@ export { useDelegatedUserDecrypt } from "./relayer/use-delegated-user-decrypt";
 export { useRequestZKProofVerification } from "./relayer/use-request-zk-proof-verification";
 export { usePublicKey, type PublicKeyData } from "./relayer/use-public-key";
 export { usePublicParams, type PublicParamsData } from "./relayer/use-public-params";
-
-// Read hooks (cached lookups)
-export { useUserDecryptedValue } from "./relayer/use-user-decrypted-value";
-export { useUserDecryptedValues } from "./relayer/use-user-decrypted-values";
 
 // Re-export core classes
 export {
@@ -78,7 +69,6 @@ export type {
   KmsDelegatedUserDecryptEIP712Type,
   ZKProofLike,
   InputProofBytesType,
-  BatchTransferData,
   TokenWrapperPair,
   TokenWrapperPairWithMetadata,
   PaginatedResult,
@@ -142,16 +132,12 @@ export {
   confidentialTransferContract,
   confidentialTransferFromContract,
   isOperatorContract,
-  confidentialBatchTransferContract,
   unwrapContract,
   unwrapFromBalanceContract,
   finalizeUnwrapContract,
   setOperatorContract,
-  getWrapperContract,
-  wrapperExistsContract,
   underlyingContract,
   wrapContract,
-  wrapETHContract,
   supportsInterfaceContract,
   isConfidentialTokenContract,
   isConfidentialWrapperContract,
@@ -164,13 +150,6 @@ export {
   confidentialTotalSupplyContract,
   totalSupplyContract,
   rateContract,
-  deploymentCoordinatorContract,
-  isFinalizeUnwrapOperatorContract,
-  setFinalizeUnwrapOperatorContract,
-  getWrapFeeContract,
-  getUnwrapFeeContract,
-  getBatchTransferFeeContract,
-  getFeeRecipientContract,
   delegateForUserDecryptionContract,
   revokeDelegationContract,
   getDelegationExpiryContract,
@@ -179,7 +158,7 @@ export {
 
 // Authorization hooks (generic — any contract with encrypted state)
 export { useAllow } from "./authorization/use-allow";
-export { useIsAllowed } from "./authorization/use-is-allowed";
+export { useIsAllowed, type UseIsAllowedConfig } from "./authorization/use-is-allowed";
 export { useRevoke } from "./authorization/use-revoke";
 export { useRevokeSession } from "./authorization/use-revoke-session";
 
@@ -209,7 +188,6 @@ export {
   type UseConfidentialIsApprovedSuspenseConfig,
 } from "./transfer/use-confidential-is-approved";
 export { useShield, type UseShieldConfig } from "./shield/use-shield";
-export { useShieldETH, type UseShieldETHConfig } from "./shield/use-shield-eth";
 export { useUnwrap } from "./unwrap/use-unwrap";
 export { useUnwrapAll } from "./unwrap/use-unwrap-all";
 export { useFinalizeUnwrap } from "./unwrap/use-finalize-unwrap";
@@ -245,14 +223,6 @@ export {
   useIsWrapperSuspense,
 } from "./token/use-is-confidential";
 export { useTotalSupply, useTotalSupplySuspense } from "./token/use-total-supply";
-export {
-  useShieldFee,
-  useUnshieldFee,
-  useBatchTransferFee,
-  useFeeRecipient,
-  type UseFeeConfig,
-} from "./token/use-fees";
-
 // Registry hooks (wagmi-based, read from on-chain ConfidentialTokenWrappersRegistry)
 export { useWrappersRegistryAddress } from "./wrappers-registry/use-wrappers-registry-address";
 export { useTokenPairsRegistry } from "./wrappers-registry/use-token-pairs-registry";
@@ -277,10 +247,6 @@ export {
   wrapperDiscoveryQueryOptions,
   underlyingAllowanceQueryOptions,
   confidentialIsApprovedQueryOptions,
-  shieldFeeQueryOptions,
-  unshieldFeeQueryOptions,
-  batchTransferFeeQueryOptions,
-  feeRecipientQueryOptions,
   publicKeyQueryOptions,
   publicParamsQueryOptions,
   confidentialHandleQueryOptions,
@@ -291,8 +257,6 @@ export {
   activityFeedQueryOptions,
   shieldMutationOptions,
   type ShieldParams,
-  shieldETHMutationOptions,
-  type ShieldETHParams,
   confidentialTransferMutationOptions,
   type ConfidentialTransferParams,
   confidentialTransferFromMutationOptions,
@@ -319,9 +283,10 @@ export {
   delegatedUserDecryptMutationOptions,
   publicDecryptMutationOptions,
   requestZKProofVerificationMutationOptions,
-  userDecryptMutationOptions,
-  type UserDecryptMutationParams,
-  type UserDecryptCallbacks,
+  userDecryptQueryOptions,
+  type UserDecryptQueryConfig,
+  type DecryptResult,
+  type DecryptHandle,
   allowMutationOptions,
   isAllowedQueryOptions,
   revokeMutationOptions,
@@ -441,4 +406,5 @@ export {
   BalanceCheckUnavailableError,
   ERC20ReadFailedError,
   matchZamaError,
+  matchAclRevert,
 } from "@zama-fhe/sdk";

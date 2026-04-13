@@ -201,7 +201,7 @@ export default function Home() {
       // address set but chainId null (which renders a persistent "Sepolia Required" screen).
       (ethereum.request({ method: "eth_chainId" }) as Promise<string>)
         .then(setChainId)
-        .catch(() => {});
+        .catch((err) => console.error("[chainId refresh] eth_chainId failed:", err));
       // Invalidate only balance queries — registry/metadata is address-independent.
       queryClient.invalidateQueries({ queryKey: ["eth-balance"] });
       queryClient.invalidateQueries({ queryKey: ["erc20-balance"] });
