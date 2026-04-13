@@ -366,7 +366,7 @@ export abstract class BaseCredentialsManager<
       if (error instanceof ZamaError) {
         throw error;
       }
-      wrapSigningError(error, errorContext);
+      return wrapSigningError(error, errorContext);
     }
   }
 

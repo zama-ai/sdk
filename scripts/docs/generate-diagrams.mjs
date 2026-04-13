@@ -52,7 +52,7 @@ for (const file of d2Files) {
 
 // Summary
 const svgCount = readdirSync(OUT).filter((f) => f.endsWith(".svg")).length;
-console.log(`\nGenerated ${svgCount} SVG files in ${OUT.toString()}`);
+console.log(`\nGenerated ${svgCount} SVG files in ${OUT}`);
 
 if (errors) {
   console.error("Some diagrams failed to render. See errors above.");

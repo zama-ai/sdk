@@ -121,6 +121,8 @@ function eventToActivityItem(
       return buildUnshieldStarted(event, userAddress, metadata);
     case "UnwrappedFinalized":
       return buildUnshieldFinalized(event, userAddress, metadata);
+    default:
+      throw new Error(`Unknown event: ${(event as OnChainEvent).eventName}`);
   }
 }
 
