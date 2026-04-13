@@ -172,9 +172,36 @@ interface ChainEntry {
   options: Record<string, unknown>;
 }
 
-/** Stable JSON key for grouping entries by relayer options. */
+/**
+ * Stable key for grouping entries by relayer options.
+ * Uses reference identity for non-serializable values (functions, class instances)
+ * so different callbacks never collide into the same group.
+ */
 function optionsKey(options: Record<string, unknown>): string {
-  return JSON.stringify(options, Object.keys(options).toSorted());
+  const refIds = new WeakMap<WeakKey, number>();
+  let nextId = 0;
+  const refId = (v: WeakKey) => {
+    let id = refIds.get(v);
+    if (id === undefined) {
+      id = nextId++;
+      refIds.set(v, id);
+    }
+    return id;
+  };
+  return JSON.stringify(options, (_key, value: unknown) => {
+    if (typeof value === "function") {return `__ref:${refId(value as WeakKey)}`;}
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      // Sort object keys for stable serialization, and tag class instances.
+      const proto = Object.getPrototypeOf(value);
+      if (proto !== Object.prototype && proto !== null) {
+        return `__ref:${refId(value as WeakKey)}`;
+      }
+      return Object.fromEntries(
+        Object.entries(value as Record<string, unknown>).toSorted(([a], [b]) => a.localeCompare(b)),
+      );
+    }
+    return value;
+  });
 }
 
 export function buildRelayer(
@@ -205,7 +232,9 @@ export function buildRelayer(
     const groups = Object.groupBy(entries, (e) => optionsKey(e.options));
     for (const group of Object.values(groups)) {
       const [first, ...rest] = group ?? [];
-      if (!first) {continue;}
+      if (!first) {
+        continue;
+      }
       const transports: Record<number, Partial<ExtendedFhevmInstanceConfig>> = {};
       for (const entry of [first, ...rest]) {
         transports[entry.chainId] = { ...entry.chain, ...entry.chainFields };
