@@ -181,7 +181,7 @@ class BurnerWalletConnector {
           const [{ chainId: hexChainId }] = params as [SwitchChainParams];
           this.connectedChainId = fromHex(hexChainId, "number");
           this.onChainChanged(this.connectedChainId.toString());
-          return;
+          return undefined;
         }
 
         default: {

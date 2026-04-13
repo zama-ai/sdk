@@ -689,7 +689,7 @@ describe("RelayerWeb", () => {
 
       // Mock fetch for revalidation: manifest + artifact returns 200 (changed)
       globalThis.fetch = vi.fn().mockImplementation((url: string) => {
-        const urlStr = String(url);
+        const urlStr = url;
         if (urlStr.includes("/keyurl")) {
           return Promise.resolve({
             ok: true,
@@ -1182,7 +1182,7 @@ describe("RelayerNode", () => {
 
       // Mock fetch: manifest + artifact returns 200 (changed)
       globalThis.fetch = vi.fn().mockImplementation((url: string) => {
-        const urlStr = String(url);
+        const urlStr = url;
         if (urlStr.includes("/keyurl")) {
           return Promise.resolve({
             ok: true,

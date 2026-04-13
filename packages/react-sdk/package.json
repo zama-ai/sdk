@@ -60,7 +60,7 @@
     "@zama-fhe/sdk": "workspace:*",
     "rolldown": "1.0.0-rc.7",
     "rolldown-plugin-dts": "^0.23.2",
-    "viem": "^2.47.6"
+    "viem": "^2.47.12"
   },
   "peerDependencies": {
     "@tanstack/react-query": ">=5",

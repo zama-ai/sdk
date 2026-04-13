@@ -321,7 +321,7 @@ function addTypedValue(
       input.add256(toBigInt(value));
       break;
     case "eaddress":
-      input.addAddress(String(value));
+      input.addAddress(value);
       break;
     default:
       unreachableFheType(fheType);
