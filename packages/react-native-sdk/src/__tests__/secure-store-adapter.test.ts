@@ -1,34 +1,32 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockStorage, mockAsyncStorage } = vi.hoisted(() => {
+const { mockStorage, mockSecureStore } = vi.hoisted(() => {
   const mockStorage = new Map<string, string>();
-  const mockAsyncStorage = {
-    getItem: vi.fn((key: string) => Promise.resolve(mockStorage.get(key) ?? null)),
-    setItem: vi.fn((key: string, value: string) => {
+  const mockSecureStore = {
+    getItemAsync: vi.fn((key: string) => Promise.resolve(mockStorage.get(key) ?? null)),
+    setItemAsync: vi.fn((key: string, value: string) => {
       mockStorage.set(key, value);
       return Promise.resolve();
     }),
-    removeItem: vi.fn((key: string) => {
+    deleteItemAsync: vi.fn((key: string) => {
       mockStorage.delete(key);
       return Promise.resolve();
     }),
   };
-  return { mockStorage, mockAsyncStorage };
+  return { mockStorage, mockSecureStore };
 });
 
-vi.mock("@react-native-async-storage/async-storage", () => ({
-  default: mockAsyncStorage,
-}));
+vi.mock("expo-secure-store", () => mockSecureStore);
 
-import { AsyncStorageAdapter } from "../async-storage-adapter";
+import { SecureStoreAdapter } from "../secure-store-adapter";
 
-describe("AsyncStorageAdapter", () => {
-  let adapter: AsyncStorageAdapter;
+describe("SecureStoreAdapter", () => {
+  let adapter: SecureStoreAdapter;
 
   beforeEach(() => {
     mockStorage.clear();
     vi.clearAllMocks();
-    adapter = new AsyncStorageAdapter();
+    adapter = new SecureStoreAdapter();
   });
 
   it("returns null for missing keys", async () => {
@@ -52,23 +50,19 @@ describe("AsyncStorageAdapter", () => {
     expect(await adapter.get("key")).toBeNull();
   });
 
-  it("delete is a no-op for missing keys", async () => {
-    await adapter.delete("missing");
-    expect(mockAsyncStorage.removeItem).toHaveBeenCalledWith("@zama-fhe:missing");
-  });
-
-  it("prefixes keys to avoid collisions", async () => {
+  it("prefixes keys with the SecureStore-safe prefix", async () => {
     await adapter.set("test", "val");
-    expect(mockAsyncStorage.setItem).toHaveBeenCalledWith("@zama-fhe:test", JSON.stringify("val"));
+    expect(mockSecureStore.setItemAsync).toHaveBeenCalledWith(
+      "zama_fhe_test",
+      JSON.stringify("val"),
+    );
   });
 
   it("throws a contextual error and removes the entry when stored value is corrupted", async () => {
-    // Bypass the adapter to plant an unparseable value at the prefixed key.
-    mockStorage.set("@zama-fhe:bad", "{not-valid-json");
+    mockStorage.set("zama_fhe_bad", "{not-valid-json");
 
     await expect(adapter.get("bad")).rejects.toThrow(/failed to parse stored value for key "bad"/);
-    expect(mockAsyncStorage.removeItem).toHaveBeenCalledWith("@zama-fhe:bad");
-    // Subsequent reads start clean.
+    expect(mockSecureStore.deleteItemAsync).toHaveBeenCalledWith("zama_fhe_bad");
     expect(await adapter.get("bad")).toBeNull();
   });
 });

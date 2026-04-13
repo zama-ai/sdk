@@ -1,7 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { StatusBar } from "expo-status-bar";
 import { StyleSheet, Text, View } from "react-native";
-import { RelayerNative, AsyncStorageAdapter, SepoliaConfig } from "@zama-fhe/react-native-sdk";
+import {
+  RelayerNative,
+  SecureStoreAdapter,
+  SqliteKvStoreAdapter,
+  SepoliaConfig,
+} from "@zama-fhe/react-native-sdk";
 import { ZamaProvider, useEncrypt, usePublicKey } from "@zama-fhe/react-sdk";
 import type { GenericSigner } from "@zama-fhe/sdk";
 
@@ -9,7 +14,8 @@ import type { GenericSigner } from "@zama-fhe/sdk";
 
 const queryClient = new QueryClient();
 const relayer = new RelayerNative(SepoliaConfig);
-const storage = new AsyncStorageAdapter();
+const storage = new SecureStoreAdapter();
+const sessionStorage = new SqliteKvStoreAdapter();
 
 // Placeholder signer — replace with a real wallet (WalletConnect, Privy, etc.)
 const placeholderSigner: GenericSigner = {
@@ -68,7 +74,12 @@ function SmokeTest() {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ZamaProvider relayer={relayer} signer={placeholderSigner} storage={storage}>
+      <ZamaProvider
+        relayer={relayer}
+        signer={placeholderSigner}
+        storage={storage}
+        sessionStorage={sessionStorage}
+      >
         <SmokeTest />
       </ZamaProvider>
     </QueryClientProvider>
