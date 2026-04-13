@@ -5,65 +5,275 @@ import type {
   EncryptedInput,
   HandleContractPair,
 } from "@fhevm/react-native-sdk";
-import type {
-  Address,
-  ClearValueType,
-  DelegatedUserDecryptParams,
-  EIP712TypedData,
-  EncryptInput as SDKEncryptInput,
-  EncryptParams,
-  EncryptResult,
-  Handle,
-  Hex,
-  InputProofBytesType,
-  KeypairType,
-  KmsDelegatedUserDecryptEIP712Type,
-  PublicDecryptResult,
-  RelayerSDK,
-  UserDecryptParams,
-  ZKProofLike,
+import {
+  ConfigurationError,
+  DefaultConfigs,
+  FheArtifactCache,
+  withRetry,
+  ZamaError,
+  type Address,
+  type ClearValueType,
+  type DelegatedUserDecryptParams,
+  type EIP712TypedData,
+  type EncryptInput as SDKEncryptInput,
+  type EncryptParams,
+  type EncryptResult,
+  type GenericLogger,
+  type GenericStorage,
+  type Handle,
+  type Hex,
+  type InputProofBytesType,
+  type KeypairType,
+  type KmsDelegatedUserDecryptEIP712Type,
+  type PublicDecryptResult,
+  type RelayerSDK,
+  type RelayerSDKStatus,
+  type UserDecryptParams,
+  type ZKProofLike,
 } from "@zama-fhe/sdk";
+import { SqliteKvStoreAdapter } from "./sqlite-kv-store-adapter";
 
 /**
- * Adapts `@fhevm/react-native-sdk`'s `FhevmInstance` to the `RelayerSDK` interface.
+ * Configuration for {@link RelayerNative}, mirroring `RelayerWebConfig` so
+ * that web → native migrations are a one-line constructor swap.
  *
- * The native instance is lazily created on first use and reused for all
- * subsequent calls. Concurrent callers share the same initialization promise.
+ * Fields intentionally absent vs. `RelayerWebConfig`:
+ * - `security` (CSRF / CDN integrity): native modules do not load remote
+ *   scripts, so neither concern applies.
+ * - `threads`: native FHE engine manages its own thread pool internally;
+ *   there is no SAB/COOP/COEP knob to tune.
  */
-export class RelayerNative implements RelayerSDK {
-  readonly #config: FhevmInstanceConfig;
-  // oxlint-disable-next-line no-redundant-type-constituents
-  #instance: FhevmInstance | null = null;
-  // oxlint-disable-next-line no-redundant-type-constituents
-  #pending: Promise<FhevmInstance> | null = null;
+export interface RelayerNativeConfig {
+  /**
+   * Per-chain partial overrides merged on top of `DefaultConfigs[chainId]`
+   * before being handed to the native engine's `createInstance`.
+   *
+   * Example:
+   * ```ts
+   * { 11155111: SepoliaConfig }
+   * ```
+   */
+  transports: Record<number, Partial<FhevmInstanceConfig>>;
+  /**
+   * Resolve the current chain ID. Called lazily before each operation; the
+   * native instance is torn down and re-initialized when the value changes.
+   */
+  getChainId: () => Promise<number>;
+  /** Optional logger for observing relayer lifecycle and request timing. */
+  logger?: GenericLogger;
+  /** Called whenever the SDK status changes (e.g. idle → initializing → ready). */
+  onStatusChange?: (status: RelayerSDKStatus, error?: Error) => void;
+  /**
+   * Persistent storage for caching FHE public key and params across sessions.
+   *
+   * Defaults to a fresh `SqliteKvStoreAdapter`. FHE public params can reach
+   * several MB — keep this on a SQLite-backed store, never on SecureStore
+   * (iOS Keychain caps entries at ~2 KB).
+   *
+   * **Not to be confused with `ZamaProvider.storage`** which stores credentials.
+   */
+  fheArtifactStorage?: GenericStorage;
+  /**
+   * Cache TTL in seconds for FHE public material. Default: 86 400 (24 h).
+   * Set to `0` to revalidate on every operation. Ignored when storage is unset.
+   */
+  fheArtifactCacheTTL?: number;
+}
 
-  constructor(config: FhevmInstanceConfig) {
+/**
+ * RelayerNative — React Native encryption/decryption layer backed by the
+ * native Rust FHE engine (`@fhevm/react-native-sdk`).
+ *
+ * Mirrors `RelayerWeb`'s lifecycle, status tracking, retry behavior, and
+ * artifact caching so that the same React hooks work transparently on web
+ * and native targets.
+ *
+ * ## Initialization / promise-lock pattern
+ *
+ * Every public method calls `#ensureInstance()` before proceeding.
+ * Initialization is managed by three private fields:
+ *
+ * - `#initPromise` — cached promise from `#initInstance()`; once resolved,
+ *   subsequent callers reuse the same instance without re-initializing.
+ *   Cleared on error so the next caller retries a fresh init.
+ * - `#ensureLock` — short-lived promise that serializes concurrent calls
+ *   to `#ensureInstanceInner()` (chain-id check + potential tear-down).
+ *
+ * Chain switching: when `getChainId()` returns a value different from the
+ * previously resolved chain, the old instance is discarded and a fresh one
+ * is created — all within the `#ensureLock` critical section.
+ */
+export class RelayerNative implements RelayerSDK, Disposable {
+  #initPromise: Promise<FhevmInstance> | null = null;
+  #ensureLock: Promise<FhevmInstance> | null = null;
+  #terminated = false;
+  #resolvedChainId: number | null = null;
+  #artifactCache: FheArtifactCache | null = null;
+  #artifactStorage: GenericStorage | null = null;
+  #status: RelayerSDKStatus = "idle";
+  #initError: Error | undefined;
+  readonly #config: RelayerNativeConfig;
+
+  constructor(config: RelayerNativeConfig) {
     this.#config = config;
   }
 
-  async #getInstance(): Promise<FhevmInstance> {
-    if (this.#instance) {
-      return this.#instance;
-    }
-    // On rejection, clear `#pending` so the next call can retry. Without this,
-    // a single transient failure (common on mobile) would brick the relayer
-    // for the lifetime of the app.
-    this.#pending ??= createInstance(this.#config).then(
-      (instance) => {
-        this.#instance = instance;
-        this.#pending = null;
-        return instance;
-      },
-      (error: unknown) => {
-        this.#pending = null;
-        throw error;
-      },
-    );
-    return this.#pending;
+  /** Current native instance initialization status. */
+  get status(): RelayerSDKStatus {
+    return this.#status;
   }
 
+  /** The error that caused initialization to fail, if `status` is `"error"`. */
+  get initError(): Error | undefined {
+    return this.#initError;
+  }
+
+  #setStatus(status: RelayerSDKStatus, error?: Error): void {
+    this.#status = status;
+    this.#initError = error;
+    this.#config.onStatusChange?.(status, error);
+  }
+
+  #resolveInstanceConfig(chainId: number): FhevmInstanceConfig {
+    const merged = Object.assign(
+      {},
+      DefaultConfigs[chainId],
+      this.#config.transports[chainId],
+    ) as FhevmInstanceConfig;
+    if (!merged) {
+      throw new ConfigurationError(
+        `No transport config registered for chain ${chainId}. ` +
+          `Add it to RelayerNativeConfig.transports.`,
+      );
+    }
+    return merged;
+  }
+
+  /**
+   * Ensure the native instance is initialized. Uses a promise lock to prevent
+   * concurrent initialization. Resets on failure to allow retries.
+   */
+  async #ensureInstance(): Promise<FhevmInstance> {
+    if (this.#ensureLock) {
+      return this.#ensureLock;
+    }
+    this.#ensureLock = this.#ensureInstanceInner();
+    try {
+      return await this.#ensureLock;
+    } finally {
+      this.#ensureLock = null;
+    }
+  }
+
+  #tearDown(): void {
+    this.#initPromise = null;
+    this.#artifactCache = null;
+  }
+
+  async #ensureInstanceInner(): Promise<FhevmInstance> {
+    // Auto-restart after terminate() — supports React StrictMode's
+    // unmount→remount cycle and HMR without permanently bricking the relayer.
+    if (this.#terminated) {
+      this.#terminated = false;
+      this.#initPromise = null;
+      this.#resolvedChainId = null;
+    }
+
+    const chainId = await this.#config.getChainId();
+
+    // Chain changed → discard old instance, re-init for the new chain.
+    if (this.#resolvedChainId !== null && chainId !== this.#resolvedChainId) {
+      this.#tearDown();
+    }
+
+    this.#resolvedChainId = chainId;
+
+    // Storage is chain-independent — reuse across chain switches.
+    if (!this.#artifactStorage) {
+      this.#artifactStorage = this.#config.fheArtifactStorage ?? new SqliteKvStoreAdapter();
+    }
+    if (!this.#artifactCache) {
+      const config = this.#resolveInstanceConfig(chainId);
+      this.#artifactCache = new FheArtifactCache({
+        storage: this.#artifactStorage,
+        chainId,
+        relayerUrl: config.relayerUrl,
+        ttl: this.#config.fheArtifactCacheTTL,
+        logger: this.#config.logger,
+      });
+    }
+
+    // Revalidate cached artifacts if due — never let revalidation block init.
+    if (this.#artifactCache) {
+      let stale = false;
+      try {
+        stale = await this.#artifactCache.revalidateIfDue();
+      } catch (err) {
+        this.#config.logger?.warn(
+          "Artifact revalidation failed, proceeding with potentially stale cache",
+          { error: err instanceof Error ? err.message : String(err) },
+        );
+      }
+      if (stale) {
+        this.#config.logger?.info("Cached FHE artifacts are stale — reinitializing");
+        this.#tearDown();
+      }
+    }
+
+    if (!this.#initPromise) {
+      this.#setStatus("initializing");
+      this.#initPromise = this.#initInstance(chainId)
+        .then((instance) => {
+          this.#setStatus("ready");
+          return instance;
+        })
+        .catch((error: unknown) => {
+          this.#initPromise = null;
+          const wrappedError =
+            error instanceof ZamaError
+              ? error
+              : new ConfigurationError("Failed to initialize native FHE instance", {
+                  cause: error,
+                });
+          this.#setStatus("error", wrappedError);
+          throw wrappedError;
+        });
+    }
+    return this.#initPromise;
+  }
+
+  /** Initialize the native instance (called once via the promise lock). */
+  async #initInstance(chainId: number): Promise<FhevmInstance> {
+    const config = this.#resolveInstanceConfig(chainId);
+    const instance = await createInstance(config);
+    // If terminate() was called while we were initializing, drop the instance
+    // and surface the cancellation as an error so the awaiting callers retry.
+    if (this.#terminated) {
+      throw new Error("RelayerNative was terminated during initialization");
+    }
+    return instance;
+  }
+
+  /**
+   * Terminate the relayer and clear cached state. The next public-method call
+   * will transparently re-initialize, so this is safe to call from React
+   * unmount/cleanup paths.
+   */
+  terminate(): void {
+    this.#terminated = true;
+    this.#initPromise = null;
+    this.#ensureLock = null;
+  }
+
+  /** Calls {@link terminate}, satisfying the `Disposable` interface. */
+  [Symbol.dispose](): void {
+    this.terminate();
+  }
+
+  // ── RelayerSDK implementation ────────────────────────────────────────
+
   async generateKeypair(): Promise<KeypairType<Hex>> {
-    const instance = await this.#getInstance();
+    const instance = await this.#ensureInstance();
     const kp = await instance.generateKeypair();
     return { publicKey: kp.publicKey as Hex, privateKey: kp.privateKey as Hex };
   }
@@ -74,7 +284,7 @@ export class RelayerNative implements RelayerSDK {
     startTimestamp: number,
     durationDays?: number,
   ): Promise<EIP712TypedData> {
-    const instance = await this.#getInstance();
+    const instance = await this.#ensureInstance();
     return instance.createEIP712(
       publicKey,
       contractAddresses,
@@ -84,43 +294,46 @@ export class RelayerNative implements RelayerSDK {
   }
 
   async encrypt(params: EncryptParams): Promise<EncryptResult> {
-    const instance = await this.#getInstance();
-    const builder = instance.createEncryptedInput(params.contractAddress, params.userAddress);
-
-    for (const input of params.values) {
-      addToBuilder(builder, input);
-    }
-
-    return builder.encrypt();
+    return withRetry(async () => {
+      const instance = await this.#ensureInstance();
+      const builder = instance.createEncryptedInput(params.contractAddress, params.userAddress);
+      for (const input of params.values) {
+        addToBuilder(builder, input);
+      }
+      return builder.encrypt();
+    });
   }
 
   async userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>> {
-    const instance = await this.#getInstance();
-    const handleContractPairs: HandleContractPair[] = params.handles.map((handle) => ({
-      handle,
-      contractAddress: params.contractAddress,
-    }));
-
-    return instance.userDecrypt(
-      handleContractPairs,
-      params.privateKey,
-      params.publicKey,
-      params.signature,
-      params.signedContractAddresses,
-      params.signerAddress,
-      params.startTimestamp,
-      params.durationDays,
-    );
+    return withRetry(async () => {
+      const instance = await this.#ensureInstance();
+      const handleContractPairs: HandleContractPair[] = params.handles.map((handle) => ({
+        handle,
+        contractAddress: params.contractAddress,
+      }));
+      return instance.userDecrypt(
+        handleContractPairs,
+        params.privateKey,
+        params.publicKey,
+        params.signature,
+        params.signedContractAddresses,
+        params.signerAddress,
+        params.startTimestamp,
+        params.durationDays,
+      );
+    });
   }
 
   async publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult> {
-    const instance = await this.#getInstance();
-    const result = await instance.publicDecrypt(handles);
-    return {
-      clearValues: result.clearValues as Readonly<Record<Handle, ClearValueType>>,
-      abiEncodedClearValues: result.abiEncodedClearValues as Hex,
-      decryptionProof: result.decryptionProof as Hex,
-    };
+    return withRetry(async () => {
+      const instance = await this.#ensureInstance();
+      const result = await instance.publicDecrypt(handles);
+      return {
+        clearValues: result.clearValues as Readonly<Record<Handle, ClearValueType>>,
+        abiEncodedClearValues: result.abiEncodedClearValues as Hex,
+        decryptionProof: result.decryptionProof as Hex,
+      };
+    });
   }
 
   async createDelegatedUserDecryptEIP712(
@@ -130,7 +343,7 @@ export class RelayerNative implements RelayerSDK {
     startTimestamp: number,
     durationDays?: number,
   ): Promise<KmsDelegatedUserDecryptEIP712Type> {
-    const instance = await this.#getInstance();
+    const instance = await this.#ensureInstance();
     return instance.createDelegatedUserDecryptEIP712(
       publicKey,
       contractAddresses,
@@ -143,58 +356,73 @@ export class RelayerNative implements RelayerSDK {
   async delegatedUserDecrypt(
     params: DelegatedUserDecryptParams,
   ): Promise<Readonly<Record<Handle, ClearValueType>>> {
-    const instance = await this.#getInstance();
-    const handleContractPairs: HandleContractPair[] = params.handles.map((handle) => ({
-      handle,
-      contractAddress: params.contractAddress,
-    }));
-
-    return instance.delegatedUserDecrypt(
-      handleContractPairs,
-      params.privateKey,
-      params.publicKey,
-      params.signature,
-      params.signedContractAddresses,
-      params.delegatorAddress,
-      params.delegateAddress,
-      params.startTimestamp,
-      params.durationDays,
-    );
+    return withRetry(async () => {
+      const instance = await this.#ensureInstance();
+      const handleContractPairs: HandleContractPair[] = params.handles.map((handle) => ({
+        handle,
+        contractAddress: params.contractAddress,
+      }));
+      return instance.delegatedUserDecrypt(
+        handleContractPairs,
+        params.privateKey,
+        params.publicKey,
+        params.signature,
+        params.signedContractAddresses,
+        params.delegatorAddress,
+        params.delegateAddress,
+        params.startTimestamp,
+        params.durationDays,
+      );
+    });
   }
 
   async requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType> {
-    const instance = await this.#getInstance();
-    return instance.requestZKProofVerification(zkProof);
+    return withRetry(async () => {
+      const instance = await this.#ensureInstance();
+      return instance.requestZKProofVerification(zkProof);
+    });
   }
 
   async getPublicKey(): Promise<{
     publicKeyId: string;
     publicKey: Uint8Array;
   } | null> {
-    const instance = await this.#getInstance();
+    const instance = await this.#ensureInstance();
+    if (this.#artifactCache) {
+      return this.#artifactCache.getPublicKey(async () => {
+        const pk = await instance.getPublicKey();
+        if (!pk) {
+          throw new Error("Native engine returned null publicKey");
+        }
+        return pk;
+      });
+    }
     return instance.getPublicKey();
   }
 
   async getPublicParams(
     bits: number,
   ): Promise<{ publicParams: Uint8Array; publicParamsId: string } | null> {
-    const instance = await this.#getInstance();
+    const instance = await this.#ensureInstance();
+    if (this.#artifactCache) {
+      return this.#artifactCache.getPublicParams(bits, async () => {
+        const pp = await instance.getPublicParams(bits);
+        if (!pp) {
+          throw new Error(`Native engine returned null publicParams for ${bits} bits`);
+        }
+        return pp;
+      });
+    }
     return instance.getPublicParams(bits);
   }
 
   async getAclAddress(): Promise<Address> {
-    const addr = this.#config.aclContractAddress;
-    if (!addr) {
-      throw new Error(
-        "aclContractAddress is not set in the FhevmInstanceConfig. " +
-          "Provide it when constructing RelayerNative, or use a preset config (SepoliaConfig, MainnetConfig).",
-      );
+    const chainId = await this.#config.getChainId();
+    const config = this.#resolveInstanceConfig(chainId);
+    if (!config.aclContractAddress) {
+      throw new ConfigurationError(`No ACL address configured for chain ${chainId}`);
     }
-    return addr as Address;
-  }
-
-  terminate(): void {
-    // No-op — native module lifecycle is managed by Expo.
+    return config.aclContractAddress as Address;
   }
 }
 

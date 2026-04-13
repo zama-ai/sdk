@@ -35,7 +35,18 @@ export type {
 export type { GenericLogger } from "./worker/worker.types";
 
 // Network preset configs
-export { HardhatConfig, MainnetConfig, SepoliaConfig } from "./relayer/relayer-utils";
+export {
+  HardhatConfig,
+  MainnetConfig,
+  SepoliaConfig,
+  DefaultConfigs,
+  withRetry,
+  buildEIP712DomainType,
+  type ExtendedFhevmInstanceConfig,
+} from "./relayer/relayer-utils";
+
+// FHE artifact cache (used by alternate `RelayerSDK` implementations like RelayerNative)
+export { FheArtifactCache } from "./relayer/fhe-artifact-cache";
 
 // ERC-165 interface IDs
 export { ERC7984_INTERFACE_ID, ERC7984_WRAPPER_INTERFACE_ID } from "./contracts";

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { RelayerNative } from "../relayer-native";
-import type { FhevmInstance, FhevmInstanceConfig } from "@fhevm/react-native-sdk";
+import { RelayerNative, type RelayerNativeConfig } from "../relayer-native";
+import type { FhevmInstance } from "@fhevm/react-native-sdk";
 
 const mockInstance = vi.hoisted(() => ({
   config: {
@@ -71,14 +71,40 @@ vi.mock("@fhevm/react-native-sdk", () => ({
   createInstance: vi.fn().mockResolvedValue(mockInstance),
 }));
 
-const testConfig: FhevmInstanceConfig = mockInstance.config;
+// `expo-sqlite/kv-store` is only loadable inside an Expo runtime; stub it so
+// the default `fheArtifactStorage` (a `SqliteKvStoreAdapter`) can be
+// constructed during tests without touching the real native module.
+vi.mock("expo-sqlite/kv-store", () => {
+  const store = new Map<string, string>();
+  return {
+    default: {
+      getItem: vi.fn(async (k: string) => store.get(k) ?? null),
+      setItem: vi.fn(async (k: string, v: string) => {
+        store.set(k, v);
+      }),
+      removeItem: vi.fn(async (k: string) => {
+        store.delete(k);
+      }),
+    },
+  };
+});
+
+const TEST_CHAIN_ID = 11155111;
+
+function makeConfig(overrides: Partial<RelayerNativeConfig> = {}): RelayerNativeConfig {
+  return {
+    transports: { [TEST_CHAIN_ID]: mockInstance.config },
+    getChainId: async () => TEST_CHAIN_ID,
+    ...overrides,
+  };
+}
 
 describe("RelayerNative", () => {
   let relayer: RelayerNative;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    relayer = new RelayerNative(testConfig);
+    relayer = new RelayerNative(makeConfig());
   });
 
   it("lazily creates instance on first call", async () => {
@@ -86,7 +112,9 @@ describe("RelayerNative", () => {
     expect(createInstance).not.toHaveBeenCalled();
     await relayer.generateKeypair();
     expect(createInstance).toHaveBeenCalledOnce();
-    expect(createInstance).toHaveBeenCalledWith(testConfig);
+    // Config passed to `createInstance` is `DefaultConfigs[chainId]` merged
+    // with `transports[chainId]`; the mock's overrides win for shared keys.
+    expect(createInstance).toHaveBeenCalledWith(expect.objectContaining(mockInstance.config));
   });
 
   it("reuses instance on subsequent calls", async () => {
@@ -265,12 +293,15 @@ describe("RelayerNative", () => {
     expect(result.handles).toHaveLength(1);
   });
 
-  it("getAclAddress throws when aclContractAddress is missing from config", async () => {
-    const badRelayer = new RelayerNative({
-      ...testConfig,
-      aclContractAddress: undefined as never,
-    });
-    await expect(badRelayer.getAclAddress()).rejects.toThrow(/aclContractAddress is not set/);
+  it("getAclAddress throws when aclContractAddress is missing from the merged config", async () => {
+    const badRelayer = new RelayerNative(
+      makeConfig({
+        transports: {
+          [TEST_CHAIN_ID]: { ...mockInstance.config, aclContractAddress: undefined as never },
+        },
+      }),
+    );
+    await expect(badRelayer.getAclAddress()).rejects.toThrow(/No ACL address configured/);
   });
 
   it("retries initialization after a failed createInstance call", async () => {
@@ -278,8 +309,11 @@ describe("RelayerNative", () => {
     const createInstanceMock = createInstance as ReturnType<typeof vi.fn>;
     createInstanceMock.mockRejectedValueOnce(new Error("network error"));
 
-    // First call fails — relayer should not be permanently stuck.
-    await expect(relayer.generateKeypair()).rejects.toThrow("network error");
+    // First call fails — the underlying error is wrapped in a
+    // ConfigurationError, but the relayer is not permanently stuck.
+    await expect(relayer.generateKeypair()).rejects.toThrow(
+      /Failed to initialize native FHE instance/,
+    );
 
     // Second call retries (re-invokes createInstance) and succeeds.
     await expect(relayer.generateKeypair()).resolves.toEqual({

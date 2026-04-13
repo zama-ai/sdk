@@ -10,13 +10,16 @@ import {
   SecureStoreAdapter,
   SqliteKvStoreAdapter,
 } from "@zama-fhe/react-native-sdk";
-import { ZamaProvider, useEncrypt, usePublicKey, SepoliaConfig } from "@zama-fhe/react-sdk";
-import { getTokenPairsLengthContract, type GenericSigner } from "@zama-fhe/sdk";
+import { ZamaProvider, useEncrypt, usePublicKey } from "@zama-fhe/react-sdk";
+import { SepoliaConfig, getTokenPairsLengthContract, type GenericSigner } from "@zama-fhe/sdk";
 
 // ── Setup ────────────────────────────────────────────────────────────
 
 const queryClient = new QueryClient();
-const relayer = new RelayerNative(SepoliaConfig);
+const relayer = new RelayerNative({
+  transports: { [SepoliaConfig.chainId]: SepoliaConfig },
+  getChainId: async () => SepoliaConfig.chainId,
+});
 const storage = new SecureStoreAdapter();
 const sessionStorage = new SqliteKvStoreAdapter();
 

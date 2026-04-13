@@ -88,9 +88,14 @@ export default defineConfig({
         resolve: sharedResolve,
       },
       {
+        // RelayerNative pulls runtime helpers (`withRetry`, `FheArtifactCache`,
+        // `DefaultConfigs`) from `@zama-fhe/sdk`'s main entry, which also
+        // re-exports `RelayerWeb`. The worker-bundle import inside RelayerWeb
+        // references `?iife` and `self`; stub the IIFE so the module loads.
+        plugins: [iifeStub()],
         test: {
           name: "react-native-sdk",
-          environment: "node",
+          environment: "happy-dom",
           include: ["packages/react-native-sdk/**/*.test.{ts,tsx}"],
           exclude: ["**/node_modules/**"],
           globals: true,
