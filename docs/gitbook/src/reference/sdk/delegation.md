@@ -1,4 +1,4 @@
-# Delegated Decryption
+# Delegated decryption
 
 Delegation lets one address grant another address the right to decrypt its confidential balance. Common use cases:
 

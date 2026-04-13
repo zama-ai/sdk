@@ -90,7 +90,7 @@ const { mutateAsync: shield } = useShield({
 
 {% include ".gitbook/includes/mutation-options.md" %}
 
-## Mutation Variables
+## Mutation variables
 
 Passed to `mutate` / `mutateAsync` at call time.
 
@@ -106,7 +106,9 @@ await shield({ amount: 1000n });
 
 ### approvalStrategy
 
-`"exact" | "max" | "skip"` (optional, default `"exact"`)
+`"exact" | "max" | "skip" | undefined`
+
+Default: `"exact"`.
 
 Controls how the SDK handles the ERC-20 approval before shielding.
 
@@ -120,12 +122,17 @@ Controls how the SDK handles the ERC-20 approval before shielding.
 await shield({ amount: 1000n, approvalStrategy: "max" });
 ```
 
-### Progress callbacks
+### onApprovalSubmitted
 
-| Callback                           | Fires when                         |
-| ---------------------------------- | ---------------------------------- |
-| `onApprovalSubmitted(txHash: Hex)` | Approval transaction is submitted. |
-| `onShieldSubmitted(txHash: Hex)`   | Shield transaction is submitted.   |
+`((txHash: Hex) => void) | undefined`
+
+Fires when the approval transaction is submitted.
+
+### onShieldSubmitted
+
+`((txHash: Hex) => void) | undefined`
+
+Fires when the shield transaction is submitted.
 
 ```ts
 await shield({

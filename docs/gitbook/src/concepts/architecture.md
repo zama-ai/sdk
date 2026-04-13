@@ -1,6 +1,6 @@
 # Architecture
 
-## Layer Overview
+## Layer overview
 
 The SDK is organized into layers, each with a clear responsibility. Higher layers depend on lower layers but never the reverse.
 
@@ -18,7 +18,7 @@ The SDK is organized into layers, each with a clear responsibility. Higher layer
 | **Storage & Credentials**      | `CredentialsManager` with pluggable backends (IndexedDB, Memory, AsyncLocalStorage, ChromeSessionStorage) |
 | **Event System**               | `ZamaSDKEvents` lifecycle events + on-chain event decoders                                                |
 
-## Module Map
+## Module map
 
 The core `@zama-fhe/sdk` package is split into focused modules:
 

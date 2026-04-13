@@ -94,7 +94,7 @@ const token = useToken({
 
 ### wrapperAddress
 
-`Address` (optional)
+`Address | undefined`
 
 Explicit wrapper address. When omitted, the SDK resolves it automatically via the deployment coordinator.
 

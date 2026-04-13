@@ -39,7 +39,7 @@ function DisconnectPanel() {
 
 `useRevokeSession` takes no constructor parameters.
 
-## Mutation Variables
+## Mutation variables
 
 No mutation variables. Call `mutate()` or `mutateAsync()` with no arguments.
 

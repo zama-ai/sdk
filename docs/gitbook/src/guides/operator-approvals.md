@@ -1,9 +1,9 @@
 ---
-title: Operator Approvals
+title: Operator approvals
 description: How to approve another address to act on your confidential tokens.
 ---
 
-# Operator Approvals
+# Operator approvals
 
 Operator approval lets another address (a DEX contract, multisig, or automated service) transfer confidential tokens on your behalf. This is the FHE equivalent of ERC-20's `approve` / `transferFrom` pattern.
 

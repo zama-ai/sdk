@@ -81,7 +81,7 @@ const { mutateAsync: batchDecryptAs } = useBatchDecryptBalancesAs(tokens);
 
 {% include ".gitbook/includes/mutation-options.md" %}
 
-## Mutation Variables
+## Mutation variables
 
 Passed to `mutate` / `mutateAsync` at call time.
 

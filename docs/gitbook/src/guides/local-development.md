@@ -1,11 +1,11 @@
 ---
-title: Local Development
+title: Local development
 description: How to use the cleartext relayer for local Hardhat nodes and custom chain deployments without a KMS or gateway.
 ---
 
-# Local Development
+# Local development
 
-The SDK ships `RelayerCleartext`, a drop-in relayer that replaces FHE operations with cleartext operations. Values are stored as plaintext on-chain — no KMS, no gateway, no WASM. Use it for local Hardhat nodes, custom testnets, or any chain where you deploy fhEVM contracts in cleartext mode.
+The SDK ships `RelayerCleartext`, a drop-in relayer that replaces FHE operations with cleartext operations. Values are stored as plaintext on-chain — no KMS, no gateway, no WASM. Use it for local Hardhat nodes, custom testnets, or any chain where you deploy FHEVM contracts in cleartext mode.
 
 `RelayerCleartext` implements the same `RelayerSDK` interface as `RelayerWeb` and `RelayerNode`, so the rest of your code stays unchanged.
 
@@ -67,7 +67,7 @@ const balance = await token.balanceOf();
 
 ### 5. (Optional) Create a custom config for your own chain
 
-If you deploy fhEVM contracts on a custom chain or at different addresses than the default ones, build a `CleartextConfig` manually. Each field maps to a contract address from your deployment:
+If you deploy FHEVM contracts on a custom chain or at different addresses than the default ones, build a `CleartextConfig` manually. Each field maps to a contract address from your deployment:
 
 ```ts
 import { RelayerCleartext } from "@zama-fhe/sdk/cleartext";
