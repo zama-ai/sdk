@@ -189,7 +189,9 @@ function optionsKey(options: Record<string, unknown>): string {
     return id;
   };
   return JSON.stringify(options, (_key, value: unknown) => {
-    if (typeof value === "function") {return `__ref:${refId(value as WeakKey)}`;}
+    if (typeof value === "function") {
+      return `__ref:${refId(value as WeakKey)}`;
+    }
     if (value && typeof value === "object" && !Array.isArray(value)) {
       // Sort object keys for stable serialization, and tag class instances.
       const proto = Object.getPrototypeOf(value);
@@ -229,14 +231,23 @@ export function buildRelayer(
       transports: Record<number, Partial<ExtendedFhevmInstanceConfig>>;
     }) => T,
   ) => {
-    const groups = Object.groupBy(entries, (e) => optionsKey(e.options));
-    for (const group of Object.values(groups)) {
-      const [first, ...rest] = group ?? [];
+    const groups = new Map<string, ChainEntry[]>();
+    for (const entry of entries) {
+      const key = optionsKey(entry.options);
+      const group = groups.get(key);
+      if (group) {
+        group.push(entry);
+      } else {
+        groups.set(key, [entry]);
+      }
+    }
+    for (const [first, ...rest] of groups.values()) {
       if (!first) {
         continue;
       }
+      const group = [first, ...rest];
       const transports: Record<number, Partial<ExtendedFhevmInstanceConfig>> = {};
-      for (const entry of [first, ...rest]) {
+      for (const entry of group) {
         transports[entry.chainId] = { ...entry.chain, ...entry.chainFields };
       }
       const relayer = new Relayer({
@@ -244,7 +255,7 @@ export function buildRelayer(
         transports,
         ...first.options,
       });
-      for (const entry of [first, ...rest]) {
+      for (const entry of group) {
         perChainRelayers.set(entry.chainId, relayer);
       }
     }
