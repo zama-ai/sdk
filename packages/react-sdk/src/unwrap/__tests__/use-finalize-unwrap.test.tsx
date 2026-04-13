@@ -52,7 +52,7 @@ describe("useFinalizeUnwrap", () => {
     queryClient.setQueryData(otherBalanceKey, 777n);
     queryClient.setQueryData(otherAllowanceKey, 333n);
 
-    await act(() => result.current.mutateAsync({ burnAmountHandle: BURN_AMOUNT_HANDLE }));
+    await act(() => result.current.mutateAsync({ unwrapRequestId: BURN_AMOUNT_HANDLE }));
 
     expectInvalidatedQueries(queryClient, [handleKey, balanceKey, allowanceKey]);
     expectCacheInvalidated(queryClient, WAGMI_BALANCE_KEY);
@@ -79,7 +79,7 @@ describe("useFinalizeUnwrap", () => {
     queryClient.setQueryData(WAGMI_BALANCE_KEY, 2000n);
 
     await mutateAndExpectOnSuccess(
-      () => result.current.mutateAsync({ burnAmountHandle: BURN_AMOUNT_HANDLE }),
+      () => result.current.mutateAsync({ unwrapRequestId: BURN_AMOUNT_HANDLE }),
       onSuccess,
       (client) => {
         expectInvalidatedQueries(client, [handleKey, balanceKey, allowanceKey]);
@@ -109,7 +109,7 @@ describe("useFinalizeUnwrap error propagation", () => {
 
     await act(async () => {
       await expect(
-        result.current.mutateAsync({ burnAmountHandle: MOCK_TOKEN_ADDRESS }),
+        result.current.mutateAsync({ unwrapRequestId: MOCK_TOKEN_ADDRESS }),
       ).rejects.toBe(error);
     });
 
