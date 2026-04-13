@@ -107,7 +107,8 @@ describe("decodeWrapped", () => {
 // decodeUnwrapRequested
 // ---------------------------------------------------------------------------
 
-const UNWRAP_REQUEST_ID = "0x00000000000000000000000000000000000000000000000000000000cafecafe" as Hex;
+const UNWRAP_REQUEST_ID =
+  "0x00000000000000000000000000000000000000000000000000000000cafecafe" as Hex;
 
 describe("decodeUnwrapRequested", () => {
   it("decodes a valid UnwrapRequested log", () => {
@@ -223,7 +224,11 @@ describe("decodeOnChainEvents", () => {
     const logs: RawLog[] = [
       makeLog(Topics.ConfidentialTransfer, [addressTopic(ALICE), addressTopic(BOB), HANDLE]),
       makeLog("0xdeadbeef" as Hex, []),
-      makeLog(Topics.UnwrapRequested, [addressTopic(ALICE), UNWRAP_REQUEST_ID], `0x${HANDLE.slice(2)}` as Hex),
+      makeLog(
+        Topics.UnwrapRequested,
+        [addressTopic(ALICE), UNWRAP_REQUEST_ID],
+        `0x${HANDLE.slice(2)}` as Hex,
+      ),
     ];
     const events = decodeOnChainEvents(logs);
     expect(events).toHaveLength(2);
@@ -244,7 +249,11 @@ describe("findUnwrapRequested", () => {
   it("finds the first UnwrapRequested in logs", () => {
     const logs: RawLog[] = [
       makeLog(Topics.ConfidentialTransfer, [addressTopic(ALICE), addressTopic(BOB), HANDLE]),
-      makeLog(Topics.UnwrapRequested, [addressTopic(BOB), UNWRAP_REQUEST_ID], `0x${HANDLE.slice(2)}` as Hex),
+      makeLog(
+        Topics.UnwrapRequested,
+        [addressTopic(BOB), UNWRAP_REQUEST_ID],
+        `0x${HANDLE.slice(2)}` as Hex,
+      ),
     ];
     const event = findUnwrapRequested(logs);
     expect(event).not.toBeNull();
