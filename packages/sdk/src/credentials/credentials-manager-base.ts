@@ -302,6 +302,12 @@ export abstract class BaseCredentialsManager<
     key: string,
     contractAddresses: [Address, ...Address[]],
   ): Promise<boolean> {
+    // Runtime guard: credentials are always contract-scoped,
+    // so an empty contract list must never resolve to "allowed"
+    // (the compile-time tuple type can be bypassed via casts).
+    if (contractAddresses.length === 0) {
+      return false;
+    }
     const entry = await this.sessionSignatures.get(key);
     if (entry === null) {
       return false;
