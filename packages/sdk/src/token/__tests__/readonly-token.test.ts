@@ -507,7 +507,7 @@ describe("ReadonlyToken", () => {
       expect(signer.signTypedData).not.toHaveBeenCalled();
     });
 
-    it("calls allow() only with uncached token addresses", async ({
+    it("calls allow() with all token addresses even when some are cached", async ({
       relayer,
       signer,
       storage,
@@ -548,14 +548,17 @@ describe("ReadonlyToken", () => {
 
       expect(result.get(tokenAddress)).toBe(1000n);
       expect(result.get(getAddress(TOKEN2))).toBe(2000n);
-      // Credentials generated only for the uncached token
+      // Credentials are generated with the full token set (not just uncached)
+      // so a parallel `ReadonlyToken.allow(...tokens)` call dedupes with this one.
       expect(relayer.generateKeypair).toHaveBeenCalledOnce();
       expect(signer.signTypedData).toHaveBeenCalledOnce();
-      // createEIP712 called with only token2's address
+      // createEIP712 called with BOTH token addresses
       const eip712Call = vi.mocked(relayer.createEIP712).mock.calls[0];
       const signedAddresses = eip712Call[1];
-      expect(signedAddresses).toHaveLength(1);
-      expect(signedAddresses[0].toLowerCase()).toBe(TOKEN2.toLowerCase());
+      expect(signedAddresses).toHaveLength(2);
+      const lowered = signedAddresses.map((a: Address) => a.toLowerCase());
+      expect(lowered).toContain(tokenAddress.toLowerCase());
+      expect(lowered).toContain(TOKEN2.toLowerCase());
     });
   });
 
@@ -616,6 +619,56 @@ describe("ReadonlyToken", () => {
 
       await ReadonlyToken.allow(token, token2);
 
+      expect(relayer.generateKeypair).toHaveBeenCalledOnce();
+      expect(signer.signTypedData).toHaveBeenCalledOnce();
+    });
+
+    it("dedupes a parallel batchDecryptBalances call to a single signature", async ({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      tokenAddress,
+      handle,
+    }) => {
+      const TOKEN2 = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
+      const sharedCache = new DecryptCache(storage);
+      const token = createReadonlyToken({
+        relayer,
+        signer,
+        storage,
+        sessionStorage,
+        tokenAddress,
+        handle,
+        cache: sharedCache,
+      });
+      const token2 = new ReadonlyToken({
+        relayer,
+        signer,
+        storage,
+        sessionStorage,
+        address: TOKEN2,
+        cache: sharedCache,
+      });
+
+      vi.mocked(relayer.userDecrypt)
+        .mockResolvedValueOnce({ [handle]: 1000n } as never)
+        .mockResolvedValueOnce({ [VALID_HANDLE2]: 2000n } as never);
+
+      // Fire `allow(...)` and `batchDecryptBalances(...)` in parallel — this
+      // is the real-world race when callers do both `ReadonlyToken.allow()`
+      // and `useConfidentialBalances()` at once. Both call paths now build
+      // the same credential cache key, so the in-flight promise dedupe
+      // triggers a single wallet signature.
+      const [, result] = await Promise.all([
+        ReadonlyToken.allow(token, token2),
+        ReadonlyToken.batchDecryptBalances([token, token2], {
+          handles: [handle, VALID_HANDLE2],
+        }),
+      ]);
+
+      expect(result.get(tokenAddress)).toBe(1000n);
+      expect(result.get(getAddress(TOKEN2))).toBe(2000n);
       expect(relayer.generateKeypair).toHaveBeenCalledOnce();
       expect(signer.signTypedData).toHaveBeenCalledOnce();
     });

@@ -272,7 +272,7 @@ export class ReadonlyToken {
       ownerAddress: signerAddress,
       onError,
       maxConcurrency,
-      obtainCreds: (uncachedAddresses) => firstToken.credentials.allow(...uncachedAddresses),
+      obtainCreds: (addresses) => firstToken.credentials.allow(...addresses),
       decrypt: (creds, handle, contractAddress) =>
         sdk.userDecrypt({
           handles: [handle],
@@ -335,8 +335,8 @@ export class ReadonlyToken {
       onError,
       maxConcurrency,
       preFlightCheck: () => firstToken.#assertDelegationActive(delegatorAddress),
-      obtainCreds: (uncachedAddresses) =>
-        firstToken.delegatedCredentials.allow(delegatorAddress, ...uncachedAddresses),
+      obtainCreds: (addresses) =>
+        firstToken.delegatedCredentials.allow(delegatorAddress, ...addresses),
       decrypt: (creds, handle, contractAddress) =>
         firstToken.relayer.delegatedUserDecrypt({
           handles: [handle],
@@ -361,7 +361,7 @@ export class ReadonlyToken {
     onError?: (error: Error, address: Address) => bigint;
     maxConcurrency?: number;
     preFlightCheck?: () => Promise<void>;
-    obtainCreds: (uncachedAddresses: Address[]) => Promise<TCreds>;
+    obtainCreds: (addresses: Address[]) => Promise<TCreds>;
     decrypt: (
       creds: TCreds,
       handle: Address,
@@ -430,8 +430,13 @@ export class ReadonlyToken {
       await config.preFlightCheck();
     }
 
-    const uncachedAddresses = uncached.map((entry) => entry.token.address);
-    const creds = await obtainCreds(uncachedAddresses);
+    // Pass the full token set (not just uncached) so the credentials cache
+    // key is stable across calls. This mirrors `userDecryptMutationOptions`
+    // and lets a pre-call to `ReadonlyToken.allow(...tokens)` deduplicate
+    // with the credential request issued here — avoiding a second wallet
+    // signature when both run in parallel.
+    const allAddresses = tokens.map((token) => token.address);
+    const creds = await obtainCreds(allAddresses);
 
     const errors: { address: Address; error: Error }[] = [];
     const decryptFns: (() => Promise<void>)[] = [];
