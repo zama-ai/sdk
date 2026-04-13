@@ -26,7 +26,7 @@ function mockDelegatedEIP712(relayer: ReturnType<typeof createMockRelayer>) {
 
 function createManager(
   relayer: ReturnType<typeof createMockRelayer>,
-  overrides: { sessionTTL?: number | "infinite" } = {},
+  overrides: { sessionTTL?: number | "infinite"; keypairTTL?: number } = {},
 ) {
   const signer = createMockSigner(DELEGATE);
   const storage = createMockStorage();
@@ -39,7 +39,7 @@ function createManager(
       signer,
       storage,
       sessionStorage,
-      keypairTTL: 86400,
+      keypairTTL: overrides.keypairTTL ?? 86400,
       sessionTTL: overrides.sessionTTL ?? 2592000,
     }),
     signer,
@@ -134,7 +134,10 @@ describe("DelegatedCredentialsManager", () => {
 
   test("sessionTTL: 'infinite' means never expire", async ({ relayer }) => {
     vi.useFakeTimers();
-    const { manager } = createManager(relayer, { sessionTTL: "infinite" });
+    const { manager } = createManager(relayer, {
+      sessionTTL: "infinite",
+      keypairTTL: 10 * 365 * 86400 + 1,
+    });
 
     await manager.allow(DELEGATOR, TOKEN_A);
 
