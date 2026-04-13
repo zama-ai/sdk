@@ -649,6 +649,82 @@ describe("session allow/revoke", () => {
     expect(await credentialManager.isAllowed([TOKEN_A, TOKEN_B])).toBe(true);
   });
 
+  it("isAllowed([A]) returns true when signature covers [A, B]", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+
+    await credentialManager.allow(TOKEN_A, TOKEN_B);
+
+    expect(await credentialManager.isAllowed([TOKEN_A])).toBe(true);
+    expect(await credentialManager.isAllowed([TOKEN_B])).toBe(true);
+    expect(await credentialManager.isAllowed([TOKEN_A, TOKEN_B])).toBe(true);
+  });
+
+  it("isAllowed() returns false when keypair has expired but session has not", async ({
+    relayer,
+    signer,
+    storage,
+    sessionStorage,
+    createCredentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+    const manager = createCredentialManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      keypairTTL: 86400,
+      sessionTTL: 86400,
+    });
+    const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
+
+    await manager.allow(TOKEN_A);
+    expect(await manager.isAllowed([TOKEN_A])).toBe(true);
+
+    // Push the keypair time window into the past while leaving the session entry intact.
+    const stored = (await storage.get(storeKey)) as Record<string, unknown>;
+    const tampered = {
+      ...stored,
+      startTimestamp: Math.floor(Date.now() / 1000) - 2 * 86400,
+      durationDays: 1,
+    };
+    await storage.set(storeKey, tampered);
+
+    expect(await manager.isAllowed([TOKEN_A])).toBe(false);
+  });
+
+  it("invariant: isAllowed true ⇒ allow() reuses cache and does not re-sign", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+
+    await credentialManager.allow(TOKEN_A);
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+    expect(await credentialManager.isAllowed([TOKEN_A])).toBe(true);
+
+    await credentialManager.allow(TOKEN_A);
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+  });
+
+  it("invariant: isAllowed false ⇒ allow() produces a fresh EIP-712 signature", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+
+    expect(await credentialManager.isAllowed([TOKEN_A])).toBe(false);
+    expect(signer.signTypedData).not.toHaveBeenCalled();
+
+    await credentialManager.allow(TOKEN_A);
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+  });
+
   it("allow() pre-caches session signature without needing stored credentials", async ({
     relayer,
     signer,

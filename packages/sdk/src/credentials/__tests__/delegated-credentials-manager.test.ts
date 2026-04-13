@@ -122,6 +122,42 @@ describe("DelegatedCredentialsManager", () => {
     expect(await manager.isAllowed(DELEGATOR, [TOKEN_A])).toBe(false);
   });
 
+  test("isAllowed() returns false when contract is outside the signed scope", async ({
+    relayer,
+  }) => {
+    const { manager } = createManager(relayer);
+
+    await manager.allow(DELEGATOR, TOKEN_A);
+
+    expect(await manager.isAllowed(DELEGATOR, [TOKEN_B])).toBe(false);
+    expect(await manager.isAllowed(DELEGATOR, [TOKEN_A, TOKEN_B])).toBe(false);
+    expect(await manager.isAllowed(DELEGATOR, [TOKEN_A])).toBe(true);
+  });
+
+  test("isAllowed() returns false for a delegator with no stored credentials", async ({
+    relayer,
+  }) => {
+    const OTHER_DELEGATOR = "0xdDdDddDdDdddDDddDDddDDDDdDdDDdDDdDDDDDDd" as Address;
+    const { manager } = createManager(relayer);
+
+    await manager.allow(DELEGATOR, TOKEN_A);
+
+    expect(await manager.isAllowed(OTHER_DELEGATOR, [TOKEN_A])).toBe(false);
+  });
+
+  test("invariant: isAllowed true ⇒ allow() reuses cache and does not re-sign", async ({
+    relayer,
+  }) => {
+    const { manager, signer } = createManager(relayer);
+
+    await manager.allow(DELEGATOR, TOKEN_A);
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+    expect(await manager.isAllowed(DELEGATOR, [TOKEN_A])).toBe(true);
+
+    await manager.allow(DELEGATOR, TOKEN_A);
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+  });
+
   test("clear() removes all stored credentials", async ({ relayer }) => {
     const { manager } = createManager(relayer);
 
