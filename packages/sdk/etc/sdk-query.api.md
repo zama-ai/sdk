@@ -368,7 +368,7 @@ export class CredentialsManager extends BaseCredentialsManager<StoredCredentials
     protected decryptCredentials(encrypted: EncryptedCredentials$1, signature: Hex): Promise<StoredCredentials>;
     // (undocumented)
     protected encryptCredentials(creds: StoredCredentials): Promise<EncryptedCredentials$1>;
-    isAllowed(): Promise<boolean>;
+    isAllowed(contractAddresses: [Address, ...Address[]]): Promise<boolean>;
     isExpired(contractAddress?: Address): Promise<boolean>;
     revoke(...contractAddresses: Address[]): Promise<void>;
     revokeByKey(key: string): Promise<void>;
@@ -428,13 +428,22 @@ export interface DecryptErrorEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.DecryptError;
 }
 
-// @public
+// @public (undocumented)
 export interface DecryptHandle {
     // (undocumented)
     contractAddress: Address;
     // (undocumented)
     handle: Handle;
 }
+
+// @public
+export interface DecryptOptions {
+    onCredentialsReady?: () => void;
+    onDecrypted?: (values: DecryptResult) => void;
+}
+
+// @public (undocumented)
+export type DecryptResult = Record<Handle, ClearValueType>;
 
 // @public (undocumented)
 export interface DecryptStartEvent extends BaseEvent {
@@ -685,8 +694,9 @@ export function invalidateWalletLifecycleQueries(queryClient: QueryClientLike): 
 export interface IsAllowedQueryConfig {
     // (undocumented)
     account: Address;
+    contractAddresses: [Address, ...Address[]];
     // (undocumented)
-    query?: Record<string, unknown>;
+    query?: QueryObserverOptions<boolean, Error, boolean, boolean, ReturnType<typeof zamaQueryKeys.isAllowed.scope>>;
 }
 
 // @public (undocumented)
@@ -831,6 +841,10 @@ export class ReadonlyToken {
     balanceOf(owner?: Address): Promise<bigint>;
     static batchDecryptBalances(tokens: ReadonlyToken[], options?: BatchDecryptOptions): Promise<Map<Address, bigint>>;
     static batchDecryptBalancesAs(tokens: ReadonlyToken[], options: BatchDecryptAsOptions): Promise<Map<Address, bigint>>;
+    // Warning: (ae-forgotten-export) The symbol "DecryptCache" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    readonly cache: DecryptCache;
     confidentialBalanceOf(owner?: Address): Promise<Handle>;
     // (undocumented)
     protected readonly credentials: CredentialsManager;
@@ -840,7 +854,7 @@ export class ReadonlyToken {
         delegatorAddress: Address;
         owner?: Address;
     }): Promise<bigint>;
-    decryptHandles(handles: Handle[], owner?: Address): Promise<Map<Handle, bigint>>;
+    decryptHandles(handles: Handle[], owner?: Address): Promise<Map<Handle, ClearValueType>>;
     // Warning: (ae-forgotten-export) The symbol "DelegatedCredentialsManager" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
@@ -880,6 +894,7 @@ export class ReadonlyToken {
 // @public
 export interface ReadonlyTokenConfig {
     address: Address;
+    cache?: DecryptCache;
     credentials?: CredentialsManager;
     delegatedCredentials?: DelegatedCredentialsManager;
     keypairTTL?: number;
@@ -1281,21 +1296,6 @@ export interface UnwrapSubmittedEvent extends BaseEvent {
 }
 
 // @public
-export interface UserDecryptCallbacks {
-    onCredentialsReady?: () => void;
-    onDecrypted?: (values: Record<Handle, ClearValueType>) => void;
-}
-
-// @public (undocumented)
-export function userDecryptMutationOptions(sdk: ZamaSDK, callbacks?: UserDecryptCallbacks): MutationFactoryOptions<readonly ["zama.userDecrypt"], UserDecryptMutationParams, Record<Handle, ClearValueType>>;
-
-// @public
-export interface UserDecryptMutationParams {
-    // (undocumented)
-    handles: DecryptHandle[];
-}
-
-// @public
 export interface UserDecryptParams {
     // (undocumented)
     contractAddress: Address;
@@ -1316,6 +1316,15 @@ export interface UserDecryptParams {
     // (undocumented)
     startTimestamp: number;
 }
+
+// @public (undocumented)
+export interface UserDecryptQueryConfig {
+    // (undocumented)
+    handles: DecryptHandle[];
+}
+
+// @public (undocumented)
+export function userDecryptQueryOptions(sdk: ZamaSDK, config: UserDecryptQueryConfig): QueryFactoryOptions<DecryptResult, Error, DecryptResult, ReturnType<typeof zamaQueryKeys.decryption.handles>>;
 
 // @public
 export interface WrappedEvent {
@@ -1462,8 +1471,9 @@ export const zamaQueryKeys: {
     };
     readonly isAllowed: {
         readonly all: readonly ["zama.isAllowed"];
-        readonly scope: (account: Address) => readonly ["zama.isAllowed", {
+        readonly scope: (account: Address, contractAddresses: Address[]) => readonly ["zama.isAllowed", {
             readonly account: `0x${string}`;
+            readonly contractAddresses: `0x${string}`[];
         }];
     };
     readonly publicKey: {
@@ -1493,6 +1503,15 @@ export const zamaQueryKeys: {
         readonly handle: (handle: string, contractAddress?: Address) => readonly ["zama.decryption", {
             readonly contractAddress?: `0x${string}` | undefined;
             readonly handle: string;
+        }];
+        readonly handles: (handles: readonly {
+            handle: string;
+            contractAddress: Address;
+        }[]) => readonly ["zama.decryption", {
+            readonly handles: {
+                handle: string;
+                contractAddress: `0x${string}`;
+            }[];
         }];
     };
     readonly wrappersRegistry: {
@@ -1548,6 +1567,7 @@ export const zamaQueryKeys: {
 export class ZamaSDK {
     [Symbol.dispose](): void;
     constructor(config: ZamaSDKConfig);
+    readonly cache: DecryptCache;
     createReadonlyToken(address: Address): ReadonlyToken;
     createToken(address: Address, wrapper?: Address): Token;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
@@ -1567,6 +1587,7 @@ export class ZamaSDK {
     // (undocumented)
     readonly storage: GenericStorage;
     terminate(): void;
+    userDecrypt(handles: DecryptHandle[], options?: DecryptOptions): Promise<Record<Handle, ClearValueType>>;
 }
 
 // @public
@@ -1630,7 +1651,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/activity-DbEbjVUg.d.ts:21161:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/esm/activity-CAZLy9Lp.d.ts:21475:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

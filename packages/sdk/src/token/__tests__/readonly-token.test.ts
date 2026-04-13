@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from "../../test-fixtures";
 import { ReadonlyToken, ZERO_HANDLE } from "../readonly-token";
+import { DecryptCache } from "../../decrypt-cache";
 import { ZamaErrorCode, DecryptionFailedError } from "../../errors";
 import type { GenericSigner, GenericStorage } from "../../types";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
-import { saveCachedBalance } from "../balance-cache";
 import { getAddress, type Address } from "viem";
 
 const VALID_HANDLE2 = ("0x" + "cd".repeat(32)) as Address;
@@ -15,6 +15,7 @@ interface ReadonlyTokenContext {
   sessionStorage: GenericStorage;
   tokenAddress: Address;
   handle: Address;
+  cache?: DecryptCache;
 }
 
 function createReadonlyToken({
@@ -24,6 +25,7 @@ function createReadonlyToken({
   sessionStorage,
   tokenAddress,
   handle,
+  cache,
 }: ReadonlyTokenContext): ReadonlyToken {
   vi.mocked(relayer.userDecrypt).mockResolvedValue({
     [handle]: 1000n,
@@ -35,6 +37,7 @@ function createReadonlyToken({
     storage,
     sessionStorage,
     address: tokenAddress,
+    cache,
   });
 }
 
@@ -467,7 +470,10 @@ describe("ReadonlyToken", () => {
       sessionStorage,
       tokenAddress,
       handle,
+      userAddress,
     }) => {
+      // Shared cache so both tokens see each other's entries.
+      const sharedCache = new DecryptCache(storage);
       const token = createReadonlyToken({
         relayer,
         signer,
@@ -475,6 +481,7 @@ describe("ReadonlyToken", () => {
         sessionStorage,
         tokenAddress,
         handle,
+        cache: sharedCache,
       });
       const token2 = new ReadonlyToken({
         relayer,
@@ -482,25 +489,12 @@ describe("ReadonlyToken", () => {
         storage,
         sessionStorage,
         address: TOKEN2,
+        cache: sharedCache,
       });
 
-      const signerAddress = await signer.getAddress();
-
-      // Pre-populate cache for both tokens
-      await saveCachedBalance({
-        storage,
-        tokenAddress,
-        owner: signerAddress,
-        handle: handle,
-        value: 1000n,
-      });
-      await saveCachedBalance({
-        storage,
-        tokenAddress: TOKEN2,
-        owner: signerAddress,
-        handle: VALID_HANDLE2,
-        value: 2000n,
-      });
+      // Pre-populate cache for both tokens (requester = signer, contractAddress = token address)
+      await sharedCache.set(userAddress, tokenAddress, handle, 1000n);
+      await sharedCache.set(userAddress, getAddress(TOKEN2), VALID_HANDLE2, 2000n);
 
       const result = await ReadonlyToken.batchDecryptBalances([token, token2], {
         handles: [handle, VALID_HANDLE2],
@@ -520,7 +514,9 @@ describe("ReadonlyToken", () => {
       sessionStorage,
       tokenAddress,
       handle,
+      userAddress,
     }) => {
+      const sharedCache = new DecryptCache(storage);
       const token = createReadonlyToken({
         relayer,
         signer,
@@ -528,6 +524,7 @@ describe("ReadonlyToken", () => {
         sessionStorage,
         tokenAddress,
         handle,
+        cache: sharedCache,
       });
       const token2 = new ReadonlyToken({
         relayer,
@@ -535,18 +532,11 @@ describe("ReadonlyToken", () => {
         storage,
         sessionStorage,
         address: TOKEN2,
+        cache: sharedCache,
       });
-
-      const signerAddress = await signer.getAddress();
 
       // Pre-populate cache only for token1
-      await saveCachedBalance({
-        storage,
-        tokenAddress,
-        owner: signerAddress,
-        handle: handle,
-        value: 1000n,
-      });
+      await sharedCache.set(userAddress, tokenAddress, handle, 1000n);
 
       vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({
         [VALID_HANDLE2]: 2000n,

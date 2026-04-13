@@ -740,22 +740,19 @@ const { handles, inputProof } = await encrypt.mutateAsync({
 
 #### Decryption (`useUserDecrypt`)
 
-`useUserDecrypt` manages the full decrypt orchestration — keypair generation, EIP-712, wallet signature — and reuses cached credentials when available, avoiding redundant wallet prompts:
+`useUserDecrypt` is a TanStack Query hook that manages the full decrypt orchestration — keypair generation, EIP-712, wallet signature — and reuses cached credentials when available, avoiding redundant wallet prompts. It is **disabled by default**; pass `enabled: true` to fire the query.
 
 ```tsx
-const decrypt = useUserDecrypt({
-  onCredentialsReady: () => setStep("decrypting"),
-  onDecrypted: (values) => setStep("done"),
-});
-
-const result = await decrypt.mutateAsync({
-  handles: [
-    { handle: "0xabc...", contractAddress: "0xTokenA" },
-    { handle: "0xdef...", contractAddress: "0xTokenB" },
-  ],
-});
-// result: { "0xabc...": 500n, "0xdef...": 1000n }
-// Results are automatically cached for useUserDecryptedValue
+const { data, isPending, isSuccess } = useUserDecrypt(
+  {
+    handles: [
+      { handle: "0xabc...", contractAddress: "0xTokenA" },
+      { handle: "0xdef...", contractAddress: "0xTokenB" },
+    ],
+  },
+  { enabled: shouldDecrypt },
+);
+// data: { "0xabc...": 500n, "0xdef...": 1000n }
 ```
 
 #### All Encryption & Decryption Hooks
@@ -763,7 +760,7 @@ const result = await decrypt.mutateAsync({
 | Hook                        | Input                        | Output                   | Description                                                                  |
 | --------------------------- | ---------------------------- | ------------------------ | ---------------------------------------------------------------------------- |
 | `useEncrypt()`              | `EncryptParams`              | `EncryptResult`          | Encrypt values for smart contract calls.                                     |
-| `useUserDecrypt()`          | `DecryptParams`              | `Record<string, bigint>` | Full decrypt orchestration with progress callbacks. Populates cache.         |
+| `useUserDecrypt()`          | `UserDecryptQueryConfig`     | `DecryptResult`          | User decryption query with TanStack Query semantics. Results cached.         |
 | `usePublicDecrypt()`        | `string[]` (handles)         | `PublicDecryptResult`    | Public decryption (no authorization needed). Populates the decryption cache. |
 | `useDelegatedUserDecrypt()` | `DelegatedUserDecryptParams` | `Record<string, bigint>` | Decrypt via delegation.                                                      |
 
@@ -782,32 +779,6 @@ const result = await decrypt.mutateAsync({
 | ------------------- | --------------- | ------------------------------------------ | ------------------------------------- |
 | `usePublicKey()`    | `void`          | `{ publicKeyId, publicKey } \| null`       | Get the TFHE compact public key.      |
 | `usePublicParams()` | `number` (bits) | `{ publicParams, publicParamsId } \| null` | Get public parameters for encryption. |
-
-### Decryption Cache Hooks
-
-`useUserDecrypt` and `usePublicDecrypt` populate a shared React Query cache. These hooks read from that cache without triggering new decryption requests.
-
-```ts
-// Single handle
-function useUserDecryptedValue(handle: string | undefined): UseQueryResult<bigint>;
-
-// Multiple handles
-function useUserDecryptedValues(handles: string[]): {
-  data: Record<string, bigint | undefined>;
-  results: UseQueryResult<bigint>[];
-};
-```
-
-```tsx
-// First, trigger decryption (populates the cache)
-const decrypt = useUserDecrypt();
-await decrypt.mutateAsync({
-  handles: [{ handle: "0xHandleHash", contractAddress: "0xToken" }],
-});
-
-// Then read cached results anywhere in the tree — no new decryption
-const { data: value } = useUserDecryptedValue("0xHandleHash");
-```
 
 ## Query Keys
 

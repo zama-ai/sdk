@@ -298,12 +298,33 @@ export abstract class BaseCredentialsManager<
     } as ZamaSDKEventInput);
   }
 
-  protected async checkAllowed(key: string): Promise<boolean> {
+  protected async checkAllowed(
+    key: string,
+    contractAddresses: [Address, ...Address[]],
+  ): Promise<boolean> {
+    // Runtime guard: credentials are always contract-scoped,
+    // so an empty contract list must never resolve to "allowed"
+    // (the compile-time tuple type can be bypassed via casts).
+    if (contractAddresses.length === 0) {
+      return false;
+    }
     const entry = await this.sessionSignatures.get(key);
     if (entry === null) {
       return false;
     }
-    return !this.sessionSignatures.isExpired(entry);
+    if (this.sessionSignatures.isExpired(entry)) {
+      return false;
+    }
+    try {
+      const stored = await this.storage.get<TEncrypted>(key);
+      if (!stored) {
+        return false;
+      }
+      this.assertEncrypted(stored);
+      return isCredentialValid(stored, contractAddresses);
+    } catch {
+      return false;
+    }
   }
 
   protected async clearAll(key: string): Promise<void> {

@@ -26,7 +26,7 @@ function mockDelegatedEIP712(relayer: ReturnType<typeof createMockRelayer>) {
 
 function createManager(
   relayer: ReturnType<typeof createMockRelayer>,
-  overrides: { sessionTTL?: number | "infinite" } = {},
+  overrides: { sessionTTL?: number | "infinite"; keypairTTL?: number } = {},
 ) {
   const signer = createMockSigner(DELEGATE);
   const storage = createMockStorage();
@@ -39,7 +39,7 @@ function createManager(
       signer,
       storage,
       sessionStorage,
-      keypairTTL: 86400,
+      keypairTTL: overrides.keypairTTL ?? 86400,
       sessionTTL: overrides.sessionTTL ?? 2592000,
     }),
     signer,
@@ -112,14 +112,61 @@ describe("DelegatedCredentialsManager", () => {
     expect(signer.signTypedData).toHaveBeenCalledTimes(2);
   });
 
-  test("isAllowed() returns true when session exists", async ({ relayer }) => {
+  test("isAllowed() returns true when session covers the given contract", async ({ relayer }) => {
     const { manager } = createManager(relayer);
 
-    expect(await manager.isAllowed(DELEGATOR)).toBe(false);
+    expect(await manager.isAllowed(DELEGATOR, [TOKEN_A])).toBe(false);
     await manager.allow(DELEGATOR, TOKEN_A);
-    expect(await manager.isAllowed(DELEGATOR)).toBe(true);
+    expect(await manager.isAllowed(DELEGATOR, [TOKEN_A])).toBe(true);
     await manager.revoke(DELEGATOR);
-    expect(await manager.isAllowed(DELEGATOR)).toBe(false);
+    expect(await manager.isAllowed(DELEGATOR, [TOKEN_A])).toBe(false);
+  });
+
+  test("isAllowed() returns false when contract is outside the signed scope", async ({
+    relayer,
+  }) => {
+    const { manager } = createManager(relayer);
+
+    await manager.allow(DELEGATOR, TOKEN_A);
+
+    expect(await manager.isAllowed(DELEGATOR, [TOKEN_B])).toBe(false);
+    expect(await manager.isAllowed(DELEGATOR, [TOKEN_A, TOKEN_B])).toBe(false);
+    expect(await manager.isAllowed(DELEGATOR, [TOKEN_A])).toBe(true);
+  });
+
+  test("isAllowed() returns false for a delegator with no stored credentials", async ({
+    relayer,
+  }) => {
+    const OTHER_DELEGATOR = "0xdDdDddDdDdddDDddDDddDDDDdDdDDdDDdDDDDDDd" as Address;
+    const { manager } = createManager(relayer);
+
+    await manager.allow(DELEGATOR, TOKEN_A);
+
+    expect(await manager.isAllowed(OTHER_DELEGATOR, [TOKEN_A])).toBe(false);
+  });
+
+  test("invariant: isAllowed true ⇒ allow() reuses cache and does not re-sign", async ({
+    relayer,
+  }) => {
+    const { manager, signer } = createManager(relayer);
+
+    await manager.allow(DELEGATOR, TOKEN_A);
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+    expect(await manager.isAllowed(DELEGATOR, [TOKEN_A])).toBe(true);
+
+    await manager.allow(DELEGATOR, TOKEN_A);
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+  });
+
+  test("isAllowed(delegator, []) returns false even with an active session", async ({
+    relayer,
+  }) => {
+    const { manager } = createManager(relayer);
+
+    await manager.allow(DELEGATOR, TOKEN_A);
+    // Compile-time signature requires a non-empty tuple, but the runtime guard
+    // must still reject empty arrays (SDK-78 principle 3 applies to delegation).
+    expect(await manager.isAllowed(DELEGATOR, [] as unknown as [Address])).toBe(false);
   });
 
   test("clear() removes all stored credentials", async ({ relayer }) => {
@@ -134,15 +181,18 @@ describe("DelegatedCredentialsManager", () => {
 
   test("sessionTTL: 'infinite' means never expire", async ({ relayer }) => {
     vi.useFakeTimers();
-    const { manager } = createManager(relayer, { sessionTTL: "infinite" });
+    const { manager } = createManager(relayer, {
+      sessionTTL: "infinite",
+      keypairTTL: 10 * 365 * 86400 + 1,
+    });
 
     await manager.allow(DELEGATOR, TOKEN_A);
 
     // Advance time by 10 years
     vi.advanceTimersByTime(10 * 365 * 86400 * 1000);
 
-    // Session should still be valid
-    expect(await manager.isAllowed(DELEGATOR)).toBe(true);
+    // Session should still be valid for the allowed contract
+    expect(await manager.isAllowed(DELEGATOR, [TOKEN_A])).toBe(true);
   });
 
   test("sessionTTL: 0 means every operation triggers signing", async ({ relayer }) => {

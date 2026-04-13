@@ -89,6 +89,7 @@ import { DecryptEndEvent } from '@zama-fhe/sdk';
 import { DecryptErrorEvent } from '@zama-fhe/sdk';
 import { DecryptHandle } from '@zama-fhe/sdk/query';
 import { DecryptionFailedError } from '@zama-fhe/sdk';
+import { DecryptResult } from '@zama-fhe/sdk/query';
 import { DecryptStartEvent } from '@zama-fhe/sdk';
 import { DefaultRegistryAddresses } from '@zama-fhe/sdk';
 import { DelegatedCredentialsManager } from '@zama-fhe/sdk';
@@ -258,10 +259,9 @@ import { UnwrapSubmittedEvent } from '@zama-fhe/sdk';
 import { UseMutationOptions } from '@tanstack/react-query';
 import { UseMutationResult } from '@tanstack/react-query';
 import { UseQueryOptions } from '@tanstack/react-query';
-import { UserDecryptCallbacks } from '@zama-fhe/sdk/query';
-import { userDecryptMutationOptions } from '@zama-fhe/sdk/query';
-import { UserDecryptMutationParams } from '@zama-fhe/sdk/query';
 import { UserDecryptParams } from '@zama-fhe/sdk';
+import { UserDecryptQueryConfig } from '@zama-fhe/sdk/query';
+import { userDecryptQueryOptions } from '@zama-fhe/sdk/query';
 import { wrapContract } from '@zama-fhe/sdk';
 import { WrappedEvent } from '@zama-fhe/sdk';
 import { wrapperDiscoveryQueryOptions } from '@zama-fhe/sdk/query';
@@ -442,6 +442,8 @@ export { DecryptErrorEvent }
 export { DecryptHandle }
 
 export { DecryptionFailedError }
+
+export { DecryptResult }
 
 export { DecryptStartEvent }
 
@@ -1257,7 +1259,12 @@ export function useFinalizeUnwrap(config: UseZamaConfig, options?: UseMutationOp
 export function useGenerateKeypair(): _$_tanstack_react_query0.UseMutationResult<_$_zama_fhe_sdk0.KeypairType<`0x${string}`>, Error, void, unknown>;
 
 // @public
-export function useIsAllowed(): _$_tanstack_react_query0.UseQueryResult<boolean, Error>;
+export function useIsAllowed(config: UseIsAllowedConfig): _$_tanstack_react_query0.UseQueryResult<boolean, Error>;
+
+// @public
+export interface UseIsAllowedConfig {
+    contractAddresses: [Address, ...Address[]];
+}
 
 // @public
 export function useIsConfidential(tokenAddress: Address, options?: Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">): _$_tanstack_react_query0.UseQueryResult<boolean, Error>;
@@ -1298,15 +1305,11 @@ export function usePublicKey(): _$_tanstack_react_query0.UseQueryResult<PublicKe
 // @public
 export function usePublicParams(bits: number): _$_tanstack_react_query0.UseQueryResult<PublicParamsData | null, Error>;
 
-export { UserDecryptCallbacks as DecryptCallbacks }
-export { UserDecryptCallbacks }
-
-export { userDecryptMutationOptions }
-
-export { UserDecryptMutationParams as DecryptParams }
-export { UserDecryptMutationParams }
-
 export { UserDecryptParams }
+
+export { UserDecryptQueryConfig }
+
+export { userDecryptQueryOptions }
 
 // @public
 export function useReadonlyToken(address: Address): _$_zama_fhe_sdk0.ReadonlyToken;
@@ -1393,19 +1396,10 @@ export function useUnwrap(config: UseZamaConfig, options?: UseMutationOptions<Tr
 export function useUnwrapAll(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, void, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, void, `0x${string}`>;
 
 // @public
-export function useUserDecrypt(config?: UseUserDecryptConfig): _$_tanstack_react_query0.UseMutationResult<Record<`0x${string}`, ClearValueType>, Error, UserDecryptMutationParams, unknown>;
+export function useUserDecrypt(config: UserDecryptQueryConfig, options?: Omit<UseQueryOptions<DecryptResult>, "queryKey" | "queryFn">): _$_tanstack_react_query0.UseQueryResult<DecryptResult, Error>;
 
 // @public
-export type UseUserDecryptConfig = UserDecryptCallbacks;
-
-// @public
-export function useUserDecryptedValue(handle: Handle | undefined): _$_tanstack_react_query0.UseQueryResult<ClearValueType, Error>;
-
-// @public
-export function useUserDecryptedValues(handles: Handle[]): {
-    data: Record<`0x${string}`, ClearValueType | undefined>;
-    results: _$_tanstack_react_query0.UseQueryResult<never, Error>[];
-};
+export type UseUserDecryptResult = ReturnType<typeof useUserDecrypt>;
 
 // @public
 export function useWrapperDiscovery(config: UseWrapperDiscoveryConfig, options?: Omit<UseQueryOptions<Address | null>, "queryKey" | "queryFn">): _$_tanstack_react_query0.UseQueryResult<`0x${string}` | null, Error>;

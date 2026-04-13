@@ -12,13 +12,8 @@ export { ZamaProvider, useZamaSDK, type ZamaProviderProps } from "./provider";
 
 // SDK method hooks
 export { useEncrypt } from "./relayer/use-encrypt";
-export {
-  useUserDecrypt,
-  type DecryptHandle,
-  type DecryptParams,
-  type DecryptCallbacks,
-  type UseUserDecryptConfig,
-} from "./relayer/use-user-decrypt";
+export { useUserDecrypt, type UseUserDecryptResult } from "./relayer/use-user-decrypt";
+
 export { usePublicDecrypt } from "./relayer/use-public-decrypt";
 export { useGenerateKeypair } from "./relayer/use-generate-keypair";
 export { useCreateEIP712 } from "./relayer/use-create-eip712";
@@ -29,10 +24,6 @@ export { useDelegatedUserDecrypt } from "./relayer/use-delegated-user-decrypt";
 export { useRequestZKProofVerification } from "./relayer/use-request-zk-proof-verification";
 export { usePublicKey, type PublicKeyData } from "./relayer/use-public-key";
 export { usePublicParams, type PublicParamsData } from "./relayer/use-public-params";
-
-// Read hooks (cached lookups)
-export { useUserDecryptedValue } from "./relayer/use-user-decrypted-value";
-export { useUserDecryptedValues } from "./relayer/use-user-decrypted-values";
 
 // Re-export core classes
 export {
@@ -167,7 +158,7 @@ export {
 
 // Authorization hooks (generic — any contract with encrypted state)
 export { useAllow } from "./authorization/use-allow";
-export { useIsAllowed } from "./authorization/use-is-allowed";
+export { useIsAllowed, type UseIsAllowedConfig } from "./authorization/use-is-allowed";
 export { useRevoke } from "./authorization/use-revoke";
 export { useRevokeSession } from "./authorization/use-revoke-session";
 
@@ -292,9 +283,10 @@ export {
   delegatedUserDecryptMutationOptions,
   publicDecryptMutationOptions,
   requestZKProofVerificationMutationOptions,
-  userDecryptMutationOptions,
-  type UserDecryptMutationParams,
-  type UserDecryptCallbacks,
+  userDecryptQueryOptions,
+  type UserDecryptQueryConfig,
+  type DecryptResult,
+  type DecryptHandle,
   allowMutationOptions,
   isAllowedQueryOptions,
   revokeMutationOptions,

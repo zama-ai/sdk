@@ -8,7 +8,7 @@ export const CONTRACTS = {
   cUSDC: deployments.cToken as Address,
 } as const;
 
-export const CONFIDENTIAL_TOKEN_ADDRESSES: Address[] = [
+export const CONFIDENTIAL_TOKEN_ADDRESSES: [Address, ...Address[]] = [
   CONTRACTS.cUSDT, // cUSDT
   CONTRACTS.cUSDC, // cUSDC
 ];

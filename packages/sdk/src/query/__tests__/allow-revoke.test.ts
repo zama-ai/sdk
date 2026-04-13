@@ -70,10 +70,14 @@ describe("isAllowedQueryOptions", () => {
 
     const options = isAllowedQueryOptions(sdk, {
       account: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
+      contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"],
     });
     expect(options.queryKey).toEqual([
       "zama.isAllowed",
-      { account: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" },
+      {
+        account: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
+        contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"],
+      },
     ]);
 
     const result = await options.queryFn({
@@ -83,11 +87,37 @@ describe("isAllowedQueryOptions", () => {
     expect(isAllowedSpy).toHaveBeenCalledTimes(1);
   });
 
+  test("forwards contractAddresses to credentials.isAllowed", async ({
+    signer,
+    relayer,
+    storage,
+  }) => {
+    const sdk = new ZamaSDK({ relayer, signer, storage });
+    const isAllowedSpy = vi.spyOn(sdk.credentials, "isAllowed").mockResolvedValue(true);
+
+    const contracts = [
+      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
+      "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
+    ] as [Address, ...Address[]];
+
+    const options = isAllowedQueryOptions(sdk, {
+      account: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
+      contractAddresses: contracts,
+    });
+
+    await options.queryFn({
+      queryKey: options.queryKey,
+    } as Parameters<typeof options.queryFn>[0]);
+
+    expect(isAllowedSpy).toHaveBeenCalledWith(contracts);
+  });
+
   test("staleTime should be 30 seconds", ({ signer, relayer, storage }) => {
     const sdk = new ZamaSDK({ relayer, signer, storage });
 
     const options = isAllowedQueryOptions(sdk, {
       account: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
+      contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"],
     });
 
     expect(options.staleTime).toBe(30_000);
@@ -98,6 +128,7 @@ describe("isAllowedQueryOptions", () => {
 
     const options = isAllowedQueryOptions(sdk, {
       account: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
+      contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"],
       query: { enabled: false },
     });
 

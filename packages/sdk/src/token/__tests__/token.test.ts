@@ -1410,9 +1410,10 @@ describe("Token", () => {
       handle,
       storage,
     }) => {
-      // Seed the balance cache with a sufficient balance
-      const cacheKey = `zama:balance:${getAddress(token.address)}:${getAddress(await signer.getAddress())}:${handle.toLowerCase()}`;
-      await storage.set(cacheKey, "200");
+      // Seed the decrypt cache with a sufficient balance
+      const owner = getAddress(await signer.getAddress());
+      const cacheKey = `zama:decrypt:${owner}:${getAddress(token.address)}:${handle.toLowerCase()}`;
+      await storage.set(cacheKey, 200n);
 
       vi.mocked(signer.readContract).mockResolvedValueOnce(handle); // confidentialBalanceOf
 
@@ -1427,8 +1428,9 @@ describe("Token", () => {
       handle,
       storage,
     }) => {
-      const cacheKey = `zama:balance:${getAddress(token.address)}:${getAddress(await signer.getAddress())}:${handle.toLowerCase()}`;
-      await storage.set(cacheKey, "50");
+      const owner = getAddress(await signer.getAddress());
+      const cacheKey = `zama:decrypt:${owner}:${getAddress(token.address)}:${handle.toLowerCase()}`;
+      await storage.set(cacheKey, 50n);
 
       vi.mocked(signer.readContract).mockResolvedValueOnce(handle); // confidentialBalanceOf
 

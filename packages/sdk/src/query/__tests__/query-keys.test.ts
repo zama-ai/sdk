@@ -50,7 +50,11 @@ describe("zamaQueryKeys", () => {
 
     expect(withHandle).toEqual([
       "zama.confidentialBalance",
-      { tokenAddress: getAddress(TOKEN_LOWER), owner: getAddress(OWNER_LOWER), handle: HANDLE_A },
+      {
+        tokenAddress: getAddress(TOKEN_LOWER),
+        owner: getAddress(OWNER_LOWER),
+        handle: HANDLE_A,
+      },
     ]);
 
     expect(withoutHandle).toEqual([
@@ -164,7 +168,9 @@ describe("zamaQueryKeys", () => {
     ];
 
     expect(lowerVariants).toEqual(upperVariants);
-    expect(lowerVariants[0][1]).toMatchObject({ tokenAddress: getAddress(TOKEN_LOWER) });
+    expect(lowerVariants[0][1]).toMatchObject({
+      tokenAddress: getAddress(TOKEN_LOWER),
+    });
   });
 
   test("normalizes address fields in all other address-bearing factories", () => {
@@ -198,7 +204,10 @@ describe("zamaQueryKeys", () => {
           getAddress(SPENDER_LOWER),
         ),
       ],
-      [zamaQueryKeys.isAllowed.scope(OWNER_LOWER), zamaQueryKeys.isAllowed.scope(OWNER_UPPER)],
+      [
+        zamaQueryKeys.isAllowed.scope(OWNER_LOWER, [TOKEN_LOWER]),
+        zamaQueryKeys.isAllowed.scope(OWNER_UPPER, [TOKEN_UPPER]),
+      ],
       [zamaQueryKeys.totalSupply.token(TOKEN_LOWER), zamaQueryKeys.totalSupply.token(TOKEN_UPPER)],
       [
         zamaQueryKeys.decryption.handle(HANDLE_A, WRAPPER_LOWER),
@@ -211,10 +220,13 @@ describe("zamaQueryKeys", () => {
     }
   });
 
-  test("isAllowed scope key includes account identity", () => {
-    expect(zamaQueryKeys.isAllowed.scope(OWNER_LOWER)).toEqual([
+  test("isAllowed scope key includes account and contractAddresses", () => {
+    expect(zamaQueryKeys.isAllowed.scope(OWNER_LOWER, [TOKEN_LOWER])).toEqual([
       "zama.isAllowed",
-      { account: getAddress(OWNER_LOWER) },
+      {
+        account: getAddress(OWNER_LOWER),
+        contractAddresses: [getAddress(TOKEN_LOWER)],
+      },
     ]);
   });
 
@@ -229,7 +241,10 @@ describe("zamaQueryKeys", () => {
     ]);
     expect(zamaQueryKeys.confidentialIsApproved.scope(TOKEN_LOWER, OWNER_LOWER)).toEqual([
       "zama.confidentialIsApproved",
-      { tokenAddress: getAddress(TOKEN_LOWER), holder: getAddress(OWNER_LOWER) },
+      {
+        tokenAddress: getAddress(TOKEN_LOWER),
+        holder: getAddress(OWNER_LOWER),
+      },
     ]);
   });
 });
