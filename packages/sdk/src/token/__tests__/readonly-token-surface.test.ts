@@ -1,4 +1,4 @@
-import { describe, it } from "vitest";
+import { describe, expect, it } from "../../test-fixtures";
 import type { ReadonlyToken } from "../readonly-token";
 
 /**
@@ -49,5 +49,25 @@ describe("ReadonlyToken surface (type-level)", () => {
       _AssertNoDelegatedCredentials,
     ] = [true, true, true, true, true, true, true, true, true, true, true, true, true];
     void _check;
+  });
+
+  it("sdk.createReadonlyToken returns a runtime instance lacking moved methods", ({
+    sdk,
+    tokenAddress,
+  }) => {
+    const token = sdk.createReadonlyToken(tokenAddress);
+    for (const method of [
+      "balanceOf",
+      "decryptBalance",
+      "decryptBalanceAs",
+      "decryptHandles",
+      "allow",
+      "isAllowed",
+      "revoke",
+      "isDelegated",
+      "getDelegationExpiry",
+    ] as const) {
+      expect(method in token).toBe(false);
+    }
   });
 });

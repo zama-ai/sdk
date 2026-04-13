@@ -54,7 +54,7 @@ export interface GenericSigner {
   waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
   /**
    * Return the latest block timestamp in seconds.
-   * Used by {@link ReadonlyToken.isDelegated} to compare delegation expiry
+   * Used by {@link Token.isDelegated} to compare delegation expiry
    * against the chain clock instead of the local clock.
    */
   getBlockTimestamp: () => Promise<bigint>;

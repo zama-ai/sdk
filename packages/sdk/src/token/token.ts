@@ -105,8 +105,12 @@ export interface BatchDecryptAsOptions {
  * Hides all FHE complexity (encryption, decryption, EIP-712 signing)
  * behind familiar methods.
  *
- * Extends ReadonlyToken with write operations
- * (transfer, shield, unshield).
+ * Extends {@link ReadonlyToken} with all signer-authenticated operations:
+ * decrypt (`balanceOf`, `decryptBalance`, `decryptHandles`,
+ * `decryptBalanceAs`, batch variants), credential management (`allow`,
+ * `isAllowed`, `revoke`), delegation queries (`isDelegated`,
+ * `getDelegationExpiry`), and write operations (transfer, shield, unshield,
+ * delegate, etc.).
  */
 export interface TokenConfig extends ReadonlyTokenConfig {
   /** FHE relayer backend. */
@@ -535,8 +539,9 @@ export class Token extends ReadonlyToken {
   }
 
   /**
-   * Whether a session signature is currently cached for the connected wallet.
-   * Use this to check if decrypt operations can proceed without a wallet prompt.
+   * Whether cached credentials exist for the connected wallet AND cover this
+   * token's contract address. Returns `false` if no session is cached or if
+   * the cached session does not include this contract.
    */
   async isAllowed(): Promise<boolean> {
     return this.credentials.isAllowed([this.address]);
@@ -546,6 +551,9 @@ export class Token extends ReadonlyToken {
    * Revoke the session signature for the connected wallet.
    * Stored credentials remain intact, but the next decrypt operation
    * will require a fresh wallet signature.
+   *
+   * @param contractAddresses - Optional contract addresses to revoke. When
+   *   omitted, revokes the entire session for the connected wallet.
    */
   async revoke(...contractAddresses: Address[]): Promise<void> {
     await this.credentials.revoke(...contractAddresses);
@@ -1499,7 +1507,7 @@ export class Token extends ReadonlyToken {
    * Calls `ACL.delegateForUserDecryption()` on-chain.
    *
    * **Important:** After the transaction is mined, allow **1–2 minutes** before
-   * calling {@link ReadonlyToken.decryptBalanceAs | decryptBalanceAs}. The delegation
+   * calling {@link Token.decryptBalanceAs | decryptBalanceAs}. The delegation
    * is recorded on L1 immediately, but the gateway (on Arbitrum) must sync the
    * ACL state via cross-chain event propagation. Attempting delegated decryption
    * before propagation completes will throw a
@@ -1930,6 +1938,8 @@ function wrapDecryptError(error: unknown, fallbackMessage: string, isDelegated =
     error instanceof NoCiphertextError ||
     error instanceof RelayerRequestFailedError ||
     error instanceof DelegationNotPropagatedError ||
+    error instanceof DelegationExpiredError ||
+    error instanceof DelegationNotFoundError ||
     error instanceof SigningRejectedError ||
     error instanceof SigningFailedError
   ) {

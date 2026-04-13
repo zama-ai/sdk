@@ -24,7 +24,7 @@ export interface ReadonlyTokenConfig {
   address: Address;
   /** Wallet signer for read calls. */
   signer: GenericSigner;
-  /** Storage backend (kept for downstream read helpers; unused after SDK-34). */
+  /** Storage backend. Used by the {@link Token} subclass for credential and decrypt-cache storage; unused by ReadonlyToken's own reads. */
   storage: GenericStorage;
   /** Optional structured event listener for debugging and telemetry. */
   onEvent?: ZamaSDKEventListener;

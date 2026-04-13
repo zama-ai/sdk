@@ -110,21 +110,6 @@ export function createMockStorage(): GenericStorage {
   };
 }
 
-function createMockReadonlyToken(address: Address, signer: GenericSigner): ReadonlyToken {
-  return {
-    address,
-    signer,
-    confidentialBalanceOf: vi.fn().mockResolvedValue(("0x" + "aa".repeat(32)) as Handle),
-    name: vi.fn().mockResolvedValue("Test"),
-    symbol: vi.fn().mockResolvedValue("TST"),
-    decimals: vi.fn().mockResolvedValue(18),
-    isConfidential: vi.fn().mockResolvedValue(true),
-    isWrapper: vi.fn().mockResolvedValue(false),
-    allowance: vi.fn().mockResolvedValue(0n),
-    isApproved: vi.fn().mockResolvedValue(false),
-  } as unknown as ReadonlyToken;
-}
-
 interface SdkFixtures {
   userAddress: typeof USER;
   tokenAddress: typeof TOKEN;
@@ -154,7 +139,6 @@ interface SdkFixtures {
           txResult?: TransactionResult;
         },
   ) => Token;
-  createMockReadonlyToken: (address?: Address) => ReadonlyToken;
   createCredentialManager: (config: CredentialsManagerConfig) => CredentialsManager;
   createDelegatedCredentialManager: (
     config: DelegatedCredentialsManagerConfig,
@@ -349,9 +333,6 @@ export const test = base.extend<SdkFixtures>({
       } as unknown as Token;
     }
     await use(factory);
-  },
-  createMockReadonlyToken: async ({ tokenAddress, signer }, use) => {
-    await use((address?: Address) => createMockReadonlyToken(address ?? tokenAddress, signer));
   },
   sdk: async ({ relayer, signer, storage, sessionStorage }, use) => {
     await use(new ZamaSDK({ relayer, signer, storage, sessionStorage }));
