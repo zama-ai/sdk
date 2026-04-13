@@ -17,7 +17,7 @@ import {
   type UnwrappedFinalizedEvent,
   type UnwrappedStartedEvent,
 } from "./events/onchain-events";
-import type { Address, Hex } from "viem";
+import { zeroAddress, type Address, type Hex } from "viem";
 import type { ClearValueType, Handle } from "./relayer/relayer-sdk.types";
 import { ZERO_HANDLE } from "./token/readonly-token";
 import { assertBigint } from "./utils/assertions";
@@ -131,6 +131,18 @@ function buildTransfer(
   userAddress: Address,
   metadata: ActivityLogMetadata,
 ): ActivityItem {
+  // ConfidentialTransfer from zeroAddress is a mint (shield) in the new wrapper contract,
+  // which no longer emits a dedicated Wrapped event.
+  if (event.from === zeroAddress) {
+    return {
+      type: "shield",
+      direction: classifyDirection(userAddress, undefined, event.to),
+      amount: { type: "encrypted", handle: event.encryptedAmountHandle },
+      to: event.to,
+      metadata,
+      rawEvent: event,
+    };
+  }
   return {
     type: "transfer",
     direction: classifyDirection(userAddress, event.from, event.to),

@@ -7,7 +7,7 @@ import {
   type ActivityItem,
 } from "../activity";
 import type { Handle } from "../relayer/relayer-sdk.types";
-import { getAddress, type Address, type Hex } from "viem";
+import { getAddress, zeroAddress, type Address, type Hex } from "viem";
 import { Topics, type RawLog } from "../events";
 
 // Helpers
@@ -127,6 +127,19 @@ describe("parseActivityFeed", () => {
     expect(items[0].type).toBe("shield");
     expect(items[0].direction).toBe("incoming");
     expect(items[0].amount).toEqual({ type: "clear", value: 1000n });
+  });
+
+  it("parses a ConfidentialTransfer from zeroAddress as shield (new contract)", () => {
+    const handle = bytes32("cc".repeat(32));
+    const logs = [transferLog(zeroAddress, USER, handle)];
+    const items = parseActivityFeed(logs, USER);
+
+    expect(items).toHaveLength(1);
+    expect(items[0].type).toBe("shield");
+    expect(items[0].direction).toBe("incoming");
+    expect(items[0].amount).toEqual({ type: "encrypted", handle });
+    expect(items[0].to).toBe(USER);
+    expect(items[0].from).toBeUndefined();
   });
 
   it("parses an UnwrapRequested event", () => {
