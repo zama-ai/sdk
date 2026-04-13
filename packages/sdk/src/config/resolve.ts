@@ -220,7 +220,12 @@ export function buildRelayer(
       continue;
     }
     const { chainFields, relayerFields } = splitTransport(transport);
-    const entry: ChainEntry = { chainId, chain, chainFields, options: relayerFields };
+    const entry: ChainEntry = {
+      chainId,
+      chain,
+      chainFields,
+      options: relayerFields,
+    };
     (isNodeTransport(transport) ? nodeEntries : webEntries).push(entry);
   }
 
