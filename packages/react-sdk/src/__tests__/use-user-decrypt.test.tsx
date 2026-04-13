@@ -1,5 +1,6 @@
 import type { Address } from "@zama-fhe/sdk";
 import { waitFor } from "@testing-library/react";
+import { useIsAllowed } from "../authorization/use-is-allowed";
 import { useUserDecrypt } from "../relayer/use-user-decrypt";
 import { describe, expect, it, vi } from "../test-fixtures";
 
@@ -92,5 +93,29 @@ describe("useUserDecrypt", () => {
 
     await waitFor(() => expect(result.current.fetchStatus).toBe("idle"));
     expect(result.current.data).toBeUndefined();
+  });
+
+  it("gated on useIsAllowed=false does not prompt for a signature", async ({
+    signer,
+    tokenAddress,
+    renderWithProviders,
+  }) => {
+    // SDK-42 pattern: the consumer gates the decrypt hook on useIsAllowed.
+    // When no session exists, isAllowed resolves to false and decrypt must
+    // stay idle — no EIP-712 prompt on mount.
+    const { result } = renderWithProviders(() => {
+      const isAllowed = useIsAllowed({ contractAddresses: [tokenAddress] });
+      const decrypt = useUserDecrypt(
+        { handles: [{ handle: "0xh", contractAddress: tokenAddress }] },
+        { enabled: isAllowed.data === true },
+      );
+      return { isAllowed, decrypt };
+    });
+
+    await waitFor(() => expect(result.current.isAllowed.data).toBe(false));
+    await waitFor(() => expect(result.current.decrypt.fetchStatus).toBe("idle"));
+
+    expect(signer.signTypedData).not.toHaveBeenCalled();
+    expect(result.current.decrypt.data).toBeUndefined();
   });
 });

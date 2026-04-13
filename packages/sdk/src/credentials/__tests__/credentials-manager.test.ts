@@ -725,6 +725,20 @@ describe("session allow/revoke", () => {
     expect(signer.signTypedData).toHaveBeenCalledOnce();
   });
 
+  it("isAllowed([]) returns false even when an active session exists", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+
+    await credentialManager.allow(TOKEN_A);
+    // Compile-time signature requires a non-empty tuple, but the runtime guard
+    // must still reject empty arrays — "are credentials valid?" with no
+    // contract context is not a meaningful question (SDK-78 principle 3).
+    expect(await credentialManager.isAllowed([] as unknown as [Address])).toBe(false);
+  });
+
   it("allow() pre-caches session signature without needing stored credentials", async ({
     relayer,
     signer,

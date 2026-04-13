@@ -158,6 +158,17 @@ describe("DelegatedCredentialsManager", () => {
     expect(signer.signTypedData).toHaveBeenCalledOnce();
   });
 
+  test("isAllowed(delegator, []) returns false even with an active session", async ({
+    relayer,
+  }) => {
+    const { manager } = createManager(relayer);
+
+    await manager.allow(DELEGATOR, TOKEN_A);
+    // Compile-time signature requires a non-empty tuple, but the runtime guard
+    // must still reject empty arrays (SDK-78 principle 3 applies to delegation).
+    expect(await manager.isAllowed(DELEGATOR, [] as unknown as [Address])).toBe(false);
+  });
+
   test("clear() removes all stored credentials", async ({ relayer }) => {
     const { manager } = createManager(relayer);
 
