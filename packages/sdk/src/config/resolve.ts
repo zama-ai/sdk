@@ -146,7 +146,7 @@ const FHEVM_INSTANCE_KEYS = new Set<string>([
   "debug",
 ]);
 
-function splitTransport(transport: Record<string, unknown>): {
+function splitTransport(transport: TransportConfig): {
   chainFields: Record<string, unknown>;
   relayerFields: Record<string, unknown>;
 } {
@@ -165,52 +165,113 @@ function splitTransport(transport: Record<string, unknown>): {
   return { chainFields, relayerFields };
 }
 
+/**
+ * Group chains by relayer-options fingerprint so chains with different
+ * relayer-level options (e.g. security only on mainnet) get separate instances.
+ */
+function groupByRelayerOptions(
+  entries: Array<
+    [
+      number,
+      {
+        chain: ExtendedFhevmInstanceConfig;
+        fields: Record<string, unknown>;
+        options: Record<string, unknown>;
+      },
+    ]
+  >,
+): Array<{
+  chainIds: number[];
+  transports: Record<number, Partial<ExtendedFhevmInstanceConfig>>;
+  options: Record<string, unknown>;
+}> {
+  const groups = new Map<
+    string,
+    {
+      chainIds: number[];
+      transports: Record<number, Partial<ExtendedFhevmInstanceConfig>>;
+      options: Record<string, unknown>;
+    }
+  >();
+  for (const [chainId, { chain, fields, options }] of entries) {
+    const key = JSON.stringify(options, Object.keys(options).toSorted());
+    let group = groups.get(key);
+    if (!group) {
+      group = { chainIds: [], transports: {}, options };
+      groups.set(key, group);
+    }
+    group.chainIds.push(chainId);
+    group.transports[chainId] = { ...chain, ...fields };
+  }
+  return [...groups.values()];
+}
+
 export function buildRelayer(
   chainTransports: Map<number, { chain: ExtendedFhevmInstanceConfig; transport: TransportConfig }>,
   resolveChainId: () => Promise<number>,
 ): RelayerSDK {
-  const webChains: Record<number, Partial<ExtendedFhevmInstanceConfig>> = {};
-  const nodeChains: Record<number, Partial<ExtendedFhevmInstanceConfig>> = {};
   const perChainRelayers = new Map<number, RelayerSDK>();
-  let webRelayerOptions: Record<string, unknown> = {};
-  let nodeRelayerOptions: Record<string, unknown> = {};
+  const webEntries: Array<
+    [
+      number,
+      {
+        chain: ExtendedFhevmInstanceConfig;
+        fields: Record<string, unknown>;
+        options: Record<string, unknown>;
+      },
+    ]
+  > = [];
+  const nodeEntries: Array<
+    [
+      number,
+      {
+        chain: ExtendedFhevmInstanceConfig;
+        fields: Record<string, unknown>;
+        options: Record<string, unknown>;
+      },
+    ]
+  > = [];
 
   for (const [chainId, { chain, transport }] of chainTransports) {
     if (isCleartextTransport(transport)) {
       perChainRelayers.set(chainId, buildCleartextRelayer(chain, transport));
+      continue;
+    }
+    const { chainFields, relayerFields } = splitTransport(transport);
+    const entry: [
+      number,
+      {
+        chain: ExtendedFhevmInstanceConfig;
+        fields: Record<string, unknown>;
+        options: Record<string, unknown>;
+      },
+    ] = [chainId, { chain, fields: chainFields, options: relayerFields }];
+    if (isNodeTransport(transport)) {
+      nodeEntries.push(entry);
     } else {
-      const { chainFields, relayerFields } = splitTransport(
-        transport as unknown as Record<string, unknown>,
-      );
-      if (isNodeTransport(transport)) {
-        nodeRelayerOptions = { ...nodeRelayerOptions, ...relayerFields };
-        nodeChains[chainId] = { ...chain, ...chainFields };
-      } else {
-        webRelayerOptions = { ...webRelayerOptions, ...relayerFields };
-        webChains[chainId] = { ...chain, ...chainFields };
-      }
+      webEntries.push(entry);
     }
   }
 
-  if (Object.keys(webChains).length > 0) {
-    const webRelayer = new RelayerWeb({
+  for (const group of groupByRelayerOptions(webEntries)) {
+    const relayer = new RelayerWeb({
       getChainId: resolveChainId,
-      transports: webChains,
-      ...webRelayerOptions,
+      transports: group.transports,
+      ...group.options,
     });
-    for (const id of Object.keys(webChains)) {
-      perChainRelayers.set(Number(id), webRelayer);
+    for (const id of group.chainIds) {
+      perChainRelayers.set(id, relayer);
     }
   }
 
-  if (Object.keys(nodeChains).length > 0) {
-    const nodeRelayer = new RelayerNode({
+  for (const group of groupByRelayerOptions(nodeEntries)) {
+    const relayer = new RelayerNode({
       getChainId: resolveChainId,
-      transports: nodeChains,
-      ...nodeRelayerOptions,
+      transports: group.transports,
+      ...group.options,
     });
-    for (const id of Object.keys(nodeChains)) {
-      perChainRelayers.set(Number(id), nodeRelayer);
+    for (const id of group.chainIds) {
+      perChainRelayers.set(id, relayer);
     }
   }
 
