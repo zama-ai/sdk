@@ -7,7 +7,7 @@ import {
   type ActivityLogMetadata,
 } from "../activity";
 import type { RawLog } from "../events/onchain-events";
-import type { ReadonlyToken } from "../token/readonly-token";
+import type { Token } from "../token/token";
 
 import { assertNonNullable } from "../utils/assertions";
 import type { QueryFactoryOptions } from "./factory-types";
@@ -65,7 +65,7 @@ export function deriveActivityFeedLogsKey(
  * with `queryClient.fetchQuery` calls that only provide an externally-constructed key.
  */
 export function activityFeedQueryOptions(
-  token: ReadonlyToken,
+  token: Token,
   config: ActivityFeedConfig,
   queryConfig?: ActivityFeedQueryConfig,
 ): QueryFactoryOptions<

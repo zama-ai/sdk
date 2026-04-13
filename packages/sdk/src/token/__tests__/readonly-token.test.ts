@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "../../test-fixtures";
-import { ReadonlyToken, ZERO_HANDLE } from "../readonly-token";
+import { ZERO_HANDLE } from "../readonly-token";
+import { Token } from "../token";
 import { DecryptCache } from "../../decrypt-cache";
 import { ZamaErrorCode, DecryptionFailedError } from "../../errors";
 import type { GenericSigner, GenericStorage } from "../../types";
@@ -8,7 +9,7 @@ import { getAddress, type Address } from "viem";
 
 const VALID_HANDLE2 = ("0x" + "cd".repeat(32)) as Address;
 
-interface ReadonlyTokenContext {
+interface TokenContext {
   relayer: RelayerSDK;
   signer: GenericSigner;
   storage: GenericStorage;
@@ -18,7 +19,7 @@ interface ReadonlyTokenContext {
   cache?: DecryptCache;
 }
 
-function createReadonlyToken({
+function createToken({
   relayer,
   signer,
   storage,
@@ -26,12 +27,12 @@ function createReadonlyToken({
   tokenAddress,
   handle,
   cache,
-}: ReadonlyTokenContext): ReadonlyToken {
+}: TokenContext): Token {
   vi.mocked(relayer.userDecrypt).mockResolvedValue({
     [handle]: 1000n,
     [VALID_HANDLE2]: 2000n,
   } as never);
-  return new ReadonlyToken({
+  return new Token({
     relayer,
     signer,
     storage,
@@ -41,7 +42,7 @@ function createReadonlyToken({
   });
 }
 
-describe("ReadonlyToken", () => {
+describe("Token", () => {
   describe("decryptHandles", () => {
     it("returns 0n for zero handles without hitting relayer", async ({
       relayer,
@@ -51,7 +52,7 @@ describe("ReadonlyToken", () => {
       tokenAddress,
       handle,
     }) => {
-      const token = createReadonlyToken({
+      const token = createToken({
         relayer,
         signer,
         storage,
@@ -73,7 +74,7 @@ describe("ReadonlyToken", () => {
       tokenAddress,
       handle,
     }) => {
-      const token = createReadonlyToken({
+      const token = createToken({
         relayer,
         signer,
         storage,
@@ -95,7 +96,7 @@ describe("ReadonlyToken", () => {
       tokenAddress,
       handle,
     }) => {
-      const token = createReadonlyToken({
+      const token = createToken({
         relayer,
         signer,
         storage,
@@ -124,7 +125,7 @@ describe("ReadonlyToken", () => {
       tokenAddress,
       handle,
     }) => {
-      const token = createReadonlyToken({
+      const token = createToken({
         relayer,
         signer,
         storage,
@@ -153,7 +154,7 @@ describe("ReadonlyToken", () => {
       tokenAddress,
       handle,
     }) => {
-      const token = createReadonlyToken({
+      const token = createToken({
         relayer,
         signer,
         storage,
@@ -175,7 +176,7 @@ describe("ReadonlyToken", () => {
       tokenAddress,
       handle,
     }) => {
-      const token = createReadonlyToken({
+      const token = createToken({
         relayer,
         signer,
         storage,
@@ -202,7 +203,7 @@ describe("ReadonlyToken", () => {
       handle,
       userAddress,
     }) => {
-      const token = createReadonlyToken({
+      const token = createToken({
         relayer,
         signer,
         storage,
@@ -227,7 +228,7 @@ describe("ReadonlyToken", () => {
       tokenAddress,
       handle,
     }) => {
-      const token = createReadonlyToken({
+      const token = createToken({
         relayer,
         signer,
         storage,
@@ -251,7 +252,7 @@ describe("ReadonlyToken", () => {
       tokenAddress,
       handle,
     }) => {
-      const token = createReadonlyToken({
+      const token = createToken({
         relayer,
         signer,
         storage,
@@ -277,7 +278,7 @@ describe("ReadonlyToken", () => {
       tokenAddress,
       handle,
     }) => {
-      const token = createReadonlyToken({
+      const token = createToken({
         relayer,
         signer,
         storage,
@@ -316,7 +317,7 @@ describe("ReadonlyToken", () => {
       tokenAddress,
       handle,
     }) => {
-      const token = createReadonlyToken({
+      const token = createToken({
         relayer,
         signer,
         storage,
@@ -324,7 +325,7 @@ describe("ReadonlyToken", () => {
         tokenAddress,
         handle,
       });
-      const token2 = new ReadonlyToken({
+      const token2 = new Token({
         relayer,
         signer,
         storage,
@@ -337,7 +338,7 @@ describe("ReadonlyToken", () => {
         .mockRejectedValueOnce(new Error("decrypt failed"));
 
       await expect(
-        ReadonlyToken.batchDecryptBalances([token, token2], {
+        Token.batchDecryptBalances([token, token2], {
           handles: [handle, VALID_HANDLE2],
         }),
       ).rejects.toThrow(DecryptionFailedError);
@@ -347,7 +348,7 @@ describe("ReadonlyToken", () => {
       vi.mocked(relayer.userDecrypt).mockRejectedValueOnce(new Error("decrypt failed"));
 
       await expect(
-        ReadonlyToken.batchDecryptBalances([token, token2], {
+        Token.batchDecryptBalances([token, token2], {
           handles: [handle, VALID_HANDLE2],
         }),
       ).rejects.toThrow(/Batch decryption failed for 1 token\(s\)/);
@@ -361,7 +362,7 @@ describe("ReadonlyToken", () => {
       tokenAddress,
       handle,
     }) => {
-      const token = createReadonlyToken({
+      const token = createToken({
         relayer,
         signer,
         storage,
@@ -369,7 +370,7 @@ describe("ReadonlyToken", () => {
         tokenAddress,
         handle,
       });
-      const token2 = new ReadonlyToken({
+      const token2 = new Token({
         relayer,
         signer,
         storage,
@@ -381,7 +382,7 @@ describe("ReadonlyToken", () => {
         .mockResolvedValueOnce({ [handle]: 1000n })
         .mockRejectedValueOnce(new Error("decrypt failed"));
 
-      const result = await ReadonlyToken.batchDecryptBalances([token, token2], {
+      const result = await Token.batchDecryptBalances([token, token2], {
         handles: [handle, VALID_HANDLE2],
         onError: () => 0n,
       });
@@ -398,7 +399,7 @@ describe("ReadonlyToken", () => {
       tokenAddress,
       handle,
     }) => {
-      const token = createReadonlyToken({
+      const token = createToken({
         relayer,
         signer,
         storage,
@@ -406,7 +407,7 @@ describe("ReadonlyToken", () => {
         tokenAddress,
         handle,
       });
-      const token2 = new ReadonlyToken({
+      const token2 = new Token({
         relayer,
         signer,
         storage,
@@ -419,7 +420,7 @@ describe("ReadonlyToken", () => {
         .mockRejectedValueOnce(new Error("decrypt failed"));
 
       const captured: { error: Error; address: Address }[] = [];
-      const result = await ReadonlyToken.batchDecryptBalances([token, token2], {
+      const result = await Token.batchDecryptBalances([token, token2], {
         handles: [handle, VALID_HANDLE2],
         onError: (error, address) => {
           captured.push({ error, address });
@@ -444,7 +445,7 @@ describe("ReadonlyToken", () => {
       tokenAddress,
       handle,
     }) => {
-      const token = createReadonlyToken({
+      const token = createToken({
         relayer,
         signer,
         storage,
@@ -453,7 +454,7 @@ describe("ReadonlyToken", () => {
         handle,
       });
       await expect(
-        ReadonlyToken.batchDecryptBalances([token], {
+        Token.batchDecryptBalances([token], {
           handles: [handle, VALID_HANDLE2],
         }),
       ).rejects.toThrow(/tokens\.length.*must equal.*handles\.length/);
@@ -474,7 +475,7 @@ describe("ReadonlyToken", () => {
     }) => {
       // Shared cache so both tokens see each other's entries.
       const sharedCache = new DecryptCache(storage);
-      const token = createReadonlyToken({
+      const token = createToken({
         relayer,
         signer,
         storage,
@@ -483,7 +484,7 @@ describe("ReadonlyToken", () => {
         handle,
         cache: sharedCache,
       });
-      const token2 = new ReadonlyToken({
+      const token2 = new Token({
         relayer,
         signer,
         storage,
@@ -496,7 +497,7 @@ describe("ReadonlyToken", () => {
       await sharedCache.set(userAddress, tokenAddress, handle, 1000n);
       await sharedCache.set(userAddress, getAddress(TOKEN2), VALID_HANDLE2, 2000n);
 
-      const result = await ReadonlyToken.batchDecryptBalances([token, token2], {
+      const result = await Token.batchDecryptBalances([token, token2], {
         handles: [handle, VALID_HANDLE2],
       });
 
@@ -517,7 +518,7 @@ describe("ReadonlyToken", () => {
       userAddress,
     }) => {
       const sharedCache = new DecryptCache(storage);
-      const token = createReadonlyToken({
+      const token = createToken({
         relayer,
         signer,
         storage,
@@ -526,7 +527,7 @@ describe("ReadonlyToken", () => {
         handle,
         cache: sharedCache,
       });
-      const token2 = new ReadonlyToken({
+      const token2 = new Token({
         relayer,
         signer,
         storage,
@@ -542,7 +543,7 @@ describe("ReadonlyToken", () => {
         [VALID_HANDLE2]: 2000n,
       } as never);
 
-      const result = await ReadonlyToken.batchDecryptBalances([token, token2], {
+      const result = await Token.batchDecryptBalances([token, token2], {
         handles: [handle, VALID_HANDLE2],
       });
 
@@ -561,7 +562,7 @@ describe("ReadonlyToken", () => {
 
   describe("allow", () => {
     it("returns immediately when called with no tokens", async ({ relayer, signer }) => {
-      await ReadonlyToken.allow();
+      await Token.allow();
 
       expect(relayer.generateKeypair).not.toHaveBeenCalled();
       expect(signer.signTypedData).not.toHaveBeenCalled();
@@ -575,7 +576,7 @@ describe("ReadonlyToken", () => {
       tokenAddress,
       handle,
     }) => {
-      const token = createReadonlyToken({
+      const token = createToken({
         relayer,
         signer,
         storage,
@@ -597,7 +598,7 @@ describe("ReadonlyToken", () => {
       tokenAddress,
       handle,
     }) => {
-      const token = createReadonlyToken({
+      const token = createToken({
         relayer,
         signer,
         storage,
@@ -606,7 +607,7 @@ describe("ReadonlyToken", () => {
         handle,
       });
       const TOKEN2 = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
-      const token2 = new ReadonlyToken({
+      const token2 = new Token({
         relayer,
         signer,
         storage,
@@ -614,7 +615,7 @@ describe("ReadonlyToken", () => {
         address: TOKEN2,
       });
 
-      await ReadonlyToken.allow(token, token2);
+      await Token.allow(token, token2);
 
       expect(relayer.generateKeypair).toHaveBeenCalledOnce();
       expect(signer.signTypedData).toHaveBeenCalledOnce();
@@ -630,7 +631,7 @@ describe("ReadonlyToken", () => {
       tokenAddress,
       handle,
     }) => {
-      const token = createReadonlyToken({
+      const token = createToken({
         relayer,
         signer,
         storage,
@@ -649,7 +650,7 @@ describe("ReadonlyToken", () => {
       tokenAddress,
       handle,
     }) => {
-      const token = createReadonlyToken({
+      const token = createToken({
         relayer,
         signer,
         storage,
@@ -671,7 +672,7 @@ describe("ReadonlyToken", () => {
       tokenAddress,
       handle,
     }) => {
-      const token = createReadonlyToken({
+      const token = createToken({
         relayer,
         signer,
         storage,
@@ -689,14 +690,14 @@ describe("ReadonlyToken", () => {
 });
 
 describe("ZamaSDK token factory", () => {
-  it("creates ReadonlyToken with correct address", ({
+  it("creates Token with correct address", ({
     relayer,
     signer,
     storage,
     sessionStorage,
     tokenAddress,
   }) => {
-    const token = new ReadonlyToken({
+    const token = new Token({
       relayer,
       signer,
       storage,

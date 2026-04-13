@@ -3,7 +3,7 @@
 import { useQuery } from "../utils/query";
 import type { Address, RawLog, ActivityLogMetadata, ActivityItem } from "@zama-fhe/sdk";
 import { activityFeedQueryOptions, deriveActivityFeedLogsKey } from "@zama-fhe/sdk/query";
-import { useReadonlyToken } from "../token/use-readonly-token";
+import { useToken } from "../token/use-token";
 
 /** Configuration for {@link useActivityFeed}. */
 export interface UseActivityFeedConfig {
@@ -39,7 +39,7 @@ export interface UseActivityFeedConfig {
  */
 export function useActivityFeed(config: UseActivityFeedConfig) {
   const { tokenAddress, userAddress, logs, decrypt: decryptOpt } = config;
-  const token = useReadonlyToken(tokenAddress);
+  const token = useToken({ tokenAddress });
   const decrypt = decryptOpt ?? true;
   const logsKey = deriveActivityFeedLogsKey(logs);
 

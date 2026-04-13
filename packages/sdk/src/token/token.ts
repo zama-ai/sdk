@@ -18,7 +18,7 @@ import {
 } from "../contracts";
 import { findUnwrapRequested } from "../events/onchain-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
-import type { Handle } from "../relayer/relayer-sdk.types";
+import type { ClearValueType, Handle } from "../relayer/relayer-sdk.types";
 import { toError } from "../utils";
 import {
   ApprovalFailedError,
@@ -181,6 +181,82 @@ export class Token extends ReadonlyToken {
       });
       throw wrapDecryptError(error, "Failed to decrypt balance");
     }
+  }
+
+  /**
+   * Batch-decrypt arbitrary encrypted handles for this token's contract.
+   * Zero handles are returned as 0n without hitting the relayer. Non-zero
+   * handles participate in the shared {@link DecryptCache}: values are
+   * served from cache when present and written back on success so that
+   * subsequent `sdk.userDecrypt` calls for the same `(contract, handle)`
+   * skip the relayer round-trip.
+   *
+   * @param handles - Array of encrypted handles to decrypt.
+   * @param owner - Optional owner address for the decrypt request.
+   * @returns A Map from handle to decrypted bigint value.
+   * @throws {@link DecryptionFailedError} if FHE decryption fails.
+   */
+  async decryptHandles(handles: Handle[], owner?: Address): Promise<Map<Handle, ClearValueType>> {
+    const results = new Map<Handle, ClearValueType>();
+    const uncachedHandles: Handle[] = [];
+    const signerAddress = owner ?? (await this.signer.getAddress());
+
+    for (const handle of handles) {
+      if (this.isZeroHandle(handle)) {
+        results.set(handle, 0n);
+        continue;
+      }
+      const cached = await this.cache.get(signerAddress, this.address, handle);
+      if (cached !== null) {
+        results.set(handle, cached);
+      } else {
+        uncachedHandles.push(handle);
+      }
+    }
+
+    if (uncachedHandles.length === 0) {
+      return results;
+    }
+
+    const creds = await this.credentials.allow(this.address);
+
+    const t0 = Date.now();
+    try {
+      this.emit({ type: ZamaSDKEvents.DecryptStart });
+      const decrypted = await this.relayer.userDecrypt({
+        handles: uncachedHandles,
+        contractAddress: this.address,
+        signedContractAddresses: creds.contractAddresses,
+        privateKey: creds.privateKey,
+        publicKey: creds.publicKey,
+        signature: creds.signature,
+        signerAddress,
+        startTimestamp: creds.startTimestamp,
+        durationDays: creds.durationDays,
+      });
+      this.emit({
+        type: ZamaSDKEvents.DecryptEnd,
+        durationMs: Date.now() - t0,
+      });
+
+      for (const handle of uncachedHandles) {
+        const value = decrypted[handle];
+        if (value === undefined) {
+          throw new DecryptionFailedError(`Decryption returned no value for handle ${handle}`);
+        }
+        results.set(handle, value);
+        await this.cache.set(signerAddress, this.address, handle, value);
+      }
+    } catch (error) {
+      this.emit({
+        type: ZamaSDKEvents.DecryptError,
+        error: toError(error),
+        durationMs: Date.now() - t0,
+      });
+      throw wrapDecryptError(error, "Failed to decrypt handles");
+    }
+
+    return results;
   }
 
   // WRITE OPERATIONS

@@ -29,7 +29,7 @@ import {
 import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
-import type { ClearValueType, Handle } from "../relayer/relayer-sdk.types";
+import type { Handle } from "../relayer/relayer-sdk.types";
 import type { GenericSigner, GenericStorage } from "../types";
 import { toError } from "../utils";
 import { assertBigint } from "../utils/assertions";
@@ -772,71 +772,6 @@ export class ReadonlyToken {
       });
       throw wrapDecryptError(error, "Failed to decrypt delegated balance", true);
     }
-  }
-
-  /**
-   * Batch-decrypt arbitrary encrypted handles in a single relayer call.
-   * Zero handles are returned as 0n without hitting the relayer.
-   *
-   * @param handles - Array of encrypted handles to decrypt.
-   * @param owner - Optional owner address for the decrypt request.
-   * @returns A Map from handle to decrypted bigint value.
-   * @throws {@link DecryptionFailedError} if FHE decryption fails.
-   */
-  async decryptHandles(handles: Handle[], owner?: Address): Promise<Map<Handle, ClearValueType>> {
-    const results = new Map<Handle, ClearValueType>();
-    const nonZeroHandles: Handle[] = [];
-
-    for (const handle of handles) {
-      if (this.isZeroHandle(handle)) {
-        results.set(handle, 0n);
-      } else {
-        nonZeroHandles.push(handle);
-      }
-    }
-
-    if (nonZeroHandles.length === 0) {
-      return results;
-    }
-
-    const creds = await this.credentials.allow(this.address);
-
-    const t0 = Date.now();
-    try {
-      this.emit({ type: ZamaSDKEvents.DecryptStart });
-      const decrypted = await this.relayer.userDecrypt({
-        handles: nonZeroHandles,
-        contractAddress: this.address,
-        signedContractAddresses: creds.contractAddresses,
-        privateKey: creds.privateKey,
-        publicKey: creds.publicKey,
-        signature: creds.signature,
-        signerAddress: owner ?? (await this.signer.getAddress()),
-        startTimestamp: creds.startTimestamp,
-        durationDays: creds.durationDays,
-      });
-      this.emit({
-        type: ZamaSDKEvents.DecryptEnd,
-        durationMs: Date.now() - t0,
-      });
-
-      for (const handle of nonZeroHandles) {
-        const value = decrypted[handle];
-        if (value === undefined) {
-          throw new DecryptionFailedError(`Decryption returned no value for handle ${handle}`);
-        }
-        results.set(handle, value);
-      }
-    } catch (error) {
-      this.emit({
-        type: ZamaSDKEvents.DecryptError,
-        error: toError(error),
-        durationMs: Date.now() - t0,
-      });
-      throw wrapDecryptError(error, "Failed to decrypt handles");
-    }
-
-    return results;
   }
 
   /** Verify all tokens share the same relayer and return it. */
