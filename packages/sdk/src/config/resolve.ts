@@ -12,7 +12,7 @@ import { IndexedDBStorage } from "../storage/indexeddb-storage";
 import { ConfigurationError } from "../errors";
 import { ViemSigner } from "../viem";
 import { EthersSigner } from "../ethers";
-import type { TransportConfig, WebTransportConfig, NodeTransportConfig } from "./transports";
+import type { TransportConfig } from "./transports";
 import { isWebTransport, isNodeTransport, isCleartextTransport } from "./transports";
 import type { ZamaConfigViem, ZamaConfigEthers, ZamaConfigCustomSigner } from "./types";
 
@@ -85,7 +85,10 @@ export function resolveChainTransports(
         result.set(id, { chain: chainConfig, transport: userTransport });
       } else {
         // No transport specified — default to web
-        result.set(id, { chain: chainConfig, transport: { __mode: "web" as const } });
+        result.set(id, {
+          chain: chainConfig,
+          transport: { __mode: "web" as const },
+        });
       }
     }
   }
@@ -119,6 +122,49 @@ function buildCleartextRelayer(
   });
 }
 
+/**
+ * Fields on a transport config that map to per-chain FHE instance config
+ * (e.g. relayerUrl, network, contract addresses). Everything else is a
+ * relayer-level option shared across all chains using the same relayer.
+ */
+const FHEVM_INSTANCE_KEYS = new Set<string>([
+  "chainId",
+  "gatewayChainId",
+  "relayerUrl",
+  "network",
+  "aclContractAddress",
+  "kmsContractAddress",
+  "inputVerifierContractAddress",
+  "verifyingContractAddressDecryption",
+  "verifyingContractAddressInputVerification",
+  "registryAddress",
+  "batchRpcCalls",
+  "relayerRouteVersion",
+  "publicKey",
+  "publicParams",
+  "auth",
+  "debug",
+]);
+
+function splitTransport(transport: Record<string, unknown>): {
+  chainFields: Record<string, unknown>;
+  relayerFields: Record<string, unknown>;
+} {
+  const chainFields: Record<string, unknown> = {};
+  const relayerFields: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(transport)) {
+    if (key === "__mode") {
+      continue;
+    }
+    if (FHEVM_INSTANCE_KEYS.has(key)) {
+      chainFields[key] = value;
+    } else {
+      relayerFields[key] = value;
+    }
+  }
+  return { chainFields, relayerFields };
+}
+
 export function buildRelayer(
   chainTransports: Map<number, { chain: ExtendedFhevmInstanceConfig; transport: TransportConfig }>,
   resolveChainId: () => Promise<number>,
@@ -126,64 +172,42 @@ export function buildRelayer(
   const webChains: Record<number, Partial<ExtendedFhevmInstanceConfig>> = {};
   const nodeChains: Record<number, Partial<ExtendedFhevmInstanceConfig>> = {};
   const perChainRelayers = new Map<number, RelayerSDK>();
-
-  let webSecurity: WebTransportConfig["security"];
-  let webThreads: WebTransportConfig["threads"];
-  let nodePoolSize: NodeTransportConfig["poolSize"];
-  let nodeLogger: NodeTransportConfig["logger"];
-  let nodeFheArtifactStorage: NodeTransportConfig["fheArtifactStorage"];
-  let nodeFheArtifactCacheTTL: NodeTransportConfig["fheArtifactCacheTTL"];
+  let webRelayerOptions: Record<string, unknown> = {};
+  let nodeRelayerOptions: Record<string, unknown> = {};
 
   for (const [chainId, { chain, transport }] of chainTransports) {
     if (isCleartextTransport(transport)) {
       perChainRelayers.set(chainId, buildCleartextRelayer(chain, transport));
-    } else if (isNodeTransport(transport)) {
-      const {
-        __mode: _,
-        poolSize,
-        logger,
-        fheArtifactStorage,
-        fheArtifactCacheTTL,
-        ...rest
-      } = transport;
-      if (poolSize) {nodePoolSize = poolSize;}
-      if (logger) {nodeLogger = logger;}
-      if (fheArtifactStorage) {nodeFheArtifactStorage = fheArtifactStorage;}
-      if (fheArtifactCacheTTL) {nodeFheArtifactCacheTTL = fheArtifactCacheTTL;}
-      nodeChains[chainId] = { ...chain, ...rest };
     } else {
-      // web transport (default)
-      const { __mode: _, security, threads, ...rest } = transport as WebTransportConfig;
-      if (security) {webSecurity = security;}
-      if (threads) {webThreads = threads;}
-      webChains[chainId] = { ...chain, ...rest };
+      const { chainFields, relayerFields } = splitTransport(
+        transport as unknown as Record<string, unknown>,
+      );
+      if (isNodeTransport(transport)) {
+        nodeRelayerOptions = { ...nodeRelayerOptions, ...relayerFields };
+        nodeChains[chainId] = { ...chain, ...chainFields };
+      } else {
+        webRelayerOptions = { ...webRelayerOptions, ...relayerFields };
+        webChains[chainId] = { ...chain, ...chainFields };
+      }
     }
   }
 
-  // Build shared relayers for web and node chains
-  const hasWeb = Object.keys(webChains).length > 0;
-  const hasNode = Object.keys(nodeChains).length > 0;
-
-  if (hasWeb) {
+  if (Object.keys(webChains).length > 0) {
     const webRelayer = new RelayerWeb({
       getChainId: resolveChainId,
       transports: webChains,
-      security: webSecurity,
-      threads: webThreads,
+      ...webRelayerOptions,
     });
     for (const id of Object.keys(webChains)) {
       perChainRelayers.set(Number(id), webRelayer);
     }
   }
 
-  if (hasNode) {
+  if (Object.keys(nodeChains).length > 0) {
     const nodeRelayer = new RelayerNode({
       getChainId: resolveChainId,
       transports: nodeChains,
-      poolSize: nodePoolSize,
-      logger: nodeLogger,
-      fheArtifactStorage: nodeFheArtifactStorage,
-      fheArtifactCacheTTL: nodeFheArtifactCacheTTL,
+      ...nodeRelayerOptions,
     });
     for (const id of Object.keys(nodeChains)) {
       perChainRelayers.set(Number(id), nodeRelayer);
