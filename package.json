@@ -21,9 +21,9 @@
     "test:coverage": "vitest --coverage",
     "test:integration": "vitest run --reporter=verbose --config vitest.integration.config.ts",
     "typecheck": "pnpm run --parallel --recursive '/^typecheck/'",
-    "lint": "oxlint --disable-nested-config && pnpm ast-grep:scan",
+    "lint": "oxlint && pnpm ast-grep:scan",
     "ast-grep:scan": "ast-grep scan --config sgconfig.yml",
-    "lint:fix": "oxlint --disable-nested-config --fix --fix-suggestions",
+    "lint:fix": "oxlint --fix --fix-suggestions",
     "format": "oxfmt",
     "format:check": "oxfmt --check",
     "release:ci": "pnpm exec semantic-release",
@@ -101,7 +101,7 @@
   },
   "lint-staged": {
     "*.{ts,tsx,js,mjs,cjs}": [
-      "oxlint --disable-nested-config --fix",
+      "oxlint --fix",
       "ast-grep scan --config sgconfig.yml"
     ],
     "*.{ts,tsx,js,mjs,cjs,json,yaml,yml}": "oxfmt"
