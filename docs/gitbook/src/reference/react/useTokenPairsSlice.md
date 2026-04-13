@@ -71,7 +71,7 @@ End index (exclusive). Pass `undefined` to disable the query.
 useTokenPairsSlice({ fromIndex: 10n, toIndex: 20n });
 ```
 
-## Return type
+## Return Type
 
 The `data` field resolves to `readonly TokenWrapperPair[]`:
 

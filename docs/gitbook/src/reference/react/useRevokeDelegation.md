@@ -76,7 +76,7 @@ The address to revoke decryption rights from.
 await revoke({ delegateAddress: "0xDelegate" });
 ```
 
-## Return type
+## Return Type
 
 `data` resolves to `{ txHash: Hex, receipt: TransactionReceipt }`.
 

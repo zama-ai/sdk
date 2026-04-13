@@ -88,7 +88,7 @@ When `true`, fetches on-chain metadata (name, symbol, decimals) for both tokens,
 useListPairs({ metadata: true });
 ```
 
-## Return type
+## Return Type
 
 The `data` field resolves to `PaginatedResult<TokenWrapperPair | TokenWrapperPairWithMetadata>`:
 

@@ -82,7 +82,7 @@ Array of contract addresses to authorize decryption for in a single wallet signa
 await allow([confidentialTokenAddress, auctionAddress, governanceAddress]);
 ```
 
-## Return type
+## Return Type
 
 Returns a standard TanStack Query `UseMutationResult<void, Error, Address[]>`.
 

@@ -49,7 +49,7 @@ function AllPairs() {
 
 This hook takes no parameters. The registry address is resolved automatically from the connected chain.
 
-## Return type
+## Return Type
 
 The `data` field resolves to `readonly TokenWrapperPair[]`:
 

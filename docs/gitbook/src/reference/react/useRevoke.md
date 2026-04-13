@@ -53,7 +53,7 @@ const { mutate: revoke } = useRevoke();
 revoke(["0xContractA", "0xContractB"]);
 ```
 
-## Return type
+## Return Type
 
 {% include ".gitbook/includes/mutation-result.md" %}
 

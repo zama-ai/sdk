@@ -119,16 +119,21 @@ Number of tokens to transfer (in the token's smallest unit). Encrypted before su
 
 ### skipBalanceCheck
 
-`boolean` (optional, default `false`)
+`boolean | undefined`
 
-Skip confidential balance validation before submitting. Useful for smart wallets that cannot produce EIP-712 signatures for balance decryption.
+Skip confidential balance validation before submitting. Defaults to `false`. Useful for smart wallets that cannot produce EIP-712 signatures for balance decryption.
 
-### Progress callbacks
+### onEncryptComplete
 
-| Callback                           | Fires when                                  |
-| ---------------------------------- | ------------------------------------------- |
-| `onEncryptComplete()`              | FHE encryption of the amount completes.     |
-| `onTransferSubmitted(txHash: Hex)` | Transfer transaction is submitted on-chain. |
+`(() => void) | undefined`
+
+Fires when FHE encryption of the amount completes.
+
+### onTransferSubmitted
+
+`((txHash: Hex) => void) | undefined`
+
+Fires when the transfer transaction is submitted on-chain.
 
 ```tsx
 await transfer({
@@ -144,7 +149,7 @@ await transfer({
 - `InsufficientConfidentialBalanceError` -- if the confidential balance is less than `amount` (exposes `requested`, `available`, `token`)
 - `BalanceCheckUnavailableError` -- if balance validation is required but decryption is not possible (no cached credentials). Call `allow()` first or use `skipBalanceCheck: true`
 
-## Return type
+## Return Type
 
 ```ts
 import { type UseConfidentialTransferReturnType } from "@zama-fhe/react-sdk";

@@ -88,7 +88,7 @@ await delegate({
 });
 ```
 
-## Return type
+## Return Type
 
 `data` resolves to `{ txHash: Hex, receipt: TransactionReceipt }`.
 

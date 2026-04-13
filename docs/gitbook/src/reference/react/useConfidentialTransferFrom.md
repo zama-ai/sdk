@@ -138,7 +138,7 @@ await transferFrom({
 {% endtab %}
 {% endtabs %}
 
-## Return type
+## Return Type
 
 ```ts
 import { type UseConfidentialTransferFromReturnType } from "@zama-fhe/react-sdk";

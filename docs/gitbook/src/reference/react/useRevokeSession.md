@@ -49,7 +49,7 @@ const { mutate: revokeSession } = useRevokeSession();
 revokeSession();
 ```
 
-## Return type
+## Return Type
 
 {% include ".gitbook/includes/mutation-result.md" %}
 

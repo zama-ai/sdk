@@ -77,7 +77,7 @@ The amount of tokens to unwrap.
 await unwrap({ amount: 1000n });
 ```
 
-## Return type
+## Return Type
 
 ```ts
 import { type UseUnwrapReturnType } from "@zama-fhe/react-sdk";

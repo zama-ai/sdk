@@ -88,7 +88,7 @@ Address of the confidential token contract.
 const readonlyToken = useReadonlyToken("0xToken");
 ```
 
-## Return type
+## Return Type
 
 `ReadonlyToken`
 

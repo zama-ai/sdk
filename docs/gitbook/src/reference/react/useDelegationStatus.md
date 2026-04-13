@@ -86,7 +86,7 @@ const { data } = useDelegationStatus({
 
 {% include ".gitbook/includes/query-options.md" %}
 
-## Return type
+## Return Type
 
 ```ts
 import { type DelegationStatusData } from "@zama-fhe/sdk/query";

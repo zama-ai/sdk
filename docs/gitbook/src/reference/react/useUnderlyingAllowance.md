@@ -52,7 +52,7 @@ const { data: allowance } = useUnderlyingAllowance({
 
 ### owner
 
-`Address` (optional)
+`Address | undefined`
 
 Address of the token owner. Defaults to the connected wallet address.
 
@@ -65,7 +65,7 @@ const { data: allowance } = useUnderlyingAllowance({
 
 ### spender
 
-`Address` (optional)
+`Address | undefined`
 
 Address of the spender. Defaults to the wrapper contract address.
 
@@ -76,7 +76,7 @@ const { data: allowance } = useUnderlyingAllowance({
 });
 ```
 
-## Return type
+## Return Type
 
 `data` is `bigint` — the current ERC-20 allowance in the token's smallest unit.
 

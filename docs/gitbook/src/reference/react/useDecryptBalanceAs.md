@@ -91,7 +91,7 @@ await decryptAs({
 });
 ```
 
-## Return type
+## Return Type
 
 `data` resolves to `bigint` — the decrypted token balance.
 

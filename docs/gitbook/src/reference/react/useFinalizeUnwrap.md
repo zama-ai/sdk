@@ -80,7 +80,7 @@ The transaction hash returned by [`useUnwrap`](/reference/react/useUnwrap) or [`
 await finalize({ unwrapTxHash: "0xabc..." });
 ```
 
-## Return type
+## Return Type
 
 ```ts
 import { type UseFinalizeUnwrapReturnType } from "@zama-fhe/react-sdk";

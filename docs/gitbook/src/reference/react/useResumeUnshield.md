@@ -128,7 +128,7 @@ The full recovery flow uses three utilities together:
 
 Run this check on mount to handle any session that was interrupted.
 
-## Return type
+## Return Type
 
 ```ts
 import { type UseResumeUnshieldReturnType } from "@zama-fhe/react-sdk";

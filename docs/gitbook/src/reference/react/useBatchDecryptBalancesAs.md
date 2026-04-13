@@ -130,7 +130,7 @@ await batchDecryptAs({
 });
 ```
 
-## Return type
+## Return Type
 
 `data` resolves to `Map<Address, bigint>` — a map from each token address to its decrypted balance.
 

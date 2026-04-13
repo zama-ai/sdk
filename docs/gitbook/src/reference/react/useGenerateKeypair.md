@@ -53,7 +53,7 @@ function GenerateButton() {
 
 `mutate` / `mutateAsync` take no arguments.
 
-## Return type
+## Return Type
 
 ```ts
 import { type KeypairType } from "@zama-fhe/sdk";

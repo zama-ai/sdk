@@ -65,7 +65,7 @@ const { mutateAsync: unwrapAll } = useUnwrapAll({
 });
 ```
 
-## Return type
+## Return Type
 
 ```ts
 import { type UseUnwrapAllReturnType } from "@zama-fhe/react-sdk";

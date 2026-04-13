@@ -53,7 +53,7 @@ The plain ERC-20 token address to look up. Pass `undefined` to disable the query
 useConfidentialTokenAddress({ tokenAddress: "0xUSDC" });
 ```
 
-## Return type
+## Return Type
 
 The `data` field resolves to `readonly [boolean, Address]`:
 

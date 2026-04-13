@@ -69,7 +69,7 @@ const { data: isApproved } = useConfidentialIsApproved({
 });
 ```
 
-## Return type
+## Return Type
 
 `data` is `boolean` — `true` if the spender has an active approval, `false` otherwise.
 

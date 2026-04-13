@@ -80,7 +80,7 @@ Address of the contract that will consume the encrypted value.
 
 Address of the user performing the encryption.
 
-## Return type
+## Return Type
 
 ```ts
 import { type EncryptResult } from "@zama-fhe/sdk";

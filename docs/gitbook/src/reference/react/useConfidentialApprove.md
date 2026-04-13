@@ -72,7 +72,7 @@ await approve({
 
 ### until
 
-`number` (optional)
+`number | undefined`
 
 Unix timestamp (seconds) when the approval expires. Defaults to 1 hour from now.
 
@@ -85,7 +85,7 @@ await approve({
 });
 ```
 
-## Return type
+## Return Type
 
 The mutation resolves with a transaction hash (`Hex`).
 
