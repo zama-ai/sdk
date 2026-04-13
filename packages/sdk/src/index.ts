@@ -17,6 +17,7 @@ export type {
   EncryptParams,
   EncryptInput,
   Handle,
+  ClearValueType,
   UserDecryptParams,
   PublicDecryptResult,
   EIP712TypedData,
@@ -24,7 +25,6 @@ export type {
   NetworkType,
 } from "./relayer/relayer-sdk.types";
 export type {
-  ClearValueType,
   FheTypeName,
   KeypairType,
   KmsDelegatedUserDecryptEIP712Type,
@@ -88,8 +88,11 @@ export type {
   TransactionReceipt,
   TransactionResult,
   UnshieldCallbacks,
+  UnshieldOptions,
   ShieldCallbacks,
+  ShieldOptions,
   TransferCallbacks,
+  TransferOptions,
 } from "./types";
 export type { Address, Hex } from "viem";
 export { ZamaSDKEvents } from "./events";
@@ -147,6 +150,11 @@ export {
   DelegationCooldownError,
   DelegationNotFoundError,
   DelegationExpiredError,
+  InsufficientConfidentialBalanceError,
+  InsufficientERC20BalanceError,
+  BalanceCheckUnavailableError,
+  ERC20ReadFailedError,
+  type BalanceErrorDetails,
   DelegationDelegateEqualsContractError,
   DelegationExpiryUnchangedError,
   AclPausedError,
@@ -213,16 +221,12 @@ export {
   confidentialTransferContract,
   confidentialTransferFromContract,
   isOperatorContract,
-  confidentialBatchTransferContract,
   unwrapContract,
   unwrapFromBalanceContract,
   finalizeUnwrapContract,
   setOperatorContract,
-  getWrapperContract,
-  wrapperExistsContract,
   underlyingContract,
   wrapContract,
-  wrapETHContract,
   supportsInterfaceContract,
   isConfidentialTokenContract,
   isConfidentialWrapperContract,
@@ -235,13 +239,6 @@ export {
   confidentialTotalSupplyContract,
   totalSupplyContract,
   rateContract,
-  deploymentCoordinatorContract,
-  isFinalizeUnwrapOperatorContract,
-  setFinalizeUnwrapOperatorContract,
-  getWrapFeeContract,
-  getUnwrapFeeContract,
-  getBatchTransferFeeContract,
-  getFeeRecipientContract,
   delegateForUserDecryptionContract,
   revokeDelegationContract,
   getDelegationExpiryContract,
@@ -254,9 +251,4 @@ export {
   getTokenAddressContract,
   isConfidentialTokenValidContract,
 } from "./contracts";
-export type {
-  BatchTransferData,
-  TokenWrapperPair,
-  TokenWrapperPairWithMetadata,
-  PaginatedResult,
-} from "./contracts";
+export type { TokenWrapperPair, TokenWrapperPairWithMetadata, PaginatedResult } from "./contracts";

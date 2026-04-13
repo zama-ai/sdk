@@ -59,9 +59,19 @@ const relayer = new RelayerWeb({
 
 ### shield
 
-`(amount: bigint, opts?: { approvalStrategy?: "exact" | "max" | "skip"; fees?: bigint; to?: Address; callbacks?: ShieldCallbacks }) => Promise<TransactionResult>`
+`(amount: bigint, options?: ShieldOptions) => Promise<TransactionResult>`
 
 Converts public ERC-20 tokens into their encrypted form. The SDK handles the ERC-20 approval automatically based on the strategy.
+
+**The ERC-20 balance is always validated before submitting** — this is a public read with no signing requirement, so it works for all wallet types (including smart wallets). For native ETH shields, the check is skipped (the chain validates ETH balance natively).
+
+| Option                | Type                         | Default          | Description                              |
+| --------------------- | ---------------------------- | ---------------- | ---------------------------------------- |
+| `approvalStrategy`    | `"exact" \| "max" \| "skip"` | `"exact"`        | ERC-20 approval strategy                 |
+| `fees`                | `bigint`                     | —                | Extra ETH for native wrappers            |
+| `to`                  | `Address`                    | connected wallet | Recipient of shielded tokens             |
+| `onApprovalSubmitted` | `(txHash: Hex) => void`      | —                | Fired after the approval tx is submitted |
+| `onShieldSubmitted`   | `(txHash: Hex) => void`      | —                | Fired after the shield tx is submitted   |
 
 ```ts
 // Exact approval (default) — approves only the shielded amount
@@ -72,17 +82,17 @@ await token.shield(1000n, { approvalStrategy: "max" });
 
 // Skip approval — wrapper is already approved
 await token.shield(1000n, { approvalStrategy: "skip" });
+
+// With progress callbacks
+await token.shield(1000n, {
+  onApprovalSubmitted: (txHash) => console.log("Approval:", txHash),
+  onShieldSubmitted: (txHash) => console.log("Shield:", txHash),
+});
 ```
 
-### shieldETH
+**Throws:**
 
-`(amount: bigint, value?: bigint) => Promise<TransactionResult>`
-
-Shields native ETH into a confidential ETH wrapper contract. No approval needed. Pass `value` to override the amount of ETH sent (defaults to `amount`).
-
-```ts
-await token.shieldETH(1000n);
-```
+- `InsufficientERC20BalanceError` — if the ERC-20 balance is less than `amount` (exposes `requested`, `available`, `token`)
 
 ### balanceOf
 
@@ -110,13 +120,29 @@ const handle = await token.confidentialBalanceOf();
 
 ### confidentialTransfer
 
-`(to: Address, amount: bigint, callbacks?: TransferCallbacks) => Promise<TransactionResult>`
+`(to: Address, amount: bigint, options?: TransferOptions) => Promise<TransactionResult>`
 
 Transfers encrypted tokens. The amount is encrypted before hitting the chain.
 
+By default, the SDK validates the confidential balance before submitting. If credentials are cached, it auto-decrypts silently. Set `skipBalanceCheck: true` to bypass (e.g. for smart wallets that cannot produce EIP-712 signatures).
+
+| Option                | Type               | Default | Description                          |
+| --------------------- | ------------------ | ------- | ------------------------------------ |
+| `skipBalanceCheck`    | `boolean`          | `false` | Skip balance validation              |
+| `onEncryptComplete`   | `() => void`       | —       | Fired after FHE encryption completes |
+| `onTransferSubmitted` | `(txHash) => void` | —       | Fired after transfer tx submitted    |
+
 ```ts
 await token.confidentialTransfer("0xRecipient", 500n);
+
+// Smart wallet (skip balance check)
+await token.confidentialTransfer("0xRecipient", 500n, { skipBalanceCheck: true });
 ```
+
+**Throws:**
+
+- `InsufficientConfidentialBalanceError` — if the confidential balance is less than `amount` (exposes `requested`, `available`, `token`)
+- `BalanceCheckUnavailableError` — if balance validation is required but decryption is not possible (no cached credentials). Call `allow()` first or use `skipBalanceCheck: true`
 
 ### confidentialTransferFrom
 
@@ -130,9 +156,18 @@ await token.confidentialTransferFrom("0xFrom", "0xTo", 500n);
 
 ### unshield
 
-`(amount: bigint, callbacks?: UnshieldCallbacks) => Promise<{ txHash: Hex; receipt: TransactionReceipt }>`
+`(amount: bigint, options?: UnshieldOptions) => Promise<{ txHash: Hex; receipt: TransactionReceipt }>`
 
 Withdraws confidential tokens back to public ERC-20. Orchestrates the two-step on-chain process (unwrap + finalize) in a single call.
+
+By default, the SDK validates the confidential balance before submitting. Set `skipBalanceCheck: true` to bypass (e.g. for smart wallets).
+
+| Option                | Type               | Default | Description                       |
+| --------------------- | ------------------ | ------- | --------------------------------- |
+| `skipBalanceCheck`    | `boolean`          | `false` | Skip balance validation           |
+| `onUnwrapSubmitted`   | `(txHash) => void` | —       | Fired after unwrap tx submitted   |
+| `onFinalizing`        | `() => void`       | —       | Fired when finalization begins    |
+| `onFinalizeSubmitted` | `(txHash) => void` | —       | Fired after finalize tx submitted |
 
 ```ts
 await token.unshield(500n);
@@ -143,7 +178,15 @@ await token.unshield(500n, {
   onFinalizing: () => updateUI("Waiting for decryption proof..."),
   onFinalizeSubmitted: (txHash) => updateUI("Done!"),
 });
+
+// Smart wallet (skip balance check)
+await token.unshield(500n, { skipBalanceCheck: true });
 ```
+
+**Throws:**
+
+- `InsufficientConfidentialBalanceError` — if the confidential balance is less than `amount` (exposes `requested`, `available`, `token`)
+- `BalanceCheckUnavailableError` — if balance validation is required but decryption is not possible
 
 ### unshieldAll
 

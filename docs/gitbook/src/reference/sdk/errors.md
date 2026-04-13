@@ -24,6 +24,10 @@ import {
   NoCiphertextError,
   RelayerRequestFailedError,
   ConfigurationError,
+  InsufficientConfidentialBalanceError,
+  InsufficientERC20BalanceError,
+  BalanceCheckUnavailableError,
+  ERC20ReadFailedError,
   DelegationSelfNotAllowedError,
   DelegationDelegateEqualsContractError,
   DelegationExpiryUnchangedError,
@@ -49,6 +53,10 @@ const message = matchZamaError(error, {
   ENCRYPTION_FAILED: () => "Encryption failed — try again",
   TRANSACTION_REVERTED: (e) => `Transaction failed: ${e.message}`,
   NO_CIPHERTEXT: () => "No confidential balance — shield tokens first",
+  INSUFFICIENT_CONFIDENTIAL_BALANCE: (e) => `Insufficient balance: ${e.available} available`,
+  INSUFFICIENT_ERC20_BALANCE: (e) => `Not enough tokens: ${e.available} available`,
+  BALANCE_CHECK_UNAVAILABLE: () => "Sign to verify your balance first",
+  ERC20_READ_FAILED: () => "Could not read token balance -- check your connection",
   _: (e) => `Unexpected error: ${e}`,
 });
 ```
@@ -75,6 +83,10 @@ The `_` wildcard catches any `ZamaError` not explicitly handled.
 | `NoCiphertextError`                     | `NO_CIPHERTEXT`                       | No encrypted balance for this account                        |
 | `RelayerRequestFailedError`             | `RELAYER_REQUEST_FAILED`              | Relayer HTTP request failed                                  |
 | `ConfigurationError`                    | `CONFIGURATION`                       | Invalid SDK configuration or FHE worker failed to initialize |
+| `InsufficientConfidentialBalanceError`  | `INSUFFICIENT_CONFIDENTIAL_BALANCE`   | Confidential balance too low for transfer or unshield        |
+| `InsufficientERC20BalanceError`         | `INSUFFICIENT_ERC20_BALANCE`          | ERC-20 balance too low for shield                            |
+| `BalanceCheckUnavailableError`          | `BALANCE_CHECK_UNAVAILABLE`           | Balance validation impossible (no cached credentials)        |
+| `ERC20ReadFailedError`                  | `ERC20_READ_FAILED`                   | Public ERC-20 read failed (network or contract error)        |
 | `DelegationSelfNotAllowedError`         | `DELEGATION_SELF_NOT_ALLOWED`         | Delegate equals connected wallet                             |
 | `DelegationDelegateEqualsContractError` | `DELEGATION_DELEGATE_EQUALS_CONTRACT` | Delegate equals contract address                             |
 | `DelegationExpiryUnchangedError`        | `DELEGATION_EXPIRY_UNCHANGED`         | New expiry matches the current value                         |
@@ -275,6 +287,87 @@ matchZamaError(error, {
 
 **How to handle:** Check your transport config, CSP headers, and that the relayer has not been terminated. If the error mentions worker initialization, verify WASM support and `wasm-unsafe-eval` in your CSP.
 
+### InsufficientConfidentialBalanceError
+
+**Code:** `INSUFFICIENT_CONFIDENTIAL_BALANCE`
+
+The decrypted confidential balance is less than the requested amount. Thrown by `confidentialTransfer()` and `unshield()` before submitting the transaction. Exposes structured details for UI display.
+
+| Property    | Type      | Description                                |
+| ----------- | --------- | ------------------------------------------ |
+| `requested` | `bigint`  | Amount the caller requested                |
+| `available` | `bigint`  | Decrypted balance at the time of the check |
+| `token`     | `Address` | Token contract address                     |
+
+```ts
+import { InsufficientConfidentialBalanceError } from "@zama-fhe/sdk";
+
+try {
+  await token.confidentialTransfer("0xRecipient", 1000n);
+} catch (error) {
+  if (error instanceof InsufficientConfidentialBalanceError) {
+    showError(`Insufficient balance: you have ${error.available}, need ${error.requested}`);
+  }
+}
+```
+
+**How to handle:** Show the user their current balance and the shortfall. No retry will help until the balance increases (via shielding or receiving a transfer).
+
+### InsufficientERC20BalanceError
+
+**Code:** `INSUFFICIENT_ERC20_BALANCE`
+
+The public ERC-20 balance is less than the requested shield amount. Thrown by `shield()` before submitting the transaction. This is a public read with no signing requirement, so it works for all wallet types.
+
+| Property    | Type      | Description                              |
+| ----------- | --------- | ---------------------------------------- |
+| `requested` | `bigint`  | Amount the caller requested to shield    |
+| `available` | `bigint`  | ERC-20 balance at the time of the check  |
+| `token`     | `Address` | Underlying ERC-20 token contract address |
+
+```ts
+import { InsufficientERC20BalanceError } from "@zama-fhe/sdk";
+
+try {
+  await token.shield(1000n);
+} catch (error) {
+  if (error instanceof InsufficientERC20BalanceError) {
+    showError(`Not enough tokens: you have ${error.available}, need ${error.requested}`);
+  }
+}
+```
+
+**How to handle:** Show the user their public token balance and the shortfall. They need to acquire more tokens before shielding.
+
+### BalanceCheckUnavailableError
+
+**Code:** `BALANCE_CHECK_UNAVAILABLE`
+
+Balance validation could not be performed. For confidential operations (`confidentialTransfer`, `unshield`), this means no cached credentials exist and the SDK cannot decrypt the balance without prompting a wallet signature. For `shield`, this means the ERC-20 balance read failed.
+
+```ts
+matchZamaError(error, {
+  BALANCE_CHECK_UNAVAILABLE: () =>
+    showPrompt("Sign to verify your balance, or use skipBalanceCheck"),
+});
+```
+
+**How to handle:** Either call `token.allow()` first to cache credentials, or pass `skipBalanceCheck: true` to bypass validation (useful for smart wallets that cannot produce EIP-712 signatures).
+
+### ERC20ReadFailedError
+
+**Code:** `ERC20_READ_FAILED`
+
+A public ERC-20 read (e.g. `balanceOf`) failed due to a network or contract error. Thrown by `shield()` when the pre-flight balance check cannot read the underlying token balance. This is distinct from `BalanceCheckUnavailableError`, which indicates missing credentials for confidential balance decryption.
+
+```ts
+matchZamaError(error, {
+  ERC20_READ_FAILED: () => showError("Could not read token balance -- check your connection"),
+});
+```
+
+**How to handle:** Check network connectivity and RPC endpoint health. The underlying ERC-20 contract may also be paused or unreachable. Retry the shield operation.
+
 ### DelegationSelfNotAllowedError
 
 **Code:** `DELEGATION_SELF_NOT_ALLOWED`
@@ -431,6 +524,10 @@ The SDK automatically maps known ACL Solidity revert reasons to typed `ZamaError
 | `DecryptionFailedError` after page reload | Unshield was interrupted mid-flow           | Call `loadPendingUnshield()` on mount, then `resumeUnshield()` to complete.                |
 | `TransactionRevertedError` on finalize    | Unwrap already finalized or invalid tx hash | Check unwrap state. If already finalized, call `clearPendingUnshield()`.                   |
 | `RelayerRequestFailedError`               | Wrong relayer URL or missing auth           | Verify `relayerUrl` in transport config. Check the `auth` option if using API key auth.    |
+| `InsufficientConfidentialBalanceError`    | Confidential balance < requested amount     | Show the user their balance and the shortfall. Wait for incoming transfers or shield more. |
+| `InsufficientERC20BalanceError`           | ERC-20 balance < requested shield amount    | Show the user their public token balance. They need to acquire more tokens.                |
+| `BalanceCheckUnavailableError`            | No cached credentials for balance check     | Call `token.allow()` first, or pass `skipBalanceCheck: true`.                              |
+| `ERC20ReadFailedError`                    | ERC-20 balanceOf read failed                | Check network connectivity and RPC endpoint. Retry the shield.                             |
 
 ## Related
 

@@ -12,22 +12,18 @@ import {
 
 /** Extract the decoded error name from a viem ContractFunctionRevertedError. */
 function extractRevertErrorName(error: unknown): string | null {
-  if (
-    error instanceof Error &&
-    "cause" in error &&
-    error.cause !== null &&
-    error.cause !== undefined &&
-    typeof error.cause === "object" &&
-    "data" in error.cause &&
-    error.cause.data !== null &&
-    error.cause.data !== undefined &&
-    typeof error.cause.data === "object" &&
-    "errorName" in error.cause.data &&
-    typeof error.cause.data.errorName === "string"
-  ) {
-    return error.cause.data.errorName;
+  if (!(error instanceof Error)) {
+    return null;
   }
-  return null;
+  const cause = error.cause;
+  if (typeof cause !== "object" || cause === null || !("data" in cause)) {
+    return null;
+  }
+  const { data } = cause;
+  if (typeof data !== "object" || data === null || !("errorName" in data)) {
+    return null;
+  }
+  return typeof data.errorName === "string" ? data.errorName : null;
 }
 
 /** ACL error name -> typed SDK error mapping. */
@@ -80,7 +76,8 @@ export function matchAclRevert(error: unknown): ZamaError | null {
   // Prefer structured error data from viem's ContractFunctionRevertedError
   const errorName = extractRevertErrorName(error);
   if (errorName && errorName in ACL_ERROR_MAP) {
-    return ACL_ERROR_MAP[errorName]?.(cause) ?? null;
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- guarded by `in` check above
+    return ACL_ERROR_MAP[errorName]!(cause);
   }
 
   // Fallback: string matching for non-viem RPC providers

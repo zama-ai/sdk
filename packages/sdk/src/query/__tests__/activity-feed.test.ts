@@ -87,10 +87,10 @@ describe("activityFeedQueryOptions", () => {
     const missingUser = activityFeedQueryOptions(token, { logs: [] });
 
     await expect(missingLogs.queryFn(mockQueryContext(missingLogs.queryKey))).rejects.toThrow(
-      "logs are required",
+      "activityFeedQueryOptions: logs must not be null or undefined",
     );
     await expect(missingUser.queryFn(mockQueryContext(missingUser.queryKey))).rejects.toThrow(
-      "userAddress is required",
+      "activityFeedQueryOptions: userAddress must not be null or undefined",
     );
   });
 

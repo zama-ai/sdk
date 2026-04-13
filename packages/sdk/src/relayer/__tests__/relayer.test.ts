@@ -227,6 +227,18 @@ describe("RelayerWeb", () => {
       const relayer = createWebRelayer();
       expect(() => relayer.terminate()).not.toThrow();
     });
+
+    it("[Symbol.dispose] delegates to terminate", async () => {
+      const relayer = createWebRelayer();
+      mockWorkerClient.generateKeypair.mockResolvedValue({
+        publicKey: "pk",
+        privateKey: "sk",
+      });
+      await relayer.generateKeypair();
+
+      relayer[Symbol.dispose]();
+      expect(mockWorkerClient.terminate).toHaveBeenCalledOnce();
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -677,7 +689,7 @@ describe("RelayerWeb", () => {
 
       // Mock fetch for revalidation: manifest + artifact returns 200 (changed)
       globalThis.fetch = vi.fn().mockImplementation((url: string) => {
-        const urlStr = String(url);
+        const urlStr = url;
         if (urlStr.includes("/keyurl")) {
           return Promise.resolve({
             ok: true,
@@ -823,6 +835,18 @@ describe("RelayerNode", () => {
     it("is safe to call terminate before any initialization", () => {
       const relayer = createNodeRelayer();
       expect(() => relayer.terminate()).not.toThrow();
+    });
+
+    it("[Symbol.dispose] delegates to terminate", async () => {
+      const relayer = createNodeRelayer();
+      mockPool.generateKeypair.mockResolvedValue({
+        publicKey: "pk",
+        privateKey: "sk",
+      });
+      await relayer.generateKeypair();
+
+      relayer[Symbol.dispose]();
+      expect(mockPool.terminate).toHaveBeenCalledOnce();
     });
   });
 
@@ -1158,7 +1182,7 @@ describe("RelayerNode", () => {
 
       // Mock fetch: manifest + artifact returns 200 (changed)
       globalThis.fetch = vi.fn().mockImplementation((url: string) => {
-        const urlStr = String(url);
+        const urlStr = url;
         if (urlStr.includes("/keyurl")) {
           return Promise.resolve({
             ok: true,

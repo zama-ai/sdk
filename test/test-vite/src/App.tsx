@@ -38,9 +38,14 @@ export default function App() {
             Component={lazy(() => import("./pages/wrapper-discovery"))}
           />
           <Route path="resume-unshield" Component={lazy(() => import("./pages/resume-unshield"))} />
-          <Route path="batch-transfer" Component={lazy(() => import("./pages/batch-transfer"))} />
           <Route path="activity-feed" Component={lazy(() => import("./pages/activity-feed"))} />
           <Route path="delegation" Component={lazy(() => import("./pages/delegation"))} />
+          <Route path="token-metadata" Component={lazy(() => import("./pages/token-metadata"))} />
+          <Route path="session" Component={lazy(() => import("./pages/session"))} />
+          <Route
+            path="delegation-status"
+            Component={lazy(() => import("./pages/delegation-status"))}
+          />
           <Route path="*" element={<Navigate to="/wallet" replace />} />
         </Route>
       </Routes>

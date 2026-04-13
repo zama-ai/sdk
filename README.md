@@ -64,10 +64,10 @@ Zama SDK is designed for developers who want to integrate confidential operation
 
 ### Packages
 
-| Package                                        | Description                                                                                                                 |
-| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| [`@zama-fhe/sdk`](./packages/sdk/)             | Core SDK — confidential contract operations, FHE relayer, contract call builders, viem/ethers adapters, Node.js worker pool |
-| [`@zama-fhe/react-sdk`](./packages/react-sdk/) | React hooks wrapping the core SDK via `@tanstack/react-query`, with viem/ethers/wagmi sub-paths                             |
+| Package                                        | Description                                                                                                                |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| [`@zama-fhe/sdk`](./packages/sdk/)             | Core SDK — confidential contract operations, FHE relayer, contract call builders, viem/ethers adapters, Web Worker support |
+| [`@zama-fhe/react-sdk`](./packages/react-sdk/) | React hooks wrapping the core SDK via `@tanstack/react-query`, with wagmi sub-path                                         |
 
 ### Main features
 
@@ -113,11 +113,11 @@ pnpm format:check           # Formatting check
 **E2E tests:**
 
 ```bash
-pnpm submodule:init         # Initialize hardhat submodule (first time)
-pnpm hardhat:install        # Install hardhat dependencies
-pnpm e2e:test               # Run E2E tests (auto-starts hardhat + next dev)
+pnpm e2e:test               # Run Playwright E2E tests
 pnpm e2e:test:ui            # Playwright UI mode
 ```
+
+> **Note:** The `forge-fhevm` submodule and its soldeer dependencies are installed automatically by `pnpm install`.
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for the full contributor guide (branching, PRs, code style, architecture).
 

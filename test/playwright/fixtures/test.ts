@@ -1,6 +1,9 @@
 // oxlint-disable no-empty-pattern
 /* eslint-disable react-hooks/rules-of-hooks */
 import { test as base, type BrowserContext } from "@playwright/test";
+import { hardhatCleartextConfig } from "@zama-fhe/sdk/cleartext";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import type { Address } from "viem";
 import {
   createTestClient,
@@ -12,9 +15,10 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { foundry } from "viem/chains";
-import { TEST_PRIVATE_KEY, MINTED, NEXTJS_ANVIL_PORT } from "./constants";
 import deployments from "../../../contracts/deployments.json" with { type: "json" };
-import { hardhatCleartextConfig } from "@zama-fhe/sdk/cleartext";
+import { MINTED, NEXTJS_ANVIL_PORT, TEST_PRIVATE_KEY } from "./constants";
+
+const mockCdnBundle = readFileSync(resolve(import.meta.dirname, "relayer-sdk-cdn.mjs"), "utf-8");
 
 const privateKey = TEST_PRIVATE_KEY;
 
@@ -25,16 +29,9 @@ const contracts = {
   cUSDT: deployments.cUSDT as Address,
   USDC: deployments.erc20 as Address,
   cUSDC: deployments.cToken as Address,
-  transferBatcher: deployments.transferBatcher as Address,
-  feeManager: deployments.feeManager as Address,
   wrappersRegistry: deployments.wrappersRegistry as Address,
   acl: hardhatCleartextConfig.aclContractAddress as Address,
 } as const;
-
-/** Fee: ceiling division of (amount * 100) / 10000 — matches FeeManager.sol */
-function computeFee(amount: bigint): bigint {
-  return (amount * 100n + 9999n) / 10000n;
-}
 
 const mintAbi = [
   {
@@ -89,7 +86,6 @@ export interface TestFixtures {
   account: typeof account;
   contracts: typeof contracts;
   formatUnits: typeof formatUnits;
-  computeFee: typeof computeFee;
   readErc20Balance: (tokenAddress: `0x${string}`, owner?: `0x${string}`) => Promise<bigint>;
   confidentialBalances: ConfidentialBalances;
 }
@@ -106,7 +102,6 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   account,
   contracts,
   formatUnits: async ({}, use) => use(formatUnits),
-  computeFee: async ({}, use) => use(computeFee),
   readErc20Balance: async ({ viemClient, account }, use) => {
     await use((tokenAddress: `0x${string}`, owner: `0x${string}` = account.address) =>
       viemClient.readContract({
@@ -154,6 +149,14 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     ]);
 
     const id = await viemClient.snapshot();
+
+    // Intercept the CDN request for the relayer SDK bundle and serve the mock
+    await page.route("**/relayer-sdk-js*", async (route) => {
+      await route.fulfill({
+        contentType: "application/javascript",
+        body: mockCdnBundle,
+      });
+    });
 
     // Inject wallet private key for the burner-connector
     await page.addInitScript((pk) => {

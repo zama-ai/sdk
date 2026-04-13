@@ -117,18 +117,32 @@ Recipient address.
 
 Number of tokens to transfer (in the token's smallest unit). Encrypted before submission.
 
-{% tabs %}
-{% tab title="component.tsx" %}
+### skipBalanceCheck
+
+`boolean` (optional, default `false`)
+
+Skip confidential balance validation before submitting. Useful for smart wallets that cannot produce EIP-712 signatures for balance decryption.
+
+### Progress callbacks
+
+| Callback                           | Fires when                                  |
+| ---------------------------------- | ------------------------------------------- |
+| `onEncryptComplete()`              | FHE encryption of the amount completes.     |
+| `onTransferSubmitted(txHash: Hex)` | Transfer transaction is submitted on-chain. |
 
 ```tsx
 await transfer({
   to: "0xRecipient",
   amount: 1000n,
+  onEncryptComplete: () => updateUI("Encrypted, submitting..."),
+  onTransferSubmitted: (txHash) => updateUI(`Submitted: ${txHash}`),
 });
 ```
 
-{% endtab %}
-{% endtabs %}
+**Throws:**
+
+- `InsufficientConfidentialBalanceError` -- if the confidential balance is less than `amount` (exposes `requested`, `available`, `token`)
+- `BalanceCheckUnavailableError` -- if balance validation is required but decryption is not possible (no cached credentials). Call `allow()` first or use `skipBalanceCheck: true`
 
 ## Return Type
 

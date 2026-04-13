@@ -71,9 +71,7 @@ export interface ActivityItem {
   readonly from?: Address;
   /** Receiver address (if applicable). */
   readonly to?: Address;
-  /** Fee deducted (for shield/unshield events). */
-  readonly fee?: bigint;
-  /** Whether the on-chain operation succeeded (for unshield events). */
+  /** Whether the on-chain operation succeeded (for unshield_started events). */
   readonly success?: boolean;
   /** On-chain metadata (tx hash, block number, log index). */
   readonly metadata: ActivityLogMetadata;
@@ -106,6 +104,7 @@ function classifyDirection(
   return "incoming";
 }
 
+// oxlint-disable-next-line typescript-eslint/consistent-return -- exhaustive switch; all cases return
 function eventToActivityItem(
   event: OnChainEvent,
   userAddress: Address,
@@ -121,7 +120,7 @@ function eventToActivityItem(
     case "UnwrappedStarted":
       return buildUnshieldStarted(event, userAddress, metadata);
     case "UnwrappedFinalized":
-      return buildUnshieldFinalized(event, metadata);
+      return buildUnshieldFinalized(event, userAddress, metadata);
   }
 }
 
@@ -151,7 +150,6 @@ function buildShield(
     direction: classifyDirection(userAddress, undefined, event.to),
     amount: { type: "clear", value: event.amountIn },
     to: event.to,
-    fee: event.feeAmount,
     metadata,
     rawEvent: event,
   };
@@ -190,15 +188,14 @@ function buildUnshieldStarted(
 
 function buildUnshieldFinalized(
   event: UnwrappedFinalizedEvent,
+  userAddress: Address,
   metadata: ActivityLogMetadata,
 ): ActivityItem {
   return {
     type: "unshield_finalized",
-    // Finalized events don't carry from/to addresses, always treat as incoming
-    direction: "incoming",
-    amount: { type: "clear", value: event.unwrapAmount },
-    fee: event.feeAmount,
-    success: event.finalizeSuccess,
+    direction: classifyDirection(userAddress, undefined, event.receiver),
+    amount: { type: "clear", value: event.cleartextAmount },
+    to: event.receiver,
     metadata,
     rawEvent: event,
   };

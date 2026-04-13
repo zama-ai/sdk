@@ -1,5 +1,6 @@
 import type { Address, Hex } from "viem";
-import { SigningFailedError, SigningRejectedError, wrapSigningError } from "../errors/signing";
+import { ZamaError } from "../errors/base";
+import { wrapSigningError } from "../errors/signing";
 import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { GenericSigner, GenericStorage, StoredCredentials } from "../types";
@@ -91,6 +92,9 @@ export abstract class BaseCredentialsManager<
   #createPromise: Promise<TCreds> | null = null;
   #createPromiseKey: string | null = null;
   #extendPromise: Promise<TCreds> | null = null;
+  /** Last successfully resolved extension result, used to recover from the race where a
+   * concurrent call enters #extendContracts after #extendPromise was already cleared. */
+  #lastExtendResult: TCreds | null = null;
 
   constructor(config: CredentialsConfig) {
     this.signer = config.signer;
@@ -230,7 +234,7 @@ export abstract class BaseCredentialsManager<
         });
       }
     } catch (error) {
-      if (error instanceof SigningRejectedError || error instanceof SigningFailedError) {
+      if (error instanceof ZamaError) {
         throw error;
       }
       // oxlint-disable-next-line no-console
@@ -311,6 +315,7 @@ export abstract class BaseCredentialsManager<
   /** Override to also clear subclass-specific caches (e.g. key cache). */
   protected clearCaches(): void {
     this.crypto.clearCache();
+    this.#lastExtendResult = null;
   }
 
   // ── Credential creation helper ────────────────────────────────
@@ -319,6 +324,7 @@ export abstract class BaseCredentialsManager<
    * Shared wrapper for fresh credential creation:
    * emits events, persists, saves session, and wraps signing errors.
    */
+  // oxlint-disable-next-line typescript-eslint/consistent-return -- catch always throws via wrapSigningError (returns never)
   protected async createCredentials({
     key,
     contractAddresses,
@@ -337,6 +343,9 @@ export abstract class BaseCredentialsManager<
       this.emit({ type: ZamaSDKEvents.CredentialsCreated, contractAddresses });
       return creds;
     } catch (error) {
+      if (error instanceof ZamaError) {
+        throw error;
+      }
       wrapSigningError(error, errorContext);
     }
   }
@@ -362,6 +371,19 @@ export abstract class BaseCredentialsManager<
         return previous;
       }
       credentials = previous;
+    } else if (this.#lastExtendResult) {
+      // A concurrent extension may have resolved and cleared #extendPromise before
+      // this call entered. Use the last known result as the base to avoid dropping
+      // contract addresses merged by the just-completed extension.
+      const last = this.#lastExtendResult;
+      if (coversContracts(last.contractAddresses, requiredContracts)) {
+        this.emit({
+          type: ZamaSDKEvents.CredentialsAllowed,
+          contractAddresses: requiredContracts,
+        });
+        return last;
+      }
+      credentials = last;
     }
 
     const promise = this.#extendCredentials({
@@ -371,7 +393,9 @@ export abstract class BaseCredentialsManager<
     });
     this.#extendPromise = promise;
     try {
-      return await promise;
+      const result = await promise;
+      this.#lastExtendResult = result;
+      return result;
     } finally {
       if (this.#extendPromise === promise) {
         this.#extendPromise = null;

@@ -78,7 +78,6 @@ export type {
   KmsDelegatedUserDecryptEIP712Type,
   ZKProofLike,
   InputProofBytesType,
-  BatchTransferData,
   TokenWrapperPair,
   TokenWrapperPairWithMetadata,
   PaginatedResult,
@@ -142,16 +141,12 @@ export {
   confidentialTransferContract,
   confidentialTransferFromContract,
   isOperatorContract,
-  confidentialBatchTransferContract,
   unwrapContract,
   unwrapFromBalanceContract,
   finalizeUnwrapContract,
   setOperatorContract,
-  getWrapperContract,
-  wrapperExistsContract,
   underlyingContract,
   wrapContract,
-  wrapETHContract,
   supportsInterfaceContract,
   isConfidentialTokenContract,
   isConfidentialWrapperContract,
@@ -164,13 +159,6 @@ export {
   confidentialTotalSupplyContract,
   totalSupplyContract,
   rateContract,
-  deploymentCoordinatorContract,
-  isFinalizeUnwrapOperatorContract,
-  setFinalizeUnwrapOperatorContract,
-  getWrapFeeContract,
-  getUnwrapFeeContract,
-  getBatchTransferFeeContract,
-  getFeeRecipientContract,
   delegateForUserDecryptionContract,
   revokeDelegationContract,
   getDelegationExpiryContract,
@@ -209,7 +197,6 @@ export {
   type UseConfidentialIsApprovedSuspenseConfig,
 } from "./transfer/use-confidential-is-approved";
 export { useShield, type UseShieldConfig } from "./shield/use-shield";
-export { useShieldETH, type UseShieldETHConfig } from "./shield/use-shield-eth";
 export { useUnwrap } from "./unwrap/use-unwrap";
 export { useUnwrapAll } from "./unwrap/use-unwrap-all";
 export { useFinalizeUnwrap } from "./unwrap/use-finalize-unwrap";
@@ -245,14 +232,6 @@ export {
   useIsWrapperSuspense,
 } from "./token/use-is-confidential";
 export { useTotalSupply, useTotalSupplySuspense } from "./token/use-total-supply";
-export {
-  useShieldFee,
-  useUnshieldFee,
-  useBatchTransferFee,
-  useFeeRecipient,
-  type UseFeeConfig,
-} from "./token/use-fees";
-
 // Registry hooks (wagmi-based, read from on-chain ConfidentialTokenWrappersRegistry)
 export { useWrappersRegistryAddress } from "./wrappers-registry/use-wrappers-registry-address";
 export { useTokenPairsRegistry } from "./wrappers-registry/use-token-pairs-registry";
@@ -277,10 +256,6 @@ export {
   wrapperDiscoveryQueryOptions,
   underlyingAllowanceQueryOptions,
   confidentialIsApprovedQueryOptions,
-  shieldFeeQueryOptions,
-  unshieldFeeQueryOptions,
-  batchTransferFeeQueryOptions,
-  feeRecipientQueryOptions,
   publicKeyQueryOptions,
   publicParamsQueryOptions,
   confidentialHandleQueryOptions,
@@ -291,8 +266,6 @@ export {
   activityFeedQueryOptions,
   shieldMutationOptions,
   type ShieldParams,
-  shieldETHMutationOptions,
-  type ShieldETHParams,
   confidentialTransferMutationOptions,
   type ConfidentialTransferParams,
   confidentialTransferFromMutationOptions,
@@ -436,5 +409,10 @@ export {
   DelegationExpirationTooSoonError,
   DelegationNotPropagatedError,
   ConfigurationError,
+  InsufficientConfidentialBalanceError,
+  InsufficientERC20BalanceError,
+  BalanceCheckUnavailableError,
+  ERC20ReadFailedError,
   matchZamaError,
+  matchAclRevert,
 } from "@zama-fhe/sdk";

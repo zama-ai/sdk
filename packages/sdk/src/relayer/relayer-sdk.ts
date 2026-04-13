@@ -1,11 +1,11 @@
 import type {
-  ClearValueType,
   InputProofBytesType,
   KeypairType,
   KmsDelegatedUserDecryptEIP712Type,
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/bundle";
 import type {
+  ClearValueType,
   DelegatedUserDecryptParams,
   EIP712TypedData,
   EncryptParams,

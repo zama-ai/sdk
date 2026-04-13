@@ -105,17 +105,6 @@ Classified activity feed.
 | `.token(addr)`                                | Feed for one token      |
 | `.scope(addr, userAddress, logsKey, decrypt)` | Fully scoped feed query |
 
-### `zamaQueryKeys.fees`
-
-Fee queries.
-
-| Key                                             | Scope                 |
-| ----------------------------------------------- | --------------------- |
-| `.shieldFee(feeManager, amount?, from?, to?)`   | Shield fee estimate   |
-| `.unshieldFee(feeManager, amount?, from?, to?)` | Unshield fee estimate |
-| `.batchTransferFee(feeManager)`                 | Batch transfer fee    |
-| `.feeRecipient(feeManager)`                     | Fee recipient address |
-
 ### `zamaQueryKeys.wrappersRegistry`
 
 On-chain wrappers registry queries.

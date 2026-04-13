@@ -1,6 +1,6 @@
 {
   "name": "@zama-fhe/react-sdk",
-  "version": "2.3.0-alpha.2",
+  "version": "2.4.0-alpha.4",
   "description": "React hooks for Zama SDK",
   "license": "BSD-3-Clause-Clear",
   "author": "Zama",
@@ -15,11 +15,16 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     },
     "./wagmi": {
       "types": "./dist/wagmi/index.d.ts",
-      "import": "./dist/wagmi/index.js"
+      "import": "./dist/wagmi/index.js",
+      "default": "./dist/wagmi/index.js"
+    },
+    "./package.json": {
+      "default": "./package.json"
     }
   },
   "files": [
@@ -59,7 +64,7 @@
   },
   "peerDependencies": {
     "@tanstack/react-query": ">=5",
-    "@zama-fhe/sdk": "^2.3.0-alpha.2",
+    "@zama-fhe/sdk": "^2.4.0-alpha.4",
     "react": ">=18",
     "viem": "^2.47.0",
     "wagmi": ">=2"

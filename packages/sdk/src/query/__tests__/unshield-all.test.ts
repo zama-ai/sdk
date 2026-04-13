@@ -9,4 +9,13 @@ describe("unshieldAllMutationOptions", () => {
     await options.mutationFn(undefined);
     expect(mockToken.unshieldAll).toHaveBeenCalledWith(undefined);
   });
+
+  test("passes flat callbacks to unshieldAll", async ({ mockToken }) => {
+    const options = unshieldAllMutationOptions(mockToken);
+    const onUnwrapSubmitted = () => {};
+    const onFinalizing = () => {};
+
+    await options.mutationFn({ onUnwrapSubmitted, onFinalizing });
+    expect(mockToken.unshieldAll).toHaveBeenCalledWith({ onUnwrapSubmitted, onFinalizing });
+  });
 });

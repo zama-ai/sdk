@@ -4,9 +4,7 @@ import type { MutationFactoryOptions } from "./factory-types";
 import type { Address } from "viem";
 
 /** Variables for {@link unshieldAllMutationOptions}. */
-export interface UnshieldAllParams {
-  callbacks?: UnshieldCallbacks;
-}
+export interface UnshieldAllParams extends UnshieldCallbacks {}
 
 export function unshieldAllMutationOptions(
   token: Token,
@@ -17,6 +15,6 @@ export function unshieldAllMutationOptions(
 > {
   return {
     mutationKey: ["zama.unshieldAll", token.address] as const,
-    mutationFn: async (params) => token.unshieldAll(params?.callbacks),
+    mutationFn: async (params) => token.unshieldAll(params || undefined),
   };
 }

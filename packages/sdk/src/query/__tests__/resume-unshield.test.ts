@@ -11,7 +11,23 @@ describe("resumeUnshieldMutationOptions", () => {
     });
     expect(mockToken.resumeUnshield).toHaveBeenCalledWith(
       "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa",
-      undefined,
+      {},
+    );
+  });
+
+  test("passes flat callbacks to resumeUnshield", async ({ mockToken }) => {
+    const options = resumeUnshieldMutationOptions(mockToken);
+    const onUnwrapSubmitted = () => {};
+    const onFinalizing = () => {};
+
+    await options.mutationFn({
+      unwrapTxHash: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa",
+      onUnwrapSubmitted,
+      onFinalizing,
+    });
+    expect(mockToken.resumeUnshield).toHaveBeenCalledWith(
+      "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa",
+      { onUnwrapSubmitted, onFinalizing },
     );
   });
 });

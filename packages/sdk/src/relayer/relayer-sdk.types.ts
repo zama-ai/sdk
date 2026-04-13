@@ -76,6 +76,9 @@ export interface EncryptResult {
 /** Canonical SDK type for encrypted ciphertext handles (`bytes32` values). */
 export type Handle = `0x${string}`;
 
+/** Decrypted value type — one of bigint, boolean, or hex-encoded bytes. */
+export type ClearValueType = bigint | boolean | `0x${string}`;
+
 /** A single value to encrypt with its FHE type. */
 export type EncryptInput =
   | {
@@ -116,7 +119,7 @@ export interface UserDecryptParams {
 
 /** Result from public decryption */
 export type PublicDecryptResult = Omit<SDK.PublicDecryptResults, "clearValues"> & {
-  clearValues: Readonly<Record<Handle, SDK.ClearValueType>>;
+  clearValues: Readonly<Record<Handle, ClearValueType>>;
 };
 
 /** EIP712 typed data structure */

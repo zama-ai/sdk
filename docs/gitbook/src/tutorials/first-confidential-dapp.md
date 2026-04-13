@@ -271,11 +271,9 @@ export function UnshieldForm() {
     setStatus("Submitting unwrap…");
     await unshield({
       amount: BigInt(amount),
-      callbacks: {
-        onUnwrapSubmitted: (txHash) => setStatus(`Unwrap submitted: ${txHash}`),
-        onFinalizing: () => setStatus("Waiting for decryption proof…"),
-        onFinalizeSubmitted: (txHash) => setStatus(`Complete: ${txHash}`),
-      },
+      onUnwrapSubmitted: (txHash) => setStatus(`Unwrap submitted: ${txHash}`),
+      onFinalizing: () => setStatus("Waiting for decryption proof…"),
+      onFinalizeSubmitted: (txHash) => setStatus(`Complete: ${txHash}`),
     });
     e.currentTarget.reset();
     setStatus("");

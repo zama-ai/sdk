@@ -1,6 +1,6 @@
 {
   "name": "@zama-fhe/sdk",
-  "version": "2.3.0-alpha.2",
+  "version": "2.4.0-alpha.4",
   "description": "TypeScript SDK for Zama fhEVM confidential smart contracts",
   "license": "BSD-3-Clause-Clear",
   "author": "Zama",
@@ -74,6 +74,9 @@
         "default": "./dist/esm/node/index.js"
       },
       "default": "./dist/esm/node/index.js"
+    },
+    "./package.json": {
+      "default": "./package.json"
     }
   },
   "typesVersions": {
