@@ -98,7 +98,7 @@ describe("isAllowedQueryOptions", () => {
     const contracts = [
       "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
-    ] as Address[];
+    ] as [Address, ...Address[]];
 
     const options = isAllowedQueryOptions(sdk, {
       account: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
@@ -109,7 +109,7 @@ describe("isAllowedQueryOptions", () => {
       queryKey: options.queryKey,
     } as Parameters<typeof options.queryFn>[0]);
 
-    expect(isAllowedSpy).toHaveBeenCalledWith(...contracts);
+    expect(isAllowedSpy).toHaveBeenCalledWith(contracts);
   });
 
   test("staleTime should be 30 seconds", ({ signer, relayer, storage }) => {
