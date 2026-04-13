@@ -64,7 +64,7 @@ describe("createZamaConfig", () => {
       createZamaConfig({
         chains: [SepoliaConfig],
         viem: { publicClient, walletClient },
-        transports: { [11155111]: SepoliaConfig },
+        transports: { [11155111]: web() },
       });
       expect(MockViemSigner).toHaveBeenCalledWith({
         publicClient,
@@ -78,7 +78,7 @@ describe("createZamaConfig", () => {
       createZamaConfig({
         chains: [SepoliaConfig],
         ethers: { ethereum },
-        transports: { [11155111]: SepoliaConfig },
+        transports: { [11155111]: web() },
       });
       expect(MockEthersSigner).toHaveBeenCalledWith({ ethereum });
     });
@@ -88,7 +88,7 @@ describe("createZamaConfig", () => {
       const config = createZamaConfig({
         chains: [SepoliaConfig],
         signer,
-        transports: { [11155111]: SepoliaConfig },
+        transports: { [11155111]: web() },
       });
       expect(config.signer).toBe(signer);
     });
@@ -108,7 +108,7 @@ describe("createZamaConfig", () => {
         chains: [SepoliaConfig],
         wagmiConfig: mockWagmiConfig([11155111]),
         transports: {
-          [11155111]: { relayerUrl: "https://my-relayer.example.com" },
+          [11155111]: web({ relayerUrl: "https://my-relayer.example.com" }),
         },
       });
       expect(config.relayer).toBeDefined();
@@ -128,7 +128,7 @@ describe("createZamaConfig", () => {
         createZamaConfig({
           chains: [],
           wagmiConfig: mockWagmiConfig([999999]),
-          transports: { [999999]: { relayerUrl: "https://custom.com" } },
+          transports: { [999999]: web({ relayerUrl: "https://custom.com" }) },
         }),
       ).not.toThrow();
     });
@@ -138,7 +138,7 @@ describe("createZamaConfig", () => {
       const config = createZamaConfig({
         chains: [SepoliaConfig],
         signer,
-        transports: { [11155111]: SepoliaConfig },
+        transports: { [11155111]: web() },
       });
       expect(config.relayer).toBeDefined();
     });
@@ -151,7 +151,7 @@ describe("createZamaConfig", () => {
       const config = createZamaConfig({
         chains: [SepoliaConfig],
         signer: createMockSigner(),
-        transports: { [11155111]: SepoliaConfig },
+        transports: { [11155111]: web() },
         storage,
         sessionStorage,
       });
@@ -164,7 +164,7 @@ describe("createZamaConfig", () => {
       const config = createZamaConfig({
         chains: [SepoliaConfig],
         signer: createMockSigner(),
-        transports: { [11155111]: SepoliaConfig },
+        transports: { [11155111]: web() },
         storage: sharedStorage,
         sessionStorage: sharedStorage,
       });
@@ -209,7 +209,7 @@ describe("createZamaConfig", () => {
       const config = createZamaConfig({
         chains: [SepoliaConfig],
         signer: createMockSigner(),
-        transports: { [11155111]: SepoliaConfig },
+        transports: { [11155111]: web() },
         keypairTTL: 86400,
         sessionTTL: "infinite",
         registryAddresses,
