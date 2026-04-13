@@ -1,5 +1,38 @@
 # Changelog
 
+## [2.4.0-alpha.4](https://github.com/zama-ai/sdk/compare/v2.4.0-alpha.3...v2.4.0-alpha.4) (2026-04-10)
+
+### Reverts
+
+- **ci:** PR [#217](https://github.com/zama-ai/sdk/issues/217) ([16301d5]())
+
+## [2.4.0-alpha.3](https://github.com/zama-ai/sdk/compare/v2.4.0-alpha.2...v2.4.0-alpha.3) (2026-04-10)
+
+## [2.4.0-alpha.2](https://github.com/zama-ai/sdk/compare/v2.4.0-alpha.1...v2.4.0-alpha.2) (2026-04-10)
+
+### Features
+
+- **example-node-ethers:** upgrade to SDK 2.x with full ERC-7984 flows ([#170](https://github.com/zama-ai/sdk/issues/170)) ([3cdddab]())
+- **example-node-viem:** upgrade to SDK 2.x with full ERC-7984 flows ([#169](https://github.com/zama-ai/sdk/issues/169)) ([950756f]())
+
+## [2.4.0-alpha.1](https://github.com/zama-ai/sdk/compare/v2.3.1-alpha.4...v2.4.0-alpha.1) (2026-04-09)
+
+### Features
+
+- **sdk:** remove Zaiffer-specific fee and admin features (SDK-39) ([#191](https://github.com/zama-ai/sdk/issues/191)) ([d4db0ae]())
+
+## [2.3.1-alpha.4](https://github.com/zama-ai/sdk/compare/v2.3.1-alpha.3...v2.3.1-alpha.4) (2026-04-08)
+
+## [2.3.1-alpha.3](https://github.com/zama-ai/sdk/compare/v2.3.1-alpha.2...v2.3.1-alpha.3) (2026-04-08)
+
+### Bug Fixes
+
+- **sdk:** cap keypairTTL at the fhevm 365-day maximum ([#212](https://github.com/zama-ai/sdk/issues/212)) ([d11986f]())
+
+## [2.3.1-alpha.2](https://github.com/zama-ai/sdk/compare/v2.3.1-alpha.1...v2.3.1-alpha.2) (2026-04-08)
+
+## [2.3.1-alpha.1](https://github.com/zama-ai/sdk/compare/v2.3.0...v2.3.1-alpha.1) (2026-04-07)
+
 ## [2.3.0](https://github.com/zama-ai/sdk/compare/v2.2.0...v2.3.0) (2026-04-07)
 
 ### Features

@@ -6,9 +6,8 @@ describe("shieldMutationOptions", () => {
     const options = shieldMutationOptions(mockToken);
 
     expect(options.mutationKey).toEqual(["zama.shield", mockToken.address]);
-    await options.mutationFn({ amount: 1n, fees: 2n, approvalStrategy: "exact" });
+    await options.mutationFn({ amount: 1n, approvalStrategy: "exact" });
     expect(mockToken.shield).toHaveBeenCalledWith(1n, {
-      fees: 2n,
       approvalStrategy: "exact",
     });
   });

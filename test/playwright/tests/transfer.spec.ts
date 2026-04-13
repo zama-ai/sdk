@@ -6,7 +6,6 @@ test("should shield USDT then transfer to another address", async ({
   page,
   contracts,
   formatUnits,
-  computeFee,
   readErc20Balance,
   confidentialBalances,
 }) => {
@@ -31,7 +30,7 @@ test("should shield USDT then transfer to another address", async ({
   // Verify confidential balance changed by expected delta
   await page.goto("/wallet");
   await page.getByTestId("reveal-button").click();
-  const expectedBalance = cUSDTBefore + shieldAmount - computeFee(shieldAmount) - transferAmount;
+  const expectedBalance = cUSDTBefore + shieldAmount - transferAmount;
   await expect(page.getByTestId("token-row-cUSDT").getByTestId("balance")).toHaveText(
     formatUnits(expectedBalance, 6),
   );
@@ -45,7 +44,6 @@ test("should shield USDC then transfer to another address", async ({
   page,
   contracts,
   formatUnits,
-  computeFee,
   readErc20Balance,
   confidentialBalances,
 }) => {
@@ -70,7 +68,7 @@ test("should shield USDC then transfer to another address", async ({
   // Verify confidential balance changed by expected delta
   await page.goto("/wallet");
   await page.getByTestId("reveal-button").click();
-  const expectedBalance = cUSDCBefore + shieldAmount - computeFee(shieldAmount) - transferAmount;
+  const expectedBalance = cUSDCBefore + shieldAmount - transferAmount;
   await expect(page.getByTestId("token-row-cERC20").getByTestId("balance")).toHaveText(
     formatUnits(expectedBalance, 6),
   );

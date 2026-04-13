@@ -29,16 +29,9 @@ const contracts = {
   cUSDT: deployments.cUSDT as Address,
   USDC: deployments.erc20 as Address,
   cUSDC: deployments.cToken as Address,
-  transferBatcher: deployments.transferBatcher as Address,
-  feeManager: deployments.feeManager as Address,
   wrappersRegistry: deployments.wrappersRegistry as Address,
   acl: hardhatCleartextConfig.aclContractAddress as Address,
 } as const;
-
-/** Fee: ceiling division of (amount * 100) / 10000 — matches FeeManager.sol */
-function computeFee(amount: bigint): bigint {
-  return (amount * 100n + 9999n) / 10000n;
-}
 
 const mintAbi = [
   {
@@ -93,7 +86,6 @@ export interface TestFixtures {
   account: typeof account;
   contracts: typeof contracts;
   formatUnits: typeof formatUnits;
-  computeFee: typeof computeFee;
   readErc20Balance: (tokenAddress: `0x${string}`, owner?: `0x${string}`) => Promise<bigint>;
   confidentialBalances: ConfidentialBalances;
 }
@@ -110,7 +102,6 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   account,
   contracts,
   formatUnits: async ({}, use) => use(formatUnits),
-  computeFee: async ({}, use) => use(computeFee),
   readErc20Balance: async ({ viemClient, account }, use) => {
     await use((tokenAddress: `0x${string}`, owner: `0x${string}` = account.address) =>
       viemClient.readContract({

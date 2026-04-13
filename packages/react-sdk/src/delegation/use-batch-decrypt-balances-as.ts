@@ -1,7 +1,11 @@
 "use client";
 
 import { useMutation, type UseMutationOptions } from "@tanstack/react-query";
-import { ReadonlyToken, type Address, type BatchDecryptAsOptions } from "@zama-fhe/sdk";
+import type { Address, ReadonlyToken } from "@zama-fhe/sdk";
+import {
+  batchDecryptBalancesAsMutationOptions,
+  type BatchDecryptBalancesAsParams,
+} from "@zama-fhe/sdk/query";
 
 /**
  * Batch decrypt confidential balances as a delegate across multiple tokens.
@@ -20,11 +24,10 @@ import { ReadonlyToken, type Address, type BatchDecryptAsOptions } from "@zama-f
  */
 export function useBatchDecryptBalancesAs(
   tokens: ReadonlyToken[],
-  options?: UseMutationOptions<Map<Address, bigint>, Error, BatchDecryptAsOptions>,
+  options?: UseMutationOptions<Map<Address, bigint>, Error, BatchDecryptBalancesAsParams>,
 ) {
-  return useMutation<Map<Address, bigint>, Error, BatchDecryptAsOptions>({
-    mutationKey: ["zama.batchDecryptBalancesAs", ...tokens.map((t) => t.address)] as const,
-    mutationFn: async (params) => ReadonlyToken.batchDecryptBalancesAs(tokens, params),
+  return useMutation<Map<Address, bigint>, Error, BatchDecryptBalancesAsParams>({
+    ...batchDecryptBalancesAsMutationOptions(tokens),
     ...options,
   });
 }

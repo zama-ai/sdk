@@ -7,6 +7,6 @@ export function revokeMutationOptions(
 ): MutationFactoryOptions<readonly ["zama.revoke"], Address[], void> {
   return {
     mutationKey: ["zama.revoke"],
-    mutationFn: (contractAddresses) => sdk.revoke(...contractAddresses),
+    mutationFn: (contractAddresses) => sdk.credentials.revoke(...contractAddresses),
   };
 }

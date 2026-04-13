@@ -11,7 +11,6 @@ export const USER = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
 export const SPENDER = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;
 export const WRAPPER = "0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D" as Address;
 export const COORDINATOR = "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e" as Address;
-export const FEE_MANAGER = "0x6f6F6f6f6f6f6f6f6f6F6f6F6F6F6F6f6F6F6f6F" as Address;
 export const TOKEN_B = "0x7A7a7A7a7a7a7a7A7a7a7a7A7a7A7A7A7A7A7a7A" as Address;
 export const WAGMI_BALANCE_KEY = [
   "readContract",
@@ -76,7 +75,6 @@ export function createMockToken(
     approve: vi.fn().mockResolvedValue(mockResult),
     approveUnderlying: vi.fn().mockResolvedValue(mockResult),
     shield: vi.fn().mockResolvedValue(mockResult),
-    shieldETH: vi.fn().mockResolvedValue(mockResult),
     unwrap: vi.fn().mockResolvedValue(mockResult),
     unwrapAll: vi.fn().mockResolvedValue(mockResult),
     finalizeUnwrap: vi.fn().mockResolvedValue(mockResult),

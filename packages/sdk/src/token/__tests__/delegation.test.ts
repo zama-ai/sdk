@@ -812,6 +812,39 @@ describe("revokeDelegation validation", () => {
   });
 });
 
+describe("delegation pre-flight RPC fallback", () => {
+  it("delegateDecryption proceeds when getDelegationExpiry throws (falls back to on-chain enforcement)", async ({
+    signer,
+    token,
+    delegateAddress,
+  }) => {
+    // Simulate RPC failure during pre-flight expiry check
+    vi.mocked(signer.readContract).mockRejectedValue(new Error("network error"));
+    vi.mocked(signer.writeContract).mockResolvedValue(`0x${"ab".repeat(32)}`);
+    vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({} as never);
+
+    // Should not throw — falls back to on-chain enforcement
+    const result = await token.delegateDecryption({ delegateAddress });
+    expect(result.txHash).toMatch(/^0x/);
+    expect(signer.writeContract).toHaveBeenCalled();
+  });
+
+  it("revokeDelegation proceeds when getDelegationExpiry throws (falls back to on-chain enforcement)", async ({
+    signer,
+    token,
+    delegateAddress,
+  }) => {
+    // Simulate RPC failure — sentinel 1n means "assume delegated, skip client check"
+    vi.mocked(signer.readContract).mockRejectedValue(new Error("network error"));
+    vi.mocked(signer.writeContract).mockResolvedValue(`0x${"ab".repeat(32)}`);
+    vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({} as never);
+
+    const result = await token.revokeDelegation({ delegateAddress });
+    expect(result.txHash).toMatch(/^0x/);
+    expect(signer.writeContract).toHaveBeenCalled();
+  });
+});
+
 describe("batchDecryptBalancesAs edge cases", () => {
   const TOKEN2 = "0xeDeDeDeDeDeDeDeDeDeDeDeDeDeDeDeDeDeDeDeD" as Address;
 

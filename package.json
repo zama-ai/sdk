@@ -112,7 +112,9 @@
     ],
     "overrides": {
       "minimatch": "10.2.4",
-      "@walletconnect/ethereum-provider": "^2.23.7"
+      "@walletconnect/ethereum-provider": "^2.23.7",
+      "lodash": ">=4.18.0",
+      "lodash-es": ">=4.18.0"
     }
   },
   "overrides": {

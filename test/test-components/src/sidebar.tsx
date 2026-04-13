@@ -21,7 +21,6 @@ const NAV_ITEMS = [
   { to: "/fhe-relayer", label: "FHE Relayer" },
   { to: "/unwrap-manual", label: "Manual Unwrap" },
   { to: "/resume-unshield", label: "Resume Unshield" },
-  { to: "/batch-transfer", label: "Batch Transfer" },
   { to: "/activity-feed", label: "Activity Feed" },
 ] as const;
 

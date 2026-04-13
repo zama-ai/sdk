@@ -13,7 +13,13 @@ import {
   DelegationNotFoundError,
   DelegationExpiredError,
   DelegationNotPropagatedError,
+  DelegationExpiryUnchangedError,
+  DelegationDelegateEqualsContractError,
+  DelegationContractIsSelfError,
+  AclPausedError,
+  DelegationExpirationTooSoonError,
 } from "..";
+import { matchAclRevert } from "../acl-revert";
 import { wrapSigningError } from "../signing";
 
 describe("InvalidKeypairError", () => {
@@ -269,5 +275,173 @@ describe("DelegationNotPropagatedError", () => {
     expect(err.code).toBe(ZamaErrorCode.DelegationNotPropagated);
     expect(err.name).toBe("DelegationNotPropagatedError");
     expect(err.message).toBe("not synced");
+  });
+});
+
+describe("DelegationExpiryUnchangedError", () => {
+  it("is instanceof ZamaError", () => {
+    const err = new DelegationExpiryUnchangedError("same expiry");
+    expect(err).toBeInstanceOf(ZamaError);
+    expect(err).toBeInstanceOf(DelegationExpiryUnchangedError);
+  });
+
+  it("has correct code and name", () => {
+    const err = new DelegationExpiryUnchangedError("same expiry");
+    expect(err.code).toBe(ZamaErrorCode.DelegationExpiryUnchanged);
+    expect(err.name).toBe("DelegationExpiryUnchangedError");
+    expect(err.message).toBe("same expiry");
+  });
+});
+
+describe("DelegationDelegateEqualsContractError", () => {
+  it("is instanceof ZamaError", () => {
+    const err = new DelegationDelegateEqualsContractError("delegate is contract");
+    expect(err).toBeInstanceOf(ZamaError);
+    expect(err).toBeInstanceOf(DelegationDelegateEqualsContractError);
+  });
+
+  it("has correct code and name", () => {
+    const err = new DelegationDelegateEqualsContractError("delegate is contract");
+    expect(err.code).toBe(ZamaErrorCode.DelegationDelegateEqualsContract);
+    expect(err.name).toBe("DelegationDelegateEqualsContractError");
+    expect(err.message).toBe("delegate is contract");
+  });
+});
+
+describe("DelegationContractIsSelfError", () => {
+  it("is instanceof ZamaError", () => {
+    const err = new DelegationContractIsSelfError("contract is caller");
+    expect(err).toBeInstanceOf(ZamaError);
+    expect(err).toBeInstanceOf(DelegationContractIsSelfError);
+  });
+
+  it("has correct code and name", () => {
+    const err = new DelegationContractIsSelfError("contract is caller");
+    expect(err.code).toBe(ZamaErrorCode.DelegationContractIsSelf);
+    expect(err.name).toBe("DelegationContractIsSelfError");
+    expect(err.message).toBe("contract is caller");
+  });
+});
+
+describe("AclPausedError", () => {
+  it("is instanceof ZamaError", () => {
+    const err = new AclPausedError("paused");
+    expect(err).toBeInstanceOf(ZamaError);
+    expect(err).toBeInstanceOf(AclPausedError);
+  });
+
+  it("has correct code and name", () => {
+    const err = new AclPausedError("paused");
+    expect(err.code).toBe(ZamaErrorCode.AclPaused);
+    expect(err.name).toBe("AclPausedError");
+    expect(err.message).toBe("paused");
+  });
+});
+
+describe("DelegationExpirationTooSoonError", () => {
+  it("is instanceof ZamaError", () => {
+    const err = new DelegationExpirationTooSoonError("too soon");
+    expect(err).toBeInstanceOf(ZamaError);
+    expect(err).toBeInstanceOf(DelegationExpirationTooSoonError);
+  });
+
+  it("has correct code and name", () => {
+    const err = new DelegationExpirationTooSoonError("too soon");
+    expect(err.code).toBe(ZamaErrorCode.DelegationExpirationTooSoon);
+    expect(err.name).toBe("DelegationExpirationTooSoonError");
+    expect(err.message).toBe("too soon");
+  });
+});
+
+// --- matchAclRevert ---
+
+describe("matchAclRevert", () => {
+  it("returns null for unrecognized errors", () => {
+    expect(matchAclRevert(new Error("SomeOtherRevert"))).toBeNull();
+    expect(matchAclRevert("string error")).toBeNull();
+    expect(matchAclRevert(null)).toBeNull();
+  });
+
+  it("maps AlreadyDelegatedOrRevokedInSameBlock via structured viem error", () => {
+    const viemError = Object.assign(new Error("revert"), {
+      cause: { data: { errorName: "AlreadyDelegatedOrRevokedInSameBlock" } },
+    });
+    const result = matchAclRevert(viemError);
+    expect(result).toBeInstanceOf(DelegationCooldownError);
+  });
+
+  it("maps SenderCannotBeDelegate via structured viem error", () => {
+    const viemError = Object.assign(new Error("revert"), {
+      cause: { data: { errorName: "SenderCannotBeDelegate" } },
+    });
+    const result = matchAclRevert(viemError);
+    expect(result).toBeInstanceOf(DelegationSelfNotAllowedError);
+  });
+
+  it("maps DelegateCannotBeContractAddress via structured viem error", () => {
+    const viemError = Object.assign(new Error("revert"), {
+      cause: { data: { errorName: "DelegateCannotBeContractAddress" } },
+    });
+    const result = matchAclRevert(viemError);
+    expect(result).toBeInstanceOf(DelegationDelegateEqualsContractError);
+  });
+
+  it("maps SenderCannotBeContractAddress via structured viem error", () => {
+    const viemError = Object.assign(new Error("revert"), {
+      cause: { data: { errorName: "SenderCannotBeContractAddress" } },
+    });
+    const result = matchAclRevert(viemError);
+    expect(result).toBeInstanceOf(DelegationContractIsSelfError);
+  });
+
+  it("maps EnforcedPause via structured viem error", () => {
+    const viemError = Object.assign(new Error("revert"), {
+      cause: { data: { errorName: "EnforcedPause" } },
+    });
+    const result = matchAclRevert(viemError);
+    expect(result).toBeInstanceOf(AclPausedError);
+  });
+
+  it("maps ExpirationDateBeforeOneHour via structured viem error", () => {
+    const viemError = Object.assign(new Error("revert"), {
+      cause: { data: { errorName: "ExpirationDateBeforeOneHour" } },
+    });
+    const result = matchAclRevert(viemError);
+    expect(result).toBeInstanceOf(DelegationExpirationTooSoonError);
+  });
+
+  it("maps ExpirationDateAlreadySetToSameValue via structured viem error", () => {
+    const viemError = Object.assign(new Error("revert"), {
+      cause: { data: { errorName: "ExpirationDateAlreadySetToSameValue" } },
+    });
+    const result = matchAclRevert(viemError);
+    expect(result).toBeInstanceOf(DelegationExpiryUnchangedError);
+  });
+
+  it("maps NotDelegatedYet via structured viem error", () => {
+    const viemError = Object.assign(new Error("revert"), {
+      cause: { data: { errorName: "NotDelegatedYet" } },
+    });
+    const result = matchAclRevert(viemError);
+    expect(result).toBeInstanceOf(DelegationNotFoundError);
+  });
+
+  it("falls back to string matching when no structured cause", () => {
+    const plainError = new Error("Transaction reverted: NotDelegatedYet");
+    const result = matchAclRevert(plainError);
+    expect(result).toBeInstanceOf(DelegationNotFoundError);
+  });
+
+  it("string fallback returns null when message does not match any key", () => {
+    const plainError = new Error("execution reverted: OutOfGas");
+    expect(matchAclRevert(plainError)).toBeNull();
+  });
+
+  it("preserves cause on returned error", () => {
+    const original = Object.assign(new Error("revert"), {
+      cause: { data: { errorName: "EnforcedPause" } },
+    });
+    const result = matchAclRevert(original);
+    expect(result?.cause).toBe(original);
   });
 });

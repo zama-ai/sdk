@@ -15,7 +15,7 @@ test("operations after terminate throw", async ({ sdk }) => {
   sdk.terminate();
 
   await expect(async () => {
-    await sdk.allow("0x0000000000000000000000000000000000000001" as `0x${string}`);
+    await sdk.credentials.allow("0x0000000000000000000000000000000000000001" as `0x${string}`);
   }).rejects.toThrow();
 });
 
