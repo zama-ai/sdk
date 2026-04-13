@@ -740,21 +740,19 @@ const { handles, inputProof } = await encrypt.mutateAsync({
 
 #### Decryption (`useUserDecrypt`)
 
-`useUserDecrypt` manages the full decrypt orchestration — keypair generation, EIP-712, wallet signature — and reuses cached credentials when available, avoiding redundant wallet prompts:
+`useUserDecrypt` is a TanStack Query hook that manages the full decrypt orchestration — keypair generation, EIP-712, wallet signature — and reuses cached credentials when available, avoiding redundant wallet prompts. It is **disabled by default**; pass `enabled: true` to fire the query.
 
 ```tsx
-const decrypt = useUserDecrypt({
-  onCredentialsReady: () => setStep("decrypting"),
-  onDecrypted: (values) => setStep("done"),
-});
-
-const result = await decrypt.mutateAsync({
-  handles: [
-    { handle: "0xabc...", contractAddress: "0xTokenA" },
-    { handle: "0xdef...", contractAddress: "0xTokenB" },
-  ],
-});
-// result: { "0xabc...": 500n, "0xdef...": 1000n }
+const { data, isPending, isSuccess } = useUserDecrypt(
+  {
+    handles: [
+      { handle: "0xabc...", contractAddress: "0xTokenA" },
+      { handle: "0xdef...", contractAddress: "0xTokenB" },
+    ],
+  },
+  { enabled: shouldDecrypt },
+);
+// data: { "0xabc...": 500n, "0xdef...": 1000n }
 ```
 
 #### All Encryption & Decryption Hooks

@@ -696,7 +696,7 @@ export interface IsAllowedQueryConfig {
     account: Address;
     contractAddresses: [Address, ...Address[]];
     // (undocumented)
-    query?: Record<string, unknown>;
+    query?: QueryObserverOptions<boolean, Error, boolean, boolean, ReturnType<typeof zamaQueryKeys.isAllowed.scope>>;
 }
 
 // @public (undocumented)
