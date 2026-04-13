@@ -9,8 +9,6 @@ const REPO_ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const SOURCE = join(REPO_ROOT, "claude-setup");
 const TARGET = join(REPO_ROOT, ".claude");
 
-// --- JSON deep merge (objects recursive, arrays unioned, scalars: b wins) ---
-
 function merge(a, b) {
   if (isObj(a) && isObj(b)) {
     const out = { ...a };
@@ -29,37 +27,39 @@ function isObj(v) {
   return v !== null && typeof v === "object" && !Array.isArray(v);
 }
 
-// --- File tree sync (skip settings.json, preserve user files) ---
+function syncFile(srcPath, dstPath, label) {
+  if (existsSync(dstPath)) {
+    const srcBuf = readFileSync(srcPath);
+    const dstBuf = readFileSync(dstPath);
+    if (srcBuf.equals(dstBuf)) {
+      console.log(`  — ${label} (unchanged, skipped)`);
+    } else {
+      writeFileSync(dstPath, srcBuf);
+      console.log(`  ✅ ${label} (updated)`);
+    }
+  } else {
+    mkdirSync(dirname(dstPath), { recursive: true });
+    cpSync(srcPath, dstPath);
+    console.log(`  ✅ ${label} (added)`);
+  }
+}
 
-function syncTree(src, dst, root) {
+function syncTree(src, dst, root, skip) {
   for (const entry of readdirSync(src, { withFileTypes: true })) {
+    if (skip?.has(entry.name)) {
+      continue;
+    }
     const srcPath = join(src, entry.name);
     const dstPath = join(dst, entry.name);
-    const rel = relative(root, srcPath);
 
     if (entry.isDirectory()) {
       mkdirSync(dstPath, { recursive: true });
       syncTree(srcPath, dstPath, root);
     } else {
-      if (existsSync(dstPath)) {
-        const srcBuf = readFileSync(srcPath);
-        const dstBuf = readFileSync(dstPath);
-        if (srcBuf.equals(dstBuf)) {
-          console.log(`  — ${rel} (unchanged, skipped)`);
-        } else {
-          writeFileSync(dstPath, srcBuf);
-          console.log(`  ✅ ${rel} (updated)`);
-        }
-      } else {
-        mkdirSync(dirname(dstPath), { recursive: true });
-        cpSync(srcPath, dstPath);
-        console.log(`  ✅ ${rel} (added)`);
-      }
+      syncFile(srcPath, dstPath, relative(root, srcPath));
     }
   }
 }
-
-// --- Main ---
 
 if (!existsSync(TARGET)) {
   cpSync(SOURCE, TARGET, { recursive: true });
@@ -67,7 +67,6 @@ if (!existsSync(TARGET)) {
 } else {
   console.log("📂 .claude/ already exists — merging...");
 
-  // Merge settings.json
   const srcSettings = join(SOURCE, "settings.json");
   const dstSettings = join(TARGET, "settings.json");
   if (existsSync(srcSettings)) {
@@ -82,37 +81,10 @@ if (!existsSync(TARGET)) {
     }
   }
 
-  // Sync remaining files, preserving anything already in .claude/
-  for (const entry of readdirSync(SOURCE, { withFileTypes: true })) {
-    if (entry.name === "settings.json") {
-      continue;
-    }
-    const srcPath = join(SOURCE, entry.name);
-    const dstPath = join(TARGET, entry.name);
-    if (entry.isDirectory()) {
-      mkdirSync(dstPath, { recursive: true });
-      syncTree(srcPath, dstPath, SOURCE);
-    } else {
-      if (existsSync(dstPath)) {
-        const srcBuf = readFileSync(srcPath);
-        const dstBuf = readFileSync(dstPath);
-        if (srcBuf.equals(dstBuf)) {
-          console.log(`  — ${entry.name} (unchanged, skipped)`);
-        } else {
-          writeFileSync(dstPath, srcBuf);
-          console.log(`  ✅ ${entry.name} (updated)`);
-        }
-      } else {
-        cpSync(srcPath, dstPath);
-        console.log(`  ✅ ${entry.name} (added)`);
-      }
-    }
-  }
+  syncTree(SOURCE, TARGET, SOURCE, new Set(["settings.json"]));
 
   console.log("✅ .claude/ merge complete");
 }
-
-// --- Plugin installation ---
 
 try {
   execFileSync("claude", ["--version"], { stdio: "ignore" });
