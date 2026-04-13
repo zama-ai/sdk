@@ -65,7 +65,7 @@ const { mutateAsync: unwrap } = useUnwrap({
 });
 ```
 
-## Mutation Variables
+## Mutation variables
 
 ### amount
 

@@ -69,7 +69,7 @@ function AuthOnConnect({ contracts }: { contracts: `0x${string}`[] }) {
 
 `useAllow` takes no configuration parameters.
 
-## Mutation Variables
+## Mutation variables
 
 ### addresses
 

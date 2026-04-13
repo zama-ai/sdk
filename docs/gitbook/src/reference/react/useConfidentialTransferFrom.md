@@ -102,7 +102,7 @@ const { mutateAsync: transferFrom } = useConfidentialTransferFrom({
 
 {% include ".gitbook/includes/mutation-options.md" %}
 
-## Mutation Variables
+## Mutation variables
 
 The function passed to `mutate` / `mutateAsync` accepts:
 

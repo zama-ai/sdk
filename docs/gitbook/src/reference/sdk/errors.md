@@ -1,9 +1,9 @@
 ---
-title: Error Types
+title: Error types
 description: All SDK error classes, codes, and the matchZamaError utility.
 ---
 
-# Error Types
+# Error types
 
 All SDK errors extend `ZamaError` and carry a `.code` string you can match on. Catch them with `instanceof` or use `matchZamaError` for exhaustive handling.
 

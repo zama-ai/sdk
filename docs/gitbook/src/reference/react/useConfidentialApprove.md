@@ -54,7 +54,7 @@ const { mutateAsync: approve } = useConfidentialApprove({
 });
 ```
 
-## Mutation Variables
+## Mutation variables
 
 ### spender
 
@@ -72,7 +72,7 @@ await approve({
 
 ### until
 
-`number` (optional)
+`number | undefined`
 
 Unix timestamp (seconds) when the approval expires. Defaults to 1 hour from now.
 
