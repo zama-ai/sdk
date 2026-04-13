@@ -1,15 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync } from "node:child_process";
-import {
-  cpSync,
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  readdirSync,
-  statSync,
-  writeFileSync,
-} from "node:fs";
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -22,12 +14,14 @@ const TARGET = join(REPO_ROOT, ".claude");
 function merge(a, b) {
   if (isObj(a) && isObj(b)) {
     const out = { ...a };
-    for (const k of Object.keys(b))
+    for (const k of Object.keys(b)) {
       out[k] = k in a ? merge(a[k], b[k]) : b[k];
+    }
     return out;
   }
-  if (Array.isArray(a) && Array.isArray(b))
+  if (Array.isArray(a) && Array.isArray(b)) {
     return [...new Set([...a, ...b])];
+  }
   return b;
 }
 
@@ -81,9 +75,7 @@ if (!existsSync(TARGET)) {
       const a = JSON.parse(readFileSync(dstSettings, "utf8"));
       const b = JSON.parse(readFileSync(srcSettings, "utf8"));
       writeFileSync(dstSettings, JSON.stringify(merge(a, b), null, 2) + "\n");
-      console.log(
-        "  ✅ settings.json merged (template wins on conflicts, arrays unioned)",
-      );
+      console.log("  ✅ settings.json merged (template wins on conflicts, arrays unioned)");
     } else {
       cpSync(srcSettings, dstSettings);
       console.log("  ✅ settings.json copied");
@@ -92,7 +84,9 @@ if (!existsSync(TARGET)) {
 
   // Sync remaining files, preserving anything already in .claude/
   for (const entry of readdirSync(SOURCE, { withFileTypes: true })) {
-    if (entry.name === "settings.json") continue;
+    if (entry.name === "settings.json") {
+      continue;
+    }
     const srcPath = join(SOURCE, entry.name);
     const dstPath = join(TARGET, entry.name);
     if (entry.isDirectory()) {
@@ -125,32 +119,20 @@ try {
 } catch {
   console.log();
   console.log("⚠️  Claude Code CLI not found. Install it first, then run:");
-  console.log(
-    "  claude plugin marketplace add zama-ai/zama-marketplace",
-  );
-  console.log(
-    "  claude plugin install zama-developer@zama-marketplace --scope project",
-  );
+  console.log("  claude plugin marketplace add zama-ai/zama-marketplace");
+  console.log("  claude plugin install zama-developer@zama-marketplace --scope project");
   process.exit(0);
 }
 
 console.log("📦 Adding zama-marketplace...");
-execFileSync(
-  "claude",
-  ["plugin", "marketplace", "add", "zama-ai/zama-marketplace"],
-  { stdio: "inherit" },
-);
+execFileSync("claude", ["plugin", "marketplace", "add", "zama-ai/zama-marketplace"], {
+  stdio: "inherit",
+});
 
 console.log("🔌 Installing zama-developer plugin...");
 execFileSync(
   "claude",
-  [
-    "plugin",
-    "install",
-    "zama-developer@zama-marketplace",
-    "--scope",
-    "project",
-  ],
+  ["plugin", "install", "zama-developer@zama-marketplace", "--scope", "project"],
   { stdio: "inherit" },
 );
 
