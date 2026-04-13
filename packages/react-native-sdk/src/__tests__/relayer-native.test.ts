@@ -322,4 +322,105 @@ describe("RelayerNative", () => {
     });
     expect(createInstanceMock).toHaveBeenCalledTimes(2);
   });
+
+  it("re-initializes when getChainId reports a different chain", async () => {
+    const { createInstance } = await import("@fhevm/react-native-sdk");
+    const createInstanceMock = createInstance as ReturnType<typeof vi.fn>;
+    let currentChain = TEST_CHAIN_ID;
+    const chainRelayer = new RelayerNative({
+      transports: {
+        [TEST_CHAIN_ID]: mockInstance.config,
+        // Second entry reuses the mock config but keyed on a different chain
+        // so the same `createInstance` mock handles both.
+        1: mockInstance.config,
+      },
+      getChainId: async () => currentChain,
+    });
+
+    await chainRelayer.generateKeypair();
+    expect(createInstanceMock).toHaveBeenCalledTimes(1);
+
+    // Switch chain — next call should tear down and re-init.
+    currentChain = 1;
+    await chainRelayer.generateKeypair();
+    expect(createInstanceMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("transitions status idle → initializing → ready and fires onStatusChange", async () => {
+    const statusChanges: Array<{ status: string; error?: string }> = [];
+    const tracked = new RelayerNative(
+      makeConfig({
+        onStatusChange: (status, error) => {
+          statusChanges.push({ status, error: error?.message });
+        },
+      }),
+    );
+
+    expect(tracked.status).toBe("idle");
+
+    await tracked.generateKeypair();
+    expect(tracked.status).toBe("ready");
+    // Full transition sequence must pass through "initializing" first.
+    expect(statusChanges.map((s) => s.status)).toEqual(["initializing", "ready"]);
+    expect(tracked.initError).toBeUndefined();
+  });
+
+  it("transitions status to 'error' with initError on init failure", async () => {
+    const { createInstance } = await import("@fhevm/react-native-sdk");
+    (createInstance as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("boom"));
+
+    const statusChanges: string[] = [];
+    const tracked = new RelayerNative(
+      makeConfig({
+        onStatusChange: (status) => {
+          statusChanges.push(status);
+        },
+      }),
+    );
+
+    await expect(tracked.generateKeypair()).rejects.toThrow();
+    expect(tracked.status).toBe("error");
+    expect(tracked.initError).toBeInstanceOf(Error);
+    expect(tracked.initError?.message).toMatch(/Failed to initialize/);
+    expect(statusChanges).toEqual(["initializing", "error"]);
+  });
+
+  it("terminate() then reuse re-initializes a fresh instance", async () => {
+    const { createInstance } = await import("@fhevm/react-native-sdk");
+    const createInstanceMock = createInstance as ReturnType<typeof vi.fn>;
+
+    await relayer.generateKeypair();
+    expect(createInstanceMock).toHaveBeenCalledTimes(1);
+
+    relayer.terminate();
+
+    await relayer.generateKeypair();
+    expect(createInstanceMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("[Symbol.dispose]() delegates to terminate()", async () => {
+    const { createInstance } = await import("@fhevm/react-native-sdk");
+    const createInstanceMock = createInstance as ReturnType<typeof vi.fn>;
+
+    await relayer.generateKeypair();
+    relayer[Symbol.dispose]();
+
+    await relayer.generateKeypair();
+    expect(createInstanceMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("getAclAddress does not initialize the native instance", async () => {
+    const { createInstance } = await import("@fhevm/react-native-sdk");
+    const addr = await relayer.getAclAddress();
+    expect(addr).toBe("0xACL");
+    expect(createInstance).not.toHaveBeenCalled();
+  });
+
+  it("throws ConfigurationError for an unregistered chain ID", async () => {
+    const bad = new RelayerNative({
+      transports: {}, // empty — no chain registered
+      getChainId: async () => 999,
+    });
+    await expect(bad.generateKeypair()).rejects.toThrow(/No transport config registered/);
+  });
 });

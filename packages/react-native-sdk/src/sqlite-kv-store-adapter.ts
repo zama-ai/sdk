@@ -5,9 +5,12 @@ const KEY_PREFIX = "@zama-fhe:";
 
 /**
  * `GenericStorage` backed by `expo-sqlite/kv-store` — an
- * AsyncStorage-compatible key/value store on top of SQLite. Intended for the
- * `sessionStorage` slot of the SDK, where short-lived per-session data lives
- * (balance caches, decryption handles, etc.).
+ * AsyncStorage-compatible key/value store on top of SQLite. Used by
+ * `RelayerNative` as the default `fheArtifactStorage` for caching the FHE
+ * public key and public params (which can reach several MB — a size
+ * SecureStore is not designed for). Also suitable for the SDK's
+ * `sessionStorage` slot for per-session caches (balance caches, decryption
+ * handles, etc.).
  *
  * Values are JSON-serialized. Keys are prefixed with `@zama-fhe:` to avoid
  * collisions with other libraries sharing the same backing database.
@@ -22,10 +25,15 @@ export class SqliteKvStoreAdapter implements GenericStorage {
     try {
       return JSON.parse(raw) as T;
     } catch (cause) {
-      // Corrupted entry — remove it so subsequent reads start clean, then
-      // throw with context so the caller knows which key failed and why.
-      await KvStore.removeItem(prefixedKey).catch(() => {
-        // Ignore cleanup failures: the original parse error is more important.
+      // Corrupted entry — try to remove it so subsequent reads start clean.
+      // Log (but do not mask) any cleanup failure so an infinite
+      // parse/cleanup loop surfaces a diagnostic.
+      await KvStore.removeItem(prefixedKey).catch((cleanupError: unknown) => {
+        // eslint-disable-next-line no-console
+        console.warn(
+          `SqliteKvStoreAdapter: failed to delete corrupted entry "${key}"`,
+          cleanupError,
+        );
       });
       throw new Error(
         `SqliteKvStoreAdapter: failed to parse stored value for key "${key}". ` +

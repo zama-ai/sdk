@@ -67,8 +67,8 @@ export interface RelayerNativeConfig {
    * Persistent storage for caching FHE public key and params across sessions.
    *
    * Defaults to a fresh `SqliteKvStoreAdapter`. FHE public params can reach
-   * several MB — keep this on a SQLite-backed store, never on SecureStore
-   * (iOS Keychain caps entries at ~2 KB).
+   * several MB — keep this on a SQLite-backed store, never on
+   * `SecureStoreAdapter` (designed for small secrets, not multi-MB blobs).
    *
    * **Not to be confused with `ZamaProvider.storage`** which stores credentials.
    */
@@ -88,24 +88,29 @@ export interface RelayerNativeConfig {
  * artifact caching so that the same React hooks work transparently on web
  * and native targets.
  *
- * ## Initialization / promise-lock pattern
+ * ## Initialization / promise-chain pattern
  *
- * Every public method calls `#ensureInstance()` before proceeding.
- * Initialization is managed by three private fields:
+ * Every public method calls `#ensureInstance()` before proceeding. Two
+ * fields back the lifecycle:
  *
  * - `#initPromise` — cached promise from `#initInstance()`; once resolved,
  *   subsequent callers reuse the same instance without re-initializing.
- *   Cleared on error so the next caller retries a fresh init.
- * - `#ensureLock` — short-lived promise that serializes concurrent calls
- *   to `#ensureInstanceInner()` (chain-id check + potential tear-down).
+ *   Cleared on error so the next caller retries a fresh init, and on
+ *   chain-switch so a new instance is built for the new chain.
+ * - `#chain` — a promise that every `#ensureInstance` call chains onto.
+ *   This serializes chain-id reads, teardown decisions, and `#initPromise`
+ *   assignment, so two concurrent callers can never both decide "chain
+ *   changed, tear down" or "artifacts stale, tear down" simultaneously.
+ *   The fast path stays cheap because `#ensureInstanceInner` returns the
+ *   already-resolved `#initPromise` in one microtask when nothing changed.
  *
  * Chain switching: when `getChainId()` returns a value different from the
  * previously resolved chain, the old instance is discarded and a fresh one
- * is created — all within the `#ensureLock` critical section.
+ * is created.
  */
 export class RelayerNative implements RelayerSDK, Disposable {
   #initPromise: Promise<FhevmInstance> | null = null;
-  #ensureLock: Promise<FhevmInstance> | null = null;
+  #chain: Promise<unknown> = Promise.resolve();
   #terminated = false;
   #resolvedChainId: number | null = null;
   #artifactCache: FheArtifactCache | null = null;
@@ -113,9 +118,13 @@ export class RelayerNative implements RelayerSDK, Disposable {
   #status: RelayerSDKStatus = "idle";
   #initError: Error | undefined;
   readonly #config: RelayerNativeConfig;
+  readonly #logger: GenericLogger;
 
   constructor(config: RelayerNativeConfig) {
     this.#config = config;
+    // Default to `console` so revalidation warnings are never silently
+    // swallowed. Callers that want silence can pass a no-op logger.
+    this.#logger = config.logger ?? console;
   }
 
   /** Current native instance initialization status. */
@@ -135,39 +144,60 @@ export class RelayerNative implements RelayerSDK, Disposable {
   }
 
   #resolveInstanceConfig(chainId: number): FhevmInstanceConfig {
-    const merged = Object.assign(
-      {},
-      DefaultConfigs[chainId],
-      this.#config.transports[chainId],
-    ) as FhevmInstanceConfig;
-    if (!merged) {
+    const preset = DefaultConfigs[chainId];
+    const override = this.#config.transports[chainId];
+    // `Object.assign({}, undefined, undefined)` returns `{}` — truthy but
+    // empty, so a bare `!merged` check would never fire. Validate that
+    // at least one source of truth exists before merging.
+    if (!preset && !override) {
       throw new ConfigurationError(
         `No transport config registered for chain ${chainId}. ` +
           `Add it to RelayerNativeConfig.transports.`,
       );
     }
-    return merged;
+    return Object.assign({}, preset, override) as FhevmInstanceConfig;
   }
 
   /**
-   * Ensure the native instance is initialized. Uses a promise lock to prevent
-   * concurrent initialization. Resets on failure to allow retries.
+   * Ensure the native instance is initialized. Each call chains onto the
+   * previous one so chain-switch detection and teardown happen atomically;
+   * the happy path (instance already initialized, no chain change) resolves
+   * in one microtask because `#ensureInstanceInner` returns the cached
+   * `#initPromise` immediately.
+   *
+   * Prior errors are swallowed from the chain so a single transient failure
+   * doesn't brick subsequent callers — each caller re-enters
+   * `#ensureInstanceInner` which will retry initialization.
    */
   async #ensureInstance(): Promise<FhevmInstance> {
-    if (this.#ensureLock) {
-      return this.#ensureLock;
-    }
-    this.#ensureLock = this.#ensureInstanceInner();
-    try {
-      return await this.#ensureLock;
-    } finally {
-      this.#ensureLock = null;
-    }
+    const prev = this.#chain;
+    const next = prev.then(
+      () => this.#ensureInstanceInner(),
+      () => this.#ensureInstanceInner(),
+    );
+    this.#chain = next;
+    return next;
   }
 
   #tearDown(): void {
     this.#initPromise = null;
     this.#artifactCache = null;
+  }
+
+  #ensureArtifactCache(chainId: number): void {
+    if (!this.#artifactStorage) {
+      this.#artifactStorage = this.#config.fheArtifactStorage ?? new SqliteKvStoreAdapter();
+    }
+    if (!this.#artifactCache) {
+      const config = this.#resolveInstanceConfig(chainId);
+      this.#artifactCache = new FheArtifactCache({
+        storage: this.#artifactStorage,
+        chainId,
+        relayerUrl: config.relayerUrl,
+        ttl: this.#config.fheArtifactCacheTTL,
+        logger: this.#logger,
+      });
+    }
   }
 
   async #ensureInstanceInner(): Promise<FhevmInstance> {
@@ -186,37 +216,30 @@ export class RelayerNative implements RelayerSDK, Disposable {
       this.#tearDown();
     }
 
-    this.#resolvedChainId = chainId;
-
     // Storage is chain-independent — reuse across chain switches.
-    if (!this.#artifactStorage) {
-      this.#artifactStorage = this.#config.fheArtifactStorage ?? new SqliteKvStoreAdapter();
-    }
-    if (!this.#artifactCache) {
-      const config = this.#resolveInstanceConfig(chainId);
-      this.#artifactCache = new FheArtifactCache({
-        storage: this.#artifactStorage,
-        chainId,
-        relayerUrl: config.relayerUrl,
-        ttl: this.#config.fheArtifactCacheTTL,
-        logger: this.#config.logger,
-      });
-    }
+    this.#ensureArtifactCache(chainId);
 
-    // Revalidate cached artifacts if due — never let revalidation block init.
+    // Revalidate cached artifacts if due. Failure is non-fatal — we proceed
+    // with the (potentially stale) cache rather than blocking init on a
+    // transient network blip. Warnings are routed through the configured
+    // logger (defaulting to `console`) so the condition is visible.
     if (this.#artifactCache) {
       let stale = false;
       try {
         stale = await this.#artifactCache.revalidateIfDue();
       } catch (err) {
-        this.#config.logger?.warn(
+        this.#logger.warn?.(
           "Artifact revalidation failed, proceeding with potentially stale cache",
           { error: err instanceof Error ? err.message : String(err) },
         );
       }
       if (stale) {
-        this.#config.logger?.info("Cached FHE artifacts are stale — reinitializing");
+        this.#logger.info?.("Cached FHE artifacts are stale — reinitializing");
         this.#tearDown();
+        // Recreate the cache for this init cycle — otherwise getPublicKey /
+        // getPublicParams would fall through to the uncached path for the
+        // first post-revalidation call.
+        this.#ensureArtifactCache(chainId);
       }
     }
 
@@ -224,6 +247,10 @@ export class RelayerNative implements RelayerSDK, Disposable {
       this.#setStatus("initializing");
       this.#initPromise = this.#initInstance(chainId)
         .then((instance) => {
+          // Commit the resolved chain ID only on success, so a failed init
+          // never leaves us in a "chain pinned to an un-initialized chain"
+          // state that skips the re-teardown branch on the next attempt.
+          this.#resolvedChainId = chainId;
           this.#setStatus("ready");
           return instance;
         })
@@ -242,7 +269,7 @@ export class RelayerNative implements RelayerSDK, Disposable {
     return this.#initPromise;
   }
 
-  /** Initialize the native instance (called once via the promise lock). */
+  /** Initialize the native instance (called once via the promise chain). */
   async #initInstance(chainId: number): Promise<FhevmInstance> {
     const config = this.#resolveInstanceConfig(chainId);
     const instance = await createInstance(config);
@@ -258,11 +285,16 @@ export class RelayerNative implements RelayerSDK, Disposable {
    * Terminate the relayer and clear cached state. The next public-method call
    * will transparently re-initialize, so this is safe to call from React
    * unmount/cleanup paths.
+   *
+   * In-flight callers that already captured an instance reference keep using
+   * that instance — the native engine itself is not freed here (there is no
+   * explicit dispose on `FhevmInstance`), so completing in-flight ops is safe.
    */
   terminate(): void {
     this.#terminated = true;
     this.#initPromise = null;
-    this.#ensureLock = null;
+    // Keep `#chain` intact so a call issued mid-terminate still serializes
+    // correctly onto the next init attempt.
   }
 
   /** Calls {@link terminate}, satisfying the `Disposable` interface. */
@@ -284,13 +316,15 @@ export class RelayerNative implements RelayerSDK, Disposable {
     startTimestamp: number,
     durationDays?: number,
   ): Promise<EIP712TypedData> {
-    const instance = await this.#ensureInstance();
-    return instance.createEIP712(
-      publicKey,
-      contractAddresses,
-      startTimestamp,
-      durationDays ?? 30,
-    ) as Promise<EIP712TypedData>;
+    return withRetry(async () => {
+      const instance = await this.#ensureInstance();
+      return instance.createEIP712(
+        publicKey,
+        contractAddresses,
+        startTimestamp,
+        durationDays ?? 30,
+      ) as Promise<EIP712TypedData>;
+    });
   }
 
   async encrypt(params: EncryptParams): Promise<EncryptResult> {
@@ -343,14 +377,16 @@ export class RelayerNative implements RelayerSDK, Disposable {
     startTimestamp: number,
     durationDays?: number,
   ): Promise<KmsDelegatedUserDecryptEIP712Type> {
-    const instance = await this.#ensureInstance();
-    return instance.createDelegatedUserDecryptEIP712(
-      publicKey,
-      contractAddresses,
-      delegatorAddress,
-      startTimestamp,
-      durationDays ?? 30,
-    ) as Promise<KmsDelegatedUserDecryptEIP712Type>;
+    return withRetry(async () => {
+      const instance = await this.#ensureInstance();
+      return instance.createDelegatedUserDecryptEIP712(
+        publicKey,
+        contractAddresses,
+        delegatorAddress,
+        startTimestamp,
+        durationDays ?? 30,
+      ) as Promise<KmsDelegatedUserDecryptEIP712Type>;
+    });
   }
 
   async delegatedUserDecrypt(
@@ -417,6 +453,9 @@ export class RelayerNative implements RelayerSDK, Disposable {
   }
 
   async getAclAddress(): Promise<Address> {
+    // Pure config read — does not need to boot the native engine. Keeps this
+    // callable before `#ensureInstance` has ever run (e.g. from early UI code
+    // that just wants to show the ACL address).
     const chainId = await this.#config.getChainId();
     const config = this.#resolveInstanceConfig(chainId);
     if (!config.aclContractAddress) {

@@ -1,9 +1,14 @@
 /**
  * React Native SDK for Zama confidential token operations.
  *
- * Provides `RelayerNative` (native FHE crypto via ARM binaries) and
- * `AsyncStorageAdapter` (persistent credential storage).
- * All hooks and providers are re-exported from `@zama-fhe/react-sdk`.
+ * Exposes three platform-specific primitives consumed by `ZamaProvider`:
+ * - `RelayerNative` — native FHE crypto backed by the Rust engine.
+ * - `SecureStoreAdapter` — durable `storage` slot (iOS Keychain / Android Keystore).
+ * - `SqliteKvStoreAdapter` — SQLite-backed KV. Default `fheArtifactStorage` for
+ *   `RelayerNative`, and a suitable choice for the SDK's `sessionStorage` slot.
+ *
+ * All React hooks (`useEncrypt`, `useShield`, etc.) come from
+ * `@zama-fhe/react-sdk` and work unchanged on top of these adapters.
  *
  * @packageDocumentation
  */

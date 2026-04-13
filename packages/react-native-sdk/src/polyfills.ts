@@ -60,8 +60,13 @@ if (typeof quickCrypto.install !== "function") {
   );
 }
 
-const globalSubtle = (globalThis as { crypto?: { subtle?: unknown } }).crypto?.subtle;
-if (!globalSubtle) {
+// Guard against partial installs: some libraries populate `crypto.subtle`
+// without providing the methods the SDK actually uses. Probe `digest` (the
+// cheapest subtle method) as a proxy for a functional implementation. If it
+// is missing or non-callable, reinstall via RNQC.
+const globalSubtle = (globalThis as { crypto?: { subtle?: { digest?: unknown } } }).crypto?.subtle;
+const subtleLooksUsable = !!globalSubtle && typeof globalSubtle.digest === "function";
+if (!subtleLooksUsable) {
   quickCrypto.install();
 }
 
@@ -89,10 +94,11 @@ if (typeof (Set.prototype as { isSubsetOf?: unknown }).isSubsetOf !== "function"
   Object.defineProperty(Set.prototype, "isSubsetOf", {
     configurable: true,
     writable: true,
+    // Matches the TC39 proposal: iterate `this` and check `other.has()` for
+    // each element. We deliberately do NOT short-circuit on
+    // `this.size > other.size` because the spec accepts any `SetLike` whose
+    // `size` may not accurately reflect `has()` (e.g. a filtered view).
     value: function isSubsetOf<T>(this: Set<T>, other: SetLike<T>): boolean {
-      if (this.size > other.size) {
-        return false;
-      }
       for (const value of this) {
         if (!other.has(value)) {
           return false;

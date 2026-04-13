@@ -14,10 +14,9 @@ const KEY_PREFIX = "zama_fhe_";
  * - Keys must match `[A-Za-z0-9._-]+`. Arbitrary key characters are rejected
  *   by the underlying native API; prefer short alphanumeric keys.
  * - Values must be strings and are JSON-serialized here.
- * - iOS enforces a soft ~2 KB per-entry size limit (larger values still
- *   work but degrade performance). If the SDK stores larger blobs, split
- *   them across keys or keep the blob in `expo-sqlite/kv-store` and only
- *   the encryption key in SecureStore.
+ * - SecureStore is designed for small secrets (keys, tokens), not multi-MB
+ *   blobs. For large payloads (FHE public params, etc.), use
+ *   `SqliteKvStoreAdapter` instead and keep only the encryption key here.
  */
 export class SecureStoreAdapter implements GenericStorage {
   async get<T = unknown>(key: string): Promise<T | null> {
@@ -29,10 +28,13 @@ export class SecureStoreAdapter implements GenericStorage {
     try {
       return JSON.parse(raw) as T;
     } catch (cause) {
-      // Corrupted entry — remove it so subsequent reads start clean, then
-      // throw with context so the caller knows which key failed and why.
-      await SecureStore.deleteItemAsync(prefixedKey).catch(() => {
-        // Ignore cleanup failures: the original parse error is more important.
+      // Corrupted entry — try to remove it so subsequent reads start clean.
+      // We do NOT let a cleanup failure mask the parse error (the caller
+      // needs to know the entry was corrupt), but we surface cleanup errors
+      // via the logger so an infinite parse/cleanup loop doesn't go silent.
+      await SecureStore.deleteItemAsync(prefixedKey).catch((cleanupError: unknown) => {
+        // eslint-disable-next-line no-console
+        console.warn(`SecureStoreAdapter: failed to delete corrupted entry "${key}"`, cleanupError);
       });
       throw new Error(
         `SecureStoreAdapter: failed to parse stored value for key "${key}". ` +

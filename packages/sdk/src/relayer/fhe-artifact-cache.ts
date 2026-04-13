@@ -63,8 +63,8 @@ function fromBase64(b64: string): Uint8Array {
   let binary: string;
   try {
     binary = atob(b64);
-  } catch {
-    throw new Error(`Invalid base64 data (length: ${b64.length})`);
+  } catch (cause) {
+    throw new Error(`Invalid base64 data (length: ${b64.length})`, { cause });
   }
   if (binary.length === 0) {
     throw new Error("Decoded artifact is empty");
