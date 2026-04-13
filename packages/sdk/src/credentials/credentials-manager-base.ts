@@ -315,7 +315,7 @@ export abstract class BaseCredentialsManager<
         return false;
       }
       this.assertEncrypted(stored);
-      return coversContracts(stored.contractAddresses, contractAddresses);
+      return isCredentialValid(stored, contractAddresses);
     } catch {
       return false;
     }
