@@ -55,3 +55,6 @@ contracts/out/
 contracts/cache/
 contracts/broadcast/
 contracts/.forge-deploy-lock/
+
+# react-native-sdk prebuilt archive (too large for GitHub; distribute out-of-band)
+packages/react-native-sdk/fhevm-react-native-sdk-*.tgz
