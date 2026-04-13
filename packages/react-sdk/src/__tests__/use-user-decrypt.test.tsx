@@ -12,12 +12,15 @@ describe("useUserDecrypt", () => {
     });
 
     const { result } = renderWithProviders(() =>
-      useUserDecrypt({
-        handles: [
-          { handle: "0xhandle1", contractAddress: tokenAddress },
-          { handle: "0xhandle2", contractAddress: tokenAddress },
-        ],
-      }),
+      useUserDecrypt(
+        {
+          handles: [
+            { handle: "0xhandle1", contractAddress: tokenAddress },
+            { handle: "0xhandle2", contractAddress: tokenAddress },
+          ],
+        },
+        { enabled: true },
+      ),
     );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true), {
@@ -39,12 +42,15 @@ describe("useUserDecrypt", () => {
       .mockResolvedValueOnce({ "0xh2": 20n });
 
     const { result } = renderWithProviders(() =>
-      useUserDecrypt({
-        handles: [
-          { handle: "0xh1", contractAddress: CONTRACT_A },
-          { handle: "0xh2", contractAddress: CONTRACT_B },
-        ],
-      }),
+      useUserDecrypt(
+        {
+          handles: [
+            { handle: "0xh1", contractAddress: CONTRACT_A },
+            { handle: "0xh2", contractAddress: CONTRACT_B },
+          ],
+        },
+        { enabled: true },
+      ),
     );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true), {
@@ -63,9 +69,10 @@ describe("useUserDecrypt", () => {
     vi.mocked(relayer.generateKeypair).mockRejectedValue(new Error("keygen failed"));
 
     const { result } = renderWithProviders(() =>
-      useUserDecrypt({
-        handles: [{ handle: "0xh", contractAddress: tokenAddress }],
-      }),
+      useUserDecrypt(
+        { handles: [{ handle: "0xh", contractAddress: tokenAddress }] },
+        { enabled: true },
+      ),
     );
 
     await waitFor(() => expect(result.current.isError).toBe(true), {
@@ -92,6 +99,20 @@ describe("useUserDecrypt", () => {
     const { result } = renderWithProviders(() => useUserDecrypt({ handles: [] }));
 
     await waitFor(() => expect(result.current.fetchStatus).toBe("idle"));
+    expect(result.current.data).toBeUndefined();
+  });
+
+  it("is off by default — no signature prompt when enabled is not provided", async ({
+    signer,
+    tokenAddress,
+    renderWithProviders,
+  }) => {
+    const { result } = renderWithProviders(() =>
+      useUserDecrypt({ handles: [{ handle: "0xh", contractAddress: tokenAddress }] }),
+    );
+
+    await waitFor(() => expect(result.current.fetchStatus).toBe("idle"));
+    expect(signer.signTypedData).not.toHaveBeenCalled();
     expect(result.current.data).toBeUndefined();
   });
 

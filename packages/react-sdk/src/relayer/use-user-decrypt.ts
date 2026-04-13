@@ -19,7 +19,7 @@ export function useUserDecrypt(
   return useQuery<DecryptResult>({
     ...queryOpts,
     ...options,
-    enabled: queryOpts.enabled && options?.enabled,
+    enabled: queryOpts.enabled && (options?.enabled ?? false),
   });
 }
 
