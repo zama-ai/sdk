@@ -232,64 +232,6 @@ export class ReadonlyToken {
     return this.signer.readContract(decimalsContract(this.address));
   }
 
-  /**
-   * Ensure FHE decrypt credentials exist for this token.
-   * Generates a keypair and requests an EIP-712 signature if needed.
-   * Call this before any decrypt operation to avoid mid-flow wallet prompts.
-   *
-   * @returns Resolves when credentials are cached.
-   *
-   * @example
-   * ```ts
-   * await token.allow();
-   * // Credentials are now cached — subsequent decrypts won't prompt
-   * const balance = await token.balanceOf();
-   * ```
-   */
-  async allow(): Promise<void> {
-    await this.credentials.allow(this.address);
-  }
-
-  /**
-   * Whether a session signature is currently cached for the connected wallet.
-   * Use this to check if decrypt operations can proceed without a wallet prompt.
-   */
-  async isAllowed(): Promise<boolean> {
-    return this.credentials.isAllowed([this.address]);
-  }
-
-  /**
-   * Revoke the session signature for the connected wallet.
-   * Stored credentials remain intact, but the next decrypt operation
-   * will require a fresh wallet signature.
-   */
-  async revoke(...contractAddresses: Address[]): Promise<void> {
-    await this.credentials.revoke(...contractAddresses);
-  }
-
-  /**
-   * Ensure FHE decrypt credentials exist for all given tokens in a single
-   * wallet signature. Call this early (e.g. after loading the token list) so
-   * that subsequent individual decrypt operations reuse cached credentials.
-   *
-   * @param tokens - Array of ReadonlyToken instances to allow.
-   * @returns Resolves when all credentials are cached.
-   *
-   * @example
-   * ```ts
-   * const tokens = addresses.map(a => sdk.createReadonlyToken(a));
-   * await ReadonlyToken.allow(...tokens);
-   * // All tokens now share the same credentials
-   * ```
-   */
-  static async allow(...tokens: ReadonlyToken[]): Promise<void> {
-    if (tokens.length === 0) {
-      return;
-    }
-    const allAddresses = tokens.map((t) => t.address);
-    await tokens[0]!.credentials.allow(...allAddresses);
-  }
-
   protected async getAclAddress(): Promise<Address> {
     return this.relayer.getAclAddress();
   }
