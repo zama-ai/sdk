@@ -50,7 +50,7 @@
     "api-report:check": "pnpm build && pnpm api-report:check:sdk && pnpm api-report:check:react-sdk",
     "api-report:check:sdk": "cd packages/sdk && api-extractor run -c api-extractor.json && api-extractor run -c api-extractor.viem.json && api-extractor run -c api-extractor.ethers.json && api-extractor run -c api-extractor.node.json && api-extractor run -c api-extractor.query.json",
     "api-report:check:react-sdk": "cd packages/react-sdk && api-extractor run -c api-extractor.json && api-extractor run -c api-extractor.wagmi.json",
-    "setup:claude": "bash scripts/setup-claude.sh",
+    "setup:claude": "node scripts/setup-claude.mjs",
     "size": "size-limit",
     "size:json": "size-limit --json"
   },

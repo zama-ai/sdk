@@ -1,5 +1,7 @@
 # Changelog
 
+## [2.4.0-alpha.5](https://github.com/zama-ai/sdk/compare/v2.4.0-alpha.4...v2.4.0-alpha.5) (2026-04-13)
+
 ## [2.4.0-alpha.4](https://github.com/zama-ai/sdk/compare/v2.4.0-alpha.3...v2.4.0-alpha.4) (2026-04-10)
 
 ### Reverts
