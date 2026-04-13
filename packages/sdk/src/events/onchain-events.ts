@@ -20,12 +20,12 @@ export type { RawLog } from "../types/transaction";
 export const Topics = {
   /** `ConfidentialTransfer(address indexed from, address indexed to, bytes32 indexed amount)` */
   ConfidentialTransfer: "0x67500e8d0ed826d2194f514dd0d8124f35648ab6e3fb5e6ed867134cffe661e9",
-  /** `Wrapped(uint64 mintAmount, uint256 amountIn, uint256 feeAmount, address indexed to_, uint256 indexed mintTxId)` */
-  Wrapped: "0x1f7907f4d84043abe0fb7c74e8865ee5fe93fe4f691c54a7b8fa9d6fb17c7cba",
+  /** `Wrapped(address indexed to, uint256 amountIn)` */
+  Wrapped: "0x4700c1726b4198077cd40320a32c45265a1910521eb0ef713dd1d8412413d7fc",
   /** `UnwrapRequested(address indexed receiver, bytes32 amount)` */
   UnwrapRequested: "0x77d02d353c5629272875d11f1b34ec4c65d7430b075575b78cd2502034c469ee",
-  /** `UnwrappedFinalized(bytes32 indexed burntAmountHandle, ...)` */
-  UnwrappedFinalized: "0xc64e7c81b18b674fc5b037d8a0041bfe3332d86c780a4688f404ee01fbabb152",
+  /** `UnwrapFinalized(address indexed receiver, bytes32 encryptedAmount, uint64 cleartextAmount)` */
+  UnwrappedFinalized: "0x2d4edf3c2943002120f53dab3f8940043f34799f4a92ab90f2f81f7dd004a49e",
   /** `UnwrappedStarted(bool returnVal, uint256 indexed requestId, ...)` */
   UnwrappedStarted: "0x3838891d4843c6d7f9f494570b6fd8843f4e3c3ddb817c1411760bd31b819806",
 } as const;
@@ -48,16 +48,10 @@ export interface ConfidentialTransferEvent {
 /** Decoded `Wrapped` event — an ERC-20 shield (wrap) operation. */
 export interface WrappedEvent {
   readonly eventName: "Wrapped";
-  /** Confidential tokens minted. */
-  readonly mintAmount: bigint;
-  /** Underlying ERC-20 tokens deposited. */
-  readonly amountIn: bigint;
-  /** Fee deducted during wrapping. */
-  readonly feeAmount: bigint;
   /** Receiver of the minted confidential tokens. */
   readonly to: Address;
-  /** On-chain mint transaction ID. */
-  readonly mintTxId: bigint;
+  /** Underlying ERC-20 tokens deposited. */
+  readonly amountIn: bigint;
 }
 
 /** Decoded `UnwrapRequested` event — an unshield request submitted. */
@@ -69,23 +63,15 @@ export interface UnwrapRequestedEvent {
   readonly encryptedAmount: Handle;
 }
 
-/** Decoded `UnwrappedFinalized` event — an unshield completed on-chain. */
+/** Decoded `UnwrapFinalized` event — an unshield completed on-chain. */
 export interface UnwrappedFinalizedEvent {
   readonly eventName: "UnwrappedFinalized";
-  /** FHE handle of the burnt confidential balance. */
-  readonly burntAmountHandle: Handle;
-  /** Whether the finalization succeeded. */
-  readonly finalizeSuccess: boolean;
-  /** Whether the fee transfer succeeded. */
-  readonly feeTransferSuccess: boolean;
-  /** Amount of confidential tokens burnt. */
-  readonly burnAmount: bigint;
-  /** Amount of underlying ERC-20 tokens returned. */
-  readonly unwrapAmount: bigint;
-  /** Fee deducted during unwrapping. */
-  readonly feeAmount: bigint;
-  /** Next on-chain transaction ID. */
-  readonly nextTxId: bigint;
+  /** Address receiving the unwrapped ERC-20 tokens. */
+  readonly receiver: Address;
+  /** FHE ciphertext handle of the burnt confidential balance. */
+  readonly encryptedAmount: Handle;
+  /** Cleartext amount of underlying ERC-20 tokens returned. */
+  readonly cleartextAmount: bigint;
 }
 
 /** Decoded `UnwrappedStarted` event — the relayer began processing an unshield. */
@@ -181,25 +167,22 @@ export function decodeConfidentialTransfer(log: RawLog): ConfidentialTransferEve
 }
 
 /**
- * Wrapped(uint64 mintAmount, uint256 amountIn, uint256 feeAmount, address indexed to_, uint256 indexed mintTxId)
- * Indexed: to_ (topics[1]), mintTxId (topics[2])
- * Data: mintAmount (uint64, abi-encoded as uint256), amountIn, feeAmount
+ * Wrapped(address indexed to, uint256 amountIn)
+ * Indexed: to (topics[1])
+ * Data: amountIn (uint256)
  */
 export function decodeWrapped(log: RawLog): WrappedEvent | null {
   if (log.topics[0] !== Topics.Wrapped) {
     return null;
   }
-  if (log.topics.length < 3) {
+  if (log.topics.length < 2) {
     return null;
   }
 
   return {
     eventName: "Wrapped",
     to: topicToAddress(log.topics[1]!),
-    mintTxId: topicToBigInt(log.topics[2]!),
-    mintAmount: wordToBigInt(log.data, 0),
-    amountIn: wordToBigInt(log.data, 1),
-    feeAmount: wordToBigInt(log.data, 2),
+    amountIn: wordToBigInt(log.data, 0),
   };
 }
 
@@ -224,28 +207,23 @@ export function decodeUnwrapRequested(log: RawLog): UnwrapRequestedEvent | null 
 }
 
 /**
- * UnwrappedFinalized(bytes32 indexed burntAmountHandle, bool finalizeSuccess, bool feeTransferSuccess,
- *                    uint64 burnAmount, uint256 unwrapAmount, uint256 feeAmount, uint256 indexed nextTxId)
- * Indexed: burntAmountHandle (topics[1]), nextTxId (topics[2])
- * Data: finalizeSuccess, feeTransferSuccess, burnAmount, unwrapAmount, feeAmount
+ * UnwrapFinalized(address indexed receiver, bytes32 encryptedAmount, uint64 cleartextAmount)
+ * Indexed: receiver (topics[1])
+ * Data: encryptedAmount (bytes32 FHE handle, word 0), cleartextAmount (uint64, word 1)
  */
 export function decodeUnwrappedFinalized(log: RawLog): UnwrappedFinalizedEvent | null {
   if (log.topics[0] !== Topics.UnwrappedFinalized) {
     return null;
   }
-  if (log.topics.length < 3) {
+  if (log.topics.length < 2) {
     return null;
   }
 
   return {
     eventName: "UnwrappedFinalized",
-    burntAmountHandle: topicToBytes32(log.topics[1]!),
-    nextTxId: topicToBigInt(log.topics[2]!),
-    finalizeSuccess: wordToBool(log.data, 0),
-    feeTransferSuccess: wordToBool(log.data, 1),
-    burnAmount: wordToBigInt(log.data, 2),
-    unwrapAmount: wordToBigInt(log.data, 3),
-    feeAmount: wordToBigInt(log.data, 4),
+    receiver: topicToAddress(log.topics[1]!),
+    encryptedAmount: wordToBytes32(log.data, 0),
+    cleartextAmount: wordToBigInt(log.data, 1),
   };
 }
 

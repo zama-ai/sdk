@@ -40,9 +40,12 @@ export { HardhatConfig, MainnetConfig, SepoliaConfig } from "./relayer/relayer-u
 // ERC-165 interface IDs
 export { ERC7984_INTERFACE_ID, ERC7984_WRAPPER_INTERFACE_ID } from "./contracts";
 
+// Decrypt cache
+export { DecryptCache } from "./decrypt-cache";
+
 // Token abstraction layer
 export { ZamaSDK } from "./zama-sdk";
-export type { ZamaSDKConfig } from "./zama-sdk";
+export type { ZamaSDKConfig, DecryptOptions } from "./zama-sdk";
 export { WrappersRegistry, DefaultRegistryAddresses } from "./wrappers-registry";
 export type { WrappersRegistryConfig, ListPairsOptions } from "./wrappers-registry";
 export {
@@ -221,16 +224,12 @@ export {
   confidentialTransferContract,
   confidentialTransferFromContract,
   isOperatorContract,
-  confidentialBatchTransferContract,
   unwrapContract,
   unwrapFromBalanceContract,
   finalizeUnwrapContract,
   setOperatorContract,
-  getWrapperContract,
-  wrapperExistsContract,
   underlyingContract,
   wrapContract,
-  wrapETHContract,
   supportsInterfaceContract,
   isConfidentialTokenContract,
   isConfidentialWrapperContract,
@@ -243,13 +242,6 @@ export {
   confidentialTotalSupplyContract,
   totalSupplyContract,
   rateContract,
-  deploymentCoordinatorContract,
-  isFinalizeUnwrapOperatorContract,
-  setFinalizeUnwrapOperatorContract,
-  getWrapFeeContract,
-  getUnwrapFeeContract,
-  getBatchTransferFeeContract,
-  getFeeRecipientContract,
   delegateForUserDecryptionContract,
   revokeDelegationContract,
   getDelegationExpiryContract,
@@ -262,9 +254,4 @@ export {
   getTokenAddressContract,
   isConfidentialTokenValidContract,
 } from "./contracts";
-export type {
-  BatchTransferData,
-  TokenWrapperPair,
-  TokenWrapperPairWithMetadata,
-  PaginatedResult,
-} from "./contracts";
+export type { TokenWrapperPair, TokenWrapperPairWithMetadata, PaginatedResult } from "./contracts";

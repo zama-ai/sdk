@@ -6,6 +6,7 @@ import { CredentialsManager } from "../credentials/credentials-manager";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { SignerLifecycleCallbacks } from "../types";
 import type { Address } from "viem";
+import type { DecryptHandle } from "../query/user-decrypt";
 
 const NEXT_USER_ADDRESS = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;
 
@@ -121,7 +122,12 @@ describe("ZamaSDK", () => {
     sdk.terminate();
   });
 
-  it("revoke clears session storage", async ({ signer, relayer, storage, sessionStorage }) => {
+  it("credentials.revoke clears session storage", async ({
+    signer,
+    relayer,
+    storage,
+    sessionStorage,
+  }) => {
     const sdk = new ZamaSDK({ relayer, signer, storage, sessionStorage });
 
     // Simulate a cached session signature by computing the same store key
@@ -133,7 +139,7 @@ describe("ZamaSDK", () => {
     await sessionStorage.set(storeKey, "0xsomeSignature");
     expect(await sessionStorage.get(storeKey)).toBe("0xsomeSignature");
 
-    await sdk.revoke();
+    await sdk.credentials.revoke();
 
     expect(await sessionStorage.get(storeKey)).toBeNull();
   });
@@ -185,6 +191,64 @@ describe("ZamaSDK", () => {
     await sdk.revokeSession();
 
     expect(clearCachesSpy).toHaveBeenCalledOnce();
+  });
+
+  describe("keypairTTL validation", () => {
+    it("throws when keypairTTL is 0", ({ relayer, signer, storage }) => {
+      expect(() => new ZamaSDK({ relayer, signer, storage, keypairTTL: 0 })).toThrow(
+        "keypairTTL must be a positive number (seconds)",
+      );
+    });
+
+    it("throws when keypairTTL is negative", ({ relayer, signer, storage }) => {
+      expect(() => new ZamaSDK({ relayer, signer, storage, keypairTTL: -1 })).toThrow(
+        "keypairTTL must be a positive number (seconds)",
+      );
+    });
+
+    it("throws when keypairTTL is NaN", ({ relayer, signer, storage }) => {
+      expect(() => new ZamaSDK({ relayer, signer, storage, keypairTTL: NaN })).toThrow(
+        "keypairTTL must be a positive number (seconds)",
+      );
+    });
+
+    it("accepts keypairTTL exactly at the 365-day maximum without warning", ({
+      relayer,
+      signer,
+      storage,
+    }) => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const MAX = 365 * 86400;
+      const sdk = new ZamaSDK({ relayer, signer, storage, keypairTTL: MAX });
+      expect(sdk.credentials.keypairTTL).toBe(MAX);
+      expect(warnSpy).not.toHaveBeenCalled();
+      warnSpy.mockRestore();
+    });
+
+    it("caps keypairTTL above 365 days and emits a warning", ({ relayer, signer, storage }) => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const MAX = 365 * 86400;
+      const TOO_BIG = MAX + 1;
+      const sdk = new ZamaSDK({ relayer, signer, storage, keypairTTL: TOO_BIG });
+      expect(sdk.credentials.keypairTTL).toBe(MAX);
+      expect(warnSpy).toHaveBeenCalledOnce();
+      expect(warnSpy.mock.calls[0][0]).toContain("keypairTTL");
+      expect(warnSpy.mock.calls[0][0]).toContain("365 days");
+      warnSpy.mockRestore();
+    });
+
+    it("caps keypairTTL: Infinity to the 365-day maximum and emits a warning", ({
+      relayer,
+      signer,
+      storage,
+    }) => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const MAX = 365 * 86400;
+      const sdk = new ZamaSDK({ relayer, signer, storage, keypairTTL: Infinity });
+      expect(sdk.credentials.keypairTTL).toBe(MAX);
+      expect(warnSpy).toHaveBeenCalledOnce();
+      warnSpy.mockRestore();
+    });
   });
 
   describe("lifecycle auto-revoke", () => {
@@ -590,6 +654,112 @@ describe("ZamaSDK", () => {
       expect(await sessionStorage.get(newKey)).toBeNull();
 
       sdk.terminate();
+    });
+  });
+
+  describe("decrypt", () => {
+    const CONTRACT_A = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
+    const CONTRACT_B = "0x3C3c3C3c3C3C3c3c3c3C3c3C3C3c3c3C3c3c3C3C" as Address;
+
+    it("decrypts handles via relayer and caches results", async ({ sdk, relayer, handle }) => {
+      const handles: DecryptHandle[] = [{ handle, contractAddress: CONTRACT_A }];
+
+      const result1 = await sdk.userDecrypt(handles);
+      expect(result1[handle]).toBe(1000n);
+      expect(relayer.userDecrypt).toHaveBeenCalledOnce();
+
+      // Second call should hit cache — relayer not called again
+      const result2 = await sdk.userDecrypt(handles);
+      expect(result2[handle]).toBe(1000n);
+      expect(relayer.userDecrypt).toHaveBeenCalledOnce();
+    });
+
+    it("groups handles by contract address", async ({ sdk, relayer, handle }) => {
+      const handle2 = ("0x" + "cd".repeat(32)) as Address;
+      vi.mocked(relayer.userDecrypt)
+        .mockResolvedValueOnce({ [handle]: 1000n })
+        .mockResolvedValueOnce({ [handle2]: 2000n });
+
+      const handles: DecryptHandle[] = [
+        { handle, contractAddress: CONTRACT_A },
+        { handle: handle2, contractAddress: CONTRACT_B },
+      ];
+
+      const result = await sdk.userDecrypt(handles);
+      expect(result[handle]).toBe(1000n);
+      expect(result[handle2]).toBe(2000n);
+      expect(relayer.userDecrypt).toHaveBeenCalledTimes(2);
+    });
+
+    it("skips already-cached handles", async ({ sdk, relayer, handle }) => {
+      const handle2 = ("0x" + "cd".repeat(32)) as Address;
+
+      // First call caches handle
+      await sdk.userDecrypt([{ handle, contractAddress: CONTRACT_A }]);
+      expect(relayer.userDecrypt).toHaveBeenCalledOnce();
+
+      // Reset and set up for handle2 only
+      vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({
+        [handle2]: 2000n,
+      });
+
+      // Second call with both — only handle2 should go to relayer
+      const result = await sdk.userDecrypt([
+        { handle, contractAddress: CONTRACT_A },
+        { handle: handle2, contractAddress: CONTRACT_A },
+      ]);
+      expect(result[handle2]).toBe(2000n);
+      expect(relayer.userDecrypt).toHaveBeenCalledTimes(2);
+
+      // Verify only handle2 was sent in the second call
+      const secondCall = vi.mocked(relayer.userDecrypt).mock.calls[1]![0];
+      expect(secondCall.handles).toEqual([handle2]);
+    });
+
+    it("returns empty object when no handles provided", async ({ sdk, relayer }) => {
+      const result = await sdk.userDecrypt([]);
+      expect(result).toEqual({});
+      expect(relayer.userDecrypt).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("revoke clears decrypt cache", () => {
+    const CONTRACT_A = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
+
+    it("credentials.revoke() + cache clear — decrypt after revoke hits relayer again", async ({
+      sdk,
+      relayer,
+      handle,
+    }) => {
+      const handles: DecryptHandle[] = [{ handle, contractAddress: CONTRACT_A }];
+
+      await sdk.userDecrypt(handles);
+      expect(relayer.userDecrypt).toHaveBeenCalledOnce();
+
+      await sdk.credentials.revoke();
+      const address = await sdk.signer.getAddress();
+      await sdk.cache.clearForRequester(address);
+
+      // After revoke, cache should be cleared — relayer called again
+      await sdk.userDecrypt(handles);
+      expect(relayer.userDecrypt).toHaveBeenCalledTimes(2);
+    });
+
+    it("revokeSession() clears cache — decrypt after revokeSession hits relayer again", async ({
+      sdk,
+      relayer,
+      handle,
+    }) => {
+      const handles: DecryptHandle[] = [{ handle, contractAddress: CONTRACT_A }];
+
+      await sdk.userDecrypt(handles);
+      expect(relayer.userDecrypt).toHaveBeenCalledOnce();
+
+      await sdk.revokeSession();
+
+      // After revokeSession, cache should be cleared — relayer called again
+      await sdk.userDecrypt(handles);
+      expect(relayer.userDecrypt).toHaveBeenCalledTimes(2);
     });
   });
 });

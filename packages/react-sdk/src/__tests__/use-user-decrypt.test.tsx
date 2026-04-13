@@ -1,81 +1,43 @@
-import { waitFor } from "@testing-library/react";
 import type { Address } from "@zama-fhe/sdk";
+import { waitFor } from "@testing-library/react";
+import { useEffect } from "react";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
+import { useQueryClient } from "@tanstack/react-query";
+import { useIsAllowed } from "../authorization/use-is-allowed";
+import { useZamaSDK } from "../provider";
 import { useUserDecrypt } from "../relayer/use-user-decrypt";
 import { describe, expect, it, vi } from "../test-fixtures";
 
 describe("useUserDecrypt", () => {
-  it("runs the full flow: keypair -> EIP712 -> sign -> decrypt", async ({
-    relayer,
-    signer,
-    tokenAddress,
-    renderWithProviders,
-  }) => {
+  it("decrypts handles", async ({ relayer, tokenAddress, renderWithProviders }) => {
     vi.mocked(relayer.userDecrypt).mockResolvedValue({
       "0xhandle1": 100n,
       "0xhandle2": true,
     });
 
-    const { result, queryClient } = renderWithProviders(() => useUserDecrypt(), {
-      relayer,
-      signer,
+    const { result } = renderWithProviders(() =>
+      useUserDecrypt(
+        {
+          handles: [
+            { handle: "0xhandle1", contractAddress: tokenAddress },
+            { handle: "0xhandle2", contractAddress: tokenAddress },
+          ],
+        },
+        { enabled: true },
+      ),
+    );
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true), {
+      timeout: 5_000,
     });
-
-    result.current.mutate({
-      handles: [
-        { handle: "0xhandle1", contractAddress: tokenAddress },
-        { handle: "0xhandle2", contractAddress: tokenAddress },
-      ],
-    });
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    expect(relayer.generateKeypair).toHaveBeenCalledOnce();
-    expect(relayer.createEIP712).toHaveBeenCalledOnce();
-    expect(signer.signTypedData).toHaveBeenCalledOnce();
-    expect(relayer.userDecrypt).toHaveBeenCalledOnce();
 
     expect(result.current.data).toEqual({
       "0xhandle1": 100n,
       "0xhandle2": true,
     });
-
-    // Verify decryption cache was populated
-    expect(queryClient.getQueryData(zamaQueryKeys.decryption.handle("0xhandle1"))).toBe(100n);
-    expect(queryClient.getQueryData(zamaQueryKeys.decryption.handle("0xhandle2"))).toBe(true);
   });
 
-  it("fires callbacks in correct order", async ({
-    relayer,
-    signer,
-    tokenAddress,
-    renderWithProviders,
-  }) => {
-    vi.mocked(relayer.userDecrypt).mockResolvedValue({ "0xh": 42n });
-
-    const order: string[] = [];
-    const onCredentialsReady = vi.fn(() => order.push("credentials"));
-    const onDecrypted = vi.fn(() => order.push("decrypted"));
-
-    const { result } = renderWithProviders(
-      () => useUserDecrypt({ onCredentialsReady, onDecrypted }),
-      {
-        relayer,
-        signer,
-      },
-    );
-
-    result.current.mutate({
-      handles: [{ handle: "0xh", contractAddress: tokenAddress }],
-    });
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    expect(order).toEqual(["credentials", "decrypted"]);
-    expect(onDecrypted).toHaveBeenCalledWith({ "0xh": 42n });
-  });
-
-  it("groups handles by contract address", async ({ relayer, signer, renderWithProviders }) => {
+  it("groups handles by contract address", async ({ relayer, renderWithProviders }) => {
     const CONTRACT_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
     const CONTRACT_B = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;
 
@@ -83,142 +45,145 @@ describe("useUserDecrypt", () => {
       .mockResolvedValueOnce({ "0xh1": 10n })
       .mockResolvedValueOnce({ "0xh2": 20n });
 
-    const { result } = renderWithProviders(() => useUserDecrypt(), {
-      relayer,
-      signer,
+    const { result } = renderWithProviders(() =>
+      useUserDecrypt(
+        {
+          handles: [
+            { handle: "0xh1", contractAddress: CONTRACT_A },
+            { handle: "0xh2", contractAddress: CONTRACT_B },
+          ],
+        },
+        { enabled: true },
+      ),
+    );
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true), {
+      timeout: 5_000,
     });
 
-    result.current.mutate({
-      handles: [
-        { handle: "0xh1", contractAddress: CONTRACT_A },
-        { handle: "0xh2", contractAddress: CONTRACT_B },
-      ],
-    });
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    // Should call userDecrypt twice (once per contract)
     expect(relayer.userDecrypt).toHaveBeenCalledTimes(2);
     expect(result.current.data).toEqual({ "0xh1": 10n, "0xh2": 20n });
   });
 
-  it("deduplicates contract addresses for EIP-712", async ({
+  it("reports error when keypair generation fails", async ({
     relayer,
-    signer,
     tokenAddress,
     renderWithProviders,
   }) => {
-    vi.mocked(relayer.userDecrypt).mockResolvedValue({
-      "0xh1": 1n,
-      "0xh2": 2n,
-    });
-
-    const { result } = renderWithProviders(() => useUserDecrypt(), {
-      relayer,
-      signer,
-    });
-
-    result.current.mutate({
-      handles: [
-        { handle: "0xh1", contractAddress: tokenAddress },
-        { handle: "0xh2", contractAddress: tokenAddress },
-      ],
-    });
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    // EIP-712 should be called with deduplicated addresses
-    expect(relayer.createEIP712).toHaveBeenCalledWith(
-      "0xpub",
-      [tokenAddress], // single address, not duplicated
-      expect.any(Number),
-      30, // default durationDays (keypairTTL = 2592000s = 30 days)
-    );
-  });
-
-  it("derives durationDays from keypairTTL", async ({
-    relayer,
-    signer,
-    tokenAddress,
-    renderWithProviders,
-  }) => {
-    vi.mocked(relayer.userDecrypt).mockResolvedValue({ "0xh": 1n });
-
-    const { result } = renderWithProviders(() => useUserDecrypt(), {
-      relayer,
-      signer,
-    });
-
-    result.current.mutate({
-      handles: [{ handle: "0xh", contractAddress: tokenAddress }],
-    });
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    // durationDays is derived from keypairTTL (default 2592000s = 30 days)
-    expect(relayer.createEIP712).toHaveBeenCalledWith(
-      "0xpub",
-      [tokenAddress],
-      expect.any(Number),
-      30,
-    );
-  });
-
-  it("reuses cached credentials on second call (no extra wallet prompt)", async ({
-    relayer,
-    signer,
-    tokenAddress,
-    renderWithProviders,
-  }) => {
-    vi.mocked(relayer.userDecrypt)
-      .mockResolvedValueOnce({ "0xh1": 10n })
-      .mockResolvedValueOnce({ "0xh2": 20n });
-
-    const { result } = renderWithProviders(() => useUserDecrypt(), {
-      relayer,
-      signer,
-    });
-
-    // First call — generates fresh credentials
-    result.current.mutate({
-      handles: [{ handle: "0xh1", contractAddress: tokenAddress }],
-    });
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    expect(relayer.generateKeypair).toHaveBeenCalledTimes(1);
-    expect(signer.signTypedData).toHaveBeenCalledTimes(1);
-
-    // Second call with same contract — should reuse cached credentials
-    result.current.mutate({
-      handles: [{ handle: "0xh2", contractAddress: tokenAddress }],
-    });
-    await waitFor(() => expect(result.current.data).toEqual({ "0xh2": 20n }));
-
-    // No additional keypair generation or signing
-    expect(relayer.generateKeypair).toHaveBeenCalledTimes(1);
-    expect(signer.signTypedData).toHaveBeenCalledTimes(1);
-    // But userDecrypt was called twice (one per mutation)
-    expect(relayer.userDecrypt).toHaveBeenCalledTimes(2);
-  });
-
-  it("reports error when keypair generation fails", async ({ relayer, renderWithProviders }) => {
     vi.mocked(relayer.generateKeypair).mockRejectedValue(new Error("keygen failed"));
 
-    const { result } = renderWithProviders(() => useUserDecrypt(), { relayer });
+    const { result } = renderWithProviders(() =>
+      useUserDecrypt(
+        { handles: [{ handle: "0xh", contractAddress: tokenAddress }] },
+        { enabled: true },
+      ),
+    );
 
-    result.current.mutate({
-      handles: [
-        {
-          handle: "0xh",
-          contractAddress: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address,
-        },
-      ],
+    await waitFor(() => expect(result.current.isError).toBe(true), {
+      timeout: 5_000,
     });
-
-    await waitFor(() => expect(result.current.isError).toBe(true));
-    // CredentialsManager wraps the error with context + original message
     expect(result.current.error?.message).toBe(
       "Failed to create decrypt credentials: keygen failed",
     );
+  });
+
+  it("respects enabled = false", async ({ tokenAddress, renderWithProviders }) => {
+    const { result } = renderWithProviders(() =>
+      useUserDecrypt(
+        { handles: [{ handle: "0xh", contractAddress: tokenAddress }] },
+        { enabled: false },
+      ),
+    );
+
+    await waitFor(() => expect(result.current.fetchStatus).toBe("idle"));
+    expect(result.current.data).toBeUndefined();
+  });
+
+  it("stays disabled with empty handles", async ({ renderWithProviders }) => {
+    const { result } = renderWithProviders(() => useUserDecrypt({ handles: [] }));
+
+    await waitFor(() => expect(result.current.fetchStatus).toBe("idle"));
+    expect(result.current.data).toBeUndefined();
+  });
+
+  it("is off by default — no signature prompt when enabled is not provided", async ({
+    signer,
+    tokenAddress,
+    renderWithProviders,
+  }) => {
+    const { result } = renderWithProviders(() =>
+      useUserDecrypt({ handles: [{ handle: "0xh", contractAddress: tokenAddress }] }),
+    );
+
+    await waitFor(() => expect(result.current.fetchStatus).toBe("idle"));
+    expect(signer.signTypedData).not.toHaveBeenCalled();
+    expect(result.current.data).toBeUndefined();
+  });
+
+  it("gated on useIsAllowed=true fires and decrypts silently without a wallet prompt", async ({
+    signer,
+    relayer,
+    tokenAddress,
+    renderWithProviders,
+  }) => {
+    // SDK-80 row 17: when credentials are already authorized for the contract,
+    // useIsAllowed resolves to true and useUserDecrypt fires automatically —
+    // no extra signature prompt should be triggered by the decrypt itself.
+    vi.mocked(relayer.userDecrypt).mockResolvedValue({ "0xh": 42n });
+
+    const { result } = renderWithProviders(() => {
+      const sdk = useZamaSDK();
+      const queryClient = useQueryClient();
+      // Prime credentials once on mount so isAllowed flips to true,
+      // then invalidate so the cached `false` result is re-fetched.
+      useEffect(() => {
+        void sdk.credentials.allow(tokenAddress).then(() =>
+          queryClient.invalidateQueries({
+            queryKey: zamaQueryKeys.isAllowed.all,
+          }),
+        );
+      }, [sdk, queryClient]);
+
+      const isAllowed = useIsAllowed({ contractAddresses: [tokenAddress] });
+      const decrypt = useUserDecrypt(
+        { handles: [{ handle: "0xh", contractAddress: tokenAddress }] },
+        { enabled: isAllowed.data === true },
+      );
+      return { isAllowed, decrypt };
+    });
+
+    await waitFor(() => expect(result.current.isAllowed.data).toBe(true));
+    await waitFor(() => expect(result.current.decrypt.isSuccess).toBe(true), {
+      timeout: 5_000,
+    });
+
+    expect(result.current.decrypt.data).toEqual({ "0xh": 42n });
+    // Exactly one signature: the credential priming. The decrypt itself must
+    // not have prompted an additional signature.
+    expect(signer.signTypedData).toHaveBeenCalledTimes(1);
+  });
+
+  it("gated on useIsAllowed=false does not prompt for a signature", async ({
+    signer,
+    tokenAddress,
+    renderWithProviders,
+  }) => {
+    // SDK-42 pattern: the consumer gates the decrypt hook on useIsAllowed.
+    // When no session exists, isAllowed resolves to false and decrypt must
+    // stay idle — no EIP-712 prompt on mount.
+    const { result } = renderWithProviders(() => {
+      const isAllowed = useIsAllowed({ contractAddresses: [tokenAddress] });
+      const decrypt = useUserDecrypt(
+        { handles: [{ handle: "0xh", contractAddress: tokenAddress }] },
+        { enabled: isAllowed.data === true },
+      );
+      return { isAllowed, decrypt };
+    });
+
+    await waitFor(() => expect(result.current.isAllowed.data).toBe(false));
+    await waitFor(() => expect(result.current.decrypt.fetchStatus).toBe("idle"));
+
+    expect(signer.signTypedData).not.toHaveBeenCalled();
+    expect(result.current.decrypt.data).toBeUndefined();
   });
 });

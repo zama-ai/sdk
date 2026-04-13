@@ -94,16 +94,6 @@ await token.shield(1000n, {
 
 - `InsufficientERC20BalanceError` — if the ERC-20 balance is less than `amount` (exposes `requested`, `available`, `token`)
 
-### shieldETH
-
-`(amount: bigint, value?: bigint) => Promise<TransactionResult>`
-
-Shields native ETH into a confidential ETH wrapper contract. No approval needed. Pass `value` to override the amount of ETH sent (defaults to `amount`).
-
-```ts
-await token.shieldETH(1000n);
-```
-
 ### balanceOf
 
 `(owner?: Address) => Promise<bigint>`

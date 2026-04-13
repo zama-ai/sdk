@@ -9,16 +9,16 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@tanstack/react-query": "^5.95.2",
+    "@tanstack/react-query": "^5.97.0",
     "@zama-fhe/react-sdk": "workspace:*",
     "@zama-fhe/sdk": "workspace:*",
     "@zama-fhe/test-components": "workspace:*",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
     "react-router": "^7.14.0",
     "tailwindcss": "^4.2.2",
-    "viem": "^2.47.6",
-    "wagmi": "^3.6.0"
+    "viem": "^2.47.12",
+    "wagmi": "^3.6.1"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.2.2",
@@ -26,6 +26,6 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "typescript": "^6.0.2",
-    "vite": "^8.0.3"
+    "vite": "^8.0.8"
   }
 }

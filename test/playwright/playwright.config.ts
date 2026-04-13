@@ -61,7 +61,7 @@ export default defineConfig<{}, WorkerFixtures>({
       wait: {
         stdout: /Anvil ready on port (\d+)/,
       },
-      timeout: 120_000,
+      timeout: 90_000,
     },
     {
       command: CI
@@ -76,14 +76,14 @@ export default defineConfig<{}, WorkerFixtures>({
       wait: {
         stdout: /Anvil ready on port (\d+)/,
       },
-      timeout: 120_000,
+      timeout: 90_000,
     },
     {
       command: CI
         ? `VITE_ANVIL_PORT=${VITE_ANVIL_PORT} VITE_MOCK_RELAYER_PORT=${MOCK_RELAYER_PORT} pnpm --filter @zama-fhe/test-vite preview`
         : `VITE_ANVIL_PORT=${VITE_ANVIL_PORT} VITE_MOCK_RELAYER_PORT=${MOCK_RELAYER_PORT} pnpm --filter @zama-fhe/test-vite dev`,
       port: VITE_PORT,
-      timeout: 120_000,
+      timeout: 90_000,
       reuseExistingServer: !CI,
     },
   ],

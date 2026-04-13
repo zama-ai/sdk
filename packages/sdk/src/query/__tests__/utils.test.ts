@@ -65,15 +65,9 @@ describe("hashFn", () => {
   });
 
   test("is deterministic across object key insertion order", () => {
-    const keyA = [
-      "zama.fees",
-      { type: "shield", feeManagerAddress: "0xabc", amount: "100", from: "0x1", to: "0x2" },
-    ] as const;
+    const keyA = ["zama.balance", { token: "0xabc", owner: "0x1", decimals: 6 }] as const;
 
-    const keyB = [
-      "zama.fees",
-      { to: "0x2", from: "0x1", amount: "100", feeManagerAddress: "0xabc", type: "shield" },
-    ] as const;
+    const keyB = ["zama.balance", { decimals: 6, owner: "0x1", token: "0xabc" }] as const;
 
     expect(hashFn(keyA)).toBe(hashFn(keyB));
   });

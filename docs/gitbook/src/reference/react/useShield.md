@@ -153,6 +153,5 @@ Auto-invalidates the `confidentialBalance` cache on success.
 
 ## Related
 
-- [useShieldETH](/reference/react/useShieldETH) — shield native ETH instead of ERC-20 tokens
 - [useUnshield](/reference/react/useUnshield) — reverse operation, unshield back to public ERC-20
 - [Token.shield](/reference/sdk/Token#shield) — imperative equivalent on the `Token` class

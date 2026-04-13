@@ -204,6 +204,28 @@ const sdk = new ZamaSDK({
 
 ## Properties
 
+### cache
+
+`DecryptCache` (readonly)
+
+Persistent cache for decrypted FHE plaintext values. Backed by the same `GenericStorage` passed to the constructor (e.g. IndexedDB in browsers), so **cached values survive page reloads**.
+
+Entries are scoped by `(requester, contractAddress, handle)` — a different signer cannot read another user's cached decryptions, mirroring the on-chain ACL. When the on-chain handle changes (e.g. after a transfer), the old entry is automatically a miss.
+
+The cache is cleared automatically on:
+
+- `revoke()` / `revokeSession()` — clears entries for the current signer
+- Wallet disconnect, account change, or chain change — clears all entries
+
+```ts
+// Manual clear for the current signer
+const address = await sdk.signer.getAddress();
+await sdk.cache.clearForRequester(address);
+
+// Clear everything
+await sdk.cache.clearAll();
+```
+
 ### registry
 
 `WrappersRegistry` (readonly)
@@ -256,44 +278,48 @@ const registry = sdk.createWrappersRegistry({ [31337]: "0xYourRegistry" });
 const pairs = await registry.getTokenPairs();
 ```
 
-### allow
+### userDecrypt
 
-`(...addresses: Address[]) => Promise<void>`
+`(handles: DecryptHandle[], options?: DecryptOptions) => Promise<Record<Handle, ClearValueType>>`
 
-Prompts the wallet to sign and caches session credentials for the given contract addresses. A single signature covers all addresses passed. Call early to avoid popups during balance decrypts.
+Decrypt one or more FHE handles. Returns cached values when available, only calling the relayer for uncached handles. Results are written to the persistent cache (`sdk.cache`) so subsequent calls for the same handles return instantly.
 
-```ts
-await sdk.allow("0xTokenA", "0xTokenB");
-```
-
-### revoke
-
-`(...addresses: Address[]) => Promise<void>`
-
-Clears session credentials. The addresses are included in the `credentials:revoked` event.
+Handles from different contracts can be mixed — they are grouped by `contractAddress` and batched into one relayer call per contract.
 
 ```ts
-await sdk.revoke("0xTokenA", "0xTokenB");
+const values = await sdk.userDecrypt([
+  { handle: balanceHandle, contractAddress: cUSDT },
+  { handle: flagHandle, contractAddress: myContract },
+]);
+console.log(values[balanceHandle]); // 1000n
 ```
+
+#### options
+
+| Field                | Type                                                              | Description                                                                                                                                   |
+| -------------------- | ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `onCredentialsReady` | `(() => void) \| undefined`                                       | Fired after credentials are ready (cached or freshly signed), **before** relayer calls begin. Not called when all handles are already cached. |
+| `onDecrypted`        | `((values: Record<Handle, ClearValueType>) => void) \| undefined` | Fired after all handles have been decrypted (including the all-cached path).                                                                  |
+
+```ts
+const values = await sdk.userDecrypt([{ handle: balanceHandle, contractAddress: cUSDT }], {
+  onCredentialsReady: () => console.log("Credentials ready, decrypting..."),
+  onDecrypted: (result) => console.log("Done:", result),
+});
+```
+
+{% hint style="info" %}
+This is the SDK-level entry point for user decryption. The method is named `userDecrypt` (not `decrypt`) because it requires the connected wallet's credentials — distinguishing it from gateway-level decryption that happens on-chain without user authentication. In React, use [`useUserDecrypt`](/reference/react/useUserDecrypt) which wraps this method with TanStack Query semantics.
+{% endhint %}
 
 ### revokeSession
 
 `() => Promise<void>`
 
-Clears the session signature without specifying addresses. The next decrypt requires a fresh wallet signature.
+Clears the session signature **and** cached decrypted values without specifying addresses. The next decrypt requires a fresh wallet signature.
 
 ```ts
 await sdk.revokeSession();
-```
-
-### isAllowed
-
-`() => Promise<boolean>`
-
-Returns whether the session has active credentials.
-
-```ts
-const allowed = await sdk.isAllowed();
 ```
 
 ### dispose

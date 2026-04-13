@@ -328,7 +328,6 @@ export const test = base.extend<SdkFixtures>({
         approve: vi.fn().mockResolvedValue(txResult),
         approveUnderlying: vi.fn().mockResolvedValue(txResult),
         shield: vi.fn().mockResolvedValue(txResult),
-        shieldETH: vi.fn().mockResolvedValue(txResult),
         unwrap: vi.fn().mockResolvedValue(txResult),
         unwrapAll: vi.fn().mockResolvedValue(txResult),
         finalizeUnwrap: vi.fn().mockResolvedValue(txResult),

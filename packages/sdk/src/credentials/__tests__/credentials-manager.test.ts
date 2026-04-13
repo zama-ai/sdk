@@ -571,10 +571,10 @@ describe("CredentialsManager", () => {
     const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
 
     await credentialManager.allow(TOKEN_A);
-    expect(await credentialManager.isAllowed()).toBe(true);
+    expect(await credentialManager.isAllowed([TOKEN_A])).toBe(true);
 
     await credentialManager.clear();
-    expect(await credentialManager.isAllowed()).toBe(false);
+    expect(await credentialManager.isAllowed([TOKEN_A])).toBe(false);
 
     // Storage should also be empty
     const stored = await storage.get(storeKey);
@@ -606,13 +606,137 @@ describe("session allow/revoke", () => {
   }) => {
     setupMocks(relayer, signer);
 
-    expect(await credentialManager.isAllowed()).toBe(false);
+    expect(await credentialManager.isAllowed([TOKEN_A])).toBe(false);
 
     await credentialManager.allow(TOKEN_A);
-    expect(await credentialManager.isAllowed()).toBe(true);
+    expect(await credentialManager.isAllowed([TOKEN_A])).toBe(true);
 
     await credentialManager.revoke();
-    expect(await credentialManager.isAllowed()).toBe(false);
+    expect(await credentialManager.isAllowed([TOKEN_A])).toBe(false);
+  });
+
+  it("isAllowed(contracts) checks contract coverage", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+
+    await credentialManager.allow(TOKEN_A);
+
+    // Covered contract → true
+    expect(await credentialManager.isAllowed([TOKEN_A])).toBe(true);
+    // Uncovered contract → false
+    expect(await credentialManager.isAllowed([TOKEN_B])).toBe(false);
+    // Mix of covered and uncovered → false
+    expect(await credentialManager.isAllowed([TOKEN_A, TOKEN_B])).toBe(false);
+    // All covered contracts → true
+    expect(await credentialManager.isAllowed([TOKEN_A])).toBe(true);
+  });
+
+  it("isAllowed(contracts) returns true after extending credentials", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+
+    await credentialManager.allow(TOKEN_A);
+    expect(await credentialManager.isAllowed([TOKEN_B])).toBe(false);
+
+    // Extend to cover TOKEN_B
+    await credentialManager.allow(TOKEN_A, TOKEN_B);
+    expect(await credentialManager.isAllowed([TOKEN_A, TOKEN_B])).toBe(true);
+  });
+
+  it("isAllowed([A]) returns true when signature covers [A, B]", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+
+    await credentialManager.allow(TOKEN_A, TOKEN_B);
+
+    expect(await credentialManager.isAllowed([TOKEN_A])).toBe(true);
+    expect(await credentialManager.isAllowed([TOKEN_B])).toBe(true);
+    expect(await credentialManager.isAllowed([TOKEN_A, TOKEN_B])).toBe(true);
+  });
+
+  it("isAllowed() returns false when keypair has expired but session has not", async ({
+    relayer,
+    signer,
+    storage,
+    sessionStorage,
+    createCredentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+    const manager = createCredentialManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      keypairTTL: 86400,
+      sessionTTL: 86400,
+    });
+    const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
+
+    await manager.allow(TOKEN_A);
+    expect(await manager.isAllowed([TOKEN_A])).toBe(true);
+
+    // Push the keypair time window into the past while leaving the session entry intact.
+    const stored = (await storage.get(storeKey)) as Record<string, unknown>;
+    const tampered = {
+      ...stored,
+      startTimestamp: Math.floor(Date.now() / 1000) - 2 * 86400,
+      durationDays: 1,
+    };
+    await storage.set(storeKey, tampered);
+
+    expect(await manager.isAllowed([TOKEN_A])).toBe(false);
+  });
+
+  it("invariant: isAllowed true ⇒ allow() reuses cache and does not re-sign", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+
+    await credentialManager.allow(TOKEN_A);
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+    expect(await credentialManager.isAllowed([TOKEN_A])).toBe(true);
+
+    await credentialManager.allow(TOKEN_A);
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+  });
+
+  it("invariant: isAllowed false ⇒ allow() produces a fresh EIP-712 signature", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+
+    expect(await credentialManager.isAllowed([TOKEN_A])).toBe(false);
+    expect(signer.signTypedData).not.toHaveBeenCalled();
+
+    await credentialManager.allow(TOKEN_A);
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+  });
+
+  it("isAllowed([]) returns false even when an active session exists", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+
+    await credentialManager.allow(TOKEN_A);
+    // Compile-time signature requires a non-empty tuple, but the runtime guard
+    // must still reject empty arrays — "are credentials valid?" with no
+    // contract context is not a meaningful question (SDK-78 principle 3).
+    expect(await credentialManager.isAllowed([] as unknown as [Address])).toBe(false);
   });
 
   it("allow() pre-caches session signature without needing stored credentials", async ({
@@ -625,7 +749,7 @@ describe("session allow/revoke", () => {
     await credentialManager.allow(TOKEN_A);
 
     expect(signer.signTypedData).toHaveBeenCalledOnce();
-    expect(await credentialManager.isAllowed()).toBe(true);
+    expect(await credentialManager.isAllowed([TOKEN_A])).toBe(true);
 
     // Subsequent get() should not re-sign
     await credentialManager.allow(TOKEN_A);

@@ -1,12 +1,13 @@
 import { type Address, getAddress } from "viem";
+import { DecryptCache } from "../decrypt-cache";
 import {
-  ERC7984_INTERFACE_ID,
-  ERC7984_WRAPPER_INTERFACE_ID,
-  MAX_UINT64,
   allowanceContract,
   confidentialBalanceOfContract,
   decimalsContract,
+  ERC7984_INTERFACE_ID,
+  ERC7984_WRAPPER_INTERFACE_ID,
   getDelegationExpiryContract,
+  MAX_UINT64,
   nameContract,
   supportsInterfaceContract,
   symbolContract,
@@ -28,10 +29,10 @@ import {
 import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
-import type { Handle } from "../relayer/relayer-sdk.types";
+import type { ClearValueType, Handle } from "../relayer/relayer-sdk.types";
 import type { GenericSigner, GenericStorage } from "../types";
 import { toError } from "../utils";
-import { loadCachedBalance, saveCachedBalance } from "./balance-cache";
+import { assertBigint } from "../utils/assertions";
 import { pLimit } from "./concurrency";
 
 /** 32-byte zero handle, used to detect uninitialized encrypted balances. */
@@ -77,20 +78,22 @@ export interface BatchDecryptAsOptions {
 
 /** Configuration for constructing a {@link ReadonlyToken}. */
 export interface ReadonlyTokenConfig {
+  /** Address of the confidential token contract. */
+  address: Address;
   /** FHE relayer backend. */
   relayer: RelayerSDK;
   /** Wallet signer for read calls and credential signing. */
   signer: GenericSigner;
   /** Credential storage backend. */
   storage: GenericStorage;
-  /** Session storage for wallet signatures. Shared across all tokens in the same SDK instance. */
+  /** Session storage for wallet signatures. Shared across all contracts in the same SDK instance. */
   sessionStorage: GenericStorage;
+  /** Storage-backed cache for decrypted handle values. When omitted, a private instance is created. */
+  cache?: DecryptCache;
   /** Shared CredentialsManager instance. When provided, storage/sessionStorage/keypairTTL/onEvent are ignored for credential creation. */
   credentials?: CredentialsManager;
   /** Shared DelegatedCredentialsManager instance. When provided, storage/sessionStorage/keypairTTL/onEvent are ignored for delegated credential creation. */
   delegatedCredentials?: DelegatedCredentialsManager;
-  /** Address of the confidential token contract. */
-  address: Address;
   /** How long the re-encryption keypair remains valid, in seconds. Default: `86400` (1 day). */
   keypairTTL?: number;
   /** Controls session signature lifetime in seconds. Default: `2592000` (30 days). `0` means every operation triggers a signing prompt. `"infinite"` means the session never expires. */
@@ -111,6 +114,7 @@ export class ReadonlyToken {
   readonly signer: GenericSigner;
   readonly address: Address;
   readonly storage: GenericStorage;
+  readonly cache: DecryptCache;
   readonly #onEvent: ZamaSDKEventListener | undefined;
 
   constructor(config: ReadonlyTokenConfig) {
@@ -130,6 +134,7 @@ export class ReadonlyToken {
     this.signer = config.signer;
     this.address = getAddress(config.address);
     this.storage = config.storage;
+    this.cache = config.cache ?? new DecryptCache(config.storage);
     this.#onEvent = config.onEvent;
   }
 
@@ -385,7 +390,6 @@ export class ReadonlyToken {
       );
     }
 
-    const tokenStorage = firstToken.storage;
     const results = new Map<Address, bigint>();
 
     // Parallel cache lookups — avoids sequential IDB round-trips.
@@ -396,12 +400,7 @@ export class ReadonlyToken {
         if (token.isZeroHandle(handle)) {
           return 0n;
         }
-        return loadCachedBalance({
-          storage: tokenStorage,
-          tokenAddress: token.address,
-          owner: ownerAddress,
-          handle,
-        });
+        return firstToken.cache.get(ownerAddress, token.address, handle);
       }),
     );
 
@@ -411,6 +410,7 @@ export class ReadonlyToken {
       const cached = cachedValues[i];
 
       if (cached !== null && cached !== undefined) {
+        assertBigint(cached, "batchDecryptCore: cached");
         results.set(token.address, cached);
         continue;
       }
@@ -440,25 +440,15 @@ export class ReadonlyToken {
       decryptFns.push(() =>
         decrypt(creds, handle, token.address)
           .then(async (result) => {
-            const value = result[handle] as bigint | undefined;
+            const value = result[handle];
             if (value === undefined) {
               throw new DecryptionFailedError(
                 `${errorPrefix} returned no value for handle ${handle} on token ${token.address}`,
               );
             }
+            assertBigint(value, "batchDecryptCore: result[handle]");
             results.set(token.address, value);
-            try {
-              await saveCachedBalance({
-                storage: tokenStorage,
-                tokenAddress: token.address,
-                owner: ownerAddress,
-                handle,
-                value,
-              });
-            } catch (cacheError) {
-              // oxlint-disable-next-line no-console
-              console.warn("[zama-sdk] Cache write failed (non-blocking):", cacheError);
-            }
+            void firstToken.cache.set(ownerAddress, token.address, handle, value);
           })
           .catch((error) => {
             const err = toError(error);
@@ -588,7 +578,7 @@ export class ReadonlyToken {
    * Use this to check if decrypt operations can proceed without a wallet prompt.
    */
   async isAllowed(): Promise<boolean> {
-    return this.credentials.isAllowed();
+    return this.credentials.isAllowed([this.address]);
   }
 
   /**
@@ -752,16 +742,9 @@ export class ReadonlyToken {
       return 0n;
     }
 
-    // Check persistent cache keyed by (token, owner, handle).
-    // When the on-chain balance changes the encrypted handle changes too,
-    // so stale entries are never served — no TTL needed.
-    const cached = await loadCachedBalance({
-      storage: this.storage,
-      tokenAddress: this.address,
-      owner: normalizedOwner,
-      handle,
-    });
+    const cached = await this.cache.get(normalizedOwner, this.address, handle);
     if (cached !== null) {
+      assertBigint(cached, "decryptBalanceAs: cached");
       return cached;
     }
 
@@ -793,26 +776,14 @@ export class ReadonlyToken {
         durationMs: Date.now() - t0,
       });
 
-      const value = result[handle] as bigint | undefined;
+      const value = result[handle];
       if (value === undefined) {
         throw new DecryptionFailedError(
           `Delegated decryption returned no value for handle ${handle}`,
         );
       }
-
-      try {
-        await saveCachedBalance({
-          storage: this.storage,
-          tokenAddress: this.address,
-          owner: normalizedOwner,
-          handle,
-          value,
-        });
-      } catch (cacheError) {
-        // oxlint-disable-next-line no-console
-        console.warn("[zama-sdk] Cache write failed (non-blocking):", cacheError);
-      }
-
+      assertBigint(value, "decryptBalanceAs: result[handle]");
+      await this.cache.set(normalizedOwner, this.address, handle, value);
       return value;
     } catch (error) {
       this.emit({
@@ -846,14 +817,9 @@ export class ReadonlyToken {
 
     const signerAddress = owner ?? (await this.signer.getAddress());
 
-    // Check persistent cache — avoids the 2–5 s decrypt spinner on reload.
-    const cached = await loadCachedBalance({
-      storage: this.storage,
-      tokenAddress: this.address,
-      owner: signerAddress,
-      handle,
-    });
+    const cached = await this.cache.get(signerAddress, this.address, handle);
     if (cached !== null) {
+      assertBigint(cached, "decryptBalance: cached");
       return cached;
     }
 
@@ -878,22 +844,12 @@ export class ReadonlyToken {
         durationMs: Date.now() - t0,
       });
 
-      const value = result[handle] as bigint | undefined;
+      const value = result[handle];
       if (value === undefined) {
         throw new DecryptionFailedError(`Decryption returned no value for handle ${handle}`);
       }
-      try {
-        await saveCachedBalance({
-          storage: this.storage,
-          tokenAddress: this.address,
-          owner: signerAddress,
-          handle,
-          value,
-        });
-      } catch (cacheError) {
-        // oxlint-disable-next-line no-console
-        console.warn("[zama-sdk] Cache write failed (non-blocking):", cacheError);
-      }
+      assertBigint(value, "decryptBalance: result[handle]");
+      await this.cache.set(signerAddress, this.address, handle, value);
       return value;
     } catch (error) {
       this.emit({
@@ -914,8 +870,8 @@ export class ReadonlyToken {
    * @returns A Map from handle to decrypted bigint value.
    * @throws {@link DecryptionFailedError} if FHE decryption fails.
    */
-  async decryptHandles(handles: Handle[], owner?: Address): Promise<Map<Handle, bigint>> {
-    const results = new Map<Handle, bigint>();
+  async decryptHandles(handles: Handle[], owner?: Address): Promise<Map<Handle, ClearValueType>> {
+    const results = new Map<Handle, ClearValueType>();
     const nonZeroHandles: Handle[] = [];
 
     for (const handle of handles) {
@@ -952,7 +908,7 @@ export class ReadonlyToken {
       });
 
       for (const handle of nonZeroHandles) {
-        const value = decrypted[handle] as bigint | undefined;
+        const value = decrypted[handle];
         if (value === undefined) {
           throw new DecryptionFailedError(`Decryption returned no value for handle ${handle}`);
         }

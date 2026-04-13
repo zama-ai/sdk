@@ -15,13 +15,11 @@ import {
   unwrapContract,
   unwrapFromBalanceContract,
   wrapContract,
-  wrapETHContract,
 } from "../contracts";
 import { findUnwrapRequested } from "../events/onchain-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { Handle } from "../relayer/relayer-sdk.types";
 import { toError } from "../utils";
-import { loadCachedBalance } from "./balance-cache";
 import {
   ApprovalFailedError,
   BalanceCheckUnavailableError,
@@ -346,11 +344,10 @@ export class Token extends ReadonlyToken {
    * (`"exact"` by default, `"max"` for unlimited approval, `"skip"` to opt out).
    *
    * The ERC-20 balance is validated before submitting (public read, no signing
-   * required). For native ETH shields (`underlying === address(0)`), the ERC-20
-   * check is skipped — the chain validates ETH balance natively.
+   * required).
    *
    * @param amount - The plaintext amount to shield.
-   * @param options - Optional configuration: `approvalStrategy` (`"exact"` | `"max"` | `"skip"`, default `"exact"`), `fees` (extra ETH for native wrappers).
+   * @param options - Optional configuration: `approvalStrategy` (`"exact"` | `"max"` | `"skip"`, default `"exact"`).
    * @returns The transaction hash and mined receipt.
    * @throws {@link InsufficientERC20BalanceError} if the ERC-20 balance is less than `amount`.
    * @throws {@link ApprovalFailedError} if the ERC-20 approval step fails.
@@ -365,10 +362,6 @@ export class Token extends ReadonlyToken {
    */
   async shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult> {
     const underlying = await this.#getUnderlying();
-
-    if (underlying === Token.ZERO_ADDRESS) {
-      return this.shieldETH(amount, amount + (options?.fees ?? 0n));
-    }
 
     // ERC-20 balance check always runs (public read, no signing needed, works for all wallet types)
     let erc20Balance: bigint;
@@ -413,43 +406,6 @@ export class Token extends ReadonlyToken {
         throw error;
       }
       throw new TransactionRevertedError("Shield transaction failed", {
-        cause: error,
-      });
-    }
-  }
-
-  /**
-   * Shield native ETH into confidential tokens. `value` defaults to `amount`.
-   *
-   * @param amount - The amount of ETH to shield (in wei).
-   * @param value - Optional ETH value to send. Defaults to `amount`.
-   * @returns The transaction hash and mined receipt.
-   * @throws {@link TransactionRevertedError} if the shield transaction reverts.
-   *
-   * @example
-   * ```ts
-   * const txHash = await token.shieldETH(1000000000000000000n); // 1 ETH
-   * ```
-   */
-  async shieldETH(amount: bigint, value?: bigint): Promise<TransactionResult> {
-    try {
-      const userAddress = await this.signer.getAddress();
-      const txHash = await this.signer.writeContract(
-        wrapETHContract(this.wrapper, userAddress, amount, value ?? amount),
-      );
-      this.emit({ type: ZamaSDKEvents.ShieldSubmitted, txHash });
-      const receipt = await this.signer.waitForTransactionReceipt(txHash);
-      return { txHash, receipt };
-    } catch (error) {
-      this.emit({
-        type: ZamaSDKEvents.TransactionError,
-        operation: "shieldETH",
-        error: toError(error),
-      });
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new TransactionRevertedError("Shield ETH transaction failed", {
         cause: error,
       });
     }
@@ -837,10 +793,15 @@ export class Token extends ReadonlyToken {
       : MAX_UINT64;
 
     // Pre-flight with RPC: new expiry must differ from current (ExpirationDateAlreadySetToSameValue)
-    const currentExpiry = await this.getDelegationExpiry({
-      delegatorAddress: signerAddress,
-      delegateAddress: normalizedDelegate,
-    });
+    let currentExpiry: bigint;
+    try {
+      currentExpiry = await this.getDelegationExpiry({
+        delegatorAddress: signerAddress,
+        delegateAddress: normalizedDelegate,
+      });
+    } catch {
+      currentExpiry = -1n; // RPC failure — skip client-side check, let the contract enforce
+    }
     if (currentExpiry === expDate) {
       throw new DelegationExpiryUnchangedError(
         `The new expiration date (${expDate}) is the same as the current one. No on-chain change needed.`,
@@ -893,10 +854,15 @@ export class Token extends ReadonlyToken {
     // Pre-flight: reject if never delegated (expiry === 0).
     // Expired delegations (non-zero expiry in the past) are allowed through —
     // the ACL contract accepts revocation of expired delegations.
-    const currentExpiry = await this.getDelegationExpiry({
-      delegatorAddress: signerAddress,
-      delegateAddress: normalizedDelegate,
-    });
+    let currentExpiry: bigint;
+    try {
+      currentExpiry = await this.getDelegationExpiry({
+        delegatorAddress: signerAddress,
+        delegateAddress: normalizedDelegate,
+      });
+    } catch {
+      currentExpiry = 1n; // RPC failure — skip client-side check, let the contract enforce
+    }
     if (currentExpiry === 0n) {
       throw new DelegationNotFoundError(
         `No active delegation found for delegate ${normalizedDelegate} on contract ${this.address}.`,
@@ -1044,17 +1010,12 @@ export class Token extends ReadonlyToken {
 
     // Check the persistent plaintext cache first — if the balance was decrypted
     // in a previous session, we can validate without credentials or a new decrypt.
-    const cached = await loadCachedBalance({
-      storage: this.storage,
-      tokenAddress: this.address,
-      owner: userAddress,
-      handle,
-    });
-    if (cached !== null) {
-      if (cached < amount) {
+    const cachedRaw = await this.cache.get(userAddress, this.address, handle);
+    if (typeof cachedRaw === "bigint") {
+      if (cachedRaw < amount) {
         throw new InsufficientConfidentialBalanceError(
-          `Insufficient confidential balance: requested ${amount}, available ${cached} (token: ${this.address})`,
-          { requested: amount, available: cached, token: this.address },
+          `Insufficient confidential balance: requested ${amount}, available ${cachedRaw} (token: ${this.address})`,
+          { requested: amount, available: cachedRaw, token: this.address },
         );
       }
       return;

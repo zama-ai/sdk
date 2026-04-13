@@ -40,15 +40,6 @@ export {
   confidentialIsApprovedQueryOptions,
   type ConfidentialIsApprovedQueryConfig,
 } from "./confidential-is-approved";
-export {
-  shieldFeeQueryOptions,
-  unshieldFeeQueryOptions,
-  batchTransferFeeQueryOptions,
-  feeRecipientQueryOptions,
-  type FeeQueryConfig,
-  type ShieldFeeQueryConfig,
-  type UnshieldFeeQueryConfig,
-} from "./fees";
 export { publicKeyQueryOptions, type PublicKeyQueryConfig } from "./public-key";
 export { publicParamsQueryOptions, type PublicParamsQueryConfig } from "./public-params";
 export {
@@ -95,7 +86,6 @@ export {
 } from "./wrappers-registry";
 
 export { shieldMutationOptions, type ShieldParams } from "./shield";
-export { shieldETHMutationOptions, type ShieldETHParams } from "./shield-eth";
 export { confidentialTransferMutationOptions, type ConfidentialTransferParams } from "./transfer";
 export {
   confidentialTransferFromMutationOptions,
@@ -131,9 +121,9 @@ export {
   type DelegateDecryptionParams,
 } from "./delegate-decryption";
 export {
-  userDecryptMutationOptions,
-  type UserDecryptMutationParams,
-  type UserDecryptCallbacks,
+  userDecryptQueryOptions,
+  type UserDecryptQueryConfig,
+  type DecryptResult,
   type DecryptHandle,
 } from "./user-decrypt";
 export { decryptBalanceAsMutationOptions, type DecryptBalanceAsParams } from "./decrypt-balance-as";
@@ -175,7 +165,7 @@ export type {
 export type { ReadonlyToken } from "../token/readonly-token";
 export type { TokenConfig } from "../token/token";
 export type { Token } from "../token/token";
-export type { ZamaSDKConfig } from "../zama-sdk";
+export type { ZamaSDKConfig, DecryptOptions } from "../zama-sdk";
 export type { ZamaSDK } from "../zama-sdk";
 export type { CredentialsManager } from "../credentials/credentials-manager";
 export type { CredentialsManagerConfig } from "../credentials/credentials-manager";
