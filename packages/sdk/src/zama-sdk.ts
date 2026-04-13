@@ -226,13 +226,8 @@ export class ZamaSDK {
    */
   createReadonlyToken(address: Address): ReadonlyToken {
     return new ReadonlyToken({
-      relayer: this.relayer,
       signer: this.signer,
       storage: this.storage,
-      sessionStorage: this.sessionStorage,
-      credentials: this.credentials,
-      delegatedCredentials: this.delegatedCredentials,
-      cache: this.cache,
       address: getAddress(address),
       onEvent: this.#onEvent,
     });

@@ -114,12 +114,7 @@ function createMockReadonlyToken(address: Address, signer: GenericSigner): Reado
   return {
     address,
     signer,
-    decryptBalance: vi.fn().mockResolvedValue(123n),
-    decryptBalanceAs: vi.fn().mockResolvedValue(123n),
-    decryptHandles: vi.fn().mockResolvedValue(new Map()),
     confidentialBalanceOf: vi.fn().mockResolvedValue(("0x" + "aa".repeat(32)) as Handle),
-    isDelegated: vi.fn().mockResolvedValue(false),
-    getDelegationExpiry: vi.fn().mockResolvedValue(0n),
     name: vi.fn().mockResolvedValue("Test"),
     symbol: vi.fn().mockResolvedValue("TST"),
     decimals: vi.fn().mockResolvedValue(18),
@@ -218,13 +213,11 @@ export const test = base.extend<SdkFixtures>({
       }),
     );
   },
-  readonlyToken: async ({ relayer, signer, storage, sessionStorage, tokenAddress }, use) => {
+  readonlyToken: async ({ signer, storage, tokenAddress }, use) => {
     await use(
       new ReadonlyToken({
-        relayer,
         signer,
         storage,
-        sessionStorage,
         address: tokenAddress,
       }),
     );

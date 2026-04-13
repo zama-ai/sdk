@@ -1,30 +1,16 @@
 import { type Address, getAddress } from "viem";
-import { DecryptCache } from "../decrypt-cache";
 import {
   allowanceContract,
   confidentialBalanceOfContract,
   decimalsContract,
   ERC7984_INTERFACE_ID,
   ERC7984_WRAPPER_INTERFACE_ID,
-  getDelegationExpiryContract,
-  MAX_UINT64,
   nameContract,
   supportsInterfaceContract,
   symbolContract,
   underlyingContract,
 } from "../contracts";
-import { CredentialsManager } from "../credentials/credentials-manager";
-import { DelegatedCredentialsManager } from "../credentials/delegated-credentials-manager";
-import {
-  DecryptionFailedError,
-  DelegationNotPropagatedError,
-  NoCiphertextError,
-  RelayerRequestFailedError,
-  SigningFailedError,
-  SigningRejectedError,
-} from "../errors";
 import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
-import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { Handle } from "../relayer/relayer-sdk.types";
 import type { GenericSigner, GenericStorage } from "../types";
 
@@ -36,61 +22,33 @@ export const ZERO_HANDLE =
 export interface ReadonlyTokenConfig {
   /** Address of the confidential token contract. */
   address: Address;
-  /** FHE relayer backend. */
-  relayer: RelayerSDK;
-  /** Wallet signer for read calls and credential signing. */
+  /** Wallet signer for read calls. */
   signer: GenericSigner;
-  /** Credential storage backend. */
+  /** Storage backend (kept for downstream read helpers; unused after SDK-34). */
   storage: GenericStorage;
-  /** Session storage for wallet signatures. Shared across all contracts in the same SDK instance. */
-  sessionStorage: GenericStorage;
-  /** Storage-backed cache for decrypted handle values. When omitted, a private instance is created. */
-  cache?: DecryptCache;
-  /** Shared CredentialsManager instance. When provided, storage/sessionStorage/keypairTTL/onEvent are ignored for credential creation. */
-  credentials?: CredentialsManager;
-  /** Shared DelegatedCredentialsManager instance. When provided, storage/sessionStorage/keypairTTL/onEvent are ignored for delegated credential creation. */
-  delegatedCredentials?: DelegatedCredentialsManager;
-  /** How long the re-encryption keypair remains valid, in seconds. Default: `86400` (1 day). */
-  keypairTTL?: number;
-  /** Controls session signature lifetime in seconds. Default: `2592000` (30 days). `0` means every operation triggers a signing prompt. `"infinite"` means the session never expires. */
-  sessionTTL?: number | "infinite";
   /** Optional structured event listener for debugging and telemetry. */
   onEvent?: ZamaSDKEventListener;
 }
 
 /**
  * Read-only interface for a confidential token.
- * Supports balance queries, authorization, and ERC-165 checks.
- * Does not require a wrapper address.
+ * Provider-based reads only: metadata, handle lookup, ERC-165 support checks.
+ * Does not require a wrapper, relayer, or credentials.
+ *
+ * For decrypt operations (balanceOf, decryptBalance, decryptHandles,
+ * decryptBalanceAs), credential management (allow, isAllowed, revoke), or
+ * delegation queries (isDelegated, getDelegationExpiry), use {@link Token}.
  */
 export class ReadonlyToken {
-  protected readonly credentials: CredentialsManager;
-  protected readonly delegatedCredentials: DelegatedCredentialsManager;
-  protected readonly relayer: RelayerSDK;
   readonly signer: GenericSigner;
   readonly address: Address;
   readonly storage: GenericStorage;
-  readonly cache: DecryptCache;
   readonly #onEvent: ZamaSDKEventListener | undefined;
 
   constructor(config: ReadonlyTokenConfig) {
-    const credentialsConfig = {
-      relayer: config.relayer,
-      signer: config.signer,
-      storage: config.storage,
-      sessionStorage: config.sessionStorage,
-      keypairTTL: config.keypairTTL ?? 2592000,
-      sessionTTL: config.sessionTTL ?? 2592000,
-      onEvent: config.onEvent,
-    };
-    this.credentials = config.credentials ?? new CredentialsManager(credentialsConfig);
-    this.delegatedCredentials =
-      config.delegatedCredentials ?? new DelegatedCredentialsManager(credentialsConfig);
-    this.relayer = config.relayer;
     this.signer = config.signer;
     this.address = getAddress(config.address);
     this.storage = config.storage;
-    this.cache = config.cache ?? new DecryptCache(config.storage);
     this.#onEvent = config.onEvent;
   }
 
@@ -232,58 +190,6 @@ export class ReadonlyToken {
     return this.signer.readContract(decimalsContract(this.address));
   }
 
-  protected async getAclAddress(): Promise<Address> {
-    return this.relayer.getAclAddress();
-  }
-
-  /**
-   * Check whether a delegation is active for this token's contract address.
-   *
-   * @param delegatorAddress - The address that granted the delegation.
-   * @param delegateAddress - The address that received delegation rights.
-   * @returns `true` if the delegation exists and has not expired.
-   */
-  async isDelegated(params: {
-    delegatorAddress: Address;
-    delegateAddress: Address;
-  }): Promise<boolean> {
-    const expiry = await this.getDelegationExpiry(params);
-    if (expiry === 0n) {
-      return false;
-    }
-    // Permanent delegation (uint64 max) — skip the RPC round-trip for block timestamp.
-    if (expiry === MAX_UINT64) {
-      return true;
-    }
-    const now = await this.signer.getBlockTimestamp();
-    return expiry > now;
-  }
-
-  /**
-   * Get the expiration timestamp of a delegation for this token.
-   *
-   * @param delegatorAddress - The address that granted the delegation.
-   * @param delegateAddress - The address that received delegation rights.
-   * @returns Unix timestamp as bigint. `0n` = no delegation. `2^64 - 1` = permanent.
-   */
-  async getDelegationExpiry({
-    delegatorAddress,
-    delegateAddress,
-  }: {
-    delegatorAddress: Address;
-    delegateAddress: Address;
-  }): Promise<bigint> {
-    const acl = await this.getAclAddress();
-    return this.signer.readContract(
-      getDelegationExpiryContract(
-        acl,
-        getAddress(delegatorAddress),
-        getAddress(delegateAddress),
-        this.address,
-      ),
-    );
-  }
-
   protected async readConfidentialBalanceOf(owner: Address): Promise<Handle> {
     return (await this.signer.readContract(
       confidentialBalanceOfContract(this.address, owner),
@@ -293,68 +199,4 @@ export class ReadonlyToken {
   isZeroHandle(handle: string): handle is typeof ZERO_HANDLE | `0x` {
     return handle === ZERO_HANDLE || handle === "0x";
   }
-}
-
-/**
- * Inspect a caught error for an HTTP status code and return the appropriate
- * typed SDK error (NoCiphertextError for 400, RelayerRequestFailedError for
- * other HTTP errors, or the generic DecryptionFailedError as fallback).
- *
- * When `isDelegated` is true and the relayer returns a 500, the error is
- * wrapped as {@link DelegationNotPropagatedError} because the most likely
- * cause is that the gateway hasn't synced the delegation from L1 yet.
- */
-export function wrapDecryptError(
-  error: unknown,
-  fallbackMessage: string,
-  isDelegated = false,
-): Error {
-  if (
-    error instanceof DecryptionFailedError ||
-    error instanceof NoCiphertextError ||
-    error instanceof RelayerRequestFailedError ||
-    error instanceof DelegationNotPropagatedError ||
-    error instanceof SigningRejectedError ||
-    error instanceof SigningFailedError
-  ) {
-    return error;
-  }
-
-  const statusCode =
-    error !== null &&
-    error !== undefined &&
-    typeof error === "object" &&
-    "statusCode" in error &&
-    typeof (error as Record<string, unknown>).statusCode === "number"
-      ? ((error as Record<string, unknown>).statusCode as number)
-      : undefined;
-
-  if (statusCode === 400) {
-    return new NoCiphertextError(
-      error instanceof Error ? error.message : "No ciphertext for this account",
-      { cause: error },
-    );
-  }
-
-  if (isDelegated && statusCode === 500) {
-    return new DelegationNotPropagatedError(
-      "Delegated decryption failed with a server error. " +
-        "This is most commonly caused by the delegation not having propagated to the gateway yet — " +
-        "after granting delegation, allow 1–2 minutes for cross-chain synchronization before retrying. " +
-        "If the error persists, the gateway or relayer may be experiencing an unrelated issue.",
-      { cause: error },
-    );
-  }
-
-  if (statusCode !== undefined) {
-    return new RelayerRequestFailedError(
-      error instanceof Error ? error.message : fallbackMessage,
-      statusCode,
-      { cause: error },
-    );
-  }
-
-  return new DecryptionFailedError(fallbackMessage, {
-    cause: error,
-  });
 }
