@@ -368,7 +368,7 @@ export class CredentialsManager extends BaseCredentialsManager<StoredCredentials
     protected decryptCredentials(encrypted: EncryptedCredentials$1, signature: Hex): Promise<StoredCredentials>;
     // (undocumented)
     protected encryptCredentials(creds: StoredCredentials): Promise<EncryptedCredentials$1>;
-    isAllowed(contractAddress: Address, ...moreAddresses: Address[]): Promise<boolean>;
+    isAllowed(contractAddresses: [Address, ...Address[]]): Promise<boolean>;
     isExpired(contractAddress?: Address): Promise<boolean>;
     revoke(...contractAddresses: Address[]): Promise<void>;
     revokeByKey(key: string): Promise<void>;
@@ -1651,7 +1651,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/activity-BqbPSP2t.d.ts:21475:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/esm/activity-CAZLy9Lp.d.ts:21475:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 
