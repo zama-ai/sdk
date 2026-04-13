@@ -3,18 +3,22 @@ import type { GenericSigner, GenericStorage } from "../types";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { ExtendedFhevmInstanceConfig } from "../relayer/relayer-utils";
 import type { CleartextConfig } from "../relayer/cleartext/types";
-import { RelayerWeb } from "../relayer/relayer-web";
-import { RelayerNode } from "../relayer/relayer-node";
-import { RelayerCleartext } from "../relayer/cleartext/relayer-cleartext";
 import { CompositeRelayer } from "../relayer/composite-relayer";
-import { MemoryStorage } from "../storage/memory-storage";
+import { RelayerCleartext } from "../relayer/cleartext/relayer-cleartext";
+import { RelayerNode } from "../relayer/relayer-node";
+import { RelayerWeb } from "../relayer/relayer-web";
 import { IndexedDBStorage } from "../storage/indexeddb-storage";
+import { MemoryStorage } from "../storage/memory-storage";
 import { ConfigurationError } from "../errors";
-import { ViemSigner } from "../viem";
 import { EthersSigner } from "../ethers";
-import type { TransportConfig } from "./transports";
-import { isWebTransport, isNodeTransport, isCleartextTransport } from "./transports";
-import type { ZamaConfigViem, ZamaConfigEthers, ZamaConfigCustomSigner } from "./types";
+import { ViemSigner } from "../viem";
+import type {
+  CleartextTransportConfig,
+  NodeTransportConfig,
+  TransportConfig,
+  WebTransportConfig,
+} from "./transports";
+import type { ZamaConfigCustomSigner, ZamaConfigEthers, ZamaConfigViem } from "./types";
 
 // ── Storage defaults ─────────────────────────────────────────────────────────
 
@@ -50,16 +54,20 @@ export function resolveSigner(params: ConfigWithTransports): GenericSigner {
 
 // ── Chain transport resolution ───────────────────────────────────────────────
 
+export interface ResolvedChainTransport {
+  chain: ExtendedFhevmInstanceConfig;
+  transport: TransportConfig;
+}
+
+const DEFAULT_WEB_TRANSPORT: TransportConfig = { __mode: "web" };
+
 export function resolveChainTransports(
   chains: ExtendedFhevmInstanceConfig[],
   transports: Record<number, TransportConfig> | undefined,
   chainIds: number[],
-): Map<number, { chain: ExtendedFhevmInstanceConfig; transport: TransportConfig }> {
+): Map<number, ResolvedChainTransport> {
   const chainMap = new Map(chains.map((c) => [c.chainId, c]));
-  const result = new Map<
-    number,
-    { chain: ExtendedFhevmInstanceConfig; transport: TransportConfig }
-  >();
+  const result = new Map<number, ResolvedChainTransport>();
 
   for (const id of chainIds) {
     const chainConfig = chainMap.get(id);
@@ -72,7 +80,7 @@ export function resolveChainTransports(
       );
     }
 
-    if (userTransport && isCleartextTransport(userTransport)) {
+    if (userTransport?.__mode === "cleartext") {
       if (!chainConfig) {
         throw new ConfigurationError(
           `Chain ${id} uses cleartext transport but has no entry in the chains array. ` +
@@ -80,17 +88,23 @@ export function resolveChainTransports(
         );
       }
       result.set(id, { chain: chainConfig, transport: userTransport });
-    } else if (chainConfig) {
-      if (userTransport && (isWebTransport(userTransport) || isNodeTransport(userTransport))) {
-        result.set(id, { chain: chainConfig, transport: userTransport });
-      } else {
-        // No transport specified — default to web
-        result.set(id, {
-          chain: chainConfig,
-          transport: { __mode: "web" as const },
-        });
-      }
+      continue;
     }
+
+    // Web/node transports require a chain config. Silently skip if missing —
+    // the chain was declared in `transports` but not `chains`, nothing to build.
+    if (!chainConfig) {
+      continue;
+    }
+
+    // Only accept properly tagged web/node transports. Untagged values (e.g.
+    // raw chain configs passed as transports) fall back to the default web
+    // transport — their fields come from the `chains` array instead.
+    const transport =
+      userTransport?.__mode === "web" || userTransport?.__mode === "node"
+        ? userTransport
+        : DEFAULT_WEB_TRANSPORT;
+    result.set(id, { chain: chainConfig, transport });
   }
 
   return result;
@@ -100,13 +114,9 @@ export function resolveChainTransports(
 
 function buildCleartextRelayer(
   chain: ExtendedFhevmInstanceConfig,
-  transport: {
-    network?: CleartextConfig["network"];
-    executorAddress: CleartextConfig["executorAddress"];
-    kmsSignerPrivateKey?: CleartextConfig["kmsSignerPrivateKey"];
-    inputSignerPrivateKey?: CleartextConfig["inputSignerPrivateKey"];
-  },
+  transport: CleartextTransportConfig,
 ): RelayerCleartext {
+  const { chain: cfg } = transport;
   return new RelayerCleartext({
     chainId: chain.chainId,
     gatewayChainId: chain.gatewayChainId,
@@ -115,164 +125,115 @@ function buildCleartextRelayer(
     verifyingContractAddressInputVerification:
       chain.verifyingContractAddressInputVerification as Address,
     registryAddress: chain.registryAddress,
-    network: (transport.network ?? chain.network) as CleartextConfig["network"],
-    executorAddress: transport.executorAddress,
-    kmsSignerPrivateKey: transport.kmsSignerPrivateKey,
-    inputSignerPrivateKey: transport.inputSignerPrivateKey,
+    network: (cfg.network ?? chain.network) as CleartextConfig["network"],
+    executorAddress: cfg.executorAddress,
+    kmsSignerPrivateKey: cfg.kmsSignerPrivateKey,
+    inputSignerPrivateKey: cfg.inputSignerPrivateKey,
   });
-}
-
-/**
- * Fields on a transport config that map to per-chain FHE instance config
- * (e.g. relayerUrl, network, contract addresses). Everything else is a
- * relayer-level option shared across all chains using the same relayer.
- */
-const FHEVM_INSTANCE_KEYS = new Set<string>([
-  "chainId",
-  "gatewayChainId",
-  "relayerUrl",
-  "network",
-  "aclContractAddress",
-  "kmsContractAddress",
-  "inputVerifierContractAddress",
-  "verifyingContractAddressDecryption",
-  "verifyingContractAddressInputVerification",
-  "registryAddress",
-  "batchRpcCalls",
-  "relayerRouteVersion",
-  "publicKey",
-  "publicParams",
-  "auth",
-  "debug",
-]);
-
-function splitTransport(transport: TransportConfig): {
-  chainFields: Record<string, unknown>;
-  relayerFields: Record<string, unknown>;
-} {
-  const chainFields: Record<string, unknown> = {};
-  const relayerFields: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(transport)) {
-    if (key === "__mode") {
-      continue;
-    }
-    if (FHEVM_INSTANCE_KEYS.has(key)) {
-      chainFields[key] = value;
-    } else {
-      relayerFields[key] = value;
-    }
-  }
-  return { chainFields, relayerFields };
 }
 
 interface ChainEntry {
   chain: ExtendedFhevmInstanceConfig;
-  chainFields: Record<string, unknown>;
-  options: Record<string, unknown>;
+  chainFields: Partial<ExtendedFhevmInstanceConfig> | undefined;
+  relayer: object | undefined;
 }
 
 /**
- * Stable key for grouping entries by relayer options.
- * Uses reference identity for non-serializable values (functions, class instances)
- * so different callbacks never collide into the same group.
+ * Group entries by `relayer` reference. Chains that share the same `relayer`
+ * object (including `undefined` — the common "no options" case) reuse a single
+ * relayer instance. Distinct references always produce distinct relayers.
  */
-function optionsKey(options: Record<string, unknown>): string {
-  const refIds = new WeakMap<WeakKey, number>();
-  let nextId = 0;
-  const refId = (v: WeakKey) => {
-    let id = refIds.get(v);
-    if (id === undefined) {
-      id = nextId++;
-      refIds.set(v, id);
+function groupByRelayer(entries: ChainEntry[]): ChainEntry[][] {
+  const groups = new Map<object | undefined, ChainEntry[]>();
+  for (const entry of entries) {
+    const group = groups.get(entry.relayer);
+    if (group) {
+      group.push(entry);
+    } else {
+      groups.set(entry.relayer, [entry]);
     }
-    return id;
-  };
-  return JSON.stringify(options, (_key, value: unknown) => {
-    if (typeof value === "function") {
-      return `__ref:${refId(value as WeakKey)}`;
+  }
+  return [...groups.values()];
+}
+
+type HttpRelayerCtor<T extends RelayerSDK> = new (config: {
+  getChainId: () => Promise<number>;
+  transports: Record<number, Partial<ExtendedFhevmInstanceConfig>>;
+}) => T;
+
+function buildHttpGroup<T extends RelayerSDK>(
+  Relayer: HttpRelayerCtor<T>,
+  entries: ChainEntry[],
+  resolveChainId: () => Promise<number>,
+): Array<[number, RelayerSDK]> {
+  const pairs: Array<[number, RelayerSDK]> = [];
+  for (const group of groupByRelayer(entries)) {
+    const first = group[0];
+    if (!first) {
+      continue;
     }
-    if (value && typeof value === "object" && !Array.isArray(value)) {
-      // Sort object keys for stable serialization, and tag class instances.
-      const proto = Object.getPrototypeOf(value);
-      if (proto !== Object.prototype && proto !== null) {
-        return `__ref:${refId(value as WeakKey)}`;
-      }
-      return Object.fromEntries(
-        Object.entries(value as Record<string, unknown>).toSorted(([a], [b]) => a.localeCompare(b)),
-      );
+    const transports: Record<number, Partial<ExtendedFhevmInstanceConfig>> = {};
+    for (const entry of group) {
+      transports[entry.chain.chainId] = { ...entry.chain, ...entry.chainFields };
     }
-    return value;
-  });
+    const relayer = new Relayer({
+      getChainId: resolveChainId,
+      transports,
+      ...first.relayer,
+    });
+    for (const entry of group) {
+      pairs.push([entry.chain.chainId, relayer]);
+    }
+  }
+  return pairs;
+}
+
+type HttpMode = "web" | "node";
+
+const HTTP_RELAYERS: Record<HttpMode, HttpRelayerCtor<RelayerSDK>> = {
+  web: RelayerWeb,
+  node: RelayerNode,
+};
+
+function toChainEntry(
+  chain: ExtendedFhevmInstanceConfig,
+  transport: WebTransportConfig | NodeTransportConfig,
+): ChainEntry {
+  return { chain, chainFields: transport.chain, relayer: transport.relayer };
 }
 
 export function buildRelayer(
-  chainTransports: Map<number, { chain: ExtendedFhevmInstanceConfig; transport: TransportConfig }>,
+  chainTransports: Map<number, ResolvedChainTransport>,
   resolveChainId: () => Promise<number>,
 ): RelayerSDK {
   const perChainRelayers = new Map<number, RelayerSDK>();
-  const webEntries: ChainEntry[] = [];
-  const nodeEntries: ChainEntry[] = [];
+  const byMode: Record<HttpMode, ChainEntry[]> = { web: [], node: [] };
 
-  for (const [chainId, { chain, transport }] of chainTransports) {
-    if (isCleartextTransport(transport)) {
-      perChainRelayers.set(chainId, buildCleartextRelayer(chain, transport));
+  for (const { chain, transport } of chainTransports.values()) {
+    if (transport.__mode === "cleartext") {
+      perChainRelayers.set(chain.chainId, buildCleartextRelayer(chain, transport));
       continue;
     }
-    const { chainFields, relayerFields } = splitTransport(transport);
-    const entry: ChainEntry = {
-      chain,
-      chainFields,
-      options: relayerFields,
-    };
-    (isNodeTransport(transport) ? nodeEntries : webEntries).push(entry);
+    byMode[transport.__mode].push(toChainEntry(chain, transport));
   }
 
-  const buildGroup = <T extends RelayerSDK>(
-    entries: ChainEntry[],
-    Relayer: new (config: {
-      getChainId: () => Promise<number>;
-      transports: Record<number, Partial<ExtendedFhevmInstanceConfig>>;
-    }) => T,
-  ) => {
-    const groups = new Map<string, ChainEntry[]>();
-    for (const entry of entries) {
-      const key = optionsKey(entry.options);
-      const group = groups.get(key);
-      if (group) {
-        group.push(entry);
-      } else {
-        groups.set(key, [entry]);
-      }
+  for (const mode of Object.keys(HTTP_RELAYERS) as HttpMode[]) {
+    for (const [chainId, relayer] of buildHttpGroup(
+      HTTP_RELAYERS[mode],
+      byMode[mode],
+      resolveChainId,
+    )) {
+      perChainRelayers.set(chainId, relayer);
     }
-    for (const group of groups.values()) {
-      const first = group[0];
-      if (!first) {
-        continue;
-      }
-      const transports: Record<number, Partial<ExtendedFhevmInstanceConfig>> = {};
-      for (const entry of group) {
-        transports[entry.chain.chainId] = { ...entry.chain, ...entry.chainFields };
-      }
-      const relayer = new Relayer({
-        getChainId: resolveChainId,
-        transports,
-        ...first.options,
-      });
-      for (const entry of group) {
-        perChainRelayers.set(entry.chain.chainId, relayer);
-      }
-    }
-  };
-
-  buildGroup(webEntries, RelayerWeb);
-  buildGroup(nodeEntries, RelayerNode);
-
-  // Single relayer — no dispatch needed
-  const uniqueRelayers = [...new Set(perChainRelayers.values())];
-  if (uniqueRelayers.length === 1 && uniqueRelayers[0]) {
-    return uniqueRelayers[0];
   }
 
-  // Mixed — dispatch by chain
+  const uniqueRelayers = new Set(perChainRelayers.values());
+  if (uniqueRelayers.size === 1) {
+    const [only] = uniqueRelayers;
+    if (only) {
+      return only;
+    }
+  }
+
   return new CompositeRelayer(resolveChainId, perChainRelayers);
 }

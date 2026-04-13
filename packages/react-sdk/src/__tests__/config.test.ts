@@ -174,26 +174,31 @@ describe("createZamaConfig", () => {
   });
 
   describe("web() helper", () => {
-    it("returns tagged config with relayerUrl", () => {
+    it("returns tagged config with chain overrides", () => {
       const result = web({ relayerUrl: "/api/relayer/11155111" });
-      expect(result).toEqual({ __mode: "web", relayerUrl: "/api/relayer/11155111" });
-    });
-
-    it("merges all config fields", () => {
-      const result = web({
-        relayerUrl: "/api/relayer/11155111",
-        network: "https://custom-rpc.com",
-      });
       expect(result).toEqual({
         __mode: "web",
-        relayerUrl: "/api/relayer/11155111",
-        network: "https://custom-rpc.com",
+        chain: { relayerUrl: "/api/relayer/11155111" },
+        relayer: undefined,
+      });
+    });
+
+    it("carries chain and relayer params separately", () => {
+      const relayerOpts = { threads: 4 } as const;
+      const result = web(
+        { relayerUrl: "/api/relayer/11155111", network: "https://custom-rpc.com" },
+        relayerOpts,
+      );
+      expect(result).toEqual({
+        __mode: "web",
+        chain: { relayerUrl: "/api/relayer/11155111", network: "https://custom-rpc.com" },
+        relayer: relayerOpts,
       });
     });
 
     it("returns tagged empty config when called with no args", () => {
       const result = web();
-      expect(result).toEqual({ __mode: "web" });
+      expect(result).toEqual({ __mode: "web", chain: undefined, relayer: undefined });
     });
   });
 
