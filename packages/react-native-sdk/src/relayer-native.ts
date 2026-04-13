@@ -45,11 +45,20 @@ export class RelayerNative implements RelayerSDK {
     if (this.#instance) {
       return this.#instance;
     }
-    this.#pending ??= createInstance(this.#config).then((instance) => {
-      this.#instance = instance;
-      this.#pending = null;
-      return instance;
-    });
+    // On rejection, clear `#pending` so the next call can retry. Without this,
+    // a single transient failure (common on mobile) would brick the relayer
+    // for the lifetime of the app.
+    this.#pending ??= createInstance(this.#config).then(
+      (instance) => {
+        this.#instance = instance;
+        this.#pending = null;
+        return instance;
+      },
+      (error: unknown) => {
+        this.#pending = null;
+        throw error;
+      },
+    );
     return this.#pending;
   }
 
@@ -174,7 +183,14 @@ export class RelayerNative implements RelayerSDK {
   }
 
   async getAclAddress(): Promise<Address> {
-    return this.#config.aclContractAddress as Address;
+    const addr = this.#config.aclContractAddress;
+    if (!addr) {
+      throw new Error(
+        "aclContractAddress is not set in the FhevmInstanceConfig. " +
+          "Provide it when constructing RelayerNative, or use a preset config (SepoliaConfig, MainnetConfig).",
+      );
+    }
+    return addr as Address;
   }
 
   terminate(): void {
@@ -210,5 +226,16 @@ function addToBuilder(builder: EncryptedInput, input: SDKEncryptInput): void {
     case "eaddress":
       builder.addAddress(input.value);
       break;
+    default: {
+      // Exhaustive-check: if a new FHE type is added upstream, TypeScript
+      // will fail this assignment, forcing us to handle it. At runtime, an
+      // unrecognized type would otherwise silently drop the input and produce
+      // an EncryptResult missing handles.
+      const _exhaustive: never = input;
+      throw new Error(
+        `Unsupported FHE type "${(input as SDKEncryptInput).type}" in addToBuilder. ` +
+          "The react-native-sdk version may need an update to support this type.",
+      );
+    }
   }
 }

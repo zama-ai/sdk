@@ -61,4 +61,14 @@ describe("AsyncStorageAdapter", () => {
     await adapter.set("test", "val");
     expect(mockAsyncStorage.setItem).toHaveBeenCalledWith("@zama-fhe:test", JSON.stringify("val"));
   });
+
+  it("throws a contextual error and removes the entry when stored value is corrupted", async () => {
+    // Bypass the adapter to plant an unparseable value at the prefixed key.
+    mockStorage.set("@zama-fhe:bad", "{not-valid-json");
+
+    await expect(adapter.get("bad")).rejects.toThrow(/failed to parse stored value for key "bad"/);
+    expect(mockAsyncStorage.removeItem).toHaveBeenCalledWith("@zama-fhe:bad");
+    // Subsequent reads start clean.
+    expect(await adapter.get("bad")).toBeNull();
+  });
 });

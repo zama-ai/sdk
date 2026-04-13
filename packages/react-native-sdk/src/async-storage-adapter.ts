@@ -9,11 +9,25 @@ const KEY_PREFIX = "@zama-fhe:";
  */
 export class AsyncStorageAdapter implements GenericStorage {
   async get<T = unknown>(key: string): Promise<T | null> {
-    const raw = await AsyncStorage.getItem(`${KEY_PREFIX}${key}`);
+    const prefixedKey = `${KEY_PREFIX}${key}`;
+    const raw = await AsyncStorage.getItem(prefixedKey);
     if (raw === null) {
       return null;
     }
-    return JSON.parse(raw) as T;
+    try {
+      return JSON.parse(raw) as T;
+    } catch (cause) {
+      // Corrupted entry — remove it so subsequent reads start clean, then
+      // throw with context so the caller knows which key failed and why.
+      await AsyncStorage.removeItem(prefixedKey).catch(() => {
+        // Ignore cleanup failures: the original parse error is more important.
+      });
+      throw new Error(
+        `AsyncStorageAdapter: failed to parse stored value for key "${key}". ` +
+          "The corrupted entry has been removed.",
+        { cause },
+      );
+    }
   }
 
   async set<T = unknown>(key: string, value: T): Promise<void> {

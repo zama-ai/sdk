@@ -146,4 +146,146 @@ describe("RelayerNative", () => {
   it("terminate is a no-op", () => {
     expect(() => relayer.terminate()).not.toThrow();
   });
+
+  it("createEIP712 defaults durationDays to 30 when omitted", async () => {
+    await relayer.createEIP712("0xpub", ["0xcontract"], 1000);
+    expect(mockInstance.createEIP712).toHaveBeenCalledWith("0xpub", ["0xcontract"], 1000, 30);
+  });
+
+  it("createDelegatedUserDecryptEIP712 forwards args and defaults durationDays to 30", async () => {
+    await relayer.createDelegatedUserDecryptEIP712("0xpub", ["0xc"], "0xdelegator", 1000);
+    expect(mockInstance.createDelegatedUserDecryptEIP712).toHaveBeenCalledWith(
+      "0xpub",
+      ["0xc"],
+      "0xdelegator",
+      1000,
+      30,
+    );
+  });
+
+  it("userDecrypt maps handles to (handle, contractAddress) pairs and forwards args", async () => {
+    const params = {
+      handles: ["0xh1", "0xh2"] as `0x${string}`[],
+      contractAddress: "0xcontract" as `0x${string}`,
+      privateKey: "0xpriv" as `0x${string}`,
+      publicKey: "0xpub" as `0x${string}`,
+      signature: "0xsig" as `0x${string}`,
+      signedContractAddresses: ["0xcontract"] as `0x${string}`[],
+      signerAddress: "0xsigner" as `0x${string}`,
+      startTimestamp: 1000,
+      durationDays: 30,
+    };
+    await relayer.userDecrypt(params);
+    expect(mockInstance.userDecrypt).toHaveBeenCalledWith(
+      [
+        { handle: "0xh1", contractAddress: "0xcontract" },
+        { handle: "0xh2", contractAddress: "0xcontract" },
+      ],
+      "0xpriv",
+      "0xpub",
+      "0xsig",
+      ["0xcontract"],
+      "0xsigner",
+      1000,
+      30,
+    );
+  });
+
+  it("delegatedUserDecrypt maps handles to pairs and forwards args", async () => {
+    const params = {
+      handles: ["0xh1"] as `0x${string}`[],
+      contractAddress: "0xcontract" as `0x${string}`,
+      privateKey: "0xpriv" as `0x${string}`,
+      publicKey: "0xpub" as `0x${string}`,
+      signature: "0xsig" as `0x${string}`,
+      signedContractAddresses: ["0xcontract"] as `0x${string}`[],
+      delegatorAddress: "0xdelegator" as `0x${string}`,
+      delegateAddress: "0xdelegate" as `0x${string}`,
+      startTimestamp: 1000,
+      durationDays: 30,
+    };
+    await relayer.delegatedUserDecrypt(params);
+    expect(mockInstance.delegatedUserDecrypt).toHaveBeenCalledWith(
+      [{ handle: "0xh1", contractAddress: "0xcontract" }],
+      "0xpriv",
+      "0xpub",
+      "0xsig",
+      ["0xcontract"],
+      "0xdelegator",
+      "0xdelegate",
+      1000,
+      30,
+    );
+  });
+
+  it("encrypt dispatches every numeric FHE type to the right builder method", async () => {
+    await relayer.encrypt({
+      values: [
+        { value: 1n, type: "euint8" },
+        { value: 2n, type: "euint16" },
+        { value: 3n, type: "euint32" },
+        { value: 4n, type: "euint64" },
+        { value: 5n, type: "euint128" },
+        { value: 6n, type: "euint256" },
+      ],
+      contractAddress: "0xcontract",
+      userAddress: "0xuser",
+    });
+    const builder = (mockInstance.createEncryptedInput as ReturnType<typeof vi.fn>).mock.results[0]!
+      .value;
+    expect(builder.add8).toHaveBeenCalledWith(1n);
+    expect(builder.add16).toHaveBeenCalledWith(2n);
+    expect(builder.add32).toHaveBeenCalledWith(3n);
+    expect(builder.add64).toHaveBeenCalledWith(4n);
+    expect(builder.add128).toHaveBeenCalledWith(5n);
+    expect(builder.add256).toHaveBeenCalledWith(6n);
+  });
+
+  it("encrypt throws on an unrecognized FHE type instead of silently dropping it", async () => {
+    await expect(
+      relayer.encrypt({
+        // Cast through unknown to simulate a future/unknown type slipping past TS.
+        values: [{ value: 42n, type: "euint512" } as unknown as never],
+        contractAddress: "0xcontract",
+        userAddress: "0xuser",
+      }),
+    ).rejects.toThrow(/Unsupported FHE type "euint512"/);
+  });
+
+  it("getPublicParams forwards the bits argument", async () => {
+    const result = await relayer.getPublicParams(2048);
+    expect(mockInstance.getPublicParams).toHaveBeenCalledWith(2048);
+    expect(result).toEqual({ publicParams: new Uint8Array([9, 10]), publicParamsId: "pp-1" });
+  });
+
+  it("requestZKProofVerification delegates to instance", async () => {
+    const proof = { handles: [new Uint8Array([1])], inputProof: new Uint8Array([2]) };
+    const result = await relayer.requestZKProofVerification(proof as never);
+    expect(mockInstance.requestZKProofVerification).toHaveBeenCalledWith(proof);
+    expect(result.handles).toHaveLength(1);
+  });
+
+  it("getAclAddress throws when aclContractAddress is missing from config", async () => {
+    const badRelayer = new RelayerNative({
+      ...testConfig,
+      aclContractAddress: undefined as never,
+    });
+    await expect(badRelayer.getAclAddress()).rejects.toThrow(/aclContractAddress is not set/);
+  });
+
+  it("retries initialization after a failed createInstance call", async () => {
+    const { createInstance } = await import("@fhevm/react-native-sdk");
+    const createInstanceMock = createInstance as ReturnType<typeof vi.fn>;
+    createInstanceMock.mockRejectedValueOnce(new Error("network error"));
+
+    // First call fails — relayer should not be permanently stuck.
+    await expect(relayer.generateKeypair()).rejects.toThrow("network error");
+
+    // Second call retries (re-invokes createInstance) and succeeds.
+    await expect(relayer.generateKeypair()).resolves.toEqual({
+      publicKey: "0xpub",
+      privateKey: "0xpriv",
+    });
+    expect(createInstanceMock).toHaveBeenCalledTimes(2);
+  });
 });

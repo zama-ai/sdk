@@ -11,9 +11,3 @@
 // React Native specific
 export { RelayerNative } from "./relayer-native";
 export { AsyncStorageAdapter } from "./async-storage-adapter";
-
-// Re-export native SDK essentials
-export { createInstance, SepoliaConfig, MainnetConfig } from "@fhevm/react-native-sdk";
-
-// Re-export everything from react-sdk (provider, hooks, types, utilities)
-export * from "@zama-fhe/react-sdk";
