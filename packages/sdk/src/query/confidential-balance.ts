@@ -1,4 +1,4 @@
-import type { ReadonlyToken } from "../token/readonly-token";
+import type { Token } from "../token/token";
 import type { Handle } from "../relayer/relayer-sdk.types";
 
 import { assertNonNullable } from "../utils/assertions";
@@ -16,7 +16,7 @@ export interface ConfidentialBalanceQueryConfig {
 }
 
 export function confidentialBalanceQueryOptions(
-  token: ReadonlyToken,
+  token: Token,
   config?: ConfidentialBalanceQueryConfig,
 ): QueryFactoryOptions<
   bigint,

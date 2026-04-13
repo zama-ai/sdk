@@ -1,9 +1,7 @@
 import { describe, expect, it, vi } from "../../test-fixtures";
 import { Topics } from "../../events";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
-import type { Token } from "../token";
-
-import { ReadonlyToken } from "../readonly-token";
+import { Token } from "../token";
 import {
   type ZamaSDKEvent,
   type ZamaSDKEventListener,
@@ -66,7 +64,7 @@ describe("ReadonlyToken event emissions", () => {
     storage: GenericStorage,
     sessionStorage: GenericStorage,
   ) {
-    return new ReadonlyToken({
+    return new Token({
       relayer,
       signer,
       storage,
@@ -284,7 +282,7 @@ describe("ReadonlyToken event emissions", () => {
     storage,
     sessionStorage,
   }) => {
-    const token = new ReadonlyToken({
+    const token = new Token({
       relayer,
       signer,
       storage,

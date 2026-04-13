@@ -8,7 +8,7 @@ import {
   confidentialHandleQueryOptions,
   signerAddressQueryOptions,
 } from "@zama-fhe/sdk/query";
-import { useReadonlyToken } from "../token/use-readonly-token";
+import { useToken } from "../token/use-token";
 
 /** Configuration for {@link useConfidentialBalance}. */
 export interface UseConfidentialBalanceConfig {
@@ -49,7 +49,7 @@ export function useConfidentialBalance(
 ) {
   const { tokenAddress, handleRefetchInterval } = config;
   const { enabled = true } = options ?? {};
-  const token = useReadonlyToken(tokenAddress);
+  const token = useToken({ tokenAddress });
 
   const addressQuery = useQuery<Address>({
     ...signerAddressQueryOptions(token.signer),

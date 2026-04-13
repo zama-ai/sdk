@@ -37,7 +37,8 @@ import {
   ZamaError,
   matchAclRevert,
 } from "../errors";
-import { ReadonlyToken, type ReadonlyTokenConfig } from "./readonly-token";
+import { ReadonlyToken, type ReadonlyTokenConfig, wrapDecryptError } from "./readonly-token";
+import { assertBigint } from "../utils/assertions";
 import type {
   ShieldCallbacks,
   ShieldOptions,
@@ -91,6 +92,95 @@ export class Token extends ReadonlyToken {
         });
     }
     return this.#underlyingPromise;
+  }
+
+  // DECRYPT OPERATIONS
+
+  /**
+   * Decrypt and return the plaintext balance for the given owner.
+   * Generates FHE credentials automatically if they don't exist.
+   *
+   * @param owner - Optional balance owner address. Defaults to the connected signer.
+   * @returns The decrypted plaintext balance as a bigint.
+   * @throws {@link DecryptionFailedError} if FHE decryption fails.
+   *
+   * @example
+   * ```ts
+   * const balance = await token.balanceOf();
+   * // or for another address:
+   * const balance = await token.balanceOf("0xOwner");
+   * ```
+   */
+  async balanceOf(owner?: Address): Promise<bigint> {
+    const ownerAddress = owner ? getAddress(owner) : await this.signer.getAddress();
+    const handle = await this.confidentialBalanceOf(ownerAddress);
+    return this.decryptBalance(handle, ownerAddress);
+  }
+
+  /**
+   * Decrypt a single encrypted handle into a plaintext bigint.
+   * Returns `0n` for zero handles without calling the relayer.
+   *
+   * @param handle - The encrypted balance handle to decrypt.
+   * @param owner - Optional owner address for the decrypt request.
+   * @returns The decrypted plaintext value as a bigint.
+   * @throws {@link DecryptionFailedError} if FHE decryption fails.
+   *
+   * @example
+   * ```ts
+   * const handle = await token.confidentialBalanceOf();
+   * const value = await token.decryptBalance(handle);
+   * ```
+   */
+  async decryptBalance(handle: Handle, owner?: Address): Promise<bigint> {
+    if (this.isZeroHandle(handle)) {
+      return 0n;
+    }
+
+    const signerAddress = owner ?? (await this.signer.getAddress());
+
+    const cached = await this.cache.get(signerAddress, this.address, handle);
+    if (cached !== null) {
+      assertBigint(cached, "decryptBalance: cached");
+      return cached;
+    }
+
+    const creds = await this.credentials.allow(this.address);
+
+    const t0 = Date.now();
+    try {
+      this.emit({ type: ZamaSDKEvents.DecryptStart });
+      const result = await this.relayer.userDecrypt({
+        handles: [handle],
+        contractAddress: this.address,
+        signedContractAddresses: creds.contractAddresses,
+        privateKey: creds.privateKey,
+        publicKey: creds.publicKey,
+        signature: creds.signature,
+        signerAddress,
+        startTimestamp: creds.startTimestamp,
+        durationDays: creds.durationDays,
+      });
+      this.emit({
+        type: ZamaSDKEvents.DecryptEnd,
+        durationMs: Date.now() - t0,
+      });
+
+      const value = result[handle];
+      if (value === undefined) {
+        throw new DecryptionFailedError(`Decryption returned no value for handle ${handle}`);
+      }
+      assertBigint(value, "decryptBalance: result[handle]");
+      await this.cache.set(signerAddress, this.address, handle, value);
+      return value;
+    } catch (error) {
+      this.emit({
+        type: ZamaSDKEvents.DecryptError,
+        error: toError(error),
+        durationMs: Date.now() - t0,
+      });
+      throw wrapDecryptError(error, "Failed to decrypt balance");
+    }
   }
 
   // WRITE OPERATIONS
