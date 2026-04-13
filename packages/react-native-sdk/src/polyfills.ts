@@ -1,75 +1,68 @@
 /**
- * Side-effect import that polyfills the JS/Web APIs the Zama SDK relies on
- * but which are missing from React Native's Hermes engine.
+ * Side-effect import that polyfills every JS/Web API the Zama SDK relies on
+ * but which is missing from React Native's Hermes engine.
  *
- * Import this once, as early as possible, before any SDK code runs:
+ * Import this once, as the **very first import** in your entry file, before
+ * any SDK code runs:
  *
  * ```ts
  * import "@zama-fhe/react-native-sdk/polyfills";
  * ```
  *
- * Because Hermes hoists `import` statements above top-level code, the import
- * must be the very first import in your entry file, or wired via Metro's
- * `getModulesRunBeforeMainModule` (a `shims.js` file).
+ * Hermes hoists ES `import` statements above top-level code, so anything you
+ * place after this import may execute before the polyfills land. Always make
+ * this the first line of your entry file (or wire it via Metro's
+ * `getModulesRunBeforeMainModule`).
  *
  * Polyfills installed:
- * - `crypto.getRandomValues`   (via `expo-crypto` — Expo Go compatible)
+ * - `crypto.subtle` and `crypto.getRandomValues` (via `react-native-quick-crypto`)
  * - `Array.prototype.toSorted` (ES2023)
- * - `Set.prototype.isSubsetOf` (ES2025)
+ * - `Set.prototype.isSubsetOf`  (ES2025)
  *
- * **Not polyfilled here:** `crypto.subtle` (WebCrypto SubtleCrypto). The only
- * production-grade option (`react-native-quick-crypto`) ships native modules
- * that Expo Go cannot load. SDK paths that depend on `crypto.subtle`
- * (credential encryption) require a custom dev client where you can install
- * `react-native-quick-crypto` and call `install()` yourself before importing
- * this file.
+ * Required peer dependencies (install in the host app):
+ *   `npx expo install react-native-quick-crypto`
  *
- * `expo-crypto` must be installed in the host app and is declared as an
- * optional peer dependency.
+ * **Custom dev client only.** `react-native-quick-crypto` ships native
+ * modules (BoringSSL/OpenSSL) that Expo Go cannot load. Run
+ * `npx expo prebuild` and use `npx expo run:ios|android` (or EAS Build).
  *
  * @packageDocumentation
  */
 
 // Use CommonJS `require` rather than `import` because:
-//   1. Hermes hoists ES `import` above top-level code, which would break the
-//      ordering guarantees this file is supposed to provide.
-//   2. `expo-crypto` is an optional peer dep without bundled types in this
-//      workspace, so a static `import` would fail typecheck.
+//   1. Hermes hoists ES `import` above top-level code, breaking the ordering
+//      guarantees this file is supposed to provide.
+//   2. The native peer is resolved at runtime, not via the bundled type graph.
 declare const require: (id: string) => unknown;
 
-// --- crypto.getRandomValues ----------------------------------------------
-// `expo-crypto` exposes a WebCrypto-conformant `getRandomValues(typedArray)`.
-// We attach it to `globalThis.crypto` only if the environment doesn't already
-// provide one (e.g. a dev client with `react-native-get-random-values`
-// already loaded).
-let expoCrypto: { getRandomValues?: <T extends ArrayBufferView | null>(array: T) => T };
+// --- crypto.subtle + crypto.getRandomValues ------------------------------
+// `react-native-quick-crypto.install()` populates the entire `globalThis.crypto`
+// object (subtle, getRandomValues, randomUUID, etc.) via JSI bindings to
+// BoringSSL. We only call install() if subtle is missing, so a previously
+// installed implementation isn't clobbered.
+let quickCrypto: { install?: () => void };
 try {
-  expoCrypto = require("expo-crypto") as typeof expoCrypto;
+  quickCrypto = require("react-native-quick-crypto") as typeof quickCrypto;
 } catch (cause) {
   throw new Error(
-    `@zama-fhe/react-native-sdk/polyfills: missing peer dependency "expo-crypto". ` +
-      `Install it in your app: \`npx expo install expo-crypto\`.`,
+    `@zama-fhe/react-native-sdk/polyfills: missing peer dependency ` +
+      `"react-native-quick-crypto". Install it in your app: ` +
+      `\`npx expo install react-native-quick-crypto\` and rebuild your dev client ` +
+      `(\`npx expo prebuild\`). Expo Go cannot load native modules.`,
     { cause },
   );
 }
 
-const globalCrypto = (globalThis as { crypto?: Partial<Crypto> }).crypto;
-if (typeof globalCrypto?.getRandomValues !== "function") {
-  if (typeof expoCrypto.getRandomValues !== "function") {
-    throw new TypeError(
-      "@zama-fhe/react-native-sdk/polyfills: expo-crypto does not expose " +
-        "getRandomValues. Upgrade expo-crypto to a version that supports it.",
-    );
-  }
-  // Build (or extend) a `crypto` object on the global with getRandomValues.
-  const next: Partial<Crypto> = globalCrypto ? { ...globalCrypto } : {};
-  next.getRandomValues = expoCrypto.getRandomValues as Crypto["getRandomValues"];
-  Object.defineProperty(globalThis, "crypto", {
-    configurable: true,
-    enumerable: true,
-    writable: true,
-    value: next,
-  });
+if (typeof quickCrypto.install !== "function") {
+  throw new TypeError(
+    "@zama-fhe/react-native-sdk/polyfills: react-native-quick-crypto " +
+      "does not expose install(). Upgrade to a version that does.",
+  );
+}
+
+const globalSubtle = (globalThis as { crypto?: { subtle?: unknown } }).crypto?.subtle;
+if (!globalSubtle) {
+  quickCrypto.install();
 }
 
 // --- Array.prototype.toSorted (ES2023) -----------------------------------

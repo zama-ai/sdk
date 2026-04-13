@@ -45,13 +45,8 @@
     "react": ">=18.0.0",
     "expo": ">=52.0.0",
     "react-native": ">=0.76.0",
-    "expo-crypto": ">=14.0.0",
     "expo-secure-store": ">=14.0.0",
-    "expo-sqlite": ">=15.0.0"
-  },
-  "peerDependenciesMeta": {
-    "expo-crypto": {
-      "optional": true
-    }
+    "expo-sqlite": ">=15.0.0",
+    "react-native-quick-crypto": ">=0.7.0"
   }
 }

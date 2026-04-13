@@ -8,10 +8,10 @@ React Native (Expo) bindings for the [Zama confidential token SDK](https://githu
 npx expo install @zama-fhe/react-native-sdk \
   @zama-fhe/sdk @zama-fhe/react-sdk \
   @tanstack/react-query \
-  expo-crypto expo-secure-store expo-sqlite
+  react-native-quick-crypto expo-secure-store expo-sqlite
 ```
 
-Requires an Expo custom dev client (`npx expo prebuild`) or EAS Build — the package ships native Rust modules.
+Requires an Expo custom dev client (`npx expo prebuild`) or EAS Build — the package ships native modules (FHE engine + `react-native-quick-crypto`).
 
 ## Quickstart
 
@@ -53,7 +53,7 @@ export default function App() {
 }
 ```
 
-Every hook (`useEncrypt`, `useUserDecrypt`, `useShield`, …) from `@zama-fhe/react-sdk` now works.
+Every hook from `@zama-fhe/react-sdk` now works (`useEncrypt`, `useUserDecrypt`, `useShield`, …).
 
 ## Exports
 
@@ -63,7 +63,7 @@ Every hook (`useEncrypt`, `useUserDecrypt`, `useShield`, …) from `@zama-fhe/re
 | `RelayerNativeConfig`   | Config type — mirrors `RelayerWebConfig`.                        |
 | `SecureStoreAdapter`    | `GenericStorage` for the durable `storage` slot (Keychain).      |
 | `SqliteKvStoreAdapter`  | `GenericStorage` for the ephemeral `sessionStorage` slot (SQLite). |
-| `/polyfills`            | Side-effect import: `crypto.getRandomValues`, `toSorted`, `isSubsetOf`. |
+| `/polyfills`            | Side-effect import: `crypto.subtle`, `crypto.getRandomValues`, `Array.toSorted`, `Set.isSubsetOf`. Must be the first import in your entry file. |
 
 ## Documentation
 

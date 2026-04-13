@@ -28,28 +28,30 @@ npx expo install \
   @zama-fhe/sdk \
   @zama-fhe/react-sdk \
   @tanstack/react-query \
-  expo-crypto \
+  react-native-quick-crypto \
   expo-secure-store \
   expo-sqlite
 ```
 
 Peer-dep matrix:
 
-| Peer                    | Required version |
-| ----------------------- | ---------------- |
-| `react`                 | `>=18.0.0`       |
-| `react-native`          | `>=0.76.0`       |
-| `expo`                  | `>=52.0.0`       |
-| `@zama-fhe/sdk`         | `^2.4.0-alpha.4` |
-| `@zama-fhe/react-sdk`   | `^2.4.0-alpha.4` |
-| `@tanstack/react-query` | `>=5`            |
-| `expo-secure-store`     | `>=14.0.0`       |
-| `expo-sqlite`           | `>=15.0.0`       |
-| `expo-crypto`           | `>=14.0.0`       |
+| Peer                        | Required version |
+| --------------------------- | ---------------- |
+| `react`                     | `>=18.0.0`       |
+| `react-native`              | `>=0.76.0`       |
+| `expo`                      | `>=52.0.0`       |
+| `@zama-fhe/sdk`             | `^2.4.0-alpha.4` |
+| `@zama-fhe/react-sdk`       | `^2.4.0-alpha.4` |
+| `@tanstack/react-query`     | `>=5`            |
+| `react-native-quick-crypto` | `>=0.7.0`        |
+| `expo-secure-store`         | `>=14.0.0`       |
+| `expo-sqlite`               | `>=15.0.0`       |
 
 ### 2. Install the polyfills before any SDK code runs
 
-Hermes is missing `crypto.getRandomValues`, `Array.prototype.toSorted`, and `Set.prototype.isSubsetOf`. The polyfills entrypoint installs them on `globalThis`. It **must be the first import** in your entry file — Hermes hoists ES `import` statements above top-level code.
+Hermes is missing `crypto.subtle`, `crypto.getRandomValues`, `Array.prototype.toSorted`, and `Set.prototype.isSubsetOf`. The polyfills entrypoint installs all four (the first two via `react-native-quick-crypto`).
+
+It **must be the first import** in your entry file — Hermes hoists ES `import` statements above top-level code, so anything you put after may execute before the polyfills land.
 
 {% tabs %}
 {% tab title="index.ts" %}
@@ -67,17 +69,13 @@ registerRootComponent(App);
 {% endtab %}
 {% endtabs %}
 
-{% hint style="info" %}
-The polyfills entrypoint does **not** install `crypto.subtle`. SDK paths that depend on it (credential encryption used by `useUserDecrypt`) require [`react-native-quick-crypto`](https://github.com/margelo/react-native-quick-crypto), which only loads in a custom dev client:
+{% hint style="warning" %}
+`react-native-quick-crypto` ships native modules (BoringSSL/OpenSSL) that **Expo Go cannot load**. Use a custom dev client:
 
-```ts
-// index.ts — install BEFORE the polyfills entrypoint
-import { install } from "react-native-quick-crypto";
-install();
-import "@zama-fhe/react-native-sdk/polyfills";
+```sh
+npx expo prebuild
+npx expo run:ios   # or: npx expo run:android
 ```
-
-If you only need encryption, public reads, and balance queries, plain Expo Go works.
 {% endhint %}
 
 ### 3. Wire `ZamaProvider` at the root
