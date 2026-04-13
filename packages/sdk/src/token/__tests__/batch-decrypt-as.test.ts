@@ -305,6 +305,58 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     ).rejects.toThrow("callback exploded");
   });
 
+  test("calls delegated allow() with all token addresses even when some are cached", async ({
+    relayer,
+  }) => {
+    const signer = createMockSigner(DELEGATE);
+    const storage = new MemoryStorage();
+    const sessionStorage = new MemoryStorage();
+    const sharedCache = new DecryptCache(storage);
+
+    // Pre-populate cache for tokenA only — tokenB still needs decryption.
+    // ownerAddress defaults to DELEGATOR for batchDecryptBalancesAs.
+    await sharedCache.set(DELEGATOR, TOKEN_A, HANDLE_A, 100n);
+
+    // readContract order: confidentialBalanceOf(A), confidentialBalanceOf(B), getDelegationExpiry
+    vi.mocked(signer.readContract)
+      .mockResolvedValueOnce(HANDLE_A)
+      .mockResolvedValueOnce(HANDLE_B)
+      .mockResolvedValueOnce(MAX_UINT64);
+    vi.mocked(relayer.delegatedUserDecrypt).mockResolvedValueOnce({ [HANDLE_B]: 200n });
+
+    const tokenA = new ReadonlyToken({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      address: TOKEN_A,
+      cache: sharedCache,
+    });
+    const tokenB = new ReadonlyToken({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      address: TOKEN_B,
+      cache: sharedCache,
+    });
+
+    const allowMock = stubDelegatedCredentials(tokenA, [TOKEN_A, TOKEN_B]);
+
+    const balances = await ReadonlyToken.batchDecryptBalancesAs([tokenA, tokenB], {
+      delegatorAddress: DELEGATOR,
+    });
+
+    expect(balances.get(TOKEN_A)).toBe(100n);
+    expect(balances.get(TOKEN_B)).toBe(200n);
+    // delegatedCredentials.allow is invoked with the FULL token set
+    // (not just uncached) so the credential cache key is stable across
+    // call sites — this lets a parallel `delegatedCredentials.allow(...)`
+    // dedupe with the credential request issued here.
+    expect(allowMock).toHaveBeenCalledOnce();
+    expect(allowMock).toHaveBeenCalledWith(DELEGATOR, TOKEN_A, TOKEN_B);
+  });
+
   // ── RED test: I-3 — saveCachedBalance failure doesn't fail decryption ─
 
   test("succeeds even when cache write fails", async ({ relayer }) => {
