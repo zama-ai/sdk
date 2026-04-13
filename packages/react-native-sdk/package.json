@@ -12,6 +12,16 @@
   "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./polyfills": {
+      "types": "./src/polyfills.ts",
+      "default": "./src/polyfills.ts"
+    }
+  },
   "files": [
     "src/"
   ],
@@ -19,6 +29,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@babel/runtime": "^7.24.0",
     "@fhevm/react-native-sdk": "file:./fhevm-react-native-sdk-0.1.0.tgz"
   },
   "devDependencies": {
@@ -32,6 +43,12 @@
     "@react-native-async-storage/async-storage": ">=2.0.0",
     "react": ">=18.0.0",
     "expo": ">=52.0.0",
-    "react-native": ">=0.76.0"
+    "react-native": ">=0.76.0",
+    "expo-crypto": ">=14.0.0"
+  },
+  "peerDependenciesMeta": {
+    "expo-crypto": {
+      "optional": true
+    }
   }
 }

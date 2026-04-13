@@ -1,14 +1,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { StatusBar } from "expo-status-bar";
 import { StyleSheet, Text, View } from "react-native";
-import {
-  ZamaProvider,
-  RelayerNative,
-  AsyncStorageAdapter,
-  useEncrypt,
-  usePublicKey,
-  SepoliaConfig,
-} from "@zama-fhe/react-native-sdk";
+import { RelayerNative, AsyncStorageAdapter, SepoliaConfig } from "@zama-fhe/react-native-sdk";
+import { ZamaProvider, useEncrypt, usePublicKey } from "@zama-fhe/react-sdk";
 import type { GenericSigner } from "@zama-fhe/sdk";
 
 // ── Setup ────────────────────────────────────────────────────────────

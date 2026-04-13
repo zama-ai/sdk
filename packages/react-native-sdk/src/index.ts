@@ -11,3 +11,8 @@
 // React Native specific
 export { RelayerNative } from "./relayer-native";
 export { AsyncStorageAdapter } from "./async-storage-adapter";
+
+// Network presets needed to construct `RelayerNative`. Re-exported here so
+// consumers don't need to depend on `@fhevm/react-native-sdk` directly (it
+// ships as a local tarball).
+export { SepoliaConfig, MainnetConfig } from "@fhevm/react-native-sdk";

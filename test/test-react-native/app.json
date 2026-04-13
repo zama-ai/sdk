@@ -4,14 +4,30 @@
     "slug": "test-react-native",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
     "scheme": "test-react-native",
-    "platforms": ["ios", "android"],
     "ios": {
+      "supportsTablet": true,
       "bundleIdentifier": "ai.zama.test.reactnative"
     },
     "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
       "package": "ai.zama.test.reactnative"
     },
-    "plugins": []
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
   }
 }
