@@ -5,11 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { createPublicClient, http, type Address, type Hash, type Hex } from "viem";
 import { privateKeyToAccount, generatePrivateKey } from "viem/accounts";
 import { sepolia } from "viem/chains";
-import {
-  RelayerNative,
-  SecureStoreAdapter,
-  SqliteKvStoreAdapter,
-} from "@zama-fhe/react-native-sdk";
+import { RelayerNative, SqliteKvStoreAdapter } from "@zama-fhe/react-native-sdk";
 import { ZamaProvider, useEncrypt, usePublicKey } from "@zama-fhe/react-sdk";
 import { SepoliaConfig, getTokenPairsLengthContract, type GenericSigner } from "@zama-fhe/sdk";
 
@@ -20,7 +16,7 @@ const relayer = new RelayerNative({
   transports: { [SepoliaConfig.chainId]: SepoliaConfig },
   getChainId: async () => SepoliaConfig.chainId,
 });
-const storage = new SecureStoreAdapter();
+const storage = new SqliteKvStoreAdapter();
 const sessionStorage = new SqliteKvStoreAdapter();
 
 // Ephemeral account used only to derive a user address. No funds, no signing.
@@ -146,9 +142,6 @@ function SmokeTest() {
   const publicKey = usePublicKey();
   const encrypt = useEncrypt();
 
-  const [secureStoreState, setSecureStoreState] = useState<TestState>({
-    status: "idle",
-  });
   const [kvStoreState, setKvStoreState] = useState<TestState>({
     status: "idle",
   });
@@ -176,30 +169,6 @@ function SmokeTest() {
     status: "idle",
   });
   const [encryptFreshnessState, setEncryptFreshnessState] = useState<TestState>({ status: "idle" });
-
-  // --- 1. SecureStore round-trip --------------------------------------
-  async function runSecureStore() {
-    setSecureStoreState({ status: "running" });
-    try {
-      const key = "smoke_secure";
-      const payload = { at: Date.now(), nonce: Math.random().toString(36) };
-      await storage.set(key, payload);
-      const readBack = await storage.get<typeof payload>(key);
-      if (!readBack || readBack.nonce !== payload.nonce) {
-        throw new Error("read-back mismatch");
-      }
-      await storage.delete(key);
-      if ((await storage.get(key)) !== null) {
-        throw new Error("delete did not remove the entry");
-      }
-      setSecureStoreState({
-        status: "ok",
-        detail: "set/get/delete round-trip",
-      });
-    } catch (error) {
-      setSecureStoreState({ status: "fail", detail: String(error) });
-    }
-  }
 
   // --- 2. SQLite KV round-trip ----------------------------------------
   async function runKvStore() {
@@ -335,8 +304,9 @@ function SmokeTest() {
     }
   }
 
-  // --- 8. SecureStore overwrite semantics -----------------------------
+  // --- 8. Storage overwrite semantics ---------------------------------
   // A second `set` for the same key must replace, not append/duplicate.
+  // Exercises the contract of whichever adapter is wired to `storage`.
   async function runStoreOverwrite() {
     setStoreOverwriteState({ status: "running" });
     try {
@@ -481,7 +451,6 @@ function SmokeTest() {
 
       <View style={styles.sectionGap} />
 
-      <TestRow label="expo-secure-store adapter" state={secureStoreState} onRun={runSecureStore} />
       <TestRow label="expo-sqlite kv-store adapter" state={kvStoreState} onRun={runKvStore} />
       <TestRow
         label="crypto.getRandomValues polyfill"
@@ -509,7 +478,7 @@ function SmokeTest() {
         onRun={runTextCodec}
       />
       <TestRow
-        label="SecureStore: overwrite semantics"
+        label="Storage: overwrite semantics"
         state={storeOverwriteState}
         onRun={runStoreOverwrite}
       />

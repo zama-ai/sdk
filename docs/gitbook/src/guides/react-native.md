@@ -8,8 +8,7 @@ description: How to use the Zama SDK in an Expo / React Native app — polyfills
 The Zama SDK ships a dedicated React Native package, `@zama-fhe/react-native-sdk`, that provides:
 
 - **`RelayerNative`** — a native-backed `RelayerSDK` implementation. Identical lifecycle and configuration shape as `RelayerWeb`, so a web → native port is a one-line constructor swap.
-- **`SecureStoreAdapter`** — `GenericStorage` backed by iOS Keychain / Android Keystore. Use for the durable `storage` slot (encrypted credentials).
-- **`SqliteKvStoreAdapter`** — `GenericStorage` backed by `expo-sqlite/kv-store`. Use for the ephemeral `sessionStorage` slot (caches, handles, FHE artifact cache).
+- **`SqliteKvStoreAdapter`** — `GenericStorage` backed by `expo-sqlite/kv-store`. Recommended for both the durable `storage` slot and the ephemeral `sessionStorage` slot, and used by default for `RelayerNative.fheArtifactStorage` (FHE artifacts are multi-MB and don't fit in platform secure stores).
 - **`/polyfills` entrypoint** — installs the small set of JS APIs the SDK relies on but Hermes is missing.
 
 All hooks (`useEncrypt`, `useUserDecrypt`, `useShield`, …) come from `@zama-fhe/react-sdk` and work unchanged.
@@ -29,7 +28,6 @@ npx expo install \
   @zama-fhe/react-sdk \
   @tanstack/react-query \
   react-native-quick-crypto \
-  expo-secure-store \
   expo-sqlite
 ```
 
@@ -44,7 +42,6 @@ Peer-dep matrix:
 | `@zama-fhe/react-sdk`       | `^2.4.0-alpha.4` |
 | `@tanstack/react-query`     | `>=5`            |
 | `react-native-quick-crypto` | `>=0.7.0`        |
-| `expo-secure-store`         | `>=14.0.0`       |
 | `expo-sqlite`               | `>=15.0.0`       |
 
 ### 2. Install the polyfills before any SDK code runs
@@ -87,11 +84,7 @@ npx expo run:ios   # or: npx expo run:android
 
 ```tsx
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  RelayerNative,
-  SecureStoreAdapter,
-  SqliteKvStoreAdapter,
-} from "@zama-fhe/react-native-sdk";
+import { RelayerNative, SqliteKvStoreAdapter } from "@zama-fhe/react-native-sdk";
 import { ZamaProvider } from "@zama-fhe/react-sdk";
 import { SepoliaConfig, type GenericSigner } from "@zama-fhe/sdk";
 
@@ -104,8 +97,10 @@ const relayer = new RelayerNative({
   getChainId: () => signer.getChainId(),
 });
 
-const storage = new SecureStoreAdapter();        // durable: keys, credentials
-const sessionStorage = new SqliteKvStoreAdapter(); // ephemeral: caches, handles
+// Same adapter for both slots — `SqliteKvStoreAdapter` handles both the
+// durable (credentials) and ephemeral (session) channels comfortably.
+const storage = new SqliteKvStoreAdapter();
+const sessionStorage = new SqliteKvStoreAdapter();
 
 export default function App() {
   return (
@@ -198,19 +193,18 @@ module.exports = config;
 {% endtab %}
 {% endtabs %}
 
-## Storage slots: which adapter goes where?
+## Storage slots
 
-`ZamaProvider` (and `ZamaSDK`) take two storage slots with different durability requirements:
+`ZamaProvider` (and `ZamaSDK`) take two storage slots — `storage` (durable, credentials) and `sessionStorage` (ephemeral, session state / caches). On React Native we recommend `SqliteKvStoreAdapter` for both:
 
-| Prop             | Lifetime               | Recommended adapter      | Backed by                         |
-| ---------------- | ---------------------- | ------------------------ | --------------------------------- |
-| `storage`        | Durable (across launches) | `SecureStoreAdapter`     | iOS Keychain / Android Keystore   |
-| `sessionStorage` | Ephemeral / per session   | `SqliteKvStoreAdapter`   | `expo-sqlite/kv-store`            |
+| Prop             | Lifetime                   | Adapter                | Backed by                  |
+| ---------------- | -------------------------- | ---------------------- | -------------------------- |
+| `storage`        | Durable (across launches)  | `SqliteKvStoreAdapter` | `expo-sqlite/kv-store`     |
+| `sessionStorage` | Ephemeral / per session    | `SqliteKvStoreAdapter` | `expo-sqlite/kv-store`     |
 
-`SecureStoreAdapter` limits:
+The SDK already wraps sensitive values with a signature-derived key before persisting, so what hits disk is ciphertext. SQLite-KV's app-sandbox isolation is sufficient for that threat model, and it's the only adapter that can hold the multi-MB FHE public key and public params consumed by `RelayerNative.fheArtifactStorage`.
 
-- Keys must match `[A-Za-z0-9._-]+`. The adapter prefixes keys with `zama_fhe_`.
-- iOS soft-limits entries to ~2 KB. Larger blobs work but degrade performance — keep big payloads in `SqliteKvStoreAdapter`.
+If you need hardware-backed encryption for other values in your app (e.g. a wallet mnemonic), use `expo-secure-store` directly at your app layer — don't plug it into the SDK's storage slots.
 
 ## Lifecycle and chain switching
 

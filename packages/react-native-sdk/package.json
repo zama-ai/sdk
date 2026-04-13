@@ -35,7 +35,6 @@
   "devDependencies": {
     "@zama-fhe/sdk": "workspace:*",
     "@zama-fhe/react-sdk": "workspace:*",
-    "expo-secure-store": "~15.0.0",
     "expo-sqlite": "~16.0.0"
   },
   "peerDependencies": {
@@ -45,7 +44,6 @@
     "react": ">=18.0.0",
     "expo": ">=52.0.0",
     "react-native": ">=0.76.0",
-    "expo-secure-store": ">=14.0.0",
     "expo-sqlite": ">=15.0.0",
     "react-native-quick-crypto": ">=0.7.0"
   }

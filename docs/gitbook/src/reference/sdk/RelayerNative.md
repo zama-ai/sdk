@@ -47,13 +47,13 @@ const relayer = new RelayerNative({
 
 ```tsx
 import { ZamaProvider } from "@zama-fhe/react-sdk";
-import { SecureStoreAdapter, SqliteKvStoreAdapter } from "@zama-fhe/react-native-sdk";
+import { SqliteKvStoreAdapter } from "@zama-fhe/react-native-sdk";
 
 <ZamaProvider
   relayer={relayer}
   signer={signer}
-  storage={new SecureStoreAdapter()}        // durable: keys, credentials
-  sessionStorage={new SqliteKvStoreAdapter()} // ephemeral: caches, handles
+  storage={new SqliteKvStoreAdapter()}          // durable: credentials
+  sessionStorage={new SqliteKvStoreAdapter()}   // ephemeral: caches, handles
 >
   <App />
 </ZamaProvider>;
@@ -157,7 +157,7 @@ const relayer = new RelayerNative({
 
 Persistent storage for caching the FHE network public key and public params across app launches. Defaults to a fresh `SqliteKvStoreAdapter`.
 
-FHE public params can reach several megabytes — keep this on a SQLite-backed store, never on `SecureStoreAdapter` (iOS Keychain caps entries at ~2 KB).
+FHE public params can reach several megabytes — keep this on a SQLite-backed store. Platform secure stores (e.g. `expo-secure-store`) enforce small per-entry size limits and are not suitable here.
 
 ```ts
 const relayer = new RelayerNative({
