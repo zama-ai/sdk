@@ -617,7 +617,7 @@ export function finalizeUnwrapMutationOptions(token: Token): MutationFactoryOpti
 // @public
 export interface FinalizeUnwrapParams {
     // (undocumented)
-    burnAmountHandle: Address;
+    unwrapRequestId: Hex;
 }
 
 // @public (undocumented)
@@ -1050,7 +1050,7 @@ export class Token extends ReadonlyToken {
         delegateAddress: Address;
         expirationDate?: Date;
     }): Promise<TransactionResult>;
-    finalizeUnwrap(burnAmountHandle: Handle): Promise<TransactionResult>;
+    finalizeUnwrap(unwrapRequestId: Handle): Promise<TransactionResult>;
     isApproved(spender: Address, holder?: Address): Promise<boolean>;
     resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     revokeDelegation(input: {
@@ -1262,6 +1262,7 @@ export interface UnwrappedFinalizedEvent {
     // (undocumented)
     readonly eventName: "UnwrappedFinalized";
     readonly receiver: Address;
+    readonly unwrapRequestId: Hex;
 }
 
 // @public
@@ -1283,6 +1284,7 @@ export interface UnwrapRequestedEvent {
     // (undocumented)
     readonly eventName: "UnwrapRequested";
     readonly receiver: Address;
+    readonly unwrapRequestId: Hex;
 }
 
 // @public (undocumented)
@@ -1650,7 +1652,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/activity-C38S7VvH.d.ts:21496:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/esm/activity-CfhH3hfY.d.ts:22001:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

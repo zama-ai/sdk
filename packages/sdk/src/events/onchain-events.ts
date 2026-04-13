@@ -22,10 +22,10 @@ export const Topics = {
   ConfidentialTransfer: "0x67500e8d0ed826d2194f514dd0d8124f35648ab6e3fb5e6ed867134cffe661e9",
   /** `Wrapped(address indexed to, uint256 amountIn)` */
   Wrapped: "0x4700c1726b4198077cd40320a32c45265a1910521eb0ef713dd1d8412413d7fc",
-  /** `UnwrapRequested(address indexed receiver, bytes32 amount)` */
-  UnwrapRequested: "0x77d02d353c5629272875d11f1b34ec4c65d7430b075575b78cd2502034c469ee",
-  /** `UnwrapFinalized(address indexed receiver, bytes32 encryptedAmount, uint64 cleartextAmount)` */
-  UnwrappedFinalized: "0x2d4edf3c2943002120f53dab3f8940043f34799f4a92ab90f2f81f7dd004a49e",
+  /** `UnwrapRequested(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 amount)` */
+  UnwrapRequested: "0x4b1bfb262557cf08a74ddeefb8aef086b81deb08484bdc1820b9f420cdd1aa0e",
+  /** `UnwrapFinalized(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 encryptedAmount, uint64 cleartextAmount)` */
+  UnwrappedFinalized: "0x87061fd1a5b3714805472c94c9eb8a6b8491992ee77791aa2594be67b92fd962",
   /** `UnwrappedStarted(bool returnVal, uint256 indexed requestId, ...)` */
   UnwrappedStarted: "0x3838891d4843c6d7f9f494570b6fd8843f4e3c3ddb817c1411760bd31b819806",
 } as const;
@@ -59,6 +59,8 @@ export interface UnwrapRequestedEvent {
   readonly eventName: "UnwrapRequested";
   /** Address that will receive the unwrapped ERC-20 tokens. */
   readonly receiver: Address;
+  /** Unique identifier for this unwrap request (bytes32). */
+  readonly unwrapRequestId: Hex;
   /** FHE ciphertext handle for the requested unshield amount. */
   readonly encryptedAmount: Handle;
 }
@@ -68,6 +70,8 @@ export interface UnwrappedFinalizedEvent {
   readonly eventName: "UnwrappedFinalized";
   /** Address receiving the unwrapped ERC-20 tokens. */
   readonly receiver: Address;
+  /** Unique identifier for this unwrap request (bytes32). */
+  readonly unwrapRequestId: Hex;
   /** FHE ciphertext handle of the burnt confidential balance. */
   readonly encryptedAmount: Handle;
   /** Cleartext amount of underlying ERC-20 tokens returned. */
@@ -187,41 +191,43 @@ export function decodeWrapped(log: RawLog): WrappedEvent | null {
 }
 
 /**
- * UnwrapRequested(address indexed receiver, bytes32 amount)
- * Indexed: receiver (topics[1])
+ * UnwrapRequested(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 amount)
+ * Indexed: receiver (topics[1]), unwrapRequestId (topics[2])
  * Data: amount (bytes32)
  */
 export function decodeUnwrapRequested(log: RawLog): UnwrapRequestedEvent | null {
   if (log.topics[0] !== Topics.UnwrapRequested) {
     return null;
   }
-  if (log.topics.length < 2) {
+  if (log.topics.length < 3) {
     return null;
   }
 
   return {
     eventName: "UnwrapRequested",
     receiver: topicToAddress(log.topics[1]!),
+    unwrapRequestId: topicToBytes32(log.topics[2]!),
     encryptedAmount: wordToBytes32(log.data, 0),
   };
 }
 
 /**
- * UnwrapFinalized(address indexed receiver, bytes32 encryptedAmount, uint64 cleartextAmount)
- * Indexed: receiver (topics[1])
+ * UnwrapFinalized(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 encryptedAmount, uint64 cleartextAmount)
+ * Indexed: receiver (topics[1]), unwrapRequestId (topics[2])
  * Data: encryptedAmount (bytes32 FHE handle, word 0), cleartextAmount (uint64, word 1)
  */
 export function decodeUnwrappedFinalized(log: RawLog): UnwrappedFinalizedEvent | null {
   if (log.topics[0] !== Topics.UnwrappedFinalized) {
     return null;
   }
-  if (log.topics.length < 2) {
+  if (log.topics.length < 3) {
     return null;
   }
 
   return {
     eventName: "UnwrappedFinalized",
     receiver: topicToAddress(log.topics[1]!),
+    unwrapRequestId: topicToBytes32(log.topics[2]!),
     encryptedAmount: wordToBytes32(log.data, 0),
     cleartextAmount: wordToBigInt(log.data, 1),
   };

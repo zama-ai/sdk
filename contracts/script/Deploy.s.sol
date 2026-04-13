@@ -4,10 +4,10 @@ pragma solidity 0.8.27;
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
 import {TestERC20} from "../src/mocks/Erc20Mintable.sol";
-import {ConfidentialWrapper} from "../src/wrapper/ERC7984ERC20WrapperUpgradeable.sol";
+import {ConfidentialWrapper} from "../src/wrapper/ConfidentialWrapper.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {WrappersRegistry} from "../src/factory/WrappersRegistry.sol";
+import {ConfidentialTokenWrappersRegistry} from "../src/factory/ConfidentialTokenWrappersRegistry.sol";
 
 contract Deploy is Script {
     function run() external {
@@ -46,10 +46,14 @@ contract Deploy is Script {
         IERC20(address(usdt)).approve(address(cUSDT), wrapAmount);
         cUSDT.wrap(msg.sender, wrapAmount);
 
-        // 6. Deploy WrappersRegistry and register token pairs
-        WrappersRegistry registry = new WrappersRegistry();
-        registry.registerPair(address(usdc), address(cUSDC));
-        registry.registerPair(address(usdt), address(cUSDT));
+        // 6. Deploy ConfidentialTokenWrappersRegistry (upgradeable) and register token pairs
+        ConfidentialTokenWrappersRegistry registryImpl = new ConfidentialTokenWrappersRegistry();
+        bytes memory registryInitData = abi.encodeCall(ConfidentialTokenWrappersRegistry.initialize, (msg.sender));
+        ConfidentialTokenWrappersRegistry registry = ConfidentialTokenWrappersRegistry(
+            payable(address(new ERC1967Proxy(address(registryImpl), registryInitData)))
+        );
+        registry.registerConfidentialToken(address(usdc), address(cUSDC));
+        registry.registerConfidentialToken(address(usdt), address(cUSDT));
         console.log("WrappersRegistry:", address(registry));
 
         vm.stopBroadcast();

@@ -533,7 +533,7 @@ describe("Token", () => {
       vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
-            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`],
+            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`, `0x${"ff".repeat(32)}`],
             data: `0x${"ff".repeat(32)}`,
           },
         ],
@@ -604,7 +604,7 @@ describe("Token", () => {
       vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
-            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`],
+            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`, `0x${"ff".repeat(32)}`],
             data: `0x${"ff".repeat(32)}`,
           },
         ],
@@ -1242,7 +1242,7 @@ describe("Token", () => {
       vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
-            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`],
+            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`, `0x${"ff".repeat(32)}`],
             data: `0x${"ff".repeat(32)}`,
           },
         ],
@@ -1569,7 +1569,7 @@ describe("Token", () => {
       vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
-            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`],
+            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`, `0x${"ff".repeat(32)}`],
             data: `0x${"ff".repeat(32)}`,
           },
         ],
@@ -1594,7 +1594,7 @@ describe("Token", () => {
       vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
-            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`],
+            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`, `0x${"ff".repeat(32)}`],
             data: `0x${"ff".repeat(32)}`,
           },
         ],
@@ -1612,7 +1612,7 @@ describe("Token", () => {
       vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
-            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`],
+            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`, `0x${"ff".repeat(32)}`],
             data: `0x${"ff".repeat(32)}`,
           },
         ],
@@ -1626,7 +1626,7 @@ describe("Token", () => {
       vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
-            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`],
+            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`, `0x${"ff".repeat(32)}`],
             data: `0x${"ff".repeat(32)}`,
           },
         ],

@@ -707,8 +707,8 @@ export function confidentialBalanceOfContract(tokenAddress: Address, userAddress
         readonly type: "error";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "amount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }];
         readonly name: "InvalidUnwrapRequest";
@@ -1026,6 +1026,11 @@ export function confidentialBalanceOfContract(tokenAddress: Address, userAddress
             readonly name: "receiver";
             readonly type: "address";
         }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }, {
             readonly indexed: false;
             readonly internalType: "euint64";
             readonly name: "encryptedAmount";
@@ -1045,6 +1050,11 @@ export function confidentialBalanceOfContract(tokenAddress: Address, userAddress
             readonly internalType: "address";
             readonly name: "receiver";
             readonly type: "address";
+        }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
         }, {
             readonly indexed: false;
             readonly internalType: "euint64";
@@ -1400,8 +1410,8 @@ export function confidentialBalanceOfContract(tokenAddress: Address, userAddress
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "burntAmount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }, {
             readonly internalType: "uint64";
@@ -1699,7 +1709,11 @@ export function confidentialBalanceOfContract(tokenAddress: Address, userAddress
             readonly type: "bytes";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
         readonly type: "function";
     }, {
@@ -1717,8 +1731,40 @@ export function confidentialBalanceOfContract(tokenAddress: Address, userAddress
             readonly type: "bytes32";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapAmount";
+        readonly outputs: readonly [{
+            readonly internalType: "euint64";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapRequester";
+        readonly outputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "";
+            readonly type: "address";
+        }];
+        readonly stateMutability: "view";
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
@@ -1982,8 +2028,8 @@ export function confidentialTotalSupplyContract(tokenAddress: Address): {
         readonly type: "error";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "amount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }];
         readonly name: "InvalidUnwrapRequest";
@@ -2301,6 +2347,11 @@ export function confidentialTotalSupplyContract(tokenAddress: Address): {
             readonly name: "receiver";
             readonly type: "address";
         }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }, {
             readonly indexed: false;
             readonly internalType: "euint64";
             readonly name: "encryptedAmount";
@@ -2320,6 +2371,11 @@ export function confidentialTotalSupplyContract(tokenAddress: Address): {
             readonly internalType: "address";
             readonly name: "receiver";
             readonly type: "address";
+        }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
         }, {
             readonly indexed: false;
             readonly internalType: "euint64";
@@ -2675,8 +2731,8 @@ export function confidentialTotalSupplyContract(tokenAddress: Address): {
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "burntAmount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }, {
             readonly internalType: "uint64";
@@ -2974,7 +3030,11 @@ export function confidentialTotalSupplyContract(tokenAddress: Address): {
             readonly type: "bytes";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
         readonly type: "function";
     }, {
@@ -2992,8 +3052,40 @@ export function confidentialTotalSupplyContract(tokenAddress: Address): {
             readonly type: "bytes32";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapAmount";
+        readonly outputs: readonly [{
+            readonly internalType: "euint64";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapRequester";
+        readonly outputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "";
+            readonly type: "address";
+        }];
+        readonly stateMutability: "view";
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
@@ -3257,8 +3349,8 @@ export function confidentialTransferContract(encryptedErc20: Address, to: Addres
         readonly type: "error";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "amount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }];
         readonly name: "InvalidUnwrapRequest";
@@ -3576,6 +3668,11 @@ export function confidentialTransferContract(encryptedErc20: Address, to: Addres
             readonly name: "receiver";
             readonly type: "address";
         }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }, {
             readonly indexed: false;
             readonly internalType: "euint64";
             readonly name: "encryptedAmount";
@@ -3595,6 +3692,11 @@ export function confidentialTransferContract(encryptedErc20: Address, to: Addres
             readonly internalType: "address";
             readonly name: "receiver";
             readonly type: "address";
+        }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
         }, {
             readonly indexed: false;
             readonly internalType: "euint64";
@@ -3950,8 +4052,8 @@ export function confidentialTransferContract(encryptedErc20: Address, to: Addres
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "burntAmount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }, {
             readonly internalType: "uint64";
@@ -4249,7 +4351,11 @@ export function confidentialTransferContract(encryptedErc20: Address, to: Addres
             readonly type: "bytes";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
         readonly type: "function";
     }, {
@@ -4267,8 +4373,40 @@ export function confidentialTransferContract(encryptedErc20: Address, to: Addres
             readonly type: "bytes32";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapAmount";
+        readonly outputs: readonly [{
+            readonly internalType: "euint64";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapRequester";
+        readonly outputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "";
+            readonly type: "address";
+        }];
+        readonly stateMutability: "view";
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
@@ -4541,8 +4679,8 @@ export function confidentialTransferFromContract(encryptedErc20: Address, from: 
         readonly type: "error";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "amount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }];
         readonly name: "InvalidUnwrapRequest";
@@ -4860,6 +4998,11 @@ export function confidentialTransferFromContract(encryptedErc20: Address, from: 
             readonly name: "receiver";
             readonly type: "address";
         }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }, {
             readonly indexed: false;
             readonly internalType: "euint64";
             readonly name: "encryptedAmount";
@@ -4879,6 +5022,11 @@ export function confidentialTransferFromContract(encryptedErc20: Address, from: 
             readonly internalType: "address";
             readonly name: "receiver";
             readonly type: "address";
+        }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
         }, {
             readonly indexed: false;
             readonly internalType: "euint64";
@@ -5234,8 +5382,8 @@ export function confidentialTransferFromContract(encryptedErc20: Address, from: 
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "burntAmount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }, {
             readonly internalType: "uint64";
@@ -5533,7 +5681,11 @@ export function confidentialTransferFromContract(encryptedErc20: Address, from: 
             readonly type: "bytes";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
         readonly type: "function";
     }, {
@@ -5551,8 +5703,40 @@ export function confidentialTransferFromContract(encryptedErc20: Address, from: 
             readonly type: "bytes32";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapAmount";
+        readonly outputs: readonly [{
+            readonly internalType: "euint64";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapRequester";
+        readonly outputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "";
+            readonly type: "address";
+        }];
+        readonly stateMutability: "view";
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
@@ -6332,7 +6516,7 @@ export { FheTypeName }
 export { FhevmInstanceConfig }
 
 // @public
-export function finalizeUnwrapContract(wrapper: Address, burntAmount: Handle, burntAmountCleartext: bigint, decryptionProof: Hex): {
+export function finalizeUnwrapContract(wrapper: Address, unwrapRequestId: Handle, burntAmountCleartext: bigint, decryptionProof: Hex): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
         readonly inputs: readonly [];
@@ -6456,8 +6640,8 @@ export function finalizeUnwrapContract(wrapper: Address, burntAmount: Handle, bu
         readonly type: "error";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "amount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }];
         readonly name: "InvalidUnwrapRequest";
@@ -6775,6 +6959,11 @@ export function finalizeUnwrapContract(wrapper: Address, burntAmount: Handle, bu
             readonly name: "receiver";
             readonly type: "address";
         }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }, {
             readonly indexed: false;
             readonly internalType: "euint64";
             readonly name: "encryptedAmount";
@@ -6794,6 +6983,11 @@ export function finalizeUnwrapContract(wrapper: Address, burntAmount: Handle, bu
             readonly internalType: "address";
             readonly name: "receiver";
             readonly type: "address";
+        }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
         }, {
             readonly indexed: false;
             readonly internalType: "euint64";
@@ -7149,8 +7343,8 @@ export function finalizeUnwrapContract(wrapper: Address, burntAmount: Handle, bu
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "burntAmount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }, {
             readonly internalType: "uint64";
@@ -7448,7 +7642,11 @@ export function finalizeUnwrapContract(wrapper: Address, burntAmount: Handle, bu
             readonly type: "bytes";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
         readonly type: "function";
     }, {
@@ -7466,8 +7664,40 @@ export function finalizeUnwrapContract(wrapper: Address, burntAmount: Handle, bu
             readonly type: "bytes32";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapAmount";
+        readonly outputs: readonly [{
+            readonly internalType: "euint64";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapRequester";
+        readonly outputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "";
+            readonly type: "address";
+        }];
+        readonly stateMutability: "view";
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
@@ -7801,6 +8031,40 @@ export function getConfidentialTokenAddressContract(registry: Address, tokenAddr
         }];
         readonly stateMutability: "view";
         readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "initialOwner";
+            readonly type: "address";
+        }];
+        readonly name: "initialize";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "tokenAddress";
+            readonly type: "address";
+        }, {
+            readonly internalType: "address";
+            readonly name: "confidentialTokenAddress";
+            readonly type: "address";
+        }];
+        readonly name: "registerConfidentialToken";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "confidentialTokenAddress";
+            readonly type: "address";
+        }];
+        readonly name: "revokeConfidentialToken";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
     }];
     readonly functionName: "getConfidentialTokenAddress";
     readonly args: readonly [`0x${string}`];
@@ -8038,6 +8302,40 @@ export function getTokenAddressContract(registry: Address, confidentialTokenAddr
         }];
         readonly stateMutability: "view";
         readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "initialOwner";
+            readonly type: "address";
+        }];
+        readonly name: "initialize";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "tokenAddress";
+            readonly type: "address";
+        }, {
+            readonly internalType: "address";
+            readonly name: "confidentialTokenAddress";
+            readonly type: "address";
+        }];
+        readonly name: "registerConfidentialToken";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "confidentialTokenAddress";
+            readonly type: "address";
+        }];
+        readonly name: "revokeConfidentialToken";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
     }];
     readonly functionName: "getTokenAddress";
     readonly args: readonly [`0x${string}`];
@@ -8186,6 +8484,40 @@ export function getTokenPairContract(registry: Address, index: bigint): {
             readonly type: "bool";
         }];
         readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "initialOwner";
+            readonly type: "address";
+        }];
+        readonly name: "initialize";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "tokenAddress";
+            readonly type: "address";
+        }, {
+            readonly internalType: "address";
+            readonly name: "confidentialTokenAddress";
+            readonly type: "address";
+        }];
+        readonly name: "registerConfidentialToken";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "confidentialTokenAddress";
+            readonly type: "address";
+        }];
+        readonly name: "revokeConfidentialToken";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
         readonly type: "function";
     }];
     readonly functionName: "getTokenConfidentialTokenPair";
@@ -8336,6 +8668,40 @@ export function getTokenPairsContract(registry: Address): {
         }];
         readonly stateMutability: "view";
         readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "initialOwner";
+            readonly type: "address";
+        }];
+        readonly name: "initialize";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "tokenAddress";
+            readonly type: "address";
+        }, {
+            readonly internalType: "address";
+            readonly name: "confidentialTokenAddress";
+            readonly type: "address";
+        }];
+        readonly name: "registerConfidentialToken";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "confidentialTokenAddress";
+            readonly type: "address";
+        }];
+        readonly name: "revokeConfidentialToken";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
     }];
     readonly functionName: "getTokenConfidentialTokenPairs";
     readonly args: readonly [];
@@ -8485,6 +8851,40 @@ export function getTokenPairsLengthContract(registry: Address): {
         }];
         readonly stateMutability: "view";
         readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "initialOwner";
+            readonly type: "address";
+        }];
+        readonly name: "initialize";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "tokenAddress";
+            readonly type: "address";
+        }, {
+            readonly internalType: "address";
+            readonly name: "confidentialTokenAddress";
+            readonly type: "address";
+        }];
+        readonly name: "registerConfidentialToken";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "confidentialTokenAddress";
+            readonly type: "address";
+        }];
+        readonly name: "revokeConfidentialToken";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
     }];
     readonly functionName: "getTokenConfidentialTokenPairsLength";
     readonly args: readonly [];
@@ -8633,6 +9033,40 @@ export function getTokenPairsSliceContract(registry: Address, fromIndex: bigint,
             readonly type: "bool";
         }];
         readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "initialOwner";
+            readonly type: "address";
+        }];
+        readonly name: "initialize";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "tokenAddress";
+            readonly type: "address";
+        }, {
+            readonly internalType: "address";
+            readonly name: "confidentialTokenAddress";
+            readonly type: "address";
+        }];
+        readonly name: "registerConfidentialToken";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "confidentialTokenAddress";
+            readonly type: "address";
+        }];
+        readonly name: "revokeConfidentialToken";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
         readonly type: "function";
     }];
     readonly functionName: "getTokenConfidentialTokenPairsSlice";
@@ -8862,6 +9296,40 @@ export function isConfidentialTokenValidContract(registry: Address, confidential
             readonly type: "bool";
         }];
         readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "initialOwner";
+            readonly type: "address";
+        }];
+        readonly name: "initialize";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "tokenAddress";
+            readonly type: "address";
+        }, {
+            readonly internalType: "address";
+            readonly name: "confidentialTokenAddress";
+            readonly type: "address";
+        }];
+        readonly name: "registerConfidentialToken";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "confidentialTokenAddress";
+            readonly type: "address";
+        }];
+        readonly name: "revokeConfidentialToken";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
         readonly type: "function";
     }];
     readonly functionName: "isConfidentialTokenValid";
@@ -9103,8 +9571,8 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
         readonly type: "error";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "amount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }];
         readonly name: "InvalidUnwrapRequest";
@@ -9422,6 +9890,11 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
             readonly name: "receiver";
             readonly type: "address";
         }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }, {
             readonly indexed: false;
             readonly internalType: "euint64";
             readonly name: "encryptedAmount";
@@ -9441,6 +9914,11 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
             readonly internalType: "address";
             readonly name: "receiver";
             readonly type: "address";
+        }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
         }, {
             readonly indexed: false;
             readonly internalType: "euint64";
@@ -9796,8 +10274,8 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "burntAmount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }, {
             readonly internalType: "uint64";
@@ -10095,7 +10573,11 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
             readonly type: "bytes";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
         readonly type: "function";
     }, {
@@ -10113,8 +10595,40 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
             readonly type: "bytes32";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapAmount";
+        readonly outputs: readonly [{
+            readonly internalType: "euint64";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapRequester";
+        readonly outputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "";
+            readonly type: "address";
+        }];
+        readonly stateMutability: "view";
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
@@ -10605,8 +11119,8 @@ export function rateContract(tokenAddress: Address): {
         readonly type: "error";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "amount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }];
         readonly name: "InvalidUnwrapRequest";
@@ -10924,6 +11438,11 @@ export function rateContract(tokenAddress: Address): {
             readonly name: "receiver";
             readonly type: "address";
         }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }, {
             readonly indexed: false;
             readonly internalType: "euint64";
             readonly name: "encryptedAmount";
@@ -10943,6 +11462,11 @@ export function rateContract(tokenAddress: Address): {
             readonly internalType: "address";
             readonly name: "receiver";
             readonly type: "address";
+        }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
         }, {
             readonly indexed: false;
             readonly internalType: "euint64";
@@ -11298,8 +11822,8 @@ export function rateContract(tokenAddress: Address): {
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "burntAmount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }, {
             readonly internalType: "uint64";
@@ -11597,7 +12121,11 @@ export function rateContract(tokenAddress: Address): {
             readonly type: "bytes";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
         readonly type: "function";
     }, {
@@ -11615,8 +12143,40 @@ export function rateContract(tokenAddress: Address): {
             readonly type: "bytes32";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapAmount";
+        readonly outputs: readonly [{
+            readonly internalType: "euint64";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapRequester";
+        readonly outputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "";
+            readonly type: "address";
+        }];
+        readonly stateMutability: "view";
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
@@ -12181,8 +12741,8 @@ export function setOperatorContract(tokenAddress: Address, spender: Address, tim
         readonly type: "error";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "amount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }];
         readonly name: "InvalidUnwrapRequest";
@@ -12500,6 +13060,11 @@ export function setOperatorContract(tokenAddress: Address, spender: Address, tim
             readonly name: "receiver";
             readonly type: "address";
         }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }, {
             readonly indexed: false;
             readonly internalType: "euint64";
             readonly name: "encryptedAmount";
@@ -12519,6 +13084,11 @@ export function setOperatorContract(tokenAddress: Address, spender: Address, tim
             readonly internalType: "address";
             readonly name: "receiver";
             readonly type: "address";
+        }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
         }, {
             readonly indexed: false;
             readonly internalType: "euint64";
@@ -12874,8 +13444,8 @@ export function setOperatorContract(tokenAddress: Address, spender: Address, tim
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "burntAmount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }, {
             readonly internalType: "uint64";
@@ -13173,7 +13743,11 @@ export function setOperatorContract(tokenAddress: Address, spender: Address, tim
             readonly type: "bytes";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
         readonly type: "function";
     }, {
@@ -13191,8 +13765,40 @@ export function setOperatorContract(tokenAddress: Address, spender: Address, tim
             readonly type: "bytes32";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapAmount";
+        readonly outputs: readonly [{
+            readonly internalType: "euint64";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapRequester";
+        readonly outputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "";
+            readonly type: "address";
+        }];
+        readonly stateMutability: "view";
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
@@ -13565,7 +14171,7 @@ export class Token extends ReadonlyToken {
         delegateAddress: Address;
         expirationDate?: Date;
     }): Promise<TransactionResult>;
-    finalizeUnwrap(burnAmountHandle: Handle): Promise<TransactionResult>;
+    finalizeUnwrap(unwrapRequestId: Handle): Promise<TransactionResult>;
     isApproved(spender: Address, holder?: Address): Promise<boolean>;
     resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     revokeDelegation(input: {
@@ -13583,7 +14189,7 @@ export class Token extends ReadonlyToken {
 }
 
 // @public
-export const TOKEN_TOPICS: readonly ["0x67500e8d0ed826d2194f514dd0d8124f35648ab6e3fb5e6ed867134cffe661e9", "0x4700c1726b4198077cd40320a32c45265a1910521eb0ef713dd1d8412413d7fc", "0x77d02d353c5629272875d11f1b34ec4c65d7430b075575b78cd2502034c469ee", "0x2d4edf3c2943002120f53dab3f8940043f34799f4a92ab90f2f81f7dd004a49e", "0x3838891d4843c6d7f9f494570b6fd8843f4e3c3ddb817c1411760bd31b819806"];
+export const TOKEN_TOPICS: readonly ["0x67500e8d0ed826d2194f514dd0d8124f35648ab6e3fb5e6ed867134cffe661e9", "0x4700c1726b4198077cd40320a32c45265a1910521eb0ef713dd1d8412413d7fc", "0x4b1bfb262557cf08a74ddeefb8aef086b81deb08484bdc1820b9f420cdd1aa0e", "0x87061fd1a5b3714805472c94c9eb8a6b8491992ee77791aa2594be67b92fd962", "0x3838891d4843c6d7f9f494570b6fd8843f4e3c3ddb817c1411760bd31b819806"];
 
 // @public
 export interface TokenConfig extends ReadonlyTokenConfig {
@@ -13620,9 +14226,9 @@ export interface TokenWrapperPairWithMetadata extends TokenWrapperPair {
 // @public
 export const Topics: {
     readonly ConfidentialTransfer: "0x67500e8d0ed826d2194f514dd0d8124f35648ab6e3fb5e6ed867134cffe661e9"; /** `Wrapped(address indexed to, uint256 amountIn)` */
-    readonly Wrapped: "0x4700c1726b4198077cd40320a32c45265a1910521eb0ef713dd1d8412413d7fc"; /** `UnwrapRequested(address indexed receiver, bytes32 amount)` */
-    readonly UnwrapRequested: "0x77d02d353c5629272875d11f1b34ec4c65d7430b075575b78cd2502034c469ee"; /** `UnwrapFinalized(address indexed receiver, bytes32 encryptedAmount, uint64 cleartextAmount)` */
-    readonly UnwrappedFinalized: "0x2d4edf3c2943002120f53dab3f8940043f34799f4a92ab90f2f81f7dd004a49e"; /** `UnwrappedStarted(bool returnVal, uint256 indexed requestId, ...)` */
+    readonly Wrapped: "0x4700c1726b4198077cd40320a32c45265a1910521eb0ef713dd1d8412413d7fc"; /** `UnwrapRequested(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 amount)` */
+    readonly UnwrapRequested: "0x4b1bfb262557cf08a74ddeefb8aef086b81deb08484bdc1820b9f420cdd1aa0e"; /** `UnwrapFinalized(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 encryptedAmount, uint64 cleartextAmount)` */
+    readonly UnwrappedFinalized: "0x87061fd1a5b3714805472c94c9eb8a6b8491992ee77791aa2594be67b92fd962"; /** `UnwrappedStarted(bool returnVal, uint256 indexed requestId, ...)` */
     readonly UnwrappedStarted: "0x3838891d4843c6d7f9f494570b6fd8843f4e3c3ddb817c1411760bd31b819806";
 };
 
@@ -13751,8 +14357,8 @@ export function totalSupplyContract(tokenAddress: Address): {
         readonly type: "error";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "amount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }];
         readonly name: "InvalidUnwrapRequest";
@@ -14070,6 +14676,11 @@ export function totalSupplyContract(tokenAddress: Address): {
             readonly name: "receiver";
             readonly type: "address";
         }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }, {
             readonly indexed: false;
             readonly internalType: "euint64";
             readonly name: "encryptedAmount";
@@ -14089,6 +14700,11 @@ export function totalSupplyContract(tokenAddress: Address): {
             readonly internalType: "address";
             readonly name: "receiver";
             readonly type: "address";
+        }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
         }, {
             readonly indexed: false;
             readonly internalType: "euint64";
@@ -14444,8 +15060,8 @@ export function totalSupplyContract(tokenAddress: Address): {
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "burntAmount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }, {
             readonly internalType: "uint64";
@@ -14743,7 +15359,11 @@ export function totalSupplyContract(tokenAddress: Address): {
             readonly type: "bytes";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
         readonly type: "function";
     }, {
@@ -14761,8 +15381,40 @@ export function totalSupplyContract(tokenAddress: Address): {
             readonly type: "bytes32";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapAmount";
+        readonly outputs: readonly [{
+            readonly internalType: "euint64";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapRequester";
+        readonly outputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "";
+            readonly type: "address";
+        }];
+        readonly stateMutability: "view";
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
@@ -15077,8 +15729,8 @@ export function underlyingContract(wrapperAddress: Address): {
         readonly type: "error";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "amount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }];
         readonly name: "InvalidUnwrapRequest";
@@ -15396,6 +16048,11 @@ export function underlyingContract(wrapperAddress: Address): {
             readonly name: "receiver";
             readonly type: "address";
         }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }, {
             readonly indexed: false;
             readonly internalType: "euint64";
             readonly name: "encryptedAmount";
@@ -15415,6 +16072,11 @@ export function underlyingContract(wrapperAddress: Address): {
             readonly internalType: "address";
             readonly name: "receiver";
             readonly type: "address";
+        }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
         }, {
             readonly indexed: false;
             readonly internalType: "euint64";
@@ -15770,8 +16432,8 @@ export function underlyingContract(wrapperAddress: Address): {
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "burntAmount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }, {
             readonly internalType: "uint64";
@@ -16069,7 +16731,11 @@ export function underlyingContract(wrapperAddress: Address): {
             readonly type: "bytes";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
         readonly type: "function";
     }, {
@@ -16087,8 +16753,40 @@ export function underlyingContract(wrapperAddress: Address): {
             readonly type: "bytes32";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapAmount";
+        readonly outputs: readonly [{
+            readonly internalType: "euint64";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapRequester";
+        readonly outputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "";
+            readonly type: "address";
+        }];
+        readonly stateMutability: "view";
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
@@ -16386,8 +17084,8 @@ export function unwrapContract(encryptedErc20: Address, from: Address, to: Addre
         readonly type: "error";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "amount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }];
         readonly name: "InvalidUnwrapRequest";
@@ -16705,6 +17403,11 @@ export function unwrapContract(encryptedErc20: Address, from: Address, to: Addre
             readonly name: "receiver";
             readonly type: "address";
         }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }, {
             readonly indexed: false;
             readonly internalType: "euint64";
             readonly name: "encryptedAmount";
@@ -16724,6 +17427,11 @@ export function unwrapContract(encryptedErc20: Address, from: Address, to: Addre
             readonly internalType: "address";
             readonly name: "receiver";
             readonly type: "address";
+        }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
         }, {
             readonly indexed: false;
             readonly internalType: "euint64";
@@ -17079,8 +17787,8 @@ export function unwrapContract(encryptedErc20: Address, from: Address, to: Addre
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "burntAmount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }, {
             readonly internalType: "uint64";
@@ -17378,7 +18086,11 @@ export function unwrapContract(encryptedErc20: Address, from: Address, to: Addre
             readonly type: "bytes";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
         readonly type: "function";
     }, {
@@ -17396,8 +18108,40 @@ export function unwrapContract(encryptedErc20: Address, from: Address, to: Addre
             readonly type: "bytes32";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapAmount";
+        readonly outputs: readonly [{
+            readonly internalType: "euint64";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapRequester";
+        readonly outputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "";
+            readonly type: "address";
+        }];
+        readonly stateMutability: "view";
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
@@ -17661,8 +18405,8 @@ export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address
         readonly type: "error";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "amount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }];
         readonly name: "InvalidUnwrapRequest";
@@ -17980,6 +18724,11 @@ export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address
             readonly name: "receiver";
             readonly type: "address";
         }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }, {
             readonly indexed: false;
             readonly internalType: "euint64";
             readonly name: "encryptedAmount";
@@ -17999,6 +18748,11 @@ export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address
             readonly internalType: "address";
             readonly name: "receiver";
             readonly type: "address";
+        }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
         }, {
             readonly indexed: false;
             readonly internalType: "euint64";
@@ -18354,8 +19108,8 @@ export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "burntAmount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }, {
             readonly internalType: "uint64";
@@ -18653,7 +19407,11 @@ export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address
             readonly type: "bytes";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
         readonly type: "function";
     }, {
@@ -18671,8 +19429,40 @@ export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address
             readonly type: "bytes32";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapAmount";
+        readonly outputs: readonly [{
+            readonly internalType: "euint64";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapRequester";
+        readonly outputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "";
+            readonly type: "address";
+        }];
+        readonly stateMutability: "view";
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
@@ -18818,6 +19608,7 @@ export interface UnwrappedFinalizedEvent {
     // (undocumented)
     readonly eventName: "UnwrappedFinalized";
     readonly receiver: Address;
+    readonly unwrapRequestId: Hex;
 }
 
 // @public
@@ -18839,6 +19630,7 @@ export interface UnwrapRequestedEvent {
     // (undocumented)
     readonly eventName: "UnwrapRequested";
     readonly receiver: Address;
+    readonly unwrapRequestId: Hex;
 }
 
 // @public (undocumented)
@@ -18996,8 +19788,8 @@ export function wrapContract(wrapperAddress: Address, to: Address, amount: bigin
         readonly type: "error";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "amount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }];
         readonly name: "InvalidUnwrapRequest";
@@ -19315,6 +20107,11 @@ export function wrapContract(wrapperAddress: Address, to: Address, amount: bigin
             readonly name: "receiver";
             readonly type: "address";
         }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }, {
             readonly indexed: false;
             readonly internalType: "euint64";
             readonly name: "encryptedAmount";
@@ -19334,6 +20131,11 @@ export function wrapContract(wrapperAddress: Address, to: Address, amount: bigin
             readonly internalType: "address";
             readonly name: "receiver";
             readonly type: "address";
+        }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
         }, {
             readonly indexed: false;
             readonly internalType: "euint64";
@@ -19689,8 +20491,8 @@ export function wrapContract(wrapperAddress: Address, to: Address, amount: bigin
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "burntAmount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }, {
             readonly internalType: "uint64";
@@ -19988,7 +20790,11 @@ export function wrapContract(wrapperAddress: Address, to: Address, amount: bigin
             readonly type: "bytes";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
         readonly type: "function";
     }, {
@@ -20006,8 +20812,40 @@ export function wrapContract(wrapperAddress: Address, to: Address, amount: bigin
             readonly type: "bytes32";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapAmount";
+        readonly outputs: readonly [{
+            readonly internalType: "euint64";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapRequester";
+        readonly outputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "";
+            readonly type: "address";
+        }];
+        readonly stateMutability: "view";
         readonly type: "function";
     }, {
         readonly inputs: readonly [{

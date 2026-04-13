@@ -31,8 +31,8 @@ describe("Topic constants match keccak256", () => {
   const cases: [string, string][] = [
     ["ConfidentialTransfer(address,address,bytes32)", Topics.ConfidentialTransfer],
     ["Wrapped(address,uint256)", Topics.Wrapped],
-    ["UnwrapRequested(address,bytes32)", Topics.UnwrapRequested],
-    ["UnwrapFinalized(address,bytes32,uint64)", Topics.UnwrappedFinalized],
+    ["UnwrapRequested(address,bytes32,bytes32)", Topics.UnwrapRequested],
+    ["UnwrapFinalized(address,bytes32,bytes32,uint64)", Topics.UnwrappedFinalized],
     [
       "UnwrappedStarted(bool,uint256,uint256,address,address,bytes32,bytes32)",
       Topics.UnwrappedStarted,
@@ -115,10 +115,11 @@ describe("decodeWrapped", () => {
 
 describe("decodeUnwrapRequested", () => {
   const receiver = addr("1234");
+  const unwrapRequestId = bytes32("ab".repeat(32));
   const amount = bytes32("ff".repeat(32));
 
   const log: RawLog = {
-    topics: [Topics.UnwrapRequested, topic("1234")],
+    topics: [Topics.UnwrapRequested, topic("1234"), unwrapRequestId],
     data: `0x${word("ff".repeat(32))}`,
   };
 
@@ -127,6 +128,7 @@ describe("decodeUnwrapRequested", () => {
     expect(event).toEqual({
       eventName: "UnwrapRequested",
       receiver,
+      unwrapRequestId,
       encryptedAmount: amount,
     });
   });
@@ -142,13 +144,14 @@ describe("decodeUnwrapRequested", () => {
 });
 
 describe("decodeUnwrappedFinalized", () => {
-  // UnwrapFinalized(address indexed receiver, bytes32 encryptedAmount, uint64 cleartextAmount)
+  // UnwrapFinalized(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 encryptedAmount, uint64 cleartextAmount)
   const receiver = addr("aabb");
+  const unwrapRequestId = bytes32("ef".repeat(32));
   const encryptedHandle = bytes32("cd".repeat(32));
   const cleartextAmount = 450n;
 
   const log: RawLog = {
-    topics: [Topics.UnwrappedFinalized, topic(receiver.slice(2))],
+    topics: [Topics.UnwrappedFinalized, topic(receiver.slice(2)), unwrapRequestId],
     data: `0x${word(encryptedHandle.slice(2))}${word(cleartextAmount.toString(16))}`,
   };
 
@@ -157,6 +160,7 @@ describe("decodeUnwrappedFinalized", () => {
     expect(event).toEqual({
       eventName: "UnwrappedFinalized",
       receiver,
+      unwrapRequestId,
       encryptedAmount: encryptedHandle,
       cleartextAmount,
     });
@@ -217,7 +221,7 @@ describe("decodeUnwrappedStarted", () => {
 describe("decodeOnChainEvent", () => {
   it("dispatches to correct decoder", () => {
     const log: RawLog = {
-      topics: [Topics.UnwrapRequested, topic("abcd")],
+      topics: [Topics.UnwrapRequested, topic("abcd"), bytes32("ab".repeat(32))],
       data: `0x${word("ff".repeat(32))}`,
     };
     const event = decodeOnChainEvent(log);
@@ -237,7 +241,7 @@ describe("decodeOnChainEvents", () => {
   it("decodes array of mixed logs, skipping unknown", () => {
     const logs: RawLog[] = [
       {
-        topics: [Topics.UnwrapRequested, topic("abcd")],
+        topics: [Topics.UnwrapRequested, topic("abcd"), bytes32("ab".repeat(32))],
         data: `0x${word("ff".repeat(32))}`,
       },
       { topics: ["0xunknown" as Hex], data: "0x" as Hex },
@@ -271,7 +275,7 @@ describe("findUnwrapRequested", () => {
         data: "0x",
       },
       {
-        topics: [Topics.UnwrapRequested, topic("1234")],
+        topics: [Topics.UnwrapRequested, topic("1234"), bytes32("ab".repeat(32))],
         data: `0x${word("ff".repeat(32))}`,
       },
     ];

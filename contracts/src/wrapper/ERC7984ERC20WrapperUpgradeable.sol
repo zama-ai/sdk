@@ -14,9 +14,6 @@ import {ERC7984Upgradeable} from "../token/ERC7984Upgradeable.sol";
 import {IERC7984} from "@openzeppelin/confidential-contracts/interfaces/IERC7984.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {IERC7984ERC20Wrapper} from "../interfaces/IERC7984ERC20Wrapper.sol";
-import {ZamaEthereumConfigUpgradeable} from "../fhevm/ZamaEthereumConfigUpgradeable.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
-import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 
 /**
  * @title ERC7984ERC20WrapperUpgradeable
@@ -33,18 +30,14 @@ abstract contract ERC7984ERC20WrapperUpgradeable is ERC7984Upgradeable, IERC7984
         IERC20 _underlying;
         uint8 _decimals;
         uint256 _rate;
-        mapping(euint64 unwrapAmount => address recipient) _unwrapRequests;
+        mapping(bytes32 unwrapRequestId => address recipient) _unwrapRequests;
     }
 
     // keccak256(abi.encode(uint256(keccak256("fhevm_protocol.storage.ERC7984ERC20WrapperUpgradeable")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant ERC7984_ERC20_WRAPPER_UPGRADEABLE_STORAGE_LOCATION =
         0x789981291a45bfde11e7ba326d04f33e2215f03c85dfc0acebcc6167a5924700;
 
-    event Wrapped(address indexed to, uint256 amountIn);
-    event UnwrapRequested(address indexed receiver, euint64 amount);
-    event UnwrapFinalized(address indexed receiver, euint64 encryptedAmount, uint64 cleartextAmount);
-
-    error InvalidUnwrapRequest(euint64 amount);
+    error InvalidUnwrapRequest(bytes32 unwrapRequestId);
     error ERC7984TotalSupplyOverflow();
 
     function _getERC7984ERC20WrapperStorage() internal pure returns (ERC7984ERC20WrapperStorage storage $) {
@@ -74,7 +67,8 @@ abstract contract ERC7984ERC20WrapperUpgradeable is ERC7984Upgradeable, IERC7984
 
     /**
      * @dev `ERC1363` callback function which wraps tokens to the address specified in `data` or
-     * the address `from` (if no address is specified in `data`).
+     * the address `from` (if no address is specified in `data`). This function refunds any excess tokens
+     * sent beyond the nearest multiple of {rate} to `from`. See {wrap} from more details on wrapping tokens.
      */
     function onTransferReceived(
         address /*operator*/,
@@ -87,67 +81,66 @@ abstract contract ERC7984ERC20WrapperUpgradeable is ERC7984Upgradeable, IERC7984
 
         // mint confidential token
         address to = data.length < 20 ? from : address(bytes20(data));
-        uint256 excess = amount % rate();
-        uint256 amountIn = amount - excess;
-        _mint(to, FHE.asEuint64(SafeCast.toUint64(amountIn / rate())));
+        _mint(to, FHE.asEuint64(SafeCast.toUint64(amount / rate())));
 
         // transfer excess back to the sender
+        uint256 excess = amount % rate();
         if (excess > 0) SafeERC20.safeTransfer(IERC20(underlying()), from, excess);
-
-        emit Wrapped(to, amountIn);
 
         // return magic value
         return IERC1363Receiver.onTransferReceived.selector;
     }
 
     /**
-     * @dev See {IERC7984ERC20Wrapper-wrap}.
+     * @dev See {IERC7984ERC20Wrapper-wrap}. Tokens are exchanged at a fixed rate specified by {rate} such that
+     * `amount / rate()` confidential tokens are sent. The amount transferred in is rounded down to the nearest
+     * multiple of {rate}.
      */
     function wrap(address to, uint256 amount) public virtual override {
-        uint256 amountIn = amount - (amount % rate());
-
         // take ownership of the tokens
-        SafeERC20.safeTransferFrom(IERC20(underlying()), msg.sender, address(this), amountIn);
+        SafeERC20.safeTransferFrom(IERC20(underlying()), msg.sender, address(this), amount - (amount % rate()));
 
         // mint confidential token
-        _mint(to, FHE.asEuint64(SafeCast.toUint64(amountIn / rate())));
-
-        emit Wrapped(to, amountIn);
+        _mint(to, FHE.asEuint64(SafeCast.toUint64(amount / rate())));
     }
 
     /**
-     * @dev Unwrap without passing an input proof.
+     * @dev Unwrap without passing an input proof. See {unwrap-address-address-bytes32-bytes} for more details.
      */
-    function unwrap(address from, address to, euint64 amount) public virtual {
+    function unwrap(address from, address to, euint64 amount) public virtual returns (bytes32) {
         require(FHE.isAllowed(amount, msg.sender), ERC7984UnauthorizedUseOfEncryptedAmount(amount, msg.sender));
-        _unwrap(from, to, amount);
+        return euint64.unwrap(_unwrap(from, to, amount));
     }
 
     /**
-     * @dev See {IERC7984ERC20Wrapper-unwrap}.
+     * @dev See {IERC7984ERC20Wrapper-unwrap}. `amount * rate()` underlying tokens are sent to `to`.
+     *
+     * NOTE: The unwrap request created by this function must be finalized by calling {finalizeUnwrap}.
      */
     function unwrap(
         address from,
         address to,
         externalEuint64 encryptedAmount,
         bytes calldata inputProof
-    ) public virtual override {
-        _unwrap(from, to, FHE.fromExternal(encryptedAmount, inputProof));
+    ) public virtual override returns (bytes32) {
+        return euint64.unwrap(_unwrap(from, to, FHE.fromExternal(encryptedAmount, inputProof)));
     }
 
     /// @inheritdoc IERC7984ERC20Wrapper
     function finalizeUnwrap(
-        euint64 burntAmount,
+        bytes32 unwrapRequestId,
         uint64 burntAmountCleartext,
         bytes calldata decryptionProof
-    ) public virtual {
+    ) public virtual override {
         ERC7984ERC20WrapperStorage storage $ = _getERC7984ERC20WrapperStorage();
-        address to = $._unwrapRequests[burntAmount];
-        require(to != address(0), InvalidUnwrapRequest(burntAmount));
-        delete $._unwrapRequests[burntAmount];
+        address to = $._unwrapRequests[unwrapRequestId];
+        require(to != address(0), InvalidUnwrapRequest(unwrapRequestId));
+
+        euint64 unwrapAmount_ = unwrapAmount(unwrapRequestId);
+        delete $._unwrapRequests[unwrapRequestId];
 
         bytes32[] memory handles = new bytes32[](1);
-        handles[0] = euint64.unwrap(burntAmount);
+        handles[0] = euint64.unwrap(unwrapAmount_);
 
         bytes memory cleartexts = abi.encode(burntAmountCleartext);
 
@@ -155,7 +148,7 @@ abstract contract ERC7984ERC20WrapperUpgradeable is ERC7984Upgradeable, IERC7984
 
         SafeERC20.safeTransfer(IERC20(underlying()), to, burntAmountCleartext * rate());
 
-        emit UnwrapFinalized(to, burntAmount, burntAmountCleartext);
+        emit UnwrapFinalized(to, unwrapRequestId, unwrapAmount_, burntAmountCleartext);
     }
 
     /// @inheritdoc ERC7984Upgradeable
@@ -164,12 +157,21 @@ abstract contract ERC7984ERC20WrapperUpgradeable is ERC7984Upgradeable, IERC7984
         return $._decimals;
     }
 
-    /**
-     * @dev Returns the rate at which the underlying token is converted to the wrapped token.
-     */
+    /// @inheritdoc IERC7984ERC20Wrapper
     function rate() public view virtual returns (uint256) {
         ERC7984ERC20WrapperStorage storage $ = _getERC7984ERC20WrapperStorage();
         return $._rate;
+    }
+
+    /// @inheritdoc IERC7984ERC20Wrapper
+    function unwrapAmount(bytes32 unwrapRequestId) public view virtual returns (euint64) {
+        return euint64.wrap(unwrapRequestId);
+    }
+
+    /// @inheritdoc IERC7984ERC20Wrapper
+    function unwrapRequester(bytes32 unwrapRequestId) public view virtual returns (address) {
+        ERC7984ERC20WrapperStorage storage $ = _getERC7984ERC20WrapperStorage();
+        return $._unwrapRequests[unwrapRequestId];
     }
 
     /// @inheritdoc IERC7984ERC20Wrapper
@@ -185,14 +187,30 @@ abstract contract ERC7984ERC20WrapperUpgradeable is ERC7984Upgradeable, IERC7984
         return interfaceId == type(IERC7984ERC20Wrapper).interfaceId || super.supportsInterface(interfaceId);
     }
 
+    /**
+     * @dev Returns the underlying balance divided by the {rate}, a value greater or equal to the actual
+     * {confidentialTotalSupply}.
+     *
+     * NOTE: The return value of this function can be inflated by directly sending underlying tokens to the wrapper contract.
+     * Reductions will lag compared to {confidentialTotalSupply} since it is updated on {unwrap} while this function updates
+     * on {finalizeUnwrap}.
+     */
     function totalSupply() public view virtual returns (uint256) {
         return IERC20(underlying()).balanceOf(address(this)) / rate();
     }
 
+    /// @dev Returns the maximum total supply of wrapped tokens supported by the encrypted datatype.
     function maxTotalSupply() public view virtual returns (uint256) {
         return type(uint64).max;
     }
 
+    /**
+     * @dev This function must revert if the new {confidentialTotalSupply} is invalid (overflow occurred).
+     *
+     * NOTE: Overflow can be detected here since the wrapper holdings are non-confidential. In other cases, it may be impossible
+     * to infer total supply overflow synchronously. This function may revert even if the {confidentialTotalSupply} did
+     * not overflow.
+     */
     function _checkConfidentialTotalSupply() internal virtual {
         if (totalSupply() > maxTotalSupply()) {
             revert ERC7984TotalSupplyOverflow();
@@ -206,26 +224,38 @@ abstract contract ERC7984ERC20WrapperUpgradeable is ERC7984Upgradeable, IERC7984
         return super._update(from, to, amount);
     }
 
-    function _unwrap(address from, address to, euint64 amount) internal virtual {
+    function _unwrap(address from, address to, euint64 amount) internal virtual returns (euint64) {
         require(to != address(0), ERC7984InvalidReceiver(to));
         require(from == msg.sender || isOperator(from, msg.sender), ERC7984UnauthorizedSpender(from, msg.sender));
 
         // try to burn, see how much we actually got
-        euint64 burntAmount = _burn(from, amount);
-        FHE.makePubliclyDecryptable(burntAmount);
+        euint64 unwrapAmount_ = _burn(from, amount);
+        FHE.makePubliclyDecryptable(unwrapAmount_);
 
         ERC7984ERC20WrapperStorage storage $ = _getERC7984ERC20WrapperStorage();
-        assert($._unwrapRequests[burntAmount] == address(0));
+        assert($._unwrapRequests[euint64.unwrap(unwrapAmount_)] == address(0));
 
-        $._unwrapRequests[burntAmount] = to;
+        // WARNING: Storing unwrap requests in a mapping from cipher-text to address assumes that
+        // cipher-texts are unique--this holds here but is not always true. Be cautious when assuming
+        // cipher-text uniqueness.
+        $._unwrapRequests[euint64.unwrap(unwrapAmount_)] = to;
 
-        emit UnwrapRequested(to, burntAmount);
+        emit UnwrapRequested(to, euint64.unwrap(unwrapAmount_), unwrapAmount_);
+        return unwrapAmount_;
     }
 
+    /**
+     * @dev Returns the default number of decimals of the underlying ERC-20 token that is being wrapped.
+     * Used as a default fallback when {_tryGetAssetDecimals} fails to fetch decimals of the underlying
+     * ERC-20 token.
+     */
     function _fallbackUnderlyingDecimals() internal pure virtual returns (uint8) {
         return 18;
     }
 
+    /**
+     * @dev Returns the maximum number that will be used for {decimals} by the wrapper.
+     */
     function _maxDecimals() internal pure virtual returns (uint8) {
         return 6;
     }
@@ -239,33 +269,4 @@ abstract contract ERC7984ERC20WrapperUpgradeable is ERC7984Upgradeable, IERC7984
         }
         return _fallbackUnderlyingDecimals();
     }
-}
-
-/// @notice Concrete confidential ERC-20 wrapper — UUPS upgradeable, Ownable.
-contract ConfidentialWrapper is
-    ERC7984ERC20WrapperUpgradeable,
-    ZamaEthereumConfigUpgradeable,
-    UUPSUpgradeable,
-    Ownable2StepUpgradeable
-{
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        _disableInitializers();
-    }
-
-    function initialize(
-        string memory name_,
-        string memory symbol_,
-        string memory contractURI_,
-        IERC20 underlying_,
-        address owner_
-    ) public initializer {
-        __ERC7984_init(name_, symbol_, contractURI_);
-        __ERC7984ERC20Wrapper_init(underlying_);
-        __ZamaEthereumConfig_init();
-        __Ownable_init(owner_);
-        __Ownable2Step_init();
-    }
-
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 }
