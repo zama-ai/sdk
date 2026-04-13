@@ -1,4 +1,3 @@
-import type { Address } from "viem";
 import type { GenericSigner, GenericStorage } from "../types";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { ExtendedFhevmInstanceConfig } from "../relayer/relayer-utils";
@@ -12,12 +11,7 @@ import { MemoryStorage } from "../storage/memory-storage";
 import { ConfigurationError } from "../errors";
 import { EthersSigner } from "../ethers";
 import { ViemSigner } from "../viem";
-import type {
-  CleartextTransportConfig,
-  NodeTransportConfig,
-  TransportConfig,
-  WebTransportConfig,
-} from "./transports";
+import type { NodeTransportConfig, TransportConfig, WebTransportConfig } from "./transports";
 import type { ZamaConfigCustomSigner, ZamaConfigEthers, ZamaConfigViem } from "./types";
 
 // ── Storage defaults ─────────────────────────────────────────────────────────
@@ -100,10 +94,8 @@ export function resolveChainTransports(
     // Only accept properly tagged web/node transports. Untagged values (e.g.
     // raw chain configs passed as transports) fall back to the default web
     // transport — their fields come from the `chains` array instead.
-    const transport =
-      userTransport?.__mode === "web" || userTransport?.__mode === "node"
-        ? userTransport
-        : DEFAULT_WEB_TRANSPORT;
+    const isHttp = userTransport?.__mode === "web" || userTransport?.__mode === "node";
+    const transport = isHttp ? userTransport : DEFAULT_WEB_TRANSPORT;
     result.set(id, { chain: chainConfig, transport });
   }
 
@@ -112,30 +104,11 @@ export function resolveChainTransports(
 
 // ── Relayer building ─────────────────────────────────────────────────────────
 
-function buildCleartextRelayer(
-  chain: ExtendedFhevmInstanceConfig,
-  transport: CleartextTransportConfig,
-): RelayerCleartext {
-  const { chain: cfg } = transport;
-  return new RelayerCleartext({
-    chainId: chain.chainId,
-    gatewayChainId: chain.gatewayChainId,
-    aclContractAddress: chain.aclContractAddress as Address,
-    verifyingContractAddressDecryption: chain.verifyingContractAddressDecryption as Address,
-    verifyingContractAddressInputVerification:
-      chain.verifyingContractAddressInputVerification as Address,
-    registryAddress: chain.registryAddress,
-    network: (cfg.network ?? chain.network) as CleartextConfig["network"],
-    executorAddress: cfg.executorAddress,
-    kmsSignerPrivateKey: cfg.kmsSignerPrivateKey,
-    inputSignerPrivateKey: cfg.inputSignerPrivateKey,
-  });
-}
-
 interface ChainEntry {
+  /** Merged per-chain FHE instance config (base chain + transport overrides). */
   chain: ExtendedFhevmInstanceConfig;
-  chainFields: Partial<ExtendedFhevmInstanceConfig> | undefined;
-  relayer: object | undefined;
+  /** Shared relayer-pool options. Reference identity controls grouping. */
+  relayer: Record<string, unknown> | undefined;
 }
 
 /**
@@ -174,7 +147,7 @@ function buildHttpGroup<T extends RelayerSDK>(
     }
     const transports: Record<number, Partial<ExtendedFhevmInstanceConfig>> = {};
     for (const entry of group) {
-      transports[entry.chain.chainId] = { ...entry.chain, ...entry.chainFields };
+      transports[entry.chain.chainId] = entry.chain;
     }
     const relayer = new Relayer({
       getChainId: resolveChainId,
@@ -188,18 +161,14 @@ function buildHttpGroup<T extends RelayerSDK>(
   return pairs;
 }
 
-type HttpMode = "web" | "node";
-
-const HTTP_RELAYERS: Record<HttpMode, HttpRelayerCtor<RelayerSDK>> = {
-  web: RelayerWeb,
-  node: RelayerNode,
-};
-
 function toChainEntry(
   chain: ExtendedFhevmInstanceConfig,
   transport: WebTransportConfig | NodeTransportConfig,
 ): ChainEntry {
-  return { chain, chainFields: transport.chain, relayer: transport.relayer };
+  return {
+    chain: { ...chain, ...transport.chain },
+    relayer: transport.relayer,
+  };
 }
 
 export function buildRelayer(
@@ -207,24 +176,33 @@ export function buildRelayer(
   resolveChainId: () => Promise<number>,
 ): RelayerSDK {
   const perChainRelayers = new Map<number, RelayerSDK>();
-  const byMode: Record<HttpMode, ChainEntry[]> = { web: [], node: [] };
+  const webEntries: ChainEntry[] = [];
+  const nodeEntries: ChainEntry[] = [];
 
   for (const { chain, transport } of chainTransports.values()) {
     if (transport.__mode === "cleartext") {
-      perChainRelayers.set(chain.chainId, buildCleartextRelayer(chain, transport));
+      perChainRelayers.set(
+        chain.chainId,
+        new RelayerCleartext({
+          ...chain,
+          ...transport.chain,
+        } as CleartextConfig),
+      );
       continue;
     }
-    byMode[transport.__mode].push(toChainEntry(chain, transport));
+    if (transport.__mode === "web") {
+      webEntries.push(toChainEntry(chain, transport));
+    }
+    if (transport.__mode === "node") {
+      nodeEntries.push(toChainEntry(chain, transport));
+    }
   }
 
-  for (const mode of Object.keys(HTTP_RELAYERS) as HttpMode[]) {
-    for (const [chainId, relayer] of buildHttpGroup(
-      HTTP_RELAYERS[mode],
-      byMode[mode],
-      resolveChainId,
-    )) {
-      perChainRelayers.set(chainId, relayer);
-    }
+  for (const [chainId, relayer] of buildHttpGroup(RelayerWeb, webEntries, resolveChainId)) {
+    perChainRelayers.set(chainId, relayer);
+  }
+  for (const [chainId, relayer] of buildHttpGroup(RelayerNode, nodeEntries, resolveChainId)) {
+    perChainRelayers.set(chainId, relayer);
   }
 
   const uniqueRelayers = new Set(perChainRelayers.values());
