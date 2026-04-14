@@ -37,7 +37,7 @@ const pairs = await registry.getTokenPairs();
 import { WrappersRegistry } from "@zama-fhe/sdk";
 
 const registry = new WrappersRegistry({ signer });
-const [found, cToken] = await registry.getConfidentialTokenAddress(tokenAddress);
+const [isValid, cToken] = await registry.getConfidentialTokenAddress(tokenAddress);
 ```
 
 ### Custom chains

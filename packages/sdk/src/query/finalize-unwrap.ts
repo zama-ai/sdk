@@ -1,11 +1,12 @@
+import type { Handle } from "../relayer/relayer-sdk.types";
 import type { Token } from "../token/token";
 import type { TransactionResult } from "../types";
 import type { MutationFactoryOptions } from "./factory-types";
-import type { Address, Hex } from "viem";
+import type { Address } from "viem";
 
 /** Variables for {@link finalizeUnwrapMutationOptions}. */
 export interface FinalizeUnwrapParams {
-  unwrapRequestId: Hex;
+  unwrapRequestId: Handle;
 }
 
 export function finalizeUnwrapMutationOptions(

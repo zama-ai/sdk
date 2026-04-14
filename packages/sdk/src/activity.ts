@@ -133,6 +133,8 @@ function buildTransfer(
 ): ActivityItem {
   // ConfidentialTransfer from zeroAddress is a mint (shield) in the new wrapper contract,
   // which no longer emits a dedicated Wrapped event.
+  // Unlike the old Wrapped event (which carried a cleartext amountIn), the shield amount
+  // is now encrypted — callers must decrypt encryptedAmountHandle to display the value.
   if (event.from === zeroAddress) {
     return {
       type: "shield",

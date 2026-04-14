@@ -329,13 +329,16 @@ export class WrappersRegistry {
    * Look up the confidential token for a given plain ERC-20 address.
    *
    * @param tokenAddress - The plain ERC-20 token address.
-   * @returns The lookup result, or `null` if no pair is registered.
+   * @returns The lookup result, or `null` if the token has never been registered.
+   *   **Note:** revoked tokens (registered then invalidated) return a non-null result
+   *   with `isValid: false`. Check `result.isValid` explicitly rather than using
+   *   `if (result)` to guard against processing revoked tokens.
    *
    * @example
    * ```ts
    * const result = await registry.getConfidentialToken(usdcAddress);
-   * if (result) {
-   *   console.log(result.confidentialTokenAddress, result.isValid);
+   * if (result?.isValid) {
+   *   console.log(result.confidentialTokenAddress);
    * }
    * ```
    */

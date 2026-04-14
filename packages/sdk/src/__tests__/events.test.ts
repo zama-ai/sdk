@@ -282,6 +282,7 @@ describe("findUnwrapRequested", () => {
     const event = findUnwrapRequested(logs);
     expect(event?.eventName).toBe("UnwrapRequested");
     expect(event?.receiver).toBe(addr("1234"));
+    expect(event?.unwrapRequestId).toBe(bytes32("ab".repeat(32)));
   });
 
   it("returns null when none found", () => {
