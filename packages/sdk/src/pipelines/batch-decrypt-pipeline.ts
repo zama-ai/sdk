@@ -14,14 +14,20 @@ export interface BatchDecryptEntry {
   handle: Handle;
 }
 
-/** Configuration for the batch decrypt pipeline. */
-export interface BatchDecryptConfig {
+export interface BatchDecryptArgs {
+  handles: BatchDecryptEntry[];
   ownerAddress: Address;
+  decrypt: (entries: DecryptHandleEntry[]) => Promise<Record<Handle, ClearValueType>>;
+}
+
+export interface BatchDecryptDeps {
   cache: DecryptCache;
+}
+
+/** Configuration for the batch decrypt pipeline. */
+export interface BatchDecryptOptions {
   onError?: (error: Error, address: Address) => bigint;
   preFlightCheck?: () => Promise<void>;
-  decrypt: (entries: DecryptHandleEntry[]) => Promise<Record<Handle, ClearValueType>>;
-  errorPrefix: string;
 }
 
 /**
@@ -30,11 +36,13 @@ export interface BatchDecryptConfig {
  * partial results on failure via cache.
  */
 export async function runBatchDecryptPipeline(
-  entries: BatchDecryptEntry[],
-  config: BatchDecryptConfig,
-): Promise<Map<Address, bigint>> {
-  const { ownerAddress, cache, decrypt, onError, preFlightCheck, errorPrefix } = config;
-  const handles = entries;
+  args: BatchDecryptArgs,
+  deps: BatchDecryptDeps,
+  options: BatchDecryptOptions,
+): Promise<{ results: Map<Address, bigint>; errors: Map<Address, Error> }> {
+  const { handles, ownerAddress, decrypt } = args;
+  const { cache } = deps;
+  const { onError, preFlightCheck } = options;
 
   const results = new Map<Address, bigint>();
   const uncachedEntries: BatchDecryptEntry[] = [];
@@ -69,7 +77,7 @@ export async function runBatchDecryptPipeline(
   }
 
   if (uncachedEntries.length === 0) {
-    return results;
+    return { results, errors: new Map() };
   }
 
   // Pre-flight check runs after cache lookups — skips RPC overhead
@@ -83,6 +91,7 @@ export async function runBatchDecryptPipeline(
     contractAddress: e.tokenAddress,
   }));
 
+  const errors = new Map<Address, Error>();
   try {
     const decrypted = await decrypt(decryptInput);
 
@@ -90,7 +99,7 @@ export async function runBatchDecryptPipeline(
       const value = decrypted[entry.handle];
       if (value === undefined) {
         throw new DecryptionFailedError(
-          `${errorPrefix} returned no value for handle ${entry.handle} on token ${entry.tokenAddress}`,
+          `No value for handle ${entry.handle} on token ${entry.tokenAddress}`,
         );
       }
       assertBigint(value, "batchDecrypt: result[handle]");
@@ -100,7 +109,6 @@ export async function runBatchDecryptPipeline(
     // The decrypt pipeline caches each contract's results before moving to
     // the next, so on partial failure we can recover successful values from
     // cache and apply onError only to truly failed tokens.
-    const errors: { address: Address; error: Error }[] = [];
     const pipelineError = toError(error);
 
     for (const entry of uncachedEntries) {
@@ -119,23 +127,13 @@ export async function runBatchDecryptPipeline(
         try {
           results.set(entry.tokenAddress, onError(pipelineError, entry.tokenAddress));
         } catch (callbackError) {
-          errors.push({
-            address: entry.tokenAddress,
-            error: toError(callbackError),
-          });
+          errors.set(entry.tokenAddress, toError(callbackError));
         }
       } else {
-        errors.push({ address: entry.tokenAddress, error: pipelineError });
+        errors.set(entry.tokenAddress, toError(pipelineError));
       }
-    }
-
-    if (errors.length > 0) {
-      const message = errors.map((e) => `${e.address}: ${e.error.message}`).join("; ");
-      throw new DecryptionFailedError(
-        `${errorPrefix} failed for ${errors.length} token(s): ${message}`,
-      );
     }
   }
 
-  return results;
+  return { results, errors };
 }

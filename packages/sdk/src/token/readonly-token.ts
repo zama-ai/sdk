@@ -261,37 +261,56 @@ export class ReadonlyToken {
     if (tokens.length === 0) {
       return new Map();
     }
-
-    const { handles, owner, onError } = options ?? {};
-    const firstToken = tokens[0]!;
     ReadonlyToken.assertSameRelayer(tokens);
-    const signerAddress = owner ?? (await firstToken.signer.getAddress());
+    const firstToken = tokens[0]!;
+    const {
+      owner = await firstToken.signer.getAddress(),
+      handles = await Promise.all(tokens.map((t) => t.readConfidentialBalanceOf(owner))),
+      onError,
+    } = options ?? {};
 
-    const resolvedHandles =
-      handles ?? (await Promise.all(tokens.map((t) => t.readConfidentialBalanceOf(signerAddress))));
-
-    if (tokens.length !== resolvedHandles.length) {
+    if (tokens.length !== handles.length) {
       throw new DecryptionFailedError(
-        `tokens.length (${tokens.length}) must equal handles.length (${resolvedHandles.length})`,
+        `tokens.length (${tokens.length}) must equal handles.length (${handles.length})`,
       );
     }
 
-    return runBatchDecryptPipeline(
-      tokens.map((t, i) => ({ tokenAddress: t.address, handle: resolvedHandles[i]! })),
-      {
-        ownerAddress: signerAddress,
+    function decryptPipeline(entries: DecryptHandleEntry[]) {
+      return runUserDecryptPipeline(entries, {
+        signer: firstToken.signer,
+        credentials: firstToken.credentials,
+        relayer: firstToken.relayer,
         cache: firstToken.cache,
+      });
+    }
+
+    const { results, errors } = await runBatchDecryptPipeline(
+      {
+        handles: tokens.map((t, i) => ({
+          tokenAddress: t.address,
+          handle: handles[i]!,
+        })),
+        ownerAddress: owner,
+        decrypt: decryptPipeline,
+      },
+      {
+        cache: firstToken.cache,
+      },
+      {
         onError,
-        decrypt: (entries: DecryptHandleEntry[]) =>
-          runUserDecryptPipeline(entries, {
-            signer: firstToken.signer,
-            credentials: firstToken.credentials,
-            relayer: firstToken.relayer,
-            cache: firstToken.cache,
-          }),
-        errorPrefix: "Batch decryption",
       },
     );
+
+    if (errors.size > 0) {
+      const message = Array.from(errors.entries())
+        .map(([address, error]) => `${address}: ${error.message}`)
+        .join("; ");
+      throw new DecryptionFailedError(
+        `Batch decryption failed for ${errors.size} token(s): ${message}`,
+      );
+    }
+
+    return results;
   }
 
   /**
@@ -328,43 +347,63 @@ export class ReadonlyToken {
       return new Map();
     }
 
-    const { delegatorAddress, handles, owner, onError } = options;
-    const ownerAddress = owner ?? delegatorAddress;
-    const firstToken = tokens[0]!;
     ReadonlyToken.assertSameRelayer(tokens);
+    const firstToken = tokens[0]!;
 
-    const resolvedHandles =
-      handles ?? (await Promise.all(tokens.map((t) => t.readConfidentialBalanceOf(ownerAddress))));
+    const {
+      delegatorAddress,
+      owner = delegatorAddress,
+      handles = await Promise.all(tokens.map((t) => t.readConfidentialBalanceOf(owner))),
+      onError,
+    } = options;
 
-    if (tokens.length !== resolvedHandles.length) {
+    if (tokens.length !== handles.length) {
       throw new DecryptionFailedError(
-        `tokens.length (${tokens.length}) must equal handles.length (${resolvedHandles.length})`,
+        `tokens.length (${tokens.length}) must equal handles.length (${handles.length})`,
       );
     }
 
-    return runBatchDecryptPipeline(
-      tokens.map((t, i) => ({ tokenAddress: t.address, handle: resolvedHandles[i]! })),
+    function decryptPipeline(entries: DecryptHandleEntry[]) {
+      return runDelegatedDecryptPipeline(
+        {
+          handles: entries,
+          delegatorAddress,
+          ownerAddress: owner,
+        },
+        {
+          delegatedCredentials: firstToken.delegatedCredentials,
+          relayer: firstToken.relayer,
+          cache: firstToken.cache,
+        },
+      );
+    }
+
+    const { results, errors } = await runBatchDecryptPipeline(
       {
-        ownerAddress,
-        cache: firstToken.cache,
+        handles: tokens.map((t, i) => ({
+          tokenAddress: t.address,
+          handle: handles[i]!,
+        })),
+        ownerAddress: owner,
+        decrypt: decryptPipeline,
+      },
+      { cache: firstToken.cache },
+      {
         onError,
         preFlightCheck: () => firstToken.#assertDelegationActive(delegatorAddress),
-        decrypt: (entries: DecryptHandleEntry[]) =>
-          runDelegatedDecryptPipeline(
-            {
-              handles: entries,
-              delegatorAddress,
-              ownerAddress,
-            },
-            {
-              delegatedCredentials: firstToken.delegatedCredentials,
-              relayer: firstToken.relayer,
-              cache: firstToken.cache,
-            },
-          ),
-        errorPrefix: "Batch delegated decryption",
       },
     );
+
+    if (errors.size > 0) {
+      const message = Array.from(errors.entries())
+        .map(([address, error]) => `${address}: ${error.message}`)
+        .join("; ");
+      throw new DecryptionFailedError(
+        `Batch delegated decryption failed for ${errors.size} token(s): ${message}`,
+      );
+    }
+
+    return results;
   }
 
   /**
