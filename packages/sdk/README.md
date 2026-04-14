@@ -210,57 +210,30 @@ interface TransactionResult {
 
 Read-only subset. No wrapper address needed.
 
-<<<<<<< HEAD
-| Method                                                       | Description                                                                            |
-| ------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
-| `balanceOf(owner?)`                                          | Decrypt and return the plaintext balance.                                              |
-| `confidentialBalanceOf(owner?)`                              | Return the raw encrypted balance handle (no decryption).                               |
-| `decryptBalance(handle, owner?)`                             | Decrypt a single encrypted handle.                                                     |
-| `decryptHandles(handles, owner?)`                            | Batch-decrypt handles in a single relayer call.                                        |
-| `allow()`                                                    | Ensure FHE decrypt credentials exist (generates/signs if needed).                      |
-| `allow(...tokens)` _(static)_                                | Pre-authorize multiple tokens with a single wallet signature.                          |
-| `isAllowed()`                                                | Whether a session signature is currently cached for this token.                        |
-| `revoke()`                                                   | Clear the session signature for the connected wallet.                                  |
-| `credentials.allow(...addresses)`                            | Pre-authorize and cache the session signature for specific token addresses.            |
-| `credentials.revoke(...addresses?)`                          | Clear the session signature for the connected wallet.                                  |
-| `credentials.isAllowed([address, ...more])`                  | Whether a session signature is currently cached and covers the given contracts.        |
-| `credentials.isExpired(address?)`                            | Whether stored credentials are past their expiration time.                             |
-| `credentials.clear()`                                        | Delete stored credentials for the connected wallet.                                    |
-| `decryptBalanceAs({ delegatorAddress, owner? })`             | Decrypt a delegator's balance as a delegate. ACL address resolved from relayer config. |
-| `isDelegated({ delegatorAddress, delegateAddress })`         | Check if a delegation is active and unexpired.                                         |
-| `getDelegationExpiry({ delegatorAddress, delegateAddress })` | Raw expiry timestamp (`0n` = none, `2^64-1` = permanent).                              |
-| `isConfidential()`                                           | ERC-165 check for ERC-7984 support.                                                    |
-| `isWrapper()`                                                | ERC-165 check for wrapper interface.                                                   |
-| `underlyingToken()`                                          | Read the underlying ERC-20 address from a wrapper.                                     |
-| `allowance(wrapper, owner?)`                                 | Read ERC-20 allowance of the underlying token.                                         |
-| `isZeroHandle(handle)`                                       | Returns `true` if the handle is the zero sentinel.                                     |
-| `name()` / `symbol()` / `decimals()`                         | Read token metadata.                                                                   |
-=======
-| Method                                                       | Description                                                                                                                                                                 |
-| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `balanceOf(owner?)`                                          | Decrypt and return the plaintext balance.                                                                                                                                   |
-| `confidentialBalanceOf(owner?)`                              | Return the raw encrypted balance handle (no decryption).                                                                                                                    |
-| `decryptBalance(handle, owner?)`                             | Decrypt a single encrypted handle.                                                                                                                                          |
-| `decryptHandles(handles, owner?)`                            | Batch-decrypt handles in a single relayer call.                                                                                                                             |
-| `allow()`                                                    | Ensure FHE decrypt credentials exist (generates/signs if needed).                                                                                                           |
-| `allow(...tokens)` _(static)_                                | Pre-authorize multiple tokens. Batches of ≤10 addresses per EIP-712 signature; sequential prompts for >10.                                                                  |
-| `isAllowed()`                                                | Whether a session signature is currently cached for this token.                                                                                                             |
-| `revoke()`                                                   | Clear the session signature for the connected wallet.                                                                                                                       |
-| `credentials.allow(...addresses)`                            | Pre-authorize credentials. Returns a `CredentialSet`; batches into groups of ≤10 with one wallet prompt per batch. Throws on signing rejection (fail-fast). |
-| `credentials.revoke(...addresses?)`                          | Clear the session signature for the connected wallet.                                                                                                                       |
-| `credentials.isAllowed()`                                    | Whether a session signature is currently cached.                                                                                                                            |
-| `credentials.isExpired(address?)`                            | Whether stored credentials are past their expiration time.                                                                                                                  |
-| `credentials.clear()`                                        | Delete stored credentials for the connected wallet.                                                                                                                         |
-| `decryptBalanceAs({ delegatorAddress, owner? })`             | Decrypt a delegator's balance as a delegate. ACL address resolved from relayer config.                                                                                      |
-| `isDelegated({ delegatorAddress, delegateAddress })`         | Check if a delegation is active and unexpired.                                                                                                                              |
-| `getDelegationExpiry({ delegatorAddress, delegateAddress })` | Raw expiry timestamp (`0n` = none, `2^64-1` = permanent).                                                                                                                   |
-| `isConfidential()`                                           | ERC-165 check for ERC-7984 support.                                                                                                                                         |
-| `isWrapper()`                                                | ERC-165 check for wrapper interface.                                                                                                                                        |
-| `underlyingToken()`                                          | Read the underlying ERC-20 address from a wrapper.                                                                                                                          |
-| `allowance(wrapper, owner?)`                                 | Read ERC-20 allowance of the underlying token.                                                                                                                              |
-| `isZeroHandle(handle)`                                       | Returns `true` if the handle is the zero sentinel.                                                                                                                          |
-| `name()` / `symbol()` / `decimals()`                         | Read token metadata.                                                                                                                                                        |
->>>>>>> f4a47ec1 (fix(sdk): address code review issues on credential batching (SDK-43))
+| Method                                                       | Description                                                                                                                                                  |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `balanceOf(owner?)`                                          | Decrypt and return the plaintext balance.                                                                                                                    |
+| `confidentialBalanceOf(owner?)`                              | Return the raw encrypted balance handle (no decryption).                                                                                                     |
+| `decryptBalance(handle, owner?)`                             | Decrypt a single encrypted handle.                                                                                                                           |
+| `decryptHandles(handles, owner?)`                            | Batch-decrypt handles in a single relayer call.                                                                                                              |
+| `allow()`                                                    | Ensure FHE decrypt credentials exist (generates/signs if needed).                                                                                            |
+| `allow(...tokens)` _(static)_                                | Pre-authorize multiple tokens. Batches of <=10 addresses per EIP-712 signature; sequential prompts for >10.                                                  |
+| `isAllowed()`                                                | Whether a session signature is currently cached for this token.                                                                                              |
+| `revoke()`                                                   | Clear the session signature for the connected wallet.                                                                                                        |
+| `credentials.allow(...addresses)`                            | Pre-authorize credentials. Returns a `CredentialSet`; batches into groups of <=10 with one wallet prompt per batch. Throws on signing rejection (fail-fast). |
+| `credentials.revoke(...addresses?)`                          | Clear cached session signatures for the connected wallet. With addresses, only batches covering those contracts are revoked.                                 |
+| `credentials.isAllowed([address, ...more])`                  | Whether a session signature is currently cached and covers the given contracts.                                                                              |
+| `credentials.isExpired(address?)`                            | Whether stored credentials are past their expiration time.                                                                                                   |
+| `credentials.clear()`                                        | Delete stored credentials for the connected wallet.                                                                                                          |
+| `decryptBalanceAs({ delegatorAddress, owner? })`             | Decrypt a delegator's balance as a delegate. ACL address resolved from relayer config.                                                                       |
+| `isDelegated({ delegatorAddress, delegateAddress })`         | Check if a delegation is active and unexpired.                                                                                                               |
+| `getDelegationExpiry({ delegatorAddress, delegateAddress })` | Raw expiry timestamp (`0n` = none, `2^64-1` = permanent).                                                                                                    |
+| `isConfidential()`                                           | ERC-165 check for ERC-7984 support.                                                                                                                          |
+| `isWrapper()`                                                | ERC-165 check for wrapper interface.                                                                                                                         |
+| `underlyingToken()`                                          | Read the underlying ERC-20 address from a wrapper.                                                                                                           |
+| `allowance(wrapper, owner?)`                                 | Read ERC-20 allowance of the underlying token.                                                                                                               |
+| `isZeroHandle(handle)`                                       | Returns `true` if the handle is the zero sentinel.                                                                                                           |
+| `name()` / `symbol()` / `decimals()`                         | Read token metadata.                                                                                                                                         |
 
 Static methods for multi-token operations:
 

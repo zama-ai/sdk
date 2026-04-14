@@ -167,6 +167,34 @@ describe("credential batching", () => {
       // No new signatures — all batches were cached
       expect(signer.signTypedData).toHaveBeenCalledTimes(signCallsAfterFirst);
     });
+
+    test("isAllowed([A, B]) returns true when A and B are covered by different valid batches", async ({
+      relayer,
+    }) => {
+      const { manager } = createManagerWithSigner(relayer);
+      const addrs = makeAddresses(11);
+      const tokenA = addrs[0]!;
+      const tokenB = addrs[10]!;
+
+      await manager.allow(...addrs);
+
+      await expect(manager.isAllowed([tokenA, tokenB])).resolves.toBe(true);
+    });
+
+    test("isAllowed([A]) stays true when an unrelated batch session is missing", async ({
+      relayer,
+    }) => {
+      const { manager } = createManagerWithSigner(relayer);
+      const addrs = makeAddresses(11);
+      const tokenA = addrs[0]!;
+      const tokenB = addrs[10]!;
+
+      await manager.allow(...addrs);
+      await manager.revoke(tokenB);
+
+      await expect(manager.isAllowed([tokenA])).resolves.toBe(true);
+      await expect(manager.isAllowed([tokenB])).resolves.toBe(false);
+    });
   });
 
   // ── Bin-packing ──────────────────────────────────────────────────────────
@@ -335,6 +363,19 @@ describe("credential batching", () => {
         expect(batch.publicKey).toBe("0xpub_delegated_single");
         expect(batch.privateKey).toBe("0xpriv_delegated_single");
       }
+    });
+
+    test("delegated isAllowed([A, B]) returns true when coverage spans multiple batches", async ({
+      relayer,
+    }) => {
+      const { manager } = createDelegatedManagerWithSigner(relayer);
+      const addrs = makeAddresses(11);
+      const tokenA = addrs[0]!;
+      const tokenB = addrs[10]!;
+
+      await manager.allow(DELEGATOR, ...addrs);
+
+      await expect(manager.isAllowed(DELEGATOR, [tokenA, tokenB])).resolves.toBe(true);
     });
   });
 

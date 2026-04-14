@@ -333,7 +333,7 @@ export class ZamaSDK {
 
     // Get unique contract addresses and acquire credentials
     const contractAddresses = [...new Set(uncached.map((h) => h.contractAddress))];
-    const creds = await this.credentials.allow(...contractAddresses);
+    const credSet = await this.credentials.allow(...contractAddresses);
     onCredentialsReady();
 
     // Group uncached handles by contract address
@@ -347,8 +347,14 @@ export class ZamaSDK {
       }
     }
 
+    // Fail fast if any required contract is missing from the returned credential set.
+    for (const contractAddress of byContract.keys()) {
+      credSet.credentialFor(contractAddress);
+    }
+
     // Decrypt per contract group
     for (const [contractAddress, contractHandles] of byContract) {
+      const creds = credSet.credentialFor(contractAddress);
       const decrypted = await this.relayer.userDecrypt({
         handles: contractHandles,
         contractAddress,

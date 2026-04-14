@@ -517,12 +517,25 @@ export abstract class BaseCredentialsManager<
   }
 
   /**
-   * Delete all session signatures for `key` (including all batch variants) and
-   * clear caches, forcing a fresh wallet signature on next use.
+   * Delete session signatures for `key`.
+   *
+   * With no contract addresses, all batch sessions are deleted. With explicit
+   * contract addresses, only batches covering at least one requested contract
+   * are revoked.
    */
   protected async revokeSession(key: string, contractAddresses?: Address[]): Promise<void> {
-    const batchKeys = await this.#scanBatchKeys(key);
-    await Promise.all(batchKeys.map((k) => this.sessionSignatures.delete(k)));
+    let batchKeys: string[];
+    if (!contractAddresses || contractAddresses.length === 0) {
+      batchKeys = await this.#scanBatchKeys(key);
+    } else {
+      const requested = new Set(contractAddresses.map((address) => getAddress(address)));
+      const { batches } = await this.#scanBatchMeta(key);
+      batchKeys = batches
+        .filter(({ addresses }) => addresses.some((address) => requested.has(getAddress(address))))
+        .map(({ batchKey }) => batchKey);
+    }
+
+    await Promise.all(batchKeys.map((batchKey) => this.sessionSignatures.delete(batchKey)));
     this.clearCaches();
     this.emit({
       type: ZamaSDKEvents.CredentialsRevoked,
@@ -561,10 +574,14 @@ export abstract class BaseCredentialsManager<
 
         try {
           this.assertEncrypted(stored);
-          for (const contractAddress of [...uncovered]) {
+          const coveredInBatch: Address[] = [];
+          for (const contractAddress of uncovered) {
             if (isCredentialValid(stored, [contractAddress])) {
-              uncovered.delete(contractAddress);
+              coveredInBatch.push(contractAddress);
             }
+          }
+          for (const contractAddress of coveredInBatch) {
+            uncovered.delete(contractAddress);
           }
           if (uncovered.size === 0) {
             return true;
