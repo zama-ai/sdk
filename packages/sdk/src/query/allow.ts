@@ -8,7 +8,7 @@ export function allowMutationOptions(
   return {
     mutationKey: ["zama.allow"],
     mutationFn: async (contractAddresses) => {
-      await sdk.credentials.allow(...contractAddresses);
+      await sdk.allow(contractAddresses);
     },
   };
 }

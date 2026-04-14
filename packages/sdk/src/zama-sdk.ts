@@ -282,6 +282,26 @@ export class ZamaSDK {
   }
 
   /**
+   * Pre-authorize contract addresses for decryption, triggering a single
+   * wallet signature prompt. Subsequent {@link userDecrypt} calls whose
+   * handles span the same set will reuse the cached credentials without
+   * an additional prompt.
+   *
+   * @param contractAddresses - One or more contract addresses to authorize.
+   *
+   * @example
+   * ```ts
+   * // Sign once for three tokens, then decrypt individually
+   * await sdk.allow([cUSDT, cDAI, cWETH]);
+   * const a = await sdk.userDecrypt([{ handle: h1, contractAddress: cUSDT }]);
+   * const b = await sdk.userDecrypt([{ handle: h2, contractAddress: cDAI }]);
+   * ```
+   */
+  async allow(contractAddresses: Address[]): Promise<void> {
+    await this.credentials.allow(...contractAddresses);
+  }
+
+  /**
    * Decrypt one or more FHE handles. Results are cached — repeated calls
    * for the same handle skip the relayer round-trip.
    *
@@ -384,7 +404,7 @@ export class ZamaSDK {
    * ```ts
    * {
    *   using sdk = new ZamaSDK({ relayer, signer, storage });
-   *   await sdk.credentials.allow(cUSDT);
+   *   await sdk.allow([cUSDT]);
    *   const balance = await sdk.createReadonlyToken(cUSDT).balanceOf();
    * } // sdk.terminate() called automatically here
    * ```

@@ -78,6 +78,9 @@ export class CredentialsManager extends BaseCredentialsManager<
    * @throws {@link SigningFailedError} if the signing operation fails for any other reason.
    */
   async allow(...contractAddresses: Address[]): Promise<StoredCredentials> {
+    if (contractAddresses.length === 0) {
+      throw new Error("credentials.allow() requires at least one contract address");
+    }
     const normalized = normalizeAddresses(contractAddresses);
     const key = await this.#storeKey();
     return this.resolveCredentials({
