@@ -222,12 +222,15 @@ Three balances are shown:
 | Confidential | Relayer decryption      | `useConfidentialBalance({ tokenAddress: token?.confidentialTokenAddress ?? ZERO_ADDRESS })` |
 
 **Explicit decrypt pattern**: `useConfidentialBalance` is only enabled after the user has
-authorized FHE decryption via an EIP-712 wallet signature. `useIsAllowed()` checks whether
-credentials are already cached; if not, `BalancesCard` shows a "Decrypt Balance" button
-rather than a balance value. This avoids blind-signing prompts on mount.
+authorized FHE decryption via an EIP-712 wallet signature. `useIsAllowed({ contractAddresses })`
+checks whether cached credentials cover the currently selected token; if not, `BalancesCard`
+shows a "Decrypt Balance" button rather than a balance value. This avoids blind-signing
+prompts on mount.
 
 ```ts
-const { data: isAllowed } = useIsAllowed();
+const { data: isAllowed } = useIsAllowed({
+  contractAddresses: [token?.confidentialTokenAddress ?? ZERO_ADDRESS],
+});
 // All registry pairs are passed at once to useAllow — one signature covers all tokens,
 // so switching tokens does not prompt the wallet again.
 const allowTokens = useAllow();
