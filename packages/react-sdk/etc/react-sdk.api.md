@@ -1175,7 +1175,6 @@ export function useConfidentialBalances(config: UseConfidentialBalancesConfig, o
 // @public
 export interface UseConfidentialBalancesConfig {
     handleRefetchInterval?: number;
-    maxConcurrency?: number;
     tokenAddresses: Address[];
 }
 

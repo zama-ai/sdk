@@ -117,7 +117,6 @@ export interface BaseEvent {
 export interface BatchDecryptAsOptions {
     delegatorAddress: Address;
     handles?: Handle[];
-    maxConcurrency?: number;
     onError?: (error: Error, address: Address) => bigint;
     owner?: Address;
 }
@@ -131,7 +130,6 @@ export type BatchDecryptBalancesAsParams = BatchDecryptAsOptions;
 // @public
 export interface BatchDecryptOptions {
     handles?: Handle[];
-    maxConcurrency?: number;
     onError?: (error: Error, address: Address) => bigint;
     owner?: Address;
 }
@@ -174,8 +172,6 @@ export interface ConfidentialBalancesData {
 export interface ConfidentialBalancesQueryConfig {
     // (undocumented)
     handles?: EncryptedBalanceHandle[];
-    // (undocumented)
-    maxConcurrency?: number;
     // (undocumented)
     owner?: Address;
     // (undocumented)
@@ -849,12 +845,12 @@ export class ReadonlyToken {
     // (undocumented)
     protected readonly credentials: CredentialsManager;
     decimals(): Promise<number>;
-    decryptBalance(handle: Handle, owner?: Address): Promise<bigint>;
+    decryptBalance(handle: Handle): Promise<bigint>;
     decryptBalanceAs(input: {
         delegatorAddress: Address;
         owner?: Address;
     }): Promise<bigint>;
-    decryptHandles(handles: Handle[], owner?: Address): Promise<Map<Handle, ClearValueType>>;
+    decryptHandles(handles: Handle[]): Promise<Map<Handle, ClearValueType>>;
     // Warning: (ae-forgotten-export) The symbol "DelegatedCredentialsManager" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
@@ -1651,7 +1647,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/activity-CAZLy9Lp.d.ts:21475:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/esm/activity-DGqwzNil.d.ts:21469:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

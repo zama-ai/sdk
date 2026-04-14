@@ -550,7 +550,6 @@ export interface BaseEvent {
 export interface BatchDecryptAsOptions {
     delegatorAddress: Address;
     handles?: Handle[];
-    maxConcurrency?: number;
     onError?: (error: Error, address: Address) => bigint;
     owner?: Address;
 }
@@ -558,7 +557,6 @@ export interface BatchDecryptAsOptions {
 // @public
 export interface BatchDecryptOptions {
     handles?: Handle[];
-    maxConcurrency?: number;
     onError?: (error: Error, address: Address) => bigint;
     owner?: Address;
 }
@@ -11798,12 +11796,12 @@ export class ReadonlyToken {
     // (undocumented)
     protected readonly credentials: CredentialsManager;
     decimals(): Promise<number>;
-    decryptBalance(handle: Handle, owner?: Address): Promise<bigint>;
+    decryptBalance(handle: Handle): Promise<bigint>;
     decryptBalanceAs(input: {
         delegatorAddress: Address;
         owner?: Address;
     }): Promise<bigint>;
-    decryptHandles(handles: Handle[], owner?: Address): Promise<Map<Handle, ClearValueType>>;
+    decryptHandles(handles: Handle[]): Promise<Map<Handle, ClearValueType>>;
     // (undocumented)
     protected readonly delegatedCredentials: DelegatedCredentialsManager;
     protected emit(partial: ZamaSDKEventInput): void;
