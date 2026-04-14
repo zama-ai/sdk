@@ -2,12 +2,13 @@ import { getAddress, type Address } from "viem";
 import { CredentialsManager } from "./credentials/credentials-manager";
 import { DelegatedCredentialsManager } from "./credentials/delegated-credentials-manager";
 import { DecryptCache } from "./decrypt-cache";
+import { wrapDecryptError } from "./errors";
 import type { ZamaSDKEventListener } from "./events/sdk-events";
 import { ZamaSDKEvents } from "./events/sdk-events";
-import type { DecryptHandle, DecryptResult } from "./query/user-decrypt";
+import { runUserDecryptPipeline } from "./pipelines/user-decrypt-pipeline";
+import type { DecryptHandle } from "./query/user-decrypt";
 import type { RelayerSDK } from "./relayer/relayer-sdk";
 import type { ClearValueType, Handle } from "./relayer/relayer-sdk.types";
-import { runUserDecryptPipeline } from "./pipelines/user-decrypt-pipeline";
 import { MemoryStorage } from "./storage/memory-storage";
 import { ReadonlyToken } from "./token/readonly-token";
 import { Token } from "./token/token";
@@ -17,14 +18,6 @@ import { WrappersRegistry } from "./wrappers-registry";
 
 /** Maximum keypairTTL accepted by the fhevm ACL contract (365 days, in seconds). */
 const MAX_KEYPAIR_TTL = 365 * 86400; // 31_536_000 s
-
-/** Options for {@link ZamaSDK.userDecrypt}. */
-export interface DecryptOptions {
-  /** Fired after credentials are ready (cached or freshly signed), before relayer calls. Not called when all handles are already cached. */
-  onCredentialsReady?: () => void;
-  /** Fired after all handles have been decrypted, including when all results come from cache. Receives the full result map. */
-  onDecrypted?: (values: DecryptResult) => void;
-}
 
 /** Configuration for {@link ZamaSDK}. */
 export interface ZamaSDKConfig {
@@ -292,8 +285,11 @@ export class ZamaSDK {
    * Decrypt one or more FHE handles. Results are cached — repeated calls
    * for the same handle skip the relayer round-trip.
    *
+   * Zero handles are mapped to `0n` without hitting the relayer.
+   * Events (`DecryptStart/End/Error`) are emitted uniformly.
+   * Relayer errors are wrapped into typed SDK errors.
+   *
    * @param handles - Handles to decrypt, each paired with its contract address.
-   * @param options - Optional lifecycle callbacks.
    * @returns A record mapping each handle to its decrypted clear-text value.
    *
    * @example
@@ -304,20 +300,41 @@ export class ZamaSDK {
    * console.log(values[balanceHandle]); // 1000n
    * ```
    */
-  async userDecrypt(
-    handles: DecryptHandle[],
-    options?: DecryptOptions,
-  ): Promise<Record<Handle, ClearValueType>> {
-    return runUserDecryptPipeline(
-      handles,
-      {
+  async userDecrypt(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>> {
+    if (handles.length === 0) {
+      return {};
+    }
+
+    const t0 = Date.now();
+    try {
+      this.#onEvent({
+        type: ZamaSDKEvents.DecryptStart,
+        timestamp: Date.now(),
+      });
+
+      const result = await runUserDecryptPipeline(handles, {
         signer: this.signer,
         credentials: this.credentials,
         relayer: this.relayer,
         cache: this.cache,
-      },
-      options,
-    );
+      });
+
+      this.#onEvent({
+        type: ZamaSDKEvents.DecryptEnd,
+        durationMs: Date.now() - t0,
+        timestamp: Date.now(),
+      });
+
+      return result;
+    } catch (error) {
+      this.#onEvent({
+        type: ZamaSDKEvents.DecryptError,
+        error: toError(error),
+        durationMs: Date.now() - t0,
+        timestamp: Date.now(),
+      });
+      throw wrapDecryptError(error, "Failed to decrypt handles");
+    }
   }
 
   /**

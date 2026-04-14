@@ -721,6 +721,77 @@ describe("ZamaSDK", () => {
       expect(result).toEqual({});
       expect(relayer.userDecrypt).not.toHaveBeenCalled();
     });
+
+    it("returns 0n for zero handles without calling relayer", async ({ sdk, relayer }) => {
+      const zeroHandle =
+        "0x0000000000000000000000000000000000000000000000000000000000000000" as Address;
+      const result = await sdk.userDecrypt([{ handle: zeroHandle, contractAddress: CONTRACT_A }]);
+      expect(result[zeroHandle]).toBe(0n);
+      expect(relayer.userDecrypt).not.toHaveBeenCalled();
+    });
+
+    it("mixes zero handles with real handles", async ({ sdk, relayer, handle }) => {
+      const zeroHandle =
+        "0x0000000000000000000000000000000000000000000000000000000000000000" as Address;
+      const result = await sdk.userDecrypt([
+        { handle: zeroHandle, contractAddress: CONTRACT_A },
+        { handle, contractAddress: CONTRACT_A },
+      ]);
+      expect(result[zeroHandle]).toBe(0n);
+      expect(result[handle]).toBe(1000n);
+      expect(relayer.userDecrypt).toHaveBeenCalledOnce();
+    });
+
+    it("emits DecryptStart and DecryptEnd events", async ({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      handle,
+    }) => {
+      const onEvent = vi.fn();
+      const sdk = new ZamaSDK({ relayer, signer, storage, sessionStorage, onEvent });
+      await sdk.userDecrypt([{ handle, contractAddress: CONTRACT_A }]);
+
+      const types = onEvent.mock.calls.map((c) => c[0].type);
+      expect(types).toContain(ZamaSDKEvents.DecryptStart);
+      expect(types).toContain(ZamaSDKEvents.DecryptEnd);
+    });
+
+    it("emits DecryptError and wraps relayer errors", async ({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      handle,
+    }) => {
+      const httpError = Object.assign(new Error("bad request"), { statusCode: 400 });
+      vi.mocked(relayer.userDecrypt).mockRejectedValueOnce(httpError);
+      const onEvent = vi.fn();
+      const sdk = new ZamaSDK({ relayer, signer, storage, sessionStorage, onEvent });
+
+      await expect(sdk.userDecrypt([{ handle, contractAddress: CONTRACT_A }])).rejects.toThrow();
+
+      const types = onEvent.mock.calls.map((c) => c[0].type);
+      expect(types).toContain(ZamaSDKEvents.DecryptError);
+    });
+
+    it("does not emit events for empty handles", async ({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+    }) => {
+      const onEvent = vi.fn();
+      const sdk = new ZamaSDK({ relayer, signer, storage, sessionStorage, onEvent });
+
+      await sdk.userDecrypt([]);
+
+      const decryptEvents = onEvent.mock.calls
+        .map((c) => c[0].type)
+        .filter((t: string) => t.startsWith("decrypt:"));
+      expect(decryptEvents).toHaveLength(0);
+    });
   });
 
   describe("revoke clears decrypt cache", () => {

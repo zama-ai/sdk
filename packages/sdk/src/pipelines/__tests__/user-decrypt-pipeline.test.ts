@@ -75,18 +75,15 @@ describe("runUserDecryptPipeline", () => {
 
     const cache = createMockCache(store);
     const deps = createDeps({ cache });
-    const onDecrypted = vi.fn();
 
     const result = await runUserDecryptPipeline(
       [{ handle: HANDLE_1, contractAddress: CONTRACT_A }],
       deps,
-      { onDecrypted },
     );
 
     expect(result[HANDLE_1]).toBe(42n);
     expect(deps.relayer.userDecrypt).not.toHaveBeenCalled();
     expect(deps.credentials.allow).not.toHaveBeenCalled();
-    expect(onDecrypted).toHaveBeenCalledWith({ [HANDLE_1]: 42n });
   });
 
   it("decrypts uncached handles via relayer and caches results", async () => {
@@ -95,21 +92,16 @@ describe("runUserDecryptPipeline", () => {
       cache,
       userDecryptResult: { [HANDLE_1]: 100n },
     });
-    const onCredentialsReady = vi.fn();
-    const onDecrypted = vi.fn();
 
     const result = await runUserDecryptPipeline(
       [{ handle: HANDLE_1, contractAddress: CONTRACT_A }],
       deps,
-      { onCredentialsReady, onDecrypted },
     );
 
     expect(result[HANDLE_1]).toBe(100n);
     expect(deps.credentials.allow).toHaveBeenCalledWith(getAddress(CONTRACT_A));
     expect(deps.relayer.userDecrypt).toHaveBeenCalledTimes(1);
     expect(cache.set).toHaveBeenCalledWith(OWNER, getAddress(CONTRACT_A), HANDLE_1, 100n);
-    expect(onCredentialsReady).toHaveBeenCalled();
-    expect(onDecrypted).toHaveBeenCalledWith({ [HANDLE_1]: 100n });
   });
 
   it("groups handles by contract and makes separate relayer calls", async () => {
@@ -161,19 +153,16 @@ describe("runUserDecryptPipeline", () => {
     ).rejects.toThrow(DecryptionFailedError);
   });
 
-  it("does not call onCredentialsReady when all handles are cached", async () => {
+  it("does not call credentials when all handles are cached", async () => {
     const store = new Map<string, ClearValueType>();
     store.set(`${getAddress(CONTRACT_A)}:${HANDLE_1}`, 42n);
 
     const cache = createMockCache(store);
     const deps = createDeps({ cache });
-    const onCredentialsReady = vi.fn();
 
-    await runUserDecryptPipeline([{ handle: HANDLE_1, contractAddress: CONTRACT_A }], deps, {
-      onCredentialsReady,
-    });
+    await runUserDecryptPipeline([{ handle: HANDLE_1, contractAddress: CONTRACT_A }], deps);
 
-    expect(onCredentialsReady).not.toHaveBeenCalled();
+    expect(deps.credentials.allow).not.toHaveBeenCalled();
   });
 
   it("tolerates cache.set failures gracefully", async () => {
@@ -216,5 +205,57 @@ describe("runUserDecryptPipeline", () => {
     expect(result[HANDLE_1]).toBe(10n); // from cache
     expect(result[HANDLE_2]).toBe(20n); // from relayer
     expect(result[HANDLE_3]).toBe(30n); // from relayer
+  });
+
+  it("returns 0n for zero handles without calling relayer", async () => {
+    const zeroHandle =
+      "0x0000000000000000000000000000000000000000000000000000000000000000" as Handle;
+    const deps = createDeps();
+
+    const result = await runUserDecryptPipeline(
+      [{ handle: zeroHandle, contractAddress: CONTRACT_A }],
+      deps,
+    );
+
+    expect(result[zeroHandle]).toBe(0n);
+    expect(deps.signer.getAddress).not.toHaveBeenCalled();
+    expect(deps.relayer.userDecrypt).not.toHaveBeenCalled();
+  });
+
+  it("mixes zero handles with real handles", async () => {
+    const zeroHandle =
+      "0x0000000000000000000000000000000000000000000000000000000000000000" as Handle;
+    const deps = createDeps({ userDecryptResult: { [HANDLE_1]: 100n } });
+
+    const result = await runUserDecryptPipeline(
+      [
+        { handle: zeroHandle, contractAddress: CONTRACT_A },
+        { handle: HANDLE_1, contractAddress: CONTRACT_A },
+      ],
+      deps,
+    );
+
+    expect(result[zeroHandle]).toBe(0n);
+    expect(result[HANDLE_1]).toBe(100n);
+    expect(deps.relayer.userDecrypt).toHaveBeenCalledOnce();
+  });
+
+  it("includes zero-handle contract addresses in credentials.allow set", async () => {
+    const zeroHandle =
+      "0x0000000000000000000000000000000000000000000000000000000000000000" as Handle;
+    const deps = createDeps({ userDecryptResult: { [HANDLE_1]: 100n } });
+
+    await runUserDecryptPipeline(
+      [
+        { handle: zeroHandle, contractAddress: CONTRACT_B },
+        { handle: HANDLE_1, contractAddress: CONTRACT_A },
+      ],
+      deps,
+    );
+
+    expect(deps.credentials.allow).toHaveBeenCalledWith(
+      getAddress(CONTRACT_B),
+      getAddress(CONTRACT_A),
+    );
   });
 });
