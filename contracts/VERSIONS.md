@@ -4,6 +4,11 @@
 
 Source: `zama-ai/protocol-apps` @ `da4afe387420` (March 26, 2026)
 
+> **Deployment status:** this commit is the version **currently deployed** on testnet and mainnet
+> as of the time this PR was written (April 2026). It is NOT the upcoming April 21/28 upgrade.
+> The April 21 (testnet) / April 28 (mainnet) upgrade corresponds to a later commit (`93c6e7a`,
+> April 7 2026) and is tracked in SDK-68 sub-tickets (SDK-69 → SDK-70 → SDK-71 → SDK-72).
+
 Includes:
 
 - `contracts/confidential-wrapper/contracts/extensions/ERC7984ERC20WrapperUpgradeable.sol`
