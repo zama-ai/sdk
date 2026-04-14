@@ -617,7 +617,7 @@ export function finalizeUnwrapMutationOptions(token: Token): MutationFactoryOpti
 // @public
 export interface FinalizeUnwrapParams {
     // (undocumented)
-    unwrapRequestId: Hex;
+    unwrapRequestId: Handle;
 }
 
 // @public (undocumented)

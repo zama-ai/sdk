@@ -20,12 +20,10 @@ export type { RawLog } from "../types/transaction";
 export const Topics = {
   /** `ConfidentialTransfer(address indexed from, address indexed to, bytes32 indexed amount)` */
   ConfidentialTransfer: "0x67500e8d0ed826d2194f514dd0d8124f35648ab6e3fb5e6ed867134cffe661e9",
-  /**
-   * `Wrapped(address indexed to, uint256 amountIn)`
-   * @deprecated New wrapper contracts no longer emit this event — shields now emit
-   * `ConfidentialTransfer(from=zeroAddress, ...)` instead. Retained for backward
-   * compatibility with older deployments.
-   */
+  // NOTE: New wrapper contracts no longer emit Wrapped — shields now emit
+  // ConfidentialTransfer(from=zeroAddress, ...) instead. Retained for backward
+  // compatibility with older deployments.
+  /** `Wrapped(address indexed to, uint256 amountIn)` */
   Wrapped: "0x4700c1726b4198077cd40320a32c45265a1910521eb0ef713dd1d8412413d7fc",
   /** `UnwrapRequested(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 amount)` */
   UnwrapRequested: "0x4b1bfb262557cf08a74ddeefb8aef086b81deb08484bdc1820b9f420cdd1aa0e",
@@ -50,12 +48,10 @@ export interface ConfidentialTransferEvent {
   readonly encryptedAmountHandle: Handle;
 }
 
-/**
- * Decoded `Wrapped` event — an ERC-20 shield (wrap) operation.
- * @deprecated New wrapper contracts no longer emit this event — shields now emit
- * `ConfidentialTransfer(from=zeroAddress, ...)` instead. Retained for backward
- * compatibility with older deployments.
- */
+// NOTE: New wrapper contracts no longer emit this event — shields now emit
+// ConfidentialTransfer(from=zeroAddress, ...) instead. Retained for backward
+// compatibility with older deployments.
+/** Decoded `Wrapped` event — an ERC-20 shield (wrap) operation. */
 export interface WrappedEvent {
   readonly eventName: "Wrapped";
   /** Receiver of the minted confidential tokens. */
@@ -180,12 +176,12 @@ export function decodeConfidentialTransfer(log: RawLog): ConfidentialTransferEve
   };
 }
 
+// NOTE: New wrapper contracts no longer emit this event. Retained for backward
+// compatibility with older deployments.
 /**
  * Wrapped(address indexed to, uint256 amountIn)
  * Indexed: to (topics[1])
  * Data: amountIn (uint256)
- * @deprecated New wrapper contracts no longer emit this event. Retained for backward
- * compatibility with older deployments.
  */
 export function decodeWrapped(log: RawLog): WrappedEvent | null {
   if (log.topics[0] !== Topics.Wrapped) {
@@ -334,11 +330,10 @@ export function findUnwrapRequested(logs: readonly RawLog[]): UnwrapRequestedEve
   return null;
 }
 
+// NOTE: New wrapper contracts no longer emit this event. Retained for backward
+// compatibility with older deployments.
 /**
  * Find the first {@link WrappedEvent} in a logs array.
- *
- * @deprecated New wrapper contracts no longer emit this event. Retained for backward
- * compatibility with older deployments.
  *
  * @example
  * ```ts
