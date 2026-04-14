@@ -168,32 +168,6 @@ describe("Token", () => {
       expect(relayer.userDecrypt).not.toHaveBeenCalled();
     });
 
-    it("uses provided owner as signerAddress", async ({
-      relayer,
-      signer,
-      storage,
-      sessionStorage,
-      tokenAddress,
-      handle,
-    }) => {
-      const token = createToken({
-        relayer,
-        signer,
-        storage,
-        sessionStorage,
-        tokenAddress,
-        handle,
-      });
-      const otherOwner = "0xdddddddddddddddddddddddddddddddddddddddd" as Address;
-      await token.decryptHandles([handle], otherOwner);
-
-      expect(relayer.userDecrypt).toHaveBeenCalledWith(
-        expect.objectContaining({
-          signerAddress: otherOwner,
-        }),
-      );
-    });
-
     it("defaults signerAddress to signer.getAddress()", async ({
       relayer,
       signer,

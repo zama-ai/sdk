@@ -2,6 +2,7 @@ import { getAddress, type Address } from "viem";
 import { CredentialsManager } from "./credentials/credentials-manager";
 import { DelegatedCredentialsManager } from "./credentials/delegated-credentials-manager";
 import { DecryptCache } from "./decrypt-cache";
+import { runUserDecryptPipeline } from "./decrypt/user-decrypt-pipeline";
 import type { ZamaSDKEventListener } from "./events/sdk-events";
 import { ZamaSDKEvents } from "./events/sdk-events";
 import type { DecryptHandle, DecryptResult } from "./query/user-decrypt";
@@ -307,61 +308,28 @@ export class ZamaSDK {
       return {};
     }
 
+    // Peek for uncached handles to know whether to fire onCredentialsReady.
     const signerAddress = await this.signer.getAddress();
-    const result: Record<Handle, ClearValueType> = {};
-    const uncached: DecryptHandle[] = [];
-
+    let hasUncached = false;
     for (const h of handles) {
       const addr = getAddress(h.contractAddress);
       const cached = await this.cache.get(signerAddress, addr, h.handle);
-      if (cached !== null) {
-        result[h.handle] = cached;
-      } else {
-        uncached.push({ handle: h.handle, contractAddress: addr });
+      if (cached === null) {
+        hasUncached = true;
+        break;
       }
     }
 
-    if (uncached.length === 0) {
-      onDecrypted(result);
-      return result;
+    const result = await runUserDecryptPipeline(handles, {
+      signer: this.signer,
+      credentials: this.credentials,
+      relayer: this.relayer,
+      cache: this.cache,
+    });
+
+    if (hasUncached) {
+      onCredentialsReady();
     }
-
-    // Get unique contract addresses and acquire credentials
-    const contractAddresses = [...new Set(uncached.map((h) => h.contractAddress))];
-    const creds = await this.credentials.allow(...contractAddresses);
-    onCredentialsReady();
-
-    // Group uncached handles by contract address
-    const byContract = new Map<Address, Handle[]>();
-    for (const h of uncached) {
-      const existing = byContract.get(h.contractAddress);
-      if (existing) {
-        existing.push(h.handle);
-      } else {
-        byContract.set(h.contractAddress, [h.handle]);
-      }
-    }
-
-    // Decrypt per contract group
-    for (const [contractAddress, contractHandles] of byContract) {
-      const decrypted = await this.relayer.userDecrypt({
-        handles: contractHandles,
-        contractAddress,
-        signedContractAddresses: creds.contractAddresses,
-        privateKey: creds.privateKey,
-        publicKey: creds.publicKey,
-        signature: creds.signature,
-        signerAddress,
-        startTimestamp: creds.startTimestamp,
-        durationDays: creds.durationDays,
-      });
-
-      for (const [handle, value] of Object.entries(decrypted)) {
-        result[handle as Handle] = value;
-        await this.cache.set(signerAddress, contractAddress, handle as Handle, value);
-      }
-    }
-
     onDecrypted(result);
     return result;
   }

@@ -45,6 +45,7 @@ import {
   ZamaError,
   matchAclRevert,
 } from "../errors";
+import { runUserDecryptPipeline } from "../decrypt/user-decrypt-pipeline";
 import { ReadonlyToken, type ReadonlyTokenConfig } from "./readonly-token";
 import { assertBigint } from "../utils/assertions";
 import { pLimit } from "./concurrency";
@@ -325,66 +326,64 @@ export class Token extends ReadonlyToken {
   /**
    * Batch-decrypt arbitrary encrypted handles for this token's contract.
    * Zero handles are returned as 0n without hitting the relayer. Non-zero
-   * handles participate in the shared {@link DecryptCache}: values are
-   * served from cache when present and written back on success so that
-   * subsequent `sdk.userDecrypt` calls for the same `(contract, handle)`
-   * skip the relayer round-trip.
+   * handles are routed through the shared {@link runUserDecryptPipeline},
+   * the same cache-aware pipeline used by `sdk.userDecrypt`. This guarantees
+   * that subsequent `sdk.userDecrypt` calls for the same `(contract, handle)`
+   * are cache hits, and vice versa.
    *
    * @param handles - Array of encrypted handles to decrypt.
-   * @param owner - Optional owner address for the decrypt request.
+   * @param _owner - Deprecated. Retained for signature compatibility; ignored.
    * @returns A Map from handle to decrypted bigint value.
    * @throws {@link DecryptionFailedError} if FHE decryption fails.
    */
-  async decryptHandles(handles: Handle[], owner?: Address): Promise<Map<Handle, ClearValueType>> {
+  async decryptHandles(
+    handles: Handle[],
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _owner?: Address,
+  ): Promise<Map<Handle, ClearValueType>> {
     const results = new Map<Handle, ClearValueType>();
-    const uncachedHandles: Handle[] = [];
-    const signerAddress = owner ?? (await this.signer.getAddress());
+    const nonZeroHandles: Handle[] = [];
 
     for (const handle of handles) {
       if (this.isZeroHandle(handle)) {
         results.set(handle, 0n);
-        continue;
-      }
-      const cached = await this.cache.get(signerAddress, this.address, handle);
-      if (cached !== null) {
-        results.set(handle, cached);
       } else {
-        uncachedHandles.push(handle);
+        nonZeroHandles.push(handle);
       }
     }
 
-    if (uncachedHandles.length === 0) {
+    if (nonZeroHandles.length === 0) {
       return results;
     }
-
-    const creds = await this.credentials.allow(this.address);
 
     const t0 = Date.now();
     try {
       this.emit({ type: ZamaSDKEvents.DecryptStart });
-      const decrypted = await this.relayer.userDecrypt({
-        handles: uncachedHandles,
-        contractAddress: this.address,
-        signedContractAddresses: creds.contractAddresses,
-        privateKey: creds.privateKey,
-        publicKey: creds.publicKey,
-        signature: creds.signature,
-        signerAddress,
-        startTimestamp: creds.startTimestamp,
-        durationDays: creds.durationDays,
-      });
+
+      const decrypted = await runUserDecryptPipeline(
+        nonZeroHandles.map((handle) => ({
+          handle,
+          contractAddress: this.address,
+        })),
+        {
+          signer: this.signer,
+          credentials: this.credentials,
+          relayer: this.relayer,
+          cache: this.cache,
+        },
+      );
+
       this.emit({
         type: ZamaSDKEvents.DecryptEnd,
         durationMs: Date.now() - t0,
       });
 
-      for (const handle of uncachedHandles) {
+      for (const handle of nonZeroHandles) {
         const value = decrypted[handle];
         if (value === undefined) {
           throw new DecryptionFailedError(`Decryption returned no value for handle ${handle}`);
         }
         results.set(handle, value);
-        await this.cache.set(signerAddress, this.address, handle, value);
       }
     } catch (error) {
       this.emit({
