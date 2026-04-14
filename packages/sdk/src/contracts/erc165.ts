@@ -59,10 +59,11 @@ export function isConfidentialTokenContract(tokenAddress: Address) {
  * Returns contract config to check if a token implements IERC7984ERC20Wrapper (confidential wrapper)
  * using the **legacy** interface ID ({@link ERC7984_WRAPPER_INTERFACE_ID}, `0xd04584ba`).
  *
- * > **During the transition period** (before mainnet upgrade on April 28, 2026), calling this
- * > alone is insufficient — new wrappers respond only to {@link ERC7984_WRAPPER_INTERFACE_ID_NEW}.
- * > Prefer higher-level APIs (`ReadonlyToken.isWrapper()`, `isWrapperQueryOptions()`) which check
- * > both interface IDs automatically.
+ * Note: During the transition period (before mainnet upgrade on April 28, 2026), calling this
+ * alone is insufficient. New wrappers respond only to
+ * {@link ERC7984_WRAPPER_INTERFACE_ID_NEW}. Prefer higher-level APIs
+ * (`ReadonlyToken.isWrapper()`, `isWrapperQueryOptions()`) which check both interface IDs
+ * automatically.
  *
  * @example
  * ```ts
