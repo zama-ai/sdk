@@ -6002,13 +6002,6 @@ export class DecryptionFailedError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
 
-// @public
-export interface DecryptOptions {
-    onCredentialsReady?: () => void;
-    // Warning: (ae-forgotten-export) The symbol "DecryptResult" needs to be exported by the entry point index.d.ts
-    onDecrypted?: (values: DecryptResult) => void;
-}
-
 // @public (undocumented)
 export interface DecryptStartEvent extends BaseEvent {
     // (undocumented)
@@ -20251,6 +20244,7 @@ export type ZamaErrorCode = (typeof ZamaErrorCode)[keyof typeof ZamaErrorCode];
 export class ZamaSDK {
     [Symbol.dispose](): void;
     constructor(config: ZamaSDKConfig);
+    allow(contractAddresses: Address[]): Promise<void>;
     readonly cache: DecryptCache;
     createReadonlyToken(address: Address): ReadonlyToken;
     createToken(address: Address, wrapper?: Address): Token;
@@ -20272,7 +20266,7 @@ export class ZamaSDK {
     readonly storage: GenericStorage;
     terminate(): void;
     // Warning: (ae-forgotten-export) The symbol "DecryptHandle" needs to be exported by the entry point index.d.ts
-    userDecrypt(handles: DecryptHandle[], options?: DecryptOptions): Promise<Record<Handle, ClearValueType>>;
+    userDecrypt(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>>;
 }
 
 // @public
