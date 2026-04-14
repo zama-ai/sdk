@@ -33,7 +33,11 @@ import type { ClearValueType, Handle } from "../relayer/relayer-sdk.types";
 import type { GenericSigner, GenericStorage } from "../types";
 import { toError } from "../utils";
 import { assertBigint } from "../utils/assertions";
-import { pLimit } from "./concurrency";
+import {
+  runUserDecryptPipeline,
+  type DecryptHandleEntry,
+} from "../pipelines/user-decrypt-pipeline";
+import { runDelegatedDecryptPipeline } from "../pipelines/delegated-user-decrypt-pipeline";
 
 /** 32-byte zero handle, used to detect uninitialized encrypted balances. */
 export const ZERO_HANDLE =
@@ -261,29 +265,22 @@ export class ReadonlyToken {
       return new Map();
     }
 
-    const { handles, owner, onError, maxConcurrency } = options ?? {};
+    const { handles, owner, onError } = options ?? {};
     const firstToken = tokens[0]!;
-    const sdk = ReadonlyToken.assertSameRelayer(tokens);
+    ReadonlyToken.assertSameRelayer(tokens);
     const signerAddress = owner ?? (await firstToken.signer.getAddress());
 
-    return ReadonlyToken.#batchDecryptCore({
+    return ReadonlyToken.#runBatchPipeline({
       tokens,
       handles,
       ownerAddress: signerAddress,
       onError,
-      maxConcurrency,
-      obtainCreds: (uncachedAddresses) => firstToken.credentials.allow(...uncachedAddresses),
-      decrypt: (creds, handle, contractAddress) =>
-        sdk.userDecrypt({
-          handles: [handle],
-          contractAddress,
-          signedContractAddresses: creds.contractAddresses,
-          privateKey: creds.privateKey,
-          publicKey: creds.publicKey,
-          signature: creds.signature,
-          signerAddress,
-          startTimestamp: creds.startTimestamp,
-          durationDays: creds.durationDays,
+      pipeline: (entries) =>
+        runUserDecryptPipeline(entries, {
+          signer: firstToken.signer,
+          credentials: firstToken.credentials,
+          relayer: firstToken.relayer,
+          cache: firstToken.cache,
         }),
       errorPrefix: "Batch decryption",
     });
@@ -323,64 +320,50 @@ export class ReadonlyToken {
       return new Map();
     }
 
-    const { delegatorAddress, handles, owner, onError, maxConcurrency } = options;
+    const { delegatorAddress, handles, owner, onError } = options;
     const ownerAddress = owner ?? delegatorAddress;
     const firstToken = tokens[0]!;
     ReadonlyToken.assertSameRelayer(tokens);
 
-    return ReadonlyToken.#batchDecryptCore({
+    return ReadonlyToken.#runBatchPipeline({
       tokens,
       handles,
       ownerAddress,
       onError,
-      maxConcurrency,
       preFlightCheck: () => firstToken.#assertDelegationActive(delegatorAddress),
-      obtainCreds: (uncachedAddresses) =>
-        firstToken.delegatedCredentials.allow(delegatorAddress, ...uncachedAddresses),
-      decrypt: (creds, handle, contractAddress) =>
-        firstToken.relayer.delegatedUserDecrypt({
-          handles: [handle],
-          contractAddress,
-          signedContractAddresses: creds.contractAddresses,
-          privateKey: creds.privateKey,
-          publicKey: creds.publicKey,
-          signature: creds.signature,
-          delegatorAddress: creds.delegatorAddress,
-          delegateAddress: creds.delegateAddress,
-          startTimestamp: creds.startTimestamp,
-          durationDays: creds.durationDays,
-        }),
+      pipeline: (entries) =>
+        runDelegatedDecryptPipeline(
+          {
+            handles: entries as [DecryptHandleEntry, ...DecryptHandleEntry[]],
+            delegatorAddress,
+            ownerAddress,
+          },
+          {
+            delegatedCredentials: firstToken.delegatedCredentials,
+            relayer: firstToken.relayer,
+            cache: firstToken.cache,
+          },
+        ),
       errorPrefix: "Batch delegated decryption",
     });
   }
 
-  static async #batchDecryptCore<TCreds>(config: {
+  /**
+   * Thin orchestration layer: resolves handles, filters zero/cached handles,
+   * delegates to a decrypt pipeline, and maps results back to
+   * `Map<Address, bigint>` with per-token error handling.
+   */
+  static async #runBatchPipeline(config: {
     tokens: ReadonlyToken[];
     handles: Handle[] | undefined;
     ownerAddress: Address;
     onError?: (error: Error, address: Address) => bigint;
-    maxConcurrency?: number;
     preFlightCheck?: () => Promise<void>;
-    obtainCreds: (uncachedAddresses: Address[]) => Promise<TCreds>;
-    decrypt: (
-      creds: TCreds,
-      handle: Address,
-      contractAddress: Address,
-    ) => Promise<Record<string, unknown>>;
+    pipeline: (entries: DecryptHandleEntry[]) => Promise<Record<Handle, ClearValueType>>;
     errorPrefix: string;
   }): Promise<Map<Address, bigint>> {
-    const {
-      tokens,
-      handles,
-      ownerAddress,
-      onError,
-      maxConcurrency,
-      obtainCreds,
-      decrypt,
-      errorPrefix,
-    } = config;
+    const { tokens, handles, ownerAddress, onError, errorPrefix } = config;
 
-    const firstToken = tokens[0]!;
     const resolvedHandles =
       handles ?? (await Promise.all(tokens.map((t) => t.readConfidentialBalanceOf(ownerAddress))));
 
@@ -391,90 +374,106 @@ export class ReadonlyToken {
     }
 
     const results = new Map<Address, bigint>();
+    const entries: DecryptHandleEntry[] = [];
+    const handleToToken = new Map<Handle, ReadonlyToken>();
 
-    // Parallel cache lookups — avoids sequential IDB round-trips.
-    const uncached: { token: ReadonlyToken; handle: Address }[] = [];
+    // Parallel cache lookups — resolves cached values before the pre-flight
+    // check so we skip RPC overhead (e.g. delegation validation) when all
+    // balances are already cached.
     const cachedValues = await Promise.all(
       tokens.map((token, i) => {
         const handle = resolvedHandles[i]!;
         if (token.isZeroHandle(handle)) {
           return 0n;
         }
-        return firstToken.cache.get(ownerAddress, token.address, handle);
+        return tokens[0]!.cache.get(ownerAddress, token.address, handle);
       }),
     );
 
     for (let i = 0; i < tokens.length; i++) {
       const token = tokens[i]!;
       const handle = resolvedHandles[i]!;
-      const cached = cachedValues[i];
 
+      if (token.isZeroHandle(handle)) {
+        results.set(token.address, 0n);
+        continue;
+      }
+
+      const cached = cachedValues[i];
       if (cached !== null && cached !== undefined) {
-        assertBigint(cached, "batchDecryptCore: cached");
+        assertBigint(cached, "batchDecrypt: cached");
         results.set(token.address, cached);
         continue;
       }
 
-      uncached.push({ token, handle });
+      entries.push({ handle, contractAddress: token.address });
+      handleToToken.set(handle, token);
     }
 
-    // All balances resolved from cache — no credentials needed.
-    if (uncached.length === 0) {
+    if (entries.length === 0) {
       return results;
     }
 
-    // Pre-flight check runs after cache lookups — skips RPC overhead when
-    // all balances are cached. Best-effort: checks the first token's contract
-    // only (delegations are typically granted per-delegator, not per-token).
+    // Pre-flight check (e.g. delegation validation) runs after cache lookups
+    // — skips RPC overhead when all balances are cached.
     if (config.preFlightCheck) {
       await config.preFlightCheck();
     }
 
-    const uncachedAddresses = uncached.map((entry) => entry.token.address);
-    const creds = await obtainCreds(uncachedAddresses);
+    try {
+      const decrypted = await config.pipeline(entries);
 
-    const errors: { address: Address; error: Error }[] = [];
-    const decryptFns: (() => Promise<void>)[] = [];
+      for (const { handle, contractAddress } of entries) {
+        const token = handleToToken.get(handle)!;
+        const value = decrypted[handle];
+        if (value === undefined) {
+          throw new DecryptionFailedError(
+            `${errorPrefix} returned no value for handle ${handle} on token ${contractAddress}`,
+          );
+        }
+        assertBigint(value, "batchDecrypt: result[handle]");
+        results.set(token.address, value);
+      }
+    } catch (error) {
+      // The pipeline caches each contract's results before moving to the
+      // next, so on partial failure we can recover successful values from
+      // cache and apply onError only to truly failed tokens.
+      const errors: { address: Address; error: Error }[] = [];
+      const pipelineError = toError(error);
 
-    for (const { token, handle } of uncached) {
-      decryptFns.push(() =>
-        decrypt(creds, handle, token.address)
-          .then(async (result) => {
-            const value = result[handle];
-            if (value === undefined) {
-              throw new DecryptionFailedError(
-                `${errorPrefix} returned no value for handle ${handle} on token ${token.address}`,
-              );
-            }
-            assertBigint(value, "batchDecryptCore: result[handle]");
-            results.set(token.address, value);
-            void firstToken.cache.set(ownerAddress, token.address, handle, value);
-          })
-          .catch((error) => {
-            const err = toError(error);
-            if (onError) {
-              try {
-                results.set(token.address, onError(err, token.address));
-              } catch (callbackError) {
-                errors.push({
-                  address: token.address,
-                  error: toError(callbackError),
-                });
-              }
-            } else {
-              errors.push({ address: token.address, error: err });
-            }
-          }),
-      );
-    }
+      for (const { handle } of entries) {
+        const token = handleToToken.get(handle)!;
+        if (results.has(token.address)) {
+          continue;
+        }
 
-    await pLimit(decryptFns, maxConcurrency);
+        const cached = await tokens[0]!.cache.get(ownerAddress, token.address, handle);
+        if (cached !== null) {
+          assertBigint(cached, "batchDecrypt: cached recovery");
+          results.set(token.address, cached);
+          continue;
+        }
 
-    if (errors.length > 0) {
-      const message = errors.map((e) => `${e.address}: ${e.error.message}`).join("; ");
-      throw new DecryptionFailedError(
-        `${errorPrefix} failed for ${errors.length} token(s): ${message}`,
-      );
+        if (onError) {
+          try {
+            results.set(token.address, onError(pipelineError, token.address));
+          } catch (callbackError) {
+            errors.push({
+              address: token.address,
+              error: toError(callbackError),
+            });
+          }
+        } else {
+          errors.push({ address: token.address, error: pipelineError });
+        }
+      }
+
+      if (errors.length > 0) {
+        const message = errors.map((e) => `${e.address}: ${e.error.message}`).join("; ");
+        throw new DecryptionFailedError(
+          `${errorPrefix} failed for ${errors.length} token(s): ${message}`,
+        );
+      }
     }
 
     return results;
@@ -870,7 +869,11 @@ export class ReadonlyToken {
    * @returns A Map from handle to decrypted bigint value.
    * @throws {@link DecryptionFailedError} if FHE decryption fails.
    */
-  async decryptHandles(handles: Handle[], owner?: Address): Promise<Map<Handle, ClearValueType>> {
+  async decryptHandles(
+    handles: Handle[],
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _owner?: Address,
+  ): Promise<Map<Handle, ClearValueType>> {
     const results = new Map<Handle, ClearValueType>();
     const nonZeroHandles: Handle[] = [];
 
@@ -886,22 +889,23 @@ export class ReadonlyToken {
       return results;
     }
 
-    const creds = await this.credentials.allow(this.address);
-
     const t0 = Date.now();
     try {
       this.emit({ type: ZamaSDKEvents.DecryptStart });
-      const decrypted = await this.relayer.userDecrypt({
-        handles: nonZeroHandles,
-        contractAddress: this.address,
-        signedContractAddresses: creds.contractAddresses,
-        privateKey: creds.privateKey,
-        publicKey: creds.publicKey,
-        signature: creds.signature,
-        signerAddress: owner ?? (await this.signer.getAddress()),
-        startTimestamp: creds.startTimestamp,
-        durationDays: creds.durationDays,
-      });
+
+      const decrypted = await runUserDecryptPipeline(
+        nonZeroHandles.map((handle) => ({
+          handle,
+          contractAddress: this.address,
+        })),
+        {
+          signer: this.signer,
+          credentials: this.credentials,
+          relayer: this.relayer,
+          cache: this.cache,
+        },
+      );
+
       this.emit({
         type: ZamaSDKEvents.DecryptEnd,
         durationMs: Date.now() - t0,
