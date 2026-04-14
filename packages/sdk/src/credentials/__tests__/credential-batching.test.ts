@@ -399,9 +399,7 @@ describe("credential batching", () => {
       expect(() => credSet.batchFor(unknown)).toThrow(ZamaError);
     });
 
-    test("tryBatchFor returns null for an address not passed to allow()", async ({
-      relayer,
-    }) => {
+    test("tryBatchFor returns null for an address not passed to allow()", async ({ relayer }) => {
       const { manager } = createManagerWithSigner(relayer);
       const addrs = makeAddresses(3);
       const unknown = makeAddresses(4)[3]!;
@@ -426,9 +424,7 @@ describe("credential batching", () => {
       expect(() => credSet.batchFor(addr)).not.toThrow();
     });
 
-    test("batchFor is case-insensitive (normalizes checksummed address)", async ({
-      relayer,
-    }) => {
+    test("batchFor is case-insensitive (normalizes checksummed address)", async ({ relayer }) => {
       const { manager } = createManagerWithSigner(relayer);
       const addr = makeAddresses(1)[0]!;
       // Lowercase variant — batchFor must normalize before lookup

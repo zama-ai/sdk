@@ -20260,7 +20260,8 @@ export const ZamaErrorCode: {
     readonly AclPaused: "ACL_PAUSED"; /** Expiration date is too soon (must be at least 1 hour in the future). */
     readonly DelegationExpirationTooSoon: "DELEGATION_EXPIRATION_TOO_SOON"; /** Delegation exists on-chain but hasn't propagated to the gateway yet. */
     readonly DelegationNotPropagated: "DELEGATION_NOT_PROPAGATED"; /** Some credential batches were signed before a failure; partial result is available. */
-    readonly PartialBatchFailure: "PARTIAL_BATCH_FAILURE";
+    readonly PartialBatchFailure: "PARTIAL_BATCH_FAILURE"; /** A credential set could not resolve credentials for a requested contract address. */
+    readonly CredentialNotFound: "CREDENTIAL_NOT_FOUND";
 };
 
 // @public
