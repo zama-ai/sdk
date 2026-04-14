@@ -132,8 +132,7 @@ export async function runBatchDecryptPipeline(
       // entire recovery loop, so treat assertion failures as misses.
       try {
         const cached = await cache.get(ownerAddress, entry.tokenAddress, entry.handle);
-        if (cached !== null) {
-          assertBigint(cached, "batchDecrypt: cached recovery");
+        if (typeof cached === "bigint") {
           results.set(entry.tokenAddress, cached);
           continue;
         }
