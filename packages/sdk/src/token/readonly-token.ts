@@ -430,11 +430,6 @@ export class ReadonlyToken {
       await config.preFlightCheck();
     }
 
-    // Pass the full token set (not just uncached) so the credentials cache
-    // key is stable across calls. This mirrors `userDecryptMutationOptions`
-    // and lets a pre-call to `ReadonlyToken.allow(...tokens)` deduplicate
-    // with the credential request issued here — avoiding a second wallet
-    // signature when both run in parallel.
     const allAddresses = tokens.map((token) => token.address);
     const creds = await obtainCreds(allAddresses);
 

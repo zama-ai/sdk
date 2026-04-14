@@ -41,11 +41,6 @@ export interface UseConfidentialBalancesOptions extends Omit<
  * Returns partial results when some tokens fail — successful balances are
  * always returned alongside per-token error information.
  *
- * The decrypt phase passes the full token set to `credentials.allow(...)`,
- * mirroring `useUserDecrypt`. This means a parallel `ReadonlyToken.allow(...)`
- * or `useAllow` call dedupes against the internal credential request and
- * triggers only one wallet signature.
- *
  * @param config - Token addresses and optional polling interval.
  * @param options - React Query options forwarded to the decrypt query.
  * @returns The decrypt query result plus `handlesQuery` for Phase 1 state.
