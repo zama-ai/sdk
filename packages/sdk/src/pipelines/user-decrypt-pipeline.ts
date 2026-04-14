@@ -114,7 +114,7 @@ export async function runUserDecryptPipeline(
   for (const h of uncached) {
     if (!(h.handle in result)) {
       throw new DecryptionFailedError(
-        `Relayer returned no value for handle ${h.handle} on contract ${h.contractAddress}`,
+        `Decryption returned no value for handle ${h.handle} on contract ${h.contractAddress}`,
       );
     }
   }
