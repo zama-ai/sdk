@@ -18,8 +18,6 @@ export interface UseConfidentialBalancesConfig {
   tokenAddresses: Address[];
   /** Polling interval (ms) for the encrypted handles. Default: 10 000. */
   handleRefetchInterval?: number;
-  /** Maximum number of concurrent decrypt calls. Default: `Infinity` (no limit). */
-  maxConcurrency?: number;
 }
 
 export type { ConfidentialBalancesData };
@@ -60,7 +58,7 @@ export function useConfidentialBalances(
   config: UseConfidentialBalancesConfig,
   options?: UseConfidentialBalancesOptions,
 ) {
-  const { tokenAddresses, handleRefetchInterval, maxConcurrency } = config;
+  const { tokenAddresses, handleRefetchInterval } = config;
   const { enabled = true } = options ?? {};
   const sdk = useZamaSDK();
 
@@ -91,7 +89,6 @@ export function useConfidentialBalances(
   const baseBalancesQueryOptions = confidentialBalancesQueryOptions(tokens, {
     owner,
     handles,
-    maxConcurrency,
     resultAddresses: tokenAddresses,
   });
   const factoryEnabled = baseBalancesQueryOptions.enabled ?? true;

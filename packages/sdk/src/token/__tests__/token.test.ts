@@ -275,7 +275,7 @@ describe("Token", () => {
       vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({});
 
       await expect(token.decryptBalance(handle as Address)).rejects.toThrow(
-        "Decryption returned no value for handle",
+        "returned no value for handle",
       );
     });
   });

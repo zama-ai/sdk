@@ -1,9 +1,18 @@
 import { getAddress, type Address } from "viem";
 import type { DecryptHandleEntry } from "./user-decrypt-pipeline";
+import { runCachePartitionPipeline } from "./cache-partition-pipeline";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { DelegatedCredentialsManager } from "../credentials/delegated-credentials-manager";
 import type { DecryptCache } from "../decrypt-cache";
+import { DecryptionFailedError } from "../errors";
 import type { ClearValueType, Handle } from "../relayer/relayer-sdk.types";
+import { runGroupByContractPipeline } from "./group-by-contract-pipeline";
+
+export interface DelegatedDecryptArgs {
+  handles: DecryptHandleEntry[];
+  delegatorAddress: Address;
+  ownerAddress?: Address;
+}
 
 /** Dependencies for delegated decryption. */
 export interface DelegatedDecryptDeps {
@@ -17,33 +26,15 @@ export interface DelegatedDecryptDeps {
  * but uses delegated credentials and `relayer.delegatedUserDecrypt`.
  */
 export async function runDelegatedDecryptPipeline(
-  {
-    handles,
-    delegatorAddress,
-    ownerAddress = delegatorAddress,
-  }: {
-    handles: DecryptHandleEntry[];
-    delegatorAddress: Address;
-    ownerAddress?: Address;
-  },
+  args: DelegatedDecryptArgs,
   deps: DelegatedDecryptDeps,
 ): Promise<Record<Handle, ClearValueType>> {
+  const { handles, delegatorAddress, ownerAddress = delegatorAddress } = args;
   if (handles.length === 0) {
     return {};
   }
 
-  const result: Record<Handle, ClearValueType> = {};
-  const uncached: DecryptHandleEntry[] = [];
-
-  for (const h of handles) {
-    const addr = getAddress(h.contractAddress);
-    const cached = await deps.cache.get(ownerAddress, addr, h.handle);
-    if (cached !== null) {
-      result[h.handle] = cached;
-    } else {
-      uncached.push({ handle: h.handle, contractAddress: addr });
-    }
-  }
+  const { result, uncached } = await runCachePartitionPipeline({ handles, ownerAddress }, deps);
 
   if (uncached.length === 0) {
     return result;
@@ -52,15 +43,7 @@ export async function runDelegatedDecryptPipeline(
   const allContractAddresses = [...new Set(handles.map((h) => getAddress(h.contractAddress)))];
   const creds = await deps.delegatedCredentials.allow(delegatorAddress, ...allContractAddresses);
 
-  const byContract = new Map<Address, Handle[]>();
-  for (const h of uncached) {
-    const existing = byContract.get(h.contractAddress);
-    if (existing) {
-      existing.push(h.handle);
-    } else {
-      byContract.set(h.contractAddress, [h.handle]);
-    }
-  }
+  const byContract = runGroupByContractPipeline(uncached);
 
   for (const [contractAddress, contractHandles] of byContract) {
     const decrypted = await deps.relayer.delegatedUserDecrypt({
@@ -78,7 +61,15 @@ export async function runDelegatedDecryptPipeline(
 
     for (const [handle, value] of Object.entries(decrypted)) {
       result[handle as Handle] = value;
-      await deps.cache.set(ownerAddress, contractAddress, handle as Handle, value);
+      deps.cache.set(ownerAddress, contractAddress, handle as Handle, value).catch(() => {});
+    }
+  }
+
+  for (const h of uncached) {
+    if (!(h.handle in result)) {
+      throw new DecryptionFailedError(
+        `Relayer returned no value for handle ${h.handle} on contract ${h.contractAddress}`,
+      );
     }
   }
 

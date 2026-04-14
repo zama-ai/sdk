@@ -85,7 +85,6 @@ describe("confidentialBalancesQueryOptions", () => {
         "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa",
         "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbBbbbbbbbbbbbbbbbbbbbbbbbb",
       ],
-      maxConcurrency: 3,
     });
 
     const result = await options.queryFn(mockQueryContext(options.queryKey));
@@ -98,7 +97,6 @@ describe("confidentialBalancesQueryOptions", () => {
           "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa",
           "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbBbbbbbbbbbbbbbbbbbbbbbbbb",
         ],
-        maxConcurrency: 3,
       }),
     );
     // onError callback is passed but we don't assert its identity
@@ -132,7 +130,6 @@ describe("confidentialBalancesQueryOptions", () => {
       expect.objectContaining({
         owner,
         handles: ["0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbBbbbbbbbbbbbbbbbbbbbbbbbb"],
-        maxConcurrency: undefined,
       }),
     );
     batchSpy.mockRestore();

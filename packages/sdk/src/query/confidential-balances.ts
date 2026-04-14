@@ -21,7 +21,6 @@ export interface ConfidentialBalancesData {
 export interface ConfidentialBalancesQueryConfig {
   owner?: Address;
   handles?: EncryptedBalanceHandle[];
-  maxConcurrency?: number;
   resultAddresses?: Address[];
   query?: Record<string, unknown>;
 }
@@ -58,7 +57,6 @@ export function confidentialBalancesQueryOptions(
       const raw = await ReadonlyToken.batchDecryptBalances(tokens, {
         owner: keyOwner,
         handles: keyHandles,
-        maxConcurrency: config?.maxConcurrency,
         onError: (error, address) => {
           perTokenErrors.set(address, error);
           return 0n;

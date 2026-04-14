@@ -7,6 +7,7 @@ import { ZamaSDKEvents } from "./events/sdk-events";
 import type { DecryptHandle, DecryptResult } from "./query/user-decrypt";
 import type { RelayerSDK } from "./relayer/relayer-sdk";
 import type { ClearValueType, Handle } from "./relayer/relayer-sdk.types";
+import { runUserDecryptPipeline } from "./pipelines/user-decrypt-pipeline";
 import { MemoryStorage } from "./storage/memory-storage";
 import { ReadonlyToken } from "./token/readonly-token";
 import { Token } from "./token/token";
@@ -312,61 +313,29 @@ export class ZamaSDK {
       return {};
     }
 
+    // Quick cache peek to decide whether onCredentialsReady should fire.
+    // The pipeline does its own cache check — this is only for the callback.
     const signerAddress = await this.signer.getAddress();
-    const result: Record<Handle, ClearValueType> = {};
-    const uncached: DecryptHandle[] = [];
-
+    let hasUncached = false;
     for (const h of handles) {
       const addr = getAddress(h.contractAddress);
       const cached = await this.cache.get(signerAddress, addr, h.handle);
-      if (cached !== null) {
-        result[h.handle] = cached;
-      } else {
-        uncached.push({ handle: h.handle, contractAddress: addr });
+      if (cached === null) {
+        hasUncached = true;
+        break;
       }
     }
 
-    if (uncached.length === 0) {
-      onDecrypted(result);
-      return result;
+    const result = await runUserDecryptPipeline(handles, {
+      signer: this.signer,
+      credentials: this.credentials,
+      relayer: this.relayer,
+      cache: this.cache,
+    });
+
+    if (hasUncached) {
+      onCredentialsReady();
     }
-
-    // Get unique contract addresses and acquire credentials
-    const contractAddresses = [...new Set(uncached.map((h) => h.contractAddress))];
-    const creds = await this.credentials.allow(...contractAddresses);
-    onCredentialsReady();
-
-    // Group uncached handles by contract address
-    const byContract = new Map<Address, Handle[]>();
-    for (const h of uncached) {
-      const existing = byContract.get(h.contractAddress);
-      if (existing) {
-        existing.push(h.handle);
-      } else {
-        byContract.set(h.contractAddress, [h.handle]);
-      }
-    }
-
-    // Decrypt per contract group
-    for (const [contractAddress, contractHandles] of byContract) {
-      const decrypted = await this.relayer.userDecrypt({
-        handles: contractHandles,
-        contractAddress,
-        signedContractAddresses: creds.contractAddresses,
-        privateKey: creds.privateKey,
-        publicKey: creds.publicKey,
-        signature: creds.signature,
-        signerAddress,
-        startTimestamp: creds.startTimestamp,
-        durationDays: creds.durationDays,
-      });
-
-      for (const [handle, value] of Object.entries(decrypted)) {
-        result[handle as Handle] = value;
-        await this.cache.set(signerAddress, contractAddress, handle as Handle, value);
-      }
-    }
-
     onDecrypted(result);
     return result;
   }

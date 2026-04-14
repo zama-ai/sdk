@@ -239,7 +239,7 @@ describe("ReadonlyToken", () => {
       vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({});
 
       await expect(token.decryptHandles([unknownHandle as Address])).rejects.toThrow(
-        "Decryption returned no value for handle",
+        "returned no value for handle",
       );
     });
 

@@ -38,6 +38,7 @@ import {
   type DecryptHandleEntry,
 } from "../pipelines/user-decrypt-pipeline";
 import { runDelegatedDecryptPipeline } from "../pipelines/delegated-user-decrypt-pipeline";
+import { runBatchDecryptPipeline } from "../pipelines/batch-decrypt-pipeline";
 
 /** 32-byte zero handle, used to detect uninitialized encrypted balances. */
 export const ZERO_HANDLE =
@@ -62,8 +63,6 @@ export interface BatchDecryptOptions {
    * ```
    */
   onError?: (error: Error, address: Address) => bigint;
-  /** Maximum number of concurrent decrypt calls. Default: `Infinity` (no limit). */
-  maxConcurrency?: number;
 }
 
 /** Options for {@link ReadonlyToken.batchDecryptBalancesAs}. */
@@ -74,8 +73,6 @@ export interface BatchDecryptAsOptions {
   handles?: Handle[];
   /** Balance owner address. Defaults to the delegator address. */
   owner?: Address;
-  /** Maximum number of concurrent decrypt calls. Default: Infinity. */
-  maxConcurrency?: number;
   /** Called when decryption fails for a single token. Return a fallback bigint. */
   onError?: (error: Error, address: Address) => bigint;
 }
@@ -270,20 +267,31 @@ export class ReadonlyToken {
     ReadonlyToken.assertSameRelayer(tokens);
     const signerAddress = owner ?? (await firstToken.signer.getAddress());
 
-    return ReadonlyToken.#runBatchPipeline({
-      tokens,
-      handles,
-      ownerAddress: signerAddress,
-      onError,
-      pipeline: (entries) =>
-        runUserDecryptPipeline(entries, {
-          signer: firstToken.signer,
-          credentials: firstToken.credentials,
-          relayer: firstToken.relayer,
-          cache: firstToken.cache,
-        }),
-      errorPrefix: "Batch decryption",
-    });
+    const resolvedHandles =
+      handles ?? (await Promise.all(tokens.map((t) => t.readConfidentialBalanceOf(signerAddress))));
+
+    if (tokens.length !== resolvedHandles.length) {
+      throw new DecryptionFailedError(
+        `tokens.length (${tokens.length}) must equal handles.length (${resolvedHandles.length})`,
+      );
+    }
+
+    return runBatchDecryptPipeline(
+      tokens.map((t, i) => ({ tokenAddress: t.address, handle: resolvedHandles[i]! })),
+      {
+        ownerAddress: signerAddress,
+        cache: firstToken.cache,
+        onError,
+        decrypt: (entries: DecryptHandleEntry[]) =>
+          runUserDecryptPipeline(entries, {
+            signer: firstToken.signer,
+            credentials: firstToken.credentials,
+            relayer: firstToken.relayer,
+            cache: firstToken.cache,
+          }),
+        errorPrefix: "Batch decryption",
+      },
+    );
   }
 
   /**
@@ -325,45 +333,6 @@ export class ReadonlyToken {
     const firstToken = tokens[0]!;
     ReadonlyToken.assertSameRelayer(tokens);
 
-    return ReadonlyToken.#runBatchPipeline({
-      tokens,
-      handles,
-      ownerAddress,
-      onError,
-      preFlightCheck: () => firstToken.#assertDelegationActive(delegatorAddress),
-      pipeline: (entries) =>
-        runDelegatedDecryptPipeline(
-          {
-            handles: entries as [DecryptHandleEntry, ...DecryptHandleEntry[]],
-            delegatorAddress,
-            ownerAddress,
-          },
-          {
-            delegatedCredentials: firstToken.delegatedCredentials,
-            relayer: firstToken.relayer,
-            cache: firstToken.cache,
-          },
-        ),
-      errorPrefix: "Batch delegated decryption",
-    });
-  }
-
-  /**
-   * Thin orchestration layer: resolves handles, filters zero/cached handles,
-   * delegates to a decrypt pipeline, and maps results back to
-   * `Map<Address, bigint>` with per-token error handling.
-   */
-  static async #runBatchPipeline(config: {
-    tokens: ReadonlyToken[];
-    handles: Handle[] | undefined;
-    ownerAddress: Address;
-    onError?: (error: Error, address: Address) => bigint;
-    preFlightCheck?: () => Promise<void>;
-    pipeline: (entries: DecryptHandleEntry[]) => Promise<Record<Handle, ClearValueType>>;
-    errorPrefix: string;
-  }): Promise<Map<Address, bigint>> {
-    const { tokens, handles, ownerAddress, onError, errorPrefix } = config;
-
     const resolvedHandles =
       handles ?? (await Promise.all(tokens.map((t) => t.readConfidentialBalanceOf(ownerAddress))));
 
@@ -373,110 +342,29 @@ export class ReadonlyToken {
       );
     }
 
-    const results = new Map<Address, bigint>();
-    const entries: DecryptHandleEntry[] = [];
-    const handleToToken = new Map<Handle, ReadonlyToken>();
-
-    // Parallel cache lookups — resolves cached values before the pre-flight
-    // check so we skip RPC overhead (e.g. delegation validation) when all
-    // balances are already cached.
-    const cachedValues = await Promise.all(
-      tokens.map((token, i) => {
-        const handle = resolvedHandles[i]!;
-        if (token.isZeroHandle(handle)) {
-          return 0n;
-        }
-        return tokens[0]!.cache.get(ownerAddress, token.address, handle);
-      }),
+    return runBatchDecryptPipeline(
+      tokens.map((t, i) => ({ tokenAddress: t.address, handle: resolvedHandles[i]! })),
+      {
+        ownerAddress,
+        cache: firstToken.cache,
+        onError,
+        preFlightCheck: () => firstToken.#assertDelegationActive(delegatorAddress),
+        decrypt: (entries: DecryptHandleEntry[]) =>
+          runDelegatedDecryptPipeline(
+            {
+              handles: entries,
+              delegatorAddress,
+              ownerAddress,
+            },
+            {
+              delegatedCredentials: firstToken.delegatedCredentials,
+              relayer: firstToken.relayer,
+              cache: firstToken.cache,
+            },
+          ),
+        errorPrefix: "Batch delegated decryption",
+      },
     );
-
-    for (let i = 0; i < tokens.length; i++) {
-      const token = tokens[i]!;
-      const handle = resolvedHandles[i]!;
-
-      if (token.isZeroHandle(handle)) {
-        results.set(token.address, 0n);
-        continue;
-      }
-
-      const cached = cachedValues[i];
-      if (cached !== null && cached !== undefined) {
-        assertBigint(cached, "batchDecrypt: cached");
-        results.set(token.address, cached);
-        continue;
-      }
-
-      entries.push({ handle, contractAddress: token.address });
-      handleToToken.set(handle, token);
-    }
-
-    if (entries.length === 0) {
-      return results;
-    }
-
-    // Pre-flight check (e.g. delegation validation) runs after cache lookups
-    // — skips RPC overhead when all balances are cached.
-    if (config.preFlightCheck) {
-      await config.preFlightCheck();
-    }
-
-    try {
-      const decrypted = await config.pipeline(entries);
-
-      for (const { handle, contractAddress } of entries) {
-        const token = handleToToken.get(handle)!;
-        const value = decrypted[handle];
-        if (value === undefined) {
-          throw new DecryptionFailedError(
-            `${errorPrefix} returned no value for handle ${handle} on token ${contractAddress}`,
-          );
-        }
-        assertBigint(value, "batchDecrypt: result[handle]");
-        results.set(token.address, value);
-      }
-    } catch (error) {
-      // The pipeline caches each contract's results before moving to the
-      // next, so on partial failure we can recover successful values from
-      // cache and apply onError only to truly failed tokens.
-      const errors: { address: Address; error: Error }[] = [];
-      const pipelineError = toError(error);
-
-      for (const { handle } of entries) {
-        const token = handleToToken.get(handle)!;
-        if (results.has(token.address)) {
-          continue;
-        }
-
-        const cached = await tokens[0]!.cache.get(ownerAddress, token.address, handle);
-        if (cached !== null) {
-          assertBigint(cached, "batchDecrypt: cached recovery");
-          results.set(token.address, cached);
-          continue;
-        }
-
-        if (onError) {
-          try {
-            results.set(token.address, onError(pipelineError, token.address));
-          } catch (callbackError) {
-            errors.push({
-              address: token.address,
-              error: toError(callbackError),
-            });
-          }
-        } else {
-          errors.push({ address: token.address, error: pipelineError });
-        }
-      }
-
-      if (errors.length > 0) {
-        const message = errors.map((e) => `${e.address}: ${e.error.message}`).join("; ");
-        throw new DecryptionFailedError(
-          `${errorPrefix} failed for ${errors.length} token(s): ${message}`,
-        );
-      }
-    }
-
-    return results;
   }
 
   /**
