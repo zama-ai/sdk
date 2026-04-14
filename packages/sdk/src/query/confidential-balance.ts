@@ -36,7 +36,7 @@ export function confidentialBalanceQueryOptions(
       const [, { owner: keyOwner, handle: keyHandle }] = context.queryKey;
       assertNonNullable(keyOwner, "confidentialBalanceQueryOptions: owner");
       assertNonNullable(keyHandle, "confidentialBalanceQueryOptions: handle");
-      return token.decryptBalance(keyHandle, keyOwner);
+      return token.decryptBalance(keyHandle);
     },
     enabled: Boolean(ownerKey && handleKey) && queryEnabled,
     staleTime: Infinity,

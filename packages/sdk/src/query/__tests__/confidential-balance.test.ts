@@ -48,7 +48,6 @@ describe("confidentialBalanceQueryOptions", () => {
     await options.queryFn(mockQueryContext(key));
     expect(token.decryptBalance).toHaveBeenCalledWith(
       "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbBbbbbbbbbbbbbbbbbbbbbbbbb",
-      "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
     );
   });
 });

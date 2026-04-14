@@ -128,7 +128,7 @@ describe("activityFeedQueryOptions", () => {
 
     const result = await options.queryFn(mockQueryContext(options.queryKey));
 
-    expect(token.decryptHandles).toHaveBeenCalledWith([handleA, handleB], USER);
+    expect(token.decryptHandles).toHaveBeenCalledWith([handleA, handleB]);
     expect(result).toHaveLength(2);
     expect(result[0]?.metadata.blockNumber).toBe(10n);
     expect(result[1]?.metadata.blockNumber).toBe(5n);

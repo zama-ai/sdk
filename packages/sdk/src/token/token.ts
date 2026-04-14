@@ -1051,7 +1051,7 @@ export class Token extends ReadonlyToken {
 
     let balance: bigint;
     try {
-      balance = await this.decryptBalance(handle, userAddress);
+      balance = await this.decryptBalance(handle);
     } catch (error) {
       if (error instanceof ZamaError) {
         throw error;

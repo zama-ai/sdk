@@ -167,7 +167,7 @@ describe("ReadonlyToken", () => {
       expect(relayer.userDecrypt).not.toHaveBeenCalled();
     });
 
-    it("always uses signer address as signerAddress (owner param ignored)", async ({
+    it("always uses signer address as signerAddress", async ({
       relayer,
       signer,
       storage,
@@ -184,8 +184,7 @@ describe("ReadonlyToken", () => {
         tokenAddress,
         handle,
       });
-      const otherOwner = "0xdddddddddddddddddddddddddddddddddddddddd" as Address;
-      await token.decryptHandles([handle], otherOwner);
+      await token.decryptHandles([handle]);
 
       expect(relayer.userDecrypt).toHaveBeenCalledWith(
         expect.objectContaining({

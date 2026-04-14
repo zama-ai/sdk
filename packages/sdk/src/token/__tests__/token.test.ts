@@ -239,22 +239,6 @@ describe("Token", () => {
       expect(signer.readContract).not.toHaveBeenCalled();
     });
 
-    it("uses provided owner as signerAddress", async ({
-      relayer,
-
-      token,
-      handle,
-    }) => {
-      const otherOwner = "0xdddddddddddddddddddddddddddddddddddddddd" as Address;
-      await token.decryptBalance(handle, otherOwner);
-
-      expect(relayer.userDecrypt).toHaveBeenCalledWith(
-        expect.objectContaining({
-          signerAddress: otherOwner,
-        }),
-      );
-    });
-
     it("defaults signerAddress to signer.getAddress()", async ({
       relayer,
 

@@ -169,7 +169,7 @@ export class ReadonlyToken {
   async balanceOf(owner?: Address): Promise<bigint> {
     const ownerAddress = owner ? getAddress(owner) : await this.signer.getAddress();
     const handle = await this.readConfidentialBalanceOf(ownerAddress);
-    return this.decryptBalance(handle, ownerAddress);
+    return this.decryptBalance(handle);
   }
 
   /**
@@ -799,7 +799,6 @@ export class ReadonlyToken {
    * Returns `0n` for zero handles without calling the relayer.
    *
    * @param handle - The encrypted balance handle to decrypt.
-   * @param owner - Optional owner address for the decrypt request.
    * @returns The decrypted plaintext value as a bigint.
    * @throws {@link DecryptionFailedError} if FHE decryption fails.
    *
@@ -809,12 +808,12 @@ export class ReadonlyToken {
    * const value = await token.decryptBalance(handle);
    * ```
    */
-  async decryptBalance(handle: Handle, owner?: Address): Promise<bigint> {
+  async decryptBalance(handle: Handle): Promise<bigint> {
     if (this.isZeroHandle(handle)) {
       return 0n;
     }
 
-    const signerAddress = owner ?? (await this.signer.getAddress());
+    const signerAddress = await this.signer.getAddress();
 
     const cached = await this.cache.get(signerAddress, this.address, handle);
     if (cached !== null) {
@@ -865,15 +864,10 @@ export class ReadonlyToken {
    * Zero handles are returned as 0n without hitting the relayer.
    *
    * @param handles - Array of encrypted handles to decrypt.
-   * @param owner - Optional owner address for the decrypt request.
    * @returns A Map from handle to decrypted bigint value.
    * @throws {@link DecryptionFailedError} if FHE decryption fails.
    */
-  async decryptHandles(
-    handles: Handle[],
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _owner?: Address,
-  ): Promise<Map<Handle, ClearValueType>> {
+  async decryptHandles(handles: Handle[]): Promise<Map<Handle, ClearValueType>> {
     const results = new Map<Handle, ClearValueType>();
     const nonZeroHandles: Handle[] = [];
 
