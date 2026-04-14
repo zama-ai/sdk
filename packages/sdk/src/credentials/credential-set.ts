@@ -1,5 +1,6 @@
 import { getAddress, type Address } from "viem";
 import type { StoredCredentials } from "../types";
+import { ZamaError, ZamaErrorCode } from "../errors/base";
 
 /**
  * A set of FHE credentials covering an arbitrary number of contract addresses.
@@ -52,7 +53,10 @@ export class CredentialSetImpl<T extends StoredCredentials> implements Credentia
   credentialFor(address: Address): T {
     const entry = this.#index.get(getAddress(address));
     if (entry === undefined) {
-      throw new Error(`[zama-sdk] No credential found for address ${address}`);
+      throw new ZamaError(
+        ZamaErrorCode.CredentialNotFound,
+        `[zama-sdk] No credential found for address ${address}`,
+      );
     }
     return entry;
   }

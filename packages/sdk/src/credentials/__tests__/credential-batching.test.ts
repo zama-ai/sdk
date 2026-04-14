@@ -8,6 +8,7 @@
 import { describe, expect, vi } from "vitest";
 import { test, createMockSigner, createMockStorage } from "../../test-fixtures";
 import type { createMockRelayer } from "../../test-fixtures";
+import { ZamaError, ZamaErrorCode } from "../../errors";
 import { CredentialsManager } from "../credentials-manager";
 import { DelegatedCredentialsManager } from "../delegated-credentials-manager";
 import { getAddress, type Address } from "viem";
@@ -389,7 +390,13 @@ describe("credential batching", () => {
 
       const credSet = await manager.allow(...addrs);
 
-      expect(() => credSet.credentialFor(unknown)).toThrow(/No credential found/);
+      expect(() => credSet.credentialFor(unknown)).toThrow(
+        expect.objectContaining({
+          code: ZamaErrorCode.CredentialNotFound,
+          message: `[zama-sdk] No credential found for address ${unknown}`,
+        }),
+      );
+      expect(() => credSet.credentialFor(unknown)).toThrow(ZamaError);
     });
 
     test("tryCredentialFor returns null for an address not passed to allow()", async ({

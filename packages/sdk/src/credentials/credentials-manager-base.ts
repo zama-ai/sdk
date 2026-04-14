@@ -586,13 +586,20 @@ export abstract class BaseCredentialsManager<
           if (uncovered.size === 0) {
             return true;
           }
-        } catch {
+        } catch (error) {
+          // oxlint-disable-next-line no-console
+          console.warn(
+            "[zama-sdk] Credential batch validation failed, treating as not allowed:",
+            error,
+          );
           continue;
         }
       }
 
       return false;
-    } catch {
+    } catch (error) {
+      // oxlint-disable-next-line no-console
+      console.warn("[zama-sdk] isAllowed check failed, treating as not allowed:", error);
       return false;
     }
   }

@@ -66,6 +66,8 @@ export const ZamaErrorCode = {
   DelegationNotPropagated: "DELEGATION_NOT_PROPAGATED",
   /** Some credential batches were signed before a failure; partial result is available. */
   PartialBatchFailure: "PARTIAL_BATCH_FAILURE",
+  /** A credential set could not resolve credentials for a requested contract address. */
+  CredentialNotFound: "CREDENTIAL_NOT_FOUND",
 } as const;
 
 /** Union of all {@link ZamaErrorCode} string values. */
