@@ -1,5 +1,27 @@
 # Changelog
 
+## [Unreleased]
+
+### Breaking Changes
+
+- **react-sdk:** `useIsAllowed()` now requires a `contractAddresses` argument. Calling it
+  without arguments no longer compiles and previously returned a result based on global
+  session state that ignored EIP-712 contract scope (SDK-77 / SDK-78). Migrate by passing
+  the contract addresses you want to check credentials against:
+
+  ```ts
+  // Before
+  const { data: isAllowed } = useIsAllowed();
+
+  // After
+  const { data: isAllowed } = useIsAllowed({
+    contractAddresses: [tokenAddress],
+  });
+  ```
+
+  Calling with no arguments is now a type error. If no credentials are cached for the
+  specified addresses, the hook returns `false`.
+
 ## [2.5.0-alpha.1](https://github.com/zama-ai/sdk/compare/v2.4.0...v2.5.0-alpha.1) (2026-04-15)
 
 ### Features
