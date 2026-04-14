@@ -22,6 +22,14 @@ export interface UserDecryptDeps {
   cache: DecryptCache;
 }
 
+/** Lifecycle callbacks fired at specific pipeline stages. */
+export interface UserDecryptOptions {
+  /** Fired after credentials are acquired, before relayer round-trips. Not called when all handles are cached. */
+  onCredentialsReady?: () => void;
+  /** Fired after all handles have been decrypted (including cache-only results). */
+  onDecrypted?: (values: Record<Handle, ClearValueType>) => void;
+}
+
 /**
  * Shared cache-aware decrypt pipeline used by both {@link ZamaSDK.userDecrypt}
  * and `Token.decryptHandles`. Centralising the logic here guarantees that all
@@ -34,27 +42,33 @@ export interface UserDecryptDeps {
 export async function runUserDecryptPipeline(
   handles: DecryptHandleEntry[],
   deps: UserDecryptDeps,
+  options?: UserDecryptOptions,
 ): Promise<Record<Handle, ClearValueType>> {
+  const { signer, credentials, relayer, cache } = deps;
+  const { onCredentialsReady = () => {}, onDecrypted = () => {} } = options ?? {};
+
   if (handles.length === 0) {
     return {};
   }
 
-  const signerAddress = await deps.signer.getAddress();
+  const signerAddress = await signer.getAddress();
   const { result, uncached } = await runCachePartitionPipeline(
     { handles, ownerAddress: signerAddress },
     deps,
   );
 
   if (uncached.length === 0) {
+    onDecrypted?.(result);
     return result;
   }
 
   const allContractAddresses = [...new Set(handles.map((h) => getAddress(h.contractAddress)))];
-  const creds = await deps.credentials.allow(...allContractAddresses);
+  const creds = await credentials.allow(...allContractAddresses);
+  onCredentialsReady?.();
   const byContract = runGroupByContractPipeline(uncached);
 
   for (const [contractAddress, contractHandles] of byContract) {
-    const decrypted = await deps.relayer.userDecrypt({
+    const decrypted = await relayer.userDecrypt({
       handles: contractHandles,
       contractAddress,
       signedContractAddresses: creds.contractAddresses,
@@ -69,7 +83,7 @@ export async function runUserDecryptPipeline(
     for (const [handle, value] of Object.entries(decrypted)) {
       result[handle as Handle] = value;
       try {
-        await deps.cache.set(signerAddress, contractAddress, handle as Handle, value);
+        await cache.set(signerAddress, contractAddress, handle as Handle, value);
       } catch {
         // Cache writes are best-effort — DecryptCache.set logs internally.
       }
@@ -84,5 +98,6 @@ export async function runUserDecryptPipeline(
     }
   }
 
+  onDecrypted?.(result);
   return result;
 }

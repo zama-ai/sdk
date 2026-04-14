@@ -308,36 +308,16 @@ export class ZamaSDK {
     handles: DecryptHandle[],
     options?: DecryptOptions,
   ): Promise<Record<Handle, ClearValueType>> {
-    const { onCredentialsReady = () => {}, onDecrypted = () => {} } = options ?? {};
-    if (handles.length === 0) {
-      return {};
-    }
-
-    // Quick cache peek to decide whether onCredentialsReady should fire.
-    // The pipeline does its own cache check — this is only for the callback.
-    const signerAddress = await this.signer.getAddress();
-    let hasUncached = false;
-    for (const h of handles) {
-      const addr = getAddress(h.contractAddress);
-      const cached = await this.cache.get(signerAddress, addr, h.handle);
-      if (cached === null) {
-        hasUncached = true;
-        break;
-      }
-    }
-
-    const result = await runUserDecryptPipeline(handles, {
-      signer: this.signer,
-      credentials: this.credentials,
-      relayer: this.relayer,
-      cache: this.cache,
-    });
-
-    if (hasUncached) {
-      onCredentialsReady();
-    }
-    onDecrypted(result);
-    return result;
+    return runUserDecryptPipeline(
+      handles,
+      {
+        signer: this.signer,
+        credentials: this.credentials,
+        relayer: this.relayer,
+        cache: this.cache,
+      },
+      options,
+    );
   }
 
   /**
