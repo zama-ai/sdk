@@ -20246,7 +20246,7 @@ export type ZamaErrorCode = (typeof ZamaErrorCode)[keyof typeof ZamaErrorCode];
 export class ZamaSDK {
     [Symbol.dispose](): void;
     constructor(config: ZamaSDKConfig);
-    allow(contractAddresses: [Address, ...Address[]]): Promise<void>;
+    allow(contractAddresses: Address[]): Promise<void>;
     readonly cache: DecryptCache;
     createReadonlyToken(address: Address): ReadonlyToken;
     createToken(address: Address, wrapper?: Address): Token;
