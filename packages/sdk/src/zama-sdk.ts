@@ -2,9 +2,10 @@ import { getAddress, type Address } from "viem";
 import { CredentialsManager } from "./credentials/credentials-manager";
 import { DelegatedCredentialsManager } from "./credentials/delegated-credentials-manager";
 import { DecryptCache } from "./decrypt-cache";
+import { DecryptionFailedError, wrapDecryptError } from "./errors";
 import type { ZamaSDKEventListener } from "./events/sdk-events";
 import { ZamaSDKEvents } from "./events/sdk-events";
-import type { DecryptHandle, DecryptResult } from "./query/user-decrypt";
+import type { DecryptHandle } from "./query/user-decrypt";
 import type { RelayerSDK } from "./relayer/relayer-sdk";
 import type { ClearValueType, Handle } from "./relayer/relayer-sdk.types";
 import { MemoryStorage } from "./storage/memory-storage";
@@ -17,13 +18,8 @@ import { WrappersRegistry } from "./wrappers-registry";
 /** Maximum keypairTTL accepted by the fhevm ACL contract (365 days, in seconds). */
 const MAX_KEYPAIR_TTL = 365 * 86400; // 31_536_000 s
 
-/** Options for {@link ZamaSDK.userDecrypt}. */
-export interface DecryptOptions {
-  /** Fired after credentials are ready (cached or freshly signed), before relayer calls. Not called when all handles are already cached. */
-  onCredentialsReady?: () => void;
-  /** Fired after all handles have been decrypted, including when all results come from cache. Receives the full result map. */
-  onDecrypted?: (values: DecryptResult) => void;
-}
+/** 32-byte zero handle — uninitialized encrypted balances map to `0n` without a relayer call. */
+const ZERO_HANDLE = "0x0000000000000000000000000000000000000000000000000000000000000000" as const;
 
 /** Configuration for {@link ZamaSDK}. */
 export interface ZamaSDKConfig {
@@ -288,11 +284,34 @@ export class ZamaSDK {
   }
 
   /**
+   * Pre-authorize contract addresses for decryption, triggering a single
+   * wallet signature prompt. Subsequent {@link userDecrypt} calls whose
+   * handles span the same set will reuse the cached credentials without
+   * an additional prompt.
+   *
+   * @param contractAddresses - One or more contract addresses to authorize.
+   *
+   * @example
+   * ```ts
+   * // Sign once for three tokens, then decrypt individually
+   * await sdk.allow([cUSDT, cDAI, cWETH]);
+   * const a = await sdk.userDecrypt([{ handle: h1, contractAddress: cUSDT }]);
+   * const b = await sdk.userDecrypt([{ handle: h2, contractAddress: cDAI }]);
+   * ```
+   */
+  async allow(contractAddresses: Address[]): Promise<void> {
+    await this.credentials.allow(...contractAddresses);
+  }
+
+  /**
    * Decrypt one or more FHE handles. Results are cached — repeated calls
    * for the same handle skip the relayer round-trip.
    *
+   * Zero handles are mapped to `0n` without hitting the relayer.
+   * Events (`DecryptStart/End/Error`) are emitted uniformly.
+   * Relayer errors are wrapped into typed SDK errors.
+   *
    * @param handles - Handles to decrypt, each paired with its contract address.
-   * @param options - Optional lifecycle callbacks.
    * @returns A record mapping each handle to its decrypted clear-text value.
    *
    * @example
@@ -303,72 +322,117 @@ export class ZamaSDK {
    * console.log(values[balanceHandle]); // 1000n
    * ```
    */
-  async userDecrypt(
-    handles: DecryptHandle[],
-    options?: DecryptOptions,
-  ): Promise<Record<Handle, ClearValueType>> {
-    const { onCredentialsReady = () => {}, onDecrypted = () => {} } = options ?? {};
+  async userDecrypt(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>> {
     if (handles.length === 0) {
       return {};
     }
 
-    const signerAddress = await this.signer.getAddress();
-    const result: Record<Handle, ClearValueType> = {};
-    const uncached: DecryptHandle[] = [];
+    const t0 = Date.now();
+    this.#onEvent({ type: ZamaSDKEvents.DecryptStart, timestamp: t0 });
 
-    for (const h of handles) {
-      const addr = getAddress(h.contractAddress);
-      const cached = await this.cache.get(signerAddress, addr, h.handle);
-      if (cached !== null) {
-        result[h.handle] = cached;
-      } else {
-        uncached.push({ handle: h.handle, contractAddress: addr });
+    try {
+      const result: Record<Handle, ClearValueType> = {};
+      const nonZero: DecryptHandle[] = [];
+
+      // Filter zero handles → 0n without relayer
+      for (const h of handles) {
+        if (h.handle === ZERO_HANDLE) {
+          result[h.handle] = 0n;
+        } else {
+          nonZero.push({ handle: h.handle, contractAddress: getAddress(h.contractAddress) });
+        }
       }
-    }
 
-    if (uncached.length === 0) {
-      onDecrypted(result);
-      return result;
-    }
-
-    // Get unique contract addresses and acquire credentials
-    const contractAddresses = [...new Set(uncached.map((h) => h.contractAddress))];
-    const creds = await this.credentials.allow(...contractAddresses);
-    onCredentialsReady();
-
-    // Group uncached handles by contract address
-    const byContract = new Map<Address, Handle[]>();
-    for (const h of uncached) {
-      const existing = byContract.get(h.contractAddress);
-      if (existing) {
-        existing.push(h.handle);
-      } else {
-        byContract.set(h.contractAddress, [h.handle]);
+      if (nonZero.length === 0) {
+        this.#onEvent({
+          type: ZamaSDKEvents.DecryptEnd,
+          durationMs: Date.now() - t0,
+          timestamp: Date.now(),
+        });
+        return result;
       }
-    }
 
-    // Decrypt per contract group
-    for (const [contractAddress, contractHandles] of byContract) {
-      const decrypted = await this.relayer.userDecrypt({
-        handles: contractHandles,
-        contractAddress,
-        signedContractAddresses: creds.contractAddresses,
-        privateKey: creds.privateKey,
-        publicKey: creds.publicKey,
-        signature: creds.signature,
-        signerAddress,
-        startTimestamp: creds.startTimestamp,
-        durationDays: creds.durationDays,
+      // Cache partition
+      const signerAddress = await this.signer.getAddress();
+      const uncached: DecryptHandle[] = [];
+
+      for (const h of nonZero) {
+        const cached = await this.cache.get(signerAddress, h.contractAddress, h.handle);
+        if (cached !== null) {
+          result[h.handle] = cached;
+        } else {
+          uncached.push(h);
+        }
+      }
+
+      if (uncached.length === 0) {
+        this.#onEvent({
+          type: ZamaSDKEvents.DecryptEnd,
+          durationMs: Date.now() - t0,
+          timestamp: Date.now(),
+        });
+        return result;
+      }
+
+      // Derive contract addresses from ALL handles for stable credential cache key
+      const allContractAddresses = [...new Set(handles.map((h) => getAddress(h.contractAddress)))];
+      const creds = await this.credentials.allow(...allContractAddresses);
+
+      // Group uncached by contract
+      const byContract = new Map<Address, Handle[]>();
+      for (const h of uncached) {
+        const existing = byContract.get(h.contractAddress);
+        if (existing) {
+          existing.push(h.handle);
+        } else {
+          byContract.set(h.contractAddress, [h.handle]);
+        }
+      }
+
+      // Decrypt per contract group
+      for (const [contractAddress, contractHandles] of byContract) {
+        const decrypted = await this.relayer.userDecrypt({
+          handles: contractHandles,
+          contractAddress,
+          signedContractAddresses: creds.contractAddresses,
+          privateKey: creds.privateKey,
+          publicKey: creds.publicKey,
+          signature: creds.signature,
+          signerAddress,
+          startTimestamp: creds.startTimestamp,
+          durationDays: creds.durationDays,
+        });
+
+        for (const [handle, value] of Object.entries(decrypted)) {
+          result[handle as Handle] = value;
+          await this.cache.set(signerAddress, contractAddress, handle as Handle, value);
+        }
+      }
+
+      // Verify completeness
+      for (const h of uncached) {
+        if (!(h.handle in result)) {
+          throw new DecryptionFailedError(
+            `Decryption returned no value for handle ${h.handle} on contract ${h.contractAddress}`,
+          );
+        }
+      }
+
+      this.#onEvent({
+        type: ZamaSDKEvents.DecryptEnd,
+        durationMs: Date.now() - t0,
+        timestamp: Date.now(),
       });
-
-      for (const [handle, value] of Object.entries(decrypted)) {
-        result[handle as Handle] = value;
-        await this.cache.set(signerAddress, contractAddress, handle as Handle, value);
-      }
+      return result;
+    } catch (error) {
+      this.#onEvent({
+        type: ZamaSDKEvents.DecryptError,
+        error: toError(error),
+        durationMs: Date.now() - t0,
+        timestamp: Date.now(),
+      });
+      throw wrapDecryptError(error, "Failed to decrypt handles");
     }
-
-    onDecrypted(result);
-    return result;
   }
 
   /**
