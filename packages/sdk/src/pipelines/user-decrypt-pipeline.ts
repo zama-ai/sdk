@@ -68,7 +68,11 @@ export async function runUserDecryptPipeline(
 
     for (const [handle, value] of Object.entries(decrypted)) {
       result[handle as Handle] = value;
-      deps.cache.set(signerAddress, contractAddress, handle as Handle, value).catch(() => {});
+      try {
+        await deps.cache.set(signerAddress, contractAddress, handle as Handle, value);
+      } catch {
+        // Cache writes are best-effort — DecryptCache.set logs internally.
+      }
     }
   }
 

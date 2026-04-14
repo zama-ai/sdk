@@ -1,7 +1,12 @@
 import type { Address } from "viem";
 import type { DecryptCache } from "../decrypt-cache";
 import type { ClearValueType, Handle } from "../relayer/relayer-sdk.types";
-import { DecryptionFailedError } from "../errors";
+import {
+  ConfigurationError,
+  DecryptionFailedError,
+  SigningFailedError,
+  SigningRejectedError,
+} from "../errors";
 import { toError } from "../utils";
 import { assertBigint } from "../utils/assertions";
 import type { DecryptHandleEntry } from "./user-decrypt-pipeline";
@@ -46,7 +51,6 @@ export async function runBatchDecryptPipeline(
 
   const results = new Map<Address, bigint>();
   const uncachedEntries: BatchDecryptEntry[] = [];
-  const handleToAddress = new Map<Handle, Address>();
 
   // Parallel cache lookups — resolves cached values before the pre-flight
   // check so we skip RPC overhead when all balances are already cached.
@@ -73,7 +77,6 @@ export async function runBatchDecryptPipeline(
     }
 
     uncachedEntries.push(entry);
-    handleToAddress.set(entry.handle, entry.tokenAddress);
   }
 
   if (uncachedEntries.length === 0) {
@@ -106,6 +109,15 @@ export async function runBatchDecryptPipeline(
       results.set(entry.tokenAddress, value);
     }
   } catch (error) {
+    // Non-recoverable errors propagate immediately — no partial recovery.
+    if (
+      error instanceof SigningRejectedError ||
+      error instanceof SigningFailedError ||
+      error instanceof ConfigurationError
+    ) {
+      throw error;
+    }
+
     // The decrypt pipeline caches each contract's results before moving to
     // the next, so on partial failure we can recover successful values from
     // cache and apply onError only to truly failed tokens.
@@ -116,11 +128,17 @@ export async function runBatchDecryptPipeline(
         continue;
       }
 
-      const cached = await cache.get(ownerAddress, entry.tokenAddress, entry.handle);
-      if (cached !== null) {
-        assertBigint(cached, "batchDecrypt: cached recovery");
-        results.set(entry.tokenAddress, cached);
-        continue;
+      // Recover from cache — a corrupted entry should not torpedo the
+      // entire recovery loop, so treat assertion failures as misses.
+      try {
+        const cached = await cache.get(ownerAddress, entry.tokenAddress, entry.handle);
+        if (cached !== null) {
+          assertBigint(cached, "batchDecrypt: cached recovery");
+          results.set(entry.tokenAddress, cached);
+          continue;
+        }
+      } catch {
+        // Corrupted cache entry — fall through to onError.
       }
 
       if (onError) {
