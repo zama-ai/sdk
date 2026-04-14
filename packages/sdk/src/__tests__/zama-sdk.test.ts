@@ -5,7 +5,7 @@ import { Token } from "../token/token";
 import { CredentialsManager } from "../credentials/credentials-manager";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { SignerLifecycleCallbacks } from "../types";
-import type { Address } from "viem";
+import { getAddress, type Address } from "viem";
 import type { DecryptHandle } from "../query/user-decrypt";
 
 const NEXT_USER_ADDRESS = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;
@@ -714,6 +714,31 @@ describe("ZamaSDK", () => {
       // Verify only handle2 was sent in the second call
       const secondCall = vi.mocked(relayer.userDecrypt).mock.calls[1]![0];
       expect(secondCall.handles).toEqual([handle2]);
+    });
+
+    it("passes full contract set to credentials.allow when some handles are cached", async ({
+      sdk,
+      relayer,
+      handle,
+    }) => {
+      const handle2 = ("0x" + "cd".repeat(32)) as Address;
+
+      // First call caches handle for CONTRACT_A
+      await sdk.userDecrypt([{ handle, contractAddress: CONTRACT_A }]);
+
+      // Set up relayer for handle2 on CONTRACT_B
+      vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({ [handle2]: 2000n });
+
+      const allowSpy = vi.spyOn(sdk.credentials, "allow");
+
+      // Second call: handle (CONTRACT_A) is cached, handle2 (CONTRACT_B) is not.
+      // credentials.allow must receive BOTH contracts — not just the uncached one.
+      await sdk.userDecrypt([
+        { handle, contractAddress: CONTRACT_A },
+        { handle: handle2, contractAddress: CONTRACT_B },
+      ]);
+
+      expect(allowSpy).toHaveBeenCalledWith(getAddress(CONTRACT_A), getAddress(CONTRACT_B));
     });
 
     it("returns empty object when no handles provided", async ({ sdk, relayer }) => {

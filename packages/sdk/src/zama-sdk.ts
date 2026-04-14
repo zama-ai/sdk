@@ -331,9 +331,11 @@ export class ZamaSDK {
       return result;
     }
 
-    // Get unique contract addresses and acquire credentials
-    const contractAddresses = [...new Set(uncached.map((h) => h.contractAddress))];
-    const creds = await this.credentials.allow(...contractAddresses);
+    // Pass the full set of contract addresses so the credential covers every
+    // address the caller needs — not just the uncached subset.  This mirrors
+    // batchDecryptBalances and lets a parallel allow() dedup against us.
+    const allContractAddresses = [...new Set(handles.map((h) => getAddress(h.contractAddress)))];
+    const creds = await this.credentials.allow(...allContractAddresses);
     onCredentialsReady();
 
     // Group uncached handles by contract address
