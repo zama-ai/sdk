@@ -49,8 +49,8 @@ export async function runDelegatedDecryptPipeline(
     return result;
   }
 
-  const contractAddresses = [...new Set(uncached.map((h) => h.contractAddress))];
-  const creds = await deps.delegatedCredentials.allow(delegatorAddress, ...contractAddresses);
+  const allContractAddresses = [...new Set(handles.map((h) => getAddress(h.contractAddress)))];
+  const creds = await deps.delegatedCredentials.allow(delegatorAddress, ...allContractAddresses);
 
   const byContract = new Map<Address, Handle[]>();
   for (const h of uncached) {
