@@ -813,30 +813,17 @@ export class ReadonlyToken {
       return 0n;
     }
 
-    const signerAddress = await this.signer.getAddress();
-
-    const cached = await this.cache.get(signerAddress, this.address, handle);
-    if (cached !== null) {
-      assertBigint(cached, "decryptBalance: cached");
-      return cached;
-    }
-
-    const creds = await this.credentials.allow(this.address);
-
     const t0 = Date.now();
     try {
       this.emit({ type: ZamaSDKEvents.DecryptStart });
-      const result = await this.relayer.userDecrypt({
-        handles: [handle],
-        contractAddress: this.address,
-        signedContractAddresses: creds.contractAddresses,
-        privateKey: creds.privateKey,
-        publicKey: creds.publicKey,
-        signature: creds.signature,
-        signerAddress,
-        startTimestamp: creds.startTimestamp,
-        durationDays: creds.durationDays,
+
+      const result = await runUserDecryptPipeline([{ handle, contractAddress: this.address }], {
+        signer: this.signer,
+        credentials: this.credentials,
+        relayer: this.relayer,
+        cache: this.cache,
       });
+
       this.emit({
         type: ZamaSDKEvents.DecryptEnd,
         durationMs: Date.now() - t0,
@@ -847,7 +834,6 @@ export class ReadonlyToken {
         throw new DecryptionFailedError(`Decryption returned no value for handle ${handle}`);
       }
       assertBigint(value, "decryptBalance: result[handle]");
-      await this.cache.set(signerAddress, this.address, handle, value);
       return value;
     } catch (error) {
       this.emit({
