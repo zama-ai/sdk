@@ -225,8 +225,12 @@ export class ReadonlyToken {
     // (0x1f1c62b2) wrapper interface IDs in parallel. Either returning true is
     // sufficient to identify a confidential wrapper.
     const [legacyMatch, newMatch] = await Promise.all([
-      this.signer.readContract(supportsInterfaceContract(this.address, ERC7984_WRAPPER_INTERFACE_ID)),
-      this.signer.readContract(supportsInterfaceContract(this.address, ERC7984_WRAPPER_INTERFACE_ID_NEW)),
+      this.signer.readContract(
+        supportsInterfaceContract(this.address, ERC7984_WRAPPER_INTERFACE_ID),
+      ),
+      this.signer.readContract(
+        supportsInterfaceContract(this.address, ERC7984_WRAPPER_INTERFACE_ID_NEW),
+      ),
     ]);
     return legacyMatch || newMatch;
   }

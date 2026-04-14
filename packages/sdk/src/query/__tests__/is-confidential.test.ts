@@ -36,7 +36,6 @@ describe("isConfidentialQueryOptions", () => {
       "fetch failed",
     );
   });
-
 });
 
 describe("isWrapperQueryOptions", () => {
@@ -44,7 +43,7 @@ describe("isWrapperQueryOptions", () => {
 
   test("returns true when legacy interfaceId (0xd04584ba) matches", async ({ signer }) => {
     vi.mocked(signer.readContract)
-      .mockResolvedValueOnce(true)  // legacy ID
+      .mockResolvedValueOnce(true) // legacy ID
       .mockResolvedValueOnce(false); // new ID
     const options = isWrapperQueryOptions(signer, TOKEN);
 

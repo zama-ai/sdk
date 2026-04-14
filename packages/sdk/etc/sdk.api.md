@@ -6328,6 +6328,9 @@ export const ERC7984_INTERFACE_ID: "0x4958f2a4";
 export const ERC7984_WRAPPER_INTERFACE_ID: "0xd04584ba";
 
 // @public
+export const ERC7984_WRAPPER_INTERFACE_ID_NEW: "0x1f1c62b2";
+
+// @public
 export function extractEncryptedHandles(items: readonly ActivityItem[]): Handle[];
 
 export { FheTypeName }

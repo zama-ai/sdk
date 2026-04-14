@@ -86,7 +86,7 @@ describe("Token", () => {
   describe("isWrapper", () => {
     it("returns true when legacy interfaceId (0xd04584ba) matches", async ({ signer, token }) => {
       vi.mocked(signer.readContract)
-        .mockResolvedValueOnce(true)  // legacy ID
+        .mockResolvedValueOnce(true) // legacy ID
         .mockResolvedValueOnce(false); // new ID
 
       expect(await token.isWrapper()).toBe(true);

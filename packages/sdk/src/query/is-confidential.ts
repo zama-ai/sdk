@@ -64,7 +64,9 @@ export function isWrapperQueryOptions(
         // sufficient to identify a confidential wrapper.
         const [legacyMatch, newMatch] = await Promise.all([
           signer.readContract(isConfidentialWrapperContract(keyTokenAddress)),
-          signer.readContract(supportsInterfaceContract(keyTokenAddress, ERC7984_WRAPPER_INTERFACE_ID_NEW)),
+          signer.readContract(
+            supportsInterfaceContract(keyTokenAddress, ERC7984_WRAPPER_INTERFACE_ID_NEW),
+          ),
         ]);
         return legacyMatch || newMatch;
       } catch (err) {

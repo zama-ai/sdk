@@ -125,6 +125,7 @@ import { EncryptStartEvent } from '@zama-fhe/sdk';
 import { ERC20ReadFailedError } from '@zama-fhe/sdk';
 import { ERC7984_INTERFACE_ID } from '@zama-fhe/sdk';
 import { ERC7984_WRAPPER_INTERFACE_ID } from '@zama-fhe/sdk';
+import { ERC7984_WRAPPER_INTERFACE_ID_NEW } from '@zama-fhe/sdk';
 import { extractEncryptedHandles } from '@zama-fhe/sdk';
 import { FheTypeName } from '@zama-fhe/sdk';
 import { FhevmInstanceConfig } from '@zama-fhe/sdk';
@@ -514,6 +515,8 @@ export { ERC20ReadFailedError }
 export { ERC7984_INTERFACE_ID }
 
 export { ERC7984_WRAPPER_INTERFACE_ID }
+
+export { ERC7984_WRAPPER_INTERFACE_ID_NEW }
 
 export { extractEncryptedHandles }
 
