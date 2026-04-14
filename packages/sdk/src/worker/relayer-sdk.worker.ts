@@ -379,6 +379,8 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
       contractAddress: payload.contractAddress,
     }));
 
+    const extraData = await sdkInstance.getExtraData();
+
     const result = await sdkInstance.userDecrypt(
       handleContractPairs,
       unprefixHex(payload.privateKey),
@@ -388,6 +390,7 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
       payload.signerAddress,
       payload.startTimestamp,
       payload.durationDays,
+      extraData,
     );
 
     const response: UserDecryptResponseData = { clearValues: result };
@@ -477,17 +480,20 @@ function handleGenerateKeypair(request: GenerateKeypairRequest): void {
 /**
  * Handle CREATE_EIP712 request.
  */
-function handleCreateEIP712(request: CreateEIP712Request): void {
+async function handleCreateEIP712(request: CreateEIP712Request): Promise<void> {
   const { id, type, payload } = request;
 
   try {
     assertSdkInstance(sdkInstance);
+
+    const extraData = (await sdkInstance.getExtraData?.()) ?? "0x00";
 
     const eip712 = sdkInstance.createEIP712(
       unprefixHex(payload.publicKey),
       payload.contractAddresses,
       payload.startTimestamp,
       payload.durationDays,
+      extraData,
     );
 
     const response: CreateEIP712ResponseData = {
@@ -525,11 +531,13 @@ function handleCreateEIP712(request: CreateEIP712Request): void {
 /**
  * Handle CREATE_DELEGATED_EIP712 request.
  */
-function handleCreateDelegatedEIP712(request: CreateDelegatedEIP712Request): void {
+async function handleCreateDelegatedEIP712(request: CreateDelegatedEIP712Request): Promise<void> {
   const { id, type, payload } = request;
 
   try {
     assertSdkInstance(sdkInstance);
+
+    const extraData = await sdkInstance.getExtraData();
 
     const result = sdkInstance.createDelegatedUserDecryptEIP712(
       unprefixHex(payload.publicKey),
@@ -537,6 +545,7 @@ function handleCreateDelegatedEIP712(request: CreateDelegatedEIP712Request): voi
       payload.delegatorAddress,
       payload.startTimestamp,
       payload.durationDays,
+      extraData,
     );
 
     sendSuccess<CreateDelegatedEIP712ResponseData>(id, type, result);
@@ -561,6 +570,8 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
       contractAddress: payload.contractAddress,
     }));
 
+    const extraData = await sdkInstance.getExtraData();
+
     const result = await sdkInstance.delegatedUserDecrypt(
       handleContractPairs,
       unprefixHex(payload.privateKey),
@@ -571,6 +582,7 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
       payload.delegateAddress,
       payload.startTimestamp,
       payload.durationDays,
+      extraData,
     );
 
     const response: DelegatedUserDecryptResponseData = { clearValues: result };
@@ -692,10 +704,10 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         handleGenerateKeypair(request);
         break;
       case "CREATE_EIP712":
-        handleCreateEIP712(request);
+        await handleCreateEIP712(request);
         break;
       case "CREATE_DELEGATED_EIP712":
-        handleCreateDelegatedEIP712(request);
+        await handleCreateDelegatedEIP712(request);
         break;
       case "DELEGATED_USER_DECRYPT":
         await handleDelegatedUserDecrypt(request);
