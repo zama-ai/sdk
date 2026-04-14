@@ -76,7 +76,7 @@ export { DecryptCache } from "./decrypt-cache";
 
 // Token abstraction layer
 export { ZamaSDK } from "./zama-sdk";
-export type { ZamaSDKConfig, DecryptOptions } from "./zama-sdk";
+export type { ZamaSDKConfig } from "./zama-sdk";
 export { WrappersRegistry, DefaultRegistryAddresses } from "./wrappers-registry";
 export type { WrappersRegistryConfig, ListPairsOptions } from "./wrappers-registry";
 export {
