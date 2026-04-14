@@ -35,6 +35,7 @@ import {
 
 // Wrapper
 import { finalizeUnwrapContract, underlyingContract, wrapContract } from "../wrapper";
+import { wrapperAbi } from "../../abi/wrapper.abi";
 
 const SPENDER = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;
 
@@ -207,5 +208,34 @@ describe("Wrapper contract builders", () => {
     const config = wrapContract(wrapperAddress, userAddress, 1000n);
     expect(config.functionName).toBe("wrap");
     expect(config.args).toEqual([userAddress, 1000n]);
+  });
+});
+
+// Regression: verify wrapperAbi matches protocol-apps@da4afe387420.
+// These assertions prove the chosen ABI version is intentional: the interface gained
+// unwrapAmount/unwrapRequester (changing ERC7984_WRAPPER_INTERFACE_ID to 0xf1f4c25a)
+// and finalizeUnwrap was changed to take bytes32 unwrapRequestId instead of euint64 burntAmount.
+describe("wrapperAbi version smoke test (protocol-apps@da4afe387420)", () => {
+  type AbiFunction = { type: string; name: string; inputs: { type: string; name: string }[] };
+  const fns = (wrapperAbi as AbiFunction[]).filter((x) => x.type === "function");
+  const fn = (name: string) => fns.find((f) => f.name === name);
+
+  it("finalizeUnwrap first param is bytes32 unwrapRequestId (not euint64 burntAmount)", () => {
+    const f = fn("finalizeUnwrap");
+    expect(f).toBeDefined();
+    expect(f!.inputs[0].name).toBe("unwrapRequestId");
+    expect(f!.inputs[0].type).toBe("bytes32");
+  });
+
+  it("unwrapAmount exists with bytes32 param", () => {
+    const f = fn("unwrapAmount");
+    expect(f).toBeDefined();
+    expect(f!.inputs[0].type).toBe("bytes32");
+  });
+
+  it("unwrapRequester exists with bytes32 param", () => {
+    const f = fn("unwrapRequester");
+    expect(f).toBeDefined();
+    expect(f!.inputs[0].type).toBe("bytes32");
   });
 });

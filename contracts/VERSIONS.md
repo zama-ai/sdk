@@ -19,7 +19,7 @@ Key changes at this commit vs prior local (Zaiffer fork):
 - Events `UnwrapRequested` and `UnwrapFinalized` include `bytes32 indexed unwrapRequestId`
 - New functions: `unwrapAmount(bytes32)` and `unwrapRequester(bytes32)`
 - `emit Wrapped` removed from `wrap()` and `onTransferReceived()`
-- ERC-165 interfaceId: `0xd04584ba` (unchanged)
+- ERC-165 interfaceId: `0xf1f4c25a` (changed: `unwrapAmount` and `unwrapRequester` selectors are now included in the XOR)
 - `totalSupply()` still present (will be renamed to `inferredTotalSupply` in SDK-71)
 
 ## confidential-token-wrappers-registry
