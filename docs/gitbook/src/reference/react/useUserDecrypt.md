@@ -125,7 +125,7 @@ const { data } = useUserDecrypt(
 This ensures the decrypt query only fires after `useAllow` has been called.
 {% endhint %}
 
-## Credential Caching
+## Credential caching
 
 `useUserDecrypt` relies on credentials acquired via [`useAllow`](/reference/react/useAllow):
 

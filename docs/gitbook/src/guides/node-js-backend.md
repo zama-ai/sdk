@@ -1,9 +1,9 @@
 ---
-title: Node.js Backend
+title: Node.js backend
 description: How to use the SDK in a Node.js server environment with worker threads and per-request isolation.
 ---
 
-# Node.js Backend
+# Node.js backend
 
 The SDK works in Node.js with the same API as in the browser. The main differences are the relayer implementation (native worker threads instead of Web Workers) and storage isolation for concurrent requests.
 

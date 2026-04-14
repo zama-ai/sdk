@@ -1,9 +1,9 @@
 ---
-title: Session Model
+title: Session model
 description: How the SDK manages FHE keypairs, wallet signatures, and session lifecycle.
 ---
 
-# Session Model
+# Session model
 
 The SDK uses a two-layer authorization model to protect FHE credentials. An FHE keypair is generated once and persisted in encrypted form. A wallet signature — the session — unlocks that keypair for the current browsing session. This separation means the expensive keypair generation happens rarely, while the lightweight signing step repeats once per session.
 

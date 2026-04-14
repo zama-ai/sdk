@@ -1,9 +1,9 @@
 ---
-title: Activity Feeds
+title: Activity feeds
 description: Parse on-chain events into a user-friendly activity feed with decrypted amounts.
 ---
 
-# Activity Feeds
+# Activity feeds
 
 Confidential tokens emit standard events (transfers, wraps, unwraps) but the amounts are encrypted handles. The SDK provides utilities to fetch these logs, classify them by type and direction, decrypt the amounts, and produce a feed ready for your UI.
 

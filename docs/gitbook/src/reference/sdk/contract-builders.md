@@ -1,9 +1,9 @@
 ---
-title: Contract Call Builders
+title: Contract call builders
 description: Low-level builders that return raw contract call configs for viem, ethers, or custom execution layers.
 ---
 
-# Contract Call Builders
+# Contract call builders
 
 Every builder returns a `ReadContractConfig` or `WriteContractConfig` — a plain object with the contract address, ABI fragment, function name, and encoded args:
 

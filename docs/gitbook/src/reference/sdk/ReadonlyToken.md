@@ -61,7 +61,7 @@ const relayer = new RelayerWeb({
 {% endtab %}
 {% endtabs %}
 
-## Static Methods
+## Static methods
 
 ### ReadonlyToken.allow
 

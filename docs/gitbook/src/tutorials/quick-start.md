@@ -1,9 +1,9 @@
 ---
-title: Quick Start
+title: Quick start
 description: Get from zero to a working confidential transfer in under 5 minutes.
 ---
 
-# Quick Start
+# Quick start
 
 Pick your stack. Each tab gets you from install to a working confidential transfer.
 

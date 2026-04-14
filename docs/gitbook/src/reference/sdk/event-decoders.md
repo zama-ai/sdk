@@ -1,9 +1,9 @@
 ---
-title: Event Decoders
+title: Event decoders
 description: Decode on-chain logs into typed event objects and build activity feeds.
 ---
 
-# Event Decoders
+# Event decoders
 
 Utilities for decoding raw `eth_getLogs` entries into typed event objects and assembling user-facing activity feeds.
 

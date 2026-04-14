@@ -1,9 +1,9 @@
 ---
-title: Network Presets
+title: Network presets
 description: Pre-configured network settings for Ethereum Mainnet, Sepolia, and Hardhat.
 ---
 
-# Network Presets
+# Network presets
 
 Pre-configured objects containing relayer URLs, contract addresses, and chain IDs for supported networks.
 

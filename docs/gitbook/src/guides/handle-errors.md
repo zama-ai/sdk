@@ -1,9 +1,9 @@
 ---
-title: Handle Errors
+title: Handle errors
 description: Catch, match, and recover from SDK errors in your application.
 ---
 
-# Handle Errors
+# Handle errors
 
 All errors thrown by `@zama-fhe/sdk` and `@zama-fhe/react-sdk` extend `ZamaError` and carry a `.code` string for programmatic matching. This guide covers how to catch them, route them to user-friendly messages, and troubleshoot common problems.
 
