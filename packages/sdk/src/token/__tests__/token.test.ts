@@ -84,10 +84,28 @@ describe("Token", () => {
   });
 
   describe("isWrapper", () => {
-    it("returns true when ERC-165 wrapper check passes", async ({ signer, token }) => {
-      vi.mocked(signer.readContract).mockResolvedValue(true);
+    it("returns true when legacy interfaceId (0xd04584ba) matches", async ({ signer, token }) => {
+      vi.mocked(signer.readContract)
+        .mockResolvedValueOnce(true)  // legacy ID
+        .mockResolvedValueOnce(false); // new ID
 
       expect(await token.isWrapper()).toBe(true);
+    });
+
+    it("returns true when new interfaceId (0x1f1c62b2) matches", async ({ signer, token }) => {
+      vi.mocked(signer.readContract)
+        .mockResolvedValueOnce(false) // legacy ID
+        .mockResolvedValueOnce(true); // new ID
+
+      expect(await token.isWrapper()).toBe(true);
+    });
+
+    it("returns false when neither interfaceId matches", async ({ signer, token }) => {
+      vi.mocked(signer.readContract)
+        .mockResolvedValueOnce(false) // legacy ID
+        .mockResolvedValueOnce(false); // new ID
+
+      expect(await token.isWrapper()).toBe(false);
     });
   });
 

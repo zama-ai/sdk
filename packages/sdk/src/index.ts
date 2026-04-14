@@ -38,7 +38,7 @@ export type { GenericLogger } from "./worker/worker.types";
 export { HardhatConfig, MainnetConfig, SepoliaConfig } from "./relayer/relayer-utils";
 
 // ERC-165 interface IDs
-export { ERC7984_INTERFACE_ID, ERC7984_WRAPPER_INTERFACE_ID } from "./contracts";
+export { ERC7984_INTERFACE_ID, ERC7984_WRAPPER_INTERFACE_ID, ERC7984_WRAPPER_INTERFACE_ID_NEW } from "./contracts";
 
 // Decrypt cache
 export { DecryptCache } from "./decrypt-cache";

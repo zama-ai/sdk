@@ -1,4 +1,9 @@
-import { isConfidentialTokenContract, isConfidentialWrapperContract } from "../contracts";
+import {
+  isConfidentialTokenContract,
+  isConfidentialWrapperContract,
+  supportsInterfaceContract,
+  ERC7984_WRAPPER_INTERFACE_ID_NEW,
+} from "../contracts";
 import type { GenericSigner } from "../types";
 import { isContractCallError } from "../utils";
 import type { QueryFactoryOptions } from "./factory-types";
@@ -54,7 +59,14 @@ export function isWrapperQueryOptions(
     queryFn: async (context) => {
       const [, { tokenAddress: keyTokenAddress }] = context.queryKey;
       try {
-        return await signer.readContract(isConfidentialWrapperContract(keyTokenAddress));
+        // During the transition period, check both the legacy (0xd04584ba) and new
+        // (0x1f1c62b2) wrapper interface IDs in parallel. Either returning true is
+        // sufficient to identify a confidential wrapper.
+        const [legacyMatch, newMatch] = await Promise.all([
+          signer.readContract(isConfidentialWrapperContract(keyTokenAddress)),
+          signer.readContract(supportsInterfaceContract(keyTokenAddress, ERC7984_WRAPPER_INTERFACE_ID_NEW)),
+        ]);
+        return legacyMatch || newMatch;
       } catch (err) {
         // Only suppress contract execution reverts (non-ERC-165 contracts).
         // Re-throw network/transport errors so TanStack Query's retry logic applies.

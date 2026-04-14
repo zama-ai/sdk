@@ -15,6 +15,7 @@ import {
   supportsInterfaceContract,
   ERC7984_INTERFACE_ID,
   ERC7984_WRAPPER_INTERFACE_ID,
+  ERC7984_WRAPPER_INTERFACE_ID_NEW,
   isConfidentialTokenContract,
   isConfidentialWrapperContract,
 } from "../erc165";
@@ -83,6 +84,7 @@ describe("ERC-165 contract builders", () => {
   it("exports interface IDs", () => {
     expect(ERC7984_INTERFACE_ID).toBe("0x4958f2a4");
     expect(ERC7984_WRAPPER_INTERFACE_ID).toBe("0xd04584ba");
+    expect(ERC7984_WRAPPER_INTERFACE_ID_NEW).toBe("0x1f1c62b2");
   });
 
   it("isConfidentialTokenContract uses ERC7984_INTERFACE_ID", ({ tokenAddress }) => {

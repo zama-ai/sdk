@@ -124,7 +124,7 @@ export { ZamaSDKEvents } from "@zama-fhe/sdk";
 export { HardhatConfig, MainnetConfig, SepoliaConfig } from "@zama-fhe/sdk";
 
 // Re-export constants
-export { ERC7984_INTERFACE_ID, ERC7984_WRAPPER_INTERFACE_ID } from "@zama-fhe/sdk";
+export { ERC7984_INTERFACE_ID, ERC7984_WRAPPER_INTERFACE_ID, ERC7984_WRAPPER_INTERFACE_ID_NEW } from "@zama-fhe/sdk";
 
 // Re-export all contract call builders
 export {
