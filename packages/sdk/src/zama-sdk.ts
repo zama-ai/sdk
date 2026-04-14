@@ -299,7 +299,7 @@ export class ZamaSDK {
    * const b = await sdk.userDecrypt([{ handle: h2, contractAddress: cDAI }]);
    * ```
    */
-  async allow(contractAddresses: Address[]): Promise<void> {
+  async allow(contractAddresses: [Address, ...Address[]]): Promise<void> {
     await this.credentials.allow(...contractAddresses);
   }
 
@@ -339,7 +339,10 @@ export class ZamaSDK {
         if (h.handle === ZERO_HANDLE) {
           result[h.handle] = 0n;
         } else {
-          nonZero.push({ handle: h.handle, contractAddress: getAddress(h.contractAddress) });
+          nonZero.push({
+            handle: h.handle,
+            contractAddress: getAddress(h.contractAddress),
+          });
         }
       }
 
@@ -375,7 +378,7 @@ export class ZamaSDK {
       }
 
       // Derive contract addresses from ALL handles for stable credential cache key
-      const allContractAddresses = [...new Set(handles.map((h) => getAddress(h.contractAddress)))];
+      const allContractAddresses = new Set(handles.map((h) => getAddress(h.contractAddress)));
       const creds = await this.credentials.allow(...allContractAddresses);
 
       // Group uncached by contract
