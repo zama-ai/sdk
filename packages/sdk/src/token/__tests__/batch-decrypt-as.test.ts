@@ -30,8 +30,8 @@ function mockCredsResult(contractAddresses: Address[]) {
 function stubDelegatedCredentials(token: ReadonlyToken, contractAddresses: Address[]) {
   const creds = mockCredsResult(contractAddresses);
   const credSet = {
-    credentialFor: () => creds,
-    tryCredentialFor: () => creds,
+    batchFor: () => creds,
+    tryBatchFor: () => creds,
     batches: [creds],
   };
   const allowMock = vi.fn().mockResolvedValue(credSet);

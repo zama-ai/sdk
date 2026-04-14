@@ -100,7 +100,7 @@ describe("credential batching", () => {
       expect(relayer.generateKeypair).toHaveBeenCalledOnce();
       expect(credSet.batches).toHaveLength(1);
       for (const addr of addrs) {
-        const creds = credSet.credentialFor(addr);
+        const creds = credSet.batchFor(addr);
         expect(creds.contractAddresses).toContain(getAddress(addr));
       }
     });
@@ -118,7 +118,7 @@ describe("credential batching", () => {
       expect(credSet.batches[1]!.contractAddresses).toHaveLength(1);
 
       for (const addr of addrs) {
-        expect(() => credSet.credentialFor(addr)).not.toThrow();
+        expect(() => credSet.batchFor(addr)).not.toThrow();
       }
     });
 
@@ -220,7 +220,7 @@ describe("credential batching", () => {
       expect(credSet.batches).toHaveLength(2);
 
       for (const addr of [...first10, eleventh]) {
-        expect(() => credSet.credentialFor(addr)).not.toThrow();
+        expect(() => credSet.batchFor(addr)).not.toThrow();
       }
     });
 
@@ -266,13 +266,13 @@ describe("credential batching", () => {
       expect(credSet.batches).toHaveLength(2);
 
       for (const addr of [...first9, tenth, eleventh]) {
-        expect(() => credSet.credentialFor(addr)).not.toThrow();
+        expect(() => credSet.batchFor(addr)).not.toThrow();
       }
 
       // The 10th address was packed into batch 0 (same credential object as the first 9)
-      expect(credSet.credentialFor(first9[0]!)).toBe(credSet.credentialFor(tenth));
+      expect(credSet.batchFor(first9[0]!)).toBe(credSet.batchFor(tenth));
       // The 11th address is in batch 1 (different credential object)
-      expect(credSet.credentialFor(first9[0]!)).not.toBe(credSet.credentialFor(eleventh));
+      expect(credSet.batchFor(first9[0]!)).not.toBe(credSet.batchFor(eleventh));
     });
   });
 
@@ -305,7 +305,7 @@ describe("credential batching", () => {
       // Only 1 new signature on retry (batch 0 was cached)
       expect(signer.signTypedData).toHaveBeenCalledTimes(3); // 1 ok + 1 rejected + 1 retry
       for (const addr of addrs) {
-        expect(() => credSet.credentialFor(addr)).not.toThrow();
+        expect(() => credSet.batchFor(addr)).not.toThrow();
       }
     });
   });
@@ -326,7 +326,7 @@ describe("credential batching", () => {
       expect(credSet.batches[1]!.contractAddresses).toHaveLength(5);
 
       for (const addr of addrs) {
-        const creds = credSet.credentialFor(addr);
+        const creds = credSet.batchFor(addr);
         expect(creds.delegatorAddress).toBe(DELEGATOR);
       }
     });
@@ -383,23 +383,23 @@ describe("credential batching", () => {
   // ── CredentialSet semantics ──────────────────────────────────────────────
 
   describe("CredentialSet semantics", () => {
-    test("credentialFor on an address not passed to allow() throws", async ({ relayer }) => {
+    test("batchFor on an address not passed to allow() throws", async ({ relayer }) => {
       const { manager } = createManagerWithSigner(relayer);
       const addrs = makeAddresses(3);
       const unknown = makeAddresses(4)[3]!;
 
       const credSet = await manager.allow(...addrs);
 
-      expect(() => credSet.credentialFor(unknown)).toThrow(
+      expect(() => credSet.batchFor(unknown)).toThrow(
         expect.objectContaining({
           code: ZamaErrorCode.CredentialNotFound,
           message: `[zama-sdk] No credential found for address ${unknown}`,
         }),
       );
-      expect(() => credSet.credentialFor(unknown)).toThrow(ZamaError);
+      expect(() => credSet.batchFor(unknown)).toThrow(ZamaError);
     });
 
-    test("tryCredentialFor returns null for an address not passed to allow()", async ({
+    test("tryBatchFor returns null for an address not passed to allow()", async ({
       relayer,
     }) => {
       const { manager } = createManagerWithSigner(relayer);
@@ -408,7 +408,7 @@ describe("credential batching", () => {
 
       const credSet = await manager.allow(...addrs);
 
-      expect(credSet.tryCredentialFor(unknown)).toBeNull();
+      expect(credSet.tryBatchFor(unknown)).toBeNull();
     });
 
     test("duplicate addresses in allow() are deduplicated — only one batch created", async ({
@@ -423,23 +423,23 @@ describe("credential batching", () => {
       expect(signer.signTypedData).toHaveBeenCalledOnce();
       expect(credSet.batches).toHaveLength(1);
       expect(credSet.batches[0]!.contractAddresses).toHaveLength(1);
-      expect(() => credSet.credentialFor(addr)).not.toThrow();
+      expect(() => credSet.batchFor(addr)).not.toThrow();
     });
 
-    test("credentialFor is case-insensitive (normalizes checksummed address)", async ({
+    test("batchFor is case-insensitive (normalizes checksummed address)", async ({
       relayer,
     }) => {
       const { manager } = createManagerWithSigner(relayer);
       const addr = makeAddresses(1)[0]!;
-      // Lowercase variant — credentialFor must normalize before lookup
+      // Lowercase variant — batchFor must normalize before lookup
       const addrLower = addr.toLowerCase() as Address;
 
       const credSet = await manager.allow(addr);
 
-      expect(() => credSet.credentialFor(addrLower)).not.toThrow();
+      expect(() => credSet.batchFor(addrLower)).not.toThrow();
     });
 
-    test("20 addresses: all accessible via credentialFor; addresses in different batches have different credential objects", async ({
+    test("20 addresses: all accessible via batchFor; addresses in different batches have different credential objects", async ({
       relayer,
     }) => {
       const { manager } = createManagerWithSigner(relayer);
@@ -451,13 +451,13 @@ describe("credential batching", () => {
 
       // Every address resolves without error
       for (const addr of addrs) {
-        expect(() => credSet.credentialFor(addr)).not.toThrow();
+        expect(() => credSet.batchFor(addr)).not.toThrow();
       }
 
       // Addresses in different batches return different credential objects
       const batch0Addr = credSet.batches[0]!.contractAddresses[0]!;
       const batch1Addr = credSet.batches[1]!.contractAddresses[0]!;
-      expect(credSet.credentialFor(batch0Addr)).not.toBe(credSet.credentialFor(batch1Addr));
+      expect(credSet.batchFor(batch0Addr)).not.toBe(credSet.batchFor(batch1Addr));
     });
   });
 });

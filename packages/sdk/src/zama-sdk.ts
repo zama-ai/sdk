@@ -349,12 +349,12 @@ export class ZamaSDK {
 
     // Fail fast if any required contract is missing from the returned credential set.
     for (const contractAddress of byContract.keys()) {
-      credSet.credentialFor(contractAddress);
+      credSet.batchFor(contractAddress);
     }
 
     // Decrypt per contract group
     for (const [contractAddress, contractHandles] of byContract) {
-      const creds = credSet.credentialFor(contractAddress);
+      const creds = credSet.batchFor(contractAddress);
       const decrypted = await this.relayer.userDecrypt({
         handles: contractHandles,
         contractAddress,

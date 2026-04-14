@@ -7,7 +7,7 @@ import { ZamaError, ZamaErrorCode } from "../errors/base";
  *
  * When the SDK creates credentials for more than {@link MAX_CONTRACTS_PER_CREDENTIAL}
  * addresses, it transparently splits them into batches — one EIP-712 wallet
- * signature per batch. Callers use {@link credentialFor} to route each address
+ * signature per batch. Callers use {@link batchFor} to route each address
  * to the right batch without knowing about the split.
  *
  * @typeParam T - The concrete credential shape (`StoredCredentials` for regular,
@@ -18,13 +18,13 @@ export interface CredentialSet<T extends StoredCredentials = StoredCredentials> 
    * Return the credential batch that covers `address`.
    * @throws If `address` was not passed to `allow()`.
    */
-  credentialFor(address: Address): T;
+  batchFor(address: Address): T;
 
   /**
    * Return the credential batch that covers `address`, or `null` if the address
    * was not passed to `allow()`. Use this in error-tolerant paths.
    */
-  tryCredentialFor(address: Address): T | null;
+  tryBatchFor(address: Address): T | null;
 
   /** All credential batches in this set, in creation order. */
   readonly batches: ReadonlyArray<T>;
@@ -50,7 +50,7 @@ export class CredentialSetImpl<T extends StoredCredentials> implements Credentia
     this.batches = Object.freeze(allBatches);
   }
 
-  credentialFor(address: Address): T {
+  batchFor(address: Address): T {
     const entry = this.#index.get(getAddress(address));
     if (entry === undefined) {
       throw new ZamaError(
@@ -61,7 +61,7 @@ export class CredentialSetImpl<T extends StoredCredentials> implements Credentia
     return entry;
   }
 
-  tryCredentialFor(address: Address): T | null {
+  tryBatchFor(address: Address): T | null {
     return this.#index.get(getAddress(address)) ?? null;
   }
 }

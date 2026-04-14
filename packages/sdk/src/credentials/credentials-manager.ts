@@ -90,7 +90,7 @@ export class CredentialsManager extends BaseCredentialsManager<
    * Addresses are split into batches of ≤ 10 internally to satisfy the fhevm
    * contract limit. Each batch triggers its own EIP-712 wallet prompt (shown
    * sequentially). The returned {@link CredentialSet} routes each address to
-   * its batch transparently — callers only need `credSet.credentialFor(address)`.
+   * its batch transparently — callers only need `credSet.batchFor(address)`.
    *
    * Already-signed batches are retained in storage on failure, so a retry only
    * needs to sign the rejected batch.

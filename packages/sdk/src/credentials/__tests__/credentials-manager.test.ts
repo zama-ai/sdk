@@ -24,7 +24,7 @@ describe("CredentialsManager", () => {
     setupMocks(relayer, signer);
 
     const credSet = await credentialManager.allow(TOKEN_A);
-    const creds = credSet.credentialFor(TOKEN_A);
+    const creds = credSet.batchFor(TOKEN_A);
 
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
     expect(relayer.createEIP712).toHaveBeenCalledOnce();
@@ -56,7 +56,7 @@ describe("CredentialsManager", () => {
 
     await credentialManager.allow(TOKEN_A);
     const credSet = await credentialManager.allow(TOKEN_A, TOKEN_B);
-    const creds = credSet.credentialFor(TOKEN_A);
+    const creds = credSet.batchFor(TOKEN_A);
 
     // Keypair is reused — only one generation
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
@@ -170,7 +170,7 @@ describe("CredentialsManager", () => {
       keypairTTL: 86400,
     });
     const credSet2 = await manager2.allow(TOKEN_A);
-    const creds2 = credSet2.credentialFor(TOKEN_A);
+    const creds2 = credSet2.batchFor(TOKEN_A);
 
     // Should have re-signed (1 original + 1 re-sign)
     expect(signer.signTypedData).toHaveBeenCalledTimes(2);
@@ -210,7 +210,7 @@ describe("CredentialsManager", () => {
     const credSet = await manager2.allow(TOKEN_A);
 
     expect(relayer.generateKeypair).toHaveBeenCalledTimes(2);
-    expect(credSet.credentialFor(TOKEN_A).publicKey).toBe("0xpub123");
+    expect(credSet.batchFor(TOKEN_A).publicKey).toBe("0xpub123");
   }, 30000);
 
   it("clears credentials", async ({ relayer, signer, storage, credentialManager }) => {
@@ -294,7 +294,7 @@ describe("CredentialsManager", () => {
 
     // Should regenerate fresh credentials
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
-    expect(credSet.credentialFor(TOKEN_A).publicKey).toBe("0xpub123");
+    expect(credSet.batchFor(TOKEN_A).publicKey).toBe("0xpub123");
 
     // Corrupted data should have been cleaned up
     const stored = await storage.get(storeKey);
@@ -382,7 +382,7 @@ describe("CredentialsManager", () => {
 
     // Should still regenerate and return valid credentials
     const credSet = await credentialManager.allow(TOKEN_A);
-    expect(credSet.credentialFor(TOKEN_A).publicKey).toBe("0xpub123");
+    expect(credSet.batchFor(TOKEN_A).publicKey).toBe("0xpub123");
     expect(storage.delete).toHaveBeenCalledWith(storeKey);
   });
 
@@ -762,8 +762,8 @@ describe("contract address extension", () => {
 
     const firstSet = await credentialManager.allow(TOKEN_A);
     const extendedSet = await credentialManager.allow(TOKEN_A, TOKEN_B);
-    const first = firstSet.credentialFor(TOKEN_A);
-    const extended = extendedSet.credentialFor(TOKEN_A);
+    const first = firstSet.batchFor(TOKEN_A);
+    const extended = extendedSet.batchFor(TOKEN_A);
 
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
     expect(signer.signTypedData).toHaveBeenCalledTimes(2);
@@ -786,7 +786,7 @@ describe("contract address extension", () => {
     await credentialManager.allow(TOKEN_A);
     await credentialManager.revoke();
     const extendedSet = await credentialManager.allow(TOKEN_A, TOKEN_B);
-    const extended = extendedSet.credentialFor(TOKEN_A);
+    const extended = extendedSet.batchFor(TOKEN_A);
 
     // Keypair reused — only one generation
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
@@ -823,7 +823,7 @@ describe("contract address extension", () => {
       keypairTTL: 86400,
     });
     const extendedSet = await manager2.allow(TOKEN_A, TOKEN_B);
-    const extended = extendedSet.credentialFor(TOKEN_A);
+    const extended = extendedSet.batchFor(TOKEN_A);
 
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
     // Original sign + old-address sign for decrypt + merged-address sign for extend
@@ -889,7 +889,7 @@ describe("contract address extension", () => {
     await credentialManager.allow(TOKEN_A);
     await credentialManager.allow(TOKEN_A, TOKEN_B);
     const finalSet = await credentialManager.allow(TOKEN_A, TOKEN_B, TOKEN_C);
-    const final = finalSet.credentialFor(TOKEN_A);
+    const final = finalSet.batchFor(TOKEN_A);
 
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
     // 3 signatures: initial + extend to B + extend to C
@@ -989,13 +989,13 @@ describe("contract address extension", () => {
     ]);
 
     // The last result should cover all three contracts (no address dropped)
-    const finalContracts = setC.credentialFor(TOKEN_A).contractAddresses.map((a) => getAddress(a));
+    const finalContracts = setC.batchFor(TOKEN_A).contractAddresses.map((a) => getAddress(a));
     expect(finalContracts).toContain(getAddress(TOKEN_A));
     expect(finalContracts).toContain(getAddress(TOKEN_B));
     expect(finalContracts).toContain(getAddress(TOKEN_C));
 
     // First concurrent result covers at least A and B
-    const firstContracts = setB.credentialFor(TOKEN_A).contractAddresses.map((a) => getAddress(a));
+    const firstContracts = setB.batchFor(TOKEN_A).contractAddresses.map((a) => getAddress(a));
     expect(firstContracts).toContain(getAddress(TOKEN_A));
     expect(firstContracts).toContain(getAddress(TOKEN_B));
   });

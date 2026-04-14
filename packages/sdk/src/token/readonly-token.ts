@@ -274,7 +274,7 @@ export class ReadonlyToken {
       maxConcurrency,
       obtainCreds: (uncachedAddresses) => firstToken.credentials.allow(...uncachedAddresses),
       decrypt: (credSet, handle, contractAddress) => {
-        const creds = credSet.credentialFor(contractAddress);
+        const creds = credSet.batchFor(contractAddress);
         return sdk.userDecrypt({
           handles: [handle],
           contractAddress,
@@ -340,7 +340,7 @@ export class ReadonlyToken {
       obtainCreds: (uncachedAddresses) =>
         firstToken.delegatedCredentials.allow(delegatorAddress, ...uncachedAddresses),
       decrypt: (credSet, handle, contractAddress) => {
-        const creds = credSet.credentialFor(contractAddress);
+        const creds = credSet.batchFor(contractAddress);
         return firstToken.relayer.delegatedUserDecrypt({
           handles: [handle],
           contractAddress,
@@ -762,7 +762,7 @@ export class ReadonlyToken {
 
       const creds = (
         await this.delegatedCredentials.allow(normalizedDelegator, this.address)
-      ).credentialFor(this.address);
+      ).batchFor(this.address);
 
       const result = await this.relayer.delegatedUserDecrypt({
         handles: [handle],
@@ -829,7 +829,7 @@ export class ReadonlyToken {
       return cached;
     }
 
-    const creds = (await this.credentials.allow(this.address)).credentialFor(this.address);
+    const creds = (await this.credentials.allow(this.address)).batchFor(this.address);
 
     const t0 = Date.now();
     try {
@@ -892,7 +892,7 @@ export class ReadonlyToken {
       return results;
     }
 
-    const creds = (await this.credentials.allow(this.address)).credentialFor(this.address);
+    const creds = (await this.credentials.allow(this.address)).batchFor(this.address);
 
     const t0 = Date.now();
     try {

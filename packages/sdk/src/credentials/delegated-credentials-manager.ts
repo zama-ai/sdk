@@ -77,7 +77,7 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
    *
    * Addresses are split into batches of ≤ 10 internally (same fhevm limit as
    * regular credentials). Each batch triggers its own EIP-712 wallet prompt,
-   * shown sequentially. Use {@link CredentialSet.credentialFor} to route each
+   * shown sequentially. Use {@link CredentialSet.batchFor} to route each
    * address to its batch transparently.
    *
    * Already-signed batches are retained in storage on failure, so a retry only

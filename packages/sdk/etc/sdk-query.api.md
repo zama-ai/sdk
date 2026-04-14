@@ -339,8 +339,8 @@ export interface CredentialsCreatingEvent extends BaseEvent {
 // @public
 export interface CredentialSet<T extends StoredCredentials = StoredCredentials> {
     readonly batches: ReadonlyArray<T>;
-    credentialFor(address: Address): T;
-    tryCredentialFor(address: Address): T | null;
+    batchFor(address: Address): T;
+    tryBatchFor(address: Address): T | null;
 }
 
 // @public (undocumented)

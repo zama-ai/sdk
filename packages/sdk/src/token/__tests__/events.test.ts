@@ -1179,6 +1179,6 @@ describe("CredentialsManager event emissions", () => {
     });
 
     const credSet = await manager.allow(TOKEN_A);
-    expect(credSet.credentialFor(TOKEN_A).publicKey).toBe("0xpub");
+    expect(credSet.batchFor(TOKEN_A).publicKey).toBe("0xpub");
   });
 });
