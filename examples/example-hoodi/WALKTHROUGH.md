@@ -376,8 +376,10 @@ const cTokenDecimals = pair?.confidential.decimals ?? 0;
 const erc20Decimals = pair?.underlying.decimals ?? 0;
 
 // Explicit decrypt pattern: check credentials before enabling the balance display.
-// useIsAllowed returns true if a valid session is cached; false/undefined otherwise.
-const { data: isAllowed } = useIsAllowed();
+// useIsAllowed returns true only when cached credentials cover the selected token.
+const { data: isAllowed } = useIsAllowed({
+  contractAddresses: [cTokenAddress ?? "0x0000000000000000000000000000000000000000"],
+});
 
 // useAllow triggers the EIP-712 wallet signature that authorizes decryption.
 // Pass all confidential token addresses at once — a single signature covers all tokens.
