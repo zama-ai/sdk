@@ -20,11 +20,7 @@ import {
   DecryptionFailedError,
   DelegationExpiredError,
   DelegationNotFoundError,
-  DelegationNotPropagatedError,
-  NoCiphertextError,
-  RelayerRequestFailedError,
-  SigningFailedError,
-  SigningRejectedError,
+  wrapDecryptError,
 } from "../errors";
 import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
@@ -33,7 +29,7 @@ import type { ClearValueType, Handle } from "../relayer/relayer-sdk.types";
 import type { GenericSigner, GenericStorage } from "../types";
 import { toError } from "../utils";
 import { assertBigint } from "../utils/assertions";
-import { pLimit } from "./concurrency";
+import { pLimit } from "../utils/concurrency";
 
 /** 32-byte zero handle, used to detect uninitialized encrypted balances. */
 export const ZERO_HANDLE =
@@ -754,7 +750,7 @@ export class ReadonlyToken {
 
     const t0 = Date.now();
     try {
-      this.emit({ type: ZamaSDKEvents.DecryptStart });
+      this.emit({ type: ZamaSDKEvents.DecryptStart, handles: [handle] });
 
       const creds = await this.delegatedCredentials.allow(normalizedDelegator, this.address);
 
@@ -774,6 +770,8 @@ export class ReadonlyToken {
       this.emit({
         type: ZamaSDKEvents.DecryptEnd,
         durationMs: Date.now() - t0,
+        handles: [handle],
+        result,
       });
 
       const value = result[handle];
@@ -790,6 +788,7 @@ export class ReadonlyToken {
         type: ZamaSDKEvents.DecryptError,
         error: toError(error),
         durationMs: Date.now() - t0,
+        handles: [handle],
       });
       throw wrapDecryptError(error, "Failed to decrypt delegated balance", true);
     }
@@ -827,7 +826,7 @@ export class ReadonlyToken {
 
     const t0 = Date.now();
     try {
-      this.emit({ type: ZamaSDKEvents.DecryptStart });
+      this.emit({ type: ZamaSDKEvents.DecryptStart, handles: [handle] });
       const result = await this.relayer.userDecrypt({
         handles: [handle],
         contractAddress: this.address,
@@ -842,6 +841,8 @@ export class ReadonlyToken {
       this.emit({
         type: ZamaSDKEvents.DecryptEnd,
         durationMs: Date.now() - t0,
+        handles: [handle],
+        result,
       });
 
       const value = result[handle];
@@ -856,6 +857,7 @@ export class ReadonlyToken {
         type: ZamaSDKEvents.DecryptError,
         error: toError(error),
         durationMs: Date.now() - t0,
+        handles: [handle],
       });
       throw wrapDecryptError(error, "Failed to decrypt balance");
     }
@@ -890,7 +892,7 @@ export class ReadonlyToken {
 
     const t0 = Date.now();
     try {
-      this.emit({ type: ZamaSDKEvents.DecryptStart });
+      this.emit({ type: ZamaSDKEvents.DecryptStart, handles: nonZeroHandles });
       const decrypted = await this.relayer.userDecrypt({
         handles: nonZeroHandles,
         contractAddress: this.address,
@@ -905,6 +907,8 @@ export class ReadonlyToken {
       this.emit({
         type: ZamaSDKEvents.DecryptEnd,
         durationMs: Date.now() - t0,
+        handles: nonZeroHandles,
+        result: decrypted,
       });
 
       for (const handle of nonZeroHandles) {
@@ -919,6 +923,7 @@ export class ReadonlyToken {
         type: ZamaSDKEvents.DecryptError,
         error: toError(error),
         durationMs: Date.now() - t0,
+        handles: nonZeroHandles,
       });
       throw wrapDecryptError(error, "Failed to decrypt handles");
     }
@@ -938,64 +943,4 @@ export class ReadonlyToken {
     }
     return relayer;
   }
-}
-
-/**
- * Inspect a caught error for an HTTP status code and return the appropriate
- * typed SDK error (NoCiphertextError for 400, RelayerRequestFailedError for
- * other HTTP errors, or the generic DecryptionFailedError as fallback).
- *
- * When `isDelegated` is true and the relayer returns a 500, the error is
- * wrapped as {@link DelegationNotPropagatedError} because the most likely
- * cause is that the gateway hasn't synced the delegation from L1 yet.
- */
-function wrapDecryptError(error: unknown, fallbackMessage: string, isDelegated = false): Error {
-  if (
-    error instanceof DecryptionFailedError ||
-    error instanceof NoCiphertextError ||
-    error instanceof RelayerRequestFailedError ||
-    error instanceof DelegationNotPropagatedError ||
-    error instanceof SigningRejectedError ||
-    error instanceof SigningFailedError
-  ) {
-    return error;
-  }
-
-  const statusCode =
-    error !== null &&
-    error !== undefined &&
-    typeof error === "object" &&
-    "statusCode" in error &&
-    typeof (error as Record<string, unknown>).statusCode === "number"
-      ? ((error as Record<string, unknown>).statusCode as number)
-      : undefined;
-
-  if (statusCode === 400) {
-    return new NoCiphertextError(
-      error instanceof Error ? error.message : "No ciphertext for this account",
-      { cause: error },
-    );
-  }
-
-  if (isDelegated && statusCode === 500) {
-    return new DelegationNotPropagatedError(
-      "Delegated decryption failed with a server error. " +
-        "This is most commonly caused by the delegation not having propagated to the gateway yet — " +
-        "after granting delegation, allow 1–2 minutes for cross-chain synchronization before retrying. " +
-        "If the error persists, the gateway or relayer may be experiencing an unrelated issue.",
-      { cause: error },
-    );
-  }
-
-  if (statusCode !== undefined) {
-    return new RelayerRequestFailedError(
-      error instanceof Error ? error.message : fallbackMessage,
-      statusCode,
-      { cause: error },
-    );
-  }
-
-  return new DecryptionFailedError(fallbackMessage, {
-    cause: error,
-  });
 }
