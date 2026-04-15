@@ -2,7 +2,8 @@
 
 ## confidential-wrapper
 
-Source: `zama-ai/protocol-apps` @ `da4afe387420` (March 26, 2026)
+Source: `zama-ai/protocol-apps` @ `da4afe387420` (March 26, 2026), imported through
+the Soldeer dependency alias `protocol-apps-wrapper`.
 
 > **Deployment status:** this commit is the version **currently deployed** on testnet and mainnet
 > as of the time this PR was written (April 2026). It is NOT the upcoming April 21/28 upgrade.
@@ -29,7 +30,8 @@ Key changes at this commit vs prior local (Zaiffer fork):
 
 ## confidential-token-wrappers-registry
 
-Source: `zama-ai/protocol-apps` @ `f51845b08cc2` (December 2025)
+Source: `zama-ai/protocol-apps` @ `f51845b08cc2` (December 2025), imported through
+the Soldeer dependency alias `protocol-apps-registry`.
 
 Includes:
 

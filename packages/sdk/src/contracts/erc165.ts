@@ -5,7 +5,7 @@ import { erc165Abi } from "../abi/erc165.abi";
 export const ERC7984_INTERFACE_ID = "0x4958f2a4" as const;
 
 /** ERC-165 interface ID for IERC7984ERC20Wrapper (confidential wrapper). */
-export const ERC7984_WRAPPER_INTERFACE_ID = "0x1f1c62b2" as const;
+export const ERC7984_WRAPPER_INTERFACE_ID = "0xf1f4c25a" as const;
 
 /**
  * Returns the contract config for an ERC-165 `supportsInterface` check.

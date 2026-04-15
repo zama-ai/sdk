@@ -1,11 +1,11 @@
 [[dependencies]]
-name = "@openzeppelin-confidential-contracts"
-version = "0.4.0"
-git = "https://github.com/OpenZeppelin/openzeppelin-confidential-contracts"
-rev = "v0.4.0"
+name = "protocol-apps-wrapper"
+version = "da4afe387420"
+git = "https://github.com/zama-ai/protocol-apps"
+rev = "da4afe387420"
 
 [[dependencies]]
-name = "protocol-apps"
-version = "49b417a4"
+name = "protocol-apps-registry"
+version = "f51845b08cc2"
 git = "https://github.com/zama-ai/protocol-apps"
-rev = "49b417a4"
+rev = "f51845b08cc2"
