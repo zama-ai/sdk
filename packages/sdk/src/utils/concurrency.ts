@@ -1,3 +1,5 @@
+import { assertNonNullable } from "./assertions";
+
 /**
  * Execute an array of async thunks with bounded concurrency.
  * Defaults to `Infinity` (equivalent to `Promise.all`).
@@ -19,9 +21,11 @@ export async function pLimit<T>(
   async function worker() {
     while (index < fns.length) {
       const i = index++;
-      if (fns[i]) {
-        results[i] = await fns[i]();
-      }
+      // The bounds check above guarantees fns[i] exists; the non-null assertion
+      // makes a missing thunk fail loudly instead of silently leaving a hole
+      // in `results`.
+      assertNonNullable(fns[i], `pLimit: fns[${i}]`);
+      results[i] = await fns[i]();
     }
   }
 

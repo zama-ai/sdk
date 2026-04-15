@@ -858,10 +858,8 @@ export class ReadonlyToken {
         delegateAddress: Address;
     }): Promise<boolean>;
     isWrapper(): Promise<boolean>;
-    // Warning: (ae-forgotten-export) The symbol "ZERO_HANDLE_2" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
-    isZeroHandle(handle: string): handle is typeof ZERO_HANDLE_2 | `0x`;
+    isZeroHandle(handle: string): handle is typeof ZERO_HANDLE | `0x`;
     name(): Promise<string>;
     // (undocumented)
     protected readConfidentialBalanceOf(owner: Address): Promise<Handle>;
@@ -1617,7 +1615,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/activity-CrJLS0Ml.d.ts:21382:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/esm/activity-DLRrUCiL.d.ts:21420:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 
