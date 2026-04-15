@@ -486,7 +486,7 @@ async function handleCreateEIP712(request: CreateEIP712Request): Promise<void> {
   try {
     assertSdkInstance(sdkInstance);
 
-    const extraData = (await sdkInstance.getExtraData?.()) ?? "0x00";
+    const extraData = await sdkInstance.getExtraData();
 
     const eip712 = sdkInstance.createEIP712(
       unprefixHex(payload.publicKey),
