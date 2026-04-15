@@ -103,11 +103,7 @@ export function activityFeedQueryOptions(
       const decrypted = await token.sdk.userDecrypt(
         handles.map((handle) => ({ handle, contractAddress: token.address })),
       );
-      const decryptedMap = new Map(Object.entries(decrypted)) as Map<
-        (typeof handles)[number],
-        (typeof decrypted)[keyof typeof decrypted]
-      >;
-      return sortByBlockNumber(applyDecryptedValues(parsed, decryptedMap));
+      return sortByBlockNumber(applyDecryptedValues(parsed, decrypted));
     },
     staleTime: Infinity,
     enabled: Boolean(userAddress && logs) && queryEnabled,
