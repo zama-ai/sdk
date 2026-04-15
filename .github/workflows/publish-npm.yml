@@ -43,10 +43,17 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      - name: Ensure npm 11
+      - name: Ensure npm >=11
         run: |
-          pnpm add -g npm@^11
-          npm --version
+          npm_v="$(npm --version)"
+          if [[ "${npm_v%%.*}" -lt 11 ]]; then
+            echo "Bundled npm ${npm_v} is too old; installing npm 11"
+            pnpm add -g npm@^11
+            echo "$(pnpm bin -g)" >> "$GITHUB_PATH"
+            export PATH="$(pnpm bin -g):$PATH"
+          fi
+          echo "npm $(npm --version)"
+          [[ "$(npm --version | cut -d. -f1)" -ge 11 ]]
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
