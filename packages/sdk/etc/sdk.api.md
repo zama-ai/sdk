@@ -5993,6 +5993,8 @@ export class DecryptCache {
 export interface DecryptEndEvent extends BaseEvent {
     // (undocumented)
     durationMs: number;
+    handles: Handle[];
+    result: Record<Handle, ClearValueType>;
     // (undocumented)
     type: typeof ZamaSDKEvents.DecryptEnd;
 }
@@ -6002,6 +6004,7 @@ export interface DecryptErrorEvent extends BaseEvent {
     // (undocumented)
     durationMs: number;
     error: Error;
+    handles: Handle[];
     // (undocumented)
     type: typeof ZamaSDKEvents.DecryptError;
 }
@@ -6011,15 +6014,9 @@ export class DecryptionFailedError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
 
-// @public
-export interface DecryptOptions {
-    onCredentialsReady?: () => void;
-    // Warning: (ae-forgotten-export) The symbol "DecryptResult" needs to be exported by the entry point index.d.ts
-    onDecrypted?: (values: DecryptResult) => void;
-}
-
 // @public (undocumented)
 export interface DecryptStartEvent extends BaseEvent {
+    handles: Handle[];
     // (undocumented)
     type: typeof ZamaSDKEvents.DecryptStart;
 }
@@ -20271,6 +20268,7 @@ export type ZamaErrorCode = (typeof ZamaErrorCode)[keyof typeof ZamaErrorCode];
 export class ZamaSDK {
     [Symbol.dispose](): void;
     constructor(config: ZamaSDKConfig);
+    allow(contractAddresses: Address[]): Promise<void>;
     readonly cache: DecryptCache;
     createReadonlyToken(address: Address): ReadonlyToken;
     createToken(address: Address, wrapper?: Address): Token;
@@ -20292,7 +20290,7 @@ export class ZamaSDK {
     readonly storage: GenericStorage;
     terminate(): void;
     // Warning: (ae-forgotten-export) The symbol "DecryptHandle" needs to be exported by the entry point index.d.ts
-    userDecrypt(handles: DecryptHandle[], options?: DecryptOptions): Promise<Record<Handle, ClearValueType>>;
+    userDecrypt(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>>;
 }
 
 // @public
