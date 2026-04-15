@@ -1,6 +1,5 @@
 "use client";
 
-import { useQuery } from "../utils/query";
 import type { UseQueryOptions } from "@tanstack/react-query";
 import type { Address, Handle } from "@zama-fhe/sdk";
 import {
@@ -9,7 +8,7 @@ import {
   signerAddressQueryOptions,
 } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
-import { useReadonlyToken } from "../token/use-readonly-token";
+import { useQuery } from "../utils/query";
 
 /** Configuration for {@link useConfidentialBalance}. */
 export interface UseConfidentialBalanceConfig {
@@ -51,7 +50,6 @@ export function useConfidentialBalance(
   const { tokenAddress, handleRefetchInterval } = config;
   const { enabled = true } = options ?? {};
   const sdk = useZamaSDK();
-  const token = useReadonlyToken(tokenAddress);
 
   const addressQuery = useQuery<Address>({
     ...signerAddressQueryOptions(sdk.signer),
@@ -71,7 +69,8 @@ export function useConfidentialBalance(
 
   // Phase 2: Decrypt only when handle changes (expensive relayer roundtrip)
   const handle = handleQuery.data;
-  const baseBalanceQueryOptions = confidentialBalanceQueryOptions(token, {
+  const baseBalanceQueryOptions = confidentialBalanceQueryOptions(sdk, {
+    tokenAddress,
     handle,
     owner,
   });

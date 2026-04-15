@@ -1,44 +1,45 @@
-import type { ReadonlyToken } from "../token/readonly-token";
 import type { Handle } from "../relayer/relayer-sdk.types";
 
+import type { Address } from "viem";
 import { DecryptionFailedError } from "../errors";
 import { assertBigint, assertNonNullable } from "../utils/assertions";
+import type { ZamaSDK } from "../zama-sdk";
 import type { QueryFactoryOptions } from "./factory-types";
-import { filterQueryOptions } from "./utils";
 import { zamaQueryKeys } from "./query-keys";
-import type { Address } from "viem";
+import { filterQueryOptions } from "./utils";
 
 export type EncryptedBalanceHandle = Handle;
 
 export interface ConfidentialBalanceQueryConfig {
+  tokenAddress: Address;
   owner?: Address;
   handle?: EncryptedBalanceHandle;
   query?: Record<string, unknown>;
 }
 
 export function confidentialBalanceQueryOptions(
-  token: ReadonlyToken,
-  config?: ConfidentialBalanceQueryConfig,
+  sdk: ZamaSDK,
+  config: ConfidentialBalanceQueryConfig,
 ): QueryFactoryOptions<
   bigint,
   Error,
   bigint,
   ReturnType<typeof zamaQueryKeys.confidentialBalance.owner>
 > {
-  const ownerKey = config?.owner;
-  const handleKey = config?.handle;
-  const queryEnabled = config?.query?.enabled !== false;
-  const queryKey = zamaQueryKeys.confidentialBalance.owner(token.address, ownerKey, handleKey);
+  const { tokenAddress, owner, handle, query = {} } = config;
+
+  const queryEnabled = query?.enabled !== false;
+  const queryKey = zamaQueryKeys.confidentialBalance.owner(tokenAddress, owner, handle);
 
   return {
-    ...filterQueryOptions(config?.query ?? {}),
+    ...filterQueryOptions(query),
     queryKey,
     queryFn: async (context) => {
       const [, { owner: keyOwner, handle: keyHandle }] = context.queryKey;
       assertNonNullable(keyOwner, "confidentialBalanceQueryOptions: owner");
       assertNonNullable(keyHandle, "confidentialBalanceQueryOptions: handle");
-      const decrypted = await token.sdk.userDecrypt([
-        { handle: keyHandle, contractAddress: token.address },
+      const decrypted = await sdk.userDecrypt([
+        { handle: keyHandle, contractAddress: tokenAddress },
       ]);
       const value = decrypted[keyHandle];
       if (value === undefined) {
@@ -47,7 +48,7 @@ export function confidentialBalanceQueryOptions(
       assertBigint(value, "confidentialBalanceQueryOptions: result[handle]");
       return value;
     },
-    enabled: Boolean(ownerKey && handleKey) && queryEnabled,
+    enabled: Boolean(owner && handle && queryEnabled),
     staleTime: Infinity,
   };
 }
