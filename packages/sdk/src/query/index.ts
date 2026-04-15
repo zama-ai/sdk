@@ -57,7 +57,6 @@ export {
 } from "./confidential-handles";
 export {
   confidentialBalancesQueryOptions,
-  type ConfidentialBalancesData,
   type ConfidentialBalancesQueryConfig,
 } from "./confidential-balances";
 export {

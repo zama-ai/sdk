@@ -251,7 +251,6 @@ export {
   confidentialBalanceQueryOptions,
   confidentialHandlesQueryOptions,
   confidentialBalancesQueryOptions,
-  type ConfidentialBalancesData,
   activityFeedQueryOptions,
   shieldMutationOptions,
   type ShieldParams,

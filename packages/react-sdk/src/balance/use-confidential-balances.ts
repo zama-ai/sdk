@@ -3,12 +3,11 @@
 import { useMemo } from "react";
 import { useQuery } from "../utils/query";
 import type { UseQueryOptions } from "@tanstack/react-query";
-import type { Address, Handle } from "@zama-fhe/sdk";
+import type { Address, BatchBalancesResult, Handle } from "@zama-fhe/sdk";
 import {
   confidentialBalancesQueryOptions,
   confidentialHandlesQueryOptions,
   signerAddressQueryOptions,
-  type ConfidentialBalancesData,
 } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 
@@ -18,15 +17,11 @@ export interface UseConfidentialBalancesConfig {
   tokenAddresses: Address[];
   /** Polling interval (ms) for the encrypted handles. Default: 10 000. */
   handleRefetchInterval?: number;
-  /** Maximum number of concurrent decrypt calls. Default: `Infinity` (no limit). */
-  maxConcurrency?: number;
 }
-
-export type { ConfidentialBalancesData };
 
 /** Query options for the decrypt phase of {@link useConfidentialBalances}. */
 export interface UseConfidentialBalancesOptions extends Omit<
-  UseQueryOptions<ConfidentialBalancesData>,
+  UseQueryOptions<BatchBalancesResult>,
   "queryKey" | "queryFn" | "enabled"
 > {
   /** Whether the query is enabled. Callback form is not supported in composite hooks. */
@@ -50,8 +45,8 @@ export interface UseConfidentialBalancesOptions extends Omit<
  * const { data } = useConfidentialBalances({
  *   tokenAddresses: ["0xTokenA", "0xTokenB"],
  * });
- * const balance = data?.balances.get("0xTokenA");
- * if (data?.isPartialError) {
+ * const balance = data?.results.get("0xTokenA");
+ * if (data && data.errors.size > 0) {
  *   // some tokens failed — check data.errors
  * }
  * ```
@@ -60,13 +55,11 @@ export function useConfidentialBalances(
   config: UseConfidentialBalancesConfig,
   options?: UseConfidentialBalancesOptions,
 ) {
-  const { tokenAddresses, handleRefetchInterval, maxConcurrency } = config;
+  const { tokenAddresses, handleRefetchInterval } = config;
   const { enabled = true } = options ?? {};
   const sdk = useZamaSDK();
 
-  const addressQuery = useQuery<Address>({
-    ...signerAddressQueryOptions(sdk.signer),
-  });
+  const addressQuery = useQuery<Address>(signerAddressQueryOptions(sdk.signer));
 
   const owner = addressQuery.data;
 
@@ -87,19 +80,15 @@ export function useConfidentialBalances(
 
   // Phase 2: Batch decrypt only when any handle changes
   const handles = handlesQuery.data;
-  const handlesReady = Array.isArray(handles) && handles.length === tokenAddresses.length;
   const baseBalancesQueryOptions = confidentialBalancesQueryOptions(tokens, {
     owner,
     handles,
-    maxConcurrency,
-    resultAddresses: tokenAddresses,
   });
-  const factoryEnabled = baseBalancesQueryOptions.enabled ?? true;
 
-  const balancesQuery = useQuery<ConfidentialBalancesData>({
+  const balancesQuery = useQuery<BatchBalancesResult>({
     ...baseBalancesQueryOptions,
     ...options,
-    enabled: factoryEnabled && handlesReady && enabled,
+    enabled: (baseBalancesQueryOptions.enabled ?? true) && enabled,
   });
 
   return { ...balancesQuery, handlesQuery };

@@ -258,11 +258,18 @@ describe("useConfidentialTransfer", () => {
   }) => {
     const handleB = `0x${"44".repeat(32)}`;
 
-    vi.mocked(signer.readContract).mockResolvedValueOnce(HANDLE).mockResolvedValueOnce(handleB);
-    vi.mocked(relayer.userDecrypt)
-      .mockResolvedValueOnce({ [HANDLE]: 1000n })
-      .mockResolvedValueOnce({ [handleB]: 500n });
-    vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
+    // Both Phase 1 (handleQuery) and Phase 2 (token.balanceOf) read the handle
+    // via signer.readContract; track the "current" handle and flip it on the
+    // transaction write so the post-transfer refetch sees handleB.
+    let currentHandle: string = HANDLE;
+    vi.mocked(signer.readContract).mockImplementation(async () => currentHandle);
+    vi.mocked(relayer.userDecrypt).mockImplementation(async ({ handles }) => ({
+      [handles[0]]: handles[0] === HANDLE ? 1000n : 500n,
+    }));
+    vi.mocked(signer.writeContract).mockImplementation(async () => {
+      currentHandle = handleB;
+      return "0xtxhash";
+    });
 
     const { Wrapper } = createWrapper({ signer, relayer });
     const { result } = renderHook(

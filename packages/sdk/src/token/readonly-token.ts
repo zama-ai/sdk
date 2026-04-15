@@ -575,9 +575,7 @@ export class ReadonlyToken {
   }
 
   protected async readConfidentialBalanceOf(owner: Address): Promise<Handle> {
-    return (await this.sdk.signer.readContract(
-      confidentialBalanceOfContract(this.address, owner),
-    )) as Handle;
+    return await this.sdk.signer.readContract(confidentialBalanceOfContract(this.address, owner));
   }
 
   isZeroHandle(handle: string): handle is typeof ZERO_HANDLE | `0x` {

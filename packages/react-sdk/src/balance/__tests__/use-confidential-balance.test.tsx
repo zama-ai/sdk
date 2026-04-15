@@ -123,58 +123,21 @@ describe("useConfidentialBalance", () => {
     `);
     });
 
-    test("error: disabled when getAddress fails", async ({ renderWithProviders, signer }) => {
+    test("error: handleQuery idle when getAddress fails (balance query still runs)", async ({
+      renderWithProviders,
+      signer,
+    }) => {
       vi.mocked(signer.getAddress).mockRejectedValue(new Error("no wallet"));
 
       const { result } = renderWithProviders(() => useConfidentialBalance({ tokenAddress: TOKEN }));
 
+      // handleQuery depends on owner — it stays idle because signer.getAddress
+      // rejects. The balance query no longer gates on owner/handle, so the SDK
+      // falls back to signer.getAddress internally and surfaces the error.
       await waitFor(() => expect(result.current.handleQuery.fetchStatus).toBe("idle"));
-      expect(result.current.isPending).toBe(true);
-      expect(result.current.fetchStatus).toBe("idle");
       expect(result.current.handleQuery.data).toBeUndefined();
+      await waitFor(() => expect(result.current.isError).toBe(true));
       expect(result.current.data).toBeUndefined();
-    });
-
-    test("behavior: disabled when signer address unavailable", ({
-      renderWithProviders,
-      signer,
-    }) => {
-      vi.mocked(signer.getAddress).mockReturnValue(new Promise(() => {}));
-
-      const { result } = renderWithProviders(() => useConfidentialBalance({ tokenAddress: TOKEN }));
-
-      expect(result.current.isPending).toBe(true);
-      expect(result.current.fetchStatus).toBe("idle");
-      expect(result.current.handleQuery.fetchStatus).toBe("idle");
-    });
-
-    test("behavior: disabled when handle not yet resolved", async ({
-      renderWithProviders,
-      signer,
-    }) => {
-      vi.mocked(signer.readContract).mockReturnValue(new Promise(() => {}));
-
-      const { result } = renderWithProviders(() => useConfidentialBalance({ tokenAddress: TOKEN }));
-
-      await waitFor(() => expect(result.current.handleQuery.fetchStatus).toBe("fetching"));
-      expect(result.current.isPending).toBe(true);
-      expect(result.current.fetchStatus).toBe("idle");
-    });
-
-    test("behavior: disabled when handle undefined despite enabled=true", async ({
-      renderWithProviders,
-      signer,
-      relayer,
-    }) => {
-      vi.mocked(signer.readContract).mockReturnValue(new Promise(() => {}));
-
-      const { result } = renderWithProviders(() =>
-        useConfidentialBalance({ tokenAddress: TOKEN }, { enabled: true }),
-      );
-
-      await waitFor(() => expect(result.current.handleQuery.fetchStatus).toBe("fetching"));
-      expect(result.current.fetchStatus).toBe("idle");
-      expect(relayer.userDecrypt).not.toHaveBeenCalled();
     });
 
     test("behavior: signer undefined -> defined", async ({
@@ -197,7 +160,6 @@ describe("useConfidentialBalance", () => {
       );
 
       expect(result.current.isPending).toBe(true);
-      expect(result.current.fetchStatus).toBe("idle");
 
       resolveAddress!(USER);
       rerender();
@@ -210,9 +172,11 @@ describe("useConfidentialBalance", () => {
       test("handle poll -> decrypt cascade", async ({ renderWithProviders, signer, relayer }) => {
         const handleA = `0x${"ab".repeat(32)}`;
         const handleB = `0x${"bc".repeat(32)}`;
-        vi.mocked(signer.readContract)
-          .mockResolvedValueOnce(handleA)
-          .mockResolvedValueOnce(handleB);
+        // Both Phase 1 (handleQuery) and Phase 2 (token.balanceOf) read the
+        // handle via signer.readContract, so we mock the "current" handle via
+        // a mutable variable and flip it after the Phase 1 refetch.
+        let currentHandle: string = handleA;
+        vi.mocked(signer.readContract).mockImplementation(async () => currentHandle);
         vi.mocked(relayer.userDecrypt).mockImplementation(async ({ handles }) => {
           const value = handles[0] === handleA ? 111n : 222n;
           return { [handles[0]]: value };
@@ -226,6 +190,7 @@ describe("useConfidentialBalance", () => {
         expect(result.current.handleQuery.data).toBe(handleA);
         expect(result.current.data).toBe(111n);
 
+        currentHandle = handleB;
         await act(async () => {
           await result.current.handleQuery.refetch();
         });
@@ -238,8 +203,7 @@ describe("useConfidentialBalance", () => {
           1,
           expect.objectContaining({ handles: [handleA] }),
         );
-        expect(relayer.userDecrypt).toHaveBeenNthCalledWith(
-          2,
+        expect(relayer.userDecrypt).toHaveBeenLastCalledWith(
           expect.objectContaining({ handles: [handleB] }),
         );
       });

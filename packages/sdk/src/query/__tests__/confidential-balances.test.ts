@@ -1,19 +1,21 @@
-import { describe, expect, test, mockQueryContext } from "../../test-fixtures";
-import type { vi } from "../../test-fixtures";
-import { DecryptionFailedError } from "../../errors";
-
-import { confidentialBalancesQueryOptions } from "../confidential-balances";
-import { zamaQueryKeys } from "../query-keys";
 import type { Address } from "viem";
+import { DecryptionFailedError } from "../../errors";
+import { describe, expect, test, vi, mockQueryContext } from "../../test-fixtures";
+import { ReadonlyToken } from "../../token/readonly-token";
+import { confidentialBalancesQueryOptions } from "../confidential-balances";
 
 describe("confidentialBalancesQueryOptions", () => {
-  const tokenA = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a";
-  const tokenB = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C";
-  const owner = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B";
-  const handleA = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa";
-  const handleB = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbBbbbbbbbbbbbbbbbbbbbbbbbb";
+  const tokenA = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
+  const tokenB = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;
+  const owner = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
+  const handleA =
+    "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa" as `0x${string}`;
+  const handleB =
+    "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbBbbbbbbbbbbbbbbbbbbbbbbbb" as `0x${string}`;
 
-  test("uses expected key shape and staleTime Infinity", ({ createMockReadonlyToken }) => {
+  test("includes owner and handles in the query key (cache identity) and uses staleTime Infinity", ({
+    createMockReadonlyToken,
+  }) => {
     const t1 = createMockReadonlyToken(tokenA);
     const t2 = createMockReadonlyToken(tokenB);
     const options = confidentialBalancesQueryOptions([t1, t2], {
@@ -32,15 +34,17 @@ describe("confidentialBalancesQueryOptions", () => {
     expect(options.staleTime).toBe(Infinity);
   });
 
-  test("enabled is false when owner is missing", ({ createMockReadonlyToken }) => {
+  test("enabled defaults to true when tokens are provided (handles/owner are cache-key only)", ({
+    createMockReadonlyToken,
+  }) => {
     const t1 = createMockReadonlyToken(tokenA);
-    const options = confidentialBalancesQueryOptions([t1], {});
+    const options = confidentialBalancesQueryOptions([t1]);
 
-    expect(options.enabled).toBe(false);
+    expect(options.enabled).toBe(true);
   });
 
-  test("enabled is false when token list is empty", () => {
-    const options = confidentialBalancesQueryOptions([], { owner });
+  test("enabled is false when the token list is empty", () => {
+    const options = confidentialBalancesQueryOptions([]);
 
     expect(options.enabled).toBe(false);
   });
@@ -48,111 +52,49 @@ describe("confidentialBalancesQueryOptions", () => {
   test("enabled is false when query.enabled is false", ({ createMockReadonlyToken }) => {
     const t1 = createMockReadonlyToken(tokenA);
     const options = confidentialBalancesQueryOptions([t1], {
-      owner,
       query: { enabled: false },
     });
 
     expect(options.enabled).toBe(false);
   });
 
-  test("enabled is false when handles are missing", ({ createMockReadonlyToken }) => {
-    const t1 = createMockReadonlyToken(tokenA);
-    const options = confidentialBalancesQueryOptions([t1], {
-      owner,
-    });
-
-    expect(options.enabled).toBe(false);
-  });
-
-  test("queryFn pre-authorizes all token addresses then decrypts per-handle via sdk.userDecrypt", async ({
+  test("queryFn delegates to ReadonlyToken.batchBalancesOf using owner from queryKey", async ({
     createMockReadonlyToken,
   }) => {
     const t1 = createMockReadonlyToken(tokenA);
     const t2 = createMockReadonlyToken(tokenB);
-    // All tokens in a batch share the same SDK in production — mirror that here so
-    // the queryFn's `tokens[0].sdk` covers both.
-    Object.defineProperty(t2, "sdk", { value: t1.sdk, configurable: true });
-
-    (t1.sdk.allow as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
-    (t1.sdk.userDecrypt as ReturnType<typeof vi.fn>)
-      .mockResolvedValueOnce({ [handleA]: 10n })
-      .mockResolvedValueOnce({ [handleB]: 20n });
+    const mockResult = {
+      results: new Map<Address, bigint>([
+        [tokenA, 10n],
+        [tokenB, 20n],
+      ]),
+      errors: new Map(),
+    };
+    const spy = vi.spyOn(ReadonlyToken, "batchBalancesOf").mockResolvedValue(mockResult);
 
     const options = confidentialBalancesQueryOptions([t1, t2], {
       owner,
       handles: [handleA, handleB],
     });
 
-    const result = await options.queryFn(mockQueryContext(options.queryKey));
+    const query = await options.queryFn(mockQueryContext(options.queryKey));
 
-    expect(t1.sdk.allow).toHaveBeenCalledWith([tokenA, tokenB]);
-    expect(t1.sdk.userDecrypt).toHaveBeenNthCalledWith(1, [
-      { handle: handleA, contractAddress: tokenA },
-    ]);
-    expect(t1.sdk.userDecrypt).toHaveBeenNthCalledWith(2, [
-      { handle: handleB, contractAddress: tokenB },
-    ]);
-
-    expect(result.balances.get(tokenA as Address)).toBe(10n);
-    expect(result.balances.get(tokenB as Address)).toBe(20n);
-    expect(result.errors.size).toBe(0);
-    expect(result.isPartialError).toBe(false);
+    expect(spy).toHaveBeenCalledWith([t1, t2], owner);
+    expect(query).toBe(mockResult);
+    expect(query.results.get(tokenA)).toBe(10n);
+    expect(query.results.get(tokenB)).toBe(20n);
+    expect(query.errors.size).toBe(0);
   });
 
-  test("queryFn uses handles from context.queryKey", async ({ createMockReadonlyToken }) => {
-    const t1 = createMockReadonlyToken(tokenA);
-    (t1.sdk.userDecrypt as ReturnType<typeof vi.fn>).mockResolvedValue({ [handleB]: 99n });
-
-    const options = confidentialBalancesQueryOptions([t1], {
-      owner,
-      handles: [handleA],
-    });
-    const key = zamaQueryKeys.confidentialBalances.tokens([tokenA], owner, [handleB]);
-
-    await options.queryFn(mockQueryContext(key));
-
-    expect(t1.sdk.userDecrypt).toHaveBeenCalledWith([{ handle: handleB, contractAddress: tokenA }]);
-  });
-
-  test("queryFn returns partial error when some tokens fail", async ({
+  test("queryFn propagates errors thrown by batchBalancesOf (total failure)", async ({
     createMockReadonlyToken,
   }) => {
     const t1 = createMockReadonlyToken(tokenA);
-    const t2 = createMockReadonlyToken(tokenB);
-    Object.defineProperty(t2, "sdk", { value: t1.sdk, configurable: true });
-
-    (t1.sdk.userDecrypt as ReturnType<typeof vi.fn>)
-      .mockResolvedValueOnce({ [handleA]: 10n })
-      .mockRejectedValueOnce(new DecryptionFailedError("decrypt failed for tokenB"));
-
-    const options = confidentialBalancesQueryOptions([t1, t2], {
-      owner,
-      handles: [handleA, handleB],
-    });
-
-    const result = await options.queryFn(mockQueryContext(options.queryKey));
-
-    expect(result.balances.get(tokenA as Address)).toBe(10n);
-    expect(result.balances.has(tokenB as Address)).toBe(false);
-    expect(result.errors.get(tokenB as Address)).toBeInstanceOf(DecryptionFailedError);
-    expect(result.isPartialError).toBe(true);
-  });
-
-  test("queryFn throws when ALL tokens fail (total failure)", async ({
-    createMockReadonlyToken,
-  }) => {
-    const t1 = createMockReadonlyToken(tokenA);
-    const t2 = createMockReadonlyToken(tokenB);
-    Object.defineProperty(t2, "sdk", { value: t1.sdk, configurable: true });
-
-    (t1.sdk.userDecrypt as ReturnType<typeof vi.fn>).mockRejectedValue(
-      new DecryptionFailedError("fail"),
+    vi.spyOn(ReadonlyToken, "batchBalancesOf").mockRejectedValue(
+      new DecryptionFailedError("all failed"),
     );
 
-    const options = confidentialBalancesQueryOptions([t1, t2], {
-      owner,
-      handles: [handleA, handleB],
-    });
+    const options = confidentialBalancesQueryOptions([t1], { owner, handles: [handleA] });
 
     await expect(options.queryFn(mockQueryContext(options.queryKey))).rejects.toThrow(
       DecryptionFailedError,

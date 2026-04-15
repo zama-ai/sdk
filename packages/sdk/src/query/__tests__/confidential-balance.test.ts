@@ -1,63 +1,82 @@
+import type { Address } from "viem";
 import { describe, expect, test, vi, mockQueryContext } from "../../test-fixtures";
 import { confidentialBalanceQueryOptions } from "../confidential-balance";
 
 describe("confidentialBalanceQueryOptions", () => {
-  test("uses handle-dependent key and staleTime Infinity", ({ sdk }) => {
-    const options = confidentialBalanceQueryOptions(sdk, {
-      tokenAddress: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
-      owner: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
-      handle: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa",
+  const tokenAddress = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
+  const owner = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
+  const handle =
+    "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa" as `0x${string}`;
+
+  test("includes handle and owner in the query key (cache identity) and uses staleTime Infinity", ({
+    createMockReadonlyToken,
+  }) => {
+    const token = createMockReadonlyToken(tokenAddress);
+    const options = confidentialBalanceQueryOptions(token, {
+      tokenAddress,
+      owner,
+      handle,
     });
 
     expect(options.queryKey).toEqual([
       "zama.confidentialBalance",
       {
-        tokenAddress: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
-        owner: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
-        handle: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa",
+        tokenAddress,
+        owner,
+        handle,
       },
     ]);
     expect(options.staleTime).toBe(Infinity);
   });
 
-  test("enabled is false without handle", ({ sdk }) => {
-    const options = confidentialBalanceQueryOptions(sdk, {
-      tokenAddress: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
-      owner: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
+  test("enabled defaults to true (handle/owner are cache-key only, not gates)", ({
+    createMockReadonlyToken,
+  }) => {
+    const token = createMockReadonlyToken(tokenAddress);
+    const options = confidentialBalanceQueryOptions(token, { tokenAddress });
+
+    expect(options.enabled).toBe(true);
+  });
+
+  test("enabled is false when query.enabled is false", ({ createMockReadonlyToken }) => {
+    const token = createMockReadonlyToken(tokenAddress);
+    const options = confidentialBalanceQueryOptions(token, {
+      tokenAddress,
+      query: { enabled: false },
     });
 
     expect(options.enabled).toBe(false);
   });
 
-  test("queryFn reads handle from context.queryKey and decrypts via sdk.userDecrypt", async ({
-    sdk,
+  test("queryFn delegates to token.balanceOf using the owner from queryKey", async ({
+    createMockReadonlyToken,
   }) => {
-    const handle =
-      "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbBbbbbbbbbbbbbbbbbbbbbbbbb" as `0x${string}`;
-    // Mock sdk.userDecrypt to return the decrypted value
-    vi.spyOn(sdk, "userDecrypt").mockResolvedValue({
-      [handle]: 42n,
+    const token = createMockReadonlyToken(tokenAddress);
+    vi.mocked(token.balanceOf).mockResolvedValue(42n);
+
+    const options = confidentialBalanceQueryOptions(token, {
+      tokenAddress,
+      owner,
+      handle,
     });
 
-    const options = confidentialBalanceQueryOptions(sdk, {
-      tokenAddress: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
-      owner: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
-      handle: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa",
-    });
+    const value = await options.queryFn(mockQueryContext(options.queryKey));
 
-    const key = [
-      "zama.confidentialBalance",
-      {
-        tokenAddress: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
-        owner: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
-        handle,
-      },
-    ] as const;
-
-    const value = await options.queryFn(mockQueryContext(key));
     expect(value).toBe(42n);
-    expect(sdk.userDecrypt).toHaveBeenCalledWith([
-      { handle, contractAddress: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" },
-    ]);
+    expect(token.balanceOf).toHaveBeenCalledWith(owner);
+  });
+
+  test("queryFn passes undefined owner through to token.balanceOf when none is configured", async ({
+    createMockReadonlyToken,
+  }) => {
+    const token = createMockReadonlyToken(tokenAddress);
+    vi.mocked(token.balanceOf).mockResolvedValue(7n);
+
+    const options = confidentialBalanceQueryOptions(token, { tokenAddress });
+
+    const value = await options.queryFn(mockQueryContext(options.queryKey));
+
+    expect(value).toBe(7n);
+    expect(token.balanceOf).toHaveBeenCalledWith(undefined);
   });
 });
