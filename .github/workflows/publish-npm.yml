@@ -56,18 +56,20 @@ jobs:
 
       - name: Resolve version and npm tag
         id: npm-tag
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+          INPUT_NPM_TAG: ${{ inputs.npm-tag }}
         run: |
           version=$(node -p "require('./packages/sdk/package.json').version")
-          expected="${{ inputs.tag }}"
-          expected="${expected#v}"  # strip leading v
+          expected="${INPUT_TAG#v}"  # strip leading v
           if [[ "$version" != "$expected" ]]; then
-            echo "::error::package.json version (${version}) does not match git tag (${{ inputs.tag }}). Aborting."
+            echo "::error::package.json version (${version}) does not match git tag (${INPUT_TAG}). Aborting."
             exit 1
           fi
           echo "version=${version}" >> "$GITHUB_OUTPUT"
 
-          if [[ -n "${{ inputs.npm-tag }}" ]]; then
-            echo "tag=${{ inputs.npm-tag }}" >> "$GITHUB_OUTPUT"
+          if [[ -n "${INPUT_NPM_TAG}" ]]; then
+            echo "tag=${INPUT_NPM_TAG}" >> "$GITHUB_OUTPUT"
           elif [[ "$version" == *-* ]]; then
             npm_tag="${version#*-}"   # e.g. "alpha.10" from "1.0.0-alpha.10"
             npm_tag="${npm_tag%%.*}"   # e.g. "alpha"
@@ -77,14 +79,16 @@ jobs:
           fi
 
       - name: Publish to npm
+        env:
+          NPM_CONFIG_PROVENANCE: true
+          VERSION: ${{ steps.npm-tag.outputs.version }}
+          NPM_TAG: ${{ steps.npm-tag.outputs.tag }}
+          DRY_RUN: ${{ inputs.dry-run }}
         run: |
-          version="${{ steps.npm-tag.outputs.version }}"
-          npm_tag="${{ steps.npm-tag.outputs.tag }}"
+          echo "Publishing v${VERSION} with tag '${NPM_TAG}'"
 
-          echo "Publishing v${version} with tag '${npm_tag}'"
-
-          flags=(--access public --tag "${npm_tag}")
-          if [[ "${{ inputs.dry-run }}" == "true" ]]; then
+          flags=(--access public --tag "${NPM_TAG}")
+          if [[ "${DRY_RUN}" == "true" ]]; then
             flags+=(--dry-run)
             echo "::notice::DRY RUN — packages will not actually be published"
           fi
@@ -93,17 +97,15 @@ jobs:
           npm publish "${flags[@]}"
           cd ../react-sdk
           npm publish "${flags[@]}"
-        env:
-          NPM_CONFIG_PROVENANCE: true
 
       - name: Summary
         if: success()
+        env:
+          VERSION: ${{ steps.npm-tag.outputs.version }}
+          NPM_TAG: ${{ steps.npm-tag.outputs.tag }}
+          DRY_RUN: ${{ inputs.dry-run }}
         run: |
-          version="${{ steps.npm-tag.outputs.version }}"
-          npm_tag="${{ steps.npm-tag.outputs.tag }}"
-          dry_run="${{ inputs.dry-run }}"
-
-          if [[ "$dry_run" == "true" ]]; then
+          if [[ "${DRY_RUN}" == "true" ]]; then
             echo "### 🏜️ Dry run complete" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "### ✅ Published to npm" >> "$GITHUB_STEP_SUMMARY"
@@ -111,5 +113,5 @@ jobs:
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "| Package | Version | Tag |" >> "$GITHUB_STEP_SUMMARY"
           echo "|---------|---------|-----|" >> "$GITHUB_STEP_SUMMARY"
-          echo "| \`@zama-fhe/sdk\` | \`${version}\` | \`${npm_tag}\` |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| \`@zama-fhe/react-sdk\` | \`${version}\` | \`${npm_tag}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| \`@zama-fhe/sdk\` | \`${VERSION}\` | \`${NPM_TAG}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| \`@zama-fhe/react-sdk\` | \`${VERSION}\` | \`${NPM_TAG}\` |" >> "$GITHUB_STEP_SUMMARY"
