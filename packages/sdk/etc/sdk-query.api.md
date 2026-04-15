@@ -693,7 +693,7 @@ export interface IsAllowedQueryConfig {
     account: Address;
     contractAddresses: [Address, ...Address[]];
     // (undocumented)
-    query?: QueryObserverOptions<boolean, Error, boolean, boolean, ReturnType<typeof zamaQueryKeys.isAllowed.scope>>;
+    query?: Record<string, unknown>;
 }
 
 // @public (undocumented)
@@ -1615,7 +1615,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/activity-DLRrUCiL.d.ts:21420:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/esm/activity-DRhVVepq.d.ts:21420:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

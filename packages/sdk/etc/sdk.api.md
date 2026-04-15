@@ -215,7 +215,7 @@ export function allowanceContract(tokenAddress: Address, owner: Address, spender
 };
 
 // @public
-export function applyDecryptedValues(items: readonly ActivityItem[], decryptedMap: ReadonlyMap<Handle, ClearValueType>): ActivityItem[];
+export function applyDecryptedValues(items: readonly ActivityItem[], decrypted: Readonly<Record<Handle, ClearValueType>>): ActivityItem[];
 
 // @public
 export class ApprovalFailedError extends ZamaError {

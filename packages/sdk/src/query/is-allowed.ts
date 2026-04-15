@@ -8,9 +8,7 @@ export interface IsAllowedQueryConfig {
   account: Address;
   /** Contract addresses to check credentials against. */
   contractAddresses: [Address, ...Address[]];
-  query?: {
-    enabled?: boolean;
-  };
+  query?: Record<string, unknown>;
 }
 
 export function isAllowedQueryOptions(
@@ -22,6 +20,6 @@ export function isAllowedQueryOptions(
     queryKey: zamaQueryKeys.isAllowed.scope(config.account, config.contractAddresses),
     queryFn: () => sdk.credentials.isAllowed(config.contractAddresses),
     staleTime: 30_000,
-    enabled: config.query?.enabled ?? true,
+    enabled: config.query?.enabled !== false,
   } as const;
 }
