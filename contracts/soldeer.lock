@@ -1,1 +1,11 @@
-dependencies = []
+[[dependencies]]
+name = "@openzeppelin-confidential-contracts"
+version = "0.4.0"
+git = "https://github.com/OpenZeppelin/openzeppelin-confidential-contracts"
+rev = "v0.4.0"
+
+[[dependencies]]
+name = "protocol-apps"
+version = "49b417a4"
+git = "https://github.com/zama-ai/protocol-apps"
+rev = "49b417a4"

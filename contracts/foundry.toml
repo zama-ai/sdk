@@ -13,3 +13,5 @@ fs_permissions = [{ access = "read-write", path = "./" }]
 line_length = 120
 
 [dependencies]
+"protocol-apps" = { version = "49b417a4", git = "https://github.com/zama-ai/protocol-apps", rev = "49b417a4" }
+"@openzeppelin-confidential-contracts" = { version = "0.4.0", git = "https://github.com/OpenZeppelin/openzeppelin-confidential-contracts", tag = "v0.4.0" }

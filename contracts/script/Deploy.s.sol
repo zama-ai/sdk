@@ -4,10 +4,10 @@ pragma solidity 0.8.27;
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
 import {TestERC20} from "../src/mocks/Erc20Mintable.sol";
-import {ConfidentialWrapper} from "../src/wrapper/ConfidentialWrapper.sol";
+import {ConfidentialWrapper} from "protocol-apps/contracts/confidential-wrapper/contracts/ConfidentialWrapper.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {ConfidentialTokenWrappersRegistry} from "../src/factory/ConfidentialTokenWrappersRegistry.sol";
+import {ConfidentialTokenWrappersRegistry} from "protocol-apps/contracts/confidential-token-wrappers-registry/contracts/ConfidentialTokenWrappersRegistry.sol";
 
 contract Deploy is Script {
     function run() external {
