@@ -43,7 +43,6 @@ import { confidentialApproveMutationOptions } from '@zama-fhe/sdk/query';
 import { ConfidentialApproveParams } from '@zama-fhe/sdk/query';
 import { confidentialBalanceOfContract } from '@zama-fhe/sdk';
 import { confidentialBalanceQueryOptions } from '@zama-fhe/sdk/query';
-import { ConfidentialBalancesData } from '@zama-fhe/sdk/query';
 import { confidentialBalancesQueryOptions } from '@zama-fhe/sdk/query';
 import { confidentialHandleQueryOptions } from '@zama-fhe/sdk/query';
 import { confidentialHandlesQueryOptions } from '@zama-fhe/sdk/query';
@@ -348,8 +347,6 @@ export { ConfidentialApproveParams }
 export { confidentialBalanceOfContract }
 
 export { confidentialBalanceQueryOptions }
-
-export { ConfidentialBalancesData }
 
 export { confidentialBalancesQueryOptions }
 
@@ -998,7 +995,7 @@ export interface UseConfidentialBalanceOptions extends Omit<UseQueryOptions<bigi
 // @public
 export function useConfidentialBalances(config: UseConfidentialBalancesConfig, options?: UseConfidentialBalancesOptions): {
     handlesQuery: _$_tanstack_react_query0.UseQueryResult<`0x${string}`[], Error>;
-    data: ConfidentialBalancesData;
+    data: BatchBalancesResult;
     error: Error;
     isError: true;
     isPending: false;
@@ -1021,12 +1018,12 @@ export function useConfidentialBalances(config: UseConfidentialBalancesConfig, o
     isRefetching: boolean;
     isStale: boolean;
     isEnabled: boolean;
-    refetch: (options?: _$_tanstack_query_core0.RefetchOptions) => Promise<_$_tanstack_query_core0.QueryObserverResult<ConfidentialBalancesData, Error>>;
+    refetch: (options?: _$_tanstack_query_core0.RefetchOptions) => Promise<_$_tanstack_query_core0.QueryObserverResult<BatchBalancesResult, Error>>;
     fetchStatus: _$_tanstack_query_core0.FetchStatus;
-    promise: Promise<ConfidentialBalancesData>;
+    promise: Promise<BatchBalancesResult>;
 } | {
     handlesQuery: _$_tanstack_react_query0.UseQueryResult<`0x${string}`[], Error>;
-    data: ConfidentialBalancesData;
+    data: BatchBalancesResult;
     error: null;
     isError: false;
     isPending: false;
@@ -1049,9 +1046,9 @@ export function useConfidentialBalances(config: UseConfidentialBalancesConfig, o
     isRefetching: boolean;
     isStale: boolean;
     isEnabled: boolean;
-    refetch: (options?: _$_tanstack_query_core0.RefetchOptions) => Promise<_$_tanstack_query_core0.QueryObserverResult<ConfidentialBalancesData, Error>>;
+    refetch: (options?: _$_tanstack_query_core0.RefetchOptions) => Promise<_$_tanstack_query_core0.QueryObserverResult<BatchBalancesResult, Error>>;
     fetchStatus: _$_tanstack_query_core0.FetchStatus;
-    promise: Promise<ConfidentialBalancesData>;
+    promise: Promise<BatchBalancesResult>;
 } | {
     handlesQuery: _$_tanstack_react_query0.UseQueryResult<`0x${string}`[], Error>;
     data: undefined;
@@ -1077,9 +1074,9 @@ export function useConfidentialBalances(config: UseConfidentialBalancesConfig, o
     isRefetching: boolean;
     isStale: boolean;
     isEnabled: boolean;
-    refetch: (options?: _$_tanstack_query_core0.RefetchOptions) => Promise<_$_tanstack_query_core0.QueryObserverResult<ConfidentialBalancesData, Error>>;
+    refetch: (options?: _$_tanstack_query_core0.RefetchOptions) => Promise<_$_tanstack_query_core0.QueryObserverResult<BatchBalancesResult, Error>>;
     fetchStatus: _$_tanstack_query_core0.FetchStatus;
-    promise: Promise<ConfidentialBalancesData>;
+    promise: Promise<BatchBalancesResult>;
 } | {
     handlesQuery: _$_tanstack_react_query0.UseQueryResult<`0x${string}`[], Error>;
     data: undefined;
@@ -1105,9 +1102,9 @@ export function useConfidentialBalances(config: UseConfidentialBalancesConfig, o
     isRefetching: boolean;
     isStale: boolean;
     isEnabled: boolean;
-    refetch: (options?: _$_tanstack_query_core0.RefetchOptions) => Promise<_$_tanstack_query_core0.QueryObserverResult<ConfidentialBalancesData, Error>>;
+    refetch: (options?: _$_tanstack_query_core0.RefetchOptions) => Promise<_$_tanstack_query_core0.QueryObserverResult<BatchBalancesResult, Error>>;
     fetchStatus: _$_tanstack_query_core0.FetchStatus;
-    promise: Promise<ConfidentialBalancesData>;
+    promise: Promise<BatchBalancesResult>;
 } | {
     handlesQuery: _$_tanstack_react_query0.UseQueryResult<`0x${string}`[], Error>;
     data: undefined;
@@ -1133,12 +1130,12 @@ export function useConfidentialBalances(config: UseConfidentialBalancesConfig, o
     isRefetching: boolean;
     isStale: boolean;
     isEnabled: boolean;
-    refetch: (options?: _$_tanstack_query_core0.RefetchOptions) => Promise<_$_tanstack_query_core0.QueryObserverResult<ConfidentialBalancesData, Error>>;
+    refetch: (options?: _$_tanstack_query_core0.RefetchOptions) => Promise<_$_tanstack_query_core0.QueryObserverResult<BatchBalancesResult, Error>>;
     fetchStatus: _$_tanstack_query_core0.FetchStatus;
-    promise: Promise<ConfidentialBalancesData>;
+    promise: Promise<BatchBalancesResult>;
 } | {
     handlesQuery: _$_tanstack_react_query0.UseQueryResult<`0x${string}`[], Error>;
-    data: ConfidentialBalancesData;
+    data: BatchBalancesResult;
     isError: false;
     error: null;
     isPending: false;
@@ -1161,20 +1158,19 @@ export function useConfidentialBalances(config: UseConfidentialBalancesConfig, o
     isRefetching: boolean;
     isStale: boolean;
     isEnabled: boolean;
-    refetch: (options?: _$_tanstack_query_core0.RefetchOptions) => Promise<_$_tanstack_query_core0.QueryObserverResult<ConfidentialBalancesData, Error>>;
+    refetch: (options?: _$_tanstack_query_core0.RefetchOptions) => Promise<_$_tanstack_query_core0.QueryObserverResult<BatchBalancesResult, Error>>;
     fetchStatus: _$_tanstack_query_core0.FetchStatus;
-    promise: Promise<ConfidentialBalancesData>;
+    promise: Promise<BatchBalancesResult>;
 };
 
 // @public
 export interface UseConfidentialBalancesConfig {
     handleRefetchInterval?: number;
-    maxConcurrency?: number;
     tokenAddresses: Address[];
 }
 
 // @public
-export interface UseConfidentialBalancesOptions extends Omit<UseQueryOptions<ConfidentialBalancesData>, "queryKey" | "queryFn" | "enabled"> {
+export interface UseConfidentialBalancesOptions extends Omit<UseQueryOptions<BatchBalancesResult>, "queryKey" | "queryFn" | "enabled"> {
     enabled?: boolean;
 }
 

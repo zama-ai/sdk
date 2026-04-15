@@ -157,34 +157,25 @@ export interface ConfidentialBalanceQueryConfig {
     owner?: Address;
     // (undocumented)
     query?: Record<string, unknown>;
+    // (undocumented)
+    tokenAddress: Address;
 }
 
 // @public (undocumented)
-export function confidentialBalanceQueryOptions(token: ReadonlyToken, config?: ConfidentialBalanceQueryConfig): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.confidentialBalance.owner>>;
-
-// @public
-export interface ConfidentialBalancesData {
-    balances: Map<Address, bigint>;
-    errors: Map<Address, Error>;
-    isPartialError: boolean;
-}
+export function confidentialBalanceQueryOptions(token: ReadonlyToken, config: ConfidentialBalanceQueryConfig): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.confidentialBalance.owner>>;
 
 // @public (undocumented)
 export interface ConfidentialBalancesQueryConfig {
     // (undocumented)
     handles?: EncryptedBalanceHandle[];
     // (undocumented)
-    maxConcurrency?: number;
-    // (undocumented)
     owner?: Address;
     // (undocumented)
     query?: Record<string, unknown>;
-    // (undocumented)
-    resultAddresses?: Address[];
 }
 
 // @public (undocumented)
-export function confidentialBalancesQueryOptions(tokens: ReadonlyToken[], config?: ConfidentialBalancesQueryConfig): QueryFactoryOptions<ConfidentialBalancesData, Error, ConfidentialBalancesData, ReturnType<typeof zamaQueryKeys.confidentialBalances.tokens>>;
+export function confidentialBalancesQueryOptions(tokens: ReadonlyToken[], config?: ConfidentialBalancesQueryConfig): QueryFactoryOptions<BatchBalancesResult, Error, BatchBalancesResult, ReturnType<typeof zamaQueryKeys.confidentialBalances.tokens>>;
 
 // @public (undocumented)
 export interface ConfidentialHandleQueryConfig {
@@ -1615,7 +1606,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/activity-DRhVVepq.d.ts:21420:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/esm/activity-B66OpQQN.d.ts:21435:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 
