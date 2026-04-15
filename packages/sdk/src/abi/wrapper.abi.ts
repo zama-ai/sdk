@@ -1381,7 +1381,7 @@ export const wrapperAbi = [
   },
   {
     inputs: [],
-    name: "totalSupply",
+    name: "inferredTotalSupply",
     outputs: [
       {
         internalType: "uint256",
