@@ -25,7 +25,7 @@ describe("ZamaSDK", () => {
     const token = sdk.createReadonlyToken(tokenAddress);
     expect(token).toBeInstanceOf(ReadonlyToken);
     expect(token.address).toBe(tokenAddress);
-    expect(token.signer).toBe(sdk.signer);
+    expect(token.sdk).toBe(sdk);
   });
 
   it("createToken returns Token", ({ relayer, signer, storage, tokenAddress }) => {
@@ -36,17 +36,11 @@ describe("ZamaSDK", () => {
   });
 
   for (const method of ["createToken", "createReadonlyToken"] as const) {
-    it(`${method} shares delegatedCredentials with the SDK`, ({
-      relayer,
-      signer,
-      storage,
-      tokenAddress,
-    }) => {
+    it(`${method} exposes the SDK instance`, ({ relayer, signer, storage, tokenAddress }) => {
       const sdk = new ZamaSDK({ relayer, signer, storage });
       const token = sdk[method](tokenAddress);
-      expect((token as unknown as { delegatedCredentials: unknown }).delegatedCredentials).toBe(
-        sdk.delegatedCredentials,
-      );
+      expect(token.sdk).toBe(sdk);
+      expect(token.sdk.delegatedCredentials).toBe(sdk.delegatedCredentials);
     });
   }
 

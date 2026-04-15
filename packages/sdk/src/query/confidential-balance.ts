@@ -1,7 +1,8 @@
 import type { ReadonlyToken } from "../token/readonly-token";
 import type { Handle } from "../relayer/relayer-sdk.types";
 
-import { assertNonNullable } from "../utils/assertions";
+import { DecryptionFailedError } from "../errors";
+import { assertBigint, assertNonNullable } from "../utils/assertions";
 import type { QueryFactoryOptions } from "./factory-types";
 import { filterQueryOptions } from "./utils";
 import { zamaQueryKeys } from "./query-keys";
@@ -36,7 +37,15 @@ export function confidentialBalanceQueryOptions(
       const [, { owner: keyOwner, handle: keyHandle }] = context.queryKey;
       assertNonNullable(keyOwner, "confidentialBalanceQueryOptions: owner");
       assertNonNullable(keyHandle, "confidentialBalanceQueryOptions: handle");
-      return token.decryptBalance(keyHandle, keyOwner);
+      const decrypted = await token.sdk.userDecrypt([
+        { handle: keyHandle, contractAddress: token.address },
+      ]);
+      const value = decrypted[keyHandle];
+      if (value === undefined) {
+        throw new DecryptionFailedError(`Decryption returned no value for handle ${keyHandle}`);
+      }
+      assertBigint(value, "confidentialBalanceQueryOptions: result[handle]");
+      return value;
     },
     enabled: Boolean(ownerKey && handleKey) && queryEnabled,
     staleTime: Infinity,

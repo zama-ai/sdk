@@ -50,10 +50,8 @@ export { WrappersRegistry, DefaultRegistryAddresses } from "./wrappers-registry"
 export type { WrappersRegistryConfig, ListPairsOptions } from "./wrappers-registry";
 export {
   Token,
-  type TokenConfig,
   ReadonlyToken,
-  type ReadonlyTokenConfig,
-  type BatchDecryptOptions,
+  type BatchBalancesResult,
   type BatchDecryptAsOptions,
   ZERO_HANDLE,
   savePendingUnshield,

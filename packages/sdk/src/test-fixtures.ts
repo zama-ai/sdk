@@ -10,9 +10,7 @@ import { CredentialsManager } from "./credentials/credentials-manager";
 import type { DelegatedCredentialsManagerConfig } from "./credentials/delegated-credentials-manager";
 import { DelegatedCredentialsManager } from "./credentials/delegated-credentials-manager";
 import { MemoryStorage } from "./storage/memory-storage";
-import type { ReadonlyTokenConfig } from "./token/readonly-token";
 import { ReadonlyToken } from "./token/readonly-token";
-import type { TokenConfig } from "./token/token";
 import { Token } from "./token/token";
 import type { GenericSigner, GenericStorage, TransactionResult } from "./types";
 import type { ZamaSDKConfig } from "./zama-sdk";
@@ -111,12 +109,18 @@ export function createMockStorage(): GenericStorage {
 }
 
 function createMockReadonlyToken(address: Address, signer: GenericSigner): ReadonlyToken {
+  const mockSdk = {
+    signer,
+    userDecrypt: vi.fn().mockResolvedValue({}),
+    allow: vi.fn().mockResolvedValue(undefined),
+    cache: { get: vi.fn(), set: vi.fn(), clearAll: vi.fn(), clearForRequester: vi.fn() },
+  };
   return {
     address,
+    sdk: mockSdk,
     signer,
-    decryptBalance: vi.fn().mockResolvedValue(123n),
+    balanceOf: vi.fn().mockResolvedValue(123n),
     decryptBalanceAs: vi.fn().mockResolvedValue(123n),
-    decryptHandles: vi.fn().mockResolvedValue(new Map()),
     confidentialBalanceOf: vi.fn().mockResolvedValue(("0x" + "aa".repeat(32)) as Handle),
     isDelegated: vi.fn().mockResolvedValue(false),
     getDelegationExpiry: vi.fn().mockResolvedValue(0n),
@@ -164,8 +168,8 @@ interface SdkFixtures {
   createDelegatedCredentialManager: (
     config: DelegatedCredentialsManagerConfig,
   ) => DelegatedCredentialsManager;
-  createToken: (config: TokenConfig) => Token;
-  createReadonlyToken: (config: ReadonlyTokenConfig) => ReadonlyToken;
+  createToken: (sdk: ZamaSDK, address?: Address, wrapper?: Address) => Token;
+  createReadonlyToken: (sdk: ZamaSDK, address?: Address) => ReadonlyToken;
   sdk: ZamaSDK;
   createSDK: (overrides?: Partial<ZamaSDKConfig>) => ZamaSDK;
   events: typeof ZamaSDKEvents;
@@ -207,27 +211,11 @@ export const test = base.extend<SdkFixtures>({
   sessionStorage: async ({}, use) => {
     await use(new MemoryStorage());
   },
-  token: async ({ relayer, signer, storage, sessionStorage, tokenAddress }, use) => {
-    await use(
-      new Token({
-        relayer,
-        signer,
-        storage,
-        sessionStorage,
-        address: tokenAddress,
-      }),
-    );
+  token: async ({ sdk, tokenAddress }, use) => {
+    await use(new Token(sdk, tokenAddress));
   },
-  readonlyToken: async ({ relayer, signer, storage, sessionStorage, tokenAddress }, use) => {
-    await use(
-      new ReadonlyToken({
-        relayer,
-        signer,
-        storage,
-        sessionStorage,
-        address: tokenAddress,
-      }),
-    );
+  readonlyToken: async ({ sdk, tokenAddress }, use) => {
+    await use(new ReadonlyToken(sdk, tokenAddress));
   },
   mockToken: async ({ createMockToken }, use) => {
     await use(createMockToken());
@@ -288,14 +276,14 @@ export const test = base.extend<SdkFixtures>({
       }),
     );
   },
-  createToken: async ({}, use) => {
-    await use((config: TokenConfig) => new Token(config));
+  createToken: async ({ tokenAddress }, use) => {
+    await use(
+      (sdk: ZamaSDK, address?: Address, wrapper?: Address) =>
+        new Token(sdk, address ?? tokenAddress, wrapper),
+    );
   },
-  createReadonlyToken: async ({}, use) => {
-    function createReadonlyToken(config: ReadonlyTokenConfig) {
-      return new ReadonlyToken(config);
-    }
-    await use(createReadonlyToken);
+  createReadonlyToken: async ({ tokenAddress }, use) => {
+    await use((sdk: ZamaSDK, address?: Address) => new ReadonlyToken(sdk, address ?? tokenAddress));
   },
   createMockToken: async ({ tokenAddress, signer }, use) => {
     const defaultTxResult: TransactionResult = {
