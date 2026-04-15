@@ -42,5 +42,9 @@ jobs:
 
       - run: pnpm format:check
 
+      - run: pnpm docs:build
+
+      - run: pnpm llm:check
+
       - name: Check bundle size
         run: pnpm size

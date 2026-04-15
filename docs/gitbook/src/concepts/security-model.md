@@ -198,4 +198,4 @@ The token is refreshed before each encrypt/decrypt call. Only POST, PUT, DELETE,
 
 ## Reporting vulnerabilities
 
-If you discover a security vulnerability in the SDK, report it to **security@zama.ai**. Do not open a public GitHub issue for security reports. See the [Security Policy](https://github.com/zama-ai/token-sdk/blob/main/SECURITY.md) for full details.
+If you discover a security vulnerability in the SDK, report it to **security@zama.ai**. Do not open a public GitHub issue for security reports. See the [Security Policy](https://github.com/zama-ai/sdk/blob/main/SECURITY.md) for full details.
