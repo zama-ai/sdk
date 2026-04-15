@@ -1,5 +1,7 @@
 {
   "schema_version": 1,
+  "config_path": "docs/llm/corpus.config.json",
+  "raw_github_base_url": "https://raw.githubusercontent.com/zama-ai/sdk/main",
   "approved_examples": [
     "example-hoodi",
     "node-ethers",

@@ -1,10 +1,12 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import {
   approvedExamples,
   buildCorpusManifest,
   loadGitbookSource,
   normalizeGitbookMarkdown,
+  rawGithubBaseUrl,
   repoRoot,
 } from "./lib/corpus.mjs";
 
@@ -51,11 +53,11 @@ function formatGroupedDocsSection(entries) {
   return lines.join("\n");
 }
 
-function rawGithubUrl(sourcePath) {
-  return `https://raw.githubusercontent.com/zama-ai/sdk/main/${sourcePath}`;
+export function rawGithubUrl(sourcePath) {
+  return `${rawGithubBaseUrl}/${sourcePath}`;
 }
 
-function buildLlmsTxt(manifest) {
+export function buildLlmsTxt(manifest) {
   const docs = manifest.entries.filter(
     (entry) => entry.source_type === "official-doc" && entry.include_in_llms_txt,
   );
@@ -83,7 +85,7 @@ function buildLlmsTxt(manifest) {
   ].join("\n");
 }
 
-function buildEntryBlock(entry, content) {
+export function buildEntryBlock(entry, content) {
   return [
     `## ${entry.title}`,
     "",
@@ -96,7 +98,7 @@ function buildEntryBlock(entry, content) {
   ].join("\n");
 }
 
-function buildLlmsFull(manifest) {
+export function buildLlmsFull(manifest) {
   const docs = manifest.entries.filter(
     (entry) => entry.source_type === "official-doc" && entry.include_in_llms_full,
   );
@@ -150,17 +152,21 @@ function buildLlmsFull(manifest) {
   return sections.join("\n");
 }
 
-const manifest = loadManifest();
-mkdirSync(repoRoot, { recursive: true });
-writeFileSync(join(repoRoot, "llms.txt"), cleanGeneratedMarkdown(buildLlmsTxt(manifest)));
-writeFileSync(join(repoRoot, "llms-full.txt"), cleanGeneratedMarkdown(buildLlmsFull(manifest)));
-
-console.log(`Wrote llms.txt and llms-full.txt for ${approvedExamples.length} approved examples.`);
-
-function cleanGeneratedMarkdown(content) {
+export function cleanGeneratedMarkdown(content) {
   return `${content
     .split("\n")
     .map((line) => line.trimEnd())
     .join("\n")
     .replace(/\n+$/u, "")}\n`;
+}
+
+export function writeLlmsArtifacts(manifest = loadManifest()) {
+  mkdirSync(repoRoot, { recursive: true });
+  writeFileSync(join(repoRoot, "llms.txt"), cleanGeneratedMarkdown(buildLlmsTxt(manifest)));
+  writeFileSync(join(repoRoot, "llms-full.txt"), cleanGeneratedMarkdown(buildLlmsFull(manifest)));
+  console.log(`Wrote llms.txt and llms-full.txt for ${approvedExamples.length} approved examples.`);
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  writeLlmsArtifacts();
 }

@@ -54,7 +54,8 @@
     "llm:manifest": "node scripts/llm/build-manifest.mjs",
     "llm:build": "pnpm llm:manifest && oxfmt docs/llm/corpus-manifest.json && node scripts/llm/build-llms.mjs",
     "llm:validate": "node scripts/llm/validate-llms.mjs",
-    "llm:test": "pnpm llm:validate",
+    "llm:test": "pnpm llm:validate && vitest run --config vitest.llm.config.ts",
+    "llm:check": "pnpm llm:build && pnpm llm:test && git diff --exit-code llms.txt llms-full.txt docs/llm/corpus-manifest.json",
     "size": "size-limit",
     "size:json": "size-limit --json"
   },

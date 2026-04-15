@@ -1,57 +1,111 @@
 import { readFileSync, existsSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { basename, dirname, join, relative } from "node:path";
 
 export const repoRoot = process.cwd();
-export const docsRoot = join(repoRoot, "docs/gitbook/src");
+export const corpusConfigPath = "docs/llm/corpus.config.json";
+export const corpusConfig = loadCorpusConfig();
+export const rawGithubBaseUrl = corpusConfig.rawGithubBaseUrl.replace(/\/$/u, "");
+export const docsRoot = join(repoRoot, corpusConfig.docs.root);
+export const docsSummaryPath = join(repoRoot, corpusConfig.docs.summary);
 export const includesRoot = join(repoRoot, "docs/gitbook/.gitbook/includes");
 
-export const approvedExamples = [
-  "example-hoodi",
-  "node-ethers",
-  "node-viem",
-  "react-ethers",
-  "react-viem",
-  "react-wagmi",
-];
+export const approvedExamples = corpusConfig.examples.approved;
+export const excludedExamples = corpusConfig.examples.excluded;
+export const exampleDocFiles = corpusConfig.examples.docFiles;
+export const packageReadmes = corpusConfig.readmes.map((entry) => entry.path);
+export const apiReportGlobs = corpusConfig.apiReports;
+export const forbiddenPaths = corpusConfig.forbiddenPaths;
 
-export const excludedExamples = ["react-ledger"];
+const packageReadmeTitles = new Map(corpusConfig.readmes.map((entry) => [entry.path, entry.title]));
+const packageReadmeDescriptions = new Map(
+  corpusConfig.readmes.map((entry) => [entry.path, entry.description]),
+);
 
-export const packageReadmes = [
-  "README.md",
-  "packages/sdk/README.md",
-  "packages/react-sdk/README.md",
-];
+function loadCorpusConfig() {
+  const config = JSON.parse(readFileSync(join(repoRoot, corpusConfigPath), "utf8"));
+  validateCorpusConfig(config);
+  return config;
+}
 
-const packageReadmeTitles = new Map([
-  ["README.md", "Repository README"],
-  ["packages/sdk/README.md", "@zama-fhe/sdk"],
-  ["packages/react-sdk/README.md", "@zama-fhe/react-sdk"],
-]);
+function validateCorpusConfig(config) {
+  const errors = [];
+  if (config.schemaVersion !== 1) {
+    errors.push("schemaVersion must be 1");
+  }
+  if (!isNonEmptyString(config.rawGithubBaseUrl)) {
+    errors.push("rawGithubBaseUrl must be a non-empty string");
+  }
+  if (!isNonEmptyString(config.docs?.root)) {
+    errors.push("docs.root must be a non-empty string");
+  }
+  if (!isNonEmptyString(config.docs?.summary)) {
+    errors.push("docs.summary must be a non-empty string");
+  }
+  validateStringArray(config.examples?.approved, "examples.approved", errors);
+  validateStringArray(config.examples?.excluded, "examples.excluded", errors);
+  validateStringArray(config.examples?.docFiles, "examples.docFiles", errors);
+  validateStringArray(config.apiReports, "apiReports", errors);
+  validateStringArray(config.forbiddenPaths, "forbiddenPaths", errors);
+  if (!Array.isArray(config.readmes) || config.readmes.length === 0) {
+    errors.push("readmes must be a non-empty array");
+  } else {
+    for (const [index, readme] of config.readmes.entries()) {
+      if (!isNonEmptyString(readme.path)) {
+        errors.push(`readmes[${index}].path must be a non-empty string`);
+      }
+      if (!isNonEmptyString(readme.title)) {
+        errors.push(`readmes[${index}].title must be a non-empty string`);
+      }
+      if (!isNonEmptyString(readme.description)) {
+        errors.push(`readmes[${index}].description must be a non-empty string`);
+      }
+    }
+  }
 
-const packageReadmeDescriptions = new Map([
-  [
-    "README.md",
-    "Monorepo overview, package layout, development workflow, and repository setup for the Zama SDK.",
-  ],
-  [
-    "packages/sdk/README.md",
-    "Core TypeScript SDK for confidential token operations, relayers, signer adapters, and low-level contract APIs.",
-  ],
-  [
-    "packages/react-sdk/README.md",
-    "React SDK with ZamaProvider, confidential token hooks, and TanStack Query integration on top of the core SDK.",
-  ],
-]);
+  const approved = new Set(config.examples?.approved ?? []);
+  for (const excluded of config.examples?.excluded ?? []) {
+    if (approved.has(excluded)) {
+      errors.push(`example "${excluded}" cannot be both approved and excluded`);
+    }
+  }
 
-export const apiReportGlobs = [
-  "packages/sdk/etc/sdk.api.md",
-  "packages/sdk/etc/sdk-ethers.api.md",
-  "packages/sdk/etc/sdk-node.api.md",
-  "packages/sdk/etc/sdk-query.api.md",
-  "packages/sdk/etc/sdk-viem.api.md",
-  "packages/react-sdk/etc/react-sdk.api.md",
-  "packages/react-sdk/etc/react-sdk-wagmi.api.md",
-];
+  for (const path of [
+    config.docs?.root,
+    config.docs?.summary,
+    ...(config.examples?.docFiles ?? []),
+    ...(config.apiReports ?? []),
+    ...(config.forbiddenPaths ?? []),
+    ...(config.readmes ?? []).map((entry) => entry.path),
+  ]) {
+    if (isNonEmptyString(path) && isUnsafeRelativePath(path)) {
+      errors.push(`unsafe relative path in corpus config: ${path}`);
+    }
+  }
+
+  if (errors.length > 0) {
+    throw new Error(`Invalid ${corpusConfigPath}:\n- ${errors.join("\n- ")}`);
+  }
+}
+
+function validateStringArray(value, fieldName, errors) {
+  if (!Array.isArray(value) || value.length === 0) {
+    errors.push(`${fieldName} must be a non-empty array`);
+    return;
+  }
+  for (const [index, item] of value.entries()) {
+    if (!isNonEmptyString(item)) {
+      errors.push(`${fieldName}[${index}] must be a non-empty string`);
+    }
+  }
+}
+
+function isNonEmptyString(value) {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function isUnsafeRelativePath(path) {
+  return path.startsWith("/") || path.includes("..");
+}
 
 function readUtf8(path) {
   return readFileSync(path, "utf8");
@@ -154,8 +208,7 @@ function titleFromFileName(fileName) {
 }
 
 export function parseSummary() {
-  const summaryPath = join(docsRoot, "SUMMARY.md");
-  const lines = readUtf8(summaryPath).split("\n");
+  const lines = readUtf8(docsSummaryPath).split("\n");
   const entries = [];
 
   for (const line of lines) {
@@ -173,7 +226,7 @@ export function parseSummary() {
     entries.push({
       title,
       logicalPath: link.replace(/\.md$/, ""),
-      sourcePath: join("docs/gitbook/src", link),
+      sourcePath: join(corpusConfig.docs.root, link),
       depth: Math.floor(indent.length / 2),
     });
   }
@@ -183,15 +236,14 @@ export function parseSummary() {
 
 export function getExampleDocs(exampleName) {
   const exampleDir = join(repoRoot, "examples", exampleName);
-  const candidates = ["README.md", "WALKTHROUGH.md"];
 
-  return candidates
+  return exampleDocFiles
     .map((fileName) => join(exampleDir, fileName))
     .filter((path) => existsSync(path))
     .map((path) => ({
       sourcePath: relative(repoRoot, path),
-      logicalPath: `examples/${exampleName}/${path.split("/").pop().replace(/\.md$/, "").toLowerCase()}`,
-      fileName: path.split("/").pop(),
+      logicalPath: `examples/${exampleName}/${basename(path).replace(/\.md$/, "").toLowerCase()}`,
+      fileName: basename(path),
     }));
 }
 
@@ -268,6 +320,8 @@ export function buildCorpusManifest() {
 
   return {
     schema_version: 1,
+    config_path: corpusConfigPath,
+    raw_github_base_url: rawGithubBaseUrl,
     approved_examples: approvedExamples,
     excluded_examples: excludedExamples,
     entries: [...docsEntries, ...exampleEntries, ...readmeEntries, ...apiEntries],
