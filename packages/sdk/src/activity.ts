@@ -14,6 +14,7 @@ import {
   type ConfidentialTransferEvent,
   type WrappedEvent,
   type UnwrapRequestedEvent,
+  type UnwrapFinalizedEvent,
   type UnwrappedFinalizedEvent,
   type UnwrappedStartedEvent,
 } from "./events/onchain-events";
@@ -119,6 +120,8 @@ function eventToActivityItem(
       return buildUnshieldRequested(event, userAddress, metadata);
     case "UnwrappedStarted":
       return buildUnshieldStarted(event, userAddress, metadata);
+    case "UnwrapFinalized":
+      return buildUnshieldFinalized(event, userAddress, metadata);
     case "UnwrappedFinalized":
       return buildUnshieldFinalized(event, userAddress, metadata);
     default:
@@ -189,7 +192,7 @@ function buildUnshieldStarted(
 }
 
 function buildUnshieldFinalized(
-  event: UnwrappedFinalizedEvent,
+  event: UnwrapFinalizedEvent | UnwrappedFinalizedEvent,
   userAddress: Address,
   metadata: ActivityLogMetadata,
 ): ActivityItem {

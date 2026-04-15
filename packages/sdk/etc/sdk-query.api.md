@@ -616,8 +616,8 @@ export function finalizeUnwrapMutationOptions(token: Token): MutationFactoryOpti
 
 // @public
 export interface FinalizeUnwrapParams {
-    // (undocumented)
-    burnAmountHandle: Address;
+    burnAmountHandle?: Handle;
+    unwrapRequestId?: Handle;
 }
 
 // @public (undocumented)
@@ -657,6 +657,9 @@ export interface GenericStorage {
     get<T = unknown>(key: string): Promise<T | null>;
     set<T = unknown>(key: string, value: T): Promise<void>;
 }
+
+// @public
+export type Handle = `0x${string}`;
 
 // @public
 export function hashFn(queryKey: readonly unknown[]): string;
@@ -753,7 +756,7 @@ export interface MutationFactoryOptions<TMutationKey extends readonly unknown[],
 }
 
 // @public
-export type OnChainEvent = ConfidentialTransferEvent | WrappedEvent | UnwrapRequestedEvent | UnwrappedFinalizedEvent | UnwrappedStartedEvent;
+export type OnChainEvent = ConfidentialTransferEvent | WrappedEvent | UnwrapRequestedEvent | UnwrapFinalizedEvent | UnwrappedFinalizedEvent | UnwrappedStartedEvent;
 
 // @public (undocumented)
 export function publicDecryptMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.publicDecrypt"], Handle[], PublicDecryptResult>;
@@ -1050,7 +1053,7 @@ export class Token extends ReadonlyToken {
         delegateAddress: Address;
         expirationDate?: Date;
     }): Promise<TransactionResult>;
-    finalizeUnwrap(burnAmountHandle: Handle): Promise<TransactionResult>;
+    finalizeUnwrap(unwrapRequestIdOrAmount: Handle): Promise<TransactionResult>;
     isApproved(spender: Address, holder?: Address): Promise<boolean>;
     resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     revokeDelegation(input: {
@@ -1246,6 +1249,16 @@ export interface UnshieldPhase2SubmittedEvent extends BaseEvent {
 // @public (undocumented)
 export function unwrapAllMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.unwrapAll", Address], void, TransactionResult>;
 
+// @public
+export interface UnwrapFinalizedEvent {
+    readonly cleartextAmount: bigint;
+    readonly encryptedAmount: Handle;
+    // (undocumented)
+    readonly eventName: "UnwrapFinalized";
+    readonly receiver: Address;
+    readonly unwrapRequestId?: Handle;
+}
+
 // @public (undocumented)
 export function unwrapMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.unwrap", Address], UnwrapParams, TransactionResult>;
 
@@ -1255,13 +1268,18 @@ export interface UnwrapParams {
     amount: bigint;
 }
 
-// @public
+// @public @deprecated (undocumented)
 export interface UnwrappedFinalizedEvent {
+    // (undocumented)
     readonly cleartextAmount: bigint;
+    // (undocumented)
     readonly encryptedAmount: Handle;
     // (undocumented)
     readonly eventName: "UnwrappedFinalized";
+    // (undocumented)
     readonly receiver: Address;
+    // (undocumented)
+    readonly unwrapRequestId?: Handle;
 }
 
 // @public
@@ -1283,6 +1301,7 @@ export interface UnwrapRequestedEvent {
     // (undocumented)
     readonly eventName: "UnwrapRequested";
     readonly receiver: Address;
+    readonly unwrapRequestId?: Handle;
 }
 
 // @public (undocumented)
@@ -1647,10 +1666,6 @@ export const ZamaSDKEvents: {
 
 // @public (undocumented)
 export const ZERO_HANDLE: "0x0000000000000000000000000000000000000000000000000000000000000000";
-
-// Warnings were encountered during analysis:
-//
-// dist/esm/activity-C38S7VvH.d.ts:21496:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

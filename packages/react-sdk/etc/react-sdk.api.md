@@ -79,6 +79,7 @@ import { decodeDelegatedForUserDecryption } from '@zama-fhe/sdk';
 import { decodeOnChainEvent } from '@zama-fhe/sdk';
 import { decodeOnChainEvents } from '@zama-fhe/sdk';
 import { decodeRevokedDelegationForUserDecryption } from '@zama-fhe/sdk';
+import { decodeUnwrapFinalized } from '@zama-fhe/sdk';
 import { decodeUnwrappedFinalized } from '@zama-fhe/sdk';
 import { decodeUnwrappedStarted } from '@zama-fhe/sdk';
 import { decodeUnwrapRequested } from '@zama-fhe/sdk';
@@ -165,6 +166,7 @@ import { ListPairsOptions } from '@zama-fhe/sdk';
 import { ListPairsQueryConfig } from '@zama-fhe/sdk/query';
 import { listPairsQueryOptions } from '@zama-fhe/sdk/query';
 import { loadPendingUnshield } from '@zama-fhe/sdk';
+import { loadPendingUnshieldRequest } from '@zama-fhe/sdk';
 import { MainnetConfig } from '@zama-fhe/sdk';
 import { matchAclRevert } from '@zama-fhe/sdk';
 import { matchZamaError } from '@zama-fhe/sdk';
@@ -176,6 +178,7 @@ import { NoCiphertextError } from '@zama-fhe/sdk';
 import { OnChainEvent } from '@zama-fhe/sdk';
 import { PaginatedResult } from '@zama-fhe/sdk';
 import { parseActivityFeed } from '@zama-fhe/sdk';
+import { PendingUnshieldRequest } from '@zama-fhe/sdk';
 import { PropsWithChildren } from 'react';
 import { publicDecryptMutationOptions } from '@zama-fhe/sdk/query';
 import { PublicDecryptResult } from '@zama-fhe/sdk';
@@ -249,6 +252,7 @@ import { UnshieldPhase2StartedEvent } from '@zama-fhe/sdk';
 import { UnshieldPhase2SubmittedEvent } from '@zama-fhe/sdk';
 import { unwrapAllMutationOptions } from '@zama-fhe/sdk/query';
 import { unwrapContract } from '@zama-fhe/sdk';
+import { UnwrapFinalizedEvent } from '@zama-fhe/sdk';
 import { unwrapFromBalanceContract } from '@zama-fhe/sdk';
 import { unwrapMutationOptions } from '@zama-fhe/sdk/query';
 import { UnwrapParams } from '@zama-fhe/sdk/query';
@@ -423,6 +427,8 @@ export { decodeOnChainEvents }
 
 export { decodeRevokedDelegationForUserDecryption }
 
+export { decodeUnwrapFinalized }
+
 export { decodeUnwrappedFinalized }
 
 export { decodeUnwrappedStarted }
@@ -595,6 +601,8 @@ export { listPairsQueryOptions }
 
 export { loadPendingUnshield }
 
+export { loadPendingUnshieldRequest }
+
 export { MainnetConfig }
 
 export { matchAclRevert }
@@ -627,6 +635,8 @@ export interface OptimisticMutateContext {
 export { PaginatedResult }
 
 export { parseActivityFeed }
+
+export { PendingUnshieldRequest }
 
 export { publicDecryptMutationOptions }
 
@@ -781,6 +791,8 @@ export { UnshieldPhase2SubmittedEvent }
 export { unwrapAllMutationOptions }
 
 export { unwrapContract }
+
+export { UnwrapFinalizedEvent }
 
 export { unwrapFromBalanceContract }
 

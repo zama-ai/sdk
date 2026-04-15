@@ -186,7 +186,7 @@ Full read/write interface for a single confidential ERC-20. Extends `ReadonlyTok
 | `unwrap(amount)`                                           | Request unwrap for a specific amount (low-level, requires manual finalization).                                                                                                                              |
 | `unwrapAll()`                                              | Request unwrap for the entire balance (low-level, requires manual finalization).                                                                                                                             |
 | `resumeUnshield(unwrapTxHash, callbacks?)`                 | Resume an interrupted unshield from an existing unwrap tx hash. Goes straight to wait receipt → finalize.                                                                                                    |
-| `finalizeUnwrap(burnAmountHandle)`                         | Complete unwrap with public decryption proof.                                                                                                                                                                |
+| `finalizeUnwrap(unwrapRequestIdOrAmount)`                  | Complete unwrap with public decryption proof. Pass `unwrapRequestId` from upgraded events, or the legacy encrypted amount handle.                                                                            |
 | `confidentialTransfer(to, amount)`                         | Encrypted transfer. Encrypts amount, then calls the contract.                                                                                                                                                |
 | `confidentialTransferFrom(from, to, amt)`                  | Operator encrypted transfer.                                                                                                                                                                                 |
 | `approve(spender, until?)`                                 | Set operator approval. `until` defaults to now + 1 hour.                                                                                                                                                     |
@@ -623,7 +623,7 @@ const logs = await publicClient.getLogs({
 });
 ```
 
-Individual topic hashes are accessible via the `Topics` object: `Topics.ConfidentialTransfer`, `Topics.Wrapped`, `Topics.UnwrapRequested`, `Topics.UnwrappedFinalized`, `Topics.UnwrappedStarted`.
+Individual topic hashes are accessible via the `Topics` object: `Topics.ConfidentialTransfer`, `Topics.Wrapped`, `Topics.UnwrapRequested`, `Topics.UnwrapRequestedWithRequestId`, `Topics.UnwrapFinalized`, `Topics.UnwrapFinalizedWithRequestId`, and `Topics.UnwrappedStarted`. `Topics.UnwrappedFinalized` remains as a deprecated alias for the old `UnwrapFinalized` topic.
 
 ### Decoders
 
@@ -631,8 +631,9 @@ Individual topic hashes are accessible via the `Topics` object: `Topics.Confiden
 | --------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | `decodeConfidentialTransfer(log)` | `ConfidentialTransferEvent \| null` — `{ from, to, encryptedAmountHandle }`                                 |
 | `decodeWrapped(log)`              | `WrappedEvent \| null` — `{ to, amountIn }`                                                                 |
-| `decodeUnwrapRequested(log)`      | `UnwrapRequestedEvent \| null` — `{ receiver, encryptedAmount }`                                            |
-| `decodeUnwrappedFinalized(log)`   | `UnwrappedFinalizedEvent \| null` — `{ receiver, encryptedAmount, cleartextAmount }`                        |
+| `decodeUnwrapRequested(log)`      | `UnwrapRequestedEvent \| null` — `{ receiver, encryptedAmount, unwrapRequestId? }`                          |
+| `decodeUnwrapFinalized(log)`      | `UnwrapFinalizedEvent \| null` — `{ receiver, encryptedAmount, cleartextAmount, unwrapRequestId? }`         |
+| `decodeUnwrappedFinalized(log)`   | Deprecated alias for `decodeUnwrapFinalized(log)`                                                           |
 | `decodeUnwrappedStarted(log)`     | `UnwrappedStartedEvent \| null` — `{ returnVal, requestId, txId, to, refund, requestedAmount, burnAmount }` |
 | `decodeOnChainEvent(log)`         | `OnChainEvent \| null` — tries all decoders                                                                 |
 | `decodeOnChainEvents(logs)`       | `OnChainEvent[]` — batch decode, skips unrecognized logs                                                    |

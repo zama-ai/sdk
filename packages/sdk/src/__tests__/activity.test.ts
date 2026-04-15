@@ -44,6 +44,17 @@ function unwrapRequestedLog(receiver: string, handle: string): RawLog {
   };
 }
 
+function unwrapRequestedWithRequestIdLog(
+  receiver: string,
+  unwrapRequestId: string,
+  handle: string,
+): RawLog {
+  return {
+    topics: [Topics.UnwrapRequestedWithRequestId, topic(receiver.slice(2)), unwrapRequestId as Hex],
+    data: `0x${word(handle.slice(2))}`,
+  };
+}
+
 function unwrappedStartedLog(to: string, requestedAmount: string): RawLog {
   return {
     topics: [
@@ -64,9 +75,23 @@ function unwrappedFinalizedLog(
   // UnwrapFinalized(address indexed receiver, bytes32 encryptedAmount, uint64 cleartextAmount)
   return {
     topics: [
-      Topics.UnwrappedFinalized,
+      Topics.UnwrapFinalized,
       topic(receiver.slice(2)), // indexed receiver
     ],
+    data: `0x${word(encryptedHandle.slice(2).padStart(64, "0"))}${word(cleartextAmount.toString(16))}` as ReturnType<
+      typeof bytes32
+    >,
+  };
+}
+
+function unwrapFinalizedWithRequestIdLog(
+  receiver: Address,
+  unwrapRequestId: string,
+  encryptedHandle: string,
+  cleartextAmount: bigint,
+): RawLog {
+  return {
+    topics: [Topics.UnwrapFinalizedWithRequestId, topic(receiver.slice(2)), unwrapRequestId as Hex],
     data: `0x${word(encryptedHandle.slice(2).padStart(64, "0"))}${word(cleartextAmount.toString(16))}` as ReturnType<
       typeof bytes32
     >,
@@ -139,6 +164,21 @@ describe("parseActivityFeed", () => {
     expect(items[0].amount).toEqual({ type: "encrypted", handle });
   });
 
+  it("parses an UnwrapRequested event with unwrapRequestId", () => {
+    const handle = bytes32("ab".repeat(32));
+    const unwrapRequestId = bytes32("cd".repeat(32));
+    const logs = [unwrapRequestedWithRequestIdLog(USER, unwrapRequestId, handle)];
+    const items = parseActivityFeed(logs, USER);
+
+    expect(items).toHaveLength(1);
+    expect(items[0].type).toBe("unshield_requested");
+    expect(items[0].amount).toEqual({ type: "encrypted", handle });
+    expect(items[0].rawEvent.eventName).toBe("UnwrapRequested");
+    expect("unwrapRequestId" in items[0].rawEvent && items[0].rawEvent.unwrapRequestId).toBe(
+      unwrapRequestId,
+    );
+  });
+
   it("parses an UnwrappedStarted event", () => {
     const handle = bytes32("11".repeat(32));
     const logs = [unwrappedStartedLog(USER, handle)];
@@ -161,6 +201,21 @@ describe("parseActivityFeed", () => {
     expect(items[0].to?.toLowerCase()).toBe(USER.toLowerCase());
     // No sender on finalized events — direction is always "incoming" regardless of receiver
     expect(items[0].direction).toBe("incoming");
+  });
+
+  it("parses an UnwrapFinalized event with unwrapRequestId", () => {
+    const handle = bytes32("ab".repeat(16));
+    const unwrapRequestId = bytes32("cd".repeat(32));
+    const logs = [unwrapFinalizedWithRequestIdLog(USER, unwrapRequestId, handle, 450n)];
+    const items = parseActivityFeed(logs, USER);
+
+    expect(items).toHaveLength(1);
+    expect(items[0].type).toBe("unshield_finalized");
+    expect(items[0].amount).toEqual({ type: "clear", value: 450n });
+    expect(items[0].rawEvent.eventName).toBe("UnwrapFinalized");
+    expect("unwrapRequestId" in items[0].rawEvent && items[0].rawEvent.unwrapRequestId).toBe(
+      unwrapRequestId,
+    );
   });
 
   it("classifies UnwrapFinalized as incoming when receiver is another address", () => {

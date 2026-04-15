@@ -16,6 +16,7 @@ import {
   decodeConfidentialTransfer,
   decodeWrapped,
   decodeUnwrapRequested,
+  decodeUnwrapFinalized,
   decodeUnwrappedFinalized,
   decodeUnwrappedStarted,
   findWrapped,
@@ -40,7 +41,7 @@ import {
 
 `(logs: Log[]) => DecodedEvent[]`
 
-Decodes an array of raw log entries into typed event objects. Each returned event has a `.type` discriminator.
+Decodes an array of raw log entries into typed event objects. Each returned event has an `.eventName` discriminator.
 
 ```ts
 const logs = await publicClient.getLogs({
@@ -51,7 +52,7 @@ const logs = await publicClient.getLogs({
 const events = decodeOnChainEvents(logs);
 
 for (const event of events) {
-  switch (event.type) {
+  switch (event.eventName) {
     case "ConfidentialTransfer":
       console.log(event.from, event.to, event.encryptedAmount);
       break;
@@ -59,7 +60,10 @@ for (const event of events) {
       console.log(event.account, event.amount);
       break;
     case "UnwrapRequested":
-      console.log(event.account, event.amount);
+      console.log(event.receiver, event.unwrapRequestId ?? event.encryptedAmount);
+      break;
+    case "UnwrapFinalized":
+      console.log(event.receiver, event.cleartextAmount);
       break;
   }
 }
@@ -69,13 +73,13 @@ for (const event of events) {
 | --------- | ------- | ----------------------------------------------------------- |
 | `logs`    | `Log[]` | Raw log entries from `eth_getLogs` or a transaction receipt |
 
-**Returns:** `DecodedEvent[]` — each event has a `.type` of `"ConfidentialTransfer"`, `"Wrapped"`, `"UnwrapRequested"`, `"UnwrappedFinalized"`, or `"UnwrappedStarted"`.
+**Returns:** `DecodedEvent[]` — each event has an `.eventName` of `"ConfidentialTransfer"`, `"Wrapped"`, `"UnwrapRequested"`, `"UnwrapFinalized"`, or `"UnwrappedStarted"`.
 
 ## TOKEN_TOPICS
 
 `Hex[]`
 
-Array of topic hashes for all supported token events. Pass this to `eth_getLogs` to fetch relevant logs in a single RPC call.
+Array of topic hashes for all supported token events, including both legacy and upgraded unwrap event signatures during the protocol transition. Pass this to `eth_getLogs` to fetch relevant logs in a single RPC call.
 
 ```ts
 const logs = await publicClient.getLogs({
@@ -90,13 +94,14 @@ const logs = await publicClient.getLogs({
 
 Each decoder takes a single log entry and returns a typed event object, or `null` if the log does not match.
 
-| Decoder                           | Event type             | Description                         |
-| --------------------------------- | ---------------------- | ----------------------------------- |
-| `decodeConfidentialTransfer(log)` | `ConfidentialTransfer` | Encrypted transfer between accounts |
-| `decodeWrapped(log)`              | `Wrapped`              | Tokens wrapped (shielded)           |
-| `decodeUnwrapRequested(log)`      | `UnwrapRequested`      | Unwrap initiated                    |
-| `decodeUnwrappedFinalized(log)`   | `UnwrappedFinalized`   | Unwrap completed (finalized)        |
-| `decodeUnwrappedStarted(log)`     | `UnwrappedStarted`     | Unwrap decryption started           |
+| Decoder                           | Event type             | Description                                                                   |
+| --------------------------------- | ---------------------- | ----------------------------------------------------------------------------- |
+| `decodeConfidentialTransfer(log)` | `ConfidentialTransfer` | Encrypted transfer between accounts                                           |
+| `decodeWrapped(log)`              | `Wrapped`              | Tokens wrapped (shielded)                                                     |
+| `decodeUnwrapRequested(log)`      | `UnwrapRequested`      | Unwrap initiated; returns `unwrapRequestId` when emitted by upgraded wrappers |
+| `decodeUnwrapFinalized(log)`      | `UnwrapFinalized`      | Unwrap completed; returns `unwrapRequestId` when emitted by upgraded wrappers |
+| `decodeUnwrappedFinalized(log)`   | `UnwrappedFinalized`   | Deprecated alias for `decodeUnwrapFinalized(log)`                             |
+| `decodeUnwrappedStarted(log)`     | `UnwrappedStarted`     | Unwrap decryption started                                                     |
 
 ```ts
 import { decodeConfidentialTransfer } from "@zama-fhe/sdk";

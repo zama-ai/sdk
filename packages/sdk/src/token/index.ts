@@ -6,4 +6,10 @@ export type {
   BatchDecryptOptions,
   BatchDecryptAsOptions,
 } from "./readonly-token";
-export { savePendingUnshield, loadPendingUnshield, clearPendingUnshield } from "./pending-unshield";
+export {
+  savePendingUnshield,
+  loadPendingUnshield,
+  loadPendingUnshieldRequest,
+  clearPendingUnshield,
+} from "./pending-unshield";
+export type { PendingUnshieldRequest } from "./pending-unshield";

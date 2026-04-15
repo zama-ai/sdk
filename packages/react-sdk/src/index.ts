@@ -115,7 +115,13 @@ export type {
 } from "@zama-fhe/sdk";
 
 // Re-export pending-unshield persistence utilities
-export { savePendingUnshield, loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/sdk";
+export {
+  savePendingUnshield,
+  loadPendingUnshield,
+  loadPendingUnshieldRequest,
+  clearPendingUnshield,
+} from "@zama-fhe/sdk";
+export type { PendingUnshieldRequest } from "@zama-fhe/sdk";
 
 // Re-export event constants
 export { ZamaSDKEvents } from "@zama-fhe/sdk";
@@ -317,6 +323,7 @@ export type {
   ConfidentialTransferEvent,
   WrappedEvent,
   UnwrapRequestedEvent,
+  UnwrapFinalizedEvent,
   UnwrappedFinalizedEvent,
   UnwrappedStartedEvent,
   OnChainEvent,
@@ -337,6 +344,7 @@ export {
   decodeConfidentialTransfer,
   decodeWrapped,
   decodeUnwrapRequested,
+  decodeUnwrapFinalized,
   decodeUnwrappedFinalized,
   decodeUnwrappedStarted,
   decodeOnChainEvent,

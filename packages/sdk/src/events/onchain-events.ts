@@ -24,7 +24,15 @@ export const Topics = {
   Wrapped: "0x4700c1726b4198077cd40320a32c45265a1910521eb0ef713dd1d8412413d7fc",
   /** `UnwrapRequested(address indexed receiver, bytes32 amount)` */
   UnwrapRequested: "0x77d02d353c5629272875d11f1b34ec4c65d7430b075575b78cd2502034c469ee",
+  /** `UnwrapRequested(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 amount)` */
+  UnwrapRequestedWithRequestId:
+    "0x4b1bfb262557cf08a74ddeefb8aef086b81deb08484bdc1820b9f420cdd1aa0e",
   /** `UnwrapFinalized(address indexed receiver, bytes32 encryptedAmount, uint64 cleartextAmount)` */
+  UnwrapFinalized: "0x2d4edf3c2943002120f53dab3f8940043f34799f4a92ab90f2f81f7dd004a49e",
+  /** `UnwrapFinalized(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 encryptedAmount, uint64 cleartextAmount)` */
+  UnwrapFinalizedWithRequestId:
+    "0x87061fd1a5b3714805472c94c9eb8a6b8491992ee77791aa2594be67b92fd962",
+  /** @deprecated Use `Topics.UnwrapFinalized`. */
   UnwrappedFinalized: "0x2d4edf3c2943002120f53dab3f8940043f34799f4a92ab90f2f81f7dd004a49e",
   /** `UnwrappedStarted(bool returnVal, uint256 indexed requestId, ...)` */
   UnwrappedStarted: "0x3838891d4843c6d7f9f494570b6fd8843f4e3c3ddb817c1411760bd31b819806",
@@ -61,17 +69,30 @@ export interface UnwrapRequestedEvent {
   readonly receiver: Address;
   /** FHE ciphertext handle for the requested unshield amount. */
   readonly encryptedAmount: Handle;
+  /** Request identifier emitted by upgraded wrapper contracts. */
+  readonly unwrapRequestId?: Handle;
 }
 
 /** Decoded `UnwrapFinalized` event — an unshield completed on-chain. */
-export interface UnwrappedFinalizedEvent {
-  readonly eventName: "UnwrappedFinalized";
+export interface UnwrapFinalizedEvent {
+  readonly eventName: "UnwrapFinalized";
   /** Address receiving the unwrapped ERC-20 tokens. */
   readonly receiver: Address;
   /** FHE ciphertext handle of the burnt confidential balance. */
   readonly encryptedAmount: Handle;
   /** Cleartext amount of underlying ERC-20 tokens returned. */
   readonly cleartextAmount: bigint;
+  /** Request identifier emitted by upgraded wrapper contracts. */
+  readonly unwrapRequestId?: Handle;
+}
+
+/** @deprecated Use `UnwrapFinalizedEvent`. */
+export interface UnwrappedFinalizedEvent {
+  readonly eventName: "UnwrappedFinalized";
+  readonly receiver: Address;
+  readonly encryptedAmount: Handle;
+  readonly cleartextAmount: bigint;
+  readonly unwrapRequestId?: Handle;
 }
 
 /** Decoded `UnwrappedStarted` event — the relayer began processing an unshield. */
@@ -98,6 +119,7 @@ export type OnChainEvent =
   | ConfidentialTransferEvent
   | WrappedEvent
   | UnwrapRequestedEvent
+  | UnwrapFinalizedEvent
   | UnwrappedFinalizedEvent
   | UnwrappedStartedEvent;
 
@@ -188,31 +210,87 @@ export function decodeWrapped(log: RawLog): WrappedEvent | null {
 
 /**
  * UnwrapRequested(address indexed receiver, bytes32 amount)
- * Indexed: receiver (topics[1])
- * Data: amount (bytes32)
+ * UnwrapRequested(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 amount)
  */
 export function decodeUnwrapRequested(log: RawLog): UnwrapRequestedEvent | null {
-  if (log.topics[0] !== Topics.UnwrapRequested) {
-    return null;
-  }
-  if (log.topics.length < 2) {
-    return null;
+  if (log.topics[0] === Topics.UnwrapRequestedWithRequestId) {
+    if (log.topics.length < 3) {
+      return null;
+    }
+
+    return {
+      eventName: "UnwrapRequested",
+      receiver: topicToAddress(log.topics[1]!),
+      unwrapRequestId: topicToBytes32(log.topics[2]!),
+      encryptedAmount: wordToBytes32(log.data, 0),
+    };
   }
 
-  return {
-    eventName: "UnwrapRequested",
-    receiver: topicToAddress(log.topics[1]!),
-    encryptedAmount: wordToBytes32(log.data, 0),
-  };
+  if (log.topics[0] === Topics.UnwrapRequested) {
+    if (log.topics.length < 2) {
+      return null;
+    }
+
+    return {
+      eventName: "UnwrapRequested",
+      receiver: topicToAddress(log.topics[1]!),
+      encryptedAmount: wordToBytes32(log.data, 0),
+    };
+  }
+
+  return null;
 }
 
 /**
  * UnwrapFinalized(address indexed receiver, bytes32 encryptedAmount, uint64 cleartextAmount)
- * Indexed: receiver (topics[1])
- * Data: encryptedAmount (bytes32 FHE handle, word 0), cleartextAmount (uint64, word 1)
+ * UnwrapFinalized(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 encryptedAmount, uint64 cleartextAmount)
  */
+export function decodeUnwrapFinalized(log: RawLog): UnwrapFinalizedEvent | null {
+  if (log.topics[0] === Topics.UnwrapFinalizedWithRequestId) {
+    if (log.topics.length < 3) {
+      return null;
+    }
+
+    return {
+      eventName: "UnwrapFinalized",
+      receiver: topicToAddress(log.topics[1]!),
+      unwrapRequestId: topicToBytes32(log.topics[2]!),
+      encryptedAmount: wordToBytes32(log.data, 0),
+      cleartextAmount: wordToBigInt(log.data, 1),
+    };
+  }
+
+  if (log.topics[0] === Topics.UnwrapFinalized) {
+    if (log.topics.length < 2) {
+      return null;
+    }
+
+    return {
+      eventName: "UnwrapFinalized",
+      receiver: topicToAddress(log.topics[1]!),
+      encryptedAmount: wordToBytes32(log.data, 0),
+      cleartextAmount: wordToBigInt(log.data, 1),
+    };
+  }
+
+  return null;
+}
+
+/** @deprecated Use `decodeUnwrapFinalized`. */
 export function decodeUnwrappedFinalized(log: RawLog): UnwrappedFinalizedEvent | null {
-  if (log.topics[0] !== Topics.UnwrappedFinalized) {
+  const event = decodeUnwrapFinalized(log);
+  if (!event) {
+    return null;
+  }
+
+  return {
+    ...event,
+    eventName: "UnwrappedFinalized",
+  };
+}
+
+function decodeLegacyUnwrappedFinalized(log: RawLog): UnwrappedFinalizedEvent | null {
+  if (log.topics[0] !== Topics.UnwrapFinalized) {
     return null;
   }
   if (log.topics.length < 2) {
@@ -273,7 +351,8 @@ export function decodeOnChainEvent(log: RawLog): OnChainEvent | null {
     decodeConfidentialTransfer(log) ??
     decodeWrapped(log) ??
     decodeUnwrapRequested(log) ??
-    decodeUnwrappedFinalized(log) ??
+    decodeLegacyUnwrappedFinalized(log) ??
+    decodeUnwrapFinalized(log) ??
     decodeUnwrappedStarted(log)
   );
 }
@@ -336,7 +415,7 @@ export function findWrapped(logs: readonly RawLog[]): WrappedEvent | null {
 }
 
 /**
- * All 5 confidential token event topic0 hashes.
+ * All confidential token event topic0 hashes.
  * Pass to `getLogs({ topics: [TOKEN_TOPICS] })` to fetch
  * all confidential token events in a single RPC call.
  */
@@ -344,7 +423,9 @@ export const TOKEN_TOPICS = [
   Topics.ConfidentialTransfer,
   Topics.Wrapped,
   Topics.UnwrapRequested,
-  Topics.UnwrappedFinalized,
+  Topics.UnwrapRequestedWithRequestId,
+  Topics.UnwrapFinalized,
+  Topics.UnwrapFinalizedWithRequestId,
   Topics.UnwrappedStarted,
 ] as const;
 

@@ -335,12 +335,13 @@ await token.unwrapAll();
 
 ### finalizeUnwrap
 
-`(burnAmountHandle: Handle) => Promise<TransactionResult>`
+`(unwrapRequestIdOrAmount: Handle) => Promise<TransactionResult>`
 
-Completes an unwrap (phase 2) after the decryption proof is available. Use `unshield()` for the full orchestrated flow.
+Completes an unwrap (phase 2) after the decryption proof is available. Pass `unwrapRequestId` from upgraded `UnwrapRequested` events, or the legacy encrypted amount handle. Use `unshield()` for the full orchestrated flow.
 
 ```ts
-await token.finalizeUnwrap(burnAmountHandle);
+const event = findUnwrapRequested(receipt.logs);
+await token.finalizeUnwrap(event.unwrapRequestId ?? event.encryptedAmount);
 ```
 
 ## Related

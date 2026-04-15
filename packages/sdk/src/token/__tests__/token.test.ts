@@ -523,6 +523,7 @@ describe("Token", () => {
 
   describe("unshield", () => {
     const BURN_HANDLE = "0x" + "ff".repeat(32);
+    const UNWRAP_REQUEST_ID = "0x" + "aa".repeat(32);
 
     it("orchestrates unwrap → receipt → finalizeUnwrap", async ({
       relayer,
@@ -552,6 +553,36 @@ describe("Token", () => {
       );
       expect(result.txHash).toBe("0xtxhash");
       expect(result.receipt).toBeDefined();
+    });
+
+    it("uses unwrapRequestId from upgraded UnwrapRequested events", async ({
+      relayer,
+      signer,
+      userAddress,
+      token,
+    }) => {
+      vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
+        logs: [
+          {
+            topics: [
+              Topics.UnwrapRequestedWithRequestId,
+              `0x000000000000000000000000${userAddress.slice(2)}`,
+              UNWRAP_REQUEST_ID,
+            ],
+            data: `0x${"ff".repeat(32)}`,
+          },
+        ],
+      });
+
+      await token.unshield(50n, { skipBalanceCheck: true });
+
+      expect(relayer.publicDecrypt).toHaveBeenCalledWith([UNWRAP_REQUEST_ID]);
+      expect(signer.writeContract).toHaveBeenCalledWith(
+        expect.objectContaining({
+          functionName: "finalizeUnwrap",
+          args: expect.arrayContaining([UNWRAP_REQUEST_ID]),
+        }),
+      );
     });
 
     it("throws when no UnwrapRequested event in receipt", async ({ signer, token }) => {
@@ -1232,6 +1263,7 @@ describe("Token", () => {
 
   describe("resumeUnshield", () => {
     const BURN_HANDLE = "0x" + "ff".repeat(32);
+    const UNWRAP_REQUEST_ID = "0x" + "aa".repeat(32);
 
     it("resumes from an existing unwrap tx hash", async ({
       relayer,
@@ -1253,6 +1285,37 @@ describe("Token", () => {
       expect(signer.waitForTransactionReceipt).toHaveBeenCalledWith("0xprevioustx");
       expect(relayer.publicDecrypt).toHaveBeenCalledWith([BURN_HANDLE]);
       expect(result.txHash).toBe("0xtxhash");
+    });
+
+    it("uses unwrapRequestId from upgraded UnwrapRequested events", async ({
+      relayer,
+      signer,
+      userAddress,
+      token,
+    }) => {
+      vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
+        logs: [
+          {
+            topics: [
+              Topics.UnwrapRequestedWithRequestId,
+              `0x000000000000000000000000${userAddress.slice(2)}`,
+              UNWRAP_REQUEST_ID,
+            ],
+            data: `0x${"ff".repeat(32)}`,
+          },
+        ],
+      });
+
+      await token.resumeUnshield("0xprevioustx" as `0x${string}`);
+
+      expect(signer.waitForTransactionReceipt).toHaveBeenCalledWith("0xprevioustx");
+      expect(relayer.publicDecrypt).toHaveBeenCalledWith([UNWRAP_REQUEST_ID]);
+      expect(signer.writeContract).toHaveBeenCalledWith(
+        expect.objectContaining({
+          functionName: "finalizeUnwrap",
+          args: expect.arrayContaining([UNWRAP_REQUEST_ID]),
+        }),
+      );
     });
   });
 

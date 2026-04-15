@@ -596,6 +596,62 @@ export const wrapperAbi = [
         type: "address",
       },
       {
+        indexed: true,
+        internalType: "bytes32",
+        name: "unwrapRequestId",
+        type: "bytes32",
+      },
+      {
+        indexed: false,
+        internalType: "euint64",
+        name: "encryptedAmount",
+        type: "bytes32",
+      },
+      {
+        indexed: false,
+        internalType: "uint64",
+        name: "cleartextAmount",
+        type: "uint64",
+      },
+    ],
+    name: "UnwrapFinalized",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "address",
+        name: "receiver",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "euint64",
+        name: "amount",
+        type: "bytes32",
+      },
+    ],
+    name: "UnwrapRequested",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "address",
+        name: "receiver",
+        type: "address",
+      },
+      {
+        indexed: true,
+        internalType: "bytes32",
+        name: "unwrapRequestId",
+        type: "bytes32",
+      },
+      {
         indexed: false,
         internalType: "euint64",
         name: "amount",
