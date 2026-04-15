@@ -83,7 +83,7 @@ describe("ERC-165 contract builders", () => {
 
   it("exports interface IDs", () => {
     expect(ERC7984_INTERFACE_ID).toBe("0x4958f2a4");
-    expect(ERC7984_WRAPPER_INTERFACE_ID).toBe("0xf1f4c25a");
+    expect(ERC7984_WRAPPER_INTERFACE_ID).toBe("0x1f1c62b2");
   });
 
   it("isConfidentialTokenContract uses ERC7984_INTERFACE_ID", ({ tokenAddress }) => {
@@ -211,11 +211,11 @@ describe("Wrapper contract builders", () => {
   });
 });
 
-// Regression: verify wrapperAbi matches protocol-apps@da4afe387420.
-// These assertions prove the chosen ABI version is intentional: the interface gained
-// unwrapAmount/unwrapRequester (changing ERC7984_WRAPPER_INTERFACE_ID to 0xf1f4c25a)
-// and finalizeUnwrap was changed to take bytes32 unwrapRequestId instead of euint64 burntAmount.
-describe("wrapperAbi version smoke test (protocol-apps@da4afe387420)", () => {
+// Regression: verify wrapperAbi matches protocol-apps@49b417a4 (OZ confidential-contracts v0.4.0).
+// These assertions prove the chosen ABI version is intentional: the interface uses
+// openzeppelin-confidential-contracts v0.4.0 where unwrapRequester is an implementation-only
+// function (not part of IERC7984ERC20Wrapper), giving ERC7984_WRAPPER_INTERFACE_ID = 0x1f1c62b2.
+describe("wrapperAbi version smoke test (protocol-apps@49b417a4)", () => {
   type AbiFunction = { type: string; name: string; inputs: { type: string; name: string }[] };
   const fns = (wrapperAbi as AbiFunction[]).filter((x) => x.type === "function");
   const fn = (name: string) => fns.find((f) => f.name === name);
