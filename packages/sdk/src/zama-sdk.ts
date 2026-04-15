@@ -385,7 +385,12 @@ export class ZamaSDK {
 
     // Decrypt per contract group with bounded concurrency
     const t0 = Date.now();
-    this.#onEvent({ type: ZamaSDKEvents.DecryptStart, timestamp: t0 });
+    const uncachedHandles = uncached.map((h) => h.handle);
+    this.#onEvent({
+      type: ZamaSDKEvents.DecryptStart,
+      timestamp: t0,
+      handles: uncachedHandles,
+    });
 
     try {
       await pLimit(
@@ -414,6 +419,8 @@ export class ZamaSDK {
         type: ZamaSDKEvents.DecryptEnd,
         durationMs: Date.now() - t0,
         timestamp: Date.now(),
+        handles: uncachedHandles,
+        result,
       });
       return result;
     } catch (error) {
@@ -422,6 +429,7 @@ export class ZamaSDK {
         error: toError(error),
         durationMs: Date.now() - t0,
         timestamp: Date.now(),
+        handles: uncachedHandles,
       });
       throw wrapDecryptError(error, "Failed to decrypt handles");
     }

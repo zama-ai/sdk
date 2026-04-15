@@ -750,7 +750,7 @@ export class ReadonlyToken {
 
     const t0 = Date.now();
     try {
-      this.emit({ type: ZamaSDKEvents.DecryptStart });
+      this.emit({ type: ZamaSDKEvents.DecryptStart, handles: [handle] });
 
       const creds = await this.delegatedCredentials.allow(normalizedDelegator, this.address);
 
@@ -770,6 +770,8 @@ export class ReadonlyToken {
       this.emit({
         type: ZamaSDKEvents.DecryptEnd,
         durationMs: Date.now() - t0,
+        handles: [handle],
+        result,
       });
 
       const value = result[handle];
@@ -786,6 +788,7 @@ export class ReadonlyToken {
         type: ZamaSDKEvents.DecryptError,
         error: toError(error),
         durationMs: Date.now() - t0,
+        handles: [handle],
       });
       throw wrapDecryptError(error, "Failed to decrypt delegated balance", true);
     }
@@ -823,7 +826,7 @@ export class ReadonlyToken {
 
     const t0 = Date.now();
     try {
-      this.emit({ type: ZamaSDKEvents.DecryptStart });
+      this.emit({ type: ZamaSDKEvents.DecryptStart, handles: [handle] });
       const result = await this.relayer.userDecrypt({
         handles: [handle],
         contractAddress: this.address,
@@ -838,6 +841,8 @@ export class ReadonlyToken {
       this.emit({
         type: ZamaSDKEvents.DecryptEnd,
         durationMs: Date.now() - t0,
+        handles: [handle],
+        result,
       });
 
       const value = result[handle];
@@ -852,6 +857,7 @@ export class ReadonlyToken {
         type: ZamaSDKEvents.DecryptError,
         error: toError(error),
         durationMs: Date.now() - t0,
+        handles: [handle],
       });
       throw wrapDecryptError(error, "Failed to decrypt balance");
     }
@@ -886,7 +892,7 @@ export class ReadonlyToken {
 
     const t0 = Date.now();
     try {
-      this.emit({ type: ZamaSDKEvents.DecryptStart });
+      this.emit({ type: ZamaSDKEvents.DecryptStart, handles: nonZeroHandles });
       const decrypted = await this.relayer.userDecrypt({
         handles: nonZeroHandles,
         contractAddress: this.address,
@@ -901,6 +907,8 @@ export class ReadonlyToken {
       this.emit({
         type: ZamaSDKEvents.DecryptEnd,
         durationMs: Date.now() - t0,
+        handles: nonZeroHandles,
+        result: decrypted,
       });
 
       for (const handle of nonZeroHandles) {
@@ -915,6 +923,7 @@ export class ReadonlyToken {
         type: ZamaSDKEvents.DecryptError,
         error: toError(error),
         durationMs: Date.now() - t0,
+        handles: nonZeroHandles,
       });
       throw wrapDecryptError(error, "Failed to decrypt handles");
     }
