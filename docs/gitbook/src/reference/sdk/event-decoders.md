@@ -267,10 +267,10 @@ const enrichedItems = applyDecryptedValues(items, decryptedMap);
 // Each item now has .amount: bigint
 ```
 
-| Parameter      | Type                  | Description                                       |
-| -------------- | --------------------- | ------------------------------------------------- |
-| `items`        | `ActivityItem[]`      | Items from `parseActivityFeed`                    |
-| `decryptedMap` | `Map<bigint, bigint>` | Handle-to-value map from `token.decryptHandles()` |
+| Parameter      | Type                  | Description                                           |
+| -------------- | --------------------- | ----------------------------------------------------- |
+| `items`        | `ActivityItem[]`      | Items from `parseActivityFeed`                        |
+| `decryptedMap` | `Map<Handle, bigint>` | Handle-to-value map produced from `sdk.userDecrypt()` |
 
 ### sortByBlockNumber
 
@@ -307,8 +307,11 @@ const items = parseActivityFeed(logs, userAddress);
 // 3. Extract handles for decryption
 const handles = extractEncryptedHandles(items);
 
-// 4. Decrypt all handles in one batch
-const decryptedMap = await token.decryptHandles(handles);
+// 4. Decrypt all handles in one batch via sdk.userDecrypt
+const decrypted = await sdk.userDecrypt(
+  handles.map((handle) => ({ handle, contractAddress: tokenAddress })),
+);
+const decryptedMap = new Map(Object.entries(decrypted));
 
 // 5. Attach decrypted amounts
 const enrichedItems = applyDecryptedValues(items, decryptedMap);

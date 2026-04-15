@@ -67,13 +67,16 @@ const handles = extractEncryptedHandles(items);
 
 ### 4. Decrypt the handles
 
-Use the token instance to decrypt all handles in one batch call. This returns a `Map` from handle to decrypted `bigint`.
+Decrypt all handles in one batch call via `sdk.userDecrypt`. Each handle must be paired with its contract address (the token contract that emitted it). The call returns a `Record<Handle, bigint>` which you can wrap in a `Map` for use with `applyDecryptedValues`.
 
 {% tabs %}
 {% tab title="SDK" %}
 
 ```ts
-const decryptedMap = await token.decryptHandles(handles);
+const decrypted = await sdk.userDecrypt(
+  handles.map((handle) => ({ handle, contractAddress: tokenAddress })),
+);
+const decryptedMap = new Map(Object.entries(decrypted));
 ```
 
 {% endtab %}
@@ -137,8 +140,11 @@ const items = parseActivityFeed(logs, userAddress);
 // 2. Pull out handles that need decrypting
 const handles = extractEncryptedHandles(items);
 
-// 3. Decrypt them
-const decryptedMap = await token.decryptHandles(handles);
+// 3. Decrypt them via sdk.userDecrypt (one entry per handle, scoped to this token)
+const decrypted = await sdk.userDecrypt(
+  handles.map((handle) => ({ handle, contractAddress: tokenAddress })),
+);
+const decryptedMap = new Map(Object.entries(decrypted));
 
 // 4. Attach the decrypted amounts
 const enrichedItems = applyDecryptedValues(items, decryptedMap);
