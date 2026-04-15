@@ -11,6 +11,7 @@ import {
 } from "@zama-fhe/react-sdk";
 import type { Address } from "@zama-fhe/react-sdk";
 import { parseAmount } from "@/lib/parseAmount";
+import { balanceErrorMessage } from "@/lib/balanceError";
 import { SEPOLIA_EXPLORER_URL } from "@/lib/config";
 
 interface ShieldCardProps {
@@ -158,8 +159,10 @@ export function ShieldCard({
       >
         {shield.isPending ? pendingLabel : "Shield"}
       </button>
-      {shield.isError && (
-        <div className="alert alert-error card-status">{shield.error?.message}</div>
+      {shield.isError && shield.error && (
+        <div className="alert alert-error card-status">
+          {balanceErrorMessage(shield.error, decimals, symbol)}
+        </div>
       )}
       {shield.isSuccess && shield.data?.txHash && (
         <div className="alert alert-success card-status">

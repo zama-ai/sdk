@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useUnshield, useZamaSDK, clearPendingUnshield } from "@zama-fhe/react-sdk";
 import type { Address } from "@zama-fhe/react-sdk";
 import { parseAmount } from "@/lib/parseAmount";
+import { balanceErrorMessage } from "@/lib/balanceError";
 import { HOODI_EXPLORER_URL } from "@/lib/config";
 import { setActiveUnshieldToken } from "@/lib/activeUnshield";
 
@@ -89,8 +90,10 @@ export function UnshieldCard({
       {balanceDecryptRequired && !disabled && (
         <p className="token-meta">Decrypt your balance first to enable unshielding.</p>
       )}
-      {unshield.isError && (
-        <div className="alert alert-error card-status">{unshield.error?.message}</div>
+      {unshield.isError && unshield.error && (
+        <div className="alert alert-error card-status">
+          {balanceErrorMessage(unshield.error, decimals, symbol)}
+        </div>
       )}
       {unshield.isSuccess && unshield.data?.txHash && (
         <div className="alert alert-success card-status">

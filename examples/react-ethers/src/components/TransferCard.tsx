@@ -5,6 +5,7 @@ import { isAddress } from "ethers";
 import { useConfidentialTransfer } from "@zama-fhe/react-sdk";
 import type { Address } from "@zama-fhe/react-sdk";
 import { parseAmount } from "@/lib/parseAmount";
+import { balanceErrorMessage } from "@/lib/balanceError";
 import { SEPOLIA_EXPLORER_URL } from "@/lib/config";
 
 interface TransferCardProps {
@@ -80,8 +81,10 @@ export function TransferCard({
       {balanceDecryptRequired && !disabled && (
         <p className="token-meta">Decrypt your balance first to enable transfers.</p>
       )}
-      {transfer.isError && (
-        <div className="alert alert-error card-status">{transfer.error?.message}</div>
+      {transfer.isError && transfer.error && (
+        <div className="alert alert-error card-status">
+          {balanceErrorMessage(transfer.error, decimals, symbol)}
+        </div>
       )}
       {transfer.isSuccess && transfer.data?.txHash && (
         <div className="alert alert-success card-status">
