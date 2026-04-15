@@ -3,7 +3,7 @@ import { CredentialsManager } from "./credentials/credentials-manager";
 import { DelegatedCredentialsManager } from "./credentials/delegated-credentials-manager";
 import { DecryptCache } from "./decrypt-cache";
 import { wrapDecryptError } from "./errors";
-import type { ZamaSDKEventListener } from "./events/sdk-events";
+import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventListener } from "./events/sdk-events";
 import { ZamaSDKEvents } from "./events/sdk-events";
 import type { DecryptHandle } from "./query/user-decrypt";
 import { ZERO_HANDLE } from "./query/utils";
@@ -217,20 +217,10 @@ export class ZamaSDK {
    * Supports balance queries and authorization without a wrapper address.
    *
    * @param address - The confidential token contract address.
-   * @returns A {@link ReadonlyToken} instance bound to this SDK's relayer, signer, and storage.
+   * @returns A {@link ReadonlyToken} instance bound to this SDK.
    */
   createReadonlyToken(address: Address): ReadonlyToken {
-    return new ReadonlyToken({
-      relayer: this.relayer,
-      signer: this.signer,
-      storage: this.storage,
-      sessionStorage: this.sessionStorage,
-      credentials: this.credentials,
-      delegatedCredentials: this.delegatedCredentials,
-      cache: this.cache,
-      address: getAddress(address),
-      onEvent: this.#onEvent,
-    });
+    return new ReadonlyToken(this, address);
   }
 
   /**
@@ -239,21 +229,28 @@ export class ZamaSDK {
    *
    * @param address - The confidential token contract address (also used as wrapper by default).
    * @param wrapper - Optional explicit wrapper address, if it differs from the token address.
-   * @returns A {@link Token} instance bound to this SDK's relayer, signer, and storage.
+   * @returns A {@link Token} instance bound to this SDK.
    */
   createToken(address: Address, wrapper?: Address): Token {
-    return new Token({
-      relayer: this.relayer,
-      signer: this.signer,
-      storage: this.storage,
-      sessionStorage: this.sessionStorage,
-      credentials: this.credentials,
-      delegatedCredentials: this.delegatedCredentials,
-      cache: this.cache,
-      address: getAddress(address),
-      wrapper: wrapper ? getAddress(wrapper) : undefined,
-      onEvent: this.#onEvent,
-    });
+    return new Token(this, address, wrapper);
+  }
+
+  /**
+   * Emit a structured SDK event. Used by {@link Token}/{@link ReadonlyToken}
+   * (delegated decrypt path only) to surface decrypt-related events through
+   * the unified SDK event stream.
+   *
+   * Application code should subscribe via the `onEvent` config option, never
+   * call this directly.
+   *
+   * @internal
+   */
+  emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void {
+    this.#onEvent({
+      ...input,
+      tokenAddress,
+      timestamp: Date.now(),
+    } as ZamaSDKEvent);
   }
 
   /**
@@ -369,8 +366,9 @@ export class ZamaSDK {
     }
 
     // Derive contract addresses from ALL handles for stable credential cache key
-    const allContractAddresses = [...new Set(normalized.map((h) => h.contractAddress))];
-    const creds = await this.credentials.allow(...allContractAddresses);
+    const creds = await this.credentials.allow(
+      ...new Set(normalized.map((h) => h.contractAddress)),
+    );
 
     // Group uncached by contract
     const byContract = new Map<Address, Handle[]>();

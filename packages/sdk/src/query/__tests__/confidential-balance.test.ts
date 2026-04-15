@@ -1,4 +1,5 @@
 import { describe, expect, test, mockQueryContext } from "../../test-fixtures";
+import type { vi } from "../../test-fixtures";
 import { confidentialBalanceQueryOptions } from "../confidential-balance";
 
 describe("confidentialBalanceQueryOptions", () => {
@@ -29,8 +30,15 @@ describe("confidentialBalanceQueryOptions", () => {
     expect(options.enabled).toBe(false);
   });
 
-  test("queryFn reads handle from context.queryKey", async ({ createMockReadonlyToken }) => {
+  test("queryFn reads handle from context.queryKey and decrypts via sdk.userDecrypt", async ({
+    createMockReadonlyToken,
+  }) => {
     const token = createMockReadonlyToken("0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a");
+    const handle =
+      "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbBbbbbbbbbbbbbbbbbbbbbbbbb" as `0x${string}`;
+    // Mock sdk.userDecrypt to return the decrypted value
+    (token.sdk.userDecrypt as ReturnType<typeof vi.fn>).mockResolvedValue({ [handle]: 42n });
+
     const options = confidentialBalanceQueryOptions(token, {
       owner: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
       handle: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa",
@@ -41,14 +49,14 @@ describe("confidentialBalanceQueryOptions", () => {
       {
         tokenAddress: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
         owner: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
-        handle: "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbBbbbbbbbbbbbbbbbbbbbbbbbb",
+        handle,
       },
     ] as const;
 
-    await options.queryFn(mockQueryContext(key));
-    expect(token.decryptBalance).toHaveBeenCalledWith(
-      "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbBbbbbbbbbbbbbbbbbbbbbbbbb",
-      "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
-    );
+    const value = await options.queryFn(mockQueryContext(key));
+    expect(value).toBe(42n);
+    expect(token.sdk.userDecrypt).toHaveBeenCalledWith([
+      { handle, contractAddress: token.address },
+    ]);
   });
 });

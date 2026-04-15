@@ -1,7 +1,8 @@
-import { ReadonlyToken } from "../token/readonly-token";
+import type { ReadonlyToken } from "../token/readonly-token";
 import { DecryptionFailedError } from "../errors";
-import { assertNonNullable } from "../utils/assertions";
-
+import { assertBigint, assertNonNullable } from "../utils/assertions";
+import { toError } from "../utils";
+import { pLimit } from "../utils/concurrency";
 import type { EncryptedBalanceHandle } from "./confidential-balance";
 import type { QueryFactoryOptions } from "./factory-types";
 import { filterQueryOptions } from "./utils";
@@ -53,17 +54,37 @@ export function confidentialBalancesQueryOptions(
       const [, { owner: keyOwner, handles: keyHandles }] = context.queryKey;
       assertNonNullable(keyOwner, "confidentialBalancesQueryOptions: owner");
       assertNonNullable(keyHandles, "confidentialBalancesQueryOptions: handles");
+      assertNonNullable(tokens[0], "confidentialBalancesQueryOptions: tokens[0]");
+      const { sdk } = tokens[0];
+
+      // Pre-authorize the full token set in one wallet signature so the
+      // per-handle userDecrypt calls below reuse the cached credentials
+      // (otherwise each call would trigger its own single-token allow()
+      // and the user would see N signature prompts).
+      await sdk.allow(tokens.map((t) => t.address));
+
+      const perTokenBalances = new Map<Address, bigint>();
       const perTokenErrors = new Map<Address, Error>();
 
-      const raw = await ReadonlyToken.batchDecryptBalances(tokens, {
-        owner: keyOwner,
-        handles: keyHandles,
-        maxConcurrency: config?.maxConcurrency,
-        onError: (error, address) => {
-          perTokenErrors.set(address, error);
-          return 0n;
-        },
-      });
+      await pLimit(
+        tokens.map((token, i) => async () => {
+          const handle = keyHandles[i]!;
+          try {
+            const decrypted = await sdk.userDecrypt([{ handle, contractAddress: token.address }]);
+            const value = decrypted[handle];
+            if (value === undefined) {
+              throw new DecryptionFailedError(
+                `Decryption returned no value for handle ${handle} on token ${token.address}`,
+              );
+            }
+            assertBigint(value, "confidentialBalancesQueryOptions: result[handle]");
+            perTokenBalances.set(token.address, value);
+          } catch (error) {
+            perTokenErrors.set(token.address, toError(error));
+          }
+        }),
+        config?.maxConcurrency,
+      );
 
       // Re-key with caller's original addresses (tokens normalize to lowercase)
       const balances = new Map<Address, bigint>();
@@ -75,7 +96,7 @@ export function confidentialBalancesQueryOptions(
         if (tokenError) {
           errors.set(originalAddr, tokenError);
         } else {
-          const balance = raw.get(tokenAddr);
+          const balance = perTokenBalances.get(tokenAddr);
           if (balance !== undefined) {
             balances.set(originalAddr, balance);
           }

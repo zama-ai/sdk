@@ -31,10 +31,10 @@ import { ApproveUnderlyingSubmittedEvent } from '@zama-fhe/sdk';
 import { BalanceCheckUnavailableError } from '@zama-fhe/sdk';
 import { balanceOfContract } from '@zama-fhe/sdk';
 import { BaseEvent } from '@zama-fhe/sdk';
+import { BatchBalancesResult } from '@zama-fhe/sdk';
 import { BatchDecryptAsOptions } from '@zama-fhe/sdk';
 import { batchDecryptBalancesAsMutationOptions } from '@zama-fhe/sdk/query';
 import { BatchDecryptBalancesAsParams } from '@zama-fhe/sdk/query';
-import { BatchDecryptOptions } from '@zama-fhe/sdk';
 import { ChromeSessionStorage } from '@zama-fhe/sdk';
 import { chromeSessionStorage } from '@zama-fhe/sdk';
 import { clearPendingUnshield } from '@zama-fhe/sdk';
@@ -189,7 +189,6 @@ import { ReadContractConfig } from '@zama-fhe/sdk';
 import { ReadContractReturnType } from '@zama-fhe/sdk';
 import { ReadFunctionName } from '@zama-fhe/sdk';
 import { ReadonlyToken } from '@zama-fhe/sdk';
-import { ReadonlyTokenConfig } from '@zama-fhe/sdk';
 import { RelayerRequestFailedError } from '@zama-fhe/sdk';
 import { RelayerSDK } from '@zama-fhe/sdk';
 import { RelayerSDKStatus } from '@zama-fhe/sdk';
@@ -222,7 +221,6 @@ import { supportsInterfaceContract } from '@zama-fhe/sdk';
 import { symbolContract } from '@zama-fhe/sdk';
 import { Token } from '@zama-fhe/sdk';
 import { TOKEN_TOPICS } from '@zama-fhe/sdk';
-import { TokenConfig } from '@zama-fhe/sdk';
 import { TokenMetadata } from '@zama-fhe/sdk/query';
 import { tokenMetadataQueryOptions } from '@zama-fhe/sdk/query';
 import { TokenWrapperPair } from '@zama-fhe/sdk';
@@ -327,13 +325,13 @@ export { balanceOfContract }
 
 export { BaseEvent }
 
+export { BatchBalancesResult }
+
 export { BatchDecryptAsOptions }
 
 export { batchDecryptBalancesAsMutationOptions }
 
 export { BatchDecryptBalancesAsParams }
-
-export { BatchDecryptOptions }
 
 export { ChromeSessionStorage }
 
@@ -662,8 +660,6 @@ export { ReadFunctionName }
 
 export { ReadonlyToken }
 
-export { ReadonlyTokenConfig }
-
 export { RelayerRequestFailedError }
 
 export { RelayerSDK }
@@ -727,8 +723,6 @@ export { symbolContract }
 export { Token }
 
 export { TOKEN_TOPICS }
-
-export { TokenConfig }
 
 export { TokenMetadata }
 

@@ -47,12 +47,19 @@ describe("NoCiphertextError detection (P3)", () => {
     await expect(token.balanceOf()).rejects.toBeInstanceOf(DecryptionFailedError);
   });
 
-  it("throws NoCiphertextError for decryptBalance with 400", async ({ relayer, token, handle }) => {
+  it("throws NoCiphertextError when sdk.userDecrypt receives 400", async ({
+    sdk,
+    relayer,
+    token,
+    handle,
+  }) => {
     const error = new Error("No ciphertext") as Error & { statusCode?: number };
     error.statusCode = 400;
     vi.mocked(relayer.userDecrypt).mockRejectedValue(error);
 
-    await expect(token.decryptBalance(handle)).rejects.toBeInstanceOf(NoCiphertextError);
+    await expect(
+      sdk.userDecrypt([{ handle, contractAddress: token.address }]),
+    ).rejects.toBeInstanceOf(NoCiphertextError);
   });
 
   it("passes through NoCiphertextError without re-wrapping", async ({
@@ -115,7 +122,8 @@ describe("NoCiphertextError detection (P3)", () => {
     expect(err.statusCode).toBe(502);
   });
 
-  it("handles decryptHandles 400 error for batch operations", async ({
+  it("handles 400 error for multi-handle sdk.userDecrypt", async ({
+    sdk,
     relayer,
     token,
     handle,
@@ -124,6 +132,8 @@ describe("NoCiphertextError detection (P3)", () => {
     error.statusCode = 400;
     vi.mocked(relayer.userDecrypt).mockRejectedValue(error);
 
-    await expect(token.decryptHandles([handle])).rejects.toBeInstanceOf(NoCiphertextError);
+    await expect(
+      sdk.userDecrypt([{ handle, contractAddress: token.address }]),
+    ).rejects.toBeInstanceOf(NoCiphertextError);
   });
 });

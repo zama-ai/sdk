@@ -8,6 +8,7 @@ import {
   confidentialHandleQueryOptions,
   signerAddressQueryOptions,
 } from "@zama-fhe/sdk/query";
+import { useZamaSDK } from "../provider";
 import { useReadonlyToken } from "../token/use-readonly-token";
 
 /** Configuration for {@link useConfidentialBalance}. */
@@ -49,16 +50,17 @@ export function useConfidentialBalance(
 ) {
   const { tokenAddress, handleRefetchInterval } = config;
   const { enabled = true } = options ?? {};
+  const sdk = useZamaSDK();
   const token = useReadonlyToken(tokenAddress);
 
   const addressQuery = useQuery<Address>({
-    ...signerAddressQueryOptions(token.signer),
+    ...signerAddressQueryOptions(sdk.signer),
   });
 
   const owner = addressQuery.data;
 
   // Phase 1: Poll the encrypted handle (cheap RPC read, no signing)
-  const baseHandleQueryOptions = confidentialHandleQueryOptions(token.signer, tokenAddress, {
+  const baseHandleQueryOptions = confidentialHandleQueryOptions(sdk.signer, tokenAddress, {
     owner,
     pollingInterval: handleRefetchInterval,
   });
