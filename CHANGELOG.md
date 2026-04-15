@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.5.0-alpha.1](https://github.com/zama-ai/sdk/compare/v2.4.0...v2.5.0-alpha.1) (2026-04-15)
+
+### Features
+
+- **sdk:** add handles and result fields to decrypt events [SDK-85] ([85dd3dc]())
+
+### Bug Fixes
+
+- **sdk:** address PR review comments on userDecrypt [SDK-85] ([7c36283]())
+
 ## [2.4.0](https://github.com/zama-ai/sdk/compare/v2.3.0...v2.4.0) (2026-04-13)
 
 ### Features
