@@ -29,7 +29,7 @@ import type { ClearValueType, Handle } from "../relayer/relayer-sdk.types";
 import type { GenericSigner, GenericStorage } from "../types";
 import { toError } from "../utils";
 import { assertBigint } from "../utils/assertions";
-import { pLimit } from "./concurrency";
+import { pLimit } from "../utils/concurrency";
 
 /** 32-byte zero handle, used to detect uninitialized encrypted balances. */
 export const ZERO_HANDLE =
