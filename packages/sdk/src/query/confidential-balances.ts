@@ -1,5 +1,5 @@
 import type { ReadonlyToken } from "../token/readonly-token";
-import { DecryptionFailedError } from "../errors";
+import { DecryptionFailedError, isSessionError } from "../errors";
 import { assertBigint, assertNonNullable } from "../utils/assertions";
 import { toError } from "../utils";
 import { pLimit } from "../utils/concurrency";
@@ -81,6 +81,11 @@ export function confidentialBalancesQueryOptions(
             assertBigint(value, "confidentialBalancesQueryOptions: result[handle]");
             perTokenBalances.set(token.address, value);
           } catch (error) {
+            // Session-level failures (user rejected signature, SDK misconfigured)
+            // are not per-token failures — rethrow so the whole query errors out.
+            if (isSessionError(error)) {
+              throw error;
+            }
             perTokenErrors.set(token.address, toError(error));
           }
         }),

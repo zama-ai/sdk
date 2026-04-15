@@ -17,19 +17,21 @@ import {
   DecryptionFailedError,
   DelegationExpiredError,
   DelegationNotFoundError,
+  isSessionError,
   wrapDecryptError,
   ZamaError,
 } from "../errors";
 import { ZamaSDKEvents, type ZamaSDKEventInput } from "../events/sdk-events";
+import { ZERO_HANDLE } from "../query/utils";
 import type { ClearValueType, Handle } from "../relayer/relayer-sdk.types";
 import { toError } from "../utils";
 import { assertBigint } from "../utils/assertions";
 import { pLimit } from "../utils/concurrency";
 import type { ZamaSDK } from "../zama-sdk";
 
-/** 32-byte zero handle, used to detect uninitialized encrypted balances. */
-export const ZERO_HANDLE =
-  "0x0000000000000000000000000000000000000000000000000000000000000000" as const;
+// Re-exported so consumers importing via `./token` keep a single canonical
+// reference. The constant itself lives in `query/utils` to avoid duplication.
+export { ZERO_HANDLE };
 
 /** Options for {@link ReadonlyToken.batchDecryptBalancesAs}. */
 export interface BatchDecryptAsOptions {
@@ -73,7 +75,7 @@ export class ReadonlyToken {
 
   /**
    * Decrypt and return the plaintext balance for the given owner.
-   * Generates FHE credentials automatically if they don't exist.
+   * Acquires FHE credentials via a wallet signature if none are cached.
    *
    * @param owner - Optional balance owner address. Defaults to the connected signer.
    * @returns The decrypted plaintext balance as a bigint.
@@ -169,21 +171,50 @@ export class ReadonlyToken {
     // per-token userDecrypt calls reuse the cached credentials.
     await sdk.allow(tokens.map((t) => t.address));
 
-    const settled = await Promise.allSettled(tokens.map((t) => t.balanceOf(owner)));
+    // Bound concurrency so a large token list can't overwhelm the relayer.
+    // Default matches the inner userDecrypt limit.
+    const outcomes = await pLimit(
+      tokens.map((t) => async () => {
+        try {
+          return {
+            status: "fulfilled" as const,
+            value: await t.balanceOf(owner),
+          };
+        } catch (reason) {
+          return { status: "rejected" as const, reason };
+        }
+      }),
+      5,
+    );
+
     for (let i = 0; i < tokens.length; i++) {
       const tokenAddress = tokens[i]!.address;
-      const outcome = settled[i]!;
+      const outcome = outcomes[i]!;
       if (outcome.status === "fulfilled") {
         results.set(tokenAddress, outcome.value);
       } else {
         const reason = outcome.reason;
+        // Session-level failures (user rejected signature, SDK misconfigured)
+        // apply to every token — surface them instead of collecting per-token.
+        if (isSessionError(reason)) {
+          throw reason;
+        }
         const error =
           reason instanceof ZamaError
             ? reason
-            : new DecryptionFailedError(toError(reason).message, { cause: reason });
+            : new DecryptionFailedError(toError(reason).message, {
+                cause: reason,
+              });
         errors.set(tokenAddress, error);
       }
     }
+
+    // Total failure: surface the first error so callers know nothing decrypted.
+    if (errors.size === tokens.length) {
+      const firstError = errors.values().next().value;
+      throw firstError ?? new DecryptionFailedError("All token balance decryptions failed");
+    }
+
     return { results, errors };
   }
 
@@ -306,15 +337,30 @@ export class ReadonlyToken {
             }
             assertBigint(value, "batchDecryptBalancesAs: result[handle]");
             results.set(token.address, value);
-            void firstToken.sdk.cache.set(ownerAddress, token.address, handle, value);
+            // Cache write is best-effort — log on failure so a broken cache
+            // backend doesn't silently force re-decryption forever.
+            firstToken.sdk.cache
+              .set(ownerAddress, token.address, handle, value)
+              .catch((cacheErr: unknown) => {
+                // oxlint-disable-next-line no-console
+                console.warn("[zama-sdk] Failed to cache decrypted value:", cacheErr);
+              });
           })
           .catch((error) => {
+            // Session-level failures apply to every token — re-throw so the
+            // whole batch aborts with the original typed error.
+            if (isSessionError(error)) {
+              throw error;
+            }
             const err = toError(error);
             if (onError) {
               try {
                 results.set(token.address, onError(err, token.address));
               } catch (callbackError) {
-                errors.push({ address: token.address, error: toError(callbackError) });
+                errors.push({
+                  address: token.address,
+                  error: toError(callbackError),
+                });
               }
             } else {
               errors.push({ address: token.address, error: err });
@@ -327,8 +373,11 @@ export class ReadonlyToken {
 
     if (errors.length > 0) {
       const message = errors.map((e) => `${e.address}: ${e.error.message}`).join("; ");
+      // Preserve the first original error as `cause` so callers can still
+      // `instanceof`-check the underlying failure type.
       throw new DecryptionFailedError(
         `Batch delegated decryption failed for ${errors.length} token(s): ${message}`,
+        { cause: errors[0]!.error },
       );
     }
 
@@ -414,9 +463,12 @@ export class ReadonlyToken {
   }
 
   /**
-   * Revoke the session signature for the connected wallet.
-   * Stored credentials remain intact, but the next decrypt operation
-   * will require a fresh wallet signature.
+   * Revoke cached session signatures for the given contract addresses, forcing
+   * a fresh wallet signature on the next decrypt operation for those contracts.
+   * Stored credentials remain intact; only the in-memory session signature is
+   * cleared.
+   *
+   * @param contractAddresses - Contract addresses to revoke credentials for.
    */
   async revoke(...contractAddresses: Address[]): Promise<void> {
     await this.sdk.credentials.revoke(...contractAddresses);
@@ -598,13 +650,8 @@ export class ReadonlyToken {
         durationDays: creds.durationDays,
       });
 
-      this.emit({
-        type: ZamaSDKEvents.DecryptEnd,
-        durationMs: Date.now() - t0,
-        handles: [handle],
-        result,
-      });
-
+      // Validate the relayer response before emitting DecryptEnd so subscribers
+      // never see a contradictory `Start → End → Error` sequence.
       const value = result[handle];
       if (value === undefined) {
         throw new DecryptionFailedError(
@@ -612,6 +659,14 @@ export class ReadonlyToken {
         );
       }
       assertBigint(value, "decryptBalanceAs: result[handle]");
+
+      this.emit({
+        type: ZamaSDKEvents.DecryptEnd,
+        durationMs: Date.now() - t0,
+        handles: [handle],
+        result,
+      });
+
       await this.sdk.cache.set(normalizedOwner, this.address, handle, value);
       return value;
     } catch (error) {

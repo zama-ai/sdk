@@ -221,7 +221,13 @@ export interface UnshieldPhase2SubmittedEvent extends BaseEvent {
   txHash: Hex;
 }
 
-/** Discriminated union of all SDK events. Never contains amounts, private keys, handles, or proofs. */
+/**
+ * Discriminated union of all SDK events.
+ *
+ * Decrypt events carry handles and decrypted clear-text values so event
+ * subscribers can correlate and bind them in UI layers. Events never carry
+ * private keys, session signatures, or ZK proofs.
+ */
 export type ZamaSDKEvent =
   | CredentialsLoadingEvent
   | CredentialsCachedEvent

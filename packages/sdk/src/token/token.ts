@@ -1027,7 +1027,7 @@ export class Token extends ReadonlyToken {
     // a transfer/unshield flow (respects the explicit-action pattern from SDK-42).
     //
     // Note: isAllowed() is a wallet-scoped session check. If credentials exist
-    // but don't yet cover this token's contract address, decryptBalance() may
+    // but don't yet cover this token's contract address, sdk.userDecrypt() may
     // still trigger a signing prompt for contract extension. This is acceptable:
     // it only happens when the user interacts with a new token for the first
     // time while having an active session — a signing prompt is expected there.

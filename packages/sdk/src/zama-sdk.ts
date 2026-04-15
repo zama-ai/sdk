@@ -142,11 +142,10 @@ export class ZamaSDK {
       const lifecycleCallbacks = config.signerLifecycleCallbacks;
       const runLifecycleEffect = (operation: string, effect: () => Promise<void>) => {
         void effect().catch((error) => {
-          this.#onEvent?.({
+          this.emitEvent({
             type: ZamaSDKEvents.TransactionError,
             operation,
             error: toError(error),
-            timestamp: Date.now(),
           });
         });
       };
@@ -237,8 +236,10 @@ export class ZamaSDK {
 
   /**
    * Emit a structured SDK event. Used by {@link Token}/{@link ReadonlyToken}
-   * (delegated decrypt path only) to surface decrypt-related events through
-   * the unified SDK event stream.
+   * to surface lifecycle events through the unified SDK event stream.
+   *
+   * Listener exceptions are caught and logged so that a misbehaving subscriber
+   * can never corrupt SDK operations.
    *
    * Application code should subscribe via the `onEvent` config option, never
    * call this directly.
@@ -246,11 +247,16 @@ export class ZamaSDK {
    * @internal
    */
   emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void {
-    this.#onEvent({
-      ...input,
-      tokenAddress,
-      timestamp: Date.now(),
-    } as ZamaSDKEvent);
+    try {
+      this.#onEvent({
+        ...input,
+        tokenAddress,
+        timestamp: Date.now(),
+      } as ZamaSDKEvent);
+    } catch (error) {
+      // oxlint-disable-next-line no-console
+      console.error("[zama-sdk] onEvent listener threw:", error);
+    }
   }
 
   /**
@@ -299,7 +305,10 @@ export class ZamaSDK {
     if (contractAddresses.length === 0) {
       return;
     }
-    await this.credentials.allow(...contractAddresses);
+    // Normalize to match userDecrypt's checksummed addresses so the credential
+    // cache key is stable regardless of how callers pass the addresses.
+    const normalized = contractAddresses.map((addr) => getAddress(addr));
+    await this.credentials.allow(...normalized);
   }
 
   /**
@@ -384,13 +393,13 @@ export class ZamaSDK {
     // Decrypt per contract group with bounded concurrency
     const t0 = Date.now();
     const uncachedHandles = uncached.map((h) => h.handle);
-    this.#onEvent({
-      type: ZamaSDKEvents.DecryptStart,
-      timestamp: t0,
-      handles: uncachedHandles,
-    });
 
     try {
+      this.emitEvent({
+        type: ZamaSDKEvents.DecryptStart,
+        handles: uncachedHandles,
+      });
+
       await pLimit(
         [...byContract.entries()].map(([contractAddress, contractHandles]) => async () => {
           const decrypted = await this.relayer.userDecrypt({
@@ -413,20 +422,27 @@ export class ZamaSDK {
         5,
       );
 
-      this.#onEvent({
+      // Emit only the freshly-decrypted subset in `result` so its keys match
+      // `handles`. Cached and zero-handle entries are intentionally excluded.
+      const uncachedResult: Record<Handle, ClearValueType> = {};
+      for (const handle of uncachedHandles) {
+        const value = result[handle];
+        if (value !== undefined) {
+          uncachedResult[handle] = value;
+        }
+      }
+      this.emitEvent({
         type: ZamaSDKEvents.DecryptEnd,
         durationMs: Date.now() - t0,
-        timestamp: Date.now(),
         handles: uncachedHandles,
-        result,
+        result: uncachedResult,
       });
       return result;
     } catch (error) {
-      this.#onEvent({
+      this.emitEvent({
         type: ZamaSDKEvents.DecryptError,
         error: toError(error),
         durationMs: Date.now() - t0,
-        timestamp: Date.now(),
         handles: uncachedHandles,
       });
       throw wrapDecryptError(error, "Failed to decrypt handles");

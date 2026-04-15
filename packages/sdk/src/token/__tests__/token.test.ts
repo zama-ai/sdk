@@ -1150,7 +1150,7 @@ describe("Token", () => {
       expect(result.txHash).toBe("0xtxhash");
     });
 
-    it("re-throws ZamaError from decryptBalance (e.g. DecryptionFailedError)", async ({
+    it("re-throws ZamaError from sdk.userDecrypt (e.g. DecryptionFailedError)", async ({
       signer,
       token,
       handle,
@@ -1161,7 +1161,7 @@ describe("Token", () => {
       vi.mocked(signer.readContract).mockResolvedValueOnce(handle); // confidentialBalanceOf
       vi.mocked(relayer.userDecrypt).mockRejectedValueOnce(new TypeError("network failure"));
 
-      // decryptBalance wraps the TypeError as DecryptionFailedError (a ZamaError),
+      // sdk.userDecrypt wraps the TypeError as DecryptionFailedError (a ZamaError),
       // so #assertConfidentialBalance re-throws it as-is rather than wrapping again.
       await expect(token.confidentialTransfer(RECIPIENT, 100n)).rejects.toMatchObject({
         code: ZamaErrorCode.DecryptionFailed,

@@ -299,7 +299,7 @@ Decrypt one or more FHE handles. Returns cached values when available, only call
 
 Handles from different contracts can be mixed — they are grouped by `contractAddress` and batched into one relayer call per contract (up to 5 concurrently). Zero handles (32 zero bytes) resolve to `0n` without hitting the relayer.
 
-Credentials are acquired from the full input handle set (including cached and zero handles), ensuring a stable credential cache key across calls.
+When the relayer is actually called, credentials are derived from the contract addresses of the full input handle set (including cached and zero handles), ensuring a stable credential cache key regardless of which handles happen to be cached. If every handle is zero or already cached, no credentials are acquired and no wallet prompt is shown.
 
 ```ts
 const values = await sdk.userDecrypt([
@@ -317,7 +317,12 @@ The `onEvent` callback is a single function, so for multi-listener observability
 {% tab title="Browser (CustomEvent)" %}
 
 ```ts
-import { ZamaSDK, ZamaSDKEvents } from "@zama-fhe/sdk";
+import {
+  ZamaSDK,
+  ZamaSDKEvents,
+  type DecryptEndEvent,
+  type DecryptErrorEvent,
+} from "@zama-fhe/sdk";
 
 const sdk = new ZamaSDK({
   relayer,
@@ -349,18 +354,23 @@ window.addEventListener(ZamaSDKEvents.DecryptError, (e: CustomEvent<DecryptError
 
 ```ts
 import { EventEmitter } from "node:events";
-import { ZamaSDK, ZamaSDKEvents } from "@zama-fhe/sdk";
+import {
+  ZamaSDK,
+  ZamaSDKEvents,
+  type DecryptEndEvent,
+  type DecryptErrorEvent,
+} from "@zama-fhe/sdk";
 
-const emmiter = new EventEmitter();
+const emitter = new EventEmitter();
 
 const sdk = new ZamaSDK({
   relayer,
   signer,
   storage,
-  onEvent: (event) => emmiter.emit(event.type, event),
+  onEvent: (event) => emitter.emit(event.type, event),
 });
 
-emmiter.on(ZamaSDKEvents.DecryptEnd, ({ durationMs, handles, result }: DecryptEndEvent) => {
+emitter.on(ZamaSDKEvents.DecryptEnd, ({ durationMs, handles, result }: DecryptEndEvent) => {
   console.log(`Decrypted ${handles.length} handle(s) in ${durationMs}ms`);
   // result is Record<Handle, ClearValueType> — look up a specific handle
   for (const h of handles) {
@@ -368,7 +378,7 @@ emmiter.on(ZamaSDKEvents.DecryptEnd, ({ durationMs, handles, result }: DecryptEn
   }
 });
 
-emmiter.on(ZamaSDKEvents.DecryptError, ({ error, durationMs, handles }: DecryptErrorEvent) => {
+emitter.on(ZamaSDKEvents.DecryptError, ({ error, durationMs, handles }: DecryptErrorEvent) => {
   console.error(`Decryption failed after ${durationMs}ms for ${handles.length} handle(s):`, error);
 });
 ```

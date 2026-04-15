@@ -139,6 +139,48 @@ describe("ReadonlyToken", () => {
         /must share the same ZamaSDK/,
       );
     });
+
+    it("throws when every token fails to decrypt", async ({
+      sdk,
+      signer,
+      tokenAddress,
+      handle,
+    }) => {
+      const token1 = new ReadonlyToken(sdk, tokenAddress);
+      const token2 = new ReadonlyToken(sdk, TOKEN2);
+      vi.mocked(signer.readContract)
+        .mockResolvedValueOnce(handle)
+        .mockResolvedValueOnce(VALID_HANDLE2);
+      vi.mocked(sdk.relayer.userDecrypt).mockRejectedValue(new Error("relayer offline"));
+
+      await expect(ReadonlyToken.batchBalancesOf([token1, token2])).rejects.toBeInstanceOf(
+        ZamaError,
+      );
+    });
+
+    it("wraps non-ZamaError per-token failures as DecryptionFailedError preserving the cause", async ({
+      sdk,
+      signer,
+      tokenAddress,
+      handle,
+    }) => {
+      const token1 = new ReadonlyToken(sdk, tokenAddress);
+      const token2 = new ReadonlyToken(sdk, TOKEN2);
+      vi.mocked(signer.readContract)
+        .mockResolvedValueOnce(handle)
+        .mockResolvedValueOnce(VALID_HANDLE2);
+      const rawError = new TypeError("malformed response");
+      vi.mocked(sdk.relayer.userDecrypt)
+        .mockImplementationOnce(async ({ handles }) => ({ [handles[0]]: 1000n }))
+        .mockImplementationOnce(async () => {
+          throw rawError;
+        });
+
+      const { errors } = await ReadonlyToken.batchBalancesOf([token1, token2]);
+
+      const err = errors.get(getAddress(TOKEN2));
+      expect(err).toBeInstanceOf(DecryptionFailedError);
+    });
   });
 
   describe("allow", () => {
