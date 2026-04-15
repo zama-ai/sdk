@@ -40,8 +40,12 @@ jobs:
     needs: [validate-branch]
     uses: ./.github/workflows/playwright.yml
 
+  api-report:
+    needs: [validate-branch]
+    uses: ./.github/workflows/api-report.yml
+
   release:
-    needs: [lint, vitest, playwright]
+    needs: [lint, vitest, playwright, api-report]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
