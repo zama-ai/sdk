@@ -10,7 +10,7 @@ import { ZERO_HANDLE } from "./query/utils";
 import type { RelayerSDK } from "./relayer/relayer-sdk";
 import type { ClearValueType, Handle } from "./relayer/relayer-sdk.types";
 import { MemoryStorage } from "./storage/memory-storage";
-import { pLimit } from "./token/concurrency";
+import { pLimit } from "./utils/concurrency";
 import { ReadonlyToken } from "./token/readonly-token";
 import { Token } from "./token/token";
 import type { GenericSigner, GenericStorage, SignerLifecycleCallbacks } from "./types";
