@@ -1,0 +1,128 @@
+name: Publish to npm (from tag)
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Git tag to publish (e.g. v2.4.0)"
+        required: true
+        type: string
+      npm-tag:
+        description: "npm dist-tag (auto-detected from version if left empty)"
+        required: false
+        type: string
+      dry-run:
+        description: "Dry run (log what would be published without actually publishing)"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write
+
+defaults:
+  run:
+    shell: bash -euo pipefail {0}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate tag format
+        run: |
+          tag="${{ inputs.tag }}"
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            echo "::error::Tag must start with 'v' followed by semver (e.g. v2.4.0, v2.5.0-alpha.1). Got: ${tag}"
+            exit 1
+          fi
+
+      - name: Checkout tag
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ inputs.tag }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Ensure npm 11
+        run: |
+          pnpm add -g npm@^11
+          npm --version
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Build packages
+        run: pnpm build
+
+      - name: Determine npm tag
+        id: npm-tag
+        run: |
+          version=$(node -p "require('./packages/sdk/package.json').version")
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+          if [[ -n "${{ inputs.npm-tag }}" ]]; then
+            echo "tag=${{ inputs.npm-tag }}" >> "$GITHUB_OUTPUT"
+          elif [[ "$version" == *-* ]]; then
+            npm_tag="${version#*-}"   # e.g. "alpha.10" from "1.0.0-alpha.10"
+            npm_tag="${npm_tag%%.*}"   # e.g. "alpha"
+            echo "tag=${npm_tag}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=latest" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify version matches tag
+        run: |
+          version="${{ steps.npm-tag.outputs.version }}"
+          expected="${{ inputs.tag }}"
+          expected="${expected#v}"  # strip leading v
+          if [[ "$version" != "$expected" ]]; then
+            echo "::error::package.json version (${version}) does not match git tag (${{ inputs.tag }}). Aborting."
+            exit 1
+          fi
+
+      - name: Publish to npm
+        run: |
+          version="${{ steps.npm-tag.outputs.version }}"
+          npm_tag="${{ steps.npm-tag.outputs.tag }}"
+          dry_run="${{ inputs.dry-run }}"
+
+          echo "Publishing v${version} with tag '${npm_tag}'"
+
+          flags="--access public --tag ${npm_tag}"
+          if [[ "$dry_run" == "true" ]]; then
+            flags="${flags} --dry-run"
+            echo "::notice::DRY RUN — packages will not actually be published"
+          fi
+
+          cd packages/sdk
+          npm publish ${flags}
+          cd ../react-sdk
+          npm publish ${flags}
+        env:
+          NPM_CONFIG_PROVENANCE: true
+
+      - name: Summary
+        run: |
+          version="${{ steps.npm-tag.outputs.version }}"
+          npm_tag="${{ steps.npm-tag.outputs.tag }}"
+          dry_run="${{ inputs.dry-run }}"
+
+          if [[ "$dry_run" == "true" ]]; then
+            echo "### 🏜️ Dry run complete" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### ✅ Published to npm" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Package | Version | Tag |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---------|---------|-----|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| \`@zama-fhe/sdk\` | \`${version}\` | \`${npm_tag}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| \`@zama-fhe/react-sdk\` | \`${version}\` | \`${npm_tag}\` |" >> "$GITHUB_STEP_SUMMARY"
