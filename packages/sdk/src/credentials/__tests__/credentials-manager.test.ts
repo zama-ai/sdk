@@ -33,6 +33,35 @@ describe("CredentialsManager", () => {
     expect(creds.signature).toBe("0xsig789");
   });
 
+  it("normalizes mixed-case contract addresses to checksummed form", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+
+    const lowercase = TOKEN_A.toLowerCase() as Address;
+    const creds = await credentialManager.allow(lowercase);
+
+    // The stored contractAddresses must be strictly equal to the checksummed
+    // form — credentials cache key stability depends on normalization.
+    expect(creds.contractAddresses).toEqual([getAddress(TOKEN_A)]);
+  });
+
+  it("treats mixed-case and checksummed inputs as cache-equivalent", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+
+    await credentialManager.allow(TOKEN_A);
+    await credentialManager.allow(TOKEN_A.toLowerCase() as Address);
+
+    // Same address in different casing must not trigger a second signature.
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+  });
+
   it("returns cached credentials on second call with same contracts", async ({
     relayer,
     signer,

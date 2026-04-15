@@ -7,7 +7,7 @@ import { DecryptionFailedError } from "../errors";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import { ZERO_HANDLE } from "../query/utils";
 import type { SignerLifecycleCallbacks } from "../types";
-import { getAddress, type Address } from "viem";
+import type { Address } from "viem";
 import type { Handle } from "../relayer/relayer-sdk.types";
 import type { DecryptHandle } from "../query/user-decrypt";
 
@@ -903,25 +903,17 @@ describe("ZamaSDK", () => {
     const CONTRACT_A = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
     const CONTRACT_B = "0x3C3c3C3c3C3C3c3c3c3C3c3C3C3c3c3C3c3c3C3C" as Address;
 
-    it("delegates to credentials.allow with checksummed addresses", async ({ sdk }) => {
+    it("delegates to credentials.allow, forwarding addresses as-is", async ({ sdk }) => {
       const allowSpy = vi.spyOn(sdk.credentials, "allow");
       await sdk.allow([CONTRACT_A, CONTRACT_B]);
-      // Addresses are normalized to match userDecrypt's checksum so the
-      // credential cache key is stable regardless of caller casing.
-      expect(allowSpy).toHaveBeenCalledWith(getAddress(CONTRACT_A), getAddress(CONTRACT_B));
+      // credentials.allow owns normalization — sdk.allow is just a thin forwarder.
+      expect(allowSpy).toHaveBeenCalledWith(CONTRACT_A, CONTRACT_B);
     });
 
     it("returns immediately for empty array without calling credentials.allow", async ({ sdk }) => {
       const allowSpy = vi.spyOn(sdk.credentials, "allow");
       await sdk.allow([]);
       expect(allowSpy).not.toHaveBeenCalled();
-    });
-
-    it("normalizes mixed-case input addresses", async ({ sdk }) => {
-      const allowSpy = vi.spyOn(sdk.credentials, "allow");
-      const lowercase = CONTRACT_A.toLowerCase() as Address;
-      await sdk.allow([lowercase]);
-      expect(allowSpy).toHaveBeenCalledWith(getAddress(CONTRACT_A));
     });
   });
 

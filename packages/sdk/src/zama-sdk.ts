@@ -10,11 +10,11 @@ import { ZERO_HANDLE } from "./query/utils";
 import type { RelayerSDK } from "./relayer/relayer-sdk";
 import type { ClearValueType, Handle } from "./relayer/relayer-sdk.types";
 import { MemoryStorage } from "./storage/memory-storage";
-import { pLimit } from "./utils/concurrency";
 import { ReadonlyToken } from "./token/readonly-token";
 import { Token } from "./token/token";
 import type { GenericSigner, GenericStorage, SignerLifecycleCallbacks } from "./types";
 import { toError } from "./utils";
+import { pLimit } from "./utils/concurrency";
 import { WrappersRegistry } from "./wrappers-registry";
 
 /** Maximum keypairTTL accepted by the fhevm ACL contract (365 days, in seconds). */
@@ -305,10 +305,7 @@ export class ZamaSDK {
     if (contractAddresses.length === 0) {
       return;
     }
-    // Normalize to match userDecrypt's checksummed addresses so the credential
-    // cache key is stable regardless of how callers pass the addresses.
-    const normalized = contractAddresses.map((addr) => getAddress(addr));
-    await this.credentials.allow(...normalized);
+    await this.credentials.allow(...contractAddresses);
   }
 
   /**
