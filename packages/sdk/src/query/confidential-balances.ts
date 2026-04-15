@@ -55,6 +55,7 @@ export function confidentialBalancesQueryOptions(
       assertNonNullable(keyOwner, "confidentialBalancesQueryOptions: owner");
       assertNonNullable(keyHandles, "confidentialBalancesQueryOptions: handles");
       assertNonNullable(tokens[0], "confidentialBalancesQueryOptions: tokens[0]");
+
       const { sdk } = tokens[0];
 
       // Pre-authorize the full token set in one wallet signature so the
