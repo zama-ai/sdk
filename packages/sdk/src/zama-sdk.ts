@@ -305,10 +305,7 @@ export class ZamaSDK {
     if (contractAddresses.length === 0) {
       return;
     }
-    // Normalize to match userDecrypt's checksummed addresses so the credential
-    // cache key is stable regardless of how callers pass the addresses.
-    const normalized = contractAddresses.map((addr) => getAddress(addr));
-    await this.credentials.allow(...normalized);
+    await this.credentials.allow(...contractAddresses);
   }
 
   /**
