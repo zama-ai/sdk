@@ -278,13 +278,28 @@ const registry = sdk.createWrappersRegistry({ [31337]: "0xYourRegistry" });
 const pairs = await registry.getTokenPairs();
 ```
 
+### allow
+
+`(contractAddresses: Address[]) => Promise<void>`
+
+Pre-authorize contract addresses for decryption, triggering a single wallet signature prompt. Subsequent [`userDecrypt`](#userdecrypt) calls whose handles span the same set reuse the cached credentials without another prompt.
+
+```ts
+// Sign once for three tokens, then decrypt individually
+await sdk.allow([cUSDT, cDAI, cWETH]);
+const a = await sdk.userDecrypt([{ handle: h1, contractAddress: cUSDT }]);
+const b = await sdk.userDecrypt([{ handle: h2, contractAddress: cDAI }]);
+```
+
 ### userDecrypt
 
-`(handles: DecryptHandle[], options?: DecryptOptions) => Promise<Record<Handle, ClearValueType>>`
+`(handles: DecryptHandle[]) => Promise<Record<Handle, ClearValueType>>`
 
 Decrypt one or more FHE handles. Returns cached values when available, only calling the relayer for uncached handles. Results are written to the persistent cache (`sdk.cache`) so subsequent calls for the same handles return instantly.
 
-Handles from different contracts can be mixed — they are grouped by `contractAddress` and batched into one relayer call per contract.
+Handles from different contracts can be mixed — they are grouped by `contractAddress` and batched into one relayer call per contract (up to 5 concurrently). Zero handles (32 zero bytes) resolve to `0n` without hitting the relayer.
+
+Credentials are acquired from the full input handle set (including cached and zero handles), ensuring a stable credential cache key across calls.
 
 ```ts
 const values = await sdk.userDecrypt([
@@ -294,19 +309,7 @@ const values = await sdk.userDecrypt([
 console.log(values[balanceHandle]); // 1000n
 ```
 
-#### options
-
-| Field                | Type                                                              | Description                                                                                                                                   |
-| -------------------- | ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `onCredentialsReady` | `(() => void) \| undefined`                                       | Fired after credentials are ready (cached or freshly signed), **before** relayer calls begin. Not called when all handles are already cached. |
-| `onDecrypted`        | `((values: Record<Handle, ClearValueType>) => void) \| undefined` | Fired after all handles have been decrypted (including the all-cached path).                                                                  |
-
-```ts
-const values = await sdk.userDecrypt([{ handle: balanceHandle, contractAddress: cUSDT }], {
-  onCredentialsReady: () => console.log("Credentials ready, decrypting..."),
-  onDecrypted: (result) => console.log("Done:", result),
-});
-```
+To observe decryption lifecycle, subscribe to SDK events (`DecryptStart`, `DecryptEnd`, `DecryptError`) via the `onEvent` config. Events fire only when the relayer is actually called — the zero-handle-only and fully-cached paths return silently.
 
 {% hint style="info" %}
 This is the SDK-level entry point for user decryption. The method is named `userDecrypt` (not `decrypt`) because it requires the connected wallet's credentials — distinguishing it from gateway-level decryption that happens on-chain without user authentication. In React, use [`useUserDecrypt`](/reference/react/useUserDecrypt) which wraps this method with TanStack Query semantics.
