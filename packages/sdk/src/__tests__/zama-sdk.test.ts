@@ -743,7 +743,7 @@ describe("ZamaSDK", () => {
       expect(relayer.userDecrypt).toHaveBeenCalledOnce();
     });
 
-    it("emits DecryptStart and DecryptEnd events on success", async ({
+    it("emits DecryptStart and DecryptEnd events with handles and result", async ({
       relayer,
       signer,
       storage,
@@ -759,13 +759,23 @@ describe("ZamaSDK", () => {
 
       await sdk.userDecrypt([{ handle, contractAddress: CONTRACT_A }]);
 
-      expect(events).toContainEqual(expect.objectContaining({ type: ZamaSDKEvents.DecryptStart }));
       expect(events).toContainEqual(
-        expect.objectContaining({ type: ZamaSDKEvents.DecryptEnd, durationMs: expect.any(Number) }),
+        expect.objectContaining({
+          type: ZamaSDKEvents.DecryptStart,
+          handles: [handle],
+        }),
+      );
+      expect(events).toContainEqual(
+        expect.objectContaining({
+          type: ZamaSDKEvents.DecryptEnd,
+          durationMs: expect.any(Number),
+          handles: [handle],
+          result: { [handle]: 1000n },
+        }),
       );
     });
 
-    it("emits DecryptError event on failure and wraps the error", async ({
+    it("emits DecryptError event with handles on failure and wraps the error", async ({
       relayer,
       signer,
       storage,
@@ -785,13 +795,50 @@ describe("ZamaSDK", () => {
         DecryptionFailedError,
       );
 
-      expect(events).toContainEqual(expect.objectContaining({ type: ZamaSDKEvents.DecryptStart }));
+      expect(events).toContainEqual(
+        expect.objectContaining({
+          type: ZamaSDKEvents.DecryptStart,
+          handles: [handle],
+        }),
+      );
       expect(events).toContainEqual(
         expect.objectContaining({
           type: ZamaSDKEvents.DecryptError,
           durationMs: expect.any(Number),
+          handles: [handle],
         }),
       );
+    });
+
+    it("DecryptStart/End handles contain only uncached handles", async ({
+      relayer,
+      signer,
+      storage,
+      handle,
+    }) => {
+      const events: { type: string; handles?: Handle[] }[] = [];
+      const handle2 = ("0x" + "cd".repeat(32)) as Handle;
+      const sdk = new ZamaSDK({
+        relayer,
+        signer,
+        storage,
+        onEvent: (e) => events.push(e),
+      });
+
+      // Prime the cache for `handle`
+      await sdk.userDecrypt([{ handle, contractAddress: CONTRACT_A }]);
+      events.length = 0;
+
+      vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({ [handle2]: 2000n });
+      await sdk.userDecrypt([
+        { handle, contractAddress: CONTRACT_A },
+        { handle: handle2, contractAddress: CONTRACT_A },
+      ]);
+
+      const start = events.find((e) => e.type === ZamaSDKEvents.DecryptStart);
+      const end = events.find((e) => e.type === ZamaSDKEvents.DecryptEnd);
+      expect(start?.handles).toEqual([handle2]);
+      expect(end?.handles).toEqual([handle2]);
     });
 
     it("does not emit events for empty handles", async ({ relayer, signer, storage }) => {
