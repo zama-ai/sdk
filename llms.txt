@@ -1,0 +1,136 @@
+# Zama SDK
+
+Zama SDK is a TypeScript and React SDK for confidential token flows and confidential smart contract interactions on EVM-compatible chains.
+
+Source of truth: official documentation, approved official examples, and package READMEs. API reports are fallback reference material and are intentionally excluded from this index.
+
+Use this file for discovery. Follow the links to fetch the smallest source that answers the task. Start with the official docs, then move to the approved examples that match the target stack.
+
+## Official Documentation
+
+### Introduction
+
+- [Overview](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/README.md): TypeScript SDK for confidential smart contracts — shield, transfer, and unshield tokens with Fully Homomorphic Encryption.
+
+### Getting Started
+
+- [Overview](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/README.md): Learn how to set up and build your first confidential dApp with the Zama SDK. These tutorials take you from installation to a working app.
+- [Quick start](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/quick-start.md): Get from zero to a working confidential transfer in under 5 minutes.
+- [Build your first confidential dApp](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/first-confidential-dapp.md): End-to-end tutorial building a token dashboard with React, wagmi, and the Zama React SDK.
+
+### Guides
+
+- [Overview](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/README.md): Step-by-step guides for common tasks with the Zama SDK. Each guide covers a single topic with code examples for both the core SDK and React hooks.
+- [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md): How to set up the SDK's three required pieces — relayer, signer, and storage.
+- [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/authentication.md): How to authenticate with the relayer using a backend proxy or a direct API key.
+- [Shield tokens](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/shield-tokens.md): How to convert public ERC-20 tokens into their confidential form.
+- [Transfer privately](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/transfer-privately.md): How to send confidential tokens so the amount stays hidden on-chain.
+- [Unshield tokens](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/unshield-tokens.md): Convert confidential tokens back to public ERC-20 by unshielding them.
+- [Check balances](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/check-balances.md): Decrypt and read confidential token balances using the SDK and React hooks.
+- [Handle errors](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/handle-errors.md): Catch, match, and recover from SDK errors in your application.
+- [Activity feeds](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/activity-feeds.md): Parse on-chain events into a user-friendly activity feed with decrypted amounts.
+- [Node.js backend](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/node-js-backend.md): How to use the SDK in a Node.js server environment with worker threads and per-request isolation.
+- [Web extensions](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/web-extensions.md): How to use the SDK in MV3 Chrome extensions with persistent session storage.
+- [Local development](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/local-development.md): How to use the cleartext relayer for local Hardhat nodes and custom chain deployments without a KMS or gateway.
+- [Build with an LLM](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/build-with-an-llm.md): How to give coding agents high-quality Zama SDK context through llms files, approved examples, and the external Zama Protocol Claude Code skill.
+- [Next.js / SSR](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/nextjs-ssr.md): How to use the SDK with Next.js and server-side rendering frameworks.
+- [Operator approvals](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/operator-approvals.md): How to approve another address to act on your confidential tokens.
+- [Encrypt & decrypt](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/encrypt-decrypt.md): How to encrypt values and decrypt FHE ciphertext handles for custom confidential smart contracts that are not wrapped ERC-20 tokens.
+
+### SDK Reference
+
+- [Overview](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/README.md): API reference for the core `@zama-fhe/sdk` package. Each page documents a single class or utility with constructor options, methods, properties, and working code examples.
+- [ZamaSDK](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md): Entry point for all confidential contract operations.
+- [Token](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md): Read/write interface for confidential ERC-20 operations.
+- [ReadonlyToken](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ReadonlyToken.md): Read-only interface for confidential token queries and batch operations.
+- [WrappersRegistry](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WrappersRegistry.md): Query the on-chain token wrappers registry — list pairs, look up tokens, and validate confidential tokens.
+- [RelayerWeb](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerWeb.md): Browser relayer that runs FHE operations in a Web Worker via WASM.
+- [RelayerNode](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerNode.md): Node.js relayer that runs FHE operations in native worker threads.
+- [RelayerCleartext](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerCleartext.md): Development relayer that operates in cleartext mode without FHE, KMS, or gateway dependencies.
+- [ViemSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ViemSigner.md): Signer adapter that wraps viem wallet and public clients for the SDK.
+- [EthersSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/EthersSigner.md): Signer adapter that wraps ethers providers and signers for the SDK.
+- [WagmiSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WagmiSigner.md): React-only signer adapter that wraps a wagmi config with automatic session revocation.
+- [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md): Interface that all signer adapters must implement for the SDK to interact with wallets.
+- [GenericStorage](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericStorage.md): Interface for async key-value storage used to persist FHE keypairs and session signatures.
+- [Error types](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/errors.md): All SDK error classes, codes, and the matchZamaError utility.
+- [Contract call builders](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/contract-builders.md): Low-level builders that return raw contract call configs for viem, ethers, or custom execution layers.
+- [FheArtifactCache](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/FheArtifactCache.md): Persistent cache for FHE public key and public parameters, avoiding re-downloads across sessions.
+- [Event decoders](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/event-decoders.md): Decode on-chain logs into typed event objects and build activity feeds.
+- [Delegated decryption](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/delegation.md): Delegation lets one address grant another address the right to decrypt its confidential balance.
+- [Network presets](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/network-presets.md): Pre-configured network settings for Ethereum Mainnet, Sepolia, and Hardhat.
+
+### React Reference
+
+- [Overview](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/README.md): API reference for the `@zama-fhe/react-sdk` package. Each page documents a single hook or component with parameters, return values, and working code examples. All hooks are built on TanStack Query with two-phase polling and automatic cache invalidation.
+- [ZamaProvider](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/ZamaProvider.md): Context provider that supplies the Zama SDK to all descendant hooks.
+- [useConfidentialBalance](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialBalance.md): Decrypt and poll a single token's confidential balance.
+- [useConfidentialBalances](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialBalances.md): Decrypt and poll multiple tokens' confidential balances in a single query.
+- [useConfidentialTransfer](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialTransfer.md): Send confidential ERC-20 tokens privately.
+- [useConfidentialTransferFrom](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialTransferFrom.md): Transfer confidential tokens on behalf of an owner who approved you as an operator.
+- [useShield](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useShield.md): Mutation hook that shields public ERC-20 tokens into confidential form.
+- [useUnshield](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnshield.md): Mutation hook that unshields confidential tokens back to public ERC-20.
+- [useUnshieldAll](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnshieldAll.md): Mutation hook that unshields the entire confidential balance.
+- [useResumeUnshield](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useResumeUnshield.md): Mutation hook that resumes an unshield interrupted between unwrap and finalize steps.
+- [useUnwrap](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnwrap.md): Low-level mutation hook that requests an unwrap for a specific amount.
+- [useUnwrapAll](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnwrapAll.md): Low-level mutation hook that requests an unwrap for the full confidential balance.
+- [useFinalizeUnwrap](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useFinalizeUnwrap.md): Low-level mutation hook that finalizes an unwrap with the decryption proof.
+- [useAllow](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useAllow.md): Mutation hook that signs an EIP-712 message authorizing decryption of confidential handles for any contract.
+- [useIsAllowed](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsAllowed.md): Query hook that checks whether a session signature is cached and valid.
+- [useRevoke](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevoke.md): Revoke the EIP-712 decrypt authorization for specific contract addresses.
+- [useRevokeSession](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevokeSession.md): Revoke the entire session for the connected wallet.
+- [useConfidentialApprove](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialApprove.md): Approve an operator to act on your confidential tokens.
+- [useConfidentialIsApproved](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialIsApproved.md): Check if a spender is approved as operator for your confidential tokens.
+- [useUnderlyingAllowance](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnderlyingAllowance.md): Read the ERC-20 allowance of the underlying public token for the wrapper contract.
+- [useWrapperDiscovery](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useWrapperDiscovery.md): Find the confidential wrapper contract address for an ERC-20 token via the on-chain registry.
+- [useWrappersRegistryAddress](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useWrappersRegistryAddress.md): Resolve the wrappers registry contract address for the current chain.
+- [useListPairs](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useListPairs.md): Fetch paginated token wrapper pairs from the on-chain registry, with optional metadata enrichment.
+- [useTokenPairsRegistry](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useTokenPairsRegistry.md): Fetch all token wrapper pairs from the on-chain registry.
+- [useTokenPairsLength](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useTokenPairsLength.md): Get the total number of token wrapper pairs in the registry.
+- [useTokenPairsSlice](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useTokenPairsSlice.md): Fetch a range of token wrapper pairs from the registry by index.
+- [useTokenPair](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useTokenPair.md): Fetch a single token wrapper pair by index from the registry.
+- [useConfidentialTokenAddress](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialTokenAddress.md): Look up the confidential token address for a given plain ERC-20 token.
+- [useTokenAddress](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useTokenAddress.md): Reverse lookup -- find the plain ERC-20 address for a given confidential token.
+- [useIsConfidentialTokenValid](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsConfidentialTokenValid.md): Check whether a confidential token is registered and valid in the on-chain registry.
+- [useMetadata](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useMetadata.md): Get token name, symbol, and decimals in one call.
+- [useActivityFeed](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useActivityFeed.md): Parse event logs into a classified, optionally decrypted activity feed.
+- [useZamaSDK](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useZamaSDK.md): Hook to access the raw ZamaSDK instance from ZamaProvider context.
+- [useToken](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useToken.md): Hook to get a memoized Token instance for a given address.
+- [useReadonlyToken](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useReadonlyToken.md): Hook to get a memoized ReadonlyToken instance for read-only access.
+- [useEncrypt](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useEncrypt.md): Low-level mutation hook that encrypts a plaintext value using the relayer's FHE engine.
+- [useUserDecrypt](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUserDecrypt.md): Query hook that automatically decrypts FHE handles once credentials are available via useAllow.
+- [useGenerateKeypair](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useGenerateKeypair.md): Low-level mutation hook that generates a fresh FHE keypair via the relayer.
+- [useDelegateDecryption](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useDelegateDecryption.md): Mutation hook that grants FHE decryption rights for a token to another address.
+- [useRevokeDelegation](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevokeDelegation.md): Mutation hook that revokes FHE decryption delegation for a token.
+- [useDelegationStatus](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useDelegationStatus.md): Query hook that checks whether a decryption delegation is active between two addresses.
+- [useDecryptBalanceAs](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useDecryptBalanceAs.md): Mutation hook that decrypts another user's confidential balance as a delegate.
+- [useBatchDecryptBalancesAs](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useBatchDecryptBalancesAs.md): Mutation hook that decrypts confidential balances across multiple tokens as a delegate.
+- [Query keys](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/query-keys.md): Reference for the zamaQueryKeys factory used for manual React Query cache control.
+
+### Concepts
+
+- [Overview](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/README.md): Core concepts and architecture behind the Zama SDK. These pages explain how the SDK works under the hood — the session model, security guarantees, and caching strategy.
+- [Architecture](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/architecture.md): The SDK is organized into layers, each with a clear responsibility. Higher layers depend on lower layers but never the reverse.
+- [Session model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/session-model.md): How the SDK manages FHE keypairs, wallet signatures, and session lifecycle.
+- [Two-phase balance polling](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/two-phase-polling.md): How the SDK uses smart polling to minimize expensive FHE decryption while keeping balances up to date.
+- [Security model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/security-model.md): Threat model, trust assumptions, and security architecture of the Zama SDK.
+
+## Official Examples
+
+- [example-hoodi README](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/example-hoodi/README.md): Next.js app demonstrating ERC-7984 confidential token operations on the Hoodi testnet and ethers — including on-chain ACL delegation.
+- [example-hoodi WALKTHROUGH](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/example-hoodi/WALKTHROUGH.md): ERC-7984 is a token standard that adds confidential balances and transfer amounts to ERC-20 tokens. Instead of storing plaintext balances on-chain, balances are stored as encrypted handles. Only the token owner can decrypt their own balance.
+- [node-ethers README](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/node-ethers/README.md): Node.js script demonstrating the full ERC-7984 confidential token lifecycle using `@zama-fhe/sdk` with ethers v6.
+- [node-ethers WALKTHROUGH](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/node-ethers/WALKTHROUGH.md): ERC-7984 is a token standard that adds confidential balances and transfer amounts to ERC-20 tokens. Balances are stored as encrypted handles on-chain; only the token owner (or an authorized delegate) can decrypt them.
+- [node-viem README](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/node-viem/README.md): Node.js script demonstrating the full ERC-7984 confidential token lifecycle using `@zama-fhe/sdk` with viem.
+- [node-viem WALKTHROUGH](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/node-viem/WALKTHROUGH.md): ERC-7984 is a token standard that adds confidential balances and transfer amounts to ERC-20 tokens. Balances are stored as encrypted handles on-chain; only the token owner (or an authorized delegate) can decrypt them.
+- [react-ethers README](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/react-ethers/README.md): Next.js 16 example app demonstrating how to integrate `@zama-fhe/react-sdk` with ethers v6 on Sepolia testnet.
+- [react-ethers WALKTHROUGH](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/react-ethers/WALKTHROUGH.md): A step-by-step guide to how this app integrates `@zama-fhe/react-sdk` using ethers v6.
+- [react-viem README](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/react-viem/README.md): Next.js 16 example app demonstrating how to integrate `@zama-fhe/react-sdk` with viem v2 on Sepolia testnet.
+- [react-viem WALKTHROUGH](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/react-viem/WALKTHROUGH.md): A step-by-step guide to how this app integrates `@zama-fhe/react-sdk` using viem v2.
+- [react-wagmi README](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/react-wagmi/README.md): Next.js 16 example app demonstrating how to integrate `@zama-fhe/react-sdk` with wagmi v3 on Sepolia testnet.
+- [react-wagmi WALKTHROUGH](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/react-wagmi/WALKTHROUGH.md): A step-by-step guide to how this app integrates `@zama-fhe/react-sdk` using wagmi v3.
+
+## Package READMEs
+
+- [Repository README](https://raw.githubusercontent.com/zama-ai/sdk/main/README.md): Monorepo overview, package layout, development workflow, and repository setup for the Zama SDK.
+- [@zama-fhe/sdk](https://raw.githubusercontent.com/zama-ai/sdk/main/packages/sdk/README.md): Core TypeScript SDK for confidential token operations, relayers, signer adapters, and low-level contract APIs.
+- [@zama-fhe/react-sdk](https://raw.githubusercontent.com/zama-ai/sdk/main/packages/react-sdk/README.md): React SDK with ZamaProvider, confidential token hooks, and TanStack Query integration on top of the core SDK.

@@ -17,6 +17,7 @@
   - [Node.js backend](guides/node-js-backend.md)
   - [Web extensions](guides/web-extensions.md)
   - [Local development](guides/local-development.md)
+  - [Build with an LLM](guides/build-with-an-llm.md)
   - [Next.js SSR](guides/nextjs-ssr.md)
   - [Operator approvals](guides/operator-approvals.md)
   - [Encrypt & decrypt](guides/encrypt-decrypt.md)
