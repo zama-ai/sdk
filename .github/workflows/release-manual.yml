@@ -24,7 +24,7 @@ jobs:
       - name: Validate target branch
         run: |
           if [[ "${GITHUB_REF_NAME}" != "main" && "${GITHUB_REF_NAME}" != "prerelease" ]]; then
-            echo "Manual releases are only allowed from main or prerelease (got: ${GITHUB_REF_NAME})."
+            echo "::error::Manual releases are only allowed from main or prerelease (got: ${GITHUB_REF_NAME})."
             exit 1
           fi
 
@@ -53,7 +53,6 @@ jobs:
       - name: Sync branch with remote
         run: |
           git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          git fetch origin "${{ github.ref_name }}"
           git checkout -B "${{ github.ref_name }}" "origin/${{ github.ref_name }}"
         env:
           GITHUB_TOKEN: ${{ secrets.SDK_RELEASER_TOKEN }}
@@ -81,10 +80,14 @@ jobs:
       - name: Semantic release
         id: release
         run: |
+          set +e
           pnpm release:ci 2>&1 | tee /tmp/release-output.txt
+          exit_code=${PIPESTATUS[0]}
+          set -e
           if grep -q "Published release" /tmp/release-output.txt; then
             echo "released=true" >> "$GITHUB_OUTPUT"
           fi
+          exit "$exit_code"
         env:
           GITHUB_TOKEN: ${{ secrets.SDK_RELEASER_TOKEN }}
 

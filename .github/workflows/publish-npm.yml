@@ -92,24 +92,24 @@ jobs:
         run: |
           version="${{ steps.npm-tag.outputs.version }}"
           npm_tag="${{ steps.npm-tag.outputs.tag }}"
-          dry_run="${{ inputs.dry-run }}"
 
           echo "Publishing v${version} with tag '${npm_tag}'"
 
-          flags="--access public --tag ${npm_tag}"
-          if [[ "$dry_run" == "true" ]]; then
-            flags="${flags} --dry-run"
+          flags=(--access public --tag "${npm_tag}")
+          if [[ "${{ inputs.dry-run }}" == "true" ]]; then
+            flags+=(--dry-run)
             echo "::notice::DRY RUN — packages will not actually be published"
           fi
 
           cd packages/sdk
-          npm publish ${flags}
+          npm publish "${flags[@]}"
           cd ../react-sdk
-          npm publish ${flags}
+          npm publish "${flags[@]}"
         env:
           NPM_CONFIG_PROVENANCE: true
 
       - name: Summary
+        if: success()
         run: |
           version="${{ steps.npm-tag.outputs.version }}"
           npm_tag="${{ steps.npm-tag.outputs.tag }}"
