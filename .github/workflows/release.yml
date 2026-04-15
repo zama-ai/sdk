@@ -71,10 +71,15 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      - name: Ensure npm 11
+      - name: Ensure npm >=11
         run: |
-          pnpm add -g npm@^11
-          npm --version
+          npm_v="$(npm --version)"
+          if [[ "${npm_v%%.*}" -lt 11 ]]; then
+            echo "Bundled npm ${npm_v} is too old; installing npm 11"
+            npm i -g npm@^11
+          fi
+          echo "npm $(npm --version)"
+          [[ "$(npm --version | cut -d. -f1)" -ge 11 ]]
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
@@ -85,10 +90,14 @@ jobs:
       - name: Semantic release
         id: release
         run: |
+          set +e
           pnpm release:ci 2>&1 | tee /tmp/release-output.txt
+          exit_code=${PIPESTATUS[0]}
+          set -e
           if grep -q "Published release" /tmp/release-output.txt; then
             echo "released=true" >> "$GITHUB_OUTPUT"
           fi
+          exit "$exit_code"
         env:
           GITHUB_TOKEN: ${{ secrets.SDK_RELEASER_TOKEN }}
 
