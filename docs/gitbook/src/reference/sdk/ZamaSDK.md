@@ -311,6 +311,71 @@ console.log(values[balanceHandle]); // 1000n
 
 To observe decryption lifecycle, subscribe to SDK events (`DecryptStart`, `DecryptEnd`, `DecryptError`) via the `onEvent` config. Events fire only when the relayer is actually called — the zero-handle-only and fully-cached paths return silently.
 
+The `onEvent` callback is a single function, so for multi-listener observability you can bridge it into a standard event bus. Pick whichever matches your runtime:
+
+{% tabs %}
+{% tab title="Browser (CustomEvent)" %}
+
+```ts
+import { ZamaSDK, ZamaSDKEvents } from "@zama-fhe/sdk";
+
+const sdk = new ZamaSDK({
+  relayer,
+  signer,
+  storage,
+  onEvent: (event) => {
+    window.dispatchEvent(new CustomEvent(event.type, { detail: event }));
+  },
+});
+
+window.addEventListener(ZamaSDKEvents.DecryptEnd, (e: CustomEvent<DecryptEndEvent>) => {
+  const { durationMs, handles, result } = e.detail;
+  console.log(`Decrypted ${handles.length} handle(s) in ${durationMs}ms`);
+  // result is Record<Handle, ClearValueType> — look up a specific handle
+  for (const h of handles) {
+    console.log(`${h} → ${result[h]}`);
+  }
+});
+
+window.addEventListener(ZamaSDKEvents.DecryptError, (e: CustomEvent<DecryptErrorEvent>) => {
+  const { error, durationMs, handles } = e.detail;
+  console.error(`Decryption failed after ${durationMs}ms for ${handles.length} handle(s):`, error);
+});
+```
+
+{% endtab %}
+
+{% tab title="Node (EventEmitter)" %}
+
+```ts
+import { EventEmitter } from "node:events";
+import { ZamaSDK, ZamaSDKEvents } from "@zama-fhe/sdk";
+
+const emmiter = new EventEmitter();
+
+const sdk = new ZamaSDK({
+  relayer,
+  signer,
+  storage,
+  onEvent: (event) => emmiter.emit(event.type, event),
+});
+
+emmiter.on(ZamaSDKEvents.DecryptEnd, ({ durationMs, handles, result }: DecryptEndEvent) => {
+  console.log(`Decrypted ${handles.length} handle(s) in ${durationMs}ms`);
+  // result is Record<Handle, ClearValueType> — look up a specific handle
+  for (const h of handles) {
+    console.log(`${h} → ${result[h]}`);
+  }
+});
+
+emmiter.on(ZamaSDKEvents.DecryptError, ({ error, durationMs, handles }: DecryptErrorEvent) => {
+  console.error(`Decryption failed after ${durationMs}ms for ${handles.length} handle(s):`, error);
+});
+```
+
+{% endtab %}
+{% endtabs %}
+
 {% hint style="info" %}
 This is the SDK-level entry point for user decryption. The method is named `userDecrypt` (not `decrypt`) because it requires the connected wallet's credentials — distinguishing it from gateway-level decryption that happens on-chain without user authentication. In React, use [`useUserDecrypt`](/reference/react/useUserDecrypt) which wraps this method with TanStack Query semantics.
 {% endhint %}

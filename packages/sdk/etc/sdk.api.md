@@ -5986,6 +5986,8 @@ export class DecryptCache {
 export interface DecryptEndEvent extends BaseEvent {
     // (undocumented)
     durationMs: number;
+    handles: Handle[];
+    result: Record<Handle, ClearValueType>;
     // (undocumented)
     type: typeof ZamaSDKEvents.DecryptEnd;
 }
@@ -5995,6 +5997,7 @@ export interface DecryptErrorEvent extends BaseEvent {
     // (undocumented)
     durationMs: number;
     error: Error;
+    handles: Handle[];
     // (undocumented)
     type: typeof ZamaSDKEvents.DecryptError;
 }
@@ -6006,6 +6009,7 @@ export class DecryptionFailedError extends ZamaError {
 
 // @public (undocumented)
 export interface DecryptStartEvent extends BaseEvent {
+    handles: Handle[];
     // (undocumented)
     type: typeof ZamaSDKEvents.DecryptStart;
 }

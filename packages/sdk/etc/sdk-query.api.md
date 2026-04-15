@@ -415,6 +415,8 @@ export interface DecryptBalanceAsParams {
 export interface DecryptEndEvent extends BaseEvent {
     // (undocumented)
     durationMs: number;
+    handles: Handle[];
+    result: Record<Handle, ClearValueType>;
     // (undocumented)
     type: typeof ZamaSDKEvents.DecryptEnd;
 }
@@ -424,6 +426,7 @@ export interface DecryptErrorEvent extends BaseEvent {
     // (undocumented)
     durationMs: number;
     error: Error;
+    handles: Handle[];
     // (undocumented)
     type: typeof ZamaSDKEvents.DecryptError;
 }
@@ -441,6 +444,7 @@ export type DecryptResult = Record<Handle, ClearValueType>;
 
 // @public (undocumented)
 export interface DecryptStartEvent extends BaseEvent {
+    handles: Handle[];
     // (undocumented)
     type: typeof ZamaSDKEvents.DecryptStart;
 }
@@ -1646,7 +1650,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/activity-scn7lQZp.d.ts:21488:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/esm/activity-C38S7VvH.d.ts:21496:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 
