@@ -10,6 +10,7 @@ import {
   useAllow,
   useListPairs,
   useZamaSDK,
+  useActivityFeed,
   balanceOfContract,
 } from "@zama-fhe/react-sdk";
 import type { TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
@@ -23,6 +24,7 @@ import { PendingUnshieldCard } from "@/components/PendingUnshieldCard";
 import { DelegateDecryptionCard } from "@/components/DelegateDecryptionCard";
 import { RevokeDelegationCard } from "@/components/RevokeDelegationCard";
 import { DecryptAsCard } from "@/components/DecryptAsCard";
+import { ActivityFeedCard } from "@/components/ActivityFeedCard";
 import {
   SEPOLIA_CHAIN_ID,
   SEPOLIA_CHAIN_ID_HEX,
@@ -266,6 +268,7 @@ export default function Home() {
   const refreshBalances = () => {
     queryClient.invalidateQueries({ queryKey: erc20BalanceKey });
     queryClient.invalidateQueries({ queryKey: ethBalanceKey });
+    queryClient.invalidateQueries({ queryKey: activityLogsKey });
     // Invalidate the encrypted handle so useConfidentialBalance re-polls after
     // any operation that changes the confidential balance (shield, unshield, transfer).
     if (token) {
@@ -283,6 +286,36 @@ export default function Home() {
     { tokenAddress: token?.confidentialTokenAddress ?? ZERO_ADDRESS },
     { enabled: !!address && isSepolia && !!isAllowed && !!token },
   );
+
+  // Fetch recent event logs from the confidential token contract for the activity feed.
+  // viem's Log objects ({ topics, data, transactionHash, blockNumber, logIndex }) match
+  // the SDK's RawLog & ActivityLogMetadata interface directly — no remapping needed.
+  const activityLogsKey = ["activity-logs", token?.confidentialTokenAddress, address];
+  const { data: rawLogs } = useQuery({
+    queryKey: activityLogsKey,
+    queryFn: async () => {
+      const currentBlock = await rpcClient.getBlockNumber();
+      return rpcClient.getLogs({
+        address: token!.confidentialTokenAddress,
+        fromBlock: currentBlock > 5_000n ? currentBlock - 5_000n : 0n,
+        toBlock: "latest",
+      });
+    },
+    enabled: !!address && isSepolia && !!token,
+  });
+
+  // Two-phase activity feed: instantly classifies logs, then batch-decrypts encrypted amounts.
+  // decrypt is gated on isAllowed — without credentials, amounts show as "Encrypted".
+  const {
+    data: activity,
+    isLoading: isActivityLoading,
+    isError: isActivityError,
+  } = useActivityFeed({
+    tokenAddress: token?.confidentialTokenAddress ?? ZERO_ADDRESS,
+    userAddress: address ? (address as Address) : undefined,
+    logs: rawLogs,
+    decrypt: !!isAllowed,
+  });
 
   // Mint 10 whole tokens on the underlying ERC-20 contract.
   const mint = useMutation({
@@ -439,6 +472,14 @@ export default function Home() {
         onDecrypt={handleDecrypt}
         isDecrypting={allowTokens.isPending}
         decryptError={allowTokens.isError ? (allowTokens.error?.message ?? "Signing failed") : null}
+      />
+
+      <ActivityFeedCard
+        activity={activity}
+        isLoading={isActivityLoading}
+        isError={isActivityError}
+        decimals={decimals}
+        symbol={confidentialSymbol}
       />
 
       {/* Pending unshield resume — checked for every registered token, not just the selected one.

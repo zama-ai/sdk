@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatEther, formatUnits, parseAbi, parseUnits } from "viem";
 import {
   useAccount,
   useBalance,
   useChainId,
   useConnect,
+  usePublicClient,
   useReadContract,
   useSwitchChain,
 } from "wagmi";
@@ -19,6 +20,7 @@ import {
   useAllow,
   useListPairs,
   useZamaSDK,
+  useActivityFeed,
 } from "@zama-fhe/react-sdk";
 import type { TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
@@ -31,6 +33,7 @@ import { PendingUnshieldCard } from "@/components/PendingUnshieldCard";
 import { DelegateDecryptionCard } from "@/components/DelegateDecryptionCard";
 import { RevokeDelegationCard } from "@/components/RevokeDelegationCard";
 import { DecryptAsCard } from "@/components/DecryptAsCard";
+import { ActivityFeedCard } from "@/components/ActivityFeedCard";
 import { SEPOLIA_CHAIN_ID } from "@/lib/config";
 
 // Standard ERC-20 balanceOf ABI — used by useReadContract for public balance polling.
@@ -63,6 +66,7 @@ export default function Home() {
   // Stable reference from the QueryClientProvider in providers.tsx.
   const queryClient = useQueryClient();
   const sdk = useZamaSDK();
+  const publicClient = usePublicClient();
 
   // Check whether FHE decrypt credentials are already cached (no wallet prompt).
   // Returns true if a valid session exists, undefined/false otherwise.
@@ -140,6 +144,7 @@ export default function Home() {
   const refreshBalances = () => {
     void refetchErc20();
     void refetchEth();
+    queryClient.invalidateQueries({ queryKey: activityLogsKey });
     // Invalidate the encrypted handle so useConfidentialBalance re-polls after
     // any operation that changes the confidential balance (shield, unshield, transfer).
     if (token) {
@@ -157,6 +162,36 @@ export default function Home() {
     { tokenAddress: token?.confidentialTokenAddress ?? ZERO_ADDRESS },
     { enabled: isConnected && isSepolia && !!isAllowed && !!token },
   );
+
+  // Fetch recent event logs from the confidential token contract for the activity feed.
+  // wagmi's usePublicClient() returns the underlying viem PublicClient, whose getLogs()
+  // returns objects matching the SDK's RawLog & ActivityLogMetadata interface directly.
+  const activityLogsKey = ["activity-logs", token?.confidentialTokenAddress, address];
+  const { data: rawLogs } = useQuery({
+    queryKey: activityLogsKey,
+    queryFn: async () => {
+      const currentBlock = await publicClient!.getBlockNumber();
+      return publicClient!.getLogs({
+        address: token!.confidentialTokenAddress,
+        fromBlock: currentBlock > 5_000n ? currentBlock - 5_000n : 0n,
+        toBlock: "latest",
+      });
+    },
+    enabled: isConnected && isSepolia && !!token && !!publicClient,
+  });
+
+  // Two-phase activity feed: instantly classifies logs, then batch-decrypts encrypted amounts.
+  // decrypt is gated on isAllowed — without credentials, amounts show as "Encrypted".
+  const {
+    data: activity,
+    isLoading: isActivityLoading,
+    isError: isActivityError,
+  } = useActivityFeed({
+    tokenAddress: token?.confidentialTokenAddress ?? ZERO_ADDRESS,
+    userAddress: address,
+    logs: rawLogs,
+    decrypt: !!isAllowed,
+  });
 
   // Mint 10 whole tokens on the underlying ERC-20 contract.
   const mint = useMutation({
@@ -321,6 +356,14 @@ export default function Home() {
         onDecrypt={handleDecrypt}
         isDecrypting={allowTokens.isPending}
         decryptError={allowTokens.isError ? (allowTokens.error?.message ?? "Signing failed") : null}
+      />
+
+      <ActivityFeedCard
+        activity={activity}
+        isLoading={isActivityLoading}
+        isError={isActivityError}
+        decimals={decimals}
+        symbol={confidentialSymbol}
       />
 
       {/* Pending unshield resume — checked for every registered token, not just the selected one.

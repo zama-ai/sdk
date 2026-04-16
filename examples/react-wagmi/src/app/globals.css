@@ -258,3 +258,74 @@ body {
   flex: 1;
   border-top: 1px solid #e2e8f0;
 }
+
+/* Activity feed */
+.activity-empty {
+  font-size: 13px;
+  color: #94a3b8;
+  text-align: center;
+  padding: 8px 0;
+}
+.activity-error {
+  color: #991b1b;
+}
+.activity-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  font-size: 13px;
+}
+.activity-row + .activity-row {
+  border-top: 1px solid #f1f5f9;
+}
+.activity-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.activity-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: right;
+}
+.activity-direction {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+.activity-direction-incoming {
+  background: #dcfce7;
+  color: #166534;
+}
+.activity-direction-outgoing {
+  background: #fef2f2;
+  color: #991b1b;
+}
+.activity-direction-self {
+  background: #f1f5f9;
+  color: #64748b;
+}
+.activity-type {
+  color: #0f172a;
+  font-weight: 500;
+}
+.activity-amount {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.activity-tx {
+  font-family: monospace;
+  font-size: 11px;
+  color: #2563eb;
+  text-decoration: none;
+}
+.activity-tx:hover {
+  text-decoration: underline;
+}

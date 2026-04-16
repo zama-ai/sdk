@@ -1,5 +1,14 @@
 import { Contract, formatUnits, JsonRpcProvider, Wallet } from "ethers";
-import { DelegationNotPropagatedError, MemoryStorage, SepoliaConfig, ZamaSDK } from "@zama-fhe/sdk";
+import {
+  DelegationNotPropagatedError,
+  MemoryStorage,
+  SepoliaConfig,
+  ZamaSDK,
+  parseActivityFeed,
+  extractEncryptedHandles,
+  applyDecryptedValues,
+  sortByBlockNumber,
+} from "@zama-fhe/sdk";
 import { EthersSigner } from "@zama-fhe/sdk/ethers";
 import { RelayerNode } from "@zama-fhe/sdk/node";
 import type { Address } from "@zama-fhe/sdk";
@@ -230,6 +239,62 @@ async function main() {
     delegateAddress: walletB.address as Address,
   });
   console.log("Delegation active after revoke:", isDelegatedAfter);
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // SECTION 5 — Activity Feed
+  // Parse on-chain events into a classified activity log. Encrypted transfer
+  // amounts are batch-decrypted via the relayer so the output shows cleartext
+  // values alongside shields, unshields, and transfers.
+  // ──────────────────────────────────────────────────────────────────────────
+  section("SECTION 5 — Activity Feed");
+
+  // Fetch all logs emitted by the confidential token contract.
+  // In production, narrow the block range or use an indexed source.
+  const currentBlock = await provider.getBlockNumber();
+  const fromBlock = Math.max(0, currentBlock - 5_000);
+  const rawLogs = await provider.getLogs({
+    address: confidentialTokenAddress,
+    fromBlock,
+    toBlock: "latest",
+  });
+  console.log(`Fetched ${rawLogs.length} log(s) from block ${fromBlock} to latest`);
+
+  // ethers uses `index` for the log position; the SDK expects `logIndex`.
+  const sdkLogs = rawLogs.map((log) => ({
+    topics: log.topics as `0x${string}`[],
+    data: log.data as `0x${string}`,
+    transactionHash: log.transactionHash as `0x${string}`,
+    blockNumber: BigInt(log.blockNumber),
+    logIndex: log.index,
+  }));
+
+  // Phase 1: Classify raw logs into ActivityItem[] (sync, no network calls).
+  const parsed = parseActivityFeed(sdkLogs, walletA.address as Address);
+  console.log(`Parsed ${parsed.length} activity item(s)`);
+
+  // Phase 2: Extract encrypted handles and batch-decrypt via the relayer.
+  const handles = extractEncryptedHandles(parsed);
+  let feed = parsed;
+  if (handles.length > 0) {
+    console.log(`Decrypting ${handles.length} encrypted amount(s)...`);
+    const decrypted = await tokenA.decryptHandles(handles);
+    feed = applyDecryptedValues(parsed, decrypted);
+  }
+
+  // Sort newest-first and print.
+  for (const item of sortByBlockNumber(feed)) {
+    const dir = item.direction === "incoming" ? "IN " : item.direction === "outgoing" ? "OUT" : "SELF";
+    let amount: string;
+    if (item.amount.type === "clear") {
+      amount = fmt(item.amount.value);
+    } else if (item.amount.decryptedValue !== undefined) {
+      amount = fmt(item.amount.decryptedValue);
+    } else {
+      amount = "(encrypted)";
+    }
+    const block = item.metadata.blockNumber ?? "?";
+    console.log(`  [${dir}] ${item.type.padEnd(20)} ${amount.padStart(16)}  block ${block}`);
+  }
 }
 
 main().catch((err) => {

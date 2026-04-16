@@ -1,7 +1,15 @@
 import { createPublicClient, createWalletClient, formatUnits, http, parseAbi } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
-import { DelegationNotPropagatedError, MemoryStorage, ZamaSDK } from "@zama-fhe/sdk";
+import {
+  DelegationNotPropagatedError,
+  MemoryStorage,
+  ZamaSDK,
+  parseActivityFeed,
+  extractEncryptedHandles,
+  applyDecryptedValues,
+  sortByBlockNumber,
+} from "@zama-fhe/sdk";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 import { RelayerNode } from "@zama-fhe/sdk/node";
 import type { Address } from "@zama-fhe/sdk";
@@ -256,6 +264,53 @@ async function main() {
     delegateAddress: accountB.address as Address,
   });
   console.log("Delegation active after revoke:", isDelegatedAfter);
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // SECTION 5 — Activity Feed
+  // Parse on-chain events into a classified activity log. Encrypted transfer
+  // amounts are batch-decrypted via the relayer so the output shows cleartext
+  // values alongside shields, unshields, and transfers.
+  // ──────────────────────────────────────────────────────────────────────────
+  section("SECTION 5 — Activity Feed");
+
+  // Fetch all logs emitted by the confidential token contract.
+  // In production, narrow the block range or use an indexed source.
+  const currentBlock = await publicClient.getBlockNumber();
+  const fromBlock = currentBlock > 5_000n ? currentBlock - 5_000n : 0n;
+  const logs = await publicClient.getLogs({
+    address: confidentialTokenAddress,
+    fromBlock,
+    toBlock: "latest",
+  });
+  console.log(`Fetched ${logs.length} log(s) from block ${fromBlock} to latest`);
+
+  // Phase 1: Classify raw logs into ActivityItem[] (sync, no network calls).
+  const parsed = parseActivityFeed(logs, accountA.address as Address);
+  console.log(`Parsed ${parsed.length} activity item(s)`);
+
+  // Phase 2: Extract encrypted handles and batch-decrypt via the relayer.
+  const handles = extractEncryptedHandles(parsed);
+  let feed = parsed;
+  if (handles.length > 0) {
+    console.log(`Decrypting ${handles.length} encrypted amount(s)...`);
+    const decrypted = await tokenA.decryptHandles(handles);
+    feed = applyDecryptedValues(parsed, decrypted);
+  }
+
+  // Sort newest-first and print.
+  for (const item of sortByBlockNumber(feed)) {
+    const dir = item.direction === "incoming" ? "IN " : item.direction === "outgoing" ? "OUT" : "SELF";
+    let amount: string;
+    if (item.amount.type === "clear") {
+      amount = fmt(item.amount.value);
+    } else if (item.amount.decryptedValue !== undefined) {
+      amount = fmt(item.amount.decryptedValue);
+    } else {
+      amount = "(encrypted)";
+    }
+    const block = item.metadata.blockNumber ?? "?";
+    console.log(`  [${dir}] ${item.type.padEnd(20)} ${amount.padStart(16)}  block ${block}`);
+  }
 }
 
 main().catch((err) => {
