@@ -36,7 +36,7 @@ Encrypt amounts client-side before submitting on-chain. On-chain observers see t
 
 ### React hooks
 
-TanStack Query-based hooks with two-phase polling, automatic cache invalidation, and one-signature session management.
+TanStack Query-based hooks with cached decryption, automatic cache invalidation, and one-signature session management.
 
 ## Two packages, one import
 

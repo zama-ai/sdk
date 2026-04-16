@@ -5,7 +5,7 @@ description: Decrypt and poll multiple tokens' confidential balances in a single
 
 # useConfidentialBalances
 
-Decrypt and poll multiple tokens' confidential balances in a single query. Returns a `Map` keyed by token address. Each token uses the same two-phase polling strategy as [`useConfidentialBalance`](/reference/react/useConfidentialBalance).
+Decrypt and poll multiple tokens' confidential balances in a single query. Returns a `BatchBalancesResult` with results and errors maps. Each token uses the same cached decryption strategy as [`useConfidentialBalance`](/reference/react/useConfidentialBalance).
 
 ## Import
 
@@ -124,13 +124,12 @@ const { data } = useConfidentialBalances({
 import { type UseConfidentialBalancesReturnType } from "@zama-fhe/react-sdk";
 ```
 
-The `data` property is `Map<Address, bigint> | undefined` -- a map from token address to decrypted balance.
+The `data` property is `BatchBalancesResult | undefined` -- an object with `results: Map<Address, bigint>` (successfully decrypted balances) and `errors: Map<Address, ZamaError>` (per-token errors).
 
 {% include ".gitbook/includes/query-result.md" %}
 
 ## Related
 
 - [useConfidentialBalance](/reference/react/useConfidentialBalance) -- single-token variant
-- [Two-Phase Polling](/concepts/two-phase-polling)
 - [Check Balances guide](/guides/check-balances)
 - [Query Keys](/reference/react/query-keys) -- `zamaQueryKeys.confidentialBalances`
