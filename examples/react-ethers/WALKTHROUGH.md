@@ -290,7 +290,8 @@ Three balances are shown:
 
 ```ts
 const { data: isAllowed } = useIsAllowed({
-  contractAddresses: [token?.confidentialTokenAddress ?? ZERO_ADDRESS],
+  contractAddresses: token ? [token.confidentialTokenAddress] : [],
+  query: { enabled: Boolean(token) },
 });
 // In BalancesCard: shows "Decrypt Balance" button when !isAllowed,
 // otherwise shows the balance (or "Decrypting…" while loading).

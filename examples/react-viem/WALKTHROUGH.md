@@ -349,7 +349,8 @@ prompts on mount.
 
 ```ts
 const { data: isAllowed } = useIsAllowed({
-  contractAddresses: [token?.confidentialTokenAddress ?? ZERO_ADDRESS],
+  contractAddresses: token ? [token.confidentialTokenAddress] : [],
+  query: { enabled: Boolean(token) },
 });
 // All registry pairs are passed at once — one signature covers all tokens,
 // so switching tokens does not prompt the wallet again.

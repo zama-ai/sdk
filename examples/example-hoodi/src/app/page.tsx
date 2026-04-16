@@ -149,9 +149,9 @@ export default function Home() {
   const token = validPairs.find((p) => p.confidentialTokenAddress === selectedTokenAddress);
 
   // Check whether cached credentials cover the currently selected confidential token.
-  // ZERO_ADDRESS is used as a stable placeholder before a real token is selected.
   const { data: isAllowed } = useIsAllowed({
-    contractAddresses: [token?.confidentialTokenAddress ?? ZERO_ADDRESS],
+    contractAddresses: token ? [token.confidentialTokenAddress] : [],
+    query: { enabled: Boolean(token) },
   });
 
   // Metadata for the selected token pair — sourced directly from the registry response
