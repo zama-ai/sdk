@@ -816,8 +816,6 @@ export class ReadonlyToken {
         delegateAddress: Address;
     }): Promise<boolean>;
     isWrapper(): Promise<boolean>;
-    // (undocumented)
-    isZeroHandle(handle: string): handle is typeof ZERO_HANDLE | `0x`;
     name(): Promise<string>;
     // (undocumented)
     protected readConfidentialBalanceOf(owner: Address): Promise<Handle>;
@@ -1550,12 +1548,9 @@ export const ZamaSDKEvents: {
     readonly UnshieldPhase2Submitted: "unshield:phase2_submitted";
 };
 
-// @public (undocumented)
-export const ZERO_HANDLE: "0x0000000000000000000000000000000000000000000000000000000000000000";
-
 // Warnings were encountered during analysis:
 //
-// dist/esm/activity-BNxngOfM.d.ts:22718:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/esm/activity-DBMyE78S.d.ts:22695:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

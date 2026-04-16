@@ -155,6 +155,7 @@ import { isConfidentialWrapperContract } from '@zama-fhe/sdk';
 import { isHandleDelegatedContract } from '@zama-fhe/sdk';
 import { isOperatorContract } from '@zama-fhe/sdk';
 import { isWrapperQueryOptions } from '@zama-fhe/sdk/query';
+import { isZeroHandle } from '@zama-fhe/sdk';
 import { KeypairExpiredError } from '@zama-fhe/sdk';
 import { KeypairType } from '@zama-fhe/sdk';
 import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/sdk';
@@ -571,6 +572,8 @@ export { isHandleDelegatedContract }
 export { isOperatorContract }
 
 export { isWrapperQueryOptions }
+
+export { isZeroHandle }
 
 export { KeypairExpiredError }
 

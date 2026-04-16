@@ -37,6 +37,7 @@ import {
   ZamaError,
   matchAclRevert,
 } from "../errors";
+import { isZeroHandle } from "../utils/handles";
 import { ReadonlyToken } from "./readonly-token";
 import type {
   ShieldCallbacks,
@@ -499,7 +500,7 @@ export class Token extends ReadonlyToken {
     const userAddress = await this.sdk.signer.getAddress();
     const handle = await this.readConfidentialBalanceOf(userAddress);
 
-    if (this.isZeroHandle(handle)) {
+    if (isZeroHandle(handle)) {
       throw new DecryptionFailedError("Cannot unshield: balance is zero");
     }
 
