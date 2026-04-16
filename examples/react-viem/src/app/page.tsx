@@ -10,6 +10,7 @@ import {
   useAllow,
   useListPairs,
   useZamaSDK,
+  useTotalSupply,
   balanceOfContract,
 } from "@zama-fhe/react-sdk";
 import type { TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
@@ -134,9 +135,10 @@ export default function Home() {
   const token = validPairs.find((p) => p.confidentialTokenAddress === selectedTokenAddress);
 
   // Check whether cached credentials cover the currently selected confidential token.
+  // ZERO_ADDRESS is used as a non-empty placeholder when no token is selected —
+  // credentials will never match it, so isAllowed stays false until a real token loads.
   const { data: isAllowed } = useIsAllowed({
-    contractAddresses: token ? [token.confidentialTokenAddress] : [],
-    query: { enabled: Boolean(token) },
+    contractAddresses: token ? [token.confidentialTokenAddress] : [ZERO_ADDRESS],
   });
 
   // Metadata for the selected token pair — sourced directly from the registry response
@@ -145,6 +147,12 @@ export default function Home() {
   const erc20Decimals = token?.underlying.decimals ?? 0;
   const confidentialSymbol = token?.confidential.symbol ?? "";
   const erc20Symbol = token?.underlying.symbol ?? "";
+
+  // Read the wrapper's inferred total supply — a plaintext on-chain value that
+  // does not require FHE decryption or credentials. Stale after 30 s (SDK default).
+  const { data: totalSupply } = useTotalSupply(token?.confidentialTokenAddress ?? ZERO_ADDRESS, {
+    enabled: !!token && isSepolia,
+  });
 
   // Triggers the EIP-712 wallet signature to create FHE decrypt credentials.
   // All registry pairs are passed at once — a single signature covers all tokens,
@@ -272,7 +280,7 @@ export default function Home() {
     // any operation that changes the confidential balance (shield, unshield, transfer).
     if (token) {
       queryClient.invalidateQueries({
-        queryKey: zamaQueryKeys.confidentialHandle.token(token.confidentialTokenAddress),
+        queryKey: zamaQueryKeys.confidentialBalance.token(token.confidentialTokenAddress),
       });
     }
   };
@@ -423,14 +431,17 @@ export default function Home() {
         {!isRegistryPending && !isRegistryError && validPairs.length === 0 && (
           <p className="token-meta">No tokens available.</p>
         )}
+        {token && totalSupply !== undefined && (
+          <p className="token-meta">
+            Total supply: {formatUnits(totalSupply, decimals)} {confidentialSymbol}
+          </p>
+        )}
       </div>
 
       <BalancesCard
         formattedErc20={formattedErc20}
         formattedConfidential={formattedConfidential}
-        // handleQuery.isLoading: fetching the encrypted handle from chain (Phase 1).
-        // balance.isLoading: decrypting it via RelayerWeb (Phase 2).
-        isLoadingConfidential={balance.handleQuery.isLoading || balance.isLoading}
+        isLoadingConfidential={balance.isLoading}
         erc20Symbol={erc20Symbol}
         onMint={() => mint.mutate()}
         isMinting={mint.isPending}

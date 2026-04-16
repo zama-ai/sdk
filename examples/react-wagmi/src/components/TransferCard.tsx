@@ -38,7 +38,7 @@ export function TransferCard({
     transfer.mutate({
       to: recipient as Address,
       amount: parsedAmount,
-      callbacks: { onEncryptComplete: () => setStep(2) },
+      onEncryptComplete: () => setStep(2),
     });
   }
 

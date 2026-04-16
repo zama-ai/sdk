@@ -57,10 +57,8 @@ export function UnshieldCard({
     setActiveUnshieldToken(tokenAddress);
     unshield.mutate({
       amount: parsedAmount,
-      callbacks: {
-        // onFinalizing fires between the two on-chain transactions, marking step 2.
-        onFinalizing: () => setStep(2),
-      },
+      // onFinalizing fires between the two on-chain transactions, marking step 2.
+      onFinalizing: () => setStep(2),
     });
   }
 

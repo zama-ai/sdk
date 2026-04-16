@@ -1,7 +1,13 @@
 import { createPublicClient, createWalletClient, formatUnits, http, parseAbi } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
-import { DelegationNotPropagatedError, MemoryStorage, ZamaSDK } from "@zama-fhe/sdk";
+import {
+  DelegationNotPropagatedError,
+  MemoryStorage,
+  ZamaSDK,
+  inferredTotalSupplyContract,
+  confidentialTotalSupplyContract,
+} from "@zama-fhe/sdk";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 import { RelayerNode } from "@zama-fhe/sdk/node";
 import type { Address } from "@zama-fhe/sdk";
@@ -256,6 +262,38 @@ async function main() {
     delegateAddress: accountB.address as Address,
   });
   console.log("Delegation active after revoke:", isDelegatedAfter);
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // SECTION 5 — Public Decryption & Inferred Total Supply
+  // Public decryption uses the network public key — no credentials (allow())
+  // are needed. This is useful for reading on-chain encrypted values that
+  // should be visible to everyone, like confidential total supply.
+  // ──────────────────────────────────────────────────────────────────────────
+  section("SECTION 5 — Public Decryption & Inferred Total Supply");
+
+  // 5a. inferredTotalSupplyContract — reads the plaintext total supply that the
+  // wrapper infers from wrap/unwrap activity. No decryption required.
+  console.log("── 5a. Inferred total supply (plaintext) ──");
+  const inferredSupply = await sdkA.signer.readContract(
+    inferredTotalSupplyContract(confidentialTokenAddress),
+  );
+  console.log("Inferred total supply:", fmt(inferredSupply as bigint));
+
+  // 5b. confidentialTotalSupplyContract — reads the encrypted total supply handle.
+  // The handle is an FHE ciphertext reference stored on-chain.
+  console.log("\n── 5b. Confidential total supply (encrypted handle) ──");
+  const totalSupplyHandle = await sdkA.signer.readContract(
+    confidentialTotalSupplyContract(confidentialTokenAddress),
+  );
+  console.log("Total supply handle:", totalSupplyHandle);
+
+  // 5c. publicDecrypt — decrypt the handle without user credentials.
+  // Unlike userDecrypt (which requires an EIP-712 session signature), publicDecrypt
+  // uses the network public key and is open to everyone.
+  console.log("\n── 5c. Public decrypt ──");
+  const { clearValues } = await sdkA.publicDecrypt([totalSupplyHandle as `0x${string}`]);
+  const decryptedSupply = clearValues[totalSupplyHandle as `0x${string}`];
+  console.log("Public-decrypted total supply:", fmt(decryptedSupply as bigint));
 }
 
 main().catch((err) => {
