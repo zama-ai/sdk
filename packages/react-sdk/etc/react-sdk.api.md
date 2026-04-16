@@ -4,7 +4,6 @@
 
 ```ts
 
-import * as _$_tanstack_query_core0 from '@tanstack/query-core';
 import * as _$_tanstack_react_query0 from '@tanstack/react-query';
 import * as _$_zama_fhe_relayer_sdk_web0 from '@zama-fhe/relayer-sdk/web';
 import * as _$_zama_fhe_sdk0 from '@zama-fhe/sdk';
@@ -44,8 +43,6 @@ import { ConfidentialApproveParams } from '@zama-fhe/sdk/query';
 import { confidentialBalanceOfContract } from '@zama-fhe/sdk';
 import { confidentialBalanceQueryOptions } from '@zama-fhe/sdk/query';
 import { confidentialBalancesQueryOptions } from '@zama-fhe/sdk/query';
-import { confidentialHandleQueryOptions } from '@zama-fhe/sdk/query';
-import { confidentialHandlesQueryOptions } from '@zama-fhe/sdk/query';
 import { confidentialIsApprovedQueryOptions } from '@zama-fhe/sdk/query';
 import { confidentialTotalSupplyContract } from '@zama-fhe/sdk';
 import { confidentialTransferContract } from '@zama-fhe/sdk';
@@ -349,10 +346,6 @@ export { confidentialBalanceOfContract }
 export { confidentialBalanceQueryOptions }
 
 export { confidentialBalancesQueryOptions }
-
-export { confidentialHandleQueryOptions }
-
-export { confidentialHandlesQueryOptions }
 
 export { confidentialIsApprovedQueryOptions }
 
@@ -811,179 +804,10 @@ export function useBatchDecryptBalancesAs(tokens: ReadonlyToken[], options?: Use
 export function useConfidentialApprove(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, ConfidentialApproveParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, ConfidentialApproveParams, `0x${string}`>;
 
 // @public
-export function useConfidentialBalance(config: UseConfidentialBalanceConfig, options?: UseConfidentialBalanceOptions): {
-    handleQuery: _$_tanstack_react_query0.UseQueryResult<`0x${string}`, Error>;
-    data: bigint;
-    error: Error;
-    isError: true;
-    isPending: false;
-    isLoading: false;
-    isLoadingError: false;
-    isRefetchError: true;
-    isSuccess: false;
-    isPlaceholderData: false;
-    status: "error";
-    dataUpdatedAt: number;
-    errorUpdatedAt: number;
-    failureCount: number;
-    failureReason: Error | null;
-    errorUpdateCount: number;
-    isFetched: boolean;
-    isFetchedAfterMount: boolean;
-    isFetching: boolean;
-    isInitialLoading: boolean;
-    isPaused: boolean;
-    isRefetching: boolean;
-    isStale: boolean;
-    isEnabled: boolean;
-    refetch: (options?: _$_tanstack_query_core0.RefetchOptions) => Promise<_$_tanstack_query_core0.QueryObserverResult<bigint, Error>>;
-    fetchStatus: _$_tanstack_query_core0.FetchStatus;
-    promise: Promise<bigint>;
-} | {
-    handleQuery: _$_tanstack_react_query0.UseQueryResult<`0x${string}`, Error>;
-    data: bigint;
-    error: null;
-    isError: false;
-    isPending: false;
-    isLoading: false;
-    isLoadingError: false;
-    isRefetchError: false;
-    isSuccess: true;
-    isPlaceholderData: false;
-    status: "success";
-    dataUpdatedAt: number;
-    errorUpdatedAt: number;
-    failureCount: number;
-    failureReason: Error | null;
-    errorUpdateCount: number;
-    isFetched: boolean;
-    isFetchedAfterMount: boolean;
-    isFetching: boolean;
-    isInitialLoading: boolean;
-    isPaused: boolean;
-    isRefetching: boolean;
-    isStale: boolean;
-    isEnabled: boolean;
-    refetch: (options?: _$_tanstack_query_core0.RefetchOptions) => Promise<_$_tanstack_query_core0.QueryObserverResult<bigint, Error>>;
-    fetchStatus: _$_tanstack_query_core0.FetchStatus;
-    promise: Promise<bigint>;
-} | {
-    handleQuery: _$_tanstack_react_query0.UseQueryResult<`0x${string}`, Error>;
-    data: undefined;
-    error: Error;
-    isError: true;
-    isPending: false;
-    isLoading: false;
-    isLoadingError: true;
-    isRefetchError: false;
-    isSuccess: false;
-    isPlaceholderData: false;
-    status: "error";
-    dataUpdatedAt: number;
-    errorUpdatedAt: number;
-    failureCount: number;
-    failureReason: Error | null;
-    errorUpdateCount: number;
-    isFetched: boolean;
-    isFetchedAfterMount: boolean;
-    isFetching: boolean;
-    isInitialLoading: boolean;
-    isPaused: boolean;
-    isRefetching: boolean;
-    isStale: boolean;
-    isEnabled: boolean;
-    refetch: (options?: _$_tanstack_query_core0.RefetchOptions) => Promise<_$_tanstack_query_core0.QueryObserverResult<bigint, Error>>;
-    fetchStatus: _$_tanstack_query_core0.FetchStatus;
-    promise: Promise<bigint>;
-} | {
-    handleQuery: _$_tanstack_react_query0.UseQueryResult<`0x${string}`, Error>;
-    data: undefined;
-    error: null;
-    isError: false;
-    isPending: true;
-    isLoading: true;
-    isLoadingError: false;
-    isRefetchError: false;
-    isSuccess: false;
-    isPlaceholderData: false;
-    status: "pending";
-    dataUpdatedAt: number;
-    errorUpdatedAt: number;
-    failureCount: number;
-    failureReason: Error | null;
-    errorUpdateCount: number;
-    isFetched: boolean;
-    isFetchedAfterMount: boolean;
-    isFetching: boolean;
-    isInitialLoading: boolean;
-    isPaused: boolean;
-    isRefetching: boolean;
-    isStale: boolean;
-    isEnabled: boolean;
-    refetch: (options?: _$_tanstack_query_core0.RefetchOptions) => Promise<_$_tanstack_query_core0.QueryObserverResult<bigint, Error>>;
-    fetchStatus: _$_tanstack_query_core0.FetchStatus;
-    promise: Promise<bigint>;
-} | {
-    handleQuery: _$_tanstack_react_query0.UseQueryResult<`0x${string}`, Error>;
-    data: undefined;
-    error: null;
-    isError: false;
-    isPending: true;
-    isLoadingError: false;
-    isRefetchError: false;
-    isSuccess: false;
-    isPlaceholderData: false;
-    status: "pending";
-    dataUpdatedAt: number;
-    errorUpdatedAt: number;
-    failureCount: number;
-    failureReason: Error | null;
-    errorUpdateCount: number;
-    isFetched: boolean;
-    isFetchedAfterMount: boolean;
-    isFetching: boolean;
-    isLoading: boolean;
-    isInitialLoading: boolean;
-    isPaused: boolean;
-    isRefetching: boolean;
-    isStale: boolean;
-    isEnabled: boolean;
-    refetch: (options?: _$_tanstack_query_core0.RefetchOptions) => Promise<_$_tanstack_query_core0.QueryObserverResult<bigint, Error>>;
-    fetchStatus: _$_tanstack_query_core0.FetchStatus;
-    promise: Promise<bigint>;
-} | {
-    handleQuery: _$_tanstack_react_query0.UseQueryResult<`0x${string}`, Error>;
-    data: bigint;
-    isError: false;
-    error: null;
-    isPending: false;
-    isLoading: false;
-    isLoadingError: false;
-    isRefetchError: false;
-    isSuccess: true;
-    isPlaceholderData: true;
-    status: "success";
-    dataUpdatedAt: number;
-    errorUpdatedAt: number;
-    failureCount: number;
-    failureReason: Error | null;
-    errorUpdateCount: number;
-    isFetched: boolean;
-    isFetchedAfterMount: boolean;
-    isFetching: boolean;
-    isInitialLoading: boolean;
-    isPaused: boolean;
-    isRefetching: boolean;
-    isStale: boolean;
-    isEnabled: boolean;
-    refetch: (options?: _$_tanstack_query_core0.RefetchOptions) => Promise<_$_tanstack_query_core0.QueryObserverResult<bigint, Error>>;
-    fetchStatus: _$_tanstack_query_core0.FetchStatus;
-    promise: Promise<bigint>;
-};
+export function useConfidentialBalance(config: UseConfidentialBalanceConfig, options?: UseConfidentialBalanceOptions): _$_tanstack_react_query0.UseQueryResult<bigint, Error>;
 
 // @public
 export interface UseConfidentialBalanceConfig {
-    handleRefetchInterval?: number;
     tokenAddress: Address;
 }
 
@@ -993,179 +817,10 @@ export interface UseConfidentialBalanceOptions extends Omit<UseQueryOptions<bigi
 }
 
 // @public
-export function useConfidentialBalances(config: UseConfidentialBalancesConfig, options?: UseConfidentialBalancesOptions): {
-    handlesQuery: _$_tanstack_react_query0.UseQueryResult<`0x${string}`[], Error>;
-    data: BatchBalancesResult;
-    error: Error;
-    isError: true;
-    isPending: false;
-    isLoading: false;
-    isLoadingError: false;
-    isRefetchError: true;
-    isSuccess: false;
-    isPlaceholderData: false;
-    status: "error";
-    dataUpdatedAt: number;
-    errorUpdatedAt: number;
-    failureCount: number;
-    failureReason: Error | null;
-    errorUpdateCount: number;
-    isFetched: boolean;
-    isFetchedAfterMount: boolean;
-    isFetching: boolean;
-    isInitialLoading: boolean;
-    isPaused: boolean;
-    isRefetching: boolean;
-    isStale: boolean;
-    isEnabled: boolean;
-    refetch: (options?: _$_tanstack_query_core0.RefetchOptions) => Promise<_$_tanstack_query_core0.QueryObserverResult<BatchBalancesResult, Error>>;
-    fetchStatus: _$_tanstack_query_core0.FetchStatus;
-    promise: Promise<BatchBalancesResult>;
-} | {
-    handlesQuery: _$_tanstack_react_query0.UseQueryResult<`0x${string}`[], Error>;
-    data: BatchBalancesResult;
-    error: null;
-    isError: false;
-    isPending: false;
-    isLoading: false;
-    isLoadingError: false;
-    isRefetchError: false;
-    isSuccess: true;
-    isPlaceholderData: false;
-    status: "success";
-    dataUpdatedAt: number;
-    errorUpdatedAt: number;
-    failureCount: number;
-    failureReason: Error | null;
-    errorUpdateCount: number;
-    isFetched: boolean;
-    isFetchedAfterMount: boolean;
-    isFetching: boolean;
-    isInitialLoading: boolean;
-    isPaused: boolean;
-    isRefetching: boolean;
-    isStale: boolean;
-    isEnabled: boolean;
-    refetch: (options?: _$_tanstack_query_core0.RefetchOptions) => Promise<_$_tanstack_query_core0.QueryObserverResult<BatchBalancesResult, Error>>;
-    fetchStatus: _$_tanstack_query_core0.FetchStatus;
-    promise: Promise<BatchBalancesResult>;
-} | {
-    handlesQuery: _$_tanstack_react_query0.UseQueryResult<`0x${string}`[], Error>;
-    data: undefined;
-    error: Error;
-    isError: true;
-    isPending: false;
-    isLoading: false;
-    isLoadingError: true;
-    isRefetchError: false;
-    isSuccess: false;
-    isPlaceholderData: false;
-    status: "error";
-    dataUpdatedAt: number;
-    errorUpdatedAt: number;
-    failureCount: number;
-    failureReason: Error | null;
-    errorUpdateCount: number;
-    isFetched: boolean;
-    isFetchedAfterMount: boolean;
-    isFetching: boolean;
-    isInitialLoading: boolean;
-    isPaused: boolean;
-    isRefetching: boolean;
-    isStale: boolean;
-    isEnabled: boolean;
-    refetch: (options?: _$_tanstack_query_core0.RefetchOptions) => Promise<_$_tanstack_query_core0.QueryObserverResult<BatchBalancesResult, Error>>;
-    fetchStatus: _$_tanstack_query_core0.FetchStatus;
-    promise: Promise<BatchBalancesResult>;
-} | {
-    handlesQuery: _$_tanstack_react_query0.UseQueryResult<`0x${string}`[], Error>;
-    data: undefined;
-    error: null;
-    isError: false;
-    isPending: true;
-    isLoading: true;
-    isLoadingError: false;
-    isRefetchError: false;
-    isSuccess: false;
-    isPlaceholderData: false;
-    status: "pending";
-    dataUpdatedAt: number;
-    errorUpdatedAt: number;
-    failureCount: number;
-    failureReason: Error | null;
-    errorUpdateCount: number;
-    isFetched: boolean;
-    isFetchedAfterMount: boolean;
-    isFetching: boolean;
-    isInitialLoading: boolean;
-    isPaused: boolean;
-    isRefetching: boolean;
-    isStale: boolean;
-    isEnabled: boolean;
-    refetch: (options?: _$_tanstack_query_core0.RefetchOptions) => Promise<_$_tanstack_query_core0.QueryObserverResult<BatchBalancesResult, Error>>;
-    fetchStatus: _$_tanstack_query_core0.FetchStatus;
-    promise: Promise<BatchBalancesResult>;
-} | {
-    handlesQuery: _$_tanstack_react_query0.UseQueryResult<`0x${string}`[], Error>;
-    data: undefined;
-    error: null;
-    isError: false;
-    isPending: true;
-    isLoadingError: false;
-    isRefetchError: false;
-    isSuccess: false;
-    isPlaceholderData: false;
-    status: "pending";
-    dataUpdatedAt: number;
-    errorUpdatedAt: number;
-    failureCount: number;
-    failureReason: Error | null;
-    errorUpdateCount: number;
-    isFetched: boolean;
-    isFetchedAfterMount: boolean;
-    isFetching: boolean;
-    isLoading: boolean;
-    isInitialLoading: boolean;
-    isPaused: boolean;
-    isRefetching: boolean;
-    isStale: boolean;
-    isEnabled: boolean;
-    refetch: (options?: _$_tanstack_query_core0.RefetchOptions) => Promise<_$_tanstack_query_core0.QueryObserverResult<BatchBalancesResult, Error>>;
-    fetchStatus: _$_tanstack_query_core0.FetchStatus;
-    promise: Promise<BatchBalancesResult>;
-} | {
-    handlesQuery: _$_tanstack_react_query0.UseQueryResult<`0x${string}`[], Error>;
-    data: BatchBalancesResult;
-    isError: false;
-    error: null;
-    isPending: false;
-    isLoading: false;
-    isLoadingError: false;
-    isRefetchError: false;
-    isSuccess: true;
-    isPlaceholderData: true;
-    status: "success";
-    dataUpdatedAt: number;
-    errorUpdatedAt: number;
-    failureCount: number;
-    failureReason: Error | null;
-    errorUpdateCount: number;
-    isFetched: boolean;
-    isFetchedAfterMount: boolean;
-    isFetching: boolean;
-    isInitialLoading: boolean;
-    isPaused: boolean;
-    isRefetching: boolean;
-    isStale: boolean;
-    isEnabled: boolean;
-    refetch: (options?: _$_tanstack_query_core0.RefetchOptions) => Promise<_$_tanstack_query_core0.QueryObserverResult<BatchBalancesResult, Error>>;
-    fetchStatus: _$_tanstack_query_core0.FetchStatus;
-    promise: Promise<BatchBalancesResult>;
-};
+export function useConfidentialBalances(config: UseConfidentialBalancesConfig, options?: UseConfidentialBalancesOptions): _$_tanstack_react_query0.UseQueryResult<BatchBalancesResult, Error>;
 
 // @public
 export interface UseConfidentialBalancesConfig {
-    handleRefetchInterval?: number;
     tokenAddresses: Address[];
 }
 

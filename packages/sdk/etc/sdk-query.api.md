@@ -152,8 +152,6 @@ export interface ConfidentialApproveParams {
 // @public (undocumented)
 export interface ConfidentialBalanceQueryConfig {
     // (undocumented)
-    handle?: EncryptedBalanceHandle;
-    // (undocumented)
     owner?: Address;
     // (undocumented)
     query?: Record<string, unknown>;
@@ -167,8 +165,6 @@ export function confidentialBalanceQueryOptions(token: ReadonlyToken, config: Co
 // @public (undocumented)
 export interface ConfidentialBalancesQueryConfig {
     // (undocumented)
-    handles?: EncryptedBalanceHandle[];
-    // (undocumented)
     owner?: Address;
     // (undocumented)
     query?: Record<string, unknown>;
@@ -176,32 +172,6 @@ export interface ConfidentialBalancesQueryConfig {
 
 // @public (undocumented)
 export function confidentialBalancesQueryOptions(tokens: ReadonlyToken[], config?: ConfidentialBalancesQueryConfig): QueryFactoryOptions<BatchBalancesResult, Error, BatchBalancesResult, ReturnType<typeof zamaQueryKeys.confidentialBalances.tokens>>;
-
-// @public (undocumented)
-export interface ConfidentialHandleQueryConfig {
-    // (undocumented)
-    owner?: Address;
-    // (undocumented)
-    pollingInterval?: number;
-    // (undocumented)
-    query?: Record<string, unknown>;
-}
-
-// @public (undocumented)
-export function confidentialHandleQueryOptions(signer: GenericSigner, tokenAddress: Address, config?: ConfidentialHandleQueryConfig): QueryFactoryOptions<Handle, Error, Handle, ReturnType<typeof zamaQueryKeys.confidentialHandle.owner>>;
-
-// @public (undocumented)
-export interface ConfidentialHandlesQueryConfig {
-    // (undocumented)
-    owner?: Address;
-    // (undocumented)
-    pollingInterval?: number;
-    // (undocumented)
-    query?: Record<string, unknown>;
-}
-
-// @public (undocumented)
-export function confidentialHandlesQueryOptions(signer: GenericSigner, tokenAddresses: Address[], config?: ConfidentialHandlesQueryConfig): QueryFactoryOptions<Handle[], Error, Handle[], ReturnType<typeof zamaQueryKeys.confidentialHandles.tokens>>;
 
 // @public (undocumented)
 export interface ConfidentialIsApprovedQueryConfig {
@@ -539,9 +509,6 @@ export interface EIP712TypedData {
         readonly type: string;
     }[]>;
 }
-
-// @public (undocumented)
-export type EncryptedBalanceHandle = Handle;
 
 // @public (undocumented)
 export interface EncryptEndEvent extends BaseEvent {
@@ -1314,38 +1281,19 @@ export const zamaQueryKeys: {
             readonly tokenAddress: `0x${string}`;
         }];
     };
-    readonly confidentialHandle: {
-        readonly all: readonly ["zama.confidentialHandle"];
-        readonly token: (tokenAddress: Address) => readonly ["zama.confidentialHandle", {
-            readonly tokenAddress: `0x${string}`;
-        }];
-        readonly owner: (tokenAddress: Address, owner?: Address) => readonly ["zama.confidentialHandle", {
-            readonly owner?: `0x${string}` | undefined;
-            readonly tokenAddress: `0x${string}`;
-        }];
-    };
     readonly confidentialBalance: {
         readonly all: readonly ["zama.confidentialBalance"];
         readonly token: (tokenAddress: Address) => readonly ["zama.confidentialBalance", {
             readonly tokenAddress: `0x${string}`;
         }];
-        readonly owner: (tokenAddress: Address, owner?: Address, handle?: Handle) => readonly ["zama.confidentialBalance", {
-            readonly handle?: `0x${string}` | undefined;
+        readonly owner: (tokenAddress: Address, owner?: Address) => readonly ["zama.confidentialBalance", {
             readonly owner?: `0x${string}` | undefined;
             readonly tokenAddress: `0x${string}`;
         }];
     };
-    readonly confidentialHandles: {
-        readonly all: readonly ["zama.confidentialHandles"];
-        readonly tokens: (tokenAddresses: Address[], owner?: Address) => readonly ["zama.confidentialHandles", {
-            readonly owner?: `0x${string}` | undefined;
-            readonly tokenAddresses: `0x${string}`[];
-        }];
-    };
     readonly confidentialBalances: {
         readonly all: readonly ["zama.confidentialBalances"];
-        readonly tokens: (tokenAddresses: Address[], owner?: Address, handles?: Handle[]) => readonly ["zama.confidentialBalances", {
-            readonly handles?: `0x${string}`[] | undefined;
+        readonly tokens: (tokenAddresses: Address[], owner?: Address) => readonly ["zama.confidentialBalances", {
             readonly owner?: `0x${string}` | undefined;
             readonly tokenAddresses: `0x${string}`[];
         }];
@@ -1606,7 +1554,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/activity-B66OpQQN.d.ts:21435:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/esm/activity-CN4AMrfo.d.ts:21416:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 
