@@ -54,7 +54,7 @@ export function createZamaConfig(params: CreateZamaConfigBaseParams): ZamaConfig
     };
   }
 
-  const p = params as ConfigWithTransports;
+  const p: ConfigWithTransports = params;
   const signer = resolveSigner(p);
   const chainTransports = resolveChainTransports(
     p.chains,

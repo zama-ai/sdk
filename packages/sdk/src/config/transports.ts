@@ -46,20 +46,6 @@ export interface CleartextTransportConfig {
 /** A per-chain transport entry. */
 export type TransportConfig = WebTransportConfig | NodeTransportConfig | CleartextTransportConfig;
 
-// ── Type guards ──────────────────────────────────────────────────────────────
-
-export function isWebTransport(t: TransportConfig): t is WebTransportConfig {
-  return t.__mode === "web";
-}
-
-export function isNodeTransport(t: TransportConfig): t is NodeTransportConfig {
-  return t.__mode === "node";
-}
-
-export function isCleartextTransport(t: TransportConfig): t is CleartextTransportConfig {
-  return t.__mode === "cleartext";
-}
-
 // ── Transport factories ──────────────────────────────────────────────────────
 
 /**
