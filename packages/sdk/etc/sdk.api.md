@@ -9375,6 +9375,51 @@ export function inferredTotalSupplyContract(wrapperAddress: Address): {
             readonly name: "receiver";
             readonly type: "address";
         }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }, {
+            readonly indexed: false;
+            readonly internalType: "euint64";
+            readonly name: "encryptedAmount";
+            readonly type: "bytes32";
+        }, {
+            readonly indexed: false;
+            readonly internalType: "uint64";
+            readonly name: "cleartextAmount";
+            readonly type: "uint64";
+        }];
+        readonly name: "UnwrapFinalized";
+        readonly type: "event";
+    }, {
+        readonly anonymous: false;
+        readonly inputs: readonly [{
+            readonly indexed: true;
+            readonly internalType: "address";
+            readonly name: "receiver";
+            readonly type: "address";
+        }, {
+            readonly indexed: false;
+            readonly internalType: "euint64";
+            readonly name: "amount";
+            readonly type: "bytes32";
+        }];
+        readonly name: "UnwrapRequested";
+        readonly type: "event";
+    }, {
+        readonly anonymous: false;
+        readonly inputs: readonly [{
+            readonly indexed: true;
+            readonly internalType: "address";
+            readonly name: "receiver";
+            readonly type: "address";
+        }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }, {
             readonly indexed: false;
             readonly internalType: "euint64";
             readonly name: "amount";
