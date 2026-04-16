@@ -151,7 +151,7 @@ await unshieldAll();
 
 ```tsx
 import { useResumeUnshield } from "@zama-fhe/react-sdk";
-import { loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/react-sdk";
+import { loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/sdk";
 
 const { mutateAsync: resumeUnshield } = useResumeUnshield({
   tokenAddress: "0xToken",

@@ -6,8 +6,6 @@ import { createDelegatedUserDecryptEIP712MutationOptions } from "@zama-fhe/sdk/q
 import type { CreateDelegatedUserDecryptEIP712Params } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 
-export type { CreateDelegatedUserDecryptEIP712Params };
-
 /**
  * Create EIP-712 typed data for a delegated user decrypt credential.
  * Used when one wallet authorizes another to decrypt on its behalf.

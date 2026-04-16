@@ -1,4 +1,4 @@
-import type { Address } from "@zama-fhe/react-sdk";
+import type { Address } from "@zama-fhe/sdk";
 import deployments from "../../../contracts/deployments.json";
 
 export const CONTRACTS = {

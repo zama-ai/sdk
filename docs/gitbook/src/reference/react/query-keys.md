@@ -12,14 +12,14 @@ Mutations auto-invalidate related caches, so you only need `zamaQueryKeys` for a
 ## Import
 
 ```ts
-import { zamaQueryKeys } from "@zama-fhe/react-sdk";
+import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 ```
 
 ## Usage
 
 ```tsx
 import { useQueryClient } from "@tanstack/react-query";
-import { zamaQueryKeys } from "@zama-fhe/react-sdk";
+import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 
 const queryClient = useQueryClient();
 
@@ -93,12 +93,12 @@ On-chain wrappers registry queries.
 | `.isConfidentialTokenValid(registryAddr, confidentialAddr)` | Validity check                             |
 | `.listPairs(registryAddr, page, pageSize, metadata)`        | Paginated listing                          |
 
-### `decryptionKeys`
+### `zamaQueryKeys.decryption`
 
 Cached decrypted values. Populated by [`useUserDecrypt`](/reference/react/useUserDecrypt).
 
 ```ts
-import { decryptionKeys } from "@zama-fhe/react-sdk";
+import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 ```
 
 | Key              | Scope                            |

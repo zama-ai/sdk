@@ -73,10 +73,6 @@ const sdk = new ZamaSDK({
 
 ## Parameters
 
-```ts
-import { type UseConfidentialBalancesParameters } from "@zama-fhe/react-sdk";
-```
-
 ### tokenAddresses
 
 `Address[]`
@@ -119,10 +115,6 @@ const { data } = useConfidentialBalances({
 {% include ".gitbook/includes/query-options.md" %}
 
 ## Return Type
-
-```ts
-import { type UseConfidentialBalancesReturnType } from "@zama-fhe/react-sdk";
-```
 
 The `data` property is `BatchBalancesResult | undefined` -- an object with `results: Map<Address, bigint>` (successfully decrypted balances) and `errors: Map<Address, ZamaError>` (per-token errors).
 

@@ -151,10 +151,6 @@ await transfer({
 
 ## Return Type
 
-```ts
-import { type UseConfidentialTransferReturnType } from "@zama-fhe/react-sdk";
-```
-
 The `data` property (after a successful mutation) is `{ txHash: Hex, receipt: TransactionReceipt }`.
 
 - **`txHash`** -- Transaction hash submitted to the network.

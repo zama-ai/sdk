@@ -4,7 +4,7 @@ import { test as base, type BrowserContext } from "@playwright/test";
 import { hardhatCleartextConfig } from "@zama-fhe/sdk/cleartext";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import type { Address } from "viem";
+import type { Address } from "@zama-fhe/sdk";
 import {
   createTestClient,
   formatUnits,
