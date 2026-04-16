@@ -1,9 +1,8 @@
 import { Topics } from "../../events";
 import { getAddress, type Address } from "viem";
 import { DecryptionFailedError, ZamaError, ZamaErrorCode } from "../../errors";
+import { isZeroHandle, ZERO_HANDLE } from "../../query/utils";
 import { describe, expect, it, vi } from "../../test-fixtures";
-
-const ZERO_HANDLE = "0x" + "0".repeat(64);
 
 describe("Token", () => {
   describe("balanceOf", () => {
@@ -91,16 +90,16 @@ describe("Token", () => {
   });
 
   describe("isZeroHandle", () => {
-    it("returns true for zero handle", ({ token }) => {
-      expect(token.isZeroHandle(ZERO_HANDLE)).toBe(true);
+    it("returns true for zero handle", () => {
+      expect(isZeroHandle(ZERO_HANDLE)).toBe(true);
     });
 
-    it("returns true for 0x", ({ token }) => {
-      expect(token.isZeroHandle("0x")).toBe(true);
+    it("returns true for 0x", () => {
+      expect(isZeroHandle("0x")).toBe(true);
     });
 
-    it("returns false for valid handle", ({ token, handle }) => {
-      expect(token.isZeroHandle(handle)).toBe(false);
+    it("returns false for valid handle", ({ handle }) => {
+      expect(isZeroHandle(handle)).toBe(false);
     });
   });
 

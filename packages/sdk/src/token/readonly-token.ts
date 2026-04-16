@@ -22,7 +22,7 @@ import {
   ZamaError,
 } from "../errors";
 import { ZamaSDKEvents, type ZamaSDKEventInput } from "../events/sdk-events";
-import { ZERO_HANDLE } from "../query/utils";
+import { isZeroHandle, ZERO_HANDLE } from "../query/utils";
 import type { ClearValueType, Handle } from "../relayer/relayer-sdk.types";
 import { toError } from "../utils";
 import { assertBigint } from "../utils/assertions";
@@ -31,7 +31,7 @@ import type { ZamaSDK } from "../zama-sdk";
 
 // Re-exported so consumers importing via `./token` keep a single canonical
 // reference. The constant itself lives in `query/utils` to avoid duplication.
-export { ZERO_HANDLE };
+export { ZERO_HANDLE, isZeroHandle };
 
 /** Options for {@link ReadonlyToken.batchDecryptBalancesAs}. */
 export interface BatchDecryptAsOptions {
@@ -273,7 +273,7 @@ export class ReadonlyToken {
     const cachedValues = await Promise.all(
       tokens.map((token, i) => {
         const handle = resolvedHandles[i]!;
-        if (token.isZeroHandle(handle)) {
+        if (isZeroHandle(handle)) {
           return 0n;
         }
         return firstToken.sdk.cache.get(ownerAddress, token.address, handle);
@@ -577,11 +577,6 @@ export class ReadonlyToken {
   protected async readConfidentialBalanceOf(owner: Address): Promise<Handle> {
     return await this.sdk.signer.readContract(confidentialBalanceOfContract(this.address, owner));
   }
-
-  isZeroHandle(handle: string): handle is typeof ZERO_HANDLE | `0x` {
-    return handle === ZERO_HANDLE || handle === "0x";
-  }
-
   /**
    * Decrypt the balance of a delegator using delegated decryption credentials.
    * The connected signer acts as the delegate who has been granted permission
@@ -615,7 +610,7 @@ export class ReadonlyToken {
     const normalizedOwner = owner ? getAddress(owner) : normalizedDelegator;
 
     const handle = await this.readConfidentialBalanceOf(normalizedOwner);
-    if (this.isZeroHandle(handle)) {
+    if (isZeroHandle(handle)) {
       return 0n;
     }
 

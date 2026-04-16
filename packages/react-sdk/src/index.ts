@@ -307,7 +307,7 @@ export type {
 } from "./balance/optimistic-balance-update";
 
 // Re-export event decoders, types, and constants from core SDK
-export { ZERO_HANDLE } from "@zama-fhe/sdk";
+export { ZERO_HANDLE, isZeroHandle } from "@zama-fhe/sdk";
 export type {
   RawLog,
   ConfidentialTransferEvent,
