@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.5.0-alpha.3](https://github.com/zama-ai/sdk/compare/v2.5.0-alpha.2...v2.5.0-alpha.3) (2026-04-16)
+
+### Bug Fixes
+
+- align example apps with scoped isAllowed checks ([#233](https://github.com/zama-ai/sdk/issues/233)) ([4f50086]())
+
 ## [2.5.0-alpha.2](https://github.com/zama-ai/sdk/compare/v2.5.0-alpha.1...v2.5.0-alpha.2) (2026-04-16)
 
 ### Features
