@@ -149,6 +149,7 @@ export {
   finalizeUnwrapContract,
   setOperatorContract,
   underlyingContract,
+  inferredTotalSupplyContract,
   wrapContract,
   supportsInterfaceContract,
   isConfidentialTokenContract,
