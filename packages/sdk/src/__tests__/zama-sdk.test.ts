@@ -899,6 +899,48 @@ describe("ZamaSDK", () => {
     });
   });
 
+  describe("publicDecrypt", () => {
+    it("delegates to relayer.publicDecrypt and returns the result", async ({
+      sdk,
+      relayer,
+      handle,
+    }) => {
+      const result = await sdk.publicDecrypt([handle]);
+      expect(relayer.publicDecrypt).toHaveBeenCalledWith([handle]);
+      expect(result).toEqual({
+        clearValues: { [handle]: 500n },
+        abiEncodedClearValues: "0x1f4",
+        decryptionProof: "0xproof",
+      });
+    });
+
+    it("returns empty result for empty handles without calling relayer", async ({
+      sdk,
+      relayer,
+    }) => {
+      const result = await sdk.publicDecrypt([]);
+      expect(result).toEqual({
+        clearValues: {},
+        decryptionProof: "0x",
+        abiEncodedClearValues: "0x",
+      });
+      expect(relayer.publicDecrypt).not.toHaveBeenCalled();
+    });
+
+    it("wraps error on failure", async ({ sdk, relayer, handle }) => {
+      vi.mocked(relayer.publicDecrypt).mockRejectedValueOnce(new Error("relayer down"));
+
+      await expect(sdk.publicDecrypt([handle])).rejects.toThrow(DecryptionFailedError);
+    });
+
+    it("re-throws DecryptionFailedError as-is", async ({ sdk, relayer, handle }) => {
+      const original = new DecryptionFailedError("already typed");
+      vi.mocked(relayer.publicDecrypt).mockRejectedValueOnce(original);
+
+      await expect(sdk.publicDecrypt([handle])).rejects.toBe(original);
+    });
+  });
+
   describe("allow", () => {
     const CONTRACT_A = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
     const CONTRACT_B = "0x3C3c3C3c3C3C3c3c3c3C3c3C3C3c3c3C3c3c3C3C" as Address;

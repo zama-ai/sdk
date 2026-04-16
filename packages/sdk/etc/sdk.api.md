@@ -21514,6 +21514,7 @@ export class ZamaSDK {
     dispose(): void;
     // @internal
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
+    publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
     readonly registry: WrappersRegistry;
     // (undocumented)
     readonly relayer: RelayerSDK;
