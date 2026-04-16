@@ -111,10 +111,6 @@ export default function Home() {
   const queryClient = useQueryClient();
   const sdk = useZamaSDK();
 
-  // Check whether FHE decrypt credentials are already cached (no wallet prompt).
-  // Returns true if a valid session exists, undefined/false otherwise.
-  const { data: isAllowed } = useIsAllowed();
-
   // Fetch all valid token pairs from the on-chain WrappersRegistry.
   // Registry address is resolved automatically from the connected chain via DefaultRegistryAddresses
   // (Hoodi: 0x1807aE2f693F8530DFB126D0eF98F2F2518F292f) — no configuration required.
@@ -151,6 +147,12 @@ export default function Home() {
 
   // Currently selected token pair, or undefined while the registry is loading.
   const token = validPairs.find((p) => p.confidentialTokenAddress === selectedTokenAddress);
+
+  // Check whether cached credentials cover the currently selected confidential token.
+  const { data: isAllowed } = useIsAllowed({
+    contractAddresses: token ? [token.confidentialTokenAddress] : [],
+    query: { enabled: Boolean(token) },
+  });
 
   // Metadata for the selected token pair — sourced directly from the registry response
   // (useListPairs with metadata: true). Defaults to safe zero values until the pair loads.
@@ -298,7 +300,7 @@ export default function Home() {
     }
   };
 
-  // Only run once the user has explicitly authorized decrypt (isAllowed).
+  // Only run once the user has explicitly authorized decrypt for the selected token.
   // Prevents the hook from firing an EIP-712 prompt on mount (blind-signing anti-pattern).
   // ZERO_ADDRESS is used as a stable placeholder while no token pair is selected —
   // the query is disabled (enabled: false) so no actual RPC call is made.
