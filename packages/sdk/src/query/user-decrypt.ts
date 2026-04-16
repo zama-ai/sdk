@@ -1,15 +1,14 @@
-import type { HandleContractPair, UserDecryptResults } from "@zama-fhe/relayer-sdk/bundle";
+import type { UserDecryptResults } from "@zama-fhe/relayer-sdk/bundle";
 import type { Address } from "viem";
 import type { Handle } from "../relayer/relayer-sdk.types";
 import type { ZamaSDK } from "../zama-sdk";
 import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
 
-/** Handle/contract pair. Structurally matches {@link HandleContractPair} with strict `Handle`/`Address` typing. */
-export type DecryptHandle = Omit<HandleContractPair, "handle" | "contractAddress"> & {
+export interface DecryptHandle {
   handle: Handle;
   contractAddress: Address;
-};
+}
 
 /** Alias for {@link UserDecryptResults}. */
 export type DecryptResult = UserDecryptResults;
