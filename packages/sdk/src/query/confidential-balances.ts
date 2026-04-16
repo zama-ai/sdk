@@ -4,8 +4,11 @@ import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
 import { filterQueryOptions } from "./utils";
 
+const DEFAULT_POLLING_INTERVAL = 10_000;
+
 export interface ConfidentialBalancesQueryConfig {
   owner?: Address;
+  pollingInterval?: number;
   query?: Record<string, unknown>;
 }
 
@@ -18,16 +21,18 @@ export function confidentialBalancesQueryOptions(
   BatchBalancesResult,
   ReturnType<typeof zamaQueryKeys.confidentialBalances.tokens>
 > {
-  const { owner, query = {} } = config ?? {};
+  const ownerKey = config?.owner;
+  const queryOpts = config?.query ?? {};
   const tokenAddresses = tokens.map((token) => token.address);
 
   return {
-    ...filterQueryOptions(query),
-    queryKey: zamaQueryKeys.confidentialBalances.tokens(tokenAddresses, owner),
+    ...filterQueryOptions(queryOpts),
+    queryKey: zamaQueryKeys.confidentialBalances.tokens(tokenAddresses, ownerKey),
     queryFn: async (context) => {
       const [, { owner: keyOwner }] = context.queryKey;
       return ReadonlyToken.batchBalancesOf(tokens, keyOwner);
     },
-    enabled: tokens.length > 0 && query?.enabled !== false,
+    enabled: tokens.length > 0 && queryOpts?.enabled !== false,
+    refetchInterval: config?.pollingInterval ?? DEFAULT_POLLING_INTERVAL,
   };
 }
