@@ -148,6 +148,7 @@ import { hashFn } from '@zama-fhe/sdk/query';
 import { Hex } from '@zama-fhe/sdk';
 import { IndexedDBStorage } from '@zama-fhe/sdk';
 import { indexedDBStorage } from '@zama-fhe/sdk';
+import { inferredTotalSupplyContract } from '@zama-fhe/sdk';
 import { InputProofBytesType } from '@zama-fhe/sdk';
 import { InsufficientConfidentialBalanceError } from '@zama-fhe/sdk';
 import { InsufficientERC20BalanceError } from '@zama-fhe/sdk';
@@ -564,6 +565,8 @@ export { Hex }
 export { IndexedDBStorage }
 
 export { indexedDBStorage }
+
+export { inferredTotalSupplyContract }
 
 export { InputProofBytesType }
 

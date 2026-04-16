@@ -1437,7 +1437,7 @@ export const encryptedAbi = [
   },
   {
     inputs: [],
-    name: "totalSupply",
+    name: "inferredTotalSupply",
     outputs: [
       {
         internalType: "uint256",

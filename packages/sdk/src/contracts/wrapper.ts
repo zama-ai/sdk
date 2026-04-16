@@ -44,6 +44,25 @@ export function underlyingContract(wrapperAddress: Address) {
 }
 
 /**
+ * Returns the contract config to read the inferred plaintext total supply.
+ *
+ * @example
+ * ```ts
+ * const supply = await signer.readContract(
+ *   inferredTotalSupplyContract(wrapperAddress),
+ * );
+ * ```
+ */
+export function inferredTotalSupplyContract(wrapperAddress: Address) {
+  return {
+    address: wrapperAddress,
+    abi: wrapperAbi,
+    functionName: "inferredTotalSupply",
+    args: [],
+  } as const;
+}
+
+/**
  * Returns the contract config for a wrap (shield) operation.
  *
  * @example
