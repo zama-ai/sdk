@@ -38,8 +38,6 @@ next-env.d.ts
 # worktrees
 .worktrees/
 
-# generated api docs
-docs/api/
 docs/gitbook/book
 
 # mdbook binary (downloaded on install)
