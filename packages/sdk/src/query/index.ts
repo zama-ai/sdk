@@ -43,17 +43,9 @@ export {
 export { publicKeyQueryOptions, type PublicKeyQueryConfig } from "./public-key";
 export { publicParamsQueryOptions, type PublicParamsQueryConfig } from "./public-params";
 export {
-  confidentialHandleQueryOptions,
-  type ConfidentialHandleQueryConfig,
-} from "./confidential-handle";
-export {
   confidentialBalanceQueryOptions,
   type ConfidentialBalanceQueryConfig,
 } from "./confidential-balance";
-export {
-  confidentialHandlesQueryOptions,
-  type ConfidentialHandlesQueryConfig,
-} from "./confidential-handles";
 export {
   confidentialBalancesQueryOptions,
   type ConfidentialBalancesQueryConfig,
