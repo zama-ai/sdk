@@ -26,23 +26,13 @@ import { skipToken } from '@tanstack/query-core';
 import { UserDecryptResults } from '@zama-fhe/relayer-sdk/bundle';
 import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
 
-// @public
-export type ActivityAmount = {
-    readonly type: "clear";
-    readonly value: bigint;
-} | {
-    readonly type: "encrypted";
-    readonly handle: Handle; /** Populated after batch decryption via {@link applyDecryptedValues}. */
-    readonly decryptedValue?: bigint;
-};
-
-// @public
-export type ActivityDirection = "incoming" | "outgoing" | "self";
-
 // @public (undocumented)
 export interface ActivityFeedConfig {
     // (undocumented)
     decrypt?: boolean;
+    // Warning: (ae-forgotten-export) The symbol "RawLog" needs to be exported by the entry point index.d.ts
+    // Warning: (ae-forgotten-export) The symbol "ActivityLogMetadata" needs to be exported by the entry point index.d.ts
+    //
     // (undocumented)
     logs?: readonly (RawLog & Partial<ActivityLogMetadata>)[];
     // (undocumented)
@@ -57,42 +47,23 @@ export interface ActivityFeedQueryConfig {
     query?: Record<string, unknown>;
 }
 
+// Warning: (ae-forgotten-export) The symbol "ReadonlyToken" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "ActivityItem" needs to be exported by the entry point index.d.ts
+// Warning: (ae-incompatible-release-tags) The symbol "activityFeedQueryOptions" is marked as @public, but its signature references "QueryFactoryOptions" which is marked as @internal
+//
 // @public
 export function activityFeedQueryOptions(token: ReadonlyToken, config: ActivityFeedConfig, queryConfig?: ActivityFeedQueryConfig): QueryFactoryOptions<ActivityItem[], Error, ActivityItem[], ReturnType<typeof zamaQueryKeys.activityFeed.scope>>;
 
-// @public
-export interface ActivityItem {
-    readonly amount: ActivityAmount;
-    readonly direction: ActivityDirection;
-    readonly from?: Address;
-    readonly metadata: ActivityLogMetadata;
-    readonly rawEvent: OnChainEvent;
-    readonly success?: boolean;
-    readonly to?: Address;
-    readonly type: ActivityType;
-}
-
-// @public
-export interface ActivityLogMetadata {
-    readonly blockNumber?: bigint | number;
-    readonly logIndex?: number;
-    readonly transactionHash?: Hex;
-}
-
-// @public
-export type ActivityType = "transfer" | "shield" | "unshield_requested" | "unshield_started" | "unshield_finalized";
-
+// Warning: (ae-forgotten-export) The symbol "ZamaSDK" needs to be exported by the entry point index.d.ts
+// Warning: (ae-incompatible-release-tags) The symbol "allowMutationOptions" is marked as @public, but its signature references "MutationFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function allowMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.allow"], Address[], void>;
 
-// @public (undocumented)
-export interface ApproveSubmittedEvent extends BaseEvent {
-    // (undocumented)
-    txHash: Hex;
-    // (undocumented)
-    type: typeof ZamaSDKEvents.ApproveSubmitted;
-}
-
+// Warning: (ae-forgotten-export) The symbol "Token" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "TransactionResult" needs to be exported by the entry point index.d.ts
+// Warning: (ae-incompatible-release-tags) The symbol "approveUnderlyingMutationOptions" is marked as @public, but its signature references "MutationFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function approveUnderlyingMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.approveUnderlying", Address], ApproveUnderlyingParams, TransactionResult>;
 
@@ -102,47 +73,18 @@ export interface ApproveUnderlyingParams {
     amount?: bigint;
 }
 
-// @public (undocumented)
-export interface ApproveUnderlyingSubmittedEvent extends BaseEvent {
-    // (undocumented)
-    txHash: Hex;
-    // (undocumented)
-    type: typeof ZamaSDKEvents.ApproveUnderlyingSubmitted;
-}
-
-// @public (undocumented)
-export interface BaseEvent {
-    operationId?: string;
-    // (undocumented)
-    timestamp: number;
-    // (undocumented)
-    tokenAddress?: Address;
-}
-
-// @public
-export interface BatchBalancesResult {
-    // Warning: (ae-forgotten-export) The symbol "ZamaError" needs to be exported by the entry point index.d.ts
-    errors: Map<Address, ZamaError>;
-    results: Map<Address, bigint>;
-}
-
-// @public
-export interface BatchDecryptAsOptions {
-    delegatorAddress: Address;
-    handles?: Handle[];
-    maxConcurrency?: number;
-    onError?: (error: Error, address: Address) => bigint;
-    owner?: Address;
-}
-
+// Warning: (ae-incompatible-release-tags) The symbol "batchDecryptBalancesAsMutationOptions" is marked as @public, but its signature references "MutationFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function batchDecryptBalancesAsMutationOptions(tokens: ReadonlyToken[]): MutationFactoryOptions<readonly ["zama.batchDecryptBalancesAs", ...Address[]], BatchDecryptBalancesAsParams, Map<Address, bigint>>;
 
+// Warning: (ae-forgotten-export) The symbol "BatchDecryptAsOptions" needs to be exported by the entry point index.d.ts
+//
 // @public
 export type BatchDecryptBalancesAsParams = BatchDecryptAsOptions;
 
-export { ClearValueType }
-
+// Warning: (ae-incompatible-release-tags) The symbol "confidentialApproveMutationOptions" is marked as @public, but its signature references "MutationFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function confidentialApproveMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.confidentialApprove", Address], ConfidentialApproveParams, TransactionResult>;
 
@@ -164,6 +106,8 @@ export interface ConfidentialBalanceQueryConfig {
     tokenAddress: Address;
 }
 
+// Warning: (ae-incompatible-release-tags) The symbol "confidentialBalanceQueryOptions" is marked as @public, but its signature references "QueryFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function confidentialBalanceQueryOptions(token: ReadonlyToken, config: ConfidentialBalanceQueryConfig): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.confidentialBalance.owner>>;
 
@@ -175,6 +119,9 @@ export interface ConfidentialBalancesQueryConfig {
     query?: Record<string, unknown>;
 }
 
+// Warning: (ae-forgotten-export) The symbol "BatchBalancesResult" needs to be exported by the entry point index.d.ts
+// Warning: (ae-incompatible-release-tags) The symbol "confidentialBalancesQueryOptions" is marked as @public, but its signature references "QueryFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function confidentialBalancesQueryOptions(tokens: ReadonlyToken[], config?: ConfidentialBalancesQueryConfig): QueryFactoryOptions<BatchBalancesResult, Error, BatchBalancesResult, ReturnType<typeof zamaQueryKeys.confidentialBalances.tokens>>;
 
@@ -188,6 +135,9 @@ export interface ConfidentialIsApprovedQueryConfig {
     spender?: Address;
 }
 
+// Warning: (ae-forgotten-export) The symbol "GenericSigner" needs to be exported by the entry point index.d.ts
+// Warning: (ae-incompatible-release-tags) The symbol "confidentialIsApprovedQueryOptions" is marked as @public, but its signature references "QueryFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function confidentialIsApprovedQueryOptions(signer: GenericSigner, tokenAddress: Address | undefined, config: ConfidentialIsApprovedQueryConfig): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.confidentialIsApproved.scope>>;
 
@@ -197,18 +147,13 @@ export interface ConfidentialTokenAddressQueryConfig extends WrappersRegistryQue
     tokenAddress?: Address;
 }
 
+// Warning: (ae-incompatible-release-tags) The symbol "confidentialTokenAddressQueryOptions" is marked as @public, but its signature references "QueryFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function confidentialTokenAddressQueryOptions(signer: GenericSigner, config: ConfidentialTokenAddressQueryConfig): QueryFactoryOptions<readonly [boolean, Address], Error, readonly [boolean, Address], ReturnType<typeof zamaQueryKeys.wrappersRegistry.confidentialTokenAddress>>;
 
-// @public
-export interface ConfidentialTransferEvent {
-    readonly encryptedAmountHandle: Handle;
-    // (undocumented)
-    readonly eventName: "ConfidentialTransfer";
-    readonly from: Address;
-    readonly to: Address;
-}
-
+// Warning: (ae-incompatible-release-tags) The symbol "confidentialTransferFromMutationOptions" is marked as @public, but its signature references "MutationFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function confidentialTransferFromMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.confidentialTransferFrom", Address], ConfidentialTransferFromParams, TransactionResult>;
 
@@ -216,6 +161,7 @@ export function confidentialTransferFromMutationOptions(token: Token): MutationF
 export interface ConfidentialTransferFromParams {
     // (undocumented)
     amount: bigint;
+    // Warning: (ae-forgotten-export) The symbol "TransferCallbacks" needs to be exported by the entry point index.d.ts
     callbacks?: TransferCallbacks;
     // (undocumented)
     from: Address;
@@ -223,9 +169,13 @@ export interface ConfidentialTransferFromParams {
     to: Address;
 }
 
+// Warning: (ae-incompatible-release-tags) The symbol "confidentialTransferMutationOptions" is marked as @public, but its signature references "MutationFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function confidentialTransferMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.confidentialTransfer", Address], ConfidentialTransferParams, TransactionResult>;
 
+// Warning: (ae-forgotten-export) The symbol "TransferOptions" needs to be exported by the entry point index.d.ts
+//
 // @public
 export interface ConfidentialTransferParams extends TransferOptions {
     // (undocumented)
@@ -234,6 +184,8 @@ export interface ConfidentialTransferParams extends TransferOptions {
     to: Address;
 }
 
+// Warning: (ae-incompatible-release-tags) The symbol "createDelegatedUserDecryptEIP712MutationOptions" is marked as @public, but its signature references "MutationFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function createDelegatedUserDecryptEIP712MutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.createDelegatedUserDecryptEIP712"], CreateDelegatedUserDecryptEIP712Params, KmsDelegatedUserDecryptEIP712Type>;
 
@@ -251,6 +203,9 @@ export interface CreateDelegatedUserDecryptEIP712Params {
     startTimestamp: number;
 }
 
+// Warning: (ae-forgotten-export) The symbol "EIP712TypedData" needs to be exported by the entry point index.d.ts
+// Warning: (ae-incompatible-release-tags) The symbol "createEIP712MutationOptions" is marked as @public, but its signature references "MutationFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function createEIP712MutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.createEIP712"], CreateEIP712Params, EIP712TypedData>;
 
@@ -261,105 +216,8 @@ export type CreateEIP712Params = Pick<KmsUserDecryptEIP712UserArgsType, "startTi
     durationDays?: number;
 };
 
-// @public (undocumented)
-export interface CredentialsAllowedEvent extends BaseEvent {
-    contractAddresses?: Address[];
-    // (undocumented)
-    type: typeof ZamaSDKEvents.CredentialsAllowed;
-}
-
-// @public (undocumented)
-export interface CredentialsCachedEvent extends BaseEvent {
-    contractAddresses?: Address[];
-    // (undocumented)
-    type: typeof ZamaSDKEvents.CredentialsCached;
-}
-
-// @public (undocumented)
-export interface CredentialsCorruptedEvent extends BaseEvent {
-    error: Error;
-    // (undocumented)
-    type: typeof ZamaSDKEvents.CredentialsCorrupted;
-}
-
-// @public (undocumented)
-export interface CredentialsCreatedEvent extends BaseEvent {
-    contractAddresses?: Address[];
-    // (undocumented)
-    type: typeof ZamaSDKEvents.CredentialsCreated;
-}
-
-// @public (undocumented)
-export interface CredentialsCreatingEvent extends BaseEvent {
-    contractAddresses?: Address[];
-    // (undocumented)
-    type: typeof ZamaSDKEvents.CredentialsCreating;
-}
-
-// @public (undocumented)
-export interface CredentialsExpiredEvent extends BaseEvent {
-    contractAddresses?: Address[];
-    // (undocumented)
-    type: typeof ZamaSDKEvents.CredentialsExpired;
-}
-
-// @public (undocumented)
-export interface CredentialsLoadingEvent extends BaseEvent {
-    contractAddresses?: Address[];
-    // (undocumented)
-    type: typeof ZamaSDKEvents.CredentialsLoading;
-}
-
-// Warning: (ae-forgotten-export) The symbol "BaseCredentialsManager" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "EncryptedCredentials$1" needs to be exported by the entry point index.d.ts
+// Warning: (ae-incompatible-release-tags) The symbol "decryptBalanceAsMutationOptions" is marked as @public, but its signature references "MutationFactoryOptions" which is marked as @internal
 //
-// @public
-export class CredentialsManager extends BaseCredentialsManager<StoredCredentials, EncryptedCredentials$1> {
-    constructor(config: CredentialsManagerConfig);
-    allow(...contractAddresses: Address[]): Promise<StoredCredentials>;
-    // (undocumented)
-    protected assertEncrypted(data: unknown): asserts data is EncryptedCredentials$1;
-    clear(): Promise<void>;
-    // (undocumented)
-    protected clearCaches(): void;
-    static computeStoreKey(address: Address, chainId: number): Promise<string>;
-    create(contractAddresses: Address[]): Promise<StoredCredentials>;
-    // (undocumented)
-    protected decryptCredentials(encrypted: EncryptedCredentials$1, signature: Hex): Promise<StoredCredentials>;
-    // (undocumented)
-    protected encryptCredentials(creds: StoredCredentials): Promise<EncryptedCredentials$1>;
-    isAllowed(contractAddresses: [Address, ...Address[]]): Promise<boolean>;
-    isExpired(contractAddress?: Address): Promise<boolean>;
-    revoke(...contractAddresses: Address[]): Promise<void>;
-    revokeByKey(key: string): Promise<void>;
-    // Warning: (ae-forgotten-export) The symbol "SigningMeta" needs to be exported by the entry point index.d.ts
-    //
-    // (undocumented)
-    protected signForContracts(meta: SigningMeta, contractAddresses: Address[]): Promise<Hex>;
-}
-
-// Warning: (ae-forgotten-export) The symbol "CredentialsConfig" needs to be exported by the entry point index.d.ts
-//
-// @public
-export interface CredentialsManagerConfig extends CredentialsConfig {
-    relayer: RelayerSDK;
-}
-
-// @public (undocumented)
-export interface CredentialsPersistFailedEvent extends BaseEvent {
-    error: Error;
-    // (undocumented)
-    type: typeof ZamaSDKEvents.CredentialsPersistFailed;
-}
-
-// @public (undocumented)
-export interface CredentialsRevokedEvent extends BaseEvent {
-    // (undocumented)
-    contractAddresses?: Address[];
-    // (undocumented)
-    type: typeof ZamaSDKEvents.CredentialsRevoked;
-}
-
 // @public (undocumented)
 export function decryptBalanceAsMutationOptions(readonlyToken: ReadonlyToken): MutationFactoryOptions<readonly ["zama.decryptBalanceAs", Address], DecryptBalanceAsParams, bigint>;
 
@@ -372,29 +230,11 @@ export interface DecryptBalanceAsParams {
 }
 
 // @public (undocumented)
-export interface DecryptEndEvent extends BaseEvent {
-    // (undocumented)
-    durationMs: number;
-    handles: Handle[];
-    result: Record<Handle, ClearValueType>;
-    // (undocumented)
-    type: typeof ZamaSDKEvents.DecryptEnd;
-}
-
-// @public (undocumented)
-export interface DecryptErrorEvent extends BaseEvent {
-    // (undocumented)
-    durationMs: number;
-    error: Error;
-    handles: Handle[];
-    // (undocumented)
-    type: typeof ZamaSDKEvents.DecryptError;
-}
-
-// @public (undocumented)
 export interface DecryptHandle {
     // (undocumented)
     contractAddress: Address;
+    // Warning: (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+    //
     // (undocumented)
     handle: Handle;
 }
@@ -402,13 +242,8 @@ export interface DecryptHandle {
 // @public
 export type DecryptResult = UserDecryptResults;
 
-// @public (undocumented)
-export interface DecryptStartEvent extends BaseEvent {
-    handles: Handle[];
-    // (undocumented)
-    type: typeof ZamaSDKEvents.DecryptStart;
-}
-
+// Warning: (ae-incompatible-release-tags) The symbol "delegateDecryptionMutationOptions" is marked as @public, but its signature references "MutationFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function delegateDecryptionMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.delegateDecryption", Address], DelegateDecryptionParams, TransactionResult>;
 
@@ -420,32 +255,11 @@ export interface DelegateDecryptionParams {
     expirationDate?: Date;
 }
 
+// Warning: (ae-forgotten-export) The symbol "DelegatedUserDecryptParams" needs to be exported by the entry point index.d.ts
+// Warning: (ae-incompatible-release-tags) The symbol "delegatedUserDecryptMutationOptions" is marked as @public, but its signature references "MutationFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function delegatedUserDecryptMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.delegatedUserDecrypt"], DelegatedUserDecryptParams, Readonly<Record<Handle, ClearValueType>>>;
-
-// @public
-export interface DelegatedUserDecryptParams {
-    // (undocumented)
-    contractAddress: Address;
-    // (undocumented)
-    delegateAddress: Address;
-    // (undocumented)
-    delegatorAddress: Address;
-    // (undocumented)
-    durationDays: number;
-    // (undocumented)
-    handles: Handle[];
-    // (undocumented)
-    privateKey: Hex;
-    // (undocumented)
-    publicKey: Hex;
-    // (undocumented)
-    signature: Hex;
-    // (undocumented)
-    signedContractAddresses: Address[];
-    // (undocumented)
-    startTimestamp: number;
-}
 
 // @public (undocumented)
 export interface DelegationStatusData {
@@ -467,79 +281,31 @@ export interface DelegationStatusQueryConfig {
     tokenAddress: Address | undefined;
 }
 
+// Warning: (ae-incompatible-release-tags) The symbol "delegationStatusQueryOptions" is marked as @public, but its signature references "QueryFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function delegationStatusQueryOptions(sdk: {
     signer: GenericSigner;
     relayer: RelayerSDK;
 }, config: DelegationStatusQueryConfig): QueryFactoryOptions<DelegationStatusData, Error, DelegationStatusData, ReturnType<typeof zamaQueryKeys.delegationStatus.scope>>;
 
-// @public (undocumented)
-export interface DelegationSubmittedEvent extends BaseEvent {
-    // (undocumented)
-    txHash: Hex;
-    // (undocumented)
-    type: typeof ZamaSDKEvents.DelegationSubmitted;
-}
-
 // @public
 export function deriveActivityFeedLogsKey(logs?: readonly (RawLog & Partial<ActivityLogMetadata>)[]): string | undefined;
 
-// @public
-export type EIP712TypedData = KmsUserDecryptEIP712Type | KmsDelegatedUserDecryptEIP712Type;
-
-// @public (undocumented)
-export interface EncryptEndEvent extends BaseEvent {
-    // (undocumented)
-    durationMs: number;
-    // (undocumented)
-    type: typeof ZamaSDKEvents.EncryptEnd;
-}
-
-// @public (undocumented)
-export interface EncryptErrorEvent extends BaseEvent {
-    // (undocumented)
-    durationMs: number;
-    error: Error;
-    // (undocumented)
-    type: typeof ZamaSDKEvents.EncryptError;
-}
-
-// @public
-export type EncryptInput = {
-    value: boolean | bigint;
-    type: "ebool";
-} | {
-    value: bigint;
-    type: Exclude<SDK.FheTypeName, "ebool" | "eaddress">;
-} | {
-    value: Address;
-    type: "eaddress";
-};
-
+// Warning: (ae-forgotten-export) The symbol "EncryptParams" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "EncryptResult" needs to be exported by the entry point index.d.ts
+// Warning: (ae-incompatible-release-tags) The symbol "encryptMutationOptions" is marked as @public, but its signature references "MutationFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function encryptMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.encrypt"], EncryptParams, EncryptResult>;
 
-// @public
-export interface EncryptParams {
-    // (undocumented)
-    contractAddress: Address;
-    // (undocumented)
-    userAddress: Address;
-    values: EncryptInput[];
-}
-
-// @public
-export type EncryptResult = InputProofBytesType;
-
-// @public (undocumented)
-export interface EncryptStartEvent extends BaseEvent {
-    // (undocumented)
-    type: typeof ZamaSDKEvents.EncryptStart;
-}
-
-// @public
+// Warning: (ae-internal-missing-underscore) The name "filterQueryOptions" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal
 export function filterQueryOptions<TOptions extends Record<string, unknown>>(options: TOptions): Omit<TOptions, StrippedQueryOptionKeys>;
 
+// Warning: (ae-incompatible-release-tags) The symbol "finalizeUnwrapMutationOptions" is marked as @public, but its signature references "MutationFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function finalizeUnwrapMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.finalizeUnwrap", Address], FinalizeUnwrapParams, TransactionResult>;
 
@@ -549,45 +315,14 @@ export interface FinalizeUnwrapParams {
     burnAmountHandle: Address;
 }
 
-// @public (undocumented)
-export interface FinalizeUnwrapSubmittedEvent extends BaseEvent {
-    // (undocumented)
-    txHash: Hex;
-    // (undocumented)
-    type: typeof ZamaSDKEvents.FinalizeUnwrapSubmitted;
-}
-
+// Warning: (ae-incompatible-release-tags) The symbol "generateKeypairMutationOptions" is marked as @public, but its signature references "MutationFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function generateKeypairMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.generateKeypair"], void, KeypairType<Hex>>;
 
-// @public
-export interface GenericSigner {
-    getAddress: () => Promise<Address>;
-    getBlockTimestamp: () => Promise<bigint>;
-    getChainId(): Promise<number>;
-    // Warning: (ae-forgotten-export) The symbol "ReadFunctionName" needs to be exported by the entry point index.d.ts
-    // Warning: (ae-forgotten-export) The symbol "ReadContractArgs" needs to be exported by the entry point index.d.ts
-    // Warning: (ae-forgotten-export) The symbol "ReadContractConfig" needs to be exported by the entry point index.d.ts
-    // Warning: (ae-forgotten-export) The symbol "ReadContractReturnType" needs to be exported by the entry point index.d.ts
-    readContract<const TAbi extends ContractAbi, TFunctionName extends ReadFunctionName<TAbi>, const TArgs extends ReadContractArgs<TAbi, TFunctionName>>(config: ReadContractConfig<TAbi, TFunctionName, TArgs>): Promise<ReadContractReturnType<TAbi, TFunctionName, TArgs>>;
-    signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-    subscribe?: (callbacks: SignerLifecycleCallbacks) => () => void;
-    waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
-    // Warning: (ae-forgotten-export) The symbol "ContractAbi" needs to be exported by the entry point index.d.ts
-    // Warning: (ae-forgotten-export) The symbol "WriteFunctionName" needs to be exported by the entry point index.d.ts
-    // Warning: (ae-forgotten-export) The symbol "WriteContractArgs" needs to be exported by the entry point index.d.ts
-    // Warning: (ae-forgotten-export) The symbol "WriteContractConfig" needs to be exported by the entry point index.d.ts
-    writeContract<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex>;
-}
-
-// @public
-export interface GenericStorage {
-    delete(key: string): Promise<void>;
-    get<T = unknown>(key: string): Promise<T | null>;
-    set<T = unknown>(key: string, value: T): Promise<void>;
-}
-
-// @public
+// Warning: (ae-internal-missing-underscore) The name "hashFn" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal
 export function hashFn(queryKey: readonly unknown[]): string;
 
 // @public (undocumented)
@@ -626,6 +361,8 @@ export interface IsAllowedQueryConfig {
     query?: Record<string, unknown>;
 }
 
+// Warning: (ae-incompatible-release-tags) The symbol "isAllowedQueryOptions" is marked as @public, but its signature references "QueryFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function isAllowedQueryOptions(sdk: ZamaSDK, config: IsAllowedQueryConfig): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.isAllowed.scope>>;
 
@@ -635,6 +372,8 @@ export interface IsConfidentialQueryConfig {
     query?: Record<string, unknown>;
 }
 
+// Warning: (ae-incompatible-release-tags) The symbol "isConfidentialQueryOptions" is marked as @public, but its signature references "QueryFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function isConfidentialQueryOptions(signer: GenericSigner, tokenAddress: Address, config?: IsConfidentialQueryConfig): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.isConfidential.token>>;
 
@@ -644,9 +383,13 @@ export interface IsConfidentialTokenValidQueryConfig extends WrappersRegistryQue
     confidentialTokenAddress?: Address;
 }
 
+// Warning: (ae-incompatible-release-tags) The symbol "isConfidentialTokenValidQueryOptions" is marked as @public, but its signature references "QueryFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function isConfidentialTokenValidQueryOptions(signer: GenericSigner, config: IsConfidentialTokenValidQueryConfig): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.wrappersRegistry.isConfidentialTokenValid>>;
 
+// Warning: (ae-incompatible-release-tags) The symbol "isWrapperQueryOptions" is marked as @public, but its signature references "QueryFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function isWrapperQueryOptions(signer: GenericSigner, tokenAddress: Address, config?: IsConfidentialQueryConfig): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.isWrapper.token>>;
 
@@ -667,11 +410,14 @@ export interface ListPairsQueryConfig {
 // Warning: (ae-forgotten-export) The symbol "PaginatedResult" needs to be exported by the entry point index.d.ts
 // Warning: (ae-forgotten-export) The symbol "TokenWrapperPair" needs to be exported by the entry point index.d.ts
 // Warning: (ae-forgotten-export) The symbol "TokenWrapperPairWithMetadata" needs to be exported by the entry point index.d.ts
+// Warning: (ae-incompatible-release-tags) The symbol "listPairsQueryOptions" is marked as @public, but its signature references "QueryFactoryOptions" which is marked as @internal
 //
 // @public
 export function listPairsQueryOptions(registry: WrappersRegistry, config: ListPairsQueryConfig): QueryFactoryOptions<PaginatedResult<TokenWrapperPair | TokenWrapperPairWithMetadata>, Error, PaginatedResult<TokenWrapperPair | TokenWrapperPairWithMetadata>, ReturnType<typeof zamaQueryKeys.wrappersRegistry.listPairs>>;
 
-// @public (undocumented)
+// Warning: (ae-internal-missing-underscore) The name "MutationFactoryOptions" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
 export interface MutationFactoryOptions<TMutationKey extends readonly unknown[], TVariables, TData, TOnMutateResult = unknown> {
     // (undocumented)
     mutationFn: (variables: TVariables) => Promise<TData>;
@@ -681,14 +427,11 @@ export interface MutationFactoryOptions<TMutationKey extends readonly unknown[],
     onSuccess?: (data: TData, variables: TVariables, onMutateResult: TOnMutateResult, context: MutationFunctionContext) => void;
 }
 
-// @public
-export type OnChainEvent = ConfidentialTransferEvent | WrappedEvent | UnwrapRequestedEvent | UnwrappedFinalizedEvent | UnwrappedStartedEvent;
-
+// Warning: (ae-forgotten-export) The symbol "PublicDecryptResult" needs to be exported by the entry point index.d.ts
+// Warning: (ae-incompatible-release-tags) The symbol "publicDecryptMutationOptions" is marked as @public, but its signature references "MutationFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function publicDecryptMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.publicDecrypt"], Handle[], PublicDecryptResult>;
-
-// @public
-export type PublicDecryptResult = PublicDecryptResults;
 
 // @public (undocumented)
 export interface PublicKeyQueryConfig {
@@ -696,6 +439,8 @@ export interface PublicKeyQueryConfig {
     query?: Record<string, unknown>;
 }
 
+// Warning: (ae-incompatible-release-tags) The symbol "publicKeyQueryOptions" is marked as @public, but its signature references "QueryFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function publicKeyQueryOptions(sdk: ZamaSDK, config?: PublicKeyQueryConfig): QueryFactoryOptions<{
     publicKeyId: string;
@@ -711,6 +456,8 @@ export interface PublicParamsQueryConfig {
     query?: Record<string, unknown>;
 }
 
+// Warning: (ae-incompatible-release-tags) The symbol "publicParamsQueryOptions" is marked as @public, but its signature references "QueryFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function publicParamsQueryOptions(sdk: ZamaSDK, bits: number, config?: PublicParamsQueryConfig): QueryFactoryOptions<{
     publicParams: Uint8Array;
@@ -728,10 +475,10 @@ export interface QueryClientLike {
     removeQueries(filters: QueryFilterLike): void;
 }
 
-// Warning: (ae-forgotten-export) The symbol "RequiredBy" needs to be exported by the entry point index.d.ts
+// Warning: (ae-internal-missing-underscore) The name "QueryFactoryOptions" should be prefixed with an underscore because the declaration is marked as @internal
 //
-// @public (undocumented)
-export type QueryFactoryOptions<TQueryFnData = unknown, TError = Error, TData = TQueryFnData, TQueryKey extends QueryKey = QueryKey> = Omit<RequiredBy<QueryObserverOptions<TQueryFnData, TError, TData, TQueryFnData, TQueryKey>, "queryKey">, "queryFn" | "queryHash" | "queryKeyHashFn" | "throwOnError"> & {
+// @internal (undocumented)
+export type QueryFactoryOptions<TQueryFnData = unknown, TError = Error, TData = TQueryFnData, TQueryKey extends QueryKey = QueryKey> = Omit<Omit<QueryObserverOptions<TQueryFnData, TError, TData, TQueryFnData, TQueryKey>, "queryKey"> & Required<Pick<QueryObserverOptions<TQueryFnData, TError, TData, TQueryFnData, TQueryKey>, "queryKey">>, "queryFn" | "queryHash" | "queryKeyHashFn" | "throwOnError"> & {
     queryFn: Exclude<QueryObserverOptions<TQueryFnData, TError, TData, TQueryFnData, TQueryKey>["queryFn"], typeof skipToken | undefined>;
 };
 
@@ -749,87 +496,26 @@ export interface QueryLike {
     queryKey: readonly unknown[];
 }
 
-// @public
-export interface RawLog {
-    readonly data: Hex;
-    readonly topics: readonly Hex[];
-}
-
-// @public
-export class ReadonlyToken {
-    constructor(sdk: ZamaSDK, address: Address);
-    // (undocumented)
-    readonly address: Address;
-    allow(): Promise<void>;
-    static allow(...tokens: ReadonlyToken[]): Promise<void>;
-    allowance(wrapper: Address, owner?: Address): Promise<bigint>;
-    balanceOf(owner?: Address): Promise<bigint>;
-    static batchBalancesOf(tokens: ReadonlyToken[], owner?: Address): Promise<BatchBalancesResult>;
-    static batchDecryptBalancesAs(tokens: ReadonlyToken[], options: BatchDecryptAsOptions): Promise<Map<Address, bigint>>;
-    confidentialBalanceOf(owner?: Address): Promise<Handle>;
-    decimals(): Promise<number>;
-    decryptBalanceAs(input: {
-        delegatorAddress: Address;
-        owner?: Address;
-    }): Promise<bigint>;
-    protected emit(input: ZamaSDKEventInput): void;
-    // (undocumented)
-    protected getAclAddress(): Promise<Address>;
-    getDelegationExpiry(input: {
-        delegatorAddress: Address;
-        delegateAddress: Address;
-    }): Promise<bigint>;
-    isAllowed(): Promise<boolean>;
-    isConfidential(): Promise<boolean>;
-    isDelegated(params: {
-        delegatorAddress: Address;
-        delegateAddress: Address;
-    }): Promise<boolean>;
-    isWrapper(): Promise<boolean>;
-    name(): Promise<string>;
-    // (undocumented)
-    protected readConfidentialBalanceOf(owner: Address): Promise<Handle>;
-    revoke(...contractAddresses: Address[]): Promise<void>;
-    // (undocumented)
-    readonly sdk: ZamaSDK;
-    symbol(): Promise<string>;
-    underlyingToken(): Promise<Address>;
-}
-
-// @public
-export interface RelayerSDK {
-    createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type>;
-    createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
-    delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
-    encrypt(params: EncryptParams): Promise<EncryptResult>;
-    generateKeypair(): Promise<KeypairType<Hex>>;
-    getAclAddress(): Promise<Address>;
-    getPublicKey(): Promise<{
-        publicKeyId: string;
-        publicKey: Uint8Array;
-    } | null>;
-    getPublicParams(bits: number): Promise<{
-        publicParams: Uint8Array;
-        publicParamsId: string;
-    } | null>;
-    publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
-    requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
-    terminate(): void;
-    userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
-}
-
+// Warning: (ae-incompatible-release-tags) The symbol "requestZKProofVerificationMutationOptions" is marked as @public, but its signature references "MutationFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function requestZKProofVerificationMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.requestZKProofVerification"], ZKProofLike, InputProofBytesType>;
 
+// Warning: (ae-incompatible-release-tags) The symbol "resumeUnshieldMutationOptions" is marked as @public, but its signature references "MutationFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function resumeUnshieldMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.resumeUnshield", Address], ResumeUnshieldParams, TransactionResult>;
 
+// Warning: (ae-forgotten-export) The symbol "UnshieldCallbacks" needs to be exported by the entry point index.d.ts
+//
 // @public
 export interface ResumeUnshieldParams extends UnshieldCallbacks {
     // (undocumented)
     unwrapTxHash: Hex;
 }
 
+// Warning: (ae-incompatible-release-tags) The symbol "revokeDelegationMutationOptions" is marked as @public, but its signature references "MutationFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function revokeDelegationMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.revokeDelegation", Address], RevokeDelegationParams, TransactionResult>;
 
@@ -839,42 +525,23 @@ export interface RevokeDelegationParams {
     delegateAddress: Address;
 }
 
-// @public (undocumented)
-export interface RevokeDelegationSubmittedEvent extends BaseEvent {
-    // (undocumented)
-    txHash: Hex;
-    // (undocumented)
-    type: typeof ZamaSDKEvents.RevokeDelegationSubmitted;
-}
-
+// Warning: (ae-incompatible-release-tags) The symbol "revokeMutationOptions" is marked as @public, but its signature references "MutationFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function revokeMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.revoke"], Address[], void>;
 
+// Warning: (ae-incompatible-release-tags) The symbol "revokeSessionMutationOptions" is marked as @public, but its signature references "MutationFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function revokeSessionMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.revokeSession"], void, void>;
 
-// @public (undocumented)
-export interface SessionExpiredEvent extends BaseEvent {
-    reason: "ttl";
-    // (undocumented)
-    type: typeof ZamaSDKEvents.SessionExpired;
-}
-
-// @public
-export interface ShieldCallbacks {
-    onApprovalSubmitted?: (txHash: Hex) => void;
-    onShieldSubmitted?: (txHash: Hex) => void;
-}
-
+// Warning: (ae-incompatible-release-tags) The symbol "shieldMutationOptions" is marked as @public, but its signature references "MutationFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function shieldMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.shield", Address], ShieldParams, TransactionResult>;
 
-// @public
-export interface ShieldOptions extends ShieldCallbacks {
-    approvalStrategy?: "max" | "exact" | "skip";
-    to?: Address;
-}
-
+// Warning: (ae-forgotten-export) The symbol "ShieldCallbacks" needs to be exported by the entry point index.d.ts
+//
 // @public
 export interface ShieldParams extends ShieldCallbacks {
     // (undocumented)
@@ -885,78 +552,20 @@ export interface ShieldParams extends ShieldCallbacks {
 }
 
 // @public (undocumented)
-export interface ShieldSubmittedEvent extends BaseEvent {
-    // (undocumented)
-    txHash: Hex;
-    // (undocumented)
-    type: typeof ZamaSDKEvents.ShieldSubmitted;
-}
-
-// @public (undocumented)
 export interface SignerAddressQueryConfig {
     // (undocumented)
     query?: Record<string, unknown>;
 }
 
+// Warning: (ae-incompatible-release-tags) The symbol "signerAddressQueryOptions" is marked as @public, but its signature references "QueryFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function signerAddressQueryOptions(signer: GenericSigner, config?: SignerAddressQueryConfig): QueryFactoryOptions<Address, Error, Address, ReturnType<typeof zamaQueryKeys.signerAddress.scope>>;
 
-// @public
-export interface SignerLifecycleCallbacks {
-    onAccountChange?: (newAddress: Address) => void;
-    onChainChange?: (newChainId: number) => void;
-    onDisconnect?: () => void;
-}
-
-// @public
-export interface StoredCredentials {
-    contractAddresses: Address[];
-    durationDays: number;
-    privateKey: Hex;
-    publicKey: Hex;
-    signature: Hex;
-    startTimestamp: number;
-}
-
-// @public (undocumented)
+// Warning: (ae-internal-missing-underscore) The name "StrippedQueryOptionKeys" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
 export type StrippedQueryOptionKeys = "gcTime" | "staleTime" | "enabled" | "select" | "refetchInterval" | "refetchOnMount" | "refetchOnWindowFocus" | "refetchOnReconnect" | "retry" | "retryDelay" | "retryOnMount" | "queryFn" | "queryKey" | "queryKeyHashFn" | "initialData" | "initialDataUpdatedAt" | "placeholderData" | "structuralSharing" | "throwOnError" | "meta" | "query" | "pollingInterval";
-
-// @public
-export class Token extends ReadonlyToken {
-    constructor(sdk: ZamaSDK, address: Address, wrapper?: Address);
-    approve(spender: Address, until?: number): Promise<TransactionResult>;
-    approveUnderlying(amount?: bigint): Promise<TransactionResult>;
-    static batchDelegateDecryption(input: {
-        tokens: Token[];
-        delegateAddress: Address;
-        expirationDate?: Date;
-    }): Promise<Map<Address, TransactionResult | ZamaError>>;
-    static batchRevokeDelegation(input: {
-        tokens: Token[];
-        delegateAddress: Address;
-    }): Promise<Map<Address, TransactionResult | ZamaError>>;
-    confidentialTransfer(to: Address, amount: bigint, options?: TransferOptions): Promise<TransactionResult>;
-    confidentialTransferFrom(from: Address, to: Address, amount: bigint, callbacks?: TransferCallbacks): Promise<TransactionResult>;
-    delegateDecryption(input: {
-        delegateAddress: Address;
-        expirationDate?: Date;
-    }): Promise<TransactionResult>;
-    finalizeUnwrap(burnAmountHandle: Handle): Promise<TransactionResult>;
-    isApproved(spender: Address, holder?: Address): Promise<boolean>;
-    resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
-    revokeDelegation(input: {
-        delegateAddress: Address;
-    }): Promise<TransactionResult>;
-    shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult>;
-    unshield(amount: bigint, options?: UnshieldOptions): Promise<TransactionResult>;
-    unshieldAll(callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
-    unwrap(amount: bigint): Promise<TransactionResult>;
-    unwrapAll(): Promise<TransactionResult>;
-    // (undocumented)
-    readonly wrapper: Address;
-    // (undocumented)
-    static readonly ZERO_ADDRESS: Address;
-}
 
 // @public (undocumented)
 export interface TokenAddressQueryConfig extends WrappersRegistryQueryConfig {
@@ -964,6 +573,8 @@ export interface TokenAddressQueryConfig extends WrappersRegistryQueryConfig {
     confidentialTokenAddress?: Address;
 }
 
+// Warning: (ae-incompatible-release-tags) The symbol "tokenAddressQueryOptions" is marked as @public, but its signature references "QueryFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function tokenAddressQueryOptions(signer: GenericSigner, config: TokenAddressQueryConfig): QueryFactoryOptions<readonly [boolean, Address], Error, readonly [boolean, Address], ReturnType<typeof zamaQueryKeys.wrappersRegistry.tokenAddress>>;
 
@@ -983,6 +594,8 @@ export interface TokenMetadataQueryConfig {
     query?: Record<string, unknown>;
 }
 
+// Warning: (ae-incompatible-release-tags) The symbol "tokenMetadataQueryOptions" is marked as @public, but its signature references "QueryFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function tokenMetadataQueryOptions(signer: GenericSigner, tokenAddress: Address, config?: TokenMetadataQueryConfig): QueryFactoryOptions<TokenMetadata, Error, TokenMetadata, ReturnType<typeof zamaQueryKeys.tokenMetadata.token>>;
 
@@ -992,12 +605,18 @@ export interface TokenPairQueryConfig extends WrappersRegistryQueryConfig {
     index?: bigint;
 }
 
+// Warning: (ae-incompatible-release-tags) The symbol "tokenPairQueryOptions" is marked as @public, but its signature references "QueryFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function tokenPairQueryOptions(signer: GenericSigner, config: TokenPairQueryConfig): QueryFactoryOptions<TokenWrapperPair, Error, TokenWrapperPair, ReturnType<typeof zamaQueryKeys.wrappersRegistry.tokenPair>>;
 
+// Warning: (ae-incompatible-release-tags) The symbol "tokenPairsLengthQueryOptions" is marked as @public, but its signature references "QueryFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function tokenPairsLengthQueryOptions(signer: GenericSigner, config: WrappersRegistryQueryConfig): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.wrappersRegistry.tokenPairsLength>>;
 
+// Warning: (ae-incompatible-release-tags) The symbol "tokenPairsQueryOptions" is marked as @public, but its signature references "QueryFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function tokenPairsQueryOptions(signer: GenericSigner, config: WrappersRegistryQueryConfig): QueryFactoryOptions<readonly TokenWrapperPair[], Error, readonly TokenWrapperPair[], ReturnType<typeof zamaQueryKeys.wrappersRegistry.tokenPairs>>;
 
@@ -1009,6 +628,8 @@ export interface TokenPairsSliceQueryConfig extends WrappersRegistryQueryConfig 
     toIndex?: bigint;
 }
 
+// Warning: (ae-incompatible-release-tags) The symbol "tokenPairsSliceQueryOptions" is marked as @public, but its signature references "QueryFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function tokenPairsSliceQueryOptions(signer: GenericSigner, config: TokenPairsSliceQueryConfig): QueryFactoryOptions<readonly TokenWrapperPair[], Error, readonly TokenWrapperPair[], ReturnType<typeof zamaQueryKeys.wrappersRegistry.tokenPairsSlice>>;
 
@@ -1018,54 +639,10 @@ export interface TotalSupplyQueryConfig {
     query?: Record<string, unknown>;
 }
 
+// Warning: (ae-incompatible-release-tags) The symbol "totalSupplyQueryOptions" is marked as @public, but its signature references "QueryFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function totalSupplyQueryOptions(signer: GenericSigner, tokenAddress: Address, config?: TotalSupplyQueryConfig): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.totalSupply.token>>;
-
-// @public (undocumented)
-export interface TransactionErrorEvent extends BaseEvent {
-    error: Error;
-    operation: string;
-    // (undocumented)
-    type: typeof ZamaSDKEvents.TransactionError;
-}
-
-// @public
-export interface TransactionReceipt {
-    readonly logs: readonly RawLog[];
-}
-
-// @public
-export interface TransactionResult {
-    receipt: TransactionReceipt;
-    txHash: Hex;
-}
-
-// @public
-export interface TransferCallbacks {
-    onEncryptComplete?: () => void;
-    onTransferSubmitted?: (txHash: Hex) => void;
-}
-
-// @public (undocumented)
-export interface TransferFromSubmittedEvent extends BaseEvent {
-    // (undocumented)
-    txHash: Hex;
-    // (undocumented)
-    type: typeof ZamaSDKEvents.TransferFromSubmitted;
-}
-
-// @public
-export interface TransferOptions extends TransferCallbacks {
-    skipBalanceCheck?: boolean;
-}
-
-// @public (undocumented)
-export interface TransferSubmittedEvent extends BaseEvent {
-    // (undocumented)
-    txHash: Hex;
-    // (undocumented)
-    type: typeof ZamaSDKEvents.TransferSubmitted;
-}
 
 // @public (undocumented)
 export interface UnderlyingAllowanceQueryConfig {
@@ -1077,61 +654,39 @@ export interface UnderlyingAllowanceQueryConfig {
     wrapperAddress?: Address;
 }
 
+// Warning: (ae-incompatible-release-tags) The symbol "underlyingAllowanceQueryOptions" is marked as @public, but its signature references "QueryFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function underlyingAllowanceQueryOptions(signer: GenericSigner, tokenAddress: Address, config: UnderlyingAllowanceQueryConfig): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.underlyingAllowance.scope>>;
 
+// Warning: (ae-incompatible-release-tags) The symbol "unshieldAllMutationOptions" is marked as @public, but its signature references "MutationFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function unshieldAllMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.unshieldAll", Address], UnshieldAllParams | void, TransactionResult>;
 
 // @public
 export interface UnshieldAllParams extends UnshieldCallbacks {}
 
-// @public
-export interface UnshieldCallbacks {
-    onFinalizeSubmitted?: (txHash: Hex) => void;
-    onFinalizing?: () => void;
-    onUnwrapSubmitted?: (txHash: Hex) => void;
-}
-
+// Warning: (ae-incompatible-release-tags) The symbol "unshieldMutationOptions" is marked as @public, but its signature references "MutationFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function unshieldMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.unshield", Address], UnshieldParams, TransactionResult>;
 
-// @public
-export interface UnshieldOptions extends UnshieldCallbacks {
-    skipBalanceCheck?: boolean;
-}
-
+// Warning: (ae-forgotten-export) The symbol "UnshieldOptions" needs to be exported by the entry point index.d.ts
+//
 // @public
 export interface UnshieldParams extends UnshieldOptions {
     // (undocumented)
     amount: bigint;
 }
 
-// @public (undocumented)
-export interface UnshieldPhase1SubmittedEvent extends BaseEvent {
-    // (undocumented)
-    txHash: Hex;
-    // (undocumented)
-    type: typeof ZamaSDKEvents.UnshieldPhase1Submitted;
-}
-
-// @public (undocumented)
-export interface UnshieldPhase2StartedEvent extends BaseEvent {
-    // (undocumented)
-    type: typeof ZamaSDKEvents.UnshieldPhase2Started;
-}
-
-// @public (undocumented)
-export interface UnshieldPhase2SubmittedEvent extends BaseEvent {
-    // (undocumented)
-    txHash: Hex;
-    // (undocumented)
-    type: typeof ZamaSDKEvents.UnshieldPhase2Submitted;
-}
-
+// Warning: (ae-incompatible-release-tags) The symbol "unwrapAllMutationOptions" is marked as @public, but its signature references "MutationFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function unwrapAllMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.unwrapAll", Address], void, TransactionResult>;
 
+// Warning: (ae-incompatible-release-tags) The symbol "unwrapMutationOptions" is marked as @public, but its signature references "MutationFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function unwrapMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.unwrap", Address], UnwrapParams, TransactionResult>;
 
@@ -1141,82 +696,16 @@ export interface UnwrapParams {
     amount: bigint;
 }
 
-// @public
-export interface UnwrappedFinalizedEvent {
-    readonly cleartextAmount: bigint;
-    readonly encryptedAmount: Handle;
-    // (undocumented)
-    readonly eventName: "UnwrappedFinalized";
-    readonly receiver: Address;
-}
-
-// @public
-export interface UnwrappedStartedEvent {
-    readonly burnAmount: Handle;
-    // (undocumented)
-    readonly eventName: "UnwrappedStarted";
-    readonly refund: Address;
-    readonly requestedAmount: Handle;
-    readonly requestId: bigint;
-    readonly returnVal: boolean;
-    readonly to: Address;
-    readonly txId: bigint;
-}
-
-// @public
-export interface UnwrapRequestedEvent {
-    readonly encryptedAmount: Handle;
-    // (undocumented)
-    readonly eventName: "UnwrapRequested";
-    readonly receiver: Address;
-}
-
-// @public (undocumented)
-export interface UnwrapSubmittedEvent extends BaseEvent {
-    // (undocumented)
-    txHash: Hex;
-    // (undocumented)
-    type: typeof ZamaSDKEvents.UnwrapSubmitted;
-}
-
-// @public
-export interface UserDecryptParams {
-    // (undocumented)
-    contractAddress: Address;
-    // (undocumented)
-    durationDays: number;
-    // (undocumented)
-    handles: Handle[];
-    // (undocumented)
-    privateKey: Hex;
-    // (undocumented)
-    publicKey: Hex;
-    // (undocumented)
-    signature: Hex;
-    // (undocumented)
-    signedContractAddresses: Address[];
-    // (undocumented)
-    signerAddress: Address;
-    // (undocumented)
-    startTimestamp: number;
-}
-
 // @public (undocumented)
 export interface UserDecryptQueryConfig {
     // (undocumented)
     handles: DecryptHandle[];
 }
 
+// Warning: (ae-incompatible-release-tags) The symbol "userDecryptQueryOptions" is marked as @public, but its signature references "QueryFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function userDecryptQueryOptions(sdk: ZamaSDK, config: UserDecryptQueryConfig): QueryFactoryOptions<DecryptResult, Error, DecryptResult, ReturnType<typeof zamaQueryKeys.decryption.handles>>;
-
-// @public
-export interface WrappedEvent {
-    readonly amountIn: bigint;
-    // (undocumented)
-    readonly eventName: "Wrapped";
-    readonly to: Address;
-}
 
 // @public (undocumented)
 export interface WrapperDiscoveryQueryConfig {
@@ -1227,6 +716,8 @@ export interface WrapperDiscoveryQueryConfig {
     tokenAddress?: Address;
 }
 
+// Warning: (ae-incompatible-release-tags) The symbol "wrapperDiscoveryQueryOptions" is marked as @public, but its signature references "QueryFactoryOptions" which is marked as @internal
+//
 // @public (undocumented)
 export function wrapperDiscoveryQueryOptions(registry: WrappersRegistry, config: WrapperDiscoveryQueryConfig): QueryFactoryOptions<Address | null, Error, Address | null, ReturnType<typeof zamaQueryKeys.wrapperDiscovery.token>>;
 
@@ -1428,99 +919,9 @@ export const zamaQueryKeys: {
     };
 };
 
-// @public
-export class ZamaSDK {
-    [Symbol.dispose](): void;
-    constructor(config: ZamaSDKConfig);
-    allow(contractAddresses: Address[]): Promise<void>;
-    // Warning: (ae-forgotten-export) The symbol "DecryptCache" needs to be exported by the entry point index.d.ts
-    readonly cache: DecryptCache;
-    createReadonlyToken(address: Address): ReadonlyToken;
-    createToken(address: Address, wrapper?: Address): Token;
-    createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
-    // (undocumented)
-    readonly credentials: CredentialsManager;
-    // Warning: (ae-forgotten-export) The symbol "DelegatedCredentialsManager" needs to be exported by the entry point index.d.ts
-    //
-    // (undocumented)
-    readonly delegatedCredentials: DelegatedCredentialsManager;
-    dispose(): void;
-    // @internal
-    emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
-    publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
-    readonly registry: WrappersRegistry;
-    // (undocumented)
-    readonly relayer: RelayerSDK;
-    revokeSession(): Promise<void>;
-    // (undocumented)
-    readonly sessionStorage: GenericStorage;
-    // (undocumented)
-    readonly signer: GenericSigner;
-    // (undocumented)
-    readonly storage: GenericStorage;
-    terminate(): void;
-    userDecrypt(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>>;
-}
-
-// @public
-export interface ZamaSDKConfig {
-    keypairTTL?: number;
-    onEvent?: ZamaSDKEventListener;
-    registryAddresses?: Record<number, Address>;
-    registryTTL?: number;
-    relayer: RelayerSDK;
-    sessionStorage?: GenericStorage;
-    sessionTTL?: number | "infinite";
-    signer: GenericSigner;
-    signerLifecycleCallbacks?: SignerLifecycleCallbacks;
-    storage: GenericStorage;
-}
-
-// @public
-export type ZamaSDKEvent = CredentialsLoadingEvent | CredentialsCachedEvent | CredentialsExpiredEvent | CredentialsCreatingEvent | CredentialsCreatedEvent | CredentialsRevokedEvent | CredentialsPersistFailedEvent | CredentialsAllowedEvent | CredentialsCorruptedEvent | SessionExpiredEvent | EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | ApproveSubmittedEvent | ApproveUnderlyingSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | DelegationSubmittedEvent | RevokeDelegationSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
-
-// @public
-export type ZamaSDKEventInput = ZamaSDKEvent extends infer E ? E extends ZamaSDKEvent ? Omit<E, "timestamp" | "tokenAddress"> : never : never;
-
-// @public (undocumented)
-export type ZamaSDKEventListener = (event: ZamaSDKEvent) => void;
-
-// @public
-export const ZamaSDKEvents: {
-    readonly CredentialsLoading: "credentials:loading";
-    readonly CredentialsCached: "credentials:cached";
-    readonly CredentialsExpired: "credentials:expired";
-    readonly CredentialsCreating: "credentials:creating";
-    readonly CredentialsCreated: "credentials:created";
-    readonly CredentialsRevoked: "credentials:revoked";
-    readonly CredentialsPersistFailed: "credentials:persist_failed";
-    readonly CredentialsAllowed: "credentials:allowed";
-    readonly CredentialsCorrupted: "credentials:corrupted";
-    readonly SessionExpired: "session:expired";
-    readonly EncryptStart: "encrypt:start";
-    readonly EncryptEnd: "encrypt:end";
-    readonly EncryptError: "encrypt:error";
-    readonly DecryptStart: "decrypt:start";
-    readonly DecryptEnd: "decrypt:end";
-    readonly DecryptError: "decrypt:error";
-    readonly TransactionError: "transaction:error";
-    readonly ShieldSubmitted: "shield:submitted";
-    readonly TransferSubmitted: "transfer:submitted";
-    readonly TransferFromSubmitted: "transferFrom:submitted";
-    readonly ApproveSubmitted: "approve:submitted";
-    readonly ApproveUnderlyingSubmitted: "approveUnderlying:submitted";
-    readonly UnwrapSubmitted: "unwrap:submitted";
-    readonly FinalizeUnwrapSubmitted: "finalizeUnwrap:submitted";
-    readonly DelegationSubmitted: "delegation:submitted";
-    readonly RevokeDelegationSubmitted: "revokeDelegation:submitted";
-    readonly UnshieldPhase1Submitted: "unshield:phase1_submitted";
-    readonly UnshieldPhase2Started: "unshield:phase2_started";
-    readonly UnshieldPhase2Submitted: "unshield:phase2_submitted";
-};
-
 // Warnings were encountered during analysis:
 //
-// dist/esm/activity-DeofoaHw.d.ts:22697:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/esm/query/index.d.ts:432:3 - (ae-forgotten-export) The symbol "RelayerSDK" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

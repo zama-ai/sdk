@@ -1,3 +1,14 @@
+/**
+ * `@tanstack/query` integration for `@zama-fhe/sdk` — query-options and
+ * mutation-options factories, invalidation helpers, and the shared query-key
+ * factory.
+ *
+ * Non-query types (e.g. {@link Token}, {@link ZamaSDK}, events, errors) should
+ * be imported from `@zama-fhe/sdk` directly.
+ *
+ * @packageDocumentation
+ */
+
 export { filterQueryOptions, hashFn } from "./utils";
 export type { StrippedQueryOptionKeys } from "./utils";
 export type { QueryFactoryOptions, MutationFactoryOptions } from "./factory-types";
@@ -127,80 +138,3 @@ export {
   type DelegationStatusData,
   type DelegationStatusQueryConfig,
 } from "./delegation-status";
-export type { ActivityItem, ActivityLogMetadata } from "../activity";
-export type { ActivityAmount, ActivityDirection, ActivityType } from "../activity";
-export type { RawLog } from "../events/onchain-events";
-export type {
-  ConfidentialTransferEvent,
-  WrappedEvent,
-  UnwrapRequestedEvent,
-  UnwrappedFinalizedEvent,
-  UnwrappedStartedEvent,
-} from "../events/onchain-events";
-export type { OnChainEvent } from "../events/onchain-events";
-export type { ClearValueType, EncryptParams, EncryptResult } from "../relayer/relayer-sdk.types";
-export type {
-  DelegatedUserDecryptParams,
-  EncryptInput,
-  EIP712TypedData,
-  PublicDecryptResult,
-  UserDecryptParams,
-} from "../relayer/relayer-sdk.types";
-export type { RelayerSDK } from "../relayer/relayer-sdk";
-export type { BatchBalancesResult, BatchDecryptAsOptions } from "../token/readonly-token";
-export type { ReadonlyToken } from "../token/readonly-token";
-export type { Token } from "../token/token";
-export type { ZamaSDKConfig } from "../zama-sdk";
-export type { ZamaSDK } from "../zama-sdk";
-export type { CredentialsManager } from "../credentials/credentials-manager";
-export type { CredentialsManagerConfig } from "../credentials/credentials-manager";
-export type {
-  GenericSigner,
-  GenericStorage,
-  ShieldCallbacks,
-  SignerLifecycleCallbacks,
-  StoredCredentials,
-  TransactionReceipt,
-  TransactionResult,
-  ShieldOptions,
-  TransferCallbacks,
-  TransferOptions,
-  UnshieldCallbacks,
-  UnshieldOptions,
-} from "../types";
-export { ZamaSDKEvents } from "../events/sdk-events";
-export type {
-  ApproveSubmittedEvent,
-  ApproveUnderlyingSubmittedEvent,
-  BaseEvent,
-  CredentialsAllowedEvent,
-  CredentialsCachedEvent,
-  CredentialsCreatedEvent,
-  CredentialsCreatingEvent,
-  CredentialsExpiredEvent,
-  CredentialsLoadingEvent,
-  CredentialsRevokedEvent,
-  DecryptEndEvent,
-  DecryptErrorEvent,
-  DecryptStartEvent,
-  EncryptEndEvent,
-  EncryptErrorEvent,
-  EncryptStartEvent,
-  FinalizeUnwrapSubmittedEvent,
-  ShieldSubmittedEvent,
-  TransactionErrorEvent,
-  TransferFromSubmittedEvent,
-  TransferSubmittedEvent,
-  UnshieldPhase1SubmittedEvent,
-  UnshieldPhase2StartedEvent,
-  UnshieldPhase2SubmittedEvent,
-  UnwrapSubmittedEvent,
-  ZamaSDKEvent,
-  ZamaSDKEventInput,
-  ZamaSDKEventListener,
-  SessionExpiredEvent,
-  DelegationSubmittedEvent,
-  RevokeDelegationSubmittedEvent,
-  CredentialsPersistFailedEvent,
-  CredentialsCorruptedEvent,
-} from "../events/sdk-events";

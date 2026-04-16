@@ -33,6 +33,7 @@ function hasObjectPrototype(o: any): boolean {
   return Object.prototype.toString.call(o) === "[object Object]";
 }
 
+/** @internal */
 export type StrippedQueryOptionKeys =
   // Keep this union aligned with @tanstack/query-core behavioral options
   // (for example QueryObserverOptions). Revisit on every upgrade to avoid
@@ -73,6 +74,8 @@ export type StrippedQueryOptionKeys =
  * });
  * // => { owner: "0xabc" }
  * ```
+ *
+ * @internal
  */
 export function filterQueryOptions<TOptions extends Record<string, unknown>>(
   options: TOptions,
@@ -114,6 +117,8 @@ export function filterQueryOptions<TOptions extends Record<string, unknown>>(
  * bigint values are serialized as decimal strings, so `42n` and `"42"` hash to
  * the same token when they occupy the same position. This collision is accepted
  * by design for the current query-key conventions in this package.
+ *
+ * @internal
  */
 export function hashFn(queryKey: readonly unknown[]): string {
   return JSON.stringify(queryKey, (_, value) => {
