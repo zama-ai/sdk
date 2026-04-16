@@ -11,8 +11,6 @@ import { useZamaSDK } from "../provider";
 export interface UseConfidentialBalancesConfig {
   /** Addresses of the confidential token contracts to batch-query. */
   tokenAddresses: Address[];
-  /** Polling interval (ms) for the balances. Default: 10 000. */
-  pollingInterval?: number;
 }
 
 /** Query options for {@link useConfidentialBalances}. */
@@ -51,7 +49,7 @@ export function useConfidentialBalances(
   config: UseConfidentialBalancesConfig,
   options?: UseConfidentialBalancesOptions,
 ) {
-  const { tokenAddresses, pollingInterval } = config;
+  const { tokenAddresses } = config;
   const { enabled = true } = options ?? {};
   const sdk = useZamaSDK();
 
@@ -66,7 +64,6 @@ export function useConfidentialBalances(
 
   const baseOptions = confidentialBalancesQueryOptions(tokens, {
     owner,
-    pollingInterval,
   });
 
   return useQuery<BatchBalancesResult>({

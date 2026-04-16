@@ -26,29 +26,22 @@ describe("useConfidentialTransfer", () => {
     expectDefaultMutationState(state);
   });
 
-  test("cache: invalidates handle and resets balance after transfer", async ({
-    renderWithProviders,
-    signer,
-  }) => {
+  test("cache: invalidates balance after transfer", async ({ renderWithProviders, signer }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
     const { result, queryClient } = renderWithProviders(() =>
       useConfidentialTransfer({ tokenAddress: TOKEN }),
     );
 
-    const handleKey = zamaQueryKeys.confidentialHandle.token(TOKEN);
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
     const activityKey = zamaQueryKeys.activityFeed.token(TOKEN);
-    const otherHandleKey = zamaQueryKeys.confidentialHandle.token(OTHER_TOKEN);
-    const otherBalanceKey = zamaQueryKeys.confidentialBalance.owner(OTHER_TOKEN, USER, HANDLE);
+    const otherBalanceKey = zamaQueryKeys.confidentialBalance.owner(OTHER_TOKEN, USER);
     const otherActivityKey = zamaQueryKeys.activityFeed.token(OTHER_TOKEN);
     const seededActivity = [{ id: "evt-1" }];
     const seededOtherActivity = [{ id: "evt-2" }];
 
-    queryClient.setQueryData(handleKey, HANDLE);
     queryClient.setQueryData(balanceKey, 1000n);
     queryClient.setQueryData(activityKey, seededActivity);
-    queryClient.setQueryData(otherHandleKey, HANDLE);
     queryClient.setQueryData(otherBalanceKey, 777n);
     queryClient.setQueryData(otherActivityKey, seededOtherActivity);
 
@@ -56,8 +49,7 @@ describe("useConfidentialTransfer", () => {
       result.current.mutateAsync({ to: RECIPIENT, amount: 500n, skipBalanceCheck: true }),
     );
 
-    expectInvalidatedQueries(queryClient, [handleKey, balanceKey, activityKey]);
-    expectCacheUntouched(queryClient, otherHandleKey, HANDLE);
+    expectInvalidatedQueries(queryClient, [balanceKey, activityKey]);
     expectCacheUntouched(queryClient, otherBalanceKey, 777n);
     expectCacheUntouched(queryClient, otherActivityKey, seededOtherActivity);
   });
@@ -65,8 +57,7 @@ describe("useConfidentialTransfer", () => {
   test("behavior: forwards onSuccess callback", async ({ renderWithProviders, signer }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
-    const handleKey = zamaQueryKeys.confidentialHandle.token(TOKEN);
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
     const activityKey = zamaQueryKeys.activityFeed.token(TOKEN);
     const onSuccess = vi.fn();
 
@@ -74,14 +65,13 @@ describe("useConfidentialTransfer", () => {
       useConfidentialTransfer({ tokenAddress: TOKEN }, { onSuccess }),
     );
 
-    queryClient.setQueryData(handleKey, HANDLE);
     queryClient.setQueryData(balanceKey, 1000n);
     queryClient.setQueryData(activityKey, [{ id: "evt-1" }]);
 
     await mutateAndExpectOnSuccess(
       () => result.current.mutateAsync({ to: RECIPIENT, amount: 500n, skipBalanceCheck: true }),
       onSuccess,
-      (client) => expectInvalidatedQueries(client, [handleKey, balanceKey, activityKey]),
+      (client) => expectInvalidatedQueries(client, [balanceKey, activityKey]),
     );
   });
 
@@ -313,7 +303,7 @@ describe("useConfidentialTransfer optimistic updates", () => {
       useConfidentialTransfer({ tokenAddress: TOKEN, optimistic: true }),
     );
 
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
     queryClient.setQueryData(balanceKey, 5000n);
     const cancelSpy = vi.spyOn(queryClient, "cancelQueries");
     const setQueryDataSpy = vi.spyOn(queryClient, "setQueryData");
@@ -355,7 +345,7 @@ describe("useConfidentialTransfer optimistic updates", () => {
       useConfidentialTransfer({ tokenAddress: TOKEN, optimistic: true }),
     );
 
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
 
     await act(() =>
       result.current.mutateAsync({ to: RECIPIENT, amount: 500n, skipBalanceCheck: true }),
@@ -374,7 +364,7 @@ describe("useConfidentialTransfer optimistic updates", () => {
       useConfidentialTransfer({ tokenAddress: TOKEN, optimistic: true }),
     );
 
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
     queryClient.setQueryData(balanceKey, 1000n);
     const cancelSpy = vi.spyOn(queryClient, "cancelQueries");
 
@@ -401,7 +391,7 @@ describe("useConfidentialTransfer optimistic updates", () => {
       useConfidentialTransfer({ tokenAddress: TOKEN }),
     );
 
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
     queryClient.setQueryData(balanceKey, 5000n);
 
     await act(async () => {
@@ -426,7 +416,7 @@ describe("useConfidentialTransfer optimistic updates", () => {
       useConfidentialTransfer({ tokenAddress: TOKEN, optimistic: true }),
     );
 
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
     queryClient.setQueryData(balanceKey, 5000n);
     const cancelSpy = vi.spyOn(queryClient, "cancelQueries");
     const setQueryDataSpy = vi.spyOn(queryClient, "setQueryData");
@@ -468,7 +458,7 @@ describe("useConfidentialTransfer optimistic updates", () => {
       useConfidentialTransfer({ tokenAddress: TOKEN, optimistic: true }, { onError }),
     );
 
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
     queryClient.setQueryData(balanceKey, 5000n);
 
     // Sabotage setQueryData after the optimistic write so rollback throws

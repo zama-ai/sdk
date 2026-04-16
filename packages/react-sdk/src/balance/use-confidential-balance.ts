@@ -11,8 +11,6 @@ import { useQuery } from "../utils/query";
 export interface UseConfidentialBalanceConfig {
   /** Address of the confidential token contract. */
   tokenAddress: Address;
-  /** Polling interval (ms) for the balance. Default: 10 000. */
-  pollingInterval?: number;
 }
 
 /** Query options for {@link useConfidentialBalance}. */
@@ -44,7 +42,7 @@ export function useConfidentialBalance(
   config: UseConfidentialBalanceConfig,
   options?: UseConfidentialBalanceOptions,
 ) {
-  const { tokenAddress, pollingInterval } = config;
+  const { tokenAddress } = config;
   const { enabled = true } = options ?? {};
   const sdk = useZamaSDK();
   const token = useReadonlyToken(tokenAddress);
@@ -56,7 +54,6 @@ export function useConfidentialBalance(
   const baseOptions = confidentialBalanceQueryOptions(token, {
     tokenAddress,
     owner,
-    pollingInterval,
   });
 
   return useQuery<bigint>({

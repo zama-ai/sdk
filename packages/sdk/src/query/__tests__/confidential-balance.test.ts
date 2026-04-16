@@ -16,21 +16,6 @@ describe("confidentialBalanceQueryOptions", () => {
     expect(options.queryKey).toEqual(["zama.confidentialBalance", { tokenAddress, owner }]);
   });
 
-  test("refetchInterval defaults to 10_000 and can be overridden", ({
-    createMockReadonlyToken,
-  }) => {
-    const token = createMockReadonlyToken(tokenAddress);
-    const defaults = confidentialBalanceQueryOptions(token, { tokenAddress, owner });
-    const custom = confidentialBalanceQueryOptions(token, {
-      tokenAddress,
-      owner,
-      pollingInterval: 5_000,
-    });
-
-    expect(defaults.refetchInterval).toBe(10_000);
-    expect(custom.refetchInterval).toBe(5_000);
-  });
-
   test("enabled defaults to true", ({ createMockReadonlyToken }) => {
     const token = createMockReadonlyToken(tokenAddress);
     const options = confidentialBalanceQueryOptions(token, { tokenAddress });

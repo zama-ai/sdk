@@ -22,17 +22,6 @@ describe("confidentialBalancesQueryOptions", () => {
     ]);
   });
 
-  test("refetchInterval defaults to 10_000 and can be overridden", ({
-    createMockReadonlyToken,
-  }) => {
-    const t1 = createMockReadonlyToken(tokenA);
-    const defaults = confidentialBalancesQueryOptions([t1], { owner });
-    const custom = confidentialBalancesQueryOptions([t1], { owner, pollingInterval: 3_000 });
-
-    expect(defaults.refetchInterval).toBe(10_000);
-    expect(custom.refetchInterval).toBe(3_000);
-  });
-
   test("enabled defaults to true when tokens are provided", ({ createMockReadonlyToken }) => {
     const t1 = createMockReadonlyToken(tokenA);
     const options = confidentialBalancesQueryOptions([t1]);

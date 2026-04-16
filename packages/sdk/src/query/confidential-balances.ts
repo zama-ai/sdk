@@ -4,11 +4,8 @@ import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
 import { filterQueryOptions } from "./utils";
 
-const DEFAULT_POLLING_INTERVAL = 10_000;
-
 export interface ConfidentialBalancesQueryConfig {
   owner?: Address;
-  pollingInterval?: number;
   query?: Record<string, unknown>;
 }
 
@@ -33,6 +30,5 @@ export function confidentialBalancesQueryOptions(
       return ReadonlyToken.batchBalancesOf(tokens, keyOwner);
     },
     enabled: tokens.length > 0 && queryOpts?.enabled !== false,
-    refetchInterval: config?.pollingInterval ?? DEFAULT_POLLING_INTERVAL,
   };
 }
