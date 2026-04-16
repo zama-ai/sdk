@@ -104,7 +104,7 @@ const { data: allowed } = useIsAllowed({
 
 ## Related
 
-- [Decrypt UX lifecycle](/guides/decrypt-ux-lifecycle) -- full guide on gating balance queries to avoid blind-sign popups
+- [Avoid blind-sign wallet popups](/guides/encrypt-decrypt#3-avoid-blind-sign-wallet-popups) -- gating balance queries to avoid blind-sign popups
 - [`useAllow`](/reference/react/useAllow) -- pre-authorize contracts with one wallet signature
 - [`useRevoke`](/reference/react/useRevoke) -- revoke session credentials
 - [Session Model](/concepts/session-model) -- security model and TTL configuration
