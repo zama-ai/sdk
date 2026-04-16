@@ -84,11 +84,15 @@ export class ViemSigner implements GenericSigner {
     const { EIP712Domain: _, ...sigTypes } = typedData.types;
     return walletClient.signTypedData({
       account,
-      primaryType: Object.keys(sigTypes)[0]!,
+      primaryType: typedData.primaryType,
       types: sigTypes,
       domain: typedData.domain,
-      message: typedData.message,
-    });
+      message: {
+        ...typedData.message,
+        startTimestamp: BigInt(typedData.message.startTimestamp),
+        durationDays: BigInt(typedData.message.durationDays),
+      },
+    } as Parameters<typeof walletClient.signTypedData>[0]);
   }
 
   async writeContract<
