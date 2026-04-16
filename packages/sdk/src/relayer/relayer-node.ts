@@ -21,6 +21,8 @@ import type {
   EncryptResult,
   Handle,
   PublicDecryptResult,
+  PublicKeyData,
+  PublicParamsData,
   UserDecryptParams,
 } from "./relayer-sdk.types";
 import { DefaultConfigs, withRetry } from "./relayer-utils";
@@ -263,10 +265,7 @@ export class RelayerNode implements RelayerSDK, Disposable {
     });
   }
 
-  async getPublicKey(): Promise<{
-    publicKeyId: string;
-    publicKey: Uint8Array;
-  } | null> {
+  async getPublicKey(): Promise<PublicKeyData | null> {
     const pool = await this.#ensurePool();
     if (this.#artifactCache) {
       return this.#artifactCache.getPublicKey(async () => (await pool.getPublicKey()).result);
@@ -274,9 +273,7 @@ export class RelayerNode implements RelayerSDK, Disposable {
     return (await pool.getPublicKey()).result;
   }
 
-  async getPublicParams(
-    bits: number,
-  ): Promise<{ publicParams: Uint8Array; publicParamsId: string } | null> {
+  async getPublicParams(bits: number): Promise<PublicParamsData | null> {
     const pool = await this.#ensurePool();
     if (this.#artifactCache) {
       return this.#artifactCache.getPublicParams(

@@ -168,6 +168,7 @@ import { PaginatedResult } from '@zama-fhe/sdk';
 import { PropsWithChildren } from 'react';
 import { publicDecryptMutationOptions } from '@zama-fhe/sdk/query';
 import { PublicDecryptResult } from '@zama-fhe/sdk';
+import { PublicKeyData } from '@zama-fhe/sdk';
 import { publicKeyQueryOptions } from '@zama-fhe/sdk/query';
 import { publicParamsQueryOptions } from '@zama-fhe/sdk/query';
 import { QueryKey } from '@tanstack/react-query';
@@ -598,19 +599,7 @@ export { publicDecryptMutationOptions }
 
 export { PublicDecryptResult }
 
-// @public
-export interface PublicKeyData {
-    publicKey: Uint8Array;
-    publicKeyId: string;
-}
-
 export { publicKeyQueryOptions }
-
-// @public
-export interface PublicParamsData {
-    publicParams: Uint8Array;
-    publicParamsId: string;
-}
 
 export { publicParamsQueryOptions }
 
@@ -920,7 +909,10 @@ export function usePublicDecrypt(): _$_tanstack_react_query0.UseMutationResult<R
 export function usePublicKey(): _$_tanstack_react_query0.UseQueryResult<PublicKeyData | null, Error>;
 
 // @public
-export function usePublicParams(bits: number): _$_tanstack_react_query0.UseQueryResult<PublicParamsData | null, Error>;
+export function usePublicParams(bits: number): _$_tanstack_react_query0.UseQueryResult<{
+    publicParams: Uint8Array<ArrayBufferLike>;
+    publicParamsId: string;
+} | null, Error>;
 
 export { UserDecryptParams }
 

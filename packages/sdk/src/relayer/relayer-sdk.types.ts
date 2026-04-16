@@ -127,6 +127,17 @@ export type PublicDecryptResult = PublicDecryptResults;
  */
 export type EIP712TypedData = KmsUserDecryptEIP712Type | KmsDelegatedUserDecryptEIP712Type;
 
+/** TFHE public key */
+export interface PublicKeyData {
+  publicKeyId: string;
+  publicKey: Uint8Array;
+}
+
+/**
+ * TFHE public parameters
+ */
+export type PublicParamsData = SDK.PublicParams<Uint8Array>[keyof SDK.PublicParams<Uint8Array>];
+
 /** Parameters for delegated user decryption */
 export interface DelegatedUserDecryptParams {
   handles: Handle[];

@@ -11698,6 +11698,17 @@ export interface PaginatedResult<T> {
 export type PublicDecryptResult = PublicDecryptResults;
 
 // @public
+export interface PublicKeyData {
+    // (undocumented)
+    publicKey: Uint8Array;
+    // (undocumented)
+    publicKeyId: string;
+}
+
+// @public
+export type PublicParamsData = SDK.PublicParams<Uint8Array>[keyof SDK.PublicParams<Uint8Array>];
+
+// @public
 export function rateContract(tokenAddress: Address): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
@@ -13050,14 +13061,8 @@ export interface RelayerSDK {
     encrypt(params: EncryptParams): Promise<EncryptResult>;
     generateKeypair(): Promise<KeypairType<Hex>>;
     getAclAddress(): Promise<Address>;
-    getPublicKey(): Promise<{
-        publicKeyId: string;
-        publicKey: Uint8Array;
-    } | null>;
-    getPublicParams(bits: number): Promise<{
-        publicParams: Uint8Array;
-        publicParamsId: string;
-    } | null>;
+    getPublicKey(): Promise<PublicKeyData | null>;
+    getPublicParams(bits: number): Promise<PublicParamsData | null>;
     publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
     requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
     terminate(): void;
@@ -13078,14 +13083,8 @@ export class RelayerWeb implements RelayerSDK, Disposable {
     generateKeypair(): Promise<KeypairType<Hex>>;
     // (undocumented)
     getAclAddress(): Promise<Address>;
-    getPublicKey(): Promise<{
-        publicKeyId: string;
-        publicKey: Uint8Array;
-    } | null>;
-    getPublicParams(bits: number): Promise<{
-        publicParams: Uint8Array;
-        publicParamsId: string;
-    } | null>;
+    getPublicKey(): Promise<PublicKeyData | null>;
+    getPublicParams(bits: number): Promise<PublicParamsData | null>;
     get initError(): Error | undefined;
     publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
     requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;

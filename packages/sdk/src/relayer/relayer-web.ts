@@ -19,6 +19,8 @@ import type {
   EncryptResult,
   Handle,
   PublicDecryptResult,
+  PublicKeyData,
+  PublicParamsData,
   RelayerSDKStatus,
   RelayerWebConfig,
   UserDecryptParams,
@@ -394,10 +396,7 @@ export class RelayerWeb implements RelayerSDK, Disposable {
    * Get the TFHE compact public key.
    * When storage is configured, the result is cached persistently.
    */
-  async getPublicKey(): Promise<{
-    publicKeyId: string;
-    publicKey: Uint8Array;
-  } | null> {
+  async getPublicKey(): Promise<PublicKeyData | null> {
     const worker = await this.#ensureWorker();
     if (this.#artifactCache) {
       return this.#artifactCache.getPublicKey(async () => (await worker.getPublicKey()).result);
@@ -409,9 +408,7 @@ export class RelayerWeb implements RelayerSDK, Disposable {
    * Get public parameters for encryption capacity.
    * When storage is configured, the result is cached persistently.
    */
-  async getPublicParams(
-    bits: number,
-  ): Promise<{ publicParams: Uint8Array; publicParamsId: string } | null> {
+  async getPublicParams(bits: number): Promise<PublicParamsData | null> {
     const worker = await this.#ensureWorker();
     if (this.#artifactCache) {
       return this.#artifactCache.getPublicParams(

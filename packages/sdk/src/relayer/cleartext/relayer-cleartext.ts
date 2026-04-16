@@ -33,6 +33,8 @@ import type {
   EncryptResult,
   Handle,
   PublicDecryptResult,
+  PublicKeyData,
+  PublicParamsData,
   UserDecryptParams,
 } from "../relayer-sdk.types";
 import {
@@ -356,13 +358,11 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
     throw new ConfigurationError("Not implemented in cleartext mode");
   }
 
-  async getPublicKey(): Promise<{ publicKeyId: string; publicKey: Uint8Array } | null> {
+  async getPublicKey(): Promise<PublicKeyData | null> {
     return { publicKeyId: "mock-public-key-id", publicKey: new Uint8Array([32]) };
   }
 
-  async getPublicParams(
-    _bits: number,
-  ): Promise<{ publicParams: Uint8Array; publicParamsId: string } | null> {
+  async getPublicParams(_bits: number): Promise<PublicParamsData | null> {
     return { publicParams: new Uint8Array([32]), publicParamsId: "mock-public-params-id" };
   }
 

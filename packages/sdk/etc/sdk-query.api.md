@@ -638,14 +638,10 @@ export interface PublicKeyQueryConfig {
     query?: Record<string, unknown>;
 }
 
+// Warning: (ae-forgotten-export) The symbol "PublicKeyData" needs to be exported by the entry point index.d.ts
+//
 // @public (undocumented)
-export function publicKeyQueryOptions(sdk: ZamaSDK, config?: PublicKeyQueryConfig): QueryFactoryOptions<{
-    publicKeyId: string;
-    publicKey: Uint8Array;
-} | null, Error, {
-    publicKeyId: string;
-    publicKey: Uint8Array;
-} | null, typeof zamaQueryKeys.publicKey.all>;
+export function publicKeyQueryOptions(sdk: ZamaSDK, config?: PublicKeyQueryConfig): QueryFactoryOptions<PublicKeyData | null, Error, PublicKeyData | null, typeof zamaQueryKeys.publicKey.all>;
 
 // @public (undocumented)
 export interface PublicParamsQueryConfig {
@@ -653,14 +649,10 @@ export interface PublicParamsQueryConfig {
     query?: Record<string, unknown>;
 }
 
+// Warning: (ae-forgotten-export) The symbol "PublicParamsData" needs to be exported by the entry point index.d.ts
+//
 // @public (undocumented)
-export function publicParamsQueryOptions(sdk: ZamaSDK, bits: number, config?: PublicParamsQueryConfig): QueryFactoryOptions<{
-    publicParams: Uint8Array;
-    publicParamsId: string;
-} | null, Error, {
-    publicParams: Uint8Array;
-    publicParamsId: string;
-} | null, ReturnType<typeof zamaQueryKeys.publicParams.bits>>;
+export function publicParamsQueryOptions(sdk: ZamaSDK, bits: number, config?: PublicParamsQueryConfig): QueryFactoryOptions<PublicParamsData | null, Error, PublicParamsData | null, ReturnType<typeof zamaQueryKeys.publicParams.bits>>;
 
 // @public (undocumented)
 export interface QueryClientLike {
@@ -746,14 +738,8 @@ export interface RelayerSDK {
     encrypt(params: EncryptParams): Promise<EncryptResult>;
     generateKeypair(): Promise<KeypairType<Hex>>;
     getAclAddress(): Promise<Address>;
-    getPublicKey(): Promise<{
-        publicKeyId: string;
-        publicKey: Uint8Array;
-    } | null>;
-    getPublicParams(bits: number): Promise<{
-        publicParams: Uint8Array;
-        publicParamsId: string;
-    } | null>;
+    getPublicKey(): Promise<PublicKeyData | null>;
+    getPublicParams(bits: number): Promise<PublicParamsData | null>;
     publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
     requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
     terminate(): void;

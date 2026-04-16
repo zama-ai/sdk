@@ -461,16 +461,14 @@ export class RelayerNode implements RelayerSDK, Disposable {
     generateKeypair(): Promise<KeypairType_2<Hex>>;
     // (undocumented)
     getAclAddress(): Promise<Address>;
+    // Warning: (ae-forgotten-export) The symbol "PublicKeyData" needs to be exported by the entry point index.d.ts
+    //
     // (undocumented)
-    getPublicKey(): Promise<{
-        publicKeyId: string;
-        publicKey: Uint8Array;
-    } | null>;
+    getPublicKey(): Promise<PublicKeyData | null>;
+    // Warning: (ae-forgotten-export) The symbol "PublicParamsData" needs to be exported by the entry point index.d.ts
+    //
     // (undocumented)
-    getPublicParams(bits: number): Promise<{
-        publicParams: Uint8Array;
-        publicParamsId: string;
-    } | null>;
+    getPublicParams(bits: number): Promise<PublicParamsData | null>;
     // (undocumented)
     publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
     // (undocumented)
@@ -501,14 +499,8 @@ export interface RelayerSDK {
     encrypt(params: EncryptParams): Promise<EncryptResult>;
     generateKeypair(): Promise<KeypairType<Hex>>;
     getAclAddress(): Promise<Address>;
-    getPublicKey(): Promise<{
-        publicKeyId: string;
-        publicKey: Uint8Array;
-    } | null>;
-    getPublicParams(bits: number): Promise<{
-        publicParams: Uint8Array;
-        publicParamsId: string;
-    } | null>;
+    getPublicKey(): Promise<PublicKeyData | null>;
+    getPublicParams(bits: number): Promise<PublicParamsData | null>;
     publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
     requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
     terminate(): void;
