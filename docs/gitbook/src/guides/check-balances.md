@@ -178,10 +178,12 @@ const {
   data: balance,
   isLoading,
   error,
-} = useConfidentialBalance({
-  tokenAddress: "0xToken",
-  handleRefetchInterval: 5_000, // optional (default: 10s)
-});
+} = useConfidentialBalance(
+  {
+    tokenAddress: "0xToken",
+  },
+  { refetchInterval: 5_000 },
+);
 ```
 
 {% endtab %}
@@ -190,17 +192,17 @@ const {
 ```tsx
 import { useConfidentialBalances } from "@zama-fhe/react-sdk";
 
-const { data: balances } = useConfidentialBalances({
+const { data } = useConfidentialBalances({
   tokenAddresses: ["0xTokenA", "0xTokenB", "0xTokenC"],
 });
 
-const tokenABalance = balances?.get("0xTokenA");
+const tokenABalance = data?.results.get("0xTokenA");
 ```
 
 {% endtab %}
 {% endtabs %}
 
-`useConfidentialBalance` uses two-phase polling: it cheaply checks the encrypted handle every 10 seconds and only decrypts when the handle changes. Decrypted values are persisted in storage, so page reloads show the balance instantly.
+`useConfidentialBalance` calls `token.balanceOf(owner)` which reads the on-chain handle and decrypts via the SDK. Previously decrypted values are served from cache instantly — the relayer is only hit when the handle changes. Pass `refetchInterval` to poll for updates. Decrypted values are persisted in storage, so page reloads show the balance instantly.
 
 ### 9. Force a manual refresh
 
