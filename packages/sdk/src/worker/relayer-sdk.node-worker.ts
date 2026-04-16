@@ -8,7 +8,6 @@ import { parentPort, type Transferable } from "node:worker_threads";
 import type {
   CreateDelegatedEIP712Request,
   CreateEIP712Request,
-  CreateEIP712ResponseData,
   DelegatedUserDecryptRequest,
   DelegatedUserDecryptResponseData,
   EncryptRequest,
@@ -242,7 +241,7 @@ function handleCreateEIP712(request: CreateEIP712Request): void {
       payload.durationDays,
     );
 
-    sendSuccess<CreateEIP712ResponseData>(id, type, eip712);
+    sendSuccess(id, type, eip712);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[NodeWorker] CreateEIP712 error:", message);
