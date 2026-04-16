@@ -33,7 +33,7 @@
     },
     "extractorMessageReporting": {
       "default": { "logLevel": "warning" },
-      "ae-forgotten-export": { "logLevel": "warning", "addToApiReportFile": true },
+      "ae-forgotten-export": { "logLevel": "none", "addToApiReportFile": false },
       "ae-missing-release-tag": { "logLevel": "none" },
       "ae-unresolved-link": { "logLevel": "none" }
     },

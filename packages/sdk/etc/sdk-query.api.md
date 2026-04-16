@@ -30,9 +30,6 @@ import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
 export interface ActivityFeedConfig {
     // (undocumented)
     decrypt?: boolean;
-    // Warning: (ae-forgotten-export) The symbol "RawLog" needs to be exported by the entry point index.d.ts
-    // Warning: (ae-forgotten-export) The symbol "ActivityLogMetadata" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     logs?: readonly (RawLog & Partial<ActivityLogMetadata>)[];
     // (undocumented)
@@ -47,21 +44,16 @@ export interface ActivityFeedQueryConfig {
     query?: Record<string, unknown>;
 }
 
-// Warning: (ae-forgotten-export) The symbol "ReadonlyToken" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "ActivityItem" needs to be exported by the entry point index.d.ts
 // Warning: (ae-incompatible-release-tags) The symbol "activityFeedQueryOptions" is marked as @public, but its signature references "QueryFactoryOptions" which is marked as @internal
 //
 // @public
 export function activityFeedQueryOptions(token: ReadonlyToken, config: ActivityFeedConfig, queryConfig?: ActivityFeedQueryConfig): QueryFactoryOptions<ActivityItem[], Error, ActivityItem[], ReturnType<typeof zamaQueryKeys.activityFeed.scope>>;
 
-// Warning: (ae-forgotten-export) The symbol "ZamaSDK" needs to be exported by the entry point index.d.ts
 // Warning: (ae-incompatible-release-tags) The symbol "allowMutationOptions" is marked as @public, but its signature references "MutationFactoryOptions" which is marked as @internal
 //
 // @public (undocumented)
 export function allowMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.allow"], Address[], void>;
 
-// Warning: (ae-forgotten-export) The symbol "Token" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "TransactionResult" needs to be exported by the entry point index.d.ts
 // Warning: (ae-incompatible-release-tags) The symbol "approveUnderlyingMutationOptions" is marked as @public, but its signature references "MutationFactoryOptions" which is marked as @internal
 //
 // @public (undocumented)
@@ -78,8 +70,6 @@ export interface ApproveUnderlyingParams {
 // @public (undocumented)
 export function batchDecryptBalancesAsMutationOptions(tokens: ReadonlyToken[]): MutationFactoryOptions<readonly ["zama.batchDecryptBalancesAs", ...Address[]], BatchDecryptBalancesAsParams, Map<Address, bigint>>;
 
-// Warning: (ae-forgotten-export) The symbol "BatchDecryptAsOptions" needs to be exported by the entry point index.d.ts
-//
 // @public
 export type BatchDecryptBalancesAsParams = BatchDecryptAsOptions;
 
@@ -119,7 +109,6 @@ export interface ConfidentialBalancesQueryConfig {
     query?: Record<string, unknown>;
 }
 
-// Warning: (ae-forgotten-export) The symbol "BatchBalancesResult" needs to be exported by the entry point index.d.ts
 // Warning: (ae-incompatible-release-tags) The symbol "confidentialBalancesQueryOptions" is marked as @public, but its signature references "QueryFactoryOptions" which is marked as @internal
 //
 // @public (undocumented)
@@ -135,7 +124,6 @@ export interface ConfidentialIsApprovedQueryConfig {
     spender?: Address;
 }
 
-// Warning: (ae-forgotten-export) The symbol "GenericSigner" needs to be exported by the entry point index.d.ts
 // Warning: (ae-incompatible-release-tags) The symbol "confidentialIsApprovedQueryOptions" is marked as @public, but its signature references "QueryFactoryOptions" which is marked as @internal
 //
 // @public (undocumented)
@@ -161,7 +149,6 @@ export function confidentialTransferFromMutationOptions(token: Token): MutationF
 export interface ConfidentialTransferFromParams {
     // (undocumented)
     amount: bigint;
-    // Warning: (ae-forgotten-export) The symbol "TransferCallbacks" needs to be exported by the entry point index.d.ts
     callbacks?: TransferCallbacks;
     // (undocumented)
     from: Address;
@@ -174,8 +161,6 @@ export interface ConfidentialTransferFromParams {
 // @public (undocumented)
 export function confidentialTransferMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.confidentialTransfer", Address], ConfidentialTransferParams, TransactionResult>;
 
-// Warning: (ae-forgotten-export) The symbol "TransferOptions" needs to be exported by the entry point index.d.ts
-//
 // @public
 export interface ConfidentialTransferParams extends TransferOptions {
     // (undocumented)
@@ -203,7 +188,6 @@ export interface CreateDelegatedUserDecryptEIP712Params {
     startTimestamp: number;
 }
 
-// Warning: (ae-forgotten-export) The symbol "EIP712TypedData" needs to be exported by the entry point index.d.ts
 // Warning: (ae-incompatible-release-tags) The symbol "createEIP712MutationOptions" is marked as @public, but its signature references "MutationFactoryOptions" which is marked as @internal
 //
 // @public (undocumented)
@@ -233,8 +217,6 @@ export interface DecryptBalanceAsParams {
 export interface DecryptHandle {
     // (undocumented)
     contractAddress: Address;
-    // Warning: (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     handle: Handle;
 }
@@ -255,7 +237,6 @@ export interface DelegateDecryptionParams {
     expirationDate?: Date;
 }
 
-// Warning: (ae-forgotten-export) The symbol "DelegatedUserDecryptParams" needs to be exported by the entry point index.d.ts
 // Warning: (ae-incompatible-release-tags) The symbol "delegatedUserDecryptMutationOptions" is marked as @public, but its signature references "MutationFactoryOptions" which is marked as @internal
 //
 // @public (undocumented)
@@ -292,8 +273,6 @@ export function delegationStatusQueryOptions(sdk: {
 // @public
 export function deriveActivityFeedLogsKey(logs?: readonly (RawLog & Partial<ActivityLogMetadata>)[]): string | undefined;
 
-// Warning: (ae-forgotten-export) The symbol "EncryptParams" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "EncryptResult" needs to be exported by the entry point index.d.ts
 // Warning: (ae-incompatible-release-tags) The symbol "encryptMutationOptions" is marked as @public, but its signature references "MutationFactoryOptions" which is marked as @internal
 //
 // @public (undocumented)
@@ -406,10 +385,6 @@ export interface ListPairsQueryConfig {
     registryAddress: Address | undefined;
 }
 
-// Warning: (ae-forgotten-export) The symbol "WrappersRegistry" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "PaginatedResult" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "TokenWrapperPair" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "TokenWrapperPairWithMetadata" needs to be exported by the entry point index.d.ts
 // Warning: (ae-incompatible-release-tags) The symbol "listPairsQueryOptions" is marked as @public, but its signature references "QueryFactoryOptions" which is marked as @internal
 //
 // @public
@@ -427,7 +402,6 @@ export interface MutationFactoryOptions<TMutationKey extends readonly unknown[],
     onSuccess?: (data: TData, variables: TVariables, onMutateResult: TOnMutateResult, context: MutationFunctionContext) => void;
 }
 
-// Warning: (ae-forgotten-export) The symbol "PublicDecryptResult" needs to be exported by the entry point index.d.ts
 // Warning: (ae-incompatible-release-tags) The symbol "publicDecryptMutationOptions" is marked as @public, but its signature references "MutationFactoryOptions" which is marked as @internal
 //
 // @public (undocumented)
@@ -506,8 +480,6 @@ export function requestZKProofVerificationMutationOptions(sdk: ZamaSDK): Mutatio
 // @public (undocumented)
 export function resumeUnshieldMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.resumeUnshield", Address], ResumeUnshieldParams, TransactionResult>;
 
-// Warning: (ae-forgotten-export) The symbol "UnshieldCallbacks" needs to be exported by the entry point index.d.ts
-//
 // @public
 export interface ResumeUnshieldParams extends UnshieldCallbacks {
     // (undocumented)
@@ -540,8 +512,6 @@ export function revokeSessionMutationOptions(sdk: ZamaSDK): MutationFactoryOptio
 // @public (undocumented)
 export function shieldMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.shield", Address], ShieldParams, TransactionResult>;
 
-// Warning: (ae-forgotten-export) The symbol "ShieldCallbacks" needs to be exported by the entry point index.d.ts
-//
 // @public
 export interface ShieldParams extends ShieldCallbacks {
     // (undocumented)
@@ -672,8 +642,6 @@ export interface UnshieldAllParams extends UnshieldCallbacks {}
 // @public (undocumented)
 export function unshieldMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.unshield", Address], UnshieldParams, TransactionResult>;
 
-// Warning: (ae-forgotten-export) The symbol "UnshieldOptions" needs to be exported by the entry point index.d.ts
-//
 // @public
 export interface UnshieldParams extends UnshieldOptions {
     // (undocumented)
@@ -918,10 +886,6 @@ export const zamaQueryKeys: {
         }];
     };
 };
-
-// Warnings were encountered during analysis:
-//
-// dist/esm/query/index.d.ts:432:3 - (ae-forgotten-export) The symbol "RelayerSDK" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

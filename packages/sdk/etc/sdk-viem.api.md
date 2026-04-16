@@ -59,8 +59,6 @@ export function readTokenPairsSliceContract(client: PublicClient, registry: Addr
 // @public (undocumented)
 export function readUnderlyingTokenContract(client: PublicClient, wrapperAddress: Address): Promise<`0x${string}`>;
 
-// Warning: (ae-forgotten-export) The symbol "GenericSigner" needs to be exported by the entry point index.d.ts
-//
 // @public
 export class ViemSigner implements GenericSigner {
     constructor(config: ViemSignerConfig);
@@ -70,24 +68,14 @@ export class ViemSigner implements GenericSigner {
     getBlockTimestamp(): Promise<bigint>;
     // (undocumented)
     getChainId(): Promise<number>;
-    // Warning: (ae-forgotten-export) The symbol "ReadContractConfig" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     readContract<const TAbi extends Abi | readonly unknown[], TFunctionName extends ContractFunctionName<TAbi, "pure" | "view">, const TArgs extends ContractFunctionArgs<TAbi, "pure" | "view", TFunctionName>>(config: ReadContractConfig<TAbi, TFunctionName, TArgs>): Promise<ContractFunctionReturnType<TAbi, "pure" | "view", TFunctionName, TArgs>>;
-    // Warning: (ae-forgotten-export) The symbol "EIP712TypedData" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-    // Warning: (ae-forgotten-export) The symbol "SignerLifecycleCallbacks" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     subscribe(callbacks: SignerLifecycleCallbacks): () => void;
-    // Warning: (ae-forgotten-export) The symbol "TransactionReceipt" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
-    // Warning: (ae-forgotten-export) The symbol "WriteContractConfig" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     writeContract<const TAbi extends Abi | readonly unknown[], TFunctionName extends ContractFunctionName<TAbi, "nonpayable" | "payable">, const TArgs extends ContractFunctionArgs<TAbi, "nonpayable" | "payable", TFunctionName>>(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex>;
 }
@@ -104,8 +92,6 @@ export interface ViemSignerConfig {
 // @public (undocumented)
 export function writeConfidentialTransferContract(client: WalletClient, tokenAddress: Address, to: Address, handle: Uint8Array, inputProof: Uint8Array): Promise<`0x${string}`>;
 
-// Warning: (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 export function writeFinalizeUnwrapContract(client: WalletClient, wrapper: Address, burntAmount: Handle, burntAmountCleartext: bigint, decryptionProof: Hex): Promise<`0x${string}`>;
 
