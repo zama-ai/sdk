@@ -634,11 +634,13 @@ export class Token extends ReadonlyToken {
 
     const t0 = Date.now();
     try {
-      this.emit({ type: ZamaSDKEvents.DecryptStart });
+      this.emit({ type: ZamaSDKEvents.DecryptStart, handles: [burnAmountHandle] });
       const result = await this.relayer.publicDecrypt([burnAmountHandle]);
       this.emit({
         type: ZamaSDKEvents.DecryptEnd,
         durationMs: Date.now() - t0,
+        handles: [burnAmountHandle],
+        result: result.clearValues,
       });
       decryptionProof = result.decryptionProof;
       try {
@@ -654,6 +656,7 @@ export class Token extends ReadonlyToken {
         type: ZamaSDKEvents.DecryptError,
         error: toError(error),
         durationMs: Date.now() - t0,
+        handles: [burnAmountHandle],
       });
       if (error instanceof ZamaError) {
         throw error;

@@ -278,13 +278,28 @@ const registry = sdk.createWrappersRegistry({ [31337]: "0xYourRegistry" });
 const pairs = await registry.getTokenPairs();
 ```
 
+### allow
+
+`(contractAddresses: Address[]) => Promise<void>`
+
+Pre-authorize contract addresses for decryption, triggering a single wallet signature prompt. Subsequent [`userDecrypt`](#userdecrypt) calls whose handles span the same set reuse the cached credentials without another prompt.
+
+```ts
+// Sign once for three tokens, then decrypt individually
+await sdk.allow([cUSDT, cDAI, cWETH]);
+const a = await sdk.userDecrypt([{ handle: h1, contractAddress: cUSDT }]);
+const b = await sdk.userDecrypt([{ handle: h2, contractAddress: cDAI }]);
+```
+
 ### userDecrypt
 
-`(handles: DecryptHandle[], options?: DecryptOptions) => Promise<Record<Handle, ClearValueType>>`
+`(handles: DecryptHandle[]) => Promise<Record<Handle, ClearValueType>>`
 
 Decrypt one or more FHE handles. Returns cached values when available, only calling the relayer for uncached handles. Results are written to the persistent cache (`sdk.cache`) so subsequent calls for the same handles return instantly.
 
-Handles from different contracts can be mixed — they are grouped by `contractAddress` and batched into one relayer call per contract.
+Handles from different contracts can be mixed — they are grouped by `contractAddress` and batched into one relayer call per contract (up to 5 concurrently). Zero handles (32 zero bytes) resolve to `0n` without hitting the relayer.
+
+Credentials are acquired from the full input handle set (including cached and zero handles), ensuring a stable credential cache key across calls.
 
 ```ts
 const values = await sdk.userDecrypt([
@@ -294,19 +309,72 @@ const values = await sdk.userDecrypt([
 console.log(values[balanceHandle]); // 1000n
 ```
 
-#### options
+To observe decryption lifecycle, subscribe to SDK events (`DecryptStart`, `DecryptEnd`, `DecryptError`) via the `onEvent` config. Events fire only when the relayer is actually called — the zero-handle-only and fully-cached paths return silently.
 
-| Field                | Type                                                              | Description                                                                                                                                   |
-| -------------------- | ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `onCredentialsReady` | `(() => void) \| undefined`                                       | Fired after credentials are ready (cached or freshly signed), **before** relayer calls begin. Not called when all handles are already cached. |
-| `onDecrypted`        | `((values: Record<Handle, ClearValueType>) => void) \| undefined` | Fired after all handles have been decrypted (including the all-cached path).                                                                  |
+The `onEvent` callback is a single function, so for multi-listener observability you can bridge it into a standard event bus. Pick whichever matches your runtime:
+
+{% tabs %}
+{% tab title="Browser (CustomEvent)" %}
 
 ```ts
-const values = await sdk.userDecrypt([{ handle: balanceHandle, contractAddress: cUSDT }], {
-  onCredentialsReady: () => console.log("Credentials ready, decrypting..."),
-  onDecrypted: (result) => console.log("Done:", result),
+import { ZamaSDK, ZamaSDKEvents } from "@zama-fhe/sdk";
+
+const sdk = new ZamaSDK({
+  relayer,
+  signer,
+  storage,
+  onEvent: (event) => {
+    window.dispatchEvent(new CustomEvent(event.type, { detail: event }));
+  },
+});
+
+window.addEventListener(ZamaSDKEvents.DecryptEnd, (e: CustomEvent<DecryptEndEvent>) => {
+  const { durationMs, handles, result } = e.detail;
+  console.log(`Decrypted ${handles.length} handle(s) in ${durationMs}ms`);
+  // result is Record<Handle, ClearValueType> — look up a specific handle
+  for (const h of handles) {
+    console.log(`${h} → ${result[h]}`);
+  }
+});
+
+window.addEventListener(ZamaSDKEvents.DecryptError, (e: CustomEvent<DecryptErrorEvent>) => {
+  const { error, durationMs, handles } = e.detail;
+  console.error(`Decryption failed after ${durationMs}ms for ${handles.length} handle(s):`, error);
 });
 ```
+
+{% endtab %}
+
+{% tab title="Node (EventEmitter)" %}
+
+```ts
+import { EventEmitter } from "node:events";
+import { ZamaSDK, ZamaSDKEvents } from "@zama-fhe/sdk";
+
+const emmiter = new EventEmitter();
+
+const sdk = new ZamaSDK({
+  relayer,
+  signer,
+  storage,
+  onEvent: (event) => emmiter.emit(event.type, event),
+});
+
+emmiter.on(ZamaSDKEvents.DecryptEnd, ({ durationMs, handles, result }: DecryptEndEvent) => {
+  console.log(`Decrypted ${handles.length} handle(s) in ${durationMs}ms`);
+  // result is Record<Handle, ClearValueType> — look up a specific handle
+  for (const h of handles) {
+    console.log(`${h} → ${result[h]}`);
+  }
+});
+
+emmiter.on(ZamaSDKEvents.DecryptError, ({ error, durationMs, handles }: DecryptErrorEvent) => {
+  console.error(`Decryption failed after ${durationMs}ms for ${handles.length} handle(s):`, error);
+});
+```
+
+{% endtab %}
+{% endtabs %}
 
 {% hint style="info" %}
 This is the SDK-level entry point for user decryption. The method is named `userDecrypt` (not `decrypt`) because it requires the connected wallet's credentials — distinguishing it from gateway-level decryption that happens on-chain without user authentication. In React, use [`useUserDecrypt`](/reference/react/useUserDecrypt) which wraps this method with TanStack Query semantics.
