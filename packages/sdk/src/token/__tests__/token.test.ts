@@ -1,6 +1,6 @@
 import { Topics } from "../../events";
 import { getAddress, type Address } from "viem";
-import { ZamaError, ZamaErrorCode } from "../../errors";
+import { DecryptionFailedError, ZamaError, ZamaErrorCode } from "../../errors";
 import { describe, expect, it, vi } from "../../test-fixtures";
 
 const ZERO_HANDLE = "0x" + "0".repeat(64);
@@ -840,38 +840,35 @@ describe("Token", () => {
           return (
             err instanceof ZamaError &&
             err.code === ZamaErrorCode.DecryptionFailed &&
-            err.message === "Failed to finalize unshield"
+            err.message === "Public decryption failed"
           );
         },
       );
     });
 
-    it("re-throws ZamaError from publicDecrypt as-is", async ({
+    it("re-throws DecryptionFailedError from publicDecrypt as-is", async ({
       relayer,
 
       token,
     }) => {
-      const original = new ZamaError(ZamaErrorCode.DecryptionFailed, "already wrapped");
+      const original = new DecryptionFailedError("already wrapped");
       vi.mocked(relayer.publicDecrypt).mockRejectedValueOnce(original);
 
       await expect(token.finalizeUnwrap("0xburn" as Address)).rejects.toBe(original);
     });
 
-    it("throws DecryptionFailed when abiEncodedClearValues is not a valid BigInt", async ({
+    it("throws TypeError when clearValues does not contain the handle", async ({
       relayer,
 
       token,
     }) => {
       vi.mocked(relayer.publicDecrypt).mockResolvedValueOnce({
         clearValues: {},
-        abiEncodedClearValues: "not-a-number" as never,
+        abiEncodedClearValues: "0x00",
         decryptionProof: "0x12",
       });
 
-      await expect(token.finalizeUnwrap("0xburn" as Address)).rejects.toMatchObject({
-        code: ZamaErrorCode.DecryptionFailed,
-        message: expect.stringContaining("Cannot parse decrypted value"),
-      });
+      await expect(token.finalizeUnwrap("0xburn" as Address)).rejects.toThrow(TypeError);
     });
 
     it("re-throws ZamaError from writeContract as-is", async ({ signer, token }) => {

@@ -1,4 +1,4 @@
-import { type Address, getAddress, type Hex, hexToBigInt } from "viem";
+import { type Address, getAddress, type Hex } from "viem";
 import {
   allowanceContract,
   approveContract,
@@ -48,6 +48,7 @@ import type {
   UnshieldOptions,
 } from "../types";
 import type { ZamaSDK } from "../zama-sdk";
+import { assertBigint } from "../utils/assertions";
 
 /**
  * ERC-20-like interface for a single confidential token.
@@ -627,49 +628,12 @@ export class Token extends ReadonlyToken {
    * ```
    */
   async finalizeUnwrap(burnAmountHandle: Handle): Promise<TransactionResult> {
-    let clearValue: bigint;
-    let decryptionProof: Hex;
-
-    const t0 = Date.now();
-    try {
-      this.emit({
-        type: ZamaSDKEvents.DecryptStart,
-        handles: [burnAmountHandle],
-      });
-      const result = await this.sdk.relayer.publicDecrypt([burnAmountHandle]);
-      this.emit({
-        type: ZamaSDKEvents.DecryptEnd,
-        durationMs: Date.now() - t0,
-        handles: [burnAmountHandle],
-        result: result.clearValues,
-      });
-      decryptionProof = result.decryptionProof;
-      try {
-        clearValue = hexToBigInt(result.abiEncodedClearValues);
-      } catch (error) {
-        throw new DecryptionFailedError(
-          `Cannot parse decrypted value: ${result.abiEncodedClearValues}`,
-          { cause: error },
-        );
-      }
-    } catch (error) {
-      this.emit({
-        type: ZamaSDKEvents.DecryptError,
-        error: toError(error),
-        durationMs: Date.now() - t0,
-        handles: [burnAmountHandle],
-      });
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new DecryptionFailedError("Failed to finalize unshield", {
-        cause: error,
-      });
-    }
-
+    const result = await this.sdk.publicDecrypt([burnAmountHandle]);
+    const clearValue = result.clearValues[burnAmountHandle];
+    assertBigint(clearValue, "finalizeUnwrap: clearValue");
     try {
       const txHash = await this.sdk.signer.writeContract(
-        finalizeUnwrapContract(this.wrapper, burnAmountHandle, clearValue, decryptionProof),
+        finalizeUnwrapContract(this.wrapper, burnAmountHandle, clearValue, result.decryptionProof),
       );
       this.emit({ type: ZamaSDKEvents.FinalizeUnwrapSubmitted, txHash });
       const receipt = await this.sdk.signer.waitForTransactionReceipt(txHash);
