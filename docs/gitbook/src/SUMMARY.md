@@ -12,6 +12,7 @@
   - [Transfer privately](guides/transfer-privately.md)
   - [Unshield tokens](guides/unshield-tokens.md)
   - [Check balances](guides/check-balances.md)
+  - [Decrypt UX lifecycle](guides/decrypt-ux-lifecycle.md)
   - [Handle errors](guides/handle-errors.md)
   - [Node.js backend](guides/node-js-backend.md)
   - [Web extensions](guides/web-extensions.md)
