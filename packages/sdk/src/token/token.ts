@@ -632,7 +632,10 @@ export class Token extends ReadonlyToken {
 
     const t0 = Date.now();
     try {
-      this.emit({ type: ZamaSDKEvents.DecryptStart, handles: [burnAmountHandle] });
+      this.emit({
+        type: ZamaSDKEvents.DecryptStart,
+        handles: [burnAmountHandle],
+      });
       const result = await this.sdk.relayer.publicDecrypt([burnAmountHandle]);
       this.emit({
         type: ZamaSDKEvents.DecryptEnd,
@@ -982,92 +985,20 @@ export class Token extends ReadonlyToken {
    * a surprise EIP-712 popup.
    */
   async #assertConfidentialBalance(amount: bigint): Promise<void> {
-    // Zero-amount operations trivially satisfy the balance constraint.
     if (amount === 0n) {
       return;
     }
 
-    let userAddress: Address;
-    let handle: Handle;
-    try {
-      userAddress = await this.sdk.signer.getAddress();
-      handle = await this.readConfidentialBalanceOf(userAddress);
-    } catch (error) {
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new BalanceCheckUnavailableError(
-        `Could not read confidential balance handle (token: ${this.address})`,
-        { cause: toError(error) },
-      );
-    }
-
-    if (this.isZeroHandle(handle)) {
-      throw new InsufficientConfidentialBalanceError(
-        `Insufficient confidential balance: requested ${amount}, available 0 (token: ${this.address})`,
-        { requested: amount, available: 0n, token: this.address },
-      );
-    }
-
-    // Check the persistent plaintext cache first — if the balance was decrypted
-    // in a previous session, we can validate without credentials or a new decrypt.
-    const cachedRaw = await this.sdk.cache.get(userAddress, this.address, handle);
-    if (typeof cachedRaw === "bigint") {
-      if (cachedRaw < amount) {
-        throw new InsufficientConfidentialBalanceError(
-          `Insufficient confidential balance: requested ${amount}, available ${cachedRaw} (token: ${this.address})`,
-          { requested: amount, available: cachedRaw, token: this.address },
-        );
-      }
-      return;
-    }
-
-    // Cache miss — only attempt decryption when credentials are already cached.
-    // This avoids triggering an unexpected EIP-712 signing popup during
-    // a transfer/unshield flow (respects the explicit-action pattern from SDK-42).
-    //
-    // Note: isAllowed() is a wallet-scoped session check. If credentials exist
-    // but don't yet cover this token's contract address, sdk.userDecrypt() may
-    // still trigger a signing prompt for contract extension. This is acceptable:
-    // it only happens when the user interacts with a new token for the first
-    // time while having an active session — a signing prompt is expected there.
-    let hasCredentials: boolean;
-    try {
-      hasCredentials = await this.isAllowed();
-    } catch (error) {
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new BalanceCheckUnavailableError(
-        `Could not check credential status for balance validation (token: ${this.address})`,
-        { cause: error },
-      );
-    }
-    if (!hasCredentials) {
-      throw new BalanceCheckUnavailableError(
-        `Cannot validate confidential balance: no cached credentials. ` +
-          `Call allow() first or use skipBalanceCheck: true for smart wallets (token: ${this.address})`,
-      );
-    }
-
     let balance: bigint;
     try {
-      const result = await this.sdk.userDecrypt([{ handle, contractAddress: this.address }]);
-      const value = result[handle];
-      if (typeof value !== "bigint") {
-        throw new DecryptionFailedError(
-          `Decryption returned no value for handle ${handle} (token: ${this.address})`,
-        );
-      }
-      balance = value;
+      balance = await this.balanceOf();
     } catch (error) {
       if (error instanceof ZamaError) {
         throw error;
       }
-      throw new BalanceCheckUnavailableError(
-        `Balance validation failed: could not decrypt confidential balance (token: ${this.address})`,
-        { cause: error },
-      );
+      throw new BalanceCheckUnavailableError(`Balance validation failed (token: ${this.address})`, {
+        cause: error,
+      });
     }
 
     if (balance < amount) {
