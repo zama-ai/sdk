@@ -23,11 +23,11 @@ export function confidentialHandlesQueryOptions(
   Handle[],
   Error,
   Handle[],
-  ReturnType<typeof zamaQueryKeys.confidentialHandles.tokens>
+  ReturnType<typeof zamaQueryKeys.confidentialBalances.tokens>
 > {
   const ownerKey = config?.owner;
   const queryEnabled = config?.query?.enabled !== false;
-  const queryKey = zamaQueryKeys.confidentialHandles.tokens(tokenAddresses, ownerKey);
+  const queryKey = zamaQueryKeys.confidentialBalances.tokens(tokenAddresses, ownerKey);
 
   return {
     ...filterQueryOptions(config?.query ?? {}),
@@ -36,7 +36,7 @@ export function confidentialHandlesQueryOptions(
       const [, { tokenAddresses: keyTokenAddresses, owner: keyOwner }] = context.queryKey;
       assertNonNullable(keyOwner, "confidentialHandlesQueryOptions: owner");
       return Promise.all(
-        keyTokenAddresses.map(async (tokenAddress) => {
+        keyTokenAddresses.map(async (tokenAddress: Address) => {
           const handle = await signer.readContract(
             confidentialBalanceOfContract(tokenAddress, keyOwner),
           );

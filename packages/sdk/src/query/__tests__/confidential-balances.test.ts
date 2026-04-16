@@ -8,35 +8,32 @@ describe("confidentialBalancesQueryOptions", () => {
   const tokenA = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
   const tokenB = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;
   const owner = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
-  const handleA =
-    "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa" as `0x${string}`;
-  const handleB =
-    "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbBbbbbbbbbbbbbbbbbbbbbbbbb" as `0x${string}`;
 
-  test("includes owner and handles in the query key (cache identity) and uses staleTime Infinity", ({
+  test("query key includes tokenAddresses and owner (no handles)", ({
     createMockReadonlyToken,
   }) => {
     const t1 = createMockReadonlyToken(tokenA);
     const t2 = createMockReadonlyToken(tokenB);
-    const options = confidentialBalancesQueryOptions([t1, t2], {
-      owner,
-      handles: [handleA, handleB],
-    });
+    const options = confidentialBalancesQueryOptions([t1, t2], { owner });
 
     expect(options.queryKey).toEqual([
       "zama.confidentialBalances",
-      {
-        tokenAddresses: [tokenA, tokenB],
-        owner,
-        handles: [handleA, handleB],
-      },
+      { tokenAddresses: [tokenA, tokenB], owner },
     ]);
-    expect(options.staleTime).toBe(Infinity);
   });
 
-  test("enabled defaults to true when tokens are provided (handles/owner are cache-key only)", ({
+  test("refetchInterval defaults to 10_000 and can be overridden", ({
     createMockReadonlyToken,
   }) => {
+    const t1 = createMockReadonlyToken(tokenA);
+    const defaults = confidentialBalancesQueryOptions([t1], { owner });
+    const custom = confidentialBalancesQueryOptions([t1], { owner, pollingInterval: 3_000 });
+
+    expect(defaults.refetchInterval).toBe(10_000);
+    expect(custom.refetchInterval).toBe(3_000);
+  });
+
+  test("enabled defaults to true when tokens are provided", ({ createMockReadonlyToken }) => {
     const t1 = createMockReadonlyToken(tokenA);
     const options = confidentialBalancesQueryOptions([t1]);
 
@@ -72,10 +69,7 @@ describe("confidentialBalancesQueryOptions", () => {
     };
     const spy = vi.spyOn(ReadonlyToken, "batchBalancesOf").mockResolvedValue(mockResult);
 
-    const options = confidentialBalancesQueryOptions([t1, t2], {
-      owner,
-      handles: [handleA, handleB],
-    });
+    const options = confidentialBalancesQueryOptions([t1, t2], { owner });
 
     const query = await options.queryFn(mockQueryContext(options.queryKey));
 
@@ -94,7 +88,7 @@ describe("confidentialBalancesQueryOptions", () => {
       new DecryptionFailedError("all failed"),
     );
 
-    const options = confidentialBalancesQueryOptions([t1], { owner, handles: [handleA] });
+    const options = confidentialBalancesQueryOptions([t1], { owner });
 
     await expect(options.queryFn(mockQueryContext(options.queryKey))).rejects.toThrow(
       DecryptionFailedError,
