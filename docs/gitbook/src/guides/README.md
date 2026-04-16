@@ -22,6 +22,8 @@ Otherwise:
 
 🟨 Go to [**Check balances**](check-balances.md) to decrypt and display confidential balances.
 
+🟨 Go to [**Decrypt UX lifecycle**](decrypt-ux-lifecycle.md) to avoid blind-sign wallet popups when displaying confidential balances.
+
 🟨 Go to [**Handle errors**](handle-errors.md) to manage SDK errors gracefully in your app.
 
 🟨 Go to [**Node.js backend**](node-js-backend.md) to run the SDK server-side with worker threads.
