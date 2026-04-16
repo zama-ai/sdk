@@ -17,18 +17,30 @@ import type { ZamaConfigCustomSigner, ZamaConfigEthers, ZamaConfigViem } from ".
 // ── Storage defaults ─────────────────────────────────────────────────────────
 
 const isBrowser = typeof window !== "undefined";
-const defaultStorage = isBrowser ? new IndexedDBStorage("CredentialStore") : new MemoryStorage();
-const defaultSessionStorage = isBrowser
-  ? new IndexedDBStorage("SessionStore")
-  : new MemoryStorage();
+// @internal
+let defaultStorage: GenericStorage | undefined;
+// @internal
+let defaultSessionStorage: GenericStorage | undefined;
+
+function getDefaultStorage(): GenericStorage {
+  return (defaultStorage ??= isBrowser
+    ? new IndexedDBStorage("CredentialStore")
+    : new MemoryStorage());
+}
+
+function getDefaultSessionStorage(): GenericStorage {
+  return (defaultSessionStorage ??= isBrowser
+    ? new IndexedDBStorage("SessionStore")
+    : new MemoryStorage());
+}
 
 export function resolveStorage(
   storage: GenericStorage | undefined,
   sessionStorage: GenericStorage | undefined,
 ): { storage: GenericStorage; sessionStorage: GenericStorage } {
   return {
-    storage: storage ?? defaultStorage,
-    sessionStorage: sessionStorage ?? defaultSessionStorage,
+    storage: storage ?? getDefaultStorage(),
+    sessionStorage: sessionStorage ?? getDefaultSessionStorage(),
   };
 }
 
@@ -85,17 +97,21 @@ export function resolveChainTransports(
       continue;
     }
 
-    // Web/node transports require a chain config. Silently skip if missing —
-    // the chain was declared in `transports` but not `chains`, nothing to build.
     if (!chainConfig) {
-      continue;
+      throw new ConfigurationError(
+        `Chain ${id} has a transport configured but no entry in the chains array. ` +
+          `Add the chain config to the chains array.`,
+      );
     }
 
-    // Only accept properly tagged web/node transports. Untagged values (e.g.
-    // raw chain configs passed as transports) fall back to the default web
-    // transport — their fields come from the `chains` array instead.
-    const isHttp = userTransport?.__mode === "web" || userTransport?.__mode === "node";
-    const transport = isHttp ? userTransport : DEFAULT_WEB_TRANSPORT;
+    if (userTransport && userTransport.__mode !== "web" && userTransport.__mode !== "node") {
+      throw new ConfigurationError(
+        `Chain ${id} has an unrecognized transport (__mode: ${JSON.stringify((userTransport as Record<string, unknown>).__mode)}). ` +
+          `Use web(), node(), or cleartext() to create transports.`,
+      );
+    }
+
+    const transport = userTransport ?? DEFAULT_WEB_TRANSPORT;
     result.set(id, { chain: chainConfig, transport });
   }
 
@@ -175,6 +191,12 @@ export function buildRelayer(
   chainTransports: Map<number, ResolvedChainTransport>,
   resolveChainId: () => Promise<number>,
 ): RelayerSDK {
+  if (chainTransports.size === 0) {
+    throw new ConfigurationError(
+      "No chain transports configured. Add at least one chain to the chains array.",
+    );
+  }
+
   const perChainRelayers = new Map<number, RelayerSDK>();
   const webEntries: ChainEntry[] = [];
   const nodeEntries: ChainEntry[] = [];

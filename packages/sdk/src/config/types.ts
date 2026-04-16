@@ -63,6 +63,10 @@ export interface ZamaConfigCustomSigner extends ZamaConfigBase {
 export interface ZamaConfigCustomRelayer extends Omit<ZamaConfigBase, "transports" | "chains"> {
   relayer: RelayerSDK;
   signer: GenericSigner;
+  viem?: never;
+  ethers?: never;
+  chains?: never;
+  transports?: never;
 }
 
 /** Config params accepted by the base SDK (no wagmi). */

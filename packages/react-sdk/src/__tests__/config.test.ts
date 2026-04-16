@@ -123,14 +123,14 @@ describe("createZamaConfig", () => {
       ).toThrow("Chain 999999");
     });
 
-    it("does not throw for unknown chains with user override", () => {
+    it("throws for unknown chains even with transport override but no chain config", () => {
       expect(() =>
         createZamaConfig({
           chains: [],
           wagmiConfig: mockWagmiConfig([999999]),
           transports: { [999999]: web({ relayerUrl: "https://custom.com" }) },
         }),
-      ).not.toThrow();
+      ).toThrow("Chain 999999");
     });
 
     it("uses explicit transports for non-wagmi paths", () => {

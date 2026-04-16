@@ -1,11 +1,12 @@
-import type { Address, Hex } from "viem";
 import type {
   InputProofBytesType,
   KeypairType,
   KmsDelegatedUserDecryptEIP712Type,
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/bundle";
+import type { Address, Hex } from "viem";
 import { ConfigurationError } from "../errors";
+import { toError } from "../utils";
 import type { RelayerSDK } from "./relayer-sdk";
 import type {
   ClearValueType,
@@ -29,11 +30,19 @@ export class CompositeRelayer implements RelayerSDK {
 
   constructor(resolveChainId: () => Promise<number>, relayers: Map<number, RelayerSDK>) {
     this.#resolveChainId = resolveChainId;
-    this.#relayers = relayers;
+    this.#relayers = new Map(relayers);
   }
 
   async #current(): Promise<RelayerSDK> {
-    const chainId = await this.#resolveChainId();
+    let chainId: number;
+    try {
+      chainId = await this.#resolveChainId();
+    } catch (cause) {
+      throw new ConfigurationError(
+        "Failed to resolve the current chain ID. Ensure a wallet is connected.",
+        { cause },
+      );
+    }
     const r = this.#relayers.get(chainId);
     if (!r) {
       throw new ConfigurationError(
@@ -100,7 +109,10 @@ export class CompositeRelayer implements RelayerSDK {
     return (await this.#current()).requestZKProofVerification(zkProof);
   }
 
-  async getPublicKey(): Promise<{ publicKeyId: string; publicKey: Uint8Array } | null> {
+  async getPublicKey(): Promise<{
+    publicKeyId: string;
+    publicKey: Uint8Array;
+  } | null> {
     return (await this.#current()).getPublicKey();
   }
 
@@ -115,8 +127,16 @@ export class CompositeRelayer implements RelayerSDK {
   }
 
   terminate(): void {
+    const errors: Error[] = [];
     for (const r of new Set(this.#relayers.values())) {
-      r.terminate();
+      try {
+        r.terminate();
+      } catch (e) {
+        errors.push(toError(e));
+      }
+    }
+    if (errors.length > 0) {
+      throw new AggregateError(errors, "One or more relayers failed to terminate");
     }
   }
 }
