@@ -41,7 +41,7 @@ export { HardhatConfig, MainnetConfig, SepoliaConfig } from "./relayer/relayer-u
 export {
   ERC7984_INTERFACE_ID,
   ERC7984_WRAPPER_INTERFACE_ID,
-  ERC7984_WRAPPER_INTERFACE_ID_NEW,
+  ERC7984_WRAPPER_INTERFACE_ID_LEGACY,
 } from "./contracts";
 
 // Decrypt cache

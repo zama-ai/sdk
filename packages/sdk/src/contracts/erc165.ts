@@ -5,24 +5,24 @@ import { erc165Abi } from "../abi/erc165.abi";
 export const ERC7984_INTERFACE_ID = "0x4958f2a4" as const;
 
 /** ERC-165 interface ID for IERC7984ERC20Wrapper (confidential wrapper) — pre-upgrade (legacy). */
-export const ERC7984_WRAPPER_INTERFACE_ID = "0xd04584ba" as const;
+export const ERC7984_WRAPPER_INTERFACE_ID_LEGACY = "0xd04584ba" as const;
 
 /**
  * ERC-165 interface ID for IERC7984ERC20Wrapper (confidential wrapper) — post-upgrade.
  *
  * Introduced in protocol-apps commit 93c6e7a (April 2026 security upgrade).
- * During the transition period, both {@link ERC7984_WRAPPER_INTERFACE_ID} and this
+ * During the transition period, both {@link ERC7984_WRAPPER_INTERFACE_ID_LEGACY} and this
  * constant must be checked to support old and new wrappers simultaneously.
  *
- * @see {@link ERC7984_WRAPPER_INTERFACE_ID} for the legacy interface ID.
+ * @see {@link ERC7984_WRAPPER_INTERFACE_ID_LEGACY} for the legacy interface ID.
  */
-export const ERC7984_WRAPPER_INTERFACE_ID_NEW = "0x1f1c62b2" as const;
+export const ERC7984_WRAPPER_INTERFACE_ID = "0x1f1c62b2" as const;
 
 /**
  * Returns the contract config for an ERC-165 `supportsInterface` check.
  *
  * Use with {@link ERC7984_INTERFACE_ID} to detect confidential tokens,
- * or {@link ERC7984_WRAPPER_INTERFACE_ID} / {@link ERC7984_WRAPPER_INTERFACE_ID_NEW}
+ * or {@link ERC7984_WRAPPER_INTERFACE_ID_LEGACY} / {@link ERC7984_WRAPPER_INTERFACE_ID}
  * to detect wrappers (both must be checked during the transition period).
  *
  * @example
@@ -57,11 +57,11 @@ export function isConfidentialTokenContract(tokenAddress: Address) {
 
 /**
  * Returns contract config to check if a token implements IERC7984ERC20Wrapper (confidential wrapper)
- * using the **legacy** interface ID ({@link ERC7984_WRAPPER_INTERFACE_ID}, `0xd04584ba`).
+ * using the **legacy** interface ID ({@link ERC7984_WRAPPER_INTERFACE_ID_LEGACY}, `0xd04584ba`).
  *
  * Note: During the transition period (before mainnet upgrade on April 28, 2026), calling this
  * alone is insufficient. New wrappers respond only to
- * {@link ERC7984_WRAPPER_INTERFACE_ID_NEW}. Prefer higher-level APIs
+ * {@link ERC7984_WRAPPER_INTERFACE_ID}. Prefer higher-level APIs
  * (`ReadonlyToken.isWrapper()`, `isWrapperQueryOptions()`) which check both interface IDs
  * automatically.
  *
@@ -73,5 +73,5 @@ export function isConfidentialTokenContract(tokenAddress: Address) {
  * ```
  */
 export function isConfidentialWrapperContract(tokenAddress: Address) {
-  return supportsInterfaceContract(tokenAddress, ERC7984_WRAPPER_INTERFACE_ID);
+  return supportsInterfaceContract(tokenAddress, ERC7984_WRAPPER_INTERFACE_ID_LEGACY);
 }

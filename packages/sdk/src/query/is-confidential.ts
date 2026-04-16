@@ -2,7 +2,7 @@ import {
   isConfidentialTokenContract,
   isConfidentialWrapperContract,
   supportsInterfaceContract,
-  ERC7984_WRAPPER_INTERFACE_ID_NEW,
+  ERC7984_WRAPPER_INTERFACE_ID,
 } from "../contracts";
 import type { GenericSigner } from "../types";
 import { isContractCallError } from "../utils";
@@ -65,7 +65,7 @@ export function isWrapperQueryOptions(
         const [legacyMatch, newMatch] = await Promise.all([
           signer.readContract(isConfidentialWrapperContract(keyTokenAddress)),
           signer.readContract(
-            supportsInterfaceContract(keyTokenAddress, ERC7984_WRAPPER_INTERFACE_ID_NEW),
+            supportsInterfaceContract(keyTokenAddress, ERC7984_WRAPPER_INTERFACE_ID),
           ),
         ]);
         return legacyMatch || newMatch;

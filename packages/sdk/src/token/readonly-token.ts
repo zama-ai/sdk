@@ -6,7 +6,7 @@ import {
   decimalsContract,
   ERC7984_INTERFACE_ID,
   ERC7984_WRAPPER_INTERFACE_ID,
-  ERC7984_WRAPPER_INTERFACE_ID_NEW,
+  ERC7984_WRAPPER_INTERFACE_ID_LEGACY,
   getDelegationExpiryContract,
   MAX_UINT64,
   nameContract,
@@ -207,8 +207,8 @@ export class ReadonlyToken {
   /**
    * ERC-165 check for IERC7984ERC20Wrapper support.
    *
-   * During the transition period, checks both {@link ERC7984_WRAPPER_INTERFACE_ID} (legacy,
-   * `0xd04584ba`) and {@link ERC7984_WRAPPER_INTERFACE_ID_NEW} (post-upgrade, `0x1f1c62b2`)
+   * During the transition period, checks both {@link ERC7984_WRAPPER_INTERFACE_ID_LEGACY} (legacy,
+   * `0xd04584ba`) and {@link ERC7984_WRAPPER_INTERFACE_ID} (post-upgrade, `0x1f1c62b2`)
    * in parallel, returning `true` if either matches.
    *
    * @returns `true` if the contract implements the ERC-7984 wrapper interface.
@@ -226,10 +226,10 @@ export class ReadonlyToken {
     // sufficient to identify a confidential wrapper.
     const [legacyMatch, newMatch] = await Promise.all([
       this.signer.readContract(
-        supportsInterfaceContract(this.address, ERC7984_WRAPPER_INTERFACE_ID),
+        supportsInterfaceContract(this.address, ERC7984_WRAPPER_INTERFACE_ID_LEGACY),
       ),
       this.signer.readContract(
-        supportsInterfaceContract(this.address, ERC7984_WRAPPER_INTERFACE_ID_NEW),
+        supportsInterfaceContract(this.address, ERC7984_WRAPPER_INTERFACE_ID),
       ),
     ]);
     return legacyMatch || newMatch;

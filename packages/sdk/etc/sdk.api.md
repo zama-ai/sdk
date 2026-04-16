@@ -6325,10 +6325,10 @@ export class ERC20ReadFailedError extends ZamaError {
 export const ERC7984_INTERFACE_ID: "0x4958f2a4";
 
 // @public
-export const ERC7984_WRAPPER_INTERFACE_ID: "0xd04584ba";
+export const ERC7984_WRAPPER_INTERFACE_ID: "0x1f1c62b2";
 
 // @public
-export const ERC7984_WRAPPER_INTERFACE_ID_NEW: "0x1f1c62b2";
+export const ERC7984_WRAPPER_INTERFACE_ID_LEGACY: "0xd04584ba";
 
 // @public
 export function extractEncryptedHandles(items: readonly ActivityItem[]): Handle[];
