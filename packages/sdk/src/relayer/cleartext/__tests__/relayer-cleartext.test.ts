@@ -260,7 +260,7 @@ describe(RelayerCleartext, () => {
     expect(typedData.domain).toEqual({
       name: "Decryption",
       version: "1",
-      chainId: hardhatCleartextConfig.chainId,
+      chainId: BigInt(hardhatCleartextConfig.chainId),
       verifyingContract: hardhatCleartextConfig.verifyingContractAddressDecryption,
     });
     expect(typedData.types.UserDecryptRequestVerification.map((field) => field.name)).toEqual([
@@ -273,8 +273,8 @@ describe(RelayerCleartext, () => {
     expect(typedData.message).toEqual({
       publicKey: "0x" + "ab".repeat(32),
       contractAddresses: [CONTRACT_ADDRESS],
-      startTimestamp: 1710000000n,
-      durationDays: 7n,
+      startTimestamp: "1710000000",
+      durationDays: "7",
       extraData: "0x00",
     });
   });

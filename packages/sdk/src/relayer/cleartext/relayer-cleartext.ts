@@ -181,14 +181,14 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
       domain: USER_DECRYPT_EIP712.domain(
         this.#config.chainId,
         this.#config.verifyingContractAddressDecryption,
-      ) as EIP712TypedData["domain"],
+      ),
       types: USER_DECRYPT_TYPES,
       primaryType: "UserDecryptRequestVerification",
       message: {
         publicKey,
         contractAddresses,
-        startTimestamp: BigInt(startTimestamp),
-        durationDays: BigInt(durationDays),
+        startTimestamp: String(startTimestamp),
+        durationDays: String(durationDays),
         extraData: "0x00",
       },
     };
@@ -293,7 +293,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
       domain: KMS_DECRYPTION_EIP712.domain(
         this.#config.gatewayChainId,
         this.#config.verifyingContractAddressDecryption,
-      ) as KmsPublicDecryptEIP712Type["domain"],
+      ),
       types: KMS_DECRYPTION_TYPES,
       primaryType: "PublicDecryptVerification",
       message: {
@@ -320,7 +320,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
     durationDays = 7,
   ): Promise<KmsDelegatedUserDecryptEIP712Type> {
     const message: KmsDelegatedUserDecryptEIP712Type["message"] = {
-      publicKey: publicKey as KmsDelegatedUserDecryptEIP712Type["message"]["publicKey"],
+      publicKey,
       contractAddresses,
       delegatorAddress: getAddress(delegatorAddress),
       startTimestamp: String(startTimestamp),
@@ -330,9 +330,9 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
 
     return {
       domain: DELEGATED_USER_DECRYPT_EIP712.domain(
-        BigInt(this.#config.chainId),
+        this.#config.chainId,
         this.#config.verifyingContractAddressDecryption,
-      ) as KmsDelegatedUserDecryptEIP712Type["domain"],
+      ),
       types: DELEGATED_USER_DECRYPT_TYPES,
       primaryType: "DelegatedUserDecryptRequestVerification",
       message,
