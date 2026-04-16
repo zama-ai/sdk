@@ -11538,6 +11538,9 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
 };
 
 // @public
+export function isZeroHandle(handle: string): boolean;
+
+// @public
 export class KeypairExpiredError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
@@ -13093,8 +13096,6 @@ export class ReadonlyToken {
         delegateAddress: Address;
     }): Promise<boolean>;
     isWrapper(): Promise<boolean>;
-    // (undocumented)
-    isZeroHandle(handle: string): handle is typeof ZERO_HANDLE | `0x`;
     name(): Promise<string>;
     // (undocumented)
     protected readConfidentialBalanceOf(owner: Address): Promise<Handle>;
