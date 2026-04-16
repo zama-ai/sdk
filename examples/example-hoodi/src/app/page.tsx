@@ -291,11 +291,11 @@ export default function Home() {
   const refreshBalances = () => {
     queryClient.invalidateQueries({ queryKey: erc20BalanceKey });
     queryClient.invalidateQueries({ queryKey: ethBalanceKey });
-    // Invalidate the encrypted handle so useConfidentialBalance re-polls after
+    // Invalidate the balance query so useConfidentialBalance re-polls after
     // any operation that changes the confidential balance (shield, unshield, transfer).
     if (token) {
       queryClient.invalidateQueries({
-        queryKey: zamaQueryKeys.confidentialHandle.token(token.confidentialTokenAddress),
+        queryKey: zamaQueryKeys.confidentialBalance.token(token.confidentialTokenAddress),
       });
     }
   };
@@ -452,9 +452,8 @@ export default function Home() {
       <BalancesCard
         formattedErc20={formattedErc20}
         formattedConfidential={formattedConfidential}
-        // handleQuery.isLoading: fetching the encrypted handle from chain (Phase 1).
-        // balance.isLoading: decrypting it via RelayerCleartext (Phase 2).
-        isLoadingConfidential={balance.handleQuery.isLoading || balance.isLoading}
+        // balance.isLoading: fetching the on-chain handle and decrypting via RelayerCleartext.
+        isLoadingConfidential={balance.isLoading}
         erc20Symbol={erc20Symbol}
         onMint={() => mint.mutate()}
         isMinting={mint.isPending}

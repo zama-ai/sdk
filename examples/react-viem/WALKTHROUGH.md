@@ -361,12 +361,9 @@ function handleDecrypt() {
 }
 ```
 
-`useConfidentialBalance` has two loading phases:
-
-- `balance.handleQuery.isLoading` — fetching the encrypted handle from chain
-- `balance.isLoading` — decrypting it via the relayer
-
-Both are OR'd to drive the "Decrypting…" display in `BalancesCard`.
+`useConfidentialBalance` returns a standard React Query result. `balance.isLoading` covers
+both fetching the on-chain handle and decrypting it via the relayer in a single unified query,
+driving the "Decrypting…" display in `BalancesCard`.
 
 **`actionsDisabled`** is `!isSepolia || !token` — `token` is only defined once the registry
 has resolved and a pair has been selected (decimals and symbol are implicitly available).

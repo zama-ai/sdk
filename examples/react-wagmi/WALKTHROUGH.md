@@ -199,11 +199,11 @@ After any operation that changes balances, call `refreshBalances()`:
 const refreshBalances = () => {
   void refetchErc20();
   void refetchEth();
-  // Invalidate the encrypted handle so useConfidentialBalance re-polls after
+  // Invalidate the balance query so useConfidentialBalance re-polls after
   // any operation that changes the confidential balance.
   if (token) {
     queryClient.invalidateQueries({
-      queryKey: zamaQueryKeys.confidentialHandle.token(token.confidentialTokenAddress),
+      queryKey: zamaQueryKeys.confidentialBalance.token(token.confidentialTokenAddress),
     });
   }
 };
@@ -241,12 +241,9 @@ function handleDecrypt() {
 }
 ```
 
-`useConfidentialBalance` has two loading phases:
-
-- `balance.handleQuery.isLoading` — fetching the encrypted handle from chain
-- `balance.isLoading` — decrypting it via the relayer
-
-Both are OR'd to drive the "Decrypting…" display in `BalancesCard`.
+`useConfidentialBalance` returns a standard React Query result. `balance.isLoading` covers
+both fetching the on-chain handle and decrypting it via the relayer in a single unified query,
+driving the "Decrypting…" display in `BalancesCard`.
 
 ---
 

@@ -297,12 +297,9 @@ const { data: isAllowed } = useIsAllowed({
 // otherwise shows the balance (or "Decrypting…" while loading).
 ```
 
-`useConfidentialBalance` has two loading phases:
-
-- `balance.handleQuery.isLoading` — fetching the encrypted handle from chain
-- `balance.isLoading` — decrypting it via the relayer
-
-Both are OR'd to drive the "Decrypting…" display in `BalancesCard`.
+`useConfidentialBalance` returns a standard React Query result. `balance.isLoading` covers
+both fetching the on-chain handle and decrypting it via the relayer in a single unified query,
+driving the "Decrypting…" display in `BalancesCard`.
 
 ---
 
