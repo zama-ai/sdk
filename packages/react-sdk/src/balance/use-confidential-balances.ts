@@ -3,23 +3,19 @@
 import { useMemo } from "react";
 import { useQuery } from "../utils/query";
 import type { UseQueryOptions } from "@tanstack/react-query";
-import type { Address, BatchBalancesResult, Handle } from "@zama-fhe/sdk";
-import {
-  confidentialBalancesQueryOptions,
-  confidentialHandlesQueryOptions,
-  signerAddressQueryOptions,
-} from "@zama-fhe/sdk/query";
+import type { Address, BatchBalancesResult } from "@zama-fhe/sdk";
+import { confidentialBalancesQueryOptions, signerAddressQueryOptions } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 
 /** Configuration for {@link useConfidentialBalances}. */
 export interface UseConfidentialBalancesConfig {
   /** Addresses of the confidential token contracts to batch-query. */
   tokenAddresses: Address[];
-  /** Polling interval (ms) for the encrypted handles. Default: 10 000. */
-  handleRefetchInterval?: number;
+  /** Polling interval (ms) for the balances. Default: 10 000. */
+  pollingInterval?: number;
 }
 
-/** Query options for the decrypt phase of {@link useConfidentialBalances}. */
+/** Query options for {@link useConfidentialBalances}. */
 export interface UseConfidentialBalancesOptions extends Omit<
   UseQueryOptions<BatchBalancesResult>,
   "queryKey" | "queryFn" | "enabled"
@@ -30,15 +26,15 @@ export interface UseConfidentialBalancesOptions extends Omit<
 
 /**
  * Declarative hook to read multiple confidential token balances in batch.
- * Uses two-phase polling: cheaply polls encrypted handles, then only
- * decrypts when any handle changes.
+ * Polls `ReadonlyToken.batchBalancesOf()` at regular intervals. The SDK
+ * cache short-circuits decryption for unchanged handles.
  *
  * Returns partial results when some tokens fail — successful balances are
  * always returned alongside per-token error information.
  *
  * @param config - Token addresses and optional polling interval.
- * @param options - React Query options forwarded to the decrypt query.
- * @returns The decrypt query result plus `handlesQuery` for Phase 1 state.
+ * @param options - React Query options forwarded to the balance query.
+ * @returns The balance query result.
  *
  * @example
  * ```tsx
@@ -55,7 +51,7 @@ export function useConfidentialBalances(
   config: UseConfidentialBalancesConfig,
   options?: UseConfidentialBalancesOptions,
 ) {
-  const { tokenAddresses, handleRefetchInterval } = config;
+  const { tokenAddresses, pollingInterval } = config;
   const { enabled = true } = options ?? {};
   const sdk = useZamaSDK();
 
@@ -68,28 +64,14 @@ export function useConfidentialBalances(
     [sdk, tokenAddresses],
   );
 
-  // Phase 1: Poll all encrypted handles (cheap RPC reads)
-  const baseHandlesQueryOptions = confidentialHandlesQueryOptions(sdk.signer, tokenAddresses, {
+  const baseOptions = confidentialBalancesQueryOptions(tokens, {
     owner,
-    pollingInterval: handleRefetchInterval,
-  });
-  const handlesQuery = useQuery<Handle[]>({
-    ...baseHandlesQueryOptions,
-    enabled: baseHandlesQueryOptions.enabled && enabled,
+    pollingInterval,
   });
 
-  // Phase 2: Batch decrypt only when any handle changes
-  const handles = handlesQuery.data;
-  const baseBalancesQueryOptions = confidentialBalancesQueryOptions(tokens, {
-    owner,
-    handles,
-  });
-
-  const balancesQuery = useQuery<BatchBalancesResult>({
-    ...baseBalancesQueryOptions,
+  return useQuery<BatchBalancesResult>({
+    ...baseOptions,
     ...options,
-    enabled: (baseBalancesQueryOptions.enabled ?? true) && enabled,
+    enabled: (baseOptions.enabled ?? true) && enabled,
   });
-
-  return { ...balancesQuery, handlesQuery };
 }
