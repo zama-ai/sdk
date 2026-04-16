@@ -1,8 +1,15 @@
 import { Contract, formatUnits, JsonRpcProvider, Wallet } from "ethers";
-import { DelegationNotPropagatedError, MemoryStorage, SepoliaConfig, ZamaSDK } from "@zama-fhe/sdk";
+import {
+  DelegationNotPropagatedError,
+  MemoryStorage,
+  SepoliaConfig,
+  ZamaSDK,
+  inferredTotalSupplyContract,
+  confidentialBalanceOfContract,
+} from "@zama-fhe/sdk";
 import { EthersSigner } from "@zama-fhe/sdk/ethers";
 import { RelayerNode } from "@zama-fhe/sdk/node";
-import type { Address } from "@zama-fhe/sdk";
+import type { Address, Handle } from "@zama-fhe/sdk";
 
 // ── Token amounts (USDT uses 6 decimals) ─────────────────────────────────────
 const DECIMALS = 6n;
@@ -230,6 +237,47 @@ async function main() {
     delegateAddress: walletB.address as Address,
   });
   console.log("Delegation active after revoke:", isDelegatedAfter);
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // SECTION 5 — Low-Level SDK Primitives
+  // The Token abstraction (used above) delegates to these lower-level methods
+  // internally. Use them directly when working with raw handles or when you
+  // need the decryption proof for on-chain finalization.
+  // ──────────────────────────────────────────────────────────────────────────
+  section("SECTION 5 — Low-Level SDK Primitives");
+
+  // 5a. Inferred total supply — reads the plaintext total supply from the wrapper.
+  // inferredTotalSupplyContract() is a contract call builder: it returns the
+  // { address, abi, functionName, args } config for signer.readContract().
+  console.log("── 5a. Inferred total supply ──");
+  const totalSupply = (await signerA.readContract(
+    inferredTotalSupplyContract(confidentialTokenAddress),
+  )) as bigint;
+  console.log("Inferred total supply:", fmt(totalSupply));
+
+  // 5b. sdk.userDecrypt() — decrypt raw FHE handles with user credentials.
+  // Token.balanceOf() calls this internally; here we show the explicit flow:
+  //   1. Read the encrypted handle from the contract
+  //   2. Decrypt it via the relayer using signed credentials
+  console.log("\n── 5b. sdk.userDecrypt() ──");
+  const handle = (await signerA.readContract(
+    confidentialBalanceOfContract(confidentialTokenAddress, walletA.address as Address),
+  )) as Handle;
+  console.log("Encrypted handle:", handle);
+
+  const decryptedValues = await sdkA.userDecrypt([
+    { handle, contractAddress: confidentialTokenAddress },
+  ]);
+  console.log("Decrypted balance:", fmt(decryptedValues[handle] as bigint));
+
+  // 5c. sdk.publicDecrypt() — decrypt without user credentials.
+  // Returns the decryption proof alongside clear values, which is needed for
+  // on-chain finalization (e.g. finalizeUnwrap in the unshield flow).
+  // No EIP-712 signature is required — any party can call this.
+  console.log("\n── 5c. sdk.publicDecrypt() ──");
+  const { clearValues, decryptionProof } = await sdkA.publicDecrypt([handle]);
+  console.log("Public-decrypted balance:", fmt(clearValues[handle] as bigint));
+  console.log("Decryption proof:", decryptionProof.slice(0, 20) + "…");
 }
 
 main().catch((err) => {

@@ -5,6 +5,7 @@ import { SEPOLIA_EXPLORER_URL } from "@/lib/config";
 interface BalancesCardProps {
   formattedErc20: string;
   formattedConfidential: string;
+  formattedTotalSupply: string;
   isLoadingConfidential: boolean;
   erc20Symbol: string;
   onMint: () => void;
@@ -21,6 +22,7 @@ interface BalancesCardProps {
 export function BalancesCard({
   formattedErc20,
   formattedConfidential,
+  formattedTotalSupply,
   isLoadingConfidential,
   erc20Symbol,
   onMint,
@@ -66,6 +68,10 @@ export function BalancesCard({
             {isLoadingConfidential ? <i>Decrypting…</i> : formattedConfidential}
           </span>
         )}
+      </div>
+      <div className="balance-row">
+        <span className="balance-label">Total Supply (inferred)</span>
+        <span className="balance-value">{formattedTotalSupply}</span>
       </div>
       {decryptError && <div className="alert alert-error card-status">{decryptError}</div>}
       {mintError && <div className="alert alert-error card-status">{mintError}</div>}

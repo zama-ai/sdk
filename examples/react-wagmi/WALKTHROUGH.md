@@ -199,11 +199,11 @@ After any operation that changes balances, call `refreshBalances()`:
 const refreshBalances = () => {
   void refetchErc20();
   void refetchEth();
-  // Invalidate the encrypted handle so useConfidentialBalance re-polls after
-  // any operation that changes the confidential balance.
+  // Invalidate the confidential balance so useConfidentialBalance re-decrypts after
+  // any operation that changes the balance.
   if (token) {
     queryClient.invalidateQueries({
-      queryKey: zamaQueryKeys.confidentialHandle.token(token.confidentialTokenAddress),
+      queryKey: zamaQueryKeys.confidentialBalance.token(token.confidentialTokenAddress),
     });
   }
 };

@@ -10,6 +10,7 @@ import {
   useAllow,
   useListPairs,
   useZamaSDK,
+  useTotalSupply,
   balanceOfContract,
 } from "@zama-fhe/react-sdk";
 import type { TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
@@ -268,11 +269,14 @@ export default function Home() {
   const refreshBalances = () => {
     queryClient.invalidateQueries({ queryKey: erc20BalanceKey });
     queryClient.invalidateQueries({ queryKey: ethBalanceKey });
-    // Invalidate the encrypted handle so useConfidentialBalance re-polls after
-    // any operation that changes the confidential balance (shield, unshield, transfer).
+    // Invalidate the confidential balance so useConfidentialBalance re-decrypts after
+    // any operation that changes the balance (shield, unshield, transfer).
     if (token) {
       queryClient.invalidateQueries({
-        queryKey: zamaQueryKeys.confidentialHandle.token(token.confidentialTokenAddress),
+        queryKey: zamaQueryKeys.confidentialBalance.token(token.confidentialTokenAddress),
+      });
+      queryClient.invalidateQueries({
+        queryKey: zamaQueryKeys.totalSupply.token(token.confidentialTokenAddress),
       });
     }
   };
@@ -312,6 +316,13 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [address]);
 
+  // Fetch the inferred plaintext total supply for the selected confidential token.
+  // This is a public on-chain read — no credentials are required.
+  const { data: totalSupply } = useTotalSupply(
+    token?.confidentialTokenAddress ?? ZERO_ADDRESS,
+    { enabled: !!token },
+  );
+
   // Guard on token too: if balance resolves before the registry, decimals defaults to 0
   // and symbol to "" — the raw integer would be displayed without unit or decimal conversion.
   const formattedErc20 =
@@ -321,6 +332,10 @@ export default function Home() {
   const formattedConfidential =
     balance.data !== undefined && token
       ? `${formatUnits(balance.data, decimals)} ${confidentialSymbol}`
+      : "—";
+  const formattedTotalSupply =
+    totalSupply !== undefined && token
+      ? `${formatUnits(totalSupply, decimals)} ${confidentialSymbol}`
       : "—";
 
   // Actions are disabled until the registry has loaded a valid token pair
@@ -428,6 +443,7 @@ export default function Home() {
       <BalancesCard
         formattedErc20={formattedErc20}
         formattedConfidential={formattedConfidential}
+        formattedTotalSupply={formattedTotalSupply}
         // handleQuery.isLoading: fetching the encrypted handle from chain (Phase 1).
         // balance.isLoading: decrypting it via RelayerWeb (Phase 2).
         isLoadingConfidential={balance.handleQuery.isLoading || balance.isLoading}
