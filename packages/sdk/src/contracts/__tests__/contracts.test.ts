@@ -99,7 +99,9 @@ describe("ERC-165 contract builders", () => {
     expect(config.args).toEqual([ERC7984_INTERFACE_ID]);
   });
 
-  it("isConfidentialWrapperContract uses ERC7984_WRAPPER_INTERFACE_ID_LEGACY", ({ tokenAddress }) => {
+  it("isConfidentialWrapperContract uses ERC7984_WRAPPER_INTERFACE_ID_LEGACY", ({
+    tokenAddress,
+  }) => {
     const config = isConfidentialWrapperContract(tokenAddress);
     expect(config.address).toBe(tokenAddress);
     expect(config.functionName).toBe("supportsInterface");
