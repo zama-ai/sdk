@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.5.0-alpha.6](https://github.com/zama-ai/sdk/compare/v2.5.0-alpha.5...v2.5.0-alpha.6) (2026-04-16)
+
+### Bug Fixes
+
+- centralize ZERO_HANDLE, use isZeroHandle checks ([#251](https://github.com/zama-ai/sdk/issues/251)) ([ffd5e3d]())
+
 ## [2.5.0-alpha.5](https://github.com/zama-ai/sdk/compare/v2.5.0-alpha.4...v2.5.0-alpha.5) (2026-04-16)
 
 ### Features
