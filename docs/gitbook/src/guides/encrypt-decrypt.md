@@ -245,7 +245,115 @@ function ConfidentialAction() {
 
 {% endcode %}
 
-### 3. Decrypt with useUserDecrypt
+### 3. Avoid blind-sign wallet popups
+
+Any decrypt operation (`useUserDecrypt`, `useConfidentialBalance`) triggers an EIP-712 wallet signature the first time it runs — the SDK needs FHE decrypt credentials. If your app calls these hooks on render without gating, users see an unsolicited MetaMask popup before they have taken any action. In crypto UX this is a **blind-signing anti-pattern**: users are trained to reject unexpected signature requests, and security tools like Blockaid may flag them.
+
+The fix: check `useIsAllowed` first, show a locked state, and let the user decide when to sign.
+
+{% hint style="danger" %}
+**Never** call `useConfidentialBalance` or `useUserDecrypt` without gating on `useIsAllowed`:
+
+```tsx
+// BAD — triggers wallet popup as soon as the component mounts
+function BadExample({ tokenAddress }: { tokenAddress: Address }) {
+  const balance = useConfidentialBalance({ tokenAddress });
+  return <p>{balance.data?.toString()}</p>;
+}
+```
+
+This causes an unexpected MetaMask popup, user rejection, potential Blockaid flags, and loss of trust.
+{% endhint %}
+
+#### Gating useConfidentialBalance
+
+For confidential token balances, gate the query on `useIsAllowed` and trigger `useAllow` from an explicit button:
+
+{% code title="ConfidentialBalanceCard.tsx" %}
+
+```tsx
+import { useAllow, useIsAllowed, useConfidentialBalance } from "@zama-fhe/react-sdk";
+import { formatUnits, type Address } from "viem";
+
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
+
+function ConfidentialBalanceCard({
+  tokenAddress,
+  decimals,
+  symbol,
+}: {
+  tokenAddress: Address | undefined;
+  decimals: number;
+  symbol: string;
+}) {
+  // 1. Check if credentials are already cached for this token
+  const { data: isAllowed } = useIsAllowed({
+    contractAddresses: tokenAddress ? [tokenAddress] : [],
+    query: { enabled: Boolean(tokenAddress) },
+  });
+
+  // 2. Gate the balance query — only runs when isAllowed is true
+  const balance = useConfidentialBalance(
+    { tokenAddress: tokenAddress ?? ZERO_ADDRESS },
+    { enabled: !!tokenAddress && !!isAllowed },
+  );
+
+  // 3. useAllow triggers the EIP-712 signature on demand
+  const { mutate: allow, isPending: isSigning } = useAllow();
+
+  if (!tokenAddress) return null;
+
+  // Credentials not cached: show locked state with explicit action
+  if (!isAllowed) {
+    return (
+      <div>
+        <p>{symbol} balance: *****</p>
+        <button onClick={() => allow([tokenAddress])} disabled={isSigning}>
+          {isSigning ? "Signing..." : "Decrypt Balance"}
+        </button>
+      </div>
+    );
+  }
+
+  // Credentials cached: balance is decrypting or ready
+  return (
+    <div>
+      <p>
+        {symbol} balance:{" "}
+        {balance.isLoading
+          ? "Decrypting..."
+          : balance.data !== undefined
+            ? formatUnits(balance.data, decimals)
+            : "---"}
+      </p>
+    </div>
+  );
+}
+```
+
+{% endcode %}
+
+The lifecycle:
+
+1. `useIsAllowed` checks if credentials are cached from a prior session
+2. If **yes**: `useConfidentialBalance` fires immediately, balance decrypts silently
+3. If **no**: balance shows as locked (`*****`), user clicks "Decrypt Balance"
+4. Click triggers `useAllow` → EIP-712 wallet signature
+5. `isAllowed` becomes true, balance query enables, balance appears
+
+Returning users skip the prompt entirely — credentials persist in IndexedDB (default TTL: 30 days).
+
+For multiple tokens, batch with a single signature:
+
+```tsx
+const allTokenAddresses = tokens.map((t) => t.confidentialTokenAddress);
+const { mutate: allow } = useAllow();
+
+// One button, one signature, all tokens
+<button onClick={() => allow(allTokenAddresses)}>Decrypt All Balances</button>;
+```
+
+#### Gating useUserDecrypt
 
 `useUserDecrypt` is a query hook that decrypts FHE handles. If no cached credentials exist, it triggers a wallet signature prompt. Use `useAllow` + `useIsAllowed` to pre-authorize and gate the query if you want to control when the prompt appears.
 
