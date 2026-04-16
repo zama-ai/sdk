@@ -7,7 +7,6 @@ import type { FhevmInstance, FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/n
 import { parentPort, type Transferable } from "node:worker_threads";
 import type {
   CreateDelegatedEIP712Request,
-  CreateDelegatedEIP712ResponseData,
   CreateEIP712Request,
   CreateEIP712ResponseData,
   DelegatedUserDecryptRequest,
@@ -21,7 +20,6 @@ import type {
   GetPublicKeyResponseData,
   GetPublicParamsRequest,
   GetPublicParamsResponseData,
-  InitResponseData,
   NodeInitRequest,
   PublicDecryptRequest,
   PublicDecryptResponseData,
@@ -82,7 +80,7 @@ async function handleNodeInit(request: NodeInitRequest): Promise<void> {
 
     sdkInstance = await nodeSdk.createInstance(config);
 
-    sendSuccess<InitResponseData>(id, type, { initialized: true });
+    sendSuccess(id, type, { initialized: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[NodeWorker] Init error:", message);
@@ -290,7 +288,7 @@ function handleCreateDelegatedEIP712(request: CreateDelegatedEIP712Request): voi
       payload.durationDays,
     );
 
-    sendSuccess<CreateDelegatedEIP712ResponseData>(id, type, result);
+    sendSuccess(id, type, result);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[NodeWorker] CreateDelegatedEIP712 error:", message);

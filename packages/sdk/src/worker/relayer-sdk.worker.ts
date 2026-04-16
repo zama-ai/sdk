@@ -9,7 +9,6 @@ import { assertNonNullable, prefixHex, unprefixHex } from "../utils";
 import { getBrowserExtensionRuntime } from "./browser-extension";
 import type {
   CreateDelegatedEIP712Request,
-  CreateDelegatedEIP712ResponseData,
   CreateEIP712Request,
   CreateEIP712ResponseData,
   DelegatedUserDecryptRequest,
@@ -24,13 +23,11 @@ import type {
   GetPublicParamsRequest,
   GetPublicParamsResponseData,
   InitRequest,
-  InitResponseData,
   PublicDecryptRequest,
   PublicDecryptResponseData,
   RequestZKProofVerificationRequest,
   SuccessResponse,
   UpdateCsrfRequest,
-  UpdateCsrfResponseData,
   UserDecryptRequest,
   UserDecryptResponseData,
   WorkerRequest,
@@ -277,7 +274,7 @@ async function handleInit(request: InitRequest): Promise<void> {
 
     sdkInstance = await sdkGlobal.createInstance(config);
 
-    sendSuccess<InitResponseData>(id, type, { initialized: true });
+    sendSuccess(id, type, { initialized: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[Worker] Init error:", message);
@@ -539,7 +536,7 @@ function handleCreateDelegatedEIP712(request: CreateDelegatedEIP712Request): voi
       payload.durationDays,
     );
 
-    sendSuccess<CreateDelegatedEIP712ResponseData>(id, type, result);
+    sendSuccess(id, type, result);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[Worker] CreateDelegatedEIP712 error:", message);
@@ -662,7 +659,7 @@ function handleGetPublicParams(request: GetPublicParamsRequest): void {
 function handleUpdateCsrf(request: UpdateCsrfRequest): void {
   const { id, type, payload } = request;
   csrfTokenBase = payload.csrfToken;
-  sendSuccess<UpdateCsrfResponseData>(id, type, { updated: true });
+  sendSuccess(id, type, { updated: true });
 }
 
 /**
