@@ -271,7 +271,7 @@ export class ReadonlyToken {
     // Parallel cache lookups — avoids sequential IDB round-trips.
     const uncached: { token: ReadonlyToken; handle: Handle }[] = [];
     const cachedValues = await Promise.all(
-      tokens.map((token, i) => {
+      tokens.map(async (token, i) => {
         const handle = resolvedHandles[i]!;
         if (isZeroHandle(handle)) {
           return 0n;
