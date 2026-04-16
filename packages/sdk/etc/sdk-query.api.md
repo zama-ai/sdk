@@ -678,9 +678,6 @@ export function isConfidentialTokenValidQueryOptions(signer: GenericSigner, conf
 // @public (undocumented)
 export function isWrapperQueryOptions(signer: GenericSigner, tokenAddress: Address, config?: IsConfidentialQueryConfig): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.isWrapper.token>>;
 
-// @public
-export function isZeroHandle(handle: string): boolean;
-
 // @public (undocumented)
 export interface ListPairsQueryConfig {
     // (undocumented)
@@ -1551,12 +1548,9 @@ export const ZamaSDKEvents: {
     readonly UnshieldPhase2Submitted: "unshield:phase2_submitted";
 };
 
-// @public (undocumented)
-export const ZERO_HANDLE: "0x0000000000000000000000000000000000000000000000000000000000000000";
-
 // Warnings were encountered during analysis:
 //
-// dist/esm/activity-DFA4cuMA.d.ts:22721:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/esm/activity-DBMyE78S.d.ts:22695:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

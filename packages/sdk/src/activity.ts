@@ -19,7 +19,7 @@ import {
 } from "./events/onchain-events";
 import type { Address, Hex } from "viem";
 import type { ClearValueType, Handle } from "./relayer/relayer-sdk.types";
-import { isZeroHandle } from "./query/utils";
+import { isZeroHandle } from "./utils/handles";
 import { assertBigint } from "./utils/assertions";
 
 // ---------------------------------------------------------------------------

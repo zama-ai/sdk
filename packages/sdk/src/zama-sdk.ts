@@ -6,7 +6,7 @@ import { wrapDecryptError } from "./errors";
 import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventListener } from "./events/sdk-events";
 import { ZamaSDKEvents } from "./events/sdk-events";
 import type { DecryptHandle } from "./query/user-decrypt";
-import { isZeroHandle } from "./query/utils";
+import { isZeroHandle } from "./utils/handles";
 import type { RelayerSDK } from "./relayer/relayer-sdk";
 import type { ClearValueType, Handle, PublicDecryptResult } from "./relayer/relayer-sdk.types";
 import { MemoryStorage } from "./storage/memory-storage";

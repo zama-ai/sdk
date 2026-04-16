@@ -1,7 +1,7 @@
 import { Topics } from "../../events";
 import { getAddress, type Address } from "viem";
 import { DecryptionFailedError, ZamaError, ZamaErrorCode } from "../../errors";
-import { isZeroHandle, ZERO_HANDLE } from "../../query/utils";
+import { isZeroHandle, ZERO_HANDLE } from "../../utils/handles";
 import { describe, expect, it, vi } from "../../test-fixtures";
 
 describe("Token", () => {

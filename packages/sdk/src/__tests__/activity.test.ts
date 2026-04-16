@@ -8,7 +8,7 @@ import {
 } from "../activity";
 import { getAddress, type Address, type Hex } from "viem";
 import { Topics, type RawLog } from "../events";
-import { ZERO_HANDLE } from "../query/utils";
+import { ZERO_HANDLE } from "../utils/handles";
 
 // Helpers
 const addr = (hex: string): Address => getAddress(`0x${hex.padStart(40, "0")}`);

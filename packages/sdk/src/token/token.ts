@@ -37,7 +37,7 @@ import {
   ZamaError,
   matchAclRevert,
 } from "../errors";
-import { isZeroHandle } from "../query/utils";
+import { isZeroHandle } from "../utils/handles";
 import { ReadonlyToken } from "./readonly-token";
 import type {
   ShieldCallbacks,

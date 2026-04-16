@@ -12,7 +12,7 @@ import type { GenericSigner, GenericStorage } from "../../types";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import { ZamaSDK } from "../../zama-sdk";
 import type { Address } from "viem";
-import { ZERO_HANDLE } from "../../query/utils";
+import { ZERO_HANDLE } from "../../utils/handles";
 const TOKEN_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
 
 /**

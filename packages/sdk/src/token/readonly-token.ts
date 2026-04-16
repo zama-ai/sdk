@@ -22,7 +22,7 @@ import {
   ZamaError,
 } from "../errors";
 import { ZamaSDKEvents, type ZamaSDKEventInput } from "../events/sdk-events";
-import { isZeroHandle, ZERO_HANDLE } from "../query/utils";
+import { isZeroHandle, ZERO_HANDLE } from "../utils/handles";
 import type { ClearValueType, Handle } from "../relayer/relayer-sdk.types";
 import { toError } from "../utils";
 import { assertBigint } from "../utils/assertions";
@@ -30,7 +30,7 @@ import { pLimit } from "../utils/concurrency";
 import type { ZamaSDK } from "../zama-sdk";
 
 // Re-exported so consumers importing via `./token` keep a single canonical
-// reference. The constant itself lives in `query/utils` to avoid duplication.
+// reference. The constant itself lives in `utils/handles`.
 export { ZERO_HANDLE, isZeroHandle };
 
 /** Options for {@link ReadonlyToken.batchDecryptBalancesAs}. */
