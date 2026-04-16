@@ -86,6 +86,7 @@ export {
   type BatchBalancesResult,
   type BatchDecryptAsOptions,
   ZERO_HANDLE,
+  isZeroHandle,
   savePendingUnshield,
   loadPendingUnshield,
   clearPendingUnshield,

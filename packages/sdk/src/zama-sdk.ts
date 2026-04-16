@@ -6,7 +6,7 @@ import { wrapDecryptError } from "./errors";
 import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventListener } from "./events/sdk-events";
 import { ZamaSDKEvents } from "./events/sdk-events";
 import type { DecryptHandle } from "./query/user-decrypt";
-import { ZERO_HANDLE } from "./query/utils";
+import { isZeroHandle } from "./utils/handles";
 import type { RelayerSDK } from "./relayer/relayer-sdk";
 import type { ClearValueType, Handle, PublicDecryptResult } from "./relayer/relayer-sdk.types";
 import { MemoryStorage } from "./storage/memory-storage";
@@ -343,7 +343,7 @@ export class ZamaSDK {
 
     // Filter zero handles → 0n without relayer
     for (const h of normalized) {
-      if (h.handle === ZERO_HANDLE) {
+      if (isZeroHandle(h.handle)) {
         result[h.handle] = 0n;
       } else {
         nonZero.push(h);

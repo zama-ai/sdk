@@ -1,5 +1,5 @@
 import { act, waitFor } from "@testing-library/react";
-import type { Address } from "@zama-fhe/sdk";
+import { ZERO_HANDLE } from "@zama-fhe/sdk";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { useDecryptBalanceAs } from "../use-decrypt-balance-as";
 import {
@@ -7,8 +7,6 @@ import {
   RECIPIENT,
   expectDefaultMutationState,
 } from "../../__tests__/mutation-test-helpers";
-
-const ZERO_HANDLE = "0x0000000000000000000000000000000000000000000000000000000000000000" as Address;
 
 describe("useDecryptBalanceAs", () => {
   test("default", ({ renderWithProviders }) => {

@@ -5,7 +5,7 @@ import { Token } from "../token/token";
 import { CredentialsManager } from "../credentials/credentials-manager";
 import { DecryptionFailedError } from "../errors";
 import { ZamaSDKEvents } from "../events/sdk-events";
-import { ZERO_HANDLE } from "../query/utils";
+import { ZERO_HANDLE } from "../utils/handles";
 import type { SignerLifecycleCallbacks } from "../types";
 import type { Address } from "viem";
 import type { Handle } from "../relayer/relayer-sdk.types";
