@@ -54,10 +54,16 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
     userDecrypt: vi.fn().mockResolvedValue({
       [VALID_HANDLE as string]: 1000n,
     }),
-    publicDecrypt: vi.fn().mockResolvedValue({
-      clearValues: {},
-      abiEncodedClearValues: "0x1f4",
-      decryptionProof: "0xproof",
+    publicDecrypt: vi.fn().mockImplementation((handles: string[]) => {
+      const clearValues: Record<string, bigint> = {};
+      for (const h of handles) {
+        clearValues[h] = 500n;
+      }
+      return Promise.resolve({
+        clearValues,
+        abiEncodedClearValues: "0x1f4",
+        decryptionProof: "0xproof",
+      });
     }),
     createDelegatedUserDecryptEIP712: vi.fn(),
     delegatedUserDecrypt: vi.fn(),
