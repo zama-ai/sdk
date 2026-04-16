@@ -26,8 +26,13 @@ export interface GenericLogger {
 
 // ============================================================================
 // Request Types
+//
+// The worker request/response protocol below describes message-passing between
+// the main thread and the FHE worker. It is not part of the public SDK surface;
+// no external consumer should build or inspect these messages directly.
 // ============================================================================
 
+/** @internal */
 export type WorkerRequestType =
   | "INIT"
   | "NODE_INIT"
@@ -43,11 +48,13 @@ export type WorkerRequestType =
   | "GET_PUBLIC_KEY"
   | "GET_PUBLIC_PARAMS";
 
+/** @internal */
 export interface BaseRequest {
   id: string;
   type: WorkerRequestType;
 }
 
+/** @internal */
 export interface InitRequest extends BaseRequest {
   type: "INIT";
   payload: {
@@ -61,6 +68,7 @@ export interface InitRequest extends BaseRequest {
   };
 }
 
+/** @internal */
 export interface NodeInitRequest extends BaseRequest {
   type: "NODE_INIT";
   payload: {
@@ -68,6 +76,7 @@ export interface NodeInitRequest extends BaseRequest {
   };
 }
 
+/** @internal */
 export interface UpdateCsrfRequest extends BaseRequest {
   type: "UPDATE_CSRF";
   payload: {
@@ -75,6 +84,7 @@ export interface UpdateCsrfRequest extends BaseRequest {
   };
 }
 
+/** @internal */
 export interface EncryptRequest extends BaseRequest {
   type: "ENCRYPT";
   payload: {
@@ -84,6 +94,7 @@ export interface EncryptRequest extends BaseRequest {
   };
 }
 
+/** @internal */
 export interface UserDecryptRequest extends BaseRequest {
   type: "USER_DECRYPT";
   payload: {
@@ -99,6 +110,7 @@ export interface UserDecryptRequest extends BaseRequest {
   };
 }
 
+/** @internal */
 export interface PublicDecryptRequest extends BaseRequest {
   type: "PUBLIC_DECRYPT";
   payload: {
@@ -106,11 +118,13 @@ export interface PublicDecryptRequest extends BaseRequest {
   };
 }
 
+/** @internal */
 export interface GenerateKeypairRequest extends BaseRequest {
   type: "GENERATE_KEYPAIR";
   payload: Record<string, never>;
 }
 
+/** @internal */
 export interface CreateEIP712Request extends BaseRequest {
   type: "CREATE_EIP712";
   payload: {
@@ -121,6 +135,7 @@ export interface CreateEIP712Request extends BaseRequest {
   };
 }
 
+/** @internal */
 export interface CreateDelegatedEIP712Request extends BaseRequest {
   type: "CREATE_DELEGATED_EIP712";
   payload: {
@@ -132,6 +147,7 @@ export interface CreateDelegatedEIP712Request extends BaseRequest {
   };
 }
 
+/** @internal */
 export interface DelegatedUserDecryptRequest extends BaseRequest {
   type: "DELEGATED_USER_DECRYPT";
   payload: {
@@ -148,6 +164,7 @@ export interface DelegatedUserDecryptRequest extends BaseRequest {
   };
 }
 
+/** @internal */
 export interface RequestZKProofVerificationRequest extends BaseRequest {
   type: "REQUEST_ZK_PROOF_VERIFICATION";
   payload: {
@@ -155,11 +172,13 @@ export interface RequestZKProofVerificationRequest extends BaseRequest {
   };
 }
 
+/** @internal */
 export interface GetPublicKeyRequest extends BaseRequest {
   type: "GET_PUBLIC_KEY";
   payload: Record<string, never>;
 }
 
+/** @internal */
 export interface GetPublicParamsRequest extends BaseRequest {
   type: "GET_PUBLIC_PARAMS";
   payload: {
@@ -167,6 +186,7 @@ export interface GetPublicParamsRequest extends BaseRequest {
   };
 }
 
+/** @internal */
 export type WorkerRequest =
   | InitRequest
   | NodeInitRequest
@@ -186,10 +206,15 @@ export type WorkerRequest =
 // Payload Type Aliases
 // ============================================================================
 
+/** @internal */
 export type EncryptPayload = EncryptRequest["payload"];
+/** @internal */
 export type UserDecryptPayload = UserDecryptRequest["payload"];
+/** @internal */
 export type DelegatedUserDecryptPayload = DelegatedUserDecryptRequest["payload"];
+/** @internal */
 export type CreateEIP712Payload = CreateEIP712Request["payload"];
+/** @internal */
 export type CreateDelegatedEIP712Payload = CreateDelegatedEIP712Request["payload"];
 
 // ============================================================================
@@ -201,11 +226,13 @@ interface BaseResponse {
   type: WorkerRequestType;
 }
 
+/** @internal */
 export interface SuccessResponse<T> extends BaseResponse {
   success: true;
   data: T;
 }
 
+/** @internal */
 export interface ErrorResponse extends BaseResponse {
   success: false;
   error: string;
@@ -213,51 +240,64 @@ export interface ErrorResponse extends BaseResponse {
   statusCode?: number;
 }
 
+/** @internal */
 export type WorkerResponse<T> = SuccessResponse<T> | ErrorResponse;
 
 // ============================================================================
 // Response Data Types
 // ============================================================================
 
+/** @internal */
 export interface InitResponseData {
   initialized: true;
 }
 
+/** @internal */
 export interface UpdateCsrfResponseData {
   updated: true;
 }
 
+/** @internal */
 export type EncryptResponseData = InputProofBytesType;
 
+/** @internal */
 export interface UserDecryptResponseData {
   clearValues: Record<Handle, ClearValueType>;
 }
 
+/** @internal */
 export interface PublicDecryptResponseData {
   clearValues: Readonly<Record<Handle, ClearValueType>>;
   abiEncodedClearValues: Hex;
   decryptionProof: Hex;
 }
 
+/** @internal */
 export interface GenerateKeypairResponseData {
   publicKey: Hex;
   privateKey: Hex;
 }
 
+/** @internal */
 export type CreateEIP712ResponseData = KmsUserDecryptEIP712Type;
 
+/** @internal */
 export type CreateDelegatedEIP712ResponseData = KmsDelegatedUserDecryptEIP712Type;
 
+/** @internal */
 export interface DelegatedUserDecryptResponseData {
   clearValues: Record<Handle, ClearValueType>;
 }
 
+/** @internal */
 export type RequestZKProofVerificationResponseData = InputProofBytesType;
 
+/** @internal */
 export interface GetPublicKeyResponseData {
   result: { publicKeyId: string; publicKey: Uint8Array } | null;
 }
 
+/** @internal */
 export interface GetPublicParamsResponseData {
   result: { publicParams: Uint8Array; publicParamsId: string } | null;
 }

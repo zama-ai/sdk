@@ -42,6 +42,8 @@ export const INIT_TIMEOUT_MS = 60_000;
  * Abstract base class for worker clients (browser Web Worker and Node.js worker_threads).
  * Encapsulates all shared logic: pending request tracking, timeouts, init dedup, domain methods.
  * Subclasses implement the abstract hooks for platform-specific worker creation and messaging.
+ *
+ * @internal
  */
 export abstract class BaseWorkerClient<TWorker, TConfig> {
   #worker: TWorker | null = null;

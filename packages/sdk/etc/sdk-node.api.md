@@ -23,8 +23,6 @@ import { Worker as Worker_2 } from 'node:worker_threads';
 import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
 import { ZKProofLike as ZKProofLike_2 } from '@zama-fhe/relayer-sdk/node';
 
-// Warning: (ae-forgotten-export) The symbol "GenericStorage" needs to be exported by the entry point index.d.ts
-//
 // @public
 export class AsyncLocalMapStorage implements GenericStorage {
     // (undocumented)
@@ -39,7 +37,9 @@ export class AsyncLocalMapStorage implements GenericStorage {
 // @public
 export const asyncLocalStorage: AsyncLocalMapStorage;
 
-// @public (undocumented)
+// Warning: (ae-internal-missing-underscore) The name "BaseRequest" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
 export interface BaseRequest {
     // (undocumented)
     id: string;
@@ -47,7 +47,9 @@ export interface BaseRequest {
     type: WorkerRequestType;
 }
 
-// @public
+// Warning: (ae-internal-missing-underscore) The name "BaseWorkerClient" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal
 export abstract class BaseWorkerClient<TWorker, TConfig> {
     constructor(config: TConfig, logger: GenericLogger | undefined);
     // (undocumented)
@@ -84,8 +86,6 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
     protected readonly logger: GenericLogger | undefined;
     protected onWorkerReady?(_worker: TWorker): void;
     protected abstract postMessage(worker: TWorker, request: WorkerRequest): void;
-    // Warning: (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     publicDecrypt(handles: Handle[]): Promise<PublicDecryptResponseData>;
     // (undocumented)
@@ -102,12 +102,14 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
     protected abstract wireEvents(worker: TWorker): void;
 }
 
-export { ClearValueType }
-
-// @public (undocumented)
+// Warning: (ae-internal-missing-underscore) The name "CreateDelegatedEIP712Payload" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
 export type CreateDelegatedEIP712Payload = CreateDelegatedEIP712Request["payload"];
 
-// @public (undocumented)
+// Warning: (ae-internal-missing-underscore) The name "CreateDelegatedEIP712Request" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
 export interface CreateDelegatedEIP712Request extends BaseRequest {
     // (undocumented)
     payload: {
@@ -121,13 +123,19 @@ export interface CreateDelegatedEIP712Request extends BaseRequest {
     type: "CREATE_DELEGATED_EIP712";
 }
 
-// @public (undocumented)
+// Warning: (ae-internal-missing-underscore) The name "CreateDelegatedEIP712ResponseData" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
 export type CreateDelegatedEIP712ResponseData = KmsDelegatedUserDecryptEIP712Type;
 
-// @public (undocumented)
+// Warning: (ae-internal-missing-underscore) The name "CreateEIP712Payload" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
 export type CreateEIP712Payload = CreateEIP712Request["payload"];
 
-// @public (undocumented)
+// Warning: (ae-internal-missing-underscore) The name "CreateEIP712Request" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
 export interface CreateEIP712Request extends BaseRequest {
     // (undocumented)
     payload: {
@@ -140,7 +148,9 @@ export interface CreateEIP712Request extends BaseRequest {
     type: "CREATE_EIP712";
 }
 
-// @public (undocumented)
+// Warning: (ae-internal-missing-underscore) The name "CreateEIP712ResponseData" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
 export type CreateEIP712ResponseData = KmsUserDecryptEIP712Type;
 
 // @public
@@ -167,10 +177,14 @@ export interface DelegatedUserDecryptParams {
     startTimestamp: number;
 }
 
-// @public (undocumented)
+// Warning: (ae-internal-missing-underscore) The name "DelegatedUserDecryptPayload" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
 export type DelegatedUserDecryptPayload = DelegatedUserDecryptRequest["payload"];
 
-// @public (undocumented)
+// Warning: (ae-internal-missing-underscore) The name "DelegatedUserDecryptRequest" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
 export interface DelegatedUserDecryptRequest extends BaseRequest {
     // (undocumented)
     payload: {
@@ -189,7 +203,9 @@ export interface DelegatedUserDecryptRequest extends BaseRequest {
     type: "DELEGATED_USER_DECRYPT";
 }
 
-// @public (undocumented)
+// Warning: (ae-internal-missing-underscore) The name "DelegatedUserDecryptResponseData" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
 export interface DelegatedUserDecryptResponseData {
     // (undocumented)
     clearValues: Record<Handle, ClearValueType>;
@@ -204,14 +220,17 @@ export interface EncryptParams {
     contractAddress: Address;
     // (undocumented)
     userAddress: Address;
-    // Warning: (ae-forgotten-export) The symbol "EncryptInput" needs to be exported by the entry point index.d.ts
     values: EncryptInput[];
 }
 
-// @public (undocumented)
+// Warning: (ae-internal-missing-underscore) The name "EncryptPayload" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
 export type EncryptPayload = EncryptRequest["payload"];
 
-// @public (undocumented)
+// Warning: (ae-internal-missing-underscore) The name "EncryptRequest" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
 export interface EncryptRequest extends BaseRequest {
     // (undocumented)
     payload: {
@@ -223,24 +242,17 @@ export interface EncryptRequest extends BaseRequest {
     type: "ENCRYPT";
 }
 
-// @public (undocumented)
+// Warning: (ae-internal-missing-underscore) The name "EncryptResponseData" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
 export type EncryptResponseData = InputProofBytesType;
 
 // @public
 export type EncryptResult = InputProofBytesType;
 
-// Warning: (ae-forgotten-export) The symbol "BaseResponse" needs to be exported by the entry point index.d.ts
+// Warning: (ae-internal-missing-underscore) The name "GenerateKeypairRequest" should be prefixed with an underscore because the declaration is marked as @internal
 //
-// @public (undocumented)
-export interface ErrorResponse extends BaseResponse {
-    // (undocumented)
-    error: string;
-    statusCode?: number;
-    // (undocumented)
-    success: false;
-}
-
-// @public (undocumented)
+// @internal (undocumented)
 export interface GenerateKeypairRequest extends BaseRequest {
     // (undocumented)
     payload: Record<string, never>;
@@ -248,7 +260,9 @@ export interface GenerateKeypairRequest extends BaseRequest {
     type: "GENERATE_KEYPAIR";
 }
 
-// @public (undocumented)
+// Warning: (ae-internal-missing-underscore) The name "GenerateKeypairResponseData" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
 export interface GenerateKeypairResponseData {
     // (undocumented)
     privateKey: Hex;
@@ -268,7 +282,16 @@ export interface GenericLogger {
     warn: (message: string, data?: Record<string, unknown>) => void;
 }
 
-// @public (undocumented)
+// @public
+export interface GenericStorage {
+    delete(key: string): Promise<void>;
+    get<T = unknown>(key: string): Promise<T | null>;
+    set<T = unknown>(key: string, value: T): Promise<void>;
+}
+
+// Warning: (ae-internal-missing-underscore) The name "GetPublicKeyRequest" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
 export interface GetPublicKeyRequest extends BaseRequest {
     // (undocumented)
     payload: Record<string, never>;
@@ -276,7 +299,9 @@ export interface GetPublicKeyRequest extends BaseRequest {
     type: "GET_PUBLIC_KEY";
 }
 
-// @public (undocumented)
+// Warning: (ae-internal-missing-underscore) The name "GetPublicKeyResponseData" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
 export interface GetPublicKeyResponseData {
     // (undocumented)
     result: {
@@ -285,7 +310,9 @@ export interface GetPublicKeyResponseData {
     } | null;
 }
 
-// @public (undocumented)
+// Warning: (ae-internal-missing-underscore) The name "GetPublicParamsRequest" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
 export interface GetPublicParamsRequest extends BaseRequest {
     // (undocumented)
     payload: {
@@ -295,7 +322,9 @@ export interface GetPublicParamsRequest extends BaseRequest {
     type: "GET_PUBLIC_PARAMS";
 }
 
-// @public (undocumented)
+// Warning: (ae-internal-missing-underscore) The name "GetPublicParamsResponseData" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
 export interface GetPublicParamsResponseData {
     // (undocumented)
     result: {
@@ -305,20 +334,11 @@ export interface GetPublicParamsResponseData {
 }
 
 // @public
-export const HardhatConfig: {
-    readonly chainId: 31337;
-    readonly gatewayChainId: 10901;
-    readonly relayerUrl: "";
-    readonly network: "http://127.0.0.1:8545";
-    readonly aclContractAddress: "0x50157CFfD6bBFA2DECe204a89ec419c23ef5755D";
-    readonly inputVerifierContractAddress: "0x36772142b74871f255CbD7A3e89B401d3e45825f";
-    readonly kmsContractAddress: "0x901F8942346f7AB3a01F6D7613119Bca447Bb030";
-    readonly verifyingContractAddressDecryption: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64";
-    readonly verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810";
-    readonly registryAddress: undefined;
-};
+export type Handle = Bytes32Hex;
 
-// @public (undocumented)
+// Warning: (ae-internal-missing-underscore) The name "InitRequest" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
 export interface InitRequest extends BaseRequest {
     // (undocumented)
     payload: {
@@ -332,21 +352,9 @@ export interface InitRequest extends BaseRequest {
     type: "INIT";
 }
 
-// @public
-export const MainnetConfig: {
-    readonly chainId: 1;
-    readonly gatewayChainId: 261131;
-    readonly relayerUrl: "https://relayer.mainnet.zama.org/v2";
-    readonly network: "https://ethereum-rpc.publicnode.com";
-    readonly aclContractAddress: "0xcA2E8f1F656CD25C01F05d0b243Ab1ecd4a8ffb6";
-    readonly kmsContractAddress: "0x77627828a55156b04Ac0DC0eb30467f1a552BB03";
-    readonly inputVerifierContractAddress: "0xCe0FC2e05CFff1B719EFF7169f7D80Af770c8EA2";
-    readonly verifyingContractAddressDecryption: "0x0f6024a97684f7d90ddb0fAAD79cB15F2C888D24";
-    readonly verifyingContractAddressInputVerification: "0xcB1bB072f38bdAF0F328CdEf1Fc6eDa1DF029287";
-    readonly registryAddress: "0xeb5015fF021DB115aCe010f23F55C2591059bBA0";
-};
-
-// @public (undocumented)
+// Warning: (ae-internal-missing-underscore) The name "NodeInitRequest" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
 export interface NodeInitRequest extends BaseRequest {
     // (undocumented)
     payload: {
@@ -356,6 +364,8 @@ export interface NodeInitRequest extends BaseRequest {
     type: "NODE_INIT";
 }
 
+// Warning: (ae-incompatible-release-tags) The symbol "NodeWorkerClient" is marked as @public, but its signature references "BaseWorkerClient" which is marked as @internal
+//
 // @public
 export class NodeWorkerClient extends BaseWorkerClient<Worker_2, NodeWorkerClientConfig> {
     constructor(config: NodeWorkerClientConfig);
@@ -370,6 +380,8 @@ export class NodeWorkerClient extends BaseWorkerClient<Worker_2, NodeWorkerClien
     };
     // (undocumented)
     protected onWorkerReady(worker: Worker_2): void;
+    // Warning: (ae-incompatible-release-tags) The symbol "postMessage" is marked as @public, but its signature references "WorkerRequest" which is marked as @internal
+    //
     // (undocumented)
     protected postMessage(worker: Worker_2, request: WorkerRequest): void;
     // (undocumented)
@@ -388,30 +400,55 @@ export interface NodeWorkerClientConfig {
 // @public
 export class NodeWorkerPool {
     constructor(config: NodeWorkerPoolConfig);
+    // Warning: (ae-incompatible-release-tags) The symbol "createDelegatedUserDecryptEIP712" is marked as @public, but its signature references "CreateDelegatedEIP712Payload" which is marked as @internal
+    // Warning: (ae-incompatible-release-tags) The symbol "createDelegatedUserDecryptEIP712" is marked as @public, but its signature references "CreateDelegatedEIP712ResponseData" which is marked as @internal
+    //
     // (undocumented)
     createDelegatedUserDecryptEIP712(params: CreateDelegatedEIP712Payload): Promise<CreateDelegatedEIP712ResponseData>;
+    // Warning: (ae-incompatible-release-tags) The symbol "createEIP712" is marked as @public, but its signature references "CreateEIP712Payload" which is marked as @internal
+    // Warning: (ae-incompatible-release-tags) The symbol "createEIP712" is marked as @public, but its signature references "CreateEIP712ResponseData" which is marked as @internal
+    //
     // (undocumented)
     createEIP712(params: CreateEIP712Payload): Promise<CreateEIP712ResponseData>;
+    // Warning: (ae-incompatible-release-tags) The symbol "delegatedUserDecrypt" is marked as @public, but its signature references "DelegatedUserDecryptPayload" which is marked as @internal
+    // Warning: (ae-incompatible-release-tags) The symbol "delegatedUserDecrypt" is marked as @public, but its signature references "DelegatedUserDecryptResponseData" which is marked as @internal
+    //
     // (undocumented)
     delegatedUserDecrypt(params: DelegatedUserDecryptPayload): Promise<DelegatedUserDecryptResponseData>;
+    // Warning: (ae-incompatible-release-tags) The symbol "encrypt" is marked as @public, but its signature references "EncryptPayload" which is marked as @internal
+    // Warning: (ae-incompatible-release-tags) The symbol "encrypt" is marked as @public, but its signature references "EncryptResponseData" which is marked as @internal
+    //
     // (undocumented)
     encrypt(params: EncryptPayload): Promise<EncryptResponseData>;
+    // Warning: (ae-incompatible-release-tags) The symbol "generateKeypair" is marked as @public, but its signature references "GenerateKeypairResponseData" which is marked as @internal
+    //
     // (undocumented)
     generateKeypair(): Promise<GenerateKeypairResponseData>;
+    // Warning: (ae-incompatible-release-tags) The symbol "getPublicKey" is marked as @public, but its signature references "GetPublicKeyResponseData" which is marked as @internal
+    //
     // (undocumented)
     getPublicKey(): Promise<GetPublicKeyResponseData>;
+    // Warning: (ae-incompatible-release-tags) The symbol "getPublicParams" is marked as @public, but its signature references "GetPublicParamsResponseData" which is marked as @internal
+    //
     // (undocumented)
     getPublicParams(bits: number): Promise<GetPublicParamsResponseData>;
     // (undocumented)
     initPool(): Promise<void>;
     // (undocumented)
     get poolSize(): number;
+    // Warning: (ae-incompatible-release-tags) The symbol "publicDecrypt" is marked as @public, but its signature references "PublicDecryptResponseData" which is marked as @internal
+    //
     // (undocumented)
     publicDecrypt(handles: Handle[]): Promise<PublicDecryptResponseData>;
+    // Warning: (ae-incompatible-release-tags) The symbol "requestZKProofVerification" is marked as @public, but its signature references "RequestZKProofVerificationResponseData" which is marked as @internal
+    //
     // (undocumented)
     requestZKProofVerification(zkProof: ZKProofLike): Promise<RequestZKProofVerificationResponseData>;
     // (undocumented)
     terminate(): void;
+    // Warning: (ae-incompatible-release-tags) The symbol "userDecrypt" is marked as @public, but its signature references "UserDecryptPayload" which is marked as @internal
+    // Warning: (ae-incompatible-release-tags) The symbol "userDecrypt" is marked as @public, but its signature references "UserDecryptResponseData" which is marked as @internal
+    //
     // (undocumented)
     userDecrypt(params: UserDecryptPayload): Promise<UserDecryptResponseData>;
 }
@@ -422,7 +459,9 @@ export interface NodeWorkerPoolConfig extends NodeWorkerClientConfig {
     poolSize?: number;
 }
 
-// @public (undocumented)
+// Warning: (ae-internal-missing-underscore) The name "PublicDecryptRequest" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
 export interface PublicDecryptRequest extends BaseRequest {
     // (undocumented)
     payload: {
@@ -432,7 +471,9 @@ export interface PublicDecryptRequest extends BaseRequest {
     type: "PUBLIC_DECRYPT";
 }
 
-// @public (undocumented)
+// Warning: (ae-internal-missing-underscore) The name "PublicDecryptResponseData" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
 export interface PublicDecryptResponseData {
     // (undocumented)
     abiEncodedClearValues: Hex;
@@ -515,7 +556,9 @@ export interface RelayerSDK {
     userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
 }
 
-// @public (undocumented)
+// Warning: (ae-internal-missing-underscore) The name "RequestZKProofVerificationRequest" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
 export interface RequestZKProofVerificationRequest extends BaseRequest {
     // (undocumented)
     payload: {
@@ -525,32 +568,14 @@ export interface RequestZKProofVerificationRequest extends BaseRequest {
     type: "REQUEST_ZK_PROOF_VERIFICATION";
 }
 
-// @public (undocumented)
+// Warning: (ae-internal-missing-underscore) The name "RequestZKProofVerificationResponseData" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
 export type RequestZKProofVerificationResponseData = InputProofBytesType;
 
-// @public
-export const SepoliaConfig: {
-    readonly chainId: 11155111;
-    readonly gatewayChainId: 10901;
-    readonly relayerUrl: "https://relayer.testnet.zama.org/v2";
-    readonly network: "https://ethereum-sepolia-rpc.publicnode.com";
-    readonly aclContractAddress: "0xf0Ffdc93b7E186bC2f8CB3dAA75D86d1930A433D";
-    readonly kmsContractAddress: "0xbE0E383937d564D7FF0BC3b46c51f0bF8d5C311A";
-    readonly inputVerifierContractAddress: "0xBBC1fFCdc7C316aAAd72E807D9b0272BE8F84DA0";
-    readonly verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478";
-    readonly verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955";
-    readonly registryAddress: "0x2f0750Bbb0A246059d80e94c454586a7F27a128e";
-};
-
-// @public (undocumented)
-export interface SuccessResponse<T> extends BaseResponse {
-    // (undocumented)
-    data: T;
-    // (undocumented)
-    success: true;
-}
-
-// @public (undocumented)
+// Warning: (ae-internal-missing-underscore) The name "UpdateCsrfRequest" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
 export interface UpdateCsrfRequest extends BaseRequest {
     // (undocumented)
     payload: {
@@ -582,10 +607,14 @@ export interface UserDecryptParams {
     startTimestamp: number;
 }
 
-// @public (undocumented)
+// Warning: (ae-internal-missing-underscore) The name "UserDecryptPayload" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
 export type UserDecryptPayload = UserDecryptRequest["payload"];
 
-// @public (undocumented)
+// Warning: (ae-internal-missing-underscore) The name "UserDecryptRequest" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
 export interface UserDecryptRequest extends BaseRequest {
     // (undocumented)
     payload: {
@@ -603,20 +632,33 @@ export interface UserDecryptRequest extends BaseRequest {
     type: "USER_DECRYPT";
 }
 
-// @public (undocumented)
+// Warning: (ae-internal-missing-underscore) The name "UserDecryptResponseData" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
 export interface UserDecryptResponseData {
     // (undocumented)
     clearValues: Record<Handle, ClearValueType>;
 }
 
-// @public (undocumented)
+// Warning: (ae-internal-missing-underscore) The name "WorkerRequest" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
 export type WorkerRequest = InitRequest | NodeInitRequest | UpdateCsrfRequest | EncryptRequest | UserDecryptRequest | PublicDecryptRequest | GenerateKeypairRequest | CreateEIP712Request | CreateDelegatedEIP712Request | DelegatedUserDecryptRequest | RequestZKProofVerificationRequest | GetPublicKeyRequest | GetPublicParamsRequest;
 
-// @public (undocumented)
+// Warning: (ae-internal-missing-underscore) The name "WorkerRequestType" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
 export type WorkerRequestType = "INIT" | "NODE_INIT" | "UPDATE_CSRF" | "ENCRYPT" | "USER_DECRYPT" | "PUBLIC_DECRYPT" | "GENERATE_KEYPAIR" | "CREATE_EIP712" | "CREATE_DELEGATED_EIP712" | "DELEGATED_USER_DECRYPT" | "REQUEST_ZK_PROOF_VERIFICATION" | "GET_PUBLIC_KEY" | "GET_PUBLIC_PARAMS";
 
-// @public (undocumented)
+// Warning: (ae-internal-missing-underscore) The name "WorkerResponse" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
 export type WorkerResponse<T> = SuccessResponse<T> | ErrorResponse;
+
+// Warnings were encountered during analysis:
+//
+// dist/esm/node/index.d.ts:126:5 - (ae-incompatible-release-tags) The symbol "type" is marked as @public, but its signature references "WorkerRequestType" which is marked as @internal
+// dist/esm/node/index.d.ts:127:5 - (ae-incompatible-release-tags) The symbol "payload" is marked as @public, but its signature references "WorkerRequest" which is marked as @internal
 
 // (No @packageDocumentation comment for this package)
 
