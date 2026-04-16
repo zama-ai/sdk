@@ -85,9 +85,17 @@ describe("ReadonlyToken", () => {
     }) => {
       const token1 = new ReadonlyToken(sdk, tokenAddress);
       const token2 = new ReadonlyToken(sdk, TOKEN2);
-      vi.mocked(signer.readContract)
-        .mockResolvedValueOnce(handle)
-        .mockResolvedValueOnce(VALID_HANDLE2);
+      const normalizedToken2 = getAddress(TOKEN2);
+      // Both balanceOf calls run concurrently — key mocks by address.
+      vi.mocked(signer.readContract).mockImplementation(async ({ address }) => {
+        if (address === tokenAddress) {
+          return handle;
+        }
+        if (address === normalizedToken2) {
+          return VALID_HANDLE2;
+        }
+        throw new Error(`Unexpected readContract address ${address}`);
+      });
       vi.mocked(sdk.relayer.userDecrypt).mockResolvedValue({
         [handle]: 1000n,
         [VALID_HANDLE2]: 2000n,
@@ -110,20 +118,32 @@ describe("ReadonlyToken", () => {
     }) => {
       const token1 = new ReadonlyToken(sdk, tokenAddress);
       const token2 = new ReadonlyToken(sdk, TOKEN2);
-      vi.mocked(signer.readContract)
-        .mockResolvedValueOnce(handle)
-        .mockResolvedValueOnce(VALID_HANDLE2);
-      vi.mocked(sdk.relayer.userDecrypt)
-        .mockImplementationOnce(async ({ handles }) => ({ [handles[0]]: 1000n }))
-        .mockImplementationOnce(async () => {
+      const normalizedToken2 = getAddress(TOKEN2);
+      // Both balanceOf calls run concurrently via pLimit — key mocks by
+      // contract address so ordering doesn't matter.
+      vi.mocked(signer.readContract).mockImplementation(async ({ address }) => {
+        if (address === tokenAddress) {
+          return handle;
+        }
+        if (address === normalizedToken2) {
+          return VALID_HANDLE2;
+        }
+        throw new Error(`Unexpected readContract address ${address}`);
+      });
+      vi.mocked(sdk.relayer.userDecrypt).mockImplementation(
+        async ({ contractAddress, handles }) => {
+          if (contractAddress === tokenAddress) {
+            return { [handles[0]]: 1000n };
+          }
           throw new Error("relayer down for token2");
-        });
+        },
+      );
 
       const { results, errors } = await ReadonlyToken.batchBalancesOf([token1, token2]);
 
       expect(results.get(tokenAddress)).toBe(1000n);
-      expect(results.get(getAddress(TOKEN2))).toBeUndefined();
-      expect(errors.get(getAddress(TOKEN2))).toBeInstanceOf(ZamaError);
+      expect(results.get(normalizedToken2)).toBeUndefined();
+      expect(errors.get(normalizedToken2)).toBeInstanceOf(ZamaError);
     });
 
     it("throws when tokens come from different SDK instances", async ({
@@ -171,7 +191,9 @@ describe("ReadonlyToken", () => {
         .mockResolvedValueOnce(VALID_HANDLE2);
       const rawError = new TypeError("malformed response");
       vi.mocked(sdk.relayer.userDecrypt)
-        .mockImplementationOnce(async ({ handles }) => ({ [handles[0]]: 1000n }))
+        .mockImplementationOnce(async ({ handles }) => ({
+          [handles[0]]: 1000n,
+        }))
         .mockImplementationOnce(async () => {
           throw rawError;
         });
