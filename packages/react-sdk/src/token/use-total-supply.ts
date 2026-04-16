@@ -4,7 +4,7 @@ import { useQuery, useSuspenseQuery } from "../utils/query";
 import type { UseQueryOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
 import { totalSupplyQueryOptions } from "@zama-fhe/sdk/query";
-import { useReadonlyToken } from "./use-readonly-token";
+import { useZamaSDK } from "../provider";
 
 export { totalSupplyQueryOptions };
 
@@ -25,10 +25,10 @@ export function useTotalSupply(
   tokenAddress: Address,
   options?: Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn">,
 ) {
-  const token = useReadonlyToken(tokenAddress);
+  const sdk = useZamaSDK();
 
   return useQuery<bigint>({
-    ...totalSupplyQueryOptions(token.signer, tokenAddress),
+    ...totalSupplyQueryOptions(sdk.signer, tokenAddress),
     ...options,
   });
 }
@@ -46,7 +46,7 @@ export function useTotalSupply(
  * ```
  */
 export function useTotalSupplySuspense(tokenAddress: Address) {
-  const token = useReadonlyToken(tokenAddress);
+  const sdk = useZamaSDK();
 
-  return useSuspenseQuery<bigint>(totalSupplyQueryOptions(token.signer, tokenAddress));
+  return useSuspenseQuery<bigint>(totalSupplyQueryOptions(sdk.signer, tokenAddress));
 }

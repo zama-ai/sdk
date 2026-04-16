@@ -258,19 +258,19 @@ const handles = extractEncryptedHandles(items);
 
 ### applyDecryptedValues
 
-`(items: ActivityItem[], decryptedMap: Map<bigint, bigint>) => EnrichedActivityItem[]`
+`(items: ActivityItem[], decrypted: Readonly<Record<Handle, ClearValueType>>) => ActivityItem[]`
 
-Attaches decrypted amounts to activity items.
+Attaches decrypted amounts to activity items. Accepts the record returned directly from `sdk.userDecrypt()`.
 
 ```ts
-const enrichedItems = applyDecryptedValues(items, decryptedMap);
-// Each item now has .amount: bigint
+const enrichedItems = applyDecryptedValues(items, decrypted);
+// Each item now has .amount.decryptedValue: bigint
 ```
 
-| Parameter      | Type                  | Description                                       |
-| -------------- | --------------------- | ------------------------------------------------- |
-| `items`        | `ActivityItem[]`      | Items from `parseActivityFeed`                    |
-| `decryptedMap` | `Map<bigint, bigint>` | Handle-to-value map from `token.decryptHandles()` |
+| Parameter   | Type                                       | Description                                                     |
+| ----------- | ------------------------------------------ | --------------------------------------------------------------- |
+| `items`     | `ActivityItem[]`                           | Items from `parseActivityFeed`                                  |
+| `decrypted` | `Readonly<Record<Handle, ClearValueType>>` | Decrypted values keyed by handle, e.g. from `sdk.userDecrypt()` |
 
 ### sortByBlockNumber
 
@@ -307,11 +307,13 @@ const items = parseActivityFeed(logs, userAddress);
 // 3. Extract handles for decryption
 const handles = extractEncryptedHandles(items);
 
-// 4. Decrypt all handles in one batch
-const decryptedMap = await token.decryptHandles(handles);
+// 4. Decrypt all handles in one batch via sdk.userDecrypt
+const decrypted = await sdk.userDecrypt(
+  handles.map((handle) => ({ handle, contractAddress: tokenAddress })),
+);
 
 // 5. Attach decrypted amounts
-const enrichedItems = applyDecryptedValues(items, decryptedMap);
+const enrichedItems = applyDecryptedValues(items, decrypted);
 
 // 6. Sort newest first
 const feed = sortByBlockNumber(enrichedItems);
