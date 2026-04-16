@@ -1,6 +1,7 @@
 "use client";
 
-import { useAllow, type Address } from "@zama-fhe/react-sdk";
+import { useAllow } from "@zama-fhe/react-sdk";
+import type { Address } from "@zama-fhe/sdk";
 
 export function AllowAllPanel({ tokenAddresses }: { tokenAddresses: Address[] }) {
   const allow = useAllow();

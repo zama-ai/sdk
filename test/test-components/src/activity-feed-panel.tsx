@@ -1,13 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  useActivityFeed,
-  useMetadata,
-  TOKEN_TOPICS,
-  type Address,
-  type ActivityItem,
-} from "@zama-fhe/react-sdk";
+import { useActivityFeed, useMetadata } from "@zama-fhe/react-sdk";
+import { TOKEN_TOPICS, type Address, type ActivityItem } from "@zama-fhe/sdk";
 import { useAccount, usePublicClient } from "wagmi";
 import { formatUnits, type Hex } from "viem";
 

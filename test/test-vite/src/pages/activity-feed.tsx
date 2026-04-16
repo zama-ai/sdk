@@ -1,4 +1,4 @@
-import type { Address } from "@zama-fhe/react-sdk";
+import type { Address } from "@zama-fhe/sdk";
 import { useSearchParams } from "react-router";
 import { ActivityFeedPanel } from "@zama-fhe/test-components";
 import { DEFAULTS } from "../constants";

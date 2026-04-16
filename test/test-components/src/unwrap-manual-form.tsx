@@ -6,9 +6,8 @@ import {
   useFinalizeUnwrap,
   useConfidentialBalance,
   useMetadata,
-  findUnwrapRequested,
-  type Address,
 } from "@zama-fhe/react-sdk";
+import { findUnwrapRequested, type Address } from "@zama-fhe/sdk";
 
 export function UnwrapManualForm({
   tokenAddress,

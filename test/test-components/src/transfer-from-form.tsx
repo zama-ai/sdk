@@ -4,8 +4,8 @@ import {
   useConfidentialTransferFrom,
   useConfidentialBalance,
   useMetadata,
-  type Address,
 } from "@zama-fhe/react-sdk";
+import type { Address } from "@zama-fhe/sdk";
 
 export function TransferFromForm({
   tokenAddress,

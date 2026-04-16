@@ -1,11 +1,7 @@
 "use client";
 
-import {
-  useDelegationStatus,
-  useRevokeDelegation,
-  useMetadata,
-  type Address,
-} from "@zama-fhe/react-sdk";
+import { useDelegationStatus, useRevokeDelegation, useMetadata } from "@zama-fhe/react-sdk";
+import type { Address } from "@zama-fhe/sdk";
 
 export function DelegationStatusPanel({
   tokenAddress,
