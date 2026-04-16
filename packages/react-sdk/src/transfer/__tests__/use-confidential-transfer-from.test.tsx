@@ -35,10 +35,8 @@ describe("useConfidentialTransferFrom", () => {
     );
 
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
-    const activityKey = zamaQueryKeys.activityFeed.token(TOKEN);
     const otherBalanceKey = zamaQueryKeys.confidentialBalance.owner(OTHER_TOKEN, USER);
     queryClient.setQueryData(balanceKey, 1000n);
-    queryClient.setQueryData(activityKey, [{ id: "evt-1" }]);
     queryClient.setQueryData(otherBalanceKey, 777n);
 
     await act(() =>
@@ -49,7 +47,7 @@ describe("useConfidentialTransferFrom", () => {
       }),
     );
 
-    expectInvalidatedQueries(queryClient, [balanceKey, activityKey]);
+    expectInvalidatedQueries(queryClient, [balanceKey]);
     expectCacheUntouched(queryClient, otherBalanceKey, 777n);
   });
 

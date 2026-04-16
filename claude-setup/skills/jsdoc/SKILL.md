@@ -207,7 +207,7 @@ No JSDoc when the name + values are self-documenting. Add JSDoc on properties on
 
 ```ts
 // GOOD — self-documenting string union, no JSDoc needed
-export type ActivityDirection = "incoming" | "outgoing" | "self";
+export type RelayerSDKStatus = "idle" | "initializing" | "ready" | "error";
 
 // GOOD — protocol struct needs a one-liner (domain-specific fields)
 /** Parameters for a user-decrypt request to the KMS relayer. Produced by the EIP-712 signing flow. */
@@ -224,8 +224,8 @@ export interface UserDecryptParams {
 }
 
 // BAD — restates the obvious on a self-documenting type
-/** Direction of an activity item relative to the connected wallet. */
-export type ActivityDirection = "incoming" | "outgoing" | "self";
+/** Lifecycle status of the relayer SDK. */
+export type RelayerSDKStatus = "idle" | "initializing" | "ready" | "error";
 
 // BAD — protocol struct with no context (reader has no idea if they construct this)
 export interface UserDecryptParams {
@@ -233,22 +233,30 @@ export interface UserDecryptParams {
   // ... 8 more opaque fields
 }
 
-// GOOD — property JSDoc adds non-obvious context
-export type ActivityAmount =
-  | { readonly type: "clear"; readonly value: bigint }
+// GOOD — property JSDoc adds non-obvious context on a discriminated union
+export type EncryptInput =
   | {
-      readonly type: "encrypted";
-      readonly handle: Handle;
-      /** Populated after batch decryption via {@link applyDecryptedValues}. */
-      readonly decryptedValue?: bigint;
+      /** Accepts `boolean` or `bigint` (0n/1n) for convenience. */
+      value: boolean | bigint;
+      type: "ebool";
+    }
+  | {
+      value: bigint;
+      type: Exclude<SDK.FheTypeName, "ebool" | "eaddress">;
+    }
+  | {
+      value: Address;
+      type: "eaddress";
     };
 
 // BAD — property JSDoc restates the name
-export interface ActivityItem {
-  /** Classified event type. */
-  readonly type: ActivityType;
-  /** Direction relative to the connected wallet. */
-  readonly direction: ActivityDirection;
+export interface ConfidentialTransferEvent {
+  /** Name of the event. */
+  readonly eventName: "ConfidentialTransfer";
+  /** Sender address. */
+  readonly from: Address;
+  /** Receiver address. */
+  readonly to: Address;
 }
 ```
 

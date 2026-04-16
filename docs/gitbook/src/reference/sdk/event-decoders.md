@@ -1,11 +1,11 @@
 ---
 title: Event decoders
-description: Decode on-chain logs into typed event objects and build activity feeds.
+description: Decode on-chain logs into typed event objects.
 ---
 
 # Event decoders
 
-Utilities for decoding raw `eth_getLogs` entries into typed event objects and assembling user-facing activity feeds.
+Utilities for decoding raw `eth_getLogs` entries into typed event objects.
 
 ## Import
 
@@ -28,11 +28,6 @@ import {
   decodeAclEvents,
   findDelegatedForUserDecryption,
   findRevokedDelegationForUserDecryption,
-  // Activity feed
-  parseActivityFeed,
-  extractEncryptedHandles,
-  applyDecryptedValues,
-  sortByBlockNumber,
 } from "@zama-fhe/sdk";
 ```
 
@@ -226,101 +221,7 @@ const logs = await publicClient.getLogs({
 ACL delegation events are **not** included in `TOKEN_TOPICS` or `decodeOnChainEvents`. They are emitted by the ACL contract, not by token contracts. Use `ACL_TOPICS` and `decodeAclEvents` separately.
 {% endhint %}
 
-## Activity feed utilities
-
-Build a complete activity feed from raw logs with encrypted amount decryption.
-
-### parseActivityFeed
-
-`(logs: Log[], userAddress: Address) => ActivityItem[]`
-
-Parses raw logs into classified activity items (transfers, shields, unshields) relative to the given user address. Items include direction ("sent", "received", "shielded", "unshielded") and raw encrypted handles.
-
-```ts
-const items = parseActivityFeed(logs, userAddress);
-// [{ type: "transfer", direction: "sent", handle: "0x...", ... }, ...]
-```
-
-| Parameter     | Type      | Description                         |
-| ------------- | --------- | ----------------------------------- |
-| `logs`        | `Log[]`   | Raw log entries                     |
-| `userAddress` | `Address` | User address to determine direction |
-
-### extractEncryptedHandles
-
-`(items: ActivityItem[]) => bigint[]`
-
-Extracts all unique encrypted handles from activity items for batch decryption.
-
-```ts
-const handles = extractEncryptedHandles(items);
-```
-
-### applyDecryptedValues
-
-`(items: ActivityItem[], decrypted: Readonly<Record<Handle, ClearValueType>>) => ActivityItem[]`
-
-Attaches decrypted amounts to activity items. Accepts the record returned directly from `sdk.userDecrypt()`.
-
-```ts
-const enrichedItems = applyDecryptedValues(items, decrypted);
-// Each item now has .amount.decryptedValue: bigint
-```
-
-| Parameter   | Type                                       | Description                                                     |
-| ----------- | ------------------------------------------ | --------------------------------------------------------------- |
-| `items`     | `ActivityItem[]`                           | Items from `parseActivityFeed`                                  |
-| `decrypted` | `Readonly<Record<Handle, ClearValueType>>` | Decrypted values keyed by handle, e.g. from `sdk.userDecrypt()` |
-
-### sortByBlockNumber
-
-`(items: ActivityItem[]) => ActivityItem[]`
-
-Returns a new array sorted by block number, newest first.
-
-```ts
-const sorted = sortByBlockNumber(enrichedItems);
-```
-
-## Full pipeline example
-
-```ts
-import {
-  parseActivityFeed,
-  extractEncryptedHandles,
-  applyDecryptedValues,
-  sortByBlockNumber,
-  TOKEN_TOPICS,
-} from "@zama-fhe/sdk";
-
-// 1. Fetch logs
-const logs = await publicClient.getLogs({
-  address: tokenAddress,
-  topics: [TOKEN_TOPICS],
-  fromBlock: startBlock,
-  toBlock: "latest",
-});
-
-// 2. Parse into classified activity items
-const items = parseActivityFeed(logs, userAddress);
-
-// 3. Extract handles for decryption
-const handles = extractEncryptedHandles(items);
-
-// 4. Decrypt all handles in one batch via sdk.userDecrypt
-const decrypted = await sdk.userDecrypt(
-  handles.map((handle) => ({ handle, contractAddress: tokenAddress })),
-);
-
-// 5. Attach decrypted amounts
-const enrichedItems = applyDecryptedValues(items, decrypted);
-
-// 6. Sort newest first
-const feed = sortByBlockNumber(enrichedItems);
-```
-
 ## Related
 
-- [Activity Feeds guide](/guides/activity-feeds) — activity feed usage in context
 - [Delegated Decryption](/reference/sdk/delegation) — delegation API with on-chain event examples
 - [Token](/reference/sdk/Token) — high-level API for token operations
