@@ -14,8 +14,6 @@ Otherwise:
 
 🟨 Go to [**Session model**](session-model.md) to learn how FHE keypairs and wallet signatures are managed.
 
-🟨 Go to [**Two-phase polling**](two-phase-polling.md) to understand how balance updates are detected efficiently.
-
 🟨 Go to [**Security model**](security-model.md) for the full threat model and trust assumptions.
 
 ## Help center
