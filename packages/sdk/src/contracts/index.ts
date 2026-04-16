@@ -11,7 +11,12 @@ export {
   rateContract,
 } from "./encrypted";
 
-export { finalizeUnwrapContract, underlyingContract, wrapContract } from "./wrapper";
+export {
+  finalizeUnwrapContract,
+  underlyingContract,
+  inferredTotalSupplyContract,
+  wrapContract,
+} from "./wrapper";
 
 export {
   nameContract,
