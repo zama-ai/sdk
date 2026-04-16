@@ -63,6 +63,11 @@ for (const event of events) {
       console.log(event.receiver, event.unwrapRequestId ?? event.encryptedAmount);
       break;
     case "UnwrapFinalized":
+      // Emitted by upgraded wrappers (unwrapRequestId present)
+      console.log(event.receiver, event.cleartextAmount);
+      break;
+    case "UnwrappedFinalized":
+      // Emitted by legacy wrappers (no unwrapRequestId) — handle during protocol transition
       console.log(event.receiver, event.cleartextAmount);
       break;
   }
@@ -73,7 +78,7 @@ for (const event of events) {
 | --------- | ------- | ----------------------------------------------------------- |
 | `logs`    | `Log[]` | Raw log entries from `eth_getLogs` or a transaction receipt |
 
-**Returns:** `DecodedEvent[]` — each event has an `.eventName` of `"ConfidentialTransfer"`, `"Wrapped"`, `"UnwrapRequested"`, `"UnwrapFinalized"`, or `"UnwrappedStarted"`.
+**Returns:** `DecodedEvent[]` — each event has an `.eventName` of `"ConfidentialTransfer"`, `"Wrapped"`, `"UnwrapRequested"`, `"UnwrapFinalized"`, `"UnwrappedFinalized"` (legacy), or `"UnwrappedStarted"`. During the protocol transition, finalize events from pre-upgrade wrappers have `eventName: "UnwrappedFinalized"`; those from upgraded wrappers have `eventName: "UnwrapFinalized"`.
 
 ## TOKEN_TOPICS
 
@@ -263,19 +268,19 @@ const handles = extractEncryptedHandles(items);
 
 ### applyDecryptedValues
 
-`(items: ActivityItem[], decryptedMap: Map<bigint, bigint>) => EnrichedActivityItem[]`
+`(items: ActivityItem[], decrypted: Readonly<Record<Handle, ClearValueType>>) => ActivityItem[]`
 
-Attaches decrypted amounts to activity items.
+Attaches decrypted amounts to activity items. Accepts the record returned directly from `sdk.userDecrypt()`.
 
 ```ts
-const enrichedItems = applyDecryptedValues(items, decryptedMap);
-// Each item now has .amount: bigint
+const enrichedItems = applyDecryptedValues(items, decrypted);
+// Each item now has .amount.decryptedValue: bigint
 ```
 
-| Parameter      | Type                  | Description                                       |
-| -------------- | --------------------- | ------------------------------------------------- |
-| `items`        | `ActivityItem[]`      | Items from `parseActivityFeed`                    |
-| `decryptedMap` | `Map<bigint, bigint>` | Handle-to-value map from `token.decryptHandles()` |
+| Parameter   | Type                                       | Description                                                     |
+| ----------- | ------------------------------------------ | --------------------------------------------------------------- |
+| `items`     | `ActivityItem[]`                           | Items from `parseActivityFeed`                                  |
+| `decrypted` | `Readonly<Record<Handle, ClearValueType>>` | Decrypted values keyed by handle, e.g. from `sdk.userDecrypt()` |
 
 ### sortByBlockNumber
 
@@ -312,11 +317,13 @@ const items = parseActivityFeed(logs, userAddress);
 // 3. Extract handles for decryption
 const handles = extractEncryptedHandles(items);
 
-// 4. Decrypt all handles in one batch
-const decryptedMap = await token.decryptHandles(handles);
+// 4. Decrypt all handles in one batch via sdk.userDecrypt
+const decrypted = await sdk.userDecrypt(
+  handles.map((handle) => ({ handle, contractAddress: tokenAddress })),
+);
 
 // 5. Attach decrypted amounts
-const enrichedItems = applyDecryptedValues(items, decryptedMap);
+const enrichedItems = applyDecryptedValues(items, decrypted);
 
 // 6. Sort newest first
 const feed = sortByBlockNumber(enrichedItems);

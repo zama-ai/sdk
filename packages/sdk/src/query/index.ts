@@ -43,21 +43,11 @@ export {
 export { publicKeyQueryOptions, type PublicKeyQueryConfig } from "./public-key";
 export { publicParamsQueryOptions, type PublicParamsQueryConfig } from "./public-params";
 export {
-  confidentialHandleQueryOptions,
-  type ConfidentialHandleQueryConfig,
-} from "./confidential-handle";
-export {
   confidentialBalanceQueryOptions,
   type ConfidentialBalanceQueryConfig,
-  type EncryptedBalanceHandle,
 } from "./confidential-balance";
 export {
-  confidentialHandlesQueryOptions,
-  type ConfidentialHandlesQueryConfig,
-} from "./confidential-handles";
-export {
   confidentialBalancesQueryOptions,
-  type ConfidentialBalancesData,
   type ConfidentialBalancesQueryConfig,
 } from "./confidential-balances";
 export {
@@ -163,13 +153,8 @@ export type {
   UserDecryptParams,
 } from "../relayer/relayer-sdk.types";
 export type { RelayerSDK } from "../relayer/relayer-sdk";
-export type {
-  BatchDecryptOptions,
-  BatchDecryptAsOptions,
-  ReadonlyTokenConfig,
-} from "../token/readonly-token";
+export type { BatchBalancesResult, BatchDecryptAsOptions } from "../token/readonly-token";
 export type { ReadonlyToken } from "../token/readonly-token";
-export type { TokenConfig } from "../token/token";
 export type { Token } from "../token/token";
 export type { ZamaSDKConfig } from "../zama-sdk";
 export type { ZamaSDK } from "../zama-sdk";

@@ -258,14 +258,14 @@ export function extractEncryptedHandles(items: readonly ActivityItem[]): Handle[
  */
 export function applyDecryptedValues(
   items: readonly ActivityItem[],
-  decryptedMap: ReadonlyMap<Handle, ClearValueType>,
+  decrypted: Readonly<Record<Handle, ClearValueType>>,
 ): ActivityItem[] {
   return items.map((item) => {
     if (item.amount.type !== "encrypted") {
       return item;
     }
 
-    const value = decryptedMap.get(item.amount.handle);
+    const value = decrypted[item.amount.handle];
     if (value === undefined) {
       return item;
     }

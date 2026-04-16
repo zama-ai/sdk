@@ -270,15 +270,31 @@ const results = await Token.batchRevokeDelegation(tokens, "0xDelegate");
 The unshield flow is two-phase: unwrap tx, then finalize. If the page reloads between phases, the unwrap tx hash is lost. Use these utilities to persist it:
 
 ```ts
-import { savePendingUnshield, loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/sdk";
+import {
+  savePendingUnshield,
+  loadPendingUnshield,
+  loadPendingUnshieldRequest,
+  clearPendingUnshield,
+} from "@zama-fhe/sdk";
 
-// Save the unwrap hash before finalization
-await savePendingUnshield(storage, wrapperAddress, unwrapTxHash);
+// Save before finalization.
+// Pass unwrapRequestId from upgraded UnwrapRequested events when available.
+const event = findUnwrapRequested(receipt.logs);
+await savePendingUnshield(storage, wrapperAddress, unwrapTxHash, event.unwrapRequestId);
 
-// On next load, check for pending unshields
+// On next load, resume with the tx hash only (works for both legacy and upgraded wrappers)
 const pending = await loadPendingUnshield(storage, wrapperAddress);
 if (pending) {
   await token.resumeUnshield(pending);
+  await clearPendingUnshield(storage, wrapperAddress);
+}
+
+// Or load the full request object to access unwrapRequestId directly
+const request = await loadPendingUnshieldRequest(storage, wrapperAddress);
+if (request) {
+  // request.unwrapTxHash — always present
+  // request.unwrapRequestId — present for requests from upgraded wrappers
+  await token.resumeUnshield(request.unwrapTxHash);
   await clearPendingUnshield(storage, wrapperAddress);
 }
 ```

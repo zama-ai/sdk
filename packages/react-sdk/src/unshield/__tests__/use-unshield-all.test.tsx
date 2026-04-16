@@ -40,26 +40,21 @@ describe("useUnshieldAll", () => {
       useUnshieldAll({ tokenAddress: TOKEN }),
     );
 
-    const handleKey = zamaQueryKeys.confidentialHandle.token(TOKEN);
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
     const allowanceKey = zamaQueryKeys.underlyingAllowance.token(TOKEN);
-    const otherHandleKey = zamaQueryKeys.confidentialHandle.token(OTHER_TOKEN);
-    const otherBalanceKey = zamaQueryKeys.confidentialBalance.owner(OTHER_TOKEN, USER, HANDLE);
+    const otherBalanceKey = zamaQueryKeys.confidentialBalance.owner(OTHER_TOKEN, USER);
     const otherAllowanceKey = zamaQueryKeys.underlyingAllowance.token(OTHER_TOKEN);
 
-    queryClient.setQueryData(handleKey, HANDLE);
     queryClient.setQueryData(balanceKey, 3000n);
     queryClient.setQueryData(allowanceKey, 500n);
     queryClient.setQueryData(WAGMI_BALANCE_KEY, 2000n);
-    queryClient.setQueryData(otherHandleKey, HANDLE);
     queryClient.setQueryData(otherBalanceKey, 777n);
     queryClient.setQueryData(otherAllowanceKey, 333n);
 
     await act(() => result.current.mutateAsync());
 
-    expectInvalidatedQueries(queryClient, [handleKey, balanceKey, allowanceKey]);
+    expectInvalidatedQueries(queryClient, [balanceKey, allowanceKey]);
     expectCacheInvalidated(queryClient, WAGMI_BALANCE_KEY);
-    expectCacheUntouched(queryClient, otherHandleKey, HANDLE);
     expectCacheUntouched(queryClient, otherBalanceKey, 777n);
     expectCacheUntouched(queryClient, otherAllowanceKey, 333n);
   });
@@ -75,8 +70,7 @@ describe("useUnshieldAll", () => {
     });
     mockPublicDecrypt(relayer);
 
-    const handleKey = zamaQueryKeys.confidentialHandle.token(TOKEN);
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
     const allowanceKey = zamaQueryKeys.underlyingAllowance.token(TOKEN);
     const onSuccess = vi.fn();
 
@@ -84,7 +78,6 @@ describe("useUnshieldAll", () => {
       useUnshieldAll({ tokenAddress: TOKEN }, { onSuccess }),
     );
 
-    queryClient.setQueryData(handleKey, HANDLE);
     queryClient.setQueryData(balanceKey, 3000n);
     queryClient.setQueryData(allowanceKey, 500n);
     queryClient.setQueryData(WAGMI_BALANCE_KEY, 2000n);
@@ -93,7 +86,7 @@ describe("useUnshieldAll", () => {
       () => result.current.mutateAsync(),
       onSuccess,
       (client) => {
-        expectInvalidatedQueries(client, [handleKey, balanceKey, allowanceKey]);
+        expectInvalidatedQueries(client, [balanceKey, allowanceKey]);
         expectCacheInvalidated(client, WAGMI_BALANCE_KEY);
       },
       { variables: "undefined" },

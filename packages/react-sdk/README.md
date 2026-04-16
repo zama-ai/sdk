@@ -491,14 +491,26 @@ Save the unwrap tx hash before finalization so interrupted unshields can be resu
 import {
   savePendingUnshield,
   loadPendingUnshield,
+  loadPendingUnshieldRequest,
   clearPendingUnshield,
+  type PendingUnshieldRequest,
 } from "@zama-fhe/react-sdk";
 
-// Save before the finalize step
-await savePendingUnshield(storage, wrapperAddress, unwrapTxHash);
+// Save before the finalize step.
+// Pass unwrapRequestId from upgraded UnwrapRequested events when available.
+const event = findUnwrapRequested(receipt.logs);
+await savePendingUnshield(storage, wrapperAddress, unwrapTxHash, event.unwrapRequestId);
 
-// Load on next visit
+// On next visit: resume with the tx hash (works for both legacy and upgraded wrappers)
 const pending = await loadPendingUnshield(storage, wrapperAddress);
+
+// Or load the full request to access unwrapRequestId directly
+const request: PendingUnshieldRequest | null = await loadPendingUnshieldRequest(
+  storage,
+  wrapperAddress,
+);
+// request.unwrapTxHash    — always present
+// request.unwrapRequestId — present only for requests from upgraded wrappers
 
 // Clear after successful finalization
 await clearPendingUnshield(storage, wrapperAddress);
@@ -797,8 +809,6 @@ import { zamaQueryKeys, decryptionKeys } from "@zama-fhe/react-sdk";
 | ------------------------------------ | --------------------------------------------------------------------------- | ----------------------------------- |
 | `zamaQueryKeys.confidentialBalance`  | `.all`, `.token(address)`, `.owner(address, owner)`                         | Single-token decrypted balance.     |
 | `zamaQueryKeys.confidentialBalances` | `.all`, `.tokens(addresses, owner)`                                         | Multi-token batch balances.         |
-| `zamaQueryKeys.confidentialHandle`   | `.all`, `.token(address)`, `.owner(address, owner)`                         | Single-token encrypted handle.      |
-| `zamaQueryKeys.confidentialHandles`  | `.all`, `.tokens(addresses, owner)`                                         | Multi-token batch handles.          |
 | `zamaQueryKeys.isAllowed`            | `.all`                                                                      | Session signature status.           |
 | `zamaQueryKeys.underlyingAllowance`  | `.all`, `.token(address)`, `.scope(address, owner, wrapper)`                | Underlying ERC-20 allowance.        |
 | `zamaQueryKeys.activityFeed`         | `.all`, `.token(address)`, `.scope(address, userAddress, logsKey, decrypt)` | Activity feed items.                |
@@ -945,7 +955,7 @@ All public exports from `@zama-fhe/sdk` are re-exported from the main entry poin
 
 **Network configs:** `SepoliaConfig`, `MainnetConfig`, `HardhatConfig`.
 
-**Pending unshield:** `savePendingUnshield`, `loadPendingUnshield`, `clearPendingUnshield`.
+**Pending unshield:** `savePendingUnshield`, `loadPendingUnshield`, `loadPendingUnshieldRequest`, `clearPendingUnshield`. Type: `PendingUnshieldRequest`.
 
 **Types:** `Address`, `ZamaSDKConfig`, `ReadonlyTokenConfig`, `NetworkType`, `RelayerSDK`, `RelayerSDKStatus`, `EncryptResult`, `EncryptParams`, `UserDecryptParams`, `PublicDecryptResult`, `KeypairType`, `EIP712TypedData`, `DelegatedUserDecryptParams`, `KmsDelegatedUserDecryptEIP712Type`, `ZKProofLike`, `InputProofBytesType`, `StoredCredentials`, `GenericSigner`, `GenericStorage`, `TransactionReceipt`, `TransactionResult`, `UnshieldCallbacks`.
 

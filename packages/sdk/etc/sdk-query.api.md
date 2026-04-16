@@ -114,6 +114,13 @@ export interface BaseEvent {
 }
 
 // @public
+export interface BatchBalancesResult {
+    // Warning: (ae-forgotten-export) The symbol "ZamaError" needs to be exported by the entry point index.d.ts
+    errors: Map<Address, ZamaError>;
+    results: Map<Address, bigint>;
+}
+
+// @public
 export interface BatchDecryptAsOptions {
     delegatorAddress: Address;
     handles?: Handle[];
@@ -127,14 +134,6 @@ export function batchDecryptBalancesAsMutationOptions(tokens: ReadonlyToken[]): 
 
 // @public
 export type BatchDecryptBalancesAsParams = BatchDecryptAsOptions;
-
-// @public
-export interface BatchDecryptOptions {
-    handles?: Handle[];
-    maxConcurrency?: number;
-    onError?: (error: Error, address: Address) => bigint;
-    owner?: Address;
-}
 
 // @public
 export type ClearValueType = bigint | boolean | `0x${string}`;
@@ -153,65 +152,26 @@ export interface ConfidentialApproveParams {
 // @public (undocumented)
 export interface ConfidentialBalanceQueryConfig {
     // (undocumented)
-    handle?: EncryptedBalanceHandle;
-    // (undocumented)
     owner?: Address;
     // (undocumented)
     query?: Record<string, unknown>;
+    // (undocumented)
+    tokenAddress: Address;
 }
 
 // @public (undocumented)
-export function confidentialBalanceQueryOptions(token: ReadonlyToken, config?: ConfidentialBalanceQueryConfig): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.confidentialBalance.owner>>;
-
-// @public
-export interface ConfidentialBalancesData {
-    balances: Map<Address, bigint>;
-    errors: Map<Address, Error>;
-    isPartialError: boolean;
-}
+export function confidentialBalanceQueryOptions(token: ReadonlyToken, config: ConfidentialBalanceQueryConfig): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.confidentialBalance.owner>>;
 
 // @public (undocumented)
 export interface ConfidentialBalancesQueryConfig {
     // (undocumented)
-    handles?: EncryptedBalanceHandle[];
-    // (undocumented)
-    maxConcurrency?: number;
-    // (undocumented)
     owner?: Address;
-    // (undocumented)
-    query?: Record<string, unknown>;
-    // (undocumented)
-    resultAddresses?: Address[];
-}
-
-// @public (undocumented)
-export function confidentialBalancesQueryOptions(tokens: ReadonlyToken[], config?: ConfidentialBalancesQueryConfig): QueryFactoryOptions<ConfidentialBalancesData, Error, ConfidentialBalancesData, ReturnType<typeof zamaQueryKeys.confidentialBalances.tokens>>;
-
-// @public (undocumented)
-export interface ConfidentialHandleQueryConfig {
-    // (undocumented)
-    owner?: Address;
-    // (undocumented)
-    pollingInterval?: number;
     // (undocumented)
     query?: Record<string, unknown>;
 }
 
 // @public (undocumented)
-export function confidentialHandleQueryOptions(signer: GenericSigner, tokenAddress: Address, config?: ConfidentialHandleQueryConfig): QueryFactoryOptions<Handle, Error, Handle, ReturnType<typeof zamaQueryKeys.confidentialHandle.owner>>;
-
-// @public (undocumented)
-export interface ConfidentialHandlesQueryConfig {
-    // (undocumented)
-    owner?: Address;
-    // (undocumented)
-    pollingInterval?: number;
-    // (undocumented)
-    query?: Record<string, unknown>;
-}
-
-// @public (undocumented)
-export function confidentialHandlesQueryOptions(signer: GenericSigner, tokenAddresses: Address[], config?: ConfidentialHandlesQueryConfig): QueryFactoryOptions<Handle[], Error, Handle[], ReturnType<typeof zamaQueryKeys.confidentialHandles.tokens>>;
+export function confidentialBalancesQueryOptions(tokens: ReadonlyToken[], config?: ConfidentialBalancesQueryConfig): QueryFactoryOptions<BatchBalancesResult, Error, BatchBalancesResult, ReturnType<typeof zamaQueryKeys.confidentialBalances.tokens>>;
 
 // @public (undocumented)
 export interface ConfidentialIsApprovedQueryConfig {
@@ -551,9 +511,6 @@ export interface EIP712TypedData {
 }
 
 // @public (undocumented)
-export type EncryptedBalanceHandle = Handle;
-
-// @public (undocumented)
 export interface EncryptEndEvent extends BaseEvent {
     // (undocumented)
     durationMs: number;
@@ -697,7 +654,7 @@ export interface IsAllowedQueryConfig {
     account: Address;
     contractAddresses: [Address, ...Address[]];
     // (undocumented)
-    query?: QueryObserverOptions<boolean, Error, boolean, boolean, ReturnType<typeof zamaQueryKeys.isAllowed.scope>>;
+    query?: Record<string, unknown>;
 }
 
 // @public (undocumented)
@@ -833,34 +790,22 @@ export interface RawLog {
 
 // @public
 export class ReadonlyToken {
-    constructor(config: ReadonlyTokenConfig);
+    constructor(sdk: ZamaSDK, address: Address);
     // (undocumented)
     readonly address: Address;
     allow(): Promise<void>;
     static allow(...tokens: ReadonlyToken[]): Promise<void>;
     allowance(wrapper: Address, owner?: Address): Promise<bigint>;
     balanceOf(owner?: Address): Promise<bigint>;
-    static batchDecryptBalances(tokens: ReadonlyToken[], options?: BatchDecryptOptions): Promise<Map<Address, bigint>>;
+    static batchBalancesOf(tokens: ReadonlyToken[], owner?: Address): Promise<BatchBalancesResult>;
     static batchDecryptBalancesAs(tokens: ReadonlyToken[], options: BatchDecryptAsOptions): Promise<Map<Address, bigint>>;
-    // Warning: (ae-forgotten-export) The symbol "DecryptCache" needs to be exported by the entry point index.d.ts
-    //
-    // (undocumented)
-    readonly cache: DecryptCache;
     confidentialBalanceOf(owner?: Address): Promise<Handle>;
-    // (undocumented)
-    protected readonly credentials: CredentialsManager;
     decimals(): Promise<number>;
-    decryptBalance(handle: Handle, owner?: Address): Promise<bigint>;
     decryptBalanceAs(input: {
         delegatorAddress: Address;
         owner?: Address;
     }): Promise<bigint>;
-    decryptHandles(handles: Handle[], owner?: Address): Promise<Map<Handle, ClearValueType>>;
-    // Warning: (ae-forgotten-export) The symbol "DelegatedCredentialsManager" needs to be exported by the entry point index.d.ts
-    //
-    // (undocumented)
-    protected readonly delegatedCredentials: DelegatedCredentialsManager;
-    protected emit(partial: ZamaSDKEventInput): void;
+    protected emit(input: ZamaSDKEventInput): void;
     // (undocumented)
     protected getAclAddress(): Promise<Address>;
     getDelegationExpiry(input: {
@@ -874,37 +819,16 @@ export class ReadonlyToken {
         delegateAddress: Address;
     }): Promise<boolean>;
     isWrapper(): Promise<boolean>;
-    // Warning: (ae-forgotten-export) The symbol "ZERO_HANDLE_2" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
-    isZeroHandle(handle: string): handle is typeof ZERO_HANDLE_2 | `0x`;
+    isZeroHandle(handle: string): handle is typeof ZERO_HANDLE | `0x`;
     name(): Promise<string>;
     // (undocumented)
     protected readConfidentialBalanceOf(owner: Address): Promise<Handle>;
-    // (undocumented)
-    protected readonly relayer: RelayerSDK;
     revoke(...contractAddresses: Address[]): Promise<void>;
     // (undocumented)
-    readonly signer: GenericSigner;
-    // (undocumented)
-    readonly storage: GenericStorage;
+    readonly sdk: ZamaSDK;
     symbol(): Promise<string>;
     underlyingToken(): Promise<Address>;
-}
-
-// @public
-export interface ReadonlyTokenConfig {
-    address: Address;
-    cache?: DecryptCache;
-    credentials?: CredentialsManager;
-    delegatedCredentials?: DelegatedCredentialsManager;
-    keypairTTL?: number;
-    onEvent?: ZamaSDKEventListener;
-    relayer: RelayerSDK;
-    sessionStorage: GenericStorage;
-    sessionTTL?: number | "infinite";
-    signer: GenericSigner;
-    storage: GenericStorage;
 }
 
 // @public
@@ -1032,12 +956,11 @@ export interface StoredCredentials {
 // @public (undocumented)
 export type StrippedQueryOptionKeys = "gcTime" | "staleTime" | "enabled" | "select" | "refetchInterval" | "refetchOnMount" | "refetchOnWindowFocus" | "refetchOnReconnect" | "retry" | "retryDelay" | "retryOnMount" | "queryFn" | "queryKey" | "queryKeyHashFn" | "initialData" | "initialDataUpdatedAt" | "placeholderData" | "structuralSharing" | "throwOnError" | "meta" | "query" | "pollingInterval";
 
-// @public (undocumented)
+// @public
 export class Token extends ReadonlyToken {
-    constructor(config: TokenConfig);
+    constructor(sdk: ZamaSDK, address: Address, wrapper?: Address);
     approve(spender: Address, until?: number): Promise<TransactionResult>;
     approveUnderlying(amount?: bigint): Promise<TransactionResult>;
-    // Warning: (ae-forgotten-export) The symbol "ZamaError" needs to be exported by the entry point index.d.ts
     static batchDelegateDecryption(input: {
         tokens: Token[];
         delegateAddress: Address;
@@ -1078,11 +1001,6 @@ export interface TokenAddressQueryConfig extends WrappersRegistryQueryConfig {
 
 // @public (undocumented)
 export function tokenAddressQueryOptions(signer: GenericSigner, config: TokenAddressQueryConfig): QueryFactoryOptions<readonly [boolean, Address], Error, readonly [boolean, Address], ReturnType<typeof zamaQueryKeys.wrappersRegistry.tokenAddress>>;
-
-// @public
-export interface TokenConfig extends ReadonlyTokenConfig {
-    wrapper?: Address;
-}
 
 // @public
 export interface TokenMetadata {
@@ -1382,38 +1300,19 @@ export const zamaQueryKeys: {
             readonly tokenAddress: `0x${string}`;
         }];
     };
-    readonly confidentialHandle: {
-        readonly all: readonly ["zama.confidentialHandle"];
-        readonly token: (tokenAddress: Address) => readonly ["zama.confidentialHandle", {
-            readonly tokenAddress: `0x${string}`;
-        }];
-        readonly owner: (tokenAddress: Address, owner?: Address) => readonly ["zama.confidentialHandle", {
-            readonly owner?: `0x${string}` | undefined;
-            readonly tokenAddress: `0x${string}`;
-        }];
-    };
     readonly confidentialBalance: {
         readonly all: readonly ["zama.confidentialBalance"];
         readonly token: (tokenAddress: Address) => readonly ["zama.confidentialBalance", {
             readonly tokenAddress: `0x${string}`;
         }];
-        readonly owner: (tokenAddress: Address, owner?: Address, handle?: Handle) => readonly ["zama.confidentialBalance", {
-            readonly handle?: `0x${string}` | undefined;
+        readonly owner: (tokenAddress: Address, owner?: Address) => readonly ["zama.confidentialBalance", {
             readonly owner?: `0x${string}` | undefined;
             readonly tokenAddress: `0x${string}`;
         }];
     };
-    readonly confidentialHandles: {
-        readonly all: readonly ["zama.confidentialHandles"];
-        readonly tokens: (tokenAddresses: Address[], owner?: Address) => readonly ["zama.confidentialHandles", {
-            readonly owner?: `0x${string}` | undefined;
-            readonly tokenAddresses: `0x${string}`[];
-        }];
-    };
     readonly confidentialBalances: {
         readonly all: readonly ["zama.confidentialBalances"];
-        readonly tokens: (tokenAddresses: Address[], owner?: Address, handles?: Handle[]) => readonly ["zama.confidentialBalances", {
-            readonly handles?: `0x${string}`[] | undefined;
+        readonly tokens: (tokenAddresses: Address[], owner?: Address) => readonly ["zama.confidentialBalances", {
             readonly owner?: `0x${string}` | undefined;
             readonly tokenAddresses: `0x${string}`[];
         }];
@@ -1585,15 +1484,20 @@ export class ZamaSDK {
     [Symbol.dispose](): void;
     constructor(config: ZamaSDKConfig);
     allow(contractAddresses: Address[]): Promise<void>;
+    // Warning: (ae-forgotten-export) The symbol "DecryptCache" needs to be exported by the entry point index.d.ts
     readonly cache: DecryptCache;
     createReadonlyToken(address: Address): ReadonlyToken;
     createToken(address: Address, wrapper?: Address): Token;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
     // (undocumented)
     readonly credentials: CredentialsManager;
+    // Warning: (ae-forgotten-export) The symbol "DelegatedCredentialsManager" needs to be exported by the entry point index.d.ts
+    //
     // (undocumented)
     readonly delegatedCredentials: DelegatedCredentialsManager;
     dispose(): void;
+    // @internal
+    emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
     readonly registry: WrappersRegistry;
     // (undocumented)
     readonly relayer: RelayerSDK;

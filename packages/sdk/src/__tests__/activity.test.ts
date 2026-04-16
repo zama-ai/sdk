@@ -6,7 +6,6 @@ import {
   sortByBlockNumber,
   type ActivityItem,
 } from "../activity";
-import type { Handle } from "../relayer/relayer-sdk.types";
 import { getAddress, type Address, type Hex } from "viem";
 import { Topics, type RawLog } from "../events";
 
@@ -311,7 +310,7 @@ describe("extractEncryptedHandles", () => {
     const handle = bytes32("aa".repeat(32));
     const items = parseActivityFeed([transferLog(USER, OTHER, handle)], USER);
     // Manually apply a decrypted value
-    const decrypted = applyDecryptedValues(items, new Map([[handle, 100n]]));
+    const decrypted = applyDecryptedValues(items, { [handle]: 100n });
     const handles = extractEncryptedHandles(decrypted);
     expect(handles).toHaveLength(0);
   });
@@ -321,8 +320,7 @@ describe("applyDecryptedValues", () => {
   it("populates decryptedValue on matching encrypted amounts", () => {
     const handle = bytes32("aa".repeat(32));
     const items = parseActivityFeed([transferLog(USER, OTHER, handle)], USER);
-    const decryptedMap = new Map<Handle, bigint>([[handle, 42n]]);
-    const result = applyDecryptedValues(items, decryptedMap);
+    const result = applyDecryptedValues(items, { [handle]: 42n });
 
     expect(result[0].amount).toEqual({
       type: "encrypted",
@@ -333,7 +331,7 @@ describe("applyDecryptedValues", () => {
 
   it("leaves clear amounts unchanged", () => {
     const items = parseActivityFeed([wrappedLog(USER, 1000n)], USER);
-    const result = applyDecryptedValues(items, new Map());
+    const result = applyDecryptedValues(items, {});
 
     expect(result[0].amount).toEqual({ type: "clear", value: 1000n });
   });
@@ -341,7 +339,7 @@ describe("applyDecryptedValues", () => {
   it("leaves items with unknown handles unchanged", () => {
     const handle = bytes32("aa".repeat(32));
     const items = parseActivityFeed([transferLog(USER, OTHER, handle)], USER);
-    const result = applyDecryptedValues(items, new Map());
+    const result = applyDecryptedValues(items, {});
 
     expect(result[0].amount).toEqual({ type: "encrypted", handle });
   });

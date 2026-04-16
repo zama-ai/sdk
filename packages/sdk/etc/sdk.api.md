@@ -215,7 +215,7 @@ export function allowanceContract(tokenAddress: Address, owner: Address, spender
 };
 
 // @public
-export function applyDecryptedValues(items: readonly ActivityItem[], decryptedMap: ReadonlyMap<Handle, ClearValueType>): ActivityItem[];
+export function applyDecryptedValues(items: readonly ActivityItem[], decrypted: Readonly<Record<Handle, ClearValueType>>): ActivityItem[];
 
 // @public
 export class ApprovalFailedError extends ZamaError {
@@ -547,16 +547,14 @@ export interface BaseEvent {
 }
 
 // @public
-export interface BatchDecryptAsOptions {
-    delegatorAddress: Address;
-    handles?: Handle[];
-    maxConcurrency?: number;
-    onError?: (error: Error, address: Address) => bigint;
-    owner?: Address;
+export interface BatchBalancesResult {
+    errors: Map<Address, ZamaError>;
+    results: Map<Address, bigint>;
 }
 
 // @public
-export interface BatchDecryptOptions {
+export interface BatchDecryptAsOptions {
+    delegatorAddress: Address;
     handles?: Handle[];
     maxConcurrency?: number;
     onError?: (error: Error, address: Address) => bigint;
@@ -6185,10 +6183,21 @@ export interface DecryptErrorEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.DecryptError;
 }
 
+// @public (undocumented)
+export interface DecryptHandle {
+    // (undocumented)
+    contractAddress: Address;
+    // (undocumented)
+    handle: Handle;
+}
+
 // @public
 export class DecryptionFailedError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
+
+// @public (undocumented)
+export type DecryptResult = Record<Handle, ClearValueType>;
 
 // @public (undocumented)
 export interface DecryptStartEvent extends BaseEvent {
@@ -13384,30 +13393,22 @@ export type ReadFunctionName<TAbi extends ContractAbi = ContractAbi> = ContractF
 
 // @public
 export class ReadonlyToken {
-    constructor(config: ReadonlyTokenConfig);
+    constructor(sdk: ZamaSDK, address: Address);
     // (undocumented)
     readonly address: Address;
     allow(): Promise<void>;
     static allow(...tokens: ReadonlyToken[]): Promise<void>;
     allowance(wrapper: Address, owner?: Address): Promise<bigint>;
     balanceOf(owner?: Address): Promise<bigint>;
-    static batchDecryptBalances(tokens: ReadonlyToken[], options?: BatchDecryptOptions): Promise<Map<Address, bigint>>;
+    static batchBalancesOf(tokens: ReadonlyToken[], owner?: Address): Promise<BatchBalancesResult>;
     static batchDecryptBalancesAs(tokens: ReadonlyToken[], options: BatchDecryptAsOptions): Promise<Map<Address, bigint>>;
-    // (undocumented)
-    readonly cache: DecryptCache;
     confidentialBalanceOf(owner?: Address): Promise<Handle>;
-    // (undocumented)
-    protected readonly credentials: CredentialsManager;
     decimals(): Promise<number>;
-    decryptBalance(handle: Handle, owner?: Address): Promise<bigint>;
     decryptBalanceAs(input: {
         delegatorAddress: Address;
         owner?: Address;
     }): Promise<bigint>;
-    decryptHandles(handles: Handle[], owner?: Address): Promise<Map<Handle, ClearValueType>>;
-    // (undocumented)
-    protected readonly delegatedCredentials: DelegatedCredentialsManager;
-    protected emit(partial: ZamaSDKEventInput): void;
+    protected emit(input: ZamaSDKEventInput): void;
     // (undocumented)
     protected getAclAddress(): Promise<Address>;
     getDelegationExpiry(input: {
@@ -13426,30 +13427,11 @@ export class ReadonlyToken {
     name(): Promise<string>;
     // (undocumented)
     protected readConfidentialBalanceOf(owner: Address): Promise<Handle>;
-    // (undocumented)
-    protected readonly relayer: RelayerSDK;
     revoke(...contractAddresses: Address[]): Promise<void>;
     // (undocumented)
-    readonly signer: GenericSigner;
-    // (undocumented)
-    readonly storage: GenericStorage;
+    readonly sdk: ZamaSDK;
     symbol(): Promise<string>;
     underlyingToken(): Promise<Address>;
-}
-
-// @public
-export interface ReadonlyTokenConfig {
-    address: Address;
-    cache?: DecryptCache;
-    credentials?: CredentialsManager;
-    delegatedCredentials?: DelegatedCredentialsManager;
-    keypairTTL?: number;
-    onEvent?: ZamaSDKEventListener;
-    relayer: RelayerSDK;
-    sessionStorage: GenericStorage;
-    sessionTTL?: number | "infinite";
-    signer: GenericSigner;
-    storage: GenericStorage;
 }
 
 // @public
@@ -15194,9 +15176,9 @@ export function symbolContract(tokenAddress: Address): {
     readonly args: readonly [];
 };
 
-// @public (undocumented)
+// @public
 export class Token extends ReadonlyToken {
-    constructor(config: TokenConfig);
+    constructor(sdk: ZamaSDK, address: Address, wrapper?: Address);
     approve(spender: Address, until?: number): Promise<TransactionResult>;
     approveUnderlying(amount?: bigint): Promise<TransactionResult>;
     static batchDelegateDecryption(input: {
@@ -15233,11 +15215,6 @@ export class Token extends ReadonlyToken {
 
 // @public
 export const TOKEN_TOPICS: readonly ["0x67500e8d0ed826d2194f514dd0d8124f35648ab6e3fb5e6ed867134cffe661e9", "0x4700c1726b4198077cd40320a32c45265a1910521eb0ef713dd1d8412413d7fc", "0x77d02d353c5629272875d11f1b34ec4c65d7430b075575b78cd2502034c469ee", "0x4b1bfb262557cf08a74ddeefb8aef086b81deb08484bdc1820b9f420cdd1aa0e", "0x2d4edf3c2943002120f53dab3f8940043f34799f4a92ab90f2f81f7dd004a49e", "0x87061fd1a5b3714805472c94c9eb8a6b8491992ee77791aa2594be67b92fd962", "0x3838891d4843c6d7f9f494570b6fd8843f4e3c3ddb817c1411760bd31b819806"];
-
-// @public
-export interface TokenConfig extends ReadonlyTokenConfig {
-    wrapper?: Address;
-}
 
 // @public (undocumented)
 export interface TokenWrapperPair {
@@ -22153,6 +22130,8 @@ export class ZamaSDK {
     // (undocumented)
     readonly delegatedCredentials: DelegatedCredentialsManager;
     dispose(): void;
+    // @internal
+    emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
     readonly registry: WrappersRegistry;
     // (undocumented)
     readonly relayer: RelayerSDK;
@@ -22164,7 +22143,6 @@ export class ZamaSDK {
     // (undocumented)
     readonly storage: GenericStorage;
     terminate(): void;
-    // Warning: (ae-forgotten-export) The symbol "DecryptHandle" needs to be exported by the entry point index.d.ts
     userDecrypt(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>>;
 }
 
@@ -22227,7 +22205,7 @@ export const ZamaSDKEvents: {
 // @public
 export type ZamaSDKEventType = (typeof ZamaSDKEvents)[keyof typeof ZamaSDKEvents];
 
-// @public
+// @public (undocumented)
 export const ZERO_HANDLE: "0x0000000000000000000000000000000000000000000000000000000000000000";
 
 export { ZKProofLike }

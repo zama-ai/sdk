@@ -3,6 +3,7 @@ import type { TransactionResult } from "../types";
 import type { MutationFactoryOptions } from "./factory-types";
 import type { Address } from "viem";
 import type { Handle } from "../relayer/relayer-sdk.types";
+import { ConfigurationError } from "../errors";
 
 /** Variables for {@link finalizeUnwrapMutationOptions}. */
 export interface FinalizeUnwrapParams {
@@ -24,7 +25,7 @@ export function finalizeUnwrapMutationOptions(
     mutationFn: async ({ unwrapRequestId, burnAmountHandle }) => {
       const unwrapRequestIdOrAmount = unwrapRequestId ?? burnAmountHandle;
       if (unwrapRequestIdOrAmount === undefined) {
-        throw new Error("finalizeUnwrap requires unwrapRequestId or burnAmountHandle");
+        throw new ConfigurationError("finalizeUnwrap requires unwrapRequestId or burnAmountHandle");
       }
       return token.finalizeUnwrap(unwrapRequestIdOrAmount);
     },
