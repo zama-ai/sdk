@@ -37,22 +37,26 @@ interface TransactionRequestConfig {
   value?: bigint;
 }
 
-interface EthersTransactionRequest {
+/** Minimal structural shape of an ethers-like transaction request. */
+export interface EthersTransactionRequest {
   to: Address;
   data: Hex;
   gasLimit?: bigint;
   value?: bigint;
 }
 
-interface EthersTransactionResponse {
+/** Minimal structural shape of an ethers-like transaction response. */
+export interface EthersTransactionResponse {
   hash: string;
 }
 
-interface EthersCallProvider {
+/** Minimal structural shape for an ethers-like provider able to perform read calls. */
+export interface EthersCallProvider {
   call(tx: EthersTransactionRequest): Promise<string>;
 }
 
-interface EthersTransactionSigner extends EthersCallProvider {
+/** Minimal structural shape for an ethers-like signer able to send transactions. */
+export interface EthersTransactionSigner extends EthersCallProvider {
   sendTransaction(tx: EthersTransactionRequest): Promise<EthersTransactionResponse>;
 }
 

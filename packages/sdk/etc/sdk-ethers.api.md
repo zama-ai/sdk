@@ -10,26 +10,19 @@ import { Bytes32Hex } from '@zama-fhe/relayer-sdk/bundle';
 import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
-import { EIP1193EventMap } from 'viem';
-import { EIP1193Events } from 'viem';
 import { EIP1193Provider } from 'viem';
 import { ethers } from 'ethers';
 import { Hex } from 'viem';
 import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
-import { ProviderConnectInfo } from 'viem';
-import { ProviderMessage } from 'viem';
-import { ProviderRpcError } from 'viem';
 import { Signer } from 'ethers';
 
-export { EIP1193EventMap }
+// @public
+export interface EthersCallProvider {
+    // (undocumented)
+    call(tx: EthersTransactionRequest): Promise<string>;
+}
 
-export { EIP1193Events }
-
-export { EIP1193Provider }
-
-// Warning: (ae-forgotten-export) The symbol "GenericSigner" needs to be exported by the entry point index.d.ts
-//
 // @public
 export class EthersSigner implements GenericSigner {
     constructor(config: EthersSignerConfig);
@@ -39,24 +32,14 @@ export class EthersSigner implements GenericSigner {
     getBlockTimestamp(): Promise<bigint>;
     // (undocumented)
     getChainId(): Promise<number>;
-    // Warning: (ae-forgotten-export) The symbol "ReadContractConfig" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     readContract<const TAbi extends Abi | readonly unknown[], TFunctionName extends ContractFunctionName<TAbi, "pure" | "view">, const TArgs extends ContractFunctionArgs<TAbi, "pure" | "view", TFunctionName>>(config: ReadContractConfig<TAbi, TFunctionName, TArgs>): Promise<ContractFunctionReturnType<TAbi, "pure" | "view", TFunctionName, TArgs>>;
-    // Warning: (ae-forgotten-export) The symbol "EIP712TypedData" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-    // Warning: (ae-forgotten-export) The symbol "SignerLifecycleCallbacks" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     subscribe(callbacks: SignerLifecycleCallbacks): () => void;
-    // Warning: (ae-forgotten-export) The symbol "TransactionReceipt" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
-    // Warning: (ae-forgotten-export) The symbol "WriteContractConfig" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     writeContract<const TAbi extends Abi | readonly unknown[], TFunctionName extends ContractFunctionName<TAbi, "nonpayable" | "payable">, const TArgs extends ContractFunctionArgs<TAbi, "nonpayable" | "payable", TFunctionName>>(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex>;
 }
@@ -70,14 +53,30 @@ export type EthersSignerConfig = {
     provider: ethers.Provider;
 };
 
-export { ProviderConnectInfo }
+// @public
+export interface EthersTransactionRequest {
+    // (undocumented)
+    data: Hex;
+    // (undocumented)
+    gasLimit?: bigint;
+    // (undocumented)
+    to: Address;
+    // (undocumented)
+    value?: bigint;
+}
 
-export { ProviderMessage }
+// @public
+export interface EthersTransactionResponse {
+    // (undocumented)
+    hash: string;
+}
 
-export { ProviderRpcError }
+// @public
+export interface EthersTransactionSigner extends EthersCallProvider {
+    // (undocumented)
+    sendTransaction(tx: EthersTransactionRequest): Promise<EthersTransactionResponse>;
+}
 
-// Warning: (ae-forgotten-export) The symbol "EthersCallProvider" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 export function readConfidentialBalanceOfContract(provider: EthersCallProvider, tokenAddress: Address, userAddress: Address): Promise<unknown>;
 
@@ -108,13 +107,9 @@ export function readTokenPairsSliceContract(provider: EthersCallProvider, regist
 // @public (undocumented)
 export function readUnderlyingTokenContract(provider: EthersCallProvider, wrapperAddress: Address): Promise<unknown>;
 
-// Warning: (ae-forgotten-export) The symbol "EthersTransactionSigner" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 export function writeConfidentialTransferContract(signer: EthersTransactionSigner, tokenAddress: Address, to: Address, handle: Uint8Array, inputProof: Uint8Array): Promise<`0x${string}`>;
 
-// Warning: (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 export function writeFinalizeUnwrapContract(signer: EthersTransactionSigner, wrapper: Address, burntAmount: Handle, burntAmountCleartext: bigint, decryptionProof: Hex): Promise<`0x${string}`>;
 
