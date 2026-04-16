@@ -1,7 +1,12 @@
 import { createPublicClient, createWalletClient, formatUnits, http, parseAbi } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
-import { DelegationNotPropagatedError, MemoryStorage, ZamaSDK } from "@zama-fhe/sdk";
+import {
+  DelegationNotPropagatedError,
+  MemoryStorage,
+  ZamaSDK,
+  inferredTotalSupplyContract,
+} from "@zama-fhe/sdk";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 import { RelayerNode } from "@zama-fhe/sdk/node";
 import type { Address } from "@zama-fhe/sdk";
@@ -160,6 +165,14 @@ async function main() {
 
   const balanceA1 = await tokenA.balanceOf();
   console.log("cUSDT balance (A, after shield):", fmt(balanceA1));
+
+  // 3b′. Inferred total supply
+  // inferredTotalSupply() returns the plaintext supply tracked by the wrapper contract —
+  // no decryption needed. Useful for dashboards and pool-size displays.
+  const supply = (await signerA.readContract(
+    inferredTotalSupplyContract(confidentialTokenAddress),
+  )) as bigint;
+  console.log("Inferred total supply:", fmt(supply));
 
   // 3c. Confidential transfer: A → B
   // The amount is encrypted client-side before being sent on-chain.

@@ -120,7 +120,7 @@ function resolveEthCall(params: unknown[] | undefined, options: RpcOptions): str
     }
   }
 
-  // Token metadata: name(), symbol(), decimals(), totalSupply()
+  // Token metadata: name(), symbol(), decimals()
   // Called by the SDK on both underlying and confidential token addresses.
   const meta = TOKEN_META[to];
   if (meta) {
@@ -128,8 +128,10 @@ function resolveEthCall(params: unknown[] | undefined, options: RpcOptions): str
     if (sel === "0x95d89b41") return abiStr(meta.symbol); // symbol()
     if (sel === "0x313ce567") return "0x" + abiU256(meta.decimals); // decimals()
   }
-  // totalSupply() — called only on the underlying ERC-20; returns uint256
+  // totalSupply() — called on the underlying ERC-20; returns uint256
   if (sel === "0x18160ddd") return "0x" + abiU256(0);
+  // inferredTotalSupply() — called on confidential wrappers; returns uint256
+  if (sel === "0xf89d30b1") return "0x" + abiU256(0);
 
   // All other eth_call requests (e.g. balanceOf) return empty data,
   // causing the caller to fail gracefully (query error → "—" in UI).

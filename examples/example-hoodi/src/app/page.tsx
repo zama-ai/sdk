@@ -8,6 +8,7 @@ import {
   useIsAllowed,
   useAllow,
   useListPairs,
+  useTotalSupply,
   useZamaSDK,
   balanceOfContract,
 } from "@zama-fhe/react-sdk";
@@ -307,6 +308,14 @@ export default function Home() {
     { enabled: !!address && isHoodi && !!isAllowed && !!token },
   );
 
+  // Read the inferred total supply of the confidential wrapper.
+  // inferredTotalSupply() returns the plaintext supply tracked by the wrapper —
+  // useful for displaying pool size without decrypting anything.
+  const { data: totalSupply } = useTotalSupply(
+    token?.confidentialTokenAddress ?? ZERO_ADDRESS,
+    { enabled: !!address && isHoodi && !!token },
+  );
+
   // Mint 10 whole tokens on the underlying ERC-20 contract.
   const mint = useMutation({
     mutationFn: async () => {
@@ -343,6 +352,10 @@ export default function Home() {
     balance.data !== undefined && token
       ? `${formatUnits(balance.data, decimals)} ${confidentialSymbol}`
       : "—";
+  const formattedTotalSupply =
+    totalSupply !== undefined && token
+      ? `${formatUnits(totalSupply, decimals)} ${confidentialSymbol}`
+      : undefined;
 
   // Actions are disabled until the registry has loaded a valid token pair
   // and until the wallet is on the Hoodi network.
@@ -450,6 +463,7 @@ export default function Home() {
       <BalancesCard
         formattedErc20={formattedErc20}
         formattedConfidential={formattedConfidential}
+        formattedTotalSupply={formattedTotalSupply}
         // handleQuery.isLoading: fetching the encrypted handle from chain (Phase 1).
         // balance.isLoading: decrypting it via RelayerCleartext (Phase 2).
         isLoadingConfidential={balance.handleQuery.isLoading || balance.isLoading}

@@ -5,6 +5,8 @@ import { HOODI_EXPLORER_URL } from "@/lib/config";
 interface BalancesCardProps {
   formattedErc20: string;
   formattedConfidential: string;
+  /** Inferred total supply of the confidential wrapper (plaintext, no decryption needed). */
+  formattedTotalSupply?: string;
   isLoadingConfidential: boolean;
   erc20Symbol: string;
   onMint: () => void;
@@ -23,6 +25,7 @@ interface BalancesCardProps {
 export function BalancesCard({
   formattedErc20,
   formattedConfidential,
+  formattedTotalSupply,
   isLoadingConfidential,
   erc20Symbol,
   onMint,
@@ -70,6 +73,12 @@ export function BalancesCard({
           </span>
         )}
       </div>
+      {formattedTotalSupply && (
+        <div className="balance-row">
+          <span className="balance-label">Inferred Total Supply</span>
+          <span className="balance-value">{formattedTotalSupply}</span>
+        </div>
+      )}
       {decryptError && <div className="alert alert-error card-status">{decryptError}</div>}
       {mintError && <div className="alert alert-error card-status">{mintError}</div>}
       {mintTxHash && (
