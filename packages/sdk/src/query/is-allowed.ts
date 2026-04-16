@@ -1,4 +1,3 @@
-import type { QueryObserverOptions } from "@tanstack/query-core";
 import type { Address } from "viem";
 import type { ZamaSDK } from "../zama-sdk";
 import type { QueryFactoryOptions } from "./factory-types";
@@ -9,13 +8,7 @@ export interface IsAllowedQueryConfig {
   account: Address;
   /** Contract addresses to check credentials against. */
   contractAddresses: [Address, ...Address[]];
-  query?: QueryObserverOptions<
-    boolean,
-    Error,
-    boolean,
-    boolean,
-    ReturnType<typeof zamaQueryKeys.isAllowed.scope>
-  >;
+  query?: Record<string, unknown>;
 }
 
 export function isAllowedQueryOptions(
@@ -27,6 +20,6 @@ export function isAllowedQueryOptions(
     queryKey: zamaQueryKeys.isAllowed.scope(config.account, config.contractAddresses),
     queryFn: () => sdk.credentials.isAllowed(config.contractAddresses),
     staleTime: 30_000,
-    enabled: config.query?.enabled ?? true,
+    enabled: config.query?.enabled !== false,
   } as const;
 }

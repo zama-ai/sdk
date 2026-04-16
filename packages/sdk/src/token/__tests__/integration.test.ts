@@ -41,9 +41,11 @@ describe("Integration: multi-step workflows", () => {
       const balanceHandle = await token.confidentialBalanceOf();
       expect(balanceHandle).toBe(handle);
 
-      // Step 4: Decrypt the balance
-      const balance = await token.decryptBalance(balanceHandle);
-      expect(balance).toBe(1000n);
+      // Step 4: Decrypt the balance through the SDK-level API
+      const decryptResult = await token.sdk.userDecrypt([
+        { handle: balanceHandle, contractAddress: token.address },
+      ]);
+      expect(decryptResult[balanceHandle]).toBe(1000n);
       expect(relayer.userDecrypt).toHaveBeenCalledWith(
         expect.objectContaining({ handles: [handle] }),
       );
@@ -59,7 +61,6 @@ describe("Integration: multi-step workflows", () => {
       userAddress,
       handle,
       createToken,
-      createMockStorage,
     }) => {
       // Step 1: Execute transfer (encrypts amount, sends tx)
       const transferResult = await token.confidentialTransfer(RECIPIENT, 250n);
@@ -86,13 +87,7 @@ describe("Integration: multi-step workflows", () => {
       expect(senderHandle).toBe(handle);
 
       // Step 3: Check receiver balance (different token instance for same contract)
-      const receiverToken = createToken({
-        relayer,
-        signer,
-        storage: createMockStorage(),
-        sessionStorage: createMockStorage(),
-        address: tokenAddress,
-      });
+      const receiverToken = createToken(token.sdk, tokenAddress);
       vi.mocked(signer.readContract).mockResolvedValueOnce(handle);
       const receiverHandle = await receiverToken.confidentialBalanceOf(RECIPIENT);
       expect(receiverHandle).toBe(handle);

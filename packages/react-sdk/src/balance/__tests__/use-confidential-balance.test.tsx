@@ -31,21 +31,6 @@ describe("useConfidentialBalance", () => {
     await waitFor(() => expect(signer.getAddress).toHaveBeenCalled(), { timeout: 5_000 });
     expect(result.current.isPending).toBe(true);
     expect(result.current.fetchStatus).toBe("idle");
-    expect(result.current.handleQuery.fetchStatus).toBe("idle");
-    expect(signer.readContract).not.toHaveBeenCalled();
-  });
-
-  test("behavior: disables both phases when enabled is false", async ({
-    renderWithProviders,
-    signer,
-  }) => {
-    const { result } = renderWithProviders(() =>
-      useConfidentialBalance({ tokenAddress: TOKEN }, { enabled: false }),
-    );
-
-    await waitFor(() => expect(signer.getAddress).toHaveBeenCalled(), { timeout: 5_000 });
-    expect(result.current.fetchStatus).toBe("idle");
-    expect(result.current.handleQuery.fetchStatus).toBe("idle");
     expect(signer.readContract).not.toHaveBeenCalled();
   });
 
@@ -59,17 +44,12 @@ describe("useConfidentialBalance", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
 
-      const { data, dataUpdatedAt, handleQuery, ...state } = result.current;
-      const { data: handleData, dataUpdatedAt: handleDataUpdatedAt, ...handleState } = handleQuery;
+      const { data, dataUpdatedAt, ...state } = result.current;
       const { promise: statePromise, ...stableState } = state;
-      const { promise: handlePromise, ...stableHandleState } = handleState;
       expect(data).toBe(123n);
-      expect(handleData).toBe(handle);
       expect(dataUpdatedAt).toEqual(expect.any(Number));
-      expect(handleDataUpdatedAt).toEqual(expect.any(Number));
       expect(statePromise).toBeDefined();
-      expect(handlePromise).toBeDefined();
-      expect({ ...stableState, handleQuery: stableHandleState }).toMatchInlineSnapshot(`
+      expect(stableState).toMatchInlineSnapshot(`
       {
         "error": null,
         "errorUpdateCount": 0,
@@ -77,31 +57,6 @@ describe("useConfidentialBalance", () => {
         "failureCount": 0,
         "failureReason": null,
         "fetchStatus": "idle",
-        "handleQuery": {
-          "error": null,
-          "errorUpdateCount": 0,
-          "errorUpdatedAt": 0,
-          "failureCount": 0,
-          "failureReason": null,
-          "fetchStatus": "idle",
-          "isEnabled": true,
-          "isError": false,
-          "isFetched": true,
-          "isFetchedAfterMount": true,
-          "isFetching": false,
-          "isInitialLoading": false,
-          "isLoading": false,
-          "isLoadingError": false,
-          "isPaused": false,
-          "isPending": false,
-          "isPlaceholderData": false,
-          "isRefetchError": false,
-          "isRefetching": false,
-          "isStale": true,
-          "isSuccess": true,
-          "refetch": [Function],
-          "status": "success",
-        },
         "isEnabled": true,
         "isError": false,
         "isFetched": true,
@@ -115,7 +70,7 @@ describe("useConfidentialBalance", () => {
         "isPlaceholderData": false,
         "isRefetchError": false,
         "isRefetching": false,
-        "isStale": false,
+        "isStale": true,
         "isSuccess": true,
         "refetch": [Function],
         "status": "success",
@@ -123,58 +78,13 @@ describe("useConfidentialBalance", () => {
     `);
     });
 
-    test("error: disabled when getAddress fails", async ({ renderWithProviders, signer }) => {
+    test("error: query surfaces signer error", async ({ renderWithProviders, signer }) => {
       vi.mocked(signer.getAddress).mockRejectedValue(new Error("no wallet"));
 
       const { result } = renderWithProviders(() => useConfidentialBalance({ tokenAddress: TOKEN }));
 
-      await waitFor(() => expect(result.current.handleQuery.fetchStatus).toBe("idle"));
-      expect(result.current.isPending).toBe(true);
-      expect(result.current.fetchStatus).toBe("idle");
-      expect(result.current.handleQuery.data).toBeUndefined();
+      await waitFor(() => expect(result.current.isError).toBe(true));
       expect(result.current.data).toBeUndefined();
-    });
-
-    test("behavior: disabled when signer address unavailable", ({
-      renderWithProviders,
-      signer,
-    }) => {
-      vi.mocked(signer.getAddress).mockReturnValue(new Promise(() => {}));
-
-      const { result } = renderWithProviders(() => useConfidentialBalance({ tokenAddress: TOKEN }));
-
-      expect(result.current.isPending).toBe(true);
-      expect(result.current.fetchStatus).toBe("idle");
-      expect(result.current.handleQuery.fetchStatus).toBe("idle");
-    });
-
-    test("behavior: disabled when handle not yet resolved", async ({
-      renderWithProviders,
-      signer,
-    }) => {
-      vi.mocked(signer.readContract).mockReturnValue(new Promise(() => {}));
-
-      const { result } = renderWithProviders(() => useConfidentialBalance({ tokenAddress: TOKEN }));
-
-      await waitFor(() => expect(result.current.handleQuery.fetchStatus).toBe("fetching"));
-      expect(result.current.isPending).toBe(true);
-      expect(result.current.fetchStatus).toBe("idle");
-    });
-
-    test("behavior: disabled when handle undefined despite enabled=true", async ({
-      renderWithProviders,
-      signer,
-      relayer,
-    }) => {
-      vi.mocked(signer.readContract).mockReturnValue(new Promise(() => {}));
-
-      const { result } = renderWithProviders(() =>
-        useConfidentialBalance({ tokenAddress: TOKEN }, { enabled: true }),
-      );
-
-      await waitFor(() => expect(result.current.handleQuery.fetchStatus).toBe("fetching"));
-      expect(result.current.fetchStatus).toBe("idle");
-      expect(relayer.userDecrypt).not.toHaveBeenCalled();
     });
 
     test("behavior: signer undefined -> defined", async ({
@@ -197,7 +107,6 @@ describe("useConfidentialBalance", () => {
       );
 
       expect(result.current.isPending).toBe(true);
-      expect(result.current.fetchStatus).toBe("idle");
 
       resolveAddress!(USER);
       rerender();
@@ -206,43 +115,38 @@ describe("useConfidentialBalance", () => {
       expect(result.current.data).toBe(321n);
     });
 
-    describe("behavior: full lifecycle", () => {
-      test("handle poll -> decrypt cascade", async ({ renderWithProviders, signer, relayer }) => {
-        const handleA = `0x${"ab".repeat(32)}`;
-        const handleB = `0x${"bc".repeat(32)}`;
-        vi.mocked(signer.readContract)
-          .mockResolvedValueOnce(handleA)
-          .mockResolvedValueOnce(handleB);
-        vi.mocked(relayer.userDecrypt).mockImplementation(async ({ handles }) => {
-          const value = handles[0] === handleA ? 111n : 222n;
-          return { [handles[0]]: value };
-        });
-
-        const { result } = renderWithProviders(() =>
-          useConfidentialBalance({ tokenAddress: TOKEN }),
-        );
-
-        await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
-        expect(result.current.handleQuery.data).toBe(handleA);
-        expect(result.current.data).toBe(111n);
-
-        await act(async () => {
-          await result.current.handleQuery.refetch();
-        });
-
-        await waitFor(() => expect(result.current.handleQuery.data).toBe(handleB), {
-          timeout: 5_000,
-        });
-        await waitFor(() => expect(result.current.data).toBe(222n), { timeout: 5_000 });
-        expect(relayer.userDecrypt).toHaveBeenNthCalledWith(
-          1,
-          expect.objectContaining({ handles: [handleA] }),
-        );
-        expect(relayer.userDecrypt).toHaveBeenNthCalledWith(
-          2,
-          expect.objectContaining({ handles: [handleB] }),
-        );
+    test("behavior: balance updates on refetch when handle changes", async ({
+      renderWithProviders,
+      signer,
+      relayer,
+    }) => {
+      const handleA = `0x${"ab".repeat(32)}`;
+      const handleB = `0x${"bc".repeat(32)}`;
+      let currentHandle: string = handleA;
+      vi.mocked(signer.readContract).mockImplementation(async () => currentHandle);
+      vi.mocked(relayer.userDecrypt).mockImplementation(async ({ handles }) => {
+        const value = handles[0] === handleA ? 111n : 222n;
+        return { [handles[0]]: value };
       });
+
+      const { result } = renderWithProviders(() => useConfidentialBalance({ tokenAddress: TOKEN }));
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
+      expect(result.current.data).toBe(111n);
+
+      currentHandle = handleB;
+      await act(async () => {
+        await result.current.refetch();
+      });
+
+      await waitFor(() => expect(result.current.data).toBe(222n), { timeout: 5_000 });
+      expect(relayer.userDecrypt).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({ handles: [handleA] }),
+      );
+      expect(relayer.userDecrypt).toHaveBeenLastCalledWith(
+        expect.objectContaining({ handles: [handleB] }),
+      );
     });
 
     test("behavior: re-render preserves cached data", async ({
@@ -278,8 +182,6 @@ describe("useConfidentialBalance", () => {
 
       expect(result.current.isPending).toBe(true);
       expect(result.current.fetchStatus).toBe("idle");
-      expect(result.current.handleQuery.fetchStatus).toBe("idle");
-      expect(result.current.handleQuery.isFetched).toBe(false);
       expect(signer.readContract).not.toHaveBeenCalled();
     });
   });

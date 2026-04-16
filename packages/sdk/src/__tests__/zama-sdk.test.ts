@@ -25,7 +25,7 @@ describe("ZamaSDK", () => {
     const token = sdk.createReadonlyToken(tokenAddress);
     expect(token).toBeInstanceOf(ReadonlyToken);
     expect(token.address).toBe(tokenAddress);
-    expect(token.signer).toBe(sdk.signer);
+    expect(token.sdk).toBe(sdk);
   });
 
   it("createToken returns Token", ({ relayer, signer, storage, tokenAddress }) => {
@@ -36,17 +36,11 @@ describe("ZamaSDK", () => {
   });
 
   for (const method of ["createToken", "createReadonlyToken"] as const) {
-    it(`${method} shares delegatedCredentials with the SDK`, ({
-      relayer,
-      signer,
-      storage,
-      tokenAddress,
-    }) => {
+    it(`${method} exposes the SDK instance`, ({ relayer, signer, storage, tokenAddress }) => {
       const sdk = new ZamaSDK({ relayer, signer, storage });
       const token = sdk[method](tokenAddress);
-      expect((token as unknown as { delegatedCredentials: unknown }).delegatedCredentials).toBe(
-        sdk.delegatedCredentials,
-      );
+      expect(token.sdk).toBe(sdk);
+      expect(token.sdk.delegatedCredentials).toBe(sdk.delegatedCredentials);
     });
   }
 
@@ -909,10 +903,17 @@ describe("ZamaSDK", () => {
     const CONTRACT_A = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
     const CONTRACT_B = "0x3C3c3C3c3C3C3c3c3c3C3c3C3C3c3c3C3c3c3C3C" as Address;
 
-    it("delegates to credentials.allow", async ({ sdk }) => {
+    it("delegates to credentials.allow, forwarding addresses as-is", async ({ sdk }) => {
       const allowSpy = vi.spyOn(sdk.credentials, "allow");
       await sdk.allow([CONTRACT_A, CONTRACT_B]);
+      // credentials.allow owns normalization — sdk.allow is just a thin forwarder.
       expect(allowSpy).toHaveBeenCalledWith(CONTRACT_A, CONTRACT_B);
+    });
+
+    it("returns immediately for empty array without calling credentials.allow", async ({ sdk }) => {
+      const allowSpy = vi.spyOn(sdk.credentials, "allow");
+      await sdk.allow([]);
+      expect(allowSpy).not.toHaveBeenCalled();
     });
   });
 
