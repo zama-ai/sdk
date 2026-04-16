@@ -295,14 +295,18 @@ const { data: balance } = useConfidentialBalance({ tokenAddress: "0xTokenA" });
 
 #### `useIsAllowed`
 
-Check whether a session signature is cached and valid. Returns `true` if decrypt operations can proceed without a wallet prompt. Use this to conditionally enable UI elements (e.g. a "Reveal Balances" button).
+Check whether a session signature is cached, valid, and scoped to the contract addresses you want to decrypt. Returns `true` if decrypt operations can proceed without a wallet prompt. Use this to conditionally enable UI elements (e.g. a "Reveal Balances" button).
 
 ```ts
-function useIsAllowed(): UseQueryResult<boolean, Error>;
+function useIsAllowed(config: {
+  contractAddresses: [Address, ...Address[]];
+}): UseQueryResult<boolean, Error>;
 ```
 
 ```tsx
-const { data: allowed } = useIsAllowed();
+const { data: allowed } = useIsAllowed({
+  contractAddresses: ["0xTokenA"],
+});
 
 <button disabled={!allowed}>Reveal Balance</button>;
 ```
@@ -852,7 +856,7 @@ FHE decrypt credentials are generated once per wallet + contract set and cached 
 3. **Page reload** — Encrypted credentials are loaded from storage; the wallet is prompted once to re-sign for the session.
 4. **Expiry** — Credentials expire based on `keypairTTL` (default: 2592000s = 30 days). After expiry, the next decrypt regenerates and re-prompts.
 5. **Pre-authorization** — Call `useAllow(contractAddresses)` early to batch-authorize all contracts in one wallet prompt, avoiding repeated popups.
-6. **Check status** — Use `useIsAllowed()` to conditionally enable UI elements (e.g. disable "Reveal" until allowed).
+6. **Check status** — Use `useIsAllowed({ contractAddresses })` to conditionally enable UI elements (e.g. disable "Reveal" until allowed).
 7. **Disconnect** — Call `useRevoke(contractAddresses)` or `await credentials.revoke()` to clear the session signature from memory.
 
 ### Web Extension Support
@@ -954,4 +958,4 @@ All public exports from `@zama-fhe/sdk` are re-exported from the main entry poin
 
 **Activity feed:** `ActivityDirection`, `ActivityType`, `ActivityAmount`, `ActivityLogMetadata`, `ActivityItem`, `parseActivityFeed`, `extractEncryptedHandles`, `applyDecryptedValues`, `sortByBlockNumber`.
 
-**Contract call builders:** `confidentialBalanceOfContract`, `confidentialTransferContract`, `confidentialTransferFromContract`, `isOperatorContract`, `unwrapContract`, `unwrapFromBalanceContract`, `finalizeUnwrapContract`, `setOperatorContract`, `underlyingContract`, `wrapContract`, `supportsInterfaceContract`, `isConfidentialTokenContract`, `isConfidentialWrapperContract`, `nameContract`, `symbolContract`, `decimalsContract`, `allowanceContract`, `approveContract`, `confidentialTotalSupplyContract`, `totalSupplyContract`, `rateContract`.
+**Contract call builders:** `confidentialBalanceOfContract`, `confidentialTransferContract`, `confidentialTransferFromContract`, `isOperatorContract`, `unwrapContract`, `unwrapFromBalanceContract`, `finalizeUnwrapContract`, `setOperatorContract`, `underlyingContract`, `inferredTotalSupplyContract`, `wrapContract`, `supportsInterfaceContract`, `isConfidentialTokenContract`, `isConfidentialWrapperContract`, `nameContract`, `symbolContract`, `decimalsContract`, `allowanceContract`, `approveContract`, `confidentialTotalSupplyContract`, `totalSupplyContract`, `rateContract`.

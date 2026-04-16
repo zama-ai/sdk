@@ -34,7 +34,12 @@ import {
 } from "../encrypted";
 
 // Wrapper
-import { finalizeUnwrapContract, underlyingContract, wrapContract } from "../wrapper";
+import {
+  finalizeUnwrapContract,
+  inferredTotalSupplyContract,
+  underlyingContract,
+  wrapContract,
+} from "../wrapper";
 
 const SPENDER = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;
 
@@ -176,9 +181,12 @@ describe("Encryption contract builders", () => {
     expect(config.args).toEqual([]);
   });
 
-  it("totalSupplyContract", ({ tokenAddress }) => {
-    const config = totalSupplyContract(tokenAddress);
-    expect(config.functionName).toBe("totalSupply");
+  it("totalSupplyContract is a deprecated alias for inferredTotalSupplyContract", ({
+    wrapperAddress,
+  }) => {
+    const config = totalSupplyContract(wrapperAddress);
+    expect(config.address).toBe(wrapperAddress);
+    expect(config.functionName).toBe("inferredTotalSupply");
   });
 
   it("rateContract", ({ tokenAddress }) => {
@@ -201,6 +209,12 @@ describe("Wrapper contract builders", () => {
     const config = underlyingContract(wrapperAddress);
     expect(config.address).toBe(wrapperAddress);
     expect(config.functionName).toBe("underlying");
+  });
+
+  it("inferredTotalSupplyContract", ({ wrapperAddress }) => {
+    const config = inferredTotalSupplyContract(wrapperAddress);
+    expect(config.address).toBe(wrapperAddress);
+    expect(config.functionName).toBe("inferredTotalSupply");
   });
 
   it("wrapContract", ({ wrapperAddress, userAddress }) => {
