@@ -1567,9 +1567,6 @@ export const ZamaSDKEvents: {
     readonly UnshieldPhase2Submitted: "unshield:phase2_submitted";
 };
 
-// @public (undocumented)
-export const ZERO_HANDLE: "0x0000000000000000000000000000000000000000000000000000000000000000";
-
 // (No @packageDocumentation comment for this package)
 
 ```
