@@ -23,27 +23,18 @@ import { WriteFunctionName } from '@zama-fhe/sdk';
 // @public
 export class WagmiSigner implements GenericSigner {
     constructor(signerConfig: WagmiSignerConfig);
-    // (undocumented)
     getAddress(): Promise<Address>;
-    // (undocumented)
     getBlockTimestamp(): Promise<bigint>;
-    // (undocumented)
     getChainId(): Promise<number>;
-    // (undocumented)
     readContract<const TAbi extends ContractAbi, TFunctionName extends ReadFunctionName<TAbi>, const TArgs extends ReadContractArgs<TAbi, TFunctionName>>(config: ReadContractConfig<TAbi, TFunctionName, TArgs>): Promise<ReadContractReturnType<TAbi, TFunctionName, TArgs>>;
-    // (undocumented)
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-    // (undocumented)
     subscribe(input: SignerLifecycleCallbacks): () => void;
-    // (undocumented)
     waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
-    // (undocumented)
     writeContract<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex>;
 }
 
 // @public
 export interface WagmiSignerConfig {
-    // (undocumented)
     config: Config;
 }
 

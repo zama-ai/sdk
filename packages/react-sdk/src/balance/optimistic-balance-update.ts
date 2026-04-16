@@ -3,9 +3,15 @@ import type { Address, TransactionResult } from "@zama-fhe/sdk";
 import { invalidateAfterShield, zamaQueryKeys } from "@zama-fhe/sdk/query";
 
 type BalanceDeltaMode = "add" | "subtract";
+
+/** @internal */
 export type OptimisticBalanceSnapshot = [QueryKey, bigint | undefined][];
 
-/** Combined context returned by optimistic `onMutate`. */
+/**
+ * Combined context returned by optimistic `onMutate`.
+ *
+ * @internal
+ */
 export interface OptimisticMutateContext {
   snapshot: OptimisticBalanceSnapshot;
   callerContext?: unknown;

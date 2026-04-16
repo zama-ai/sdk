@@ -29,11 +29,15 @@ import {
 
 /** Configuration for {@link WagmiSigner}. */
 export interface WagmiSignerConfig {
+  /** Wagmi `Config` instance (created via `createConfig`) used for all wallet actions. */
   config: Config;
 }
 
 /**
- * GenericSigner backed by wagmi.
+ * {@link GenericSigner} implementation backed by wagmi.
+ *
+ * Delegates chain, account, signing, and transaction actions to `wagmi/actions`.
+ * Pass an instance to {@link ZamaProvider} via the `signer` prop.
  *
  * @param signerConfig - {@link WagmiSignerConfig} with wagmi config
  */
@@ -44,10 +48,16 @@ export class WagmiSigner implements GenericSigner {
     this.config = signerConfig.config;
   }
 
+  /** Returns the chain id of the currently connected wallet. */
   async getChainId(): Promise<number> {
     return getChainId(this.config);
   }
 
+  /**
+   * Returns the address of the currently connected wallet.
+   *
+   * @throws `TypeError` when no wallet is connected.
+   */
   async getAddress(): Promise<Address> {
     const account = getAccount(this.config);
     if (!account?.address) {
@@ -56,6 +66,12 @@ export class WagmiSigner implements GenericSigner {
     return account.address;
   }
 
+  /**
+   * Signs an EIP-712 typed data payload with the connected wallet.
+   *
+   * @param typedData - Typed data domain, types, and message to sign.
+   * @returns The hex-encoded signature.
+   */
   async signTypedData(typedData: EIP712TypedData): Promise<Hex> {
     const { EIP712Domain: _, ...sigTypes } = typedData.types;
     return signTypedData(this.config, {
@@ -71,6 +87,12 @@ export class WagmiSigner implements GenericSigner {
     } as Parameters<typeof signTypedData>[1]);
   }
 
+  /**
+   * Submits a state-changing contract call through the connected wallet.
+   *
+   * @param config - Contract address, ABI, function name, and args.
+   * @returns The hex-encoded transaction hash.
+   */
   async writeContract<
     const TAbi extends ContractAbi,
     TFunctionName extends WriteFunctionName<TAbi>,
@@ -79,6 +101,12 @@ export class WagmiSigner implements GenericSigner {
     return writeContract(this.config, config as Parameters<typeof writeContract>[1]);
   }
 
+  /**
+   * Performs a read-only contract call using the active wagmi transport.
+   *
+   * @param config - Contract address, ABI, function name, and args.
+   * @returns The decoded return value.
+   */
   async readContract<
     const TAbi extends ContractAbi,
     TFunctionName extends ReadFunctionName<TAbi>,
@@ -89,6 +117,14 @@ export class WagmiSigner implements GenericSigner {
     return readContract(this.config, config);
   }
 
+  /**
+   * Waits for a transaction to be mined and returns its receipt.
+   *
+   * @param hash - Transaction hash returned by {@link WagmiSigner.writeContract}.
+   * @throws {@link TransactionRevertedError} when the receipt cannot be located — this
+   * typically indicates an ERC-4337 connector returned a UserOperation hash instead of
+   * a transaction hash.
+   */
   async waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt> {
     try {
       return await waitForTransactionReceipt(this.config, { hash });
@@ -106,11 +142,20 @@ export class WagmiSigner implements GenericSigner {
     }
   }
 
+  /** Returns the timestamp (in seconds) of the latest block seen by the active transport. */
   async getBlockTimestamp(): Promise<bigint> {
     const block = await getBlock(this.config);
     return block.timestamp;
   }
 
+  /**
+   * Subscribes to wallet lifecycle events (disconnects, account changes, chain changes).
+   *
+   * {@link ZamaProvider} uses this to invalidate per-wallet React Query caches automatically.
+   *
+   * @param callbacks - Lifecycle callbacks; omitted callbacks default to no-ops.
+   * @returns An unsubscribe function.
+   */
   subscribe({
     onDisconnect = () => {},
     onAccountChange = () => {},
