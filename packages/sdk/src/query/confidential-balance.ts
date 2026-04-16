@@ -22,16 +22,16 @@ export function confidentialBalanceQueryOptions(
   bigint,
   ReturnType<typeof zamaQueryKeys.confidentialBalance.owner>
 > {
-  const { tokenAddress, owner, pollingInterval, query = {} } = config;
+  const queryOpts = config.query ?? {};
 
   return {
-    ...filterQueryOptions(query),
-    queryKey: zamaQueryKeys.confidentialBalance.owner(tokenAddress, owner),
+    ...filterQueryOptions(queryOpts),
+    queryKey: zamaQueryKeys.confidentialBalance.owner(config.tokenAddress, config.owner),
     queryFn: async (context) => {
       const [, { owner: keyOwner }] = context.queryKey;
       return token.balanceOf(keyOwner);
     },
-    enabled: query?.enabled !== false,
-    refetchInterval: pollingInterval ?? DEFAULT_POLLING_INTERVAL,
+    enabled: queryOpts?.enabled !== false,
+    refetchInterval: config.pollingInterval ?? DEFAULT_POLLING_INTERVAL,
   };
 }
