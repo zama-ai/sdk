@@ -275,33 +275,25 @@ For confidential token balances, gate the query on `useIsAllowed` and trigger `u
 import { useAllow, useIsAllowed, useConfidentialBalance } from "@zama-fhe/react-sdk";
 import { formatUnits, type Address } from "viem";
 
-const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
-
 function ConfidentialBalanceCard({
   tokenAddress,
   decimals,
   symbol,
 }: {
-  tokenAddress: Address | undefined;
+  tokenAddress: Address;
   decimals: number;
   symbol: string;
 }) {
   // 1. Check if credentials are already cached for this token
   const { data: isAllowed } = useIsAllowed({
-    contractAddresses: tokenAddress ? [tokenAddress] : [],
-    query: { enabled: Boolean(tokenAddress) },
+    contractAddresses: [tokenAddress],
   });
 
   // 2. Gate the balance query — only runs when isAllowed is true
-  const balance = useConfidentialBalance(
-    { tokenAddress: tokenAddress ?? ZERO_ADDRESS },
-    { enabled: !!tokenAddress && !!isAllowed },
-  );
+  const balance = useConfidentialBalance({ tokenAddress }, { enabled: !!isAllowed });
 
   // 3. useAllow triggers the EIP-712 signature on demand
   const { mutate: allow, isPending: isSigning } = useAllow();
-
-  if (!tokenAddress) return null;
 
   // Credentials not cached: show locked state with explicit action
   if (!isAllowed) {
