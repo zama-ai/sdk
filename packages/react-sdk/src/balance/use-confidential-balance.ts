@@ -24,10 +24,11 @@ export interface UseConfidentialBalanceOptions extends Omit<
 
 /**
  * Declarative hook to read the connected wallet's confidential token balance.
- * Polls `token.balanceOf(owner)` at regular intervals. The SDK cache
- * short-circuits decryption when the on-chain handle is unchanged.
+ * Calls `token.balanceOf(owner)` which reads the on-chain handle and decrypts
+ * via the SDK. Cached values are returned instantly — the relayer is only hit
+ * when the handle changes.
  *
- * @param config - Token address and optional polling interval.
+ * @param config - Token address configuration.
  * @param options - React Query options forwarded to the balance query.
  * @returns The balance query result.
  *

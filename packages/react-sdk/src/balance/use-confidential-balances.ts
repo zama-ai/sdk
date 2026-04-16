@@ -24,13 +24,14 @@ export interface UseConfidentialBalancesOptions extends Omit<
 
 /**
  * Declarative hook to read multiple confidential token balances in batch.
- * Polls `ReadonlyToken.batchBalancesOf()` at regular intervals. The SDK
- * cache short-circuits decryption for unchanged handles.
+ * Calls `ReadonlyToken.batchBalancesOf()` which decrypts each token via the
+ * SDK. Cached values are returned instantly — the relayer is only hit for
+ * changed handles.
  *
  * Returns partial results when some tokens fail — successful balances are
  * always returned alongside per-token error information.
  *
- * @param config - Token addresses and optional polling interval.
+ * @param config - Token addresses configuration.
  * @param options - React Query options forwarded to the balance query.
  * @returns The balance query result.
  *
