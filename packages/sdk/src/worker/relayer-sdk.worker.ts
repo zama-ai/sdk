@@ -10,7 +10,6 @@ import { getBrowserExtensionRuntime } from "./browser-extension";
 import type {
   CreateDelegatedEIP712Request,
   CreateEIP712Request,
-  CreateEIP712ResponseData,
   DelegatedUserDecryptRequest,
   DelegatedUserDecryptResponseData,
   EncryptRequest,
@@ -487,7 +486,7 @@ function handleCreateEIP712(request: CreateEIP712Request): void {
       payload.durationDays,
     );
 
-    sendSuccess<CreateEIP712ResponseData>(id, type, eip712);
+    sendSuccess(id, type, eip712);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[Worker] CreateEIP712 error:", message);
