@@ -1,5 +1,4 @@
 import { type Address, getAddress } from "viem";
-import { DecryptCache } from "../decrypt-cache";
 import {
   allowanceContract,
   confidentialBalanceOfContract,
@@ -13,50 +12,26 @@ import {
   symbolContract,
   underlyingContract,
 } from "../contracts";
-import { CredentialsManager } from "../credentials/credentials-manager";
-import { DelegatedCredentialsManager } from "../credentials/delegated-credentials-manager";
 import {
   ConfigurationError,
   DecryptionFailedError,
   DelegationExpiredError,
   DelegationNotFoundError,
+  isSessionError,
   wrapDecryptError,
+  ZamaError,
 } from "../errors";
-import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
-import { ZamaSDKEvents } from "../events/sdk-events";
-import type { RelayerSDK } from "../relayer/relayer-sdk";
+import { ZamaSDKEvents, type ZamaSDKEventInput } from "../events/sdk-events";
+import { ZERO_HANDLE } from "../query/utils";
 import type { ClearValueType, Handle } from "../relayer/relayer-sdk.types";
-import type { GenericSigner, GenericStorage } from "../types";
 import { toError } from "../utils";
 import { assertBigint } from "../utils/assertions";
 import { pLimit } from "../utils/concurrency";
+import type { ZamaSDK } from "../zama-sdk";
 
-/** 32-byte zero handle, used to detect uninitialized encrypted balances. */
-export const ZERO_HANDLE =
-  "0x0000000000000000000000000000000000000000000000000000000000000000" as const;
-
-/** Options for {@link ReadonlyToken.batchDecryptBalances}. */
-export interface BatchDecryptOptions {
-  /** Pre-fetched encrypted handles. When omitted, handles are fetched from the chain. */
-  handles?: Handle[];
-  /** Balance owner address. Defaults to the connected signer. */
-  owner?: Address;
-  /**
-   * Called when decryption fails for a single token. Return a fallback bigint value.
-   * When omitted, errors are collected and thrown as an aggregated DecryptionFailedError.
-   *
-   * @example
-   * ```ts
-   * // Silent zero (old behavior):
-   * onError: () => 0n
-   * // Log and use zero:
-   * onError: (err, addr) => { console.error(addr, err); return 0n; }
-   * ```
-   */
-  onError?: (error: Error, address: Address) => bigint;
-  /** Maximum number of concurrent decrypt calls. Default: `Infinity` (no limit). */
-  maxConcurrency?: number;
-}
+// Re-exported so consumers importing via `./token` keep a single canonical
+// reference. The constant itself lives in `query/utils` to avoid duplication.
+export { ZERO_HANDLE };
 
 /** Options for {@link ReadonlyToken.batchDecryptBalancesAs}. */
 export interface BatchDecryptAsOptions {
@@ -72,80 +47,35 @@ export interface BatchDecryptAsOptions {
   onError?: (error: Error, address: Address) => bigint;
 }
 
-/** Configuration for constructing a {@link ReadonlyToken}. */
-export interface ReadonlyTokenConfig {
-  /** Address of the confidential token contract. */
-  address: Address;
-  /** FHE relayer backend. */
-  relayer: RelayerSDK;
-  /** Wallet signer for read calls and credential signing. */
-  signer: GenericSigner;
-  /** Credential storage backend. */
-  storage: GenericStorage;
-  /** Session storage for wallet signatures. Shared across all contracts in the same SDK instance. */
-  sessionStorage: GenericStorage;
-  /** Storage-backed cache for decrypted handle values. When omitted, a private instance is created. */
-  cache?: DecryptCache;
-  /** Shared CredentialsManager instance. When provided, storage/sessionStorage/keypairTTL/onEvent are ignored for credential creation. */
-  credentials?: CredentialsManager;
-  /** Shared DelegatedCredentialsManager instance. When provided, storage/sessionStorage/keypairTTL/onEvent are ignored for delegated credential creation. */
-  delegatedCredentials?: DelegatedCredentialsManager;
-  /** How long the re-encryption keypair remains valid, in seconds. Default: `86400` (1 day). */
-  keypairTTL?: number;
-  /** Controls session signature lifetime in seconds. Default: `2592000` (30 days). `0` means every operation triggers a signing prompt. `"infinite"` means the session never expires. */
-  sessionTTL?: number | "infinite";
-  /** Optional structured event listener for debugging and telemetry. */
-  onEvent?: ZamaSDKEventListener;
+/** Result of {@link ReadonlyToken.batchBalancesOf}. */
+export interface BatchBalancesResult {
+  /** Successfully decrypted balances, keyed by token address. */
+  results: Map<Address, bigint>;
+  /** Per-token errors for tokens that failed to decrypt. */
+  errors: Map<Address, ZamaError>;
 }
 
 /**
  * Read-only interface for a confidential token.
  * Supports balance queries, authorization, and ERC-165 checks.
  * Does not require a wrapper address.
+ *
+ * Decryption, credentials, caching, and event emission are handled by the
+ * owning {@link ZamaSDK} — this class only exposes token-specific helpers
+ * that delegate to {@link ZamaSDK.userDecrypt} and {@link ZamaSDK.allow}.
  */
 export class ReadonlyToken {
-  protected readonly credentials: CredentialsManager;
-  protected readonly delegatedCredentials: DelegatedCredentialsManager;
-  protected readonly relayer: RelayerSDK;
-  readonly signer: GenericSigner;
+  readonly sdk: ZamaSDK;
   readonly address: Address;
-  readonly storage: GenericStorage;
-  readonly cache: DecryptCache;
-  readonly #onEvent: ZamaSDKEventListener | undefined;
 
-  constructor(config: ReadonlyTokenConfig) {
-    const credentialsConfig = {
-      relayer: config.relayer,
-      signer: config.signer,
-      storage: config.storage,
-      sessionStorage: config.sessionStorage,
-      keypairTTL: config.keypairTTL ?? 2592000,
-      sessionTTL: config.sessionTTL ?? 2592000,
-      onEvent: config.onEvent,
-    };
-    this.credentials = config.credentials ?? new CredentialsManager(credentialsConfig);
-    this.delegatedCredentials =
-      config.delegatedCredentials ?? new DelegatedCredentialsManager(credentialsConfig);
-    this.relayer = config.relayer;
-    this.signer = config.signer;
-    this.address = getAddress(config.address);
-    this.storage = config.storage;
-    this.cache = config.cache ?? new DecryptCache(config.storage);
-    this.#onEvent = config.onEvent;
-  }
-
-  /** Emit a structured event (no-op when no listener is registered). */
-  protected emit(partial: ZamaSDKEventInput): void {
-    this.#onEvent?.({
-      ...partial,
-      tokenAddress: this.address,
-      timestamp: Date.now(),
-    });
+  constructor(sdk: ZamaSDK, address: Address) {
+    this.sdk = sdk;
+    this.address = getAddress(address);
   }
 
   /**
    * Decrypt and return the plaintext balance for the given owner.
-   * Generates FHE credentials automatically if they don't exist.
+   * Acquires FHE credentials via a wallet signature if none are cached.
    *
    * @param owner - Optional balance owner address. Defaults to the connected signer.
    * @returns The decrypted plaintext balance as a bigint.
@@ -159,9 +89,15 @@ export class ReadonlyToken {
    * ```
    */
   async balanceOf(owner?: Address): Promise<bigint> {
-    const ownerAddress = owner ? getAddress(owner) : await this.signer.getAddress();
+    const ownerAddress = owner ? getAddress(owner) : await this.sdk.signer.getAddress();
     const handle = await this.readConfidentialBalanceOf(ownerAddress);
-    return this.decryptBalance(handle, ownerAddress);
+    const result = await this.sdk.userDecrypt([{ handle, contractAddress: this.address }]);
+    const value = result[handle];
+    if (value === undefined) {
+      throw new DecryptionFailedError(`Decryption returned no value for handle ${handle}`);
+    }
+    assertBigint(value, "balanceOf: result[handle]");
+    return value;
   }
 
   /**
@@ -176,7 +112,7 @@ export class ReadonlyToken {
    * ```
    */
   async confidentialBalanceOf(owner?: Address): Promise<Handle> {
-    const ownerAddress = owner ? getAddress(owner) : await this.signer.getAddress();
+    const ownerAddress = owner ? getAddress(owner) : await this.sdk.signer.getAddress();
     return this.readConfidentialBalanceOf(ownerAddress);
   }
 
@@ -184,110 +120,107 @@ export class ReadonlyToken {
    * ERC-165 check for {@link ERC7984_INTERFACE_ID} support.
    *
    * @returns `true` if the contract implements the ERC-7984 confidential token interface.
-   *
-   * @example
-   * ```ts
-   * if (await token.isConfidential()) {
-   *   // Token supports encrypted operations
-   * }
-   * ```
    */
   async isConfidential(): Promise<boolean> {
-    const result = await this.signer.readContract(
+    return this.sdk.signer.readContract(
       supportsInterfaceContract(this.address, ERC7984_INTERFACE_ID),
     );
-    return result;
   }
 
   /**
    * ERC-165 check for {@link ERC7984_WRAPPER_INTERFACE_ID} support.
    *
    * @returns `true` if the contract implements the ERC-7984 wrapper interface.
-   *
-   * @example
-   * ```ts
-   * if (await token.isWrapper()) {
-   *   // Token is a confidential wrapper
-   * }
-   * ```
    */
   async isWrapper(): Promise<boolean> {
-    const result = await this.signer.readContract(
+    return this.sdk.signer.readContract(
       supportsInterfaceContract(this.address, ERC7984_WRAPPER_INTERFACE_ID),
     );
-    return result;
   }
 
   /**
-   * Decrypt multiple token balances in parallel.
-   * When `handles` are provided, decrypts them directly (useful for two-phase
-   * polling where handles are already known). When omitted, fetches handles
-   * from the chain first.
+   * Decrypt confidential balances for multiple tokens in parallel, returning
+   * successes and per-token errors separately. Pre-authorizes all token
+   * addresses in a single wallet signature, then delegates each decrypt to
+   * {@link ZamaSDK.userDecrypt}.
    *
-   * **Error handling:** If a per-token decryption fails and no `onError` callback
-   * is provided, errors are collected and thrown as an aggregated
-   * `DecryptionFailedError`. When the relayer returns no value for a handle,
-   * a `DecryptionFailedError` is thrown for that token (never silently returns `0n`).
-   * Pass `onError: () => 0n` to opt into the silent zero behavior.
+   * Tokens that fail to decrypt land in `errors` rather than aborting the
+   * whole batch — caller decides how to surface them.
    *
-   * @param tokens - Array of ReadonlyToken instances to decrypt balances for.
-   * @param options - Optional configuration for handles, owner, error handling, and concurrency.
-   * @returns A Map from token address to decrypted balance.
-   * @throws {@link DecryptionFailedError} if any decryption fails and no `onError` callback is provided.
-   * @throws {@link SigningRejectedError} if the user rejects the wallet signature prompt.
+   * @param tokens - Array of {@link ReadonlyToken} instances bound to the same SDK.
+   * @param owner - Optional balance owner address. Defaults to the connected signer.
+   * @returns `{ results, errors }` partitioning the per-token outcomes.
    *
    * @example
    * ```ts
-   * // Simple one-shot:
-   * const balances = await ReadonlyToken.batchDecryptBalances(tokens);
-   *
-   * // With pre-fetched handles and error callback:
-   * const handles = await Promise.all(tokens.map(t => t.confidentialBalanceOf()));
-   * const balances = await ReadonlyToken.batchDecryptBalances(tokens, {
-   *   handles,
-   *   onError: (err, addr) => { console.error(addr, err); return 0n; },
-   * });
+   * const { results, errors } = await ReadonlyToken.batchBalancesOf(tokens);
    * ```
    */
-  static async batchDecryptBalances(
+  static async batchBalancesOf(
     tokens: ReadonlyToken[],
-    options?: BatchDecryptOptions,
-  ): Promise<Map<Address, bigint>> {
+    owner?: Address,
+  ): Promise<BatchBalancesResult> {
+    const results = new Map<Address, bigint>();
+    const errors = new Map<Address, ZamaError>();
     if (tokens.length === 0) {
-      return new Map();
+      return { results, errors };
     }
 
-    const { handles, owner, onError, maxConcurrency } = options ?? {};
-    const firstToken = tokens[0]!;
-    const sdk = ReadonlyToken.assertSameRelayer(tokens);
-    const signerAddress = owner ?? (await firstToken.signer.getAddress());
+    const sdk = ReadonlyToken.assertSameSdk(tokens);
+    // Pre-authorize the full token set in one wallet signature so subsequent
+    // per-token userDecrypt calls reuse the cached credentials.
+    await sdk.allow(tokens.map((t) => t.address));
 
-    return ReadonlyToken.#batchDecryptCore({
-      tokens,
-      handles,
-      ownerAddress: signerAddress,
-      onError,
-      maxConcurrency,
-      obtainCreds: (uncachedAddresses) => firstToken.credentials.allow(...uncachedAddresses),
-      decrypt: (creds, handle, contractAddress) =>
-        sdk.userDecrypt({
-          handles: [handle],
-          contractAddress,
-          signedContractAddresses: creds.contractAddresses,
-          privateKey: creds.privateKey,
-          publicKey: creds.publicKey,
-          signature: creds.signature,
-          signerAddress,
-          startTimestamp: creds.startTimestamp,
-          durationDays: creds.durationDays,
-        }),
-      errorPrefix: "Batch decryption",
-    });
+    // Bound concurrency so a large token list can't overwhelm the relayer.
+    // Default matches the inner userDecrypt limit.
+    const outcomes = await pLimit(
+      tokens.map((t) => async () => {
+        try {
+          return {
+            status: "fulfilled" as const,
+            value: await t.balanceOf(owner),
+          };
+        } catch (reason) {
+          return { status: "rejected" as const, reason };
+        }
+      }),
+      5,
+    );
+
+    for (let i = 0; i < tokens.length; i++) {
+      const tokenAddress = tokens[i]!.address;
+      const outcome = outcomes[i]!;
+      if (outcome.status === "fulfilled") {
+        results.set(tokenAddress, outcome.value);
+      } else {
+        const reason = outcome.reason;
+        // Session-level failures (user rejected signature, SDK misconfigured)
+        // apply to every token — surface them instead of collecting per-token.
+        if (isSessionError(reason)) {
+          throw reason;
+        }
+        const error =
+          reason instanceof ZamaError
+            ? reason
+            : new DecryptionFailedError(toError(reason).message, {
+                cause: reason,
+              });
+        errors.set(tokenAddress, error);
+      }
+    }
+
+    // Total failure: surface the first error so callers know nothing decrypted.
+    if (errors.size === tokens.length) {
+      const firstError = errors.values().next().value;
+      throw firstError ?? new DecryptionFailedError("All token balance decryptions failed");
+    }
+
+    return { results, errors };
   }
 
   /**
    * Batch decrypt confidential balances as a delegate across multiple tokens.
-   * Mirrors {@link batchDecryptBalances} but uses delegated credentials.
+   * Mirrors {@link batchBalancesOf} but uses delegated credentials.
    *
    * **Error handling:** If a per-token decryption fails and no `onError` callback
    * is provided, errors are collected and thrown as an aggregated
@@ -322,61 +255,8 @@ export class ReadonlyToken {
     const { delegatorAddress, handles, owner, onError, maxConcurrency } = options;
     const ownerAddress = owner ?? delegatorAddress;
     const firstToken = tokens[0]!;
-    ReadonlyToken.assertSameRelayer(tokens);
+    ReadonlyToken.assertSameSdk(tokens);
 
-    return ReadonlyToken.#batchDecryptCore({
-      tokens,
-      handles,
-      ownerAddress,
-      onError,
-      maxConcurrency,
-      preFlightCheck: () => firstToken.#assertDelegationActive(delegatorAddress),
-      obtainCreds: (uncachedAddresses) =>
-        firstToken.delegatedCredentials.allow(delegatorAddress, ...uncachedAddresses),
-      decrypt: (creds, handle, contractAddress) =>
-        firstToken.relayer.delegatedUserDecrypt({
-          handles: [handle],
-          contractAddress,
-          signedContractAddresses: creds.contractAddresses,
-          privateKey: creds.privateKey,
-          publicKey: creds.publicKey,
-          signature: creds.signature,
-          delegatorAddress: creds.delegatorAddress,
-          delegateAddress: creds.delegateAddress,
-          startTimestamp: creds.startTimestamp,
-          durationDays: creds.durationDays,
-        }),
-      errorPrefix: "Batch delegated decryption",
-    });
-  }
-
-  static async #batchDecryptCore<TCreds>(config: {
-    tokens: ReadonlyToken[];
-    handles: Handle[] | undefined;
-    ownerAddress: Address;
-    onError?: (error: Error, address: Address) => bigint;
-    maxConcurrency?: number;
-    preFlightCheck?: () => Promise<void>;
-    obtainCreds: (uncachedAddresses: Address[]) => Promise<TCreds>;
-    decrypt: (
-      creds: TCreds,
-      handle: Address,
-      contractAddress: Address,
-    ) => Promise<Record<string, unknown>>;
-    errorPrefix: string;
-  }): Promise<Map<Address, bigint>> {
-    const {
-      tokens,
-      handles,
-      ownerAddress,
-      onError,
-      maxConcurrency,
-      obtainCreds,
-      decrypt,
-      errorPrefix,
-    } = config;
-
-    const firstToken = tokens[0]!;
     const resolvedHandles =
       handles ?? (await Promise.all(tokens.map((t) => t.readConfidentialBalanceOf(ownerAddress))));
 
@@ -389,14 +269,14 @@ export class ReadonlyToken {
     const results = new Map<Address, bigint>();
 
     // Parallel cache lookups — avoids sequential IDB round-trips.
-    const uncached: { token: ReadonlyToken; handle: Address }[] = [];
+    const uncached: { token: ReadonlyToken; handle: Handle }[] = [];
     const cachedValues = await Promise.all(
       tokens.map((token, i) => {
         const handle = resolvedHandles[i]!;
         if (token.isZeroHandle(handle)) {
           return 0n;
         }
-        return firstToken.cache.get(ownerAddress, token.address, handle);
+        return firstToken.sdk.cache.get(ownerAddress, token.address, handle);
       }),
     );
 
@@ -406,7 +286,7 @@ export class ReadonlyToken {
       const cached = cachedValues[i];
 
       if (cached !== null && cached !== undefined) {
-        assertBigint(cached, "batchDecryptCore: cached");
+        assertBigint(cached, "batchDecryptBalancesAs: cached");
         results.set(token.address, cached);
         continue;
       }
@@ -419,34 +299,59 @@ export class ReadonlyToken {
       return results;
     }
 
-    // Pre-flight check runs after cache lookups — skips RPC overhead when
-    // all balances are cached. Best-effort: checks the first token's contract
-    // only (delegations are typically granted per-delegator, not per-token).
-    if (config.preFlightCheck) {
-      await config.preFlightCheck();
-    }
+    // Pre-flight delegation check runs after cache lookups — skips RPC overhead
+    // when all balances are cached. Best-effort: checks the first token's
+    // contract only (delegations are typically granted per-delegator, not per-token).
+    await firstToken.#assertDelegationActive(delegatorAddress);
 
     const uncachedAddresses = uncached.map((entry) => entry.token.address);
-    const creds = await obtainCreds(uncachedAddresses);
+    const creds = await firstToken.sdk.delegatedCredentials.allow(
+      delegatorAddress,
+      ...uncachedAddresses,
+    );
 
     const errors: { address: Address; error: Error }[] = [];
     const decryptFns: (() => Promise<void>)[] = [];
 
     for (const { token, handle } of uncached) {
       decryptFns.push(() =>
-        decrypt(creds, handle, token.address)
+        firstToken.sdk.relayer
+          .delegatedUserDecrypt({
+            handles: [handle],
+            contractAddress: token.address,
+            signedContractAddresses: creds.contractAddresses,
+            privateKey: creds.privateKey,
+            publicKey: creds.publicKey,
+            signature: creds.signature,
+            delegatorAddress: creds.delegatorAddress,
+            delegateAddress: creds.delegateAddress,
+            startTimestamp: creds.startTimestamp,
+            durationDays: creds.durationDays,
+          })
           .then(async (result) => {
             const value = result[handle];
             if (value === undefined) {
               throw new DecryptionFailedError(
-                `${errorPrefix} returned no value for handle ${handle} on token ${token.address}`,
+                `Batch delegated decryption returned no value for handle ${handle} on token ${token.address}`,
               );
             }
-            assertBigint(value, "batchDecryptCore: result[handle]");
+            assertBigint(value, "batchDecryptBalancesAs: result[handle]");
             results.set(token.address, value);
-            void firstToken.cache.set(ownerAddress, token.address, handle, value);
+            // Cache write is best-effort — log on failure so a broken cache
+            // backend doesn't silently force re-decryption forever.
+            firstToken.sdk.cache
+              .set(ownerAddress, token.address, handle, value)
+              .catch((cacheErr: unknown) => {
+                // oxlint-disable-next-line no-console
+                console.warn("[zama-sdk] Failed to cache decrypted value:", cacheErr);
+              });
           })
           .catch((error) => {
+            // Session-level failures apply to every token — re-throw so the
+            // whole batch aborts with the original typed error.
+            if (isSessionError(error)) {
+              throw error;
+            }
             const err = toError(error);
             if (onError) {
               try {
@@ -468,8 +373,11 @@ export class ReadonlyToken {
 
     if (errors.length > 0) {
       const message = errors.map((e) => `${e.address}: ${e.error.message}`).join("; ");
+      // Preserve the first original error as `cause` so callers can still
+      // `instanceof`-check the underlying failure type.
       throw new DecryptionFailedError(
-        `${errorPrefix} failed for ${errors.length} token(s): ${message}`,
+        `Batch delegated decryption failed for ${errors.length} token(s): ${message}`,
+        { cause: errors[0]!.error },
       );
     }
 
@@ -480,14 +388,9 @@ export class ReadonlyToken {
    * Read the underlying ERC-20 address from this token's wrapper contract.
    *
    * @returns The underlying ERC-20 token address.
-   *
-   * @example
-   * ```ts
-   * const underlying = await token.underlyingToken();
-   * ```
    */
   async underlyingToken(): Promise<Address> {
-    return this.signer.readContract(underlyingContract(this.address));
+    return this.sdk.signer.readContract(underlyingContract(this.address));
   }
 
   /**
@@ -496,59 +399,41 @@ export class ReadonlyToken {
    * @param wrapper - The wrapper contract address to check allowance for.
    * @param owner - Optional owner address. Defaults to the connected signer.
    * @returns The current allowance as a bigint.
-   *
-   * @example
-   * ```ts
-   * const allowance = await token.allowance("0xWrapper");
-   * ```
    */
   async allowance(wrapper: Address, owner?: Address): Promise<bigint> {
     const normalizedWrapper = getAddress(wrapper);
-    const underlying = await this.signer.readContract(underlyingContract(normalizedWrapper));
-    const userAddress = owner ? getAddress(owner) : await this.signer.getAddress();
-    return this.signer.readContract(allowanceContract(underlying, userAddress, normalizedWrapper));
+    const underlying = await this.sdk.signer.readContract(underlyingContract(normalizedWrapper));
+    const userAddress = owner ? getAddress(owner) : await this.sdk.signer.getAddress();
+    return this.sdk.signer.readContract(
+      allowanceContract(underlying, userAddress, normalizedWrapper),
+    );
   }
 
   /**
    * Read the token name from the contract.
    *
    * @returns The token name string.
-   *
-   * @example
-   * ```ts
-   * const name = await token.name(); // "Wrapped USDC"
-   * ```
    */
   async name(): Promise<string> {
-    return this.signer.readContract(nameContract(this.address));
+    return this.sdk.signer.readContract(nameContract(this.address));
   }
 
   /**
    * Read the token symbol from the contract.
    *
    * @returns The token symbol string.
-   *
-   * @example
-   * ```ts
-   * const symbol = await token.symbol(); // "cUSDC"
-   * ```
    */
   async symbol(): Promise<string> {
-    return this.signer.readContract(symbolContract(this.address));
+    return this.sdk.signer.readContract(symbolContract(this.address));
   }
 
   /**
    * Read the token decimals from the contract.
    *
    * @returns The number of decimals.
-   *
-   * @example
-   * ```ts
-   * const decimals = await token.decimals(); // 6
-   * ```
    */
   async decimals(): Promise<number> {
-    return this.signer.readContract(decimalsContract(this.address));
+    return this.sdk.signer.readContract(decimalsContract(this.address));
   }
 
   /**
@@ -566,7 +451,7 @@ export class ReadonlyToken {
    * ```
    */
   async allow(): Promise<void> {
-    await this.credentials.allow(this.address);
+    await this.sdk.allow([this.address]);
   }
 
   /**
@@ -574,16 +459,19 @@ export class ReadonlyToken {
    * Use this to check if decrypt operations can proceed without a wallet prompt.
    */
   async isAllowed(): Promise<boolean> {
-    return this.credentials.isAllowed([this.address]);
+    return this.sdk.credentials.isAllowed([this.address]);
   }
 
   /**
-   * Revoke the session signature for the connected wallet.
-   * Stored credentials remain intact, but the next decrypt operation
-   * will require a fresh wallet signature.
+   * Revoke cached session signatures for the given contract addresses, forcing
+   * a fresh wallet signature on the next decrypt operation for those contracts.
+   * Stored credentials remain intact; only the in-memory session signature is
+   * cleared.
+   *
+   * @param contractAddresses - Contract addresses to revoke credentials for.
    */
   async revoke(...contractAddresses: Address[]): Promise<void> {
-    await this.credentials.revoke(...contractAddresses);
+    await this.sdk.credentials.revoke(...contractAddresses);
   }
 
   /**
@@ -605,12 +493,12 @@ export class ReadonlyToken {
     if (tokens.length === 0) {
       return;
     }
-    const allAddresses = tokens.map((t) => t.address);
-    await tokens[0]!.credentials.allow(...allAddresses);
+    const sdk = ReadonlyToken.assertSameSdk(tokens);
+    await sdk.allow(tokens.map((t) => t.address));
   }
 
   protected async getAclAddress(): Promise<Address> {
-    return this.relayer.getAclAddress();
+    return this.sdk.relayer.getAclAddress();
   }
 
   /**
@@ -632,7 +520,7 @@ export class ReadonlyToken {
     if (expiry === MAX_UINT64) {
       return true;
     }
-    const now = await this.signer.getBlockTimestamp();
+    const now = await this.sdk.signer.getBlockTimestamp();
     return expiry > now;
   }
 
@@ -651,7 +539,7 @@ export class ReadonlyToken {
     delegateAddress: Address;
   }): Promise<bigint> {
     const acl = await this.getAclAddress();
-    return this.signer.readContract(
+    return this.sdk.signer.readContract(
       getDelegationExpiryContract(
         acl,
         getAddress(delegatorAddress),
@@ -666,7 +554,7 @@ export class ReadonlyToken {
    * connected signer for this token contract.
    */
   async #assertDelegationActive(delegatorAddress: Address): Promise<void> {
-    const delegateAddress = await this.signer.getAddress();
+    const delegateAddress = await this.sdk.signer.getAddress();
     const expiry = await this.getDelegationExpiry({
       delegatorAddress,
       delegateAddress,
@@ -677,7 +565,7 @@ export class ReadonlyToken {
       );
     }
     if (expiry !== MAX_UINT64) {
-      const now = await this.signer.getBlockTimestamp();
+      const now = await this.sdk.signer.getBlockTimestamp();
       if (expiry <= now) {
         throw new DelegationExpiredError(
           `Delegation from ${delegatorAddress} to ${delegateAddress} for ${this.address} has expired`,
@@ -687,9 +575,7 @@ export class ReadonlyToken {
   }
 
   protected async readConfidentialBalanceOf(owner: Address): Promise<Handle> {
-    return (await this.signer.readContract(
-      confidentialBalanceOfContract(this.address, owner),
-    )) as Handle;
+    return await this.sdk.signer.readContract(confidentialBalanceOfContract(this.address, owner));
   }
 
   isZeroHandle(handle: string): handle is typeof ZERO_HANDLE | `0x` {
@@ -709,12 +595,7 @@ export class ReadonlyToken {
    * @returns The decrypted plaintext balance as a bigint.
    * @throws {@link DelegationNotFoundError} if no active delegation exists from the delegator to the connected signer.
    * @throws {@link DelegationExpiredError} if the delegation has expired.
-   * @throws {@link DelegationNotPropagatedError} if the delegation exists on L1 but hasn't propagated to the gateway yet (typically 1–2 min after granting).
    * @throws {@link DecryptionFailedError} if delegated decryption fails or the relayer returns no value.
-   * @throws {@link SigningRejectedError} if the user rejects the wallet signature prompt.
-   * @throws {@link SigningFailedError} if the signing operation fails.
-   * @throws {@link NoCiphertextError} if the relayer returns HTTP 400 (no ciphertext for this account).
-   * @throws {@link RelayerRequestFailedError} if the relayer returns a non-400 HTTP error.
    *
    * @example
    * ```ts
@@ -738,7 +619,7 @@ export class ReadonlyToken {
       return 0n;
     }
 
-    const cached = await this.cache.get(normalizedOwner, this.address, handle);
+    const cached = await this.sdk.cache.get(normalizedOwner, this.address, handle);
     if (cached !== null) {
       assertBigint(cached, "decryptBalanceAs: cached");
       return cached;
@@ -752,9 +633,9 @@ export class ReadonlyToken {
     try {
       this.emit({ type: ZamaSDKEvents.DecryptStart, handles: [handle] });
 
-      const creds = await this.delegatedCredentials.allow(normalizedDelegator, this.address);
+      const creds = await this.sdk.delegatedCredentials.allow(normalizedDelegator, this.address);
 
-      const result = await this.relayer.delegatedUserDecrypt({
+      const result = await this.sdk.relayer.delegatedUserDecrypt({
         handles: [handle],
         contractAddress: this.address,
         signedContractAddresses: creds.contractAddresses,
@@ -767,13 +648,8 @@ export class ReadonlyToken {
         durationDays: creds.durationDays,
       });
 
-      this.emit({
-        type: ZamaSDKEvents.DecryptEnd,
-        durationMs: Date.now() - t0,
-        handles: [handle],
-        result,
-      });
-
+      // Validate the relayer response before emitting DecryptEnd so subscribers
+      // never see a contradictory `Start → End → Error` sequence.
       const value = result[handle];
       if (value === undefined) {
         throw new DecryptionFailedError(
@@ -781,7 +657,15 @@ export class ReadonlyToken {
         );
       }
       assertBigint(value, "decryptBalanceAs: result[handle]");
-      await this.cache.set(normalizedOwner, this.address, handle, value);
+
+      this.emit({
+        type: ZamaSDKEvents.DecryptEnd,
+        durationMs: Date.now() - t0,
+        handles: [handle],
+        result,
+      });
+
+      await this.sdk.cache.set(normalizedOwner, this.address, handle, value);
       return value;
     } catch (error) {
       this.emit({
@@ -795,152 +679,31 @@ export class ReadonlyToken {
   }
 
   /**
-   * Decrypt a single encrypted handle into a plaintext bigint.
-   * Returns `0n` for zero handles without calling the relayer.
-   *
-   * @param handle - The encrypted balance handle to decrypt.
-   * @param owner - Optional owner address for the decrypt request.
-   * @returns The decrypted plaintext value as a bigint.
-   * @throws {@link DecryptionFailedError} if FHE decryption fails.
-   *
-   * @example
-   * ```ts
-   * const handle = await token.confidentialBalanceOf();
-   * const value = await token.decryptBalance(handle);
-   * ```
+   * Emit a decrypt-related event scoped to this token. Events are routed
+   * through the owning {@link ZamaSDK} so subscribers see a unified stream.
    */
-  async decryptBalance(handle: Handle, owner?: Address): Promise<bigint> {
-    if (this.isZeroHandle(handle)) {
-      return 0n;
-    }
-
-    const signerAddress = owner ?? (await this.signer.getAddress());
-
-    const cached = await this.cache.get(signerAddress, this.address, handle);
-    if (cached !== null) {
-      assertBigint(cached, "decryptBalance: cached");
-      return cached;
-    }
-
-    const creds = await this.credentials.allow(this.address);
-
-    const t0 = Date.now();
-    try {
-      this.emit({ type: ZamaSDKEvents.DecryptStart, handles: [handle] });
-      const result = await this.relayer.userDecrypt({
-        handles: [handle],
-        contractAddress: this.address,
-        signedContractAddresses: creds.contractAddresses,
-        privateKey: creds.privateKey,
-        publicKey: creds.publicKey,
-        signature: creds.signature,
-        signerAddress,
-        startTimestamp: creds.startTimestamp,
-        durationDays: creds.durationDays,
-      });
-      this.emit({
-        type: ZamaSDKEvents.DecryptEnd,
-        durationMs: Date.now() - t0,
-        handles: [handle],
-        result,
-      });
-
-      const value = result[handle];
-      if (value === undefined) {
-        throw new DecryptionFailedError(`Decryption returned no value for handle ${handle}`);
-      }
-      assertBigint(value, "decryptBalance: result[handle]");
-      await this.cache.set(signerAddress, this.address, handle, value);
-      return value;
-    } catch (error) {
-      this.emit({
-        type: ZamaSDKEvents.DecryptError,
-        error: toError(error),
-        durationMs: Date.now() - t0,
-        handles: [handle],
-      });
-      throw wrapDecryptError(error, "Failed to decrypt balance");
-    }
+  protected emit(input: ZamaSDKEventInput): void {
+    this.sdk.emitEvent(input, this.address);
   }
 
-  /**
-   * Batch-decrypt arbitrary encrypted handles in a single relayer call.
-   * Zero handles are returned as 0n without hitting the relayer.
-   *
-   * @param handles - Array of encrypted handles to decrypt.
-   * @param owner - Optional owner address for the decrypt request.
-   * @returns A Map from handle to decrypted bigint value.
-   * @throws {@link DecryptionFailedError} if FHE decryption fails.
-   */
-  async decryptHandles(handles: Handle[], owner?: Address): Promise<Map<Handle, ClearValueType>> {
-    const results = new Map<Handle, ClearValueType>();
-    const nonZeroHandles: Handle[] = [];
-
-    for (const handle of handles) {
-      if (this.isZeroHandle(handle)) {
-        results.set(handle, 0n);
-      } else {
-        nonZeroHandles.push(handle);
-      }
-    }
-
-    if (nonZeroHandles.length === 0) {
-      return results;
-    }
-
-    const creds = await this.credentials.allow(this.address);
-
-    const t0 = Date.now();
-    try {
-      this.emit({ type: ZamaSDKEvents.DecryptStart, handles: nonZeroHandles });
-      const decrypted = await this.relayer.userDecrypt({
-        handles: nonZeroHandles,
-        contractAddress: this.address,
-        signedContractAddresses: creds.contractAddresses,
-        privateKey: creds.privateKey,
-        publicKey: creds.publicKey,
-        signature: creds.signature,
-        signerAddress: owner ?? (await this.signer.getAddress()),
-        startTimestamp: creds.startTimestamp,
-        durationDays: creds.durationDays,
-      });
-      this.emit({
-        type: ZamaSDKEvents.DecryptEnd,
-        durationMs: Date.now() - t0,
-        handles: nonZeroHandles,
-        result: decrypted,
-      });
-
-      for (const handle of nonZeroHandles) {
-        const value = decrypted[handle];
-        if (value === undefined) {
-          throw new DecryptionFailedError(`Decryption returned no value for handle ${handle}`);
-        }
-        results.set(handle, value);
-      }
-    } catch (error) {
-      this.emit({
-        type: ZamaSDKEvents.DecryptError,
-        error: toError(error),
-        durationMs: Date.now() - t0,
-        handles: nonZeroHandles,
-      });
-      throw wrapDecryptError(error, "Failed to decrypt handles");
-    }
-
-    return results;
-  }
-
-  /** Verify all tokens share the same relayer and return it. */
-  private static assertSameRelayer(tokens: ReadonlyToken[]): RelayerSDK {
-    const relayer = tokens[0]!.relayer;
+  /** Verify all tokens share the same SDK instance and return it. */
+  private static assertSameSdk(tokens: ReadonlyToken[]): ZamaSDK {
+    const sdk = tokens[0]!.sdk;
     for (let i = 1; i < tokens.length; i++) {
-      if (tokens[i]!.relayer !== relayer) {
+      if (tokens[i]!.sdk !== sdk) {
         throw new ConfigurationError(
-          "All tokens in a batch operation must share the same relayer instance",
+          "All tokens in a batch operation must share the same ZamaSDK instance",
         );
       }
     }
-    return relayer;
+    return sdk;
   }
 }
+
+/**
+ * Re-exported alias used by tests and helpers for arbitrary-handle decryption.
+ * Use {@link ZamaSDK.userDecrypt} directly in application code.
+ *
+ * @internal
+ */
+export type DecryptedHandlesMap = Map<Handle, ClearValueType>;
