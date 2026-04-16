@@ -634,7 +634,12 @@ export class Token extends ReadonlyToken {
     assertBigint(clearValue, "finalizeUnwrap: clearValue");
     try {
       const txHash = await this.sdk.signer.writeContract(
-        finalizeUnwrapContract(this.wrapper, unwrapRequestIdOrAmount, clearValue, result.decryptionProof),
+        finalizeUnwrapContract(
+          this.wrapper,
+          unwrapRequestIdOrAmount,
+          clearValue,
+          result.decryptionProof,
+        ),
       );
       this.emit({ type: ZamaSDKEvents.FinalizeUnwrapSubmitted, txHash });
       const receipt = await this.sdk.signer.waitForTransactionReceipt(txHash);
