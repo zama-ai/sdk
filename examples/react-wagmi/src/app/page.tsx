@@ -18,6 +18,7 @@ import {
   useIsAllowed,
   useAllow,
   useListPairs,
+  useTotalSupply,
   useZamaSDK,
 } from "@zama-fhe/react-sdk";
 import type { TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
@@ -113,6 +114,13 @@ export default function Home() {
   const erc20Decimals = token?.underlying.decimals ?? 0;
   const confidentialSymbol = token?.confidential.symbol ?? "";
   const erc20Symbol = token?.underlying.symbol ?? "";
+
+  // Reads the wrapper's plaintext inferred total supply (inferredTotalSupply() on-chain).
+  // Unlike confidentialTotalSupply (which returns an encrypted handle), this is a plain
+  // bigint that does not require FHE credentials — useful for public dashboards.
+  const { data: totalSupply } = useTotalSupply(token?.confidentialTokenAddress ?? ZERO_ADDRESS, {
+    enabled: !!token,
+  });
 
   // Triggers the EIP-712 wallet signature to create FHE decrypt credentials.
   // All registry pairs are passed at once — a single signature covers all tokens,
@@ -304,6 +312,11 @@ export default function Home() {
         )}
         {!isRegistryPending && !isRegistryError && validPairs.length === 0 && (
           <p className="token-meta">No tokens available.</p>
+        )}
+        {token && totalSupply !== undefined && (
+          <p className="token-meta">
+            Total supply: {formatUnits(totalSupply, decimals)} {confidentialSymbol}
+          </p>
         )}
       </div>
 

@@ -193,6 +193,16 @@ Under the hood, `balanceOf` performs several steps the first time it is called:
 Subsequent calls reuse the cached keypair and session signature (no re-signing until the
 session expires or `sdk.revoke()` is called).
 
+#### `inferredTotalSupplyContract` — plaintext total supply
+
+```ts
+const totalSupply = await signerA.readContract(
+  inferredTotalSupplyContract(confidentialTokenAddress),
+);
+```
+
+`inferredTotalSupplyContract` reads the wrapper's **inferred plaintext** total supply. Unlike `confidentialTotalSupply` (which returns an encrypted handle requiring FHE decryption), this is a plain `bigint` accessible without credentials — useful for dashboards and analytics.
+
 ### 3b — `shield` (ERC-20 → cToken)
 
 ```ts
@@ -223,6 +233,12 @@ The amount is encrypted client-side (via `RelayerNode`) before the transaction i
 Only the recipient and authorized delegates can decrypt the transferred amount.
 From an observer's point of view, the transferred value is opaque.
 
+> **Balance validation** — since v2.3.0, `confidentialTransfer` automatically decrypts and
+> checks the sender's confidential balance before submitting the transaction. If the balance
+> is insufficient, it throws `InsufficientConfidentialBalanceError` before any on-chain call.
+> Pass `{ skipBalanceCheck: true }` to bypass this (useful for smart-wallet setups where the
+> SDK cannot decrypt the balance in advance).
+
 ### 3d — `unshield` (cToken → ERC-20)
 
 ```ts
@@ -242,6 +258,9 @@ await tokenA.unshield(UNSHIELD_AMOUNT, {
 
 The SDK polls for Phase 2 automatically. The `onFinalizing` callback fires while waiting.
 On Sepolia, Phase 2 typically completes within 1–3 minutes.
+
+> **Balance validation** — like `confidentialTransfer`, `unshield` validates the confidential
+> balance before Phase 1. Pass `{ skipBalanceCheck: true }` to bypass.
 
 ---
 

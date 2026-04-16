@@ -103,6 +103,8 @@ page.tsx — sdk.createToken().shield() / useConfidentialTransfer / useUnshield 
 
 **`getActiveUnshieldToken` bridge** (`src/lib/activeUnshield.ts`): module-level variable that stores the token address of an in-flight unshield. `ZamaSDKEvents.UnshieldPhase1Submitted` does not carry the token address, so `UnshieldCard` sets this variable just before calling `mutate()`. The `onEvent` handler in `providers.tsx` reads it to call `savePendingUnshield` with the correct wrapper address. A module-level variable is safe here — only one unshield can be in flight per browser tab.
 
+**Decrypt event telemetry:** the `onEvent` handler also logs decrypt lifecycle events. Since v2.5.0, `DecryptEnd` events carry `handles` (the ciphertext handles that were decrypted) and `result` (a `Record<Handle, ClearValueType>` mapping each handle to its plaintext). `DecryptError` events carry the same `handles` array for failure correlation.
+
 **Hybrid EIP-1193 provider:** contract read calls (`eth_call`, `eth_estimateGas`) are routed to a direct `JsonRpcProvider` for fast, wallet-independent reads. The following calls are routed to the injected wallet's node instead, because `rpc.hoodi.ethpandaops.io` is a load balancer whose backends can be at different chain heights:
 
 - **`eth_getTransactionCount` (nonce):** a stale backend can return an outdated nonce, causing ethers to build a transaction with a nonce lower than MetaMask's actual next nonce and triggering a "nonce too low" rejection. The wallet is the authoritative nonce source.
@@ -228,6 +230,8 @@ Two balances are displayed:
 Click **Decrypt Balance** and approve the EIP-712 signature in your wallet. A single signature covers all registered tokens — switching tokens will not prompt again. The credential is cached in IndexedDB (30-day TTL) and reused for all subsequent decryptions.
 
 If you have never shielded any tokens, the confidential balance shows **—** after decryption — this is expected, as there is no encrypted balance to read yet.
+
+**Inferred total supply:** the token selector card also displays the wrapper's plaintext total supply via `useTotalSupply`. This calls `inferredTotalSupply()` on-chain — a plain `bigint` that does not require FHE credentials, useful for public dashboards.
 
 ### Step 5 — Shield (ERC-20 → cToken)
 
@@ -389,6 +393,12 @@ function handleDecrypt() {
   const addresses = pairsData?.items?.map((p) => p.confidentialTokenAddress) ?? [];
   if (addresses.length > 0) allowTokens.mutate(addresses);
 }
+
+// Read the plaintext inferred total supply — no FHE credentials required.
+const { data: totalSupply } = useTotalSupply(
+  cTokenAddress ?? "0x0000000000000000000000000000000000000000",
+  { enabled: !!cTokenAddress },
+);
 
 const transfer = useConfidentialTransfer({ tokenAddress: cTokenAddress });
 const unshield = useUnshield({ tokenAddress: cTokenAddress, wrapperAddress: cTokenAddress });

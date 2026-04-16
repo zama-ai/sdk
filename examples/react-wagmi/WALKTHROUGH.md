@@ -248,6 +248,19 @@ function handleDecrypt() {
 
 Both are OR'd to drive the "Decrypting…" display in `BalancesCard`.
 
+### Inferred total supply
+
+The token selector card also shows the wrapper's plaintext total supply via `useTotalSupply`:
+
+```ts
+const { data: totalSupply } = useTotalSupply(
+  token?.confidentialTokenAddress ?? ZERO_ADDRESS,
+  { enabled: !!token },
+);
+```
+
+Unlike `confidentialTotalSupply` (which returns an encrypted handle), `inferredTotalSupply` returns a plain `bigint` and does not require FHE credentials — useful for public dashboard displays.
+
 ---
 
 ## 7. RelayerWeb proxy
@@ -273,6 +286,21 @@ If the user closes the tab between phases, `PendingUnshieldCard` recovers the st
 The `savePendingUnshield` call in `onEvent` and the `storage` prop in `ZamaProvider`
 **must always reference the same `indexedDBStorage` instance**. If you ever change the
 `storage` prop, update `onEvent` to match.
+
+### Decrypt event telemetry
+
+The `onEvent` handler also logs decrypt lifecycle events. Since v2.5.0, `DecryptEnd` events carry `handles` (the ciphertext handles that were decrypted) and `result` (a `Record<Handle, ClearValueType>` mapping each handle to its plaintext value). This enables telemetry and debugging without polling:
+
+```ts
+if (event.type === ZamaSDKEvents.DecryptEnd) {
+  console.debug(
+    `[FHE] Decrypted ${event.handles.length} handle(s) in ${event.durationMs}ms`,
+    event.result,
+  );
+}
+```
+
+`DecryptError` events carry the same `handles` array, useful for correlating failures with specific ciphertexts.
 
 ---
 

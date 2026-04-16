@@ -1,7 +1,12 @@
 import { createPublicClient, createWalletClient, formatUnits, http, parseAbi } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
-import { DelegationNotPropagatedError, MemoryStorage, ZamaSDK } from "@zama-fhe/sdk";
+import {
+  DelegationNotPropagatedError,
+  MemoryStorage,
+  ZamaSDK,
+  inferredTotalSupplyContract,
+} from "@zama-fhe/sdk";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 import { RelayerNode } from "@zama-fhe/sdk/node";
 import type { Address } from "@zama-fhe/sdk";
@@ -142,12 +147,20 @@ async function main() {
   // ──────────────────────────────────────────────────────────────────────────
   section("SECTION 3 — Confidential Token Lifecycle");
 
-  // 3a. Initial confidential balance
+  // 3a. Initial confidential balance + inferred total supply
   console.log("── 3a. Initial balances ──");
   const balanceA0 = await tokenA.balanceOf();
   const balanceB0 = await tokenB.balanceOf();
   console.log("cUSDT balance (A):", fmt(balanceA0));
   console.log("cUSDT balance (B):", fmt(balanceB0));
+
+  // inferredTotalSupplyContract reads the wrapper's plaintext total supply estimate.
+  // Unlike confidentialTotalSupply (which returns an encrypted handle requiring decryption),
+  // this returns a plain bigint and does not need FHE credentials.
+  const totalSupply = await signerA.readContract(
+    inferredTotalSupplyContract(confidentialTokenAddress),
+  );
+  console.log("Inferred total supply:", fmt(totalSupply));
 
   // 3b. Shield: ERC-20 USDT → confidential cUSDT
   // shield() handles approval + wrap in a single call.
@@ -163,6 +176,9 @@ async function main() {
 
   // 3c. Confidential transfer: A → B
   // The amount is encrypted client-side before being sent on-chain.
+  // The SDK automatically validates the confidential balance before submitting.
+  // Pass { skipBalanceCheck: true } to bypass this check (e.g. for smart wallets
+  // where the SDK cannot decrypt the balance before sending).
   console.log("\n── 3c. Confidential transfer ──");
   console.log(`Transferring ${fmt(TRANSFER_AMOUNT)} cUSDT: A → B...`);
   await tokenA.confidentialTransfer(accountB.address as Address, TRANSFER_AMOUNT, {
@@ -178,6 +194,8 @@ async function main() {
   // 3d. Unshield: confidential cUSDT → ERC-20 USDT
   // unshield() is a two-phase operation (unwrap + finalizeUnwrap).
   // The callbacks let you track each phase; both are awaited automatically.
+  // Like confidentialTransfer, balance is validated before submission —
+  // pass { skipBalanceCheck: true } to bypass.
   console.log("\n── 3d. Unshield ──");
   console.log(`Unshielding ${fmt(UNSHIELD_AMOUNT)} cUSDT → USDT (Account A)...`);
   await tokenA.unshield(UNSHIELD_AMOUNT, {

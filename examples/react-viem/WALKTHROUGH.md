@@ -282,6 +282,21 @@ UnshieldCard: setActiveUnshieldToken(tokenAddress) → mutate()
 providers.tsx onEvent: getActiveUnshieldToken() → savePendingUnshield(storage, wrapperAddress, txHash)
 ```
 
+### Decrypt event telemetry
+
+The `onEvent` handler in `providers.tsx` also logs decrypt lifecycle events. Since v2.5.0, `DecryptEnd` events carry `handles` (the ciphertext handles that were decrypted) and `result` (a `Record<Handle, ClearValueType>` mapping each handle to its plaintext value). This enables telemetry and debugging without polling:
+
+```ts
+if (event.type === ZamaSDKEvents.DecryptEnd) {
+  console.debug(
+    `[FHE] Decrypted ${event.handles.length} handle(s) in ${event.durationMs}ms`,
+    event.result,
+  );
+}
+```
+
+`DecryptError` events carry the same `handles` array, useful for correlating failures with specific ciphertexts.
+
 ---
 
 ## 8. Delegation
@@ -367,6 +382,19 @@ function handleDecrypt() {
 - `balance.isLoading` — decrypting it via the relayer
 
 Both are OR'd to drive the "Decrypting…" display in `BalancesCard`.
+
+### Inferred total supply
+
+The token selector card also shows the wrapper's plaintext total supply via `useTotalSupply`:
+
+```ts
+const { data: totalSupply } = useTotalSupply(
+  token?.confidentialTokenAddress ?? ZERO_ADDRESS,
+  { enabled: !!token },
+);
+```
+
+Unlike `confidentialTotalSupply` (which returns an encrypted handle), `inferredTotalSupply` returns a plain `bigint` and does not require FHE credentials — useful for public dashboard displays.
 
 **`actionsDisabled`** is `!isSepolia || !token` — `token` is only defined once the registry
 has resolved and a pair has been selected (decimals and symbol are implicitly available).

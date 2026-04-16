@@ -186,6 +186,22 @@ export function Providers({ children }: { children: ReactNode }) {
               setActiveUnshieldToken(null);
             }
           }
+
+          // Decrypt events carry `handles` (the ciphertext handles being decrypted) and,
+          // on success, `result` (a Record<Handle, ClearValueType> mapping each handle to
+          // its plaintext). These fields enable telemetry and debugging without polling.
+          if (event.type === ZamaSDKEvents.DecryptEnd) {
+            console.debug(
+              `[FHE] Decrypted ${event.handles.length} handle(s) in ${event.durationMs}ms`,
+              event.result,
+            );
+          }
+          if (event.type === ZamaSDKEvents.DecryptError) {
+            console.error(
+              `[FHE] Decrypt failed for ${event.handles.length} handle(s):`,
+              event.error.message,
+            );
+          }
         }}
       >
         {children}
