@@ -579,9 +579,6 @@ export class ChromeSessionStorage implements GenericStorage {
 // @public
 export const chromeSessionStorage: ChromeSessionStorage;
 
-// @public
-export function clearPendingUnshield(storage: GenericStorage, wrapperAddress: Address): Promise<void>;
-
 export { ClearValueType }
 
 // @public
@@ -5750,36 +5747,29 @@ export interface CredentialsLoadingEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.CredentialsLoading;
 }
 
-// Warning: (ae-forgotten-export) The symbol "BaseCredentialsManager" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "EncryptedCredentials$1" needs to be exported by the entry point index.d.ts
-//
 // @public
-export class CredentialsManager extends BaseCredentialsManager<StoredCredentials, EncryptedCredentials$1> {
+export class CredentialsManager extends BaseCredentialsManager<StoredCredentials, BaseEncryptedCredentials> {
     constructor(config: CredentialsManagerConfig);
     allow(...contractAddresses: Address[]): Promise<StoredCredentials>;
-    // (undocumented)
-    protected assertEncrypted(data: unknown): asserts data is EncryptedCredentials$1;
+    // @internal (undocumented)
+    protected assertEncrypted(data: unknown): asserts data is BaseEncryptedCredentials;
     clear(): Promise<void>;
-    // (undocumented)
+    // @internal (undocumented)
     protected clearCaches(): void;
     static computeStoreKey(address: Address, chainId: number): Promise<string>;
     create(contractAddresses: Address[]): Promise<StoredCredentials>;
-    // (undocumented)
-    protected decryptCredentials(encrypted: EncryptedCredentials$1, signature: Hex): Promise<StoredCredentials>;
-    // (undocumented)
-    protected encryptCredentials(creds: StoredCredentials): Promise<EncryptedCredentials$1>;
+    // @internal (undocumented)
+    protected decryptCredentials(encrypted: BaseEncryptedCredentials, signature: Hex): Promise<StoredCredentials>;
+    // @internal (undocumented)
+    protected encryptCredentials(creds: StoredCredentials): Promise<BaseEncryptedCredentials>;
     isAllowed(contractAddresses: [Address, ...Address[]]): Promise<boolean>;
     isExpired(contractAddress?: Address): Promise<boolean>;
     revoke(...contractAddresses: Address[]): Promise<void>;
     revokeByKey(key: string): Promise<void>;
-    // Warning: (ae-forgotten-export) The symbol "SigningMeta" needs to be exported by the entry point index.d.ts
-    //
-    // (undocumented)
+    // @internal (undocumented)
     protected signForContracts(meta: SigningMeta, contractAddresses: Address[]): Promise<Hex>;
 }
 
-// Warning: (ae-forgotten-export) The symbol "CredentialsConfig" needs to be exported by the entry point index.d.ts
-//
 // @public
 export interface CredentialsManagerConfig extends CredentialsConfig {
     relayer: RelayerSDK;
@@ -6030,28 +6020,24 @@ export interface DecryptStartEvent extends BaseEvent {
 // @public
 export const DefaultRegistryAddresses: Record<number, Address>;
 
-// Warning: (ae-forgotten-export) The symbol "EncryptedCredentials" needs to be exported by the entry point index.d.ts
-//
 // @public
-export class DelegatedCredentialsManager extends BaseCredentialsManager<DelegatedStoredCredentials, EncryptedCredentials> {
+export class DelegatedCredentialsManager extends BaseCredentialsManager<DelegatedStoredCredentials, DelegatedEncryptedCredentials> {
     constructor(config: DelegatedCredentialsManagerConfig);
     allow(delegatorAddress: Address, ...contractAddresses: Address[]): Promise<DelegatedStoredCredentials>;
-    // (undocumented)
-    protected assertEncrypted(data: unknown): asserts data is EncryptedCredentials;
+    // @internal (undocumented)
+    protected assertEncrypted(data: unknown): asserts data is DelegatedEncryptedCredentials;
     clear(delegatorAddress: Address): Promise<void>;
-    // (undocumented)
+    // @internal (undocumented)
     protected clearCaches(): void;
     static computeStoreKey(delegateAddress: Address, delegatorAddress: Address, chainId: number): Promise<string>;
-    // (undocumented)
-    protected decryptCredentials(encrypted: EncryptedCredentials, signature: Hex): Promise<DelegatedStoredCredentials>;
-    // (undocumented)
-    protected encryptCredentials(creds: DelegatedStoredCredentials): Promise<EncryptedCredentials>;
+    // @internal (undocumented)
+    protected decryptCredentials(encrypted: DelegatedEncryptedCredentials, signature: Hex): Promise<DelegatedStoredCredentials>;
+    // @internal (undocumented)
+    protected encryptCredentials(creds: DelegatedStoredCredentials): Promise<DelegatedEncryptedCredentials>;
     isAllowed(delegatorAddress: Address, contractAddresses: [Address, ...Address[]]): Promise<boolean>;
     isExpired(delegatorAddress: Address, contractAddress?: Address): Promise<boolean>;
     revoke(delegatorAddress: Address): Promise<void>;
-    // Warning: (ae-forgotten-export) The symbol "DelegatedSigningMeta" needs to be exported by the entry point index.d.ts
-    //
-    // (undocumented)
+    // @internal (undocumented)
     protected signForContracts(meta: DelegatedSigningMeta, contractAddresses: Address[]): Promise<Hex>;
 }
 
@@ -11533,9 +11519,6 @@ export interface ListPairsOptions {
 }
 
 // @public
-export function loadPendingUnshield(storage: GenericStorage, wrapperAddress: Address): Promise<Hex | null>;
-
-// @public
 export const MainnetConfig: {
     readonly chainId: 1;
     readonly gatewayChainId: 261131;
@@ -13263,9 +13246,6 @@ export interface RevokeDelegationSubmittedEvent extends BaseEvent {
     // (undocumented)
     type: typeof ZamaSDKEvents.RevokeDelegationSubmitted;
 }
-
-// @public
-export function savePendingUnshield(storage: GenericStorage, wrapperAddress: Address, unwrapTxHash: Hex): Promise<void>;
 
 // @public
 export const SepoliaConfig: {

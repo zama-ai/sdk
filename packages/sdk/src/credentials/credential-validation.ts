@@ -2,7 +2,10 @@ import { getAddress, isAddress, type Address, type Hex } from "viem";
 import { assertArray, assertCondition, assertObject, assertString } from "../utils";
 import type { EncryptedData } from "./credential-crypto";
 
-/** Encrypted credential shape stored in persistent storage (shared base fields). */
+/**
+ * Encrypted credential shape stored in persistent storage (shared base fields).
+ * @internal
+ */
 export interface BaseEncryptedCredentials {
   publicKey: Hex;
   contractAddresses: Address[];

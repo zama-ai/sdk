@@ -13,8 +13,11 @@ import {
   computeStoreKey,
 } from "./credential-validation";
 
-/** Internal storage shape — base fields plus delegator/delegate addresses. */
-interface EncryptedCredentials extends BaseEncryptedCredentials {
+/**
+ * Internal storage shape — base fields plus delegator/delegate addresses.
+ * @internal
+ */
+export interface DelegatedEncryptedCredentials extends BaseEncryptedCredentials {
   delegatorAddress: Address;
   delegateAddress: Address;
 }
@@ -25,7 +28,10 @@ export interface DelegatedCredentialsManagerConfig extends CredentialsConfig {
   relayer: RelayerSDK;
 }
 
-/** Signing metadata for delegated credentials, adding the delegator's address. */
+/**
+ * Signing metadata for delegated credentials, adding the delegator's address.
+ * @internal
+ */
 export interface DelegatedSigningMeta extends SigningMeta {
   /** On-chain address of the account that delegated decryption rights. */
   delegatorAddress: Address;
@@ -37,7 +43,7 @@ export interface DelegatedSigningMeta extends SigningMeta {
  */
 export class DelegatedCredentialsManager extends BaseCredentialsManager<
   DelegatedStoredCredentials,
-  EncryptedCredentials
+  DelegatedEncryptedCredentials
 > {
   #relayer: RelayerSDK;
   #cachedStoreKey: string | null = null;
@@ -144,10 +150,12 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
 
   // ── Abstract implementations ──────────────────────────────────
 
-  protected assertEncrypted(data: unknown): asserts data is EncryptedCredentials {
+  /** @internal */
+  protected assertEncrypted(data: unknown): asserts data is DelegatedEncryptedCredentials {
     assertDelegatedFields(data);
   }
 
+  /** @internal */
   protected async signForContracts(
     meta: DelegatedSigningMeta,
     contractAddresses: Address[],
@@ -155,9 +163,10 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
     return this.#signDelegated(meta, contractAddresses);
   }
 
+  /** @internal */
   protected async encryptCredentials(
     creds: DelegatedStoredCredentials,
-  ): Promise<EncryptedCredentials> {
+  ): Promise<DelegatedEncryptedCredentials> {
     const address = await this.signer.getAddress();
     const encryptedPrivateKey = await this.crypto.encrypt(
       creds.privateKey,
@@ -168,8 +177,9 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
     return { ...rest, encryptedPrivateKey };
   }
 
+  /** @internal */
   protected async decryptCredentials(
-    encrypted: EncryptedCredentials,
+    encrypted: DelegatedEncryptedCredentials,
     signature: Hex,
   ): Promise<DelegatedStoredCredentials> {
     const address = await this.signer.getAddress();
@@ -178,6 +188,7 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
     return { ...rest, privateKey, signature };
   }
 
+  /** @internal */
   protected override clearCaches(): void {
     this.#cachedStoreKey = null;
     this.#cachedStoreKeyIdentity = null;

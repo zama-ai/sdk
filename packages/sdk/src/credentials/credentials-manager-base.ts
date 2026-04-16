@@ -15,7 +15,10 @@ import {
 } from "./credential-validation";
 import { SessionSignatures } from "./session-signatures";
 
-/** Shared configuration accepted by both credential manager variants. */
+/**
+ * Shared configuration accepted by both credential manager variants.
+ * @internal
+ */
 export interface CredentialsConfig {
   /** Backend that generates FHE keypairs (public/private). */
   relayer: { generateKeypair(): Promise<{ publicKey: Hex; privateKey: Hex }> };
@@ -33,7 +36,10 @@ export interface CredentialsConfig {
   onEvent?: ZamaSDKEventListener;
 }
 
-/** Minimal fields needed to produce an EIP-712 signing request. */
+/**
+ * Minimal fields needed to produce an EIP-712 signing request.
+ * @internal
+ */
 export interface SigningMeta {
   /** FHE public key being authorized. */
   publicKey: Hex;
@@ -45,8 +51,11 @@ export interface SigningMeta {
   delegatorAddress?: string;
 }
 
-/** Options for {@link BaseCredentialsManager.resolveCredentials}. */
-interface ResolveCredentialsOptions<TCreds> {
+/**
+ * Options for {@link BaseCredentialsManager.resolveCredentials}.
+ * @internal
+ */
+export interface ResolveCredentialsOptions<TCreds> {
   /** Storage key identifying the credential entry. */
   key: string;
   /** Contract addresses the caller needs access to. */
@@ -57,8 +66,11 @@ interface ResolveCredentialsOptions<TCreds> {
   createFn: () => Promise<TCreds>;
 }
 
-/** Options for {@link BaseCredentialsManager.createCredentials}. */
-interface CreateCredentialsOptions<TCreds> {
+/**
+ * Options for {@link BaseCredentialsManager.createCredentials}.
+ * @internal
+ */
+export interface CreateCredentialsOptions<TCreds> {
   /** Storage key identifying the credential entry. */
   key: string;
   /** Contract addresses being authorized. */
@@ -76,6 +88,8 @@ interface CreateCredentialsOptions<TCreds> {
  *
  * @typeParam TCreds    - The in-memory credential shape (includes plaintext privateKey).
  * @typeParam TEncrypted - The on-disk shape (privateKey replaced by encryptedPrivateKey).
+ *
+ * @internal
  */
 export abstract class BaseCredentialsManager<
   TCreds extends StoredCredentials,

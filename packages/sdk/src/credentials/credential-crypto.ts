@@ -1,7 +1,10 @@
 import type { Address, Hex } from "viem";
 import { prefixHex } from "../utils";
 
-/** Encrypted data format with IV for AES-GCM decryption. */
+/**
+ * Encrypted data format with IV for AES-GCM decryption.
+ * @internal
+ */
 export interface EncryptedData {
   /** Base64-encoded initialization vector. */
   iv: string;
@@ -20,6 +23,8 @@ export interface EncryptedData {
  * The derived key is cached internally so that repeated encrypt/decrypt
  * calls with the same (signature, address) pair skip the expensive
  * PBKDF2 derivation.
+ *
+ * @internal
  */
 export class CredentialCrypto {
   #cachedDerivedKey: CryptoKey | null = null;

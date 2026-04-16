@@ -19,6 +19,8 @@ export interface SessionEntry {
  * operations can reuse it without prompting the user again. The TTL
  * is recorded at creation time so that changing the config later does
  * not retroactively extend or shorten existing sessions.
+ *
+ * @internal
  */
 export class SessionSignatures {
   #storage: GenericStorage;

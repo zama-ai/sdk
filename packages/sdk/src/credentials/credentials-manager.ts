@@ -14,9 +14,6 @@ import {
   computeStoreKey,
 } from "./credential-validation";
 
-/** Internal storage shape — same as BaseEncryptedCredentials. */
-type EncryptedCredentials = BaseEncryptedCredentials;
-
 /** Configuration for constructing a {@link CredentialsManager}. */
 export interface CredentialsManagerConfig extends CredentialsConfig {
   /** FHE relayer backend for keypair generation and EIP-712 creation. */
@@ -41,7 +38,7 @@ function hasExtensionRuntimeId(value: unknown): value is { runtime: { id: string
  */
 export class CredentialsManager extends BaseCredentialsManager<
   StoredCredentials,
-  EncryptedCredentials
+  BaseEncryptedCredentials
 > {
   #relayer: RelayerSDK;
   #cachedStoreKey: string | null = null;
@@ -154,10 +151,12 @@ export class CredentialsManager extends BaseCredentialsManager<
 
   // ── Abstract implementations ──────────────────────────────────
 
-  protected assertEncrypted(data: unknown): asserts data is EncryptedCredentials {
+  /** @internal */
+  protected assertEncrypted(data: unknown): asserts data is BaseEncryptedCredentials {
     assertBaseEncryptedCredentials(data);
   }
 
+  /** @internal */
   protected async signForContracts(meta: SigningMeta, contractAddresses: Address[]): Promise<Hex> {
     const eip712 = await this.#relayer.createEIP712(
       meta.publicKey,
@@ -168,7 +167,8 @@ export class CredentialsManager extends BaseCredentialsManager<
     return this.signer.signTypedData(eip712);
   }
 
-  protected async encryptCredentials(creds: StoredCredentials): Promise<EncryptedCredentials> {
+  /** @internal */
+  protected async encryptCredentials(creds: StoredCredentials): Promise<BaseEncryptedCredentials> {
     const address = await this.signer.getAddress();
     const encryptedPrivateKey = await this.crypto.encrypt(
       creds.privateKey,
@@ -179,8 +179,9 @@ export class CredentialsManager extends BaseCredentialsManager<
     return { ...rest, encryptedPrivateKey };
   }
 
+  /** @internal */
   protected async decryptCredentials(
-    encrypted: EncryptedCredentials,
+    encrypted: BaseEncryptedCredentials,
     signature: Hex,
   ): Promise<StoredCredentials> {
     const address = await this.signer.getAddress();
@@ -189,6 +190,7 @@ export class CredentialsManager extends BaseCredentialsManager<
     return { ...rest, privateKey, signature };
   }
 
+  /** @internal */
   protected override clearCaches(): void {
     this.#cachedStoreKey = null;
     this.#cachedStoreKeyIdentity = null;

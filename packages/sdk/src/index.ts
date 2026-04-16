@@ -24,6 +24,10 @@ export type {
   DelegatedUserDecryptParams,
   NetworkType,
 } from "./relayer/relayer-sdk.types";
+// Re-exports from `@zama-fhe/relayer-sdk/bundle`: these types appear in public
+// signatures across the SDK (e.g. relayer keypair, EIP-712 payloads, ZK proof
+// inputs). They're surfaced here so consumers of `@zama-fhe/sdk` don't need to
+// add `@zama-fhe/relayer-sdk` as a direct dependency.
 export type {
   FheTypeName,
   KeypairType,
@@ -56,9 +60,6 @@ export {
   type BatchDecryptAsOptions,
   ZERO_HANDLE,
   isZeroHandle,
-  savePendingUnshield,
-  loadPendingUnshield,
-  clearPendingUnshield,
 } from "./token";
 export {
   MemoryStorage,
