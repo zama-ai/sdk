@@ -28,7 +28,7 @@ describe("resolveChainTransports", () => {
     expect(result.size).toBe(1);
     const entry = result.get(11155111);
     expect(entry?.chain).toBe(sepoliaChain);
-    expect(entry?.transport.__mode).toBe("web");
+    expect(entry?.transport.type).toBe("web");
   });
 
   it("resolves chains with explicit web transport", () => {
@@ -83,8 +83,8 @@ describe("resolveChainTransports", () => {
     );
   });
 
-  it("throws for unrecognized transport __mode", () => {
-    const bad = { __mode: "unknown" } as any;
+  it("throws for unrecognized transport type", () => {
+    const bad = { type: "unknown" } as any;
     expect(() => resolveChainTransports([sepoliaChain], { [11155111]: bad }, [11155111])).toThrow(
       "unrecognized transport",
     );

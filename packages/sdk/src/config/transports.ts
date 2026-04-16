@@ -20,7 +20,7 @@ export type CleartextChainConfig = Partial<CleartextConfig> & {
 
 /** Tagged transport: routes to RelayerWeb (browser). */
 export interface WebTransportConfig {
-  readonly __mode: "web";
+  readonly type: "web";
   /** Per-chain FHE instance overrides (e.g. relayerUrl, network). */
   chain?: Partial<ExtendedFhevmInstanceConfig>;
   /** Shared relayer-pool options. Reference identity controls grouping: chains
@@ -30,7 +30,7 @@ export interface WebTransportConfig {
 
 /** Tagged transport: routes to RelayerNode (Node.js). */
 export interface NodeTransportConfig {
-  readonly __mode: "node";
+  readonly type: "node";
   /** Per-chain FHE instance overrides. */
   chain?: Partial<ExtendedFhevmInstanceConfig>;
   /** Shared relayer-pool options. Reference identity controls grouping. */
@@ -39,7 +39,7 @@ export interface NodeTransportConfig {
 
 /** Tagged transport: routes to RelayerCleartext (local dev / testnets). */
 export interface CleartextTransportConfig {
-  readonly __mode: "cleartext";
+  readonly type: "cleartext";
   chain: CleartextChainConfig;
 }
 
@@ -67,7 +67,7 @@ export function web(
   chain?: Partial<ExtendedFhevmInstanceConfig>,
   relayer?: WebRelayerOptions,
 ): WebTransportConfig {
-  return { __mode: "web", chain, relayer };
+  return { type: "web", chain, relayer };
 }
 
 /**
@@ -85,7 +85,7 @@ export function node(
   chain?: Partial<ExtendedFhevmInstanceConfig>,
   relayer?: NodeRelayerOptions,
 ): NodeTransportConfig {
-  return { __mode: "node", chain, relayer };
+  return { type: "node", chain, relayer };
 }
 
 /**
@@ -97,5 +97,5 @@ export function node(
  * ```
  */
 export function cleartext(chain: CleartextChainConfig): CleartextTransportConfig {
-  return { __mode: "cleartext", chain };
+  return { type: "cleartext", chain };
 }

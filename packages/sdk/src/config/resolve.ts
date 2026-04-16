@@ -65,7 +65,7 @@ export interface ResolvedChainTransport {
   transport: TransportConfig;
 }
 
-const DEFAULT_WEB_TRANSPORT: TransportConfig = { __mode: "web" };
+const DEFAULT_WEB_TRANSPORT: TransportConfig = { type: "web" };
 
 export function resolveChainTransports(
   chains: ExtendedFhevmInstanceConfig[],
@@ -86,7 +86,7 @@ export function resolveChainTransports(
       );
     }
 
-    if (userTransport?.__mode === "cleartext") {
+    if (userTransport?.type === "cleartext") {
       if (!chainConfig) {
         throw new ConfigurationError(
           `Chain ${id} uses cleartext transport but has no entry in the chains array. ` +
@@ -104,9 +104,9 @@ export function resolveChainTransports(
       );
     }
 
-    if (userTransport && userTransport.__mode !== "web" && userTransport.__mode !== "node") {
+    if (userTransport && userTransport.type !== "web" && userTransport.type !== "node") {
       throw new ConfigurationError(
-        `Chain ${id} has an unrecognized transport (__mode: ${JSON.stringify((userTransport as Record<string, unknown>).__mode)}). ` +
+        `Chain ${id} has an unrecognized transport (type: ${JSON.stringify((userTransport as Record<string, unknown>).type)}). ` +
           `Use web(), node(), or cleartext() to create transports.`,
       );
     }
@@ -202,7 +202,7 @@ export function buildRelayer(
   const nodeEntries: ChainEntry[] = [];
 
   for (const { chain, transport } of chainTransports.values()) {
-    if (transport.__mode === "cleartext") {
+    if (transport.type === "cleartext") {
       perChainRelayers.set(
         chain.chainId,
         new RelayerCleartext({
@@ -212,10 +212,10 @@ export function buildRelayer(
       );
       continue;
     }
-    if (transport.__mode === "web") {
+    if (transport.type === "web") {
       webEntries.push(toChainEntry(chain, transport));
     }
-    if (transport.__mode === "node") {
+    if (transport.type === "node") {
       nodeEntries.push(toChainEntry(chain, transport));
     }
   }
