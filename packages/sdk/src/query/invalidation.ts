@@ -36,9 +36,9 @@ export function invalidateBalanceQueries(
   tokenAddress: Address,
 ): void {
   void queryClient.invalidateQueries({
-    queryKey: zamaQueryKeys.confidentialHandle.token(tokenAddress),
+    queryKey: zamaQueryKeys.confidentialBalance.token(tokenAddress),
   });
-  void queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialHandles.all });
+  void queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalances.all });
   void queryClient.invalidateQueries({
     queryKey: zamaQueryKeys.confidentialBalance.token(tokenAddress),
   });

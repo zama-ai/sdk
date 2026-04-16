@@ -5,33 +5,33 @@ import { confidentialBalanceQueryOptions } from "../confidential-balance";
 describe("confidentialBalanceQueryOptions", () => {
   const tokenAddress = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
   const owner = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
-  const handle =
-    "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa" as `0x${string}`;
 
-  test("includes handle and owner in the query key (cache identity) and uses staleTime Infinity", ({
-    createMockReadonlyToken,
-  }) => {
+  test("query key includes tokenAddress and owner (no handle)", ({ createMockReadonlyToken }) => {
     const token = createMockReadonlyToken(tokenAddress);
     const options = confidentialBalanceQueryOptions(token, {
       tokenAddress,
       owner,
-      handle,
     });
 
-    expect(options.queryKey).toEqual([
-      "zama.confidentialBalance",
-      {
-        tokenAddress,
-        owner,
-        handle,
-      },
-    ]);
-    expect(options.staleTime).toBe(Infinity);
+    expect(options.queryKey).toEqual(["zama.confidentialBalance", { tokenAddress, owner }]);
   });
 
-  test("enabled defaults to true (handle/owner are cache-key only, not gates)", ({
+  test("refetchInterval defaults to 10_000 and can be overridden", ({
     createMockReadonlyToken,
   }) => {
+    const token = createMockReadonlyToken(tokenAddress);
+    const defaults = confidentialBalanceQueryOptions(token, { tokenAddress, owner });
+    const custom = confidentialBalanceQueryOptions(token, {
+      tokenAddress,
+      owner,
+      pollingInterval: 5_000,
+    });
+
+    expect(defaults.refetchInterval).toBe(10_000);
+    expect(custom.refetchInterval).toBe(5_000);
+  });
+
+  test("enabled defaults to true", ({ createMockReadonlyToken }) => {
     const token = createMockReadonlyToken(tokenAddress);
     const options = confidentialBalanceQueryOptions(token, { tokenAddress });
 
@@ -57,7 +57,6 @@ describe("confidentialBalanceQueryOptions", () => {
     const options = confidentialBalanceQueryOptions(token, {
       tokenAddress,
       owner,
-      handle,
     });
 
     const value = await options.queryFn(mockQueryContext(options.queryKey));

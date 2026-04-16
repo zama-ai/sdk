@@ -23,11 +23,11 @@ export function confidentialHandleQueryOptions(
   Handle,
   Error,
   Handle,
-  ReturnType<typeof zamaQueryKeys.confidentialHandle.owner>
+  ReturnType<typeof zamaQueryKeys.confidentialBalance.owner>
 > {
   const ownerKey = config?.owner;
   const queryEnabled = config?.query?.enabled !== false;
-  const queryKey = zamaQueryKeys.confidentialHandle.owner(tokenAddress, ownerKey);
+  const queryKey = zamaQueryKeys.confidentialBalance.owner(tokenAddress, ownerKey);
 
   return {
     ...filterQueryOptions(config?.query ?? {}),

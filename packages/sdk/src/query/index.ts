@@ -49,7 +49,6 @@ export {
 export {
   confidentialBalanceQueryOptions,
   type ConfidentialBalanceQueryConfig,
-  type EncryptedBalanceHandle,
 } from "./confidential-balance";
 export {
   confidentialHandlesQueryOptions,
