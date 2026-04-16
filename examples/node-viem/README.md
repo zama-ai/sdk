@@ -59,18 +59,16 @@ npm start
 
 ## Verifying the run
 
-A successful run prints four section headers. The final lines look like:
+A successful run prints five section headers. The final lines look like:
 
 ```
-cUSDT balance (A, final): 40.0 USDT
-USDT  balance (A, final): 950.0 USDT
+── 5b. Decrypt balance via sdk.userDecrypt() ──
+Encrypted handle: 0x…
+Decrypted balance: 40.0 USDT
 
-── 4b. Decrypt as delegate ──
-Account B reading Account A's cUSDT balance...
-cUSDT balance (A, seen by B): 40.0 USDT
-
-── 4c. Revoke delegation ──
-Delegation active after revoke: false
+── 5c. Public decrypt ──
+Public decrypted value: 40.0 USDT
+Decryption proof: 0x…
 ```
 
 Exact balance values depend on prior runs (they accumulate). The relative changes
@@ -131,6 +129,16 @@ on behalf of users (Account A) without holding their private key:
 | Decrypt as delegate | Account B reads Account A's cUSDT balance via `decryptBalanceAs()`   |
 | Revoke              | Account A revokes delegation via `revokeDelegation()`                |
 | Verify              | Confirm delegation is inactive with `isDelegated()`                  |
+
+### Section 5 — SDK Primitives
+
+Shows the lower-level SDK methods that the `Token` class uses internally:
+
+| Step              | Description                                                            |
+| ----------------- | ---------------------------------------------------------------------- |
+| `sdk.allow()`     | Pre-authorize contract addresses — one wallet signature covers all     |
+| `sdk.userDecrypt()`   | Decrypt FHE handles directly with caching and batch optimization   |
+| `sdk.publicDecrypt()` | Decrypt handles publicly and obtain a proof for on-chain finalization |
 
 ---
 

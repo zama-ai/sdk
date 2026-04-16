@@ -221,7 +221,7 @@ If your ERC-20 balance shows `0`, click **Mint** next to the ERC-20 balance, or 
 Two balances are displayed:
 
 - **ERC-20 balance** — your public on-chain balance of the underlying token. Read via a standard `balanceOf` call.
-- **Confidential balance** — your confidential cToken balance, read via `useConfidentialBalance`. The SDK reads the encrypted handle on-chain (Phase 1), then decrypts it via `RelayerCleartext` (Phase 2).
+- **Confidential balance** — your confidential cToken balance, read via `useConfidentialBalance`. The SDK reads the encrypted handle on-chain (Phase 1), then decrypts it via `sdk.userDecrypt()` → `RelayerCleartext` (Phase 2). Decrypted values are cached per handle.
 
 **Explicit decrypt pattern:** the confidential balance is not queried until you explicitly authorize FHE decryption. The Balances card shows a **Decrypt Balance** button instead of a balance value until you sign. This avoids blind EIP-712 prompts on mount.
 

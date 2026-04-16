@@ -284,7 +284,7 @@ Three balances are shown:
 | ------------ | ------------------------------ | -------------------------------------------------------------- |
 | ETH          | Direct RPC (`JsonRpcProvider`) | `useQuery` → `rpcProvider.getBalance()`                        |
 | ERC-20       | Direct RPC via SDK signer      | `useQuery` → `sdk.signer.readContract(balanceOfContract(...))` |
-| Confidential | Relayer decryption             | `useConfidentialBalance({ tokenAddress })`                     |
+| Confidential | `sdk.userDecrypt()` via relayer | `useConfidentialBalance({ tokenAddress })`                     |
 
 **Explicit decrypt pattern**: `useConfidentialBalance` is only enabled after the user has authorized FHE decryption via an EIP-712 wallet signature (`useIsAllowed({ contractAddresses })` → `useAllow()`). Until then, `BalancesCard` shows a "Decrypt Balance" button rather than a balance value. This avoids blind-signing prompts on mount.
 
@@ -300,7 +300,7 @@ const { data: isAllowed } = useIsAllowed({
 `useConfidentialBalance` has two loading phases:
 
 - `balance.handleQuery.isLoading` — fetching the encrypted handle from chain
-- `balance.isLoading` — decrypting it via the relayer
+- `balance.isLoading` — decrypting it via `sdk.userDecrypt()` (results are cached per handle)
 
 Both are OR'd to drive the "Decrypting…" display in `BalancesCard`.
 

@@ -1,8 +1,14 @@
 import { Contract, formatUnits, JsonRpcProvider, Wallet } from "ethers";
-import { DelegationNotPropagatedError, MemoryStorage, SepoliaConfig, ZamaSDK } from "@zama-fhe/sdk";
+import {
+  confidentialBalanceOfContract,
+  DelegationNotPropagatedError,
+  MemoryStorage,
+  SepoliaConfig,
+  ZamaSDK,
+} from "@zama-fhe/sdk";
 import { EthersSigner } from "@zama-fhe/sdk/ethers";
 import { RelayerNode } from "@zama-fhe/sdk/node";
-import type { Address } from "@zama-fhe/sdk";
+import type { Address, Handle } from "@zama-fhe/sdk";
 
 // ── Token amounts (USDT uses 6 decimals) ─────────────────────────────────────
 const DECIMALS = 6n;
@@ -230,6 +236,45 @@ async function main() {
     delegateAddress: walletB.address as Address,
   });
   console.log("Delegation active after revoke:", isDelegatedAfter);
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // SECTION 5 — SDK Primitives
+  // Sections 3–4 use the high-level Token class. The SDK also exposes
+  // lower-level primitives — sdk.allow(), sdk.userDecrypt(), and
+  // sdk.publicDecrypt() — for advanced use cases like multi-token batch
+  // decrypts or custom contract integrations.
+  // ──────────────────────────────────────────────────────────────────────────
+  section("SECTION 5 — SDK Primitives");
+
+  // 5a. sdk.allow() — pre-authorize contracts for decryption
+  // A single wallet signature covers all supplied contract addresses. Subsequent
+  // userDecrypt() calls for these contracts reuse the cached credentials — no
+  // additional signature prompts.
+  console.log("── 5a. Pre-authorize decrypt credentials ──");
+  await sdkA.allow([confidentialTokenAddress]);
+  console.log("Credentials cached for:", confidentialTokenAddress);
+
+  // 5b. sdk.userDecrypt() — decrypt arbitrary FHE handles
+  // Read the encrypted balance handle from the chain, then decrypt it with
+  // userDecrypt(). This is what Token.balanceOf() does internally.
+  console.log("\n── 5b. Decrypt balance via sdk.userDecrypt() ──");
+  const handle = (await sdkA.signer.readContract(
+    confidentialBalanceOfContract(confidentialTokenAddress, walletA.address as Address),
+  )) as Handle;
+  console.log("Encrypted handle:", handle);
+
+  const values = await sdkA.userDecrypt([{ handle, contractAddress: confidentialTokenAddress }]);
+  const decryptedBalance = values[handle] as bigint;
+  console.log("Decrypted balance:", fmt(decryptedBalance));
+
+  // 5c. sdk.publicDecrypt() — decrypt handles publicly (with proof)
+  // publicDecrypt returns clear values alongside a decryption proof for on-chain
+  // finalization (e.g. finalizeUnwrap). Unlike userDecrypt, no credentials are needed.
+  console.log("\n── 5c. Public decrypt ──");
+  const publicResult = await sdkA.publicDecrypt([handle]);
+  const publicValue = publicResult.clearValues[handle] as bigint;
+  console.log("Public decrypted value:", fmt(publicValue));
+  console.log("Decryption proof:", publicResult.decryptionProof.slice(0, 42) + "…");
 }
 
 main().catch((err) => {

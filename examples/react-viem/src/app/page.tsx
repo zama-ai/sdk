@@ -429,7 +429,7 @@ export default function Home() {
         formattedErc20={formattedErc20}
         formattedConfidential={formattedConfidential}
         // handleQuery.isLoading: fetching the encrypted handle from chain (Phase 1).
-        // balance.isLoading: decrypting it via RelayerWeb (Phase 2).
+        // balance.isLoading: decrypting it via sdk.userDecrypt() (Phase 2).
         isLoadingConfidential={balance.handleQuery.isLoading || balance.isLoading}
         erc20Symbol={erc20Symbol}
         onMint={() => mint.mutate()}

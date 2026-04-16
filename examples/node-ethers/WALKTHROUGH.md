@@ -18,14 +18,15 @@ ERC-20 tokens. Balances are stored as encrypted handles on-chain; only the token
 (or an authorized delegate) can decrypt them.
 
 The **Zama SDK** (`@zama-fhe/sdk`) handles all cryptographic operations — FHE keypair
-generation, encryption, EIP-712 signing, decryption — behind a high-level `Token` API.
-This example shows how to use that API in a pure Node.js backend with ethers v6.
+generation, encryption, EIP-712 signing, decryption — behind a high-level `Token` API
+and lower-level primitives (`sdk.userDecrypt()`, `sdk.publicDecrypt()`, `sdk.allow()`).
+This example shows how to use both in a pure Node.js backend with ethers v6.
 
 ---
 
 ## What this example demonstrates
 
-Four self-contained sections, meant to be read and run in order:
+Five self-contained sections, meant to be read and run in order:
 
 | Section                    | Operations                                                                     |
 | -------------------------- | ------------------------------------------------------------------------------ |
@@ -33,6 +34,7 @@ Four self-contained sections, meant to be read and run in order:
 | 2 — Mint                   | Fund Account A via the ERC-20 mock's `mint()`                                  |
 | 3 — Confidential lifecycle | `balanceOf` → `shield` → `confidentialTransfer` → `unshield`                   |
 | 4 — Delegation             | `delegateDecryption` → `decryptBalanceAs` → `revokeDelegation` → `isDelegated` |
+| 5 — SDK Primitives         | `sdk.allow` → `sdk.userDecrypt` → `sdk.publicDecrypt`                          |
 
 ---
 
@@ -171,16 +173,20 @@ ERC-7984 wrapper (`confidentialTokenAddress`), not the ERC-20.
 const balance = await tokenA.balanceOf();
 ```
 
-Under the hood, `balanceOf` performs several steps the first time it is called:
+Under the hood, `balanceOf` delegates to `sdk.userDecrypt()` — the SDK's general-purpose
+decryption primitive. On the first call, `userDecrypt` performs several steps:
 
-1. Generates an ML-KEM re-encryption keypair (via `RelayerNode` worker).
-2. Prompts an EIP-712 wallet signature (stored in `MemoryStorage` for the session duration).
-3. Sends the re-encryption public key to the Zama relayer.
-4. The relayer re-encrypts the on-chain ciphertext under that key and returns the result.
-5. The SDK decrypts locally and returns the plaintext `bigint`.
+1. Reads the encrypted balance handle from the chain via `confidentialBalanceOf()`.
+2. Calls `sdk.allow([contractAddress])` to provision FHE credentials:
+   - Generates an ML-KEM re-encryption keypair (via `RelayerNode` worker).
+   - Prompts an EIP-712 wallet signature (stored in `MemoryStorage` for the session duration).
+3. Sends the handle + credentials to the Zama relayer for re-encryption.
+4. The relayer re-encrypts the on-chain ciphertext under the user's key and returns the result.
+5. The SDK decrypts locally, caches the result, and returns the plaintext `bigint`.
 
-Subsequent calls reuse the cached keypair and session signature (no re-signing until the
-session expires or `sdk.revoke()` is called).
+Subsequent calls reuse the cached keypair, session signature, and decrypted values (no
+re-signing or relayer round-trip until the session expires or the cache is invalidated).
+See Section 5 for using `sdk.userDecrypt()` and `sdk.publicDecrypt()` directly.
 
 ### 3b — `shield` (ERC-20 → cToken)
 
@@ -226,8 +232,9 @@ await tokenA.unshield(UNSHIELD_AMOUNT, {
 
 1. **Phase 1 — `unwrap`:** the wrapper contract initiates decryption and burns the
    confidential balance.
-2. **Phase 2 — `finalizeUnwrap`:** the Zama relayer fulfils the decryption request and
-   the ERC-20 tokens are released to the user's wallet.
+2. **Phase 2 — `finalizeUnwrap`:** calls `sdk.publicDecrypt()` to obtain the decrypted
+   amount and a cryptographic proof, then submits both on-chain to release the ERC-20
+   tokens to the user's wallet.
 
 The SDK polls for Phase 2 automatically. The `onFinalizing` callback fires while waiting.
 On Sepolia, Phase 2 typically completes within 1–3 minutes.
@@ -288,6 +295,74 @@ await tokenA.revokeDelegation({ delegateAddress: walletB.address });
 Removes the delegation record on-chain. Subsequent `decryptBalanceAs` calls from
 Account B will fail with an authorization error. A follow-up `isDelegated` call
 (same parameters as above) confirms the revoke took effect — it should return `false`.
+
+---
+
+## Section 5 — SDK Primitives
+
+Sections 3 and 4 use the high-level `Token` class, which handles credential management,
+caching, and event emission automatically. For advanced use cases — multi-token batch
+decrypts, custom contract integrations, or fine-grained control — the SDK exposes three
+lower-level primitives directly on the `ZamaSDK` instance.
+
+### `sdk.allow()` — pre-authorize contracts
+
+```ts
+await sdkA.allow([confidentialTokenAddress]);
+```
+
+Triggers a single EIP-712 wallet signature that covers **all** supplied contract addresses.
+Subsequent `userDecrypt()` calls for any of these contracts reuse the cached credentials
+without prompting the wallet again. This is especially useful when working with multiple
+tokens — call `sdk.allow([cUSDT, cDAI, cWETH])` once, then decrypt each individually.
+
+`Token.balanceOf()` calls `sdk.allow()` internally, but calling it explicitly gives you
+control over **when** the signature prompt appears (e.g. during onboarding rather than
+on the first balance read).
+
+### `sdk.userDecrypt()` — decrypt FHE handles
+
+```ts
+const handle = await sdkA.signer.readContract(
+  confidentialBalanceOfContract(confidentialTokenAddress, walletA.address),
+);
+
+const values = await sdkA.userDecrypt([
+  { handle, contractAddress: confidentialTokenAddress },
+]);
+console.log(values[handle]); // bigint
+```
+
+`userDecrypt` is the primitive that `Token.balanceOf()` delegates to. It accepts an array
+of `{ handle, contractAddress }` pairs and returns a record mapping each handle to its
+clear-text value (`bigint`, `boolean`, or hex-encoded bytes).
+
+Key features:
+
+- **Caching:** decrypted values are cached per `(signer, contract, handle)`. Repeated
+  calls skip the relayer round-trip entirely.
+- **Batch optimization:** handles are grouped by contract and decrypted in parallel
+  (up to 5 concurrent relayer requests).
+- **Zero-handle shortcut:** `0x` handles map to `0n` without a relayer call.
+- **Events:** emits `DecryptStart`, `DecryptEnd`, and `DecryptError` events with
+  timing and result metadata.
+
+### `sdk.publicDecrypt()` — decrypt with proof
+
+```ts
+const { clearValues, decryptionProof, abiEncodedClearValues } =
+  await sdkA.publicDecrypt([handle]);
+```
+
+Public decryption does not require user credentials — it returns the clear-text values
+alongside a **decryption proof** that can be submitted on-chain. This is the primitive
+that `Token.finalizeUnwrap()` uses internally to complete the unshield flow.
+
+Use `publicDecrypt` when you need:
+
+- The raw decryption proof for a custom finalization transaction.
+- ABI-encoded clear values for direct contract calls.
+- Proof-of-value for auditing or dispute resolution.
 
 ---
 
