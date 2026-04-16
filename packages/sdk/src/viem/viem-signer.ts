@@ -92,6 +92,7 @@ export class ViemSigner implements GenericSigner {
         startTimestamp: BigInt(typedData.message.startTimestamp),
         durationDays: BigInt(typedData.message.durationDays),
       },
+      // Cast: EIP712TypedData is a union; viem cannot correlate primaryType/types/message across union members, so the inferred `message` collapses to `never`.
     } as Parameters<typeof walletClient.signTypedData>[0]);
   }
 
