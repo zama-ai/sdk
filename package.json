@@ -85,7 +85,7 @@
     "mdbook": "workspace:*",
     "oxfmt": "^0.42.0",
     "oxlint": "^1.59.0",
-    "oxlint-tsgolint": "0.18.1",
+    "oxlint-tsgolint": "0.20.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "rolldown": "1.0.0-rc.9",
