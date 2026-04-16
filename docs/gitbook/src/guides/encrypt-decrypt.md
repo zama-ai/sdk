@@ -345,41 +345,7 @@ const { mutate: allow } = useAllow();
 <button onClick={() => allow(allTokenAddresses)}>Decrypt All Balances</button>;
 ```
 
-#### Gating useUserDecrypt
-
-`useUserDecrypt` is a query hook that decrypts FHE handles. If no cached credentials exist, it triggers a wallet signature prompt. Use `useAllow` + `useIsAllowed` to pre-authorize and gate the query if you want to control when the prompt appears.
-
-{% code title="DecryptExample.tsx" %}
-
-```tsx
-import { useAllow, useIsAllowed, useUserDecrypt } from "@zama-fhe/react-sdk";
-
-const CONTRACT = "0xYourConfidentialContract" as const;
-
-function DecryptExample() {
-  const { mutate: allow, isPending: isAllowing } = useAllow();
-  const { data: isAllowed } = useIsAllowed({ contractAddresses: [CONTRACT] });
-
-  const { data, isPending } = useUserDecrypt(
-    { handles: [{ handle: "0xabc123...", contractAddress: CONTRACT }] },
-    { enabled: !!isAllowed },
-  );
-
-  return (
-    <section>
-      {!isAllowed && (
-        <button onClick={() => allow([CONTRACT])} disabled={isAllowing}>
-          {isAllowing ? "Signing..." : "Authorize decryption"}
-        </button>
-      )}
-      {isPending && <p>Decrypting...</p>}
-      {data && <output>Value: {Object.values(data)[0]?.toString()}</output>}
-    </section>
-  );
-}
-```
-
-{% endcode %}
+The same pattern applies to `useUserDecrypt` — pass `{ enabled: !!isAllowed }` and trigger `useAllow` from a button. Rather than gating each component individually, you can pre-authorize once and let every nested decrypt hook run without prompts.
 
 #### Pre-authorize once, decrypt anywhere
 
