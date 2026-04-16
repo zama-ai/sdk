@@ -5,8 +5,19 @@ import type { Handle } from "../relayer/relayer-sdk.types";
 const STORAGE_PREFIX = "zama:pending-unshield:";
 const CURRENT_VERSION = 1;
 
+/**
+ * Persisted state for an in-progress unshield request.
+ * Used to resume an interrupted unshield after page reload.
+ */
 export interface PendingUnshieldRequest {
+  /** Transaction hash of the original unwrap call. */
   readonly unwrapTxHash: Hex;
+  /**
+   * Request identifier emitted by upgraded wrapper contracts.
+   * Present only for requests initiated after the protocol upgrade.
+   * When defined, pass this as `unwrapRequestId` to `finalizeUnwrap`.
+   * When absent (legacy request), pass the `encryptedAmount` from the `UnwrapRequested` event.
+   */
   readonly unwrapRequestId?: Handle;
 }
 
