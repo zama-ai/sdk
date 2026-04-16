@@ -1,4 +1,4 @@
-import { type Address, getAddress, type Hex, hexToBigInt } from "viem";
+import { type Address, getAddress, type Hex } from "viem";
 import {
   allowanceContract,
   approveContract,
@@ -37,6 +37,7 @@ import {
   ZamaError,
   matchAclRevert,
 } from "../errors";
+import { isZeroHandle } from "../utils/handles";
 import { ReadonlyToken } from "./readonly-token";
 import type {
   ShieldCallbacks,
@@ -48,6 +49,7 @@ import type {
   UnshieldOptions,
 } from "../types";
 import type { ZamaSDK } from "../zama-sdk";
+import { assertBigint } from "../utils/assertions";
 
 /**
  * ERC-20-like interface for a single confidential token.
@@ -498,7 +500,7 @@ export class Token extends ReadonlyToken {
     const userAddress = await this.sdk.signer.getAddress();
     const handle = await this.readConfidentialBalanceOf(userAddress);
 
-    if (this.isZeroHandle(handle)) {
+    if (isZeroHandle(handle)) {
       throw new DecryptionFailedError("Cannot unshield: balance is zero");
     }
 
@@ -627,49 +629,12 @@ export class Token extends ReadonlyToken {
    * ```
    */
   async finalizeUnwrap(unwrapRequestIdOrAmount: Handle): Promise<TransactionResult> {
-    let clearValue: bigint;
-    let decryptionProof: Hex;
-
-    const t0 = Date.now();
-    try {
-      this.emit({
-        type: ZamaSDKEvents.DecryptStart,
-        handles: [unwrapRequestIdOrAmount],
-      });
-      const result = await this.sdk.relayer.publicDecrypt([unwrapRequestIdOrAmount]);
-      this.emit({
-        type: ZamaSDKEvents.DecryptEnd,
-        durationMs: Date.now() - t0,
-        handles: [unwrapRequestIdOrAmount],
-        result: result.clearValues,
-      });
-      decryptionProof = result.decryptionProof;
-      try {
-        clearValue = hexToBigInt(result.abiEncodedClearValues);
-      } catch (error) {
-        throw new DecryptionFailedError(
-          `Cannot parse decrypted value: ${result.abiEncodedClearValues}`,
-          { cause: error },
-        );
-      }
-    } catch (error) {
-      this.emit({
-        type: ZamaSDKEvents.DecryptError,
-        error: toError(error),
-        durationMs: Date.now() - t0,
-        handles: [unwrapRequestIdOrAmount],
-      });
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new DecryptionFailedError("Failed to finalize unshield", {
-        cause: error,
-      });
-    }
-
+    const result = await this.sdk.publicDecrypt([unwrapRequestIdOrAmount]);
+    const clearValue = result.clearValues[unwrapRequestIdOrAmount];
+    assertBigint(clearValue, "finalizeUnwrap: clearValue");
     try {
       const txHash = await this.sdk.signer.writeContract(
-        finalizeUnwrapContract(this.wrapper, unwrapRequestIdOrAmount, clearValue, decryptionProof),
+        finalizeUnwrapContract(this.wrapper, unwrapRequestIdOrAmount, clearValue, result.decryptionProof),
       );
       this.emit({ type: ZamaSDKEvents.FinalizeUnwrapSubmitted, txHash });
       const receipt = await this.sdk.signer.waitForTransactionReceipt(txHash);

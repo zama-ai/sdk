@@ -1,11 +1,11 @@
 ---
 title: useConfidentialBalance
-description: Decrypt and poll a single token's confidential balance.
+description: Decrypt a single token's confidential balance.
 ---
 
 # useConfidentialBalance
 
-Decrypt and poll a single token's confidential balance. Uses [two-phase polling](/concepts/two-phase-polling) -- cheaply checks the encrypted handle on-chain, only decrypts when it changes. Decrypted values are persisted in storage, so page reloads display the balance instantly.
+Decrypt a single token's confidential balance. Calls `token.balanceOf(owner)` which reads the encrypted handle on-chain and decrypts it via the SDK. Previously decrypted values are served from cache instantly — the expensive relayer round-trip only happens when the on-chain handle changes. Pass `refetchInterval` to poll for updates.
 
 ## Import
 
@@ -112,25 +112,6 @@ const { data } = useConfidentialBalance({
 {% endtab %}
 {% endtabs %}
 
-### handleRefetchInterval
-
-`number | undefined`
-
-Polling interval in milliseconds for checking on-chain handle changes. Default: `10000` (10 seconds).
-
-{% tabs %}
-{% tab title="component.tsx" %}
-
-```tsx
-const { data } = useConfidentialBalance({
-  tokenAddress: "0xToken",
-  handleRefetchInterval: 5_000,
-});
-```
-
-{% endtab %}
-{% endtabs %}
-
 {% include ".gitbook/includes/query-options.md" %}
 
 ## Return Type
@@ -146,6 +127,5 @@ The `data` property is `bigint | undefined` -- the decrypted token balance.
 ## Related
 
 - [useConfidentialBalances](/reference/react/useConfidentialBalances) -- batch variant for multiple tokens
-- [Two-Phase Polling](/concepts/two-phase-polling)
 - [Check Balances guide](/guides/check-balances)
 - [Query Keys](/reference/react/query-keys) -- `zamaQueryKeys.confidentialBalance`

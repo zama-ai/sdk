@@ -86,5 +86,4 @@
 - [Concepts](concepts/README.md)
   - [Architecture](concepts/architecture.md)
   - [Session model](concepts/session-model.md)
-  - [Two-phase polling](concepts/two-phase-polling.md)
   - [Security model](concepts/security-model.md)

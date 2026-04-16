@@ -12,8 +12,7 @@ import type { GenericSigner, GenericStorage } from "../../types";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import { ZamaSDK } from "../../zama-sdk";
 import type { Address } from "viem";
-
-const ZERO_HANDLE = "0x" + "0".repeat(64);
+import { ZERO_HANDLE } from "../../utils/handles";
 const TOKEN_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
 
 /**
@@ -566,31 +565,7 @@ describe("Token event emissions", () => {
       await token.finalizeUnwrap("0xburn" as Address);
 
       const types = events.map((e) => e.type);
-      expect(types).toContain(ZamaSDKEvents.DecryptStart);
-      expect(types).toContain(ZamaSDKEvents.DecryptEnd);
       expect(types).toContain(ZamaSDKEvents.FinalizeUnwrapSubmitted);
-    });
-
-    it("emits DecryptError when publicDecrypt fails", async ({
-      relayer,
-      signer,
-      tokenAddress,
-      storage,
-      sessionStorage,
-    }) => {
-      relayer.publicDecrypt = vi.fn().mockRejectedValue(new Error("public decrypt boom"));
-      const { token, events } = setupSdkWithEvents({
-        relayer,
-        signer,
-        storage,
-        sessionStorage,
-        tokenAddress,
-      });
-
-      await expect(token.finalizeUnwrap("0xburn" as Address)).rejects.toThrow();
-
-      const errorEvent = events.find((e) => e.type === ZamaSDKEvents.DecryptError);
-      expect(errorEvent).toBeDefined();
     });
   });
 
@@ -656,8 +631,6 @@ describe("Token event emissions", () => {
       expect(types).toContain(ZamaSDKEvents.UnwrapSubmitted);
       expect(types).toContain(ZamaSDKEvents.UnshieldPhase1Submitted);
       expect(types).toContain(ZamaSDKEvents.UnshieldPhase2Started);
-      expect(types).toContain(ZamaSDKEvents.DecryptStart);
-      expect(types).toContain(ZamaSDKEvents.DecryptEnd);
       expect(types).toContain(ZamaSDKEvents.FinalizeUnwrapSubmitted);
       expect(types).toContain(ZamaSDKEvents.UnshieldPhase2Submitted);
 

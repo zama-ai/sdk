@@ -1,4 +1,4 @@
-export { filterQueryOptions, hashFn, ZERO_HANDLE } from "./utils";
+export { filterQueryOptions, hashFn } from "./utils";
 export type { StrippedQueryOptionKeys } from "./utils";
 export type { QueryFactoryOptions, MutationFactoryOptions } from "./factory-types";
 export { zamaQueryKeys } from "./query-keys";

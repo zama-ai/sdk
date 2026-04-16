@@ -5,7 +5,7 @@ import { Token } from "../token/token";
 import { CredentialsManager } from "../credentials/credentials-manager";
 import { DecryptionFailedError } from "../errors";
 import { ZamaSDKEvents } from "../events/sdk-events";
-import { ZERO_HANDLE } from "../query/utils";
+import { ZERO_HANDLE } from "../utils/handles";
 import type { SignerLifecycleCallbacks } from "../types";
 import type { Address } from "viem";
 import type { Handle } from "../relayer/relayer-sdk.types";
@@ -896,6 +896,48 @@ describe("ZamaSDK", () => {
       const allowArgs = allowSpy.mock.calls[0]!;
       // Both contract addresses should be present (checksummed via getAddress)
       expect(allowArgs).toHaveLength(2);
+    });
+  });
+
+  describe("publicDecrypt", () => {
+    it("delegates to relayer.publicDecrypt and returns the result", async ({
+      sdk,
+      relayer,
+      handle,
+    }) => {
+      const result = await sdk.publicDecrypt([handle]);
+      expect(relayer.publicDecrypt).toHaveBeenCalledWith([handle]);
+      expect(result).toEqual({
+        clearValues: { [handle]: 500n },
+        abiEncodedClearValues: "0x1f4",
+        decryptionProof: "0xproof",
+      });
+    });
+
+    it("returns empty result for empty handles without calling relayer", async ({
+      sdk,
+      relayer,
+    }) => {
+      const result = await sdk.publicDecrypt([]);
+      expect(result).toEqual({
+        clearValues: {},
+        decryptionProof: "0x",
+        abiEncodedClearValues: "0x",
+      });
+      expect(relayer.publicDecrypt).not.toHaveBeenCalled();
+    });
+
+    it("wraps error on failure", async ({ sdk, relayer, handle }) => {
+      vi.mocked(relayer.publicDecrypt).mockRejectedValueOnce(new Error("relayer down"));
+
+      await expect(sdk.publicDecrypt([handle])).rejects.toThrow(DecryptionFailedError);
+    });
+
+    it("re-throws DecryptionFailedError as-is", async ({ sdk, relayer, handle }) => {
+      const original = new DecryptionFailedError("already typed");
+      vi.mocked(relayer.publicDecrypt).mockRejectedValueOnce(original);
+
+      await expect(sdk.publicDecrypt([handle])).rejects.toBe(original);
     });
   });
 

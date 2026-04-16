@@ -60,9 +60,6 @@ export type StrippedQueryOptionKeys =
   | "query"
   | "pollingInterval";
 
-export const ZERO_HANDLE =
-  "0x0000000000000000000000000000000000000000000000000000000000000000" as const;
-
 /**
  * Remove TanStack behavioral options from a query config object so only domain
  * parameters remain for the lower-level factory.

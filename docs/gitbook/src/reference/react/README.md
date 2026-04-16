@@ -2,7 +2,7 @@
 
 **Welcome to the React reference!**
 
-API reference for the `@zama-fhe/react-sdk` package. Each page documents a single hook or component with parameters, return values, and working code examples. All hooks are built on TanStack Query with two-phase polling and automatic cache invalidation.
+API reference for the `@zama-fhe/react-sdk` package. Each page documents a single hook or component with parameters, return values, and working code examples. All hooks are built on TanStack Query with automatic cache invalidation and cached decryption.
 
 ## Where to go next
 

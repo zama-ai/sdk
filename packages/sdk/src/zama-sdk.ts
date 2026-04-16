@@ -6,9 +6,9 @@ import { wrapDecryptError } from "./errors";
 import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventListener } from "./events/sdk-events";
 import { ZamaSDKEvents } from "./events/sdk-events";
 import type { DecryptHandle } from "./query/user-decrypt";
-import { ZERO_HANDLE } from "./query/utils";
+import { isZeroHandle } from "./utils/handles";
 import type { RelayerSDK } from "./relayer/relayer-sdk";
-import type { ClearValueType, Handle } from "./relayer/relayer-sdk.types";
+import type { ClearValueType, Handle, PublicDecryptResult } from "./relayer/relayer-sdk.types";
 import { MemoryStorage } from "./storage/memory-storage";
 import { ReadonlyToken } from "./token/readonly-token";
 import { Token } from "./token/token";
@@ -343,7 +343,7 @@ export class ZamaSDK {
 
     // Filter zero handles → 0n without relayer
     for (const h of normalized) {
-      if (h.handle === ZERO_HANDLE) {
+      if (isZeroHandle(h.handle)) {
         result[h.handle] = 0n;
       } else {
         nonZero.push(h);
@@ -443,6 +443,33 @@ export class ZamaSDK {
         handles: uncachedHandles,
       });
       throw wrapDecryptError(error, "Failed to decrypt handles");
+    }
+  }
+
+  /**
+   * Publicly decrypt one or more FHE handles.
+   *
+   * Returns the decryption proof alongside the clear-text values so callers
+   * can submit on-chain finalization transactions (e.g. `finalizeUnwrap`).
+   *
+   * @param handles - FHE handles to decrypt publicly.
+   * @returns Clear-text values, ABI-encoded values, and the decryption proof.
+   *
+   * @example
+   * ```ts
+   * const { clearValues, decryptionProof, abiEncodedClearValues } =
+   *   await sdk.publicDecrypt([handle]);
+   * ```
+   */
+  async publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult> {
+    if (handles.length === 0) {
+      return { clearValues: {}, decryptionProof: "0x", abiEncodedClearValues: "0x" };
+    }
+
+    try {
+      return await this.relayer.publicDecrypt(handles);
+    } catch (error) {
+      throw wrapDecryptError(error, "Public decryption failed");
     }
   }
 

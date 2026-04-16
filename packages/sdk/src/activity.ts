@@ -20,7 +20,7 @@ import {
 } from "./events/onchain-events";
 import type { Address, Hex } from "viem";
 import type { ClearValueType, Handle } from "./relayer/relayer-sdk.types";
-import { ZERO_HANDLE } from "./token/readonly-token";
+import { isZeroHandle } from "./utils/handles";
 import { assertBigint } from "./utils/assertions";
 
 // ---------------------------------------------------------------------------
@@ -244,7 +244,7 @@ export function extractEncryptedHandles(items: readonly ActivityItem[]): Handle[
     if (item.amount.type === "encrypted" && item.amount.decryptedValue === undefined) {
       const h = item.amount.handle;
       // Skip zero handles
-      if (h !== "0x" && h !== ZERO_HANDLE) {
+      if (!isZeroHandle(h)) {
         handles.add(h);
       }
     }
