@@ -617,7 +617,7 @@ export class Token extends ReadonlyToken {
    * Complete an unwrap by providing the public decryption proof.
    * Call this after an unshield request has been processed on-chain.
    *
-   * @param burnAmountHandle - The encrypted amount handle from the `UnwrapRequested` event.
+   * @param unwrapRequestId - The unwrap request ID from the `UnwrapRequested` event.
    * @returns The transaction hash and mined receipt.
    * @throws {@link DecryptionFailedError} if public decryption fails.
    * @throws {@link TransactionRevertedError} if the finalize transaction reverts.
@@ -625,16 +625,16 @@ export class Token extends ReadonlyToken {
    * @example
    * ```ts
    * const event = findUnwrapRequested(receipt.logs);
-   * const txHash = await token.finalizeUnwrap(event.encryptedAmount);
+   * const txHash = await token.finalizeUnwrap(event.unwrapRequestId);
    * ```
    */
-  async finalizeUnwrap(burnAmountHandle: Handle): Promise<TransactionResult> {
-    const result = await this.sdk.publicDecrypt([burnAmountHandle]);
-    const clearValue = result.clearValues[burnAmountHandle];
+  async finalizeUnwrap(unwrapRequestId: Handle): Promise<TransactionResult> {
+    const result = await this.sdk.publicDecrypt([unwrapRequestId]);
+    const clearValue = result.clearValues[unwrapRequestId];
     assertBigint(clearValue, "finalizeUnwrap: clearValue");
     try {
       const txHash = await this.sdk.signer.writeContract(
-        finalizeUnwrapContract(this.wrapper, burnAmountHandle, clearValue, result.decryptionProof),
+        finalizeUnwrapContract(this.wrapper, unwrapRequestId, clearValue, result.decryptionProof),
       );
       this.emit({ type: ZamaSDKEvents.FinalizeUnwrapSubmitted, txHash });
       const receipt = await this.sdk.signer.waitForTransactionReceipt(txHash);
@@ -1001,7 +1001,7 @@ export class Token extends ReadonlyToken {
     }
     this.emit({ type: ZamaSDKEvents.UnshieldPhase2Started, operationId });
     safeCallback(() => callbacks?.onFinalizing?.());
-    const finalizeResult = await this.finalizeUnwrap(event.encryptedAmount);
+    const finalizeResult = await this.finalizeUnwrap(event.unwrapRequestId);
     this.emit({
       type: ZamaSDKEvents.UnshieldPhase2Submitted,
       txHash: finalizeResult.txHash,
