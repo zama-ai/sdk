@@ -1,6 +1,6 @@
 # @zama-fhe/react-sdk
 
-React hooks for confidential contract operations, built on [React Query](https://tanstack.com/query). Provides declarative, cache-aware hooks for session authorization, balances, confidential transfers, shielding, unshielding, and decryption — so you never deal with raw FHE operations in your components.
+React hooks for confidential contract operations, built on [React Query](https://tanstack.com/query). Provides declarative, declarative hooks for session authorization, balances, confidential transfers, shielding, unshielding, and decryption — so you never deal with raw FHE operations in your components.
 
 ## Installation
 
@@ -220,7 +220,7 @@ function useReadonlyToken(tokenAddress: Address): ReadonlyToken;
 
 #### `useConfidentialBalance`
 
-Single-token balance with automatic decryption. Uses two-phase polling: polls the encrypted handle at a configurable interval, and only triggers the expensive decryption when the handle changes.
+Single-token balance with automatic decryption. Calls `token.balanceOf(owner)` which reads the on-chain handle and decrypts via the SDK. Cached values are returned instantly — the relayer is only hit when the handle changes. Pass `refetchInterval` to poll for updates.
 
 ```ts
 function useConfidentialBalance(
@@ -230,7 +230,6 @@ function useConfidentialBalance(
 
 interface UseConfidentialBalanceConfig {
   tokenAddress: Address;
-  handleRefetchInterval?: number; // default: 10000ms
 }
 ```
 
@@ -241,36 +240,43 @@ const {
   data: balance,
   isLoading,
   error,
-} = useConfidentialBalance({
-  tokenAddress: "0xTokenAddress",
-  handleRefetchInterval: 5_000,
-});
+} = useConfidentialBalance(
+  {
+    tokenAddress: "0xTokenAddress",
+  },
+  { refetchInterval: 5_000 },
+);
 ```
 
 #### `useConfidentialBalances`
 
-Multi-token batch balance. Same two-phase polling pattern.
+Multi-token batch balance. Calls `ReadonlyToken.batchBalancesOf()` which decrypts each token's balance via the SDK. Cached values are returned instantly — the relayer is only hit for changed handles. Returns partial results when some tokens fail.
 
 ```ts
 function useConfidentialBalances(
   config: UseConfidentialBalancesConfig,
   options?: UseConfidentialBalancesOptions,
-): UseQueryResult<Map<Address, bigint>, Error>;
+): UseQueryResult<BatchBalancesResult, Error>;
 
 interface UseConfidentialBalancesConfig {
   tokenAddresses: Address[];
-  handleRefetchInterval?: number;
-  maxConcurrency?: number;
+}
+
+interface BatchBalancesResult {
+  results: Map<Address, bigint>;
+  errors: Map<Address, ZamaError>;
 }
 ```
 
 ```tsx
-const { data: balances } = useConfidentialBalances({
+const { data } = useConfidentialBalances({
   tokenAddresses: ["0xTokenA", "0xTokenB", "0xTokenC"],
 });
 
-// balances is a Map<Address, bigint>
-const tokenABalance = balances?.get("0xTokenA");
+const tokenABalance = data?.results.get("0xTokenA");
+if (data && data.errors.size > 0) {
+  // some tokens failed — check data.errors
+}
 ```
 
 ### Authorization
@@ -692,38 +698,6 @@ const { data: meta } = useTokenMetadata("0xTokenAddress");
 // meta?.name, meta?.symbol, meta?.decimals
 ```
 
-### Activity Feed
-
-#### `useActivityFeed`
-
-Parse raw event logs into a classified, optionally decrypted activity feed.
-
-```ts
-function useActivityFeed(config: UseActivityFeedConfig): UseQueryResult<ActivityItem[], Error>;
-
-interface UseActivityFeedConfig {
-  tokenAddress: Address;
-  userAddress: Address | undefined;
-  logs: readonly (RawLog & Partial<ActivityLogMetadata>)[] | undefined;
-  decrypt?: boolean; // default: true — batch-decrypt encrypted amounts
-}
-```
-
-Enabled when both `logs` and `userAddress` are defined. When `decrypt` is `true` (default), encrypted transfer amounts are automatically decrypted via the relayer.
-
-```tsx
-const { data: feed } = useActivityFeed({
-  tokenAddress: "0xTokenAddress",
-  logs, // from getLogs or a similar source
-  userAddress,
-  decrypt: true,
-});
-
-feed?.forEach((item) => {
-  console.log(item.type, item.direction, item.amount);
-});
-```
-
 ### Low-Level FHE Hooks
 
 These hooks are for **custom FHE contracts** (non-token contracts that use encrypted types directly). For confidential ERC-20 tokens, use the high-level token hooks above instead. For detailed usage examples, see the [Encrypt & Decrypt guide](../../docs/gitbook/src/guides/encrypt-decrypt.md).
@@ -792,16 +766,13 @@ Use `zamaQueryKeys` for manual cache management (invalidation, prefetching, remo
 import { zamaQueryKeys, decryptionKeys } from "@zama-fhe/react-sdk";
 ```
 
-| Factory                              | Keys                                                                        | Description                         |
-| ------------------------------------ | --------------------------------------------------------------------------- | ----------------------------------- |
-| `zamaQueryKeys.confidentialBalance`  | `.all`, `.token(address)`, `.owner(address, owner)`                         | Single-token decrypted balance.     |
-| `zamaQueryKeys.confidentialBalances` | `.all`, `.tokens(addresses, owner)`                                         | Multi-token batch balances.         |
-| `zamaQueryKeys.confidentialHandle`   | `.all`, `.token(address)`, `.owner(address, owner)`                         | Single-token encrypted handle.      |
-| `zamaQueryKeys.confidentialHandles`  | `.all`, `.tokens(addresses, owner)`                                         | Multi-token batch handles.          |
-| `zamaQueryKeys.isAllowed`            | `.all`                                                                      | Session signature status.           |
-| `zamaQueryKeys.underlyingAllowance`  | `.all`, `.token(address)`, `.scope(address, owner, wrapper)`                | Underlying ERC-20 allowance.        |
-| `zamaQueryKeys.activityFeed`         | `.all`, `.token(address)`, `.scope(address, userAddress, logsKey, decrypt)` | Activity feed items.                |
-| `decryptionKeys`                     | `.value(handle)`                                                            | Individual decrypted handle values. |
+| Factory                              | Keys                                                         | Description                         |
+| ------------------------------------ | ------------------------------------------------------------ | ----------------------------------- |
+| `zamaQueryKeys.confidentialBalance`  | `.all`, `.token(address)`, `.owner(address, owner)`          | Single-token decrypted balance.     |
+| `zamaQueryKeys.confidentialBalances` | `.all`, `.tokens(addresses, owner)`                          | Multi-token batch balances.         |
+| `zamaQueryKeys.isAllowed`            | `.all`                                                       | Session signature status.           |
+| `zamaQueryKeys.underlyingAllowance`  | `.all`, `.token(address)`, `.scope(address, owner, wrapper)` | Underlying ERC-20 allowance.        |
+| `decryptionKeys`                     | `.value(handle)`                                             | Individual decrypted handle values. |
 
 ```tsx
 import { useQueryClient } from "@tanstack/react-query";
@@ -922,12 +893,9 @@ const message = matchZamaError(error, {
 
 ### Balance Caching and Refresh
 
-Balance queries use two-phase polling:
+Balance queries call `token.balanceOf(owner)`, which reads the encrypted handle on-chain and decrypts via `sdk.userDecrypt`. The SDK's `DecryptCache` returns previously decrypted values instantly when the handle hasn't changed — the expensive relayer round-trip only runs when the balance actually changes. Pass `refetchInterval` to poll for on-chain updates.
 
-1. **Phase 1 (cheap)** — Polls the encrypted balance handle via a read-only RPC call at `handleRefetchInterval` (default: 10s).
-2. **Phase 2 (expensive)** — Only when the handle changes (i.e. balance updated on-chain), triggers an FHE decryption via the relayer.
-
-This means balances update within `handleRefetchInterval` ms of any on-chain change, without wasting decryption resources. Mutation hooks (`useConfidentialTransfer`, `useShield`, `useUnshield`, etc.) automatically invalidate the relevant caches on success, so the UI updates immediately after user actions.
+Mutation hooks (`useConfidentialTransfer`, `useShield`, `useUnshield`, etc.) automatically invalidate the relevant caches on success, so the UI updates immediately after user actions.
 
 To force a refresh:
 
@@ -957,7 +925,5 @@ All public exports from `@zama-fhe/sdk` are re-exported from the main entry poin
 **Events:** `RawLog`, `ConfidentialTransferEvent`, `WrappedEvent`, `UnwrapRequestedEvent`, `UnwrappedFinalizedEvent`, `UnwrappedStartedEvent`, `OnChainEvent`, `Topics`, `TOKEN_TOPICS`.
 
 **Event decoders:** `decodeConfidentialTransfer`, `decodeWrapped`, `decodeUnwrapRequested`, `decodeUnwrappedFinalized`, `decodeUnwrappedStarted`, `decodeOnChainEvent`, `decodeOnChainEvents`, `findUnwrapRequested`, `findWrapped`.
-
-**Activity feed:** `ActivityDirection`, `ActivityType`, `ActivityAmount`, `ActivityLogMetadata`, `ActivityItem`, `parseActivityFeed`, `extractEncryptedHandles`, `applyDecryptedValues`, `sortByBlockNumber`.
 
 **Contract call builders:** `confidentialBalanceOfContract`, `confidentialTransferContract`, `confidentialTransferFromContract`, `isOperatorContract`, `unwrapContract`, `unwrapFromBalanceContract`, `finalizeUnwrapContract`, `setOperatorContract`, `underlyingContract`, `inferredTotalSupplyContract`, `wrapContract`, `supportsInterfaceContract`, `isConfidentialTokenContract`, `isConfidentialWrapperContract`, `nameContract`, `symbolContract`, `decimalsContract`, `allowanceContract`, `approveContract`, `confidentialTotalSupplyContract`, `totalSupplyContract`, `rateContract`.

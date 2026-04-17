@@ -113,7 +113,7 @@ export function writeConfidentialTransferContract(signer: EthersTransactionSigne
 // Warning: (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 //
 // @public (undocumented)
-export function writeFinalizeUnwrapContract(signer: EthersTransactionSigner, wrapper: Address, burntAmount: Handle, burntAmountCleartext: bigint, decryptionProof: Hex): Promise<`0x${string}`>;
+export function writeFinalizeUnwrapContract(signer: EthersTransactionSigner, wrapper: Address, unwrapRequestId: Handle, burntAmountCleartext: bigint, decryptionProof: Hex): Promise<`0x${string}`>;
 
 // @public (undocumented)
 export function writeSetOperatorContract(signer: EthersTransactionSigner, tokenAddress: Address, spender: Address, timestamp?: number): Promise<`0x${string}`>;

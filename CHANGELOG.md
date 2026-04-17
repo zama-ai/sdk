@@ -1,5 +1,35 @@
 # Changelog
 
+## [3.0.0-alpha.1](https://github.com/zama-ai/sdk/compare/v2.5.0-alpha.6...v3.0.0-alpha.1) (2026-04-17)
+
+### ⚠ BREAKING CHANGES
+
+- The following exports are removed:
+- @zama-fhe/sdk: parseActivityFeed, applyDecryptedValues, activity types
+  (ActivityItem, ActivityDirection, ActivityAmount, ActivityType),
+  activityFeedQueryOptions, queryKeys.activityFeed
+- @zama-fhe/react-sdk: useActivityFeed
+
+* fmt
+
+### Code Refactoring
+
+- remove activity feed from SDK and react-sdk ([#258](https://github.com/zama-ai/sdk/issues/258)) ([5784dba]())
+
+## [2.5.0-alpha.6](https://github.com/zama-ai/sdk/compare/v2.5.0-alpha.5...v2.5.0-alpha.6) (2026-04-16)
+
+### Bug Fixes
+
+- centralize ZERO_HANDLE, use isZeroHandle checks ([#251](https://github.com/zama-ai/sdk/issues/251)) ([ffd5e3d]())
+
+## [2.5.0-alpha.5](https://github.com/zama-ai/sdk/compare/v2.5.0-alpha.4...v2.5.0-alpha.5) (2026-04-16)
+
+### Features
+
+- **sdk:** add sdk.publicDecrypt() as the primitive for public decryptions ([#250](https://github.com/zama-ai/sdk/issues/250)) ([fca0c80]())
+
+## [2.5.0-alpha.4](https://github.com/zama-ai/sdk/compare/v2.5.0-alpha.3...v2.5.0-alpha.4) (2026-04-16)
+
 ## [2.5.0-alpha.3](https://github.com/zama-ai/sdk/compare/v2.5.0-alpha.2...v2.5.0-alpha.3) (2026-04-16)
 
 ### Bug Fixes

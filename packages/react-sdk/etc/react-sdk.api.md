@@ -4,7 +4,6 @@
 
 ```ts
 
-import * as _$_tanstack_query_core0 from '@tanstack/query-core';
 import * as _$_tanstack_react_query0 from '@tanstack/react-query';
 import * as _$_zama_fhe_relayer_sdk_web0 from '@zama-fhe/relayer-sdk/web';
 import * as _$_zama_fhe_sdk0 from '@zama-fhe/sdk';
@@ -12,16 +11,9 @@ import * as _$react_jsx_runtime0 from 'react/jsx-runtime';
 import { ACL_TOPICS } from '@zama-fhe/sdk';
 import { AclEvent } from '@zama-fhe/sdk';
 import { AclPausedError } from '@zama-fhe/sdk';
-import { ActivityAmount } from '@zama-fhe/sdk';
-import { ActivityDirection } from '@zama-fhe/sdk';
-import { activityFeedQueryOptions } from '@zama-fhe/sdk/query';
-import { ActivityItem } from '@zama-fhe/sdk';
-import { ActivityLogMetadata } from '@zama-fhe/sdk';
-import { ActivityType } from '@zama-fhe/sdk';
 import { Address } from '@zama-fhe/sdk';
 import { allowanceContract } from '@zama-fhe/sdk';
 import { allowMutationOptions } from '@zama-fhe/sdk/query';
-import { applyDecryptedValues } from '@zama-fhe/sdk';
 import { ApprovalFailedError } from '@zama-fhe/sdk';
 import { approveContract } from '@zama-fhe/sdk';
 import { ApproveSubmittedEvent } from '@zama-fhe/sdk';
@@ -31,10 +23,10 @@ import { ApproveUnderlyingSubmittedEvent } from '@zama-fhe/sdk';
 import { BalanceCheckUnavailableError } from '@zama-fhe/sdk';
 import { balanceOfContract } from '@zama-fhe/sdk';
 import { BaseEvent } from '@zama-fhe/sdk';
+import { BatchBalancesResult } from '@zama-fhe/sdk';
 import { BatchDecryptAsOptions } from '@zama-fhe/sdk';
 import { batchDecryptBalancesAsMutationOptions } from '@zama-fhe/sdk/query';
 import { BatchDecryptBalancesAsParams } from '@zama-fhe/sdk/query';
-import { BatchDecryptOptions } from '@zama-fhe/sdk';
 import { ChromeSessionStorage } from '@zama-fhe/sdk';
 import { chromeSessionStorage } from '@zama-fhe/sdk';
 import { clearPendingUnshield } from '@zama-fhe/sdk';
@@ -43,10 +35,7 @@ import { confidentialApproveMutationOptions } from '@zama-fhe/sdk/query';
 import { ConfidentialApproveParams } from '@zama-fhe/sdk/query';
 import { confidentialBalanceOfContract } from '@zama-fhe/sdk';
 import { confidentialBalanceQueryOptions } from '@zama-fhe/sdk/query';
-import { ConfidentialBalancesData } from '@zama-fhe/sdk/query';
 import { confidentialBalancesQueryOptions } from '@zama-fhe/sdk/query';
-import { confidentialHandleQueryOptions } from '@zama-fhe/sdk/query';
-import { confidentialHandlesQueryOptions } from '@zama-fhe/sdk/query';
 import { confidentialIsApprovedQueryOptions } from '@zama-fhe/sdk/query';
 import { confidentialTotalSupplyContract } from '@zama-fhe/sdk';
 import { confidentialTransferContract } from '@zama-fhe/sdk';
@@ -126,7 +115,6 @@ import { ERC20ReadFailedError } from '@zama-fhe/sdk';
 import { ERC7984_INTERFACE_ID } from '@zama-fhe/sdk';
 import { ERC7984_WRAPPER_INTERFACE_ID } from '@zama-fhe/sdk';
 import { ERC7984_WRAPPER_INTERFACE_ID_LEGACY } from '@zama-fhe/sdk';
-import { extractEncryptedHandles } from '@zama-fhe/sdk';
 import { FheTypeName } from '@zama-fhe/sdk';
 import { FhevmInstanceConfig } from '@zama-fhe/sdk';
 import { filterQueryOptions } from '@zama-fhe/sdk/query';
@@ -160,6 +148,7 @@ import { isConfidentialWrapperContract } from '@zama-fhe/sdk';
 import { isHandleDelegatedContract } from '@zama-fhe/sdk';
 import { isOperatorContract } from '@zama-fhe/sdk';
 import { isWrapperQueryOptions } from '@zama-fhe/sdk/query';
+import { isZeroHandle } from '@zama-fhe/sdk';
 import { KeypairExpiredError } from '@zama-fhe/sdk';
 import { KeypairType } from '@zama-fhe/sdk';
 import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/sdk';
@@ -177,7 +166,6 @@ import { NetworkType } from '@zama-fhe/sdk';
 import { NoCiphertextError } from '@zama-fhe/sdk';
 import { OnChainEvent } from '@zama-fhe/sdk';
 import { PaginatedResult } from '@zama-fhe/sdk';
-import { parseActivityFeed } from '@zama-fhe/sdk';
 import { PropsWithChildren } from 'react';
 import { publicDecryptMutationOptions } from '@zama-fhe/sdk/query';
 import { PublicDecryptResult } from '@zama-fhe/sdk';
@@ -191,7 +179,6 @@ import { ReadContractConfig } from '@zama-fhe/sdk';
 import { ReadContractReturnType } from '@zama-fhe/sdk';
 import { ReadFunctionName } from '@zama-fhe/sdk';
 import { ReadonlyToken } from '@zama-fhe/sdk';
-import { ReadonlyTokenConfig } from '@zama-fhe/sdk';
 import { RelayerRequestFailedError } from '@zama-fhe/sdk';
 import { RelayerSDK } from '@zama-fhe/sdk';
 import { RelayerSDKStatus } from '@zama-fhe/sdk';
@@ -218,13 +205,11 @@ import { ShieldSubmittedEvent } from '@zama-fhe/sdk';
 import { signerAddressQueryOptions } from '@zama-fhe/sdk/query';
 import { SigningFailedError } from '@zama-fhe/sdk';
 import { SigningRejectedError } from '@zama-fhe/sdk';
-import { sortByBlockNumber } from '@zama-fhe/sdk';
 import { StoredCredentials } from '@zama-fhe/sdk';
 import { supportsInterfaceContract } from '@zama-fhe/sdk';
 import { symbolContract } from '@zama-fhe/sdk';
 import { Token } from '@zama-fhe/sdk';
 import { TOKEN_TOPICS } from '@zama-fhe/sdk';
-import { TokenConfig } from '@zama-fhe/sdk';
 import { TokenMetadata } from '@zama-fhe/sdk/query';
 import { tokenMetadataQueryOptions } from '@zama-fhe/sdk/query';
 import { TokenWrapperPair } from '@zama-fhe/sdk';
@@ -291,25 +276,11 @@ export { AclEvent }
 
 export { AclPausedError }
 
-export { ActivityAmount }
-
-export { ActivityDirection }
-
-export { activityFeedQueryOptions }
-
-export { ActivityItem }
-
-export { ActivityLogMetadata }
-
-export { ActivityType }
-
 export { Address }
 
 export { allowanceContract }
 
 export { allowMutationOptions }
-
-export { applyDecryptedValues }
 
 export { ApprovalFailedError }
 
@@ -329,13 +300,13 @@ export { balanceOfContract }
 
 export { BaseEvent }
 
+export { BatchBalancesResult }
+
 export { BatchDecryptAsOptions }
 
 export { batchDecryptBalancesAsMutationOptions }
 
 export { BatchDecryptBalancesAsParams }
-
-export { BatchDecryptOptions }
 
 export { ChromeSessionStorage }
 
@@ -353,13 +324,7 @@ export { confidentialBalanceOfContract }
 
 export { confidentialBalanceQueryOptions }
 
-export { ConfidentialBalancesData }
-
 export { confidentialBalancesQueryOptions }
-
-export { confidentialHandleQueryOptions }
-
-export { confidentialHandlesQueryOptions }
 
 export { confidentialIsApprovedQueryOptions }
 
@@ -519,8 +484,6 @@ export { ERC7984_WRAPPER_INTERFACE_ID }
 
 export { ERC7984_WRAPPER_INTERFACE_ID_LEGACY }
 
-export { extractEncryptedHandles }
-
 export { FheTypeName }
 
 export { FhevmInstanceConfig }
@@ -587,6 +550,8 @@ export { isOperatorContract }
 
 export { isWrapperQueryOptions }
 
+export { isZeroHandle }
+
 export { KeypairExpiredError }
 
 export { KeypairType }
@@ -632,8 +597,6 @@ export interface OptimisticMutateContext {
 
 export { PaginatedResult }
 
-export { parseActivityFeed }
-
 export { publicDecryptMutationOptions }
 
 export { PublicDecryptResult }
@@ -667,8 +630,6 @@ export { ReadContractReturnType }
 export { ReadFunctionName }
 
 export { ReadonlyToken }
-
-export { ReadonlyTokenConfig }
 
 export { RelayerRequestFailedError }
 
@@ -722,8 +683,6 @@ export { SigningFailedError }
 
 export { SigningRejectedError }
 
-export { sortByBlockNumber }
-
 export { StoredCredentials }
 
 export { supportsInterfaceContract }
@@ -733,8 +692,6 @@ export { symbolContract }
 export { Token }
 
 export { TOKEN_TOPICS }
-
-export { TokenConfig }
 
 export { TokenMetadata }
 
@@ -803,17 +760,6 @@ export { UnwrapRequestedEvent }
 export { UnwrapSubmittedEvent }
 
 // @public
-export function useActivityFeed(config: UseActivityFeedConfig): _$_tanstack_react_query0.UseQueryResult<ActivityItem[], Error>;
-
-// @public
-export interface UseActivityFeedConfig {
-    decrypt?: boolean;
-    logs: readonly (RawLog & Partial<ActivityLogMetadata>)[] | undefined;
-    tokenAddress: Address;
-    userAddress: Address | undefined;
-}
-
-// @public
 export function useAllow(options?: UseMutationOptions<void, Error, Address[]>): _$_tanstack_react_query0.UseMutationResult<void, Error, `0x${string}`[], unknown>;
 
 // @public
@@ -826,179 +772,10 @@ export function useBatchDecryptBalancesAs(tokens: ReadonlyToken[], options?: Use
 export function useConfidentialApprove(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, ConfidentialApproveParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, ConfidentialApproveParams, `0x${string}`>;
 
 // @public
-export function useConfidentialBalance(config: UseConfidentialBalanceConfig, options?: UseConfidentialBalanceOptions): {
-    handleQuery: _$_tanstack_react_query0.UseQueryResult<`0x${string}`, Error>;
-    data: bigint;
-    error: Error;
-    isError: true;
-    isPending: false;
-    isLoading: false;
-    isLoadingError: false;
-    isRefetchError: true;
-    isSuccess: false;
-    isPlaceholderData: false;
-    status: "error";
-    dataUpdatedAt: number;
-    errorUpdatedAt: number;
-    failureCount: number;
-    failureReason: Error | null;
-    errorUpdateCount: number;
-    isFetched: boolean;
-    isFetchedAfterMount: boolean;
-    isFetching: boolean;
-    isInitialLoading: boolean;
-    isPaused: boolean;
-    isRefetching: boolean;
-    isStale: boolean;
-    isEnabled: boolean;
-    refetch: (options?: _$_tanstack_query_core0.RefetchOptions) => Promise<_$_tanstack_query_core0.QueryObserverResult<bigint, Error>>;
-    fetchStatus: _$_tanstack_query_core0.FetchStatus;
-    promise: Promise<bigint>;
-} | {
-    handleQuery: _$_tanstack_react_query0.UseQueryResult<`0x${string}`, Error>;
-    data: bigint;
-    error: null;
-    isError: false;
-    isPending: false;
-    isLoading: false;
-    isLoadingError: false;
-    isRefetchError: false;
-    isSuccess: true;
-    isPlaceholderData: false;
-    status: "success";
-    dataUpdatedAt: number;
-    errorUpdatedAt: number;
-    failureCount: number;
-    failureReason: Error | null;
-    errorUpdateCount: number;
-    isFetched: boolean;
-    isFetchedAfterMount: boolean;
-    isFetching: boolean;
-    isInitialLoading: boolean;
-    isPaused: boolean;
-    isRefetching: boolean;
-    isStale: boolean;
-    isEnabled: boolean;
-    refetch: (options?: _$_tanstack_query_core0.RefetchOptions) => Promise<_$_tanstack_query_core0.QueryObserverResult<bigint, Error>>;
-    fetchStatus: _$_tanstack_query_core0.FetchStatus;
-    promise: Promise<bigint>;
-} | {
-    handleQuery: _$_tanstack_react_query0.UseQueryResult<`0x${string}`, Error>;
-    data: undefined;
-    error: Error;
-    isError: true;
-    isPending: false;
-    isLoading: false;
-    isLoadingError: true;
-    isRefetchError: false;
-    isSuccess: false;
-    isPlaceholderData: false;
-    status: "error";
-    dataUpdatedAt: number;
-    errorUpdatedAt: number;
-    failureCount: number;
-    failureReason: Error | null;
-    errorUpdateCount: number;
-    isFetched: boolean;
-    isFetchedAfterMount: boolean;
-    isFetching: boolean;
-    isInitialLoading: boolean;
-    isPaused: boolean;
-    isRefetching: boolean;
-    isStale: boolean;
-    isEnabled: boolean;
-    refetch: (options?: _$_tanstack_query_core0.RefetchOptions) => Promise<_$_tanstack_query_core0.QueryObserverResult<bigint, Error>>;
-    fetchStatus: _$_tanstack_query_core0.FetchStatus;
-    promise: Promise<bigint>;
-} | {
-    handleQuery: _$_tanstack_react_query0.UseQueryResult<`0x${string}`, Error>;
-    data: undefined;
-    error: null;
-    isError: false;
-    isPending: true;
-    isLoading: true;
-    isLoadingError: false;
-    isRefetchError: false;
-    isSuccess: false;
-    isPlaceholderData: false;
-    status: "pending";
-    dataUpdatedAt: number;
-    errorUpdatedAt: number;
-    failureCount: number;
-    failureReason: Error | null;
-    errorUpdateCount: number;
-    isFetched: boolean;
-    isFetchedAfterMount: boolean;
-    isFetching: boolean;
-    isInitialLoading: boolean;
-    isPaused: boolean;
-    isRefetching: boolean;
-    isStale: boolean;
-    isEnabled: boolean;
-    refetch: (options?: _$_tanstack_query_core0.RefetchOptions) => Promise<_$_tanstack_query_core0.QueryObserverResult<bigint, Error>>;
-    fetchStatus: _$_tanstack_query_core0.FetchStatus;
-    promise: Promise<bigint>;
-} | {
-    handleQuery: _$_tanstack_react_query0.UseQueryResult<`0x${string}`, Error>;
-    data: undefined;
-    error: null;
-    isError: false;
-    isPending: true;
-    isLoadingError: false;
-    isRefetchError: false;
-    isSuccess: false;
-    isPlaceholderData: false;
-    status: "pending";
-    dataUpdatedAt: number;
-    errorUpdatedAt: number;
-    failureCount: number;
-    failureReason: Error | null;
-    errorUpdateCount: number;
-    isFetched: boolean;
-    isFetchedAfterMount: boolean;
-    isFetching: boolean;
-    isLoading: boolean;
-    isInitialLoading: boolean;
-    isPaused: boolean;
-    isRefetching: boolean;
-    isStale: boolean;
-    isEnabled: boolean;
-    refetch: (options?: _$_tanstack_query_core0.RefetchOptions) => Promise<_$_tanstack_query_core0.QueryObserverResult<bigint, Error>>;
-    fetchStatus: _$_tanstack_query_core0.FetchStatus;
-    promise: Promise<bigint>;
-} | {
-    handleQuery: _$_tanstack_react_query0.UseQueryResult<`0x${string}`, Error>;
-    data: bigint;
-    isError: false;
-    error: null;
-    isPending: false;
-    isLoading: false;
-    isLoadingError: false;
-    isRefetchError: false;
-    isSuccess: true;
-    isPlaceholderData: true;
-    status: "success";
-    dataUpdatedAt: number;
-    errorUpdatedAt: number;
-    failureCount: number;
-    failureReason: Error | null;
-    errorUpdateCount: number;
-    isFetched: boolean;
-    isFetchedAfterMount: boolean;
-    isFetching: boolean;
-    isInitialLoading: boolean;
-    isPaused: boolean;
-    isRefetching: boolean;
-    isStale: boolean;
-    isEnabled: boolean;
-    refetch: (options?: _$_tanstack_query_core0.RefetchOptions) => Promise<_$_tanstack_query_core0.QueryObserverResult<bigint, Error>>;
-    fetchStatus: _$_tanstack_query_core0.FetchStatus;
-    promise: Promise<bigint>;
-};
+export function useConfidentialBalance(config: UseConfidentialBalanceConfig, options?: UseConfidentialBalanceOptions): _$_tanstack_react_query0.UseQueryResult<bigint, Error>;
 
 // @public
 export interface UseConfidentialBalanceConfig {
-    handleRefetchInterval?: number;
     tokenAddress: Address;
 }
 
@@ -1008,185 +785,15 @@ export interface UseConfidentialBalanceOptions extends Omit<UseQueryOptions<bigi
 }
 
 // @public
-export function useConfidentialBalances(config: UseConfidentialBalancesConfig, options?: UseConfidentialBalancesOptions): {
-    handlesQuery: _$_tanstack_react_query0.UseQueryResult<`0x${string}`[], Error>;
-    data: ConfidentialBalancesData;
-    error: Error;
-    isError: true;
-    isPending: false;
-    isLoading: false;
-    isLoadingError: false;
-    isRefetchError: true;
-    isSuccess: false;
-    isPlaceholderData: false;
-    status: "error";
-    dataUpdatedAt: number;
-    errorUpdatedAt: number;
-    failureCount: number;
-    failureReason: Error | null;
-    errorUpdateCount: number;
-    isFetched: boolean;
-    isFetchedAfterMount: boolean;
-    isFetching: boolean;
-    isInitialLoading: boolean;
-    isPaused: boolean;
-    isRefetching: boolean;
-    isStale: boolean;
-    isEnabled: boolean;
-    refetch: (options?: _$_tanstack_query_core0.RefetchOptions) => Promise<_$_tanstack_query_core0.QueryObserverResult<ConfidentialBalancesData, Error>>;
-    fetchStatus: _$_tanstack_query_core0.FetchStatus;
-    promise: Promise<ConfidentialBalancesData>;
-} | {
-    handlesQuery: _$_tanstack_react_query0.UseQueryResult<`0x${string}`[], Error>;
-    data: ConfidentialBalancesData;
-    error: null;
-    isError: false;
-    isPending: false;
-    isLoading: false;
-    isLoadingError: false;
-    isRefetchError: false;
-    isSuccess: true;
-    isPlaceholderData: false;
-    status: "success";
-    dataUpdatedAt: number;
-    errorUpdatedAt: number;
-    failureCount: number;
-    failureReason: Error | null;
-    errorUpdateCount: number;
-    isFetched: boolean;
-    isFetchedAfterMount: boolean;
-    isFetching: boolean;
-    isInitialLoading: boolean;
-    isPaused: boolean;
-    isRefetching: boolean;
-    isStale: boolean;
-    isEnabled: boolean;
-    refetch: (options?: _$_tanstack_query_core0.RefetchOptions) => Promise<_$_tanstack_query_core0.QueryObserverResult<ConfidentialBalancesData, Error>>;
-    fetchStatus: _$_tanstack_query_core0.FetchStatus;
-    promise: Promise<ConfidentialBalancesData>;
-} | {
-    handlesQuery: _$_tanstack_react_query0.UseQueryResult<`0x${string}`[], Error>;
-    data: undefined;
-    error: Error;
-    isError: true;
-    isPending: false;
-    isLoading: false;
-    isLoadingError: true;
-    isRefetchError: false;
-    isSuccess: false;
-    isPlaceholderData: false;
-    status: "error";
-    dataUpdatedAt: number;
-    errorUpdatedAt: number;
-    failureCount: number;
-    failureReason: Error | null;
-    errorUpdateCount: number;
-    isFetched: boolean;
-    isFetchedAfterMount: boolean;
-    isFetching: boolean;
-    isInitialLoading: boolean;
-    isPaused: boolean;
-    isRefetching: boolean;
-    isStale: boolean;
-    isEnabled: boolean;
-    refetch: (options?: _$_tanstack_query_core0.RefetchOptions) => Promise<_$_tanstack_query_core0.QueryObserverResult<ConfidentialBalancesData, Error>>;
-    fetchStatus: _$_tanstack_query_core0.FetchStatus;
-    promise: Promise<ConfidentialBalancesData>;
-} | {
-    handlesQuery: _$_tanstack_react_query0.UseQueryResult<`0x${string}`[], Error>;
-    data: undefined;
-    error: null;
-    isError: false;
-    isPending: true;
-    isLoading: true;
-    isLoadingError: false;
-    isRefetchError: false;
-    isSuccess: false;
-    isPlaceholderData: false;
-    status: "pending";
-    dataUpdatedAt: number;
-    errorUpdatedAt: number;
-    failureCount: number;
-    failureReason: Error | null;
-    errorUpdateCount: number;
-    isFetched: boolean;
-    isFetchedAfterMount: boolean;
-    isFetching: boolean;
-    isInitialLoading: boolean;
-    isPaused: boolean;
-    isRefetching: boolean;
-    isStale: boolean;
-    isEnabled: boolean;
-    refetch: (options?: _$_tanstack_query_core0.RefetchOptions) => Promise<_$_tanstack_query_core0.QueryObserverResult<ConfidentialBalancesData, Error>>;
-    fetchStatus: _$_tanstack_query_core0.FetchStatus;
-    promise: Promise<ConfidentialBalancesData>;
-} | {
-    handlesQuery: _$_tanstack_react_query0.UseQueryResult<`0x${string}`[], Error>;
-    data: undefined;
-    error: null;
-    isError: false;
-    isPending: true;
-    isLoadingError: false;
-    isRefetchError: false;
-    isSuccess: false;
-    isPlaceholderData: false;
-    status: "pending";
-    dataUpdatedAt: number;
-    errorUpdatedAt: number;
-    failureCount: number;
-    failureReason: Error | null;
-    errorUpdateCount: number;
-    isFetched: boolean;
-    isFetchedAfterMount: boolean;
-    isFetching: boolean;
-    isLoading: boolean;
-    isInitialLoading: boolean;
-    isPaused: boolean;
-    isRefetching: boolean;
-    isStale: boolean;
-    isEnabled: boolean;
-    refetch: (options?: _$_tanstack_query_core0.RefetchOptions) => Promise<_$_tanstack_query_core0.QueryObserverResult<ConfidentialBalancesData, Error>>;
-    fetchStatus: _$_tanstack_query_core0.FetchStatus;
-    promise: Promise<ConfidentialBalancesData>;
-} | {
-    handlesQuery: _$_tanstack_react_query0.UseQueryResult<`0x${string}`[], Error>;
-    data: ConfidentialBalancesData;
-    isError: false;
-    error: null;
-    isPending: false;
-    isLoading: false;
-    isLoadingError: false;
-    isRefetchError: false;
-    isSuccess: true;
-    isPlaceholderData: true;
-    status: "success";
-    dataUpdatedAt: number;
-    errorUpdatedAt: number;
-    failureCount: number;
-    failureReason: Error | null;
-    errorUpdateCount: number;
-    isFetched: boolean;
-    isFetchedAfterMount: boolean;
-    isFetching: boolean;
-    isInitialLoading: boolean;
-    isPaused: boolean;
-    isRefetching: boolean;
-    isStale: boolean;
-    isEnabled: boolean;
-    refetch: (options?: _$_tanstack_query_core0.RefetchOptions) => Promise<_$_tanstack_query_core0.QueryObserverResult<ConfidentialBalancesData, Error>>;
-    fetchStatus: _$_tanstack_query_core0.FetchStatus;
-    promise: Promise<ConfidentialBalancesData>;
-};
+export function useConfidentialBalances(config: UseConfidentialBalancesConfig, options?: UseConfidentialBalancesOptions): _$_tanstack_react_query0.UseQueryResult<BatchBalancesResult, Error>;
 
 // @public
 export interface UseConfidentialBalancesConfig {
-    handleRefetchInterval?: number;
-    maxConcurrency?: number;
     tokenAddresses: Address[];
 }
 
 // @public
-export interface UseConfidentialBalancesOptions extends Omit<UseQueryOptions<ConfidentialBalancesData>, "queryKey" | "queryFn" | "enabled"> {
+export interface UseConfidentialBalancesOptions extends Omit<UseQueryOptions<BatchBalancesResult>, "queryKey" | "queryFn" | "enabled"> {
     enabled?: boolean;
 }
 

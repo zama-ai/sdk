@@ -59,9 +59,8 @@ export function isWrapperQueryOptions(
     queryFn: async (context) => {
       const [, { tokenAddress: keyTokenAddress }] = context.queryKey;
       try {
-        // During the transition period, check both the legacy (0xd04584ba) and new
-        // (0x1f1c62b2) wrapper interface IDs in parallel. Either returning true is
-        // sufficient to identify a confidential wrapper.
+        // During the transition period, check both wrapper interface IDs in parallel.
+        // Either returning true is sufficient to identify a confidential wrapper.
         const [legacyMatch, newMatch] = await Promise.all([
           signer.readContract(isConfidentialWrapperContract(keyTokenAddress)),
           signer.readContract(

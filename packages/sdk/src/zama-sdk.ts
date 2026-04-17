@@ -3,18 +3,18 @@ import { CredentialsManager } from "./credentials/credentials-manager";
 import { DelegatedCredentialsManager } from "./credentials/delegated-credentials-manager";
 import { DecryptCache } from "./decrypt-cache";
 import { wrapDecryptError } from "./errors";
-import type { ZamaSDKEventListener } from "./events/sdk-events";
+import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventListener } from "./events/sdk-events";
 import { ZamaSDKEvents } from "./events/sdk-events";
 import type { DecryptHandle } from "./query/user-decrypt";
-import { ZERO_HANDLE } from "./query/utils";
+import { isZeroHandle } from "./utils/handles";
 import type { RelayerSDK } from "./relayer/relayer-sdk";
-import type { ClearValueType, Handle } from "./relayer/relayer-sdk.types";
+import type { ClearValueType, Handle, PublicDecryptResult } from "./relayer/relayer-sdk.types";
 import { MemoryStorage } from "./storage/memory-storage";
-import { pLimit } from "./utils/concurrency";
 import { ReadonlyToken } from "./token/readonly-token";
 import { Token } from "./token/token";
 import type { GenericSigner, GenericStorage, SignerLifecycleCallbacks } from "./types";
 import { toError } from "./utils";
+import { pLimit } from "./utils/concurrency";
 import { WrappersRegistry } from "./wrappers-registry";
 
 /** Maximum keypairTTL accepted by the fhevm ACL contract (365 days, in seconds). */
@@ -142,11 +142,10 @@ export class ZamaSDK {
       const lifecycleCallbacks = config.signerLifecycleCallbacks;
       const runLifecycleEffect = (operation: string, effect: () => Promise<void>) => {
         void effect().catch((error) => {
-          this.#onEvent?.({
+          this.emitEvent({
             type: ZamaSDKEvents.TransactionError,
             operation,
             error: toError(error),
-            timestamp: Date.now(),
           });
         });
       };
@@ -217,20 +216,10 @@ export class ZamaSDK {
    * Supports balance queries and authorization without a wrapper address.
    *
    * @param address - The confidential token contract address.
-   * @returns A {@link ReadonlyToken} instance bound to this SDK's relayer, signer, and storage.
+   * @returns A {@link ReadonlyToken} instance bound to this SDK.
    */
   createReadonlyToken(address: Address): ReadonlyToken {
-    return new ReadonlyToken({
-      relayer: this.relayer,
-      signer: this.signer,
-      storage: this.storage,
-      sessionStorage: this.sessionStorage,
-      credentials: this.credentials,
-      delegatedCredentials: this.delegatedCredentials,
-      cache: this.cache,
-      address: getAddress(address),
-      onEvent: this.#onEvent,
-    });
+    return new ReadonlyToken(this, address);
   }
 
   /**
@@ -239,21 +228,35 @@ export class ZamaSDK {
    *
    * @param address - The confidential token contract address (also used as wrapper by default).
    * @param wrapper - Optional explicit wrapper address, if it differs from the token address.
-   * @returns A {@link Token} instance bound to this SDK's relayer, signer, and storage.
+   * @returns A {@link Token} instance bound to this SDK.
    */
   createToken(address: Address, wrapper?: Address): Token {
-    return new Token({
-      relayer: this.relayer,
-      signer: this.signer,
-      storage: this.storage,
-      sessionStorage: this.sessionStorage,
-      credentials: this.credentials,
-      delegatedCredentials: this.delegatedCredentials,
-      cache: this.cache,
-      address: getAddress(address),
-      wrapper: wrapper ? getAddress(wrapper) : undefined,
-      onEvent: this.#onEvent,
-    });
+    return new Token(this, address, wrapper);
+  }
+
+  /**
+   * Emit a structured SDK event. Used by {@link Token}/{@link ReadonlyToken}
+   * to surface lifecycle events through the unified SDK event stream.
+   *
+   * Listener exceptions are caught and logged so that a misbehaving subscriber
+   * can never corrupt SDK operations.
+   *
+   * Application code should subscribe via the `onEvent` config option, never
+   * call this directly.
+   *
+   * @internal
+   */
+  emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void {
+    try {
+      this.#onEvent({
+        ...input,
+        tokenAddress,
+        timestamp: Date.now(),
+      } as ZamaSDKEvent);
+    } catch (error) {
+      // oxlint-disable-next-line no-console
+      console.error("[zama-sdk] onEvent listener threw:", error);
+    }
   }
 
   /**
@@ -340,7 +343,7 @@ export class ZamaSDK {
 
     // Filter zero handles → 0n without relayer
     for (const h of normalized) {
-      if (h.handle === ZERO_HANDLE) {
+      if (isZeroHandle(h.handle)) {
         result[h.handle] = 0n;
       } else {
         nonZero.push(h);
@@ -369,8 +372,9 @@ export class ZamaSDK {
     }
 
     // Derive contract addresses from ALL handles for stable credential cache key
-    const allContractAddresses = [...new Set(normalized.map((h) => h.contractAddress))];
-    const creds = await this.credentials.allow(...allContractAddresses);
+    const creds = await this.credentials.allow(
+      ...new Set(normalized.map((h) => h.contractAddress)),
+    );
 
     // Group uncached by contract
     const byContract = new Map<Address, Handle[]>();
@@ -386,13 +390,13 @@ export class ZamaSDK {
     // Decrypt per contract group with bounded concurrency
     const t0 = Date.now();
     const uncachedHandles = uncached.map((h) => h.handle);
-    this.#onEvent({
-      type: ZamaSDKEvents.DecryptStart,
-      timestamp: t0,
-      handles: uncachedHandles,
-    });
 
     try {
+      this.emitEvent({
+        type: ZamaSDKEvents.DecryptStart,
+        handles: uncachedHandles,
+      });
+
       await pLimit(
         [...byContract.entries()].map(([contractAddress, contractHandles]) => async () => {
           const decrypted = await this.relayer.userDecrypt({
@@ -415,23 +419,57 @@ export class ZamaSDK {
         5,
       );
 
-      this.#onEvent({
+      // Emit only the freshly-decrypted subset in `result` so its keys match
+      // `handles`. Cached and zero-handle entries are intentionally excluded.
+      const uncachedResult: Record<Handle, ClearValueType> = {};
+      for (const handle of uncachedHandles) {
+        const value = result[handle];
+        if (value !== undefined) {
+          uncachedResult[handle] = value;
+        }
+      }
+      this.emitEvent({
         type: ZamaSDKEvents.DecryptEnd,
         durationMs: Date.now() - t0,
-        timestamp: Date.now(),
         handles: uncachedHandles,
-        result,
+        result: uncachedResult,
       });
       return result;
     } catch (error) {
-      this.#onEvent({
+      this.emitEvent({
         type: ZamaSDKEvents.DecryptError,
         error: toError(error),
         durationMs: Date.now() - t0,
-        timestamp: Date.now(),
         handles: uncachedHandles,
       });
       throw wrapDecryptError(error, "Failed to decrypt handles");
+    }
+  }
+
+  /**
+   * Publicly decrypt one or more FHE handles.
+   *
+   * Returns the decryption proof alongside the clear-text values so callers
+   * can submit on-chain finalization transactions (e.g. `finalizeUnwrap`).
+   *
+   * @param handles - FHE handles to decrypt publicly.
+   * @returns Clear-text values, ABI-encoded values, and the decryption proof.
+   *
+   * @example
+   * ```ts
+   * const { clearValues, decryptionProof, abiEncodedClearValues } =
+   *   await sdk.publicDecrypt([handle]);
+   * ```
+   */
+  async publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult> {
+    if (handles.length === 0) {
+      return { clearValues: {}, decryptionProof: "0x", abiEncodedClearValues: "0x" };
+    }
+
+    try {
+      return await this.relayer.publicDecrypt(handles);
+    } catch (error) {
+      throw wrapDecryptError(error, "Public decryption failed");
     }
   }
 

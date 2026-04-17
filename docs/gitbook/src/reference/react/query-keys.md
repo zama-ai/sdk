@@ -58,25 +58,6 @@ Multi-token batch balances.
 | `.all`                  | All batch balance queries                 |
 | `.tokens(addrs, owner)` | Batch query for specific tokens and owner |
 
-### `zamaQueryKeys.confidentialHandle`
-
-Single-token encrypted handle (pre-decryption).
-
-| Key                   | Scope                            |
-| --------------------- | -------------------------------- |
-| `.all`                | All handles                      |
-| `.token(addr)`        | Handles for one token            |
-| `.owner(addr, owner)` | One owner's handle for one token |
-
-### `zamaQueryKeys.confidentialHandles`
-
-Multi-token batch handles.
-
-| Key                     | Scope                                     |
-| ----------------------- | ----------------------------------------- |
-| `.all`                  | All batch handle queries                  |
-| `.tokens(addrs, owner)` | Batch query for specific tokens and owner |
-
 ### `zamaQueryKeys.isAllowed`
 
 Session signature status.
@@ -94,16 +75,6 @@ ERC-20 allowance of the underlying token for the wrapper.
 | `.all`                         | All allowance queries       |
 | `.token(addr)`                 | Allowances for one token    |
 | `.scope(addr, owner, wrapper)` | Specific owner-wrapper pair |
-
-### `zamaQueryKeys.activityFeed`
-
-Classified activity feed.
-
-| Key                                           | Scope                   |
-| --------------------------------------------- | ----------------------- |
-| `.all`                                        | All feed queries        |
-| `.token(addr)`                                | Feed for one token      |
-| `.scope(addr, userAddress, logsKey, decrypt)` | Fully scoped feed query |
 
 ### `zamaQueryKeys.wrappersRegistry`
 
@@ -158,7 +129,6 @@ queryClient.prefetchQuery({
 
 ```tsx
 queryClient.removeQueries({ queryKey: zamaQueryKeys.confidentialBalance.all });
-queryClient.removeQueries({ queryKey: zamaQueryKeys.confidentialHandle.all });
 ```
 
 ## Related

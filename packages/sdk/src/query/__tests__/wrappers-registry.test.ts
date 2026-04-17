@@ -143,7 +143,7 @@ describe("confidentialTokenAddressQueryOptions", () => {
     ).toBe(false);
   });
 
-  test("queryFn returns [found, address] tuple", async ({ signer }) => {
+  test("queryFn returns [isValid, address] tuple", async ({ signer }) => {
     vi.mocked(signer.readContract).mockResolvedValue([true, C_TOKEN]);
     const options = confidentialTokenAddressQueryOptions(signer, {
       registryAddress: REGISTRY,
@@ -164,7 +164,7 @@ describe("tokenAddressQueryOptions", () => {
     ).toBe(false);
   });
 
-  test("queryFn returns [found, address] tuple", async ({ signer }) => {
+  test("queryFn returns [isValid, address] tuple", async ({ signer }) => {
     vi.mocked(signer.readContract).mockResolvedValue([true, TOKEN]);
     const options = tokenAddressQueryOptions(signer, {
       registryAddress: REGISTRY,

@@ -24,7 +24,7 @@ test("should shield USDT then unwrap and finalize in two steps", async ({
 
   await expect(page.getByTestId("unwrap-success")).toContainText("Tx: 0x");
   // Burn handle should be a valid hex address
-  await expect(page.getByTestId("burn-handle")).toContainText("Burn handle: 0x");
+  await expect(page.getByTestId("burn-handle")).toContainText("Unwrap request ID: 0x");
 
   // Step 2: Finalize
   await page.getByTestId("finalize-button").click();
