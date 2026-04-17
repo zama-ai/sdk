@@ -23,7 +23,7 @@ import type {
   RelayerWebConfig,
   UserDecryptParams,
 } from "./relayer-sdk.types";
-import { buildEIP712DomainType, DefaultConfigs, withRetry } from "./relayer-utils";
+import { buildEIP712DomainType, withRetry } from "./relayer-utils";
 
 /**
  * Pinned relayer SDK version used for the WASM CDN bundle.
@@ -65,7 +65,6 @@ export class RelayerWeb implements RelayerSDK, Disposable {
   #initPromise: Promise<RelayerWorkerClient> | null = null;
   #ensureLock: Promise<RelayerWorkerClient> | null = null;
   #terminated = false;
-  #resolvedChainId: number | null = null;
   #artifactCache: FheArtifactCache | null = null;
   #artifactStorage: GenericStorage | null = null;
   #status: RelayerSDKStatus = "idle";
@@ -92,9 +91,8 @@ export class RelayerWeb implements RelayerSDK, Disposable {
     this.#config.onStatusChange?.(status, error);
   }
 
-  async #getWorkerConfig(): Promise<WorkerClientConfig> {
-    const chainId = await this.#config.getChainId();
-    const { transports, security, threads } = this.#config;
+  #getWorkerConfig(): WorkerClientConfig {
+    const { chain, security, threads } = this.#config;
 
     if (threads !== undefined && (!Number.isInteger(threads) || threads < 1)) {
       throw new Error(`Invalid thread count: ${threads}. Must be a positive integer.`);
@@ -108,7 +106,7 @@ export class RelayerWeb implements RelayerSDK, Disposable {
 
     return {
       cdnUrl: CDN_URL,
-      fhevmConfig: Object.assign({}, DefaultConfigs[chainId], transports[chainId]),
+      fhevmConfig: chain,
       csrfToken: security?.getCsrfToken?.() ?? "",
       integrity: security?.integrityCheck === false ? undefined : CDN_INTEGRITY,
       logger: this.#config.logger,
@@ -149,30 +147,17 @@ export class RelayerWeb implements RelayerSDK, Disposable {
       this.#terminated = false;
       this.#workerClient = null;
       this.#initPromise = null;
-      this.#resolvedChainId = null;
     }
 
-    const chainId = await this.#config.getChainId();
-
-    // Chain changed → tear down old worker, re-init
-    if (this.#resolvedChainId !== null && chainId !== this.#resolvedChainId) {
-      this.#tearDown();
-    }
-
-    this.#resolvedChainId = chainId;
-
-    // Create cache for current chain.
-    // Storage is chain-independent — reuse across chain switches.
     if (!this.#artifactStorage) {
       this.#artifactStorage =
         this.#config.fheArtifactStorage ?? new IndexedDBStorage("FheArtifactCache", 1, "artifacts");
     }
     if (!this.#artifactCache) {
-      const config = Object.assign({}, DefaultConfigs[chainId], this.#config.transports[chainId]);
       this.#artifactCache = new FheArtifactCache({
         storage: this.#artifactStorage,
-        chainId,
-        relayerUrl: config.relayerUrl,
+        chainId: this.#config.chain.chainId,
+        relayerUrl: this.#config.chain.relayerUrl,
         ttl: this.#config.fheArtifactCacheTTL,
         logger: this.#config.logger,
       });
@@ -221,7 +206,7 @@ export class RelayerWeb implements RelayerSDK, Disposable {
    * Initialize the worker (called once via promise lock).
    */
   async #initWorker(): Promise<RelayerWorkerClient> {
-    const workerConfig = await this.#getWorkerConfig();
+    const workerConfig = this.#getWorkerConfig();
     const client = new RelayerWorkerClient(workerConfig);
     await client.initWorker();
     // If terminate() was called while we were initializing, clean up immediately
@@ -445,11 +430,11 @@ export class RelayerWeb implements RelayerSDK, Disposable {
   }
 
   async getAclAddress(): Promise<Address> {
-    const chainId = await this.#config.getChainId();
-    const config = Object.assign({}, DefaultConfigs[chainId], this.#config.transports[chainId]);
-    if (!config.aclContractAddress) {
-      throw new ConfigurationError(`No ACL address configured for chain ${chainId}`);
+    if (!this.#config.chain.aclContractAddress) {
+      throw new ConfigurationError(
+        `No ACL address configured for chain ${this.#config.chain.chainId}`,
+      );
     }
-    return config.aclContractAddress as Address;
+    return this.#config.chain.aclContractAddress as Address;
   }
 }

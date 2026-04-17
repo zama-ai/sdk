@@ -34,14 +34,11 @@ const wagmiConfig = createConfig({
 const signer = new WagmiSigner({ config: wagmiConfig });
 
 const relayer = new RelayerWeb({
-  getChainId: async () => anvil.id,
-  transports: {
-    [anvil.id]: {
-      ...HardhatConfig,
-      relayerUrl: mockRelayerUrl,
-      network: rpcUrl,
-      chainId: anvil.id,
-    },
+  chain: {
+    ...HardhatConfig,
+    relayerUrl: mockRelayerUrl,
+    network: rpcUrl,
+    chainId: anvil.id,
   },
   threads: 4,
   security: { integrityCheck: false },

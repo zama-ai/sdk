@@ -148,15 +148,14 @@ describe("buildRelayer", () => {
     expect(relayer.constructor.name).toBe("CompositeRelayer");
   });
 
-  it("returns unwrapped relayer when all chains share the same relayer instance", () => {
+  it("returns CompositeRelayer for multiple web chains", () => {
     const transports = resolveChainTransports(
       [sepoliaChain, mainnetChain],
       { [11155111]: web(), [1]: web() },
       [11155111, 1],
     );
     const relayer = buildRelayer(transports, resolveChainId);
-    // Both use default web (same undefined relayer ref) → single RelayerWeb
-    expect(relayer.constructor.name).not.toBe("CompositeRelayer");
+    expect(relayer.constructor.name).toBe("CompositeRelayer");
   });
 
   it("throws when web transport chain has empty relayerUrl", () => {
@@ -171,18 +170,6 @@ describe("buildRelayer", () => {
     expect(() => buildRelayer(transports, resolveChainId)).toThrow(
       "Chain 560048 has an empty relayerUrl",
     );
-  });
-
-  it("creates separate relayers for distinct relayer option references", () => {
-    const opts1 = { threads: 2 };
-    const opts2 = { threads: 4 };
-    const transports = resolveChainTransports(
-      [sepoliaChain, mainnetChain],
-      { [11155111]: web(undefined, opts1), [1]: web(undefined, opts2) },
-      [11155111, 1],
-    );
-    const relayer = buildRelayer(transports, resolveChainId);
-    expect(relayer.constructor.name).toBe("CompositeRelayer");
   });
 
   it("uses custom relayer directly without constructing", () => {

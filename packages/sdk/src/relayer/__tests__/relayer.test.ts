@@ -78,17 +78,16 @@ import { RelayerWeb } from "../relayer-web";
 // Shared fixtures
 // ---------------------------------------------------------------------------
 
-const CHAIN_ID = 11155111;
-const TRANSPORTS = {
-  [CHAIN_ID]: { relayerUrl: "https://relayer.example.com" },
-};
+const CHAIN_CONFIG = {
+  chainId: 11155111,
+  relayerUrl: "https://relayer.example.com",
+} as any;
 
 function createWebRelayer(
   overrides: Partial<ConstructorParameters<typeof RelayerWeb>[0]> = {},
 ): RelayerWeb {
   return new RelayerWeb({
-    getChainId: vi.fn().mockResolvedValue(CHAIN_ID),
-    transports: TRANSPORTS,
+    chain: CHAIN_CONFIG,
     // Override default IndexedDBStorage with per-test MemoryStorage for isolation
     fheArtifactStorage: new MemoryStorage(),
     ...overrides,
@@ -99,8 +98,7 @@ function createNodeRelayer(
   overrides: Partial<ConstructorParameters<typeof RelayerNode>[0]> = {},
 ): RelayerNode {
   return new RelayerNode({
-    getChainId: vi.fn().mockResolvedValue(CHAIN_ID),
-    transports: TRANSPORTS,
+    chain: CHAIN_CONFIG,
     ...overrides,
   });
 }
@@ -119,7 +117,7 @@ const MOCK_EIP712 = {
   domain: {
     name: "test",
     version: "1",
-    chainId: CHAIN_ID,
+    chainId: 11155111,
     verifyingContract: "0xABC" as `0x${string}`,
   },
   types: {
@@ -173,31 +171,6 @@ describe("RelayerWeb", () => {
 
       expect(RelayerWorkerClient).toHaveBeenCalledOnce();
       expect(mockWorkerClient.initWorker).toHaveBeenCalledOnce();
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // Chain ID change detection
-  // -------------------------------------------------------------------------
-
-  describe("chain ID change", () => {
-    it("re-initializes the worker when chain ID changes", async () => {
-      const getChainId = vi.fn().mockResolvedValue(CHAIN_ID);
-      const relayer = createWebRelayer({ getChainId });
-      mockWorkerClient.generateKeypair.mockResolvedValue({
-        publicKey: "pk",
-        privateKey: "sk",
-      });
-
-      await relayer.generateKeypair();
-      expect(RelayerWorkerClient).toHaveBeenCalledTimes(1);
-
-      // Switch chain
-      getChainId.mockResolvedValue(1);
-      await relayer.generateKeypair();
-
-      expect(mockWorkerClient.terminate).toHaveBeenCalledOnce();
-      expect(RelayerWorkerClient).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -624,27 +597,6 @@ describe("RelayerWeb", () => {
       // Caching is always on — worker called only once
       expect(mockWorkerClient.getPublicKey).toHaveBeenCalledOnce();
     });
-
-    it("clears cache on chain switch", async () => {
-      const storage = new MemoryStorage();
-      const getChainId = vi.fn().mockResolvedValue(CHAIN_ID);
-      const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([1]) };
-      mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk });
-
-      const relayer = createWebRelayer({
-        fheArtifactStorage: storage,
-        getChainId,
-      });
-      await relayer.getPublicKey();
-      expect(mockWorkerClient.getPublicKey).toHaveBeenCalledOnce();
-
-      // Switch chain — cache should be cleared
-      getChainId.mockResolvedValue(1);
-      const pk2 = { publicKeyId: "pk-2", publicKey: new Uint8Array([2]) };
-      mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk2 });
-      const result = await relayer.getPublicKey();
-      expect(result).toEqual(pk2);
-    });
   });
 
   // -------------------------------------------------------------------------
@@ -678,7 +630,7 @@ describe("RelayerWeb", () => {
 
       // Seed artifact metadata + force expired timestamp so revalidation
       // issues a conditional GET instead of just capturing validators.
-      const pkKey = `fhe:pubkey:${CHAIN_ID}`;
+      const pkKey = "fhe:pubkey:11155111";
       const cached = await storage.get<Record<string, unknown>>(pkKey);
       if (cached) {
         cached.lastValidatedAt = 0;
@@ -789,27 +741,6 @@ describe("RelayerNode", () => {
   // -------------------------------------------------------------------------
   // Chain ID change detection
   // -------------------------------------------------------------------------
-
-  describe("chain ID change", () => {
-    it("re-initializes the pool when chain ID changes", async () => {
-      const getChainId = vi.fn().mockResolvedValue(CHAIN_ID);
-      const relayer = createNodeRelayer({ getChainId });
-      mockPool.generateKeypair.mockResolvedValue({
-        publicKey: "pk",
-        privateKey: "sk",
-      });
-
-      await relayer.generateKeypair();
-      expect(NodeWorkerPool).toHaveBeenCalledTimes(1);
-
-      // Switch chain
-      getChainId.mockResolvedValue(1);
-      await relayer.generateKeypair();
-
-      expect(mockPool.terminate).toHaveBeenCalledOnce();
-      expect(NodeWorkerPool).toHaveBeenCalledTimes(2);
-    });
-  });
 
   // -------------------------------------------------------------------------
   // Terminated state
@@ -1118,27 +1049,6 @@ describe("RelayerNode", () => {
 
       expect(mockPool.getPublicKey).toHaveBeenCalledTimes(1);
     });
-
-    it("clears cache on chain switch", async () => {
-      const storage = new MemoryStorage();
-      const getChainId = vi.fn().mockResolvedValue(CHAIN_ID);
-      const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([1]) };
-      mockPool.getPublicKey.mockResolvedValue({ result: pk });
-
-      const relayer = createNodeRelayer({
-        fheArtifactStorage: storage,
-        getChainId,
-      });
-      await relayer.getPublicKey();
-      expect(mockPool.getPublicKey).toHaveBeenCalledOnce();
-
-      // Switch chain — cache should be cleared
-      getChainId.mockResolvedValue(1);
-      const pk2 = { publicKeyId: "pk-2", publicKey: new Uint8Array([2]) };
-      mockPool.getPublicKey.mockResolvedValue({ result: pk2 });
-      const result = await relayer.getPublicKey();
-      expect(result).toEqual(pk2);
-    });
   });
 
   // -------------------------------------------------------------------------
@@ -1171,7 +1081,7 @@ describe("RelayerNode", () => {
       expect(NodeWorkerPool).toHaveBeenCalledTimes(1);
 
       // Seed artifact metadata + force expired timestamp
-      const pkKey = `fhe:pubkey:${CHAIN_ID}`;
+      const pkKey = "fhe:pubkey:11155111";
       const cached = await storage.get<Record<string, unknown>>(pkKey);
       if (cached) {
         cached.lastValidatedAt = 0;

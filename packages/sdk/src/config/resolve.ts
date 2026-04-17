@@ -11,7 +11,7 @@ import { MemoryStorage } from "../storage/memory-storage";
 import { ConfigurationError } from "../errors";
 import { EthersSigner } from "../ethers";
 import { ViemSigner } from "../viem";
-import type { NodeTransportConfig, TransportConfig, WebTransportConfig } from "./transports";
+import type { TransportConfig } from "./transports";
 import type { ZamaConfigCustomSigner, ZamaConfigEthers, ZamaConfigViem } from "./types";
 
 // ── Storage defaults ─────────────────────────────────────────────────────────
@@ -133,80 +133,6 @@ export function resolveChainTransports(
 
 // ── Relayer building ─────────────────────────────────────────────────────────
 
-interface ChainEntry {
-  /** Merged per-chain FHE instance config (base chain + transport overrides). */
-  chain: ExtendedFhevmInstanceConfig;
-  /** Shared relayer-pool options. Reference identity controls grouping. */
-  relayer: Record<string, unknown> | undefined;
-}
-
-/**
- * Group entries by `relayer` reference. Chains that share the same `relayer`
- * object (including `undefined` — the common "no options" case) reuse a single
- * relayer instance. Distinct references always produce distinct relayers.
- */
-function groupByRelayer(entries: ChainEntry[]): ChainEntry[][] {
-  const groups = new Map<object | undefined, ChainEntry[]>();
-  for (const entry of entries) {
-    const group = groups.get(entry.relayer);
-    if (group) {
-      group.push(entry);
-    } else {
-      groups.set(entry.relayer, [entry]);
-    }
-  }
-  return [...groups.values()];
-}
-
-type HttpRelayerCtor<T extends RelayerSDK> = new (config: {
-  getChainId: () => Promise<number>;
-  transports: Record<number, Partial<ExtendedFhevmInstanceConfig>>;
-}) => T;
-
-function buildHttpGroup<T extends RelayerSDK>(
-  Relayer: HttpRelayerCtor<T>,
-  entries: ChainEntry[],
-  resolveChainId: () => Promise<number>,
-): Array<[number, RelayerSDK]> {
-  const pairs: Array<[number, RelayerSDK]> = [];
-  for (const group of groupByRelayer(entries)) {
-    const first = group[0];
-    if (!first) {
-      continue;
-    }
-    const transports: Record<number, Partial<ExtendedFhevmInstanceConfig>> = {};
-    for (const entry of group) {
-      transports[entry.chain.chainId] = entry.chain;
-    }
-    const relayer = new Relayer({
-      getChainId: resolveChainId,
-      transports,
-      ...first.relayer,
-    });
-    for (const entry of group) {
-      pairs.push([entry.chain.chainId, relayer]);
-    }
-  }
-  return pairs;
-}
-
-function toChainEntry(
-  chain: ExtendedFhevmInstanceConfig,
-  transport: WebTransportConfig | NodeTransportConfig,
-): ChainEntry {
-  const merged = { ...chain, ...transport.chain };
-  if (!merged.relayerUrl) {
-    throw new ConfigurationError(
-      `Chain ${chain.chainId} has an empty relayerUrl. ` +
-        `Use cleartext() for chains without a relayer.`,
-    );
-  }
-  return {
-    chain: merged,
-    relayer: transport.relayer,
-  };
-}
-
 export function buildRelayer(
   chainTransports: Map<number, ResolvedChainTransport>,
   resolveChainId: () => Promise<number>,
@@ -218,8 +144,6 @@ export function buildRelayer(
   }
 
   const perChainRelayers = new Map<number, RelayerSDK>();
-  const webEntries: ChainEntry[] = [];
-  const nodeEntries: ChainEntry[] = [];
 
   for (const { chain, transport } of chainTransports.values()) {
     if (transport.type === "custom") {
@@ -236,19 +160,23 @@ export function buildRelayer(
       );
       continue;
     }
+
+    const merged = { ...chain, ...transport.chain };
+    if (!merged.relayerUrl) {
+      throw new ConfigurationError(
+        `Chain ${chain.chainId} has an empty relayerUrl. ` +
+          `Use cleartext() for chains without a relayer.`,
+      );
+    }
+
     if (transport.type === "web") {
-      webEntries.push(toChainEntry(chain, transport));
+      perChainRelayers.set(chain.chainId, new RelayerWeb({ chain: merged, ...transport.relayer }));
+      continue;
     }
     if (transport.type === "node") {
-      nodeEntries.push(toChainEntry(chain, transport));
+      perChainRelayers.set(chain.chainId, new RelayerNode({ chain: merged, ...transport.relayer }));
+      continue;
     }
-  }
-
-  for (const [chainId, relayer] of buildHttpGroup(RelayerWeb, webEntries, resolveChainId)) {
-    perChainRelayers.set(chainId, relayer);
-  }
-  for (const [chainId, relayer] of buildHttpGroup(RelayerNode, nodeEntries, resolveChainId)) {
-    perChainRelayers.set(chainId, relayer);
   }
 
   const uniqueRelayers = new Set(perChainRelayers.values());
