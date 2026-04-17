@@ -427,16 +427,16 @@ describe("Viem write contract helpers", () => {
   vit(
     "writeFinalizeUnwrapContract calls writeContract with correct config",
     ({ wrapperAddress, walletClient }) => {
-      const burntAmount = "0xburnt" as Address;
+      const unwrapRequestId = "0xburnt" as Address;
       const proof = "0xproof" as Address;
-      writeFinalizeUnwrapContract(walletClient, wrapperAddress, burntAmount, 500n, proof);
+      writeFinalizeUnwrapContract(walletClient, wrapperAddress, unwrapRequestId, 500n, proof);
       expect(walletClient.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({
           chain: MOCK_CHAIN,
           account: walletClient.account,
           address: wrapperAddress,
           functionName: "finalizeUnwrap",
-          args: [burntAmount, 500n, proof],
+          args: [unwrapRequestId, 500n, proof],
         }),
       );
     },

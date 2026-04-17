@@ -8,6 +8,7 @@ import {
   useMetadata,
   findUnwrapRequested,
   type Address,
+  type Hex,
 } from "@zama-fhe/react-sdk";
 
 export function UnwrapManualForm({
@@ -17,7 +18,7 @@ export function UnwrapManualForm({
   tokenAddress: Address;
   wrapperAddress?: Address;
 }) {
-  const [burnAmountHandle, setBurnAmountHandle] = useState<Address | null>(null);
+  const [unwrapRequestId, setUnwrapRequestId] = useState<Hex | null>(null);
   const { data: metadata } = useMetadata(tokenAddress);
   const { data: balance } = useConfidentialBalance({ tokenAddress });
   const unwrap = useUnwrap({ tokenAddress, wrapperAddress });
@@ -33,7 +34,7 @@ export function UnwrapManualForm({
           });
           const event = findUnwrapRequested(result.receipt.logs);
           if (event) {
-            setBurnAmountHandle(event.encryptedAmount as Address);
+            setUnwrapRequestId(event.unwrapRequestId);
           }
         }}
         className="space-y-4"
@@ -73,9 +74,9 @@ export function UnwrapManualForm({
           </p>
         )}
 
-        {burnAmountHandle && (
+        {unwrapRequestId && (
           <p className="text-sm text-zama-gray" data-testid="burn-handle">
-            Burn handle: {burnAmountHandle}
+            Unwrap request ID: {unwrapRequestId}
           </p>
         )}
 
@@ -89,10 +90,10 @@ export function UnwrapManualForm({
       {/* Step 2: Finalize */}
       <form
         action={() => {
-          if (!burnAmountHandle) {
+          if (!unwrapRequestId) {
             return;
           }
-          finalizeUnwrap.mutate({ burnAmountHandle });
+          finalizeUnwrap.mutate({ unwrapRequestId });
         }}
         className="space-y-4"
         data-testid="finalize-form"
@@ -101,7 +102,7 @@ export function UnwrapManualForm({
 
         <button
           type="submit"
-          disabled={finalizeUnwrap.isPending || !burnAmountHandle}
+          disabled={finalizeUnwrap.isPending || !unwrapRequestId}
           className="px-4 py-2 bg-zama-yellow text-zama-black font-medium rounded hover:bg-zama-yellow-hover disabled:opacity-50 transition-colors"
           data-testid="finalize-button"
         >

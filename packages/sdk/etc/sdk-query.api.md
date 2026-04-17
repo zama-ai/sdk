@@ -523,7 +523,7 @@ export function finalizeUnwrapMutationOptions(token: Token): MutationFactoryOpti
 // @public
 export interface FinalizeUnwrapParams {
     // (undocumented)
-    burnAmountHandle: Address;
+    unwrapRequestId: Handle;
 }
 
 // @public (undocumented)
@@ -923,7 +923,7 @@ export class Token extends ReadonlyToken {
         delegateAddress: Address;
         expirationDate?: Date;
     }): Promise<TransactionResult>;
-    finalizeUnwrap(burnAmountHandle: Handle): Promise<TransactionResult>;
+    finalizeUnwrap(unwrapRequestId: Handle): Promise<TransactionResult>;
     isApproved(spender: Address, holder?: Address): Promise<boolean>;
     resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     revokeDelegation(input: {
@@ -1130,6 +1130,7 @@ export interface UnwrappedFinalizedEvent {
     // (undocumented)
     readonly eventName: "UnwrappedFinalized";
     readonly receiver: Address;
+    readonly unwrapRequestId: Hex;
 }
 
 // @public
@@ -1151,6 +1152,7 @@ export interface UnwrapRequestedEvent {
     // (undocumented)
     readonly eventName: "UnwrapRequested";
     readonly receiver: Address;
+    readonly unwrapRequestId: Hex;
 }
 
 // @public (undocumented)

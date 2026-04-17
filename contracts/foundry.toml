@@ -13,3 +13,5 @@ fs_permissions = [{ access = "read-write", path = "./" }]
 line_length = 120
 
 [dependencies]
+"protocol-apps-wrapper" = { version = "da4afe387420", git = "https://github.com/zama-ai/protocol-apps", rev = "da4afe387420" }
+"protocol-apps-registry" = { version = "f51845b08cc2", git = "https://github.com/zama-ai/protocol-apps", rev = "f51845b08cc2" }
