@@ -71,7 +71,7 @@ export function useConfidentialTransfer<TContext = unknown>(
   // is cast back to the caller's TContext.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return useMutation<TransactionResult, Error, ConfidentialTransferParams, any>({
-    ...confidentialTransferMutationOptions(token),
+    ...confidentialTransferMutationOptions(token, config.tokenAddress),
     ...options,
     onMutate: config.optimistic
       ? async (variables, mutationContext) => {

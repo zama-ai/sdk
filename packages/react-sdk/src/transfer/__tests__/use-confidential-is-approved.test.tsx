@@ -28,8 +28,8 @@ describe("useConfidentialIsApproved", () => {
     expect(result.current.data).toBeUndefined();
   });
 
-  test("behavior: spender undefined -> defined", async ({ createWrapper, signer }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(true);
+  test("behavior: spender undefined -> defined", async ({ createWrapper, signer, provider }) => {
+    vi.mocked(provider.readContract).mockResolvedValue(true);
 
     const ctx = createWrapper({ signer });
     const { result, rerender } = renderHook(
@@ -49,8 +49,12 @@ describe("useConfidentialIsApproved", () => {
     expect(result.current.data).toBe(true);
   });
 
-  test("behavior: tokenAddress undefined -> defined", async ({ createWrapper, signer }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(true);
+  test("behavior: tokenAddress undefined -> defined", async ({
+    createWrapper,
+    signer,
+    provider,
+  }) => {
+    vi.mocked(provider.readContract).mockResolvedValue(true);
 
     const ctx = createWrapper({ signer });
     const { result, rerender } = renderHook(
@@ -70,8 +74,12 @@ describe("useConfidentialIsApproved", () => {
     expect(result.current.data).toBe(true);
   });
 
-  test("behavior: disabled when user passes enabled=false", ({ renderWithProviders, signer }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(true);
+  test("behavior: disabled when user passes enabled=false", ({
+    renderWithProviders,
+    signer,
+    provider,
+  }) => {
+    vi.mocked(provider.readContract).mockResolvedValue(true);
 
     const { result } = renderWithProviders(() =>
       useConfidentialIsApproved(
@@ -87,8 +95,8 @@ describe("useConfidentialIsApproved", () => {
     expect(result.current.fetchStatus).toBe("idle");
   });
 
-  test("default", async ({ renderWithProviders, signer }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(true);
+  test("default", async ({ renderWithProviders, signer, provider }) => {
+    vi.mocked(provider.readContract).mockResolvedValue(true);
 
     const { result } = renderWithProviders(() =>
       useConfidentialIsApproved({
@@ -102,7 +110,7 @@ describe("useConfidentialIsApproved", () => {
     const { data, dataUpdatedAt } = result.current;
     expect(data).toBe(true);
     expect(dataUpdatedAt).toEqual(expect.any(Number));
-    expect(signer.readContract).toHaveBeenCalledWith(
+    expect(provider.readContract).toHaveBeenCalledWith(
       expect.objectContaining({ functionName: "isOperator", address: TOKEN }),
     );
   });
@@ -110,8 +118,9 @@ describe("useConfidentialIsApproved", () => {
   test("skips signer resolution when holder is provided", async ({
     renderWithProviders,
     signer,
+    provider,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(true);
+    vi.mocked(provider.readContract).mockResolvedValue(true);
 
     const { result } = renderWithProviders(() =>
       useConfidentialIsApproved({
@@ -123,7 +132,7 @@ describe("useConfidentialIsApproved", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(signer.readContract).toHaveBeenCalledWith(
+    expect(provider.readContract).toHaveBeenCalledWith(
       expect.objectContaining({
         functionName: "isOperator",
         args: ["0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D", SPENDER],
@@ -136,8 +145,9 @@ describe("useConfidentialIsApprovedSuspense", () => {
   test("skips signer resolution when holder is provided", async ({
     renderWithProviders,
     signer,
+    provider,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(true);
+    vi.mocked(provider.readContract).mockResolvedValue(true);
 
     const { result } = renderWithProviders(() =>
       useConfidentialIsApprovedSuspense({
@@ -149,7 +159,7 @@ describe("useConfidentialIsApprovedSuspense", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(signer.readContract).toHaveBeenCalledWith(
+    expect(provider.readContract).toHaveBeenCalledWith(
       expect.objectContaining({
         functionName: "isOperator",
         args: ["0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D", SPENDER],

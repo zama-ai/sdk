@@ -35,7 +35,7 @@ export function useConfidentialTransferFrom(
   const token = useToken(config);
 
   return useMutation<TransactionResult, Error, ConfidentialTransferFromParams, Address>({
-    ...confidentialTransferFromMutationOptions(token),
+    ...confidentialTransferFromMutationOptions(token, config.tokenAddress),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       options?.onSuccess?.(data, variables, onMutateResult, context);

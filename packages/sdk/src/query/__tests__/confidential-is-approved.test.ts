@@ -53,8 +53,8 @@ describe("confidentialIsApprovedQueryOptions", () => {
     ]);
   });
 
-  test("checks operator approval", async ({ sdk, signer }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(true);
+  test("checks operator approval", async ({ sdk, signer, provider }) => {
+    vi.mocked(provider.readContract).mockResolvedValue(true);
 
     const options = confidentialIsApprovedQueryOptions(
       sdk,
@@ -92,8 +92,9 @@ describe("confidentialIsApprovedQueryOptions", () => {
   test("queryFn reads tokenAddress, holder, and spender from context.queryKey", async ({
     sdk,
     signer,
+    provider,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(true);
+    vi.mocked(provider.readContract).mockResolvedValue(true);
 
     const options = confidentialIsApprovedQueryOptions(
       sdk,
@@ -112,7 +113,7 @@ describe("confidentialIsApprovedQueryOptions", () => {
 
     await options.queryFn(mockQueryContext(key));
 
-    expect(vi.mocked(signer.readContract)).toHaveBeenCalledWith(
+    expect(vi.mocked(provider.readContract)).toHaveBeenCalledWith(
       expect.objectContaining({
         address: getAddress("0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa"),
         functionName: "isOperator",
@@ -124,8 +125,12 @@ describe("confidentialIsApprovedQueryOptions", () => {
     );
   });
 
-  test("queryFn uses the resolved holder without querying the signer", async ({ sdk, signer }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(true);
+  test("queryFn uses the resolved holder without querying the signer", async ({
+    sdk,
+    signer,
+    provider,
+  }) => {
+    vi.mocked(provider.readContract).mockResolvedValue(true);
 
     const options = confidentialIsApprovedQueryOptions(
       sdk,
@@ -140,7 +145,7 @@ describe("confidentialIsApprovedQueryOptions", () => {
     await options.queryFn(mockQueryContext(options.queryKey));
 
     expect(signer.getAddress).not.toHaveBeenCalled();
-    expect(vi.mocked(signer.readContract)).toHaveBeenCalledWith(
+    expect(vi.mocked(provider.readContract)).toHaveBeenCalledWith(
       expect.objectContaining({
         functionName: "isOperator",
         args: [
@@ -151,8 +156,12 @@ describe("confidentialIsApprovedQueryOptions", () => {
     );
   });
 
-  test("queryFn uses the explicit holder without resolving the signer", async ({ sdk, signer }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(true);
+  test("queryFn uses the explicit holder without resolving the signer", async ({
+    sdk,
+    signer,
+    provider,
+  }) => {
+    vi.mocked(provider.readContract).mockResolvedValue(true);
 
     const options = confidentialIsApprovedQueryOptions(
       sdk,
@@ -167,7 +176,7 @@ describe("confidentialIsApprovedQueryOptions", () => {
     await options.queryFn(mockQueryContext(options.queryKey));
 
     expect(signer.getAddress).not.toHaveBeenCalled();
-    expect(vi.mocked(signer.readContract)).toHaveBeenCalledWith(
+    expect(vi.mocked(provider.readContract)).toHaveBeenCalledWith(
       expect.objectContaining({
         functionName: "isOperator",
         args: [

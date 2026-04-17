@@ -41,7 +41,7 @@ export function useFinalizeUnwrap(
   const token = useToken(config);
 
   return useMutation<TransactionResult, Error, FinalizeUnwrapParams, Address>({
-    ...finalizeUnwrapMutationOptions(token),
+    ...finalizeUnwrapMutationOptions(token, config.tokenAddress),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       options?.onSuccess?.(data, variables, onMutateResult, context);

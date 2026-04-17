@@ -37,14 +37,14 @@ describe("tokenPairsQueryOptions", () => {
     expect(options.enabled).toBe(false);
   });
 
-  test("queryFn calls readContract", async ({ sdk, signer }) => {
-    vi.mocked(signer.readContract).mockResolvedValue([]);
+  test("queryFn calls readContract", async ({ sdk, signer, provider }) => {
+    vi.mocked(provider.readContract).mockResolvedValue([]);
     const options = tokenPairsQueryOptions(sdk, {
       registryAddress: REGISTRY,
     });
     const result = await options.queryFn(mockQueryContext(options.queryKey));
     expect(result).toEqual([]);
-    expect(signer.readContract).toHaveBeenCalledWith(
+    expect(provider.readContract).toHaveBeenCalledWith(
       expect.objectContaining({ functionName: "getTokenConfidentialTokenPairs" }),
     );
   });
@@ -61,8 +61,8 @@ describe("tokenPairsLengthQueryOptions", () => {
     ]);
   });
 
-  test("queryFn returns bigint", async ({ sdk, signer }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(5n);
+  test("queryFn returns bigint", async ({ sdk, signer, provider }) => {
+    vi.mocked(provider.readContract).mockResolvedValue(5n);
     const options = tokenPairsLengthQueryOptions(sdk, {
       registryAddress: REGISTRY,
     });
@@ -99,15 +99,17 @@ describe("tokenPairsSliceQueryOptions", () => {
     expect(options.enabled).toBe(true);
   });
 
-  test("queryFn passes bigint indices", async ({ sdk, signer }) => {
-    vi.mocked(signer.readContract).mockResolvedValue([]);
+  test("queryFn passes bigint indices", async ({ sdk, signer, provider }) => {
+    vi.mocked(provider.readContract).mockResolvedValue([]);
     const options = tokenPairsSliceQueryOptions(sdk, {
       registryAddress: REGISTRY,
       fromIndex: 5n,
       toIndex: 15n,
     });
     await options.queryFn(mockQueryContext(options.queryKey));
-    expect(signer.readContract).toHaveBeenCalledWith(expect.objectContaining({ args: [5n, 15n] }));
+    expect(provider.readContract).toHaveBeenCalledWith(
+      expect.objectContaining({ args: [5n, 15n] }),
+    );
   });
 });
 
@@ -121,9 +123,9 @@ describe("tokenPairQueryOptions", () => {
     ).toBe(false);
   });
 
-  test("queryFn passes bigint index", async ({ sdk, signer }) => {
+  test("queryFn passes bigint index", async ({ sdk, signer, provider }) => {
     const pair = { tokenAddress: TOKEN, confidentialTokenAddress: C_TOKEN, isValid: true };
-    vi.mocked(signer.readContract).mockResolvedValue(pair);
+    vi.mocked(provider.readContract).mockResolvedValue(pair);
     const options = tokenPairQueryOptions(sdk, {
       registryAddress: REGISTRY,
       index: 3n,
@@ -143,8 +145,8 @@ describe("confidentialTokenAddressQueryOptions", () => {
     ).toBe(false);
   });
 
-  test("queryFn returns [isValid, address] tuple", async ({ sdk, signer }) => {
-    vi.mocked(signer.readContract).mockResolvedValue([true, C_TOKEN]);
+  test("queryFn returns [isValid, address] tuple", async ({ sdk, signer, provider }) => {
+    vi.mocked(provider.readContract).mockResolvedValue([true, C_TOKEN]);
     const options = confidentialTokenAddressQueryOptions(sdk, {
       registryAddress: REGISTRY,
       tokenAddress: TOKEN,
@@ -164,8 +166,8 @@ describe("tokenAddressQueryOptions", () => {
     ).toBe(false);
   });
 
-  test("queryFn returns [isValid, address] tuple", async ({ sdk, signer }) => {
-    vi.mocked(signer.readContract).mockResolvedValue([true, TOKEN]);
+  test("queryFn returns [isValid, address] tuple", async ({ sdk, signer, provider }) => {
+    vi.mocked(provider.readContract).mockResolvedValue([true, TOKEN]);
     const options = tokenAddressQueryOptions(sdk, {
       registryAddress: REGISTRY,
       confidentialTokenAddress: C_TOKEN,
@@ -185,8 +187,8 @@ describe("isConfidentialTokenValidQueryOptions", () => {
     ).toBe(false);
   });
 
-  test("queryFn returns boolean", async ({ sdk, signer }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(true);
+  test("queryFn returns boolean", async ({ sdk, signer, provider }) => {
+    vi.mocked(provider.readContract).mockResolvedValue(true);
     const options = isConfidentialTokenValidQueryOptions(sdk, {
       registryAddress: REGISTRY,
       confidentialTokenAddress: C_TOKEN,

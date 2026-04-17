@@ -13,20 +13,20 @@ import type { Config } from "wagmi";
 import { getChainId, signTypedData, writeContract } from "wagmi/actions";
 import { getConnection, watchConnection } from "./compat";
 
-/** Configuration for {@link WagmiSigner}. */
-export interface WagmiSignerConfig {
+/** Configuration for {@link ZamaWagmiSigner}. */
+export interface ZamaWagmiSignerConfig {
   config: Config;
 }
 
 /**
  * GenericSigner backed by wagmi.
  *
- * @param signerConfig - {@link WagmiSignerConfig} with wagmi config
+ * @param signerConfig - {@link ZamaWagmiSignerConfig} with wagmi config
  */
-export class WagmiSigner implements GenericSigner {
+export class ZamaWagmiSigner implements GenericSigner {
   private readonly config: Config;
 
-  constructor(signerConfig: WagmiSignerConfig) {
+  constructor(signerConfig: ZamaWagmiSignerConfig) {
     this.config = signerConfig.config;
   }
 

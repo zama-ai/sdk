@@ -1,3 +1,4 @@
+import { SignerRequiredError } from "../errors/signer";
 import type { Token } from "../token/token";
 import type { TransactionResult } from "../types";
 import type { MutationFactoryOptions } from "./factory-types";
@@ -10,14 +11,18 @@ export interface ConfidentialApproveParams {
 }
 
 export function confidentialApproveMutationOptions(
-  token: Token,
+  token: Token | undefined,
+  tokenAddress: Address,
 ): MutationFactoryOptions<
   readonly ["zama.confidentialApprove", Address],
   ConfidentialApproveParams,
   TransactionResult
 > {
   return {
-    mutationKey: ["zama.confidentialApprove", token.address] as const,
-    mutationFn: async ({ spender, until }) => token.approve(spender, until),
+    mutationKey: ["zama.confidentialApprove", tokenAddress] as const,
+    mutationFn: async ({ spender, until }) => {
+      if (!token) throw new SignerRequiredError("confidentialApprove");
+      return token.approve(spender, until);
+    },
   };
 }

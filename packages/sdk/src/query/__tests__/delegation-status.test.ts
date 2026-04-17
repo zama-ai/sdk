@@ -32,9 +32,10 @@ describe("delegationStatusQueryOptions", () => {
     relayer,
     tokenAddress,
     aclAddress,
+    provider,
   }) => {
     vi.mocked(relayer.getAclAddress).mockResolvedValue(aclAddress);
-    vi.mocked(signer.readContract).mockResolvedValue(0n);
+    vi.mocked(provider.readContract).mockResolvedValue(0n);
 
     const options = delegationStatusQueryOptions(sdk, {
       tokenAddress,
@@ -46,7 +47,7 @@ describe("delegationStatusQueryOptions", () => {
     const result = await options.queryFn!(context);
 
     expect(result).toEqual({ isDelegated: false, expiryTimestamp: 0n });
-    expect(signer.getBlockTimestamp).not.toHaveBeenCalled();
+    expect(provider.getBlockTimestamp).not.toHaveBeenCalled();
   });
 
   test("returns isDelegated: true when expiryTimestamp is MAX_UINT64 (skips getBlockTimestamp)", async ({
@@ -55,9 +56,10 @@ describe("delegationStatusQueryOptions", () => {
     relayer,
     tokenAddress,
     aclAddress,
+    provider,
   }) => {
     vi.mocked(relayer.getAclAddress).mockResolvedValue(aclAddress);
-    vi.mocked(signer.readContract).mockResolvedValue(MAX_UINT64);
+    vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
 
     const options = delegationStatusQueryOptions(sdk, {
       tokenAddress,
@@ -69,7 +71,7 @@ describe("delegationStatusQueryOptions", () => {
     const result = await options.queryFn!(context);
 
     expect(result).toEqual({ isDelegated: true, expiryTimestamp: MAX_UINT64 });
-    expect(signer.getBlockTimestamp).not.toHaveBeenCalled();
+    expect(provider.getBlockTimestamp).not.toHaveBeenCalled();
   });
 
   test("returns isDelegated: true when expiryTimestamp is in the future", async ({
@@ -78,11 +80,12 @@ describe("delegationStatusQueryOptions", () => {
     relayer,
     tokenAddress,
     aclAddress,
+    provider,
   }) => {
     const futureTimestamp = BigInt(Math.floor(Date.now() / 1000) + 3600);
     vi.mocked(relayer.getAclAddress).mockResolvedValue(aclAddress);
-    vi.mocked(signer.readContract).mockResolvedValue(futureTimestamp);
-    vi.mocked(signer.getBlockTimestamp).mockResolvedValue(BigInt(Math.floor(Date.now() / 1000)));
+    vi.mocked(provider.readContract).mockResolvedValue(futureTimestamp);
+    vi.mocked(provider.getBlockTimestamp).mockResolvedValue(BigInt(Math.floor(Date.now() / 1000)));
 
     const options = delegationStatusQueryOptions(sdk, {
       tokenAddress,
@@ -94,7 +97,7 @@ describe("delegationStatusQueryOptions", () => {
     const result = await options.queryFn!(context);
 
     expect(result).toEqual({ isDelegated: true, expiryTimestamp: futureTimestamp });
-    expect(signer.getBlockTimestamp).toHaveBeenCalled();
+    expect(provider.getBlockTimestamp).toHaveBeenCalled();
   });
 
   test("returns isDelegated: false when expiryTimestamp is in the past", async ({
@@ -103,11 +106,12 @@ describe("delegationStatusQueryOptions", () => {
     relayer,
     tokenAddress,
     aclAddress,
+    provider,
   }) => {
     const pastTimestamp = 1000n;
     vi.mocked(relayer.getAclAddress).mockResolvedValue(aclAddress);
-    vi.mocked(signer.readContract).mockResolvedValue(pastTimestamp);
-    vi.mocked(signer.getBlockTimestamp).mockResolvedValue(2000n);
+    vi.mocked(provider.readContract).mockResolvedValue(pastTimestamp);
+    vi.mocked(provider.getBlockTimestamp).mockResolvedValue(2000n);
 
     const options = delegationStatusQueryOptions(sdk, {
       tokenAddress,
@@ -119,7 +123,7 @@ describe("delegationStatusQueryOptions", () => {
     const result = await options.queryFn!(context);
 
     expect(result).toEqual({ isDelegated: false, expiryTimestamp: pastTimestamp });
-    expect(signer.getBlockTimestamp).toHaveBeenCalled();
+    expect(provider.getBlockTimestamp).toHaveBeenCalled();
   });
 
   test("queryFn throws when required params are missing from context.queryKey", async ({ sdk }) => {

@@ -3,12 +3,9 @@
 import { useQuery } from "../utils/query";
 import { skipToken } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
-import {
-  isAllowedQueryOptions,
-  signerAddressQueryOptions,
-  zamaQueryKeys,
-} from "@zama-fhe/sdk/query";
+import { isAllowedQueryOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
+import { useSignerAddress } from "../use-signer-address";
 
 /** Configuration for {@link useIsAllowed}. */
 export interface UseIsAllowedConfig {
@@ -28,10 +25,7 @@ export interface UseIsAllowedConfig {
  */
 export function useIsAllowed(config: UseIsAllowedConfig) {
   const sdk = useZamaSDK();
-  const addressQuery = useQuery<Address>({
-    ...signerAddressQueryOptions(sdk),
-  });
-  const account = addressQuery.data;
+  const account = useSignerAddress();
   const baseOpts = account
     ? isAllowedQueryOptions(sdk, { account, contractAddresses: config.contractAddresses })
     : ({

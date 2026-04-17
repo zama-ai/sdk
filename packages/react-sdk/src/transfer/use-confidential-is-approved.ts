@@ -3,9 +3,10 @@
 import { useQuery, useSuspenseQuery } from "../utils/query";
 import type { UseQueryOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
-import { confidentialIsApprovedQueryOptions, signerAddressQueryOptions } from "@zama-fhe/sdk/query";
+import { confidentialIsApprovedQueryOptions } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
-import { useToken, type UseZamaConfig } from "../token/use-token";
+import { useSignerAddress } from "../use-signer-address";
+import { type UseZamaConfig } from "../token/use-token";
 
 export { confidentialIsApprovedQueryOptions };
 
@@ -23,8 +24,8 @@ export interface UseConfidentialIsApprovedConfig {
 export interface UseConfidentialIsApprovedSuspenseConfig extends UseZamaConfig {
   /** Address to check approval for. */
   spender: Address;
-  /** Token holder address. Defaults to the connected wallet. */
-  holder?: Address;
+  /** Token holder address. Required — callers wanting the connected wallet should pass `useSignerAddressSuspense().data`. */
+  holder: Address;
 }
 
 /**
@@ -39,7 +40,7 @@ export interface UseConfidentialIsApprovedSuspenseConfig extends UseZamaConfig {
  * const { data: isApproved } = useConfidentialIsApproved({
  *   tokenAddress: "0xToken",
  *   spender: "0xSpender",
- *   holder: "0xHolder", // optional
+ *   holder: "0xHolder", // optional, defaults to connected wallet
  * });
  * ```
  */
@@ -49,11 +50,8 @@ export function useConfidentialIsApproved(
 ) {
   const { tokenAddress, spender, holder } = config;
   const sdk = useZamaSDK();
-  const holderQuery = useQuery<Address>({
-    ...signerAddressQueryOptions(sdk),
-    enabled: tokenAddress !== undefined && spender !== undefined && holder === undefined,
-  });
-  const resolvedHolder = holder ?? holderQuery.data;
+  const signerAddress = useSignerAddress();
+  const resolvedHolder = holder ?? signerAddress;
   const baseOpts = confidentialIsApprovedQueryOptions(sdk, tokenAddress, {
     holder: resolvedHolder,
     spender,
@@ -69,29 +67,26 @@ export function useConfidentialIsApproved(
 /**
  * Suspense variant of {@link useConfidentialIsApproved}.
  * Suspends rendering until the approval check resolves.
- *
- * @param config - Token address, spender, and optional holder to check.
- * @returns Suspense query result with `data: boolean`.
+ * `holder` is required — callers wanting the connected wallet address should
+ * compose with `useSignerAddressSuspense`:
  *
  * @example
  * ```tsx
+ * const { data: myAddress } = useSignerAddressSuspense();
  * const { data: isApproved } = useConfidentialIsApprovedSuspense({
  *   tokenAddress: "0xToken",
  *   spender: "0xSpender",
- *   holder: "0xHolder", // optional
+ *   holder: myAddress,
  * });
  * ```
  */
 export function useConfidentialIsApprovedSuspense(config: UseConfidentialIsApprovedSuspenseConfig) {
-  const { spender, holder, ...tokenConfig } = config;
+  const { spender, holder, tokenAddress } = config;
   const sdk = useZamaSDK();
-  const token = useToken(tokenConfig);
-  const addressQuery = useSuspenseQuery<Address>(signerAddressQueryOptions(sdk));
-  const resolvedHolder = holder ?? addressQuery.data;
 
   return useSuspenseQuery<boolean>(
-    confidentialIsApprovedQueryOptions(sdk, token.address, {
-      holder: resolvedHolder,
+    confidentialIsApprovedQueryOptions(sdk, tokenAddress, {
+      holder,
       spender,
     }),
   );

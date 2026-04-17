@@ -5,8 +5,8 @@ import { useTotalSupply } from "../use-total-supply";
 import { TOKEN } from "../../__tests__/mutation-test-helpers";
 
 describe("useTotalSupply", () => {
-  test("default", async ({ renderWithProviders, signer }) => {
-    vi.mocked(signer.readContract).mockImplementation(async (config) => {
+  test("default", async ({ renderWithProviders, provider }) => {
+    vi.mocked(provider.readContract).mockImplementation(async (config) => {
       if (config.functionName === "supportsInterface") {
         return config.args[0] === ERC7984_WRAPPER_INTERFACE_ID;
       }
@@ -20,7 +20,7 @@ describe("useTotalSupply", () => {
     const { data, dataUpdatedAt } = result.current;
     expect(data).toBe(42000n);
     expect(dataUpdatedAt).toEqual(expect.any(Number));
-    expect(signer.readContract).toHaveBeenCalledWith(
+    expect(provider.readContract).toHaveBeenCalledWith(
       expect.objectContaining({ functionName: "inferredTotalSupply", address: TOKEN }),
     );
   });

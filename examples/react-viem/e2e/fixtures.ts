@@ -85,7 +85,7 @@ const TOKEN_META: Record<string, { name: string; symbol: string; decimals: numbe
 /**
  * Route a single `eth_call` request to the correct ABI-encoded response.
  *
- * For react-viem, ALL contract reads (useListPairs, sdk.signer.readContract, etc.) go
+ * For react-viem, ALL contract reads (useListPairs, sdk.provider.readContract, etc.) go
  * through the publicClient HTTP transport — not through window.ethereum. This is the
  * opposite of react-ethers (EthersSigner routes reads through BrowserProvider →
  * window.ethereum). Routing happens here in interceptRpc, not in injectMockWallet.
@@ -152,7 +152,7 @@ function resolveEthCall(params: unknown[] | undefined, options: RpcOptions): str
  * - `eth_sign`/`personal_sign`/`eth_signTypedData_v4` return a 65-byte hex string
  *   (32 bytes r + 32 bytes s + 1 byte v = ECDSA signature).
  * - NOTE: eth_call is NOT routed here. For react-viem, all contract reads
- *   (useListPairs, sdk.signer.readContract, etc.) go through the publicClient
+ *   (useListPairs, sdk.provider.readContract, etc.) go through the publicClient
  *   HTTP transport, not window.ethereum. Registry and metadata mocking happens
  *   in interceptRpc.
  */

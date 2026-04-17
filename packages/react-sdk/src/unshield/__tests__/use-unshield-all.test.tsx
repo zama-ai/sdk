@@ -29,9 +29,10 @@ describe("useUnshieldAll", () => {
     renderWithProviders,
     signer,
     relayer,
+    provider,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(HANDLE);
-    vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
+    vi.mocked(provider.readContract).mockResolvedValue(HANDLE);
+    vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
       logs: [createUnwrapRequestedLog(BURN_AMOUNT_HANDLE)],
     });
     mockPublicDecrypt(relayer);
@@ -63,9 +64,10 @@ describe("useUnshieldAll", () => {
     renderWithProviders,
     signer,
     relayer,
+    provider,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(HANDLE);
-    vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
+    vi.mocked(provider.readContract).mockResolvedValue(HANDLE);
+    vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
       logs: [createUnwrapRequestedLog(BURN_AMOUNT_HANDLE)],
     });
     mockPublicDecrypt(relayer);

@@ -1,3 +1,4 @@
+import { SignerRequiredError } from "../errors/signer";
 import type { Token } from "../token/token";
 import type { TransactionResult } from "../types";
 import type { MutationFactoryOptions } from "./factory-types";
@@ -9,10 +10,14 @@ export interface UnwrapParams {
 }
 
 export function unwrapMutationOptions(
-  token: Token,
+  token: Token | undefined,
+  tokenAddress: Address,
 ): MutationFactoryOptions<readonly ["zama.unwrap", Address], UnwrapParams, TransactionResult> {
   return {
-    mutationKey: ["zama.unwrap", token.address] as const,
-    mutationFn: async ({ amount }) => token.unwrap(amount),
+    mutationKey: ["zama.unwrap", tokenAddress] as const,
+    mutationFn: async ({ amount }) => {
+      if (!token) throw new SignerRequiredError("unwrap");
+      return token.unwrap(amount);
+    },
   };
 }

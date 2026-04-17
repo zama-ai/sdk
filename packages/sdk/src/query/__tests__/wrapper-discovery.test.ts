@@ -43,8 +43,8 @@ describe("wrapperDiscoveryQueryOptions", () => {
 
   test("returns null when no wrapper exists", async ({ provider, signer }) => {
     // Mock chainId to Mainnet (has default registry)
-    vi.mocked(signer.getChainId).mockResolvedValue(1);
-    vi.mocked(signer.readContract).mockResolvedValueOnce([
+    vi.mocked(provider.getChainId).mockResolvedValue(1);
+    vi.mocked(provider.readContract).mockResolvedValueOnce([
       false,
       "0x0000000000000000000000000000000000000000",
     ]);
@@ -60,8 +60,8 @@ describe("wrapperDiscoveryQueryOptions", () => {
   });
 
   test("returns wrapper address when it exists", async ({ provider, signer }) => {
-    vi.mocked(signer.getChainId).mockResolvedValue(1);
-    vi.mocked(signer.readContract)
+    vi.mocked(provider.getChainId).mockResolvedValue(1);
+    vi.mocked(provider.readContract)
       .mockResolvedValueOnce([true, "0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D"]) // getConfidentialTokenAddress
       .mockResolvedValueOnce(true); // isConfidentialTokenValid
 

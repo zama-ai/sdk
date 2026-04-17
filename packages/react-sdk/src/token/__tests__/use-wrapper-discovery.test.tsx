@@ -26,11 +26,15 @@ describe("useWrapperDiscovery", () => {
     expect(result.current.fetchStatus).toBe("idle");
   });
 
-  test("behavior: erc20Address: undefined -> defined", async ({ createWrapper, signer }) => {
+  test("behavior: erc20Address: undefined -> defined", async ({
+    createWrapper,
+    signer,
+    provider,
+  }) => {
     const wrapperAddress = "0x7A7a7A7a7a7a7a7A7a7a7a7A7a7A7A7A7A7A7a7A" as Address;
     // Mock chainId to Mainnet (has default registry)
-    vi.mocked(signer.getChainId).mockResolvedValue(1);
-    vi.mocked(signer.readContract)
+    vi.mocked(provider.getChainId).mockResolvedValue(1);
+    vi.mocked(provider.readContract)
       .mockResolvedValueOnce([true, wrapperAddress]) // getConfidentialTokenAddress
       .mockResolvedValueOnce(true); // isConfidentialTokenValid
 
@@ -52,10 +56,10 @@ describe("useWrapperDiscovery", () => {
     expect(result.current.data).toBe(wrapperAddress);
   });
 
-  test("default", async ({ renderWithProviders, signer }) => {
+  test("default", async ({ renderWithProviders, signer, provider }) => {
     const wrapperAddress = "0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D" as Address;
-    vi.mocked(signer.getChainId).mockResolvedValue(1);
-    vi.mocked(signer.readContract)
+    vi.mocked(provider.getChainId).mockResolvedValue(1);
+    vi.mocked(provider.readContract)
       .mockResolvedValueOnce([true, wrapperAddress]) // getConfidentialTokenAddress
       .mockResolvedValueOnce(true); // isConfidentialTokenValid
 
@@ -71,7 +75,7 @@ describe("useWrapperDiscovery", () => {
     const { data, dataUpdatedAt } = result.current;
     expect(data).toBe(wrapperAddress);
     expect(dataUpdatedAt).toEqual(expect.any(Number));
-    expect(signer.readContract).toHaveBeenCalledWith(
+    expect(provider.readContract).toHaveBeenCalledWith(
       expect.objectContaining({ functionName: "getConfidentialTokenAddress" }),
     );
   });

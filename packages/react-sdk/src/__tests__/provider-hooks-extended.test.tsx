@@ -15,8 +15,9 @@ describe("useUnderlyingAllowance", () => {
     tokenAddress,
     wrapperAddress,
     renderWithProviders,
+    provider,
   }) => {
-    vi.mocked(signer.readContract)
+    vi.mocked(provider.readContract)
       .mockResolvedValueOnce("0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e")
       .mockResolvedValueOnce(5000n);
 
@@ -31,7 +32,7 @@ describe("useUnderlyingAllowance", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toBe(5000n);
-    expect(signer.readContract).toHaveBeenCalled();
+    expect(provider.readContract).toHaveBeenCalled();
   });
 });
 
@@ -54,8 +55,13 @@ describe("useUnshieldAll", () => {
 });
 
 describe("useMetadataSuspense", () => {
-  it("returns metadata via suspense", async ({ signer, tokenAddress, renderWithProviders }) => {
-    vi.mocked(signer.readContract)
+  it("returns metadata via suspense", async ({
+    signer,
+    tokenAddress,
+    renderWithProviders,
+    provider,
+  }) => {
+    vi.mocked(provider.readContract)
       .mockResolvedValueOnce("TestToken")
       .mockResolvedValueOnce("TT")
       .mockResolvedValueOnce(18);
@@ -70,8 +76,13 @@ describe("useMetadataSuspense", () => {
 });
 
 describe("useTotalSupplySuspense", () => {
-  it("returns total supply via suspense", async ({ signer, tokenAddress, renderWithProviders }) => {
-    vi.mocked(signer.readContract).mockImplementation(async (config) => {
+  it("returns total supply via suspense", async ({
+    signer,
+    tokenAddress,
+    renderWithProviders,
+    provider,
+  }) => {
+    vi.mocked(provider.readContract).mockImplementation(async (config) => {
       if (config.functionName === "supportsInterface") {
         return config.args[0] === ERC7984_WRAPPER_INTERFACE_ID;
       }
@@ -92,10 +103,11 @@ describe("useWrapperDiscoverySuspense", () => {
     signer,
     tokenAddress,
     renderWithProviders,
+    provider,
   }) => {
     const wrapperAddr = "0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D" as Address;
-    vi.mocked(signer.getChainId).mockResolvedValue(1);
-    vi.mocked(signer.readContract)
+    vi.mocked(provider.getChainId).mockResolvedValue(1);
+    vi.mocked(provider.readContract)
       .mockResolvedValueOnce([true, wrapperAddr])
       .mockResolvedValueOnce(true);
 

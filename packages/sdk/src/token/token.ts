@@ -40,6 +40,7 @@ import {
 import { isZeroHandle } from "../utils/handles";
 import { ReadonlyToken } from "./readonly-token";
 import type {
+  GenericSigner,
   ShieldCallbacks,
   ShieldOptions,
   TransactionResult,
@@ -62,12 +63,14 @@ import { assertBigint } from "../utils/assertions";
 export class Token extends ReadonlyToken {
   static readonly ZERO_ADDRESS: Address = "0x0000000000000000000000000000000000000000";
 
+  readonly signer: GenericSigner;
   readonly wrapper: Address;
   #underlying: Address | undefined;
   #underlyingPromise: Promise<Address> | null = null;
 
-  constructor(sdk: ZamaSDK, address: Address, wrapper?: Address) {
+  constructor(sdk: ZamaSDK, signer: GenericSigner, address: Address, wrapper?: Address) {
     super(sdk, address);
+    this.signer = signer;
     this.wrapper = wrapper ? getAddress(wrapper) : this.address;
   }
 
@@ -106,6 +109,7 @@ export class Token extends ReadonlyToken {
    * @param amount - Plaintext amount to transfer (encrypted automatically via FHE).
    * @param options - Optional: `skipBalanceCheck` (default `false`).
    * @returns The transaction hash and mined receipt.
+   * @throws {@link ChainMismatchError} if signer and provider are on different chains.
    * @throws {@link InsufficientConfidentialBalanceError} if the confidential balance is less than `amount`.
    * @throws {@link BalanceCheckUnavailableError} if balance validation is required but decryption is not possible (no cached credentials).
    * @throws {@link EncryptionFailedError} if FHE encryption fails.
@@ -123,6 +127,7 @@ export class Token extends ReadonlyToken {
     amount: bigint,
     options?: TransferOptions,
   ): Promise<TransactionResult> {
+    await this.sdk.requireChainAlignment("confidentialTransfer");
     const { skipBalanceCheck = false, onEncryptComplete, onTransferSubmitted } = options ?? {};
 
     const normalizedTo = getAddress(to);
@@ -139,7 +144,7 @@ export class Token extends ReadonlyToken {
       ({ handles, inputProof } = await this.sdk.relayer.encrypt({
         values: [{ value: amount, type: "euint64" }],
         contractAddress: this.address,
-        userAddress: await this.sdk.requireSigner("confidentialTransfer").getAddress(),
+        userAddress: await this.signer.getAddress(),
       }));
       this.emit({
         type: ZamaSDKEvents.EncryptEnd,
@@ -165,11 +170,9 @@ export class Token extends ReadonlyToken {
     }
 
     try {
-      const txHash = await this.sdk
-        .requireSigner("confidentialTransfer")
-        .writeContract(
-          confidentialTransferContract(this.address, normalizedTo, handles[0]!, inputProof),
-        );
+      const txHash = await this.signer.writeContract(
+        confidentialTransferContract(this.address, normalizedTo, handles[0]!, inputProof),
+      );
       this.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash });
       safeCallback(() => onTransferSubmitted?.(txHash));
       const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
@@ -197,6 +200,7 @@ export class Token extends ReadonlyToken {
    * @param to - Recipient address.
    * @param amount - Plaintext amount to transfer (encrypted automatically via FHE).
    * @returns The transaction hash and mined receipt.
+   * @throws {@link ChainMismatchError} if signer and provider are on different chains.
    * @throws {@link EncryptionFailedError} if FHE encryption fails.
    * @throws {@link TransactionRevertedError} if the on-chain transfer reverts.
    *
@@ -211,6 +215,7 @@ export class Token extends ReadonlyToken {
     amount: bigint,
     callbacks?: TransferCallbacks,
   ): Promise<TransactionResult> {
+    await this.sdk.requireChainAlignment("confidentialTransferFrom");
     const normalizedFrom = getAddress(from);
     const normalizedTo = getAddress(to);
 
@@ -248,17 +253,15 @@ export class Token extends ReadonlyToken {
     }
 
     try {
-      const txHash = await this.sdk
-        .requireSigner("confidentialTransferFrom")
-        .writeContract(
-          confidentialTransferFromContract(
-            this.address,
-            normalizedFrom,
-            normalizedTo,
-            handles[0]!,
-            inputProof,
-          ),
-        );
+      const txHash = await this.signer.writeContract(
+        confidentialTransferFromContract(
+          this.address,
+          normalizedFrom,
+          normalizedTo,
+          handles[0]!,
+          inputProof,
+        ),
+      );
       this.emit({ type: ZamaSDKEvents.TransferFromSubmitted, txHash });
       safeCallback(() => callbacks?.onTransferSubmitted?.(txHash));
       const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
@@ -285,6 +288,7 @@ export class Token extends ReadonlyToken {
    * @param spender - The address to approve as an operator.
    * @param until - Optional Unix timestamp for approval expiry. Defaults to now + 1 hour.
    * @returns The transaction hash and mined receipt.
+   * @throws {@link ChainMismatchError} if signer and provider are on different chains.
    * @throws {@link ApprovalFailedError} if the approval transaction fails.
    *
    * @example
@@ -293,11 +297,12 @@ export class Token extends ReadonlyToken {
    * ```
    */
   async approve(spender: Address, until?: number): Promise<TransactionResult> {
+    await this.sdk.requireChainAlignment("approve");
     const normalizedSpender = getAddress(spender);
     try {
-      const txHash = await this.sdk
-        .requireSigner("approve")
-        .writeContract(setOperatorContract(this.address, normalizedSpender, until));
+      const txHash = await this.signer.writeContract(
+        setOperatorContract(this.address, normalizedSpender, until),
+      );
       this.emit({ type: ZamaSDKEvents.ApproveSubmitted, txHash });
       const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
       return { txHash, receipt };
@@ -334,9 +339,7 @@ export class Token extends ReadonlyToken {
    */
   async isApproved(spender: Address, holder?: Address): Promise<boolean> {
     const normalizedSpender = getAddress(spender);
-    const resolvedHolder = holder
-      ? getAddress(holder)
-      : await this.sdk.requireSigner("isApproved").getAddress();
+    const resolvedHolder = holder ? getAddress(holder) : await this.signer.getAddress();
     return this.sdk.provider.readContract(
       isOperatorContract(this.address, resolvedHolder, normalizedSpender),
     );
@@ -353,6 +356,7 @@ export class Token extends ReadonlyToken {
    * @param amount - The plaintext amount to shield.
    * @param options - Optional configuration: `approvalStrategy` (`"exact"` | `"max"` | `"skip"`, default `"exact"`).
    * @returns The transaction hash and mined receipt.
+   * @throws {@link ChainMismatchError} if signer and provider are on different chains.
    * @throws {@link InsufficientERC20BalanceError} if the ERC-20 balance is less than `amount`.
    * @throws {@link ApprovalFailedError} if the ERC-20 approval step fails.
    * @throws {@link TransactionRevertedError} if the shield transaction reverts.
@@ -365,12 +369,13 @@ export class Token extends ReadonlyToken {
    * ```
    */
   async shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult> {
+    await this.sdk.requireChainAlignment("shield");
     const underlying = await this.#getUnderlying();
 
     // ERC-20 balance check always runs (public read, no signing needed, works for all wallet types)
     let erc20Balance: bigint;
     try {
-      const userAddress = await this.sdk.requireSigner("shield").getAddress();
+      const userAddress = await this.signer.getAddress();
       erc20Balance = await this.sdk.provider.readContract(
         balanceOfContract(underlying, userAddress),
       );
@@ -396,12 +401,8 @@ export class Token extends ReadonlyToken {
     }
 
     try {
-      const recipient = options?.to
-        ? getAddress(options.to)
-        : await this.sdk.requireSigner("shield").getAddress();
-      const txHash = await this.sdk
-        .requireSigner("shield")
-        .writeContract(wrapContract(this.wrapper, recipient, amount));
+      const recipient = options?.to ? getAddress(options.to) : await this.signer.getAddress();
+      const txHash = await this.signer.writeContract(wrapContract(this.wrapper, recipient, amount));
       this.emit({ type: ZamaSDKEvents.ShieldSubmitted, txHash });
       safeCallback(() => options?.onShieldSubmitted?.(txHash));
       const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
@@ -427,6 +428,7 @@ export class Token extends ReadonlyToken {
    *
    * @param amount - The plaintext amount to unwrap (encrypted automatically).
    * @returns The transaction hash and mined receipt.
+   * @throws {@link ChainMismatchError} if signer and provider are on different chains.
    * @throws {@link EncryptionFailedError} if FHE encryption fails.
    * @throws {@link TransactionRevertedError} if the unwrap transaction reverts.
    *
@@ -436,7 +438,8 @@ export class Token extends ReadonlyToken {
    * ```
    */
   async unwrap(amount: bigint): Promise<TransactionResult> {
-    const userAddress = await this.sdk.requireSigner("unwrap").getAddress();
+    await this.sdk.requireChainAlignment("unwrap");
+    const userAddress = await this.signer.getAddress();
 
     let handles: Uint8Array[];
     let inputProof: Uint8Array;
@@ -471,11 +474,9 @@ export class Token extends ReadonlyToken {
     }
 
     try {
-      const txHash = await this.sdk
-        .requireSigner("unwrap")
-        .writeContract(
-          unwrapContract(this.address, userAddress, userAddress, handles[0]!, inputProof),
-        );
+      const txHash = await this.signer.writeContract(
+        unwrapContract(this.address, userAddress, userAddress, handles[0]!, inputProof),
+      );
       this.emit({ type: ZamaSDKEvents.UnwrapSubmitted, txHash });
       const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
       return { txHash, receipt };
@@ -500,6 +501,7 @@ export class Token extends ReadonlyToken {
    * Throws if the balance is zero.
    *
    * @returns The transaction hash and mined receipt.
+   * @throws {@link ChainMismatchError} if signer and provider are on different chains.
    * @throws {@link DecryptionFailedError} if the balance is zero.
    * @throws {@link TransactionRevertedError} if the unwrap transaction reverts.
    *
@@ -509,7 +511,8 @@ export class Token extends ReadonlyToken {
    * ```
    */
   async unwrapAll(): Promise<TransactionResult> {
-    const userAddress = await this.sdk.requireSigner("unwrapAll").getAddress();
+    await this.sdk.requireChainAlignment("unwrapAll");
+    const userAddress = await this.signer.getAddress();
     const handle = await this.readConfidentialBalanceOf(userAddress);
 
     if (isZeroHandle(handle)) {
@@ -517,9 +520,9 @@ export class Token extends ReadonlyToken {
     }
 
     try {
-      const txHash = await this.sdk
-        .requireSigner("unwrapAll")
-        .writeContract(unwrapFromBalanceContract(this.address, userAddress, userAddress, handle));
+      const txHash = await this.signer.writeContract(
+        unwrapFromBalanceContract(this.address, userAddress, userAddress, handle),
+      );
       this.emit({ type: ZamaSDKEvents.UnwrapSubmitted, txHash });
       const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
       return { txHash, receipt };
@@ -631,6 +634,7 @@ export class Token extends ReadonlyToken {
    *
    * @param unwrapRequestIdOrAmount - `unwrapRequestId` from upgraded wrappers, or the encrypted amount handle from legacy wrappers.
    * @returns The transaction hash and mined receipt.
+   * @throws {@link ChainMismatchError} if signer and provider are on different chains.
    * @throws {@link DecryptionFailedError} if public decryption fails.
    * @throws {@link TransactionRevertedError} if the finalize transaction reverts.
    *
@@ -641,6 +645,7 @@ export class Token extends ReadonlyToken {
    * ```
    */
   async finalizeUnwrap(unwrapRequestIdOrAmount: Handle): Promise<TransactionResult> {
+    await this.sdk.requireChainAlignment("finalizeUnwrap");
     const result = await this.sdk.publicDecrypt([unwrapRequestIdOrAmount]);
     const clearValue = result.clearValues[unwrapRequestIdOrAmount];
     assertBigint(clearValue, "finalizeUnwrap: clearValue");
@@ -680,6 +685,7 @@ export class Token extends ReadonlyToken {
    *
    * @param amount - Optional approval amount. Defaults to max uint256.
    * @returns The transaction hash and mined receipt.
+   * @throws {@link ChainMismatchError} if signer and provider are on different chains.
    * @throws {@link ApprovalFailedError} if the approval transaction fails.
    *
    * @example
@@ -689,12 +695,13 @@ export class Token extends ReadonlyToken {
    * ```
    */
   async approveUnderlying(amount?: bigint): Promise<TransactionResult> {
+    await this.sdk.requireChainAlignment("approveUnderlying");
     const underlying = await this.#getUnderlying();
 
     const approvalAmount = amount ?? 2n ** 256n - 1n;
 
     try {
-      const signer = this.sdk.requireSigner("approveUnderlying");
+      const signer = this.signer;
       if (approvalAmount > 0n) {
         const userAddress = await signer.getAddress();
         const currentAllowance = await this.sdk.provider.readContract(
@@ -743,6 +750,7 @@ export class Token extends ReadonlyToken {
    * @param delegateAddress - Address to delegate decryption rights to.
    * @param expirationDate - Optional expiration date (defaults to permanent delegation via `uint64.max`).
    * @returns The transaction hash and mined receipt.
+   * @throws {@link ChainMismatchError} if signer and provider are on different chains.
    * @throws {@link TransactionRevertedError} if the delegation transaction reverts.
    */
   async delegateDecryption({
@@ -752,6 +760,7 @@ export class Token extends ReadonlyToken {
     delegateAddress: Address;
     expirationDate?: Date;
   }): Promise<TransactionResult> {
+    await this.sdk.requireChainAlignment("delegateDecryption");
     if (expirationDate && expirationDate.getTime() < Date.now() + 3600_000) {
       throw new DelegationExpirationTooSoonError(
         "Expiration date must be at least 1 hour in the future",
@@ -761,7 +770,7 @@ export class Token extends ReadonlyToken {
     const normalizedDelegate = getAddress(delegateAddress);
 
     // Pre-flight: delegate cannot be the connected wallet (SenderCannotBeDelegate)
-    const signer = this.sdk.requireSigner("delegateDecryption");
+    const signer = this.signer;
     const signerAddress = await signer.getAddress();
     if (normalizedDelegate === getAddress(signerAddress)) {
       throw new DelegationSelfNotAllowedError(
@@ -830,6 +839,7 @@ export class Token extends ReadonlyToken {
    *
    * @param delegateAddress - Address to revoke delegation from.
    * @returns The transaction hash and mined receipt.
+   * @throws {@link ChainMismatchError} if signer and provider are on different chains.
    * @throws {@link TransactionRevertedError} if the revocation transaction reverts.
    */
   async revokeDelegation({
@@ -837,8 +847,9 @@ export class Token extends ReadonlyToken {
   }: {
     delegateAddress: Address;
   }): Promise<TransactionResult> {
+    await this.sdk.requireChainAlignment("revokeDelegation");
     const normalizedDelegate = getAddress(delegateAddress);
-    const signer = this.sdk.requireSigner("revokeDelegation");
+    const signer = this.signer;
     const signerAddress = await signer.getAddress();
     const acl = await this.getAclAddress();
 
@@ -1042,7 +1053,7 @@ export class Token extends ReadonlyToken {
   ): Promise<void> {
     const underlying = await this.#getUnderlying();
 
-    const signer = this.sdk.requireSigner("shield");
+    const signer = this.signer;
     const userAddress = await signer.getAddress();
     const allowance = await this.sdk.provider.readContract(
       allowanceContract(underlying, userAddress, this.wrapper),

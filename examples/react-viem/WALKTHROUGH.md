@@ -338,7 +338,7 @@ Three balances are shown:
 | Balance      | Source                            | Hook / method                                                                               |
 | ------------ | --------------------------------- | ------------------------------------------------------------------------------------------- |
 | ETH          | Direct RPC (`createPublicClient`) | `useQuery` → `rpcClient.getBalance({ address })`                                            |
-| ERC-20       | Direct RPC via SDK signer         | `useQuery` → `sdk.signer.readContract(balanceOfContract(token.tokenAddress, ...))`          |
+| ERC-20       | Direct RPC via SDK signer         | `useQuery` → `sdk.provider.readContract(balanceOfContract(token.tokenAddress, ...))`        |
 | Confidential | Relayer decryption                | `useConfidentialBalance({ tokenAddress: token?.confidentialTokenAddress ?? ZERO_ADDRESS })` |
 
 **Explicit decrypt pattern**: `useConfidentialBalance` is only enabled after the user has

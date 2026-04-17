@@ -18,6 +18,7 @@ import {
   useEffect,
   useMemo,
   useRef,
+  useState,
 } from "react";
 
 /** Props for {@link ZamaProvider}. */
@@ -67,14 +68,19 @@ export interface ZamaProviderProps extends PropsWithChildren {
   onEvent?: ZamaSDKEventListener;
 }
 
-const ZamaSDKContext = createContext<ZamaSDK | null>(null);
+interface ZamaSDKContextValue {
+  sdk: ZamaSDK;
+  signerAddress: Address | undefined;
+}
+
+const ZamaSDKContext = createContext<ZamaSDKContextValue | null>(null);
 
 /**
  * Provides a {@link ZamaSDK} instance to all descendant hooks.
  *
  * @example
  * ```tsx
- * <ZamaProvider relayer={relayer} signer={signer} storage={storage}>
+ * <ZamaProvider relayer={relayer} provider={provider} signer={signer} storage={storage}>
  *   <App />
  * </ZamaProvider>
  * ```
@@ -147,12 +153,42 @@ export function ZamaProvider({
   // and is idempotent.
   useEffect(() => () => sdk.dispose(), [sdk]);
 
-  return <ZamaSDKContext.Provider value={sdk}>{children}</ZamaSDKContext.Provider>;
+  // Resolve and track the signer address as React state so hooks read it
+  // synchronously without needing a query factory.
+  const [signerAddress, setSignerAddress] = useState<Address | undefined>();
+
+  useEffect(() => {
+    if (!sdk.signer) {
+      setSignerAddress(undefined);
+      return;
+    }
+    let cancelled = false;
+    sdk.signer.getAddress().then(
+      (addr) => {
+        if (!cancelled) setSignerAddress(addr);
+      },
+      () => {
+        // Signer not ready — signerAddress stays undefined until subscribe fires
+      },
+    );
+    const unsub = sdk.signer.subscribe?.({
+      onAccountChange: (addr) => setSignerAddress(addr),
+      onDisconnect: () => setSignerAddress(undefined),
+    });
+    return () => {
+      cancelled = true;
+      unsub?.();
+    };
+  }, [sdk.signer]);
+
+  const contextValue = useMemo(() => ({ sdk, signerAddress }), [sdk, signerAddress]);
+
+  return <ZamaSDKContext.Provider value={contextValue}>{children}</ZamaSDKContext.Provider>;
 }
 
 /**
  * Access the {@link ZamaSDK} instance from context.
- * Throws if called outside a {@link ZamaProvider} or when no signer is provided.
+ * Throws if called outside a {@link ZamaProvider}.
  *
  * @example
  * ```tsx
@@ -166,9 +202,31 @@ export function useZamaSDK(): ZamaSDK {
   if (!context) {
     throw new Error(
       "useZamaSDK must be used within a <ZamaProvider>. " +
-        "Wrap your component tree in <ZamaProvider relayer={…} signer={…} storage={…}>.",
+        "Wrap your component tree in <ZamaProvider relayer={…} provider={…} signer={…} storage={…}>.",
     );
   }
 
-  return context;
+  return context.sdk;
+}
+
+/**
+ * Access the current signer address from context.
+ * Returns `undefined` when no signer is configured or the address has not yet resolved.
+ *
+ * @example
+ * ```tsx
+ * const address = useSignerAddress();
+ * ```
+ */
+export function useSignerAddress(): Address | undefined {
+  const context = useContext(ZamaSDKContext);
+
+  if (!context) {
+    throw new Error(
+      "useSignerAddress must be used within a <ZamaProvider>. " +
+        "Wrap your component tree in <ZamaProvider relayer={…} provider={…} signer={…} storage={…}>.",
+    );
+  }
+
+  return context.signerAddress;
 }

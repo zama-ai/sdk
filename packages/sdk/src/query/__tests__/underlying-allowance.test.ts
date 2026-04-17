@@ -28,8 +28,8 @@ describe("underlyingAllowanceQueryOptions", () => {
     expect(options.enabled).toBe(false);
   });
 
-  test("queries allowance when owner exists", async ({ sdk, signer }) => {
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(99n);
+  test("queries allowance when owner exists", async ({ sdk, signer, provider }) => {
+    vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(99n);
 
     const options = underlyingAllowanceQueryOptions(
       sdk,
@@ -67,8 +67,9 @@ describe("underlyingAllowanceQueryOptions", () => {
   test("queryFn reads tokenAddress, owner, and wrapperAddress from context.queryKey", async ({
     sdk,
     signer,
+    provider,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(99n);
+    vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(99n);
 
     const options = underlyingAllowanceQueryOptions(
       sdk,
@@ -87,7 +88,7 @@ describe("underlyingAllowanceQueryOptions", () => {
 
     await options.queryFn(mockQueryContext(key));
 
-    expect(vi.mocked(signer.readContract)).toHaveBeenNthCalledWith(
+    expect(vi.mocked(provider.readContract)).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({
         address: getAddress("0xcccccccccccccccccccccccccccccccccccccccc"),
@@ -95,7 +96,7 @@ describe("underlyingAllowanceQueryOptions", () => {
         args: [],
       }),
     );
-    expect(vi.mocked(signer.readContract)).toHaveBeenNthCalledWith(
+    expect(vi.mocked(provider.readContract)).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({
         address: getAddress(UNDERLYING),

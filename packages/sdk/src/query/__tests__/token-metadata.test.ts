@@ -12,8 +12,8 @@ describe("tokenMetadataQueryOptions", () => {
     expect(options.staleTime).toBe(Infinity);
   });
 
-  test("queryFn reads token address from context.queryKey", async ({ sdk, signer }) => {
-    vi.mocked(signer.readContract)
+  test("queryFn reads token address from context.queryKey", async ({ sdk, signer, provider }) => {
+    vi.mocked(provider.readContract)
       .mockResolvedValueOnce("Name")
       .mockResolvedValueOnce("SYM")
       .mockResolvedValueOnce(18);
@@ -26,7 +26,7 @@ describe("tokenMetadataQueryOptions", () => {
     const result = await options.queryFn(mockQueryContext(otherKey));
 
     expect(result).toEqual({ name: "Name", symbol: "SYM", decimals: 18 });
-    expect(vi.mocked(signer.readContract).mock.calls[0]?.[0]).toMatchObject({
+    expect(vi.mocked(provider.readContract).mock.calls[0]?.[0]).toMatchObject({
       address: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
       functionName: "name",
     });

@@ -4,7 +4,6 @@ import type {
   ContractFunctionArgs,
   ContractFunctionName,
   EIP1193Provider,
-  PublicClient,
   WalletClient,
   Address,
   Hex,
@@ -24,33 +23,26 @@ import { eip1193Subscribe } from "../token/eip1193-subscribe";
  * `walletClient.transport`.
  *
  * If you omit `ethereum`, `subscribe()` returns a no-op. For automatic
- * wallet lifecycle handling, consider using `WagmiSigner` instead.
+ * wallet lifecycle handling, consider using `ZamaWagmiSigner` instead.
  */
 export interface ViemSignerConfig {
   /** Wallet client for signing and write operations. */
   walletClient: WalletClient;
-  /**
-   * Public client used to read the wallet's active chain ID. Required because
-   * `WalletClient.getChainId()` may not reflect the most recent chain switch
-   * in every viem version.
-   */
-  publicClient: PublicClient;
   ethereum?: EIP1193Provider;
 }
 
 /**
  * GenericSigner backed by viem.
- *
- * @param config - {@link ViemSignerConfig} with walletClient and publicClient
  */
 export class ViemSigner implements GenericSigner {
   readonly #walletClient: WalletClient;
-  readonly #publicClient: PublicClient;
   readonly #ethereum?: EIP1193Provider;
 
+  /**
+   * @param config - {@link ViemSignerConfig} with walletClient and optional ethereum provider
+   */
   constructor(config: ViemSignerConfig) {
     this.#walletClient = config.walletClient;
-    this.#publicClient = config.publicClient;
     this.#ethereum = config.ethereum;
   }
 
@@ -62,7 +54,7 @@ export class ViemSigner implements GenericSigner {
   }
 
   async getChainId(): Promise<number> {
-    return this.#publicClient.getChainId();
+    return this.#walletClient.getChainId();
   }
 
   async getAddress(): Promise<Address> {

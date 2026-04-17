@@ -12,15 +12,16 @@ describe("delegation read methods", () => {
     tokenAddress,
     delegatorAddress,
     delegateAddress,
+    provider,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(1700000000n);
+    vi.mocked(provider.readContract).mockResolvedValue(1700000000n);
 
     const expiry = await readonlyToken.getDelegationExpiry({
       delegatorAddress,
       delegateAddress,
     });
 
-    expect(signer.readContract).toHaveBeenCalledWith(
+    expect(provider.readContract).toHaveBeenCalledWith(
       expect.objectContaining({
         address: aclAddress,
         functionName: "getUserDecryptionDelegationExpirationDate",
@@ -35,9 +36,10 @@ describe("delegation read methods", () => {
     readonlyToken,
     delegatorAddress,
     delegateAddress,
+    provider,
   }) => {
     const futureTimestamp = BigInt(Math.floor(Date.now() / 1000) + 3600);
-    vi.mocked(signer.readContract).mockResolvedValue(futureTimestamp);
+    vi.mocked(provider.readContract).mockResolvedValue(futureTimestamp);
 
     expect(await readonlyToken.isDelegated({ delegatorAddress, delegateAddress })).toBe(true);
   });
@@ -47,8 +49,9 @@ describe("delegation read methods", () => {
     readonlyToken,
     delegatorAddress,
     delegateAddress,
+    provider,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(0n);
+    vi.mocked(provider.readContract).mockResolvedValue(0n);
 
     expect(await readonlyToken.isDelegated({ delegatorAddress, delegateAddress })).toBe(false);
   });
@@ -58,8 +61,9 @@ describe("delegation read methods", () => {
     readonlyToken,
     delegatorAddress,
     delegateAddress,
+    provider,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(1000n);
+    vi.mocked(provider.readContract).mockResolvedValue(1000n);
 
     expect(await readonlyToken.isDelegated({ delegatorAddress, delegateAddress })).toBe(false);
   });
@@ -69,12 +73,13 @@ describe("delegation read methods", () => {
     readonlyToken,
     delegatorAddress,
     delegateAddress,
+    provider,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(MAX_UINT64);
+    vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
 
     expect(await readonlyToken.isDelegated({ delegatorAddress, delegateAddress })).toBe(true);
     // getBlockTimestamp should NOT have been called — permanent delegation skips it.
-    expect(signer.getBlockTimestamp).not.toHaveBeenCalled();
+    expect(provider.getBlockTimestamp).not.toHaveBeenCalled();
   });
 
   it("getDelegationExpiry throws when relayer cannot resolve ACL", async ({
@@ -132,9 +137,14 @@ describe("delegation write methods", () => {
     );
   });
 
-  it("delegateDecryption returns TransactionResult", async ({ signer, token, delegateAddress }) => {
+  it("delegateDecryption returns TransactionResult", async ({
+    signer,
+    token,
+    delegateAddress,
+    provider,
+  }) => {
     // Mock readContract to return a different expiry so the duplicate-expiry guard doesn't fire
-    vi.mocked(signer.readContract).mockResolvedValue(1000n);
+    vi.mocked(provider.readContract).mockResolvedValue(1000n);
     const result = await token.delegateDecryption({ delegateAddress });
     expect(result).toEqual({ txHash: "0xtxhash", receipt: { logs: [] } });
   });
@@ -145,9 +155,10 @@ describe("delegation write methods", () => {
     aclAddress,
     tokenAddress,
     delegateAddress,
+    provider,
   }) => {
     // Mock active delegation so pre-flight check passes
-    vi.mocked(signer.readContract).mockResolvedValue(MAX_UINT64);
+    vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
     await token.revokeDelegation({ delegateAddress });
 
     expect(signer.writeContract).toHaveBeenCalledWith(
@@ -201,9 +212,10 @@ describe("delegation write methods", () => {
     signer,
     token,
     delegateAddress,
+    provider,
   }) => {
     // readContract returns active delegation for pre-flight check
-    vi.mocked(signer.readContract).mockResolvedValue(MAX_UINT64);
+    vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
     vi.mocked(signer.writeContract).mockRejectedValue(new Error("revert"));
 
     await expect(token.revokeDelegation({ delegateAddress })).rejects.toThrow(
@@ -215,8 +227,9 @@ describe("delegation write methods", () => {
     signer,
     token,
     delegateAddress,
+    provider,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(MAX_UINT64);
+    vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
     vi.mocked(signer.writeContract).mockRejectedValue(
       new Error("AlreadyDelegatedOrRevokedInSameBlock"),
     );
@@ -226,15 +239,21 @@ describe("delegation write methods", () => {
     );
   });
 
-  it("revokeDelegation returns TransactionResult", async ({ signer, token, delegateAddress }) => {
+  it("revokeDelegation returns TransactionResult", async ({
+    signer,
+    token,
+    delegateAddress,
+    provider,
+  }) => {
     // Mock active delegation so pre-flight check passes
-    vi.mocked(signer.readContract).mockResolvedValue(MAX_UINT64);
+    vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
     const result = await token.revokeDelegation({ delegateAddress });
     expect(result).toEqual({ txHash: "0xtxhash", receipt: { logs: [] } });
   });
 
   it("delegateDecryption throws when relayer cannot resolve ACL", async ({
     createSDK,
+    signer,
     tokenAddress,
     delegateAddress,
   }) => {
@@ -242,7 +261,7 @@ describe("delegation write methods", () => {
       getAclAddress: vi.fn().mockRejectedValue(new Error("no transport config")),
     });
     const sdkNoAcl = createSDK({ relayer: relayerNoAcl });
-    const tokenNoAcl = new Token(sdkNoAcl, tokenAddress);
+    const tokenNoAcl = new Token(sdkNoAcl, signer, tokenAddress);
 
     await expect(tokenNoAcl.delegateDecryption({ delegateAddress })).rejects.toThrow(
       "no transport config",
@@ -251,6 +270,7 @@ describe("delegation write methods", () => {
 
   it("revokeDelegation throws when relayer cannot resolve ACL", async ({
     createSDK,
+    signer,
     tokenAddress,
     delegateAddress,
   }) => {
@@ -258,7 +278,7 @@ describe("delegation write methods", () => {
       getAclAddress: vi.fn().mockRejectedValue(new Error("no transport config")),
     });
     const sdkNoAcl = createSDK({ relayer: relayerNoAcl });
-    const tokenNoAcl = new Token(sdkNoAcl, tokenAddress);
+    const tokenNoAcl = new Token(sdkNoAcl, signer, tokenAddress);
 
     await expect(tokenNoAcl.revokeDelegation({ delegateAddress })).rejects.toThrow(
       "no transport config",
@@ -272,8 +292,9 @@ describe("decryptBalanceAs", () => {
     relayer,
     readonlyToken,
     delegatorAddress,
+    provider,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(ZERO_HANDLE);
+    vi.mocked(provider.readContract).mockResolvedValue(ZERO_HANDLE);
 
     const balance = await readonlyToken.decryptBalanceAs({ delegatorAddress });
 
@@ -288,8 +309,9 @@ describe("decryptBalanceAs", () => {
     handle,
     tokenAddress,
     delegatorAddress,
+    provider,
   }) => {
-    vi.mocked(signer.readContract)
+    vi.mocked(provider.readContract)
       .mockResolvedValueOnce(handle) // confidentialBalanceOf
       .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry (permanent → active)
     vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue({
@@ -340,8 +362,9 @@ describe("decryptBalanceAs", () => {
     readonlyToken,
     handle,
     delegatorAddress,
+    provider,
   }) => {
-    vi.mocked(signer.readContract)
+    vi.mocked(provider.readContract)
       .mockResolvedValueOnce(handle) // confidentialBalanceOf
       .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry (permanent → active)
     vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockRejectedValue(new Error("fail"));
@@ -359,8 +382,9 @@ describe("decryptBalanceAs", () => {
     tokenAddress,
     delegatorAddress,
     userAddress,
+    provider,
   }) => {
-    vi.mocked(signer.readContract)
+    vi.mocked(provider.readContract)
       .mockResolvedValueOnce(handle) // confidentialBalanceOf (first call)
       .mockResolvedValueOnce(MAX_UINT64) // getDelegationExpiry (first call)
       .mockResolvedValueOnce(handle) // confidentialBalanceOf (second call)
@@ -458,8 +482,9 @@ describe("decryptBalanceAs", () => {
     handle,
     delegatorAddress,
     tokenAddress,
+    provider,
   }) => {
-    vi.mocked(signer.readContract)
+    vi.mocked(provider.readContract)
       .mockResolvedValueOnce(handle) // confidentialBalanceOf
       .mockResolvedValueOnce(0n); // getDelegationExpiry → no delegation
 
@@ -479,8 +504,9 @@ describe("decryptBalanceAs", () => {
     handle,
     delegatorAddress,
     tokenAddress,
+    provider,
   }) => {
-    vi.mocked(signer.readContract)
+    vi.mocked(provider.readContract)
       .mockResolvedValueOnce(handle) // confidentialBalanceOf
       .mockResolvedValueOnce(1000n); // getDelegationExpiry → expired (past timestamp)
 
@@ -500,8 +526,9 @@ describe("decryptBalanceAs", () => {
     handle,
     tokenAddress,
     delegatorAddress,
+    provider,
   }) => {
-    vi.mocked(signer.readContract)
+    vi.mocked(provider.readContract)
       .mockResolvedValueOnce(handle) // confidentialBalanceOf
       .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry → permanent
     vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue({
@@ -540,8 +567,9 @@ describe("decryptBalanceAs", () => {
     handle,
     tokenAddress,
     delegatorAddress,
+    provider,
   }) => {
-    vi.mocked(signer.readContract)
+    vi.mocked(provider.readContract)
       .mockResolvedValueOnce(handle) // confidentialBalanceOf
       .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry → permanent
     vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue({
@@ -581,8 +609,9 @@ describe("decryptBalanceAs", () => {
     handle,
     tokenAddress,
     delegatorAddress,
+    provider,
   }) => {
-    vi.mocked(signer.readContract)
+    vi.mocked(provider.readContract)
       .mockResolvedValueOnce(handle) // confidentialBalanceOf
       .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry → permanent
     vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue({
@@ -618,11 +647,12 @@ describe("batch delegation", () => {
 
   it("batchDelegateDecryption calls delegateDecryption on each token", async ({
     sdk,
+    signer,
     token,
     tokenAddress,
     delegateAddress,
   }) => {
-    const token2 = new Token(sdk, TOKEN2);
+    const token2 = new Token(sdk, signer, TOKEN2);
 
     const results = await Token.batchDelegateDecryption({
       tokens: [token, token2],
@@ -647,7 +677,7 @@ describe("batch delegation", () => {
       .mockResolvedValueOnce("0xtxhash")
       .mockRejectedValueOnce(new Error("revert"));
 
-    const token2 = new Token(sdk, TOKEN2);
+    const token2 = new Token(sdk, signer, TOKEN2);
 
     const results = await Token.batchDelegateDecryption({
       tokens: [token, token2],
@@ -679,7 +709,7 @@ describe("batch delegation", () => {
       .mockResolvedValueOnce("0xtxhash")
       .mockRejectedValueOnce(new Error("revert"));
 
-    const token2 = new Token(sdk, TOKEN2);
+    const token2 = new Token(sdk, signer, TOKEN2);
 
     const results = await Token.batchRevokeDelegation({
       tokens: [token, token2],
@@ -779,11 +809,12 @@ describe("delegateDecryption validation", () => {
     signer,
     token,
     delegateAddress,
+    provider,
   }) => {
     const expiry = new Date("2030-01-01T00:00:00Z");
     const expiryTimestamp = BigInt(Math.floor(expiry.getTime() / 1000));
     // readContract returns the same expiry as the one being set
-    vi.mocked(signer.readContract).mockResolvedValue(expiryTimestamp);
+    vi.mocked(provider.readContract).mockResolvedValue(expiryTimestamp);
 
     await expect(
       token.delegateDecryption({ delegateAddress, expirationDate: expiry }),
@@ -796,8 +827,9 @@ describe("revokeDelegation validation", () => {
     signer,
     token,
     delegateAddress,
+    provider,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(0n);
+    vi.mocked(provider.readContract).mockResolvedValue(0n);
 
     await expect(token.revokeDelegation({ delegateAddress })).rejects.toThrow(
       expect.objectContaining({ code: "DELEGATION_NOT_FOUND" }),
@@ -808,12 +840,13 @@ describe("revokeDelegation validation", () => {
     signer,
     token,
     delegateAddress,
+    provider,
   }) => {
     // Expired delegation (non-zero expiry in the past) — the SDK should NOT
     // block revocation; the ACL contract accepts it for cleanup.
-    vi.mocked(signer.readContract).mockResolvedValue(1000n); // expired timestamp
+    vi.mocked(provider.readContract).mockResolvedValue(1000n); // expired timestamp
     vi.mocked(signer.writeContract).mockResolvedValue(`0x${"ab".repeat(32)}`);
-    vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({} as never);
+    vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({} as never);
 
     const result = await token.revokeDelegation({ delegateAddress });
     expect(result.txHash).toMatch(/^0x/);
@@ -825,11 +858,12 @@ describe("delegation pre-flight RPC fallback", () => {
     signer,
     token,
     delegateAddress,
+    provider,
   }) => {
     // Simulate RPC failure during pre-flight expiry check
-    vi.mocked(signer.readContract).mockRejectedValue(new Error("network error"));
+    vi.mocked(provider.readContract).mockRejectedValue(new Error("network error"));
     vi.mocked(signer.writeContract).mockResolvedValue(`0x${"ab".repeat(32)}`);
-    vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({} as never);
+    vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({} as never);
 
     // Should not throw — falls back to on-chain enforcement
     const result = await token.delegateDecryption({ delegateAddress });
@@ -841,11 +875,12 @@ describe("delegation pre-flight RPC fallback", () => {
     signer,
     token,
     delegateAddress,
+    provider,
   }) => {
     // Simulate RPC failure — sentinel 1n means "assume delegated, skip client check"
-    vi.mocked(signer.readContract).mockRejectedValue(new Error("network error"));
+    vi.mocked(provider.readContract).mockRejectedValue(new Error("network error"));
     vi.mocked(signer.writeContract).mockResolvedValue(`0x${"ab".repeat(32)}`);
-    vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({} as never);
+    vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({} as never);
 
     const result = await token.revokeDelegation({ delegateAddress });
     expect(result.txHash).toMatch(/^0x/);

@@ -18,7 +18,7 @@ import type { TransactionReceipt } from "./transaction";
  * Any caller with only an RPC endpoint (server indexer, SSR, dApp pre-connect)
  * can drive the SDK via a {@link GenericProvider} implementation, without
  * instantiating a wallet-shaped object. Use {@link ViemProvider},
- * {@link EthersProvider}, or {@link WagmiProvider}; or implement the
+ * {@link EthersProvider}, or {@link ZamaWagmiProvider}; or implement the
  * interface directly.
  */
 export interface GenericProvider {

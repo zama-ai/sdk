@@ -35,7 +35,7 @@ export function useResumeUnshield(
   const token = useToken(config);
 
   return useMutation<TransactionResult, Error, ResumeUnshieldParams, Address>({
-    ...resumeUnshieldMutationOptions(token),
+    ...resumeUnshieldMutationOptions(token, config.tokenAddress),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       options?.onSuccess?.(data, variables, onMutateResult, context);

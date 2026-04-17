@@ -7,8 +7,9 @@ describe("NoCiphertextError detection (P3)", () => {
     signer,
     token,
     handle,
+    provider,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(handle);
+    vi.mocked(provider.readContract).mockResolvedValue(handle);
     const error = new Error("No ciphertext found") as Error & { statusCode?: number };
     error.statusCode = 400;
     vi.mocked(relayer.userDecrypt).mockRejectedValue(error);
@@ -21,8 +22,9 @@ describe("NoCiphertextError detection (P3)", () => {
     signer,
     token,
     handle,
+    provider,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(handle);
+    vi.mocked(provider.readContract).mockResolvedValue(handle);
     const error = new Error("Internal server error") as Error & { statusCode?: number };
     error.statusCode = 500;
     vi.mocked(relayer.userDecrypt).mockRejectedValue(error);
@@ -40,8 +42,9 @@ describe("NoCiphertextError detection (P3)", () => {
     signer,
     token,
     handle,
+    provider,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(handle);
+    vi.mocked(provider.readContract).mockResolvedValue(handle);
     vi.mocked(relayer.userDecrypt).mockRejectedValue(new Error("unknown"));
 
     await expect(token.balanceOf()).rejects.toBeInstanceOf(DecryptionFailedError);
@@ -67,8 +70,9 @@ describe("NoCiphertextError detection (P3)", () => {
     signer,
     token,
     handle,
+    provider,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(handle);
+    vi.mocked(provider.readContract).mockResolvedValue(handle);
     const original = new NoCiphertextError("already typed");
     vi.mocked(relayer.userDecrypt).mockRejectedValue(original);
 
@@ -84,8 +88,9 @@ describe("NoCiphertextError detection (P3)", () => {
     signer,
     token,
     handle,
+    provider,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(handle);
+    vi.mocked(provider.readContract).mockResolvedValue(handle);
     const original = new RelayerRequestFailedError("already typed", 503);
     vi.mocked(relayer.userDecrypt).mockRejectedValue(original);
 
@@ -101,8 +106,9 @@ describe("NoCiphertextError detection (P3)", () => {
     signer,
     token,
     handle,
+    provider,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(handle);
+    vi.mocked(provider.readContract).mockResolvedValue(handle);
     vi.mocked(relayer.userDecrypt).mockRejectedValue({ statusCode: 400, message: "bad" });
 
     await expect(token.balanceOf()).rejects.toBeInstanceOf(NoCiphertextError);
@@ -113,8 +119,9 @@ describe("NoCiphertextError detection (P3)", () => {
     signer,
     token,
     handle,
+    provider,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(handle);
+    vi.mocked(provider.readContract).mockResolvedValue(handle);
     vi.mocked(relayer.userDecrypt).mockRejectedValue({ statusCode: 502 });
 
     const err = await token.balanceOf().catch((error) => error);

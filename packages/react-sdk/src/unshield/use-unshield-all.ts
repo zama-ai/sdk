@@ -35,7 +35,7 @@ export function useUnshieldAll(
   const token = useToken(config);
 
   return useMutation<TransactionResult, Error, UnshieldAllParams | void, Address>({
-    ...unshieldAllMutationOptions(token),
+    ...unshieldAllMutationOptions(token, config.tokenAddress),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       options?.onSuccess?.(data, variables, onMutateResult, context);

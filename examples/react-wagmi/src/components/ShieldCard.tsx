@@ -65,13 +65,13 @@ export function ShieldCard({
       const userAddress = await sdk.signer.getAddress();
 
       // Read the current ERC-20 allowance granted to the wrapper.
-      const currentAllowance = (await sdk.signer.readContract(
+      const currentAllowance = (await sdk.provider.readContract(
         allowanceContract(underlyingAddress, userAddress, tokenAddress),
       )) as bigint;
 
       if (currentAllowance < amount) {
         // Fetch the user's full ERC-20 balance to use as the new spend cap.
-        const erc20Balance = (await sdk.signer.readContract(
+        const erc20Balance = (await sdk.provider.readContract(
           balanceOfContract(underlyingAddress, userAddress),
         )) as bigint;
 
@@ -100,7 +100,7 @@ export function ShieldCard({
             needsReset = true;
           }
           if (overwriteTxHash) {
-            await sdk.signer.waitForTransactionReceipt(overwriteTxHash);
+            await sdk.provider.waitForTransactionReceipt(overwriteTxHash);
           }
 
           if (needsReset) {
@@ -108,18 +108,18 @@ export function ShieldCard({
             const resetTxHash = await sdk.signer.writeContract(
               approveContract(underlyingAddress, tokenAddress, 0n),
             );
-            await sdk.signer.waitForTransactionReceipt(resetTxHash);
+            await sdk.provider.waitForTransactionReceipt(resetTxHash);
             const approveTxHash = await sdk.signer.writeContract(
               approveContract(underlyingAddress, tokenAddress, erc20Balance),
             );
-            await sdk.signer.waitForTransactionReceipt(approveTxHash);
+            await sdk.provider.waitForTransactionReceipt(approveTxHash);
           }
         } else {
           // Zero allowance — any token type accepts a direct approve from 0.
           const txHash = await sdk.signer.writeContract(
             approveContract(underlyingAddress, tokenAddress, erc20Balance),
           );
-          await sdk.signer.waitForTransactionReceipt(txHash);
+          await sdk.provider.waitForTransactionReceipt(txHash);
         }
 
         setPhase("wrap-after-approve");

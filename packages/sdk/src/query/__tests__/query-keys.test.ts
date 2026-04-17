@@ -92,7 +92,6 @@ describe("zamaQueryKeys", () => {
 
   test("all parameterized keys are 2-element tuples", () => {
     const parameterizedKeys = [
-      zamaQueryKeys.signerAddress.token(TOKEN_LOWER),
       zamaQueryKeys.confidentialBalance.owner(TOKEN_LOWER, OWNER_LOWER),
       zamaQueryKeys.confidentialBalances.tokens([TOKEN_LOWER, TOKEN_B_LOWER], OWNER_LOWER),
       zamaQueryKeys.tokenMetadata.token(TOKEN_LOWER),

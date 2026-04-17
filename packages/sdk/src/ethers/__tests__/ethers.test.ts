@@ -18,6 +18,9 @@ const { mockContractMethod, MockContract, MockBrowserProvider, mockGetSigner } =
           if (prop === "then") {
             return undefined;
           }
+          if (prop === "getFunction") {
+            return () => mockContractMethod;
+          }
           return mockContractMethod;
         },
       },

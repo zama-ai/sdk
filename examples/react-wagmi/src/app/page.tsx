@@ -169,7 +169,7 @@ export default function Home() {
         functionName: "mint",
         args: [address as Address, parseUnits("10", erc20Decimals)],
       });
-      await sdk.signer.waitForTransactionReceipt(txHash);
+      await sdk.provider.waitForTransactionReceipt(txHash);
       return txHash;
     },
     onSuccess: refreshBalances,

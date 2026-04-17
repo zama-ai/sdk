@@ -28,7 +28,7 @@ export function useRevokeDelegation(
   const token = useToken(config);
 
   return useMutation<TransactionResult, Error, RevokeDelegationParams>({
-    ...revokeDelegationMutationOptions(token),
+    ...revokeDelegationMutationOptions(token, config.tokenAddress),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       try {

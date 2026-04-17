@@ -66,6 +66,8 @@ export const ZamaErrorCode = {
   DelegationNotPropagated: "DELEGATION_NOT_PROPAGATED",
   /** Operation requires a wallet signer but the SDK was configured without one. */
   SignerRequired: "SIGNER_REQUIRED",
+  /** Signer and provider are connected to different chains. */
+  ChainMismatch: "CHAIN_MISMATCH",
 } as const;
 
 /** Union of all {@link ZamaErrorCode} string values. */

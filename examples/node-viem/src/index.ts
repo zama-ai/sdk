@@ -61,8 +61,8 @@ async function main() {
   const walletClientA = createWalletClient({ account: accountA, chain: sepolia, transport });
   const walletClientB = createWalletClient({ account: accountB, chain: sepolia, transport });
 
-  const signerA = new ViemSigner({ walletClient: walletClientA, publicClient });
-  const signerB = new ViemSigner({ walletClient: walletClientB, publicClient });
+  const signerA = new ViemSigner({ walletClient: walletClientA });
+  const signerB = new ViemSigner({ walletClient: walletClientB });
 
   // ViemProvider handles public chain reads (balances, receipts, block timestamps).
   // A single provider can be shared across both SDK instances — reads are stateless.

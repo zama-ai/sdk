@@ -29,8 +29,9 @@ describe("useShield", () => {
   test("cache: invalidates allowance and removes balance after shield", async ({
     renderWithProviders,
     signer,
+    provider,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
+    vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
 
     const { result, queryClient } = renderWithProviders(() =>
       useShield({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
@@ -57,8 +58,12 @@ describe("useShield", () => {
     expectCacheUntouched(queryClient, otherAllowanceKey, 333n);
   });
 
-  test("behavior: forwards onSuccess callback", async ({ renderWithProviders, signer }) => {
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
+  test("behavior: forwards onSuccess callback", async ({
+    renderWithProviders,
+    signer,
+    provider,
+  }) => {
+    vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
 
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
     const allowanceKey = zamaQueryKeys.underlyingAllowance.token(TOKEN);
@@ -87,8 +92,9 @@ describe("useShield", () => {
   test("behavior: forwards raw onMutate context to onSuccess without optimistic flag", async ({
     renderWithProviders,
     signer,
+    provider,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
+    vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
 
     const expectedContext = { requestId: "shield-success-raw" } as const;
     const onMutate = vi.fn().mockReturnValue(expectedContext);
@@ -109,8 +115,9 @@ describe("useShield", () => {
   test("behavior: forwards raw onMutate context to onError without optimistic flag", async ({
     renderWithProviders,
     signer,
+    provider,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
+    vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
     vi.mocked(signer.writeContract).mockRejectedValue(new Error("shield failed"));
 
     const expectedContext = { requestId: "shield-error-raw" } as const;
@@ -134,8 +141,9 @@ describe("useShield", () => {
   test("behavior: forwards raw onMutate context to onSettled without optimistic flag", async ({
     renderWithProviders,
     signer,
+    provider,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
+    vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
 
     const expectedContext = { requestId: "shield-settled-raw" } as const;
     const onMutate = vi.fn().mockReturnValue(expectedContext);
@@ -156,8 +164,9 @@ describe("useShield", () => {
   test("behavior: unwraps caller context for onSuccess with optimistic flag", async ({
     renderWithProviders,
     signer,
+    provider,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
+    vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
 
     const expectedContext = { requestId: "shield-success-optimistic" } as const;
     const onMutate = vi.fn().mockReturnValue(expectedContext);
@@ -184,8 +193,9 @@ describe("useShield", () => {
   test("behavior: unwraps caller context for onError with optimistic flag", async ({
     renderWithProviders,
     signer,
+    provider,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
+    vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
     vi.mocked(signer.writeContract).mockRejectedValue(new Error("shield failed"));
 
     const expectedContext = { requestId: "shield-error-optimistic" } as const;
@@ -215,8 +225,9 @@ describe("useShield", () => {
   test("behavior: unwraps caller context for onSettled with optimistic flag", async ({
     renderWithProviders,
     signer,
+    provider,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
+    vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
 
     const expectedContext = { requestId: "shield-settled-optimistic" } as const;
     const onMutate = vi.fn().mockReturnValue(expectedContext);
@@ -242,8 +253,8 @@ describe("useShield", () => {
 });
 
 describe("useShield optimistic updates", () => {
-  test("behavior: optimistic add on mutate", async ({ renderWithProviders, signer }) => {
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
+  test("behavior: optimistic add on mutate", async ({ renderWithProviders, signer, provider }) => {
+    vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
 
     let resolveWrap: (value: string) => void;
     vi.mocked(signer.writeContract).mockReturnValue(
@@ -284,8 +295,12 @@ describe("useShield optimistic updates", () => {
     });
   });
 
-  test("behavior: rolls back optimistic on error", async ({ renderWithProviders, signer }) => {
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
+  test("behavior: rolls back optimistic on error", async ({
+    renderWithProviders,
+    signer,
+    provider,
+  }) => {
+    vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
     vi.mocked(signer.writeContract).mockRejectedValue(new Error("shield failed"));
 
     const { result, queryClient } = renderWithProviders(() =>
@@ -318,8 +333,12 @@ describe("useShield optimistic updates", () => {
     expect(setQueryDataSpy).toHaveBeenCalledWith(balanceKey, 3000n);
   });
 
-  test("behavior: no optimistic update without flag", async ({ renderWithProviders, signer }) => {
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
+  test("behavior: no optimistic update without flag", async ({
+    renderWithProviders,
+    signer,
+    provider,
+  }) => {
+    vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
 
     let resolveWrap: (value: string) => void;
     vi.mocked(signer.writeContract).mockReturnValue(
@@ -349,8 +368,9 @@ describe("useShield optimistic updates", () => {
   test("optimistic: no error when balance cache is empty", async ({
     renderWithProviders,
     signer,
+    provider,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
+    vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
     const { result, queryClient } = renderWithProviders(() =>
@@ -370,7 +390,7 @@ describe("useShield error propagation", () => {
     const error = new ApprovalFailedError("ERC-20 approval failed");
     vi.mocked(token.shield).mockRejectedValueOnce(error);
 
-    const opts = shieldMutationOptions(token);
+    const opts = shieldMutationOptions(token, token.address);
 
     await expect(opts.mutationFn({ amount: 100n })).rejects.toThrow(ApprovalFailedError);
   });
@@ -379,7 +399,7 @@ describe("useShield error propagation", () => {
     const error = new TransactionRevertedError("Shield (wrap) transaction failed");
     vi.mocked(token.shield).mockRejectedValueOnce(error);
 
-    const opts = shieldMutationOptions(token);
+    const opts = shieldMutationOptions(token, token.address);
 
     await expect(opts.mutationFn({ amount: 100n })).rejects.toThrow(TransactionRevertedError);
   });

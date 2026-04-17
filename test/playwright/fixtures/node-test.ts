@@ -91,7 +91,7 @@ export const nodeTest = base.extend<NodeTestFixtures, NodeWorkerFixtures>({
       chain: foundry,
       transport: http(transport.network as string),
     });
-    const signer = new ViemSigner({ walletClient: viemClient, publicClient });
+    const signer = new ViemSigner({ walletClient: viemClient });
     const provider = new ViemProvider({ publicClient });
     const storage = new MemoryStorage();
     using sdk = new ZamaSDK({ relayer, provider, signer, storage });

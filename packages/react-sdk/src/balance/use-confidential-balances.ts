@@ -4,8 +4,9 @@ import { useMemo } from "react";
 import { useQuery } from "../utils/query";
 import type { UseQueryOptions } from "@tanstack/react-query";
 import type { Address, BatchBalancesResult } from "@zama-fhe/sdk";
-import { confidentialBalancesQueryOptions, signerAddressQueryOptions } from "@zama-fhe/sdk/query";
+import { confidentialBalancesQueryOptions } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
+import { useSignerAddress } from "../use-signer-address";
 
 /** Configuration for {@link useConfidentialBalances}. */
 export interface UseConfidentialBalancesConfig {
@@ -53,10 +54,7 @@ export function useConfidentialBalances(
   const { tokenAddresses } = config;
   const { enabled = true } = options ?? {};
   const sdk = useZamaSDK();
-
-  const addressQuery = useQuery<Address>(signerAddressQueryOptions(sdk));
-
-  const owner = addressQuery.data;
+  const owner = useSignerAddress();
 
   const tokens = useMemo(
     () => tokenAddresses.map((addr) => sdk.createReadonlyToken(addr)),
@@ -70,6 +68,6 @@ export function useConfidentialBalances(
   return useQuery<BatchBalancesResult>({
     ...baseOptions,
     ...options,
-    enabled: (baseOptions.enabled ?? true) && enabled,
+    enabled: Boolean(baseOptions.enabled) && enabled && owner !== undefined,
   });
 }

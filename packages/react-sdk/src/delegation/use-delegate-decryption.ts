@@ -28,7 +28,7 @@ export function useDelegateDecryption(
   const token = useToken(config);
 
   return useMutation<TransactionResult, Error, DelegateDecryptionParams>({
-    ...delegateDecryptionMutationOptions(token),
+    ...delegateDecryptionMutationOptions(token, config.tokenAddress),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       try {

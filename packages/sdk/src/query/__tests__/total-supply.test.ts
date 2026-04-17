@@ -40,8 +40,8 @@ function mockReadContract({
 }
 
 describe("totalSupplyQueryOptions", () => {
-  test("uses inferredTotalSupply for upgraded wrappers", async ({ sdk, signer }) => {
-    vi.mocked(signer.readContract).mockImplementation(
+  test("uses inferredTotalSupply for upgraded wrappers", async ({ sdk, provider }) => {
+    vi.mocked(provider.readContract).mockImplementation(
       mockReadContract({ supportsUpgraded: true, supportsLegacy: false, supply: 42n }),
     );
 
@@ -50,13 +50,13 @@ describe("totalSupplyQueryOptions", () => {
 
     expect(value).toBe(42n);
     expect(options.staleTime).toBe(30_000);
-    expect(signer.readContract).toHaveBeenLastCalledWith(
+    expect(provider.readContract).toHaveBeenLastCalledWith(
       expect.objectContaining({ functionName: "inferredTotalSupply", address: WRAPPER }),
     );
   });
 
   test("uses legacy totalSupply for legacy wrappers", async ({ sdk, signer }) => {
-    vi.mocked(signer.readContract).mockImplementation(
+    vi.mocked(provider.readContract).mockImplementation(
       mockReadContract({ supportsUpgraded: false, supportsLegacy: true, supply: 24n }),
     );
 
@@ -64,26 +64,26 @@ describe("totalSupplyQueryOptions", () => {
     const value = await options.queryFn(mockQueryContext(options.queryKey));
 
     expect(value).toBe(24n);
-    expect(signer.readContract).toHaveBeenLastCalledWith(
+    expect(provider.readContract).toHaveBeenLastCalledWith(
       expect.objectContaining({ functionName: "totalSupply", address: WRAPPER }),
     );
   });
 
   test("prefers upgraded interface when both interface IDs match", async ({ sdk, signer }) => {
-    vi.mocked(signer.readContract).mockImplementation(
+    vi.mocked(provider.readContract).mockImplementation(
       mockReadContract({ supportsUpgraded: true, supportsLegacy: true, supply: 99n }),
     );
 
     const options = totalSupplyQueryOptions(sdk, WRAPPER);
     await options.queryFn(mockQueryContext(options.queryKey));
 
-    expect(signer.readContract).toHaveBeenLastCalledWith(
+    expect(provider.readContract).toHaveBeenLastCalledWith(
       expect.objectContaining({ functionName: "inferredTotalSupply", address: WRAPPER }),
     );
   });
 
   test("throws ConfigurationError for unsupported wrappers", async ({ sdk, signer }) => {
-    vi.mocked(signer.readContract).mockImplementation(
+    vi.mocked(provider.readContract).mockImplementation(
       mockReadContract({ supportsUpgraded: false, supportsLegacy: false, supply: 0n }),
     );
 
@@ -101,7 +101,7 @@ describe("totalSupplyQueryOptions", () => {
     const revert = Object.assign(new Error("execution reverted"), {
       name: "ContractFunctionExecutionError",
     });
-    vi.mocked(signer.readContract).mockImplementation(async (config: ReadContractConfig) => {
+    vi.mocked(provider.readContract).mockImplementation(async (config: ReadContractConfig) => {
       if (config.functionName === "supportsInterface") {
         throw revert;
       }
@@ -116,7 +116,7 @@ describe("totalSupplyQueryOptions", () => {
   });
 
   test("propagates network errors from ERC-165 checks", async ({ sdk, signer }) => {
-    vi.mocked(signer.readContract).mockImplementation(async (config: ReadContractConfig) => {
+    vi.mocked(provider.readContract).mockImplementation(async (config: ReadContractConfig) => {
       if (config.functionName === "supportsInterface") {
         throw new Error("network error");
       }

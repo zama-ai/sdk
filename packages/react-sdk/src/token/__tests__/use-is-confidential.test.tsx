@@ -4,8 +4,8 @@ import { useIsConfidential, useIsWrapper } from "../use-is-confidential";
 import { TOKEN } from "../../__tests__/mutation-test-helpers";
 
 describe("useIsConfidential", () => {
-  test("default", async ({ renderWithProviders, signer }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(true);
+  test("default", async ({ renderWithProviders, signer, provider }) => {
+    vi.mocked(provider.readContract).mockResolvedValue(true);
 
     const { result } = renderWithProviders(() => useIsConfidential(TOKEN));
 
@@ -14,15 +14,15 @@ describe("useIsConfidential", () => {
     const { data, dataUpdatedAt } = result.current;
     expect(data).toBe(true);
     expect(dataUpdatedAt).toEqual(expect.any(Number));
-    expect(signer.readContract).toHaveBeenCalledWith(
+    expect(provider.readContract).toHaveBeenCalledWith(
       expect.objectContaining({ functionName: "supportsInterface", address: TOKEN }),
     );
   });
 });
 
 describe("useIsWrapper", () => {
-  test("default", async ({ renderWithProviders, signer }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(false);
+  test("default", async ({ renderWithProviders, signer, provider }) => {
+    vi.mocked(provider.readContract).mockResolvedValue(false);
 
     const { result } = renderWithProviders(() => useIsWrapper(TOKEN));
 
@@ -31,7 +31,7 @@ describe("useIsWrapper", () => {
     const { data, dataUpdatedAt } = result.current;
     expect(data).toBe(false);
     expect(dataUpdatedAt).toEqual(expect.any(Number));
-    expect(signer.readContract).toHaveBeenCalledWith(
+    expect(provider.readContract).toHaveBeenCalledWith(
       expect.objectContaining({ functionName: "supportsInterface", address: TOKEN }),
     );
   });

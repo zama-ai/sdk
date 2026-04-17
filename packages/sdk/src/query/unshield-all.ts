@@ -1,3 +1,4 @@
+import { SignerRequiredError } from "../errors/signer";
 import type { Token } from "../token/token";
 import type { TransactionResult, UnshieldCallbacks } from "../types";
 import type { MutationFactoryOptions } from "./factory-types";
@@ -7,14 +8,18 @@ import type { Address } from "viem";
 export interface UnshieldAllParams extends UnshieldCallbacks {}
 
 export function unshieldAllMutationOptions(
-  token: Token,
+  token: Token | undefined,
+  tokenAddress: Address,
 ): MutationFactoryOptions<
   readonly ["zama.unshieldAll", Address],
   UnshieldAllParams | void,
   TransactionResult
 > {
   return {
-    mutationKey: ["zama.unshieldAll", token.address] as const,
-    mutationFn: async (params) => token.unshieldAll(params || undefined),
+    mutationKey: ["zama.unshieldAll", tokenAddress] as const,
+    mutationFn: async (params) => {
+      if (!token) throw new SignerRequiredError("unshieldAll");
+      return token.unshieldAll(params || undefined);
+    },
   };
 }

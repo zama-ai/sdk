@@ -29,9 +29,10 @@ import { getEthereumProvider } from "@/lib/ethereum";
 //
 // This file wires together the three SDK primitives every integration needs:
 //
-//   const signer  = new ViemSigner({ walletClient, publicClient });
-//   const relayer = new RelayerWeb({ getChainId, transports: { [SepoliaConfig.chainId]: ... } });
-//   <ZamaProvider relayer={relayer} signer={signer}
+//   const provider = new ViemProvider({ publicClient });
+//   const signer   = new ViemSigner({ walletClient });
+//   const relayer  = new RelayerWeb({ getChainId, transports: { [SepoliaConfig.chainId]: ... } });
+//   <ZamaProvider relayer={relayer} provider={provider} signer={signer}
 //     storage={indexedDBStorage} sessionStorage={sessionDBStorage}>
 //
 // SepoliaConfig (from @zama-fhe/sdk) provides the contract addresses and chain parameters.
@@ -39,13 +40,15 @@ import { getEthereumProvider } from "@/lib/ethereum";
 // so that RELAYER_API_KEY stays server-side. The proxy defaults to the public Sepolia
 // testnet relayer when RELAYER_URL is not set — no API key required for testnet.
 //
-// ViemSigner is constructed with two clients:
-// - publicClient: for read operations (balances, metadata, receipts) — always available
-// - walletClient: for write operations (send tx, sign) — only when a wallet is installed
+// Read/write split:
+// - ViemProvider wraps publicClient for read operations (balances, metadata, receipts) —
+//   always available, even without a wallet.
+// - ViemSigner wraps walletClient for write operations (send tx, sign) — only meaningful
+//   when a wallet is installed.
 //
-// When no wallet is installed, ViemSigner is constructed with publicClient only (read-only).
-// useConfidentialBalance catches getAddress() rejections gracefully; all write operations
-// are gated behind address/isSepolia checks in page.tsx and are never called.
+// When no wallet is installed, ViemSigner is constructed with a wallet client that has
+// no account. useConfidentialBalance catches getAddress() rejections gracefully; all
+// write operations are gated behind address/isSepolia checks in page.tsx and are never called.
 //
 // Two extra layers handle wallet reactivity:
 //
@@ -165,8 +168,8 @@ export function Providers({ children }: { children: ReactNode }) {
   );
 
   // Recreated on wallet switch so the new ViemSigner is bound to the new account address.
-  // publicClient is always created (needed for reads even without a wallet) and is shared
-  // between the ViemProvider (for Zama-SDK public chain reads) and the ViemSigner.
+  // publicClient is always created (needed for reads even without a wallet) and backs the
+  // ViemProvider for Zama-SDK public chain reads.
   // walletClient is only created when window.ethereum is available.
   const { signer, provider } = useMemo(() => {
     const ethereum = getEthereumProvider();
@@ -185,7 +188,7 @@ export function Providers({ children }: { children: ReactNode }) {
         transport: http(SEPOLIA_RPC_URL),
       });
       return {
-        signer: new ViemSigner({ walletClient: readOnlyWalletClient, publicClient }),
+        signer: new ViemSigner({ walletClient: readOnlyWalletClient }),
         provider: zamaProvider,
       };
     }
@@ -205,7 +208,7 @@ export function Providers({ children }: { children: ReactNode }) {
       chain: sepolia,
       transport: custom(ethereum),
     });
-    return { signer: new ViemSigner({ walletClient, publicClient }), provider: zamaProvider };
+    return { signer: new ViemSigner({ walletClient }), provider: zamaProvider };
   }, [walletKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (

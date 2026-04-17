@@ -1,4 +1,5 @@
-import { createMockProvider, describe, expect, it, vi, type MockSigner } from "../../test-fixtures";
+import { describe, expect, it, vi, type MockSigner } from "../../test-fixtures";
+import type { GenericProvider } from "../../types";
 import { Topics } from "../../events";
 import { ReadonlyToken } from "../readonly-token";
 import { Token } from "../token";
@@ -23,6 +24,7 @@ const TOKEN_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
 function setupSdkWithEvents(opts: {
   relayer: RelayerSDK;
   signer: MockSigner;
+  provider: GenericProvider;
   storage: GenericStorage;
   sessionStorage: GenericStorage;
   tokenAddress: Address;
@@ -32,14 +34,14 @@ function setupSdkWithEvents(opts: {
   const onEvent: ZamaSDKEventListener = (event) => events.push(event);
   const sdk = new ZamaSDK({
     relayer: opts.relayer,
-    provider: createMockProvider(opts.signer),
+    provider: opts.provider,
     signer: opts.signer,
     storage: opts.storage,
     sessionStorage: opts.sessionStorage,
     onEvent,
   });
   const readonlyToken = new ReadonlyToken(sdk, opts.tokenAddress);
-  const token = new Token(sdk, opts.tokenAddress, opts.wrapper);
+  const token = new Token(sdk, opts.signer, opts.tokenAddress, opts.wrapper);
   return { sdk, events, readonlyToken, token };
 }
 
@@ -96,15 +98,17 @@ describe("ReadonlyToken.balanceOf event emissions", () => {
     handle,
     storage,
     sessionStorage,
+    provider,
   }) => {
     const { readonlyToken, events } = setupSdkWithEvents({
       relayer,
       signer,
+      provider,
       storage,
       sessionStorage,
       tokenAddress,
     });
-    vi.mocked(signer.readContract).mockResolvedValue(handle);
+    vi.mocked(provider.readContract).mockResolvedValue(handle);
 
     await readonlyToken.balanceOf();
 
@@ -122,15 +126,17 @@ describe("ReadonlyToken.balanceOf event emissions", () => {
     tokenAddress,
     storage,
     sessionStorage,
+    provider,
   }) => {
     const { readonlyToken, events } = setupSdkWithEvents({
       relayer,
       signer,
+      provider,
       storage,
       sessionStorage,
       tokenAddress,
     });
-    vi.mocked(signer.readContract).mockResolvedValue(ZERO_HANDLE);
+    vi.mocked(provider.readContract).mockResolvedValue(ZERO_HANDLE);
 
     await readonlyToken.balanceOf();
 
@@ -146,15 +152,17 @@ describe("ReadonlyToken.balanceOf event emissions", () => {
     handle,
     storage,
     sessionStorage,
+    provider,
   }) => {
     const { readonlyToken, events } = setupSdkWithEvents({
       relayer,
       signer,
+      provider,
       storage,
       sessionStorage,
       tokenAddress,
     });
-    vi.mocked(signer.readContract).mockResolvedValue(handle);
+    vi.mocked(provider.readContract).mockResolvedValue(handle);
 
     await readonlyToken.balanceOf();
 
@@ -172,16 +180,18 @@ describe("ReadonlyToken.balanceOf event emissions", () => {
     handle,
     storage,
     sessionStorage,
+    provider,
   }) => {
     relayer.userDecrypt = vi.fn().mockRejectedValue(new Error("decrypt boom"));
     const { readonlyToken, events } = setupSdkWithEvents({
       relayer,
       signer,
+      provider,
       storage,
       sessionStorage,
       tokenAddress,
     });
-    vi.mocked(signer.readContract).mockResolvedValue(handle);
+    vi.mocked(provider.readContract).mockResolvedValue(handle);
 
     await expect(readonlyToken.balanceOf()).rejects.toThrow();
 
@@ -199,16 +209,17 @@ describe("ReadonlyToken.balanceOf event emissions", () => {
     handle,
     storage,
     sessionStorage,
+    provider,
   }) => {
     const sdk = new ZamaSDK({
       relayer,
-      provider: createMockProvider(signer),
+      provider,
       signer,
       storage,
       sessionStorage,
     });
     const token = new ReadonlyToken(sdk, tokenAddress);
-    vi.mocked(signer.readContract).mockResolvedValue(handle);
+    vi.mocked(provider.readContract).mockResolvedValue(handle);
     await expect(token.balanceOf()).resolves.toBe(1000n);
   });
 });
@@ -225,16 +236,18 @@ describe("ReadonlyToken.decryptBalanceAs event emissions", () => {
     storage,
     sessionStorage,
     delegatorAddress,
+    provider,
   }) => {
     const { readonlyToken, events } = setupSdkWithEvents({
       relayer,
       signer,
+      provider,
       storage,
       sessionStorage,
       tokenAddress,
     });
     // readConfidentialBalanceOf → non-zero handle; getDelegationExpiry → permanent (skips block-timestamp RPC)
-    vi.mocked(signer.readContract)
+    vi.mocked(provider.readContract)
       .mockResolvedValueOnce(handle)
       .mockResolvedValue(2n ** 64n - 1n);
     relayer.createDelegatedUserDecryptEIP712 = vi.fn().mockResolvedValue({
@@ -274,10 +287,12 @@ describe("Token event emissions", () => {
       tokenAddress,
       storage,
       sessionStorage,
+      provider,
     }) => {
       const { token, events } = setupSdkWithEvents({
         relayer,
         signer,
+        provider,
         storage,
         sessionStorage,
         tokenAddress,
@@ -304,10 +319,12 @@ describe("Token event emissions", () => {
       tokenAddress,
       storage,
       sessionStorage,
+      provider,
     }) => {
       const { token, events } = setupSdkWithEvents({
         relayer,
         signer,
+        provider,
         storage,
         sessionStorage,
         tokenAddress,
@@ -329,10 +346,12 @@ describe("Token event emissions", () => {
       tokenAddress,
       storage,
       sessionStorage,
+      provider,
     }) => {
       const { token, events } = setupSdkWithEvents({
         relayer,
         signer,
+        provider,
         storage,
         sessionStorage,
         tokenAddress,
@@ -354,11 +373,13 @@ describe("Token event emissions", () => {
       tokenAddress,
       storage,
       sessionStorage,
+      provider,
     }) => {
       relayer.encrypt = vi.fn().mockRejectedValue(new Error("encrypt boom"));
       const { token, events } = setupSdkWithEvents({
         relayer,
         signer,
+        provider,
         storage,
         sessionStorage,
         tokenAddress,
@@ -383,11 +404,13 @@ describe("Token event emissions", () => {
       tokenAddress,
       storage,
       sessionStorage,
+      provider,
     }) => {
       vi.mocked(signer.writeContract).mockRejectedValue(new Error("tx reverted"));
       const { token, events } = setupSdkWithEvents({
         relayer,
         signer,
+        provider,
         storage,
         sessionStorage,
         tokenAddress,
@@ -417,10 +440,12 @@ describe("Token event emissions", () => {
       tokenAddress,
       storage,
       sessionStorage,
+      provider,
     }) => {
       const { token, events } = setupSdkWithEvents({
         relayer,
         signer,
+        provider,
         storage,
         sessionStorage,
         tokenAddress,
@@ -445,10 +470,12 @@ describe("Token event emissions", () => {
       tokenAddress,
       storage,
       sessionStorage,
+      provider,
     }) => {
       const { token, events } = setupSdkWithEvents({
         relayer,
         signer,
+        provider,
         storage,
         sessionStorage,
         tokenAddress,
@@ -465,10 +492,12 @@ describe("Token event emissions", () => {
       tokenAddress,
       storage,
       sessionStorage,
+      provider,
     }) => {
       const { token, events } = setupSdkWithEvents({
         relayer,
         signer,
+        provider,
         storage,
         sessionStorage,
         tokenAddress,
@@ -488,14 +517,16 @@ describe("Token event emissions", () => {
       tokenAddress,
       storage,
       sessionStorage,
+      provider,
     }) => {
-      vi.mocked(signer.readContract)
+      vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // underlying
         .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
         .mockResolvedValueOnce(2n ** 256n - 1n); // allowance
       const { token, events } = setupSdkWithEvents({
         relayer,
         signer,
+        provider,
         storage,
         sessionStorage,
         tokenAddress,
@@ -515,10 +546,12 @@ describe("Token event emissions", () => {
       tokenAddress,
       storage,
       sessionStorage,
+      provider,
     }) => {
       const { token, events } = setupSdkWithEvents({
         relayer,
         signer,
+        provider,
         storage,
         sessionStorage,
         tokenAddress,
@@ -539,10 +572,12 @@ describe("Token event emissions", () => {
       tokenAddress,
       storage,
       sessionStorage,
+      provider,
     }) => {
       const { token, events } = setupSdkWithEvents({
         relayer,
         signer,
+        provider,
         storage,
         sessionStorage,
         tokenAddress,
@@ -561,10 +596,12 @@ describe("Token event emissions", () => {
       tokenAddress,
       storage,
       sessionStorage,
+      provider,
     }) => {
       const { token, events } = setupSdkWithEvents({
         relayer,
         signer,
+        provider,
         storage,
         sessionStorage,
         tokenAddress,
@@ -583,13 +620,15 @@ describe("Token event emissions", () => {
       tokenAddress,
       storage,
       sessionStorage,
+      provider,
     }) => {
-      vi.mocked(signer.readContract).mockResolvedValue(
+      vi.mocked(provider.readContract).mockResolvedValue(
         "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c",
       );
       const { token, events } = setupSdkWithEvents({
         relayer,
         signer,
+        provider,
         storage,
         sessionStorage,
         tokenAddress,
@@ -602,8 +641,8 @@ describe("Token event emissions", () => {
   });
 
   describe("unshield event sequence", () => {
-    function mockReceiptWithUnwrapRequested(signer: GenericSigner, userAddress: Address) {
-      vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
+    function mockReceiptWithUnwrapRequested(provider: GenericProvider, userAddress: Address) {
+      vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
             topics: [
@@ -624,15 +663,17 @@ describe("Token event emissions", () => {
       userAddress,
       storage,
       sessionStorage,
+      provider,
     }) => {
       const { token, events } = setupSdkWithEvents({
         relayer,
         signer,
+        provider,
         storage,
         sessionStorage,
         tokenAddress,
       });
-      mockReceiptWithUnwrapRequested(signer, userAddress);
+      mockReceiptWithUnwrapRequested(provider, userAddress);
 
       await token.unshield(50n, { skipBalanceCheck: true });
 
@@ -659,15 +700,17 @@ describe("Token event emissions", () => {
       userAddress,
       storage,
       sessionStorage,
+      provider,
     }) => {
       const { token, events } = setupSdkWithEvents({
         relayer,
         signer,
+        provider,
         storage,
         sessionStorage,
         tokenAddress,
       });
-      mockReceiptWithUnwrapRequested(signer, userAddress);
+      mockReceiptWithUnwrapRequested(provider, userAddress);
 
       await token.unshield(50n, { skipBalanceCheck: true });
 
@@ -687,15 +730,17 @@ describe("Token event emissions", () => {
       userAddress,
       storage,
       sessionStorage,
+      provider,
     }) => {
       const { token, events } = setupSdkWithEvents({
         relayer,
         signer,
+        provider,
         storage,
         sessionStorage,
         tokenAddress,
       });
-      mockReceiptWithUnwrapRequested(signer, userAddress);
+      mockReceiptWithUnwrapRequested(provider, userAddress);
 
       await token.unshield(50n, { skipBalanceCheck: true });
 
@@ -721,14 +766,16 @@ describe("Token event emissions", () => {
       tokenAddress,
       storage,
       sessionStorage,
+      provider,
     }) => {
-      vi.mocked(signer.readContract)
+      vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c")
         .mockResolvedValueOnce(1000n);
       vi.mocked(signer.writeContract).mockRejectedValue(new Error("shield failed"));
       const { token, events } = setupSdkWithEvents({
         relayer,
         signer,
+        provider,
         storage,
         sessionStorage,
         tokenAddress,
@@ -747,11 +794,13 @@ describe("Token event emissions", () => {
       tokenAddress,
       storage,
       sessionStorage,
+      provider,
     }) => {
       vi.mocked(signer.writeContract).mockRejectedValue(new Error("approve failed"));
       const { token, events } = setupSdkWithEvents({
         relayer,
         signer,
+        provider,
         storage,
         sessionStorage,
         tokenAddress,
@@ -772,11 +821,13 @@ describe("Token event emissions", () => {
       tokenAddress,
       storage,
       sessionStorage,
+      provider,
     }) => {
       vi.mocked(signer.writeContract).mockRejectedValue(new Error("unwrap failed"));
       const { token, events } = setupSdkWithEvents({
         relayer,
         signer,
+        provider,
         storage,
         sessionStorage,
         tokenAddress,
@@ -795,11 +846,13 @@ describe("Token event emissions", () => {
       tokenAddress,
       storage,
       sessionStorage,
+      provider,
     }) => {
       vi.mocked(signer.writeContract).mockRejectedValue(new Error("finalize tx failed"));
       const { token, events } = setupSdkWithEvents({
         relayer,
         signer,
+        provider,
         storage,
         sessionStorage,
         tokenAddress,

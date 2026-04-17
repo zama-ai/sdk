@@ -282,7 +282,7 @@ export default function Home() {
   const { data: erc20Balance } = useQuery({
     queryKey: erc20BalanceKey,
     queryFn: async () =>
-      sdk.signer.readContract(
+      sdk.provider.readContract(
         balanceOfContract(token!.tokenAddress, address as Address),
       ) as Promise<bigint>,
     enabled: !!address && isHoodi && !!token,
@@ -318,7 +318,7 @@ export default function Home() {
         functionName: "mint",
         args: [address as Address, parseUnits("10", erc20Decimals)],
       });
-      await sdk.signer.waitForTransactionReceipt(txHash);
+      await sdk.provider.waitForTransactionReceipt(txHash);
       return txHash;
     },
     onSuccess: refreshBalances,

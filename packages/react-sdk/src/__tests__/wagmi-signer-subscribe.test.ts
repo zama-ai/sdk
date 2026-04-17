@@ -26,11 +26,11 @@ vi.mock(import("wagmi/actions"), () => ({
   }),
 }));
 
-import { WagmiSigner } from "../wagmi/wagmi-signer";
-import { WagmiProvider } from "../wagmi/wagmi-provider";
+import { ZamaWagmiSigner } from "../wagmi/wagmi-signer";
+import { ZamaWagmiProvider } from "../wagmi/wagmi-provider";
 
 interface WagmiFixtures {
-  wagmiSigner: WagmiSigner;
+  wagmiSigner: ZamaWagmiSigner;
 }
 
 const wit = base.extend<WagmiFixtures>({
@@ -38,11 +38,11 @@ const wit = base.extend<WagmiFixtures>({
   wagmiSigner: async ({}, use) => {
     capturedOnChange = undefined;
     mockUnsubscribe.mockClear();
-    await use(new WagmiSigner({ config: {} as unknown as Config }));
+    await use(new ZamaWagmiSigner({ config: {} as unknown as Config }));
   },
 });
 
-describe("WagmiSigner.subscribe", () => {
+describe("ZamaWagmiSigner.subscribe", () => {
   wit("calls watchConnection and returns unsubscribe function", ({ wagmiSigner }) => {
     const onDisconnect = vi.fn();
     const unsubscribe = wagmiSigner.subscribe({ onDisconnect });
@@ -107,9 +107,9 @@ describe("WagmiSigner.subscribe", () => {
   });
 });
 
-describe("WagmiProvider.getBlockTimestamp", () => {
+describe("ZamaWagmiProvider.getBlockTimestamp", () => {
   wit("returns block timestamp from getBlock", async () => {
-    const wagmiProvider = new WagmiProvider({ config: {} as unknown as Config });
+    const wagmiProvider = new ZamaWagmiProvider({ config: {} as unknown as Config });
     const timestamp = await wagmiProvider.getBlockTimestamp();
     expect(timestamp).toBe(1700000000n);
   });

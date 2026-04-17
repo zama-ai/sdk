@@ -2,10 +2,11 @@
 
 import type { UseQueryOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
-import { confidentialBalanceQueryOptions, signerAddressQueryOptions } from "@zama-fhe/sdk/query";
+import { confidentialBalanceQueryOptions } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 import { useReadonlyToken } from "../token/use-readonly-token";
 import { useQuery } from "../utils/query";
+import { useSignerAddress } from "../use-signer-address";
 
 /** Configuration for {@link useConfidentialBalance}. */
 export interface UseConfidentialBalanceConfig {
@@ -47,10 +48,7 @@ export function useConfidentialBalance(
   const { enabled = true } = options ?? {};
   const sdk = useZamaSDK();
   const token = useReadonlyToken(tokenAddress);
-
-  const addressQuery = useQuery<Address>(signerAddressQueryOptions(sdk));
-
-  const owner = addressQuery.data;
+  const owner = useSignerAddress();
 
   const baseOptions = confidentialBalanceQueryOptions(token, {
     tokenAddress,
@@ -60,6 +58,6 @@ export function useConfidentialBalance(
   return useQuery<bigint>({
     ...baseOptions,
     ...options,
-    enabled: baseOptions.enabled && enabled,
+    enabled: Boolean(baseOptions.enabled) && enabled && owner !== undefined,
   });
 }

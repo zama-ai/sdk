@@ -12,29 +12,29 @@ import { TransactionRevertedError } from "@zama-fhe/sdk";
 import type { Config } from "wagmi";
 import { getBlock, getChainId, readContract, waitForTransactionReceipt } from "wagmi/actions";
 
-/** Configuration for {@link WagmiProvider}. */
-export interface WagmiProviderConfig {
-  /** Wagmi `Config` — same instance passed to `WagmiSigner`. */
+/** Configuration for {@link ZamaWagmiProvider}. */
+export interface ZamaWagmiProviderConfig {
+  /** Wagmi `Config` — same instance passed to {@link ZamaWagmiSigner}. */
   config: Config;
 }
 
 /**
  * Read-only {@link GenericProvider} backed by wagmi.
  *
- * Uses the same `Config` as {@link WagmiSigner}, sharing the transport the
- * application has already configured. Pair with a {@link WagmiSigner} when
+ * Uses the same `Config` as {@link ZamaWagmiSigner}, sharing the transport the
+ * application has already configured. Pair with a {@link ZamaWagmiSigner} when
  * wallet authority is required.
  *
  * @example
  * ```ts
- * const provider = new WagmiProvider({ config: wagmiConfig });
- * const signer   = new WagmiSigner({ config: wagmiConfig });
+ * const provider = new ZamaWagmiProvider({ config: wagmiConfig });
+ * const signer   = new ZamaWagmiSigner({ config: wagmiConfig });
  * ```
  */
-export class WagmiProvider implements GenericProvider {
+export class ZamaWagmiProvider implements GenericProvider {
   private readonly config: Config;
 
-  constructor(providerConfig: WagmiProviderConfig) {
+  constructor(providerConfig: ZamaWagmiProviderConfig) {
     this.config = providerConfig.config;
   }
 
@@ -52,6 +52,14 @@ export class WagmiProvider implements GenericProvider {
     return readContract(this.config, config);
   }
 
+  /**
+   * Wait for a transaction receipt.
+   *
+   * @param hash - The transaction hash to wait for.
+   * @returns The transaction receipt.
+   * @throws {@link TransactionRevertedError} if the transaction hash cannot be found (e.g.
+   *   an ERC-4337 bundler returned a `UserOperation` hash instead of a transaction hash).
+   */
   async waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt> {
     try {
       return await waitForTransactionReceipt(this.config, { hash });

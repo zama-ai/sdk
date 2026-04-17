@@ -28,8 +28,9 @@ describe("useUnshield", () => {
     renderWithProviders,
     signer,
     relayer,
+    provider,
   }) => {
-    vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
+    vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
       logs: [createUnwrapRequestedLog(BURN_AMOUNT_HANDLE)],
     });
     mockPublicDecrypt(relayer);
@@ -59,8 +60,9 @@ describe("useUnshield", () => {
     renderWithProviders,
     signer,
     relayer,
+    provider,
   }) => {
-    vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
+    vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
       logs: [createUnwrapRequestedLog(BURN_AMOUNT_HANDLE)],
     });
     mockPublicDecrypt(relayer);

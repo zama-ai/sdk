@@ -268,9 +268,13 @@ export interface ListPairsQueryConfig {
 /**
  * Query options for paginated listing of token wrapper pairs.
  *
- * Accepts a {@link WrappersRegistry} instance rather than a raw signer so that the
- * class-level TTL cache is shared across multiple `queryFn` executions. Pass
- * `sdk.registry` (the ZamaSDK lazy singleton) to ensure a single shared cache.
+ * Accepts a {@link WrappersRegistry} instance rather than a raw provider so that the
+ * class-level TTL cache is shared across multiple `queryFn` executions.
+ *
+ * **Callers must pass `sdk.registry`** (the `ZamaSDK` lazy singleton) rather than
+ * constructing a new `WrappersRegistry` themselves. A new instance has an empty
+ * TTL cache and bypasses deduplication; the singleton is pre-configured with any
+ * `registryAddresses` overrides set at SDK construction time.
  */
 export function listPairsQueryOptions(
   registry: WrappersRegistry,
