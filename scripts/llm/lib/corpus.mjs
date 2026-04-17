@@ -1,5 +1,5 @@
 import { readFileSync, existsSync } from "node:fs";
-import { basename, dirname, join, relative } from "node:path";
+import { basename, dirname, join, posix, relative } from "node:path";
 
 export const repoRoot = process.cwd();
 export const corpusConfigPath = "docs/llm/corpus.config.json";
@@ -109,6 +109,10 @@ function isUnsafeRelativePath(path) {
 
 function readUtf8(path) {
   return readFileSync(path, "utf8");
+}
+
+export function rawGithubUrl(sourcePath) {
+  return `${rawGithubBaseUrl}/${sourcePath}`;
 }
 
 function stripFrontmatter(content) {
@@ -256,6 +260,7 @@ export function buildCorpusManifest() {
       id: `doc:${entry.logicalPath}`,
       title: extractTitle(content, entry.title),
       source_path: entry.sourcePath,
+      source_url: rawGithubUrl(entry.sourcePath),
       source_type: "official-doc",
       category: categoryFromLogicalPath(entry.logicalPath),
       logical_path: entry.logicalPath,
@@ -273,6 +278,7 @@ export function buildCorpusManifest() {
         id: `example:${entry.logicalPath}`,
         title: `${exampleName} ${entry.fileName.replace(/\.md$/, "")}`,
         source_path: entry.sourcePath,
+        source_url: rawGithubUrl(entry.sourcePath),
         source_type: "official-example",
         category: "examples",
         logical_path: entry.logicalPath,
@@ -292,6 +298,7 @@ export function buildCorpusManifest() {
         packageReadmeTitles.get(sourcePath) ??
         extractTitle(content, titleFromFileName(sourcePath.split("/").pop())),
       source_path: sourcePath,
+      source_url: rawGithubUrl(sourcePath),
       source_type: "package-readme",
       category: "package-readmes",
       logical_path: sourcePath.replace(/\.md$/, ""),
@@ -309,6 +316,7 @@ export function buildCorpusManifest() {
         id: `api:${sourcePath.replace(/[/.]/g, "_")}`,
         title: extractTitle(content, titleFromFileName(sourcePath.split("/").pop())),
         source_path: sourcePath,
+        source_url: rawGithubUrl(sourcePath),
         source_type: "api-report",
         category: "api-reports",
         logical_path: sourcePath.replace(/\.md$/, ""),
@@ -379,11 +387,42 @@ export function renderTabs(content) {
   });
 }
 
-export function normalizeLinks(content) {
-  return content.replace(/\]\(\/([^)]+)\)/g, (_match, path) => {
-    const [pathPart, ...rest] = path.split("#");
-    const anchor = rest.length > 0 ? `#${rest.join("#")}` : "";
-    return `](docs/gitbook/src/${pathPart.replace(/\.md$/, "")}.md${anchor})`;
+function normalizeMarkdownLinkTarget(target, currentSourcePath) {
+  if (!target || target.startsWith("#") || /^(?:https?:|mailto:|tel:)/u.test(target)) {
+    return target;
+  }
+
+  const [pathPart, ...rest] = target.split("#");
+  const anchor = rest.length > 0 ? `#${rest.join("#")}` : "";
+  const hasNonMarkdownExtension = /\.[a-z0-9]+$/iu.test(pathPart) && !pathPart.endsWith(".md");
+  if (hasNonMarkdownExtension) {
+    return target;
+  }
+  if (!pathPart.endsWith(".md") && !pathPart.startsWith("/")) {
+    return target;
+  }
+
+  let sourcePath;
+  if (pathPart.startsWith("/")) {
+    const withoutSlash = pathPart.slice(1);
+    sourcePath = `${corpusConfig.docs.root}/${withoutSlash.replace(/\.md$/u, "")}.md`;
+  } else if (
+    pathPart.startsWith(corpusConfig.docs.root) ||
+    pathPart.startsWith("examples/") ||
+    pathPart.startsWith("packages/") ||
+    pathPart === "README.md"
+  ) {
+    sourcePath = pathPart;
+  } else {
+    sourcePath = posix.normalize(posix.join(posix.dirname(currentSourcePath), pathPart));
+  }
+
+  return `${rawGithubUrl(sourcePath)}${anchor}`;
+}
+
+export function normalizeLinks(content, currentSourcePath) {
+  return content.replace(/\]\(([^)]+)\)/g, (match, target) => {
+    return `](${normalizeMarkdownLinkTarget(target, currentSourcePath)})`;
   });
 }
 
@@ -393,7 +432,7 @@ export function normalizeGitbookMarkdown(sourcePath, content) {
   result = resolveIncludes(result, sourcePath);
   result = renderHints(result);
   result = renderTabs(result);
-  result = normalizeLinks(result);
+  result = normalizeLinks(result, sourcePath);
   return result.trim();
 }
 

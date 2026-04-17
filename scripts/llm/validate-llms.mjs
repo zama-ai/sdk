@@ -4,7 +4,7 @@ import {
   approvedExamples,
   buildCorpusManifest,
   forbiddenPaths,
-  rawGithubBaseUrl,
+  rawGithubUrl,
   repoRoot,
 } from "./lib/corpus.mjs";
 
@@ -15,7 +15,7 @@ const llmsFull = readFileSync(join(repoRoot, "llms-full.txt"), "utf8");
 const missing = [];
 
 for (const entry of manifest.entries.filter((item) => item.include_in_llms_txt)) {
-  if (!llms.includes(`${rawGithubBaseUrl}/${entry.source_path}`)) {
+  if (!llms.includes(entry.source_url ?? rawGithubUrl(entry.source_path))) {
     missing.push(`llms.txt missing raw URL: ${entry.source_path}`);
   }
 }
@@ -24,10 +24,13 @@ for (const entry of manifest.entries.filter((item) => item.include_in_llms_full)
   if (!llmsFull.includes(`source_path: ${entry.source_path}`)) {
     missing.push(`llms-full.txt missing source path: ${entry.source_path}`);
   }
+  if (!llmsFull.includes(`source_url: ${entry.source_url ?? rawGithubUrl(entry.source_path)}`)) {
+    missing.push(`llms-full.txt missing source URL: ${entry.source_path}`);
+  }
 }
 
 for (const entry of manifest.entries.filter((item) => !item.include_in_llms_txt)) {
-  if (llms.includes(`${rawGithubBaseUrl}/${entry.source_path}`)) {
+  if (llms.includes(entry.source_url ?? rawGithubUrl(entry.source_path))) {
     missing.push(`llms.txt contains excluded entry: ${entry.source_path}`);
   }
 }

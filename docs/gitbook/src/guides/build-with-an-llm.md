@@ -25,19 +25,42 @@ Use the smallest tool that gives the agent enough context:
 
 For Claude Code, install the external skill first, then use `llms.txt`, `llms-full.txt`, or the approved example docs as supporting context when the task needs SDK-specific detail.
 
+## Consumption modes
+
+You do not need to clone the SDK repository to use the LLM artifacts.
+
+### Without cloning the SDK repository
+
+Use this mode when integrating the SDK into an external app:
+
+1. Give the agent [`llms.txt`](https://raw.githubusercontent.com/zama-ai/sdk/main/llms.txt) for discovery, or [`llms-full.txt`](https://raw.githubusercontent.com/zama-ai/sdk/main/llms-full.txt) for full-context grounding.
+2. When using `llms.txt`, follow the raw GitHub links to fetch the smallest relevant source.
+3. Treat `source_path` values such as `docs/gitbook/src/...` as provenance metadata, not as local paths you need to have.
+
+### With a cloned SDK repository
+
+Use this mode when contributing to the SDK, debugging SDK internals, or inspecting examples locally:
+
+1. Read `docs/gitbook/src/...`, `examples/...`, and package READMEs directly from the local checkout.
+2. Run `pnpm llm:build` and `pnpm llm:validate` only when updating or validating the generated LLM artifacts.
+
 ## Source of truth
 
 Agent-facing guidance follows this source order:
 
-1. Official docs in `docs/gitbook/src`
+1. Official documentation, published through GitBook and sourced from `docs/gitbook/src` in the SDK repository
 2. Approved official examples
 3. API reports as fallback reference material
 
 When the docs already answer the question, prefer the docs over examples. When examples are needed, prefer the approved examples in this repo over ad hoc implementations.
 
-## Build the LLM artifacts
+`docs/gitbook/src/...` and `examples/...` are repository-relative source paths. If you have not cloned the SDK repository, use the raw GitHub URLs from `llms.txt` or the embedded content in `llms-full.txt`.
 
-From the repository root:
+## Maintain the LLM artifacts
+
+These commands are for SDK maintainers and contributors. External integrators do not need to run them.
+
+From a cloned SDK repository root:
 
 ```bash
 pnpm llm:build
@@ -72,7 +95,7 @@ Only use it with agents that support large context windows. For normal coding ta
 
 It includes:
 
-- official docs from `docs/gitbook/src`
+- official docs sourced from `docs/gitbook/src`
 - approved official examples
 - root and package README context
 
@@ -95,20 +118,20 @@ The marketplace install requires Claude Code to be able to access the `zama-ai/s
 
 ## Use the approved example docs directly
 
-When `llms.txt` points you to an example, read the example docs directly in the repository:
+When `llms.txt` points you to an example, read the linked raw GitHub example docs. If you have cloned the SDK repository, you can also read the same files locally:
 
-- `examples/example-hoodi/README.md`
-- `examples/example-hoodi/WALKTHROUGH.md`
-- `examples/node-ethers/README.md`
-- `examples/node-ethers/WALKTHROUGH.md`
-- `examples/node-viem/README.md`
-- `examples/node-viem/WALKTHROUGH.md`
-- `examples/react-ethers/README.md`
-- `examples/react-ethers/WALKTHROUGH.md`
-- `examples/react-viem/README.md`
-- `examples/react-viem/WALKTHROUGH.md`
-- `examples/react-wagmi/README.md`
-- `examples/react-wagmi/WALKTHROUGH.md`
+- [`examples/example-hoodi/README.md`](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/example-hoodi/README.md)
+- [`examples/example-hoodi/WALKTHROUGH.md`](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/example-hoodi/WALKTHROUGH.md)
+- [`examples/node-ethers/README.md`](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/node-ethers/README.md)
+- [`examples/node-ethers/WALKTHROUGH.md`](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/node-ethers/WALKTHROUGH.md)
+- [`examples/node-viem/README.md`](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/node-viem/README.md)
+- [`examples/node-viem/WALKTHROUGH.md`](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/node-viem/WALKTHROUGH.md)
+- [`examples/react-ethers/README.md`](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/react-ethers/README.md)
+- [`examples/react-ethers/WALKTHROUGH.md`](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/react-ethers/WALKTHROUGH.md)
+- [`examples/react-viem/README.md`](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/react-viem/README.md)
+- [`examples/react-viem/WALKTHROUGH.md`](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/react-viem/WALKTHROUGH.md)
+- [`examples/react-wagmi/README.md`](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/react-wagmi/README.md)
+- [`examples/react-wagmi/WALKTHROUGH.md`](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/react-wagmi/WALKTHROUGH.md)
 
 Read the example docs before dropping into example source files.
 
@@ -117,14 +140,14 @@ Read the example docs before dropping into example source files.
 ### For new integrations
 
 1. Start with `llms.txt`
-2. Read the closest approved example
+2. Read the closest approved example through its raw GitHub link
 3. Use the `zama-protocol` Claude Code skill if you are working in Claude Code
-4. Read the matching official guide or reference page directly in the repo when you need more detail
+4. Read the matching official guide or reference page through its raw GitHub link when you need more detail
 
 ### For deeper grounding
 
 1. Give the agent `llms-full.txt`
-2. Read the matching official guide or example docs directly in the repo
+2. Read the matching official guide or example docs through their raw GitHub links if more detail is needed
 3. Fall back to API reports only when the docs and examples do not answer an exported-surface question
 
 ### For debugging

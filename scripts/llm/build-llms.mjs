@@ -6,7 +6,7 @@ import {
   buildCorpusManifest,
   loadGitbookSource,
   normalizeGitbookMarkdown,
-  rawGithubBaseUrl,
+  rawGithubUrl,
   repoRoot,
 } from "./lib/corpus.mjs";
 
@@ -22,7 +22,9 @@ function loadManifest() {
 function formatIndexSection(title, entries) {
   const lines = [`## ${title}`, ""];
   for (const entry of entries) {
-    lines.push(`- [${entry.title}](${rawGithubUrl(entry.source_path)}): ${entry.description}`);
+    lines.push(
+      `- [${entry.title}](${entry.source_url ?? rawGithubUrl(entry.source_path)}): ${entry.description}`,
+    );
   }
   lines.push("");
   return lines.join("\n");
@@ -46,15 +48,13 @@ function formatGroupedDocsSection(entries) {
     }
     lines.push(`### ${section.title}`, "");
     for (const entry of group) {
-      lines.push(`- [${entry.title}](${rawGithubUrl(entry.source_path)}): ${entry.description}`);
+      lines.push(
+        `- [${entry.title}](${entry.source_url ?? rawGithubUrl(entry.source_path)}): ${entry.description}`,
+      );
     }
     lines.push("");
   }
   return lines.join("\n");
-}
-
-export function rawGithubUrl(sourcePath) {
-  return `${rawGithubBaseUrl}/${sourcePath}`;
 }
 
 export function buildLlmsTxt(manifest) {
@@ -72,6 +72,8 @@ export function buildLlmsTxt(manifest) {
     "# Zama SDK",
     "",
     "Zama SDK is a TypeScript and React SDK for confidential token flows and confidential smart contract interactions on EVM-compatible chains.",
+    "",
+    "This file is usable without cloning the SDK repository. Links point to raw GitHub Markdown sources.",
     "",
     "Source of truth: official documentation, approved official examples, and package READMEs. API reports are fallback reference material and are intentionally excluded from this index.",
     "",
@@ -91,6 +93,7 @@ export function buildEntryBlock(entry, content) {
     "",
     `- source_type: ${entry.source_type}`,
     `- source_path: ${entry.source_path}`,
+    `- source_url: ${entry.source_url ?? rawGithubUrl(entry.source_path)}`,
     `- logical_path: ${entry.logical_path}`,
     "",
     content.trim(),
@@ -116,9 +119,11 @@ export function buildLlmsFull(manifest) {
     "",
     "Use `llms.txt` for discovery when you do not need the full corpus.",
     "",
+    "This file is usable without cloning the SDK repository. `source_path` entries are repository-relative provenance paths; `source_url` entries are fetchable raw GitHub sources.",
+    "",
     "Source of truth:",
     "",
-    "1. Official documentation in `docs/gitbook/src`",
+    "1. Official documentation published through GitBook and sourced from `docs/gitbook/src`",
     "2. Approved official examples",
     "3. Package READMEs for onboarding context",
     "",

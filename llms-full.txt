@@ -4,9 +4,11 @@ Zama SDK is a TypeScript and React SDK for confidential token flows and confiden
 
 Use `llms.txt` for discovery when you do not need the full corpus.
 
+This file is usable without cloning the SDK repository. `source_path` entries are repository-relative provenance paths; `source_url` entries are fetchable raw GitHub sources.
+
 Source of truth:
 
-1. Official documentation in `docs/gitbook/src`
+1. Official documentation published through GitBook and sourced from `docs/gitbook/src`
 2. Approved official examples
 3. Package READMEs for onboarding context
 
@@ -18,6 +20,7 @@ API reports are intentionally excluded from this file. They remain available in 
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/README.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/README.md
 - logical_path: README
 
 # Overview
@@ -32,15 +35,15 @@ If you're new to the Zama Protocol, start with the [Litepaper](https://docs.zama
 
 Otherwise:
 
-🟨 Go to [**Quick start**](tutorials/quick-start.md) to get from zero to a working confidential transfer in under 5 minutes.
+🟨 Go to [**Quick start**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/quick-start.md) to get from zero to a working confidential transfer in under 5 minutes.
 
-🟨 Go to [**Build your first confidential dApp**](tutorials/first-confidential-dapp.md) for an end-to-end React tutorial.
+🟨 Go to [**Build your first confidential dApp**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/first-confidential-dapp.md) for an end-to-end React tutorial.
 
-🟨 Go to [**Guides**](guides/README.md) for step-by-step instructions on shielding, transfers, balances, and more.
+🟨 Go to [**Guides**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/README.md) for step-by-step instructions on shielding, transfers, balances, and more.
 
-🟨 Go to [**SDK reference**](reference/sdk/README.md) for the full core SDK API.
+🟨 Go to [**SDK reference**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/README.md) for the full core SDK API.
 
-🟨 Go to [**React reference**](reference/react/README.md) for all React hooks and components.
+🟨 Go to [**React reference**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/README.md) for all React hooks and components.
 
 ## Features
 
@@ -60,8 +63,8 @@ TanStack Query-based hooks with two-phase polling, automatic cache invalidation,
 
 | Package                                                | Use when...                                                                   |
 | ------------------------------------------------------ | ----------------------------------------------------------------------------- |
-| [`@zama-fhe/sdk`](docs/gitbook/src/reference/sdk/ZamaSDK.md)              | You are building with vanilla TypeScript, Node.js, or any non-React framework |
-| [`@zama-fhe/react-sdk`](docs/gitbook/src/reference/react/ZamaProvider.md) | You are building a React app (includes everything from the core SDK)          |
+| [`@zama-fhe/sdk`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md)              | You are building with vanilla TypeScript, Node.js, or any non-React framework |
+| [`@zama-fhe/react-sdk`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/ZamaProvider.md) | You are building a React app (includes everything from the core SDK)          |
 
 If you are using React, `@zama-fhe/react-sdk` re-exports most of the core SDK (hooks, providers, `RelayerWeb`, storage singletons). You still import signer adapters from their sub-paths (e.g. `@zama-fhe/sdk/viem`, `@zama-fhe/sdk/ethers`).
 
@@ -131,7 +134,7 @@ await token.confidentialTransfer("0xRecipient", 500n); // private send
 await token.unshield(500n); // withdraw back to public
 ```
 
-Ready to build? Jump to the [Quick start](docs/gitbook/src/tutorials/quick-start.md) for a full working example with your stack.
+Ready to build? Jump to the [Quick start](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/quick-start.md) for a full working example with your stack.
 
 ## Help center
 
@@ -144,6 +147,7 @@ Ask technical questions and discuss with the community.
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/tutorials/README.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/README.md
 - logical_path: tutorials/README
 
 # Overview
@@ -158,9 +162,9 @@ If you're new to the Zama Protocol, start with the [Litepaper](https://docs.zama
 
 Otherwise:
 
-🟨 Go to [**Quick start**](quick-start.md) to get from zero to a working confidential transfer in under 5 minutes.
+🟨 Go to [**Quick start**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/quick-start.md) to get from zero to a working confidential transfer in under 5 minutes.
 
-🟨 Go to [**Build your first confidential dApp**](first-confidential-dapp.md) for an end-to-end React tutorial with wagmi.
+🟨 Go to [**Build your first confidential dApp**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/first-confidential-dapp.md) for an end-to-end React tutorial with wagmi.
 
 ## Help center
 
@@ -173,6 +177,7 @@ Ask technical questions and discuss with the community.
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/tutorials/quick-start.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/quick-start.md
 - logical_path: tutorials/quick-start
 
 # Quick start
@@ -195,7 +200,7 @@ relayerUrl: "https://your-app.com/api/relayer/11155111"
 auth: { __type: "ApiKeyHeader", value: "your-api-key" }
 ```
 
-See [Authentication](docs/gitbook/src/guides/authentication.md) for a backend proxy example.
+See [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/authentication.md) for a backend proxy example.
 
 ## Install
 
@@ -402,7 +407,7 @@ const sdk = new ZamaSDK({
 
 
 > [!INFO]
-> **FHE artifact caching** — Both `RelayerWeb` and `RelayerNode` automatically cache the multi-MB FHE public key and parameters so they are not re-downloaded on every startup. `RelayerWeb` uses IndexedDB (persists across reloads), `RelayerNode` uses in-memory storage (lost on restart). The cache revalidates against the CDN every 24 hours. Configure via `fheArtifactStorage` and `fheArtifactCacheTTL`. See [FheArtifactCache](docs/gitbook/src/reference/sdk/FheArtifactCache.md) for details.
+> **FHE artifact caching** — Both `RelayerWeb` and `RelayerNode` automatically cache the multi-MB FHE public key and parameters so they are not re-downloaded on every startup. `RelayerWeb` uses IndexedDB (persists across reloads), `RelayerNode` uses in-memory storage (lost on restart). The cache revalidates against the CDN every 24 hours. Configure via `fheArtifactStorage` and `fheArtifactCacheTTL`. See [FheArtifactCache](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/FheArtifactCache.md) for details.
 
 
 ## Your first confidential transfer
@@ -576,16 +581,17 @@ The hooks and SDK methods handle FHE encryption, wallet signing, ERC-20 approval
 
 ## Next steps
 
-- [Configuration](docs/gitbook/src/guides/configuration.md) -- relayer, signer, storage, and authentication setup
-- [Shield Tokens](docs/gitbook/src/guides/shield-tokens.md) -- move tokens into confidential form
-- [Network Presets](docs/gitbook/src/reference/sdk/network-presets.md) -- pre-configured contract addresses for Sepolia, Mainnet, and Hardhat
-- [React Hooks](docs/gitbook/src/reference/react/ZamaProvider.md) -- provider setup and all available hooks
-- [Security Model](docs/gitbook/src/concepts/security-model.md) -- understand the cryptography and trust assumptions
+- [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) -- relayer, signer, storage, and authentication setup
+- [Shield Tokens](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/shield-tokens.md) -- move tokens into confidential form
+- [Network Presets](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/network-presets.md) -- pre-configured contract addresses for Sepolia, Mainnet, and Hardhat
+- [React Hooks](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/ZamaProvider.md) -- provider setup and all available hooks
+- [Security Model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/security-model.md) -- understand the cryptography and trust assumptions
 
 ## Build your first confidential dApp
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/tutorials/first-confidential-dapp.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/first-confidential-dapp.md
 - logical_path: tutorials/first-confidential-dapp
 
 # Build your first confidential dApp
@@ -665,7 +671,7 @@ export const WRAPPER_ADDRESS = "0xYourWrapperAddress" as const;
 ```
 
 
-Replace `YOUR_KEY` with your Infura (or Alchemy) project ID, and update the relayer URL to point at your backend proxy. See the [Authentication guide](docs/gitbook/src/guides/authentication.md) for proxy setup details.
+Replace `YOUR_KEY` with your Infura (or Alchemy) project ID, and update the relayer URL to point at your backend proxy. See the [Authentication guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/authentication.md) for proxy setup details.
 
 ## 4. Create the App layout with providers
 
@@ -871,11 +877,11 @@ export function UnshieldForm() {
 ```
 
 
-See [Hooks > useUnshield](docs/gitbook/src/reference/react/useUnshield.md) for the full callback reference.
+See [Hooks > useUnshield](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnshield.md) for the full callback reference.
 
 ## 9. Add error handling
 
-Create `src/ErrorMessage.tsx`. The `matchZamaError` utility maps SDK error codes to user-friendly messages without long `instanceof` chains. See [Error Handling](docs/gitbook/src/guides/handle-errors.md) for the full list of error codes.
+Create `src/ErrorMessage.tsx`. The `matchZamaError` utility maps SDK error codes to user-friendly messages without long `instanceof` chains. See [Error Handling](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/handle-errors.md) for the full list of error codes.
 
 
 ### Tab: src/ErrorMessage.tsx
@@ -951,15 +957,16 @@ Open the app in your browser, connect your wallet, and try the full flow: shield
 
 ## Next steps
 
-- [Configuration](docs/gitbook/src/guides/configuration.md) -- customize authentication, storage backends, and network presets
-- [Error Handling](docs/gitbook/src/guides/handle-errors.md) -- handle every SDK error type
-- [React Hooks](docs/gitbook/src/reference/react/query-keys.md) -- explore all available hooks
-- [Core SDK](docs/gitbook/src/reference/sdk/ZamaSDK.md) -- use the imperative API for non-React apps
+- [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) -- customize authentication, storage backends, and network presets
+- [Error Handling](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/handle-errors.md) -- handle every SDK error type
+- [React Hooks](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/query-keys.md) -- explore all available hooks
+- [Core SDK](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md) -- use the imperative API for non-React apps
 
 ## Overview
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/guides/README.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/README.md
 - logical_path: guides/README
 
 # Overview
@@ -974,23 +981,23 @@ If you're new to the Zama Protocol, start with the [Litepaper](https://docs.zama
 
 Otherwise:
 
-🟨 Go to [**Configuration**](configuration.md) to set up the relayer, signer, and storage.
+🟨 Go to [**Configuration**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) to set up the relayer, signer, and storage.
 
-🟨 Go to [**Authentication**](authentication.md) to learn about API key management and backend proxies.
+🟨 Go to [**Authentication**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/authentication.md) to learn about API key management and backend proxies.
 
-🟨 Go to [**Shield tokens**](shield-tokens.md) to convert public ERC-20 tokens into confidential form.
+🟨 Go to [**Shield tokens**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/shield-tokens.md) to convert public ERC-20 tokens into confidential form.
 
-🟨 Go to [**Transfer privately**](transfer-privately.md) to send encrypted amounts on-chain.
+🟨 Go to [**Transfer privately**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/transfer-privately.md) to send encrypted amounts on-chain.
 
-🟨 Go to [**Unshield tokens**](unshield-tokens.md) to withdraw confidential tokens back to public ERC-20.
+🟨 Go to [**Unshield tokens**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/unshield-tokens.md) to withdraw confidential tokens back to public ERC-20.
 
-🟨 Go to [**Check balances**](check-balances.md) to decrypt and display confidential balances.
+🟨 Go to [**Check balances**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/check-balances.md) to decrypt and display confidential balances.
 
-🟨 Go to [**Handle errors**](handle-errors.md) to manage SDK errors gracefully in your app.
+🟨 Go to [**Handle errors**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/handle-errors.md) to manage SDK errors gracefully in your app.
 
-🟨 Go to [**Node.js backend**](node-js-backend.md) to run the SDK server-side with worker threads.
+🟨 Go to [**Node.js backend**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/node-js-backend.md) to run the SDK server-side with worker threads.
 
-🟨 Go to [**Encrypt & decrypt**](encrypt-decrypt.md) for low-level FHE encryption and decryption operations.
+🟨 Go to [**Encrypt & decrypt**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/encrypt-decrypt.md) for low-level FHE encryption and decryption operations.
 
 ## Help center
 
@@ -1003,6 +1010,7 @@ Ask technical questions and discuss with the community.
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/guides/configuration.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md
 - logical_path: guides/configuration
 
 # Configuration
@@ -1024,7 +1032,7 @@ The SDK ships two relayer implementations. Pick the one that matches your runtim
 
 
 > [!INFO]
-> For local Hardhat nodes or custom testnets deployed in cleartext mode, use [`createCleartextRelayer`](docs/gitbook/src/guides/local-development.md) instead — no KMS, no gateway, no WASM needed.
+> For local Hardhat nodes or custom testnets deployed in cleartext mode, use [`createCleartextRelayer`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/local-development.md) instead — no KMS, no gateway, no WASM needed.
 
 
 ### 2. Set up a signer
@@ -1073,11 +1081,11 @@ const signer = new WagmiSigner({ config: wagmiConfig });
 ```
 
 
-For full type information, see the [ViemSigner](docs/gitbook/src/reference/sdk/ViemSigner.md), [EthersSigner](docs/gitbook/src/reference/sdk/EthersSigner.md), and [WagmiSigner](docs/gitbook/src/reference/sdk/WagmiSigner.md) reference pages. You can also implement the [GenericSigner](docs/gitbook/src/reference/sdk/GenericSigner.md) interface for a custom wallet integration.
+For full type information, see the [ViemSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ViemSigner.md), [EthersSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/EthersSigner.md), and [WagmiSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WagmiSigner.md) reference pages. You can also implement the [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md) interface for a custom wallet integration.
 
 ### 3. Configure the relayer
 
-The relayer needs a `getChainId` callback and a transport map. Use the built-in [network presets](docs/gitbook/src/reference/sdk/network-presets.md) (`SepoliaConfig`, `MainnetConfig`, `HardhatConfig`) so you don't have to specify contract addresses manually. Each preset provides `chainId`, `relayerUrl`, `gatewayAddress`, `aclAddress`, and `kmsVerifierAddress` for its network.
+The relayer needs a `getChainId` callback and a transport map. Use the built-in [network presets](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/network-presets.md) (`SepoliaConfig`, `MainnetConfig`, `HardhatConfig`) so you don't have to specify contract addresses manually. Each preset provides `chainId`, `relayerUrl`, `gatewayAddress`, `aclAddress`, and `kmsVerifierAddress` for its network.
 
 
 ### Tab: Browser (RelayerWeb)
@@ -1122,9 +1130,9 @@ const relayer = new RelayerNode({
 ```
 
 
-Browser apps should proxy relayer requests through a backend to keep the API key secret. See the [Authentication guide](docs/gitbook/src/guides/authentication.md) for the full setup.
+Browser apps should proxy relayer requests through a backend to keep the API key secret. See the [Authentication guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/authentication.md) for the full setup.
 
-For details on multi-threaded FHE and security options, see the [RelayerWeb](docs/gitbook/src/reference/sdk/RelayerWeb.md) and [RelayerNode](docs/gitbook/src/reference/sdk/RelayerNode.md) reference pages.
+For details on multi-threaded FHE and security options, see the [RelayerWeb](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerWeb.md) and [RelayerNode](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerNode.md) reference pages.
 
 ### 4. Choose a storage backend
 
@@ -1142,7 +1150,7 @@ import { indexedDBStorage, memoryStorage } from "@zama-fhe/sdk";
 // import { asyncLocalStorage } from "@zama-fhe/sdk/node";
 ```
 
-For full storage options see the [GenericStorage](docs/gitbook/src/reference/sdk/GenericStorage.md) reference.
+For full storage options see the [GenericStorage](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericStorage.md) reference.
 
 ### 5. Create the SDK instance
 
@@ -1236,7 +1244,7 @@ const sdk = new ZamaSDK({
 });
 ```
 
-Your `manifest.json` must include the `"storage"` permission. See the [Web Extensions guide](docs/gitbook/src/guides/web-extensions.md) for manifest configuration, multi-context sharing, and browser close behavior.
+Your `manifest.json` must include the `"storage"` permission. See the [Web Extensions guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/web-extensions.md) for manifest configuration, multi-context sharing, and browser close behavior.
 
 
 ### 6. (Optional) Configure TTLs and event listener
@@ -1260,15 +1268,16 @@ Setting `sessionTTL: 0` disables session caching entirely — every operation tr
 
 ## Next steps
 
-- [Authentication](docs/gitbook/src/guides/authentication.md) — set up a backend proxy or use a direct API key
-- [Shield Tokens](docs/gitbook/src/guides/shield-tokens.md) — convert public ERC-20 tokens into confidential form
-- [RelayerWeb reference](docs/gitbook/src/reference/sdk/RelayerWeb.md) — multi-threading, security options, CDN configuration
-- [GenericStorage reference](docs/gitbook/src/reference/sdk/GenericStorage.md) — custom storage implementations
+- [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/authentication.md) — set up a backend proxy or use a direct API key
+- [Shield Tokens](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/shield-tokens.md) — convert public ERC-20 tokens into confidential form
+- [RelayerWeb reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerWeb.md) — multi-threading, security options, CDN configuration
+- [GenericStorage reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericStorage.md) — custom storage implementations
 
 ## Authentication
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/guides/authentication.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/authentication.md
 - logical_path: guides/authentication
 
 # Authentication
@@ -1415,19 +1424,20 @@ auth: { __type: "ApiKeyCookie", value: "your-api-key" }
 auth: { __type: "BearerToken", token: "your-jwt-token" }
 ```
 
-When using `RelayerWeb` with a proxy, you can also add CSRF protection via the `security.getCsrfToken` callback. See the [RelayerWeb reference](docs/gitbook/src/reference/sdk/RelayerWeb.md) for details.
+When using `RelayerWeb` with a proxy, you can also add CSRF protection via the `security.getCsrfToken` callback. See the [RelayerWeb reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerWeb.md) for details.
 
 ## Next steps
 
-- [Configuration](docs/gitbook/src/guides/configuration.md) — full relayer, signer, and storage setup
-- [Shield Tokens](docs/gitbook/src/guides/shield-tokens.md) — start converting public tokens to confidential form
-- [RelayerWeb reference](docs/gitbook/src/reference/sdk/RelayerWeb.md) — security options and multi-threading
-- [RelayerNode reference](docs/gitbook/src/reference/sdk/RelayerNode.md) — Node.js-specific configuration
+- [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) — full relayer, signer, and storage setup
+- [Shield Tokens](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/shield-tokens.md) — start converting public tokens to confidential form
+- [RelayerWeb reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerWeb.md) — security options and multi-threading
+- [RelayerNode reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerNode.md) — Node.js-specific configuration
 
 ## Shield tokens
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/guides/shield-tokens.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/shield-tokens.md
 - logical_path: guides/shield-tokens
 
 # Shield tokens
@@ -1438,7 +1448,7 @@ Shielding converts public ERC-20 tokens into confidential tokens. The SDK handle
 
 ### 1. Create a token instance
 
-Start from a configured SDK instance (see [Configuration](docs/gitbook/src/guides/configuration.md)) and create a token pointing at your encrypted ERC-20 contract.
+Start from a configured SDK instance (see [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md)) and create a token pointing at your encrypted ERC-20 contract.
 
 Some deployments use a **wrapper contract** that is separate from the token contract itself. If your setup has a separate wrapper address, pass it as the second argument to `createToken` or as `wrapperAddress` in hooks. If the token _is_ the wrapper (single-contract deployments), you can omit it.
 
@@ -1592,14 +1602,15 @@ In React, balance caches are automatically invalidated after a successful shield
 
 ## Next steps
 
-- [Transfer Privately](docs/gitbook/src/guides/transfer-privately.md) — send confidential tokens to another address
-- [Token.shield reference](docs/gitbook/src/reference/sdk/Token.md#shield) — full API signature and options
-- [useShield reference](docs/gitbook/src/reference/react/useShield.md) — React hook details
+- [Transfer Privately](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/transfer-privately.md) — send confidential tokens to another address
+- [Token.shield reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md#shield) — full API signature and options
+- [useShield reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useShield.md) — React hook details
 
 ## Transfer privately
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/guides/transfer-privately.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/transfer-privately.md
 - logical_path: guides/transfer-privately
 
 # Transfer privately
@@ -1610,7 +1621,7 @@ Confidential transfers encrypt the amount before it reaches the chain -- no one 
 
 ### 1. Create a token instance
 
-Start from a configured SDK instance (see [Configuration](docs/gitbook/src/guides/configuration.md)) and create a token pointing at your encrypted ERC-20 contract:
+Start from a configured SDK instance (see [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md)) and create a token pointing at your encrypted ERC-20 contract:
 
 
 ### Tab: Core SDK
@@ -1779,19 +1790,20 @@ function TransferForm() {
 }
 ```
 
-The `matchZamaError` helper maps SDK error codes to user-friendly messages. See the [Error Handling guide](docs/gitbook/src/guides/handle-errors.md) for the full list of error types.
+The `matchZamaError` helper maps SDK error codes to user-friendly messages. See the [Error Handling guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/handle-errors.md) for the full list of error types.
 
 ## Next steps
 
-- [Shield Tokens](docs/gitbook/src/guides/shield-tokens.md) — convert public ERC-20 tokens into confidential form
-- [Token.confidentialTransfer reference](docs/gitbook/src/reference/sdk/Token.md#confidentialtransfer) — full API signature
-- [useConfidentialTransfer reference](docs/gitbook/src/reference/react/useConfidentialTransfer.md) — React hook details
-- [useConfidentialTransferFrom reference](docs/gitbook/src/reference/react/useConfidentialTransferFrom.md) — operator transfer hook
+- [Shield Tokens](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/shield-tokens.md) — convert public ERC-20 tokens into confidential form
+- [Token.confidentialTransfer reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md#confidentialtransfer) — full API signature
+- [useConfidentialTransfer reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialTransfer.md) — React hook details
+- [useConfidentialTransferFrom reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialTransferFrom.md) — operator transfer hook
 
 ## Unshield tokens
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/guides/unshield-tokens.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/unshield-tokens.md
 - logical_path: guides/unshield-tokens
 
 # Unshield tokens
@@ -1952,14 +1964,15 @@ All mutation hooks automatically invalidate balance queries on success, so your 
 
 ## Next steps
 
-- See [Token Operations](docs/gitbook/src/reference/sdk/Token.md) for the full `Token.unshield` and `Token.unshieldAll` API.
-- See [Hooks](docs/gitbook/src/reference/react/query-keys.md) for `useUnshield`, `useUnshieldAll`, and `useResumeUnshield` details.
-- If your unshield fails, see [Handle Errors](handle-errors.md) for troubleshooting `TransactionRevertedError` and related issues.
+- See [Token Operations](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md) for the full `Token.unshield` and `Token.unshieldAll` API.
+- See [Hooks](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/query-keys.md) for `useUnshield`, `useUnshieldAll`, and `useResumeUnshield` details.
+- If your unshield fails, see [Handle Errors](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/handle-errors.md) for troubleshooting `TransactionRevertedError` and related issues.
 
 ## Check balances
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/guides/check-balances.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/check-balances.md
 - logical_path: guides/check-balances
 
 # Check balances
@@ -1990,7 +2003,7 @@ console.log(`Confidential balance: ${balance}`);
 
 The first `balanceOf()` call for a token prompts the user's wallet for an EIP-712 signature. This creates FHE decrypt credentials that are cached in your storage backend. Subsequent reads are silent -- no wallet popup.
 
-If the user rejects the signature, the SDK throws a `SigningRejectedError`. See [Handle Errors](handle-errors.md) for recovery patterns.
+If the user rejects the signature, the SDK throws a `SigningRejectedError`. See [Handle Errors](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/handle-errors.md) for recovery patterns.
 
 You can pre-authorize multiple tokens with a single signature using `ReadonlyToken.allow()`:
 
@@ -2106,7 +2119,7 @@ const { data: meta } = useMetadata("0xToken");
 // meta.name, meta.symbol, meta.decimals
 ```
 
-See [useMetadata reference](docs/gitbook/src/reference/react/useMetadata.md) for full options.
+See [useMetadata reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useMetadata.md) for full options.
 
 ### 8. Use the balance hooks in React
 
@@ -2170,14 +2183,15 @@ queryClient.invalidateQueries({
 
 ## Next steps
 
-- See [Token Operations](docs/gitbook/src/reference/sdk/Token.md) for the full `Token.balanceOf` and `ReadonlyToken` API.
-- See [Hooks](docs/gitbook/src/reference/react/query-keys.md) for `useConfidentialBalance`, `useConfidentialBalances`, and query key details.
-- To handle `NoCiphertextError` and other failures, see [Handle Errors](handle-errors.md).
+- See [Token Operations](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md) for the full `Token.balanceOf` and `ReadonlyToken` API.
+- See [Hooks](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/query-keys.md) for `useConfidentialBalance`, `useConfidentialBalances`, and query key details.
+- To handle `NoCiphertextError` and other failures, see [Handle Errors](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/handle-errors.md).
 
 ## Handle errors
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/guides/handle-errors.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/handle-errors.md
 - logical_path: guides/handle-errors
 
 # Handle errors
@@ -2313,7 +2327,7 @@ try {
 ```
 
 
-See [Check Balances](check-balances.md) for more detail on balance handling patterns.
+See [Check Balances](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/check-balances.md) for more detail on balance handling patterns.
 
 ### 6. Use matchZamaError in React components
 
@@ -2356,14 +2370,15 @@ When `matchZamaError` returns `undefined` (because the error is not a `ZamaError
 
 ## Next steps
 
-- See [Error types reference](docs/gitbook/src/reference/sdk/errors.md) for the full error type reference.
-- See [Hooks](docs/gitbook/src/reference/react/query-keys.md) for error handling patterns with React Query.
-- For interrupted unshields specifically, see [Unshield Tokens](unshield-tokens.md).
+- See [Error types reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/errors.md) for the full error type reference.
+- See [Hooks](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/query-keys.md) for error handling patterns with React Query.
+- For interrupted unshields specifically, see [Unshield Tokens](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/unshield-tokens.md).
 
 ## Activity feeds
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/guides/activity-feeds.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/activity-feeds.md
 - logical_path: guides/activity-feeds
 
 # Activity feeds
@@ -2434,7 +2449,7 @@ const decryptedMap = await token.decryptHandles(handles);
 ```
 
 
-This call requires FHE credentials. If the user has not signed yet, the SDK prompts for a wallet signature. See [Check Balances](check-balances.md) for details on the signature flow.
+This call requires FHE credentials. If the user has not signed yet, the SDK prompts for a wallet signature. See [Check Balances](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/check-balances.md) for details on the signature flow.
 
 ### 5. Attach decrypted values with applyDecryptedValues
 
@@ -2538,14 +2553,15 @@ queryClient.invalidateQueries({
 
 ## Next steps
 
-- See [Event Decoders](docs/gitbook/src/reference/sdk/event-decoders.md) for the event decoder API (`decodeOnChainEvents`, `TOKEN_TOPICS`, individual decoders).
-- See [Hooks](docs/gitbook/src/reference/react/query-keys.md) for `useActivityFeed` details and query key reference.
-- To handle decryption errors during feed building, see [Handle Errors](handle-errors.md).
+- See [Event Decoders](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/event-decoders.md) for the event decoder API (`decodeOnChainEvents`, `TOKEN_TOPICS`, individual decoders).
+- See [Hooks](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/query-keys.md) for `useActivityFeed` details and query key reference.
+- To handle decryption errors during feed building, see [Handle Errors](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/handle-errors.md).
 
 ## Node.js backend
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/guides/node-js-backend.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/node-js-backend.md
 - logical_path: guides/node-js-backend
 
 # Node.js backend
@@ -2655,7 +2671,7 @@ await token.confidentialTransfer("0xRecipient", 500n);
 const balance = await token.balanceOf();
 ```
 
-See the [Token Operations](docs/gitbook/src/reference/sdk/Token.md) reference for the full API.
+See the [Token Operations](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md) reference for the full API.
 
 ### 7. Use direct API key auth
 
@@ -2693,14 +2709,15 @@ process.on("SIGTERM", () => {
 
 ## Next steps
 
-- [RelayerNode](docs/gitbook/src/reference/sdk/RelayerNode.md) -- full constructor options and pool behavior
-- [asyncLocalStorage](docs/gitbook/src/reference/sdk/GenericStorage.md) -- the `GenericStorage` interface it implements
-- [Configuration](docs/gitbook/src/guides/configuration.md) -- authentication options, network presets, and session management
+- [RelayerNode](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerNode.md) -- full constructor options and pool behavior
+- [asyncLocalStorage](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericStorage.md) -- the `GenericStorage` interface it implements
+- [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) -- authentication options, network presets, and session management
 
 ## Web extensions
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/guides/web-extensions.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/web-extensions.md
 - logical_path: guides/web-extensions
 
 # Web extensions
@@ -2774,13 +2791,14 @@ This mirrors the default browser SDK behavior (in-memory session lost on tab clo
 
 ## Next steps
 
-- [GenericStorage](docs/gitbook/src/reference/sdk/GenericStorage.md) -- implement a custom storage adapter for other extension APIs
-- [Session Model](docs/gitbook/src/concepts/session-model.md) -- how keypair encryption, session signatures, and storage interact
+- [GenericStorage](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericStorage.md) -- implement a custom storage adapter for other extension APIs
+- [Session Model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/session-model.md) -- how keypair encryption, session signatures, and storage interact
 
 ## Local development
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/guides/local-development.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/local-development.md
 - logical_path: guides/local-development
 
 # Local development
@@ -2886,14 +2904,15 @@ const relayer = new RelayerCleartext(myChainConfig);
 
 ## Next steps
 
-- [RelayerCleartext reference](docs/gitbook/src/reference/sdk/RelayerCleartext.md) — full constructor options and `CleartextConfig` type
-- [Configuration](docs/gitbook/src/guides/configuration.md) — production setup with `RelayerWeb` or `RelayerNode`
-- [Network Presets](docs/gitbook/src/reference/sdk/network-presets.md) — preset configs for Mainnet, Sepolia, and Hardhat
+- [RelayerCleartext reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerCleartext.md) — full constructor options and `CleartextConfig` type
+- [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) — production setup with `RelayerWeb` or `RelayerNode`
+- [Network Presets](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/network-presets.md) — preset configs for Mainnet, Sepolia, and Hardhat
 
 ## Build with an LLM
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/guides/build-with-an-llm.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/build-with-an-llm.md
 - logical_path: guides/build-with-an-llm
 
 # Build with an LLM
@@ -2918,19 +2937,42 @@ Use the smallest tool that gives the agent enough context:
 
 For Claude Code, install the external skill first, then use `llms.txt`, `llms-full.txt`, or the approved example docs as supporting context when the task needs SDK-specific detail.
 
+## Consumption modes
+
+You do not need to clone the SDK repository to use the LLM artifacts.
+
+### Without cloning the SDK repository
+
+Use this mode when integrating the SDK into an external app:
+
+1. Give the agent [`llms.txt`](https://raw.githubusercontent.com/zama-ai/sdk/main/llms.txt) for discovery, or [`llms-full.txt`](https://raw.githubusercontent.com/zama-ai/sdk/main/llms-full.txt) for full-context grounding.
+2. When using `llms.txt`, follow the raw GitHub links to fetch the smallest relevant source.
+3. Treat `source_path` values such as `docs/gitbook/src/...` as provenance metadata, not as local paths you need to have.
+
+### With a cloned SDK repository
+
+Use this mode when contributing to the SDK, debugging SDK internals, or inspecting examples locally:
+
+1. Read `docs/gitbook/src/...`, `examples/...`, and package READMEs directly from the local checkout.
+2. Run `pnpm llm:build` and `pnpm llm:validate` only when updating or validating the generated LLM artifacts.
+
 ## Source of truth
 
 Agent-facing guidance follows this source order:
 
-1. Official docs in `docs/gitbook/src`
+1. Official documentation, published through GitBook and sourced from `docs/gitbook/src` in the SDK repository
 2. Approved official examples
 3. API reports as fallback reference material
 
 When the docs already answer the question, prefer the docs over examples. When examples are needed, prefer the approved examples in this repo over ad hoc implementations.
 
-## Build the LLM artifacts
+`docs/gitbook/src/...` and `examples/...` are repository-relative source paths. If you have not cloned the SDK repository, use the raw GitHub URLs from `llms.txt` or the embedded content in `llms-full.txt`.
 
-From the repository root:
+## Maintain the LLM artifacts
+
+These commands are for SDK maintainers and contributors. External integrators do not need to run them.
+
+From a cloned SDK repository root:
 
 ```bash
 pnpm llm:build
@@ -2965,7 +3007,7 @@ Only use it with agents that support large context windows. For normal coding ta
 
 It includes:
 
-- official docs from `docs/gitbook/src`
+- official docs sourced from `docs/gitbook/src`
 - approved official examples
 - root and package README context
 
@@ -2988,20 +3030,20 @@ The marketplace install requires Claude Code to be able to access the `zama-ai/s
 
 ## Use the approved example docs directly
 
-When `llms.txt` points you to an example, read the example docs directly in the repository:
+When `llms.txt` points you to an example, read the linked raw GitHub example docs. If you have cloned the SDK repository, you can also read the same files locally:
 
-- `examples/example-hoodi/README.md`
-- `examples/example-hoodi/WALKTHROUGH.md`
-- `examples/node-ethers/README.md`
-- `examples/node-ethers/WALKTHROUGH.md`
-- `examples/node-viem/README.md`
-- `examples/node-viem/WALKTHROUGH.md`
-- `examples/react-ethers/README.md`
-- `examples/react-ethers/WALKTHROUGH.md`
-- `examples/react-viem/README.md`
-- `examples/react-viem/WALKTHROUGH.md`
-- `examples/react-wagmi/README.md`
-- `examples/react-wagmi/WALKTHROUGH.md`
+- [`examples/example-hoodi/README.md`](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/example-hoodi/README.md)
+- [`examples/example-hoodi/WALKTHROUGH.md`](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/example-hoodi/WALKTHROUGH.md)
+- [`examples/node-ethers/README.md`](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/node-ethers/README.md)
+- [`examples/node-ethers/WALKTHROUGH.md`](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/node-ethers/WALKTHROUGH.md)
+- [`examples/node-viem/README.md`](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/node-viem/README.md)
+- [`examples/node-viem/WALKTHROUGH.md`](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/node-viem/WALKTHROUGH.md)
+- [`examples/react-ethers/README.md`](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/react-ethers/README.md)
+- [`examples/react-ethers/WALKTHROUGH.md`](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/react-ethers/WALKTHROUGH.md)
+- [`examples/react-viem/README.md`](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/react-viem/README.md)
+- [`examples/react-viem/WALKTHROUGH.md`](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/react-viem/WALKTHROUGH.md)
+- [`examples/react-wagmi/README.md`](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/react-wagmi/README.md)
+- [`examples/react-wagmi/WALKTHROUGH.md`](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/react-wagmi/WALKTHROUGH.md)
 
 Read the example docs before dropping into example source files.
 
@@ -3010,14 +3052,14 @@ Read the example docs before dropping into example source files.
 ### For new integrations
 
 1. Start with `llms.txt`
-2. Read the closest approved example
+2. Read the closest approved example through its raw GitHub link
 3. Use the `zama-protocol` Claude Code skill if you are working in Claude Code
-4. Read the matching official guide or reference page directly in the repo when you need more detail
+4. Read the matching official guide or reference page through its raw GitHub link when you need more detail
 
 ### For deeper grounding
 
 1. Give the agent `llms-full.txt`
-2. Read the matching official guide or example docs directly in the repo
+2. Read the matching official guide or example docs through their raw GitHub links if more detail is needed
 3. Fall back to API reports only when the docs and examples do not answer an exported-surface question
 
 ### For debugging
@@ -3066,6 +3108,7 @@ Debug this Zama SDK integration using the official error guide first, then compa
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/guides/nextjs-ssr.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/nextjs-ssr.md
 - logical_path: guides/nextjs-ssr
 
 # Next.js / SSR
@@ -3228,14 +3271,15 @@ The server renders the page shell, and the `TokenBalance` client component hydra
 
 ## Next steps
 
-- [ZamaProvider](docs/gitbook/src/reference/react/ZamaProvider.md) -- all provider props and configuration
-- [useConfidentialBalance](docs/gitbook/src/reference/react/useConfidentialBalance.md) -- balance hook API reference
-- [Provider Setup](docs/gitbook/src/guides/configuration.md) -- full examples for wagmi, viem, and ethers setups
+- [ZamaProvider](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/ZamaProvider.md) -- all provider props and configuration
+- [useConfidentialBalance](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialBalance.md) -- balance hook API reference
+- [Provider Setup](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) -- full examples for wagmi, viem, and ethers setups
 
 ## Operator approvals
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/guides/operator-approvals.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/operator-approvals.md
 - logical_path: guides/operator-approvals
 
 # Operator approvals
@@ -3342,22 +3386,23 @@ This is a distinct concern from transfer approval: approving an operator for tra
 
 ## Next steps
 
-- [Token.approve](docs/gitbook/src/reference/sdk/Token.md) -- full method signature and options
-- [useConfidentialApprove](docs/gitbook/src/reference/react/useConfidentialApprove.md) -- React hook reference
-- [useConfidentialIsApproved](docs/gitbook/src/reference/react/useConfidentialIsApproved.md) -- query hook reference
-- [useConfidentialTransferFrom](docs/gitbook/src/reference/react/useConfidentialTransferFrom.md) -- operator transfer hook reference
+- [Token.approve](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md) -- full method signature and options
+- [useConfidentialApprove](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialApprove.md) -- React hook reference
+- [useConfidentialIsApproved](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialIsApproved.md) -- query hook reference
+- [useConfidentialTransferFrom](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialTransferFrom.md) -- operator transfer hook reference
 
 ## Encrypt & decrypt
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/guides/encrypt-decrypt.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/encrypt-decrypt.md
 - logical_path: guides/encrypt-decrypt
 
 # Encrypt & decrypt
 
 The high-level token hooks (`useShield`, `useConfidentialTransfer`, `useConfidentialBalance`) handle encryption and decryption automatically for wrapped confidential ERC-20 tokens. This guide is for a different scenario: **your smart contract uses FHE types directly** (e.g. a confidential voting contract, a sealed-bid auction, or any non-token contract that stores `euint` values). In that case, you need `useEncrypt` and `useUserDecrypt` to interact with your contract's encrypted parameters and return values.
 
-Before starting, make sure your project is set up following the [Configuration](docs/gitbook/src/guides/configuration.md) guide.
+Before starting, make sure your project is set up following the [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) guide.
 
 ## Example
 
@@ -3475,7 +3520,7 @@ function ConfidentialRoundTrip() {
 >
 
 >
-> See [Configuration](docs/gitbook/src/guides/configuration.md) for full setup instructions.
+> See [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) for full setup instructions.
 
 
 
@@ -3774,6 +3819,7 @@ function PublicDecryptExample() {
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/sdk/README.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/README.md
 - logical_path: reference/sdk/README
 
 # Overview
@@ -3784,19 +3830,19 @@ API reference for the core `@zama-fhe/sdk` package. Each page documents a single
 
 ## Where to go next
 
-🟨 Go to [**ZamaSDK**](ZamaSDK.md) for the main entry point — creates tokens, manages sessions, and coordinates the relayer and signer.
+🟨 Go to [**ZamaSDK**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md) for the main entry point — creates tokens, manages sessions, and coordinates the relayer and signer.
 
-🟨 Go to [**Token**](Token.md) for read/write operations — shield, transfer, unshield, and balance decryption.
+🟨 Go to [**Token**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md) for read/write operations — shield, transfer, unshield, and balance decryption.
 
-🟨 Go to [**ReadonlyToken**](ReadonlyToken.md) for read-only balance decryption and batch operations.
+🟨 Go to [**ReadonlyToken**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ReadonlyToken.md) for read-only balance decryption and batch operations.
 
-🟨 Go to [**RelayerWeb**](RelayerWeb.md) for browser-side FHE encryption via Web Workers and WASM.
+🟨 Go to [**RelayerWeb**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerWeb.md) for browser-side FHE encryption via Web Workers and WASM.
 
-🟨 Go to [**RelayerNode**](RelayerNode.md) for server-side FHE encryption with native worker threads.
+🟨 Go to [**RelayerNode**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerNode.md) for server-side FHE encryption with native worker threads.
 
-🟨 Go to [**Network presets**](network-presets.md) for pre-configured contract addresses on Sepolia, Mainnet, and Hardhat.
+🟨 Go to [**Network presets**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/network-presets.md) for pre-configured contract addresses on Sepolia, Mainnet, and Hardhat.
 
-🟨 Go to [**Errors**](errors.md) for the full list of SDK error types and codes.
+🟨 Go to [**Errors**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/errors.md) for the full list of SDK error types and codes.
 
 ## Help center
 
@@ -3809,6 +3855,7 @@ Ask technical questions and discuss with the community.
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/sdk/ZamaSDK.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md
 - logical_path: reference/sdk/ZamaSDK
 
 # ZamaSDK
@@ -4179,7 +4226,7 @@ emmiter.on(ZamaSDKEvents.DecryptError, ({ error, durationMs, handles }: DecryptE
 
 
 > [!INFO]
-> This is the SDK-level entry point for user decryption. The method is named `userDecrypt` (not `decrypt`) because it requires the connected wallet's credentials — distinguishing it from gateway-level decryption that happens on-chain without user authentication. In React, use [`useUserDecrypt`](docs/gitbook/src/reference/react/useUserDecrypt.md) which wraps this method with TanStack Query semantics.
+> This is the SDK-level entry point for user decryption. The method is named `userDecrypt` (not `decrypt`) because it requires the connected wallet's credentials — distinguishing it from gateway-level decryption that happens on-chain without user authentication. In React, use [`useUserDecrypt`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUserDecrypt.md) which wraps this method with TanStack Query semantics.
 
 
 ### revokeSession
@@ -4214,15 +4261,16 @@ sdk.terminate();
 
 ## Related
 
-- [Token](docs/gitbook/src/reference/sdk/Token.md) — read/write token operations
-- [ReadonlyToken](docs/gitbook/src/reference/sdk/ReadonlyToken.md) — read-only token operations
-- [WrappersRegistry](docs/gitbook/src/reference/sdk/WrappersRegistry.md) — on-chain token wrappers registry
-- [Configuration guide](docs/gitbook/src/guides/configuration.md) — relayer, signer, and storage setup
+- [Token](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md) — read/write token operations
+- [ReadonlyToken](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ReadonlyToken.md) — read-only token operations
+- [WrappersRegistry](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WrappersRegistry.md) — on-chain token wrappers registry
+- [Configuration guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) — relayer, signer, and storage setup
 
 ## Token
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/sdk/Token.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md
 - logical_path: reference/sdk/Token
 
 # Token
@@ -4231,7 +4279,7 @@ Read/write interface for confidential ERC-20 operations — shielding, transferr
 
 ## Import
 
-Created via [`ZamaSDK.createToken()`](docs/gitbook/src/reference/sdk/ZamaSDK.md#createtoken). Not imported directly.
+Created via [`ZamaSDK.createToken()`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md#createtoken). Not imported directly.
 
 ## Usage
 
@@ -4564,14 +4612,15 @@ await token.finalizeUnwrap(burnAmountHandle);
 
 ## Related
 
-- [ZamaSDK](docs/gitbook/src/reference/sdk/ZamaSDK.md) — creates `Token` via `createToken()`
-- [ReadonlyToken](docs/gitbook/src/reference/sdk/ReadonlyToken.md) — read-only variant with batch operations
-- [Shield Tokens guide](docs/gitbook/src/guides/shield-tokens.md) — step-by-step shielding walkthrough
+- [ZamaSDK](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md) — creates `Token` via `createToken()`
+- [ReadonlyToken](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ReadonlyToken.md) — read-only variant with batch operations
+- [Shield Tokens guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/shield-tokens.md) — step-by-step shielding walkthrough
 
 ## ReadonlyToken
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/sdk/ReadonlyToken.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ReadonlyToken.md
 - logical_path: reference/sdk/ReadonlyToken
 
 # ReadonlyToken
@@ -4584,7 +4633,7 @@ Read-only interface for confidential token queries and batch operations — bala
 import { ReadonlyToken } from "@zama-fhe/sdk";
 ```
 
-Instance creation via [`ZamaSDK.createReadonlyToken()`](docs/gitbook/src/reference/sdk/ZamaSDK.md#createreadonlytoken).
+Instance creation via [`ZamaSDK.createReadonlyToken()`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md#createreadonlytoken).
 
 ## Usage
 
@@ -4819,14 +4868,15 @@ if (readonlyToken.isZeroHandle(handle)) {
 
 ## Related
 
-- [ZamaSDK](docs/gitbook/src/reference/sdk/ZamaSDK.md) — creates `ReadonlyToken` via `createReadonlyToken()`
-- [Token](docs/gitbook/src/reference/sdk/Token.md) — read/write variant with shielding and transfers
-- [Check Balances guide](docs/gitbook/src/guides/check-balances.md) — step-by-step balance decryption walkthrough
+- [ZamaSDK](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md) — creates `ReadonlyToken` via `createReadonlyToken()`
+- [Token](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md) — read/write variant with shielding and transfers
+- [Check Balances guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/check-balances.md) — step-by-step balance decryption walkthrough
 
 ## WrappersRegistry
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/sdk/WrappersRegistry.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WrappersRegistry.md
 - logical_path: reference/sdk/WrappersRegistry
 
 # WrappersRegistry
@@ -5074,18 +5124,19 @@ console.log(DefaultRegistryAddresses[1]); // "0xeb5015fF021DB115aCe010f23F55C259
 
 ## Related
 
-- [ZamaSDK](docs/gitbook/src/reference/sdk/ZamaSDK.md) — `sdk.registry` shared instance and `createWrappersRegistry()` factory
-- [useListPairs](docs/gitbook/src/reference/react/useListPairs.md) — React hook for paginated pair listing
-- [useConfidentialTokenAddress](docs/gitbook/src/reference/react/useConfidentialTokenAddress.md) — React hook for forward lookup
-- [useTokenAddress](docs/gitbook/src/reference/react/useTokenAddress.md) — React hook for reverse lookup
-- [useIsConfidentialTokenValid](docs/gitbook/src/reference/react/useIsConfidentialTokenValid.md) — React hook for validity check
-- [Contract Builders](docs/gitbook/src/reference/sdk/contract-builders.md) — low-level registry builders
-- [Network Presets](docs/gitbook/src/reference/sdk/network-presets.md) — built-in chain configurations
+- [ZamaSDK](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md) — `sdk.registry` shared instance and `createWrappersRegistry()` factory
+- [useListPairs](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useListPairs.md) — React hook for paginated pair listing
+- [useConfidentialTokenAddress](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialTokenAddress.md) — React hook for forward lookup
+- [useTokenAddress](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useTokenAddress.md) — React hook for reverse lookup
+- [useIsConfidentialTokenValid](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsConfidentialTokenValid.md) — React hook for validity check
+- [Contract Builders](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/contract-builders.md) — low-level registry builders
+- [Network Presets](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/network-presets.md) — built-in chain configurations
 
 ## RelayerWeb
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/sdk/RelayerWeb.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerWeb.md
 - logical_path: reference/sdk/RelayerWeb
 
 # RelayerWeb
@@ -5249,14 +5300,15 @@ const relayer = new RelayerWeb({
 
 ## Related
 
-- [ZamaSDK](docs/gitbook/src/reference/sdk/ZamaSDK.md) — pass the relayer to the SDK constructor
-- [RelayerNode](docs/gitbook/src/reference/sdk/RelayerNode.md) — Node.js variant using worker threads
-- [Configuration guide](docs/gitbook/src/guides/configuration.md) — authentication and network presets
+- [ZamaSDK](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md) — pass the relayer to the SDK constructor
+- [RelayerNode](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerNode.md) — Node.js variant using worker threads
+- [Configuration guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) — authentication and network presets
 
 ## RelayerNode
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/sdk/RelayerNode.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerNode.md
 - logical_path: reference/sdk/RelayerNode
 
 # RelayerNode
@@ -5393,14 +5445,15 @@ const relayer = new RelayerNode({
 
 ## Related
 
-- [ZamaSDK](docs/gitbook/src/reference/sdk/ZamaSDK.md) — pass the relayer to the SDK constructor
-- [RelayerWeb](docs/gitbook/src/reference/sdk/RelayerWeb.md) — browser variant using Web Workers and WASM
-- [Configuration guide](docs/gitbook/src/guides/configuration.md) — authentication and network presets
+- [ZamaSDK](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md) — pass the relayer to the SDK constructor
+- [RelayerWeb](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerWeb.md) — browser variant using Web Workers and WASM
+- [Configuration guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) — authentication and network presets
 
 ## RelayerCleartext
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/sdk/RelayerCleartext.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerCleartext.md
 - logical_path: reference/sdk/RelayerCleartext
 
 # RelayerCleartext
@@ -5550,20 +5603,21 @@ The cleartext relayer implements the full `RelayerSDK` interface:
 
 ## Related
 
-- [Local Development guide](docs/gitbook/src/guides/local-development.md) — when and how to use cleartext mode
-- [RelayerWeb](docs/gitbook/src/reference/sdk/RelayerWeb.md) — browser relayer with real FHE
-- [RelayerNode](docs/gitbook/src/reference/sdk/RelayerNode.md) — Node.js relayer with real FHE
-- [Network Presets](docs/gitbook/src/reference/sdk/network-presets.md) — production network configs
+- [Local Development guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/local-development.md) — when and how to use cleartext mode
+- [RelayerWeb](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerWeb.md) — browser relayer with real FHE
+- [RelayerNode](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerNode.md) — Node.js relayer with real FHE
+- [Network Presets](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/network-presets.md) — production network configs
 
 ## ViemSigner
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/sdk/ViemSigner.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ViemSigner.md
 - logical_path: reference/sdk/ViemSigner
 
 # ViemSigner
 
-Signer adapter that wraps viem wallet and public clients for the SDK. Implements [GenericSigner](docs/gitbook/src/reference/sdk/GenericSigner.md).
+Signer adapter that wraps viem wallet and public clients for the SDK. Implements [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md).
 
 ## Import
 
@@ -5654,7 +5708,7 @@ const signer = new ViemSigner({
 
 ## Methods
 
-All methods are inherited from [GenericSigner](docs/gitbook/src/reference/sdk/GenericSigner.md).
+All methods are inherited from [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md).
 
 | Method                        | Read-only | Full                        |
 | ----------------------------- | --------- | --------------------------- |
@@ -5668,25 +5722,26 @@ All methods are inherited from [GenericSigner](docs/gitbook/src/reference/sdk/Ge
 
 
 > [!INFO]
-> `subscribe()` is only available when you pass the `ethereum` option. Without it, wire wallet lifecycle events manually to `sdk.revokeSession()`. See the [Configuration guide](docs/gitbook/src/guides/configuration.md).
+> `subscribe()` is only available when you pass the `ethereum` option. Without it, wire wallet lifecycle events manually to `sdk.revokeSession()`. See the [Configuration guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md).
 
 
 ## Related
 
-- [GenericSigner](docs/gitbook/src/reference/sdk/GenericSigner.md) -- interface this class implements
-- [EthersSigner](docs/gitbook/src/reference/sdk/EthersSigner.md) -- ethers alternative
-- [WagmiSigner](docs/gitbook/src/reference/sdk/WagmiSigner.md) -- React adapter with auto-revoke
-- [Configuration guide](docs/gitbook/src/guides/configuration.md) -- full setup walkthrough
+- [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md) -- interface this class implements
+- [EthersSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/EthersSigner.md) -- ethers alternative
+- [WagmiSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WagmiSigner.md) -- React adapter with auto-revoke
+- [Configuration guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) -- full setup walkthrough
 
 ## EthersSigner
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/sdk/EthersSigner.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/EthersSigner.md
 - logical_path: reference/sdk/EthersSigner
 
 # EthersSigner
 
-Signer adapter that wraps ethers providers and signers for the SDK. Implements [GenericSigner](docs/gitbook/src/reference/sdk/GenericSigner.md).
+Signer adapter that wraps ethers providers and signers for the SDK. Implements [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md).
 
 ## Import
 
@@ -5780,7 +5835,7 @@ const signer = new EthersSigner({
 
 ## Methods
 
-All methods are inherited from [GenericSigner](docs/gitbook/src/reference/sdk/GenericSigner.md).
+All methods are inherited from [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md).
 
 | Method                        | Browser | Node.js | Read-only |
 | ----------------------------- | ------- | ------- | --------- |
@@ -5799,20 +5854,21 @@ All methods are inherited from [GenericSigner](docs/gitbook/src/reference/sdk/Ge
 
 ## Related
 
-- [GenericSigner](docs/gitbook/src/reference/sdk/GenericSigner.md) -- interface this class implements
-- [ViemSigner](docs/gitbook/src/reference/sdk/ViemSigner.md) -- viem alternative
-- [WagmiSigner](docs/gitbook/src/reference/sdk/WagmiSigner.md) -- React adapter with auto-revoke
-- [Configuration guide](docs/gitbook/src/guides/configuration.md) -- full setup walkthrough
+- [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md) -- interface this class implements
+- [ViemSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ViemSigner.md) -- viem alternative
+- [WagmiSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WagmiSigner.md) -- React adapter with auto-revoke
+- [Configuration guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) -- full setup walkthrough
 
 ## WagmiSigner
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/sdk/WagmiSigner.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WagmiSigner.md
 - logical_path: reference/sdk/WagmiSigner
 
 # WagmiSigner
 
-React-only signer adapter that wraps a wagmi config with automatic session revocation. Implements [GenericSigner](docs/gitbook/src/reference/sdk/GenericSigner.md).
+React-only signer adapter that wraps a wagmi config with automatic session revocation. Implements [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md).
 
 ## Import
 
@@ -5858,7 +5914,7 @@ const signer = new WagmiSigner({
 
 ## Methods
 
-All methods are inherited from [GenericSigner](docs/gitbook/src/reference/sdk/GenericSigner.md).
+All methods are inherited from [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md).
 
 ### subscribe()
 
@@ -5876,20 +5932,21 @@ You do not need to wire any events manually. The SDK calls `subscribe()` during 
 
 ## Related
 
-- [GenericSigner](docs/gitbook/src/reference/sdk/GenericSigner.md) -- interface this class implements
-- [ViemSigner](docs/gitbook/src/reference/sdk/ViemSigner.md) -- viem alternative (manual lifecycle wiring)
-- [EthersSigner](docs/gitbook/src/reference/sdk/EthersSigner.md) -- ethers alternative
-- [Configuration guide](docs/gitbook/src/guides/configuration.md) -- full setup walkthrough
+- [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md) -- interface this class implements
+- [ViemSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ViemSigner.md) -- viem alternative (manual lifecycle wiring)
+- [EthersSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/EthersSigner.md) -- ethers alternative
+- [Configuration guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) -- full setup walkthrough
 
 ## GenericSigner
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/sdk/GenericSigner.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md
 - logical_path: reference/sdk/GenericSigner
 
 # GenericSigner
 
-Interface that all signer adapters must implement for the SDK to interact with wallets. You only need this if you are building a custom signer -- otherwise use [ViemSigner](docs/gitbook/src/reference/sdk/ViemSigner.md), [EthersSigner](docs/gitbook/src/reference/sdk/EthersSigner.md), or [WagmiSigner](docs/gitbook/src/reference/sdk/WagmiSigner.md).
+Interface that all signer adapters must implement for the SDK to interact with wallets. You only need this if you are building a custom signer -- otherwise use [ViemSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ViemSigner.md), [EthersSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/EthersSigner.md), or [WagmiSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WagmiSigner.md).
 
 ## Import
 
@@ -6009,15 +6066,16 @@ The SDK calls `subscribe()` during initialization if it exists. The callbacks ob
 
 ## Related
 
-- [ViemSigner](docs/gitbook/src/reference/sdk/ViemSigner.md) -- viem implementation
-- [EthersSigner](docs/gitbook/src/reference/sdk/EthersSigner.md) -- ethers implementation
-- [WagmiSigner](docs/gitbook/src/reference/sdk/WagmiSigner.md) -- wagmi implementation with auto-revoke
-- [Configuration guide](docs/gitbook/src/guides/configuration.md) -- full setup walkthrough
+- [ViemSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ViemSigner.md) -- viem implementation
+- [EthersSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/EthersSigner.md) -- ethers implementation
+- [WagmiSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WagmiSigner.md) -- wagmi implementation with auto-revoke
+- [Configuration guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) -- full setup walkthrough
 
 ## GenericStorage
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/sdk/GenericStorage.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericStorage.md
 - logical_path: reference/sdk/GenericStorage
 
 # GenericStorage
@@ -6165,13 +6223,14 @@ const sdk = new ZamaSDK({
 
 ## Related
 
-- [ZamaSDK](docs/gitbook/src/reference/sdk/ZamaSDK.md) -- accepts `storage` and `sessionStorage` parameters
-- [Configuration guide](docs/gitbook/src/guides/configuration.md) -- storage selection guidance
+- [ZamaSDK](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md) -- accepts `storage` and `sessionStorage` parameters
+- [Configuration guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) -- storage selection guidance
 
 ## Error types
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/sdk/errors.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/errors.md
 - logical_path: reference/sdk/errors
 
 # Error types
@@ -6682,7 +6741,7 @@ matchZamaError(error, {
 
 
 > [!INFO]
-> The SDK automatically maps known ACL Solidity revert reasons to typed `ZamaError` subclasses via `matchAclRevert()`. Unmapped reverts fall through to `TransactionRevertedError`. See the [delegation error reference](docs/gitbook/src/reference/sdk/delegation.md#on-chain-revert-errors) for the full mapping.
+> The SDK automatically maps known ACL Solidity revert reasons to typed `ZamaError` subclasses via `matchAclRevert()`. Unmapped reverts fall through to `TransactionRevertedError`. See the [delegation error reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/delegation.md#on-chain-revert-errors) for the full mapping.
 
 
 ## Common problems
@@ -6703,13 +6762,14 @@ matchZamaError(error, {
 
 ## Related
 
-- [Error handling guide](docs/gitbook/src/guides/handle-errors.md) — practical patterns for catching and displaying errors
-- [ZamaSDK](docs/gitbook/src/reference/sdk/ZamaSDK.md) — SDK constructor and session management
+- [Error handling guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/handle-errors.md) — practical patterns for catching and displaying errors
+- [ZamaSDK](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md) — SDK constructor and session management
 
 ## Contract call builders
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/sdk/contract-builders.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/contract-builders.md
 - logical_path: reference/sdk/contract-builders
 
 # Contract call builders
@@ -6732,7 +6792,7 @@ type WriteContractConfig = ReadContractConfig & {
 
 
 > [!WARNING]
-> The [Token API](docs/gitbook/src/reference/sdk/Token.md) (`shield`, `unshield`, `confidentialTransfer`, etc.) handles contract calls, encryption, and multi-step flows for you. Use builders only when you need raw contract-level control — custom transaction pipelines, batching, or integrating with systems that expect ABI-encoded call data.
+> The [Token API](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md) (`shield`, `unshield`, `confidentialTransfer`, etc.) handles contract calls, encryption, and multi-step flows for you. Use builders only when you need raw contract-level control — custom transaction pipelines, batching, or integrating with systems that expect ABI-encoded call data.
 
 
 ## Import
@@ -6831,7 +6891,7 @@ import {
 
 
 > [!INFO]
-> The [WrappersRegistry class](docs/gitbook/src/reference/sdk/WrappersRegistry.md) wraps these builders with automatic address resolution. Use builders only when you need raw contract-level control.
+> The [WrappersRegistry class](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WrappersRegistry.md) wraps these builders with automatic address resolution. Use builders only when you need raw contract-level control.
 
 
 ## Delegation
@@ -6892,13 +6952,14 @@ const { address, abi, functionName, args } = wrapContract(wrapperAddress, recipi
 
 ## Related
 
-- [Token](docs/gitbook/src/reference/sdk/Token.md) — high-level API that wraps these builders
-- [Event Decoders](docs/gitbook/src/reference/sdk/event-decoders.md) — decode on-chain logs into typed events
+- [Token](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md) — high-level API that wraps these builders
+- [Event Decoders](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/event-decoders.md) — decode on-chain logs into typed events
 
 ## FheArtifactCache
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/sdk/FheArtifactCache.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/FheArtifactCache.md
 - logical_path: reference/sdk/FheArtifactCache
 
 # FheArtifactCache
@@ -7125,15 +7186,16 @@ Cache entries are scoped by chain ID:
 
 ## Related
 
-- [RelayerWeb](docs/gitbook/src/reference/sdk/RelayerWeb.md) — browser relayer that creates an `FheArtifactCache` internally
-- [RelayerNode](docs/gitbook/src/reference/sdk/RelayerNode.md) — Node.js relayer variant
-- [GenericStorage](docs/gitbook/src/reference/sdk/GenericStorage.md) — storage interface used by the cache
-- [Configuration guide](docs/gitbook/src/guides/configuration.md) — network presets and relayer setup
+- [RelayerWeb](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerWeb.md) — browser relayer that creates an `FheArtifactCache` internally
+- [RelayerNode](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerNode.md) — Node.js relayer variant
+- [GenericStorage](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericStorage.md) — storage interface used by the cache
+- [Configuration guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) — network presets and relayer setup
 
 ## Event decoders
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/sdk/event-decoders.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/event-decoders.md
 - logical_path: reference/sdk/event-decoders
 
 # Event decoders
@@ -7453,14 +7515,15 @@ const feed = sortByBlockNumber(enrichedItems);
 
 ## Related
 
-- [Activity Feeds guide](docs/gitbook/src/guides/activity-feeds.md) — activity feed usage in context
-- [Delegated Decryption](docs/gitbook/src/reference/sdk/delegation.md) — delegation API with on-chain event examples
-- [Token](docs/gitbook/src/reference/sdk/Token.md) — high-level API for token operations
+- [Activity Feeds guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/activity-feeds.md) — activity feed usage in context
+- [Delegated Decryption](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/delegation.md) — delegation API with on-chain event examples
+- [Token](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md) — high-level API for token operations
 
 ## Delegated decryption
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/sdk/delegation.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/delegation.md
 - logical_path: reference/sdk/delegation
 
 # Delegated decryption
@@ -7688,7 +7751,7 @@ A delegation between `(delegator, delegate, contract)` can be in one of four sta
 | **Expired**   | Past non-zero timestamp  | `isDelegated()` returns `false`, `getDelegationExpiry()` returns a non-zero past value                                  |
 | **Revoked**   | `0n` (reset by contract) | Indistinguishable from **never set** via state reads — use `RevokedDelegationForUserDecryption` events to differentiate |
 
-Because the ACL contract resets the expiry to `0n` on revocation, `DelegationNotFoundError` covers both the never-set and revoked cases. To distinguish them, query `RevokedDelegationForUserDecryption` events using the [ACL event decoders](docs/gitbook/src/reference/sdk/event-decoders.md#acl-delegation-events).
+Because the ACL contract resets the expiry to `0n` on revocation, `DelegationNotFoundError` covers both the never-set and revoked cases. To distinguish them, query `RevokedDelegationForUserDecryption` events using the [ACL event decoders](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/event-decoders.md#acl-delegation-events).
 
 ## Error handling
 
@@ -7811,21 +7874,22 @@ if (delegated) {
 }
 ```
 
-See [Event Decoders](docs/gitbook/src/reference/sdk/event-decoders.md#acl-delegation-events) for the full list of ACL event decoders and types.
+See [Event Decoders](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/event-decoders.md#acl-delegation-events) for the full list of ACL event decoders and types.
 
 ## Related
 
-- [Contract Builders](docs/gitbook/src/reference/sdk/contract-builders.md#delegation) — low-level ACL delegation builders
-- [useDelegateDecryption](docs/gitbook/src/reference/react/useDelegateDecryption.md) — React hook to grant delegation
-- [useRevokeDelegation](docs/gitbook/src/reference/react/useRevokeDelegation.md) — React hook to revoke delegation
-- [useDelegationStatus](docs/gitbook/src/reference/react/useDelegationStatus.md) — React hook to query delegation status
-- [useDecryptBalanceAs](docs/gitbook/src/reference/react/useDecryptBalanceAs.md) — React hook to decrypt as a delegate
-- [useBatchDecryptBalancesAs](docs/gitbook/src/reference/react/useBatchDecryptBalancesAs.md) — React hook for batch delegation decryption
+- [Contract Builders](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/contract-builders.md#delegation) — low-level ACL delegation builders
+- [useDelegateDecryption](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useDelegateDecryption.md) — React hook to grant delegation
+- [useRevokeDelegation](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevokeDelegation.md) — React hook to revoke delegation
+- [useDelegationStatus](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useDelegationStatus.md) — React hook to query delegation status
+- [useDecryptBalanceAs](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useDecryptBalanceAs.md) — React hook to decrypt as a delegate
+- [useBatchDecryptBalancesAs](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useBatchDecryptBalancesAs.md) — React hook for batch delegation decryption
 
 ## Network presets
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/sdk/network-presets.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/network-presets.md
 - logical_path: reference/sdk/network-presets
 
 # Network presets
@@ -7954,7 +8018,7 @@ The relayer selects the correct transport based on the chain ID returned by `get
 
 ## DefaultRegistryAddresses
 
-A convenience export of built-in registry addresses for known chains (Mainnet, Sepolia, Hoodi) as a `Record<number, Address>` map. Used internally by the [WrappersRegistry](docs/gitbook/src/reference/sdk/WrappersRegistry.md) class.
+A convenience export of built-in registry addresses for known chains (Mainnet, Sepolia, Hoodi) as a `Record<number, Address>` map. Used internally by the [WrappersRegistry](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WrappersRegistry.md) class.
 
 ```ts
 import { DefaultRegistryAddresses } from "@zama-fhe/sdk";
@@ -7965,19 +8029,20 @@ console.log(DefaultRegistryAddresses);
 
 
 > [!INFO]
-> `HardhatConfig` has no registry address by default. Pass one explicitly via `registryAddresses` when creating a [WrappersRegistry](docs/gitbook/src/reference/sdk/WrappersRegistry.md).
+> `HardhatConfig` has no registry address by default. Pass one explicitly via `registryAddresses` when creating a [WrappersRegistry](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WrappersRegistry.md).
 
 
 ## Related
 
-- [WrappersRegistry](docs/gitbook/src/reference/sdk/WrappersRegistry.md) — high-level registry query API
-- [Configuration guide](docs/gitbook/src/guides/configuration.md) — full relayer, signer, and storage setup
-- [ZamaSDK](docs/gitbook/src/reference/sdk/ZamaSDK.md) — SDK constructor reference
+- [WrappersRegistry](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WrappersRegistry.md) — high-level registry query API
+- [Configuration guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) — full relayer, signer, and storage setup
+- [ZamaSDK](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md) — SDK constructor reference
 
 ## Overview
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/README.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/README.md
 - logical_path: reference/react/README
 
 # Overview
@@ -7988,17 +8053,17 @@ API reference for the `@zama-fhe/react-sdk` package. Each page documents a singl
 
 ## Where to go next
 
-🟨 Go to [**ZamaProvider**](ZamaProvider.md) for the required context provider that wires up the relayer, signer, and storage.
+🟨 Go to [**ZamaProvider**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/ZamaProvider.md) for the required context provider that wires up the relayer, signer, and storage.
 
-🟨 Go to [**useConfidentialBalance**](useConfidentialBalance.md) to decrypt and display a single token's balance.
+🟨 Go to [**useConfidentialBalance**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialBalance.md) to decrypt and display a single token's balance.
 
-🟨 Go to [**useShield**](useShield.md) to convert public ERC-20 tokens into confidential form.
+🟨 Go to [**useShield**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useShield.md) to convert public ERC-20 tokens into confidential form.
 
-🟨 Go to [**useConfidentialTransfer**](useConfidentialTransfer.md) to send encrypted amounts on-chain.
+🟨 Go to [**useConfidentialTransfer**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialTransfer.md) to send encrypted amounts on-chain.
 
-🟨 Go to [**useUnshield**](useUnshield.md) to withdraw confidential tokens back to public ERC-20.
+🟨 Go to [**useUnshield**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnshield.md) to withdraw confidential tokens back to public ERC-20.
 
-🟨 Go to [**Query keys**](query-keys.md) for manual cache invalidation and custom query composition.
+🟨 Go to [**Query keys**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/query-keys.md) for manual cache invalidation and custom query composition.
 
 ## Help center
 
@@ -8011,6 +8076,7 @@ Ask technical questions and discuss with the community.
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/ZamaProvider.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/ZamaProvider.md
 - logical_path: reference/react/ZamaProvider
 
 # ZamaProvider
@@ -8149,18 +8215,19 @@ Callback fired for SDK lifecycle events (keypair generation, signing, encryption
 
 ## Related
 
-- [Configuration guide](docs/gitbook/src/guides/configuration.md)
-- [Session Model](docs/gitbook/src/concepts/session-model.md)
+- [Configuration guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md)
+- [Session Model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/session-model.md)
 
 ## useConfidentialBalance
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useConfidentialBalance.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialBalance.md
 - logical_path: reference/react/useConfidentialBalance
 
 # useConfidentialBalance
 
-Decrypt and poll a single token's confidential balance. Uses [two-phase polling](docs/gitbook/src/concepts/two-phase-polling.md) -- cheaply checks the encrypted handle on-chain, only decrypts when it changes. Decrypted values are persisted in storage, so page reloads display the balance instantly.
+Decrypt and poll a single token's confidential balance. Uses [two-phase polling](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/two-phase-polling.md) -- cheaply checks the encrypted handle on-chain, only decrypts when it changes. Decrypted values are persisted in storage, so page reloads display the balance instantly.
 
 ## Import
 
@@ -8297,20 +8364,21 @@ The `data` property is `bigint | undefined` -- the decrypted token balance.
 
 ## Related
 
-- [useConfidentialBalances](docs/gitbook/src/reference/react/useConfidentialBalances.md) -- batch variant for multiple tokens
-- [Two-Phase Polling](docs/gitbook/src/concepts/two-phase-polling.md)
-- [Check Balances guide](docs/gitbook/src/guides/check-balances.md)
-- [Query Keys](docs/gitbook/src/reference/react/query-keys.md) -- `zamaQueryKeys.confidentialBalance`
+- [useConfidentialBalances](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialBalances.md) -- batch variant for multiple tokens
+- [Two-Phase Polling](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/two-phase-polling.md)
+- [Check Balances guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/check-balances.md)
+- [Query Keys](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/query-keys.md) -- `zamaQueryKeys.confidentialBalance`
 
 ## useConfidentialBalances
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useConfidentialBalances.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialBalances.md
 - logical_path: reference/react/useConfidentialBalances
 
 # useConfidentialBalances
 
-Decrypt and poll multiple tokens' confidential balances in a single query. Returns a `Map` keyed by token address. Each token uses the same two-phase polling strategy as [`useConfidentialBalance`](docs/gitbook/src/reference/react/useConfidentialBalance.md).
+Decrypt and poll multiple tokens' confidential balances in a single query. Returns a `Map` keyed by token address. Each token uses the same two-phase polling strategy as [`useConfidentialBalance`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialBalance.md).
 
 ## Import
 
@@ -8434,20 +8502,21 @@ The `data` property is `Map<Address, bigint> | undefined` -- a map from token ad
 
 ## Related
 
-- [useConfidentialBalance](docs/gitbook/src/reference/react/useConfidentialBalance.md) -- single-token variant
-- [Two-Phase Polling](docs/gitbook/src/concepts/two-phase-polling.md)
-- [Check Balances guide](docs/gitbook/src/guides/check-balances.md)
-- [Query Keys](docs/gitbook/src/reference/react/query-keys.md) -- `zamaQueryKeys.confidentialBalances`
+- [useConfidentialBalance](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialBalance.md) -- single-token variant
+- [Two-Phase Polling](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/two-phase-polling.md)
+- [Check Balances guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/check-balances.md)
+- [Query Keys](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/query-keys.md) -- `zamaQueryKeys.confidentialBalances`
 
 ## useConfidentialTransfer
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useConfidentialTransfer.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialTransfer.md
 - logical_path: reference/react/useConfidentialTransfer
 
 # useConfidentialTransfer
 
-Send confidential ERC-20 tokens privately. The amount is encrypted client-side before the transaction is submitted on-chain. Automatically invalidates the [`useConfidentialBalance`](docs/gitbook/src/reference/react/useConfidentialBalance.md) cache on success.
+Send confidential ERC-20 tokens privately. The amount is encrypted client-side before the transaction is submitted on-chain. Automatically invalidates the [`useConfidentialBalance`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialBalance.md) cache on success.
 
 ## Import
 
@@ -8607,19 +8676,20 @@ The `data` property (after a successful mutation) is `{ txHash: Hex, receipt: Tr
 
 ## Related
 
-- [useConfidentialTransferFrom](docs/gitbook/src/reference/react/useConfidentialTransferFrom.md) -- operator transfer variant
-- [Transfer Privately guide](docs/gitbook/src/guides/transfer-privately.md)
-- [useConfidentialBalance](docs/gitbook/src/reference/react/useConfidentialBalance.md) -- auto-invalidated on success
+- [useConfidentialTransferFrom](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialTransferFrom.md) -- operator transfer variant
+- [Transfer Privately guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/transfer-privately.md)
+- [useConfidentialBalance](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialBalance.md) -- auto-invalidated on success
 
 ## useConfidentialTransferFrom
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useConfidentialTransferFrom.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialTransferFrom.md
 - logical_path: reference/react/useConfidentialTransferFrom
 
 # useConfidentialTransferFrom
 
-Transfer confidential tokens on behalf of an owner who approved you as an operator. The sender must have been granted approval via [`useConfidentialApprove`](docs/gitbook/src/reference/react/useConfidentialApprove.md) before calling this hook. Automatically invalidates the [`useConfidentialBalance`](docs/gitbook/src/reference/react/useConfidentialBalance.md) cache on success.
+Transfer confidential tokens on behalf of an owner who approved you as an operator. The sender must have been granted approval via [`useConfidentialApprove`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialApprove.md) before calling this hook. Automatically invalidates the [`useConfidentialBalance`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialBalance.md) cache on success.
 
 ## Import
 
@@ -8766,15 +8836,16 @@ The `data` property (after a successful mutation) is `{ txHash: Hex, receipt: Tr
 
 ## Related
 
-- [useConfidentialTransfer](docs/gitbook/src/reference/react/useConfidentialTransfer.md) -- direct transfer (no operator)
-- [useConfidentialApprove](docs/gitbook/src/reference/react/useConfidentialApprove.md) -- grant operator approval
-- [Operator Approvals guide](docs/gitbook/src/guides/operator-approvals.md)
-- [useConfidentialBalance](docs/gitbook/src/reference/react/useConfidentialBalance.md) -- auto-invalidated on success
+- [useConfidentialTransfer](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialTransfer.md) -- direct transfer (no operator)
+- [useConfidentialApprove](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialApprove.md) -- grant operator approval
+- [Operator Approvals guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/operator-approvals.md)
+- [useConfidentialBalance](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialBalance.md) -- auto-invalidated on success
 
 ## useShield
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useShield.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useShield.md
 - logical_path: reference/react/useShield
 
 # useShield
@@ -8937,13 +9008,14 @@ Auto-invalidates the `confidentialBalance` cache on success.
 
 ## Related
 
-- [useUnshield](docs/gitbook/src/reference/react/useUnshield.md) — reverse operation, unshield back to public ERC-20
-- [Token.shield](docs/gitbook/src/reference/sdk/Token.md#shield) — imperative equivalent on the `Token` class
+- [useUnshield](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnshield.md) — reverse operation, unshield back to public ERC-20
+- [Token.shield](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md#shield) — imperative equivalent on the `Token` class
 
 ## useUnshield
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useUnshield.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnshield.md
 - logical_path: reference/react/useUnshield
 
 # useUnshield
@@ -9111,15 +9183,16 @@ Auto-invalidates the `confidentialBalance` cache on success.
 
 ## Related
 
-- [useUnshieldAll](docs/gitbook/src/reference/react/useUnshieldAll.md) — unshield the entire confidential balance
-- [useResumeUnshield](docs/gitbook/src/reference/react/useResumeUnshield.md) — resume an interrupted unshield
-- [useShield](docs/gitbook/src/reference/react/useShield.md) — reverse operation, shield public tokens
-- [Token.unshield](docs/gitbook/src/reference/sdk/Token.md#unshield) — imperative equivalent on the `Token` class
+- [useUnshieldAll](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnshieldAll.md) — unshield the entire confidential balance
+- [useResumeUnshield](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useResumeUnshield.md) — resume an interrupted unshield
+- [useShield](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useShield.md) — reverse operation, shield public tokens
+- [Token.unshield](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md#unshield) — imperative equivalent on the `Token` class
 
 ## useUnshieldAll
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useUnshieldAll.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnshieldAll.md
 - logical_path: reference/react/useUnshieldAll
 
 # useUnshieldAll
@@ -9264,15 +9337,16 @@ Auto-invalidates the `confidentialBalance` cache on success.
 
 ## Related
 
-- [useUnshield](docs/gitbook/src/reference/react/useUnshield.md) — unshield a specific amount
-- [useResumeUnshield](docs/gitbook/src/reference/react/useResumeUnshield.md) — resume an interrupted unshield
-- [useShield](docs/gitbook/src/reference/react/useShield.md) — reverse operation, shield public tokens
-- [Token.unshieldAll](docs/gitbook/src/reference/sdk/Token.md#unshieldall) — imperative equivalent on the `Token` class
+- [useUnshield](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnshield.md) — unshield a specific amount
+- [useResumeUnshield](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useResumeUnshield.md) — resume an interrupted unshield
+- [useShield](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useShield.md) — reverse operation, shield public tokens
+- [Token.unshieldAll](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md#unshieldall) — imperative equivalent on the `Token` class
 
 ## useResumeUnshield
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useResumeUnshield.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useResumeUnshield.md
 - logical_path: reference/react/useResumeUnshield
 
 # useResumeUnshield
@@ -9417,23 +9491,24 @@ Auto-invalidates the `confidentialBalance` cache on success.
 
 ## Related
 
-- [useUnshield](docs/gitbook/src/reference/react/useUnshield.md) — standard unshield (handles both steps automatically)
-- [useUnshieldAll](docs/gitbook/src/reference/react/useUnshieldAll.md) — unshield the entire balance
-- [Token.resumeUnshield](docs/gitbook/src/reference/sdk/Token.md#resumeunshield) — imperative equivalent on the `Token` class
+- [useUnshield](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnshield.md) — standard unshield (handles both steps automatically)
+- [useUnshieldAll](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnshieldAll.md) — unshield the entire balance
+- [Token.resumeUnshield](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md#resumeunshield) — imperative equivalent on the `Token` class
 
 ## useUnwrap
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useUnwrap.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnwrap.md
 - logical_path: reference/react/useUnwrap
 
 # useUnwrap
 
-Low-level mutation hook that requests an unwrap for a specific amount. You must finalize manually with [`useFinalizeUnwrap`](docs/gitbook/src/reference/react/useFinalizeUnwrap.md).
+Low-level mutation hook that requests an unwrap for a specific amount. You must finalize manually with [`useFinalizeUnwrap`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useFinalizeUnwrap.md).
 
 
 > [!INFO]
-> Most apps should use [`useUnshield`](docs/gitbook/src/reference/react/useUnshield.md) instead, which orchestrates both steps (unwrap + finalize) in a single call.
+> Most apps should use [`useUnshield`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnshield.md) instead, which orchestrates both steps (unwrap + finalize) in a single call.
 
 
 ## Import
@@ -9515,23 +9590,24 @@ The mutation resolves with a transaction hash (`Hex`).
 
 ## Related
 
-- [`useFinalizeUnwrap`](docs/gitbook/src/reference/react/useFinalizeUnwrap.md) -- finalize the unwrap with a decryption proof
-- [`useUnwrapAll`](docs/gitbook/src/reference/react/useUnwrapAll.md) -- unwrap the full balance
-- [`useUnshield`](docs/gitbook/src/reference/react/useUnshield.md) -- high-level hook that handles both steps
+- [`useFinalizeUnwrap`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useFinalizeUnwrap.md) -- finalize the unwrap with a decryption proof
+- [`useUnwrapAll`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnwrapAll.md) -- unwrap the full balance
+- [`useUnshield`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnshield.md) -- high-level hook that handles both steps
 
 ## useUnwrapAll
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useUnwrapAll.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnwrapAll.md
 - logical_path: reference/react/useUnwrapAll
 
 # useUnwrapAll
 
-Low-level mutation hook that requests an unwrap for the full confidential balance. You must finalize manually with [`useFinalizeUnwrap`](docs/gitbook/src/reference/react/useFinalizeUnwrap.md).
+Low-level mutation hook that requests an unwrap for the full confidential balance. You must finalize manually with [`useFinalizeUnwrap`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useFinalizeUnwrap.md).
 
 
 > [!INFO]
-> Most apps should use [`useUnshieldAll`](docs/gitbook/src/reference/react/useUnshieldAll.md) instead, which orchestrates both steps in a single call.
+> Most apps should use [`useUnshieldAll`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnshieldAll.md) instead, which orchestrates both steps in a single call.
 
 
 ## Import
@@ -9601,23 +9677,24 @@ The mutation resolves with a transaction hash (`Hex`).
 
 ## Related
 
-- [`useFinalizeUnwrap`](docs/gitbook/src/reference/react/useFinalizeUnwrap.md) -- finalize the unwrap with a decryption proof
-- [`useUnwrap`](docs/gitbook/src/reference/react/useUnwrap.md) -- unwrap a specific amount
-- [`useUnshieldAll`](docs/gitbook/src/reference/react/useUnshieldAll.md) -- high-level hook that handles both steps
+- [`useFinalizeUnwrap`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useFinalizeUnwrap.md) -- finalize the unwrap with a decryption proof
+- [`useUnwrap`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnwrap.md) -- unwrap a specific amount
+- [`useUnshieldAll`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnshieldAll.md) -- high-level hook that handles both steps
 
 ## useFinalizeUnwrap
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useFinalizeUnwrap.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useFinalizeUnwrap.md
 - logical_path: reference/react/useFinalizeUnwrap
 
 # useFinalizeUnwrap
 
-Low-level mutation hook that finalizes an unwrap with the decryption proof. Call this after [`useUnwrap`](docs/gitbook/src/reference/react/useUnwrap.md) or [`useUnwrapAll`](docs/gitbook/src/reference/react/useUnwrapAll.md) has submitted the initial unwrap transaction.
+Low-level mutation hook that finalizes an unwrap with the decryption proof. Call this after [`useUnwrap`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnwrap.md) or [`useUnwrapAll`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnwrapAll.md) has submitted the initial unwrap transaction.
 
 
 > [!INFO]
-> Most apps should use [`useUnshield`](docs/gitbook/src/reference/react/useUnshield.md) instead, which orchestrates both steps (unwrap + finalize) in a single call. Use this hook for custom multi-step flows where you need control over each phase.
+> Most apps should use [`useUnshield`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnshield.md) instead, which orchestrates both steps (unwrap + finalize) in a single call. Use this hook for custom multi-step flows where you need control over each phase.
 
 
 ## Import
@@ -9681,7 +9758,7 @@ const { mutateAsync: finalize } = useFinalizeUnwrap({
 
 `Hex`
 
-The transaction hash returned by [`useUnwrap`](docs/gitbook/src/reference/react/useUnwrap.md) or [`useUnwrapAll`](docs/gitbook/src/reference/react/useUnwrapAll.md). The SDK uses this to locate and verify the decryption proof on-chain.
+The transaction hash returned by [`useUnwrap`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnwrap.md) or [`useUnwrapAll`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnwrapAll.md). The SDK uses this to locate and verify the decryption proof on-chain.
 
 ```tsx
 await finalize({ unwrapTxHash: "0xabc..." });
@@ -9700,22 +9777,23 @@ import { type UseFinalizeUnwrapReturnType } from "@zama-fhe/react-sdk";
 
 ## Related
 
-- [`useUnwrap`](docs/gitbook/src/reference/react/useUnwrap.md) -- request unwrap for a specific amount
-- [`useUnwrapAll`](docs/gitbook/src/reference/react/useUnwrapAll.md) -- request unwrap for the full balance
-- [`useResumeUnshield`](docs/gitbook/src/reference/react/useResumeUnshield.md) -- resume an interrupted unshield
-- [`useUnshield`](docs/gitbook/src/reference/react/useUnshield.md) -- high-level hook that handles both steps
+- [`useUnwrap`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnwrap.md) -- request unwrap for a specific amount
+- [`useUnwrapAll`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnwrapAll.md) -- request unwrap for the full balance
+- [`useResumeUnshield`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useResumeUnshield.md) -- resume an interrupted unshield
+- [`useUnshield`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnshield.md) -- high-level hook that handles both steps
 
 ## useAllow
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useAllow.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useAllow.md
 - logical_path: reference/react/useAllow
 
 # useAllow
 
 Mutation hook that signs an EIP-712 message authorizing decryption of confidential handles for a list of contract addresses. This is **not token-specific** — any contract that uses FHE-encrypted values (confidential tokens, DeFi vaults, games, etc.) can be authorized in a single wallet signature.
 
-Call this early (e.g. after wallet connect) so that [`useUserDecrypt`](docs/gitbook/src/reference/react/useUserDecrypt.md) queries fire automatically without wallet popups. Automatically invalidates [`useIsAllowed`](docs/gitbook/src/reference/react/useIsAllowed.md) queries on success.
+Call this early (e.g. after wallet connect) so that [`useUserDecrypt`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUserDecrypt.md) queries fire automatically without wallet popups. Automatically invalidates [`useIsAllowed`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsAllowed.md) queries on success.
 
 
 > [!WARNING]
@@ -9799,15 +9877,16 @@ Returns a standard TanStack Query `UseMutationResult<void, Error, Address[]>`.
 
 ## Related
 
-- [`useIsAllowed`](docs/gitbook/src/reference/react/useIsAllowed.md) -- check whether a session signature is cached
-- [`useRevoke`](docs/gitbook/src/reference/react/useRevoke.md) -- revoke decrypt authorization for specific contracts
-- [`useRevokeSession`](docs/gitbook/src/reference/react/useRevokeSession.md) -- revoke the entire session
-- [Session Model](docs/gitbook/src/concepts/session-model.md) -- security model and TTL configuration
+- [`useIsAllowed`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsAllowed.md) -- check whether a session signature is cached
+- [`useRevoke`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevoke.md) -- revoke decrypt authorization for specific contracts
+- [`useRevokeSession`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevokeSession.md) -- revoke the entire session
+- [Session Model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/session-model.md) -- security model and TTL configuration
 
 ## useIsAllowed
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useIsAllowed.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsAllowed.md
 - logical_path: reference/react/useIsAllowed
 
 # useIsAllowed
@@ -9903,7 +9982,7 @@ const { data: allowed } = useIsAllowed({
 `data` is a `boolean`:
 
 - `true` -- a valid session signature is cached; decrypts will not prompt the wallet.
-- `false` -- no cached signature, or the `sessionTTL` has expired. Call [`useAllow`](docs/gitbook/src/reference/react/useAllow.md) to re-authorize.
+- `false` -- no cached signature, or the `sessionTTL` has expired. Call [`useAllow`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useAllow.md) to re-authorize.
 
 
 > [!NOTE]
@@ -9912,14 +9991,15 @@ const { data: allowed } = useIsAllowed({
 
 ## Related
 
-- [`useAllow`](docs/gitbook/src/reference/react/useAllow.md) -- pre-authorize contracts with one wallet signature
-- [`useRevoke`](docs/gitbook/src/reference/react/useRevoke.md) -- revoke session credentials
-- [Session Model](docs/gitbook/src/concepts/session-model.md) -- security model and TTL configuration
+- [`useAllow`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useAllow.md) -- pre-authorize contracts with one wallet signature
+- [`useRevoke`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevoke.md) -- revoke session credentials
+- [Session Model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/session-model.md) -- security model and TTL configuration
 
 ## useRevoke
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useRevoke.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevoke.md
 - logical_path: reference/react/useRevoke
 
 # useRevoke
@@ -9980,30 +10060,31 @@ revoke(["0xContractA", "0xContractB"]);
 ## Behavior
 
 - Clears the cached session signature for each contract in the array.
-- Auto-invalidates all [`useIsAllowed`](docs/gitbook/src/reference/react/useIsAllowed.md) queries on success.
+- Auto-invalidates all [`useIsAllowed`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsAllowed.md) queries on success.
 - Does **not** delete stored FHE credentials — only the session-level signature is cleared.
 
 
 > [!INFO]
-> If you use [`WagmiSigner`](docs/gitbook/src/reference/sdk/WagmiSigner.md), the SDK auto-revokes on wallet disconnect or account change. Manual revoke is for [`ViemSigner`](docs/gitbook/src/reference/sdk/ViemSigner.md) and [`EthersSigner`](docs/gitbook/src/reference/sdk/EthersSigner.md) users.
+> If you use [`WagmiSigner`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WagmiSigner.md), the SDK auto-revokes on wallet disconnect or account change. Manual revoke is for [`ViemSigner`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ViemSigner.md) and [`EthersSigner`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/EthersSigner.md) users.
 
 
 ## Related
 
-- [`useRevokeSession`](docs/gitbook/src/reference/react/useRevokeSession.md) — revoke the entire session instead of specific contracts
-- [`useAllow`](docs/gitbook/src/reference/react/useAllow.md) — authorize decryption for contracts with a single wallet signature
-- [`useIsAllowed`](docs/gitbook/src/reference/react/useIsAllowed.md) — check whether a session signature is valid
-- [`Token.revoke()`](docs/gitbook/src/reference/sdk/Token.md#revoke) — imperative equivalent on the SDK class
+- [`useRevokeSession`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevokeSession.md) — revoke the entire session instead of specific contracts
+- [`useAllow`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useAllow.md) — authorize decryption for contracts with a single wallet signature
+- [`useIsAllowed`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsAllowed.md) — check whether a session signature is valid
+- [`Token.revoke()`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md#revoke) — imperative equivalent on the SDK class
 
 ## useRevokeSession
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useRevokeSession.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevokeSession.md
 - logical_path: reference/react/useRevokeSession
 
 # useRevokeSession
 
-Revoke the entire session for the connected wallet. Unlike [`useRevoke`](docs/gitbook/src/reference/react/useRevoke.md) which targets specific contract addresses, this clears the session-level signature.
+Revoke the entire session for the connected wallet. Unlike [`useRevoke`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevoke.md) which targets specific contract addresses, this clears the session-level signature.
 
 ## Import
 
@@ -10055,24 +10136,25 @@ revokeSession();
 ## Behavior
 
 - Clears the session-level signature for the connected wallet.
-- Auto-invalidates all [`useIsAllowed`](docs/gitbook/src/reference/react/useIsAllowed.md) queries on success.
+- Auto-invalidates all [`useIsAllowed`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsAllowed.md) queries on success.
 - After revoking, any balance decrypt or FHE operation will prompt a new wallet signature.
 
 
 > [!INFO]
-> If you use [`WagmiSigner`](docs/gitbook/src/reference/sdk/WagmiSigner.md), the SDK auto-revokes on wallet disconnect or account change — you do not need to call this hook manually for that case.
+> If you use [`WagmiSigner`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WagmiSigner.md), the SDK auto-revokes on wallet disconnect or account change — you do not need to call this hook manually for that case.
 
 
 ## Related
 
-- [`useRevoke`](docs/gitbook/src/reference/react/useRevoke.md) — revoke specific contract addresses instead of the full session
-- [`useAllow`](docs/gitbook/src/reference/react/useAllow.md) — pre-authorize contracts with a single wallet signature
-- [`useIsAllowed`](docs/gitbook/src/reference/react/useIsAllowed.md) — check whether a session signature is valid
+- [`useRevoke`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevoke.md) — revoke specific contract addresses instead of the full session
+- [`useAllow`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useAllow.md) — pre-authorize contracts with a single wallet signature
+- [`useIsAllowed`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsAllowed.md) — check whether a session signature is valid
 
 ## useConfidentialApprove
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useConfidentialApprove.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialApprove.md
 - logical_path: reference/react/useConfidentialApprove
 
 # useConfidentialApprove
@@ -10166,14 +10248,15 @@ The mutation resolves with a transaction hash (`Hex`).
 
 ## Related
 
-- [`useConfidentialIsApproved`](docs/gitbook/src/reference/react/useConfidentialIsApproved.md) — check if a spender is currently approved
-- [`useConfidentialTransferFrom`](docs/gitbook/src/reference/react/useConfidentialTransferFrom.md) — operator transfer using an existing approval
-- [`Token.approve()`](docs/gitbook/src/reference/sdk/Token.md#approve) — imperative equivalent on the SDK class
+- [`useConfidentialIsApproved`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialIsApproved.md) — check if a spender is currently approved
+- [`useConfidentialTransferFrom`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialTransferFrom.md) — operator transfer using an existing approval
+- [`Token.approve()`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md#approve) — imperative equivalent on the SDK class
 
 ## useConfidentialIsApproved
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useConfidentialIsApproved.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialIsApproved.md
 - logical_path: reference/react/useConfidentialIsApproved
 
 # useConfidentialIsApproved
@@ -10284,13 +10367,14 @@ function App() {
 
 ## Related
 
-- [`useConfidentialApprove`](docs/gitbook/src/reference/react/useConfidentialApprove.md) — approve an operator
-- [`Token.isApproved()`](docs/gitbook/src/reference/sdk/Token.md#isapproved) — imperative equivalent on the SDK class
+- [`useConfidentialApprove`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialApprove.md) — approve an operator
+- [`Token.isApproved()`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md#isapproved) — imperative equivalent on the SDK class
 
 ## useUnderlyingAllowance
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useUnderlyingAllowance.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnderlyingAllowance.md
 - logical_path: reference/react/useUnderlyingAllowance
 
 # useUnderlyingAllowance
@@ -10401,13 +10485,14 @@ function App() {
 
 ## Related
 
-- [`useShield`](docs/gitbook/src/reference/react/useShield.md) — shield tokens (handles approval automatically)
-- [`zamaQueryKeys.underlyingAllowance`](docs/gitbook/src/reference/react/query-keys.md) — cache keys for manual invalidation
+- [`useShield`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useShield.md) — shield tokens (handles approval automatically)
+- [`zamaQueryKeys.underlyingAllowance`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/query-keys.md) — cache keys for manual invalidation
 
 ## useWrapperDiscovery
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useWrapperDiscovery.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useWrapperDiscovery.md
 - logical_path: reference/react/useWrapperDiscovery
 
 # useWrapperDiscovery
@@ -10499,13 +10584,14 @@ function WrapperInfo({ tokenAddress }: { tokenAddress: `0x${string}` }) {
 
 ## Related
 
-- [useMetadata](docs/gitbook/src/reference/react/useMetadata.md) -- read token name, symbol, and decimals
-- [Hooks overview](docs/gitbook/src/reference/react/query-keys.md) -- all available hooks
+- [useMetadata](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useMetadata.md) -- read token name, symbol, and decimals
+- [Hooks overview](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/query-keys.md) -- all available hooks
 
 ## useWrappersRegistryAddress
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useWrappersRegistryAddress.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useWrappersRegistryAddress.md
 - logical_path: reference/react/useWrappersRegistryAddress
 
 # useWrappersRegistryAddress
@@ -10554,14 +10640,15 @@ The underlying chain ID query uses `staleTime: 30000` (30 seconds). Chain switch
 
 ## Related
 
-- [WrappersRegistry](docs/gitbook/src/reference/sdk/WrappersRegistry.md) -- SDK-level registry class
-- [Network Presets](docs/gitbook/src/reference/sdk/network-presets.md) -- built-in chain configurations and `DefaultRegistryAddresses`
-- [useListPairs](docs/gitbook/src/reference/react/useListPairs.md) -- paginated pair listing (depends on this hook internally)
+- [WrappersRegistry](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WrappersRegistry.md) -- SDK-level registry class
+- [Network Presets](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/network-presets.md) -- built-in chain configurations and `DefaultRegistryAddresses`
+- [useListPairs](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useListPairs.md) -- paginated pair listing (depends on this hook internally)
 
 ## useListPairs
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useListPairs.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useListPairs.md
 - logical_path: reference/react/useListPairs
 
 # useListPairs
@@ -10699,22 +10786,23 @@ Results are cached with a TTL matching the SDK's `registryTTL` (default: 24 hour
 
 ## Related
 
-- [WrappersRegistry](docs/gitbook/src/reference/sdk/WrappersRegistry.md) -- SDK-level registry class with `listPairs()` method
-- [useTokenPairsRegistry](docs/gitbook/src/reference/react/useTokenPairsRegistry.md) -- fetch all pairs at once (no pagination)
-- [useConfidentialTokenAddress](docs/gitbook/src/reference/react/useConfidentialTokenAddress.md) -- look up a single token's wrapper
-- [Query Keys](docs/gitbook/src/reference/react/query-keys.md) -- manual cache control via `zamaQueryKeys.wrappersRegistry`
+- [WrappersRegistry](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WrappersRegistry.md) -- SDK-level registry class with `listPairs()` method
+- [useTokenPairsRegistry](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useTokenPairsRegistry.md) -- fetch all pairs at once (no pagination)
+- [useConfidentialTokenAddress](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialTokenAddress.md) -- look up a single token's wrapper
+- [Query Keys](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/query-keys.md) -- manual cache control via `zamaQueryKeys.wrappersRegistry`
 
 ## useTokenPairsRegistry
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useTokenPairsRegistry.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useTokenPairsRegistry.md
 - logical_path: reference/react/useTokenPairsRegistry
 
 # useTokenPairsRegistry
 
 Fetches all token wrapper pairs from the `ConfidentialTokenWrappersRegistry` contract on the current chain in a single call.
 
-For large registries, prefer [`useListPairs`](docs/gitbook/src/reference/react/useListPairs.md) with pagination.
+For large registries, prefer [`useListPairs`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useListPairs.md) with pagination.
 
 ## Import
 
@@ -10773,14 +10861,15 @@ interface TokenWrapperPair {
 
 ## Related
 
-- [useListPairs](docs/gitbook/src/reference/react/useListPairs.md) -- paginated listing with optional metadata
-- [useTokenPairsLength](docs/gitbook/src/reference/react/useTokenPairsLength.md) -- get total count without fetching pairs
-- [WrappersRegistry](docs/gitbook/src/reference/sdk/WrappersRegistry.md) -- SDK-level `getTokenPairs()` method
+- [useListPairs](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useListPairs.md) -- paginated listing with optional metadata
+- [useTokenPairsLength](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useTokenPairsLength.md) -- get total count without fetching pairs
+- [WrappersRegistry](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WrappersRegistry.md) -- SDK-level `getTokenPairs()` method
 
 ## useTokenPairsLength
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useTokenPairsLength.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useTokenPairsLength.md
 - logical_path: reference/react/useTokenPairsLength
 
 # useTokenPairsLength
@@ -10828,19 +10917,20 @@ The `data` field resolves to `bigint` -- the total number of registered pairs.
 
 ## Related
 
-- [useListPairs](docs/gitbook/src/reference/react/useListPairs.md) -- paginated pair listing
-- [useTokenPairsSlice](docs/gitbook/src/reference/react/useTokenPairsSlice.md) -- fetch a range of pairs by index
-- [WrappersRegistry](docs/gitbook/src/reference/sdk/WrappersRegistry.md) -- SDK-level `getTokenPairsLength()` method
+- [useListPairs](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useListPairs.md) -- paginated pair listing
+- [useTokenPairsSlice](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useTokenPairsSlice.md) -- fetch a range of pairs by index
+- [WrappersRegistry](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WrappersRegistry.md) -- SDK-level `getTokenPairsLength()` method
 
 ## useTokenPairsSlice
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useTokenPairsSlice.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useTokenPairsSlice.md
 - logical_path: reference/react/useTokenPairsSlice
 
 # useTokenPairsSlice
 
-Fetches a range of token wrapper pairs from the registry using start and end indices. This is the low-level pagination primitive — for page-based pagination, use [`useListPairs`](docs/gitbook/src/reference/react/useListPairs.md) instead.
+Fetches a range of token wrapper pairs from the registry using start and end indices. This is the low-level pagination primitive — for page-based pagination, use [`useListPairs`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useListPairs.md) instead.
 
 ## Import
 
@@ -10923,15 +11013,16 @@ interface TokenWrapperPair {
 
 ## Related
 
-- [useListPairs](docs/gitbook/src/reference/react/useListPairs.md) -- page-based pagination with metadata support
-- [useTokenPairsLength](docs/gitbook/src/reference/react/useTokenPairsLength.md) -- get total count for pagination bounds
-- [useTokenPair](docs/gitbook/src/reference/react/useTokenPair.md) -- fetch a single pair by index
-- [WrappersRegistry](docs/gitbook/src/reference/sdk/WrappersRegistry.md) -- SDK-level `getTokenPairsSlice()` method
+- [useListPairs](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useListPairs.md) -- page-based pagination with metadata support
+- [useTokenPairsLength](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useTokenPairsLength.md) -- get total count for pagination bounds
+- [useTokenPair](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useTokenPair.md) -- fetch a single pair by index
+- [WrappersRegistry](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WrappersRegistry.md) -- SDK-level `getTokenPairsSlice()` method
 
 ## useTokenPair
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useTokenPair.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useTokenPair.md
 - logical_path: reference/react/useTokenPair
 
 # useTokenPair
@@ -11001,14 +11092,15 @@ interface TokenWrapperPair {
 
 ## Related
 
-- [useTokenPairsLength](docs/gitbook/src/reference/react/useTokenPairsLength.md) -- get total count to know valid indices
-- [useTokenPairsSlice](docs/gitbook/src/reference/react/useTokenPairsSlice.md) -- fetch a range of pairs
-- [WrappersRegistry](docs/gitbook/src/reference/sdk/WrappersRegistry.md) -- SDK-level `getTokenPair()` method
+- [useTokenPairsLength](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useTokenPairsLength.md) -- get total count to know valid indices
+- [useTokenPairsSlice](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useTokenPairsSlice.md) -- fetch a range of pairs
+- [WrappersRegistry](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WrappersRegistry.md) -- SDK-level `getTokenPair()` method
 
 ## useConfidentialTokenAddress
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useConfidentialTokenAddress.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialTokenAddress.md
 - logical_path: reference/react/useConfidentialTokenAddress
 
 # useConfidentialTokenAddress
@@ -11073,15 +11165,16 @@ The `data` field resolves to `readonly [boolean, Address]`:
 
 ## Related
 
-- [useTokenAddress](docs/gitbook/src/reference/react/useTokenAddress.md) -- reverse lookup (confidential &rarr; plain)
-- [useIsConfidentialTokenValid](docs/gitbook/src/reference/react/useIsConfidentialTokenValid.md) -- check if a confidential token is valid
-- [useWrapperDiscovery](docs/gitbook/src/reference/react/useWrapperDiscovery.md) -- alternative lookup via the deployment coordinator
-- [WrappersRegistry](docs/gitbook/src/reference/sdk/WrappersRegistry.md) -- SDK-level `getConfidentialTokenAddress()` method
+- [useTokenAddress](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useTokenAddress.md) -- reverse lookup (confidential &rarr; plain)
+- [useIsConfidentialTokenValid](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsConfidentialTokenValid.md) -- check if a confidential token is valid
+- [useWrapperDiscovery](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useWrapperDiscovery.md) -- alternative lookup via the deployment coordinator
+- [WrappersRegistry](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WrappersRegistry.md) -- SDK-level `getConfidentialTokenAddress()` method
 
 ## useTokenAddress
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useTokenAddress.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useTokenAddress.md
 - logical_path: reference/react/useTokenAddress
 
 # useTokenAddress
@@ -11146,14 +11239,15 @@ The `data` field resolves to `readonly [boolean, Address]`:
 
 ## Related
 
-- [useConfidentialTokenAddress](docs/gitbook/src/reference/react/useConfidentialTokenAddress.md) -- forward lookup (plain &rarr; confidential)
-- [useIsConfidentialTokenValid](docs/gitbook/src/reference/react/useIsConfidentialTokenValid.md) -- check if a confidential token is valid
-- [WrappersRegistry](docs/gitbook/src/reference/sdk/WrappersRegistry.md) -- SDK-level `getTokenAddress()` method
+- [useConfidentialTokenAddress](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialTokenAddress.md) -- forward lookup (plain &rarr; confidential)
+- [useIsConfidentialTokenValid](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsConfidentialTokenValid.md) -- check if a confidential token is valid
+- [WrappersRegistry](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WrappersRegistry.md) -- SDK-level `getTokenAddress()` method
 
 ## useIsConfidentialTokenValid
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useIsConfidentialTokenValid.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsConfidentialTokenValid.md
 - logical_path: reference/react/useIsConfidentialTokenValid
 
 # useIsConfidentialTokenValid
@@ -11221,14 +11315,15 @@ The `data` field resolves to `boolean`:
 
 ## Related
 
-- [useConfidentialTokenAddress](docs/gitbook/src/reference/react/useConfidentialTokenAddress.md) -- look up the wrapper for an ERC-20
-- [useTokenAddress](docs/gitbook/src/reference/react/useTokenAddress.md) -- reverse lookup (confidential &rarr; plain)
-- [WrappersRegistry](docs/gitbook/src/reference/sdk/WrappersRegistry.md) -- SDK-level `isConfidentialTokenValid()` method
+- [useConfidentialTokenAddress](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialTokenAddress.md) -- look up the wrapper for an ERC-20
+- [useTokenAddress](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useTokenAddress.md) -- reverse lookup (confidential &rarr; plain)
+- [WrappersRegistry](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WrappersRegistry.md) -- SDK-level `isConfidentialTokenValid()` method
 
 ## useMetadata
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useMetadata.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useMetadata.md
 - logical_path: reference/react/useMetadata
 
 # useMetadata
@@ -11316,14 +11411,15 @@ function TokenHeader({ tokenAddress }: { tokenAddress: `0x${string}` }) {
 
 ## Related
 
-- [useWrapperDiscovery](docs/gitbook/src/reference/react/useWrapperDiscovery.md) -- find the wrapper address for a token
-- [useConfidentialBalance](docs/gitbook/src/reference/react/useConfidentialBalance.md) -- read the decrypted confidential balance
-- [Hooks overview](docs/gitbook/src/reference/react/query-keys.md) -- all available hooks
+- [useWrapperDiscovery](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useWrapperDiscovery.md) -- find the wrapper address for a token
+- [useConfidentialBalance](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialBalance.md) -- read the decrypted confidential balance
+- [Hooks overview](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/query-keys.md) -- all available hooks
 
 ## useActivityFeed
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useActivityFeed.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useActivityFeed.md
 - logical_path: reference/react/useActivityFeed
 
 # useActivityFeed
@@ -11475,14 +11571,15 @@ Array<{
 
 ## Related
 
-- [useConfidentialBalance](docs/gitbook/src/reference/react/useConfidentialBalance.md) -- read the decrypted balance
-- [useMetadata](docs/gitbook/src/reference/react/useMetadata.md) -- token name, symbol, decimals
-- [Query keys](docs/gitbook/src/reference/react/query-keys.md) -- `zamaQueryKeys.activityFeed` for cache control
+- [useConfidentialBalance](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialBalance.md) -- read the decrypted balance
+- [useMetadata](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useMetadata.md) -- token name, symbol, decimals
+- [Query keys](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/query-keys.md) -- `zamaQueryKeys.activityFeed` for cache control
 
 ## useZamaSDK
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useZamaSDK.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useZamaSDK.md
 - logical_path: reference/react/useZamaSDK
 
 # useZamaSDK
@@ -11558,14 +11655,15 @@ The configured SDK instance. Throws if called outside a `ZamaProvider`.
 
 ## Related
 
-- [useToken](docs/gitbook/src/reference/react/useToken.md) — memoized `Token` instance for a given address
-- [useReadonlyToken](docs/gitbook/src/reference/react/useReadonlyToken.md) — memoized `ReadonlyToken` instance (no write access)
-- [ZamaSDK](docs/gitbook/src/reference/sdk/ZamaSDK.md) — full API reference for the SDK class
+- [useToken](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useToken.md) — memoized `Token` instance for a given address
+- [useReadonlyToken](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useReadonlyToken.md) — memoized `ReadonlyToken` instance (no write access)
+- [ZamaSDK](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md) — full API reference for the SDK class
 
 ## useToken
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useToken.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useToken.md
 - logical_path: reference/react/useToken
 
 # useToken
@@ -11675,14 +11773,15 @@ A memoized `Token` instance with full read and write access. The reference stays
 
 ## Related
 
-- [useReadonlyToken](docs/gitbook/src/reference/react/useReadonlyToken.md) — read-only variant (no signing required)
-- [useZamaSDK](docs/gitbook/src/reference/react/useZamaSDK.md) — access the underlying SDK instance directly
-- [Token](docs/gitbook/src/reference/sdk/Token.md) — full API reference for the `Token` class
+- [useReadonlyToken](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useReadonlyToken.md) — read-only variant (no signing required)
+- [useZamaSDK](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useZamaSDK.md) — access the underlying SDK instance directly
+- [Token](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md) — full API reference for the `Token` class
 
 ## useReadonlyToken
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useReadonlyToken.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useReadonlyToken.md
 - logical_path: reference/react/useReadonlyToken
 
 # useReadonlyToken
@@ -11775,14 +11874,15 @@ A memoized `ReadonlyToken` instance. The reference stays the same as long as the
 
 ## Related
 
-- [useToken](docs/gitbook/src/reference/react/useToken.md) — full read/write `Token` instance
-- [useZamaSDK](docs/gitbook/src/reference/react/useZamaSDK.md) — access the underlying SDK instance directly
-- [ReadonlyToken](docs/gitbook/src/reference/sdk/ReadonlyToken.md) — full API reference for the `ReadonlyToken` class
+- [useToken](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useToken.md) — full read/write `Token` instance
+- [useZamaSDK](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useZamaSDK.md) — access the underlying SDK instance directly
+- [ReadonlyToken](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ReadonlyToken.md) — full API reference for the `ReadonlyToken` class
 
 ## useEncrypt
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useEncrypt.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useEncrypt.md
 - logical_path: reference/react/useEncrypt
 
 # useEncrypt
@@ -11791,7 +11891,7 @@ Low-level mutation hook that encrypts plaintext values using the relayer's FHE e
 
 
 > [!WARNING]
-> For **confidential ERC-20 tokens**, use [`useShield`](docs/gitbook/src/reference/react/useShield.md) or [`useConfidentialTransfer`](docs/gitbook/src/reference/react/useConfidentialTransfer.md) — they handle encryption automatically.
+> For **confidential ERC-20 tokens**, use [`useShield`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useShield.md) or [`useConfidentialTransfer`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialTransfer.md) — they handle encryption automatically.
 >
 > Use `useEncrypt` when your smart contract uses FHE types directly (e.g. a confidential voting contract, a sealed-bid auction, or any non-token contract that accepts encrypted parameters).
 
@@ -11892,24 +11992,25 @@ import { type EncryptResult } from "@zama-fhe/sdk";
 
 ## Related
 
-- [`useShield`](docs/gitbook/src/reference/react/useShield.md) — high-level hook that encrypts and shields in one step
-- [`useConfidentialTransfer`](docs/gitbook/src/reference/react/useConfidentialTransfer.md) — high-level hook that encrypts and transfers
-- [`useUserDecrypt`](docs/gitbook/src/reference/react/useUserDecrypt.md) — reverse operation, decrypt handles back to plaintext
-- [Encrypt & Decrypt guide](docs/gitbook/src/guides/encrypt-decrypt.md) — full walkthrough with examples
+- [`useShield`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useShield.md) — high-level hook that encrypts and shields in one step
+- [`useConfidentialTransfer`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialTransfer.md) — high-level hook that encrypts and transfers
+- [`useUserDecrypt`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUserDecrypt.md) — reverse operation, decrypt handles back to plaintext
+- [Encrypt & Decrypt guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/encrypt-decrypt.md) — full walkthrough with examples
 
 ## useUserDecrypt
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useUserDecrypt.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUserDecrypt.md
 - logical_path: reference/react/useUserDecrypt
 
 # useUserDecrypt
 
-Query hook for user decryption. Automatically fires when credentials are available (acquired via [`useAllow`](docs/gitbook/src/reference/react/useAllow.md)) and handles are provided. Checks the persistent decrypt cache first and only hits the relayer for uncached handles.
+Query hook for user decryption. Automatically fires when credentials are available (acquired via [`useAllow`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useAllow.md)) and handles are provided. Checks the persistent decrypt cache first and only hits the relayer for uncached handles.
 
 
 > [!INFO]
-> **This is the recommended way to decrypt.** For token balances, prefer [`useConfidentialBalance`](docs/gitbook/src/reference/react/useConfidentialBalance.md) which decrypts automatically with two-phase polling. Use `useUserDecrypt` when your smart contract uses FHE types directly (e.g. a confidential voting contract, a sealed-bid auction, or any non-token contract).
+> **This is the recommended way to decrypt.** For token balances, prefer [`useConfidentialBalance`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialBalance.md) which decrypts automatically with two-phase polling. Use `useUserDecrypt` when your smart contract uses FHE types directly (e.g. a confidential voting contract, a sealed-bid auction, or any non-token contract).
 
 
 ## Import
@@ -12016,7 +12117,7 @@ When all requested handles are already cached, `data` contains the cached values
 
 
 > [!WARNING]
-> **`useUserDecrypt` does not automatically gate on credentials.** If credentials are not cached when the query fires, the SDK will prompt the user's wallet for a signature. To avoid unexpected popups, gate the query yourself using [`useIsAllowed`](docs/gitbook/src/reference/react/useIsAllowed.md):
+> **`useUserDecrypt` does not automatically gate on credentials.** If credentials are not cached when the query fires, the SDK will prompt the user's wallet for a signature. To avoid unexpected popups, gate the query yourself using [`useIsAllowed`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsAllowed.md):
 >
 > ```tsx
 > const { data: allowed } = useIsAllowed({ contractAddresses: ["0xContract"] });
@@ -12031,7 +12132,7 @@ When all requested handles are already cached, `data` contains the cached values
 
 ## Credential caching
 
-`useUserDecrypt` relies on credentials acquired via [`useAllow`](docs/gitbook/src/reference/react/useAllow.md):
+`useUserDecrypt` relies on credentials acquired via [`useAllow`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useAllow.md):
 
 - **First `allow()` call** — generates a new FHE keypair, creates EIP-712 typed data, and requests a wallet signature. The credentials are then cached.
 - **Subsequent queries** — reuse the cached credentials if they are still valid (not expired).
@@ -12041,16 +12142,17 @@ This means users only see a wallet signature prompt once per session (or per TTL
 
 ## Related
 
-- [`useAllow`](docs/gitbook/src/reference/react/useAllow.md) — pre-authorize contracts with one wallet signature (required before `useUserDecrypt` fires)
-- [`useIsAllowed`](docs/gitbook/src/reference/react/useIsAllowed.md) — check whether credentials are cached and cover specific contracts
-- [`useConfidentialBalance`](docs/gitbook/src/reference/react/useConfidentialBalance.md) — high-level hook that decrypts token balances automatically with two-phase polling
-- [`useEncrypt`](docs/gitbook/src/reference/react/useEncrypt.md) — reverse operation, encrypt a plaintext value for on-chain submission
-- [Encrypt & Decrypt guide](docs/gitbook/src/guides/encrypt-decrypt.md) — full walkthrough with end-to-end examples
+- [`useAllow`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useAllow.md) — pre-authorize contracts with one wallet signature (required before `useUserDecrypt` fires)
+- [`useIsAllowed`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsAllowed.md) — check whether credentials are cached and cover specific contracts
+- [`useConfidentialBalance`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialBalance.md) — high-level hook that decrypts token balances automatically with two-phase polling
+- [`useEncrypt`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useEncrypt.md) — reverse operation, encrypt a plaintext value for on-chain submission
+- [Encrypt & Decrypt guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/encrypt-decrypt.md) — full walkthrough with end-to-end examples
 
 ## useGenerateKeypair
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useGenerateKeypair.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useGenerateKeypair.md
 - logical_path: reference/react/useGenerateKeypair
 
 # useGenerateKeypair
@@ -12059,7 +12161,7 @@ Low-level mutation hook that generates a fresh FHE keypair via the relayer. Retu
 
 
 > [!WARNING]
-> [`useUserDecrypt`](docs/gitbook/src/reference/react/useUserDecrypt.md), [`useAllow`](docs/gitbook/src/reference/react/useAllow.md), and [`useConfidentialBalance`](docs/gitbook/src/reference/react/useConfidentialBalance.md) handle keypair generation automatically. Call `useGenerateKeypair` only when managing FHE credentials manually.
+> [`useUserDecrypt`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUserDecrypt.md), [`useAllow`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useAllow.md), and [`useConfidentialBalance`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialBalance.md) handle keypair generation automatically. Call `useGenerateKeypair` only when managing FHE credentials manually.
 
 
 ## Import
@@ -12113,7 +12215,7 @@ import { type KeypairType } from "@zama-fhe/sdk";
 - **`publicKey`** — the FHE public key (string-encoded).
 - **`privateKey`** — the FHE private key (string-encoded).
 
-Pass these to [`useUserDecrypt`](docs/gitbook/src/reference/react/useUserDecrypt.md) when decrypting handles manually.
+Pass these to [`useUserDecrypt`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUserDecrypt.md) when decrypting handles manually.
 
 
 > [!NOTE]
@@ -12122,19 +12224,20 @@ Pass these to [`useUserDecrypt`](docs/gitbook/src/reference/react/useUserDecrypt
 
 ## Related
 
-- [`useAllow`](docs/gitbook/src/reference/react/useAllow.md) — high-level hook that generates a keypair and caches the session signature
-- [`useUserDecrypt`](docs/gitbook/src/reference/react/useUserDecrypt.md) — uses the generated keypair to decrypt handles
-- [`useEncrypt`](docs/gitbook/src/reference/react/useEncrypt.md) — encrypt values (does not require a keypair)
+- [`useAllow`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useAllow.md) — high-level hook that generates a keypair and caches the session signature
+- [`useUserDecrypt`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUserDecrypt.md) — uses the generated keypair to decrypt handles
+- [`useEncrypt`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useEncrypt.md) — encrypt values (does not require a keypair)
 
 ## useDelegateDecryption
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useDelegateDecryption.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useDelegateDecryption.md
 - logical_path: reference/react/useDelegateDecryption
 
 # useDelegateDecryption
 
-Mutation hook that grants FHE decryption rights for a token to another address via the on-chain ACL. Automatically invalidates [`useDelegationStatus`](docs/gitbook/src/reference/react/useDelegationStatus.md) queries on success.
+Mutation hook that grants FHE decryption rights for a token to another address via the on-chain ACL. Automatically invalidates [`useDelegationStatus`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useDelegationStatus.md) queries on success.
 
 ## Import
 
@@ -12229,20 +12332,21 @@ await delegate({
 
 ## Related
 
-- [`useRevokeDelegation`](docs/gitbook/src/reference/react/useRevokeDelegation.md) -- revoke a previously granted delegation
-- [`useDelegationStatus`](docs/gitbook/src/reference/react/useDelegationStatus.md) -- check whether a delegation is active
-- [`useDecryptBalanceAs`](docs/gitbook/src/reference/react/useDecryptBalanceAs.md) -- decrypt a balance as the delegate
-- [Delegated Decryption](docs/gitbook/src/reference/sdk/delegation.md) -- SDK reference
+- [`useRevokeDelegation`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevokeDelegation.md) -- revoke a previously granted delegation
+- [`useDelegationStatus`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useDelegationStatus.md) -- check whether a delegation is active
+- [`useDecryptBalanceAs`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useDecryptBalanceAs.md) -- decrypt a balance as the delegate
+- [Delegated Decryption](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/delegation.md) -- SDK reference
 
 ## useRevokeDelegation
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useRevokeDelegation.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevokeDelegation.md
 - logical_path: reference/react/useRevokeDelegation
 
 # useRevokeDelegation
 
-Mutation hook that revokes a previously granted FHE decryption delegation for a token. Automatically invalidates [`useDelegationStatus`](docs/gitbook/src/reference/react/useDelegationStatus.md) queries on success.
+Mutation hook that revokes a previously granted FHE decryption delegation for a token. Automatically invalidates [`useDelegationStatus`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useDelegationStatus.md) queries on success.
 
 ## Import
 
@@ -12325,14 +12429,15 @@ await revoke({ delegateAddress: "0xDelegate" });
 
 ## Related
 
-- [`useDelegateDecryption`](docs/gitbook/src/reference/react/useDelegateDecryption.md) -- grant delegation
-- [`useDelegationStatus`](docs/gitbook/src/reference/react/useDelegationStatus.md) -- check whether a delegation is active
-- [Delegated Decryption](docs/gitbook/src/reference/sdk/delegation.md) -- SDK reference
+- [`useDelegateDecryption`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useDelegateDecryption.md) -- grant delegation
+- [`useDelegationStatus`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useDelegationStatus.md) -- check whether a delegation is active
+- [Delegated Decryption](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/delegation.md) -- SDK reference
 
 ## useDelegationStatus
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useDelegationStatus.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useDelegationStatus.md
 - logical_path: reference/react/useDelegationStatus
 
 # useDelegationStatus
@@ -12439,14 +12544,15 @@ import { type DelegationStatusData } from "@zama-fhe/sdk/query";
 
 ## Related
 
-- [`useDelegateDecryption`](docs/gitbook/src/reference/react/useDelegateDecryption.md) -- grant delegation
-- [`useRevokeDelegation`](docs/gitbook/src/reference/react/useRevokeDelegation.md) -- revoke delegation
-- [Delegated Decryption](docs/gitbook/src/reference/sdk/delegation.md) -- SDK reference
+- [`useDelegateDecryption`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useDelegateDecryption.md) -- grant delegation
+- [`useRevokeDelegation`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevokeDelegation.md) -- revoke delegation
+- [Delegated Decryption](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/delegation.md) -- SDK reference
 
 ## useDecryptBalanceAs
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useDecryptBalanceAs.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useDecryptBalanceAs.md
 - logical_path: reference/react/useDecryptBalanceAs
 
 # useDecryptBalanceAs
@@ -12549,15 +12655,16 @@ await decryptAs({
 
 ## Related
 
-- [`useBatchDecryptBalancesAs`](docs/gitbook/src/reference/react/useBatchDecryptBalancesAs.md) -- batch variant for multiple tokens
-- [`useDelegationStatus`](docs/gitbook/src/reference/react/useDelegationStatus.md) -- check delegation status before decrypting
-- [`useConfidentialBalance`](docs/gitbook/src/reference/react/useConfidentialBalance.md) -- decrypt your own balance (non-delegated)
-- [Delegated Decryption](docs/gitbook/src/reference/sdk/delegation.md) -- SDK reference
+- [`useBatchDecryptBalancesAs`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useBatchDecryptBalancesAs.md) -- batch variant for multiple tokens
+- [`useDelegationStatus`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useDelegationStatus.md) -- check delegation status before decrypting
+- [`useConfidentialBalance`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialBalance.md) -- decrypt your own balance (non-delegated)
+- [Delegated Decryption](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/delegation.md) -- SDK reference
 
 ## useBatchDecryptBalancesAs
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/useBatchDecryptBalancesAs.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useBatchDecryptBalancesAs.md
 - logical_path: reference/react/useBatchDecryptBalancesAs
 
 # useBatchDecryptBalancesAs
@@ -12699,14 +12806,15 @@ await batchDecryptAs({
 
 ## Related
 
-- [`useDecryptBalanceAs`](docs/gitbook/src/reference/react/useDecryptBalanceAs.md) -- single-token variant
-- [`useDelegationStatus`](docs/gitbook/src/reference/react/useDelegationStatus.md) -- check delegation status before decrypting
-- [Delegated Decryption](docs/gitbook/src/reference/sdk/delegation.md) -- SDK reference
+- [`useDecryptBalanceAs`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useDecryptBalanceAs.md) -- single-token variant
+- [`useDelegationStatus`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useDelegationStatus.md) -- check delegation status before decrypting
+- [Delegated Decryption](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/delegation.md) -- SDK reference
 
 ## Query keys
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/react/query-keys.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/query-keys.md
 - logical_path: reference/react/query-keys
 
 # Query keys
@@ -12830,7 +12938,7 @@ On-chain wrappers registry queries.
 
 ### `decryptionKeys`
 
-Cached decrypted values. Populated by [`useUserDecrypt`](docs/gitbook/src/reference/react/useUserDecrypt.md).
+Cached decrypted values. Populated by [`useUserDecrypt`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUserDecrypt.md).
 
 ```ts
 import { decryptionKeys } from "@zama-fhe/react-sdk";
@@ -12869,13 +12977,14 @@ queryClient.removeQueries({ queryKey: zamaQueryKeys.confidentialHandle.all });
 
 ## Related
 
-- [ZamaProvider](docs/gitbook/src/reference/react/ZamaProvider.md) — provider setup and hook overview
-- [`useConfidentialBalance`](docs/gitbook/src/reference/react/useConfidentialBalance.md) — the hook whose cache these keys control
+- [ZamaProvider](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/ZamaProvider.md) — provider setup and hook overview
+- [`useConfidentialBalance`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialBalance.md) — the hook whose cache these keys control
 
 ## Overview
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/concepts/README.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/README.md
 - logical_path: concepts/README
 
 # Overview
@@ -12890,13 +12999,13 @@ If you're new to the Zama Protocol, start with the [Litepaper](https://docs.zama
 
 Otherwise:
 
-🟨 Go to [**Architecture**](architecture.md) to understand the SDK's layered module structure.
+🟨 Go to [**Architecture**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/architecture.md) to understand the SDK's layered module structure.
 
-🟨 Go to [**Session model**](session-model.md) to learn how FHE keypairs and wallet signatures are managed.
+🟨 Go to [**Session model**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/session-model.md) to learn how FHE keypairs and wallet signatures are managed.
 
-🟨 Go to [**Two-phase polling**](two-phase-polling.md) to understand how balance updates are detected efficiently.
+🟨 Go to [**Two-phase polling**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/two-phase-polling.md) to understand how balance updates are detected efficiently.
 
-🟨 Go to [**Security model**](security-model.md) for the full threat model and trust assumptions.
+🟨 Go to [**Security model**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/security-model.md) for the full threat model and trust assumptions.
 
 ## Help center
 
@@ -12909,6 +13018,7 @@ Ask technical questions and discuss with the community.
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/concepts/architecture.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/architecture.md
 - logical_path: concepts/architecture
 
 # Architecture
@@ -12962,6 +13072,7 @@ Each package exposes multiple entry points for tree-shaking:
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/concepts/session-model.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/session-model.md
 - logical_path: concepts/session-model
 
 # Session model
@@ -13144,7 +13255,7 @@ To solve this, pass `chromeSessionStorage` as the `sessionStorage` option. This 
 - Is shared across popup, background, and content script contexts.
 - Is automatically cleared when the browser closes.
 
-See the [Web Extensions guide](docs/gitbook/src/guides/web-extensions.md) for the full setup.
+See the [Web Extensions guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/web-extensions.md) for the full setup.
 
 ## Security properties
 
@@ -13156,12 +13267,13 @@ See the [Web Extensions guide](docs/gitbook/src/guides/web-extensions.md) for th
 | Storage key privacy     | Wallet addresses are SHA-256 hashed before use as storage keys            |
 | Plaintext exposure      | FHE private key exists in plaintext only during active decrypt operations |
 
-For the full threat model and trust assumptions, see the [Security Model](docs/gitbook/src/concepts/security-model.md).
+For the full threat model and trust assumptions, see the [Security Model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/security-model.md).
 
 ## Two-phase balance polling
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/concepts/two-phase-polling.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/two-phase-polling.md
 - logical_path: concepts/two-phase-polling
 
 # Two-phase balance polling
@@ -13295,12 +13407,13 @@ The two-phase architecture is built on React Query's primitives:
 
 The core SDK exposes these as query option factories so they work with any React Query setup. The React SDK's `useConfidentialBalance` hook composes them into a single declarative API.
 
-See the [React SDK hooks guide](docs/gitbook/src/reference/react/query-keys.md) for usage examples. For the query key structure, see the [`zamaQueryKeys` reference](docs/gitbook/src/reference/react/query-keys.md).
+See the [React SDK hooks guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/query-keys.md) for usage examples. For the query key structure, see the [`zamaQueryKeys` reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/query-keys.md).
 
 ## Security model
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/concepts/security-model.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/security-model.md
 - logical_path: concepts/security-model
 
 # Security model
@@ -13372,7 +13485,7 @@ The FHE private key is encrypted with AES-256-GCM before being written to storag
 | Cipher        | AES-256-GCM                    |
 | IV            | 12 random bytes per encryption |
 
-The signature itself is never persisted. It lives only in the in-memory session map, cleared on page reload or revocation. See [Session Model](docs/gitbook/src/concepts/session-model.md) for the full lifecycle.
+The signature itself is never persisted. It lives only in the in-memory session map, cleared on page reload or revocation. See [Session Model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/session-model.md) for the full lifecycle.
 
 ### Storage key privacy
 
@@ -13510,6 +13623,7 @@ If you discover a security vulnerability in the SDK, report it to **security@zam
 
 - source_type: official-example
 - source_path: examples/example-hoodi/README.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/examples/example-hoodi/README.md
 - logical_path: examples/example-hoodi/readme
 
 # Example Hoodi app with cleartext Zama Protocol support
@@ -13645,6 +13759,7 @@ For a detailed partner-facing guide including prerequisites, step-by-step flow, 
 
 - source_type: official-example
 - source_path: examples/example-hoodi/WALKTHROUGH.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/examples/example-hoodi/WALKTHROUGH.md
 - logical_path: examples/example-hoodi/walkthrough
 
 # Integrating Zama Confidential Tokens (ERC-7984) on Hoodi
@@ -14264,6 +14379,7 @@ Tests run automatically on CI for every pull request that touches `examples/exam
 
 - source_type: official-example
 - source_path: examples/node-ethers/README.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/examples/node-ethers/README.md
 - logical_path: examples/node-ethers/readme
 
 # node-ethers — Zama SDK example
@@ -14425,6 +14541,7 @@ RELAYER_API_KEY=your-api-key
 
 - source_type: official-example
 - source_path: examples/node-ethers/WALKTHROUGH.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/examples/node-ethers/WALKTHROUGH.md
 - logical_path: examples/node-ethers/walkthrough
 
 # Integrating Zama Confidential Tokens (ERC-7984) — Node.js + ethers
@@ -14817,6 +14934,7 @@ the scope exits, even if an error is thrown. Both SDKs share the same relayer;
 
 - source_type: official-example
 - source_path: examples/node-viem/README.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/examples/node-viem/README.md
 - logical_path: examples/node-viem/readme
 
 # node-viem — Zama SDK example
@@ -14981,6 +15099,7 @@ RELAYER_API_KEY=your-api-key
 
 - source_type: official-example
 - source_path: examples/node-viem/WALKTHROUGH.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/examples/node-viem/WALKTHROUGH.md
 - logical_path: examples/node-viem/walkthrough
 
 # Integrating Zama Confidential Tokens (ERC-7984) — Node.js + viem
@@ -15384,6 +15503,7 @@ the scope exits, even if an error is thrown. Both SDKs share the same relayer;
 
 - source_type: official-example
 - source_path: examples/react-ethers/README.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/examples/react-ethers/README.md
 - logical_path: examples/react-ethers/readme
 
 # Sepolia Confidential Token Quickstart — react-ethers
@@ -15441,6 +15561,7 @@ See [WALKTHROUGH.md](WALKTHROUGH.md) for a full developer walkthrough.
 
 - source_type: official-example
 - source_path: examples/react-ethers/WALKTHROUGH.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/examples/react-ethers/WALKTHROUGH.md
 - logical_path: examples/react-ethers/walkthrough
 
 # Developer Walkthrough — react-ethers
@@ -15800,6 +15921,7 @@ npm run test:e2e   # starts dev server and runs all specs
 
 - source_type: official-example
 - source_path: examples/react-viem/README.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/examples/react-viem/README.md
 - logical_path: examples/react-viem/readme
 
 # Sepolia Confidential Token Quickstart — react-viem
@@ -15857,6 +15979,7 @@ See [WALKTHROUGH.md](WALKTHROUGH.md) for a full developer walkthrough.
 
 - source_type: official-example
 - source_path: examples/react-viem/WALKTHROUGH.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/examples/react-viem/WALKTHROUGH.md
 - logical_path: examples/react-viem/walkthrough
 
 # Developer Walkthrough — react-viem
@@ -16313,6 +16436,7 @@ npm run test:e2e   # starts dev server and runs all specs
 
 - source_type: official-example
 - source_path: examples/react-wagmi/README.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/examples/react-wagmi/README.md
 - logical_path: examples/react-wagmi/readme
 
 # Sepolia Confidential Token Quickstart — react-wagmi
@@ -16370,6 +16494,7 @@ See [WALKTHROUGH.md](WALKTHROUGH.md) for a full developer walkthrough.
 
 - source_type: official-example
 - source_path: examples/react-wagmi/WALKTHROUGH.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/examples/react-wagmi/WALKTHROUGH.md
 - logical_path: examples/react-wagmi/walkthrough
 
 # Developer Walkthrough — react-wagmi
@@ -16664,6 +16789,7 @@ npm run test:e2e                     # Playwright e2e tests (starts dev server a
 
 - source_type: package-readme
 - source_path: README.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/README.md
 - logical_path: README
 
 <p align="center">
@@ -16835,6 +16961,7 @@ This software is distributed under the **BSD-3-Clause-Clear** license. Read [thi
 
 - source_type: package-readme
 - source_path: packages/sdk/README.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/packages/sdk/README.md
 - logical_path: packages/sdk/README
 
 # @zama-fhe/sdk
@@ -17673,6 +17800,7 @@ For direct use with viem, ethers, or any ABI-compatible library:
 
 - source_type: package-readme
 - source_path: packages/react-sdk/README.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/packages/react-sdk/README.md
 - logical_path: packages/react-sdk/README
 
 # @zama-fhe/react-sdk

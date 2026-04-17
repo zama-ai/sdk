@@ -2,6 +2,8 @@
 
 Zama SDK is a TypeScript and React SDK for confidential token flows and confidential smart contract interactions on EVM-compatible chains.
 
+This file is usable without cloning the SDK repository. Links point to raw GitHub Markdown sources.
+
 Source of truth: official documentation, approved official examples, and package READMEs. API reports are fallback reference material and are intentionally excluded from this index.
 
 Use this file for discovery. Follow the links to fetch the smallest source that answers the task. Start with the official docs, then move to the approved examples that match the target stack.
