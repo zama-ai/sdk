@@ -104,7 +104,7 @@ export class DecryptCache {
       }
     }
     await Promise.all(toRemove.map((k) => this.#storage.delete(k).catch(() => {})));
-    await this.#storage.set<string[]>(this.#decryptKeysNamespace, remaining);
+    await this.#storage.set(this.#decryptKeysNamespace, remaining);
   }
 
   /** Removes all cached entries. */
@@ -136,7 +136,7 @@ export class DecryptCache {
     const keys = await this.#readIndex();
     if (!keys.includes(key)) {
       keys.push(key);
-      await this.#storage.set<string[]>(this.#decryptKeysNamespace, keys);
+      await this.#storage.set(this.#decryptKeysNamespace, keys);
     }
   }
 }

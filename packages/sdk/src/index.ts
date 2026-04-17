@@ -23,6 +23,8 @@ export type {
   EIP712TypedData,
   DelegatedUserDecryptParams,
   NetworkType,
+  PublicKeyData,
+  PublicParamsData,
 } from "./relayer/relayer-sdk.types";
 export type {
   FheTypeName,
@@ -55,6 +57,7 @@ export {
   type BatchBalancesResult,
   type BatchDecryptAsOptions,
   ZERO_HANDLE,
+  isZeroHandle,
   savePendingUnshield,
   loadPendingUnshield,
   clearPendingUnshield,
@@ -201,21 +204,6 @@ export {
   findUnwrapRequested,
   findWrapped,
 } from "./events";
-
-// Activity feed helpers and types
-export type {
-  ActivityDirection,
-  ActivityType,
-  ActivityAmount,
-  ActivityLogMetadata,
-  ActivityItem,
-} from "./activity";
-export {
-  parseActivityFeed,
-  extractEncryptedHandles,
-  applyDecryptedValues,
-  sortByBlockNumber,
-} from "./activity";
 
 // Contract call builders
 export {

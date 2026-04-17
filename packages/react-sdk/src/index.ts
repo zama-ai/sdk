@@ -22,8 +22,8 @@ export { useCreateDelegatedUserDecryptEIP712 } from "./relayer/use-create-delega
 export type { CreateDelegatedUserDecryptEIP712Params } from "./relayer/use-create-delegated-user-decrypt-eip712";
 export { useDelegatedUserDecrypt } from "./relayer/use-delegated-user-decrypt";
 export { useRequestZKProofVerification } from "./relayer/use-request-zk-proof-verification";
-export { usePublicKey, type PublicKeyData } from "./relayer/use-public-key";
-export { usePublicParams, type PublicParamsData } from "./relayer/use-public-params";
+export { usePublicKey } from "./relayer/use-public-key";
+export { usePublicParams } from "./relayer/use-public-params";
 
 // Re-export core classes
 export {
@@ -205,7 +205,6 @@ export {
   type UseWrapperDiscoverySuspenseConfig,
 } from "./token/use-wrapper-discovery";
 export { useMetadata, useMetadataSuspense, type TokenMetadata } from "./token/use-metadata";
-export { useActivityFeed, type UseActivityFeedConfig } from "./balance/use-activity-feed";
 export { useDelegateDecryption } from "./delegation/use-delegate-decryption";
 export { useRevokeDelegation } from "./delegation/use-revoke-delegation";
 export {
@@ -250,7 +249,6 @@ export {
   publicParamsQueryOptions,
   confidentialBalanceQueryOptions,
   confidentialBalancesQueryOptions,
-  activityFeedQueryOptions,
   shieldMutationOptions,
   type ShieldParams,
   confidentialTransferMutationOptions,
@@ -307,7 +305,7 @@ export type {
 } from "./balance/optimistic-balance-update";
 
 // Re-export event decoders, types, and constants from core SDK
-export { ZERO_HANDLE } from "@zama-fhe/sdk";
+export { ZERO_HANDLE, isZeroHandle } from "@zama-fhe/sdk";
 export type {
   RawLog,
   ConfidentialTransferEvent,
@@ -339,21 +337,6 @@ export {
   decodeOnChainEvents,
   findUnwrapRequested,
   findWrapped,
-} from "@zama-fhe/sdk";
-
-// Re-export activity feed types and helpers from core SDK
-export type {
-  ActivityDirection,
-  ActivityType,
-  ActivityAmount,
-  ActivityLogMetadata,
-  ActivityItem,
-} from "@zama-fhe/sdk";
-export {
-  parseActivityFeed,
-  extractEncryptedHandles,
-  applyDecryptedValues,
-  sortByBlockNumber,
 } from "@zama-fhe/sdk";
 
 // Re-export core types from SDK

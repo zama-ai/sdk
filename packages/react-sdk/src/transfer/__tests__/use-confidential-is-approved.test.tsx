@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { renderHook, waitFor } from "@testing-library/react";
-import type { Address } from "@zama-fhe/sdk";
+import type { Address } from "viem";
 import {
   useConfidentialIsApproved,
   useConfidentialIsApprovedSuspense,

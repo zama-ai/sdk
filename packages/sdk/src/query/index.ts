@@ -1,4 +1,4 @@
-export { filterQueryOptions, hashFn, ZERO_HANDLE } from "./utils";
+export { filterQueryOptions, hashFn } from "./utils";
 export type { StrippedQueryOptionKeys } from "./utils";
 export type { QueryFactoryOptions, MutationFactoryOptions } from "./factory-types";
 export { zamaQueryKeys } from "./query-keys";
@@ -50,13 +50,6 @@ export {
   confidentialBalancesQueryOptions,
   type ConfidentialBalancesQueryConfig,
 } from "./confidential-balances";
-export {
-  activityFeedQueryOptions,
-  deriveActivityFeedLogsKey,
-  type ActivityFeedConfig,
-  type ActivityFeedQueryConfig,
-} from "./activity-feed";
-
 export {
   tokenPairsQueryOptions,
   tokenPairsLengthQueryOptions,
@@ -127,8 +120,6 @@ export {
   type DelegationStatusData,
   type DelegationStatusQueryConfig,
 } from "./delegation-status";
-export type { ActivityItem, ActivityLogMetadata } from "../activity";
-export type { ActivityAmount, ActivityDirection, ActivityType } from "../activity";
 export type { RawLog } from "../events/onchain-events";
 export type {
   ConfidentialTransferEvent,

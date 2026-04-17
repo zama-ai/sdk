@@ -12,8 +12,7 @@ import type { GenericSigner, GenericStorage } from "../../types";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import { ZamaSDK } from "../../zama-sdk";
 import type { Address } from "viem";
-
-const ZERO_HANDLE = "0x" + "0".repeat(64);
+import { ZERO_HANDLE } from "../../utils/handles";
 const TOKEN_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
 
 /**
@@ -600,7 +599,11 @@ describe("Token event emissions", () => {
       vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
-            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`],
+            topics: [
+              Topics.UnwrapRequested,
+              `0x000000000000000000000000${userAddress.slice(2)}`,
+              `0x${"ff".repeat(32)}`,
+            ],
             data: `0x${"ff".repeat(32)}`,
           },
         ],

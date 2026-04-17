@@ -106,15 +106,13 @@ test("should transition through masked → decrypting → revealed states", asyn
   // Clear IndexedDB cache to ensure fresh decryption
   await page.evaluate(() => {
     const dbs = indexedDB.databases ? indexedDB.databases() : Promise.resolve([]);
-    return dbs.then((databases: IDBDatabaseInfo[]) =>
-      Promise.all(
-        databases.map((db: IDBDatabaseInfo) => {
-          if (db.name) {
-            indexedDB.deleteDatabase(db.name);
-          }
-        }),
-      ),
-    );
+    return dbs.then((databases: IDBDatabaseInfo[]) => {
+      for (const db of databases) {
+        if (db.name) {
+          indexedDB.deleteDatabase(db.name);
+        }
+      }
+    });
   });
 
   await page.goto("/wallet");

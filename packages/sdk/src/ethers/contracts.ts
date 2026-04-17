@@ -153,13 +153,13 @@ export function writeUnwrapFromBalanceContract(
 export function writeFinalizeUnwrapContract(
   signer: EthersTransactionSigner,
   wrapper: Address,
-  burntAmount: Handle,
+  unwrapRequestId: Handle,
   burntAmountCleartext: bigint,
   decryptionProof: Hex,
 ) {
   return ethersWrite(
     signer,
-    finalizeUnwrapContract(wrapper, burntAmount, burntAmountCleartext, decryptionProof),
+    finalizeUnwrapContract(wrapper, unwrapRequestId, burntAmountCleartext, decryptionProof),
   );
 }
 
