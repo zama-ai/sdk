@@ -6,14 +6,11 @@
 
 import { Abi } from 'viem';
 import { Address } from 'viem';
-import { Bytes32Hex } from '@zama-fhe/relayer-sdk/bundle';
 import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
 import { EIP1193Provider } from 'viem';
 import { Hex } from 'viem';
-import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
-import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
 import { PublicClient } from 'viem';
 import { WalletClient } from 'viem';
 
@@ -107,7 +104,7 @@ export function writeConfidentialTransferContract(client: WalletClient, tokenAdd
 // Warning: (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 //
 // @public (undocumented)
-export function writeFinalizeUnwrapContract(client: WalletClient, wrapper: Address, unwrapRequestId: Handle, burntAmountCleartext: bigint, decryptionProof: Hex): Promise<`0x${string}`>;
+export function writeFinalizeUnwrapContract(client: WalletClient, wrapper: Address, burntAmount: Handle, burntAmountCleartext: bigint, decryptionProof: Hex): Promise<`0x${string}`>;
 
 // @public (undocumented)
 export function writeSetOperatorContract(client: WalletClient, tokenAddress: Address, spender: Address, timestamp?: number): Promise<`0x${string}`>;

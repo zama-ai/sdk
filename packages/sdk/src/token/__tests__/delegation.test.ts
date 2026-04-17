@@ -351,7 +351,7 @@ describe("decryptBalanceAs", () => {
     );
   });
 
-  it("caches by owner, not delegator, when options.owner differs", async ({
+  it("caches by balanceHolder, not delegator, when balanceHolder differs", async ({
     signer,
     relayer,
     readonlyToken,
@@ -386,17 +386,17 @@ describe("decryptBalanceAs", () => {
       [handle]: 42n,
     });
 
-    // First call populates cache keyed by owner (userAddress), not delegator.
+    // First call populates cache keyed by balanceHolder (userAddress), not delegator.
     await readonlyToken.decryptBalanceAs({
       delegatorAddress,
-      owner: userAddress,
+      balanceHolder: userAddress,
     });
     expect(relayer.delegatedUserDecrypt).toHaveBeenCalledTimes(1);
 
-    // Second call with same owner should hit cache — no second decrypt call.
+    // Second call with same balanceHolder should hit cache — no second decrypt call.
     const balance = await readonlyToken.decryptBalanceAs({
       delegatorAddress,
-      owner: userAddress,
+      balanceHolder: userAddress,
     });
     expect(balance).toBe(42n);
     expect(relayer.delegatedUserDecrypt).toHaveBeenCalledTimes(1);
