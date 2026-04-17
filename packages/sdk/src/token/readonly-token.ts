@@ -41,12 +41,14 @@ export interface BatchDecryptAsOptions {
   /** Pre-fetched encrypted handles. When omitted, handles are fetched from the chain. */
   handles?: Handle[];
   /**
-   * The address whose on-chain balance to read. Defaults to the delegator
+   * The account whose on-chain balance to read. Defaults to the delegator
    * address, which is the common case (the delegator grants permission to
-   * decrypt their own balance). Only set this when the balance holder differs
+   * decrypt their own balance). Only set this when the account differs
    * from the delegator.
+   *
+   * Matches the `account` parameter of `confidentialBalanceOf(account)` on-chain.
    */
-  balanceHolder?: Address;
+  account?: Address;
   /** Maximum number of concurrent decrypt calls. Default: Infinity. */
   maxConcurrency?: number;
   /** Called when decryption fails for a single token. Return a fallback bigint. */
@@ -270,14 +272,14 @@ export class ReadonlyToken {
       return new Map();
     }
 
-    const { delegatorAddress, handles, balanceHolder, onError, maxConcurrency } = options;
-    const balanceHolderAddress = balanceHolder ?? delegatorAddress;
+    const { delegatorAddress, handles, account, onError, maxConcurrency } = options;
+    const accountAddress = account ? getAddress(account) : getAddress(delegatorAddress);
     const firstToken = tokens[0]!;
     ReadonlyToken.assertSameSdk(tokens);
 
     const resolvedHandles =
       handles ??
-      (await Promise.all(tokens.map((t) => t.readConfidentialBalanceOf(balanceHolderAddress))));
+      (await Promise.all(tokens.map((t) => t.readConfidentialBalanceOf(accountAddress))));
 
     if (tokens.length !== resolvedHandles.length) {
       throw new DecryptionFailedError(
@@ -295,7 +297,7 @@ export class ReadonlyToken {
         if (isZeroHandle(handle)) {
           return 0n;
         }
-        return firstToken.sdk.cache.get(balanceHolderAddress, token.address, handle);
+        return firstToken.sdk.cache.get(accountAddress, token.address, handle);
       }),
     );
 
@@ -359,7 +361,7 @@ export class ReadonlyToken {
             // Cache write is best-effort — log on failure so a broken cache
             // backend doesn't silently force re-decryption forever.
             firstToken.sdk.cache
-              .set(balanceHolderAddress, token.address, handle, value)
+              .set(accountAddress, token.address, handle, value)
               .catch((cacheErr: unknown) => {
                 // oxlint-disable-next-line no-console
                 console.warn("[zama-sdk] Failed to cache decrypted value:", cacheErr);
@@ -602,14 +604,15 @@ export class ReadonlyToken {
    * by the delegator to decrypt their balance.
    *
    * Decrypted values are cached in storage keyed by
-   * `(balanceHolder, token, handle)`. Because every on-chain balance change
+   * `(account, token, handle)`. Because every on-chain balance change
    * produces a new encrypted handle, stale cache entries are never served.
    * Cache write failures are silently ignored — they do not affect the returned value.
    *
    * @param delegatorAddress - The address of the account that delegated decryption rights.
-   * @param balanceHolder - The address whose on-chain balance to read. Defaults
-   *   to the delegator address (the common case where the delegator grants
-   *   permission to decrypt their own balance).
+   * @param account - The account whose on-chain balance to read (matches
+   *   `confidentialBalanceOf(account)` on-chain). Defaults to the delegator
+   *   address (the common case where the delegator grants permission to
+   *   decrypt their own balance).
    * @returns The decrypted plaintext balance as a bigint.
    * @throws {@link DelegationNotFoundError} if no active delegation exists from the delegator to the connected signer.
    * @throws {@link DelegationExpiredError} if the delegation has expired.
@@ -624,20 +627,20 @@ export class ReadonlyToken {
    */
   async decryptBalanceAs({
     delegatorAddress,
-    balanceHolder,
+    account,
   }: {
     delegatorAddress: Address;
-    balanceHolder?: Address;
+    account?: Address;
   }): Promise<bigint> {
     const normalizedDelegator = getAddress(delegatorAddress);
-    const normalizedBalanceHolder = balanceHolder ? getAddress(balanceHolder) : normalizedDelegator;
+    const normalizedAccount = account ? getAddress(account) : normalizedDelegator;
 
-    const handle = await this.readConfidentialBalanceOf(normalizedBalanceHolder);
+    const handle = await this.readConfidentialBalanceOf(normalizedAccount);
     if (isZeroHandle(handle)) {
       return 0n;
     }
 
-    const cached = await this.sdk.cache.get(normalizedBalanceHolder, this.address, handle);
+    const cached = await this.sdk.cache.get(normalizedAccount, this.address, handle);
     if (cached !== null) {
       assertBigint(cached, "decryptBalanceAs: cached");
       return cached;
@@ -683,7 +686,7 @@ export class ReadonlyToken {
         result,
       });
 
-      await this.sdk.cache.set(normalizedBalanceHolder, this.address, handle, value);
+      await this.sdk.cache.set(normalizedAccount, this.address, handle, value);
       return value;
     } catch (error) {
       this.emit({
