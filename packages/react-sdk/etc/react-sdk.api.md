@@ -11,16 +11,9 @@ import * as _$react_jsx_runtime0 from 'react/jsx-runtime';
 import { ACL_TOPICS } from '@zama-fhe/sdk';
 import { AclEvent } from '@zama-fhe/sdk';
 import { AclPausedError } from '@zama-fhe/sdk';
-import { ActivityAmount } from '@zama-fhe/sdk';
-import { ActivityDirection } from '@zama-fhe/sdk';
-import { activityFeedQueryOptions } from '@zama-fhe/sdk/query';
-import { ActivityItem } from '@zama-fhe/sdk';
-import { ActivityLogMetadata } from '@zama-fhe/sdk';
-import { ActivityType } from '@zama-fhe/sdk';
 import { Address } from '@zama-fhe/sdk';
 import { allowanceContract } from '@zama-fhe/sdk';
 import { allowMutationOptions } from '@zama-fhe/sdk/query';
-import { applyDecryptedValues } from '@zama-fhe/sdk';
 import { ApprovalFailedError } from '@zama-fhe/sdk';
 import { approveContract } from '@zama-fhe/sdk';
 import { ApproveSubmittedEvent } from '@zama-fhe/sdk';
@@ -122,7 +115,6 @@ import { EncryptStartEvent } from '@zama-fhe/sdk';
 import { ERC20ReadFailedError } from '@zama-fhe/sdk';
 import { ERC7984_INTERFACE_ID } from '@zama-fhe/sdk';
 import { ERC7984_WRAPPER_INTERFACE_ID } from '@zama-fhe/sdk';
-import { extractEncryptedHandles } from '@zama-fhe/sdk';
 import { FheTypeName } from '@zama-fhe/sdk';
 import { FhevmInstanceConfig } from '@zama-fhe/sdk';
 import { filterQueryOptions } from '@zama-fhe/sdk/query';
@@ -175,7 +167,6 @@ import { NetworkType } from '@zama-fhe/sdk';
 import { NoCiphertextError } from '@zama-fhe/sdk';
 import { OnChainEvent } from '@zama-fhe/sdk';
 import { PaginatedResult } from '@zama-fhe/sdk';
-import { parseActivityFeed } from '@zama-fhe/sdk';
 import { PendingUnshieldRequest } from '@zama-fhe/sdk';
 import { PropsWithChildren } from 'react';
 import { publicDecryptMutationOptions } from '@zama-fhe/sdk/query';
@@ -216,7 +207,6 @@ import { ShieldSubmittedEvent } from '@zama-fhe/sdk';
 import { signerAddressQueryOptions } from '@zama-fhe/sdk/query';
 import { SigningFailedError } from '@zama-fhe/sdk';
 import { SigningRejectedError } from '@zama-fhe/sdk';
-import { sortByBlockNumber } from '@zama-fhe/sdk';
 import { StoredCredentials } from '@zama-fhe/sdk';
 import { supportsInterfaceContract } from '@zama-fhe/sdk';
 import { symbolContract } from '@zama-fhe/sdk';
@@ -289,25 +279,11 @@ export { AclEvent }
 
 export { AclPausedError }
 
-export { ActivityAmount }
-
-export { ActivityDirection }
-
-export { activityFeedQueryOptions }
-
-export { ActivityItem }
-
-export { ActivityLogMetadata }
-
-export { ActivityType }
-
 export { Address }
 
 export { allowanceContract }
 
 export { allowMutationOptions }
-
-export { applyDecryptedValues }
 
 export { ApprovalFailedError }
 
@@ -511,8 +487,6 @@ export { ERC7984_INTERFACE_ID }
 
 export { ERC7984_WRAPPER_INTERFACE_ID }
 
-export { extractEncryptedHandles }
-
 export { FheTypeName }
 
 export { FhevmInstanceConfig }
@@ -628,8 +602,6 @@ export interface OptimisticMutateContext {
 
 export { PaginatedResult }
 
-export { parseActivityFeed }
-
 export { PendingUnshieldRequest }
 
 export { publicDecryptMutationOptions }
@@ -718,8 +690,6 @@ export { SigningFailedError }
 
 export { SigningRejectedError }
 
-export { sortByBlockNumber }
-
 export { StoredCredentials }
 
 export { supportsInterfaceContract }
@@ -797,17 +767,6 @@ export { UnwrappedStartedEvent }
 export { UnwrapRequestedEvent }
 
 export { UnwrapSubmittedEvent }
-
-// @public
-export function useActivityFeed(config: UseActivityFeedConfig): _$_tanstack_react_query0.UseQueryResult<ActivityItem[], Error>;
-
-// @public
-export interface UseActivityFeedConfig {
-    decrypt?: boolean;
-    logs: readonly (RawLog & Partial<ActivityLogMetadata>)[] | undefined;
-    tokenAddress: Address;
-    userAddress: Address | undefined;
-}
 
 // @public
 export function useAllow(options?: UseMutationOptions<void, Error, Address[]>): _$_tanstack_react_query0.UseMutationResult<void, Error, `0x${string}`[], unknown>;

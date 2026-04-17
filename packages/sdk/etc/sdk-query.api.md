@@ -20,62 +20,6 @@ import * as SDK from '@zama-fhe/relayer-sdk/bundle';
 import { skipToken } from '@tanstack/query-core';
 import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
 
-// @public
-export type ActivityAmount = {
-    readonly type: "clear";
-    readonly value: bigint;
-} | {
-    readonly type: "encrypted";
-    readonly handle: Handle; /** Populated after batch decryption via {@link applyDecryptedValues}. */
-    readonly decryptedValue?: bigint;
-};
-
-// @public
-export type ActivityDirection = "incoming" | "outgoing" | "self";
-
-// @public (undocumented)
-export interface ActivityFeedConfig {
-    // (undocumented)
-    decrypt?: boolean;
-    // (undocumented)
-    logs?: readonly (RawLog & Partial<ActivityLogMetadata>)[];
-    // (undocumented)
-    logsKey?: string;
-    // (undocumented)
-    userAddress?: Address;
-}
-
-// @public (undocumented)
-export interface ActivityFeedQueryConfig {
-    // (undocumented)
-    query?: Record<string, unknown>;
-}
-
-// @public
-export function activityFeedQueryOptions(token: ReadonlyToken, config: ActivityFeedConfig, queryConfig?: ActivityFeedQueryConfig): QueryFactoryOptions<ActivityItem[], Error, ActivityItem[], ReturnType<typeof zamaQueryKeys.activityFeed.scope>>;
-
-// @public
-export interface ActivityItem {
-    readonly amount: ActivityAmount;
-    readonly direction: ActivityDirection;
-    readonly from?: Address;
-    readonly metadata: ActivityLogMetadata;
-    readonly rawEvent: OnChainEvent;
-    readonly success?: boolean;
-    readonly to?: Address;
-    readonly type: ActivityType;
-}
-
-// @public
-export interface ActivityLogMetadata {
-    readonly blockNumber?: bigint | number;
-    readonly logIndex?: number;
-    readonly transactionHash?: Hex;
-}
-
-// @public
-export type ActivityType = "transfer" | "shield" | "unshield_requested" | "unshield_started" | "unshield_finalized";
-
 // @public (undocumented)
 export function allowMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.allow"], Address[], void>;
 
@@ -480,9 +424,6 @@ export interface DelegationSubmittedEvent extends BaseEvent {
     // (undocumented)
     type: typeof ZamaSDKEvents.DelegationSubmitted;
 }
-
-// @public
-export function deriveActivityFeedLogsKey(logs?: readonly (RawLog & Partial<ActivityLogMetadata>)[]): string | undefined;
 
 // @public
 export interface EIP712TypedData {
@@ -1369,18 +1310,6 @@ export const zamaQueryKeys: {
     readonly totalSupply: {
         readonly all: readonly ["zama.totalSupply"];
         readonly token: (tokenAddress: Address) => readonly ["zama.totalSupply", {
-            readonly tokenAddress: `0x${string}`;
-        }];
-    };
-    readonly activityFeed: {
-        readonly all: readonly ["zama.activityFeed"];
-        readonly token: (tokenAddress: Address) => readonly ["zama.activityFeed", {
-            readonly tokenAddress: `0x${string}`;
-        }];
-        readonly scope: (tokenAddress: Address, userAddress?: Address, logsKey?: string, decrypt?: boolean) => readonly ["zama.activityFeed", {
-            readonly decrypt?: boolean | undefined;
-            readonly logsKey?: string | undefined;
-            readonly userAddress?: `0x${string}` | undefined;
             readonly tokenAddress: `0x${string}`;
         }];
     };

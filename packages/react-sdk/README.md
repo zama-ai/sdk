@@ -711,38 +711,6 @@ const { data: meta } = useTokenMetadata("0xTokenAddress");
 // meta?.name, meta?.symbol, meta?.decimals
 ```
 
-### Activity Feed
-
-#### `useActivityFeed`
-
-Parse raw event logs into a classified, optionally decrypted activity feed.
-
-```ts
-function useActivityFeed(config: UseActivityFeedConfig): UseQueryResult<ActivityItem[], Error>;
-
-interface UseActivityFeedConfig {
-  tokenAddress: Address;
-  userAddress: Address | undefined;
-  logs: readonly (RawLog & Partial<ActivityLogMetadata>)[] | undefined;
-  decrypt?: boolean; // default: true — batch-decrypt encrypted amounts
-}
-```
-
-Enabled when both `logs` and `userAddress` are defined. When `decrypt` is `true` (default), encrypted transfer amounts are automatically decrypted via the relayer.
-
-```tsx
-const { data: feed } = useActivityFeed({
-  tokenAddress: "0xTokenAddress",
-  logs, // from getLogs or a similar source
-  userAddress,
-  decrypt: true,
-});
-
-feed?.forEach((item) => {
-  console.log(item.type, item.direction, item.amount);
-});
-```
-
 ### Low-Level FHE Hooks
 
 These hooks are for **custom FHE contracts** (non-token contracts that use encrypted types directly). For confidential ERC-20 tokens, use the high-level token hooks above instead. For detailed usage examples, see the [Encrypt & Decrypt guide](../../docs/gitbook/src/guides/encrypt-decrypt.md).
@@ -811,14 +779,13 @@ Use `zamaQueryKeys` for manual cache management (invalidation, prefetching, remo
 import { zamaQueryKeys, decryptionKeys } from "@zama-fhe/react-sdk";
 ```
 
-| Factory                              | Keys                                                                        | Description                         |
-| ------------------------------------ | --------------------------------------------------------------------------- | ----------------------------------- |
-| `zamaQueryKeys.confidentialBalance`  | `.all`, `.token(address)`, `.owner(address, owner)`                         | Single-token decrypted balance.     |
-| `zamaQueryKeys.confidentialBalances` | `.all`, `.tokens(addresses, owner)`                                         | Multi-token batch balances.         |
-| `zamaQueryKeys.isAllowed`            | `.all`                                                                      | Session signature status.           |
-| `zamaQueryKeys.underlyingAllowance`  | `.all`, `.token(address)`, `.scope(address, owner, wrapper)`                | Underlying ERC-20 allowance.        |
-| `zamaQueryKeys.activityFeed`         | `.all`, `.token(address)`, `.scope(address, userAddress, logsKey, decrypt)` | Activity feed items.                |
-| `decryptionKeys`                     | `.value(handle)`                                                            | Individual decrypted handle values. |
+| Factory                              | Keys                                                         | Description                         |
+| ------------------------------------ | ------------------------------------------------------------ | ----------------------------------- |
+| `zamaQueryKeys.confidentialBalance`  | `.all`, `.token(address)`, `.owner(address, owner)`          | Single-token decrypted balance.     |
+| `zamaQueryKeys.confidentialBalances` | `.all`, `.tokens(addresses, owner)`                          | Multi-token batch balances.         |
+| `zamaQueryKeys.isAllowed`            | `.all`                                                       | Session signature status.           |
+| `zamaQueryKeys.underlyingAllowance`  | `.all`, `.token(address)`, `.scope(address, owner, wrapper)` | Underlying ERC-20 allowance.        |
+| `decryptionKeys`                     | `.value(handle)`                                             | Individual decrypted handle values. |
 
 ```tsx
 import { useQueryClient } from "@tanstack/react-query";
@@ -971,7 +938,5 @@ All public exports from `@zama-fhe/sdk` are re-exported from the main entry poin
 **Events:** `RawLog`, `ConfidentialTransferEvent`, `WrappedEvent`, `UnwrapRequestedEvent`, `UnwrapFinalizedEvent`, `UnwrappedFinalizedEvent`, `UnwrappedStartedEvent`, `OnChainEvent`, `Topics`, `TOKEN_TOPICS`.
 
 **Event decoders:** `decodeConfidentialTransfer`, `decodeWrapped`, `decodeUnwrapRequested`, `decodeUnwrapFinalized`, `decodeUnwrappedFinalized`, `decodeUnwrappedStarted`, `decodeOnChainEvent`, `decodeOnChainEvents`, `findUnwrapRequested`, `findWrapped`.
-
-**Activity feed:** `ActivityDirection`, `ActivityType`, `ActivityAmount`, `ActivityLogMetadata`, `ActivityItem`, `parseActivityFeed`, `extractEncryptedHandles`, `applyDecryptedValues`, `sortByBlockNumber`.
 
 **Contract call builders:** `confidentialBalanceOfContract`, `confidentialTransferContract`, `confidentialTransferFromContract`, `isOperatorContract`, `unwrapContract`, `unwrapFromBalanceContract`, `finalizeUnwrapContract`, `setOperatorContract`, `underlyingContract`, `inferredTotalSupplyContract`, `wrapContract`, `supportsInterfaceContract`, `isConfidentialTokenContract`, `isConfidentialWrapperContract`, `nameContract`, `symbolContract`, `decimalsContract`, `allowanceContract`, `approveContract`, `confidentialTotalSupplyContract`, `totalSupplyContract`, `rateContract`.
