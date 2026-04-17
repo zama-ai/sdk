@@ -54,7 +54,7 @@ export function useConfidentialBalances(
   const { enabled = true } = options ?? {};
   const sdk = useZamaSDK();
 
-  const addressQuery = useQuery<Address>(signerAddressQueryOptions(sdk.signer));
+  const addressQuery = useQuery<Address>(signerAddressQueryOptions(sdk));
 
   const owner = addressQuery.data;
 

@@ -2,6 +2,7 @@
 
 import type {
   Address,
+  GenericProvider,
   GenericSigner,
   GenericStorage,
   RelayerSDK,
@@ -23,8 +24,16 @@ import {
 export interface ZamaProviderProps extends PropsWithChildren {
   /** FHE relayer backend (RelayerWeb for browser, RelayerNode for server). */
   relayer: RelayerSDK;
-  /** Wallet signer (`ViemSigner`, `EthersSigner`, or custom {@link GenericSigner}). */
-  signer: GenericSigner;
+  /**
+   * Read-only chain provider (`ViemProvider`, `EthersProvider`, `WagmiProvider`,
+   * or custom {@link GenericProvider}). Used for every public chain read.
+   */
+  provider: GenericProvider;
+  /**
+   * Wallet signer (`ViemSigner`, `EthersSigner`, `WagmiSigner`, or custom
+   * {@link GenericSigner}). Omit for read-only integrations.
+   */
+  signer?: GenericSigner;
   /** Credential storage backend (IndexedDBStorage for browser, MemoryStorage for tests). */
   storage: GenericStorage;
   /**
@@ -73,6 +82,7 @@ const ZamaSDKContext = createContext<ZamaSDK | null>(null);
 export function ZamaProvider({
   children,
   relayer,
+  provider,
   signer,
   storage,
   sessionStorage,
@@ -107,6 +117,7 @@ export function ZamaProvider({
     () =>
       new ZamaSDK({
         relayer,
+        provider,
         signer,
         storage,
         sessionStorage,
@@ -119,6 +130,7 @@ export function ZamaProvider({
       }),
     [
       relayer,
+      provider,
       signer,
       storage,
       sessionStorage,

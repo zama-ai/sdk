@@ -4,26 +4,13 @@ import type {
   EIP712TypedData,
   GenericSigner,
   Hex,
-  ReadContractArgs,
-  ReadContractConfig,
-  ReadContractReturnType,
-  ReadFunctionName,
   SignerLifecycleCallbacks,
-  TransactionReceipt,
   WriteContractArgs,
   WriteFunctionName,
   WriteContractConfig,
 } from "@zama-fhe/sdk";
-import { TransactionRevertedError } from "@zama-fhe/sdk";
 import type { Config } from "wagmi";
-import {
-  getBlock,
-  getChainId,
-  readContract,
-  signTypedData,
-  waitForTransactionReceipt,
-  writeContract,
-} from "wagmi/actions";
+import { getChainId, signTypedData, writeContract } from "wagmi/actions";
 import { getConnection, watchConnection } from "./compat";
 
 /** Configuration for {@link WagmiSigner}. */
@@ -76,38 +63,6 @@ export class WagmiSigner implements GenericSigner {
     const TArgs extends WriteContractArgs<TAbi, TFunctionName>,
   >(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex> {
     return writeContract(this.config, config as Parameters<typeof writeContract>[1]);
-  }
-
-  async readContract<
-    const TAbi extends ContractAbi,
-    TFunctionName extends ReadFunctionName<TAbi>,
-    const TArgs extends ReadContractArgs<TAbi, TFunctionName>,
-  >(
-    config: ReadContractConfig<TAbi, TFunctionName, TArgs>,
-  ): Promise<ReadContractReturnType<TAbi, TFunctionName, TArgs>> {
-    return readContract(this.config, config);
-  }
-
-  async waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt> {
-    try {
-      return await waitForTransactionReceipt(this.config, { hash });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      if (message.includes("could not be found") || message.includes("Transaction not found")) {
-        throw new TransactionRevertedError(
-          `Could not find transaction receipt for hash "${hash.slice(0, 10)}…". ` +
-            "If using ERC-4337 with a bundler, your connector may be returning a UserOperation hash " +
-            "instead of a transaction hash.",
-          { cause: error instanceof Error ? error : undefined },
-        );
-      }
-      throw error;
-    }
-  }
-
-  async getBlockTimestamp(): Promise<bigint> {
-    const block = await getBlock(this.config);
-    return block.timestamp;
   }
 
   subscribe({

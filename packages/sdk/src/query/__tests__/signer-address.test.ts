@@ -2,8 +2,8 @@ import { describe, expect, test, mockQueryContext } from "../../test-fixtures";
 import { signerAddressQueryOptions } from "../signer-address";
 
 describe("signerAddressQueryOptions", () => {
-  test("returns query key and reads signer address", async ({ signer }) => {
-    const options = signerAddressQueryOptions(signer);
+  test("returns query key and reads signer address", async ({ sdk, signer }) => {
+    const options = signerAddressQueryOptions(sdk);
 
     expect(options.queryKey).toEqual(["zama.signerAddress", { scope: expect.any(Number) }]);
 
@@ -11,14 +11,20 @@ describe("signerAddressQueryOptions", () => {
     expect(signer.getAddress).toHaveBeenCalled();
   });
 
-  test("uses a stable scope per signer instance", ({ signer, createMockSigner }) => {
+  test("uses a stable scope per sdk instance", ({
+    sdk,
+    createSDK,
+    createMockSigner,
+    createMockProvider,
+  }) => {
     const otherSigner = createMockSigner();
+    const otherSdk = createSDK({ signer: otherSigner, provider: createMockProvider(otherSigner) });
 
-    expect(signerAddressQueryOptions(signer).queryKey).toEqual(
-      signerAddressQueryOptions(signer).queryKey,
+    expect(signerAddressQueryOptions(sdk).queryKey).toEqual(
+      signerAddressQueryOptions(sdk).queryKey,
     );
-    expect(signerAddressQueryOptions(signer).queryKey).not.toEqual(
-      signerAddressQueryOptions(otherSigner).queryKey,
+    expect(signerAddressQueryOptions(sdk).queryKey).not.toEqual(
+      signerAddressQueryOptions(otherSdk).queryKey,
     );
   });
 });

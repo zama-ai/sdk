@@ -27,6 +27,7 @@ vi.mock(import("wagmi/actions"), () => ({
 }));
 
 import { WagmiSigner } from "../wagmi/wagmi-signer";
+import { WagmiProvider } from "../wagmi/wagmi-provider";
 
 interface WagmiFixtures {
   wagmiSigner: WagmiSigner;
@@ -106,9 +107,10 @@ describe("WagmiSigner.subscribe", () => {
   });
 });
 
-describe("WagmiSigner.getBlockTimestamp", () => {
-  wit("returns block timestamp from getBlock", async ({ wagmiSigner }) => {
-    const timestamp = await wagmiSigner.getBlockTimestamp();
+describe("WagmiProvider.getBlockTimestamp", () => {
+  wit("returns block timestamp from getBlock", async () => {
+    const wagmiProvider = new WagmiProvider({ config: {} as unknown as Config });
+    const timestamp = await wagmiProvider.getBlockTimestamp();
     expect(timestamp).toBe(1700000000n);
   });
 });

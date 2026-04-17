@@ -3,7 +3,6 @@ import type {
   Abi,
   ContractFunctionArgs,
   ContractFunctionName,
-  ContractFunctionReturnType,
   EIP1193Provider,
   PublicClient,
   WalletClient,
@@ -12,13 +11,7 @@ import type {
 } from "viem";
 import type { writeContract } from "viem/actions";
 import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
-import type {
-  GenericSigner,
-  ReadContractConfig,
-  SignerLifecycleCallbacks,
-  TransactionReceipt,
-  WriteContractConfig,
-} from "../types";
+import type { GenericSigner, SignerLifecycleCallbacks, WriteContractConfig } from "../types";
 import { eip1193Subscribe } from "../token/eip1193-subscribe";
 
 /**
@@ -34,8 +27,13 @@ import { eip1193Subscribe } from "../token/eip1193-subscribe";
  * wallet lifecycle handling, consider using `WagmiSigner` instead.
  */
 export interface ViemSignerConfig {
-  /** Wallet client for signing and write operations. Optional — omit for read-only usage. */
-  walletClient?: WalletClient;
+  /** Wallet client for signing and write operations. */
+  walletClient: WalletClient;
+  /**
+   * Public client used to read the wallet's active chain ID. Required because
+   * `WalletClient.getChainId()` may not reflect the most recent chain switch
+   * in every viem version.
+   */
   publicClient: PublicClient;
   ethereum?: EIP1193Provider;
 }
@@ -46,7 +44,7 @@ export interface ViemSignerConfig {
  * @param config - {@link ViemSignerConfig} with walletClient and publicClient
  */
 export class ViemSigner implements GenericSigner {
-  readonly #walletClient?: WalletClient;
+  readonly #walletClient: WalletClient;
   readonly #publicClient: PublicClient;
   readonly #ethereum?: EIP1193Provider;
 
@@ -56,19 +54,11 @@ export class ViemSigner implements GenericSigner {
     this.#ethereum = config.ethereum;
   }
 
-  #requireWalletClient(): WalletClient {
-    if (!this.#walletClient) {
-      throw new TypeError("No walletClient configured — read-only mode");
-    }
-    return this.#walletClient;
-  }
-
-  #requireWalletAndAccount(): { walletClient: WalletClient; account: Account } {
-    const walletClient = this.#requireWalletClient();
-    if (!walletClient.account) {
+  #requireAccount(): { walletClient: WalletClient; account: Account } {
+    if (!this.#walletClient.account) {
       throw new TypeError("WalletClient has no account");
     }
-    return { walletClient, account: walletClient.account };
+    return { walletClient: this.#walletClient, account: this.#walletClient.account };
   }
 
   async getChainId(): Promise<number> {
@@ -76,11 +66,11 @@ export class ViemSigner implements GenericSigner {
   }
 
   async getAddress(): Promise<Address> {
-    return this.#requireWalletAndAccount().account.address;
+    return this.#requireAccount().account.address;
   }
 
   async signTypedData(typedData: EIP712TypedData): Promise<Hex> {
-    const { walletClient, account } = this.#requireWalletAndAccount();
+    const { walletClient, account } = this.#requireAccount();
     const { EIP712Domain: _, ...sigTypes } = typedData.types;
     return walletClient.signTypedData({
       account,
@@ -101,7 +91,7 @@ export class ViemSigner implements GenericSigner {
     TFunctionName extends ContractFunctionName<TAbi, "nonpayable" | "payable">,
     const TArgs extends ContractFunctionArgs<TAbi, "nonpayable" | "payable", TFunctionName>,
   >(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex> {
-    const { walletClient, account } = this.#requireWalletAndAccount();
+    const { walletClient, account } = this.#requireAccount();
     return walletClient.writeContract({
       chain: walletClient.chain,
       account,
@@ -109,29 +99,7 @@ export class ViemSigner implements GenericSigner {
     } as Parameters<typeof writeContract>[1]);
   }
 
-  async readContract<
-    const TAbi extends Abi | readonly unknown[],
-    TFunctionName extends ContractFunctionName<TAbi, "pure" | "view">,
-    const TArgs extends ContractFunctionArgs<TAbi, "pure" | "view", TFunctionName>,
-  >(
-    config: ReadContractConfig<TAbi, TFunctionName, TArgs>,
-  ): Promise<ContractFunctionReturnType<TAbi, "pure" | "view", TFunctionName, TArgs>> {
-    return this.#publicClient.readContract(config);
-  }
-
-  async waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt> {
-    return this.#publicClient.waitForTransactionReceipt({ hash });
-  }
-
-  async getBlockTimestamp(): Promise<bigint> {
-    const block = await this.#publicClient.getBlock();
-    return block.timestamp;
-  }
-
   subscribe(callbacks: SignerLifecycleCallbacks): () => void {
-    if (!this.#walletClient) {
-      return () => {};
-    }
     return eip1193Subscribe(this.#ethereum, () => this.getAddress(), callbacks);
   }
 }

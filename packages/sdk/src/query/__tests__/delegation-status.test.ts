@@ -6,33 +6,20 @@ const DELEGATOR = "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC" as const;
 const DELEGATE = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as const;
 
 describe("delegationStatusQueryOptions", () => {
-  test("is disabled when required params are missing", async ({
-    signer,
-    relayer,
-    tokenAddress,
-  }) => {
-    const missingToken = delegationStatusQueryOptions(
-      { signer, relayer },
-      {
-        tokenAddress: undefined,
-        delegatorAddress: DELEGATOR,
-        delegateAddress: DELEGATE,
-      },
-    );
-    const missingDelegator = delegationStatusQueryOptions(
-      { signer, relayer },
-      {
-        tokenAddress,
-        delegateAddress: DELEGATE,
-      },
-    );
-    const missingDelegate = delegationStatusQueryOptions(
-      { signer, relayer },
-      {
-        tokenAddress,
-        delegatorAddress: DELEGATOR,
-      },
-    );
+  test("is disabled when required params are missing", async ({ sdk, tokenAddress }) => {
+    const missingToken = delegationStatusQueryOptions(sdk, {
+      tokenAddress: undefined,
+      delegatorAddress: DELEGATOR,
+      delegateAddress: DELEGATE,
+    });
+    const missingDelegator = delegationStatusQueryOptions(sdk, {
+      tokenAddress,
+      delegateAddress: DELEGATE,
+    });
+    const missingDelegate = delegationStatusQueryOptions(sdk, {
+      tokenAddress,
+      delegatorAddress: DELEGATOR,
+    });
 
     expect(missingToken.enabled).toBe(false);
     expect(missingDelegator.enabled).toBe(false);
@@ -40,6 +27,7 @@ describe("delegationStatusQueryOptions", () => {
   });
 
   test("returns isDelegated: false when expiryTimestamp is 0n", async ({
+    sdk,
     signer,
     relayer,
     tokenAddress,
@@ -48,14 +36,11 @@ describe("delegationStatusQueryOptions", () => {
     vi.mocked(relayer.getAclAddress).mockResolvedValue(aclAddress);
     vi.mocked(signer.readContract).mockResolvedValue(0n);
 
-    const options = delegationStatusQueryOptions(
-      { signer, relayer },
-      {
-        tokenAddress,
-        delegatorAddress: DELEGATOR,
-        delegateAddress: DELEGATE,
-      },
-    );
+    const options = delegationStatusQueryOptions(sdk, {
+      tokenAddress,
+      delegatorAddress: DELEGATOR,
+      delegateAddress: DELEGATE,
+    });
 
     const context = mockQueryContext(options.queryKey);
     const result = await options.queryFn!(context);
@@ -65,6 +50,7 @@ describe("delegationStatusQueryOptions", () => {
   });
 
   test("returns isDelegated: true when expiryTimestamp is MAX_UINT64 (skips getBlockTimestamp)", async ({
+    sdk,
     signer,
     relayer,
     tokenAddress,
@@ -73,14 +59,11 @@ describe("delegationStatusQueryOptions", () => {
     vi.mocked(relayer.getAclAddress).mockResolvedValue(aclAddress);
     vi.mocked(signer.readContract).mockResolvedValue(MAX_UINT64);
 
-    const options = delegationStatusQueryOptions(
-      { signer, relayer },
-      {
-        tokenAddress,
-        delegatorAddress: DELEGATOR,
-        delegateAddress: DELEGATE,
-      },
-    );
+    const options = delegationStatusQueryOptions(sdk, {
+      tokenAddress,
+      delegatorAddress: DELEGATOR,
+      delegateAddress: DELEGATE,
+    });
 
     const context = mockQueryContext(options.queryKey);
     const result = await options.queryFn!(context);
@@ -90,6 +73,7 @@ describe("delegationStatusQueryOptions", () => {
   });
 
   test("returns isDelegated: true when expiryTimestamp is in the future", async ({
+    sdk,
     signer,
     relayer,
     tokenAddress,
@@ -100,14 +84,11 @@ describe("delegationStatusQueryOptions", () => {
     vi.mocked(signer.readContract).mockResolvedValue(futureTimestamp);
     vi.mocked(signer.getBlockTimestamp).mockResolvedValue(BigInt(Math.floor(Date.now() / 1000)));
 
-    const options = delegationStatusQueryOptions(
-      { signer, relayer },
-      {
-        tokenAddress,
-        delegatorAddress: DELEGATOR,
-        delegateAddress: DELEGATE,
-      },
-    );
+    const options = delegationStatusQueryOptions(sdk, {
+      tokenAddress,
+      delegatorAddress: DELEGATOR,
+      delegateAddress: DELEGATE,
+    });
 
     const context = mockQueryContext(options.queryKey);
     const result = await options.queryFn!(context);
@@ -117,6 +98,7 @@ describe("delegationStatusQueryOptions", () => {
   });
 
   test("returns isDelegated: false when expiryTimestamp is in the past", async ({
+    sdk,
     signer,
     relayer,
     tokenAddress,
@@ -127,14 +109,11 @@ describe("delegationStatusQueryOptions", () => {
     vi.mocked(signer.readContract).mockResolvedValue(pastTimestamp);
     vi.mocked(signer.getBlockTimestamp).mockResolvedValue(2000n);
 
-    const options = delegationStatusQueryOptions(
-      { signer, relayer },
-      {
-        tokenAddress,
-        delegatorAddress: DELEGATOR,
-        delegateAddress: DELEGATE,
-      },
-    );
+    const options = delegationStatusQueryOptions(sdk, {
+      tokenAddress,
+      delegatorAddress: DELEGATOR,
+      delegateAddress: DELEGATE,
+    });
 
     const context = mockQueryContext(options.queryKey);
     const result = await options.queryFn!(context);
@@ -143,11 +122,8 @@ describe("delegationStatusQueryOptions", () => {
     expect(signer.getBlockTimestamp).toHaveBeenCalled();
   });
 
-  test("queryFn throws when required params are missing from context.queryKey", async ({
-    signer,
-    relayer,
-  }) => {
-    const options = delegationStatusQueryOptions({ signer, relayer }, { tokenAddress: undefined });
+  test("queryFn throws when required params are missing from context.queryKey", async ({ sdk }) => {
+    const options = delegationStatusQueryOptions(sdk, { tokenAddress: undefined });
 
     await expect(options.queryFn!(mockQueryContext(options.queryKey))).rejects.toThrow(
       "delegationStatusQueryOptions: tokenAddress must not be null or undefined",

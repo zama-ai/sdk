@@ -2,15 +2,10 @@ import type { Address, Hex } from "viem";
 import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
 import type {
   ContractAbi,
-  ReadContractArgs,
-  ReadContractConfig,
-  ReadContractReturnType,
-  ReadFunctionName,
   WriteContractArgs,
   WriteContractConfig,
   WriteFunctionName,
 } from "./contract";
-import type { TransactionReceipt } from "./transaction";
 
 /** Callbacks for signer lifecycle events (wallet disconnect, account switch). */
 export interface SignerLifecycleCallbacks {
@@ -23,12 +18,18 @@ export interface SignerLifecycleCallbacks {
 }
 
 /**
- * Framework-agnostic signer interface.
- * Wallet devs implement this with their library of choice.
- * The React SDK ships pre-built adapters for wagmi/viem/ethers.
+ * Framework-agnostic signer interface — wallet authority only.
+ *
+ * Public chain reads have moved to {@link GenericProvider}. A signer is only
+ * required for operations that involve a user-controlled wallet
+ * (`getAddress`, `signTypedData`, `writeContract`).
+ *
+ * Both interfaces expose `getChainId()` — neither takes ownership of "the
+ * chain" unilaterally. A wallet can legitimately switch chain mid-session
+ * while the provider's RPC stays constant.
  */
 export interface GenericSigner {
-  /** Return the chain ID of the connected network. */
+  /** Return the chain ID of the connected wallet. */
   getChainId(): Promise<number>;
   /** The connected wallet address. */
   getAddress: () => Promise<Address>;
@@ -42,22 +43,6 @@ export interface GenericSigner {
   >(
     config: WriteContractConfig<TAbi, TFunctionName, TArgs>,
   ): Promise<Hex>;
-  /** Execute a read-only call and return the decoded result. */
-  readContract<
-    const TAbi extends ContractAbi,
-    TFunctionName extends ReadFunctionName<TAbi>,
-    const TArgs extends ReadContractArgs<TAbi, TFunctionName>,
-  >(
-    config: ReadContractConfig<TAbi, TFunctionName, TArgs>,
-  ): Promise<ReadContractReturnType<TAbi, TFunctionName, TArgs>>;
-  /** Wait for a transaction to be mined and return its receipt. */
-  waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
-  /**
-   * Return the latest block timestamp in seconds.
-   * Used by {@link ReadonlyToken.isDelegated} to compare delegation expiry
-   * against the chain clock instead of the local clock.
-   */
-  getBlockTimestamp: () => Promise<bigint>;
   /**
    * Subscribe to wallet lifecycle events (disconnect, account change, chain change).
    * Returns an unsubscribe function.

@@ -1,6 +1,6 @@
 import { Contract, formatUnits, JsonRpcProvider, Wallet } from "ethers";
 import { DelegationNotPropagatedError, MemoryStorage, SepoliaConfig, ZamaSDK } from "@zama-fhe/sdk";
-import { EthersSigner } from "@zama-fhe/sdk/ethers";
+import { EthersProvider, EthersSigner } from "@zama-fhe/sdk/ethers";
 import { RelayerNode } from "@zama-fhe/sdk/node";
 import type { Address } from "@zama-fhe/sdk";
 
@@ -54,6 +54,10 @@ async function main() {
   const signerA = new EthersSigner({ signer: walletA });
   const signerB = new EthersSigner({ signer: walletB });
 
+  // EthersProvider handles public chain reads (balances, receipts, block timestamps).
+  // A single provider can be shared across both SDK instances — reads are stateless.
+  const zamaProvider = new EthersProvider({ provider });
+
   const auth = RELAYER_API_KEY
     ? { __type: "ApiKeyHeader" as const, value: RELAYER_API_KEY }
     : undefined;
@@ -76,8 +80,18 @@ async function main() {
   // process restarts.
   // `using` ensures terminate() is called when the scope exits (even on error).
   // Both SDKs share the same relayer; relayer.terminate() is idempotent.
-  using sdkA = new ZamaSDK({ relayer, signer: signerA, storage: new MemoryStorage() });
-  using sdkB = new ZamaSDK({ relayer, signer: signerB, storage: new MemoryStorage() });
+  using sdkA = new ZamaSDK({
+    relayer,
+    provider: zamaProvider,
+    signer: signerA,
+    storage: new MemoryStorage(),
+  });
+  using sdkB = new ZamaSDK({
+    relayer,
+    provider: zamaProvider,
+    signer: signerB,
+    storage: new MemoryStorage(),
+  });
 
   // Resolve the confidential wrapper address via the on-chain registry.
   // getConfidentialToken() maps an ERC-20 address → its ERC-7984 wrapper.

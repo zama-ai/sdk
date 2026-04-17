@@ -10,7 +10,7 @@ import {
   savePendingUnshield,
 } from "@zama-fhe/react-sdk";
 import { RelayerCleartext, hoodiCleartextConfig } from "@zama-fhe/sdk/cleartext";
-import { EthersSigner } from "@zama-fhe/sdk/ethers";
+import { EthersProvider, EthersSigner } from "@zama-fhe/sdk/ethers";
 import { JsonRpcProvider } from "ethers";
 import { HOODI_RPC_URL } from "@/lib/config";
 import { getActiveUnshieldToken, setActiveUnshieldToken } from "@/lib/activeUnshield";
@@ -233,10 +233,15 @@ export function Providers({ children }: { children: ReactNode }) {
   );
 
   // Recreated on wallet switch so the new EthersSigner is bound to the new account address.
-  const signer = useMemo(() => {
+  // EthersProvider shares the same hybrid EIP-1193 transport so all public chain reads
+  // benefit from the direct-RPC routing in createHybridEthereum.
+  const { signer, provider } = useMemo(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const hybridEthereum = createHybridEthereum(getEthereumProvider(), liveAccountsRef) as any;
-    return new EthersSigner({ ethereum: hybridEthereum });
+    return {
+      signer: new EthersSigner({ ethereum: hybridEthereum }),
+      provider: new EthersProvider({ ethereum: hybridEthereum }),
+    };
   }, [walletKey]);
 
   return (
@@ -246,6 +251,7 @@ export function Providers({ children }: { children: ReactNode }) {
         relayer={relayer}
         storage={indexedDBStorage}
         sessionStorage={sessionDBStorage}
+        provider={provider}
         signer={signer}
         onEvent={(event) => {
           // ZamaSDKEvents.UnshieldPhase1Submitted fires after Phase 1 is mined (the SDK

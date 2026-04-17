@@ -10,7 +10,7 @@ import {
   savePendingUnshield,
   RelayerWeb,
 } from "@zama-fhe/react-sdk";
-import { ViemSigner } from "@zama-fhe/sdk/viem";
+import { ViemProvider, ViemSigner } from "@zama-fhe/sdk/viem";
 import { SepoliaConfig } from "@zama-fhe/sdk";
 import {
   createWalletClient,
@@ -165,19 +165,29 @@ export function Providers({ children }: { children: ReactNode }) {
   );
 
   // Recreated on wallet switch so the new ViemSigner is bound to the new account address.
-  // publicClient is always created (needed for reads even without a wallet).
+  // publicClient is always created (needed for reads even without a wallet) and is shared
+  // between the ViemProvider (for Zama-SDK public chain reads) and the ViemSigner.
   // walletClient is only created when window.ethereum is available.
-  const signer = useMemo(() => {
+  const { signer, provider } = useMemo(() => {
     const ethereum = getEthereumProvider();
     const publicClient = createPublicClient({
       chain: sepolia,
       transport: http(SEPOLIA_RPC_URL),
     });
+    const zamaProvider = new ViemProvider({ publicClient });
     if (!ethereum) {
-      // No wallet installed — read-only signer. ViemSigner handles getAddress() rejections
-      // gracefully: useConfidentialBalance catches the error; write operations are gated
-      // behind address/isSepolia checks in page.tsx and will never be called.
-      return new ViemSigner({ publicClient });
+      // No wallet installed — construct a read-only signer with a wallet client that has
+      // no account. ViemSigner handles getAddress() rejections gracefully
+      // (useConfidentialBalance catches the error), and all write operations are gated
+      // behind address/isSepolia checks in page.tsx so they are never actually called.
+      const readOnlyWalletClient = createWalletClient({
+        chain: sepolia,
+        transport: http(SEPOLIA_RPC_URL),
+      });
+      return {
+        signer: new ViemSigner({ walletClient: readOnlyWalletClient, publicClient }),
+        provider: zamaProvider,
+      };
     }
     // ViemSigner.writeContract calls walletClient.account to get the signer address —
     // it does NOT fall back to eth_requestAccounts at call time. The account must be
@@ -195,7 +205,7 @@ export function Providers({ children }: { children: ReactNode }) {
       chain: sepolia,
       transport: custom(ethereum),
     });
-    return new ViemSigner({ walletClient, publicClient });
+    return { signer: new ViemSigner({ walletClient, publicClient }), provider: zamaProvider };
   }, [walletKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
@@ -205,6 +215,7 @@ export function Providers({ children }: { children: ReactNode }) {
         relayer={relayer}
         storage={indexedDBStorage}
         sessionStorage={sessionDBStorage}
+        provider={provider}
         signer={signer}
         onEvent={(event) => {
           // ZamaSDKEvents.UnshieldPhase1Submitted fires after Phase 1 is mined (the SDK

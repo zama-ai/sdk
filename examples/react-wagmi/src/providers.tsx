@@ -3,6 +3,8 @@
 import { useState, useMemo, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { http, createConfig, WagmiProvider } from "wagmi";
+// Avoid collision with wagmi's own `WagmiProvider` (React context provider) by
+// aliasing the Zama-SDK provider class.
 import { sepolia } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
 import {
@@ -13,7 +15,7 @@ import {
   savePendingUnshield,
   RelayerWeb,
 } from "@zama-fhe/react-sdk";
-import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
+import { WagmiProvider as ZamaWagmiProvider, WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
 import { SepoliaConfig } from "@zama-fhe/sdk";
 import { SEPOLIA_RPC_URL } from "@/lib/config";
 import { getActiveUnshieldToken, setActiveUnshieldToken } from "@/lib/activeUnshield";
@@ -54,6 +56,8 @@ const wagmiConfig = createConfig({
 
 // WagmiSigner wraps wagmiConfig — account/chain reactivity is handled internally by wagmi.
 const signer = new WagmiSigner({ config: wagmiConfig });
+// WagmiProvider (Zama) wraps the same wagmiConfig for public chain reads.
+const provider = new ZamaWagmiProvider({ config: wagmiConfig });
 
 export function Providers({ children }: { children: ReactNode }) {
   // Created once per Providers mount — avoids sharing the QueryClient across
@@ -86,6 +90,7 @@ export function Providers({ children }: { children: ReactNode }) {
           relayer={relayer}
           storage={indexedDBStorage}
           sessionStorage={sessionDBStorage}
+          provider={provider}
           signer={signer}
           onEvent={(event) => {
             // ZamaSDKEvents.UnshieldPhase1Submitted fires after Phase 1 is mined (the SDK

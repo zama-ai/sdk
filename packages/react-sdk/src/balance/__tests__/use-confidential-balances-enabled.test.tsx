@@ -14,11 +14,14 @@ vi.mock("../../utils/query", async () => {
   return { ...actual, useQuery: vi.fn() };
 });
 
+const mockSdk = {
+  signer: { getAddress: vi.fn().mockResolvedValue(OWNER) },
+  provider: { readContract: vi.fn() },
+  createReadonlyToken: vi.fn((address: Address) => ({ address })),
+};
+
 vi.mock("../../provider", () => ({
-  useZamaSDK: vi.fn(() => ({
-    signer: { getAddress: vi.fn().mockResolvedValue(OWNER) },
-    createReadonlyToken: vi.fn((address: Address) => ({ address })),
-  })),
+  useZamaSDK: vi.fn(() => mockSdk),
 }));
 
 vi.mock("@zama-fhe/sdk/query", () => ({
@@ -68,7 +71,9 @@ describe("useConfidentialBalances enabled propagation", () => {
     );
 
     expect(vi.mocked(signerAddressQueryOptions).mock.calls[0]).toEqual([
-      expect.objectContaining({ getAddress: expect.any(Function) }),
+      expect.objectContaining({
+        signer: expect.objectContaining({ getAddress: expect.any(Function) }),
+      }),
     ]);
 
     const balanceQueryOptions = vi.mocked(useQuery).mock.calls[1]?.[0] as

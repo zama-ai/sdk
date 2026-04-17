@@ -38,10 +38,10 @@ export function useUnderlyingAllowance(
 ) {
   const { tokenAddress, wrapperAddress } = config;
   const sdk = useZamaSDK();
-  const addressQuery = useQuery<Address>(signerAddressQueryOptions(sdk.signer));
+  const addressQuery = useQuery<Address>(signerAddressQueryOptions(sdk));
   const owner = addressQuery.data;
 
-  const baseOpts = underlyingAllowanceQueryOptions(sdk.signer, tokenAddress, {
+  const baseOpts = underlyingAllowanceQueryOptions(sdk, tokenAddress, {
     owner,
     wrapperAddress,
   });
@@ -71,11 +71,11 @@ export function useUnderlyingAllowance(
 export function useUnderlyingAllowanceSuspense(config: UseUnderlyingAllowanceConfig) {
   const { tokenAddress, wrapperAddress } = config;
   const sdk = useZamaSDK();
-  const addressQuery = useSuspenseQuery<Address>(signerAddressQueryOptions(sdk.signer));
+  const addressQuery = useSuspenseQuery<Address>(signerAddressQueryOptions(sdk));
   const owner = addressQuery.data;
 
   return useSuspenseQuery<bigint>(
-    underlyingAllowanceQueryOptions(sdk.signer, tokenAddress, {
+    underlyingAllowanceQueryOptions(sdk, tokenAddress, {
       owner,
       wrapperAddress,
     }),

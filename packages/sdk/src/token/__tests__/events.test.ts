@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "../../test-fixtures";
+import { createMockProvider, describe, expect, it, vi, type MockSigner } from "../../test-fixtures";
 import { Topics } from "../../events";
 import { ReadonlyToken } from "../readonly-token";
 import { Token } from "../token";
@@ -8,7 +8,7 @@ import {
   ZamaSDKEvents,
 } from "../../events/sdk-events";
 import { CredentialsManager } from "../../credentials/credentials-manager";
-import type { GenericSigner, GenericStorage } from "../../types";
+import type { GenericStorage } from "../../types";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import { ZamaSDK } from "../../zama-sdk";
 import type { Address } from "viem";
@@ -22,7 +22,7 @@ const TOKEN_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
  */
 function setupSdkWithEvents(opts: {
   relayer: RelayerSDK;
-  signer: GenericSigner;
+  signer: MockSigner;
   storage: GenericStorage;
   sessionStorage: GenericStorage;
   tokenAddress: Address;
@@ -32,6 +32,7 @@ function setupSdkWithEvents(opts: {
   const onEvent: ZamaSDKEventListener = (event) => events.push(event);
   const sdk = new ZamaSDK({
     relayer: opts.relayer,
+    provider: createMockProvider(opts.signer),
     signer: opts.signer,
     storage: opts.storage,
     sessionStorage: opts.sessionStorage,
@@ -199,7 +200,13 @@ describe("ReadonlyToken.balanceOf event emissions", () => {
     storage,
     sessionStorage,
   }) => {
-    const sdk = new ZamaSDK({ relayer, signer, storage, sessionStorage });
+    const sdk = new ZamaSDK({
+      relayer,
+      provider: createMockProvider(signer),
+      signer,
+      storage,
+      sessionStorage,
+    });
     const token = new ReadonlyToken(sdk, tokenAddress);
     vi.mocked(signer.readContract).mockResolvedValue(handle);
     await expect(token.balanceOf()).resolves.toBe(1000n);

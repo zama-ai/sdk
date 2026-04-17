@@ -12,7 +12,13 @@ import type { ClearValueType, Handle, PublicDecryptResult } from "./relayer/rela
 import { MemoryStorage } from "./storage/memory-storage";
 import { ReadonlyToken } from "./token/readonly-token";
 import { Token } from "./token/token";
-import type { GenericSigner, GenericStorage, SignerLifecycleCallbacks } from "./types";
+import type {
+  GenericProvider,
+  GenericSigner,
+  GenericStorage,
+  SignerLifecycleCallbacks,
+} from "./types";
+import { SignerRequiredError } from "./errors/signer";
 import { toError } from "./utils";
 import { pLimit } from "./utils/concurrency";
 import { WrappersRegistry } from "./wrappers-registry";
@@ -20,12 +26,36 @@ import { WrappersRegistry } from "./wrappers-registry";
 /** Maximum keypairTTL accepted by the fhevm ACL contract (365 days, in seconds). */
 const MAX_KEYPAIR_TTL = 365 * 86400; // 31_536_000 s
 
+/**
+ * Stub signer used when `ZamaSDK` is constructed without one. Every method
+ * throws {@link SignerRequiredError} so wallet-bound operations surface a
+ * typed error instead of a generic `TypeError`.
+ */
+function createThrowingSigner(): GenericSigner {
+  return {
+    getChainId: () => Promise.reject(new SignerRequiredError("getChainId")),
+    getAddress: () => Promise.reject(new SignerRequiredError("getAddress")),
+    signTypedData: () => Promise.reject(new SignerRequiredError("signTypedData")),
+    writeContract: () => Promise.reject(new SignerRequiredError("writeContract")),
+  };
+}
+
 /** Configuration for {@link ZamaSDK}. */
 export interface ZamaSDKConfig {
   /** FHE relayer backend (`RelayerWeb` for browser, `RelayerNode` for server). */
   relayer: RelayerSDK;
-  /** Wallet signer (`ViemSigner`, `EthersSigner`, or custom {@link GenericSigner}). */
-  signer: GenericSigner;
+  /**
+   * Read-only chain provider (`ViemProvider`, `EthersProvider`, `WagmiProvider`,
+   * or custom {@link GenericProvider}). Used for every public chain read the
+   * SDK issues.
+   */
+  provider: GenericProvider;
+  /**
+   * Wallet signer (`ViemSigner`, `EthersSigner`, `WagmiSigner`, or custom
+   * {@link GenericSigner}). Required for writes, EIP-712 signatures, and
+   * wallet-lifecycle subscriptions. Omit for read-only integrations.
+   */
+  signer?: GenericSigner;
   /** Credential storage backend (`IndexedDBStorage` for browser, `MemoryStorage` for tests). */
   storage: GenericStorage;
   /**
@@ -72,7 +102,8 @@ export interface ZamaSDKConfig {
  */
 export class ZamaSDK {
   readonly relayer: RelayerSDK;
-  readonly signer: GenericSigner;
+  readonly provider: GenericProvider;
+  readonly signer: GenericSigner | undefined;
   readonly storage: GenericStorage;
   readonly sessionStorage: GenericStorage;
   readonly credentials: CredentialsManager;
@@ -101,20 +132,21 @@ export class ZamaSDK {
 
   constructor(config: ZamaSDKConfig) {
     this.relayer = config.relayer;
+    this.provider = config.provider;
     this.signer = config.signer;
     this.storage = config.storage;
     this.sessionStorage = config.sessionStorage ?? new MemoryStorage();
     this.cache = new DecryptCache(config.storage);
     this.#onEvent = config.onEvent ?? function () {};
     this.registry = new WrappersRegistry({
-      signer: this.signer,
+      provider: this.provider,
       registryAddresses: config.registryAddresses,
       registryTTL: config.registryTTL,
     });
     this.#registryTTL = config.registryTTL;
     const credentialsConfig = {
       relayer: this.relayer,
-      signer: this.signer,
+      signer: this.signer ?? createThrowingSigner(),
       storage: this.storage,
       sessionStorage: this.sessionStorage,
       keypairTTL: (() => {
@@ -138,7 +170,9 @@ export class ZamaSDK {
     this.delegatedCredentials = new DelegatedCredentialsManager(credentialsConfig);
     this.#identityReady = this.#initIdentity();
 
-    if (this.signer.subscribe) {
+    const signer = this.signer;
+    const subscribe = signer?.subscribe?.bind(signer);
+    if (signer && subscribe) {
       const lifecycleCallbacks = config.signerLifecycleCallbacks;
       const runLifecycleEffect = (operation: string, effect: () => Promise<void>) => {
         void effect().catch((error) => {
@@ -149,7 +183,7 @@ export class ZamaSDK {
           });
         });
       };
-      this.#unsubscribeSigner = this.signer.subscribe({
+      this.#unsubscribeSigner = subscribe({
         onDisconnect: () => {
           runLifecycleEffect("signerDisconnect", async () => {
             await this.#revokeByTrackedIdentity();
@@ -160,12 +194,16 @@ export class ZamaSDK {
           });
         },
         onAccountChange: (newAddress: Address) => {
+          const normalized = getAddress(newAddress);
+          if (normalized === this.#lastAddress) {
+            return;
+          }
           runLifecycleEffect("signerAccountChange", async () => {
             await this.#revokeByTrackedIdentity();
             await this.cache.clearAll();
-            this.#lastAddress = getAddress(newAddress);
+            this.#lastAddress = normalized;
             try {
-              this.#lastChainId = await this.signer.getChainId();
+              this.#lastChainId = await signer.getChainId();
             } catch {
               // Signer may not be ready — keep previous chainId
             }
@@ -173,12 +211,15 @@ export class ZamaSDK {
           });
         },
         onChainChange: (newChainId: number) => {
+          if (newChainId === this.#lastChainId) {
+            return;
+          }
           runLifecycleEffect("signerChainChange", async () => {
             await this.#revokeByTrackedIdentity();
             await this.cache.clearAll();
             this.#lastChainId = newChainId;
             try {
-              this.#lastAddress = await this.signer.getAddress();
+              this.#lastAddress = await signer.getAddress();
             } catch {
               // Signer may not be ready — keep previous address
             }
@@ -189,10 +230,29 @@ export class ZamaSDK {
     }
   }
 
+  /**
+   * Returns the configured signer or throws {@link SignerRequiredError}.
+   *
+   * Used by wallet-bound operations (writes, signatures, decrypts) to surface
+   * a typed error when the SDK was constructed in read-only mode
+   * (no signer configured).
+   */
+  requireSigner(operation: string): GenericSigner {
+    if (!this.signer) {
+      throw new SignerRequiredError(operation);
+    }
+    return this.signer;
+  }
+
   async #initIdentity(): Promise<void> {
+    if (!this.signer) {
+      return;
+    }
     try {
-      const address = await this.signer.getAddress();
-      const chainId = await this.signer.getChainId();
+      const [address, chainId] = await Promise.all([
+        this.signer.getAddress(),
+        this.signer.getChainId(),
+      ]);
       // Only commit both values atomically so revokeByTrackedIdentity
       // never sees a partial (address-only) state.
       this.#lastAddress = address;
@@ -260,7 +320,7 @@ export class ZamaSDK {
   }
 
   /**
-   * Create a {@link WrappersRegistry} instance bound to this SDK's signer.
+   * Create a {@link WrappersRegistry} instance bound to this SDK's provider.
    * On Mainnet and Sepolia the registry address is resolved automatically.
    *
    * @param registryAddresses - Optional per-chain overrides (e.g. Hardhat).
@@ -279,7 +339,7 @@ export class ZamaSDK {
    */
   createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry {
     return new WrappersRegistry({
-      signer: this.signer,
+      provider: this.provider,
       registryAddresses,
       registryTTL: this.#registryTTL,
     });
@@ -355,7 +415,7 @@ export class ZamaSDK {
     }
 
     // Cache partition
-    const signerAddress = await this.signer.getAddress();
+    const signerAddress = await this.requireSigner("userDecrypt").getAddress();
     const uncached: DecryptHandle[] = [];
 
     for (const h of nonZero) {
@@ -485,8 +545,11 @@ export class ZamaSDK {
    */
   async revokeSession(): Promise<void> {
     await this.#identityReady;
-    const address = this.#lastAddress ?? (await this.signer.getAddress());
-    const chainId = this.#lastChainId ?? (await this.signer.getChainId());
+    const signer = this.requireSigner("revokeSession");
+    const [address, chainId] = await Promise.all([
+      this.#lastAddress ?? signer.getAddress(),
+      this.#lastChainId ?? signer.getChainId(),
+    ]);
     const storeKey = await CredentialsManager.computeStoreKey(address, chainId);
     await this.credentials.revokeByKey(storeKey);
     await this.cache.clearForRequester(address);

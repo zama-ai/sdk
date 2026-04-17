@@ -12,7 +12,7 @@ import { DelegatedCredentialsManager } from "./credentials/delegated-credentials
 import { MemoryStorage } from "./storage/memory-storage";
 import { ReadonlyToken } from "./token/readonly-token";
 import { Token } from "./token/token";
-import type { GenericSigner, GenericStorage, TransactionResult } from "./types";
+import type { GenericProvider, GenericSigner, GenericStorage, TransactionResult } from "./types";
 import type { ZamaSDKConfig } from "./zama-sdk";
 import { ZamaSDK } from "./zama-sdk";
 export { afterEach, beforeEach, describe, expect, vi, type Mock } from "vitest";
@@ -82,10 +82,20 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
   } as unknown as RelayerSDK;
 }
 
+/**
+ * Test-only signer shape: the narrow production {@link GenericSigner} plus the
+ * read methods that moved to {@link GenericProvider}. Tests configure a single
+ * mock object and the paired `createMockProvider` reuses the read-method
+ * `vi.fn()`s so `sdk.provider.readContract(...)` calls route through the same
+ * mocks tests assert against as `signer.readContract`.
+ */
+export type MockSigner = GenericSigner &
+  Pick<GenericProvider, "readContract" | "waitForTransactionReceipt" | "getBlockTimestamp">;
+
 export function createMockSigner(
   address: Address = USER,
-  overrides: Partial<GenericSigner> = {},
-): GenericSigner {
+  overrides: Partial<MockSigner> = {},
+): MockSigner {
   return {
     getAddress: vi.fn().mockResolvedValue(address),
     signTypedData: vi.fn().mockResolvedValue("0xsig"),
@@ -96,6 +106,20 @@ export function createMockSigner(
     getBlockTimestamp: vi.fn().mockResolvedValue(BigInt(Math.floor(Date.now() / 1000))),
     subscribe: vi.fn().mockReturnValue(() => {}),
     ...overrides,
+  } as MockSigner;
+}
+
+/**
+ * Test provider mock that shares the signer's read-method `vi.fn()`s so
+ * existing tests can continue asserting via `signer.readContract` etc. while
+ * production code routes through `sdk.provider`.
+ */
+export function createMockProvider(signer: MockSigner): GenericProvider {
+  return {
+    getChainId: signer.getChainId,
+    readContract: signer.readContract,
+    waitForTransactionReceipt: signer.waitForTransactionReceipt,
+    getBlockTimestamp: signer.getBlockTimestamp,
   };
 }
 
@@ -149,7 +173,8 @@ interface SdkFixtures {
   delegateAddress: typeof DELEGATE;
   handle: typeof VALID_HANDLE;
   relayer: RelayerSDK;
-  signer: GenericSigner;
+  signer: MockSigner;
+  provider: GenericProvider;
   token: Token;
   readonlyToken: ReadonlyToken;
   mockToken: Token;
@@ -158,7 +183,8 @@ interface SdkFixtures {
   storage: GenericStorage;
   sessionStorage: GenericStorage;
   createMockRelayer: typeof createMockRelayer;
-  createMockSigner: (addressOrOverrides?: Address | Partial<GenericSigner>) => GenericSigner;
+  createMockSigner: (addressOrOverrides?: Address | Partial<MockSigner>) => MockSigner;
+  createMockProvider: typeof createMockProvider;
   createMockStorage: typeof createMockStorage;
   createMockToken: (
     addressOrArgs?:
@@ -196,6 +222,9 @@ export const test = base.extend<SdkFixtures>({
   signer: async ({ userAddress }, use) => {
     await use(createMockSigner(userAddress));
   },
+  provider: async ({ signer }, use) => {
+    await use(createMockProvider(signer));
+  },
   credentialManager: async (
     { relayer, signer, storage, sessionStorage, createCredentialManager },
     use,
@@ -230,11 +259,14 @@ export const test = base.extend<SdkFixtures>({
     await use(createMockRelayer);
   },
   createMockSigner: async ({ userAddress }, use) => {
-    await use((addressOrOverrides?: Address | Partial<GenericSigner>) => {
+    await use((addressOrOverrides?: Address | Partial<MockSigner>) => {
       const address = typeof addressOrOverrides === "string" ? addressOrOverrides : userAddress;
       const overrides = typeof addressOrOverrides === "object" ? addressOrOverrides : {};
       return createMockSigner(address, overrides);
     });
+  },
+  createMockProvider: async ({}, use) => {
+    await use(createMockProvider);
   },
   createMockStorage: async ({}, use) => {
     await use(createMockStorage);
@@ -337,13 +369,14 @@ export const test = base.extend<SdkFixtures>({
   createMockReadonlyToken: async ({ tokenAddress, signer }, use) => {
     await use((address?: Address) => createMockReadonlyToken(address ?? tokenAddress, signer));
   },
-  sdk: async ({ relayer, signer, storage, sessionStorage }, use) => {
-    await use(new ZamaSDK({ relayer, signer, storage, sessionStorage }));
+  sdk: async ({ relayer, provider, signer, storage, sessionStorage }, use) => {
+    await use(new ZamaSDK({ relayer, provider, signer, storage, sessionStorage }));
   },
-  createSDK: async ({ signer, relayer, storage, sessionStorage }, use) => {
+  createSDK: async ({ provider, signer, relayer, storage, sessionStorage }, use) => {
     await use((overrides?: Partial<ZamaSDKConfig>) => {
       return new ZamaSDK({
         relayer,
+        provider,
         signer,
         storage,
         sessionStorage,

@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ZamaProvider } from "@zama-fhe/react-sdk";
-import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
+import { WagmiProvider as ZamaWagmiProvider, WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
 import type { ReactNode } from "react";
 import { createConfig, http, WagmiProvider } from "wagmi";
 import { anvil } from "wagmi/chains";
@@ -31,6 +31,7 @@ const wagmiConfig = createConfig({
 });
 
 const signer = new WagmiSigner({ config: wagmiConfig });
+const provider = new ZamaWagmiProvider({ config: wagmiConfig });
 
 const relayer = new RelayerWeb({
   getChainId: async () => anvil.id,
@@ -56,6 +57,7 @@ export function Providers({ children }: { children: ReactNode }) {
       <WagmiProvider config={wagmiConfig}>
         <ZamaProvider
           relayer={relayer}
+          provider={provider}
           storage={storage}
           signer={signer}
           registryAddresses={{

@@ -6,9 +6,9 @@ import { zamaQueryKeys } from "../query-keys";
 describe("underlyingAllowanceQueryOptions", () => {
   const UNDERLYING = "0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D";
 
-  test("enabled false when owner missing", ({ signer }) => {
+  test("enabled false when owner missing", ({ sdk }) => {
     const options = underlyingAllowanceQueryOptions(
-      signer,
+      sdk,
       "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       { wrapperAddress: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" },
     );
@@ -16,9 +16,9 @@ describe("underlyingAllowanceQueryOptions", () => {
     expect(options.enabled).toBe(false);
   });
 
-  test("enabled false when wrapperAddress is missing", ({ signer }) => {
+  test("enabled false when wrapperAddress is missing", ({ sdk }) => {
     const options = underlyingAllowanceQueryOptions(
-      signer,
+      sdk,
       "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       {
         owner: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
@@ -28,11 +28,11 @@ describe("underlyingAllowanceQueryOptions", () => {
     expect(options.enabled).toBe(false);
   });
 
-  test("queries allowance when owner exists", async ({ signer }) => {
+  test("queries allowance when owner exists", async ({ sdk, signer }) => {
     vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(99n);
 
     const options = underlyingAllowanceQueryOptions(
-      signer,
+      sdk,
       "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       {
         owner: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
@@ -44,9 +44,9 @@ describe("underlyingAllowanceQueryOptions", () => {
     expect(allowance).toBe(99n);
   });
 
-  test("includes owner and wrapperAddress in queryKey", ({ signer }) => {
+  test("includes owner and wrapperAddress in queryKey", ({ sdk }) => {
     const options = underlyingAllowanceQueryOptions(
-      signer,
+      sdk,
       "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       {
         owner: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
@@ -65,12 +65,13 @@ describe("underlyingAllowanceQueryOptions", () => {
   });
 
   test("queryFn reads tokenAddress, owner, and wrapperAddress from context.queryKey", async ({
+    sdk,
     signer,
   }) => {
     vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(99n);
 
     const options = underlyingAllowanceQueryOptions(
-      signer,
+      sdk,
       "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       {
         owner: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
@@ -107,9 +108,9 @@ describe("underlyingAllowanceQueryOptions", () => {
     );
   });
 
-  test("queryFn throws when params are missing from context.queryKey", async ({ signer }) => {
+  test("queryFn throws when params are missing from context.queryKey", async ({ sdk }) => {
     const options = underlyingAllowanceQueryOptions(
-      signer,
+      sdk,
       "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       {
         owner: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",

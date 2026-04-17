@@ -50,11 +50,11 @@ export function useConfidentialIsApproved(
   const { tokenAddress, spender, holder } = config;
   const sdk = useZamaSDK();
   const holderQuery = useQuery<Address>({
-    ...signerAddressQueryOptions(sdk.signer),
+    ...signerAddressQueryOptions(sdk),
     enabled: tokenAddress !== undefined && spender !== undefined && holder === undefined,
   });
   const resolvedHolder = holder ?? holderQuery.data;
-  const baseOpts = confidentialIsApprovedQueryOptions(sdk.signer, tokenAddress, {
+  const baseOpts = confidentialIsApprovedQueryOptions(sdk, tokenAddress, {
     holder: resolvedHolder,
     spender,
   });
@@ -86,11 +86,11 @@ export function useConfidentialIsApprovedSuspense(config: UseConfidentialIsAppro
   const { spender, holder, ...tokenConfig } = config;
   const sdk = useZamaSDK();
   const token = useToken(tokenConfig);
-  const addressQuery = useSuspenseQuery<Address>(signerAddressQueryOptions(sdk.signer));
+  const addressQuery = useSuspenseQuery<Address>(signerAddressQueryOptions(sdk));
   const resolvedHolder = holder ?? addressQuery.data;
 
   return useSuspenseQuery<boolean>(
-    confidentialIsApprovedQueryOptions(sdk.signer, token.address, {
+    confidentialIsApprovedQueryOptions(sdk, token.address, {
       holder: resolvedHolder,
       spender,
     }),
