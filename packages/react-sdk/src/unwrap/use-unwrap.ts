@@ -36,11 +36,11 @@ export function useUnwrap(
   const token = useToken(config);
 
   return useMutation<TransactionResult, Error, UnwrapParams, Address>({
-    ...unwrapMutationOptions(token, config.tokenAddress),
+    ...unwrapMutationOptions(token),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       options?.onSuccess?.(data, variables, onMutateResult, context);
-      invalidateAfterUnwrap(context.client, config.tokenAddress);
+      invalidateAfterUnwrap(context.client, token.address);
     },
   });
 }

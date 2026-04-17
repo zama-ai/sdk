@@ -133,7 +133,7 @@ export interface ConfidentialIsApprovedQueryConfig {
 }
 
 // @public (undocumented)
-export function confidentialIsApprovedQueryOptions(signer: GenericSigner, tokenAddress: Address | undefined, config: ConfidentialIsApprovedQueryConfig): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.confidentialIsApproved.scope>>;
+export function confidentialIsApprovedQueryOptions(sdk: ZamaSDK, tokenAddress: Address | undefined, config: ConfidentialIsApprovedQueryConfig): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.confidentialIsApproved.scope>>;
 
 // @public (undocumented)
 export interface ConfidentialTokenAddressQueryConfig extends WrappersRegistryQueryConfig {
@@ -142,7 +142,7 @@ export interface ConfidentialTokenAddressQueryConfig extends WrappersRegistryQue
 }
 
 // @public (undocumented)
-export function confidentialTokenAddressQueryOptions(signer: GenericSigner, config: ConfidentialTokenAddressQueryConfig): QueryFactoryOptions<readonly [boolean, Address], Error, readonly [boolean, Address], ReturnType<typeof zamaQueryKeys.wrappersRegistry.confidentialTokenAddress>>;
+export function confidentialTokenAddressQueryOptions(sdk: ZamaSDK, config: ConfidentialTokenAddressQueryConfig): QueryFactoryOptions<readonly [boolean, Address], Error, readonly [boolean, Address], ReturnType<typeof zamaQueryKeys.wrappersRegistry.confidentialTokenAddress>>;
 
 // @public
 export interface ConfidentialTransferEvent {
@@ -412,10 +412,7 @@ export interface DelegationStatusQueryConfig {
 }
 
 // @public (undocumented)
-export function delegationStatusQueryOptions(sdk: {
-    signer: GenericSigner;
-    relayer: RelayerSDK;
-}, config: DelegationStatusQueryConfig): QueryFactoryOptions<DelegationStatusData, Error, DelegationStatusData, ReturnType<typeof zamaQueryKeys.delegationStatus.scope>>;
+export function delegationStatusQueryOptions(sdk: ZamaSDK, config: DelegationStatusQueryConfig): QueryFactoryOptions<DelegationStatusData, Error, DelegationStatusData, ReturnType<typeof zamaQueryKeys.delegationStatus.scope>>;
 
 // @public (undocumented)
 export interface DelegationSubmittedEvent extends BaseEvent {
@@ -507,16 +504,9 @@ export function generateKeypairMutationOptions(sdk: ZamaSDK): MutationFactoryOpt
 // @public
 export interface GenericSigner {
     getAddress: () => Promise<Address>;
-    getBlockTimestamp: () => Promise<bigint>;
     getChainId(): Promise<number>;
-    // Warning: (ae-forgotten-export) The symbol "ReadFunctionName" needs to be exported by the entry point index.d.ts
-    // Warning: (ae-forgotten-export) The symbol "ReadContractArgs" needs to be exported by the entry point index.d.ts
-    // Warning: (ae-forgotten-export) The symbol "ReadContractConfig" needs to be exported by the entry point index.d.ts
-    // Warning: (ae-forgotten-export) The symbol "ReadContractReturnType" needs to be exported by the entry point index.d.ts
-    readContract<const TAbi extends ContractAbi, TFunctionName extends ReadFunctionName<TAbi>, const TArgs extends ReadContractArgs<TAbi, TFunctionName>>(config: ReadContractConfig<TAbi, TFunctionName, TArgs>): Promise<ReadContractReturnType<TAbi, TFunctionName, TArgs>>;
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
     subscribe?: (callbacks: SignerLifecycleCallbacks) => () => void;
-    waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
     // Warning: (ae-forgotten-export) The symbol "ContractAbi" needs to be exported by the entry point index.d.ts
     // Warning: (ae-forgotten-export) The symbol "WriteFunctionName" needs to be exported by the entry point index.d.ts
     // Warning: (ae-forgotten-export) The symbol "WriteContractArgs" needs to be exported by the entry point index.d.ts
@@ -583,7 +573,7 @@ export interface IsConfidentialQueryConfig {
 }
 
 // @public (undocumented)
-export function isConfidentialQueryOptions(signer: GenericSigner, tokenAddress: Address, config?: IsConfidentialQueryConfig): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.isConfidential.token>>;
+export function isConfidentialQueryOptions(sdk: ZamaSDK, tokenAddress: Address, config?: IsConfidentialQueryConfig): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.isConfidential.token>>;
 
 // @public (undocumented)
 export interface IsConfidentialTokenValidQueryConfig extends WrappersRegistryQueryConfig {
@@ -592,10 +582,10 @@ export interface IsConfidentialTokenValidQueryConfig extends WrappersRegistryQue
 }
 
 // @public (undocumented)
-export function isConfidentialTokenValidQueryOptions(signer: GenericSigner, config: IsConfidentialTokenValidQueryConfig): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.wrappersRegistry.isConfidentialTokenValid>>;
+export function isConfidentialTokenValidQueryOptions(sdk: ZamaSDK, config: IsConfidentialTokenValidQueryConfig): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.wrappersRegistry.isConfidentialTokenValid>>;
 
 // @public (undocumented)
-export function isWrapperQueryOptions(signer: GenericSigner, tokenAddress: Address, config?: IsConfidentialQueryConfig): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.isWrapper.token>>;
+export function isWrapperQueryOptions(sdk: ZamaSDK, tokenAddress: Address, config?: IsConfidentialQueryConfig): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.isWrapper.token>>;
 
 // @public (undocumented)
 export interface ListPairsQueryConfig {
@@ -832,7 +822,7 @@ export interface SignerAddressQueryConfig {
 }
 
 // @public (undocumented)
-export function signerAddressQueryOptions(signer: GenericSigner, config?: SignerAddressQueryConfig): QueryFactoryOptions<Address, Error, Address, ReturnType<typeof zamaQueryKeys.signerAddress.scope>>;
+export function signerAddressQueryOptions(sdk: ZamaSDK, config?: SignerAddressQueryConfig): QueryFactoryOptions<Address, Error, Address, ReturnType<typeof zamaQueryKeys.signerAddress.scope>>;
 
 // @public
 export interface SignerLifecycleCallbacks {
@@ -898,7 +888,7 @@ export interface TokenAddressQueryConfig extends WrappersRegistryQueryConfig {
 }
 
 // @public (undocumented)
-export function tokenAddressQueryOptions(signer: GenericSigner, config: TokenAddressQueryConfig): QueryFactoryOptions<readonly [boolean, Address], Error, readonly [boolean, Address], ReturnType<typeof zamaQueryKeys.wrappersRegistry.tokenAddress>>;
+export function tokenAddressQueryOptions(sdk: ZamaSDK, config: TokenAddressQueryConfig): QueryFactoryOptions<readonly [boolean, Address], Error, readonly [boolean, Address], ReturnType<typeof zamaQueryKeys.wrappersRegistry.tokenAddress>>;
 
 // @public
 export interface TokenMetadata {
@@ -917,7 +907,7 @@ export interface TokenMetadataQueryConfig {
 }
 
 // @public (undocumented)
-export function tokenMetadataQueryOptions(signer: GenericSigner, tokenAddress: Address, config?: TokenMetadataQueryConfig): QueryFactoryOptions<TokenMetadata, Error, TokenMetadata, ReturnType<typeof zamaQueryKeys.tokenMetadata.token>>;
+export function tokenMetadataQueryOptions(sdk: ZamaSDK, tokenAddress: Address, config?: TokenMetadataQueryConfig): QueryFactoryOptions<TokenMetadata, Error, TokenMetadata, ReturnType<typeof zamaQueryKeys.tokenMetadata.token>>;
 
 // @public (undocumented)
 export interface TokenPairQueryConfig extends WrappersRegistryQueryConfig {
@@ -926,13 +916,13 @@ export interface TokenPairQueryConfig extends WrappersRegistryQueryConfig {
 }
 
 // @public (undocumented)
-export function tokenPairQueryOptions(signer: GenericSigner, config: TokenPairQueryConfig): QueryFactoryOptions<TokenWrapperPair, Error, TokenWrapperPair, ReturnType<typeof zamaQueryKeys.wrappersRegistry.tokenPair>>;
+export function tokenPairQueryOptions(sdk: ZamaSDK, config: TokenPairQueryConfig): QueryFactoryOptions<TokenWrapperPair, Error, TokenWrapperPair, ReturnType<typeof zamaQueryKeys.wrappersRegistry.tokenPair>>;
 
 // @public (undocumented)
-export function tokenPairsLengthQueryOptions(signer: GenericSigner, config: WrappersRegistryQueryConfig): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.wrappersRegistry.tokenPairsLength>>;
+export function tokenPairsLengthQueryOptions(sdk: ZamaSDK, config: WrappersRegistryQueryConfig): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.wrappersRegistry.tokenPairsLength>>;
 
 // @public (undocumented)
-export function tokenPairsQueryOptions(signer: GenericSigner, config: WrappersRegistryQueryConfig): QueryFactoryOptions<readonly TokenWrapperPair[], Error, readonly TokenWrapperPair[], ReturnType<typeof zamaQueryKeys.wrappersRegistry.tokenPairs>>;
+export function tokenPairsQueryOptions(sdk: ZamaSDK, config: WrappersRegistryQueryConfig): QueryFactoryOptions<readonly TokenWrapperPair[], Error, readonly TokenWrapperPair[], ReturnType<typeof zamaQueryKeys.wrappersRegistry.tokenPairs>>;
 
 // @public (undocumented)
 export interface TokenPairsSliceQueryConfig extends WrappersRegistryQueryConfig {
@@ -943,7 +933,7 @@ export interface TokenPairsSliceQueryConfig extends WrappersRegistryQueryConfig 
 }
 
 // @public (undocumented)
-export function tokenPairsSliceQueryOptions(signer: GenericSigner, config: TokenPairsSliceQueryConfig): QueryFactoryOptions<readonly TokenWrapperPair[], Error, readonly TokenWrapperPair[], ReturnType<typeof zamaQueryKeys.wrappersRegistry.tokenPairsSlice>>;
+export function tokenPairsSliceQueryOptions(sdk: ZamaSDK, config: TokenPairsSliceQueryConfig): QueryFactoryOptions<readonly TokenWrapperPair[], Error, readonly TokenWrapperPair[], ReturnType<typeof zamaQueryKeys.wrappersRegistry.tokenPairsSlice>>;
 
 // @public (undocumented)
 export interface TotalSupplyQueryConfig {
@@ -952,7 +942,7 @@ export interface TotalSupplyQueryConfig {
 }
 
 // @public (undocumented)
-export function totalSupplyQueryOptions(signer: GenericSigner, tokenAddress: Address, config?: TotalSupplyQueryConfig): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.totalSupply.token>>;
+export function totalSupplyQueryOptions(sdk: ZamaSDK, tokenAddress: Address, config?: TotalSupplyQueryConfig): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.totalSupply.token>>;
 
 // @public (undocumented)
 export interface TransactionErrorEvent extends BaseEvent {
@@ -1011,7 +1001,7 @@ export interface UnderlyingAllowanceQueryConfig {
 }
 
 // @public (undocumented)
-export function underlyingAllowanceQueryOptions(signer: GenericSigner, tokenAddress: Address, config: UnderlyingAllowanceQueryConfig): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.underlyingAllowance.scope>>;
+export function underlyingAllowanceQueryOptions(sdk: ZamaSDK, tokenAddress: Address, config: UnderlyingAllowanceQueryConfig): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.underlyingAllowance.scope>>;
 
 // @public (undocumented)
 export function unshieldAllMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.unshieldAll", Address], UnshieldAllParams | void, TransactionResult>;
@@ -1384,15 +1374,20 @@ export class ZamaSDK {
     dispose(): void;
     // @internal
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
+    // Warning: (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    readonly provider: GenericProvider;
     publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
     readonly registry: WrappersRegistry;
     // (undocumented)
     readonly relayer: RelayerSDK;
+    requireSigner(operation: string): GenericSigner;
     revokeSession(): Promise<void>;
     // (undocumented)
     readonly sessionStorage: GenericStorage;
     // (undocumented)
-    readonly signer: GenericSigner;
+    readonly signer: GenericSigner | undefined;
     // (undocumented)
     readonly storage: GenericStorage;
     terminate(): void;
@@ -1403,12 +1398,13 @@ export class ZamaSDK {
 export interface ZamaSDKConfig {
     keypairTTL?: number;
     onEvent?: ZamaSDKEventListener;
+    provider: GenericProvider;
     registryAddresses?: Record<number, Address>;
     registryTTL?: number;
     relayer: RelayerSDK;
     sessionStorage?: GenericStorage;
     sessionTTL?: number | "infinite";
-    signer: GenericSigner;
+    signer?: GenericSigner;
     signerLifecycleCallbacks?: SignerLifecycleCallbacks;
     storage: GenericStorage;
 }

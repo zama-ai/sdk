@@ -33,11 +33,11 @@ export function useConfidentialApprove(
   const token = useToken(config);
 
   return useMutation<TransactionResult, Error, ConfidentialApproveParams, Address>({
-    ...confidentialApproveMutationOptions(token, config.tokenAddress),
+    ...confidentialApproveMutationOptions(token),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       options?.onSuccess?.(data, variables, onMutateResult, context);
-      invalidateAfterApprove(context.client, config.tokenAddress);
+      invalidateAfterApprove(context.client, token.address);
     },
   });
 }

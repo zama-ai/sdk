@@ -59,13 +59,11 @@ export function readTokenPairsSliceContract(client: PublicClient, registry: Addr
 // @public (undocumented)
 export function readUnderlyingTokenContract(client: PublicClient, wrapperAddress: Address): Promise<`0x${string}`>;
 
-// Warning: (ae-forgotten-export) The symbol "GenericSigner" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
 //
 // @public
-export class ViemSigner implements GenericSigner {
-    constructor(config: ViemSignerConfig);
-    // (undocumented)
-    getAddress(): Promise<Address>;
+export class ViemProvider implements GenericProvider {
+    constructor(config: ViemProviderConfig);
     // (undocumented)
     getBlockTimestamp(): Promise<bigint>;
     // (undocumented)
@@ -74,6 +72,26 @@ export class ViemSigner implements GenericSigner {
     //
     // (undocumented)
     readContract<const TAbi extends Abi | readonly unknown[], TFunctionName extends ContractFunctionName<TAbi, "pure" | "view">, const TArgs extends ContractFunctionArgs<TAbi, "pure" | "view", TFunctionName>>(config: ReadContractConfig<TAbi, TFunctionName, TArgs>): Promise<ContractFunctionReturnType<TAbi, "pure" | "view", TFunctionName, TArgs>>;
+    // Warning: (ae-forgotten-export) The symbol "TransactionReceipt" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
+}
+
+// @public
+export interface ViemProviderConfig {
+    publicClient: PublicClient;
+}
+
+// Warning: (ae-forgotten-export) The symbol "GenericSigner" needs to be exported by the entry point index.d.ts
+//
+// @public
+export class ViemSigner implements GenericSigner {
+    constructor(config: ViemSignerConfig);
+    // (undocumented)
+    getAddress(): Promise<Address>;
+    // (undocumented)
+    getChainId(): Promise<number>;
     // Warning: (ae-forgotten-export) The symbol "EIP712TypedData" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
@@ -82,10 +100,6 @@ export class ViemSigner implements GenericSigner {
     //
     // (undocumented)
     subscribe(callbacks: SignerLifecycleCallbacks): () => void;
-    // Warning: (ae-forgotten-export) The symbol "TransactionReceipt" needs to be exported by the entry point index.d.ts
-    //
-    // (undocumented)
-    waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
     // Warning: (ae-forgotten-export) The symbol "WriteContractConfig" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
@@ -96,9 +110,8 @@ export class ViemSigner implements GenericSigner {
 export interface ViemSignerConfig {
     // (undocumented)
     ethereum?: EIP1193Provider;
-    // (undocumented)
     publicClient: PublicClient;
-    walletClient?: WalletClient;
+    walletClient: WalletClient;
 }
 
 // @public (undocumented)

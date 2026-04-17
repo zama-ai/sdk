@@ -39,7 +39,7 @@ interface ReactSdkFixtures {
   createWrapper: (overrides?: Partial<ZamaProviderProps>) => {
     Wrapper: React.FC<{ children?: React.ReactNode }>;
     queryClient: QueryClient;
-    signer: GenericSigner | undefined;
+    signer: GenericSigner;
     provider: GenericProvider;
     relayer: RelayerSDK;
     storage: GenericStorage;

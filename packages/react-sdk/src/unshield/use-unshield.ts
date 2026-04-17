@@ -36,11 +36,11 @@ export function useUnshield(
   const token = useToken(config);
 
   return useMutation<TransactionResult, Error, UnshieldParams, Address>({
-    ...unshieldMutationOptions(token, config.tokenAddress),
+    ...unshieldMutationOptions(token),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       options?.onSuccess?.(data, variables, onMutateResult, context);
-      invalidateAfterUnshield(context.client, config.tokenAddress);
+      invalidateAfterUnshield(context.client, token.address);
     },
   });
 }

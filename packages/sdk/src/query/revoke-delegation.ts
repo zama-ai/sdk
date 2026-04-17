@@ -1,4 +1,3 @@
-import { SignerRequiredError } from "../errors/signer";
 import type { Token } from "../token/token";
 import type { Address } from "viem";
 import type { TransactionResult } from "../types";
@@ -10,17 +9,15 @@ export interface RevokeDelegationParams {
 }
 
 export function revokeDelegationMutationOptions(
-  token: Token | undefined,
-  tokenAddress: Address,
+  token: Token,
 ): MutationFactoryOptions<
   readonly ["zama.revokeDelegation", Address],
   RevokeDelegationParams,
   TransactionResult
 > {
   return {
-    mutationKey: ["zama.revokeDelegation", tokenAddress] as const,
+    mutationKey: ["zama.revokeDelegation", token.address] as const,
     mutationFn: async ({ delegateAddress }) => {
-      if (!token) throw new SignerRequiredError("revokeDelegation");
       return token.revokeDelegation({ delegateAddress });
     },
   };

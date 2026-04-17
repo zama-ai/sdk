@@ -18,7 +18,6 @@ import {
   useEffect,
   useMemo,
   useRef,
-  useState,
 } from "react";
 
 /** Props for {@link ZamaProvider}. */
@@ -26,15 +25,15 @@ export interface ZamaProviderProps extends PropsWithChildren {
   /** FHE relayer backend (RelayerWeb for browser, RelayerNode for server). */
   relayer: RelayerSDK;
   /**
-   * Read-only chain provider (`ViemProvider`, `EthersProvider`, `WagmiProvider`,
-   * or custom {@link GenericProvider}). Used for every public chain read.
+   * Chain provider (`ViemProvider`, `EthersProvider`, `WagmiProvider`, or
+   * custom {@link GenericProvider}). Used for every public chain read.
    */
   provider: GenericProvider;
   /**
    * Wallet signer (`ViemSigner`, `EthersSigner`, `WagmiSigner`, or custom
-   * {@link GenericSigner}). Omit for read-only integrations.
+   * {@link GenericSigner}).
    */
-  signer?: GenericSigner;
+  signer: GenericSigner;
   /** Credential storage backend (IndexedDBStorage for browser, MemoryStorage for tests). */
   storage: GenericStorage;
   /**
@@ -70,7 +69,6 @@ export interface ZamaProviderProps extends PropsWithChildren {
 
 interface ZamaSDKContextValue {
   sdk: ZamaSDK;
-  signerAddress: Address | undefined;
 }
 
 const ZamaSDKContext = createContext<ZamaSDKContextValue | null>(null);
@@ -153,35 +151,7 @@ export function ZamaProvider({
   // and is idempotent.
   useEffect(() => () => sdk.dispose(), [sdk]);
 
-  // Resolve and track the signer address as React state so hooks read it
-  // synchronously without needing a query factory.
-  const [signerAddress, setSignerAddress] = useState<Address | undefined>();
-
-  useEffect(() => {
-    if (!sdk.signer) {
-      setSignerAddress(undefined);
-      return;
-    }
-    let cancelled = false;
-    sdk.signer.getAddress().then(
-      (addr) => {
-        if (!cancelled) setSignerAddress(addr);
-      },
-      () => {
-        // Signer not ready — signerAddress stays undefined until subscribe fires
-      },
-    );
-    const unsub = sdk.signer.subscribe?.({
-      onAccountChange: (addr) => setSignerAddress(addr),
-      onDisconnect: () => setSignerAddress(undefined),
-    });
-    return () => {
-      cancelled = true;
-      unsub?.();
-    };
-  }, [sdk.signer]);
-
-  const contextValue = useMemo(() => ({ sdk, signerAddress }), [sdk, signerAddress]);
+  const contextValue = useMemo(() => ({ sdk }), [sdk]);
 
   return <ZamaSDKContext.Provider value={contextValue}>{children}</ZamaSDKContext.Provider>;
 }
@@ -193,7 +163,7 @@ export function ZamaProvider({
  * @example
  * ```tsx
  * const sdk = useZamaSDK();
- * const token = sdk.createReadonlyToken("0x...");
+ * const token = sdk.createToken("0x...", "0x...");
  * ```
  */
 export function useZamaSDK(): ZamaSDK {
@@ -205,28 +175,5 @@ export function useZamaSDK(): ZamaSDK {
         "Wrap your component tree in <ZamaProvider relayer={…} provider={…} signer={…} storage={…}>.",
     );
   }
-
   return context.sdk;
-}
-
-/**
- * Access the current signer address from context.
- * Returns `undefined` when no signer is configured or the address has not yet resolved.
- *
- * @example
- * ```tsx
- * const address = useSignerAddress();
- * ```
- */
-export function useSignerAddress(): Address | undefined {
-  const context = useContext(ZamaSDKContext);
-
-  if (!context) {
-    throw new Error(
-      "useSignerAddress must be used within a <ZamaProvider>. " +
-        "Wrap your component tree in <ZamaProvider relayer={…} provider={…} signer={…} storage={…}>.",
-    );
-  }
-
-  return context.signerAddress;
 }

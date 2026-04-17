@@ -4,7 +4,6 @@ export { EncryptionFailedError, DecryptionFailedError } from "./encryption";
 export { ApprovalFailedError, TransactionRevertedError } from "./transaction";
 export { KeypairExpiredError, InvalidKeypairError, NoCiphertextError } from "./credential";
 export { RelayerRequestFailedError, ConfigurationError } from "./relayer";
-export { SignerRequiredError } from "./signer";
 export { ChainMismatchError } from "./chain";
 export {
   DelegationSelfNotAllowedError,

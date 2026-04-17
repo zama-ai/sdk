@@ -36,11 +36,11 @@ export function useApproveUnderlying(
   const token = useToken(config);
 
   return useMutation<TransactionResult, Error, ApproveUnderlyingParams, Address>({
-    ...approveUnderlyingMutationOptions(token, config.tokenAddress),
+    ...approveUnderlyingMutationOptions(token),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       options?.onSuccess?.(data, variables, onMutateResult, context);
-      invalidateAfterApproveUnderlying(context.client, config.tokenAddress);
+      invalidateAfterApproveUnderlying(context.client, token.address);
     },
   });
 }

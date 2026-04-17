@@ -1,4 +1,3 @@
-import { SignerRequiredError } from "../errors/signer";
 import type { Handle } from "../relayer/relayer-sdk.types";
 import type { Token } from "../token/token";
 import type { TransactionResult } from "../types";
@@ -13,17 +12,15 @@ export type FinalizeUnwrapParams =
   | { unwrapRequestId?: never; burnAmountHandle: Handle };
 
 export function finalizeUnwrapMutationOptions(
-  token: Token | undefined,
-  tokenAddress: Address,
+  token: Token,
 ): MutationFactoryOptions<
   readonly ["zama.finalizeUnwrap", Address],
   FinalizeUnwrapParams,
   TransactionResult
 > {
   return {
-    mutationKey: ["zama.finalizeUnwrap", tokenAddress] as const,
+    mutationKey: ["zama.finalizeUnwrap", token.address] as const,
     mutationFn: async (params) => {
-      if (!token) throw new SignerRequiredError("finalizeUnwrap");
       const handle = params.unwrapRequestId ?? params.burnAmountHandle;
       if (!handle) {
         throw new ConfigurationError("finalizeUnwrap requires unwrapRequestId or burnAmountHandle");

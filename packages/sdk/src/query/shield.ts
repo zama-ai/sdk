@@ -1,4 +1,3 @@
-import { SignerRequiredError } from "../errors/signer";
 import type { Token } from "../token/token";
 import type { ShieldCallbacks, TransactionResult } from "../types";
 import type { MutationFactoryOptions } from "./factory-types";
@@ -13,13 +12,11 @@ export interface ShieldParams extends ShieldCallbacks {
 }
 
 export function shieldMutationOptions(
-  token: Token | undefined,
-  tokenAddress: Address,
+  token: Token,
 ): MutationFactoryOptions<readonly ["zama.shield", Address], ShieldParams, TransactionResult> {
   return {
-    mutationKey: ["zama.shield", tokenAddress] as const,
+    mutationKey: ["zama.shield", token.address] as const,
     mutationFn: async ({ amount, ...rest }) => {
-      if (!token) throw new SignerRequiredError("shield");
       return token.shield(amount, rest);
     },
   };

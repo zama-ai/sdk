@@ -56,7 +56,6 @@ export function useUnderlyingAllowance(
 /**
  * Suspense variant of {@link useUnderlyingAllowance}.
  * Suspends rendering until the allowance is loaded.
- * Throws `SignerRequiredError` via the error boundary when no signer is configured.
  *
  * @param config - Token and wrapper addresses.
  * @returns Suspense query result with `data: bigint`.

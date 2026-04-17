@@ -1,4 +1,3 @@
-import { SignerRequiredError } from "../errors/signer";
 import type { Token } from "../token/token";
 import type { TransactionResult, UnshieldOptions } from "../types";
 import type { MutationFactoryOptions } from "./factory-types";
@@ -10,13 +9,11 @@ export interface UnshieldParams extends UnshieldOptions {
 }
 
 export function unshieldMutationOptions(
-  token: Token | undefined,
-  tokenAddress: Address,
+  token: Token,
 ): MutationFactoryOptions<readonly ["zama.unshield", Address], UnshieldParams, TransactionResult> {
   return {
-    mutationKey: ["zama.unshield", tokenAddress] as const,
+    mutationKey: ["zama.unshield", token.address] as const,
     mutationFn: async ({ amount, ...options }) => {
-      if (!token) throw new SignerRequiredError("unshield");
       return token.unshield(amount, options);
     },
   };

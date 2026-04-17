@@ -1,4 +1,3 @@
-import { SignerRequiredError } from "../errors/signer";
 import type { Token } from "../token/token";
 import type { TransferCallbacks, TransactionResult } from "../types";
 import type { MutationFactoryOptions } from "./factory-types";
@@ -14,17 +13,15 @@ export interface ConfidentialTransferFromParams {
 }
 
 export function confidentialTransferFromMutationOptions(
-  token: Token | undefined,
-  tokenAddress: Address,
+  token: Token,
 ): MutationFactoryOptions<
   readonly ["zama.confidentialTransferFrom", Address],
   ConfidentialTransferFromParams,
   TransactionResult
 > {
   return {
-    mutationKey: ["zama.confidentialTransferFrom", tokenAddress] as const,
+    mutationKey: ["zama.confidentialTransferFrom", token.address] as const,
     mutationFn: async ({ from, to, amount, callbacks }) => {
-      if (!token) throw new SignerRequiredError("confidentialTransferFrom");
       return token.confidentialTransferFrom(from, to, amount, callbacks);
     },
   };

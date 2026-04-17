@@ -3,11 +3,13 @@ import { waitFor } from "@testing-library/react";
 import { ERC7984_WRAPPER_INTERFACE_ID } from "@zama-fhe/sdk";
 import type { Address } from "@zama-fhe/sdk";
 import { useUnderlyingAllowance } from "../shield/use-underlying-allowance";
+import { useSignerAddress, useSignerAddressSuspense } from "../use-signer-address";
 import { useUnshield } from "../unshield/use-unshield";
 import { useUnshieldAll } from "../unshield/use-unshield-all";
 import { useMetadataSuspense } from "../token/use-metadata";
 import { useTotalSupplySuspense } from "../token/use-total-supply";
 import { useWrapperDiscoverySuspense } from "../token/use-wrapper-discovery";
+import { USER } from "./mutation-test-helpers";
 
 describe("useUnderlyingAllowance", () => {
   it("returns allowance value", async ({
@@ -33,6 +35,22 @@ describe("useUnderlyingAllowance", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toBe(5000n);
     expect(provider.readContract).toHaveBeenCalled();
+  });
+});
+
+describe("useSignerAddress", () => {
+  it("returns the connected signer address", async ({ renderWithProviders }) => {
+    const { result } = renderWithProviders(() => useSignerAddress());
+
+    await waitFor(() => expect(result.current).toBe(USER));
+  });
+});
+
+describe("useSignerAddressSuspense", () => {
+  it("returns the connected signer address", async ({ renderWithProviders }) => {
+    const { result } = renderWithProviders(() => useSignerAddressSuspense());
+
+    await waitFor(() => expect(result.current.data).toBe(USER));
   });
 });
 

@@ -16,6 +16,7 @@ export {
 } from "./invalidation";
 export type { QueryClientLike, QueryFilterLike, QueryLike } from "./invalidation";
 
+export { signerAddressQueryOptions, type SignerAddressQueryConfig } from "./signer-address";
 export {
   tokenMetadataQueryOptions,
   type TokenMetadata,

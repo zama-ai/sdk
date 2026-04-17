@@ -18,7 +18,6 @@ import type {
   GenericStorage,
   SignerLifecycleCallbacks,
 } from "./types";
-import { SignerRequiredError } from "./errors/signer";
 import { ChainMismatchError } from "./errors/chain";
 import { toError } from "./utils";
 import { pLimit } from "./utils/concurrency";
@@ -40,9 +39,9 @@ export interface ZamaSDKConfig {
   /**
    * Wallet signer (`ViemSigner`, `EthersSigner`, `WagmiSigner`, or custom
    * {@link GenericSigner}). Required for writes, EIP-712 signatures, and
-   * wallet-lifecycle subscriptions. Omit for read-only integrations.
+   * wallet-lifecycle subscriptions.
    */
-  signer?: GenericSigner;
+  signer: GenericSigner;
   /** Credential storage backend (`IndexedDBStorage` for browser, `MemoryStorage` for tests). */
   storage: GenericStorage;
   /**
@@ -90,11 +89,11 @@ export interface ZamaSDKConfig {
 export class ZamaSDK {
   readonly relayer: RelayerSDK;
   readonly provider: GenericProvider;
-  readonly signer: GenericSigner | undefined;
+  readonly signer: GenericSigner;
   readonly storage: GenericStorage;
   readonly sessionStorage: GenericStorage;
-  readonly credentials: CredentialsManager | undefined;
-  readonly delegatedCredentials: DelegatedCredentialsManager | undefined;
+  readonly credentials: CredentialsManager;
+  readonly delegatedCredentials: DelegatedCredentialsManager;
   /** Persistent cache for decrypted FHE plaintext values, scoped by (requester, contract, handle). */
   readonly cache: DecryptCache;
   /**
@@ -131,37 +130,34 @@ export class ZamaSDK {
       registryTTL: config.registryTTL,
     });
     this.#registryTTL = config.registryTTL;
-    if (config.signer) {
-      const credentialsConfig = {
-        relayer: this.relayer,
-        signer: config.signer,
-        storage: this.storage,
-        sessionStorage: this.sessionStorage,
-        keypairTTL: (() => {
-          const ttl = config.keypairTTL ?? 2592000;
-          if (ttl <= 0 || isNaN(ttl)) {
-            throw new Error("keypairTTL must be a positive number (seconds)");
-          }
-          if (ttl > MAX_KEYPAIR_TTL) {
-            // oxlint-disable-next-line no-console
-            console.warn(
-              `[zama-sdk] keypairTTL (${ttl}s) exceeds the fhevm maximum of 365 days (${MAX_KEYPAIR_TTL}s); capping to ${MAX_KEYPAIR_TTL}s.`,
-            );
-            return MAX_KEYPAIR_TTL;
-          }
-          return ttl;
-        })(),
-        sessionTTL: config.sessionTTL ?? 2592000,
-        onEvent: this.#onEvent,
-      };
-      this.credentials = new CredentialsManager(credentialsConfig);
-      this.delegatedCredentials = new DelegatedCredentialsManager(credentialsConfig);
-    }
+    const credentialsConfig = {
+      relayer: this.relayer,
+      signer: config.signer,
+      storage: this.storage,
+      sessionStorage: this.sessionStorage,
+      keypairTTL: (() => {
+        const ttl = config.keypairTTL ?? 2592000;
+        if (ttl <= 0 || isNaN(ttl)) {
+          throw new Error("keypairTTL must be a positive number (seconds)");
+        }
+        if (ttl > MAX_KEYPAIR_TTL) {
+          // oxlint-disable-next-line no-console
+          console.warn(
+            `[zama-sdk] keypairTTL (${ttl}s) exceeds the fhevm maximum of 365 days (${MAX_KEYPAIR_TTL}s); capping to ${MAX_KEYPAIR_TTL}s.`,
+          );
+          return MAX_KEYPAIR_TTL;
+        }
+        return ttl;
+      })(),
+      sessionTTL: config.sessionTTL ?? 2592000,
+      onEvent: this.#onEvent,
+    };
+    this.credentials = new CredentialsManager(credentialsConfig);
+    this.delegatedCredentials = new DelegatedCredentialsManager(credentialsConfig);
     this.#identityReady = this.#initIdentity();
 
-    const signer = this.signer;
-    const subscribe = signer?.subscribe?.bind(signer);
-    if (signer && subscribe) {
+    const subscribe = this.signer.subscribe?.bind(this.signer);
+    if (subscribe) {
       const lifecycleCallbacks = config.signerLifecycleCallbacks;
       const runLifecycleEffect = (operation: string, effect: () => Promise<void>) => {
         void effect().catch((error) => {
@@ -192,7 +188,7 @@ export class ZamaSDK {
             await this.cache.clearAll();
             this.#lastAddress = normalized;
             try {
-              this.#lastChainId = await signer.getChainId();
+              this.#lastChainId = await this.signer.getChainId();
             } catch {
               // Signer may not be ready — keep previous chainId
             }
@@ -208,7 +204,7 @@ export class ZamaSDK {
             await this.cache.clearAll();
             this.#lastChainId = newChainId;
             try {
-              this.#lastAddress = await signer.getAddress();
+              this.#lastAddress = await this.signer.getAddress();
             } catch {
               // Signer may not be ready — keep previous address
             }
@@ -220,60 +216,16 @@ export class ZamaSDK {
   }
 
   /**
-   * Returns the configured signer or throws {@link SignerRequiredError}.
-   *
-   * Used by wallet-bound operations (writes, signatures, decrypts) to surface
-   * a typed error when the SDK was constructed in read-only mode
-   * (no signer configured).
-   */
-  requireSigner(operation: string): GenericSigner {
-    if (!this.signer) {
-      throw new SignerRequiredError(operation);
-    }
-    return this.signer;
-  }
-
-  /**
-   * Returns the {@link CredentialsManager} or throws {@link SignerRequiredError}.
-   *
-   * The manager only exists when the SDK was constructed with a signer.
-   * Wallet-bound credential operations should call this instead of
-   * dereferencing {@link credentials} directly.
-   */
-  requireCredentials(operation: string): CredentialsManager {
-    if (!this.credentials) {
-      throw new SignerRequiredError(operation);
-    }
-    return this.credentials;
-  }
-
-  /**
-   * Returns the {@link DelegatedCredentialsManager} or throws {@link SignerRequiredError}.
-   *
-   * The manager only exists when the SDK was constructed with a signer.
-   */
-  requireDelegatedCredentials(operation: string): DelegatedCredentialsManager {
-    if (!this.delegatedCredentials) {
-      throw new SignerRequiredError(operation);
-    }
-    return this.delegatedCredentials;
-  }
-
-  /**
    * Pre-flight chain coherence check for write operations.
    *
    * Calls `signer.getChainId()` and `provider.getChainId()` in parallel.
    * Throws {@link ChainMismatchError} if they differ.
-   * No-op (returns `provider` chain ID) when no signer is configured.
    *
    * @param operation - The operation name, included in the error message.
    * @returns The chain ID shared by both signer and provider.
    * @throws {@link ChainMismatchError} if signer and provider report different chain IDs.
    */
   async requireChainAlignment(operation: string): Promise<number> {
-    if (!this.signer) {
-      return this.provider.getChainId();
-    }
     const [signerChainId, providerChainId] = await Promise.all([
       this.signer.getChainId(),
       this.provider.getChainId(),
@@ -285,9 +237,6 @@ export class ZamaSDK {
   }
 
   async #initIdentity(): Promise<void> {
-    if (!this.signer) {
-      return;
-    }
     try {
       const [address, chainId] = await Promise.all([
         this.signer.getAddress(),
@@ -304,7 +253,7 @@ export class ZamaSDK {
 
   async #revokeByTrackedIdentity(): Promise<void> {
     await this.#identityReady;
-    if (this.#lastAddress === null || this.#lastChainId === null || !this.credentials) {
+    if (this.#lastAddress === null || this.#lastChainId === null) {
       return;
     }
     const storeKey = await CredentialsManager.computeStoreKey(this.#lastAddress, this.#lastChainId);
@@ -329,11 +278,9 @@ export class ZamaSDK {
    * @param address - The confidential token contract address (also used as wrapper by default).
    * @param wrapper - Optional explicit wrapper address, if it differs from the token address.
    * @returns A {@link Token} instance bound to this SDK.
-   * @throws {@link SignerRequiredError} if no signer was configured.
    */
   createToken(address: Address, wrapper?: Address): Token {
-    const signer = this.requireSigner("createToken");
-    return new Token(this, signer, address, wrapper);
+    return new Token(this, this.signer, address, wrapper);
   }
 
   /**
@@ -407,7 +354,7 @@ export class ZamaSDK {
     if (contractAddresses.length === 0) {
       return;
     }
-    await this.requireCredentials("allow").allow(...contractAddresses);
+    await this.credentials.allow(...contractAddresses);
   }
 
   /**
@@ -420,7 +367,6 @@ export class ZamaSDK {
    *
    * @param handles - Handles to decrypt, each paired with its contract address.
    * @returns A record mapping each handle to its decrypted clear-text value.
-   * @throws {@link SignerRequiredError} if no signer was configured.
    * @throws {@link ChainMismatchError} if signer and provider are on different chains.
    *
    * @example
@@ -460,7 +406,7 @@ export class ZamaSDK {
     }
 
     // Cache partition
-    const signerAddress = await this.requireSigner("userDecrypt").getAddress();
+    const signerAddress = await this.signer.getAddress();
     const uncached: DecryptHandle[] = [];
 
     for (const h of nonZero) {
@@ -477,7 +423,7 @@ export class ZamaSDK {
     }
 
     // Derive contract addresses from ALL handles for stable credential cache key
-    const creds = await this.requireCredentials("userDecrypt").allow(
+    const creds = await this.credentials.allow(
       ...new Set(normalized.map((h) => h.contractAddress)),
     );
 
@@ -583,7 +529,6 @@ export class ZamaSDK {
    * contract addresses. Uses the tracked identity when available (safe during
    * account switches), falling back to querying the signer directly.
    *
-   * @throws {@link SignerRequiredError} if no signer was configured.
    * @throws {@link ChainMismatchError} if signer and provider are on different chains.
    *
    * @example
@@ -594,14 +539,12 @@ export class ZamaSDK {
   async revokeSession(): Promise<void> {
     await this.requireChainAlignment("revokeSession");
     await this.#identityReady;
-    const signer = this.requireSigner("revokeSession");
-    const credentials = this.requireCredentials("revokeSession");
     const [address, chainId] = await Promise.all([
-      this.#lastAddress ?? signer.getAddress(),
-      this.#lastChainId ?? signer.getChainId(),
+      this.#lastAddress ?? this.signer.getAddress(),
+      this.#lastChainId ?? this.signer.getChainId(),
     ]);
     const storeKey = await CredentialsManager.computeStoreKey(address, chainId);
-    await credentials.revokeByKey(storeKey);
+    await this.credentials.revokeByKey(storeKey);
     await this.cache.clearForRequester(address);
   }
 

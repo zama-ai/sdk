@@ -19,6 +19,7 @@ const normalizeAddress = (address?: Address): Address | undefined =>
 export const zamaQueryKeys = {
   signerAddress: {
     all: ["zama.signerAddress"] as const,
+    scope: (scope: number) => ["zama.signerAddress", { scope }] as const,
   },
 
   confidentialBalance: {

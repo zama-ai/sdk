@@ -13,25 +13,21 @@ export interface UseZamaConfig {
 }
 
 /**
- * Get a {@link Token} instance, memoized by address pair. Returns `undefined`
- * when the SDK has no signer configured (read-only mode) — mutation hooks
- * handle this by throwing {@link SignerRequiredError} at mutate time.
- *
- * Reads signer and storage from the nearest {@link ZamaProvider}.
+ * Get a {@link Token} instance, memoized by address pair.
  *
  * @param config - Token and optional wrapper addresses.
- * @returns A memoized `Token` instance, or `undefined` when no signer.
+ * @returns A memoized `Token` instance.
  *
  * @example
  * ```tsx
  * const token = useToken({ tokenAddress: "0xToken", wrapperAddress: "0xWrapper" });
  * ```
  */
-export function useToken(config: UseZamaConfig): Token | undefined {
+export function useToken(config: UseZamaConfig): Token {
   const sdk = useZamaSDK();
 
-  return useMemo(
-    () => (sdk.signer ? sdk.createToken(config.tokenAddress, config.wrapperAddress) : undefined),
-    [sdk, sdk.signer, config.tokenAddress, config.wrapperAddress],
+  return useMemo<Token>(
+    () => sdk.createToken(config.tokenAddress, config.wrapperAddress),
+    [sdk, config.tokenAddress, config.wrapperAddress],
   );
 }

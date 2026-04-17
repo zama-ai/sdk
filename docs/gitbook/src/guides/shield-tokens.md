@@ -61,7 +61,7 @@ const tokenWithWrapper = useToken({
 
 ### 2. Shield with exact approval (default)
 
-The SDK always validates the ERC-20 balance before submitting. If the balance is insufficient, it throws `InsufficientERC20BalanceError` with `requested`, `available`, and `token` properties -- no transaction is sent. This is a public read with no signing requirement, so it works for all wallet types including smart wallets.
+The SDK always validates the ERC-20 balance before submitting. If the balance is insufficient, it throws `InsufficientERC20BalanceError` with `requested`, `available`, and `token` properties -- no transaction is sent. This is a public read, so it works for all wallet types including smart wallets.
 
 By default, `shield` approves the exact amount before wrapping. This is the safest option — it limits exposure if the contract is compromised:
 

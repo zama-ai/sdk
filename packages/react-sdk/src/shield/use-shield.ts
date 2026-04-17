@@ -48,11 +48,11 @@ export function useShield<TContext = unknown>(
   const queryClient = useQueryClient();
 
   return useMutation({
-    ...shieldMutationOptions(token, config.tokenAddress),
+    ...shieldMutationOptions(token),
     ...options,
     ...optimisticBalanceCallbacks({
       optimistic: config.optimistic,
-      tokenAddress: config.tokenAddress,
+      tokenAddress: token.address,
       queryClient,
       options,
     }),

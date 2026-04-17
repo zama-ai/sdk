@@ -35,11 +35,11 @@ export function useResumeUnshield(
   const token = useToken(config);
 
   return useMutation<TransactionResult, Error, ResumeUnshieldParams, Address>({
-    ...resumeUnshieldMutationOptions(token, config.tokenAddress),
+    ...resumeUnshieldMutationOptions(token),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       options?.onSuccess?.(data, variables, onMutateResult, context);
-      invalidateAfterUnshield(context.client, config.tokenAddress);
+      invalidateAfterUnshield(context.client, token.address);
     },
   });
 }

@@ -1,11 +1,11 @@
 ---
 title: useReadonlyToken
-description: Hook to get a memoized ReadonlyToken instance for read-only access.
+description: Hook to get a memoized ReadonlyToken instance for balance decryption and metadata queries.
 ---
 
 # useReadonlyToken
 
-Hook to get a memoized `ReadonlyToken` instance. Use this when you only need to read balances and metadata without signing transactions.
+Hook to get a memoized `ReadonlyToken` instance for balance decryption and metadata queries.
 
 ## Import
 
@@ -92,7 +92,7 @@ const readonlyToken = useReadonlyToken("0xToken");
 
 `ReadonlyToken`
 
-A memoized `ReadonlyToken` instance. The reference stays the same as long as the input address does not change. Provides read operations (metadata, balance checks, session status) without requiring a connected signer.
+A memoized `ReadonlyToken` instance. The reference stays the same as long as the input address does not change.
 
 ## Related
 

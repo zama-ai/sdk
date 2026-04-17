@@ -31,11 +31,11 @@ export function useUnwrapAll(
   const token = useToken(config);
 
   return useMutation<TransactionResult, Error, void, Address>({
-    ...unwrapAllMutationOptions(token, config.tokenAddress),
+    ...unwrapAllMutationOptions(token),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       options?.onSuccess?.(data, variables, onMutateResult, context);
-      invalidateAfterUnwrap(context.client, config.tokenAddress);
+      invalidateAfterUnwrap(context.client, token.address);
     },
   });
 }

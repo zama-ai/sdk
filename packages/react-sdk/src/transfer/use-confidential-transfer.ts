@@ -71,13 +71,13 @@ export function useConfidentialTransfer<TContext = unknown>(
   // is cast back to the caller's TContext.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return useMutation<TransactionResult, Error, ConfidentialTransferParams, any>({
-    ...confidentialTransferMutationOptions(token, config.tokenAddress),
+    ...confidentialTransferMutationOptions(token),
     ...options,
     onMutate: config.optimistic
       ? async (variables, mutationContext) => {
           const snapshot = await applyOptimisticBalanceDelta({
             queryClient,
-            tokenAddress: config.tokenAddress,
+            tokenAddress: token.address,
             amount: variables.amount,
             mode: "subtract",
           });
@@ -101,7 +101,7 @@ export function useConfidentialTransfer<TContext = unknown>(
     onSuccess: (data, variables, rawContext, context) => {
       const { callerContext } = unwrapOptimisticCallerContext(config.optimistic, rawContext);
       options?.onSuccess?.(data, variables, callerContext as TContext, context);
-      invalidateAfterTransfer(context.client, config.tokenAddress);
+      invalidateAfterTransfer(context.client, token.address);
     },
     onSettled: (data, error, variables, rawContext, context) => {
       const { callerContext } = unwrapOptimisticCallerContext(config.optimistic, rawContext);

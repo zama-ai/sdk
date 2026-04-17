@@ -97,9 +97,7 @@ export class ReadonlyToken {
    * ```
    */
   async balanceOf(owner?: Address): Promise<bigint> {
-    const ownerAddress = owner
-      ? getAddress(owner)
-      : await this.sdk.requireSigner("balanceOf").getAddress();
+    const ownerAddress = owner ? getAddress(owner) : await this.sdk.signer.getAddress();
     const handle = await this.readConfidentialBalanceOf(ownerAddress);
     const result = await this.sdk.userDecrypt([{ handle, contractAddress: this.address }]);
     const value = result[handle];
@@ -122,9 +120,7 @@ export class ReadonlyToken {
    * ```
    */
   async confidentialBalanceOf(owner?: Address): Promise<Handle> {
-    const ownerAddress = owner
-      ? getAddress(owner)
-      : await this.sdk.requireSigner("confidentialBalanceOf").getAddress();
+    const ownerAddress = owner ? getAddress(owner) : await this.sdk.signer.getAddress();
     return this.readConfidentialBalanceOf(ownerAddress);
   }
 
@@ -336,9 +332,10 @@ export class ReadonlyToken {
     }
 
     const uncachedAddresses = uncached.map((entry) => entry.token.address);
-    const creds = await firstToken.sdk
-      .requireDelegatedCredentials("batchDecryptAs")
-      .allow(delegatorAddress, ...uncachedAddresses);
+    const creds = await firstToken.sdk.delegatedCredentials.allow(
+      delegatorAddress,
+      ...uncachedAddresses,
+    );
 
     const errors: { address: Address; error: Error }[] = [];
     const decryptFns: (() => Promise<void>)[] = [];
@@ -433,9 +430,7 @@ export class ReadonlyToken {
   async allowance(wrapper: Address, owner?: Address): Promise<bigint> {
     const normalizedWrapper = getAddress(wrapper);
     const underlying = await this.sdk.provider.readContract(underlyingContract(normalizedWrapper));
-    const userAddress = owner
-      ? getAddress(owner)
-      : await this.sdk.requireSigner("allowance").getAddress();
+    const userAddress = owner ? getAddress(owner) : await this.sdk.signer.getAddress();
     return this.sdk.provider.readContract(
       allowanceContract(underlying, userAddress, normalizedWrapper),
     );
@@ -491,7 +486,7 @@ export class ReadonlyToken {
    * Use this to check if decrypt operations can proceed without a wallet prompt.
    */
   async isAllowed(): Promise<boolean> {
-    return this.sdk.requireCredentials("isAllowed").isAllowed([this.address]);
+    return this.sdk.credentials.isAllowed([this.address]);
   }
 
   /**
@@ -503,7 +498,7 @@ export class ReadonlyToken {
    * @param contractAddresses - Contract addresses to revoke credentials for.
    */
   async revoke(...contractAddresses: Address[]): Promise<void> {
-    await this.sdk.requireCredentials("revoke").revoke(...contractAddresses);
+    await this.sdk.credentials.revoke(...contractAddresses);
   }
 
   /**
@@ -586,7 +581,7 @@ export class ReadonlyToken {
    * connected signer for this token contract.
    */
   async #assertDelegationActive(delegatorAddress: Address): Promise<void> {
-    const delegateAddress = await this.sdk.requireSigner("assertDelegationActive").getAddress();
+    const delegateAddress = await this.sdk.signer.getAddress();
     const expiry = await this.getDelegationExpiry({
       delegatorAddress,
       delegateAddress,
@@ -665,9 +660,7 @@ export class ReadonlyToken {
     try {
       this.emit({ type: ZamaSDKEvents.DecryptStart, handles: [handle] });
 
-      const creds = await this.sdk
-        .requireDelegatedCredentials("decryptBalanceAs")
-        .allow(normalizedDelegator, this.address);
+      const creds = await this.sdk.delegatedCredentials.allow(normalizedDelegator, this.address);
 
       const result = await this.sdk.relayer.delegatedUserDecrypt({
         handles: [handle],

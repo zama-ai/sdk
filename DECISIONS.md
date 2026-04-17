@@ -44,57 +44,6 @@ scope discipline of this refactor, and would force every static helper
 (e.g. `batchBalancesOf`, `batchDecryptBalancesAs`) to rederive the shared
 SDK from individual pieces.
 
-## D3 — `sdk.signer` typing
-
-**Question.** With the signer optional, should `sdk.signer` be typed
-`GenericSigner | undefined` or should the SDK hide the optionality behind
-`requireSigner(operation)`?
-
-**Decision.** Type `sdk.signer` as `GenericSigner | undefined`. Provide a
-public `requireSigner(operation)` method that throws `SignerRequiredError`
-with an actionable message. External code uses `sdk.signer?.subscribe(…)`
-and lets optional chaining short-circuit when no signer is configured
-(matches the plan's example snippet).
-
-**Reasoning.** Exposing `sdk.signer` as the canonical access point keeps
-the API symmetric with `sdk.provider` / `sdk.relayer` / `sdk.storage`, and
-lifts the "is a signer configured" decision into the type system where the
-compiler can enforce it at each call site. `requireSigner` has to be
-public (not a `#private` method) because `Token` and `ReadonlyToken` — which
-live outside the `ZamaSDK` class — call it at every wallet-bound operation
-to surface a typed error instead of a generic `TypeError`.
-
-## D4 — `ReadonlyToken`'s owner fallback after the split
-
-**Question.** Methods like `balanceOf(owner?)`, `allowance(wrapper, owner?)`
-today fall back to `sdk.signer.getAddress()`. After the split `sdk.signer`
-may be undefined.
-
-**Decision.** Preserve the fallback, but route it through
-`sdk.requireSigner("operation").getAddress()`. Callers that pass an
-explicit `owner` continue to work without a signer; callers relying on the
-fallback get a `SignerRequiredError` instead of a generic
-`TypeError("No signer configured")`.
-
-**Reasoning.** Matches the plan's explicit "Owner parameter semantics"
-section. Moving to viem-style required-owner semantics is out of scope.
-
-## D5 — `signer-address` query factory
-
-**Question.** The plan mentions migrating 10 query factories from
-`signer: GenericSigner` to `sdk: ZamaSDK`. `signer-address.ts` queries the
-wallet address — it genuinely needs a signer, not a provider.
-
-**Decision.** Migrate it to take `sdk: ZamaSDK` like the others. Internally
-it calls `sdk.signer?.getAddress()`; if no signer is configured, the query
-function throws `SignerRequiredError`. The `enabled` gate in the hook
-layer short-circuits this in read-only mode — callers that need the signer
-address must configure a signer.
-
-**Reasoning.** Centralizing on `sdk: ZamaSDK` for every factory removes
-a branch from the hook layer (no per-factory decision about whether to
-pass `sdk.signer` or `sdk`).
-
 ## D6 — Wagmi adapter structure
 
 **Question.** The wagmi adapter lives under `@zama-fhe/react-sdk/wagmi`,
