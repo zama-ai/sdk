@@ -78,7 +78,7 @@ import { type DecryptBalanceAsParams } from "@zama-fhe/sdk/query";
 
 The address that delegated decryption rights.
 
-### balanceHolder
+### account
 
 `Address | undefined`
 
@@ -87,7 +87,7 @@ The address whose on-chain balance to read. Defaults to `delegatorAddress`. Use 
 ```ts
 await decryptAs({
   delegatorAddress: "0xDelegator",
-  balanceHolder: "0xBalanceHolder",
+  account: "0xBalanceHolder",
 });
 ```
 

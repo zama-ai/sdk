@@ -101,7 +101,7 @@ The address that delegated decryption rights.
 
 Pre-fetched encrypted handles. When omitted, handles are fetched from the chain.
 
-### balanceHolder
+### account
 
 `Address | undefined`
 
