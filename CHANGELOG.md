@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.0.0-alpha.2](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.1...v3.0.0-alpha.2) (2026-04-17)
+
+### Features
+
+- **sdk-61:** replace WrappersRegistry with protocol ConfidentialTokenWrappersRegistry contracts ([#229](https://github.com/zama-ai/sdk/issues/229)) ([dd4364d]())
+
 ## [3.0.0-alpha.1](https://github.com/zama-ai/sdk/compare/v2.5.0-alpha.6...v3.0.0-alpha.1) (2026-04-17)
 
 ### ⚠ BREAKING CHANGES
