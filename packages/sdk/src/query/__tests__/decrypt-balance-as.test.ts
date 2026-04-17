@@ -12,7 +12,7 @@ describe("decryptBalanceAsMutationOptions", () => {
     });
     expect(readonlyToken.decryptBalanceAs).toHaveBeenCalledWith({
       delegatorAddress: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
-      account: undefined,
+      accountAddress: undefined,
     });
   });
 
@@ -22,11 +22,11 @@ describe("decryptBalanceAsMutationOptions", () => {
 
     await options.mutationFn({
       delegatorAddress: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
-      account: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
+      accountAddress: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
     });
     expect(readonlyToken.decryptBalanceAs).toHaveBeenCalledWith({
       delegatorAddress: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
-      account: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
+      accountAddress: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
     });
   });
 });

@@ -389,14 +389,14 @@ describe("decryptBalanceAs", () => {
     // First call populates cache keyed by account (userAddress), not delegator.
     await readonlyToken.decryptBalanceAs({
       delegatorAddress,
-      account: userAddress,
+      accountAddress: userAddress,
     });
     expect(relayer.delegatedUserDecrypt).toHaveBeenCalledTimes(1);
 
     // Second call with same account should hit cache — no second decrypt call.
     const balance = await readonlyToken.decryptBalanceAs({
       delegatorAddress,
-      account: userAddress,
+      accountAddress: userAddress,
     });
     expect(balance).toBe(42n);
     expect(relayer.delegatedUserDecrypt).toHaveBeenCalledTimes(1);
