@@ -72,6 +72,7 @@
   - [useMetadata](reference/react/useMetadata.md)
   - [useZamaSDK](reference/react/useZamaSDK.md)
   - [useToken](reference/react/useToken.md)
+  - [useReadonlyToken](reference/react/useReadonlyToken.md)
   - [useEncrypt](reference/react/useEncrypt.md)
   - [useUserDecrypt](reference/react/useUserDecrypt.md)
   - [useGenerateKeypair](reference/react/useGenerateKeypair.md)

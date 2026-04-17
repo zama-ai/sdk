@@ -256,7 +256,7 @@ const token = sdk.createToken("0xTokenAddress", "0xWrapperAddress");
 
 `(address: Address) => ReadonlyToken`
 
-Creates a token instance for balance decryption and metadata queries.
+Creates a read-only token instance for balance decryption and metadata queries.
 
 ```ts
 const readonlyToken = sdk.createReadonlyToken("0xEncryptedERC20");
@@ -423,6 +423,6 @@ sdk.terminate();
 ## Related
 
 - [Token](/reference/sdk/Token) — read/write token operations
-- [ReadonlyToken](/reference/sdk/ReadonlyToken) — balance decryption and metadata queries
+- [ReadonlyToken](/reference/sdk/ReadonlyToken) — read-only token operations
 - [WrappersRegistry](/reference/sdk/WrappersRegistry) — on-chain token wrappers registry
 - [Configuration guide](/guides/configuration) — relayer, signer, and storage setup
