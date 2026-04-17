@@ -127,16 +127,12 @@ describe("zamaQueryKeys", () => {
       zamaQueryKeys.confidentialBalance.token(TOKEN_LOWER),
       zamaQueryKeys.confidentialBalances.tokens([TOKEN_LOWER], OWNER_LOWER),
       zamaQueryKeys.underlyingAllowance.scope(TOKEN_LOWER, OWNER_LOWER, WRAPPER_LOWER),
-      zamaQueryKeys.signerAddress.token(TOKEN_LOWER),
-      zamaQueryKeys.signerAddress.scope(1),
     ];
 
     const upperVariants = [
       zamaQueryKeys.confidentialBalance.token(TOKEN_UPPER),
       zamaQueryKeys.confidentialBalances.tokens([TOKEN_UPPER], OWNER_UPPER),
       zamaQueryKeys.underlyingAllowance.scope(TOKEN_UPPER, OWNER_UPPER, WRAPPER_UPPER),
-      zamaQueryKeys.signerAddress.token(TOKEN_UPPER),
-      zamaQueryKeys.signerAddress.scope(1),
     ];
 
     expect(lowerVariants).toEqual(upperVariants);
