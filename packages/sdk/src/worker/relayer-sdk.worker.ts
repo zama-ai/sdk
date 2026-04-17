@@ -19,6 +19,8 @@ import type {
   ErrorResponse,
   GenerateKeypairRequest,
   GenerateKeypairResponseData,
+  GetExtraDataRequest,
+  GetExtraDataResponseData,
   GetPublicKeyRequest,
   GetPublicKeyResponseData,
   GetPublicParamsRequest,
@@ -486,14 +488,12 @@ async function handleCreateEIP712(request: CreateEIP712Request): Promise<void> {
   try {
     assertSdkInstance(sdkInstance);
 
-    const extraData = await sdkInstance.getExtraData();
-
     const eip712 = sdkInstance.createEIP712(
       unprefixHex(payload.publicKey),
       payload.contractAddresses,
       payload.startTimestamp,
       payload.durationDays,
-      extraData,
+      payload.extraData,
     );
 
     const response: CreateEIP712ResponseData = {
@@ -537,15 +537,13 @@ async function handleCreateDelegatedEIP712(request: CreateDelegatedEIP712Request
   try {
     assertSdkInstance(sdkInstance);
 
-    const extraData = await sdkInstance.getExtraData();
-
     const result = sdkInstance.createDelegatedUserDecryptEIP712(
       unprefixHex(payload.publicKey),
       payload.contractAddresses,
       payload.delegatorAddress,
       payload.startTimestamp,
       payload.durationDays,
-      extraData,
+      payload.extraData,
     );
 
     sendSuccess<CreateDelegatedEIP712ResponseData>(id, type, result);
@@ -669,6 +667,27 @@ function handleGetPublicParams(request: GetPublicParamsRequest): void {
 }
 
 /**
+ * Handle GET_EXTRA_DATA request.
+ */
+async function handleGetExtraData(request: GetExtraDataRequest): Promise<void> {
+  const { id, type } = request;
+
+  try {
+    assertSdkInstance(sdkInstance);
+
+    const result = await sdkInstance.getExtraData();
+
+    const response: GetExtraDataResponseData = { result };
+
+    sendSuccess(id, type, response);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("[Worker] GetExtraData error:", message);
+    sendError(id, type, message);
+  }
+}
+
+/**
  * Handle UPDATE_CSRF request - update the stored CSRF token.
  */
 function handleUpdateCsrf(request: UpdateCsrfRequest): void {
@@ -720,6 +739,9 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         break;
       case "GET_PUBLIC_PARAMS":
         handleGetPublicParams(request);
+        break;
+      case "GET_EXTRA_DATA":
+        await handleGetExtraData(request);
         break;
       default:
         console.error("[Worker] Unknown request type:", (request as WorkerRequest).type);

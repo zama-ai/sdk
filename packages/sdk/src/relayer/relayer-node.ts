@@ -193,11 +193,13 @@ export class RelayerNode implements RelayerSDK, Disposable {
     durationDays = 7,
   ): Promise<EIP712TypedData> {
     const pool = await this.#ensurePool();
+    const extraData = await this.getExtraData();
     const result = await pool.createEIP712({
       publicKey,
       contractAddresses,
       startTimestamp,
       durationDays,
+      extraData,
     });
 
     const domain = {
@@ -259,12 +261,14 @@ export class RelayerNode implements RelayerSDK, Disposable {
     durationDays = 7,
   ): Promise<KmsDelegatedUserDecryptEIP712Type> {
     const pool = await this.#ensurePool();
+    const extraData = await this.getExtraData();
     return pool.createDelegatedUserDecryptEIP712({
       publicKey,
       contractAddresses,
       delegatorAddress,
       startTimestamp,
       durationDays,
+      extraData,
     });
   }
 
@@ -307,6 +311,11 @@ export class RelayerNode implements RelayerSDK, Disposable {
       );
     }
     return (await pool.getPublicParams(bits)).result;
+  }
+
+  async getExtraData(): Promise<Hex> {
+    const pool = await this.#ensurePool();
+    return (await pool.getExtraData()).result;
   }
 
   async getAclAddress(): Promise<Address> {

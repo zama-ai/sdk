@@ -4,7 +4,9 @@
  */
 
 import type { FhevmInstance, FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/node";
+import type { PublicParams } from "@zama-fhe/relayer-sdk/web";
 import { parentPort, type Transferable } from "node:worker_threads";
+import { assertNonNullable, prefixHex, unprefixHex } from "../utils";
 import type {
   CreateDelegatedEIP712Request,
   CreateDelegatedEIP712ResponseData,
@@ -17,6 +19,8 @@ import type {
   ErrorResponse,
   GenerateKeypairRequest,
   GenerateKeypairResponseData,
+  GetExtraDataRequest,
+  GetExtraDataResponseData,
   GetPublicKeyRequest,
   GetPublicKeyResponseData,
   GetPublicParamsRequest,
@@ -31,7 +35,6 @@ import type {
   UserDecryptResponseData,
   WorkerRequest,
 } from "./worker.types";
-import { assertNonNullable, prefixHex, unprefixHex } from "../utils";
 
 if (!parentPort) {
   throw new Error("This script must be run as a worker thread");
@@ -240,14 +243,12 @@ async function handleCreateEIP712(request: CreateEIP712Request): Promise<void> {
   try {
     assertSdkInstance(sdkInstance);
 
-    const extraData = await sdkInstance.getExtraData();
-
     const eip712 = sdkInstance.createEIP712(
       unprefixHex(payload.publicKey),
       payload.contractAddresses,
       payload.startTimestamp,
       payload.durationDays,
-      extraData,
+      payload.extraData,
     );
 
     const response: CreateEIP712ResponseData = {
@@ -288,15 +289,13 @@ async function handleCreateDelegatedEIP712(request: CreateDelegatedEIP712Request
   try {
     assertSdkInstance(sdkInstance);
 
-    const extraData = await sdkInstance.getExtraData();
-
     const result = sdkInstance.createDelegatedUserDecryptEIP712(
       unprefixHex(payload.publicKey),
       payload.contractAddresses,
       payload.delegatorAddress,
       payload.startTimestamp,
       payload.durationDays,
-      extraData,
+      payload.extraData,
     );
 
     sendSuccess<CreateDelegatedEIP712ResponseData>(id, type, result);
@@ -392,7 +391,7 @@ function handleGetPublicParams(request: GetPublicParamsRequest): void {
 
     const result = sdkInstance.getPublicParams(
       // oxlint-disable-next-line typescript-eslint/consistent-type-imports -- SDK loaded dynamically
-      payload.bits as keyof import("@zama-fhe/relayer-sdk/node").PublicParams<Uint8Array>,
+      payload.bits as keyof PublicParams<Uint8Array>,
     );
 
     const response: GetPublicParamsResponseData = { result };
@@ -401,6 +400,24 @@ function handleGetPublicParams(request: GetPublicParamsRequest): void {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[NodeWorker] GetPublicParams error:", message);
+    sendError(id, type, message);
+  }
+}
+
+async function handleGetExtraData(request: GetExtraDataRequest): Promise<void> {
+  const { id, type } = request;
+
+  try {
+    assertSdkInstance(sdkInstance);
+
+    const result = await sdkInstance.getExtraData();
+
+    const response: GetExtraDataResponseData = { result };
+
+    sendSuccess(id, type, response);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("[NodeWorker] GetExtraData error:", message);
     sendError(id, type, message);
   }
 }
@@ -440,6 +457,9 @@ async function handleMessage(request: WorkerRequest): Promise<void> {
         break;
       case "GET_PUBLIC_PARAMS":
         handleGetPublicParams(request);
+        break;
+      case "GET_EXTRA_DATA":
+        await handleGetExtraData(request);
         break;
       default:
         console.error("[NodeWorker] Unknown request type:", request.type);

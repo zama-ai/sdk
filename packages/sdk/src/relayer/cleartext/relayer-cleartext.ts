@@ -366,6 +366,10 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
     return { publicParams: new Uint8Array([32]), publicParamsId: "mock-public-params-id" };
   }
 
+  async getExtraData(): Promise<Hex> {
+    return "0x";
+  }
+
   async getAclAddress(): Promise<Address> {
     return this.#config.aclContractAddress;
   }

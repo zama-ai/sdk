@@ -69,6 +69,9 @@ export interface RelayerSDK {
     bits: number,
   ): Promise<{ publicParams: Uint8Array; publicParamsId: string } | null>;
 
+  /** Fetch the extra data bytes for the current chain (used in EIP-712 and decrypt requests). */
+  getExtraData(): Promise<Hex>;
+
   /** Return the ACL contract address for the current chain. */
   getAclAddress(): Promise<Address>;
 

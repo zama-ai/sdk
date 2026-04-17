@@ -11862,6 +11862,7 @@ export interface RelayerSDK {
     encrypt(params: EncryptParams): Promise<EncryptResult>;
     generateKeypair(): Promise<KeypairType<Hex>>;
     getAclAddress(): Promise<Address>;
+    getExtraData(): Promise<Hex>;
     getPublicKey(): Promise<{
         publicKeyId: string;
         publicKey: Uint8Array;
@@ -11890,6 +11891,8 @@ export class RelayerWeb implements RelayerSDK, Disposable {
     generateKeypair(): Promise<KeypairType<Hex>>;
     // (undocumented)
     getAclAddress(): Promise<Address>;
+    // (undocumented)
+    getExtraData(): Promise<Hex>;
     getPublicKey(): Promise<{
         publicKeyId: string;
         publicKey: Uint8Array;
