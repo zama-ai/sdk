@@ -6,7 +6,6 @@ import { MAX_UINT64 } from "../../contracts/constants";
 
 describe("delegation read methods", () => {
   it("getDelegationExpiry reads from ACL contract", async ({
-    signer,
     readonlyToken,
     aclAddress,
     tokenAddress,
@@ -32,7 +31,6 @@ describe("delegation read methods", () => {
   });
 
   it("isDelegated returns true when expiry is in the future", async ({
-    signer,
     readonlyToken,
     delegatorAddress,
     delegateAddress,
@@ -45,7 +43,6 @@ describe("delegation read methods", () => {
   });
 
   it("isDelegated returns false when expiry is 0", async ({
-    signer,
     readonlyToken,
     delegatorAddress,
     delegateAddress,
@@ -57,7 +54,6 @@ describe("delegation read methods", () => {
   });
 
   it("isDelegated returns false when expiry is in the past", async ({
-    signer,
     readonlyToken,
     delegatorAddress,
     delegateAddress,
@@ -69,7 +65,6 @@ describe("delegation read methods", () => {
   });
 
   it("isDelegated short-circuits for permanent delegation without fetching block timestamp", async ({
-    signer,
     readonlyToken,
     delegatorAddress,
     delegateAddress,
@@ -138,7 +133,6 @@ describe("delegation write methods", () => {
   });
 
   it("delegateDecryption returns TransactionResult", async ({
-    signer,
     token,
     delegateAddress,
     provider,
@@ -239,12 +233,7 @@ describe("delegation write methods", () => {
     );
   });
 
-  it("revokeDelegation returns TransactionResult", async ({
-    signer,
-    token,
-    delegateAddress,
-    provider,
-  }) => {
+  it("revokeDelegation returns TransactionResult", async ({ token, delegateAddress, provider }) => {
     // Mock active delegation so pre-flight check passes
     vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
     const result = await token.revokeDelegation({ delegateAddress });
@@ -288,7 +277,6 @@ describe("delegation write methods", () => {
 
 describe("decryptBalanceAs", () => {
   it("returns 0n for zero handle without calling relayer", async ({
-    signer,
     relayer,
     readonlyToken,
     delegatorAddress,
@@ -303,7 +291,6 @@ describe("decryptBalanceAs", () => {
   });
 
   it("calls delegatedUserDecrypt with correct params", async ({
-    signer,
     relayer,
     readonlyToken,
     handle,
@@ -357,7 +344,6 @@ describe("decryptBalanceAs", () => {
   });
 
   it("propagates SigningFailedError from credential creation", async ({
-    signer,
     relayer,
     readonlyToken,
     handle,
@@ -375,7 +361,6 @@ describe("decryptBalanceAs", () => {
   });
 
   it("caches by account, not delegator, when account differs", async ({
-    signer,
     relayer,
     readonlyToken,
     handle,
@@ -476,7 +461,6 @@ describe("decryptBalanceAs", () => {
   });
 
   it("throws DelegationNotFoundError when no delegation exists", async ({
-    signer,
     relayer,
     readonlyToken,
     handle,
@@ -498,7 +482,6 @@ describe("decryptBalanceAs", () => {
   });
 
   it("throws DelegationExpiredError when delegation has expired", async ({
-    signer,
     relayer,
     readonlyToken,
     handle,
@@ -520,7 +503,6 @@ describe("decryptBalanceAs", () => {
   });
 
   it("preserves non-Error cause from relayer rejection", async ({
-    signer,
     relayer,
     readonlyToken,
     handle,
@@ -561,7 +543,6 @@ describe("decryptBalanceAs", () => {
   });
 
   it("preserves object cause with statusCode from relayer rejection", async ({
-    signer,
     relayer,
     readonlyToken,
     handle,
@@ -603,7 +584,6 @@ describe("decryptBalanceAs", () => {
   });
 
   it("throws DelegationNotPropagatedError when relayer returns 500 in delegated context", async ({
-    signer,
     relayer,
     readonlyToken,
     handle,
@@ -806,7 +786,6 @@ describe("delegateDecryption validation", () => {
   });
 
   it("throws DelegationExpiryUnchangedError when expiry matches current", async ({
-    signer,
     token,
     delegateAddress,
     provider,
@@ -824,7 +803,6 @@ describe("delegateDecryption validation", () => {
 
 describe("revokeDelegation validation", () => {
   it("throws DelegationNotFoundError when no delegation exists", async ({
-    signer,
     token,
     delegateAddress,
     provider,

@@ -74,11 +74,7 @@ describe("useConfidentialIsApproved", () => {
     expect(result.current.data).toBe(true);
   });
 
-  test("behavior: disabled when user passes enabled=false", ({
-    renderWithProviders,
-    signer,
-    provider,
-  }) => {
+  test("behavior: disabled when user passes enabled=false", ({ renderWithProviders, provider }) => {
     vi.mocked(provider.readContract).mockResolvedValue(true);
 
     const { result } = renderWithProviders(() =>
@@ -95,7 +91,7 @@ describe("useConfidentialIsApproved", () => {
     expect(result.current.fetchStatus).toBe("idle");
   });
 
-  test("default", async ({ renderWithProviders, signer, provider }) => {
+  test("default", async ({ renderWithProviders, provider }) => {
     vi.mocked(provider.readContract).mockResolvedValue(true);
 
     const { result } = renderWithProviders(() =>
@@ -117,7 +113,6 @@ describe("useConfidentialIsApproved", () => {
 
   test("skips signer resolution when holder is provided", async ({
     renderWithProviders,
-    signer,
     provider,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValue(true);
@@ -144,7 +139,6 @@ describe("useConfidentialIsApproved", () => {
 describe("useConfidentialIsApprovedSuspense", () => {
   test("skips signer resolution when holder is provided", async ({
     renderWithProviders,
-    signer,
     provider,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValue(true);

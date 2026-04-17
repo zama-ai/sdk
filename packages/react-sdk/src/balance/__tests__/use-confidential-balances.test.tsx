@@ -5,7 +5,7 @@ import { useConfidentialBalances } from "../use-confidential-balances";
 import { TOKEN, TOKEN_B, USER } from "../../__tests__/mutation-test-helpers";
 
 describe("useConfidentialBalances", () => {
-  test("default", async ({ renderWithProviders, signer, relayer, provider }) => {
+  test("default", async ({ renderWithProviders, relayer, provider }) => {
     const handleA = `0x${"bb".repeat(32)}`;
     const handleB = `0x${"cc".repeat(32)}`;
     vi.mocked(provider.readContract).mockImplementation(async ({ address }) => {
@@ -40,7 +40,6 @@ describe("useConfidentialBalances", () => {
 
   test("preserves the caller token address casing in result maps", async ({
     renderWithProviders,
-    signer,
     relayer,
     provider,
   }) => {
@@ -75,7 +74,7 @@ describe("useConfidentialBalances", () => {
   });
 
   describe("lifecycle", () => {
-    test("default", async ({ renderWithProviders, signer, relayer, provider }) => {
+    test("default", async ({ renderWithProviders, relayer, provider }) => {
       const handleA = `0x${"ca".repeat(32)}`;
       const handleB = `0x${"cb".repeat(32)}`;
       vi.mocked(provider.readContract).mockImplementation(async ({ address }) => {

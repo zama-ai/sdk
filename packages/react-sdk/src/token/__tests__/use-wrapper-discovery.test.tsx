@@ -56,7 +56,7 @@ describe("useWrapperDiscovery", () => {
     expect(result.current.data).toBe(wrapperAddress);
   });
 
-  test("default", async ({ renderWithProviders, signer, provider }) => {
+  test("default", async ({ renderWithProviders, provider }) => {
     const wrapperAddress = "0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D" as Address;
     vi.mocked(provider.getChainId).mockResolvedValue(1);
     vi.mocked(provider.readContract)

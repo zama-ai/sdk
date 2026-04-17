@@ -28,7 +28,6 @@ describe("delegationStatusQueryOptions", () => {
 
   test("returns isDelegated: false when expiryTimestamp is 0n", async ({
     sdk,
-    signer,
     relayer,
     tokenAddress,
     aclAddress,
@@ -52,7 +51,6 @@ describe("delegationStatusQueryOptions", () => {
 
   test("returns isDelegated: true when expiryTimestamp is MAX_UINT64 (skips getBlockTimestamp)", async ({
     sdk,
-    signer,
     relayer,
     tokenAddress,
     aclAddress,
@@ -76,7 +74,6 @@ describe("delegationStatusQueryOptions", () => {
 
   test("returns isDelegated: true when expiryTimestamp is in the future", async ({
     sdk,
-    signer,
     relayer,
     tokenAddress,
     aclAddress,
@@ -102,7 +99,6 @@ describe("delegationStatusQueryOptions", () => {
 
   test("returns isDelegated: false when expiryTimestamp is in the past", async ({
     sdk,
-    signer,
     relayer,
     tokenAddress,
     aclAddress,

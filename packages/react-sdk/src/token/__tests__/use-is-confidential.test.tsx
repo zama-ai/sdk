@@ -4,7 +4,7 @@ import { useIsConfidential, useIsWrapper } from "../use-is-confidential";
 import { TOKEN } from "../../__tests__/mutation-test-helpers";
 
 describe("useIsConfidential", () => {
-  test("default", async ({ renderWithProviders, signer, provider }) => {
+  test("default", async ({ renderWithProviders, provider }) => {
     vi.mocked(provider.readContract).mockResolvedValue(true);
 
     const { result } = renderWithProviders(() => useIsConfidential(TOKEN));
@@ -21,7 +21,7 @@ describe("useIsConfidential", () => {
 });
 
 describe("useIsWrapper", () => {
-  test("default", async ({ renderWithProviders, signer, provider }) => {
+  test("default", async ({ renderWithProviders, provider }) => {
     vi.mocked(provider.readContract).mockResolvedValue(false);
 
     const { result } = renderWithProviders(() => useIsWrapper(TOKEN));

@@ -28,7 +28,7 @@ describe("underlyingAllowanceQueryOptions", () => {
     expect(options.enabled).toBe(false);
   });
 
-  test("queries allowance when owner exists", async ({ sdk, signer, provider }) => {
+  test("queries allowance when owner exists", async ({ sdk, provider }) => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(99n);
 
     const options = underlyingAllowanceQueryOptions(
@@ -66,7 +66,6 @@ describe("underlyingAllowanceQueryOptions", () => {
 
   test("queryFn reads tokenAddress, owner, and wrapperAddress from context.queryKey", async ({
     sdk,
-    signer,
     provider,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(99n);

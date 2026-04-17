@@ -23,7 +23,6 @@ describe("Unshield callbacks (P4)", () => {
 
   it("fires all callbacks during unshield", async ({
     relayer: _relayer,
-    signer,
     userAddress,
     token,
     provider,
@@ -46,13 +45,7 @@ describe("Unshield callbacks (P4)", () => {
     expect(onFinalizeSubmitted).toHaveBeenCalledWith("0xtxhash");
   });
 
-  it("fires all callbacks during unshieldAll", async ({
-    signer,
-    userAddress,
-    handle,
-    token,
-    provider,
-  }) => {
+  it("fires all callbacks during unshieldAll", async ({ userAddress, handle, token, provider }) => {
     vi.mocked(provider.readContract).mockResolvedValue(handle);
     mockReceiptWithUnwrapRequested(provider, userAddress);
 
@@ -67,7 +60,7 @@ describe("Unshield callbacks (P4)", () => {
     expect(onFinalizeSubmitted).toHaveBeenCalledWith("0xtxhash");
   });
 
-  it("fires callbacks during resumeUnshield", async ({ signer, userAddress, token, provider }) => {
+  it("fires callbacks during resumeUnshield", async ({ userAddress, token, provider }) => {
     mockReceiptWithUnwrapRequested(provider, userAddress);
 
     const onFinalizing = vi.fn();
@@ -80,12 +73,7 @@ describe("Unshield callbacks (P4)", () => {
     expect(onFinalizeSubmitted).toHaveBeenCalledWith("0xtxhash");
   });
 
-  it("works without callbacks (backward compatible)", async ({
-    signer,
-    userAddress,
-    token,
-    provider,
-  }) => {
+  it("works without callbacks (backward compatible)", async ({ userAddress, token, provider }) => {
     mockReceiptWithUnwrapRequested(provider, userAddress);
 
     const result = await token.unshield(50n, { skipBalanceCheck: true });
@@ -118,12 +106,7 @@ describe("Unshield callbacks (P4)", () => {
     expect(signer.writeContract).toHaveBeenCalledTimes(2); // unwrap + finalize
   });
 
-  it("fires onFinalizing before onFinalizeSubmitted", async ({
-    signer,
-    userAddress,
-    token,
-    provider,
-  }) => {
+  it("fires onFinalizing before onFinalizeSubmitted", async ({ userAddress, token, provider }) => {
     mockReceiptWithUnwrapRequested(provider, userAddress);
 
     const order: string[] = [];
@@ -137,11 +120,7 @@ describe("Unshield callbacks (P4)", () => {
     expect(order).toEqual(["unwrapSubmitted", "finalizing", "finalizeSubmitted"]);
   });
 
-  it("throws TransactionRevertedError when receipt fetch fails", async ({
-    signer,
-    token,
-    provider,
-  }) => {
+  it("throws TransactionRevertedError when receipt fetch fails", async ({ token, provider }) => {
     vi.mocked(provider.waitForTransactionReceipt).mockRejectedValue(new Error("network error"));
 
     await expect(token.unshield(50n, { skipBalanceCheck: true })).rejects.toBeInstanceOf(
@@ -150,7 +129,6 @@ describe("Unshield callbacks (P4)", () => {
   });
 
   it("throws TransactionRevertedError when no UnwrapRequested event in receipt", async ({
-    signer,
     token,
     provider,
   }) => {
@@ -179,7 +157,6 @@ describe("Unshield callbacks (P4)", () => {
 
   it("throws DecryptionFailedError when publicDecrypt fails during finalize", async ({
     relayer,
-    signer,
     userAddress,
     token,
     provider,
@@ -196,11 +173,7 @@ describe("Unshield callbacks (P4)", () => {
 describe("Shield callbacks (SDK-19)", () => {
   const UNDERLYING = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c";
 
-  it("fires onApprovalSubmitted and onShieldSubmitted callbacks", async ({
-    token,
-    signer,
-    provider,
-  }) => {
+  it("fires onApprovalSubmitted and onShieldSubmitted callbacks", async ({ token, provider }) => {
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce(UNDERLYING)
       .mockResolvedValueOnce(1000n)
@@ -215,11 +188,7 @@ describe("Shield callbacks (SDK-19)", () => {
     expect(onShieldSubmitted).toHaveBeenCalledWith("0xtxhash");
   });
 
-  it("skips onApprovalSubmitted when allowance is sufficient", async ({
-    token,
-    signer,
-    provider,
-  }) => {
+  it("skips onApprovalSubmitted when allowance is sufficient", async ({ token, provider }) => {
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce(UNDERLYING)
       .mockResolvedValueOnce(1000n)
@@ -234,7 +203,7 @@ describe("Shield callbacks (SDK-19)", () => {
     expect(onShieldSubmitted).toHaveBeenCalledOnce();
   });
 
-  it("completes shield even when callbacks throw", async ({ token, signer, provider }) => {
+  it("completes shield even when callbacks throw", async ({ token, provider }) => {
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce(UNDERLYING)
       .mockResolvedValueOnce(1000n)

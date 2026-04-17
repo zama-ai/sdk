@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, type MockSigner } from "../../test-fixtures";
-import type { GenericProvider } from "../../types";
+import type { GenericProvider, GenericStorage } from "../../types";
 import { Topics } from "../../events";
 import { ReadonlyToken } from "../readonly-token";
 import { Token } from "../token";
@@ -9,7 +9,6 @@ import {
   ZamaSDKEvents,
 } from "../../events/sdk-events";
 import { CredentialsManager } from "../../credentials/credentials-manager";
-import type { GenericStorage } from "../../types";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import { ZamaSDK } from "../../zama-sdk";
 import type { Address } from "viem";

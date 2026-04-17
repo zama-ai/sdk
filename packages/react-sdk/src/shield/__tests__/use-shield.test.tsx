@@ -28,7 +28,6 @@ describe("useShield", () => {
 
   test("cache: invalidates allowance and removes balance after shield", async ({
     renderWithProviders,
-    signer,
     provider,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
@@ -58,11 +57,7 @@ describe("useShield", () => {
     expectCacheUntouched(queryClient, otherAllowanceKey, 333n);
   });
 
-  test("behavior: forwards onSuccess callback", async ({
-    renderWithProviders,
-    signer,
-    provider,
-  }) => {
+  test("behavior: forwards onSuccess callback", async ({ renderWithProviders, provider }) => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
 
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
@@ -91,7 +86,6 @@ describe("useShield", () => {
 
   test("behavior: forwards raw onMutate context to onSuccess without optimistic flag", async ({
     renderWithProviders,
-    signer,
     provider,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
@@ -140,7 +134,6 @@ describe("useShield", () => {
 
   test("behavior: forwards raw onMutate context to onSettled without optimistic flag", async ({
     renderWithProviders,
-    signer,
     provider,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
@@ -163,7 +156,6 @@ describe("useShield", () => {
 
   test("behavior: unwraps caller context for onSuccess with optimistic flag", async ({
     renderWithProviders,
-    signer,
     provider,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
@@ -224,7 +216,6 @@ describe("useShield", () => {
 
   test("behavior: unwraps caller context for onSettled with optimistic flag", async ({
     renderWithProviders,
-    signer,
     provider,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);

@@ -12,7 +12,7 @@ describe("tokenMetadataQueryOptions", () => {
     expect(options.staleTime).toBe(Infinity);
   });
 
-  test("queryFn reads token address from context.queryKey", async ({ sdk, signer, provider }) => {
+  test("queryFn reads token address from context.queryKey", async ({ sdk, provider }) => {
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce("Name")
       .mockResolvedValueOnce("SYM")

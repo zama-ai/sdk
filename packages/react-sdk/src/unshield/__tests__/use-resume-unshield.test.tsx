@@ -26,7 +26,6 @@ describe("useResumeUnshield", () => {
 
   test("cache: invalidates balance, allowance, and wagmi after resume unshield", async ({
     renderWithProviders,
-    signer,
     relayer,
     provider,
   }) => {
@@ -60,7 +59,6 @@ describe("useResumeUnshield", () => {
 
   test("behavior: forwards onSuccess callback", async ({
     renderWithProviders,
-    signer,
     relayer,
     provider,
   }) => {

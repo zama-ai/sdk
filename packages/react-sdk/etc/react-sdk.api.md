@@ -26,6 +26,7 @@ import { DelegationStatusData } from '@zama-fhe/sdk/query';
 import { EIP712TypedData } from '@zama-fhe/sdk';
 import { EncryptParams } from '@zama-fhe/sdk';
 import { FinalizeUnwrapParams } from '@zama-fhe/sdk/query';
+import { GenericProvider } from '@zama-fhe/sdk';
 import { GenericSigner } from '@zama-fhe/sdk';
 import { GenericStorage } from '@zama-fhe/sdk';
 import { PaginatedResult } from '@zama-fhe/sdk';
@@ -36,6 +37,7 @@ import { RelayerSDK } from '@zama-fhe/sdk';
 import { ResumeUnshieldParams } from '@zama-fhe/sdk/query';
 import { RevokeDelegationParams } from '@zama-fhe/sdk/query';
 import { ShieldParams } from '@zama-fhe/sdk/query';
+import { Token } from '@zama-fhe/sdk';
 import { TokenMetadata } from '@zama-fhe/sdk/query';
 import { TokenWrapperPair } from '@zama-fhe/sdk';
 import { TokenWrapperPairWithMetadata } from '@zama-fhe/sdk';
@@ -104,7 +106,7 @@ export function useConfidentialIsApprovedSuspense(config: UseConfidentialIsAppro
 
 // @public
 export interface UseConfidentialIsApprovedSuspenseConfig extends UseZamaConfig {
-    holder?: Address;
+    holder: Address;
     spender: Address;
 }
 
@@ -250,7 +252,15 @@ export interface UseShieldConfig extends UseZamaConfig {
 }
 
 // @public
-export function useToken(config: UseZamaConfig): _$_zama_fhe_sdk0.Token;
+export function useSignerAddress(): Address | undefined;
+
+// @public
+export function useSignerAddressSuspense(): {
+    data: Address;
+};
+
+// @public
+export function useToken(config: UseZamaConfig): Token;
 
 // @public
 export function useTokenAddress(input: {
@@ -347,6 +357,7 @@ export function ZamaProvider(input: ZamaProviderProps): _$react_jsx_runtime0.JSX
 export interface ZamaProviderProps extends PropsWithChildren {
     keypairTTL?: number;
     onEvent?: ZamaSDKEventListener;
+    provider: GenericProvider;
     registryAddresses?: Record<number, Address>;
     registryTTL?: number;
     relayer: RelayerSDK;

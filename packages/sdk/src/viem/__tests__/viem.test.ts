@@ -89,14 +89,11 @@ describe("ViemSigner", () => {
       expect(address).toBe(ACCOUNT_ADDRESS);
     });
 
-    vit(
-      "throws when wallet client has no account",
-      async ({ createMockWalletClient, publicClient }) => {
-        const noAccountClient = createMockWalletClient(false);
-        const noAccountSigner = new ViemSigner({ walletClient: noAccountClient });
-        await expect(noAccountSigner.getAddress()).rejects.toThrow("WalletClient has no account");
-      },
-    );
+    vit("throws when wallet client has no account", async ({ createMockWalletClient }) => {
+      const noAccountClient = createMockWalletClient(false);
+      const noAccountSigner = new ViemSigner({ walletClient: noAccountClient });
+      await expect(noAccountSigner.getAddress()).rejects.toThrow("WalletClient has no account");
+    });
   });
 
   describe("signTypedData", () => {
@@ -145,7 +142,7 @@ describe("ViemSigner", () => {
 
     vit(
       "throws when wallet client has no account",
-      async ({ tokenAddress, createMockWalletClient, publicClient }) => {
+      async ({ tokenAddress, createMockWalletClient }) => {
         const typedData = createTypedData(tokenAddress);
         const noAccountClient = createMockWalletClient(false);
         const noAccountSigner = new ViemSigner({ walletClient: noAccountClient });
@@ -186,7 +183,7 @@ describe("ViemSigner", () => {
 
     vit(
       "throws when wallet client has no account",
-      async ({ tokenAddress, userAddress, createMockWalletClient, publicClient }) => {
+      async ({ tokenAddress, userAddress, createMockWalletClient }) => {
         const config = createConfig(tokenAddress, userAddress);
         const noAccountClient = createMockWalletClient(false);
         const noAccountSigner = new ViemSigner({ walletClient: noAccountClient });

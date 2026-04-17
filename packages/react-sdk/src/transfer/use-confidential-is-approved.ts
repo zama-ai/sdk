@@ -6,7 +6,7 @@ import type { Address } from "@zama-fhe/sdk";
 import { confidentialIsApprovedQueryOptions } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 import { useSignerAddress } from "../use-signer-address";
-import { type UseZamaConfig } from "../token/use-token";
+import type { UseZamaConfig } from "../token/use-token";
 
 export { confidentialIsApprovedQueryOptions };
 

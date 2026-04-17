@@ -53,7 +53,7 @@ describe("confidentialIsApprovedQueryOptions", () => {
     ]);
   });
 
-  test("checks operator approval", async ({ sdk, signer, provider }) => {
+  test("checks operator approval", async ({ sdk, provider }) => {
     vi.mocked(provider.readContract).mockResolvedValue(true);
 
     const options = confidentialIsApprovedQueryOptions(
@@ -91,7 +91,6 @@ describe("confidentialIsApprovedQueryOptions", () => {
 
   test("queryFn reads tokenAddress, holder, and spender from context.queryKey", async ({
     sdk,
-    signer,
     provider,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValue(true);

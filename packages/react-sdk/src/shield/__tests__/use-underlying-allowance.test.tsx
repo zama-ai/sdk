@@ -7,7 +7,7 @@ import { TOKEN, WRAPPER, USER } from "../../__tests__/mutation-test-helpers";
 describe("useUnderlyingAllowance", () => {
   const UNDERLYING = "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e";
 
-  test("default", async ({ renderWithProviders, signer, provider }) => {
+  test("default", async ({ renderWithProviders, provider }) => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(1000n);
 
     const { result } = renderWithProviders(() =>
@@ -50,11 +50,7 @@ describe("useUnderlyingAllowance", () => {
     expect(result.current.data).toBe(1000n);
   });
 
-  test("behavior: disabled when user passes enabled=false", ({
-    renderWithProviders,
-    signer,
-    provider,
-  }) => {
+  test("behavior: disabled when user passes enabled=false", ({ renderWithProviders, provider }) => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(1000n);
 
     const { result } = renderWithProviders(() =>

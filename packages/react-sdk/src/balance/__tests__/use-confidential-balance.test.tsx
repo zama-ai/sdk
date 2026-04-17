@@ -5,7 +5,7 @@ import { useConfidentialBalance } from "../use-confidential-balance";
 import { TOKEN, USER } from "../../__tests__/mutation-test-helpers";
 
 describe("useConfidentialBalance", () => {
-  test("default", async ({ renderWithProviders, signer, relayer, provider }) => {
+  test("default", async ({ renderWithProviders, relayer, provider }) => {
     const handle = `0x${"aa".repeat(32)}`;
     vi.mocked(provider.readContract).mockResolvedValue(handle);
     vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handle]: 123n });
@@ -36,7 +36,7 @@ describe("useConfidentialBalance", () => {
   });
 
   describe("lifecycle", () => {
-    test("default", async ({ renderWithProviders, signer, relayer, provider }) => {
+    test("default", async ({ renderWithProviders, relayer, provider }) => {
       const handle = `0x${"aa".repeat(32)}`;
       vi.mocked(provider.readContract).mockResolvedValue(handle);
       vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handle]: 123n });
@@ -130,7 +130,6 @@ describe("useConfidentialBalance", () => {
 
     test("behavior: balance updates on refetch when handle changes", async ({
       renderWithProviders,
-      signer,
       relayer,
       provider,
     }) => {
@@ -165,7 +164,6 @@ describe("useConfidentialBalance", () => {
 
     test("behavior: re-render preserves cached data", async ({
       renderWithProviders,
-      signer,
       relayer,
       provider,
     }) => {

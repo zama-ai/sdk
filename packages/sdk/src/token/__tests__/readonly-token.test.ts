@@ -10,7 +10,6 @@ describe("ReadonlyToken", () => {
   describe("balanceOf", () => {
     it("returns 0n for zero handle without hitting relayer", async ({
       readonlyToken,
-      signer,
       provider,
     }) => {
       vi.mocked(provider.readContract).mockResolvedValue(ZERO_HANDLE);
@@ -22,7 +21,6 @@ describe("ReadonlyToken", () => {
 
     it("decrypts non-zero handle and returns balance", async ({
       readonlyToken,
-      signer,
       handle,
       tokenAddress,
       provider,
@@ -43,12 +41,7 @@ describe("ReadonlyToken", () => {
       );
     });
 
-    it("throws ZamaError on decryption failure", async ({
-      readonlyToken,
-      signer,
-      handle,
-      provider,
-    }) => {
+    it("throws ZamaError on decryption failure", async ({ readonlyToken, handle, provider }) => {
       vi.mocked(provider.readContract).mockResolvedValue(handle);
       vi.mocked(readonlyToken.sdk.relayer.userDecrypt).mockRejectedValue(new Error("relayer down"));
 
@@ -57,11 +50,7 @@ describe("ReadonlyToken", () => {
   });
 
   describe("allowance", () => {
-    it("reads underlying token then checks allowance", async ({
-      readonlyToken,
-      signer,
-      provider,
-    }) => {
+    it("reads underlying token then checks allowance", async ({ readonlyToken, provider }) => {
       const UNDERLYING = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce(UNDERLYING) // underlying()
@@ -127,7 +116,6 @@ describe("ReadonlyToken", () => {
 
     it("captures per-token decryption failures in the errors map", async ({
       sdk,
-      signer,
       tokenAddress,
       handle,
       provider,
@@ -178,7 +166,6 @@ describe("ReadonlyToken", () => {
 
     it("throws when every token fails to decrypt", async ({
       sdk,
-      signer,
       tokenAddress,
       handle,
       provider,
@@ -197,7 +184,6 @@ describe("ReadonlyToken", () => {
 
     it("wraps non-ZamaError per-token failures as DecryptionFailedError preserving the cause", async ({
       sdk,
-      signer,
       tokenAddress,
       handle,
       provider,
@@ -286,7 +272,6 @@ describe("ZamaSDK token factory", () => {
 
   it("throws when handle not found in decrypt result", async ({
     sdk,
-    signer,
     tokenAddress,
     handle,
     provider,

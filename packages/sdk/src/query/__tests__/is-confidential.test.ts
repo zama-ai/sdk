@@ -2,7 +2,7 @@ import { describe, expect, test, vi, mockQueryContext } from "../../test-fixture
 import { isConfidentialQueryOptions, isWrapperQueryOptions } from "../is-confidential";
 
 describe("isConfidentialQueryOptions", () => {
-  test("queries confidential interface check", async ({ sdk, signer, provider }) => {
+  test("queries confidential interface check", async ({ sdk, provider }) => {
     vi.mocked(provider.readContract).mockResolvedValue(true);
     const options = isConfidentialQueryOptions(sdk, "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a");
 
@@ -11,11 +11,7 @@ describe("isConfidentialQueryOptions", () => {
     expect(options.staleTime).toBe(Infinity);
   });
 
-  test("returns false when contract reverts (no ERC-165 support)", async ({
-    sdk,
-    signer,
-    provider,
-  }) => {
+  test("returns false when contract reverts (no ERC-165 support)", async ({ sdk, provider }) => {
     vi.mocked(provider.readContract).mockRejectedValue(new Error("execution reverted"));
     const options = isConfidentialQueryOptions(sdk, "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a");
 
@@ -23,7 +19,7 @@ describe("isConfidentialQueryOptions", () => {
     expect(value).toBe(false);
   });
 
-  test("re-throws network errors instead of returning false", async ({ sdk, signer, provider }) => {
+  test("re-throws network errors instead of returning false", async ({ sdk, provider }) => {
     vi.mocked(provider.readContract).mockRejectedValue(new Error("fetch failed"));
     const options = isConfidentialQueryOptions(sdk, "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a");
 

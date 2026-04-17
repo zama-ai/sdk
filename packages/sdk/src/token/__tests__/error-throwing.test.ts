@@ -4,7 +4,6 @@ import { DecryptionFailedError, NoCiphertextError, RelayerRequestFailedError } f
 describe("NoCiphertextError detection (P3)", () => {
   it("throws NoCiphertextError when relayer returns 400", async ({
     relayer,
-    signer,
     token,
     handle,
     provider,
@@ -19,7 +18,6 @@ describe("NoCiphertextError detection (P3)", () => {
 
   it("throws RelayerRequestFailedError for non-400 HTTP errors", async ({
     relayer,
-    signer,
     token,
     handle,
     provider,
@@ -39,7 +37,6 @@ describe("NoCiphertextError detection (P3)", () => {
 
   it("throws DecryptionFailedError for errors without statusCode", async ({
     relayer,
-    signer,
     token,
     handle,
     provider,
@@ -67,7 +64,6 @@ describe("NoCiphertextError detection (P3)", () => {
 
   it("passes through NoCiphertextError without re-wrapping", async ({
     relayer,
-    signer,
     token,
     handle,
     provider,
@@ -85,7 +81,6 @@ describe("NoCiphertextError detection (P3)", () => {
 
   it("passes through RelayerRequestFailedError without re-wrapping", async ({
     relayer,
-    signer,
     token,
     handle,
     provider,
@@ -103,7 +98,6 @@ describe("NoCiphertextError detection (P3)", () => {
 
   it("wraps non-Error thrown value with statusCode 400 as NoCiphertextError", async ({
     relayer,
-    signer,
     token,
     handle,
     provider,
@@ -116,7 +110,6 @@ describe("NoCiphertextError detection (P3)", () => {
 
   it("wraps non-Error thrown value with other statusCode as RelayerRequestFailedError", async ({
     relayer,
-    signer,
     token,
     handle,
     provider,

@@ -4,11 +4,7 @@ import { describe, expect, it, vi } from "../../test-fixtures";
 const UNDERLYING = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
 
 describe("Token.shield", () => {
-  it("fires onApprovalSubmitted and onShieldSubmitted callbacks", async ({
-    token,
-    signer,
-    provider,
-  }) => {
+  it("fires onApprovalSubmitted and onShieldSubmitted callbacks", async ({ token, provider }) => {
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce(UNDERLYING) // underlying()
       .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
@@ -23,11 +19,7 @@ describe("Token.shield", () => {
     expect(onShieldSubmitted).toHaveBeenCalledWith("0xtxhash");
   });
 
-  it("skips onApprovalSubmitted when allowance is sufficient", async ({
-    token,
-    signer,
-    provider,
-  }) => {
+  it("skips onApprovalSubmitted when allowance is sufficient", async ({ token, provider }) => {
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce(UNDERLYING)
       .mockResolvedValueOnce(1000n)
@@ -42,7 +34,7 @@ describe("Token.shield", () => {
     expect(onShieldSubmitted).toHaveBeenCalledOnce();
   });
 
-  it("completes shield even when callbacks throw", async ({ token, signer, provider }) => {
+  it("completes shield even when callbacks throw", async ({ token, provider }) => {
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce(UNDERLYING)
       .mockResolvedValueOnce(1000n)

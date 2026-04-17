@@ -4,7 +4,7 @@ import { useMetadata } from "../use-metadata";
 import { TOKEN } from "../../__tests__/mutation-test-helpers";
 
 describe("useMetadata", () => {
-  test("returns name, symbol, decimals", async ({ renderWithProviders, signer, provider }) => {
+  test("returns name, symbol, decimals", async ({ renderWithProviders, provider }) => {
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce("TestToken")
       .mockResolvedValueOnce("TT")

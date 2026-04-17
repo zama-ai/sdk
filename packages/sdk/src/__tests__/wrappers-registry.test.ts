@@ -32,21 +32,21 @@ describe("DefaultRegistryAddresses", () => {
 
 describe("WrappersRegistry", () => {
   describe("getRegistryAddress", () => {
-    it("resolves from defaults for Mainnet", async ({ signer, provider }) => {
+    it("resolves from defaults for Mainnet", async ({ provider }) => {
       vi.mocked(provider.getChainId).mockResolvedValue(1);
       const registry = new WrappersRegistry({ provider });
       const addr = await registry.getRegistryAddress();
       expect(addr.toLowerCase()).toBe(MainnetConfig.registryAddress!.toLowerCase());
     });
 
-    it("resolves from defaults for Sepolia", async ({ signer, provider }) => {
+    it("resolves from defaults for Sepolia", async ({ provider }) => {
       vi.mocked(provider.getChainId).mockResolvedValue(11155111);
       const registry = new WrappersRegistry({ provider });
       const addr = await registry.getRegistryAddress();
       expect(addr.toLowerCase()).toBe(SepoliaConfig.registryAddress!.toLowerCase());
     });
 
-    it("overrides take precedence over defaults", async ({ signer, provider }) => {
+    it("overrides take precedence over defaults", async ({ provider }) => {
       vi.mocked(provider.getChainId).mockResolvedValue(1);
       const registry = new WrappersRegistry({
         provider,
@@ -56,7 +56,7 @@ describe("WrappersRegistry", () => {
       expect(addr).toBe(CUSTOM_REGISTRY);
     });
 
-    it("supports custom chains via overrides", async ({ signer, provider }) => {
+    it("supports custom chains via overrides", async ({ provider }) => {
       vi.mocked(provider.getChainId).mockResolvedValue(31337);
       const registry = new WrappersRegistry({
         provider,
@@ -66,7 +66,7 @@ describe("WrappersRegistry", () => {
       expect(addr).toBe(CUSTOM_REGISTRY);
     });
 
-    it("throws ConfigurationError for unconfigured chain", async ({ signer, provider }) => {
+    it("throws ConfigurationError for unconfigured chain", async ({ provider }) => {
       vi.mocked(provider.getChainId).mockResolvedValue(99999);
       const registry = new WrappersRegistry({ provider });
       await expect(registry.getRegistryAddress()).rejects.toThrow(ConfigurationError);
@@ -75,7 +75,7 @@ describe("WrappersRegistry", () => {
   });
 
   describe("read methods", () => {
-    it("getTokenPairs calls readContract with correct config", async ({ signer, provider }) => {
+    it("getTokenPairs calls readContract with correct config", async ({ provider }) => {
       vi.mocked(provider.getChainId).mockResolvedValue(1);
       vi.mocked(provider.readContract).mockResolvedValue([]);
       const registry = new WrappersRegistry({ provider });
@@ -90,7 +90,7 @@ describe("WrappersRegistry", () => {
       );
     });
 
-    it("getTokenPairsLength calls readContract", async ({ signer, provider }) => {
+    it("getTokenPairsLength calls readContract", async ({ provider }) => {
       vi.mocked(provider.getChainId).mockResolvedValue(1);
       vi.mocked(provider.readContract).mockResolvedValue(5n);
       const registry = new WrappersRegistry({ provider });
@@ -105,7 +105,7 @@ describe("WrappersRegistry", () => {
       );
     });
 
-    it("getTokenPairsSlice passes fromIndex and toIndex", async ({ signer, provider }) => {
+    it("getTokenPairsSlice passes fromIndex and toIndex", async ({ provider }) => {
       vi.mocked(provider.getChainId).mockResolvedValue(1);
       vi.mocked(provider.readContract).mockResolvedValue([]);
       const registry = new WrappersRegistry({ provider });
@@ -120,7 +120,7 @@ describe("WrappersRegistry", () => {
       );
     });
 
-    it("getTokenPair passes index", async ({ signer, provider }) => {
+    it("getTokenPair passes index", async ({ provider }) => {
       vi.mocked(provider.getChainId).mockResolvedValue(1);
       vi.mocked(provider.readContract).mockResolvedValue({
         tokenAddress: TOKEN,
@@ -144,7 +144,7 @@ describe("WrappersRegistry", () => {
       );
     });
 
-    it("getConfidentialTokenAddress normalizes the input address", async ({ signer, provider }) => {
+    it("getConfidentialTokenAddress normalizes the input address", async ({ provider }) => {
       vi.mocked(provider.getChainId).mockResolvedValue(1);
       vi.mocked(provider.readContract).mockResolvedValue([true, C_TOKEN]);
       const registry = new WrappersRegistry({ provider });
@@ -155,7 +155,7 @@ describe("WrappersRegistry", () => {
       expect(addr).toBe(C_TOKEN);
     });
 
-    it("getTokenAddress normalizes the input address", async ({ signer, provider }) => {
+    it("getTokenAddress normalizes the input address", async ({ provider }) => {
       vi.mocked(provider.getChainId).mockResolvedValue(1);
       vi.mocked(provider.readContract).mockResolvedValue([true, TOKEN]);
       const registry = new WrappersRegistry({ provider });
@@ -166,7 +166,7 @@ describe("WrappersRegistry", () => {
       expect(addr).toBe(TOKEN);
     });
 
-    it("isConfidentialTokenValid returns boolean", async ({ signer, provider }) => {
+    it("isConfidentialTokenValid returns boolean", async ({ provider }) => {
       vi.mocked(provider.getChainId).mockResolvedValue(1);
       vi.mocked(provider.readContract).mockResolvedValue(true);
       const registry = new WrappersRegistry({ provider });
@@ -214,7 +214,7 @@ describe("WrappersRegistry", () => {
       return new WrappersRegistry({ provider });
     }
 
-    it("returns paginated result with defaults", async ({ signer, provider }) => {
+    it("returns paginated result with defaults", async ({ provider }) => {
       vi.mocked(provider.getChainId).mockResolvedValue(1);
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce(3n) // getTokenConfidentialTokenPairsLength
@@ -236,7 +236,7 @@ describe("WrappersRegistry", () => {
       expect(result.items[0]!.tokenAddress).toBe(TOKEN);
     });
 
-    it("respects page and pageSize options", async ({ signer, provider }) => {
+    it("respects page and pageSize options", async ({ provider }) => {
       vi.mocked(provider.getChainId).mockResolvedValue(1);
       vi.mocked(provider.readContract).mockResolvedValueOnce(50n).mockResolvedValueOnce([]);
       const registry = new WrappersRegistry({ provider });
@@ -254,7 +254,7 @@ describe("WrappersRegistry", () => {
       );
     });
 
-    it("enriches pairs when metadata: true", async ({ signer, provider }) => {
+    it("enriches pairs when metadata: true", async ({ provider }) => {
       vi.mocked(provider.getChainId).mockResolvedValue(1);
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce(1n) // length
@@ -326,27 +326,27 @@ describe("WrappersRegistry", () => {
     });
 
     describe("edge cases and negative tests", () => {
-      it("throws on page=0", async ({ signer, provider }) => {
+      it("throws on page=0", async ({ provider }) => {
         vi.mocked(provider.getChainId).mockResolvedValue(1);
         const registry = new WrappersRegistry({ provider });
         await expect(registry.listPairs({ page: 0 })).rejects.toThrow(ConfigurationError);
         await expect(registry.listPairs({ page: 0 })).rejects.toThrow(/page must be >= 1/);
       });
 
-      it("throws on negative page", async ({ signer, provider }) => {
+      it("throws on negative page", async ({ provider }) => {
         vi.mocked(provider.getChainId).mockResolvedValue(1);
         const registry = new WrappersRegistry({ provider });
         await expect(registry.listPairs({ page: -1 })).rejects.toThrow(ConfigurationError);
       });
 
-      it("throws on pageSize=0", async ({ signer, provider }) => {
+      it("throws on pageSize=0", async ({ provider }) => {
         vi.mocked(provider.getChainId).mockResolvedValue(1);
         const registry = new WrappersRegistry({ provider });
         await expect(registry.listPairs({ pageSize: 0 })).rejects.toThrow(ConfigurationError);
         await expect(registry.listPairs({ pageSize: 0 })).rejects.toThrow(/pageSize must be >= 1/);
       });
 
-      it("throws on negative pageSize", async ({ signer, provider }) => {
+      it("throws on negative pageSize", async ({ provider }) => {
         vi.mocked(provider.getChainId).mockResolvedValue(1);
         const registry = new WrappersRegistry({ provider });
         await expect(registry.listPairs({ pageSize: -5 })).rejects.toThrow(ConfigurationError);
@@ -381,7 +381,7 @@ describe("WrappersRegistry", () => {
   });
 
   describe("getConfidentialToken", () => {
-    it("returns structured result when registered and valid", async ({ signer, provider }) => {
+    it("returns structured result when registered and valid", async ({ provider }) => {
       vi.mocked(provider.getChainId).mockResolvedValue(1);
       vi.mocked(provider.readContract).mockResolvedValueOnce([true, C_TOKEN]);
       const registry = new WrappersRegistry({ provider });
@@ -394,10 +394,7 @@ describe("WrappersRegistry", () => {
       });
     });
 
-    it("returns structured result with isValid=false when revoked", async ({
-      signer,
-      provider,
-    }) => {
+    it("returns structured result with isValid=false when revoked", async ({ provider }) => {
       vi.mocked(provider.getChainId).mockResolvedValue(1);
       vi.mocked(provider.readContract).mockResolvedValueOnce([false, C_TOKEN]);
       const registry = new WrappersRegistry({ provider });
@@ -410,7 +407,7 @@ describe("WrappersRegistry", () => {
       });
     });
 
-    it("returns null when not registered (zero address)", async ({ signer, provider }) => {
+    it("returns null when not registered (zero address)", async ({ provider }) => {
       vi.mocked(provider.getChainId).mockResolvedValue(1);
       vi.mocked(provider.readContract).mockResolvedValueOnce([
         false,
@@ -425,7 +422,7 @@ describe("WrappersRegistry", () => {
   });
 
   describe("getUnderlyingToken", () => {
-    it("returns structured result when registered and valid", async ({ signer, provider }) => {
+    it("returns structured result when registered and valid", async ({ provider }) => {
       vi.mocked(provider.getChainId).mockResolvedValue(1);
       vi.mocked(provider.readContract).mockResolvedValueOnce([true, TOKEN]);
       const registry = new WrappersRegistry({ provider });
@@ -435,10 +432,7 @@ describe("WrappersRegistry", () => {
       expect(result).toEqual({ tokenAddress: TOKEN, isValid: true });
     });
 
-    it("returns structured result with isValid=false when revoked", async ({
-      signer,
-      provider,
-    }) => {
+    it("returns structured result with isValid=false when revoked", async ({ provider }) => {
       vi.mocked(provider.getChainId).mockResolvedValue(1);
       vi.mocked(provider.readContract).mockResolvedValueOnce([false, TOKEN]);
       const registry = new WrappersRegistry({ provider });
@@ -448,7 +442,7 @@ describe("WrappersRegistry", () => {
       expect(result).toEqual({ tokenAddress: TOKEN, isValid: false });
     });
 
-    it("returns null when not registered (zero address)", async ({ signer, provider }) => {
+    it("returns null when not registered (zero address)", async ({ provider }) => {
       vi.mocked(provider.getChainId).mockResolvedValue(1);
       vi.mocked(provider.readContract).mockResolvedValueOnce([
         false,
@@ -463,7 +457,7 @@ describe("WrappersRegistry", () => {
   });
 
   describe("caching", () => {
-    it("caches listPairs results", async ({ signer, provider }) => {
+    it("caches listPairs results", async ({ provider }) => {
       vi.mocked(provider.getChainId).mockResolvedValue(1);
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce(1n) // length
@@ -477,7 +471,7 @@ describe("WrappersRegistry", () => {
       expect(provider.readContract).toHaveBeenCalledTimes(2);
     });
 
-    it("caches getConfidentialToken results", async ({ signer, provider }) => {
+    it("caches getConfidentialToken results", async ({ provider }) => {
       vi.mocked(provider.getChainId).mockResolvedValue(1);
       vi.mocked(provider.readContract).mockResolvedValueOnce([true, C_TOKEN]);
       const registry = new WrappersRegistry({ provider });
@@ -488,7 +482,7 @@ describe("WrappersRegistry", () => {
       expect(provider.readContract).toHaveBeenCalledTimes(1); // not 2
     });
 
-    it("refresh() clears the cache", async ({ signer, provider }) => {
+    it("refresh() clears the cache", async ({ provider }) => {
       vi.mocked(provider.getChainId).mockResolvedValue(1);
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce(1n)
@@ -506,7 +500,7 @@ describe("WrappersRegistry", () => {
       expect(second.total).toBe(2);
     });
 
-    it("respects registryTTL config", async ({ signer, provider }) => {
+    it("respects registryTTL config", async ({ provider }) => {
       vi.mocked(provider.getChainId).mockResolvedValue(1);
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce(1n)

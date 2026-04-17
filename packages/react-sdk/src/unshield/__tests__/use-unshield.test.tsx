@@ -26,7 +26,6 @@ describe("useUnshield", () => {
 
   test("cache: invalidates balance, allowance, and wagmi after unshield", async ({
     renderWithProviders,
-    signer,
     relayer,
     provider,
   }) => {
@@ -58,7 +57,6 @@ describe("useUnshield", () => {
 
   test("behavior: forwards onSuccess callback", async ({
     renderWithProviders,
-    signer,
     relayer,
     provider,
   }) => {

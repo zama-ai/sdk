@@ -18,7 +18,6 @@ describe("useDecryptBalanceAs", () => {
 
   test("behavior: calls decryptBalanceAs and returns balance", async ({
     renderWithProviders,
-    signer,
     provider,
   }) => {
     // Return zero handle so decryptBalanceAs short-circuits to 0n
@@ -37,11 +36,7 @@ describe("useDecryptBalanceAs", () => {
     expect(result.current.data).toBe(0n);
   });
 
-  test("behavior: forwards onSuccess callback", async ({
-    renderWithProviders,
-    signer,
-    provider,
-  }) => {
+  test("behavior: forwards onSuccess callback", async ({ renderWithProviders, provider }) => {
     vi.mocked(provider.readContract).mockResolvedValue(ZERO_HANDLE);
 
     const onSuccess = vi.fn();
