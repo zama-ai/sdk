@@ -1,3 +1,4 @@
+import type { PublicParamsData } from "../relayer/relayer-sdk.types";
 import type { ZamaSDK } from "../zama-sdk";
 import type { QueryFactoryOptions } from "./factory-types";
 import { filterQueryOptions } from "./utils";
@@ -12,9 +13,9 @@ export function publicParamsQueryOptions(
   bits: number,
   config?: PublicParamsQueryConfig,
 ): QueryFactoryOptions<
-  { publicParams: Uint8Array; publicParamsId: string } | null,
+  PublicParamsData | null,
   Error,
-  { publicParams: Uint8Array; publicParamsId: string } | null,
+  PublicParamsData | null,
   ReturnType<typeof zamaQueryKeys.publicParams.bits>
 > {
   const queryKey = zamaQueryKeys.publicParams.bits(bits);
