@@ -1,7 +1,6 @@
 import { createMockRelayer, describe, expect, it, vi } from "../../test-fixtures";
 import { ReadonlyToken, ZERO_HANDLE } from "../readonly-token";
 import { Token } from "../token";
-import { MemoryStorage } from "../../storage/memory-storage";
 import { getAddress, type Address } from "viem";
 import { MAX_UINT64 } from "../../contracts/constants";
 
@@ -79,9 +78,7 @@ describe("delegation read methods", () => {
   });
 
   it("getDelegationExpiry throws when relayer cannot resolve ACL", async ({
-    signer,
-    storage,
-    sessionStorage,
+    createSDK,
     tokenAddress,
     delegatorAddress,
     delegateAddress,
@@ -89,13 +86,8 @@ describe("delegation read methods", () => {
     const relayerNoAcl = createMockRelayer({
       getAclAddress: vi.fn().mockRejectedValue(new Error("no transport config")),
     });
-    const token = new ReadonlyToken({
-      relayer: relayerNoAcl,
-      signer,
-      storage,
-      sessionStorage,
-      address: tokenAddress,
-    });
+    const sdkNoAcl = createSDK({ relayer: relayerNoAcl });
+    const token = new ReadonlyToken(sdkNoAcl, tokenAddress);
 
     await expect(token.getDelegationExpiry({ delegatorAddress, delegateAddress })).rejects.toThrow(
       "no transport config",
@@ -242,22 +234,15 @@ describe("delegation write methods", () => {
   });
 
   it("delegateDecryption throws when relayer cannot resolve ACL", async ({
-    signer,
-    storage,
-    sessionStorage,
+    createSDK,
     tokenAddress,
     delegateAddress,
   }) => {
     const relayerNoAcl = createMockRelayer({
       getAclAddress: vi.fn().mockRejectedValue(new Error("no transport config")),
     });
-    const tokenNoAcl = new Token({
-      relayer: relayerNoAcl,
-      signer,
-      storage,
-      sessionStorage,
-      address: tokenAddress,
-    });
+    const sdkNoAcl = createSDK({ relayer: relayerNoAcl });
+    const tokenNoAcl = new Token(sdkNoAcl, tokenAddress);
 
     await expect(tokenNoAcl.delegateDecryption({ delegateAddress })).rejects.toThrow(
       "no transport config",
@@ -265,22 +250,15 @@ describe("delegation write methods", () => {
   });
 
   it("revokeDelegation throws when relayer cannot resolve ACL", async ({
-    signer,
-    storage,
-    sessionStorage,
+    createSDK,
     tokenAddress,
     delegateAddress,
   }) => {
     const relayerNoAcl = createMockRelayer({
       getAclAddress: vi.fn().mockRejectedValue(new Error("no transport config")),
     });
-    const tokenNoAcl = new Token({
-      relayer: relayerNoAcl,
-      signer,
-      storage,
-      sessionStorage,
-      address: tokenAddress,
-    });
+    const sdkNoAcl = createSDK({ relayer: relayerNoAcl });
+    const tokenNoAcl = new Token(sdkNoAcl, tokenAddress);
 
     await expect(tokenNoAcl.revokeDelegation({ delegateAddress })).rejects.toThrow(
       "no transport config",
@@ -590,19 +568,12 @@ describe("batch delegation", () => {
   const TOKEN2 = "0xeDeDeDeDeDeDeDeDeDeDeDeDeDeDeDeDeDeDeDeD" as Address;
 
   it("batchDelegateDecryption calls delegateDecryption on each token", async ({
-    signer,
-    relayer,
+    sdk,
     token,
     tokenAddress,
     delegateAddress,
   }) => {
-    const token2 = new Token({
-      relayer,
-      signer,
-      storage: new MemoryStorage(),
-      sessionStorage: new MemoryStorage(),
-      address: TOKEN2,
-    });
+    const token2 = new Token(sdk, TOKEN2);
 
     const results = await Token.batchDelegateDecryption({
       tokens: [token, token2],
@@ -618,7 +589,7 @@ describe("batch delegation", () => {
 
   it("batchDelegateDecryption captures per-token errors", async ({
     signer,
-    relayer,
+    sdk,
     token,
     tokenAddress,
     delegateAddress,
@@ -627,13 +598,7 @@ describe("batch delegation", () => {
       .mockResolvedValueOnce("0xtxhash")
       .mockRejectedValueOnce(new Error("revert"));
 
-    const token2 = new Token({
-      relayer,
-      signer,
-      storage: new MemoryStorage(),
-      sessionStorage: new MemoryStorage(),
-      address: TOKEN2,
-    });
+    const token2 = new Token(sdk, TOKEN2);
 
     const results = await Token.batchDelegateDecryption({
       tokens: [token, token2],
@@ -656,7 +621,7 @@ describe("batch delegation", () => {
 
   it("batchRevokeDelegation captures per-token errors", async ({
     signer,
-    relayer,
+    sdk,
     token,
     tokenAddress,
     delegateAddress,
@@ -665,13 +630,7 @@ describe("batch delegation", () => {
       .mockResolvedValueOnce("0xtxhash")
       .mockRejectedValueOnce(new Error("revert"));
 
-    const token2 = new Token({
-      relayer,
-      signer,
-      storage: new MemoryStorage(),
-      sessionStorage: new MemoryStorage(),
-      address: TOKEN2,
-    });
+    const token2 = new Token(sdk, TOKEN2);
 
     const results = await Token.batchRevokeDelegation({
       tokens: [token, token2],
@@ -860,26 +819,18 @@ describe("batchDecryptBalancesAs edge cases", () => {
     ).rejects.toThrow("tokens.length (1) must equal handles.length (0)");
   });
 
-  it("throws when tokens use different relayers", async ({
-    signer,
-    storage,
-    sessionStorage,
+  it("throws when tokens use different SDK instances", async ({
+    createSDK,
     readonlyToken,
     delegatorAddress,
   }) => {
-    const otherRelayer = createMockRelayer();
-    const token2 = new ReadonlyToken({
-      relayer: otherRelayer,
-      signer,
-      storage,
-      sessionStorage,
-      address: TOKEN2,
-    });
+    const otherSdk = createSDK({ relayer: createMockRelayer() });
+    const token2 = new ReadonlyToken(otherSdk, TOKEN2);
 
     await expect(
       ReadonlyToken.batchDecryptBalancesAs([readonlyToken, token2], {
         delegatorAddress,
       }),
-    ).rejects.toThrow("All tokens in a batch operation must share the same relayer instance");
+    ).rejects.toThrow("All tokens in a batch operation must share the same ZamaSDK instance");
   });
 });

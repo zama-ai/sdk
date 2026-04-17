@@ -33,6 +33,35 @@ describe("CredentialsManager", () => {
     expect(creds.signature).toBe("0xsig789");
   });
 
+  it("normalizes mixed-case contract addresses to checksummed form", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+
+    const lowercase = TOKEN_A.toLowerCase() as Address;
+    const creds = await credentialManager.allow(lowercase);
+
+    // The stored contractAddresses must be strictly equal to the checksummed
+    // form — credentials cache key stability depends on normalization.
+    expect(creds.contractAddresses).toEqual([getAddress(TOKEN_A)]);
+  });
+
+  it("treats mixed-case and checksummed inputs as cache-equivalent", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+
+    await credentialManager.allow(TOKEN_A);
+    await credentialManager.allow(TOKEN_A.toLowerCase() as Address);
+
+    // Same address in different casing must not trigger a second signature.
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+  });
+
   it("returns cached credentials on second call with same contracts", async ({
     relayer,
     signer,
@@ -1007,22 +1036,38 @@ describe("contract address extension", () => {
 
     await credentialManager.allow(TOKEN_A);
 
-    // Launch two extensions concurrently with different contracts
+    // Launch two extensions concurrently with different contracts. Which call
+    // reaches #extendContracts first is non-deterministic (decryptCredentials
+    // uses native crypto.subtle), so assertions must be order-independent.
     const [resultB, resultC] = await Promise.all([
       credentialManager.allow(TOKEN_A, TOKEN_B),
       credentialManager.allow(TOKEN_A, TOKEN_C),
     ]);
 
-    // The last result should cover all three contracts (no address dropped)
-    const finalContracts = resultC.contractAddresses.map((a) => getAddress(a));
-    expect(finalContracts).toContain(getAddress(TOKEN_A));
-    expect(finalContracts).toContain(getAddress(TOKEN_B));
-    expect(finalContracts).toContain(getAddress(TOKEN_C));
+    // Each call's result must cover its own required contracts.
+    const contractsB = resultB.contractAddresses.map((a) => getAddress(a));
+    expect(contractsB).toContain(getAddress(TOKEN_A));
+    expect(contractsB).toContain(getAddress(TOKEN_B));
 
-    // First concurrent result covers at least A and B
-    const firstContracts = resultB.contractAddresses.map((a) => getAddress(a));
-    expect(firstContracts).toContain(getAddress(TOKEN_A));
-    expect(firstContracts).toContain(getAddress(TOKEN_B));
+    const contractsC = resultC.contractAddresses.map((a) => getAddress(a));
+    expect(contractsC).toContain(getAddress(TOKEN_A));
+    expect(contractsC).toContain(getAddress(TOKEN_C));
+
+    // Whichever call extended last must have merged with the other's result,
+    // so at least one of the two results covers all three contracts.
+    const hasAll = (contracts: string[]) =>
+      contracts.includes(getAddress(TOKEN_A)) &&
+      contracts.includes(getAddress(TOKEN_B)) &&
+      contracts.includes(getAddress(TOKEN_C));
+    expect(hasAll(contractsB) || hasAll(contractsC)).toBe(true);
+
+    // Persisted state must reflect all three contracts — the real invariant
+    // the extension deduplication is meant to preserve.
+    const persisted = await credentialManager.allow(TOKEN_A, TOKEN_B, TOKEN_C);
+    const persistedContracts = persisted.contractAddresses.map((a) => getAddress(a));
+    expect(persistedContracts).toContain(getAddress(TOKEN_A));
+    expect(persistedContracts).toContain(getAddress(TOKEN_B));
+    expect(persistedContracts).toContain(getAddress(TOKEN_C));
   });
 
   it("persists ciphertext before session signature during extension", async ({

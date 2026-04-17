@@ -100,7 +100,9 @@ export function activityFeedQueryOptions(
         return sortByBlockNumber(parsed);
       }
 
-      const decrypted = await token.decryptHandles(handles, keyUserAddress);
+      const decrypted = await token.sdk.userDecrypt(
+        handles.map((handle) => ({ handle, contractAddress: token.address })),
+      );
       return sortByBlockNumber(applyDecryptedValues(parsed, decrypted));
     },
     staleTime: Infinity,

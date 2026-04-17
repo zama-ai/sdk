@@ -15,7 +15,7 @@ describe("useTotalSupply", () => {
     expect(data).toBe(42000n);
     expect(dataUpdatedAt).toEqual(expect.any(Number));
     expect(signer.readContract).toHaveBeenCalledWith(
-      expect.objectContaining({ functionName: "totalSupply", address: TOKEN }),
+      expect.objectContaining({ functionName: "inferredTotalSupply", address: TOKEN }),
     );
   });
 });

@@ -1,4 +1,5 @@
-import { describe, expect, test, vi, mockQueryContext } from "../../test-fixtures";
+import { describe, expect, test, mockQueryContext } from "../../test-fixtures";
+import type { vi } from "../../test-fixtures";
 import type { RawLog } from "../../events/onchain-events";
 import { Topics } from "../../events/onchain-events";
 
@@ -100,12 +101,10 @@ describe("activityFeedQueryOptions", () => {
     const token = createMockReadonlyToken(TOKEN);
     const handleA = bytes32("aa".repeat(32));
     const handleB = bytes32("bb".repeat(32));
-    vi.mocked(token.decryptHandles).mockResolvedValue(
-      new Map<Address, bigint>([
-        [handleA, 7n],
-        [handleB, 3n],
-      ]),
-    );
+    (token.sdk.userDecrypt as ReturnType<typeof vi.fn>).mockResolvedValue({
+      [handleA]: 7n,
+      [handleB]: 3n,
+    });
 
     const logs = [
       {
@@ -128,7 +127,10 @@ describe("activityFeedQueryOptions", () => {
 
     const result = await options.queryFn(mockQueryContext(options.queryKey));
 
-    expect(token.decryptHandles).toHaveBeenCalledWith([handleA, handleB], USER);
+    expect(token.sdk.userDecrypt).toHaveBeenCalledWith([
+      { handle: handleA, contractAddress: token.address },
+      { handle: handleB, contractAddress: token.address },
+    ]);
     expect(result).toHaveLength(2);
     expect(result[0]?.metadata.blockNumber).toBe(10n);
     expect(result[1]?.metadata.blockNumber).toBe(5n);
@@ -158,7 +160,7 @@ describe("activityFeedQueryOptions", () => {
 
     const result = await options.queryFn(mockQueryContext(options.queryKey));
 
-    expect(token.decryptHandles).not.toHaveBeenCalled();
+    expect(token.sdk.userDecrypt).not.toHaveBeenCalled();
     expect(result).toEqual([
       expect.objectContaining({
         amount: { type: "encrypted", handle },

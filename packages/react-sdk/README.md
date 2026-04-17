@@ -1,6 +1,6 @@
 # @zama-fhe/react-sdk
 
-React hooks for confidential contract operations, built on [React Query](https://tanstack.com/query). Provides declarative, cache-aware hooks for session authorization, balances, confidential transfers, shielding, unshielding, and decryption — so you never deal with raw FHE operations in your components.
+React hooks for confidential contract operations, built on [React Query](https://tanstack.com/query). Provides declarative, declarative hooks for session authorization, balances, confidential transfers, shielding, unshielding, and decryption — so you never deal with raw FHE operations in your components.
 
 ## Installation
 
@@ -220,7 +220,7 @@ function useReadonlyToken(tokenAddress: Address): ReadonlyToken;
 
 #### `useConfidentialBalance`
 
-Single-token balance with automatic decryption. Uses two-phase polling: polls the encrypted handle at a configurable interval, and only triggers the expensive decryption when the handle changes.
+Single-token balance with automatic decryption. Calls `token.balanceOf(owner)` which reads the on-chain handle and decrypts via the SDK. Cached values are returned instantly — the relayer is only hit when the handle changes. Pass `refetchInterval` to poll for updates.
 
 ```ts
 function useConfidentialBalance(
@@ -230,7 +230,6 @@ function useConfidentialBalance(
 
 interface UseConfidentialBalanceConfig {
   tokenAddress: Address;
-  handleRefetchInterval?: number; // default: 10000ms
 }
 ```
 
@@ -241,36 +240,43 @@ const {
   data: balance,
   isLoading,
   error,
-} = useConfidentialBalance({
-  tokenAddress: "0xTokenAddress",
-  handleRefetchInterval: 5_000,
-});
+} = useConfidentialBalance(
+  {
+    tokenAddress: "0xTokenAddress",
+  },
+  { refetchInterval: 5_000 },
+);
 ```
 
 #### `useConfidentialBalances`
 
-Multi-token batch balance. Same two-phase polling pattern.
+Multi-token batch balance. Calls `ReadonlyToken.batchBalancesOf()` which decrypts each token's balance via the SDK. Cached values are returned instantly — the relayer is only hit for changed handles. Returns partial results when some tokens fail.
 
 ```ts
 function useConfidentialBalances(
   config: UseConfidentialBalancesConfig,
   options?: UseConfidentialBalancesOptions,
-): UseQueryResult<Map<Address, bigint>, Error>;
+): UseQueryResult<BatchBalancesResult, Error>;
 
 interface UseConfidentialBalancesConfig {
   tokenAddresses: Address[];
-  handleRefetchInterval?: number;
-  maxConcurrency?: number;
+}
+
+interface BatchBalancesResult {
+  results: Map<Address, bigint>;
+  errors: Map<Address, ZamaError>;
 }
 ```
 
 ```tsx
-const { data: balances } = useConfidentialBalances({
+const { data } = useConfidentialBalances({
   tokenAddresses: ["0xTokenA", "0xTokenB", "0xTokenC"],
 });
 
-// balances is a Map<Address, bigint>
-const tokenABalance = balances?.get("0xTokenA");
+const tokenABalance = data?.results.get("0xTokenA");
+if (data && data.errors.size > 0) {
+  // some tokens failed — check data.errors
+}
 ```
 
 ### Authorization
@@ -295,14 +301,18 @@ const { data: balance } = useConfidentialBalance({ tokenAddress: "0xTokenA" });
 
 #### `useIsAllowed`
 
-Check whether a session signature is cached and valid. Returns `true` if decrypt operations can proceed without a wallet prompt. Use this to conditionally enable UI elements (e.g. a "Reveal Balances" button).
+Check whether a session signature is cached, valid, and scoped to the contract addresses you want to decrypt. Returns `true` if decrypt operations can proceed without a wallet prompt. Use this to conditionally enable UI elements (e.g. a "Reveal Balances" button).
 
 ```ts
-function useIsAllowed(): UseQueryResult<boolean, Error>;
+function useIsAllowed(config: {
+  contractAddresses: [Address, ...Address[]];
+}): UseQueryResult<boolean, Error>;
 ```
 
 ```tsx
-const { data: allowed } = useIsAllowed();
+const { data: allowed } = useIsAllowed({
+  contractAddresses: ["0xTokenA"],
+});
 
 <button disabled={!allowed}>Reveal Balance</button>;
 ```
@@ -792,8 +802,6 @@ import { zamaQueryKeys, decryptionKeys } from "@zama-fhe/react-sdk";
 | ------------------------------------ | --------------------------------------------------------------------------- | ----------------------------------- |
 | `zamaQueryKeys.confidentialBalance`  | `.all`, `.token(address)`, `.owner(address, owner)`                         | Single-token decrypted balance.     |
 | `zamaQueryKeys.confidentialBalances` | `.all`, `.tokens(addresses, owner)`                                         | Multi-token batch balances.         |
-| `zamaQueryKeys.confidentialHandle`   | `.all`, `.token(address)`, `.owner(address, owner)`                         | Single-token encrypted handle.      |
-| `zamaQueryKeys.confidentialHandles`  | `.all`, `.tokens(addresses, owner)`                                         | Multi-token batch handles.          |
 | `zamaQueryKeys.isAllowed`            | `.all`                                                                      | Session signature status.           |
 | `zamaQueryKeys.underlyingAllowance`  | `.all`, `.token(address)`, `.scope(address, owner, wrapper)`                | Underlying ERC-20 allowance.        |
 | `zamaQueryKeys.activityFeed`         | `.all`, `.token(address)`, `.scope(address, userAddress, logsKey, decrypt)` | Activity feed items.                |
@@ -854,7 +862,7 @@ FHE decrypt credentials are generated once per wallet + contract set and cached 
 3. **Page reload** — Encrypted credentials are loaded from storage; the wallet is prompted once to re-sign for the session.
 4. **Expiry** — Credentials expire based on `keypairTTL` (default: 2592000s = 30 days). After expiry, the next decrypt regenerates and re-prompts.
 5. **Pre-authorization** — Call `useAllow(contractAddresses)` early to batch-authorize all contracts in one wallet prompt, avoiding repeated popups.
-6. **Check status** — Use `useIsAllowed()` to conditionally enable UI elements (e.g. disable "Reveal" until allowed).
+6. **Check status** — Use `useIsAllowed({ contractAddresses })` to conditionally enable UI elements (e.g. disable "Reveal" until allowed).
 7. **Disconnect** — Call `useRevoke(contractAddresses)` or `await credentials.revoke()` to clear the session signature from memory.
 
 ### Web Extension Support
@@ -918,12 +926,9 @@ const message = matchZamaError(error, {
 
 ### Balance Caching and Refresh
 
-Balance queries use two-phase polling:
+Balance queries call `token.balanceOf(owner)`, which reads the encrypted handle on-chain and decrypts via `sdk.userDecrypt`. The SDK's `DecryptCache` returns previously decrypted values instantly when the handle hasn't changed — the expensive relayer round-trip only runs when the balance actually changes. Pass `refetchInterval` to poll for on-chain updates.
 
-1. **Phase 1 (cheap)** — Polls the encrypted balance handle via a read-only RPC call at `handleRefetchInterval` (default: 10s).
-2. **Phase 2 (expensive)** — Only when the handle changes (i.e. balance updated on-chain), triggers an FHE decryption via the relayer.
-
-This means balances update within `handleRefetchInterval` ms of any on-chain change, without wasting decryption resources. Mutation hooks (`useConfidentialTransfer`, `useShield`, `useUnshield`, etc.) automatically invalidate the relevant caches on success, so the UI updates immediately after user actions.
+Mutation hooks (`useConfidentialTransfer`, `useShield`, `useUnshield`, etc.) automatically invalidate the relevant caches on success, so the UI updates immediately after user actions.
 
 To force a refresh:
 
@@ -956,4 +961,4 @@ All public exports from `@zama-fhe/sdk` are re-exported from the main entry poin
 
 **Activity feed:** `ActivityDirection`, `ActivityType`, `ActivityAmount`, `ActivityLogMetadata`, `ActivityItem`, `parseActivityFeed`, `extractEncryptedHandles`, `applyDecryptedValues`, `sortByBlockNumber`.
 
-**Contract call builders:** `confidentialBalanceOfContract`, `confidentialTransferContract`, `confidentialTransferFromContract`, `isOperatorContract`, `unwrapContract`, `unwrapFromBalanceContract`, `finalizeUnwrapContract`, `setOperatorContract`, `underlyingContract`, `wrapContract`, `supportsInterfaceContract`, `isConfidentialTokenContract`, `isConfidentialWrapperContract`, `nameContract`, `symbolContract`, `decimalsContract`, `allowanceContract`, `approveContract`, `confidentialTotalSupplyContract`, `totalSupplyContract`, `rateContract`.
+**Contract call builders:** `confidentialBalanceOfContract`, `confidentialTransferContract`, `confidentialTransferFromContract`, `isOperatorContract`, `unwrapContract`, `unwrapFromBalanceContract`, `finalizeUnwrapContract`, `setOperatorContract`, `underlyingContract`, `inferredTotalSupplyContract`, `wrapContract`, `supportsInterfaceContract`, `isConfidentialTokenContract`, `isConfidentialWrapperContract`, `nameContract`, `symbolContract`, `decimalsContract`, `allowanceContract`, `approveContract`, `confidentialTotalSupplyContract`, `totalSupplyContract`, `rateContract`.
