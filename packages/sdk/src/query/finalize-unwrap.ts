@@ -3,15 +3,12 @@ import type { TransactionResult } from "../types";
 import type { MutationFactoryOptions } from "./factory-types";
 import type { Address } from "viem";
 import type { Handle } from "../relayer/relayer-sdk.types";
-import { ConfigurationError } from "../errors";
-
 /** Variables for {@link finalizeUnwrapMutationOptions}. */
-export interface FinalizeUnwrapParams {
+export type FinalizeUnwrapParams =
   /** Preferred input from upgraded `UnwrapRequested` events. */
-  unwrapRequestId?: Handle;
+  | { unwrapRequestId: Handle }
   /** Legacy input from pre-upgrade `UnwrapRequested` events. */
-  burnAmountHandle?: Handle;
-}
+  | { burnAmountHandle: Handle };
 
 export function finalizeUnwrapMutationOptions(
   token: Token,
@@ -22,12 +19,9 @@ export function finalizeUnwrapMutationOptions(
 > {
   return {
     mutationKey: ["zama.finalizeUnwrap", token.address] as const,
-    mutationFn: async ({ unwrapRequestId, burnAmountHandle }) => {
-      const unwrapRequestIdOrAmount = unwrapRequestId ?? burnAmountHandle;
-      if (unwrapRequestIdOrAmount === undefined) {
-        throw new ConfigurationError("finalizeUnwrap requires unwrapRequestId or burnAmountHandle");
-      }
-      return token.finalizeUnwrap(unwrapRequestIdOrAmount);
+    mutationFn: async (params) => {
+      const handle = "unwrapRequestId" in params ? params.unwrapRequestId : params.burnAmountHandle;
+      return token.finalizeUnwrap(handle);
     },
   };
 }
