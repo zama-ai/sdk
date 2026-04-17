@@ -12083,11 +12083,9 @@ export interface PaginatedResult<T> {
 // @public
 export function parseActivityFeed(logs: readonly (RawLog & Partial<ActivityLogMetadata>)[], userAddress: Address): ActivityItem[];
 
-// @public (undocumented)
+// @public
 export interface PendingUnshieldRequest {
-    // (undocumented)
     readonly unwrapRequestId?: Handle;
-    // (undocumented)
     readonly unwrapTxHash: Hex;
 }
 
