@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.5.0](https://github.com/zama-ai/sdk/compare/v2.4.0...v2.5.0) (2026-04-17)
+
+### Features
+
+- **sdk:** add handles and result fields to decrypt events [SDK-85] ([5d02da5]())
+- **sdk:** add inferred total supply contract builder ([#243](https://github.com/zama-ai/sdk/issues/243)) ([24f2c1d]())
+- **sdk:** add sdk.publicDecrypt() as the primitive for public decryptions ([#250](https://github.com/zama-ai/sdk/issues/250)) ([c38a578]())
+
+### Bug Fixes
+
+- align example apps with scoped isAllowed checks ([#233](https://github.com/zama-ai/sdk/issues/233)) ([111423b]())
+- centralize ZERO_HANDLE, use isZeroHandle checks ([#251](https://github.com/zama-ai/sdk/issues/251)) ([4abb133]())
+- **sdk:** address PR review comments on userDecrypt [SDK-85] ([b004949]())
+
 ## [2.5.0-alpha.6](https://github.com/zama-ai/sdk/compare/v2.5.0-alpha.5...v2.5.0-alpha.6) (2026-04-16)
 
 ### Bug Fixes
