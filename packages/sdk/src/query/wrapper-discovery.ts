@@ -47,7 +47,7 @@ export function wrapperDiscoveryQueryOptions(
     queryKey,
     queryFn: async (context) => {
       const [, { erc20Address }] = context.queryKey;
-      assertNonNullable(erc20Address, "wrapperDiscoveryQueryOptions: erc20Address")
+      assertNonNullable(erc20Address, "wrapperDiscoveryQueryOptions: erc20Address");
       const result = await registry.getConfidentialToken(erc20Address);
       return result ? result.confidentialTokenAddress : null;
     },
