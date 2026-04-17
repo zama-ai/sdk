@@ -1,5 +1,37 @@
 # Changelog
 
+## [3.0.0-alpha.5](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.4...v3.0.0-alpha.5) (2026-04-17)
+
+### Features
+
+- **SDK-69:** support both old and new wrapper interfaceIds during transition ([#235](https://github.com/zama-ai/sdk/issues/235)) ([93c7d8a]())
+
+## [3.0.0-alpha.4](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.3...v3.0.0-alpha.4) (2026-04-17)
+
+## [3.0.0-alpha.3](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.2...v3.0.0-alpha.3) (2026-04-17)
+
+## [3.0.0-alpha.2](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.1...v3.0.0-alpha.2) (2026-04-17)
+
+### Features
+
+- **sdk-61:** replace WrappersRegistry with protocol ConfidentialTokenWrappersRegistry contracts ([#229](https://github.com/zama-ai/sdk/issues/229)) ([dd4364d]())
+
+## [3.0.0-alpha.1](https://github.com/zama-ai/sdk/compare/v2.5.0-alpha.6...v3.0.0-alpha.1) (2026-04-17)
+
+### ⚠ BREAKING CHANGES
+
+- The following exports are removed:
+- @zama-fhe/sdk: parseActivityFeed, applyDecryptedValues, activity types
+  (ActivityItem, ActivityDirection, ActivityAmount, ActivityType),
+  activityFeedQueryOptions, queryKeys.activityFeed
+- @zama-fhe/react-sdk: useActivityFeed
+
+* fmt
+
+### Code Refactoring
+
+- remove activity feed from SDK and react-sdk ([#258](https://github.com/zama-ai/sdk/issues/258)) ([5784dba]())
+
 ## [2.5.0-alpha.6](https://github.com/zama-ai/sdk/compare/v2.5.0-alpha.5...v2.5.0-alpha.6) (2026-04-16)
 
 ### Bug Fixes

@@ -91,15 +91,15 @@ import {
 
 ## Wrapping and unwrapping
 
-| Builder                                                          | What it does                                       |
-| ---------------------------------------------------------------- | -------------------------------------------------- |
-| `wrapContract(wrapper, to, amount)`                              | Wrap ERC-20 tokens                                 |
-| `unwrapContract(token, from, to, encryptedAmount, inputProof)`   | Request unwrap                                     |
-| `unwrapFromBalanceContract(token, from, to, encryptedBalance)`   | Unwrap using on-chain handle                       |
-| `finalizeUnwrapContract(wrapper, burntAmount, cleartext, proof)` | Finalize unwrap                                    |
-| `underlyingContract(wrapper)`                                    | Read underlying ERC-20 address                     |
-| `inferredTotalSupplyContract(wrapper)`                           | Read inferred plaintext total supply               |
-| `totalSupplyContract(wrapper)`                                   | Deprecated alias for `inferredTotalSupplyContract` |
+| Builder                                                              | What it does                                       |
+| -------------------------------------------------------------------- | -------------------------------------------------- |
+| `wrapContract(wrapper, to, amount)`                                  | Wrap ERC-20 tokens                                 |
+| `unwrapContract(token, from, to, encryptedAmount, inputProof)`       | Request unwrap                                     |
+| `unwrapFromBalanceContract(token, from, to, encryptedBalance)`       | Unwrap using on-chain handle                       |
+| `finalizeUnwrapContract(wrapper, unwrapRequestId, cleartext, proof)` | Finalize unwrap                                    |
+| `underlyingContract(wrapper)`                                        | Read underlying ERC-20 address                     |
+| `inferredTotalSupplyContract(wrapper)`                               | Read inferred plaintext total supply               |
+| `totalSupplyContract(wrapper)`                                       | Deprecated alias for `inferredTotalSupplyContract` |
 
 ## Discovery and detection
 

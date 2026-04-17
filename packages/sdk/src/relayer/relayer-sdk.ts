@@ -12,6 +12,8 @@ import type {
   EncryptResult,
   Handle,
   PublicDecryptResult,
+  PublicKeyData,
+  PublicParamsData,
   UserDecryptParams,
 } from "./relayer-sdk.types";
 import type { Address, Hex } from "viem";
@@ -59,15 +61,10 @@ export interface RelayerSDK {
   requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
 
   /** Fetch the FHE network public key. Returns `null` if not available. */
-  getPublicKey(): Promise<{
-    publicKeyId: string;
-    publicKey: Uint8Array;
-  } | null>;
+  getPublicKey(): Promise<PublicKeyData | null>;
 
   /** Fetch FHE public parameters for a given bit size. Returns `null` if not available. */
-  getPublicParams(
-    bits: number,
-  ): Promise<{ publicParams: Uint8Array; publicParamsId: string } | null>;
+  getPublicParams(bits: number): Promise<PublicParamsData | null>;
 
   /** Return the ACL contract address for the current chain. */
   getAclAddress(): Promise<Address>;

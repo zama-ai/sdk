@@ -10,7 +10,6 @@ import { getBrowserExtensionRuntime } from "./browser-extension";
 import type {
   CreateDelegatedEIP712Request,
   CreateEIP712Request,
-  CreateEIP712ResponseData,
   DelegatedUserDecryptRequest,
   DelegatedUserDecryptResponseData,
   EncryptRequest,
@@ -487,31 +486,7 @@ function handleCreateEIP712(request: CreateEIP712Request): void {
       payload.durationDays,
     );
 
-    const response: CreateEIP712ResponseData = {
-      domain: {
-        name: eip712.domain.name,
-        version: eip712.domain.version,
-        chainId: Number(eip712.domain.chainId),
-        verifyingContract: eip712.domain.verifyingContract,
-      },
-      types: {
-        UserDecryptRequestVerification: eip712.types.UserDecryptRequestVerification.map(
-          (field) => ({
-            name: field.name,
-            type: field.type,
-          }),
-        ),
-      },
-      message: {
-        publicKey: prefixHex(eip712.message.publicKey),
-        contractAddresses: [...eip712.message.contractAddresses],
-        startTimestamp: BigInt(eip712.message.startTimestamp),
-        durationDays: BigInt(eip712.message.durationDays),
-        extraData: prefixHex(eip712.message.extraData),
-      },
-    };
-
-    sendSuccess(id, type, response);
+    sendSuccess(id, type, eip712);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[Worker] CreateEIP712 error:", message);

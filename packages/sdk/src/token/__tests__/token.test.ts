@@ -82,10 +82,28 @@ describe("Token", () => {
   });
 
   describe("isWrapper", () => {
-    it("returns true when ERC-165 wrapper check passes", async ({ signer, token }) => {
-      vi.mocked(signer.readContract).mockResolvedValue(true);
+    it("returns true when baseline interfaceId (0xf1f4c25a) matches", async ({ signer, token }) => {
+      vi.mocked(signer.readContract)
+        .mockResolvedValueOnce(true) // baseline ID
+        .mockResolvedValueOnce(false); // upgraded ID
 
       expect(await token.isWrapper()).toBe(true);
+    });
+
+    it("returns true when new interfaceId (0x1f1c62b2) matches", async ({ signer, token }) => {
+      vi.mocked(signer.readContract)
+        .mockResolvedValueOnce(false) // baseline ID
+        .mockResolvedValueOnce(true); // upgraded ID
+
+      expect(await token.isWrapper()).toBe(true);
+    });
+
+    it("returns false when neither interfaceId matches", async ({ signer, token }) => {
+      vi.mocked(signer.readContract)
+        .mockResolvedValueOnce(false) // baseline ID
+        .mockResolvedValueOnce(false); // upgraded ID
+
+      expect(await token.isWrapper()).toBe(false);
     });
   });
 
@@ -301,11 +319,17 @@ describe("Token", () => {
   });
 
   describe("finalizeUnwrap", () => {
-    it("decrypts burn amount and finalizes", async ({ relayer, signer, token }) => {
-      const burnHandle = "0xburn" as Address;
-      const result = await token.finalizeUnwrap(burnHandle);
+    it("calls publicDecrypt with unwrapRequestId and finalizes on-chain", async ({
+      relayer,
+      signer,
+      token,
+    }) => {
+      // unwrapRequestId comes from the UnwrapRequested event — it is a bytes32 identifier,
+      // not the burn amount handle. publicDecrypt must receive this exact value.
+      const unwrapRequestId = "0x" + "ab".repeat(32);
+      const result = await token.finalizeUnwrap(unwrapRequestId);
 
-      expect(relayer.publicDecrypt).toHaveBeenCalledWith([burnHandle]);
+      expect(relayer.publicDecrypt).toHaveBeenCalledWith([unwrapRequestId]);
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "finalizeUnwrap" }),
       );
@@ -326,7 +350,11 @@ describe("Token", () => {
       vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
-            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`],
+            topics: [
+              Topics.UnwrapRequested,
+              `0x000000000000000000000000${userAddress.slice(2)}`,
+              `0x${"ff".repeat(32)}`,
+            ],
             data: `0x${"ff".repeat(32)}`,
           },
         ],
@@ -397,7 +425,11 @@ describe("Token", () => {
       vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
-            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`],
+            topics: [
+              Topics.UnwrapRequested,
+              `0x000000000000000000000000${userAddress.slice(2)}`,
+              `0x${"ff".repeat(32)}`,
+            ],
             data: `0x${"ff".repeat(32)}`,
           },
         ],
@@ -1032,7 +1064,11 @@ describe("Token", () => {
       vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
-            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`],
+            topics: [
+              Topics.UnwrapRequested,
+              `0x000000000000000000000000${userAddress.slice(2)}`,
+              `0x${"ff".repeat(32)}`,
+            ],
             data: `0x${"ff".repeat(32)}`,
           },
         ],
@@ -1296,7 +1332,11 @@ describe("Token", () => {
       vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
-            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`],
+            topics: [
+              Topics.UnwrapRequested,
+              `0x000000000000000000000000${userAddress.slice(2)}`,
+              `0x${"ff".repeat(32)}`,
+            ],
             data: `0x${"ff".repeat(32)}`,
           },
         ],
@@ -1318,7 +1358,11 @@ describe("Token", () => {
       vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
-            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`],
+            topics: [
+              Topics.UnwrapRequested,
+              `0x000000000000000000000000${userAddress.slice(2)}`,
+              `0x${"ff".repeat(32)}`,
+            ],
             data: `0x${"ff".repeat(32)}`,
           },
         ],
@@ -1336,7 +1380,11 @@ describe("Token", () => {
       vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
-            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`],
+            topics: [
+              Topics.UnwrapRequested,
+              `0x000000000000000000000000${userAddress.slice(2)}`,
+              `0x${"ff".repeat(32)}`,
+            ],
             data: `0x${"ff".repeat(32)}`,
           },
         ],
@@ -1350,7 +1398,11 @@ describe("Token", () => {
       vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
-            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`],
+            topics: [
+              Topics.UnwrapRequested,
+              `0x000000000000000000000000${userAddress.slice(2)}`,
+              `0x${"ff".repeat(32)}`,
+            ],
             data: `0x${"ff".repeat(32)}`,
           },
         ],

@@ -1,6 +1,7 @@
 import type { GenericStorage } from "../types";
 import { assertObject, assertStringProp, toError } from "../utils";
 import type { GenericLogger } from "../worker/worker.types";
+import type { PublicKeyData, PublicParamsData } from "./relayer-sdk.types";
 
 // ── Cached data shapes ──────────────────────────────────────
 
@@ -33,13 +34,10 @@ interface CachedPublicParams {
 // ── Return types ────────────────────────────────────────────
 
 /** Return type of the public key fetcher. */
-type PublicKeyResult = { publicKeyId: string; publicKey: Uint8Array } | null;
+type PublicKeyResult = PublicKeyData | null;
 
 /** Return type of the public params fetcher. */
-type PublicParamsResult = {
-  publicParamsId: string;
-  publicParams: Uint8Array;
-} | null;
+type PublicParamsResult = PublicParamsData | null;
 
 // ── Constants ───────────────────────────────────────────────
 
