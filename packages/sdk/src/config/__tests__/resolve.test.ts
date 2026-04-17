@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { web, node, cleartext } from "../transports";
+import { web, node, cleartext, custom } from "../transports";
 import { SepoliaConfig, MainnetConfig, HoodiConfig } from "../../relayer/relayer-utils";
 import { ConfigurationError } from "../../errors";
 
@@ -70,7 +70,7 @@ describe("resolveChainTransports", () => {
   it("throws for cleartext transport with missing chain config", () => {
     const transport = cleartext({ executorAddress: "0xExec" as `0x${string}` });
     expect(() => resolveChainTransports([], { [999]: transport }, [999])).toThrow(
-      "cleartext transport but has no entry",
+      "transport configured but no entry in the chains array",
     );
   });
 
@@ -87,6 +87,20 @@ describe("resolveChainTransports", () => {
     const bad = { type: "unknown" } as any;
     expect(() => resolveChainTransports([sepoliaChain], { [11155111]: bad }, [11155111])).toThrow(
       "unrecognized transport",
+    );
+  });
+
+  it("resolves chains with custom transport", () => {
+    const mockRelayer = { terminate: () => {} } as any;
+    const transport = custom(mockRelayer);
+    const result = resolveChainTransports([sepoliaChain], { [11155111]: transport }, [11155111]);
+    expect(result.get(11155111)?.transport).toBe(transport);
+  });
+
+  it("throws for custom transport with missing chain config", () => {
+    const mockRelayer = { terminate: () => {} } as any;
+    expect(() => resolveChainTransports([], { [999]: custom(mockRelayer) }, [999])).toThrow(
+      "transport configured but no entry in the chains array",
     );
   });
 
@@ -165,6 +179,28 @@ describe("buildRelayer", () => {
     const transports = resolveChainTransports(
       [sepoliaChain, mainnetChain],
       { [11155111]: web(undefined, opts1), [1]: web(undefined, opts2) },
+      [11155111, 1],
+    );
+    const relayer = buildRelayer(transports, resolveChainId);
+    expect(relayer.constructor.name).toBe("CompositeRelayer");
+  });
+
+  it("uses custom relayer directly without constructing", () => {
+    const mockRelayer = { terminate: vi.fn() } as any;
+    const transports = resolveChainTransports(
+      [sepoliaChain],
+      { [11155111]: custom(mockRelayer) },
+      [11155111],
+    );
+    const relayer = buildRelayer(transports, resolveChainId);
+    expect(relayer).toBe(mockRelayer);
+  });
+
+  it("returns CompositeRelayer for mixed web + custom", () => {
+    const mockRelayer = { terminate: vi.fn() } as any;
+    const transports = resolveChainTransports(
+      [sepoliaChain, mainnetChain],
+      { [11155111]: web(), [1]: custom(mockRelayer) },
       [11155111, 1],
     );
     const relayer = buildRelayer(transports, resolveChainId);

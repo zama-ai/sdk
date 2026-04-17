@@ -12,6 +12,7 @@ export {
   web,
   node,
   cleartext,
+  custom,
   resolveChainTransports,
   buildRelayer,
   resolveStorage,
@@ -28,6 +29,7 @@ export type {
   WebTransportConfig,
   NodeTransportConfig,
   CleartextTransportConfig,
+  CustomTransportConfig,
 } from "./config";
 
 // Core SDK

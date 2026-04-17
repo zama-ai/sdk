@@ -1,8 +1,9 @@
-export { web, node, cleartext } from "./transports";
+export { web, node, cleartext, custom } from "./transports";
 export type {
   WebTransportConfig,
   NodeTransportConfig,
   CleartextTransportConfig,
+  CustomTransportConfig,
   TransportConfig,
 } from "./transports";
 

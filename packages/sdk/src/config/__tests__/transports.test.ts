@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { web, node, cleartext } from "../transports";
+import { web, node, cleartext, custom } from "../transports";
 
 describe("web()", () => {
   it("returns tagged empty config when called with no args", () => {
@@ -54,5 +54,20 @@ describe("cleartext()", () => {
       type: "cleartext",
       chain,
     });
+  });
+});
+
+describe("custom()", () => {
+  it("returns tagged config with user-provided relayer", () => {
+    const mockRelayer = { terminate: () => {} } as any;
+    expect(custom(mockRelayer)).toEqual({
+      type: "custom",
+      relayer: mockRelayer,
+    });
+  });
+
+  it("preserves relayer reference identity", () => {
+    const mockRelayer = { terminate: () => {} } as any;
+    expect(custom(mockRelayer).relayer).toBe(mockRelayer);
   });
 });

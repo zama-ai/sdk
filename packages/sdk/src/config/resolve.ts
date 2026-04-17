@@ -86,10 +86,10 @@ export function resolveChainTransports(
       );
     }
 
-    if (userTransport?.type === "cleartext") {
+    if (userTransport?.type === "cleartext" || userTransport?.type === "custom") {
       if (!chainConfig) {
         throw new ConfigurationError(
-          `Chain ${id} uses cleartext transport but has no entry in the chains array. ` +
+          `Chain ${id} has a transport configured but no entry in the chains array. ` +
             `Add the chain config to the chains array.`,
         );
       }
@@ -106,8 +106,8 @@ export function resolveChainTransports(
 
     if (userTransport && userTransport.type !== "web" && userTransport.type !== "node") {
       throw new ConfigurationError(
-        `Chain ${id} has an unrecognized transport (type: ${JSON.stringify((userTransport as Record<string, unknown>).type)}). ` +
-          `Use web(), node(), or cleartext() to create transports.`,
+        `Chain ${id} has an unrecognized transport (type: ${JSON.stringify((userTransport as unknown as Record<string, unknown>).type)}). ` +
+          `Use web(), node(), cleartext(), or custom() to create transports.`,
       );
     }
 
@@ -222,6 +222,10 @@ export function buildRelayer(
   const nodeEntries: ChainEntry[] = [];
 
   for (const { chain, transport } of chainTransports.values()) {
+    if (transport.type === "custom") {
+      perChainRelayers.set(chain.chainId, transport.relayer);
+      continue;
+    }
     if (transport.type === "cleartext") {
       perChainRelayers.set(
         chain.chainId,
