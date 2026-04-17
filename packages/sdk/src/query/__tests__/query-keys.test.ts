@@ -26,7 +26,6 @@ describe("zamaQueryKeys", () => {
     ["underlyingAllowance", zamaQueryKeys.underlyingAllowance.all],
     ["confidentialIsApproved", zamaQueryKeys.confidentialIsApproved.all],
     ["totalSupply", zamaQueryKeys.totalSupply.all],
-    ["activityFeed", zamaQueryKeys.activityFeed.all],
     ["publicKey", zamaQueryKeys.publicKey.all],
     ["publicParams", zamaQueryKeys.publicParams.all],
     ["decryption", zamaQueryKeys.decryption.all],
@@ -81,20 +80,6 @@ describe("zamaQueryKeys", () => {
     expect(withoutOwner[1]).not.toHaveProperty("owner");
   });
 
-  test("activityFeed.scope contains full cache identity", () => {
-    expect(
-      zamaQueryKeys.activityFeed.scope(TOKEN_LOWER, OWNER_LOWER, "0xtx1:0,0xtx2:1", true),
-    ).toEqual([
-      "zama.activityFeed",
-      {
-        tokenAddress: getAddress(TOKEN_LOWER),
-        userAddress: getAddress(OWNER_LOWER),
-        logsKey: "0xtx1:0,0xtx2:1",
-        decrypt: true,
-      },
-    ]);
-  });
-
   test("key labels are consistent and params support prefix matching", () => {
     const all = zamaQueryKeys.confidentialBalance.all;
     const token = zamaQueryKeys.confidentialBalance.token(TOKEN_LOWER);
@@ -119,8 +104,6 @@ describe("zamaQueryKeys", () => {
       zamaQueryKeys.confidentialIsApproved.token(TOKEN_LOWER),
       zamaQueryKeys.confidentialIsApproved.scope(TOKEN_LOWER, OWNER_LOWER, SPENDER_LOWER),
       zamaQueryKeys.totalSupply.token(TOKEN_LOWER),
-      zamaQueryKeys.activityFeed.token(TOKEN_LOWER),
-      zamaQueryKeys.activityFeed.scope(TOKEN_LOWER, OWNER_LOWER, "log-key", false),
       zamaQueryKeys.publicParams.bits(2048),
       zamaQueryKeys.decryption.handle(HANDLE_A, WRAPPER_LOWER),
     ];
@@ -140,7 +123,6 @@ describe("zamaQueryKeys", () => {
       zamaQueryKeys.underlyingAllowance.scope(TOKEN_LOWER, OWNER_LOWER, WRAPPER_LOWER),
       zamaQueryKeys.signerAddress.token(TOKEN_LOWER),
       zamaQueryKeys.signerAddress.scope(1),
-      zamaQueryKeys.activityFeed.scope(TOKEN_LOWER, OWNER_LOWER, "logs-key", false),
     ];
 
     const upperVariants = [
@@ -149,7 +131,6 @@ describe("zamaQueryKeys", () => {
       zamaQueryKeys.underlyingAllowance.scope(TOKEN_UPPER, OWNER_UPPER, WRAPPER_UPPER),
       zamaQueryKeys.signerAddress.token(TOKEN_UPPER),
       zamaQueryKeys.signerAddress.scope(1),
-      zamaQueryKeys.activityFeed.scope(TOKEN_UPPER, OWNER_UPPER, "logs-key", false),
     ];
 
     expect(lowerVariants).toEqual(upperVariants);
