@@ -17,15 +17,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Validate Conventional Commit PR title
-        run: |
-          node <<'NODE'
-            const { readFileSync } = require("node:fs");
-            const event = JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, "utf8"));
-            const title = event.pull_request?.title ?? "";
-            const re = /^(feat|fix|perf|refactor|docs|chore|test|build|ci|revert|style)(\([^)]+\))?!?: .+/;
-            if (!re.test(title)) {
-              console.error("PR title must follow Conventional Commits (e.g. fix: ..., feat(scope): ...).");
-              console.error(`Current title: ${JSON.stringify(title)}`);
-              process.exit(1);
-            }
-          NODE
+        uses: amannn/action-semantic-pull-request@48f256284bd46cdaab1048c3721360e808335d50 # v6.1.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            perf
+            refactor
+            docs
+            chore
+            test
+            build
+            ci
+            revert
+            style
