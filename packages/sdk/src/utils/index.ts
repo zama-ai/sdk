@@ -8,3 +8,4 @@ export {
   assertCondition,
   assertNonNullable,
 } from "./assertions";
+export { ZERO_HANDLE, isZeroHandle } from "./handles";

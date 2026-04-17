@@ -1,3 +1,4 @@
+import type { ZamaError } from "./base";
 import { DecryptionFailedError } from "./encryption";
 import { NoCiphertextError } from "./credential";
 import { RelayerRequestFailedError } from "./relayer";
@@ -9,6 +10,10 @@ import { SigningRejectedError, SigningFailedError } from "./signing";
  * typed SDK error (NoCiphertextError for 400, RelayerRequestFailedError for
  * other HTTP errors, or the generic DecryptionFailedError as fallback).
  *
+ * Errors that are already typed SDK errors (e.g. {@link SigningRejectedError},
+ * {@link DecryptionFailedError}) are returned as-is so callers can still match
+ * the original cause.
+ *
  * When `isDelegated` is true and the relayer returns a 500, the error is
  * wrapped as {@link DelegationNotPropagatedError} because the most likely
  * cause is that the gateway hasn't synced the delegation from L1 yet.
@@ -17,7 +22,7 @@ export function wrapDecryptError(
   error: unknown,
   fallbackMessage: string,
   isDelegated = false,
-): Error {
+): ZamaError {
   if (
     error instanceof DecryptionFailedError ||
     error instanceof NoCiphertextError ||

@@ -112,7 +112,7 @@ const otherBalance = await token.balanceOf("0xOwnerAddress");
 
 `(owner?: Address) => Promise<Hex>`
 
-Returns the raw encrypted handle without decrypting. Use with `decryptBalance()` or `isZeroHandle()`.
+Returns the raw encrypted handle without decrypting. Use with `isZeroHandle()` or pass to `sdk.userDecrypt()` for decryption.
 
 ```ts
 const handle = await token.confidentialBalanceOf();
@@ -266,27 +266,6 @@ Returns whether the session has active credentials for this token.
 
 ```ts
 const allowed = await token.isAllowed();
-```
-
-### decryptBalance
-
-`(handle: Hex, owner?: Address) => Promise<bigint>`
-
-Decrypts a raw encrypted handle into a plaintext balance value. Results are cached automatically.
-
-```ts
-const handle = await token.confidentialBalanceOf();
-const value = await token.decryptBalance(handle);
-```
-
-### decryptHandles
-
-`(handles: Hex[], owner?: Address) => Promise<Map<Hex, bigint>>`
-
-Decrypts multiple encrypted handles in a single call.
-
-```ts
-const values = await token.decryptHandles([handle1, handle2, handle3]);
 ```
 
 ### isZeroHandle

@@ -54,10 +54,16 @@ export function createUnwrapRequestedLog(unwrapRequestId: Address): RawLog {
 }
 
 export function mockPublicDecrypt(relayer: ReturnType<typeof createMockRelayer>) {
-  vi.mocked(relayer.publicDecrypt).mockResolvedValue({
-    clearValues: {},
-    abiEncodedClearValues: "0x1",
-    decryptionProof: DECRYPTION_PROOF,
+  vi.mocked(relayer.publicDecrypt).mockImplementation((handles: string[]) => {
+    const clearValues: Record<string, bigint> = {};
+    for (const h of handles) {
+      clearValues[h] = 1n;
+    }
+    return Promise.resolve({
+      clearValues,
+      abiEncodedClearValues: "0x1",
+      decryptionProof: DECRYPTION_PROOF,
+    });
   });
 }
 

@@ -84,12 +84,13 @@ export function useConfidentialIsApproved(
  */
 export function useConfidentialIsApprovedSuspense(config: UseConfidentialIsApprovedSuspenseConfig) {
   const { spender, holder, ...tokenConfig } = config;
+  const sdk = useZamaSDK();
   const token = useToken(tokenConfig);
-  const addressQuery = useSuspenseQuery<Address>(signerAddressQueryOptions(token.signer));
+  const addressQuery = useSuspenseQuery<Address>(signerAddressQueryOptions(sdk.signer));
   const resolvedHolder = holder ?? addressQuery.data;
 
   return useSuspenseQuery<boolean>(
-    confidentialIsApprovedQueryOptions(token.signer, token.address, {
+    confidentialIsApprovedQueryOptions(sdk.signer, token.address, {
       holder: resolvedHolder,
       spender,
     }),

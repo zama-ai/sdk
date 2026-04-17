@@ -634,7 +634,7 @@ export const wrapperAbi = [
   },
   {
     type: "function",
-    name: "totalSupply",
+    name: "inferredTotalSupply",
     inputs: [],
     outputs: [
       {
