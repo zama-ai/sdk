@@ -267,7 +267,7 @@ This causes an unexpected MetaMask popup, user rejection, potential Blockaid fla
 
 #### Gating useConfidentialBalance
 
-For confidential token balances, gate the query on `useIsAllowed` and trigger `useAllow` from an explicit button:
+Gate the query on `useIsAllowed` and trigger `useAllow` from an explicit button:
 
 {% code title="ConfidentialBalanceCard.tsx" %}
 
@@ -284,65 +284,42 @@ function ConfidentialBalanceCard({
   decimals: number;
   symbol: string;
 }) {
-  // 1. Check if credentials are already cached for this token
-  const { data: isAllowed } = useIsAllowed({
-    contractAddresses: [tokenAddress],
-  });
-
-  // 2. Gate the balance query — only runs when isAllowed is true
+  const { data: isAllowed } = useIsAllowed({ contractAddresses: [tokenAddress] });
   const balance = useConfidentialBalance({ tokenAddress }, { enabled: !!isAllowed });
-
-  // 3. useAllow triggers the EIP-712 signature on demand
   const { mutate: allow, isPending: isSigning } = useAllow();
 
-  // Credentials not cached: show locked state with explicit action
   if (!isAllowed) {
     return (
-      <div>
-        <p>{symbol} balance: *****</p>
+      <section>
+        <p>{symbol}: *****</p>
         <button onClick={() => allow([tokenAddress])} disabled={isSigning}>
           {isSigning ? "Signing..." : "Decrypt Balance"}
         </button>
-      </div>
+      </section>
     );
   }
 
-  // Credentials cached: balance is decrypting or ready
   return (
-    <div>
+    <section>
       <p>
-        {symbol} balance:{" "}
-        {balance.isLoading
-          ? "Decrypting..."
-          : balance.data !== undefined
-            ? formatUnits(balance.data, decimals)
-            : "---"}
+        {symbol}: {balance.isLoading ? "Decrypting..." : formatUnits(balance.data ?? 0n, decimals)}
       </p>
-    </div>
+    </section>
   );
 }
 ```
 
 {% endcode %}
 
-The lifecycle:
-
-1. `useIsAllowed` checks if credentials are cached from a prior session
-2. If **yes**: `useConfidentialBalance` fires immediately, balance decrypts silently
-3. If **no**: balance shows as locked (`*****`), user clicks "Decrypt Balance"
-4. Click triggers `useAllow` → EIP-712 wallet signature
-5. `isAllowed` becomes true, balance query enables, balance appears
-
-Returning users skip the prompt entirely — credentials persist in IndexedDB (default TTL: 30 days).
+When `isAllowed` is false the balance query sits idle — no wallet popup. The user clicks "Decrypt Balance", `useAllow` fires the EIP-712 signature, and `isAllowed` flips to true, enabling the query. Returning users skip the prompt entirely because credentials persist in IndexedDB (default TTL: 30 days).
 
 For multiple tokens, batch with a single signature:
 
 ```tsx
-const allTokenAddresses = tokens.map((t) => t.confidentialTokenAddress);
 const { mutate: allow } = useAllow();
+const addresses = tokens.map((t) => t.confidentialTokenAddress);
 
-// One button, one signature, all tokens
-<button onClick={() => allow(allTokenAddresses)}>Decrypt All Balances</button>;
+<button onClick={() => allow(addresses)}>Decrypt All Balances</button>;
 ```
 
 The same pattern applies to `useUserDecrypt` — pass `{ enabled: !!isAllowed }` and trigger `useAllow` from a button. Rather than gating each component individually, you can pre-authorize once and let every nested decrypt hook run without prompts.
