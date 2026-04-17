@@ -24,12 +24,9 @@ module.exports = {
       "@semantic-release/commit-analyzer",
       {
         preset: "conventionalcommits",
-        // Scope version-bump decisions to the squash commit's subject line only.
-        // Empty noteKeywords stops `BREAKING CHANGE:` in commit bodies (e.g. inner
-        // commits rolled into a squash) from escalating the release type. The `!`
-        // marker in the header still triggers major bumps via headerPattern.
-        // release-notes-generator below keeps its default noteKeywords so the
-        // changelog continues to surface BREAKING CHANGE prose from bodies.
+        // Breaking detection from header `!` only; ignore `BREAKING CHANGE`
+        // in bodies. Notes generator below keeps defaults so the changelog
+        // still surfaces body prose.
         parserOpts: {
           noteKeywords: [],
         },
