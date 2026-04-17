@@ -26,3 +26,4 @@ export {
 export { matchAclRevert } from "./acl-revert";
 export { PartialCredentialError } from "./partial-credential";
 export { wrapDecryptError } from "./decrypt";
+export { isSessionError } from "./session";

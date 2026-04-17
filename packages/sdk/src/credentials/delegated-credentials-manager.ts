@@ -6,17 +6,12 @@ import {
   type CredentialsConfig,
   type SigningMeta,
 } from "./credentials-manager-base";
-import type { CredentialSet } from "./credential-set";
 import {
   type BaseEncryptedCredentials,
   assertDelegatedFields,
   normalizeAddresses,
   computeStoreKey,
-  MAX_CONTRACTS_PER_CREDENTIAL,
 } from "./credential-validation";
-import { Batcher } from "../utils/batcher";
-
-const batcher = new Batcher(MAX_CONTRACTS_PER_CREDENTIAL);
 
 /** Internal storage shape — base fields plus delegator/delegate addresses. */
 interface EncryptedCredentials extends BaseEncryptedCredentials {
@@ -47,14 +42,6 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
   #relayer: RelayerSDK;
   #cachedStoreKey: string | null = null;
   #cachedStoreKeyIdentity: string | null = null;
-  /**
-   * FHE keypairs cached per delegator store key. Reused for all batches within a
-   * burst but invalidated once `keypairTTL` seconds have elapsed since generation,
-   * preventing a compromised keypair from being reused beyond its rotation window.
-   * Each delegator has an isolated entry. Also cleared by {@link clear},
-   * {@link revoke}, and {@link clearCaches}.
-   */
-  #cachedKeypairs = new Map<string, { publicKey: Hex; privateKey: Hex; createdAt: number }>();
 
   /** Derive the deterministic storage key for a (delegate, delegator, chain) triple. */
   static async computeStoreKey(
@@ -75,35 +62,22 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
   /**
    * Authorize FHE delegated credentials for one or more contract addresses.
    *
-   * Addresses are split into batches of ≤ 10 internally (same fhevm limit as
-   * regular credentials). Each batch triggers its own EIP-712 wallet prompt,
-   * shown sequentially. Use {@link CredentialSet.batchFor} to route each
-   * address to its batch transparently.
-   *
-   * Already-signed batches are retained in storage on failure, so a retry only
-   * needs to sign the rejected batch.
-   *
-   * @throws {@link PartialCredentialError} if a batch fails after at least one batch succeeded.
-   *   The error carries a {@link PartialCredentialError.partialResult} with the credentials
-   *   already signed. Retrying `allow()` is safe — persisted batches are reused automatically.
-   * @throws {@link SigningRejectedError} if the first batch's wallet signature prompt is rejected.
-   * @throws {@link SigningFailedError} if the first batch signing operation fails for any other reason.
+   * @throws {@link SigningRejectedError} if the user rejects the wallet signature prompt.
+   * @throws {@link SigningFailedError} if the signing operation fails for any other reason.
    */
   async allow(
     delegatorAddress: Address,
     ...contractAddresses: Address[]
-  ): Promise<CredentialSet<DelegatedStoredCredentials>> {
+  ): Promise<DelegatedStoredCredentials> {
     const normalizedDelegator = getAddress(delegatorAddress);
     const normalized = normalizeAddresses(contractAddresses);
     const key = await this.#storeKey(normalizedDelegator);
-    return batcher.execute(normalized, (accumulated) =>
-      this.resolveMulti({
-        key,
-        contracts: accumulated,
-        createFn: (batchAddresses: Address[], batchKey: string) =>
-          this.#createBatch(normalizedDelegator, batchAddresses, key, batchKey),
-      }),
-    );
+    return this.resolveCredentials({
+      key,
+      contracts: normalized,
+      createKey: `${normalizedDelegator}:${normalized.join(",")}`,
+      createFn: () => this.#create(normalizedDelegator, normalized),
+    });
   }
 
   /** Check if stored delegated credentials are expired or unusable. */
@@ -131,35 +105,21 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
 
   // ── Credential creation ───────────────────────────────────────
 
-  /**
-   * Create credentials for a single batch. Reuses the cached FHE keypair for
-   * `storeKey` when available, or generates a fresh one. Keypair generation
-   * runs inside `createCredentials` so failures are wrapped by
-   * {@link wrapSigningError} with the correct context prefix.
-   */
-  async #createBatch(
+  async #create(
     delegatorAddress: Address,
     contractAddresses: Address[],
-    storeKey: string,
-    overrideKey?: string,
   ): Promise<DelegatedStoredCredentials> {
-    const key = overrideKey ?? (await this.#storeKey(delegatorAddress));
+    const key = await this.#storeKey(delegatorAddress);
     return this.createCredentials({
       key,
       contractAddresses,
       createFn: async () => {
-        const now = Math.floor(Date.now() / 1000);
-        let keypair = this.#cachedKeypairs.get(storeKey);
-        if (!keypair || now - keypair.createdAt >= this.keypairTTL) {
-          const kp = await this.#relayer.generateKeypair();
-          keypair = { ...kp, createdAt: now };
-          this.#cachedKeypairs.set(storeKey, keypair);
-        }
+        const keypair = await this.#relayer.generateKeypair();
         const delegateAddress = await this.signer.getAddress();
         const startTimestamp = Math.floor(Date.now() / 1000);
         const durationDays = Math.ceil(this.keypairTTL / 86400);
 
-        const meta = {
+        const meta: DelegatedSigningMeta = {
           publicKey: keypair.publicKey,
           startTimestamp,
           durationDays,
@@ -219,7 +179,6 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
   }
 
   protected override clearCaches(): void {
-    this.#cachedKeypairs.clear();
     this.#cachedStoreKey = null;
     this.#cachedStoreKeyIdentity = null;
     super.clearCaches();

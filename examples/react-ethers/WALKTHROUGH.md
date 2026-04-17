@@ -286,10 +286,13 @@ Three balances are shown:
 | ERC-20       | Direct RPC via SDK signer      | `useQuery` → `sdk.signer.readContract(balanceOfContract(...))` |
 | Confidential | Relayer decryption             | `useConfidentialBalance({ tokenAddress })`                     |
 
-**Explicit decrypt pattern**: `useConfidentialBalance` is only enabled after the user has authorized FHE decryption via an EIP-712 wallet signature (`useIsAllowed()` → `useAllow()`). Until then, `BalancesCard` shows a "Decrypt Balance" button rather than a balance value. This avoids blind-signing prompts on mount.
+**Explicit decrypt pattern**: `useConfidentialBalance` is only enabled after the user has authorized FHE decryption via an EIP-712 wallet signature (`useIsAllowed({ contractAddresses })` → `useAllow()`). Until then, `BalancesCard` shows a "Decrypt Balance" button rather than a balance value. This avoids blind-signing prompts on mount.
 
 ```ts
-const { data: isAllowed } = useIsAllowed();
+const { data: isAllowed } = useIsAllowed({
+  contractAddresses: token ? [token.confidentialTokenAddress] : [],
+  query: { enabled: Boolean(token) },
+});
 // In BalancesCard: shows "Decrypt Balance" button when !isAllowed,
 // otherwise shows the balance (or "Decrypting…" while loading).
 ```

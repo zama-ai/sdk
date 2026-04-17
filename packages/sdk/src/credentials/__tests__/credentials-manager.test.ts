@@ -23,8 +23,7 @@ describe("CredentialsManager", () => {
   it("generates new credentials on first call", async ({ relayer, signer, credentialManager }) => {
     setupMocks(relayer, signer);
 
-    const credSet = await credentialManager.allow(TOKEN_A);
-    const creds = credSet.batchFor(TOKEN_A);
+    const creds = await credentialManager.allow(TOKEN_A);
 
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
     expect(relayer.createEIP712).toHaveBeenCalledOnce();
@@ -32,6 +31,35 @@ describe("CredentialsManager", () => {
     expect(creds.publicKey).toBe("0xpub123");
     expect(creds.privateKey).toBe("0xpriv456");
     expect(creds.signature).toBe("0xsig789");
+  });
+
+  it("normalizes mixed-case contract addresses to checksummed form", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+
+    const lowercase = TOKEN_A.toLowerCase() as Address;
+    const creds = await credentialManager.allow(lowercase);
+
+    // The stored contractAddresses must be strictly equal to the checksummed
+    // form — credentials cache key stability depends on normalization.
+    expect(creds.contractAddresses).toEqual([getAddress(TOKEN_A)]);
+  });
+
+  it("treats mixed-case and checksummed inputs as cache-equivalent", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+
+    await credentialManager.allow(TOKEN_A);
+    await credentialManager.allow(TOKEN_A.toLowerCase() as Address);
+
+    // Same address in different casing must not trigger a second signature.
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
   });
 
   it("returns cached credentials on second call with same contracts", async ({
@@ -55,8 +83,7 @@ describe("CredentialsManager", () => {
     setupMocks(relayer, signer);
 
     await credentialManager.allow(TOKEN_A);
-    const credSet = await credentialManager.allow(TOKEN_A, TOKEN_B);
-    const creds = credSet.batchFor(TOKEN_A);
+    const creds = await credentialManager.allow(TOKEN_A, TOKEN_B);
 
     // Keypair is reused — only one generation
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
@@ -169,8 +196,7 @@ describe("CredentialsManager", () => {
       sessionStorage: createMockStorage(),
       keypairTTL: 86400,
     });
-    const credSet2 = await manager2.allow(TOKEN_A);
-    const creds2 = credSet2.batchFor(TOKEN_A);
+    const creds2 = await manager2.allow(TOKEN_A);
 
     // Should have re-signed (1 original + 1 re-sign)
     expect(signer.signTypedData).toHaveBeenCalledTimes(2);
@@ -210,7 +236,7 @@ describe("CredentialsManager", () => {
     const credSet = await manager2.allow(TOKEN_A);
 
     expect(relayer.generateKeypair).toHaveBeenCalledTimes(2);
-    expect(credSet.batchFor(TOKEN_A).publicKey).toBe("0xpub123");
+    expect(credSet.publicKey).toBe("0xpub123");
   }, 30000);
 
   it("clears credentials", async ({ relayer, signer, storage, credentialManager }) => {
@@ -294,7 +320,7 @@ describe("CredentialsManager", () => {
 
     // Should regenerate fresh credentials
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
-    expect(credSet.batchFor(TOKEN_A).publicKey).toBe("0xpub123");
+    expect(credSet.publicKey).toBe("0xpub123");
 
     // Corrupted data should have been cleaned up
     const stored = await storage.get(storeKey);
@@ -382,7 +408,7 @@ describe("CredentialsManager", () => {
 
     // Should still regenerate and return valid credentials
     const credSet = await credentialManager.allow(TOKEN_A);
-    expect(credSet.batchFor(TOKEN_A).publicKey).toBe("0xpub123");
+    expect(credSet.publicKey).toBe("0xpub123");
     expect(storage.delete).toHaveBeenCalledWith(storeKey);
   });
 
@@ -760,10 +786,8 @@ describe("contract address extension", () => {
   }) => {
     setupMocks(relayer, signer);
 
-    const firstSet = await credentialManager.allow(TOKEN_A);
-    const extendedSet = await credentialManager.allow(TOKEN_A, TOKEN_B);
-    const first = firstSet.batchFor(TOKEN_A);
-    const extended = extendedSet.batchFor(TOKEN_A);
+    const first = await credentialManager.allow(TOKEN_A);
+    const extended = await credentialManager.allow(TOKEN_A, TOKEN_B);
 
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
     expect(signer.signTypedData).toHaveBeenCalledTimes(2);
@@ -785,8 +809,7 @@ describe("contract address extension", () => {
 
     await credentialManager.allow(TOKEN_A);
     await credentialManager.revoke();
-    const extendedSet = await credentialManager.allow(TOKEN_A, TOKEN_B);
-    const extended = extendedSet.batchFor(TOKEN_A);
+    const extended = await credentialManager.allow(TOKEN_A, TOKEN_B);
 
     // Keypair reused — only one generation
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
@@ -822,8 +845,7 @@ describe("contract address extension", () => {
       sessionStorage: createMockStorage(),
       keypairTTL: 86400,
     });
-    const extendedSet = await manager2.allow(TOKEN_A, TOKEN_B);
-    const extended = extendedSet.batchFor(TOKEN_A);
+    const extended = await manager2.allow(TOKEN_A, TOKEN_B);
 
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
     // Original sign + old-address sign for decrypt + merged-address sign for extend
@@ -888,8 +910,7 @@ describe("contract address extension", () => {
 
     await credentialManager.allow(TOKEN_A);
     await credentialManager.allow(TOKEN_A, TOKEN_B);
-    const finalSet = await credentialManager.allow(TOKEN_A, TOKEN_B, TOKEN_C);
-    const final = finalSet.batchFor(TOKEN_A);
+    const final = await credentialManager.allow(TOKEN_A, TOKEN_B, TOKEN_C);
 
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
     // 3 signatures: initial + extend to B + extend to C
@@ -982,22 +1003,38 @@ describe("contract address extension", () => {
 
     await credentialManager.allow(TOKEN_A);
 
-    // Launch two extensions concurrently with different contracts
-    const [setB, setC] = await Promise.all([
+    // Launch two extensions concurrently with different contracts. Which call
+    // reaches #extendContracts first is non-deterministic (decryptCredentials
+    // uses native crypto.subtle), so assertions must be order-independent.
+    const [resultB, resultC] = await Promise.all([
       credentialManager.allow(TOKEN_A, TOKEN_B),
       credentialManager.allow(TOKEN_A, TOKEN_C),
     ]);
 
-    // The last result should cover all three contracts (no address dropped)
-    const finalContracts = setC.batchFor(TOKEN_A).contractAddresses.map((a) => getAddress(a));
-    expect(finalContracts).toContain(getAddress(TOKEN_A));
-    expect(finalContracts).toContain(getAddress(TOKEN_B));
-    expect(finalContracts).toContain(getAddress(TOKEN_C));
+    // Each call's result must cover its own required contracts.
+    const contractsB = resultB.contractAddresses.map((a) => getAddress(a));
+    expect(contractsB).toContain(getAddress(TOKEN_A));
+    expect(contractsB).toContain(getAddress(TOKEN_B));
 
-    // First concurrent result covers at least A and B
-    const firstContracts = setB.batchFor(TOKEN_A).contractAddresses.map((a) => getAddress(a));
-    expect(firstContracts).toContain(getAddress(TOKEN_A));
-    expect(firstContracts).toContain(getAddress(TOKEN_B));
+    const contractsC = resultC.contractAddresses.map((a) => getAddress(a));
+    expect(contractsC).toContain(getAddress(TOKEN_A));
+    expect(contractsC).toContain(getAddress(TOKEN_C));
+
+    // Whichever call extended last must have merged with the other's result,
+    // so at least one of the two results covers all three contracts.
+    const hasAll = (contracts: string[]) =>
+      contracts.includes(getAddress(TOKEN_A)) &&
+      contracts.includes(getAddress(TOKEN_B)) &&
+      contracts.includes(getAddress(TOKEN_C));
+    expect(hasAll(contractsB) || hasAll(contractsC)).toBe(true);
+
+    // Persisted state must reflect all three contracts — the real invariant
+    // the extension deduplication is meant to preserve.
+    const persisted = await credentialManager.allow(TOKEN_A, TOKEN_B, TOKEN_C);
+    const persistedContracts = persisted.contractAddresses.map((a) => getAddress(a));
+    expect(persistedContracts).toContain(getAddress(TOKEN_A));
+    expect(persistedContracts).toContain(getAddress(TOKEN_B));
+    expect(persistedContracts).toContain(getAddress(TOKEN_C));
   });
 
   it("persists ciphertext before session signature during extension", async ({

@@ -195,7 +195,6 @@ Full read/write interface for a single confidential ERC-20. Extends `ReadonlyTok
 | `delegateDecryption({ delegateAddress, expirationDate? })` | Grant decryption rights to another address via the on-chain ACL. Default: permanent. ACL address resolved from relayer config.                                                                               |
 | `revokeDelegation({ delegateAddress })`                    | Revoke decryption delegation for this token. ACL address resolved from relayer config.                                                                                                                       |
 | `balanceOf(owner?)`                                        | Decrypt and return the plaintext balance.                                                                                                                                                                    |
-| `decryptHandles(handles, owner?)`                          | Batch-decrypt arbitrary encrypted handles.                                                                                                                                                                   |
 
 All write methods return a `TransactionResult` object:
 
@@ -214,8 +213,8 @@ Read-only subset. No wrapper address needed.
 | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `balanceOf(owner?)`                                          | Decrypt and return the plaintext balance.                                                                                                                    |
 | `confidentialBalanceOf(owner?)`                              | Return the raw encrypted balance handle (no decryption).                                                                                                     |
-| `decryptBalance(handle, owner?)`                             | Decrypt a single encrypted handle.                                                                                                                           |
-| `decryptHandles(handles, owner?)`                            | Batch-decrypt handles in a single relayer call.                                                                                                              |
+| `decryptBalance(handle)`                                     | Decrypt a single encrypted handle.                                                                                                                           |
+| `decryptHandles(handles)`                                    | Batch-decrypt handles in a single relayer call.                                                                                                              |
 | `allow()`                                                    | Ensure FHE decrypt credentials exist (generates/signs if needed).                                                                                            |
 | `allow(...tokens)` _(static)_                                | Pre-authorize multiple tokens. Batches of <=10 addresses per EIP-712 signature; sequential prompts for >10.                                                  |
 | `isAllowed()`                                                | Whether a session signature is currently cached for this token.                                                                                              |
@@ -244,10 +243,7 @@ await ReadonlyToken.allow(...tokens);
 // All subsequent decrypts reuse cached credentials — no more wallet prompts
 
 // Decrypt balances for multiple tokens in parallel
-const balances = await ReadonlyToken.batchDecryptBalances(tokens, { owner });
-
-// Decrypt pre-fetched handles for multiple tokens
-const balances = await ReadonlyToken.batchDecryptBalances(tokens, { handles, owner });
+const { results, errors } = await ReadonlyToken.batchBalancesOf(tokens, owner);
 ```
 
 Batch delegation (on `Token`):
@@ -536,18 +532,19 @@ interface ContractCallConfig {
 | `isOperatorContract(token, holder, spender)`                            | Check operator approval.                  |
 | `setOperatorContract(token, spender, timestamp?)`                       | Set operator approval (default: +1 hour). |
 | `confidentialTotalSupplyContract(token)`                                | Read encrypted total supply handle.       |
-| `totalSupplyContract(token)`                                            | Read plaintext total supply.              |
 | `rateContract(token)`                                                   | Read conversion rate.                     |
 
 ### Wrapper
 
-| Function                                                         | Description                                   |
-| ---------------------------------------------------------------- | --------------------------------------------- |
-| `wrapContract(wrapper, to, amount)`                              | Wrap ERC-20 tokens.                           |
-| `unwrapContract(token, from, to, encryptedAmount, inputProof)`   | Request unwrap with encrypted amount.         |
-| `unwrapFromBalanceContract(token, from, to, encryptedBalance)`   | Request unwrap using on-chain balance handle. |
-| `finalizeUnwrapContract(wrapper, burntAmount, cleartext, proof)` | Finalize unwrap with decryption proof.        |
-| `underlyingContract(wrapper)`                                    | Read underlying ERC-20 address.               |
+| Function                                                         | Description                                         |
+| ---------------------------------------------------------------- | --------------------------------------------------- |
+| `wrapContract(wrapper, to, amount)`                              | Wrap ERC-20 tokens.                                 |
+| `unwrapContract(token, from, to, encryptedAmount, inputProof)`   | Request unwrap with encrypted amount.               |
+| `unwrapFromBalanceContract(token, from, to, encryptedBalance)`   | Request unwrap using on-chain balance handle.       |
+| `finalizeUnwrapContract(wrapper, burntAmount, cleartext, proof)` | Finalize unwrap with decryption proof.              |
+| `underlyingContract(wrapper)`                                    | Read underlying ERC-20 address.                     |
+| `inferredTotalSupplyContract(wrapper)`                           | Read inferred plaintext total supply.               |
+| `totalSupplyContract(wrapper)`                                   | Deprecated alias for `inferredTotalSupplyContract`. |
 
 ### ERC-165
 
@@ -668,8 +665,10 @@ const items = parseActivityFeed(logs, userAddress);
 // 2. Extract encrypted handles that need decryption
 const handles = extractEncryptedHandles(items);
 
-// 3. Decrypt handles (using your token instance)
-const decryptedMap = await token.decryptHandles(handles);
+// 3. Decrypt handles via SDK
+const decryptedMap = await sdk.userDecrypt(
+  handles.map((h) => ({ handle: h, contractAddress: tokenAddress })),
+);
 
 // 4. Apply decrypted values back to activity items
 const enrichedItems = applyDecryptedValues(items, decryptedMap);

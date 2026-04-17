@@ -46,16 +46,16 @@ export { DecryptCache } from "./decrypt-cache";
 // Token abstraction layer
 export { ZamaSDK } from "./zama-sdk";
 export type { ZamaSDKConfig } from "./zama-sdk";
+export type { DecryptHandle, DecryptResult } from "./query/user-decrypt";
 export { WrappersRegistry, DefaultRegistryAddresses } from "./wrappers-registry";
 export type { WrappersRegistryConfig, ListPairsOptions } from "./wrappers-registry";
 export {
   Token,
-  type TokenConfig,
   ReadonlyToken,
-  type ReadonlyTokenConfig,
-  type BatchDecryptOptions,
+  type BatchBalancesResult,
   type BatchDecryptAsOptions,
   ZERO_HANDLE,
+  isZeroHandle,
   savePendingUnshield,
   loadPendingUnshield,
   clearPendingUnshield,
@@ -232,6 +232,7 @@ export {
   finalizeUnwrapContract,
   setOperatorContract,
   underlyingContract,
+  inferredTotalSupplyContract,
   wrapContract,
   supportsInterfaceContract,
   isConfidentialTokenContract,

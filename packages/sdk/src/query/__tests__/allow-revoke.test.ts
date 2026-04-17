@@ -1,27 +1,16 @@
 import { describe, expect, test, vi } from "../../test-fixtures";
 
+import type { Address } from "viem";
 import { ZamaSDK } from "../../zama-sdk";
 import { allowMutationOptions } from "../allow";
+import { isAllowedQueryOptions } from "../is-allowed";
 import { revokeMutationOptions } from "../revoke";
 import { revokeSessionMutationOptions } from "../revoke-session";
-import { isAllowedQueryOptions } from "../is-allowed";
-import type { Address } from "viem";
-import type { CredentialSet } from "../../credentials/credential-set";
 
 describe("allowMutationOptions", () => {
-  test("calls sdk.credentials.allow with provided addresses", async ({
-    signer,
-    relayer,
-    storage,
-  }) => {
+  test("calls sdk.allow with provided addresses", async ({ signer, relayer, storage }) => {
     const sdk = new ZamaSDK({ relayer, signer, storage });
-    const allowSpy = vi.spyOn(sdk.credentials, "allow").mockResolvedValue({
-      batches: [],
-      batchFor: () => {
-        throw new Error("not used");
-      },
-      tryBatchFor: () => null,
-    } as CredentialSet);
+    const allowSpy = vi.spyOn(sdk, "allow").mockResolvedValue();
 
     const options = allowMutationOptions(sdk);
     expect(options.mutationKey).toEqual(["zama.allow"]);
@@ -32,7 +21,7 @@ describe("allowMutationOptions", () => {
     ] as Address[];
     await options.mutationFn(addresses);
 
-    expect(allowSpy).toHaveBeenCalledWith(...addresses);
+    expect(allowSpy).toHaveBeenCalledWith(addresses);
   });
 });
 

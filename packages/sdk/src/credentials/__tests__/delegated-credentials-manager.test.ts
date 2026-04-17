@@ -57,8 +57,7 @@ describe("DelegatedCredentialsManager", () => {
   test("allow() generates fresh credentials for a delegator", async ({ relayer }) => {
     const { manager, signer } = createManager(relayer);
 
-    const credSet = await manager.allow(DELEGATOR, TOKEN_A);
-    const creds = credSet.batchFor(TOKEN_A);
+    const creds = await manager.allow(DELEGATOR, TOKEN_A);
 
     expect(creds.delegatorAddress).toBe(DELEGATOR);
     expect(creds.delegateAddress).toBe(DELEGATE);
@@ -75,7 +74,7 @@ describe("DelegatedCredentialsManager", () => {
     const set1 = await manager.allow(DELEGATOR, TOKEN_A);
     const set2 = await manager.allow(DELEGATOR, TOKEN_A);
 
-    expect(set1.batchFor(TOKEN_A).publicKey).toBe(set2.batchFor(TOKEN_A).publicKey);
+    expect(set1.publicKey).toBe(set2.publicKey);
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
   });
 
@@ -83,8 +82,7 @@ describe("DelegatedCredentialsManager", () => {
     const { manager, signer } = createManager(relayer);
 
     await manager.allow(DELEGATOR, TOKEN_A);
-    const credSet = await manager.allow(DELEGATOR, TOKEN_A, TOKEN_B);
-    const creds = credSet.batchFor(TOKEN_A);
+    const creds = await manager.allow(DELEGATOR, TOKEN_A, TOKEN_B);
 
     expect(creds.contractAddresses).toContain(TOKEN_A);
     expect(creds.contractAddresses).toContain(TOKEN_B);

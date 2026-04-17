@@ -162,7 +162,7 @@ Without wiring, cached signatures remain valid until TTL expiry. This is not a s
 A single `allow()` call can cover multiple contracts:
 
 ```ts
-await sdk.credentials.allow("0xContractA", "0xContractB", "0xContractC");
+await sdk.allow(["0xContractA", "0xContractB", "0xContractC"]);
 ```
 
 For three addresses this produces one EIP-712 signature covering all three contracts. For more than 10 addresses, the SDK batches in groups of 10 — each batch triggers one sequential wallet prompt. The signed message includes the full list of contract addresses, the start timestamp, and the duration. Any `balanceOf` call on ContractA, ContractB, or ContractC reuses the cached signature without additional popups.
