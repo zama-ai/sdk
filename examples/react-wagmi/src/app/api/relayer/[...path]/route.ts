@@ -5,7 +5,6 @@ import type { NextRequest } from "next/server";
 const DEFAULT_RELAYER_URL = "https://relayer.testnet.zama.org/v2";
 const RELAYER_URL = process.env.RELAYER_URL ?? DEFAULT_RELAYER_URL;
 const RELAYER_API_KEY = process.env.RELAYER_API_KEY;
-const ALLOW_PRIVATE_RELAYER_URL = process.env.RELAYER_ALLOW_PRIVATE_URL === "true";
 
 const HOP_BY_HOP = new Set([
   "connection",
@@ -48,42 +47,10 @@ const RESPONSE_DROP = new Set([...HOP_BY_HOP, "content-encoding", "content-lengt
 // Dot-only segments (`.` and `..`) are rejected to prevent path traversal.
 const SAFE_SEGMENT = /^[a-zA-Z0-9._-]+$/;
 
-function isPrivateHostname(hostname: string): boolean {
-  const host = hostname.toLowerCase().replace(/^\[|\]$/g, "");
-  if (
-    host === "localhost" ||
-    host === "::1" ||
-    host.startsWith("fe80:") ||
-    /^f[cd][0-9a-f]{2}:/u.test(host)
-  ) {
-    return true;
-  }
-
-  const parts = host.split(".").map((part) => Number(part));
-  if (
-    parts.length !== 4 ||
-    parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)
-  ) {
-    return false;
-  }
-
-  const [a, b] = parts;
-  return (
-    a === 10 ||
-    a === 127 ||
-    (a === 169 && b === 254) ||
-    (a === 172 && b >= 16 && b <= 31) ||
-    (a === 192 && b === 168)
-  );
-}
-
 function getRelayerBaseUrl(): URL {
   const baseUrl = new URL(RELAYER_URL);
-  if (baseUrl.protocol !== "https:" && !ALLOW_PRIVATE_RELAYER_URL) {
-    throw new Error("RELAYER_URL must use https unless RELAYER_ALLOW_PRIVATE_URL=true");
-  }
-  if (isPrivateHostname(baseUrl.hostname) && !ALLOW_PRIVATE_RELAYER_URL) {
-    throw new Error("RELAYER_URL must not target private or local hosts");
+  if (baseUrl.protocol !== "https:" && baseUrl.protocol !== "http:") {
+    throw new Error("RELAYER_URL must use http or https");
   }
   return baseUrl;
 }

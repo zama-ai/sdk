@@ -35,7 +35,6 @@ If your wallet is on the wrong network, the app shows a message — switch to Se
 | ----------------------------- | -------- | ------------------------------------------------------------------------------------------- |
 | `RELAYER_URL`                 | No       | Relayer base URL incl. API version path. Defaults to `https://relayer.testnet.zama.org/v2`. |
 | `RELAYER_API_KEY`             | No       | API key added as `x-api-key` header by the proxy. Not required for Sepolia testnet.         |
-| `RELAYER_ALLOW_PRIVATE_URL`   | No       | Set to `true` only for local/private relayer development URLs.                              |
 | `NEXT_PUBLIC_SEPOLIA_RPC_URL` | No       | Sepolia RPC override. Defaults to the public PublicNode endpoint.                           |
 
 ## Running e2e tests
