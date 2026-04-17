@@ -128,11 +128,10 @@ describe("buildRelayer", () => {
     expect(() => buildRelayer(new Map(), resolveChainId)).toThrow("No chain transports configured");
   });
 
-  it("returns unwrapped relayer for single web chain", () => {
+  it("wraps single web chain in CompositeRelayer", () => {
     const transports = resolveChainTransports([sepoliaChain], { [11155111]: web() }, [11155111]);
     const relayer = buildRelayer(transports, resolveChainId);
-    // Single chain should not be wrapped in CompositeRelayer
-    expect(relayer.constructor.name).not.toBe("CompositeRelayer");
+    expect(relayer.constructor.name).toBe("CompositeRelayer");
   });
 
   it("returns CompositeRelayer for mixed web + cleartext", () => {
@@ -172,7 +171,7 @@ describe("buildRelayer", () => {
     );
   });
 
-  it("uses custom relayer directly without constructing", () => {
+  it("wraps custom relayer in CompositeRelayer", () => {
     const mockRelayer = { terminate: vi.fn() } as any;
     const transports = resolveChainTransports(
       [sepoliaChain],
@@ -180,7 +179,7 @@ describe("buildRelayer", () => {
       [11155111],
     );
     const relayer = buildRelayer(transports, resolveChainId);
-    expect(relayer).toBe(mockRelayer);
+    expect(relayer.constructor.name).toBe("CompositeRelayer");
   });
 
   it("returns CompositeRelayer for mixed web + custom", () => {

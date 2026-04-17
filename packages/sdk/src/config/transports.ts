@@ -7,10 +7,10 @@ import type { CleartextConfig } from "../relayer/cleartext/types";
 // ── Shared option shapes ─────────────────────────────────────────────────────
 
 /** Relayer-pool options shared across all chains using the same web relayer. */
-export type WebRelayerOptions = Partial<Omit<RelayerWebConfig, "transports" | "getChainId">>;
+export type WebRelayerOptions = Partial<Omit<RelayerWebConfig, "chain">>;
 
 /** Relayer-pool options shared across all chains using the same node relayer. */
-export type NodeRelayerOptions = Partial<Omit<RelayerNodeConfig, "transports" | "getChainId">>;
+export type NodeRelayerOptions = Partial<Omit<RelayerNodeConfig, "chain">>;
 
 /** Per-chain cleartext config. `executorAddress` is required. */
 export type CleartextChainConfig = Partial<CleartextConfig> & {

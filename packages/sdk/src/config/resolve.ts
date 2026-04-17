@@ -172,6 +172,11 @@ export function buildRelayer(
       perChainRelayers.set(chain.chainId, new RelayerNode({ chain: merged, ...transport.relayer }));
       continue;
     }
+
+    const _exhaustive: never = transport;
+    throw new ConfigurationError(
+      `Unhandled transport type for chain ${chain.chainId}: ${JSON.stringify((_exhaustive as unknown as Record<string, unknown>).type)}`,
+    );
   }
 
   return new CompositeRelayer(resolveChainId, perChainRelayers);
