@@ -2,6 +2,7 @@ import type { Address } from "viem";
 import type { WrappersRegistry } from "../wrappers-registry";
 import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
+import { assertNonNullable } from "../utils/assertions";
 import { filterQueryOptions } from "./utils";
 
 export interface WrapperDiscoveryQueryConfig {
@@ -44,11 +45,10 @@ export function wrapperDiscoveryQueryOptions(
   return {
     ...filterQueryOptions(config.query ?? {}),
     queryKey,
-    queryFn: async () => {
-      if (!config.erc20Address) {
-        throw new Error("erc20Address is required for wrapper discovery query");
-      }
-      const result = await registry.getConfidentialToken(config.erc20Address);
+    queryFn: async (context) => {
+      const [, { erc20Address }] = context.queryKey;
+      assertNonNullable(erc20Address, "wrapperDiscoveryQueryOptions: erc20Address");
+      const result = await registry.getConfidentialToken(erc20Address);
       return result ? result.confidentialTokenAddress : null;
     },
     staleTime: Infinity,
