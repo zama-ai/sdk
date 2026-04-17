@@ -90,14 +90,20 @@ describe("resolveChainTransports", () => {
     );
   });
 
-  it("only iterates chainIds, ignoring extra transport keys", () => {
-    const result = resolveChainTransports(
-      [sepoliaChain],
-      { [11155111]: web(), [999]: web() },
-      [11155111],
-    );
-    expect(result.size).toBe(1);
-    expect(result.has(999)).toBe(false);
+  it("throws for orphaned transport keys not in chainIds", () => {
+    expect(() =>
+      resolveChainTransports([sepoliaChain], { [11155111]: web(), [999]: web() }, [11155111]),
+    ).toThrow("Transport entries for chain(s) [999]");
+  });
+
+  it("throws for multiple orphaned transport keys", () => {
+    expect(() =>
+      resolveChainTransports(
+        [sepoliaChain],
+        { [11155111]: web(), [999]: web(), [888]: node() },
+        [11155111],
+      ),
+    ).toThrow("Transport entries for chain(s) [888, 999]");
   });
 });
 

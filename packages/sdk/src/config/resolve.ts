@@ -115,6 +115,19 @@ export function resolveChainTransports(
     result.set(id, { chain: chainConfig, transport });
   }
 
+  if (transports) {
+    const chainIdSet = new Set(chainIds);
+    const orphaned = Object.keys(transports)
+      .map(Number)
+      .filter((id) => !chainIdSet.has(id));
+    if (orphaned.length > 0) {
+      throw new ConfigurationError(
+        `Transport entries for chain(s) [${orphaned.join(", ")}] have no matching entry ` +
+          `in the chains array or wagmi config. Remove them or add the corresponding chain config.`,
+      );
+    }
+  }
+
   return result;
 }
 
