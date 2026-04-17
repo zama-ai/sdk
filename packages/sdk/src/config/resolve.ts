@@ -151,13 +151,8 @@ export function buildRelayer(
       continue;
     }
     if (transport.type === "cleartext") {
-      perChainRelayers.set(
-        chain.chainId,
-        new RelayerCleartext({
-          ...chain,
-          ...transport.chain,
-        } as CleartextConfig),
-      );
+      const merged = { ...chain, ...transport.chain } as CleartextConfig;
+      perChainRelayers.set(chain.chainId, new RelayerCleartext(merged));
       continue;
     }
 
@@ -176,14 +171,6 @@ export function buildRelayer(
     if (transport.type === "node") {
       perChainRelayers.set(chain.chainId, new RelayerNode({ chain: merged, ...transport.relayer }));
       continue;
-    }
-  }
-
-  const uniqueRelayers = new Set(perChainRelayers.values());
-  if (uniqueRelayers.size === 1) {
-    const [only] = uniqueRelayers;
-    if (only) {
-      return only;
     }
   }
 
