@@ -194,8 +194,15 @@ function toChainEntry(
   chain: ExtendedFhevmInstanceConfig,
   transport: WebTransportConfig | NodeTransportConfig,
 ): ChainEntry {
+  const merged = { ...chain, ...transport.chain };
+  if (!merged.relayerUrl) {
+    throw new ConfigurationError(
+      `Chain ${chain.chainId} has an empty relayerUrl. ` +
+        `Use cleartext() for chains without a relayer.`,
+    );
+  }
   return {
-    chain: { ...chain, ...transport.chain },
+    chain: merged,
     relayer: transport.relayer,
   };
 }

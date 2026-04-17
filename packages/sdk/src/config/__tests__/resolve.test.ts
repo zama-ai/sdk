@@ -145,6 +145,20 @@ describe("buildRelayer", () => {
     expect(relayer.constructor.name).not.toBe("CompositeRelayer");
   });
 
+  it("throws when web transport chain has empty relayerUrl", () => {
+    const transports = resolveChainTransports([hoodiChain], { [560048]: web() }, [560048]);
+    expect(() => buildRelayer(transports, resolveChainId)).toThrow(
+      "Chain 560048 has an empty relayerUrl",
+    );
+  });
+
+  it("throws when node transport chain has empty relayerUrl", () => {
+    const transports = resolveChainTransports([hoodiChain], { [560048]: node() }, [560048]);
+    expect(() => buildRelayer(transports, resolveChainId)).toThrow(
+      "Chain 560048 has an empty relayerUrl",
+    );
+  });
+
   it("creates separate relayers for distinct relayer option references", () => {
     const opts1 = { threads: 2 };
     const opts2 = { threads: 4 };
