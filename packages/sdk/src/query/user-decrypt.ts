@@ -26,7 +26,10 @@ export function userDecryptQueryOptions(
 > {
   return {
     queryKey: zamaQueryKeys.decryption.handles(config.handles),
-    queryFn: () => sdk.userDecrypt(config.handles),
+    queryFn: (context) => {
+      const [, { handles }] = context.queryKey;
+      return sdk.userDecrypt(handles as DecryptHandle[]);
+    },
     staleTime: Infinity,
     enabled: config.handles.length > 0,
   };
