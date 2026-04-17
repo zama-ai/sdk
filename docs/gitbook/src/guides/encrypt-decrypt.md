@@ -245,11 +245,15 @@ function ConfidentialAction() {
 
 {% endcode %}
 
-### 3. Avoid blind-sign wallet popups
+### 3. Decryption of the encrypted data
 
-Operations performing decryptions like `useUserDecrypt` or `useConfidentialBalance` might trigger an EIP-712 wallet signature when ran for the first time. If your app calls these hooks on render without gating, users might see an unsolicited MetaMask popup before they have taken any action. In crypto UX this is a **blind-signing anti-pattern**: users are trained to reject unexpected signature requests, and it's confusing to know what is being signed exactly.
+Decrypting on-chain data requires the user to sign an EIP-712 message that grants your app a **reusable credential** for the relevant contracts. Hooks like `useUserDecrypt` and `useConfidentialBalance` trigger this signature automatically the first time they run. If your app calls these hooks on render without gating, users see an unsolicited MetaMask popup before they have taken any action — a confusing experience that often leads to rejection.
 
-The fix: check `useIsAllowed` first, show a locked state, and let the user decide when to sign.
+A good decryption UX follows three steps:
+
+1. **Check credentials** — use `useIsAllowed` to see whether the user has already signed.
+2. **Show a locked state** — display a clear "Decrypt" button so the user understands what they are authorizing.
+3. **Decrypt on demand** — only mount balance or decrypt components after the credential exists.
 
 {% hint style="danger" %}
 **Never** call `useConfidentialBalance` or `useUserDecrypt` without gating on `useIsAllowed`:
