@@ -572,9 +572,9 @@ export function filterQueryOptions<TOptions extends Record<string, unknown>>(opt
 export function finalizeUnwrapMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.finalizeUnwrap", Address], FinalizeUnwrapParams, TransactionResult>;
 
 // @public
-export type FinalizeUnwrapParams = {
+export type FinalizeUnwrapParams = /** Preferred input from upgraded `UnwrapRequested` events. */{
     unwrapRequestId: Handle;
-} | {
+} /** Legacy input from pre-upgrade `UnwrapRequested` events. */ | {
     burnAmountHandle: Handle;
 };
 
