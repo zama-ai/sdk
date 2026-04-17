@@ -78,16 +78,16 @@ import { type DecryptBalanceAsParams } from "@zama-fhe/sdk/query";
 
 The address that delegated decryption rights.
 
-### owner
+### balanceHolder
 
 `Address | undefined`
 
-Balance owner address. Defaults to `delegatorAddress`. Use this when the owner differs from the delegator.
+The address whose on-chain balance to read. Defaults to `delegatorAddress`. Use this when the balance holder differs from the delegator.
 
 ```ts
 await decryptAs({
   delegatorAddress: "0xDelegator",
-  owner: "0xOwner",
+  balanceHolder: "0xBalanceHolder",
 });
 ```
 
