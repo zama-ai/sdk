@@ -108,7 +108,7 @@ export interface ConfidentialBalanceQueryConfig {
     tokenAddress: Address;
 }
 
-// @public (undocumented)
+// @public
 export function confidentialBalanceQueryOptions(token: ReadonlyToken, config: ConfidentialBalanceQueryConfig): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.confidentialBalance.owner>>;
 
 // @public (undocumented)
@@ -822,7 +822,7 @@ export interface SignerAddressQueryConfig {
 }
 
 // @public (undocumented)
-export function signerAddressQueryOptions(sdk: ZamaSDK, config?: SignerAddressQueryConfig): QueryFactoryOptions<Address, Error, Address, ReturnType<typeof zamaQueryKeys.signerAddress.scope>>;
+export function signerAddressQueryOptions(signer: GenericSigner, config?: SignerAddressQueryConfig): QueryFactoryOptions<Address, Error, Address, ReturnType<typeof zamaQueryKeys.signerAddress.scope>>;
 
 // @public
 export interface SignerLifecycleCallbacks {
@@ -846,7 +846,7 @@ export type StrippedQueryOptionKeys = "gcTime" | "staleTime" | "enabled" | "sele
 
 // @public
 export class Token extends ReadonlyToken {
-    constructor(sdk: ZamaSDK, address: Address, wrapper?: Address);
+    constructor(sdk: ZamaSDK, signer: GenericSigner, address: Address, wrapper?: Address);
     approve(spender: Address, until?: number): Promise<TransactionResult>;
     approveUnderlying(amount?: bigint): Promise<TransactionResult>;
     static batchDelegateDecryption(input: {
@@ -871,6 +871,8 @@ export class Token extends ReadonlyToken {
         delegateAddress: Address;
     }): Promise<TransactionResult>;
     shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult>;
+    // (undocumented)
+    readonly signer: GenericSigner;
     unshield(amount: bigint, options?: UnshieldOptions): Promise<TransactionResult>;
     unshieldAll(callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     unwrap(amount: bigint): Promise<TransactionResult>;
@@ -1184,9 +1186,6 @@ export const zamaQueryKeys: {
         readonly scope: (scope: number) => readonly ["zama.signerAddress", {
             readonly scope: number;
         }];
-        readonly token: (tokenAddress: Address) => readonly ["zama.signerAddress", {
-            readonly tokenAddress: `0x${string}`;
-        }];
     };
     readonly confidentialBalance: {
         readonly all: readonly ["zama.confidentialBalance"];
@@ -1382,12 +1381,12 @@ export class ZamaSDK {
     readonly registry: WrappersRegistry;
     // (undocumented)
     readonly relayer: RelayerSDK;
-    requireSigner(operation: string): GenericSigner;
+    requireChainAlignment(operation: string): Promise<number>;
     revokeSession(): Promise<void>;
     // (undocumented)
     readonly sessionStorage: GenericStorage;
     // (undocumented)
-    readonly signer: GenericSigner | undefined;
+    readonly signer: GenericSigner;
     // (undocumented)
     readonly storage: GenericStorage;
     terminate(): void;
@@ -1404,7 +1403,7 @@ export interface ZamaSDKConfig {
     relayer: RelayerSDK;
     sessionStorage?: GenericStorage;
     sessionTTL?: number | "infinite";
-    signer?: GenericSigner;
+    signer: GenericSigner;
     signerLifecycleCallbacks?: SignerLifecycleCallbacks;
     storage: GenericStorage;
 }

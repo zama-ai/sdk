@@ -44,6 +44,29 @@ scope discipline of this refactor, and would force every static helper
 (e.g. `batchBalancesOf`, `batchDecryptBalancesAs`) to rederive the shared
 SDK from individual pieces.
 
+## D3 — `sdk.signer` stays required
+
+**Question.** Once `GenericProvider` owns public reads, should `sdk.signer`
+also become optional so the SDK can be constructed in a read-only mode?
+
+**Decision.** No. Keep `sdk.signer` typed as `GenericSigner`, make
+`ZamaSDKConfig.signer` required, and keep `sdk.credentials` /
+`sdk.delegatedCredentials` unconditionally constructed. Do not model this
+PR as "provider/signer split plus read-only SDK construction".
+
+**Reasoning.** The provider/signer split is about separating read
+transport from wallet authority. Making `signer` optional is a separate
+product decision that widens the public surface: nullable fields on
+`ZamaSDK`, extra guard helpers, mutation hooks that tolerate missing
+`Token`, alternate signer-address behavior, and additional docs/tests for
+an SDK-construction path no current consumer uses. That scope creep makes
+the split harder to review and leaves the main API less coherent.
+
+If a future consumer needs true read-only construction, it should land as
+an explicit separate design, e.g. a dedicated `ReadonlyZamaSDK` (or
+equivalent) with its own invariants, rather than threading
+`GenericSigner | undefined` through every wallet-bound path.
+
 ## D6 — Wagmi adapter structure
 
 **Question.** The wagmi adapter lives under `@zama-fhe/react-sdk/wagmi`,

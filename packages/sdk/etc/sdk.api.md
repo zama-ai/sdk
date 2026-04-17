@@ -529,6 +529,18 @@ export interface BatchDecryptAsOptions {
 }
 
 // @public
+export class ChainMismatchError extends ZamaError {
+    constructor(input: {
+        operation: string;
+        signerChainId: number;
+        providerChainId: number;
+    }, options?: ErrorOptions);
+    readonly operation: string;
+    readonly providerChainId: number;
+    readonly signerChainId: number;
+}
+
+// @public
 export class ChromeSessionStorage implements GenericStorage {
     // (undocumented)
     delete(key: string): Promise<void>;
@@ -14630,12 +14642,6 @@ export interface SignerLifecycleCallbacks {
 }
 
 // @public
-export class SignerRequiredError extends ZamaError {
-    constructor(operation: string, options?: ErrorOptions);
-    readonly operation: string;
-}
-
-// @public
 export class SigningFailedError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
@@ -14821,7 +14827,7 @@ export function symbolContract(tokenAddress: Address): {
 
 // @public
 export class Token extends ReadonlyToken {
-    constructor(sdk: ZamaSDK, address: Address, wrapper?: Address);
+    constructor(sdk: ZamaSDK, signer: GenericSigner, address: Address, wrapper?: Address);
     approve(spender: Address, until?: number): Promise<TransactionResult>;
     approveUnderlying(amount?: bigint): Promise<TransactionResult>;
     static batchDelegateDecryption(input: {
@@ -14846,6 +14852,8 @@ export class Token extends ReadonlyToken {
         delegateAddress: Address;
     }): Promise<TransactionResult>;
     shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult>;
+    // (undocumented)
+    readonly signer: GenericSigner;
     unshield(amount: bigint, options?: UnshieldOptions): Promise<TransactionResult>;
     unshieldAll(callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     unwrap(amount: bigint): Promise<TransactionResult>;
@@ -19868,7 +19876,8 @@ export const ZamaErrorCode: {
     readonly AclPaused: "ACL_PAUSED"; /** Expiration date is too soon (must be at least 1 hour in the future). */
     readonly DelegationExpirationTooSoon: "DELEGATION_EXPIRATION_TOO_SOON"; /** Delegation exists on-chain but hasn't propagated to the gateway yet. */
     readonly DelegationNotPropagated: "DELEGATION_NOT_PROPAGATED"; /** Operation requires a wallet signer but the SDK was configured without one. */
-    readonly SignerRequired: "SIGNER_REQUIRED";
+    readonly SignerRequired: "SIGNER_REQUIRED"; /** Signer and provider are connected to different chains. */
+    readonly ChainMismatch: "CHAIN_MISMATCH";
 };
 
 // @public
@@ -19896,12 +19905,12 @@ export class ZamaSDK {
     readonly registry: WrappersRegistry;
     // (undocumented)
     readonly relayer: RelayerSDK;
-    requireSigner(operation: string): GenericSigner;
+    requireChainAlignment(operation: string): Promise<number>;
     revokeSession(): Promise<void>;
     // (undocumented)
     readonly sessionStorage: GenericStorage;
     // (undocumented)
-    readonly signer: GenericSigner | undefined;
+    readonly signer: GenericSigner;
     // (undocumented)
     readonly storage: GenericStorage;
     terminate(): void;
@@ -19918,7 +19927,7 @@ export interface ZamaSDKConfig {
     relayer: RelayerSDK;
     sessionStorage?: GenericStorage;
     sessionTTL?: number | "infinite";
-    signer?: GenericSigner;
+    signer: GenericSigner;
     signerLifecycleCallbacks?: SignerLifecycleCallbacks;
     storage: GenericStorage;
 }
