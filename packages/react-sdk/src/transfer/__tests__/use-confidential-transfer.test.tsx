@@ -34,31 +34,23 @@ describe("useConfidentialTransfer", () => {
     );
 
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
-    const activityKey = zamaQueryKeys.activityFeed.token(TOKEN);
     const otherBalanceKey = zamaQueryKeys.confidentialBalance.owner(OTHER_TOKEN, USER);
-    const otherActivityKey = zamaQueryKeys.activityFeed.token(OTHER_TOKEN);
-    const seededActivity = [{ id: "evt-1" }];
-    const seededOtherActivity = [{ id: "evt-2" }];
 
     queryClient.setQueryData(balanceKey, 1000n);
-    queryClient.setQueryData(activityKey, seededActivity);
     queryClient.setQueryData(otherBalanceKey, 777n);
-    queryClient.setQueryData(otherActivityKey, seededOtherActivity);
 
     await act(() =>
       result.current.mutateAsync({ to: RECIPIENT, amount: 500n, skipBalanceCheck: true }),
     );
 
-    expectInvalidatedQueries(queryClient, [balanceKey, activityKey]);
+    expectInvalidatedQueries(queryClient, [balanceKey]);
     expectCacheUntouched(queryClient, otherBalanceKey, 777n);
-    expectCacheUntouched(queryClient, otherActivityKey, seededOtherActivity);
   });
 
   test("behavior: forwards onSuccess callback", async ({ renderWithProviders, signer }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
-    const activityKey = zamaQueryKeys.activityFeed.token(TOKEN);
     const onSuccess = vi.fn();
 
     const { result, queryClient } = renderWithProviders(() =>
@@ -66,12 +58,11 @@ describe("useConfidentialTransfer", () => {
     );
 
     queryClient.setQueryData(balanceKey, 1000n);
-    queryClient.setQueryData(activityKey, [{ id: "evt-1" }]);
 
     await mutateAndExpectOnSuccess(
       () => result.current.mutateAsync({ to: RECIPIENT, amount: 500n, skipBalanceCheck: true }),
       onSuccess,
-      (client) => expectInvalidatedQueries(client, [balanceKey, activityKey]),
+      (client) => expectInvalidatedQueries(client, [balanceKey]),
     );
   });
 

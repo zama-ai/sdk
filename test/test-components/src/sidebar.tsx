@@ -21,7 +21,6 @@ const NAV_ITEMS = [
   { to: "/fhe-relayer", label: "FHE Relayer" },
   { to: "/unwrap-manual", label: "Manual Unwrap" },
   { to: "/resume-unshield", label: "Resume Unshield" },
-  { to: "/activity-feed", label: "Activity Feed" },
 ] as const;
 
 function NavLinks({ LinkComponent }: { LinkComponent: LinkComponent }) {
