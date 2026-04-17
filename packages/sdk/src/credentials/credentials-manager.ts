@@ -7,17 +7,12 @@ import {
   type CredentialsConfig,
   type SigningMeta,
 } from "./credentials-manager-base";
-import type { CredentialSet } from "./credential-set";
 import {
   type BaseEncryptedCredentials,
   assertBaseEncryptedCredentials,
   normalizeAddresses,
   computeStoreKey,
-  MAX_CONTRACTS_PER_CREDENTIAL,
 } from "./credential-validation";
-import { Batcher } from "../utils/batcher";
-
-const batcher = new Batcher(MAX_CONTRACTS_PER_CREDENTIAL);
 
 /** Internal storage shape — same as BaseEncryptedCredentials. */
 type EncryptedCredentials = BaseEncryptedCredentials;
@@ -51,14 +46,6 @@ export class CredentialsManager extends BaseCredentialsManager<
   #relayer: RelayerSDK;
   #cachedStoreKey: string | null = null;
   #cachedStoreKeyIdentity: string | null = null;
-  /**
-   * FHE keypair cached across `allow()` calls. Reused for all batches created
-   * within a single burst so they share a single public key, but invalidated
-   * once `keypairTTL` seconds have elapsed since generation to prevent a
-   * compromised keypair from being reused beyond its intended rotation window.
-   * Also cleared by {@link clear}, {@link revoke}, and {@link clearCaches}.
-   */
-  #cachedKeypair: { publicKey: Hex; privateKey: Hex; createdAt: number } | null = null;
 
   /** Derive the deterministic storage key for a given wallet address and chain. */
   static async computeStoreKey(address: Address, chainId: number): Promise<string> {
@@ -87,31 +74,18 @@ export class CredentialsManager extends BaseCredentialsManager<
   /**
    * Authorize FHE credentials for one or more contract addresses.
    *
-   * Addresses are split into batches of ≤ 10 internally to satisfy the fhevm
-   * contract limit. Each batch triggers its own EIP-712 wallet prompt (shown
-   * sequentially). The returned {@link CredentialSet} routes each address to
-   * its batch transparently — callers only need `credSet.batchFor(address)`.
-   *
-   * Already-signed batches are retained in storage on failure, so a retry only
-   * needs to sign the rejected batch.
-   *
-   * @throws {@link PartialCredentialError} if a batch fails after at least one batch succeeded.
-   *   The error carries a {@link PartialCredentialError.partialResult} with the credentials
-   *   already signed. Retrying `allow()` is safe — persisted batches are reused automatically.
-   * @throws {@link SigningRejectedError} if the first batch's wallet signature prompt is rejected.
-   * @throws {@link SigningFailedError} if the first batch signing operation fails for any other reason.
+   * @throws {@link SigningRejectedError} if the user rejects the wallet signature prompt.
+   * @throws {@link SigningFailedError} if the signing operation fails for any other reason.
    */
-  async allow(...contractAddresses: Address[]): Promise<CredentialSet> {
+  async allow(...contractAddresses: Address[]): Promise<StoredCredentials> {
     const normalized = normalizeAddresses(contractAddresses);
     const key = await this.#storeKey();
-    return batcher.execute(normalized, (accumulated) =>
-      this.resolveMulti({
-        key,
-        contracts: accumulated,
-        createFn: (batchAddresses: Address[], batchKey: string) =>
-          this.#createBatch(batchAddresses, batchKey),
-      }),
-    );
+    return this.resolveCredentials({
+      key,
+      contracts: normalized,
+      createKey: normalized.join(","),
+      createFn: () => this.create(normalized),
+    });
   }
 
   /** Check if stored credentials are expired or unusable. */
@@ -143,46 +117,23 @@ export class CredentialsManager extends BaseCredentialsManager<
   }
 
   /**
-   * Generate fresh FHE credentials for one or more contract addresses and
-   * prompt the user to sign the EIP-712 authorization.
-   *
-   * For more than {@link MAX_CONTRACTS_PER_CREDENTIAL} addresses, prefer
-   * {@link allow} which batches transparently. This method operates on a
-   * single batch for a given storage key.
+   * Generate a fresh FHE keypair, create an EIP-712 authorization, and
+   * prompt the user to sign it.
    */
   async create(contractAddresses: Address[]): Promise<StoredCredentials> {
     const normalized = normalizeAddresses(contractAddresses);
     const key = await this.#storeKey();
-    return this.#createBatch(normalized, key);
-  }
-
-  /**
-   * Create credentials for a single batch. Reuses the cached FHE keypair when
-   * available (set by a previous `allow()` call), or generates a fresh one.
-   * Keypair generation runs inside `createCredentials` so failures are wrapped
-   * by {@link wrapSigningError} with the correct context prefix.
-   */
-  async #createBatch(
-    contractAddresses: Address[],
-    overrideKey?: string,
-  ): Promise<StoredCredentials> {
-    const key = overrideKey ?? (await this.#storeKey());
     return this.createCredentials({
       key,
-      contractAddresses,
+      contractAddresses: normalized,
       createFn: async () => {
-        const now = Math.floor(Date.now() / 1000);
-        if (!this.#cachedKeypair || now - this.#cachedKeypair.createdAt >= this.keypairTTL) {
-          const kp = await this.#relayer.generateKeypair();
-          this.#cachedKeypair = { ...kp, createdAt: now };
-        }
-        const keypair = this.#cachedKeypair;
+        const keypair = await this.#relayer.generateKeypair();
         const startTimestamp = Math.floor(Date.now() / 1000);
         const durationDays = Math.ceil(this.keypairTTL / 86400);
 
         const eip712 = await this.#relayer.createEIP712(
           keypair.publicKey,
-          contractAddresses,
+          normalized,
           startTimestamp,
           durationDays,
         );
@@ -192,7 +143,7 @@ export class CredentialsManager extends BaseCredentialsManager<
           publicKey: keypair.publicKey,
           privateKey: keypair.privateKey,
           signature,
-          contractAddresses,
+          contractAddresses: normalized,
           startTimestamp,
           durationDays,
         };
@@ -239,7 +190,6 @@ export class CredentialsManager extends BaseCredentialsManager<
   }
 
   protected override clearCaches(): void {
-    this.#cachedKeypair = null;
     this.#cachedStoreKey = null;
     this.#cachedStoreKeyIdentity = null;
     super.clearCaches();
