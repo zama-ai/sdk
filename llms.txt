@@ -63,9 +63,9 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 
 ### React Reference
 
-- [Overview](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/README.md): API reference for the `@zama-fhe/react-sdk` package. Each page documents a single hook or component with parameters, return values, and working code examples. All hooks are built on TanStack Query with two-phase polling and automatic cache invalidation.
+- [Overview](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/README.md): API reference for the `@zama-fhe/react-sdk` package. Each page documents a single hook or component with parameters, return values, and working code examples. All hooks are built on TanStack Query with automatic cache invalidation and cached decryption.
 - [ZamaProvider](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/ZamaProvider.md): Context provider that supplies the Zama SDK to all descendant hooks.
-- [useConfidentialBalance](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialBalance.md): Decrypt and poll a single token's confidential balance.
+- [useConfidentialBalance](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialBalance.md): Decrypt a single token's confidential balance.
 - [useConfidentialBalances](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialBalances.md): Decrypt and poll multiple tokens' confidential balances in a single query.
 - [useConfidentialTransfer](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialTransfer.md): Send confidential ERC-20 tokens privately.
 - [useConfidentialTransferFrom](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialTransferFrom.md): Transfer confidential tokens on behalf of an owner who approved you as an operator.
@@ -113,7 +113,6 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [Overview](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/README.md): Core concepts and architecture behind the Zama SDK. These pages explain how the SDK works under the hood — the session model, security guarantees, and caching strategy.
 - [Architecture](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/architecture.md): The SDK is organized into layers, each with a clear responsibility. Higher layers depend on lower layers but never the reverse.
 - [Session model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/session-model.md): How the SDK manages FHE keypairs, wallet signatures, and session lifecycle.
-- [Two-phase balance polling](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/two-phase-polling.md): How the SDK uses smart polling to minimize expensive FHE decryption while keeping balances up to date.
 - [Security model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/security-model.md): Threat model, trust assumptions, and security architecture of the Zama SDK.
 
 ## Official Examples
