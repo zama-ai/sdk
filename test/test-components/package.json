@@ -14,6 +14,7 @@
   "peerDependencies": {
     "react": ">=18",
     "@zama-fhe/react-sdk": "workspace:*",
+    "@zama-fhe/sdk": "workspace:*",
     "viem": ">=2",
     "wagmi": ">=2"
   }

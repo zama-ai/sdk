@@ -1,12 +1,7 @@
 "use client";
 
-import {
-  useIsAllowed,
-  useRevoke,
-  useRevokeSession,
-  useAllow,
-  type Address,
-} from "@zama-fhe/react-sdk";
+import { useIsAllowed, useRevoke, useRevokeSession, useAllow } from "@zama-fhe/react-sdk";
+import type { Address } from "@zama-fhe/sdk";
 
 export function SessionPanel({ tokenAddresses }: { tokenAddresses: [Address, ...Address[]] }) {
   const { data: isAllowed, isLoading } = useIsAllowed({ contractAddresses: tokenAddresses });
