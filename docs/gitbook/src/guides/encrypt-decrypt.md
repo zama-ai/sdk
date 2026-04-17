@@ -267,96 +267,30 @@ This causes an unexpected MetaMask popup, user rejection, potential Blockaid fla
 
 #### Gating useConfidentialBalance
 
-Gate the query on `useIsAllowed` and trigger `useAllow` from an explicit button:
-
-{% code title="ConfidentialBalanceCard.tsx" %}
-
-```tsx
-import { useAllow, useIsAllowed, useConfidentialBalance } from "@zama-fhe/react-sdk";
-import { formatUnits, type Address } from "viem";
-
-function ConfidentialBalanceCard({
-  tokenAddress,
-  decimals,
-  symbol,
-}: {
-  tokenAddress: Address;
-  decimals: number;
-  symbol: string;
-}) {
-  const { data: isAllowed } = useIsAllowed({ contractAddresses: [tokenAddress] });
-  const balance = useConfidentialBalance({ tokenAddress }, { enabled: !!isAllowed });
-  const { mutate: allow, isPending: isSigning } = useAllow();
-
-  if (!isAllowed) {
-    return (
-      <section>
-        <p>{symbol}: *****</p>
-        <button onClick={() => allow([tokenAddress])} disabled={isSigning}>
-          {isSigning ? "Signing..." : "Decrypt Balance"}
-        </button>
-      </section>
-    );
-  }
-
-  return (
-    <section>
-      <p>
-        {symbol}: {balance.isLoading ? "Decrypting..." : formatUnits(balance.data ?? 0n, decimals)}
-      </p>
-    </section>
-  );
-}
-```
-
-{% endcode %}
-
-When `isAllowed` is false the balance query sits idle — no wallet popup. The user clicks "Decrypt Balance", `useAllow` fires the EIP-712 signature, and `isAllowed` flips to true, enabling the query. Returning users skip the prompt entirely because credentials persist in IndexedDB (default TTL: 30 days).
-
-For multiple tokens, batch with a single signature:
-
-```tsx
-const { mutate: allow } = useAllow();
-const addresses = tokens.map((t) => t.confidentialTokenAddress);
-
-<button onClick={() => allow(addresses)}>Decrypt All Balances</button>;
-```
-
-The same pattern applies to `useUserDecrypt` — pass `{ enabled: !!isAllowed }` and trigger `useAllow` from a button. Rather than gating each component individually, you can pre-authorize once and let every nested decrypt hook run without prompts.
-
-#### Pre-authorize once, decrypt anywhere
-
-A common pattern is to call `useAllow` once — for example right after the user connects their wallet — and then decrypt independently in any component, on any page, without triggering another wallet prompt. Credentials persist in IndexedDB, so they survive page reloads.
+Split the gate and the balance display into separate components. The gate checks credentials and shows a decrypt button; the balance component only mounts once credentials exist, so it never triggers a wallet popup.
 
 {% tabs %}
-{% tab title="UserDecryptionGate.tsx" %}
+{% tab title="DecryptGate.tsx" %}
 
 ```tsx
 import { useAllow, useIsAllowed } from "@zama-fhe/react-sdk";
+import type { Address } from "viem";
 
-/**
- * Show once after wallet connect. After the user signs,
- * every useUserDecrypt in the app works without prompts.
- *
- * Pass all contract addresses you want to decrypt upfront.
- */
-function UserDecryptionGate({
-  contracts,
+function DecryptGate({
+  contractAddresses,
   children,
 }: {
-  contracts: `0x${string}`[];
+  contractAddresses: Address[];
   children: React.ReactNode;
 }) {
+  const { data: isAllowed } = useIsAllowed({ contractAddresses });
   const { mutate: allow, isPending } = useAllow();
-  const { data: allowed } = useIsAllowed({
-    contractAddresses: contracts,
-  });
 
-  if (allowed) return <>{children}</>;
+  if (isAllowed) return <>{children}</>;
 
   return (
-    <button onClick={() => allow(contracts)} disabled={isPending}>
-      {isPending ? "Signing..." : "Authorize decryption"}
+    <button onClick={() => allow(contractAddresses)} disabled={isPending}>
+      {isPending ? "Signing..." : "Decrypt Balances"}
     </button>
   );
 }
@@ -367,18 +301,24 @@ function UserDecryptionGate({
 
 ```tsx
 import { useConfidentialBalance } from "@zama-fhe/react-sdk";
+import { formatUnits, type Address } from "viem";
 
-/**
- * Rendered inside <UserDecryptionGate> — credentials are already cached,
- * so this fires immediately with no wallet interaction.
- */
-function ConfidentialBalance({ contractAddress }: { contractAddress: `0x${string}` }) {
-  const { data: balance, isPending } = useConfidentialBalance({
-    tokenAddress: contractAddress,
-  });
+function ConfidentialBalance({
+  tokenAddress,
+  decimals,
+  symbol,
+}: {
+  tokenAddress: Address;
+  decimals: number;
+  symbol: string;
+}) {
+  const { data, isLoading } = useConfidentialBalance({ tokenAddress });
 
-  if (isPending) return <p>Decrypting...</p>;
-  return <output>{balance?.toString()}</output>;
+  return (
+    <p>
+      {symbol}: {isLoading ? "Decrypting..." : formatUnits(data ?? 0n, decimals)}
+    </p>
+  );
 }
 ```
 
@@ -386,24 +326,23 @@ function ConfidentialBalance({ contractAddress }: { contractAddress: `0x${string
 {% tab title="App.tsx" %}
 
 ```tsx
-import { useListPairs } from "@zama-fhe/react-sdk";
-
-/**
- * Contracts can come from the on-chain wrappers registry.
- * When new pairs are added, UserDecryptionGate detects the gap
- * and shows a one-click re-authorization — the SDK extends the
- * existing credential to cover the new addresses.
- */
 function App() {
-  const { data: pairs } = useListPairs();
-  const contracts = pairs?.items.map((p) => p.confidentialTokenAddress) ?? [];
+  const tokens = [
+    { address: "0xTokenA" as const, decimals: 6, symbol: "USDC" },
+    { address: "0xTokenB" as const, decimals: 18, symbol: "WETH" },
+  ];
 
   return (
-    <UserDecryptionGate contracts={contracts}>
-      {contracts.map((addr) => (
-        <ConfidentialBalance key={addr} contractAddress={addr} />
+    <DecryptGate contractAddresses={tokens.map((t) => t.address)}>
+      {tokens.map((t) => (
+        <ConfidentialBalance
+          key={t.address}
+          tokenAddress={t.address}
+          decimals={t.decimals}
+          symbol={t.symbol}
+        />
       ))}
-    </UserDecryptionGate>
+    </DecryptGate>
   );
 }
 ```
@@ -411,7 +350,33 @@ function App() {
 {% endtab %}
 {% endtabs %}
 
-Because `UserDecryptionGate` only renders its children after `useIsAllowed` returns `true`, every nested `useUserDecrypt` call reuses the cached credentials — no `enabled` guard needed. When new contracts appear in the list, `useIsAllowed` returns `false` and the user is prompted once to extend their authorization.
+`DecryptGate` only renders its children once `useIsAllowed` returns true. This means `ConfidentialBalance` never mounts without credentials — no `enabled` guard needed, no wallet popup on render. Returning users skip the prompt entirely because credentials persist in IndexedDB (default TTL: 30 days).
+
+The same pattern works with `useUserDecrypt` and any other decrypt hook — anything nested inside `DecryptGate` can decrypt freely without triggering a wallet prompt.
+
+When contract addresses come from the chain (e.g. `useListPairs`), `DecryptGate` automatically detects new addresses and prompts the user once to extend their authorization:
+
+```tsx
+import { useListPairs } from "@zama-fhe/react-sdk";
+
+function App() {
+  const { data: pairs } = useListPairs();
+  const addresses = pairs?.items.map((p) => p.confidentialTokenAddress) ?? [];
+
+  return (
+    <DecryptGate contractAddresses={addresses}>
+      {pairs?.items.map((p) => (
+        <ConfidentialBalance
+          key={p.confidentialTokenAddress}
+          tokenAddress={p.confidentialTokenAddress}
+          decimals={p.decimals}
+          symbol={p.symbol}
+        />
+      ))}
+    </DecryptGate>
+  );
+}
+```
 
 #### Decrypting handles from multiple contracts
 
