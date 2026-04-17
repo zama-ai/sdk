@@ -48,7 +48,7 @@ export interface BatchDecryptAsOptions {
    *
    * Matches the `account` parameter of `confidentialBalanceOf(account)` on-chain.
    */
-  account?: Address;
+  accountAddress?: Address;
   /** Maximum number of concurrent decrypt calls. Default: Infinity. */
   maxConcurrency?: number;
   /** Called when decryption fails for a single token. Return a fallback bigint. */
@@ -272,14 +272,16 @@ export class ReadonlyToken {
       return new Map();
     }
 
-    const { delegatorAddress, handles, account, onError, maxConcurrency } = options;
-    const accountAddress = account ? getAddress(account) : getAddress(delegatorAddress);
+    const { delegatorAddress, handles, accountAddress, onError, maxConcurrency } = options;
+    const normalizedAccount = accountAddress
+      ? getAddress(accountAddress)
+      : getAddress(delegatorAddress);
     const firstToken = tokens[0]!;
     ReadonlyToken.assertSameSdk(tokens);
 
     const resolvedHandles =
       handles ??
-      (await Promise.all(tokens.map((t) => t.readConfidentialBalanceOf(accountAddress))));
+      (await Promise.all(tokens.map((t) => t.readConfidentialBalanceOf(normalizedAccount))));
 
     if (tokens.length !== resolvedHandles.length) {
       throw new DecryptionFailedError(
@@ -297,7 +299,7 @@ export class ReadonlyToken {
         if (isZeroHandle(handle)) {
           return 0n;
         }
-        return firstToken.sdk.cache.get(accountAddress, token.address, handle);
+        return firstToken.sdk.cache.get(normalizedAccount, token.address, handle);
       }),
     );
 
@@ -361,7 +363,7 @@ export class ReadonlyToken {
             // Cache write is best-effort — log on failure so a broken cache
             // backend doesn't silently force re-decryption forever.
             firstToken.sdk.cache
-              .set(accountAddress, token.address, handle, value)
+              .set(normalizedAccount, token.address, handle, value)
               .catch((cacheErr: unknown) => {
                 // oxlint-disable-next-line no-console
                 console.warn("[zama-sdk] Failed to cache decrypted value:", cacheErr);
@@ -627,13 +629,13 @@ export class ReadonlyToken {
    */
   async decryptBalanceAs({
     delegatorAddress,
-    account,
+    accountAddress,
   }: {
     delegatorAddress: Address;
-    account?: Address;
+    accountAddress?: Address;
   }): Promise<bigint> {
     const normalizedDelegator = getAddress(delegatorAddress);
-    const normalizedAccount = account ? getAddress(account) : normalizedDelegator;
+    const normalizedAccount = accountAddress ? getAddress(accountAddress) : normalizedDelegator;
 
     const handle = await this.readConfidentialBalanceOf(normalizedAccount);
     if (isZeroHandle(handle)) {
