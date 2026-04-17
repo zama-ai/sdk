@@ -6,6 +6,8 @@
 
 import { Abi } from 'viem';
 import { Address } from 'viem';
+import { Bytes32Hex } from '@zama-fhe/relayer-sdk/bundle';
+import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle';
 import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
@@ -13,11 +15,15 @@ import { Hex } from 'viem';
 import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
 import { KeypairType } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
+import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
+import { KmsUserDecryptEIP712UserArgsType } from '@zama-fhe/relayer-sdk/bundle';
 import { MutationFunctionContext } from '@tanstack/query-core';
+import { PublicDecryptResults } from '@zama-fhe/relayer-sdk/bundle';
 import { QueryKey } from '@tanstack/query-core';
 import { QueryObserverOptions } from '@tanstack/query-core';
 import * as SDK from '@zama-fhe/relayer-sdk/bundle';
 import { skipToken } from '@tanstack/query-core';
+import { UserDecryptResults } from '@zama-fhe/relayer-sdk/bundle';
 import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
 
 // @public (undocumented)
@@ -80,8 +86,7 @@ export function batchDecryptBalancesAsMutationOptions(tokens: ReadonlyToken[]): 
 // @public
 export type BatchDecryptBalancesAsParams = BatchDecryptAsOptions;
 
-// @public
-export type ClearValueType = bigint | boolean | `0x${string}`;
+export { ClearValueType }
 
 // @public (undocumented)
 export function confidentialApproveMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.confidentialApprove", Address], ConfidentialApproveParams, TransactionResult>;
@@ -195,16 +200,11 @@ export interface CreateDelegatedUserDecryptEIP712Params {
 export function createEIP712MutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.createEIP712"], CreateEIP712Params, EIP712TypedData>;
 
 // @public
-export interface CreateEIP712Params {
-    // (undocumented)
-    contractAddresses: Address[];
-    // (undocumented)
-    durationDays?: number;
-    // (undocumented)
+export type CreateEIP712Params = Pick<KmsUserDecryptEIP712UserArgsType, "startTimestamp"> & {
     publicKey: Hex;
-    // (undocumented)
-    startTimestamp: number;
-}
+    contractAddresses: Address[];
+    durationDays?: number;
+};
 
 // @public (undocumented)
 export interface CredentialsAllowedEvent extends BaseEvent {
@@ -344,8 +344,8 @@ export interface DecryptHandle {
     handle: Handle;
 }
 
-// @public (undocumented)
-export type DecryptResult = Record<Handle, ClearValueType>;
+// @public
+export type DecryptResult = UserDecryptResults;
 
 // @public (undocumented)
 export interface DecryptStartEvent extends BaseEvent {
@@ -427,30 +427,7 @@ export interface DelegationSubmittedEvent extends BaseEvent {
 }
 
 // @public
-export interface EIP712TypedData {
-    // (undocumented)
-    domain: {
-        name: string;
-        version: string;
-        chainId: number;
-        verifyingContract: Address;
-    };
-    // (undocumented)
-    message: {
-        publicKey: Hex;
-        contractAddresses: readonly Address[];
-        startTimestamp: bigint;
-        durationDays: bigint;
-        extraData: Hex;
-    };
-    // (undocumented)
-    primaryType?: string;
-    // (undocumented)
-    types: Record<string, readonly {
-        readonly name: string;
-        readonly type: string;
-    }[]>;
-}
+export type EIP712TypedData = KmsUserDecryptEIP712Type | KmsDelegatedUserDecryptEIP712Type;
 
 // @public (undocumented)
 export interface EncryptEndEvent extends BaseEvent {
@@ -494,12 +471,7 @@ export interface EncryptParams {
 }
 
 // @public
-export interface EncryptResult {
-    // (undocumented)
-    handles: Uint8Array[];
-    // (undocumented)
-    inputProof: Uint8Array;
-}
+export type EncryptResult = InputProofBytesType;
 
 // @public (undocumented)
 export interface EncryptStartEvent extends BaseEvent {
@@ -658,9 +630,7 @@ export type OnChainEvent = ConfidentialTransferEvent | WrappedEvent | UnwrapRequ
 export function publicDecryptMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.publicDecrypt"], Handle[], PublicDecryptResult>;
 
 // @public
-export type PublicDecryptResult = Omit<SDK.PublicDecryptResults, "clearValues"> & {
-    clearValues: Readonly<Record<Handle, ClearValueType>>;
-};
+export type PublicDecryptResult = PublicDecryptResults;
 
 // @public (undocumented)
 export interface PublicKeyQueryConfig {
@@ -668,14 +638,10 @@ export interface PublicKeyQueryConfig {
     query?: Record<string, unknown>;
 }
 
+// Warning: (ae-forgotten-export) The symbol "PublicKeyData" needs to be exported by the entry point index.d.ts
+//
 // @public (undocumented)
-export function publicKeyQueryOptions(sdk: ZamaSDK, config?: PublicKeyQueryConfig): QueryFactoryOptions<{
-    publicKeyId: string;
-    publicKey: Uint8Array;
-} | null, Error, {
-    publicKeyId: string;
-    publicKey: Uint8Array;
-} | null, typeof zamaQueryKeys.publicKey.all>;
+export function publicKeyQueryOptions(sdk: ZamaSDK, config?: PublicKeyQueryConfig): QueryFactoryOptions<PublicKeyData | null, Error, PublicKeyData | null, typeof zamaQueryKeys.publicKey.all>;
 
 // @public (undocumented)
 export interface PublicParamsQueryConfig {
@@ -683,14 +649,10 @@ export interface PublicParamsQueryConfig {
     query?: Record<string, unknown>;
 }
 
+// Warning: (ae-forgotten-export) The symbol "PublicParamsData" needs to be exported by the entry point index.d.ts
+//
 // @public (undocumented)
-export function publicParamsQueryOptions(sdk: ZamaSDK, bits: number, config?: PublicParamsQueryConfig): QueryFactoryOptions<{
-    publicParams: Uint8Array;
-    publicParamsId: string;
-} | null, Error, {
-    publicParams: Uint8Array;
-    publicParamsId: string;
-} | null, ReturnType<typeof zamaQueryKeys.publicParams.bits>>;
+export function publicParamsQueryOptions(sdk: ZamaSDK, bits: number, config?: PublicParamsQueryConfig): QueryFactoryOptions<PublicParamsData | null, Error, PublicParamsData | null, ReturnType<typeof zamaQueryKeys.publicParams.bits>>;
 
 // @public (undocumented)
 export interface QueryClientLike {
@@ -776,14 +738,8 @@ export interface RelayerSDK {
     encrypt(params: EncryptParams): Promise<EncryptResult>;
     generateKeypair(): Promise<KeypairType<Hex>>;
     getAclAddress(): Promise<Address>;
-    getPublicKey(): Promise<{
-        publicKeyId: string;
-        publicKey: Uint8Array;
-    } | null>;
-    getPublicParams(bits: number): Promise<{
-        publicParams: Uint8Array;
-        publicParamsId: string;
-    } | null>;
+    getPublicKey(): Promise<PublicKeyData | null>;
+    getPublicParams(bits: number): Promise<PublicParamsData | null>;
     publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
     requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
     terminate(): void;

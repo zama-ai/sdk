@@ -23,6 +23,8 @@ export type {
   EIP712TypedData,
   DelegatedUserDecryptParams,
   NetworkType,
+  PublicKeyData,
+  PublicParamsData,
 } from "./relayer/relayer-sdk.types";
 export type {
   FheTypeName,

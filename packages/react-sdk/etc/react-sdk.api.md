@@ -168,6 +168,7 @@ import { PaginatedResult } from '@zama-fhe/sdk';
 import { PropsWithChildren } from 'react';
 import { publicDecryptMutationOptions } from '@zama-fhe/sdk/query';
 import { PublicDecryptResult } from '@zama-fhe/sdk';
+import { PublicKeyData } from '@zama-fhe/sdk';
 import { publicKeyQueryOptions } from '@zama-fhe/sdk/query';
 import { publicParamsQueryOptions } from '@zama-fhe/sdk/query';
 import { QueryKey } from '@tanstack/react-query';
@@ -598,19 +599,7 @@ export { publicDecryptMutationOptions }
 
 export { PublicDecryptResult }
 
-// @public
-export interface PublicKeyData {
-    publicKey: Uint8Array;
-    publicKeyId: string;
-}
-
 export { publicKeyQueryOptions }
-
-// @public
-export interface PublicParamsData {
-    publicParams: Uint8Array;
-    publicParamsId: string;
-}
 
 export { publicParamsQueryOptions }
 
@@ -860,7 +849,10 @@ export interface UseDelegationStatusConfig {
 }
 
 // @public
-export function useEncrypt(): _$_tanstack_react_query0.UseMutationResult<EncryptResult, Error, EncryptParams, unknown>;
+export function useEncrypt(): _$_tanstack_react_query0.UseMutationResult<Readonly<{
+    handles: Uint8Array[];
+    inputProof: Uint8Array;
+}>, Error, EncryptParams, unknown>;
 
 // @public
 export function useFinalizeUnwrap(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, FinalizeUnwrapParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, FinalizeUnwrapParams, `0x${string}`>;
@@ -907,13 +899,20 @@ export function useMetadata(tokenAddress: Address, options?: Omit<UseQueryOption
 export function useMetadataSuspense(tokenAddress: Address): _$_tanstack_react_query0.UseSuspenseQueryResult<TokenMetadata, Error>;
 
 // @public
-export function usePublicDecrypt(): _$_tanstack_react_query0.UseMutationResult<PublicDecryptResult, Error, `0x${string}`[], unknown>;
+export function usePublicDecrypt(): _$_tanstack_react_query0.UseMutationResult<Readonly<{
+    clearValues: _$_zama_fhe_relayer_sdk_web0.ClearValues;
+    abiEncodedClearValues: `0x${string}`;
+    decryptionProof: `0x${string}`;
+}>, Error, `0x${string}`[], unknown>;
 
 // @public
 export function usePublicKey(): _$_tanstack_react_query0.UseQueryResult<PublicKeyData | null, Error>;
 
 // @public
-export function usePublicParams(bits: number): _$_tanstack_react_query0.UseQueryResult<PublicParamsData | null, Error>;
+export function usePublicParams(bits: number): _$_tanstack_react_query0.UseQueryResult<{
+    publicParams: Uint8Array<ArrayBufferLike>;
+    publicParamsId: string;
+} | null, Error>;
 
 export { UserDecryptParams }
 
@@ -1006,7 +1005,7 @@ export function useUnwrap(config: UseZamaConfig, options?: UseMutationOptions<Tr
 export function useUnwrapAll(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, void, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, void, `0x${string}`>;
 
 // @public
-export function useUserDecrypt(config: UserDecryptQueryConfig, options?: Omit<UseQueryOptions<DecryptResult>, "queryKey" | "queryFn">): _$_tanstack_react_query0.UseQueryResult<DecryptResult, Error>;
+export function useUserDecrypt(config: UserDecryptQueryConfig, options?: Omit<UseQueryOptions<DecryptResult>, "queryKey" | "queryFn">): _$_tanstack_react_query0.UseQueryResult<Readonly<Record<`0x${string}`, _$_zama_fhe_sdk0.ClearValueType>>, Error>;
 
 // @public
 export type UseUserDecryptResult = ReturnType<typeof useUserDecrypt>;
