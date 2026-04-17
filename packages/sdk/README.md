@@ -644,7 +644,7 @@ Individual topic hashes are accessible via the `Topics` object: `Topics.Confiden
 | `decodeWrapped(log)`              | `WrappedEvent \| null` — `{ to, amountIn }`                                                                 |
 | `decodeUnwrapRequested(log)`      | `UnwrapRequestedEvent \| null` — `{ receiver, encryptedAmount, unwrapRequestId? }`                          |
 | `decodeUnwrapFinalized(log)`      | `UnwrapFinalizedEvent \| null` — `{ receiver, encryptedAmount, cleartextAmount, unwrapRequestId? }`         |
-| `decodeUnwrappedFinalized(log)`   | Deprecated alias for `decodeUnwrapFinalized(log)`                                                           |
+| `decodeUnwrappedFinalized(log)`   | **Deprecated.** Like `decodeUnwrapFinalized(log)` but always returns `eventName: "UnwrappedFinalized"` — not a transparent alias. Update switch statements to use `decodeUnwrapFinalized` and `"UnwrapFinalized"` instead. |
 | `decodeUnwrappedStarted(log)`     | `UnwrappedStartedEvent \| null` — `{ returnVal, requestId, txId, to, refund, requestedAmount, burnAmount }` |
 | `decodeOnChainEvent(log)`         | `OnChainEvent \| null` — tries all decoders                                                                 |
 | `decodeOnChainEvents(logs)`       | `OnChainEvent[]` — batch decode, skips unrecognized logs                                                    |
