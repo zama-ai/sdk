@@ -40,6 +40,7 @@ import {
   underlyingContract,
   wrapContract,
 } from "../wrapper";
+import { wrapperAbi } from "../../abi/wrapper.abi";
 
 const SPENDER = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;
 
@@ -87,7 +88,7 @@ describe("ERC-165 contract builders", () => {
 
   it("exports interface IDs", () => {
     expect(ERC7984_INTERFACE_ID).toBe("0x4958f2a4");
-    expect(ERC7984_WRAPPER_INTERFACE_ID).toBe("0xd04584ba");
+    expect(ERC7984_WRAPPER_INTERFACE_ID).toBe("0xf1f4c25a");
   });
 
   it("isConfidentialTokenContract uses ERC7984_INTERFACE_ID", ({ tokenAddress }) => {
@@ -221,5 +222,34 @@ describe("Wrapper contract builders", () => {
     const config = wrapContract(wrapperAddress, userAddress, 1000n);
     expect(config.functionName).toBe("wrap");
     expect(config.args).toEqual([userAddress, 1000n]);
+  });
+});
+
+// Regression: verify wrapperAbi matches protocol-apps@da4afe387420 (currently deployed).
+// These assertions prove the chosen ABI version is intentional: the interface uses
+// openzeppelin-confidential-contracts@6edd293 where unwrapRequester is part of IERC7984ERC20Wrapper
+// (7 functions), giving ERC7984_WRAPPER_INTERFACE_ID = 0xf1f4c25a.
+describe("wrapperAbi version smoke test (protocol-apps@da4afe387420)", () => {
+  type AbiFunction = { type: string; name: string; inputs: { type: string; name: string }[] };
+  const fns = (wrapperAbi as AbiFunction[]).filter((x) => x.type === "function");
+  const fn = (name: string) => fns.find((f) => f.name === name);
+
+  it("finalizeUnwrap first param is bytes32 unwrapRequestId (not euint64 burntAmount)", () => {
+    const f = fn("finalizeUnwrap");
+    expect(f).toBeDefined();
+    expect(f!.inputs[0].name).toBe("unwrapRequestId");
+    expect(f!.inputs[0].type).toBe("bytes32");
+  });
+
+  it("unwrapAmount exists with bytes32 param", () => {
+    const f = fn("unwrapAmount");
+    expect(f).toBeDefined();
+    expect(f!.inputs[0].type).toBe("bytes32");
+  });
+
+  it("unwrapRequester exists with bytes32 param", () => {
+    const f = fn("unwrapRequester");
+    expect(f).toBeDefined();
+    expect(f!.inputs[0].type).toBe("bytes32");
   });
 });

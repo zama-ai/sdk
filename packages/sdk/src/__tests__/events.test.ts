@@ -35,6 +35,7 @@ describe("Topic constants match keccak256", () => {
     ["UnwrapRequested(address,bytes32)", Topics.UnwrapRequested],
     ["UnwrapRequested(address,bytes32,bytes32)", Topics.UnwrapRequestedWithRequestId],
     ["UnwrapFinalized(address,bytes32,uint64)", Topics.UnwrapFinalized],
+    ["UnwrapFinalized(address,bytes32,uint64)", Topics.UnwrappedFinalized],
     ["UnwrapFinalized(address,bytes32,bytes32,uint64)", Topics.UnwrapFinalizedWithRequestId],
     [
       "UnwrappedStarted(bool,uint256,uint256,address,address,bytes32,bytes32)",
@@ -159,7 +160,6 @@ describe("decodeUnwrapRequested", () => {
 });
 
 describe("decodeUnwrappedFinalized", () => {
-  // UnwrapFinalized(address indexed receiver, bytes32 encryptedAmount, uint64 cleartextAmount)
   const receiver = addr("aabb");
   const encryptedHandle = bytes32("cd".repeat(32));
   const unwrapRequestId = bytes32("ab".repeat(32));
@@ -259,7 +259,7 @@ describe("decodeUnwrappedStarted", () => {
 describe("decodeOnChainEvent", () => {
   it("dispatches to correct decoder", () => {
     const log: RawLog = {
-      topics: [Topics.UnwrapRequested, topic("abcd")],
+      topics: [Topics.UnwrapRequested, topic("abcd"), bytes32("ab".repeat(32))],
       data: `0x${word("ff".repeat(32))}`,
     };
     const event = decodeOnChainEvent(log);
@@ -298,7 +298,7 @@ describe("decodeOnChainEvents", () => {
   it("decodes array of mixed logs, skipping unknown", () => {
     const logs: RawLog[] = [
       {
-        topics: [Topics.UnwrapRequested, topic("abcd")],
+        topics: [Topics.UnwrapRequested, topic("abcd"), bytes32("ab".repeat(32))],
         data: `0x${word("ff".repeat(32))}`,
       },
       { topics: ["0xunknown" as Hex], data: "0x" as Hex },
@@ -337,13 +337,14 @@ describe("findUnwrapRequested", () => {
         data: "0x",
       },
       {
-        topics: [Topics.UnwrapRequested, topic("1234")],
+        topics: [Topics.UnwrapRequestedWithRequestId, topic("1234"), bytes32("ab".repeat(32))],
         data: `0x${word("ff".repeat(32))}`,
       },
     ];
     const event = findUnwrapRequested(logs);
     expect(event?.eventName).toBe("UnwrapRequested");
     expect(event?.receiver).toBe(addr("1234"));
+    expect(event?.unwrapRequestId).toBe(bytes32("ab".repeat(32)));
   });
 
   it("returns null when none found", () => {

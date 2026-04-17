@@ -4,10 +4,14 @@
  */
 
 import type { Handle } from "../relayer/relayer-sdk.types";
-import { getAddress, type Address, type Hex } from "viem";
+import { getAddress, keccak256, toBytes, type Address, type Hex } from "viem";
 import { prefixHex } from "../utils";
 import type { RawLog } from "../types/transaction";
 export type { RawLog } from "../types/transaction";
+
+function eventTopic(signature: string): Hex {
+  return keccak256(toBytes(signature));
+}
 
 // ---------------------------------------------------------------------------
 // Event topic0 constants (keccak256 of canonical signature)
@@ -19,23 +23,26 @@ export type { RawLog } from "../types/transaction";
  */
 export const Topics = {
   /** `ConfidentialTransfer(address indexed from, address indexed to, bytes32 indexed amount)` */
-  ConfidentialTransfer: "0x67500e8d0ed826d2194f514dd0d8124f35648ab6e3fb5e6ed867134cffe661e9",
+  ConfidentialTransfer: eventTopic("ConfidentialTransfer(address,address,bytes32)"),
+  // NOTE: New wrapper contracts no longer emit Wrapped — shields now emit
+  // ConfidentialTransfer(from=zeroAddress, ...) instead. Retained for backward
+  // compatibility with older deployments.
   /** `Wrapped(address indexed to, uint256 amountIn)` */
-  Wrapped: "0x4700c1726b4198077cd40320a32c45265a1910521eb0ef713dd1d8412413d7fc",
+  Wrapped: eventTopic("Wrapped(address,uint256)"),
   /** `UnwrapRequested(address indexed receiver, bytes32 amount)` */
-  UnwrapRequested: "0x77d02d353c5629272875d11f1b34ec4c65d7430b075575b78cd2502034c469ee",
+  UnwrapRequested: eventTopic("UnwrapRequested(address,bytes32)"),
   /** `UnwrapRequested(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 amount)` */
-  UnwrapRequestedWithRequestId:
-    "0x4b1bfb262557cf08a74ddeefb8aef086b81deb08484bdc1820b9f420cdd1aa0e",
+  UnwrapRequestedWithRequestId: eventTopic("UnwrapRequested(address,bytes32,bytes32)"),
   /** `UnwrapFinalized(address indexed receiver, bytes32 encryptedAmount, uint64 cleartextAmount)` */
-  UnwrapFinalized: "0x2d4edf3c2943002120f53dab3f8940043f34799f4a92ab90f2f81f7dd004a49e",
+  UnwrapFinalized: eventTopic("UnwrapFinalized(address,bytes32,uint64)"),
   /** `UnwrapFinalized(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 encryptedAmount, uint64 cleartextAmount)` */
-  UnwrapFinalizedWithRequestId:
-    "0x87061fd1a5b3714805472c94c9eb8a6b8491992ee77791aa2594be67b92fd962",
+  UnwrapFinalizedWithRequestId: eventTopic("UnwrapFinalized(address,bytes32,bytes32,uint64)"),
   /** @deprecated Use `Topics.UnwrapFinalized`. */
-  UnwrappedFinalized: "0x2d4edf3c2943002120f53dab3f8940043f34799f4a92ab90f2f81f7dd004a49e",
+  UnwrappedFinalized: eventTopic("UnwrapFinalized(address,bytes32,uint64)"),
   /** `UnwrappedStarted(bool returnVal, uint256 indexed requestId, ...)` */
-  UnwrappedStarted: "0x3838891d4843c6d7f9f494570b6fd8843f4e3c3ddb817c1411760bd31b819806",
+  UnwrappedStarted: eventTopic(
+    "UnwrappedStarted(bool,uint256,uint256,address,address,bytes32,bytes32)",
+  ),
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -53,6 +60,9 @@ export interface ConfidentialTransferEvent {
   readonly encryptedAmountHandle: Handle;
 }
 
+// NOTE: New wrapper contracts no longer emit this event — shields now emit
+// ConfidentialTransfer(from=zeroAddress, ...) instead. Retained for backward
+// compatibility with older deployments.
 /** Decoded `Wrapped` event — an ERC-20 shield (wrap) operation. */
 export interface WrappedEvent {
   readonly eventName: "Wrapped";
@@ -188,6 +198,8 @@ export function decodeConfidentialTransfer(log: RawLog): ConfidentialTransferEve
   };
 }
 
+// NOTE: New wrapper contracts no longer emit this event. Retained for backward
+// compatibility with older deployments.
 /**
  * Wrapped(address indexed to, uint256 amountIn)
  * Indexed: to (topics[1])
@@ -395,6 +407,8 @@ export function findUnwrapRequested(logs: readonly RawLog[]): UnwrapRequestedEve
   return null;
 }
 
+// NOTE: New wrapper contracts no longer emit this event. Retained for backward
+// compatibility with older deployments.
 /**
  * Find the first {@link WrappedEvent} in a logs array.
  *
@@ -439,10 +453,13 @@ export const TOKEN_TOPICS = [
  */
 export const AclTopics = {
   /** `DelegatedForUserDecryption(address indexed delegator, address indexed delegate, address contractAddress, uint64 delegationCounter, uint64 oldExpirationDate, uint64 newExpirationDate)` */
-  DelegatedForUserDecryption: "0x527b025d7ff06689c1ab9d32dfd7881c964cce72ce8ac5b2fe1d3be8cfda5bfc",
+  DelegatedForUserDecryption: eventTopic(
+    "DelegatedForUserDecryption(address,address,address,uint64,uint64,uint64)",
+  ),
   /** `RevokedDelegationForUserDecryption(address indexed delegator, address indexed delegate, address contractAddress, uint64 delegationCounter, uint64 oldExpirationDate)` */
-  RevokedDelegationForUserDecryption:
-    "0x7aca80b6b7928b9038f186e3d9922a0fc5d52c398fbf144725c142c52a5277e4",
+  RevokedDelegationForUserDecryption: eventTopic(
+    "RevokedDelegationForUserDecryption(address,address,address,uint64,uint64)",
+  ),
 } as const;
 
 // ---------------------------------------------------------------------------

@@ -550,15 +550,15 @@ interface ContractCallConfig {
 
 ### Wrapper
 
-| Function                                                         | Description                                         |
-| ---------------------------------------------------------------- | --------------------------------------------------- |
-| `wrapContract(wrapper, to, amount)`                              | Wrap ERC-20 tokens.                                 |
-| `unwrapContract(token, from, to, encryptedAmount, inputProof)`   | Request unwrap with encrypted amount.               |
-| `unwrapFromBalanceContract(token, from, to, encryptedBalance)`   | Request unwrap using on-chain balance handle.       |
-| `finalizeUnwrapContract(wrapper, burntAmount, cleartext, proof)` | Finalize unwrap with decryption proof.              |
-| `underlyingContract(wrapper)`                                    | Read underlying ERC-20 address.                     |
-| `inferredTotalSupplyContract(wrapper)`                           | Read inferred plaintext total supply.               |
-| `totalSupplyContract(wrapper)`                                   | Deprecated alias for `inferredTotalSupplyContract`. |
+| Function                                                             | Description                                         |
+| -------------------------------------------------------------------- | --------------------------------------------------- |
+| `wrapContract(wrapper, to, amount)`                                  | Wrap ERC-20 tokens.                                 |
+| `unwrapContract(token, from, to, encryptedAmount, inputProof)`       | Request unwrap with encrypted amount.               |
+| `unwrapFromBalanceContract(token, from, to, encryptedBalance)`       | Request unwrap using on-chain balance handle.       |
+| `finalizeUnwrapContract(wrapper, unwrapRequestId, cleartext, proof)` | Finalize unwrap with decryption proof.              |
+| `underlyingContract(wrapper)`                                        | Read underlying ERC-20 address.                     |
+| `inferredTotalSupplyContract(wrapper)`                               | Read inferred plaintext total supply.               |
+| `totalSupplyContract(wrapper)`                                       | Deprecated alias for `inferredTotalSupplyContract`. |
 
 ### ERC-165
 
@@ -769,7 +769,7 @@ Low-level FHE operations are available on the relayer backend via `sdk.relayer`:
 | ------------------------------ | --------------------------------- | --------------------------------------------- |
 | `ZERO_HANDLE`                  | `"0x0000...0000"` (32 zero bytes) | Sentinel for empty/zero encrypted values.     |
 | `ERC7984_INTERFACE_ID`         | `"0x4958f2a4"`                    | ERC-165 interface ID for confidential tokens. |
-| `ERC7984_WRAPPER_INTERFACE_ID` | `"0xd04584ba"`                    | ERC-165 interface ID for wrapper contracts.   |
+| `ERC7984_WRAPPER_INTERFACE_ID` | `"0xf1f4c25a"`                    | ERC-165 interface ID for wrapper contracts.   |
 
 ## Exported ABIs
 

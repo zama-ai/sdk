@@ -112,12 +112,14 @@ describe("decodeWrapped", () => {
 
 describe("decodeUnwrapRequested", () => {
   it("decodes a valid UnwrapRequested log", () => {
+    // UnwrapRequested(address indexed receiver, bytes32 amount)
     const data = `0x${HANDLE.slice(2)}` as Hex;
     const log = makeLog(Topics.UnwrapRequested, [addressTopic(ALICE)], data);
     const event = decodeUnwrapRequested(log);
     expect(event).not.toBeNull();
     expect(event!.eventName).toBe("UnwrapRequested");
     expect(event!.receiver.toLowerCase()).toBe(ALICE.toLowerCase());
+    expect(event!.unwrapRequestId).toBeUndefined();
     expect(event!.encryptedAmount).toBe(HANDLE);
   });
 
@@ -137,7 +139,7 @@ describe("decodeUnwrapRequested", () => {
   });
 
   it("returns null for wrong topic0", () => {
-    const log = makeLog(Topics.Wrapped, [addressTopic(ALICE)]);
+    const log = makeLog(Topics.Wrapped, [addressTopic(ALICE), UNWRAP_REQUEST_ID]);
     expect(decodeUnwrapRequested(log)).toBeNull();
   });
 
@@ -154,7 +156,6 @@ describe("decodeUnwrapRequested", () => {
 describe("decodeUnwrappedFinalized", () => {
   it("decodes a valid UnwrapFinalized log", () => {
     // UnwrapFinalized(address indexed receiver, bytes32 encryptedAmount, uint64 cleartextAmount)
-    // Data: encryptedAmount (word 0), cleartextAmount (word 1)
     const data = `0x${HANDLE.slice(2)}${uint256(450n)}` as Hex;
     const log = makeLog(Topics.UnwrapFinalized, [addressTopic(ALICE)], data);
     const event = decodeUnwrapFinalized(log);
@@ -188,10 +189,12 @@ describe("decodeUnwrappedFinalized", () => {
     expect(event).not.toBeNull();
     expect(event!.eventName).toBe("UnwrappedFinalized");
     expect(event!.receiver.toLowerCase()).toBe(ALICE.toLowerCase());
+    expect(event!.encryptedAmount).toBe(HANDLE);
+    expect(event!.cleartextAmount).toBe(450n);
   });
 
   it("returns null for wrong topic0", () => {
-    const log = makeLog(Topics.Wrapped, [addressTopic(ALICE)]);
+    const log = makeLog(Topics.Wrapped, [addressTopic(ALICE), UNWRAP_REQUEST_ID]);
     expect(decodeUnwrappedFinalized(log)).toBeNull();
   });
 
@@ -308,7 +311,11 @@ describe("findUnwrapRequested", () => {
   it("finds the first UnwrapRequested in logs", () => {
     const logs: RawLog[] = [
       makeLog(Topics.ConfidentialTransfer, [addressTopic(ALICE), addressTopic(BOB), HANDLE]),
-      makeLog(Topics.UnwrapRequested, [addressTopic(BOB)], `0x${HANDLE.slice(2)}` as Hex),
+      makeLog(
+        Topics.UnwrapRequestedWithRequestId,
+        [addressTopic(BOB), UNWRAP_REQUEST_ID],
+        `0x${HANDLE.slice(2)}` as Hex,
+      ),
     ];
     const event = findUnwrapRequested(logs);
     expect(event).not.toBeNull();
