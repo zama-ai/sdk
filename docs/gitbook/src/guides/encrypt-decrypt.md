@@ -247,7 +247,7 @@ function ConfidentialAction() {
 
 ### 3. Avoid blind-sign wallet popups
 
-Any decrypt operation (`useUserDecrypt`, `useConfidentialBalance`) triggers an EIP-712 wallet signature the first time it runs — the SDK needs FHE decrypt credentials. If your app calls these hooks on render without gating, users see an unsolicited MetaMask popup before they have taken any action. In crypto UX this is a **blind-signing anti-pattern**: users are trained to reject unexpected signature requests, and security tools like Blockaid may flag them.
+Operations performing decryptions like `useUserDecrypt` or `useConfidentialBalance` might trigger an EIP-712 wallet signature when ran for the first time. If your app calls these hooks on render without gating, users might see an unsolicited MetaMask popup before they have taken any action. In crypto UX this is a **blind-signing anti-pattern**: users are trained to reject unexpected signature requests, and it's confusing to know what is being signed exactly.
 
 The fix: check `useIsAllowed` first, show a locked state, and let the user decide when to sign.
 
