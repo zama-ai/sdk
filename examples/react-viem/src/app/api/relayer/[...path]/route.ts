@@ -2,8 +2,10 @@ import type { NextRequest } from "next/server";
 
 // Default to the public Sepolia testnet relayer — no API key required.
 // For production or private deployments, set RELAYER_URL and RELAYER_API_KEY in .env.local.
-const RELAYER_URL = process.env.RELAYER_URL ?? "https://relayer.testnet.zama.org/v2";
+const DEFAULT_RELAYER_URL = "https://relayer.testnet.zama.org/v2";
+const RELAYER_URL = process.env.RELAYER_URL ?? DEFAULT_RELAYER_URL;
 const RELAYER_API_KEY = process.env.RELAYER_API_KEY;
+const ALLOW_PRIVATE_RELAYER_URL = process.env.RELAYER_ALLOW_PRIVATE_URL === "true";
 
 const HOP_BY_HOP = new Set([
   "connection",
@@ -45,6 +47,54 @@ const RESPONSE_DROP = new Set([...HOP_BY_HOP, "content-encoding", "content-lengt
 // Dot-only segments (`.` and `..`) are rejected to prevent path traversal.
 const SAFE_SEGMENT = /^[a-zA-Z0-9._-]+$/;
 
+function isPrivateHostname(hostname: string): boolean {
+  const host = hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  if (
+    host === "localhost" ||
+    host === "::1" ||
+    host.startsWith("fe80:") ||
+    /^f[cd][0-9a-f]{2}:/u.test(host)
+  ) {
+    return true;
+  }
+
+  const parts = host.split(".").map((part) => Number(part));
+  if (
+    parts.length !== 4 ||
+    parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)
+  ) {
+    return false;
+  }
+
+  const [a, b] = parts;
+  return (
+    a === 10 ||
+    a === 127 ||
+    (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168)
+  );
+}
+
+function getRelayerBaseUrl(): URL {
+  const baseUrl = new URL(RELAYER_URL);
+  if (baseUrl.protocol !== "https:" && !ALLOW_PRIVATE_RELAYER_URL) {
+    throw new Error("RELAYER_URL must use https unless RELAYER_ALLOW_PRIVATE_URL=true");
+  }
+  if (isPrivateHostname(baseUrl.hostname) && !ALLOW_PRIVATE_RELAYER_URL) {
+    throw new Error("RELAYER_URL must not target private or local hosts");
+  }
+  return baseUrl;
+}
+
+function buildRelayerUrl(path: string[], search: string): URL {
+  const url = getRelayerBaseUrl();
+  const basePath = url.pathname.replace(/\/+$/u, "");
+  url.pathname = `${basePath}/${path.map((segment) => encodeURIComponent(segment)).join("/")}`;
+  url.search = search;
+  return url;
+}
+
 async function proxy(req: NextRequest, path: string[]) {
   for (const segment of path) {
     // Reject segments that fail the character allowlist or are dot-only (`.`, `..`).
@@ -58,12 +108,20 @@ async function proxy(req: NextRequest, path: string[]) {
     }
   }
 
-  const url = new URL(path.join("/"), RELAYER_URL + "/");
-  url.search = req.nextUrl.search;
+  let url: URL;
+  try {
+    url = buildRelayerUrl(path, req.nextUrl.search);
+  } catch (err) {
+    console.error("[relayer-proxy] invalid RELAYER_URL", err);
+    return new Response(JSON.stringify({ error: "Invalid relayer configuration" }), {
+      status: 500,
+      headers: { "content-type": "application/json" },
+    });
+  }
 
   let resp: Response;
   try {
-    resp = await fetch(url.toString(), {
+    resp = await fetch(url, {
       method: req.method,
       headers: forwardHeaders(req.headers),
       body: req.body,
