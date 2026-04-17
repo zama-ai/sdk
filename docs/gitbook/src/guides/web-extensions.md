@@ -1,9 +1,9 @@
 ---
-title: Web Extensions
+title: Web extensions
 description: How to use the SDK in MV3 Chrome extensions with persistent session storage.
 ---
 
-# Web Extensions
+# Web extensions
 
 MV3 Chrome extensions present a unique challenge: the background service worker can be terminated by Chrome at any time. When that happens, anything stored in JavaScript memory is lost -- including the SDK's default in-memory session storage. This guide shows how to keep sessions alive across service worker restarts.
 

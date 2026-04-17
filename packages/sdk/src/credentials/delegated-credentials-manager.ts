@@ -90,9 +90,12 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
     await this.revokeSession(await this.#storeKey(getAddress(delegatorAddress)));
   }
 
-  /** Whether a session signature is currently cached for a delegator. */
-  async isAllowed(delegatorAddress: Address): Promise<boolean> {
-    return this.checkAllowed(await this.#storeKey(getAddress(delegatorAddress)));
+  /** Whether a session signature is currently cached and covers the given contracts. */
+  async isAllowed(
+    delegatorAddress: Address,
+    contractAddresses: [Address, ...Address[]],
+  ): Promise<boolean> {
+    return this.checkAllowed(await this.#storeKey(getAddress(delegatorAddress)), contractAddresses);
   }
 
   /** Delete stored credentials for a delegator (best-effort). */
@@ -208,17 +211,6 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
       meta.startTimestamp,
       meta.durationDays,
     );
-    return this.signer.signTypedData({
-      domain: {
-        ...delegatedEIP712.domain,
-        chainId: Number(delegatedEIP712.domain.chainId),
-      },
-      types: delegatedEIP712.types,
-      message: {
-        ...delegatedEIP712.message,
-        startTimestamp: BigInt(delegatedEIP712.message.startTimestamp),
-        durationDays: BigInt(delegatedEIP712.message.durationDays),
-      },
-    });
+    return this.signer.signTypedData(delegatedEIP712);
   }
 }

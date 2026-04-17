@@ -62,7 +62,7 @@ const { mutateAsync: revoke } = useRevokeDelegation({
 
 {% include ".gitbook/includes/mutation-options.md" %}
 
-## Mutation Variables
+## Mutation variables
 
 Passed to `mutate` / `mutateAsync` at call time.
 

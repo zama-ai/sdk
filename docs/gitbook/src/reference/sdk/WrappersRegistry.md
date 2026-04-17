@@ -37,7 +37,7 @@ const pairs = await registry.getTokenPairs();
 import { WrappersRegistry } from "@zama-fhe/sdk";
 
 const registry = new WrappersRegistry({ signer });
-const [found, cToken] = await registry.getConfidentialTokenAddress(tokenAddress);
+const [isValid, cToken] = await registry.getConfidentialTokenAddress(tokenAddress);
 ```
 
 ### Custom chains
@@ -203,11 +203,17 @@ const pair = await registry.getTokenPair(0n);
 
 `(tokenAddress: Address) => Promise<readonly [boolean, Address]>`
 
-Look up the confidential token for a given plain ERC-20. Returns `[found, confidentialTokenAddress]`.
+Look up the confidential token for a given plain ERC-20. Returns `[isValid, confidentialTokenAddress]`.
+
+The three possible states:
+
+- `[true, nonZeroAddress]` -- registered and valid
+- `[false, nonZeroAddress]` -- registered but revoked (address is the former confidential token)
+- `[false, zeroAddress]` -- not registered
 
 ```ts
-const [found, cToken] = await registry.getConfidentialTokenAddress("0xUSDC");
-if (found) {
+const [isValid, cToken] = await registry.getConfidentialTokenAddress("0xUSDC");
+if (isValid) {
   const token = sdk.createToken(cToken);
 }
 ```
@@ -216,10 +222,16 @@ if (found) {
 
 `(confidentialTokenAddress: Address) => Promise<readonly [boolean, Address]>`
 
-Reverse lookup — find the plain ERC-20 for a confidential token. Returns `[found, tokenAddress]`.
+Reverse lookup — find the plain ERC-20 for a confidential token. Returns `[isValid, tokenAddress]`.
+
+The three possible states mirror `getConfidentialTokenAddress`:
+
+- `[true, nonZeroAddress]` -- registered and valid
+- `[false, nonZeroAddress]` -- registered but revoked
+- `[false, zeroAddress]` -- not registered
 
 ```ts
-const [found, plainToken] = await registry.getTokenAddress("0xcUSDC");
+const [isValid, plainToken] = await registry.getTokenAddress("0xcUSDC");
 ```
 
 ### isConfidentialTokenValid

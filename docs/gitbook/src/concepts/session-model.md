@@ -1,9 +1,9 @@
 ---
-title: Session Model
+title: Session model
 description: How the SDK manages FHE keypairs, wallet signatures, and session lifecycle.
 ---
 
-# Session Model
+# Session model
 
 The SDK uses a two-layer authorization model to protect FHE credentials. An FHE keypair is generated once and persisted in encrypted form. A wallet signature — the session — unlocks that keypair for the current browsing session. This separation means the expensive keypair generation happens rarely, while the lightweight signing step repeats once per session.
 
@@ -162,7 +162,7 @@ Without wiring, cached signatures remain valid until TTL expiry. This is not a s
 A single `allow()` call can cover multiple contracts:
 
 ```ts
-await sdk.credentials.allow("0xContractA", "0xContractB", "0xContractC");
+await sdk.allow(["0xContractA", "0xContractB", "0xContractC"]);
 ```
 
 This produces one EIP-712 signature covering all three contracts. The signed message includes the full list of contract addresses, the start timestamp, and the duration. Any `balanceOf` call on ContractA, ContractB, or ContractC reuses the cached signature without additional popups.

@@ -30,7 +30,7 @@ const tokens = addresses.map((a) => sdk.createReadonlyToken(a));
 await ReadonlyToken.allow(...tokens);
 
 // Decrypt all balances in parallel
-const balances = await ReadonlyToken.batchDecryptBalances(tokens, { owner });
+const { results, errors } = await ReadonlyToken.batchBalancesOf(tokens, owner);
 ```
 
 {% endtab %}
@@ -61,7 +61,7 @@ const relayer = new RelayerWeb({
 {% endtab %}
 {% endtabs %}
 
-## Static Methods
+## Static methods
 
 ### ReadonlyToken.allow
 
@@ -74,18 +74,21 @@ const tokens = addresses.map((a) => sdk.createReadonlyToken(a));
 await ReadonlyToken.allow(...tokens);
 ```
 
-### ReadonlyToken.batchDecryptBalances
+### ReadonlyToken.batchBalancesOf
 
-`(tokens: ReadonlyToken[], opts: { owner?: Address; handles?: Hex[] }) => Promise<Map<Address, bigint>>`
+`(tokens: ReadonlyToken[], owner?: Address) => Promise<{ results: Map<Address, bigint>; errors: Map<Address, ZamaError> }>`
 
-Decrypts balances for multiple tokens in parallel. Returns a `Map` keyed by token address. Pass `handles` to skip the on-chain RPC reads if you already have them.
+Decrypts balances for multiple tokens in parallel. Pre-authorizes the full token set in one wallet signature, then dispatches per-token decryption with bounded concurrency. Returns successful balances and per-token failures separately so a single bad token does not reject the whole batch.
 
 ```ts
-const balances = await ReadonlyToken.batchDecryptBalances(tokens, { owner });
-// Returns Map<Address, bigint>
+const { results, errors } = await ReadonlyToken.batchBalancesOf(tokens, owner);
 
-// With pre-fetched handles
-const balancesWithHandles = await ReadonlyToken.batchDecryptBalances(tokens, { handles, owner });
+for (const [address, balance] of results) {
+  console.log(address, balance);
+}
+for (const [address, error] of errors) {
+  console.warn(`Failed to decrypt ${address}:`, error);
+}
 ```
 
 ## Methods
@@ -214,27 +217,6 @@ Returns whether the session has active credentials for this token.
 
 ```ts
 const allowed = await readonlyToken.isAllowed();
-```
-
-### decryptBalance
-
-`(handle: Hex, owner?: Address) => Promise<bigint>`
-
-Decrypts a raw encrypted handle into a plaintext balance value. Results are cached.
-
-```ts
-const handle = await readonlyToken.confidentialBalanceOf();
-const value = await readonlyToken.decryptBalance(handle);
-```
-
-### decryptHandles
-
-`(handles: Hex[], owner?: Address) => Promise<Map<Hex, bigint>>`
-
-Decrypts multiple encrypted handles in a single call.
-
-```ts
-const values = await readonlyToken.decryptHandles([handle1, handle2]);
 ```
 
 ### isZeroHandle

@@ -1,3 +1,4 @@
+import type { PublicKeyData } from "../relayer/relayer-sdk.types";
 import type { ZamaSDK } from "../zama-sdk";
 import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
@@ -11,9 +12,9 @@ export function publicKeyQueryOptions(
   sdk: ZamaSDK,
   config?: PublicKeyQueryConfig,
 ): QueryFactoryOptions<
-  { publicKeyId: string; publicKey: Uint8Array } | null,
+  PublicKeyData | null,
   Error,
-  { publicKeyId: string; publicKey: Uint8Array } | null,
+  PublicKeyData | null,
   typeof zamaQueryKeys.publicKey.all
 > {
   const queryKey = zamaQueryKeys.publicKey.all;

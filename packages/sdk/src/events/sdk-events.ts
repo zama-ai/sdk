@@ -1,4 +1,5 @@
 import type { Address, Hex } from "viem";
+import type { ClearValueType, Handle } from "../relayer/relayer-sdk.types";
 
 /**
  * All SDK event keys, accessible as `ZamaSDKEvents.EncryptStart` etc.
@@ -131,11 +132,17 @@ export interface EncryptErrorEvent extends BaseEvent {
 
 export interface DecryptStartEvent extends BaseEvent {
   type: typeof ZamaSDKEvents.DecryptStart;
+  /** Handles being decrypted — correlate with matching DecryptEnd/DecryptError. */
+  handles: Handle[];
 }
 
 export interface DecryptEndEvent extends BaseEvent {
   type: typeof ZamaSDKEvents.DecryptEnd;
   durationMs: number;
+  /** Handles that were decrypted. */
+  handles: Handle[];
+  /** Decrypted values keyed by handle — use this to correlate events to specific handles. */
+  result: Record<Handle, ClearValueType>;
 }
 
 export interface DecryptErrorEvent extends BaseEvent {
@@ -143,6 +150,8 @@ export interface DecryptErrorEvent extends BaseEvent {
   /** The error that caused the decryption to fail. */
   error: Error;
   durationMs: number;
+  /** Handles that were being decrypted when the error occurred. */
+  handles: Handle[];
 }
 
 export interface TransactionErrorEvent extends BaseEvent {
@@ -212,7 +221,13 @@ export interface UnshieldPhase2SubmittedEvent extends BaseEvent {
   txHash: Hex;
 }
 
-/** Discriminated union of all SDK events. Never contains amounts, private keys, handles, or proofs. */
+/**
+ * Discriminated union of all SDK events.
+ *
+ * Decrypt events carry handles and decrypted clear-text values so event
+ * subscribers can correlate and bind them in UI layers. Events never carry
+ * private keys, session signatures, or ZK proofs.
+ */
 export type ZamaSDKEvent =
   | CredentialsLoadingEvent
   | CredentialsCachedEvent

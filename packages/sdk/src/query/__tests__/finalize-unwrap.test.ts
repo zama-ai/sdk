@@ -7,7 +7,7 @@ describe("finalizeUnwrapMutationOptions", () => {
 
     expect(options.mutationKey).toEqual(["zama.finalizeUnwrap", mockToken.address]);
     await options.mutationFn({
-      burnAmountHandle: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa",
+      unwrapRequestId: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa",
     });
     expect(mockToken.finalizeUnwrap).toHaveBeenCalledWith(
       "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa",

@@ -59,11 +59,16 @@ export class WagmiSigner implements GenericSigner {
   async signTypedData(typedData: EIP712TypedData): Promise<Hex> {
     const { EIP712Domain: _, ...sigTypes } = typedData.types;
     return signTypedData(this.config, {
-      primaryType: Object.keys(sigTypes)[0]!,
+      primaryType: typedData.primaryType,
       types: sigTypes,
       domain: typedData.domain,
-      message: typedData.message,
-    });
+      message: {
+        ...typedData.message,
+        startTimestamp: BigInt(typedData.message.startTimestamp),
+        durationDays: BigInt(typedData.message.durationDays),
+      },
+      // Cast: EIP712TypedData is a union; viem cannot correlate primaryType/types/message across union members, so the inferred `message` collapses to `never`.
+    } as Parameters<typeof signTypedData>[1]);
   }
 
   async writeContract<

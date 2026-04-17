@@ -186,7 +186,7 @@ Checks whether cached artifacts are still fresh by issuing HTTP conditional requ
 
 Concurrent calls are coalesced. On transient failures (network errors, 5xx), the cache fails open and retries after 5 minutes.
 
-## Relayer Config Options
+## Relayer config options
 
 When using `RelayerWeb` or `RelayerNode`, configure artifact caching with these constructor options:
 
@@ -211,14 +211,14 @@ FHE public parameters can be several MB — avoid `localStorage`-backed storage 
 
 Cache TTL in **seconds**. Default: `86400` (24 h). Set to `0` to revalidate on every operation. Ignored when `fheArtifactStorage` is not set.
 
-## How It Works
+## How it works
 
 1. **First load** — The SDK fetches the public key and CRS from the relayer, stores them as base64 in the configured storage backend, and caches them in memory.
 2. **Subsequent loads** — The SDK reads from storage (instant), skipping the multi-MB network download.
 3. **Revalidation** — Periodically (controlled by `ttl`), the cache issues `HEAD` requests with conditional headers to the artifact CDN. If the server returns 405 (Method Not Allowed), the cache falls back to a `GET` request. If artifacts haven't changed (304), only timestamps are updated. If they have changed (200), the entire cache is cleared and artifacts are re-fetched on next use.
 4. **Fail-open** — On network errors or malformed manifests, the cache continues serving stale data and retries revalidation after 5 minutes.
 
-## Storage Keys
+## Storage keys
 
 Cache entries are scoped by chain ID:
 

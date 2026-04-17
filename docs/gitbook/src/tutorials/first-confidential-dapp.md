@@ -1,9 +1,9 @@
 ---
-title: Build Your First Confidential dApp
+title: Build your first confidential dApp
 description: End-to-end tutorial building a token dashboard with React, wagmi, and the Zama React SDK.
 ---
 
-# Build Your First Confidential dApp
+# Build your first confidential dApp
 
 We'll build a token dashboard that shows a confidential balance, lets users shield tokens, transfer privately, and unshield. The finished app uses React, wagmi, and the Zama React SDK.
 

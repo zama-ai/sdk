@@ -1,10 +1,12 @@
 /* eslint-disable no-empty-pattern */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, type RenderHookOptions } from "@testing-library/react";
-import type { GenericSigner, GenericStorage, RelayerSDK, Token } from "@zama-fhe/sdk";
 import type { PropsWithChildren } from "react";
 import React from "react";
+import type { RelayerSDK } from "../../sdk/src/relayer/relayer-sdk";
 import { test as base } from "../../sdk/src/test-fixtures";
+import type { Token } from "../../sdk/src/token";
+import type { GenericSigner, GenericStorage } from "../../sdk/src/types";
 import type { ZamaProviderProps } from "./provider";
 import { ZamaProvider } from "./provider";
 import { createMockToken } from "./__tests__/mutation-test-helpers";

@@ -1,9 +1,9 @@
 ---
-title: Contract Call Builders
+title: Contract call builders
 description: Low-level builders that return raw contract call configs for viem, ethers, or custom execution layers.
 ---
 
-# Contract Call Builders
+# Contract call builders
 
 Every builder returns a `ReadContractConfig` or `WriteContractConfig` — a plain object with the contract address, ABI fragment, function name, and encoded args:
 
@@ -41,6 +41,7 @@ import {
   isOperatorContract,
   setOperatorContract,
   confidentialTotalSupplyContract,
+  inferredTotalSupplyContract,
   totalSupplyContract,
   rateContract,
   wrapContract,
@@ -86,18 +87,19 @@ import {
 | `isOperatorContract(token, holder, spender)`                            | Check operator approval            |
 | `setOperatorContract(token, spender, timestamp?)`                       | Set operator approval              |
 | `confidentialTotalSupplyContract(token)`                                | Read encrypted total supply handle |
-| `totalSupplyContract(token)`                                            | Read plaintext total supply        |
 | `rateContract(token)`                                                   | Read conversion rate               |
 
 ## Wrapping and unwrapping
 
-| Builder                                                          | What it does                   |
-| ---------------------------------------------------------------- | ------------------------------ |
-| `wrapContract(wrapper, to, amount)`                              | Wrap ERC-20 tokens             |
-| `unwrapContract(token, from, to, encryptedAmount, inputProof)`   | Request unwrap                 |
-| `unwrapFromBalanceContract(token, from, to, encryptedBalance)`   | Unwrap using on-chain handle   |
-| `finalizeUnwrapContract(wrapper, burntAmount, cleartext, proof)` | Finalize unwrap                |
-| `underlyingContract(wrapper)`                                    | Read underlying ERC-20 address |
+| Builder                                                              | What it does                                       |
+| -------------------------------------------------------------------- | -------------------------------------------------- |
+| `wrapContract(wrapper, to, amount)`                                  | Wrap ERC-20 tokens                                 |
+| `unwrapContract(token, from, to, encryptedAmount, inputProof)`       | Request unwrap                                     |
+| `unwrapFromBalanceContract(token, from, to, encryptedBalance)`       | Unwrap using on-chain handle                       |
+| `finalizeUnwrapContract(wrapper, unwrapRequestId, cleartext, proof)` | Finalize unwrap                                    |
+| `underlyingContract(wrapper)`                                        | Read underlying ERC-20 address                     |
+| `inferredTotalSupplyContract(wrapper)`                               | Read inferred plaintext total supply               |
+| `totalSupplyContract(wrapper)`                                       | Deprecated alias for `inferredTotalSupplyContract` |
 
 ## Discovery and detection
 

@@ -1,10 +1,10 @@
 import { describe, expect, vi } from "vitest";
-import { test, createMockSigner } from "../../test-fixtures";
+import { test } from "../../test-fixtures";
 import { ReadonlyToken } from "../readonly-token";
-import { MemoryStorage } from "../../storage/memory-storage";
 import { MAX_UINT64 } from "../../contracts/constants";
 import type { Address } from "viem";
 import type { Handle } from "../../relayer/relayer-sdk.types";
+import type { ZamaSDK } from "../../zama-sdk";
 
 const TOKEN_A = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
 const TOKEN_B = "0x7A7a7A7a7a7a7a7A7a7a7a7A7a7A7A7A7A7A7a7A" as Address;
@@ -26,10 +26,14 @@ function mockCredsResult(contractAddresses: Address[]) {
   };
 }
 
-function stubDelegatedCredentials(token: ReadonlyToken, contractAddresses: Address[]) {
+/**
+ * Swap out the SDK's delegated credentials manager with a stub that resolves to
+ * the expected contractAddresses, so we don't have to prime the full EIP-712
+ * sign flow for every batch test.
+ */
+function stubDelegatedCredentials(sdk: ZamaSDK, contractAddresses: Address[]) {
   const allowMock = vi.fn().mockResolvedValue(mockCredsResult(contractAddresses));
-  // Override the lazy getter for testing
-  Object.defineProperty(token, "delegatedCredentials", {
+  Object.defineProperty(sdk, "delegatedCredentials", {
     value: { allow: allowMock },
     configurable: true,
   });
@@ -37,37 +41,29 @@ function stubDelegatedCredentials(token: ReadonlyToken, contractAddresses: Addre
 }
 
 describe("ReadonlyToken.batchDecryptBalancesAs", () => {
-  test("decrypts balances for multiple tokens using delegated credentials", async ({ relayer }) => {
-    const signer = createMockSigner(DELEGATE);
-    const storage = new MemoryStorage();
-    const sessionStorage = new MemoryStorage();
+  test("decrypts balances for multiple tokens using delegated credentials", async ({
+    sdk,
+    relayer,
+    signer,
+    createMockSigner,
+    createSDK,
+  }) => {
+    // The fixture signer is the connected user; the delegate is DELEGATE
+    const delegateSigner = createMockSigner(DELEGATE);
+    const delegateSdk = createSDK({ signer: delegateSigner });
 
-    // readContract order: confidentialBalanceOf(A), confidentialBalanceOf(B), getDelegationExpiry
-    vi.mocked(signer.readContract)
+    vi.mocked(delegateSigner.readContract)
       .mockResolvedValueOnce(HANDLE_A) // confidentialBalanceOf(tokenA)
       .mockResolvedValueOnce(HANDLE_B) // confidentialBalanceOf(tokenB)
       .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry → permanent
-
     vi.mocked(relayer.delegatedUserDecrypt)
       .mockResolvedValueOnce({ [HANDLE_A]: 100n })
       .mockResolvedValueOnce({ [HANDLE_B]: 200n });
 
-    const tokenA = new ReadonlyToken({
-      relayer,
-      signer,
-      storage,
-      sessionStorage,
-      address: TOKEN_A,
-    });
-    const tokenB = new ReadonlyToken({
-      relayer,
-      signer,
-      storage,
-      sessionStorage,
-      address: TOKEN_B,
-    });
+    const tokenA = new ReadonlyToken(delegateSdk, TOKEN_A);
+    const tokenB = new ReadonlyToken(delegateSdk, TOKEN_B);
 
-    const allowMock = stubDelegatedCredentials(tokenA, [TOKEN_A, TOKEN_B]);
+    const allowMock = stubDelegatedCredentials(delegateSdk, [TOKEN_A, TOKEN_B]);
 
     const balances = await ReadonlyToken.batchDecryptBalancesAs([tokenA, tokenB], {
       delegatorAddress: DELEGATOR,
@@ -78,6 +74,9 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     expect(allowMock).toHaveBeenCalledOnce();
     expect(allowMock).toHaveBeenCalledWith(DELEGATOR, TOKEN_A, TOKEN_B);
     expect(relayer.delegatedUserDecrypt).toHaveBeenCalledTimes(2);
+    // unused but captured so the fixture isn't complained about
+    void sdk;
+    void signer;
   });
 
   test("returns empty map for empty token list", async () => {
@@ -87,16 +86,18 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     expect(result.size).toBe(0);
   });
 
-  test("returns 0n for zero handles without calling relayer", async ({ relayer }) => {
-    const signer = createMockSigner(DELEGATE);
-    const storage = new MemoryStorage();
-    const sessionStorage = new MemoryStorage();
+  test("returns 0n for zero handles without calling relayer", async ({
+    relayer,
+    createMockSigner,
+    createSDK,
+  }) => {
+    const delegateSigner = createMockSigner(DELEGATE);
+    const delegateSdk = createSDK({ signer: delegateSigner });
     const ZERO = ("0x" + "00".repeat(32)) as Handle;
 
-    // Only confidentialBalanceOf — zero handle means all cached, no preFlightCheck
-    vi.mocked(signer.readContract).mockResolvedValueOnce(ZERO);
+    vi.mocked(delegateSigner.readContract).mockResolvedValueOnce(ZERO);
 
-    const token = new ReadonlyToken({ relayer, signer, storage, sessionStorage, address: TOKEN_A });
+    const token = new ReadonlyToken(delegateSdk, TOKEN_A);
 
     const balances = await ReadonlyToken.batchDecryptBalancesAs([token], {
       delegatorAddress: DELEGATOR,
@@ -106,46 +107,48 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
     // Pre-flight is skipped when all balances resolve from cache (zero handles),
     // so getDelegationExpiry never calls readContract.
-    expect(signer.readContract).toHaveBeenCalledTimes(1);
+    expect(delegateSigner.readContract).toHaveBeenCalledTimes(1);
   });
 
-  test("skips pre-flight delegation check when balance is pre-cached", async ({ relayer }) => {
-    const signer = createMockSigner(DELEGATE);
-    const storage = new MemoryStorage();
-    const sessionStorage = new MemoryStorage();
+  test("skips pre-flight delegation check when balance is pre-cached", async ({
+    relayer,
+    createMockSigner,
+    createSDK,
+  }) => {
+    const delegateSigner = createMockSigner(DELEGATE);
+    const delegateSdk = createSDK({ signer: delegateSigner });
+    // Pre-populate cache: ownerAddress = DELEGATOR (default for batchDecryptBalancesAs)
+    await delegateSdk.cache.set(DELEGATOR, TOKEN_A, HANDLE_A, 42n);
 
-    // Pre-populate cache with the internal key format
-    const handleLower = HANDLE_A.toLowerCase();
-    const cacheKey = `zama:balance:${TOKEN_A}:${DELEGATOR}:${handleLower}`;
-    await storage.set(cacheKey, "42");
+    vi.mocked(delegateSigner.readContract).mockResolvedValueOnce(HANDLE_A);
 
-    vi.mocked(signer.readContract).mockResolvedValueOnce(HANDLE_A); // confidentialBalanceOf
-
-    const token = new ReadonlyToken({ relayer, signer, storage, sessionStorage, address: TOKEN_A });
+    const token = new ReadonlyToken(delegateSdk, TOKEN_A);
 
     const balances = await ReadonlyToken.batchDecryptBalancesAs([token], {
       delegatorAddress: DELEGATOR,
     });
 
     // Only confidentialBalanceOf — pre-flight skipped because cache resolved everything.
-    expect(signer.readContract).toHaveBeenCalledTimes(1);
+    expect(delegateSigner.readContract).toHaveBeenCalledTimes(1);
     expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
     expect(balances.get(TOKEN_A)).toBe(42n);
   });
 
-  test("calls onError callback when decryption fails for a token", async ({ relayer }) => {
-    const signer = createMockSigner(DELEGATE);
-    const storage = new MemoryStorage();
-    const sessionStorage = new MemoryStorage();
+  test("calls onError callback when decryption fails for a token", async ({
+    relayer,
+    createMockSigner,
+    createSDK,
+  }) => {
+    const delegateSigner = createMockSigner(DELEGATE);
+    const delegateSdk = createSDK({ signer: delegateSigner });
 
-    // readContract order: confidentialBalanceOf, getDelegationExpiry
-    vi.mocked(signer.readContract)
-      .mockResolvedValueOnce(HANDLE_A) // confidentialBalanceOf
-      .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry → permanent
+    vi.mocked(delegateSigner.readContract)
+      .mockResolvedValueOnce(HANDLE_A)
+      .mockResolvedValueOnce(MAX_UINT64);
     vi.mocked(relayer.delegatedUserDecrypt).mockRejectedValueOnce(new Error("decrypt failed"));
 
-    const token = new ReadonlyToken({ relayer, signer, storage, sessionStorage, address: TOKEN_A });
-    stubDelegatedCredentials(token, [TOKEN_A]);
+    const token = new ReadonlyToken(delegateSdk, TOKEN_A);
+    stubDelegatedCredentials(delegateSdk, [TOKEN_A]);
     const onError = vi.fn().mockReturnValue(0n);
 
     const balances = await ReadonlyToken.batchDecryptBalancesAs([token], {
@@ -157,22 +160,24 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     expect(onError).toHaveBeenCalledOnce();
   });
 
-  // ── RED tests: I-1 — batch pre-flight delegation check ────────────────
+  test("throws DelegationNotFoundError when no delegation exists", async ({
+    relayer,
+    createMockSigner,
+    createSDK,
+  }) => {
+    const delegateSigner = createMockSigner(DELEGATE);
+    const delegateSdk = createSDK({ signer: delegateSigner });
 
-  test("throws DelegationNotFoundError when no delegation exists", async ({ relayer }) => {
-    const signer = createMockSigner(DELEGATE);
-    const storage = new MemoryStorage();
-    const sessionStorage = new MemoryStorage();
-
-    // readContract order: confidentialBalanceOf (non-zero handle), getDelegationExpiry → 0n
-    vi.mocked(signer.readContract)
+    vi.mocked(delegateSigner.readContract)
       .mockResolvedValueOnce(HANDLE_A) // confidentialBalanceOf → non-zero, goes to uncached
       .mockResolvedValueOnce(0n); // getDelegationExpiry → no delegation
 
-    const token = new ReadonlyToken({ relayer, signer, storage, sessionStorage, address: TOKEN_A });
+    const token = new ReadonlyToken(delegateSdk, TOKEN_A);
 
     await expect(
-      ReadonlyToken.batchDecryptBalancesAs([token], { delegatorAddress: DELEGATOR }),
+      ReadonlyToken.batchDecryptBalancesAs([token], {
+        delegatorAddress: DELEGATOR,
+      }),
     ).rejects.toThrow(
       expect.objectContaining({
         code: "DELEGATION_NOT_FOUND",
@@ -182,21 +187,25 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
   });
 
-  test("throws DelegationExpiredError when delegation has expired", async ({ relayer }) => {
-    const signer = createMockSigner(DELEGATE);
-    const storage = new MemoryStorage();
-    const sessionStorage = new MemoryStorage();
+  test("throws DelegationExpiredError when delegation has expired", async ({
+    relayer,
+    createMockSigner,
+    createSDK,
+  }) => {
+    const delegateSigner = createMockSigner(DELEGATE);
+    const delegateSdk = createSDK({ signer: delegateSigner });
 
-    // readContract order: confidentialBalanceOf (non-zero handle), getDelegationExpiry → past
-    vi.mocked(signer.readContract)
-      .mockResolvedValueOnce(HANDLE_A) // confidentialBalanceOf → non-zero, goes to uncached
-      .mockResolvedValueOnce(1000n); // getDelegationExpiry → past timestamp
-    vi.mocked(signer.getBlockTimestamp).mockResolvedValue(2000n);
+    vi.mocked(delegateSigner.readContract)
+      .mockResolvedValueOnce(HANDLE_A)
+      .mockResolvedValueOnce(1000n); // past timestamp
+    vi.mocked(delegateSigner.getBlockTimestamp).mockResolvedValue(2000n);
 
-    const token = new ReadonlyToken({ relayer, signer, storage, sessionStorage, address: TOKEN_A });
+    const token = new ReadonlyToken(delegateSdk, TOKEN_A);
 
     await expect(
-      ReadonlyToken.batchDecryptBalancesAs([token], { delegatorAddress: DELEGATOR }),
+      ReadonlyToken.batchDecryptBalancesAs([token], {
+        delegatorAddress: DELEGATOR,
+      }),
     ).rejects.toThrow(
       expect.objectContaining({
         code: "DELEGATION_EXPIRED",
@@ -206,49 +215,50 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
   });
 
-  test("batch succeeds when delegation is permanently active", async ({ relayer }) => {
-    const signer = createMockSigner(DELEGATE);
-    const storage = new MemoryStorage();
-    const sessionStorage = new MemoryStorage();
+  test("batch succeeds when delegation is permanently active", async ({
+    relayer,
+    createMockSigner,
+    createSDK,
+  }) => {
+    const delegateSigner = createMockSigner(DELEGATE);
+    const delegateSdk = createSDK({ signer: delegateSigner });
 
-    // readContract order: confidentialBalanceOf, getDelegationExpiry
-    vi.mocked(signer.readContract)
-      .mockResolvedValueOnce(HANDLE_A) // confidentialBalanceOf
-      .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry → permanent
+    vi.mocked(delegateSigner.readContract)
+      .mockResolvedValueOnce(HANDLE_A)
+      .mockResolvedValueOnce(MAX_UINT64);
     vi.mocked(relayer.delegatedUserDecrypt).mockResolvedValueOnce({ [HANDLE_A]: 42n });
 
-    const token = new ReadonlyToken({ relayer, signer, storage, sessionStorage, address: TOKEN_A });
-    stubDelegatedCredentials(token, [TOKEN_A]);
+    const token = new ReadonlyToken(delegateSdk, TOKEN_A);
+    stubDelegatedCredentials(delegateSdk, [TOKEN_A]);
 
     const balances = await ReadonlyToken.batchDecryptBalancesAs([token], {
       delegatorAddress: DELEGATOR,
     });
 
     expect(balances.get(TOKEN_A)).toBe(42n);
-    expect(signer.getBlockTimestamp).not.toHaveBeenCalled();
+    expect(delegateSigner.getBlockTimestamp).not.toHaveBeenCalled();
   });
 
-  // ── RED test: I-2 — onError callback that throws ──────────────────────
+  test("catches errors thrown by onError callback and aggregates them", async ({
+    relayer,
+    createMockSigner,
+    createSDK,
+  }) => {
+    const delegateSigner = createMockSigner(DELEGATE);
+    const delegateSdk = createSDK({ signer: delegateSigner });
 
-  test("catches errors thrown by onError callback and aggregates them", async ({ relayer }) => {
-    const signer = createMockSigner(DELEGATE);
-    const storage = new MemoryStorage();
-    const sessionStorage = new MemoryStorage();
-
-    // readContract order: confidentialBalanceOf, getDelegationExpiry
-    vi.mocked(signer.readContract)
-      .mockResolvedValueOnce(HANDLE_A) // confidentialBalanceOf
-      .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry → permanent
+    vi.mocked(delegateSigner.readContract)
+      .mockResolvedValueOnce(HANDLE_A)
+      .mockResolvedValueOnce(MAX_UINT64);
     vi.mocked(relayer.delegatedUserDecrypt).mockRejectedValueOnce(new Error("decrypt failed"));
 
-    const token = new ReadonlyToken({ relayer, signer, storage, sessionStorage, address: TOKEN_A });
-    stubDelegatedCredentials(token, [TOKEN_A]);
+    const token = new ReadonlyToken(delegateSdk, TOKEN_A);
+    stubDelegatedCredentials(delegateSdk, [TOKEN_A]);
 
     const throwingOnError = vi.fn().mockImplementation(() => {
       throw new Error("callback exploded");
     });
 
-    // After fix: callback error is caught and aggregated as a DecryptionFailedError
     await expect(
       ReadonlyToken.batchDecryptBalancesAs([token], {
         delegatorAddress: DELEGATOR,
@@ -257,30 +267,31 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     ).rejects.toThrow("callback exploded");
   });
 
-  // ── RED test: I-3 — saveCachedBalance failure doesn't fail decryption ─
+  test("succeeds even when cache write fails", async ({
+    relayer,
+    createMockSigner,
+    createSDK,
+    createMockStorage,
+  }) => {
+    const delegateSigner = createMockSigner(DELEGATE);
+    const storage = createMockStorage();
+    const delegateSdk = createSDK({ signer: delegateSigner, storage });
 
-  test("succeeds even when cache write fails", async ({ relayer }) => {
-    const signer = createMockSigner(DELEGATE);
-    const storage = new MemoryStorage();
-    const sessionStorage = new MemoryStorage();
-
-    // readContract order: confidentialBalanceOf, getDelegationExpiry
-    vi.mocked(signer.readContract)
-      .mockResolvedValueOnce(HANDLE_A) // confidentialBalanceOf
-      .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry → permanent
+    vi.mocked(delegateSigner.readContract)
+      .mockResolvedValueOnce(HANDLE_A)
+      .mockResolvedValueOnce(MAX_UINT64);
     vi.mocked(relayer.delegatedUserDecrypt).mockResolvedValueOnce({ [HANDLE_A]: 99n });
 
-    const token = new ReadonlyToken({ relayer, signer, storage, sessionStorage, address: TOKEN_A });
-    stubDelegatedCredentials(token, [TOKEN_A]);
+    const token = new ReadonlyToken(delegateSdk, TOKEN_A);
+    stubDelegatedCredentials(delegateSdk, [TOKEN_A]);
 
-    // Sabotage the storage to make saveCachedBalance fail
+    // Sabotage the storage so any cache write fails — decrypt should still succeed.
     vi.spyOn(storage, "set").mockRejectedValue(new Error("storage full"));
 
     const balances = await ReadonlyToken.batchDecryptBalancesAs([token], {
       delegatorAddress: DELEGATOR,
     });
 
-    // Decryption should still succeed despite cache write failure
     expect(balances.get(TOKEN_A)).toBe(99n);
   });
 });

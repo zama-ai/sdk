@@ -376,11 +376,9 @@ describe("WrappersRegistry", () => {
   });
 
   describe("getConfidentialToken", () => {
-    it("returns structured result when found", async ({ signer }) => {
+    it("returns structured result when registered and valid", async ({ signer }) => {
       vi.mocked(signer.getChainId).mockResolvedValue(1);
-      vi.mocked(signer.readContract)
-        .mockResolvedValueOnce([true, C_TOKEN]) // getConfidentialTokenAddress
-        .mockResolvedValueOnce(true); // isConfidentialTokenValid
+      vi.mocked(signer.readContract).mockResolvedValueOnce([true, C_TOKEN]);
       const registry = new WrappersRegistry({ signer });
 
       const result = await registry.getConfidentialToken(TOKEN);
@@ -391,7 +389,20 @@ describe("WrappersRegistry", () => {
       });
     });
 
-    it("returns null when not found", async ({ signer }) => {
+    it("returns structured result with isValid=false when revoked", async ({ signer }) => {
+      vi.mocked(signer.getChainId).mockResolvedValue(1);
+      vi.mocked(signer.readContract).mockResolvedValueOnce([false, C_TOKEN]);
+      const registry = new WrappersRegistry({ signer });
+
+      const result = await registry.getConfidentialToken(TOKEN);
+
+      expect(result).toEqual({
+        confidentialTokenAddress: C_TOKEN,
+        isValid: false,
+      });
+    });
+
+    it("returns null when not registered (zero address)", async ({ signer }) => {
       vi.mocked(signer.getChainId).mockResolvedValue(1);
       vi.mocked(signer.readContract).mockResolvedValueOnce([
         false,
@@ -406,11 +417,9 @@ describe("WrappersRegistry", () => {
   });
 
   describe("getUnderlyingToken", () => {
-    it("returns structured result when found", async ({ signer }) => {
+    it("returns structured result when registered and valid", async ({ signer }) => {
       vi.mocked(signer.getChainId).mockResolvedValue(1);
-      vi.mocked(signer.readContract)
-        .mockResolvedValueOnce([true, TOKEN]) // getTokenAddress
-        .mockResolvedValueOnce(true); // isConfidentialTokenValid
+      vi.mocked(signer.readContract).mockResolvedValueOnce([true, TOKEN]);
       const registry = new WrappersRegistry({ signer });
 
       const result = await registry.getUnderlyingToken(C_TOKEN);
@@ -418,7 +427,17 @@ describe("WrappersRegistry", () => {
       expect(result).toEqual({ tokenAddress: TOKEN, isValid: true });
     });
 
-    it("returns null when not found", async ({ signer }) => {
+    it("returns structured result with isValid=false when revoked", async ({ signer }) => {
+      vi.mocked(signer.getChainId).mockResolvedValue(1);
+      vi.mocked(signer.readContract).mockResolvedValueOnce([false, TOKEN]);
+      const registry = new WrappersRegistry({ signer });
+
+      const result = await registry.getUnderlyingToken(C_TOKEN);
+
+      expect(result).toEqual({ tokenAddress: TOKEN, isValid: false });
+    });
+
+    it("returns null when not registered (zero address)", async ({ signer }) => {
       vi.mocked(signer.getChainId).mockResolvedValue(1);
       vi.mocked(signer.readContract).mockResolvedValueOnce([
         false,
@@ -449,15 +468,13 @@ describe("WrappersRegistry", () => {
 
     it("caches getConfidentialToken results", async ({ signer }) => {
       vi.mocked(signer.getChainId).mockResolvedValue(1);
-      vi.mocked(signer.readContract)
-        .mockResolvedValueOnce([true, C_TOKEN])
-        .mockResolvedValueOnce(true);
+      vi.mocked(signer.readContract).mockResolvedValueOnce([true, C_TOKEN]);
       const registry = new WrappersRegistry({ signer });
 
       await registry.getConfidentialToken(TOKEN);
       await registry.getConfidentialToken(TOKEN); // cached
 
-      expect(signer.readContract).toHaveBeenCalledTimes(2); // not 4
+      expect(signer.readContract).toHaveBeenCalledTimes(1); // not 2
     });
 
     it("refresh() clears the cache", async ({ signer }) => {

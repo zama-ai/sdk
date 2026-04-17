@@ -7,6 +7,7 @@ import {
   assertFunctionProp,
   assertStringProp,
   assertCondition,
+  assertBigint,
   assertNonNullable,
 } from "../assertions";
 
@@ -158,6 +159,37 @@ describe("assertFunctionProp", () => {
     expect(() => assertFunctionProp(obj, "handler", "ctx")).toThrow(
       "ctx must be a function, got undefined",
     );
+  });
+});
+
+describe("assertBigint", () => {
+  it("accepts a bigint", () => {
+    expect(() => assertBigint(42n, "test")).not.toThrow();
+  });
+
+  it("accepts 0n (falsy bigint)", () => {
+    expect(() => assertBigint(0n, "test")).not.toThrow();
+  });
+
+  it("throws for a number", () => {
+    expect(() => assertBigint(42, "ctx")).toThrow(TypeError);
+    expect(() => assertBigint(42, "ctx")).toThrow("ctx must be a bigint, got number");
+  });
+
+  it("throws for a boolean", () => {
+    expect(() => assertBigint(true, "ctx")).toThrow("ctx must be a bigint, got boolean");
+  });
+
+  it("throws for a string", () => {
+    expect(() => assertBigint("0x123", "ctx")).toThrow("ctx must be a bigint, got string");
+  });
+
+  it("throws for null", () => {
+    expect(() => assertBigint(null, "ctx")).toThrow("ctx must be a bigint, got object");
+  });
+
+  it("throws for undefined", () => {
+    expect(() => assertBigint(undefined, "ctx")).toThrow("ctx must be a bigint, got undefined");
   });
 });
 

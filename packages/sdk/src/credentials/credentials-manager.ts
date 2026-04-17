@@ -106,9 +106,9 @@ export class CredentialsManager extends BaseCredentialsManager<
     await this.revokeSession(key);
   }
 
-  /** Whether a session signature is currently cached. */
-  async isAllowed(): Promise<boolean> {
-    return this.checkAllowed(await this.#storeKey());
+  /** Whether a session signature is currently cached and covers the given contracts. */
+  async isAllowed(contractAddresses: [Address, ...Address[]]): Promise<boolean> {
+    return this.checkAllowed(await this.#storeKey(), contractAddresses);
   }
 
   /** Delete stored credentials (best-effort). */

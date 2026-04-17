@@ -281,20 +281,20 @@ export function listPairsQueryOptions(
   PaginatedResult<TokenWrapperPair | TokenWrapperPairWithMetadata>,
   ReturnType<typeof zamaQueryKeys.wrappersRegistry.listPairs>
 > {
-  const page = config.page ?? 1;
-  const pageSize = config.pageSize ?? 100;
-  const metadata = config.metadata ?? false;
   const enabled = Boolean(config.registryAddress) && config.query?.enabled !== false;
   const queryKey = zamaQueryKeys.wrappersRegistry.listPairs(
     config.registryAddress ?? zeroAddress,
-    page,
-    pageSize,
-    metadata,
+    config.page ?? 1,
+    config.pageSize ?? 100,
+    config.metadata ?? false,
   );
   return {
     ...filterQueryOptions(config.query ?? {}),
     queryKey,
-    queryFn: async () => registry.listPairs({ page, pageSize, metadata }),
+    queryFn: async (context) => {
+      const [, { page, pageSize, metadata }] = context.queryKey;
+      return registry.listPairs({ page, pageSize, metadata });
+    },
     // Use the registry's own TTL so TanStack Query and the class-level cache
     // operate under the same freshness contract.
     staleTime: registry.ttlMs,

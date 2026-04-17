@@ -6,7 +6,7 @@ import { CONFIDENTIAL_TOKEN_ADDRESSES } from "../constants";
 export default function SessionPage() {
   const [searchParams] = useSearchParams();
   const tokens = searchParams.get("tokens")
-    ? (searchParams.get("tokens")!.split(",") as Address[])
+    ? (searchParams.get("tokens")!.split(",") as [Address, ...Address[]])
     : CONFIDENTIAL_TOKEN_ADDRESSES;
 
   return (

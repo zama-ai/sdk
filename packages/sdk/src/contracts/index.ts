@@ -11,7 +11,12 @@ export {
   rateContract,
 } from "./encrypted";
 
-export { finalizeUnwrapContract, underlyingContract, wrapContract } from "./wrapper";
+export {
+  finalizeUnwrapContract,
+  underlyingContract,
+  inferredTotalSupplyContract,
+  wrapContract,
+} from "./wrapper";
 
 export {
   nameContract,
@@ -26,6 +31,7 @@ export {
 export {
   ERC7984_INTERFACE_ID,
   ERC7984_WRAPPER_INTERFACE_ID,
+  ERC7984_WRAPPER_INTERFACE_ID_LEGACY,
   supportsInterfaceContract,
   isConfidentialTokenContract,
   isConfidentialWrapperContract,

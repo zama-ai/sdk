@@ -68,7 +68,7 @@ const { mutateAsync: finalize } = useFinalizeUnwrap({
 });
 ```
 
-## Mutation Variables
+## Mutation variables
 
 ### unwrapTxHash
 

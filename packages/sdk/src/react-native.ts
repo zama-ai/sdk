@@ -23,6 +23,8 @@ export type {
   EIP712TypedData,
   DelegatedUserDecryptParams,
   NetworkType,
+  PublicKeyData,
+  PublicParamsData,
 } from "./relayer/relayer-sdk.types";
 export type {
   FheTypeName,
@@ -41,7 +43,6 @@ export {
   SepoliaConfig,
   DefaultConfigs,
   withRetry,
-  buildEIP712DomainType,
   type ExtendedFhevmInstanceConfig,
 } from "./relayer/relayer-utils";
 
@@ -49,21 +50,28 @@ export {
 export { FheArtifactCache } from "./relayer/fhe-artifact-cache";
 
 // ERC-165 interface IDs
-export { ERC7984_INTERFACE_ID, ERC7984_WRAPPER_INTERFACE_ID } from "./contracts";
+export {
+  ERC7984_INTERFACE_ID,
+  ERC7984_WRAPPER_INTERFACE_ID,
+  ERC7984_WRAPPER_INTERFACE_ID_LEGACY,
+} from "./contracts";
+
+// Decrypt cache
+export { DecryptCache } from "./decrypt-cache";
 
 // Token abstraction layer
 export { ZamaSDK } from "./zama-sdk";
 export type { ZamaSDKConfig } from "./zama-sdk";
+export type { DecryptHandle, DecryptResult } from "./query/user-decrypt";
 export { WrappersRegistry, DefaultRegistryAddresses } from "./wrappers-registry";
 export type { WrappersRegistryConfig, ListPairsOptions } from "./wrappers-registry";
 export {
   Token,
-  type TokenConfig,
   ReadonlyToken,
-  type ReadonlyTokenConfig,
-  type BatchDecryptOptions,
+  type BatchBalancesResult,
   type BatchDecryptAsOptions,
   ZERO_HANDLE,
+  isZeroHandle,
   savePendingUnshield,
   loadPendingUnshield,
   clearPendingUnshield,
@@ -204,21 +212,6 @@ export {
   findWrapped,
 } from "./events";
 
-// Activity feed helpers and types
-export type {
-  ActivityDirection,
-  ActivityType,
-  ActivityAmount,
-  ActivityLogMetadata,
-  ActivityItem,
-} from "./activity";
-export {
-  parseActivityFeed,
-  extractEncryptedHandles,
-  applyDecryptedValues,
-  sortByBlockNumber,
-} from "./activity";
-
 // Contract call builders
 export {
   confidentialBalanceOfContract,
@@ -230,6 +223,7 @@ export {
   finalizeUnwrapContract,
   setOperatorContract,
   underlyingContract,
+  inferredTotalSupplyContract,
   wrapContract,
   supportsInterfaceContract,
   isConfidentialTokenContract,

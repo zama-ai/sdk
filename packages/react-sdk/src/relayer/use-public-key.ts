@@ -1,18 +1,9 @@
 "use client";
 
+import type { PublicKeyData } from "@zama-fhe/sdk";
 import { useQuery } from "../utils/query";
 import { publicKeyQueryOptions } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
-
-export { publicKeyQueryOptions };
-
-/** Shape of the FHE public key data returned by the relayer. */
-export interface PublicKeyData {
-  /** Unique identifier for this public key version. */
-  publicKeyId: string;
-  /** The raw FHE public key bytes. */
-  publicKey: Uint8Array;
-}
 
 /**
  * Fetch the FHE network public key from the relayer.

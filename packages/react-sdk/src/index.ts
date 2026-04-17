@@ -12,13 +12,8 @@ export { ZamaProvider, useZamaSDK, type ZamaProviderProps } from "./provider";
 
 // SDK method hooks
 export { useEncrypt } from "./relayer/use-encrypt";
-export {
-  useUserDecrypt,
-  type DecryptHandle,
-  type DecryptParams,
-  type DecryptCallbacks,
-  type UseUserDecryptConfig,
-} from "./relayer/use-user-decrypt";
+export { useUserDecrypt, type UseUserDecryptResult } from "./relayer/use-user-decrypt";
+
 export { usePublicDecrypt } from "./relayer/use-public-decrypt";
 export { useGenerateKeypair } from "./relayer/use-generate-keypair";
 export { useCreateEIP712 } from "./relayer/use-create-eip712";
@@ -27,12 +22,8 @@ export { useCreateDelegatedUserDecryptEIP712 } from "./relayer/use-create-delega
 export type { CreateDelegatedUserDecryptEIP712Params } from "./relayer/use-create-delegated-user-decrypt-eip712";
 export { useDelegatedUserDecrypt } from "./relayer/use-delegated-user-decrypt";
 export { useRequestZKProofVerification } from "./relayer/use-request-zk-proof-verification";
-export { usePublicKey, type PublicKeyData } from "./relayer/use-public-key";
-export { usePublicParams, type PublicParamsData } from "./relayer/use-public-params";
-
-// Read hooks (cached lookups)
-export { useUserDecryptedValue } from "./relayer/use-user-decrypted-value";
-export { useUserDecryptedValues } from "./relayer/use-user-decrypted-values";
+export { usePublicKey } from "./relayer/use-public-key";
+export { usePublicParams } from "./relayer/use-public-params";
 
 // Re-export core classes
 export {
@@ -58,9 +49,7 @@ export type {
   RelayerWebConfig,
   RelayerWebSecurityConfig,
   ZamaSDKConfig,
-  TokenConfig,
-  ReadonlyTokenConfig,
-  BatchDecryptOptions,
+  BatchBalancesResult,
   FhevmInstanceConfig,
   NetworkType,
   RelayerSDKStatus,
@@ -133,7 +122,11 @@ export { ZamaSDKEvents } from "@zama-fhe/sdk";
 export { HardhatConfig, MainnetConfig, SepoliaConfig } from "@zama-fhe/sdk";
 
 // Re-export constants
-export { ERC7984_INTERFACE_ID, ERC7984_WRAPPER_INTERFACE_ID } from "@zama-fhe/sdk";
+export {
+  ERC7984_INTERFACE_ID,
+  ERC7984_WRAPPER_INTERFACE_ID,
+  ERC7984_WRAPPER_INTERFACE_ID_LEGACY,
+} from "@zama-fhe/sdk";
 
 // Re-export all contract call builders
 export {
@@ -146,6 +139,7 @@ export {
   finalizeUnwrapContract,
   setOperatorContract,
   underlyingContract,
+  inferredTotalSupplyContract,
   wrapContract,
   supportsInterfaceContract,
   isConfidentialTokenContract,
@@ -167,7 +161,7 @@ export {
 
 // Authorization hooks (generic — any contract with encrypted state)
 export { useAllow } from "./authorization/use-allow";
-export { useIsAllowed } from "./authorization/use-is-allowed";
+export { useIsAllowed, type UseIsAllowedConfig } from "./authorization/use-is-allowed";
 export { useRevoke } from "./authorization/use-revoke";
 export { useRevokeSession } from "./authorization/use-revoke-session";
 
@@ -215,7 +209,6 @@ export {
   type UseWrapperDiscoverySuspenseConfig,
 } from "./token/use-wrapper-discovery";
 export { useMetadata, useMetadataSuspense, type TokenMetadata } from "./token/use-metadata";
-export { useActivityFeed, type UseActivityFeedConfig } from "./balance/use-activity-feed";
 export { useDelegateDecryption } from "./delegation/use-delegate-decryption";
 export { useRevokeDelegation } from "./delegation/use-revoke-delegation";
 export {
@@ -258,12 +251,8 @@ export {
   confidentialIsApprovedQueryOptions,
   publicKeyQueryOptions,
   publicParamsQueryOptions,
-  confidentialHandleQueryOptions,
   confidentialBalanceQueryOptions,
-  confidentialHandlesQueryOptions,
   confidentialBalancesQueryOptions,
-  type ConfidentialBalancesData,
-  activityFeedQueryOptions,
   shieldMutationOptions,
   type ShieldParams,
   confidentialTransferMutationOptions,
@@ -292,9 +281,10 @@ export {
   delegatedUserDecryptMutationOptions,
   publicDecryptMutationOptions,
   requestZKProofVerificationMutationOptions,
-  userDecryptMutationOptions,
-  type UserDecryptMutationParams,
-  type UserDecryptCallbacks,
+  userDecryptQueryOptions,
+  type UserDecryptQueryConfig,
+  type DecryptResult,
+  type DecryptHandle,
   allowMutationOptions,
   isAllowedQueryOptions,
   revokeMutationOptions,
@@ -319,7 +309,7 @@ export type {
 } from "./balance/optimistic-balance-update";
 
 // Re-export event decoders, types, and constants from core SDK
-export { ZERO_HANDLE } from "@zama-fhe/sdk";
+export { ZERO_HANDLE, isZeroHandle } from "@zama-fhe/sdk";
 export type {
   RawLog,
   ConfidentialTransferEvent,
@@ -351,21 +341,6 @@ export {
   decodeOnChainEvents,
   findUnwrapRequested,
   findWrapped,
-} from "@zama-fhe/sdk";
-
-// Re-export activity feed types and helpers from core SDK
-export type {
-  ActivityDirection,
-  ActivityType,
-  ActivityAmount,
-  ActivityLogMetadata,
-  ActivityItem,
-} from "@zama-fhe/sdk";
-export {
-  parseActivityFeed,
-  extractEncryptedHandles,
-  applyDecryptedValues,
-  sortByBlockNumber,
 } from "@zama-fhe/sdk";
 
 // Re-export core types from SDK

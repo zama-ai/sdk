@@ -101,7 +101,7 @@ const { mutateAsync: transfer } = useConfidentialTransfer({
 
 {% include ".gitbook/includes/mutation-options.md" %}
 
-## Mutation Variables
+## Mutation variables
 
 The function passed to `mutate` / `mutateAsync` accepts:
 
@@ -119,16 +119,21 @@ Number of tokens to transfer (in the token's smallest unit). Encrypted before su
 
 ### skipBalanceCheck
 
-`boolean` (optional, default `false`)
+`boolean | undefined`
 
-Skip confidential balance validation before submitting. Useful for smart wallets that cannot produce EIP-712 signatures for balance decryption.
+Skip confidential balance validation before submitting. Defaults to `false`. Useful for smart wallets that cannot produce EIP-712 signatures for balance decryption.
 
-### Progress callbacks
+### onEncryptComplete
 
-| Callback                           | Fires when                                  |
-| ---------------------------------- | ------------------------------------------- |
-| `onEncryptComplete()`              | FHE encryption of the amount completes.     |
-| `onTransferSubmitted(txHash: Hex)` | Transfer transaction is submitted on-chain. |
+`(() => void) | undefined`
+
+Fires when FHE encryption of the amount completes.
+
+### onTransferSubmitted
+
+`((txHash: Hex) => void) | undefined`
+
+Fires when the transfer transaction is submitted on-chain.
 
 ```tsx
 await transfer({

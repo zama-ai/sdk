@@ -8,13 +8,13 @@ import { wrapperAbi } from "../abi/wrapper.abi";
  * @example
  * ```ts
  * const txHash = await signer.writeContract(
- *   finalizeUnwrapContract(wrapper, burntAmount, cleartext, proof),
+ *   finalizeUnwrapContract(wrapper, unwrapRequestId, cleartext, proof),
  * );
  * ```
  */
 export function finalizeUnwrapContract(
   wrapper: Address,
-  burntAmount: Handle,
+  unwrapRequestId: Handle,
   burntAmountCleartext: bigint,
   decryptionProof: Hex,
 ) {
@@ -22,7 +22,7 @@ export function finalizeUnwrapContract(
     address: wrapper,
     abi: wrapperAbi,
     functionName: "finalizeUnwrap",
-    args: [burntAmount, burntAmountCleartext, decryptionProof],
+    args: [unwrapRequestId, burntAmountCleartext, decryptionProof],
   } as const;
 }
 
@@ -39,6 +39,25 @@ export function underlyingContract(wrapperAddress: Address) {
     address: wrapperAddress,
     abi: wrapperAbi,
     functionName: "underlying",
+    args: [],
+  } as const;
+}
+
+/**
+ * Returns the contract config to read the inferred plaintext total supply.
+ *
+ * @example
+ * ```ts
+ * const supply = await signer.readContract(
+ *   inferredTotalSupplyContract(wrapperAddress),
+ * );
+ * ```
+ */
+export function inferredTotalSupplyContract(wrapperAddress: Address) {
+  return {
+    address: wrapperAddress,
+    abi: wrapperAbi,
+    functionName: "inferredTotalSupply",
     args: [],
   } as const;
 }

@@ -26,62 +26,43 @@ describe("useConfidentialTransfer", () => {
     expectDefaultMutationState(state);
   });
 
-  test("cache: invalidates handle and resets balance after transfer", async ({
-    renderWithProviders,
-    signer,
-  }) => {
+  test("cache: invalidates balance after transfer", async ({ renderWithProviders, signer }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
     const { result, queryClient } = renderWithProviders(() =>
       useConfidentialTransfer({ tokenAddress: TOKEN }),
     );
 
-    const handleKey = zamaQueryKeys.confidentialHandle.token(TOKEN);
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
-    const activityKey = zamaQueryKeys.activityFeed.token(TOKEN);
-    const otherHandleKey = zamaQueryKeys.confidentialHandle.token(OTHER_TOKEN);
-    const otherBalanceKey = zamaQueryKeys.confidentialBalance.owner(OTHER_TOKEN, USER, HANDLE);
-    const otherActivityKey = zamaQueryKeys.activityFeed.token(OTHER_TOKEN);
-    const seededActivity = [{ id: "evt-1" }];
-    const seededOtherActivity = [{ id: "evt-2" }];
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
+    const otherBalanceKey = zamaQueryKeys.confidentialBalance.owner(OTHER_TOKEN, USER);
 
-    queryClient.setQueryData(handleKey, HANDLE);
     queryClient.setQueryData(balanceKey, 1000n);
-    queryClient.setQueryData(activityKey, seededActivity);
-    queryClient.setQueryData(otherHandleKey, HANDLE);
     queryClient.setQueryData(otherBalanceKey, 777n);
-    queryClient.setQueryData(otherActivityKey, seededOtherActivity);
 
     await act(() =>
       result.current.mutateAsync({ to: RECIPIENT, amount: 500n, skipBalanceCheck: true }),
     );
 
-    expectInvalidatedQueries(queryClient, [handleKey, balanceKey, activityKey]);
-    expectCacheUntouched(queryClient, otherHandleKey, HANDLE);
+    expectInvalidatedQueries(queryClient, [balanceKey]);
     expectCacheUntouched(queryClient, otherBalanceKey, 777n);
-    expectCacheUntouched(queryClient, otherActivityKey, seededOtherActivity);
   });
 
   test("behavior: forwards onSuccess callback", async ({ renderWithProviders, signer }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
-    const handleKey = zamaQueryKeys.confidentialHandle.token(TOKEN);
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
-    const activityKey = zamaQueryKeys.activityFeed.token(TOKEN);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
     const onSuccess = vi.fn();
 
     const { result, queryClient } = renderWithProviders(() =>
       useConfidentialTransfer({ tokenAddress: TOKEN }, { onSuccess }),
     );
 
-    queryClient.setQueryData(handleKey, HANDLE);
     queryClient.setQueryData(balanceKey, 1000n);
-    queryClient.setQueryData(activityKey, [{ id: "evt-1" }]);
 
     await mutateAndExpectOnSuccess(
       () => result.current.mutateAsync({ to: RECIPIENT, amount: 500n, skipBalanceCheck: true }),
       onSuccess,
-      (client) => expectInvalidatedQueries(client, [handleKey, balanceKey, activityKey]),
+      (client) => expectInvalidatedQueries(client, [balanceKey]),
     );
   });
 
@@ -258,11 +239,18 @@ describe("useConfidentialTransfer", () => {
   }) => {
     const handleB = `0x${"44".repeat(32)}`;
 
-    vi.mocked(signer.readContract).mockResolvedValueOnce(HANDLE).mockResolvedValueOnce(handleB);
-    vi.mocked(relayer.userDecrypt)
-      .mockResolvedValueOnce({ [HANDLE]: 1000n })
-      .mockResolvedValueOnce({ [handleB]: 500n });
-    vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
+    // Both Phase 1 (handleQuery) and Phase 2 (token.balanceOf) read the handle
+    // via signer.readContract; track the "current" handle and flip it on the
+    // transaction write so the post-transfer refetch sees handleB.
+    let currentHandle: string = HANDLE;
+    vi.mocked(signer.readContract).mockImplementation(async () => currentHandle);
+    vi.mocked(relayer.userDecrypt).mockImplementation(async ({ handles }) => ({
+      [handles[0]]: handles[0] === HANDLE ? 1000n : 500n,
+    }));
+    vi.mocked(signer.writeContract).mockImplementation(async () => {
+      currentHandle = handleB;
+      return "0xtxhash";
+    });
 
     const { Wrapper } = createWrapper({ signer, relayer });
     const { result } = renderHook(
@@ -306,7 +294,7 @@ describe("useConfidentialTransfer optimistic updates", () => {
       useConfidentialTransfer({ tokenAddress: TOKEN, optimistic: true }),
     );
 
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
     queryClient.setQueryData(balanceKey, 5000n);
     const cancelSpy = vi.spyOn(queryClient, "cancelQueries");
     const setQueryDataSpy = vi.spyOn(queryClient, "setQueryData");
@@ -348,7 +336,7 @@ describe("useConfidentialTransfer optimistic updates", () => {
       useConfidentialTransfer({ tokenAddress: TOKEN, optimistic: true }),
     );
 
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
 
     await act(() =>
       result.current.mutateAsync({ to: RECIPIENT, amount: 500n, skipBalanceCheck: true }),
@@ -367,7 +355,7 @@ describe("useConfidentialTransfer optimistic updates", () => {
       useConfidentialTransfer({ tokenAddress: TOKEN, optimistic: true }),
     );
 
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
     queryClient.setQueryData(balanceKey, 1000n);
     const cancelSpy = vi.spyOn(queryClient, "cancelQueries");
 
@@ -394,7 +382,7 @@ describe("useConfidentialTransfer optimistic updates", () => {
       useConfidentialTransfer({ tokenAddress: TOKEN }),
     );
 
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
     queryClient.setQueryData(balanceKey, 5000n);
 
     await act(async () => {
@@ -419,7 +407,7 @@ describe("useConfidentialTransfer optimistic updates", () => {
       useConfidentialTransfer({ tokenAddress: TOKEN, optimistic: true }),
     );
 
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
     queryClient.setQueryData(balanceKey, 5000n);
     const cancelSpy = vi.spyOn(queryClient, "cancelQueries");
     const setQueryDataSpy = vi.spyOn(queryClient, "setQueryData");
@@ -461,7 +449,7 @@ describe("useConfidentialTransfer optimistic updates", () => {
       useConfidentialTransfer({ tokenAddress: TOKEN, optimistic: true }, { onError }),
     );
 
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
     queryClient.setQueryData(balanceKey, 5000n);
 
     // Sabotage setQueryData after the optimistic write so rollback throws

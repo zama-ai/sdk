@@ -1,6 +1,5 @@
 import { getAddress } from "viem";
 import type { Address } from "viem";
-import type { Handle } from "../relayer/relayer-sdk.types";
 
 const normalizeAddresses = (addresses: Address[]): Address[] =>
   addresses.map((address) => getAddress(address));
@@ -25,42 +24,15 @@ export const zamaQueryKeys = {
       ["zama.signerAddress", { tokenAddress: getAddress(tokenAddress) }] as const,
   },
 
-  confidentialHandle: {
-    all: ["zama.confidentialHandle"] as const,
-    token: (tokenAddress: Address) =>
-      ["zama.confidentialHandle", { tokenAddress: getAddress(tokenAddress) }] as const,
-    owner: (tokenAddress: Address, owner?: Address) =>
-      [
-        "zama.confidentialHandle",
-        {
-          tokenAddress: getAddress(tokenAddress),
-          ...(owner ? { owner: getAddress(owner) } : {}),
-        },
-      ] as const,
-  },
-
   confidentialBalance: {
     all: ["zama.confidentialBalance"] as const,
     token: (tokenAddress: Address) =>
       ["zama.confidentialBalance", { tokenAddress: getAddress(tokenAddress) }] as const,
-    owner: (tokenAddress: Address, owner?: Address, handle?: Handle) =>
+    owner: (tokenAddress: Address, owner?: Address) =>
       [
         "zama.confidentialBalance",
         {
           tokenAddress: getAddress(tokenAddress),
-          ...(owner ? { owner: getAddress(owner) } : {}),
-          ...(handle === undefined ? {} : { handle }),
-        },
-      ] as const,
-  },
-
-  confidentialHandles: {
-    all: ["zama.confidentialHandles"] as const,
-    tokens: (tokenAddresses: Address[], owner?: Address) =>
-      [
-        "zama.confidentialHandles",
-        {
-          tokenAddresses: normalizeAddresses(tokenAddresses),
           ...(owner ? { owner: getAddress(owner) } : {}),
         },
       ] as const,
@@ -68,13 +40,12 @@ export const zamaQueryKeys = {
 
   confidentialBalances: {
     all: ["zama.confidentialBalances"] as const,
-    tokens: (tokenAddresses: Address[], owner?: Address, handles?: Handle[]) =>
+    tokens: (tokenAddresses: Address[], owner?: Address) =>
       [
         "zama.confidentialBalances",
         {
           tokenAddresses: normalizeAddresses(tokenAddresses),
           ...(owner ? { owner: getAddress(owner) } : {}),
-          ...(handles === undefined ? {} : { handles }),
         },
       ] as const,
   },
@@ -156,25 +127,16 @@ export const zamaQueryKeys = {
       ["zama.totalSupply", { tokenAddress: getAddress(tokenAddress) }] as const,
   },
 
-  activityFeed: {
-    all: ["zama.activityFeed"] as const,
-    token: (tokenAddress: Address) =>
-      ["zama.activityFeed", { tokenAddress: getAddress(tokenAddress) }] as const,
-    scope: (tokenAddress: Address, userAddress?: Address, logsKey?: string, decrypt?: boolean) =>
-      [
-        "zama.activityFeed",
-        {
-          tokenAddress: getAddress(tokenAddress),
-          ...(userAddress ? { userAddress: getAddress(userAddress) } : {}),
-          ...(logsKey ? { logsKey } : {}),
-          ...(decrypt === undefined ? {} : { decrypt }),
-        },
-      ] as const,
-  },
-
   isAllowed: {
     all: ["zama.isAllowed"] as const,
-    scope: (account: Address) => ["zama.isAllowed", { account: getAddress(account) }] as const,
+    scope: (account: Address, contractAddresses: Address[]) =>
+      [
+        "zama.isAllowed",
+        {
+          account: getAddress(account),
+          contractAddresses: normalizeAddresses(contractAddresses).toSorted(),
+        },
+      ] as const,
   },
 
   publicKey: {
@@ -217,6 +179,18 @@ export const zamaQueryKeys = {
           ...(contractAddress === undefined
             ? {}
             : { contractAddress: getAddress(contractAddress) }),
+        },
+      ] as const,
+    handles: (handles: readonly { handle: string; contractAddress: Address }[]) =>
+      [
+        "zama.decryption",
+        {
+          handles: [...handles]
+            .toSorted((a, b) => a.handle.localeCompare(b.handle))
+            .map((h) => ({
+              handle: h.handle,
+              contractAddress: getAddress(h.contractAddress),
+            })),
         },
       ] as const,
   },

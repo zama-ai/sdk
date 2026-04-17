@@ -8,8 +8,6 @@ import { useConfidentialBalances } from "../use-confidential-balances";
 const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
 const TOKEN_B = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
 const OWNER = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;
-const HANDLE_A = `0x${"aa".repeat(32)}` as Address;
-const HANDLE_B = `0x${"bb".repeat(32)}` as Address;
 
 vi.mock("../../utils/query", async () => {
   const actual = await vi.importActual("../../utils/query");
@@ -29,11 +27,6 @@ vi.mock("@zama-fhe/sdk/query", () => ({
     queryFn: vi.fn(),
     enabled: true,
   })),
-  confidentialHandlesQueryOptions: vi.fn(() => ({
-    queryKey: ["handles"],
-    queryFn: vi.fn(),
-    enabled: true,
-  })),
   signerAddressQueryOptions: vi.fn(() => ({
     queryKey: ["signerAddress"],
     queryFn: vi.fn(),
@@ -48,29 +41,25 @@ describe("useConfidentialBalances enabled propagation", () => {
     vi.mocked(useQuery)
       .mockReturnValueOnce({ data: OWNER } as ReturnType<typeof useQuery>)
       .mockReturnValueOnce({
-        data: [HANDLE_A, HANDLE_B],
-        fetchStatus: "idle",
-      } as ReturnType<typeof useQuery>)
-      .mockReturnValueOnce({
         data: new Map<Address, bigint>(),
         fetchStatus: "idle",
       } as ReturnType<typeof useQuery>);
   });
 
-  test("disables handles polling query when user passes enabled=false", () => {
+  test("disables balance query when user passes enabled=false", () => {
     renderHook(() =>
       useConfidentialBalances({ tokenAddresses: [TOKEN, TOKEN_B] }, { enabled: false }),
     );
 
-    const handlesQueryOptions = vi.mocked(useQuery).mock.calls[1]?.[0] as
+    const balanceQueryOptions = vi.mocked(useQuery).mock.calls[1]?.[0] as
       | { enabled?: boolean }
       | undefined;
 
-    expect(handlesQueryOptions).toBeDefined();
-    expect(handlesQueryOptions?.enabled).toBe(false);
+    expect(balanceQueryOptions).toBeDefined();
+    expect(balanceQueryOptions?.enabled).toBe(false);
   });
 
-  test("uses a signer-only address query key and disables handles for other falsy enabled values", () => {
+  test("uses a signer-only address query key and disables balance for other falsy enabled values", () => {
     renderHook(() =>
       useConfidentialBalances(
         { tokenAddresses: [TOKEN, TOKEN_B] },
@@ -82,10 +71,10 @@ describe("useConfidentialBalances enabled propagation", () => {
       expect.objectContaining({ getAddress: expect.any(Function) }),
     ]);
 
-    const handlesQueryOptions = vi.mocked(useQuery).mock.calls[1]?.[0] as
+    const balanceQueryOptions = vi.mocked(useQuery).mock.calls[1]?.[0] as
       | { enabled?: boolean }
       | undefined;
 
-    expect(handlesQueryOptions?.enabled).toBeFalsy();
+    expect(balanceQueryOptions?.enabled).toBeFalsy();
   });
 });

@@ -1,9 +1,9 @@
 ---
-title: Check Balances
+title: Check balances
 description: Decrypt and read confidential token balances using the SDK and React hooks.
 ---
 
-# Check Balances
+# Check balances
 
 Confidential balances are stored on-chain as encrypted handles. To display a human-readable number, the SDK decrypts them using FHE credentials tied to the user's wallet. This guide walks through reading balances, understanding the caching layer, and working with multiple tokens.
 
@@ -79,10 +79,13 @@ if (token.isZeroHandle(handle)) {
 }
 
 // Decrypt a handle you already have
-const value = await token.decryptBalance(handle);
+const result = await sdk.userDecrypt([{ handle, contractAddress: token.address }]);
+const value = result[handle] as bigint;
 
-// Decrypt multiple handles at once
-const values = await token.decryptHandles([handle1, handle2, handle3]);
+// Decrypt multiple handles at once (must include the contract address per handle)
+const decrypted = await sdk.userDecrypt(
+  [handle1, handle2, handle3].map((h) => ({ handle: h, contractAddress: token.address })),
+);
 ```
 
 {% endtab %}
@@ -130,16 +133,14 @@ const tokens = addresses.map((a) => sdk.createReadonlyToken(a));
 await ReadonlyToken.allow(...tokens);
 
 // Decrypt all balances in parallel
-const balances = await ReadonlyToken.batchDecryptBalances(tokens, {
-  owner: userAddress,
-});
-// Returns Map<Address, bigint>
+const { results, errors } = await ReadonlyToken.batchBalancesOf(tokens, userAddress);
 
-// If you already have the handles, pass them to skip the RPC reads
-const balancesWithHandles = await ReadonlyToken.batchDecryptBalances(tokens, {
-  handles,
-  owner: userAddress,
-});
+// `results` is Map<Address, bigint> for tokens that decrypted successfully,
+// `errors` is Map<Address, ZamaError> for tokens that failed — partial failure
+// never rejects the whole batch.
+for (const [address, balance] of results) {
+  console.log(address, balance);
+}
 ```
 
 {% endtab %}
@@ -173,10 +174,12 @@ const {
   data: balance,
   isLoading,
   error,
-} = useConfidentialBalance({
-  tokenAddress: "0xToken",
-  handleRefetchInterval: 5_000, // optional (default: 10s)
-});
+} = useConfidentialBalance(
+  {
+    tokenAddress: "0xToken",
+  },
+  { refetchInterval: 5_000 },
+);
 ```
 
 {% endtab %}
@@ -185,17 +188,17 @@ const {
 ```tsx
 import { useConfidentialBalances } from "@zama-fhe/react-sdk";
 
-const { data: balances } = useConfidentialBalances({
+const { data } = useConfidentialBalances({
   tokenAddresses: ["0xTokenA", "0xTokenB", "0xTokenC"],
 });
 
-const tokenABalance = balances?.get("0xTokenA");
+const tokenABalance = data?.results.get("0xTokenA");
 ```
 
 {% endtab %}
 {% endtabs %}
 
-`useConfidentialBalance` uses two-phase polling: it cheaply checks the encrypted handle every 10 seconds and only decrypts when the handle changes. Decrypted values are persisted in storage, so page reloads show the balance instantly.
+`useConfidentialBalance` calls `token.balanceOf(owner)` which reads the on-chain handle and decrypts via the SDK. Previously decrypted values are served from cache instantly — the relayer is only hit when the handle changes. Pass `refetchInterval` to poll for updates. Decrypted values are persisted in storage, so page reloads show the balance instantly.
 
 ### 9. Force a manual refresh
 

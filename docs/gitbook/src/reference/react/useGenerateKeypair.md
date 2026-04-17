@@ -49,7 +49,7 @@ function GenerateButton() {
 
 `useGenerateKeypair` takes no constructor parameters.
 
-## Mutation Variables
+## Mutation variables
 
 `mutate` / `mutateAsync` take no arguments.
 
