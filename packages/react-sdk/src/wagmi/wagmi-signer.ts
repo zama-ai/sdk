@@ -19,13 +19,12 @@ import type { Config } from "wagmi";
 import {
   getBlock,
   getChainId,
-  getAccount,
   readContract,
   signTypedData,
   waitForTransactionReceipt,
-  watchConnection,
   writeContract,
 } from "wagmi/actions";
+import { getConnection, watchConnection } from "./compat";
 
 /** Configuration for {@link WagmiSigner}. */
 export interface WagmiSignerConfig {
@@ -49,7 +48,7 @@ export class WagmiSigner implements GenericSigner {
   }
 
   async getAddress(): Promise<Address> {
-    const account = getAccount(this.config);
+    const account = getConnection(this.config);
     if (!account?.address) {
       throw new TypeError("Invalid address");
     }
