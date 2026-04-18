@@ -369,14 +369,21 @@ describe("FheArtifactCache", () => {
     }
 
     const MANIFEST = {
-      fhePublicKey: {
-        dataId: "pk-id-1",
-        urls: [PK_ARTIFACT_URL],
-      },
-      crs: {
-        2048: {
-          dataId: "pp-id-1",
-          urls: [CRS_ARTIFACT_URL],
+      status: "succeeded",
+      response: {
+        fheKeyInfo: [
+          {
+            fhePublicKey: {
+              dataId: "pk-id-1",
+              urls: [PK_ARTIFACT_URL],
+            },
+          },
+        ],
+        crs: {
+          2048: {
+            dataId: "pp-id-1",
+            urls: [CRS_ARTIFACT_URL],
+          },
         },
       },
     };
@@ -551,9 +558,16 @@ describe("FheArtifactCache", () => {
       mockFetch({
         manifest: {
           ...MANIFEST,
-          fhePublicKey: {
-            dataId: "pk-id-1",
-            urls: ["https://new-cdn.example.com/pk-v2.bin"],
+          response: {
+            ...MANIFEST.response,
+            fheKeyInfo: [
+              {
+                fhePublicKey: {
+                  dataId: "pk-id-1",
+                  urls: ["https://new-cdn.example.com/pk-v2.bin"],
+                },
+              },
+            ],
           },
         },
       });
@@ -1014,8 +1028,17 @@ describe("FheArtifactCache", () => {
         status: 200,
         json: () =>
           Promise.resolve({
-            fhePublicKey: { urls: ["https://cdn.example.com/pk.bin"] },
-            crs: {},
+            status: "succeeded",
+            response: {
+              fheKeyInfo: [
+                {
+                  fhePublicKey: {
+                    urls: ["https://cdn.example.com/pk.bin"],
+                  },
+                },
+              ],
+              crs: {},
+            },
           }),
       });
 

@@ -245,75 +245,56 @@ function ConfidentialAction() {
 
 {% endcode %}
 
-### 3. Decrypt with useUserDecrypt
+### 3. Decryption of the encrypted data
 
-`useUserDecrypt` is a query hook that decrypts FHE handles. If no cached credentials exist, it triggers a wallet signature prompt. Use `useAllow` + `useIsAllowed` to pre-authorize and gate the query if you want to control when the prompt appears.
+Decrypting on-chain data requires the user to sign an EIP-712 message that grants your app a **reusable credential** for the relevant contracts. Hooks like `useUserDecrypt` and `useConfidentialBalance` trigger this signature automatically the first time they run. If your app calls these hooks on render without gating, users see an unsolicited MetaMask popup before they have taken any action — a confusing experience that often leads to rejection.
 
-{% code title="DecryptExample.tsx" %}
+A good decryption UX follows three steps:
+
+1. **Check credentials** — use `useIsAllowed` to see whether the user has already signed.
+2. **Show a locked state** — display a clear "Decrypt" button so the user understands what they are authorizing.
+3. **Decrypt on demand** — only mount balance or decrypt components after the credential exists.
+
+{% hint style="danger" %}
+**Never** call `useConfidentialBalance` or `useUserDecrypt` without gating on `useIsAllowed`:
 
 ```tsx
-import { useAllow, useIsAllowed, useUserDecrypt } from "@zama-fhe/react-sdk";
-
-const CONTRACT = "0xYourConfidentialContract" as const;
-
-function DecryptExample() {
-  const { mutate: allow, isPending: isAllowing } = useAllow();
-  const { data: isAllowed } = useIsAllowed({ contractAddresses: [CONTRACT] });
-
-  const { data, isPending } = useUserDecrypt(
-    { handles: [{ handle: "0xabc123...", contractAddress: CONTRACT }] },
-    { enabled: !!isAllowed },
-  );
-
-  return (
-    <section>
-      {!isAllowed && (
-        <button onClick={() => allow([CONTRACT])} disabled={isAllowing}>
-          {isAllowing ? "Signing..." : "Authorize decryption"}
-        </button>
-      )}
-      {isPending && <p>Decrypting...</p>}
-      {data && <output>Value: {Object.values(data)[0]?.toString()}</output>}
-    </section>
-  );
+// BAD — triggers wallet popup as soon as the component mounts
+function BadExample({ tokenAddress }: { tokenAddress: Address }) {
+  const balance = useConfidentialBalance({ tokenAddress });
+  return <p>{balance.data?.toString()}</p>;
 }
 ```
 
-{% endcode %}
+This causes an unexpected MetaMask popup, user rejection, potential Blockaid flags, and loss of trust.
+{% endhint %}
 
-#### Pre-authorize once, decrypt anywhere
+#### Gating useConfidentialBalance
 
-A common pattern is to call `useAllow` once — for example right after the user connects their wallet — and then decrypt independently in any component, on any page, without triggering another wallet prompt. Credentials persist in IndexedDB, so they survive page reloads.
+Split the gate and the balance display into separate components. The gate checks credentials and shows a decrypt button; the balance component only mounts once credentials exist, so it never triggers a wallet popup.
 
 {% tabs %}
-{% tab title="UserDecryptionGate.tsx" %}
+{% tab title="DecryptGate.tsx" %}
 
 ```tsx
 import { useAllow, useIsAllowed } from "@zama-fhe/react-sdk";
+import type { Address } from "viem";
 
-/**
- * Show once after wallet connect. After the user signs,
- * every useUserDecrypt in the app works without prompts.
- *
- * Pass all contract addresses you want to decrypt upfront.
- */
-function UserDecryptionGate({
-  contracts,
+function DecryptGate({
+  contractAddresses,
   children,
 }: {
-  contracts: `0x${string}`[];
+  contractAddresses: Address[];
   children: React.ReactNode;
 }) {
+  const { data: isAllowed } = useIsAllowed({ contractAddresses });
   const { mutate: allow, isPending } = useAllow();
-  const { data: allowed } = useIsAllowed({
-    contractAddresses: contracts,
-  });
 
-  if (allowed) return <>{children}</>;
+  if (isAllowed) return <>{children}</>;
 
   return (
-    <button onClick={() => allow(contracts)} disabled={isPending}>
-      {isPending ? "Signing..." : "Authorize decryption"}
+    <button onClick={() => allow(contractAddresses)} disabled={isPending}>
+      {isPending ? "Signing..." : "Decrypt Balances"}
     </button>
   );
 }
@@ -324,18 +305,24 @@ function UserDecryptionGate({
 
 ```tsx
 import { useConfidentialBalance } from "@zama-fhe/react-sdk";
+import { formatUnits, type Address } from "viem";
 
-/**
- * Rendered inside <UserDecryptionGate> — credentials are already cached,
- * so this fires immediately with no wallet interaction.
- */
-function ConfidentialBalance({ contractAddress }: { contractAddress: `0x${string}` }) {
-  const { data: balance, isPending } = useConfidentialBalance({
-    tokenAddress: contractAddress,
-  });
+function ConfidentialBalance({
+  tokenAddress,
+  decimals,
+  symbol,
+}: {
+  tokenAddress: Address;
+  decimals: number;
+  symbol: string;
+}) {
+  const { data, isLoading } = useConfidentialBalance({ tokenAddress });
 
-  if (isPending) return <p>Decrypting...</p>;
-  return <output>{balance?.toString()}</output>;
+  return (
+    <p>
+      {symbol}: {isLoading ? "Decrypting..." : formatUnits(data ?? 0n, decimals)}
+    </p>
+  );
 }
 ```
 
@@ -343,24 +330,23 @@ function ConfidentialBalance({ contractAddress }: { contractAddress: `0x${string
 {% tab title="App.tsx" %}
 
 ```tsx
-import { useListPairs } from "@zama-fhe/react-sdk";
-
-/**
- * Contracts can come from the on-chain wrappers registry.
- * When new pairs are added, UserDecryptionGate detects the gap
- * and shows a one-click re-authorization — the SDK extends the
- * existing credential to cover the new addresses.
- */
 function App() {
-  const { data: pairs } = useListPairs();
-  const contracts = pairs?.items.map((p) => p.confidentialTokenAddress) ?? [];
+  const tokens = [
+    { address: "0xTokenA" as const, decimals: 6, symbol: "USDC" },
+    { address: "0xTokenB" as const, decimals: 18, symbol: "WETH" },
+  ];
 
   return (
-    <UserDecryptionGate contracts={contracts}>
-      {contracts.map((addr) => (
-        <ConfidentialBalance key={addr} contractAddress={addr} />
+    <DecryptGate contractAddresses={tokens.map((t) => t.address)}>
+      {tokens.map((t) => (
+        <ConfidentialBalance
+          key={t.address}
+          tokenAddress={t.address}
+          decimals={t.decimals}
+          symbol={t.symbol}
+        />
       ))}
-    </UserDecryptionGate>
+    </DecryptGate>
   );
 }
 ```
@@ -368,7 +354,33 @@ function App() {
 {% endtab %}
 {% endtabs %}
 
-Because `UserDecryptionGate` only renders its children after `useIsAllowed` returns `true`, every nested `useUserDecrypt` call reuses the cached credentials — no `enabled` guard needed. When new contracts appear in the list, `useIsAllowed` returns `false` and the user is prompted once to extend their authorization.
+`DecryptGate` only renders its children once `useIsAllowed` returns true. This means `ConfidentialBalance` never mounts without credentials — no `enabled` guard needed, no wallet popup on render. Returning users skip the prompt entirely because credentials persist in IndexedDB (default TTL: 30 days).
+
+The same pattern works with `useUserDecrypt` and any other decrypt hook — anything nested inside `DecryptGate` can decrypt freely without triggering a wallet prompt.
+
+When contract addresses come from the chain (e.g. `useListPairs`), `DecryptGate` automatically detects new addresses and prompts the user once to extend their authorization:
+
+```tsx
+import { useListPairs } from "@zama-fhe/react-sdk";
+
+function App() {
+  const { data: pairs } = useListPairs();
+  const addresses = pairs?.items.map((p) => p.confidentialTokenAddress) ?? [];
+
+  return (
+    <DecryptGate contractAddresses={addresses}>
+      {pairs?.items.map((p) => (
+        <ConfidentialBalance
+          key={p.confidentialTokenAddress}
+          tokenAddress={p.confidentialTokenAddress}
+          decimals={p.decimals}
+          symbol={p.symbol}
+        />
+      ))}
+    </DecryptGate>
+  );
+}
+```
 
 #### Decrypting handles from multiple contracts
 
