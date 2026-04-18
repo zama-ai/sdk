@@ -12,7 +12,6 @@ export {
   web,
   node,
   cleartext,
-  custom,
   resolveChainTransports,
   buildRelayer,
   resolveStorage,
@@ -23,13 +22,11 @@ export type {
   ZamaConfigViem,
   ZamaConfigEthers,
   ZamaConfigCustomSigner,
-  ZamaConfigCustomRelayer,
   CreateZamaConfigBaseParams,
   TransportConfig,
   WebTransportConfig,
   NodeTransportConfig,
   CleartextTransportConfig,
-  CustomTransportConfig,
 } from "./config";
 
 // Core SDK

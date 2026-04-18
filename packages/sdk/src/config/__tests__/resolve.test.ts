@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { web, node, cleartext, custom } from "../transports";
+import { web, node, cleartext } from "../transports";
 import { SepoliaConfig, MainnetConfig, HoodiConfig } from "../../relayer/relayer-utils";
 import { ConfigurationError } from "../../errors";
 
@@ -90,20 +90,6 @@ describe("resolveChainTransports", () => {
     );
   });
 
-  it("resolves chains with custom transport", () => {
-    const mockRelayer = { terminate: () => {} } as any;
-    const transport = custom(mockRelayer);
-    const result = resolveChainTransports([sepoliaChain], { [11155111]: transport }, [11155111]);
-    expect(result.get(11155111)?.transport).toBe(transport);
-  });
-
-  it("throws for custom transport with missing chain config", () => {
-    const mockRelayer = { terminate: () => {} } as any;
-    expect(() => resolveChainTransports([], { [999]: custom(mockRelayer) }, [999])).toThrow(
-      "transport configured but no entry in the chains array",
-    );
-  });
-
   it("throws for orphaned transport keys not in chainIds", () => {
     expect(() =>
       resolveChainTransports([sepoliaChain], { [11155111]: web(), [999]: web() }, [11155111]),
@@ -169,27 +155,5 @@ describe("buildRelayer", () => {
     expect(() => buildRelayer(transports, resolveChainId)).toThrow(
       "Chain 560048 has an empty relayerUrl",
     );
-  });
-
-  it("wraps custom relayer in CompositeRelayer", () => {
-    const mockRelayer = { terminate: vi.fn() } as any;
-    const transports = resolveChainTransports(
-      [sepoliaChain],
-      { [11155111]: custom(mockRelayer) },
-      [11155111],
-    );
-    const relayer = buildRelayer(transports, resolveChainId);
-    expect(relayer.constructor.name).toBe("CompositeRelayer");
-  });
-
-  it("returns CompositeRelayer for mixed web + custom", () => {
-    const mockRelayer = { terminate: vi.fn() } as any;
-    const transports = resolveChainTransports(
-      [sepoliaChain, mainnetChain],
-      { [11155111]: web(), [1]: custom(mockRelayer) },
-      [11155111, 1],
-    );
-    const relayer = buildRelayer(transports, resolveChainId);
-    expect(relayer.constructor.name).toBe("CompositeRelayer");
   });
 });

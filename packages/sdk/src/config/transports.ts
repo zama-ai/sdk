@@ -1,6 +1,5 @@
 import type { RelayerWebConfig } from "../relayer/relayer-sdk.types";
 import type { RelayerNodeConfig } from "../relayer/relayer-node";
-import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { ExtendedFhevmInstanceConfig } from "../relayer/relayer-utils";
 import type { CleartextConfig } from "../relayer/cleartext/types";
 
@@ -44,18 +43,8 @@ export interface CleartextTransportConfig {
   chain: CleartextChainConfig;
 }
 
-/** Tagged transport: user-provided RelayerSDK for a specific chain. */
-export interface CustomTransportConfig {
-  readonly type: "custom";
-  relayer: RelayerSDK;
-}
-
 /** A per-chain transport entry. */
-export type TransportConfig =
-  | WebTransportConfig
-  | NodeTransportConfig
-  | CleartextTransportConfig
-  | CustomTransportConfig;
+export type TransportConfig = WebTransportConfig | NodeTransportConfig | CleartextTransportConfig;
 
 // ── Transport factories ──────────────────────────────────────────────────────
 
@@ -109,16 +98,4 @@ export function node(
  */
 export function cleartext(chain: CleartextChainConfig): CleartextTransportConfig {
   return { type: "cleartext", chain };
-}
-
-/**
- * Custom transport — inject a user-provided RelayerSDK for a specific chain.
- *
- * @example
- * ```ts
- * transports: { [mainnet.id]: custom(myRelayer) }
- * ```
- */
-export function custom(relayer: RelayerSDK): CustomTransportConfig {
-  return { type: "custom", relayer };
 }

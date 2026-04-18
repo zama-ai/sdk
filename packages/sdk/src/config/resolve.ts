@@ -86,7 +86,7 @@ export function resolveChainTransports(
       );
     }
 
-    if (userTransport?.type === "cleartext" || userTransport?.type === "custom") {
+    if (userTransport?.type === "cleartext") {
       if (!chainConfig) {
         throw new ConfigurationError(
           `Chain ${id} has a transport configured but no entry in the chains array. ` +
@@ -107,7 +107,7 @@ export function resolveChainTransports(
     if (userTransport && userTransport.type !== "web" && userTransport.type !== "node") {
       throw new ConfigurationError(
         `Chain ${id} has an unrecognized transport (type: ${JSON.stringify((userTransport as unknown as Record<string, unknown>).type)}). ` +
-          `Use web(), node(), cleartext(), or custom() to create transports.`,
+          `Use web(), node(), or cleartext() to create transports.`,
       );
     }
 
@@ -146,10 +146,6 @@ export function buildRelayer(
   const perChainRelayers = new Map<number, RelayerSDK>();
 
   for (const { chain, transport } of chainTransports.values()) {
-    if (transport.type === "custom") {
-      perChainRelayers.set(chain.chainId, transport.relayer);
-      continue;
-    }
     if (transport.type === "cleartext") {
       const merged = { ...chain, ...transport.chain } as CleartextConfig;
       perChainRelayers.set(chain.chainId, new RelayerCleartext(merged));

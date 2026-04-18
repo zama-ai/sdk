@@ -1,9 +1,9 @@
-import type { Address, PublicClient, WalletClient, EIP1193Provider } from "viem";
-import type { Signer, Provider } from "ethers";
-import type { GenericSigner, GenericStorage } from "../types";
-import type { RelayerSDK } from "../relayer/relayer-sdk";
+import type { Provider, Signer } from "ethers";
+import type { Address, EIP1193Provider, PublicClient, WalletClient } from "viem";
 import type { ZamaSDKEventListener } from "../events";
+import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { ExtendedFhevmInstanceConfig } from "../relayer/relayer-utils";
+import type { GenericSigner, GenericStorage } from "../types";
 import type { TransportConfig } from "./transports";
 
 /** Shared options across all adapter paths. */
@@ -59,22 +59,8 @@ export interface ZamaConfigCustomSigner extends ZamaConfigBase {
   transports: Record<number, TransportConfig>;
 }
 
-/** Pre-built relayer — bring your own RelayerSDK. */
-export interface ZamaConfigCustomRelayer extends Omit<ZamaConfigBase, "transports" | "chains"> {
-  relayer: RelayerSDK;
-  signer: GenericSigner;
-  viem?: never;
-  ethers?: never;
-  chains?: never;
-  transports?: never;
-}
-
 /** Config params accepted by the base SDK (no wagmi). */
-export type CreateZamaConfigBaseParams =
-  | ZamaConfigViem
-  | ZamaConfigEthers
-  | ZamaConfigCustomSigner
-  | ZamaConfigCustomRelayer;
+export type CreateZamaConfigBaseParams = ZamaConfigViem | ZamaConfigEthers | ZamaConfigCustomSigner;
 
 /** Opaque config object returned by {@link createZamaConfig}. */
 export interface ZamaConfig {

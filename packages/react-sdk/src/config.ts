@@ -11,7 +11,6 @@ import {
   type ZamaConfigViem,
   type ZamaConfigEthers,
   type ZamaConfigCustomSigner,
-  type ZamaConfigCustomRelayer,
 } from "@zama-fhe/sdk";
 import { WagmiSigner } from "./wagmi/wagmi-signer";
 
@@ -25,7 +24,6 @@ export {
   type ZamaConfigViem,
   type ZamaConfigEthers,
   type ZamaConfigCustomSigner,
-  type ZamaConfigCustomRelayer,
   type TransportConfig,
   type WebTransportConfig,
   type NodeTransportConfig,
@@ -48,8 +46,7 @@ export type CreateZamaConfigParams =
   | ZamaConfigWagmi
   | ZamaConfigViem
   | ZamaConfigEthers
-  | ZamaConfigCustomSigner
-  | ZamaConfigCustomRelayer;
+  | ZamaConfigCustomSigner;
 
 // ── Factory (widened for wagmi) ──────────────────────────────────────────────
 
@@ -61,7 +58,6 @@ export type CreateZamaConfigParams =
  * - **viem** — takes native viem clients
  * - **ethers** — takes native ethers types
  * - **signer** — raw GenericSigner
- * - **relayer** — pre-built RelayerSDK
  *
  * @example
  * ```ts
