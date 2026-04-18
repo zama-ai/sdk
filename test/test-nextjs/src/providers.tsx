@@ -10,8 +10,6 @@ import { anvil } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
 import { burner } from "@zama-fhe/test-components";
 import { RelayerCleartext, hardhatCleartextConfig } from "@zama-fhe/sdk/cleartext";
-import deployments from "../../../contracts/deployments.json" with { type: "json" };
-import { getAddress } from "viem";
 
 const anvilPort = process.env.NEXT_PUBLIC_ANVIL_PORT || "8545";
 const rpcUrl = `http://127.0.0.1:${anvilPort}`;
@@ -45,9 +43,6 @@ const zamaConfig: ZamaConfig = {
   sessionStorage: new MemoryStorage(),
   keypairTTL: undefined,
   sessionTTL: undefined,
-  registryAddresses: {
-    [anvil.id]: getAddress(deployments.wrappersRegistry),
-  },
   registryTTL: undefined,
   onEvent: undefined,
 };

@@ -62,7 +62,6 @@ export function ZamaProvider({ children, config }: ZamaProviderProps) {
         sessionStorage: config.sessionStorage,
         keypairTTL: config.keypairTTL,
         sessionTTL: config.sessionTTL,
-        registryAddresses: config.registryAddresses,
         registryTTL: config.registryTTL,
         onEvent: onEventRef.current,
         signerLifecycleCallbacks,

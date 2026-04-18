@@ -113,8 +113,8 @@ export const SepoliaConfig = {
  * Ensure that the executor address and other contract addresses correspond to
  * the contracts deployed on your Hardhat network.
  *
- * `registryAddress` is `undefined` — pass it explicitly via
- * `registryAddresses` when creating a `WrappersRegistry`.
+ * `registryAddress` is `undefined` — set it on the chain config or pass it
+ * explicitly when creating a `WrappersRegistry`.
  */
 export const HardhatConfig = {
   chainId: 31337,

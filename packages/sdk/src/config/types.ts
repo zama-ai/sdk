@@ -1,5 +1,5 @@
 import type { Provider, Signer } from "ethers";
-import type { Address, EIP1193Provider, PublicClient, WalletClient } from "viem";
+import type { EIP1193Provider, PublicClient, WalletClient } from "viem";
 import type { ZamaSDKEventListener } from "../events";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { ExtendedFhevmInstanceConfig } from "../relayer/relayer-utils";
@@ -20,8 +20,6 @@ export interface ZamaConfigBase {
   keypairTTL?: number;
   /** Session signature TTL in seconds. Default: 2592000 (30 days). */
   sessionTTL?: number | "infinite";
-  /** Per-chain registry address overrides. */
-  registryAddresses?: Record<number, Address>;
   /** Registry cache TTL in seconds. Default: 86400 (24h). */
   registryTTL?: number;
   /** SDK lifecycle event listener. */
@@ -70,7 +68,6 @@ export interface ZamaConfig {
   /** @internal */ readonly sessionStorage: GenericStorage;
   /** @internal */ readonly keypairTTL: number | undefined;
   /** @internal */ readonly sessionTTL: number | "infinite" | undefined;
-  /** @internal */ readonly registryAddresses: Record<number, Address> | undefined;
   /** @internal */ readonly registryTTL: number | undefined;
   /** @internal */ readonly onEvent: ZamaSDKEventListener | undefined;
 }

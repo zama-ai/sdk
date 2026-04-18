@@ -53,11 +53,6 @@ export interface ZamaSDKConfig {
   /** Optional structured event listener for debugging and telemetry. Never receives sensitive data. */
   onEvent?: ZamaSDKEventListener;
   /**
-   * Per-chain wrappers registry address overrides, merged on top of built-in defaults.
-   * Use this for custom or local chains (e.g. Hardhat) where no default registry exists.
-   */
-  registryAddresses?: Record<number, Address>;
-  /**
    * How long cached registry results remain valid, in seconds.
    * Default: `86400` (24 hours).
    */
@@ -81,7 +76,7 @@ export class ZamaSDK {
   readonly cache: DecryptCache;
   /**
    * A {@link WrappersRegistry} instance auto-configured for the current chain.
-   * Uses built-in defaults merged with any `registryAddresses` overrides, and the SDK's `registryTTL` if configured.
+   * Uses built-in defaults from chain configs, and the SDK's `registryTTL` if configured.
    *
    * @example
    * ```ts
@@ -108,7 +103,6 @@ export class ZamaSDK {
     this.#onEvent = config.onEvent ?? function () {};
     this.registry = new WrappersRegistry({
       signer: this.signer,
-      registryAddresses: config.registryAddresses,
       registryTTL: config.registryTTL,
     });
     this.#registryTTL = config.registryTTL;

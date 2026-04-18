@@ -39,6 +39,7 @@ const relayer = new RelayerWeb({
     relayerUrl: mockRelayerUrl,
     network: rpcUrl,
     chainId: anvil.id,
+    registryAddress: getAddress(deployments.wrappersRegistry),
   },
   threads: 4,
   security: { integrityCheck: false },
@@ -53,9 +54,6 @@ const zamaConfig: ZamaConfig = {
   sessionStorage: new MemoryStorage(),
   keypairTTL: undefined,
   sessionTTL: undefined,
-  registryAddresses: {
-    [anvil.id]: getAddress(deployments.wrappersRegistry),
-  },
   registryTTL: undefined,
   onEvent: undefined,
 };

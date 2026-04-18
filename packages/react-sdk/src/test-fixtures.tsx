@@ -37,7 +37,6 @@ function buildMockZamaConfig(overrides: {
     sessionStorage: overrides.sessionStorage,
     keypairTTL: overrides.keypairTTL,
     sessionTTL: undefined,
-    registryAddresses: undefined,
     registryTTL: undefined,
     onEvent: overrides.onEvent,
   } as unknown as ZamaConfig;

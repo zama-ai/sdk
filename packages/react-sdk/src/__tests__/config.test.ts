@@ -203,22 +203,19 @@ describe("createZamaConfig", () => {
   });
 
   describe("options passthrough", () => {
-    it("passes keypairTTL, sessionTTL, registryAddresses, registryTTL, onEvent through", () => {
+    it("passes keypairTTL, sessionTTL, registryTTL, onEvent through", () => {
       const onEvent = vi.fn();
-      const registryAddresses = { [31337]: "0x1234567890123456789012345678901234567890" as any };
       const config = createZamaConfig({
         chains: [SepoliaConfig],
         signer: createMockSigner(),
         transports: { [11155111]: web() },
         keypairTTL: 86400,
         sessionTTL: "infinite",
-        registryAddresses,
         registryTTL: 3600,
         onEvent,
       });
       expect(config.keypairTTL).toBe(86400);
       expect(config.sessionTTL).toBe("infinite");
-      expect(config.registryAddresses).toBe(registryAddresses);
       expect(config.registryTTL).toBe(3600);
       expect(config.onEvent).toBe(onEvent);
     });

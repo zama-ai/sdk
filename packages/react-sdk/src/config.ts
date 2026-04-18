@@ -92,7 +92,6 @@ export function createZamaConfig(params: CreateZamaConfigParams): ZamaConfig {
     sessionStorage,
     keypairTTL: params.keypairTTL,
     sessionTTL: params.sessionTTL,
-    registryAddresses: params.registryAddresses,
     registryTTL: params.registryTTL,
     onEvent: params.onEvent,
   };
