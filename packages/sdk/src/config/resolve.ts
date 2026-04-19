@@ -1,15 +1,12 @@
-import type { GenericSigner, GenericStorage } from "../types";
-import type { RelayerSDK } from "../relayer/relayer-sdk";
-import type { ExtendedFhevmInstanceConfig } from "../relayer/relayer-utils";
-import type { CleartextConfig } from "../relayer/cleartext/types";
-import { CompositeRelayer } from "../relayer/composite-relayer";
-import { RelayerCleartext } from "../relayer/cleartext/relayer-cleartext";
-import { RelayerNode } from "../relayer/relayer-node";
-import { RelayerWeb } from "../relayer/relayer-web";
-import { IndexedDBStorage } from "../storage/indexeddb-storage";
-import { MemoryStorage } from "../storage/memory-storage";
 import { ConfigurationError } from "../errors";
 import { EthersSigner } from "../ethers";
+import type { CleartextConfig } from "../relayer/cleartext/types";
+import { CompositeRelayer } from "../relayer/composite-relayer";
+import type { RelayerSDK } from "../relayer/relayer-sdk";
+import type { ExtendedFhevmInstanceConfig } from "../relayer/relayer-utils";
+import { IndexedDBStorage } from "../storage/indexeddb-storage";
+import { MemoryStorage } from "../storage/memory-storage";
+import type { GenericSigner, GenericStorage } from "../types";
 import { ViemSigner } from "../viem";
 import type { TransportConfig } from "./transports";
 import type { ZamaConfigCustomSigner, ZamaConfigEthers, ZamaConfigViem } from "./types";
@@ -143,12 +140,17 @@ export function buildRelayer(
     );
   }
 
-  const perChainRelayers = new Map<number, RelayerSDK>();
+  const perChainRelayers = new Map<number, Promise<RelayerSDK>>();
 
   for (const { chain, transport } of chainTransports.values()) {
     if (transport.type === "cleartext") {
       const merged = { ...chain, ...transport.chain } as CleartextConfig;
-      perChainRelayers.set(chain.chainId, new RelayerCleartext(merged));
+      perChainRelayers.set(
+        chain.chainId,
+        import("../relayer/cleartext/relayer-cleartext").then(
+          (m) => new m.RelayerCleartext(merged),
+        ),
+      );
       continue;
     }
 
@@ -161,11 +163,21 @@ export function buildRelayer(
     }
 
     if (transport.type === "web") {
-      perChainRelayers.set(chain.chainId, new RelayerWeb({ chain: merged, ...transport.relayer }));
+      perChainRelayers.set(
+        chain.chainId,
+        import("../relayer/relayer-web").then(
+          (m) => new m.RelayerWeb({ chain: merged, ...transport.relayer }),
+        ),
+      );
       continue;
     }
     if (transport.type === "node") {
-      perChainRelayers.set(chain.chainId, new RelayerNode({ chain: merged, ...transport.relayer }));
+      perChainRelayers.set(
+        chain.chainId,
+        import("../relayer/relayer-node").then(
+          (m) => new m.RelayerNode({ chain: merged, ...transport.relayer }),
+        ),
+      );
       continue;
     }
 

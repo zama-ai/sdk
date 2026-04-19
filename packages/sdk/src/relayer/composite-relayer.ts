@@ -25,10 +25,11 @@ import type {
  * RelayerCleartext on a testnet) within a single SDK instance.
  */
 export class CompositeRelayer implements RelayerSDK {
-  readonly #relayers: Map<number, RelayerSDK>;
+  readonly #relayers: Map<number, Promise<RelayerSDK>>;
+  readonly #resolved = new Map<number, RelayerSDK>();
   readonly #resolveChainId: () => Promise<number>;
 
-  constructor(resolveChainId: () => Promise<number>, relayers: Map<number, RelayerSDK>) {
+  constructor(resolveChainId: () => Promise<number>, relayers: Map<number, Promise<RelayerSDK>>) {
     this.#resolveChainId = resolveChainId;
     this.#relayers = new Map(relayers);
   }
@@ -43,13 +44,22 @@ export class CompositeRelayer implements RelayerSDK {
         { cause },
       );
     }
-    const r = this.#relayers.get(chainId);
+
+    const resolved = this.#resolved.get(chainId);
+    if (resolved) {
+      return resolved;
+    }
+
+    const r = await this.#relayers.get(chainId);
     if (!r) {
       throw new ConfigurationError(
         `No relayer configured for chain ${chainId}. ` +
           `Add it to the chains array and transports map.`,
       );
     }
+
+    this.#resolved.set(chainId, r);
+
     return r;
   }
 
@@ -128,7 +138,7 @@ export class CompositeRelayer implements RelayerSDK {
 
   terminate(): void {
     const errors: Error[] = [];
-    for (const r of new Set(this.#relayers.values())) {
+    for (const r of new Set(this.#resolved.values())) {
       try {
         r.terminate();
       } catch (e) {

@@ -7,7 +7,9 @@ function makeComposite(
   chainRelayers: Record<number, ReturnType<typeof createMockRelayer>>,
   activeChainId = Object.keys(chainRelayers).map(Number)[0] ?? 1,
 ) {
-  const map = new Map(Object.entries(chainRelayers).map(([id, r]) => [Number(id), r]));
+  const map = new Map(
+    Object.entries(chainRelayers).map(([id, r]) => [Number(id), Promise.resolve(r)]),
+  );
   const resolveChainId = vi.fn().mockResolvedValue(activeChainId);
   return { composite: new CompositeRelayer(resolveChainId, map), resolveChainId };
 }
@@ -33,7 +35,7 @@ describe("CompositeRelayer", () => {
     });
 
     it("wraps resolveChainId errors with context", async () => {
-      const map = new Map([[1, createMockRelayer()]]);
+      const map = new Map([[1, Promise.resolve(createMockRelayer())]]);
       const resolveChainId = vi.fn().mockRejectedValue(new Error("wallet disconnected"));
       const composite = new CompositeRelayer(resolveChainId, map);
 
@@ -45,30 +47,39 @@ describe("CompositeRelayer", () => {
   });
 
   describe("terminate()", () => {
-    it("terminates all unique relayers", () => {
+    it("terminates all unique relayers", async () => {
       const relayer = createMockRelayer();
-      // Same relayer instance for two chains (shared)
       const map = new Map([
-        [1, relayer],
-        [2, relayer],
+        [1, Promise.resolve(relayer)],
+        [2, Promise.resolve(relayer)],
       ]);
-      const composite = new CompositeRelayer(() => Promise.resolve(1), map);
+      const resolveChainId = vi.fn().mockResolvedValue(1);
+      const composite = new CompositeRelayer(resolveChainId, map);
+
+      // Trigger #current to populate #resolved
+      await composite.getAclAddress();
+      resolveChainId.mockResolvedValue(2);
+      await composite.getAclAddress();
 
       composite.terminate();
       expect(relayer.terminate).toHaveBeenCalledTimes(1);
     });
 
-    it("terminates distinct relayers separately", () => {
+    it("terminates distinct relayers separately", async () => {
       const relayerA = createMockRelayer();
       const relayerB = createMockRelayer();
-      const { composite } = makeComposite({ 1: relayerA, 2: relayerB });
+      const { composite, resolveChainId } = makeComposite({ 1: relayerA, 2: relayerB }, 1);
+
+      await composite.getAclAddress();
+      resolveChainId.mockResolvedValue(2);
+      await composite.getAclAddress();
 
       composite.terminate();
       expect(relayerA.terminate).toHaveBeenCalledTimes(1);
       expect(relayerB.terminate).toHaveBeenCalledTimes(1);
     });
 
-    it("collects errors and throws AggregateError", () => {
+    it("collects errors and throws AggregateError", async () => {
       const relayerA = createMockRelayer({
         terminate: vi.fn(() => {
           throw new Error("fail A");
@@ -79,22 +90,29 @@ describe("CompositeRelayer", () => {
           throw new Error("fail B");
         }),
       });
-      const { composite } = makeComposite({ 1: relayerA, 2: relayerB });
+      const { composite, resolveChainId } = makeComposite({ 1: relayerA, 2: relayerB }, 1);
+
+      await composite.getAclAddress();
+      resolveChainId.mockResolvedValue(2);
+      await composite.getAclAddress();
 
       expect(() => composite.terminate()).toThrow("One or more relayers failed to terminate");
-      // Both relayers were still attempted
       expect(relayerA.terminate).toHaveBeenCalled();
       expect(relayerB.terminate).toHaveBeenCalled();
     });
 
-    it("terminates remaining relayers even if one throws", () => {
+    it("terminates remaining relayers even if one throws", async () => {
       const relayerA = createMockRelayer({
         terminate: vi.fn(() => {
           throw new Error("fail");
         }),
       });
       const relayerB = createMockRelayer();
-      const { composite } = makeComposite({ 1: relayerA, 2: relayerB });
+      const { composite, resolveChainId } = makeComposite({ 1: relayerA, 2: relayerB }, 1);
+
+      await composite.getAclAddress();
+      resolveChainId.mockResolvedValue(2);
+      await composite.getAclAddress();
 
       expect(() => composite.terminate()).toThrow("One or more relayers failed to terminate");
       expect(relayerB.terminate).toHaveBeenCalledTimes(1);
@@ -104,14 +122,12 @@ describe("CompositeRelayer", () => {
   describe("defensive copy", () => {
     it("is not affected by external map mutations after construction", async () => {
       const relayer = createMockRelayer();
-      const map = new Map([[1, relayer]]);
+      const map = new Map([[1, Promise.resolve(relayer)]]);
       const resolveChainId = vi.fn().mockResolvedValue(1);
       const composite = new CompositeRelayer(resolveChainId, map);
 
-      // Mutate the original map
       map.delete(1);
 
-      // Should still work — internal copy is unaffected
       await expect(composite.getAclAddress()).resolves.toBeDefined();
     });
   });
