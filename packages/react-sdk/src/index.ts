@@ -22,8 +22,8 @@ export { useCreateDelegatedUserDecryptEIP712 } from "./relayer/use-create-delega
 export type { CreateDelegatedUserDecryptEIP712Params } from "./relayer/use-create-delegated-user-decrypt-eip712";
 export { useDelegatedUserDecrypt } from "./relayer/use-delegated-user-decrypt";
 export { useRequestZKProofVerification } from "./relayer/use-request-zk-proof-verification";
-export { usePublicKey, type PublicKeyData } from "./relayer/use-public-key";
-export { usePublicParams, type PublicParamsData } from "./relayer/use-public-params";
+export { usePublicKey } from "./relayer/use-public-key";
+export { usePublicParams } from "./relayer/use-public-params";
 
 // Re-export core classes
 export {
@@ -128,7 +128,11 @@ export { ZamaSDKEvents } from "@zama-fhe/sdk";
 export { HardhatConfig, MainnetConfig, SepoliaConfig } from "@zama-fhe/sdk";
 
 // Re-export constants
-export { ERC7984_INTERFACE_ID, ERC7984_WRAPPER_INTERFACE_ID } from "@zama-fhe/sdk";
+export {
+  ERC7984_INTERFACE_ID,
+  ERC7984_WRAPPER_INTERFACE_ID,
+  ERC7984_WRAPPER_INTERFACE_ID_LEGACY,
+} from "@zama-fhe/sdk";
 
 // Re-export all contract call builders
 export {

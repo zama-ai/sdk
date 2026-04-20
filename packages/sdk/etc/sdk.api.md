@@ -6,6 +6,8 @@
 
 import { Abi } from 'viem';
 import { Address } from 'viem';
+import { Bytes32Hex } from '@zama-fhe/relayer-sdk/bundle';
+import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle';
 import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
@@ -15,7 +17,10 @@ import { Hex } from 'viem';
 import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
 import { KeypairType } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
+import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
+import { PublicDecryptResults } from '@zama-fhe/relayer-sdk/bundle';
 import * as SDK from '@zama-fhe/relayer-sdk/bundle';
+import { UserDecryptResults } from '@zama-fhe/relayer-sdk/bundle';
 import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
 
 // @public
@@ -516,11 +521,11 @@ export interface BatchBalancesResult {
 
 // @public
 export interface BatchDecryptAsOptions {
+    accountAddress?: Address;
     delegatorAddress: Address;
     handles?: Handle[];
     maxConcurrency?: number;
     onError?: (error: Error, address: Address) => bigint;
-    owner?: Address;
 }
 
 // @public
@@ -539,8 +544,7 @@ export const chromeSessionStorage: ChromeSessionStorage;
 // @public
 export function clearPendingUnshield(storage: GenericStorage, wrapperAddress: Address): Promise<void>;
 
-// @public
-export type ClearValueType = bigint | boolean | `0x${string}`;
+export { ClearValueType }
 
 // @public
 export function confidentialBalanceOfContract(tokenAddress: Address, userAddress: Address): {
@@ -6162,8 +6166,8 @@ export class DecryptionFailedError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
 
-// @public (undocumented)
-export type DecryptResult = Record<Handle, ClearValueType>;
+// @public
+export type DecryptResult = UserDecryptResults;
 
 // @public (undocumented)
 export interface DecryptStartEvent extends BaseEvent {
@@ -6389,30 +6393,7 @@ export interface DelegationSubmittedEvent extends BaseEvent {
 }
 
 // @public
-export interface EIP712TypedData {
-    // (undocumented)
-    domain: {
-        name: string;
-        version: string;
-        chainId: number;
-        verifyingContract: Address;
-    };
-    // (undocumented)
-    message: {
-        publicKey: Hex;
-        contractAddresses: readonly Address[];
-        startTimestamp: bigint;
-        durationDays: bigint;
-        extraData: Hex;
-    };
-    // (undocumented)
-    primaryType?: string;
-    // (undocumented)
-    types: Record<string, readonly {
-        readonly name: string;
-        readonly type: string;
-    }[]>;
-}
+export type EIP712TypedData = KmsUserDecryptEIP712Type | KmsDelegatedUserDecryptEIP712Type;
 
 // @public (undocumented)
 export interface EncryptEndEvent extends BaseEvent {
@@ -6458,12 +6439,7 @@ export interface EncryptParams {
 }
 
 // @public
-export interface EncryptResult {
-    // (undocumented)
-    handles: Uint8Array[];
-    // (undocumented)
-    inputProof: Uint8Array;
-}
+export type EncryptResult = InputProofBytesType;
 
 // @public (undocumented)
 export interface EncryptStartEvent extends BaseEvent {
@@ -6480,7 +6456,10 @@ export class ERC20ReadFailedError extends ZamaError {
 export const ERC7984_INTERFACE_ID: "0x4958f2a4";
 
 // @public
-export const ERC7984_WRAPPER_INTERFACE_ID: "0xf1f4c25a";
+export const ERC7984_WRAPPER_INTERFACE_ID: "0x1f1c62b2";
+
+// @public
+export const ERC7984_WRAPPER_INTERFACE_ID_LEGACY: "0xf1f4c25a";
 
 export { FheTypeName }
 
@@ -8716,7 +8695,7 @@ export function getTokenPairsSliceContract(registry: Address, fromIndex: bigint,
 };
 
 // @public
-export type Handle = `0x${string}`;
+export type Handle = Bytes32Hex;
 
 // @public
 export const HardhatConfig: {
@@ -11633,9 +11612,18 @@ export interface PendingUnshieldRequest {
 }
 
 // @public
-export type PublicDecryptResult = Omit<SDK.PublicDecryptResults, "clearValues"> & {
-    clearValues: Readonly<Record<Handle, ClearValueType>>;
-};
+export type PublicDecryptResult = PublicDecryptResults;
+
+// @public
+export interface PublicKeyData {
+    // (undocumented)
+    publicKey: Uint8Array;
+    // (undocumented)
+    publicKeyId: string;
+}
+
+// @public
+export type PublicParamsData = SDK.PublicParams<Uint8Array>[keyof SDK.PublicParams<Uint8Array>];
 
 // @public
 export function rateContract(tokenAddress: Address): {
@@ -12996,7 +12984,7 @@ export class ReadonlyToken {
     decimals(): Promise<number>;
     decryptBalanceAs(input: {
         delegatorAddress: Address;
-        owner?: Address;
+        accountAddress?: Address;
     }): Promise<bigint>;
     protected emit(input: ZamaSDKEventInput): void;
     // (undocumented)
@@ -13036,14 +13024,8 @@ export interface RelayerSDK {
     encrypt(params: EncryptParams): Promise<EncryptResult>;
     generateKeypair(): Promise<KeypairType<Hex>>;
     getAclAddress(): Promise<Address>;
-    getPublicKey(): Promise<{
-        publicKeyId: string;
-        publicKey: Uint8Array;
-    } | null>;
-    getPublicParams(bits: number): Promise<{
-        publicParams: Uint8Array;
-        publicParamsId: string;
-    } | null>;
+    getPublicKey(): Promise<PublicKeyData | null>;
+    getPublicParams(bits: number): Promise<PublicParamsData | null>;
     publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
     requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
     terminate(): void;
@@ -13064,14 +13046,8 @@ export class RelayerWeb implements RelayerSDK, Disposable {
     generateKeypair(): Promise<KeypairType<Hex>>;
     // (undocumented)
     getAclAddress(): Promise<Address>;
-    getPublicKey(): Promise<{
-        publicKeyId: string;
-        publicKey: Uint8Array;
-    } | null>;
-    getPublicParams(bits: number): Promise<{
-        publicParams: Uint8Array;
-        publicParamsId: string;
-    } | null>;
+    getPublicKey(): Promise<PublicKeyData | null>;
+    getPublicParams(bits: number): Promise<PublicParamsData | null>;
     get initError(): Error | undefined;
     publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
     requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;

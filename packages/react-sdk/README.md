@@ -559,13 +559,12 @@ Complete an unwrap by providing the decryption proof.
 ```ts
 function useFinalizeUnwrap(
   config: UseZamaConfig,
-  options?: UseMutationOptions<Address, Error, FinalizeUnwrapParams>,
-): UseMutationResult<Address, Error, FinalizeUnwrapParams>;
+  options?: UseMutationOptions<TransactionResult, Error, FinalizeUnwrapParams>,
+): UseMutationResult<TransactionResult, Error, FinalizeUnwrapParams>;
 
-interface FinalizeUnwrapParams {
-  unwrapRequestId?: Hex;
-  burnAmountHandle?: Hex;
-}
+type FinalizeUnwrapParams =
+  | { unwrapRequestId: Hex; burnAmountHandle?: never }
+  | { unwrapRequestId?: never; burnAmountHandle: Hex };
 ```
 
 ### Delegation Hooks

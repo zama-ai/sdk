@@ -94,14 +94,14 @@ const logs = await publicClient.getLogs({
 
 Each decoder takes a single log entry and returns a typed event object, or `null` if the log does not match.
 
-| Decoder                           | Event type             | Description                                                                   |
-| --------------------------------- | ---------------------- | ----------------------------------------------------------------------------- |
-| `decodeConfidentialTransfer(log)` | `ConfidentialTransfer` | Encrypted transfer between accounts                                           |
-| `decodeWrapped(log)`              | `Wrapped`              | Tokens wrapped (shielded)                                                     |
-| `decodeUnwrapRequested(log)`      | `UnwrapRequested`      | Unwrap initiated; returns `unwrapRequestId` when emitted by upgraded wrappers |
-| `decodeUnwrapFinalized(log)`      | `UnwrapFinalized`      | Unwrap completed; returns `unwrapRequestId` when emitted by upgraded wrappers |
-| `decodeUnwrappedFinalized(log)`   | `UnwrappedFinalized`   | Deprecated alias for `decodeUnwrapFinalized(log)`                             |
-| `decodeUnwrappedStarted(log)`     | `UnwrappedStarted`     | Unwrap decryption started                                                     |
+| Decoder                           | Event type             | Description                                                                    |
+| --------------------------------- | ---------------------- | ------------------------------------------------------------------------------ |
+| `decodeConfidentialTransfer(log)` | `ConfidentialTransfer` | Encrypted transfer between accounts                                            |
+| `decodeWrapped(log)`              | `Wrapped`              | Tokens wrapped (shielded)                                                      |
+| `decodeUnwrapRequested(log)`      | `UnwrapRequested`      | Unwrap initiated; returns `unwrapRequestId` when emitted by upgraded wrappers  |
+| `decodeUnwrapFinalized(log)`      | `UnwrapFinalized`      | Unwrap completed; returns `unwrapRequestId` when emitted by upgraded wrappers  |
+| `decodeUnwrappedFinalized(log)`   | `UnwrappedFinalized`   | Deprecated compatibility decoder; not a transparent alias for switch consumers |
+| `decodeUnwrappedStarted(log)`     | `UnwrappedStarted`     | Unwrap decryption started                                                      |
 
 ```ts
 import { decodeConfidentialTransfer } from "@zama-fhe/sdk";

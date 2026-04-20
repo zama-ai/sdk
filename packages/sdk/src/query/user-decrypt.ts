@@ -1,5 +1,6 @@
+import type { UserDecryptResults } from "@zama-fhe/relayer-sdk/bundle";
 import type { Address } from "viem";
-import type { ClearValueType, Handle } from "../relayer/relayer-sdk.types";
+import type { Handle } from "../relayer/relayer-sdk.types";
 import type { ZamaSDK } from "../zama-sdk";
 import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
@@ -9,7 +10,8 @@ export interface DecryptHandle {
   contractAddress: Address;
 }
 
-export type DecryptResult = Record<Handle, ClearValueType>;
+/** Alias for {@link UserDecryptResults}. */
+export type DecryptResult = UserDecryptResults;
 
 export interface UserDecryptQueryConfig {
   handles: DecryptHandle[];

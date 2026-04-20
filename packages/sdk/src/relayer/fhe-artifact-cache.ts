@@ -1,6 +1,7 @@
 import type { GenericStorage } from "../types";
 import { assertObject, assertStringProp, toError } from "../utils";
 import type { GenericLogger } from "../worker/worker.types";
+import type { PublicKeyData, PublicParamsData } from "./relayer-sdk.types";
 
 // ── Cached data shapes ──────────────────────────────────────
 
@@ -33,13 +34,10 @@ interface CachedPublicParams {
 // ── Return types ────────────────────────────────────────────
 
 /** Return type of the public key fetcher. */
-type PublicKeyResult = { publicKeyId: string; publicKey: Uint8Array } | null;
+type PublicKeyResult = PublicKeyData | null;
 
 /** Return type of the public params fetcher. */
-type PublicParamsResult = {
-  publicParamsId: string;
-  publicParams: Uint8Array;
-} | null;
+type PublicParamsResult = PublicParamsData | null;
 
 // ── Constants ───────────────────────────────────────────────
 
@@ -102,8 +100,13 @@ function assertCachedParams(v: unknown): asserts v is CachedPublicParams {
 
 /** Manifest shape returned by the relayer `/keyurl` endpoint. */
 interface ManifestShape {
-  fhePublicKey: { dataId: string; urls: string[] };
-  crs: Record<string, { dataId: string; urls: string[] }>;
+  status: string;
+  response: {
+    fheKeyInfo: Array<{
+      fhePublicKey: { dataId: string; urls: string[] };
+    }>;
+    crs: Record<string, { dataId: string; urls: string[] }>;
+  };
 }
 
 // ── ArtifactCache ──────────────────────────────────────────
@@ -414,18 +417,18 @@ export class FheArtifactCache {
         return false;
       }
 
-      const manifest = (await manifestRes.json()) as unknown;
+      const manifest: ManifestShape = await manifestRes.json();
 
       // Validate manifest shape — a malformed response indicates a permanent
       // config error (wrong relayer URL, API version mismatch), not a transient
       // network issue. Log at error level so it's actionable.
+      const fheKeyEntry = manifest?.response?.fheKeyInfo?.[0];
       if (
         !manifest ||
         typeof manifest !== "object" ||
-        !("fhePublicKey" in manifest) ||
-        !(manifest as ManifestShape).fhePublicKey?.urls?.length ||
-        !("crs" in manifest) ||
-        typeof (manifest as ManifestShape).crs !== "object"
+        manifest.status !== "succeeded" ||
+        !fheKeyEntry?.fhePublicKey?.urls?.length ||
+        typeof manifest.response?.crs !== "object"
       ) {
         this.#logger.error(
           "Relayer manifest has unexpected shape — check relayer URL and API version",
@@ -447,11 +450,10 @@ export class FheArtifactCache {
         this.#lastRevalidatedAt = retryTimestamp;
         return false;
       }
-      const validManifest = manifest as ManifestShape;
+      const validManifest = manifest.response;
 
       // ── 4. Check PK artifact ──────────────────────────
-      const pkArtifactUrl = validManifest.fhePublicKey.urls[0];
-
+      const pkArtifactUrl = fheKeyEntry.fhePublicKey.urls[0];
       // URL change → stale
       if (storedPk.artifactUrl && pkArtifactUrl && pkArtifactUrl !== storedPk.artifactUrl) {
         await this.#clearAll(pkKey, paramEntries);

@@ -100,16 +100,25 @@ describe("ViemSigner", () => {
   describe("signTypedData", () => {
     function createTypedData(tokenAddress: Address): EIP712TypedData {
       return {
-        domain: { name: "Test", version: "1", chainId: 1, verifyingContract: tokenAddress },
-        types: { Transfer: [{ name: "to", type: "address" }] },
+        domain: { name: "Decryption", version: "1", chainId: 1n, verifyingContract: tokenAddress },
+        types: {
+          EIP712Domain: [
+            { name: "name", type: "string" },
+            { name: "version", type: "string" },
+            { name: "chainId", type: "uint256" },
+            { name: "verifyingContract", type: "address" },
+          ],
+          UserDecryptRequestVerification: [{ name: "publicKey", type: "bytes" }],
+        },
+        primaryType: "UserDecryptRequestVerification",
         message: {
           publicKey: "0xkey",
           contractAddresses: ["0x1" as Address],
-          startTimestamp: 1000n,
-          durationDays: 1n,
+          startTimestamp: "1000",
+          durationDays: "1",
           extraData: "0x",
         },
-      };
+      } as EIP712TypedData;
     }
 
     vit(
@@ -120,8 +129,14 @@ describe("ViemSigner", () => {
         expect(result).toBe("0xsignature");
         expect(walletClient.signTypedData).toHaveBeenCalledWith({
           account: walletClient.account,
-          primaryType: "Transfer",
-          ...typedData,
+          primaryType: "UserDecryptRequestVerification",
+          types: { UserDecryptRequestVerification: typedData.types.UserDecryptRequestVerification },
+          domain: typedData.domain,
+          message: {
+            ...typedData.message,
+            startTimestamp: 1000n,
+            durationDays: 1n,
+          },
         });
       },
     );

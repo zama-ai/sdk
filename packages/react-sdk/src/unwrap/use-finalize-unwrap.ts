@@ -27,10 +27,11 @@ import { useToken, type UseZamaConfig } from "../token/use-token";
  * const finalize = useFinalizeUnwrap({ tokenAddress: "0x..." });
  * const event = findUnwrapRequested(receipt.logs);
  * // Pass unwrapRequestId from upgraded events, or fall back to encryptedAmount for legacy ones.
- * finalize.mutate({
- *   unwrapRequestId: event.unwrapRequestId,
- *   burnAmountHandle: event.encryptedAmount,
- * });
+ * finalize.mutate(
+ *   event.unwrapRequestId
+ *     ? { unwrapRequestId: event.unwrapRequestId }
+ *     : { burnAmountHandle: event.encryptedAmount },
+ * );
  * ```
  */
 export function useFinalizeUnwrap(

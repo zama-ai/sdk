@@ -15,6 +15,7 @@ import {
   supportsInterfaceContract,
   ERC7984_INTERFACE_ID,
   ERC7984_WRAPPER_INTERFACE_ID,
+  ERC7984_WRAPPER_INTERFACE_ID_LEGACY,
   isConfidentialTokenContract,
   isConfidentialWrapperContract,
 } from "../erc165";
@@ -88,7 +89,8 @@ describe("ERC-165 contract builders", () => {
 
   it("exports interface IDs", () => {
     expect(ERC7984_INTERFACE_ID).toBe("0x4958f2a4");
-    expect(ERC7984_WRAPPER_INTERFACE_ID).toBe("0xf1f4c25a");
+    expect(ERC7984_WRAPPER_INTERFACE_ID_LEGACY).toBe("0xf1f4c25a");
+    expect(ERC7984_WRAPPER_INTERFACE_ID).toBe("0x1f1c62b2");
   });
 
   it("isConfidentialTokenContract uses ERC7984_INTERFACE_ID", ({ tokenAddress }) => {
@@ -98,11 +100,13 @@ describe("ERC-165 contract builders", () => {
     expect(config.args).toEqual([ERC7984_INTERFACE_ID]);
   });
 
-  it("isConfidentialWrapperContract uses ERC7984_WRAPPER_INTERFACE_ID", ({ tokenAddress }) => {
+  it("isConfidentialWrapperContract uses ERC7984_WRAPPER_INTERFACE_ID_LEGACY", ({
+    tokenAddress,
+  }) => {
     const config = isConfidentialWrapperContract(tokenAddress);
     expect(config.address).toBe(tokenAddress);
     expect(config.functionName).toBe("supportsInterface");
-    expect(config.args).toEqual([ERC7984_WRAPPER_INTERFACE_ID]);
+    expect(config.args).toEqual([ERC7984_WRAPPER_INTERFACE_ID_LEGACY]);
   });
 });
 
