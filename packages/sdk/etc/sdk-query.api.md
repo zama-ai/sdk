@@ -1384,7 +1384,6 @@ export class ZamaSDK {
 export interface ZamaSDKConfig {
     keypairTTL?: number;
     onEvent?: ZamaSDKEventListener;
-    registryAddresses?: Record<number, Address>;
     registryTTL?: number;
     relayer: RelayerSDK;
     sessionStorage?: GenericStorage;

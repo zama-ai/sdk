@@ -30,6 +30,7 @@ import { BatchDecryptBalancesAsParams } from '@zama-fhe/sdk/query';
 import { ChromeSessionStorage } from '@zama-fhe/sdk';
 import { chromeSessionStorage } from '@zama-fhe/sdk';
 import { clearPendingUnshield } from '@zama-fhe/sdk';
+import { cleartext } from '@zama-fhe/sdk';
 import { ClearValueType } from '@zama-fhe/sdk';
 import { confidentialApproveMutationOptions } from '@zama-fhe/sdk/query';
 import { ConfidentialApproveParams } from '@zama-fhe/sdk/query';
@@ -45,6 +46,7 @@ import { confidentialTransferFromMutationOptions } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferFromParams } from '@zama-fhe/sdk/query';
 import { confidentialTransferMutationOptions } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferParams } from '@zama-fhe/sdk/query';
+import { Config } from 'wagmi';
 import { ConfigurationError } from '@zama-fhe/sdk';
 import { ContractAbi } from '@zama-fhe/sdk';
 import { createDelegatedUserDecryptEIP712MutationOptions } from '@zama-fhe/sdk/query';
@@ -80,6 +82,7 @@ import { DecryptHandle } from '@zama-fhe/sdk/query';
 import { DecryptionFailedError } from '@zama-fhe/sdk';
 import { DecryptResult } from '@zama-fhe/sdk/query';
 import { DecryptStartEvent } from '@zama-fhe/sdk';
+import { DefaultConfigs } from '@zama-fhe/sdk';
 import { DefaultRegistryAddresses } from '@zama-fhe/sdk';
 import { DelegatedCredentialsManager } from '@zama-fhe/sdk';
 import { DelegatedCredentialsManagerConfig } from '@zama-fhe/sdk';
@@ -115,6 +118,7 @@ import { ERC20ReadFailedError } from '@zama-fhe/sdk';
 import { ERC7984_INTERFACE_ID } from '@zama-fhe/sdk';
 import { ERC7984_WRAPPER_INTERFACE_ID } from '@zama-fhe/sdk';
 import { ERC7984_WRAPPER_INTERFACE_ID_LEGACY } from '@zama-fhe/sdk';
+import { ExtendedFhevmInstanceConfig } from '@zama-fhe/sdk';
 import { FheTypeName } from '@zama-fhe/sdk';
 import { FhevmInstanceConfig } from '@zama-fhe/sdk';
 import { filterQueryOptions } from '@zama-fhe/sdk/query';
@@ -164,6 +168,7 @@ import { memoryStorage } from '@zama-fhe/sdk';
 import { nameContract } from '@zama-fhe/sdk';
 import { NetworkType } from '@zama-fhe/sdk';
 import { NoCiphertextError } from '@zama-fhe/sdk';
+import { node } from '@zama-fhe/sdk';
 import { OnChainEvent } from '@zama-fhe/sdk';
 import { PaginatedResult } from '@zama-fhe/sdk';
 import { PropsWithChildren } from 'react';
@@ -250,6 +255,7 @@ import { UseQueryOptions } from '@tanstack/react-query';
 import { UserDecryptParams } from '@zama-fhe/sdk';
 import { UserDecryptQueryConfig } from '@zama-fhe/sdk/query';
 import { userDecryptQueryOptions } from '@zama-fhe/sdk/query';
+import { web } from '@zama-fhe/sdk';
 import { wrapContract } from '@zama-fhe/sdk';
 import { WrappedEvent } from '@zama-fhe/sdk';
 import { wrapperDiscoveryQueryOptions } from '@zama-fhe/sdk/query';
@@ -258,6 +264,11 @@ import { WrappersRegistryConfig } from '@zama-fhe/sdk';
 import { WriteContractArgs } from '@zama-fhe/sdk';
 import { WriteContractConfig } from '@zama-fhe/sdk';
 import { WriteFunctionName } from '@zama-fhe/sdk';
+import { ZamaConfig } from '@zama-fhe/sdk';
+import { ZamaConfigBase } from '@zama-fhe/sdk';
+import { ZamaConfigCustomSigner } from '@zama-fhe/sdk';
+import { ZamaConfigEthers } from '@zama-fhe/sdk';
+import { ZamaConfigViem } from '@zama-fhe/sdk';
 import { ZamaError } from '@zama-fhe/sdk';
 import { ZamaErrorCode } from '@zama-fhe/sdk';
 import { zamaQueryKeys } from '@zama-fhe/sdk/query';
@@ -315,6 +326,8 @@ export { chromeSessionStorage }
 
 export { clearPendingUnshield }
 
+export { cleartext }
+
 export { ClearValueType }
 
 export { confidentialApproveMutationOptions }
@@ -356,6 +369,12 @@ export { CreateDelegatedUserDecryptEIP712Params }
 export { createEIP712MutationOptions }
 
 export { CreateEIP712Params }
+
+// @public
+export function createZamaConfig(params: CreateZamaConfigParams): ZamaConfig;
+
+// @public
+export type CreateZamaConfigParams = ZamaConfigWagmi | ZamaConfigViem | ZamaConfigEthers | ZamaConfigCustomSigner;
 
 export { CredentialsAllowedEvent }
 
@@ -414,6 +433,8 @@ export { DecryptionFailedError }
 export { DecryptResult }
 
 export { DecryptStartEvent }
+
+export { DefaultConfigs }
 
 export { DefaultRegistryAddresses }
 
@@ -484,6 +505,8 @@ export { ERC7984_INTERFACE_ID }
 export { ERC7984_WRAPPER_INTERFACE_ID }
 
 export { ERC7984_WRAPPER_INTERFACE_ID_LEGACY }
+
+export { ExtendedFhevmInstanceConfig }
 
 export { FheTypeName }
 
@@ -582,6 +605,8 @@ export { nameContract }
 export { NetworkType }
 
 export { NoCiphertextError }
+
+export { node }
 
 export { OnChainEvent }
 
@@ -1043,6 +1068,8 @@ export interface UseZamaConfig {
 // @public
 export function useZamaSDK(): ZamaSDK;
 
+export { web }
+
 export { wrapContract }
 
 export { WrappedEvent }
@@ -1059,6 +1086,28 @@ export { WriteContractConfig }
 
 export { WriteFunctionName }
 
+export { ZamaConfig }
+
+export { ZamaConfigCustomSigner }
+
+export { ZamaConfigEthers }
+
+export { ZamaConfigViem }
+
+// @public
+export interface ZamaConfigWagmi extends ZamaConfigBase {
+    // (undocumented)
+    ethers?: never;
+    // (undocumented)
+    relayer?: never;
+    // (undocumented)
+    signer?: never;
+    // (undocumented)
+    viem?: never;
+    // (undocumented)
+    wagmiConfig: Config;
+}
+
 export { ZamaError }
 
 export { ZamaErrorCode }
@@ -1068,15 +1117,7 @@ export function ZamaProvider(input: ZamaProviderProps): _$react_jsx_runtime0.JSX
 
 // @public
 export interface ZamaProviderProps extends PropsWithChildren {
-    keypairTTL?: number;
-    onEvent?: ZamaSDKEventListener;
-    registryAddresses?: Record<number, Address>;
-    registryTTL?: number;
-    relayer: RelayerSDK;
-    sessionStorage?: GenericStorage;
-    sessionTTL?: number;
-    signer: GenericSigner;
-    storage: GenericStorage;
+    config: ZamaConfig;
 }
 
 export { zamaQueryKeys }
