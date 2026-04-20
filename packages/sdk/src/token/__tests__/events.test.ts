@@ -40,7 +40,7 @@ function setupSdkWithEvents(opts: {
     onEvent,
   });
   const readonlyToken = new ReadonlyToken(sdk, opts.tokenAddress);
-  const token = new Token(sdk, opts.signer, opts.tokenAddress, opts.wrapper);
+  const token = new Token(sdk, opts.tokenAddress, opts.wrapper);
   return { sdk, events, readonlyToken, token };
 }
 

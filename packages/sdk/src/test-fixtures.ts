@@ -138,7 +138,6 @@ function createMockReadonlyToken(address: Address, signer: GenericSigner): Reado
   return {
     address,
     sdk: mockSdk,
-    signer,
     balanceOf: vi.fn().mockResolvedValue(123n),
     decryptBalanceAs: vi.fn().mockResolvedValue(123n),
     confidentialBalanceOf: vi.fn().mockResolvedValue(("0x" + "aa".repeat(32)) as Handle),
@@ -236,8 +235,8 @@ export const test = base.extend<SdkFixtures>({
   sessionStorage: async ({}, use) => {
     await use(new MemoryStorage());
   },
-  token: async ({ sdk, signer, tokenAddress }, use) => {
-    await use(new Token(sdk, signer, tokenAddress));
+  token: async ({ sdk, tokenAddress }, use) => {
+    await use(new Token(sdk, tokenAddress));
   },
   readonlyToken: async ({ sdk, tokenAddress }, use) => {
     await use(new ReadonlyToken(sdk, tokenAddress));
@@ -304,10 +303,10 @@ export const test = base.extend<SdkFixtures>({
       }),
     );
   },
-  createToken: async ({ signer, tokenAddress }, use) => {
+  createToken: async ({ tokenAddress }, use) => {
     await use(
       (sdk: ZamaSDK, address?: Address, wrapper?: Address) =>
-        new Token(sdk, signer, address ?? tokenAddress, wrapper),
+        new Token(sdk, address ?? tokenAddress, wrapper),
     );
   },
   createReadonlyToken: async ({ tokenAddress }, use) => {

@@ -3,9 +3,8 @@
 import { useQuery, useSuspenseQuery } from "../utils/query";
 import type { UseQueryOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
-import { confidentialIsApprovedQueryOptions } from "@zama-fhe/sdk/query";
+import { confidentialIsApprovedQueryOptions, signerAddressQueryOptions } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
-import { useSignerAddress } from "../use-signer-address";
 import type { UseZamaConfig } from "../token/use-token";
 
 export { confidentialIsApprovedQueryOptions };
@@ -24,8 +23,8 @@ export interface UseConfidentialIsApprovedConfig {
 export interface UseConfidentialIsApprovedSuspenseConfig extends UseZamaConfig {
   /** Address to check approval for. */
   spender: Address;
-  /** Token holder address. Required — callers wanting the connected wallet should pass `useSignerAddressSuspense().data`. */
-  holder: Address;
+  /** Token holder address. Defaults to the connected signer address. */
+  holder?: Address;
 }
 
 /**
@@ -50,8 +49,13 @@ export function useConfidentialIsApproved(
 ) {
   const { tokenAddress, spender, holder } = config;
   const sdk = useZamaSDK();
-  const signerAddress = useSignerAddress();
-  const resolvedHolder = holder ?? signerAddress;
+  // Skip signer-address resolution entirely when an explicit holder is supplied —
+  // callers passing `holder` must never incur signer.getAddress() failures/retries.
+  const signerAddressQuery = useQuery<Address>({
+    ...signerAddressQueryOptions(sdk.signer),
+    enabled: holder === undefined,
+  });
+  const resolvedHolder = holder ?? signerAddressQuery.data;
   const baseOpts = confidentialIsApprovedQueryOptions(sdk, tokenAddress, {
     holder: resolvedHolder,
     spender,
@@ -67,26 +71,34 @@ export function useConfidentialIsApproved(
 /**
  * Suspense variant of {@link useConfidentialIsApproved}.
  * Suspends rendering until the approval check resolves.
- * `holder` is required — callers wanting the connected wallet address should
- * compose with `useSignerAddressSuspense`:
+ * When `holder` is omitted, the connected signer address is resolved via a
+ * suspending query (mirrors the non-suspense hook's implicit fallback).
  *
  * @example
  * ```tsx
- * const { data: myAddress } = useSignerAddressSuspense();
+ * // Implicit holder (connected signer)
  * const { data: isApproved } = useConfidentialIsApprovedSuspense({
  *   tokenAddress: "0xToken",
  *   spender: "0xSpender",
- *   holder: myAddress,
+ * });
+ *
+ * // Explicit holder
+ * const { data: isApproved } = useConfidentialIsApprovedSuspense({
+ *   tokenAddress: "0xToken",
+ *   spender: "0xSpender",
+ *   holder: "0xHolder",
  * });
  * ```
  */
 export function useConfidentialIsApprovedSuspense(config: UseConfidentialIsApprovedSuspenseConfig) {
   const { spender, holder, tokenAddress } = config;
   const sdk = useZamaSDK();
+  const addressQuery = useSuspenseQuery<Address>(signerAddressQueryOptions(sdk.signer));
+  const resolvedHolder = holder ?? addressQuery.data;
 
   return useSuspenseQuery<boolean>(
     confidentialIsApprovedQueryOptions(sdk, tokenAddress, {
-      holder,
+      holder: resolvedHolder,
       spender,
     }),
   );

@@ -55,7 +55,6 @@ export class ZamaWagmiSigner implements GenericSigner {
 
 // @public
 export interface ZamaWagmiSignerConfig {
-    // (undocumented)
     config: Config;
 }
 

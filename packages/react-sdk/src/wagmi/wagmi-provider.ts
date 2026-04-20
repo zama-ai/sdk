@@ -32,14 +32,14 @@ export interface ZamaWagmiProviderConfig {
  * ```
  */
 export class ZamaWagmiProvider implements GenericProvider {
-  private readonly config: Config;
+  readonly #config: Config;
 
   constructor(providerConfig: ZamaWagmiProviderConfig) {
-    this.config = providerConfig.config;
+    this.#config = providerConfig.config;
   }
 
   async getChainId(): Promise<number> {
-    return getChainId(this.config);
+    return getChainId(this.#config);
   }
 
   async readContract<
@@ -49,7 +49,7 @@ export class ZamaWagmiProvider implements GenericProvider {
   >(
     config: ReadContractConfig<TAbi, TFunctionName, TArgs>,
   ): Promise<ReadContractReturnType<TAbi, TFunctionName, TArgs>> {
-    return readContract(this.config, config);
+    return readContract(this.#config, config);
   }
 
   /**
@@ -62,7 +62,7 @@ export class ZamaWagmiProvider implements GenericProvider {
    */
   async waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt> {
     try {
-      return await waitForTransactionReceipt(this.config, { hash });
+      return await waitForTransactionReceipt(this.#config, { hash });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       if (message.includes("could not be found") || message.includes("Transaction not found")) {
@@ -78,7 +78,7 @@ export class ZamaWagmiProvider implements GenericProvider {
   }
 
   async getBlockTimestamp(): Promise<bigint> {
-    const block = await getBlock(this.config);
+    const block = await getBlock(this.#config);
     return block.timestamp;
   }
 }

@@ -106,7 +106,7 @@ export function useConfidentialIsApprovedSuspense(config: UseConfidentialIsAppro
 
 // @public
 export interface UseConfidentialIsApprovedSuspenseConfig extends UseZamaConfig {
-    holder: Address;
+    holder?: Address;
     spender: Address;
 }
 

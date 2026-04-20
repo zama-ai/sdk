@@ -187,6 +187,8 @@ export class ReadonlyToken {
     }
 
     const sdk = ReadonlyToken.assertSameSdk(tokens);
+    // Fail fast on chain mismatch before prompting the wallet for a signature.
+    await sdk.requireChainAlignment("batchBalancesOf");
     // Pre-authorize the full token set in one wallet signature so subsequent
     // per-token userDecrypt calls reuse the cached credentials.
     await sdk.allow(tokens.map((t) => t.address));
@@ -278,6 +280,7 @@ export class ReadonlyToken {
       : getAddress(delegatorAddress);
     const firstToken = tokens[0]!;
     ReadonlyToken.assertSameSdk(tokens);
+    await firstToken.sdk.requireChainAlignment("batchDecryptBalancesAs");
 
     const resolvedHandles =
       handles ??
@@ -638,6 +641,7 @@ export class ReadonlyToken {
     delegatorAddress: Address;
     accountAddress?: Address;
   }): Promise<bigint> {
+    await this.sdk.requireChainAlignment("decryptBalanceAs");
     const normalizedDelegator = getAddress(delegatorAddress);
     const normalizedAccount = accountAddress ? getAddress(accountAddress) : normalizedDelegator;
 

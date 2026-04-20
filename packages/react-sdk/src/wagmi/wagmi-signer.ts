@@ -15,6 +15,7 @@ import { getConnection, watchConnection } from "./compat";
 
 /** Configuration for {@link ZamaWagmiSigner}. */
 export interface ZamaWagmiSignerConfig {
+  /** Wagmi `Config` — same instance passed to {@link ZamaWagmiProvider}. */
   config: Config;
 }
 
@@ -24,18 +25,18 @@ export interface ZamaWagmiSignerConfig {
  * @param signerConfig - {@link ZamaWagmiSignerConfig} with wagmi config
  */
 export class ZamaWagmiSigner implements GenericSigner {
-  private readonly config: Config;
+  readonly #config: Config;
 
   constructor(signerConfig: ZamaWagmiSignerConfig) {
-    this.config = signerConfig.config;
+    this.#config = signerConfig.config;
   }
 
   async getChainId(): Promise<number> {
-    return getChainId(this.config);
+    return getChainId(this.#config);
   }
 
   async getAddress(): Promise<Address> {
-    const account = getConnection(this.config);
+    const account = getConnection(this.#config);
     if (!account?.address) {
       throw new TypeError("Invalid address");
     }
@@ -44,7 +45,7 @@ export class ZamaWagmiSigner implements GenericSigner {
 
   async signTypedData(typedData: EIP712TypedData): Promise<Hex> {
     const { EIP712Domain: _, ...sigTypes } = typedData.types;
-    return signTypedData(this.config, {
+    return signTypedData(this.#config, {
       primaryType: typedData.primaryType,
       types: sigTypes,
       domain: typedData.domain,
@@ -62,7 +63,7 @@ export class ZamaWagmiSigner implements GenericSigner {
     TFunctionName extends WriteFunctionName<TAbi>,
     const TArgs extends WriteContractArgs<TAbi, TFunctionName>,
   >(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex> {
-    return writeContract(this.config, config as Parameters<typeof writeContract>[1]);
+    return writeContract(this.#config, config as Parameters<typeof writeContract>[1]);
   }
 
   subscribe({
@@ -70,7 +71,7 @@ export class ZamaWagmiSigner implements GenericSigner {
     onAccountChange = () => {},
     onChainChange = () => {},
   }: SignerLifecycleCallbacks): () => void {
-    return watchConnection(this.config, {
+    return watchConnection(this.#config, {
       onChange(connection, prevConnection) {
         if (connection.status === "disconnected" && prevConnection.status !== "disconnected") {
           onDisconnect();

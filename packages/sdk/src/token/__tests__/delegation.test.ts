@@ -242,7 +242,6 @@ describe("delegation write methods", () => {
 
   it("delegateDecryption throws when relayer cannot resolve ACL", async ({
     createSDK,
-    signer,
     tokenAddress,
     delegateAddress,
   }) => {
@@ -250,7 +249,7 @@ describe("delegation write methods", () => {
       getAclAddress: vi.fn().mockRejectedValue(new Error("no transport config")),
     });
     const sdkNoAcl = createSDK({ relayer: relayerNoAcl });
-    const tokenNoAcl = new Token(sdkNoAcl, signer, tokenAddress);
+    const tokenNoAcl = new Token(sdkNoAcl, tokenAddress);
 
     await expect(tokenNoAcl.delegateDecryption({ delegateAddress })).rejects.toThrow(
       "no transport config",
@@ -259,7 +258,6 @@ describe("delegation write methods", () => {
 
   it("revokeDelegation throws when relayer cannot resolve ACL", async ({
     createSDK,
-    signer,
     tokenAddress,
     delegateAddress,
   }) => {
@@ -267,7 +265,7 @@ describe("delegation write methods", () => {
       getAclAddress: vi.fn().mockRejectedValue(new Error("no transport config")),
     });
     const sdkNoAcl = createSDK({ relayer: relayerNoAcl });
-    const tokenNoAcl = new Token(sdkNoAcl, signer, tokenAddress);
+    const tokenNoAcl = new Token(sdkNoAcl, tokenAddress);
 
     await expect(tokenNoAcl.revokeDelegation({ delegateAddress })).rejects.toThrow(
       "no transport config",
@@ -627,12 +625,11 @@ describe("batch delegation", () => {
 
   it("batchDelegateDecryption calls delegateDecryption on each token", async ({
     sdk,
-    signer,
     token,
     tokenAddress,
     delegateAddress,
   }) => {
-    const token2 = new Token(sdk, signer, TOKEN2);
+    const token2 = new Token(sdk, TOKEN2);
 
     const results = await Token.batchDelegateDecryption({
       tokens: [token, token2],
@@ -657,7 +654,7 @@ describe("batch delegation", () => {
       .mockResolvedValueOnce("0xtxhash")
       .mockRejectedValueOnce(new Error("revert"));
 
-    const token2 = new Token(sdk, signer, TOKEN2);
+    const token2 = new Token(sdk, TOKEN2);
 
     const results = await Token.batchDelegateDecryption({
       tokens: [token, token2],
@@ -689,7 +686,7 @@ describe("batch delegation", () => {
       .mockResolvedValueOnce("0xtxhash")
       .mockRejectedValueOnce(new Error("revert"));
 
-    const token2 = new Token(sdk, signer, TOKEN2);
+    const token2 = new Token(sdk, TOKEN2);
 
     const results = await Token.batchRevokeDelegation({
       tokens: [token, token2],

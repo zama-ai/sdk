@@ -14827,7 +14827,7 @@ export function symbolContract(tokenAddress: Address): {
 
 // @public
 export class Token extends ReadonlyToken {
-    constructor(sdk: ZamaSDK, signer: GenericSigner, address: Address, wrapper?: Address);
+    constructor(sdk: ZamaSDK, address: Address, wrapper?: Address);
     approve(spender: Address, until?: number): Promise<TransactionResult>;
     approveUnderlying(amount?: bigint): Promise<TransactionResult>;
     static batchDelegateDecryption(input: {
@@ -14852,8 +14852,6 @@ export class Token extends ReadonlyToken {
         delegateAddress: Address;
     }): Promise<TransactionResult>;
     shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult>;
-    // (undocumented)
-    readonly signer: GenericSigner;
     unshield(amount: bigint, options?: UnshieldOptions): Promise<TransactionResult>;
     unshieldAll(callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     unwrap(amount: bigint): Promise<TransactionResult>;

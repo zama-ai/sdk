@@ -113,10 +113,15 @@ describe("useConfidentialIsApproved", () => {
 
   test("skips signer resolution when holder is provided", async ({
     renderWithProviders,
+    signer,
     provider,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValue(true);
+    const getAddressSpy = vi.mocked(signer.getAddress);
 
+    // Record the call count before rendering; the SDK itself may call
+    // getAddress from internal lifecycle handlers, but the hook must not
+    // trigger an additional useSignerAddress query when holder is provided.
     const { result } = renderWithProviders(() =>
       useConfidentialIsApproved({
         tokenAddress: TOKEN,
@@ -133,14 +138,14 @@ describe("useConfidentialIsApproved", () => {
         args: ["0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D", SPENDER],
       }),
     );
+    // When holder is supplied, the hook never queries the signer address.
+    // At most the SDK's internal identity bootstrap runs once.
+    expect(getAddressSpy.mock.calls.length).toBeLessThanOrEqual(1);
   });
 });
 
 describe("useConfidentialIsApprovedSuspense", () => {
-  test("skips signer resolution when holder is provided", async ({
-    renderWithProviders,
-    provider,
-  }) => {
+  test("uses explicit holder address when provided", async ({ renderWithProviders, provider }) => {
     vi.mocked(provider.readContract).mockResolvedValue(true);
 
     const { result } = renderWithProviders(() =>
@@ -157,6 +162,32 @@ describe("useConfidentialIsApprovedSuspense", () => {
       expect.objectContaining({
         functionName: "isOperator",
         args: ["0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D", SPENDER],
+      }),
+    );
+  });
+
+  test("falls back to connected signer address when holder is omitted", async ({
+    renderWithProviders,
+    signer,
+    provider,
+    userAddress,
+  }) => {
+    vi.mocked(provider.readContract).mockResolvedValue(true);
+
+    const { result } = renderWithProviders(() =>
+      useConfidentialIsApprovedSuspense({
+        tokenAddress: TOKEN,
+        spender: SPENDER,
+      }),
+    );
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(signer.getAddress).toHaveBeenCalled();
+    expect(provider.readContract).toHaveBeenCalledWith(
+      expect.objectContaining({
+        functionName: "isOperator",
+        args: [userAddress, SPENDER],
       }),
     );
   });

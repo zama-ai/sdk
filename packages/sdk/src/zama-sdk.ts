@@ -280,7 +280,7 @@ export class ZamaSDK {
    * @returns A {@link Token} instance bound to this SDK.
    */
   createToken(address: Address, wrapper?: Address): Token {
-    return new Token(this, this.signer, address, wrapper);
+    return new Token(this, address, wrapper);
   }
 
   /**

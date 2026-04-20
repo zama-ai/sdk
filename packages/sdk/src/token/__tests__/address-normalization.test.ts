@@ -4,16 +4,15 @@ import { Token } from "../token";
 import type { Address } from "viem";
 
 describe("Address normalization (P6)", () => {
-  it("checksummed token address in constructor", ({ sdk, signer }) => {
-    const token = new Token(sdk, signer, "0xABCDEF1234567890ABCDEF1234567890ABCDEF12" as Address);
+  it("checksummed token address in constructor", ({ sdk }) => {
+    const token = new Token(sdk, "0xABCDEF1234567890ABCDEF1234567890ABCDEF12" as Address);
 
     expect(token.address).toBe("0xabCDEF1234567890ABcDEF1234567890aBCDeF12");
   });
 
-  it("checksummed wrapper address in constructor", ({ sdk, signer, tokenAddress }) => {
+  it("checksummed wrapper address in constructor", ({ sdk, tokenAddress }) => {
     const token = new Token(
       sdk,
-      signer,
       tokenAddress,
       "0xABCDEF1234567890ABCDEF1234567890ABCDEF12" as Address,
     );
@@ -21,15 +20,13 @@ describe("Address normalization (P6)", () => {
     expect(token.wrapper).toBe("0xabCDEF1234567890ABcDEF1234567890aBCDeF12");
   });
 
-  it("defaults wrapper to checksummed address when not provided", ({ sdk, signer }) => {
-    const token = new Token(sdk, signer, "0xABCDEF1234567890ABCDEF1234567890ABCDEF12" as Address);
+  it("defaults wrapper to checksummed address when not provided", ({ sdk }) => {
+    const token = new Token(sdk, "0xABCDEF1234567890ABCDEF1234567890ABCDEF12" as Address);
 
     expect(token.wrapper).toBe("0xabCDEF1234567890ABcDEF1234567890aBCDeF12");
   });
 
-  it("rejects invalid address in constructor", ({ sdk, signer }) => {
-    expect(() => new Token(sdk, signer, "0xinvalid" as Address)).toThrow(
-      'Address "0xinvalid" is invalid.',
-    );
+  it("rejects invalid address in constructor", ({ sdk }) => {
+    expect(() => new Token(sdk, "0xinvalid" as Address)).toThrow('Address "0xinvalid" is invalid.');
   });
 });
