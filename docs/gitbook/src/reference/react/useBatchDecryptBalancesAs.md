@@ -101,11 +101,11 @@ The address that delegated decryption rights.
 
 Pre-fetched encrypted handles. When omitted, handles are fetched from the chain.
 
-### owner
+### accountAddress
 
 `Address | undefined`
 
-Balance owner address. Defaults to `delegatorAddress`.
+The address whose on-chain balance to read. Defaults to `delegatorAddress`.
 
 ### maxConcurrency
 

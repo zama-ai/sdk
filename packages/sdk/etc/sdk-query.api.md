@@ -72,12 +72,12 @@ export interface BatchBalancesResult {
 
 // @public
 export interface BatchDecryptAsOptions {
+    accountAddress?: Address;
     delegatorAddress: Address;
     // Warning: (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
     handles?: Handle[];
     maxConcurrency?: number;
     onError?: (error: Error, address: Address) => bigint;
-    owner?: Address;
 }
 
 // @public (undocumented)
@@ -311,9 +311,9 @@ export function decryptBalanceAsMutationOptions(readonlyToken: ReadonlyToken): M
 // @public
 export interface DecryptBalanceAsParams {
     // (undocumented)
-    delegatorAddress: Address;
+    accountAddress?: Address;
     // (undocumented)
-    owner?: Address;
+    delegatorAddress: Address;
 }
 
 // @public (undocumented)
@@ -704,7 +704,7 @@ export class ReadonlyToken {
     decimals(): Promise<number>;
     decryptBalanceAs(input: {
         delegatorAddress: Address;
-        owner?: Address;
+        accountAddress?: Address;
     }): Promise<bigint>;
     protected emit(input: ZamaSDKEventInput): void;
     // (undocumented)
