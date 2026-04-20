@@ -1,6 +1,6 @@
 {
   "name": "@zama-fhe/react-native-sdk",
-  "version": "2.4.0-alpha.4",
+  "version": "3.0.0-alpha.7",
   "description": "React Native hooks for Zama confidential token operations",
   "license": "BSD-3-Clause-Clear",
   "repository": {
@@ -38,8 +38,8 @@
     "expo-sqlite": "~16.0.0"
   },
   "peerDependencies": {
-    "@zama-fhe/sdk": "^2.4.0-alpha.4",
-    "@zama-fhe/react-sdk": "^2.4.0-alpha.4",
+    "@zama-fhe/sdk": "^3.0.0-alpha.7",
+    "@zama-fhe/react-sdk": "^3.0.0-alpha.7",
     "@tanstack/react-query": ">=5",
     "react": ">=18.0.0",
     "expo": ">=52.0.0",
