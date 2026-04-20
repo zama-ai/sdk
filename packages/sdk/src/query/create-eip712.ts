@@ -1,19 +1,17 @@
-import type { KmsUserDecryptEIP712UserArgsType } from "@zama-fhe/relayer-sdk/bundle";
 import type { Address, Hex } from "viem";
 import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
 import type { ZamaSDK } from "../zama-sdk";
 import type { MutationFactoryOptions } from "./factory-types";
 
 /**
- * Variables for {@link createEIP712MutationOptions}. Derived from
- * {@link KmsUserDecryptEIP712UserArgsType} with stricter `publicKey`/`contractAddresses`
- * typing and optional `durationDays`. `extraData` is computed internally and omitted.
+ * Variables for {@link createEIP712MutationOptions}.
  */
-export type CreateEIP712Params = Pick<KmsUserDecryptEIP712UserArgsType, "startTimestamp"> & {
+export interface CreateEIP712Params {
   publicKey: Hex;
   contractAddresses: Address[];
+  startTimestamp: number;
   durationDays?: number;
-};
+}
 
 export function createEIP712MutationOptions(
   sdk: ZamaSDK,

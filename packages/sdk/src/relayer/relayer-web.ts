@@ -1,9 +1,3 @@
-import type {
-  InputProofBytesType,
-  KeypairType,
-  KmsDelegatedUserDecryptEIP712Type,
-  ZKProofLike,
-} from "@zama-fhe/relayer-sdk/bundle";
 import type { Address, Hex } from "viem";
 import { ConfigurationError, ZamaError } from "../errors";
 import { IndexedDBStorage } from "../storage/indexeddb-storage";
@@ -17,6 +11,7 @@ import type {
   EIP712TypedData,
   EncryptParams,
   EncryptResult,
+  EncryptResult as InputProofBytesType,
   Handle,
   PublicDecryptResult,
   PublicKeyData,
@@ -270,7 +265,7 @@ export class RelayerWeb implements RelayerSDK, Disposable {
   /**
    * Generate a keypair for FHE operations.
    */
-  async generateKeypair(): Promise<KeypairType<Hex>> {
+  async generateKeypair(): Promise<{ publicKey: Hex; privateKey: Hex }> {
     const worker = await this.#ensureWorker();
     const result = await worker.generateKeypair();
     return {
@@ -355,7 +350,7 @@ export class RelayerWeb implements RelayerSDK, Disposable {
     delegatorAddress: Address,
     startTimestamp: number,
     durationDays = 7,
-  ): Promise<KmsDelegatedUserDecryptEIP712Type> {
+  ): Promise<EIP712TypedData> {
     const worker = await this.#ensureWorker();
     return worker.createDelegatedUserDecryptEIP712({
       publicKey,
@@ -384,11 +379,11 @@ export class RelayerWeb implements RelayerSDK, Disposable {
   /**
    * Submit a ZK proof to the relayer for verification.
    */
-  async requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType> {
+  async requestZKProofVerification(zkProof: unknown): Promise<InputProofBytesType> {
     return withRetry(async () => {
       const worker = await this.#ensureWorker();
       await this.#refreshCsrfToken();
-      return worker.requestZKProofVerification(zkProof);
+      return worker.requestZKProofVerification(zkProof) as unknown as Promise<InputProofBytesType>;
     });
   }
 

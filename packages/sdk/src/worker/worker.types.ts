@@ -1,12 +1,23 @@
-import type {
-  FhevmInstanceConfig,
-  InputProofBytesType,
-  KmsDelegatedUserDecryptEIP712Type,
-  KmsUserDecryptEIP712Type,
-  ZKProofLike,
-} from "@zama-fhe/relayer-sdk/bundle";
 import type { ClearValueType, EncryptInput, Handle } from "../relayer/relayer-sdk.types";
+import type { StoredEIP712 } from "../types/credentials";
 import type { Address, Hex } from "viem";
+
+/** Network configuration for the FHE VM instance (matches @fhevm/sdk chain config shape). */
+export interface FhevmInstanceConfig {
+  chainId: number;
+  networkUrl?: string;
+  network?: string;
+  relayerUrl: string;
+  aclContractAddress: string;
+  kmsContractAddress: string;
+  gatewayChainId: number;
+  verifyingContractAddressDecryption: string;
+  verifyingContractAddressInputVerification?: string;
+  inputVerifierContractAddress?: string;
+  batchRpcCalls?: boolean;
+  /** Allow extra fields from upstream configs (e.g. @zama-fhe/relayer-sdk). */
+  [key: string]: unknown;
+}
 
 // ============================================================================
 // Logger
@@ -96,6 +107,7 @@ export interface UserDecryptRequest extends BaseRequest {
     signerAddress: Address;
     startTimestamp: number;
     durationDays: number;
+    eip712: StoredEIP712;
   };
 }
 
@@ -145,13 +157,14 @@ export interface DelegatedUserDecryptRequest extends BaseRequest {
     delegateAddress: Address;
     startTimestamp: number;
     durationDays: number;
+    eip712: StoredEIP712;
   };
 }
 
 export interface RequestZKProofVerificationRequest extends BaseRequest {
   type: "REQUEST_ZK_PROOF_VERIFICATION";
   payload: {
-    zkProof: ZKProofLike;
+    zkProof: unknown;
   };
 }
 
@@ -227,7 +240,10 @@ export interface UpdateCsrfResponseData {
   updated: true;
 }
 
-export type EncryptResponseData = InputProofBytesType;
+export interface EncryptResponseData {
+  handles: Uint8Array[];
+  inputProof: Uint8Array;
+}
 
 export interface UserDecryptResponseData {
   clearValues: Record<Handle, ClearValueType>;
@@ -244,15 +260,16 @@ export interface GenerateKeypairResponseData {
   privateKey: Hex;
 }
 
-export type CreateEIP712ResponseData = KmsUserDecryptEIP712Type;
-
-export type CreateDelegatedEIP712ResponseData = KmsDelegatedUserDecryptEIP712Type;
+export type { CreateKmsUserDecryptEIP712ReturnType as CreateEIP712ResponseData } from "@fhevm/sdk/actions/chain";
+export type { CreateKmsDelegatedUserDecryptEip712ReturnType as CreateDelegatedEIP712ResponseData } from "@fhevm/sdk/actions/chain";
 
 export interface DelegatedUserDecryptResponseData {
   clearValues: Record<Handle, ClearValueType>;
 }
 
-export type RequestZKProofVerificationResponseData = InputProofBytesType;
+export interface RequestZKProofVerificationResponseData {
+  error: string;
+}
 
 export interface GetPublicKeyResponseData {
   result: { publicKeyId: string; publicKey: Uint8Array } | null;

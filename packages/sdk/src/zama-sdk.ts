@@ -409,6 +409,7 @@ export class ZamaSDK {
             signerAddress,
             startTimestamp: creds.startTimestamp,
             durationDays: creds.durationDays,
+            eip712: creds.eip712,
           });
 
           for (const [handle, value] of Object.entries(decrypted)) {

@@ -16,14 +16,6 @@ import {
   type PublicClient,
 } from "viem";
 import { mainnet, sepolia } from "viem/chains";
-import type {
-  InputProofBytesType,
-  KeypairType,
-  KmsDelegatedUserDecryptEIP712Type,
-  KmsPublicDecryptEIP712Type,
-  KmsUserDecryptEIP712Type,
-  ZKProofLike,
-} from "@zama-fhe/relayer-sdk/bundle";
 import type { RelayerSDK } from "../relayer-sdk";
 import type {
   ClearValueType,
@@ -31,6 +23,7 @@ import type {
   EIP712TypedData,
   EncryptParams,
   EncryptResult,
+  EncryptResult as InputProofBytesType,
   Handle,
   PublicDecryptResult,
   PublicKeyData,
@@ -72,16 +65,16 @@ const STANDARD_EIP712_DOMAIN = [
 const USER_DECRYPT_TYPES = {
   EIP712Domain: STANDARD_EIP712_DOMAIN,
   UserDecryptRequestVerification: USER_DECRYPT_EIP712.types.UserDecryptRequestVerification,
-} satisfies KmsUserDecryptEIP712Type["types"];
+} satisfies Record<string, readonly { readonly name: string; readonly type: string }[]>;
 const DELEGATED_USER_DECRYPT_TYPES = {
   EIP712Domain: STANDARD_EIP712_DOMAIN,
   DelegatedUserDecryptRequestVerification:
     DELEGATED_USER_DECRYPT_EIP712.types.DelegatedUserDecryptRequestVerification,
-} satisfies KmsDelegatedUserDecryptEIP712Type["types"];
+};
 const KMS_DECRYPTION_TYPES = {
   EIP712Domain: STANDARD_EIP712_DOMAIN,
   PublicDecryptVerification: KMS_DECRYPTION_EIP712.types.PublicDecryptVerification,
-} satisfies KmsPublicDecryptEIP712Type["types"];
+} satisfies Record<string, readonly { readonly name: string; readonly type: string }[]>;
 
 const FORBIDDEN_CHAIN_IDS = new Set<number>([mainnet.id, sepolia.id]);
 
@@ -162,7 +155,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
     this.inputSigner = privateKeyToAccount(config.inputSignerPrivateKey ?? MOCK_INPUT_SIGNER_PK);
   }
 
-  async generateKeypair(): Promise<KeypairType<Hex>> {
+  async generateKeypair(): Promise<{ publicKey: Hex; privateKey: Hex }> {
     const publicKey = toHex(crypto.getRandomValues(new Uint8Array(32)));
     let privateKey = toHex(crypto.getRandomValues(new Uint8Array(32)));
 
@@ -179,18 +172,19 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
     startTimestamp: number,
     durationDays = 7,
   ): Promise<EIP712TypedData> {
+    const domain = USER_DECRYPT_EIP712.domain(
+      this.#config.chainId,
+      this.#config.verifyingContractAddressDecryption,
+    );
     return {
-      domain: USER_DECRYPT_EIP712.domain(
-        this.#config.chainId,
-        this.#config.verifyingContractAddressDecryption,
-      ),
-      types: USER_DECRYPT_TYPES,
+      domain,
+      types: USER_DECRYPT_TYPES as unknown as Record<string, { name: string; type: string }[]>,
       primaryType: "UserDecryptRequestVerification",
       message: {
         publicKey,
         contractAddresses,
-        startTimestamp: String(startTimestamp),
-        durationDays: String(durationDays),
+        startTimestamp: BigInt(startTimestamp),
+        durationDays: BigInt(durationDays),
         extraData: "0x00",
       },
     };
@@ -320,24 +314,27 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
     delegatorAddress: Address,
     startTimestamp: number,
     durationDays = 7,
-  ): Promise<KmsDelegatedUserDecryptEIP712Type> {
-    const message: KmsDelegatedUserDecryptEIP712Type["message"] = {
-      publicKey,
-      contractAddresses,
-      delegatorAddress: getAddress(delegatorAddress),
-      startTimestamp: String(startTimestamp),
-      durationDays: String(durationDays),
-      extraData: "0x00",
-    };
-
+  ): Promise<EIP712TypedData> {
+    const domain = DELEGATED_USER_DECRYPT_EIP712.domain(
+      this.#config.chainId,
+      this.#config.verifyingContractAddressDecryption,
+    );
     return {
-      domain: DELEGATED_USER_DECRYPT_EIP712.domain(
-        this.#config.chainId,
-        this.#config.verifyingContractAddressDecryption,
-      ),
-      types: DELEGATED_USER_DECRYPT_TYPES,
+      domain,
+      types: DELEGATED_USER_DECRYPT_TYPES as unknown as Record<
+        string,
+        { name: string; type: string }[]
+      >,
       primaryType: "DelegatedUserDecryptRequestVerification",
-      message,
+      message: {
+        publicKey,
+        contractAddresses,
+        startTimestamp: BigInt(startTimestamp),
+        durationDays: BigInt(durationDays),
+        extraData: "0x00",
+        // delegatorAddress is needed for delegated decrypt EIP712 but not in base type
+        ...(delegatorAddress ? { delegatorAddress: getAddress(delegatorAddress) } : {}),
+      } as EIP712TypedData["message"],
     };
   }
 
@@ -354,7 +351,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
     return this.#decryptHandles(params.handles);
   }
 
-  async requestZKProofVerification(_zkProof: ZKProofLike): Promise<InputProofBytesType> {
+  async requestZKProofVerification(_zkProof: unknown): Promise<InputProofBytesType> {
     throw new ConfigurationError("Not implemented in cleartext mode");
   }
 

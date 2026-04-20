@@ -1,5 +1,5 @@
-import type { FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/bundle";
 import type {
+  FhevmInstanceConfig,
   GenericLogger,
   UpdateCsrfResponseData,
   WorkerRequest,

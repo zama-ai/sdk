@@ -1,10 +1,3 @@
-import type {
-  FhevmInstanceConfig,
-  InputProofBytesType,
-  KeypairType,
-  KmsDelegatedUserDecryptEIP712Type,
-  ZKProofLike,
-} from "@zama-fhe/relayer-sdk/node";
 import type { Address, Hex } from "viem";
 import { ConfigurationError, ZamaError } from "../errors";
 import { MemoryStorage } from "../storage/memory-storage";
@@ -19,6 +12,7 @@ import type {
   EIP712TypedData,
   EncryptParams,
   EncryptResult,
+  FhevmInstanceConfig,
   Handle,
   PublicDecryptResult,
   PublicKeyData,
@@ -179,7 +173,7 @@ export class RelayerNode implements RelayerSDK, Disposable {
     this.terminate();
   }
 
-  async generateKeypair(): Promise<KeypairType<Hex>> {
+  async generateKeypair(): Promise<{ publicKey: Hex; privateKey: Hex }> {
     const pool = await this.#ensurePool();
     const result = await pool.generateKeypair();
     return {
@@ -237,7 +231,7 @@ export class RelayerNode implements RelayerSDK, Disposable {
     delegatorAddress: Address,
     startTimestamp: number,
     durationDays = 7,
-  ): Promise<KmsDelegatedUserDecryptEIP712Type> {
+  ): Promise<EIP712TypedData> {
     const pool = await this.#ensurePool();
     return pool.createDelegatedUserDecryptEIP712({
       publicKey,
@@ -245,7 +239,7 @@ export class RelayerNode implements RelayerSDK, Disposable {
       delegatorAddress,
       startTimestamp,
       durationDays,
-    });
+    }) as unknown as EIP712TypedData;
   }
 
   async delegatedUserDecrypt(
@@ -258,10 +252,10 @@ export class RelayerNode implements RelayerSDK, Disposable {
     });
   }
 
-  async requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType> {
+  async requestZKProofVerification(zkProof: unknown): Promise<EncryptResult> {
     return withRetry(async () => {
       const pool = await this.#ensurePool();
-      return pool.requestZKProofVerification(zkProof);
+      return pool.requestZKProofVerification(zkProof) as unknown as Promise<EncryptResult>;
     });
   }
 

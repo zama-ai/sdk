@@ -1,5 +1,4 @@
 import type { Handle } from "../relayer/relayer-sdk.types";
-import type { ZKProofLike } from "@zama-fhe/relayer-sdk/bundle";
 import type {
   CreateDelegatedEIP712Payload,
   CreateDelegatedEIP712ResponseData,
@@ -259,7 +258,9 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
   }
 
   async publicDecrypt(handles: Handle[]): Promise<PublicDecryptResponseData> {
-    return this.sendRequest<PublicDecryptResponseData>("PUBLIC_DECRYPT", { handles });
+    return this.sendRequest<PublicDecryptResponseData>("PUBLIC_DECRYPT", {
+      handles,
+    });
   }
 
   async createDelegatedUserDecryptEIP712(
@@ -275,7 +276,7 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
   }
 
   async requestZKProofVerification(
-    zkProof: ZKProofLike,
+    zkProof: unknown,
   ): Promise<RequestZKProofVerificationResponseData> {
     return this.sendRequest<RequestZKProofVerificationResponseData>(
       "REQUEST_ZK_PROOF_VERIFICATION",
@@ -288,7 +289,9 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
   }
 
   async getPublicParams(bits: number): Promise<GetPublicParamsResponseData> {
-    return this.sendRequest<GetPublicParamsResponseData>("GET_PUBLIC_PARAMS", { bits });
+    return this.sendRequest<GetPublicParamsResponseData>("GET_PUBLIC_PARAMS", {
+      bits,
+    });
   }
 
   // ===========================================================================

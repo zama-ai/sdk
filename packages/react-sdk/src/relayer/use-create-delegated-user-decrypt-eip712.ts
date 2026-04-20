@@ -1,6 +1,6 @@
 "use client";
 
-import type { KmsDelegatedUserDecryptEIP712Type } from "@zama-fhe/sdk";
+import type { EIP712TypedData } from "@zama-fhe/sdk";
 import { useMutation } from "@tanstack/react-query";
 import { createDelegatedUserDecryptEIP712MutationOptions } from "@zama-fhe/sdk/query";
 import type { CreateDelegatedUserDecryptEIP712Params } from "@zama-fhe/sdk/query";
@@ -25,9 +25,7 @@ import { useZamaSDK } from "../provider";
  */
 export function useCreateDelegatedUserDecryptEIP712() {
   const sdk = useZamaSDK();
-  return useMutation<
-    KmsDelegatedUserDecryptEIP712Type,
-    Error,
-    CreateDelegatedUserDecryptEIP712Params
-  >(createDelegatedUserDecryptEIP712MutationOptions(sdk));
+  return useMutation<EIP712TypedData, Error, CreateDelegatedUserDecryptEIP712Params>(
+    createDelegatedUserDecryptEIP712MutationOptions(sdk),
+  );
 }

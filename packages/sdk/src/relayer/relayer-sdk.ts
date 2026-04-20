@@ -1,15 +1,10 @@
 import type {
-  InputProofBytesType,
-  KeypairType,
-  KmsDelegatedUserDecryptEIP712Type,
-  ZKProofLike,
-} from "@zama-fhe/relayer-sdk/bundle";
-import type {
   ClearValueType,
   DelegatedUserDecryptParams,
   EIP712TypedData,
   EncryptParams,
   EncryptResult,
+  EncryptResult as InputProofBytesType,
   Handle,
   PublicDecryptResult,
   PublicKeyData,
@@ -24,7 +19,7 @@ import type { Address, Hex } from "viem";
  */
 export interface RelayerSDK {
   /** Generate an FHE keypair (public + private key). */
-  generateKeypair(): Promise<KeypairType<Hex>>;
+  generateKeypair(): Promise<{ publicKey: Hex; privateKey: Hex }>;
 
   /** Create EIP-712 typed data for signing an FHE decrypt credential. */
   createEIP712(
@@ -50,7 +45,7 @@ export interface RelayerSDK {
     delegatorAddress: Address,
     startTimestamp: number,
     durationDays?: number,
-  ): Promise<KmsDelegatedUserDecryptEIP712Type>;
+  ): Promise<EIP712TypedData>;
 
   /** Decrypt FHE handles using delegated user credentials. */
   delegatedUserDecrypt(
@@ -58,7 +53,7 @@ export interface RelayerSDK {
   ): Promise<Readonly<Record<Handle, ClearValueType>>>;
 
   /** Submit a ZK proof for on-chain verification. */
-  requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
+  requestZKProofVerification(zkProof: unknown): Promise<InputProofBytesType>;
 
   /** Fetch the FHE network public key. Returns `null` if not available. */
   getPublicKey(): Promise<PublicKeyData | null>;

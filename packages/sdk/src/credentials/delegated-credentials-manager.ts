@@ -1,6 +1,6 @@
 import { getAddress, type Address, type Hex } from "viem";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
-import type { DelegatedStoredCredentials } from "../types";
+import type { DelegatedStoredCredentials, StoredEIP712 } from "../types";
 import {
   BaseCredentialsManager,
   type CredentialsConfig,
@@ -125,7 +125,7 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
           durationDays,
           delegatorAddress,
         };
-        const signature = await this.#signDelegated(meta, contractAddresses);
+        const { signature, eip712 } = await this.#signDelegated(meta, contractAddresses);
 
         return {
           publicKey: keypair.publicKey,
@@ -136,6 +136,7 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
           durationDays,
           delegatorAddress,
           delegateAddress,
+          eip712,
         };
       },
       errorContext: "Failed to create delegated decrypt credentials",
@@ -152,7 +153,8 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
     meta: DelegatedSigningMeta,
     contractAddresses: Address[],
   ): Promise<Hex> {
-    return this.#signDelegated(meta, contractAddresses);
+    const { signature } = await this.#signDelegated(meta, contractAddresses);
+    return signature;
   }
 
   protected async encryptCredentials(
@@ -203,14 +205,41 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
     return key;
   }
 
-  async #signDelegated(meta: DelegatedSigningMeta, contractAddresses: Address[]): Promise<Hex> {
-    const delegatedEIP712 = await this.#relayer.createDelegatedUserDecryptEIP712(
+  async #signDelegated(
+    meta: DelegatedSigningMeta,
+    contractAddresses: Address[],
+  ): Promise<{ signature: Hex; eip712: StoredEIP712 }> {
+    const eip712Raw = await this.#relayer.createDelegatedUserDecryptEIP712(
       meta.publicKey,
       contractAddresses,
       meta.delegatorAddress,
       meta.startTimestamp,
       meta.durationDays,
     );
-    return this.signer.signTypedData(delegatedEIP712);
+    const signature = await this.signer.signTypedData(eip712Raw as never);
+
+    const msg = eip712Raw.message as Record<string, unknown>;
+    const eip712: StoredEIP712 = {
+      domain: {
+        ...eip712Raw.domain,
+        chainId: Number(eip712Raw.domain.chainId),
+      },
+      primaryType: eip712Raw.primaryType,
+      types: Object.fromEntries(
+        Object.entries(eip712Raw.types).map(([k, v]) => [
+          k,
+          (v as readonly { name: string; type: string }[]).map((f) => ({ ...f })),
+        ]),
+      ),
+      message: {
+        publicKey: msg.publicKey as Hex,
+        contractAddresses: [...(msg.contractAddresses as Address[])],
+        startTimestamp: Number(msg.startTimestamp),
+        durationDays: Number(msg.durationDays),
+        extraData: msg.extraData as Hex,
+      },
+    };
+
+    return { signature, eip712 };
   }
 }

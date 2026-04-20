@@ -1,27 +1,11 @@
-import type * as SDK from "@zama-fhe/relayer-sdk/bundle";
-import type {
-  Bytes32Hex,
-  ClearValueType,
-  InputProofBytesType,
-  KmsDelegatedUserDecryptEIP712Type,
-  KmsUserDecryptEIP712Type,
-  PublicDecryptResults,
-} from "@zama-fhe/relayer-sdk/bundle";
 import type { Address, Hex } from "viem";
-import type { GenericLogger } from "../worker/worker.types";
+import type { FhevmInstanceConfig, GenericLogger } from "../worker/worker.types";
 import type { GenericStorage } from "../types";
+import type { StoredEIP712 } from "../types/credentials";
 
 // ============================================================================
 // Application Types
 // ============================================================================
-
-/** Global SDK interface (from CDN script window.relayerSDK) */
-export interface RelayerSDKGlobal {
-  initSDK: typeof SDK.initSDK;
-  createInstance: typeof SDK.createInstance;
-  SepoliaConfig: SDK.FhevmInstanceConfig;
-  MainnetConfig: SDK.FhevmInstanceConfig;
-}
 
 /** Network configuration for the Relayer SDK */
 export type NetworkType = "hardhat" | "sepolia" | "mainnet";
@@ -36,7 +20,7 @@ export interface RelayerWebSecurityConfig {
 
 /** Configuration for RelayerWeb (browser backend) initialization. */
 export interface RelayerWebConfig {
-  transports: Record<number, Partial<SDK.FhevmInstanceConfig>>;
+  transports: Record<number, Partial<FhevmInstanceConfig>>;
   /** Resolve the current chain ID. Called lazily before each operation; the worker is re-initialized when the value changes. */
   getChainId: () => Promise<number>;
   /** Security options (CSRF, CDN integrity). */
@@ -74,13 +58,28 @@ export interface RelayerWebConfig {
   fheArtifactCacheTTL?: number;
 }
 
-/** Result from encryption operation. Alias for {@link InputProofBytesType}. */
-export type EncryptResult = InputProofBytesType;
+/** Result from encryption operation. */
+export interface EncryptResult {
+  handles: Uint8Array[];
+  inputProof: Uint8Array;
+}
 
-/** Canonical SDK type for encrypted ciphertext handles (`bytes32` values). Alias for {@link Bytes32Hex}. */
-export type Handle = Bytes32Hex;
+/** Canonical SDK type for encrypted ciphertext handles (`bytes32` values). */
+export type Handle = `0x${string}`;
 
-export type { ClearValueType };
+/** Decrypted value type returned by FHE operations. */
+export type ClearValueType = bigint | boolean | `0x${string}`;
+
+/** FHE type names for encryption. */
+export type FheTypeName =
+  | "ebool"
+  | "euint8"
+  | "euint16"
+  | "euint32"
+  | "euint64"
+  | "euint128"
+  | "euint256"
+  | "eaddress";
 
 /** A single value to encrypt with its FHE type. */
 export type EncryptInput =
@@ -90,7 +89,7 @@ export type EncryptInput =
     }
   | {
       value: bigint;
-      type: Exclude<SDK.FheTypeName, "ebool" | "eaddress">;
+      type: Exclude<FheTypeName, "ebool" | "eaddress">;
     }
   | {
       value: Address;
@@ -116,16 +115,32 @@ export interface UserDecryptParams {
   signerAddress: Address;
   startTimestamp: number;
   durationDays: number;
+  /** EIP-712 typed data used for the permit (required by @fhevm/sdk parseSignedDecryptionPermit). */
+  eip712: StoredEIP712;
 }
 
-/** Result from public decryption. Alias for {@link PublicDecryptResults}. */
-export type PublicDecryptResult = PublicDecryptResults;
+/** Result from public decryption. */
+export interface PublicDecryptResult {
+  clearValues: Readonly<Record<Handle, ClearValueType>>;
+  abiEncodedClearValues: Hex;
+  decryptionProof: Hex;
+}
 
 /**
  * EIP712 typed data structure for user or delegated user decrypt requests.
- * Union of the relayer-sdk's two user-decrypt EIP712 shapes.
+ * Union of the canonical @fhevm/sdk return types.
  */
-export type EIP712TypedData = KmsUserDecryptEIP712Type | KmsDelegatedUserDecryptEIP712Type;
+export type EIP712TypedData = {
+  readonly domain: {
+    readonly name: string;
+    readonly version: string;
+    readonly chainId: bigint;
+    readonly verifyingContract: `0x${string}`;
+  };
+  readonly types: Record<string, readonly { readonly name: string; readonly type: string }[]>;
+  readonly primaryType: string;
+  readonly message: Record<string, unknown>;
+};
 
 /** TFHE public key */
 export interface PublicKeyData {
@@ -133,10 +148,11 @@ export interface PublicKeyData {
   publicKey: Uint8Array;
 }
 
-/**
- * TFHE public parameters
- */
-export type PublicParamsData = SDK.PublicParams<Uint8Array>[keyof SDK.PublicParams<Uint8Array>];
+/** TFHE public parameters for a given bit size. */
+export interface PublicParamsData {
+  publicParams: Uint8Array;
+  publicParamsId: string;
+}
 
 /** Parameters for delegated user decryption */
 export interface DelegatedUserDecryptParams {
@@ -150,7 +166,11 @@ export interface DelegatedUserDecryptParams {
   delegateAddress: Address;
   startTimestamp: number;
   durationDays: number;
+  /** EIP-712 typed data used for the permit (required by @fhevm/sdk parseSignedDecryptionPermit). */
+  eip712: StoredEIP712;
 }
 
 /** SDK status */
 export type RelayerSDKStatus = "idle" | "initializing" | "ready" | "error";
+
+export type { FhevmInstanceConfig };

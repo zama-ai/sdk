@@ -1,6 +1,7 @@
 import { getAddress, isAddress, type Address, type Hex } from "viem";
 import { assertArray, assertCondition, assertObject, assertString } from "../utils";
 import type { EncryptedData } from "./credential-crypto";
+import type { StoredEIP712 } from "../types/credentials";
 
 /** Encrypted credential shape stored in persistent storage (shared base fields). */
 export interface BaseEncryptedCredentials {
@@ -9,6 +10,7 @@ export interface BaseEncryptedCredentials {
   encryptedPrivateKey: EncryptedData;
   startTimestamp: number;
   durationDays: number;
+  eip712: StoredEIP712;
 }
 
 /**
