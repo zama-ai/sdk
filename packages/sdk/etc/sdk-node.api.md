@@ -8,7 +8,6 @@ import { Address } from 'viem';
 import { Bytes32Hex } from '@zama-fhe/relayer-sdk/bundle';
 import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle';
 import { FhevmInstanceConfig } from '@zama-fhe/relayer-sdk/bundle';
-import { FhevmInstanceConfig as FhevmInstanceConfig_2 } from '@zama-fhe/relayer-sdk/node';
 import { Hex } from 'viem';
 import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
 import { InputProofBytesType as InputProofBytesType_2 } from '@zama-fhe/relayer-sdk/node';
@@ -481,14 +480,13 @@ export class RelayerNode implements RelayerSDK, Disposable {
 
 // @public (undocumented)
 export interface RelayerNodeConfig {
+    // Warning: (ae-forgotten-export) The symbol "ExtendedFhevmInstanceConfig" needs to be exported by the entry point index.d.ts
+    chain: ExtendedFhevmInstanceConfig;
     fheArtifactCacheTTL?: number;
     fheArtifactStorage?: GenericStorage;
-    getChainId: () => Promise<number>;
     logger?: GenericLogger;
     // (undocumented)
     poolSize?: number;
-    // (undocumented)
-    transports: Record<number, Partial<FhevmInstanceConfig_2>>;
 }
 
 // @public

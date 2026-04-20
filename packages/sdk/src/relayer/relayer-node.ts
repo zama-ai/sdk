@@ -1,5 +1,4 @@
 import type {
-  FhevmInstanceConfig,
   InputProofBytesType,
   KeypairType,
   KmsDelegatedUserDecryptEIP712Type,
@@ -25,12 +24,12 @@ import type {
   PublicParamsData,
   UserDecryptParams,
 } from "./relayer-sdk.types";
-import { DefaultConfigs, withRetry } from "./relayer-utils";
+import type { ExtendedFhevmInstanceConfig } from "./relayer-utils";
+import { withRetry } from "./relayer-utils";
 
 export interface RelayerNodeConfig {
-  transports: Record<number, Partial<FhevmInstanceConfig>>;
-  /** Resolve the current chain ID. Called lazily before each operation; the pool is re-initialized when the value changes. */
-  getChainId: () => Promise<number>;
+  /** Single chain FHE configuration (addresses, URLs, chain ID). */
+  chain: ExtendedFhevmInstanceConfig;
   poolSize?: number;
   /** Optional logger for observing worker lifecycle and request timing. */
   logger?: GenericLogger;
@@ -59,20 +58,16 @@ export class RelayerNode implements RelayerSDK, Disposable {
   #initPromise: Promise<NodeWorkerPool> | null = null;
   #ensureLock: Promise<NodeWorkerPool> | null = null;
   #terminated = false;
-  #resolvedChainId: number | null = null;
   #artifactCache: FheArtifactCache | null = null;
 
   constructor(config: RelayerNodeConfig) {
     this.#config = { fheArtifactStorage: new MemoryStorage(), ...config };
   }
 
-  async #getPoolConfig(): Promise<NodeWorkerPoolConfig> {
-    const chainId = await this.#config.getChainId();
-    const { transports, poolSize } = this.#config;
-
+  #getPoolConfig(): NodeWorkerPoolConfig {
     return {
-      fhevmConfig: Object.assign({}, DefaultConfigs[chainId], transports[chainId]),
-      poolSize,
+      fhevmConfig: this.#config.chain,
+      poolSize: this.#config.poolSize,
       logger: this.#config.logger,
     };
   }
@@ -101,22 +96,12 @@ export class RelayerNode implements RelayerSDK, Disposable {
       throw new ConfigurationError("RelayerNode has been terminated");
     }
 
-    const chainId = await this.#config.getChainId();
-
-    // Chain changed → tear down old pool, re-init
-    if (this.#resolvedChainId !== null && chainId !== this.#resolvedChainId) {
-      this.#tearDown();
-    }
-
-    this.#resolvedChainId = chainId;
-
     // Create cache for current chain (when storage is provided)
     if (!this.#artifactCache && this.#config.fheArtifactStorage) {
-      const config = Object.assign({}, DefaultConfigs[chainId], this.#config.transports[chainId]);
       this.#artifactCache = new FheArtifactCache({
         storage: this.#config.fheArtifactStorage,
-        chainId,
-        relayerUrl: config.relayerUrl,
+        chainId: this.#config.chain.chainId,
+        relayerUrl: this.#config.chain.relayerUrl,
         ttl: this.#config.fheArtifactCacheTTL,
         logger: this.#config.logger,
       });
@@ -153,7 +138,7 @@ export class RelayerNode implements RelayerSDK, Disposable {
   }
 
   async #initPool(): Promise<NodeWorkerPool> {
-    const poolConfig = await this.#getPoolConfig();
+    const poolConfig = this.#getPoolConfig();
     const pool = new NodeWorkerPool(poolConfig);
     await pool.initPool();
     if (this.#terminated) {
@@ -285,11 +270,11 @@ export class RelayerNode implements RelayerSDK, Disposable {
   }
 
   async getAclAddress(): Promise<Address> {
-    const chainId = await this.#config.getChainId();
-    const config = Object.assign({}, DefaultConfigs[chainId], this.#config.transports[chainId]);
-    if (!config.aclContractAddress) {
-      throw new ConfigurationError(`No ACL address configured for chain ${chainId}`);
+    if (!this.#config.chain.aclContractAddress) {
+      throw new ConfigurationError(
+        `No ACL address configured for chain ${this.#config.chain.chainId}`,
+      );
     }
-    return config.aclContractAddress as Address;
+    return this.#config.chain.aclContractAddress as Address;
   }
 }

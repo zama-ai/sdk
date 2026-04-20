@@ -45,12 +45,9 @@ test("matchZamaError routes to the correct handler", async () => {
   ).toBe("fallback");
 });
 
-test("zero poolSize rejects on first operation", async ({ transport }) => {
+test("zero poolSize rejects on first operation", async ({ chain }) => {
   using relayer = new RelayerNode({
-    getChainId: async () => HardhatConfig.chainId,
-    transports: {
-      [HardhatConfig.chainId]: transport,
-    },
+    chain,
     poolSize: 0,
   });
   expect(relayer).toBeDefined();
@@ -58,30 +55,19 @@ test("zero poolSize rejects on first operation", async ({ transport }) => {
 });
 
 test("init failure resets so next call retries", async () => {
-  let callCount = 0;
   using relayer = new RelayerNode({
-    getChainId: async () => {
-      callCount++;
-      if (callCount === 1) {
-        throw new Error("transient failure");
-      }
-      return HardhatConfig.chainId;
-    },
-    transports: {
-      [HardhatConfig.chainId]: {
-        ...HardhatConfig,
-        relayerUrl: "http://127.0.0.1:1",
-        network: "http://127.0.0.1:1",
-      },
+    chain: {
+      ...HardhatConfig,
+      relayerUrl: "http://127.0.0.1:1",
+      network: "http://127.0.0.1:1",
     },
     poolSize: 1,
   });
 
-  // First call fails due to getChainId throwing
+  // First call fails due to unreachable network — pool init fails
   await expect(relayer.generateKeypair()).rejects.toThrow();
 
-  // getChainId now succeeds but network is unreachable — pool init fails again
-  // This proves the init promise was reset (not stuck on the first failure)
+  // Second call retries — proves init promise was reset (not stuck on first failure)
   await expect(relayer.generateKeypair()).rejects.toThrow();
 });
 
@@ -109,12 +95,9 @@ test("isConfidential on non-ERC-165 contract reverts with a ContractFunction err
   }
 });
 
-test("terminate during pool init rejects cleanly", async ({ transport }) => {
+test("terminate during pool init rejects cleanly", async ({ chain }) => {
   const relayer = new RelayerNode({
-    getChainId: async () => HardhatConfig.chainId,
-    transports: {
-      [HardhatConfig.chainId]: transport,
-    },
+    chain,
     poolSize: 1,
   });
 

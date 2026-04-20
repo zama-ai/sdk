@@ -9,12 +9,12 @@ import {
   HardhatConfig,
   MemoryStorage,
   ZamaSDK,
-  type Address,
-  type FhevmInstanceConfig,
+  type ExtendedFhevmInstanceConfig,
 } from "@zama-fhe/sdk";
 import { hardhatCleartextConfig } from "@zama-fhe/sdk/cleartext";
 import { RelayerNode } from "@zama-fhe/sdk/node";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
+import type { Address } from "viem";
 import { createPublicClient, createTestClient, http, publicActions, walletActions } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { foundry } from "viem/chains";
@@ -53,7 +53,7 @@ export interface NodeWorkerFixtures {
 export interface NodeTestFixtures {
   account: typeof account;
   contracts: typeof contracts;
-  transport: FhevmInstanceConfig;
+  chain: ExtendedFhevmInstanceConfig;
   relayer: RelayerNode;
   sdk: ZamaSDK;
   anvilState: undefined;
@@ -69,16 +69,17 @@ export const nodeTest = base.extend<NodeTestFixtures, NodeWorkerFixtures>({
   ],
   account,
   contracts,
-  transport: async ({ anvilPort }, use) => {
+  chain: async ({ anvilPort }, use) => {
     const network = `http://127.0.0.1:${anvilPort}`;
-    await use({ ...HardhatConfig, network, relayerUrl: network });
+    await use({
+      ...HardhatConfig,
+      network,
+      relayerUrl: network,
+    } satisfies ExtendedFhevmInstanceConfig);
   },
-  relayer: async ({ transport }, use) => {
+  relayer: async ({ chain }, use) => {
     const relayer = new RelayerNode({
-      getChainId: async () => HardhatConfig.chainId,
-      transports: {
-        [HardhatConfig.chainId]: transport,
-      },
+      chain,
       poolSize: 1,
     });
     await use(relayer);
@@ -86,10 +87,10 @@ export const nodeTest = base.extend<NodeTestFixtures, NodeWorkerFixtures>({
     // Explicit terminate here as a safety net for tests that use relayer directly.
     relayer.terminate();
   },
-  sdk: async ({ viemClient, transport, relayer }, use) => {
+  sdk: async ({ viemClient, chain, relayer }, use) => {
     const publicClient = createPublicClient({
       chain: foundry,
-      transport: http(transport.network as string),
+      transport: http(chain.network as string),
     });
     const signer = new ViemSigner({ walletClient: viemClient, publicClient });
     const storage = new MemoryStorage();

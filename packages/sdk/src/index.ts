@@ -6,6 +6,29 @@
  * @packageDocumentation
  */
 
+// Config factory
+export {
+  createZamaConfig,
+  web,
+  node,
+  cleartext,
+  resolveChainTransports,
+  buildRelayer,
+  resolveStorage,
+} from "./config";
+export type {
+  ZamaConfig,
+  ZamaConfigBase,
+  ZamaConfigViem,
+  ZamaConfigEthers,
+  ZamaConfigCustomSigner,
+  CreateZamaConfigBaseParams,
+  TransportConfig,
+  WebTransportConfig,
+  NodeTransportConfig,
+  CleartextTransportConfig,
+} from "./config";
+
 // Core SDK
 export { RelayerWeb } from "./relayer/relayer-web";
 export type { RelayerSDK } from "./relayer/relayer-sdk";
@@ -37,7 +60,14 @@ export type {
 export type { GenericLogger } from "./worker/worker.types";
 
 // Network preset configs
-export { HardhatConfig, MainnetConfig, SepoliaConfig } from "./relayer/relayer-utils";
+export {
+  DefaultConfigs,
+  HardhatConfig,
+  MainnetConfig,
+  SepoliaConfig,
+} from "./relayer/relayer-utils";
+export type { ExtendedFhevmInstanceConfig } from "./relayer/relayer-utils";
+export type { FheChain } from "./chains/types";
 
 // ERC-165 interface IDs
 export {

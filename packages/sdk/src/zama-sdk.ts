@@ -1,4 +1,5 @@
 import { getAddress, type Address } from "viem";
+import type { FheChain } from "./chains/types";
 import { CredentialsManager } from "./credentials/credentials-manager";
 import { DelegatedCredentialsManager } from "./credentials/delegated-credentials-manager";
 import { DecryptCache } from "./decrypt-cache";
@@ -22,6 +23,8 @@ const MAX_KEYPAIR_TTL = 365 * 86400; // 31_536_000 s
 
 /** Configuration for {@link ZamaSDK}. */
 export interface ZamaSDKConfig {
+  /** FHE chain configurations. Registry addresses are extracted from each chain's `registryAddress`. */
+  chains?: readonly FheChain[];
   /** FHE relayer backend (`RelayerWeb` for browser, `RelayerNode` for server). */
   relayer: RelayerSDK;
   /** Wallet signer (`ViemSigner`, `EthersSigner`, or custom {@link GenericSigner}). */
@@ -53,11 +56,6 @@ export interface ZamaSDKConfig {
   /** Optional structured event listener for debugging and telemetry. Never receives sensitive data. */
   onEvent?: ZamaSDKEventListener;
   /**
-   * Per-chain wrappers registry address overrides, merged on top of built-in defaults.
-   * Use this for custom or local chains (e.g. Hardhat) where no default registry exists.
-   */
-  registryAddresses?: Record<number, Address>;
-  /**
    * How long cached registry results remain valid, in seconds.
    * Default: `86400` (24 hours).
    */
@@ -81,7 +79,7 @@ export class ZamaSDK {
   readonly cache: DecryptCache;
   /**
    * A {@link WrappersRegistry} instance auto-configured for the current chain.
-   * Uses built-in defaults merged with any `registryAddresses` overrides, and the SDK's `registryTTL` if configured.
+   * Uses built-in defaults from chain configs, and the SDK's `registryTTL` if configured.
    *
    * @example
    * ```ts
@@ -106,10 +104,16 @@ export class ZamaSDK {
     this.sessionStorage = config.sessionStorage ?? new MemoryStorage();
     this.cache = new DecryptCache(config.storage);
     this.#onEvent = config.onEvent ?? function () {};
+    const registryAddresses: Record<number, Address> = {};
+    for (const chain of config.chains ?? []) {
+      if (chain.registryAddress) {
+        registryAddresses[chain.id] = chain.registryAddress;
+      }
+    }
     this.registry = new WrappersRegistry({
       signer: this.signer,
-      registryAddresses: config.registryAddresses,
       registryTTL: config.registryTTL,
+      registryAddresses,
     });
     this.#registryTTL = config.registryTTL;
     const credentialsConfig = {

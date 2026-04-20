@@ -12,6 +12,7 @@ const shared = {
 
 const entryPoints = {
   index: "src/index.ts",
+  "chains/index": "src/chains/index.ts",
   "cleartext/index": "src/relayer/cleartext/index.ts",
   "query/index": "src/query/index.ts",
   "viem/index": "src/viem/index.ts",

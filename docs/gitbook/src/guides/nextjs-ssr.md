@@ -48,23 +48,17 @@ Create a dedicated client component that sets up the SDK providers. This keeps t
 import { WagmiProvider, createConfig, http } from "wagmi";
 import { sepolia } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ZamaProvider } from "@zama-fhe/react-sdk";
-import { RelayerWeb, indexedDBStorage } from "@zama-fhe/sdk";
-import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
+import { ZamaProvider, createZamaConfig, relayer } from "@zama-fhe/react-sdk";
 
 const wagmiConfig = createConfig({
   chains: [sepolia],
   transports: { [sepolia.id]: http() },
 });
 
-const signer = new WagmiSigner({ config: wagmiConfig });
-const relayer = new RelayerWeb({
-  getChainId: () => signer.getChainId(),
+const zamaConfig = createZamaConfig({
+  wagmiConfig,
   transports: {
-    [sepolia.id]: {
-      relayerUrl: "/api/relayer/11155111",
-      network: "https://sepolia.infura.io/v3/YOUR_KEY",
-    },
+    [sepolia.id]: relayer("/api/relayer/11155111"),
   },
 });
 
@@ -74,9 +68,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <ZamaProvider relayer={relayer} signer={signer} storage={indexedDBStorage}>
-          {children}
-        </ZamaProvider>
+        <ZamaProvider config={zamaConfig}>{children}</ZamaProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );

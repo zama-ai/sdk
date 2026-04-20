@@ -5,7 +5,7 @@ description: How to use the SDK in a Node.js server environment with worker thre
 
 # Node.js backend
 
-The SDK works in Node.js with the same API as in the browser. The main differences are the relayer implementation (native worker threads instead of Web Workers) and storage isolation for concurrent requests.
+The SDK works in Node.js with the same API as in the browser. The main differences are the transport (native worker threads instead of Web Workers) and storage isolation for concurrent requests.
 
 ## Steps
 
@@ -15,62 +15,50 @@ The SDK works in Node.js with the same API as in the browser. The main differenc
 npm install @zama-fhe/sdk viem
 ```
 
-### 2. Import RelayerNode from the `/node` sub-path
+### 2. Create the config with a `node()` transport
 
-The Node.js relayer uses native `worker_threads` instead of a Web Worker. It lives in a separate entry point to avoid pulling browser-only code into your server bundle.
+The `node()` transport uses native `worker_threads` for FHE operations. Pass `poolSize` in the second argument to control parallelism (default: `min(CPU cores, 4)`).
 
 ```ts
-import { ZamaSDK, SepoliaConfig, memoryStorage } from "@zama-fhe/sdk";
-import { RelayerNode, asyncLocalStorage } from "@zama-fhe/sdk/node";
-import { ViemSigner } from "@zama-fhe/sdk/viem";
+import { createZamaConfig, node, ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
+import { sepolia } from "@zama-fhe/sdk/chains";
 import { createPublicClient, createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { sepolia } from "viem/chains";
-```
+import { sepolia as sepoliaViem } from "viem/chains";
 
-### 3. Configure the relayer with a worker pool
-
-`RelayerNode` spawns a pool of worker threads for FHE operations. Use the `poolSize` option to control parallelism. The default is `min(CPU cores, 4)`.
-
-```ts
 const account = privateKeyToAccount(process.env.PRIVATE_KEY as `0x${string}`);
-const publicClient = createPublicClient({ chain: sepolia, transport: http() });
+const publicClient = createPublicClient({ chain: sepoliaViem, transport: http() });
 const walletClient = createWalletClient({
   account,
-  chain: sepolia,
+  chain: sepoliaViem,
   transport: http(),
 });
 
-const signer = new ViemSigner({ walletClient, publicClient });
-
-const relayer = new RelayerNode({
-  getChainId: () => signer.getChainId(),
-  poolSize: 4,
+const config = createZamaConfig({
+  chains: [sepolia],
+  viem: { publicClient, walletClient },
+  storage: memoryStorage,
   transports: {
-    [SepoliaConfig.chainId]: {
-      ...SepoliaConfig,
-      network: "https://sepolia.infura.io/v3/YOUR_KEY",
-      auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY! },
-    },
+    [sepolia.id]: node(
+      {
+        network: "https://sepolia.infura.io/v3/YOUR_KEY",
+        auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY! },
+      },
+      { poolSize: 4 },
+    ),
   },
 });
+
+const sdk = new ZamaSDK(config);
 ```
 
-### 4. Choose a storage backend
+### 3. Choose a storage backend
 
-For scripts and single-user CLIs, `memoryStorage` is the simplest option:
+For scripts and single-user CLIs, `memoryStorage` is the simplest option (shown above).
 
-```ts
-const sdk = new ZamaSDK({
-  relayer,
-  signer,
-  storage: memoryStorage,
-});
-```
+For servers handling multiple users concurrently, use `asyncLocalStorage` instead — see the next step.
 
-For servers handling multiple users concurrently, use `asyncLocalStorage` instead -- see the next step.
-
-### 5. Isolate per-request state with `asyncLocalStorage`
+### 4. Isolate per-request state with `asyncLocalStorage`
 
 On a server where each HTTP request belongs to a different user, you need per-request FHE keypair isolation. `asyncLocalStorage` wraps Node.js [`AsyncLocalStorage`](https://nodejs.org/api/async_context.html) to scope storage to the current async context.
 
@@ -83,7 +71,18 @@ const app = express();
 app.post("/api/transfer", (req, res) => {
   asyncLocalStorage.run(async () => {
     // Everything inside this callback has its own isolated storage
-    const sdk = new ZamaSDK({ relayer, signer, storage: asyncLocalStorage });
+    const config = createZamaConfig({
+      chains: [sepolia],
+      viem: { publicClient, walletClient },
+      storage: asyncLocalStorage,
+      transports: {
+        [sepolia.id]: node({
+          network: "https://sepolia.infura.io/v3/YOUR_KEY",
+          auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY! },
+        }),
+      },
+    });
+    const sdk = new ZamaSDK(config);
     const token = sdk.createToken("0xTokenAddress");
     await token.confidentialTransfer("0xRecipient", 100n);
     res.json({ ok: true });
@@ -93,7 +92,7 @@ app.post("/api/transfer", (req, res) => {
 
 Each call to `asyncLocalStorage.run()` creates a fresh storage scope. Concurrent requests never share FHE keypair state.
 
-### 6. Create tokens and operate
+### 5. Create tokens and operate
 
 The token API is identical to the browser SDK:
 
@@ -112,18 +111,14 @@ const balance = await token.balanceOf();
 
 See the [Token Operations](/reference/sdk/Token) reference for the full API.
 
-### 7. Use direct API key auth
+### 6. Use direct API key auth
 
-In a server environment, you can authenticate with the relayer directly -- there is no browser to leak the key to.
+In a server environment, you can authenticate with the relayer directly — there is no browser to leak the key to. Pass `auth` in the chain overrides:
 
 ```ts
-const transports = {
-  [SepoliaConfig.chainId]: {
-    ...SepoliaConfig,
-    network: "https://sepolia.infura.io/v3/YOUR_KEY",
-    auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY! },
-  },
-};
+node({
+  auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY! },
+});
 ```
 
 Other auth methods are also available:
@@ -136,7 +131,7 @@ auth: { __type: "ApiKeyCookie", value: "your-api-key" }
 auth: { __type: "BearerToken", token: "your-bearer-token" }
 ```
 
-### 8. Clean up on shutdown
+### 7. Clean up on shutdown
 
 Terminate the worker pool when your process exits:
 
@@ -150,4 +145,4 @@ process.on("SIGTERM", () => {
 
 - [RelayerNode](/reference/sdk/RelayerNode) -- full constructor options and pool behavior
 - [asyncLocalStorage](/reference/sdk/GenericStorage) -- the `GenericStorage` interface it implements
-- [Configuration](/guides/configuration) -- authentication options, network presets, and session management
+- [Configuration](/guides/configuration) -- chains, transports, authentication, and session management

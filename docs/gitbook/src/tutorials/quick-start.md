@@ -17,10 +17,10 @@ The relayer requires an API key. In browser apps, proxy requests through your ba
 
 ```ts
 // Browser apps: proxy through your backend (recommended)
-relayerUrl: "https://your-app.com/api/relayer/11155111"
+web({ relayerUrl: "https://your-app.com/api/relayer/11155111" });
 
 // Server-side / prototyping: pass the key directly
-auth: { __type: "ApiKeyHeader", value: "your-api-key" }
+node({ auth: { __type: "ApiKeyHeader", value: "your-api-key" } });
 ```
 
 See [Authentication](/guides/authentication) for a backend proxy example.
@@ -31,7 +31,7 @@ See [Authentication](/guides/authentication) for a backend proxy example.
 {% tab title="React + wagmi" %}
 
 ```bash
-pnpm add @zama-fhe/react-sdk @zama-fhe/sdk @tanstack/react-query wagmi viem
+pnpm add @zama-fhe/react-sdk @tanstack/react-query wagmi viem
 ```
 
 {% endtab %}
@@ -75,9 +75,8 @@ import { WagmiProvider, createConfig, http } from "wagmi";
 import { sepolia } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ZamaProvider } from "@zama-fhe/react-sdk";
-import { RelayerWeb, indexedDBStorage } from "@zama-fhe/sdk";
-import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
+import { ZamaProvider, createZamaConfig, web } from "@zama-fhe/react-sdk";
+import { sepolia as sepoliaFhe } from "@zama-fhe/sdk/chains";
 
 const wagmiConfig = createConfig({
   chains: [sepolia],
@@ -87,14 +86,11 @@ const wagmiConfig = createConfig({
   },
 });
 
-const signer = new WagmiSigner({ config: wagmiConfig });
-const relayer = new RelayerWeb({
-  getChainId: () => signer.getChainId(),
+const zamaConfig = createZamaConfig({
+  chains: [sepoliaFhe],
+  wagmiConfig,
   transports: {
-    [sepolia.id]: {
-      relayerUrl: "https://your-app.com/api/relayer/11155111",
-      network: "https://sepolia.infura.io/v3/YOUR_KEY",
-    },
+    [sepoliaFhe.id]: web({ relayerUrl: "https://your-app.com/api/relayer/11155111" }),
   },
 });
 const queryClient = new QueryClient();
@@ -103,7 +99,7 @@ function App() {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <ZamaProvider relayer={relayer} signer={signer} storage={indexedDBStorage}>
+        <ZamaProvider config={zamaConfig}>
           <MyTokenPage />
         </ZamaProvider>
       </QueryClientProvider>
@@ -118,8 +114,8 @@ function App() {
 ```ts
 import { createPublicClient, createWalletClient, custom, http } from "viem";
 import { sepolia } from "viem/chains";
-import { ZamaSDK, RelayerWeb, indexedDBStorage } from "@zama-fhe/sdk";
-import { ViemSigner } from "@zama-fhe/sdk/viem";
+import { createZamaConfig, web, ZamaSDK } from "@zama-fhe/sdk";
+import { sepolia as sepoliaFhe } from "@zama-fhe/sdk/chains";
 
 const publicClient = createPublicClient({
   chain: sepolia,
@@ -129,120 +125,109 @@ const walletClient = createWalletClient({
   chain: sepolia,
   transport: custom(window.ethereum!),
 });
-const signer = new ViemSigner({ walletClient, publicClient });
 
-const sdk = new ZamaSDK({
-  relayer: new RelayerWeb({
-    getChainId: () => signer.getChainId(),
-    transports: {
-      [sepolia.id]: {
-        relayerUrl: "https://your-app.com/api/relayer/11155111",
-        network: "https://sepolia.infura.io/v3/YOUR_KEY",
-      },
-    },
-  }),
-  signer,
-  storage: indexedDBStorage,
+const config = createZamaConfig({
+  chains: [sepoliaFhe],
+  viem: { publicClient, walletClient },
+  transports: {
+    [sepoliaFhe.id]: web({ relayerUrl: "https://your-app.com/api/relayer/11155111" }),
+  },
 });
+
+const sdk = new ZamaSDK(config);
 ```
 
 {% endtab %}
 {% tab title="ethers" %}
 
 ```ts
-import { ZamaSDK, RelayerWeb, indexedDBStorage } from "@zama-fhe/sdk";
-import { EthersSigner } from "@zama-fhe/sdk/ethers";
+import { createZamaConfig, web, ZamaSDK } from "@zama-fhe/sdk";
+import { sepolia } from "@zama-fhe/sdk/chains";
 
-const signer = new EthersSigner({ ethereum: window.ethereum! });
-
-const sdk = new ZamaSDK({
-  relayer: new RelayerWeb({
-    getChainId: () => signer.getChainId(),
-    transports: {
-      [11155111]: {
-        relayerUrl: "https://your-app.com/api/relayer/11155111",
-        network: "https://sepolia.infura.io/v3/YOUR_KEY",
-      },
-    },
-  }),
-  signer,
-  storage: indexedDBStorage,
+const config = createZamaConfig({
+  chains: [sepolia],
+  ethers: { ethereum: window.ethereum! },
+  transports: {
+    [sepolia.id]: web({ relayerUrl: "https://your-app.com/api/relayer/11155111" }),
+  },
 });
+
+const sdk = new ZamaSDK(config);
 ```
 
 {% endtab %}
 {% tab title="Node.js (viem)" %}
 
 ```ts
-import { ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
-import { RelayerNode } from "@zama-fhe/sdk/node";
-import { ViemSigner } from "@zama-fhe/sdk/viem";
+import { createZamaConfig, node, ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
+import { sepolia } from "@zama-fhe/sdk/chains";
 import { createPublicClient, createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { sepolia } from "viem/chains";
+import { sepolia as sepoliaViem } from "viem/chains";
 
 const account = privateKeyToAccount(process.env.PRIVATE_KEY as `0x${string}`);
 const publicClient = createPublicClient({
-  chain: sepolia,
+  chain: sepoliaViem,
   transport: http(process.env.RPC_URL),
 });
 const walletClient = createWalletClient({
   account,
-  chain: sepolia,
+  chain: sepoliaViem,
   transport: http(process.env.RPC_URL),
 });
-const signer = new ViemSigner({ walletClient, publicClient });
 
-const sdk = new ZamaSDK({
-  relayer: new RelayerNode({
-    getChainId: () => signer.getChainId(),
-    poolSize: 4,
-    transports: {
-      [sepolia.id]: {
+const config = createZamaConfig({
+  chains: [sepolia],
+  viem: { publicClient, walletClient },
+  storage: memoryStorage,
+  transports: {
+    [sepolia.id]: node(
+      {
         network: process.env.RPC_URL!,
         auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY! },
       },
-    },
-  }),
-  signer,
-  storage: memoryStorage,
+      { poolSize: 4 },
+    ),
+  },
 });
+
+const sdk = new ZamaSDK(config);
 ```
 
 {% endtab %}
 {% tab title="Node.js (ethers)" %}
 
 ```ts
-import { ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
-import { RelayerNode } from "@zama-fhe/sdk/node";
-import { EthersSigner } from "@zama-fhe/sdk/ethers";
+import { createZamaConfig, node, ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
+import { sepolia } from "@zama-fhe/sdk/chains";
 import { Wallet, JsonRpcProvider } from "ethers";
 
 const provider = new JsonRpcProvider(process.env.RPC_URL);
 const wallet = new Wallet(process.env.PRIVATE_KEY!, provider);
-const signer = new EthersSigner({ signer: wallet });
 
-const sdk = new ZamaSDK({
-  relayer: new RelayerNode({
-    getChainId: () => signer.getChainId(),
-    poolSize: 4,
-    transports: {
-      [11155111]: {
+const config = createZamaConfig({
+  chains: [sepolia],
+  ethers: { signer: wallet },
+  storage: memoryStorage,
+  transports: {
+    [sepolia.id]: node(
+      {
         network: process.env.RPC_URL!,
         auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY! },
       },
-    },
-  }),
-  signer,
-  storage: memoryStorage,
+      { poolSize: 4 },
+    ),
+  },
 });
+
+const sdk = new ZamaSDK(config);
 ```
 
 {% endtab %}
 {% endtabs %}
 
 {% hint style="info" %}
-**FHE artifact caching** — Both `RelayerWeb` and `RelayerNode` automatically cache the multi-MB FHE public key and parameters so they are not re-downloaded on every startup. `RelayerWeb` uses IndexedDB (persists across reloads), `RelayerNode` uses in-memory storage (lost on restart). The cache revalidates against the CDN every 24 hours. Configure via `fheArtifactStorage` and `fheArtifactCacheTTL`. See [FheArtifactCache](/reference/sdk/FheArtifactCache) for details.
+**FHE artifact caching** — Both `web()` and `node()` transports automatically cache the multi-MB FHE public key and parameters so they are not re-downloaded on every startup. Browser uses IndexedDB (persists across reloads), Node.js uses in-memory storage (lost on restart). The cache revalidates against the CDN every 24 hours. Configure via the relayer options in the second argument. See [FheArtifactCache](/reference/sdk/FheArtifactCache) for details.
 {% endhint %}
 
 ## Your first confidential transfer
@@ -422,8 +407,8 @@ The hooks and SDK methods handle FHE encryption, wallet signing, ERC-20 approval
 
 ## Next steps
 
-- [Configuration](/guides/configuration) -- relayer, signer, storage, and authentication setup
+- [Configuration](/guides/configuration) -- chains, transports, signer, storage, and authentication setup
 - [Shield Tokens](/guides/shield-tokens) -- move tokens into confidential form
-- [Network Presets](/reference/sdk/network-presets) -- pre-configured contract addresses for Sepolia, Mainnet, and Hardhat
+- [Chain Objects](/reference/sdk/network-presets) -- pre-configured chain definitions for Sepolia, Mainnet, and more
 - [React Hooks](/reference/react/ZamaProvider) -- provider setup and all available hooks
 - [Security Model](/concepts/security-model) -- understand the cryptography and trust assumptions

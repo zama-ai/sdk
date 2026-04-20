@@ -10,6 +10,7 @@ import type {
 import type { Address, Hex } from "viem";
 import type { GenericLogger } from "../worker/worker.types";
 import type { GenericStorage } from "../types";
+import type { ExtendedFhevmInstanceConfig } from "./relayer-utils";
 
 // ============================================================================
 // Application Types
@@ -36,9 +37,8 @@ export interface RelayerWebSecurityConfig {
 
 /** Configuration for RelayerWeb (browser backend) initialization. */
 export interface RelayerWebConfig {
-  transports: Record<number, Partial<SDK.FhevmInstanceConfig>>;
-  /** Resolve the current chain ID. Called lazily before each operation; the worker is re-initialized when the value changes. */
-  getChainId: () => Promise<number>;
+  /** Single chain FHE configuration (addresses, URLs, chain ID). */
+  chain: ExtendedFhevmInstanceConfig;
   /** Security options (CSRF, CDN integrity). */
   security?: RelayerWebSecurityConfig;
   /** Optional logger for observing worker lifecycle and request timing. */

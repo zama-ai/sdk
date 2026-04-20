@@ -66,8 +66,7 @@ const MOCK_EIP712 = {
 
 function createRelayer() {
   return new RelayerWeb({
-    transports: { 1: {} },
-    getChainId: async () => 1,
+    chain: { chainId: 1 } as any,
   });
 }
 

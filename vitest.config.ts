@@ -5,6 +5,7 @@ import path from "node:path";
 function iifeStub(): Plugin {
   return {
     name: "iife-stub",
+    enforce: "pre",
     resolveId(source) {
       if (source.endsWith("?iife")) {
         return `\0${source}`;

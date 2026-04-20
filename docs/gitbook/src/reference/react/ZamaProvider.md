@@ -22,23 +22,19 @@ import { ZamaProvider } from "@zama-fhe/react-sdk";
 import { WagmiProvider, createConfig, http } from "wagmi";
 import { sepolia } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ZamaProvider } from "@zama-fhe/react-sdk";
-import { RelayerWeb, indexedDBStorage } from "@zama-fhe/sdk";
-import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
+import { ZamaProvider, createZamaConfig, web } from "@zama-fhe/react-sdk";
+import { sepolia as sepoliaFhe } from "@zama-fhe/sdk/chains";
 
 const wagmiConfig = createConfig({
   chains: [sepolia],
   transports: { [sepolia.id]: http("https://sepolia.infura.io/v3/YOUR_KEY") },
 });
 
-const signer = new WagmiSigner({ config: wagmiConfig });
-const relayer = new RelayerWeb({
-  getChainId: () => signer.getChainId(),
+const zamaConfig = createZamaConfig({
+  chains: [sepoliaFhe],
+  wagmiConfig,
   transports: {
-    [sepolia.id]: {
-      relayerUrl: "https://your-app.com/api/relayer/11155111",
-      network: "https://sepolia.infura.io/v3/YOUR_KEY",
-    },
+    [sepoliaFhe.id]: web({ relayerUrl: "https://your-app.com/api/relayer/11155111" }),
   },
 });
 const queryClient = new QueryClient();
@@ -47,7 +43,7 @@ function App() {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <ZamaProvider relayer={relayer} signer={signer} storage={indexedDBStorage}>
+        <ZamaProvider config={zamaConfig}>
           <YourApp />
         </ZamaProvider>
       </QueryClientProvider>
@@ -60,20 +56,26 @@ function App() {
 {% tab title="viem setup" %}
 
 ```tsx
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ZamaProvider } from "@zama-fhe/react-sdk";
-import { RelayerWeb, indexedDBStorage } from "@zama-fhe/sdk";
-import { ViemSigner } from "@zama-fhe/sdk/viem";
+import { createPublicClient, createWalletClient, custom, http } from "viem";
 import { sepolia } from "viem/chains";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ZamaProvider, createZamaConfig, web } from "@zama-fhe/react-sdk";
+import { sepolia as sepoliaFhe } from "@zama-fhe/sdk/chains";
 
-const signer = new ViemSigner({ walletClient, publicClient });
-const relayer = new RelayerWeb({
-  getChainId: () => signer.getChainId(),
+const publicClient = createPublicClient({
+  chain: sepolia,
+  transport: http("https://sepolia.infura.io/v3/YOUR_KEY"),
+});
+const walletClient = createWalletClient({
+  chain: sepolia,
+  transport: custom(window.ethereum!),
+});
+
+const zamaConfig = createZamaConfig({
+  chains: [sepoliaFhe],
+  viem: { publicClient, walletClient },
   transports: {
-    [sepolia.id]: {
-      relayerUrl: "https://your-app.com/api/relayer/11155111",
-      network: "https://sepolia.infura.io/v3/YOUR_KEY",
-    },
+    [sepoliaFhe.id]: web({ relayerUrl: "https://your-app.com/api/relayer/11155111" }),
   },
 });
 const queryClient = new QueryClient();
@@ -81,7 +83,35 @@ const queryClient = new QueryClient();
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ZamaProvider relayer={relayer} signer={signer} storage={indexedDBStorage}>
+      <ZamaProvider config={zamaConfig}>
+        <YourApp />
+      </ZamaProvider>
+    </QueryClientProvider>
+  );
+}
+```
+
+{% endtab %}
+{% tab title="cleartext (local dev)" %}
+
+```tsx
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ZamaProvider, createZamaConfig, cleartext } from "@zama-fhe/react-sdk";
+import { hardhat } from "@zama-fhe/sdk/chains";
+
+const zamaConfig = createZamaConfig({
+  chains: [hardhat],
+  signer: myCustomSigner,
+  transports: {
+    [hardhat.id]: cleartext({ executorAddress: "0x..." }),
+  },
+});
+const queryClient = new QueryClient();
+
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ZamaProvider config={zamaConfig}>
         <YourApp />
       </ZamaProvider>
     </QueryClientProvider>
@@ -98,49 +128,11 @@ function App() {
 import { type ZamaProviderProps } from "@zama-fhe/react-sdk";
 ```
 
-### relayer
+### config
 
-`RelayerWeb | RelayerNode`
+`ZamaConfig`
 
-Relayer instance that submits encrypted transactions on the user's behalf.
-
-### signer
-
-`WagmiSigner | ViemSigner | EthersSigner | GenericSigner`
-
-Signer that provides wallet connectivity for signing FHE keypair authorizations and transactions.
-
-### storage
-
-`GenericStorage`
-
-Persistent storage backend for encrypted FHE keypairs and cached balances. Use `indexedDBStorage` for browsers or `memoryStorage` for tests.
-
----
-
-### sessionStorage
-
-`GenericStorage | undefined`
-
-Storage backend for wallet session signatures. Defaults to in-memory storage. Pass `chromeSessionStorage` for web extensions so signatures survive service worker restarts.
-
-### keypairTTL
-
-`number | undefined`
-
-FHE keypair lifetime in seconds. After expiry a fresh keypair is generated and the wallet prompts again. Default: `86400` (1 day).
-
-### sessionTTL
-
-`number | undefined`
-
-Session signature lifetime in seconds. After expiry the user re-signs once to unlock their existing FHE keypair. Default: `2592000` (30 days).
-
-### onEvent
-
-`ZamaSDKEventListener | undefined`
-
-Callback fired for SDK lifecycle events (keypair generation, signing, encryption, decryption). Useful for analytics and debugging.
+Configuration object created by [`createZamaConfig`](/guides/configuration). Wires together chains, transports, signer, and storage for the SDK.
 
 ## Related
 

@@ -4,27 +4,24 @@
  */
 import { nodeTest as test, expect } from "../../fixtures/node-test";
 import { RelayerNode } from "@zama-fhe/sdk/node";
-import { MemoryStorage, ZamaSDK, HardhatConfig } from "@zama-fhe/sdk";
+import { MemoryStorage, ZamaSDK } from "@zama-fhe/sdk";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 import { createPublicClient, http, type Address } from "viem";
 import { foundry } from "viem/chains";
 
 test("backend bootstraps SDK, verifies FHE infra, and shuts down cleanly", async ({
-  transport,
+  chain,
   viemClient,
   contracts,
 }) => {
   // 1. Server creates RelayerNode with worker pool
   const relayer = new RelayerNode({
-    getChainId: async () => HardhatConfig.chainId,
-    transports: {
-      [HardhatConfig.chainId]: transport,
-    },
+    chain,
     poolSize: 2,
   });
   const publicClient = createPublicClient({
     chain: foundry,
-    transport: http(transport.network as string),
+    transport: http(chain.network as string),
   });
   const signer = new ViemSigner({ walletClient: viemClient, publicClient });
 

@@ -133,12 +133,12 @@ describe("ZamaSDK", () => {
     const chainId = await signer.getChainId();
     const storeKey = await CredentialsManager.computeStoreKey(address, chainId);
 
-    await sessionStorage.set(storeKey, "0xsomeSignature");
-    expect(await sessionStorage.get(storeKey)).toBe("0xsomeSignature");
+    await sessionStorage.set(`signature:${storeKey}`, "0xsomeSignature");
+    expect(await sessionStorage.get(`signature:${storeKey}`)).toBe("0xsomeSignature");
 
     await sdk.credentials.revoke();
 
-    expect(await sessionStorage.get(storeKey)).toBeNull();
+    expect(await sessionStorage.get(`signature:${storeKey}`)).toBeNull();
   });
 
   it("revokeSession clears session storage", async ({
@@ -153,12 +153,12 @@ describe("ZamaSDK", () => {
     const chainId = await signer.getChainId();
     const storeKey = await CredentialsManager.computeStoreKey(address, chainId);
 
-    await sessionStorage.set(storeKey, "0xsomeSignature");
-    expect(await sessionStorage.get(storeKey)).toBe("0xsomeSignature");
+    await sessionStorage.set(`signature:${storeKey}`, "0xsomeSignature");
+    expect(await sessionStorage.get(`signature:${storeKey}`)).toBe("0xsomeSignature");
 
     await sdk.revokeSession();
 
-    expect(await sessionStorage.get(storeKey)).toBeNull();
+    expect(await sessionStorage.get(`signature:${storeKey}`)).toBeNull();
   });
 
   it("revokeSession emits CredentialsRevoked event", async ({ relayer, signer, storage }) => {
@@ -493,7 +493,7 @@ describe("ZamaSDK", () => {
 
       // Seed account A's session
       const keyA = await CredentialsManager.computeStoreKey(userAddress, 31337);
-      await sessionStorage.set(keyA, "0xsigA");
+      await sessionStorage.set(`signature:${keyA}`, "0xsigA");
 
       // Simulate account change: signer now reports account B
       (signer.getAddress as Mock).mockResolvedValue(NEXT_USER_ADDRESS);
@@ -503,12 +503,12 @@ describe("ZamaSDK", () => {
 
       // Wait for async revoke to complete
       await vi.waitFor(async () => {
-        expect(await sessionStorage.get(keyA)).toBeNull();
+        expect(await sessionStorage.get(`signature:${keyA}`)).toBeNull();
       });
 
       // Account B's key should be untouched (it was never seeded)
       const keyB = await CredentialsManager.computeStoreKey(NEXT_USER_ADDRESS, 31337);
-      expect(await sessionStorage.get(keyB)).toBeNull();
+      expect(await sessionStorage.get(`signature:${keyB}`)).toBeNull();
 
       sdk.terminate();
     });
@@ -542,23 +542,23 @@ describe("ZamaSDK", () => {
       const keyB = await CredentialsManager.computeStoreKey(NEXT_USER_ADDRESS, 31337);
 
       // A has a session
-      await sessionStorage.set(keyA, "0xsigA");
+      await sessionStorage.set(`signature:${keyA}`, "0xsigA");
 
       // Switch A → B
       (signer.getAddress as Mock).mockResolvedValue(NEXT_USER_ADDRESS);
       subscribeCbs!.onAccountChange(NEXT_USER_ADDRESS);
       await vi.waitFor(async () => {
-        expect(await sessionStorage.get(keyA)).toBeNull();
+        expect(await sessionStorage.get(`signature:${keyA}`)).toBeNull();
       });
 
       // B gets a session
-      await sessionStorage.set(keyB, "0xsigB");
+      await sessionStorage.set(`signature:${keyB}`, "0xsigB");
 
       // Switch B → A
       (signer.getAddress as Mock).mockResolvedValue(userAddress);
       subscribeCbs!.onAccountChange(userAddress);
       await vi.waitFor(async () => {
-        expect(await sessionStorage.get(keyB)).toBeNull();
+        expect(await sessionStorage.get(`signature:${keyB}`)).toBeNull();
       });
 
       sdk.terminate();
@@ -590,14 +590,14 @@ describe("ZamaSDK", () => {
       });
 
       const keyA = await CredentialsManager.computeStoreKey(userAddress, 31337);
-      await sessionStorage.set(keyA, "0xsigA");
+      await sessionStorage.set(`signature:${keyA}`, "0xsigA");
 
       // Signer may throw on getAddress after disconnect
       (signer.getAddress as Mock).mockRejectedValue(new Error("disconnected"));
 
       subscribeCbs!.onDisconnect();
       await vi.waitFor(async () => {
-        expect(await sessionStorage.get(keyA)).toBeNull();
+        expect(await sessionStorage.get(`signature:${keyA}`)).toBeNull();
       });
 
       sdk.terminate();
@@ -631,12 +631,12 @@ describe("ZamaSDK", () => {
         "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address,
         31337,
       );
-      await sessionStorage.set(oldKey, "0xsigA");
+      await sessionStorage.set(`signature:${oldKey}`, "0xsigA");
 
       subscribeCbs!.onChainChange(1);
 
       await vi.waitFor(async () => {
-        expect(await sessionStorage.get(oldKey)).toBeNull();
+        expect(await sessionStorage.get(`signature:${oldKey}`)).toBeNull();
       });
 
       (signer.getChainId as Mock).mockResolvedValue(1);
@@ -644,11 +644,11 @@ describe("ZamaSDK", () => {
         "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address,
         1,
       );
-      await sessionStorage.set(newKey, "0xsigB");
+      await sessionStorage.set(`signature:${newKey}`, "0xsigB");
 
       await sdk.revokeSession();
 
-      expect(await sessionStorage.get(newKey)).toBeNull();
+      expect(await sessionStorage.get(`signature:${newKey}`)).toBeNull();
 
       sdk.terminate();
     });
