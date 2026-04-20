@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { createZamaConfig, web } from "@zama-fhe/sdk";
-import { createZamaConfig as createWagmiZamaConfig } from "../wagmi/create-zama-config";
+import { createZamaConfig as createWagmiZamaConfig } from "../wagmi/config";
 import { createMockSigner, createMockStorage } from "../../../sdk/src/test-fixtures";
 import { sepolia } from "@zama-fhe/sdk/chains";
 import { WagmiSigner } from "../wagmi/wagmi-signer";
