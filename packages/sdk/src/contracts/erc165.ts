@@ -4,7 +4,7 @@ import { erc165Abi } from "../abi/erc165.abi";
 /** ERC-165 interface ID for IERC7984 (confidential fungible token). */
 export const ERC7984_INTERFACE_ID = "0x4958f2a4" as const;
 
-/** ERC-165 interface ID for IERC7984ERC20Wrapper (confidential wrapper) — pre-upgrade deployed baseline. */
+/** ERC-165 interface ID for IERC7984ERC20Wrapper (confidential wrapper) — current deployed baseline. */
 export const ERC7984_WRAPPER_INTERFACE_ID_LEGACY = "0xd04584ba" as const;
 
 /**
@@ -57,7 +57,7 @@ export function isConfidentialTokenContract(tokenAddress: Address) {
 
 /**
  * Returns contract config to check if a token implements IERC7984ERC20Wrapper (confidential wrapper)
- * using the **pre-upgrade deployed baseline** interface ID
+ * using the **current deployed baseline** interface ID
  * ({@link ERC7984_WRAPPER_INTERFACE_ID_LEGACY}, `0xd04584ba`).
  *
  * Note: During the transition period, calling this alone is insufficient. Upgraded wrappers

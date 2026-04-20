@@ -1,8 +1,8 @@
 import {
-  ERC7984_WRAPPER_INTERFACE_ID,
   isConfidentialTokenContract,
   isConfidentialWrapperContract,
   supportsInterfaceContract,
+  ERC7984_WRAPPER_INTERFACE_ID,
 } from "../contracts";
 import type { GenericSigner } from "../types";
 import { isContractCallError } from "../utils";
