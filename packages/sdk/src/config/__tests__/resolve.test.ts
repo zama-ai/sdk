@@ -15,6 +15,12 @@ vi.mock(import("../../relayer/relayer-node"), async () => ({
   }),
 }));
 
+vi.mock(import("../../relayer/cleartext/relayer-cleartext"), async () => ({
+  RelayerCleartext: vi.fn().mockImplementation(function (this: any) {
+    this.terminate = vi.fn();
+  }),
+}));
+
 // Import after mocks
 const { resolveChainTransports, buildRelayer } = await import("../resolve");
 
