@@ -570,41 +570,6 @@ export interface CleartextTransportConfig {
 export { ClearValueType }
 
 // @public
-export class CompositeRelayer implements RelayerSDK {
-    constructor(resolveChainId: () => Promise<number>, relayers: Map<number, Promise<RelayerSDK>>);
-    // (undocumented)
-    createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type>;
-    // (undocumented)
-    createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
-    // (undocumented)
-    delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
-    // (undocumented)
-    encrypt(params: EncryptParams): Promise<EncryptResult>;
-    // (undocumented)
-    generateKeypair(): Promise<KeypairType<Hex>>;
-    // (undocumented)
-    getAclAddress(): Promise<Address>;
-    // (undocumented)
-    getPublicKey(): Promise<{
-        publicKeyId: string;
-        publicKey: Uint8Array;
-    } | null>;
-    // (undocumented)
-    getPublicParams(bits: number): Promise<{
-        publicParams: Uint8Array;
-        publicParamsId: string;
-    } | null>;
-    // (undocumented)
-    publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
-    // (undocumented)
-    requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
-    // (undocumented)
-    terminate(): void;
-    // (undocumented)
-    userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
-}
-
-// @public
 export function confidentialBalanceOfContract(tokenAddress: Address, userAddress: Address): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
@@ -6528,6 +6493,12 @@ export const ERC7984_WRAPPER_INTERFACE_ID_LEGACY: "0xf1f4c25a";
 // @public
 export interface ExtendedFhevmInstanceConfig extends FhevmInstanceConfig {
     registryAddress: Address | undefined;
+}
+
+// @public (undocumented)
+export interface FheChain extends Omit<ExtendedFhevmInstanceConfig, "chainId"> {
+    // (undocumented)
+    readonly id: number;
 }
 
 export { FheTypeName }
@@ -13147,7 +13118,7 @@ export interface RelayerWebSecurityConfig {
 }
 
 // @public (undocumented)
-export function resolveChainTransports(chains: ExtendedFhevmInstanceConfig[], transports: Record<number, TransportConfig> | undefined, chainIds: number[]): Map<number, ResolvedChainTransport>;
+export function resolveChainTransports(chains: FheChain[], transports: Record<number, TransportConfig> | undefined, chainIds: number[]): Map<number, ResolvedChainTransport>;
 
 // @public (undocumented)
 export function resolveStorage(storage: GenericStorage | undefined, sessionStorage: GenericStorage | undefined): {
@@ -20759,7 +20730,7 @@ export interface ZamaConfig {
 
 // @public
 export interface ZamaConfigBase {
-    chains: ExtendedFhevmInstanceConfig[];
+    chains: FheChain[];
     keypairTTL?: number;
     onEvent?: ZamaSDKEventListener;
     registryTTL?: number;

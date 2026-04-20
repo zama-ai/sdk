@@ -51,8 +51,8 @@ export type TransportConfig = WebTransportConfig | NodeTransportConfig | Clearte
 /**
  * Browser transport — routes to RelayerWeb (Web Worker + WASM).
  *
- * @param chain Per-chain FHE instance overrides (e.g. `relayerUrl`, `network`).
- * @param relayer Shared relayer-pool options (e.g. `threads`, `logger`). Chains
+ * @param chain - Per-chain FHE instance overrides (e.g. `relayerUrl`, `network`).
+ * @param relayer - Shared relayer-pool options (e.g. `threads`, `logger`). Chains
  *   that pass the *same* `relayer` object reuse a single relayer instance.
  *
  * @example
@@ -73,8 +73,8 @@ export function web(
 /**
  * Node.js transport — routes to RelayerNode (worker thread pool).
  *
- * @param chain Per-chain FHE instance overrides.
- * @param relayer Shared relayer-pool options (e.g. `poolSize`, `logger`).
+ * @param chain - Per-chain FHE instance overrides.
+ * @param relayer - Shared relayer-pool options (e.g. `poolSize`, `logger`).
  *
  * @example
  * ```ts

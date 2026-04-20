@@ -67,6 +67,7 @@ export {
   SepoliaConfig,
 } from "./relayer/relayer-utils";
 export type { ExtendedFhevmInstanceConfig } from "./relayer/relayer-utils";
+export type { FheChain } from "./chains/types";
 
 // ERC-165 interface IDs
 export {
