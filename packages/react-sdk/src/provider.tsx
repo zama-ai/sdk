@@ -11,7 +11,7 @@ import {
   useMemo,
   useRef,
 } from "react";
-import type { ZamaConfig } from "./config";
+import type { ZamaConfig } from "@zama-fhe/sdk";
 
 /** Props for {@link ZamaProvider}. */
 export interface ZamaProviderProps extends PropsWithChildren {

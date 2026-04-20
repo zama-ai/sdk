@@ -10,17 +10,6 @@
 // Provider
 export { ZamaProvider, useZamaSDK, type ZamaProviderProps } from "./provider";
 
-// Config
-export { createZamaConfig, web, node, cleartext } from "./config";
-export type {
-  ZamaConfig,
-  CreateZamaConfigParams,
-  ZamaConfigWagmi,
-  ZamaConfigViem,
-  ZamaConfigEthers,
-  ZamaConfigCustomSigner,
-} from "./config";
-
 // SDK method hooks
 export { useEncrypt } from "./relayer/use-encrypt";
 export { useUserDecrypt, type UseUserDecryptResult } from "./relayer/use-user-decrypt";

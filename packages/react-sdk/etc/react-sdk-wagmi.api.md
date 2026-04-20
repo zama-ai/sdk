@@ -19,6 +19,11 @@ import { TransactionReceipt } from '@zama-fhe/sdk';
 import { WriteContractArgs } from '@zama-fhe/sdk';
 import { WriteContractConfig } from '@zama-fhe/sdk';
 import { WriteFunctionName } from '@zama-fhe/sdk';
+import { ZamaConfig } from '@zama-fhe/sdk';
+import { ZamaConfigBase } from '@zama-fhe/sdk';
+
+// @public
+export function createZamaConfig(params: ZamaConfigWagmi): ZamaConfig;
 
 // @public
 export class WagmiSigner implements GenericSigner {
@@ -45,6 +50,20 @@ export class WagmiSigner implements GenericSigner {
 export interface WagmiSignerConfig {
     // (undocumented)
     config: Config;
+}
+
+// @public
+export interface ZamaConfigWagmi<T = Config> extends ZamaConfigBase {
+    // (undocumented)
+    ethers?: never;
+    // (undocumented)
+    relayer?: never;
+    // (undocumented)
+    signer?: never;
+    // (undocumented)
+    viem?: never;
+    // (undocumented)
+    wagmiConfig: T;
 }
 
 // (No @packageDocumentation comment for this package)

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { createZamaConfig, web } from "../config";
+import { createZamaConfig, web } from "@zama-fhe/sdk";
+import { createZamaConfig as createWagmiZamaConfig } from "../wagmi/create-zama-config";
 import { createMockSigner, createMockStorage } from "../../../sdk/src/test-fixtures";
 import { sepolia } from "@zama-fhe/sdk/chains";
 import { WagmiSigner } from "../wagmi/wagmi-signer";
@@ -54,7 +55,7 @@ describe("createZamaConfig", () => {
   describe("signer resolution", () => {
     it("creates WagmiSigner from wagmiConfig", () => {
       const wagmiConfig = mockWagmiConfig();
-      createZamaConfig({ chains: [sepolia], wagmiConfig });
+      createWagmiZamaConfig({ chains: [sepolia], wagmiConfig });
       expect(MockWagmiSigner).toHaveBeenCalledWith({ config: wagmiConfig });
     });
 
@@ -96,7 +97,7 @@ describe("createZamaConfig", () => {
 
   describe("transport resolution", () => {
     it("auto-resolves transports from wagmi chains using chains array", () => {
-      const config = createZamaConfig({
+      const config = createWagmiZamaConfig({
         chains: [sepolia],
         wagmiConfig: mockWagmiConfig([11155111]),
       });
@@ -104,7 +105,7 @@ describe("createZamaConfig", () => {
     });
 
     it("merges user overrides on top of defaults", () => {
-      const config = createZamaConfig({
+      const config = createWagmiZamaConfig({
         chains: [sepolia],
         wagmiConfig: mockWagmiConfig([11155111]),
         transports: {
@@ -116,7 +117,7 @@ describe("createZamaConfig", () => {
 
     it("throws for unknown chains with no override", () => {
       expect(() =>
-        createZamaConfig({
+        createWagmiZamaConfig({
           chains: [sepolia],
           wagmiConfig: mockWagmiConfig([999999]),
         }),
@@ -125,7 +126,7 @@ describe("createZamaConfig", () => {
 
     it("throws for unknown chains even with transport override but no chain config", () => {
       expect(() =>
-        createZamaConfig({
+        createWagmiZamaConfig({
           chains: [],
           wagmiConfig: mockWagmiConfig([999999]),
           transports: { [999999]: web({ relayerUrl: "https://custom.com" }) },
