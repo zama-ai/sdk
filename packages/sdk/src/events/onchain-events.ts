@@ -29,16 +29,20 @@ export const Topics = {
   // compatibility with older deployments.
   /** `Wrapped(address indexed to, uint256 amountIn)` */
   Wrapped: eventTopic("Wrapped(address,uint256)"),
-  /** `UnwrapRequested(address indexed receiver, bytes32 amount)` */
-  UnwrapRequested: eventTopic("UnwrapRequested(address,bytes32)"),
   /** `UnwrapRequested(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 amount)` */
+  UnwrapRequested: eventTopic("UnwrapRequested(address,bytes32,bytes32)"),
+  /** `UnwrapRequested(address indexed receiver, bytes32 amount)` */
+  UnwrapRequestedLegacy: eventTopic("UnwrapRequested(address,bytes32)"),
+  /** @deprecated Use `Topics.UnwrapRequested`. */
   UnwrapRequestedWithRequestId: eventTopic("UnwrapRequested(address,bytes32,bytes32)"),
-  /** `UnwrapFinalized(address indexed receiver, bytes32 encryptedAmount, uint64 cleartextAmount)` */
-  UnwrapFinalized: eventTopic("UnwrapFinalized(address,bytes32,uint64)"),
   /** `UnwrapFinalized(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 encryptedAmount, uint64 cleartextAmount)` */
+  UnwrapFinalized: eventTopic("UnwrapFinalized(address,bytes32,bytes32,uint64)"),
+  /** `UnwrapFinalized(address indexed receiver, bytes32 encryptedAmount, uint64 cleartextAmount)` */
+  UnwrapFinalizedLegacy: eventTopic("UnwrapFinalized(address,bytes32,uint64)"),
+  /** @deprecated Use `Topics.UnwrapFinalized`. */
   UnwrapFinalizedWithRequestId: eventTopic("UnwrapFinalized(address,bytes32,bytes32,uint64)"),
   /** @deprecated Use `Topics.UnwrapFinalized`. */
-  UnwrappedFinalized: eventTopic("UnwrapFinalized(address,bytes32,uint64)"),
+  UnwrappedFinalized: eventTopic("UnwrapFinalized(address,bytes32,bytes32,uint64)"),
   /** `UnwrappedStarted(bool returnVal, uint256 indexed requestId, ...)` */
   UnwrappedStarted: eventTopic(
     "UnwrappedStarted(bool,uint256,uint256,address,address,bytes32,bytes32)",
@@ -225,7 +229,10 @@ export function decodeWrapped(log: RawLog): WrappedEvent | null {
  * UnwrapRequested(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 amount)
  */
 export function decodeUnwrapRequested(log: RawLog): UnwrapRequestedEvent | null {
-  if (log.topics[0] === Topics.UnwrapRequestedWithRequestId) {
+  if (
+    log.topics[0] === Topics.UnwrapRequested ||
+    log.topics[0] === Topics.UnwrapRequestedWithRequestId
+  ) {
     if (log.topics.length < 3) {
       return null;
     }
@@ -238,7 +245,7 @@ export function decodeUnwrapRequested(log: RawLog): UnwrapRequestedEvent | null 
     };
   }
 
-  if (log.topics[0] === Topics.UnwrapRequested) {
+  if (log.topics[0] === Topics.UnwrapRequestedLegacy) {
     if (log.topics.length < 2) {
       return null;
     }
@@ -258,7 +265,11 @@ export function decodeUnwrapRequested(log: RawLog): UnwrapRequestedEvent | null 
  * UnwrapFinalized(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 encryptedAmount, uint64 cleartextAmount)
  */
 export function decodeUnwrapFinalized(log: RawLog): UnwrapFinalizedEvent | null {
-  if (log.topics[0] === Topics.UnwrapFinalizedWithRequestId) {
+  if (
+    log.topics[0] === Topics.UnwrapFinalized ||
+    log.topics[0] === Topics.UnwrapFinalizedWithRequestId ||
+    log.topics[0] === Topics.UnwrappedFinalized
+  ) {
     if (log.topics.length < 3) {
       return null;
     }
@@ -272,7 +283,7 @@ export function decodeUnwrapFinalized(log: RawLog): UnwrapFinalizedEvent | null 
     };
   }
 
-  if (log.topics[0] === Topics.UnwrapFinalized) {
+  if (log.topics[0] === Topics.UnwrapFinalizedLegacy) {
     if (log.topics.length < 2) {
       return null;
     }
@@ -302,7 +313,7 @@ export function decodeUnwrappedFinalized(log: RawLog): UnwrappedFinalizedEvent |
 }
 
 function decodeLegacyUnwrappedFinalized(log: RawLog): UnwrappedFinalizedEvent | null {
-  if (log.topics[0] !== Topics.UnwrapFinalized) {
+  if (log.topics[0] !== Topics.UnwrapFinalizedLegacy) {
     return null;
   }
   if (log.topics.length < 2) {
@@ -437,9 +448,9 @@ export const TOKEN_TOPICS = [
   Topics.ConfidentialTransfer,
   Topics.Wrapped,
   Topics.UnwrapRequested,
-  Topics.UnwrapRequestedWithRequestId,
+  Topics.UnwrapRequestedLegacy,
   Topics.UnwrapFinalized,
-  Topics.UnwrapFinalizedWithRequestId,
+  Topics.UnwrapFinalizedLegacy,
   Topics.UnwrappedStarted,
 ] as const;
 

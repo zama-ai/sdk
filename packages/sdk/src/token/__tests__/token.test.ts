@@ -352,7 +352,7 @@ describe("Token", () => {
         logs: [
           {
             topics: [
-              Topics.UnwrapRequested,
+              Topics.UnwrapRequestedLegacy,
               `0x000000000000000000000000${userAddress.slice(2)}`,
               `0x${"ff".repeat(32)}`,
             ],
@@ -386,7 +386,7 @@ describe("Token", () => {
         logs: [
           {
             topics: [
-              Topics.UnwrapRequestedWithRequestId,
+              Topics.UnwrapRequested,
               `0x000000000000000000000000${userAddress.slice(2)}`,
               UNWRAP_REQUEST_ID,
             ],
@@ -457,7 +457,7 @@ describe("Token", () => {
         logs: [
           {
             topics: [
-              Topics.UnwrapRequested,
+              Topics.UnwrapRequestedLegacy,
               `0x000000000000000000000000${userAddress.slice(2)}`,
               `0x${"ff".repeat(32)}`,
             ],
@@ -1097,7 +1097,7 @@ describe("Token", () => {
         logs: [
           {
             topics: [
-              Topics.UnwrapRequested,
+              Topics.UnwrapRequestedLegacy,
               `0x000000000000000000000000${userAddress.slice(2)}`,
               `0x${"ff".repeat(32)}`,
             ],
@@ -1123,7 +1123,7 @@ describe("Token", () => {
         logs: [
           {
             topics: [
-              Topics.UnwrapRequestedWithRequestId,
+              Topics.UnwrapRequested,
               `0x000000000000000000000000${userAddress.slice(2)}`,
               UNWRAP_REQUEST_ID,
             ],
@@ -1396,7 +1396,7 @@ describe("Token", () => {
         logs: [
           {
             topics: [
-              Topics.UnwrapRequested,
+              Topics.UnwrapRequestedLegacy,
               `0x000000000000000000000000${userAddress.slice(2)}`,
               `0x${"ff".repeat(32)}`,
             ],
@@ -1422,7 +1422,7 @@ describe("Token", () => {
         logs: [
           {
             topics: [
-              Topics.UnwrapRequested,
+              Topics.UnwrapRequestedLegacy,
               `0x000000000000000000000000${userAddress.slice(2)}`,
               `0x${"ff".repeat(32)}`,
             ],
@@ -1444,7 +1444,7 @@ describe("Token", () => {
         logs: [
           {
             topics: [
-              Topics.UnwrapRequested,
+              Topics.UnwrapRequestedLegacy,
               `0x000000000000000000000000${userAddress.slice(2)}`,
               `0x${"ff".repeat(32)}`,
             ],
@@ -1462,7 +1462,7 @@ describe("Token", () => {
         logs: [
           {
             topics: [
-              Topics.UnwrapRequested,
+              Topics.UnwrapRequestedLegacy,
               `0x000000000000000000000000${userAddress.slice(2)}`,
               `0x${"ff".repeat(32)}`,
             ],

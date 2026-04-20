@@ -32,10 +32,12 @@ describe("Topic constants match keccak256", () => {
   const cases: [string, string][] = [
     ["ConfidentialTransfer(address,address,bytes32)", Topics.ConfidentialTransfer],
     ["Wrapped(address,uint256)", Topics.Wrapped],
-    ["UnwrapRequested(address,bytes32)", Topics.UnwrapRequested],
+    ["UnwrapRequested(address,bytes32)", Topics.UnwrapRequestedLegacy],
+    ["UnwrapRequested(address,bytes32,bytes32)", Topics.UnwrapRequested],
     ["UnwrapRequested(address,bytes32,bytes32)", Topics.UnwrapRequestedWithRequestId],
-    ["UnwrapFinalized(address,bytes32,uint64)", Topics.UnwrapFinalized],
-    ["UnwrapFinalized(address,bytes32,uint64)", Topics.UnwrappedFinalized],
+    ["UnwrapFinalized(address,bytes32,uint64)", Topics.UnwrapFinalizedLegacy],
+    ["UnwrapFinalized(address,bytes32,bytes32,uint64)", Topics.UnwrapFinalized],
+    ["UnwrapFinalized(address,bytes32,bytes32,uint64)", Topics.UnwrappedFinalized],
     ["UnwrapFinalized(address,bytes32,bytes32,uint64)", Topics.UnwrapFinalizedWithRequestId],
     [
       "UnwrappedStarted(bool,uint256,uint256,address,address,bytes32,bytes32)",
@@ -111,7 +113,7 @@ describe("decodeWrapped", () => {
     expect(
       decodeWrapped({
         ...log,
-        topics: [Topics.UnwrapRequested, ...log.topics.slice(1)],
+        topics: [Topics.UnwrapRequestedLegacy, ...log.topics.slice(1)],
       }),
     ).toBeNull();
   });
@@ -123,7 +125,7 @@ describe("decodeUnwrapRequested", () => {
   const unwrapRequestId = bytes32("aa".repeat(32));
 
   const log: RawLog = {
-    topics: [Topics.UnwrapRequested, topic("1234")],
+    topics: [Topics.UnwrapRequestedLegacy, topic("1234")],
     data: `0x${word("ff".repeat(32))}`,
   };
 
@@ -138,7 +140,7 @@ describe("decodeUnwrapRequested", () => {
 
   it("decodes valid log with unwrapRequestId", () => {
     const event = decodeUnwrapRequested({
-      topics: [Topics.UnwrapRequestedWithRequestId, topic("1234"), unwrapRequestId],
+      topics: [Topics.UnwrapRequested, topic("1234"), unwrapRequestId],
       data: `0x${word("ff".repeat(32))}`,
     });
     expect(event).toEqual({
@@ -166,7 +168,7 @@ describe("decodeUnwrappedFinalized", () => {
   const cleartextAmount = 450n;
 
   const log: RawLog = {
-    topics: [Topics.UnwrapFinalized, topic(receiver.slice(2))],
+    topics: [Topics.UnwrapFinalizedLegacy, topic(receiver.slice(2))],
     data: `0x${word(encryptedHandle.slice(2))}${word(cleartextAmount.toString(16))}`,
   };
 
@@ -182,7 +184,7 @@ describe("decodeUnwrappedFinalized", () => {
 
   it("decodes valid log with unwrapRequestId", () => {
     const event = decodeUnwrapFinalized({
-      topics: [Topics.UnwrapFinalizedWithRequestId, topic(receiver.slice(2)), unwrapRequestId],
+      topics: [Topics.UnwrapFinalized, topic(receiver.slice(2)), unwrapRequestId],
       data: `0x${word(encryptedHandle.slice(2))}${word(cleartextAmount.toString(16))}`,
     });
     expect(event).toEqual({
@@ -268,7 +270,7 @@ describe("decodeOnChainEvent", () => {
 
   it("keeps legacy UnwrapFinalized logs backward-compatible in generic decoding", () => {
     const log: RawLog = {
-      topics: [Topics.UnwrapFinalized, topic("abcd")],
+      topics: [Topics.UnwrapFinalizedLegacy, topic("abcd")],
       data: `0x${word("ff".repeat(32))}${word("1")}`,
     };
     const event = decodeOnChainEvent(log);
@@ -277,7 +279,7 @@ describe("decodeOnChainEvent", () => {
 
   it("decodes upgraded UnwrapFinalized logs with the canonical event name", () => {
     const log: RawLog = {
-      topics: [Topics.UnwrapFinalizedWithRequestId, topic("abcd"), bytes32("aa".repeat(32))],
+      topics: [Topics.UnwrapFinalized, topic("abcd"), bytes32("aa".repeat(32))],
       data: `0x${word("ff".repeat(32))}${word("1")}`,
     };
     const event = decodeOnChainEvent(log);
@@ -312,7 +314,7 @@ describe("decodeOnChainEvents", () => {
         data: "0x",
       },
       {
-        topics: [Topics.UnwrapFinalizedWithRequestId, topic("abcd"), bytes32("aa".repeat(32))],
+        topics: [Topics.UnwrapFinalized, topic("abcd"), bytes32("aa".repeat(32))],
         data: `0x${word("11".repeat(32))}${word("1")}`,
       },
     ];
