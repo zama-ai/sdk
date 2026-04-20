@@ -82,7 +82,7 @@ describe("Token", () => {
   });
 
   describe("isWrapper", () => {
-    it("returns true when baseline interfaceId (0xf1f4c25a) matches", async ({ signer, token }) => {
+    it("returns true when baseline interfaceId (0xd04584ba) matches", async ({ signer, token }) => {
       vi.mocked(signer.readContract)
         .mockResolvedValueOnce(true) // baseline ID
         .mockResolvedValueOnce(false); // upgraded ID

@@ -139,7 +139,7 @@ export class ReadonlyToken {
    * ERC-165 check for IERC7984ERC20Wrapper support.
    *
    * During the transition period, checks both {@link ERC7984_WRAPPER_INTERFACE_ID_LEGACY}
-   * (`0xf1f4c25a`) and {@link ERC7984_WRAPPER_INTERFACE_ID} (`0x1f1c62b2`) in parallel,
+   * (`0xd04584ba`) and {@link ERC7984_WRAPPER_INTERFACE_ID} (`0x1f1c62b2`) in parallel,
    * returning `true` if either matches.
    *
    * @returns `true` if the contract implements the ERC-7984 wrapper interface.
