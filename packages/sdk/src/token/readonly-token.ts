@@ -2,10 +2,9 @@ import { type Address, getAddress } from "viem";
 import {
   allowanceContract,
   confidentialBalanceOfContract,
+  confidentialWrapperInterfaceContracts,
   decimalsContract,
   ERC7984_INTERFACE_ID,
-  ERC7984_WRAPPER_INTERFACE_ID,
-  ERC7984_WRAPPER_INTERFACE_ID_LEGACY,
   getDelegationExpiryContract,
   MAX_UINT64,
   nameContract,
@@ -138,24 +137,19 @@ export class ReadonlyToken {
   /**
    * ERC-165 check for IERC7984ERC20Wrapper support.
    *
-   * During the transition period, checks both {@link ERC7984_WRAPPER_INTERFACE_ID_LEGACY}
-   * (`0xf1f4c25a`) and {@link ERC7984_WRAPPER_INTERFACE_ID} (`0x1f1c62b2`) in parallel,
-   * returning `true` if either matches.
+   * During the transition period, checks the documented legacy ID (`0xd04584ba`)
+   * and the upgraded ID (`0x1f1c62b2`), returning `true` if either deployment
+   * line is detected.
    *
    * @returns `true` if the contract implements the ERC-7984 wrapper interface.
    */
   async isWrapper(): Promise<boolean> {
-    // During the transition period, check both wrapper interface IDs in parallel.
-    // Either returning true is sufficient to identify a confidential wrapper.
-    const [legacyMatch, newMatch] = await Promise.all([
-      this.sdk.signer.readContract(
-        supportsInterfaceContract(this.address, ERC7984_WRAPPER_INTERFACE_ID_LEGACY),
+    const matches = await Promise.all(
+      confidentialWrapperInterfaceContracts(this.address).map((contract) =>
+        this.sdk.signer.readContract(contract),
       ),
-      this.sdk.signer.readContract(
-        supportsInterfaceContract(this.address, ERC7984_WRAPPER_INTERFACE_ID),
-      ),
-    ]);
-    return legacyMatch || newMatch;
+    );
+    return matches.some(Boolean);
   }
 
   /**

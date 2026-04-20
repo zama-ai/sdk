@@ -41,10 +41,11 @@ describe("isConfidentialQueryOptions", () => {
 describe("isWrapperQueryOptions", () => {
   const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a";
 
-  test("returns true when baseline interfaceId (0xf1f4c25a) matches", async ({ signer }) => {
+  test("returns true when legacy interfaceId (0xd04584ba) matches", async ({ signer }) => {
     vi.mocked(signer.readContract)
-      .mockResolvedValueOnce(true) // baseline ID
-      .mockResolvedValueOnce(false); // upgraded ID
+      .mockResolvedValueOnce(true) // legacy ID
+      .mockResolvedValueOnce(false) // upgraded ID
+      .mockResolvedValueOnce(false); // intermediate fixture ID
     const options = isWrapperQueryOptions(signer, TOKEN);
 
     const value = await options.queryFn(mockQueryContext(options.queryKey));
@@ -53,8 +54,22 @@ describe("isWrapperQueryOptions", () => {
 
   test("returns true when new interfaceId (0x1f1c62b2) matches", async ({ signer }) => {
     vi.mocked(signer.readContract)
-      .mockResolvedValueOnce(false) // baseline ID
-      .mockResolvedValueOnce(true); // upgraded ID
+      .mockResolvedValueOnce(false) // legacy ID
+      .mockResolvedValueOnce(true) // upgraded ID
+      .mockResolvedValueOnce(false); // intermediate fixture ID
+    const options = isWrapperQueryOptions(signer, TOKEN);
+
+    const value = await options.queryFn(mockQueryContext(options.queryKey));
+    expect(value).toBe(true);
+  });
+
+  test("returns true when intermediate local fixture interfaceId (0xf1f4c25a) matches", async ({
+    signer,
+  }) => {
+    vi.mocked(signer.readContract)
+      .mockResolvedValueOnce(false) // legacy ID
+      .mockResolvedValueOnce(false) // upgraded ID
+      .mockResolvedValueOnce(true); // intermediate fixture ID
     const options = isWrapperQueryOptions(signer, TOKEN);
 
     const value = await options.queryFn(mockQueryContext(options.queryKey));
