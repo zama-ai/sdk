@@ -1,6 +1,7 @@
 "use client";
 
 import type {
+  Address,
   GenericSigner,
   GenericStorage,
   RelayerSDK,
@@ -35,6 +36,7 @@ interface ZamaProviderLegacyProps extends PropsWithChildren {
   keypairTTL?: number;
   sessionTTL?: number;
   registryTTL?: number;
+  registryAddresses?: Record<number, Address>;
   onEvent?: ZamaSDKEventListener;
 }
 
@@ -68,6 +70,7 @@ export function ZamaProvider(props: ZamaProviderProps) {
   const keypairTTL = props.config?.keypairTTL ?? (props as ZamaProviderLegacyProps).keypairTTL;
   const sessionTTL = props.config?.sessionTTL ?? (props as ZamaProviderLegacyProps).sessionTTL;
   const registryTTL = props.config?.registryTTL ?? (props as ZamaProviderLegacyProps).registryTTL;
+  const registryAddresses = (props as ZamaProviderLegacyProps).registryAddresses;
   const onEvent = props.config?.onEvent ?? (props as ZamaProviderLegacyProps).onEvent;
   const chains = props.config?.chains;
 
@@ -101,6 +104,7 @@ export function ZamaProvider(props: ZamaProviderProps) {
         keypairTTL,
         sessionTTL,
         registryTTL,
+        registryAddresses,
         onEvent: onEventRef.current,
         signerLifecycleCallbacks,
       }),
@@ -113,6 +117,7 @@ export function ZamaProvider(props: ZamaProviderProps) {
       keypairTTL,
       sessionTTL,
       registryTTL,
+      registryAddresses,
       signerLifecycleCallbacks,
     ],
   );

@@ -60,6 +60,11 @@ export interface ZamaSDKConfig {
    * Default: `86400` (24 hours).
    */
   registryTTL?: number;
+  /**
+   * Per-chain wrappers registry address overrides, merged on top of chain definitions.
+   * Use for custom or local chains (e.g. Hardhat) where no default registry exists.
+   */
+  registryAddresses?: Record<number, Address>;
   /** Optional signer lifecycle callbacks composed with the SDK's internal session handling. */
   signerLifecycleCallbacks?: SignerLifecycleCallbacks;
 }
@@ -104,7 +109,7 @@ export class ZamaSDK {
     this.sessionStorage = config.sessionStorage ?? new MemoryStorage();
     this.cache = new DecryptCache(config.storage);
     this.#onEvent = config.onEvent ?? function () {};
-    const registryAddresses: Record<number, Address> = {};
+    const registryAddresses: Record<number, Address> = { ...config.registryAddresses };
     for (const chain of config.chains ?? []) {
       if (chain.registryAddress) {
         registryAddresses[chain.id] = chain.registryAddress;
