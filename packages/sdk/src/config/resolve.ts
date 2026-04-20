@@ -70,11 +70,12 @@ export function resolveChainTransports(
   chainIds: number[],
 ): Map<number, ResolvedChainTransport> {
   const chainMap = new Map(chains.map((c) => [c.chainId, c]));
+  const transportMap = new Map(Object.entries(transports ?? {}));
   const result = new Map<number, ResolvedChainTransport>();
 
   for (const id of chainIds) {
     const chainConfig = chainMap.get(id);
-    const userTransport = transports?.[id];
+    const userTransport = transportMap.get(String(id));
 
     if (!chainConfig && !userTransport) {
       throw new ConfigurationError(

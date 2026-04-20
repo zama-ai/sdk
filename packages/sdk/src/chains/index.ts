@@ -6,15 +6,16 @@ import {
   type ExtendedFhevmInstanceConfig,
 } from "../relayer/relayer-utils";
 
-export interface FheChain extends ExtendedFhevmInstanceConfig {
+export interface FheChain extends Omit<ExtendedFhevmInstanceConfig, "chainId"> {
   readonly id: number;
 }
 
-function withId<T extends ExtendedFhevmInstanceConfig>(config: T): T & { readonly id: number } {
-  return { ...config, id: config.chainId };
+function toFheChain<T extends ExtendedFhevmInstanceConfig>({ chainId, ...config }: T): FheChain {
+  return { ...config, id: chainId };
 }
 
-export const sepolia = withId(SepoliaConfig);
-export const mainnet = withId(MainnetConfig);
-export const hardhat = withId(HardhatConfig);
-export const hoodi = withId(HoodiConfig);
+export const mainnet = toFheChain(MainnetConfig);
+export const sepolia = toFheChain(SepoliaConfig);
+export const hoodi = toFheChain(HoodiConfig);
+export const hardhat = toFheChain(HardhatConfig);
+export const anvil = toFheChain(HardhatConfig);
