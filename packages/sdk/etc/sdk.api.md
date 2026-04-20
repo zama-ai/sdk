@@ -521,11 +521,11 @@ export interface BatchBalancesResult {
 
 // @public
 export interface BatchDecryptAsOptions {
+    accountAddress?: Address;
     delegatorAddress: Address;
     handles?: Handle[];
     maxConcurrency?: number;
     onError?: (error: Error, address: Address) => bigint;
-    owner?: Address;
 }
 
 // @public
@@ -12972,7 +12972,7 @@ export class ReadonlyToken {
     decimals(): Promise<number>;
     decryptBalanceAs(input: {
         delegatorAddress: Address;
-        owner?: Address;
+        accountAddress?: Address;
     }): Promise<bigint>;
     protected emit(input: ZamaSDKEventInput): void;
     // (undocumented)
