@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.0.0-alpha.10](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.9...v3.0.0-alpha.10) (2026-04-20)
+
+### Bug Fixes
+
+- **sdk:** correct legacy wrapper interface ID ([#271](https://github.com/zama-ai/sdk/issues/271)) ([f347198]())
+
 ## [3.0.0-alpha.9](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.8...v3.0.0-alpha.9) (2026-04-20)
 
 ## [3.0.0-alpha.8](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.7...v3.0.0-alpha.8) (2026-04-20)
