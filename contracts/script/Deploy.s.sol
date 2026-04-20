@@ -4,6 +4,7 @@ pragma solidity 0.8.27;
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
 import {TestERC20} from "../src/mocks/Erc20Mintable.sol";
+import {SdkLocalConfidentialWrapper} from "../src/SdkLocalConfidentialWrapper.sol";
 import {ConfidentialWrapper} from "protocol-apps-wrapper/contracts/confidential-wrapper/contracts/ConfidentialWrapper.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
@@ -14,7 +15,7 @@ contract Deploy is Script {
         vm.startBroadcast();
 
         // 1. Deploy ConfidentialWrapper implementation (for UUPS proxies)
-        ConfidentialWrapper wrapperImpl = new ConfidentialWrapper();
+        SdkLocalConfidentialWrapper wrapperImpl = new SdkLocalConfidentialWrapper();
         console.log("WrapperImpl:", address(wrapperImpl));
 
         // 2. Deploy test ERC20 tokens
@@ -25,12 +26,12 @@ contract Deploy is Script {
         console.log("USDT:", address(usdt));
 
         // 3. Deploy wrapper proxies directly
-        ConfidentialWrapper cUSDC = _deployWrapper(
+        SdkLocalConfidentialWrapper cUSDC = _deployWrapper(
             address(wrapperImpl), "Confidential ERC20 Token", "cERC20", IERC20(address(usdc))
         );
         console.log("cUSDC:", address(cUSDC));
 
-        ConfidentialWrapper cUSDT = _deployWrapper(
+        SdkLocalConfidentialWrapper cUSDT = _deployWrapper(
             address(wrapperImpl), "Confidential Tether USD", "cUSDT", IERC20(address(usdt))
         );
         console.log("cUSDT:", address(cUSDT));
@@ -76,7 +77,7 @@ contract Deploy is Script {
         string memory name,
         string memory symbol,
         IERC20 underlying
-    ) internal returns (ConfidentialWrapper) {
+    ) internal returns (SdkLocalConfidentialWrapper) {
         string memory contractURI = string.concat(
             "data:application/json;utf8,",
             '{"name":"', name, '","symbol":"', symbol, '"}'
@@ -85,6 +86,6 @@ contract Deploy is Script {
             ConfidentialWrapper.initialize,
             (name, symbol, contractURI, underlying, msg.sender)
         );
-        return ConfidentialWrapper(payable(address(new ERC1967Proxy(implementation, initData))));
+        return SdkLocalConfidentialWrapper(payable(address(new ERC1967Proxy(implementation, initData))));
     }
 }
