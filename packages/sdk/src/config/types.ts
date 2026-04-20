@@ -62,6 +62,7 @@ export type CreateZamaConfigBaseParams = ZamaConfigViem | ZamaConfigEthers | Zam
 
 /** Opaque config object returned by {@link createZamaConfig}. */
 export interface ZamaConfig {
+  /** @internal */ readonly chains: readonly FheChain[];
   /** @internal */ readonly relayer: RelayerSDK;
   /** @internal */ readonly signer: GenericSigner;
   /** @internal */ readonly storage: GenericStorage;

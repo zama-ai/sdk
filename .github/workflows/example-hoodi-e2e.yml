@@ -5,6 +5,8 @@ on:
     branches: [main, prerelease]
     paths:
       - "examples/example-hoodi/**"
+      - "packages/sdk/src/**"
+      - "packages/react-sdk/src/**"
 
 concurrency:
   group: example-hoodi-e2e-${{ github.ref }}
@@ -32,8 +34,20 @@ jobs:
           cache: npm
           cache-dependency-path: examples/example-hoodi/package-lock.json
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Install workspace dependencies and build SDK packages
+        working-directory: .
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+          pnpm build:sdk
+          pnpm build:react-sdk
+
+      - name: Install example with local SDK packages
+        run: |
+          SDK_TARBALL=$(cd ../../packages/sdk && npm pack --pack-destination /tmp)
+          REACT_SDK_TARBALL=$(cd ../../packages/react-sdk && npm pack --pack-destination /tmp)
+          npm ci
+          npm install --no-save "/tmp/$SDK_TARBALL" "/tmp/$REACT_SDK_TARBALL"
 
       - name: Restore Playwright browsers cache
         id: playwright-cache

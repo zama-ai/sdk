@@ -56,6 +56,7 @@ export function ZamaProvider({ children, config }: ZamaProviderProps) {
   const sdk = useMemo(
     () =>
       new ZamaSDK({
+        chains: config.chains,
         relayer: config.relayer,
         signer: config.signer,
         storage: config.storage,

@@ -86,6 +86,7 @@ export function createZamaConfig(params: CreateZamaConfigParams): ZamaConfig {
   const relayer = buildRelayer(chainTransports, getChainIdFn);
 
   return {
+    chains: params.chains,
     relayer,
     signer,
     storage,

@@ -8,6 +8,7 @@ import { anvil } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
 import { burner } from "@zama-fhe/test-components";
 import { HardhatConfig, RelayerWeb } from "@zama-fhe/sdk";
+import { hardhat } from "@zama-fhe/sdk/chains";
 import deployments from "../../../contracts/deployments.json" with { type: "json" };
 import { getAddress } from "viem";
 
@@ -48,6 +49,7 @@ const relayer = new RelayerWeb({
 const storage = new MemoryStorage();
 
 const zamaConfig: ZamaConfig = {
+  chains: [{ ...hardhat, registryAddress: getAddress(deployments.wrappersRegistry) }],
   relayer,
   signer,
   storage,

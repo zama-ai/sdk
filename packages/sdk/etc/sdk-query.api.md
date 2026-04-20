@@ -11,6 +11,7 @@ import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle';
 import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
+import { FhevmInstanceConfig } from '@zama-fhe/relayer-sdk/bundle';
 import { Hex } from 'viem';
 import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
 import { KeypairType } from '@zama-fhe/relayer-sdk/bundle';
@@ -1382,6 +1383,8 @@ export class ZamaSDK {
 
 // @public
 export interface ZamaSDKConfig {
+    // Warning: (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
+    chains?: readonly FheChain[];
     keypairTTL?: number;
     onEvent?: ZamaSDKEventListener;
     registryTTL?: number;

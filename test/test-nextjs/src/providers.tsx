@@ -10,6 +10,7 @@ import { anvil } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
 import { burner } from "@zama-fhe/test-components";
 import { RelayerCleartext, hardhatCleartextConfig } from "@zama-fhe/sdk/cleartext";
+import { hardhat } from "@zama-fhe/sdk/chains";
 
 const anvilPort = process.env.NEXT_PUBLIC_ANVIL_PORT || "8545";
 const rpcUrl = `http://127.0.0.1:${anvilPort}`;
@@ -37,6 +38,7 @@ const relayer = new RelayerCleartext({
 });
 
 const zamaConfig: ZamaConfig = {
+  chains: [hardhat],
   relayer,
   signer,
   storage,

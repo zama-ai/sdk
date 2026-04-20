@@ -1,4 +1,5 @@
 import { getAddress, type Address } from "viem";
+import type { FheChain } from "./chains/types";
 import { CredentialsManager } from "./credentials/credentials-manager";
 import { DelegatedCredentialsManager } from "./credentials/delegated-credentials-manager";
 import { DecryptCache } from "./decrypt-cache";
@@ -22,6 +23,8 @@ const MAX_KEYPAIR_TTL = 365 * 86400; // 31_536_000 s
 
 /** Configuration for {@link ZamaSDK}. */
 export interface ZamaSDKConfig {
+  /** FHE chain configurations. Registry addresses are extracted from each chain's `registryAddress`. */
+  chains?: readonly FheChain[];
   /** FHE relayer backend (`RelayerWeb` for browser, `RelayerNode` for server). */
   relayer: RelayerSDK;
   /** Wallet signer (`ViemSigner`, `EthersSigner`, or custom {@link GenericSigner}). */
@@ -101,9 +104,16 @@ export class ZamaSDK {
     this.sessionStorage = config.sessionStorage ?? new MemoryStorage();
     this.cache = new DecryptCache(config.storage);
     this.#onEvent = config.onEvent ?? function () {};
+    const registryAddresses: Record<number, Address> = {};
+    for (const chain of config.chains ?? []) {
+      if (chain.registryAddress) {
+        registryAddresses[chain.id] = chain.registryAddress;
+      }
+    }
     this.registry = new WrappersRegistry({
       signer: this.signer,
       registryTTL: config.registryTTL,
+      registryAddresses,
     });
     this.#registryTTL = config.registryTTL;
     const credentialsConfig = {

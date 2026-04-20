@@ -20711,6 +20711,8 @@ export type WriteFunctionName<TAbi extends ContractAbi = ContractAbi> = Contract
 // @public
 export interface ZamaConfig {
     // @internal (undocumented)
+    readonly chains: readonly FheChain[];
+    // @internal (undocumented)
     readonly keypairTTL: number | undefined;
     // @internal (undocumented)
     readonly onEvent: ZamaSDKEventListener | undefined;
@@ -20863,6 +20865,7 @@ export class ZamaSDK {
 
 // @public
 export interface ZamaSDKConfig {
+    chains?: readonly FheChain[];
     keypairTTL?: number;
     onEvent?: ZamaSDKEventListener;
     registryTTL?: number;
