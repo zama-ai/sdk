@@ -29,14 +29,20 @@ export async function detectWrapperInterfaceVersion(
   signer: GenericSigner,
   wrapperAddress: Address,
 ): Promise<WrapperInterfaceVersion> {
-  const [supportsUpgraded, supportsLegacy] = await Promise.all([
-    safeSupportsInterface(signer, wrapperAddress, ERC7984_WRAPPER_INTERFACE_ID),
-    safeSupportsInterface(signer, wrapperAddress, ERC7984_WRAPPER_INTERFACE_ID_LEGACY),
-  ]);
-
+  const supportsUpgraded = await safeSupportsInterface(
+    signer,
+    wrapperAddress,
+    ERC7984_WRAPPER_INTERFACE_ID,
+  );
   if (supportsUpgraded) {
     return "upgraded";
   }
+
+  const supportsLegacy = await safeSupportsInterface(
+    signer,
+    wrapperAddress,
+    ERC7984_WRAPPER_INTERFACE_ID_LEGACY,
+  );
   if (supportsLegacy) {
     return "legacy";
   }
