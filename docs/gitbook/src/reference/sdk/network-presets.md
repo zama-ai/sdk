@@ -1,32 +1,34 @@
 ---
 title: Network presets
-description: Pre-configured network settings for Ethereum Mainnet, Sepolia, and Hardhat.
+description: Pre-configured chain objects and legacy network configs for supported networks.
 ---
 
 # Network presets
 
-Pre-configured objects containing relayer URLs, contract addresses, and chain IDs for supported networks.
+## Chain objects (recommended)
 
-## Import
+Import pre-configured chain objects from `@zama-fhe/sdk/chains`. Each chain includes contract addresses, relayer URLs, chain IDs, and an `id` alias for use in transport config keys.
 
 ```ts
-import { MainnetConfig, SepoliaConfig, HardhatConfig } from "@zama-fhe/sdk";
+import { sepolia, mainnet, hoodi, hardhat } from "@zama-fhe/sdk/chains";
 ```
 
-## Available presets
+### Available chains
 
-| Preset          | Chain ID   | Network            |
-| --------------- | ---------- | ------------------ |
-| `MainnetConfig` | `1`        | Ethereum Mainnet   |
-| `SepoliaConfig` | `11155111` | Sepolia Testnet    |
-| `HardhatConfig` | `31337`    | Local Hardhat node |
+| Chain     | Chain ID   | Network            |
+| --------- | ---------- | ------------------ |
+| `mainnet` | `1`        | Ethereum Mainnet   |
+| `sepolia` | `11155111` | Sepolia Testnet    |
+| `hoodi`   | `17000`    | Hoodi Testnet      |
+| `hardhat` | `31337`    | Local Hardhat node |
 
-## What each preset includes
+### What each chain includes
 
-Each preset provides the fields needed by a relayer transport:
+Each chain object extends `ExtendedFhevmInstanceConfig` with an `id` property:
 
 | Field                                       | Type                  | Description                                                                                              |
 | ------------------------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------- |
+| `id`                                        | `number`              | Chain identifier (same as `chainId`)                                                                     |
 | `chainId`                                   | `number`              | Chain identifier                                                                                         |
 | `gatewayChainId`                            | `number`              | Chain ID of the gateway                                                                                  |
 | `relayerUrl`                                | `string`              | Default relayer endpoint for this network                                                                |
@@ -38,94 +40,101 @@ Each preset provides the fields needed by a relayer transport:
 | `verifyingContractAddressInputVerification` | `Address`             | EIP-712 verifying contract for encrypt operations                                                        |
 | `registryAddress`                           | `string \| undefined` | Token wrapper registry contract address (undefined for chains without a deployed registry, e.g. Hardhat) |
 
-## Usage
+### Usage with `createZamaConfig`
 
-Spread a preset into your transport config and add the fields specific to your setup:
+Pass chain objects in the `chains` array and use `chain.id` as transport keys:
 
 ```ts
-import { RelayerWeb, SepoliaConfig } from "@zama-fhe/sdk";
+import { createZamaConfig, web } from "@zama-fhe/sdk";
+import { sepolia, mainnet } from "@zama-fhe/sdk/chains";
 
-const relayer = new RelayerWeb({
-  getChainId: () => signer.getChainId(),
+const config = createZamaConfig({
+  chains: [sepolia, mainnet],
+  viem: { publicClient, walletClient },
   transports: {
-    [SepoliaConfig.chainId]: {
-      ...SepoliaConfig,
-      network: "https://sepolia.infura.io/v3/YOUR_KEY",
-    },
+    [sepolia.id]: web({ relayerUrl: "https://your-app.com/api/relayer/11155111" }),
+    [mainnet.id]: web({ relayerUrl: "https://your-app.com/api/relayer/1" }),
   },
 });
 ```
 
+Per-chain overrides (e.g. `relayerUrl`, `network`) are passed to the transport function. The chain object provides all contract addresses automatically.
+
 ### Browser apps
 
-In browser environments, proxy relayer requests through your backend to avoid exposing API keys. Override `relayerUrl` to point at your proxy:
+In browser environments, proxy relayer requests through your backend to avoid exposing API keys. Override `relayerUrl` in the transport:
 
 ```ts
-{
-  ...SepoliaConfig,
-  relayerUrl: "https://your-app.com/api/relayer/11155111",
-  network: "https://sepolia.infura.io/v3/YOUR_KEY",
-}
+web({ relayerUrl: "https://your-app.com/api/relayer/11155111" });
 ```
 
 ### Server apps
 
-On the server, use `RelayerNode` and add authentication:
+On the server, use `node()` and add authentication:
 
 ```ts
-import { RelayerNode } from "@zama-fhe/sdk/node";
-import { SepoliaConfig } from "@zama-fhe/sdk";
+import { node } from "@zama-fhe/sdk";
 
-const relayer = new RelayerNode({
-  getChainId: async () => 11155111,
-  transports: {
-    [SepoliaConfig.chainId]: {
-      ...SepoliaConfig,
-      network: "https://sepolia.infura.io/v3/YOUR_KEY",
-      auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY! },
-    },
+node(
+  {
+    network: "https://sepolia.infura.io/v3/YOUR_KEY",
+    auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY! },
   },
-});
+  { poolSize: 4 },
+);
 ```
 
 ### Local development
 
-Use `HardhatConfig` with a local Hardhat node:
+Use the `hardhat` chain with a `cleartext()` transport:
 
 ```ts
-import { HardhatConfig } from "@zama-fhe/sdk";
+import { cleartext } from "@zama-fhe/sdk";
+import { hardhat } from "@zama-fhe/sdk/chains";
 
-const relayer = new RelayerWeb({
-  getChainId: () => signer.getChainId(),
+const config = createZamaConfig({
+  chains: [hardhat],
+  viem: { publicClient, walletClient },
   transports: {
-    [HardhatConfig.chainId]: HardhatConfig,
+    [hardhat.id]: cleartext({ executorAddress: "0x..." }),
   },
 });
 ```
 
 ### Multiple networks
 
-Support multiple networks by spreading several presets:
+Support multiple networks by listing them in the `chains` array:
 
 ```ts
-import { MainnetConfig, SepoliaConfig } from "@zama-fhe/sdk";
+import { sepolia, mainnet } from "@zama-fhe/sdk/chains";
 
-const relayer = new RelayerWeb({
-  getChainId: () => signer.getChainId(),
+const config = createZamaConfig({
+  chains: [sepolia, mainnet],
+  wagmiConfig,
   transports: {
-    [MainnetConfig.chainId]: {
-      ...MainnetConfig,
-      network: "https://mainnet.infura.io/v3/YOUR_KEY",
-    },
-    [SepoliaConfig.chainId]: {
-      ...SepoliaConfig,
-      network: "https://sepolia.infura.io/v3/YOUR_KEY",
-    },
+    [sepolia.id]: web({ relayerUrl: "/api/relayer/11155111" }),
+    [mainnet.id]: web({ relayerUrl: "/api/relayer/1" }),
   },
 });
 ```
 
-The relayer selects the correct transport based on the chain ID returned by `getChainId()`.
+## Legacy preset configs
+
+The legacy `SepoliaConfig`, `MainnetConfig`, and `HardhatConfig` objects are still available for use with manual `RelayerWeb`/`RelayerNode` construction:
+
+```ts
+import { MainnetConfig, SepoliaConfig, HardhatConfig } from "@zama-fhe/sdk";
+```
+
+| Preset          | Chain ID   | Network            |
+| --------------- | ---------- | ------------------ |
+| `MainnetConfig` | `1`        | Ethereum Mainnet   |
+| `SepoliaConfig` | `11155111` | Sepolia Testnet    |
+| `HardhatConfig` | `31337`    | Local Hardhat node |
+
+{% hint style="info" %}
+For new projects, prefer chain objects from `@zama-fhe/sdk/chains` with `createZamaConfig`. The legacy preset configs work best with the manual `RelayerWeb`/`RelayerNode` constructors.
+{% endhint %}
 
 ## DefaultRegistryAddresses
 
@@ -139,11 +148,11 @@ console.log(DefaultRegistryAddresses);
 ```
 
 {% hint style="info" %}
-`HardhatConfig` has no registry address by default. Pass one explicitly via `registryAddresses` when creating a [WrappersRegistry](/reference/sdk/WrappersRegistry).
+`hardhat` has no registry address by default. Pass one explicitly via `registryAddresses` when creating a [WrappersRegistry](/reference/sdk/WrappersRegistry).
 {% endhint %}
 
 ## Related
 
 - [WrappersRegistry](/reference/sdk/WrappersRegistry) — high-level registry query API
-- [Configuration guide](/guides/configuration) — full relayer, signer, and storage setup
+- [Configuration guide](/guides/configuration) — full chains, transports, signer, and storage setup
 - [ZamaSDK](/reference/sdk/ZamaSDK) — SDK constructor reference

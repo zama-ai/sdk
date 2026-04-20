@@ -22,7 +22,8 @@ import { ZamaProvider } from "@zama-fhe/react-sdk";
 import { WagmiProvider, createConfig, http } from "wagmi";
 import { sepolia } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ZamaProvider, createZamaConfig, relayer } from "@zama-fhe/react-sdk";
+import { ZamaProvider, createZamaConfig, web } from "@zama-fhe/react-sdk";
+import { sepolia as sepoliaFhe } from "@zama-fhe/sdk/chains";
 
 const wagmiConfig = createConfig({
   chains: [sepolia],
@@ -30,9 +31,10 @@ const wagmiConfig = createConfig({
 });
 
 const zamaConfig = createZamaConfig({
+  chains: [sepoliaFhe],
   wagmiConfig,
   transports: {
-    [sepolia.id]: relayer("https://your-app.com/api/relayer/11155111"),
+    [sepoliaFhe.id]: web({ relayerUrl: "https://your-app.com/api/relayer/11155111" }),
   },
 });
 const queryClient = new QueryClient();
@@ -57,8 +59,8 @@ function App() {
 import { createPublicClient, createWalletClient, custom, http } from "viem";
 import { sepolia } from "viem/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ZamaProvider, createZamaConfig, relayer } from "@zama-fhe/react-sdk";
-import { SepoliaConfig } from "@zama-fhe/sdk";
+import { ZamaProvider, createZamaConfig, web } from "@zama-fhe/react-sdk";
+import { sepolia as sepoliaFhe } from "@zama-fhe/sdk/chains";
 
 const publicClient = createPublicClient({
   chain: sepolia,
@@ -70,11 +72,10 @@ const walletClient = createWalletClient({
 });
 
 const zamaConfig = createZamaConfig({
+  chains: [sepoliaFhe],
   viem: { publicClient, walletClient },
   transports: {
-    [SepoliaConfig.chainId]: relayer("https://your-app.com/api/relayer/11155111", {
-      network: "https://sepolia.infura.io/v3/YOUR_KEY",
-    }),
+    [sepoliaFhe.id]: web({ relayerUrl: "https://your-app.com/api/relayer/11155111" }),
   },
 });
 const queryClient = new QueryClient();
@@ -91,16 +92,19 @@ function App() {
 ```
 
 {% endtab %}
-{% tab title="custom relayer (e.g. cleartext)" %}
+{% tab title="cleartext (local dev)" %}
 
 ```tsx
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ZamaProvider, createZamaConfig } from "@zama-fhe/react-sdk";
-import { RelayerCleartext, hardhatCleartextConfig } from "@zama-fhe/sdk/cleartext";
+import { ZamaProvider, createZamaConfig, cleartext } from "@zama-fhe/react-sdk";
+import { hardhat } from "@zama-fhe/sdk/chains";
 
 const zamaConfig = createZamaConfig({
+  chains: [hardhat],
   signer: myCustomSigner,
-  relayer: new RelayerCleartext(hardhatCleartextConfig),
+  transports: {
+    [hardhat.id]: cleartext({ executorAddress: "0x..." }),
+  },
 });
 const queryClient = new QueryClient();
 
@@ -128,7 +132,7 @@ import { type ZamaProviderProps } from "@zama-fhe/react-sdk";
 
 `ZamaConfig`
 
-Configuration object created by [`createZamaConfig`](/reference/react/createZamaConfig). Wires together the relayer, signer, and storage for the SDK.
+Configuration object created by [`createZamaConfig`](/guides/configuration). Wires together chains, transports, signer, and storage for the SDK.
 
 ## Related
 
