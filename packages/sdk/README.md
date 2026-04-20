@@ -748,11 +748,12 @@ Low-level FHE operations are available on the relayer backend via `sdk.relayer`:
 
 ## Constants
 
-| Constant                       | Value                             | Description                                   |
-| ------------------------------ | --------------------------------- | --------------------------------------------- |
-| `ZERO_HANDLE`                  | `"0x0000...0000"` (32 zero bytes) | Sentinel for empty/zero encrypted values.     |
-| `ERC7984_INTERFACE_ID`         | `"0x4958f2a4"`                    | ERC-165 interface ID for confidential tokens. |
-| `ERC7984_WRAPPER_INTERFACE_ID` | `"0xf1f4c25a"`                    | ERC-165 interface ID for wrapper contracts.   |
+| Constant                              | Value                             | Description                                          |
+| ------------------------------------- | --------------------------------- | ---------------------------------------------------- |
+| `ZERO_HANDLE`                         | `"0x0000...0000"` (32 zero bytes) | Sentinel for empty/zero encrypted values.            |
+| `ERC7984_INTERFACE_ID`                | `"0x4958f2a4"`                    | ERC-165 interface ID for confidential tokens.        |
+| `ERC7984_WRAPPER_INTERFACE_ID`        | `"0x1f1c62b2"`                    | ERC-165 interface ID for upgraded wrapper contracts. |
+| `ERC7984_WRAPPER_INTERFACE_ID_LEGACY` | `"0xd04584ba"`                    | ERC-165 interface ID for legacy wrapper contracts.   |
 
 ## Exported ABIs
 
