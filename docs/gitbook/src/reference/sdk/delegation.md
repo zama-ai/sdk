@@ -129,22 +129,21 @@ const expiryDate = new Date(Number(expiry) * 1000);
 The delegate calls `decryptBalanceAs` to read the delegator's balance. This uses a delegated EIP-712 flow under the hood — the delegate signs with their own wallet, and the relayer verifies the on-chain delegation before decrypting.
 
 ```ts
-// Decrypt the delegator's balance (owner defaults to delegator)
+// Decrypt the delegator's balance (accountAddress defaults to delegator)
 const balance = await readonlyToken.decryptBalanceAs({
   delegatorAddress: "0xDelegator",
 });
 
-// Decrypt a specific owner's balance (when owner differs from delegator).
-// Note: the relayer validates ACL permissions against `delegatorAddress`,
-// not `owner`. The delegator must have been granted decrypt rights for
-// the contract, regardless of whose balance is being read.
+// Decrypt a specific address's balance (when the balance holder differs
+// from the delegator). The relayer validates ACL permissions against
+// `delegatorAddress`, not `accountAddress`.
 const balance = await readonlyToken.decryptBalanceAs({
   delegatorAddress: "0xDelegator",
-  owner: "0xOwner",
+  accountAddress: "0xBalanceHolder",
 });
 ```
 
-Decrypted values are cached in storage, keyed by `(token, owner, handle)`. Because every on-chain balance change produces a new encrypted handle, stale cache entries are never served — no TTL or manual invalidation needed. If the delegator's balance changes in another app, the next `decryptBalanceAs` call will see a different handle and perform a fresh decryption.
+Decrypted values are cached in storage, keyed by `(accountAddress, token, handle)`. Because every on-chain balance change produces a new encrypted handle, stale cache entries are never served — no TTL or manual invalidation needed. If the delegator's balance changes in another app, the next `decryptBalanceAs` call will see a different handle and perform a fresh decryption.
 
 ### Batch decryption as delegate
 
@@ -169,7 +168,7 @@ for (const [address, balance] of balances) {
 | ------------------ | --------------------------------------------------------- | -------------------------------------------------------------------------------- |
 | `delegatorAddress` | `Address`                                                 | The address that granted delegation rights.                                      |
 | `handles`          | `Handle[] \| undefined`                                   | Pre-fetched encrypted handles. When omitted, handles are fetched from the chain. |
-| `owner`            | `Address \| undefined`                                    | Balance owner address. Defaults to the delegator address.                        |
+| `accountAddress`   | `Address \| undefined`                                    | The address whose on-chain balance to read. Defaults to the delegator address.   |
 | `maxConcurrency`   | `number \| undefined`                                     | Maximum number of concurrent decrypt calls. Default: `Infinity`.                 |
 | `onError`          | `(error: Error, address: Address) => bigint \| undefined` | Called when decryption fails for a single token. Return a fallback value.        |
 

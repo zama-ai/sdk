@@ -5,6 +5,7 @@ import {
   decimalsContract,
   ERC7984_INTERFACE_ID,
   ERC7984_WRAPPER_INTERFACE_ID,
+  ERC7984_WRAPPER_INTERFACE_ID_LEGACY,
   getDelegationExpiryContract,
   MAX_UINT64,
   nameContract,
@@ -39,8 +40,15 @@ export interface BatchDecryptAsOptions {
   delegatorAddress: Address;
   /** Pre-fetched encrypted handles. When omitted, handles are fetched from the chain. */
   handles?: Handle[];
-  /** Balance owner address. Defaults to the delegator address. */
-  owner?: Address;
+  /**
+   * The account whose on-chain balance to read. Defaults to the delegator
+   * address, which is the common case (the delegator grants permission to
+   * decrypt their own balance). Only set this when the account differs
+   * from the delegator.
+   *
+   * Matches the `account` parameter of `confidentialBalanceOf(account)` on-chain.
+   */
+  accountAddress?: Address;
   /** Maximum number of concurrent decrypt calls. Default: Infinity. */
   maxConcurrency?: number;
   /** Called when decryption fails for a single token. Return a fallback bigint. */
@@ -128,14 +136,26 @@ export class ReadonlyToken {
   }
 
   /**
-   * ERC-165 check for {@link ERC7984_WRAPPER_INTERFACE_ID} support.
+   * ERC-165 check for IERC7984ERC20Wrapper support.
+   *
+   * During the transition period, checks both {@link ERC7984_WRAPPER_INTERFACE_ID_LEGACY}
+   * (`0xf1f4c25a`) and {@link ERC7984_WRAPPER_INTERFACE_ID} (`0x1f1c62b2`) in parallel,
+   * returning `true` if either matches.
    *
    * @returns `true` if the contract implements the ERC-7984 wrapper interface.
    */
   async isWrapper(): Promise<boolean> {
-    return this.sdk.signer.readContract(
-      supportsInterfaceContract(this.address, ERC7984_WRAPPER_INTERFACE_ID),
-    );
+    // During the transition period, check both wrapper interface IDs in parallel.
+    // Either returning true is sufficient to identify a confidential wrapper.
+    const [legacyMatch, newMatch] = await Promise.all([
+      this.sdk.signer.readContract(
+        supportsInterfaceContract(this.address, ERC7984_WRAPPER_INTERFACE_ID_LEGACY),
+      ),
+      this.sdk.signer.readContract(
+        supportsInterfaceContract(this.address, ERC7984_WRAPPER_INTERFACE_ID),
+      ),
+    ]);
+    return legacyMatch || newMatch;
   }
 
   /**
@@ -252,13 +272,16 @@ export class ReadonlyToken {
       return new Map();
     }
 
-    const { delegatorAddress, handles, owner, onError, maxConcurrency } = options;
-    const ownerAddress = owner ?? delegatorAddress;
+    const { delegatorAddress, handles, accountAddress, onError, maxConcurrency } = options;
+    const normalizedAccount = accountAddress
+      ? getAddress(accountAddress)
+      : getAddress(delegatorAddress);
     const firstToken = tokens[0]!;
     ReadonlyToken.assertSameSdk(tokens);
 
     const resolvedHandles =
-      handles ?? (await Promise.all(tokens.map((t) => t.readConfidentialBalanceOf(ownerAddress))));
+      handles ??
+      (await Promise.all(tokens.map((t) => t.readConfidentialBalanceOf(normalizedAccount))));
 
     if (tokens.length !== resolvedHandles.length) {
       throw new DecryptionFailedError(
@@ -271,12 +294,12 @@ export class ReadonlyToken {
     // Parallel cache lookups — avoids sequential IDB round-trips.
     const uncached: { token: ReadonlyToken; handle: Handle }[] = [];
     const cachedValues = await Promise.all(
-      tokens.map((token, i) => {
+      tokens.map(async (token, i) => {
         const handle = resolvedHandles[i]!;
         if (isZeroHandle(handle)) {
           return 0n;
         }
-        return firstToken.sdk.cache.get(ownerAddress, token.address, handle);
+        return firstToken.sdk.cache.get(normalizedAccount, token.address, handle);
       }),
     );
 
@@ -340,7 +363,7 @@ export class ReadonlyToken {
             // Cache write is best-effort — log on failure so a broken cache
             // backend doesn't silently force re-decryption forever.
             firstToken.sdk.cache
-              .set(ownerAddress, token.address, handle, value)
+              .set(normalizedAccount, token.address, handle, value)
               .catch((cacheErr: unknown) => {
                 // oxlint-disable-next-line no-console
                 console.warn("[zama-sdk] Failed to cache decrypted value:", cacheErr);
@@ -579,14 +602,19 @@ export class ReadonlyToken {
   }
   /**
    * Decrypt the balance of a delegator using delegated decryption credentials.
-   * The connected signer acts as the delegate who has been granted permission
+   * The connected signer acts as the delegatee who has been granted permission
    * by the delegator to decrypt their balance.
    *
-   * Decrypted values are cached in storage keyed by `(token, owner, handle)`.
+   * Decrypted values are cached in storage keyed by
+   * `(account, token, handle)`. Because every on-chain balance change
+   * produces a new encrypted handle, stale cache entries are never served.
    * Cache write failures are silently ignored — they do not affect the returned value.
    *
    * @param delegatorAddress - The address of the account that delegated decryption rights.
-   * @param owner - Optional balance owner address. Defaults to the delegator address.
+   * @param account - The account whose on-chain balance to read (matches
+   *   `confidentialBalanceOf(account)` on-chain). Defaults to the delegator
+   *   address (the common case where the delegator grants permission to
+   *   decrypt their own balance).
    * @returns The decrypted plaintext balance as a bigint.
    * @throws {@link DelegationNotFoundError} if no active delegation exists from the delegator to the connected signer.
    * @throws {@link DelegationExpiredError} if the delegation has expired.
@@ -601,20 +629,20 @@ export class ReadonlyToken {
    */
   async decryptBalanceAs({
     delegatorAddress,
-    owner,
+    accountAddress,
   }: {
     delegatorAddress: Address;
-    owner?: Address;
+    accountAddress?: Address;
   }): Promise<bigint> {
     const normalizedDelegator = getAddress(delegatorAddress);
-    const normalizedOwner = owner ? getAddress(owner) : normalizedDelegator;
+    const normalizedAccount = accountAddress ? getAddress(accountAddress) : normalizedDelegator;
 
-    const handle = await this.readConfidentialBalanceOf(normalizedOwner);
+    const handle = await this.readConfidentialBalanceOf(normalizedAccount);
     if (isZeroHandle(handle)) {
       return 0n;
     }
 
-    const cached = await this.sdk.cache.get(normalizedOwner, this.address, handle);
+    const cached = await this.sdk.cache.get(normalizedAccount, this.address, handle);
     if (cached !== null) {
       assertBigint(cached, "decryptBalanceAs: cached");
       return cached;
@@ -660,7 +688,7 @@ export class ReadonlyToken {
         result,
       });
 
-      await this.sdk.cache.set(normalizedOwner, this.address, handle, value);
+      await this.sdk.cache.set(normalizedAccount, this.address, handle, value);
       return value;
     } catch (error) {
       this.emit({

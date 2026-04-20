@@ -1,17 +1,12 @@
 /* eslint-disable no-empty-pattern */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, type RenderHookOptions } from "@testing-library/react";
-import type {
-  GenericSigner,
-  GenericStorage,
-  RelayerSDK,
-  Token,
-  ZamaSDKEventListener,
-} from "@zama-fhe/sdk";
 import type { PropsWithChildren } from "react";
 import React from "react";
+import type { RelayerSDK } from "../../sdk/src/relayer/relayer-sdk";
 import { test as base } from "../../sdk/src/test-fixtures";
-import type { ZamaConfig } from "./config";
+import type { Token } from "../../sdk/src/token";
+import type { GenericSigner, GenericStorage } from "../../sdk/src/types";
 import type { ZamaProviderProps } from "./provider";
 import { ZamaProvider } from "./provider";
 import { createMockToken } from "./__tests__/mutation-test-helpers";
@@ -22,34 +17,14 @@ export { afterEach, beforeEach, describe, expect, vi, type Mock } from "vitest";
 // Internal helpers (not exported — used by fixtures only)
 // ---------------------------------------------------------------------------
 
-function buildMockZamaConfig(overrides: {
-  relayer?: RelayerSDK;
-  signer?: GenericSigner;
-  storage?: GenericStorage;
-  sessionStorage?: GenericStorage;
-  keypairTTL?: number;
-  onEvent?: ZamaSDKEventListener;
-}): ZamaConfig {
-  return {
-    relayer: overrides.relayer,
-    signer: overrides.signer,
-    storage: overrides.storage,
-    sessionStorage: overrides.sessionStorage,
-    keypairTTL: overrides.keypairTTL,
-    sessionTTL: undefined,
-    registryTTL: undefined,
-    onEvent: overrides.onEvent,
-  } as unknown as ZamaConfig;
-}
-
 function Providers({
   children,
   queryClient,
-  config,
+  ...props
 }: PropsWithChildren<ZamaProviderProps & { queryClient: QueryClient }>) {
   return (
     <QueryClientProvider client={queryClient}>
-      <ZamaProvider config={config}>{children}</ZamaProvider>
+      <ZamaProvider {...props}>{children}</ZamaProvider>
     </QueryClientProvider>
   );
 }
@@ -61,14 +36,7 @@ function Providers({
 interface ReactSdkFixtures {
   token: Token;
   queryClient: QueryClient;
-  createWrapper: (overrides?: {
-    relayer?: RelayerSDK;
-    signer?: GenericSigner;
-    storage?: GenericStorage;
-    sessionStorage?: GenericStorage;
-    keypairTTL?: number;
-    onEvent?: ZamaSDKEventListener;
-  }) => {
+  createWrapper: (overrides?: Partial<ZamaProviderProps>) => {
     Wrapper: React.FC<{ children?: React.ReactNode }>;
     queryClient: QueryClient;
     signer: GenericSigner | undefined;
@@ -77,12 +45,7 @@ interface ReactSdkFixtures {
   };
   renderWithProviders: <TResult>(
     hook: () => TResult,
-    overrides?: {
-      relayer?: RelayerSDK;
-      signer?: GenericSigner;
-      storage?: GenericStorage;
-      sessionStorage?: GenericStorage;
-    },
+    overrides?: Partial<ZamaProviderProps>,
     options?: Omit<RenderHookOptions<unknown>, "wrapper">,
   ) => ReturnType<typeof renderHook<TResult, unknown>> & { queryClient: QueryClient };
 }
@@ -99,31 +62,12 @@ export const test = base.extend<ReactSdkFixtures>({
     );
   },
   createWrapper: async ({ relayer, signer, storage, sessionStorage, queryClient }, use) => {
-    function createWrapper(overrides?: {
-      relayer?: RelayerSDK;
-      signer?: GenericSigner;
-      storage?: GenericStorage;
-      sessionStorage?: GenericStorage;
-      keypairTTL?: number;
-      onEvent?: ZamaSDKEventListener;
-    }) {
-      const mergedRelayer = overrides?.relayer ?? relayer;
-      const mergedSigner = overrides?.signer ?? signer;
-      const mergedStorage = overrides?.storage ?? storage;
-      const mergedSessionStorage = overrides?.sessionStorage ?? sessionStorage;
-
-      const config = buildMockZamaConfig({
-        relayer: mergedRelayer as RelayerSDK,
-        signer: mergedSigner,
-        storage: mergedStorage,
-        sessionStorage: mergedSessionStorage,
-        keypairTTL: overrides?.keypairTTL,
-        onEvent: overrides?.onEvent,
-      });
+    function createWrapper(overrides?: Partial<ZamaProviderProps>) {
+      const props = { relayer, signer, storage, sessionStorage, ...overrides };
 
       function Wrapper({ children }: { children?: React.ReactNode }) {
         return (
-          <Providers queryClient={queryClient} config={config}>
+          <Providers queryClient={queryClient} {...props}>
             {children}
           </Providers>
         );
@@ -132,9 +76,9 @@ export const test = base.extend<ReactSdkFixtures>({
       return {
         Wrapper,
         queryClient,
-        signer: mergedSigner,
-        relayer: mergedRelayer,
-        storage: mergedStorage,
+        signer: props.signer,
+        relayer: props.relayer,
+        storage: props.storage,
       };
     }
     await use(createWrapper);
@@ -142,12 +86,7 @@ export const test = base.extend<ReactSdkFixtures>({
   renderWithProviders: async ({ createWrapper }, use) => {
     function renderWithProviders<TResult>(
       hook: () => TResult,
-      overrides?: {
-        relayer?: RelayerSDK;
-        signer?: GenericSigner;
-        storage?: GenericStorage;
-        sessionStorage?: GenericStorage;
-      },
+      overrides?: Partial<ZamaProviderProps>,
       options?: Omit<RenderHookOptions<unknown>, "wrapper">,
     ) {
       const { Wrapper, queryClient } = createWrapper(overrides);

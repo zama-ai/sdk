@@ -1,4 +1,4 @@
-import { type Address, getAddress } from "viem";
+import { type Address, getAddress, zeroAddress } from "viem";
 import type { TokenWrapperPairWithMetadata, PaginatedResult, TokenWrapperPair } from "./contracts";
 import {
   decimalsContract,
@@ -329,13 +329,16 @@ export class WrappersRegistry {
    * Look up the confidential token for a given plain ERC-20 address.
    *
    * @param tokenAddress - The plain ERC-20 token address.
-   * @returns The lookup result, or `null` if no pair is registered.
+   * @returns The lookup result, or `null` if the token has never been registered.
+   *   **Note:** revoked tokens (registered then invalidated) return a non-null result
+   *   with `isValid: false`. Check `result.isValid` explicitly rather than using
+   *   `if (result)` to guard against processing revoked tokens.
    *
    * @example
    * ```ts
    * const result = await registry.getConfidentialToken(usdcAddress);
-   * if (result) {
-   *   console.log(result.confidentialTokenAddress, result.isValid);
+   * if (result?.isValid) {
+   *   console.log(result.confidentialTokenAddress);
    * }
    * ```
    */
@@ -354,18 +357,15 @@ export class WrappersRegistry {
       return cached;
     }
 
-    const [found, confidentialTokenAddress] = await this.signer.readContract(
+    const [isValid, confidentialTokenAddress] = await this.signer.readContract(
       getConfidentialTokenAddressContract(registry, normalized),
     );
 
-    if (!found) {
+    // Zero address means the token is not registered at all (never seen by the registry).
+    // A non-zero address with isValid=false means it was registered but later revoked.
+    if (confidentialTokenAddress === zeroAddress) {
       return this.#setCached(cacheKey, null, NEGATIVE_CACHE_TTL_MS);
     }
-
-    // Check validity via isConfidentialTokenValid
-    const isValid = await this.signer.readContract(
-      isConfidentialTokenValidContract(registry, confidentialTokenAddress),
-    );
 
     return this.#setCached(cacheKey, { confidentialTokenAddress, isValid });
   }
@@ -399,17 +399,15 @@ export class WrappersRegistry {
       return cached;
     }
 
-    const [found, tokenAddress] = await this.signer.readContract(
+    const [isValid, tokenAddress] = await this.signer.readContract(
       getTokenAddressContract(registry, normalized),
     );
 
-    if (!found) {
+    // Zero address means the confidential token is not registered at all.
+    // A non-zero address with isValid=false means it was registered but later revoked.
+    if (tokenAddress === zeroAddress) {
       return this.#setCached(cacheKey, null, NEGATIVE_CACHE_TTL_MS);
     }
-
-    const isValid = await this.signer.readContract(
-      isConfidentialTokenValidContract(registry, normalized),
-    );
 
     return this.#setCached(cacheKey, { tokenAddress, isValid });
   }
@@ -468,7 +466,9 @@ export class WrappersRegistry {
    * Look up the confidential token address for a given plain ERC-20 token.
    *
    * @param tokenAddress - The plain ERC-20 token address.
-   * @returns A tuple `[found, confidentialTokenAddress]`.
+   * @returns A tuple `[isValid, confidentialTokenAddress]`. `isValid` is `true` only for a
+   *   registered, non-revoked wrapper. The address is the zero address when no pair is registered.
+   *   A non-zero address with `isValid=false` means the wrapper was registered but later revoked.
    */
   async getConfidentialTokenAddress(tokenAddress: Address): Promise<readonly [boolean, Address]> {
     const registry = await this.getRegistryAddress();
@@ -481,7 +481,9 @@ export class WrappersRegistry {
    * Reverse lookup — find the plain ERC-20 for a given confidential token.
    *
    * @param confidentialTokenAddress - The confidential token address.
-   * @returns A tuple `[found, tokenAddress]`.
+   * @returns A tuple `[isValid, tokenAddress]`. `isValid` is `true` only for a registered,
+   *   non-revoked wrapper. The address is the zero address when no pair is registered.
+   *   A non-zero address with `isValid=false` means the wrapper was registered but later revoked.
    */
   async getTokenAddress(confidentialTokenAddress: Address): Promise<readonly [boolean, Address]> {
     const registry = await this.getRegistryAddress();

@@ -20,10 +20,12 @@ import type {
   EncryptResult,
   Handle,
   PublicDecryptResult,
+  PublicKeyData,
+  PublicParamsData,
   UserDecryptParams,
 } from "./relayer-sdk.types";
 import type { ExtendedFhevmInstanceConfig } from "./relayer-utils";
-import { buildEIP712DomainType, withRetry } from "./relayer-utils";
+import { withRetry } from "./relayer-utils";
 
 export interface RelayerNodeConfig {
   /** Single chain FHE configuration (addresses, URLs, chain ID). */
@@ -178,34 +180,12 @@ export class RelayerNode implements RelayerSDK, Disposable {
     durationDays = 7,
   ): Promise<EIP712TypedData> {
     const pool = await this.#ensurePool();
-    const result = await pool.createEIP712({
+    return pool.createEIP712({
       publicKey,
       contractAddresses,
       startTimestamp,
       durationDays,
     });
-
-    const domain = {
-      name: result.domain.name,
-      version: result.domain.version,
-      chainId: result.domain.chainId,
-      verifyingContract: result.domain.verifyingContract,
-    };
-
-    return {
-      domain,
-      types: {
-        EIP712Domain: buildEIP712DomainType(domain),
-        UserDecryptRequestVerification: result.types.UserDecryptRequestVerification,
-      },
-      message: {
-        publicKey: result.message.publicKey,
-        contractAddresses: result.message.contractAddresses,
-        startTimestamp: result.message.startTimestamp,
-        durationDays: result.message.durationDays,
-        extraData: result.message.extraData,
-      },
-    };
   }
 
   async encrypt(params: EncryptParams): Promise<EncryptResult> {
@@ -270,10 +250,7 @@ export class RelayerNode implements RelayerSDK, Disposable {
     });
   }
 
-  async getPublicKey(): Promise<{
-    publicKeyId: string;
-    publicKey: Uint8Array;
-  } | null> {
+  async getPublicKey(): Promise<PublicKeyData | null> {
     const pool = await this.#ensurePool();
     if (this.#artifactCache) {
       return this.#artifactCache.getPublicKey(async () => (await pool.getPublicKey()).result);
@@ -281,9 +258,7 @@ export class RelayerNode implements RelayerSDK, Disposable {
     return (await pool.getPublicKey()).result;
   }
 
-  async getPublicParams(
-    bits: number,
-  ): Promise<{ publicParams: Uint8Array; publicParamsId: string } | null> {
+  async getPublicParams(bits: number): Promise<PublicParamsData | null> {
     const pool = await this.#ensurePool();
     if (this.#artifactCache) {
       return this.#artifactCache.getPublicParams(

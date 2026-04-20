@@ -11,16 +11,9 @@ import * as _$react_jsx_runtime0 from 'react/jsx-runtime';
 import { ACL_TOPICS } from '@zama-fhe/sdk';
 import { AclEvent } from '@zama-fhe/sdk';
 import { AclPausedError } from '@zama-fhe/sdk';
-import { ActivityAmount } from '@zama-fhe/sdk';
-import { ActivityDirection } from '@zama-fhe/sdk';
-import { activityFeedQueryOptions } from '@zama-fhe/sdk/query';
-import { ActivityItem } from '@zama-fhe/sdk';
-import { ActivityLogMetadata } from '@zama-fhe/sdk';
-import { ActivityType } from '@zama-fhe/sdk';
 import { Address } from '@zama-fhe/sdk';
 import { allowanceContract } from '@zama-fhe/sdk';
 import { allowMutationOptions } from '@zama-fhe/sdk/query';
-import { applyDecryptedValues } from '@zama-fhe/sdk';
 import { ApprovalFailedError } from '@zama-fhe/sdk';
 import { approveContract } from '@zama-fhe/sdk';
 import { ApproveSubmittedEvent } from '@zama-fhe/sdk';
@@ -121,7 +114,7 @@ import { EncryptStartEvent } from '@zama-fhe/sdk';
 import { ERC20ReadFailedError } from '@zama-fhe/sdk';
 import { ERC7984_INTERFACE_ID } from '@zama-fhe/sdk';
 import { ERC7984_WRAPPER_INTERFACE_ID } from '@zama-fhe/sdk';
-import { extractEncryptedHandles } from '@zama-fhe/sdk';
+import { ERC7984_WRAPPER_INTERFACE_ID_LEGACY } from '@zama-fhe/sdk';
 import { FheTypeName } from '@zama-fhe/sdk';
 import { FhevmInstanceConfig } from '@zama-fhe/sdk';
 import { filterQueryOptions } from '@zama-fhe/sdk/query';
@@ -173,10 +166,10 @@ import { NetworkType } from '@zama-fhe/sdk';
 import { NoCiphertextError } from '@zama-fhe/sdk';
 import { OnChainEvent } from '@zama-fhe/sdk';
 import { PaginatedResult } from '@zama-fhe/sdk';
-import { parseActivityFeed } from '@zama-fhe/sdk';
 import { PropsWithChildren } from 'react';
 import { publicDecryptMutationOptions } from '@zama-fhe/sdk/query';
 import { PublicDecryptResult } from '@zama-fhe/sdk';
+import { PublicKeyData } from '@zama-fhe/sdk';
 import { publicKeyQueryOptions } from '@zama-fhe/sdk/query';
 import { publicParamsQueryOptions } from '@zama-fhe/sdk/query';
 import { QueryKey } from '@tanstack/react-query';
@@ -213,7 +206,6 @@ import { ShieldSubmittedEvent } from '@zama-fhe/sdk';
 import { signerAddressQueryOptions } from '@zama-fhe/sdk/query';
 import { SigningFailedError } from '@zama-fhe/sdk';
 import { SigningRejectedError } from '@zama-fhe/sdk';
-import { sortByBlockNumber } from '@zama-fhe/sdk';
 import { StoredCredentials } from '@zama-fhe/sdk';
 import { supportsInterfaceContract } from '@zama-fhe/sdk';
 import { symbolContract } from '@zama-fhe/sdk';
@@ -285,25 +277,11 @@ export { AclEvent }
 
 export { AclPausedError }
 
-export { ActivityAmount }
-
-export { ActivityDirection }
-
-export { activityFeedQueryOptions }
-
-export { ActivityItem }
-
-export { ActivityLogMetadata }
-
-export { ActivityType }
-
 export { Address }
 
 export { allowanceContract }
 
 export { allowMutationOptions }
-
-export { applyDecryptedValues }
 
 export { ApprovalFailedError }
 
@@ -505,7 +483,7 @@ export { ERC7984_INTERFACE_ID }
 
 export { ERC7984_WRAPPER_INTERFACE_ID }
 
-export { extractEncryptedHandles }
+export { ERC7984_WRAPPER_INTERFACE_ID_LEGACY }
 
 export { FheTypeName }
 
@@ -620,25 +598,11 @@ export interface OptimisticMutateContext {
 
 export { PaginatedResult }
 
-export { parseActivityFeed }
-
 export { publicDecryptMutationOptions }
 
 export { PublicDecryptResult }
 
-// @public
-export interface PublicKeyData {
-    publicKey: Uint8Array;
-    publicKeyId: string;
-}
-
 export { publicKeyQueryOptions }
-
-// @public
-export interface PublicParamsData {
-    publicParams: Uint8Array;
-    publicParamsId: string;
-}
 
 export { publicParamsQueryOptions }
 
@@ -707,8 +671,6 @@ export { signerAddressQueryOptions }
 export { SigningFailedError }
 
 export { SigningRejectedError }
-
-export { sortByBlockNumber }
 
 export { StoredCredentials }
 
@@ -785,17 +747,6 @@ export { UnwrappedStartedEvent }
 export { UnwrapRequestedEvent }
 
 export { UnwrapSubmittedEvent }
-
-// @public
-export function useActivityFeed(config: UseActivityFeedConfig): _$_tanstack_react_query0.UseQueryResult<ActivityItem[], Error>;
-
-// @public
-export interface UseActivityFeedConfig {
-    decrypt?: boolean;
-    logs: readonly (RawLog & Partial<ActivityLogMetadata>)[] | undefined;
-    tokenAddress: Address;
-    userAddress: Address | undefined;
-}
 
 // @public
 export function useAllow(options?: UseMutationOptions<void, Error, Address[]>): _$_tanstack_react_query0.UseMutationResult<void, Error, `0x${string}`[], unknown>;
@@ -901,7 +852,10 @@ export interface UseDelegationStatusConfig {
 }
 
 // @public
-export function useEncrypt(): _$_tanstack_react_query0.UseMutationResult<EncryptResult, Error, EncryptParams, unknown>;
+export function useEncrypt(): _$_tanstack_react_query0.UseMutationResult<Readonly<{
+    handles: Uint8Array[];
+    inputProof: Uint8Array;
+}>, Error, EncryptParams, unknown>;
 
 // @public
 export function useFinalizeUnwrap(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, FinalizeUnwrapParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, FinalizeUnwrapParams, `0x${string}`>;
@@ -948,13 +902,20 @@ export function useMetadata(tokenAddress: Address, options?: Omit<UseQueryOption
 export function useMetadataSuspense(tokenAddress: Address): _$_tanstack_react_query0.UseSuspenseQueryResult<TokenMetadata, Error>;
 
 // @public
-export function usePublicDecrypt(): _$_tanstack_react_query0.UseMutationResult<PublicDecryptResult, Error, `0x${string}`[], unknown>;
+export function usePublicDecrypt(): _$_tanstack_react_query0.UseMutationResult<Readonly<{
+    clearValues: _$_zama_fhe_relayer_sdk_web0.ClearValues;
+    abiEncodedClearValues: `0x${string}`;
+    decryptionProof: `0x${string}`;
+}>, Error, `0x${string}`[], unknown>;
 
 // @public
 export function usePublicKey(): _$_tanstack_react_query0.UseQueryResult<PublicKeyData | null, Error>;
 
 // @public
-export function usePublicParams(bits: number): _$_tanstack_react_query0.UseQueryResult<PublicParamsData | null, Error>;
+export function usePublicParams(bits: number): _$_tanstack_react_query0.UseQueryResult<{
+    publicParams: Uint8Array<ArrayBufferLike>;
+    publicParamsId: string;
+} | null, Error>;
 
 export { UserDecryptParams }
 
@@ -1047,7 +1008,7 @@ export function useUnwrap(config: UseZamaConfig, options?: UseMutationOptions<Tr
 export function useUnwrapAll(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, void, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, void, `0x${string}`>;
 
 // @public
-export function useUserDecrypt(config: UserDecryptQueryConfig, options?: Omit<UseQueryOptions<DecryptResult>, "queryKey" | "queryFn">): _$_tanstack_react_query0.UseQueryResult<DecryptResult, Error>;
+export function useUserDecrypt(config: UserDecryptQueryConfig, options?: Omit<UseQueryOptions<DecryptResult>, "queryKey" | "queryFn">): _$_tanstack_react_query0.UseQueryResult<Readonly<Record<`0x${string}`, _$_zama_fhe_sdk0.ClearValueType>>, Error>;
 
 // @public
 export type UseUserDecryptResult = ReturnType<typeof useUserDecrypt>;

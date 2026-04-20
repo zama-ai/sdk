@@ -37,22 +37,29 @@ import type { Address } from "viem";
 
 const MOCK_EIP712 = {
   domain: {
-    name: "KmsDecryptor",
+    name: "Decryption",
     version: "1",
-    chainId: 1,
+    chainId: 1n,
     verifyingContract: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
   },
   types: {
+    EIP712Domain: [
+      { name: "name", type: "string" },
+      { name: "version", type: "string" },
+      { name: "chainId", type: "uint256" },
+      { name: "verifyingContract", type: "address" },
+    ],
     UserDecryptRequestVerification: [
       { name: "publicKey", type: "bytes" },
       { name: "contractAddresses", type: "address[]" },
     ],
   },
+  primaryType: "UserDecryptRequestVerification",
   message: {
     publicKey: "0xpub",
     contractAddresses: ["0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a"],
-    startTimestamp: 1000n,
-    durationDays: 7n,
+    startTimestamp: "1000",
+    durationDays: "7",
     extraData: "0x",
   },
 };

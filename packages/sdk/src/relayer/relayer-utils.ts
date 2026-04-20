@@ -1,6 +1,5 @@
 import type { FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/bundle";
 import type { Address } from "viem";
-import type { EIP712TypedData } from "./relayer-sdk.types";
 
 const MAX_RETRIES = 2;
 const RETRY_BASE_MS = 500;
@@ -160,24 +159,3 @@ export const DefaultConfigs: Record<number, ExtendedFhevmInstanceConfig> = {
   [SepoliaConfig.chainId]: SepoliaConfig,
   [HardhatConfig.chainId]: HardhatConfig,
 } as const;
-
-/** EIP-712 domain field → Solidity type. Order follows the EIP-712 spec. */
-const DOMAIN_FIELD_TYPES: Record<string, string> = {
-  name: "string",
-  version: "string",
-  chainId: "uint256",
-  verifyingContract: "address",
-  salt: "bytes32",
-};
-
-/**
- * Build `EIP712Domain` type entries from the keys present in a domain object.
- * Order matches the EIP-712 spec (name → version → chainId → verifyingContract → salt).
- */
-export function buildEIP712DomainType(
-  domain: EIP712TypedData["domain"],
-): { name: string; type: string }[] {
-  return Object.keys(DOMAIN_FIELD_TYPES)
-    .filter((k) => k in domain)
-    .map((k) => ({ name: k, type: DOMAIN_FIELD_TYPES[k]! }));
-}

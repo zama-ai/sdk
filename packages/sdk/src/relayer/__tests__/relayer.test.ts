@@ -647,10 +647,17 @@ describe("RelayerWeb", () => {
             ok: true,
             json: () =>
               Promise.resolve({
-                fhePublicKey: {
-                  urls: ["https://cdn.example.com/pk.bin"],
+                status: "succeeded",
+                response: {
+                  fheKeyInfo: [
+                    {
+                      fhePublicKey: {
+                        urls: ["https://cdn.example.com/pk.bin"],
+                      },
+                    },
+                  ],
+                  crs: {},
                 },
-                crs: {},
               }),
           });
         }
@@ -1098,10 +1105,17 @@ describe("RelayerNode", () => {
             ok: true,
             json: () =>
               Promise.resolve({
-                fhePublicKey: {
-                  urls: ["https://cdn.example.com/pk.bin"],
+                status: "succeeded",
+                response: {
+                  fheKeyInfo: [
+                    {
+                      fhePublicKey: {
+                        urls: ["https://cdn.example.com/pk.bin"],
+                      },
+                    },
+                  ],
+                  crs: {},
                 },
-                crs: {},
               }),
           });
         }

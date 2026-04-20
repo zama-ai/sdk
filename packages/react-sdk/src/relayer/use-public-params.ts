@@ -1,18 +1,9 @@
 "use client";
 
+import type { PublicParamsData } from "@zama-fhe/sdk";
 import { useQuery } from "../utils/query";
 import { publicParamsQueryOptions } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
-
-export { publicParamsQueryOptions };
-
-/** Shape of the FHE public parameters returned by the relayer. */
-export interface PublicParamsData {
-  /** The raw public parameters bytes (WASM-ready). */
-  publicParams: Uint8Array;
-  /** Unique identifier for this public params version. */
-  publicParamsId: string;
-}
 
 /**
  * Fetch FHE public parameters for a given bit size from the relayer.
