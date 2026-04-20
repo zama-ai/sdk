@@ -1,5 +1,12 @@
 "use client";
 
+import type {
+  GenericSigner,
+  GenericStorage,
+  RelayerSDK,
+  ZamaConfig,
+  ZamaSDKEventListener,
+} from "@zama-fhe/sdk";
 import { ZamaSDK } from "@zama-fhe/sdk";
 import { invalidateWalletLifecycleQueries } from "@zama-fhe/sdk/query";
 import { useQueryClient } from "@tanstack/react-query";
@@ -11,13 +18,28 @@ import {
   useMemo,
   useRef,
 } from "react";
-import type { ZamaConfig } from "@zama-fhe/sdk";
+
+/** Config-based props (preferred). */
+interface ZamaProviderConfigProps extends PropsWithChildren {
+  config: ZamaConfig;
+  relayer?: never;
+}
+
+/** Legacy prop-based API for apps that don't use createZamaConfig. */
+interface ZamaProviderLegacyProps extends PropsWithChildren {
+  config?: never;
+  relayer: RelayerSDK;
+  signer: GenericSigner;
+  storage: GenericStorage;
+  sessionStorage?: GenericStorage;
+  keypairTTL?: number;
+  sessionTTL?: number;
+  registryTTL?: number;
+  onEvent?: ZamaSDKEventListener;
+}
 
 /** Props for {@link ZamaProvider}. */
-export interface ZamaProviderProps extends PropsWithChildren {
-  /** Configuration object created by {@link createZamaConfig}. */
-  config: ZamaConfig;
-}
+export type ZamaProviderProps = ZamaProviderConfigProps | ZamaProviderLegacyProps;
 
 const ZamaSDKContext = createContext<ZamaSDK | null>(null);
 
@@ -31,43 +53,68 @@ const ZamaSDKContext = createContext<ZamaSDK | null>(null);
  * </ZamaProvider>
  * ```
  */
-export function ZamaProvider({ children, config }: ZamaProviderProps) {
+export function ZamaProvider(props: ZamaProviderProps) {
+  const { children } = props;
   const queryClient = useQueryClient();
 
+  // Normalize: config-based or legacy props → unified shape.
+  // For the legacy path, individual props are spread into deps so the object
+  // is only recreated when an actual prop changes.
+  const relayer = props.config?.relayer ?? (props as ZamaProviderLegacyProps).relayer;
+  const signer = props.config?.signer ?? (props as ZamaProviderLegacyProps).signer;
+  const storage = props.config?.storage ?? (props as ZamaProviderLegacyProps).storage;
+  const sessionStorage =
+    props.config?.sessionStorage ?? (props as ZamaProviderLegacyProps).sessionStorage;
+  const keypairTTL = props.config?.keypairTTL ?? (props as ZamaProviderLegacyProps).keypairTTL;
+  const sessionTTL = props.config?.sessionTTL ?? (props as ZamaProviderLegacyProps).sessionTTL;
+  const registryTTL = props.config?.registryTTL ?? (props as ZamaProviderLegacyProps).registryTTL;
+  const onEvent = props.config?.onEvent ?? (props as ZamaProviderLegacyProps).onEvent;
+  const chains = props.config?.chains;
+
   // Stabilize onEvent so an inline arrow doesn't recreate the SDK every render.
-  const onEventRef = useRef(config.onEvent);
+  const onEventRef = useRef(onEvent);
 
   useEffect(() => {
-    onEventRef.current = config.onEvent;
+    onEventRef.current = onEvent;
   });
 
   const signerLifecycleCallbacks = useMemo(
     () =>
-      config.signer?.subscribe
+      signer?.subscribe
         ? {
             onDisconnect: () => invalidateWalletLifecycleQueries(queryClient),
             onAccountChange: () => invalidateWalletLifecycleQueries(queryClient),
             onChainChange: () => invalidateWalletLifecycleQueries(queryClient),
           }
         : undefined,
-    [queryClient, config.signer],
+    [queryClient, signer],
   );
 
   const sdk = useMemo(
     () =>
       new ZamaSDK({
-        chains: config.chains,
-        relayer: config.relayer,
-        signer: config.signer,
-        storage: config.storage,
-        sessionStorage: config.sessionStorage,
-        keypairTTL: config.keypairTTL,
-        sessionTTL: config.sessionTTL,
-        registryTTL: config.registryTTL,
+        chains,
+        relayer,
+        signer,
+        storage,
+        sessionStorage,
+        keypairTTL,
+        sessionTTL,
+        registryTTL,
         onEvent: onEventRef.current,
         signerLifecycleCallbacks,
       }),
-    [config, signerLifecycleCallbacks],
+    [
+      chains,
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      keypairTTL,
+      sessionTTL,
+      registryTTL,
+      signerLifecycleCallbacks,
+    ],
   );
 
   useEffect(() => () => sdk.dispose(), [sdk]);
