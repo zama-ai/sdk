@@ -212,6 +212,9 @@ importers:
       '@zama-fhe/react-sdk':
         specifier: workspace:*
         version: link:../../packages/react-sdk
+      '@zama-fhe/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
       react:
         specifier: '>=18'
         version: 19.2.5

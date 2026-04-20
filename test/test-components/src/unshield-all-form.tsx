@@ -1,11 +1,7 @@
 "use client";
 
-import {
-  useUnshieldAll,
-  useConfidentialBalance,
-  useMetadata,
-  type Address,
-} from "@zama-fhe/react-sdk";
+import { useUnshieldAll, useConfidentialBalance, useMetadata } from "@zama-fhe/react-sdk";
+import type { Address } from "@zama-fhe/sdk";
 
 export function UnshieldAllForm({
   tokenAddress,

@@ -6,8 +6,6 @@ import { tokenMetadataQueryOptions, type TokenMetadata } from "@zama-fhe/sdk/que
 import { useZamaSDK } from "../provider";
 import { useQuery, useSuspenseQuery } from "../utils/query";
 
-export { type TokenMetadata };
-
 /**
  * Read ERC-20 token metadata (name, symbol, decimals).
  * Fetches all three in parallel. Cached indefinitely since metadata is immutable.

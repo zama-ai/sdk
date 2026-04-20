@@ -7,8 +7,8 @@ import {
   usePublicKey,
   usePublicParams,
   useEncrypt,
-  type Address,
 } from "@zama-fhe/react-sdk";
+import type { Address } from "@zama-fhe/sdk";
 import type { Hex } from "viem";
 
 export function FheRelayerPanel({ tokenAddresses }: { tokenAddresses: Address[] }) {

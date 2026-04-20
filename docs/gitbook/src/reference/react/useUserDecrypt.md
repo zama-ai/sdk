@@ -53,10 +53,6 @@ function DecryptHandle({ handle }: { handle: string }) {
 
 ## Parameters
 
-```ts
-import { type UseUserDecryptConfig } from "@zama-fhe/react-sdk";
-```
-
 ### handles
 
 `DecryptHandle[]`
@@ -64,7 +60,7 @@ import { type UseUserDecryptConfig } from "@zama-fhe/react-sdk";
 Array of handles to decrypt. Each entry pairs an encrypted handle with the address of the contract that owns it. Only handles not yet in the SDK's persistent decrypt cache are sent for decryption — cached handles are returned immediately, even after a page reload.
 
 ```ts
-import { type DecryptHandle } from "@zama-fhe/react-sdk";
+import { type DecryptHandle } from "@zama-fhe/sdk";
 ```
 
 | Field             | Type      | Description                                            |
