@@ -1,8 +1,9 @@
-import { totalSupplyContract } from "../contracts";
+import { inferredTotalSupplyContract, totalSupplyContract } from "../contracts";
 import type { GenericSigner } from "../types";
 import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
 import { filterQueryOptions } from "./utils";
+import { detectWrapperInterfaceVersion } from "./wrapper-interface-version";
 import type { Address } from "viem";
 
 export interface TotalSupplyQueryConfig {
@@ -21,6 +22,10 @@ export function totalSupplyQueryOptions(
     queryKey,
     queryFn: async (context) => {
       const [, { tokenAddress: keyTokenAddress }] = context.queryKey;
+      const version = await detectWrapperInterfaceVersion(signer, keyTokenAddress);
+      if (version === "upgraded") {
+        return signer.readContract(inferredTotalSupplyContract(keyTokenAddress));
+      }
       return signer.readContract(totalSupplyContract(keyTokenAddress));
     },
     staleTime: 30_000,
