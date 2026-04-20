@@ -7,10 +7,6 @@ export const ERC7984_INTERFACE_ID = "0x4958f2a4" as const;
 /** ERC-165 interface ID for IERC7984ERC20Wrapper (confidential wrapper) — pre-upgrade deployed baseline. */
 export const ERC7984_WRAPPER_INTERFACE_ID_LEGACY = "0xd04584ba" as const;
 
-// Internal compatibility ID used by the local protocol-apps wrapper fixture.
-// This is not the documented deployed legacy ID and must not be exposed as such.
-const ERC7984_WRAPPER_INTERFACE_ID_INTERMEDIATE = "0xf1f4c25a" as const;
-
 /**
  * ERC-165 interface ID for IERC7984ERC20Wrapper (confidential wrapper) — upgraded interface.
  *
@@ -77,12 +73,4 @@ export function isConfidentialTokenContract(tokenAddress: Address) {
  */
 export function isConfidentialWrapperContract(tokenAddress: Address) {
   return supportsInterfaceContract(tokenAddress, ERC7984_WRAPPER_INTERFACE_ID_LEGACY);
-}
-
-export function confidentialWrapperInterfaceContracts(tokenAddress: Address) {
-  return [
-    supportsInterfaceContract(tokenAddress, ERC7984_WRAPPER_INTERFACE_ID_LEGACY),
-    supportsInterfaceContract(tokenAddress, ERC7984_WRAPPER_INTERFACE_ID),
-    supportsInterfaceContract(tokenAddress, ERC7984_WRAPPER_INTERFACE_ID_INTERMEDIATE),
-  ] as const;
 }

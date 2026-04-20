@@ -2,9 +2,10 @@ import { type Address, getAddress } from "viem";
 import {
   allowanceContract,
   confidentialBalanceOfContract,
-  confidentialWrapperInterfaceContracts,
   decimalsContract,
   ERC7984_INTERFACE_ID,
+  ERC7984_WRAPPER_INTERFACE_ID,
+  ERC7984_WRAPPER_INTERFACE_ID_LEGACY,
   getDelegationExpiryContract,
   MAX_UINT64,
   nameContract,
@@ -144,12 +145,17 @@ export class ReadonlyToken {
    * @returns `true` if the contract implements the ERC-7984 wrapper interface.
    */
   async isWrapper(): Promise<boolean> {
-    const matches = await Promise.all(
-      confidentialWrapperInterfaceContracts(this.address).map((contract) =>
-        this.sdk.signer.readContract(contract),
+    // During the transition period, check both wrapper interface IDs in parallel.
+    // Either returning true is sufficient to identify a confidential wrapper.
+    const [legacyMatch, newMatch] = await Promise.all([
+      this.sdk.signer.readContract(
+        supportsInterfaceContract(this.address, ERC7984_WRAPPER_INTERFACE_ID_LEGACY),
       ),
-    );
-    return matches.some(Boolean);
+      this.sdk.signer.readContract(
+        supportsInterfaceContract(this.address, ERC7984_WRAPPER_INTERFACE_ID),
+      ),
+    ]);
+    return legacyMatch || newMatch;
   }
 
   /**
