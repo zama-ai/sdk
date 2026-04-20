@@ -24,12 +24,11 @@ import { sepolia, mainnet, hoodi, hardhat } from "@zama-fhe/sdk/chains";
 
 ### What each chain includes
 
-Each chain object extends `ExtendedFhevmInstanceConfig` with an `id` property:
+Each chain object implements the `FheChain` interface:
 
 | Field                                       | Type                  | Description                                                                                              |
 | ------------------------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------- |
-| `id`                                        | `number`              | Chain identifier (same as `chainId`)                                                                     |
-| `chainId`                                   | `number`              | Chain identifier                                                                                         |
+| `id`                                        | `number`              | Chain identifier                                                                                         |
 | `gatewayChainId`                            | `number`              | Chain ID of the gateway                                                                                  |
 | `relayerUrl`                                | `string`              | Default relayer endpoint for this network                                                                |
 | `network`                                   | `string`              | Default RPC URL for this network                                                                         |

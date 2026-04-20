@@ -1,3 +1,4 @@
+import type { FheChain } from "../chains";
 import { ConfigurationError } from "../errors";
 import { EthersSigner } from "../ethers";
 import type { CleartextConfig } from "../relayer/cleartext/types";
@@ -10,6 +11,13 @@ import type { GenericSigner, GenericStorage } from "../types";
 import { ViemSigner } from "../viem";
 import type { TransportConfig } from "./transports";
 import type { ZamaConfigCustomSigner, ZamaConfigEthers, ZamaConfigViem } from "./types";
+
+// ── Chain normalization ─────────────────────────────────────────────────────
+
+/** Convert an `FheChain` (with `id`) to an `ExtendedFhevmInstanceConfig` (with `chainId`) for the relayer layer. */
+function toFhevmConfig({ id, ...rest }: FheChain): ExtendedFhevmInstanceConfig {
+  return { ...rest, chainId: id };
+}
 
 // ── Storage defaults ─────────────────────────────────────────────────────────
 
@@ -65,11 +73,11 @@ export interface ResolvedChainTransport {
 const DEFAULT_WEB_TRANSPORT: TransportConfig = { type: "web" };
 
 export function resolveChainTransports(
-  chains: ExtendedFhevmInstanceConfig[],
+  chains: FheChain[],
   transports: Record<number, TransportConfig> | undefined,
   chainIds: number[],
 ): Map<number, ResolvedChainTransport> {
-  const chainMap = new Map(chains.map((c) => [c.chainId, c]));
+  const chainMap = new Map(chains.map((c) => [c.id, c]));
   const transportMap = new Map(Object.entries(transports ?? {}));
   const result = new Map<number, ResolvedChainTransport>();
 
@@ -91,7 +99,10 @@ export function resolveChainTransports(
             `Add the chain config to the chains array.`,
         );
       }
-      result.set(id, { chain: chainConfig, transport: userTransport });
+      result.set(id, {
+        chain: toFhevmConfig(chainConfig),
+        transport: userTransport,
+      });
       continue;
     }
 
@@ -110,7 +121,7 @@ export function resolveChainTransports(
     }
 
     const transport = userTransport ?? DEFAULT_WEB_TRANSPORT;
-    result.set(id, { chain: chainConfig, transport });
+    result.set(id, { chain: toFhevmConfig(chainConfig), transport });
   }
 
   if (transports) {

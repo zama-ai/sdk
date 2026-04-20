@@ -1,15 +1,15 @@
 import type { Provider, Signer } from "ethers";
 import type { EIP1193Provider, PublicClient, WalletClient } from "viem";
+import type { FheChain } from "../chains";
 import type { ZamaSDKEventListener } from "../events";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
-import type { ExtendedFhevmInstanceConfig } from "../relayer/relayer-utils";
 import type { GenericSigner, GenericStorage } from "../types";
 import type { TransportConfig } from "./transports";
 
 /** Shared options across all adapter paths. */
 export interface ZamaConfigBase {
   /** FHE chain configurations. Defines which chains support FHE operations. */
-  chains: ExtendedFhevmInstanceConfig[];
+  chains: FheChain[];
   /** Per-chain transport configuration. */
   transports?: Record<number, TransportConfig>;
   /** Credential storage. Default: IndexedDB in browser, memory in Node. */

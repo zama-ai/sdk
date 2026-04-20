@@ -75,6 +75,17 @@
       },
       "default": "./dist/esm/node/index.js"
     },
+    "./chains": {
+      "import": {
+        "types": "./dist/esm/chains/index.d.ts",
+        "default": "./dist/esm/chains/index.js"
+      },
+      "require": {
+        "types": "./dist/esm/chains/index.d.ts",
+        "default": "./dist/cjs/chains/index.cjs"
+      },
+      "default": "./dist/esm/chains/index.js"
+    },
     "./package.json": {
       "default": "./package.json"
     }
@@ -95,6 +106,9 @@
       ],
       "node": [
         "./dist/esm/node/index.d.ts"
+      ],
+      "chains": [
+        "./dist/esm/chains/index.d.ts"
       ]
     }
   },

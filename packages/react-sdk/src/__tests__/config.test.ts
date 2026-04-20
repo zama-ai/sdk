@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { createZamaConfig, web } from "../config";
 import { createMockSigner, createMockStorage } from "../../../sdk/src/test-fixtures";
-import { SepoliaConfig } from "@zama-fhe/sdk";
+import { sepolia } from "@zama-fhe/sdk/chains";
 import { WagmiSigner } from "../wagmi/wagmi-signer";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 import { EthersSigner } from "@zama-fhe/sdk/ethers";
@@ -54,7 +54,7 @@ describe("createZamaConfig", () => {
   describe("signer resolution", () => {
     it("creates WagmiSigner from wagmiConfig", () => {
       const wagmiConfig = mockWagmiConfig();
-      createZamaConfig({ chains: [SepoliaConfig], wagmiConfig });
+      createZamaConfig({ chains: [sepolia], wagmiConfig });
       expect(MockWagmiSigner).toHaveBeenCalledWith({ config: wagmiConfig });
     });
 
@@ -62,7 +62,7 @@ describe("createZamaConfig", () => {
       const publicClient = {} as any;
       const walletClient = {} as any;
       createZamaConfig({
-        chains: [SepoliaConfig],
+        chains: [sepolia],
         viem: { publicClient, walletClient },
         transports: { [11155111]: web() },
       });
@@ -76,7 +76,7 @@ describe("createZamaConfig", () => {
     it("creates EthersSigner from ethers config", () => {
       const ethereum = {} as any;
       createZamaConfig({
-        chains: [SepoliaConfig],
+        chains: [sepolia],
         ethers: { ethereum },
         transports: { [11155111]: web() },
       });
@@ -86,7 +86,7 @@ describe("createZamaConfig", () => {
     it("uses custom signer as-is", () => {
       const signer = createMockSigner();
       const config = createZamaConfig({
-        chains: [SepoliaConfig],
+        chains: [sepolia],
         signer,
         transports: { [11155111]: web() },
       });
@@ -97,7 +97,7 @@ describe("createZamaConfig", () => {
   describe("transport resolution", () => {
     it("auto-resolves transports from wagmi chains using chains array", () => {
       const config = createZamaConfig({
-        chains: [SepoliaConfig],
+        chains: [sepolia],
         wagmiConfig: mockWagmiConfig([11155111]),
       });
       expect(config.relayer).toBeDefined();
@@ -105,7 +105,7 @@ describe("createZamaConfig", () => {
 
     it("merges user overrides on top of defaults", () => {
       const config = createZamaConfig({
-        chains: [SepoliaConfig],
+        chains: [sepolia],
         wagmiConfig: mockWagmiConfig([11155111]),
         transports: {
           [11155111]: web({ relayerUrl: "https://my-relayer.example.com" }),
@@ -117,7 +117,7 @@ describe("createZamaConfig", () => {
     it("throws for unknown chains with no override", () => {
       expect(() =>
         createZamaConfig({
-          chains: [SepoliaConfig],
+          chains: [sepolia],
           wagmiConfig: mockWagmiConfig([999999]),
         }),
       ).toThrow("Chain 999999");
@@ -136,7 +136,7 @@ describe("createZamaConfig", () => {
     it("uses explicit transports for non-wagmi paths", () => {
       const signer = createMockSigner();
       const config = createZamaConfig({
-        chains: [SepoliaConfig],
+        chains: [sepolia],
         signer,
         transports: { [11155111]: web() },
       });
@@ -149,7 +149,7 @@ describe("createZamaConfig", () => {
       const storage = createMockStorage();
       const sessionStorage = createMockStorage();
       const config = createZamaConfig({
-        chains: [SepoliaConfig],
+        chains: [sepolia],
         signer: createMockSigner(),
         transports: { [11155111]: web() },
         storage,
@@ -162,7 +162,7 @@ describe("createZamaConfig", () => {
     it("accepts the same storage instance for both storage and sessionStorage", () => {
       const sharedStorage = createMockStorage();
       const config = createZamaConfig({
-        chains: [SepoliaConfig],
+        chains: [sepolia],
         signer: createMockSigner(),
         transports: { [11155111]: web() },
         storage: sharedStorage,
@@ -206,7 +206,7 @@ describe("createZamaConfig", () => {
     it("passes keypairTTL, sessionTTL, registryTTL, onEvent through", () => {
       const onEvent = vi.fn();
       const config = createZamaConfig({
-        chains: [SepoliaConfig],
+        chains: [sepolia],
         signer: createMockSigner(),
         transports: { [11155111]: web() },
         keypairTTL: 86400,
