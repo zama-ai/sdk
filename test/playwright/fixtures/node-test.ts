@@ -5,11 +5,16 @@
  * Domain-level FHE scenarios are covered by the browser e2e suite.
  */
 import { test as base } from "@playwright/test";
-import { HardhatConfig, MemoryStorage, ZamaSDK, type FhevmInstanceConfig } from "@zama-fhe/sdk";
+import {
+  HardhatConfig,
+  MemoryStorage,
+  ZamaSDK,
+  type Address,
+  type FhevmInstanceConfig,
+} from "@zama-fhe/sdk";
 import { hardhatCleartextConfig } from "@zama-fhe/sdk/cleartext";
 import { RelayerNode } from "@zama-fhe/sdk/node";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
-import type { Address } from "viem";
 import { createPublicClient, createTestClient, http, publicActions, walletActions } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { foundry } from "viem/chains";

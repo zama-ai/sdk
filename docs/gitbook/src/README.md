@@ -43,9 +43,9 @@ TanStack Query-based hooks with cached decryption, automatic cache invalidation,
 | Package                                                | Use when...                                                                   |
 | ------------------------------------------------------ | ----------------------------------------------------------------------------- |
 | [`@zama-fhe/sdk`](/reference/sdk/ZamaSDK)              | You are building with vanilla TypeScript, Node.js, or any non-React framework |
-| [`@zama-fhe/react-sdk`](/reference/react/ZamaProvider) | You are building a React app (includes everything from the core SDK)          |
+| [`@zama-fhe/react-sdk`](/reference/react/ZamaProvider) | You are building a React app (hooks and React-specific providers)             |
 
-If you are using React, `@zama-fhe/react-sdk` re-exports most of the core SDK (hooks, providers, `RelayerWeb`, storage singletons). You still import signer adapters from their sub-paths (e.g. `@zama-fhe/sdk/viem`, `@zama-fhe/sdk/ethers`).
+If you are using React, install both packages: `@zama-fhe/react-sdk` provides the hooks and `ZamaProvider`, while `@zama-fhe/sdk` is a peer dependency that provides core classes and utilities (`RelayerWeb`, storage singletons, etc.). Signer adapters are imported from sub-paths (e.g. `@zama-fhe/sdk/viem`, `@zama-fhe/sdk/ethers`).
 
 ## Install
 
@@ -54,7 +54,7 @@ If you are using React, `@zama-fhe/react-sdk` re-exports most of the core SDK (h
 
 ```sh
 # React app
-pnpm add @zama-fhe/react-sdk @tanstack/react-query
+pnpm add @zama-fhe/react-sdk @zama-fhe/sdk @tanstack/react-query
 
 # Vanilla TypeScript / Node.js
 pnpm add @zama-fhe/sdk
@@ -65,7 +65,7 @@ pnpm add @zama-fhe/sdk
 
 ```sh
 # React app
-npm install @zama-fhe/react-sdk @tanstack/react-query
+npm install @zama-fhe/react-sdk @zama-fhe/sdk @tanstack/react-query
 
 # Vanilla TypeScript / Node.js
 npm install @zama-fhe/sdk
@@ -76,7 +76,7 @@ npm install @zama-fhe/sdk
 
 ```sh
 # React app
-yarn add @zama-fhe/react-sdk @tanstack/react-query
+yarn add @zama-fhe/react-sdk @zama-fhe/sdk @tanstack/react-query
 
 # Vanilla TypeScript / Node.js
 yarn add @zama-fhe/sdk

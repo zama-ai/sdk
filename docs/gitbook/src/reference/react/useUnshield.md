@@ -75,7 +75,7 @@ const sdk = new ZamaSDK({
 ## Parameters
 
 ```ts
-import { type UnshieldParams } from "@zama-fhe/react-sdk";
+import { type UnshieldParams } from "@zama-fhe/sdk/query";
 ```
 
 ### tokenAddress
@@ -153,7 +153,7 @@ await unshield({
 ## Return Type
 
 ```ts
-import { type UnshieldParams } from "@zama-fhe/react-sdk";
+import { type UnshieldParams } from "@zama-fhe/sdk/query";
 ```
 
 `data` resolves to `{ txHash: Hex, receipt: TransactionReceipt }`.

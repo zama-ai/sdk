@@ -6,8 +6,8 @@ import {
   useResumeUnshield,
   useConfidentialBalance,
   useMetadata,
-  type Address,
 } from "@zama-fhe/react-sdk";
+import type { Address } from "@zama-fhe/sdk";
 
 export function ResumeUnshieldForm({
   tokenAddress,

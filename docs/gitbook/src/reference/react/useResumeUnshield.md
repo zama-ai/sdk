@@ -11,7 +11,7 @@ Mutation hook that resumes an unshield interrupted between the unwrap and finali
 
 ```ts
 import { useResumeUnshield } from "@zama-fhe/react-sdk";
-import { loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/react-sdk";
+import { loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/sdk";
 ```
 
 ## Usage
@@ -21,12 +21,8 @@ import { loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/react-sdk";
 
 ```tsx
 import { useEffect } from "react";
-import {
-  useResumeUnshield,
-  loadPendingUnshield,
-  clearPendingUnshield,
-  useZamaSDK,
-} from "@zama-fhe/react-sdk";
+import { useResumeUnshield, useZamaSDK } from "@zama-fhe/react-sdk";
+import { loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/sdk";
 
 const TOKEN = "0xToken" as const;
 
@@ -84,10 +80,6 @@ const sdk = new ZamaSDK({
 
 ## Parameters
 
-```ts
-import { type UseResumeUnshieldParameters } from "@zama-fhe/react-sdk";
-```
-
 ### tokenAddress
 
 `Address`
@@ -129,10 +121,6 @@ The full recovery flow uses three utilities together:
 Run this check on mount to handle any session that was interrupted.
 
 ## Return Type
-
-```ts
-import { type UseResumeUnshieldReturnType } from "@zama-fhe/react-sdk";
-```
 
 `data` resolves to `{ txHash: Hex, receipt: TransactionReceipt }`.
 

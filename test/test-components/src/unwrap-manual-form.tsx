@@ -1,14 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { type Address, findUnwrapRequested, type Hex } from "@zama-fhe/sdk";
 import {
   useUnwrap,
   useFinalizeUnwrap,
   useConfidentialBalance,
   useMetadata,
-  findUnwrapRequested,
-  type Address,
-  type Hex,
 } from "@zama-fhe/react-sdk";
 
 export function UnwrapManualForm({
