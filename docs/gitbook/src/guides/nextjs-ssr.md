@@ -48,7 +48,8 @@ Create a dedicated client component that sets up the SDK providers. This keeps t
 import { WagmiProvider, createConfig, http } from "wagmi";
 import { sepolia } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ZamaProvider, createZamaConfig, relayer } from "@zama-fhe/react-sdk";
+import { ZamaProvider, relayer } from "@zama-fhe/react-sdk";
+import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 
 const wagmiConfig = createConfig({
   chains: [sepolia],

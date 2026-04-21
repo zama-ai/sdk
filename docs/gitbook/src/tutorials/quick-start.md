@@ -16,6 +16,9 @@ In browser apps, prefix client-side variables with `NEXT_PUBLIC_` (Next.js) or `
 The relayer requires an API key. In browser apps, proxy requests through your backend so the key stays server-side. For server-side scripts or prototyping, pass the key directly:
 
 ```ts
+import { web } from "@zama-fhe/sdk";
+import { node } from "@zama-fhe/sdk/node";
+
 // Browser apps: proxy through your backend (recommended)
 web({ relayerUrl: "https://your-app.com/api/relayer/11155111" });
 
@@ -75,7 +78,8 @@ import { WagmiProvider, createConfig, http } from "wagmi";
 import { sepolia } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ZamaProvider, createZamaConfig, web } from "@zama-fhe/react-sdk";
+import { ZamaProvider, web } from "@zama-fhe/react-sdk";
+import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 import { sepolia as sepoliaFhe } from "@zama-fhe/sdk/chains";
 
 const wagmiConfig = createConfig({
@@ -90,7 +94,9 @@ const zamaConfig = createZamaConfig({
   chains: [sepoliaFhe],
   wagmiConfig,
   transports: {
-    [sepoliaFhe.id]: web({ relayerUrl: "https://your-app.com/api/relayer/11155111" }),
+    [sepoliaFhe.id]: web({
+      relayerUrl: "https://your-app.com/api/relayer/11155111",
+    }),
   },
 });
 const queryClient = new QueryClient();
@@ -114,7 +120,8 @@ function App() {
 ```ts
 import { createPublicClient, createWalletClient, custom, http } from "viem";
 import { sepolia } from "viem/chains";
-import { createZamaConfig, web, ZamaSDK } from "@zama-fhe/sdk";
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { web, ZamaSDK } from "@zama-fhe/sdk";
 import { sepolia as sepoliaFhe } from "@zama-fhe/sdk/chains";
 
 const publicClient = createPublicClient({
@@ -126,11 +133,14 @@ const walletClient = createWalletClient({
   transport: custom(window.ethereum!),
 });
 
-const config = createZamaConfig({
+const config = createConfig({
   chains: [sepoliaFhe],
-  viem: { publicClient, walletClient },
+  publicClient,
+  walletClient,
   transports: {
-    [sepoliaFhe.id]: web({ relayerUrl: "https://your-app.com/api/relayer/11155111" }),
+    [sepoliaFhe.id]: web({
+      relayerUrl: "https://your-app.com/api/relayer/11155111",
+    }),
   },
 });
 
@@ -141,14 +151,17 @@ const sdk = new ZamaSDK(config);
 {% tab title="ethers" %}
 
 ```ts
-import { createZamaConfig, web, ZamaSDK } from "@zama-fhe/sdk";
+import { createConfig } from "@zama-fhe/sdk/ethers";
+import { web, ZamaSDK } from "@zama-fhe/sdk";
 import { sepolia } from "@zama-fhe/sdk/chains";
 
-const config = createZamaConfig({
+const config = createConfig({
   chains: [sepolia],
-  ethers: { ethereum: window.ethereum! },
+  ethereum: window.ethereum!,
   transports: {
-    [sepolia.id]: web({ relayerUrl: "https://your-app.com/api/relayer/11155111" }),
+    [sepolia.id]: web({
+      relayerUrl: "https://your-app.com/api/relayer/11155111",
+    }),
   },
 });
 
@@ -159,7 +172,9 @@ const sdk = new ZamaSDK(config);
 {% tab title="Node.js (viem)" %}
 
 ```ts
-import { createZamaConfig, node, ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
+import { node } from "@zama-fhe/sdk/node";
 import { sepolia } from "@zama-fhe/sdk/chains";
 import { createPublicClient, createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
@@ -176,9 +191,10 @@ const walletClient = createWalletClient({
   transport: http(process.env.RPC_URL),
 });
 
-const config = createZamaConfig({
+const config = createConfig({
   chains: [sepolia],
-  viem: { publicClient, walletClient },
+  publicClient,
+  walletClient,
   storage: memoryStorage,
   transports: {
     [sepolia.id]: node(
@@ -198,16 +214,18 @@ const sdk = new ZamaSDK(config);
 {% tab title="Node.js (ethers)" %}
 
 ```ts
-import { createZamaConfig, node, ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
+import { createConfig } from "@zama-fhe/sdk/ethers";
+import { ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
+import { node } from "@zama-fhe/sdk/node";
 import { sepolia } from "@zama-fhe/sdk/chains";
 import { Wallet, JsonRpcProvider } from "ethers";
 
 const provider = new JsonRpcProvider(process.env.RPC_URL);
 const wallet = new Wallet(process.env.PRIVATE_KEY!, provider);
 
-const config = createZamaConfig({
+const config = createConfig({
   chains: [sepolia],
-  ethers: { signer: wallet },
+  ethereum: provider,
   storage: memoryStorage,
   transports: {
     [sepolia.id]: node(
@@ -253,8 +271,12 @@ function MyTokenPage() {
   const { disconnect } = useDisconnect();
 
   const { data: meta } = useMetadata(TOKEN);
-  const { data: balance, isLoading } = useConfidentialBalance({ tokenAddress: TOKEN });
-  const { mutateAsync: shield, isPending: isShielding } = useShield({ tokenAddress: TOKEN });
+  const { data: balance, isLoading } = useConfidentialBalance({
+    tokenAddress: TOKEN,
+  });
+  const { mutateAsync: shield, isPending: isShielding } = useShield({
+    tokenAddress: TOKEN,
+  });
   const { mutateAsync: transfer, isPending: isSending } = useConfidentialTransfer({
     tokenAddress: TOKEN,
   });

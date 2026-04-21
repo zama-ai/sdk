@@ -39,17 +39,19 @@ Each chain object implements the `FheChain` interface:
 | `verifyingContractAddressInputVerification` | `Address`             | EIP-712 verifying contract for encrypt operations                                                        |
 | `registryAddress`                           | `string \| undefined` | Token wrapper registry contract address (undefined for chains without a deployed registry, e.g. Hardhat) |
 
-### Usage with `createZamaConfig`
+### Usage with `createConfig`
 
 Pass chain objects in the `chains` array and use `chain.id` as transport keys:
 
 ```ts
-import { createZamaConfig, web } from "@zama-fhe/sdk";
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { web } from "@zama-fhe/sdk";
 import { sepolia, mainnet } from "@zama-fhe/sdk/chains";
 
-const config = createZamaConfig({
+const config = createConfig({
   chains: [sepolia, mainnet],
-  viem: { publicClient, walletClient },
+  publicClient,
+  walletClient,
   transports: {
     [sepolia.id]: web({ relayerUrl: "https://your-app.com/api/relayer/11155111" }),
     [mainnet.id]: web({ relayerUrl: "https://your-app.com/api/relayer/1" }),
@@ -72,7 +74,7 @@ web({ relayerUrl: "https://your-app.com/api/relayer/11155111" });
 On the server, use `node()` and add authentication:
 
 ```ts
-import { node } from "@zama-fhe/sdk";
+import { node } from "@zama-fhe/sdk/node";
 
 node(
   {
@@ -88,12 +90,14 @@ node(
 Use the `hardhat` chain with a `cleartext()` transport:
 
 ```ts
+import { createConfig } from "@zama-fhe/sdk/viem";
 import { cleartext } from "@zama-fhe/sdk";
 import { hardhat } from "@zama-fhe/sdk/chains";
 
-const config = createZamaConfig({
+const config = createConfig({
   chains: [hardhat],
-  viem: { publicClient, walletClient },
+  publicClient,
+  walletClient,
   transports: {
     [hardhat.id]: cleartext({ executorAddress: "0x..." }),
   },
@@ -105,9 +109,11 @@ const config = createZamaConfig({
 Support multiple networks by listing them in the `chains` array:
 
 ```ts
+import { createConfig } from "@zama-fhe/react-sdk/wagmi";
+import { web } from "@zama-fhe/sdk";
 import { sepolia, mainnet } from "@zama-fhe/sdk/chains";
 
-const config = createZamaConfig({
+const config = createConfig({
   chains: [sepolia, mainnet],
   wagmiConfig,
   transports: {
@@ -132,7 +138,7 @@ import { MainnetConfig, SepoliaConfig, HardhatConfig } from "@zama-fhe/sdk";
 | `HardhatConfig` | `31337`    | Local Hardhat node |
 
 {% hint style="info" %}
-For new projects, prefer chain objects from `@zama-fhe/sdk/chains` with `createZamaConfig`. The legacy preset configs work best with the manual `RelayerWeb`/`RelayerNode` constructors.
+For new projects, prefer chain objects from `@zama-fhe/sdk/chains` with `createConfig`. The legacy preset configs work best with the manual `RelayerWeb`/`RelayerNode` constructors.
 {% endhint %}
 
 ## DefaultRegistryAddresses

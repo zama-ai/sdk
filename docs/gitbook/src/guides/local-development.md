@@ -21,10 +21,11 @@ Cleartext mode is blocked on Ethereum Mainnet (chain 1) and Sepolia (chain 11155
 npm install @zama-fhe/sdk viem
 ```
 
-### 2. Use the `cleartext()` transport with `createZamaConfig`
+### 2. Use the `cleartext()` transport with `createConfig`
 
 ```ts
-import { createZamaConfig, cleartext, ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { cleartext, ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
 import { hardhat } from "@zama-fhe/sdk/chains";
 ```
 
@@ -33,9 +34,10 @@ import { hardhat } from "@zama-fhe/sdk/chains";
 For a local Hardhat network, use the built-in `hardhat` chain object:
 
 ```ts
-const config = createZamaConfig({
+const config = createConfig({
   chains: [hardhat],
-  viem: { publicClient, walletClient },
+  publicClient,
+  walletClient,
   storage: memoryStorage,
   transports: {
     [hardhat.id]: cleartext({ executorAddress: "0xYourExecutorAddress" }),
@@ -87,7 +89,8 @@ const relayer = new RelayerCleartext(hoodiCleartextConfig);
 If you deploy FHEVM contracts on a custom chain or at different addresses than the default ones, pass all required fields to the `cleartext()` transport:
 
 ```ts
-import { createZamaConfig, cleartext, ZamaSDK } from "@zama-fhe/sdk";
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { cleartext, ZamaSDK } from "@zama-fhe/sdk";
 
 const myChain = {
   id: 12345,
@@ -102,9 +105,10 @@ const myChain = {
   relayerUrl: "",
 };
 
-const config = createZamaConfig({
+const config = createConfig({
   chains: [myChain],
-  viem: { publicClient, walletClient },
+  publicClient,
+  walletClient,
   transports: {
     [myChain.id]: cleartext({
       executorAddress: "0x...",

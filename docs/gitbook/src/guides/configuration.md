@@ -1,11 +1,11 @@
 ---
 title: Configuration
-description: How to configure the SDK with createZamaConfig — chains, transports, signer, and storage.
+description: How to configure the SDK with createConfig — chains, transports, signer, and storage.
 ---
 
 # Configuration
 
-The SDK uses `createZamaConfig` to wire together chains, transports, a signer, and storage into a single configuration object. This guide walks through each piece.
+The SDK uses `createConfig` to wire together chains, transports, a signer, and storage into a single configuration object. This guide walks through each piece.
 
 ## Steps
 
@@ -35,7 +35,8 @@ Transports tell the SDK how to run FHE operations on each chain.
 | `cleartext()` | Local dev   | No FHE infrastructure — cleartext operations |
 
 ```ts
-import { web, node, cleartext } from "@zama-fhe/sdk";
+import { web, cleartext } from "@zama-fhe/sdk";
+import { node } from "@zama-fhe/sdk/node";
 ```
 
 The first argument is per-chain overrides (e.g. `relayerUrl`, `network`). The optional second argument is shared relayer-pool options (e.g. `threads`, `poolSize`).
@@ -104,13 +105,14 @@ For full type information, see the [ViemSigner](/reference/sdk/ViemSigner), [Eth
 
 ### 4. Create the config
 
-`createZamaConfig` takes your chains, transports, and signer adapter and returns a config object.
+`createConfig` takes your chains, transports, and signer adapter and returns a config object.
 
 {% tabs %}
 {% tab title="React + wagmi" %}
 
 ```tsx
-import { createZamaConfig, web } from "@zama-fhe/react-sdk";
+import { web } from "@zama-fhe/react-sdk";
+import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 import { sepolia, mainnet } from "@zama-fhe/sdk/chains";
 
 const zamaConfig = createZamaConfig({
@@ -127,12 +129,14 @@ const zamaConfig = createZamaConfig({
 {% tab title="Browser (viem)" %}
 
 ```ts
-import { createZamaConfig, web, ZamaSDK } from "@zama-fhe/sdk";
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { web, ZamaSDK } from "@zama-fhe/sdk";
 import { sepolia, mainnet } from "@zama-fhe/sdk/chains";
 
-const config = createZamaConfig({
+const config = createConfig({
   chains: [sepolia, mainnet],
-  viem: { publicClient, walletClient },
+  publicClient,
+  walletClient,
   transports: {
     [sepolia.id]: web({ relayerUrl: "https://your-app.com/api/relayer/11155111" }),
     [mainnet.id]: web({ relayerUrl: "https://your-app.com/api/relayer/1" }),
@@ -146,12 +150,13 @@ const sdk = new ZamaSDK(config);
 {% tab title="Browser (ethers)" %}
 
 ```ts
-import { createZamaConfig, web, ZamaSDK } from "@zama-fhe/sdk";
+import { createConfig } from "@zama-fhe/sdk/ethers";
+import { web, ZamaSDK } from "@zama-fhe/sdk";
 import { sepolia } from "@zama-fhe/sdk/chains";
 
-const config = createZamaConfig({
+const config = createConfig({
   chains: [sepolia],
-  ethers: { ethereum: window.ethereum! },
+  ethereum: window.ethereum!,
   transports: {
     [sepolia.id]: web({ relayerUrl: "https://your-app.com/api/relayer/11155111" }),
   },
@@ -164,12 +169,15 @@ const sdk = new ZamaSDK(config);
 {% tab title="Node.js" %}
 
 ```ts
-import { createZamaConfig, node, ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
+import { node } from "@zama-fhe/sdk/node";
 import { sepolia } from "@zama-fhe/sdk/chains";
 
-const config = createZamaConfig({
+const config = createConfig({
   chains: [sepolia],
-  viem: { publicClient, walletClient },
+  publicClient,
+  walletClient,
   storage: memoryStorage,
   transports: {
     [sepolia.id]: node(
@@ -191,18 +199,14 @@ const sdk = new ZamaSDK(config);
 MV3 Chrome extensions need a second storage backend for session signatures, because the service worker can be terminated at any time and in-memory state is lost. Use `chromeSessionStorage` alongside `indexedDBStorage`:
 
 ```ts
-import {
-  createZamaConfig,
-  web,
-  ZamaSDK,
-  indexedDBStorage,
-  chromeSessionStorage,
-} from "@zama-fhe/sdk";
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { web, ZamaSDK, indexedDBStorage, chromeSessionStorage } from "@zama-fhe/sdk";
 import { sepolia } from "@zama-fhe/sdk/chains";
 
-const config = createZamaConfig({
+const config = createConfig({
   chains: [sepolia],
-  viem: { publicClient, walletClient },
+  publicClient,
+  walletClient,
   storage: indexedDBStorage,
   sessionStorage: chromeSessionStorage,
   transports: {
@@ -225,7 +229,7 @@ Browser apps should proxy relayer requests through a backend to keep the API key
 You can tune how long the FHE keypair and session signatures remain valid, and subscribe to lifecycle events for debugging:
 
 ```ts
-const config = createZamaConfig({
+const config = createConfig({
   chains: [sepolia],
   wagmiConfig,
   transports: { [sepolia.id]: web({ relayerUrl: "..." }) },
@@ -241,7 +245,7 @@ Setting `sessionTTL: 0` disables session caching entirely — every operation tr
 
 ### 6. (Optional) Choose a storage backend
 
-The FHE keypair is cached so users don't get a wallet popup on every decrypt. By default, `createZamaConfig` picks the right storage for your environment. Override with the `storage` field if needed:
+The FHE keypair is cached so users don't get a wallet popup on every decrypt. By default, `createConfig` picks the right storage for your environment. Override with the `storage` field if needed:
 
 | Storage             | When to use                                         |
 | ------------------- | --------------------------------------------------- |
@@ -264,9 +268,10 @@ When multiple chains use the same transport type, pass a shared options object t
 ```ts
 const sharedOpts = { threads: 8, logger: console };
 
-const config = createZamaConfig({
+const config = createConfig({
   chains: [sepolia, mainnet],
-  viem: { publicClient, walletClient },
+  publicClient,
+  walletClient,
   transports: {
     [sepolia.id]: web({ relayerUrl: "/api/relayer/11155111" }, sharedOpts),
     [mainnet.id]: web({ relayerUrl: "/api/relayer/1" }, sharedOpts),
@@ -274,7 +279,7 @@ const config = createZamaConfig({
 });
 ```
 
-Chains that pass the _same_ `relayer` object (by reference) share a single relayer instance, reducing memory usage.
+Chains that pass the _same_ `options` object (by reference) share a single relayer instance, reducing memory usage.
 
 ## Next steps
 

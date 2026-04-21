@@ -46,7 +46,8 @@ Create `src/config.ts`. This file sets up wagmi, the signer, and the relayer -- 
 import { createConfig, http } from "wagmi";
 import { sepolia } from "wagmi/chains";
 import { QueryClient } from "@tanstack/react-query";
-import { createZamaConfig, relayer } from "@zama-fhe/react-sdk";
+import { relayer } from "@zama-fhe/react-sdk";
+import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 
 export const wagmiConfig = createConfig({
   chains: [sepolia],

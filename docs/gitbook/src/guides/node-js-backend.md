@@ -20,7 +20,9 @@ npm install @zama-fhe/sdk viem
 The `node()` transport uses native `worker_threads` for FHE operations. Pass `poolSize` in the second argument to control parallelism (default: `min(CPU cores, 4)`).
 
 ```ts
-import { createZamaConfig, node, ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
+import { node } from "@zama-fhe/sdk/node";
 import { sepolia } from "@zama-fhe/sdk/chains";
 import { createPublicClient, createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
@@ -34,9 +36,10 @@ const walletClient = createWalletClient({
   transport: http(),
 });
 
-const config = createZamaConfig({
+const config = createConfig({
   chains: [sepolia],
-  viem: { publicClient, walletClient },
+  publicClient,
+  walletClient,
   storage: memoryStorage,
   transports: {
     [sepolia.id]: node(
@@ -71,9 +74,10 @@ const app = express();
 app.post("/api/transfer", (req, res) => {
   asyncLocalStorage.run(async () => {
     // Everything inside this callback has its own isolated storage
-    const config = createZamaConfig({
+    const config = createConfig({
       chains: [sepolia],
-      viem: { publicClient, walletClient },
+      publicClient,
+      walletClient,
       storage: asyncLocalStorage,
       transports: {
         [sepolia.id]: node({
