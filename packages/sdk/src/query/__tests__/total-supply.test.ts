@@ -30,7 +30,12 @@ function mockReadContract({
       }
       return false;
     }
-    return supply;
+
+    if (config.functionName === "inferredTotalSupply" || config.functionName === "totalSupply") {
+      return supply;
+    }
+
+    throw new Error(`Unexpected readContract call: ${config.functionName}`);
   });
 }
 
