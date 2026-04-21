@@ -3,7 +3,7 @@
  * Uses @fhevm/sdk for encryption/decryption off the main thread using node:worker_threads.
  */
 
-import { ethers } from "ethers";
+import { createPublicClient, http } from "viem";
 import { parentPort, type Transferable } from "node:worker_threads";
 import type { EncryptValuesParameters } from "@fhevm/sdk/actions/encrypt";
 import type { FheTypeName } from "../relayer/relayer-sdk.types";
@@ -43,7 +43,7 @@ const port = parentPort;
 // ============================================================================
 
 // oxlint-disable-next-line typescript-eslint/consistent-type-imports -- dynamic import type extraction
-type FhevmSdk = typeof import("@fhevm/sdk/ethers");
+type FhevmSdk = typeof import("@fhevm/sdk/viem");
 type FhevmClient = ReturnType<FhevmSdk["createFhevmClient"]>;
 type FhevmClientInstance = Awaited<FhevmClient>;
 
@@ -199,16 +199,16 @@ async function handleNodeInit(request: NodeInitRequest): Promise<void> {
   const { fhevmConfig } = payload;
 
   try {
-    const { createFhevmClient, setFhevmRuntimeConfig } = await import("@fhevm/sdk/ethers");
+    const { createFhevmClient, setFhevmRuntimeConfig } = await import("@fhevm/sdk/viem");
 
     // Node worker runs single-threaded (no SharedArrayBuffer support needed)
     setFhevmRuntimeConfig({ singleThread: true });
 
     const chain = configToChain(fhevmConfig);
     const providerUrl = fhevmConfig.networkUrl ?? fhevmConfig.relayerUrl;
-    const provider = new ethers.JsonRpcProvider(providerUrl);
+    const publicClient = createPublicClient({ transport: http(providerUrl) });
 
-    client = createFhevmClient({ chain, provider });
+    client = createFhevmClient({ chain, publicClient });
     await client.ready;
 
     sendSuccess(id, type, { initialized: true });

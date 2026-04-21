@@ -4,8 +4,8 @@
  * This worker is bundled by the host app's bundler which resolves imports at build time.
  */
 
-import { ethers } from "ethers";
-import { createFhevmClient, setFhevmRuntimeConfig } from "@fhevm/sdk/ethers";
+import { createPublicClient, http } from "viem";
+import { createFhevmClient, setFhevmRuntimeConfig } from "@fhevm/sdk/viem";
 import {
   createKmsUserDecryptEIP712,
   createKmsDelegatedUserDecryptEip712,
@@ -277,15 +277,15 @@ async function handleInit(request: InitRequest): Promise<void> {
       thread !== null && thread !== undefined ? { numberOfThreads: thread } : {},
     );
 
-    // Build chain config and ethers provider
+    // Build chain config and viem public client
     const chain = configToChain(fhevmConfig);
     const providerUrl = fhevmConfig.networkUrl ?? fhevmConfig.relayerUrl;
-    const provider = new ethers.JsonRpcProvider(providerUrl);
+    const publicClient = createPublicClient({ transport: http(providerUrl) });
 
     // Create client and wait for it to be ready
     client = createFhevmClient({
       chain,
-      provider,
+      publicClient,
     });
     await client.ready;
 
