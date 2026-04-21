@@ -11627,14 +11627,10 @@ export class NoCiphertextError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
 
-// Warning: (ae-forgotten-export) The symbol "NodeRelayerOptions" needs to be exported by the entry point index.d.ts
-//
-// @public
-export function node(chain?: Partial<ExtendedFhevmInstanceConfig>, relayer?: NodeRelayerOptions): NodeTransportConfig;
-
 // @public
 export interface NodeTransportConfig {
     chain?: Partial<ExtendedFhevmInstanceConfig>;
+    // Warning: (ae-forgotten-export) The symbol "NodeRelayerOptions" needs to be exported by the entry point index.d.ts
     relayer?: NodeRelayerOptions;
     // (undocumented)
     readonly type: "node";
@@ -20710,6 +20706,8 @@ export type WriteFunctionName<TAbi extends ContractAbi = ContractAbi> = Contract
 
 // @public
 export interface ZamaConfig {
+    // @internal (undocumented)
+    readonly [__brand]: true;
     // @internal (undocumented)
     readonly chains: readonly FheChain[];
     // @internal (undocumented)

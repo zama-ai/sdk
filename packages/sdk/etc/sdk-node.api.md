@@ -345,6 +345,13 @@ export const MainnetConfig: {
     readonly registryAddress: "0xeb5015fF021DB115aCe010f23F55C2591059bBA0";
 };
 
+// Warning: (ae-forgotten-export) The symbol "ExtendedFhevmInstanceConfig" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "NodeRelayerOptions" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "NodeTransportConfig" needs to be exported by the entry point index.d.ts
+//
+// @public
+export function node(chain?: Partial<ExtendedFhevmInstanceConfig>, relayer?: NodeRelayerOptions): NodeTransportConfig;
+
 // @public (undocumented)
 export interface NodeInitRequest extends BaseRequest {
     // (undocumented)
@@ -480,7 +487,6 @@ export class RelayerNode implements RelayerSDK, Disposable {
 
 // @public (undocumented)
 export interface RelayerNodeConfig {
-    // Warning: (ae-forgotten-export) The symbol "ExtendedFhevmInstanceConfig" needs to be exported by the entry point index.d.ts
     chain: ExtendedFhevmInstanceConfig;
     fheArtifactCacheTTL?: number;
     fheArtifactStorage?: GenericStorage;

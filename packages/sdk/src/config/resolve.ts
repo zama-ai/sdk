@@ -142,38 +142,40 @@ export function resolveChainTransports(
 
 // ── Transport handler registry ──────────────────────────────────────────────
 
-type TransportHandlerFn = (
+type RelayerSDKFn = (
   chain: ExtendedFhevmInstanceConfig,
   transport: TransportConfig,
 ) => Promise<RelayerSDK>;
 
-const transportHandlers = new Map<string, TransportHandlerFn>();
+const relayerSDKMap = new Map<string, RelayerSDKFn>();
 
 /** Register a transport handler. Called by sub-path modules (e.g. `@zama-fhe/sdk/node`). */
-export function registerTransportHandler(type: string, handler: TransportHandlerFn): void {
-  transportHandlers.set(type, handler);
+export function registerRelayer(type: string, handler: RelayerSDKFn): void {
+  relayerSDKMap.set(type, handler);
 }
 
 // Built-in handlers (browser-safe — no node:worker_threads references)
-registerTransportHandler("web", (chain, transport) => {
-  if (transport.type !== "web") {throw new Error("unreachable");}
+registerRelayer("web", async (chain, transport) => {
+  if (transport.type !== "web") {
+    throw new Error("unreachable");
+  }
   const merged = { ...chain, ...transport.chain };
   if (!merged.relayerUrl) {
     throw new ConfigurationError(
       `Chain ${chain.chainId} has an empty relayerUrl. Use cleartext() for chains without a relayer.`,
     );
   }
-  return import("../relayer/relayer-web").then(
-    (m) => new m.RelayerWeb({ chain: merged, ...transport.relayer }),
-  );
+  const m = await import("../relayer/relayer-web");
+  return new m.RelayerWeb({ chain: merged, ...transport.relayer });
 });
 
-registerTransportHandler("cleartext", (chain, transport) => {
-  if (transport.type !== "cleartext") {throw new Error("unreachable");}
+registerRelayer("cleartext", async (chain, transport) => {
+  if (transport.type !== "cleartext") {
+    throw new Error("unreachable");
+  }
   const merged = { ...chain, ...transport.chain } as CleartextConfig;
-  return import("../relayer/cleartext/relayer-cleartext").then(
-    (m) => new m.RelayerCleartext(merged),
-  );
+  const m = await import("../relayer/cleartext/relayer-cleartext");
+  return new m.RelayerCleartext(merged);
 });
 
 // ── Relayer building ─────────────────────────────────────────────────────────
@@ -191,7 +193,7 @@ export function buildRelayer(
   const perChainRelayers = new Map<number, Promise<RelayerSDK>>();
 
   for (const { chain, transport } of chainTransports.values()) {
-    const handler = transportHandlers.get(transport.type);
+    const handler = relayerSDKMap.get(transport.type);
     if (!handler) {
       const hint =
         transport.type === "node"

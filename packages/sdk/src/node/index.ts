@@ -9,22 +9,23 @@
  */
 
 import { ConfigurationError } from "../errors";
-import { registerTransportHandler } from "../config/resolve";
+import { registerRelayer } from "../config/resolve";
 
 // Register the node transport handler (side-effect).
 // This keeps the dynamic import("../relayer/relayer-node") out of the main
 // @zama-fhe/sdk entry, so browser bundles never reference node:worker_threads.
-registerTransportHandler("node", (chain, transport) => {
-  if (transport.type !== "node") {throw new Error("unreachable");}
+registerRelayer("node", async (chain, transport) => {
+  if (transport.type !== "node") {
+    throw new Error("unreachable");
+  }
   const merged = { ...chain, ...transport.chain };
   if (!merged.relayerUrl) {
     throw new ConfigurationError(
       `Chain ${chain.chainId} has an empty relayerUrl. Use cleartext() for chains without a relayer.`,
     );
   }
-  return import("../relayer/relayer-node").then(
-    (m) => new m.RelayerNode({ chain: merged, ...transport.relayer }),
-  );
+  const m = await import("../relayer/relayer-node");
+  return new m.RelayerNode({ chain: merged, ...transport.relayer });
 });
 
 export { node } from "../config/transports";

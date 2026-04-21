@@ -1071,13 +1071,12 @@ export { ZamaError }
 export { ZamaErrorCode }
 
 // @public
-export function ZamaProvider(props: ZamaProviderProps): _$react_jsx_runtime0.JSX.Element;
+export function ZamaProvider(input: ZamaProviderProps): _$react_jsx_runtime0.JSX.Element;
 
-// Warning: (ae-forgotten-export) The symbol "ZamaProviderConfigProps" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "ZamaProviderLegacyProps" needs to be exported by the entry point index.d.ts
-//
 // @public
-export type ZamaProviderProps = ZamaProviderConfigProps | ZamaProviderLegacyProps;
+export interface ZamaProviderProps extends PropsWithChildren {
+    config: ZamaConfig;
+}
 
 export { zamaQueryKeys }
 

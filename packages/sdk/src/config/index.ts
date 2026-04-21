@@ -19,7 +19,7 @@ export {
   resolveChainTransports,
   buildRelayer,
   resolveStorage,
-  registerTransportHandler,
+  registerRelayer as registerTransportHandler,
 } from "./resolve";
 export type { ConfigWithTransports } from "./resolve";
 
