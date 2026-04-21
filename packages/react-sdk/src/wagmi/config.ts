@@ -12,7 +12,7 @@ export interface ZamaConfigWagmi<
 }
 
 /** Create a {@link ZamaConfig} from a wagmi `Config`. */
-export function createZamaConfig<const TChains extends AtLeastOneChain>(
+export function createConfig<const TChains extends AtLeastOneChain>(
   params: ZamaConfigWagmi<TChains>,
 ): ZamaConfig {
   const { wagmiConfig } = params;

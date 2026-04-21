@@ -29,7 +29,7 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
 /** @internal Nominal brand — prevents constructing ZamaConfig as a plain object literal. */
 declare const __brand: unique symbol;
 
-/** Opaque config object returned by `createZamaConfig`. */
+/** Opaque config object returned by `createConfig`. */
 export interface ZamaConfig {
   /** @internal */ readonly [__brand]: true;
   /** @internal */ readonly chains: readonly FheChain[];

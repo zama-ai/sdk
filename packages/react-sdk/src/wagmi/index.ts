@@ -5,4 +5,4 @@
  */
 
 export { WagmiSigner, type WagmiSignerConfig } from "./wagmi-signer";
-export { createZamaConfig, type ZamaConfigWagmi } from "./config";
+export { createConfig, type ZamaConfigWagmi } from "./config";

@@ -7,7 +7,7 @@
 
 export type { ZamaConfigViem } from "./types";
 
-export { createZamaConfig } from "./config";
+export { createConfig } from "./config";
 
 export { ViemSigner, type ViemSignerConfig } from "./viem-signer";
 export {

@@ -7,7 +7,7 @@
 
 export type { ZamaConfigEthers } from "./types";
 
-export { createZamaConfig } from "./config";
+export { createConfig } from "./config";
 
 export { EthersSigner, type EthersSignerConfig } from "./ethers-signer";
 export type {

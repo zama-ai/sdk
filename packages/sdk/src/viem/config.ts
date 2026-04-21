@@ -5,7 +5,7 @@ import { ViemSigner } from "./viem-signer";
 import type { ZamaConfigViem } from "./types";
 
 /** Create a {@link ZamaConfig} from viem clients. */
-export function createZamaConfig<const TChains extends readonly [FheChain, ...FheChain[]]>(
+export function createConfig<const TChains extends readonly [FheChain, ...FheChain[]]>(
   params: ZamaConfigViem<TChains>,
 ): ZamaConfig {
   const signer = new ViemSigner({

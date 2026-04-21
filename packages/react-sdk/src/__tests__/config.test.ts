@@ -1,10 +1,10 @@
 import { web } from "@zama-fhe/sdk";
 import { sepolia } from "@zama-fhe/sdk/chains";
-import { createZamaConfig as createEthersZamaConfig, EthersSigner } from "@zama-fhe/sdk/ethers";
-import { createZamaConfig as createViemZamaConfig, ViemSigner } from "@zama-fhe/sdk/viem";
+import { createConfig as createEthersConfig, EthersSigner } from "@zama-fhe/sdk/ethers";
+import { createConfig as createViemConfig, ViemSigner } from "@zama-fhe/sdk/viem";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createMockSigner, createMockStorage } from "../../../sdk/src/test-fixtures";
-import { createZamaConfig as createWagmiZamaConfig } from "../wagmi/config";
+import { createConfig as createWagmiConfig } from "../wagmi/config";
 import { WagmiSigner } from "../wagmi/wagmi-signer";
 
 vi.mock(import("../wagmi/wagmi-signer"), async (importOriginal) => {
@@ -51,11 +51,11 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe("createZamaConfig", () => {
+describe("createConfig", () => {
   describe("signer resolution", () => {
     it("creates WagmiSigner from wagmiConfig", () => {
       const wagmiConfig = mockWagmiConfig();
-      createWagmiZamaConfig({
+      createWagmiConfig({
         chains: [sepolia],
         wagmiConfig,
         transports: { [11155111]: web() },
@@ -66,7 +66,7 @@ describe("createZamaConfig", () => {
     it("creates ViemSigner from viem clients", () => {
       const publicClient = {} as any;
       const walletClient = {} as any;
-      createViemZamaConfig({
+      createViemConfig({
         chains: [sepolia],
         publicClient,
         walletClient,
@@ -81,7 +81,7 @@ describe("createZamaConfig", () => {
 
     it("creates EthersSigner from ethers config", () => {
       const ethereum = {} as any;
-      createEthersZamaConfig({
+      createEthersConfig({
         chains: [sepolia],
         ethereum,
         transports: { [11155111]: web() },
@@ -92,7 +92,7 @@ describe("createZamaConfig", () => {
 
   describe("transport resolution", () => {
     it("resolves explicit transports from wagmi chains", () => {
-      const config = createWagmiZamaConfig({
+      const config = createWagmiConfig({
         chains: [sepolia],
         wagmiConfig: mockWagmiConfig([11155111]),
         transports: { [11155111]: web() },
@@ -101,7 +101,7 @@ describe("createZamaConfig", () => {
     });
 
     it("merges user overrides on top of defaults", () => {
-      const config = createWagmiZamaConfig({
+      const config = createWagmiConfig({
         chains: [sepolia],
         wagmiConfig: mockWagmiConfig([11155111]),
         transports: {
@@ -113,7 +113,7 @@ describe("createZamaConfig", () => {
 
     it("throws when a chain has no transport configured", () => {
       expect(() =>
-        createWagmiZamaConfig({
+        createWagmiConfig({
           chains: [sepolia],
           wagmiConfig: mockWagmiConfig([11155111]),
           transports: {},
@@ -123,7 +123,7 @@ describe("createZamaConfig", () => {
 
     it("throws for orphaned transport entries with no matching chain", () => {
       expect(() =>
-        createWagmiZamaConfig({
+        createWagmiConfig({
           chains: [],
           wagmiConfig: mockWagmiConfig([]),
           transports: { [999999]: web({ relayerUrl: "https://custom.com" }) },
@@ -132,7 +132,7 @@ describe("createZamaConfig", () => {
     });
 
     it("uses explicit transports for non-wagmi paths", () => {
-      const config = createViemZamaConfig({
+      const config = createViemConfig({
         chains: [sepolia],
         publicClient: {} as any,
         transports: { [11155111]: web() },
@@ -145,7 +145,7 @@ describe("createZamaConfig", () => {
     it("uses user-provided storage", () => {
       const storage = createMockStorage();
       const sessionStorage = createMockStorage();
-      const config = createViemZamaConfig({
+      const config = createViemConfig({
         chains: [sepolia],
         publicClient: {} as any,
         transports: { [11155111]: web() },
@@ -158,7 +158,7 @@ describe("createZamaConfig", () => {
 
     it("accepts the same storage instance for both storage and sessionStorage", () => {
       const sharedStorage = createMockStorage();
-      const config = createViemZamaConfig({
+      const config = createViemConfig({
         chains: [sepolia],
         publicClient: {} as any,
         transports: { [11155111]: web() },
@@ -212,7 +212,7 @@ describe("createZamaConfig", () => {
   describe("options passthrough", () => {
     it("passes keypairTTL, sessionTTL, registryTTL, onEvent through", () => {
       const onEvent = vi.fn();
-      const config = createViemZamaConfig({
+      const config = createViemConfig({
         chains: [sepolia],
         publicClient: {} as any,
         transports: { [11155111]: web() },
