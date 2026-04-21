@@ -5,6 +5,19 @@
  * @packageDocumentation
  */
 
+import type { ZamaConfig } from "../config/types";
+import { buildZamaConfig } from "../config/build";
+import { EthersSigner } from "./ethers-signer";
+import type { ZamaConfigEthers } from "./types";
+
+export type { ZamaConfigEthers } from "./types";
+
+/** Create a {@link ZamaConfig} from ethers types. */
+export function createZamaConfig(params: ZamaConfigEthers): ZamaConfig {
+  const signer = new EthersSigner(params);
+  return buildZamaConfig(signer, params);
+}
+
 export { EthersSigner, type EthersSignerConfig } from "./ethers-signer";
 export type {
   EIP1193Provider,

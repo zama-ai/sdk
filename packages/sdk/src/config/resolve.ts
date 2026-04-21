@@ -1,6 +1,6 @@
 import type { FheChain } from "../chains";
 import { ConfigurationError } from "../errors";
-import { EthersSigner } from "../ethers";
+import { EthersSigner } from "../ethers/ethers-signer";
 import { CompositeRelayer } from "../relayer/composite-relayer";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { ExtendedFhevmInstanceConfig } from "../relayer/relayer-utils";
