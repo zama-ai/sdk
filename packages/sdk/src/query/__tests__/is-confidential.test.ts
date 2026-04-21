@@ -41,7 +41,7 @@ describe("isConfidentialQueryOptions", () => {
 describe("isWrapperQueryOptions", () => {
   const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a";
 
-  test("returns true when baseline interfaceId (0xf1f4c25a) matches", async ({ signer }) => {
+  test("returns true when baseline interfaceId (0xd04584ba) matches", async ({ signer }) => {
     vi.mocked(signer.readContract)
       .mockResolvedValueOnce(true) // baseline ID
       .mockResolvedValueOnce(false); // upgraded ID

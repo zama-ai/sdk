@@ -1,14 +1,8 @@
 "use client";
 
-import {
-  balanceOfContract,
-  decimalsContract,
-  symbolContract,
-  useAllow,
-  useConfidentialBalances,
-  useMetadata,
-  type Address,
-} from "@zama-fhe/react-sdk";
+import { useAllow, useConfidentialBalances, useMetadata } from "@zama-fhe/react-sdk";
+import { balanceOfContract, decimalsContract, symbolContract } from "@zama-fhe/sdk";
+import type { Address } from "@zama-fhe/sdk";
 import { useState } from "react";
 import { formatUnits } from "viem";
 import { useConnection, useReadContracts } from "wagmi";

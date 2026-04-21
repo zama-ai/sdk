@@ -152,7 +152,7 @@ The `matchZamaError` helper works the same way in React. Here is a reusable erro
 {% tab title="React" %}
 
 ```tsx
-import { matchZamaError } from "@zama-fhe/react-sdk";
+import { matchZamaError } from "@zama-fhe/sdk";
 
 function ErrorMessage({ error }: { error: Error | null }) {
   if (!error) return null;

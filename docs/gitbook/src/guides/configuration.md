@@ -13,10 +13,10 @@ Every SDK instance needs a relayer (handles FHE encryption and decryption), a si
 
 The SDK ships two relayer implementations. Pick the one that matches your runtime:
 
-| Environment                 | Relayer       | Import path                              |
-| --------------------------- | ------------- | ---------------------------------------- |
-| Browser (React, vanilla TS) | `RelayerWeb`  | `@zama-fhe/sdk` or `@zama-fhe/react-sdk` |
-| Node.js (scripts, servers)  | `RelayerNode` | `@zama-fhe/sdk/node`                     |
+| Environment                 | Relayer       | Import path          |
+| --------------------------- | ------------- | -------------------- |
+| Browser (React, vanilla TS) | `RelayerWeb`  | `@zama-fhe/sdk`      |
+| Node.js (scripts, servers)  | `RelayerNode` | `@zama-fhe/sdk/node` |
 
 `RelayerWeb` runs FHE inside a Web Worker using WASM. `RelayerNode` uses native worker threads.
 

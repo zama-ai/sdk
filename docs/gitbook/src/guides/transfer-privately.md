@@ -149,11 +149,8 @@ const {
 Here is a complete component that wires up the transfer with loading and error states:
 
 ```tsx
-import {
-  useConfidentialBalance,
-  useConfidentialTransfer,
-  matchZamaError,
-} from "@zama-fhe/react-sdk";
+import { useConfidentialBalance, useConfidentialTransfer } from "@zama-fhe/react-sdk";
+import { matchZamaError } from "@zama-fhe/sdk";
 
 const TOKEN = "0xEncryptedERC20Address";
 

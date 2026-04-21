@@ -213,7 +213,7 @@ Mutations automatically invalidate balance caches, but if you need manual contro
 
 ```tsx
 import { useQueryClient } from "@tanstack/react-query";
-import { zamaQueryKeys } from "@zama-fhe/react-sdk";
+import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 
 const queryClient = useQueryClient();
 

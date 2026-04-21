@@ -1,5 +1,5 @@
 import { DelegationPanel } from "@zama-fhe/test-components";
-import type { Address } from "@zama-fhe/react-sdk";
+import type { Address } from "@zama-fhe/sdk";
 import { CONFIDENTIAL_TOKEN_ADDRESSES } from "@/constants";
 
 export default async function DelegationPage({
