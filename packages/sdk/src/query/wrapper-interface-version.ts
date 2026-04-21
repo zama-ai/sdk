@@ -29,6 +29,8 @@ export async function detectWrapperInterfaceVersion(
   signer: GenericSigner,
   wrapperAddress: Address,
 ): Promise<WrapperInterfaceVersion> {
+  // Probe the upgraded interface first: it is the target steady state and lets
+  // post-upgrade wrappers avoid the legacy ERC-165 read on every refetch.
   const supportsUpgraded = await safeSupportsInterface(
     signer,
     wrapperAddress,

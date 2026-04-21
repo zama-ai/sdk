@@ -22,9 +22,9 @@ export function totalSupplyQueryOptions(
     queryKey,
     queryFn: async (context) => {
       const [, { tokenAddress: keyTokenAddress }] = context.queryKey;
-      // ERC-165 detection adds two RPC calls per refetch, which is acceptable while
-      // both legacy and upgraded wrappers coexist. Remove this branch once all
-      // supported wrappers expose `inferredTotalSupply()`.
+      // ERC-165 detection adds one or two RPC calls per refetch, which is acceptable
+      // while both legacy and upgraded wrappers coexist. Remove this branch once
+      // all supported wrappers expose `inferredTotalSupply()`.
       const version = await detectWrapperInterfaceVersion(signer, keyTokenAddress);
       if (version === "upgraded") {
         return signer.readContract(inferredTotalSupplyContract(keyTokenAddress));
