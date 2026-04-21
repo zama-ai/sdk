@@ -31,10 +31,6 @@ import type {
   UserDecryptResponseData,
   WorkerRequest,
 } from "./worker.types";
-import {
-  createKmsDelegatedUserDecryptEip712,
-  createKmsUserDecryptEIP712,
-} from "@fhevm/sdk/actions/chain";
 
 if (!parentPort) {
   throw new Error("This script must be run as a worker thread");
@@ -458,6 +454,7 @@ async function handleCreateEIP712(request: CreateEIP712Request): Promise<void> {
   try {
     assertClient(client);
 
+    const { createKmsUserDecryptEIP712 } = await import("@fhevm/sdk/actions/chain");
     const response = createKmsUserDecryptEIP712(client, {
       publicKey: payload.publicKey,
       contractAddresses: payload.contractAddresses,
@@ -483,6 +480,7 @@ async function handleCreateDelegatedEIP712(request: CreateDelegatedEIP712Request
   try {
     assertClient(client);
 
+    const { createKmsDelegatedUserDecryptEip712 } = await import("@fhevm/sdk/actions/chain");
     const response = createKmsDelegatedUserDecryptEip712(client, {
       publicKey: payload.publicKey,
       contractAddresses: payload.contractAddresses,

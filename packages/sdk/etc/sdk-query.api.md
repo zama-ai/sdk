@@ -1468,7 +1468,7 @@ export const ZamaSDKEvents: {
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/relayer-sdk.types-BgmFqhsQ.d.ts:487:3 - (ae-forgotten-export) The symbol "FheTypeName" needs to be exported by the entry point index.d.ts
+// dist/esm/relayer-sdk.types-BPyYexkj.d.ts:487:3 - (ae-forgotten-export) The symbol "FheTypeName" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 
