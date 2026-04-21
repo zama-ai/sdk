@@ -39,9 +39,8 @@ export interface ZamaConfigViem extends ZamaConfigBase {
 }
 
 // src/ethers/types.ts
-export type ZamaConfigEthers = ZamaConfigBase & {
-  ethereum?: EIP1193Provider;
-} & ({ ethereum: EIP1193Provider } | { signer: Signer } | { provider: Provider });
+export type ZamaConfigEthers = ZamaConfigBase &
+  ({ ethereum: EIP1193Provider } | { signer: Signer } | { provider: Provider });
 
 // react-sdk: src/wagmi/config.ts
 export interface ZamaConfigWagmi<T = Config> extends ZamaConfigBase {
@@ -49,7 +48,7 @@ export interface ZamaConfigWagmi<T = Config> extends ZamaConfigBase {
 }
 ```
 
-For `ZamaConfigEthers`: `ethereum` can accompany `signer` or `provider` (it is not mutually exclusive). At least one of the three fields must be present.
+For `ZamaConfigEthers`: `ethereum`, `signer`, and `provider` are mutually exclusive — matches the existing `EthersSignerConfig` shape. `EthersSigner` constructor is unchanged.
 
 ### Shared internal builder
 
