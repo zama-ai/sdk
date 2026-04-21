@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.0.0-alpha.11](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.10...v3.0.0-alpha.11) (2026-04-21)
+
+### Bug Fixes
+
+- **sdk:** choose total supply method via ERC-165 ([#270](https://github.com/zama-ai/sdk/issues/270)) ([7fb55c4]())
+
 ## [3.0.0-alpha.10](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.9...v3.0.0-alpha.10) (2026-04-20)
 
 ### Bug Fixes
