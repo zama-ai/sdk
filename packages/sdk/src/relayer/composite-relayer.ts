@@ -33,10 +33,7 @@ export class CompositeRelayer implements RelayerSDK {
   readonly #pending = new Map<number, Promise<RelayerSDK>>();
   readonly #resolveChainId: () => Promise<number>;
 
-  constructor(
-    resolveChainId: () => Promise<number>,
-    configs: Map<number, ResolvedChainTransport>,
-  ) {
+  constructor(resolveChainId: () => Promise<number>, configs: Map<number, ResolvedChainTransport>) {
     this.#resolveChainId = resolveChainId;
     this.#configs = new Map(configs);
   }
@@ -53,11 +50,15 @@ export class CompositeRelayer implements RelayerSDK {
     }
 
     const resolved = this.#resolved.get(chainId);
-    if (resolved) {return resolved;}
+    if (resolved) {
+      return resolved;
+    }
 
     // Deduplicate concurrent init for the same chain
     const pending = this.#pending.get(chainId);
-    if (pending) {return pending;}
+    if (pending) {
+      return pending;
+    }
 
     const config = this.#configs.get(chainId);
     if (!config) {
@@ -69,12 +70,8 @@ export class CompositeRelayer implements RelayerSDK {
 
     const handler = relayersMap.get(config.transport.type);
     if (!handler) {
-      const hint =
-        config.transport.type === "node"
-          ? ' Import "@zama-fhe/sdk/node" to enable Node.js transports.'
-          : "";
       throw new ConfigurationError(
-        `No transport handler registered for type "${config.transport.type}".${hint}`,
+        `No transport handler registered for type "${config.transport.type}".`,
       );
     }
 

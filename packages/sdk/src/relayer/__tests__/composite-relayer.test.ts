@@ -2,16 +2,36 @@ import { describe, expect, it, vi } from "vitest";
 import { CompositeRelayer } from "../composite-relayer";
 import { ConfigurationError } from "../../errors";
 import { createMockRelayer } from "../../test-fixtures";
+import type { ResolvedChainTransport } from "../../config/resolve";
+import { relayersMap } from "../../config/relayers";
+import type { RelayerSDK } from "../relayer-sdk";
 
+/**
+ * Build a CompositeRelayer that lazily resolves to the given mock relayers.
+ * Registers temporary transport handlers that return the mocks.
+ */
 function makeComposite(
   chainRelayers: Record<number, ReturnType<typeof createMockRelayer>>,
   activeChainId = Object.keys(chainRelayers).map(Number)[0] ?? 1,
 ) {
-  const map = new Map(
-    Object.entries(chainRelayers).map(([id, r]) => [Number(id), Promise.resolve(r)]),
-  );
+  // Register a temporary handler that maps chainId → mock relayer
+  const handlerKey = "__test__";
+  relayersMap.set(handlerKey, async (chain) => {
+    const relayer = chainRelayers[chain.chainId];
+    if (!relayer) {throw new Error(`No mock relayer for chain ${chain.chainId}`);}
+    return relayer as unknown as RelayerSDK;
+  });
+
+  const configs = new Map<number, ResolvedChainTransport>();
+  for (const id of Object.keys(chainRelayers).map(Number)) {
+    configs.set(id, {
+      chain: { chainId: id } as ResolvedChainTransport["chain"],
+      transport: { type: handlerKey } as unknown as ResolvedChainTransport["transport"],
+    });
+  }
+
   const resolveChainId = vi.fn().mockResolvedValue(activeChainId);
-  return { composite: new CompositeRelayer(resolveChainId, map), resolveChainId };
+  return { composite: new CompositeRelayer(resolveChainId, configs), resolveChainId };
 }
 
 describe("CompositeRelayer", () => {
@@ -35,9 +55,9 @@ describe("CompositeRelayer", () => {
     });
 
     it("wraps resolveChainId errors with context", async () => {
-      const map = new Map([[1, Promise.resolve(createMockRelayer())]]);
+      const configs = new Map<number, ResolvedChainTransport>();
       const resolveChainId = vi.fn().mockRejectedValue(new Error("wallet disconnected"));
-      const composite = new CompositeRelayer(resolveChainId, map);
+      const composite = new CompositeRelayer(resolveChainId, configs);
 
       await expect(composite.encrypt({ values: [] } as any)).rejects.toThrow(ConfigurationError);
       await expect(composite.encrypt({ values: [] } as any)).rejects.toThrow(
@@ -49,14 +69,10 @@ describe("CompositeRelayer", () => {
   describe("terminate()", () => {
     it("terminates all unique relayers", async () => {
       const relayer = createMockRelayer();
-      const map = new Map([
-        [1, Promise.resolve(relayer)],
-        [2, Promise.resolve(relayer)],
-      ]);
-      const resolveChainId = vi.fn().mockResolvedValue(1);
-      const composite = new CompositeRelayer(resolveChainId, map);
+      // Two chains share the same mock relayer
+      const { composite, resolveChainId } = makeComposite({ 1: relayer, 2: relayer }, 1);
 
-      // Trigger #current to populate #resolved
+      // Trigger #current to populate #resolved for both chains
       await composite.getAclAddress();
       resolveChainId.mockResolvedValue(2);
       await composite.getAclAddress();
@@ -121,12 +137,23 @@ describe("CompositeRelayer", () => {
 
   describe("defensive copy", () => {
     it("is not affected by external map mutations after construction", async () => {
+      const handlerKey = "__test_defensive__";
       const relayer = createMockRelayer();
-      const map = new Map([[1, Promise.resolve(relayer)]]);
-      const resolveChainId = vi.fn().mockResolvedValue(1);
-      const composite = new CompositeRelayer(resolveChainId, map);
+      relayersMap.set(handlerKey, async () => relayer as unknown as RelayerSDK);
 
-      map.delete(1);
+      const configs = new Map<number, ResolvedChainTransport>([
+        [
+          1,
+          {
+            chain: { chainId: 1 } as ResolvedChainTransport["chain"],
+            transport: { type: handlerKey } as unknown as ResolvedChainTransport["transport"],
+          },
+        ],
+      ]);
+      const resolveChainId = vi.fn().mockResolvedValue(1);
+      const composite = new CompositeRelayer(resolveChainId, configs);
+
+      configs.delete(1);
 
       await expect(composite.getAclAddress()).resolves.toBeDefined();
     });
