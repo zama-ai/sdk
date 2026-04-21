@@ -8,18 +8,14 @@ import { resolveStorage, resolveChainTransports, buildRelayer } from "./resolve"
  * Each entry point (`/viem`, `/ethers`, wagmi) creates its signer,
  * then delegates here for the common resolution work.
  */
-export function buildZamaConfig(
-  signer: GenericSigner,
-  params: ZamaConfigBase,
-  resolveChainId?: () => Promise<number>,
-): ZamaConfig {
+export function buildZamaConfig(signer: GenericSigner, params: ZamaConfigBase): ZamaConfig {
   const { storage, sessionStorage } = resolveStorage(params.storage, params.sessionStorage);
   const chainTransports = resolveChainTransports(
     params.chains,
     params.transports,
     params.chains.map((c) => c.id),
   );
-  const relayer = buildRelayer(chainTransports, resolveChainId ?? (() => signer.getChainId()));
+  const relayer = buildRelayer(chainTransports, () => signer.getChainId());
 
   return {
     chains: params.chains,
