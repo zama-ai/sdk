@@ -37,7 +37,7 @@ export interface WebTransportConfig {
   chain?: Partial<ExtendedFhevmInstanceConfig>;
   /** Shared relayer-pool options. Reference identity controls grouping: chains
    * that share the same `relayer` object reuse a single relayer instance. */
-  relayer?: WebRelayerOptions;
+  options?: WebRelayerOptions;
   /** @internal */
   readonly createRelayer: CreateRelayerFn;
 }
@@ -48,7 +48,7 @@ export interface NodeTransportConfig {
   /** Per-chain FHE instance overrides. */
   chain?: Partial<ExtendedFhevmInstanceConfig>;
   /** Shared relayer-pool options. Reference identity controls grouping. */
-  relayer?: NodeRelayerOptions;
+  options?: NodeRelayerOptions;
   /** @internal */
   readonly createRelayer: CreateRelayerFn;
 }
@@ -70,7 +70,7 @@ export type TransportConfig = WebTransportConfig | NodeTransportConfig | Clearte
  * Browser transport — routes to RelayerWeb (Web Worker + WASM).
  *
  * @param chain - Per-chain FHE instance overrides (e.g. `relayerUrl`, `network`).
- * @param relayer - Shared relayer-pool options (e.g. `threads`, `logger`). Chains
+ * @param options - Shared relayer-pool options (e.g. `threads`, `logger`). Chains
  *   that pass the *same* `relayer` object reuse a single relayer instance.
  *
  * @example
@@ -83,17 +83,17 @@ export type TransportConfig = WebTransportConfig | NodeTransportConfig | Clearte
  */
 export function web(
   chain?: Partial<ExtendedFhevmInstanceConfig>,
-  relayer?: WebRelayerOptions,
+  options?: WebRelayerOptions,
 ): WebTransportConfig {
   return {
     type: "web",
     chain,
-    relayer,
+    options,
     createRelayer: (resolvedChain, transport) => {
       assertCondition(transport.type === "web", "Transport config must be of type `web`");
       return new RelayerWeb({
         chain: { ...resolvedChain, ...transport.chain },
-        ...transport.relayer,
+        ...transport.options,
       });
     },
   };

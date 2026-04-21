@@ -11,7 +11,7 @@ import { assertCondition } from "../utils/assertions";
  * the RelayerNode class.
  *
  * @param chain - Per-chain FHE instance overrides.
- * @param relayer - Shared relayer-pool options (e.g. `poolSize`, `logger`).
+ * @param options - Shared relayer-pool options (e.g. `poolSize`, `logger`).
  *
  * @example
  * ```ts
@@ -21,17 +21,17 @@ import { assertCondition } from "../utils/assertions";
  */
 export function node(
   chain?: Partial<ExtendedFhevmInstanceConfig>,
-  relayer?: NodeRelayerOptions,
+  options?: NodeRelayerOptions,
 ): NodeTransportConfig {
   return {
     type: "node",
     chain,
-    relayer,
+    options,
     createRelayer: (resolvedChain, transport) => {
       assertCondition(transport.type === "node", "Transport config must be of type `node`");
       return new RelayerNode({
         chain: { ...resolvedChain, ...transport.chain },
-        ...transport.relayer,
+        ...transport.options,
       });
     },
   };
