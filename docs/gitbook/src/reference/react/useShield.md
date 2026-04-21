@@ -149,7 +149,7 @@ await shield({
 ## Return Type
 
 ```ts
-import { type ShieldParams } from "@zama-fhe/react-sdk";
+import { type ShieldParams } from "@zama-fhe/sdk/query";
 ```
 
 `data` resolves to `{ txHash: Hex, receipt: TransactionReceipt }`.

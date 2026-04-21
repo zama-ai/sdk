@@ -112,7 +112,7 @@ const otherBalance = await token.balanceOf("0xOwnerAddress");
 
 `(owner?: Address) => Promise<Hex>`
 
-Returns the raw encrypted handle without decrypting. Use with `decryptBalance()` or `isZeroHandle()`.
+Returns the raw encrypted handle without decrypting. Use with `isZeroHandle()` or pass to `sdk.userDecrypt()` for decryption.
 
 ```ts
 const handle = await token.confidentialBalanceOf();
@@ -268,27 +268,6 @@ Returns whether the session has active credentials for this token.
 const allowed = await token.isAllowed();
 ```
 
-### decryptBalance
-
-`(handle: Hex, owner?: Address) => Promise<bigint>`
-
-Decrypts a raw encrypted handle into a plaintext balance value. Results are cached automatically.
-
-```ts
-const handle = await token.confidentialBalanceOf();
-const value = await token.decryptBalance(handle);
-```
-
-### decryptHandles
-
-`(handles: Hex[], owner?: Address) => Promise<Map<Hex, bigint>>`
-
-Decrypts multiple encrypted handles in a single call.
-
-```ts
-const values = await token.decryptHandles([handle1, handle2, handle3]);
-```
-
 ### isZeroHandle
 
 `(handle: Hex) => boolean`
@@ -335,12 +314,12 @@ await token.unwrapAll();
 
 ### finalizeUnwrap
 
-`(burnAmountHandle: Handle) => Promise<TransactionResult>`
+`(unwrapRequestId: Hex) => Promise<TransactionResult>`
 
 Completes an unwrap (phase 2) after the decryption proof is available. Use `unshield()` for the full orchestrated flow.
 
 ```ts
-await token.finalizeUnwrap(burnAmountHandle);
+await token.finalizeUnwrap(event.unwrapRequestId);
 ```
 
 ## Related

@@ -19,11 +19,13 @@ import type {
   EncryptResult,
   Handle,
   PublicDecryptResult,
+  PublicKeyData,
+  PublicParamsData,
   RelayerSDKStatus,
   RelayerWebConfig,
   UserDecryptParams,
 } from "./relayer-sdk.types";
-import { buildEIP712DomainType, DefaultConfigs, withRetry } from "./relayer-utils";
+import { DefaultConfigs, withRetry } from "./relayer-utils";
 
 /**
  * Pinned relayer SDK version used for the WASM CDN bundle.
@@ -288,35 +290,13 @@ export class RelayerWeb implements RelayerSDK, Disposable {
   ): Promise<EIP712TypedData> {
     const worker = await this.#ensureWorker();
     const extraData = await this.getExtraData();
-    const result = await worker.createEIP712({
+    return worker.createEIP712({
       publicKey,
       contractAddresses,
       startTimestamp,
       durationDays,
       extraData,
     });
-
-    const domain = {
-      name: result.domain.name,
-      version: result.domain.version,
-      chainId: result.domain.chainId,
-      verifyingContract: result.domain.verifyingContract,
-    };
-
-    return {
-      domain,
-      types: {
-        EIP712Domain: buildEIP712DomainType(domain),
-        UserDecryptRequestVerification: result.types.UserDecryptRequestVerification,
-      },
-      message: {
-        publicKey: result.message.publicKey,
-        contractAddresses: result.message.contractAddresses,
-        startTimestamp: result.message.startTimestamp,
-        durationDays: result.message.durationDays,
-        extraData: result.message.extraData,
-      },
-    };
   }
 
   /**
@@ -420,10 +400,7 @@ export class RelayerWeb implements RelayerSDK, Disposable {
    * Get the TFHE compact public key.
    * When storage is configured, the result is cached persistently.
    */
-  async getPublicKey(): Promise<{
-    publicKeyId: string;
-    publicKey: Uint8Array;
-  } | null> {
+  async getPublicKey(): Promise<PublicKeyData | null> {
     const worker = await this.#ensureWorker();
     if (this.#artifactCache) {
       return this.#artifactCache.getPublicKey(async () => (await worker.getPublicKey()).result);
@@ -435,9 +412,7 @@ export class RelayerWeb implements RelayerSDK, Disposable {
    * Get public parameters for encryption capacity.
    * When storage is configured, the result is cached persistently.
    */
-  async getPublicParams(
-    bits: number,
-  ): Promise<{ publicParams: Uint8Array; publicParamsId: string } | null> {
+  async getPublicParams(bits: number): Promise<PublicParamsData | null> {
     const worker = await this.#ensureWorker();
     if (this.#artifactCache) {
       return this.#artifactCache.getPublicParams(

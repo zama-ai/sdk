@@ -12,14 +12,14 @@ Mutations auto-invalidate related caches, so you only need `zamaQueryKeys` for a
 ## Import
 
 ```ts
-import { zamaQueryKeys } from "@zama-fhe/react-sdk";
+import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 ```
 
 ## Usage
 
 ```tsx
 import { useQueryClient } from "@tanstack/react-query";
-import { zamaQueryKeys } from "@zama-fhe/react-sdk";
+import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 
 const queryClient = useQueryClient();
 
@@ -58,25 +58,6 @@ Multi-token batch balances.
 | `.all`                  | All batch balance queries                 |
 | `.tokens(addrs, owner)` | Batch query for specific tokens and owner |
 
-### `zamaQueryKeys.confidentialHandle`
-
-Single-token encrypted handle (pre-decryption).
-
-| Key                   | Scope                            |
-| --------------------- | -------------------------------- |
-| `.all`                | All handles                      |
-| `.token(addr)`        | Handles for one token            |
-| `.owner(addr, owner)` | One owner's handle for one token |
-
-### `zamaQueryKeys.confidentialHandles`
-
-Multi-token batch handles.
-
-| Key                     | Scope                                     |
-| ----------------------- | ----------------------------------------- |
-| `.all`                  | All batch handle queries                  |
-| `.tokens(addrs, owner)` | Batch query for specific tokens and owner |
-
 ### `zamaQueryKeys.isAllowed`
 
 Session signature status.
@@ -95,16 +76,6 @@ ERC-20 allowance of the underlying token for the wrapper.
 | `.token(addr)`                 | Allowances for one token    |
 | `.scope(addr, owner, wrapper)` | Specific owner-wrapper pair |
 
-### `zamaQueryKeys.activityFeed`
-
-Classified activity feed.
-
-| Key                                           | Scope                   |
-| --------------------------------------------- | ----------------------- |
-| `.all`                                        | All feed queries        |
-| `.token(addr)`                                | Feed for one token      |
-| `.scope(addr, userAddress, logsKey, decrypt)` | Fully scoped feed query |
-
 ### `zamaQueryKeys.wrappersRegistry`
 
 On-chain wrappers registry queries.
@@ -122,12 +93,12 @@ On-chain wrappers registry queries.
 | `.isConfidentialTokenValid(registryAddr, confidentialAddr)` | Validity check                             |
 | `.listPairs(registryAddr, page, pageSize, metadata)`        | Paginated listing                          |
 
-### `decryptionKeys`
+### `zamaQueryKeys.decryption`
 
 Cached decrypted values. Populated by [`useUserDecrypt`](/reference/react/useUserDecrypt).
 
 ```ts
-import { decryptionKeys } from "@zama-fhe/react-sdk";
+import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 ```
 
 | Key              | Scope                            |
@@ -158,7 +129,6 @@ queryClient.prefetchQuery({
 
 ```tsx
 queryClient.removeQueries({ queryKey: zamaQueryKeys.confidentialBalance.all });
-queryClient.removeQueries({ queryKey: zamaQueryKeys.confidentialHandle.all });
 ```
 
 ## Related

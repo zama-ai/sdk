@@ -26,18 +26,6 @@ function createQueryClient(): QueryClient {
 }
 
 describe("invalidation", () => {
-  test("invalidateBalanceQueries invalidates confidentialHandle token query while preserving data", () => {
-    const qc = createQueryClient();
-    const handleKey = zamaQueryKeys.confidentialHandle.token(TOKEN);
-    const seeded = { handle: "h1" };
-
-    qc.setQueryData(handleKey, seeded);
-    invalidateBalanceQueries(qc, TOKEN);
-
-    expect(qc.getQueryData(handleKey)).toEqual(seeded);
-    expect(qc.getQueryState(handleKey)?.isInvalidated).toBe(true);
-  });
-
   test("invalidateBalanceQueries invalidates confidentialBalance token query while preserving data", () => {
     const qc = createQueryClient();
     const balanceKey = zamaQueryKeys.confidentialBalance.token(TOKEN);
@@ -61,18 +49,6 @@ describe("invalidation", () => {
     expect(qc.getQueryData(otherBalanceKey)).toEqual(seeded);
   });
 
-  test("invalidateBalanceQueries invalidates confidentialHandles.all while preserving data", () => {
-    const qc = createQueryClient();
-    const handlesKey = zamaQueryKeys.confidentialHandles.all;
-    const seeded = [{ tokenAddress: TOKEN, handle: "h2" }];
-
-    qc.setQueryData(handlesKey, seeded);
-    invalidateBalanceQueries(qc, TOKEN);
-
-    expect(qc.getQueryData(handlesKey)).toEqual(seeded);
-    expect(qc.getQueryState(handlesKey)?.isInvalidated).toBe(true);
-  });
-
   test("invalidateBalanceQueries invalidates confidentialBalances.all while preserving data", () => {
     const qc = createQueryClient();
     const balancesKey = zamaQueryKeys.confidentialBalances.all;
@@ -88,12 +64,9 @@ describe("invalidation", () => {
   test("invalidateAfterShield invalidates all expected keys", () => {
     const qc = createQueryClient();
     const keys = [
-      zamaQueryKeys.confidentialHandle.token(TOKEN),
       zamaQueryKeys.confidentialBalance.token(TOKEN),
-      zamaQueryKeys.confidentialHandles.all,
       zamaQueryKeys.confidentialBalances.all,
       zamaQueryKeys.underlyingAllowance.token(TOKEN),
-      zamaQueryKeys.activityFeed.token(TOKEN),
     ];
 
     for (const key of keys) {
@@ -109,10 +82,8 @@ describe("invalidation", () => {
   test("invalidateAfterShield does not invalidate keys for a different token", () => {
     const qc = createQueryClient();
     const otherKeys = [
-      zamaQueryKeys.confidentialHandle.token(OTHER_TOKEN),
       zamaQueryKeys.confidentialBalance.token(OTHER_TOKEN),
       zamaQueryKeys.underlyingAllowance.token(OTHER_TOKEN),
-      zamaQueryKeys.activityFeed.token(OTHER_TOKEN),
     ];
 
     for (const key of otherKeys) {
@@ -125,15 +96,12 @@ describe("invalidation", () => {
     }
   });
 
-  test("invalidateAfterUnshield invalidates balance keys, wagmi, underlyingAllowance, and activityFeed", () => {
+  test("invalidateAfterUnshield invalidates balance keys, wagmi, and underlyingAllowance", () => {
     const qc = createQueryClient();
     const keys = [
-      zamaQueryKeys.confidentialHandle.token(TOKEN),
       zamaQueryKeys.confidentialBalance.token(TOKEN),
-      zamaQueryKeys.confidentialHandles.all,
       zamaQueryKeys.confidentialBalances.all,
       zamaQueryKeys.underlyingAllowance.token(TOKEN),
-      zamaQueryKeys.activityFeed.token(TOKEN),
     ];
 
     for (const key of keys) {
@@ -146,14 +114,11 @@ describe("invalidation", () => {
     }
   });
 
-  test("invalidateAfterTransfer invalidates balance keys and activityFeed", () => {
+  test("invalidateAfterTransfer invalidates balance keys", () => {
     const qc = createQueryClient();
     const keys = [
-      zamaQueryKeys.confidentialHandle.token(TOKEN),
       zamaQueryKeys.confidentialBalance.token(TOKEN),
-      zamaQueryKeys.confidentialHandles.all,
       zamaQueryKeys.confidentialBalances.all,
-      zamaQueryKeys.activityFeed.token(TOKEN),
     ];
 
     for (const key of keys) {
@@ -182,12 +147,9 @@ describe("invalidation", () => {
   test("invalidateAfterUnwrap invalidates all expected keys", () => {
     const qc = createQueryClient();
     const keys = [
-      zamaQueryKeys.confidentialHandle.token(TOKEN),
       zamaQueryKeys.confidentialBalance.token(TOKEN),
-      zamaQueryKeys.confidentialHandles.all,
       zamaQueryKeys.confidentialBalances.all,
       zamaQueryKeys.underlyingAllowance.token(TOKEN),
-      zamaQueryKeys.activityFeed.token(TOKEN),
     ];
 
     for (const key of keys) {
@@ -209,16 +171,6 @@ describe("invalidation", () => {
 
     expect(qc.getQueryData(approvalKey)).toBe(true);
     expect(qc.getQueryState(approvalKey)?.isInvalidated).toBe(true);
-  });
-
-  test("invalidateAfterApprove invalidates activityFeed.token", () => {
-    const qc = createQueryClient();
-    const activityKey = zamaQueryKeys.activityFeed.token(TOKEN);
-
-    qc.setQueryData(activityKey, [{ id: "evt-1" }]);
-    invalidateAfterApprove(qc, TOKEN);
-
-    expect(qc.getQueryState(activityKey)?.isInvalidated).toBe(true);
   });
 
   test("invalidateAfterApproveUnderlying invalidates underlying allowance and keeps data", () => {

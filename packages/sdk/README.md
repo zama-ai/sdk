@@ -186,7 +186,7 @@ Full read/write interface for a single confidential ERC-20. Extends `ReadonlyTok
 | `unwrap(amount)`                                           | Request unwrap for a specific amount (low-level, requires manual finalization).                                                                                                                              |
 | `unwrapAll()`                                              | Request unwrap for the entire balance (low-level, requires manual finalization).                                                                                                                             |
 | `resumeUnshield(unwrapTxHash, callbacks?)`                 | Resume an interrupted unshield from an existing unwrap tx hash. Goes straight to wait receipt → finalize.                                                                                                    |
-| `finalizeUnwrap(burnAmountHandle)`                         | Complete unwrap with public decryption proof.                                                                                                                                                                |
+| `finalizeUnwrap(unwrapRequestId)`                          | Complete unwrap with public decryption proof.                                                                                                                                                                |
 | `confidentialTransfer(to, amount)`                         | Encrypted transfer. Encrypts amount, then calls the contract.                                                                                                                                                |
 | `confidentialTransferFrom(from, to, amt)`                  | Operator encrypted transfer.                                                                                                                                                                                 |
 | `approve(spender, until?)`                                 | Set operator approval. `until` defaults to now + 1 hour.                                                                                                                                                     |
@@ -195,7 +195,6 @@ Full read/write interface for a single confidential ERC-20. Extends `ReadonlyTok
 | `delegateDecryption({ delegateAddress, expirationDate? })` | Grant decryption rights to another address via the on-chain ACL. Default: permanent. ACL address resolved from relayer config.                                                                               |
 | `revokeDelegation({ delegateAddress })`                    | Revoke decryption delegation for this token. ACL address resolved from relayer config.                                                                                                                       |
 | `balanceOf(owner?)`                                        | Decrypt and return the plaintext balance.                                                                                                                                                                    |
-| `decryptHandles(handles, owner?)`                          | Batch-decrypt arbitrary encrypted handles.                                                                                                                                                                   |
 
 All write methods return a `TransactionResult` object:
 
@@ -214,8 +213,6 @@ Read-only subset. No wrapper address needed.
 | ------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
 | `balanceOf(owner?)`                                          | Decrypt and return the plaintext balance.                                              |
 | `confidentialBalanceOf(owner?)`                              | Return the raw encrypted balance handle (no decryption).                               |
-| `decryptBalance(handle, owner?)`                             | Decrypt a single encrypted handle.                                                     |
-| `decryptHandles(handles, owner?)`                            | Batch-decrypt handles in a single relayer call.                                        |
 | `allow()`                                                    | Ensure FHE decrypt credentials exist (generates/signs if needed).                      |
 | `allow(...tokens)` _(static)_                                | Pre-authorize multiple tokens with a single wallet signature.                          |
 | `isAllowed()`                                                | Whether a session signature is currently cached for this token.                        |
@@ -244,10 +241,7 @@ await ReadonlyToken.allow(...tokens);
 // All subsequent decrypts reuse cached credentials — no more wallet prompts
 
 // Decrypt balances for multiple tokens in parallel
-const balances = await ReadonlyToken.batchDecryptBalances(tokens, { owner });
-
-// Decrypt pre-fetched handles for multiple tokens
-const balances = await ReadonlyToken.batchDecryptBalances(tokens, { handles, owner });
+const { results, errors } = await ReadonlyToken.batchBalancesOf(tokens, owner);
 ```
 
 Batch delegation (on `Token`):
@@ -536,18 +530,19 @@ interface ContractCallConfig {
 | `isOperatorContract(token, holder, spender)`                            | Check operator approval.                  |
 | `setOperatorContract(token, spender, timestamp?)`                       | Set operator approval (default: +1 hour). |
 | `confidentialTotalSupplyContract(token)`                                | Read encrypted total supply handle.       |
-| `totalSupplyContract(token)`                                            | Read plaintext total supply.              |
 | `rateContract(token)`                                                   | Read conversion rate.                     |
 
 ### Wrapper
 
-| Function                                                         | Description                                   |
-| ---------------------------------------------------------------- | --------------------------------------------- |
-| `wrapContract(wrapper, to, amount)`                              | Wrap ERC-20 tokens.                           |
-| `unwrapContract(token, from, to, encryptedAmount, inputProof)`   | Request unwrap with encrypted amount.         |
-| `unwrapFromBalanceContract(token, from, to, encryptedBalance)`   | Request unwrap using on-chain balance handle. |
-| `finalizeUnwrapContract(wrapper, burntAmount, cleartext, proof)` | Finalize unwrap with decryption proof.        |
-| `underlyingContract(wrapper)`                                    | Read underlying ERC-20 address.               |
+| Function                                                             | Description                                         |
+| -------------------------------------------------------------------- | --------------------------------------------------- |
+| `wrapContract(wrapper, to, amount)`                                  | Wrap ERC-20 tokens.                                 |
+| `unwrapContract(token, from, to, encryptedAmount, inputProof)`       | Request unwrap with encrypted amount.               |
+| `unwrapFromBalanceContract(token, from, to, encryptedBalance)`       | Request unwrap using on-chain balance handle.       |
+| `finalizeUnwrapContract(wrapper, unwrapRequestId, cleartext, proof)` | Finalize unwrap with decryption proof.              |
+| `underlyingContract(wrapper)`                                        | Read underlying ERC-20 address.                     |
+| `inferredTotalSupplyContract(wrapper)`                               | Read inferred plaintext total supply.               |
+| `totalSupplyContract(wrapper)`                                       | Deprecated alias for `inferredTotalSupplyContract`. |
 
 ### ERC-165
 
@@ -631,8 +626,8 @@ Individual topic hashes are accessible via the `Topics` object: `Topics.Confiden
 | --------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | `decodeConfidentialTransfer(log)` | `ConfidentialTransferEvent \| null` — `{ from, to, encryptedAmountHandle }`                                 |
 | `decodeWrapped(log)`              | `WrappedEvent \| null` — `{ to, amountIn }`                                                                 |
-| `decodeUnwrapRequested(log)`      | `UnwrapRequestedEvent \| null` — `{ receiver, encryptedAmount }`                                            |
-| `decodeUnwrappedFinalized(log)`   | `UnwrappedFinalizedEvent \| null` — `{ receiver, encryptedAmount, cleartextAmount }`                        |
+| `decodeUnwrapRequested(log)`      | `UnwrapRequestedEvent \| null` — `{ receiver, unwrapRequestId, encryptedAmount }`                           |
+| `decodeUnwrappedFinalized(log)`   | `UnwrappedFinalizedEvent \| null` — `{ receiver, unwrapRequestId, encryptedAmount, cleartextAmount }`       |
 | `decodeUnwrappedStarted(log)`     | `UnwrappedStartedEvent \| null` — `{ returnVal, requestId, txId, to, refund, requestedAmount, burnAmount }` |
 | `decodeOnChainEvent(log)`         | `OnChainEvent \| null` — tries all decoders                                                                 |
 | `decodeOnChainEvents(logs)`       | `OnChainEvent[]` — batch decode, skips unrecognized logs                                                    |
@@ -646,71 +641,6 @@ import { findWrapped, findUnwrapRequested } from "@zama-fhe/sdk";
 
 const wrappedEvent = findWrapped(receipt.logs);
 const unwrapEvent = findUnwrapRequested(receipt.logs);
-```
-
-## Activity Feed Helpers
-
-Transform raw event logs into a user-friendly activity feed with decrypted amounts.
-
-### Pipeline
-
-```ts
-import {
-  parseActivityFeed,
-  extractEncryptedHandles,
-  applyDecryptedValues,
-  sortByBlockNumber,
-} from "@zama-fhe/sdk";
-
-// 1. Parse raw logs into classified activity items
-const items = parseActivityFeed(logs, userAddress);
-
-// 2. Extract encrypted handles that need decryption
-const handles = extractEncryptedHandles(items);
-
-// 3. Decrypt handles (using your token instance)
-const decryptedMap = await token.decryptHandles(handles);
-
-// 4. Apply decrypted values back to activity items
-const enrichedItems = applyDecryptedValues(items, decryptedMap);
-
-// 5. Sort by block number (most recent first)
-const sorted = sortByBlockNumber(enrichedItems);
-```
-
-### Types
-
-```ts
-type ActivityDirection = "incoming" | "outgoing" | "self";
-
-type ActivityType =
-  | "transfer"
-  | "shield"
-  | "unshield_requested"
-  | "unshield_started"
-  | "unshield_finalized";
-
-type ActivityAmount =
-  | { type: "clear"; value: bigint }
-  | { type: "encrypted"; handle: string; decryptedValue?: bigint };
-
-interface ActivityItem {
-  type: ActivityType;
-  direction: ActivityDirection;
-  amount: ActivityAmount;
-  from?: string;
-  to?: string;
-  fee?: ActivityAmount;
-  success?: boolean;
-  metadata: ActivityLogMetadata;
-  rawEvent: OnChainEvent;
-}
-
-interface ActivityLogMetadata {
-  transactionHash?: string;
-  blockNumber?: bigint | number;
-  logIndex?: number;
-}
 ```
 
 ## Error Handling
@@ -822,7 +752,7 @@ Low-level FHE operations are available on the relayer backend via `sdk.relayer`:
 | ------------------------------ | --------------------------------- | --------------------------------------------- |
 | `ZERO_HANDLE`                  | `"0x0000...0000"` (32 zero bytes) | Sentinel for empty/zero encrypted values.     |
 | `ERC7984_INTERFACE_ID`         | `"0x4958f2a4"`                    | ERC-165 interface ID for confidential tokens. |
-| `ERC7984_WRAPPER_INTERFACE_ID` | `"0xd04584ba"`                    | ERC-165 interface ID for wrapper contracts.   |
+| `ERC7984_WRAPPER_INTERFACE_ID` | `"0xf1f4c25a"`                    | ERC-165 interface ID for wrapper contracts.   |
 
 ## Exported ABIs
 

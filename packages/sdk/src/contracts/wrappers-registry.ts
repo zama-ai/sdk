@@ -116,6 +116,36 @@ export const wrappersRegistryAbi = [
     stateMutability: "view",
     type: "function",
   },
+  {
+    inputs: [{ internalType: "address", name: "initialOwner", type: "address" }],
+    name: "initialize",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "address", name: "tokenAddress", type: "address" },
+      { internalType: "address", name: "confidentialTokenAddress", type: "address" },
+    ],
+    name: "registerConfidentialToken",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "confidentialTokenAddress",
+        type: "address",
+      },
+    ],
+    name: "revokeConfidentialToken",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
 ] as const;
 
 export interface TokenWrapperPair {
@@ -228,9 +258,12 @@ export function getTokenPairContract(registry: Address, index: bigint) {
  *
  * @example
  * ```ts
- * const [found, confidentialToken] = await client.readContract(
+ * const [isValid, confidentialToken] = await client.readContract(
  *   getConfidentialTokenAddressContract(registryAddress, tokenAddress),
  * );
+ * // isValid=false + confidentialToken=zeroAddress → not registered
+ * // isValid=false + confidentialToken=nonZeroAddress → registered but revoked
+ * // isValid=true  + confidentialToken=nonZeroAddress → registered and valid
  * ```
  */
 export function getConfidentialTokenAddressContract(registry: Address, tokenAddress: Address) {
@@ -247,9 +280,12 @@ export function getConfidentialTokenAddressContract(registry: Address, tokenAddr
  *
  * @example
  * ```ts
- * const [found, token] = await client.readContract(
+ * const [isValid, token] = await client.readContract(
  *   getTokenAddressContract(registryAddress, confidentialTokenAddress),
  * );
+ * // isValid=false + token=zeroAddress → not registered
+ * // isValid=false + token=nonZeroAddress → registered but revoked
+ * // isValid=true  + token=nonZeroAddress → registered and valid
  * ```
  */
 export function getTokenAddressContract(registry: Address, confidentialTokenAddress: Address) {

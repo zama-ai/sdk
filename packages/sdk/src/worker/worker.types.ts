@@ -2,6 +2,7 @@ import type {
   FhevmInstanceConfig,
   InputProofBytesType,
   KmsDelegatedUserDecryptEIP712Type,
+  KmsUserDecryptEIP712Type,
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/bundle";
 import type { ClearValueType, EncryptInput, Handle } from "../relayer/relayer-sdk.types";
@@ -235,10 +236,7 @@ export interface UpdateCsrfResponseData {
   updated: true;
 }
 
-export interface EncryptResponseData {
-  handles: Uint8Array[];
-  inputProof: Uint8Array;
-}
+export type EncryptResponseData = InputProofBytesType;
 
 export interface UserDecryptResponseData {
   clearValues: Record<Handle, ClearValueType>;
@@ -255,27 +253,7 @@ export interface GenerateKeypairResponseData {
   privateKey: Hex;
 }
 
-export interface CreateEIP712ResponseData {
-  domain: {
-    name: string;
-    version: string;
-    chainId: number;
-    verifyingContract: Address;
-  };
-  types: {
-    UserDecryptRequestVerification: {
-      name: string;
-      type: string;
-    }[];
-  };
-  message: {
-    publicKey: Hex;
-    contractAddresses: Address[];
-    startTimestamp: bigint;
-    durationDays: bigint;
-    extraData: Hex;
-  };
-}
+export type CreateEIP712ResponseData = KmsUserDecryptEIP712Type;
 
 export type CreateDelegatedEIP712ResponseData = KmsDelegatedUserDecryptEIP712Type;
 

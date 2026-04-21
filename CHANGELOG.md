@@ -1,5 +1,75 @@
 # Changelog
 
+## [3.0.0-alpha.9](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.8...v3.0.0-alpha.9) (2026-04-20)
+
+## [3.0.0-alpha.8](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.7...v3.0.0-alpha.8) (2026-04-20)
+
+## [3.0.0-alpha.7](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.6...v3.0.0-alpha.7) (2026-04-18)
+
+### Bug Fixes
+
+- align ManifestShape with actual /keyurl endpoint response ([2cde790]())
+
+## [3.0.0-alpha.6](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.5...v3.0.0-alpha.6) (2026-04-17)
+
+## [3.0.0-alpha.5](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.4...v3.0.0-alpha.5) (2026-04-17)
+
+### Features
+
+- **SDK-69:** support both old and new wrapper interfaceIds during transition ([#235](https://github.com/zama-ai/sdk/issues/235)) ([93c7d8a]())
+
+## [3.0.0-alpha.4](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.3...v3.0.0-alpha.4) (2026-04-17)
+
+## [3.0.0-alpha.3](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.2...v3.0.0-alpha.3) (2026-04-17)
+
+## [3.0.0-alpha.2](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.1...v3.0.0-alpha.2) (2026-04-17)
+
+### Features
+
+- **sdk-61:** replace WrappersRegistry with protocol ConfidentialTokenWrappersRegistry contracts ([#229](https://github.com/zama-ai/sdk/issues/229)) ([dd4364d]())
+
+## [3.0.0-alpha.1](https://github.com/zama-ai/sdk/compare/v2.5.0-alpha.6...v3.0.0-alpha.1) (2026-04-17)
+
+### ⚠ BREAKING CHANGES
+
+- The following exports are removed:
+- @zama-fhe/sdk: parseActivityFeed, applyDecryptedValues, activity types
+  (ActivityItem, ActivityDirection, ActivityAmount, ActivityType),
+  activityFeedQueryOptions, queryKeys.activityFeed
+- @zama-fhe/react-sdk: useActivityFeed
+
+* fmt
+
+### Code Refactoring
+
+- remove activity feed from SDK and react-sdk ([#258](https://github.com/zama-ai/sdk/issues/258)) ([5784dba]())
+
+## [2.5.0-alpha.6](https://github.com/zama-ai/sdk/compare/v2.5.0-alpha.5...v2.5.0-alpha.6) (2026-04-16)
+
+### Bug Fixes
+
+- centralize ZERO_HANDLE, use isZeroHandle checks ([#251](https://github.com/zama-ai/sdk/issues/251)) ([ffd5e3d]())
+
+## [2.5.0-alpha.5](https://github.com/zama-ai/sdk/compare/v2.5.0-alpha.4...v2.5.0-alpha.5) (2026-04-16)
+
+### Features
+
+- **sdk:** add sdk.publicDecrypt() as the primitive for public decryptions ([#250](https://github.com/zama-ai/sdk/issues/250)) ([fca0c80]())
+
+## [2.5.0-alpha.4](https://github.com/zama-ai/sdk/compare/v2.5.0-alpha.3...v2.5.0-alpha.4) (2026-04-16)
+
+## [2.5.0-alpha.3](https://github.com/zama-ai/sdk/compare/v2.5.0-alpha.2...v2.5.0-alpha.3) (2026-04-16)
+
+### Bug Fixes
+
+- align example apps with scoped isAllowed checks ([#233](https://github.com/zama-ai/sdk/issues/233)) ([4f50086]())
+
+## [2.5.0-alpha.2](https://github.com/zama-ai/sdk/compare/v2.5.0-alpha.1...v2.5.0-alpha.2) (2026-04-16)
+
+### Features
+
+- **sdk:** add inferred total supply contract builder ([#243](https://github.com/zama-ai/sdk/issues/243)) ([f63355f]())
+
 ## [2.5.0-alpha.1](https://github.com/zama-ai/sdk/compare/v2.4.0...v2.5.0-alpha.1) (2026-04-15)
 
 ### Features

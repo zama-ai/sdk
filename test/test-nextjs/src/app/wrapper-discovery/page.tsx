@@ -1,5 +1,5 @@
 import { WrapperDiscoveryPanel } from "@zama-fhe/test-components";
-import type { Address } from "@zama-fhe/react-sdk";
+import type { Address } from "@zama-fhe/sdk";
 
 export default async function WrapperDiscoveryPage({
   searchParams,

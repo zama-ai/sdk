@@ -28,17 +28,12 @@ export function invalidateAfterUnwrap(queryClient: QueryClientLike, tokenAddress
   invalidateBalanceQueries(queryClient, tokenAddress);
   invalidateUnderlyingAllowanceQueries(queryClient, tokenAddress);
   invalidateWagmiBalanceQueries(queryClient);
-  void queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
 }
 
 export function invalidateBalanceQueries(
   queryClient: QueryClientLike,
   tokenAddress: Address,
 ): void {
-  void queryClient.invalidateQueries({
-    queryKey: zamaQueryKeys.confidentialHandle.token(tokenAddress),
-  });
-  void queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialHandles.all });
   void queryClient.invalidateQueries({
     queryKey: zamaQueryKeys.confidentialBalance.token(tokenAddress),
   });
@@ -49,19 +44,16 @@ export function invalidateAfterShield(queryClient: QueryClientLike, tokenAddress
   invalidateBalanceQueries(queryClient, tokenAddress);
   invalidateUnderlyingAllowanceQueries(queryClient, tokenAddress);
   invalidateWagmiBalanceQueries(queryClient);
-  void queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
 }
 
 export function invalidateAfterUnshield(queryClient: QueryClientLike, tokenAddress: Address): void {
   invalidateBalanceQueries(queryClient, tokenAddress);
   invalidateUnderlyingAllowanceQueries(queryClient, tokenAddress);
   invalidateWagmiBalanceQueries(queryClient);
-  void queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
 }
 
 export function invalidateAfterTransfer(queryClient: QueryClientLike, tokenAddress: Address): void {
   invalidateBalanceQueries(queryClient, tokenAddress);
-  void queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
 }
 
 export function invalidateAfterApproveUnderlying(
@@ -75,7 +67,6 @@ export function invalidateAfterApprove(queryClient: QueryClientLike, tokenAddres
   void queryClient.invalidateQueries({
     queryKey: zamaQueryKeys.confidentialIsApproved.token(tokenAddress),
   });
-  void queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
 }
 
 function isZamaQuery(query: QueryLike): boolean {

@@ -5,7 +5,7 @@ import type { MutationFactoryOptions } from "./factory-types";
 /** Variables for {@link decryptBalanceAsMutationOptions}. */
 export interface DecryptBalanceAsParams {
   delegatorAddress: Address;
-  owner?: Address;
+  accountAddress?: Address;
 }
 
 export function decryptBalanceAsMutationOptions(
@@ -17,7 +17,7 @@ export function decryptBalanceAsMutationOptions(
 > {
   return {
     mutationKey: ["zama.decryptBalanceAs", readonlyToken.address] as const,
-    mutationFn: async ({ delegatorAddress, owner }) =>
-      readonlyToken.decryptBalanceAs({ delegatorAddress, owner }),
+    mutationFn: async ({ delegatorAddress, accountAddress }) =>
+      readonlyToken.decryptBalanceAs({ delegatorAddress, accountAddress }),
   };
 }

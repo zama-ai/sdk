@@ -8,7 +8,7 @@ description: Query hook that automatically decrypts FHE handles once credentials
 Query hook for user decryption. Automatically fires when credentials are available (acquired via [`useAllow`](/reference/react/useAllow)) and handles are provided. Checks the persistent decrypt cache first and only hits the relayer for uncached handles.
 
 {% hint style="info" %}
-**This is the recommended way to decrypt.** For token balances, prefer [`useConfidentialBalance`](/reference/react/useConfidentialBalance) which decrypts automatically with two-phase polling. Use `useUserDecrypt` when your smart contract uses FHE types directly (e.g. a confidential voting contract, a sealed-bid auction, or any non-token contract).
+**This is the recommended way to decrypt.** For token balances, prefer [`useConfidentialBalance`](/reference/react/useConfidentialBalance) which handles decryption and caching automatically. Use `useUserDecrypt` when your smart contract uses FHE types directly (e.g. a confidential voting contract, a sealed-bid auction, or any non-token contract).
 {% endhint %}
 
 ## Import
@@ -53,10 +53,6 @@ function DecryptHandle({ handle }: { handle: string }) {
 
 ## Parameters
 
-```ts
-import { type UseUserDecryptConfig } from "@zama-fhe/react-sdk";
-```
-
 ### handles
 
 `DecryptHandle[]`
@@ -64,7 +60,7 @@ import { type UseUserDecryptConfig } from "@zama-fhe/react-sdk";
 Array of handles to decrypt. Each entry pairs an encrypted handle with the address of the contract that owns it. Only handles not yet in the SDK's persistent decrypt cache are sent for decryption — cached handles are returned immediately, even after a page reload.
 
 ```ts
-import { type DecryptHandle } from "@zama-fhe/react-sdk";
+import { type DecryptHandle } from "@zama-fhe/sdk";
 ```
 
 | Field             | Type      | Description                                            |
@@ -139,6 +135,6 @@ This means users only see a wallet signature prompt once per session (or per TTL
 
 - [`useAllow`](/reference/react/useAllow) — pre-authorize contracts with one wallet signature (required before `useUserDecrypt` fires)
 - [`useIsAllowed`](/reference/react/useIsAllowed) — check whether credentials are cached and cover specific contracts
-- [`useConfidentialBalance`](/reference/react/useConfidentialBalance) — high-level hook that decrypts token balances automatically with two-phase polling
+- [`useConfidentialBalance`](/reference/react/useConfidentialBalance) — high-level hook that decrypts token balances with automatic caching
 - [`useEncrypt`](/reference/react/useEncrypt) — reverse operation, encrypt a plaintext value for on-chain submission
 - [Encrypt & Decrypt guide](/guides/encrypt-decrypt) — full walkthrough with end-to-end examples

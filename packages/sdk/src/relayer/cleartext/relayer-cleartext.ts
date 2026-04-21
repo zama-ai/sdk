@@ -33,6 +33,8 @@ import type {
   EncryptResult,
   Handle,
   PublicDecryptResult,
+  PublicKeyData,
+  PublicParamsData,
   UserDecryptParams,
 } from "../relayer-sdk.types";
 import {
@@ -181,14 +183,14 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
       domain: USER_DECRYPT_EIP712.domain(
         this.#config.chainId,
         this.#config.verifyingContractAddressDecryption,
-      ) as EIP712TypedData["domain"],
+      ),
       types: USER_DECRYPT_TYPES,
       primaryType: "UserDecryptRequestVerification",
       message: {
         publicKey,
         contractAddresses,
-        startTimestamp: BigInt(startTimestamp),
-        durationDays: BigInt(durationDays),
+        startTimestamp: String(startTimestamp),
+        durationDays: String(durationDays),
         extraData: "0x00",
       },
     };
@@ -293,7 +295,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
       domain: KMS_DECRYPTION_EIP712.domain(
         this.#config.gatewayChainId,
         this.#config.verifyingContractAddressDecryption,
-      ) as KmsPublicDecryptEIP712Type["domain"],
+      ),
       types: KMS_DECRYPTION_TYPES,
       primaryType: "PublicDecryptVerification",
       message: {
@@ -320,7 +322,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
     durationDays = 7,
   ): Promise<KmsDelegatedUserDecryptEIP712Type> {
     const message: KmsDelegatedUserDecryptEIP712Type["message"] = {
-      publicKey: publicKey as KmsDelegatedUserDecryptEIP712Type["message"]["publicKey"],
+      publicKey,
       contractAddresses,
       delegatorAddress: getAddress(delegatorAddress),
       startTimestamp: String(startTimestamp),
@@ -330,9 +332,9 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
 
     return {
       domain: DELEGATED_USER_DECRYPT_EIP712.domain(
-        BigInt(this.#config.chainId),
+        this.#config.chainId,
         this.#config.verifyingContractAddressDecryption,
-      ) as KmsDelegatedUserDecryptEIP712Type["domain"],
+      ),
       types: DELEGATED_USER_DECRYPT_TYPES,
       primaryType: "DelegatedUserDecryptRequestVerification",
       message,
@@ -356,13 +358,11 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
     throw new ConfigurationError("Not implemented in cleartext mode");
   }
 
-  async getPublicKey(): Promise<{ publicKeyId: string; publicKey: Uint8Array } | null> {
+  async getPublicKey(): Promise<PublicKeyData | null> {
     return { publicKeyId: "mock-public-key-id", publicKey: new Uint8Array([32]) };
   }
 
-  async getPublicParams(
-    _bits: number,
-  ): Promise<{ publicParams: Uint8Array; publicParamsId: string } | null> {
+  async getPublicParams(_bits: number): Promise<PublicParamsData | null> {
     return { publicParams: new Uint8Array([32]), publicParamsId: "mock-public-params-id" };
   }
 

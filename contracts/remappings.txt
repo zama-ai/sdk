@@ -5,3 +5,5 @@
 encrypted-types/=lib/forge-fhevm/dependencies/encrypted-types-0.0.4/
 forge-fhevm/=lib/forge-fhevm/src/
 forge-std/=lib/forge-fhevm/dependencies/forge-std-1.14.0/src/
+protocol-apps-registry/=dependencies/protocol-apps-registry-f51845b08cc2/
+protocol-apps-wrapper/=dependencies/protocol-apps-wrapper-da4afe387420/

@@ -5,7 +5,7 @@
 import { nodeTest as test, expect } from "../../fixtures/node-test";
 import { RelayerNode } from "@zama-fhe/sdk/node";
 import { HardhatConfig } from "@zama-fhe/sdk";
-import type { Address } from "viem";
+import type { Address } from "@zama-fhe/sdk";
 
 test("pool re-initializes when chain ID changes", async ({ transport, contracts }) => {
   let chainId: number = HardhatConfig.chainId;

@@ -1,44 +1,33 @@
-import type { ReadonlyToken } from "../token/readonly-token";
-import type { Handle } from "../relayer/relayer-sdk.types";
-
-import { assertNonNullable } from "../utils/assertions";
-import type { QueryFactoryOptions } from "./factory-types";
-import { filterQueryOptions } from "./utils";
-import { zamaQueryKeys } from "./query-keys";
 import type { Address } from "viem";
-
-export type EncryptedBalanceHandle = Handle;
+import type { ReadonlyToken } from "../token";
+import type { QueryFactoryOptions } from "./factory-types";
+import { zamaQueryKeys } from "./query-keys";
+import { filterQueryOptions } from "./utils";
 
 export interface ConfidentialBalanceQueryConfig {
+  tokenAddress: Address;
   owner?: Address;
-  handle?: EncryptedBalanceHandle;
   query?: Record<string, unknown>;
 }
 
 export function confidentialBalanceQueryOptions(
   token: ReadonlyToken,
-  config?: ConfidentialBalanceQueryConfig,
+  config: ConfidentialBalanceQueryConfig,
 ): QueryFactoryOptions<
   bigint,
   Error,
   bigint,
   ReturnType<typeof zamaQueryKeys.confidentialBalance.owner>
 > {
-  const ownerKey = config?.owner;
-  const handleKey = config?.handle;
-  const queryEnabled = config?.query?.enabled !== false;
-  const queryKey = zamaQueryKeys.confidentialBalance.owner(token.address, ownerKey, handleKey);
+  const queryOpts = config.query ?? {};
 
   return {
-    ...filterQueryOptions(config?.query ?? {}),
-    queryKey,
+    ...filterQueryOptions(queryOpts),
+    queryKey: zamaQueryKeys.confidentialBalance.owner(config.tokenAddress, config.owner),
     queryFn: async (context) => {
-      const [, { owner: keyOwner, handle: keyHandle }] = context.queryKey;
-      assertNonNullable(keyOwner, "confidentialBalanceQueryOptions: owner");
-      assertNonNullable(keyHandle, "confidentialBalanceQueryOptions: handle");
-      return token.decryptBalance(keyHandle, keyOwner);
+      const [, { owner: keyOwner }] = context.queryKey;
+      return token.balanceOf(keyOwner);
     },
-    enabled: Boolean(ownerKey && handleKey) && queryEnabled,
-    staleTime: Infinity,
+    enabled: queryOpts?.enabled !== false,
   };
 }

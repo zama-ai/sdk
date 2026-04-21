@@ -2,6 +2,7 @@ import type { Address } from "viem";
 import { toHex } from "viem";
 import { encryptedAbi } from "../abi/encrypted.abi";
 import type { Handle } from "../relayer/relayer-sdk.types";
+import { inferredTotalSupplyContract } from "./wrapper";
 
 /**
  * Returns the contract config to read an encrypted balance.
@@ -180,22 +181,20 @@ export function confidentialTotalSupplyContract(tokenAddress: Address) {
 }
 
 /**
- * Returns the contract config to read the plaintext total supply.
+ * Returns the contract config to read the inferred plaintext total supply.
+ *
+ * @deprecated Use {@link inferredTotalSupplyContract}. `totalSupply()` was
+ * renamed to `inferredTotalSupply()` on wrapper contracts.
  *
  * @example
  * ```ts
  * const supply = await signer.readContract(
- *   totalSupplyContract(tokenAddress),
+ *   totalSupplyContract(wrapperAddress),
  * );
  * ```
  */
-export function totalSupplyContract(tokenAddress: Address) {
-  return {
-    address: tokenAddress,
-    abi: encryptedAbi,
-    functionName: "totalSupply",
-    args: [],
-  } as const;
+export function totalSupplyContract(wrapperAddress: Address) {
+  return inferredTotalSupplyContract(wrapperAddress);
 }
 
 /**

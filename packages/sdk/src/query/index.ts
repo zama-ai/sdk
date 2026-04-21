@@ -1,4 +1,4 @@
-export { filterQueryOptions, hashFn, ZERO_HANDLE } from "./utils";
+export { filterQueryOptions, hashFn } from "./utils";
 export type { StrippedQueryOptionKeys } from "./utils";
 export type { QueryFactoryOptions, MutationFactoryOptions } from "./factory-types";
 export { zamaQueryKeys } from "./query-keys";
@@ -43,30 +43,13 @@ export {
 export { publicKeyQueryOptions, type PublicKeyQueryConfig } from "./public-key";
 export { publicParamsQueryOptions, type PublicParamsQueryConfig } from "./public-params";
 export {
-  confidentialHandleQueryOptions,
-  type ConfidentialHandleQueryConfig,
-} from "./confidential-handle";
-export {
   confidentialBalanceQueryOptions,
   type ConfidentialBalanceQueryConfig,
-  type EncryptedBalanceHandle,
 } from "./confidential-balance";
 export {
-  confidentialHandlesQueryOptions,
-  type ConfidentialHandlesQueryConfig,
-} from "./confidential-handles";
-export {
   confidentialBalancesQueryOptions,
-  type ConfidentialBalancesData,
   type ConfidentialBalancesQueryConfig,
 } from "./confidential-balances";
-export {
-  activityFeedQueryOptions,
-  deriveActivityFeedLogsKey,
-  type ActivityFeedConfig,
-  type ActivityFeedQueryConfig,
-} from "./activity-feed";
-
 export {
   tokenPairsQueryOptions,
   tokenPairsLengthQueryOptions,
@@ -137,8 +120,6 @@ export {
   type DelegationStatusData,
   type DelegationStatusQueryConfig,
 } from "./delegation-status";
-export type { ActivityItem, ActivityLogMetadata } from "../activity";
-export type { ActivityAmount, ActivityDirection, ActivityType } from "../activity";
 export type { RawLog } from "../events/onchain-events";
 export type {
   ConfidentialTransferEvent,
@@ -157,13 +138,8 @@ export type {
   UserDecryptParams,
 } from "../relayer/relayer-sdk.types";
 export type { RelayerSDK } from "../relayer/relayer-sdk";
-export type {
-  BatchDecryptOptions,
-  BatchDecryptAsOptions,
-  ReadonlyTokenConfig,
-} from "../token/readonly-token";
+export type { BatchBalancesResult, BatchDecryptAsOptions } from "../token/readonly-token";
 export type { ReadonlyToken } from "../token/readonly-token";
-export type { TokenConfig } from "../token/token";
 export type { Token } from "../token/token";
 export type { ZamaSDKConfig } from "../zama-sdk";
 export type { ZamaSDK } from "../zama-sdk";

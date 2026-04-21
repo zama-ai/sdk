@@ -10,7 +10,11 @@ describe("Unshield callbacks (P4)", () => {
     vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
       logs: [
         {
-          topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`],
+          topics: [
+            Topics.UnwrapRequested,
+            `0x000000000000000000000000${userAddress.slice(2)}`,
+            `0x${"ff".repeat(32)}`,
+          ],
           data: `0x${"ff".repeat(32)}`,
         },
       ],
@@ -161,100 +165,42 @@ describe("Unshield callbacks (P4)", () => {
 });
 
 describe("Shield callbacks (SDK-19)", () => {
-  it("fires onApprovalSubmitted and onShieldSubmitted callbacks", async ({
-    relayer,
-    signer,
-    createToken,
-    storage,
-    sessionStorage,
-    tokenAddress,
-  }) => {
-    // underlying() returns a non-zero address so it's treated as ERC-20, not ETH
-    vi.mocked(signer.readContract).mockResolvedValue("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c");
-    const token = createToken({
-      relayer,
-      signer,
-      storage,
-      sessionStorage,
-      address: tokenAddress,
-      wrapper: tokenAddress,
-    });
+  const UNDERLYING = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c";
 
-    // Mock allowance to 0 so approval is needed
+  it("fires onApprovalSubmitted and onShieldSubmitted callbacks", async ({ token, signer }) => {
     vi.mocked(signer.readContract)
-      .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // underlying()
-      .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
-      .mockResolvedValueOnce(0n); // allowance()
+      .mockResolvedValueOnce(UNDERLYING)
+      .mockResolvedValueOnce(1000n)
+      .mockResolvedValueOnce(0n);
 
     const onApprovalSubmitted = vi.fn();
     const onShieldSubmitted = vi.fn();
 
-    await token.shield(100n, {
-      onApprovalSubmitted,
-      onShieldSubmitted,
-    });
+    await token.shield(100n, { onApprovalSubmitted, onShieldSubmitted });
 
     expect(onApprovalSubmitted).toHaveBeenCalledWith("0xtxhash");
     expect(onShieldSubmitted).toHaveBeenCalledWith("0xtxhash");
   });
 
-  it("skips onApprovalSubmitted when allowance is sufficient", async ({
-    relayer,
-    signer,
-    createToken,
-    storage,
-    sessionStorage,
-    tokenAddress,
-  }) => {
-    vi.mocked(signer.readContract).mockResolvedValue("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c");
-    const token = createToken({
-      relayer,
-      signer,
-      storage,
-      sessionStorage,
-      address: tokenAddress,
-      wrapper: tokenAddress,
-    });
-
-    // Mock allowance to be greater than amount
+  it("skips onApprovalSubmitted when allowance is sufficient", async ({ token, signer }) => {
     vi.mocked(signer.readContract)
-      .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // underlying()
-      .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
-      .mockResolvedValueOnce(1000n); // allowance() > 100n
+      .mockResolvedValueOnce(UNDERLYING)
+      .mockResolvedValueOnce(1000n)
+      .mockResolvedValueOnce(1000n);
 
     const onApprovalSubmitted = vi.fn();
     const onShieldSubmitted = vi.fn();
 
-    await token.shield(100n, {
-      onApprovalSubmitted,
-      onShieldSubmitted,
-    });
+    await token.shield(100n, { onApprovalSubmitted, onShieldSubmitted });
 
     expect(onApprovalSubmitted).not.toHaveBeenCalled();
     expect(onShieldSubmitted).toHaveBeenCalledOnce();
   });
 
-  it("completes shield even when callbacks throw", async ({
-    relayer,
-    signer,
-    createToken,
-    storage,
-    sessionStorage,
-    tokenAddress,
-  }) => {
-    vi.mocked(signer.readContract).mockResolvedValue("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c");
-    const token = createToken({
-      relayer,
-      signer,
-      storage,
-      sessionStorage,
-      address: tokenAddress,
-      wrapper: tokenAddress,
-    });
-
+  it("completes shield even when callbacks throw", async ({ token, signer }) => {
     vi.mocked(signer.readContract)
-      .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c")
-      .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
+      .mockResolvedValueOnce(UNDERLYING)
+      .mockResolvedValueOnce(1000n)
       .mockResolvedValueOnce(0n);
 
     const result = await token.shield(100n, {
@@ -269,33 +215,15 @@ describe("Shield callbacks (SDK-19)", () => {
     expect(result.txHash).toBe("0xtxhash");
   });
 
-  it("passes to parameter for shield recipient", async ({
-    relayer,
-    signer,
-    createToken,
-    storage,
-    sessionStorage,
-    tokenAddress,
-  }) => {
-    vi.mocked(signer.readContract).mockResolvedValue("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c");
-    const token = createToken({
-      relayer,
-      signer,
-      storage,
-      sessionStorage,
-      address: tokenAddress,
-      wrapper: tokenAddress,
-    });
-
+  it("passes to parameter for shield recipient", async ({ token, signer }) => {
     vi.mocked(signer.readContract)
-      .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c")
-      .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
-      .mockResolvedValueOnce(1000n); // allowance
+      .mockResolvedValueOnce(UNDERLYING)
+      .mockResolvedValueOnce(1000n)
+      .mockResolvedValueOnce(1000n);
 
     const recipient = "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address;
     await token.shield(100n, { to: recipient });
 
-    // The writeContract call for wrap should include the recipient
     expect(signer.writeContract).toHaveBeenCalled();
   });
 });

@@ -98,14 +98,14 @@ export function writeUnwrapFromBalanceContract(
 export function writeFinalizeUnwrapContract(
   client: WalletClient,
   wrapper: Address,
-  burntAmount: Handle,
+  unwrapRequestId: Handle,
   burntAmountCleartext: bigint,
   decryptionProof: Hex,
 ) {
   return client.writeContract({
     chain: client.chain,
     account: requireAccount(client),
-    ...finalizeUnwrapContract(wrapper, burntAmount, burntAmountCleartext, decryptionProof),
+    ...finalizeUnwrapContract(wrapper, unwrapRequestId, burntAmountCleartext, decryptionProof),
   });
 }
 
