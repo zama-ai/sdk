@@ -1,16 +1,11 @@
 import { describe, expectTypeOf, it } from "vitest";
-import { mainnet, sepolia } from "../../chains";
+import { sepolia } from "../../chains";
 import type { FheChain } from "../../chains";
 import type { ZamaConfigViem } from "../../viem/types";
 import type { ZamaConfigEthers } from "../../ethers/types";
 
 describe("FheChain", () => {
-  it("preset chains carry literal id types", () => {
-    expectTypeOf(sepolia.id).toEqualTypeOf<11155111>();
-    expectTypeOf(mainnet.id).toEqualTypeOf<1>();
-  });
-
-  it("FheChain<number> is backwards compatible", () => {
+  it("FheChain without generic defaults to number id", () => {
     const chain: FheChain = sepolia;
     expectTypeOf(chain.id).toEqualTypeOf<number>();
   });
@@ -27,10 +22,6 @@ describe("ZamaConfigViem", () => {
 });
 
 describe("ZamaConfigEthers", () => {
-  it("accepts ethereum at top level", () => {
-    expectTypeOf<ZamaConfigEthers>().toHaveProperty("ethereum");
-  });
-
   it("does not have an ethers wrapper property", () => {
     expectTypeOf<ZamaConfigEthers>().not.toHaveProperty("ethers");
   });

@@ -1,10 +1,10 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
 import { web } from "@zama-fhe/sdk";
-import { createZamaConfig as createViemZamaConfig, ViemSigner } from "@zama-fhe/sdk/viem";
-import { createZamaConfig as createEthersZamaConfig, EthersSigner } from "@zama-fhe/sdk/ethers";
-import { createZamaConfig as createWagmiZamaConfig } from "../wagmi/config";
-import { createMockSigner, createMockStorage } from "../../../sdk/src/test-fixtures";
 import { sepolia } from "@zama-fhe/sdk/chains";
+import { createZamaConfig as createEthersZamaConfig, EthersSigner } from "@zama-fhe/sdk/ethers";
+import { createZamaConfig as createViemZamaConfig, ViemSigner } from "@zama-fhe/sdk/viem";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createMockSigner, createMockStorage } from "../../../sdk/src/test-fixtures";
+import { createZamaConfig as createWagmiZamaConfig } from "../wagmi/config";
 import { WagmiSigner } from "../wagmi/wagmi-signer";
 
 vi.mock(import("../wagmi/wagmi-signer"), async (importOriginal) => {
@@ -17,7 +17,7 @@ vi.mock(import("../wagmi/wagmi-signer"), async (importOriginal) => {
   };
 });
 
-vi.mock(import("@zama-fhe/sdk/viem/viem-signer"), async (importOriginal) => {
+vi.mock(import("../../../sdk/src/viem/viem-signer"), async (importOriginal) => {
   const actual = await importOriginal();
   return {
     ...actual,
@@ -27,7 +27,7 @@ vi.mock(import("@zama-fhe/sdk/viem/viem-signer"), async (importOriginal) => {
   };
 });
 
-vi.mock(import("@zama-fhe/sdk/ethers/ethers-signer"), async (importOriginal) => {
+vi.mock(import("../../../sdk/src/ethers/ethers-signer"), async (importOriginal) => {
   const actual = await importOriginal();
   return {
     ...actual,
@@ -55,7 +55,11 @@ describe("createZamaConfig", () => {
   describe("signer resolution", () => {
     it("creates WagmiSigner from wagmiConfig", () => {
       const wagmiConfig = mockWagmiConfig();
-      createWagmiZamaConfig({ chains: [sepolia], wagmiConfig, transports: { [11155111]: web() } });
+      createWagmiZamaConfig({
+        chains: [sepolia],
+        wagmiConfig,
+        transports: { [11155111]: web() },
+      });
       expect(MockWagmiSigner).toHaveBeenCalledWith({ config: wagmiConfig });
     });
 
@@ -179,19 +183,29 @@ describe("createZamaConfig", () => {
     it("carries chain and relayer params separately", () => {
       const relayerOpts = { threads: 4 } as const;
       const result = web(
-        { relayerUrl: "/api/relayer/11155111", network: "https://custom-rpc.com" },
+        {
+          relayerUrl: "/api/relayer/11155111",
+          network: "https://custom-rpc.com",
+        },
         relayerOpts,
       );
       expect(result).toEqual({
         type: "web",
-        chain: { relayerUrl: "/api/relayer/11155111", network: "https://custom-rpc.com" },
+        chain: {
+          relayerUrl: "/api/relayer/11155111",
+          network: "https://custom-rpc.com",
+        },
         relayer: relayerOpts,
       });
     });
 
     it("returns tagged empty config when called with no args", () => {
       const result = web();
-      expect(result).toEqual({ type: "web", chain: undefined, relayer: undefined });
+      expect(result).toEqual({
+        type: "web",
+        chain: undefined,
+        relayer: undefined,
+      });
     });
   });
 
