@@ -115,7 +115,6 @@ export interface UserDecryptParams {
   signerAddress: Address;
   startTimestamp: number;
   durationDays: number;
-  /** EIP-712 typed data used for the permit (required by @fhevm/sdk parseSignedDecryptionPermit). */
   eip712: StoredEIP712;
 }
 
@@ -128,7 +127,6 @@ export interface PublicDecryptResult {
 
 /**
  * EIP712 typed data structure for user or delegated user decrypt requests.
- * Union of the canonical @fhevm/sdk return types.
  */
 export type EIP712TypedData = {
   readonly domain: {
@@ -166,7 +164,6 @@ export interface DelegatedUserDecryptParams {
   delegateAddress: Address;
   startTimestamp: number;
   durationDays: number;
-  /** EIP-712 typed data used for the permit (required by @fhevm/sdk parseSignedDecryptionPermit). */
   eip712: StoredEIP712;
 }
 

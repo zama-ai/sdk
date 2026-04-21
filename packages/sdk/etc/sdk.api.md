@@ -6224,6 +6224,8 @@ export interface DelegatedUserDecryptParams {
     // (undocumented)
     durationDays: number;
     // Warning: (ae-forgotten-export) The symbol "StoredEIP712" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
     eip712: StoredEIP712;
     // (undocumented)
     handles: Handle[];
@@ -6472,6 +6474,7 @@ export type FheTypeName = "ebool" | "euint8" | "euint16" | "euint32" | "euint64"
 
 // @public
 export interface FhevmInstanceConfig {
+    // (undocumented)
     [key: string]: unknown;
     // (undocumented)
     aclContractAddress: string;
@@ -19607,6 +19610,7 @@ export interface UserDecryptParams {
     contractAddress: Address;
     // (undocumented)
     durationDays: number;
+    // (undocumented)
     eip712: StoredEIP712;
     // (undocumented)
     handles: Handle[];

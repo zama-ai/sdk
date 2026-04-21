@@ -37,7 +37,7 @@ export interface StoredCredentials {
   startTimestamp: number;
   /** Number of days the credential remains valid. */
   durationDays: number;
-  /** EIP-712 typed data used to produce the signature (needed by @fhevm/sdk to reconstruct the permit). */
+  /** EIP-712 typed data used to produce the signature */
   eip712: StoredEIP712;
 }
 

@@ -2,7 +2,7 @@ import type { ClearValueType, EncryptInput, Handle } from "../relayer/relayer-sd
 import type { StoredEIP712 } from "../types/credentials";
 import type { Address, Hex } from "viem";
 
-/** Network configuration for the FHE VM instance (matches @fhevm/sdk chain config shape). */
+/** Network configuration for the FHE VM instance */
 export interface FhevmInstanceConfig {
   chainId: number;
   networkUrl?: string;
@@ -15,7 +15,6 @@ export interface FhevmInstanceConfig {
   verifyingContractAddressInputVerification?: string;
   inputVerifierContractAddress?: string;
   batchRpcCalls?: boolean;
-  /** Allow extra fields from upstream configs (e.g. @zama-fhe/relayer-sdk). */
   [key: string]: unknown;
 }
 
