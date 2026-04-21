@@ -10,7 +10,9 @@ export const ERC7984_WRAPPER_INTERFACE_ID_LEGACY = "0xd04584ba" as const;
 /**
  * ERC-165 interface ID for IERC7984ERC20Wrapper (confidential wrapper) — upgraded interface.
  *
- * Introduced in protocol-apps commit 93c6e7a (April 2026 security upgrade).
+ * Verified against the protocol-apps upgraded wrapper line: commit 35dbefb asserts
+ * `supportsInterface(0x1f1c62b2)` for `type(IERC7984ERC20Wrapper).interfaceId`,
+ * and the implementation exposes `inferredTotalSupply()`.
  * During the transition period, both {@link ERC7984_WRAPPER_INTERFACE_ID_LEGACY} and this
  * constant must be checked to support old and new wrappers simultaneously.
  *
