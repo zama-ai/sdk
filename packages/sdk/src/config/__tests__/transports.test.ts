@@ -4,46 +4,46 @@ import { node } from "../../node";
 
 describe("web()", () => {
   it("returns tagged empty config when called with no args", () => {
-    expect(web()).toMatchObject({ type: "web", chain: undefined, relayer: undefined });
+    expect(web()).toMatchObject({ type: "web", chain: undefined, options: undefined });
   });
 
   it("passes chain overrides", () => {
     expect(web({ relayerUrl: "https://r.example.com" })).toMatchObject({
       type: "web",
       chain: { relayerUrl: "https://r.example.com" },
-      relayer: undefined,
+      options: undefined,
     });
   });
 
-  it("passes chain and relayer params separately", () => {
+  it("passes chain and options params separately", () => {
     const relayerOpts = { threads: 4 } as const;
     expect(web({ relayerUrl: "https://r.example.com" }, relayerOpts)).toMatchObject({
       type: "web",
       chain: { relayerUrl: "https://r.example.com" },
-      relayer: relayerOpts,
+      options: relayerOpts,
     });
   });
 });
 
 describe("node()", () => {
   it("returns tagged empty config when called with no args", () => {
-    expect(node()).toMatchObject({ type: "node", chain: undefined, relayer: undefined });
+    expect(node()).toMatchObject({ type: "node", chain: undefined, options: undefined });
   });
 
   it("passes chain overrides", () => {
     expect(node({ relayerUrl: "https://r.example.com" })).toMatchObject({
       type: "node",
       chain: { relayerUrl: "https://r.example.com" },
-      relayer: undefined,
+      options: undefined,
     });
   });
 
-  it("passes chain and relayer params separately", () => {
+  it("passes chain and options params separately", () => {
     const relayerOpts = { poolSize: 4 };
     expect(node({ relayerUrl: "https://r.example.com" }, relayerOpts)).toMatchObject({
       type: "node",
       chain: { relayerUrl: "https://r.example.com" },
-      relayer: relayerOpts,
+      options: relayerOpts,
     });
   });
 });

@@ -176,11 +176,11 @@ describe("createConfig", () => {
       expect(result).toMatchObject({
         type: "web",
         chain: { relayerUrl: "/api/relayer/11155111" },
-        relayer: undefined,
+        options: undefined,
       });
     });
 
-    it("carries chain and relayer params separately", () => {
+    it("carries chain and options params separately", () => {
       const relayerOpts = { threads: 4 } as const;
       const result = web(
         {
@@ -195,7 +195,7 @@ describe("createConfig", () => {
           relayerUrl: "/api/relayer/11155111",
           network: "https://custom-rpc.com",
         },
-        relayer: relayerOpts,
+        options: relayerOpts,
       });
     });
 
@@ -204,7 +204,7 @@ describe("createConfig", () => {
       expect(result).toMatchObject({
         type: "web",
         chain: undefined,
-        relayer: undefined,
+        options: undefined,
       });
     });
   });
