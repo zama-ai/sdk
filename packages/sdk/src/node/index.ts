@@ -2,27 +2,48 @@
  * Node.js backend for `@zama-fhe/sdk` — provides {@link RelayerNode},
  * {@link NodeWorkerClient}, and {@link NodeWorkerPool} for server-side FHE operations.
  *
- * Importing this module registers the `node()` transport handler so that
- * `createZamaConfig` can route chains to {@link RelayerNode}.
+ * The `node()` transport factory self-registers its handler on first call,
+ * keeping `node:worker_threads` out of browser bundles.
  *
  * @packageDocumentation
  */
 
-import { registerRelayer } from "../config/relayers";
+import { registerRelayer, relayersMap } from "../config/relayers";
+import type { NodeTransportConfig, NodeRelayerOptions } from "../config/transports";
+import type { ExtendedFhevmInstanceConfig } from "../relayer/relayer-utils";
 import { assertCondition } from "../utils";
 
-// Register the node transport handler (side-effect).
-// This keeps the dynamic import("../relayer/relayer-node") out of the main
-// @zama-fhe/sdk entry, so browser bundles never reference node:worker_threads.
-// Validation (relayerUrl, handler existence) happens lazily in CompositeRelayer on first use.
-registerRelayer("node", async (chain, transport) => {
-  assertCondition(transport.type === "node", "Transport type must be of type `node`");
-  const merged = { ...chain, ...transport.chain };
-  const m = await import("../relayer/relayer-node");
-  return new m.RelayerNode({ chain: merged, ...transport.relayer });
-});
+/**
+ * Node.js transport — routes to RelayerNode (worker thread pool).
+ *
+ * Self-registers the node transport handler on first call. No side-effect
+ * import needed — just call `node()` in your transports map.
+ *
+ * @param chain - Per-chain FHE instance overrides.
+ * @param relayer - Shared relayer-pool options (e.g. `poolSize`, `logger`).
+ *
+ * @example
+ * ```ts
+ * import { node } from "@zama-fhe/sdk/node";
+ * transports: { [sepolia.id]: node({ relayerUrl: "..." }, { poolSize: 4 }) }
+ * ```
+ */
+export function node(
+  chain?: Partial<ExtendedFhevmInstanceConfig>,
+  relayer?: NodeRelayerOptions,
+): NodeTransportConfig {
+  if (!relayersMap.has("node")) {
+    registerRelayer("node", async (resolvedChain, transport) => {
+      assertCondition(transport.type === "node", "Transport type must be of type `node`");
+      const merged = { ...resolvedChain, ...transport.chain };
+      const m = await import("../relayer/relayer-node");
+      return new m.RelayerNode({ chain: merged, ...transport.relayer });
+    });
+  }
+  return { type: "node", chain, relayer };
+}
 
-export { node, cleartext } from "../config/transports";
+export { cleartext } from "../config/transports";
 export type { NodeTransportConfig, CleartextTransportConfig } from "../config/transports";
 export { RelayerNode } from "../relayer/relayer-node";
 export type { RelayerNodeConfig } from "../relayer/relayer-node";
