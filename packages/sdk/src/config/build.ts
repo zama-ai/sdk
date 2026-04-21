@@ -31,5 +31,5 @@ export function buildZamaConfig(
     sessionTTL: params.sessionTTL,
     registryTTL: params.registryTTL,
     onEvent: params.onEvent,
-  } as unknown as ZamaConfig;
+  };
 }

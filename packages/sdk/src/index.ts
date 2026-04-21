@@ -22,8 +22,6 @@ export type {
   ZamaConfigBase,
   ZamaConfigViem,
   ZamaConfigEthers,
-  ZamaConfigCustomSigner,
-  CreateZamaConfigBaseParams,
   TransportConfig,
   WebTransportConfig,
   NodeTransportConfig,

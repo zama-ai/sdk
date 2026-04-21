@@ -1,16 +1,13 @@
 import type { FheChain } from "../chains";
 import { ConfigurationError } from "../errors";
-import { EthersSigner } from "../ethers/ethers-signer";
 import { CompositeRelayer } from "../relayer/composite-relayer";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { ExtendedFhevmInstanceConfig } from "../relayer/relayer-utils";
 import { IndexedDBStorage } from "../storage/indexeddb-storage";
 import { MemoryStorage } from "../storage/memory-storage";
-import type { GenericSigner, GenericStorage } from "../types";
-import { ViemSigner } from "../viem/viem-signer";
+import type { GenericStorage } from "../types";
 import { relayersMap } from "./relayers";
 import type { TransportConfig } from "./transports";
-import type { ZamaConfigCustomSigner, ZamaConfigEthers, ZamaConfigViem } from "./types";
 
 // ── Chain normalization ─────────────────────────────────────────────────────
 
@@ -47,20 +44,6 @@ export function resolveStorage(
     storage: storage ?? getDefaultStorage(),
     sessionStorage: sessionStorage ?? getDefaultSessionStorage(),
   };
-}
-
-// ── Signer resolution ────────────────────────────────────────────────────────
-
-export type ConfigWithTransports = ZamaConfigViem | ZamaConfigEthers | ZamaConfigCustomSigner;
-
-export function resolveSigner(params: ConfigWithTransports): GenericSigner {
-  if ("viem" in params && params.viem) {
-    return new ViemSigner(params.viem);
-  }
-  if ("ethers" in params && params.ethers) {
-    return new EthersSigner(params.ethers);
-  }
-  return params.signer;
 }
 
 // ── Chain transport resolution ───────────────────────────────────────────────

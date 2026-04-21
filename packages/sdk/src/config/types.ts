@@ -1,5 +1,3 @@
-import type { Provider, Signer } from "ethers";
-import type { EIP1193Provider, PublicClient, WalletClient } from "viem";
 import type { FheChain } from "../chains";
 import type { ZamaSDKEventListener } from "../events";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
@@ -26,38 +24,7 @@ export interface ZamaConfigBase {
   onEvent?: ZamaSDKEventListener;
 }
 
-/** Viem path — takes native viem clients. */
-export interface ZamaConfigViem extends ZamaConfigBase {
-  viem: {
-    publicClient: PublicClient;
-    walletClient?: WalletClient;
-    ethereum?: EIP1193Provider;
-  };
-  relayer?: never;
-  signer?: never;
-  ethers?: never;
-}
-
-/** Ethers path — takes native ethers types. */
-export interface ZamaConfigEthers extends ZamaConfigBase {
-  ethers: { ethereum: EIP1193Provider } | { signer: Signer } | { provider: Provider };
-  relayer?: never;
-  signer?: never;
-  viem?: never;
-}
-
-/** Custom GenericSigner with explicit transports. */
-export interface ZamaConfigCustomSigner extends ZamaConfigBase {
-  signer: GenericSigner;
-  relayer?: never;
-  viem?: never;
-  ethers?: never;
-}
-
-/** Config params accepted by the base SDK (no wagmi). */
-export type CreateZamaConfigBaseParams = ZamaConfigViem | ZamaConfigEthers | ZamaConfigCustomSigner;
-
-/** Opaque config object returned by {@link createZamaConfig}. */
+/** Opaque config object returned by `createZamaConfig`. */
 export interface ZamaConfig {
   /** @internal */ readonly chains: readonly FheChain[];
   /** @internal */ readonly relayer: RelayerSDK;
