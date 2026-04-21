@@ -14,11 +14,32 @@ import { privateKeyToAccount } from "viem/accounts";
 
 import { RelayerCleartext } from "../relayer-cleartext";
 import type { Handle } from "../../relayer-sdk.types";
+import type { StoredEIP712 } from "../../../types/credentials";
 import { MOCK_INPUT_SIGNER_PK, MOCK_KMS_SIGNER_PK } from "../constants";
 import { hardhatCleartextConfig } from "../presets";
+import { describe, expect, it } from "vitest";
 
 const USER_ADDRESS = "0x1000000000000000000000000000000000000001";
 const CONTRACT_ADDRESS = "0x2000000000000000000000000000000000000002";
+
+const EIP712: StoredEIP712 = {
+  domain: {
+    name: "Decryption",
+    version: "1",
+    chainId: 31337,
+    verifyingContract: "0x0000000000000000000000000000000000000000",
+  },
+  types: {
+    UserDecryptRequestVerification: [{ name: "publicKey", type: "bytes" }],
+  },
+  message: {
+    publicKey: "0x00",
+    contractAddresses: [CONTRACT_ADDRESS],
+    startTimestamp: 1,
+    durationDays: 1,
+    extraData: "0x00",
+  },
+};
 
 const ACL_ABI = parseAbi([
   "function persistAllowed(bytes32 handle, address account) view returns (bool)",
@@ -138,11 +159,19 @@ function createInstance(options: MockClientOptions = {}): {
   calls: MockCall[];
 } {
   const { provider, calls } = createMockProvider(options);
-  return { fhevm: new RelayerCleartext({ ...hardhatCleartextConfig, network: provider }), calls };
+  return {
+    fhevm: new RelayerCleartext({
+      ...hardhatCleartextConfig,
+      network: provider,
+    }),
+    calls,
+  };
 }
 
 function createUserDecryptParams(
-  overrides: Omit<Partial<UserDecryptParams>, "handles"> & { handles: string[] },
+  overrides: Omit<Partial<UserDecryptParams>, "handles"> & {
+    handles: string[];
+  },
 ): UserDecryptParams {
   const { handles, ...rest } = overrides;
   return {
@@ -155,6 +184,7 @@ function createUserDecryptParams(
     signerAddress: USER_ADDRESS,
     startTimestamp: 1,
     durationDays: 1,
+    eip712: EIP712,
     ...rest,
   };
 }
@@ -273,8 +303,8 @@ describe(RelayerCleartext, () => {
     expect(typedData.message).toEqual({
       publicKey: "0x" + "ab".repeat(32),
       contractAddresses: [CONTRACT_ADDRESS],
-      startTimestamp: "1710000000",
-      durationDays: "7",
+      startTimestamp: 1710000000n,
+      durationDays: 7n,
       extraData: "0x00",
     });
   });
@@ -587,7 +617,6 @@ describe(RelayerCleartext, () => {
     const result = await fhevm.userDecrypt(createUserDecryptParams({ handles: [addressHandle] }));
 
     const decoded = result[addressHandle];
-    expectTypeOf(decoded).toBeString();
     expect(decoded).toMatch(/^0x[0-9a-f]{40}$/);
   });
 
@@ -712,6 +741,7 @@ describe(RelayerCleartext, () => {
         delegateAddress,
         startTimestamp: 1,
         durationDays: 1,
+        eip712: EIP712,
       }),
     ).rejects.toThrow(/not delegated/i);
 
@@ -743,6 +773,7 @@ describe(RelayerCleartext, () => {
       delegateAddress,
       startTimestamp: 1,
       durationDays: 1,
+      eip712: EIP712,
     });
 
     expect(result[handleA]).toBe(7n);
@@ -805,6 +836,7 @@ describe(RelayerCleartext, () => {
         delegateAddress,
         startTimestamp: 1,
         durationDays: 1,
+        eip712: EIP712,
       }),
     ).rejects.toThrow(new RegExp(normalizedB));
 
@@ -813,7 +845,10 @@ describe(RelayerCleartext, () => {
       getAddress(hardhatCleartextConfig.aclContractAddress),
     ).filter((call) => {
       const tx = call.params[0] as { data: string };
-      const parsed = decodeFunctionData({ abi: ACL_ABI, data: tx.data as `0x${string}` });
+      const parsed = decodeFunctionData({
+        abi: ACL_ABI,
+        data: tx.data as `0x${string}`,
+      });
       return parsed?.functionName === "isHandleDelegatedForUserDecryption";
     });
     expect(delegationCalls).toHaveLength(2);
@@ -847,6 +882,7 @@ describe(RelayerCleartext, () => {
       delegateAddress: "0x3000000000000000000000000000000000000003",
       startTimestamp: 1,
       durationDays: 1,
+      eip712: EIP712,
     });
 
     expect(result[handleA]).toBe(7n);
@@ -877,11 +913,11 @@ describe(RelayerCleartext, () => {
       delegateAddress: "0x3000000000000000000000000000000000000003",
       startTimestamp: 1,
       durationDays: 1,
+      eip712: EIP712,
     });
 
     expect(result[boolHandle]).toBeTruthy();
     const addressResult = result[addressHandle];
-    expectTypeOf(addressResult).toBeString();
     expect(addressResult).toMatch(/^0x[0-9a-f]{40}$/);
   });
 

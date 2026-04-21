@@ -5,7 +5,6 @@
 
 import { ethers } from "ethers";
 import { parentPort, type Transferable } from "node:worker_threads";
-import type { Hex } from "viem";
 import type { EncryptValuesParameters } from "@fhevm/sdk/actions/encrypt";
 import type { FheTypeName } from "../relayer/relayer-sdk.types";
 import type {
@@ -32,6 +31,10 @@ import type {
   UserDecryptResponseData,
   WorkerRequest,
 } from "./worker.types";
+import {
+  createKmsDelegatedUserDecryptEip712,
+  createKmsUserDecryptEIP712,
+} from "@fhevm/sdk/actions/chain";
 
 if (!parentPort) {
   throw new Error("This script must be run as a worker thread");
@@ -241,8 +244,8 @@ async function handleEncrypt(request: EncryptRequest): Promise<void> {
       userAddress,
     });
 
-    const handles = (encrypted.encryptedValues as unknown as string[]).map(hexToBytes);
-    const inputProof = hexToBytes(encrypted.inputProof as unknown as string);
+    const handles = encrypted.encryptedValues.map(hexToBytes);
+    const inputProof = hexToBytes(encrypted.inputProof);
 
     const response: EncryptResponseData = { handles, inputProof };
 
@@ -299,17 +302,17 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
     });
 
     // 4. Map results: clearValues is TypedValue[] -> Record<Handle, value>
-    const result: Record<string, unknown> = {};
+    const mapped: UserDecryptResponseData["clearValues"] = {};
     for (let i = 0; i < payload.handles.length; i++) {
       const handle = payload.handles[i];
-      const cv = (clearValues as readonly unknown[])[i] as { value: unknown } | undefined;
+      const cv = clearValues[i];
       if (handle !== undefined && cv !== undefined) {
-        result[handle] = cv.value;
+        mapped[handle] = cv.value;
       }
     }
 
     const response: UserDecryptResponseData = {
-      clearValues: result as UserDecryptResponseData["clearValues"],
+      clearValues: mapped,
     };
 
     sendSuccess(id, type, response);
@@ -353,7 +356,7 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
     });
 
     // 3. Decrypt (permit is a union — the SDK dispatches based on isDelegated)
-    const clearValues = await client.decryptValues({
+    const decryptedValues = await client.decryptValues({
       transportKeypair: keypair,
       encryptedValues: payload.handles,
       contractAddress: payload.contractAddress,
@@ -361,17 +364,17 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
     });
 
     // 4. Map results
-    const result: Record<string, unknown> = {};
+    const clearValues: DelegatedUserDecryptResponseData["clearValues"] = {};
     for (let i = 0; i < payload.handles.length; i++) {
       const handle = payload.handles[i];
-      const cv = (clearValues as readonly unknown[])[i] as { value: unknown } | undefined;
+      const cv = decryptedValues[i];
       if (handle !== undefined && cv !== undefined) {
-        result[handle] = cv.value;
+        clearValues[handle] = cv.value;
       }
     }
 
     const response: DelegatedUserDecryptResponseData = {
-      clearValues: result as DelegatedUserDecryptResponseData["clearValues"],
+      clearValues,
     };
 
     sendSuccess(id, type, response);
@@ -396,19 +399,19 @@ async function handlePublicDecrypt(request: PublicDecryptRequest): Promise<void>
       encryptedValues: payload.handles,
     });
 
-    const clearValues: Record<string, unknown> = {};
+    const clearValues: PublicDecryptResponseData["clearValues"] = {};
     for (let i = 0; i < payload.handles.length; i++) {
       const handle = payload.handles[i];
-      const cv = (result.clearValues as readonly unknown[])[i] as { value: unknown } | undefined;
+      const cv = result.clearValues[i];
       if (handle !== undefined && cv !== undefined) {
         clearValues[handle] = cv.value;
       }
     }
 
     const response: PublicDecryptResponseData = {
-      clearValues: clearValues as PublicDecryptResponseData["clearValues"],
-      abiEncodedClearValues: result.checkSignaturesArgs.abiEncodedCleartexts as unknown as Hex,
-      decryptionProof: result.checkSignaturesArgs.decryptionProof as unknown as Hex,
+      clearValues,
+      abiEncodedClearValues: result.checkSignaturesArgs.abiEncodedCleartexts,
+      decryptionProof: result.checkSignaturesArgs.decryptionProof,
     };
 
     sendSuccess(id, type, response);
@@ -434,8 +437,8 @@ async function handleGenerateKeypair(request: GenerateKeypairRequest): Promise<v
     });
 
     const response: GenerateKeypairResponseData = {
-      publicKey: serialized.publicKey as unknown as Hex,
-      privateKey: serialized.privateKey as unknown as Hex,
+      publicKey: serialized.publicKey,
+      privateKey: serialized.privateKey,
     };
 
     sendSuccess(id, type, response);
@@ -454,8 +457,6 @@ async function handleCreateEIP712(request: CreateEIP712Request): Promise<void> {
 
   try {
     assertClient(client);
-
-    const { createKmsUserDecryptEIP712 } = await import("@fhevm/sdk/actions/chain");
 
     const response = createKmsUserDecryptEIP712(client, {
       publicKey: payload.publicKey,
@@ -481,8 +482,6 @@ async function handleCreateDelegatedEIP712(request: CreateDelegatedEIP712Request
 
   try {
     assertClient(client);
-
-    const { createKmsDelegatedUserDecryptEip712 } = await import("@fhevm/sdk/actions/chain");
 
     const response = createKmsDelegatedUserDecryptEip712(client, {
       publicKey: payload.publicKey,

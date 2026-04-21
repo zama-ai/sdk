@@ -356,11 +356,17 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
   }
 
   async getPublicKey(): Promise<PublicKeyData | null> {
-    return { publicKeyId: "mock-public-key-id", publicKey: new Uint8Array([32]) };
+    return {
+      publicKeyId: "mock-public-key-id",
+      publicKey: new Uint8Array([32]),
+    };
   }
 
   async getPublicParams(_bits: number): Promise<PublicParamsData | null> {
-    return { publicParams: new Uint8Array([32]), publicParamsId: "mock-public-params-id" };
+    return {
+      publicParams: new Uint8Array([32]),
+      publicParamsId: "mock-public-params-id",
+    };
   }
 
   async getAclAddress(): Promise<Address> {

@@ -4,7 +4,6 @@
  * This worker is bundled by the host app's bundler which resolves imports at build time.
  */
 
-import type { Hex } from "viem";
 import { ethers } from "ethers";
 import { createFhevmClient, setFhevmRuntimeConfig } from "@fhevm/sdk/ethers";
 import {
@@ -321,10 +320,9 @@ async function handleEncrypt(request: EncryptRequest): Promise<void> {
       userAddress,
     });
 
-    // encrypted.encryptedValues are branded Bytes32Hex, encrypted.inputProof is BytesHex.
-    // Convert to Uint8Array for the worker response (structured-clone transfer).
-    const handles = (encrypted.encryptedValues as unknown as string[]).map(hexToBytes);
-    const inputProof = hexToBytes(encrypted.inputProof as unknown as string);
+    // Convert branded hex strings to Uint8Array for structured-clone transfer.
+    const handles = encrypted.encryptedValues.map(hexToBytes);
+    const inputProof = hexToBytes(encrypted.inputProof);
 
     const response: EncryptResponseData = {
       handles,
@@ -374,7 +372,7 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
     });
 
     // 3. Decrypt (permit is a union — the SDK dispatches based on isDelegated)
-    const clearValues = await (client as FhevmClientInstance).decryptValues({
+    const decryptedValues = await client.decryptValues({
       transportKeypair: keypair,
       encryptedValues: payload.handles,
       contractAddress: payload.contractAddress,
@@ -382,17 +380,17 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
     });
 
     // 4. Map results: clearValues is TypedValue[] -> Record<Handle, value>
-    const result: Record<string, unknown> = {};
+    const clearValues: UserDecryptResponseData["clearValues"] = {};
     for (let i = 0; i < payload.handles.length; i++) {
       const handle = payload.handles[i];
-      const cv = (clearValues as readonly unknown[])[i] as { value: unknown } | undefined;
+      const cv = decryptedValues[i];
       if (handle !== undefined && cv !== undefined) {
-        result[handle] = cv.value;
+        clearValues[handle] = cv.value;
       }
     }
 
     const response: UserDecryptResponseData = {
-      clearValues: result as UserDecryptResponseData["clearValues"],
+      clearValues,
     };
 
     sendSuccess(id, type, response);
@@ -436,7 +434,7 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
     });
 
     // 3. Decrypt (permit is a union — the SDK dispatches based on isDelegated)
-    const clearValues = await (client as FhevmClientInstance).decryptValues({
+    const decryptedValues = await client.decryptValues({
       transportKeypair: keypair,
       encryptedValues: payload.handles,
       contractAddress: payload.contractAddress,
@@ -444,17 +442,17 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
     });
 
     // 4. Map results
-    const result: Record<string, unknown> = {};
+    const clearValues: DelegatedUserDecryptResponseData["clearValues"] = {};
     for (let i = 0; i < payload.handles.length; i++) {
       const handle = payload.handles[i];
-      const cv = (clearValues as readonly unknown[])[i] as { value: unknown } | undefined;
+      const cv = decryptedValues[i];
       if (handle !== undefined && cv !== undefined) {
-        result[handle] = cv.value;
+        clearValues[handle] = cv.value;
       }
     }
 
     const response: DelegatedUserDecryptResponseData = {
-      clearValues: result as DelegatedUserDecryptResponseData["clearValues"],
+      clearValues,
     };
 
     sendSuccess(id, type, response);
@@ -480,19 +478,19 @@ async function handlePublicDecrypt(request: PublicDecryptRequest): Promise<void>
     });
 
     // Map clearValues from TypedValue[] to Record<Handle, ClearValue>
-    const clearValues: Record<string, unknown> = {};
+    const clearValues: PublicDecryptResponseData["clearValues"] = {};
     for (let i = 0; i < payload.handles.length; i++) {
       const handle = payload.handles[i];
-      const cv = (result.clearValues as readonly unknown[])[i] as { value: unknown } | undefined;
+      const cv = result.clearValues[i];
       if (handle !== undefined && cv !== undefined) {
         clearValues[handle] = cv.value;
       }
     }
 
     const response: PublicDecryptResponseData = {
-      clearValues: clearValues as PublicDecryptResponseData["clearValues"],
-      abiEncodedClearValues: result.checkSignaturesArgs.abiEncodedCleartexts as unknown as Hex,
-      decryptionProof: result.checkSignaturesArgs.decryptionProof as unknown as Hex,
+      clearValues,
+      abiEncodedClearValues: result.checkSignaturesArgs.abiEncodedCleartexts,
+      decryptionProof: result.checkSignaturesArgs.decryptionProof,
     };
 
     sendSuccess(id, type, response);
@@ -513,11 +511,13 @@ async function handleGenerateKeypair(request: GenerateKeypairRequest): Promise<v
     assertClient(client);
 
     const keypair = await client.generateTransportKeypair();
-    const serialized = client.serializeTransportKeypair({ transportKeypair: keypair });
+    const serialized = client.serializeTransportKeypair({
+      transportKeypair: keypair,
+    });
 
     const response: GenerateKeypairResponseData = {
-      publicKey: serialized.publicKey as unknown as Hex,
-      privateKey: serialized.privateKey as unknown as Hex,
+      publicKey: serialized.publicKey,
+      privateKey: serialized.privateKey,
     };
 
     sendSuccess(id, type, response);
@@ -607,7 +607,10 @@ async function handleGetPublicKey(request: GetPublicKeyRequest): Promise<void> {
 
     const response: GetPublicKeyResponseData = {
       result: keyData
-        ? { publicKeyId: keyData.publicKeyBytes.id, publicKey: keyData.publicKeyBytes.bytes }
+        ? {
+            publicKeyId: keyData.publicKeyBytes.id,
+            publicKey: keyData.publicKeyBytes.bytes,
+          }
         : null,
     };
 

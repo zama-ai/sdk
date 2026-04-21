@@ -6,22 +6,10 @@
 
 import { Abi } from 'viem';
 import { Address } from 'viem';
-import { Bytes32Hex } from '@zama-fhe/relayer-sdk/bundle';
-import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle';
 import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
-import { FheTypeName } from '@zama-fhe/relayer-sdk/bundle';
-import { FhevmInstanceConfig } from '@zama-fhe/relayer-sdk/bundle';
 import { Hex } from 'viem';
-import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
-import { KeypairType } from '@zama-fhe/relayer-sdk/bundle';
-import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
-import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
-import { PublicDecryptResults } from '@zama-fhe/relayer-sdk/bundle';
-import * as SDK from '@zama-fhe/relayer-sdk/bundle';
-import { UserDecryptResults } from '@zama-fhe/relayer-sdk/bundle';
-import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
 
 // @public
 export const ACL_TOPICS: readonly [`0x${string}`, `0x${string}`];
@@ -544,7 +532,8 @@ export const chromeSessionStorage: ChromeSessionStorage;
 // @public
 export function clearPendingUnshield(storage: GenericStorage, wrapperAddress: Address): Promise<void>;
 
-export { ClearValueType }
+// @public
+export type ClearValueType = number | bigint | boolean | `0x${string}`;
 
 // @public
 export function confidentialBalanceOfContract(tokenAddress: Address, userAddress: Address): {
@@ -6164,7 +6153,7 @@ export class DecryptionFailedError extends ZamaError {
 }
 
 // @public
-export type DecryptResult = UserDecryptResults;
+export type DecryptResult = Record<Handle, ClearValueType>;
 
 // @public (undocumented)
 export interface DecryptStartEvent extends BaseEvent {
@@ -6234,6 +6223,8 @@ export interface DelegatedUserDecryptParams {
     delegatorAddress: Address;
     // (undocumented)
     durationDays: number;
+    // Warning: (ae-forgotten-export) The symbol "StoredEIP712" needs to be exported by the entry point index.d.ts
+    eip712: StoredEIP712;
     // (undocumented)
     handles: Handle[];
     // (undocumented)
@@ -6390,7 +6381,20 @@ export interface DelegationSubmittedEvent extends BaseEvent {
 }
 
 // @public
-export type EIP712TypedData = KmsUserDecryptEIP712Type | KmsDelegatedUserDecryptEIP712Type;
+export type EIP712TypedData = {
+    readonly domain: {
+        readonly name: string;
+        readonly version: string;
+        readonly chainId: bigint;
+        readonly verifyingContract: `0x${string}`;
+    };
+    readonly types: Record<string, readonly {
+        readonly name: string;
+        readonly type: string;
+    }[]>;
+    readonly primaryType: string;
+    readonly message: Record<string, unknown>;
+};
 
 // @public (undocumented)
 export interface EncryptEndEvent extends BaseEvent {
@@ -6415,7 +6419,7 @@ export type EncryptInput = {
     type: "ebool";
 } | {
     value: bigint;
-    type: Exclude<SDK.FheTypeName, "ebool" | "eaddress">;
+    type: Exclude<FheTypeName, "ebool" | "eaddress">;
 } | {
     value: Address;
     type: "eaddress";
@@ -6436,7 +6440,12 @@ export interface EncryptParams {
 }
 
 // @public
-export type EncryptResult = InputProofBytesType;
+export interface EncryptResult {
+    // (undocumented)
+    handles: Uint8Array[];
+    // (undocumented)
+    inputProof: Uint8Array;
+}
 
 // @public (undocumented)
 export interface EncryptStartEvent extends BaseEvent {
@@ -6458,9 +6467,35 @@ export const ERC7984_WRAPPER_INTERFACE_ID: "0x1f1c62b2";
 // @public
 export const ERC7984_WRAPPER_INTERFACE_ID_LEGACY: "0xd04584ba";
 
-export { FheTypeName }
+// @public
+export type FheTypeName = "ebool" | "euint8" | "euint16" | "euint32" | "euint64" | "euint128" | "euint256" | "eaddress";
 
-export { FhevmInstanceConfig }
+// @public
+export interface FhevmInstanceConfig {
+    [key: string]: unknown;
+    // (undocumented)
+    aclContractAddress: string;
+    // (undocumented)
+    batchRpcCalls?: boolean;
+    // (undocumented)
+    chainId: number;
+    // (undocumented)
+    gatewayChainId: number;
+    // (undocumented)
+    inputVerifierContractAddress?: string;
+    // (undocumented)
+    kmsContractAddress: string;
+    // (undocumented)
+    network?: string;
+    // (undocumented)
+    networkUrl?: string;
+    // (undocumented)
+    relayerUrl: string;
+    // (undocumented)
+    verifyingContractAddressDecryption: string;
+    // (undocumented)
+    verifyingContractAddressInputVerification?: string;
+}
 
 // @public
 export function finalizeUnwrapContract(wrapper: Address, unwrapRequestId: Handle, burntAmountCleartext: bigint, decryptionProof: Hex): {
@@ -8692,7 +8727,7 @@ export function getTokenPairsSliceContract(registry: Address, fromIndex: bigint,
 };
 
 // @public
-export type Handle = Bytes32Hex;
+export type Handle = `0x${string}`;
 
 // @public
 export const HardhatConfig: {
@@ -9717,8 +9752,6 @@ export function inferredTotalSupplyContract(wrapperAddress: Address): {
     readonly functionName: "inferredTotalSupply";
     readonly args: readonly [];
 };
-
-export { InputProofBytesType }
 
 // @public
 export class InsufficientConfidentialBalanceError extends ZamaError {
@@ -11385,10 +11418,6 @@ export class KeypairExpiredError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
 
-export { KeypairType }
-
-export { KmsDelegatedUserDecryptEIP712Type }
-
 // @public
 export interface ListPairsOptions {
     metadata?: boolean;
@@ -11600,7 +11629,14 @@ export interface PaginatedResult<T> {
 }
 
 // @public
-export type PublicDecryptResult = PublicDecryptResults;
+export interface PublicDecryptResult {
+    // (undocumented)
+    abiEncodedClearValues: Hex;
+    // (undocumented)
+    clearValues: Readonly<Record<Handle, ClearValueType>>;
+    // (undocumented)
+    decryptionProof: Hex;
+}
 
 // @public
 export interface PublicKeyData {
@@ -11611,7 +11647,12 @@ export interface PublicKeyData {
 }
 
 // @public
-export type PublicParamsData = SDK.PublicParams<Uint8Array>[keyof SDK.PublicParams<Uint8Array>];
+export interface PublicParamsData {
+    // (undocumented)
+    publicParams: Uint8Array;
+    // (undocumented)
+    publicParamsId: string;
+}
 
 // @public
 export function rateContract(tokenAddress: Address): {
@@ -13006,16 +13047,19 @@ export class RelayerRequestFailedError extends ZamaError {
 
 // @public
 export interface RelayerSDK {
-    createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type>;
+    createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
     createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
     delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
-    generateKeypair(): Promise<KeypairType<Hex>>;
+    generateKeypair(): Promise<{
+        publicKey: Hex;
+        privateKey: Hex;
+    }>;
     getAclAddress(): Promise<Address>;
     getPublicKey(): Promise<PublicKeyData | null>;
     getPublicParams(bits: number): Promise<PublicParamsData | null>;
     publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
-    requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
+    requestZKProofVerification(zkProof: unknown): Promise<EncryptResult>;
     terminate(): void;
     userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
 }
@@ -13027,18 +13071,21 @@ export type RelayerSDKStatus = "idle" | "initializing" | "ready" | "error";
 export class RelayerWeb implements RelayerSDK, Disposable {
     [Symbol.dispose](): void;
     constructor(config: RelayerWebConfig);
-    createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type>;
+    createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
     createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
     delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
-    generateKeypair(): Promise<KeypairType<Hex>>;
+    generateKeypair(): Promise<{
+        publicKey: Hex;
+        privateKey: Hex;
+    }>;
     // (undocumented)
     getAclAddress(): Promise<Address>;
     getPublicKey(): Promise<PublicKeyData | null>;
     getPublicParams(bits: number): Promise<PublicParamsData | null>;
     get initError(): Error | undefined;
     publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
-    requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
+    requestZKProofVerification(zkProof: unknown): Promise<EncryptResult>;
     get status(): RelayerSDKStatus;
     terminate(): void;
     userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
@@ -13054,7 +13101,7 @@ export interface RelayerWebConfig {
     security?: RelayerWebSecurityConfig;
     threads?: number;
     // (undocumented)
-    transports: Record<number, Partial<SDK.FhevmInstanceConfig>>;
+    transports: Record<number, Partial<FhevmInstanceConfig>>;
 }
 
 // @public
@@ -14556,6 +14603,7 @@ export class SigningRejectedError extends ZamaError {
 export interface StoredCredentials {
     contractAddresses: Address[];
     durationDays: number;
+    eip712: StoredEIP712;
     privateKey: Hex;
     publicKey: Hex;
     signature: Hex;
@@ -19559,6 +19607,7 @@ export interface UserDecryptParams {
     contractAddress: Address;
     // (undocumented)
     durationDays: number;
+    eip712: StoredEIP712;
     // (undocumented)
     handles: Handle[];
     // (undocumented)
@@ -20759,8 +20808,6 @@ export type ZamaSDKEventType = (typeof ZamaSDKEvents)[keyof typeof ZamaSDKEvents
 
 // @public (undocumented)
 export const ZERO_HANDLE: "0x0000000000000000000000000000000000000000000000000000000000000000";
-
-export { ZKProofLike }
 
 // (No @packageDocumentation comment for this package)
 

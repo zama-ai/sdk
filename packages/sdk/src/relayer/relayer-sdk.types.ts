@@ -67,8 +67,8 @@ export interface EncryptResult {
 /** Canonical SDK type for encrypted ciphertext handles (`bytes32` values). */
 export type Handle = `0x${string}`;
 
-/** Decrypted value type returned by FHE operations. */
-export type ClearValueType = bigint | boolean | `0x${string}`;
+/** Decrypted value type returned by FHE operations. Includes `number` for the SDK's branded uint8/16/32 types. */
+export type ClearValueType = number | bigint | boolean | `0x${string}`;
 
 /** FHE type names for encryption. */
 export type FheTypeName =

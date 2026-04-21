@@ -250,7 +250,7 @@ export interface UserDecryptResponseData {
 }
 
 export interface PublicDecryptResponseData {
-  clearValues: Readonly<Record<Handle, ClearValueType>>;
+  clearValues: Record<Handle, ClearValueType>;
   abiEncodedClearValues: Hex;
   decryptionProof: Hex;
 }
