@@ -25,7 +25,10 @@ export class NodeWorkerClient extends BaseWorkerClient<Worker, NodeWorkerClientC
   }
 
   protected createWorker(): Worker {
-    return new Worker(new URL("relayer-sdk.node-worker.js", import.meta.url));
+    // Resolve relative to the @zama-fhe/sdk/node entry point so the path is
+    // correct regardless of which rolldown chunk this code lands in.
+    const nodeEntry = new URL(import.meta.resolve("@zama-fhe/sdk/node"));
+    return new Worker(new URL("relayer-sdk.node-worker.js", nodeEntry));
   }
 
   protected wireEvents(worker: Worker): void {

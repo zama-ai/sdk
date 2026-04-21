@@ -2,9 +2,32 @@
  * Node.js backend for `@zama-fhe/sdk` — provides {@link RelayerNode},
  * {@link NodeWorkerClient}, and {@link NodeWorkerPool} for server-side FHE operations.
  *
+ * Importing this module registers the `node()` transport handler so that
+ * `createZamaConfig` can route chains to {@link RelayerNode}.
+ *
  * @packageDocumentation
  */
 
+import { ConfigurationError } from "../errors";
+import { registerTransportHandler } from "../config/resolve";
+
+// Register the node transport handler (side-effect).
+// This keeps the dynamic import("../relayer/relayer-node") out of the main
+// @zama-fhe/sdk entry, so browser bundles never reference node:worker_threads.
+registerTransportHandler("node", (chain, transport) => {
+  if (transport.type !== "node") {throw new Error("unreachable");}
+  const merged = { ...chain, ...transport.chain };
+  if (!merged.relayerUrl) {
+    throw new ConfigurationError(
+      `Chain ${chain.chainId} has an empty relayerUrl. Use cleartext() for chains without a relayer.`,
+    );
+  }
+  return import("../relayer/relayer-node").then(
+    (m) => new m.RelayerNode({ chain: merged, ...transport.relayer }),
+  );
+});
+
+export { node } from "../config/transports";
 export { RelayerNode } from "../relayer/relayer-node";
 export type { RelayerNodeConfig } from "../relayer/relayer-node";
 export type { RelayerSDK } from "../relayer/relayer-sdk";

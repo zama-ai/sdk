@@ -1,8 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryStorage, ZamaProvider } from "@zama-fhe/react-sdk";
-import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
-import type { ZamaConfig } from "@zama-fhe/sdk";
-import { HardhatConfig, RelayerWeb } from "@zama-fhe/sdk";
+import { ZamaProvider } from "@zama-fhe/react-sdk";
+import { createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
+import { web } from "@zama-fhe/sdk";
 import { hardhat } from "@zama-fhe/sdk/chains";
 import { burner } from "@zama-fhe/test-components";
 import type { ReactNode } from "react";
@@ -19,46 +18,24 @@ const mockRelayerUrl = `http://127.0.0.1:${mockRelayerPort}`;
 
 const wagmiConfig = createConfig({
   chains: [anvil],
-  connectors: [
-    burner({
-      rpcUrls: {
-        [anvil.id]: rpcUrl,
-      },
-    }),
-    injected(),
-  ],
+  connectors: [burner({ rpcUrls: { [anvil.id]: rpcUrl } }), injected()],
+  transports: { [anvil.id]: http(rpcUrl) },
+});
+
+const zamaConfig = createZamaConfig({
+  chains: [hardhat],
+  wagmiConfig,
   transports: {
-    [anvil.id]: http(rpcUrl),
+    [anvil.id]: web(
+      {
+        relayerUrl: mockRelayerUrl,
+        network: rpcUrl,
+        registryAddress: getAddress(deployments.wrappersRegistry),
+      },
+      { threads: 4, security: { integrityCheck: false } },
+    ),
   },
 });
-
-const signer = new WagmiSigner({ config: wagmiConfig });
-
-const relayer = new RelayerWeb({
-  chain: {
-    ...HardhatConfig,
-    relayerUrl: mockRelayerUrl,
-    network: rpcUrl,
-    chainId: anvil.id,
-    registryAddress: getAddress(deployments.wrappersRegistry),
-  },
-  threads: 4,
-  security: { integrityCheck: false },
-});
-
-const storage = new MemoryStorage();
-
-const zamaConfig: ZamaConfig = {
-  chains: [{ ...hardhat, registryAddress: getAddress(deployments.wrappersRegistry) }],
-  relayer,
-  signer,
-  storage,
-  sessionStorage: new MemoryStorage(),
-  keypairTTL: undefined,
-  sessionTTL: undefined,
-  registryTTL: undefined,
-  onEvent: undefined,
-};
 
 const queryClient = new QueryClient();
 

@@ -15,7 +15,12 @@ export type {
   CreateZamaConfigBaseParams,
 } from "./types";
 
-export { resolveChainTransports, buildRelayer, resolveStorage } from "./resolve";
+export {
+  resolveChainTransports,
+  buildRelayer,
+  resolveStorage,
+  registerTransportHandler,
+} from "./resolve";
 export type { ConfigWithTransports } from "./resolve";
 
 import type { CreateZamaConfigBaseParams, ZamaConfig } from "./types";
@@ -55,5 +60,5 @@ export function createZamaConfig(params: CreateZamaConfigBaseParams): ZamaConfig
     sessionTTL: params.sessionTTL,
     registryTTL: params.registryTTL,
     onEvent: params.onEvent,
-  };
+  } as unknown as ZamaConfig;
 }

@@ -140,6 +140,42 @@ export function resolveChainTransports(
   return result;
 }
 
+// ── Transport handler registry ──────────────────────────────────────────────
+
+type TransportHandlerFn = (
+  chain: ExtendedFhevmInstanceConfig,
+  transport: TransportConfig,
+) => Promise<RelayerSDK>;
+
+const transportHandlers = new Map<string, TransportHandlerFn>();
+
+/** Register a transport handler. Called by sub-path modules (e.g. `@zama-fhe/sdk/node`). */
+export function registerTransportHandler(type: string, handler: TransportHandlerFn): void {
+  transportHandlers.set(type, handler);
+}
+
+// Built-in handlers (browser-safe — no node:worker_threads references)
+registerTransportHandler("web", (chain, transport) => {
+  if (transport.type !== "web") {throw new Error("unreachable");}
+  const merged = { ...chain, ...transport.chain };
+  if (!merged.relayerUrl) {
+    throw new ConfigurationError(
+      `Chain ${chain.chainId} has an empty relayerUrl. Use cleartext() for chains without a relayer.`,
+    );
+  }
+  return import("../relayer/relayer-web").then(
+    (m) => new m.RelayerWeb({ chain: merged, ...transport.relayer }),
+  );
+});
+
+registerTransportHandler("cleartext", (chain, transport) => {
+  if (transport.type !== "cleartext") {throw new Error("unreachable");}
+  const merged = { ...chain, ...transport.chain } as CleartextConfig;
+  return import("../relayer/cleartext/relayer-cleartext").then(
+    (m) => new m.RelayerCleartext(merged),
+  );
+});
+
 // ── Relayer building ─────────────────────────────────────────────────────────
 
 export function buildRelayer(
@@ -155,48 +191,17 @@ export function buildRelayer(
   const perChainRelayers = new Map<number, Promise<RelayerSDK>>();
 
   for (const { chain, transport } of chainTransports.values()) {
-    if (transport.type === "cleartext") {
-      const merged = { ...chain, ...transport.chain } as CleartextConfig;
-      perChainRelayers.set(
-        chain.chainId,
-        import("../relayer/cleartext/relayer-cleartext").then(
-          (m) => new m.RelayerCleartext(merged),
-        ),
-      );
-      continue;
-    }
-
-    const merged = { ...chain, ...transport.chain };
-    if (!merged.relayerUrl) {
+    const handler = transportHandlers.get(transport.type);
+    if (!handler) {
+      const hint =
+        transport.type === "node"
+          ? ' Import "@zama-fhe/sdk/node" to enable Node.js transports.'
+          : "";
       throw new ConfigurationError(
-        `Chain ${chain.chainId} has an empty relayerUrl. ` +
-          `Use cleartext() for chains without a relayer.`,
+        `No transport handler registered for type "${transport.type}".${hint}`,
       );
     }
-
-    if (transport.type === "web") {
-      perChainRelayers.set(
-        chain.chainId,
-        import("../relayer/relayer-web").then(
-          (m) => new m.RelayerWeb({ chain: merged, ...transport.relayer }),
-        ),
-      );
-      continue;
-    }
-    if (transport.type === "node") {
-      perChainRelayers.set(
-        chain.chainId,
-        import("../relayer/relayer-node").then(
-          (m) => new m.RelayerNode({ chain: merged, ...transport.relayer }),
-        ),
-      );
-      continue;
-    }
-
-    const _exhaustive: never = transport;
-    throw new ConfigurationError(
-      `Unhandled transport type for chain ${chain.chainId}: ${JSON.stringify((_exhaustive as unknown as Record<string, unknown>).type)}`,
-    );
+    perChainRelayers.set(chain.chainId, handler(chain, transport));
   }
 
   return new CompositeRelayer(resolveChainId, perChainRelayers);

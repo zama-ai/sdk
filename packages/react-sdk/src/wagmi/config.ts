@@ -40,5 +40,5 @@ export function createZamaConfig(params: ZamaConfigWagmi): ZamaConfig {
     sessionTTL: params.sessionTTL,
     registryTTL: params.registryTTL,
     onEvent: params.onEvent,
-  };
+  } as unknown as ZamaConfig;
 }

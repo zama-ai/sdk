@@ -7,10 +7,11 @@
  */
 
 // Config factory
+// Note: node() transport factory is exported from @zama-fhe/sdk/node instead,
+// keeping node:worker_threads out of the main browser entry.
 export {
   createZamaConfig,
   web,
-  node,
   cleartext,
   resolveChainTransports,
   buildRelayer,

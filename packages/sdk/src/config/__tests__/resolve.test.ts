@@ -9,11 +9,8 @@ vi.mock(import("../../relayer/relayer-web"), async () => ({
   }),
 }));
 
-vi.mock(import("../../relayer/relayer-node"), async () => ({
-  RelayerNode: vi.fn().mockImplementation(function (this: any) {
-    this.terminate = vi.fn();
-  }),
-}));
+// Note: relayer-node is NOT mocked here — it's no longer imported by resolve.ts.
+// The node transport handler is registered via @zama-fhe/sdk/node (side-effect import).
 
 vi.mock(import("../../relayer/cleartext/relayer-cleartext"), async () => ({
   RelayerCleartext: vi.fn().mockImplementation(function (this: any) {
@@ -156,10 +153,10 @@ describe("buildRelayer", () => {
     );
   });
 
-  it("throws when node transport chain has empty relayerUrl", () => {
-    const transports = resolveChainTransports([hoodiChain], { [560048]: node() }, [560048]);
+  it("throws for node transport when handler is not registered", () => {
+    const transports = resolveChainTransports([sepoliaChain], { [11155111]: node() }, [11155111]);
     expect(() => buildRelayer(transports, resolveChainId)).toThrow(
-      "Chain 560048 has an empty relayerUrl",
+      'No transport handler registered for type "node"',
     );
   });
 });
