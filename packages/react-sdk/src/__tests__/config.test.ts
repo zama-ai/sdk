@@ -173,7 +173,7 @@ describe("createZamaConfig", () => {
   describe("web() helper", () => {
     it("returns tagged config with chain overrides", () => {
       const result = web({ relayerUrl: "/api/relayer/11155111" });
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         type: "web",
         chain: { relayerUrl: "/api/relayer/11155111" },
         relayer: undefined,
@@ -189,7 +189,7 @@ describe("createZamaConfig", () => {
         },
         relayerOpts,
       );
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         type: "web",
         chain: {
           relayerUrl: "/api/relayer/11155111",
@@ -201,7 +201,7 @@ describe("createZamaConfig", () => {
 
     it("returns tagged empty config when called with no args", () => {
       const result = web();
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         type: "web",
         chain: undefined,
         relayer: undefined,

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { web, node, cleartext } from "../transports";
+import { web, cleartext } from "../transports";
+import { node } from "../../node";
 import { sepolia, mainnet, hoodi } from "../../chains";
 
 vi.mock(import("../../relayer/relayer-web"), async () => ({
@@ -8,9 +9,6 @@ vi.mock(import("../../relayer/relayer-web"), async () => ({
     this.generateKeypair = vi.fn().mockResolvedValue({ publicKey: "0x", secretKey: "0x" });
   }),
 }));
-
-// Note: relayer-node is NOT mocked here — it's no longer imported by resolve.ts.
-// The node transport handler is registered via @zama-fhe/sdk/node (side-effect import).
 
 vi.mock(import("../../relayer/cleartext/relayer-cleartext"), async () => ({
   RelayerCleartext: vi.fn().mockImplementation(function (this: any) {
@@ -22,7 +20,6 @@ vi.mock(import("../../relayer/cleartext/relayer-cleartext"), async () => ({
 // Import after mocks
 const { resolveChainTransports } = await import("../resolve");
 const { CompositeRelayer } = await import("../../relayer/composite-relayer");
-const { relayersMap } = await import("../relayers");
 
 const sepoliaChain = sepolia;
 const mainnetChain = mainnet;
@@ -109,46 +106,33 @@ describe("resolveChainTransports", () => {
 });
 
 describe("CompositeRelayer (lazy init)", () => {
-  it("does not call transport handler at construction time", () => {
-    const handlerSpy = vi.fn();
-    const origWeb = relayersMap.get("web")!;
-    relayersMap.set("web", handlerSpy);
-
-    const transports = resolveChainTransports([sepoliaChain], { [11155111]: web() }, [11155111]);
+  it("does not call createRelayer at construction time", () => {
+    const createRelayerSpy = vi.fn();
+    const transport = { ...web(), createRelayer: createRelayerSpy };
+    const transports = resolveChainTransports(
+      [sepoliaChain],
+      { [11155111]: transport },
+      [11155111],
+    );
     new CompositeRelayer(() => Promise.resolve(11155111), transports);
-
-    expect(handlerSpy).not.toHaveBeenCalled();
-    relayersMap.set("web", origWeb);
+    expect(createRelayerSpy).not.toHaveBeenCalled();
   });
 
-  it("calls transport handler on first SDK operation", async () => {
+  it("calls createRelayer on first SDK operation", async () => {
     const transports = resolveChainTransports([sepoliaChain], { [11155111]: web() }, [11155111]);
     const relayer = new CompositeRelayer(() => Promise.resolve(11155111), transports);
-
-    // generateKeypair triggers #current() which triggers lazy init
     await relayer.generateKeypair();
-    // If we get here without error, the handler was called and RelayerWeb mock was constructed
   });
 
   it("throws for unconfigured chain on first use", async () => {
     const transports = resolveChainTransports([sepoliaChain], { [11155111]: web() }, [11155111]);
     const relayer = new CompositeRelayer(() => Promise.resolve(999999), transports);
-
     await expect(relayer.generateKeypair()).rejects.toThrow(
       "No relayer configured for chain 999999",
     );
   });
 
-  it("throws for unregistered transport handler on first use", async () => {
-    const transports = resolveChainTransports([sepoliaChain], { [11155111]: node() }, [11155111]);
-    const relayer = new CompositeRelayer(() => Promise.resolve(11155111), transports);
-
-    await expect(relayer.generateKeypair()).rejects.toThrow(
-      'No transport handler registered for type "node"',
-    );
-  });
-
-  it("wraps single web chain", async () => {
+  it("wraps single web chain", () => {
     const transports = resolveChainTransports([sepoliaChain], { [11155111]: web() }, [11155111]);
     const relayer = new CompositeRelayer(() => Promise.resolve(11155111), transports);
     expect(relayer.constructor.name).toBe("CompositeRelayer");

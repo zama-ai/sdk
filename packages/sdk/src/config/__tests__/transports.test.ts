@@ -1,13 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { web, node, cleartext } from "../transports";
+import { web, cleartext } from "../transports";
+import { node } from "../../node";
 
 describe("web()", () => {
   it("returns tagged empty config when called with no args", () => {
-    expect(web()).toEqual({ type: "web", chain: undefined, relayer: undefined });
+    expect(web()).toMatchObject({ type: "web", chain: undefined, relayer: undefined });
   });
 
   it("passes chain overrides", () => {
-    expect(web({ relayerUrl: "https://r.example.com" })).toEqual({
+    expect(web({ relayerUrl: "https://r.example.com" })).toMatchObject({
       type: "web",
       chain: { relayerUrl: "https://r.example.com" },
       relayer: undefined,
@@ -16,7 +17,7 @@ describe("web()", () => {
 
   it("passes chain and relayer params separately", () => {
     const relayerOpts = { threads: 4 } as const;
-    expect(web({ relayerUrl: "https://r.example.com" }, relayerOpts)).toEqual({
+    expect(web({ relayerUrl: "https://r.example.com" }, relayerOpts)).toMatchObject({
       type: "web",
       chain: { relayerUrl: "https://r.example.com" },
       relayer: relayerOpts,
@@ -26,11 +27,11 @@ describe("web()", () => {
 
 describe("node()", () => {
   it("returns tagged empty config when called with no args", () => {
-    expect(node()).toEqual({ type: "node", chain: undefined, relayer: undefined });
+    expect(node()).toMatchObject({ type: "node", chain: undefined, relayer: undefined });
   });
 
   it("passes chain overrides", () => {
-    expect(node({ relayerUrl: "https://r.example.com" })).toEqual({
+    expect(node({ relayerUrl: "https://r.example.com" })).toMatchObject({
       type: "node",
       chain: { relayerUrl: "https://r.example.com" },
       relayer: undefined,
@@ -39,7 +40,7 @@ describe("node()", () => {
 
   it("passes chain and relayer params separately", () => {
     const relayerOpts = { poolSize: 4 };
-    expect(node({ relayerUrl: "https://r.example.com" }, relayerOpts)).toEqual({
+    expect(node({ relayerUrl: "https://r.example.com" }, relayerOpts)).toMatchObject({
       type: "node",
       chain: { relayerUrl: "https://r.example.com" },
       relayer: relayerOpts,
@@ -50,7 +51,7 @@ describe("node()", () => {
 describe("cleartext()", () => {
   it("returns tagged config with required chain", () => {
     const chain = { executorAddress: "0x1234" as `0x${string}` };
-    expect(cleartext(chain)).toEqual({
+    expect(cleartext(chain)).toMatchObject({
       type: "cleartext",
       chain,
     });

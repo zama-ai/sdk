@@ -3,30 +3,29 @@ import { CompositeRelayer } from "../composite-relayer";
 import { ConfigurationError } from "../../errors";
 import { createMockRelayer } from "../../test-fixtures";
 import type { ResolvedChainTransport } from "../../config/resolve";
-import { relayersMap } from "../../config/relayers";
 import type { RelayerSDK } from "../relayer-sdk";
+import type { TransportConfig } from "../../config/transports";
+
+/** Create a transport config with a mock createRelayer that returns the given relayer. */
+function mockTransport(relayer: ReturnType<typeof createMockRelayer>): TransportConfig {
+  return {
+    type: "web",
+    createRelayer: () => relayer as unknown as RelayerSDK,
+  } as TransportConfig;
+}
 
 /**
  * Build a CompositeRelayer that lazily resolves to the given mock relayers.
- * Registers temporary transport handlers that return the mocks.
  */
 function makeComposite(
   chainRelayers: Record<number, ReturnType<typeof createMockRelayer>>,
   activeChainId = Object.keys(chainRelayers).map(Number)[0] ?? 1,
 ) {
-  // Register a temporary handler that maps chainId → mock relayer
-  const handlerKey = "__test__";
-  relayersMap.set(handlerKey, async (chain) => {
-    const relayer = chainRelayers[chain.chainId];
-    if (!relayer) {throw new Error(`No mock relayer for chain ${chain.chainId}`);}
-    return relayer as unknown as RelayerSDK;
-  });
-
   const configs = new Map<number, ResolvedChainTransport>();
   for (const id of Object.keys(chainRelayers).map(Number)) {
     configs.set(id, {
       chain: { chainId: id } as ResolvedChainTransport["chain"],
-      transport: { type: handlerKey } as unknown as ResolvedChainTransport["transport"],
+      transport: mockTransport(chainRelayers[id]),
     });
   }
 
@@ -69,10 +68,8 @@ describe("CompositeRelayer", () => {
   describe("terminate()", () => {
     it("terminates all unique relayers", async () => {
       const relayer = createMockRelayer();
-      // Two chains share the same mock relayer
       const { composite, resolveChainId } = makeComposite({ 1: relayer, 2: relayer }, 1);
 
-      // Trigger #current to populate #resolved for both chains
       await composite.getAclAddress();
       resolveChainId.mockResolvedValue(2);
       await composite.getAclAddress();
@@ -137,16 +134,13 @@ describe("CompositeRelayer", () => {
 
   describe("defensive copy", () => {
     it("is not affected by external map mutations after construction", async () => {
-      const handlerKey = "__test_defensive__";
       const relayer = createMockRelayer();
-      relayersMap.set(handlerKey, async () => relayer as unknown as RelayerSDK);
-
       const configs = new Map<number, ResolvedChainTransport>([
         [
           1,
           {
             chain: { chainId: 1 } as ResolvedChainTransport["chain"],
-            transport: { type: handlerKey } as unknown as ResolvedChainTransport["transport"],
+            transport: mockTransport(relayer),
           },
         ],
       ]);

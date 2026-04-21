@@ -2,9 +2,9 @@ import type { RelayerWebConfig } from "../relayer/relayer-sdk.types";
 import type { RelayerNodeConfig } from "../relayer/relayer-node";
 import type { ExtendedFhevmInstanceConfig } from "../relayer/relayer-utils";
 import type { CleartextConfig } from "../relayer/cleartext/types";
+import type { RelayerSDK } from "../relayer/relayer-sdk";
 import { RelayerWeb } from "../relayer/relayer-web";
 import { RelayerCleartext } from "../relayer/cleartext/relayer-cleartext";
-import { registerRelayer, relayersMap } from "./relayers";
 import { assertCondition } from "../utils";
 
 // ── Shared option shapes ─────────────────────────────────────────────────────
@@ -20,6 +20,14 @@ export type CleartextChainConfig = Partial<CleartextConfig> & {
   executorAddress: CleartextConfig["executorAddress"];
 };
 
+// ── Relayer factory type ────────────────────────────────────────────────────
+
+/** Creates a RelayerSDK instance for a resolved chain + transport config. */
+export type CreateRelayerFn = (
+  chain: ExtendedFhevmInstanceConfig,
+  transport: TransportConfig,
+) => RelayerSDK;
+
 // ── Transport types ──────────────────────────────────────────────────────────
 
 /** Tagged transport: routes to RelayerWeb (browser). */
@@ -30,6 +38,8 @@ export interface WebTransportConfig {
   /** Shared relayer-pool options. Reference identity controls grouping: chains
    * that share the same `relayer` object reuse a single relayer instance. */
   relayer?: WebRelayerOptions;
+  /** @internal */
+  readonly createRelayer: CreateRelayerFn;
 }
 
 /** Tagged transport: routes to RelayerNode (Node.js). */
@@ -39,12 +49,16 @@ export interface NodeTransportConfig {
   chain?: Partial<ExtendedFhevmInstanceConfig>;
   /** Shared relayer-pool options. Reference identity controls grouping. */
   relayer?: NodeRelayerOptions;
+  /** @internal */
+  readonly createRelayer: CreateRelayerFn;
 }
 
 /** Tagged transport: routes to RelayerCleartext (local dev / testnets). */
 export interface CleartextTransportConfig {
   readonly type: "cleartext";
   chain: CleartextChainConfig;
+  /** @internal */
+  readonly createRelayer: CreateRelayerFn;
 }
 
 /** A per-chain transport entry. */
@@ -71,32 +85,18 @@ export function web(
   chain?: Partial<ExtendedFhevmInstanceConfig>,
   relayer?: WebRelayerOptions,
 ): WebTransportConfig {
-  if (!relayersMap.has("web")) {
-    registerRelayer("web", async (resolvedChain, transport) => {
+  return {
+    type: "web",
+    chain,
+    relayer,
+    createRelayer: (resolvedChain, transport) => {
       assertCondition(transport.type === "web", "Transport config must be of type `web`");
-      const merged = { ...resolvedChain, ...transport.chain };
-      return new RelayerWeb({ chain: merged, ...transport.relayer });
-    });
-  }
-  return { type: "web", chain, relayer };
-}
-
-/**
- * Node.js transport — routes to RelayerNode (worker thread pool).
- *
- * @param chain - Per-chain FHE instance overrides.
- * @param relayer - Shared relayer-pool options (e.g. `poolSize`, `logger`).
- *
- * @example
- * ```ts
- * transports: { [sepolia.id]: node({ relayerUrl: "..." }, { poolSize: 4 }) }
- * ```
- */
-export function node(
-  chain?: Partial<ExtendedFhevmInstanceConfig>,
-  relayer?: NodeRelayerOptions,
-): NodeTransportConfig {
-  return { type: "node", chain, relayer };
+      return new RelayerWeb({
+        chain: { ...resolvedChain, ...transport.chain },
+        ...transport.relayer,
+      });
+    },
+  };
 }
 
 /**
@@ -108,15 +108,18 @@ export function node(
  * ```
  */
 export function cleartext(chain: CleartextChainConfig): CleartextTransportConfig {
-  if (!relayersMap.has("cleartext")) {
-    registerRelayer("cleartext", async (resolvedChain, transport) => {
+  return {
+    type: "cleartext",
+    chain,
+    createRelayer: (resolvedChain, transport) => {
       assertCondition(
         transport.type === "cleartext",
         "Transport config must be of type `cleartext`",
       );
-      const merged = { ...resolvedChain, ...transport.chain } as CleartextConfig;
-      return new RelayerCleartext(merged);
-    });
-  }
-  return { type: "cleartext", chain };
+      return new RelayerCleartext({
+        ...resolvedChain,
+        ...transport.chain,
+      } as CleartextConfig);
+    },
+  };
 }

@@ -12,6 +12,5 @@ export type { ZamaConfigEthers } from "../ethers/types";
 
 export { resolveChainTransports, resolveStorage } from "./resolve";
 export type { ResolvedChainTransport } from "./resolve";
-export { registerRelayer as registerTransportHandler } from "./relayers";
 
 export { buildZamaConfig } from "./build";

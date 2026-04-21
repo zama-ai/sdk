@@ -5,7 +5,6 @@ import type {
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/bundle";
 import type { Address, Hex } from "viem";
-import { relayersMap } from "../config/relayers";
 import type { ResolvedChainTransport } from "../config/resolve";
 import { ConfigurationError } from "../errors";
 import { toError } from "../utils";
@@ -30,7 +29,6 @@ import type {
 export class CompositeRelayer implements RelayerSDK {
   readonly #configs: Map<number, ResolvedChainTransport>;
   readonly #resolved = new Map<number, RelayerSDK>();
-  readonly #pending = new Map<number, Promise<RelayerSDK>>();
   readonly #resolveChainId: () => Promise<number>;
 
   constructor(resolveChainId: () => Promise<number>, configs: Map<number, ResolvedChainTransport>) {
@@ -38,7 +36,7 @@ export class CompositeRelayer implements RelayerSDK {
     this.#configs = new Map(configs);
   }
 
-  async #current(): Promise<RelayerSDK> {
+  async #getRelayer(): Promise<RelayerSDK> {
     let chainId: number;
     try {
       chainId = await this.#resolveChainId();
@@ -54,12 +52,6 @@ export class CompositeRelayer implements RelayerSDK {
       return resolved;
     }
 
-    // Deduplicate concurrent init for the same chain
-    const pending = this.#pending.get(chainId);
-    if (pending) {
-      return pending;
-    }
-
     const config = this.#configs.get(chainId);
     if (!config) {
       throw new ConfigurationError(
@@ -68,24 +60,13 @@ export class CompositeRelayer implements RelayerSDK {
       );
     }
 
-    const handler = relayersMap.get(config.transport.type);
-    if (!handler) {
-      throw new ConfigurationError(
-        `No transport handler registered for type "${config.transport.type}".`,
-      );
-    }
-
-    const promise = handler(config.chain, config.transport).then((relayer) => {
-      this.#resolved.set(chainId, relayer);
-      this.#pending.delete(chainId);
-      return relayer;
-    });
-    this.#pending.set(chainId, promise);
-    return promise;
+    const relayer = config.transport.createRelayer(config.chain, config.transport);
+    this.#resolved.set(chainId, relayer);
+    return relayer;
   }
 
   async generateKeypair(): Promise<KeypairType<Hex>> {
-    return (await this.#current()).generateKeypair();
+    return (await this.#getRelayer()).generateKeypair();
   }
 
   async createEIP712(
@@ -94,7 +75,7 @@ export class CompositeRelayer implements RelayerSDK {
     startTimestamp: number,
     durationDays?: number,
   ): Promise<EIP712TypedData> {
-    return (await this.#current()).createEIP712(
+    return (await this.#getRelayer()).createEIP712(
       publicKey,
       contractAddresses,
       startTimestamp,
@@ -103,15 +84,15 @@ export class CompositeRelayer implements RelayerSDK {
   }
 
   async encrypt(params: EncryptParams): Promise<EncryptResult> {
-    return (await this.#current()).encrypt(params);
+    return (await this.#getRelayer()).encrypt(params);
   }
 
   async userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>> {
-    return (await this.#current()).userDecrypt(params);
+    return (await this.#getRelayer()).userDecrypt(params);
   }
 
   async publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult> {
-    return (await this.#current()).publicDecrypt(handles);
+    return (await this.#getRelayer()).publicDecrypt(handles);
   }
 
   async createDelegatedUserDecryptEIP712(
@@ -121,7 +102,7 @@ export class CompositeRelayer implements RelayerSDK {
     startTimestamp: number,
     durationDays?: number,
   ): Promise<KmsDelegatedUserDecryptEIP712Type> {
-    return (await this.#current()).createDelegatedUserDecryptEIP712(
+    return (await this.#getRelayer()).createDelegatedUserDecryptEIP712(
       publicKey,
       contractAddresses,
       delegatorAddress,
@@ -133,28 +114,28 @@ export class CompositeRelayer implements RelayerSDK {
   async delegatedUserDecrypt(
     params: DelegatedUserDecryptParams,
   ): Promise<Readonly<Record<Handle, ClearValueType>>> {
-    return (await this.#current()).delegatedUserDecrypt(params);
+    return (await this.#getRelayer()).delegatedUserDecrypt(params);
   }
 
   async requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType> {
-    return (await this.#current()).requestZKProofVerification(zkProof);
+    return (await this.#getRelayer()).requestZKProofVerification(zkProof);
   }
 
   async getPublicKey(): Promise<{
     publicKeyId: string;
     publicKey: Uint8Array;
   } | null> {
-    return (await this.#current()).getPublicKey();
+    return (await this.#getRelayer()).getPublicKey();
   }
 
   async getPublicParams(
     bits: number,
   ): Promise<{ publicParams: Uint8Array; publicParamsId: string } | null> {
-    return (await this.#current()).getPublicParams(bits);
+    return (await this.#getRelayer()).getPublicParams(bits);
   }
 
   async getAclAddress(): Promise<Address> {
-    return (await this.#current()).getAclAddress();
+    return (await this.#getRelayer()).getAclAddress();
   }
 
   terminate(): void {
