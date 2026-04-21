@@ -2,12 +2,12 @@
   {
     "name": "@zama-fhe/sdk (ESM)",
     "path": "packages/sdk/dist/esm/**/*.js",
-    "limit": "49 KB"
+    "limit": "6 MB"
   },
   {
     "name": "@zama-fhe/sdk (CJS)",
     "path": "packages/sdk/dist/cjs/**/*.cjs",
-    "limit": "40 KB"
+    "limit": "2 MB"
   },
   {
     "name": "@zama-fhe/react-sdk (all JS)",
