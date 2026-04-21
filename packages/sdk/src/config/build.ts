@@ -27,5 +27,5 @@ export function buildZamaConfig(signer: GenericSigner, params: ZamaConfigBase): 
     sessionTTL: params.sessionTTL,
     registryTTL: params.registryTTL,
     onEvent: params.onEvent,
-  };
+  } as unknown as ZamaConfig;
 }

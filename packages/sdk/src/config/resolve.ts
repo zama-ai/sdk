@@ -54,9 +54,9 @@ export interface ResolvedChainTransport {
 }
 
 export function resolveChainTransports(
-  chains: FheChain[],
-  transports: Record<number, TransportConfig>,
-  chainIds: number[],
+  chains: readonly FheChain[],
+  transports: Readonly<Record<number, TransportConfig>>,
+  chainIds: readonly number[],
 ): Map<number, ResolvedChainTransport> {
   const chainMap = new Map(chains.map((c) => [c.id, c]));
   const transportMap = new Map(Object.entries(transports));
