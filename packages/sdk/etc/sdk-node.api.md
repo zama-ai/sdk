@@ -7,6 +7,7 @@
 import { Address } from 'viem';
 import { Bytes32Hex } from '@zama-fhe/relayer-sdk/bundle';
 import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle';
+import { EIP1193Provider } from 'viem';
 import { FhevmInstanceConfig } from '@zama-fhe/relayer-sdk/bundle';
 import { Hex } from 'viem';
 import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
@@ -99,6 +100,19 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
     // (undocumented)
     userDecrypt(params: UserDecryptPayload): Promise<UserDecryptResponseData>;
     protected abstract wireEvents(worker: TWorker): void;
+}
+
+// Warning: (ae-forgotten-export) The symbol "CleartextChainConfig" needs to be exported by the entry point index.d.ts
+//
+// @public
+export function cleartext(chain: CleartextChainConfig): CleartextTransportConfig;
+
+// @public
+export interface CleartextTransportConfig {
+    // (undocumented)
+    chain: CleartextChainConfig;
+    // (undocumented)
+    readonly type: "cleartext";
 }
 
 export { ClearValueType }
@@ -347,7 +361,6 @@ export const MainnetConfig: {
 
 // Warning: (ae-forgotten-export) The symbol "ExtendedFhevmInstanceConfig" needs to be exported by the entry point index.d.ts
 // Warning: (ae-forgotten-export) The symbol "NodeRelayerOptions" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "NodeTransportConfig" needs to be exported by the entry point index.d.ts
 //
 // @public
 export function node(chain?: Partial<ExtendedFhevmInstanceConfig>, relayer?: NodeRelayerOptions): NodeTransportConfig;
@@ -360,6 +373,14 @@ export interface NodeInitRequest extends BaseRequest {
     };
     // (undocumented)
     type: "NODE_INIT";
+}
+
+// @public
+export interface NodeTransportConfig {
+    chain?: Partial<ExtendedFhevmInstanceConfig>;
+    relayer?: NodeRelayerOptions;
+    // (undocumented)
+    readonly type: "node";
 }
 
 // @public

@@ -8,6 +8,7 @@ import { Address } from '@zama-fhe/sdk';
 import { Config } from 'wagmi';
 import { ContractAbi } from '@zama-fhe/sdk';
 import { EIP712TypedData } from '@zama-fhe/sdk';
+import { FheChain } from '@zama-fhe/sdk/chains';
 import { GenericSigner } from '@zama-fhe/sdk';
 import { Hex } from '@zama-fhe/sdk';
 import { ReadContractArgs } from '@zama-fhe/sdk';
@@ -22,8 +23,10 @@ import { WriteFunctionName } from '@zama-fhe/sdk';
 import { ZamaConfig } from '@zama-fhe/sdk';
 import { ZamaConfigBase } from '@zama-fhe/sdk';
 
+// Warning: (ae-forgotten-export) The symbol "AtLeastOneChain" needs to be exported by the entry point index.d.ts
+//
 // @public
-export function createZamaConfig(params: ZamaConfigWagmi): ZamaConfig;
+export function createZamaConfig<const TChains extends AtLeastOneChain>(params: ZamaConfigWagmi<TChains>): ZamaConfig;
 
 // @public
 export class WagmiSigner implements GenericSigner {
@@ -53,15 +56,7 @@ export interface WagmiSignerConfig {
 }
 
 // @public
-export interface ZamaConfigWagmi<T = Config> extends ZamaConfigBase {
-    // (undocumented)
-    ethers?: never;
-    // (undocumented)
-    relayer?: never;
-    // (undocumented)
-    signer?: never;
-    // (undocumented)
-    viem?: never;
+export interface ZamaConfigWagmi<TChains extends AtLeastOneChain = AtLeastOneChain, T = Config> extends ZamaConfigBase<TChains> {
     // (undocumented)
     wagmiConfig: T;
 }

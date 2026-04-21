@@ -7,6 +7,7 @@
 import { Abi } from 'viem';
 import { Address } from 'viem';
 import { Bytes32Hex } from '@zama-fhe/relayer-sdk/bundle';
+import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle';
 import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
@@ -14,13 +15,25 @@ import { EIP1193EventMap } from 'viem';
 import { EIP1193Events } from 'viem';
 import { EIP1193Provider } from 'viem';
 import { ethers } from 'ethers';
+import { FhevmInstanceConfig } from '@zama-fhe/relayer-sdk/bundle';
 import { Hex } from 'viem';
+import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
+import { KeypairType } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
 import { ProviderConnectInfo } from 'viem';
 import { ProviderMessage } from 'viem';
 import { ProviderRpcError } from 'viem';
+import { PublicDecryptResults } from '@zama-fhe/relayer-sdk/bundle';
+import * as SDK from '@zama-fhe/relayer-sdk/bundle';
 import { Signer } from 'ethers';
+import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
+
+// Warning: (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "ZamaConfig" needs to be exported by the entry point index.d.ts
+//
+// @public
+export function createZamaConfig<const TChains extends readonly [FheChain, ...FheChain[]]>(params: ZamaConfigEthers<TChains>): ZamaConfig;
 
 export { EIP1193EventMap }
 
@@ -129,6 +142,18 @@ export function writeUnwrapFromBalanceContract(signer: EthersTransactionSigner, 
 
 // @public (undocumented)
 export function writeWrapContract(signer: EthersTransactionSigner, wrapperAddress: Address, to: Address, amount: bigint): Promise<`0x${string}`>;
+
+// Warning: (ae-forgotten-export) The symbol "AtLeastOneChain" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "ZamaConfigBase" needs to be exported by the entry point index.d.ts
+//
+// @public
+export type ZamaConfigEthers<TChains extends AtLeastOneChain = AtLeastOneChain> = ZamaConfigBase<TChains> & ({
+    ethereum: EIP1193Provider;
+} | {
+    signer: Signer;
+} | {
+    provider: ethers.Provider;
+});
 
 // (No @packageDocumentation comment for this package)
 

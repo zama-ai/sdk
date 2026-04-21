@@ -12,6 +12,7 @@ import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
 import { EIP1193Provider } from 'viem';
+import { ethers } from 'ethers';
 import { FheTypeName } from '@zama-fhe/relayer-sdk/bundle';
 import { FhevmInstanceConfig } from '@zama-fhe/relayer-sdk/bundle';
 import { Hex } from 'viem';
@@ -19,7 +20,6 @@ import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
 import { KeypairType } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
-import { Provider } from 'ethers';
 import { PublicClient } from 'viem';
 import { PublicDecryptResults } from '@zama-fhe/relayer-sdk/bundle';
 import * as SDK from '@zama-fhe/relayer-sdk/bundle';
@@ -533,10 +533,10 @@ export interface BatchDecryptAsOptions {
     onError?: (error: Error, address: Address) => bigint;
 }
 
-// Warning: (ae-forgotten-export) The symbol "ResolvedChainTransport" needs to be exported by the entry point index.d.ts
+// Warning: (ae-internal-missing-underscore) The name "buildZamaConfig" should be prefixed with an underscore because the declaration is marked as @internal
 //
-// @public (undocumented)
-export function buildRelayer(chainTransports: Map<number, ResolvedChainTransport>, resolveChainId: () => Promise<number>): RelayerSDK;
+// @internal
+export function buildZamaConfig(signer: GenericSigner, params: ZamaConfigBase): ZamaConfig;
 
 // @public
 export class ChromeSessionStorage implements GenericStorage {
@@ -5870,12 +5870,6 @@ export class ConfigurationError extends ZamaError {
 // @public
 export type ContractAbi = Abi | readonly unknown[];
 
-// @public
-export function createZamaConfig(params: CreateZamaConfigBaseParams): ZamaConfig;
-
-// @public
-export type CreateZamaConfigBaseParams = ZamaConfigViem | ZamaConfigEthers | ZamaConfigCustomSigner;
-
 // @public (undocumented)
 export interface CredentialsAllowedEvent extends BaseEvent {
     contractAddresses?: Address[];
@@ -6496,9 +6490,9 @@ export interface ExtendedFhevmInstanceConfig extends FhevmInstanceConfig {
 }
 
 // @public (undocumented)
-export interface FheChain extends Omit<ExtendedFhevmInstanceConfig, "chainId"> {
+export interface FheChain<TId extends number = number> extends Omit<ExtendedFhevmInstanceConfig, "chainId"> {
     // (undocumented)
-    readonly id: number;
+    readonly id: TId;
 }
 
 export { FheTypeName }
@@ -13113,8 +13107,10 @@ export interface RelayerWebSecurityConfig {
     integrityCheck?: boolean;
 }
 
+// Warning: (ae-forgotten-export) The symbol "ResolvedChainTransport" needs to be exported by the entry point index.d.ts
+//
 // @public (undocumented)
-export function resolveChainTransports(chains: FheChain[], transports: Record<number, TransportConfig> | undefined, chainIds: number[]): Map<number, ResolvedChainTransport>;
+export function resolveChainTransports(chains: readonly FheChain[], transports: Readonly<Record<number, TransportConfig>>, chainIds: readonly number[]): Map<number, ResolvedChainTransport>;
 
 // @public (undocumented)
 export function resolveStorage(storage: GenericStorage | undefined, sessionStorage: GenericStorage | undefined): {
@@ -20728,68 +20724,41 @@ export interface ZamaConfig {
     readonly storage: GenericStorage;
 }
 
+// Warning: (ae-forgotten-export) The symbol "AtLeastOneChain" needs to be exported by the entry point index.d.ts
+//
 // @public
-export interface ZamaConfigBase {
-    chains: FheChain[];
+export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChain> {
+    chains: TChains;
     keypairTTL?: number;
     onEvent?: ZamaSDKEventListener;
     registryTTL?: number;
     sessionStorage?: GenericStorage;
     sessionTTL?: number | "infinite";
     storage?: GenericStorage;
-    transports?: Record<number, TransportConfig>;
+    transports: { [K in TChains[number]["id"]]: TransportConfig };
 }
 
+// Warning: (ae-forgotten-export) The symbol "AtLeastOneChain_2" needs to be exported by the entry point index.d.ts
+//
 // @public
-export interface ZamaConfigCustomSigner extends ZamaConfigBase {
-    // (undocumented)
-    ethers?: never;
-    // (undocumented)
-    relayer?: never;
-    // (undocumented)
-    signer: GenericSigner;
-    // (undocumented)
-    transports: Record<number, TransportConfig>;
-    // (undocumented)
-    viem?: never;
-}
+export type ZamaConfigEthers<TChains extends AtLeastOneChain_2 = AtLeastOneChain_2> = ZamaConfigBase<TChains> & ({
+    ethereum: EIP1193Provider;
+} | {
+    signer: Signer;
+} | {
+    provider: ethers.Provider;
+});
 
+// Warning: (ae-forgotten-export) The symbol "AtLeastOneChain_3" needs to be exported by the entry point index.d.ts
+//
 // @public
-export interface ZamaConfigEthers extends ZamaConfigBase {
+export interface ZamaConfigViem<TChains extends AtLeastOneChain_3 = AtLeastOneChain_3> extends ZamaConfigBase<TChains> {
     // (undocumented)
-    ethers: {
-        ethereum: EIP1193Provider;
-    } | {
-        signer: Signer;
-    } | {
-        provider: Provider;
-    };
+    ethereum?: EIP1193Provider;
     // (undocumented)
-    relayer?: never;
+    publicClient: PublicClient;
     // (undocumented)
-    signer?: never;
-    // (undocumented)
-    transports: Record<number, TransportConfig>;
-    // (undocumented)
-    viem?: never;
-}
-
-// @public
-export interface ZamaConfigViem extends ZamaConfigBase {
-    // (undocumented)
-    ethers?: never;
-    // (undocumented)
-    relayer?: never;
-    // (undocumented)
-    signer?: never;
-    // (undocumented)
-    transports: Record<number, TransportConfig>;
-    // (undocumented)
-    viem: {
-        publicClient: PublicClient;
-        walletClient?: WalletClient;
-        ethereum?: EIP1193Provider;
-    };
+    walletClient?: WalletClient;
 }
 
 // @public
