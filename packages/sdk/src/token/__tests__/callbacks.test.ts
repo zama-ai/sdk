@@ -11,7 +11,7 @@ describe("Unshield callbacks (P4)", () => {
       logs: [
         {
           topics: [
-            Topics.UnwrapRequested,
+            Topics.UnwrapRequestedLegacy,
             `0x000000000000000000000000${userAddress.slice(2)}`,
             `0x${"ff".repeat(32)}`,
           ],

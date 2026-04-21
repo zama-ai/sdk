@@ -497,14 +497,26 @@ Save the unwrap tx hash before finalization so interrupted unshields can be resu
 import {
   savePendingUnshield,
   loadPendingUnshield,
+  loadPendingUnshieldRequest,
   clearPendingUnshield,
+  type PendingUnshieldRequest,
 } from "@zama-fhe/react-sdk";
 
-// Save before the finalize step
-await savePendingUnshield(storage, wrapperAddress, unwrapTxHash);
+// Save before the finalize step.
+// Pass unwrapRequestId from upgraded UnwrapRequested events when available.
+const event = findUnwrapRequested(receipt.logs);
+await savePendingUnshield(storage, wrapperAddress, unwrapTxHash, event.unwrapRequestId);
 
-// Load on next visit
+// On next visit: resume with the tx hash (works for both legacy and upgraded wrappers)
 const pending = await loadPendingUnshield(storage, wrapperAddress);
+
+// Or load the full request to access unwrapRequestId directly
+const request: PendingUnshieldRequest | null = await loadPendingUnshieldRequest(
+  storage,
+  wrapperAddress,
+);
+// request.unwrapTxHash    — always present
+// request.unwrapRequestId — present only for requests from upgraded wrappers
 
 // Clear after successful finalization
 await clearPendingUnshield(storage, wrapperAddress);
@@ -547,12 +559,12 @@ Complete an unwrap by providing the decryption proof.
 ```ts
 function useFinalizeUnwrap(
   config: UseZamaConfig,
-  options?: UseMutationOptions<Address, Error, FinalizeUnwrapParams>,
-): UseMutationResult<Address, Error, FinalizeUnwrapParams>;
+  options?: UseMutationOptions<TransactionResult, Error, FinalizeUnwrapParams>,
+): UseMutationResult<TransactionResult, Error, FinalizeUnwrapParams>;
 
-interface FinalizeUnwrapParams {
-  burnAmountHandle: Address;
-}
+type FinalizeUnwrapParams =
+  | { unwrapRequestId: Hex; burnAmountHandle?: never }
+  | { unwrapRequestId?: never; burnAmountHandle: Hex };
 ```
 
 ### Delegation Hooks
@@ -912,7 +924,7 @@ All public exports from `@zama-fhe/sdk` are re-exported from the main entry poin
 
 **Network configs:** `SepoliaConfig`, `MainnetConfig`, `HardhatConfig`.
 
-**Pending unshield:** `savePendingUnshield`, `loadPendingUnshield`, `clearPendingUnshield`.
+**Pending unshield:** `savePendingUnshield`, `loadPendingUnshield`, `loadPendingUnshieldRequest`, `clearPendingUnshield`. Type: `PendingUnshieldRequest`.
 
 **Types:** `Address`, `ZamaSDKConfig`, `ReadonlyTokenConfig`, `NetworkType`, `RelayerSDK`, `RelayerSDKStatus`, `EncryptResult`, `EncryptParams`, `UserDecryptParams`, `PublicDecryptResult`, `KeypairType`, `EIP712TypedData`, `DelegatedUserDecryptParams`, `KmsDelegatedUserDecryptEIP712Type`, `ZKProofLike`, `InputProofBytesType`, `StoredCredentials`, `GenericSigner`, `GenericStorage`, `TransactionReceipt`, `TransactionResult`, `UnshieldCallbacks`.
 
@@ -922,8 +934,8 @@ All public exports from `@zama-fhe/sdk` are re-exported from the main entry poin
 
 **ABIs:** `ERC20_ABI`, `ERC20_METADATA_ABI`, `DEPLOYMENT_COORDINATOR_ABI`, `ERC165_ABI`, `ENCRYPTION_ABI`, `TRANSFER_BATCHER_ABI`, `WRAPPER_ABI`, `BATCH_SWAP_ABI`.
 
-**Events:** `RawLog`, `ConfidentialTransferEvent`, `WrappedEvent`, `UnwrapRequestedEvent`, `UnwrappedFinalizedEvent`, `UnwrappedStartedEvent`, `OnChainEvent`, `Topics`, `TOKEN_TOPICS`.
+**Events:** `RawLog`, `ConfidentialTransferEvent`, `WrappedEvent`, `UnwrapRequestedEvent`, `UnwrapFinalizedEvent`, `UnwrappedFinalizedEvent`, `UnwrappedStartedEvent`, `OnChainEvent`, `Topics`, `TOKEN_TOPICS`.
 
-**Event decoders:** `decodeConfidentialTransfer`, `decodeWrapped`, `decodeUnwrapRequested`, `decodeUnwrappedFinalized`, `decodeUnwrappedStarted`, `decodeOnChainEvent`, `decodeOnChainEvents`, `findUnwrapRequested`, `findWrapped`.
+**Event decoders:** `decodeConfidentialTransfer`, `decodeWrapped`, `decodeUnwrapRequested`, `decodeUnwrapFinalized`, `decodeUnwrappedFinalized`, `decodeUnwrappedStarted`, `decodeOnChainEvent`, `decodeOnChainEvents`, `findUnwrapRequested`, `findWrapped`.
 
 **Contract call builders:** `confidentialBalanceOfContract`, `confidentialTransferContract`, `confidentialTransferFromContract`, `isOperatorContract`, `unwrapContract`, `unwrapFromBalanceContract`, `finalizeUnwrapContract`, `setOperatorContract`, `underlyingContract`, `inferredTotalSupplyContract`, `wrapContract`, `supportsInterfaceContract`, `isConfidentialTokenContract`, `isConfidentialWrapperContract`, `nameContract`, `symbolContract`, `decimalsContract`, `allowanceContract`, `approveContract`, `confidentialTotalSupplyContract`, `totalSupplyContract`, `rateContract`.

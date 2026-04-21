@@ -5,6 +5,7 @@ import {
   decodeConfidentialTransfer,
   decodeWrapped,
   decodeUnwrapRequested,
+  decodeUnwrapFinalized,
   decodeUnwrappedFinalized,
   decodeUnwrappedStarted,
   decodeOnChainEvent,
@@ -31,7 +32,10 @@ describe("Topic constants match keccak256", () => {
   const cases: [string, string][] = [
     ["ConfidentialTransfer(address,address,bytes32)", Topics.ConfidentialTransfer],
     ["Wrapped(address,uint256)", Topics.Wrapped],
+    ["UnwrapRequested(address,bytes32)", Topics.UnwrapRequestedLegacy],
     ["UnwrapRequested(address,bytes32,bytes32)", Topics.UnwrapRequested],
+    ["UnwrapFinalized(address,bytes32,uint64)", Topics.UnwrapFinalizedLegacy],
+    ["UnwrapFinalized(address,bytes32,bytes32,uint64)", Topics.UnwrapFinalized],
     ["UnwrapFinalized(address,bytes32,bytes32,uint64)", Topics.UnwrappedFinalized],
     [
       "UnwrappedStarted(bool,uint256,uint256,address,address,bytes32,bytes32)",
@@ -107,7 +111,7 @@ describe("decodeWrapped", () => {
     expect(
       decodeWrapped({
         ...log,
-        topics: [Topics.UnwrapRequested, ...log.topics.slice(1)],
+        topics: [Topics.UnwrapRequestedLegacy, ...log.topics.slice(1)],
       }),
     ).toBeNull();
   });
@@ -115,16 +119,28 @@ describe("decodeWrapped", () => {
 
 describe("decodeUnwrapRequested", () => {
   const receiver = addr("1234");
-  const unwrapRequestId = bytes32("ab".repeat(32));
   const amount = bytes32("ff".repeat(32));
+  const unwrapRequestId = bytes32("aa".repeat(32));
 
   const log: RawLog = {
-    topics: [Topics.UnwrapRequested, topic("1234"), unwrapRequestId],
+    topics: [Topics.UnwrapRequestedLegacy, topic("1234")],
     data: `0x${word("ff".repeat(32))}`,
   };
 
   it("decodes valid log", () => {
     const event = decodeUnwrapRequested(log);
+    expect(event).toEqual({
+      eventName: "UnwrapRequested",
+      receiver,
+      encryptedAmount: amount,
+    });
+  });
+
+  it("decodes valid log with unwrapRequestId", () => {
+    const event = decodeUnwrapRequested({
+      topics: [Topics.UnwrapRequested, topic("1234"), unwrapRequestId],
+      data: `0x${word("ff".repeat(32))}`,
+    });
     expect(event).toEqual({
       eventName: "UnwrapRequested",
       receiver,
@@ -144,19 +160,55 @@ describe("decodeUnwrapRequested", () => {
 });
 
 describe("decodeUnwrappedFinalized", () => {
-  // UnwrapFinalized(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 encryptedAmount, uint64 cleartextAmount)
   const receiver = addr("aabb");
-  const unwrapRequestId = bytes32("ef".repeat(32));
   const encryptedHandle = bytes32("cd".repeat(32));
+  const unwrapRequestId = bytes32("ab".repeat(32));
   const cleartextAmount = 450n;
 
   const log: RawLog = {
-    topics: [Topics.UnwrappedFinalized, topic(receiver.slice(2)), unwrapRequestId],
+    topics: [Topics.UnwrapFinalizedLegacy, topic(receiver.slice(2))],
     data: `0x${word(encryptedHandle.slice(2))}${word(cleartextAmount.toString(16))}`,
   };
 
-  it("decodes valid log", () => {
+  it("decodes valid log with the canonical decoder", () => {
+    const event = decodeUnwrapFinalized(log);
+    expect(event).toEqual({
+      eventName: "UnwrapFinalized",
+      receiver,
+      encryptedAmount: encryptedHandle,
+      cleartextAmount,
+    });
+  });
+
+  it("decodes valid log with unwrapRequestId", () => {
+    const event = decodeUnwrapFinalized({
+      topics: [Topics.UnwrapFinalized, topic(receiver.slice(2)), unwrapRequestId],
+      data: `0x${word(encryptedHandle.slice(2))}${word(cleartextAmount.toString(16))}`,
+    });
+    expect(event).toEqual({
+      eventName: "UnwrapFinalized",
+      receiver,
+      unwrapRequestId,
+      encryptedAmount: encryptedHandle,
+      cleartextAmount,
+    });
+  });
+
+  it("keeps decodeUnwrappedFinalized as a backwards-compatible alias", () => {
     const event = decodeUnwrappedFinalized(log);
+    expect(event).toEqual({
+      eventName: "UnwrappedFinalized",
+      receiver,
+      encryptedAmount: encryptedHandle,
+      cleartextAmount,
+    });
+  });
+
+  it("keeps decodeUnwrappedFinalized compatible with upgraded finalized logs", () => {
+    const event = decodeUnwrappedFinalized({
+      topics: [Topics.UnwrapFinalized, topic(receiver.slice(2)), unwrapRequestId],
+      data: `0x${word(encryptedHandle.slice(2))}${word(cleartextAmount.toString(16))}`,
+    });
     expect(event).toEqual({
       eventName: "UnwrappedFinalized",
       receiver,
@@ -228,6 +280,25 @@ describe("decodeOnChainEvent", () => {
     expect(event?.eventName).toBe("UnwrapRequested");
   });
 
+  it("keeps legacy UnwrapFinalized logs backward-compatible in generic decoding", () => {
+    const log: RawLog = {
+      topics: [Topics.UnwrapFinalizedLegacy, topic("abcd")],
+      data: `0x${word("ff".repeat(32))}${word("1")}`,
+    };
+    const event = decodeOnChainEvent(log);
+    expect(event?.eventName).toBe("UnwrappedFinalized");
+  });
+
+  it("decodes upgraded UnwrapFinalized logs with the canonical event name", () => {
+    const log: RawLog = {
+      topics: [Topics.UnwrapFinalized, topic("abcd"), bytes32("aa".repeat(32))],
+      data: `0x${word("ff".repeat(32))}${word("1")}`,
+    };
+    const event = decodeOnChainEvent(log);
+    expect(event?.eventName).toBe("UnwrapFinalized");
+    expect("unwrapRequestId" in event! && event.unwrapRequestId).toBe(bytes32("aa".repeat(32)));
+  });
+
   it("returns null for unknown event", () => {
     const log: RawLog = {
       topics: [topic("00".repeat(32))],
@@ -254,11 +325,16 @@ describe("decodeOnChainEvents", () => {
         ],
         data: "0x",
       },
+      {
+        topics: [Topics.UnwrapFinalized, topic("abcd"), bytes32("aa".repeat(32))],
+        data: `0x${word("11".repeat(32))}${word("1")}`,
+      },
     ];
     const events = decodeOnChainEvents(logs);
-    expect(events).toHaveLength(2);
+    expect(events).toHaveLength(3);
     expect(events[0].eventName).toBe("UnwrapRequested");
     expect(events[1].eventName).toBe("ConfidentialTransfer");
+    expect(events[2].eventName).toBe("UnwrapFinalized");
   });
 });
 

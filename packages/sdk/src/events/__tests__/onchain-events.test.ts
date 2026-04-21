@@ -7,6 +7,7 @@ import {
   decodeConfidentialTransfer,
   decodeWrapped,
   decodeUnwrapRequested,
+  decodeUnwrapFinalized,
   decodeUnwrappedFinalized,
   decodeUnwrappedStarted,
   decodeOnChainEvent,
@@ -46,6 +47,8 @@ function addressWord(addr: string): string {
 const ALICE = "0x000000000000000000000000000000000000aA01" as Hex;
 const BOB = "0x000000000000000000000000000000000000bB02" as Hex;
 const HANDLE = "0x00000000000000000000000000000000000000000000000000000000deadbeef" as Hex;
+const UNWRAP_REQUEST_ID =
+  "0x00000000000000000000000000000000000000000000000000000000feedbabe" as Hex;
 
 // ---------------------------------------------------------------------------
 // decodeConfidentialTransfer
@@ -107,13 +110,20 @@ describe("decodeWrapped", () => {
 // decodeUnwrapRequested
 // ---------------------------------------------------------------------------
 
-const UNWRAP_REQUEST_ID =
-  "0x00000000000000000000000000000000000000000000000000000000cafecafe" as Hex;
-
 describe("decodeUnwrapRequested", () => {
   it("decodes a valid UnwrapRequested log", () => {
-    // UnwrapRequested(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 amount)
-    // topics[1] = receiver, topics[2] = unwrapRequestId, data = encryptedAmount
+    // UnwrapRequested(address indexed receiver, bytes32 amount)
+    const data = `0x${HANDLE.slice(2)}` as Hex;
+    const log = makeLog(Topics.UnwrapRequestedLegacy, [addressTopic(ALICE)], data);
+    const event = decodeUnwrapRequested(log);
+    expect(event).not.toBeNull();
+    expect(event!.eventName).toBe("UnwrapRequested");
+    expect(event!.receiver.toLowerCase()).toBe(ALICE.toLowerCase());
+    expect(event!.unwrapRequestId).toBeUndefined();
+    expect(event!.encryptedAmount).toBe(HANDLE);
+  });
+
+  it("decodes a valid UnwrapRequested log with unwrapRequestId", () => {
     const data = `0x${HANDLE.slice(2)}` as Hex;
     const log = makeLog(Topics.UnwrapRequested, [addressTopic(ALICE), UNWRAP_REQUEST_ID], data);
     const event = decodeUnwrapRequested(log);
@@ -130,7 +140,7 @@ describe("decodeUnwrapRequested", () => {
   });
 
   it("returns null for insufficient topics", () => {
-    const log = makeLog(Topics.UnwrapRequested, [addressTopic(ALICE)]);
+    const log = makeLog(Topics.UnwrapRequestedLegacy, []);
     expect(decodeUnwrapRequested(log)).toBeNull();
   });
 });
@@ -141,17 +151,47 @@ describe("decodeUnwrapRequested", () => {
 
 describe("decodeUnwrappedFinalized", () => {
   it("decodes a valid UnwrapFinalized log", () => {
-    // UnwrapFinalized(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 encryptedAmount, uint64 cleartextAmount)
-    // topics[1] = receiver, topics[2] = unwrapRequestId, data: encryptedAmount (word 0), cleartextAmount (word 1)
+    // UnwrapFinalized(address indexed receiver, bytes32 encryptedAmount, uint64 cleartextAmount)
     const data = `0x${HANDLE.slice(2)}${uint256(450n)}` as Hex;
-    const log = makeLog(Topics.UnwrappedFinalized, [addressTopic(ALICE), UNWRAP_REQUEST_ID], data);
-    const event = decodeUnwrappedFinalized(log);
+    const log = makeLog(Topics.UnwrapFinalizedLegacy, [addressTopic(ALICE)], data);
+    const event = decodeUnwrapFinalized(log);
     expect(event).not.toBeNull();
-    expect(event!.eventName).toBe("UnwrappedFinalized");
+    expect(event!.eventName).toBe("UnwrapFinalized");
+    expect(event!.receiver.toLowerCase()).toBe(ALICE.toLowerCase());
+    expect(event!.encryptedAmount).toBe(HANDLE);
+    expect(event!.cleartextAmount).toBe(450n);
+  });
+
+  it("decodes a valid UnwrapFinalized log with unwrapRequestId", () => {
+    const data = `0x${HANDLE.slice(2)}${uint256(450n)}` as Hex;
+    const log = makeLog(Topics.UnwrapFinalized, [addressTopic(ALICE), UNWRAP_REQUEST_ID], data);
+    const event = decodeUnwrapFinalized(log);
+    expect(event).not.toBeNull();
+    expect(event!.eventName).toBe("UnwrapFinalized");
     expect(event!.receiver.toLowerCase()).toBe(ALICE.toLowerCase());
     expect(event!.unwrapRequestId).toBe(UNWRAP_REQUEST_ID);
     expect(event!.encryptedAmount).toBe(HANDLE);
     expect(event!.cleartextAmount).toBe(450n);
+  });
+
+  it("keeps decodeUnwrappedFinalized as a backwards-compatible alias", () => {
+    const data = `0x${HANDLE.slice(2)}${uint256(450n)}` as Hex;
+    const log = makeLog(Topics.UnwrapFinalizedLegacy, [addressTopic(ALICE)], data);
+    const event = decodeUnwrappedFinalized(log);
+    expect(event).not.toBeNull();
+    expect(event!.eventName).toBe("UnwrappedFinalized");
+    expect(event!.receiver.toLowerCase()).toBe(ALICE.toLowerCase());
+    expect(event!.encryptedAmount).toBe(HANDLE);
+    expect(event!.cleartextAmount).toBe(450n);
+  });
+
+  it("keeps decodeUnwrappedFinalized compatible with upgraded finalized logs", () => {
+    const data = `0x${HANDLE.slice(2)}${uint256(450n)}` as Hex;
+    const log = makeLog(Topics.UnwrapFinalized, [addressTopic(ALICE), UNWRAP_REQUEST_ID], data);
+    const event = decodeUnwrappedFinalized(log);
+    expect(event).not.toBeNull();
+    expect(event!.eventName).toBe("UnwrappedFinalized");
+    expect(event!.unwrapRequestId).toBe(UNWRAP_REQUEST_ID);
   });
 
   it("returns null for wrong topic0", () => {
@@ -160,8 +200,8 @@ describe("decodeUnwrappedFinalized", () => {
   });
 
   it("returns null for insufficient topics", () => {
-    const log = makeLog(Topics.UnwrappedFinalized, [addressTopic(ALICE)]);
-    expect(decodeUnwrappedFinalized(log)).toBeNull();
+    const log = makeLog(Topics.UnwrapFinalizedLegacy, []);
+    expect(decodeUnwrapFinalized(log)).toBeNull();
   });
 });
 
@@ -213,6 +253,23 @@ describe("decodeOnChainEvent", () => {
     expect(event!.eventName).toBe("ConfidentialTransfer");
   });
 
+  it("keeps legacy UnwrapFinalized logs backward-compatible in generic decoding", () => {
+    const data = `0x${HANDLE.slice(2)}${uint256(450n)}` as Hex;
+    const log = makeLog(Topics.UnwrapFinalizedLegacy, [addressTopic(ALICE)], data);
+    const event = decodeOnChainEvent(log);
+    expect(event).not.toBeNull();
+    expect(event!.eventName).toBe("UnwrappedFinalized");
+  });
+
+  it("decodes upgraded UnwrapFinalized logs with the canonical event name", () => {
+    const data = `0x${HANDLE.slice(2)}${uint256(450n)}` as Hex;
+    const log = makeLog(Topics.UnwrapFinalized, [addressTopic(ALICE), UNWRAP_REQUEST_ID], data);
+    const event = decodeOnChainEvent(log);
+    expect(event).not.toBeNull();
+    expect(event!.eventName).toBe("UnwrapFinalized");
+    expect("unwrapRequestId" in event! && event.unwrapRequestId).toBe(UNWRAP_REQUEST_ID);
+  });
+
   it("returns null for an unrecognized log", () => {
     const log = makeLog("0xdeadbeef" as Hex, []);
     expect(decodeOnChainEvent(log)).toBeNull();
@@ -224,16 +281,18 @@ describe("decodeOnChainEvents", () => {
     const logs: RawLog[] = [
       makeLog(Topics.ConfidentialTransfer, [addressTopic(ALICE), addressTopic(BOB), HANDLE]),
       makeLog("0xdeadbeef" as Hex, []),
+      makeLog(Topics.UnwrapRequestedLegacy, [addressTopic(ALICE)], `0x${HANDLE.slice(2)}` as Hex),
       makeLog(
-        Topics.UnwrapRequested,
+        Topics.UnwrapFinalized,
         [addressTopic(ALICE), UNWRAP_REQUEST_ID],
-        `0x${HANDLE.slice(2)}` as Hex,
+        `0x${HANDLE.slice(2)}${uint256(450n)}` as Hex,
       ),
     ];
     const events = decodeOnChainEvents(logs);
-    expect(events).toHaveLength(2);
+    expect(events).toHaveLength(3);
     expect(events[0]!.eventName).toBe("ConfidentialTransfer");
     expect(events[1]!.eventName).toBe("UnwrapRequested");
+    expect(events[2]!.eventName).toBe("UnwrapFinalized");
   });
 
   it("returns empty array for no recognized logs", () => {
@@ -287,12 +346,14 @@ describe("findWrapped", () => {
 // ---------------------------------------------------------------------------
 
 describe("TOKEN_TOPICS", () => {
-  it("contains all 5 event topic hashes", () => {
-    expect(TOKEN_TOPICS).toHaveLength(5);
+  it("contains all token event topic hashes", () => {
+    expect(TOKEN_TOPICS).toHaveLength(7);
     expect(TOKEN_TOPICS).toContain(Topics.ConfidentialTransfer);
     expect(TOKEN_TOPICS).toContain(Topics.Wrapped);
     expect(TOKEN_TOPICS).toContain(Topics.UnwrapRequested);
-    expect(TOKEN_TOPICS).toContain(Topics.UnwrappedFinalized);
+    expect(TOKEN_TOPICS).toContain(Topics.UnwrapRequestedLegacy);
+    expect(TOKEN_TOPICS).toContain(Topics.UnwrapFinalized);
+    expect(TOKEN_TOPICS).toContain(Topics.UnwrapFinalizedLegacy);
     expect(TOKEN_TOPICS).toContain(Topics.UnwrappedStarted);
   });
 
