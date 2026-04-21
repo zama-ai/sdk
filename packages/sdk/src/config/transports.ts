@@ -2,6 +2,10 @@ import type { RelayerWebConfig } from "../relayer/relayer-sdk.types";
 import type { RelayerNodeConfig } from "../relayer/relayer-node";
 import type { ExtendedFhevmInstanceConfig } from "../relayer/relayer-utils";
 import type { CleartextConfig } from "../relayer/cleartext/types";
+import { RelayerWeb } from "../relayer/relayer-web";
+import { RelayerCleartext } from "../relayer/cleartext/relayer-cleartext";
+import { registerRelayer, relayersMap } from "./relayers";
+import { assertCondition } from "../utils";
 
 // ── Shared option shapes ─────────────────────────────────────────────────────
 
@@ -67,6 +71,13 @@ export function web(
   chain?: Partial<ExtendedFhevmInstanceConfig>,
   relayer?: WebRelayerOptions,
 ): WebTransportConfig {
+  if (!relayersMap.has("web")) {
+    registerRelayer("web", async (resolvedChain, transport) => {
+      assertCondition(transport.type === "web", "Transport config must be of type `web`");
+      const merged = { ...resolvedChain, ...transport.chain };
+      return new RelayerWeb({ chain: merged, ...transport.relayer });
+    });
+  }
   return { type: "web", chain, relayer };
 }
 
@@ -97,5 +108,15 @@ export function node(
  * ```
  */
 export function cleartext(chain: CleartextChainConfig): CleartextTransportConfig {
+  if (!relayersMap.has("cleartext")) {
+    registerRelayer("cleartext", async (resolvedChain, transport) => {
+      assertCondition(
+        transport.type === "cleartext",
+        "Transport config must be of type `cleartext`",
+      );
+      const merged = { ...resolvedChain, ...transport.chain } as CleartextConfig;
+      return new RelayerCleartext(merged);
+    });
+  }
   return { type: "cleartext", chain };
 }
