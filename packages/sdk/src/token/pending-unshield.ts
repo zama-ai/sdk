@@ -82,6 +82,11 @@ export async function loadPendingUnshield(
 
 /**
  * Load a previously saved unwrap request, including `unwrapRequestId` when available.
+ *
+ * `resumeUnshield()` only needs `unwrapTxHash`: it reloads the transaction receipt and
+ * rediscovers the right finalize handle from the emitted `UnwrapRequested` event.
+ * Use `unwrapRequestId` directly only for custom flows that call `finalizeUnwrap()`
+ * without reloading the original unwrap receipt.
  */
 export async function loadPendingUnshieldRequest(
   storage: GenericStorage,

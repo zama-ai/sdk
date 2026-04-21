@@ -34,11 +34,9 @@ describe("Topic constants match keccak256", () => {
     ["Wrapped(address,uint256)", Topics.Wrapped],
     ["UnwrapRequested(address,bytes32)", Topics.UnwrapRequestedLegacy],
     ["UnwrapRequested(address,bytes32,bytes32)", Topics.UnwrapRequested],
-    ["UnwrapRequested(address,bytes32,bytes32)", Topics.UnwrapRequestedWithRequestId],
     ["UnwrapFinalized(address,bytes32,uint64)", Topics.UnwrapFinalizedLegacy],
     ["UnwrapFinalized(address,bytes32,bytes32,uint64)", Topics.UnwrapFinalized],
     ["UnwrapFinalized(address,bytes32,bytes32,uint64)", Topics.UnwrappedFinalized],
-    ["UnwrapFinalized(address,bytes32,bytes32,uint64)", Topics.UnwrapFinalizedWithRequestId],
     [
       "UnwrappedStarted(bool,uint256,uint256,address,address,bytes32,bytes32)",
       Topics.UnwrappedStarted,
@@ -339,7 +337,7 @@ describe("findUnwrapRequested", () => {
         data: "0x",
       },
       {
-        topics: [Topics.UnwrapRequestedWithRequestId, topic("1234"), bytes32("ab".repeat(32))],
+        topics: [Topics.UnwrapRequested, topic("1234"), bytes32("ab".repeat(32))],
         data: `0x${word("ff".repeat(32))}`,
       },
     ];

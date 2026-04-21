@@ -33,14 +33,10 @@ export const Topics = {
   UnwrapRequested: eventTopic("UnwrapRequested(address,bytes32,bytes32)"),
   /** `UnwrapRequested(address indexed receiver, bytes32 amount)` */
   UnwrapRequestedLegacy: eventTopic("UnwrapRequested(address,bytes32)"),
-  /** @deprecated Use `Topics.UnwrapRequested`. */
-  UnwrapRequestedWithRequestId: eventTopic("UnwrapRequested(address,bytes32,bytes32)"),
   /** `UnwrapFinalized(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 encryptedAmount, uint64 cleartextAmount)` */
   UnwrapFinalized: eventTopic("UnwrapFinalized(address,bytes32,bytes32,uint64)"),
   /** `UnwrapFinalized(address indexed receiver, bytes32 encryptedAmount, uint64 cleartextAmount)` */
   UnwrapFinalizedLegacy: eventTopic("UnwrapFinalized(address,bytes32,uint64)"),
-  /** @deprecated Use `Topics.UnwrapFinalized`. */
-  UnwrapFinalizedWithRequestId: eventTopic("UnwrapFinalized(address,bytes32,bytes32,uint64)"),
   /** @deprecated Use `Topics.UnwrapFinalized`. */
   UnwrappedFinalized: eventTopic("UnwrapFinalized(address,bytes32,bytes32,uint64)"),
   /** `UnwrappedStarted(bool returnVal, uint256 indexed requestId, ...)` */
@@ -229,10 +225,7 @@ export function decodeWrapped(log: RawLog): WrappedEvent | null {
  * UnwrapRequested(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 amount)
  */
 export function decodeUnwrapRequested(log: RawLog): UnwrapRequestedEvent | null {
-  if (
-    log.topics[0] === Topics.UnwrapRequested ||
-    log.topics[0] === Topics.UnwrapRequestedWithRequestId
-  ) {
+  if (log.topics[0] === Topics.UnwrapRequested) {
     if (log.topics.length < 3) {
       return null;
     }
@@ -265,11 +258,7 @@ export function decodeUnwrapRequested(log: RawLog): UnwrapRequestedEvent | null 
  * UnwrapFinalized(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 encryptedAmount, uint64 cleartextAmount)
  */
 export function decodeUnwrapFinalized(log: RawLog): UnwrapFinalizedEvent | null {
-  if (
-    log.topics[0] === Topics.UnwrapFinalized ||
-    log.topics[0] === Topics.UnwrapFinalizedWithRequestId ||
-    log.topics[0] === Topics.UnwrappedFinalized
-  ) {
+  if (log.topics[0] === Topics.UnwrapFinalized || log.topics[0] === Topics.UnwrappedFinalized) {
     if (log.topics.length < 3) {
       return null;
     }
@@ -316,15 +305,14 @@ function decodeLegacyUnwrappedFinalized(log: RawLog): UnwrappedFinalizedEvent | 
   if (log.topics[0] !== Topics.UnwrapFinalizedLegacy) {
     return null;
   }
-  if (log.topics.length < 2) {
+  const event = decodeUnwrapFinalized(log);
+  if (!event) {
     return null;
   }
 
   return {
+    ...event,
     eventName: "UnwrappedFinalized",
-    receiver: topicToAddress(log.topics[1]!),
-    encryptedAmount: wordToBytes32(log.data, 0),
-    cleartextAmount: wordToBigInt(log.data, 1),
   };
 }
 

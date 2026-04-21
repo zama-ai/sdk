@@ -634,7 +634,7 @@ const logs = await publicClient.getLogs({
 });
 ```
 
-Individual topic hashes are accessible via the `Topics` object: `Topics.ConfidentialTransfer`, `Topics.Wrapped`, `Topics.UnwrapRequested`, `Topics.UnwrapRequestedLegacy`, `Topics.UnwrapFinalized`, `Topics.UnwrapFinalizedLegacy`, and `Topics.UnwrappedStarted`. `Topics.UnwrapRequestedWithRequestId`, `Topics.UnwrapFinalizedWithRequestId`, and `Topics.UnwrappedFinalized` remain as deprecated aliases for the with-request-id topics.
+Individual topic hashes are accessible via the `Topics` object: `Topics.ConfidentialTransfer`, `Topics.Wrapped`, `Topics.UnwrapRequested`, `Topics.UnwrapRequestedLegacy`, `Topics.UnwrapFinalized`, `Topics.UnwrapFinalizedLegacy`, and `Topics.UnwrappedStarted`. `Topics.UnwrappedFinalized` remains as a deprecated alias for the upgraded finalized topic.
 
 ### Decoders
 
