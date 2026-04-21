@@ -1,4 +1,4 @@
-export { web, node, cleartext } from "./transports";
+export { web, cleartext } from "./transports";
 export type {
   WebTransportConfig,
   NodeTransportConfig,
@@ -15,12 +15,8 @@ export type {
   CreateZamaConfigBaseParams,
 } from "./types";
 
-export {
-  resolveChainTransports,
-  buildRelayer,
-  resolveStorage,
-  registerRelayer as registerTransportHandler,
-} from "./resolve";
+export { resolveChainTransports, buildRelayer, resolveStorage } from "./resolve";
+export { registerRelayer as registerTransportHandler } from "./relayers";
 export type { ConfigWithTransports } from "./resolve";
 
 import type { CreateZamaConfigBaseParams, ZamaConfig } from "./types";
