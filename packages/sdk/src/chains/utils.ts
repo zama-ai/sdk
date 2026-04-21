@@ -5,5 +5,5 @@ export function toFheChain<T extends ExtendedFhevmInstanceConfig>({
   chainId,
   ...config
 }: T): FheChain {
-  return { ...config, id: chainId };
+  return { ...config, id: chainId } as FheChain;
 }
