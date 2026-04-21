@@ -534,15 +534,20 @@ interface ContractCallConfig {
 
 ### Wrapper
 
-| Function                                                             | Description                                         |
-| -------------------------------------------------------------------- | --------------------------------------------------- |
-| `wrapContract(wrapper, to, amount)`                                  | Wrap ERC-20 tokens.                                 |
-| `unwrapContract(token, from, to, encryptedAmount, inputProof)`       | Request unwrap with encrypted amount.               |
-| `unwrapFromBalanceContract(token, from, to, encryptedBalance)`       | Request unwrap using on-chain balance handle.       |
-| `finalizeUnwrapContract(wrapper, unwrapRequestId, cleartext, proof)` | Finalize unwrap with decryption proof.              |
-| `underlyingContract(wrapper)`                                        | Read underlying ERC-20 address.                     |
-| `inferredTotalSupplyContract(wrapper)`                               | Read inferred plaintext total supply.               |
-| `totalSupplyContract(wrapper)`                                       | Deprecated alias for `inferredTotalSupplyContract`. |
+| Function                                                             | Description                                   |
+| -------------------------------------------------------------------- | --------------------------------------------- |
+| `wrapContract(wrapper, to, amount)`                                  | Wrap ERC-20 tokens.                           |
+| `unwrapContract(token, from, to, encryptedAmount, inputProof)`       | Request unwrap with encrypted amount.         |
+| `unwrapFromBalanceContract(token, from, to, encryptedBalance)`       | Request unwrap using on-chain balance handle. |
+| `finalizeUnwrapContract(wrapper, unwrapRequestId, cleartext, proof)` | Finalize unwrap with decryption proof.        |
+| `underlyingContract(wrapper)`                                        | Read underlying ERC-20 address.               |
+| `inferredTotalSupplyContract(wrapper)`                               | Read inferred plaintext total supply.         |
+| `totalSupplyContract(wrapper)`                                       | Deprecated legacy `totalSupply()` builder.    |
+
+For transition-safe total supply reads, prefer `totalSupplyQueryOptions` or React
+`useTotalSupply`. They detect the wrapper ERC-165 interface ID and call
+`inferredTotalSupply()` on upgraded wrappers or legacy `totalSupply()` on pre-upgrade
+wrappers.
 
 ### ERC-165
 
