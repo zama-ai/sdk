@@ -258,7 +258,7 @@ export function decodeUnwrapRequested(log: RawLog): UnwrapRequestedEvent | null 
  * UnwrapFinalized(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 encryptedAmount, uint64 cleartextAmount)
  */
 export function decodeUnwrapFinalized(log: RawLog): UnwrapFinalizedEvent | null {
-  if (log.topics[0] === Topics.UnwrapFinalized || log.topics[0] === Topics.UnwrappedFinalized) {
+  if (log.topics[0] === Topics.UnwrapFinalized) {
     if (log.topics.length < 3) {
       return null;
     }

@@ -185,6 +185,15 @@ describe("decodeUnwrappedFinalized", () => {
     expect(event!.cleartextAmount).toBe(450n);
   });
 
+  it("keeps decodeUnwrappedFinalized compatible with upgraded finalized logs", () => {
+    const data = `0x${HANDLE.slice(2)}${uint256(450n)}` as Hex;
+    const log = makeLog(Topics.UnwrapFinalized, [addressTopic(ALICE), UNWRAP_REQUEST_ID], data);
+    const event = decodeUnwrappedFinalized(log);
+    expect(event).not.toBeNull();
+    expect(event!.eventName).toBe("UnwrappedFinalized");
+    expect(event!.unwrapRequestId).toBe(UNWRAP_REQUEST_ID);
+  });
+
   it("returns null for wrong topic0", () => {
     const log = makeLog(Topics.Wrapped, [addressTopic(ALICE), UNWRAP_REQUEST_ID]);
     expect(decodeUnwrappedFinalized(log)).toBeNull();

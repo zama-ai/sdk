@@ -204,6 +204,20 @@ describe("decodeUnwrappedFinalized", () => {
     });
   });
 
+  it("keeps decodeUnwrappedFinalized compatible with upgraded finalized logs", () => {
+    const event = decodeUnwrappedFinalized({
+      topics: [Topics.UnwrapFinalized, topic(receiver.slice(2)), unwrapRequestId],
+      data: `0x${word(encryptedHandle.slice(2))}${word(cleartextAmount.toString(16))}`,
+    });
+    expect(event).toEqual({
+      eventName: "UnwrappedFinalized",
+      receiver,
+      unwrapRequestId,
+      encryptedAmount: encryptedHandle,
+      cleartextAmount,
+    });
+  });
+
   it("returns null for wrong topic", () => {
     expect(
       decodeUnwrappedFinalized({

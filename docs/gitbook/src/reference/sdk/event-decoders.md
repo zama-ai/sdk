@@ -145,7 +145,7 @@ import { findUnwrapRequested } from "@zama-fhe/sdk";
 
 const unwrapEvent = findUnwrapRequested(receipt.logs);
 if (unwrapEvent) {
-  console.log(`Unwrap requested for ${unwrapEvent.amount}`);
+  console.log(`Unwrap requested for ${unwrapEvent.encryptedAmount}`);
 }
 ```
 
