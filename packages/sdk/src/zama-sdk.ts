@@ -109,12 +109,14 @@ export class ZamaSDK {
     this.sessionStorage = config.sessionStorage ?? new MemoryStorage();
     this.cache = new DecryptCache(config.storage);
     this.#onEvent = config.onEvent ?? function () {};
-    const registryAddresses: Record<number, Address> = { ...config.registryAddresses };
+    // Chain definitions provide defaults; explicit registryAddresses override them.
+    const registryAddresses: Record<number, Address> = {};
     for (const chain of config.chains ?? []) {
       if (chain.registryAddress) {
         registryAddresses[chain.id] = chain.registryAddress;
       }
     }
+    Object.assign(registryAddresses, config.registryAddresses);
     this.registry = new WrappersRegistry({
       signer: this.signer,
       registryTTL: config.registryTTL,
