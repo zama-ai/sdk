@@ -89,7 +89,9 @@ describe("totalSupplyQueryOptions", () => {
     );
   });
 
-  test("treats ERC-165 contract call reverts as unsupported interface IDs", async ({ signer }) => {
+  test("throws ConfigurationError when supportsInterface reverts for both interface IDs", async ({
+    signer,
+  }) => {
     const revert = Object.assign(new Error("execution reverted"), {
       name: "ContractFunctionExecutionError",
     });
