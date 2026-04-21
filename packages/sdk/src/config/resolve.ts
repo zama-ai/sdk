@@ -70,40 +70,24 @@ export interface ResolvedChainTransport {
   transport: TransportConfig;
 }
 
-const DEFAULT_WEB_TRANSPORT: TransportConfig = { type: "web" };
-
 export function resolveChainTransports(
   chains: FheChain[],
-  transports: Record<number, TransportConfig> | undefined,
+  transports: Record<number, TransportConfig>,
   chainIds: number[],
 ): Map<number, ResolvedChainTransport> {
   const chainMap = new Map(chains.map((c) => [c.id, c]));
-  const transportMap = new Map(Object.entries(transports ?? {}));
+  const transportMap = new Map(Object.entries(transports));
   const result = new Map<number, ResolvedChainTransport>();
 
   for (const id of chainIds) {
     const chainConfig = chainMap.get(id);
-    const userTransport = transportMap.get(String(id));
+    const transportConfig = transportMap.get(String(id));
 
-    if (!chainConfig && !userTransport) {
+    if (!transportConfig) {
       throw new ConfigurationError(
-        `Chain ${id} has no FHE chain config in the chains array and no transport override. ` +
-          `Add it to chains or provide a transport.`,
+        `Chain ${id} has no transport configured. ` +
+          `Add a transport entry: transports: { [${id}]: web() }`,
       );
-    }
-
-    if (userTransport?.type === "cleartext") {
-      if (!chainConfig) {
-        throw new ConfigurationError(
-          `Chain ${id} has a transport configured but no entry in the chains array. ` +
-            `Add the chain config to the chains array.`,
-        );
-      }
-      result.set(id, {
-        chain: toFhevmConfig(chainConfig),
-        transport: userTransport,
-      });
-      continue;
     }
 
     if (!chainConfig) {
@@ -113,28 +97,32 @@ export function resolveChainTransports(
       );
     }
 
-    if (userTransport && userTransport.type !== "web" && userTransport.type !== "node") {
+    if (
+      transportConfig.type !== "web" &&
+      transportConfig.type !== "node" &&
+      transportConfig.type !== "cleartext"
+    ) {
       throw new ConfigurationError(
-        `Chain ${id} has an unrecognized transport (type: ${JSON.stringify((userTransport as unknown as Record<string, unknown>).type)}). ` +
+        `Chain ${id} has an unrecognized transport (type: ${JSON.stringify((transportConfig as unknown as Record<string, unknown>).type)}). ` +
           `Use web(), node(), or cleartext() to create transports.`,
       );
     }
 
-    const transport = userTransport ?? DEFAULT_WEB_TRANSPORT;
-    result.set(id, { chain: toFhevmConfig(chainConfig), transport });
+    result.set(id, {
+      chain: toFhevmConfig(chainConfig),
+      transport: transportConfig,
+    });
   }
 
-  if (transports) {
-    const chainIdSet = new Set(chainIds);
-    const orphaned = Object.keys(transports)
-      .map(Number)
-      .filter((id) => !chainIdSet.has(id));
-    if (orphaned.length > 0) {
-      throw new ConfigurationError(
-        `Transport entries for chain(s) [${orphaned.join(", ")}] have no matching entry ` +
-          `in the chains array or wagmi config. Remove them or add the corresponding chain config.`,
-      );
-    }
+  const chainIdSet = new Set(chainIds);
+  const orphaned = Object.keys(transports)
+    .map(Number)
+    .filter((id) => !chainIdSet.has(id));
+  if (orphaned.length > 0) {
+    throw new ConfigurationError(
+      `Transport entries for chain(s) [${orphaned.join(", ")}] have no matching entry ` +
+        `in the chains array or wagmi config. Remove them or add the corresponding chain config.`,
+    );
   }
 
   return result;

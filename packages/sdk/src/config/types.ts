@@ -10,8 +10,8 @@ import type { TransportConfig } from "./transports";
 export interface ZamaConfigBase {
   /** FHE chain configurations. Defines which chains support FHE operations. */
   chains: FheChain[];
-  /** Per-chain transport configuration. */
-  transports?: Record<number, TransportConfig>;
+  /** Per-chain transport configuration. Every chain must have a transport entry. */
+  transports: Record<number, TransportConfig>;
   /** Credential storage. Default: IndexedDB in browser, memory in Node. */
   storage?: GenericStorage;
   /** Session storage. Default: IndexedDB in browser, memory in Node. */
@@ -36,7 +36,6 @@ export interface ZamaConfigViem extends ZamaConfigBase {
   relayer?: never;
   signer?: never;
   ethers?: never;
-  transports: Record<number, TransportConfig>;
 }
 
 /** Ethers path — takes native ethers types. */
@@ -45,7 +44,6 @@ export interface ZamaConfigEthers extends ZamaConfigBase {
   relayer?: never;
   signer?: never;
   viem?: never;
-  transports: Record<number, TransportConfig>;
 }
 
 /** Custom GenericSigner with explicit transports. */
@@ -54,7 +52,6 @@ export interface ZamaConfigCustomSigner extends ZamaConfigBase {
   relayer?: never;
   viem?: never;
   ethers?: never;
-  transports: Record<number, TransportConfig>;
 }
 
 /** Config params accepted by the base SDK (no wagmi). */

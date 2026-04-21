@@ -55,7 +55,7 @@ describe("createZamaConfig", () => {
   describe("signer resolution", () => {
     it("creates WagmiSigner from wagmiConfig", () => {
       const wagmiConfig = mockWagmiConfig();
-      createWagmiZamaConfig({ chains: [sepolia], wagmiConfig });
+      createWagmiZamaConfig({ chains: [sepolia], wagmiConfig, transports: { [11155111]: web() } });
       expect(MockWagmiSigner).toHaveBeenCalledWith({ config: wagmiConfig });
     });
 
@@ -96,10 +96,11 @@ describe("createZamaConfig", () => {
   });
 
   describe("transport resolution", () => {
-    it("auto-resolves transports from wagmi chains using chains array", () => {
+    it("resolves explicit transports from wagmi chains", () => {
       const config = createWagmiZamaConfig({
         chains: [sepolia],
         wagmiConfig: mockWagmiConfig([11155111]),
+        transports: { [11155111]: web() },
       });
       expect(config.relayer).toBeDefined();
     });
@@ -120,6 +121,7 @@ describe("createZamaConfig", () => {
         createWagmiZamaConfig({
           chains: [sepolia],
           wagmiConfig: mockWagmiConfig([999999]),
+          transports: { [11155111]: web() },
         }),
       ).toThrow("Chain 999999");
     });

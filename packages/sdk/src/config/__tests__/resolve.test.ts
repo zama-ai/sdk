@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
 import { web, node, cleartext } from "../transports";
-import { ConfigurationError } from "../../errors";
 import { sepolia, mainnet, hoodi } from "../../chains";
 
 vi.mock(import("../../relayer/relayer-web"), async () => ({
@@ -26,12 +25,10 @@ const mainnetChain = mainnet;
 const hoodiChain = hoodi;
 
 describe("resolveChainTransports", () => {
-  it("resolves chains with default web transport when no transports provided", () => {
-    const result = resolveChainTransports([sepoliaChain], undefined, [11155111]);
-    expect(result.size).toBe(1);
-    const entry = result.get(11155111);
-    expect(entry?.chain.chainId).toBe(sepoliaChain.id);
-    expect(entry?.transport.type).toBe("web");
+  it("throws when a chain has no transport entry", () => {
+    expect(() => resolveChainTransports([sepoliaChain], {}, [11155111])).toThrow(
+      "Chain 11155111 has no transport configured",
+    );
   });
 
   it("resolves chains with explicit web transport", () => {
@@ -61,12 +58,9 @@ describe("resolveChainTransports", () => {
     expect(result.size).toBe(2);
   });
 
-  it("throws for chain with no config and no transport", () => {
-    expect(() => resolveChainTransports([sepoliaChain], undefined, [999999])).toThrow(
-      ConfigurationError,
-    );
-    expect(() => resolveChainTransports([sepoliaChain], undefined, [999999])).toThrow(
-      "Chain 999999",
+  it("throws for chain ID with no transport entry", () => {
+    expect(() => resolveChainTransports([sepoliaChain], { [11155111]: web() }, [999999])).toThrow(
+      "Chain 999999 has no transport configured",
     );
   });
 
