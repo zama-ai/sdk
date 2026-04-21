@@ -33,7 +33,7 @@ import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
 // Warning: (ae-forgotten-export) The symbol "ZamaConfig" needs to be exported by the entry point index.d.ts
 //
 // @public
-export function createZamaConfig<const TChains extends readonly [FheChain, ...FheChain[]]>(params: ZamaConfigEthers<TChains>): ZamaConfig;
+export function createConfig<const TChains extends readonly [FheChain, ...FheChain[]]>(params: ZamaConfigEthers<TChains>): ZamaConfig;
 
 export { EIP1193EventMap }
 
@@ -149,10 +149,16 @@ export function writeWrapContract(signer: EthersTransactionSigner, wrapperAddres
 // @public
 export type ZamaConfigEthers<TChains extends AtLeastOneChain = AtLeastOneChain> = ZamaConfigBase<TChains> & ({
     ethereum: EIP1193Provider;
+    signer?: never;
+    provider?: never;
 } | {
     signer: Signer;
+    ethereum?: never;
+    provider?: never;
 } | {
     provider: ethers.Provider;
+    ethereum?: never;
+    signer?: never;
 });
 
 // (No @packageDocumentation comment for this package)

@@ -111,6 +111,10 @@ export function cleartext(chain: CleartextChainConfig): CleartextTransportConfig
 export interface CleartextTransportConfig {
     // (undocumented)
     chain: CleartextChainConfig;
+    // Warning: (ae-forgotten-export) The symbol "CreateRelayerFn" needs to be exported by the entry point index.d.ts
+    //
+    // @internal (undocumented)
+    readonly createRelayer: CreateRelayerFn;
     // (undocumented)
     readonly type: "cleartext";
 }
@@ -363,7 +367,7 @@ export const MainnetConfig: {
 // Warning: (ae-forgotten-export) The symbol "NodeRelayerOptions" needs to be exported by the entry point index.d.ts
 //
 // @public
-export function node(chain?: Partial<ExtendedFhevmInstanceConfig>, relayer?: NodeRelayerOptions): NodeTransportConfig;
+export function node(chain?: Partial<ExtendedFhevmInstanceConfig>, options?: NodeRelayerOptions): NodeTransportConfig;
 
 // @public (undocumented)
 export interface NodeInitRequest extends BaseRequest {
@@ -378,7 +382,9 @@ export interface NodeInitRequest extends BaseRequest {
 // @public
 export interface NodeTransportConfig {
     chain?: Partial<ExtendedFhevmInstanceConfig>;
-    relayer?: NodeRelayerOptions;
+    // @internal (undocumented)
+    readonly createRelayer: CreateRelayerFn;
+    options?: NodeRelayerOptions;
     // (undocumented)
     readonly type: "node";
 }

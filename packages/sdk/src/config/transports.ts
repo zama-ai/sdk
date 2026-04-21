@@ -36,7 +36,7 @@ export interface WebTransportConfig {
   /** Per-chain FHE instance overrides (e.g. relayerUrl, network). */
   chain?: Partial<ExtendedFhevmInstanceConfig>;
   /** Shared relayer-pool options. Reference identity controls grouping: chains
-   * that share the same `relayer` object reuse a single relayer instance. */
+   * that share the same `options` object reuse a single relayer instance. */
   options?: WebRelayerOptions;
   /** @internal */
   readonly createRelayer: CreateRelayerFn;
@@ -71,7 +71,7 @@ export type TransportConfig = WebTransportConfig | NodeTransportConfig | Clearte
  *
  * @param chain - Per-chain FHE instance overrides (e.g. `relayerUrl`, `network`).
  * @param options - Shared relayer-pool options (e.g. `threads`, `logger`). Chains
- *   that pass the *same* `relayer` object reuse a single relayer instance.
+ *   that pass the *same* `options` object reuse a single relayer instance.
  *
  * @example
  * ```ts

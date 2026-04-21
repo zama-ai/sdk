@@ -563,6 +563,8 @@ export function cleartext(chain: CleartextChainConfig): CleartextTransportConfig
 export interface CleartextTransportConfig {
     // (undocumented)
     chain: CleartextChainConfig;
+    // @internal (undocumented)
+    readonly createRelayer: CreateRelayerFn;
     // (undocumented)
     readonly type: "cleartext";
 }
@@ -5869,6 +5871,9 @@ export class ConfigurationError extends ZamaError {
 
 // @public
 export type ContractAbi = Abi | readonly unknown[];
+
+// @public
+export type CreateRelayerFn = (chain: ExtendedFhevmInstanceConfig, transport: TransportConfig) => RelayerSDK;
 
 // @public (undocumented)
 export interface CredentialsAllowedEvent extends BaseEvent {
@@ -11624,8 +11629,10 @@ export class NoCiphertextError extends ZamaError {
 // @public
 export interface NodeTransportConfig {
     chain?: Partial<ExtendedFhevmInstanceConfig>;
+    // @internal (undocumented)
+    readonly createRelayer: CreateRelayerFn;
     // Warning: (ae-forgotten-export) The symbol "NodeRelayerOptions" needs to be exported by the entry point index.d.ts
-    relayer?: NodeRelayerOptions;
+    options?: NodeRelayerOptions;
     // (undocumented)
     readonly type: "node";
 }
@@ -19636,12 +19643,14 @@ export interface UserDecryptParams {
 // Warning: (ae-forgotten-export) The symbol "WebRelayerOptions" needs to be exported by the entry point index.d.ts
 //
 // @public
-export function web(chain?: Partial<ExtendedFhevmInstanceConfig>, relayer?: WebRelayerOptions): WebTransportConfig;
+export function web(chain?: Partial<ExtendedFhevmInstanceConfig>, options?: WebRelayerOptions): WebTransportConfig;
 
 // @public
 export interface WebTransportConfig {
     chain?: Partial<ExtendedFhevmInstanceConfig>;
-    relayer?: WebRelayerOptions;
+    // @internal (undocumented)
+    readonly createRelayer: CreateRelayerFn;
+    options?: WebRelayerOptions;
     // (undocumented)
     readonly type: "web";
 }
@@ -20738,21 +20747,23 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
     transports: { [K in TChains[number]["id"]]: TransportConfig };
 }
 
-// Warning: (ae-forgotten-export) The symbol "AtLeastOneChain_2" needs to be exported by the entry point index.d.ts
-//
 // @public
-export type ZamaConfigEthers<TChains extends AtLeastOneChain_2 = AtLeastOneChain_2> = ZamaConfigBase<TChains> & ({
+export type ZamaConfigEthers<TChains extends AtLeastOneChain = AtLeastOneChain> = ZamaConfigBase<TChains> & ({
     ethereum: EIP1193Provider;
+    signer?: never;
+    provider?: never;
 } | {
     signer: Signer;
+    ethereum?: never;
+    provider?: never;
 } | {
     provider: ethers.Provider;
+    ethereum?: never;
+    signer?: never;
 });
 
-// Warning: (ae-forgotten-export) The symbol "AtLeastOneChain_3" needs to be exported by the entry point index.d.ts
-//
 // @public
-export interface ZamaConfigViem<TChains extends AtLeastOneChain_3 = AtLeastOneChain_3> extends ZamaConfigBase<TChains> {
+export interface ZamaConfigViem<TChains extends AtLeastOneChain = AtLeastOneChain> extends ZamaConfigBase<TChains> {
     // (undocumented)
     ethereum?: EIP1193Provider;
     // (undocumented)

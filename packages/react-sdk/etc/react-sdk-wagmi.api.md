@@ -5,10 +5,10 @@
 ```ts
 
 import { Address } from '@zama-fhe/sdk';
+import { AtLeastOneChain } from '@zama-fhe/sdk/chains';
 import { Config } from 'wagmi';
 import { ContractAbi } from '@zama-fhe/sdk';
 import { EIP712TypedData } from '@zama-fhe/sdk';
-import { FheChain } from '@zama-fhe/sdk/chains';
 import { GenericSigner } from '@zama-fhe/sdk';
 import { Hex } from '@zama-fhe/sdk';
 import { ReadContractArgs } from '@zama-fhe/sdk';
@@ -23,10 +23,8 @@ import { WriteFunctionName } from '@zama-fhe/sdk';
 import { ZamaConfig } from '@zama-fhe/sdk';
 import { ZamaConfigBase } from '@zama-fhe/sdk';
 
-// Warning: (ae-forgotten-export) The symbol "AtLeastOneChain" needs to be exported by the entry point index.d.ts
-//
 // @public
-export function createZamaConfig<const TChains extends AtLeastOneChain>(params: ZamaConfigWagmi<TChains>): ZamaConfig;
+export function createConfig<const TChains extends AtLeastOneChain>(params: ZamaConfigWagmi<TChains>): ZamaConfig;
 
 // @public
 export class WagmiSigner implements GenericSigner {

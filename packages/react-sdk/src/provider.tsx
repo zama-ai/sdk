@@ -15,7 +15,7 @@ import {
 
 /** Props for {@link ZamaProvider}. */
 export interface ZamaProviderProps extends PropsWithChildren {
-  /** Configuration object created by {@link createZamaConfig}. */
+  /** Configuration object created by {@link createConfig}. */
   config: ZamaConfig;
 }
 
@@ -91,7 +91,7 @@ export function useZamaSDK(): ZamaSDK {
   if (!context) {
     throw new Error(
       "useZamaSDK must be used within a <ZamaProvider>. " +
-        "Wrap your component tree in <ZamaProvider config={createZamaConfig(...)}>.",
+        "Wrap your component tree in <ZamaProvider config={createConfig(...)}>.",
     );
   }
 
