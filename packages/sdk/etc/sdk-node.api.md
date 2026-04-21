@@ -649,7 +649,7 @@ export type WorkerResponse<T> = SuccessResponse<T> | ErrorResponse;
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/relayer-sdk.types-BqsspDKN.d.ts:90:5 - (ae-forgotten-export) The symbol "FhevmInstanceConfig" needs to be exported by the entry point index.d.ts
+// dist/esm/relayer-sdk.types-CBurl-AZ.d.ts:90:5 - (ae-forgotten-export) The symbol "FhevmInstanceConfig" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 
