@@ -57,12 +57,8 @@ export interface ZamaConfigCustomSigner extends ZamaConfigBase {
 /** Config params accepted by the base SDK (no wagmi). */
 export type CreateZamaConfigBaseParams = ZamaConfigViem | ZamaConfigEthers | ZamaConfigCustomSigner;
 
-/** @internal Nominal brand — prevents constructing ZamaConfig as a plain object literal. */
-declare const __brand: unique symbol;
-
 /** Opaque config object returned by {@link createZamaConfig}. */
 export interface ZamaConfig {
-  /** @internal */ readonly [__brand]: true;
   /** @internal */ readonly chains: readonly FheChain[];
   /** @internal */ readonly relayer: RelayerSDK;
   /** @internal */ readonly signer: GenericSigner;

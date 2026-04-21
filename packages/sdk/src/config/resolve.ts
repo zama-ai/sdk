@@ -7,7 +7,7 @@ import type { ExtendedFhevmInstanceConfig } from "../relayer/relayer-utils";
 import { IndexedDBStorage } from "../storage/indexeddb-storage";
 import { MemoryStorage } from "../storage/memory-storage";
 import type { GenericSigner, GenericStorage } from "../types";
-import { ViemSigner } from "../viem";
+import { ViemSigner } from "../viem/viem-signer";
 import { relayersMap } from "./relayers";
 import type { TransportConfig } from "./transports";
 import type { ZamaConfigCustomSigner, ZamaConfigEthers, ZamaConfigViem } from "./types";
