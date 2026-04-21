@@ -60,7 +60,16 @@ export class CompositeRelayer implements RelayerSDK {
       );
     }
 
-    const relayer = config.transport.createRelayer(config.chain, config.transport);
+    let relayer: RelayerSDK;
+    try {
+      relayer = config.transport.createRelayer(config.chain, config.transport);
+    } catch (cause) {
+      throw new ConfigurationError(
+        `Failed to create ${config.transport.type} relayer for chain ${chainId}. ` +
+          `Check the transport configuration for this chain.`,
+        { cause },
+      );
+    }
     this.#resolved.set(chainId, relayer);
     return relayer;
   }

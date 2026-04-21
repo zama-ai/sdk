@@ -6,7 +6,7 @@ export type {
   TransportConfig,
 } from "./transports";
 
-export type { ZamaConfig, ZamaConfigBase } from "./types";
+export type { ZamaConfig, ZamaConfigBase, AtLeastOneChain } from "./types";
 export type { ZamaConfigViem } from "../viem/types";
 export type { ZamaConfigEthers } from "../ethers/types";
 

@@ -1,10 +1,7 @@
 import { buildZamaConfig, type ZamaConfig, type ZamaConfigBase } from "@zama-fhe/sdk";
-import type { FheChain } from "@zama-fhe/sdk/chains";
+import type { AtLeastOneChain } from "@zama-fhe/sdk/chains";
 import type { Config } from "wagmi";
 import { WagmiSigner } from "./wagmi-signer";
-
-/** At least one chain is required. */
-type AtLeastOneChain = readonly [FheChain, ...FheChain[]];
 
 /** Wagmi-backed config — signer derived from wagmi Config. */
 export interface ZamaConfigWagmi<

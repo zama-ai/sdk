@@ -93,7 +93,7 @@ export function web(
       assertCondition(transport.type === "web", "Transport config must be of type `web`");
       return new RelayerWeb({
         chain: { ...resolvedChain, ...transport.chain },
-        ...transport.relayer,
+        ...(transport as WebTransportConfig).relayer,
       });
     },
   };

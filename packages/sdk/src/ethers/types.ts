@@ -1,10 +1,7 @@
 import type { Signer, ethers } from "ethers";
 import type { EIP1193Provider } from "viem";
-import type { FheChain } from "../chains";
+import type { AtLeastOneChain } from "../chains";
 import type { ZamaConfigBase } from "../config/types";
-
-/** At least one chain is required. */
-type AtLeastOneChain = readonly [FheChain, ...FheChain[]];
 
 /**
  * Ethers config — pass an EIP-1193 provider, ethers Signer, or ethers Provider.
@@ -16,4 +13,8 @@ type AtLeastOneChain = readonly [FheChain, ...FheChain[]];
  */
 export type ZamaConfigEthers<TChains extends AtLeastOneChain = AtLeastOneChain> =
   ZamaConfigBase<TChains> &
-    ({ ethereum: EIP1193Provider } | { signer: Signer } | { provider: ethers.Provider });
+    (
+      | { ethereum: EIP1193Provider; signer?: never; provider?: never }
+      | { signer: Signer; ethereum?: never; provider?: never }
+      | { provider: ethers.Provider; ethereum?: never; signer?: never }
+    );

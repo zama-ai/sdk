@@ -6,3 +6,6 @@ export interface FheChain<TId extends number = number> extends Omit<
 > {
   readonly id: TId;
 }
+
+/** At least one chain is required. */
+export type AtLeastOneChain = readonly [FheChain, ...FheChain[]];

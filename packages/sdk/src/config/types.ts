@@ -1,13 +1,10 @@
-import type { Provider, Signer } from "ethers";
-import type { EIP1193Provider, PublicClient, WalletClient } from "viem";
-import type { FheChain } from "../chains";
+import type { FheChain, AtLeastOneChain } from "../chains";
 import type { ZamaSDKEventListener } from "../events";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { GenericSigner, GenericStorage } from "../types";
 import type { TransportConfig } from "./transports";
 
-/** At least one chain is required. */
-type AtLeastOneChain = readonly [FheChain, ...FheChain[]];
+export type { AtLeastOneChain };
 
 /** Shared options across all adapter paths. */
 export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChain> {
@@ -29,50 +26,10 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
   onEvent?: ZamaSDKEventListener;
 }
 
-/** Viem path — takes native viem clients. */
-export interface ZamaConfigViem<
-  TChains extends AtLeastOneChain = AtLeastOneChain,
-> extends ZamaConfigBase<TChains> {
-  viem: {
-    publicClient: PublicClient;
-    walletClient?: WalletClient;
-    ethereum?: EIP1193Provider;
-  };
-  relayer?: never;
-  signer?: never;
-  ethers?: never;
-}
-
-/** Ethers path — takes native ethers types. */
-export interface ZamaConfigEthers<
-  TChains extends AtLeastOneChain = AtLeastOneChain,
-> extends ZamaConfigBase<TChains> {
-  ethers: { ethereum: EIP1193Provider } | { signer: Signer } | { provider: Provider };
-  relayer?: never;
-  signer?: never;
-  viem?: never;
-}
-
-/** Custom GenericSigner with explicit transports. */
-export interface ZamaConfigCustomSigner<
-  TChains extends AtLeastOneChain = AtLeastOneChain,
-> extends ZamaConfigBase<TChains> {
-  signer: GenericSigner;
-  relayer?: never;
-  viem?: never;
-  ethers?: never;
-}
-
-/** Config params accepted by the base SDK (no wagmi). */
-export type CreateZamaConfigBaseParams<TChains extends AtLeastOneChain = AtLeastOneChain> =
-  | ZamaConfigViem<TChains>
-  | ZamaConfigEthers<TChains>
-  | ZamaConfigCustomSigner<TChains>;
-
 /** @internal Nominal brand — prevents constructing ZamaConfig as a plain object literal. */
 declare const __brand: unique symbol;
 
-/** Opaque config object returned by {@link createZamaConfig}. */
+/** Opaque config object returned by `createZamaConfig`. */
 export interface ZamaConfig {
   /** @internal */ readonly [__brand]: true;
   /** @internal */ readonly chains: readonly FheChain[];

@@ -7,5 +7,5 @@ export const hoodi = toFheChain(HoodiConfig);
 export const hardhat = toFheChain(HardhatConfig);
 export const anvil = toFheChain(HardhatConfig);
 
-export type { FheChain } from "./types";
+export type { FheChain, AtLeastOneChain } from "./types";
 export { toFheChain } from "./utils";
