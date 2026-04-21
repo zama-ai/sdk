@@ -9,7 +9,9 @@ import {
   indexedDBStorage,
   savePendingUnshield,
 } from "@zama-fhe/react-sdk";
-import { RelayerCleartext, hoodiCleartextConfig } from "@zama-fhe/sdk/cleartext";
+import { createZamaConfig, cleartext } from "@zama-fhe/sdk";
+import { hoodi } from "@zama-fhe/sdk/chains";
+import { hoodiCleartextConfig } from "@zama-fhe/sdk/cleartext";
 import { EthersSigner } from "@zama-fhe/sdk/ethers";
 import { JsonRpcProvider } from "ethers";
 import { HOODI_RPC_URL } from "@/lib/config";
@@ -18,12 +20,11 @@ import { getEthereumProvider } from "@/lib/ethereum";
 
 // ── What this file does ────────────────────────────────────────────────────────
 //
-// This file wires together the three SDK primitives every integration needs:
+// This file wires together the SDK via createZamaConfig:
 //
 //   const signer  = new EthersSigner({ ethereum });
-//   const relayer = new RelayerCleartext({ ...hoodiCleartextConfig, network: HOODI_RPC_URL });
-//   <ZamaProvider relayer={relayer} signer={signer}
-//     storage={indexedDBStorage} sessionStorage={sessionDBStorage}>
+//   const config  = createZamaConfig({ chains: [hoodi], signer, transports: { ... } });
+//   <ZamaProvider config={config}>
 //
 // That is the minimal setup. This file adds three extra layers to handle issues
 // specific to MetaMask + Hoodi — you may not need all of them in your integration:
@@ -117,9 +118,6 @@ function createHybridEthereum(
   liveAccountsRef: { readonly current: readonly string[] },
 ) {
   if (!ethereum) {
-    // No wallet injected — return a no-op provider so ZamaProvider mounts without
-    // crashing. page.tsx checks getEthereumProvider() before calling connect(), so all
-    // user-visible wallet operations still fail gracefully.
     return {
       request() {
         return Promise.reject(new Error("No wallet injected"));
@@ -130,28 +128,14 @@ function createHybridEthereum(
   }
 
   const rpcProvider = new JsonRpcProvider(HOODI_RPC_URL);
-
-  // Tracks the highest block number ever returned to ethers. eth_blockNumber responses
-  // are adjusted so the value is always strictly increasing — even when the wallet node
-  // returns the same block across consecutive polls. ethers' PollingBlockSubscriber only
-  // triggers an eth_getTransactionReceipt check when it sees a new block, so without this
-  // adjustment receipts are only checked once per block (~12 s on Hoodi) instead of once
-  // per poll interval (4 s). The adjustment is purely for ethers' internal polling — it
-  // has no effect on any other RPC call and resets when the provider is recreated on
-  // wallet switch.
   let highWaterBlock = 0n;
 
   return {
     request({ method, params }: { method: string; params?: unknown[] }) {
       if (method === "eth_requestAccounts" || method === "eth_accounts") {
         if (liveAccountsRef.current.length > 0) {
-          // Cache hit — serve immediately so EthersSigner resolves without a wallet roundtrip.
           return Promise.resolve([...liveAccountsRef.current]);
         }
-        // Cache empty (initial mount, not yet seeded): query eth_accounts (non-requesting).
-        // This avoids triggering an unexpected wallet popup from EthersSigner's eager
-        // getSigner() call. Returns the connected accounts on page refresh (no popup),
-        // or [] when not yet connected (getSigner fails gracefully, balances stay "—").
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return (ethereum as any).request({ method: "eth_accounts", params: [] });
       }
@@ -179,28 +163,14 @@ function createHybridEthereum(
 }
 
 export function Providers({ children }: { children: ReactNode }) {
-  // Created once per Providers mount — avoids sharing the QueryClient across
-  // SSR requests and React Strict Mode double-invocations.
   const [queryClient] = useState(() => new QueryClient());
-
-  // Updated synchronously in accountsChanged (before setWalletKey re-renders) so the
-  // next EthersSigner sees the correct accounts immediately via the hybrid provider.
   const liveAccountsRef = useRef<readonly string[]>([]);
-
-  // Becomes true once the initial eth_accounts call resolves. accountsChanged events
-  // that arrive before that point are ignored — some wallets (Phantom, certain MetaMask
-  // versions) fire accountsChanged on page load before the async seed completes, which
-  // would cause a spurious ZamaProvider remount and force the user to re-sign.
   const refSeededRef = useRef(false);
-
-  // Incremented on wallet switch to remount ZamaProvider with a fresh EthersSigner
-  // bound to the new account.
   const [walletKey, setWalletKey] = useState(0);
 
   useEffect(() => {
     const ethereum = getEthereumProvider();
     if (!ethereum) return;
-    // Seed the ref for already-connected wallets on page load.
     (ethereum.request({ method: "eth_accounts" }) as Promise<string[]>).then(
       (accounts) => {
         liveAccountsRef.current = accounts;
@@ -215,9 +185,7 @@ export function Providers({ children }: { children: ReactNode }) {
       const newAccounts = accounts as string[];
       const prevAddress = liveAccountsRef.current[0];
       liveAccountsRef.current = newAccounts;
-      // Drop events that arrive before eth_accounts resolves — prevents spurious remounts.
       if (!refSeededRef.current) return;
-      // Remount on any actual account change, including first connection (prevAddress = undefined).
       if (newAccounts[0] !== prevAddress) {
         setWalletKey((k) => k + 1);
       }
@@ -226,43 +194,37 @@ export function Providers({ children }: { children: ReactNode }) {
     return () => ethereum.removeListener("accountsChanged", handleAccountsChanged);
   }, []);
 
-  // hoodiCleartextConfig and HOODI_RPC_URL are build-time constants — relayer never changes.
-  const relayer = useMemo(
-    () => new RelayerCleartext({ ...hoodiCleartextConfig, network: HOODI_RPC_URL }),
-    [],
-  );
-
   // Recreated on wallet switch so the new EthersSigner is bound to the new account address.
-  const signer = useMemo(() => {
+  const zamaConfig = useMemo(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const hybridEthereum = createHybridEthereum(getEthereumProvider(), liveAccountsRef) as any;
-    return new EthersSigner({ ethereum: hybridEthereum });
+    const signer = new EthersSigner({ ethereum: hybridEthereum });
+    return createZamaConfig({
+      chains: [hoodi],
+      signer,
+      transports: {
+        [hoodi.id]: cleartext({ ...hoodiCleartextConfig, network: HOODI_RPC_URL }),
+      },
+      storage: indexedDBStorage,
+      sessionStorage: sessionDBStorage,
+      onEvent: (event) => {
+        if (event.type === ZamaSDKEvents.UnshieldPhase1Submitted) {
+          const wrapperAddress = getActiveUnshieldToken();
+          if (wrapperAddress) {
+            savePendingUnshield(indexedDBStorage, wrapperAddress, event.txHash).catch(
+              (err: unknown) =>
+                console.error("[Providers] Failed to persist pending unshield:", event.txHash, err),
+            );
+            setActiveUnshieldToken(null);
+          }
+        }
+      },
+    });
   }, [walletKey]);
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ZamaProvider
-        key={walletKey}
-        relayer={relayer}
-        storage={indexedDBStorage}
-        sessionStorage={sessionDBStorage}
-        signer={signer}
-        onEvent={(event) => {
-          // ZamaSDKEvents.UnshieldPhase1Submitted fires after Phase 1 is mined (the SDK
-          // awaits the receipt before emitting). Saving here ensures the pending state
-          // survives a tab close between Phase 1 and Phase 2.
-          // See activeUnshield.ts for why wrapperAddress is passed via a module-level ref.
-          if (event.type === ZamaSDKEvents.UnshieldPhase1Submitted) {
-            const wrapperAddress = getActiveUnshieldToken();
-            if (wrapperAddress) {
-              savePendingUnshield(indexedDBStorage, wrapperAddress, event.txHash).catch((err) =>
-                console.error("[Providers] Failed to persist pending unshield:", event.txHash, err),
-              );
-              setActiveUnshieldToken(null);
-            }
-          }
-        }}
-      >
+      <ZamaProvider key={walletKey} config={zamaConfig}>
         {children}
       </ZamaProvider>
     </QueryClientProvider>
