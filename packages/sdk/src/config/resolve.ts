@@ -1,12 +1,9 @@
 import type { FheChain } from "../chains";
 import { ConfigurationError } from "../errors";
-import { CompositeRelayer } from "../relayer/composite-relayer";
-import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { ExtendedFhevmInstanceConfig } from "../relayer/relayer-utils";
 import { IndexedDBStorage } from "../storage/indexeddb-storage";
 import { MemoryStorage } from "../storage/memory-storage";
 import type { GenericStorage } from "../types";
-import { relayersMap } from "./relayers";
 import type { TransportConfig } from "./transports";
 
 // ── Chain normalization ─────────────────────────────────────────────────────
@@ -109,44 +106,4 @@ export function resolveChainTransports(
   }
 
   return result;
-}
-
-// ── Relayer building ─────────────────────────────────────────────────────────
-
-export function buildRelayer(
-  chainTransports: Map<number, ResolvedChainTransport>,
-  resolveChainId: () => Promise<number>,
-): RelayerSDK {
-  if (chainTransports.size === 0) {
-    throw new ConfigurationError(
-      "No chain transports configured. Add at least one chain to the chains array.",
-    );
-  }
-
-  const perChainRelayers = new Map<number, Promise<RelayerSDK>>();
-
-  for (const { chain, transport } of chainTransports.values()) {
-    const handler = relayersMap.get(transport.type);
-    if (!handler) {
-      const hint =
-        transport.type === "node"
-          ? ' Import "@zama-fhe/sdk/node" to enable Node.js transports.'
-          : "";
-      throw new ConfigurationError(
-        `No transport handler registered for type "${transport.type}".${hint}`,
-      );
-    }
-    // Validate relayerUrl synchronously for non-cleartext transports.
-    if (transport.type !== "cleartext") {
-      const merged = { ...chain, ...transport.chain };
-      if (!merged.relayerUrl) {
-        throw new ConfigurationError(
-          `Chain ${chain.chainId} has an empty relayerUrl. Use cleartext() for chains without a relayer.`,
-        );
-      }
-    }
-    perChainRelayers.set(chain.chainId, handler(chain, transport));
-  }
-
-  return new CompositeRelayer(resolveChainId, perChainRelayers);
 }

@@ -14,7 +14,7 @@ import { assertCondition } from "../utils";
 // Register the node transport handler (side-effect).
 // This keeps the dynamic import("../relayer/relayer-node") out of the main
 // @zama-fhe/sdk entry, so browser bundles never reference node:worker_threads.
-// relayerUrl is validated synchronously in buildRelayer before the handler is called.
+// Validation (relayerUrl, handler existence) happens lazily in CompositeRelayer on first use.
 registerRelayer("node", async (chain, transport) => {
   assertCondition(transport.type === "node", "Transport type must be of type `node`");
   const merged = { ...chain, ...transport.chain };

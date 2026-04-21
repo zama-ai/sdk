@@ -1,6 +1,7 @@
+import { CompositeRelayer } from "../relayer/composite-relayer";
 import type { GenericSigner } from "../types";
+import { resolveChainTransports, resolveStorage } from "./resolve";
 import type { ZamaConfig, ZamaConfigBase } from "./types";
-import { resolveStorage, resolveChainTransports, buildRelayer } from "./resolve";
 
 /**
  * @internal Shared config builder — not part of the public API.
@@ -15,7 +16,7 @@ export function buildZamaConfig(signer: GenericSigner, params: ZamaConfigBase): 
     params.transports,
     params.chains.map((c) => c.id),
   );
-  const relayer = buildRelayer(chainTransports, () => signer.getChainId());
+  const relayer = new CompositeRelayer(() => signer.getChainId(), chainTransports);
 
   return {
     chains: params.chains,

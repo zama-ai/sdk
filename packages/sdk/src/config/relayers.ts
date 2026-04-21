@@ -17,7 +17,7 @@ export function registerRelayer(type: string, handler: RelayerSDKFn): void {
 }
 
 // Built-in handlers (browser-safe — no node:worker_threads references)
-// relayerUrl is validated synchronously in buildRelayer before the handler is called.
+// Built-in handlers (browser-safe — no node:worker_threads references).
 registerRelayer("web", async (chain, transport) => {
   assertCondition(transport.type === "web", "Transport config must be of type `web`");
   const merged = { ...chain, ...transport.chain };

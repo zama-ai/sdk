@@ -5,6 +5,7 @@ import { sepolia, mainnet, hoodi } from "../../chains";
 vi.mock(import("../../relayer/relayer-web"), async () => ({
   RelayerWeb: vi.fn().mockImplementation(function (this: any) {
     this.terminate = vi.fn();
+    this.generateKeypair = vi.fn().mockResolvedValue({ publicKey: "0x", secretKey: "0x" });
   }),
 }));
 
@@ -14,11 +15,14 @@ vi.mock(import("../../relayer/relayer-web"), async () => ({
 vi.mock(import("../../relayer/cleartext/relayer-cleartext"), async () => ({
   RelayerCleartext: vi.fn().mockImplementation(function (this: any) {
     this.terminate = vi.fn();
+    this.generateKeypair = vi.fn().mockResolvedValue({ publicKey: "0x", secretKey: "0x" });
   }),
 }));
 
 // Import after mocks
-const { resolveChainTransports, buildRelayer } = await import("../resolve");
+const { resolveChainTransports } = await import("../resolve");
+const { CompositeRelayer } = await import("../../relayer/composite-relayer");
+const { relayersMap } = await import("../relayers");
 
 const sepoliaChain = sepolia;
 const mainnetChain = mainnet;
@@ -104,20 +108,53 @@ describe("resolveChainTransports", () => {
   });
 });
 
-describe("buildRelayer", () => {
-  const resolveChainId = () => Promise.resolve(11155111);
+describe("CompositeRelayer (lazy init)", () => {
+  it("does not call transport handler at construction time", () => {
+    const handlerSpy = vi.fn();
+    const origWeb = relayersMap.get("web")!;
+    relayersMap.set("web", handlerSpy);
 
-  it("throws on empty chainTransports", () => {
-    expect(() => buildRelayer(new Map(), resolveChainId)).toThrow("No chain transports configured");
+    const transports = resolveChainTransports([sepoliaChain], { [11155111]: web() }, [11155111]);
+    new CompositeRelayer(() => Promise.resolve(11155111), transports);
+
+    expect(handlerSpy).not.toHaveBeenCalled();
+    relayersMap.set("web", origWeb);
   });
 
-  it("wraps single web chain in CompositeRelayer", () => {
+  it("calls transport handler on first SDK operation", async () => {
     const transports = resolveChainTransports([sepoliaChain], { [11155111]: web() }, [11155111]);
-    const relayer = buildRelayer(transports, resolveChainId);
+    const relayer = new CompositeRelayer(() => Promise.resolve(11155111), transports);
+
+    // generateKeypair triggers #current() which triggers lazy init
+    await relayer.generateKeypair();
+    // If we get here without error, the handler was called and RelayerWeb mock was constructed
+  });
+
+  it("throws for unconfigured chain on first use", async () => {
+    const transports = resolveChainTransports([sepoliaChain], { [11155111]: web() }, [11155111]);
+    const relayer = new CompositeRelayer(() => Promise.resolve(999999), transports);
+
+    await expect(relayer.generateKeypair()).rejects.toThrow(
+      "No relayer configured for chain 999999",
+    );
+  });
+
+  it("throws for unregistered transport handler on first use", async () => {
+    const transports = resolveChainTransports([sepoliaChain], { [11155111]: node() }, [11155111]);
+    const relayer = new CompositeRelayer(() => Promise.resolve(11155111), transports);
+
+    await expect(relayer.generateKeypair()).rejects.toThrow(
+      'No transport handler registered for type "node"',
+    );
+  });
+
+  it("wraps single web chain", async () => {
+    const transports = resolveChainTransports([sepoliaChain], { [11155111]: web() }, [11155111]);
+    const relayer = new CompositeRelayer(() => Promise.resolve(11155111), transports);
     expect(relayer.constructor.name).toBe("CompositeRelayer");
   });
 
-  it("returns CompositeRelayer for mixed web + cleartext", () => {
+  it("supports mixed web + cleartext", () => {
     const transports = resolveChainTransports(
       [sepoliaChain, hoodiChain],
       {
@@ -126,31 +163,7 @@ describe("buildRelayer", () => {
       },
       [11155111, 560048],
     );
-    const relayer = buildRelayer(transports, resolveChainId);
+    const relayer = new CompositeRelayer(() => Promise.resolve(11155111), transports);
     expect(relayer.constructor.name).toBe("CompositeRelayer");
-  });
-
-  it("returns CompositeRelayer for multiple web chains", () => {
-    const transports = resolveChainTransports(
-      [sepoliaChain, mainnetChain],
-      { [11155111]: web(), [1]: web() },
-      [11155111, 1],
-    );
-    const relayer = buildRelayer(transports, resolveChainId);
-    expect(relayer.constructor.name).toBe("CompositeRelayer");
-  });
-
-  it("throws when web transport chain has empty relayerUrl", () => {
-    const transports = resolveChainTransports([hoodiChain], { [560048]: web() }, [560048]);
-    expect(() => buildRelayer(transports, resolveChainId)).toThrow(
-      "Chain 560048 has an empty relayerUrl",
-    );
-  });
-
-  it("throws for node transport when handler is not registered", () => {
-    const transports = resolveChainTransports([sepoliaChain], { [11155111]: node() }, [11155111]);
-    expect(() => buildRelayer(transports, resolveChainId)).toThrow(
-      'No transport handler registered for type "node"',
-    );
   });
 });

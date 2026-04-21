@@ -5,6 +5,8 @@ import type {
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/bundle";
 import type { Address, Hex } from "viem";
+import { relayersMap } from "../config/relayers";
+import type { ResolvedChainTransport } from "../config/resolve";
 import { ConfigurationError } from "../errors";
 import { toError } from "../utils";
 import type { RelayerSDK } from "./relayer-sdk";
@@ -21,17 +23,22 @@ import type {
 
 /**
  * Dispatches RelayerSDK calls to the correct per-chain relayer based on the
- * current chain ID. Supports mixed modes (e.g. RelayerWeb on mainnet +
- * RelayerCleartext on a testnet) within a single SDK instance.
+ * current chain ID. Relayers are constructed lazily on first use per chain.
+ * Supports mixed modes (e.g. RelayerWeb on mainnet + RelayerCleartext on a
+ * testnet) within a single SDK instance.
  */
 export class CompositeRelayer implements RelayerSDK {
-  readonly #relayers: Map<number, Promise<RelayerSDK>>;
+  readonly #configs: Map<number, ResolvedChainTransport>;
   readonly #resolved = new Map<number, RelayerSDK>();
+  readonly #pending = new Map<number, Promise<RelayerSDK>>();
   readonly #resolveChainId: () => Promise<number>;
 
-  constructor(resolveChainId: () => Promise<number>, relayers: Map<number, Promise<RelayerSDK>>) {
+  constructor(
+    resolveChainId: () => Promise<number>,
+    configs: Map<number, ResolvedChainTransport>,
+  ) {
     this.#resolveChainId = resolveChainId;
-    this.#relayers = new Map(relayers);
+    this.#configs = new Map(configs);
   }
 
   async #current(): Promise<RelayerSDK> {
@@ -46,21 +53,38 @@ export class CompositeRelayer implements RelayerSDK {
     }
 
     const resolved = this.#resolved.get(chainId);
-    if (resolved) {
-      return resolved;
-    }
+    if (resolved) {return resolved;}
 
-    const r = await this.#relayers.get(chainId);
-    if (!r) {
+    // Deduplicate concurrent init for the same chain
+    const pending = this.#pending.get(chainId);
+    if (pending) {return pending;}
+
+    const config = this.#configs.get(chainId);
+    if (!config) {
       throw new ConfigurationError(
         `No relayer configured for chain ${chainId}. ` +
           `Add it to the chains array and transports map.`,
       );
     }
 
-    this.#resolved.set(chainId, r);
+    const handler = relayersMap.get(config.transport.type);
+    if (!handler) {
+      const hint =
+        config.transport.type === "node"
+          ? ' Import "@zama-fhe/sdk/node" to enable Node.js transports.'
+          : "";
+      throw new ConfigurationError(
+        `No transport handler registered for type "${config.transport.type}".${hint}`,
+      );
+    }
 
-    return r;
+    const promise = handler(config.chain, config.transport).then((relayer) => {
+      this.#resolved.set(chainId, relayer);
+      this.#pending.delete(chainId);
+      return relayer;
+    });
+    this.#pending.set(chainId, promise);
+    return promise;
   }
 
   async generateKeypair(): Promise<KeypairType<Hex>> {
