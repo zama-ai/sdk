@@ -186,12 +186,10 @@ describe("Encryption contract builders", () => {
     expect(config.args).toEqual([]);
   });
 
-  it("totalSupplyContract is a deprecated alias for inferredTotalSupplyContract", ({
-    wrapperAddress,
-  }) => {
+  it("totalSupplyContract builds the legacy totalSupply call", ({ wrapperAddress }) => {
     const config = totalSupplyContract(wrapperAddress);
     expect(config.address).toBe(wrapperAddress);
-    expect(config.functionName).toBe("inferredTotalSupply");
+    expect(config.functionName).toBe("totalSupply");
   });
 
   it("rateContract", ({ tokenAddress }) => {

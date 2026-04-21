@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "../test-fixtures";
 import { waitFor } from "@testing-library/react";
+import { ERC7984_WRAPPER_INTERFACE_ID } from "@zama-fhe/sdk";
 import type { Address } from "@zama-fhe/sdk";
 import { useUnderlyingAllowance } from "../shield/use-underlying-allowance";
 import { useUnshield } from "../unshield/use-unshield";
@@ -70,7 +71,12 @@ describe("useMetadataSuspense", () => {
 
 describe("useTotalSupplySuspense", () => {
   it("returns total supply via suspense", async ({ signer, tokenAddress, renderWithProviders }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(100000n);
+    vi.mocked(signer.readContract).mockImplementation(async (config) => {
+      if (config.functionName === "supportsInterface") {
+        return config.args[0] === ERC7984_WRAPPER_INTERFACE_ID;
+      }
+      return 100000n;
+    });
 
     const { result } = renderWithProviders(() => useTotalSupplySuspense(tokenAddress), {
       signer,
