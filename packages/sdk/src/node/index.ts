@@ -11,6 +11,7 @@
 import { registerRelayer, relayersMap } from "../config/relayers";
 import type { NodeTransportConfig, NodeRelayerOptions } from "../config/transports";
 import type { ExtendedFhevmInstanceConfig } from "../relayer/relayer-utils";
+import { RelayerNode } from "../relayer/relayer-node";
 import { assertCondition } from "../utils";
 
 /**
@@ -36,8 +37,7 @@ export function node(
     registerRelayer("node", async (resolvedChain, transport) => {
       assertCondition(transport.type === "node", "Transport type must be of type `node`");
       const merged = { ...resolvedChain, ...transport.chain };
-      const m = await import("../relayer/relayer-node");
-      return new m.RelayerNode({ chain: merged, ...transport.relayer });
+      return new RelayerNode({ chain: merged, ...transport.relayer });
     });
   }
   return { type: "node", chain, relayer };
