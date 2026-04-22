@@ -1,4 +1,4 @@
-import type { Address } from "@zama-fhe/react-sdk";
+import type { Address } from "@zama-fhe/sdk";
 import { useSearchParams } from "react-router";
 import { SessionPanel } from "@zama-fhe/test-components";
 import { CONFIDENTIAL_TOKEN_ADDRESSES } from "../constants";

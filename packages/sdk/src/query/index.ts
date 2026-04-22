@@ -51,13 +51,6 @@ export {
   type ConfidentialBalancesQueryConfig,
 } from "./confidential-balances";
 export {
-  activityFeedQueryOptions,
-  deriveActivityFeedLogsKey,
-  type ActivityFeedConfig,
-  type ActivityFeedQueryConfig,
-} from "./activity-feed";
-
-export {
   tokenPairsQueryOptions,
   tokenPairsLengthQueryOptions,
   tokenPairsSliceQueryOptions,
@@ -127,18 +120,22 @@ export {
   type DelegationStatusData,
   type DelegationStatusQueryConfig,
 } from "./delegation-status";
-export type { ActivityItem, ActivityLogMetadata } from "../activity";
-export type { ActivityAmount, ActivityDirection, ActivityType } from "../activity";
 export type { RawLog } from "../events/onchain-events";
 export type {
   ConfidentialTransferEvent,
   WrappedEvent,
   UnwrapRequestedEvent,
+  UnwrapFinalizedEvent,
   UnwrappedFinalizedEvent,
   UnwrappedStartedEvent,
 } from "../events/onchain-events";
 export type { OnChainEvent } from "../events/onchain-events";
-export type { ClearValueType, EncryptParams, EncryptResult } from "../relayer/relayer-sdk.types";
+export type {
+  ClearValueType,
+  EncryptParams,
+  EncryptResult,
+  Handle,
+} from "../relayer/relayer-sdk.types";
 export type {
   DelegatedUserDecryptParams,
   EncryptInput,

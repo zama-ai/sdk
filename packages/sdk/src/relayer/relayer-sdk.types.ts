@@ -1,4 +1,12 @@
 import type * as SDK from "@zama-fhe/relayer-sdk/bundle";
+import type {
+  Bytes32Hex,
+  ClearValueType,
+  InputProofBytesType,
+  KmsDelegatedUserDecryptEIP712Type,
+  KmsUserDecryptEIP712Type,
+  PublicDecryptResults,
+} from "@zama-fhe/relayer-sdk/bundle";
 import type { Address, Hex } from "viem";
 import type { GenericLogger } from "../worker/worker.types";
 import type { GenericStorage } from "../types";
@@ -66,17 +74,13 @@ export interface RelayerWebConfig {
   fheArtifactCacheTTL?: number;
 }
 
-/** Result from encryption operation */
-export interface EncryptResult {
-  handles: Uint8Array[];
-  inputProof: Uint8Array;
-}
+/** Result from encryption operation. Alias for {@link InputProofBytesType}. */
+export type EncryptResult = InputProofBytesType;
 
-/** Canonical SDK type for encrypted ciphertext handles (`bytes32` values). */
-export type Handle = `0x${string}`;
+/** Canonical SDK type for encrypted ciphertext handles (`bytes32` values). Alias for {@link Bytes32Hex}. */
+export type Handle = Bytes32Hex;
 
-/** Decrypted value type — one of bigint, boolean, or hex-encoded bytes. */
-export type ClearValueType = bigint | boolean | `0x${string}`;
+export type { ClearValueType };
 
 /** A single value to encrypt with its FHE type. */
 export type EncryptInput =
@@ -114,35 +118,25 @@ export interface UserDecryptParams {
   durationDays: number;
 }
 
-/** Result from public decryption */
-export type PublicDecryptResult = Omit<SDK.PublicDecryptResults, "clearValues"> & {
-  clearValues: Readonly<Record<Handle, ClearValueType>>;
-};
+/** Result from public decryption. Alias for {@link PublicDecryptResults}. */
+export type PublicDecryptResult = PublicDecryptResults;
 
-/** EIP712 typed data structure */
-export interface EIP712TypedData {
-  domain: {
-    name: string;
-    version: string;
-    chainId: number;
-    verifyingContract: Address;
-  };
-  types: Record<
-    string,
-    readonly {
-      readonly name: string;
-      readonly type: string;
-    }[]
-  >;
-  primaryType?: string;
-  message: {
-    publicKey: Hex;
-    contractAddresses: readonly Address[];
-    startTimestamp: bigint;
-    durationDays: bigint;
-    extraData: Hex;
-  };
+/**
+ * EIP712 typed data structure for user or delegated user decrypt requests.
+ * Union of the relayer-sdk's two user-decrypt EIP712 shapes.
+ */
+export type EIP712TypedData = KmsUserDecryptEIP712Type | KmsDelegatedUserDecryptEIP712Type;
+
+/** TFHE public key */
+export interface PublicKeyData {
+  publicKeyId: string;
+  publicKey: Uint8Array;
 }
+
+/**
+ * TFHE public parameters
+ */
+export type PublicParamsData = SDK.PublicParams<Uint8Array>[keyof SDK.PublicParams<Uint8Array>];
 
 /** Parameters for delegated user decryption */
 export interface DelegatedUserDecryptParams {

@@ -6,6 +6,8 @@
 
 import { Abi } from 'viem';
 import { Address } from 'viem';
+import { Bytes32Hex } from '@zama-fhe/relayer-sdk/bundle';
+import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle';
 import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
@@ -13,68 +15,16 @@ import { Hex } from 'viem';
 import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
 import { KeypairType } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
+import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
+import { KmsUserDecryptEIP712UserArgsType } from '@zama-fhe/relayer-sdk/bundle';
 import { MutationFunctionContext } from '@tanstack/query-core';
+import { PublicDecryptResults } from '@zama-fhe/relayer-sdk/bundle';
 import { QueryKey } from '@tanstack/query-core';
 import { QueryObserverOptions } from '@tanstack/query-core';
 import * as SDK from '@zama-fhe/relayer-sdk/bundle';
 import { skipToken } from '@tanstack/query-core';
+import { UserDecryptResults } from '@zama-fhe/relayer-sdk/bundle';
 import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
-
-// @public
-export type ActivityAmount = {
-    readonly type: "clear";
-    readonly value: bigint;
-} | {
-    readonly type: "encrypted";
-    readonly handle: Handle; /** Populated after batch decryption via {@link applyDecryptedValues}. */
-    readonly decryptedValue?: bigint;
-};
-
-// @public
-export type ActivityDirection = "incoming" | "outgoing" | "self";
-
-// @public (undocumented)
-export interface ActivityFeedConfig {
-    // (undocumented)
-    decrypt?: boolean;
-    // (undocumented)
-    logs?: readonly (RawLog & Partial<ActivityLogMetadata>)[];
-    // (undocumented)
-    logsKey?: string;
-    // (undocumented)
-    userAddress?: Address;
-}
-
-// @public (undocumented)
-export interface ActivityFeedQueryConfig {
-    // (undocumented)
-    query?: Record<string, unknown>;
-}
-
-// @public
-export function activityFeedQueryOptions(token: ReadonlyToken, config: ActivityFeedConfig, queryConfig?: ActivityFeedQueryConfig): QueryFactoryOptions<ActivityItem[], Error, ActivityItem[], ReturnType<typeof zamaQueryKeys.activityFeed.scope>>;
-
-// @public
-export interface ActivityItem {
-    readonly amount: ActivityAmount;
-    readonly direction: ActivityDirection;
-    readonly from?: Address;
-    readonly metadata: ActivityLogMetadata;
-    readonly rawEvent: OnChainEvent;
-    readonly success?: boolean;
-    readonly to?: Address;
-    readonly type: ActivityType;
-}
-
-// @public
-export interface ActivityLogMetadata {
-    readonly blockNumber?: bigint | number;
-    readonly logIndex?: number;
-    readonly transactionHash?: Hex;
-}
-
-// @public
-export type ActivityType = "transfer" | "shield" | "unshield_requested" | "unshield_started" | "unshield_finalized";
 
 // @public (undocumented)
 export function allowMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.allow"], Address[], void>;
@@ -122,11 +72,11 @@ export interface BatchBalancesResult {
 
 // @public
 export interface BatchDecryptAsOptions {
+    accountAddress?: Address;
     delegatorAddress: Address;
     handles?: Handle[];
     maxConcurrency?: number;
     onError?: (error: Error, address: Address) => bigint;
-    owner?: Address;
 }
 
 // @public (undocumented)
@@ -135,8 +85,7 @@ export function batchDecryptBalancesAsMutationOptions(tokens: ReadonlyToken[]): 
 // @public
 export type BatchDecryptBalancesAsParams = BatchDecryptAsOptions;
 
-// @public
-export type ClearValueType = bigint | boolean | `0x${string}`;
+export { ClearValueType }
 
 // @public (undocumented)
 export function confidentialApproveMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.confidentialApprove", Address], ConfidentialApproveParams, TransactionResult>;
@@ -250,16 +199,11 @@ export interface CreateDelegatedUserDecryptEIP712Params {
 export function createEIP712MutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.createEIP712"], CreateEIP712Params, EIP712TypedData>;
 
 // @public
-export interface CreateEIP712Params {
-    // (undocumented)
-    contractAddresses: Address[];
-    // (undocumented)
-    durationDays?: number;
-    // (undocumented)
+export type CreateEIP712Params = Pick<KmsUserDecryptEIP712UserArgsType, "startTimestamp"> & {
     publicKey: Hex;
-    // (undocumented)
-    startTimestamp: number;
-}
+    contractAddresses: Address[];
+    durationDays?: number;
+};
 
 // @public (undocumented)
 export interface CredentialsAllowedEvent extends BaseEvent {
@@ -366,9 +310,9 @@ export function decryptBalanceAsMutationOptions(readonlyToken: ReadonlyToken): M
 // @public
 export interface DecryptBalanceAsParams {
     // (undocumented)
-    delegatorAddress: Address;
+    accountAddress?: Address;
     // (undocumented)
-    owner?: Address;
+    delegatorAddress: Address;
 }
 
 // @public (undocumented)
@@ -399,8 +343,8 @@ export interface DecryptHandle {
     handle: Handle;
 }
 
-// @public (undocumented)
-export type DecryptResult = Record<Handle, ClearValueType>;
+// @public
+export type DecryptResult = UserDecryptResults;
 
 // @public (undocumented)
 export interface DecryptStartEvent extends BaseEvent {
@@ -482,33 +426,7 @@ export interface DelegationSubmittedEvent extends BaseEvent {
 }
 
 // @public
-export function deriveActivityFeedLogsKey(logs?: readonly (RawLog & Partial<ActivityLogMetadata>)[]): string | undefined;
-
-// @public
-export interface EIP712TypedData {
-    // (undocumented)
-    domain: {
-        name: string;
-        version: string;
-        chainId: number;
-        verifyingContract: Address;
-    };
-    // (undocumented)
-    message: {
-        publicKey: Hex;
-        contractAddresses: readonly Address[];
-        startTimestamp: bigint;
-        durationDays: bigint;
-        extraData: Hex;
-    };
-    // (undocumented)
-    primaryType?: string;
-    // (undocumented)
-    types: Record<string, readonly {
-        readonly name: string;
-        readonly type: string;
-    }[]>;
-}
+export type EIP712TypedData = KmsUserDecryptEIP712Type | KmsDelegatedUserDecryptEIP712Type;
 
 // @public (undocumented)
 export interface EncryptEndEvent extends BaseEvent {
@@ -552,12 +470,7 @@ export interface EncryptParams {
 }
 
 // @public
-export interface EncryptResult {
-    // (undocumented)
-    handles: Uint8Array[];
-    // (undocumented)
-    inputProof: Uint8Array;
-}
+export type EncryptResult = InputProofBytesType;
 
 // @public (undocumented)
 export interface EncryptStartEvent extends BaseEvent {
@@ -572,10 +485,13 @@ export function filterQueryOptions<TOptions extends Record<string, unknown>>(opt
 export function finalizeUnwrapMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.finalizeUnwrap", Address], FinalizeUnwrapParams, TransactionResult>;
 
 // @public
-export interface FinalizeUnwrapParams {
-    // (undocumented)
-    burnAmountHandle: Address;
-}
+export type FinalizeUnwrapParams = /** Preferred input from upgraded `UnwrapRequested` events. */{
+    unwrapRequestId: Handle;
+    burnAmountHandle?: never;
+} /** Legacy input from pre-upgrade `UnwrapRequested` events. */ | {
+    unwrapRequestId?: never;
+    burnAmountHandle: Handle;
+};
 
 // @public (undocumented)
 export interface FinalizeUnwrapSubmittedEvent extends BaseEvent {
@@ -614,6 +530,9 @@ export interface GenericStorage {
     get<T = unknown>(key: string): Promise<T | null>;
     set<T = unknown>(key: string, value: T): Promise<void>;
 }
+
+// @public
+export type Handle = Bytes32Hex;
 
 // @public
 export function hashFn(queryKey: readonly unknown[]): string;
@@ -710,15 +629,13 @@ export interface MutationFactoryOptions<TMutationKey extends readonly unknown[],
 }
 
 // @public
-export type OnChainEvent = ConfidentialTransferEvent | WrappedEvent | UnwrapRequestedEvent | UnwrappedFinalizedEvent | UnwrappedStartedEvent;
+export type OnChainEvent = ConfidentialTransferEvent | WrappedEvent | UnwrapRequestedEvent | UnwrapFinalizedEvent | UnwrappedFinalizedEvent | UnwrappedStartedEvent;
 
 // @public (undocumented)
 export function publicDecryptMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.publicDecrypt"], Handle[], PublicDecryptResult>;
 
 // @public
-export type PublicDecryptResult = Omit<SDK.PublicDecryptResults, "clearValues"> & {
-    clearValues: Readonly<Record<Handle, ClearValueType>>;
-};
+export type PublicDecryptResult = PublicDecryptResults;
 
 // @public (undocumented)
 export interface PublicKeyQueryConfig {
@@ -726,14 +643,10 @@ export interface PublicKeyQueryConfig {
     query?: Record<string, unknown>;
 }
 
+// Warning: (ae-forgotten-export) The symbol "PublicKeyData" needs to be exported by the entry point index.d.ts
+//
 // @public (undocumented)
-export function publicKeyQueryOptions(sdk: ZamaSDK, config?: PublicKeyQueryConfig): QueryFactoryOptions<{
-    publicKeyId: string;
-    publicKey: Uint8Array;
-} | null, Error, {
-    publicKeyId: string;
-    publicKey: Uint8Array;
-} | null, typeof zamaQueryKeys.publicKey.all>;
+export function publicKeyQueryOptions(sdk: ZamaSDK, config?: PublicKeyQueryConfig): QueryFactoryOptions<PublicKeyData | null, Error, PublicKeyData | null, typeof zamaQueryKeys.publicKey.all>;
 
 // @public (undocumented)
 export interface PublicParamsQueryConfig {
@@ -741,14 +654,10 @@ export interface PublicParamsQueryConfig {
     query?: Record<string, unknown>;
 }
 
+// Warning: (ae-forgotten-export) The symbol "PublicParamsData" needs to be exported by the entry point index.d.ts
+//
 // @public (undocumented)
-export function publicParamsQueryOptions(sdk: ZamaSDK, bits: number, config?: PublicParamsQueryConfig): QueryFactoryOptions<{
-    publicParams: Uint8Array;
-    publicParamsId: string;
-} | null, Error, {
-    publicParams: Uint8Array;
-    publicParamsId: string;
-} | null, ReturnType<typeof zamaQueryKeys.publicParams.bits>>;
+export function publicParamsQueryOptions(sdk: ZamaSDK, bits: number, config?: PublicParamsQueryConfig): QueryFactoryOptions<PublicParamsData | null, Error, PublicParamsData | null, ReturnType<typeof zamaQueryKeys.publicParams.bits>>;
 
 // @public (undocumented)
 export interface QueryClientLike {
@@ -800,7 +709,7 @@ export class ReadonlyToken {
     decimals(): Promise<number>;
     decryptBalanceAs(input: {
         delegatorAddress: Address;
-        owner?: Address;
+        accountAddress?: Address;
     }): Promise<bigint>;
     protected emit(input: ZamaSDKEventInput): void;
     // (undocumented)
@@ -834,14 +743,8 @@ export interface RelayerSDK {
     encrypt(params: EncryptParams): Promise<EncryptResult>;
     generateKeypair(): Promise<KeypairType<Hex>>;
     getAclAddress(): Promise<Address>;
-    getPublicKey(): Promise<{
-        publicKeyId: string;
-        publicKey: Uint8Array;
-    } | null>;
-    getPublicParams(bits: number): Promise<{
-        publicParams: Uint8Array;
-        publicParamsId: string;
-    } | null>;
+    getPublicKey(): Promise<PublicKeyData | null>;
+    getPublicParams(bits: number): Promise<PublicParamsData | null>;
     publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
     requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
     terminate(): void;
@@ -971,7 +874,7 @@ export class Token extends ReadonlyToken {
         delegateAddress: Address;
         expirationDate?: Date;
     }): Promise<TransactionResult>;
-    finalizeUnwrap(burnAmountHandle: Handle): Promise<TransactionResult>;
+    finalizeUnwrap(unwrapRequestIdOrAmount: Handle): Promise<TransactionResult>;
     isApproved(spender: Address, holder?: Address): Promise<boolean>;
     resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     revokeDelegation(input: {
@@ -1162,6 +1065,16 @@ export interface UnshieldPhase2SubmittedEvent extends BaseEvent {
 // @public (undocumented)
 export function unwrapAllMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.unwrapAll", Address], void, TransactionResult>;
 
+// @public
+export interface UnwrapFinalizedEvent {
+    readonly cleartextAmount: bigint;
+    readonly encryptedAmount: Handle;
+    // (undocumented)
+    readonly eventName: "UnwrapFinalized";
+    readonly receiver: Address;
+    readonly unwrapRequestId?: Handle;
+}
+
 // @public (undocumented)
 export function unwrapMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.unwrap", Address], UnwrapParams, TransactionResult>;
 
@@ -1171,13 +1084,18 @@ export interface UnwrapParams {
     amount: bigint;
 }
 
-// @public
+// @public @deprecated (undocumented)
 export interface UnwrappedFinalizedEvent {
+    // (undocumented)
     readonly cleartextAmount: bigint;
+    // (undocumented)
     readonly encryptedAmount: Handle;
     // (undocumented)
     readonly eventName: "UnwrappedFinalized";
+    // (undocumented)
     readonly receiver: Address;
+    // (undocumented)
+    readonly unwrapRequestId?: Handle;
 }
 
 // @public
@@ -1199,6 +1117,7 @@ export interface UnwrapRequestedEvent {
     // (undocumented)
     readonly eventName: "UnwrapRequested";
     readonly receiver: Address;
+    readonly unwrapRequestId?: Handle;
 }
 
 // @public (undocumented)
@@ -1349,18 +1268,6 @@ export const zamaQueryKeys: {
     readonly totalSupply: {
         readonly all: readonly ["zama.totalSupply"];
         readonly token: (tokenAddress: Address) => readonly ["zama.totalSupply", {
-            readonly tokenAddress: `0x${string}`;
-        }];
-    };
-    readonly activityFeed: {
-        readonly all: readonly ["zama.activityFeed"];
-        readonly token: (tokenAddress: Address) => readonly ["zama.activityFeed", {
-            readonly tokenAddress: `0x${string}`;
-        }];
-        readonly scope: (tokenAddress: Address, userAddress?: Address, logsKey?: string, decrypt?: boolean) => readonly ["zama.activityFeed", {
-            readonly decrypt?: boolean | undefined;
-            readonly logsKey?: string | undefined;
-            readonly userAddress?: `0x${string}` | undefined;
             readonly tokenAddress: `0x${string}`;
         }];
     };
@@ -1547,10 +1454,6 @@ export const ZamaSDKEvents: {
     readonly UnshieldPhase2Started: "unshield:phase2_started";
     readonly UnshieldPhase2Submitted: "unshield:phase2_submitted";
 };
-
-// Warnings were encountered during analysis:
-//
-// dist/esm/activity-DBMyE78S.d.ts:22695:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

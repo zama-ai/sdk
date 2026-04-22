@@ -6,8 +6,6 @@ import { createEIP712MutationOptions } from "@zama-fhe/sdk/query";
 import type { CreateEIP712Params } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 
-export type { CreateEIP712Params };
-
 /**
  * Create EIP-712 typed data for signing an FHE decrypt credential.
  * The returned typed data is signed by the wallet to authorize decryption.

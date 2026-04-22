@@ -49,10 +49,6 @@ function UnwrapAllButton() {
 
 ## Parameters
 
-```ts
-import { type UseUnwrapAllParameters } from "@zama-fhe/react-sdk";
-```
-
 ### tokenAddress
 
 `Address`
@@ -66,10 +62,6 @@ const { mutateAsync: unwrapAll } = useUnwrapAll({
 ```
 
 ## Return Type
-
-```ts
-import { type UseUnwrapAllReturnType } from "@zama-fhe/react-sdk";
-```
 
 The mutation resolves with a transaction hash (`Hex`).
 

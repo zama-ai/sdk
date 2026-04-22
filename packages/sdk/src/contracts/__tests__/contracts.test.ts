@@ -15,6 +15,7 @@ import {
   supportsInterfaceContract,
   ERC7984_INTERFACE_ID,
   ERC7984_WRAPPER_INTERFACE_ID,
+  ERC7984_WRAPPER_INTERFACE_ID_LEGACY,
   isConfidentialTokenContract,
   isConfidentialWrapperContract,
 } from "../erc165";
@@ -40,6 +41,7 @@ import {
   underlyingContract,
   wrapContract,
 } from "../wrapper";
+import { wrapperAbi } from "../../abi/wrapper.abi";
 
 const SPENDER = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;
 
@@ -87,7 +89,8 @@ describe("ERC-165 contract builders", () => {
 
   it("exports interface IDs", () => {
     expect(ERC7984_INTERFACE_ID).toBe("0x4958f2a4");
-    expect(ERC7984_WRAPPER_INTERFACE_ID).toBe("0xd04584ba");
+    expect(ERC7984_WRAPPER_INTERFACE_ID_LEGACY).toBe("0xd04584ba");
+    expect(ERC7984_WRAPPER_INTERFACE_ID).toBe("0x1f1c62b2");
   });
 
   it("isConfidentialTokenContract uses ERC7984_INTERFACE_ID", ({ tokenAddress }) => {
@@ -97,11 +100,13 @@ describe("ERC-165 contract builders", () => {
     expect(config.args).toEqual([ERC7984_INTERFACE_ID]);
   });
 
-  it("isConfidentialWrapperContract uses ERC7984_WRAPPER_INTERFACE_ID", ({ tokenAddress }) => {
+  it("isConfidentialWrapperContract uses ERC7984_WRAPPER_INTERFACE_ID_LEGACY", ({
+    tokenAddress,
+  }) => {
     const config = isConfidentialWrapperContract(tokenAddress);
     expect(config.address).toBe(tokenAddress);
     expect(config.functionName).toBe("supportsInterface");
-    expect(config.args).toEqual([ERC7984_WRAPPER_INTERFACE_ID]);
+    expect(config.args).toEqual([ERC7984_WRAPPER_INTERFACE_ID_LEGACY]);
   });
 });
 
@@ -181,12 +186,10 @@ describe("Encryption contract builders", () => {
     expect(config.args).toEqual([]);
   });
 
-  it("totalSupplyContract is a deprecated alias for inferredTotalSupplyContract", ({
-    wrapperAddress,
-  }) => {
+  it("totalSupplyContract builds the legacy totalSupply call", ({ wrapperAddress }) => {
     const config = totalSupplyContract(wrapperAddress);
     expect(config.address).toBe(wrapperAddress);
-    expect(config.functionName).toBe("inferredTotalSupply");
+    expect(config.functionName).toBe("totalSupply");
   });
 
   it("rateContract", ({ tokenAddress }) => {
@@ -221,5 +224,45 @@ describe("Wrapper contract builders", () => {
     const config = wrapContract(wrapperAddress, userAddress, 1000n);
     expect(config.functionName).toBe("wrap");
     expect(config.args).toEqual([userAddress, 1000n]);
+  });
+});
+
+// Regression: verify wrapperAbi matches protocol-apps@da4afe387420 (currently deployed).
+// These assertions prove the chosen ABI version is intentional: the interface uses
+// openzeppelin-confidential-contracts@6edd293 where unwrapRequester is part of IERC7984ERC20Wrapper
+// (7 functions).
+describe("wrapperAbi version smoke test (protocol-apps@da4afe387420)", () => {
+  type AbiFunction = { type: string; name: string; inputs: { type: string; name: string }[] };
+  type AbiEvent = { type: string; name: string; inputs: { type: string; name: string }[] };
+  const fns = (wrapperAbi as AbiFunction[]).filter((x) => x.type === "function");
+  const fn = (name: string) => fns.find((f) => f.name === name);
+  const eventSignatures = (wrapperAbi as AbiEvent[])
+    .filter((x) => x.type === "event")
+    .map((event) => `${event.name}(${event.inputs.map((input) => input.type).join(",")})`);
+
+  it("finalizeUnwrap first param is bytes32 unwrapRequestId (not euint64 burntAmount)", () => {
+    const f = fn("finalizeUnwrap");
+    expect(f).toBeDefined();
+    expect(f!.inputs[0].name).toBe("unwrapRequestId");
+    expect(f!.inputs[0].type).toBe("bytes32");
+  });
+
+  it("unwrapAmount exists with bytes32 param", () => {
+    const f = fn("unwrapAmount");
+    expect(f).toBeDefined();
+    expect(f!.inputs[0].type).toBe("bytes32");
+  });
+
+  it("unwrapRequester exists with bytes32 param", () => {
+    const f = fn("unwrapRequester");
+    expect(f).toBeDefined();
+    expect(f!.inputs[0].type).toBe("bytes32");
+  });
+
+  it("keeps legacy and upgraded unwrap events in the exported wrapper ABI", () => {
+    expect(eventSignatures).toContain("UnwrapRequested(address,bytes32)");
+    expect(eventSignatures).toContain("UnwrapRequested(address,bytes32,bytes32)");
+    expect(eventSignatures).toContain("UnwrapFinalized(address,bytes32,uint64)");
+    expect(eventSignatures).toContain("UnwrapFinalized(address,bytes32,bytes32,uint64)");
   });
 });

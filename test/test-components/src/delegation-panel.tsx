@@ -1,11 +1,7 @@
 "use client";
 
-import {
-  useDelegateDecryption,
-  useDecryptBalanceAs,
-  useMetadata,
-  type Address,
-} from "@zama-fhe/react-sdk";
+import { useDelegateDecryption, useDecryptBalanceAs, useMetadata } from "@zama-fhe/react-sdk";
+import type { Address } from "@zama-fhe/sdk";
 
 export function DelegationPanel({
   tokenAddress,

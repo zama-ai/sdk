@@ -1,5 +1,67 @@
 # Changelog
 
+## [3.0.0-alpha.12](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.11...v3.0.0-alpha.12) (2026-04-21)
+
+### Features
+
+- **sdk:** support upgraded unwrap events ([#239](https://github.com/zama-ai/sdk/issues/239)) ([4f4116a]()), closes [#249]()
+
+## [3.0.0-alpha.11](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.10...v3.0.0-alpha.11) (2026-04-21)
+
+### Bug Fixes
+
+- **sdk:** choose total supply method via ERC-165 ([#270](https://github.com/zama-ai/sdk/issues/270)) ([7fb55c4]())
+
+## [3.0.0-alpha.10](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.9...v3.0.0-alpha.10) (2026-04-20)
+
+### Bug Fixes
+
+- **sdk:** correct legacy wrapper interface ID ([#271](https://github.com/zama-ai/sdk/issues/271)) ([f347198]())
+
+## [3.0.0-alpha.9](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.8...v3.0.0-alpha.9) (2026-04-20)
+
+## [3.0.0-alpha.8](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.7...v3.0.0-alpha.8) (2026-04-20)
+
+## [3.0.0-alpha.7](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.6...v3.0.0-alpha.7) (2026-04-18)
+
+### Bug Fixes
+
+- align ManifestShape with actual /keyurl endpoint response ([2cde790]())
+
+## [3.0.0-alpha.6](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.5...v3.0.0-alpha.6) (2026-04-17)
+
+## [3.0.0-alpha.5](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.4...v3.0.0-alpha.5) (2026-04-17)
+
+### Features
+
+- **SDK-69:** support both old and new wrapper interfaceIds during transition ([#235](https://github.com/zama-ai/sdk/issues/235)) ([93c7d8a]())
+
+## [3.0.0-alpha.4](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.3...v3.0.0-alpha.4) (2026-04-17)
+
+## [3.0.0-alpha.3](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.2...v3.0.0-alpha.3) (2026-04-17)
+
+## [3.0.0-alpha.2](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.1...v3.0.0-alpha.2) (2026-04-17)
+
+### Features
+
+- **sdk-61:** replace WrappersRegistry with protocol ConfidentialTokenWrappersRegistry contracts ([#229](https://github.com/zama-ai/sdk/issues/229)) ([dd4364d]())
+
+## [3.0.0-alpha.1](https://github.com/zama-ai/sdk/compare/v2.5.0-alpha.6...v3.0.0-alpha.1) (2026-04-17)
+
+### ⚠ BREAKING CHANGES
+
+- The following exports are removed:
+- @zama-fhe/sdk: parseActivityFeed, applyDecryptedValues, activity types
+  (ActivityItem, ActivityDirection, ActivityAmount, ActivityType),
+  activityFeedQueryOptions, queryKeys.activityFeed
+- @zama-fhe/react-sdk: useActivityFeed
+
+* fmt
+
+### Code Refactoring
+
+- remove activity feed from SDK and react-sdk ([#258](https://github.com/zama-ai/sdk/issues/258)) ([5784dba]())
+
 ## [2.5.0-alpha.6](https://github.com/zama-ai/sdk/compare/v2.5.0-alpha.5...v2.5.0-alpha.6) (2026-04-16)
 
 ### Bug Fixes
