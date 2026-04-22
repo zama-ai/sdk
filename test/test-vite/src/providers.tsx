@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ZamaProvider } from "@zama-fhe/react-sdk";
-import { ZamaWagmiProvider, ZamaWagmiSigner } from "@zama-fhe/react-sdk/wagmi";
+import { WagmiSigner, WagmiProvider as ZamaWagmiProvider } from "@zama-fhe/react-sdk/wagmi";
 import type { ReactNode } from "react";
 import { createConfig, http, WagmiProvider } from "wagmi";
 import { anvil } from "wagmi/chains";
@@ -30,7 +30,7 @@ const wagmiConfig = createConfig({
   },
 });
 
-const signer = new ZamaWagmiSigner({ config: wagmiConfig });
+const signer = new WagmiSigner({ config: wagmiConfig });
 const provider = new ZamaWagmiProvider({ config: wagmiConfig });
 
 const relayer = new RelayerWeb({

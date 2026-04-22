@@ -22,8 +22,8 @@ import { WriteContractConfig } from '@zama-fhe/sdk';
 import { WriteFunctionName } from '@zama-fhe/sdk';
 
 // @public
-export class ZamaWagmiProvider implements GenericProvider {
-    constructor(providerConfig: ZamaWagmiProviderConfig);
+export class WagmiProvider implements GenericProvider {
+    constructor(providerConfig: WagmiProviderConfig);
     // (undocumented)
     getBlockTimestamp(): Promise<bigint>;
     // (undocumented)
@@ -34,12 +34,12 @@ export class ZamaWagmiProvider implements GenericProvider {
 }
 
 // @public
-export interface ZamaWagmiProviderConfig {
+export interface WagmiProviderConfig {
     config: Config;
 }
 
 // @public
-export class ZamaWagmiSigner implements GenericSigner {
+export class WagmiSigner implements GenericSigner {
     constructor(signerConfig: ZamaWagmiSignerConfig);
     // (undocumented)
     getAddress(): Promise<Address>;

@@ -4,5 +4,5 @@
  * @packageDocumentation
  */
 
-export { ZamaWagmiSigner, type ZamaWagmiSignerConfig } from "./wagmi-signer";
-export { ZamaWagmiProvider, type ZamaWagmiProviderConfig } from "./wagmi-provider";
+export { WagmiSigner, type ZamaWagmiSignerConfig } from "./wagmi-signer";
+export { WagmiProvider, type WagmiProviderConfig } from "./wagmi-provider";

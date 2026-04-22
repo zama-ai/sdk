@@ -12,29 +12,29 @@ import { TransactionRevertedError } from "@zama-fhe/sdk";
 import type { Config } from "wagmi";
 import { getBlock, getChainId, readContract, waitForTransactionReceipt } from "wagmi/actions";
 
-/** Configuration for {@link ZamaWagmiProvider}. */
-export interface ZamaWagmiProviderConfig {
-  /** Wagmi `Config` — same instance passed to {@link ZamaWagmiSigner}. */
+/** Configuration for {@link WagmiProvider}. */
+export interface WagmiProviderConfig {
+  /** Wagmi `Config` — same instance passed to {@link WagmiSigner}. */
   config: Config;
 }
 
 /**
  * Read-only {@link GenericProvider} backed by wagmi.
  *
- * Uses the same `Config` as {@link ZamaWagmiSigner}, sharing the transport the
- * application has already configured. Pair with a {@link ZamaWagmiSigner} when
+ * Uses the same `Config` as {@link WagmiSigner}, sharing the transport the
+ * application has already configured. Pair with a {@link WagmiSigner} when
  * wallet authority is required.
  *
  * @example
  * ```ts
- * const provider = new ZamaWagmiProvider({ config: wagmiConfig });
- * const signer   = new ZamaWagmiSigner({ config: wagmiConfig });
+ * const provider = new WagmiProvider({ config: wagmiConfig });
+ * const signer   = new WagmiSigner({ config: wagmiConfig });
  * ```
  */
-export class ZamaWagmiProvider implements GenericProvider {
+export class WagmiProvider implements GenericProvider {
   readonly #config: Config;
 
-  constructor(providerConfig: ZamaWagmiProviderConfig) {
+  constructor(providerConfig: WagmiProviderConfig) {
     this.#config = providerConfig.config;
   }
 

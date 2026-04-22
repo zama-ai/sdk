@@ -23,7 +23,7 @@ import { eip1193Subscribe } from "../token/eip1193-subscribe";
  * `walletClient.transport`.
  *
  * If you omit `ethereum`, `subscribe()` returns a no-op. For automatic
- * wallet lifecycle handling, consider using `ZamaWagmiSigner` instead.
+ * wallet lifecycle handling, consider using `WagmiSigner` instead.
  */
 export interface ViemSignerConfig {
   /** Wallet client for signing and write operations. */
