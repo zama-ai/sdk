@@ -31,7 +31,7 @@ export function finalizeUnwrapContract(
  *
  * @example
  * ```ts
- * const token = await signer.readContract(underlyingContract(wrapperAddress));
+ * const token = await provider.readContract(underlyingContract(wrapperAddress));
  * ```
  */
 export function underlyingContract(wrapperAddress: Address) {
@@ -48,7 +48,7 @@ export function underlyingContract(wrapperAddress: Address) {
  *
  * @example
  * ```ts
- * const supply = await signer.readContract(
+ * const supply = await provider.readContract(
  *   inferredTotalSupplyContract(wrapperAddress),
  * );
  * ```

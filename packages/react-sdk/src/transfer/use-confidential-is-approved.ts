@@ -6,6 +6,7 @@ import type { Address } from "@zama-fhe/sdk";
 import { confidentialIsApprovedQueryOptions, signerAddressQueryOptions } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 import type { UseZamaConfig } from "../token/use-token";
+import { useSignerAddressSuspense } from "../use-signer-address";
 
 export { confidentialIsApprovedQueryOptions };
 
@@ -93,8 +94,8 @@ export function useConfidentialIsApproved(
 export function useConfidentialIsApprovedSuspense(config: UseConfidentialIsApprovedSuspenseConfig) {
   const { spender, holder, tokenAddress } = config;
   const sdk = useZamaSDK();
-  const addressQuery = useSuspenseQuery<Address>(signerAddressQueryOptions(sdk.signer));
-  const resolvedHolder = holder ?? addressQuery.data;
+  const { data: signerAddress } = useSignerAddressSuspense();
+  const resolvedHolder = holder ?? signerAddress;
 
   return useSuspenseQuery<boolean>(
     confidentialIsApprovedQueryOptions(sdk, tokenAddress, {

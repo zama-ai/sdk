@@ -16,8 +16,6 @@ export function shieldMutationOptions(
 ): MutationFactoryOptions<readonly ["zama.shield", Address], ShieldParams, TransactionResult> {
   return {
     mutationKey: ["zama.shield", token.address] as const,
-    mutationFn: async ({ amount, ...rest }) => {
-      return token.shield(amount, rest);
-    },
+    mutationFn: async ({ amount, ...rest }) => token.shield(amount, rest),
   };
 }

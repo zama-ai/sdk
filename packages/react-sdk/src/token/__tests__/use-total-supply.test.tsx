@@ -25,8 +25,8 @@ describe("useTotalSupply", () => {
     );
   });
 
-  test("uses legacy totalSupply for legacy wrappers", async ({ renderWithProviders, signer }) => {
-    vi.mocked(signer.readContract).mockImplementation(async (config) => {
+  test("uses legacy totalSupply for legacy wrappers", async ({ renderWithProviders, provider }) => {
+    vi.mocked(provider.readContract).mockImplementation(async (config) => {
       if (config.functionName === "supportsInterface") {
         return config.args[0] === ERC7984_WRAPPER_INTERFACE_ID_LEGACY;
       }
@@ -38,7 +38,7 @@ describe("useTotalSupply", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(result.current.data).toBe(21000n);
-    expect(signer.readContract).toHaveBeenCalledWith(
+    expect(provider.readContract).toHaveBeenCalledWith(
       expect.objectContaining({ functionName: "totalSupply", address: TOKEN }),
     );
   });

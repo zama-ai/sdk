@@ -17,8 +17,7 @@ export function resumeUnshieldMutationOptions(
 > {
   return {
     mutationKey: ["zama.resumeUnshield", token.address] as const,
-    mutationFn: async ({ unwrapTxHash, ...callbacks }) => {
-      return token.resumeUnshield(unwrapTxHash, callbacks);
-    },
+    mutationFn: async ({ unwrapTxHash, ...callbacks }) =>
+      token.resumeUnshield(unwrapTxHash, callbacks),
   };
 }

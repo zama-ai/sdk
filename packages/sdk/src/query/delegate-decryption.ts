@@ -18,8 +18,7 @@ export function delegateDecryptionMutationOptions(
 > {
   return {
     mutationKey: ["zama.delegateDecryption", token.address] as const,
-    mutationFn: async ({ delegateAddress, expirationDate }) => {
-      return token.delegateDecryption({ delegateAddress, expirationDate });
-    },
+    mutationFn: async ({ delegateAddress, expirationDate }) =>
+      token.delegateDecryption({ delegateAddress, expirationDate }),
   };
 }

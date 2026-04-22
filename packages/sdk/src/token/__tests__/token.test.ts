@@ -341,7 +341,7 @@ describe("Token", () => {
     }) => {
       // unwrapRequestId comes from the UnwrapRequested event — it is a bytes32 identifier,
       // not the burn amount handle. publicDecrypt must receive this exact value.
-      const unwrapRequestId = "0x" + "ab".repeat(32);
+      const unwrapRequestId = ("0x" + "ab".repeat(32)) as `0x${string}`;
       const result = await token.finalizeUnwrap(unwrapRequestId);
 
       expect(relayer.publicDecrypt).toHaveBeenCalledWith([unwrapRequestId]);
@@ -355,7 +355,7 @@ describe("Token", () => {
 
   describe("unshield", () => {
     const BURN_HANDLE = "0x" + "ff".repeat(32);
-    const UNWRAP_REQUEST_ID = "0x" + "aa".repeat(32);
+    const UNWRAP_REQUEST_ID = ("0x" + "aa".repeat(32)) as `0x${string}`;
 
     it("orchestrates unwrap → receipt → finalizeUnwrap", async ({
       relayer,
@@ -1122,7 +1122,7 @@ describe("Token", () => {
 
   describe("resumeUnshield", () => {
     const BURN_HANDLE = "0x" + "ff".repeat(32);
-    const UNWRAP_REQUEST_ID = "0x" + "aa".repeat(32);
+    const UNWRAP_REQUEST_ID = ("0x" + "aa".repeat(32)) as `0x${string}`;
 
     it("resumes from an existing unwrap tx hash", async ({
       relayer,
@@ -1152,11 +1152,12 @@ describe("Token", () => {
 
     it("uses unwrapRequestId from upgraded UnwrapRequested events", async ({
       relayer,
+      provider,
       signer,
       userAddress,
       token,
     }) => {
-      vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
+      vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
             topics: [
@@ -1171,7 +1172,7 @@ describe("Token", () => {
 
       await token.resumeUnshield("0xprevioustx" as `0x${string}`);
 
-      expect(signer.waitForTransactionReceipt).toHaveBeenCalledWith("0xprevioustx");
+      expect(provider.waitForTransactionReceipt).toHaveBeenCalledWith("0xprevioustx");
       expect(relayer.publicDecrypt).toHaveBeenCalledWith([UNWRAP_REQUEST_ID]);
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({

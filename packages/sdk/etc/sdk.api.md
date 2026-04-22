@@ -7546,7 +7546,7 @@ export interface GenericProvider {
 
 // @public
 export interface GenericSigner {
-    getAddress: () => Promise<Address>;
+    getAddress(): Promise<Address>;
     getChainId(): Promise<number>;
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
     subscribe?: (callbacks: SignerLifecycleCallbacks) => () => void;
@@ -19873,8 +19873,7 @@ export const ZamaErrorCode: {
     readonly DelegationContractIsSelf: "DELEGATION_CONTRACT_IS_SELF"; /** The ACL contract is paused. */
     readonly AclPaused: "ACL_PAUSED"; /** Expiration date is too soon (must be at least 1 hour in the future). */
     readonly DelegationExpirationTooSoon: "DELEGATION_EXPIRATION_TOO_SOON"; /** Delegation exists on-chain but hasn't propagated to the gateway yet. */
-    readonly DelegationNotPropagated: "DELEGATION_NOT_PROPAGATED"; /** Operation requires a wallet signer but the SDK was configured without one. */
-    readonly SignerRequired: "SIGNER_REQUIRED"; /** Signer and provider are connected to different chains. */
+    readonly DelegationNotPropagated: "DELEGATION_NOT_PROPAGATED"; /** Signer and provider are connected to different chains. */
     readonly ChainMismatch: "CHAIN_MISMATCH";
 };
 

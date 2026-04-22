@@ -18,8 +18,7 @@ export function confidentialTransferMutationOptions(
 > {
   return {
     mutationKey: ["zama.confidentialTransfer", token.address] as const,
-    mutationFn: async ({ to, amount, ...options }) => {
-      return token.confidentialTransfer(to, amount, options);
-    },
+    mutationFn: async ({ to, amount, ...options }) =>
+      token.confidentialTransfer(to, amount, options),
   };
 }

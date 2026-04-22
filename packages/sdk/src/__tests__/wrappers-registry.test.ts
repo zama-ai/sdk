@@ -2,7 +2,7 @@ import type { Address } from "viem";
 import { ConfigurationError } from "../errors";
 import { MainnetConfig, SepoliaConfig } from "../relayer/relayer-utils";
 import { describe, expect, it, vi } from "../test-fixtures";
-import type { GenericProvider, GenericSigner } from "../types";
+import type { GenericProvider } from "../types";
 import { DefaultRegistryAddresses, WrappersRegistry } from "../wrappers-registry";
 import { ZamaSDK } from "../zama-sdk";
 
@@ -195,11 +195,7 @@ describe("WrappersRegistry", () => {
      * - getTokenConfidentialTokenPairsLength → entries.length
      * - getTokenConfidentialTokenPairsSlice(from, to) → entries.slice(from, to)
      */
-    function makeRegistryWithEntries(
-      signer: GenericSigner,
-      provider: GenericProvider,
-      entries: typeof PAIRS,
-    ) {
+    function makeRegistryWithEntries(provider: GenericProvider, entries: typeof PAIRS) {
       vi.mocked(provider.getChainId).mockResolvedValue(1);
       vi.mocked(provider.readContract).mockImplementation((config: any) => {
         if (config.functionName === "getTokenConfidentialTokenPairsLength") {
@@ -300,10 +296,9 @@ describe("WrappersRegistry", () => {
 
       for (const { pageSize, expectedPages, lastPageSize } of cases) {
         it(`pageSize=${pageSize} — collects all entries across ${expectedPages} page(s)`, async ({
-          signer,
           provider,
         }) => {
-          const registry = makeRegistryWithEntries(signer, provider, PAIRS);
+          const registry = makeRegistryWithEntries(provider, PAIRS);
           const allItems: typeof PAIRS = [];
 
           for (let page = 1; page <= expectedPages; page++) {
@@ -352,8 +347,8 @@ describe("WrappersRegistry", () => {
         await expect(registry.listPairs({ pageSize: -5 })).rejects.toThrow(ConfigurationError);
       });
 
-      it("returns empty items when page is beyond total", async ({ signer, provider }) => {
-        const registry = makeRegistryWithEntries(signer, provider, PAIRS);
+      it("returns empty items when page is beyond total", async ({ provider }) => {
+        const registry = makeRegistryWithEntries(provider, PAIRS);
 
         const result = await registry.listPairs({ page: 10, pageSize: 2 });
         expect(result.items).toHaveLength(0);
@@ -361,8 +356,8 @@ describe("WrappersRegistry", () => {
         expect(result.page).toBe(10);
       });
 
-      it("returns empty items when registry has 0 entries", async ({ signer, provider }) => {
-        const registry = makeRegistryWithEntries(signer, provider, []);
+      it("returns empty items when registry has 0 entries", async ({ provider }) => {
+        const registry = makeRegistryWithEntries(provider, []);
 
         const result = await registry.listPairs();
         expect(result.items).toHaveLength(0);
@@ -370,8 +365,8 @@ describe("WrappersRegistry", () => {
         expect(result.page).toBe(1);
       });
 
-      it("returns empty when page=2 but total fits in 1 page", async ({ signer, provider }) => {
-        const registry = makeRegistryWithEntries(signer, provider, PAIRS.slice(0, 2));
+      it("returns empty when page=2 but total fits in 1 page", async ({ provider }) => {
+        const registry = makeRegistryWithEntries(provider, PAIRS.slice(0, 2));
 
         const result = await registry.listPairs({ page: 2, pageSize: 100 });
         expect(result.items).toHaveLength(0);

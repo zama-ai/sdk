@@ -17,8 +17,6 @@ export function approveUnderlyingMutationOptions(
 > {
   return {
     mutationKey: ["zama.approveUnderlying", token.address] as const,
-    mutationFn: async ({ amount }) => {
-      return token.approveUnderlying(amount);
-    },
+    mutationFn: async ({ amount }) => token.approveUnderlying(amount),
   };
 }

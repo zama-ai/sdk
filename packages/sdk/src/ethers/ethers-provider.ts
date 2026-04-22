@@ -7,7 +7,6 @@ import type {
   EIP1193Provider,
   Hex,
 } from "viem";
-import { TransactionRevertedError } from "../errors";
 import type { GenericProvider, ReadContractConfig, TransactionReceipt } from "../types";
 
 /**
@@ -69,7 +68,7 @@ export class EthersProvider implements GenericProvider {
       config.abi as ethers.InterfaceAbi,
       this.#readProvider,
     );
-    const fn = contract.getFunction(config.functionName as string);
+    const fn = contract.getFunction(config.functionName);
     return fn(...(config.args as readonly unknown[])) as Promise<
       ContractFunctionReturnType<TAbi, "pure" | "view", TFunctionName, TArgs>
     >;
@@ -86,36 +85,10 @@ export class EthersProvider implements GenericProvider {
     return BigInt(block.timestamp);
   }
 
-  /**
-   * Wait for a transaction receipt.
-   *
-   * @param hash - The transaction hash to wait for.
-   * @returns The transaction receipt.
-   * @throws {@link TransactionRevertedError} if the transaction hash cannot be found (e.g.
-   *   an ERC-4337 bundler returned a `UserOperation` hash instead of a transaction hash).
-   */
   async waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt> {
-    let receipt: ethers.TransactionReceipt | null;
-    try {
-      receipt = await this.#readProvider.waitForTransaction(hash);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      if (message.includes("could not be found") || message.includes("Transaction not found")) {
-        throw new TransactionRevertedError(
-          `Could not find transaction receipt for hash "${hash.slice(0, 10)}…". ` +
-            "If using ERC-4337 with a bundler, your connector may be returning a UserOperation hash " +
-            "instead of a transaction hash.",
-          { cause: error instanceof Error ? error : undefined },
-        );
-      }
-      throw error;
-    }
+    const receipt = await this.#readProvider.waitForTransaction(hash);
     if (!receipt) {
-      throw new TransactionRevertedError(
-        `Could not find transaction receipt for hash "${hash.slice(0, 10)}…". ` +
-          "If using ERC-4337 with a bundler, your connector may be returning a UserOperation hash " +
-          "instead of a transaction hash.",
-      );
+      throw new Error("Transaction receipt not found");
     }
     return {
       logs: receipt.logs.map((log) => ({

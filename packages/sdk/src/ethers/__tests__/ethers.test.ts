@@ -58,7 +58,6 @@ vi.mock(import("ethers"), () => {
 
 import { EthersSigner } from "../ethers-signer";
 import { EthersProvider } from "../ethers-provider";
-import { TransactionRevertedError } from "../../errors";
 import {
   readConfidentialBalanceOfContract,
   readUnderlyingTokenContract,
@@ -440,32 +439,27 @@ describe("EthersProvider", () => {
       expect(receipt.logs[0].topics).toEqual(["0xa", "0xb"]);
     });
 
-    eit("throws TransactionRevertedError when receipt is null", async () => {
+    eit("throws when receipt is null", async () => {
       const mockProvider = {
         waitForTransaction: vi.fn().mockResolvedValue(null),
       };
       const ethersProvider = new EthersProvider({ provider: mockProvider as never });
 
       await expect(ethersProvider.waitForTransactionReceipt("0xhash" as Hex)).rejects.toThrow(
-        TransactionRevertedError,
+        "Transaction receipt not found",
       );
     });
 
-    eit(
-      "throws TransactionRevertedError when waitForTransaction reports transaction not found",
-      async () => {
-        const mockProvider = {
-          waitForTransaction: vi
-            .fn()
-            .mockRejectedValue(new Error("transaction could not be found")),
-        };
-        const ethersProvider = new EthersProvider({ provider: mockProvider as never });
+    eit("propagates errors from waitForTransaction", async () => {
+      const mockProvider = {
+        waitForTransaction: vi.fn().mockRejectedValue(new Error("transaction could not be found")),
+      };
+      const ethersProvider = new EthersProvider({ provider: mockProvider as never });
 
-        await expect(ethersProvider.waitForTransactionReceipt("0xhash" as Hex)).rejects.toThrow(
-          TransactionRevertedError,
-        );
-      },
-    );
+      await expect(ethersProvider.waitForTransactionReceipt("0xhash" as Hex)).rejects.toThrow(
+        "transaction could not be found",
+      );
+    });
   });
 
   describe("getBlockTimestamp", () => {

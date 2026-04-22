@@ -280,6 +280,7 @@ export class ReadonlyToken {
       : getAddress(delegatorAddress);
     const firstToken = tokens[0]!;
     ReadonlyToken.assertSameSdk(tokens);
+    // TODO: code smell; an instance of SDK should be passed as argument of batchDecryptBalancesAs instead.
     await firstToken.sdk.requireChainAlignment("batchDecryptBalancesAs");
 
     const resolvedHandles =

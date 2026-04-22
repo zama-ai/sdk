@@ -13,8 +13,6 @@ export function unwrapMutationOptions(
 ): MutationFactoryOptions<readonly ["zama.unwrap", Address], UnwrapParams, TransactionResult> {
   return {
     mutationKey: ["zama.unwrap", token.address] as const,
-    mutationFn: async ({ amount }) => {
-      return token.unwrap(amount);
-    },
+    mutationFn: async ({ amount }) => token.unwrap(amount),
   };
 }

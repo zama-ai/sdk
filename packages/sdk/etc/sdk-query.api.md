@@ -503,7 +503,7 @@ export function generateKeypairMutationOptions(sdk: ZamaSDK): MutationFactoryOpt
 
 // @public
 export interface GenericSigner {
-    getAddress: () => Promise<Address>;
+    getAddress(): Promise<Address>;
     getChainId(): Promise<number>;
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
     subscribe?: (callbacks: SignerLifecycleCallbacks) => () => void;

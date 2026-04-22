@@ -64,8 +64,6 @@ export const ZamaErrorCode = {
   DelegationExpirationTooSoon: "DELEGATION_EXPIRATION_TOO_SOON",
   /** Delegation exists on-chain but hasn't propagated to the gateway yet. */
   DelegationNotPropagated: "DELEGATION_NOT_PROPAGATED",
-  /** Operation requires a wallet signer but the SDK was configured without one. */
-  SignerRequired: "SIGNER_REQUIRED",
   /** Signer and provider are connected to different chains. */
   ChainMismatch: "CHAIN_MISMATCH",
 } as const;

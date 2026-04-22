@@ -2,7 +2,7 @@ import { getAddress, type Address } from "viem";
 import { CredentialsManager } from "./credentials/credentials-manager";
 import { DelegatedCredentialsManager } from "./credentials/delegated-credentials-manager";
 import { DecryptCache } from "./decrypt-cache";
-import { wrapDecryptError } from "./errors";
+import { ChainMismatchError, wrapDecryptError } from "./errors";
 import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventListener } from "./events/sdk-events";
 import { ZamaSDKEvents } from "./events/sdk-events";
 import type { DecryptHandle } from "./query/user-decrypt";
@@ -18,7 +18,6 @@ import type {
   GenericStorage,
   SignerLifecycleCallbacks,
 } from "./types";
-import { ChainMismatchError } from "./errors/chain";
 import { toError } from "./utils";
 import { pLimit } from "./utils/concurrency";
 import { WrappersRegistry } from "./wrappers-registry";
@@ -513,6 +512,7 @@ export class ZamaSDK {
    * ```
    */
   async publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult> {
+    await this.requireChainAlignment("publicDecrypt");
     if (handles.length === 0) {
       return { clearValues: {}, decryptionProof: "0x", abiEncodedClearValues: "0x" };
     }
@@ -537,12 +537,9 @@ export class ZamaSDK {
    * ```
    */
   async revokeSession(): Promise<void> {
-    await this.requireChainAlignment("revokeSession");
+    const chainId = await this.requireChainAlignment("revokeSession");
     await this.#identityReady;
-    const [address, chainId] = await Promise.all([
-      this.#lastAddress ?? this.signer.getAddress(),
-      this.#lastChainId ?? this.signer.getChainId(),
-    ]);
+    const address = this.#lastAddress ?? (await this.signer.getAddress());
     const storeKey = await CredentialsManager.computeStoreKey(address, chainId);
     await this.credentials.revokeByKey(storeKey);
     await this.cache.clearForRequester(address);

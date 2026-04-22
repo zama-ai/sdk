@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "../test-fixtures";
 import { ZamaSDK } from "../zama-sdk";
-import { ChainMismatchError } from "../errors/chain";
+import { ChainMismatchError } from "../errors";
 import type { Address } from "viem";
 
 describe("requireChainAlignment", () => {
@@ -114,5 +114,65 @@ describe("requireChainAlignment", () => {
 
     expect(allowSpy).not.toHaveBeenCalled();
     expect(signer.signTypedData).not.toHaveBeenCalled();
+  });
+
+  it("token.confidentialTransfer throws ChainMismatchError before encrypting or writing", async ({
+    relayer,
+    provider,
+    signer,
+    storage,
+    tokenAddress,
+  }) => {
+    vi.mocked(signer.getChainId).mockResolvedValue(1);
+    vi.mocked(provider.getChainId).mockResolvedValue(11155111);
+    const sdk = new ZamaSDK({ relayer, provider, signer, storage });
+    const token = sdk.createToken(tokenAddress);
+
+    await expect(
+      token.confidentialTransfer("0x000000000000000000000000000000000000dEaD" as Address, 100n, {
+        skipBalanceCheck: true,
+      }),
+    ).rejects.toBeInstanceOf(ChainMismatchError);
+
+    expect(signer.writeContract).not.toHaveBeenCalled();
+    expect(relayer.encrypt).not.toHaveBeenCalled();
+  });
+
+  it("token.unwrap throws ChainMismatchError before calling writeContract", async ({
+    relayer,
+    provider,
+    signer,
+    storage,
+    tokenAddress,
+  }) => {
+    vi.mocked(signer.getChainId).mockResolvedValue(1);
+    vi.mocked(provider.getChainId).mockResolvedValue(11155111);
+    const sdk = new ZamaSDK({ relayer, provider, signer, storage });
+    const token = sdk.createToken(tokenAddress);
+
+    await expect(token.unwrap(100n)).rejects.toBeInstanceOf(ChainMismatchError);
+
+    expect(signer.writeContract).not.toHaveBeenCalled();
+    expect(relayer.encrypt).not.toHaveBeenCalled();
+  });
+
+  it("token.delegateDecryption throws ChainMismatchError before calling writeContract", async ({
+    relayer,
+    provider,
+    signer,
+    storage,
+    tokenAddress,
+    delegatorAddress,
+  }) => {
+    vi.mocked(signer.getChainId).mockResolvedValue(1);
+    vi.mocked(provider.getChainId).mockResolvedValue(11155111);
+    const sdk = new ZamaSDK({ relayer, provider, signer, storage });
+    const token = sdk.createToken(tokenAddress);
+
+    await expect(
+      token.delegateDecryption({ delegateAddress: delegatorAddress }),
+    ).rejects.toBeInstanceOf(ChainMismatchError);
+
+    expect(signer.writeContract).not.toHaveBeenCalled();
   });
 });

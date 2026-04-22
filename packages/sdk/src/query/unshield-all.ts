@@ -15,8 +15,6 @@ export function unshieldAllMutationOptions(
 > {
   return {
     mutationKey: ["zama.unshieldAll", token.address] as const,
-    mutationFn: async (params) => {
-      return token.unshieldAll(params || undefined);
-    },
+    mutationFn: async (params) => token.unshieldAll(params || undefined),
   };
 }

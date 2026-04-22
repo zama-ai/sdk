@@ -32,7 +32,7 @@ export interface GenericSigner {
   /** Return the chain ID of the connected wallet. */
   getChainId(): Promise<number>;
   /** The connected wallet address. */
-  getAddress: () => Promise<Address>;
+  getAddress(): Promise<Address>;
   /** Sign EIP-712 typed data (used for decrypt authorization). */
   signTypedData(typedData: EIP712TypedData): Promise<Hex>;
   /** Send a write transaction and return the tx hash. */

@@ -18,8 +18,6 @@ export function confidentialApproveMutationOptions(
 > {
   return {
     mutationKey: ["zama.confidentialApprove", token.address] as const,
-    mutationFn: async ({ spender, until }) => {
-      return token.approve(spender, until);
-    },
+    mutationFn: async ({ spender, until }) => token.approve(spender, until),
   };
 }

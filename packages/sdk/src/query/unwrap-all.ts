@@ -8,8 +8,6 @@ export function unwrapAllMutationOptions(
 ): MutationFactoryOptions<readonly ["zama.unwrapAll", Address], void, TransactionResult> {
   return {
     mutationKey: ["zama.unwrapAll", token.address] as const,
-    mutationFn: async () => {
-      return token.unwrapAll();
-    },
+    mutationFn: async () => token.unwrapAll(),
   };
 }

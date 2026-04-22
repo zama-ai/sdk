@@ -13,8 +13,6 @@ export function unshieldMutationOptions(
 ): MutationFactoryOptions<readonly ["zama.unshield", Address], UnshieldParams, TransactionResult> {
   return {
     mutationKey: ["zama.unshield", token.address] as const,
-    mutationFn: async ({ amount, ...options }) => {
-      return token.unshield(amount, options);
-    },
+    mutationFn: async ({ amount, ...options }) => token.unshield(amount, options),
   };
 }
