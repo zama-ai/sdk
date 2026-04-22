@@ -65,13 +65,13 @@ export function ShieldCard({
       const userAddress = await sdk.signer.getAddress();
 
       // Read the current ERC-20 allowance granted to the wrapper.
-      const currentAllowance = (await sdk.provider.readContract(
+      const currentAllowance = (await sdk.signer.readContract(
         allowanceContract(underlyingAddress, userAddress, tokenAddress),
       )) as bigint;
 
       if (currentAllowance < amount) {
         // Fetch the user's full ERC-20 balance to use as the new spend cap.
-        const erc20Balance = (await sdk.provider.readContract(
+        const erc20Balance = (await sdk.signer.readContract(
           balanceOfContract(underlyingAddress, userAddress),
         )) as bigint;
 
@@ -98,7 +98,7 @@ export function ShieldCard({
             needsReset = true; // estimateGas reverted → USDT-style token
           }
           if (overwriteTxHash) {
-            await sdk.provider.waitForTransactionReceipt(overwriteTxHash);
+            await sdk.signer.waitForTransactionReceipt(overwriteTxHash);
           }
 
           if (needsReset) {
@@ -106,18 +106,18 @@ export function ShieldCard({
             const resetTxHash = await sdk.signer.writeContract(
               approveContract(underlyingAddress, tokenAddress, 0n),
             );
-            await sdk.provider.waitForTransactionReceipt(resetTxHash);
+            await sdk.signer.waitForTransactionReceipt(resetTxHash);
             const approveTxHash = await sdk.signer.writeContract(
               approveContract(underlyingAddress, tokenAddress, erc20Balance),
             );
-            await sdk.provider.waitForTransactionReceipt(approveTxHash);
+            await sdk.signer.waitForTransactionReceipt(approveTxHash);
           }
         } else {
           // Zero allowance — any token type accepts a direct approve from 0.
           const txHash = await sdk.signer.writeContract(
             approveContract(underlyingAddress, tokenAddress, erc20Balance),
           );
-          await sdk.provider.waitForTransactionReceipt(txHash);
+          await sdk.signer.waitForTransactionReceipt(txHash);
         }
 
         setPhase("wrap-after-approve");

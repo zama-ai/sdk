@@ -280,11 +280,11 @@ Note: `useDecryptBalanceAs` takes a positional `tokenAddress` (unlike `useDelega
 
 Three balances are shown:
 
-| Balance      | Source                         | Hook / method                                                    |
-| ------------ | ------------------------------ | ---------------------------------------------------------------- |
-| ETH          | Direct RPC (`JsonRpcProvider`) | `useQuery` → `rpcProvider.getBalance()`                          |
-| ERC-20       | Direct RPC via SDK signer      | `useQuery` → `sdk.provider.readContract(balanceOfContract(...))` |
-| Confidential | Relayer decryption             | `useConfidentialBalance({ tokenAddress })`                       |
+| Balance      | Source                         | Hook / method                                                  |
+| ------------ | ------------------------------ | -------------------------------------------------------------- |
+| ETH          | Direct RPC (`JsonRpcProvider`) | `useQuery` → `rpcProvider.getBalance()`                        |
+| ERC-20       | Direct RPC via SDK signer      | `useQuery` → `sdk.signer.readContract(balanceOfContract(...))` |
+| Confidential | Relayer decryption             | `useConfidentialBalance({ tokenAddress })`                     |
 
 **Explicit decrypt pattern**: `useConfidentialBalance` is only enabled after the user has authorized FHE decryption via an EIP-712 wallet signature (`useIsAllowed({ contractAddresses })` → `useAllow()`). Until then, `BalancesCard` shows a "Decrypt Balance" button rather than a balance value. This avoids blind-signing prompts on mount.
 

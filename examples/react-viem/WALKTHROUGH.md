@@ -8,7 +8,7 @@ A step-by-step guide to how this app integrates `@zama-fhe/react-sdk` using viem
 
 ```
 page.tsx                         — wallet connect, token selector, layout
-├── providers.tsx                — ZamaProvider + ViemProvider + ViemSigner + RelayerWeb wiring
+├── providers.tsx                — ZamaProvider + ViemSigner + RelayerWeb wiring
 │   └── /api/relayer/[...path]   — Next.js proxy (keeps RELAYER_API_KEY server-side)
 ├── BalancesCard.tsx             — ETH / ERC-20 / confidential balance display
 ├── ShieldCard.tsx               — ERC-20 → confidential (with manual approval flow)
@@ -24,19 +24,12 @@ page.tsx                         — wallet connect, token selector, layout
 
 ## 1. Wiring the SDK (`providers.tsx`)
 
-Four objects are required: a `provider`, a `signer`, a `relayer`, and a `storage`.
+Three objects are required: a `signer`, a `relayer`, and a `storage`.
 
 ```ts
-// Provider — wraps a viem publicClient for every read the SDK performs.
-// Always constructable (no wallet needed). Shared between ZamaProvider and any
-// ancillary hooks that need public chain reads.
-const provider = useMemo(() => {
-  const publicClient = createPublicClient({ chain: sepolia, transport: http(SEPOLIA_RPC_URL) });
-  return new ViemProvider({ publicClient });
-}, []);
-
-// Signer — wraps a viem walletClient for writes, EIP-712 signing, and wallet
-// lifecycle subscriptions. Created only when window.ethereum is available.
+// Signer — wraps viem clients for read/write operations.
+// publicClient is always created (needed for reads even without a wallet).
+// walletClient is only created when window.ethereum is available.
 // Recreated on wallet switch (walletKey pattern) so ViemSigner is always bound to the
 // correct account.
 //
@@ -46,11 +39,12 @@ const provider = useMemo(() => {
 // after the initial eth_accounts seed. See §"Wallet reactivity" for the full details.
 const signer = useMemo(() => {
   const ethereum = getEthereumProvider();
+  const publicClient = createPublicClient({ chain: sepolia, transport: http(SEPOLIA_RPC_URL) });
   if (!ethereum) {
-    return undefined; // read-only until a wallet connects
+    return new ViemSigner({ publicClient }); // read-only when no wallet installed
   }
   const walletClient = createWalletClient({ chain: sepolia, transport: custom(ethereum) });
-  return new ViemSigner({ walletClient, ethereum });
+  return new ViemSigner({ walletClient, publicClient });
 }, [walletKey]);
 
 // Relayer — browser FHE worker loaded from CDN.
@@ -84,7 +78,6 @@ const relayer = useMemo(
 
 ```ts
 <ZamaProvider
-  provider={provider}
   signer={signer}
   relayer={relayer}
   storage={indexedDBStorage}          // "CredentialStore" — encrypted keypair
@@ -345,7 +338,7 @@ Three balances are shown:
 | Balance      | Source                            | Hook / method                                                                               |
 | ------------ | --------------------------------- | ------------------------------------------------------------------------------------------- |
 | ETH          | Direct RPC (`createPublicClient`) | `useQuery` → `rpcClient.getBalance({ address })`                                            |
-| ERC-20       | Direct RPC via SDK signer         | `useQuery` → `sdk.provider.readContract(balanceOfContract(token.tokenAddress, ...))`        |
+| ERC-20       | Direct RPC via SDK signer         | `useQuery` → `sdk.signer.readContract(balanceOfContract(token.tokenAddress, ...))`          |
 | Confidential | Relayer decryption                | `useConfidentialBalance({ tokenAddress: token?.confidentialTokenAddress ?? ZERO_ADDRESS })` |
 
 **Explicit decrypt pattern**: `useConfidentialBalance` is only enabled after the user has

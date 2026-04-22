@@ -8,7 +8,7 @@ A step-by-step guide to how this app integrates `@zama-fhe/react-sdk` using wagm
 
 ```
 page.tsx                         — wallet connect (wagmi hooks), token selector, layout
-├── providers.tsx                — ZamaProvider + ZamaWagmiProvider + ZamaWagmiSigner + RelayerWeb wiring
+├── providers.tsx                — ZamaProvider + WagmiSigner + RelayerWeb wiring
 │   └── /api/relayer/[...path]   — Next.js proxy (keeps RELAYER_API_KEY server-side)
 ├── BalancesCard.tsx             — ETH / ERC-20 / confidential balance display
 ├── ShieldCard.tsx               — ERC-20 → confidential (with manual approval flow)
@@ -24,25 +24,21 @@ page.tsx                         — wallet connect (wagmi hooks), token selecto
 
 ## 1. Wiring the SDK (`providers.tsx`)
 
-Four objects are required: a `provider`, a `signer`, a `relayer`, and a `storage`.
+Three objects are required: a `signer`, a `relayer`, and a `storage`.
 
 ```ts
-// wagmiConfig, provider, and signer are created at module level (outside the component)
-// because:
+// wagmiConfig and signer are created at module level (outside the component) because:
 // - createConfig does not access window at construction time (transports are lazy).
-// - ZamaWagmiProvider / ZamaWagmiSigner wrap the config directly — no SSR issue at
-//   construction.
+// - WagmiSigner wraps the config directly — no SSR issue at construction.
 // - providers.tsx is wrapped in next/dynamic ssr:false, so this module is never
 //   evaluated server-side.
-// All three are stable references — recreating them on re-render would reset wagmi's
-// state.
+// Both are stable references — recreating them on re-render would reset wagmi's state.
 const wagmiConfig = createConfig({
   chains: [sepolia],
   connectors: [injected()],
   transports: { [sepolia.id]: http(SEPOLIA_RPC_URL) },
 });
-const provider = new ZamaWagmiProvider({ config: wagmiConfig });
-const signer = new ZamaWagmiSigner({ config: wagmiConfig });
+const signer = new WagmiSigner({ config: wagmiConfig });
 
 // RelayerWeb must be in useMemo because it accesses window.location.origin at construction.
 const relayer = useMemo(
@@ -65,11 +61,10 @@ const relayer = useMemo(
 
 ```ts
 <ZamaProvider
-  provider={provider}
-  signer={signer}
   relayer={relayer}
   storage={indexedDBStorage}          // "CredentialStore" — encrypted keypair
   sessionStorage={sessionDBStorage}   // "SessionStore"    — EIP-712 session signatures
+  signer={signer}
 >
 ```
 
@@ -78,11 +73,11 @@ to overwrite the encrypted keypair, forcing re-signing on every balance decrypt.
 
 ---
 
-## 2. Why `ZamaWagmiSigner` is different from `EthersSigner` / `ViemSigner`
+## 2. Why `WagmiSigner` is different from `EthersSigner` / `ViemSigner`
 
-`ZamaWagmiSigner` has a `subscribe({ onAccountChange, onChainChange, onDisconnect })`
-method backed by `watchConnection` from wagmi. The SDK uses this internally to update its
-state whenever the account or chain changes.
+`WagmiSigner` has a `subscribe({ onAccountChange, onChainChange, onDisconnect })` method
+backed by `watchConnection` from wagmi. The SDK uses this internally to update its state
+whenever the account or chain changes.
 
 **Consequences:**
 
@@ -156,10 +151,10 @@ useEffect(() => {
 }, [validPairs, selectedTokenAddress]);
 ```
 
-With `ZamaWagmiProvider` (viem-based), named fields (`tokenAddress`,
-`confidentialTokenAddress`, `isValid`) are directly accessible — no `normalizePair`
-workaround needed (unlike `EthersProvider`, where ethers `Result` non-enumerable prototype
-getters require a numeric index fallback).
+With `WagmiSigner` (viem-based), named fields (`tokenAddress`, `confidentialTokenAddress`,
+`isValid`) are directly accessible — no `normalizePair` workaround needed (unlike
+`EthersSigner`, where ethers `Result` non-enumerable prototype getters require a numeric
+index fallback).
 
 **`ZERO_ADDRESS` placeholder**: SDK hooks cannot be called conditionally (React rules of
 hooks). While no pair is selected, `ZERO_ADDRESS` is passed as a stable placeholder with

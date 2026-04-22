@@ -10,7 +10,7 @@ import {
   savePendingUnshield,
   RelayerWeb,
 } from "@zama-fhe/react-sdk";
-import { EthersProvider, EthersSigner } from "@zama-fhe/sdk/ethers";
+import { EthersSigner } from "@zama-fhe/sdk/ethers";
 import { SepoliaConfig } from "@zama-fhe/sdk";
 import { SEPOLIA_RPC_URL } from "@/lib/config";
 import { getActiveUnshieldToken, setActiveUnshieldToken } from "@/lib/activeUnshield";
@@ -141,27 +141,21 @@ export function Providers({ children }: { children: ReactNode }) {
   );
 
   // Recreated on wallet switch so the new EthersSigner is bound to the new account address.
-  // EthersProvider is built alongside the signer from the same EIP-1193 source so reads
-  // and writes share a transport.
-  const { signer, provider } = useMemo(() => {
+  const signer = useMemo(() => {
     const ethereum = getEthereumProvider();
     // EthersSigner requires a non-null EIP-1193 provider — it throws on undefined/null.
     // When no wallet is installed, use a stub provider that throws a descriptive error.
     // All SDK operations in page.tsx are gated behind address/isSepolia checks so
     // this signer is never actually called until the user connects a wallet.
-    const eip1193 = ethereum ?? {
+    const provider = ethereum ?? {
       request: async () => {
         throw new Error("No Ethereum wallet detected. Connect a wallet to use this app.");
       },
       on: () => {},
       removeListener: () => {},
     };
-    return {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      signer: new EthersSigner({ ethereum: eip1193 as any }),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      provider: new EthersProvider({ ethereum: eip1193 as any }),
-    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return new EthersSigner({ ethereum: provider as any });
   }, [walletKey]);
 
   return (
@@ -171,7 +165,6 @@ export function Providers({ children }: { children: ReactNode }) {
         relayer={relayer}
         storage={indexedDBStorage}
         sessionStorage={sessionDBStorage}
-        provider={provider}
         signer={signer}
         onEvent={(event) => {
           // ZamaSDKEvents.UnshieldPhase1Submitted fires after Phase 1 is mined (the SDK awaits

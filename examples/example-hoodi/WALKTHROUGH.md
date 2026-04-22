@@ -416,12 +416,12 @@ const shieldAmount = parseUnits("10", erc20Decimals);
 const token = sdk.createToken(cTokenAddress);
 const userAddress = await sdk.signer.getAddress();
 
-const currentAllowance = (await sdk.provider.readContract(
+const currentAllowance = (await sdk.signer.readContract(
   allowanceContract(erc20Address, userAddress, cTokenAddress),
 )) as bigint;
 
 if (currentAllowance < shieldAmount) {
-  const erc20Balance = (await sdk.provider.readContract(
+  const erc20Balance = (await sdk.signer.readContract(
     balanceOfContract(erc20Address, userAddress),
   )) as bigint;
 
@@ -433,7 +433,7 @@ if (currentAllowance < shieldAmount) {
       const approveHash = await sdk.signer.writeContract(
         approveContract(erc20Address, cTokenAddress, erc20Balance),
       );
-      await sdk.provider.waitForTransactionReceipt(approveHash);
+      await sdk.signer.waitForTransactionReceipt(approveHash);
     } catch (err) {
       if (isError(err, "ACTION_REJECTED")) throw err; // user rejected — stop here
       needsReset = true; // gas estimation reverted → USDT-style token
@@ -442,18 +442,18 @@ if (currentAllowance < shieldAmount) {
       const resetHash = await sdk.signer.writeContract(
         approveContract(erc20Address, cTokenAddress, 0n),
       );
-      await sdk.provider.waitForTransactionReceipt(resetHash);
+      await sdk.signer.waitForTransactionReceipt(resetHash);
       const approveHash = await sdk.signer.writeContract(
         approveContract(erc20Address, cTokenAddress, erc20Balance),
       );
-      await sdk.provider.waitForTransactionReceipt(approveHash);
+      await sdk.signer.waitForTransactionReceipt(approveHash);
     }
   } else {
     // Zero allowance: direct approve — no reset needed for any token.
     const approveHash = await sdk.signer.writeContract(
       approveContract(erc20Address, cTokenAddress, erc20Balance),
     );
-    await sdk.provider.waitForTransactionReceipt(approveHash);
+    await sdk.signer.waitForTransactionReceipt(approveHash);
   }
 }
 // approvalStrategy: 'skip' — allowance is confirmed above (or was already sufficient).

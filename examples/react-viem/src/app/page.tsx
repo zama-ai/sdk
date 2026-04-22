@@ -259,7 +259,7 @@ export default function Home() {
   const { data: erc20Balance } = useQuery({
     queryKey: erc20BalanceKey,
     queryFn: async () =>
-      sdk.provider.readContract(
+      sdk.signer.readContract(
         balanceOfContract(token!.tokenAddress, address as Address),
       ) as Promise<bigint>,
     enabled: !!address && isSepolia && !!token,
@@ -295,7 +295,7 @@ export default function Home() {
         functionName: "mint",
         args: [address as Address, parseUnits("10", erc20Decimals)],
       });
-      await sdk.provider.waitForTransactionReceipt(txHash);
+      await sdk.signer.waitForTransactionReceipt(txHash);
       return txHash;
     },
     onSuccess: refreshBalances,

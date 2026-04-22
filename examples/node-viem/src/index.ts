@@ -2,7 +2,7 @@ import { createPublicClient, createWalletClient, formatUnits, http, parseAbi } f
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
 import { DelegationNotPropagatedError, MemoryStorage, ZamaSDK } from "@zama-fhe/sdk";
-import { ViemProvider, ViemSigner } from "@zama-fhe/sdk/viem";
+import { ViemSigner } from "@zama-fhe/sdk/viem";
 import { RelayerNode } from "@zama-fhe/sdk/node";
 import type { Address } from "@zama-fhe/sdk";
 
@@ -61,12 +61,8 @@ async function main() {
   const walletClientA = createWalletClient({ account: accountA, chain: sepolia, transport });
   const walletClientB = createWalletClient({ account: accountB, chain: sepolia, transport });
 
-  const signerA = new ViemSigner({ walletClient: walletClientA });
-  const signerB = new ViemSigner({ walletClient: walletClientB });
-
-  // ViemProvider handles public chain reads (balances, receipts, block timestamps).
-  // A single provider can be shared across both SDK instances — reads are stateless.
-  const zamaProvider = new ViemProvider({ publicClient });
+  const signerA = new ViemSigner({ walletClient: walletClientA, publicClient });
+  const signerB = new ViemSigner({ walletClient: walletClientB, publicClient });
 
   const auth = RELAYER_API_KEY
     ? { __type: "ApiKeyHeader" as const, value: RELAYER_API_KEY }
@@ -90,18 +86,8 @@ async function main() {
   // process restarts.
   // `using` ensures terminate() is called when the scope exits (even on error).
   // Both SDKs share the same relayer; relayer.terminate() is idempotent.
-  using sdkA = new ZamaSDK({
-    relayer,
-    provider: zamaProvider,
-    signer: signerA,
-    storage: new MemoryStorage(),
-  });
-  using sdkB = new ZamaSDK({
-    relayer,
-    provider: zamaProvider,
-    signer: signerB,
-    storage: new MemoryStorage(),
-  });
+  using sdkA = new ZamaSDK({ relayer, signer: signerA, storage: new MemoryStorage() });
+  using sdkB = new ZamaSDK({ relayer, signer: signerB, storage: new MemoryStorage() });
 
   // Resolve the confidential wrapper address via the on-chain registry.
   // getConfidentialToken() maps an ERC-20 address → its ERC-7984 wrapper.
