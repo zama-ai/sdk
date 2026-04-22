@@ -24,6 +24,12 @@ module.exports = {
       "@semantic-release/commit-analyzer",
       {
         preset: "conventionalcommits",
+        // Breaking detection from header `!` only; ignore `BREAKING CHANGE`
+        // in bodies. Notes generator below keeps defaults so the changelog
+        // still surfaces body prose.
+        parserOpts: {
+          noteKeywords: [],
+        },
         releaseRules: [
           { breaking: true, release: "major" },
           { scope: "security", release: "patch" },
