@@ -24,15 +24,10 @@ module.exports = {
       "@semantic-release/commit-analyzer",
       {
         preset: "conventionalcommits",
-        // Breaking detection from header `!` only; ignore `BREAKING CHANGE`
-        // in bodies. Notes generator below keeps defaults so the changelog
-        // still surfaces body prose.
-        //
-        // Must be a sentinel string, not []: an empty array makes
-        // conventional-commits-parser emit a zero-title note for every `* `
-        // bullet in a GitHub squash body, and the analyzer's `breaking: true`
-        // rule matches any commit with notes.length > 0 regardless of title.
-        // That escalated every squash-merge to major (see 3.0.0-alpha.12..14).
+        // Sentinel (not []): an empty array makes the parser emit empty-
+        // title notes for every `* ` bullet in a squash body, which the
+        // analyzer treats as breaking. Header `!` still escalates via
+        // breakingHeaderPattern, which ignores noteKeywords.
         parserOpts: {
           noteKeywords: ["__NO_BREAKING_NOTES__"],
         },
