@@ -327,7 +327,7 @@ export function buildCorpusManifest() {
     });
 
   return {
-    schema_version: 1,
+    schemaVersion: 1,
     config_path: corpusConfigPath,
     raw_github_base_url: rawGithubBaseUrl,
     approved_examples: approvedExamples,

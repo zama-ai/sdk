@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schemaVersion": 1,
   "config_path": "docs/llm/corpus.config.json",
   "raw_github_base_url": "https://raw.githubusercontent.com/zama-ai/sdk/main",
   "approved_examples": [
@@ -200,7 +200,7 @@
       "source_type": "official-doc",
       "category": "guides",
       "logical_path": "guides/build-with-an-llm",
-      "description": "How to give coding agents high-quality Zama SDK context through llms files, approved examples, and the external Zama Protocol Claude Code skill.",
+      "description": "How to give coding agents high-quality Zama SDK context through llms files and the external Zama Protocol Claude Code skill.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },

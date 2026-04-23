@@ -29,7 +29,7 @@ const corpusSourcePatterns = [
   /^docs\/llm\/corpus\.config\.json$/u,
   /^examples\/[^/]+\/(?:README|WALKTHROUGH)\.md$/u,
   /^packages\/(?:sdk|react-sdk)\/etc\/.+\.api\.md$/u,
-  /^scripts\/llm\/.+\.mjs$/u,
+  /^scripts\/llm\/(?!__tests__\/).+\.mjs$/u,
 ];
 
 function gitChangedFiles(args) {

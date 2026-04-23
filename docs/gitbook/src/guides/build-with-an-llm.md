@@ -1,11 +1,11 @@
 ---
 title: Build with an LLM
-description: How to give coding agents high-quality Zama SDK context through llms files, approved examples, and the external Zama Protocol Claude Code skill.
+description: How to give coding agents high-quality Zama SDK context through llms files and the external Zama Protocol Claude Code skill.
 ---
 
 # Build with an LLM
 
-Use the SDK's LLM-ready artifacts to give your coding agent a grounded view of the Zama SDK.
+Use the SDK's LLM-ready artifacts to give coding agents a grounded view of the Zama SDK without overloading their context window.
 
 Prefer the smallest source that can answer the task, and keep the source order strict: official docs first, approved examples second, API reports only as fallback.
 
@@ -15,15 +15,15 @@ The SDK documentation provides:
 - [`llms-full.txt`](https://raw.githubusercontent.com/zama-ai/sdk/main/llms-full.txt) for full-context grounding
 - guidance for using the external [`zama-protocol`](https://github.com/zama-ai/skills) Claude Code skill
 
-## Choose the right tool
+## Choose the right source
 
-Use the smallest tool that gives the agent enough context:
+Use the smallest source that gives the agent enough context:
 
-- `llms.txt` for navigation and discovery
-- `llms-full.txt` for broad grounding
-- the `zama-protocol` Claude Code skill for Zama FHEVM and SDK workflow guidance
+- Use `llms.txt` when the agent needs to discover the relevant docs, examples, or package README.
+- Use `llms-full.txt` only when the agent supports a large context window and needs the complete public learning corpus in one file.
+- Use the `zama-protocol` Claude Code skill when working in Claude Code and the task needs Zama FHEVM, Solidity, ERC-7984, SDK, or React SDK workflow guidance.
 
-For Claude Code, install the external skill first, then use `llms.txt`, `llms-full.txt`, or the approved example docs as supporting context when the task needs SDK-specific detail.
+For Claude Code, install the external skill first, then use `llms.txt` or `llms-full.txt` as supporting SDK-specific context when needed.
 
 ## Consumption modes
 
@@ -42,38 +42,19 @@ Use this mode when integrating the SDK into an external app:
 Use this mode when contributing to the SDK, debugging SDK internals, or inspecting examples locally:
 
 1. Read `docs/gitbook/src/...`, `examples/...`, and package READMEs directly from the local checkout.
-2. Run `pnpm llm:build` and `pnpm llm:validate` only when updating or validating the generated LLM artifacts.
+2. Use `llms.txt` as a map of the public SDK docs and approved examples.
 
 ## Source of truth
 
 Agent-facing guidance follows this source order:
 
 1. Official documentation, published through GitBook and sourced from `docs/gitbook/src` in the SDK repository
-2. Approved official examples
-3. API reports as fallback reference material
+2. Approved official examples listed in the `Official Examples` section of `llms.txt`
+3. API reports as fallback reference material for exported API details
 
 When the docs already answer the question, prefer the docs over examples. When examples are needed, prefer the approved examples in this repo over ad hoc implementations.
 
 `docs/gitbook/src/...` and `examples/...` are repository-relative source paths. If you have not cloned the SDK repository, use the raw GitHub URLs from `llms.txt` or the embedded content in `llms-full.txt`.
-
-## Maintain the LLM artifacts
-
-These commands are for SDK maintainers and contributors. External integrators do not need to run them.
-
-From a cloned SDK repository root:
-
-```bash
-pnpm llm:build
-pnpm llm:validate
-```
-
-This generates:
-
-- `./llms.txt`
-- `./llms-full.txt`
-- `docs/llm/corpus-manifest.json`
-
-`pnpm llm:validate` validates the generated artifacts.
 
 ## Use `llms.txt`
 
@@ -114,35 +95,16 @@ Install the `zama-protocol` skill with Claude Code:
 
 The skill covers Zama FHEVM concepts, Solidity patterns, ERC-7984, TypeScript SDK integration, React SDK patterns, verified addresses, and common setup paths.
 
-The marketplace install requires Claude Code to be able to access the `zama-ai/skills` GitHub repository. If the install command cannot read the marketplace, use `llms.txt` and `llms-full.txt` directly and ask your Zama contact for skill access.
-
-## Use the approved example docs directly
-
-When `llms.txt` points you to an example, read the linked raw GitHub example docs. If you have cloned the SDK repository, you can also read the same files locally:
-
-- [`examples/example-hoodi/README.md`](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/example-hoodi/README.md)
-- [`examples/example-hoodi/WALKTHROUGH.md`](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/example-hoodi/WALKTHROUGH.md)
-- [`examples/node-ethers/README.md`](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/node-ethers/README.md)
-- [`examples/node-ethers/WALKTHROUGH.md`](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/node-ethers/WALKTHROUGH.md)
-- [`examples/node-viem/README.md`](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/node-viem/README.md)
-- [`examples/node-viem/WALKTHROUGH.md`](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/node-viem/WALKTHROUGH.md)
-- [`examples/react-ethers/README.md`](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/react-ethers/README.md)
-- [`examples/react-ethers/WALKTHROUGH.md`](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/react-ethers/WALKTHROUGH.md)
-- [`examples/react-viem/README.md`](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/react-viem/README.md)
-- [`examples/react-viem/WALKTHROUGH.md`](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/react-viem/WALKTHROUGH.md)
-- [`examples/react-wagmi/README.md`](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/react-wagmi/README.md)
-- [`examples/react-wagmi/WALKTHROUGH.md`](https://raw.githubusercontent.com/zama-ai/sdk/main/examples/react-wagmi/WALKTHROUGH.md)
-
-Read the example docs before dropping into example source files.
+If the marketplace install is unavailable, continue with `llms.txt` or `llms-full.txt`.
 
 ## Recommended workflow
 
 ### For new integrations
 
 1. Start with `llms.txt`
-2. Read the closest approved example through its raw GitHub link
+2. Read the closest approved example from the `Official Examples` section
 3. Use the `zama-protocol` Claude Code skill if you are working in Claude Code
-4. Read the matching official guide or reference page through its raw GitHub link when you need more detail
+4. Read the matching official guide or reference page when you need more detail
 
 ### For deeper grounding
 
@@ -157,19 +119,6 @@ Read the example docs before dropping into example source files.
 3. Use the `zama-protocol` skill if you are working in Claude Code
 4. Inspect API reports only if the exported API surface is still unclear
 
-## Approved examples
-
-The current approved examples are:
-
-- `example-hoodi`
-- `node-ethers`
-- `node-viem`
-- `react-ethers`
-- `react-viem`
-- `react-wagmi`
-
-`react-ledger` is intentionally excluded from the V1 LLM workflow.
-
 ## Prompt ideas
 
 Use prompts like:
@@ -179,15 +128,9 @@ Use the official Zama SDK docs and the approved react-wagmi example to integrate
 ```
 
 ```text
-Use the official Zama SDK docs and the approved node-viem example to build a Node.js backend flow with RelayerNode and per-request credential isolation.
+Use the official Zama SDK docs and the approved node-viem example to build a Node.js backend flow with RelayerNode and per-request isolation.
 ```
 
 ```text
 Debug this Zama SDK integration using the official error guide first, then compare it to the closest approved example.
 ```
-
-## Notes
-
-- Keep all published or versioned content in English.
-- Treat approved examples as reference implementations, not as substitutes for the official docs.
-- Treat API reports as fallback reference material, not as the main onboarding path.

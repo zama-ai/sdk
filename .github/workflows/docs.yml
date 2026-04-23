@@ -1,19 +1,31 @@
-name: Lint
+name: Docs
 
 on:
   pull_request:
     branches: [main, prerelease]
+    paths:
+      - "docs/**"
+      - "examples/**/README.md"
+      - "examples/**/WALKTHROUGH.md"
+      - "README.md"
+      - "packages/*/README.md"
+      - "packages/*/etc/**"
+      - "scripts/llm/**"
+      - "llms.txt"
+      - "llms-full.txt"
+      - "package.json"
+      - "pnpm-lock.yaml"
   workflow_call:
 
 concurrency:
-  group: lint-${{ github.ref }}
+  group: docs-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
-  lint:
+  docs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -33,14 +45,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build packages
-        run: pnpm build
+      - run: pnpm docs:build
 
-      - run: pnpm lint
-
-      - run: pnpm typecheck
-
-      - run: pnpm format:check
-
-      - name: Check bundle size
-        run: pnpm size
+      - run: pnpm llm:check
