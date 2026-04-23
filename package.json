@@ -52,7 +52,7 @@
     "setup:claude": "node scripts/setup-claude.mjs",
     "llm:build": "node scripts/llm/build-llms.mjs",
     "llm:stage": "node scripts/llm/stage-artifacts.mjs",
-    "llm:check": "pnpm llm:build && vitest run --config vitest.llm.config.ts && git diff --exit-code llms.txt llms-full.txt docs/llm/corpus-manifest.json",
+    "llm:check": "node scripts/llm/check.mjs",
     "size": "size-limit",
     "size:json": "size-limit --json"
   },
