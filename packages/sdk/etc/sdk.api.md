@@ -5,7 +5,7 @@
 ```ts
 
 import { Abi } from 'viem';
-import { Address } from 'viem';
+import { Address as Address_2 } from 'viem';
 import { Bytes32Hex } from '@zama-fhe/relayer-sdk/bundle';
 import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle';
 import { ContractFunctionArgs } from 'viem';
@@ -13,7 +13,6 @@ import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
 import { FheTypeName } from '@zama-fhe/relayer-sdk/bundle';
 import { FhevmInstanceConfig } from '@zama-fhe/relayer-sdk/bundle';
-import { Hex } from 'viem';
 import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
 import { KeypairType } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
@@ -40,41 +39,58 @@ export const AclTopics: {
     readonly RevokedDelegationForUserDecryption: `0x${string}`;
 };
 
-export { Address }
+// @public
+export type Address = `0x${string}`;
 
 // @public
 export function allowanceContract(tokenAddress: Address, owner: Address, spender: Address): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
-        readonly type: "event";
-        readonly name: "Approval";
-        readonly inputs: readonly [{
-            readonly indexed: true;
-            readonly name: "owner";
-            readonly type: "address";
-        }, {
-            readonly indexed: true;
-            readonly name: "spender";
-            readonly type: "address";
-        }, {
-            readonly indexed: false;
-            readonly name: "value";
+        readonly type: "function";
+        readonly name: "name";
+        readonly stateMutability: "view";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "string";
+        }];
+    }, {
+        readonly type: "function";
+        readonly name: "symbol";
+        readonly stateMutability: "view";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "string";
+        }];
+    }, {
+        readonly type: "function";
+        readonly name: "decimals";
+        readonly stateMutability: "view";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "uint8";
+        }];
+    }, {
+        readonly type: "function";
+        readonly name: "totalSupply";
+        readonly stateMutability: "view";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
             readonly type: "uint256";
         }];
     }, {
-        readonly type: "event";
-        readonly name: "Transfer";
+        readonly type: "function";
+        readonly name: "balanceOf";
+        readonly stateMutability: "view";
         readonly inputs: readonly [{
-            readonly indexed: true;
-            readonly name: "from";
+            readonly name: "account";
             readonly type: "address";
-        }, {
-            readonly indexed: true;
-            readonly name: "to";
-            readonly type: "address";
-        }, {
-            readonly indexed: false;
-            readonly name: "value";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
             readonly type: "uint256";
         }];
     }, {
@@ -89,6 +105,7 @@ export function allowanceContract(tokenAddress: Address, owner: Address, spender
             readonly type: "address";
         }];
         readonly outputs: readonly [{
+            readonly name: "";
             readonly type: "uint256";
         }];
     }, {
@@ -99,67 +116,26 @@ export function allowanceContract(tokenAddress: Address, owner: Address, spender
             readonly name: "spender";
             readonly type: "address";
         }, {
-            readonly name: "amount";
+            readonly name: "value";
             readonly type: "uint256";
         }];
         readonly outputs: readonly [{
+            readonly name: "";
             readonly type: "bool";
-        }];
-    }, {
-        readonly type: "function";
-        readonly name: "balanceOf";
-        readonly stateMutability: "view";
-        readonly inputs: readonly [{
-            readonly name: "account";
-            readonly type: "address";
-        }];
-        readonly outputs: readonly [{
-            readonly type: "uint256";
-        }];
-    }, {
-        readonly type: "function";
-        readonly name: "decimals";
-        readonly stateMutability: "view";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [{
-            readonly type: "uint8";
-        }];
-    }, {
-        readonly type: "function";
-        readonly name: "name";
-        readonly stateMutability: "view";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [{
-            readonly type: "string";
-        }];
-    }, {
-        readonly type: "function";
-        readonly name: "symbol";
-        readonly stateMutability: "view";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [{
-            readonly type: "string";
-        }];
-    }, {
-        readonly type: "function";
-        readonly name: "totalSupply";
-        readonly stateMutability: "view";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [{
-            readonly type: "uint256";
         }];
     }, {
         readonly type: "function";
         readonly name: "transfer";
         readonly stateMutability: "nonpayable";
         readonly inputs: readonly [{
-            readonly name: "recipient";
+            readonly name: "to";
             readonly type: "address";
         }, {
-            readonly name: "amount";
+            readonly name: "value";
             readonly type: "uint256";
         }];
         readonly outputs: readonly [{
+            readonly name: "";
             readonly type: "bool";
         }];
     }, {
@@ -167,17 +143,50 @@ export function allowanceContract(tokenAddress: Address, owner: Address, spender
         readonly name: "transferFrom";
         readonly stateMutability: "nonpayable";
         readonly inputs: readonly [{
-            readonly name: "sender";
+            readonly name: "from";
             readonly type: "address";
         }, {
-            readonly name: "recipient";
+            readonly name: "to";
             readonly type: "address";
         }, {
-            readonly name: "amount";
+            readonly name: "value";
             readonly type: "uint256";
         }];
         readonly outputs: readonly [{
+            readonly name: "";
             readonly type: "bool";
+        }];
+    }, {
+        readonly type: "event";
+        readonly name: "Transfer";
+        readonly inputs: readonly [{
+            readonly name: "from";
+            readonly type: "address";
+            readonly indexed: true;
+        }, {
+            readonly name: "to";
+            readonly type: "address";
+            readonly indexed: true;
+        }, {
+            readonly name: "value";
+            readonly type: "uint256";
+            readonly indexed: false;
+        }];
+    }, {
+        readonly type: "event";
+        readonly name: "Approval";
+        readonly inputs: readonly [{
+            readonly name: "owner";
+            readonly type: "address";
+            readonly indexed: true;
+        }, {
+            readonly name: "spender";
+            readonly type: "address";
+            readonly indexed: true;
+        }, {
+            readonly name: "value";
+            readonly type: "uint256";
+            readonly indexed: false;
         }];
     }];
     readonly functionName: "allowance";
@@ -193,35 +202,51 @@ export class ApprovalFailedError extends ZamaError {
 export function approveContract(tokenAddress: Address, spender: Address, value: bigint): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
-        readonly type: "event";
-        readonly name: "Approval";
-        readonly inputs: readonly [{
-            readonly indexed: true;
-            readonly name: "owner";
-            readonly type: "address";
-        }, {
-            readonly indexed: true;
-            readonly name: "spender";
-            readonly type: "address";
-        }, {
-            readonly indexed: false;
-            readonly name: "value";
+        readonly type: "function";
+        readonly name: "name";
+        readonly stateMutability: "view";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "string";
+        }];
+    }, {
+        readonly type: "function";
+        readonly name: "symbol";
+        readonly stateMutability: "view";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "string";
+        }];
+    }, {
+        readonly type: "function";
+        readonly name: "decimals";
+        readonly stateMutability: "view";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "uint8";
+        }];
+    }, {
+        readonly type: "function";
+        readonly name: "totalSupply";
+        readonly stateMutability: "view";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
             readonly type: "uint256";
         }];
     }, {
-        readonly type: "event";
-        readonly name: "Transfer";
+        readonly type: "function";
+        readonly name: "balanceOf";
+        readonly stateMutability: "view";
         readonly inputs: readonly [{
-            readonly indexed: true;
-            readonly name: "from";
+            readonly name: "account";
             readonly type: "address";
-        }, {
-            readonly indexed: true;
-            readonly name: "to";
-            readonly type: "address";
-        }, {
-            readonly indexed: false;
-            readonly name: "value";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
             readonly type: "uint256";
         }];
     }, {
@@ -236,6 +261,7 @@ export function approveContract(tokenAddress: Address, spender: Address, value: 
             readonly type: "address";
         }];
         readonly outputs: readonly [{
+            readonly name: "";
             readonly type: "uint256";
         }];
     }, {
@@ -246,67 +272,26 @@ export function approveContract(tokenAddress: Address, spender: Address, value: 
             readonly name: "spender";
             readonly type: "address";
         }, {
-            readonly name: "amount";
+            readonly name: "value";
             readonly type: "uint256";
         }];
         readonly outputs: readonly [{
+            readonly name: "";
             readonly type: "bool";
-        }];
-    }, {
-        readonly type: "function";
-        readonly name: "balanceOf";
-        readonly stateMutability: "view";
-        readonly inputs: readonly [{
-            readonly name: "account";
-            readonly type: "address";
-        }];
-        readonly outputs: readonly [{
-            readonly type: "uint256";
-        }];
-    }, {
-        readonly type: "function";
-        readonly name: "decimals";
-        readonly stateMutability: "view";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [{
-            readonly type: "uint8";
-        }];
-    }, {
-        readonly type: "function";
-        readonly name: "name";
-        readonly stateMutability: "view";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [{
-            readonly type: "string";
-        }];
-    }, {
-        readonly type: "function";
-        readonly name: "symbol";
-        readonly stateMutability: "view";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [{
-            readonly type: "string";
-        }];
-    }, {
-        readonly type: "function";
-        readonly name: "totalSupply";
-        readonly stateMutability: "view";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [{
-            readonly type: "uint256";
         }];
     }, {
         readonly type: "function";
         readonly name: "transfer";
         readonly stateMutability: "nonpayable";
         readonly inputs: readonly [{
-            readonly name: "recipient";
+            readonly name: "to";
             readonly type: "address";
         }, {
-            readonly name: "amount";
+            readonly name: "value";
             readonly type: "uint256";
         }];
         readonly outputs: readonly [{
+            readonly name: "";
             readonly type: "bool";
         }];
     }, {
@@ -314,17 +299,50 @@ export function approveContract(tokenAddress: Address, spender: Address, value: 
         readonly name: "transferFrom";
         readonly stateMutability: "nonpayable";
         readonly inputs: readonly [{
-            readonly name: "sender";
+            readonly name: "from";
             readonly type: "address";
         }, {
-            readonly name: "recipient";
+            readonly name: "to";
             readonly type: "address";
         }, {
-            readonly name: "amount";
+            readonly name: "value";
             readonly type: "uint256";
         }];
         readonly outputs: readonly [{
+            readonly name: "";
             readonly type: "bool";
+        }];
+    }, {
+        readonly type: "event";
+        readonly name: "Transfer";
+        readonly inputs: readonly [{
+            readonly name: "from";
+            readonly type: "address";
+            readonly indexed: true;
+        }, {
+            readonly name: "to";
+            readonly type: "address";
+            readonly indexed: true;
+        }, {
+            readonly name: "value";
+            readonly type: "uint256";
+            readonly indexed: false;
+        }];
+    }, {
+        readonly type: "event";
+        readonly name: "Approval";
+        readonly inputs: readonly [{
+            readonly name: "owner";
+            readonly type: "address";
+            readonly indexed: true;
+        }, {
+            readonly name: "spender";
+            readonly type: "address";
+            readonly indexed: true;
+        }, {
+            readonly name: "value";
+            readonly type: "uint256";
+            readonly indexed: false;
         }];
     }];
     readonly functionName: "approve";
@@ -366,35 +384,51 @@ export interface BalanceErrorDetails {
 export function balanceOfContract(tokenAddress: Address, account: Address): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
-        readonly type: "event";
-        readonly name: "Approval";
-        readonly inputs: readonly [{
-            readonly indexed: true;
-            readonly name: "owner";
-            readonly type: "address";
-        }, {
-            readonly indexed: true;
-            readonly name: "spender";
-            readonly type: "address";
-        }, {
-            readonly indexed: false;
-            readonly name: "value";
+        readonly type: "function";
+        readonly name: "name";
+        readonly stateMutability: "view";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "string";
+        }];
+    }, {
+        readonly type: "function";
+        readonly name: "symbol";
+        readonly stateMutability: "view";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "string";
+        }];
+    }, {
+        readonly type: "function";
+        readonly name: "decimals";
+        readonly stateMutability: "view";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "uint8";
+        }];
+    }, {
+        readonly type: "function";
+        readonly name: "totalSupply";
+        readonly stateMutability: "view";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
             readonly type: "uint256";
         }];
     }, {
-        readonly type: "event";
-        readonly name: "Transfer";
+        readonly type: "function";
+        readonly name: "balanceOf";
+        readonly stateMutability: "view";
         readonly inputs: readonly [{
-            readonly indexed: true;
-            readonly name: "from";
+            readonly name: "account";
             readonly type: "address";
-        }, {
-            readonly indexed: true;
-            readonly name: "to";
-            readonly type: "address";
-        }, {
-            readonly indexed: false;
-            readonly name: "value";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
             readonly type: "uint256";
         }];
     }, {
@@ -409,6 +443,7 @@ export function balanceOfContract(tokenAddress: Address, account: Address): {
             readonly type: "address";
         }];
         readonly outputs: readonly [{
+            readonly name: "";
             readonly type: "uint256";
         }];
     }, {
@@ -419,67 +454,26 @@ export function balanceOfContract(tokenAddress: Address, account: Address): {
             readonly name: "spender";
             readonly type: "address";
         }, {
-            readonly name: "amount";
+            readonly name: "value";
             readonly type: "uint256";
         }];
         readonly outputs: readonly [{
+            readonly name: "";
             readonly type: "bool";
-        }];
-    }, {
-        readonly type: "function";
-        readonly name: "balanceOf";
-        readonly stateMutability: "view";
-        readonly inputs: readonly [{
-            readonly name: "account";
-            readonly type: "address";
-        }];
-        readonly outputs: readonly [{
-            readonly type: "uint256";
-        }];
-    }, {
-        readonly type: "function";
-        readonly name: "decimals";
-        readonly stateMutability: "view";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [{
-            readonly type: "uint8";
-        }];
-    }, {
-        readonly type: "function";
-        readonly name: "name";
-        readonly stateMutability: "view";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [{
-            readonly type: "string";
-        }];
-    }, {
-        readonly type: "function";
-        readonly name: "symbol";
-        readonly stateMutability: "view";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [{
-            readonly type: "string";
-        }];
-    }, {
-        readonly type: "function";
-        readonly name: "totalSupply";
-        readonly stateMutability: "view";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [{
-            readonly type: "uint256";
         }];
     }, {
         readonly type: "function";
         readonly name: "transfer";
         readonly stateMutability: "nonpayable";
         readonly inputs: readonly [{
-            readonly name: "recipient";
+            readonly name: "to";
             readonly type: "address";
         }, {
-            readonly name: "amount";
+            readonly name: "value";
             readonly type: "uint256";
         }];
         readonly outputs: readonly [{
+            readonly name: "";
             readonly type: "bool";
         }];
     }, {
@@ -487,17 +481,50 @@ export function balanceOfContract(tokenAddress: Address, account: Address): {
         readonly name: "transferFrom";
         readonly stateMutability: "nonpayable";
         readonly inputs: readonly [{
-            readonly name: "sender";
+            readonly name: "from";
             readonly type: "address";
         }, {
-            readonly name: "recipient";
+            readonly name: "to";
             readonly type: "address";
         }, {
-            readonly name: "amount";
+            readonly name: "value";
             readonly type: "uint256";
         }];
         readonly outputs: readonly [{
+            readonly name: "";
             readonly type: "bool";
+        }];
+    }, {
+        readonly type: "event";
+        readonly name: "Transfer";
+        readonly inputs: readonly [{
+            readonly name: "from";
+            readonly type: "address";
+            readonly indexed: true;
+        }, {
+            readonly name: "to";
+            readonly type: "address";
+            readonly indexed: true;
+        }, {
+            readonly name: "value";
+            readonly type: "uint256";
+            readonly indexed: false;
+        }];
+    }, {
+        readonly type: "event";
+        readonly name: "Approval";
+        readonly inputs: readonly [{
+            readonly name: "owner";
+            readonly type: "address";
+            readonly indexed: true;
+        }, {
+            readonly name: "spender";
+            readonly type: "address";
+            readonly indexed: true;
+        }, {
+            readonly name: "value";
+            readonly type: "uint256";
+            readonly indexed: false;
         }];
     }];
     readonly functionName: "balanceOf";
@@ -5950,35 +5977,51 @@ export interface CredentialsRevokedEvent extends BaseEvent {
 export function decimalsContract(tokenAddress: Address): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
-        readonly type: "event";
-        readonly name: "Approval";
-        readonly inputs: readonly [{
-            readonly indexed: true;
-            readonly name: "owner";
-            readonly type: "address";
-        }, {
-            readonly indexed: true;
-            readonly name: "spender";
-            readonly type: "address";
-        }, {
-            readonly indexed: false;
-            readonly name: "value";
+        readonly type: "function";
+        readonly name: "name";
+        readonly stateMutability: "view";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "string";
+        }];
+    }, {
+        readonly type: "function";
+        readonly name: "symbol";
+        readonly stateMutability: "view";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "string";
+        }];
+    }, {
+        readonly type: "function";
+        readonly name: "decimals";
+        readonly stateMutability: "view";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "uint8";
+        }];
+    }, {
+        readonly type: "function";
+        readonly name: "totalSupply";
+        readonly stateMutability: "view";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
             readonly type: "uint256";
         }];
     }, {
-        readonly type: "event";
-        readonly name: "Transfer";
+        readonly type: "function";
+        readonly name: "balanceOf";
+        readonly stateMutability: "view";
         readonly inputs: readonly [{
-            readonly indexed: true;
-            readonly name: "from";
+            readonly name: "account";
             readonly type: "address";
-        }, {
-            readonly indexed: true;
-            readonly name: "to";
-            readonly type: "address";
-        }, {
-            readonly indexed: false;
-            readonly name: "value";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
             readonly type: "uint256";
         }];
     }, {
@@ -5993,6 +6036,7 @@ export function decimalsContract(tokenAddress: Address): {
             readonly type: "address";
         }];
         readonly outputs: readonly [{
+            readonly name: "";
             readonly type: "uint256";
         }];
     }, {
@@ -6003,67 +6047,26 @@ export function decimalsContract(tokenAddress: Address): {
             readonly name: "spender";
             readonly type: "address";
         }, {
-            readonly name: "amount";
+            readonly name: "value";
             readonly type: "uint256";
         }];
         readonly outputs: readonly [{
+            readonly name: "";
             readonly type: "bool";
-        }];
-    }, {
-        readonly type: "function";
-        readonly name: "balanceOf";
-        readonly stateMutability: "view";
-        readonly inputs: readonly [{
-            readonly name: "account";
-            readonly type: "address";
-        }];
-        readonly outputs: readonly [{
-            readonly type: "uint256";
-        }];
-    }, {
-        readonly type: "function";
-        readonly name: "decimals";
-        readonly stateMutability: "view";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [{
-            readonly type: "uint8";
-        }];
-    }, {
-        readonly type: "function";
-        readonly name: "name";
-        readonly stateMutability: "view";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [{
-            readonly type: "string";
-        }];
-    }, {
-        readonly type: "function";
-        readonly name: "symbol";
-        readonly stateMutability: "view";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [{
-            readonly type: "string";
-        }];
-    }, {
-        readonly type: "function";
-        readonly name: "totalSupply";
-        readonly stateMutability: "view";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [{
-            readonly type: "uint256";
         }];
     }, {
         readonly type: "function";
         readonly name: "transfer";
         readonly stateMutability: "nonpayable";
         readonly inputs: readonly [{
-            readonly name: "recipient";
+            readonly name: "to";
             readonly type: "address";
         }, {
-            readonly name: "amount";
+            readonly name: "value";
             readonly type: "uint256";
         }];
         readonly outputs: readonly [{
+            readonly name: "";
             readonly type: "bool";
         }];
     }, {
@@ -6071,17 +6074,50 @@ export function decimalsContract(tokenAddress: Address): {
         readonly name: "transferFrom";
         readonly stateMutability: "nonpayable";
         readonly inputs: readonly [{
-            readonly name: "sender";
+            readonly name: "from";
             readonly type: "address";
         }, {
-            readonly name: "recipient";
+            readonly name: "to";
             readonly type: "address";
         }, {
-            readonly name: "amount";
+            readonly name: "value";
             readonly type: "uint256";
         }];
         readonly outputs: readonly [{
+            readonly name: "";
             readonly type: "bool";
+        }];
+    }, {
+        readonly type: "event";
+        readonly name: "Transfer";
+        readonly inputs: readonly [{
+            readonly name: "from";
+            readonly type: "address";
+            readonly indexed: true;
+        }, {
+            readonly name: "to";
+            readonly type: "address";
+            readonly indexed: true;
+        }, {
+            readonly name: "value";
+            readonly type: "uint256";
+            readonly indexed: false;
+        }];
+    }, {
+        readonly type: "event";
+        readonly name: "Approval";
+        readonly inputs: readonly [{
+            readonly name: "owner";
+            readonly type: "address";
+            readonly indexed: true;
+        }, {
+            readonly name: "spender";
+            readonly type: "address";
+            readonly indexed: true;
+        }, {
+            readonly name: "value";
+            readonly type: "uint256";
+            readonly indexed: false;
         }];
     }];
     readonly functionName: "decimals";
@@ -8746,7 +8782,8 @@ export const HardhatConfig: {
     readonly registryAddress: undefined;
 };
 
-export { Hex }
+// @public
+export type Hex = `0x${string}`;
 
 // @public
 export class IndexedDBStorage implements GenericStorage {
@@ -11514,35 +11551,51 @@ export const memoryStorage: MemoryStorage;
 export function nameContract(tokenAddress: Address): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
-        readonly type: "event";
-        readonly name: "Approval";
-        readonly inputs: readonly [{
-            readonly indexed: true;
-            readonly name: "owner";
-            readonly type: "address";
-        }, {
-            readonly indexed: true;
-            readonly name: "spender";
-            readonly type: "address";
-        }, {
-            readonly indexed: false;
-            readonly name: "value";
+        readonly type: "function";
+        readonly name: "name";
+        readonly stateMutability: "view";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "string";
+        }];
+    }, {
+        readonly type: "function";
+        readonly name: "symbol";
+        readonly stateMutability: "view";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "string";
+        }];
+    }, {
+        readonly type: "function";
+        readonly name: "decimals";
+        readonly stateMutability: "view";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "uint8";
+        }];
+    }, {
+        readonly type: "function";
+        readonly name: "totalSupply";
+        readonly stateMutability: "view";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
             readonly type: "uint256";
         }];
     }, {
-        readonly type: "event";
-        readonly name: "Transfer";
+        readonly type: "function";
+        readonly name: "balanceOf";
+        readonly stateMutability: "view";
         readonly inputs: readonly [{
-            readonly indexed: true;
-            readonly name: "from";
+            readonly name: "account";
             readonly type: "address";
-        }, {
-            readonly indexed: true;
-            readonly name: "to";
-            readonly type: "address";
-        }, {
-            readonly indexed: false;
-            readonly name: "value";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
             readonly type: "uint256";
         }];
     }, {
@@ -11557,6 +11610,7 @@ export function nameContract(tokenAddress: Address): {
             readonly type: "address";
         }];
         readonly outputs: readonly [{
+            readonly name: "";
             readonly type: "uint256";
         }];
     }, {
@@ -11567,67 +11621,26 @@ export function nameContract(tokenAddress: Address): {
             readonly name: "spender";
             readonly type: "address";
         }, {
-            readonly name: "amount";
+            readonly name: "value";
             readonly type: "uint256";
         }];
         readonly outputs: readonly [{
+            readonly name: "";
             readonly type: "bool";
-        }];
-    }, {
-        readonly type: "function";
-        readonly name: "balanceOf";
-        readonly stateMutability: "view";
-        readonly inputs: readonly [{
-            readonly name: "account";
-            readonly type: "address";
-        }];
-        readonly outputs: readonly [{
-            readonly type: "uint256";
-        }];
-    }, {
-        readonly type: "function";
-        readonly name: "decimals";
-        readonly stateMutability: "view";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [{
-            readonly type: "uint8";
-        }];
-    }, {
-        readonly type: "function";
-        readonly name: "name";
-        readonly stateMutability: "view";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [{
-            readonly type: "string";
-        }];
-    }, {
-        readonly type: "function";
-        readonly name: "symbol";
-        readonly stateMutability: "view";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [{
-            readonly type: "string";
-        }];
-    }, {
-        readonly type: "function";
-        readonly name: "totalSupply";
-        readonly stateMutability: "view";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [{
-            readonly type: "uint256";
         }];
     }, {
         readonly type: "function";
         readonly name: "transfer";
         readonly stateMutability: "nonpayable";
         readonly inputs: readonly [{
-            readonly name: "recipient";
+            readonly name: "to";
             readonly type: "address";
         }, {
-            readonly name: "amount";
+            readonly name: "value";
             readonly type: "uint256";
         }];
         readonly outputs: readonly [{
+            readonly name: "";
             readonly type: "bool";
         }];
     }, {
@@ -11635,17 +11648,50 @@ export function nameContract(tokenAddress: Address): {
         readonly name: "transferFrom";
         readonly stateMutability: "nonpayable";
         readonly inputs: readonly [{
-            readonly name: "sender";
+            readonly name: "from";
             readonly type: "address";
         }, {
-            readonly name: "recipient";
+            readonly name: "to";
             readonly type: "address";
         }, {
-            readonly name: "amount";
+            readonly name: "value";
             readonly type: "uint256";
         }];
         readonly outputs: readonly [{
+            readonly name: "";
             readonly type: "bool";
+        }];
+    }, {
+        readonly type: "event";
+        readonly name: "Transfer";
+        readonly inputs: readonly [{
+            readonly name: "from";
+            readonly type: "address";
+            readonly indexed: true;
+        }, {
+            readonly name: "to";
+            readonly type: "address";
+            readonly indexed: true;
+        }, {
+            readonly name: "value";
+            readonly type: "uint256";
+            readonly indexed: false;
+        }];
+    }, {
+        readonly type: "event";
+        readonly name: "Approval";
+        readonly inputs: readonly [{
+            readonly name: "owner";
+            readonly type: "address";
+            readonly indexed: true;
+        }, {
+            readonly name: "spender";
+            readonly type: "address";
+            readonly indexed: true;
+        }, {
+            readonly name: "value";
+            readonly type: "uint256";
+            readonly indexed: false;
         }];
     }];
     readonly functionName: "name";
@@ -13028,7 +13074,7 @@ export type ReadContractArgs<TAbi extends ContractAbi = ContractAbi, TFunctionNa
 // @public
 export interface ReadContractConfig<TAbi extends ContractAbi = ContractAbi, TFunctionName extends ReadFunctionName<TAbi> = ReadFunctionName<TAbi>, TArgs extends ReadContractArgs<TAbi, TFunctionName> = ReadContractArgs<TAbi, TFunctionName>> {
     readonly abi: TAbi;
-    readonly address: Address;
+    readonly address: Address_2;
     readonly args: TArgs;
     readonly functionName: TFunctionName;
 }
@@ -14670,35 +14716,51 @@ export function supportsInterfaceContract(tokenAddress: Address, interfaceId: Ad
 export function symbolContract(tokenAddress: Address): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
-        readonly type: "event";
-        readonly name: "Approval";
-        readonly inputs: readonly [{
-            readonly indexed: true;
-            readonly name: "owner";
-            readonly type: "address";
-        }, {
-            readonly indexed: true;
-            readonly name: "spender";
-            readonly type: "address";
-        }, {
-            readonly indexed: false;
-            readonly name: "value";
+        readonly type: "function";
+        readonly name: "name";
+        readonly stateMutability: "view";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "string";
+        }];
+    }, {
+        readonly type: "function";
+        readonly name: "symbol";
+        readonly stateMutability: "view";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "string";
+        }];
+    }, {
+        readonly type: "function";
+        readonly name: "decimals";
+        readonly stateMutability: "view";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "uint8";
+        }];
+    }, {
+        readonly type: "function";
+        readonly name: "totalSupply";
+        readonly stateMutability: "view";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "";
             readonly type: "uint256";
         }];
     }, {
-        readonly type: "event";
-        readonly name: "Transfer";
+        readonly type: "function";
+        readonly name: "balanceOf";
+        readonly stateMutability: "view";
         readonly inputs: readonly [{
-            readonly indexed: true;
-            readonly name: "from";
+            readonly name: "account";
             readonly type: "address";
-        }, {
-            readonly indexed: true;
-            readonly name: "to";
-            readonly type: "address";
-        }, {
-            readonly indexed: false;
-            readonly name: "value";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
             readonly type: "uint256";
         }];
     }, {
@@ -14713,6 +14775,7 @@ export function symbolContract(tokenAddress: Address): {
             readonly type: "address";
         }];
         readonly outputs: readonly [{
+            readonly name: "";
             readonly type: "uint256";
         }];
     }, {
@@ -14723,67 +14786,26 @@ export function symbolContract(tokenAddress: Address): {
             readonly name: "spender";
             readonly type: "address";
         }, {
-            readonly name: "amount";
+            readonly name: "value";
             readonly type: "uint256";
         }];
         readonly outputs: readonly [{
+            readonly name: "";
             readonly type: "bool";
-        }];
-    }, {
-        readonly type: "function";
-        readonly name: "balanceOf";
-        readonly stateMutability: "view";
-        readonly inputs: readonly [{
-            readonly name: "account";
-            readonly type: "address";
-        }];
-        readonly outputs: readonly [{
-            readonly type: "uint256";
-        }];
-    }, {
-        readonly type: "function";
-        readonly name: "decimals";
-        readonly stateMutability: "view";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [{
-            readonly type: "uint8";
-        }];
-    }, {
-        readonly type: "function";
-        readonly name: "name";
-        readonly stateMutability: "view";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [{
-            readonly type: "string";
-        }];
-    }, {
-        readonly type: "function";
-        readonly name: "symbol";
-        readonly stateMutability: "view";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [{
-            readonly type: "string";
-        }];
-    }, {
-        readonly type: "function";
-        readonly name: "totalSupply";
-        readonly stateMutability: "view";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [{
-            readonly type: "uint256";
         }];
     }, {
         readonly type: "function";
         readonly name: "transfer";
         readonly stateMutability: "nonpayable";
         readonly inputs: readonly [{
-            readonly name: "recipient";
+            readonly name: "to";
             readonly type: "address";
         }, {
-            readonly name: "amount";
+            readonly name: "value";
             readonly type: "uint256";
         }];
         readonly outputs: readonly [{
+            readonly name: "";
             readonly type: "bool";
         }];
     }, {
@@ -14791,17 +14813,50 @@ export function symbolContract(tokenAddress: Address): {
         readonly name: "transferFrom";
         readonly stateMutability: "nonpayable";
         readonly inputs: readonly [{
-            readonly name: "sender";
+            readonly name: "from";
             readonly type: "address";
         }, {
-            readonly name: "recipient";
+            readonly name: "to";
             readonly type: "address";
         }, {
-            readonly name: "amount";
+            readonly name: "value";
             readonly type: "uint256";
         }];
         readonly outputs: readonly [{
+            readonly name: "";
             readonly type: "bool";
+        }];
+    }, {
+        readonly type: "event";
+        readonly name: "Transfer";
+        readonly inputs: readonly [{
+            readonly name: "from";
+            readonly type: "address";
+            readonly indexed: true;
+        }, {
+            readonly name: "to";
+            readonly type: "address";
+            readonly indexed: true;
+        }, {
+            readonly name: "value";
+            readonly type: "uint256";
+            readonly indexed: false;
+        }];
+    }, {
+        readonly type: "event";
+        readonly name: "Approval";
+        readonly inputs: readonly [{
+            readonly name: "owner";
+            readonly type: "address";
+            readonly indexed: true;
+        }, {
+            readonly name: "spender";
+            readonly type: "address";
+            readonly indexed: true;
+        }, {
+            readonly name: "value";
+            readonly type: "uint256";
+            readonly indexed: false;
         }];
     }];
     readonly functionName: "symbol";
@@ -19814,7 +19869,7 @@ export type WriteContractArgs<TAbi extends ContractAbi = ContractAbi, TFunctionN
 // @public
 export interface WriteContractConfig<TAbi extends ContractAbi = ContractAbi, TFunctionName extends WriteFunctionName<TAbi> = WriteFunctionName<TAbi>, TArgs extends WriteContractArgs<TAbi, TFunctionName> = WriteContractArgs<TAbi, TFunctionName>> {
     readonly abi: TAbi;
-    readonly address: Address;
+    readonly address: Address_2;
     readonly args: TArgs;
     readonly functionName: TFunctionName;
     readonly gas?: bigint;

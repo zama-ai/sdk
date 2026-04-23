@@ -10,23 +10,43 @@ import { Bytes32Hex } from '@zama-fhe/relayer-sdk/bundle';
 import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
-import { EIP1193EventMap } from 'viem';
-import { EIP1193Events } from 'viem';
-import { EIP1193Provider } from 'viem';
 import { ethers } from 'ethers';
 import { Hex } from 'viem';
 import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
-import { ProviderConnectInfo } from 'viem';
-import { ProviderMessage } from 'viem';
-import { ProviderRpcError } from 'viem';
 import { Signer } from 'ethers';
 
-export { EIP1193EventMap }
+// @public
+export interface EIP1193EventMap {
+    // Warning: (ae-forgotten-export) The symbol "Address$1" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    accountsChanged: (accounts: Address$1[]) => void;
+    // (undocumented)
+    chainChanged: (chainId: string) => void;
+    // (undocumented)
+    connect: (connectInfo: ProviderConnectInfo) => void;
+    // (undocumented)
+    disconnect: (error: ProviderRpcError) => void;
+    // (undocumented)
+    message: (message: ProviderMessage) => void;
+}
 
-export { EIP1193Events }
+// @public
+export interface EIP1193Events {
+    // (undocumented)
+    on<TEvent extends keyof EIP1193EventMap>(event: TEvent, listener: EIP1193EventMap[TEvent]): void;
+    // (undocumented)
+    removeListener<TEvent extends keyof EIP1193EventMap>(event: TEvent, listener: EIP1193EventMap[TEvent]): void;
+}
 
-export { EIP1193Provider }
+// @public
+export interface EIP1193Provider extends EIP1193Events {
+    // Warning: (ae-forgotten-export) The symbol "EIP1193RequestFn" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    request: EIP1193RequestFn;
+}
 
 // Warning: (ae-forgotten-export) The symbol "GenericSigner" needs to be exported by the entry point index.d.ts
 //
@@ -34,7 +54,7 @@ export { EIP1193Provider }
 export class EthersSigner implements GenericSigner {
     constructor(config: EthersSignerConfig);
     // (undocumented)
-    getAddress(): Promise<Address>;
+    getAddress(): Promise<Address$1>;
     // (undocumented)
     getBlockTimestamp(): Promise<bigint>;
     // (undocumented)
@@ -44,9 +64,10 @@ export class EthersSigner implements GenericSigner {
     // (undocumented)
     readContract<const TAbi extends Abi | readonly unknown[], TFunctionName extends ContractFunctionName<TAbi, "pure" | "view">, const TArgs extends ContractFunctionArgs<TAbi, "pure" | "view", TFunctionName>>(config: ReadContractConfig<TAbi, TFunctionName, TArgs>): Promise<ContractFunctionReturnType<TAbi, "pure" | "view", TFunctionName, TArgs>>;
     // Warning: (ae-forgotten-export) The symbol "EIP712TypedData" needs to be exported by the entry point index.d.ts
+    // Warning: (ae-forgotten-export) The symbol "Hex$1" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
-    signTypedData(typedData: EIP712TypedData): Promise<Hex>;
+    signTypedData(typedData: EIP712TypedData): Promise<Hex$1>;
     // Warning: (ae-forgotten-export) The symbol "SignerLifecycleCallbacks" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
@@ -54,11 +75,11 @@ export class EthersSigner implements GenericSigner {
     // Warning: (ae-forgotten-export) The symbol "TransactionReceipt" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
-    waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
+    waitForTransactionReceipt(hash: Hex$1): Promise<TransactionReceipt>;
     // Warning: (ae-forgotten-export) The symbol "WriteContractConfig" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
-    writeContract<const TAbi extends Abi | readonly unknown[], TFunctionName extends ContractFunctionName<TAbi, "nonpayable" | "payable">, const TArgs extends ContractFunctionArgs<TAbi, "nonpayable" | "payable", TFunctionName>>(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex>;
+    writeContract<const TAbi extends Abi | readonly unknown[], TFunctionName extends ContractFunctionName<TAbi, "nonpayable" | "payable">, const TArgs extends ContractFunctionArgs<TAbi, "nonpayable" | "payable", TFunctionName>>(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex$1>;
 }
 
 // @public
@@ -70,11 +91,28 @@ export type EthersSignerConfig = {
     provider: ethers.Provider;
 };
 
-export { ProviderConnectInfo }
+// @public
+export interface ProviderConnectInfo {
+    // (undocumented)
+    readonly chainId: string;
+}
 
-export { ProviderMessage }
+// @public
+export interface ProviderMessage {
+    // (undocumented)
+    readonly data: unknown;
+    // (undocumented)
+    readonly type: string;
+}
 
-export { ProviderRpcError }
+// @public
+export class ProviderRpcError extends Error {
+    constructor(code: number, message: string, data?: unknown);
+    // (undocumented)
+    readonly code: number;
+    // (undocumented)
+    readonly data?: unknown;
+}
 
 // Warning: (ae-forgotten-export) The symbol "EthersCallProvider" needs to be exported by the entry point index.d.ts
 //

@@ -4,12 +4,10 @@
 
 ```ts
 
-import { Address } from 'viem';
 import { Bytes32Hex } from '@zama-fhe/relayer-sdk/bundle';
 import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle';
 import { FhevmInstanceConfig } from '@zama-fhe/relayer-sdk/bundle';
 import { FhevmInstanceConfig as FhevmInstanceConfig_2 } from '@zama-fhe/relayer-sdk/node';
-import { Hex } from 'viem';
 import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
 import { InputProofBytesType as InputProofBytesType_2 } from '@zama-fhe/relayer-sdk/node';
 import { KeypairType } from '@zama-fhe/relayer-sdk/bundle';
@@ -111,9 +109,9 @@ export type CreateDelegatedEIP712Payload = CreateDelegatedEIP712Request["payload
 export interface CreateDelegatedEIP712Request extends BaseRequest {
     // (undocumented)
     payload: {
-        publicKey: Hex;
-        contractAddresses: Address[];
-        delegatorAddress: Address;
+        publicKey: Hex$1;
+        contractAddresses: Address$1[];
+        delegatorAddress: Address$1;
         startTimestamp: number;
         durationDays: number;
     };
@@ -131,8 +129,8 @@ export type CreateEIP712Payload = CreateEIP712Request["payload"];
 export interface CreateEIP712Request extends BaseRequest {
     // (undocumented)
     payload: {
-        publicKey: Hex;
-        contractAddresses: Address[];
+        publicKey: Hex$1;
+        contractAddresses: Address$1[];
         startTimestamp: number;
         durationDays: number;
     };
@@ -146,23 +144,23 @@ export type CreateEIP712ResponseData = KmsUserDecryptEIP712Type;
 // @public
 export interface DelegatedUserDecryptParams {
     // (undocumented)
-    contractAddress: Address;
+    contractAddress: Address$1;
     // (undocumented)
-    delegateAddress: Address;
+    delegateAddress: Address$1;
     // (undocumented)
-    delegatorAddress: Address;
+    delegatorAddress: Address$1;
     // (undocumented)
     durationDays: number;
     // (undocumented)
     handles: Handle[];
     // (undocumented)
-    privateKey: Hex;
+    privateKey: Hex$1;
     // (undocumented)
-    publicKey: Hex;
+    publicKey: Hex$1;
     // (undocumented)
-    signature: Hex;
+    signature: Hex$1;
     // (undocumented)
-    signedContractAddresses: Address[];
+    signedContractAddresses: Address$1[];
     // (undocumented)
     startTimestamp: number;
 }
@@ -175,13 +173,13 @@ export interface DelegatedUserDecryptRequest extends BaseRequest {
     // (undocumented)
     payload: {
         handles: Handle[];
-        contractAddress: Address;
-        signedContractAddresses: Address[];
-        privateKey: Hex;
-        publicKey: Hex;
-        signature: Hex;
-        delegatorAddress: Address;
-        delegateAddress: Address;
+        contractAddress: Address$1;
+        signedContractAddresses: Address$1[];
+        privateKey: Hex$1;
+        publicKey: Hex$1;
+        signature: Hex$1;
+        delegatorAddress: Address$1;
+        delegateAddress: Address$1;
         startTimestamp: number;
         durationDays: number;
     };
@@ -201,9 +199,9 @@ export type EIP712TypedData = KmsUserDecryptEIP712Type | KmsDelegatedUserDecrypt
 // @public
 export interface EncryptParams {
     // (undocumented)
-    contractAddress: Address;
+    contractAddress: Address$1;
     // (undocumented)
-    userAddress: Address;
+    userAddress: Address$1;
     // Warning: (ae-forgotten-export) The symbol "EncryptInput" needs to be exported by the entry point index.d.ts
     values: EncryptInput[];
 }
@@ -216,8 +214,8 @@ export interface EncryptRequest extends BaseRequest {
     // (undocumented)
     payload: {
         values: EncryptInput[];
-        contractAddress: Address;
-        userAddress: Address;
+        contractAddress: Address$1;
+        userAddress: Address$1;
     };
     // (undocumented)
     type: "ENCRYPT";
@@ -251,9 +249,9 @@ export interface GenerateKeypairRequest extends BaseRequest {
 // @public (undocumented)
 export interface GenerateKeypairResponseData {
     // (undocumented)
-    privateKey: Hex;
+    privateKey: Hex$1;
     // (undocumented)
-    publicKey: Hex;
+    publicKey: Hex$1;
 }
 
 // @public
@@ -435,11 +433,11 @@ export interface PublicDecryptRequest extends BaseRequest {
 // @public (undocumented)
 export interface PublicDecryptResponseData {
     // (undocumented)
-    abiEncodedClearValues: Hex;
+    abiEncodedClearValues: Hex$1;
     // (undocumented)
     clearValues: Readonly<Record<Handle, ClearValueType>>;
     // (undocumented)
-    decryptionProof: Hex;
+    decryptionProof: Hex$1;
 }
 
 // @public
@@ -450,17 +448,17 @@ export class RelayerNode implements RelayerSDK, Disposable {
     [Symbol.dispose](): void;
     constructor(config: RelayerNodeConfig);
     // (undocumented)
-    createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type_2>;
+    createDelegatedUserDecryptEIP712(publicKey: Hex$1, contractAddresses: Address$1[], delegatorAddress: Address$1, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type_2>;
     // (undocumented)
-    createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
+    createEIP712(publicKey: Hex$1, contractAddresses: Address$1[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
     // (undocumented)
     delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
     // (undocumented)
     encrypt(params: EncryptParams): Promise<EncryptResult>;
     // (undocumented)
-    generateKeypair(): Promise<KeypairType_2<Hex>>;
+    generateKeypair(): Promise<KeypairType_2<Hex$1>>;
     // (undocumented)
-    getAclAddress(): Promise<Address>;
+    getAclAddress(): Promise<Address$1>;
     // Warning: (ae-forgotten-export) The symbol "PublicKeyData" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
@@ -493,12 +491,12 @@ export interface RelayerNodeConfig {
 
 // @public
 export interface RelayerSDK {
-    createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type>;
-    createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
+    createDelegatedUserDecryptEIP712(publicKey: Hex$1, contractAddresses: Address$1[], delegatorAddress: Address$1, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type>;
+    createEIP712(publicKey: Hex$1, contractAddresses: Address$1[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
     delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
-    generateKeypair(): Promise<KeypairType<Hex>>;
-    getAclAddress(): Promise<Address>;
+    generateKeypair(): Promise<KeypairType<Hex$1>>;
+    getAclAddress(): Promise<Address$1>;
     getPublicKey(): Promise<PublicKeyData | null>;
     getPublicParams(bits: number): Promise<PublicParamsData | null>;
     publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
@@ -555,21 +553,21 @@ export interface UpdateCsrfRequest extends BaseRequest {
 // @public
 export interface UserDecryptParams {
     // (undocumented)
-    contractAddress: Address;
+    contractAddress: Address$1;
     // (undocumented)
     durationDays: number;
     // (undocumented)
     handles: Handle[];
     // (undocumented)
-    privateKey: Hex;
+    privateKey: Hex$1;
     // (undocumented)
-    publicKey: Hex;
+    publicKey: Hex$1;
     // (undocumented)
-    signature: Hex;
+    signature: Hex$1;
     // (undocumented)
-    signedContractAddresses: Address[];
+    signedContractAddresses: Address$1[];
     // (undocumented)
-    signerAddress: Address;
+    signerAddress: Address$1;
     // (undocumented)
     startTimestamp: number;
 }
@@ -582,12 +580,12 @@ export interface UserDecryptRequest extends BaseRequest {
     // (undocumented)
     payload: {
         handles: Handle[];
-        contractAddress: Address;
-        signedContractAddresses: Address[];
-        privateKey: Hex;
-        publicKey: Hex;
-        signature: Hex;
-        signerAddress: Address;
+        contractAddress: Address$1;
+        signedContractAddresses: Address$1[];
+        privateKey: Hex$1;
+        publicKey: Hex$1;
+        signature: Hex$1;
+        signerAddress: Address$1;
         startTimestamp: number;
         durationDays: number;
     };
@@ -609,6 +607,11 @@ export type WorkerRequestType = "INIT" | "NODE_INIT" | "UPDATE_CSRF" | "ENCRYPT"
 
 // @public (undocumented)
 export type WorkerResponse<T> = SuccessResponse<T> | ErrorResponse;
+
+// Warnings were encountered during analysis:
+//
+// dist/esm/relayer-sdk.types-7ysZXmRt.d.ts:292:5 - (ae-forgotten-export) The symbol "Hex$1" needs to be exported by the entry point index.d.ts
+// dist/esm/relayer-sdk.types-7ysZXmRt.d.ts:293:5 - (ae-forgotten-export) The symbol "Address$1" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 
