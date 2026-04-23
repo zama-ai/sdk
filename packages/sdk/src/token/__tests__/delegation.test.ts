@@ -411,14 +411,14 @@ describe("decryptBalanceAs", () => {
   });
 
   it("re-checks delegation on cache hit and throws when revoked", async ({
-    signer,
+    provider,
     relayer,
     readonlyToken,
     handle,
     tokenAddress,
     delegatorAddress,
   }) => {
-    vi.mocked(signer.readContract)
+    vi.mocked(provider.readContract)
       .mockResolvedValueOnce(handle) // confidentialBalanceOf (first call)
       .mockResolvedValueOnce(MAX_UINT64) // getDelegationExpiry → permanent
       .mockResolvedValueOnce(handle) // confidentialBalanceOf (second call)
