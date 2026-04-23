@@ -2,7 +2,16 @@ import type { Address } from "viem";
 import { toHex } from "viem";
 import { encryptedAbi } from "../abi/encrypted.abi";
 import type { Handle } from "../relayer/relayer-sdk.types";
-import { inferredTotalSupplyContract } from "./wrapper";
+
+const legacyTotalSupplyAbi = [
+  {
+    inputs: [],
+    name: "totalSupply",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+] as const;
 
 /**
  * Returns the contract config to read an encrypted balance.
@@ -181,10 +190,10 @@ export function confidentialTotalSupplyContract(tokenAddress: Address) {
 }
 
 /**
- * Returns the contract config to read the inferred plaintext total supply.
+ * Returns the contract config to read the legacy plaintext total supply.
  *
- * @deprecated Use {@link inferredTotalSupplyContract}. `totalSupply()` was
- * renamed to `inferredTotalSupply()` on wrapper contracts.
+ * @deprecated Prefer higher-level APIs such as `totalSupplyQueryOptions` / `useTotalSupply`,
+ * which choose between legacy `totalSupply()` and upgraded `inferredTotalSupply()` via ERC-165.
  *
  * @example
  * ```ts
@@ -194,7 +203,12 @@ export function confidentialTotalSupplyContract(tokenAddress: Address) {
  * ```
  */
 export function totalSupplyContract(wrapperAddress: Address) {
-  return inferredTotalSupplyContract(wrapperAddress);
+  return {
+    address: wrapperAddress,
+    abi: legacyTotalSupplyAbi,
+    functionName: "totalSupply",
+    args: [],
+  } as const;
 }
 
 /**

@@ -211,7 +211,7 @@ Full read/write interface for a single confidential ERC-20. Extends `ReadonlyTok
 | `unwrap(amount)`                                           | Request unwrap for a specific amount (low-level, requires manual finalization).                                                                                                                              |
 | `unwrapAll()`                                              | Request unwrap for the entire balance (low-level, requires manual finalization).                                                                                                                             |
 | `resumeUnshield(unwrapTxHash, callbacks?)`                 | Resume an interrupted unshield from an existing unwrap tx hash. Goes straight to wait receipt → finalize.                                                                                                    |
-| `finalizeUnwrap(unwrapRequestId)`                          | Complete unwrap with public decryption proof.                                                                                                                                                                |
+| `finalizeUnwrap(unwrapRequestIdOrAmount)`                  | Complete unwrap with public decryption proof. Pass `unwrapRequestId` from upgraded events, or the legacy encrypted amount handle.                                                                            |
 | `confidentialTransfer(to, amount)`                         | Encrypted transfer. Encrypts amount, then calls the contract.                                                                                                                                                |
 | `confidentialTransferFrom(from, to, amt)`                  | Operator encrypted transfer.                                                                                                                                                                                 |
 | `approve(spender, until?)`                                 | Set operator approval. `until` defaults to now + 1 hour.                                                                                                                                                     |
@@ -289,15 +289,31 @@ const results = await Token.batchRevokeDelegation(tokens, "0xDelegate");
 The unshield flow is two-phase: unwrap tx, then finalize. If the page reloads between phases, the unwrap tx hash is lost. Use these utilities to persist it:
 
 ```ts
-import { savePendingUnshield, loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/sdk";
+import {
+  savePendingUnshield,
+  loadPendingUnshield,
+  loadPendingUnshieldRequest,
+  clearPendingUnshield,
+} from "@zama-fhe/sdk";
 
-// Save the unwrap hash before finalization
-await savePendingUnshield(storage, wrapperAddress, unwrapTxHash);
+// Save before finalization.
+// Pass unwrapRequestId from upgraded UnwrapRequested events when available.
+const event = findUnwrapRequested(receipt.logs);
+await savePendingUnshield(storage, wrapperAddress, unwrapTxHash, event.unwrapRequestId);
 
-// On next load, check for pending unshields
+// On next load, resume with the tx hash only (works for both legacy and upgraded wrappers)
 const pending = await loadPendingUnshield(storage, wrapperAddress);
 if (pending) {
   await token.resumeUnshield(pending);
+  await clearPendingUnshield(storage, wrapperAddress);
+}
+
+// Or load the full request object to access unwrapRequestId directly
+const request = await loadPendingUnshieldRequest(storage, wrapperAddress);
+if (request) {
+  // request.unwrapTxHash — always present
+  // request.unwrapRequestId — present for requests from upgraded wrappers
+  await token.resumeUnshield(request.unwrapTxHash);
   await clearPendingUnshield(storage, wrapperAddress);
 }
 ```
@@ -563,15 +579,20 @@ interface ContractCallConfig {
 
 ### Wrapper
 
-| Function                                                             | Description                                         |
-| -------------------------------------------------------------------- | --------------------------------------------------- |
-| `wrapContract(wrapper, to, amount)`                                  | Wrap ERC-20 tokens.                                 |
-| `unwrapContract(token, from, to, encryptedAmount, inputProof)`       | Request unwrap with encrypted amount.               |
-| `unwrapFromBalanceContract(token, from, to, encryptedBalance)`       | Request unwrap using on-chain balance handle.       |
-| `finalizeUnwrapContract(wrapper, unwrapRequestId, cleartext, proof)` | Finalize unwrap with decryption proof.              |
-| `underlyingContract(wrapper)`                                        | Read underlying ERC-20 address.                     |
-| `inferredTotalSupplyContract(wrapper)`                               | Read inferred plaintext total supply.               |
-| `totalSupplyContract(wrapper)`                                       | Deprecated alias for `inferredTotalSupplyContract`. |
+| Function                                                             | Description                                   |
+| -------------------------------------------------------------------- | --------------------------------------------- |
+| `wrapContract(wrapper, to, amount)`                                  | Wrap ERC-20 tokens.                           |
+| `unwrapContract(token, from, to, encryptedAmount, inputProof)`       | Request unwrap with encrypted amount.         |
+| `unwrapFromBalanceContract(token, from, to, encryptedBalance)`       | Request unwrap using on-chain balance handle. |
+| `finalizeUnwrapContract(wrapper, unwrapRequestId, cleartext, proof)` | Finalize unwrap with decryption proof.        |
+| `underlyingContract(wrapper)`                                        | Read underlying ERC-20 address.               |
+| `inferredTotalSupplyContract(wrapper)`                               | Read inferred plaintext total supply.         |
+| `totalSupplyContract(wrapper)`                                       | Deprecated legacy `totalSupply()` builder.    |
+
+For transition-safe total supply reads, prefer `totalSupplyQueryOptions` or React
+`useTotalSupply`. They detect the wrapper ERC-165 interface ID and call
+`inferredTotalSupply()` on upgraded wrappers or legacy `totalSupply()` on pre-upgrade
+wrappers.
 
 ### ERC-165
 
@@ -647,19 +668,20 @@ const logs = await publicClient.getLogs({
 });
 ```
 
-Individual topic hashes are accessible via the `Topics` object: `Topics.ConfidentialTransfer`, `Topics.Wrapped`, `Topics.UnwrapRequested`, `Topics.UnwrappedFinalized`, `Topics.UnwrappedStarted`.
+Individual topic hashes are accessible via the `Topics` object: `Topics.ConfidentialTransfer`, `Topics.Wrapped`, `Topics.UnwrapRequested`, `Topics.UnwrapRequestedLegacy`, `Topics.UnwrapFinalized`, `Topics.UnwrapFinalizedLegacy`, and `Topics.UnwrappedStarted`. `Topics.UnwrappedFinalized` remains as a deprecated alias for the upgraded finalized topic.
 
 ### Decoders
 
-| Function                          | Returns                                                                                                     |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `decodeConfidentialTransfer(log)` | `ConfidentialTransferEvent \| null` — `{ from, to, encryptedAmountHandle }`                                 |
-| `decodeWrapped(log)`              | `WrappedEvent \| null` — `{ to, amountIn }`                                                                 |
-| `decodeUnwrapRequested(log)`      | `UnwrapRequestedEvent \| null` — `{ receiver, unwrapRequestId, encryptedAmount }`                           |
-| `decodeUnwrappedFinalized(log)`   | `UnwrappedFinalizedEvent \| null` — `{ receiver, unwrapRequestId, encryptedAmount, cleartextAmount }`       |
-| `decodeUnwrappedStarted(log)`     | `UnwrappedStartedEvent \| null` — `{ returnVal, requestId, txId, to, refund, requestedAmount, burnAmount }` |
-| `decodeOnChainEvent(log)`         | `OnChainEvent \| null` — tries all decoders                                                                 |
-| `decodeOnChainEvents(logs)`       | `OnChainEvent[]` — batch decode, skips unrecognized logs                                                    |
+| Function                          | Returns                                                                                                                                                                                                                    |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `decodeConfidentialTransfer(log)` | `ConfidentialTransferEvent \| null` — `{ from, to, encryptedAmountHandle }`                                                                                                                                                |
+| `decodeWrapped(log)`              | `WrappedEvent \| null` — `{ to, amountIn }`                                                                                                                                                                                |
+| `decodeUnwrapRequested(log)`      | `UnwrapRequestedEvent \| null` — `{ receiver, encryptedAmount, unwrapRequestId? }`                                                                                                                                         |
+| `decodeUnwrapFinalized(log)`      | `UnwrapFinalizedEvent \| null` — `{ receiver, encryptedAmount, cleartextAmount, unwrapRequestId? }`                                                                                                                        |
+| `decodeUnwrappedFinalized(log)`   | **Deprecated.** Like `decodeUnwrapFinalized(log)` but always returns `eventName: "UnwrappedFinalized"` — not a transparent alias. Update switch statements to use `decodeUnwrapFinalized` and `"UnwrapFinalized"` instead. |
+| `decodeUnwrappedStarted(log)`     | `UnwrappedStartedEvent \| null` — `{ returnVal, requestId, txId, to, refund, requestedAmount, burnAmount }`                                                                                                                |
+| `decodeOnChainEvent(log)`         | `OnChainEvent \| null` — tries all decoders                                                                                                                                                                                |
+| `decodeOnChainEvents(logs)`       | `OnChainEvent[]` — batch decode, skips unrecognized logs                                                                                                                                                                   |
 
 ### Finder Helpers
 
@@ -777,11 +799,12 @@ Low-level FHE operations are available on the relayer backend via `sdk.relayer`:
 
 ## Constants
 
-| Constant                       | Value                             | Description                                   |
-| ------------------------------ | --------------------------------- | --------------------------------------------- |
-| `ZERO_HANDLE`                  | `"0x0000...0000"` (32 zero bytes) | Sentinel for empty/zero encrypted values.     |
-| `ERC7984_INTERFACE_ID`         | `"0x4958f2a4"`                    | ERC-165 interface ID for confidential tokens. |
-| `ERC7984_WRAPPER_INTERFACE_ID` | `"0xf1f4c25a"`                    | ERC-165 interface ID for wrapper contracts.   |
+| Constant                              | Value                             | Description                                          |
+| ------------------------------------- | --------------------------------- | ---------------------------------------------------- |
+| `ZERO_HANDLE`                         | `"0x0000...0000"` (32 zero bytes) | Sentinel for empty/zero encrypted values.            |
+| `ERC7984_INTERFACE_ID`                | `"0x4958f2a4"`                    | ERC-165 interface ID for confidential tokens.        |
+| `ERC7984_WRAPPER_INTERFACE_ID`        | `"0x1f1c62b2"`                    | ERC-165 interface ID for upgraded wrapper contracts. |
+| `ERC7984_WRAPPER_INTERFACE_ID_LEGACY` | `"0xd04584ba"`                    | ERC-165 interface ID for legacy wrapper contracts.   |
 
 ## Exported ABIs
 

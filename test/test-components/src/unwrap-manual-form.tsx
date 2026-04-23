@@ -9,6 +9,10 @@ import {
   useMetadata,
 } from "@zama-fhe/react-sdk";
 
+type FinalizeUnwrapInput =
+  | { label: "Unwrap request ID"; params: { unwrapRequestId: Hex } }
+  | { label: "Legacy burn handle"; params: { burnAmountHandle: Hex } };
+
 export function UnwrapManualForm({
   tokenAddress,
   wrapperAddress,
@@ -16,7 +20,7 @@ export function UnwrapManualForm({
   tokenAddress: Address;
   wrapperAddress?: Address;
 }) {
-  const [unwrapRequestId, setUnwrapRequestId] = useState<Hex | null>(null);
+  const [finalizeInput, setFinalizeInput] = useState<FinalizeUnwrapInput | null>(null);
   const { data: metadata } = useMetadata(tokenAddress);
   const { data: balance } = useConfidentialBalance({ tokenAddress });
   const unwrap = useUnwrap({ tokenAddress, wrapperAddress });
@@ -32,7 +36,17 @@ export function UnwrapManualForm({
           });
           const event = findUnwrapRequested(result.receipt.logs);
           if (event) {
-            setUnwrapRequestId(event.unwrapRequestId);
+            setFinalizeInput(
+              event.unwrapRequestId
+                ? {
+                    label: "Unwrap request ID",
+                    params: { unwrapRequestId: event.unwrapRequestId },
+                  }
+                : {
+                    label: "Legacy burn handle",
+                    params: { burnAmountHandle: event.encryptedAmount },
+                  },
+            );
           }
         }}
         className="space-y-4"
@@ -72,9 +86,12 @@ export function UnwrapManualForm({
           </p>
         )}
 
-        {unwrapRequestId && (
+        {finalizeInput && (
           <p className="text-sm text-zama-gray" data-testid="burn-handle">
-            Unwrap request ID: {unwrapRequestId}
+            {finalizeInput.label}:{" "}
+            {"unwrapRequestId" in finalizeInput.params
+              ? finalizeInput.params.unwrapRequestId
+              : finalizeInput.params.burnAmountHandle}
           </p>
         )}
 
@@ -88,10 +105,10 @@ export function UnwrapManualForm({
       {/* Step 2: Finalize */}
       <form
         action={() => {
-          if (!unwrapRequestId) {
+          if (!finalizeInput) {
             return;
           }
-          finalizeUnwrap.mutate({ unwrapRequestId });
+          finalizeUnwrap.mutate(finalizeInput.params);
         }}
         className="space-y-4"
         data-testid="finalize-form"
@@ -100,7 +117,7 @@ export function UnwrapManualForm({
 
         <button
           type="submit"
-          disabled={finalizeUnwrap.isPending || !unwrapRequestId}
+          disabled={finalizeUnwrap.isPending || !finalizeInput}
           className="px-4 py-2 bg-zama-yellow text-zama-black font-medium rounded hover:bg-zama-yellow-hover disabled:opacity-50 transition-colors"
           data-testid="finalize-button"
         >

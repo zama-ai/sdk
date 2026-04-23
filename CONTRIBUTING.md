@@ -106,7 +106,7 @@ Release behavior:
 
 1. PR titles are validated against Conventional Commits.
 2. Squash-merging into a release branch (`main` or `prerelease`) preserves that title as the release signal.
-3. semantic-release computes the next version (`patch`/`minor`/`major`) from merged commits.
+3. semantic-release computes the next version (`patch`/`minor`/`major`) from merged commits. Breaking changes must be signaled with `!` in the PR title (e.g. `feat!: drop deprecated API`); `BREAKING CHANGE:` text in commit bodies is preserved in the changelog but does not affect the version bump.
 4. `@zama-fhe/sdk` and `@zama-fhe/react-sdk` are versioned and published together in lockstep.
 5. `main` publishes stable versions to npm `latest`, while `prerelease` publishes prerelease versions to npm `alpha`.
 6. GitHub release notes and tags are generated automatically.

@@ -125,11 +125,17 @@ export type {
   ConfidentialTransferEvent,
   WrappedEvent,
   UnwrapRequestedEvent,
+  UnwrapFinalizedEvent,
   UnwrappedFinalizedEvent,
   UnwrappedStartedEvent,
 } from "../events/onchain-events";
 export type { OnChainEvent } from "../events/onchain-events";
-export type { ClearValueType, EncryptParams, EncryptResult } from "../relayer/relayer-sdk.types";
+export type {
+  ClearValueType,
+  EncryptParams,
+  EncryptResult,
+  Handle,
+} from "../relayer/relayer-sdk.types";
 export type {
   DelegatedUserDecryptParams,
   EncryptInput,

@@ -205,11 +205,23 @@ await token.unshieldAll();
 Resumes an interrupted unshield from the finalize step. Use when the user closed the page between unwrap and finalize.
 
 ```ts
-import { loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/sdk";
+import {
+  loadPendingUnshield,
+  loadPendingUnshieldRequest,
+  clearPendingUnshield,
+} from "@zama-fhe/sdk";
 
+// Simple resume (tx hash only — works for both legacy and upgraded wrappers)
 const pending = await loadPendingUnshield(storage, wrapperAddress);
 if (pending) {
   await token.resumeUnshield(pending);
+  await clearPendingUnshield(storage, wrapperAddress);
+}
+
+// Full request (includes unwrapRequestId when available from upgraded wrappers)
+const request = await loadPendingUnshieldRequest(storage, wrapperAddress);
+if (request) {
+  await token.resumeUnshield(request.unwrapTxHash);
   await clearPendingUnshield(storage, wrapperAddress);
 }
 ```
@@ -314,12 +326,13 @@ await token.unwrapAll();
 
 ### finalizeUnwrap
 
-`(unwrapRequestId: Hex) => Promise<TransactionResult>`
+`(unwrapRequestIdOrAmount: Handle) => Promise<TransactionResult>`
 
-Completes an unwrap (phase 2) after the decryption proof is available. Use `unshield()` for the full orchestrated flow.
+Completes an unwrap (phase 2) after the decryption proof is available. Pass `unwrapRequestId` from upgraded `UnwrapRequested` events, or the legacy encrypted amount handle. Use `unshield()` for the full orchestrated flow.
 
 ```ts
-await token.finalizeUnwrap(event.unwrapRequestId);
+const event = findUnwrapRequested(receipt.logs);
+await token.finalizeUnwrap(event.unwrapRequestId ?? event.encryptedAmount);
 ```
 
 ## Related

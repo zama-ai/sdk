@@ -8,21 +8,21 @@ import { wrapperAbi } from "../abi/wrapper.abi";
  * @example
  * ```ts
  * const txHash = await signer.writeContract(
- *   finalizeUnwrapContract(wrapper, unwrapRequestId, cleartext, proof),
+ *   finalizeUnwrapContract(wrapper, unwrapRequestIdOrAmount, cleartext, proof),
  * );
  * ```
  */
 export function finalizeUnwrapContract(
   wrapper: Address,
-  unwrapRequestId: Handle,
-  burntAmountCleartext: bigint,
+  unwrapRequestIdOrAmount: Handle,
+  unwrapAmountCleartext: bigint,
   decryptionProof: Hex,
 ) {
   return {
     address: wrapper,
     abi: wrapperAbi,
     functionName: "finalizeUnwrap",
-    args: [unwrapRequestId, burntAmountCleartext, decryptionProof],
+    args: [unwrapRequestIdOrAmount, unwrapAmountCleartext, decryptionProof],
   } as const;
 }
 
