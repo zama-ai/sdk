@@ -9,10 +9,10 @@ import {
   indexedDBStorage,
   savePendingUnshield,
 } from "@zama-fhe/react-sdk";
-import { createZamaConfig, cleartext } from "@zama-fhe/sdk";
+import { cleartext } from "@zama-fhe/sdk";
 import { hoodi } from "@zama-fhe/sdk/chains";
 import { hoodiCleartextConfig } from "@zama-fhe/sdk/cleartext";
-import { EthersSigner } from "@zama-fhe/sdk/ethers";
+import { createConfig } from "@zama-fhe/sdk/ethers";
 import { JsonRpcProvider } from "ethers";
 import { HOODI_RPC_URL } from "@/lib/config";
 import { getActiveUnshieldToken, setActiveUnshieldToken } from "@/lib/activeUnshield";
@@ -20,10 +20,9 @@ import { getEthereumProvider } from "@/lib/ethereum";
 
 // ── What this file does ────────────────────────────────────────────────────────
 //
-// This file wires together the SDK via createZamaConfig:
+// This file wires together the SDK via createConfig:
 //
-//   const signer  = new EthersSigner({ ethereum });
-//   const config  = createZamaConfig({ chains: [hoodi], signer, transports: { ... } });
+//   const config  = createConfig({ chains: [hoodi], ethereum, transports: { ... } });
 //   <ZamaProvider config={config}>
 //
 // That is the minimal setup. This file adds three extra layers to handle issues
@@ -137,12 +136,18 @@ function createHybridEthereum(
           return Promise.resolve([...liveAccountsRef.current]);
         }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return (ethereum as any).request({ method: "eth_accounts", params: [] });
+        return (ethereum as any).request({
+          method: "eth_accounts",
+          params: [],
+        });
       }
       const dest = WALLET_METHODS.has(method) || method.startsWith("wallet_") ? "wallet" : "rpc";
       if (dest === "wallet") {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const p = (ethereum as any).request({ method, params }) as Promise<unknown>;
+        const p = (ethereum as any).request({
+          method,
+          params,
+        }) as Promise<unknown>;
         if (method === "eth_blockNumber") {
           return p.then((block: unknown) => {
             const actual = BigInt(block as string);
@@ -197,17 +202,19 @@ export function Providers({ children }: { children: ReactNode }) {
   // Recreated on wallet switch so the new EthersSigner is bound to the new account address.
   const zamaConfig = useMemo(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const hybridEthereum = createHybridEthereum(getEthereumProvider(), liveAccountsRef) as any;
-    const signer = new EthersSigner({ ethereum: hybridEthereum });
-    return createZamaConfig({
+    const hybridEthereum = createHybridEthereum(getEthereumProvider(), liveAccountsRef);
+    return createConfig({
       chains: [hoodi],
-      signer,
+      ethereum: hybridEthereum,
       transports: {
-        [hoodi.id]: cleartext({ ...hoodiCleartextConfig, network: HOODI_RPC_URL }),
+        [hoodi.id]: cleartext({
+          ...hoodiCleartextConfig,
+          network: HOODI_RPC_URL,
+        }),
       },
       storage: indexedDBStorage,
       sessionStorage: sessionDBStorage,
-      onEvent: (event) => {
+      onEvent: (event: ZamaSDKEvents) => {
         if (event.type === ZamaSDKEvents.UnshieldPhase1Submitted) {
           const wrapperAddress = getActiveUnshieldToken();
           if (wrapperAddress) {

@@ -642,15 +642,13 @@ export class ReadonlyToken {
       return 0n;
     }
 
+    await this.#assertDelegationActive(normalizedDelegator);
+
     const cached = await this.sdk.cache.get(normalizedAccount, this.address, handle);
     if (cached !== null) {
       assertBigint(cached, "decryptBalanceAs: cached");
       return cached;
     }
-
-    // Pre-flight delegation check — avoids wasting a wallet signature on an
-    // expired or non-existent delegation.
-    await this.#assertDelegationActive(normalizedDelegator);
 
     const t0 = Date.now();
     try {

@@ -53,13 +53,12 @@ export interface ResolvedChainTransport {
 export function resolveChainTransports(
   chains: readonly FheChain[],
   transports: Readonly<Record<number, TransportConfig>>,
-  chainIds: readonly number[],
 ): Map<number, ResolvedChainTransport> {
   const chainMap = new Map(chains.map((c) => [c.id, c]));
   const transportMap = new Map(Object.entries(transports));
   const result = new Map<number, ResolvedChainTransport>();
 
-  for (const id of chainIds) {
+  for (const id of chainMap.keys()) {
     const chainConfig = chainMap.get(id);
     const transportConfig = transportMap.get(String(id));
 
@@ -94,7 +93,7 @@ export function resolveChainTransports(
     });
   }
 
-  const chainIdSet = new Set(chainIds);
+  const chainIdSet = new Set(chainMap.keys());
   const orphaned = Object.keys(transports)
     .map(Number)
     .filter((id) => !chainIdSet.has(id));
