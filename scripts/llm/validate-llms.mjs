@@ -66,6 +66,10 @@ if (!llmsFull.includes("Only use it with agents that support large context windo
   missing.push("llms-full.txt missing large context window guidance");
 }
 
+if (llmsFull.includes("Missing include:")) {
+  missing.push("llms-full.txt contains unresolved GitBook includes");
+}
+
 if (missing.length > 0) {
   console.error("LLM artifact validation failed:");
   for (const issue of missing) {

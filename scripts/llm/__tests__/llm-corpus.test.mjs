@@ -9,6 +9,8 @@ import {
   docsSummaryPath,
   excludedExamples,
   forbiddenPaths,
+  loadGitbookSource,
+  normalizeGitbookMarkdown,
   parseSummary,
   rawGithubBaseUrl,
   repoRoot,
@@ -113,7 +115,18 @@ describe("LLM artifact rendering", () => {
     expect(llmsFull).toContain("source_path: examples/react-wagmi/WALKTHROUGH.md");
     expect(llmsFull).not.toContain("source_path: packages/sdk/etc/sdk.api.md");
     expect(llmsFull).not.toContain("source_path: examples/react-ledger");
+    expect(llmsFull).not.toContain("Missing include:");
     expect(llmsFull.split("\n").some((line) => /\s$/u.test(line))).toBe(false);
+  });
+
+  test("resolves GitBook include paths in generated markdown", () => {
+    const content = normalizeGitbookMarkdown(
+      "docs/gitbook/src/reference/react/useConfidentialBalance.md",
+      loadGitbookSource("docs/gitbook/src/reference/react/useConfidentialBalance.md"),
+    );
+
+    expect(content).not.toContain("Missing include:");
+    expect(content).toContain("The last successfully resolved data for the query.");
   });
 
   test("generated files match renderer output", () => {

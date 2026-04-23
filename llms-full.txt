@@ -8081,9 +8081,35 @@ const { data } = useConfidentialBalance({
 ```
 
 
+### `enabled`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/query-options.md
+**Type:** `boolean`
+
+Set to `false` to prevent the query from running automatically. The query will only execute when `refetch` is called or when `enabled` changes to `true`.
+
+### `staleTime`
+
+**Type:** `number` (milliseconds)
+
+How long fetched data is considered fresh. While fresh, the query will not re-fetch on mount or window focus. Defaults to `0` (always stale).
+
+### `gcTime`
+
+**Type:** `number` (milliseconds)
+
+How long inactive query data stays in the cache before garbage collection. Defaults to `300000` (5 minutes).
+
+### `refetchInterval`
+
+**Type:** `number | false` (milliseconds)
+
+Poll at a fixed interval. Set to `false` or omit to disable polling.
+
+### `refetchOnWindowFocus`
+
+**Type:** `boolean`
+
+Re-fetch when the browser tab regains focus. Defaults to `true`.
 
 
 ## Return Type
@@ -8094,9 +8120,59 @@ import { type UseConfidentialBalanceOptions } from "@zama-fhe/react-sdk";
 
 The `data` property is `bigint | undefined` -- the decrypted token balance.
 
+### `data`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/query-result.md
+**Type:** `TData | undefined`
+
+The last successfully resolved data for the query.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the query failed, otherwise `null`.
+
+### `isLoading`
+
+**Type:** `boolean`
+
+`true` on the first fetch when there is no cached data. Equivalent to `isPending && isFetching`.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` when there is no cached data and no query attempt has finished yet.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` when the query has received a successful response.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` when the query encountered an error.
+
+### `isFetching`
+
+**Type:** `boolean`
+
+`true` whenever the query is fetching, including background re-fetches. Use this for subtle loading indicators that do not replace content.
+
+### `refetch`
+
+**Type:** `() => Promise<QueryObserverResult>`
+
+Manually trigger a re-fetch. Returns a promise that resolves with the query result.
+
+### `status`
+
+**Type:** `"pending" | "error" | "success"`
+
+The current status of the query. Prefer the boolean flags above for conditional rendering.
 
 
 ## Related
@@ -8214,18 +8290,94 @@ const { data } = useConfidentialBalances({
 ```
 
 
+### `enabled`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/query-options.md
+**Type:** `boolean`
+
+Set to `false` to prevent the query from running automatically. The query will only execute when `refetch` is called or when `enabled` changes to `true`.
+
+### `staleTime`
+
+**Type:** `number` (milliseconds)
+
+How long fetched data is considered fresh. While fresh, the query will not re-fetch on mount or window focus. Defaults to `0` (always stale).
+
+### `gcTime`
+
+**Type:** `number` (milliseconds)
+
+How long inactive query data stays in the cache before garbage collection. Defaults to `300000` (5 minutes).
+
+### `refetchInterval`
+
+**Type:** `number | false` (milliseconds)
+
+Poll at a fixed interval. Set to `false` or omit to disable polling.
+
+### `refetchOnWindowFocus`
+
+**Type:** `boolean`
+
+Re-fetch when the browser tab regains focus. Defaults to `true`.
 
 
 ## Return Type
 
 The `data` property is `BatchBalancesResult | undefined` -- an object with `results: Map<Address, bigint>` (successfully decrypted balances) and `errors: Map<Address, ZamaError>` (per-token errors).
 
+### `data`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/query-result.md
+**Type:** `TData | undefined`
+
+The last successfully resolved data for the query.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the query failed, otherwise `null`.
+
+### `isLoading`
+
+**Type:** `boolean`
+
+`true` on the first fetch when there is no cached data. Equivalent to `isPending && isFetching`.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` when there is no cached data and no query attempt has finished yet.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` when the query has received a successful response.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` when the query encountered an error.
+
+### `isFetching`
+
+**Type:** `boolean`
+
+`true` whenever the query is fetching, including background re-fetches. Use this for subtle loading indicators that do not replace content.
+
+### `refetch`
+
+**Type:** `() => Promise<QueryObserverResult>`
+
+Manually trigger a re-fetch. Returns a promise that resolves with the query result.
+
+### `status`
+
+**Type:** `"pending" | "error" | "success"`
+
+The current status of the query. Prefer the boolean flags above for conditional rendering.
 
 
 ## Related
@@ -8332,9 +8484,29 @@ const { mutateAsync: transfer } = useConfidentialTransfer({
 
 ---
 
+### `onSuccess`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/mutation-options.md
+**Type:** `(data: TData, variables: TVariables, context: TContext) => void`
+
+Callback fired when the mutation completes without error. Receives the return data, the variables passed to `mutate`, and any context from `onMutate`.
+
+### `onError`
+
+**Type:** `(error: Error, variables: TVariables, context: TContext | undefined) => void`
+
+Callback fired when the mutation throws. Receives the error, the variables passed to `mutate`, and the context from `onMutate` (if it ran).
+
+### `onSettled`
+
+**Type:** `(data: TData | undefined, error: Error | null, variables: TVariables, context: TContext | undefined) => void`
+
+Callback fired after the mutation finishes, regardless of success or failure. Useful for cleanup like closing modals or resetting form state.
+
+### `onMutate`
+
+**Type:** `(variables: TVariables) => Promise<TContext> | TContext`
+
+Callback fired before the mutation function runs. Return a context value to pass through to `onSuccess`, `onError`, and `onSettled`. Commonly used for optimistic updates.
 
 
 ## Mutation variables
@@ -8392,9 +8564,53 @@ The `data` property (after a successful mutation) is `{ txHash: Hex, receipt: Tr
 - **`txHash`** -- Transaction hash submitted to the network.
 - **`receipt`** -- Confirmed transaction receipt from the chain.
 
+### `mutate`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/mutation-result.md
+**Type:** `(variables: TVariables) => void`
+
+Trigger the mutation. Does not return a promise. Use `onSuccess` / `onError` callbacks to react to the result.
+
+### `mutateAsync`
+
+**Type:** `(variables: TVariables) => Promise<TData>`
+
+Trigger the mutation and return a promise. Useful when you need to `await` the result in an event handler.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` while the mutation is in progress. Use this to show loading indicators.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` after the mutation completes without error.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` after the mutation throws an error.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the mutation failed, otherwise `null`.
+
+### `data`
+
+**Type:** `TData | undefined`
+
+The return value from the mutation function after a successful call.
+
+### `reset`
+
+**Type:** `() => void`
+
+Reset the mutation state back to its initial values. Clears `data`, `error`, and status flags.
 
 
 ## Related
@@ -8498,9 +8714,29 @@ const { mutateAsync: transferFrom } = useConfidentialTransferFrom({
 
 ---
 
+### `onSuccess`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/mutation-options.md
+**Type:** `(data: TData, variables: TVariables, context: TContext) => void`
+
+Callback fired when the mutation completes without error. Receives the return data, the variables passed to `mutate`, and any context from `onMutate`.
+
+### `onError`
+
+**Type:** `(error: Error, variables: TVariables, context: TContext | undefined) => void`
+
+Callback fired when the mutation throws. Receives the error, the variables passed to `mutate`, and the context from `onMutate` (if it ran).
+
+### `onSettled`
+
+**Type:** `(data: TData | undefined, error: Error | null, variables: TVariables, context: TContext | undefined) => void`
+
+Callback fired after the mutation finishes, regardless of success or failure. Useful for cleanup like closing modals or resetting form state.
+
+### `onMutate`
+
+**Type:** `(variables: TVariables) => Promise<TContext> | TContext`
+
+Callback fired before the mutation function runs. Return a context value to pass through to `onSuccess`, `onError`, and `onSettled`. Commonly used for optimistic updates.
 
 
 ## Mutation variables
@@ -8544,9 +8780,53 @@ The `data` property (after a successful mutation) is `{ txHash: Hex, receipt: Tr
 - **`txHash`** -- Transaction hash submitted to the network.
 - **`receipt`** -- Confirmed transaction receipt from the chain.
 
+### `mutate`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/mutation-result.md
+**Type:** `(variables: TVariables) => void`
+
+Trigger the mutation. Does not return a promise. Use `onSuccess` / `onError` callbacks to react to the result.
+
+### `mutateAsync`
+
+**Type:** `(variables: TVariables) => Promise<TData>`
+
+Trigger the mutation and return a promise. Useful when you need to `await` the result in an event handler.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` while the mutation is in progress. Use this to show loading indicators.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` after the mutation completes without error.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` after the mutation throws an error.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the mutation failed, otherwise `null`.
+
+### `data`
+
+**Type:** `TData | undefined`
+
+The return value from the mutation function after a successful call.
+
+### `reset`
+
+**Type:** `() => void`
+
+Reset the mutation state back to its initial values. Clears `data`, `error`, and status flags.
 
 
 ## Related
@@ -8645,9 +8925,29 @@ const { mutateAsync: shield } = useShield({
 
 ---
 
+### `onSuccess`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/mutation-options.md
+**Type:** `(data: TData, variables: TVariables, context: TContext) => void`
+
+Callback fired when the mutation completes without error. Receives the return data, the variables passed to `mutate`, and any context from `onMutate`.
+
+### `onError`
+
+**Type:** `(error: Error, variables: TVariables, context: TContext | undefined) => void`
+
+Callback fired when the mutation throws. Receives the error, the variables passed to `mutate`, and the context from `onMutate` (if it ran).
+
+### `onSettled`
+
+**Type:** `(data: TData | undefined, error: Error | null, variables: TVariables, context: TContext | undefined) => void`
+
+Callback fired after the mutation finishes, regardless of success or failure. Useful for cleanup like closing modals or resetting form state.
+
+### `onMutate`
+
+**Type:** `(variables: TVariables) => Promise<TContext> | TContext`
+
+Callback fired before the mutation function runs. Return a context value to pass through to `onSuccess`, `onError`, and `onSettled`. Commonly used for optimistic updates.
 
 
 ## Mutation variables
@@ -8716,9 +9016,53 @@ import { type ShieldParams } from "@zama-fhe/sdk/query";
 
 Auto-invalidates the `confidentialBalance` cache on success.
 
+### `mutate`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/mutation-result.md
+**Type:** `(variables: TVariables) => void`
+
+Trigger the mutation. Does not return a promise. Use `onSuccess` / `onError` callbacks to react to the result.
+
+### `mutateAsync`
+
+**Type:** `(variables: TVariables) => Promise<TData>`
+
+Trigger the mutation and return a promise. Useful when you need to `await` the result in an event handler.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` while the mutation is in progress. Use this to show loading indicators.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` after the mutation completes without error.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` after the mutation throws an error.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the mutation failed, otherwise `null`.
+
+### `data`
+
+**Type:** `TData | undefined`
+
+The return value from the mutation function after a successful call.
+
+### `reset`
+
+**Type:** `() => void`
+
+Reset the mutation state back to its initial values. Clears `data`, `error`, and status flags.
 
 
 ## Related
@@ -8819,9 +9163,29 @@ const { mutateAsync: unshield } = useUnshield({
 
 ---
 
+### `onSuccess`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/mutation-options.md
+**Type:** `(data: TData, variables: TVariables, context: TContext) => void`
+
+Callback fired when the mutation completes without error. Receives the return data, the variables passed to `mutate`, and any context from `onMutate`.
+
+### `onError`
+
+**Type:** `(error: Error, variables: TVariables, context: TContext | undefined) => void`
+
+Callback fired when the mutation throws. Receives the error, the variables passed to `mutate`, and the context from `onMutate` (if it ran).
+
+### `onSettled`
+
+**Type:** `(data: TData | undefined, error: Error | null, variables: TVariables, context: TContext | undefined) => void`
+
+Callback fired after the mutation finishes, regardless of success or failure. Useful for cleanup like closing modals or resetting form state.
+
+### `onMutate`
+
+**Type:** `(variables: TVariables) => Promise<TContext> | TContext`
+
+Callback fired before the mutation function runs. Return a context value to pass through to `onSuccess`, `onError`, and `onSettled`. Commonly used for optimistic updates.
 
 
 ## Mutation variables
@@ -8891,9 +9255,53 @@ import { type UnshieldParams } from "@zama-fhe/sdk/query";
 
 Auto-invalidates the `confidentialBalance` cache on success.
 
+### `mutate`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/mutation-result.md
+**Type:** `(variables: TVariables) => void`
+
+Trigger the mutation. Does not return a promise. Use `onSuccess` / `onError` callbacks to react to the result.
+
+### `mutateAsync`
+
+**Type:** `(variables: TVariables) => Promise<TData>`
+
+Trigger the mutation and return a promise. Useful when you need to `await` the result in an event handler.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` while the mutation is in progress. Use this to show loading indicators.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` after the mutation completes without error.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` after the mutation throws an error.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the mutation failed, otherwise `null`.
+
+### `data`
+
+**Type:** `TData | undefined`
+
+The return value from the mutation function after a successful call.
+
+### `reset`
+
+**Type:** `() => void`
+
+Reset the mutation state back to its initial values. Clears `data`, `error`, and status flags.
 
 
 ## Related
@@ -8991,9 +9399,29 @@ const { mutateAsync: unshieldAll } = useUnshieldAll({
 
 ---
 
+### `onSuccess`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/mutation-options.md
+**Type:** `(data: TData, variables: TVariables, context: TContext) => void`
+
+Callback fired when the mutation completes without error. Receives the return data, the variables passed to `mutate`, and any context from `onMutate`.
+
+### `onError`
+
+**Type:** `(error: Error, variables: TVariables, context: TContext | undefined) => void`
+
+Callback fired when the mutation throws. Receives the error, the variables passed to `mutate`, and the context from `onMutate` (if it ran).
+
+### `onSettled`
+
+**Type:** `(data: TData | undefined, error: Error | null, variables: TVariables, context: TContext | undefined) => void`
+
+Callback fired after the mutation finishes, regardless of success or failure. Useful for cleanup like closing modals or resetting form state.
+
+### `onMutate`
+
+**Type:** `(variables: TVariables) => Promise<TContext> | TContext`
+
+Callback fired before the mutation function runs. Return a context value to pass through to `onSuccess`, `onError`, and `onSettled`. Commonly used for optimistic updates.
 
 
 ## Mutation variables
@@ -9037,9 +9465,53 @@ await unshieldAll({
 
 Auto-invalidates the `confidentialBalance` cache on success.
 
+### `mutate`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/mutation-result.md
+**Type:** `(variables: TVariables) => void`
+
+Trigger the mutation. Does not return a promise. Use `onSuccess` / `onError` callbacks to react to the result.
+
+### `mutateAsync`
+
+**Type:** `(variables: TVariables) => Promise<TData>`
+
+Trigger the mutation and return a promise. Useful when you need to `await` the result in an event handler.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` while the mutation is in progress. Use this to show loading indicators.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` after the mutation completes without error.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` after the mutation throws an error.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the mutation failed, otherwise `null`.
+
+### `data`
+
+**Type:** `TData | undefined`
+
+The return value from the mutation function after a successful call.
+
+### `reset`
+
+**Type:** `() => void`
+
+Reset the mutation state back to its initial values. Clears `data`, `error`, and status flags.
 
 
 ## Related
@@ -9144,9 +9616,29 @@ const { mutateAsync: resumeUnshield } = useResumeUnshield({
 
 ---
 
+### `onSuccess`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/mutation-options.md
+**Type:** `(data: TData, variables: TVariables, context: TContext) => void`
+
+Callback fired when the mutation completes without error. Receives the return data, the variables passed to `mutate`, and any context from `onMutate`.
+
+### `onError`
+
+**Type:** `(error: Error, variables: TVariables, context: TContext | undefined) => void`
+
+Callback fired when the mutation throws. Receives the error, the variables passed to `mutate`, and the context from `onMutate` (if it ran).
+
+### `onSettled`
+
+**Type:** `(data: TData | undefined, error: Error | null, variables: TVariables, context: TContext | undefined) => void`
+
+Callback fired after the mutation finishes, regardless of success or failure. Useful for cleanup like closing modals or resetting form state.
+
+### `onMutate`
+
+**Type:** `(variables: TVariables) => Promise<TContext> | TContext`
+
+Callback fired before the mutation function runs. Return a context value to pass through to `onSuccess`, `onError`, and `onSettled`. Commonly used for optimistic updates.
 
 
 ## Mutation variables
@@ -9179,9 +9671,53 @@ Run this check on mount to handle any session that was interrupted.
 
 Auto-invalidates the `confidentialBalance` cache on success.
 
+### `mutate`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/mutation-result.md
+**Type:** `(variables: TVariables) => void`
+
+Trigger the mutation. Does not return a promise. Use `onSuccess` / `onError` callbacks to react to the result.
+
+### `mutateAsync`
+
+**Type:** `(variables: TVariables) => Promise<TData>`
+
+Trigger the mutation and return a promise. Useful when you need to `await` the result in an event handler.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` while the mutation is in progress. Use this to show loading indicators.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` after the mutation completes without error.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` after the mutation throws an error.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the mutation failed, otherwise `null`.
+
+### `data`
+
+**Type:** `TData | undefined`
+
+The return value from the mutation function after a successful call.
+
+### `reset`
+
+**Type:** `() => void`
+
+Reset the mutation state back to its initial values. Clears `data`, `error`, and status flags.
 
 
 ## Related
@@ -9270,9 +9806,53 @@ await unwrap({ amount: 1000n });
 
 The mutation resolves with a transaction hash (`Hex`).
 
+### `mutate`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/mutation-result.md
+**Type:** `(variables: TVariables) => void`
+
+Trigger the mutation. Does not return a promise. Use `onSuccess` / `onError` callbacks to react to the result.
+
+### `mutateAsync`
+
+**Type:** `(variables: TVariables) => Promise<TData>`
+
+Trigger the mutation and return a promise. Useful when you need to `await` the result in an event handler.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` while the mutation is in progress. Use this to show loading indicators.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` after the mutation completes without error.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` after the mutation throws an error.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the mutation failed, otherwise `null`.
+
+### `data`
+
+**Type:** `TData | undefined`
+
+The return value from the mutation function after a successful call.
+
+### `reset`
+
+**Type:** `() => void`
+
+Reset the mutation state back to its initial values. Clears `data`, `error`, and status flags.
 
 
 ## Related
@@ -9349,9 +9929,53 @@ const { mutateAsync: unwrapAll } = useUnwrapAll({
 
 The mutation resolves with a transaction hash (`Hex`).
 
+### `mutate`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/mutation-result.md
+**Type:** `(variables: TVariables) => void`
+
+Trigger the mutation. Does not return a promise. Use `onSuccess` / `onError` callbacks to react to the result.
+
+### `mutateAsync`
+
+**Type:** `(variables: TVariables) => Promise<TData>`
+
+Trigger the mutation and return a promise. Useful when you need to `await` the result in an event handler.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` while the mutation is in progress. Use this to show loading indicators.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` after the mutation completes without error.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` after the mutation throws an error.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the mutation failed, otherwise `null`.
+
+### `data`
+
+**Type:** `TData | undefined`
+
+The return value from the mutation function after a successful call.
+
+### `reset`
+
+**Type:** `() => void`
+
+Reset the mutation state back to its initial values. Clears `data`, `error`, and status flags.
 
 
 ## Related
@@ -9441,9 +10065,53 @@ await finalize({ unwrapTxHash: "0xabc..." });
 
 ## Return Type
 
+### `mutate`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/mutation-result.md
+**Type:** `(variables: TVariables) => void`
+
+Trigger the mutation. Does not return a promise. Use `onSuccess` / `onError` callbacks to react to the result.
+
+### `mutateAsync`
+
+**Type:** `(variables: TVariables) => Promise<TData>`
+
+Trigger the mutation and return a promise. Useful when you need to `await` the result in an event handler.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` while the mutation is in progress. Use this to show loading indicators.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` after the mutation completes without error.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` after the mutation throws an error.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the mutation failed, otherwise `null`.
+
+### `data`
+
+**Type:** `TData | undefined`
+
+The return value from the mutation function after a successful call.
+
+### `reset`
+
+**Type:** `() => void`
+
+Reset the mutation state back to its initial values. Clears `data`, `error`, and status flags.
 
 
 ## Related
@@ -9541,9 +10209,53 @@ await allow([confidentialTokenAddress, auctionAddress, governanceAddress]);
 
 Returns a standard TanStack Query `UseMutationResult<void, Error, Address[]>`.
 
+### `mutate`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/mutation-result.md
+**Type:** `(variables: TVariables) => void`
+
+Trigger the mutation. Does not return a promise. Use `onSuccess` / `onError` callbacks to react to the result.
+
+### `mutateAsync`
+
+**Type:** `(variables: TVariables) => Promise<TData>`
+
+Trigger the mutation and return a promise. Useful when you need to `await` the result in an event handler.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` while the mutation is in progress. Use this to show loading indicators.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` after the mutation completes without error.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` after the mutation throws an error.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the mutation failed, otherwise `null`.
+
+### `data`
+
+**Type:** `TData | undefined`
+
+The return value from the mutation function after a successful call.
+
+### `reset`
+
+**Type:** `() => void`
+
+Reset the mutation state back to its initial values. Clears `data`, `error`, and status flags.
 
 
 ## Related
@@ -9655,9 +10367,59 @@ const { data: allowed } = useIsAllowed({
 - `true` -- a valid session signature is cached; decrypts will not prompt the wallet.
 - `false` -- no cached signature, or the `sessionTTL` has expired. Call [`useAllow`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useAllow.md) to re-authorize.
 
+### `data`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/query-result.md
+**Type:** `TData | undefined`
+
+The last successfully resolved data for the query.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the query failed, otherwise `null`.
+
+### `isLoading`
+
+**Type:** `boolean`
+
+`true` on the first fetch when there is no cached data. Equivalent to `isPending && isFetching`.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` when there is no cached data and no query attempt has finished yet.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` when the query has received a successful response.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` when the query encountered an error.
+
+### `isFetching`
+
+**Type:** `boolean`
+
+`true` whenever the query is fetching, including background re-fetches. Use this for subtle loading indicators that do not replace content.
+
+### `refetch`
+
+**Type:** `() => Promise<QueryObserverResult>`
+
+Manually trigger a re-fetch. Returns a promise that resolves with the query result.
+
+### `status`
+
+**Type:** `"pending" | "error" | "success"`
+
+The current status of the query. Prefer the boolean flags above for conditional rendering.
 
 
 ## Related
@@ -9724,9 +10486,53 @@ revoke(["0xContractA", "0xContractB"]);
 
 ## Return Type
 
+### `mutate`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/mutation-result.md
+**Type:** `(variables: TVariables) => void`
+
+Trigger the mutation. Does not return a promise. Use `onSuccess` / `onError` callbacks to react to the result.
+
+### `mutateAsync`
+
+**Type:** `(variables: TVariables) => Promise<TData>`
+
+Trigger the mutation and return a promise. Useful when you need to `await` the result in an event handler.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` while the mutation is in progress. Use this to show loading indicators.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` after the mutation completes without error.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` after the mutation throws an error.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the mutation failed, otherwise `null`.
+
+### `data`
+
+**Type:** `TData | undefined`
+
+The return value from the mutation function after a successful call.
+
+### `reset`
+
+**Type:** `() => void`
+
+Reset the mutation state back to its initial values. Clears `data`, `error`, and status flags.
 
 
 ## Behavior
@@ -9800,9 +10606,53 @@ revokeSession();
 
 ## Return Type
 
+### `mutate`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/mutation-result.md
+**Type:** `(variables: TVariables) => void`
+
+Trigger the mutation. Does not return a promise. Use `onSuccess` / `onError` callbacks to react to the result.
+
+### `mutateAsync`
+
+**Type:** `(variables: TVariables) => Promise<TData>`
+
+Trigger the mutation and return a promise. Useful when you need to `await` the result in an event handler.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` while the mutation is in progress. Use this to show loading indicators.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` after the mutation completes without error.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` after the mutation throws an error.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the mutation failed, otherwise `null`.
+
+### `data`
+
+**Type:** `TData | undefined`
+
+The return value from the mutation function after a successful call.
+
+### `reset`
+
+**Type:** `() => void`
+
+Reset the mutation state back to its initial values. Clears `data`, `error`, and status flags.
 
 
 ## Behavior
@@ -9913,9 +10763,53 @@ await approve({
 
 The mutation resolves with a transaction hash (`Hex`).
 
+### `mutate`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/mutation-result.md
+**Type:** `(variables: TVariables) => void`
+
+Trigger the mutation. Does not return a promise. Use `onSuccess` / `onError` callbacks to react to the result.
+
+### `mutateAsync`
+
+**Type:** `(variables: TVariables) => Promise<TData>`
+
+Trigger the mutation and return a promise. Useful when you need to `await` the result in an event handler.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` while the mutation is in progress. Use this to show loading indicators.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` after the mutation completes without error.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` after the mutation throws an error.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the mutation failed, otherwise `null`.
+
+### `data`
+
+**Type:** `TData | undefined`
+
+The return value from the mutation function after a successful call.
+
+### `reset`
+
+**Type:** `() => void`
+
+Reset the mutation state back to its initial values. Clears `data`, `error`, and status flags.
 
 
 ## Related
@@ -9999,9 +10893,59 @@ const { data: isApproved } = useConfidentialIsApproved({
 
 `data` is `boolean` — `true` if the spender has an active approval, `false` otherwise.
 
+### `data`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/query-result.md
+**Type:** `TData | undefined`
+
+The last successfully resolved data for the query.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the query failed, otherwise `null`.
+
+### `isLoading`
+
+**Type:** `boolean`
+
+`true` on the first fetch when there is no cached data. Equivalent to `isPending && isFetching`.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` when there is no cached data and no query attempt has finished yet.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` when the query has received a successful response.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` when the query encountered an error.
+
+### `isFetching`
+
+**Type:** `boolean`
+
+`true` whenever the query is fetching, including background re-fetches. Use this for subtle loading indicators that do not replace content.
+
+### `refetch`
+
+**Type:** `() => Promise<QueryObserverResult>`
+
+Manually trigger a re-fetch. Returns a promise that resolves with the query result.
+
+### `status`
+
+**Type:** `"pending" | "error" | "success"`
+
+The current status of the query. Prefer the boolean flags above for conditional rendering.
 
 
 ## Suspense
@@ -10124,9 +11068,59 @@ const { data: allowance } = useUnderlyingAllowance({
 
 `data` is `bigint` — the current ERC-20 allowance in the token's smallest unit.
 
+### `data`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/query-result.md
+**Type:** `TData | undefined`
+
+The last successfully resolved data for the query.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the query failed, otherwise `null`.
+
+### `isLoading`
+
+**Type:** `boolean`
+
+`true` on the first fetch when there is no cached data. Equivalent to `isPending && isFetching`.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` when there is no cached data and no query attempt has finished yet.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` when the query has received a successful response.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` when the query encountered an error.
+
+### `isFetching`
+
+**Type:** `boolean`
+
+`true` whenever the query is fetching, including background re-fetches. Use this for subtle loading indicators that do not replace content.
+
+### `refetch`
+
+**Type:** `() => Promise<QueryObserverResult>`
+
+Manually trigger a re-fetch. Returns a promise that resolves with the query result.
+
+### `status`
+
+**Type:** `"pending" | "error" | "success"`
+
+The current status of the query. Prefer the boolean flags above for conditional rendering.
 
 
 ## Suspense
@@ -10228,9 +11222,59 @@ useWrapperDiscovery({
 
 The `data` field resolves to `Address | null` -- the wrapper contract address for the given token, or `null` if no wrapper exists.
 
+### `data`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/query-result.md
+**Type:** `TData | undefined`
+
+The last successfully resolved data for the query.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the query failed, otherwise `null`.
+
+### `isLoading`
+
+**Type:** `boolean`
+
+`true` on the first fetch when there is no cached data. Equivalent to `isPending && isFetching`.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` when there is no cached data and no query attempt has finished yet.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` when the query has received a successful response.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` when the query encountered an error.
+
+### `isFetching`
+
+**Type:** `boolean`
+
+`true` whenever the query is fetching, including background re-fetches. Use this for subtle loading indicators that do not replace content.
+
+### `refetch`
+
+**Type:** `() => Promise<QueryObserverResult>`
+
+Manually trigger a re-fetch. Returns a promise that resolves with the query result.
+
+### `status`
+
+**Type:** `"pending" | "error" | "success"`
+
+The current status of the query. Prefer the boolean flags above for conditional rendering.
 
 
 ## Caching
@@ -10447,9 +11491,59 @@ interface TokenWrapperPairWithMetadata extends TokenWrapperPair {
 }
 ```
 
+### `data`
 
-> [!NOTE]
-> Missing include: ../../.gitbook/includes/query-result.md
+**Type:** `TData | undefined`
+
+The last successfully resolved data for the query.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the query failed, otherwise `null`.
+
+### `isLoading`
+
+**Type:** `boolean`
+
+`true` on the first fetch when there is no cached data. Equivalent to `isPending && isFetching`.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` when there is no cached data and no query attempt has finished yet.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` when the query has received a successful response.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` when the query encountered an error.
+
+### `isFetching`
+
+**Type:** `boolean`
+
+`true` whenever the query is fetching, including background re-fetches. Use this for subtle loading indicators that do not replace content.
+
+### `refetch`
+
+**Type:** `() => Promise<QueryObserverResult>`
+
+Manually trigger a re-fetch. Returns a promise that resolves with the query result.
+
+### `status`
+
+**Type:** `"pending" | "error" | "success"`
+
+The current status of the query. Prefer the boolean flags above for conditional rendering.
 
 
 ## Caching
@@ -10526,9 +11620,59 @@ interface TokenWrapperPair {
 }
 ```
 
+### `data`
 
-> [!NOTE]
-> Missing include: ../../.gitbook/includes/query-result.md
+**Type:** `TData | undefined`
+
+The last successfully resolved data for the query.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the query failed, otherwise `null`.
+
+### `isLoading`
+
+**Type:** `boolean`
+
+`true` on the first fetch when there is no cached data. Equivalent to `isPending && isFetching`.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` when there is no cached data and no query attempt has finished yet.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` when the query has received a successful response.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` when the query encountered an error.
+
+### `isFetching`
+
+**Type:** `boolean`
+
+`true` whenever the query is fetching, including background re-fetches. Use this for subtle loading indicators that do not replace content.
+
+### `refetch`
+
+**Type:** `() => Promise<QueryObserverResult>`
+
+Manually trigger a re-fetch. Returns a promise that resolves with the query result.
+
+### `status`
+
+**Type:** `"pending" | "error" | "success"`
+
+The current status of the query. Prefer the boolean flags above for conditional rendering.
 
 
 ## Related
@@ -10582,9 +11726,59 @@ This hook takes no parameters. The registry address is resolved automatically fr
 
 The `data` field resolves to `bigint` -- the total number of registered pairs.
 
+### `data`
 
-> [!NOTE]
-> Missing include: ../../.gitbook/includes/query-result.md
+**Type:** `TData | undefined`
+
+The last successfully resolved data for the query.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the query failed, otherwise `null`.
+
+### `isLoading`
+
+**Type:** `boolean`
+
+`true` on the first fetch when there is no cached data. Equivalent to `isPending && isFetching`.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` when there is no cached data and no query attempt has finished yet.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` when the query has received a successful response.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` when the query encountered an error.
+
+### `isFetching`
+
+**Type:** `boolean`
+
+`true` whenever the query is fetching, including background re-fetches. Use this for subtle loading indicators that do not replace content.
+
+### `refetch`
+
+**Type:** `() => Promise<QueryObserverResult>`
+
+Manually trigger a re-fetch. Returns a promise that resolves with the query result.
+
+### `status`
+
+**Type:** `"pending" | "error" | "success"`
+
+The current status of the query. Prefer the boolean flags above for conditional rendering.
 
 
 ## Related
@@ -10678,9 +11872,59 @@ interface TokenWrapperPair {
 }
 ```
 
+### `data`
 
-> [!NOTE]
-> Missing include: ../../.gitbook/includes/query-result.md
+**Type:** `TData | undefined`
+
+The last successfully resolved data for the query.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the query failed, otherwise `null`.
+
+### `isLoading`
+
+**Type:** `boolean`
+
+`true` on the first fetch when there is no cached data. Equivalent to `isPending && isFetching`.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` when there is no cached data and no query attempt has finished yet.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` when the query has received a successful response.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` when the query encountered an error.
+
+### `isFetching`
+
+**Type:** `boolean`
+
+`true` whenever the query is fetching, including background re-fetches. Use this for subtle loading indicators that do not replace content.
+
+### `refetch`
+
+**Type:** `() => Promise<QueryObserverResult>`
+
+Manually trigger a re-fetch. Returns a promise that resolves with the query result.
+
+### `status`
+
+**Type:** `"pending" | "error" | "success"`
+
+The current status of the query. Prefer the boolean flags above for conditional rendering.
 
 
 ## Related
@@ -10757,9 +12001,59 @@ interface TokenWrapperPair {
 }
 ```
 
+### `data`
 
-> [!NOTE]
-> Missing include: ../../.gitbook/includes/query-result.md
+**Type:** `TData | undefined`
+
+The last successfully resolved data for the query.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the query failed, otherwise `null`.
+
+### `isLoading`
+
+**Type:** `boolean`
+
+`true` on the first fetch when there is no cached data. Equivalent to `isPending && isFetching`.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` when there is no cached data and no query attempt has finished yet.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` when the query has received a successful response.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` when the query encountered an error.
+
+### `isFetching`
+
+**Type:** `boolean`
+
+`true` whenever the query is fetching, including background re-fetches. Use this for subtle loading indicators that do not replace content.
+
+### `refetch`
+
+**Type:** `() => Promise<QueryObserverResult>`
+
+Manually trigger a re-fetch. Returns a promise that resolves with the query result.
+
+### `status`
+
+**Type:** `"pending" | "error" | "success"`
+
+The current status of the query. Prefer the boolean flags above for conditional rendering.
 
 
 ## Related
@@ -10831,9 +12125,59 @@ The `data` field resolves to `readonly [boolean, Address]`:
 - `[false, nonZeroAddress]` -- registered but revoked; `address` is the former confidential token
 - `[false, zeroAddress]` -- no registered pair
 
+### `data`
 
-> [!NOTE]
-> Missing include: ../../.gitbook/includes/query-result.md
+**Type:** `TData | undefined`
+
+The last successfully resolved data for the query.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the query failed, otherwise `null`.
+
+### `isLoading`
+
+**Type:** `boolean`
+
+`true` on the first fetch when there is no cached data. Equivalent to `isPending && isFetching`.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` when there is no cached data and no query attempt has finished yet.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` when the query has received a successful response.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` when the query encountered an error.
+
+### `isFetching`
+
+**Type:** `boolean`
+
+`true` whenever the query is fetching, including background re-fetches. Use this for subtle loading indicators that do not replace content.
+
+### `refetch`
+
+**Type:** `() => Promise<QueryObserverResult>`
+
+Manually trigger a re-fetch. Returns a promise that resolves with the query result.
+
+### `status`
+
+**Type:** `"pending" | "error" | "success"`
+
+The current status of the query. Prefer the boolean flags above for conditional rendering.
 
 
 ## Related
@@ -10906,9 +12250,59 @@ The `data` field resolves to `readonly [boolean, Address]`:
 - `[false, nonZeroAddress]` -- registered but revoked; `address` is the former underlying token
 - `[false, zeroAddress]` -- no registered pair
 
+### `data`
 
-> [!NOTE]
-> Missing include: ../../.gitbook/includes/query-result.md
+**Type:** `TData | undefined`
+
+The last successfully resolved data for the query.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the query failed, otherwise `null`.
+
+### `isLoading`
+
+**Type:** `boolean`
+
+`true` on the first fetch when there is no cached data. Equivalent to `isPending && isFetching`.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` when there is no cached data and no query attempt has finished yet.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` when the query has received a successful response.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` when the query encountered an error.
+
+### `isFetching`
+
+**Type:** `boolean`
+
+`true` whenever the query is fetching, including background re-fetches. Use this for subtle loading indicators that do not replace content.
+
+### `refetch`
+
+**Type:** `() => Promise<QueryObserverResult>`
+
+Manually trigger a re-fetch. Returns a promise that resolves with the query result.
+
+### `status`
+
+**Type:** `"pending" | "error" | "success"`
+
+The current status of the query. Prefer the boolean flags above for conditional rendering.
 
 
 ## Related
@@ -10982,9 +12376,59 @@ The `data` field resolves to `boolean`:
 - `true` -- the token is a known, valid wrapper in the registry
 - `false` -- the token is not registered or not valid
 
+### `data`
 
-> [!NOTE]
-> Missing include: ../../.gitbook/includes/query-result.md
+**Type:** `TData | undefined`
+
+The last successfully resolved data for the query.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the query failed, otherwise `null`.
+
+### `isLoading`
+
+**Type:** `boolean`
+
+`true` on the first fetch when there is no cached data. Equivalent to `isPending && isFetching`.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` when there is no cached data and no query attempt has finished yet.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` when the query has received a successful response.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` when the query encountered an error.
+
+### `isFetching`
+
+**Type:** `boolean`
+
+`true` whenever the query is fetching, including background re-fetches. Use this for subtle loading indicators that do not replace content.
+
+### `refetch`
+
+**Type:** `() => Promise<QueryObserverResult>`
+
+Manually trigger a re-fetch. Returns a promise that resolves with the query result.
+
+### `status`
+
+**Type:** `"pending" | "error" | "success"`
+
+The current status of the query. Prefer the boolean flags above for conditional rendering.
 
 
 ## Related
@@ -11056,9 +12500,59 @@ The `data` field resolves to:
 } | undefined
 ```
 
+### `data`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/query-result.md
+**Type:** `TData | undefined`
+
+The last successfully resolved data for the query.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the query failed, otherwise `null`.
+
+### `isLoading`
+
+**Type:** `boolean`
+
+`true` on the first fetch when there is no cached data. Equivalent to `isPending && isFetching`.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` when there is no cached data and no query attempt has finished yet.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` when the query has received a successful response.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` when the query encountered an error.
+
+### `isFetching`
+
+**Type:** `boolean`
+
+`true` whenever the query is fetching, including background re-fetches. Use this for subtle loading indicators that do not replace content.
+
+### `refetch`
+
+**Type:** `() => Promise<QueryObserverResult>`
+
+Manually trigger a re-fetch. Returns a promise that resolves with the query result.
+
+### `status`
+
+**Type:** `"pending" | "error" | "success"`
+
+The current status of the query. Prefer the boolean flags above for conditional rendering.
 
 
 ## Caching
@@ -11486,9 +12980,53 @@ import { type EncryptResult } from "@zama-fhe/sdk";
 - **`handles`** — one encrypted handle per input value.
 - **`inputProof`** — the ZK input proof to submit alongside the handles in a contract call.
 
+### `mutate`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/mutation-result.md
+**Type:** `(variables: TVariables) => void`
+
+Trigger the mutation. Does not return a promise. Use `onSuccess` / `onError` callbacks to react to the result.
+
+### `mutateAsync`
+
+**Type:** `(variables: TVariables) => Promise<TData>`
+
+Trigger the mutation and return a promise. Useful when you need to `await` the result in an event handler.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` while the mutation is in progress. Use this to show loading indicators.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` after the mutation completes without error.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` after the mutation throws an error.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the mutation failed, otherwise `null`.
+
+### `data`
+
+**Type:** `TData | undefined`
+
+The return value from the mutation function after a successful call.
+
+### `reset`
+
+**Type:** `() => void`
+
+Reset the mutation state back to its initial values. Clears `data`, `error`, and status flags.
 
 
 ## Supported FHE Types
@@ -11613,9 +13151,59 @@ Returns a standard `useQuery` result. `data` resolves to `Record<Handle, ClearVa
 
 When all requested handles are already cached, `data` contains the cached values immediately (no relayer call). Freshly decrypted results are written to the SDK's persistent decrypt cache (`sdk.cache`) — scoped by `(signer, contract, handle)` — so that subsequent renders return instantly, even after a page reload. The cache is cleared automatically on `revoke()`, `revokeSession()`, or wallet lifecycle events (disconnect, account change, chain change).
 
+### `data`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/query-result.md
+**Type:** `TData | undefined`
+
+The last successfully resolved data for the query.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the query failed, otherwise `null`.
+
+### `isLoading`
+
+**Type:** `boolean`
+
+`true` on the first fetch when there is no cached data. Equivalent to `isPending && isFetching`.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` when there is no cached data and no query attempt has finished yet.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` when the query has received a successful response.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` when the query encountered an error.
+
+### `isFetching`
+
+**Type:** `boolean`
+
+`true` whenever the query is fetching, including background re-fetches. Use this for subtle loading indicators that do not replace content.
+
+### `refetch`
+
+**Type:** `() => Promise<QueryObserverResult>`
+
+Manually trigger a re-fetch. Returns a promise that resolves with the query result.
+
+### `status`
+
+**Type:** `"pending" | "error" | "success"`
+
+The current status of the query. Prefer the boolean flags above for conditional rendering.
 
 
 ## How It Works
@@ -11727,9 +13315,53 @@ import { type KeypairType } from "@zama-fhe/sdk";
 
 Pass these to [`useUserDecrypt`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUserDecrypt.md) when decrypting handles manually.
 
+### `mutate`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/mutation-result.md
+**Type:** `(variables: TVariables) => void`
+
+Trigger the mutation. Does not return a promise. Use `onSuccess` / `onError` callbacks to react to the result.
+
+### `mutateAsync`
+
+**Type:** `(variables: TVariables) => Promise<TData>`
+
+Trigger the mutation and return a promise. Useful when you need to `await` the result in an event handler.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` while the mutation is in progress. Use this to show loading indicators.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` after the mutation completes without error.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` after the mutation throws an error.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the mutation failed, otherwise `null`.
+
+### `data`
+
+**Type:** `TData | undefined`
+
+The return value from the mutation function after a successful call.
+
+### `reset`
+
+**Type:** `() => void`
+
+Reset the mutation state back to its initial values. Clears `data`, `error`, and status flags.
 
 
 ## Related
@@ -11803,9 +13435,29 @@ const { mutateAsync: delegate } = useDelegateDecryption({
 
 ---
 
+### `onSuccess`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/mutation-options.md
+**Type:** `(data: TData, variables: TVariables, context: TContext) => void`
+
+Callback fired when the mutation completes without error. Receives the return data, the variables passed to `mutate`, and any context from `onMutate`.
+
+### `onError`
+
+**Type:** `(error: Error, variables: TVariables, context: TContext | undefined) => void`
+
+Callback fired when the mutation throws. Receives the error, the variables passed to `mutate`, and the context from `onMutate` (if it ran).
+
+### `onSettled`
+
+**Type:** `(data: TData | undefined, error: Error | null, variables: TVariables, context: TContext | undefined) => void`
+
+Callback fired after the mutation finishes, regardless of success or failure. Useful for cleanup like closing modals or resetting form state.
+
+### `onMutate`
+
+**Type:** `(variables: TVariables) => Promise<TContext> | TContext`
+
+Callback fired before the mutation function runs. Return a context value to pass through to `onSuccess`, `onError`, and `onSettled`. Commonly used for optimistic updates.
 
 
 ## Mutation variables
@@ -11835,9 +13487,53 @@ await delegate({
 
 `data` resolves to `{ txHash: Hex, receipt: TransactionReceipt }`.
 
+### `mutate`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/mutation-result.md
+**Type:** `(variables: TVariables) => void`
+
+Trigger the mutation. Does not return a promise. Use `onSuccess` / `onError` callbacks to react to the result.
+
+### `mutateAsync`
+
+**Type:** `(variables: TVariables) => Promise<TData>`
+
+Trigger the mutation and return a promise. Useful when you need to `await` the result in an event handler.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` while the mutation is in progress. Use this to show loading indicators.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` after the mutation completes without error.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` after the mutation throws an error.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the mutation failed, otherwise `null`.
+
+### `data`
+
+**Type:** `TData | undefined`
+
+The return value from the mutation function after a successful call.
+
+### `reset`
+
+**Type:** `() => void`
+
+Reset the mutation state back to its initial values. Clears `data`, `error`, and status flags.
 
 
 ## Related
@@ -11909,9 +13605,29 @@ const { mutateAsync: revoke } = useRevokeDelegation({
 
 ---
 
+### `onSuccess`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/mutation-options.md
+**Type:** `(data: TData, variables: TVariables, context: TContext) => void`
+
+Callback fired when the mutation completes without error. Receives the return data, the variables passed to `mutate`, and any context from `onMutate`.
+
+### `onError`
+
+**Type:** `(error: Error, variables: TVariables, context: TContext | undefined) => void`
+
+Callback fired when the mutation throws. Receives the error, the variables passed to `mutate`, and the context from `onMutate` (if it ran).
+
+### `onSettled`
+
+**Type:** `(data: TData | undefined, error: Error | null, variables: TVariables, context: TContext | undefined) => void`
+
+Callback fired after the mutation finishes, regardless of success or failure. Useful for cleanup like closing modals or resetting form state.
+
+### `onMutate`
+
+**Type:** `(variables: TVariables) => Promise<TContext> | TContext`
+
+Callback fired before the mutation function runs. Return a context value to pass through to `onSuccess`, `onError`, and `onSettled`. Commonly used for optimistic updates.
 
 
 ## Mutation variables
@@ -11932,9 +13648,53 @@ await revoke({ delegateAddress: "0xDelegate" });
 
 `data` resolves to `{ txHash: Hex, receipt: TransactionReceipt }`.
 
+### `mutate`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/mutation-result.md
+**Type:** `(variables: TVariables) => void`
+
+Trigger the mutation. Does not return a promise. Use `onSuccess` / `onError` callbacks to react to the result.
+
+### `mutateAsync`
+
+**Type:** `(variables: TVariables) => Promise<TData>`
+
+Trigger the mutation and return a promise. Useful when you need to `await` the result in an event handler.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` while the mutation is in progress. Use this to show loading indicators.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` after the mutation completes without error.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` after the mutation throws an error.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the mutation failed, otherwise `null`.
+
+### `data`
+
+**Type:** `TData | undefined`
+
+The return value from the mutation function after a successful call.
+
+### `reset`
+
+**Type:** `() => void`
+
+Reset the mutation state back to its initial values. Clears `data`, `error`, and status flags.
 
 
 ## Related
@@ -12029,9 +13789,35 @@ const { data } = useDelegationStatus({
 });
 ```
 
+### `enabled`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/query-options.md
+**Type:** `boolean`
+
+Set to `false` to prevent the query from running automatically. The query will only execute when `refetch` is called or when `enabled` changes to `true`.
+
+### `staleTime`
+
+**Type:** `number` (milliseconds)
+
+How long fetched data is considered fresh. While fresh, the query will not re-fetch on mount or window focus. Defaults to `0` (always stale).
+
+### `gcTime`
+
+**Type:** `number` (milliseconds)
+
+How long inactive query data stays in the cache before garbage collection. Defaults to `300000` (5 minutes).
+
+### `refetchInterval`
+
+**Type:** `number | false` (milliseconds)
+
+Poll at a fixed interval. Set to `false` or omit to disable polling.
+
+### `refetchOnWindowFocus`
+
+**Type:** `boolean`
+
+Re-fetch when the browser tab regains focus. Defaults to `true`.
 
 
 ## Return Type
@@ -12047,9 +13833,59 @@ import { type DelegationStatusData } from "@zama-fhe/sdk/query";
 | `isDelegated`     | `boolean` | `true` if delegation exists and hasn't expired.                           |
 | `expiryTimestamp` | `bigint`  | `0n` = no delegation, `2^64 - 1` = permanent, otherwise UTC Unix seconds. |
 
+### `data`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/query-result.md
+**Type:** `TData | undefined`
+
+The last successfully resolved data for the query.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the query failed, otherwise `null`.
+
+### `isLoading`
+
+**Type:** `boolean`
+
+`true` on the first fetch when there is no cached data. Equivalent to `isPending && isFetching`.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` when there is no cached data and no query attempt has finished yet.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` when the query has received a successful response.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` when the query encountered an error.
+
+### `isFetching`
+
+**Type:** `boolean`
+
+`true` whenever the query is fetching, including background re-fetches. Use this for subtle loading indicators that do not replace content.
+
+### `refetch`
+
+**Type:** `() => Promise<QueryObserverResult>`
+
+Manually trigger a re-fetch. Returns a promise that resolves with the query result.
+
+### `status`
+
+**Type:** `"pending" | "error" | "success"`
+
+The current status of the query. Prefer the boolean flags above for conditional rendering.
 
 
 ## Related
@@ -12122,9 +13958,29 @@ const { mutateAsync: decryptAs } = useDecryptBalanceAs("0xToken");
 
 ---
 
+### `onSuccess`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/mutation-options.md
+**Type:** `(data: TData, variables: TVariables, context: TContext) => void`
+
+Callback fired when the mutation completes without error. Receives the return data, the variables passed to `mutate`, and any context from `onMutate`.
+
+### `onError`
+
+**Type:** `(error: Error, variables: TVariables, context: TContext | undefined) => void`
+
+Callback fired when the mutation throws. Receives the error, the variables passed to `mutate`, and the context from `onMutate` (if it ran).
+
+### `onSettled`
+
+**Type:** `(data: TData | undefined, error: Error | null, variables: TVariables, context: TContext | undefined) => void`
+
+Callback fired after the mutation finishes, regardless of success or failure. Useful for cleanup like closing modals or resetting form state.
+
+### `onMutate`
+
+**Type:** `(variables: TVariables) => Promise<TContext> | TContext`
+
+Callback fired before the mutation function runs. Return a context value to pass through to `onSuccess`, `onError`, and `onSettled`. Commonly used for optimistic updates.
 
 
 ## Mutation variables
@@ -12158,9 +14014,53 @@ await decryptAs({
 
 `data` resolves to `bigint` — the decrypted token balance.
 
+### `mutate`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/mutation-result.md
+**Type:** `(variables: TVariables) => void`
+
+Trigger the mutation. Does not return a promise. Use `onSuccess` / `onError` callbacks to react to the result.
+
+### `mutateAsync`
+
+**Type:** `(variables: TVariables) => Promise<TData>`
+
+Trigger the mutation and return a promise. Useful when you need to `await` the result in an event handler.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` while the mutation is in progress. Use this to show loading indicators.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` after the mutation completes without error.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` after the mutation throws an error.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the mutation failed, otherwise `null`.
+
+### `data`
+
+**Type:** `TData | undefined`
+
+The return value from the mutation function after a successful call.
+
+### `reset`
+
+**Type:** `() => void`
+
+Reset the mutation state back to its initial values. Clears `data`, `error`, and status flags.
 
 
 ## Related
@@ -12251,9 +14151,29 @@ const { mutateAsync: batchDecryptAs } = useBatchDecryptBalancesAs(tokens);
 
 ---
 
+### `onSuccess`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/mutation-options.md
+**Type:** `(data: TData, variables: TVariables, context: TContext) => void`
+
+Callback fired when the mutation completes without error. Receives the return data, the variables passed to `mutate`, and any context from `onMutate`.
+
+### `onError`
+
+**Type:** `(error: Error, variables: TVariables, context: TContext | undefined) => void`
+
+Callback fired when the mutation throws. Receives the error, the variables passed to `mutate`, and the context from `onMutate` (if it ran).
+
+### `onSettled`
+
+**Type:** `(data: TData | undefined, error: Error | null, variables: TVariables, context: TContext | undefined) => void`
+
+Callback fired after the mutation finishes, regardless of success or failure. Useful for cleanup like closing modals or resetting form state.
+
+### `onMutate`
+
+**Type:** `(variables: TVariables) => Promise<TContext> | TContext`
+
+Callback fired before the mutation function runs. Return a context value to pass through to `onSuccess`, `onError`, and `onSettled`. Commonly used for optimistic updates.
 
 
 ## Mutation variables
@@ -12309,9 +14229,53 @@ await batchDecryptAs({
 
 `data` resolves to `Map<Address, bigint>` — a map from each token address to its decrypted balance.
 
+### `mutate`
 
-> [!NOTE]
-> Missing include: .gitbook/includes/mutation-result.md
+**Type:** `(variables: TVariables) => void`
+
+Trigger the mutation. Does not return a promise. Use `onSuccess` / `onError` callbacks to react to the result.
+
+### `mutateAsync`
+
+**Type:** `(variables: TVariables) => Promise<TData>`
+
+Trigger the mutation and return a promise. Useful when you need to `await` the result in an event handler.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` while the mutation is in progress. Use this to show loading indicators.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` after the mutation completes without error.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` after the mutation throws an error.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the mutation failed, otherwise `null`.
+
+### `data`
+
+**Type:** `TData | undefined`
+
+The return value from the mutation function after a successful call.
+
+### `reset`
+
+**Type:** `() => void`
+
+Reset the mutation state back to its initial values. Clears `data`, `error`, and status flags.
 
 
 ## Related

@@ -343,10 +343,21 @@ export function loadGitbookSource(sourcePath) {
 
 export function resolveIncludes(content, currentSourcePath) {
   return content.replace(/\{%\s*include\s*"([^"]+)"\s*%\}/g, (_match, includePath) => {
-    const candidatePath = join(repoRoot, includePath);
-    const fallbackPath = join(dirname(join(repoRoot, currentSourcePath)), includePath);
-    const resolved = existsSync(candidatePath) ? candidatePath : fallbackPath;
-    if (!existsSync(resolved)) {
+    const normalizedIncludePath = posix.normalize(includePath);
+    const gitbookIncludeIndex = normalizedIncludePath.indexOf(".gitbook/includes/");
+    const candidatePaths = [
+      join(repoRoot, includePath),
+      join(repoRoot, "docs/gitbook", includePath),
+      join(dirname(join(repoRoot, currentSourcePath)), includePath),
+    ];
+    if (gitbookIncludeIndex !== -1) {
+      candidatePaths.push(
+        join(repoRoot, "docs/gitbook", normalizedIncludePath.slice(gitbookIncludeIndex)),
+      );
+    }
+
+    const resolved = candidatePaths.find((candidatePath) => existsSync(candidatePath));
+    if (!resolved) {
       return `\n> [!NOTE]\n> Missing include: ${includePath}\n`;
     }
     const includedSourcePath = relative(repoRoot, resolved);
