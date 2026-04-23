@@ -1,6 +1,6 @@
 {
   "name": "@zama-fhe/sdk",
-  "version": "3.0.0-alpha.12",
+  "version": "3.0.0-alpha.14",
   "description": "TypeScript SDK for Zama fhEVM confidential smart contracts",
   "license": "BSD-3-Clause-Clear",
   "author": "Zama",
@@ -135,7 +135,7 @@
     "viem": "^2.47.12"
   },
   "devDependencies": {
-    "@tanstack/query-core": "^5.97.0",
+    "@tanstack/query-core": "^5.99.2",
     "rolldown": "1.0.0-rc.7",
     "rolldown-plugin-dts": "^0.23.2"
   },
