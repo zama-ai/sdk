@@ -363,7 +363,8 @@ describe("decryptBalanceAs", () => {
     vi.mocked(signer.readContract)
       .mockResolvedValueOnce(handle) // confidentialBalanceOf (first call)
       .mockResolvedValueOnce(MAX_UINT64) // getDelegationExpiry (first call)
-      .mockResolvedValueOnce(handle); // confidentialBalanceOf (second call — cache hit skips delegation check)
+      .mockResolvedValueOnce(handle) // confidentialBalanceOf (second call)
+      .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry (second call — runs before cache lookup)
     vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue({
       domain: {
         name: "Decryption",
@@ -399,6 +400,54 @@ describe("decryptBalanceAs", () => {
       accountAddress: userAddress,
     });
     expect(balance).toBe(42n);
+    expect(relayer.delegatedUserDecrypt).toHaveBeenCalledTimes(1);
+  });
+
+  it("re-checks delegation on cache hit and throws when revoked", async ({
+    signer,
+    relayer,
+    readonlyToken,
+    handle,
+    tokenAddress,
+    delegatorAddress,
+  }) => {
+    vi.mocked(signer.readContract)
+      .mockResolvedValueOnce(handle) // confidentialBalanceOf (first call)
+      .mockResolvedValueOnce(MAX_UINT64) // getDelegationExpiry → permanent
+      .mockResolvedValueOnce(handle) // confidentialBalanceOf (second call)
+      .mockResolvedValueOnce(0n); // getDelegationExpiry → revoked
+    vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue({
+      domain: {
+        name: "Decryption",
+        version: "1",
+        chainId: 1n,
+        verifyingContract: "0xkms",
+      },
+      types: { DelegatedUserDecryptRequestVerification: [] },
+      message: {
+        publicKey: "0xpub",
+        contractAddresses: [tokenAddress],
+        delegatorAddress,
+        startTimestamp: "1000",
+        durationDays: "1",
+        extraData: "0x",
+      },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any);
+    vi.mocked(relayer.delegatedUserDecrypt).mockResolvedValue({
+      [handle]: 42n,
+    });
+
+    // First call populates cache while delegation is active.
+    const first = await readonlyToken.decryptBalanceAs({ delegatorAddress });
+    expect(first).toBe(42n);
+    expect(relayer.delegatedUserDecrypt).toHaveBeenCalledTimes(1);
+
+    // Delegation revoked — second call must reject despite the cached value.
+    await expect(readonlyToken.decryptBalanceAs({ delegatorAddress })).rejects.toThrow(
+      expect.objectContaining({ code: "DELEGATION_NOT_FOUND" }),
+    );
+    // No second decryption was attempted; the check fired before cache lookup.
     expect(relayer.delegatedUserDecrypt).toHaveBeenCalledTimes(1);
   });
 

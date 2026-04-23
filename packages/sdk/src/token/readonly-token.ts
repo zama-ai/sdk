@@ -289,6 +289,15 @@ export class ReadonlyToken {
       );
     }
 
+    // Pre-flight delegation check — must run before cache lookups so that
+    // revoked delegations are caught even when stale cached values exist.
+    // Skipped only when every handle is zero (balance of 0 needs no
+    // authorization). Best-effort: checks the first token's contract only
+    // (delegations are typically granted per-delegator, not per-token).
+    if (resolvedHandles.some((h) => !isZeroHandle(h))) {
+      await firstToken.#assertDelegationActive(delegatorAddress);
+    }
+
     const results = new Map<Address, bigint>();
 
     // Parallel cache lookups — avoids sequential IDB round-trips.
@@ -321,11 +330,6 @@ export class ReadonlyToken {
     if (uncached.length === 0) {
       return results;
     }
-
-    // Pre-flight delegation check runs after cache lookups — skips RPC overhead
-    // when all balances are cached. Best-effort: checks the first token's
-    // contract only (delegations are typically granted per-delegator, not per-token).
-    await firstToken.#assertDelegationActive(delegatorAddress);
 
     const uncachedAddresses = uncached.map((entry) => entry.token.address);
     const creds = await firstToken.sdk.delegatedCredentials.allow(
@@ -642,15 +646,15 @@ export class ReadonlyToken {
       return 0n;
     }
 
+    // Pre-flight delegation check — must run before cache lookup so that
+    // revoked delegations are caught even when a stale cached value exists.
+    await this.#assertDelegationActive(normalizedDelegator);
+
     const cached = await this.sdk.cache.get(normalizedAccount, this.address, handle);
     if (cached !== null) {
       assertBigint(cached, "decryptBalanceAs: cached");
       return cached;
     }
-
-    // Pre-flight delegation check — avoids wasting a wallet signature on an
-    // expired or non-existent delegation.
-    await this.#assertDelegationActive(normalizedDelegator);
 
     const t0 = Date.now();
     try {
