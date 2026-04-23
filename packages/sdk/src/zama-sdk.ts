@@ -512,7 +512,6 @@ export class ZamaSDK {
    * ```
    */
   async publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult> {
-    await this.requireChainAlignment("publicDecrypt");
     if (handles.length === 0) {
       return { clearValues: {}, decryptionProof: "0x", abiEncodedClearValues: "0x" };
     }

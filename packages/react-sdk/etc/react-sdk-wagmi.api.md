@@ -40,7 +40,7 @@ export interface WagmiProviderConfig {
 
 // @public
 export class WagmiSigner implements GenericSigner {
-    constructor(signerConfig: ZamaWagmiSignerConfig);
+    constructor(signerConfig: WagmiSignerConfig);
     // (undocumented)
     getAddress(): Promise<Address>;
     // (undocumented)
@@ -54,7 +54,7 @@ export class WagmiSigner implements GenericSigner {
 }
 
 // @public
-export interface ZamaWagmiSignerConfig {
+export interface WagmiSignerConfig {
     config: Config;
 }
 

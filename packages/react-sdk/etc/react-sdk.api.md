@@ -256,9 +256,7 @@ export interface UseShieldConfig extends UseZamaConfig {
 export function useSignerAddress(): UseQueryResult<Address>;
 
 // @public
-export function useSignerAddressSuspense(): {
-    data: Address;
-};
+export function useSignerAddressSuspense(): _$_tanstack_react_query0.UseSuspenseQueryResult<`0x${string}`, Error>;
 
 // @public
 export function useToken(config: UseZamaConfig): Token;

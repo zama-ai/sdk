@@ -20,7 +20,7 @@ export function useSignerAddress(): UseQueryResult<Address> {
 }
 
 /**
- * Suspense variant of `useSignerAddress`.
+ * Suspense variant of {@link useSignerAddress}.
  * Suspends rendering until the signer address resolves.
  *
  * @example
@@ -28,8 +28,7 @@ export function useSignerAddress(): UseQueryResult<Address> {
  * const { data: address } = useSignerAddressSuspense();
  * ```
  */
-export function useSignerAddressSuspense(): { data: Address } {
+export function useSignerAddressSuspense() {
   const sdk = useZamaSDK();
-
   return useSuspenseQuery<Address>(signerAddressQueryOptions(sdk.signer));
 }
