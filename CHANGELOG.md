@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.0.0-alpha.15](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.14...v3.0.0-alpha.15) (2026-04-23)
+
+### Bug Fixes
+
+- **sdk:** run delegation check before cache lookup in decryptBalanceAs ([#278](https://github.com/zama-ai/sdk/issues/278)) ([ce6b85e]())
+
 ## [3.0.0-alpha.14](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.13...v3.0.0-alpha.14) (2026-04-23)
 
 ## [3.0.0-alpha.13](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.12...v3.0.0-alpha.13) (2026-04-22)
