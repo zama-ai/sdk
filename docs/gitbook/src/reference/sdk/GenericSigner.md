@@ -119,7 +119,7 @@ The SDK calls `subscribe()` during initialization if it exists. The callbacks ob
 - `onChainChange(newChainId: number)` -- called when the user switches chains.
 
 {% hint style="info" %}
-Implementing `subscribe()` is optional but recommended. Without it, stale sessions persist until TTL expiry, which can create confusing UX when users switch accounts. See [`WagmiSigner`](https://github.com/zama-ai/sdk/blob/main/packages/react-sdk/src/wagmi/wagmi-signer.ts) for a reference implementation.
+Implementing `subscribe()` is optional but recommended. Without it, stale sessions persist until TTL expiry, which can create confusing UX when users switch accounts. See [`WagmiSigner`](https://github.com/zama-ai/token-sdk/blob/main/packages/react-sdk/src/wagmi/wagmi-signer.ts) for a reference implementation.
 {% endhint %}
 
 ## Related
