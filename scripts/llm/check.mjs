@@ -10,13 +10,7 @@ const steps = [
   {
     name: "verify-clean",
     command: "git",
-    args: [
-      "diff",
-      "--exit-code",
-      "llms.txt",
-      "llms-full.txt",
-      "docs/llm/corpus-manifest.json",
-    ],
+    args: ["diff", "--exit-code", "llms.txt", "llms-full.txt", "docs/llm/corpus-manifest.json"],
   },
 ];
 
