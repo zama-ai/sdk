@@ -271,6 +271,11 @@ async function handleMessage(request) {
         break;
       }
 
+      case "GET_EXTRA_DATA": {
+        send(id, type, { result: "0x" });
+        break;
+      }
+
       case "REQUEST_ZK_PROOF_VERIFICATION": {
         throw new Error("Not implemented in mock worker");
       }
