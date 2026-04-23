@@ -63,7 +63,8 @@ export const test = base.extend<ReactSdkFixtures>({
   },
   createWrapper: async ({ relayer, signer, storage, sessionStorage, queryClient }, use) => {
     function createWrapper(overrides?: Partial<ZamaConfig>) {
-      const config = {
+      const config: ZamaConfig = {
+        chains: [],
         relayer,
         signer,
         storage,
@@ -73,7 +74,7 @@ export const test = base.extend<ReactSdkFixtures>({
         registryTTL: undefined,
         onEvent: undefined,
         ...overrides,
-      } as unknown as ZamaConfig;
+      };
 
       function Wrapper({ children }: { children?: React.ReactNode }) {
         return (

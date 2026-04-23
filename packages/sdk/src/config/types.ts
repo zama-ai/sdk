@@ -26,19 +26,15 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
   onEvent?: ZamaSDKEventListener;
 }
 
-/** @internal Nominal brand — prevents constructing ZamaConfig as a plain object literal. */
-declare const __brand: unique symbol;
-
-/** Opaque config object returned by `createConfig`. */
+/** Resolved config object returned by `createConfig`. */
 export interface ZamaConfig {
-  /** @internal */ readonly [__brand]: true;
-  /** @internal */ readonly chains: readonly FheChain[];
-  /** @internal */ readonly relayer: RelayerSDK;
-  /** @internal */ readonly signer: GenericSigner;
-  /** @internal */ readonly storage: GenericStorage;
-  /** @internal */ readonly sessionStorage: GenericStorage;
-  /** @internal */ readonly keypairTTL: number | undefined;
-  /** @internal */ readonly sessionTTL: number | "infinite" | undefined;
-  /** @internal */ readonly registryTTL: number | undefined;
-  /** @internal */ readonly onEvent: ZamaSDKEventListener | undefined;
+  readonly chains: readonly FheChain[];
+  readonly relayer: RelayerSDK;
+  readonly signer: GenericSigner;
+  readonly storage: GenericStorage;
+  readonly sessionStorage: GenericStorage;
+  readonly keypairTTL: number | undefined;
+  readonly sessionTTL: number | "infinite" | undefined;
+  readonly registryTTL: number | undefined;
+  readonly onEvent: ZamaSDKEventListener | undefined;
 }
