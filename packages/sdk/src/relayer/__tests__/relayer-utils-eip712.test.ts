@@ -19,6 +19,7 @@ const { mockWorkerClient, MockRelayerWorkerClient } = vi.hoisted(() => {
     requestZKProofVerification: vi.fn(),
     getPublicKey: vi.fn(),
     getPublicParams: vi.fn(),
+    getExtraData: vi.fn().mockResolvedValue({ result: "0x" }),
   };
 
   const MockRelayerWorkerClient = vi.fn(function () {
