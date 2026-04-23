@@ -1,10 +1,10 @@
+import type { Address } from "../utils/address";
 import { inferredTotalSupplyContract, totalSupplyContract } from "../contracts";
 import type { GenericSigner } from "../types";
 import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
 import { filterQueryOptions } from "./utils";
 import { detectWrapperInterfaceVersion } from "./wrapper-interface-version";
-import type { Address } from "viem";
 
 export interface TotalSupplyQueryConfig {
   query?: Record<string, unknown>;

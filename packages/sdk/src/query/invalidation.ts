@@ -1,4 +1,4 @@
-import type { Address } from "viem";
+import type { Address } from "../utils/address";
 import { zamaQueryKeys } from "./query-keys";
 
 export interface QueryLike {

@@ -1,4 +1,5 @@
-import type { Address, Hex } from "viem";
+import type { Address } from "../utils/address";
+import type { Hex } from "../utils/hex";
 import { ZamaError } from "../errors/base";
 import { wrapSigningError } from "../errors/signing";
 import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";

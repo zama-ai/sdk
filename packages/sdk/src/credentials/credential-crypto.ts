@@ -1,4 +1,5 @@
-import type { Address, Hex } from "viem";
+import type { Address } from "../utils/address";
+import type { Hex } from "../utils/hex";
 import { prefixHex } from "../utils";
 
 /** Encrypted data format with IV for AES-GCM decryption. */

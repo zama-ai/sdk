@@ -1,4 +1,4 @@
-import type { Address } from "viem";
+import type { Address } from "../../utils/address";
 import type {
   CoprocessorEIP712DomainType,
   CoprocessorEIP712TypesType,

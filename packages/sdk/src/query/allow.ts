@@ -1,4 +1,4 @@
-import type { Address } from "viem";
+import type { Address } from "../utils/address";
 import type { ZamaSDK } from "../zama-sdk";
 import type { MutationFactoryOptions } from "./factory-types";
 

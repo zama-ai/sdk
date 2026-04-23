@@ -1,3 +1,5 @@
+import type { Address } from "../utils/address";
+import type { Hex } from "../utils/hex";
 import type {
   InputProofBytesType,
   KeypairType,
@@ -16,7 +18,6 @@ import type {
   PublicParamsData,
   UserDecryptParams,
 } from "./relayer-sdk.types";
-import type { Address, Hex } from "viem";
 
 /**
  * Interface for FHE relayer operations.

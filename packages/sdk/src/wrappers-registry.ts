@@ -1,4 +1,5 @@
-import { type Address, getAddress, zeroAddress } from "viem";
+import type { Address } from "./utils/address";
+import { getAddress, zeroAddress } from "./utils/address";
 import type { TokenWrapperPairWithMetadata, PaginatedResult, TokenWrapperPair } from "./contracts";
 import {
   decimalsContract,

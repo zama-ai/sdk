@@ -1,4 +1,5 @@
-import type { Address, Hex } from "viem";
+import type { Address } from "../utils/address";
+import type { Hex } from "../utils/hex";
 
 /** Stored FHE credential data (serialized as JSON in the credential store). */
 export interface StoredCredentials {

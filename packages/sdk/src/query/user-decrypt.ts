@@ -1,5 +1,5 @@
+import type { Address } from "../utils/address";
 import type { UserDecryptResults } from "@zama-fhe/relayer-sdk/bundle";
-import type { Address } from "viem";
 import type { Handle } from "../relayer/relayer-sdk.types";
 import type { ZamaSDK } from "../zama-sdk";
 import type { QueryFactoryOptions } from "./factory-types";

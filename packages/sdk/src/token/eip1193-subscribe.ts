@@ -1,9 +1,6 @@
-import {
-  getAddress as checksumAddress,
-  type Address,
-  type EIP1193EventMap,
-  type EIP1193Provider,
-} from "viem";
+import type { Address } from "../utils/address";
+import type { EIP1193EventMap, EIP1193Provider } from "../types/ethereum";
+import { checksumAddress } from "../utils/address";
 import type { SignerLifecycleCallbacks } from "../types";
 
 /**

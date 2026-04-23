@@ -1,10 +1,10 @@
+import type { Address } from "../utils/address";
 import { allowanceContract, underlyingContract } from "../contracts";
 import type { GenericSigner } from "../types";
 import { assertNonNullable } from "../utils/assertions";
 import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
 import { filterQueryOptions } from "./utils";
-import type { Address } from "viem";
 
 export interface UnderlyingAllowanceQueryConfig {
   owner?: Address;

@@ -1,4 +1,4 @@
-import type { Hex } from "viem";
+import type { Hex } from "../utils/hex";
 import { assertCondition, assertObject, assertString } from "../utils";
 import type { GenericStorage } from "../types";
 

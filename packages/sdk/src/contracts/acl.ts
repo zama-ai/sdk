@@ -1,4 +1,4 @@
-import type { Address } from "viem";
+import type { Address } from "../utils/address";
 import { aclAbi } from "../abi/acl.abi";
 
 /**

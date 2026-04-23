@@ -1,4 +1,4 @@
-import type { Address } from "viem";
+import type { Address } from "../utils/address";
 import type { ReadonlyToken } from "../token/readonly-token";
 import type { MutationFactoryOptions } from "./factory-types";
 

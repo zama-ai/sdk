@@ -1,4 +1,4 @@
-import type { Address } from "viem";
+import type { Address } from "../utils/address";
 import { ZamaError, ZamaErrorCode } from "./base";
 
 /** Structured details shared by balance-related errors. */

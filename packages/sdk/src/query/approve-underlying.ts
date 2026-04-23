@@ -1,7 +1,7 @@
+import type { Address } from "../utils/address";
 import type { Token } from "../token/token";
 import type { TransactionResult } from "../types";
 import type { MutationFactoryOptions } from "./factory-types";
-import type { Address } from "viem";
 
 /** Variables for {@link approveUnderlyingMutationOptions}. */
 export interface ApproveUnderlyingParams {

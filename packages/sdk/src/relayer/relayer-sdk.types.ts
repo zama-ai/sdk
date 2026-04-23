@@ -7,9 +7,10 @@ import type {
   KmsUserDecryptEIP712Type,
   PublicDecryptResults,
 } from "@zama-fhe/relayer-sdk/bundle";
-import type { Address, Hex } from "viem";
-import type { GenericLogger } from "../worker/worker.types";
 import type { GenericStorage } from "../types";
+import type { Address } from "../utils/address";
+import type { Hex } from "../utils/hex";
+import type { GenericLogger } from "../worker/worker.types";
 
 // ============================================================================
 // Application Types

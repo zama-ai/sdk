@@ -3,8 +3,11 @@
  * Works with raw log data from any provider.
  */
 
+import type { Address } from "../utils/address";
+import type { Hex } from "../utils/hex";
+import { getAddress } from "../utils/address";
+import { keccak256, toBytes } from "../utils/hex";
 import type { Handle } from "../relayer/relayer-sdk.types";
-import { getAddress, keccak256, toBytes, type Address, type Hex } from "viem";
 import { prefixHex } from "../utils";
 import type { RawLog } from "../types/transaction";
 export type { RawLog } from "../types/transaction";

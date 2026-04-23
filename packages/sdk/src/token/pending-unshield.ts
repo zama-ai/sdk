@@ -1,4 +1,5 @@
-import type { Address, Hex } from "viem";
+import type { Address } from "../utils/address";
+import type { Hex } from "../utils/hex";
 import type { GenericStorage } from "../types";
 import type { Handle } from "../relayer/relayer-sdk.types";
 

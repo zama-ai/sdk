@@ -1,4 +1,5 @@
-import { getAddress, type Address } from "viem";
+import type { Address } from "./utils/address";
+import { getAddress } from "./utils/address";
 import { CredentialsManager } from "./credentials/credentials-manager";
 import { DelegatedCredentialsManager } from "./credentials/delegated-credentials-manager";
 import { DecryptCache } from "./decrypt-cache";
@@ -463,7 +464,11 @@ export class ZamaSDK {
    */
   async publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult> {
     if (handles.length === 0) {
-      return { clearValues: {}, decryptionProof: "0x", abiEncodedClearValues: "0x" };
+      return {
+        clearValues: {},
+        decryptionProof: "0x",
+        abiEncodedClearValues: "0x",
+      };
     }
 
     try {

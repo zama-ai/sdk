@@ -1,10 +1,10 @@
+import type { Address } from "../utils/address";
 import { isOperatorContract } from "../contracts";
 import type { GenericSigner } from "../types";
 import { assertNonNullable } from "../utils/assertions";
 import type { QueryFactoryOptions } from "./factory-types";
 import { filterQueryOptions } from "./utils";
 import { zamaQueryKeys } from "./query-keys";
-import type { Address } from "viem";
 
 export interface ConfidentialIsApprovedQueryConfig {
   holder?: Address;

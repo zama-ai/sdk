@@ -1,4 +1,6 @@
-import { type Address, getAddress, type Hex } from "viem";
+import type { Address } from "../utils/address";
+import type { Hex } from "../utils/hex";
+import { getAddress } from "../utils/address";
 import {
   allowanceContract,
   approveContract,

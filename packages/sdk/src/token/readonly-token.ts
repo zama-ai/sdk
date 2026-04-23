@@ -1,4 +1,5 @@
-import { type Address, getAddress } from "viem";
+import type { Address } from "../utils/address";
+import { getAddress } from "../utils/address";
 import {
   allowanceContract,
   confidentialBalanceOfContract,

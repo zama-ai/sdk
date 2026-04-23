@@ -1,4 +1,4 @@
-import type { Address } from "viem";
+import type { Address } from "../utils/address";
 import type { ShieldCallbacks, TransferCallbacks, UnshieldCallbacks } from "./callbacks";
 
 /** Options for {@link ConfidentialToken.confidentialTransfer}. */

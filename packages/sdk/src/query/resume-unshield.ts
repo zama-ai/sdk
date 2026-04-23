@@ -1,7 +1,8 @@
+import type { Address } from "../utils/address";
+import type { Hex } from "../utils/hex";
 import type { Token } from "../token/token";
 import type { TransactionResult, UnshieldCallbacks } from "../types";
 import type { MutationFactoryOptions } from "./factory-types";
-import type { Address, Hex } from "viem";
 
 /** Variables for {@link resumeUnshieldMutationOptions}. */
 export interface ResumeUnshieldParams extends UnshieldCallbacks {

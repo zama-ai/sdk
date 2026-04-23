@@ -1,5 +1,5 @@
+import type { Address } from "../utils/address";
 import type { Token } from "../token/token";
-import type { Address } from "viem";
 import type { TransactionResult } from "../types";
 import type { MutationFactoryOptions } from "./factory-types";
 

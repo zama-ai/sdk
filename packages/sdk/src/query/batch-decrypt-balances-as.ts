@@ -1,5 +1,5 @@
+import type { Address } from "../utils/address";
 import { ReadonlyToken, type BatchDecryptAsOptions } from "../token/readonly-token";
-import type { Address } from "viem";
 import type { MutationFactoryOptions } from "./factory-types";
 
 /** Variables for {@link batchDecryptBalancesAsMutationOptions}. */

@@ -12,8 +12,8 @@ export type {
   EIP1193EventMap,
   ProviderConnectInfo,
   ProviderMessage,
-} from "viem";
-export { ProviderRpcError } from "viem";
+} from "../types/ethereum";
+export { ProviderRpcError } from "../types/ethereum";
 export {
   readConfidentialBalanceOfContract,
   readUnderlyingTokenContract,

@@ -1,3 +1,4 @@
+import type { Address } from "../utils/address";
 import {
   isConfidentialTokenContract,
   isConfidentialWrapperContract,
@@ -9,7 +10,6 @@ import { isContractCallError } from "../utils";
 import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
 import { filterQueryOptions } from "./utils";
-import type { Address } from "viem";
 
 export interface IsConfidentialQueryConfig {
   query?: Record<string, unknown>;

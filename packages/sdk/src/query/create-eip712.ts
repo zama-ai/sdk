@@ -1,5 +1,6 @@
+import type { Address } from "../utils/address";
+import type { Hex } from "../utils/hex";
 import type { KmsUserDecryptEIP712UserArgsType } from "@zama-fhe/relayer-sdk/bundle";
-import type { Address, Hex } from "viem";
 import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
 import type { ZamaSDK } from "../zama-sdk";
 import type { MutationFactoryOptions } from "./factory-types";

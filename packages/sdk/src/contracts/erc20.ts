@@ -1,4 +1,5 @@
-import { erc20Abi, type Address } from "viem";
+import type { Address } from "../utils/address";
+import { erc20Abi } from "../abi/erc20.abi";
 
 /**
  * Returns the contract config to read a token's name.

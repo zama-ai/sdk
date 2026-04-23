@@ -1,4 +1,5 @@
-import { type Address, zeroAddress } from "viem";
+import type { Address } from "../utils/address";
+import { zeroAddress } from "../utils/address";
 import {
   getTokenPairsContract,
   getTokenPairsLengthContract,

@@ -1,4 +1,4 @@
-import type { Hex } from "viem";
+import type { Hex } from "../utils/hex";
 
 /** Framework-agnostic log shape compatible with any Ethereum provider. */
 export interface RawLog {

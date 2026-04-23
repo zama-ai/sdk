@@ -6,7 +6,8 @@ import type {
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/bundle";
 import type { ClearValueType, EncryptInput, Handle } from "../relayer/relayer-sdk.types";
-import type { Address, Hex } from "viem";
+import type { Address } from "../utils/address";
+import type { Hex } from "../utils/hex";
 
 // ============================================================================
 // Logger

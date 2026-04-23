@@ -1,4 +1,6 @@
-import { getAddress, isAddress, type Address, type Hex } from "viem";
+import type { Address } from "../utils/address";
+import type { Hex } from "../utils/hex";
+import { getAddress, isAddress } from "../utils/address";
 import { assertArray, assertCondition, assertObject, assertString } from "../utils";
 import type { EncryptedData } from "./credential-crypto";
 
@@ -23,7 +25,7 @@ export function assertBaseEncryptedCredentials(
   assertArray(data.contractAddresses, "credentials.contractAddresses");
   for (const addr of data.contractAddresses) {
     assertCondition(
-      typeof addr === "string" && isAddress(addr, { strict: false }),
+      typeof addr === "string" && isAddress(addr),
       `Expected each contractAddress to be a valid hex address`,
     );
   }
@@ -51,11 +53,11 @@ export function assertDelegatedFields(data: unknown): asserts data is BaseEncryp
   assertBaseEncryptedCredentials(data);
   const obj = data as unknown as Record<string, unknown>;
   assertCondition(
-    typeof obj.delegatorAddress === "string" && isAddress(obj.delegatorAddress, { strict: false }),
+    typeof obj.delegatorAddress === "string" && isAddress(obj.delegatorAddress),
     "Expected credentials.delegatorAddress to be a valid address",
   );
   assertCondition(
-    typeof obj.delegateAddress === "string" && isAddress(obj.delegateAddress, { strict: false }),
+    typeof obj.delegateAddress === "string" && isAddress(obj.delegateAddress),
     "Expected credentials.delegateAddress to be a valid address",
   );
   assertCondition(typeof obj.startTimestamp === "number", "Expected startTimestamp to be a number");
@@ -80,7 +82,11 @@ export function coversContracts(signedAddresses: Address[], requiredContracts: A
  * Check if credentials are valid: not time-expired and covering all required contracts.
  */
 export function isCredentialValid(
-  creds: { startTimestamp: number; durationDays: number; contractAddresses: Address[] },
+  creds: {
+    startTimestamp: number;
+    durationDays: number;
+    contractAddresses: Address[];
+  },
   requiredContracts: Address[],
 ): boolean {
   if (!isTimeValid(creds)) {

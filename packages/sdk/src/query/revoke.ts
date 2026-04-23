@@ -1,6 +1,6 @@
+import type { Address } from "../utils/address";
 import type { ZamaSDK } from "../zama-sdk";
 import type { MutationFactoryOptions } from "./factory-types";
-import type { Address } from "viem";
 
 export function revokeMutationOptions(
   sdk: ZamaSDK,

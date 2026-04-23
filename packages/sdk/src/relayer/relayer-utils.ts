@@ -1,5 +1,5 @@
+import type { Address } from "../utils/address";
 import type { FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/bundle";
-import type { Address } from "viem";
 
 const MAX_RETRIES = 2;
 const RETRY_BASE_MS = 500;

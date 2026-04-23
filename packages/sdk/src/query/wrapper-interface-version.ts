@@ -1,3 +1,4 @@
+import type { Address } from "../utils/address";
 import {
   ERC7984_WRAPPER_INTERFACE_ID,
   ERC7984_WRAPPER_INTERFACE_ID_LEGACY,
@@ -6,7 +7,6 @@ import {
 import { ConfigurationError } from "../errors";
 import type { GenericSigner } from "../types";
 import { isContractCallError } from "../utils";
-import type { Address } from "viem";
 
 export type WrapperInterfaceVersion = "legacy" | "upgraded";
 

@@ -1,4 +1,4 @@
-import type { Address } from "viem";
+import type { Address } from "../utils/address";
 import { MAX_UINT64 } from "../contracts";
 import { getDelegationExpiryContract } from "../contracts/acl";
 import type { RelayerSDK } from "../relayer/relayer-sdk";

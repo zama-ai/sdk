@@ -1,10 +1,11 @@
+import type { Address } from "../utils/address";
+import type { Hex } from "../utils/hex";
 import type {
   InputProofBytesType,
   KeypairType,
   KmsDelegatedUserDecryptEIP712Type,
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/bundle";
-import type { Address, Hex } from "viem";
 import { ConfigurationError, ZamaError } from "../errors";
 import { IndexedDBStorage } from "../storage/indexeddb-storage";
 import type { GenericStorage } from "../types";

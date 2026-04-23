@@ -1,3 +1,5 @@
+import type { Address } from "../utils/address";
+import type { Hex } from "../utils/hex";
 import type {
   FhevmInstanceConfig,
   InputProofBytesType,
@@ -5,7 +7,6 @@ import type {
   KmsDelegatedUserDecryptEIP712Type,
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/node";
-import type { Address, Hex } from "viem";
 import { ConfigurationError, ZamaError } from "../errors";
 import { MemoryStorage } from "../storage/memory-storage";
 import type { GenericStorage } from "../types";

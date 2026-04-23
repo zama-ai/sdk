@@ -1,6 +1,5 @@
-import { getAddress } from "viem";
-import type { Address } from "viem";
-
+import type { Address } from "../utils/address";
+import { getAddress } from "../utils/address";
 const normalizeAddresses = (addresses: Address[]): Address[] =>
   addresses.map((address) => getAddress(address));
 const normalizeAddress = (address?: Address): Address | undefined =>

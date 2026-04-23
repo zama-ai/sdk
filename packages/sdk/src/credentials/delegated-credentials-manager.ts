@@ -1,4 +1,6 @@
-import { getAddress, type Address, type Hex } from "viem";
+import type { Address } from "../utils/address";
+import type { Hex } from "../utils/hex";
+import { getAddress } from "../utils/address";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { DelegatedStoredCredentials } from "../types";
 import {

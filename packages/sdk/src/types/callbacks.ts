@@ -1,4 +1,4 @@
-import type { Hex } from "viem";
+import type { Hex } from "../utils/hex";
 
 /** Progress callbacks for multi-step unshield operations. */
 export interface UnshieldCallbacks {

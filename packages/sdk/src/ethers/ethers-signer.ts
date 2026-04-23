@@ -1,14 +1,14 @@
+import type { Address } from "../utils/address";
+import type { Hex } from "../utils/hex";
+import type { EIP1193Provider } from "../types/ethereum";
+import { getAddress } from "../utils/address";
+import { isHex } from "../utils/hex";
 import { ethers, BrowserProvider, type Signer } from "ethers";
-import {
-  getAddress,
-  isHex,
-  type Abi,
-  type Address,
-  type ContractFunctionArgs,
-  type ContractFunctionName,
-  type ContractFunctionReturnType,
-  type EIP1193Provider,
-  type Hex,
+import type {
+  Abi,
+  ContractFunctionArgs,
+  ContractFunctionName,
+  ContractFunctionReturnType,
 } from "viem";
 import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
 import type {

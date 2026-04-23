@@ -1,10 +1,11 @@
 /* eslint-disable no-empty-pattern */
+import type { Address } from "./utils/address";
+import type { Hex } from "./utils/hex";
 import { test as base, vi } from "vitest";
 import { ZamaSDKEvents } from "./events/sdk-events";
 import type { RelayerSDK } from "./relayer/relayer-sdk";
 import type { Handle } from "./relayer/relayer-sdk.types";
 import type { QueryClient } from "@tanstack/query-core";
-import type { Address, Hex } from "viem";
 import type { CredentialsManagerConfig } from "./credentials/credentials-manager";
 import { CredentialsManager } from "./credentials/credentials-manager";
 import type { DelegatedCredentialsManagerConfig } from "./credentials/delegated-credentials-manager";

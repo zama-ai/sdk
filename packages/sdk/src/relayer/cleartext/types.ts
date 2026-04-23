@@ -1,4 +1,6 @@
-import type { Address, EIP1193Provider, Hex } from "viem";
+import type { Address } from "../../utils/address";
+import type { Hex } from "../../utils/hex";
+import type { EIP1193Provider } from "../../types/ethereum";
 
 export interface CleartextConfig {
   chainId: number;

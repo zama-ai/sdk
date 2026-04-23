@@ -1,4 +1,5 @@
-import { getAddress, type Address } from "viem";
+import type { Address } from "./utils/address";
+import { getAddress } from "./utils/address";
 import type { ClearValueType, Handle } from "./relayer/relayer-sdk.types";
 import type { GenericStorage } from "./types";
 
@@ -84,7 +85,8 @@ export class DecryptCache {
     // Serialise with the index write queue to avoid racing with concurrent set() calls
     this.#indexWriteQueue = this.#indexWriteQueue.then(() =>
       this.#doClearForRequester(requester).catch((error) => {
-        console.warn("[zama-sdk] DecryptCache.clearForRequester failed:", error); // eslint-disable-line no-console
+        // oxlint-disable-next-line no-console
+        console.warn("[zama-sdk] DecryptCache.clearForRequester failed:", error);
       }),
     );
     await this.#indexWriteQueue;
