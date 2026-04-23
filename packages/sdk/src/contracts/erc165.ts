@@ -5,12 +5,14 @@ import { erc165Abi } from "../abi/erc165.abi";
 export const ERC7984_INTERFACE_ID = "0x4958f2a4" as const;
 
 /** ERC-165 interface ID for IERC7984ERC20Wrapper (confidential wrapper) — current deployed baseline. */
-export const ERC7984_WRAPPER_INTERFACE_ID_LEGACY = "0xf1f4c25a" as const;
+export const ERC7984_WRAPPER_INTERFACE_ID_LEGACY = "0xd04584ba" as const;
 
 /**
  * ERC-165 interface ID for IERC7984ERC20Wrapper (confidential wrapper) — upgraded interface.
  *
- * Introduced in protocol-apps commit 93c6e7a (April 2026 security upgrade).
+ * Verified against the protocol-apps upgraded wrapper line: commit b06eb263 asserts
+ * `supportsInterface(0x1f1c62b2)` for `type(IERC7984ERC20Wrapper).interfaceId`,
+ * and the implementation exposes `inferredTotalSupply()`.
  * During the transition period, both {@link ERC7984_WRAPPER_INTERFACE_ID_LEGACY} and this
  * constant must be checked to support old and new wrappers simultaneously.
  *
@@ -58,7 +60,7 @@ export function isConfidentialTokenContract(tokenAddress: Address) {
 /**
  * Returns contract config to check if a token implements IERC7984ERC20Wrapper (confidential wrapper)
  * using the **current deployed baseline** interface ID
- * ({@link ERC7984_WRAPPER_INTERFACE_ID_LEGACY}, `0xf1f4c25a`).
+ * ({@link ERC7984_WRAPPER_INTERFACE_ID_LEGACY}, `0xd04584ba`).
  *
  * Note: During the transition period, calling this alone is insufficient. Upgraded wrappers
  * respond only to {@link ERC7984_WRAPPER_INTERFACE_ID}. Prefer higher-level APIs

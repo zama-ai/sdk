@@ -1,5 +1,31 @@
 # Changelog
 
+## [3.0.0-alpha.14](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.13...v3.0.0-alpha.14) (2026-04-23)
+
+## [3.0.0-alpha.13](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.12...v3.0.0-alpha.13) (2026-04-22)
+
+## [3.0.0-alpha.12](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.11...v3.0.0-alpha.12) (2026-04-21)
+
+## [3.0.0](https://github.com/zama-ai/sdk/compare/v2.5.0...v3.0.0) (2026-04-22)
+
+## [2.5.0](https://github.com/zama-ai/sdk/compare/v2.4.0...v2.5.0) (2026-04-17)
+
+### Features
+
+- **sdk:** support upgraded unwrap events ([#239](https://github.com/zama-ai/sdk/issues/239)) ([4f4116a]()), closes [#249]()
+
+## [3.0.0-alpha.11](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.10...v3.0.0-alpha.11) (2026-04-21)
+
+### Bug Fixes
+
+- **sdk:** choose total supply method via ERC-165 ([#270](https://github.com/zama-ai/sdk/issues/270)) ([7fb55c4]())
+
+## [3.0.0-alpha.10](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.9...v3.0.0-alpha.10) (2026-04-20)
+
+### Bug Fixes
+
+- **sdk:** correct legacy wrapper interface ID ([#271](https://github.com/zama-ai/sdk/issues/271)) ([f347198]())
+
 ## [3.0.0-alpha.9](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.8...v3.0.0-alpha.9) (2026-04-20)
 
 ## [3.0.0-alpha.8](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.7...v3.0.0-alpha.8) (2026-04-20)
