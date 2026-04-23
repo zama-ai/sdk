@@ -54,7 +54,7 @@ export function useConfidentialBalances(
   const { tokenAddresses } = config;
   const { enabled = true } = options ?? {};
   const sdk = useZamaSDK();
-  const owner = useSignerAddress();
+  const { data: owner } = useSignerAddress();
 
   const tokens = useMemo(
     () => tokenAddresses.map((addr) => sdk.createReadonlyToken(addr)),

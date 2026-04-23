@@ -21,11 +21,11 @@ const mockSdk = {
 
 vi.mock("../../provider", () => ({
   useZamaSDK: vi.fn(() => mockSdk),
-  useSignerAddress: vi.fn(() => OWNER),
+  useSignerAddress: vi.fn(() => ({ data: OWNER })),
 }));
 
 vi.mock("../../use-signer-address", () => ({
-  useSignerAddress: vi.fn(() => OWNER),
+  useSignerAddress: vi.fn(() => ({ data: OWNER })),
 }));
 
 vi.mock("@zama-fhe/sdk/query", () => ({

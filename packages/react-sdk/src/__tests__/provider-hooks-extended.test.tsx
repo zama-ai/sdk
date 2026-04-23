@@ -42,7 +42,7 @@ describe("useSignerAddress", () => {
   it("returns the connected signer address", async ({ renderWithProviders }) => {
     const { result } = renderWithProviders(() => useSignerAddress());
 
-    await waitFor(() => expect(result.current).toBe(USER));
+    await waitFor(() => expect(result.current.data).toBe(USER));
   });
 });
 

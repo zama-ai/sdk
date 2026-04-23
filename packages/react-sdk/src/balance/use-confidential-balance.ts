@@ -46,7 +46,7 @@ export function useConfidentialBalance(
   const { tokenAddress } = config;
   const { enabled = true } = options ?? {};
   const token = useReadonlyToken(tokenAddress);
-  const owner = useSignerAddress();
+  const { data: owner } = useSignerAddress();
 
   const baseOptions = confidentialBalanceQueryOptions(token, {
     tokenAddress,

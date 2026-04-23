@@ -39,7 +39,7 @@ export function useUnderlyingAllowance(
 ) {
   const { tokenAddress, wrapperAddress } = config;
   const sdk = useZamaSDK();
-  const owner = useSignerAddress();
+  const { data: owner } = useSignerAddress();
 
   const baseOpts = underlyingAllowanceQueryOptions(sdk, tokenAddress, {
     owner,

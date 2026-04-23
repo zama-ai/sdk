@@ -48,6 +48,7 @@ import { UnwrapParams } from '@zama-fhe/sdk/query';
 import { UseMutationOptions } from '@tanstack/react-query';
 import { UseMutationResult } from '@tanstack/react-query';
 import { UseQueryOptions } from '@tanstack/react-query';
+import { UseQueryResult } from '@tanstack/react-query';
 import { UserDecryptQueryConfig } from '@zama-fhe/sdk/query';
 import { ZamaSDK } from '@zama-fhe/sdk';
 import { ZamaSDKEventListener } from '@zama-fhe/sdk';
@@ -252,7 +253,7 @@ export interface UseShieldConfig extends UseZamaConfig {
 }
 
 // @public
-export function useSignerAddress(): Address | undefined;
+export function useSignerAddress(): UseQueryResult<Address>;
 
 // @public
 export function useSignerAddressSuspense(): {

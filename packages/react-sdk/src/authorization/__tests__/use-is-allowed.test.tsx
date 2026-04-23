@@ -17,7 +17,7 @@ vi.mock(import("@tanstack/react-query"), async () => {
 });
 
 vi.mock("../../use-signer-address", () => ({
-  useSignerAddress: vi.fn(() => USER_ADDRESS),
+  useSignerAddress: vi.fn(() => ({ data: USER_ADDRESS })),
 }));
 
 describe("useIsAllowed", () => {

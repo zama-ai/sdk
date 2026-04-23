@@ -816,13 +816,7 @@ export interface ShieldSubmittedEvent extends BaseEvent {
 }
 
 // @public (undocumented)
-export interface SignerAddressQueryConfig {
-    // (undocumented)
-    query?: Record<string, unknown>;
-}
-
-// @public (undocumented)
-export function signerAddressQueryOptions(signer: GenericSigner, config?: SignerAddressQueryConfig): QueryFactoryOptions<Address, Error, Address, ReturnType<typeof zamaQueryKeys.signerAddress.scope>>;
+export function signerAddressQueryOptions(signer: GenericSigner): QueryFactoryOptions<Address, Error, Address, ReturnType<typeof zamaQueryKeys.signerAddress.scope>>;
 
 // @public
 export interface SignerLifecycleCallbacks {

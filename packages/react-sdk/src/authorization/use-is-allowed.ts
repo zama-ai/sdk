@@ -25,7 +25,7 @@ export interface UseIsAllowedConfig {
  */
 export function useIsAllowed(config: UseIsAllowedConfig) {
   const sdk = useZamaSDK();
-  const account = useSignerAddress();
+  const { data: account } = useSignerAddress();
   const baseOpts = account
     ? isAllowedQueryOptions(sdk, { account, contractAddresses: config.contractAddresses })
     : ({

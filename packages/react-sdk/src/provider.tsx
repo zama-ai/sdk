@@ -67,11 +67,7 @@ export interface ZamaProviderProps extends PropsWithChildren {
   onEvent?: ZamaSDKEventListener;
 }
 
-interface ZamaSDKContextValue {
-  sdk: ZamaSDK;
-}
-
-const ZamaSDKContext = createContext<ZamaSDKContextValue | null>(null);
+const ZamaSDKContext = createContext<ZamaSDK | null>(null);
 
 /**
  * Provides a {@link ZamaSDK} instance to all descendant hooks.
@@ -151,9 +147,7 @@ export function ZamaProvider({
   // and is idempotent.
   useEffect(() => () => sdk.dispose(), [sdk]);
 
-  const contextValue = useMemo(() => ({ sdk }), [sdk]);
-
-  return <ZamaSDKContext.Provider value={contextValue}>{children}</ZamaSDKContext.Provider>;
+  return <ZamaSDKContext.Provider value={sdk}>{children}</ZamaSDKContext.Provider>;
 }
 
 /**
@@ -175,5 +169,5 @@ export function useZamaSDK(): ZamaSDK {
         "Wrap your component tree in <ZamaProvider relayer={…} provider={…} signer={…} storage={…}>.",
     );
   }
-  return context.sdk;
+  return context;
 }

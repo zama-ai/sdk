@@ -30,15 +30,23 @@ import { WagmiSigner } from "../wagmi/wagmi-signer";
 import { WagmiProvider } from "../wagmi/wagmi-provider";
 
 interface WagmiFixtures {
+  wagmiConfig: Config;
   wagmiSigner: WagmiSigner;
+  wagmiProvider: WagmiProvider;
 }
 
 const wit = base.extend<WagmiFixtures>({
   // eslint-disable-next-line no-empty-pattern
-  wagmiSigner: async ({}, use) => {
+  wagmiConfig: async ({}, use) => {
+    await use({} as unknown as Config);
+  },
+  wagmiSigner: async ({ wagmiConfig }, use) => {
     capturedOnChange = undefined;
     mockUnsubscribe.mockClear();
-    await use(new WagmiSigner({ config: {} as unknown as Config }));
+    await use(new WagmiSigner({ config: wagmiConfig }));
+  },
+  wagmiProvider: async ({ wagmiConfig }, use) => {
+    await use(new WagmiProvider({ config: wagmiConfig }));
   },
 });
 
@@ -108,8 +116,7 @@ describe("WagmiSigner.subscribe", () => {
 });
 
 describe("WagmiProvider.getBlockTimestamp", () => {
-  wit("returns block timestamp from getBlock", async () => {
-    const wagmiProvider = new WagmiProvider({ config: {} as unknown as Config });
+  wit("returns block timestamp from getBlock", async ({ wagmiProvider }) => {
     const timestamp = await wagmiProvider.getBlockTimestamp();
     expect(timestamp).toBe(1700000000n);
   });
