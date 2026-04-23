@@ -529,17 +529,15 @@ export class ZamaSDK {
    * contract addresses. Uses the tracked identity when available (safe during
    * account switches), falling back to querying the signer directly.
    *
-   * @throws {@link ChainMismatchError} if signer and provider are on different chains.
-   *
    * @example
    * ```ts
    * wallet.on("disconnect", () => sdk.revokeSession());
    * ```
    */
   async revokeSession(): Promise<void> {
-    const chainId = await this.requireChainAlignment("revokeSession");
     await this.#identityReady;
     const address = this.#lastAddress ?? (await this.signer.getAddress());
+    const chainId = this.#lastChainId ?? (await this.signer.getChainId());
     const storeKey = await CredentialsManager.computeStoreKey(address, chainId);
     await this.credentials.revokeByKey(storeKey);
     await this.cache.clearForRequester(address);
