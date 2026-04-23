@@ -16,9 +16,10 @@ describe("Integration: multi-step workflows", () => {
     }) => {
       const UNDERLYING = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
 
-      // Step 1: readContract calls for underlying and allowance
+      // Step 1: readContract calls for underlying, ERC-20 balance, allowance, then confidentialBalanceOf
       vi.mocked(signer.readContract)
         .mockResolvedValueOnce(UNDERLYING) // #getUnderlying
+        .mockResolvedValueOnce(1000n) // ERC-20 balanceOf (must be >= shield amount)
         .mockResolvedValueOnce(0n) // allowance check (insufficient)
         .mockResolvedValueOnce(handle); // confidentialBalanceOf after wrap
 
@@ -62,6 +63,9 @@ describe("Integration: multi-step workflows", () => {
       handle,
       createToken,
     }) => {
+      // Step 0: Mock confidentialBalanceOf for pre-flight balance check
+      vi.mocked(signer.readContract).mockResolvedValueOnce(handle); // confidentialBalanceOf
+
       // Step 1: Execute transfer (encrypts amount, sends tx)
       const transferResult = await token.confidentialTransfer(RECIPIENT, 250n);
       expect(transferResult.txHash).toBe("0xtxhash");
@@ -144,8 +148,12 @@ describe("Integration: multi-step workflows", () => {
       relayer,
       signer,
       token,
+      handle,
       userAddress,
     }) => {
+      // Mock confidentialBalanceOf for pre-flight balance check
+      vi.mocked(signer.readContract).mockResolvedValueOnce(handle); // confidentialBalanceOf
+
       // Mock receipt with UnwrapRequested event for the auto-finalize path.
       // unwrap() now calls waitForTransactionReceipt (1st call),
       // then #waitAndFinalizeUnshield calls it again (2nd call) to parse the event,
@@ -153,7 +161,12 @@ describe("Integration: multi-step workflows", () => {
       const eventReceipt: { logs: RawLog[] } = {
         logs: [
           {
-            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`],
+            // UnwrapRequested(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 encryptedAmount)
+            topics: [
+              Topics.UnwrapRequested,
+              `0x000000000000000000000000${userAddress.slice(2)}`,
+              BURN_HANDLE,
+            ],
             data: BURN_HANDLE,
           },
         ],
