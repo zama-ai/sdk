@@ -42,6 +42,32 @@ describe("isAddress", () => {
   it("rejects bare 0x", () => {
     expect(isAddress("0x")).toBe(false);
   });
+
+  describe("strict mode (default)", () => {
+    it("accepts all-lowercase (no checksum to verify)", () => {
+      expect(isAddress("0xd8da6bf26964af9d7eed9e03e53415d37aa96045")).toBe(true);
+    });
+
+    it("accepts all-uppercase (no checksum to verify)", () => {
+      expect(isAddress("0xD8DA6BF26964AF9D7EED9E03E53415D37AA96045")).toBe(true);
+    });
+
+    it("accepts correctly checksummed mixed-case", () => {
+      expect(isAddress("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045")).toBe(true);
+    });
+
+    it("rejects incorrectly checksummed mixed-case", () => {
+      // Flip one letter's case to break the checksum
+      expect(isAddress("0xd8Da6BF26964aF9D7eEd9e03E53415D37aA96045")).toBe(false);
+    });
+  });
+
+  describe("strict: false", () => {
+    it("accepts any valid hex address regardless of casing", () => {
+      // Wrong checksum but valid hex — strict: false should accept
+      expect(isAddress("0xd8Da6BF26964aF9D7eEd9e03E53415D37aA96045", { strict: false })).toBe(true);
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------

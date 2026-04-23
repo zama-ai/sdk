@@ -25,7 +25,7 @@ export function assertBaseEncryptedCredentials(
   assertArray(data.contractAddresses, "credentials.contractAddresses");
   for (const addr of data.contractAddresses) {
     assertCondition(
-      typeof addr === "string" && isAddress(addr),
+      typeof addr === "string" && isAddress(addr, { strict: false }),
       `Expected each contractAddress to be a valid hex address`,
     );
   }
@@ -53,11 +53,11 @@ export function assertDelegatedFields(data: unknown): asserts data is BaseEncryp
   assertBaseEncryptedCredentials(data);
   const obj = data as unknown as Record<string, unknown>;
   assertCondition(
-    typeof obj.delegatorAddress === "string" && isAddress(obj.delegatorAddress),
+    typeof obj.delegatorAddress === "string" && isAddress(obj.delegatorAddress, { strict: false }),
     "Expected credentials.delegatorAddress to be a valid address",
   );
   assertCondition(
-    typeof obj.delegateAddress === "string" && isAddress(obj.delegateAddress),
+    typeof obj.delegateAddress === "string" && isAddress(obj.delegateAddress, { strict: false }),
     "Expected credentials.delegateAddress to be a valid address",
   );
   assertCondition(typeof obj.startTimestamp === "number", "Expected startTimestamp to be a number");
