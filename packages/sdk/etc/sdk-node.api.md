@@ -469,10 +469,10 @@ export class RelayerNode implements RelayerSDK, Disposable {
     generateKeypair(): Promise<KeypairType_2<Hex>>;
     // (undocumented)
     getAclAddress(): Promise<Address>;
-    // Warning: (ae-forgotten-export) The symbol "PublicKeyData" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     getExtraData(): Promise<Hex>;
+    // Warning: (ae-forgotten-export) The symbol "PublicKeyData" needs to be exported by the entry point index.d.ts
+    //
     // (undocumented)
     getPublicKey(): Promise<PublicKeyData | null>;
     // Warning: (ae-forgotten-export) The symbol "PublicParamsData" needs to be exported by the entry point index.d.ts
