@@ -7,9 +7,9 @@ import {
   ZamaSDKEvents,
   indexedDBStorage,
   savePendingUnshield,
-  createZamaConfig,
   web,
 } from "@zama-fhe/react-sdk";
+import { createConfig as createZamaConfig } from "@zama-fhe/sdk/ethers";
 import { sepolia as fheSepolia } from "@zama-fhe/sdk/chains";
 import { SEPOLIA_RPC_URL } from "@/lib/config";
 import { getActiveUnshieldToken, setActiveUnshieldToken } from "@/lib/activeUnshield";
@@ -81,7 +81,7 @@ export function Providers({ children }: { children: ReactNode }) {
     return createZamaConfig({
       chains: [fheSepolia],
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ethers: { ethereum: provider as any },
+      ethereum: provider as any,
       transports: {
         [fheSepolia.id]: web({
           relayerUrl: `${window.location.origin}/api/relayer`,

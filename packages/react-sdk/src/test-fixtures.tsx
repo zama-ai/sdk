@@ -7,7 +7,7 @@ import type { RelayerSDK } from "../../sdk/src/relayer/relayer-sdk";
 import { test as base } from "../../sdk/src/test-fixtures";
 import type { Token } from "../../sdk/src/token";
 import type { GenericSigner, GenericStorage } from "../../sdk/src/types";
-import type { ZamaConfig } from "./config";
+import type { ZamaConfig } from "@zama-fhe/sdk";
 import { ZamaProvider } from "./provider";
 import { createMockToken } from "./__tests__/mutation-test-helpers";
 
@@ -63,7 +63,7 @@ export const test = base.extend<ReactSdkFixtures>({
   },
   createWrapper: async ({ relayer, signer, storage, sessionStorage, queryClient }, use) => {
     function createWrapper(overrides?: Partial<ZamaConfig>) {
-      const config: ZamaConfig = {
+      const config = {
         relayer,
         signer,
         storage,
@@ -73,7 +73,7 @@ export const test = base.extend<ReactSdkFixtures>({
         registryTTL: undefined,
         onEvent: undefined,
         ...overrides,
-      };
+      } as unknown as ZamaConfig;
 
       function Wrapper({ children }: { children?: React.ReactNode }) {
         return (

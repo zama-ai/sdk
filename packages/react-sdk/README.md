@@ -32,7 +32,9 @@ yarn add @zama-fhe/react-sdk @tanstack/react-query
 import { WagmiProvider, createConfig, http } from "wagmi";
 import { sepolia } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ZamaProvider, createZamaConfig, web } from "@zama-fhe/react-sdk";
+import { ZamaProvider } from "@zama-fhe/react-sdk";
+import { createConfig as createZamaFheConfig } from "@zama-fhe/react-sdk/wagmi";
+import { web } from "@zama-fhe/sdk";
 import { sepolia as sepoliaFhe } from "@zama-fhe/sdk/chains";
 
 const wagmiConfig = createConfig({
@@ -42,7 +44,7 @@ const wagmiConfig = createConfig({
   },
 });
 
-const zamaConfig = createZamaConfig({
+const zamaConfig = createZamaFheConfig({
   chains: [sepoliaFhe],
   wagmiConfig,
   transports: {
@@ -76,16 +78,12 @@ function TokenBalance() {
 
 ```tsx
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  ZamaProvider,
-  createZamaConfig,
-  web,
-  useConfidentialBalance,
-  useConfidentialTransfer,
-} from "@zama-fhe/react-sdk";
+import { ZamaProvider, useConfidentialBalance, useConfidentialTransfer } from "@zama-fhe/react-sdk";
+import { createConfig } from "@zama-fhe/react-sdk/wagmi";
+import { web } from "@zama-fhe/sdk";
 import { sepolia } from "@zama-fhe/sdk/chains";
 
-const zamaConfig = createZamaConfig({
+const zamaConfig = createConfig({
   chains: [sepolia],
   signer: yourCustomSigner,
   transports: {
@@ -129,15 +127,17 @@ function TransferForm() {
 
 ## Provider Setup
 
-All setups use `ZamaProvider` with a config object from `createZamaConfig`.
+All setups use `ZamaProvider` with a config object from `createConfig`.
 
 ```tsx
-import { ZamaProvider, createZamaConfig, web } from "@zama-fhe/react-sdk";
+import { ZamaProvider } from "@zama-fhe/react-sdk";
+import { createConfig } from "@zama-fhe/react-sdk/wagmi";
+import { web } from "@zama-fhe/sdk";
 import { sepolia } from "@zama-fhe/sdk/chains";
 
-const zamaConfig = createZamaConfig({
+const zamaConfig = createConfig({
   chains: [sepolia],
-  wagmiConfig, // or viem: {...}, ethers: {...}, signer: customSigner
+  wagmiConfig, // or use createConfig from @zama-fhe/sdk/viem or @zama-fhe/sdk/ethers
   transports: {
     [sepolia.id]: web({ relayerUrl: "/api/relayer/11155111" }),
   },
@@ -839,10 +839,12 @@ FHE decrypt credentials are generated once per wallet + contract set and cached 
 By default, wallet signatures are stored in memory and lost on page reload (or service worker restart). For MV3 web extensions, use the built-in `chromeSessionStorage` singleton so signatures survive service worker restarts and are shared across popup, background, and content script contexts:
 
 ```tsx
-import { createZamaConfig, web, chromeSessionStorage, indexedDBStorage } from "@zama-fhe/react-sdk";
+import { chromeSessionStorage, indexedDBStorage } from "@zama-fhe/react-sdk";
+import { createConfig } from "@zama-fhe/react-sdk/wagmi";
+import { web } from "@zama-fhe/sdk";
 import { sepolia } from "@zama-fhe/sdk/chains";
 
-const zamaConfig = createZamaConfig({
+const zamaConfig = createConfig({
   chains: [sepolia],
   wagmiConfig,
   storage: indexedDBStorage,
@@ -916,7 +918,7 @@ queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalance.all 
 
 All public exports from `@zama-fhe/sdk` are re-exported from the main entry point. You never need to import from the core package directly.
 
-**Config:** `createZamaConfig`, `web`, `node`, `cleartext`.
+**Config:** `web`, `cleartext`. Use `createConfig` from `@zama-fhe/react-sdk/wagmi`, `@zama-fhe/sdk/viem`, or `@zama-fhe/sdk/ethers` as appropriate. Use `node` from `@zama-fhe/sdk/node`.
 
 **Classes:** `RelayerWeb`, `ZamaSDK`, `Token`, `ReadonlyToken`, `MemoryStorage`, `memoryStorage`, `IndexedDBStorage`, `indexedDBStorage`, `CredentialsManager`.
 

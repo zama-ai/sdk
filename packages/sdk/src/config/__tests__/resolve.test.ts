@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { web, cleartext } from "../transports";
 import { node } from "../../node";
-import { sepolia, mainnet, hoodi, type FheChain } from "../../chains";
+import { sepolia, mainnet, hoodi, hardhat, anvil, type FheChain } from "../../chains";
 
 vi.mock(import("../../relayer/relayer-web"), async () => ({
   RelayerWeb: vi.fn().mockImplementation(function (this: any) {
@@ -20,12 +20,19 @@ vi.mock(import("../../relayer/cleartext/relayer-cleartext"), async () => ({
 // Import after mocks
 const { resolveChainTransports } = await import("../resolve");
 const { CompositeRelayer } = await import("../../relayer/composite-relayer");
+const { buildZamaConfig } = await import("../build");
 
 const sepoliaChain = sepolia;
 const mainnetChain = mainnet;
 const hoodiChain = hoodi;
 
 describe("resolveChainTransports", () => {
+  it("throws for duplicate chain ids (e.g. hardhat + anvil alias)", () => {
+    expect(() => resolveChainTransports([hardhat, anvil], { [31337]: web() })).toThrow(
+      "Duplicate chain id(s) [31337]",
+    );
+  });
+
   it("throws when a chain has no transport entry", () => {
     expect(() => resolveChainTransports([sepoliaChain], {})).toThrow(
       "Chain 11155111 has no transport configured",
@@ -159,5 +166,41 @@ describe("CompositeRelayer (lazy init)", () => {
     });
     const relayer = new CompositeRelayer(() => Promise.resolve(11155111), transports);
     expect(relayer.constructor.name).toBe("CompositeRelayer");
+  });
+
+  it("deduplicates concurrent first-use for the same chain", async () => {
+    const transports = resolveChainTransports([sepoliaChain], {
+      [11155111]: web(),
+    });
+    const relayer = new CompositeRelayer(() => Promise.resolve(11155111), transports);
+    const [a, b] = await Promise.all([relayer.generateKeypair(), relayer.generateKeypair()]);
+    expect(a).toEqual(b);
+  });
+});
+
+describe("buildZamaConfig (mergeRegistryAddresses)", () => {
+  const mockSigner = {
+    getAddress: vi.fn().mockResolvedValue("0x1234" as `0x${string}`),
+    getChainId: vi.fn().mockResolvedValue(11155111),
+    signTypedData: vi.fn(),
+  };
+
+  it("propagates transport registryAddress to chain config", () => {
+    const customRegistry = "0xCustomRegistry" as `0x${string}`;
+    const config = buildZamaConfig(mockSigner as any, {
+      chains: [sepoliaChain],
+      transports: {
+        [11155111]: web({ registryAddress: customRegistry }),
+      },
+    });
+    expect(config.chains[0].registryAddress).toBe(customRegistry);
+  });
+
+  it("preserves chain registryAddress when transport has none", () => {
+    const config = buildZamaConfig(mockSigner as any, {
+      chains: [sepoliaChain],
+      transports: { [11155111]: web() },
+    });
+    expect(config.chains[0].registryAddress).toBe(sepoliaChain.registryAddress);
   });
 });

@@ -26,7 +26,8 @@ The SDK ships both ESM and CommonJS builds. Most modern toolchains use ESM autom
 ### ESM (recommended)
 
 ```ts
-import { createZamaConfig, web, ZamaSDK } from "@zama-fhe/sdk";
+import { web, ZamaSDK } from "@zama-fhe/sdk";
+import { createConfig } from "@zama-fhe/sdk/viem";
 import { sepolia } from "@zama-fhe/sdk/chains";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 ```
@@ -34,8 +35,8 @@ import { ViemSigner } from "@zama-fhe/sdk/viem";
 ### CommonJS
 
 ```js
-const { createZamaConfig, web, ZamaSDK } = require("@zama-fhe/sdk");
-const { EthersSigner } = require("@zama-fhe/sdk/ethers");
+const { web, ZamaSDK } = require("@zama-fhe/sdk");
+const { createConfig, EthersSigner } = require("@zama-fhe/sdk/ethers");
 ```
 
 ### Available subpath exports
@@ -64,13 +65,15 @@ The SDK works with all TypeScript `moduleResolution` modes:
 ### Browser (viem)
 
 ```ts
-import { createZamaConfig, web, ZamaSDK } from "@zama-fhe/sdk";
+import { web, ZamaSDK } from "@zama-fhe/sdk";
+import { createConfig } from "@zama-fhe/sdk/viem";
 import { sepolia, mainnet } from "@zama-fhe/sdk/chains";
 
 // 1. Create the config
-const config = createZamaConfig({
+const config = createConfig({
   chains: [sepolia, mainnet],
-  viem: { publicClient, walletClient },
+  publicClient,
+  walletClient,
   transports: {
     [sepolia.id]: web({ relayerUrl: "https://your-app.com/api/relayer/11155111" }),
     [mainnet.id]: web({ relayerUrl: "https://your-app.com/api/relayer/1" }),
@@ -96,12 +99,13 @@ const transferTx = await token.confidentialTransfer("0xRecipient", 500n);
 ### Browser (ethers)
 
 ```ts
-import { createZamaConfig, web, ZamaSDK } from "@zama-fhe/sdk";
+import { web, ZamaSDK } from "@zama-fhe/sdk";
+import { createConfig } from "@zama-fhe/sdk/ethers";
 import { sepolia } from "@zama-fhe/sdk/chains";
 
-const config = createZamaConfig({
+const config = createConfig({
   chains: [sepolia],
-  ethers: { ethereum: window.ethereum! },
+  ethereum: window.ethereum!,
   transports: {
     [sepolia.id]: web({ relayerUrl: "https://your-app.com/api/relayer/11155111" }),
   },
@@ -115,12 +119,15 @@ const balance = await token.balanceOf();
 ### Node.js
 
 ```ts
-import { createZamaConfig, node, ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
+import { web, ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
+import { node } from "@zama-fhe/sdk/node";
+import { createConfig } from "@zama-fhe/sdk/viem";
 import { sepolia, mainnet } from "@zama-fhe/sdk/chains";
 
-const config = createZamaConfig({
+const config = createConfig({
   chains: [sepolia, mainnet],
-  viem: { publicClient, walletClient },
+  publicClient,
+  walletClient,
   storage: memoryStorage,
   transports: {
     [sepolia.id]: node(
@@ -147,17 +154,19 @@ const balance = await token.balanceOf();
 
 ## Core Concepts
 
-### createZamaConfig
+### createConfig
 
-The recommended way to configure the SDK. Takes chains, transports, and a signer adapter and returns a config object for `ZamaSDK`.
+The recommended way to configure the SDK. Takes chains, transports, and a signer adapter and returns a config object for `ZamaSDK`. Import `createConfig` from the adapter subpath that matches your Web3 library.
 
 ```ts
-import { createZamaConfig, web, ZamaSDK } from "@zama-fhe/sdk";
+import { web, ZamaSDK } from "@zama-fhe/sdk";
+import { createConfig } from "@zama-fhe/sdk/viem";
 import { sepolia } from "@zama-fhe/sdk/chains";
 
-const config = createZamaConfig({
+const config = createConfig({
   chains: [sepolia],
-  viem: { publicClient, walletClient }, // or ethers: {...}, or signer: customSigner
+  publicClient,
+  walletClient, // or use createConfig from @zama-fhe/sdk/ethers with { ethereum }
   transports: {
     [sepolia.id]: web({ relayerUrl: "/api/relayer/11155111" }),
   },
@@ -165,14 +174,14 @@ const config = createZamaConfig({
 const sdk = new ZamaSDK(config);
 ```
 
-Transport functions: `web()` (browser, WASM in Web Worker), `node()` (Node.js, worker threads), `cleartext()` (local dev, no FHE).
+Transport functions: `web()` (browser, WASM in Web Worker), `node()` from `@zama-fhe/sdk/node` (Node.js, worker threads), `cleartext()` (local dev, no FHE).
 
 ### ZamaSDK
 
-Entry point to the SDK. Composes a relayer backend with a signer and storage layer. Manages sessions, credentials, and acts as a factory for contract instances. Accepts a config from `createZamaConfig` or a manual config object.
+Entry point to the SDK. Composes a relayer backend with a signer and storage layer. Manages sessions, credentials, and acts as a factory for contract instances. Accepts a config from `createConfig` or a manual config object.
 
 ```ts
-const sdk = new ZamaSDK(config); // from createZamaConfig
+const sdk = new ZamaSDK(config); // from createConfig
 
 // Read-only — balances, metadata, decryption. No wrapper needed.
 const readonlyToken = sdk.createReadonlyToken("0xTokenAddress");
@@ -481,15 +490,17 @@ import { sepolia, mainnet, hoodi, hardhat } from "@zama-fhe/sdk/chains";
 | `hoodi`   | `17000`    | Hoodi Testnet      |
 | `hardhat` | `31337`    | Local Hardhat node |
 
-Use with `createZamaConfig`:
+Use with `createConfig`:
 
 ```ts
-import { createZamaConfig, web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk";
+import { createConfig } from "@zama-fhe/sdk/viem";
 import { sepolia } from "@zama-fhe/sdk/chains";
 
-const config = createZamaConfig({
+const config = createConfig({
   chains: [sepolia],
-  viem: { publicClient, walletClient },
+  publicClient,
+  walletClient,
   transports: {
     [sepolia.id]: web({ relayerUrl: "/api/relayer/11155111" }),
   },

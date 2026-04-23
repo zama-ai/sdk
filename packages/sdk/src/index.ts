@@ -20,6 +20,11 @@ export type {
   WebTransportConfig,
   NodeTransportConfig,
   CleartextTransportConfig,
+  WebRelayerOptions,
+  NodeRelayerOptions,
+  CleartextChainConfig,
+  AtLeastOneChain,
+  ResolvedChainTransport,
 } from "./config";
 
 // Core SDK

@@ -7,9 +7,9 @@ import {
   ZamaSDKEvents,
   indexedDBStorage,
   savePendingUnshield,
-  createZamaConfig,
   web,
 } from "@zama-fhe/react-sdk";
+import { createConfig as createZamaConfig } from "@zama-fhe/sdk/viem";
 import { sepolia as fheSepolia } from "@zama-fhe/sdk/chains";
 import {
   createWalletClient,
@@ -100,7 +100,9 @@ export function Providers({ children }: { children: ReactNode }) {
 
     return createZamaConfig({
       chains: [fheSepolia],
-      viem: { publicClient, walletClient, ethereum: ethereum ?? undefined },
+      publicClient,
+      walletClient,
+      ethereum: ethereum ?? undefined,
       transports: {
         [fheSepolia.id]: web({
           relayerUrl: `${window.location.origin}/api/relayer`,

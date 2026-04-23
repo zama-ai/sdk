@@ -15,32 +15,21 @@ function toFhevmConfig({ id, ...rest }: FheChain): ExtendedFhevmInstanceConfig {
 
 // ── Storage defaults ─────────────────────────────────────────────────────────
 
-const isBrowser = typeof window !== "undefined";
-// @internal
-let defaultStorage: GenericStorage | undefined;
-// @internal
-let defaultSessionStorage: GenericStorage | undefined;
-
 function getDefaultStorage(): GenericStorage {
-  return (defaultStorage ??= isBrowser
+  return typeof window !== "undefined"
     ? new IndexedDBStorage("CredentialStore")
-    : new MemoryStorage());
+    : new MemoryStorage();
 }
 
 function getDefaultSessionStorage(): GenericStorage {
-  return (defaultSessionStorage ??= isBrowser
-    ? new IndexedDBStorage("SessionStore")
-    : new MemoryStorage());
+  return typeof window !== "undefined" ? new IndexedDBStorage("SessionStore") : new MemoryStorage();
 }
 
 export function resolveStorage(
-  storage: GenericStorage | undefined,
-  sessionStorage: GenericStorage | undefined,
+  storage: GenericStorage | undefined = getDefaultStorage(),
+  sessionStorage: GenericStorage | undefined = getDefaultSessionStorage(),
 ): { storage: GenericStorage; sessionStorage: GenericStorage } {
-  return {
-    storage: storage ?? getDefaultStorage(),
-    sessionStorage: sessionStorage ?? getDefaultSessionStorage(),
-  };
+  return { storage, sessionStorage };
 }
 
 // ── Chain transport resolution ───────────────────────────────────────────────
@@ -55,6 +44,20 @@ export function resolveChainTransports(
   transports: Readonly<Record<number, TransportConfig>>,
 ): Map<number, ResolvedChainTransport> {
   const chainMap = new Map(chains.map((c) => [c.id, c]));
+  if (chainMap.size !== chains.length) {
+    const seen = new Set<number>();
+    const dupes = new Set<number>();
+    for (const c of chains) {
+      if (seen.has(c.id)) {
+        dupes.add(c.id);
+      }
+      seen.add(c.id);
+    }
+    throw new ConfigurationError(
+      `Duplicate chain id(s) [${[...dupes].join(", ")}] in the chains array. ` +
+        `Each chain id must appear only once. Note: hardhat and anvil are aliases (both use 31337).`,
+    );
+  }
   const transportMap = new Map(Object.entries(transports));
   const result = new Map<number, ResolvedChainTransport>();
 
@@ -82,7 +85,7 @@ export function resolveChainTransports(
       transportConfig.type !== "cleartext"
     ) {
       throw new ConfigurationError(
-        `Chain ${id} has an unrecognized transport (type: ${JSON.stringify((transportConfig as unknown as Record<string, unknown>).type)}). ` +
+        `Chain ${id} has an unrecognized transport (type: ${String((transportConfig as unknown as Record<string, unknown>).type)}). ` +
           `Use web(), node(), or cleartext() to create transports.`,
       );
     }
@@ -93,14 +96,12 @@ export function resolveChainTransports(
     });
   }
 
-  const chainIdSet = new Set(chainMap.keys());
-  const orphaned = Object.keys(transports)
-    .map(Number)
-    .filter((id) => !chainIdSet.has(id));
-  if (orphaned.length > 0) {
+  const transportIdSet = new Set(Object.keys(transports).map(Number));
+  const orphaned = transportIdSet.difference(new Set(chainMap.keys()));
+  if (orphaned.size > 0) {
     throw new ConfigurationError(
-      `Transport entries for chain(s) [${orphaned.join(", ")}] have no matching entry ` +
-        `in the chains array or wagmi config. Remove them or add the corresponding chain config.`,
+      `Transport entries for chain(s) [${[...orphaned].join(", ")}] have no matching entry ` +
+        `in the chains array. Remove them or add the corresponding chain config.`,
     );
   }
 

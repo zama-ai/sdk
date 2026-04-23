@@ -10,9 +10,9 @@ import {
   ZamaSDKEvents,
   indexedDBStorage,
   savePendingUnshield,
-  createZamaConfig,
   web,
 } from "@zama-fhe/react-sdk";
+import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 import { sepolia as fheSepolia } from "@zama-fhe/sdk/chains";
 import { SEPOLIA_RPC_URL } from "@/lib/config";
 import { getActiveUnshieldToken, setActiveUnshieldToken } from "@/lib/activeUnshield";

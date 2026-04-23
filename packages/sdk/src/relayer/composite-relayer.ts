@@ -52,6 +52,12 @@ export class CompositeRelayer implements RelayerSDK {
       return resolved;
     }
 
+    const relayer = this.#createRelayer(chainId);
+    this.#resolved.set(chainId, relayer);
+    return relayer;
+  }
+
+  #createRelayer(chainId: number): RelayerSDK {
     const config = this.#configs.get(chainId);
     if (!config) {
       throw new ConfigurationError(
@@ -70,7 +76,6 @@ export class CompositeRelayer implements RelayerSDK {
         { cause },
       );
     }
-    this.#resolved.set(chainId, relayer);
     return relayer;
   }
 
@@ -156,8 +161,13 @@ export class CompositeRelayer implements RelayerSDK {
         errors.push(toError(e));
       }
     }
+    this.#resolved.clear();
     if (errors.length > 0) {
       throw new AggregateError(errors, "One or more relayers failed to terminate");
     }
+  }
+
+  [Symbol.dispose](): void {
+    this.terminate();
   }
 }

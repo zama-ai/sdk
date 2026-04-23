@@ -132,6 +132,40 @@ describe("CompositeRelayer", () => {
     });
   });
 
+  describe("dispatches all RelayerSDK methods", () => {
+    it.each([
+      ["generateKeypair", []],
+      ["createEIP712", ["0xpubkey", ["0xcontract"], 1000]],
+      ["encrypt", [{ values: [] }]],
+      ["userDecrypt", [{ handles: [] }]],
+      ["publicDecrypt", [["0xhandle"]]],
+      ["createDelegatedUserDecryptEIP712", ["0xpubkey", ["0xcontract"], "0xdelegator", 1000]],
+      ["delegatedUserDecrypt", [{ handles: [] }]],
+      ["requestZKProofVerification", [{ proof: "0x" }]],
+      ["getPublicKey", []],
+      ["getPublicParams", [2048]],
+      ["getAclAddress", []],
+    ] as [keyof RelayerSDK, unknown[]][])(
+      "forwards %s to the underlying relayer",
+      async (method, args) => {
+        const relayer = createMockRelayer();
+        const { composite } = makeComposite({ 1: relayer }, 1);
+        await (composite[method] as Function)(...args);
+        expect(relayer[method]).toHaveBeenCalled();
+      },
+    );
+  });
+
+  describe("[Symbol.dispose]", () => {
+    it("calls terminate()", async () => {
+      const relayer = createMockRelayer();
+      const { composite } = makeComposite({ 1: relayer }, 1);
+      await composite.getAclAddress();
+      composite[Symbol.dispose]();
+      expect(relayer.terminate).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe("defensive copy", () => {
     it("is not affected by external map mutations after construction", async () => {
       const relayer = createMockRelayer();
