@@ -45,16 +45,10 @@ export function resolveChainTransports(
 ): Map<number, ResolvedChainTransport> {
   const chainMap = new Map(chains.map((c) => [c.id, c]));
   if (chainMap.size !== chains.length) {
-    const seen = new Set<number>();
-    const dupes = new Set<number>();
-    for (const c of chains) {
-      if (seen.has(c.id)) {
-        dupes.add(c.id);
-      }
-      seen.add(c.id);
-    }
+    const ids = chains.map((c) => c.id);
+    const dupes = [...new Set(ids.filter((id, i) => ids.indexOf(id) !== i))];
     throw new ConfigurationError(
-      `Duplicate chain id(s) [${[...dupes].join(", ")}] in the chains array. ` +
+      `Duplicate chain id(s) [${dupes.join(", ")}] in the chains array. ` +
         `Each chain id must appear only once. Note: hardhat and anvil are aliases (both use 31337).`,
     );
   }
