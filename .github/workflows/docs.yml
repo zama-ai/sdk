@@ -1,4 +1,4 @@
-name: Docs
+name: LLM Docs
 
 on:
   pull_request:
@@ -18,7 +18,7 @@ on:
   workflow_call:
 
 concurrency:
-  group: docs-${{ github.ref }}
+  group: llm-docs-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -45,6 +45,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - run: pnpm docs:build
+      - name: Build GitBook documentation
+        run: pnpm docs:build
 
-      - run: pnpm llm:check
+      - name: Verify LLM corpus artifacts are up to date
+        run: pnpm llm:check
