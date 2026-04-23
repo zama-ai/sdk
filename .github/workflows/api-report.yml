@@ -56,7 +56,7 @@ jobs:
           cp packages/sdk/etc/*.api.md packages/react-sdk/etc/*.api.md /tmp/api-reports/pr/
 
           has_changes=false
-          for f in $(ls /tmp/api-reports/base /tmp/api-reports/pr 2>/dev/null | sort -u); do
+          for f in $({ ls /tmp/api-reports/base 2>/dev/null; ls /tmp/api-reports/pr 2>/dev/null; } | sort -u); do
             base_file="/tmp/api-reports/base/$f"
             pr_file="/tmp/api-reports/pr/$f"
             [ -f "$base_file" ] || base_file=/dev/null
