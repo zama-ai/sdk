@@ -13199,7 +13199,7 @@ export interface RelayerWebSecurityConfig {
 // Warning: (ae-forgotten-export) The symbol "ResolvedChainTransport" needs to be exported by the entry point index.d.ts
 //
 // @public (undocumented)
-export function resolveChainTransports(chains: readonly FheChain[], transports: Readonly<Record<number, TransportConfig>>, chainIds: readonly number[]): Map<number, ResolvedChainTransport>;
+export function resolveChainTransports(chains: readonly FheChain[], transports: Readonly<Record<number, TransportConfig>>): Map<number, ResolvedChainTransport>;
 
 // @public (undocumented)
 export function resolveStorage(storage: GenericStorage | undefined, sessionStorage: GenericStorage | undefined): {
