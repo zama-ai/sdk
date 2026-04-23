@@ -37,7 +37,8 @@ jobs:
       - name: Build packages
         run: pnpm build
 
-      - run: pnpm test:coverage
+      - name: Test Coverage
+        run: pnpm test:coverage
 
       - name: Coverage report
         if: github.event_name == 'pull_request'
@@ -45,3 +46,6 @@ jobs:
         with:
           json-summary-path: coverage/coverage-summary.json
           json-final-path: coverage/coverage-final.json
+
+      - name: Integration Tests
+        run: pnpm test:integration
