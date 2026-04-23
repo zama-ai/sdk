@@ -400,7 +400,7 @@ matchZamaError(error, {
 
 **Code:** `DELEGATION_NOT_FOUND`
 
-No active delegation exists for the given `(delegator, delegate, contract)` tuple. Thrown when attempting to revoke a non-existent delegation.
+No active delegation exists for the given `(delegator, delegate, contract)` tuple. Thrown when attempting to revoke a non-existent delegation, and by `decryptBalanceAs` / `batchDecryptBalancesAs` (including on cache hits) when the delegation is missing or has been revoked.
 
 ```ts
 matchZamaError(error, {

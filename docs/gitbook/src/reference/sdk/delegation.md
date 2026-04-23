@@ -235,7 +235,7 @@ These are caught **before** submitting a transaction, saving gas and providing a
 | `DelegationSelfNotAllowedError`         | Delegate address equals the connected wallet (`delegate === msg.sender`)      |
 | `DelegationDelegateEqualsContractError` | Delegate address equals the token contract address                            |
 | `DelegationExpiryUnchangedError`        | New expiration date matches the current one (no on-chain change needed)       |
-| `DelegationNotFoundError`               | Attempting to revoke a delegation that was never established (expiry is zero) |
+| `DelegationNotFoundError`               | Revoking a delegation that was never established, or reading via `decryptBalanceAs` / `batchDecryptBalancesAs` when the delegation is missing or has been revoked (expiry is zero) |
 
 ### On-chain revert errors
 
