@@ -1,2 +1,3 @@
+pnpm llm:stage
 pnpm exec lint-staged
 pnpm typecheck

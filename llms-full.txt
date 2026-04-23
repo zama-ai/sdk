@@ -64,9 +64,9 @@ TanStack Query-based hooks with cached decryption, automatic cache invalidation,
 | Package                                                | Use when...                                                                   |
 | ------------------------------------------------------ | ----------------------------------------------------------------------------- |
 | [`@zama-fhe/sdk`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md)              | You are building with vanilla TypeScript, Node.js, or any non-React framework |
-| [`@zama-fhe/react-sdk`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/ZamaProvider.md) | You are building a React app (includes everything from the core SDK)          |
+| [`@zama-fhe/react-sdk`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/ZamaProvider.md) | You are building a React app (hooks and React-specific providers)             |
 
-If you are using React, `@zama-fhe/react-sdk` re-exports most of the core SDK (hooks, providers, `RelayerWeb`, storage singletons). You still import signer adapters from their sub-paths (e.g. `@zama-fhe/sdk/viem`, `@zama-fhe/sdk/ethers`).
+If you are using React, install both packages: `@zama-fhe/react-sdk` provides the hooks and `ZamaProvider`, while `@zama-fhe/sdk` is a peer dependency that provides core classes and utilities (`RelayerWeb`, storage singletons, etc.). Signer adapters are imported from sub-paths (e.g. `@zama-fhe/sdk/viem`, `@zama-fhe/sdk/ethers`).
 
 ## Install
 
@@ -75,7 +75,7 @@ If you are using React, `@zama-fhe/react-sdk` re-exports most of the core SDK (h
 
 ```sh
 # React app
-pnpm add @zama-fhe/react-sdk @tanstack/react-query
+pnpm add @zama-fhe/react-sdk @zama-fhe/sdk @tanstack/react-query
 
 # Vanilla TypeScript / Node.js
 pnpm add @zama-fhe/sdk
@@ -85,7 +85,7 @@ pnpm add @zama-fhe/sdk
 
 ```sh
 # React app
-npm install @zama-fhe/react-sdk @tanstack/react-query
+npm install @zama-fhe/react-sdk @zama-fhe/sdk @tanstack/react-query
 
 # Vanilla TypeScript / Node.js
 npm install @zama-fhe/sdk
@@ -95,7 +95,7 @@ npm install @zama-fhe/sdk
 
 ```sh
 # React app
-yarn add @zama-fhe/react-sdk @tanstack/react-query
+yarn add @zama-fhe/react-sdk @zama-fhe/sdk @tanstack/react-query
 
 # Vanilla TypeScript / Node.js
 yarn add @zama-fhe/sdk
@@ -208,7 +208,7 @@ See [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/git
 ### Tab: React + wagmi
 
 ```bash
-pnpm add @zama-fhe/react-sdk @tanstack/react-query wagmi viem
+pnpm add @zama-fhe/react-sdk @zama-fhe/sdk @tanstack/react-query wagmi viem
 ```
 
 ### Tab: viem
@@ -246,7 +246,8 @@ import { WagmiProvider, createConfig, http } from "wagmi";
 import { sepolia } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ZamaProvider, RelayerWeb, indexedDBStorage } from "@zama-fhe/react-sdk";
+import { ZamaProvider } from "@zama-fhe/react-sdk";
+import { RelayerWeb, indexedDBStorage } from "@zama-fhe/sdk";
 import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
 
 const wagmiConfig = createConfig({
@@ -621,10 +622,10 @@ cd my-confidential-dapp
 ## 2. Install dependencies
 
 ```bash
-pnpm add @zama-fhe/react-sdk @tanstack/react-query wagmi viem
+pnpm add @zama-fhe/react-sdk @zama-fhe/sdk @tanstack/react-query wagmi viem
 ```
 
-`@zama-fhe/react-sdk` re-exports everything from the core SDK, so we never need to import from `@zama-fhe/sdk` directly.
+`@zama-fhe/react-sdk` provides the React hooks and `ZamaProvider`. Core classes and utilities (`RelayerWeb`, `indexedDBStorage`, `matchZamaError`, etc.) are imported from `@zama-fhe/sdk`.
 
 ## 3. Configure wagmi and the SDK
 
@@ -637,7 +638,7 @@ Create `src/config.ts`. This file sets up wagmi, the signer, and the relayer -- 
 import { createConfig, http } from "wagmi";
 import { sepolia } from "wagmi/chains";
 import { QueryClient } from "@tanstack/react-query";
-import { RelayerWeb, indexedDBStorage } from "@zama-fhe/react-sdk";
+import { RelayerWeb, indexedDBStorage } from "@zama-fhe/sdk";
 import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
 
 export const wagmiConfig = createConfig({
@@ -887,7 +888,7 @@ Create `src/ErrorMessage.tsx`. The `matchZamaError` utility maps SDK error codes
 ### Tab: src/ErrorMessage.tsx
 
 ```tsx
-import { matchZamaError } from "@zama-fhe/react-sdk";
+import { matchZamaError } from "@zama-fhe/sdk";
 
 export function ErrorMessage({ error }: { error: Error | null }) {
   if (!error) return null;
@@ -1023,10 +1024,10 @@ Every SDK instance needs a relayer (handles FHE encryption and decryption), a si
 
 The SDK ships two relayer implementations. Pick the one that matches your runtime:
 
-| Environment                 | Relayer       | Import path                              |
-| --------------------------- | ------------- | ---------------------------------------- |
-| Browser (React, vanilla TS) | `RelayerWeb`  | `@zama-fhe/sdk` or `@zama-fhe/react-sdk` |
-| Node.js (scripts, servers)  | `RelayerNode` | `@zama-fhe/sdk/node`                     |
+| Environment                 | Relayer       | Import path          |
+| --------------------------- | ------------- | -------------------- |
+| Browser (React, vanilla TS) | `RelayerWeb`  | `@zama-fhe/sdk`      |
+| Node.js (scripts, servers)  | `RelayerNode` | `@zama-fhe/sdk/node` |
 
 `RelayerWeb` runs FHE inside a Web Worker using WASM. `RelayerNode` uses native worker threads.
 
@@ -1747,11 +1748,8 @@ const {
 Here is a complete component that wires up the transfer with loading and error states:
 
 ```tsx
-import {
-  useConfidentialBalance,
-  useConfidentialTransfer,
-  matchZamaError,
-} from "@zama-fhe/react-sdk";
+import { useConfidentialBalance, useConfidentialTransfer } from "@zama-fhe/react-sdk";
+import { matchZamaError } from "@zama-fhe/sdk";
 
 const TOKEN = "0xEncryptedERC20Address";
 
@@ -1944,7 +1942,7 @@ await unshieldAll();
 
 ```tsx
 import { useResumeUnshield } from "@zama-fhe/react-sdk";
-import { loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/react-sdk";
+import { loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/sdk";
 
 const { mutateAsync: resumeUnshield } = useResumeUnshield({
   tokenAddress: "0xToken",
@@ -2002,6 +2000,11 @@ console.log(`Confidential balance: ${balance}`);
 ### 2. Understand the first-time wallet signature
 
 The first `balanceOf()` call for a token prompts the user's wallet for an EIP-712 signature. This creates FHE decrypt credentials that are cached in your storage backend. Subsequent reads are silent -- no wallet popup.
+
+
+> [!INFO]
+> **In React apps, don't trigger this signature on render.** Gate `useConfidentialBalance` behind `useIsAllowed` and let the user click an explicit "Decrypt" button. See [Avoid blind-sign wallet popups](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/encrypt-decrypt.md#3-avoid-blind-sign-wallet-popups) for the full pattern.
+
 
 If the user rejects the signature, the SDK throws a `SigningRejectedError`. See [Handle Errors](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/handle-errors.md) for recovery patterns.
 
@@ -2168,7 +2171,7 @@ Mutations automatically invalidate balance caches, but if you need manual contro
 
 ```tsx
 import { useQueryClient } from "@tanstack/react-query";
-import { zamaQueryKeys } from "@zama-fhe/react-sdk";
+import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 
 const queryClient = useQueryClient();
 
@@ -2186,6 +2189,7 @@ queryClient.invalidateQueries({
 
 ## Next steps
 
+- See [Avoid blind-sign wallet popups](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/encrypt-decrypt.md#3-avoid-blind-sign-wallet-popups) to gate balance queries behind explicit user action.
 - See [Token Operations](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md) for the full `Token.balanceOf` and `ReadonlyToken` API.
 - See [Hooks](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/query-keys.md) for `useConfidentialBalance`, `useConfidentialBalances`, and query key details.
 - To handle `NoCiphertextError` and other failures, see [Handle Errors](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/handle-errors.md).
@@ -2340,7 +2344,7 @@ The `matchZamaError` helper works the same way in React. Here is a reusable erro
 ### Tab: React
 
 ```tsx
-import { matchZamaError } from "@zama-fhe/react-sdk";
+import { matchZamaError } from "@zama-fhe/sdk";
 
 function ErrorMessage({ error }: { error: Error | null }) {
   if (!error) return null;
@@ -2376,193 +2380,6 @@ When `matchZamaError` returns `undefined` (because the error is not a `ZamaError
 - See [Error types reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/errors.md) for the full error type reference.
 - See [Hooks](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/query-keys.md) for error handling patterns with React Query.
 - For interrupted unshields specifically, see [Unshield Tokens](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/unshield-tokens.md).
-
-## Activity feeds
-
-- source_type: official-doc
-- source_path: docs/gitbook/src/guides/activity-feeds.md
-- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/activity-feeds.md
-- logical_path: guides/activity-feeds
-
-# Activity feeds
-
-Confidential tokens emit standard events (transfers, wraps, unwraps) but the amounts are encrypted handles. The SDK provides utilities to fetch these logs, classify them by type and direction, decrypt the amounts, and produce a feed ready for your UI.
-
-## Steps
-
-### 1. Fetch logs from the chain
-
-Start by querying event logs from the token contract. The SDK exports `TOKEN_TOPICS` -- an array of topic hashes covering all relevant events (confidential transfers, wraps, and unwraps).
-
-
-### Tab: viem
-
-```ts
-import { TOKEN_TOPICS } from "@zama-fhe/sdk";
-
-const logs = await publicClient.getLogs({
-  address: tokenAddress,
-  topics: [TOKEN_TOPICS],
-  fromBlock: deployBlock,
-  toBlock: "latest",
-});
-```
-
-
-You can narrow the block range to limit the number of logs returned. For a production app, you would typically paginate or use an indexer.
-
-### 2. Parse raw logs with parseActivityFeed
-
-Pass the raw logs and the user's address to `parseActivityFeed`. It classifies each event by type (`ConfidentialTransfer`, `Wrapped`, `UnwrapRequested`, etc.) and direction (`incoming`, `outgoing`, or `self`).
-
-
-### Tab: SDK
-
-```ts
-import { parseActivityFeed } from "@zama-fhe/sdk";
-
-const items = parseActivityFeed(logs, userAddress);
-// Each item has: .type, .direction, .from, .to, .encryptedHandle, .blockNumber
-```
-
-
-### 3. Extract encrypted handles
-
-The parsed items contain encrypted handles that need decrypting before you can show amounts. Use `extractEncryptedHandles` to collect them into a flat array.
-
-
-### Tab: SDK
-
-```ts
-import { extractEncryptedHandles } from "@zama-fhe/sdk";
-
-const handles = extractEncryptedHandles(items);
-```
-
-
-### 4. Decrypt the handles
-
-Decrypt all handles in one batch call via `sdk.userDecrypt`. Each handle must be paired with its contract address (the token contract that emitted it). The result is passed straight to `applyDecryptedValues` in the next step.
-
-
-### Tab: SDK
-
-```ts
-const decrypted = await sdk.userDecrypt(
-  handles.map((handle) => ({ handle, contractAddress: tokenAddress })),
-);
-```
-
-
-This call requires FHE credentials. If the user has not signed yet, the SDK prompts for a wallet signature. See [Check Balances](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/check-balances.md) for details on the signature flow.
-
-### 5. Attach decrypted values with applyDecryptedValues
-
-Merge the decrypted amounts back into the activity items. Each item gains an `.amount` field with the human-readable value.
-
-
-### Tab: SDK
-
-```ts
-import { applyDecryptedValues } from "@zama-fhe/sdk";
-
-const enrichedItems = applyDecryptedValues(items, decryptedMap);
-// Each item now has .amount (bigint) alongside .encryptedHandle
-```
-
-
-### 6. Sort and display
-
-Use `sortByBlockNumber` to order the feed newest-first, then render it in your UI.
-
-
-### Tab: SDK
-
-```ts
-import { sortByBlockNumber } from "@zama-fhe/sdk";
-
-const feed = sortByBlockNumber(enrichedItems);
-
-feed.forEach((item) => {
-  console.log(`${item.type} | ${item.direction} | ${item.amount}`);
-});
-```
-
-
-Here is the full pipeline in one block for reference:
-
-
-### Tab: Full example
-
-```ts
-import {
-  parseActivityFeed,
-  extractEncryptedHandles,
-  applyDecryptedValues,
-  sortByBlockNumber,
-} from "@zama-fhe/sdk";
-
-// 1. Parse raw logs into classified items
-const items = parseActivityFeed(logs, userAddress);
-
-// 2. Pull out handles that need decrypting
-const handles = extractEncryptedHandles(items);
-
-// 3. Decrypt the handles
-const decrypted = await sdk.userDecrypt(
-  handles.map((handle) => ({ handle, contractAddress: tokenAddress })),
-);
-
-// 4. Attach the decrypted amounts
-const enrichedItems = applyDecryptedValues(items, decrypted);
-
-// 5. Sort newest first
-const feed = sortByBlockNumber(enrichedItems);
-```
-
-
-### 7. Use the useActivityFeed hook in React
-
-The React SDK wraps the entire pipeline into a single hook. Pass it your logs and it handles parsing, decryption, and sorting automatically.
-
-
-### Tab: React
-
-```tsx
-import { useActivityFeed } from "@zama-fhe/react-sdk";
-
-const { data: feed, isLoading } = useActivityFeed({
-  tokenAddress: "0xToken",
-  logs,
-  userAddress,
-  decrypt: true,
-});
-
-feed?.forEach((item) => {
-  console.log(item.type, item.direction, item.amount);
-});
-```
-
-
-When `decrypt` is `true`, the hook decrypts all handles and attaches amounts. Set it to `false` if you only need the classified event metadata without decrypted values.
-
-You can control cache invalidation with `zamaQueryKeys.activityFeed`:
-
-```tsx
-import { zamaQueryKeys } from "@zama-fhe/react-sdk";
-import { useQueryClient } from "@tanstack/react-query";
-
-const queryClient = useQueryClient();
-queryClient.invalidateQueries({
-  queryKey: zamaQueryKeys.activityFeed.token("0xToken"),
-});
-```
-
-## Next steps
-
-- See [Event Decoders](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/event-decoders.md) for the event decoder API (`decodeOnChainEvents`, `TOKEN_TOPICS`, individual decoders).
-- See [Hooks](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/query-keys.md) for `useActivityFeed` details and query key reference.
-- To handle decryption errors during feed building, see [Handle Errors](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/handle-errors.md).
 
 ## Node.js backend
 
@@ -3163,7 +2980,8 @@ Create a dedicated client component that sets up the SDK providers. This keeps t
 import { WagmiProvider, createConfig, http } from "wagmi";
 import { sepolia } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ZamaProvider, RelayerWeb, indexedDBStorage } from "@zama-fhe/react-sdk";
+import { ZamaProvider } from "@zama-fhe/react-sdk";
+import { RelayerWeb, indexedDBStorage } from "@zama-fhe/sdk";
 import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
 
 const wagmiConfig = createConfig({
@@ -3651,75 +3469,57 @@ function ConfidentialAction() {
 
 {% endcode %}
 
-### 3. Decrypt with useUserDecrypt
+### 3. Decryption of the encrypted data
 
-`useUserDecrypt` is a query hook that decrypts FHE handles. If no cached credentials exist, it triggers a wallet signature prompt. Use `useAllow` + `useIsAllowed` to pre-authorize and gate the query if you want to control when the prompt appears.
+Decrypting on-chain data requires the user to sign an EIP-712 message that grants your app a **reusable credential** for the relevant contracts. Hooks like `useUserDecrypt` and `useConfidentialBalance` trigger this signature automatically the first time they run. If your app calls these hooks on render without gating, users see an unsolicited MetaMask popup before they have taken any action — a confusing experience that often leads to rejection.
 
-{% code title="DecryptExample.tsx" %}
+A good decryption UX follows three steps:
 
-```tsx
-import { useAllow, useIsAllowed, useUserDecrypt } from "@zama-fhe/react-sdk";
-
-const CONTRACT = "0xYourConfidentialContract" as const;
-
-function DecryptExample() {
-  const { mutate: allow, isPending: isAllowing } = useAllow();
-  const { data: isAllowed } = useIsAllowed({ contractAddresses: [CONTRACT] });
-
-  const { data, isPending } = useUserDecrypt(
-    { handles: [{ handle: "0xabc123...", contractAddress: CONTRACT }] },
-    { enabled: !!isAllowed },
-  );
-
-  return (
-    <section>
-      {!isAllowed && (
-        <button onClick={() => allow([CONTRACT])} disabled={isAllowing}>
-          {isAllowing ? "Signing..." : "Authorize decryption"}
-        </button>
-      )}
-      {isPending && <p>Decrypting...</p>}
-      {data && <output>Value: {Object.values(data)[0]?.toString()}</output>}
-    </section>
-  );
-}
-```
-
-{% endcode %}
-
-#### Pre-authorize once, decrypt anywhere
-
-A common pattern is to call `useAllow` once — for example right after the user connects their wallet — and then decrypt independently in any component, on any page, without triggering another wallet prompt. Credentials persist in IndexedDB, so they survive page reloads.
+1. **Check credentials** — use `useIsAllowed` to see whether the user has already signed.
+2. **Show a locked state** — display a clear "Decrypt" button so the user understands what they are authorizing.
+3. **Decrypt on demand** — only mount balance or decrypt components after the credential exists.
 
 
-### Tab: UserDecryptionGate.tsx
+> [!DANGER]
+> **Never** call `useConfidentialBalance` or `useUserDecrypt` without gating on `useIsAllowed`:
+>
+> ```tsx
+> // BAD — triggers wallet popup as soon as the component mounts
+> function BadExample({ tokenAddress }: { tokenAddress: Address }) {
+>   const balance = useConfidentialBalance({ tokenAddress });
+>   return <p>{balance.data?.toString()}</p>;
+> }
+> ```
+>
+> This causes an unexpected MetaMask popup, user rejection, potential Blockaid flags, and loss of trust.
+
+
+#### Gating useConfidentialBalance
+
+Split the gate and the balance display into separate components. The gate checks credentials and shows a decrypt button; the balance component only mounts once credentials exist, so it never triggers a wallet popup.
+
+
+### Tab: DecryptGate.tsx
 
 ```tsx
 import { useAllow, useIsAllowed } from "@zama-fhe/react-sdk";
+import type { Address } from "viem";
 
-/**
- * Show once after wallet connect. After the user signs,
- * every useUserDecrypt in the app works without prompts.
- *
- * Pass all contract addresses you want to decrypt upfront.
- */
-function UserDecryptionGate({
-  contracts,
+function DecryptGate({
+  contractAddresses,
   children,
 }: {
-  contracts: `0x${string}`[];
+  contractAddresses: Address[];
   children: React.ReactNode;
 }) {
+  const { data: isAllowed } = useIsAllowed({ contractAddresses });
   const { mutate: allow, isPending } = useAllow();
-  const { data: allowed } = useIsAllowed({
-    contractAddresses: contracts,
-  });
 
-  if (allowed) return <>{children}</>;
+  if (isAllowed) return <>{children}</>;
 
   return (
-    <button onClick={() => allow(contracts)} disabled={isPending}>
-      {isPending ? "Signing..." : "Authorize decryption"}
+    <button onClick={() => allow(contractAddresses)} disabled={isPending}>
+      {isPending ? "Signing..." : "Decrypt Balances"}
     </button>
   );
 }
@@ -3729,48 +3529,79 @@ function UserDecryptionGate({
 
 ```tsx
 import { useConfidentialBalance } from "@zama-fhe/react-sdk";
+import { formatUnits, type Address } from "viem";
 
-/**
- * Rendered inside <UserDecryptionGate> — credentials are already cached,
- * so this fires immediately with no wallet interaction.
- */
-function ConfidentialBalance({ contractAddress }: { contractAddress: `0x${string}` }) {
-  const { data: balance, isPending } = useConfidentialBalance({
-    tokenAddress: contractAddress,
-  });
+function ConfidentialBalance({
+  tokenAddress,
+  decimals,
+  symbol,
+}: {
+  tokenAddress: Address;
+  decimals: number;
+  symbol: string;
+}) {
+  const { data, isLoading } = useConfidentialBalance({ tokenAddress });
 
-  if (isPending) return <p>Decrypting...</p>;
-  return <output>{balance?.toString()}</output>;
+  return (
+    <p>
+      {symbol}: {isLoading ? "Decrypting..." : formatUnits(data ?? 0n, decimals)}
+    </p>
+  );
 }
 ```
 
 ### Tab: App.tsx
 
 ```tsx
-import { useListPairs } from "@zama-fhe/react-sdk";
-
-/**
- * Contracts can come from the on-chain wrappers registry.
- * When new pairs are added, UserDecryptionGate detects the gap
- * and shows a one-click re-authorization — the SDK extends the
- * existing credential to cover the new addresses.
- */
 function App() {
-  const { data: pairs } = useListPairs();
-  const contracts = pairs?.items.map((p) => p.confidentialTokenAddress) ?? [];
+  const tokens = [
+    { address: "0xTokenA" as const, decimals: 6, symbol: "USDC" },
+    { address: "0xTokenB" as const, decimals: 18, symbol: "WETH" },
+  ];
 
   return (
-    <UserDecryptionGate contracts={contracts}>
-      {contracts.map((addr) => (
-        <ConfidentialBalance key={addr} contractAddress={addr} />
+    <DecryptGate contractAddresses={tokens.map((t) => t.address)}>
+      {tokens.map((t) => (
+        <ConfidentialBalance
+          key={t.address}
+          tokenAddress={t.address}
+          decimals={t.decimals}
+          symbol={t.symbol}
+        />
       ))}
-    </UserDecryptionGate>
+    </DecryptGate>
   );
 }
 ```
 
 
-Because `UserDecryptionGate` only renders its children after `useIsAllowed` returns `true`, every nested `useUserDecrypt` call reuses the cached credentials — no `enabled` guard needed. When new contracts appear in the list, `useIsAllowed` returns `false` and the user is prompted once to extend their authorization.
+`DecryptGate` only renders its children once `useIsAllowed` returns true. This means `ConfidentialBalance` never mounts without credentials — no `enabled` guard needed, no wallet popup on render. Returning users skip the prompt entirely because credentials persist in IndexedDB (default TTL: 30 days).
+
+The same pattern works with `useUserDecrypt` and any other decrypt hook — anything nested inside `DecryptGate` can decrypt freely without triggering a wallet prompt.
+
+When contract addresses come from the chain (e.g. `useListPairs`), `DecryptGate` automatically detects new addresses and prompts the user once to extend their authorization:
+
+```tsx
+import { useListPairs } from "@zama-fhe/react-sdk";
+
+function App() {
+  const { data: pairs } = useListPairs();
+  const addresses = pairs?.items.map((p) => p.confidentialTokenAddress) ?? [];
+
+  return (
+    <DecryptGate contractAddresses={addresses}>
+      {pairs?.items.map((p) => (
+        <ConfidentialBalance
+          key={p.confidentialTokenAddress}
+          tokenAddress={p.confidentialTokenAddress}
+          decimals={p.decimals}
+          symbol={p.symbol}
+        />
+      ))}
+    </DecryptGate>
+  );
+}
+```
 
 #### Decrypting handles from multiple contracts
 
@@ -4489,11 +4320,23 @@ await token.unshieldAll();
 Resumes an interrupted unshield from the finalize step. Use when the user closed the page between unwrap and finalize.
 
 ```ts
-import { loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/sdk";
+import {
+  loadPendingUnshield,
+  loadPendingUnshieldRequest,
+  clearPendingUnshield,
+} from "@zama-fhe/sdk";
 
+// Simple resume (tx hash only — works for both legacy and upgraded wrappers)
 const pending = await loadPendingUnshield(storage, wrapperAddress);
 if (pending) {
   await token.resumeUnshield(pending);
+  await clearPendingUnshield(storage, wrapperAddress);
+}
+
+// Full request (includes unwrapRequestId when available from upgraded wrappers)
+const request = await loadPendingUnshieldRequest(storage, wrapperAddress);
+if (request) {
+  await token.resumeUnshield(request.unwrapTxHash);
   await clearPendingUnshield(storage, wrapperAddress);
 }
 ```
@@ -4598,12 +4441,13 @@ await token.unwrapAll();
 
 ### finalizeUnwrap
 
-`(burnAmountHandle: Handle) => Promise<TransactionResult>`
+`(unwrapRequestIdOrAmount: Handle) => Promise<TransactionResult>`
 
-Completes an unwrap (phase 2) after the decryption proof is available. Use `unshield()` for the full orchestrated flow.
+Completes an unwrap (phase 2) after the decryption proof is available. Pass `unwrapRequestId` from upgraded `UnwrapRequested` events, or the legacy encrypted amount handle. Use `unshield()` for the full orchestrated flow.
 
 ```ts
-await token.finalizeUnwrap(burnAmountHandle);
+const event = findUnwrapRequested(receipt.logs);
+await token.finalizeUnwrap(event.unwrapRequestId ?? event.encryptedAmount);
 ```
 
 ## Related
@@ -4891,7 +4735,7 @@ const pairs = await registry.getTokenPairs();
 import { WrappersRegistry } from "@zama-fhe/sdk";
 
 const registry = new WrappersRegistry({ signer });
-const [found, cToken] = await registry.getConfidentialTokenAddress(tokenAddress);
+const [isValid, cToken] = await registry.getConfidentialTokenAddress(tokenAddress);
 ```
 
 ### Custom chains
@@ -5057,11 +4901,17 @@ const pair = await registry.getTokenPair(0n);
 
 `(tokenAddress: Address) => Promise<readonly [boolean, Address]>`
 
-Look up the confidential token for a given plain ERC-20. Returns `[found, confidentialTokenAddress]`.
+Look up the confidential token for a given plain ERC-20. Returns `[isValid, confidentialTokenAddress]`.
+
+The three possible states:
+
+- `[true, nonZeroAddress]` -- registered and valid
+- `[false, nonZeroAddress]` -- registered but revoked (address is the former confidential token)
+- `[false, zeroAddress]` -- not registered
 
 ```ts
-const [found, cToken] = await registry.getConfidentialTokenAddress("0xUSDC");
-if (found) {
+const [isValid, cToken] = await registry.getConfidentialTokenAddress("0xUSDC");
+if (isValid) {
   const token = sdk.createToken(cToken);
 }
 ```
@@ -5070,10 +4920,16 @@ if (found) {
 
 `(confidentialTokenAddress: Address) => Promise<readonly [boolean, Address]>`
 
-Reverse lookup — find the plain ERC-20 for a confidential token. Returns `[found, tokenAddress]`.
+Reverse lookup — find the plain ERC-20 for a confidential token. Returns `[isValid, tokenAddress]`.
+
+The three possible states mirror `getConfidentialTokenAddress`:
+
+- `[true, nonZeroAddress]` -- registered and valid
+- `[false, nonZeroAddress]` -- registered but revoked
+- `[false, zeroAddress]` -- not registered
 
 ```ts
-const [found, plainToken] = await registry.getTokenAddress("0xcUSDC");
+const [isValid, plainToken] = await registry.getTokenAddress("0xcUSDC");
 ```
 
 ### isConfidentialTokenValid
@@ -6839,15 +6695,19 @@ import {
 
 ## Wrapping and unwrapping
 
-| Builder                                                          | What it does                                       |
-| ---------------------------------------------------------------- | -------------------------------------------------- |
-| `wrapContract(wrapper, to, amount)`                              | Wrap ERC-20 tokens                                 |
-| `unwrapContract(token, from, to, encryptedAmount, inputProof)`   | Request unwrap                                     |
-| `unwrapFromBalanceContract(token, from, to, encryptedBalance)`   | Unwrap using on-chain handle                       |
-| `finalizeUnwrapContract(wrapper, burntAmount, cleartext, proof)` | Finalize unwrap                                    |
-| `underlyingContract(wrapper)`                                    | Read underlying ERC-20 address                     |
-| `inferredTotalSupplyContract(wrapper)`                           | Read inferred plaintext total supply               |
-| `totalSupplyContract(wrapper)`                                   | Deprecated alias for `inferredTotalSupplyContract` |
+| Builder                                                              | What it does                              |
+| -------------------------------------------------------------------- | ----------------------------------------- |
+| `wrapContract(wrapper, to, amount)`                                  | Wrap ERC-20 tokens                        |
+| `unwrapContract(token, from, to, encryptedAmount, inputProof)`       | Request unwrap                            |
+| `unwrapFromBalanceContract(token, from, to, encryptedBalance)`       | Unwrap using on-chain handle              |
+| `finalizeUnwrapContract(wrapper, unwrapRequestId, cleartext, proof)` | Finalize unwrap                           |
+| `underlyingContract(wrapper)`                                        | Read underlying ERC-20 address            |
+| `inferredTotalSupplyContract(wrapper)`                               | Read inferred plaintext total supply      |
+| `totalSupplyContract(wrapper)`                                       | Deprecated legacy `totalSupply()` builder |
+
+Use `totalSupplyQueryOptions` / React `useTotalSupply` for transition-safe reads. They
+detect the wrapper ERC-165 interface ID and call `inferredTotalSupply()` on upgraded
+wrappers or legacy `totalSupply()` on pre-upgrade wrappers.
 
 ## Discovery and detection
 
@@ -7180,7 +7040,7 @@ Cache entries are scoped by chain ID:
 
 # Event decoders
 
-Utilities for decoding raw `eth_getLogs` entries into typed event objects and assembling user-facing activity feeds.
+Utilities for decoding raw `eth_getLogs` entries into typed event objects.
 
 ## Import
 
@@ -7191,6 +7051,7 @@ import {
   decodeConfidentialTransfer,
   decodeWrapped,
   decodeUnwrapRequested,
+  decodeUnwrapFinalized,
   decodeUnwrappedFinalized,
   decodeUnwrappedStarted,
   findWrapped,
@@ -7203,11 +7064,6 @@ import {
   decodeAclEvents,
   findDelegatedForUserDecryption,
   findRevokedDelegationForUserDecryption,
-  // Activity feed
-  parseActivityFeed,
-  extractEncryptedHandles,
-  applyDecryptedValues,
-  sortByBlockNumber,
 } from "@zama-fhe/sdk";
 ```
 
@@ -7215,7 +7071,7 @@ import {
 
 `(logs: Log[]) => DecodedEvent[]`
 
-Decodes an array of raw log entries into typed event objects. Each returned event has a `.type` discriminator.
+Decodes an array of raw log entries into typed event objects. Each returned event has an `.eventName` discriminator.
 
 ```ts
 const logs = await publicClient.getLogs({
@@ -7226,7 +7082,7 @@ const logs = await publicClient.getLogs({
 const events = decodeOnChainEvents(logs);
 
 for (const event of events) {
-  switch (event.type) {
+  switch (event.eventName) {
     case "ConfidentialTransfer":
       console.log(event.from, event.to, event.encryptedAmount);
       break;
@@ -7234,7 +7090,15 @@ for (const event of events) {
       console.log(event.account, event.amount);
       break;
     case "UnwrapRequested":
-      console.log(event.account, event.amount);
+      console.log(event.receiver, event.unwrapRequestId ?? event.encryptedAmount);
+      break;
+    case "UnwrapFinalized":
+      // Emitted by upgraded wrappers (unwrapRequestId present)
+      console.log(event.receiver, event.cleartextAmount);
+      break;
+    case "UnwrappedFinalized":
+      // Emitted by legacy wrappers (no unwrapRequestId) — handle during protocol transition
+      console.log(event.receiver, event.cleartextAmount);
       break;
   }
 }
@@ -7244,13 +7108,13 @@ for (const event of events) {
 | --------- | ------- | ----------------------------------------------------------- |
 | `logs`    | `Log[]` | Raw log entries from `eth_getLogs` or a transaction receipt |
 
-**Returns:** `DecodedEvent[]` — each event has a `.type` of `"ConfidentialTransfer"`, `"Wrapped"`, `"UnwrapRequested"`, `"UnwrappedFinalized"`, or `"UnwrappedStarted"`.
+**Returns:** `DecodedEvent[]` — each event has an `.eventName` of `"ConfidentialTransfer"`, `"Wrapped"`, `"UnwrapRequested"`, `"UnwrapFinalized"`, `"UnwrappedFinalized"` (legacy), or `"UnwrappedStarted"`. During the protocol transition, finalize events from pre-upgrade wrappers have `eventName: "UnwrappedFinalized"`; those from upgraded wrappers have `eventName: "UnwrapFinalized"`.
 
 ## TOKEN_TOPICS
 
 `Hex[]`
 
-Array of topic hashes for all supported token events. Pass this to `eth_getLogs` to fetch relevant logs in a single RPC call.
+Array of topic hashes for all supported token events, including both legacy and upgraded unwrap event signatures during the protocol transition. Pass this to `eth_getLogs` to fetch relevant logs in a single RPC call.
 
 ```ts
 const logs = await publicClient.getLogs({
@@ -7265,13 +7129,14 @@ const logs = await publicClient.getLogs({
 
 Each decoder takes a single log entry and returns a typed event object, or `null` if the log does not match.
 
-| Decoder                           | Event type             | Description                         |
-| --------------------------------- | ---------------------- | ----------------------------------- |
-| `decodeConfidentialTransfer(log)` | `ConfidentialTransfer` | Encrypted transfer between accounts |
-| `decodeWrapped(log)`              | `Wrapped`              | Tokens wrapped (shielded)           |
-| `decodeUnwrapRequested(log)`      | `UnwrapRequested`      | Unwrap initiated                    |
-| `decodeUnwrappedFinalized(log)`   | `UnwrappedFinalized`   | Unwrap completed (finalized)        |
-| `decodeUnwrappedStarted(log)`     | `UnwrappedStarted`     | Unwrap decryption started           |
+| Decoder                           | Event type             | Description                                                                    |
+| --------------------------------- | ---------------------- | ------------------------------------------------------------------------------ |
+| `decodeConfidentialTransfer(log)` | `ConfidentialTransfer` | Encrypted transfer between accounts                                            |
+| `decodeWrapped(log)`              | `Wrapped`              | Tokens wrapped (shielded)                                                      |
+| `decodeUnwrapRequested(log)`      | `UnwrapRequested`      | Unwrap initiated; returns `unwrapRequestId` when emitted by upgraded wrappers  |
+| `decodeUnwrapFinalized(log)`      | `UnwrapFinalized`      | Unwrap completed; returns `unwrapRequestId` when emitted by upgraded wrappers  |
+| `decodeUnwrappedFinalized(log)`   | `UnwrappedFinalized`   | Deprecated compatibility decoder; not a transparent alias for switch consumers |
+| `decodeUnwrappedStarted(log)`     | `UnwrappedStarted`     | Unwrap decryption started                                                      |
 
 ```ts
 import { decodeConfidentialTransfer } from "@zama-fhe/sdk";
@@ -7315,7 +7180,7 @@ import { findUnwrapRequested } from "@zama-fhe/sdk";
 
 const unwrapEvent = findUnwrapRequested(receipt.logs);
 if (unwrapEvent) {
-  console.log(`Unwrap requested for ${unwrapEvent.amount}`);
+  console.log(`Unwrap requested for ${unwrapEvent.encryptedAmount}`);
 }
 ```
 
@@ -7402,102 +7267,8 @@ const logs = await publicClient.getLogs({
 > ACL delegation events are **not** included in `TOKEN_TOPICS` or `decodeOnChainEvents`. They are emitted by the ACL contract, not by token contracts. Use `ACL_TOPICS` and `decodeAclEvents` separately.
 
 
-## Activity feed utilities
-
-Build a complete activity feed from raw logs with encrypted amount decryption.
-
-### parseActivityFeed
-
-`(logs: Log[], userAddress: Address) => ActivityItem[]`
-
-Parses raw logs into classified activity items (transfers, shields, unshields) relative to the given user address. Items include direction ("sent", "received", "shielded", "unshielded") and raw encrypted handles.
-
-```ts
-const items = parseActivityFeed(logs, userAddress);
-// [{ type: "transfer", direction: "sent", handle: "0x...", ... }, ...]
-```
-
-| Parameter     | Type      | Description                         |
-| ------------- | --------- | ----------------------------------- |
-| `logs`        | `Log[]`   | Raw log entries                     |
-| `userAddress` | `Address` | User address to determine direction |
-
-### extractEncryptedHandles
-
-`(items: ActivityItem[]) => bigint[]`
-
-Extracts all unique encrypted handles from activity items for batch decryption.
-
-```ts
-const handles = extractEncryptedHandles(items);
-```
-
-### applyDecryptedValues
-
-`(items: ActivityItem[], decrypted: Readonly<Record<Handle, ClearValueType>>) => ActivityItem[]`
-
-Attaches decrypted amounts to activity items. Accepts the record returned directly from `sdk.userDecrypt()`.
-
-```ts
-const enrichedItems = applyDecryptedValues(items, decrypted);
-// Each item now has .amount.decryptedValue: bigint
-```
-
-| Parameter   | Type                                       | Description                                                     |
-| ----------- | ------------------------------------------ | --------------------------------------------------------------- |
-| `items`     | `ActivityItem[]`                           | Items from `parseActivityFeed`                                  |
-| `decrypted` | `Readonly<Record<Handle, ClearValueType>>` | Decrypted values keyed by handle, e.g. from `sdk.userDecrypt()` |
-
-### sortByBlockNumber
-
-`(items: ActivityItem[]) => ActivityItem[]`
-
-Returns a new array sorted by block number, newest first.
-
-```ts
-const sorted = sortByBlockNumber(enrichedItems);
-```
-
-## Full pipeline example
-
-```ts
-import {
-  parseActivityFeed,
-  extractEncryptedHandles,
-  applyDecryptedValues,
-  sortByBlockNumber,
-  TOKEN_TOPICS,
-} from "@zama-fhe/sdk";
-
-// 1. Fetch logs
-const logs = await publicClient.getLogs({
-  address: tokenAddress,
-  topics: [TOKEN_TOPICS],
-  fromBlock: startBlock,
-  toBlock: "latest",
-});
-
-// 2. Parse into classified activity items
-const items = parseActivityFeed(logs, userAddress);
-
-// 3. Extract handles for decryption
-const handles = extractEncryptedHandles(items);
-
-// 4. Decrypt all handles in one batch via sdk.userDecrypt
-const decrypted = await sdk.userDecrypt(
-  handles.map((handle) => ({ handle, contractAddress: tokenAddress })),
-);
-
-// 5. Attach decrypted amounts
-const enrichedItems = applyDecryptedValues(items, decrypted);
-
-// 6. Sort newest first
-const feed = sortByBlockNumber(enrichedItems);
-```
-
 ## Related
 
-- [Activity Feeds guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/activity-feeds.md) — activity feed usage in context
 - [Delegated Decryption](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/delegation.md) — delegation API with on-chain event examples
 - [Token](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md) — high-level API for token operations
 
@@ -7640,22 +7411,21 @@ const expiryDate = new Date(Number(expiry) * 1000);
 The delegate calls `decryptBalanceAs` to read the delegator's balance. This uses a delegated EIP-712 flow under the hood — the delegate signs with their own wallet, and the relayer verifies the on-chain delegation before decrypting.
 
 ```ts
-// Decrypt the delegator's balance (owner defaults to delegator)
+// Decrypt the delegator's balance (accountAddress defaults to delegator)
 const balance = await readonlyToken.decryptBalanceAs({
   delegatorAddress: "0xDelegator",
 });
 
-// Decrypt a specific owner's balance (when owner differs from delegator).
-// Note: the relayer validates ACL permissions against `delegatorAddress`,
-// not `owner`. The delegator must have been granted decrypt rights for
-// the contract, regardless of whose balance is being read.
+// Decrypt a specific address's balance (when the balance holder differs
+// from the delegator). The relayer validates ACL permissions against
+// `delegatorAddress`, not `accountAddress`.
 const balance = await readonlyToken.decryptBalanceAs({
   delegatorAddress: "0xDelegator",
-  owner: "0xOwner",
+  accountAddress: "0xBalanceHolder",
 });
 ```
 
-Decrypted values are cached in storage, keyed by `(token, owner, handle)`. Because every on-chain balance change produces a new encrypted handle, stale cache entries are never served — no TTL or manual invalidation needed. If the delegator's balance changes in another app, the next `decryptBalanceAs` call will see a different handle and perform a fresh decryption.
+Decrypted values are cached in storage, keyed by `(accountAddress, token, handle)`. Because every on-chain balance change produces a new encrypted handle, stale cache entries are never served — no TTL or manual invalidation needed. If the delegator's balance changes in another app, the next `decryptBalanceAs` call will see a different handle and perform a fresh decryption.
 
 ### Batch decryption as delegate
 
@@ -7680,7 +7450,7 @@ for (const [address, balance] of balances) {
 | ------------------ | --------------------------------------------------------- | -------------------------------------------------------------------------------- |
 | `delegatorAddress` | `Address`                                                 | The address that granted delegation rights.                                      |
 | `handles`          | `Handle[] \| undefined`                                   | Pre-fetched encrypted handles. When omitted, handles are fetched from the chain. |
-| `owner`            | `Address \| undefined`                                    | Balance owner address. Defaults to the delegator address.                        |
+| `accountAddress`   | `Address \| undefined`                                    | The address whose on-chain balance to read. Defaults to the delegator address.   |
 | `maxConcurrency`   | `number \| undefined`                                     | Maximum number of concurrent decrypt calls. Default: `Infinity`.                 |
 | `onError`          | `(error: Error, address: Address) => bigint \| undefined` | Called when decryption fails for a single token. Return a fallback value.        |
 
@@ -8080,7 +7850,8 @@ import { ZamaProvider } from "@zama-fhe/react-sdk";
 import { WagmiProvider, createConfig, http } from "wagmi";
 import { sepolia } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ZamaProvider, RelayerWeb, indexedDBStorage } from "@zama-fhe/react-sdk";
+import { ZamaProvider } from "@zama-fhe/react-sdk";
+import { RelayerWeb, indexedDBStorage } from "@zama-fhe/sdk";
 import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
 
 const wagmiConfig = createConfig({
@@ -8117,7 +7888,8 @@ function App() {
 
 ```tsx
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ZamaProvider, RelayerWeb, indexedDBStorage } from "@zama-fhe/react-sdk";
+import { ZamaProvider } from "@zama-fhe/react-sdk";
+import { RelayerWeb, indexedDBStorage } from "@zama-fhe/sdk";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 import { sepolia } from "viem/chains";
 
@@ -8407,10 +8179,6 @@ const sdk = new ZamaSDK({
 
 ## Parameters
 
-```ts
-import { type UseConfidentialBalancesParameters } from "@zama-fhe/react-sdk";
-```
-
 ### tokenAddresses
 
 `Address[]`
@@ -8452,10 +8220,6 @@ const { data } = useConfidentialBalances({
 
 
 ## Return Type
-
-```ts
-import { type UseConfidentialBalancesReturnType } from "@zama-fhe/react-sdk";
-```
 
 The `data` property is `BatchBalancesResult | undefined` -- an object with `results: Map<Address, bigint>` (successfully decrypted balances) and `errors: Map<Address, ZamaError>` (per-token errors).
 
@@ -8623,10 +8387,6 @@ await transfer({
 
 ## Return Type
 
-```ts
-import { type UseConfidentialTransferReturnType } from "@zama-fhe/react-sdk";
-```
-
 The `data` property (after a successful mutation) is `{ txHash: Hex, receipt: TransactionReceipt }`.
 
 - **`txHash`** -- Transaction hash submitted to the network.
@@ -8720,10 +8480,6 @@ const sdk = new ZamaSDK({
 
 ## Parameters
 
-```ts
-import { type UseConfidentialTransferFromParameters } from "@zama-fhe/react-sdk";
-```
-
 ### tokenAddress
 
 `Address`
@@ -8782,10 +8538,6 @@ await transferFrom({
 
 
 ## Return Type
-
-```ts
-import { type UseConfidentialTransferFromReturnType } from "@zama-fhe/react-sdk";
-```
 
 The `data` property (after a successful mutation) is `{ txHash: Hex, receipt: TransactionReceipt }`.
 
@@ -8957,7 +8709,7 @@ await shield({
 ## Return Type
 
 ```ts
-import { type ShieldParams } from "@zama-fhe/react-sdk";
+import { type ShieldParams } from "@zama-fhe/sdk/query";
 ```
 
 `data` resolves to `{ txHash: Hex, receipt: TransactionReceipt }`.
@@ -9050,7 +8802,7 @@ const sdk = new ZamaSDK({
 ## Parameters
 
 ```ts
-import { type UnshieldParams } from "@zama-fhe/react-sdk";
+import { type UnshieldParams } from "@zama-fhe/sdk/query";
 ```
 
 ### tokenAddress
@@ -9132,7 +8884,7 @@ await unshield({
 ## Return Type
 
 ```ts
-import { type UnshieldParams } from "@zama-fhe/react-sdk";
+import { type UnshieldParams } from "@zama-fhe/sdk/query";
 ```
 
 `data` resolves to `{ txHash: Hex, receipt: TransactionReceipt }`.
@@ -9225,10 +8977,6 @@ const sdk = new ZamaSDK({
 
 ## Parameters
 
-```ts
-import { type UseUnshieldAllParameters } from "@zama-fhe/react-sdk";
-```
-
 ### tokenAddress
 
 `Address`
@@ -9285,10 +9033,6 @@ await unshieldAll({
 
 ## Return Type
 
-```ts
-import { type UseUnshieldAllReturnType } from "@zama-fhe/react-sdk";
-```
-
 `data` resolves to `{ txHash: Hex, receipt: TransactionReceipt }`.
 
 Auto-invalidates the `confidentialBalance` cache on success.
@@ -9320,7 +9064,7 @@ Mutation hook that resumes an unshield interrupted between the unwrap and finali
 
 ```ts
 import { useResumeUnshield } from "@zama-fhe/react-sdk";
-import { loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/react-sdk";
+import { loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/sdk";
 ```
 
 ## Usage
@@ -9330,12 +9074,8 @@ import { loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/react-sdk";
 
 ```tsx
 import { useEffect } from "react";
-import {
-  useResumeUnshield,
-  loadPendingUnshield,
-  clearPendingUnshield,
-  useZamaSDK,
-} from "@zama-fhe/react-sdk";
+import { useResumeUnshield, useZamaSDK } from "@zama-fhe/react-sdk";
+import { loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/sdk";
 
 const TOKEN = "0xToken" as const;
 
@@ -9390,10 +9130,6 @@ const sdk = new ZamaSDK({
 
 ## Parameters
 
-```ts
-import { type UseResumeUnshieldParameters } from "@zama-fhe/react-sdk";
-```
-
 ### tokenAddress
 
 `Address`
@@ -9438,10 +9174,6 @@ The full recovery flow uses three utilities together:
 Run this check on mount to handle any session that was interrupted.
 
 ## Return Type
-
-```ts
-import { type UseResumeUnshieldReturnType } from "@zama-fhe/react-sdk";
-```
 
 `data` resolves to `{ txHash: Hex, receipt: TransactionReceipt }`.
 
@@ -9510,10 +9242,6 @@ function UnwrapButton() {
 
 ## Parameters
 
-```ts
-import { type UseUnwrapParameters } from "@zama-fhe/react-sdk";
-```
-
 ### tokenAddress
 
 `Address`
@@ -9539,10 +9267,6 @@ await unwrap({ amount: 1000n });
 ```
 
 ## Return Type
-
-```ts
-import { type UseUnwrapReturnType } from "@zama-fhe/react-sdk";
-```
 
 The mutation resolves with a transaction hash (`Hex`).
 
@@ -9609,10 +9333,6 @@ function UnwrapAllButton() {
 
 ## Parameters
 
-```ts
-import { type UseUnwrapAllParameters } from "@zama-fhe/react-sdk";
-```
-
 ### tokenAddress
 
 `Address`
@@ -9626,10 +9346,6 @@ const { mutateAsync: unwrapAll } = useUnwrapAll({
 ```
 
 ## Return Type
-
-```ts
-import { type UseUnwrapAllReturnType } from "@zama-fhe/react-sdk";
-```
 
 The mutation resolves with a transaction hash (`Hex`).
 
@@ -9699,10 +9415,6 @@ function TwoStepUnshield() {
 
 ## Parameters
 
-```ts
-import { type UseFinalizeUnwrapParameters } from "@zama-fhe/react-sdk";
-```
-
 ### tokenAddress
 
 `Address`
@@ -9728,10 +9440,6 @@ await finalize({ unwrapTxHash: "0xabc..." });
 ```
 
 ## Return Type
-
-```ts
-import { type UseFinalizeUnwrapReturnType } from "@zama-fhe/react-sdk";
-```
 
 
 > [!NOTE]
@@ -9954,6 +9662,7 @@ const { data: allowed } = useIsAllowed({
 
 ## Related
 
+- [Avoid blind-sign wallet popups](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/encrypt-decrypt.md#3-avoid-blind-sign-wallet-popups) -- gating balance queries to avoid blind-sign popups
 - [`useAllow`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useAllow.md) -- pre-authorize contracts with one wallet signature
 - [`useRevoke`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevoke.md) -- revoke session credentials
 - [Session Model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/session-model.md) -- security model and TTL configuration
@@ -11118,8 +10827,9 @@ useConfidentialTokenAddress({ tokenAddress: "0xUSDC" });
 
 The `data` field resolves to `readonly [boolean, Address]`:
 
-- `[true, address]` -- a confidential token was found at `address`
-- `[false, address]` -- no registered pair (the address value is meaningless)
+- `[true, address]` -- registered and valid; `address` is the confidential token
+- `[false, nonZeroAddress]` -- registered but revoked; `address` is the former confidential token
+- `[false, zeroAddress]` -- no registered pair
 
 
 > [!NOTE]
@@ -11192,8 +10902,9 @@ useTokenAddress({ confidentialTokenAddress: "0xcUSDC" });
 
 The `data` field resolves to `readonly [boolean, Address]`:
 
-- `[true, address]` -- the underlying ERC-20 was found at `address`
-- `[false, address]` -- no registered pair (the address value is meaningless)
+- `[true, address]` -- registered and valid; `address` is the underlying ERC-20
+- `[false, nonZeroAddress]` -- registered but revoked; `address` is the former underlying token
+- `[false, zeroAddress]` -- no registered pair
 
 
 > [!NOTE]
@@ -11377,166 +11088,6 @@ function TokenHeader({ tokenAddress }: { tokenAddress: `0x${string}` }) {
 - [useWrapperDiscovery](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useWrapperDiscovery.md) -- find the wrapper address for a token
 - [useConfidentialBalance](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialBalance.md) -- read the decrypted confidential balance
 - [Hooks overview](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/query-keys.md) -- all available hooks
-
-## useActivityFeed
-
-- source_type: official-doc
-- source_path: docs/gitbook/src/reference/react/useActivityFeed.md
-- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useActivityFeed.md
-- logical_path: reference/react/useActivityFeed
-
-# useActivityFeed
-
-Parse event logs into a classified, optionally decrypted activity feed. Each item includes the event type, direction relative to the user, and amount.
-
-## Import
-
-```ts
-import { useActivityFeed } from "@zama-fhe/react-sdk";
-```
-
-## Usage
-
-
-### Tab: ActivityList.tsx
-
-```tsx
-import { useActivityFeed } from "@zama-fhe/react-sdk";
-import { usePublicClient } from "wagmi";
-import { type Log } from "viem";
-import { useEffect, useState } from "react";
-
-function ActivityList({
-  tokenAddress,
-  userAddress,
-}: {
-  tokenAddress: `0x${string}`;
-  userAddress: `0x${string}`;
-}) {
-  const [logs, setLogs] = useState<Log[]>([]);
-  const publicClient = usePublicClient();
-
-  useEffect(() => {
-    publicClient
-      .getLogs({
-        address: tokenAddress,
-        fromBlock: "earliest",
-      })
-      .then(setLogs);
-  }, [tokenAddress]);
-
-  const { data: feed, isLoading } = useActivityFeed({
-    tokenAddress,
-    logs,
-    userAddress,
-    decrypt: true,
-  });
-
-  if (isLoading) return <p>Loading activity...</p>;
-
-  return (
-    <ul>
-      {feed?.map((item, i) => (
-        <li key={i}>
-          {item.type} -- {item.direction} -- {item.amount?.toString()}
-        </li>
-      ))}
-    </ul>
-  );
-}
-```
-
-
-## Parameters
-
-### tokenAddress
-
-`Address`
-
-Address of the confidential token contract.
-
-```ts
-useActivityFeed({
-  tokenAddress: "0xToken",
-  logs,
-  userAddress: "0xUser",
-});
-```
-
-### logs
-
-`Log[]`
-
-Raw event logs to parse. Fetch these from your provider (viem `getLogs`, ethers `queryFilter`, etc.) before passing them in.
-
-```ts
-const logs = await publicClient.getLogs({
-  address: tokenAddress,
-  fromBlock: "earliest",
-});
-
-useActivityFeed({ tokenAddress, logs, userAddress: "0xUser" });
-```
-
-### userAddress
-
-`Address`
-
-Address of the current user. Used to determine the `direction` of each activity item (incoming vs. outgoing).
-
-```ts
-useActivityFeed({
-  tokenAddress: "0xToken",
-  logs,
-  userAddress: "0xUser",
-});
-```
-
----
-
-### decrypt
-
-`boolean`
-
-When `true`, decrypt encrypted amounts in the feed items. Defaults to `false`.
-
-```ts
-useActivityFeed({
-  tokenAddress: "0xToken",
-  logs,
-  userAddress: "0xUser",
-  decrypt: true,
-});
-```
-
-## Return Type
-
-The `data` field resolves to an array of activity items:
-
-```ts
-Array<{
-  type: "ConfidentialTransfer" | "Wrapped" | "UnwrapRequested" | string;
-  direction: "incoming" | "outgoing" | "self";
-  amount: bigint | undefined;
-}>;
-```
-
-| Field       | Description                                                  |
-| ----------- | ------------------------------------------------------------ |
-| `type`      | Event classification                                         |
-| `direction` | Whether the user sent, received, or self-transferred         |
-| `amount`    | Decrypted amount when `decrypt: true`, otherwise `undefined` |
-
-
-> [!NOTE]
-> Missing include: .gitbook/includes/query-result.md
-
-
-## Related
-
-- [useConfidentialBalance](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialBalance.md) -- read the decrypted balance
-- [useMetadata](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useMetadata.md) -- token name, symbol, decimals
-- [Query keys](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/query-keys.md) -- `zamaQueryKeys.activityFeed` for cache control
 
 ## useZamaSDK
 
@@ -12016,10 +11567,6 @@ function DecryptHandle({ handle }: { handle: string }) {
 
 ## Parameters
 
-```ts
-import { type UseUserDecryptConfig } from "@zama-fhe/react-sdk";
-```
-
 ### handles
 
 `DecryptHandle[]`
@@ -12027,7 +11574,7 @@ import { type UseUserDecryptConfig } from "@zama-fhe/react-sdk";
 Array of handles to decrypt. Each entry pairs an encrypted handle with the address of the contract that owns it. Only handles not yet in the SDK's persistent decrypt cache are sent for decryption — cached handles are returned immediately, even after a page reload.
 
 ```ts
-import { type DecryptHandle } from "@zama-fhe/react-sdk";
+import { type DecryptHandle } from "@zama-fhe/sdk";
 ```
 
 | Field             | Type      | Description                                            |
@@ -12594,16 +12141,16 @@ import { type DecryptBalanceAsParams } from "@zama-fhe/sdk/query";
 
 The address that delegated decryption rights.
 
-### owner
+### accountAddress
 
 `Address | undefined`
 
-Balance owner address. Defaults to `delegatorAddress`. Use this when the owner differs from the delegator.
+The address whose on-chain balance to read. Defaults to `delegatorAddress`. Use this when the balance holder differs from the delegator.
 
 ```ts
 await decryptAs({
   delegatorAddress: "0xDelegator",
-  owner: "0xOwner",
+  accountAddress: "0xBalanceHolder",
 });
 ```
 
@@ -12729,11 +12276,11 @@ The address that delegated decryption rights.
 
 Pre-fetched encrypted handles. When omitted, handles are fetched from the chain.
 
-### owner
+### accountAddress
 
 `Address | undefined`
 
-Balance owner address. Defaults to `delegatorAddress`.
+The address whose on-chain balance to read. Defaults to `delegatorAddress`.
 
 ### maxConcurrency
 
@@ -12789,14 +12336,14 @@ Mutations auto-invalidate related caches, so you only need `zamaQueryKeys` for a
 ## Import
 
 ```ts
-import { zamaQueryKeys } from "@zama-fhe/react-sdk";
+import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 ```
 
 ## Usage
 
 ```tsx
 import { useQueryClient } from "@tanstack/react-query";
-import { zamaQueryKeys } from "@zama-fhe/react-sdk";
+import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 
 const queryClient = useQueryClient();
 
@@ -12853,16 +12400,6 @@ ERC-20 allowance of the underlying token for the wrapper.
 | `.token(addr)`                 | Allowances for one token    |
 | `.scope(addr, owner, wrapper)` | Specific owner-wrapper pair |
 
-### `zamaQueryKeys.activityFeed`
-
-Classified activity feed.
-
-| Key                                           | Scope                   |
-| --------------------------------------------- | ----------------------- |
-| `.all`                                        | All feed queries        |
-| `.token(addr)`                                | Feed for one token      |
-| `.scope(addr, userAddress, logsKey, decrypt)` | Fully scoped feed query |
-
 ### `zamaQueryKeys.wrappersRegistry`
 
 On-chain wrappers registry queries.
@@ -12880,12 +12417,12 @@ On-chain wrappers registry queries.
 | `.isConfidentialTokenValid(registryAddr, confidentialAddr)` | Validity check                             |
 | `.listPairs(registryAddr, page, pageSize, metadata)`        | Paginated listing                          |
 
-### `decryptionKeys`
+### `zamaQueryKeys.decryption`
 
 Cached decrypted values. Populated by [`useUserDecrypt`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUserDecrypt.md).
 
 ```ts
-import { decryptionKeys } from "@zama-fhe/react-sdk";
+import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 ```
 
 | Key              | Scope                            |
@@ -13004,10 +12541,10 @@ Each package exposes multiple entry points for tree-shaking:
 
 **`@zama-fhe/react-sdk`**
 
-| Import Path                 | Contents                                            |
-| --------------------------- | --------------------------------------------------- |
-| `@zama-fhe/react-sdk`       | Provider-based hooks + all re-exports from core SDK |
-| `@zama-fhe/react-sdk/wagmi` | `WagmiSigner` adapter                               |
+| Import Path                 | Contents                                             |
+| --------------------------- | ---------------------------------------------------- |
+| `@zama-fhe/react-sdk`       | Provider-based hooks (`ZamaProvider` + `use*` hooks) |
+| `@zama-fhe/react-sdk/wagmi` | `WagmiSigner` adapter                                |
 
 ## Session model
 
@@ -16967,7 +16504,7 @@ Full read/write interface for a single confidential ERC-20. Extends `ReadonlyTok
 | `unwrap(amount)`                                           | Request unwrap for a specific amount (low-level, requires manual finalization).                                                                                                                              |
 | `unwrapAll()`                                              | Request unwrap for the entire balance (low-level, requires manual finalization).                                                                                                                             |
 | `resumeUnshield(unwrapTxHash, callbacks?)`                 | Resume an interrupted unshield from an existing unwrap tx hash. Goes straight to wait receipt → finalize.                                                                                                    |
-| `finalizeUnwrap(burnAmountHandle)`                         | Complete unwrap with public decryption proof.                                                                                                                                                                |
+| `finalizeUnwrap(unwrapRequestIdOrAmount)`                  | Complete unwrap with public decryption proof. Pass `unwrapRequestId` from upgraded events, or the legacy encrypted amount handle.                                                                            |
 | `confidentialTransfer(to, amount)`                         | Encrypted transfer. Encrypts amount, then calls the contract.                                                                                                                                                |
 | `confidentialTransferFrom(from, to, amt)`                  | Operator encrypted transfer.                                                                                                                                                                                 |
 | `approve(spender, until?)`                                 | Set operator approval. `until` defaults to now + 1 hour.                                                                                                                                                     |
@@ -17045,15 +16582,31 @@ const results = await Token.batchRevokeDelegation(tokens, "0xDelegate");
 The unshield flow is two-phase: unwrap tx, then finalize. If the page reloads between phases, the unwrap tx hash is lost. Use these utilities to persist it:
 
 ```ts
-import { savePendingUnshield, loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/sdk";
+import {
+  savePendingUnshield,
+  loadPendingUnshield,
+  loadPendingUnshieldRequest,
+  clearPendingUnshield,
+} from "@zama-fhe/sdk";
 
-// Save the unwrap hash before finalization
-await savePendingUnshield(storage, wrapperAddress, unwrapTxHash);
+// Save before finalization.
+// Pass unwrapRequestId from upgraded UnwrapRequested events when available.
+const event = findUnwrapRequested(receipt.logs);
+await savePendingUnshield(storage, wrapperAddress, unwrapTxHash, event.unwrapRequestId);
 
-// On next load, check for pending unshields
+// On next load, resume with the tx hash only (works for both legacy and upgraded wrappers)
 const pending = await loadPendingUnshield(storage, wrapperAddress);
 if (pending) {
   await token.resumeUnshield(pending);
+  await clearPendingUnshield(storage, wrapperAddress);
+}
+
+// Or load the full request object to access unwrapRequestId directly
+const request = await loadPendingUnshieldRequest(storage, wrapperAddress);
+if (request) {
+  // request.unwrapTxHash — always present
+  // request.unwrapRequestId — present for requests from upgraded wrappers
+  await token.resumeUnshield(request.unwrapTxHash);
   await clearPendingUnshield(storage, wrapperAddress);
 }
 ```
@@ -17315,15 +16868,20 @@ interface ContractCallConfig {
 
 ### Wrapper
 
-| Function                                                         | Description                                         |
-| ---------------------------------------------------------------- | --------------------------------------------------- |
-| `wrapContract(wrapper, to, amount)`                              | Wrap ERC-20 tokens.                                 |
-| `unwrapContract(token, from, to, encryptedAmount, inputProof)`   | Request unwrap with encrypted amount.               |
-| `unwrapFromBalanceContract(token, from, to, encryptedBalance)`   | Request unwrap using on-chain balance handle.       |
-| `finalizeUnwrapContract(wrapper, burntAmount, cleartext, proof)` | Finalize unwrap with decryption proof.              |
-| `underlyingContract(wrapper)`                                    | Read underlying ERC-20 address.                     |
-| `inferredTotalSupplyContract(wrapper)`                           | Read inferred plaintext total supply.               |
-| `totalSupplyContract(wrapper)`                                   | Deprecated alias for `inferredTotalSupplyContract`. |
+| Function                                                             | Description                                   |
+| -------------------------------------------------------------------- | --------------------------------------------- |
+| `wrapContract(wrapper, to, amount)`                                  | Wrap ERC-20 tokens.                           |
+| `unwrapContract(token, from, to, encryptedAmount, inputProof)`       | Request unwrap with encrypted amount.         |
+| `unwrapFromBalanceContract(token, from, to, encryptedBalance)`       | Request unwrap using on-chain balance handle. |
+| `finalizeUnwrapContract(wrapper, unwrapRequestId, cleartext, proof)` | Finalize unwrap with decryption proof.        |
+| `underlyingContract(wrapper)`                                        | Read underlying ERC-20 address.               |
+| `inferredTotalSupplyContract(wrapper)`                               | Read inferred plaintext total supply.         |
+| `totalSupplyContract(wrapper)`                                       | Deprecated legacy `totalSupply()` builder.    |
+
+For transition-safe total supply reads, prefer `totalSupplyQueryOptions` or React
+`useTotalSupply`. They detect the wrapper ERC-165 interface ID and call
+`inferredTotalSupply()` on upgraded wrappers or legacy `totalSupply()` on pre-upgrade
+wrappers.
 
 ### ERC-165
 
@@ -17399,19 +16957,20 @@ const logs = await publicClient.getLogs({
 });
 ```
 
-Individual topic hashes are accessible via the `Topics` object: `Topics.ConfidentialTransfer`, `Topics.Wrapped`, `Topics.UnwrapRequested`, `Topics.UnwrappedFinalized`, `Topics.UnwrappedStarted`.
+Individual topic hashes are accessible via the `Topics` object: `Topics.ConfidentialTransfer`, `Topics.Wrapped`, `Topics.UnwrapRequested`, `Topics.UnwrapRequestedLegacy`, `Topics.UnwrapFinalized`, `Topics.UnwrapFinalizedLegacy`, and `Topics.UnwrappedStarted`. `Topics.UnwrappedFinalized` remains as a deprecated alias for the upgraded finalized topic.
 
 ### Decoders
 
-| Function                          | Returns                                                                                                     |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `decodeConfidentialTransfer(log)` | `ConfidentialTransferEvent \| null` — `{ from, to, encryptedAmountHandle }`                                 |
-| `decodeWrapped(log)`              | `WrappedEvent \| null` — `{ to, amountIn }`                                                                 |
-| `decodeUnwrapRequested(log)`      | `UnwrapRequestedEvent \| null` — `{ receiver, encryptedAmount }`                                            |
-| `decodeUnwrappedFinalized(log)`   | `UnwrappedFinalizedEvent \| null` — `{ receiver, encryptedAmount, cleartextAmount }`                        |
-| `decodeUnwrappedStarted(log)`     | `UnwrappedStartedEvent \| null` — `{ returnVal, requestId, txId, to, refund, requestedAmount, burnAmount }` |
-| `decodeOnChainEvent(log)`         | `OnChainEvent \| null` — tries all decoders                                                                 |
-| `decodeOnChainEvents(logs)`       | `OnChainEvent[]` — batch decode, skips unrecognized logs                                                    |
+| Function                          | Returns                                                                                                                                                                                                                    |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `decodeConfidentialTransfer(log)` | `ConfidentialTransferEvent \| null` — `{ from, to, encryptedAmountHandle }`                                                                                                                                                |
+| `decodeWrapped(log)`              | `WrappedEvent \| null` — `{ to, amountIn }`                                                                                                                                                                                |
+| `decodeUnwrapRequested(log)`      | `UnwrapRequestedEvent \| null` — `{ receiver, encryptedAmount, unwrapRequestId? }`                                                                                                                                         |
+| `decodeUnwrapFinalized(log)`      | `UnwrapFinalizedEvent \| null` — `{ receiver, encryptedAmount, cleartextAmount, unwrapRequestId? }`                                                                                                                        |
+| `decodeUnwrappedFinalized(log)`   | **Deprecated.** Like `decodeUnwrapFinalized(log)` but always returns `eventName: "UnwrappedFinalized"` — not a transparent alias. Update switch statements to use `decodeUnwrapFinalized` and `"UnwrapFinalized"` instead. |
+| `decodeUnwrappedStarted(log)`     | `UnwrappedStartedEvent \| null` — `{ returnVal, requestId, txId, to, refund, requestedAmount, burnAmount }`                                                                                                                |
+| `decodeOnChainEvent(log)`         | `OnChainEvent \| null` — tries all decoders                                                                                                                                                                                |
+| `decodeOnChainEvents(logs)`       | `OnChainEvent[]` — batch decode, skips unrecognized logs                                                                                                                                                                   |
 
 ### Finder Helpers
 
@@ -17422,73 +16981,6 @@ import { findWrapped, findUnwrapRequested } from "@zama-fhe/sdk";
 
 const wrappedEvent = findWrapped(receipt.logs);
 const unwrapEvent = findUnwrapRequested(receipt.logs);
-```
-
-## Activity Feed Helpers
-
-Transform raw event logs into a user-friendly activity feed with decrypted amounts.
-
-### Pipeline
-
-```ts
-import {
-  parseActivityFeed,
-  extractEncryptedHandles,
-  applyDecryptedValues,
-  sortByBlockNumber,
-} from "@zama-fhe/sdk";
-
-// 1. Parse raw logs into classified activity items
-const items = parseActivityFeed(logs, userAddress);
-
-// 2. Extract encrypted handles that need decryption
-const handles = extractEncryptedHandles(items);
-
-// 3. Decrypt handles via SDK
-const decryptedMap = await sdk.userDecrypt(
-  handles.map((h) => ({ handle: h, contractAddress: tokenAddress })),
-);
-
-// 4. Apply decrypted values back to activity items
-const enrichedItems = applyDecryptedValues(items, decryptedMap);
-
-// 5. Sort by block number (most recent first)
-const sorted = sortByBlockNumber(enrichedItems);
-```
-
-### Types
-
-```ts
-type ActivityDirection = "incoming" | "outgoing" | "self";
-
-type ActivityType =
-  | "transfer"
-  | "shield"
-  | "unshield_requested"
-  | "unshield_started"
-  | "unshield_finalized";
-
-type ActivityAmount =
-  | { type: "clear"; value: bigint }
-  | { type: "encrypted"; handle: string; decryptedValue?: bigint };
-
-interface ActivityItem {
-  type: ActivityType;
-  direction: ActivityDirection;
-  amount: ActivityAmount;
-  from?: string;
-  to?: string;
-  fee?: ActivityAmount;
-  success?: boolean;
-  metadata: ActivityLogMetadata;
-  rawEvent: OnChainEvent;
-}
-
-interface ActivityLogMetadata {
-  transactionHash?: string;
-  blockNumber?: bigint | number;
-  logIndex?: number;
-}
 ```
 
 ## Error Handling
@@ -17596,11 +17088,12 @@ Low-level FHE operations are available on the relayer backend via `sdk.relayer`:
 
 ## Constants
 
-| Constant                       | Value                             | Description                                   |
-| ------------------------------ | --------------------------------- | --------------------------------------------- |
-| `ZERO_HANDLE`                  | `"0x0000...0000"` (32 zero bytes) | Sentinel for empty/zero encrypted values.     |
-| `ERC7984_INTERFACE_ID`         | `"0x4958f2a4"`                    | ERC-165 interface ID for confidential tokens. |
-| `ERC7984_WRAPPER_INTERFACE_ID` | `"0xd04584ba"`                    | ERC-165 interface ID for wrapper contracts.   |
+| Constant                              | Value                             | Description                                          |
+| ------------------------------------- | --------------------------------- | ---------------------------------------------------- |
+| `ZERO_HANDLE`                         | `"0x0000...0000"` (32 zero bytes) | Sentinel for empty/zero encrypted values.            |
+| `ERC7984_INTERFACE_ID`                | `"0x4958f2a4"`                    | ERC-165 interface ID for confidential tokens.        |
+| `ERC7984_WRAPPER_INTERFACE_ID`        | `"0x1f1c62b2"`                    | ERC-165 interface ID for upgraded wrapper contracts. |
+| `ERC7984_WRAPPER_INTERFACE_ID_LEGACY` | `"0xd04584ba"`                    | ERC-165 interface ID for legacy wrapper contracts.   |
 
 ## Exported ABIs
 
@@ -18114,14 +17607,26 @@ Save the unwrap tx hash before finalization so interrupted unshields can be resu
 import {
   savePendingUnshield,
   loadPendingUnshield,
+  loadPendingUnshieldRequest,
   clearPendingUnshield,
+  type PendingUnshieldRequest,
 } from "@zama-fhe/react-sdk";
 
-// Save before the finalize step
-await savePendingUnshield(storage, wrapperAddress, unwrapTxHash);
+// Save before the finalize step.
+// Pass unwrapRequestId from upgraded UnwrapRequested events when available.
+const event = findUnwrapRequested(receipt.logs);
+await savePendingUnshield(storage, wrapperAddress, unwrapTxHash, event.unwrapRequestId);
 
-// Load on next visit
+// On next visit: resume with the tx hash (works for both legacy and upgraded wrappers)
 const pending = await loadPendingUnshield(storage, wrapperAddress);
+
+// Or load the full request to access unwrapRequestId directly
+const request: PendingUnshieldRequest | null = await loadPendingUnshieldRequest(
+  storage,
+  wrapperAddress,
+);
+// request.unwrapTxHash    — always present
+// request.unwrapRequestId — present only for requests from upgraded wrappers
 
 // Clear after successful finalization
 await clearPendingUnshield(storage, wrapperAddress);
@@ -18164,12 +17669,12 @@ Complete an unwrap by providing the decryption proof.
 ```ts
 function useFinalizeUnwrap(
   config: UseZamaConfig,
-  options?: UseMutationOptions<Address, Error, FinalizeUnwrapParams>,
-): UseMutationResult<Address, Error, FinalizeUnwrapParams>;
+  options?: UseMutationOptions<TransactionResult, Error, FinalizeUnwrapParams>,
+): UseMutationResult<TransactionResult, Error, FinalizeUnwrapParams>;
 
-interface FinalizeUnwrapParams {
-  burnAmountHandle: Address;
-}
+type FinalizeUnwrapParams =
+  | { unwrapRequestId: Hex; burnAmountHandle?: never }
+  | { unwrapRequestId?: never; burnAmountHandle: Hex };
 ```
 
 ### Delegation Hooks
@@ -18315,38 +17820,6 @@ const { data: meta } = useTokenMetadata("0xTokenAddress");
 // meta?.name, meta?.symbol, meta?.decimals
 ```
 
-### Activity Feed
-
-#### `useActivityFeed`
-
-Parse raw event logs into a classified, optionally decrypted activity feed.
-
-```ts
-function useActivityFeed(config: UseActivityFeedConfig): UseQueryResult<ActivityItem[], Error>;
-
-interface UseActivityFeedConfig {
-  tokenAddress: Address;
-  userAddress: Address | undefined;
-  logs: readonly (RawLog & Partial<ActivityLogMetadata>)[] | undefined;
-  decrypt?: boolean; // default: true — batch-decrypt encrypted amounts
-}
-```
-
-Enabled when both `logs` and `userAddress` are defined. When `decrypt` is `true` (default), encrypted transfer amounts are automatically decrypted via the relayer.
-
-```tsx
-const { data: feed } = useActivityFeed({
-  tokenAddress: "0xTokenAddress",
-  logs, // from getLogs or a similar source
-  userAddress,
-  decrypt: true,
-});
-
-feed?.forEach((item) => {
-  console.log(item.type, item.direction, item.amount);
-});
-```
-
 ### Low-Level FHE Hooks
 
 These hooks are for **custom FHE contracts** (non-token contracts that use encrypted types directly). For confidential ERC-20 tokens, use the high-level token hooks above instead. For detailed usage examples, see the [Encrypt & Decrypt guide](../../docs/gitbook/src/guides/encrypt-decrypt.md).
@@ -18415,14 +17888,13 @@ Use `zamaQueryKeys` for manual cache management (invalidation, prefetching, remo
 import { zamaQueryKeys, decryptionKeys } from "@zama-fhe/react-sdk";
 ```
 
-| Factory                              | Keys                                                                        | Description                         |
-| ------------------------------------ | --------------------------------------------------------------------------- | ----------------------------------- |
-| `zamaQueryKeys.confidentialBalance`  | `.all`, `.token(address)`, `.owner(address, owner)`                         | Single-token decrypted balance.     |
-| `zamaQueryKeys.confidentialBalances` | `.all`, `.tokens(addresses, owner)`                                         | Multi-token batch balances.         |
-| `zamaQueryKeys.isAllowed`            | `.all`                                                                      | Session signature status.           |
-| `zamaQueryKeys.underlyingAllowance`  | `.all`, `.token(address)`, `.scope(address, owner, wrapper)`                | Underlying ERC-20 allowance.        |
-| `zamaQueryKeys.activityFeed`         | `.all`, `.token(address)`, `.scope(address, userAddress, logsKey, decrypt)` | Activity feed items.                |
-| `decryptionKeys`                     | `.value(handle)`                                                            | Individual decrypted handle values. |
+| Factory                              | Keys                                                         | Description                         |
+| ------------------------------------ | ------------------------------------------------------------ | ----------------------------------- |
+| `zamaQueryKeys.confidentialBalance`  | `.all`, `.token(address)`, `.owner(address, owner)`          | Single-token decrypted balance.     |
+| `zamaQueryKeys.confidentialBalances` | `.all`, `.tokens(addresses, owner)`                          | Multi-token batch balances.         |
+| `zamaQueryKeys.isAllowed`            | `.all`                                                       | Session signature status.           |
+| `zamaQueryKeys.underlyingAllowance`  | `.all`, `.token(address)`, `.scope(address, owner, wrapper)` | Underlying ERC-20 allowance.        |
+| `decryptionKeys`                     | `.value(handle)`                                             | Individual decrypted handle values. |
 
 ```tsx
 import { useQueryClient } from "@tanstack/react-query";
@@ -18562,20 +18034,18 @@ All public exports from `@zama-fhe/sdk` are re-exported from the main entry poin
 
 **Network configs:** `SepoliaConfig`, `MainnetConfig`, `HardhatConfig`.
 
-**Pending unshield:** `savePendingUnshield`, `loadPendingUnshield`, `clearPendingUnshield`.
+**Pending unshield:** `savePendingUnshield`, `loadPendingUnshield`, `loadPendingUnshieldRequest`, `clearPendingUnshield`. Type: `PendingUnshieldRequest`.
 
 **Types:** `Address`, `ZamaSDKConfig`, `ReadonlyTokenConfig`, `NetworkType`, `RelayerSDK`, `RelayerSDKStatus`, `EncryptResult`, `EncryptParams`, `UserDecryptParams`, `PublicDecryptResult`, `KeypairType`, `EIP712TypedData`, `DelegatedUserDecryptParams`, `KmsDelegatedUserDecryptEIP712Type`, `ZKProofLike`, `InputProofBytesType`, `StoredCredentials`, `GenericSigner`, `GenericStorage`, `TransactionReceipt`, `TransactionResult`, `UnshieldCallbacks`.
 
 **Errors:** `ZamaError`, `ZamaErrorCode`, `SigningRejectedError`, `SigningFailedError`, `EncryptionFailedError`, `DecryptionFailedError`, `ApprovalFailedError`, `TransactionRevertedError`, `InvalidKeypairError`, `NoCiphertextError`, `RelayerRequestFailedError`, `matchZamaError`.
 
-**Constants:** `ZERO_HANDLE`, `ERC7984_INTERFACE_ID`, `ERC7984_WRAPPER_INTERFACE_ID`.
+**Constants:** `ZERO_HANDLE`, `ERC7984_INTERFACE_ID`, `ERC7984_WRAPPER_INTERFACE_ID`, `ERC7984_WRAPPER_INTERFACE_ID_LEGACY`.
 
 **ABIs:** `ERC20_ABI`, `ERC20_METADATA_ABI`, `DEPLOYMENT_COORDINATOR_ABI`, `ERC165_ABI`, `ENCRYPTION_ABI`, `TRANSFER_BATCHER_ABI`, `WRAPPER_ABI`, `BATCH_SWAP_ABI`.
 
-**Events:** `RawLog`, `ConfidentialTransferEvent`, `WrappedEvent`, `UnwrapRequestedEvent`, `UnwrappedFinalizedEvent`, `UnwrappedStartedEvent`, `OnChainEvent`, `Topics`, `TOKEN_TOPICS`.
+**Events:** `RawLog`, `ConfidentialTransferEvent`, `WrappedEvent`, `UnwrapRequestedEvent`, `UnwrapFinalizedEvent`, `UnwrappedFinalizedEvent`, `UnwrappedStartedEvent`, `OnChainEvent`, `Topics`, `TOKEN_TOPICS`.
 
-**Event decoders:** `decodeConfidentialTransfer`, `decodeWrapped`, `decodeUnwrapRequested`, `decodeUnwrappedFinalized`, `decodeUnwrappedStarted`, `decodeOnChainEvent`, `decodeOnChainEvents`, `findUnwrapRequested`, `findWrapped`.
-
-**Activity feed:** `ActivityDirection`, `ActivityType`, `ActivityAmount`, `ActivityLogMetadata`, `ActivityItem`, `parseActivityFeed`, `extractEncryptedHandles`, `applyDecryptedValues`, `sortByBlockNumber`.
+**Event decoders:** `decodeConfidentialTransfer`, `decodeWrapped`, `decodeUnwrapRequested`, `decodeUnwrapFinalized`, `decodeUnwrappedFinalized`, `decodeUnwrappedStarted`, `decodeOnChainEvent`, `decodeOnChainEvents`, `findUnwrapRequested`, `findWrapped`.
 
 **Contract call builders:** `confidentialBalanceOfContract`, `confidentialTransferContract`, `confidentialTransferFromContract`, `isOperatorContract`, `unwrapContract`, `unwrapFromBalanceContract`, `finalizeUnwrapContract`, `setOperatorContract`, `underlyingContract`, `inferredTotalSupplyContract`, `wrapContract`, `supportsInterfaceContract`, `isConfidentialTokenContract`, `isConfidentialWrapperContract`, `nameContract`, `symbolContract`, `decimalsContract`, `allowanceContract`, `approveContract`, `confidentialTotalSupplyContract`, `totalSupplyContract`, `rateContract`.

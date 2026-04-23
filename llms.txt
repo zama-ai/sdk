@@ -30,7 +30,6 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [Unshield tokens](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/unshield-tokens.md): Convert confidential tokens back to public ERC-20 by unshielding them.
 - [Check balances](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/check-balances.md): Decrypt and read confidential token balances using the SDK and React hooks.
 - [Handle errors](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/handle-errors.md): Catch, match, and recover from SDK errors in your application.
-- [Activity feeds](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/activity-feeds.md): Parse on-chain events into a user-friendly activity feed with decrypted amounts.
 - [Node.js backend](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/node-js-backend.md): How to use the SDK in a Node.js server environment with worker threads and per-request isolation.
 - [Web extensions](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/web-extensions.md): How to use the SDK in MV3 Chrome extensions with persistent session storage.
 - [Local development](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/local-development.md): How to use the cleartext relayer for local Hardhat nodes and custom chain deployments without a KMS or gateway.
@@ -57,7 +56,7 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [Error types](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/errors.md): All SDK error classes, codes, and the matchZamaError utility.
 - [Contract call builders](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/contract-builders.md): Low-level builders that return raw contract call configs for viem, ethers, or custom execution layers.
 - [FheArtifactCache](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/FheArtifactCache.md): Persistent cache for FHE public key and public parameters, avoiding re-downloads across sessions.
-- [Event decoders](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/event-decoders.md): Decode on-chain logs into typed event objects and build activity feeds.
+- [Event decoders](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/event-decoders.md): Decode on-chain logs into typed event objects.
 - [Delegated decryption](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/delegation.md): Delegation lets one address grant another address the right to decrypt its confidential balance.
 - [Network presets](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/network-presets.md): Pre-configured network settings for Ethereum Mainnet, Sepolia, and Hardhat.
 
@@ -94,7 +93,6 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [useTokenAddress](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useTokenAddress.md): Reverse lookup -- find the plain ERC-20 address for a given confidential token.
 - [useIsConfidentialTokenValid](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsConfidentialTokenValid.md): Check whether a confidential token is registered and valid in the on-chain registry.
 - [useMetadata](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useMetadata.md): Get token name, symbol, and decimals in one call.
-- [useActivityFeed](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useActivityFeed.md): Parse event logs into a classified, optionally decrypted activity feed.
 - [useZamaSDK](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useZamaSDK.md): Hook to access the raw ZamaSDK instance from ZamaProvider context.
 - [useToken](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useToken.md): Hook to get a memoized Token instance for a given address.
 - [useReadonlyToken](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useReadonlyToken.md): Hook to get a memoized ReadonlyToken instance for read-only access.
