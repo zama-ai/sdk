@@ -353,6 +353,9 @@ export interface ApproveUnderlyingSubmittedEvent extends BaseEvent {
 }
 
 // @public
+export type AtLeastOneChain = readonly [FheChain, ...FheChain[]];
+
+// @public
 export class BalanceCheckUnavailableError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
@@ -554,10 +557,15 @@ export const chromeSessionStorage: ChromeSessionStorage;
 // @public
 export function clearPendingUnshield(storage: GenericStorage, wrapperAddress: Address): Promise<void>;
 
-// Warning: (ae-forgotten-export) The symbol "CleartextChainConfig" needs to be exported by the entry point index.d.ts
-//
 // @public
 export function cleartext(chain: CleartextChainConfig): CleartextTransportConfig;
+
+// Warning: (ae-forgotten-export) The symbol "CleartextConfig" needs to be exported by the entry point index.d.ts
+//
+// @public
+export type CleartextChainConfig = Partial<CleartextConfig> & {
+    executorAddress: CleartextConfig["executorAddress"];
+};
 
 // @public
 export interface CleartextTransportConfig {
@@ -11702,12 +11710,16 @@ export class NoCiphertextError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
 
+// Warning: (ae-forgotten-export) The symbol "RelayerNodeConfig" needs to be exported by the entry point index.d.ts
+//
+// @public
+export type NodeRelayerOptions = Partial<Omit<RelayerNodeConfig, "chain">>;
+
 // @public
 export interface NodeTransportConfig {
     chain?: Partial<ExtendedFhevmInstanceConfig>;
     // @internal (undocumented)
     readonly createRelayer: CreateRelayerFn;
-    // Warning: (ae-forgotten-export) The symbol "NodeRelayerOptions" needs to be exported by the entry point index.d.ts
     options?: NodeRelayerOptions;
     // (undocumented)
     readonly type: "node";
@@ -13196,13 +13208,19 @@ export interface RelayerWebSecurityConfig {
     integrityCheck?: boolean;
 }
 
-// Warning: (ae-forgotten-export) The symbol "ResolvedChainTransport" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 export function resolveChainTransports(chains: readonly FheChain[], transports: Readonly<Record<number, TransportConfig>>): Map<number, ResolvedChainTransport>;
 
 // @public (undocumented)
-export function resolveStorage(storage: GenericStorage | undefined, sessionStorage: GenericStorage | undefined): {
+export interface ResolvedChainTransport {
+    // (undocumented)
+    chain: ExtendedFhevmInstanceConfig;
+    // (undocumented)
+    transport: TransportConfig;
+}
+
+// @public (undocumented)
+export function resolveStorage(storage?: GenericStorage | undefined, sessionStorage?: GenericStorage | undefined): {
     storage: GenericStorage;
     sessionStorage: GenericStorage;
 };
@@ -18800,10 +18818,11 @@ export interface UserDecryptParams {
     startTimestamp: number;
 }
 
-// Warning: (ae-forgotten-export) The symbol "WebRelayerOptions" needs to be exported by the entry point index.d.ts
-//
 // @public
 export function web(chain?: Partial<ExtendedFhevmInstanceConfig>, options?: WebRelayerOptions): WebTransportConfig;
+
+// @public
+export type WebRelayerOptions = Partial<Omit<RelayerWebConfig, "chain">>;
 
 // @public
 export interface WebTransportConfig {
@@ -19906,30 +19925,26 @@ export type WriteFunctionName<TAbi extends ContractAbi = ContractAbi> = Contract
 
 // @public
 export interface ZamaConfig {
-    // @internal (undocumented)
-    readonly [__brand]: true;
-    // @internal (undocumented)
+    // (undocumented)
     readonly chains: readonly FheChain[];
-    // @internal (undocumented)
+    // (undocumented)
     readonly keypairTTL: number | undefined;
-    // @internal (undocumented)
+    // (undocumented)
     readonly onEvent: ZamaSDKEventListener | undefined;
-    // @internal (undocumented)
+    // (undocumented)
     readonly registryTTL: number | undefined;
-    // @internal (undocumented)
+    // (undocumented)
     readonly relayer: RelayerSDK;
-    // @internal (undocumented)
+    // (undocumented)
     readonly sessionStorage: GenericStorage;
-    // @internal (undocumented)
+    // (undocumented)
     readonly sessionTTL: number | "infinite" | undefined;
-    // @internal (undocumented)
+    // (undocumented)
     readonly signer: GenericSigner;
-    // @internal (undocumented)
+    // (undocumented)
     readonly storage: GenericStorage;
 }
 
-// Warning: (ae-forgotten-export) The symbol "AtLeastOneChain" needs to be exported by the entry point index.d.ts
-//
 // @public
 export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChain> {
     chains: TChains;
