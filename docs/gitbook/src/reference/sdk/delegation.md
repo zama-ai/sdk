@@ -229,12 +229,12 @@ Because the ACL contract resets the expiry to `0n` on revocation, `DelegationNot
 
 These are caught **before** submitting a transaction, saving gas and providing actionable messages:
 
-| Error                                   | When                                                                          |
-| --------------------------------------- | ----------------------------------------------------------------------------- |
-| `DelegationExpirationTooSoonError`      | Expiration date is less than 1 hour in the future                             |
-| `DelegationSelfNotAllowedError`         | Delegate address equals the connected wallet (`delegate === msg.sender`)      |
-| `DelegationDelegateEqualsContractError` | Delegate address equals the token contract address                            |
-| `DelegationExpiryUnchangedError`        | New expiration date matches the current one (no on-chain change needed)       |
+| Error                                   | When                                                                                                                                                                               |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DelegationExpirationTooSoonError`      | Expiration date is less than 1 hour in the future                                                                                                                                  |
+| `DelegationSelfNotAllowedError`         | Delegate address equals the connected wallet (`delegate === msg.sender`)                                                                                                           |
+| `DelegationDelegateEqualsContractError` | Delegate address equals the token contract address                                                                                                                                 |
+| `DelegationExpiryUnchangedError`        | New expiration date matches the current one (no on-chain change needed)                                                                                                            |
 | `DelegationNotFoundError`               | Revoking a delegation that was never established, or reading via `decryptBalanceAs` / `batchDecryptBalancesAs` when the delegation is missing or has been revoked (expiry is zero) |
 
 ### On-chain revert errors
