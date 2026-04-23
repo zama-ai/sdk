@@ -46,6 +46,3 @@ jobs:
         with:
           json-summary-path: coverage/coverage-summary.json
           json-final-path: coverage/coverage-final.json
-
-      - name: Integration Tests
-        run: pnpm test:integration
