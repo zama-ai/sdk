@@ -1,8 +1,14 @@
 # Changelog
 
+## [3.0.0-alpha.14](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.13...v3.0.0-alpha.14) (2026-04-23)
+
 ## [3.0.0-alpha.13](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.12...v3.0.0-alpha.13) (2026-04-22)
 
 ## [3.0.0-alpha.12](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.11...v3.0.0-alpha.12) (2026-04-21)
+
+## [3.0.0](https://github.com/zama-ai/sdk/compare/v2.5.0...v3.0.0) (2026-04-22)
+
+## [2.5.0](https://github.com/zama-ai/sdk/compare/v2.4.0...v2.5.0) (2026-04-17)
 
 ### Features
 
