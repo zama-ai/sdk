@@ -133,6 +133,8 @@ This repository includes an opt-in [Claude Code](https://docs.anthropic.com/en/d
 
 To use it, install [Claude Code](https://docs.anthropic.com/en/docs/claude-code) and run `pnpm setup:claude`.
 
+For agentic SDK integrations, start with [`llms.txt`](./llms.txt) as the compact documentation map. Use [`llms-full.txt`](./llms-full.txt) only with agents that support large context windows, and see [Build with an LLM](./docs/gitbook/src/guides/build-with-an-llm.md) for the recommended workflow.
+
 ### Contributing
 
 There are two ways to contribute to Zama SDK:
