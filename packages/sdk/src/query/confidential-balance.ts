@@ -6,18 +6,11 @@ import { filterQueryOptions } from "./utils";
 
 export interface ConfidentialBalanceQueryConfig {
   tokenAddress: Address;
-  owner?: Address;
+  account?: Address;
   query?: Record<string, unknown>;
 }
 
-/**
- * Query options for a single confidential token balance.
- *
- * **Owner gating:** this factory does not gate on `owner !== undefined` because
- * it is also used outside React with an explicit owner. React consumers should
- * apply the gate at the hook level (e.g. `enabled: ... && owner !== undefined`),
- * as {@link useConfidentialBalance} does.
- */
+/** Query options for a single confidential token balance. Auto-gated on `account`. */
 export function confidentialBalanceQueryOptions(
   token: ReadonlyToken,
   config: ConfidentialBalanceQueryConfig,
@@ -31,11 +24,11 @@ export function confidentialBalanceQueryOptions(
 
   return {
     ...filterQueryOptions(queryOpts),
-    queryKey: zamaQueryKeys.confidentialBalance.owner(config.tokenAddress, config.owner),
+    queryKey: zamaQueryKeys.confidentialBalance.owner(config.tokenAddress, config.account),
     queryFn: async (context) => {
       const [, { owner: keyOwner }] = context.queryKey;
       return token.balanceOf(keyOwner);
     },
-    enabled: queryOpts?.enabled !== false,
+    enabled: Boolean(config.account) && queryOpts?.enabled !== false,
   };
 }

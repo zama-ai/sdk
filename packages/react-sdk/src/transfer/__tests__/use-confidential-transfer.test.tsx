@@ -256,7 +256,7 @@ describe("useConfidentialTransfer", () => {
     const { Wrapper } = createWrapper({ signer, relayer });
     const { result } = renderHook(
       () => ({
-        balance: useConfidentialBalance({ tokenAddress: TOKEN }),
+        balance: useConfidentialBalance({ tokenAddress: TOKEN, account: USER }),
         transfer: useConfidentialTransfer({ tokenAddress: TOKEN }),
       }),
       { wrapper: Wrapper },

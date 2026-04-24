@@ -14,7 +14,7 @@ describe("confidentialBalancesQueryOptions", () => {
   }) => {
     const t1 = createMockReadonlyToken(tokenA);
     const t2 = createMockReadonlyToken(tokenB);
-    const options = confidentialBalancesQueryOptions([t1, t2], { owner });
+    const options = confidentialBalancesQueryOptions([t1, t2], { account: owner });
 
     expect(options.queryKey).toEqual([
       "zama.confidentialBalances",
@@ -22,15 +22,22 @@ describe("confidentialBalancesQueryOptions", () => {
     ]);
   });
 
-  test("enabled defaults to true when tokens are provided", ({ createMockReadonlyToken }) => {
+  test("enabled is true when tokens and owner are provided", ({ createMockReadonlyToken }) => {
     const t1 = createMockReadonlyToken(tokenA);
-    const options = confidentialBalancesQueryOptions([t1]);
+    const options = confidentialBalancesQueryOptions([t1], { account: owner });
 
     expect(options.enabled).toBe(true);
   });
 
+  test("enabled is false when owner is undefined", ({ createMockReadonlyToken }) => {
+    const t1 = createMockReadonlyToken(tokenA);
+    const options = confidentialBalancesQueryOptions([t1]);
+
+    expect(options.enabled).toBe(false);
+  });
+
   test("enabled is false when the token list is empty", () => {
-    const options = confidentialBalancesQueryOptions([]);
+    const options = confidentialBalancesQueryOptions([], { account: owner });
 
     expect(options.enabled).toBe(false);
   });
@@ -38,6 +45,7 @@ describe("confidentialBalancesQueryOptions", () => {
   test("enabled is false when query.enabled is false", ({ createMockReadonlyToken }) => {
     const t1 = createMockReadonlyToken(tokenA);
     const options = confidentialBalancesQueryOptions([t1], {
+      account: owner,
       query: { enabled: false },
     });
 
@@ -58,7 +66,7 @@ describe("confidentialBalancesQueryOptions", () => {
     };
     const spy = vi.spyOn(ReadonlyToken, "batchBalancesOf").mockResolvedValue(mockResult);
 
-    const options = confidentialBalancesQueryOptions([t1, t2], { owner });
+    const options = confidentialBalancesQueryOptions([t1, t2], { account: owner });
 
     const query = await options.queryFn(mockQueryContext(options.queryKey));
 
@@ -77,7 +85,7 @@ describe("confidentialBalancesQueryOptions", () => {
       new DecryptionFailedError("all failed"),
     );
 
-    const options = confidentialBalancesQueryOptions([t1], { owner });
+    const options = confidentialBalancesQueryOptions([t1], { account: owner });
 
     await expect(options.queryFn(mockQueryContext(options.queryKey))).rejects.toThrow(
       DecryptionFailedError,
