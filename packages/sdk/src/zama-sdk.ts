@@ -241,7 +241,11 @@ export class ZamaSDK {
       this.provider.getChainId(),
     ]);
     if (signerChainId !== providerChainId) {
-      throw new ChainMismatchError({ operation, signerChainId, providerChainId });
+      throw new ChainMismatchError({
+        operation,
+        signerChainId,
+        providerChainId,
+      });
     }
     return signerChainId;
   }
@@ -524,7 +528,11 @@ export class ZamaSDK {
    */
   async publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult> {
     if (handles.length === 0) {
-      return { clearValues: {}, decryptionProof: "0x", abiEncodedClearValues: "0x" };
+      return {
+        clearValues: {},
+        decryptionProof: "0x",
+        abiEncodedClearValues: "0x",
+      };
     }
 
     try {
@@ -546,8 +554,9 @@ export class ZamaSDK {
    */
   async revokeSession(): Promise<void> {
     await this.#identityReady;
-    const address = this.#lastAddress ?? (await this.signer.getAddress());
-    const chainId = this.#lastChainId ?? (await this.signer.getChainId());
+    const signer = this.signer;
+    const address = this.#lastAddress ?? (await signer.getAddress());
+    const chainId = this.#lastChainId ?? (await signer.getChainId());
     const storeKey = await CredentialsManager.computeStoreKey(address, chainId);
     await this.credentials.revokeByKey(storeKey);
     await this.cache.clearForRequester(address);

@@ -1,4 +1,4 @@
-import type { Signer, ethers } from "ethers";
+import type { Provider, Signer } from "ethers";
 import type { EIP1193Provider } from "viem";
 import type { AtLeastOneChain } from "../chains";
 import type { ZamaConfigBase } from "../config/types";
@@ -16,5 +16,5 @@ export type ZamaConfigEthers<TChains extends AtLeastOneChain = AtLeastOneChain> 
     (
       | { ethereum: EIP1193Provider; signer?: never; provider?: never }
       | { signer: Signer; ethereum?: never; provider?: never }
-      | { provider: ethers.Provider; ethereum?: never; signer?: never }
+      | { ethereum: EIP1193Provider; provider: Provider; signer?: never }
     );

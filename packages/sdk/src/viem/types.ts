@@ -7,6 +7,6 @@ export interface ZamaConfigViem<
   TChains extends AtLeastOneChain = AtLeastOneChain,
 > extends ZamaConfigBase<TChains> {
   publicClient: PublicClient;
-  walletClient?: WalletClient;
+  walletClient: WalletClient;
   ethereum?: EIP1193Provider;
 }
