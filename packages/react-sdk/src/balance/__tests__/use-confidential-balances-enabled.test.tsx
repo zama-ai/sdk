@@ -1,6 +1,5 @@
 import { renderHook } from "@testing-library/react";
 import type { Address } from "@zama-fhe/sdk";
-import { signerAddressQueryOptions } from "@zama-fhe/sdk/query";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { useQuery } from "../../utils/query";
 import { useConfidentialBalances } from "../use-confidential-balances";
@@ -14,21 +13,24 @@ vi.mock("../../utils/query", async () => {
   return { ...actual, useQuery: vi.fn() };
 });
 
+const mockSdk = {
+  signer: { getAddress: vi.fn().mockResolvedValue(OWNER) },
+  provider: { readContract: vi.fn() },
+  createReadonlyToken: vi.fn((address: Address) => ({ address })),
+};
+
 vi.mock("../../provider", () => ({
-  useZamaSDK: vi.fn(() => ({
-    signer: { getAddress: vi.fn().mockResolvedValue(OWNER) },
-    createReadonlyToken: vi.fn((address: Address) => ({ address })),
-  })),
+  useZamaSDK: vi.fn(() => mockSdk),
+  useSignerAddress: vi.fn(() => ({ data: OWNER })),
+}));
+
+vi.mock("../../use-signer-address", () => ({
+  useSignerAddress: vi.fn(() => ({ data: OWNER })),
 }));
 
 vi.mock("@zama-fhe/sdk/query", () => ({
   confidentialBalancesQueryOptions: vi.fn(() => ({
     queryKey: ["balances"],
-    queryFn: vi.fn(),
-    enabled: true,
-  })),
-  signerAddressQueryOptions: vi.fn(() => ({
-    queryKey: ["signerAddress"],
     queryFn: vi.fn(),
     enabled: true,
   })),
@@ -38,12 +40,10 @@ vi.mock("@zama-fhe/sdk/query", () => ({
 describe("useConfidentialBalances enabled propagation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useQuery)
-      .mockReturnValueOnce({ data: OWNER } as ReturnType<typeof useQuery>)
-      .mockReturnValueOnce({
-        data: new Map<Address, bigint>(),
-        fetchStatus: "idle",
-      } as ReturnType<typeof useQuery>);
+    vi.mocked(useQuery).mockReturnValue({
+      data: new Map<Address, bigint>(),
+      fetchStatus: "idle",
+    } as ReturnType<typeof useQuery>);
   });
 
   test("disables balance query when user passes enabled=false", () => {
@@ -51,7 +51,7 @@ describe("useConfidentialBalances enabled propagation", () => {
       useConfidentialBalances({ tokenAddresses: [TOKEN, TOKEN_B] }, { enabled: false }),
     );
 
-    const balanceQueryOptions = vi.mocked(useQuery).mock.calls[1]?.[0] as
+    const balanceQueryOptions = vi.mocked(useQuery).mock.calls[0]?.[0] as
       | { enabled?: boolean }
       | undefined;
 
@@ -59,7 +59,7 @@ describe("useConfidentialBalances enabled propagation", () => {
     expect(balanceQueryOptions?.enabled).toBe(false);
   });
 
-  test("uses a signer-only address query key and disables balance for other falsy enabled values", () => {
+  test("disables balance query for other falsy enabled values", () => {
     renderHook(() =>
       useConfidentialBalances(
         { tokenAddresses: [TOKEN, TOKEN_B] },
@@ -67,11 +67,7 @@ describe("useConfidentialBalances enabled propagation", () => {
       ),
     );
 
-    expect(vi.mocked(signerAddressQueryOptions).mock.calls[0]).toEqual([
-      expect.objectContaining({ getAddress: expect.any(Function) }),
-    ]);
-
-    const balanceQueryOptions = vi.mocked(useQuery).mock.calls[1]?.[0] as
+    const balanceQueryOptions = vi.mocked(useQuery).mock.calls[0]?.[0] as
       | { enabled?: boolean }
       | undefined;
 

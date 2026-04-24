@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.0-alpha.16](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.15...v3.0.0-alpha.16) (2026-04-24)
+
+### Features
+
+- **docs:** add LLM-ready SDK docs corpus ([#248](https://github.com/zama-ai/sdk/issues/248)) ([964bd5d]())
+- introduce concrete signer / provider split ([#268](https://github.com/zama-ai/sdk/issues/268)) ([ae45dfd]())
+
 ## [3.0.0-alpha.15](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.14...v3.0.0-alpha.15) (2026-04-23)
 
 ### Bug Fixes

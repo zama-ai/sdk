@@ -1,6 +1,6 @@
 import type { FheChain } from "../chains";
 import { CompositeRelayer } from "../relayer/composite-relayer";
-import type { GenericSigner } from "../types";
+import type { GenericProvider, GenericSigner } from "../types";
 import { resolveChainTransports, resolveStorage } from "./resolve";
 import type { TransportConfig } from "./transports";
 import type { ZamaConfig, ZamaConfigBase } from "./types";
@@ -25,7 +25,11 @@ function mergeRegistryAddresses(
  * Each entry point (`/viem`, `/ethers`, wagmi) creates its signer,
  * then delegates here for the common resolution work.
  */
-export function buildZamaConfig(signer: GenericSigner, params: ZamaConfigBase): ZamaConfig {
+export function buildZamaConfig(
+  signer: GenericSigner,
+  provider: GenericProvider,
+  params: ZamaConfigBase,
+): ZamaConfig {
   const { storage, sessionStorage } = resolveStorage(params.storage, params.sessionStorage);
   const chains = mergeRegistryAddresses(params.chains, params.transports);
   const chainTransports = resolveChainTransports(chains, params.transports);
@@ -34,6 +38,7 @@ export function buildZamaConfig(signer: GenericSigner, params: ZamaConfigBase): 
   return {
     chains,
     relayer,
+    provider,
     signer,
     storage,
     sessionStorage,

@@ -129,6 +129,7 @@ import { findRevokedDelegationForUserDecryption } from '@zama-fhe/sdk';
 import { findUnwrapRequested } from '@zama-fhe/sdk';
 import { findWrapped } from '@zama-fhe/sdk';
 import { generateKeypairMutationOptions } from '@zama-fhe/sdk/query';
+import { GenericProvider } from '@zama-fhe/sdk';
 import { GenericSigner } from '@zama-fhe/sdk';
 import { GenericStorage } from '@zama-fhe/sdk';
 import { getDelegationExpiryContract } from '@zama-fhe/sdk';
@@ -250,6 +251,7 @@ import { UseMutationOptions } from '@tanstack/react-query';
 import { UseMutationResult } from '@tanstack/react-query';
 import { UseQueryOptions } from '@tanstack/react-query';
 import { UserDecryptParams } from '@zama-fhe/sdk';
+import { UseQueryResult } from '@tanstack/react-query';
 import { UserDecryptQueryConfig } from '@zama-fhe/sdk/query';
 import { userDecryptQueryOptions } from '@zama-fhe/sdk/query';
 import { wrapContract } from '@zama-fhe/sdk';
@@ -960,7 +962,13 @@ export interface UseShieldConfig extends UseZamaConfig {
 }
 
 // @public
-export function useToken(config: UseZamaConfig): _$_zama_fhe_sdk0.Token;
+export function useSignerAddress(): UseQueryResult<Address>;
+
+// @public
+export function useSignerAddressSuspense(): _$_tanstack_react_query0.UseSuspenseQueryResult<`0x${string}`, Error>;
+
+// @public
+export function useToken(config: UseZamaConfig): Token;
 
 // @public
 export function useTokenAddress(input: {

@@ -10,6 +10,9 @@
 // Provider
 export { ZamaProvider, useZamaSDK, type ZamaProviderProps } from "./provider";
 
+// Signer address hooks
+export { useSignerAddress, useSignerAddressSuspense } from "./use-signer-address";
+
 // SDK method hooks
 export { useEncrypt } from "./relayer/use-encrypt";
 export { useUserDecrypt, type UseUserDecryptResult } from "./relayer/use-user-decrypt";

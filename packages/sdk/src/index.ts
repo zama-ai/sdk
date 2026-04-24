@@ -112,6 +112,7 @@ export {
 } from "./credentials";
 export type {
   GenericSigner,
+  GenericProvider,
   GenericStorage,
   SignerLifecycleCallbacks,
   StoredCredentials,
@@ -185,6 +186,7 @@ export {
   NoCiphertextError,
   RelayerRequestFailedError,
   ConfigurationError,
+  ChainMismatchError,
   DelegationSelfNotAllowedError,
   DelegationCooldownError,
   DelegationNotFoundError,

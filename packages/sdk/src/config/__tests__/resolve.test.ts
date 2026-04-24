@@ -184,10 +184,16 @@ describe("buildZamaConfig (mergeRegistryAddresses)", () => {
     getChainId: vi.fn().mockResolvedValue(11155111),
     signTypedData: vi.fn(),
   };
+  const mockProvider = {
+    getChainId: vi.fn().mockResolvedValue(11155111),
+    readContract: vi.fn(),
+    waitForTransactionReceipt: vi.fn(),
+    getBlockTimestamp: vi.fn(),
+  };
 
   it("propagates transport registryAddress to chain config", () => {
     const customRegistry = "0xCustomRegistry" as `0x${string}`;
-    const config = buildZamaConfig(mockSigner as any, {
+    const config = buildZamaConfig(mockSigner as any, mockProvider as any, {
       chains: [sepoliaChain],
       transports: {
         [11155111]: web({ registryAddress: customRegistry }),
@@ -197,7 +203,7 @@ describe("buildZamaConfig (mergeRegistryAddresses)", () => {
   });
 
   it("preserves chain registryAddress when transport has none", () => {
-    const config = buildZamaConfig(mockSigner as any, {
+    const config = buildZamaConfig(mockSigner as any, mockProvider as any, {
       chains: [sepoliaChain],
       transports: { [11155111]: web() },
     });

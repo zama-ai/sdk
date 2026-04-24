@@ -33,6 +33,12 @@ describe("zamaQueryKeys", () => {
     expect(key[0]).toMatch(/^zama\./);
   });
 
+  test("signerAddress scope key is stable per scope and namespaced", () => {
+    expect(zamaQueryKeys.signerAddress.scope(1)).toEqual(["zama.signerAddress", { scope: 1 }]);
+    expect(zamaQueryKeys.signerAddress.scope(1)).toEqual(zamaQueryKeys.signerAddress.scope(1));
+    expect(zamaQueryKeys.signerAddress.scope(1)).not.toEqual(zamaQueryKeys.signerAddress.scope(2));
+  });
+
   test("tokenMetadata token key uses 2-element tuple shape", () => {
     expect(zamaQueryKeys.tokenMetadata.token(TOKEN_LOWER)).toEqual([
       "zama.tokenMetadata",
@@ -92,7 +98,7 @@ describe("zamaQueryKeys", () => {
 
   test("all parameterized keys are 2-element tuples", () => {
     const parameterizedKeys = [
-      zamaQueryKeys.signerAddress.token(TOKEN_LOWER),
+      zamaQueryKeys.signerAddress.scope(1),
       zamaQueryKeys.confidentialBalance.owner(TOKEN_LOWER, OWNER_LOWER),
       zamaQueryKeys.confidentialBalances.tokens([TOKEN_LOWER, TOKEN_B_LOWER], OWNER_LOWER),
       zamaQueryKeys.tokenMetadata.token(TOKEN_LOWER),
@@ -121,16 +127,12 @@ describe("zamaQueryKeys", () => {
       zamaQueryKeys.confidentialBalance.token(TOKEN_LOWER),
       zamaQueryKeys.confidentialBalances.tokens([TOKEN_LOWER], OWNER_LOWER),
       zamaQueryKeys.underlyingAllowance.scope(TOKEN_LOWER, OWNER_LOWER, WRAPPER_LOWER),
-      zamaQueryKeys.signerAddress.token(TOKEN_LOWER),
-      zamaQueryKeys.signerAddress.scope(1),
     ];
 
     const upperVariants = [
       zamaQueryKeys.confidentialBalance.token(TOKEN_UPPER),
       zamaQueryKeys.confidentialBalances.tokens([TOKEN_UPPER], OWNER_UPPER),
       zamaQueryKeys.underlyingAllowance.scope(TOKEN_UPPER, OWNER_UPPER, WRAPPER_UPPER),
-      zamaQueryKeys.signerAddress.token(TOKEN_UPPER),
-      zamaQueryKeys.signerAddress.scope(1),
     ];
 
     expect(lowerVariants).toEqual(upperVariants);

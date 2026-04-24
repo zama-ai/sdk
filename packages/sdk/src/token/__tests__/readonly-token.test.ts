@@ -8,8 +8,11 @@ const VALID_HANDLE2 = ("0x" + "cd".repeat(32)) as Address;
 
 describe("ReadonlyToken", () => {
   describe("balanceOf", () => {
-    it("returns 0n for zero handle without hitting relayer", async ({ readonlyToken, signer }) => {
-      vi.mocked(signer.readContract).mockResolvedValue(ZERO_HANDLE);
+    it("returns 0n for zero handle without hitting relayer", async ({
+      readonlyToken,
+      provider,
+    }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(ZERO_HANDLE);
       const balance = await readonlyToken.balanceOf();
 
       expect(balance).toBe(0n);
@@ -18,11 +21,11 @@ describe("ReadonlyToken", () => {
 
     it("decrypts non-zero handle and returns balance", async ({
       readonlyToken,
-      signer,
       handle,
       tokenAddress,
+      provider,
     }) => {
-      vi.mocked(signer.readContract).mockResolvedValue(handle);
+      vi.mocked(provider.readContract).mockResolvedValue(handle);
       vi.mocked(readonlyToken.sdk.relayer.userDecrypt).mockResolvedValue({
         [handle]: 1000n,
       });
@@ -38,8 +41,8 @@ describe("ReadonlyToken", () => {
       );
     });
 
-    it("throws ZamaError on decryption failure", async ({ readonlyToken, signer, handle }) => {
-      vi.mocked(signer.readContract).mockResolvedValue(handle);
+    it("throws ZamaError on decryption failure", async ({ readonlyToken, handle, provider }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(handle);
       vi.mocked(readonlyToken.sdk.relayer.userDecrypt).mockRejectedValue(new Error("relayer down"));
 
       await expect(readonlyToken.balanceOf()).rejects.toBeInstanceOf(ZamaError);
@@ -47,9 +50,9 @@ describe("ReadonlyToken", () => {
   });
 
   describe("allowance", () => {
-    it("reads underlying token then checks allowance", async ({ readonlyToken, signer }) => {
+    it("reads underlying token then checks allowance", async ({ readonlyToken, provider }) => {
       const UNDERLYING = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
-      vi.mocked(signer.readContract)
+      vi.mocked(provider.readContract)
         .mockResolvedValueOnce(UNDERLYING) // underlying()
         .mockResolvedValueOnce(500n); // allowance()
 
@@ -58,12 +61,12 @@ describe("ReadonlyToken", () => {
       );
 
       expect(result).toBe(500n);
-      expect(signer.readContract).toHaveBeenCalledTimes(2);
-      expect(signer.readContract).toHaveBeenNthCalledWith(
+      expect(provider.readContract).toHaveBeenCalledTimes(2);
+      expect(provider.readContract).toHaveBeenNthCalledWith(
         1,
         expect.objectContaining({ functionName: "underlying" }),
       );
-      expect(signer.readContract).toHaveBeenNthCalledWith(
+      expect(provider.readContract).toHaveBeenNthCalledWith(
         2,
         expect.objectContaining({ functionName: "allowance" }),
       );
@@ -82,12 +85,13 @@ describe("ReadonlyToken", () => {
       signer,
       tokenAddress,
       handle,
+      provider,
     }) => {
       const token1 = new ReadonlyToken(sdk, tokenAddress);
       const token2 = new ReadonlyToken(sdk, TOKEN2);
       const normalizedToken2 = getAddress(TOKEN2);
       // Both balanceOf calls run concurrently — key mocks by address.
-      vi.mocked(signer.readContract).mockImplementation(async ({ address }) => {
+      vi.mocked(provider.readContract).mockImplementation(async ({ address }) => {
         if (address === tokenAddress) {
           return handle;
         }
@@ -112,16 +116,16 @@ describe("ReadonlyToken", () => {
 
     it("captures per-token decryption failures in the errors map", async ({
       sdk,
-      signer,
       tokenAddress,
       handle,
+      provider,
     }) => {
       const token1 = new ReadonlyToken(sdk, tokenAddress);
       const token2 = new ReadonlyToken(sdk, TOKEN2);
       const normalizedToken2 = getAddress(TOKEN2);
       // Both balanceOf calls run concurrently via pLimit — key mocks by
       // contract address so ordering doesn't matter.
-      vi.mocked(signer.readContract).mockImplementation(async ({ address }) => {
+      vi.mocked(provider.readContract).mockImplementation(async ({ address }) => {
         if (address === tokenAddress) {
           return handle;
         }
@@ -162,13 +166,13 @@ describe("ReadonlyToken", () => {
 
     it("throws when every token fails to decrypt", async ({
       sdk,
-      signer,
       tokenAddress,
       handle,
+      provider,
     }) => {
       const token1 = new ReadonlyToken(sdk, tokenAddress);
       const token2 = new ReadonlyToken(sdk, TOKEN2);
-      vi.mocked(signer.readContract)
+      vi.mocked(provider.readContract)
         .mockResolvedValueOnce(handle)
         .mockResolvedValueOnce(VALID_HANDLE2);
       vi.mocked(sdk.relayer.userDecrypt).mockRejectedValue(new Error("relayer offline"));
@@ -180,13 +184,13 @@ describe("ReadonlyToken", () => {
 
     it("wraps non-ZamaError per-token failures as DecryptionFailedError preserving the cause", async ({
       sdk,
-      signer,
       tokenAddress,
       handle,
+      provider,
     }) => {
       const token1 = new ReadonlyToken(sdk, tokenAddress);
       const token2 = new ReadonlyToken(sdk, TOKEN2);
-      vi.mocked(signer.readContract)
+      vi.mocked(provider.readContract)
         .mockResolvedValueOnce(handle)
         .mockResolvedValueOnce(VALID_HANDLE2);
       const rawError = new TypeError("malformed response");
@@ -268,12 +272,12 @@ describe("ZamaSDK token factory", () => {
 
   it("throws when handle not found in decrypt result", async ({
     sdk,
-    signer,
     tokenAddress,
     handle,
+    provider,
   }) => {
     const token = new ReadonlyToken(sdk, tokenAddress);
-    vi.mocked(signer.readContract).mockResolvedValue(handle);
+    vi.mocked(provider.readContract).mockResolvedValue(handle);
     vi.mocked(sdk.relayer.userDecrypt).mockResolvedValue({});
 
     await expect(token.balanceOf()).rejects.toBeInstanceOf(DecryptionFailedError);

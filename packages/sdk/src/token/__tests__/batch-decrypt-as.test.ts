@@ -1,5 +1,5 @@
 import { describe, expect, vi } from "vitest";
-import { test } from "../../test-fixtures";
+import { createMockProvider, test } from "../../test-fixtures";
 import { ReadonlyToken } from "../readonly-token";
 import { MAX_UINT64 } from "../../contracts/constants";
 import type { Address } from "viem";
@@ -50,9 +50,13 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
   }) => {
     // The fixture signer is the connected user; the delegate is DELEGATE
     const delegateSigner = createMockSigner(DELEGATE);
-    const delegateSdk = createSDK({ signer: delegateSigner });
+    const delegateProvider = createMockProvider();
+    const delegateSdk = createSDK({
+      signer: delegateSigner,
+      provider: delegateProvider,
+    });
 
-    vi.mocked(delegateSigner.readContract)
+    vi.mocked(delegateProvider.readContract)
       .mockResolvedValueOnce(HANDLE_A) // confidentialBalanceOf(tokenA)
       .mockResolvedValueOnce(HANDLE_B) // confidentialBalanceOf(tokenB)
       .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry → permanent
@@ -92,10 +96,14 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     createSDK,
   }) => {
     const delegateSigner = createMockSigner(DELEGATE);
-    const delegateSdk = createSDK({ signer: delegateSigner });
+    const delegateProvider = createMockProvider();
+    const delegateSdk = createSDK({
+      signer: delegateSigner,
+      provider: delegateProvider,
+    });
     const ZERO = ("0x" + "00".repeat(32)) as Handle;
 
-    vi.mocked(delegateSigner.readContract).mockResolvedValueOnce(ZERO);
+    vi.mocked(delegateProvider.readContract).mockResolvedValueOnce(ZERO);
 
     const token = new ReadonlyToken(delegateSdk, TOKEN_A);
 
@@ -107,7 +115,7 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
     // Pre-flight is skipped only when every handle is zero — zero balances
     // need no authorization — so getDelegationExpiry never calls readContract.
-    expect(delegateSigner.readContract).toHaveBeenCalledTimes(1);
+    expect(delegateProvider.readContract).toHaveBeenCalledTimes(1);
   });
 
   test("runs pre-flight delegation check even when balance is pre-cached", async ({
@@ -116,11 +124,15 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     createSDK,
   }) => {
     const delegateSigner = createMockSigner(DELEGATE);
-    const delegateSdk = createSDK({ signer: delegateSigner });
+    const delegateProvider = createMockProvider();
+    const delegateSdk = createSDK({
+      signer: delegateSigner,
+      provider: delegateProvider,
+    });
     // Pre-populate cache: ownerAddress = DELEGATOR (default for batchDecryptBalancesAs)
     await delegateSdk.cache.set(DELEGATOR, TOKEN_A, HANDLE_A, 42n);
 
-    vi.mocked(delegateSigner.readContract)
+    vi.mocked(delegateProvider.readContract)
       .mockResolvedValueOnce(HANDLE_A) // confidentialBalanceOf
       .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry → permanent
 
@@ -132,7 +144,7 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
 
     // Delegation check now fires even when the cache resolves everything, so
     // revoked delegations can't leak stale cached values.
-    expect(delegateSigner.readContract).toHaveBeenCalledTimes(2);
+    expect(delegateProvider.readContract).toHaveBeenCalledTimes(2);
     expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
     expect(balances.get(TOKEN_A)).toBe(42n);
   });
@@ -143,10 +155,14 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     createSDK,
   }) => {
     const delegateSigner = createMockSigner(DELEGATE);
-    const delegateSdk = createSDK({ signer: delegateSigner });
+    const delegateProvider = createMockProvider();
+    const delegateSdk = createSDK({
+      signer: delegateSigner,
+      provider: delegateProvider,
+    });
     await delegateSdk.cache.set(DELEGATOR, TOKEN_A, HANDLE_A, 42n);
 
-    vi.mocked(delegateSigner.readContract)
+    vi.mocked(delegateProvider.readContract)
       .mockResolvedValueOnce(HANDLE_A) // confidentialBalanceOf
       .mockResolvedValueOnce(0n); // getDelegationExpiry → revoked
 
@@ -166,9 +182,13 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     createSDK,
   }) => {
     const delegateSigner = createMockSigner(DELEGATE);
-    const delegateSdk = createSDK({ signer: delegateSigner });
+    const delegateProvider = createMockProvider();
+    const delegateSdk = createSDK({
+      signer: delegateSigner,
+      provider: delegateProvider,
+    });
 
-    vi.mocked(delegateSigner.readContract)
+    vi.mocked(delegateProvider.readContract)
       .mockResolvedValueOnce(HANDLE_A)
       .mockResolvedValueOnce(MAX_UINT64);
     vi.mocked(relayer.delegatedUserDecrypt).mockRejectedValueOnce(new Error("decrypt failed"));
@@ -192,9 +212,13 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     createSDK,
   }) => {
     const delegateSigner = createMockSigner(DELEGATE);
-    const delegateSdk = createSDK({ signer: delegateSigner });
+    const delegateProvider = createMockProvider();
+    const delegateSdk = createSDK({
+      signer: delegateSigner,
+      provider: delegateProvider,
+    });
 
-    vi.mocked(delegateSigner.readContract)
+    vi.mocked(delegateProvider.readContract)
       .mockResolvedValueOnce(HANDLE_A) // confidentialBalanceOf → non-zero, goes to uncached
       .mockResolvedValueOnce(0n); // getDelegationExpiry → no delegation
 
@@ -219,12 +243,16 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     createSDK,
   }) => {
     const delegateSigner = createMockSigner(DELEGATE);
-    const delegateSdk = createSDK({ signer: delegateSigner });
+    const delegateProvider = createMockProvider();
+    const delegateSdk = createSDK({
+      signer: delegateSigner,
+      provider: delegateProvider,
+    });
 
-    vi.mocked(delegateSigner.readContract)
+    vi.mocked(delegateProvider.readContract)
       .mockResolvedValueOnce(HANDLE_A)
       .mockResolvedValueOnce(1000n); // past timestamp
-    vi.mocked(delegateSigner.getBlockTimestamp).mockResolvedValue(2000n);
+    vi.mocked(delegateProvider.getBlockTimestamp).mockResolvedValue(2000n);
 
     const token = new ReadonlyToken(delegateSdk, TOKEN_A);
 
@@ -247,9 +275,13 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     createSDK,
   }) => {
     const delegateSigner = createMockSigner(DELEGATE);
-    const delegateSdk = createSDK({ signer: delegateSigner });
+    const delegateProvider = createMockProvider();
+    const delegateSdk = createSDK({
+      signer: delegateSigner,
+      provider: delegateProvider,
+    });
 
-    vi.mocked(delegateSigner.readContract)
+    vi.mocked(delegateProvider.readContract)
       .mockResolvedValueOnce(HANDLE_A)
       .mockResolvedValueOnce(MAX_UINT64);
     vi.mocked(relayer.delegatedUserDecrypt).mockResolvedValueOnce({ [HANDLE_A]: 42n });
@@ -262,7 +294,7 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     });
 
     expect(balances.get(TOKEN_A)).toBe(42n);
-    expect(delegateSigner.getBlockTimestamp).not.toHaveBeenCalled();
+    expect(delegateProvider.getBlockTimestamp).not.toHaveBeenCalled();
   });
 
   test("catches errors thrown by onError callback and aggregates them", async ({
@@ -271,9 +303,13 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     createSDK,
   }) => {
     const delegateSigner = createMockSigner(DELEGATE);
-    const delegateSdk = createSDK({ signer: delegateSigner });
+    const delegateProvider = createMockProvider();
+    const delegateSdk = createSDK({
+      signer: delegateSigner,
+      provider: delegateProvider,
+    });
 
-    vi.mocked(delegateSigner.readContract)
+    vi.mocked(delegateProvider.readContract)
       .mockResolvedValueOnce(HANDLE_A)
       .mockResolvedValueOnce(MAX_UINT64);
     vi.mocked(relayer.delegatedUserDecrypt).mockRejectedValueOnce(new Error("decrypt failed"));
@@ -300,10 +336,15 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     createMockStorage,
   }) => {
     const delegateSigner = createMockSigner(DELEGATE);
+    const delegateProvider = createMockProvider();
     const storage = createMockStorage();
-    const delegateSdk = createSDK({ signer: delegateSigner, storage });
+    const delegateSdk = createSDK({
+      signer: delegateSigner,
+      provider: delegateProvider,
+      storage,
+    });
 
-    vi.mocked(delegateSigner.readContract)
+    vi.mocked(delegateProvider.readContract)
       .mockResolvedValueOnce(HANDLE_A)
       .mockResolvedValueOnce(MAX_UINT64);
     vi.mocked(relayer.delegatedUserDecrypt).mockResolvedValueOnce({ [HANDLE_A]: 99n });

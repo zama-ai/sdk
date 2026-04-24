@@ -18,7 +18,7 @@ const legacyTotalSupplyAbi = [
  *
  * @example
  * ```ts
- * const handle = await signer.readContract(
+ * const handle = await provider.readContract(
  *   confidentialBalanceOfContract(tokenAddress, userAddress),
  * );
  * ```
@@ -86,7 +86,7 @@ export function confidentialTransferFromContract(
  *
  * @example
  * ```ts
- * const isApproved = await signer.readContract(
+ * const isApproved = await provider.readContract(
  *   isOperatorContract(tokenAddress, holder, spender),
  * );
  * ```
@@ -175,7 +175,7 @@ export function unwrapFromBalanceContract(
  *
  * @example
  * ```ts
- * const handle = await signer.readContract(
+ * const handle = await provider.readContract(
  *   confidentialTotalSupplyContract(tokenAddress),
  * );
  * ```
@@ -197,7 +197,7 @@ export function confidentialTotalSupplyContract(tokenAddress: Address) {
  *
  * @example
  * ```ts
- * const supply = await signer.readContract(
+ * const supply = await provider.readContract(
  *   totalSupplyContract(wrapperAddress),
  * );
  * ```
@@ -216,7 +216,7 @@ export function totalSupplyContract(wrapperAddress: Address) {
  *
  * @example
  * ```ts
- * const rate = await signer.readContract(rateContract(tokenAddress));
+ * const rate = await provider.readContract(rateContract(tokenAddress));
  * ```
  */
 export function rateContract(tokenAddress: Address) {

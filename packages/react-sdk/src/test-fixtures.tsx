@@ -6,7 +6,7 @@ import React from "react";
 import type { RelayerSDK } from "../../sdk/src/relayer/relayer-sdk";
 import { test as base } from "../../sdk/src/test-fixtures";
 import type { Token } from "../../sdk/src/token";
-import type { GenericSigner, GenericStorage } from "../../sdk/src/types";
+import type { GenericProvider, GenericSigner, GenericStorage } from "../../sdk/src/types";
 import type { ZamaConfig } from "@zama-fhe/sdk";
 import { ZamaProvider } from "./provider";
 import { createMockToken } from "./__tests__/mutation-test-helpers";
@@ -39,7 +39,8 @@ interface ReactSdkFixtures {
   createWrapper: (overrides?: Partial<ZamaConfig>) => {
     Wrapper: React.FC<{ children?: React.ReactNode }>;
     queryClient: QueryClient;
-    signer: GenericSigner | undefined;
+    signer: GenericSigner;
+    provider: GenericProvider;
     relayer: RelayerSDK;
     storage: GenericStorage;
   };
@@ -61,11 +62,15 @@ export const test = base.extend<ReactSdkFixtures>({
       }),
     );
   },
-  createWrapper: async ({ relayer, signer, storage, sessionStorage, queryClient }, use) => {
+  createWrapper: async (
+    { relayer, provider, signer, storage, sessionStorage, queryClient },
+    use,
+  ) => {
     function createWrapper(overrides?: Partial<ZamaConfig>) {
       const config: ZamaConfig = {
         chains: [],
         relayer,
+        provider,
         signer,
         storage,
         sessionStorage,
@@ -88,6 +93,7 @@ export const test = base.extend<ReactSdkFixtures>({
         Wrapper,
         queryClient,
         signer: config.signer,
+        provider: config.provider,
         relayer: config.relayer,
         storage: config.storage,
       };

@@ -40,7 +40,7 @@ export function useApproveUnderlying(
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       options?.onSuccess?.(data, variables, onMutateResult, context);
-      invalidateAfterApproveUnderlying(context.client, config.tokenAddress);
+      invalidateAfterApproveUnderlying(context.client, token.address);
     },
   });
 }

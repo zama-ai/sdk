@@ -3,8 +3,9 @@
 import { useQuery, useSuspenseQuery } from "../utils/query";
 import type { UseQueryOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
-import { signerAddressQueryOptions, underlyingAllowanceQueryOptions } from "@zama-fhe/sdk/query";
+import { underlyingAllowanceQueryOptions } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
+import { useSignerAddress, useSignerAddressSuspense } from "../use-signer-address";
 
 export { underlyingAllowanceQueryOptions };
 
@@ -38,10 +39,9 @@ export function useUnderlyingAllowance(
 ) {
   const { tokenAddress, wrapperAddress } = config;
   const sdk = useZamaSDK();
-  const addressQuery = useQuery<Address>(signerAddressQueryOptions(sdk.signer));
-  const owner = addressQuery.data;
+  const { data: owner } = useSignerAddress();
 
-  const baseOpts = underlyingAllowanceQueryOptions(sdk.signer, tokenAddress, {
+  const baseOpts = underlyingAllowanceQueryOptions(sdk, tokenAddress, {
     owner,
     wrapperAddress,
   });
@@ -71,11 +71,10 @@ export function useUnderlyingAllowance(
 export function useUnderlyingAllowanceSuspense(config: UseUnderlyingAllowanceConfig) {
   const { tokenAddress, wrapperAddress } = config;
   const sdk = useZamaSDK();
-  const addressQuery = useSuspenseQuery<Address>(signerAddressQueryOptions(sdk.signer));
-  const owner = addressQuery.data;
+  const { data: owner } = useSignerAddressSuspense();
 
   return useSuspenseQuery<bigint>(
-    underlyingAllowanceQueryOptions(sdk.signer, tokenAddress, {
+    underlyingAllowanceQueryOptions(sdk, tokenAddress, {
       owner,
       wrapperAddress,
     }),

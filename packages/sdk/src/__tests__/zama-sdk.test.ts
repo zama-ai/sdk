@@ -144,10 +144,11 @@ describe("ZamaSDK", () => {
   it("revokeSession clears session storage", async ({
     signer,
     relayer,
+    provider,
     storage,
     sessionStorage,
   }) => {
-    const sdk = new ZamaSDK({ relayer, signer, storage, sessionStorage });
+    const sdk = new ZamaSDK({ relayer, provider, signer, storage, sessionStorage });
 
     const address = await signer.getAddress();
     const chainId = await signer.getChainId();
@@ -161,10 +162,16 @@ describe("ZamaSDK", () => {
     expect(await sessionStorage.get(`signature:${storeKey}`)).toBeNull();
   });
 
-  it("revokeSession emits CredentialsRevoked event", async ({ relayer, signer, storage }) => {
+  it("revokeSession emits CredentialsRevoked event", async ({
+    relayer,
+    provider,
+    signer,
+    storage,
+  }) => {
     const events: { type: string }[] = [];
     const sdk = new ZamaSDK({
       relayer,
+      provider,
       signer,
       storage,
       onEvent: (e) => events.push(e),
@@ -179,10 +186,11 @@ describe("ZamaSDK", () => {
 
   it("revokeSession calls clearCaches on credentials manager", async ({
     relayer,
+    provider,
     signer,
     storage,
   }) => {
-    const sdk = new ZamaSDK({ relayer, signer, storage });
+    const sdk = new ZamaSDK({ relayer, provider, signer, storage });
     const clearCachesSpy = vi.spyOn(sdk.credentials, "clearCaches" as never);
 
     await sdk.revokeSession();
@@ -606,6 +614,7 @@ describe("ZamaSDK", () => {
     it("onChainChange revokes the previous chain session and tracks the new chain", async ({
       createMockRelayer,
       createMockSigner,
+      createMockProvider,
       storage,
       sessionStorage,
     }) => {
@@ -620,8 +629,10 @@ describe("ZamaSDK", () => {
         }),
       };
 
+      const mockProvider = createMockProvider();
       const sdk = new ZamaSDK({
         relayer: createMockRelayer(),
+        provider: mockProvider,
         signer,
         storage,
         sessionStorage,
@@ -639,7 +650,9 @@ describe("ZamaSDK", () => {
         expect(await sessionStorage.get(`signature:${oldKey}`)).toBeNull();
       });
 
+      // Align both signer and provider to the new chain before calling revokeSession
       (signer.getChainId as Mock).mockResolvedValue(1);
+      (mockProvider.getChainId as Mock).mockResolvedValue(1);
       const newKey = await CredentialsManager.computeStoreKey(
         "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address,
         1,
@@ -739,6 +752,7 @@ describe("ZamaSDK", () => {
 
     it("emits DecryptStart and DecryptEnd events with handles and result", async ({
       relayer,
+      provider,
       signer,
       storage,
       handle,
@@ -746,6 +760,7 @@ describe("ZamaSDK", () => {
       const events: { type: string }[] = [];
       const sdk = new ZamaSDK({
         relayer,
+        provider,
         signer,
         storage,
         onEvent: (e) => events.push(e),
@@ -771,6 +786,7 @@ describe("ZamaSDK", () => {
 
     it("emits DecryptError event with handles on failure and wraps the error", async ({
       relayer,
+      provider,
       signer,
       storage,
       handle,
@@ -778,6 +794,7 @@ describe("ZamaSDK", () => {
       const events: { type: string }[] = [];
       const sdk = new ZamaSDK({
         relayer,
+        provider,
         signer,
         storage,
         onEvent: (e) => events.push(e),
@@ -806,6 +823,7 @@ describe("ZamaSDK", () => {
 
     it("DecryptStart/End handles contain only uncached handles", async ({
       relayer,
+      provider,
       signer,
       storage,
       handle,
@@ -814,6 +832,7 @@ describe("ZamaSDK", () => {
       const handle2 = ("0x" + "cd".repeat(32)) as Handle;
       const sdk = new ZamaSDK({
         relayer,
+        provider,
         signer,
         storage,
         onEvent: (e) => events.push(e),
@@ -835,10 +854,11 @@ describe("ZamaSDK", () => {
       expect(end?.handles).toEqual([handle2]);
     });
 
-    it("does not emit events for empty handles", async ({ relayer, signer, storage }) => {
+    it("does not emit events for empty handles", async ({ relayer, provider, signer, storage }) => {
       const events: { type: string }[] = [];
       const sdk = new ZamaSDK({
         relayer,
+        provider,
         signer,
         storage,
         onEvent: (e) => events.push(e),
@@ -851,12 +871,14 @@ describe("ZamaSDK", () => {
 
     it("does not emit events when all handles are zero or cached", async ({
       relayer,
+      provider,
       signer,
       storage,
     }) => {
       const events: { type: string }[] = [];
       const sdk = new ZamaSDK({
         relayer,
+        provider,
         signer,
         storage,
         onEvent: (e) => events.push(e),

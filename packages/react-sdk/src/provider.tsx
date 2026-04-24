@@ -58,6 +58,7 @@ export function ZamaProvider({ children, config }: ZamaProviderProps) {
       new ZamaSDK({
         chains: config.chains,
         relayer: config.relayer,
+        provider: config.provider,
         signer: config.signer,
         storage: config.storage,
         sessionStorage: config.sessionStorage,
@@ -82,7 +83,7 @@ export function ZamaProvider({ children, config }: ZamaProviderProps) {
  * @example
  * ```tsx
  * const sdk = useZamaSDK();
- * const token = sdk.createReadonlyToken("0x...");
+ * const token = sdk.createToken("0x...", "0x...");
  * ```
  */
 export function useZamaSDK(): ZamaSDK {
@@ -94,6 +95,5 @@ export function useZamaSDK(): ZamaSDK {
         "Wrap your component tree in <ZamaProvider config={createConfig(...)}>.",
     );
   }
-
   return context;
 }

@@ -5,7 +5,7 @@
 import { nodeTest as test, expect } from "../../fixtures/node-test";
 import { RelayerNode } from "@zama-fhe/sdk/node";
 import { MemoryStorage, ZamaSDK } from "@zama-fhe/sdk";
-import { ViemSigner } from "@zama-fhe/sdk/viem";
+import { ViemSigner, ViemProvider } from "@zama-fhe/sdk/viem";
 import { createPublicClient, http, type Address } from "viem";
 import { foundry } from "viem/chains";
 
@@ -23,11 +23,12 @@ test("backend bootstraps SDK, verifies FHE infra, and shuts down cleanly", async
     chain: foundry,
     transport: http(chain.network as string),
   });
-  const signer = new ViemSigner({ walletClient: viemClient, publicClient });
+  const signer = new ViemSigner({ walletClient: viemClient });
+  const provider = new ViemProvider({ publicClient });
 
   // Use a block scope so `using` disposes before the post-terminate check
   {
-    using sdk = new ZamaSDK({ relayer, signer, storage: new MemoryStorage() });
+    using sdk = new ZamaSDK({ relayer, provider, signer, storage: new MemoryStorage() });
 
     // 2. Verify ACL contract is reachable
     const aclAddress = await relayer.getAclAddress();
@@ -84,8 +85,9 @@ test("SDK rejects invalid keypairTTL at construction", async ({
     chain: foundry,
     transport: http(`http://127.0.0.1:${anvilPort}`),
   });
-  const signer = new ViemSigner({ walletClient: viemClient, publicClient });
+  const signer = new ViemSigner({ walletClient: viemClient });
+  const provider = new ViemProvider({ publicClient });
   expect(
-    () => new ZamaSDK({ relayer, signer, storage: new MemoryStorage(), keypairTTL: 0 }),
+    () => new ZamaSDK({ relayer, provider, signer, storage: new MemoryStorage(), keypairTTL: 0 }),
   ).toThrow("keypairTTL must be a positive number");
 });
