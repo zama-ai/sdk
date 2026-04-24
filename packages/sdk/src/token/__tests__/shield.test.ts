@@ -69,6 +69,7 @@ describe("Token.shield", () => {
     signer,
     relayer,
     handle: fixtureHandle,
+    userAddress,
     provider,
   }) => {
     vi.mocked(provider.readContract)
@@ -91,10 +92,10 @@ describe("Token.shield", () => {
       expect.objectContaining({ functionName: "wrap" }),
     );
 
-    const handle = await token.confidentialBalanceOf();
+    const handle = await token.confidentialBalanceOf(userAddress);
     expect(handle).toBe(fixtureHandle);
 
-    const balance = await token.balanceOf();
+    const balance = await token.balanceOf(userAddress);
     expect(balance).toBe(1000n);
     expect(relayer.userDecrypt).toHaveBeenCalledWith(
       expect.objectContaining({ handles: [fixtureHandle] }),

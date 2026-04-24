@@ -97,6 +97,7 @@ describe("ReadonlyToken.balanceOf event emissions", () => {
     handle,
     storage,
     sessionStorage,
+    userAddress,
     provider,
   }) => {
     const { readonlyToken, events } = setupSdkWithEvents({
@@ -109,7 +110,7 @@ describe("ReadonlyToken.balanceOf event emissions", () => {
     });
     vi.mocked(provider.readContract).mockResolvedValue(handle);
 
-    await readonlyToken.balanceOf();
+    await readonlyToken.balanceOf(userAddress);
 
     const types = events.map((e) => e.type);
     expect(types).toContain(ZamaSDKEvents.DecryptStart);
@@ -125,6 +126,7 @@ describe("ReadonlyToken.balanceOf event emissions", () => {
     tokenAddress,
     storage,
     sessionStorage,
+    userAddress,
     provider,
   }) => {
     const { readonlyToken, events } = setupSdkWithEvents({
@@ -137,7 +139,7 @@ describe("ReadonlyToken.balanceOf event emissions", () => {
     });
     vi.mocked(provider.readContract).mockResolvedValue(ZERO_HANDLE);
 
-    await readonlyToken.balanceOf();
+    await readonlyToken.balanceOf(userAddress);
 
     const types = events.map((e) => e.type);
     expect(types).not.toContain(ZamaSDKEvents.DecryptStart);
@@ -151,6 +153,7 @@ describe("ReadonlyToken.balanceOf event emissions", () => {
     handle,
     storage,
     sessionStorage,
+    userAddress,
     provider,
   }) => {
     const { readonlyToken, events } = setupSdkWithEvents({
@@ -163,7 +166,7 @@ describe("ReadonlyToken.balanceOf event emissions", () => {
     });
     vi.mocked(provider.readContract).mockResolvedValue(handle);
 
-    await readonlyToken.balanceOf();
+    await readonlyToken.balanceOf(userAddress);
 
     const endEvent = events.find((e) => e.type === ZamaSDKEvents.DecryptEnd);
     expect(endEvent).toBeDefined();
@@ -179,6 +182,7 @@ describe("ReadonlyToken.balanceOf event emissions", () => {
     handle,
     storage,
     sessionStorage,
+    userAddress,
     provider,
   }) => {
     relayer.userDecrypt = vi.fn().mockRejectedValue(new Error("decrypt boom"));
@@ -192,7 +196,7 @@ describe("ReadonlyToken.balanceOf event emissions", () => {
     });
     vi.mocked(provider.readContract).mockResolvedValue(handle);
 
-    await expect(readonlyToken.balanceOf()).rejects.toThrow();
+    await expect(readonlyToken.balanceOf(userAddress)).rejects.toThrow();
 
     const errorEvent = events.find((e) => e.type === ZamaSDKEvents.DecryptError);
     expect(errorEvent).toBeDefined();
@@ -208,6 +212,7 @@ describe("ReadonlyToken.balanceOf event emissions", () => {
     handle,
     storage,
     sessionStorage,
+    userAddress,
     provider,
   }) => {
     const sdk = new ZamaSDK({
@@ -219,7 +224,7 @@ describe("ReadonlyToken.balanceOf event emissions", () => {
     });
     const token = new ReadonlyToken(sdk, tokenAddress);
     vi.mocked(provider.readContract).mockResolvedValue(handle);
-    await expect(token.balanceOf()).resolves.toBe(1000n);
+    await expect(token.balanceOf(userAddress)).resolves.toBe(1000n);
   });
 });
 
