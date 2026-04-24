@@ -146,7 +146,7 @@
   },
   "dependencies": {
     "@zama-fhe/relayer-sdk": "~0.4.2",
-    "viem": "^2.47.12"
+    "viem": ">=2"
   },
   "devDependencies": {
     "@tanstack/query-core": "^5.99.2",
