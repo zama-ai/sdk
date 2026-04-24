@@ -52,14 +52,33 @@ jobs:
         if: github.event_name == 'pull_request'
         id: api-diff
         run: |
-          mkdir -p /tmp/api-reports/pr
+          mkdir -p /tmp/api-reports/pr /tmp/api-reports/diffs
           cp packages/sdk/etc/*.api.md packages/react-sdk/etc/*.api.md /tmp/api-reports/pr/
-          diff -ru /tmp/api-reports/base /tmp/api-reports/pr | \
-            sed 's|/tmp/api-reports/base/|a/|;s|/tmp/api-reports/pr/|b/|' > /tmp/api-reports/raw.diff || true
 
-          if [ -s /tmp/api-reports/raw.diff ]; then
+          has_changes=false
+          for f in $({ ls /tmp/api-reports/base 2>/dev/null; ls /tmp/api-reports/pr 2>/dev/null; } | sort -u); do
+            base_file="/tmp/api-reports/base/$f"
+            pr_file="/tmp/api-reports/pr/$f"
+            [ -f "$base_file" ] || base_file=/dev/null
+            [ -f "$pr_file" ] || pr_file=/dev/null
+            if ! diff -u --label "a/$f" --label "b/$f" "$base_file" "$pr_file" > "/tmp/api-reports/diffs/$f.diff"; then
+              has_changes=true
+            else
+              rm -f "/tmp/api-reports/diffs/$f.diff"
+            fi
+          done
+
+          if [ "$has_changes" = "true" ]; then
             echo "has_changes=true" >> "$GITHUB_OUTPUT"
-            { echo "## Public API Changes"; echo '```diff'; cat /tmp/api-reports/raw.diff; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+            {
+              echo "## Public API Changes"
+              for f in /tmp/api-reports/diffs/*.diff; do
+                echo "### $(basename "$f" .diff)"
+                echo '````diff'
+                cat "$f"
+                echo '````'
+              done
+            } >> "$GITHUB_STEP_SUMMARY"
           else
             echo "No public API changes detected." >> "$GITHUB_STEP_SUMMARY"
           fi
@@ -70,18 +89,47 @@ jobs:
         with:
           script: |
             const fs = require('fs');
+            const path = require('path');
             const marker = '<!-- api-report-diff -->';
             const hasChanges = '${{ steps.api-diff.outputs.has_changes }}' === 'true';
 
             let body;
             if (hasChanges) {
-              let diff = fs.readFileSync('/tmp/api-reports/raw.diff', 'utf8');
-              if (diff.length > 60000) {
-                diff = diff.slice(0, 60000) + '\n... (truncated, see Actions run summary for full diff)';
+              const diffDir = '/tmp/api-reports/diffs';
+              const files = fs.readdirSync(diffDir).sort();
+              const MAX_BODY = 60000;
+              const sections = [];
+              let totalLen = 0;
+              let truncated = false;
+
+              for (const file of files) {
+                const name = file.replace(/\.diff$/, '');
+                const diff = fs.readFileSync(path.join(diffDir, file), 'utf8');
+                const section = [
+                  '<details>',
+                  `<summary><code>${name}</code></summary>`,
+                  '',
+                  '````diff',
+                  diff,
+                  '````',
+                  '',
+                  '</details>',
+                  '',
+                ].join('\n');
+
+                if (totalLen + section.length > MAX_BODY) {
+                  truncated = true;
+                  break;
+                }
+                totalLen += section.length;
+                sections.push(section);
               }
-              body = [marker, '## Public API Changes', '',
-                '<details>', '<summary>Expand to see full diff</summary>', '',
-                '```diff', diff, '```', '', '</details>'].join('\n');
+
+              const parts = [marker, '## Public API Changes', '', ...sections];
+              if (truncated) {
+                parts.push('... (truncated, see Actions run summary for full diff)');
+              }
+              body = parts.join('\n');
             } else {
               body = [marker, '## Public API Changes', '', ':white_check_mark: No public API changes detected.'].join('\n');
             }
