@@ -1,11 +1,11 @@
 # Product Vision
 
-The Zama SDK is the high-level TypeScript SDK for the **Zama Protocol**, including ERC-7984 confidential tokens. It publishes `@zama-fhe/sdk` (core) and `@zama-fhe/react-sdk` (React hooks).
+Zama SDK is a suite of TypeScript libraries for building privacy-preserving dApps on EVM-compatible blockchains powered by the **Zama Confidential Blockchain Protocol**. It gives developers everything they need to interact with confidential smart contracts using Fully Homomorphic Encryption (FHE) — encrypting inputs, decrypting outputs, managing access control — without having to learn cryptography. The SDK publishes `@zama-fhe/sdk` (core) and `@zama-fhe/react-sdk` (React hooks), with ERC-7984 confidential tokens as the primary vertical today.
 
-**Design principle: clear-text in, clear-text out.** Developers work with familiar primitives (e.g. ERC-20-style `balanceOf`, `transfer` for tokens) while the SDK handles all protocol complexity under the hood — encrypted inputs, EIP-712 signing, Relayer routing, and response format interpretation. The SDK is a credentials + relayer coordination layer that abstracts the protocol so developers never need to understand FHE internals.
+**Design principle: clear-text in, clear-text out.** Callers work with familiar primitives (for tokens, ERC-20-style `balanceOf`, `transfer`, etc.) while the SDK handles the protocol complexity under the hood — encrypted inputs, EIP-712 signing, Relayer routing, and response-format interpretation. Agents should design new APIs the same way: accept plaintext, return plaintext, push everything FHE-related down into the SDK.
 
-**Target users:** wallet developers and dApp developers building on the Zama Protocol who need a high-level integration layer.
+**Framework-agnostic core.** The core SDK works with viem, ethers, or any EVM library via adapters. Heavy FHE operations run in Web Workers (browser) or worker threads (Node.js) so the main thread stays responsive.
 
-**UX goals:** signing prompt minimization (no per-token prompts for balances, single confirmation for transfers), batch balance fetching, decryption caching and staleness management.
+**React-first view layer.** First-class React hooks, powered by `@tanstack/react-query`, including a drop-in wagmi integration. Other frameworks (React Native, Vue, etc.) aren't supported today, but the three-layer architecture (core action → query-options factory → framework hook) leaves room to add them without touching the core.
 
-**Future direction:** plugin system for additional capabilities beyond tokens — DeFi primitives (swaps, yield), RWA extensions (ERC-3643 + ERC-7984), and domain-specific integrations. The view layer is React-focused today but the architecture accommodates React Native, Vue, and others.
+**Target users.** Developers integrating confidential operations into their applications — wallet teams, dApp teams, and anyone building on the Zama Protocol — without wanting to learn FHE.

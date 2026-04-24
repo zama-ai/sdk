@@ -10,9 +10,9 @@
 
 The directory structure is shallow, so understanding how data moves through the system requires knowing the layers.
 
-**SDK layers:** `ZamaSDK` orchestrates signer + relayer + storage + credentials, and creates `Token` instances that share credentials. `Token` (write ops) and `ReadonlyToken` (read ops) coordinate between host-chain RPC (for encrypted handles) and the Relayer (for encrypt/decrypt via Web Workers). React hooks follow a three-layer pattern: core action (`packages/sdk/src/query/`) → query options factory → framework hook (`packages/react-sdk/src/`).
+**SDK layers:** `ZamaSDK` orchestrates `provider` (read-only RPC: `ViemProvider`, `EthersProvider`, `WagmiProvider`), `signer` (wallet: `ViemSigner`, `EthersSigner`, `WagmiSigner`), `relayer` (encrypt/decrypt backend), `storage` (credential store), and a `CredentialsManager`. `ZamaSDK` creates `Token` / `ReadonlyToken` instances that share these. `Token` (write ops) and `ReadonlyToken` (read ops) fetch encrypted handles via `sdk.provider.readContract` and go through `sdk.userDecrypt` / `sdk.publicDecrypt` for decryption. React hooks follow a three-layer pattern: core action (`packages/sdk/src/query/`) → query options factory → framework hook (`packages/react-sdk/src/`).
 
-**Balance flow (two-phase):** Phase 1 is a cheap RPC poll for the encrypted handle (no signing needed). Phase 2 triggers an expensive relayer decrypt only when the handle changes — this requires EIP-712 credentials (first time needs an explicit user click, then cached). Cache hierarchy: React Query (memory) → IndexedDB balance cache → encrypted credential store → relayer.
+**Balance flow:** `useConfidentialBalance` runs a single `useQuery` whose `queryFn` calls `ReadonlyToken.balanceOf(owner)`. That method reads the encrypted handle from the host-chain RPC and then calls `sdk.userDecrypt([{ handle, contractAddress }])` to get the plaintext — both in one pass, no separate polling phase. EIP-712 credentials are required for decryption: the first decrypt per session needs an explicit user click, and subsequent decrypts reuse the cached credentials. Plaintext balances are cached by React Query in memory; there is no on-disk balance cache.
 
 **Transfer:** encrypt amount via relayer → single contract call → wait for receipt.
 
