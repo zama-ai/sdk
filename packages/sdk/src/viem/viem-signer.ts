@@ -10,8 +10,8 @@ import type {
 } from "viem";
 import type { writeContract } from "viem/actions";
 import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
-import type { GenericSigner, SignerLifecycleCallbacks, WriteContractConfig } from "../types";
-import { eip1193Subscribe } from "../token/eip1193-subscribe";
+import type { GenericSigner, SignerIdentityListener, WriteContractConfig } from "../types";
+import { eip1193Subscribe } from "../signer/eip1193-subscribe";
 
 /**
  * Configuration for {@link ViemSigner}.
@@ -91,7 +91,7 @@ export class ViemSigner implements GenericSigner {
     } as Parameters<typeof writeContract>[1]);
   }
 
-  subscribe(callbacks: SignerLifecycleCallbacks): () => void {
-    return eip1193Subscribe(this.#ethereum, () => this.getAddress(), callbacks);
+  subscribe(onIdentityChange: SignerIdentityListener): () => void {
+    return eip1193Subscribe(this.#ethereum, onIdentityChange);
   }
 }

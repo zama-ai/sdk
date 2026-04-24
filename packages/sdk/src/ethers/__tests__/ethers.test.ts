@@ -156,12 +156,12 @@ describe("EthersSigner", () => {
         ethereum: mockEthereum as never,
       });
 
-      const onDisconnect = vi.fn();
-      const onAccountChange = vi.fn();
-      const unsub = ethersSigner.subscribe({ onDisconnect, onAccountChange });
+      const onIdentityChange = vi.fn();
+      const unsub = ethersSigner.subscribe(onIdentityChange);
 
       expect(mockEthereum.on).toHaveBeenCalledWith("accountsChanged", expect.any(Function));
       expect(mockEthereum.on).toHaveBeenCalledWith("disconnect", expect.any(Function));
+      expect(mockEthereum.on).toHaveBeenCalledWith("chainChanged", expect.any(Function));
       expect(typeof unsub).toBe("function");
 
       unsub();
@@ -170,16 +170,17 @@ describe("EthersSigner", () => {
         expect.any(Function),
       );
       expect(mockEthereum.removeListener).toHaveBeenCalledWith("disconnect", expect.any(Function));
+      expect(mockEthereum.removeListener).toHaveBeenCalledWith(
+        "chainChanged",
+        expect.any(Function),
+      );
     });
 
     eit("subscribe returns no-op with { signer } config", ({ createEthersMockSigner }) => {
       const signer = createEthersMockSigner();
       const ethersSigner = new EthersSigner({ signer: signer as never });
 
-      const unsub = ethersSigner.subscribe({
-        onDisconnect: vi.fn(),
-        onAccountChange: vi.fn(),
-      });
+      const unsub = ethersSigner.subscribe(vi.fn());
       expect(typeof unsub).toBe("function");
       // Should not throw
       unsub();

@@ -101,18 +101,6 @@ export function ZamaProvider({
     onEventRef.current = onEvent;
   });
 
-  const signerLifecycleCallbacks = useMemo(
-    () =>
-      signer?.subscribe
-        ? {
-            onDisconnect: () => invalidateWalletLifecycleQueries(queryClient),
-            onAccountChange: () => invalidateWalletLifecycleQueries(queryClient),
-            onChainChange: () => invalidateWalletLifecycleQueries(queryClient),
-          }
-        : undefined,
-    [queryClient, signer],
-  );
-
   const sdk = useMemo(
     () =>
       new ZamaSDK({
@@ -126,7 +114,6 @@ export function ZamaProvider({
         registryAddresses,
         registryTTL,
         onEvent: onEventRef.current,
-        signerLifecycleCallbacks,
       }),
     [
       relayer,
@@ -138,13 +125,19 @@ export function ZamaProvider({
       sessionTTL,
       registryAddresses,
       registryTTL,
-      signerLifecycleCallbacks,
     ],
   );
 
-  // Clean up signer subscriptions on unmount without terminating the
-  // caller-owned relayer. dispose() only unsubscribes from wallet events
-  // and is idempotent.
+  // SDK owns the single signer subscription: it runs credential/cache cleanup
+  // and fans identity changes out to registered listeners. The provider
+  // layers query invalidation atop that same event stream.
+  useEffect(
+    () => sdk.onIdentityChange(() => invalidateWalletLifecycleQueries(queryClient)),
+    [sdk, queryClient],
+  );
+
+  // Clean up SDK-owned signer subscriptions on unmount without terminating
+  // the caller-owned relayer. dispose() is idempotent.
   useEffect(() => () => sdk.dispose(), [sdk]);
 
   return <ZamaSDKContext.Provider value={sdk}>{children}</ZamaSDKContext.Provider>;

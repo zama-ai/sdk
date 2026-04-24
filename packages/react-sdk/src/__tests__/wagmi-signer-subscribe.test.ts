@@ -2,8 +2,11 @@ import { test as base, describe, expect } from "../test-fixtures";
 import type { Address } from "@zama-fhe/sdk";
 import type { Config } from "wagmi";
 
+const ADDR_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
+const ADDR_B = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;
+
 interface Connection {
-  status: string;
+  status: "connected" | "connecting" | "disconnected" | "reconnecting";
   address?: Address;
   chainId?: number;
 }
@@ -52,66 +55,91 @@ const wit = base.extend<WagmiFixtures>({
 
 describe("WagmiSigner.subscribe", () => {
   wit("calls watchConnection and returns unsubscribe function", ({ wagmiSigner }) => {
-    const onDisconnect = vi.fn();
-    const unsubscribe = wagmiSigner.subscribe({ onDisconnect });
+    const onIdentityChange = vi.fn();
+    const unsubscribe = wagmiSigner.subscribe(onIdentityChange);
 
     expect(capturedOnChange).toBeDefined();
     expect(unsubscribe).toBe(mockUnsubscribe);
   });
 
-  wit("fires onDisconnect when status becomes disconnected", ({ wagmiSigner }) => {
-    const onDisconnect = vi.fn();
-    wagmiSigner.subscribe({ onDisconnect });
+  wit("fires connect when transitioning from disconnected to connected", ({ wagmiSigner }) => {
+    const onIdentityChange = vi.fn();
+    wagmiSigner.subscribe(onIdentityChange);
+
+    capturedOnChange!(
+      { status: "connected", address: ADDR_A, chainId: 1 },
+      { status: "disconnected" },
+    );
+    expect(onIdentityChange).toHaveBeenCalledOnce();
+    expect(onIdentityChange).toHaveBeenCalledWith({
+      previous: undefined,
+      next: { address: ADDR_A, chainId: 1 },
+    });
+  });
+
+  wit("fires disconnect when status becomes disconnected", ({ wagmiSigner }) => {
+    const onIdentityChange = vi.fn();
+    wagmiSigner.subscribe(onIdentityChange);
 
     capturedOnChange!(
       { status: "disconnected" },
-      { status: "connected", address: "0xabc" as Address },
+      { status: "connected", address: ADDR_A, chainId: 1 },
     );
-    expect(onDisconnect).toHaveBeenCalledOnce();
+    expect(onIdentityChange).toHaveBeenCalledOnce();
+    expect(onIdentityChange).toHaveBeenCalledWith({
+      previous: { address: ADDR_A, chainId: 1 },
+      next: undefined,
+    });
   });
 
-  wit("does not fire onDisconnect when already disconnected", ({ wagmiSigner }) => {
-    const onDisconnect = vi.fn();
-    wagmiSigner.subscribe({ onDisconnect });
+  wit("does not fire when already disconnected", ({ wagmiSigner }) => {
+    const onIdentityChange = vi.fn();
+    wagmiSigner.subscribe(onIdentityChange);
 
     capturedOnChange!({ status: "disconnected" }, { status: "disconnected" });
-    expect(onDisconnect).not.toHaveBeenCalled();
+    expect(onIdentityChange).not.toHaveBeenCalled();
   });
 
-  wit("fires onAccountChange when address changes", ({ wagmiSigner }) => {
-    const onAccountChange = vi.fn();
-    wagmiSigner.subscribe({ onAccountChange });
+  wit("fires when address changes", ({ wagmiSigner }) => {
+    const onIdentityChange = vi.fn();
+    wagmiSigner.subscribe(onIdentityChange);
 
     capturedOnChange!(
-      { status: "connected", address: "0xbbb" as Address },
-      { status: "connected", address: "0xaaa" as Address },
+      { status: "connected", address: ADDR_B, chainId: 1 },
+      { status: "connected", address: ADDR_A, chainId: 1 },
     );
-    expect(onAccountChange).toHaveBeenCalledOnce();
-    expect(onAccountChange).toHaveBeenCalledWith("0xbbb");
+    expect(onIdentityChange).toHaveBeenCalledOnce();
+    expect(onIdentityChange).toHaveBeenCalledWith({
+      previous: { address: ADDR_A, chainId: 1 },
+      next: { address: ADDR_B, chainId: 1 },
+    });
   });
 
-  wit("does not fire onAccountChange when address is unchanged", ({ wagmiSigner }) => {
-    const onAccountChange = vi.fn();
-    wagmiSigner.subscribe({ onAccountChange });
+  wit("does not fire when address is unchanged", ({ wagmiSigner }) => {
+    const onIdentityChange = vi.fn();
+    wagmiSigner.subscribe(onIdentityChange);
 
     capturedOnChange!(
-      { status: "connected", address: "0xaaa" as Address },
-      { status: "connected", address: "0xaaa" as Address },
+      { status: "connected", address: ADDR_A.toLowerCase() as Address, chainId: 1 },
+      { status: "connected", address: ADDR_A, chainId: 1 },
     );
-    expect(onAccountChange).not.toHaveBeenCalled();
+    expect(onIdentityChange).not.toHaveBeenCalled();
   });
 
-  wit("fires onChainChange when chain id changes", ({ wagmiSigner }) => {
-    const onChainChange = vi.fn();
-    wagmiSigner.subscribe({ onChainChange });
+  wit("fires when chain id changes", ({ wagmiSigner }) => {
+    const onIdentityChange = vi.fn();
+    wagmiSigner.subscribe(onIdentityChange);
 
     capturedOnChange!(
-      { status: "connected", address: "0xaaa" as Address, chainId: 2 },
-      { status: "connected", address: "0xaaa" as Address, chainId: 1 },
+      { status: "connected", address: ADDR_A, chainId: 2 },
+      { status: "connected", address: ADDR_A, chainId: 1 },
     );
 
-    expect(onChainChange).toHaveBeenCalledOnce();
-    expect(onChainChange).toHaveBeenCalledWith(2);
+    expect(onIdentityChange).toHaveBeenCalledOnce();
+    expect(onIdentityChange).toHaveBeenCalledWith({
+      previous: { address: ADDR_A, chainId: 1 },
+      next: { address: ADDR_A, chainId: 2 },
+    });
   });
 });
 

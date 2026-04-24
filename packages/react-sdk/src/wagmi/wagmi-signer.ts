@@ -4,14 +4,39 @@ import type {
   EIP712TypedData,
   GenericSigner,
   Hex,
-  SignerLifecycleCallbacks,
+  SignerIdentity,
+  SignerIdentityListener,
   WriteContractArgs,
   WriteFunctionName,
   WriteContractConfig,
 } from "@zama-fhe/sdk";
+import { getAddress } from "viem";
 import type { Config } from "wagmi";
 import { getChainId, signTypedData, writeContract } from "wagmi/actions";
 import { getConnection, watchConnection } from "./compat";
+
+interface WagmiConnectionSnapshot {
+  status: "connected" | "connecting" | "disconnected" | "reconnecting";
+  address?: Address;
+  chainId?: number;
+}
+
+function toIdentity(c: WagmiConnectionSnapshot): SignerIdentity | undefined {
+  if (c.status !== "connected") {
+    return undefined;
+  }
+  if (!c.address || c.chainId === undefined) {
+    return undefined;
+  }
+  return { address: getAddress(c.address), chainId: c.chainId };
+}
+
+function identitiesEqual(a: SignerIdentity | undefined, b: SignerIdentity | undefined): boolean {
+  if (!a || !b) {
+    return a === b;
+  }
+  return a.address === b.address && a.chainId === b.chainId;
+}
 
 /** Configuration for {@link WagmiSigner}. */
 export interface WagmiSignerConfig {
@@ -66,29 +91,13 @@ export class WagmiSigner implements GenericSigner {
     return writeContract(this.#config, config as Parameters<typeof writeContract>[1]);
   }
 
-  subscribe({
-    onDisconnect = () => {},
-    onAccountChange = () => {},
-    onChainChange = () => {},
-  }: SignerLifecycleCallbacks): () => void {
+  subscribe(onIdentityChange: SignerIdentityListener): () => void {
     return watchConnection(this.#config, {
       onChange(connection, prevConnection) {
-        if (connection.status === "disconnected" && prevConnection.status !== "disconnected") {
-          onDisconnect();
-        }
-        if (
-          prevConnection.address &&
-          connection.address &&
-          connection.address !== prevConnection.address
-        ) {
-          onAccountChange(connection.address);
-        }
-        if (
-          typeof prevConnection.chainId === "number" &&
-          typeof connection.chainId === "number" &&
-          connection.chainId !== prevConnection.chainId
-        ) {
-          onChainChange(connection.chainId);
+        const previous = toIdentity(prevConnection);
+        const next = toIdentity(connection);
+        if (!identitiesEqual(previous, next)) {
+          onIdentityChange({ previous, next });
         }
       },
     });
