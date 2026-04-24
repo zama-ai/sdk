@@ -85,19 +85,17 @@ export class ReadonlyToken {
    * Decrypt and return the plaintext balance for the given owner.
    * Acquires FHE credentials via a wallet signature if none are cached.
    *
-   * @param owner - Optional balance owner address. Defaults to the connected signer.
+   * @param owner - Balance owner address.
    * @returns The decrypted plaintext balance as a bigint.
    * @throws {@link DecryptionFailedError} if FHE decryption fails.
    *
    * @example
    * ```ts
-   * const balance = await token.balanceOf();
-   * // or for another address:
    * const balance = await token.balanceOf("0xOwner");
    * ```
    */
-  async balanceOf(owner?: Address): Promise<bigint> {
-    const ownerAddress = owner ? getAddress(owner) : await this.sdk.signer.getAddress();
+  async balanceOf(owner: Address): Promise<bigint> {
+    const ownerAddress = getAddress(owner);
     const handle = await this.readConfidentialBalanceOf(ownerAddress);
     const result = await this.sdk.userDecrypt([{ handle, contractAddress: this.address }]);
     const value = result[handle];
@@ -111,17 +109,16 @@ export class ReadonlyToken {
   /**
    * Return the raw encrypted balance handle without decrypting.
    *
-   * @param owner - Optional balance owner address. Defaults to the connected signer.
+   * @param owner - Balance owner address.
    * @returns The encrypted balance handle as a hex string.
    *
    * @example
    * ```ts
-   * const handle = await token.confidentialBalanceOf();
+   * const handle = await token.confidentialBalanceOf("0xOwner");
    * ```
    */
-  async confidentialBalanceOf(owner?: Address): Promise<Handle> {
-    const ownerAddress = owner ? getAddress(owner) : await this.sdk.signer.getAddress();
-    return this.readConfidentialBalanceOf(ownerAddress);
+  async confidentialBalanceOf(owner: Address): Promise<Handle> {
+    return this.readConfidentialBalanceOf(getAddress(owner));
   }
 
   /**
@@ -168,17 +165,17 @@ export class ReadonlyToken {
    * whole batch — caller decides how to surface them.
    *
    * @param tokens - Array of {@link ReadonlyToken} instances bound to the same SDK.
-   * @param owner - Optional balance owner address. Defaults to the connected signer.
+   * @param owner - Balance owner address.
    * @returns `{ results, errors }` partitioning the per-token outcomes.
    *
    * @example
    * ```ts
-   * const { results, errors } = await ReadonlyToken.batchBalancesOf(tokens);
+   * const { results, errors } = await ReadonlyToken.batchBalancesOf(tokens, owner);
    * ```
    */
   static async batchBalancesOf(
     tokens: ReadonlyToken[],
-    owner?: Address,
+    owner: Address,
   ): Promise<BatchBalancesResult> {
     const results = new Map<Address, bigint>();
     const errors = new Map<Address, ZamaError>();
@@ -428,15 +425,14 @@ export class ReadonlyToken {
    * Read the ERC-20 allowance of the underlying token for a given wrapper.
    *
    * @param wrapper - The wrapper contract address to check allowance for.
-   * @param owner - Optional owner address. Defaults to the connected signer.
+   * @param owner - The owner address whose allowance to read.
    * @returns The current allowance as a bigint.
    */
-  async allowance(wrapper: Address, owner?: Address): Promise<bigint> {
+  async allowance(wrapper: Address, owner: Address): Promise<bigint> {
     const normalizedWrapper = getAddress(wrapper);
     const underlying = await this.sdk.provider.readContract(underlyingContract(normalizedWrapper));
-    const userAddress = owner ? getAddress(owner) : await this.sdk.signer.getAddress();
     return this.sdk.provider.readContract(
-      allowanceContract(underlying, userAddress, normalizedWrapper),
+      allowanceContract(underlying, getAddress(owner), normalizedWrapper),
     );
   }
 
@@ -478,7 +474,7 @@ export class ReadonlyToken {
    * ```ts
    * await token.allow();
    * // Credentials are now cached — subsequent decrypts won't prompt
-   * const balance = await token.balanceOf();
+   * const balance = await token.balanceOf(owner);
    * ```
    */
   async allow(): Promise<void> {

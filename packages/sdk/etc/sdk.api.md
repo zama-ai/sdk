@@ -13066,11 +13066,11 @@ export class ReadonlyToken {
     readonly address: Address;
     allow(): Promise<void>;
     static allow(...tokens: ReadonlyToken[]): Promise<void>;
-    allowance(wrapper: Address, owner?: Address): Promise<bigint>;
-    balanceOf(owner?: Address): Promise<bigint>;
-    static batchBalancesOf(tokens: ReadonlyToken[], owner?: Address): Promise<BatchBalancesResult>;
+    allowance(wrapper: Address, owner: Address): Promise<bigint>;
+    balanceOf(owner: Address): Promise<bigint>;
+    static batchBalancesOf(tokens: ReadonlyToken[], owner: Address): Promise<BatchBalancesResult>;
     static batchDecryptBalancesAs(tokens: ReadonlyToken[], options: BatchDecryptAsOptions): Promise<Map<Address, bigint>>;
-    confidentialBalanceOf(owner?: Address): Promise<Handle>;
+    confidentialBalanceOf(owner: Address): Promise<Handle>;
     decimals(): Promise<number>;
     decryptBalanceAs(input: {
         delegatorAddress: Address;
@@ -14849,7 +14849,7 @@ export class Token extends ReadonlyToken {
         expirationDate?: Date;
     }): Promise<TransactionResult>;
     finalizeUnwrap(unwrapRequestIdOrAmount: Handle): Promise<TransactionResult>;
-    isApproved(spender: Address, holder?: Address): Promise<boolean>;
+    isApproved(spender: Address, holder: Address): Promise<boolean>;
     resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     revokeDelegation(input: {
         delegateAddress: Address;

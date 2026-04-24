@@ -322,23 +322,19 @@ export class Token extends ReadonlyToken {
    * Check if a spender is an approved operator for a given holder.
    *
    * @param spender - The address to check operator approval for.
-   * @param holder - The token holder address. Defaults to the connected wallet.
+   * @param holder - The token holder address.
    * @returns `true` if the spender is an approved operator for the holder.
    *
    * @example
    * ```ts
-   * if (await token.isApproved("0xSpender")) {
-   *   // spender can call transferFrom on behalf of connected wallet
+   * if (await token.isApproved("0xSpender", "0xHolder")) {
+   *   // spender can call transferFrom on behalf of holder
    * }
-   * // or check for a specific holder:
-   * if (await token.isApproved("0xSpender", "0xHolder")) { ... }
    * ```
    */
-  async isApproved(spender: Address, holder?: Address): Promise<boolean> {
-    const normalizedSpender = getAddress(spender);
-    const resolvedHolder = holder ? getAddress(holder) : await this.sdk.signer.getAddress();
+  async isApproved(spender: Address, holder: Address): Promise<boolean> {
     return this.sdk.provider.readContract(
-      isOperatorContract(this.address, resolvedHolder, normalizedSpender),
+      isOperatorContract(this.address, getAddress(holder), getAddress(spender)),
     );
   }
 
@@ -986,7 +982,7 @@ export class Token extends ReadonlyToken {
 
     let balance: bigint;
     try {
-      balance = await this.balanceOf();
+      balance = await this.balanceOf(await this.sdk.signer.getAddress());
     } catch (error) {
       if (error instanceof ZamaError) {
         throw error;

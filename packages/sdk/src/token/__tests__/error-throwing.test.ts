@@ -6,6 +6,7 @@ describe("NoCiphertextError detection (P3)", () => {
     relayer,
     token,
     handle,
+    userAddress,
     provider,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValue(handle);
@@ -13,13 +14,14 @@ describe("NoCiphertextError detection (P3)", () => {
     error.statusCode = 400;
     vi.mocked(relayer.userDecrypt).mockRejectedValue(error);
 
-    await expect(token.balanceOf()).rejects.toBeInstanceOf(NoCiphertextError);
+    await expect(token.balanceOf(userAddress)).rejects.toBeInstanceOf(NoCiphertextError);
   });
 
   it("throws RelayerRequestFailedError for non-400 HTTP errors", async ({
     relayer,
     token,
     handle,
+    userAddress,
     provider,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValue(handle);
@@ -27,9 +29,9 @@ describe("NoCiphertextError detection (P3)", () => {
     error.statusCode = 500;
     vi.mocked(relayer.userDecrypt).mockRejectedValue(error);
 
-    await expect(token.balanceOf()).rejects.toBeInstanceOf(RelayerRequestFailedError);
+    await expect(token.balanceOf(userAddress)).rejects.toBeInstanceOf(RelayerRequestFailedError);
     try {
-      await token.balanceOf();
+      await token.balanceOf(userAddress);
     } catch (error) {
       expect((error as RelayerRequestFailedError).statusCode).toBe(500);
     }
@@ -39,12 +41,13 @@ describe("NoCiphertextError detection (P3)", () => {
     relayer,
     token,
     handle,
+    userAddress,
     provider,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValue(handle);
     vi.mocked(relayer.userDecrypt).mockRejectedValue(new Error("unknown"));
 
-    await expect(token.balanceOf()).rejects.toBeInstanceOf(DecryptionFailedError);
+    await expect(token.balanceOf(userAddress)).rejects.toBeInstanceOf(DecryptionFailedError);
   });
 
   it("throws NoCiphertextError when sdk.userDecrypt receives 400", async ({
@@ -66,6 +69,7 @@ describe("NoCiphertextError detection (P3)", () => {
     relayer,
     token,
     handle,
+    userAddress,
     provider,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValue(handle);
@@ -73,7 +77,7 @@ describe("NoCiphertextError detection (P3)", () => {
     vi.mocked(relayer.userDecrypt).mockRejectedValue(original);
 
     try {
-      await token.balanceOf();
+      await token.balanceOf(userAddress);
     } catch (error) {
       expect(error).toBe(original);
     }
@@ -83,6 +87,7 @@ describe("NoCiphertextError detection (P3)", () => {
     relayer,
     token,
     handle,
+    userAddress,
     provider,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValue(handle);
@@ -90,7 +95,7 @@ describe("NoCiphertextError detection (P3)", () => {
     vi.mocked(relayer.userDecrypt).mockRejectedValue(original);
 
     try {
-      await token.balanceOf();
+      await token.balanceOf(userAddress);
     } catch (error) {
       expect(error).toBe(original);
     }
@@ -100,24 +105,26 @@ describe("NoCiphertextError detection (P3)", () => {
     relayer,
     token,
     handle,
+    userAddress,
     provider,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValue(handle);
     vi.mocked(relayer.userDecrypt).mockRejectedValue({ statusCode: 400, message: "bad" });
 
-    await expect(token.balanceOf()).rejects.toBeInstanceOf(NoCiphertextError);
+    await expect(token.balanceOf(userAddress)).rejects.toBeInstanceOf(NoCiphertextError);
   });
 
   it("wraps non-Error thrown value with other statusCode as RelayerRequestFailedError", async ({
     relayer,
     token,
     handle,
+    userAddress,
     provider,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValue(handle);
     vi.mocked(relayer.userDecrypt).mockRejectedValue({ statusCode: 502 });
 
-    const err = await token.balanceOf().catch((error) => error);
+    const err = await token.balanceOf(userAddress).catch((error) => error);
     expect(err).toBeInstanceOf(RelayerRequestFailedError);
     expect(err.statusCode).toBe(502);
   });

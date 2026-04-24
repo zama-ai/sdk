@@ -13,6 +13,7 @@ describe("Integration: multi-step workflows", () => {
       signer,
       token,
       handle,
+      userAddress,
       provider,
     }) => {
       const UNDERLYING = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
@@ -39,7 +40,7 @@ describe("Integration: multi-step workflows", () => {
       );
 
       // Step 3: Check balance after shield — should read the new handle
-      const balanceHandle = await token.confidentialBalanceOf();
+      const balanceHandle = await token.confidentialBalanceOf(userAddress);
       expect(balanceHandle).toBe(handle);
 
       // Step 4: Decrypt the balance through the SDK-level API
@@ -85,7 +86,7 @@ describe("Integration: multi-step workflows", () => {
 
       // Step 2: Check sender balance after transfer
       vi.mocked(provider.readContract).mockResolvedValueOnce(handle);
-      const senderHandle = await token.confidentialBalanceOf();
+      const senderHandle = await token.confidentialBalanceOf(userAddress);
       expect(senderHandle).toBe(handle);
 
       // Step 3: Check receiver balance (different token instance for same contract)

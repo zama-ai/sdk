@@ -110,7 +110,12 @@ describe("requireChainAlignment", () => {
     const allowSpy = vi.spyOn(sdk, "allow");
 
     const { ReadonlyToken } = await import("../token/readonly-token");
-    await expect(ReadonlyToken.batchBalancesOf([token])).rejects.toBeInstanceOf(ChainMismatchError);
+    await expect(
+      ReadonlyToken.batchBalancesOf(
+        [token],
+        "0x3F3f3f3F3F3f3F3f3F3f3f3F3F3f3F3f3f3f3f3F" as Address,
+      ),
+    ).rejects.toBeInstanceOf(ChainMismatchError);
 
     expect(allowSpy).not.toHaveBeenCalled();
     expect(signer.signTypedData).not.toHaveBeenCalled();

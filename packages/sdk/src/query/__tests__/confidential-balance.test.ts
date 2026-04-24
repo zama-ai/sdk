@@ -53,22 +53,7 @@ describe("confidentialBalanceQueryOptions", () => {
     });
 
     const value = await options.queryFn(mockQueryContext(options.queryKey));
-
     expect(value).toBe(42n);
     expect(token.balanceOf).toHaveBeenCalledWith(owner);
-  });
-
-  test("queryFn passes undefined owner through to token.balanceOf when none is configured", async ({
-    createMockReadonlyToken,
-  }) => {
-    const token = createMockReadonlyToken(tokenAddress);
-    vi.mocked(token.balanceOf).mockResolvedValue(7n);
-
-    const options = confidentialBalanceQueryOptions(token, { tokenAddress });
-
-    const value = await options.queryFn(mockQueryContext(options.queryKey));
-
-    expect(value).toBe(7n);
-    expect(token.balanceOf).toHaveBeenCalledWith(undefined);
   });
 });
