@@ -2,6 +2,7 @@
 
 import type { Address } from "@zama-fhe/sdk";
 import { useShield, useUnderlyingAllowance, useMetadata } from "@zama-fhe/react-sdk";
+import { useAccount } from "wagmi";
 
 export function ShieldForm({
   tokenAddress,
@@ -10,8 +11,13 @@ export function ShieldForm({
   tokenAddress: Address;
   wrapperAddress: Address;
 }) {
+  const { address } = useAccount();
   const { data: metadata } = useMetadata(tokenAddress);
-  const { data: allowance } = useUnderlyingAllowance({ tokenAddress, wrapperAddress });
+  const { data: allowance } = useUnderlyingAllowance({
+    tokenAddress,
+    wrapperAddress,
+    owner: address,
+  });
   const shield = useShield({ tokenAddress, wrapperAddress });
 
   return (

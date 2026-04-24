@@ -21,11 +21,6 @@ const mockSdk = {
 
 vi.mock("../../provider", () => ({
   useZamaSDK: vi.fn(() => mockSdk),
-  useSignerAddress: vi.fn(() => ({ data: OWNER })),
-}));
-
-vi.mock("../../use-signer-address", () => ({
-  useSignerAddress: vi.fn(() => ({ data: OWNER })),
 }));
 
 vi.mock("@zama-fhe/sdk/query", () => ({
@@ -48,7 +43,10 @@ describe("useConfidentialBalances enabled propagation", () => {
 
   test("disables balance query when user passes enabled=false", () => {
     renderHook(() =>
-      useConfidentialBalances({ tokenAddresses: [TOKEN, TOKEN_B] }, { enabled: false }),
+      useConfidentialBalances(
+        { tokenAddresses: [TOKEN, TOKEN_B], account: OWNER },
+        { enabled: false },
+      ),
     );
 
     const balanceQueryOptions = vi.mocked(useQuery).mock.calls[0]?.[0] as
@@ -62,7 +60,7 @@ describe("useConfidentialBalances enabled propagation", () => {
   test("disables balance query for other falsy enabled values", () => {
     renderHook(() =>
       useConfidentialBalances(
-        { tokenAddresses: [TOKEN, TOKEN_B] },
+        { tokenAddresses: [TOKEN, TOKEN_B], account: OWNER },
         { enabled: 0 as unknown as boolean },
       ),
     );

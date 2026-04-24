@@ -28,6 +28,7 @@ describe("useUnderlyingAllowance", () => {
         useUnderlyingAllowance({
           tokenAddress,
           wrapperAddress,
+          owner: USER,
         }),
       { signer },
     );

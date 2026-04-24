@@ -8,6 +8,7 @@ import {
   useMetadata,
 } from "@zama-fhe/react-sdk";
 import type { Address } from "@zama-fhe/sdk";
+import { useAccount } from "wagmi";
 
 export function ResumeUnshieldForm({
   tokenAddress,
@@ -17,8 +18,9 @@ export function ResumeUnshieldForm({
   wrapperAddress?: Address;
 }) {
   const [unwrapTxHash, setUnwrapTxHash] = useState<string | null>(null);
+  const { address } = useAccount();
   const { data: metadata } = useMetadata(tokenAddress);
-  const { data: balance } = useConfidentialBalance({ tokenAddress });
+  const { data: balance } = useConfidentialBalance({ tokenAddress, account: address });
   const unwrap = useUnwrap({ tokenAddress, wrapperAddress });
   const resumeUnshield = useResumeUnshield({ tokenAddress, wrapperAddress });
 

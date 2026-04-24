@@ -101,7 +101,7 @@ export interface ConfidentialApproveParams {
 // @public (undocumented)
 export interface ConfidentialBalanceQueryConfig {
     // (undocumented)
-    owner?: Address;
+    account?: Address;
     // (undocumented)
     query?: Record<string, unknown>;
     // (undocumented)
@@ -114,7 +114,7 @@ export function confidentialBalanceQueryOptions(token: ReadonlyToken, config: Co
 // @public (undocumented)
 export interface ConfidentialBalancesQueryConfig {
     // (undocumented)
-    owner?: Address;
+    account?: Address;
     // (undocumented)
     query?: Record<string, unknown>;
 }
