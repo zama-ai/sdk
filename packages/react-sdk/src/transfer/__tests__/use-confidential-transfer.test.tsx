@@ -236,14 +236,15 @@ describe("useConfidentialTransfer", () => {
     createWrapper,
     signer,
     relayer,
+    provider,
   }) => {
     const handleB = `0x${"44".repeat(32)}`;
 
     // Both Phase 1 (handleQuery) and Phase 2 (token.balanceOf) read the handle
-    // via signer.readContract; track the "current" handle and flip it on the
+    // via provider.readContract; track the "current" handle and flip it on the
     // transaction write so the post-transfer refetch sees handleB.
     let currentHandle: string = HANDLE;
-    vi.mocked(signer.readContract).mockImplementation(async () => currentHandle);
+    vi.mocked(provider.readContract).mockImplementation(async () => currentHandle);
     vi.mocked(relayer.userDecrypt).mockImplementation(async ({ handles }) => ({
       [handles[0]]: handles[0] === HANDLE ? 1000n : 500n,
     }));
@@ -255,7 +256,7 @@ describe("useConfidentialTransfer", () => {
     const { Wrapper } = createWrapper({ signer, relayer });
     const { result } = renderHook(
       () => ({
-        balance: useConfidentialBalance({ tokenAddress: TOKEN }),
+        balance: useConfidentialBalance({ tokenAddress: TOKEN, account: USER }),
         transfer: useConfidentialTransfer({ tokenAddress: TOKEN }),
       }),
       { wrapper: Wrapper },
@@ -498,9 +499,12 @@ describe("useConfidentialTransfer error propagation", () => {
     vi.mocked(token.confidentialTransfer).mockRejectedValueOnce(error);
 
     const { Wrapper } = createWrapper();
-    const { result } = renderHook(() => useMutation(confidentialTransferMutationOptions(token)), {
-      wrapper: Wrapper,
-    });
+    const { result } = renderHook(
+      () => useMutation(confidentialTransferMutationOptions(token, token.address)),
+      {
+        wrapper: Wrapper,
+      },
+    );
 
     await act(async () => {
       await expect(
@@ -519,7 +523,7 @@ describe("useConfidentialTransfer error propagation", () => {
     const error = new EncryptionFailedError("Failed to encrypt transfer amount");
     vi.mocked(token.confidentialTransfer).mockRejectedValue(error);
 
-    const opts = confidentialTransferMutationOptions(token);
+    const opts = confidentialTransferMutationOptions(token, token.address);
 
     await expect(opts.mutationFn({ to: "0xto" as Address, amount: 100n })).rejects.toThrow(
       EncryptionFailedError,

@@ -39,7 +39,7 @@ export function useConfidentialTransferFrom(
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       options?.onSuccess?.(data, variables, onMutateResult, context);
-      invalidateAfterTransfer(context.client, config.tokenAddress);
+      invalidateAfterTransfer(context.client, token.address);
     },
   });
 }

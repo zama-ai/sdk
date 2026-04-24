@@ -8,6 +8,7 @@ import {
   useConfidentialBalance,
   useMetadata,
 } from "@zama-fhe/react-sdk";
+import { useAccount } from "wagmi";
 
 type FinalizeUnwrapInput =
   | { label: "Unwrap request ID"; params: { unwrapRequestId: Hex } }
@@ -21,8 +22,9 @@ export function UnwrapManualForm({
   wrapperAddress?: Address;
 }) {
   const [finalizeInput, setFinalizeInput] = useState<FinalizeUnwrapInput | null>(null);
+  const { address } = useAccount();
   const { data: metadata } = useMetadata(tokenAddress);
-  const { data: balance } = useConfidentialBalance({ tokenAddress });
+  const { data: balance } = useConfidentialBalance({ tokenAddress, account: address });
   const unwrap = useUnwrap({ tokenAddress, wrapperAddress });
   const finalizeUnwrap = useFinalizeUnwrap({ tokenAddress, wrapperAddress });
 

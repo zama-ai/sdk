@@ -5,42 +5,79 @@ import { useConfidentialBalance } from "../use-confidential-balance";
 import { TOKEN, USER } from "../../__tests__/mutation-test-helpers";
 
 describe("useConfidentialBalance", () => {
-  test("default", async ({ renderWithProviders, signer, relayer }) => {
+  test("default", async ({ renderWithProviders, relayer, provider }) => {
     const handle = `0x${"aa".repeat(32)}`;
-    vi.mocked(signer.readContract).mockResolvedValue(handle);
+    vi.mocked(provider.readContract).mockResolvedValue(handle);
     vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handle]: 123n });
 
-    const { result } = renderWithProviders(() => useConfidentialBalance({ tokenAddress: TOKEN }));
+    const { result } = renderWithProviders(() =>
+      useConfidentialBalance({ tokenAddress: TOKEN, account: USER }),
+    );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
 
     expect(result.current.data).toBe(123n);
-    expect(signer.readContract).toHaveBeenCalledWith(
+    expect(provider.readContract).toHaveBeenCalledWith(
       expect.objectContaining({ functionName: "confidentialBalanceOf", address: TOKEN }),
     );
   });
 
   test("behavior: disabled when user passes enabled=false", async ({
     renderWithProviders,
-    signer,
+    provider,
   }) => {
     const { result } = renderWithProviders(() =>
-      useConfidentialBalance({ tokenAddress: TOKEN }, { enabled: false }),
+      useConfidentialBalance({ tokenAddress: TOKEN, account: USER }, { enabled: false }),
     );
 
-    await waitFor(() => expect(signer.getAddress).toHaveBeenCalled(), { timeout: 5_000 });
     expect(result.current.isPending).toBe(true);
     expect(result.current.fetchStatus).toBe("idle");
-    expect(signer.readContract).not.toHaveBeenCalled();
+    expect(provider.readContract).not.toHaveBeenCalled();
+  });
+
+  test("behavior: disabled when account is undefined (signer-less mount)", ({
+    renderWithProviders,
+    provider,
+  }) => {
+    const { result } = renderWithProviders(() =>
+      useConfidentialBalance({ tokenAddress: TOKEN, account: undefined }),
+    );
+
+    expect(result.current.isPending).toBe(true);
+    expect(result.current.fetchStatus).toBe("idle");
+    expect(provider.readContract).not.toHaveBeenCalled();
+  });
+
+  test("behavior: uses the caller-supplied account even when it differs from the connected signer", async ({
+    renderWithProviders,
+    relayer,
+    provider,
+  }) => {
+    const handle = `0x${"cd".repeat(32)}`;
+    vi.mocked(provider.readContract).mockResolvedValue(handle);
+    vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handle]: 456n });
+
+    const OTHER = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
+    const { result } = renderWithProviders(() =>
+      useConfidentialBalance({ tokenAddress: TOKEN, account: OTHER }),
+    );
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
+    expect(result.current.data).toBe(456n);
+    expect(provider.readContract).toHaveBeenCalledWith(
+      expect.objectContaining({ functionName: "confidentialBalanceOf", args: [OTHER] }),
+    );
   });
 
   describe("lifecycle", () => {
-    test("default", async ({ renderWithProviders, signer, relayer }) => {
+    test("default", async ({ renderWithProviders, relayer, provider }) => {
       const handle = `0x${"aa".repeat(32)}`;
-      vi.mocked(signer.readContract).mockResolvedValue(handle);
+      vi.mocked(provider.readContract).mockResolvedValue(handle);
       vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handle]: 123n });
 
-      const { result } = renderWithProviders(() => useConfidentialBalance({ tokenAddress: TOKEN }));
+      const { result } = renderWithProviders(() =>
+        useConfidentialBalance({ tokenAddress: TOKEN, account: USER }),
+      );
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
 
@@ -78,58 +115,23 @@ describe("useConfidentialBalance", () => {
     `);
     });
 
-    test("error: query surfaces signer error", async ({ renderWithProviders, signer }) => {
-      vi.mocked(signer.getAddress).mockRejectedValue(new Error("no wallet"));
-
-      const { result } = renderWithProviders(() => useConfidentialBalance({ tokenAddress: TOKEN }));
-
-      await waitFor(() => expect(result.current.isError).toBe(true));
-      expect(result.current.data).toBeUndefined();
-    });
-
-    test("behavior: signer undefined -> defined", async ({
-      renderWithProviders,
-      signer,
-      relayer,
-    }) => {
-      const handle = `0x${"ac".repeat(32)}`;
-      let resolveAddress: (value: Address) => void;
-      const addressPromise = new Promise<Address>((resolve) => {
-        resolveAddress = resolve;
-      });
-
-      vi.mocked(signer.getAddress).mockReturnValue(addressPromise);
-      vi.mocked(signer.readContract).mockResolvedValue(handle);
-      vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handle]: 321n });
-
-      const { result, rerender } = renderWithProviders(() =>
-        useConfidentialBalance({ tokenAddress: TOKEN }),
-      );
-
-      expect(result.current.isPending).toBe(true);
-
-      resolveAddress!(USER);
-      rerender();
-
-      await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
-      expect(result.current.data).toBe(321n);
-    });
-
     test("behavior: balance updates on refetch when handle changes", async ({
       renderWithProviders,
-      signer,
       relayer,
+      provider,
     }) => {
       const handleA = `0x${"ab".repeat(32)}`;
       const handleB = `0x${"bc".repeat(32)}`;
       let currentHandle: string = handleA;
-      vi.mocked(signer.readContract).mockImplementation(async () => currentHandle);
+      vi.mocked(provider.readContract).mockImplementation(async () => currentHandle);
       vi.mocked(relayer.userDecrypt).mockImplementation(async ({ handles }) => {
         const value = handles[0] === handleA ? 111n : 222n;
         return { [handles[0]]: value };
       });
 
-      const { result } = renderWithProviders(() => useConfidentialBalance({ tokenAddress: TOKEN }));
+      const { result } = renderWithProviders(() =>
+        useConfidentialBalance({ tokenAddress: TOKEN, account: USER }),
+      );
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
       expect(result.current.data).toBe(111n);
@@ -151,15 +153,15 @@ describe("useConfidentialBalance", () => {
 
     test("behavior: re-render preserves cached data", async ({
       renderWithProviders,
-      signer,
       relayer,
+      provider,
     }) => {
       const handle = `0x${"ad".repeat(32)}`;
-      vi.mocked(signer.readContract).mockResolvedValue(handle);
+      vi.mocked(provider.readContract).mockResolvedValue(handle);
       vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handle]: 999n });
 
       const { result, rerender } = renderWithProviders(() =>
-        useConfidentialBalance({ tokenAddress: TOKEN }),
+        useConfidentialBalance({ tokenAddress: TOKEN, account: USER }),
       );
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
@@ -172,17 +174,15 @@ describe("useConfidentialBalance", () => {
 
     test("behavior: disabled when user passes enabled=false", async ({
       renderWithProviders,
-      signer,
+      provider,
     }) => {
       const { result } = renderWithProviders(() =>
-        useConfidentialBalance({ tokenAddress: TOKEN }, { enabled: false }),
+        useConfidentialBalance({ tokenAddress: TOKEN, account: USER }, { enabled: false }),
       );
-
-      await waitFor(() => expect(signer.getAddress).toHaveBeenCalled(), { timeout: 5_000 });
 
       expect(result.current.isPending).toBe(true);
       expect(result.current.fetchStatus).toBe("idle");
-      expect(signer.readContract).not.toHaveBeenCalled();
+      expect(provider.readContract).not.toHaveBeenCalled();
     });
   });
 });

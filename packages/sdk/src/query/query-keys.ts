@@ -20,8 +20,6 @@ export const zamaQueryKeys = {
   signerAddress: {
     all: ["zama.signerAddress"] as const,
     scope: (scope: number) => ["zama.signerAddress", { scope }] as const,
-    token: (tokenAddress: Address) =>
-      ["zama.signerAddress", { tokenAddress: getAddress(tokenAddress) }] as const,
   },
 
   confidentialBalance: {

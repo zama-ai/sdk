@@ -13,11 +13,13 @@ describe("Integration: multi-step workflows", () => {
       signer,
       token,
       handle,
+      userAddress,
+      provider,
     }) => {
       const UNDERLYING = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
 
       // Step 1: readContract calls for underlying and allowance
-      vi.mocked(signer.readContract)
+      vi.mocked(provider.readContract)
         .mockResolvedValueOnce(UNDERLYING) // #getUnderlying
         .mockResolvedValueOnce(0n) // allowance check (insufficient)
         .mockResolvedValueOnce(handle); // confidentialBalanceOf after wrap
@@ -38,7 +40,7 @@ describe("Integration: multi-step workflows", () => {
       );
 
       // Step 3: Check balance after shield — should read the new handle
-      const balanceHandle = await token.confidentialBalanceOf();
+      const balanceHandle = await token.confidentialBalanceOf(userAddress);
       expect(balanceHandle).toBe(handle);
 
       // Step 4: Decrypt the balance through the SDK-level API
@@ -61,6 +63,7 @@ describe("Integration: multi-step workflows", () => {
       userAddress,
       handle,
       createToken,
+      provider,
     }) => {
       // Step 1: Execute transfer (encrypts amount, sends tx)
       const transferResult = await token.confidentialTransfer(RECIPIENT, 250n);
@@ -82,13 +85,13 @@ describe("Integration: multi-step workflows", () => {
       );
 
       // Step 2: Check sender balance after transfer
-      vi.mocked(signer.readContract).mockResolvedValueOnce(handle);
-      const senderHandle = await token.confidentialBalanceOf();
+      vi.mocked(provider.readContract).mockResolvedValueOnce(handle);
+      const senderHandle = await token.confidentialBalanceOf(userAddress);
       expect(senderHandle).toBe(handle);
 
       // Step 3: Check receiver balance (different token instance for same contract)
       const receiverToken = createToken(token.sdk, tokenAddress);
-      vi.mocked(signer.readContract).mockResolvedValueOnce(handle);
+      vi.mocked(provider.readContract).mockResolvedValueOnce(handle);
       const receiverHandle = await receiverToken.confidentialBalanceOf(RECIPIENT);
       expect(receiverHandle).toBe(handle);
     });
@@ -101,6 +104,7 @@ describe("Integration: multi-step workflows", () => {
       token,
       tokenAddress,
       userAddress,
+      provider,
     }) => {
       // Step 1: Execute unwrap (encrypts amount, sends tx)
       const unwrapResult = await token.unwrap(500n);
@@ -115,7 +119,7 @@ describe("Integration: multi-step workflows", () => {
 
       // Step 2: Wait for receipt and finalize
       // Mock receipt with UnwrapRequested event
-      vi.mocked(signer.waitForTransactionReceipt).mockResolvedValueOnce({
+      vi.mocked(provider.waitForTransactionReceipt).mockResolvedValueOnce({
         logs: [
           {
             topics: [
@@ -148,6 +152,7 @@ describe("Integration: multi-step workflows", () => {
       signer,
       token,
       userAddress,
+      provider,
     }) => {
       // Mock receipt with UnwrapRequested event for the auto-finalize path.
       // unwrap() now calls waitForTransactionReceipt (1st call),
@@ -164,7 +169,7 @@ describe("Integration: multi-step workflows", () => {
           },
         ],
       };
-      vi.mocked(signer.waitForTransactionReceipt)
+      vi.mocked(provider.waitForTransactionReceipt)
         .mockResolvedValueOnce(eventReceipt) // unwrap receipt
         .mockResolvedValueOnce(eventReceipt) // #waitAndFinalizeUnshield receipt (parses event)
         .mockResolvedValueOnce({ logs: [] }); // finalizeUnwrap receipt
@@ -177,7 +182,7 @@ describe("Integration: multi-step workflows", () => {
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "unwrap" }),
       );
-      expect(signer.waitForTransactionReceipt).toHaveBeenCalled();
+      expect(provider.waitForTransactionReceipt).toHaveBeenCalled();
       expect(relayer.publicDecrypt).toHaveBeenCalledWith([BURN_HANDLE]);
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "finalizeUnwrap" }),

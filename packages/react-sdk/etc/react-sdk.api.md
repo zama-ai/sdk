@@ -26,6 +26,7 @@ import { DelegationStatusData } from '@zama-fhe/sdk/query';
 import { EIP712TypedData } from '@zama-fhe/sdk';
 import { EncryptParams } from '@zama-fhe/sdk';
 import { FinalizeUnwrapParams } from '@zama-fhe/sdk/query';
+import { GenericProvider } from '@zama-fhe/sdk';
 import { GenericSigner } from '@zama-fhe/sdk';
 import { GenericStorage } from '@zama-fhe/sdk';
 import { PaginatedResult } from '@zama-fhe/sdk';
@@ -36,6 +37,7 @@ import { RelayerSDK } from '@zama-fhe/sdk';
 import { ResumeUnshieldParams } from '@zama-fhe/sdk/query';
 import { RevokeDelegationParams } from '@zama-fhe/sdk/query';
 import { ShieldParams } from '@zama-fhe/sdk/query';
+import { Token } from '@zama-fhe/sdk';
 import { TokenMetadata } from '@zama-fhe/sdk/query';
 import { TokenWrapperPair } from '@zama-fhe/sdk';
 import { TokenWrapperPairWithMetadata } from '@zama-fhe/sdk';
@@ -46,6 +48,7 @@ import { UnwrapParams } from '@zama-fhe/sdk/query';
 import { UseMutationOptions } from '@tanstack/react-query';
 import { UseMutationResult } from '@tanstack/react-query';
 import { UseQueryOptions } from '@tanstack/react-query';
+import { UseQueryResult } from '@tanstack/react-query';
 import { UserDecryptQueryConfig } from '@zama-fhe/sdk/query';
 import { ZamaSDK } from '@zama-fhe/sdk';
 import { ZamaSDKEventListener } from '@zama-fhe/sdk';
@@ -66,12 +69,13 @@ export function useConfidentialApprove(config: UseZamaConfig, options?: UseMutat
 // @public
 export function useConfidentialBalance(config: UseConfidentialBalanceConfig, options?: UseConfidentialBalanceOptions): _$_tanstack_react_query0.UseQueryResult<bigint, Error>;
 
-// @public
+// @public (undocumented)
 export interface UseConfidentialBalanceConfig {
+    account: Address | undefined;
     tokenAddress: Address;
 }
 
-// @public
+// @public (undocumented)
 export interface UseConfidentialBalanceOptions extends Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn" | "enabled"> {
     enabled?: boolean;
 }
@@ -79,12 +83,13 @@ export interface UseConfidentialBalanceOptions extends Omit<UseQueryOptions<bigi
 // @public
 export function useConfidentialBalances(config: UseConfidentialBalancesConfig, options?: UseConfidentialBalancesOptions): _$_tanstack_react_query0.UseQueryResult<BatchBalancesResult, Error>;
 
-// @public
+// @public (undocumented)
 export interface UseConfidentialBalancesConfig {
+    account: Address | undefined;
     tokenAddresses: Address[];
 }
 
-// @public
+// @public (undocumented)
 export interface UseConfidentialBalancesOptions extends Omit<UseQueryOptions<BatchBalancesResult>, "queryKey" | "queryFn" | "enabled"> {
     enabled?: boolean;
 }
@@ -92,9 +97,9 @@ export interface UseConfidentialBalancesOptions extends Omit<UseQueryOptions<Bat
 // @public
 export function useConfidentialIsApproved(config: UseConfidentialIsApprovedConfig, options?: Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">): _$_tanstack_react_query0.UseQueryResult<boolean, Error>;
 
-// @public
+// @public (undocumented)
 export interface UseConfidentialIsApprovedConfig {
-    holder?: Address;
+    holder: Address | undefined;
     spender: Address | undefined;
     tokenAddress: Address | undefined;
 }
@@ -102,10 +107,11 @@ export interface UseConfidentialIsApprovedConfig {
 // @public
 export function useConfidentialIsApprovedSuspense(config: UseConfidentialIsApprovedSuspenseConfig): _$_tanstack_react_query0.UseSuspenseQueryResult<boolean, Error>;
 
-// @public
-export interface UseConfidentialIsApprovedSuspenseConfig extends UseZamaConfig {
-    holder?: Address;
+// @public (undocumented)
+export interface UseConfidentialIsApprovedSuspenseConfig {
+    holder: Address;
     spender: Address;
+    tokenAddress: Address;
 }
 
 // @public
@@ -250,7 +256,13 @@ export interface UseShieldConfig extends UseZamaConfig {
 }
 
 // @public
-export function useToken(config: UseZamaConfig): _$_zama_fhe_sdk0.Token;
+export function useSignerAddress(): UseQueryResult<Address>;
+
+// @public
+export function useSignerAddressSuspense(): _$_tanstack_react_query0.UseSuspenseQueryResult<`0x${string}`, Error>;
+
+// @public
+export function useToken(config: UseZamaConfig): Token;
 
 // @public
 export function useTokenAddress(input: {
@@ -283,14 +295,22 @@ export function useTotalSupplySuspense(tokenAddress: Address): _$_tanstack_react
 // @public
 export function useUnderlyingAllowance(config: UseUnderlyingAllowanceConfig, options?: Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn">): _$_tanstack_react_query0.UseQueryResult<bigint, Error>;
 
-// @public
+// @public (undocumented)
 export interface UseUnderlyingAllowanceConfig {
+    owner: Address | undefined;
     tokenAddress: Address;
     wrapperAddress: Address;
 }
 
 // @public
-export function useUnderlyingAllowanceSuspense(config: UseUnderlyingAllowanceConfig): _$_tanstack_react_query0.UseSuspenseQueryResult<bigint, Error>;
+export function useUnderlyingAllowanceSuspense(config: UseUnderlyingAllowanceSuspenseConfig): _$_tanstack_react_query0.UseSuspenseQueryResult<bigint, Error>;
+
+// @public (undocumented)
+export interface UseUnderlyingAllowanceSuspenseConfig {
+    owner: Address;
+    tokenAddress: Address;
+    wrapperAddress: Address;
+}
 
 // @public
 export function useUnshield(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, UnshieldParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, UnshieldParams, `0x${string}`>;
@@ -347,6 +367,7 @@ export function ZamaProvider(input: ZamaProviderProps): _$react_jsx_runtime0.JSX
 export interface ZamaProviderProps extends PropsWithChildren {
     keypairTTL?: number;
     onEvent?: ZamaSDKEventListener;
+    provider: GenericProvider;
     registryAddresses?: Record<number, Address>;
     registryTTL?: number;
     relayer: RelayerSDK;

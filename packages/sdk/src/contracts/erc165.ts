@@ -29,7 +29,7 @@ export const ERC7984_WRAPPER_INTERFACE_ID = "0x1f1c62b2" as const;
  *
  * @example
  * ```ts
- * const isConfidential = await signer.readContract(
+ * const isConfidential = await provider.readContract(
  *   supportsInterfaceContract(tokenAddress, ERC7984_INTERFACE_ID),
  * );
  * ```
@@ -48,7 +48,7 @@ export function supportsInterfaceContract(tokenAddress: Address, interfaceId: Ad
  *
  * @example
  * ```ts
- * const isConfidential = await signer.readContract(
+ * const isConfidential = await provider.readContract(
  *   isConfidentialTokenContract("0xTokenAddress"),
  * );
  * ```
@@ -68,7 +68,7 @@ export function isConfidentialTokenContract(tokenAddress: Address) {
  *
  * @example
  * ```ts
- * const isWrapper = await signer.readContract(
+ * const isWrapper = await provider.readContract(
  *   isConfidentialWrapperContract("0xWrapperAddress"),
  * );
  * ```

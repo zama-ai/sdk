@@ -64,6 +64,8 @@ export const ZamaErrorCode = {
   DelegationExpirationTooSoon: "DELEGATION_EXPIRATION_TOO_SOON",
   /** Delegation exists on-chain but hasn't propagated to the gateway yet. */
   DelegationNotPropagated: "DELEGATION_NOT_PROPAGATED",
+  /** Signer and provider are connected to different chains. */
+  ChainMismatch: "CHAIN_MISMATCH",
 } as const;
 
 /** Union of all {@link ZamaErrorCode} string values. */

@@ -52,7 +52,7 @@ export function useShield<TContext = unknown>(
     ...options,
     ...optimisticBalanceCallbacks({
       optimistic: config.optimistic,
-      tokenAddress: config.tokenAddress,
+      tokenAddress: token.address,
       queryClient,
       options,
     }),

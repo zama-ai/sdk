@@ -52,7 +52,7 @@ describe("ZamaProvider & useZamaSDK", () => {
     const { Wrapper, queryClient } = createWrapper({ signer });
     renderHook(() => useZamaSDK(), { wrapper: Wrapper });
 
-    const lifecycle = vi.mocked(signer.subscribe!).mock.calls.at(-1)?.[0];
+    const lifecycle = vi.mocked(signer.subscribe!).mock.calls.at(0)?.[0];
     const signerKey = zamaQueryKeys.signerAddress.all;
     const balanceKey = zamaQueryKeys.confidentialBalance.token(
       "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",

@@ -4,7 +4,7 @@ import { finalizeUnwrapMutationOptions } from "../finalize-unwrap";
 
 describe("finalizeUnwrapMutationOptions", () => {
   test("delegates finalizeUnwrap with unwrapRequestId", async ({ mockToken }) => {
-    const options = finalizeUnwrapMutationOptions(mockToken);
+    const options = finalizeUnwrapMutationOptions(mockToken, mockToken.address);
 
     expect(options.mutationKey).toEqual(["zama.finalizeUnwrap", mockToken.address]);
     await options.mutationFn({

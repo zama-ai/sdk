@@ -85,19 +85,17 @@ export class ReadonlyToken {
    * Decrypt and return the plaintext balance for the given owner.
    * Acquires FHE credentials via a wallet signature if none are cached.
    *
-   * @param owner - Optional balance owner address. Defaults to the connected signer.
+   * @param owner - Balance owner address.
    * @returns The decrypted plaintext balance as a bigint.
    * @throws {@link DecryptionFailedError} if FHE decryption fails.
    *
    * @example
    * ```ts
-   * const balance = await token.balanceOf();
-   * // or for another address:
    * const balance = await token.balanceOf("0xOwner");
    * ```
    */
-  async balanceOf(owner?: Address): Promise<bigint> {
-    const ownerAddress = owner ? getAddress(owner) : await this.sdk.signer.getAddress();
+  async balanceOf(owner: Address): Promise<bigint> {
+    const ownerAddress = getAddress(owner);
     const handle = await this.readConfidentialBalanceOf(ownerAddress);
     const result = await this.sdk.userDecrypt([{ handle, contractAddress: this.address }]);
     const value = result[handle];
@@ -111,17 +109,16 @@ export class ReadonlyToken {
   /**
    * Return the raw encrypted balance handle without decrypting.
    *
-   * @param owner - Optional balance owner address. Defaults to the connected signer.
+   * @param owner - Balance owner address.
    * @returns The encrypted balance handle as a hex string.
    *
    * @example
    * ```ts
-   * const handle = await token.confidentialBalanceOf();
+   * const handle = await token.confidentialBalanceOf("0xOwner");
    * ```
    */
-  async confidentialBalanceOf(owner?: Address): Promise<Handle> {
-    const ownerAddress = owner ? getAddress(owner) : await this.sdk.signer.getAddress();
-    return this.readConfidentialBalanceOf(ownerAddress);
+  async confidentialBalanceOf(owner: Address): Promise<Handle> {
+    return this.readConfidentialBalanceOf(getAddress(owner));
   }
 
   /**
@@ -130,7 +127,7 @@ export class ReadonlyToken {
    * @returns `true` if the contract implements the ERC-7984 confidential token interface.
    */
   async isConfidential(): Promise<boolean> {
-    return this.sdk.signer.readContract(
+    return this.sdk.provider.readContract(
       supportsInterfaceContract(this.address, ERC7984_INTERFACE_ID),
     );
   }
@@ -148,10 +145,10 @@ export class ReadonlyToken {
     // During the transition period, check both wrapper interface IDs in parallel.
     // Either returning true is sufficient to identify a confidential wrapper.
     const [legacyMatch, newMatch] = await Promise.all([
-      this.sdk.signer.readContract(
+      this.sdk.provider.readContract(
         supportsInterfaceContract(this.address, ERC7984_WRAPPER_INTERFACE_ID_LEGACY),
       ),
-      this.sdk.signer.readContract(
+      this.sdk.provider.readContract(
         supportsInterfaceContract(this.address, ERC7984_WRAPPER_INTERFACE_ID),
       ),
     ]);
@@ -168,17 +165,17 @@ export class ReadonlyToken {
    * whole batch — caller decides how to surface them.
    *
    * @param tokens - Array of {@link ReadonlyToken} instances bound to the same SDK.
-   * @param owner - Optional balance owner address. Defaults to the connected signer.
+   * @param owner - Balance owner address.
    * @returns `{ results, errors }` partitioning the per-token outcomes.
    *
    * @example
    * ```ts
-   * const { results, errors } = await ReadonlyToken.batchBalancesOf(tokens);
+   * const { results, errors } = await ReadonlyToken.batchBalancesOf(tokens, owner);
    * ```
    */
   static async batchBalancesOf(
     tokens: ReadonlyToken[],
-    owner?: Address,
+    owner: Address,
   ): Promise<BatchBalancesResult> {
     const results = new Map<Address, bigint>();
     const errors = new Map<Address, ZamaError>();
@@ -187,6 +184,8 @@ export class ReadonlyToken {
     }
 
     const sdk = ReadonlyToken.assertSameSdk(tokens);
+    // Fail fast on chain mismatch before prompting the wallet for a signature.
+    await sdk.requireChainAlignment("batchBalancesOf");
     // Pre-authorize the full token set in one wallet signature so subsequent
     // per-token userDecrypt calls reuse the cached credentials.
     await sdk.allow(tokens.map((t) => t.address));
@@ -278,6 +277,8 @@ export class ReadonlyToken {
       : getAddress(delegatorAddress);
     const firstToken = tokens[0]!;
     ReadonlyToken.assertSameSdk(tokens);
+    // TODO: code smell; an instance of SDK should be passed as argument of batchDecryptBalancesAs instead.
+    await firstToken.sdk.requireChainAlignment("batchDecryptBalancesAs");
 
     const resolvedHandles =
       handles ??
@@ -417,22 +418,21 @@ export class ReadonlyToken {
    * @returns The underlying ERC-20 token address.
    */
   async underlyingToken(): Promise<Address> {
-    return this.sdk.signer.readContract(underlyingContract(this.address));
+    return this.sdk.provider.readContract(underlyingContract(this.address));
   }
 
   /**
    * Read the ERC-20 allowance of the underlying token for a given wrapper.
    *
    * @param wrapper - The wrapper contract address to check allowance for.
-   * @param owner - Optional owner address. Defaults to the connected signer.
+   * @param owner - The owner address whose allowance to read.
    * @returns The current allowance as a bigint.
    */
-  async allowance(wrapper: Address, owner?: Address): Promise<bigint> {
+  async allowance(wrapper: Address, owner: Address): Promise<bigint> {
     const normalizedWrapper = getAddress(wrapper);
-    const underlying = await this.sdk.signer.readContract(underlyingContract(normalizedWrapper));
-    const userAddress = owner ? getAddress(owner) : await this.sdk.signer.getAddress();
-    return this.sdk.signer.readContract(
-      allowanceContract(underlying, userAddress, normalizedWrapper),
+    const underlying = await this.sdk.provider.readContract(underlyingContract(normalizedWrapper));
+    return this.sdk.provider.readContract(
+      allowanceContract(underlying, getAddress(owner), normalizedWrapper),
     );
   }
 
@@ -442,7 +442,7 @@ export class ReadonlyToken {
    * @returns The token name string.
    */
   async name(): Promise<string> {
-    return this.sdk.signer.readContract(nameContract(this.address));
+    return this.sdk.provider.readContract(nameContract(this.address));
   }
 
   /**
@@ -451,7 +451,7 @@ export class ReadonlyToken {
    * @returns The token symbol string.
    */
   async symbol(): Promise<string> {
-    return this.sdk.signer.readContract(symbolContract(this.address));
+    return this.sdk.provider.readContract(symbolContract(this.address));
   }
 
   /**
@@ -460,7 +460,7 @@ export class ReadonlyToken {
    * @returns The number of decimals.
    */
   async decimals(): Promise<number> {
-    return this.sdk.signer.readContract(decimalsContract(this.address));
+    return this.sdk.provider.readContract(decimalsContract(this.address));
   }
 
   /**
@@ -474,7 +474,7 @@ export class ReadonlyToken {
    * ```ts
    * await token.allow();
    * // Credentials are now cached — subsequent decrypts won't prompt
-   * const balance = await token.balanceOf();
+   * const balance = await token.balanceOf(owner);
    * ```
    */
   async allow(): Promise<void> {
@@ -547,7 +547,7 @@ export class ReadonlyToken {
     if (expiry === MAX_UINT64) {
       return true;
     }
-    const now = await this.sdk.signer.getBlockTimestamp();
+    const now = await this.sdk.provider.getBlockTimestamp();
     return expiry > now;
   }
 
@@ -566,7 +566,7 @@ export class ReadonlyToken {
     delegateAddress: Address;
   }): Promise<bigint> {
     const acl = await this.getAclAddress();
-    return this.sdk.signer.readContract(
+    return this.sdk.provider.readContract(
       getDelegationExpiryContract(
         acl,
         getAddress(delegatorAddress),
@@ -592,7 +592,7 @@ export class ReadonlyToken {
       );
     }
     if (expiry !== MAX_UINT64) {
-      const now = await this.sdk.signer.getBlockTimestamp();
+      const now = await this.sdk.provider.getBlockTimestamp();
       if (expiry <= now) {
         throw new DelegationExpiredError(
           `Delegation from ${delegatorAddress} to ${delegateAddress} for ${this.address} has expired`,
@@ -602,7 +602,7 @@ export class ReadonlyToken {
   }
 
   protected async readConfidentialBalanceOf(owner: Address): Promise<Handle> {
-    return await this.sdk.signer.readContract(confidentialBalanceOfContract(this.address, owner));
+    return await this.sdk.provider.readContract(confidentialBalanceOfContract(this.address, owner));
   }
   /**
    * Decrypt the balance of a delegator using delegated decryption credentials.
@@ -638,6 +638,7 @@ export class ReadonlyToken {
     delegatorAddress: Address;
     accountAddress?: Address;
   }): Promise<bigint> {
+    await this.sdk.requireChainAlignment("decryptBalanceAs");
     const normalizedDelegator = getAddress(delegatorAddress);
     const normalizedAccount = accountAddress ? getAddress(accountAddress) : normalizedDelegator;
 
