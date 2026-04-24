@@ -30,10 +30,12 @@ export interface ZamaProviderProps extends PropsWithChildren {
    */
   provider: GenericProvider;
   /**
-   * Wallet signer (`ViemSigner`, `EthersSigner`, `WagmiSigner`, or custom
-   * {@link GenericSigner}).
+   * Optional wallet signer (`ViemSigner`, `EthersSigner`, `WagmiSigner`, or
+   * custom {@link GenericSigner}). Omit for read-only usage (indexers, SSR,
+   * pre-wallet-connect states). Signer-required operations throw
+   * `SignerRequiredError` when invoked without a signer.
    */
-  signer: GenericSigner;
+  signer?: GenericSigner;
   /** Credential storage backend (IndexedDBStorage for browser, MemoryStorage for tests). */
   storage: GenericStorage;
   /**
@@ -128,7 +130,8 @@ export function ZamaProvider({
     ],
   );
 
-  // SDK internally does credential/cache cleanup. React layer needs to handle query invalidation.
+  // SDK internally does credential/cache cleanup. React layer clears the
+  // wallet-lifecycle query state.
   useEffect(
     () => sdk.onIdentityChange(() => invalidateWalletLifecycleQueries(queryClient)),
     [sdk, queryClient],
@@ -157,7 +160,8 @@ export function useZamaSDK(): ZamaSDK {
   if (!context) {
     throw new Error(
       "useZamaSDK must be used within a <ZamaProvider>. " +
-        "Wrap your component tree in <ZamaProvider relayer={…} provider={…} signer={…} storage={…}>.",
+        "Wrap your component tree in <ZamaProvider relayer={…} provider={…} storage={…}>. " +
+        "Pass an optional signer={…} prop when you want writes and decrypts.",
     );
   }
   return context;

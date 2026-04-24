@@ -1,40 +1,64 @@
 import { useQuery } from "@tanstack/react-query";
 import { waitFor } from "@testing-library/react";
 import { hashFn, zamaQueryKeys } from "@zama-fhe/sdk/query";
-import type { Address } from "@zama-fhe/sdk";
+import type { Address, GenericSigner } from "@zama-fhe/sdk";
 import { describe, expect, test } from "../../test-fixtures";
 
 import { useIsAllowed } from "../use-is-allowed";
 
 const CONTRACT_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
-// Matches the USER constant in sdk/src/test-fixtures.ts used by createMockSigner
-const USER_ADDRESS = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
+const SIGNER_ADDRESS = "0x1111111111111111111111111111111111111111" as Address;
+const CHAIN_ID = 31337;
 
 vi.mock(import("@tanstack/react-query"), async () => {
   const actual =
     await vi.importActual<typeof import("@tanstack/react-query")>("@tanstack/react-query"); // oxlint-disable-line typescript-eslint/consistent-type-imports
-  return { ...actual, useQuery: vi.fn(() => ({ data: true })) };
+  return { ...actual, useQuery: vi.fn() };
 });
 
-vi.mock("../../use-signer-address", () => ({
-  useSignerAddress: vi.fn(() => ({ data: USER_ADDRESS })),
-}));
+function makeSigner(): GenericSigner {
+  return {
+    getAddress: vi.fn().mockResolvedValue(SIGNER_ADDRESS),
+    getChainId: vi.fn().mockResolvedValue(CHAIN_ID),
+    signTypedData: vi.fn(),
+    writeContract: vi.fn(),
+  } as unknown as GenericSigner;
+}
 
 describe("useIsAllowed", () => {
-  test("passes the shared queryKeyHashFn and scopes by signer address", async ({
+  test("uses a minimal uncached query keyed by contract addresses", async ({
     renderWithProviders,
   }) => {
     vi.mocked(useQuery).mockReturnValue({ data: true } as never);
+    const signer = makeSigner();
 
-    renderWithProviders(() => useIsAllowed({ contractAddresses: [CONTRACT_A] }));
+    renderWithProviders(() => useIsAllowed({ contractAddresses: [CONTRACT_A] }), { signer });
 
-    // After ZamaProvider resolves signer.getAddress() the hook re-renders with the
-    // signer address in the query key.
     await waitFor(() => {
       expect(vi.mocked(useQuery)).toHaveBeenCalledWith(
         expect.objectContaining({
           queryKeyHashFn: hashFn,
-          queryKey: zamaQueryKeys.isAllowed.scope(USER_ADDRESS, [CONTRACT_A]),
+          queryKey: zamaQueryKeys.isAllowed.scope([CONTRACT_A]),
+          enabled: true,
+          staleTime: 0,
+          gcTime: 0,
+        }),
+      );
+    });
+  });
+
+  test("is disabled when no signer is configured", async ({ renderWithProviders }) => {
+    vi.mocked(useQuery).mockReturnValue({ data: undefined } as never);
+
+    renderWithProviders(() => useIsAllowed({ contractAddresses: [CONTRACT_A] }), {
+      signer: undefined,
+    });
+
+    await waitFor(() => {
+      expect(vi.mocked(useQuery)).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queryKey: zamaQueryKeys.isAllowed.scope([CONTRACT_A]),
+          enabled: false,
         }),
       );
     });

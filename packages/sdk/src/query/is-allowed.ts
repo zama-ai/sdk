@@ -5,9 +5,13 @@ import { zamaQueryKeys } from "./query-keys";
 import { filterQueryOptions } from "./utils";
 
 export interface IsAllowedQueryConfig {
-  account: Address;
   /** Contract addresses to check credentials against. */
   contractAddresses: [Address, ...Address[]];
+  /**
+   * Standard TanStack query options. `isAllowed` intentionally overrides cache
+   * timing because credential state is wallet-local session state, not server
+   * state: every fetch should read the SDK credential manager directly.
+   */
   query?: Record<string, unknown>;
 }
 
@@ -15,14 +19,18 @@ export function isAllowedQueryOptions(
   sdk: ZamaSDK,
   config: IsAllowedQueryConfig,
 ): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.isAllowed.scope>> {
+  const callerEnabled = config.query?.enabled !== false;
   return {
     ...filterQueryOptions(config?.query ?? {}),
-    queryKey: zamaQueryKeys.isAllowed.scope(config.account, config.contractAddresses),
+    queryKey: zamaQueryKeys.isAllowed.scope(config.contractAddresses),
     queryFn: (context) => {
       const [, { contractAddresses }] = context.queryKey;
-      return sdk.credentials.isAllowed(contractAddresses as [Address, ...Address[]]);
+      return sdk
+        .requireCredentials("isAllowed")
+        .isAllowed(contractAddresses as [Address, ...Address[]]);
     },
-    staleTime: 30_000,
-    enabled: config.query?.enabled !== false,
+    staleTime: 0,
+    gcTime: 0,
+    enabled: callerEnabled && sdk.credentials !== undefined,
   } as const;
 }

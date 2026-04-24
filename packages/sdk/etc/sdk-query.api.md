@@ -556,15 +556,22 @@ export function invalidateWalletLifecycleQueries(queryClient: QueryClientLike): 
 
 // @public (undocumented)
 export interface IsAllowedQueryConfig {
-    // (undocumented)
-    account: Address;
     contractAddresses: [Address, ...Address[]];
     // (undocumented)
     query?: Record<string, unknown>;
+    signerScope?: IsAllowedSignerScope;
 }
 
 // @public (undocumented)
 export function isAllowedQueryOptions(sdk: ZamaSDK, config: IsAllowedQueryConfig): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.isAllowed.scope>>;
+
+// @public
+export interface IsAllowedSignerScope {
+    // (undocumented)
+    address: Address;
+    // (undocumented)
+    chainId: number;
+}
 
 // @public (undocumented)
 export interface IsConfidentialQueryConfig {
@@ -814,9 +821,6 @@ export interface ShieldSubmittedEvent extends BaseEvent {
     // (undocumented)
     type: typeof ZamaSDKEvents.ShieldSubmitted;
 }
-
-// @public (undocumented)
-export function signerAddressQueryOptions(signer: GenericSigner): QueryFactoryOptions<Address, Error, Address, ReturnType<typeof zamaQueryKeys.signerAddress.scope>>;
 
 // @public
 export interface SignerIdentity {
@@ -1185,12 +1189,6 @@ export interface WrappersRegistryQueryConfig {
 
 // @public
 export const zamaQueryKeys: {
-    readonly signerAddress: {
-        readonly all: readonly ["zama.signerAddress"];
-        readonly scope: (scope: number) => readonly ["zama.signerAddress", {
-            readonly scope: number;
-        }];
-    };
     readonly confidentialBalance: {
         readonly all: readonly ["zama.confidentialBalance"];
         readonly token: (tokenAddress: Address) => readonly ["zama.confidentialBalance", {
@@ -1266,9 +1264,13 @@ export const zamaQueryKeys: {
     };
     readonly isAllowed: {
         readonly all: readonly ["zama.isAllowed"];
-        readonly scope: (account: Address, contractAddresses: Address[]) => readonly ["zama.isAllowed", {
-            readonly account: `0x${string}`;
+        readonly scope: (contractAddresses: Address[], signerScope?: {
+            address: Address;
+            chainId: number;
+        }) => readonly ["zama.isAllowed", {
             readonly contractAddresses: `0x${string}`[];
+            readonly signerAddress: `0x${string}` | null;
+            readonly chainId: number | null;
         }];
     };
     readonly publicKey: {
@@ -1369,11 +1371,11 @@ export class ZamaSDK {
     createToken(address: Address, wrapper?: Address): Token;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
     // (undocumented)
-    readonly credentials: CredentialsManager;
+    readonly credentials: CredentialsManager | undefined;
     // Warning: (ae-forgotten-export) The symbol "DelegatedCredentialsManager" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
-    readonly delegatedCredentials: DelegatedCredentialsManager;
+    readonly delegatedCredentials: DelegatedCredentialsManager | undefined;
     dispose(): void;
     // @internal
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
@@ -1387,11 +1389,14 @@ export class ZamaSDK {
     // (undocumented)
     readonly relayer: RelayerSDK;
     requireChainAlignment(operation: string): Promise<number>;
+    requireCredentials(operation: string): CredentialsManager;
+    requireDelegatedCredentials(operation: string): DelegatedCredentialsManager;
+    requireSigner(operation: string): GenericSigner;
     revokeSession(): Promise<void>;
     // (undocumented)
     readonly sessionStorage: GenericStorage;
     // (undocumented)
-    readonly signer: GenericSigner;
+    readonly signer: GenericSigner | undefined;
     // (undocumented)
     readonly storage: GenericStorage;
     terminate(): void;
@@ -1408,7 +1413,7 @@ export interface ZamaSDKConfig {
     relayer: RelayerSDK;
     sessionStorage?: GenericStorage;
     sessionTTL?: number | "infinite";
-    signer: GenericSigner;
+    signer?: GenericSigner;
     storage: GenericStorage;
 }
 

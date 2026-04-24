@@ -333,10 +333,9 @@ export class ReadonlyToken {
     }
 
     const uncachedAddresses = uncached.map((entry) => entry.token.address);
-    const creds = await firstToken.sdk.delegatedCredentials.allow(
-      delegatorAddress,
-      ...uncachedAddresses,
-    );
+    const delegatedCredentials =
+      firstToken.sdk.requireDelegatedCredentials("batchDecryptBalancesAs");
+    const creds = await delegatedCredentials.allow(delegatorAddress, ...uncachedAddresses);
 
     const errors: { address: Address; error: Error }[] = [];
     const decryptFns: (() => Promise<void>)[] = [];
@@ -486,7 +485,7 @@ export class ReadonlyToken {
    * Use this to check if decrypt operations can proceed without a wallet prompt.
    */
   async isAllowed(): Promise<boolean> {
-    return this.sdk.credentials.isAllowed([this.address]);
+    return this.sdk.requireCredentials("isAllowed").isAllowed([this.address]);
   }
 
   /**
@@ -498,7 +497,7 @@ export class ReadonlyToken {
    * @param contractAddresses - Contract addresses to revoke credentials for.
    */
   async revoke(...contractAddresses: Address[]): Promise<void> {
-    await this.sdk.credentials.revoke(...contractAddresses);
+    await this.sdk.requireCredentials("revoke").revoke(...contractAddresses);
   }
 
   /**
@@ -581,7 +580,8 @@ export class ReadonlyToken {
    * connected signer for this token contract.
    */
   async #assertDelegationActive(delegatorAddress: Address): Promise<void> {
-    const delegateAddress = await this.sdk.signer.getAddress();
+    const signer = this.sdk.requireSigner("decryptBalanceAs");
+    const delegateAddress = await signer.getAddress();
     const expiry = await this.getDelegationExpiry({
       delegatorAddress,
       delegateAddress,
@@ -661,7 +661,8 @@ export class ReadonlyToken {
     try {
       this.emit({ type: ZamaSDKEvents.DecryptStart, handles: [handle] });
 
-      const creds = await this.sdk.delegatedCredentials.allow(normalizedDelegator, this.address);
+      const delegatedCredentials = this.sdk.requireDelegatedCredentials("decryptBalanceAs");
+      const creds = await delegatedCredentials.allow(normalizedDelegator, this.address);
 
       const result = await this.sdk.relayer.delegatedUserDecrypt({
         handles: [handle],
