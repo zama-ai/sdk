@@ -2,34 +2,50 @@
 description: TypeScript SDK for confidential smart contracts — shield, transfer, and unshield tokens with Fully Homomorphic Encryption.
 ---
 
-# Zama SDK
+# Overview
 
-Integrate the Zama fhEVM into your app
+**Welcome to the Zama SDK!**
 
-TypeScript SDK for confidential smart contracts — shield, transfer, and unshield tokens with Fully Homomorphic Encryption.
+TypeScript SDK for building confidential dApps with FHEVM — shield, transfer, and unshield tokens using Fully Homomorphic Encryption (FHE).
+
+## Where to go next
+
+If you're new to the Zama Protocol, start with the [Litepaper](https://docs.zama.ai/protocol/zama-protocol-litepaper) or the [Protocol Overview](https://docs.zama.ai/protocol) to understand the foundations.
+
+Otherwise:
+
+🟨 Go to [**Quick start**](tutorials/quick-start.md) to get from zero to a working confidential transfer in under 5 minutes.
+
+🟨 Go to [**Build your first confidential dApp**](tutorials/first-confidential-dapp.md) for an end-to-end React tutorial.
+
+🟨 Go to [**Guides**](guides/README.md) for step-by-step instructions on shielding, transfers, balances, and more.
+
+🟨 Go to [**SDK reference**](reference/sdk/README.md) for the full core SDK API.
+
+🟨 Go to [**React reference**](reference/react/README.md) for all React hooks and components.
 
 ## Features
 
-### Shield & Unshield
+### Shield & unshield
 
 Convert public ERC-20 tokens into encrypted form and back. The SDK handles approvals, encryption, and the two-step unshield flow.
 
-### Confidential Transfers
+### Confidential transfers
 
 Encrypt amounts client-side before submitting on-chain. On-chain observers see the transaction but never the value.
 
-### React Hooks
+### React hooks
 
-TanStack Query-based hooks with two-phase polling, automatic cache invalidation, and one-signature session management.
+TanStack Query-based hooks with cached decryption, automatic cache invalidation, and one-signature session management.
 
 ## Two packages, one import
 
 | Package                                                | Use when...                                                                   |
 | ------------------------------------------------------ | ----------------------------------------------------------------------------- |
 | [`@zama-fhe/sdk`](/reference/sdk/ZamaSDK)              | You are building with vanilla TypeScript, Node.js, or any non-React framework |
-| [`@zama-fhe/react-sdk`](/reference/react/ZamaProvider) | You are building a React app (includes everything from the core SDK)          |
+| [`@zama-fhe/react-sdk`](/reference/react/ZamaProvider) | You are building a React app (hooks and React-specific providers)             |
 
-If you are using React, `@zama-fhe/react-sdk` re-exports most of the core SDK (hooks, providers, `RelayerWeb`, storage singletons). You still import signer adapters from their sub-paths (e.g. `@zama-fhe/sdk/viem`, `@zama-fhe/sdk/ethers`).
+If you are using React, install both packages: `@zama-fhe/react-sdk` provides the hooks and `ZamaProvider`, while `@zama-fhe/sdk` is a peer dependency that provides core classes and utilities (`RelayerWeb`, storage singletons, etc.). Signer adapters are imported from sub-paths (e.g. `@zama-fhe/sdk/viem`, `@zama-fhe/sdk/ethers`).
 
 ## Install
 
@@ -38,7 +54,7 @@ If you are using React, `@zama-fhe/react-sdk` re-exports most of the core SDK (h
 
 ```sh
 # React app
-pnpm add @zama-fhe/react-sdk @tanstack/react-query
+pnpm add @zama-fhe/react-sdk @zama-fhe/sdk @tanstack/react-query
 
 # Vanilla TypeScript / Node.js
 pnpm add @zama-fhe/sdk
@@ -49,7 +65,7 @@ pnpm add @zama-fhe/sdk
 
 ```sh
 # React app
-npm install @zama-fhe/react-sdk @tanstack/react-query
+npm install @zama-fhe/react-sdk @zama-fhe/sdk @tanstack/react-query
 
 # Vanilla TypeScript / Node.js
 npm install @zama-fhe/sdk
@@ -60,7 +76,7 @@ npm install @zama-fhe/sdk
 
 ```sh
 # React app
-yarn add @zama-fhe/react-sdk @tanstack/react-query
+yarn add @zama-fhe/react-sdk @zama-fhe/sdk @tanstack/react-query
 
 # Vanilla TypeScript / Node.js
 yarn add @zama-fhe/sdk
@@ -101,4 +117,11 @@ await token.confidentialTransfer("0xRecipient", 500n); // private send
 await token.unshield(500n); // withdraw back to public
 ```
 
-Ready to build? Jump to the [Quick Start](/tutorials/quick-start) for a full working example with your stack.
+Ready to build? Jump to the [Quick start](/tutorials/quick-start) for a full working example with your stack.
+
+## Help center
+
+Ask technical questions and discuss with the community.
+
+- [Community forum](https://community.zama.ai/c/zama-protocol/15)
+- [Discord channel](https://discord.com/invite/zama)

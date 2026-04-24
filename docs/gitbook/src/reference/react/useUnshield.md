@@ -75,7 +75,7 @@ const sdk = new ZamaSDK({
 ## Parameters
 
 ```ts
-import { type UnshieldParams } from "@zama-fhe/react-sdk";
+import { type UnshieldParams } from "@zama-fhe/sdk/query";
 ```
 
 ### tokenAddress
@@ -94,7 +94,7 @@ const { mutateAsync: unshield } = useUnshield({
 
 {% include ".gitbook/includes/mutation-options.md" %}
 
-## Mutation Variables
+## Mutation variables
 
 Passed to `mutate` / `mutateAsync` at call time.
 
@@ -110,19 +110,31 @@ await unshield({ amount: 500n });
 
 ### skipBalanceCheck
 
-`boolean` (optional, default `false`)
+`boolean | undefined`
 
-Skip confidential balance validation (e.g. for smart wallets that cannot produce EIP-712 signatures).
+Skip confidential balance validation (e.g. for smart wallets that cannot produce EIP-712 signatures). Defaults to `false`.
 
-### Progress callbacks
+### onUnwrapSubmitted
 
-Passed as top-level options alongside `amount`. Callbacks are safe — if one throws, the unshield still completes.
+`((txHash: Hex) => void) | undefined`
 
-| Callback                           | Fires when                                   |
-| ---------------------------------- | -------------------------------------------- |
-| `onUnwrapSubmitted(txHash: Hex)`   | Unwrap transaction is submitted on-chain.    |
-| `onFinalizing()`                   | SDK begins waiting for the decryption proof. |
-| `onFinalizeSubmitted(txHash: Hex)` | Finalize transaction is submitted on-chain.  |
+Fires when the unwrap transaction is submitted on-chain.
+
+### onFinalizing
+
+`(() => void) | undefined`
+
+Fires when the SDK begins waiting for the decryption proof.
+
+### onFinalizeSubmitted
+
+`((txHash: Hex) => void) | undefined`
+
+Fires when the finalize transaction is submitted on-chain.
+
+{% hint style="info" %}
+Callbacks are safe — if one throws, the unshield still completes.
+{% endhint %}
 
 ```ts
 await unshield({
@@ -141,7 +153,7 @@ await unshield({
 ## Return Type
 
 ```ts
-import { type UnshieldParams } from "@zama-fhe/react-sdk";
+import { type UnshieldParams } from "@zama-fhe/sdk/query";
 ```
 
 `data` resolves to `{ txHash: Hex, receipt: TransactionReceipt }`.

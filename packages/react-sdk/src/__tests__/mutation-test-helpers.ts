@@ -11,7 +11,6 @@ export const USER = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
 export const SPENDER = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;
 export const WRAPPER = "0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D" as Address;
 export const COORDINATOR = "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e" as Address;
-export const FEE_MANAGER = "0x6f6F6f6f6f6f6f6f6f6F6f6F6F6F6F6f6F6F6f6F" as Address;
 export const TOKEN_B = "0x7A7a7A7a7a7a7a7A7a7a7a7A7a7A7A7A7A7A7a7A" as Address;
 export const WAGMI_BALANCE_KEY = [
   "readContract",
@@ -25,7 +24,7 @@ export const BURN_AMOUNT_HANDLE = `0x${"22".repeat(32)}` as const;
 export const DECRYPTION_PROOF = `0x${"33".repeat(32)}` as const;
 export const UNDERLYING = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
 export const UNWRAP_REQUESTED_TOPIC =
-  "0x77d02d353c5629272875d11f1b34ec4c65d7430b075575b78cd2502034c469ee";
+  "0x4b1bfb262557cf08a74ddeefb8aef086b81deb08484bdc1820b9f420cdd1aa0e";
 export const TRANSFER_FROM = "0xeDEdEDedeDEdeDeDedeDEDeDEdEdededeDeDEdED" as Address;
 export const DEFAULT_IDLE_MUTATION_STATE = {
   context: undefined,
@@ -47,18 +46,24 @@ export function toTopicAddress(address: Address): Address {
   return `0x${address.slice(2).padStart(64, "0")}`;
 }
 
-export function createUnwrapRequestedLog(handle: Address): RawLog {
+export function createUnwrapRequestedLog(unwrapRequestId: Address): RawLog {
   return {
-    topics: [UNWRAP_REQUESTED_TOPIC, toTopicAddress(USER)],
-    data: handle,
+    topics: [UNWRAP_REQUESTED_TOPIC, toTopicAddress(USER), unwrapRequestId],
+    data: `0x${"00".repeat(32)}`,
   };
 }
 
 export function mockPublicDecrypt(relayer: ReturnType<typeof createMockRelayer>) {
-  vi.mocked(relayer.publicDecrypt).mockResolvedValue({
-    clearValues: {},
-    abiEncodedClearValues: "0x1",
-    decryptionProof: DECRYPTION_PROOF,
+  vi.mocked(relayer.publicDecrypt).mockImplementation((handles: string[]) => {
+    const clearValues: Record<string, bigint> = {};
+    for (const h of handles) {
+      clearValues[h] = 1n;
+    }
+    return Promise.resolve({
+      clearValues,
+      abiEncodedClearValues: "0x1",
+      decryptionProof: DECRYPTION_PROOF,
+    });
   });
 }
 
@@ -76,7 +81,6 @@ export function createMockToken(
     approve: vi.fn().mockResolvedValue(mockResult),
     approveUnderlying: vi.fn().mockResolvedValue(mockResult),
     shield: vi.fn().mockResolvedValue(mockResult),
-    shieldETH: vi.fn().mockResolvedValue(mockResult),
     unwrap: vi.fn().mockResolvedValue(mockResult),
     unwrapAll: vi.fn().mockResolvedValue(mockResult),
     finalizeUnwrap: vi.fn().mockResolvedValue(mockResult),

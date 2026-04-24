@@ -37,7 +37,7 @@ export function useConfidentialApprove(
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       options?.onSuccess?.(data, variables, onMutateResult, context);
-      invalidateAfterApprove(context.client, config.tokenAddress);
+      invalidateAfterApprove(context.client, token.address);
     },
   });
 }

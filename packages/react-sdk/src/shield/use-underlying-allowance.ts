@@ -3,32 +3,39 @@
 import { useQuery, useSuspenseQuery } from "../utils/query";
 import type { UseQueryOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
-import { signerAddressQueryOptions, underlyingAllowanceQueryOptions } from "@zama-fhe/sdk/query";
-import { useReadonlyToken } from "../token/use-readonly-token";
+import { underlyingAllowanceQueryOptions } from "@zama-fhe/sdk/query";
+import { useZamaSDK } from "../provider";
 
 export { underlyingAllowanceQueryOptions };
 
-/** Configuration for {@link useUnderlyingAllowance}. */
 export interface UseUnderlyingAllowanceConfig {
   /** Address of the confidential token contract used to scope the query cache. */
   tokenAddress: Address;
   /** Address of the wrapper contract whose underlying ERC-20 allowance is checked. */
   wrapperAddress: Address;
+  /** Owner to fetch allowance for. The query is disabled while `undefined`. */
+  owner: Address | undefined;
+}
+
+export interface UseUnderlyingAllowanceSuspenseConfig {
+  /** Address of the confidential token contract used to scope the query cache. */
+  tokenAddress: Address;
+  /** Address of the wrapper contract whose underlying ERC-20 allowance is checked. */
+  wrapperAddress: Address;
+  /** Owner to fetch allowance for. */
+  owner: Address;
 }
 
 /**
- * Read the underlying ERC-20 allowance granted to the wrapper contract.
- * Useful to check if an approval is needed before shielding.
- *
- * @param config - Token and wrapper addresses.
- * @param options - React Query options (forwarded to `useQuery`).
- * @returns Query result with `data: bigint` (current allowance).
+ * Hook for fetching the underlying ERC-20 allowance granted to the wrapper
+ * contract. Useful to check if an approval is needed before shielding.
  *
  * @example
  * ```tsx
  * const { data: allowance } = useUnderlyingAllowance({
  *   tokenAddress: "0xConfidentialToken",
  *   wrapperAddress: "0xWrapper",
+ *   owner: "0xOwner",
  * });
  * ```
  */
@@ -36,12 +43,10 @@ export function useUnderlyingAllowance(
   config: UseUnderlyingAllowanceConfig,
   options?: Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn">,
 ) {
-  const { tokenAddress, wrapperAddress } = config;
-  const token = useReadonlyToken(tokenAddress);
-  const addressQuery = useQuery<Address>(signerAddressQueryOptions(token.signer));
-  const owner = addressQuery.data;
+  const { tokenAddress, wrapperAddress, owner } = config;
+  const sdk = useZamaSDK();
 
-  const baseOpts = underlyingAllowanceQueryOptions(token.signer, tokenAddress, {
+  const baseOpts = underlyingAllowanceQueryOptions(sdk, tokenAddress, {
     owner,
     wrapperAddress,
   });
@@ -54,28 +59,24 @@ export function useUnderlyingAllowance(
 }
 
 /**
- * Suspense variant of {@link useUnderlyingAllowance}.
- * Suspends rendering until the allowance is loaded.
- *
- * @param config - Token and wrapper addresses.
- * @returns Suspense query result with `data: bigint`.
+ * Suspense variant of {@link useUnderlyingAllowance}. Suspends rendering until
+ * the allowance resolves.
  *
  * @example
  * ```tsx
  * const { data: allowance } = useUnderlyingAllowanceSuspense({
  *   tokenAddress: "0xConfidentialToken",
  *   wrapperAddress: "0xWrapper",
+ *   owner: "0xOwner",
  * });
  * ```
  */
-export function useUnderlyingAllowanceSuspense(config: UseUnderlyingAllowanceConfig) {
-  const { tokenAddress, wrapperAddress } = config;
-  const token = useReadonlyToken(tokenAddress);
-  const addressQuery = useSuspenseQuery<Address>(signerAddressQueryOptions(token.signer));
-  const owner = addressQuery.data;
+export function useUnderlyingAllowanceSuspense(config: UseUnderlyingAllowanceSuspenseConfig) {
+  const { tokenAddress, wrapperAddress, owner } = config;
+  const sdk = useZamaSDK();
 
   return useSuspenseQuery<bigint>(
-    underlyingAllowanceQueryOptions(token.signer, tokenAddress, {
+    underlyingAllowanceQueryOptions(sdk, tokenAddress, {
       owner,
       wrapperAddress,
     }),

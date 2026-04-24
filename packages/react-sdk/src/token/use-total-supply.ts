@@ -4,7 +4,7 @@ import { useQuery, useSuspenseQuery } from "../utils/query";
 import type { UseQueryOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
 import { totalSupplyQueryOptions } from "@zama-fhe/sdk/query";
-import { useReadonlyToken } from "./use-readonly-token";
+import { useZamaSDK } from "../provider";
 
 export { totalSupplyQueryOptions };
 
@@ -15,6 +15,8 @@ export { totalSupplyQueryOptions };
  * @param tokenAddress - Address of the token contract.
  * @param options - React Query options (forwarded to `useQuery`).
  * @returns Query result with `data: bigint`.
+ * Uses ERC-165 to call `inferredTotalSupply()` on upgraded wrappers and
+ * legacy `totalSupply()` on pre-upgrade wrappers.
  *
  * @example
  * ```tsx
@@ -25,10 +27,10 @@ export function useTotalSupply(
   tokenAddress: Address,
   options?: Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn">,
 ) {
-  const token = useReadonlyToken(tokenAddress);
+  const sdk = useZamaSDK();
 
   return useQuery<bigint>({
-    ...totalSupplyQueryOptions(token.signer, tokenAddress),
+    ...totalSupplyQueryOptions(sdk, tokenAddress),
     ...options,
   });
 }
@@ -39,6 +41,8 @@ export function useTotalSupply(
  *
  * @param tokenAddress - Address of the token contract.
  * @returns Suspense query result with `data: bigint`.
+ * Uses ERC-165 to call `inferredTotalSupply()` on upgraded wrappers and
+ * legacy `totalSupply()` on pre-upgrade wrappers.
  *
  * @example
  * ```tsx
@@ -46,7 +50,7 @@ export function useTotalSupply(
  * ```
  */
 export function useTotalSupplySuspense(tokenAddress: Address) {
-  const token = useReadonlyToken(tokenAddress);
+  const sdk = useZamaSDK();
 
-  return useSuspenseQuery<bigint>(totalSupplyQueryOptions(token.signer, tokenAddress));
+  return useSuspenseQuery<bigint>(totalSupplyQueryOptions(sdk, tokenAddress));
 }

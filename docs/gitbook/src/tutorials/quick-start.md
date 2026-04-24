@@ -1,9 +1,9 @@
 ---
-title: Quick Start
+title: Quick start
 description: Get from zero to a working confidential transfer in under 5 minutes.
 ---
 
-# Quick Start
+# Quick start
 
 Pick your stack. Each tab gets you from install to a working confidential transfer.
 
@@ -31,7 +31,7 @@ See [Authentication](/guides/authentication) for a backend proxy example.
 {% tab title="React + wagmi" %}
 
 ```bash
-pnpm add @zama-fhe/react-sdk @tanstack/react-query wagmi viem
+pnpm add @zama-fhe/react-sdk @zama-fhe/sdk @tanstack/react-query wagmi viem
 ```
 
 {% endtab %}
@@ -75,7 +75,8 @@ import { WagmiProvider, createConfig, http } from "wagmi";
 import { sepolia } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ZamaProvider, RelayerWeb, indexedDBStorage } from "@zama-fhe/react-sdk";
+import { ZamaProvider } from "@zama-fhe/react-sdk";
+import { RelayerWeb, indexedDBStorage } from "@zama-fhe/sdk";
 import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
 
 const wagmiConfig = createConfig({

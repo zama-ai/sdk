@@ -1,20 +1,15 @@
 import type { PublicClient, WalletClient, Address, Hex } from "viem";
 import type { Handle } from "../relayer/relayer-sdk.types";
-import type { BatchTransferData } from "../contracts";
 import {
   confidentialBalanceOfContract,
-  confidentialBatchTransferContract,
   confidentialTransferContract,
   finalizeUnwrapContract,
-  getWrapperContract,
   setOperatorContract,
   supportsInterfaceContract,
   underlyingContract,
   unwrapContract,
   unwrapFromBalanceContract,
   wrapContract,
-  wrapETHContract,
-  wrapperExistsContract,
   getTokenPairsContract,
   getTokenPairsLengthContract,
   getTokenPairsSliceContract,
@@ -43,24 +38,8 @@ export function readConfidentialBalanceOfContract(
   return client.readContract(confidentialBalanceOfContract(tokenAddress, userAddress));
 }
 
-export function readWrapperForTokenContract(
-  client: PublicClient,
-  registryAddress: Address,
-  tokenAddress: Address,
-) {
-  return client.readContract(getWrapperContract(registryAddress, tokenAddress));
-}
-
 export function readUnderlyingTokenContract(client: PublicClient, wrapperAddress: Address) {
   return client.readContract(underlyingContract(wrapperAddress));
-}
-
-export function readWrapperExistsContract(
-  client: PublicClient,
-  registryAddress: Address,
-  tokenAddress: Address,
-) {
-  return client.readContract(wrapperExistsContract(registryAddress, tokenAddress));
 }
 
 export function readSupportsInterfaceContract(
@@ -84,27 +63,6 @@ export function writeConfidentialTransferContract(
     chain: client.chain,
     account: requireAccount(client),
     ...confidentialTransferContract(tokenAddress, to, handle, inputProof),
-  });
-}
-
-export function writeConfidentialBatchTransferContract(
-  client: WalletClient,
-  batcherAddress: Address,
-  tokenAddress: Address,
-  fromAddress: Address,
-  batchTransferData: BatchTransferData[],
-  fees: bigint,
-) {
-  return client.writeContract({
-    chain: client.chain,
-    account: requireAccount(client),
-    ...confidentialBatchTransferContract(
-      batcherAddress,
-      tokenAddress,
-      fromAddress,
-      batchTransferData,
-      fees,
-    ),
   });
 }
 
@@ -140,14 +98,14 @@ export function writeUnwrapFromBalanceContract(
 export function writeFinalizeUnwrapContract(
   client: WalletClient,
   wrapper: Address,
-  burntAmount: Handle,
+  unwrapRequestId: Handle,
   burntAmountCleartext: bigint,
   decryptionProof: Hex,
 ) {
   return client.writeContract({
     chain: client.chain,
     account: requireAccount(client),
-    ...finalizeUnwrapContract(wrapper, burntAmount, burntAmountCleartext, decryptionProof),
+    ...finalizeUnwrapContract(wrapper, unwrapRequestId, burntAmountCleartext, decryptionProof),
   });
 }
 
@@ -174,20 +132,6 @@ export function writeWrapContract(
     chain: client.chain,
     account: requireAccount(client),
     ...wrapContract(wrapperAddress, to, amount),
-  });
-}
-
-export function writeWrapETHContract(
-  client: WalletClient,
-  wrapperAddress: Address,
-  to: Address,
-  amount: bigint,
-  value: bigint,
-) {
-  return client.writeContract({
-    chain: client.chain,
-    account: requireAccount(client),
-    ...wrapETHContract(wrapperAddress, to, amount, value),
   });
 }
 

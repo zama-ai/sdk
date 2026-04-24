@@ -6,11 +6,14 @@
 
 import { Abi } from 'viem';
 import { Address } from 'viem';
+import { Bytes32Hex } from '@zama-fhe/relayer-sdk/bundle';
 import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
 import { EIP1193Provider } from 'viem';
 import { Hex } from 'viem';
+import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
+import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
 import { PublicClient } from 'viem';
 import { WalletClient } from 'viem';
 
@@ -56,11 +59,29 @@ export function readTokenPairsSliceContract(client: PublicClient, registry: Addr
 // @public (undocumented)
 export function readUnderlyingTokenContract(client: PublicClient, wrapperAddress: Address): Promise<`0x${string}`>;
 
-// @public (undocumented)
-export function readWrapperExistsContract(client: PublicClient, registryAddress: Address, tokenAddress: Address): Promise<boolean>;
+// Warning: (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
+//
+// @public
+export class ViemProvider implements GenericProvider {
+    constructor(config: ViemProviderConfig);
+    // (undocumented)
+    getBlockTimestamp(): Promise<bigint>;
+    // (undocumented)
+    getChainId(): Promise<number>;
+    // Warning: (ae-forgotten-export) The symbol "ReadContractConfig" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    readContract<const TAbi extends Abi | readonly unknown[], TFunctionName extends ContractFunctionName<TAbi, "pure" | "view">, const TArgs extends ContractFunctionArgs<TAbi, "pure" | "view", TFunctionName>>(config: ReadContractConfig<TAbi, TFunctionName, TArgs>): Promise<ContractFunctionReturnType<TAbi, "pure" | "view", TFunctionName, TArgs>>;
+    // Warning: (ae-forgotten-export) The symbol "TransactionReceipt" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
+}
 
-// @public (undocumented)
-export function readWrapperForTokenContract(client: PublicClient, registryAddress: Address, tokenAddress: Address): Promise<`0x${string}`>;
+// @public
+export interface ViemProviderConfig {
+    publicClient: PublicClient;
+}
 
 // Warning: (ae-forgotten-export) The symbol "GenericSigner" needs to be exported by the entry point index.d.ts
 //
@@ -70,13 +91,7 @@ export class ViemSigner implements GenericSigner {
     // (undocumented)
     getAddress(): Promise<Address>;
     // (undocumented)
-    getBlockTimestamp(): Promise<bigint>;
-    // (undocumented)
     getChainId(): Promise<number>;
-    // Warning: (ae-forgotten-export) The symbol "ReadContractConfig" needs to be exported by the entry point index.d.ts
-    //
-    // (undocumented)
-    readContract<const TAbi extends Abi | readonly unknown[], TFunctionName extends ContractFunctionName<TAbi, "pure" | "view">, const TArgs extends ContractFunctionArgs<TAbi, "pure" | "view", TFunctionName>>(config: ReadContractConfig<TAbi, TFunctionName, TArgs>): Promise<ContractFunctionReturnType<TAbi, "pure" | "view", TFunctionName, TArgs>>;
     // Warning: (ae-forgotten-export) The symbol "EIP712TypedData" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
@@ -85,10 +100,6 @@ export class ViemSigner implements GenericSigner {
     //
     // (undocumented)
     subscribe(callbacks: SignerLifecycleCallbacks): () => void;
-    // Warning: (ae-forgotten-export) The symbol "TransactionReceipt" needs to be exported by the entry point index.d.ts
-    //
-    // (undocumented)
-    waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
     // Warning: (ae-forgotten-export) The symbol "WriteContractConfig" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
@@ -99,15 +110,8 @@ export class ViemSigner implements GenericSigner {
 export interface ViemSignerConfig {
     // (undocumented)
     ethereum?: EIP1193Provider;
-    // (undocumented)
-    publicClient: PublicClient;
-    walletClient?: WalletClient;
+    walletClient: WalletClient;
 }
-
-// Warning: (ae-forgotten-export) The symbol "BatchTransferData" needs to be exported by the entry point index.d.ts
-//
-// @public (undocumented)
-export function writeConfidentialBatchTransferContract(client: WalletClient, batcherAddress: Address, tokenAddress: Address, fromAddress: Address, batchTransferData: BatchTransferData[], fees: bigint): Promise<`0x${string}`>;
 
 // @public (undocumented)
 export function writeConfidentialTransferContract(client: WalletClient, tokenAddress: Address, to: Address, handle: Uint8Array, inputProof: Uint8Array): Promise<`0x${string}`>;
@@ -115,7 +119,7 @@ export function writeConfidentialTransferContract(client: WalletClient, tokenAdd
 // Warning: (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 //
 // @public (undocumented)
-export function writeFinalizeUnwrapContract(client: WalletClient, wrapper: Address, burntAmount: Handle, burntAmountCleartext: bigint, decryptionProof: Hex): Promise<`0x${string}`>;
+export function writeFinalizeUnwrapContract(client: WalletClient, wrapper: Address, unwrapRequestId: Handle, burntAmountCleartext: bigint, decryptionProof: Hex): Promise<`0x${string}`>;
 
 // @public (undocumented)
 export function writeSetOperatorContract(client: WalletClient, tokenAddress: Address, spender: Address, timestamp?: number): Promise<`0x${string}`>;
@@ -128,9 +132,6 @@ export function writeUnwrapFromBalanceContract(client: WalletClient, encryptedEr
 
 // @public (undocumented)
 export function writeWrapContract(client: WalletClient, wrapperAddress: Address, to: Address, amount: bigint): Promise<`0x${string}`>;
-
-// @public (undocumented)
-export function writeWrapETHContract(client: WalletClient, wrapperAddress: Address, to: Address, amount: bigint, value: bigint): Promise<`0x${string}`>;
 
 // (No @packageDocumentation comment for this package)
 

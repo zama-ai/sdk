@@ -94,16 +94,6 @@ await token.shield(1000n, {
 
 - `InsufficientERC20BalanceError` — if the ERC-20 balance is less than `amount` (exposes `requested`, `available`, `token`)
 
-### shieldETH
-
-`(amount: bigint, value?: bigint) => Promise<TransactionResult>`
-
-Shields native ETH into a confidential ETH wrapper contract. No approval needed. Pass `value` to override the amount of ETH sent (defaults to `amount`).
-
-```ts
-await token.shieldETH(1000n);
-```
-
 ### balanceOf
 
 `(owner?: Address) => Promise<bigint>`
@@ -122,7 +112,7 @@ const otherBalance = await token.balanceOf("0xOwnerAddress");
 
 `(owner?: Address) => Promise<Hex>`
 
-Returns the raw encrypted handle without decrypting. Use with `decryptBalance()` or `isZeroHandle()`.
+Returns the raw encrypted handle without decrypting. Use with `isZeroHandle()` or pass to `sdk.userDecrypt()` for decryption.
 
 ```ts
 const handle = await token.confidentialBalanceOf();
@@ -215,11 +205,23 @@ await token.unshieldAll();
 Resumes an interrupted unshield from the finalize step. Use when the user closed the page between unwrap and finalize.
 
 ```ts
-import { loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/sdk";
+import {
+  loadPendingUnshield,
+  loadPendingUnshieldRequest,
+  clearPendingUnshield,
+} from "@zama-fhe/sdk";
 
+// Simple resume (tx hash only — works for both legacy and upgraded wrappers)
 const pending = await loadPendingUnshield(storage, wrapperAddress);
 if (pending) {
   await token.resumeUnshield(pending);
+  await clearPendingUnshield(storage, wrapperAddress);
+}
+
+// Full request (includes unwrapRequestId when available from upgraded wrappers)
+const request = await loadPendingUnshieldRequest(storage, wrapperAddress);
+if (request) {
+  await token.resumeUnshield(request.unwrapTxHash);
   await clearPendingUnshield(storage, wrapperAddress);
 }
 ```
@@ -278,27 +280,6 @@ Returns whether the session has active credentials for this token.
 const allowed = await token.isAllowed();
 ```
 
-### decryptBalance
-
-`(handle: Hex, owner?: Address) => Promise<bigint>`
-
-Decrypts a raw encrypted handle into a plaintext balance value. Results are cached automatically.
-
-```ts
-const handle = await token.confidentialBalanceOf();
-const value = await token.decryptBalance(handle);
-```
-
-### decryptHandles
-
-`(handles: Hex[], owner?: Address) => Promise<Map<Hex, bigint>>`
-
-Decrypts multiple encrypted handles in a single call.
-
-```ts
-const values = await token.decryptHandles([handle1, handle2, handle3]);
-```
-
 ### isZeroHandle
 
 `(handle: Hex) => boolean`
@@ -345,12 +326,13 @@ await token.unwrapAll();
 
 ### finalizeUnwrap
 
-`(burnAmountHandle: Handle) => Promise<TransactionResult>`
+`(unwrapRequestIdOrAmount: Handle) => Promise<TransactionResult>`
 
-Completes an unwrap (phase 2) after the decryption proof is available. Use `unshield()` for the full orchestrated flow.
+Completes an unwrap (phase 2) after the decryption proof is available. Pass `unwrapRequestId` from upgraded `UnwrapRequested` events, or the legacy encrypted amount handle. Use `unshield()` for the full orchestrated flow.
 
 ```ts
-await token.finalizeUnwrap(burnAmountHandle);
+const event = findUnwrapRequested(receipt.logs);
+await token.finalizeUnwrap(event.unwrapRequestId ?? event.encryptedAmount);
 ```
 
 ## Related

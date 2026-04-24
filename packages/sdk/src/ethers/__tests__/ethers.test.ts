@@ -18,6 +18,9 @@ const { mockContractMethod, MockContract, MockBrowserProvider, mockGetSigner } =
           if (prop === "then") {
             return undefined;
           }
+          if (prop === "getFunction") {
+            return () => mockContractMethod;
+          }
           return mockContractMethod;
         },
       },
@@ -54,27 +57,22 @@ vi.mock(import("ethers"), () => {
 // ── Imports (after mock) ─────────────────────────────────────
 
 import { EthersSigner } from "../ethers-signer";
+import { EthersProvider } from "../ethers-provider";
 import {
   readConfidentialBalanceOfContract,
-  readWrapperForTokenContract,
   readUnderlyingTokenContract,
-  readWrapperExistsContract,
   readSupportsInterfaceContract,
   writeConfidentialTransferContract,
-  writeConfidentialBatchTransferContract,
   writeUnwrapContract,
   writeUnwrapFromBalanceContract,
   writeFinalizeUnwrapContract,
   writeSetOperatorContract,
   writeWrapContract,
-  writeWrapETHContract,
 } from "../contracts";
 
 // ── Test constants ───────────────────────────────────────────
 
 const SPENDER = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;
-const REGISTRY = "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e" as Address;
-const BATCHER = "0x7A7a7A7a7a7a7a7A7a7a7a7A7a7A7A7A7A7A7a7A" as Address;
 const TX_HASH = "0xdeadbeef" as Hex;
 const MOCK_ADDRESS = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
 const MOCK_SIGNATURE = ("0x" + "12".repeat(65)) as Hex;
@@ -355,15 +353,50 @@ describe("EthersSigner", () => {
       },
     );
   });
+});
+
+// ── EthersProvider ────────────────────────────────────────────
+
+describe("EthersProvider", () => {
+  describe("constructor", () => {
+    eit("accepts an EIP-1193 provider and creates BrowserProvider internally", async () => {
+      const mockEthereum = {
+        on: vi.fn(),
+        removeListener: vi.fn(),
+        request: vi.fn(),
+      };
+      // Does not throw
+      const provider = new EthersProvider({ ethereum: mockEthereum as never });
+      expect(provider).toBeInstanceOf(EthersProvider);
+    });
+
+    eit("accepts a pre-built Provider directly", () => {
+      const mockProvider = { getNetwork: vi.fn() };
+      const provider = new EthersProvider({ provider: mockProvider as never });
+      expect(provider).toBeInstanceOf(EthersProvider);
+    });
+  });
+
+  describe("getChainId", () => {
+    eit("returns the numeric chain ID from the provider network", async () => {
+      const mockProvider = {
+        getNetwork: vi.fn().mockResolvedValue({ chainId: 8009n }),
+      };
+      const ethersProvider = new EthersProvider({ provider: mockProvider as never });
+
+      const chainId = await ethersProvider.getChainId();
+      expect(mockProvider.getNetwork).toHaveBeenCalled();
+      expect(chainId).toBe(8009);
+    });
+  });
 
   describe("readContract", () => {
     eit(
       "creates an ethers Contract and calls the function with args",
-      async ({ tokenAddress, userAddress, createEthersMockSigner }) => {
-        const signer = createEthersMockSigner();
-        const ethersSigner = new EthersSigner({ signer: signer as never });
-
+      async ({ tokenAddress, userAddress }) => {
         mockContractMethod.mockResolvedValueOnce(42n);
+        const mockProvider = { getNetwork: vi.fn() };
+        const ethersProvider = new EthersProvider({ provider: mockProvider as never });
 
         const config = {
           address: tokenAddress,
@@ -372,7 +405,7 @@ describe("EthersSigner", () => {
           args: [userAddress] as const,
         };
 
-        const result = await ethersSigner.readContract(config);
+        const result = await ethersProvider.readContract(config);
         expect(mockContractMethod).toHaveBeenCalledWith(userAddress);
         expect(result).toBe(42n);
       },
@@ -380,126 +413,77 @@ describe("EthersSigner", () => {
   });
 
   describe("waitForTransactionReceipt", () => {
-    eit("waits for the transaction and maps logs correctly", async ({ createEthersMockSigner }) => {
-      const signer = createEthersMockSigner();
-      const ethersSigner = new EthersSigner({ signer: signer as never });
+    eit("waits for the transaction and maps logs correctly", async () => {
+      const mockProvider = {
+        waitForTransaction: vi.fn().mockResolvedValue({
+          logs: [{ topics: ["0xtopic1", null, "0xtopic3"], data: "0xdata" }],
+        }),
+      };
+      const ethersProvider = new EthersProvider({ provider: mockProvider as never });
 
-      const receipt = await ethersSigner.waitForTransactionReceipt("0xhash" as Hex);
+      const receipt = await ethersProvider.waitForTransactionReceipt("0xhash" as Hex);
 
-      expect(signer.provider.waitForTransaction).toHaveBeenCalledWith("0xhash");
+      expect(mockProvider.waitForTransaction).toHaveBeenCalledWith("0xhash");
       expect(receipt.logs).toEqual([{ topics: ["0xtopic1", "0xtopic3"], data: "0xdata" }]);
     });
 
-    eit("filters out null topics from logs", async ({ createEthersMockSigner }) => {
-      const signer = createEthersMockSigner();
-      signer.provider.waitForTransaction.mockResolvedValue({
-        logs: [{ topics: [null, "0xa", null, "0xb"], data: "0x" }],
-      });
-      const ethersSigner = new EthersSigner({ signer: signer as never });
+    eit("filters out null topics from logs", async () => {
+      const mockProvider = {
+        waitForTransaction: vi.fn().mockResolvedValue({
+          logs: [{ topics: [null, "0xa", null, "0xb"], data: "0x" }],
+        }),
+      };
+      const ethersProvider = new EthersProvider({ provider: mockProvider as never });
 
-      const receipt = await ethersSigner.waitForTransactionReceipt("0xhash" as Hex);
+      const receipt = await ethersProvider.waitForTransactionReceipt("0xhash" as Hex);
       expect(receipt.logs[0].topics).toEqual(["0xa", "0xb"]);
     });
 
-    eit("throws when signer has no provider", async ({ createEthersMockSigner }) => {
-      const signer = { ...createEthersMockSigner(), provider: null };
-      const ethersSigner = new EthersSigner({ signer: signer as never });
+    eit("throws when receipt is null", async () => {
+      const mockProvider = {
+        waitForTransaction: vi.fn().mockResolvedValue(null),
+      };
+      const ethersProvider = new EthersProvider({ provider: mockProvider as never });
 
-      await expect(ethersSigner.waitForTransactionReceipt("0xhash" as Hex)).rejects.toThrow(
-        "Signer has no provider",
-      );
-    });
-
-    eit("throws when receipt is null", async ({ createEthersMockSigner }) => {
-      const signer = createEthersMockSigner();
-      signer.provider.waitForTransaction.mockResolvedValue(null);
-      const ethersSigner = new EthersSigner({ signer: signer as never });
-
-      await expect(ethersSigner.waitForTransactionReceipt("0xhash" as Hex)).rejects.toThrow(
+      await expect(ethersProvider.waitForTransactionReceipt("0xhash" as Hex)).rejects.toThrow(
         "Transaction receipt not found",
       );
     });
+
+    eit("propagates errors from waitForTransaction", async () => {
+      const mockProvider = {
+        waitForTransaction: vi.fn().mockRejectedValue(new Error("transaction could not be found")),
+      };
+      const ethersProvider = new EthersProvider({ provider: mockProvider as never });
+
+      await expect(ethersProvider.waitForTransactionReceipt("0xhash" as Hex)).rejects.toThrow(
+        "transaction could not be found",
+      );
+    });
   });
-});
 
-// ── Read-only mode ({ provider } config) ────────────────────
+  describe("getBlockTimestamp", () => {
+    eit("returns the latest block timestamp as bigint", async () => {
+      const mockProvider = {
+        getBlock: vi.fn().mockResolvedValue({ timestamp: 1700000000 }),
+      };
+      const ethersProvider = new EthersProvider({ provider: mockProvider as never });
 
-describe("EthersSigner read-only mode ({ provider })", () => {
-  eit("readContract works with provider-only config", async ({ tokenAddress, userAddress }) => {
-    mockContractMethod.mockResolvedValue(42n);
-    const mockProvider = {
-      getNetwork: vi.fn().mockResolvedValue({ chainId: 1n }),
-    };
-    const ethersSigner = new EthersSigner({
-      provider: mockProvider as never,
+      const timestamp = await ethersProvider.getBlockTimestamp();
+      expect(mockProvider.getBlock).toHaveBeenCalledWith("latest");
+      expect(timestamp).toBe(1700000000n);
     });
 
-    const result = await ethersSigner.readContract({
-      address: tokenAddress,
-      abi: [{ name: "balanceOf" }],
-      functionName: "balanceOf",
-      args: [userAddress],
+    eit("throws when no block is returned", async () => {
+      const mockProvider = {
+        getBlock: vi.fn().mockResolvedValue(null),
+      };
+      const ethersProvider = new EthersProvider({ provider: mockProvider as never });
+
+      await expect(ethersProvider.getBlockTimestamp()).rejects.toThrow(
+        "Failed to fetch latest block",
+      );
     });
-    expect(result).toBe(42n);
-  });
-
-  eit("getChainId works with provider-only config", async () => {
-    const mockProvider = {
-      getNetwork: vi.fn().mockResolvedValue({ chainId: 8009n }),
-    };
-    const ethersSigner = new EthersSigner({ provider: mockProvider as never });
-
-    const chainId = await ethersSigner.getChainId();
-    expect(chainId).toBe(8009);
-  });
-
-  eit("getAddress throws with provider-only config", async () => {
-    const mockProvider = { getNetwork: vi.fn() };
-    const ethersSigner = new EthersSigner({ provider: mockProvider as never });
-
-    await expect(ethersSigner.getAddress()).rejects.toThrow("No signer configured");
-  });
-
-  eit("signTypedData throws with provider-only config", async () => {
-    const mockProvider = { getNetwork: vi.fn() };
-    const ethersSigner = new EthersSigner({ provider: mockProvider as never });
-
-    const typedData = {
-      domain: {},
-      types: { EIP712Domain: [], Transfer: [{ name: "to", type: "address" }] },
-      message: {},
-    };
-    await expect(ethersSigner.signTypedData(typedData as never)).rejects.toThrow(
-      "No signer configured",
-    );
-  });
-
-  eit("writeContract throws with provider-only config", async ({ tokenAddress }) => {
-    const mockProvider = { getNetwork: vi.fn() };
-    const ethersSigner = new EthersSigner({
-      provider: mockProvider as never,
-    });
-
-    await expect(
-      ethersSigner.writeContract({
-        address: tokenAddress,
-        abi: [],
-        functionName: "transfer",
-        args: [],
-      }),
-    ).rejects.toThrow("No signer configured");
-  });
-
-  eit("subscribe returns no-op with provider-only config", () => {
-    const mockProvider = { getNetwork: vi.fn() };
-    const ethersSigner = new EthersSigner({ provider: mockProvider as never });
-
-    const unsub = ethersSigner.subscribe({
-      onDisconnect: vi.fn(),
-      onAccountChange: vi.fn(),
-    });
-    expect(typeof unsub).toBe("function");
-    unsub(); // should not throw
   });
 });
 
@@ -516,28 +500,12 @@ describe("ethers read contract helpers", () => {
     expect(result).toBe(VALID_HANDLE);
   });
 
-  eit("readWrapperForTokenContract", async ({ tokenAddress }) => {
-    vi.mocked(mockProvider.call).mockResolvedValueOnce(
-      encodeAbiParameters([{ type: "address" }], [MOCK_ADDRESS]),
-    );
-    const result = await readWrapperForTokenContract(mockProvider, REGISTRY, tokenAddress);
-    expect(result).toBe(MOCK_ADDRESS);
-  });
-
   eit("readUnderlyingTokenContract", async ({ wrapperAddress }) => {
     vi.mocked(mockProvider.call).mockResolvedValueOnce(
       encodeAbiParameters([{ type: "address" }], [MOCK_ADDRESS]),
     );
     const result = await readUnderlyingTokenContract(mockProvider, wrapperAddress);
     expect(result).toBe(MOCK_ADDRESS);
-  });
-
-  eit("readWrapperExistsContract", async ({ tokenAddress }) => {
-    vi.mocked(mockProvider.call).mockResolvedValueOnce(
-      encodeAbiParameters([{ type: "bool" }], [true]),
-    );
-    const result = await readWrapperExistsContract(mockProvider, REGISTRY, tokenAddress);
-    expect(result).toBe(true);
   });
 
   eit("readSupportsInterfaceContract", async ({ tokenAddress }) => {
@@ -567,29 +535,6 @@ describe("ethers write contract helpers", () => {
       userAddress,
       handle,
       proof,
-    );
-    expect(hash).toBe(TX_HASH);
-  });
-
-  eit("writeConfidentialBatchTransferContract", async ({ tokenAddress, userAddress }) => {
-    vi.mocked(mockSigner.sendTransaction).mockResolvedValueOnce({
-      hash: TX_HASH,
-    });
-    const batchData = [
-      {
-        to: userAddress,
-        encryptedAmount: VALID_HANDLE,
-        inputProof: VALID_PROOF,
-        retryFor: 0n,
-      },
-    ];
-    const hash = await writeConfidentialBatchTransferContract(
-      mockSigner,
-      BATCHER,
-      tokenAddress,
-      userAddress,
-      batchData,
-      10n,
     );
     expect(hash).toBe(TX_HASH);
   });
@@ -657,14 +602,6 @@ describe("ethers write contract helpers", () => {
       hash: TX_HASH,
     });
     const hash = await writeWrapContract(mockSigner, wrapperAddress, userAddress, 1000n);
-    expect(hash).toBe(TX_HASH);
-  });
-
-  eit("writeWrapETHContract", async ({ wrapperAddress, userAddress }) => {
-    vi.mocked(mockSigner.sendTransaction).mockResolvedValueOnce({
-      hash: TX_HASH,
-    });
-    const hash = await writeWrapETHContract(mockSigner, wrapperAddress, userAddress, 500n, 500n);
     expect(hash).toBe(TX_HASH);
   });
 

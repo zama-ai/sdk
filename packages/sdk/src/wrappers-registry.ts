@@ -1,4 +1,4 @@
-import { type Address, getAddress } from "viem";
+import { type Address, getAddress, zeroAddress } from "viem";
 import type { TokenWrapperPairWithMetadata, PaginatedResult, TokenWrapperPair } from "./contracts";
 import {
   decimalsContract,
@@ -16,7 +16,7 @@ import {
 import { ConfigurationError } from "./errors/relayer";
 import { hoodiCleartextConfig } from "./relayer/cleartext";
 import { MainnetConfig, SepoliaConfig } from "./relayer/relayer-utils";
-import type { GenericSigner } from "./types/signer";
+import type { GenericProvider } from "./types/provider";
 
 /**
  * Default wrappers registry addresses for known chains.
@@ -36,8 +36,8 @@ const DEFAULT_REGISTRY_TTL = 86400;
 
 /** Configuration for {@link WrappersRegistry}. */
 export interface WrappersRegistryConfig {
-  /** The connected wallet signer. Must satisfy the full `GenericSigner` interface. */
-  signer: GenericSigner;
+  /** Read-only chain provider used for every registry lookup. */
+  provider: GenericProvider;
   /**
    * Per-chain registry address overrides, merged on top of
    * {@link DefaultRegistryAddresses}. Use this to supply a registry
@@ -46,7 +46,7 @@ export interface WrappersRegistryConfig {
    * @example
    * ```ts
    * new WrappersRegistry({
-   *   signer,
+   *   provider,
    *   registryAddresses: { [31337]: "0xYourHardhatRegistry" },
    * });
    * ```
@@ -85,14 +85,14 @@ interface CacheEntry<T> {
 /**
  * High-level interface for the on-chain token wrappers registry.
  *
- * Uses the connected signer to resolve the correct registry contract
- * address for the current chain and exposes typed read helpers for
- * every registry query. Results are cached in memory with a
- * configurable TTL (default 24 hours).
+ * Uses the configured {@link GenericProvider} to resolve the correct registry
+ * contract address for the current chain and exposes typed read helpers for
+ * every registry query. Results are cached in memory with a configurable TTL
+ * (default 24 hours).
  *
  * @example
  * ```ts
- * const registry = new WrappersRegistry({ signer });
+ * const registry = new WrappersRegistry({ provider });
  *
  * // Paginated listing
  * const page1 = await registry.listPairs({ page: 1, pageSize: 20 });
@@ -106,13 +106,13 @@ interface CacheEntry<T> {
  * ```
  */
 export class WrappersRegistry {
-  readonly signer: GenericSigner;
+  readonly provider: GenericProvider;
   readonly #addresses: Record<number, Address>;
   readonly #ttlMs: number;
   readonly #cache = new Map<string, CacheEntry<unknown>>();
 
   constructor(config: WrappersRegistryConfig) {
-    this.signer = config.signer;
+    this.provider = config.provider;
     this.#addresses = Object.assign({}, DefaultRegistryAddresses, config.registryAddresses);
     this.#ttlMs = (config.registryTTL ?? DEFAULT_REGISTRY_TTL) * 1000;
   }
@@ -178,7 +178,7 @@ export class WrappersRegistry {
    * @throws {@link ConfigurationError} if no address is configured for the chain.
    */
   async getRegistryAddress(): Promise<Address> {
-    const chainId = await this.signer.getChainId();
+    const chainId = await this.provider.getChainId();
     const address = this.#addresses[chainId];
 
     if (!address) {
@@ -239,7 +239,7 @@ export class WrappersRegistry {
     const totalCacheKey = `total:${registry}`;
     let total = this.#getCached<number>(totalCacheKey);
     if (total === undefined) {
-      const raw = await this.signer.readContract(getTokenPairsLengthContract(registry));
+      const raw = await this.provider.readContract(getTokenPairsLengthContract(registry));
       total = this.#setCached(totalCacheKey, Number(raw));
     }
 
@@ -257,7 +257,7 @@ export class WrappersRegistry {
     const sliceCacheKey = `slice:${registry}:${fromIndex}:${clampedToIndex}`;
     let items = this.#getCached<TokenWrapperPair[]>(sliceCacheKey);
     if (items === undefined) {
-      const raw = await this.signer.readContract(
+      const raw = await this.provider.readContract(
         getTokenPairsSliceContract(registry, fromIndex, clampedToIndex),
       );
       items = this.#setCached(sliceCacheKey, [...raw]);
@@ -300,13 +300,13 @@ export class WrappersRegistry {
 
   async #pairWithMetadata(pair: TokenWrapperPair): Promise<TokenWrapperPairWithMetadata> {
     const [uName, uSymbol, uDecimals, uTotalSupply, cName, cSymbol, cDecimals] = await Promise.all([
-      this.signer.readContract(nameContract(pair.tokenAddress)),
-      this.signer.readContract(symbolContract(pair.tokenAddress)),
-      this.signer.readContract(decimalsContract(pair.tokenAddress)),
-      this.signer.readContract(erc20TotalSupplyContract(pair.tokenAddress)),
-      this.signer.readContract(nameContract(pair.confidentialTokenAddress)),
-      this.signer.readContract(symbolContract(pair.confidentialTokenAddress)),
-      this.signer.readContract(decimalsContract(pair.confidentialTokenAddress)),
+      this.provider.readContract(nameContract(pair.tokenAddress)),
+      this.provider.readContract(symbolContract(pair.tokenAddress)),
+      this.provider.readContract(decimalsContract(pair.tokenAddress)),
+      this.provider.readContract(erc20TotalSupplyContract(pair.tokenAddress)),
+      this.provider.readContract(nameContract(pair.confidentialTokenAddress)),
+      this.provider.readContract(symbolContract(pair.confidentialTokenAddress)),
+      this.provider.readContract(decimalsContract(pair.confidentialTokenAddress)),
     ]);
 
     return {
@@ -329,13 +329,16 @@ export class WrappersRegistry {
    * Look up the confidential token for a given plain ERC-20 address.
    *
    * @param tokenAddress - The plain ERC-20 token address.
-   * @returns The lookup result, or `null` if no pair is registered.
+   * @returns The lookup result, or `null` if the token has never been registered.
+   *   **Note:** revoked tokens (registered then invalidated) return a non-null result
+   *   with `isValid: false`. Check `result.isValid` explicitly rather than using
+   *   `if (result)` to guard against processing revoked tokens.
    *
    * @example
    * ```ts
    * const result = await registry.getConfidentialToken(usdcAddress);
-   * if (result) {
-   *   console.log(result.confidentialTokenAddress, result.isValid);
+   * if (result?.isValid) {
+   *   console.log(result.confidentialTokenAddress);
    * }
    * ```
    */
@@ -354,18 +357,15 @@ export class WrappersRegistry {
       return cached;
     }
 
-    const [found, confidentialTokenAddress] = await this.signer.readContract(
+    const [isValid, confidentialTokenAddress] = await this.provider.readContract(
       getConfidentialTokenAddressContract(registry, normalized),
     );
 
-    if (!found) {
+    // Zero address means the token is not registered at all (never seen by the registry).
+    // A non-zero address with isValid=false means it was registered but later revoked.
+    if (confidentialTokenAddress === zeroAddress) {
       return this.#setCached(cacheKey, null, NEGATIVE_CACHE_TTL_MS);
     }
-
-    // Check validity via isConfidentialTokenValid
-    const isValid = await this.signer.readContract(
-      isConfidentialTokenValidContract(registry, confidentialTokenAddress),
-    );
 
     return this.#setCached(cacheKey, { confidentialTokenAddress, isValid });
   }
@@ -399,17 +399,15 @@ export class WrappersRegistry {
       return cached;
     }
 
-    const [found, tokenAddress] = await this.signer.readContract(
+    const [isValid, tokenAddress] = await this.provider.readContract(
       getTokenAddressContract(registry, normalized),
     );
 
-    if (!found) {
+    // Zero address means the confidential token is not registered at all.
+    // A non-zero address with isValid=false means it was registered but later revoked.
+    if (tokenAddress === zeroAddress) {
       return this.#setCached(cacheKey, null, NEGATIVE_CACHE_TTL_MS);
     }
-
-    const isValid = await this.signer.readContract(
-      isConfidentialTokenValidContract(registry, normalized),
-    );
 
     return this.#setCached(cacheKey, { tokenAddress, isValid });
   }
@@ -425,7 +423,7 @@ export class WrappersRegistry {
    */
   async getTokenPairs(): Promise<readonly TokenWrapperPair[]> {
     const registry = await this.getRegistryAddress();
-    return this.signer.readContract(getTokenPairsContract(registry));
+    return this.provider.readContract(getTokenPairsContract(registry));
   }
 
   /**
@@ -435,7 +433,7 @@ export class WrappersRegistry {
    */
   async getTokenPairsLength(): Promise<bigint> {
     const registry = await this.getRegistryAddress();
-    return this.signer.readContract(getTokenPairsLengthContract(registry));
+    return this.provider.readContract(getTokenPairsLengthContract(registry));
   }
 
   /**
@@ -450,7 +448,7 @@ export class WrappersRegistry {
     toIndex: bigint,
   ): Promise<readonly TokenWrapperPair[]> {
     const registry = await this.getRegistryAddress();
-    return this.signer.readContract(getTokenPairsSliceContract(registry, fromIndex, toIndex));
+    return this.provider.readContract(getTokenPairsSliceContract(registry, fromIndex, toIndex));
   }
 
   /**
@@ -461,18 +459,20 @@ export class WrappersRegistry {
    */
   async getTokenPair(index: bigint): Promise<TokenWrapperPair> {
     const registry = await this.getRegistryAddress();
-    return this.signer.readContract(getTokenPairContract(registry, index));
+    return this.provider.readContract(getTokenPairContract(registry, index));
   }
 
   /**
    * Look up the confidential token address for a given plain ERC-20 token.
    *
    * @param tokenAddress - The plain ERC-20 token address.
-   * @returns A tuple `[found, confidentialTokenAddress]`.
+   * @returns A tuple `[isValid, confidentialTokenAddress]`. `isValid` is `true` only for a
+   *   registered, non-revoked wrapper. The address is the zero address when no pair is registered.
+   *   A non-zero address with `isValid=false` means the wrapper was registered but later revoked.
    */
   async getConfidentialTokenAddress(tokenAddress: Address): Promise<readonly [boolean, Address]> {
     const registry = await this.getRegistryAddress();
-    return this.signer.readContract(
+    return this.provider.readContract(
       getConfidentialTokenAddressContract(registry, getAddress(tokenAddress)),
     );
   }
@@ -481,11 +481,13 @@ export class WrappersRegistry {
    * Reverse lookup — find the plain ERC-20 for a given confidential token.
    *
    * @param confidentialTokenAddress - The confidential token address.
-   * @returns A tuple `[found, tokenAddress]`.
+   * @returns A tuple `[isValid, tokenAddress]`. `isValid` is `true` only for a registered,
+   *   non-revoked wrapper. The address is the zero address when no pair is registered.
+   *   A non-zero address with `isValid=false` means the wrapper was registered but later revoked.
    */
   async getTokenAddress(confidentialTokenAddress: Address): Promise<readonly [boolean, Address]> {
     const registry = await this.getRegistryAddress();
-    return this.signer.readContract(
+    return this.provider.readContract(
       getTokenAddressContract(registry, getAddress(confidentialTokenAddress)),
     );
   }
@@ -498,7 +500,7 @@ export class WrappersRegistry {
    */
   async isConfidentialTokenValid(confidentialTokenAddress: Address): Promise<boolean> {
     const registry = await this.getRegistryAddress();
-    return this.signer.readContract(
+    return this.provider.readContract(
       isConfidentialTokenValidContract(registry, getAddress(confidentialTokenAddress)),
     );
   }

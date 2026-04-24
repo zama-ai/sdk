@@ -6,20 +6,17 @@
  */
 
 export { ViemSigner, type ViemSignerConfig } from "./viem-signer";
+export { ViemProvider, type ViemProviderConfig } from "./viem-provider";
 export {
   readConfidentialBalanceOfContract,
-  readWrapperForTokenContract,
   readUnderlyingTokenContract,
-  readWrapperExistsContract,
   readSupportsInterfaceContract,
   writeConfidentialTransferContract,
-  writeConfidentialBatchTransferContract,
   writeUnwrapContract,
   writeUnwrapFromBalanceContract,
   writeFinalizeUnwrapContract,
   writeSetOperatorContract,
   writeWrapContract,
-  writeWrapETHContract,
   readTokenPairsContract,
   readTokenPairsLengthContract,
   readTokenPairsSliceContract,

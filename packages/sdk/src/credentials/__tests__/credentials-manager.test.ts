@@ -33,6 +33,35 @@ describe("CredentialsManager", () => {
     expect(creds.signature).toBe("0xsig789");
   });
 
+  it("normalizes mixed-case contract addresses to checksummed form", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+
+    const lowercase = TOKEN_A.toLowerCase() as Address;
+    const creds = await credentialManager.allow(lowercase);
+
+    // The stored contractAddresses must be strictly equal to the checksummed
+    // form — credentials cache key stability depends on normalization.
+    expect(creds.contractAddresses).toEqual([getAddress(TOKEN_A)]);
+  });
+
+  it("treats mixed-case and checksummed inputs as cache-equivalent", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+
+    await credentialManager.allow(TOKEN_A);
+    await credentialManager.allow(TOKEN_A.toLowerCase() as Address);
+
+    // Same address in different casing must not trigger a second signature.
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+  });
+
   it("returns cached credentials on second call with same contracts", async ({
     relayer,
     signer,
@@ -571,10 +600,10 @@ describe("CredentialsManager", () => {
     const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
 
     await credentialManager.allow(TOKEN_A);
-    expect(await credentialManager.isAllowed()).toBe(true);
+    expect(await credentialManager.isAllowed([TOKEN_A])).toBe(true);
 
     await credentialManager.clear();
-    expect(await credentialManager.isAllowed()).toBe(false);
+    expect(await credentialManager.isAllowed([TOKEN_A])).toBe(false);
 
     // Storage should also be empty
     const stored = await storage.get(storeKey);
@@ -606,13 +635,137 @@ describe("session allow/revoke", () => {
   }) => {
     setupMocks(relayer, signer);
 
-    expect(await credentialManager.isAllowed()).toBe(false);
+    expect(await credentialManager.isAllowed([TOKEN_A])).toBe(false);
 
     await credentialManager.allow(TOKEN_A);
-    expect(await credentialManager.isAllowed()).toBe(true);
+    expect(await credentialManager.isAllowed([TOKEN_A])).toBe(true);
 
     await credentialManager.revoke();
-    expect(await credentialManager.isAllowed()).toBe(false);
+    expect(await credentialManager.isAllowed([TOKEN_A])).toBe(false);
+  });
+
+  it("isAllowed(contracts) checks contract coverage", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+
+    await credentialManager.allow(TOKEN_A);
+
+    // Covered contract → true
+    expect(await credentialManager.isAllowed([TOKEN_A])).toBe(true);
+    // Uncovered contract → false
+    expect(await credentialManager.isAllowed([TOKEN_B])).toBe(false);
+    // Mix of covered and uncovered → false
+    expect(await credentialManager.isAllowed([TOKEN_A, TOKEN_B])).toBe(false);
+    // All covered contracts → true
+    expect(await credentialManager.isAllowed([TOKEN_A])).toBe(true);
+  });
+
+  it("isAllowed(contracts) returns true after extending credentials", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+
+    await credentialManager.allow(TOKEN_A);
+    expect(await credentialManager.isAllowed([TOKEN_B])).toBe(false);
+
+    // Extend to cover TOKEN_B
+    await credentialManager.allow(TOKEN_A, TOKEN_B);
+    expect(await credentialManager.isAllowed([TOKEN_A, TOKEN_B])).toBe(true);
+  });
+
+  it("isAllowed([A]) returns true when signature covers [A, B]", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+
+    await credentialManager.allow(TOKEN_A, TOKEN_B);
+
+    expect(await credentialManager.isAllowed([TOKEN_A])).toBe(true);
+    expect(await credentialManager.isAllowed([TOKEN_B])).toBe(true);
+    expect(await credentialManager.isAllowed([TOKEN_A, TOKEN_B])).toBe(true);
+  });
+
+  it("isAllowed() returns false when keypair has expired but session has not", async ({
+    relayer,
+    signer,
+    storage,
+    sessionStorage,
+    createCredentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+    const manager = createCredentialManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      keypairTTL: 86400,
+      sessionTTL: 86400,
+    });
+    const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
+
+    await manager.allow(TOKEN_A);
+    expect(await manager.isAllowed([TOKEN_A])).toBe(true);
+
+    // Push the keypair time window into the past while leaving the session entry intact.
+    const stored = (await storage.get(storeKey)) as Record<string, unknown>;
+    const tampered = {
+      ...stored,
+      startTimestamp: Math.floor(Date.now() / 1000) - 2 * 86400,
+      durationDays: 1,
+    };
+    await storage.set(storeKey, tampered);
+
+    expect(await manager.isAllowed([TOKEN_A])).toBe(false);
+  });
+
+  it("invariant: isAllowed true ⇒ allow() reuses cache and does not re-sign", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+
+    await credentialManager.allow(TOKEN_A);
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+    expect(await credentialManager.isAllowed([TOKEN_A])).toBe(true);
+
+    await credentialManager.allow(TOKEN_A);
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+  });
+
+  it("invariant: isAllowed false ⇒ allow() produces a fresh EIP-712 signature", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+
+    expect(await credentialManager.isAllowed([TOKEN_A])).toBe(false);
+    expect(signer.signTypedData).not.toHaveBeenCalled();
+
+    await credentialManager.allow(TOKEN_A);
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+  });
+
+  it("isAllowed([]) returns false even when an active session exists", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+
+    await credentialManager.allow(TOKEN_A);
+    // Compile-time signature requires a non-empty tuple, but the runtime guard
+    // must still reject empty arrays — "are credentials valid?" with no
+    // contract context is not a meaningful question (SDK-78 principle 3).
+    expect(await credentialManager.isAllowed([] as unknown as [Address])).toBe(false);
   });
 
   it("allow() pre-caches session signature without needing stored credentials", async ({
@@ -625,7 +778,7 @@ describe("session allow/revoke", () => {
     await credentialManager.allow(TOKEN_A);
 
     expect(signer.signTypedData).toHaveBeenCalledOnce();
-    expect(await credentialManager.isAllowed()).toBe(true);
+    expect(await credentialManager.isAllowed([TOKEN_A])).toBe(true);
 
     // Subsequent get() should not re-sign
     await credentialManager.allow(TOKEN_A);
@@ -883,22 +1036,38 @@ describe("contract address extension", () => {
 
     await credentialManager.allow(TOKEN_A);
 
-    // Launch two extensions concurrently with different contracts
+    // Launch two extensions concurrently with different contracts. Which call
+    // reaches #extendContracts first is non-deterministic (decryptCredentials
+    // uses native crypto.subtle), so assertions must be order-independent.
     const [resultB, resultC] = await Promise.all([
       credentialManager.allow(TOKEN_A, TOKEN_B),
       credentialManager.allow(TOKEN_A, TOKEN_C),
     ]);
 
-    // The last result should cover all three contracts (no address dropped)
-    const finalContracts = resultC.contractAddresses.map((a) => getAddress(a));
-    expect(finalContracts).toContain(getAddress(TOKEN_A));
-    expect(finalContracts).toContain(getAddress(TOKEN_B));
-    expect(finalContracts).toContain(getAddress(TOKEN_C));
+    // Each call's result must cover its own required contracts.
+    const contractsB = resultB.contractAddresses.map((a) => getAddress(a));
+    expect(contractsB).toContain(getAddress(TOKEN_A));
+    expect(contractsB).toContain(getAddress(TOKEN_B));
 
-    // First concurrent result covers at least A and B
-    const firstContracts = resultB.contractAddresses.map((a) => getAddress(a));
-    expect(firstContracts).toContain(getAddress(TOKEN_A));
-    expect(firstContracts).toContain(getAddress(TOKEN_B));
+    const contractsC = resultC.contractAddresses.map((a) => getAddress(a));
+    expect(contractsC).toContain(getAddress(TOKEN_A));
+    expect(contractsC).toContain(getAddress(TOKEN_C));
+
+    // Whichever call extended last must have merged with the other's result,
+    // so at least one of the two results covers all three contracts.
+    const hasAll = (contracts: string[]) =>
+      contracts.includes(getAddress(TOKEN_A)) &&
+      contracts.includes(getAddress(TOKEN_B)) &&
+      contracts.includes(getAddress(TOKEN_C));
+    expect(hasAll(contractsB) || hasAll(contractsC)).toBe(true);
+
+    // Persisted state must reflect all three contracts — the real invariant
+    // the extension deduplication is meant to preserve.
+    const persisted = await credentialManager.allow(TOKEN_A, TOKEN_B, TOKEN_C);
+    const persistedContracts = persisted.contractAddresses.map((a) => getAddress(a));
+    expect(persistedContracts).toContain(getAddress(TOKEN_A));
+    expect(persistedContracts).toContain(getAddress(TOKEN_B));
+    expect(persistedContracts).toContain(getAddress(TOKEN_C));
   });
 
   it("persists ciphertext before session signature during extension", async ({

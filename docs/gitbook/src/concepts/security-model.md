@@ -1,9 +1,9 @@
 ---
-title: Security Model
+title: Security model
 description: Threat model, trust assumptions, and security architecture of the Zama SDK.
 ---
 
-# Security Model
+# Security model
 
 This page describes what the SDK protects, what it exposes, and the trust assumptions underlying its design. Understanding these boundaries helps you make informed decisions about deploying confidential tokens.
 
@@ -46,7 +46,7 @@ The KMS must be available for decryption to work. If the relayer is down, users 
 
 ### The blockchain
 
-The on-chain FHE coprocessor (fhEVM) executes homomorphic operations. It must correctly perform encrypted arithmetic for transfers and balance updates. This is part of the blockchain's consensus — nodes verify FHE operations as part of block validation.
+The on-chain FHE coprocessor (FHEVM) executes homomorphic operations. It must correctly perform encrypted arithmetic for transfers and balance updates. This is part of the blockchain's consensus — nodes verify FHE operations as part of block validation.
 
 ### The user's wallet
 

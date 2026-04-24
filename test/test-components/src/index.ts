@@ -11,8 +11,6 @@ export { UnwrapManualForm } from "./unwrap-manual-form";
 export { WrapperDiscoveryPanel } from "./wrapper-discovery-panel";
 export { TokenTable } from "./token-table";
 export { ResumeUnshieldForm } from "./resume-unshield-form";
-export { BatchTransferForm } from "./batch-transfer-form";
-export { ActivityFeedPanel } from "./activity-feed-panel";
 export { Sidebar } from "./sidebar";
 export { DelegationPanel } from "./delegation-panel";
 export { DelegationStatusPanel } from "./delegation-status-panel";

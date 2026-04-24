@@ -1,4 +1,4 @@
-import type { Address } from "@zama-fhe/react-sdk";
+import type { Address } from "@zama-fhe/sdk";
 import deployments from "../../../contracts/deployments.json";
 
 export const CONTRACTS = {
@@ -6,11 +6,9 @@ export const CONTRACTS = {
   cUSDT: deployments.cUSDT as Address,
   USDC: deployments.erc20 as Address,
   cUSDC: deployments.cToken as Address,
-  feeManager: deployments.feeManager as Address,
-  transferBatcher: deployments.transferBatcher as Address,
 } as const;
 
-export const CONFIDENTIAL_TOKEN_ADDRESSES: Address[] = [
+export const CONFIDENTIAL_TOKEN_ADDRESSES: [Address, ...Address[]] = [
   CONTRACTS.cUSDT, // cUSDT
   CONTRACTS.cUSDC, // cUSDC
 ];

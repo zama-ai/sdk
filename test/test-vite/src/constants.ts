@@ -1,7 +1,7 @@
-import type { Address } from "@zama-fhe/react-sdk";
+import type { Address } from "@zama-fhe/sdk";
 import deployments from "../../../contracts/deployments.json";
 
-export const CONFIDENTIAL_TOKEN_ADDRESSES: Address[] = [
+export const CONFIDENTIAL_TOKEN_ADDRESSES: [Address, ...Address[]] = [
   deployments.cUSDT as Address, // cUSDT
   deployments.cToken as Address, // cUSDC
 ];
@@ -21,7 +21,4 @@ export const DEFAULTS = {
   token: deployments.USDT as Address, // USDT (ERC-20)
   wrapper: deployments.cUSDT as Address, // cUSDT
   confidentialToken: deployments.cUSDT as Address, // cUSDT
-  feeManager: deployments.feeManager as Address,
 };
-
-export const TRANSFER_BATCHER_ADDRESS = deployments.transferBatcher as Address;

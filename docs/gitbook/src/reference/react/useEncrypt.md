@@ -54,7 +54,7 @@ function EncryptValue() {
 
 `useEncrypt` takes no constructor parameters.
 
-## Mutation Variables
+## Mutation variables
 
 Passed to `mutate` / `mutateAsync` at call time.
 

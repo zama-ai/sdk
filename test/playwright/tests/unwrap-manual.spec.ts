@@ -4,7 +4,6 @@ test("should shield USDT then unwrap and finalize in two steps", async ({
   page,
   contracts,
   formatUnits,
-  computeFee,
   confidentialBalances,
 }) => {
   const shieldAmount = 1000n;
@@ -25,7 +24,7 @@ test("should shield USDT then unwrap and finalize in two steps", async ({
 
   await expect(page.getByTestId("unwrap-success")).toContainText("Tx: 0x");
   // Burn handle should be a valid hex address
-  await expect(page.getByTestId("burn-handle")).toContainText("Burn handle: 0x");
+  await expect(page.getByTestId("burn-handle")).toContainText("Unwrap request ID: 0x");
 
   // Step 2: Finalize
   await page.getByTestId("finalize-button").click();
@@ -34,7 +33,7 @@ test("should shield USDT then unwrap and finalize in two steps", async ({
   // Verify balance decreased by unwrap amount
   await page.goto("/wallet");
   await page.getByTestId("reveal-button").click();
-  const expectedBalance = cUSDTBefore + shieldAmount - computeFee(shieldAmount) - unwrapAmount;
+  const expectedBalance = cUSDTBefore + shieldAmount - unwrapAmount;
   await expect(page.getByTestId("token-row-cUSDT").getByTestId("balance")).toHaveText(
     formatUnits(expectedBalance, 6),
   );

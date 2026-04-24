@@ -1,9 +1,9 @@
 ---
-title: Error Types
+title: Error types
 description: All SDK error classes, codes, and the matchZamaError utility.
 ---
 
-# Error Types
+# Error types
 
 All SDK errors extend `ZamaError` and carry a `.code` string you can match on. Catch them with `instanceof` or use `matchZamaError` for exhaustive handling.
 
@@ -400,7 +400,7 @@ matchZamaError(error, {
 
 **Code:** `DELEGATION_NOT_FOUND`
 
-No active delegation exists for the given `(delegator, delegate, contract)` tuple. Thrown when attempting to revoke a non-existent delegation.
+No active delegation exists for the given `(delegator, delegate, contract)` tuple. Thrown when attempting to revoke a non-existent delegation, and by `decryptBalanceAs` / `batchDecryptBalancesAs` (including on cache hits) when the delegation is missing or has been revoked.
 
 ```ts
 matchZamaError(error, {

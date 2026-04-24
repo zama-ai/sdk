@@ -4,6 +4,7 @@ export { EncryptionFailedError, DecryptionFailedError } from "./encryption";
 export { ApprovalFailedError, TransactionRevertedError } from "./transaction";
 export { KeypairExpiredError, InvalidKeypairError, NoCiphertextError } from "./credential";
 export { RelayerRequestFailedError, ConfigurationError } from "./relayer";
+export { ChainMismatchError } from "./chain";
 export {
   DelegationSelfNotAllowedError,
   DelegationCooldownError,
@@ -24,3 +25,5 @@ export {
   type BalanceErrorDetails,
 } from "./balance";
 export { matchAclRevert } from "./acl-revert";
+export { wrapDecryptError } from "./decrypt";
+export { isSessionError } from "./session";

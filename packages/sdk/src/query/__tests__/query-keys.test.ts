@@ -1,6 +1,5 @@
 import { describe, expect, test } from "../../test-fixtures";
 import { getAddress } from "viem";
-import type { Address } from "viem";
 
 import { zamaQueryKeys } from "../query-keys";
 
@@ -14,14 +13,11 @@ const SPENDER_LOWER = "0xdbf03b407c01e7cd3cbea99509d93f8dddc8c6fb";
 const ERC20_LOWER = "0xd1220a0cf47c7b9be7a2e6ba89f429762e7b9adb";
 const TOKEN_B_LOWER = "0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359";
 const HANDLE_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa";
-const HANDLE_B = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbBbbbbbbbbbbbbbbbbbbbbbbbb";
 
 describe("zamaQueryKeys", () => {
   test.each([
     ["signerAddress", zamaQueryKeys.signerAddress.all],
-    ["confidentialHandle", zamaQueryKeys.confidentialHandle.all],
     ["confidentialBalance", zamaQueryKeys.confidentialBalance.all],
-    ["confidentialHandles", zamaQueryKeys.confidentialHandles.all],
     ["confidentialBalances", zamaQueryKeys.confidentialBalances.all],
     ["tokenMetadata", zamaQueryKeys.tokenMetadata.all],
     ["isConfidential", zamaQueryKeys.isConfidential.all],
@@ -30,13 +26,17 @@ describe("zamaQueryKeys", () => {
     ["underlyingAllowance", zamaQueryKeys.underlyingAllowance.all],
     ["confidentialIsApproved", zamaQueryKeys.confidentialIsApproved.all],
     ["totalSupply", zamaQueryKeys.totalSupply.all],
-    ["activityFeed", zamaQueryKeys.activityFeed.all],
-    ["fees", zamaQueryKeys.fees.all],
     ["publicKey", zamaQueryKeys.publicKey.all],
     ["publicParams", zamaQueryKeys.publicParams.all],
     ["decryption", zamaQueryKeys.decryption.all],
   ])("all keys are namespaced with zama.* (%s)", (_, key) => {
     expect(key[0]).toMatch(/^zama\./);
+  });
+
+  test("signerAddress scope key is stable per scope and namespaced", () => {
+    expect(zamaQueryKeys.signerAddress.scope(1)).toEqual(["zama.signerAddress", { scope: 1 }]);
+    expect(zamaQueryKeys.signerAddress.scope(1)).toEqual(zamaQueryKeys.signerAddress.scope(1));
+    expect(zamaQueryKeys.signerAddress.scope(1)).not.toEqual(zamaQueryKeys.signerAddress.scope(2));
   });
 
   test("tokenMetadata token key uses 2-element tuple shape", () => {
@@ -46,93 +46,50 @@ describe("zamaQueryKeys", () => {
     ]);
   });
 
-  test("confidentialBalance owner key includes optional handle only when provided", () => {
-    const withHandle = zamaQueryKeys.confidentialBalance.owner(TOKEN_LOWER, OWNER_LOWER, HANDLE_A);
-    const withoutHandle = zamaQueryKeys.confidentialBalance.owner(TOKEN_LOWER, OWNER_LOWER);
+  test("confidentialBalance owner key includes optional owner only when provided", () => {
+    const withOwner = zamaQueryKeys.confidentialBalance.owner(TOKEN_LOWER, OWNER_LOWER);
+    const withoutOwner = zamaQueryKeys.confidentialBalance.owner(TOKEN_LOWER);
 
-    expect(withHandle).toEqual([
+    expect(withOwner).toEqual([
       "zama.confidentialBalance",
-      { tokenAddress: getAddress(TOKEN_LOWER), owner: getAddress(OWNER_LOWER), handle: HANDLE_A },
-    ]);
-
-    expect(withoutHandle).toEqual([
-      "zama.confidentialBalance",
-      { tokenAddress: getAddress(TOKEN_LOWER), owner: getAddress(OWNER_LOWER) },
-    ]);
-    expect(withoutHandle[1]).not.toHaveProperty("handle");
-  });
-
-  test("confidentialBalances tokens key includes optional handles only when provided", () => {
-    const withHandles = zamaQueryKeys.confidentialBalances.tokens([TOKEN_LOWER], OWNER_LOWER, [
-      HANDLE_A,
-      HANDLE_B,
-    ]);
-    const withoutHandles = zamaQueryKeys.confidentialBalances.tokens([TOKEN_LOWER], OWNER_LOWER);
-
-    expect(withHandles).toEqual([
-      "zama.confidentialBalances",
-      {
-        tokenAddresses: [getAddress(TOKEN_LOWER)],
-        owner: getAddress(OWNER_LOWER),
-        handles: [HANDLE_A, HANDLE_B],
-      },
-    ]);
-
-    expect(withoutHandles).toEqual([
-      "zama.confidentialBalances",
-      {
-        tokenAddresses: [getAddress(TOKEN_LOWER)],
-        owner: getAddress(OWNER_LOWER),
-      },
-    ]);
-    expect(withoutHandles[1]).not.toHaveProperty("handles");
-  });
-
-  test("fees.shieldFee includes optional amount/from/to only when amount is provided", () => {
-    const withAllParams = zamaQueryKeys.fees.shieldFee(
-      TOKEN_LOWER,
-      "100",
-      OWNER_LOWER,
-      WRAPPER_LOWER,
-    );
-    const withoutAmount = zamaQueryKeys.fees.shieldFee(TOKEN_LOWER);
-
-    expect(withAllParams).toEqual([
-      "zama.fees",
-      {
-        type: "shield",
-        feeManagerAddress: getAddress(TOKEN_LOWER),
-        amount: "100",
-        from: getAddress(OWNER_LOWER),
-        to: getAddress(WRAPPER_LOWER),
-      },
-    ]);
-
-    expect(withoutAmount).toEqual([
-      "zama.fees",
-      { type: "shield", feeManagerAddress: getAddress(TOKEN_LOWER) },
-    ]);
-    expect(withoutAmount[1]).not.toHaveProperty("amount");
-  });
-
-  test("activityFeed.scope contains full cache identity", () => {
-    expect(
-      zamaQueryKeys.activityFeed.scope(TOKEN_LOWER, OWNER_LOWER, "0xtx1:0,0xtx2:1", true),
-    ).toEqual([
-      "zama.activityFeed",
       {
         tokenAddress: getAddress(TOKEN_LOWER),
-        userAddress: getAddress(OWNER_LOWER),
-        logsKey: "0xtx1:0,0xtx2:1",
-        decrypt: true,
+        owner: getAddress(OWNER_LOWER),
       },
     ]);
+
+    expect(withoutOwner).toEqual([
+      "zama.confidentialBalance",
+      { tokenAddress: getAddress(TOKEN_LOWER) },
+    ]);
+    expect(withoutOwner[1]).not.toHaveProperty("owner");
+  });
+
+  test("confidentialBalances tokens key includes optional owner only when provided", () => {
+    const withOwner = zamaQueryKeys.confidentialBalances.tokens([TOKEN_LOWER], OWNER_LOWER);
+    const withoutOwner = zamaQueryKeys.confidentialBalances.tokens([TOKEN_LOWER]);
+
+    expect(withOwner).toEqual([
+      "zama.confidentialBalances",
+      {
+        tokenAddresses: [getAddress(TOKEN_LOWER)],
+        owner: getAddress(OWNER_LOWER),
+      },
+    ]);
+
+    expect(withoutOwner).toEqual([
+      "zama.confidentialBalances",
+      {
+        tokenAddresses: [getAddress(TOKEN_LOWER)],
+      },
+    ]);
+    expect(withoutOwner[1]).not.toHaveProperty("owner");
   });
 
   test("key labels are consistent and params support prefix matching", () => {
     const all = zamaQueryKeys.confidentialBalance.all;
     const token = zamaQueryKeys.confidentialBalance.token(TOKEN_LOWER);
-    const owner = zamaQueryKeys.confidentialBalance.owner(TOKEN_LOWER, OWNER_LOWER, HANDLE_A);
+    const owner = zamaQueryKeys.confidentialBalance.owner(TOKEN_LOWER, OWNER_LOWER);
 
     expect(all[0]).toBe(token[0]);
     expect(token[0]).toBe(owner[0]);
@@ -141,10 +98,8 @@ describe("zamaQueryKeys", () => {
 
   test("all parameterized keys are 2-element tuples", () => {
     const parameterizedKeys = [
-      zamaQueryKeys.signerAddress.token(TOKEN_LOWER),
-      zamaQueryKeys.confidentialHandle.owner(TOKEN_LOWER, OWNER_LOWER),
-      zamaQueryKeys.confidentialBalance.owner(TOKEN_LOWER, OWNER_LOWER, HANDLE_A),
-      zamaQueryKeys.confidentialHandles.tokens([TOKEN_LOWER, TOKEN_B_LOWER], OWNER_LOWER),
+      zamaQueryKeys.signerAddress.scope(1),
+      zamaQueryKeys.confidentialBalance.owner(TOKEN_LOWER, OWNER_LOWER),
       zamaQueryKeys.confidentialBalances.tokens([TOKEN_LOWER, TOKEN_B_LOWER], OWNER_LOWER),
       zamaQueryKeys.tokenMetadata.token(TOKEN_LOWER),
       zamaQueryKeys.isConfidential.token(TOKEN_LOWER),
@@ -155,12 +110,6 @@ describe("zamaQueryKeys", () => {
       zamaQueryKeys.confidentialIsApproved.token(TOKEN_LOWER),
       zamaQueryKeys.confidentialIsApproved.scope(TOKEN_LOWER, OWNER_LOWER, SPENDER_LOWER),
       zamaQueryKeys.totalSupply.token(TOKEN_LOWER),
-      zamaQueryKeys.activityFeed.token(TOKEN_LOWER),
-      zamaQueryKeys.activityFeed.scope(TOKEN_LOWER, OWNER_LOWER, "log-key", false),
-      zamaQueryKeys.fees.shieldFee(TOKEN_LOWER, "100", OWNER_LOWER, WRAPPER_LOWER),
-      zamaQueryKeys.fees.unshieldFee(TOKEN_LOWER, "100", OWNER_LOWER, WRAPPER_LOWER),
-      zamaQueryKeys.fees.batchTransferFee(TOKEN_LOWER),
-      zamaQueryKeys.fees.feeRecipient(TOKEN_LOWER),
       zamaQueryKeys.publicParams.bits(2048),
       zamaQueryKeys.decryption.handle(HANDLE_A, WRAPPER_LOWER),
     ];
@@ -176,28 +125,20 @@ describe("zamaQueryKeys", () => {
   test("normalizes addresses so case variants produce identical keys in core address namespaces", () => {
     const lowerVariants = [
       zamaQueryKeys.confidentialBalance.token(TOKEN_LOWER),
-      zamaQueryKeys.confidentialHandle.token(TOKEN_LOWER),
-      zamaQueryKeys.confidentialHandles.tokens([TOKEN_LOWER], OWNER_LOWER),
       zamaQueryKeys.confidentialBalances.tokens([TOKEN_LOWER], OWNER_LOWER),
       zamaQueryKeys.underlyingAllowance.scope(TOKEN_LOWER, OWNER_LOWER, WRAPPER_LOWER),
-      zamaQueryKeys.signerAddress.token(TOKEN_LOWER),
-      zamaQueryKeys.signerAddress.scope(1),
-      zamaQueryKeys.activityFeed.scope(TOKEN_LOWER, OWNER_LOWER, "logs-key", false),
     ];
 
     const upperVariants = [
       zamaQueryKeys.confidentialBalance.token(TOKEN_UPPER),
-      zamaQueryKeys.confidentialHandle.token(TOKEN_UPPER),
-      zamaQueryKeys.confidentialHandles.tokens([TOKEN_UPPER], OWNER_UPPER),
       zamaQueryKeys.confidentialBalances.tokens([TOKEN_UPPER], OWNER_UPPER),
       zamaQueryKeys.underlyingAllowance.scope(TOKEN_UPPER, OWNER_UPPER, WRAPPER_UPPER),
-      zamaQueryKeys.signerAddress.token(TOKEN_UPPER),
-      zamaQueryKeys.signerAddress.scope(1),
-      zamaQueryKeys.activityFeed.scope(TOKEN_UPPER, OWNER_UPPER, "logs-key", false),
     ];
 
     expect(lowerVariants).toEqual(upperVariants);
-    expect(lowerVariants[0][1]).toMatchObject({ tokenAddress: getAddress(TOKEN_LOWER) });
+    expect(lowerVariants[0][1]).toMatchObject({
+      tokenAddress: getAddress(TOKEN_LOWER),
+    });
   });
 
   test("normalizes address fields in all other address-bearing factories", () => {
@@ -231,21 +172,11 @@ describe("zamaQueryKeys", () => {
           getAddress(SPENDER_LOWER),
         ),
       ],
-      [zamaQueryKeys.isAllowed.scope(OWNER_LOWER), zamaQueryKeys.isAllowed.scope(OWNER_UPPER)],
+      [
+        zamaQueryKeys.isAllowed.scope(OWNER_LOWER, [TOKEN_LOWER]),
+        zamaQueryKeys.isAllowed.scope(OWNER_UPPER, [TOKEN_UPPER]),
+      ],
       [zamaQueryKeys.totalSupply.token(TOKEN_LOWER), zamaQueryKeys.totalSupply.token(TOKEN_UPPER)],
-      [
-        zamaQueryKeys.fees.shieldFee(TOKEN_LOWER, "100", OWNER_LOWER, WRAPPER_LOWER),
-        zamaQueryKeys.fees.shieldFee(TOKEN_UPPER, "100", OWNER_UPPER, WRAPPER_UPPER),
-      ],
-      [
-        zamaQueryKeys.fees.unshieldFee(TOKEN_LOWER, "100", OWNER_LOWER, WRAPPER_LOWER),
-        zamaQueryKeys.fees.unshieldFee(TOKEN_UPPER, "100", OWNER_UPPER, WRAPPER_UPPER),
-      ],
-      [
-        zamaQueryKeys.fees.batchTransferFee(TOKEN_LOWER),
-        zamaQueryKeys.fees.batchTransferFee(TOKEN_UPPER),
-      ],
-      [zamaQueryKeys.fees.feeRecipient(TOKEN_LOWER), zamaQueryKeys.fees.feeRecipient(TOKEN_UPPER)],
       [
         zamaQueryKeys.decryption.handle(HANDLE_A, WRAPPER_LOWER),
         zamaQueryKeys.decryption.handle(HANDLE_A, WRAPPER_UPPER),
@@ -257,37 +188,27 @@ describe("zamaQueryKeys", () => {
     }
   });
 
-  test("isAllowed scope key includes account identity", () => {
-    expect(zamaQueryKeys.isAllowed.scope(OWNER_LOWER)).toEqual([
+  test("isAllowed scope key includes account and contractAddresses", () => {
+    expect(zamaQueryKeys.isAllowed.scope(OWNER_LOWER, [TOKEN_LOWER])).toEqual([
       "zama.isAllowed",
-      { account: getAddress(OWNER_LOWER) },
+      {
+        account: getAddress(OWNER_LOWER),
+        contractAddresses: [getAddress(TOKEN_LOWER)],
+      },
     ]);
   });
 
   test("omits absent optional address fields from query keys", () => {
-    expect(zamaQueryKeys.confidentialHandle.owner(TOKEN_LOWER)).toEqual([
-      "zama.confidentialHandle",
-      { tokenAddress: getAddress(TOKEN_LOWER) },
-    ]);
     expect(zamaQueryKeys.underlyingAllowance.scope(TOKEN_LOWER)).toEqual([
       "zama.underlyingAllowance",
       { tokenAddress: getAddress(TOKEN_LOWER) },
     ]);
     expect(zamaQueryKeys.confidentialIsApproved.scope(TOKEN_LOWER, OWNER_LOWER)).toEqual([
       "zama.confidentialIsApproved",
-      { tokenAddress: getAddress(TOKEN_LOWER), holder: getAddress(OWNER_LOWER) },
+      {
+        tokenAddress: getAddress(TOKEN_LOWER),
+        holder: getAddress(OWNER_LOWER),
+      },
     ]);
-  });
-
-  test("fees keys type feeManagerAddress as Address | undefined", () => {
-    const shieldFeeKey = zamaQueryKeys.fees.shieldFee(TOKEN_LOWER);
-    const unshieldFeeKey = zamaQueryKeys.fees.unshieldFee(TOKEN_LOWER);
-    const batchTransferFeeKey = zamaQueryKeys.fees.batchTransferFee(TOKEN_LOWER);
-    const feeRecipientKey = zamaQueryKeys.fees.feeRecipient(TOKEN_LOWER);
-
-    expectTypeOf(shieldFeeKey[1].feeManagerAddress).toEqualTypeOf<Address | undefined>();
-    expectTypeOf(unshieldFeeKey[1].feeManagerAddress).toEqualTypeOf<Address | undefined>();
-    expectTypeOf(batchTransferFeeKey[1].feeManagerAddress).toEqualTypeOf<Address | undefined>();
-    expectTypeOf(feeRecipientKey[1].feeManagerAddress).toEqualTypeOf<Address | undefined>();
   });
 });

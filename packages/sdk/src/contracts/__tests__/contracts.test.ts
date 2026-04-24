@@ -15,6 +15,7 @@ import {
   supportsInterfaceContract,
   ERC7984_INTERFACE_ID,
   ERC7984_WRAPPER_INTERFACE_ID,
+  ERC7984_WRAPPER_INTERFACE_ID_LEGACY,
   isConfidentialTokenContract,
   isConfidentialWrapperContract,
 } from "../erc165";
@@ -31,37 +32,18 @@ import {
   confidentialTotalSupplyContract,
   totalSupplyContract,
   rateContract,
-  deploymentCoordinatorContract,
-  isFinalizeUnwrapOperatorContract,
-  setFinalizeUnwrapOperatorContract,
 } from "../encrypted";
 
 // Wrapper
 import {
   finalizeUnwrapContract,
+  inferredTotalSupplyContract,
   underlyingContract,
   wrapContract,
-  wrapETHContract,
 } from "../wrapper";
-
-// Deployment coordinator
-import { getWrapperContract, wrapperExistsContract } from "../deployment-coordinator";
-
-// Fee manager
-import {
-  getWrapFeeContract,
-  getUnwrapFeeContract,
-  getBatchTransferFeeContract,
-  getFeeRecipientContract,
-} from "../fee-manager";
-
-// Transfer batcher
-import { confidentialBatchTransferContract } from "../transfer-batcher";
+import { wrapperAbi } from "../../abi/wrapper.abi";
 
 const SPENDER = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;
-const COORDINATOR = "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e" as Address;
-const FEE_MANAGER = "0x6f6F6f6f6f6f6f6f6f6F6f6F6F6F6F6f6F6F6f6F" as Address;
-const BATCHER = "0x7A7a7A7a7a7a7a7A7a7a7a7A7a7A7A7A7A7A7a7A" as Address;
 
 describe("ERC-20 contract builders", () => {
   it("nameContract", ({ tokenAddress }) => {
@@ -107,7 +89,8 @@ describe("ERC-165 contract builders", () => {
 
   it("exports interface IDs", () => {
     expect(ERC7984_INTERFACE_ID).toBe("0x4958f2a4");
-    expect(ERC7984_WRAPPER_INTERFACE_ID).toBe("0xd04584ba");
+    expect(ERC7984_WRAPPER_INTERFACE_ID_LEGACY).toBe("0xd04584ba");
+    expect(ERC7984_WRAPPER_INTERFACE_ID).toBe("0x1f1c62b2");
   });
 
   it("isConfidentialTokenContract uses ERC7984_INTERFACE_ID", ({ tokenAddress }) => {
@@ -117,11 +100,13 @@ describe("ERC-165 contract builders", () => {
     expect(config.args).toEqual([ERC7984_INTERFACE_ID]);
   });
 
-  it("isConfidentialWrapperContract uses ERC7984_WRAPPER_INTERFACE_ID", ({ tokenAddress }) => {
+  it("isConfidentialWrapperContract uses ERC7984_WRAPPER_INTERFACE_ID_LEGACY", ({
+    tokenAddress,
+  }) => {
     const config = isConfidentialWrapperContract(tokenAddress);
     expect(config.address).toBe(tokenAddress);
     expect(config.functionName).toBe("supportsInterface");
-    expect(config.args).toEqual([ERC7984_WRAPPER_INTERFACE_ID]);
+    expect(config.args).toEqual([ERC7984_WRAPPER_INTERFACE_ID_LEGACY]);
   });
 });
 
@@ -201,39 +186,15 @@ describe("Encryption contract builders", () => {
     expect(config.args).toEqual([]);
   });
 
-  it("totalSupplyContract", ({ tokenAddress }) => {
-    const config = totalSupplyContract(tokenAddress);
+  it("totalSupplyContract builds the legacy totalSupply call", ({ wrapperAddress }) => {
+    const config = totalSupplyContract(wrapperAddress);
+    expect(config.address).toBe(wrapperAddress);
     expect(config.functionName).toBe("totalSupply");
   });
 
   it("rateContract", ({ tokenAddress }) => {
     const config = rateContract(tokenAddress);
     expect(config.functionName).toBe("rate");
-  });
-
-  it("deploymentCoordinatorContract", ({ tokenAddress }) => {
-    const config = deploymentCoordinatorContract(tokenAddress);
-    expect(config.functionName).toBe("deploymentCoordinator");
-  });
-
-  it("isFinalizeUnwrapOperatorContract", ({ tokenAddress, userAddress }) => {
-    const config = isFinalizeUnwrapOperatorContract(tokenAddress, userAddress, SPENDER);
-    expect(config.functionName).toBe("isFinalizeUnwrapOperator");
-    expect(config.args).toEqual([userAddress, SPENDER]);
-  });
-
-  it("setFinalizeUnwrapOperatorContract with explicit timestamp", ({ tokenAddress }) => {
-    const config = setFinalizeUnwrapOperatorContract(tokenAddress, SPENDER, 99999);
-    expect(config.functionName).toBe("setFinalizeUnwrapOperator");
-    expect(config.args).toEqual([SPENDER, 99999]);
-  });
-
-  it("setFinalizeUnwrapOperatorContract defaults timestamp", ({ tokenAddress }) => {
-    const before = Math.floor(Date.now() / 1000) + 3600;
-    const config = setFinalizeUnwrapOperatorContract(tokenAddress, SPENDER);
-    const after = Math.floor(Date.now() / 1000) + 3600;
-    expect(config.args[1]).toBeGreaterThanOrEqual(before);
-    expect(config.args[1]).toBeLessThanOrEqual(after);
   });
 });
 
@@ -253,76 +214,55 @@ describe("Wrapper contract builders", () => {
     expect(config.functionName).toBe("underlying");
   });
 
+  it("inferredTotalSupplyContract", ({ wrapperAddress }) => {
+    const config = inferredTotalSupplyContract(wrapperAddress);
+    expect(config.address).toBe(wrapperAddress);
+    expect(config.functionName).toBe("inferredTotalSupply");
+  });
+
   it("wrapContract", ({ wrapperAddress, userAddress }) => {
     const config = wrapContract(wrapperAddress, userAddress, 1000n);
     expect(config.functionName).toBe("wrap");
     expect(config.args).toEqual([userAddress, 1000n]);
   });
-
-  it("wrapETHContract includes value", ({ wrapperAddress, userAddress }) => {
-    const config = wrapETHContract(wrapperAddress, userAddress, 500n, 500n);
-    expect(config.functionName).toBe("wrapETH");
-    expect(config.args).toEqual([userAddress, 500n]);
-    expect(config.value).toBe(500n);
-  });
 });
 
-describe("Deployment coordinator contract builders", () => {
-  it("getWrapperContract", ({ tokenAddress }) => {
-    const config = getWrapperContract(COORDINATOR, tokenAddress);
-    expect(config.address).toBe(COORDINATOR);
-    expect(config.functionName).toBe("getWrapper");
-    expect(config.args).toEqual([tokenAddress]);
+// Regression: verify wrapperAbi matches protocol-apps@da4afe387420 (currently deployed).
+// These assertions prove the chosen ABI version is intentional: the interface uses
+// openzeppelin-confidential-contracts@6edd293 where unwrapRequester is part of IERC7984ERC20Wrapper
+// (7 functions).
+describe("wrapperAbi version smoke test (protocol-apps@da4afe387420)", () => {
+  type AbiFunction = { type: string; name: string; inputs: { type: string; name: string }[] };
+  type AbiEvent = { type: string; name: string; inputs: { type: string; name: string }[] };
+  const fns = (wrapperAbi as AbiFunction[]).filter((x) => x.type === "function");
+  const fn = (name: string) => fns.find((f) => f.name === name);
+  const eventSignatures = (wrapperAbi as AbiEvent[])
+    .filter((x) => x.type === "event")
+    .map((event) => `${event.name}(${event.inputs.map((input) => input.type).join(",")})`);
+
+  it("finalizeUnwrap first param is bytes32 unwrapRequestId (not euint64 burntAmount)", () => {
+    const f = fn("finalizeUnwrap");
+    expect(f).toBeDefined();
+    expect(f!.inputs[0].name).toBe("unwrapRequestId");
+    expect(f!.inputs[0].type).toBe("bytes32");
   });
 
-  it("wrapperExistsContract", ({ tokenAddress }) => {
-    const config = wrapperExistsContract(COORDINATOR, tokenAddress);
-    expect(config.functionName).toBe("wrapperExists");
-    expect(config.args).toEqual([tokenAddress]);
-  });
-});
-
-describe("Fee manager contract builders", () => {
-  it("getWrapFeeContract", ({ userAddress }) => {
-    const config = getWrapFeeContract(FEE_MANAGER, 100n, userAddress, SPENDER);
-    expect(config.address).toBe(FEE_MANAGER);
-    expect(config.functionName).toBe("getWrapFee");
-    expect(config.args).toEqual([100n, userAddress, SPENDER]);
+  it("unwrapAmount exists with bytes32 param", () => {
+    const f = fn("unwrapAmount");
+    expect(f).toBeDefined();
+    expect(f!.inputs[0].type).toBe("bytes32");
   });
 
-  it("getUnwrapFeeContract", ({ userAddress }) => {
-    const config = getUnwrapFeeContract(FEE_MANAGER, 200n, userAddress, SPENDER);
-    expect(config.functionName).toBe("getUnwrapFee");
-    expect(config.args).toEqual([200n, userAddress, SPENDER]);
+  it("unwrapRequester exists with bytes32 param", () => {
+    const f = fn("unwrapRequester");
+    expect(f).toBeDefined();
+    expect(f!.inputs[0].type).toBe("bytes32");
   });
 
-  it("getBatchTransferFeeContract", () => {
-    const config = getBatchTransferFeeContract(FEE_MANAGER);
-    expect(config.functionName).toBe("getBatchTransferFee");
-    expect(config.args).toEqual([]);
-  });
-
-  it("getFeeRecipientContract", () => {
-    const config = getFeeRecipientContract(FEE_MANAGER);
-    expect(config.functionName).toBe("getFeeRecipient");
-    expect(config.args).toEqual([]);
-  });
-});
-
-describe("Transfer batcher contract builders", () => {
-  it("confidentialBatchTransferContract", ({ tokenAddress, userAddress }) => {
-    const data = [
-      {
-        to: userAddress,
-        encryptedAmount: ("0x" + "aa".repeat(32)) as Address,
-        inputProof: ("0x" + "bb".repeat(32)) as Address,
-        retryFor: 0n,
-      },
-    ];
-    const config = confidentialBatchTransferContract(BATCHER, tokenAddress, userAddress, data, 10n);
-    expect(config.address).toBe(BATCHER);
-    expect(config.functionName).toBe("confidentialBatchTransfer");
-    expect(config.args).toEqual([tokenAddress, userAddress, data]);
-    expect(config.value).toBe(10n);
+  it("keeps legacy and upgraded unwrap events in the exported wrapper ABI", () => {
+    expect(eventSignatures).toContain("UnwrapRequested(address,bytes32)");
+    expect(eventSignatures).toContain("UnwrapRequested(address,bytes32,bytes32)");
+    expect(eventSignatures).toContain("UnwrapFinalized(address,bytes32,uint64)");
+    expect(eventSignatures).toContain("UnwrapFinalized(address,bytes32,bytes32,uint64)");
   });
 });

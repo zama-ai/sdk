@@ -1,52 +1,27 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
-import type { ClearValueType, Handle } from "@zama-fhe/sdk";
-import type {
-  DecryptHandle,
-  UserDecryptCallbacks,
-  UserDecryptMutationParams,
-} from "@zama-fhe/sdk/query";
-import { userDecryptMutationOptions } from "@zama-fhe/sdk/query";
+import type { UseQueryOptions } from "@tanstack/react-query";
+import type { DecryptResult, UserDecryptQueryConfig } from "@zama-fhe/sdk/query";
+import { userDecryptQueryOptions } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
-
-export type {
-  UserDecryptCallbacks as DecryptCallbacks,
-  DecryptHandle,
-  UserDecryptMutationParams as DecryptParams,
-};
-
-/** Configuration for {@link useUserDecrypt}. */
-export type UseUserDecryptConfig = UserDecryptCallbacks;
+import { useQuery } from "../utils/query";
 
 /**
- * High-level orchestration hook for user decryption.
- *
- * Reuses cached FHE credentials from `sdk.credentials` when available,
- * falling back to generating a fresh keypair + EIP-712 signature only when
- * no valid credentials exist. This avoids redundant wallet signature prompts.
- *
- * On success, populates the decryption cache so `useUserDecryptedValue` / `useUserDecryptedValues`
- * can read the results.
- *
- * @param config - Optional callbacks for step-by-step UX feedback.
- * @returns A mutation whose `mutate` accepts {@link UserDecryptMutationParams}.
- *
- * @example
- * ```tsx
- * const decrypt = useUserDecrypt({
- *   onCredentialsReady: () => setStep("decrypting"),
- *   onDecrypted: (values) => console.log(values),
- * });
- * decrypt.mutate({
- *   handles: [{ handle: "0xHandle", contractAddress: "0xContract" }],
- * });
- * ```
+ * React hook for FHE user decryption. Thin wrapper around
+ * `userDecryptQueryOptions` with `useQuery` semantics.
  */
-export function useUserDecrypt(config?: UseUserDecryptConfig) {
+export function useUserDecrypt(
+  config: UserDecryptQueryConfig,
+  options?: Omit<UseQueryOptions<DecryptResult>, "queryKey" | "queryFn">,
+) {
   const sdk = useZamaSDK();
-
-  return useMutation<Record<Handle, ClearValueType>, Error, UserDecryptMutationParams>(
-    userDecryptMutationOptions(sdk, config),
-  );
+  const queryOpts = userDecryptQueryOptions(sdk, config);
+  return useQuery<DecryptResult>({
+    ...queryOpts,
+    ...options,
+    enabled: queryOpts.enabled && (options?.enabled ?? false),
+  });
 }
+
+/** Return type of {@link useUserDecrypt}. */
+export type UseUserDecryptResult = ReturnType<typeof useUserDecrypt>;

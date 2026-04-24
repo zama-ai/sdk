@@ -69,9 +69,7 @@ function createMockProvider(options: MockClientOptions = {}) {
 
           if (parsed.functionName === "persistAllowed") {
             const [handle, account] = parsed.args;
-            const allowed = options.persistAllowed
-              ? options.persistAllowed(String(handle), String(account))
-              : true;
+            const allowed = options.persistAllowed ? options.persistAllowed(handle, account) : true;
             return encodeFunctionResult({
               abi: ACL_ABI,
               functionName: "persistAllowed",
@@ -82,7 +80,7 @@ function createMockProvider(options: MockClientOptions = {}) {
           if (parsed.functionName === "isAllowedForDecryption") {
             const [handle] = parsed.args;
             const allowed = options.isAllowedForDecryption
-              ? options.isAllowedForDecryption(String(handle))
+              ? options.isAllowedForDecryption(handle)
               : true;
             return encodeFunctionResult({
               abi: ACL_ABI,
@@ -94,10 +92,10 @@ function createMockProvider(options: MockClientOptions = {}) {
             const [delegator, delegate, contractAddress, handle] = parsed.args;
             const isDelegated = options.isHandleDelegatedForUserDecryption
               ? options.isHandleDelegatedForUserDecryption(
-                  String(delegator),
-                  String(delegate),
-                  String(contractAddress),
-                  String(handle),
+                  delegator,
+                  delegate,
+                  contractAddress,
+                  handle,
                 )
               : true;
             return encodeFunctionResult({
@@ -117,7 +115,7 @@ function createMockProvider(options: MockClientOptions = {}) {
             throw new Error("Unable to parse executor call");
           }
           const [handle] = parsed.args;
-          const value = options.plaintexts?.[String(handle).toLowerCase()] ?? 0n;
+          const value = options.plaintexts?.[handle.toLowerCase()] ?? 0n;
           return encodeFunctionResult({
             abi: EXECUTOR_ABI,
             functionName: "plaintexts",
@@ -262,7 +260,7 @@ describe(RelayerCleartext, () => {
     expect(typedData.domain).toEqual({
       name: "Decryption",
       version: "1",
-      chainId: hardhatCleartextConfig.chainId,
+      chainId: BigInt(hardhatCleartextConfig.chainId),
       verifyingContract: hardhatCleartextConfig.verifyingContractAddressDecryption,
     });
     expect(typedData.types.UserDecryptRequestVerification.map((field) => field.name)).toEqual([
@@ -275,8 +273,8 @@ describe(RelayerCleartext, () => {
     expect(typedData.message).toEqual({
       publicKey: "0x" + "ab".repeat(32),
       contractAddresses: [CONTRACT_ADDRESS],
-      startTimestamp: 1710000000n,
-      durationDays: 7n,
+      startTimestamp: "1710000000",
+      durationDays: "7",
       extraData: "0x00",
     });
   });

@@ -8,22 +8,17 @@ import {
 } from "viem";
 
 import type { Handle } from "../relayer/relayer-sdk.types";
-import type { BatchTransferData } from "../contracts";
 
 import {
   confidentialBalanceOfContract,
-  confidentialBatchTransferContract,
   confidentialTransferContract,
   finalizeUnwrapContract,
-  getWrapperContract,
   setOperatorContract,
   supportsInterfaceContract,
   underlyingContract,
   unwrapContract,
   unwrapFromBalanceContract,
   wrapContract,
-  wrapETHContract,
-  wrapperExistsContract,
   getTokenPairsContract,
   getTokenPairsLengthContract,
   getTokenPairsSliceContract,
@@ -110,24 +105,8 @@ export function readConfidentialBalanceOfContract(
   return ethersRead(provider, confidentialBalanceOfContract(tokenAddress, userAddress));
 }
 
-export function readWrapperForTokenContract(
-  provider: EthersCallProvider,
-  registryAddress: Address,
-  tokenAddress: Address,
-) {
-  return ethersRead(provider, getWrapperContract(registryAddress, tokenAddress));
-}
-
 export function readUnderlyingTokenContract(provider: EthersCallProvider, wrapperAddress: Address) {
   return ethersRead(provider, underlyingContract(wrapperAddress));
-}
-
-export function readWrapperExistsContract(
-  provider: EthersCallProvider,
-  registryAddress: Address,
-  tokenAddress: Address,
-) {
-  return ethersRead(provider, wrapperExistsContract(registryAddress, tokenAddress));
 }
 
 export function readSupportsInterfaceContract(
@@ -148,26 +127,6 @@ export function writeConfidentialTransferContract(
   inputProof: Uint8Array,
 ) {
   return ethersWrite(signer, confidentialTransferContract(tokenAddress, to, handle, inputProof));
-}
-
-export function writeConfidentialBatchTransferContract(
-  signer: EthersTransactionSigner,
-  batcherAddress: Address,
-  tokenAddress: Address,
-  fromAddress: Address,
-  batchTransferData: BatchTransferData[],
-  fees: bigint,
-) {
-  return ethersWrite(
-    signer,
-    confidentialBatchTransferContract(
-      batcherAddress,
-      tokenAddress,
-      fromAddress,
-      batchTransferData,
-      fees,
-    ),
-  );
 }
 
 export function writeUnwrapContract(
@@ -194,13 +153,13 @@ export function writeUnwrapFromBalanceContract(
 export function writeFinalizeUnwrapContract(
   signer: EthersTransactionSigner,
   wrapper: Address,
-  burntAmount: Handle,
+  unwrapRequestId: Handle,
   burntAmountCleartext: bigint,
   decryptionProof: Hex,
 ) {
   return ethersWrite(
     signer,
-    finalizeUnwrapContract(wrapper, burntAmount, burntAmountCleartext, decryptionProof),
+    finalizeUnwrapContract(wrapper, unwrapRequestId, burntAmountCleartext, decryptionProof),
   );
 }
 
@@ -220,16 +179,6 @@ export function writeWrapContract(
   amount: bigint,
 ) {
   return ethersWrite(signer, wrapContract(wrapperAddress, to, amount));
-}
-
-export function writeWrapETHContract(
-  signer: EthersTransactionSigner,
-  wrapperAddress: Address,
-  to: Address,
-  amount: bigint,
-  value: bigint,
-) {
-  return ethersWrite(signer, wrapETHContract(wrapperAddress, to, amount, value));
 }
 
 // ── Registry read helpers ──────────────────────────────────

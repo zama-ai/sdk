@@ -23,6 +23,8 @@ export type {
   EIP712TypedData,
   DelegatedUserDecryptParams,
   NetworkType,
+  PublicKeyData,
+  PublicParamsData,
 } from "./relayer/relayer-sdk.types";
 export type {
   FheTypeName,
@@ -38,24 +40,33 @@ export type { GenericLogger } from "./worker/worker.types";
 export { HardhatConfig, MainnetConfig, SepoliaConfig } from "./relayer/relayer-utils";
 
 // ERC-165 interface IDs
-export { ERC7984_INTERFACE_ID, ERC7984_WRAPPER_INTERFACE_ID } from "./contracts";
+export {
+  ERC7984_INTERFACE_ID,
+  ERC7984_WRAPPER_INTERFACE_ID,
+  ERC7984_WRAPPER_INTERFACE_ID_LEGACY,
+} from "./contracts";
+
+// Decrypt cache
+export { DecryptCache } from "./decrypt-cache";
 
 // Token abstraction layer
 export { ZamaSDK } from "./zama-sdk";
 export type { ZamaSDKConfig } from "./zama-sdk";
+export type { DecryptHandle, DecryptResult } from "./query/user-decrypt";
 export { WrappersRegistry, DefaultRegistryAddresses } from "./wrappers-registry";
 export type { WrappersRegistryConfig, ListPairsOptions } from "./wrappers-registry";
 export {
   Token,
-  type TokenConfig,
   ReadonlyToken,
-  type ReadonlyTokenConfig,
-  type BatchDecryptOptions,
+  type BatchBalancesResult,
   type BatchDecryptAsOptions,
   ZERO_HANDLE,
+  isZeroHandle,
   savePendingUnshield,
   loadPendingUnshield,
+  loadPendingUnshieldRequest,
   clearPendingUnshield,
+  type PendingUnshieldRequest,
 } from "./token";
 export {
   MemoryStorage,
@@ -73,6 +84,7 @@ export {
 } from "./credentials";
 export type {
   GenericSigner,
+  GenericProvider,
   GenericStorage,
   SignerLifecycleCallbacks,
   StoredCredentials,
@@ -146,6 +158,7 @@ export {
   NoCiphertextError,
   RelayerRequestFailedError,
   ConfigurationError,
+  ChainMismatchError,
   DelegationSelfNotAllowedError,
   DelegationCooldownError,
   DelegationNotFoundError,
@@ -171,6 +184,7 @@ export type {
   ConfidentialTransferEvent,
   WrappedEvent,
   UnwrapRequestedEvent,
+  UnwrapFinalizedEvent,
   UnwrappedFinalizedEvent,
   UnwrappedStartedEvent,
   OnChainEvent,
@@ -192,6 +206,7 @@ export {
   decodeConfidentialTransfer,
   decodeWrapped,
   decodeUnwrapRequested,
+  decodeUnwrapFinalized,
   decodeUnwrappedFinalized,
   decodeUnwrappedStarted,
   decodeOnChainEvent,
@@ -200,37 +215,19 @@ export {
   findWrapped,
 } from "./events";
 
-// Activity feed helpers and types
-export type {
-  ActivityDirection,
-  ActivityType,
-  ActivityAmount,
-  ActivityLogMetadata,
-  ActivityItem,
-} from "./activity";
-export {
-  parseActivityFeed,
-  extractEncryptedHandles,
-  applyDecryptedValues,
-  sortByBlockNumber,
-} from "./activity";
-
 // Contract call builders
 export {
   confidentialBalanceOfContract,
   confidentialTransferContract,
   confidentialTransferFromContract,
   isOperatorContract,
-  confidentialBatchTransferContract,
   unwrapContract,
   unwrapFromBalanceContract,
   finalizeUnwrapContract,
   setOperatorContract,
-  getWrapperContract,
-  wrapperExistsContract,
   underlyingContract,
+  inferredTotalSupplyContract,
   wrapContract,
-  wrapETHContract,
   supportsInterfaceContract,
   isConfidentialTokenContract,
   isConfidentialWrapperContract,
@@ -243,13 +240,6 @@ export {
   confidentialTotalSupplyContract,
   totalSupplyContract,
   rateContract,
-  deploymentCoordinatorContract,
-  isFinalizeUnwrapOperatorContract,
-  setFinalizeUnwrapOperatorContract,
-  getWrapFeeContract,
-  getUnwrapFeeContract,
-  getBatchTransferFeeContract,
-  getFeeRecipientContract,
   delegateForUserDecryptionContract,
   revokeDelegationContract,
   getDelegationExpiryContract,
@@ -262,9 +252,4 @@ export {
   getTokenAddressContract,
   isConfidentialTokenValidContract,
 } from "./contracts";
-export type {
-  BatchTransferData,
-  TokenWrapperPair,
-  TokenWrapperPairWithMetadata,
-  PaginatedResult,
-} from "./contracts";
+export type { TokenWrapperPair, TokenWrapperPairWithMetadata, PaginatedResult } from "./contracts";

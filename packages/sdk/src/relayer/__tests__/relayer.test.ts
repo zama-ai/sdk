@@ -689,16 +689,23 @@ describe("RelayerWeb", () => {
 
       // Mock fetch for revalidation: manifest + artifact returns 200 (changed)
       globalThis.fetch = vi.fn().mockImplementation((url: string) => {
-        const urlStr = String(url);
+        const urlStr = url;
         if (urlStr.includes("/keyurl")) {
           return Promise.resolve({
             ok: true,
             json: () =>
               Promise.resolve({
-                fhePublicKey: {
-                  urls: ["https://cdn.example.com/pk.bin"],
+                status: "succeeded",
+                response: {
+                  fheKeyInfo: [
+                    {
+                      fhePublicKey: {
+                        urls: ["https://cdn.example.com/pk.bin"],
+                      },
+                    },
+                  ],
+                  crs: {},
                 },
-                crs: {},
               }),
           });
         }
@@ -1182,16 +1189,23 @@ describe("RelayerNode", () => {
 
       // Mock fetch: manifest + artifact returns 200 (changed)
       globalThis.fetch = vi.fn().mockImplementation((url: string) => {
-        const urlStr = String(url);
+        const urlStr = url;
         if (urlStr.includes("/keyurl")) {
           return Promise.resolve({
             ok: true,
             json: () =>
               Promise.resolve({
-                fhePublicKey: {
-                  urls: ["https://cdn.example.com/pk.bin"],
+                status: "succeeded",
+                response: {
+                  fheKeyInfo: [
+                    {
+                      fhePublicKey: {
+                        urls: ["https://cdn.example.com/pk.bin"],
+                      },
+                    },
+                  ],
+                  crs: {},
                 },
-                crs: {},
               }),
           });
         }

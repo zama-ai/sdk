@@ -1,4 +1,4 @@
-export { filterQueryOptions, hashFn, ZERO_HANDLE } from "./utils";
+export { filterQueryOptions, hashFn } from "./utils";
 export type { StrippedQueryOptionKeys } from "./utils";
 export type { QueryFactoryOptions, MutationFactoryOptions } from "./factory-types";
 export { zamaQueryKeys } from "./query-keys";
@@ -16,7 +16,7 @@ export {
 } from "./invalidation";
 export type { QueryClientLike, QueryFilterLike, QueryLike } from "./invalidation";
 
-export { signerAddressQueryOptions, type SignerAddressQueryConfig } from "./signer-address";
+export { signerAddressQueryOptions } from "./signer-address";
 export {
   tokenMetadataQueryOptions,
   type TokenMetadata,
@@ -40,42 +40,16 @@ export {
   confidentialIsApprovedQueryOptions,
   type ConfidentialIsApprovedQueryConfig,
 } from "./confidential-is-approved";
-export {
-  shieldFeeQueryOptions,
-  unshieldFeeQueryOptions,
-  batchTransferFeeQueryOptions,
-  feeRecipientQueryOptions,
-  type FeeQueryConfig,
-  type ShieldFeeQueryConfig,
-  type UnshieldFeeQueryConfig,
-} from "./fees";
 export { publicKeyQueryOptions, type PublicKeyQueryConfig } from "./public-key";
 export { publicParamsQueryOptions, type PublicParamsQueryConfig } from "./public-params";
 export {
-  confidentialHandleQueryOptions,
-  type ConfidentialHandleQueryConfig,
-} from "./confidential-handle";
-export {
   confidentialBalanceQueryOptions,
   type ConfidentialBalanceQueryConfig,
-  type EncryptedBalanceHandle,
 } from "./confidential-balance";
 export {
-  confidentialHandlesQueryOptions,
-  type ConfidentialHandlesQueryConfig,
-} from "./confidential-handles";
-export {
   confidentialBalancesQueryOptions,
-  type ConfidentialBalancesData,
   type ConfidentialBalancesQueryConfig,
 } from "./confidential-balances";
-export {
-  activityFeedQueryOptions,
-  deriveActivityFeedLogsKey,
-  type ActivityFeedConfig,
-  type ActivityFeedQueryConfig,
-} from "./activity-feed";
-
 export {
   tokenPairsQueryOptions,
   tokenPairsLengthQueryOptions,
@@ -95,7 +69,6 @@ export {
 } from "./wrappers-registry";
 
 export { shieldMutationOptions, type ShieldParams } from "./shield";
-export { shieldETHMutationOptions, type ShieldETHParams } from "./shield-eth";
 export { confidentialTransferMutationOptions, type ConfidentialTransferParams } from "./transfer";
 export {
   confidentialTransferFromMutationOptions,
@@ -131,9 +104,9 @@ export {
   type DelegateDecryptionParams,
 } from "./delegate-decryption";
 export {
-  userDecryptMutationOptions,
-  type UserDecryptMutationParams,
-  type UserDecryptCallbacks,
+  userDecryptQueryOptions,
+  type UserDecryptQueryConfig,
+  type DecryptResult,
   type DecryptHandle,
 } from "./user-decrypt";
 export { decryptBalanceAsMutationOptions, type DecryptBalanceAsParams } from "./decrypt-balance-as";
@@ -147,18 +120,22 @@ export {
   type DelegationStatusData,
   type DelegationStatusQueryConfig,
 } from "./delegation-status";
-export type { ActivityItem, ActivityLogMetadata } from "../activity";
-export type { ActivityAmount, ActivityDirection, ActivityType } from "../activity";
 export type { RawLog } from "../events/onchain-events";
 export type {
   ConfidentialTransferEvent,
   WrappedEvent,
   UnwrapRequestedEvent,
+  UnwrapFinalizedEvent,
   UnwrappedFinalizedEvent,
   UnwrappedStartedEvent,
 } from "../events/onchain-events";
 export type { OnChainEvent } from "../events/onchain-events";
-export type { ClearValueType, EncryptParams, EncryptResult } from "../relayer/relayer-sdk.types";
+export type {
+  ClearValueType,
+  EncryptParams,
+  EncryptResult,
+  Handle,
+} from "../relayer/relayer-sdk.types";
 export type {
   DelegatedUserDecryptParams,
   EncryptInput,
@@ -167,13 +144,8 @@ export type {
   UserDecryptParams,
 } from "../relayer/relayer-sdk.types";
 export type { RelayerSDK } from "../relayer/relayer-sdk";
-export type {
-  BatchDecryptOptions,
-  BatchDecryptAsOptions,
-  ReadonlyTokenConfig,
-} from "../token/readonly-token";
+export type { BatchBalancesResult, BatchDecryptAsOptions } from "../token/readonly-token";
 export type { ReadonlyToken } from "../token/readonly-token";
-export type { TokenConfig } from "../token/token";
 export type { Token } from "../token/token";
 export type { ZamaSDKConfig } from "../zama-sdk";
 export type { ZamaSDK } from "../zama-sdk";

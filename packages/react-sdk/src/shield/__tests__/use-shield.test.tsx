@@ -5,7 +5,6 @@ import { describe, expect, test, vi } from "../../test-fixtures";
 import { expectCacheInvalidated, expectCacheUntouched } from "../../test-helpers";
 import { useShield } from "../use-shield";
 import {
-  HANDLE,
   OTHER_TOKEN,
   TOKEN,
   UNDERLYING,
@@ -29,45 +28,39 @@ describe("useShield", () => {
 
   test("cache: invalidates allowance and removes balance after shield", async ({
     renderWithProviders,
-    signer,
+    provider,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
+    vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
 
     const { result, queryClient } = renderWithProviders(() =>
       useShield({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
     );
 
-    const handleKey = zamaQueryKeys.confidentialHandle.token(TOKEN);
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
     const allowanceKey = zamaQueryKeys.underlyingAllowance.token(TOKEN);
-    const otherHandleKey = zamaQueryKeys.confidentialHandle.token(OTHER_TOKEN);
-    const otherBalanceKey = zamaQueryKeys.confidentialBalance.owner(OTHER_TOKEN, USER, HANDLE);
+    const otherBalanceKey = zamaQueryKeys.confidentialBalance.owner(OTHER_TOKEN, USER);
     const otherAllowanceKey = zamaQueryKeys.underlyingAllowance.token(OTHER_TOKEN);
 
-    queryClient.setQueryData(handleKey, HANDLE);
     queryClient.setQueryData(balanceKey, 3000n);
     queryClient.setQueryData(allowanceKey, 500n);
     queryClient.setQueryData(WAGMI_BALANCE_KEY, 2000n);
-    queryClient.setQueryData(otherHandleKey, HANDLE);
     queryClient.setQueryData(otherBalanceKey, 777n);
     queryClient.setQueryData(otherAllowanceKey, 333n);
 
     await act(() => result.current.mutateAsync({ amount: 500n }));
 
-    expectInvalidatedQueries(queryClient, [handleKey, balanceKey]);
+    expectInvalidatedQueries(queryClient, [balanceKey]);
     expect(queryClient.getQueryData(allowanceKey)).toBe(500n);
     expectCacheInvalidated(queryClient, allowanceKey);
     expectCacheInvalidated(queryClient, WAGMI_BALANCE_KEY);
-    expectCacheUntouched(queryClient, otherHandleKey, HANDLE);
     expectCacheUntouched(queryClient, otherBalanceKey, 777n);
     expectCacheUntouched(queryClient, otherAllowanceKey, 333n);
   });
 
-  test("behavior: forwards onSuccess callback", async ({ renderWithProviders, signer }) => {
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
+  test("behavior: forwards onSuccess callback", async ({ renderWithProviders, provider }) => {
+    vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
 
-    const handleKey = zamaQueryKeys.confidentialHandle.token(TOKEN);
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
     const allowanceKey = zamaQueryKeys.underlyingAllowance.token(TOKEN);
     const onSuccess = vi.fn();
 
@@ -75,7 +68,6 @@ describe("useShield", () => {
       useShield({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }, { onSuccess }),
     );
 
-    queryClient.setQueryData(handleKey, HANDLE);
     queryClient.setQueryData(balanceKey, 3000n);
     queryClient.setQueryData(allowanceKey, 500n);
     queryClient.setQueryData(WAGMI_BALANCE_KEY, 2000n);
@@ -84,7 +76,7 @@ describe("useShield", () => {
       () => result.current.mutateAsync({ amount: 500n }),
       onSuccess,
       (client) => {
-        expectInvalidatedQueries(client, [handleKey, balanceKey]);
+        expectInvalidatedQueries(client, [balanceKey]);
         expect(client.getQueryData(allowanceKey)).toBe(500n);
         expectCacheInvalidated(client, allowanceKey);
         expectCacheInvalidated(client, WAGMI_BALANCE_KEY);
@@ -94,9 +86,9 @@ describe("useShield", () => {
 
   test("behavior: forwards raw onMutate context to onSuccess without optimistic flag", async ({
     renderWithProviders,
-    signer,
+    provider,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
+    vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
 
     const expectedContext = { requestId: "shield-success-raw" } as const;
     const onMutate = vi.fn().mockReturnValue(expectedContext);
@@ -117,8 +109,9 @@ describe("useShield", () => {
   test("behavior: forwards raw onMutate context to onError without optimistic flag", async ({
     renderWithProviders,
     signer,
+    provider,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
+    vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
     vi.mocked(signer.writeContract).mockRejectedValue(new Error("shield failed"));
 
     const expectedContext = { requestId: "shield-error-raw" } as const;
@@ -141,9 +134,9 @@ describe("useShield", () => {
 
   test("behavior: forwards raw onMutate context to onSettled without optimistic flag", async ({
     renderWithProviders,
-    signer,
+    provider,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
+    vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
 
     const expectedContext = { requestId: "shield-settled-raw" } as const;
     const onMutate = vi.fn().mockReturnValue(expectedContext);
@@ -163,9 +156,9 @@ describe("useShield", () => {
 
   test("behavior: unwraps caller context for onSuccess with optimistic flag", async ({
     renderWithProviders,
-    signer,
+    provider,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
+    vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
 
     const expectedContext = { requestId: "shield-success-optimistic" } as const;
     const onMutate = vi.fn().mockReturnValue(expectedContext);
@@ -192,8 +185,9 @@ describe("useShield", () => {
   test("behavior: unwraps caller context for onError with optimistic flag", async ({
     renderWithProviders,
     signer,
+    provider,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
+    vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
     vi.mocked(signer.writeContract).mockRejectedValue(new Error("shield failed"));
 
     const expectedContext = { requestId: "shield-error-optimistic" } as const;
@@ -222,9 +216,9 @@ describe("useShield", () => {
 
   test("behavior: unwraps caller context for onSettled with optimistic flag", async ({
     renderWithProviders,
-    signer,
+    provider,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
+    vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
 
     const expectedContext = { requestId: "shield-settled-optimistic" } as const;
     const onMutate = vi.fn().mockReturnValue(expectedContext);
@@ -250,8 +244,8 @@ describe("useShield", () => {
 });
 
 describe("useShield optimistic updates", () => {
-  test("behavior: optimistic add on mutate", async ({ renderWithProviders, signer }) => {
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
+  test("behavior: optimistic add on mutate", async ({ renderWithProviders, signer, provider }) => {
+    vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
 
     let resolveWrap: (value: string) => void;
     vi.mocked(signer.writeContract).mockReturnValue(
@@ -264,7 +258,7 @@ describe("useShield optimistic updates", () => {
       useShield({ tokenAddress: TOKEN, wrapperAddress: WRAPPER, optimistic: true }),
     );
 
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
     queryClient.setQueryData(balanceKey, 3000n);
     const cancelSpy = vi.spyOn(queryClient, "cancelQueries");
     const setQueryDataSpy = vi.spyOn(queryClient, "setQueryData");
@@ -292,15 +286,19 @@ describe("useShield optimistic updates", () => {
     });
   });
 
-  test("behavior: rolls back optimistic on error", async ({ renderWithProviders, signer }) => {
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
+  test("behavior: rolls back optimistic on error", async ({
+    renderWithProviders,
+    signer,
+    provider,
+  }) => {
+    vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
     vi.mocked(signer.writeContract).mockRejectedValue(new Error("shield failed"));
 
     const { result, queryClient } = renderWithProviders(() =>
       useShield({ tokenAddress: TOKEN, wrapperAddress: WRAPPER, optimistic: true }),
     );
 
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
     queryClient.setQueryData(balanceKey, 3000n);
     const cancelSpy = vi.spyOn(queryClient, "cancelQueries");
     const setQueryDataSpy = vi.spyOn(queryClient, "setQueryData");
@@ -326,8 +324,12 @@ describe("useShield optimistic updates", () => {
     expect(setQueryDataSpy).toHaveBeenCalledWith(balanceKey, 3000n);
   });
 
-  test("behavior: no optimistic update without flag", async ({ renderWithProviders, signer }) => {
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
+  test("behavior: no optimistic update without flag", async ({
+    renderWithProviders,
+    signer,
+    provider,
+  }) => {
+    vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
 
     let resolveWrap: (value: string) => void;
     vi.mocked(signer.writeContract).mockReturnValue(
@@ -340,7 +342,7 @@ describe("useShield optimistic updates", () => {
       useShield({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
     );
 
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
     queryClient.setQueryData(balanceKey, 3000n);
 
     await act(async () => {
@@ -357,15 +359,16 @@ describe("useShield optimistic updates", () => {
   test("optimistic: no error when balance cache is empty", async ({
     renderWithProviders,
     signer,
+    provider,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
+    vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
     const { result, queryClient } = renderWithProviders(() =>
       useShield({ tokenAddress: TOKEN, wrapperAddress: WRAPPER, optimistic: true }),
     );
 
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
 
     await act(() => result.current.mutateAsync({ amount: 500n }));
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -378,7 +381,7 @@ describe("useShield error propagation", () => {
     const error = new ApprovalFailedError("ERC-20 approval failed");
     vi.mocked(token.shield).mockRejectedValueOnce(error);
 
-    const opts = shieldMutationOptions(token);
+    const opts = shieldMutationOptions(token, token.address);
 
     await expect(opts.mutationFn({ amount: 100n })).rejects.toThrow(ApprovalFailedError);
   });
@@ -387,7 +390,7 @@ describe("useShield error propagation", () => {
     const error = new TransactionRevertedError("Shield (wrap) transaction failed");
     vi.mocked(token.shield).mockRejectedValueOnce(error);
 
-    const opts = shieldMutationOptions(token);
+    const opts = shieldMutationOptions(token, token.address);
 
     await expect(opts.mutationFn({ amount: 100n })).rejects.toThrow(TransactionRevertedError);
   });

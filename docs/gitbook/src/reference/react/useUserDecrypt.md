@@ -1,16 +1,14 @@
 ---
 title: useUserDecrypt
-description: High-level mutation hook that orchestrates the full user decryption flow — credential management, wallet signature, and decryption — in a single call.
+description: Query hook that automatically decrypts FHE handles once credentials are available via useAllow.
 ---
 
 # useUserDecrypt
 
-High-level orchestration hook for user decryption. Manages the entire flow internally — keypair generation, EIP-712 creation, wallet signature, and decryption — so you only need to provide the handles you want to decrypt. All session parameters (`keypairTTL`, credential duration, etc.) are inherited from the SDK configuration.
-
-Reuses cached FHE credentials when available, falling back to generating fresh ones only when no valid credentials exist. This avoids redundant wallet signature prompts across multiple decrypt calls.
+Query hook for user decryption. Automatically fires when credentials are available (acquired via [`useAllow`](/reference/react/useAllow)) and handles are provided. Checks the persistent decrypt cache first and only hits the relayer for uncached handles.
 
 {% hint style="info" %}
-**This is the recommended way to decrypt.** For token balances, prefer [`useConfidentialBalance`](/reference/react/useConfidentialBalance) which decrypts automatically with two-phase polling. Use `useUserDecrypt` when your smart contract uses FHE types directly (e.g. a confidential voting contract, a sealed-bid auction, or any non-token contract).
+**This is the recommended way to decrypt.** For token balances, prefer [`useConfidentialBalance`](/reference/react/useConfidentialBalance) which handles decryption and caching automatically. Use `useUserDecrypt` when your smart contract uses FHE types directly (e.g. a confidential voting contract, a sealed-bid auction, or any non-token contract).
 {% endhint %}
 
 ## Import
@@ -25,33 +23,28 @@ import { useUserDecrypt } from "@zama-fhe/react-sdk";
 {% tab title="component.tsx" %}
 
 ```tsx
-import { useUserDecrypt, useUserDecryptedValue } from "@zama-fhe/react-sdk";
+import { useAllow, useIsAllowed, useUserDecrypt } from "@zama-fhe/react-sdk";
 
-function DecryptHandle() {
-  const decrypt = useUserDecrypt();
-  const { data: decryptedValue } = useUserDecryptedValue("0xhandle...");
+const CONTRACT = "0xYourContract" as const;
 
-  async function handleDecrypt() {
-    const result = await decrypt.mutateAsync({
-      handles: [
-        {
-          handle: "0xhandle...",
-          contractAddress: "0xYourContract",
-        },
-      ],
-    });
-    // result: { "0xhandle...": 1000n }
+function DecryptHandle({ handle }: { handle: string }) {
+  const { mutate: allow, isPending: isAllowing } = useAllow();
+  const { data: allowed } = useIsAllowed({ contractAddresses: [CONTRACT] });
+  const { data, isPending } = useUserDecrypt(
+    { handles: [{ handle, contractAddress: CONTRACT }] },
+    { enabled: !!allowed }, // gate: only decrypt once authorized
+  );
+
+  if (!allowed) {
+    return (
+      <button onClick={() => allow([CONTRACT])} disabled={isAllowing}>
+        {isAllowing ? "Signing..." : "Authorize"}
+      </button>
+    );
   }
 
-  return (
-    <section>
-      <button onClick={handleDecrypt} disabled={decrypt.isPending}>
-        {decrypt.isPending ? "Decrypting..." : "Decrypt"}
-      </button>
-      {decrypt.error && <p role="alert">Error: {decrypt.error.message}</p>}
-      {decryptedValue !== undefined && <output>Value: {decryptedValue.toString()}</output>}
-    </section>
-  );
+  if (isPending) return <p>Decrypting...</p>;
+  return <output>Value: {data?.[handle]?.toString()}</output>;
 }
 ```
 
@@ -60,78 +53,14 @@ function DecryptHandle() {
 
 ## Parameters
 
-```ts
-import { type UseUserDecryptConfig } from "@zama-fhe/react-sdk";
-```
-
-`UseUserDecryptConfig` extends `DecryptCallbacks` — callbacks are passed directly as top-level properties.
-
-### onCredentialsReady
-
-`(() => void) | undefined`
-
-Fired after credentials are ready — either reused from cache or freshly generated (which may trigger a wallet signature prompt).
-
-### onDecrypted
-
-`((values: Record<Handle, ClearValueType>) => void) | undefined`
-
-Fired after all handles have been decrypted. Receives the full result map.
-
-{% tabs %}
-{% tab title="with callbacks" %}
-
-```tsx
-import { useUserDecrypt } from "@zama-fhe/react-sdk";
-import { useState } from "react";
-
-type DecryptStep = "idle" | "authorizing" | "decrypting" | "done";
-
-function DecryptWithProgress() {
-  const [step, setStep] = useState<DecryptStep>("idle");
-
-  const decrypt = useUserDecrypt({
-    onCredentialsReady: () => setStep("decrypting"),
-    onDecrypted: () => setStep("done"),
-  });
-
-  const handleDecrypt = async () => {
-    setStep("authorizing");
-    await decrypt.mutateAsync({
-      handles: [{ handle: "0x...", contractAddress: "0xToken" }],
-    });
-  };
-
-  const stepLabels: Record<DecryptStep, string> = {
-    idle: "Decrypt",
-    authorizing: "Authorizing...",
-    decrypting: "Decrypting...",
-    done: "Done!",
-  };
-
-  return <button onClick={handleDecrypt}>{stepLabels[step]}</button>;
-}
-```
-
-{% endtab %}
-{% endtabs %}
-
-## Mutation Variables
-
-Passed to `mutate` / `mutateAsync` at call time.
-
-```ts
-import { type DecryptParams } from "@zama-fhe/react-sdk";
-```
-
 ### handles
 
 `DecryptHandle[]`
 
-Array of handles to decrypt. Each entry pairs an encrypted handle with the address of the contract that owns it.
+Array of handles to decrypt. Each entry pairs an encrypted handle with the address of the contract that owns it. Only handles not yet in the SDK's persistent decrypt cache are sent for decryption — cached handles are returned immediately, even after a page reload.
 
 ```ts
-import { type DecryptHandle } from "@zama-fhe/react-sdk";
+import { type DecryptHandle } from "@zama-fhe/sdk";
 ```
 
 | Field             | Type      | Description                                            |
@@ -142,7 +71,7 @@ import { type DecryptHandle } from "@zama-fhe/react-sdk";
 Handles from different contracts can be mixed in a single call — `useUserDecrypt` automatically groups them by contract address and issues one decryption request per unique contract:
 
 ```tsx
-const result = await decrypt.mutateAsync({
+const { data } = useUserDecrypt({
   handles: [
     { handle: "0xhandle1...", contractAddress: "0xContractA" },
     { handle: "0xhandle2...", contractAddress: "0xContractA" },
@@ -150,30 +79,62 @@ const result = await decrypt.mutateAsync({
   ],
 });
 
-// Single wallet signature, two decryption requests (one per contract)
-// result: { "0xhandle1...": 500n, "0xhandle2...": 200n, "0xhandle3...": 1000n }
+// data: { "0xhandle1...": 500n, "0xhandle2...": 200n, "0xhandle3...": 1000n }
 ```
+
+{% hint style="warning" %}
+**All contract addresses must be authorized first.** Call `useAllow` with every contract address present in `handles` before enabling the query. Use `useIsAllowed({ contractAddresses })` to check coverage and pass `{ enabled: !!allowed }` as the second argument to prevent unexpected wallet prompts.
+{% endhint %}
+
+### options (second argument)
+
+`{ enabled?: boolean } | undefined`
+
+Pass `{ enabled: false }` as the second argument to disable the query.
 
 ## Return Type
 
-`data` resolves to `Record<Handle, ClearValueType>` — a map from each handle to its decrypted plaintext value (`bigint`, `boolean`, or `string`).
+Returns a standard `useQuery` result. `data` resolves to `Record<Handle, ClearValueType>` — a map from each handle to its decrypted plaintext value (`bigint`, `boolean`, or `string`).
 
-On success, results are written to the decryption cache so that [`useUserDecryptedValue`](/guides/encrypt-decrypt#reading-decrypted-values-from-cache) and [`useUserDecryptedValues`](/guides/encrypt-decrypt#reading-decrypted-values-from-cache) can read them without re-decrypting.
+When all requested handles are already cached, `data` contains the cached values immediately (no relayer call). Freshly decrypted results are written to the SDK's persistent decrypt cache (`sdk.cache`) — scoped by `(signer, contract, handle)` — so that subsequent renders return instantly, even after a page reload. The cache is cleared automatically on `revoke()`, `revokeSession()`, or wallet lifecycle events (disconnect, account change, chain change).
 
-{% include ".gitbook/includes/mutation-result.md" %}
+{% include ".gitbook/includes/query-result.md" %}
 
-## Credential Caching
+## How It Works
 
-`useUserDecrypt` uses the SDK's credential manager (`sdk.credentials`) to avoid unnecessary wallet prompts:
+`useUserDecrypt` chains two internal queries:
 
-- **First call** — generates a new FHE keypair, creates EIP-712 typed data, and requests a wallet signature. The credentials are then cached.
-- **Subsequent calls** — reuses the cached credentials if they are still valid (not expired).
-- **Expiry** — credentials expire after `keypairTTL` seconds (default: 2592000 = 30 days, configurable via SDK config). Once expired, the next call generates fresh credentials.
+1. **Signer address** — resolves the connected wallet address.
+2. **Decrypt** — calls `sdk.userDecrypt(handles)` which checks the persistent cache, then hits the relayer for any uncached handles.
+
+{% hint style="warning" %}
+**`useUserDecrypt` does not automatically gate on credentials.** If credentials are not cached when the query fires, the SDK will prompt the user's wallet for a signature. To avoid unexpected popups, gate the query yourself using [`useIsAllowed`](/reference/react/useIsAllowed):
+
+```tsx
+const { data: allowed } = useIsAllowed({ contractAddresses: ["0xContract"] });
+const { data } = useUserDecrypt(
+  { handles: [{ handle, contractAddress: "0xContract" }] },
+  { enabled: !!allowed },
+);
+```
+
+This ensures the decrypt query only fires after `useAllow` has been called.
+{% endhint %}
+
+## Credential caching
+
+`useUserDecrypt` relies on credentials acquired via [`useAllow`](/reference/react/useAllow):
+
+- **First `allow()` call** — generates a new FHE keypair, creates EIP-712 typed data, and requests a wallet signature. The credentials are then cached.
+- **Subsequent queries** — reuse the cached credentials if they are still valid (not expired).
+- **Expiry** — credentials expire after `keypairTTL` seconds (default: 2592000 = 30 days, configurable via SDK config). Once expired, call `allow()` again to generate fresh credentials.
 
 This means users only see a wallet signature prompt once per session (or per TTL window), even if they decrypt multiple times.
 
 ## Related
 
-- [`useConfidentialBalance`](/reference/react/useConfidentialBalance) — high-level hook that decrypts token balances automatically with two-phase polling
+- [`useAllow`](/reference/react/useAllow) — pre-authorize contracts with one wallet signature (required before `useUserDecrypt` fires)
+- [`useIsAllowed`](/reference/react/useIsAllowed) — check whether credentials are cached and cover specific contracts
+- [`useConfidentialBalance`](/reference/react/useConfidentialBalance) — high-level hook that decrypts token balances with automatic caching
 - [`useEncrypt`](/reference/react/useEncrypt) — reverse operation, encrypt a plaintext value for on-chain submission
 - [Encrypt & Decrypt guide](/guides/encrypt-decrypt) — full walkthrough with end-to-end examples

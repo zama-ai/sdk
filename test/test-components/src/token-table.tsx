@@ -1,17 +1,11 @@
 "use client";
 
-import {
-  balanceOfContract,
-  decimalsContract,
-  symbolContract,
-  useAllow,
-  useConfidentialBalances,
-  useMetadata,
-  type Address,
-} from "@zama-fhe/react-sdk";
+import { useAllow, useConfidentialBalances, useMetadata } from "@zama-fhe/react-sdk";
+import { balanceOfContract, decimalsContract, symbolContract } from "@zama-fhe/sdk";
+import type { Address } from "@zama-fhe/sdk";
 import { useState } from "react";
 import { formatUnits } from "viem";
-import { useConnection, useReadContracts } from "wagmi";
+import { useAccount, useConnection, useReadContracts } from "wagmi";
 
 function TokenRow({
   address,
@@ -24,7 +18,11 @@ function TokenRow({
   balance: bigint | undefined;
   revealed: boolean;
   isDecrypting: boolean;
-  LinkComponent: React.ComponentType<{ to: string; className?: string; children: React.ReactNode }>;
+  LinkComponent: React.ComponentType<{
+    to: string;
+    className?: string;
+    children: React.ReactNode;
+  }>;
 }) {
   const { data: metadata } = useMetadata(address);
 
@@ -59,7 +57,11 @@ function ERC20TokenRow({
 }: {
   tokenAddress: Address;
   wrapper: Address;
-  LinkComponent: React.ComponentType<{ to: string; className?: string; children: React.ReactNode }>;
+  LinkComponent: React.ComponentType<{
+    to: string;
+    className?: string;
+    children: React.ReactNode;
+  }>;
 }) {
   const { address: connectedAddress } = useConnection();
   const balanceContract = connectedAddress
@@ -104,16 +106,18 @@ export function TokenTable({
 }: {
   tokenAddresses: Address[];
   erc20Tokens?: { address: Address; wrapper: Address }[];
-  LinkComponent: React.ComponentType<{ to: string; className?: string; children: React.ReactNode }>;
+  LinkComponent: React.ComponentType<{
+    to: string;
+    className?: string;
+    children: React.ReactNode;
+  }>;
 }) {
   const [revealed, setRevealed] = useState(false);
+  const { address } = useAccount();
   const { mutate: allow } = useAllow();
-  const {
-    data: balances,
-    isFetching,
-    isLoading,
-  } = useConfidentialBalances({
+  const { data, isFetching, isLoading } = useConfidentialBalances({
     tokenAddresses: revealed ? tokenAddresses : [],
+    account: address,
   });
 
   return (
@@ -153,7 +157,7 @@ export function TokenTable({
             <TokenRow
               key={addr}
               address={addr}
-              balance={balances?.balances.get(addr)}
+              balance={data?.results.get(addr)}
               revealed={revealed}
               isDecrypting={revealed && isFetching}
               LinkComponent={LinkComponent}

@@ -6,6 +6,7 @@
  */
 
 export { EthersSigner, type EthersSignerConfig } from "./ethers-signer";
+export { EthersProvider, type EthersProviderConfig } from "./ethers-provider";
 export type {
   EIP1193Provider,
   EIP1193Events,
@@ -16,18 +17,14 @@ export type {
 export { ProviderRpcError } from "viem";
 export {
   readConfidentialBalanceOfContract,
-  readWrapperForTokenContract,
   readUnderlyingTokenContract,
-  readWrapperExistsContract,
   readSupportsInterfaceContract,
   writeConfidentialTransferContract,
-  writeConfidentialBatchTransferContract,
   writeUnwrapContract,
   writeUnwrapFromBalanceContract,
   writeFinalizeUnwrapContract,
   writeSetOperatorContract,
   writeWrapContract,
-  writeWrapETHContract,
   readTokenPairsContract,
   readTokenPairsLengthContract,
   readTokenPairsSliceContract,

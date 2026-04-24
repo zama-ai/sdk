@@ -5,7 +5,6 @@ import { expectCacheInvalidated, expectCacheUntouched } from "../../test-helpers
 import { useResumeUnshield } from "../use-resume-unshield";
 import {
   BURN_AMOUNT_HANDLE,
-  HANDLE,
   OTHER_TOKEN,
   TOKEN,
   USER,
@@ -27,10 +26,10 @@ describe("useResumeUnshield", () => {
 
   test("cache: invalidates balance, allowance, and wagmi after resume unshield", async ({
     renderWithProviders,
-    signer,
     relayer,
+    provider,
   }) => {
-    vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
+    vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
       logs: [createUnwrapRequestedLog(BURN_AMOUNT_HANDLE)],
     });
     mockPublicDecrypt(relayer);
@@ -39,42 +38,36 @@ describe("useResumeUnshield", () => {
       useResumeUnshield({ tokenAddress: TOKEN }),
     );
 
-    const handleKey = zamaQueryKeys.confidentialHandle.token(TOKEN);
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
     const allowanceKey = zamaQueryKeys.underlyingAllowance.token(TOKEN);
-    const otherHandleKey = zamaQueryKeys.confidentialHandle.token(OTHER_TOKEN);
-    const otherBalanceKey = zamaQueryKeys.confidentialBalance.owner(OTHER_TOKEN, USER, HANDLE);
+    const otherBalanceKey = zamaQueryKeys.confidentialBalance.owner(OTHER_TOKEN, USER);
     const otherAllowanceKey = zamaQueryKeys.underlyingAllowance.token(OTHER_TOKEN);
 
-    queryClient.setQueryData(handleKey, HANDLE);
     queryClient.setQueryData(balanceKey, 3000n);
     queryClient.setQueryData(allowanceKey, 500n);
     queryClient.setQueryData(WAGMI_BALANCE_KEY, 2000n);
-    queryClient.setQueryData(otherHandleKey, HANDLE);
     queryClient.setQueryData(otherBalanceKey, 777n);
     queryClient.setQueryData(otherAllowanceKey, 333n);
 
     await act(() => result.current.mutateAsync({ unwrapTxHash: "0xtxhash" }));
 
-    expectInvalidatedQueries(queryClient, [handleKey, balanceKey, allowanceKey]);
+    expectInvalidatedQueries(queryClient, [balanceKey, allowanceKey]);
     expectCacheInvalidated(queryClient, WAGMI_BALANCE_KEY);
-    expectCacheUntouched(queryClient, otherHandleKey, HANDLE);
     expectCacheUntouched(queryClient, otherBalanceKey, 777n);
     expectCacheUntouched(queryClient, otherAllowanceKey, 333n);
   });
 
   test("behavior: forwards onSuccess callback", async ({
     renderWithProviders,
-    signer,
     relayer,
+    provider,
   }) => {
-    vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
+    vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
       logs: [createUnwrapRequestedLog(BURN_AMOUNT_HANDLE)],
     });
     mockPublicDecrypt(relayer);
 
-    const handleKey = zamaQueryKeys.confidentialHandle.token(TOKEN);
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
     const allowanceKey = zamaQueryKeys.underlyingAllowance.token(TOKEN);
     const onSuccess = vi.fn();
 
@@ -82,7 +75,6 @@ describe("useResumeUnshield", () => {
       useResumeUnshield({ tokenAddress: TOKEN }, { onSuccess }),
     );
 
-    queryClient.setQueryData(handleKey, HANDLE);
     queryClient.setQueryData(balanceKey, 3000n);
     queryClient.setQueryData(allowanceKey, 500n);
     queryClient.setQueryData(WAGMI_BALANCE_KEY, 2000n);
@@ -91,7 +83,7 @@ describe("useResumeUnshield", () => {
       () => result.current.mutateAsync({ unwrapTxHash: "0xtxhash" }),
       onSuccess,
       (client) => {
-        expectInvalidatedQueries(client, [handleKey, balanceKey, allowanceKey]);
+        expectInvalidatedQueries(client, [balanceKey, allowanceKey]);
         expectCacheInvalidated(client, WAGMI_BALANCE_KEY);
       },
     );

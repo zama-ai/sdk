@@ -4,94 +4,40 @@ import { describe, expect, it, vi } from "../../test-fixtures";
 const UNDERLYING = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
 
 describe("Token.shield", () => {
-  it("fires onApprovalSubmitted and onShieldSubmitted callbacks", async ({
-    relayer,
-    signer,
-    createToken,
-    storage,
-    sessionStorage,
-    tokenAddress,
-  }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(UNDERLYING);
-    const token = createToken({
-      relayer,
-      signer,
-      storage,
-      sessionStorage,
-      address: tokenAddress,
-      wrapper: tokenAddress,
-    });
-    vi.mocked(signer.readContract)
-      .mockResolvedValueOnce(UNDERLYING)
+  it("fires onApprovalSubmitted and onShieldSubmitted callbacks", async ({ token, provider }) => {
+    vi.mocked(provider.readContract)
+      .mockResolvedValueOnce(UNDERLYING) // underlying()
       .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
-      .mockResolvedValueOnce(0n);
+      .mockResolvedValueOnce(0n); // allowance
 
     const onApprovalSubmitted = vi.fn();
     const onShieldSubmitted = vi.fn();
 
-    await token.shield(100n, {
-      onApprovalSubmitted,
-      onShieldSubmitted,
-    });
+    await token.shield(100n, { onApprovalSubmitted, onShieldSubmitted });
 
     expect(onApprovalSubmitted).toHaveBeenCalledWith("0xtxhash");
     expect(onShieldSubmitted).toHaveBeenCalledWith("0xtxhash");
   });
 
-  it("skips onApprovalSubmitted when allowance is sufficient", async ({
-    relayer,
-    signer,
-    createToken,
-    storage,
-    sessionStorage,
-    tokenAddress,
-  }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(UNDERLYING);
-    const token = createToken({
-      relayer,
-      signer,
-      storage,
-      sessionStorage,
-      address: tokenAddress,
-      wrapper: tokenAddress,
-    });
-    vi.mocked(signer.readContract)
+  it("skips onApprovalSubmitted when allowance is sufficient", async ({ token, provider }) => {
+    vi.mocked(provider.readContract)
       .mockResolvedValueOnce(UNDERLYING)
-      .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
-      .mockResolvedValueOnce(1000n); // allowance
+      .mockResolvedValueOnce(1000n)
+      .mockResolvedValueOnce(1000n);
 
     const onApprovalSubmitted = vi.fn();
     const onShieldSubmitted = vi.fn();
 
-    await token.shield(100n, {
-      onApprovalSubmitted,
-      onShieldSubmitted,
-    });
+    await token.shield(100n, { onApprovalSubmitted, onShieldSubmitted });
 
     expect(onApprovalSubmitted).not.toHaveBeenCalled();
     expect(onShieldSubmitted).toHaveBeenCalledOnce();
   });
 
-  it("completes shield even when callbacks throw", async ({
-    relayer,
-    signer,
-    createToken,
-    storage,
-    sessionStorage,
-    tokenAddress,
-  }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(UNDERLYING);
-    const token = createToken({
-      relayer,
-      signer,
-      storage,
-      sessionStorage,
-      address: tokenAddress,
-      wrapper: tokenAddress,
-    });
-    vi.mocked(signer.readContract)
+  it("completes shield even when callbacks throw", async ({ token, provider }) => {
+    vi.mocked(provider.readContract)
       .mockResolvedValueOnce(UNDERLYING)
-      .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
+      .mockResolvedValueOnce(1000n)
       .mockResolvedValueOnce(0n);
 
     const result = await token.shield(100n, {
@@ -106,27 +52,11 @@ describe("Token.shield", () => {
     expect(result.txHash).toBe("0xtxhash");
   });
 
-  it("passes to parameter for shield recipient", async ({
-    relayer,
-    signer,
-    createToken,
-    storage,
-    sessionStorage,
-    tokenAddress,
-  }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(UNDERLYING);
-    const token = createToken({
-      relayer,
-      signer,
-      storage,
-      sessionStorage,
-      address: tokenAddress,
-      wrapper: tokenAddress,
-    });
-    vi.mocked(signer.readContract)
+  it("passes to parameter for shield recipient", async ({ token, signer, provider }) => {
+    vi.mocked(provider.readContract)
       .mockResolvedValueOnce(UNDERLYING)
-      .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
-      .mockResolvedValueOnce(1000n); // allowance
+      .mockResolvedValueOnce(1000n)
+      .mockResolvedValueOnce(1000n);
 
     const recipient = "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address;
     await token.shield(100n, { to: recipient });
@@ -135,28 +65,19 @@ describe("Token.shield", () => {
   });
 
   it("performs full shield flow with exact approval", async ({
-    relayer,
+    token,
     signer,
-    createToken,
-    storage,
-    sessionStorage,
-    tokenAddress,
+    relayer,
     handle: fixtureHandle,
+    userAddress,
+    provider,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(UNDERLYING);
-    const token = createToken({
-      relayer,
-      signer,
-      storage,
-      sessionStorage,
-      address: tokenAddress,
-      wrapper: tokenAddress,
-    });
-    vi.mocked(signer.readContract)
+    vi.mocked(provider.readContract)
       .mockResolvedValueOnce(UNDERLYING)
       .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
-      .mockResolvedValueOnce(0n)
-      .mockResolvedValueOnce(fixtureHandle);
+      .mockResolvedValueOnce(0n) // allowance
+      .mockResolvedValue(fixtureHandle); // subsequent confidentialBalanceOf calls
+    vi.mocked(relayer.userDecrypt).mockResolvedValue({ [fixtureHandle]: 1000n });
 
     const shieldResult = await token.shield(500n);
     expect(shieldResult.txHash).toBe("0xtxhash");
@@ -171,10 +92,10 @@ describe("Token.shield", () => {
       expect.objectContaining({ functionName: "wrap" }),
     );
 
-    const handle = await token.confidentialBalanceOf();
+    const handle = await token.confidentialBalanceOf(userAddress);
     expect(handle).toBe(fixtureHandle);
 
-    const balance = await token.decryptBalance(handle);
+    const balance = await token.balanceOf(userAddress);
     expect(balance).toBe(1000n);
     expect(relayer.userDecrypt).toHaveBeenCalledWith(
       expect.objectContaining({ handles: [fixtureHandle] }),

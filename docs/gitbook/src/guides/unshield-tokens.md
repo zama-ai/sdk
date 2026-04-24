@@ -1,9 +1,9 @@
 ---
-title: Unshield Tokens
+title: Unshield tokens
 description: Convert confidential tokens back to public ERC-20 by unshielding them.
 ---
 
-# Unshield Tokens
+# Unshield tokens
 
 Unshielding converts encrypted tokens back into standard ERC-20 tokens that are visible on-chain. The process involves two on-chain steps (unwrap and finalize), but the SDK handles both in a single call.
 
@@ -151,7 +151,7 @@ await unshieldAll();
 
 ```tsx
 import { useResumeUnshield } from "@zama-fhe/react-sdk";
-import { loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/react-sdk";
+import { loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/sdk";
 
 const { mutateAsync: resumeUnshield } = useResumeUnshield({
   tokenAddress: "0xToken",

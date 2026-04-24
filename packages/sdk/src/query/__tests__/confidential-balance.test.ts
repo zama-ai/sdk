@@ -1,54 +1,59 @@
-import { describe, expect, test, mockQueryContext } from "../../test-fixtures";
+import type { Address } from "viem";
+import { describe, expect, test, vi, mockQueryContext } from "../../test-fixtures";
 import { confidentialBalanceQueryOptions } from "../confidential-balance";
 
 describe("confidentialBalanceQueryOptions", () => {
-  test("uses handle-dependent key and staleTime Infinity", ({ createMockReadonlyToken }) => {
-    const token = createMockReadonlyToken("0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a");
+  const tokenAddress = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
+  const owner = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
+
+  test("query key includes tokenAddress and owner (no handle)", ({ createMockReadonlyToken }) => {
+    const token = createMockReadonlyToken(tokenAddress);
     const options = confidentialBalanceQueryOptions(token, {
-      owner: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
-      handle: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa",
+      tokenAddress,
+      account: owner,
     });
 
-    expect(options.queryKey).toEqual([
-      "zama.confidentialBalance",
-      {
-        tokenAddress: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
-        owner: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
-        handle: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa",
-      },
-    ]);
-    expect(options.staleTime).toBe(Infinity);
+    expect(options.queryKey).toEqual(["zama.confidentialBalance", { tokenAddress, owner }]);
   });
 
-  test("enabled is false without handle", ({ createMockReadonlyToken }) => {
-    const token = createMockReadonlyToken("0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a");
+  test("enabled is true when owner is provided", ({ createMockReadonlyToken }) => {
+    const token = createMockReadonlyToken(tokenAddress);
+    const options = confidentialBalanceQueryOptions(token, { tokenAddress, account: owner });
+
+    expect(options.enabled).toBe(true);
+  });
+
+  test("enabled is false when owner is undefined", ({ createMockReadonlyToken }) => {
+    const token = createMockReadonlyToken(tokenAddress);
+    const options = confidentialBalanceQueryOptions(token, { tokenAddress });
+
+    expect(options.enabled).toBe(false);
+  });
+
+  test("enabled is false when query.enabled is false", ({ createMockReadonlyToken }) => {
+    const token = createMockReadonlyToken(tokenAddress);
     const options = confidentialBalanceQueryOptions(token, {
-      owner: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
+      tokenAddress,
+      account: owner,
+      query: { enabled: false },
     });
 
     expect(options.enabled).toBe(false);
   });
 
-  test("queryFn reads handle from context.queryKey", async ({ createMockReadonlyToken }) => {
-    const token = createMockReadonlyToken("0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a");
+  test("queryFn delegates to token.balanceOf using the owner from queryKey", async ({
+    createMockReadonlyToken,
+  }) => {
+    const token = createMockReadonlyToken(tokenAddress);
+    vi.mocked(token.balanceOf).mockResolvedValue(42n);
+
     const options = confidentialBalanceQueryOptions(token, {
-      owner: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
-      handle: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa",
+      tokenAddress,
+      account: owner,
     });
 
-    const key = [
-      "zama.confidentialBalance",
-      {
-        tokenAddress: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
-        owner: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
-        handle: "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbBbbbbbbbbbbbbbbbbbbbbbbbb",
-      },
-    ] as const;
-
-    await options.queryFn(mockQueryContext(key));
-    expect(token.decryptBalance).toHaveBeenCalledWith(
-      "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbBbbbbbbbbbbbbbbbbbbbbbbbb",
-      "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
-    );
+    const value = await options.queryFn(mockQueryContext(options.queryKey));
+    expect(value).toBe(42n);
+    expect(token.balanceOf).toHaveBeenCalledWith(owner);
   });
 });

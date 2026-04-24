@@ -1,9 +1,9 @@
 ---
-title: Contract Call Builders
+title: Contract call builders
 description: Low-level builders that return raw contract call configs for viem, ethers, or custom execution layers.
 ---
 
-# Contract Call Builders
+# Contract call builders
 
 Every builder returns a `ReadContractConfig` or `WriteContractConfig` — a plain object with the contract address, ABI fragment, function name, and encoded args:
 
@@ -41,27 +41,17 @@ import {
   isOperatorContract,
   setOperatorContract,
   confidentialTotalSupplyContract,
+  inferredTotalSupplyContract,
   totalSupplyContract,
   rateContract,
   wrapContract,
-  wrapETHContract,
   unwrapContract,
   unwrapFromBalanceContract,
   finalizeUnwrapContract,
   underlyingContract,
-  getWrapperContract,
-  wrapperExistsContract,
-  deploymentCoordinatorContract,
   supportsInterfaceContract,
   isConfidentialTokenContract,
   isConfidentialWrapperContract,
-  isFinalizeUnwrapOperatorContract,
-  setFinalizeUnwrapOperatorContract,
-  getWrapFeeContract,
-  getUnwrapFeeContract,
-  getBatchTransferFeeContract,
-  getFeeRecipientContract,
-  confidentialBatchTransferContract,
   delegateForUserDecryptionContract,
   revokeDelegationContract,
   getDelegationExpiryContract,
@@ -97,37 +87,31 @@ import {
 | `isOperatorContract(token, holder, spender)`                            | Check operator approval            |
 | `setOperatorContract(token, spender, timestamp?)`                       | Set operator approval              |
 | `confidentialTotalSupplyContract(token)`                                | Read encrypted total supply handle |
-| `totalSupplyContract(token)`                                            | Read plaintext total supply        |
 | `rateContract(token)`                                                   | Read conversion rate               |
 
 ## Wrapping and unwrapping
 
-| Builder                                                          | What it does                   |
-| ---------------------------------------------------------------- | ------------------------------ |
-| `wrapContract(wrapper, to, amount)`                              | Wrap ERC-20 tokens             |
-| `wrapETHContract(wrapper, to, amount, value)`                    | Wrap native ETH                |
-| `unwrapContract(token, from, to, encryptedAmount, inputProof)`   | Request unwrap                 |
-| `unwrapFromBalanceContract(token, from, to, encryptedBalance)`   | Unwrap using on-chain handle   |
-| `finalizeUnwrapContract(wrapper, burntAmount, cleartext, proof)` | Finalize unwrap                |
-| `underlyingContract(wrapper)`                                    | Read underlying ERC-20 address |
+| Builder                                                              | What it does                              |
+| -------------------------------------------------------------------- | ----------------------------------------- |
+| `wrapContract(wrapper, to, amount)`                                  | Wrap ERC-20 tokens                        |
+| `unwrapContract(token, from, to, encryptedAmount, inputProof)`       | Request unwrap                            |
+| `unwrapFromBalanceContract(token, from, to, encryptedBalance)`       | Unwrap using on-chain handle              |
+| `finalizeUnwrapContract(wrapper, unwrapRequestId, cleartext, proof)` | Finalize unwrap                           |
+| `underlyingContract(wrapper)`                                        | Read underlying ERC-20 address            |
+| `inferredTotalSupplyContract(wrapper)`                               | Read inferred plaintext total supply      |
+| `totalSupplyContract(wrapper)`                                       | Deprecated legacy `totalSupply()` builder |
 
-## Discovery, detection, and fees
+Use `totalSupplyQueryOptions` / React `useTotalSupply` for transition-safe reads. They
+detect the wrapper ERC-165 interface ID and call `inferredTotalSupply()` on upgraded
+wrappers or legacy `totalSupply()` on pre-upgrade wrappers.
 
-| Builder                                                                    | What it does                          |
-| -------------------------------------------------------------------------- | ------------------------------------- |
-| `getWrapperContract(coordinator, token)`                                   | Look up wrapper for a token           |
-| `wrapperExistsContract(coordinator, token)`                                | Check if wrapper exists               |
-| `deploymentCoordinatorContract(token)`                                     | Read the deployment coordinator       |
-| `supportsInterfaceContract(token, interfaceId)`                            | ERC-165 interface check               |
-| `isConfidentialTokenContract(token)`                                       | Check if token is ERC-7984 compliant  |
-| `isConfidentialWrapperContract(token)`                                     | Check if token is an ERC-7984 wrapper |
-| `isFinalizeUnwrapOperatorContract(token, holder, operator)`                | Check finalize-unwrap operator status |
-| `setFinalizeUnwrapOperatorContract(token, operator, timestamp?)`           | Set finalize-unwrap operator approval |
-| `getWrapFeeContract(feeManager, amount, from, to)`                         | Calculate wrap fee                    |
-| `getUnwrapFeeContract(feeManager, amount, from, to)`                       | Calculate unwrap fee                  |
-| `getBatchTransferFeeContract(feeManager)`                                  | Get batch transfer fee                |
-| `getFeeRecipientContract(feeManager)`                                      | Get fee recipient address             |
-| `confidentialBatchTransferContract(batcher, token, from, transfers, fees)` | Batch encrypted transfers             |
+## Discovery and detection
+
+| Builder                                         | What it does                          |
+| ----------------------------------------------- | ------------------------------------- |
+| `supportsInterfaceContract(token, interfaceId)` | ERC-165 interface check               |
+| `isConfidentialTokenContract(token)`            | Check if token is ERC-7984 compliant  |
+| `isConfidentialWrapperContract(token)`          | Check if token is an ERC-7984 wrapper |
 
 ## Registry
 

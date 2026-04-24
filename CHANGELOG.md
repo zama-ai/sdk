@@ -1,5 +1,192 @@
 # Changelog
 
+## [3.0.0-alpha.18](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.17...v3.0.0-alpha.18) (2026-04-24)
+
+### Features
+
+- **sdk:** require explicit owner on token reads ([#282](https://github.com/zama-ai/sdk/issues/282)) ([82e6487]())
+
+## [3.0.0-alpha.17](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.16...v3.0.0-alpha.17) (2026-04-24)
+
+### Features
+
+- remove auto-signer resolving in hooks ([#281](https://github.com/zama-ai/sdk/issues/281)) ([6c74d9c]())
+
+## [3.0.0-alpha.16](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.15...v3.0.0-alpha.16) (2026-04-24)
+
+### Features
+
+- **docs:** add LLM-ready SDK docs corpus ([#248](https://github.com/zama-ai/sdk/issues/248)) ([964bd5d]())
+- introduce concrete signer / provider split ([#268](https://github.com/zama-ai/sdk/issues/268)) ([ae45dfd]())
+
+## [3.0.0-alpha.15](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.14...v3.0.0-alpha.15) (2026-04-23)
+
+### Bug Fixes
+
+- **sdk:** run delegation check before cache lookup in decryptBalanceAs ([#278](https://github.com/zama-ai/sdk/issues/278)) ([ce6b85e]())
+
+## [3.0.0-alpha.14](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.13...v3.0.0-alpha.14) (2026-04-23)
+
+## [3.0.0-alpha.13](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.12...v3.0.0-alpha.13) (2026-04-22)
+
+## [3.0.0-alpha.12](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.11...v3.0.0-alpha.12) (2026-04-21)
+
+## [3.0.0](https://github.com/zama-ai/sdk/compare/v2.5.0...v3.0.0) (2026-04-22)
+
+## [2.5.0](https://github.com/zama-ai/sdk/compare/v2.4.0...v2.5.0) (2026-04-17)
+
+### Features
+
+- **sdk:** support upgraded unwrap events ([#239](https://github.com/zama-ai/sdk/issues/239)) ([4f4116a]()), closes [#249]()
+
+## [3.0.0-alpha.11](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.10...v3.0.0-alpha.11) (2026-04-21)
+
+### Bug Fixes
+
+- **sdk:** choose total supply method via ERC-165 ([#270](https://github.com/zama-ai/sdk/issues/270)) ([7fb55c4]())
+
+## [3.0.0-alpha.10](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.9...v3.0.0-alpha.10) (2026-04-20)
+
+### Bug Fixes
+
+- **sdk:** correct legacy wrapper interface ID ([#271](https://github.com/zama-ai/sdk/issues/271)) ([f347198]())
+
+## [3.0.0-alpha.9](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.8...v3.0.0-alpha.9) (2026-04-20)
+
+## [3.0.0-alpha.8](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.7...v3.0.0-alpha.8) (2026-04-20)
+
+## [3.0.0-alpha.7](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.6...v3.0.0-alpha.7) (2026-04-18)
+
+### Bug Fixes
+
+- align ManifestShape with actual /keyurl endpoint response ([2cde790]())
+
+## [3.0.0-alpha.6](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.5...v3.0.0-alpha.6) (2026-04-17)
+
+## [3.0.0-alpha.5](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.4...v3.0.0-alpha.5) (2026-04-17)
+
+### Features
+
+- **SDK-69:** support both old and new wrapper interfaceIds during transition ([#235](https://github.com/zama-ai/sdk/issues/235)) ([93c7d8a]())
+
+## [3.0.0-alpha.4](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.3...v3.0.0-alpha.4) (2026-04-17)
+
+## [3.0.0-alpha.3](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.2...v3.0.0-alpha.3) (2026-04-17)
+
+## [3.0.0-alpha.2](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.1...v3.0.0-alpha.2) (2026-04-17)
+
+### Features
+
+- **sdk-61:** replace WrappersRegistry with protocol ConfidentialTokenWrappersRegistry contracts ([#229](https://github.com/zama-ai/sdk/issues/229)) ([dd4364d]())
+
+## [3.0.0-alpha.1](https://github.com/zama-ai/sdk/compare/v2.5.0-alpha.6...v3.0.0-alpha.1) (2026-04-17)
+
+### ⚠ BREAKING CHANGES
+
+- The following exports are removed:
+- @zama-fhe/sdk: parseActivityFeed, applyDecryptedValues, activity types
+  (ActivityItem, ActivityDirection, ActivityAmount, ActivityType),
+  activityFeedQueryOptions, queryKeys.activityFeed
+- @zama-fhe/react-sdk: useActivityFeed
+
+* fmt
+
+### Code Refactoring
+
+- remove activity feed from SDK and react-sdk ([#258](https://github.com/zama-ai/sdk/issues/258)) ([5784dba]())
+
+## [2.5.0-alpha.6](https://github.com/zama-ai/sdk/compare/v2.5.0-alpha.5...v2.5.0-alpha.6) (2026-04-16)
+
+### Bug Fixes
+
+- centralize ZERO_HANDLE, use isZeroHandle checks ([#251](https://github.com/zama-ai/sdk/issues/251)) ([ffd5e3d]())
+
+## [2.5.0-alpha.5](https://github.com/zama-ai/sdk/compare/v2.5.0-alpha.4...v2.5.0-alpha.5) (2026-04-16)
+
+### Features
+
+- **sdk:** add sdk.publicDecrypt() as the primitive for public decryptions ([#250](https://github.com/zama-ai/sdk/issues/250)) ([fca0c80]())
+
+## [2.5.0-alpha.4](https://github.com/zama-ai/sdk/compare/v2.5.0-alpha.3...v2.5.0-alpha.4) (2026-04-16)
+
+## [2.5.0-alpha.3](https://github.com/zama-ai/sdk/compare/v2.5.0-alpha.2...v2.5.0-alpha.3) (2026-04-16)
+
+### Bug Fixes
+
+- align example apps with scoped isAllowed checks ([#233](https://github.com/zama-ai/sdk/issues/233)) ([4f50086]())
+
+## [2.5.0-alpha.2](https://github.com/zama-ai/sdk/compare/v2.5.0-alpha.1...v2.5.0-alpha.2) (2026-04-16)
+
+### Features
+
+- **sdk:** add inferred total supply contract builder ([#243](https://github.com/zama-ai/sdk/issues/243)) ([f63355f]())
+
+## [2.5.0-alpha.1](https://github.com/zama-ai/sdk/compare/v2.4.0...v2.5.0-alpha.1) (2026-04-15)
+
+### Features
+
+- **sdk:** add handles and result fields to decrypt events [SDK-85] ([85dd3dc]())
+
+### Bug Fixes
+
+- **sdk:** address PR review comments on userDecrypt [SDK-85] ([7c36283]())
+
+## [2.4.0](https://github.com/zama-ai/sdk/compare/v2.3.0...v2.4.0) (2026-04-13)
+
+### Features
+
+- **example-node-ethers:** upgrade to SDK 2.x with full ERC-7984 flows ([#170](https://github.com/zama-ai/sdk/issues/170)) ([3cdddab]())
+- **example-node-viem:** upgrade to SDK 2.x with full ERC-7984 flows ([#169](https://github.com/zama-ai/sdk/issues/169)) ([950756f]())
+- **react-sdk:** unify useUserDecrypt with reactive cache and auto-decrypt ([#125](https://github.com/zama-ai/sdk/issues/125)) ([9e14f69]()), closes [#176]()
+- **sdk:** remove Zaiffer-specific fee and admin features (SDK-39) ([#191](https://github.com/zama-ai/sdk/issues/191)) ([d4db0ae]())
+
+### Bug Fixes
+
+- **sdk:** cap keypairTTL at the fhevm 365-day maximum ([#212](https://github.com/zama-ai/sdk/issues/212)) ([d11986f]())
+
+### Reverts
+
+- **ci:** PR [#217](https://github.com/zama-ai/sdk/issues/217) ([16301d5]())
+
+## [2.4.0-alpha.6](https://github.com/zama-ai/sdk/compare/v2.4.0-alpha.5...v2.4.0-alpha.6) (2026-04-13)
+
+### Features
+
+- **react-sdk:** unify useUserDecrypt with reactive cache and auto-decrypt ([#125](https://github.com/zama-ai/sdk/issues/125)) ([9e14f69]()), closes [#176]()
+
+## [2.4.0-alpha.5](https://github.com/zama-ai/sdk/compare/v2.4.0-alpha.4...v2.4.0-alpha.5) (2026-04-13)
+
+## [2.4.0-alpha.4](https://github.com/zama-ai/sdk/compare/v2.4.0-alpha.3...v2.4.0-alpha.4) (2026-04-10)
+
+### Reverts
+
+- **ci:** PR [#217](https://github.com/zama-ai/sdk/issues/217) ([16301d5]())
+
+## [2.4.0-alpha.3](https://github.com/zama-ai/sdk/compare/v2.4.0-alpha.2...v2.4.0-alpha.3) (2026-04-10)
+
+## [2.4.0-alpha.2](https://github.com/zama-ai/sdk/compare/v2.4.0-alpha.1...v2.4.0-alpha.2) (2026-04-10)
+
+### Features
+
+- **example-node-ethers:** upgrade to SDK 2.x with full ERC-7984 flows ([#170](https://github.com/zama-ai/sdk/issues/170)) ([3cdddab]())
+- **example-node-viem:** upgrade to SDK 2.x with full ERC-7984 flows ([#169](https://github.com/zama-ai/sdk/issues/169)) ([950756f]())
+
+## [2.4.0-alpha.1](https://github.com/zama-ai/sdk/compare/v2.3.1-alpha.4...v2.4.0-alpha.1) (2026-04-09)
+
+### Features
+
+- **sdk:** remove Zaiffer-specific fee and admin features (SDK-39) ([#191](https://github.com/zama-ai/sdk/issues/191)) ([d4db0ae]())
+
+## [2.3.1-alpha.4](https://github.com/zama-ai/sdk/compare/v2.3.1-alpha.3...v2.3.1-alpha.4) (2026-04-08)
+
+## [2.3.1-alpha.3](https://github.com/zama-ai/sdk/compare/v2.3.1-alpha.2...v2.3.1-alpha.3) (2026-04-08)
+
+### Bug Fixes
+
+- **sdk:** cap keypairTTL at the fhevm 365-day maximum ([#212](https://github.com/zama-ai/sdk/issues/212)) ([d11986f]())
+
+## [2.3.1-alpha.2](https://github.com/zama-ai/sdk/compare/v2.3.1-alpha.1...v2.3.1-alpha.2) (2026-04-08)
+
 ## [2.3.1-alpha.1](https://github.com/zama-ai/sdk/compare/v2.3.0...v2.3.1-alpha.1) (2026-04-07)
 
 ## [2.3.0](https://github.com/zama-ai/sdk/compare/v2.2.0...v2.3.0) (2026-04-07)

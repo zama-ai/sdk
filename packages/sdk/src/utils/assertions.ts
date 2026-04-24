@@ -32,6 +32,12 @@ export function assertFunction(value: unknown, context: string): asserts value i
   }
 }
 
+export function assertBigint(value: unknown, context: string): asserts value is bigint {
+  if (typeof value !== "bigint") {
+    throw new TypeError(`${context} must be a bigint, got ${typeof value}`);
+  }
+}
+
 /** Assert that `obj[key]` is a string. Narrows `obj` to include `{ [key]: string }`. */
 export function assertStringProp<
   K extends string,

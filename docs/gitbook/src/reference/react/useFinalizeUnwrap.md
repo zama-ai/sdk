@@ -52,10 +52,6 @@ function TwoStepUnshield() {
 
 ## Parameters
 
-```ts
-import { type UseFinalizeUnwrapParameters } from "@zama-fhe/react-sdk";
-```
-
 ### tokenAddress
 
 `Address`
@@ -68,7 +64,7 @@ const { mutateAsync: finalize } = useFinalizeUnwrap({
 });
 ```
 
-## Mutation Variables
+## Mutation variables
 
 ### unwrapTxHash
 
@@ -81,10 +77,6 @@ await finalize({ unwrapTxHash: "0xabc..." });
 ```
 
 ## Return Type
-
-```ts
-import { type UseFinalizeUnwrapReturnType } from "@zama-fhe/react-sdk";
-```
 
 {% include ".gitbook/includes/mutation-result.md" %}
 

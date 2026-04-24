@@ -17,15 +17,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Validate Conventional Commit PR title
+        uses: amannn/action-semantic-pull-request@48f256284bd46cdaab1048c3721360e808335d50 # v6.1.1
         env:
-          PR_TITLE: ${{ github.event.pull_request.title }}
-        run: |
-          node -e '
-            const title = process.env.PR_TITLE || "";
-            const re = /^(feat|fix|perf|refactor|docs|chore|test|build|ci|revert|style)(\([^)]+\))?!?: .+/;
-            if (!re.test(title)) {
-              console.error("PR title must follow Conventional Commits (e.g. fix: ..., feat(scope): ...).");
-              console.error(`Current title: "${title}"`);
-              process.exit(1);
-            }
-          '
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            perf
+            refactor
+            docs
+            chore
+            test
+            build
+            ci
+            revert
+            style

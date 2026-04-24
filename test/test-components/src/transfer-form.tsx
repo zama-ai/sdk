@@ -1,11 +1,8 @@
 "use client";
 
-import {
-  useConfidentialTransfer,
-  useConfidentialBalance,
-  useMetadata,
-  type Address,
-} from "@zama-fhe/react-sdk";
+import { useConfidentialTransfer, useConfidentialBalance, useMetadata } from "@zama-fhe/react-sdk";
+import type { Address } from "@zama-fhe/sdk";
+import { useAccount } from "wagmi";
 
 export function TransferForm({
   tokenAddress,
@@ -14,8 +11,9 @@ export function TransferForm({
   tokenAddress: Address;
   wrapperAddress?: Address;
 }) {
+  const { address } = useAccount();
   const { data: metadata } = useMetadata(tokenAddress);
-  const { data: balance } = useConfidentialBalance({ tokenAddress });
+  const { data: balance } = useConfidentialBalance({ tokenAddress, account: address });
   const transfer = useConfidentialTransfer({ tokenAddress, wrapperAddress });
 
   return (

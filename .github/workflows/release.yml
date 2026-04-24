@@ -4,6 +4,20 @@ on:
   push:
     branches: [main, prerelease]
   workflow_dispatch:
+    inputs:
+      publish-tag:
+        description: "Publish from existing git tag (e.g. v1.0.0). Skips semantic-release."
+        required: false
+        type: string
+      npm-tag:
+        description: "npm dist-tag override (auto-detected from version if left empty)"
+        required: false
+        type: string
+      dry-run:
+        description: "Dry run (log what would be published without actually publishing)"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -20,8 +34,108 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # ── Publish from tag (manual recovery) ──────────────────────────────
+  publish-from-tag:
+    if: inputs.publish-tag != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout tag
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ inputs.publish-tag }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@903f9c1a6ebcba6cf41d87230be49611ac97822e # v6.0.3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Ensure npm >=11
+        run: |
+          npm_v="$(npm --version)"
+          if [[ "${npm_v%%.*}" -lt 11 ]]; then
+            echo "Bundled npm ${npm_v} is too old; installing npm 11"
+            pnpm add -g npm@^11
+            echo "$(pnpm bin -g)" >> "$GITHUB_PATH"
+            export PATH="$(pnpm bin -g):$PATH"
+          fi
+          echo "npm $(npm --version)"
+          [[ "$(npm --version | cut -d. -f1)" -ge 11 ]]
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Build packages
+        run: pnpm build
+
+      - name: Resolve version and npm tag
+        id: npm-tag
+        env:
+          INPUT_TAG: ${{ inputs.publish-tag }}
+          INPUT_NPM_TAG: ${{ inputs.npm-tag }}
+        run: |
+          version=$(node -p "require('./packages/sdk/package.json').version")
+          expected="${INPUT_TAG#v}"  # strip leading v
+          if [[ "$version" != "$expected" ]]; then
+            echo "::error::package.json version (${version}) does not match git tag (${INPUT_TAG}). Aborting."
+            exit 1
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+          if [[ -n "${INPUT_NPM_TAG}" ]]; then
+            echo "tag=${INPUT_NPM_TAG}" >> "$GITHUB_OUTPUT"
+          elif [[ "$version" == *-* ]]; then
+            npm_tag="${version#*-}"   # e.g. "alpha.10" from "1.0.0-alpha.10"
+            npm_tag="${npm_tag%%.*}"   # e.g. "alpha"
+            echo "tag=${npm_tag}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=latest" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish to npm
+        env:
+          NPM_CONFIG_PROVENANCE: true
+          VERSION: ${{ steps.npm-tag.outputs.version }}
+          NPM_TAG: ${{ steps.npm-tag.outputs.tag }}
+          DRY_RUN: ${{ inputs.dry-run }}
+        run: |
+          echo "Publishing v${VERSION} with tag '${NPM_TAG}'"
+
+          flags=(--access public --tag "${NPM_TAG}")
+          if [[ "${DRY_RUN}" == "true" ]]; then
+            flags+=(--dry-run)
+            echo "::notice::DRY RUN — packages will not actually be published"
+          fi
+
+          cd packages/sdk
+          npm publish "${flags[@]}"
+          cd ../react-sdk
+          npm publish "${flags[@]}"
+
+      - name: Summary
+        if: success()
+        env:
+          VERSION: ${{ steps.npm-tag.outputs.version }}
+          NPM_TAG: ${{ steps.npm-tag.outputs.tag }}
+          DRY_RUN: ${{ inputs.dry-run }}
+        run: |
+          if [[ "${DRY_RUN}" == "true" ]]; then
+            echo "### Dry run complete" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Published to npm" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Package | Version | Tag |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---------|---------|-----|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| \`@zama-fhe/sdk\` | \`${VERSION}\` | \`${NPM_TAG}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| \`@zama-fhe/react-sdk\` | \`${VERSION}\` | \`${NPM_TAG}\` |" >> "$GITHUB_STEP_SUMMARY"
+
+  # ── Normal release flow ─────────────────────────────────────────────
   validate-branch:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' && inputs.publish-tag == ''
     runs-on: ubuntu-latest
     steps:
       - name: Validate target branch
@@ -33,27 +147,32 @@ jobs:
 
   lint:
     needs: [validate-branch]
-    if: ${{ !cancelled() && !failure() }}
+    if: ${{ !cancelled() && !failure() && inputs.publish-tag == '' }}
     uses: ./.github/workflows/lint.yml
 
   vitest:
     needs: [validate-branch]
-    if: ${{ !cancelled() && !failure() }}
+    if: ${{ !cancelled() && !failure() && inputs.publish-tag == '' }}
     uses: ./.github/workflows/vitest.yml
 
   playwright:
     needs: [validate-branch]
-    if: ${{ !cancelled() && !failure() }}
+    if: ${{ !cancelled() && !failure() && inputs.publish-tag == '' }}
     uses: ./.github/workflows/playwright.yml
 
   api-report:
     needs: [validate-branch]
-    if: ${{ !cancelled() && !failure() }}
+    if: ${{ !cancelled() && !failure() && inputs.publish-tag == '' }}
     uses: ./.github/workflows/api-report.yml
 
+  docs:
+    needs: [validate-branch]
+    if: ${{ !cancelled() && !failure() && inputs.publish-tag == '' }}
+    uses: ./.github/workflows/docs.yml
+
   release:
-    needs: [lint, vitest, playwright, api-report]
-    if: ${{ !cancelled() && !failure() }}
+    needs: [lint, vitest, playwright, api-report, docs]
+    if: ${{ !cancelled() && !failure() && inputs.publish-tag == '' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -63,18 +182,25 @@ jobs:
           persist-credentials: false
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+        uses: pnpm/action-setup@903f9c1a6ebcba6cf41d87230be49611ac97822e # v6.0.3
 
       - name: Setup Node.js
-        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: 22
           cache: pnpm
 
-      - name: Ensure npm 11
+      - name: Ensure npm >=11
         run: |
-          pnpm add -g npm@^11
-          npm --version
+          npm_v="$(npm --version)"
+          if [[ "${npm_v%%.*}" -lt 11 ]]; then
+            echo "Bundled npm ${npm_v} is too old; installing npm 11"
+            pnpm add -g npm@^11
+            echo "$(pnpm bin -g)" >> "$GITHUB_PATH"
+            export PATH="$(pnpm bin -g):$PATH"
+          fi
+          echo "npm $(npm --version)"
+          [[ "$(npm --version | cut -d. -f1)" -ge 11 ]]
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
@@ -85,10 +211,14 @@ jobs:
       - name: Semantic release
         id: release
         run: |
+          set +e
           pnpm release:ci 2>&1 | tee /tmp/release-output.txt
+          exit_code=${PIPESTATUS[0]}
+          set -e
           if grep -q "Published release" /tmp/release-output.txt; then
             echo "released=true" >> "$GITHUB_OUTPUT"
           fi
+          exit "$exit_code"
         env:
           GITHUB_TOKEN: ${{ secrets.SDK_RELEASER_TOKEN }}
 

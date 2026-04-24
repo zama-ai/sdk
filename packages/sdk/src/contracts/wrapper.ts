@@ -8,21 +8,21 @@ import { wrapperAbi } from "../abi/wrapper.abi";
  * @example
  * ```ts
  * const txHash = await signer.writeContract(
- *   finalizeUnwrapContract(wrapper, burntAmount, cleartext, proof),
+ *   finalizeUnwrapContract(wrapper, unwrapRequestIdOrAmount, cleartext, proof),
  * );
  * ```
  */
 export function finalizeUnwrapContract(
   wrapper: Address,
-  burntAmount: Handle,
-  burntAmountCleartext: bigint,
+  unwrapRequestIdOrAmount: Handle,
+  unwrapAmountCleartext: bigint,
   decryptionProof: Hex,
 ) {
   return {
     address: wrapper,
     abi: wrapperAbi,
     functionName: "finalizeUnwrap",
-    args: [burntAmount, burntAmountCleartext, decryptionProof],
+    args: [unwrapRequestIdOrAmount, unwrapAmountCleartext, decryptionProof],
   } as const;
 }
 
@@ -31,7 +31,7 @@ export function finalizeUnwrapContract(
  *
  * @example
  * ```ts
- * const token = await signer.readContract(underlyingContract(wrapperAddress));
+ * const token = await provider.readContract(underlyingContract(wrapperAddress));
  * ```
  */
 export function underlyingContract(wrapperAddress: Address) {
@@ -39,6 +39,25 @@ export function underlyingContract(wrapperAddress: Address) {
     address: wrapperAddress,
     abi: wrapperAbi,
     functionName: "underlying",
+    args: [],
+  } as const;
+}
+
+/**
+ * Returns the contract config to read the inferred plaintext total supply.
+ *
+ * @example
+ * ```ts
+ * const supply = await provider.readContract(
+ *   inferredTotalSupplyContract(wrapperAddress),
+ * );
+ * ```
+ */
+export function inferredTotalSupplyContract(wrapperAddress: Address) {
+  return {
+    address: wrapperAddress,
+    abi: wrapperAbi,
+    functionName: "inferredTotalSupply",
     args: [],
   } as const;
 }
@@ -59,30 +78,5 @@ export function wrapContract(wrapperAddress: Address, to: Address, amount: bigin
     abi: wrapperAbi,
     functionName: "wrap",
     args: [to, amount],
-  } as const;
-}
-
-/**
- * Returns the contract config for wrapping native ETH into a confidential wrapper.
- *
- * @example
- * ```ts
- * const txHash = await signer.writeContract(
- *   wrapETHContract(wrapperAddress, to, amount, value),
- * );
- * ```
- */
-export function wrapETHContract(
-  wrapperAddress: Address,
-  to: Address,
-  amount: bigint,
-  value: bigint,
-) {
-  return {
-    address: wrapperAddress,
-    abi: wrapperAbi,
-    functionName: "wrapETH",
-    args: [to, amount],
-    value,
   } as const;
 }

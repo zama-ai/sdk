@@ -1,44 +1,36 @@
-import type { ReadonlyToken } from "../token/readonly-token";
-import type { Handle } from "../relayer/relayer-sdk.types";
-
+import type { Address } from "viem";
+import type { ReadonlyToken } from "../token";
 import { assertNonNullable } from "../utils/assertions";
 import type { QueryFactoryOptions } from "./factory-types";
-import { filterQueryOptions } from "./utils";
 import { zamaQueryKeys } from "./query-keys";
-import type { Address } from "viem";
-
-export type EncryptedBalanceHandle = Handle;
+import { filterQueryOptions } from "./utils";
 
 export interface ConfidentialBalanceQueryConfig {
-  owner?: Address;
-  handle?: EncryptedBalanceHandle;
+  tokenAddress: Address;
+  account?: Address;
   query?: Record<string, unknown>;
 }
 
+/** Query options for a single confidential token balance. Auto-gated on `account`. */
 export function confidentialBalanceQueryOptions(
   token: ReadonlyToken,
-  config?: ConfidentialBalanceQueryConfig,
+  config: ConfidentialBalanceQueryConfig,
 ): QueryFactoryOptions<
   bigint,
   Error,
   bigint,
   ReturnType<typeof zamaQueryKeys.confidentialBalance.owner>
 > {
-  const ownerKey = config?.owner;
-  const handleKey = config?.handle;
-  const queryEnabled = config?.query?.enabled !== false;
-  const queryKey = zamaQueryKeys.confidentialBalance.owner(token.address, ownerKey, handleKey);
+  const queryOpts = config.query ?? {};
 
   return {
-    ...filterQueryOptions(config?.query ?? {}),
-    queryKey,
+    ...filterQueryOptions(queryOpts),
+    queryKey: zamaQueryKeys.confidentialBalance.owner(config.tokenAddress, config.account),
     queryFn: async (context) => {
-      const [, { owner: keyOwner, handle: keyHandle }] = context.queryKey;
+      const [, { owner: keyOwner }] = context.queryKey;
       assertNonNullable(keyOwner, "confidentialBalanceQueryOptions: owner");
-      assertNonNullable(keyHandle, "confidentialBalanceQueryOptions: handle");
-      return token.decryptBalance(keyHandle, keyOwner);
+      return token.balanceOf(keyOwner);
     },
-    enabled: Boolean(ownerKey && handleKey) && queryEnabled,
-    staleTime: Infinity,
+    enabled: Boolean(config.account) && queryOpts?.enabled !== false,
   };
 }

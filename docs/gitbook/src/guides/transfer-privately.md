@@ -1,9 +1,9 @@
 ---
-title: Transfer Privately
+title: Transfer privately
 description: How to send confidential tokens so the amount stays hidden on-chain.
 ---
 
-# Transfer Privately
+# Transfer privately
 
 Confidential transfers encrypt the amount before it reaches the chain -- no one can see how much was sent. The SDK handles FHE encryption internally via `token.confidentialTransfer()`. In React, use the `useConfidentialTransfer` and `useConfidentialTransferFrom` hooks.
 
@@ -149,11 +149,8 @@ const {
 Here is a complete component that wires up the transfer with loading and error states:
 
 ```tsx
-import {
-  useConfidentialBalance,
-  useConfidentialTransfer,
-  matchZamaError,
-} from "@zama-fhe/react-sdk";
+import { useConfidentialBalance, useConfidentialTransfer } from "@zama-fhe/react-sdk";
+import { matchZamaError } from "@zama-fhe/sdk";
 
 const TOKEN = "0xEncryptedERC20Address";
 

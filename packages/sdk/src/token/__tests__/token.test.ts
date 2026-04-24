@@ -1,17 +1,20 @@
 import { Topics } from "../../events";
-import { Token } from "../token";
 import { getAddress, type Address } from "viem";
-import { ZamaError, ZamaErrorCode } from "../../errors";
+import { DecryptionFailedError, ZamaError, ZamaErrorCode } from "../../errors";
+import { isZeroHandle, ZERO_HANDLE } from "../../utils/handles";
 import { describe, expect, it, vi } from "../../test-fixtures";
-
-const ZERO_HANDLE = "0x" + "0".repeat(64);
 
 describe("Token", () => {
   describe("balanceOf", () => {
-    it("returns 0n for zero handle without decrypting", async ({ signer, relayer, token }) => {
-      vi.mocked(signer.readContract).mockResolvedValue(ZERO_HANDLE);
+    it("returns 0n for zero handle without decrypting", async ({
+      relayer,
+      token,
+      userAddress,
+      provider,
+    }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(ZERO_HANDLE);
 
-      const balance = await token.balanceOf();
+      const balance = await token.balanceOf(userAddress);
 
       expect(balance).toBe(0n);
       expect(relayer.userDecrypt).not.toHaveBeenCalled();
@@ -22,10 +25,12 @@ describe("Token", () => {
       signer,
       token,
       handle,
+      userAddress,
+      provider,
     }) => {
-      vi.mocked(signer.readContract).mockResolvedValue(handle);
+      vi.mocked(provider.readContract).mockResolvedValue(handle);
 
-      const balance = await token.balanceOf();
+      const balance = await token.balanceOf(userAddress);
 
       expect(balance).toBe(1000n);
       expect(relayer.generateKeypair).toHaveBeenCalled();
@@ -33,36 +38,35 @@ describe("Token", () => {
       expect(relayer.userDecrypt).toHaveBeenCalled();
     });
 
-    it("defaults owner to signer address", async ({ signer, userAddress, token }) => {
-      vi.mocked(signer.readContract).mockResolvedValue(ZERO_HANDLE);
-
-      await token.balanceOf();
-
-      expect(signer.readContract).toHaveBeenCalledWith(
-        expect.objectContaining({
-          functionName: "confidentialBalanceOf",
-          args: [userAddress],
-        }),
-      );
-    });
-
-    it("accepts custom owner address", async ({ signer, token }) => {
-      vi.mocked(signer.readContract).mockResolvedValue(ZERO_HANDLE);
+    it("passes the caller-supplied owner address to the contract read", async ({
+      token,
+      provider,
+    }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(ZERO_HANDLE);
       const otherAddress = "0xdddddddddddddddddddddddddddddddddddddddd" as Address;
 
       await token.balanceOf(otherAddress);
 
-      expect(signer.readContract).toHaveBeenCalledWith(
-        expect.objectContaining({ args: [getAddress(otherAddress)] }),
+      expect(provider.readContract).toHaveBeenCalledWith(
+        expect.objectContaining({
+          functionName: "confidentialBalanceOf",
+          args: [getAddress(otherAddress)],
+        }),
       );
     });
   });
 
   describe("confidentialBalanceOf", () => {
-    it("returns the raw handle without decrypting", async ({ relayer, signer, token, handle }) => {
-      vi.mocked(signer.readContract).mockResolvedValue(handle);
+    it("returns the raw handle without decrypting", async ({
+      relayer,
+      token,
+      handle,
+      userAddress,
+      provider,
+    }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(handle);
 
-      const result = await token.confidentialBalanceOf();
+      const result = await token.confidentialBalanceOf(userAddress);
 
       expect(result).toBe(handle);
       expect(relayer.userDecrypt).not.toHaveBeenCalled();
@@ -70,306 +74,127 @@ describe("Token", () => {
   });
 
   describe("isConfidential", () => {
-    it("returns true when ERC-165 check passes", async ({ signer, token }) => {
-      vi.mocked(signer.readContract).mockResolvedValue(true);
+    it("returns true when ERC-165 check passes", async ({ token, provider }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(true);
 
       expect(await token.isConfidential()).toBe(true);
     });
 
-    it("returns false when ERC-165 check fails", async ({ signer, token }) => {
-      vi.mocked(signer.readContract).mockResolvedValue(false);
+    it("returns false when ERC-165 check fails", async ({ token, provider }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(false);
 
       expect(await token.isConfidential()).toBe(false);
     });
   });
 
   describe("isWrapper", () => {
-    it("returns true when ERC-165 wrapper check passes", async ({ signer, token }) => {
-      vi.mocked(signer.readContract).mockResolvedValue(true);
+    it("returns true when baseline interfaceId (0xd04584ba) matches", async ({
+      token,
+      provider,
+    }) => {
+      vi.mocked(provider.readContract)
+        .mockResolvedValueOnce(true) // baseline ID
+        .mockResolvedValueOnce(false); // upgraded ID
 
       expect(await token.isWrapper()).toBe(true);
     });
-  });
 
-  describe("batchDecryptBalances", () => {
-    const TOKEN2 = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
-    const handle2 = "0x" + "cd".repeat(32);
+    it("returns true when new interfaceId (0x1f1c62b2) matches", async ({ token, provider }) => {
+      vi.mocked(provider.readContract)
+        .mockResolvedValueOnce(false) // baseline ID
+        .mockResolvedValueOnce(true); // upgraded ID
 
-    it("returns empty map for empty array", async () => {
-      const result = await Token.batchDecryptBalances([]);
-      expect(result.size).toBe(0);
+      expect(await token.isWrapper()).toBe(true);
     });
 
-    it("decrypts pre-read handles without calling readContract", async ({
-      relayer,
-      signer,
-      token,
-      handle,
-      tokenAddress,
-      createToken,
-      storage,
-      sessionStorage,
-    }) => {
-      const token2 = createToken({
-        relayer,
-        signer,
-        storage,
-        sessionStorage,
-        address: TOKEN2,
-      });
+    it("returns false when neither interfaceId matches", async ({ token, provider }) => {
+      vi.mocked(provider.readContract)
+        .mockResolvedValueOnce(false) // baseline ID
+        .mockResolvedValueOnce(false); // upgraded ID
 
-      vi.mocked(relayer.userDecrypt)
-        .mockResolvedValueOnce({ [handle]: 1000n })
-        .mockResolvedValueOnce({ [handle2]: 2000n });
-
-      const result = await Token.batchDecryptBalances([token, token2], {
-        handles: [handle, handle2 as Address],
-      });
-
-      expect(result.get(tokenAddress)).toBe(1000n);
-      expect(result.get(getAddress(TOKEN2))).toBe(2000n);
-      expect(signer.readContract).not.toHaveBeenCalled();
-      expect(signer.signTypedData).toHaveBeenCalledOnce();
-    });
-
-    it("skips decryption for zero handles", async ({
-      relayer,
-      signer,
-      token,
-      handle,
-      tokenAddress,
-      createToken,
-      storage,
-      sessionStorage,
-    }) => {
-      const token2 = createToken({
-        relayer,
-        signer,
-        storage,
-        sessionStorage,
-        address: TOKEN2,
-      });
-
-      const result = await Token.batchDecryptBalances([token, token2], {
-        handles: [handle, ZERO_HANDLE as Address],
-      });
-
-      expect(result.get(tokenAddress)).toBe(1000n);
-      expect(result.get(getAddress(TOKEN2))).toBe(0n);
-      expect(relayer.userDecrypt).toHaveBeenCalledOnce();
-    });
-
-    it("returns 0n for tokens that fail decryption when onError returns 0n", async ({
-      relayer,
-
-      token,
-      handle,
-      tokenAddress,
-    }) => {
-      vi.mocked(relayer.userDecrypt).mockRejectedValueOnce(new Error("decrypt failed"));
-
-      const result = await Token.batchDecryptBalances([token], {
-        handles: [handle],
-        onError: () => 0n,
-      });
-
-      expect(result.get(tokenAddress)).toBe(0n);
-    });
-
-    it("throws DecryptionFailedError by default when decryption fails", async ({
-      relayer,
-
-      token,
-      handle,
-    }) => {
-      vi.mocked(relayer.userDecrypt).mockRejectedValueOnce(new Error("decrypt failed"));
-
-      await expect(
-        Token.batchDecryptBalances([token], {
-          handles: [handle],
-        }),
-      ).rejects.toThrow("Batch decryption failed for 1 token(s)");
-    });
-  });
-
-  describe("decryptBalance", () => {
-    it("returns 0n for zero handle without decrypting", async ({
-      relayer,
-
-      token,
-    }) => {
-      const balance = await token.decryptBalance(ZERO_HANDLE as Address);
-
-      expect(balance).toBe(0n);
-      expect(relayer.userDecrypt).not.toHaveBeenCalled();
-    });
-
-    it("returns 0n for 0x handle without decrypting", async ({
-      relayer,
-
-      token,
-    }) => {
-      const balance = await token.decryptBalance("0x" as Address);
-
-      expect(balance).toBe(0n);
-      expect(relayer.userDecrypt).not.toHaveBeenCalled();
-    });
-
-    it("decrypts non-zero handle and returns balance", async ({
-      relayer,
-
-      token,
-      handle,
-      tokenAddress,
-    }) => {
-      const balance = await token.decryptBalance(handle);
-
-      expect(balance).toBe(1000n);
-      expect(relayer.userDecrypt).toHaveBeenCalledWith(
-        expect.objectContaining({
-          handles: [handle],
-          contractAddress: tokenAddress,
-        }),
-      );
-    });
-
-    it("does not call readContract (skips on-chain read)", async ({ signer, token, handle }) => {
-      await token.decryptBalance(handle);
-
-      expect(signer.readContract).not.toHaveBeenCalled();
-    });
-
-    it("uses provided owner as signerAddress", async ({
-      relayer,
-
-      token,
-      handle,
-    }) => {
-      const otherOwner = "0xdddddddddddddddddddddddddddddddddddddddd" as Address;
-      await token.decryptBalance(handle, otherOwner);
-
-      expect(relayer.userDecrypt).toHaveBeenCalledWith(
-        expect.objectContaining({
-          signerAddress: otherOwner,
-        }),
-      );
-    });
-
-    it("defaults signerAddress to signer.getAddress()", async ({
-      relayer,
-
-      userAddress,
-      token,
-      handle,
-    }) => {
-      await token.decryptBalance(handle);
-
-      expect(relayer.userDecrypt).toHaveBeenCalledWith(
-        expect.objectContaining({
-          signerAddress: userAddress,
-        }),
-      );
-    });
-
-    it("throws ZamaError on decryption failure", async ({
-      relayer,
-
-      token,
-      handle,
-    }) => {
-      vi.mocked(relayer.userDecrypt).mockRejectedValueOnce(new Error("decrypt failed"));
-
-      await expect(token.decryptBalance(handle)).rejects.toThrow("Failed to decrypt balance");
-    });
-
-    it("throws when handle not found in decrypt result", async ({
-      relayer,
-
-      token,
-      handle,
-    }) => {
-      vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({});
-
-      await expect(token.decryptBalance(handle as Address)).rejects.toThrow(
-        "Decryption returned no value for handle",
-      );
+      expect(await token.isWrapper()).toBe(false);
     });
   });
 
   describe("isZeroHandle", () => {
-    it("returns true for zero handle", ({ token }) => {
-      expect(token.isZeroHandle(ZERO_HANDLE)).toBe(true);
+    it("returns true for zero handle", () => {
+      expect(isZeroHandle(ZERO_HANDLE)).toBe(true);
     });
 
-    it("returns true for 0x", ({ token }) => {
-      expect(token.isZeroHandle("0x")).toBe(true);
+    it("returns true for 0x", () => {
+      expect(isZeroHandle("0x")).toBe(true);
     });
 
-    it("returns false for valid handle", ({ token, handle }) => {
-      expect(token.isZeroHandle(handle)).toBe(false);
+    it("returns false for valid handle", ({ handle }) => {
+      expect(isZeroHandle(handle)).toBe(false);
     });
   });
 
   describe("underlyingToken", () => {
-    it("reads the underlying token address", async ({ signer, token }) => {
+    it("reads the underlying token address", async ({ token, provider }) => {
       const UNDERLYING = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
-      vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING);
+      vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING);
 
       const result = await token.underlyingToken();
 
       expect(result).toBe(UNDERLYING);
-      expect(signer.readContract).toHaveBeenCalledWith(
+      expect(provider.readContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "underlying" }),
       );
     });
   });
 
   describe("name", () => {
-    it("reads the token name", async ({ signer, token }) => {
-      vi.mocked(signer.readContract).mockResolvedValueOnce("My Token");
+    it("reads the token name", async ({ token, provider }) => {
+      vi.mocked(provider.readContract).mockResolvedValueOnce("My Token");
 
       const result = await token.name();
 
       expect(result).toBe("My Token");
-      expect(signer.readContract).toHaveBeenCalledWith(
+      expect(provider.readContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "name" }),
       );
     });
   });
 
   describe("symbol", () => {
-    it("reads the token symbol", async ({ signer, token }) => {
-      vi.mocked(signer.readContract).mockResolvedValueOnce("MTK");
+    it("reads the token symbol", async ({ token, provider }) => {
+      vi.mocked(provider.readContract).mockResolvedValueOnce("MTK");
 
       const result = await token.symbol();
 
       expect(result).toBe("MTK");
-      expect(signer.readContract).toHaveBeenCalledWith(
+      expect(provider.readContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "symbol" }),
       );
     });
   });
 
   describe("decimals", () => {
-    it("reads the token decimals", async ({ signer, token }) => {
-      vi.mocked(signer.readContract).mockResolvedValueOnce(18);
+    it("reads the token decimals", async ({ token, provider }) => {
+      vi.mocked(provider.readContract).mockResolvedValueOnce(18);
 
       const result = await token.decimals();
 
       expect(result).toBe(18);
-      expect(signer.readContract).toHaveBeenCalledWith(
+      expect(provider.readContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "decimals" }),
       );
     });
   });
 
   describe("allow", () => {
-    it("generates credentials without reading balance", async ({ relayer, signer, token }) => {
+    it("generates credentials without reading balance", async ({
+      relayer,
+      signer,
+      token,
+      provider,
+    }) => {
       await token.allow();
 
       expect(relayer.generateKeypair).toHaveBeenCalledOnce();
       expect(signer.signTypedData).toHaveBeenCalledOnce();
-      expect(signer.readContract).not.toHaveBeenCalled();
+      expect(provider.readContract).not.toHaveBeenCalled();
     });
   });
 
@@ -403,8 +228,8 @@ describe("Token", () => {
   });
 
   describe("shield", () => {
-    it("checks allowance and shields", async ({ signer, token }) => {
-      vi.mocked(signer.readContract)
+    it("checks allowance and shields", async ({ signer, token, provider }) => {
+      vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // #getUnderlying
         .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
         .mockResolvedValueOnce(0n); // allowance
@@ -425,8 +250,8 @@ describe("Token", () => {
       expect(txHash.receipt).toEqual({ logs: [] });
     });
 
-    it("skips approval when allowance is sufficient", async ({ signer, token }) => {
-      vi.mocked(signer.readContract)
+    it("skips approval when allowance is sufficient", async ({ signer, token, provider }) => {
+      vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // #getUnderlying
         .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
         .mockResolvedValueOnce(200n); // enough allowance
@@ -440,31 +265,16 @@ describe("Token", () => {
       );
     });
 
-    it("skips approval when approvalStrategy is skip", async ({ signer, token }) => {
-      vi.mocked(signer.readContract)
+    it("skips approval when approvalStrategy is skip", async ({ signer, token, provider }) => {
+      vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // #getUnderlying
         .mockResolvedValueOnce(1000n); // ERC-20 balanceOf
 
       await token.shield(100n, { approvalStrategy: "skip" });
 
       // readContract for #getUnderlying + ERC-20 balanceOf, no allowance check
-      expect(signer.readContract).toHaveBeenCalledTimes(2);
+      expect(provider.readContract).toHaveBeenCalledTimes(2);
       expect(signer.writeContract).toHaveBeenCalledOnce();
-    });
-  });
-
-  describe("shieldETH", () => {
-    it("sends shieldETH with value", async ({ signer, token }) => {
-      const result = await token.shieldETH(1000n);
-
-      expect(signer.writeContract).toHaveBeenCalledWith(
-        expect.objectContaining({
-          functionName: "wrapETH",
-          value: 1000n,
-        }),
-      );
-      expect(result.txHash).toBe("0xtxhash");
-      expect(result.receipt).toEqual({ logs: [] });
     });
   });
 
@@ -501,8 +311,9 @@ describe("Token", () => {
       userAddress,
       token,
       handle,
+      provider,
     }) => {
-      vi.mocked(signer.readContract).mockResolvedValue(handle);
+      vi.mocked(provider.readContract).mockResolvedValue(handle);
 
       await token.unwrapAll();
 
@@ -515,19 +326,25 @@ describe("Token", () => {
       );
     });
 
-    it("throws when balance is zero", async ({ signer, token }) => {
-      vi.mocked(signer.readContract).mockResolvedValue(ZERO_HANDLE);
+    it("throws when balance is zero", async ({ token, provider }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(ZERO_HANDLE);
 
       await expect(token.unwrapAll()).rejects.toThrow("balance is zero");
     });
   });
 
   describe("finalizeUnwrap", () => {
-    it("decrypts burn amount and finalizes", async ({ relayer, signer, token }) => {
-      const burnHandle = "0xburn" as Address;
-      const result = await token.finalizeUnwrap(burnHandle);
+    it("calls publicDecrypt with unwrapRequestId and finalizes on-chain", async ({
+      relayer,
+      signer,
+      token,
+    }) => {
+      // unwrapRequestId comes from the UnwrapRequested event — it is a bytes32 identifier,
+      // not the burn amount handle. publicDecrypt must receive this exact value.
+      const unwrapRequestId = ("0x" + "ab".repeat(32)) as `0x${string}`;
+      const result = await token.finalizeUnwrap(unwrapRequestId);
 
-      expect(relayer.publicDecrypt).toHaveBeenCalledWith([burnHandle]);
+      expect(relayer.publicDecrypt).toHaveBeenCalledWith([unwrapRequestId]);
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "finalizeUnwrap" }),
       );
@@ -538,17 +355,23 @@ describe("Token", () => {
 
   describe("unshield", () => {
     const BURN_HANDLE = "0x" + "ff".repeat(32);
+    const UNWRAP_REQUEST_ID = ("0x" + "aa".repeat(32)) as `0x${string}`;
 
     it("orchestrates unwrap → receipt → finalizeUnwrap", async ({
       relayer,
       signer,
       userAddress,
       token,
+      provider,
     }) => {
-      vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
+      vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
-            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`],
+            topics: [
+              Topics.UnwrapRequestedLegacy,
+              `0x000000000000000000000000${userAddress.slice(2)}`,
+              `0x${"ff".repeat(32)}`,
+            ],
             data: `0x${"ff".repeat(32)}`,
           },
         ],
@@ -560,7 +383,7 @@ describe("Token", () => {
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "unwrap" }),
       );
-      expect(signer.waitForTransactionReceipt).toHaveBeenCalledWith("0xtxhash");
+      expect(provider.waitForTransactionReceipt).toHaveBeenCalledWith("0xtxhash");
       expect(relayer.publicDecrypt).toHaveBeenCalledWith([BURN_HANDLE]);
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "finalizeUnwrap" }),
@@ -569,8 +392,39 @@ describe("Token", () => {
       expect(result.receipt).toBeDefined();
     });
 
-    it("throws when no UnwrapRequested event in receipt", async ({ signer, token }) => {
-      vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
+    it("uses unwrapRequestId from upgraded UnwrapRequested events", async ({
+      relayer,
+      signer,
+      userAddress,
+      token,
+      provider,
+    }) => {
+      vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
+        logs: [
+          {
+            topics: [
+              Topics.UnwrapRequested,
+              `0x000000000000000000000000${userAddress.slice(2)}`,
+              UNWRAP_REQUEST_ID,
+            ],
+            data: `0x${"ff".repeat(32)}`,
+          },
+        ],
+      });
+
+      await token.unshield(50n, { skipBalanceCheck: true });
+
+      expect(relayer.publicDecrypt).toHaveBeenCalledWith([UNWRAP_REQUEST_ID]);
+      expect(signer.writeContract).toHaveBeenCalledWith(
+        expect.objectContaining({
+          functionName: "finalizeUnwrap",
+          args: expect.arrayContaining([UNWRAP_REQUEST_ID]),
+        }),
+      );
+    });
+
+    it("throws when no UnwrapRequested event in receipt", async ({ token, provider }) => {
+      vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
         logs: [],
       });
 
@@ -579,25 +433,25 @@ describe("Token", () => {
       );
     });
 
-    it("re-throws ZamaError from waitForTransactionReceipt as-is", async ({ signer, token }) => {
+    it("re-throws ZamaError from waitForTransactionReceipt as-is", async ({ token, provider }) => {
       const original = new ZamaError(ZamaErrorCode.TransactionReverted, "already wrapped");
       // First call succeeds (unwrap), second call fails (waitAndFinalize)
-      vi.mocked(signer.waitForTransactionReceipt)
+      vi.mocked(provider.waitForTransactionReceipt)
         .mockResolvedValueOnce({ logs: [] }) // unwrap receipt (no event triggers error in another path)
         .mockRejectedValueOnce(original);
 
       // Need the unwrap to succeed and produce a receipt with the event
-      vi.mocked(signer.waitForTransactionReceipt).mockReset();
-      vi.mocked(signer.waitForTransactionReceipt).mockRejectedValueOnce(original);
+      vi.mocked(provider.waitForTransactionReceipt).mockReset();
+      vi.mocked(provider.waitForTransactionReceipt).mockRejectedValueOnce(original);
 
       await expect(token.unshield(50n, { skipBalanceCheck: true })).rejects.toBe(original);
     });
 
     it("wraps non-ZamaError from waitForTransactionReceipt in TransactionReverted", async ({
-      signer,
       token,
+      provider,
     }) => {
-      vi.mocked(signer.waitForTransactionReceipt).mockRejectedValueOnce(new Error("timeout"));
+      vi.mocked(provider.waitForTransactionReceipt).mockRejectedValueOnce(new Error("timeout"));
 
       await expect(token.unshield(50n, { skipBalanceCheck: true })).rejects.toMatchObject({
         code: ZamaErrorCode.TransactionReverted,
@@ -614,12 +468,17 @@ describe("Token", () => {
       userAddress,
       token,
       handle,
+      provider,
     }) => {
-      vi.mocked(signer.readContract).mockResolvedValue(handle);
-      vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
+      vi.mocked(provider.readContract).mockResolvedValue(handle);
+      vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
-            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`],
+            topics: [
+              Topics.UnwrapRequestedLegacy,
+              `0x000000000000000000000000${userAddress.slice(2)}`,
+              `0x${"ff".repeat(32)}`,
+            ],
             data: `0x${"ff".repeat(32)}`,
           },
         ],
@@ -630,15 +489,15 @@ describe("Token", () => {
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "unwrap" }),
       );
-      expect(signer.waitForTransactionReceipt).toHaveBeenCalledWith("0xtxhash");
+      expect(provider.waitForTransactionReceipt).toHaveBeenCalledWith("0xtxhash");
       expect(relayer.publicDecrypt).toHaveBeenCalledWith([BURN_HANDLE]);
       expect(result.txHash).toBe("0xtxhash");
       expect(result.receipt).toBeDefined();
     });
 
-    it("throws when no UnwrapRequested event in receipt", async ({ signer, token, handle }) => {
-      vi.mocked(signer.readContract).mockResolvedValue(handle);
-      vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
+    it("throws when no UnwrapRequested event in receipt", async ({ token, handle, provider }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(handle);
+      vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
         logs: [],
       });
 
@@ -869,15 +728,16 @@ describe("Token", () => {
   });
 
   describe("isApproved", () => {
-    it("returns boolean result from readContract", async ({ signer, token }) => {
-      vi.mocked(signer.readContract).mockResolvedValueOnce(true);
+    it("returns boolean result from readContract", async ({ token, provider }) => {
+      vi.mocked(provider.readContract).mockResolvedValueOnce(true);
 
       const result = await token.isApproved(
         "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address,
+        "0x9F9f9F9F9F9f9F9f9F9f9F9f9F9F9F9F9F9f9F9f" as Address,
       );
 
       expect(result).toBe(true);
-      expect(signer.readContract).toHaveBeenCalledWith(
+      expect(provider.readContract).toHaveBeenCalledWith(
         expect.objectContaining({
           functionName: "isOperator",
         }),
@@ -886,41 +746,8 @@ describe("Token", () => {
   });
 
   describe("wrap (additional branches)", () => {
-    const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as Address;
-
-    it("calls shieldETH when underlying is zero address", async ({ signer, token }) => {
-      vi.mocked(signer.readContract).mockResolvedValueOnce(ZERO_ADDRESS); // #getUnderlying
-
-      const result = await token.shield(100n);
-
-      expect(signer.writeContract).toHaveBeenCalledWith(
-        expect.objectContaining({
-          functionName: "wrapETH",
-          value: 100n,
-        }),
-      );
-      expect(result.txHash).toBe("0xtxhash");
-      expect(result.receipt).toEqual({ logs: [] });
-    });
-
-    it("passes amount + fees as value when underlying is zero address with fees", async ({
-      signer,
-      token,
-    }) => {
-      vi.mocked(signer.readContract).mockResolvedValueOnce(ZERO_ADDRESS); // #getUnderlying
-
-      await token.shield(100n, { fees: 10n });
-
-      expect(signer.writeContract).toHaveBeenCalledWith(
-        expect.objectContaining({
-          functionName: "wrapETH",
-          value: 110n,
-        }),
-      );
-    });
-
-    it("approves max uint256 with approvalStrategy max", async ({ signer, token }) => {
-      vi.mocked(signer.readContract)
+    it("approves max uint256 with approvalStrategy max", async ({ signer, token, provider }) => {
+      vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // #getUnderlying
         .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
         .mockResolvedValueOnce(0n); // allowance
@@ -940,8 +767,9 @@ describe("Token", () => {
     it("resets to zero first when existing non-zero allowance (USDT handling)", async ({
       signer,
       token,
+      provider,
     }) => {
-      vi.mocked(signer.readContract)
+      vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // #getUnderlying
         .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
         .mockResolvedValueOnce(50n); // existing non-zero allowance < amount
@@ -970,8 +798,8 @@ describe("Token", () => {
       );
     });
 
-    it("wraps write failure in TransactionReverted", async ({ signer, token }) => {
-      vi.mocked(signer.readContract).mockResolvedValueOnce(
+    it("wraps write failure in TransactionReverted", async ({ signer, token, provider }) => {
+      vi.mocked(provider.readContract).mockResolvedValueOnce(
         "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c",
       ); // #getUnderlying
       // skip approval
@@ -988,8 +816,8 @@ describe("Token", () => {
       );
     });
 
-    it("wraps allowance check failure in ApprovalFailed", async ({ signer, token }) => {
-      vi.mocked(signer.readContract)
+    it("wraps allowance check failure in ApprovalFailed", async ({ signer, token, provider }) => {
+      vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // #getUnderlying
         .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
         .mockResolvedValueOnce(0n); // allowance
@@ -999,39 +827,6 @@ describe("Token", () => {
       await expect(token.shield(100n)).rejects.toSatisfy((err: ZamaError) => {
         return err instanceof ZamaError && err.code === ZamaErrorCode.ApprovalFailed;
       });
-    });
-  });
-
-  describe("shieldETH (error wrapping)", () => {
-    it("wraps ZamaError thrown by writeContract", async ({ signer, token }) => {
-      vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("tx failed"));
-
-      await expect(token.shieldETH(1000n)).rejects.toMatchObject({
-        code: ZamaErrorCode.TransactionReverted,
-        message: "Shield ETH transaction failed",
-      });
-    });
-
-    it("re-throws ZamaError as-is", async ({ signer, token }) => {
-      const original = new ZamaError(ZamaErrorCode.EncryptionFailed, "already wrapped");
-      vi.mocked(signer.writeContract).mockRejectedValueOnce(original);
-
-      await expect(token.shieldETH(1000n)).rejects.toBe(original);
-    });
-  });
-
-  describe("shieldETH (additional branches)", () => {
-    it("uses custom value parameter when provided", async ({ signer, token }) => {
-      const result = await token.shieldETH(1000n, 2000n);
-
-      expect(signer.writeContract).toHaveBeenCalledWith(
-        expect.objectContaining({
-          functionName: "wrapETH",
-          value: 2000n,
-        }),
-      );
-      expect(result.txHash).toBe("0xtxhash");
-      expect(result.receipt).toEqual({ logs: [] });
     });
   });
 
@@ -1092,8 +887,13 @@ describe("Token", () => {
   });
 
   describe("unwrapAll (error handling)", () => {
-    it("wraps write failure in TransactionReverted", async ({ signer, token, handle }) => {
-      vi.mocked(signer.readContract).mockResolvedValue(handle);
+    it("wraps write failure in TransactionReverted", async ({
+      signer,
+      token,
+      handle,
+      provider,
+    }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(handle);
       vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("tx failed"));
 
       await expect(token.unwrapAll()).rejects.toSatisfy((err: ZamaError) => {
@@ -1105,8 +905,13 @@ describe("Token", () => {
       });
     });
 
-    it("re-throws ZamaError from writeContract as-is", async ({ signer, token, handle }) => {
-      vi.mocked(signer.readContract).mockResolvedValue(handle);
+    it("re-throws ZamaError from writeContract as-is", async ({
+      signer,
+      token,
+      handle,
+      provider,
+    }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(handle);
       const original = new ZamaError(ZamaErrorCode.TransactionReverted, "already wrapped");
       vi.mocked(signer.writeContract).mockRejectedValueOnce(original);
 
@@ -1127,38 +932,35 @@ describe("Token", () => {
           return (
             err instanceof ZamaError &&
             err.code === ZamaErrorCode.DecryptionFailed &&
-            err.message === "Failed to finalize unshield"
+            err.message === "Public decryption failed"
           );
         },
       );
     });
 
-    it("re-throws ZamaError from publicDecrypt as-is", async ({
+    it("re-throws DecryptionFailedError from publicDecrypt as-is", async ({
       relayer,
 
       token,
     }) => {
-      const original = new ZamaError(ZamaErrorCode.DecryptionFailed, "already wrapped");
+      const original = new DecryptionFailedError("already wrapped");
       vi.mocked(relayer.publicDecrypt).mockRejectedValueOnce(original);
 
       await expect(token.finalizeUnwrap("0xburn" as Address)).rejects.toBe(original);
     });
 
-    it("throws DecryptionFailed when abiEncodedClearValues is not a valid BigInt", async ({
+    it("throws TypeError when clearValues does not contain the handle", async ({
       relayer,
 
       token,
     }) => {
       vi.mocked(relayer.publicDecrypt).mockResolvedValueOnce({
         clearValues: {},
-        abiEncodedClearValues: "not-a-number" as never,
+        abiEncodedClearValues: "0x00",
         decryptionProof: "0x12",
       });
 
-      await expect(token.finalizeUnwrap("0xburn" as Address)).rejects.toMatchObject({
-        code: ZamaErrorCode.DecryptionFailed,
-        message: expect.stringContaining("Cannot parse decrypted value"),
-      });
+      await expect(token.finalizeUnwrap("0xburn" as Address)).rejects.toThrow(TypeError);
     });
 
     it("re-throws ZamaError from writeContract as-is", async ({ signer, token }) => {
@@ -1182,8 +984,8 @@ describe("Token", () => {
   });
 
   describe("approveUnderlying", () => {
-    it("defaults to max uint256 approval", async ({ signer, token }) => {
-      vi.mocked(signer.readContract)
+    it("defaults to max uint256 approval", async ({ signer, token, provider }) => {
+      vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // underlying
         .mockResolvedValueOnce(0n); // currentAllowance
 
@@ -1197,8 +999,12 @@ describe("Token", () => {
       );
     });
 
-    it("resets to zero first when existing non-zero allowance", async ({ signer, token }) => {
-      vi.mocked(signer.readContract)
+    it("resets to zero first when existing non-zero allowance", async ({
+      signer,
+      token,
+      provider,
+    }) => {
+      vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // underlying
         .mockResolvedValueOnce(50n); // currentAllowance > 0
 
@@ -1221,8 +1027,8 @@ describe("Token", () => {
       );
     });
 
-    it("accepts custom amount", async ({ signer, token }) => {
-      vi.mocked(signer.readContract)
+    it("accepts custom amount", async ({ signer, token, provider }) => {
+      vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // underlying
         .mockResolvedValueOnce(0n); // currentAllowance
 
@@ -1236,8 +1042,8 @@ describe("Token", () => {
       );
     });
 
-    it("wraps error in ApprovalFailed", async ({ signer, token }) => {
-      vi.mocked(signer.readContract)
+    it("wraps error in ApprovalFailed", async ({ signer, token, provider }) => {
+      vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // underlying
         .mockResolvedValueOnce(0n); // currentAllowance
 
@@ -1252,8 +1058,8 @@ describe("Token", () => {
       });
     });
 
-    it("re-throws ZamaError from writeContract as-is", async ({ signer, token }) => {
-      vi.mocked(signer.readContract)
+    it("re-throws ZamaError from writeContract as-is", async ({ signer, token, provider }) => {
+      vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // underlying
         .mockResolvedValueOnce(0n); // currentAllowance
 
@@ -1263,15 +1069,15 @@ describe("Token", () => {
       await expect(token.approveUnderlying()).rejects.toBe(original);
     });
 
-    it("skips allowance check when amount is 0n", async ({ signer, token }) => {
-      vi.mocked(signer.readContract).mockResolvedValueOnce(
+    it("skips allowance check when amount is 0n", async ({ token, provider }) => {
+      vi.mocked(provider.readContract).mockResolvedValueOnce(
         "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c",
       ); // underlying
 
       await token.approveUnderlying(0n);
 
       // Only readContract for underlying, no allowance check (approvalAmount is 0)
-      expect(signer.readContract).toHaveBeenCalledOnce();
+      expect(provider.readContract).toHaveBeenCalledOnce();
     });
   });
 
@@ -1287,8 +1093,12 @@ describe("Token", () => {
   });
 
   describe("shield (ZamaError re-throw from ensureAllowance)", () => {
-    it("re-throws ZamaError from approve in ensureAllowance as-is", async ({ signer, token }) => {
-      vi.mocked(signer.readContract)
+    it("re-throws ZamaError from approve in ensureAllowance as-is", async ({
+      signer,
+      token,
+      provider,
+    }) => {
+      vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // #getUnderlying
         .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
         .mockResolvedValueOnce(0n); // allowance
@@ -1299,8 +1109,8 @@ describe("Token", () => {
       await expect(token.shield(100n)).rejects.toBe(original);
     });
 
-    it("re-throws ZamaError from wrap writeContract as-is", async ({ signer, token }) => {
-      vi.mocked(signer.readContract)
+    it("re-throws ZamaError from wrap writeContract as-is", async ({ signer, token, provider }) => {
+      vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // #getUnderlying
         .mockResolvedValueOnce(1000n); // ERC-20 balanceOf
 
@@ -1313,17 +1123,22 @@ describe("Token", () => {
 
   describe("resumeUnshield", () => {
     const BURN_HANDLE = "0x" + "ff".repeat(32);
+    const UNWRAP_REQUEST_ID = ("0x" + "aa".repeat(32)) as `0x${string}`;
 
     it("resumes from an existing unwrap tx hash", async ({
       relayer,
-      signer,
       userAddress,
       token,
+      provider,
     }) => {
-      vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
+      vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
-            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`],
+            topics: [
+              Topics.UnwrapRequestedLegacy,
+              `0x000000000000000000000000${userAddress.slice(2)}`,
+              `0x${"ff".repeat(32)}`,
+            ],
             data: `0x${"ff".repeat(32)}`,
           },
         ],
@@ -1331,9 +1146,41 @@ describe("Token", () => {
 
       const result = await token.resumeUnshield("0xprevioustx" as `0x${string}`);
 
-      expect(signer.waitForTransactionReceipt).toHaveBeenCalledWith("0xprevioustx");
+      expect(provider.waitForTransactionReceipt).toHaveBeenCalledWith("0xprevioustx");
       expect(relayer.publicDecrypt).toHaveBeenCalledWith([BURN_HANDLE]);
       expect(result.txHash).toBe("0xtxhash");
+    });
+
+    it("uses unwrapRequestId from upgraded UnwrapRequested events", async ({
+      relayer,
+      provider,
+      signer,
+      userAddress,
+      token,
+    }) => {
+      vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
+        logs: [
+          {
+            topics: [
+              Topics.UnwrapRequested,
+              `0x000000000000000000000000${userAddress.slice(2)}`,
+              UNWRAP_REQUEST_ID,
+            ],
+            data: `0x${"ff".repeat(32)}`,
+          },
+        ],
+      });
+
+      await token.resumeUnshield("0xprevioustx" as `0x${string}`);
+
+      expect(provider.waitForTransactionReceipt).toHaveBeenCalledWith("0xprevioustx");
+      expect(relayer.publicDecrypt).toHaveBeenCalledWith([UNWRAP_REQUEST_ID]);
+      expect(signer.writeContract).toHaveBeenCalledWith(
+        expect.objectContaining({
+          functionName: "finalizeUnwrap",
+          args: expect.arrayContaining([UNWRAP_REQUEST_ID]),
+        }),
+      );
     });
   });
 
@@ -1343,39 +1190,23 @@ describe("Token", () => {
     const RECIPIENT = "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address;
 
     it("throws INSUFFICIENT_CONFIDENTIAL_BALANCE when balance is zero handle", async ({
-      signer,
       token,
+      provider,
     }) => {
-      vi.mocked(signer.readContract).mockResolvedValueOnce(ZERO_HANDLE); // confidentialBalanceOf
+      vi.mocked(provider.readContract).mockResolvedValueOnce(ZERO_HANDLE);
 
       await expect(token.confidentialTransfer(RECIPIENT, 100n)).rejects.toMatchObject({
         code: ZamaErrorCode.InsufficientConfidentialBalance,
       });
     });
 
-    it("throws BALANCE_CHECK_UNAVAILABLE when no credentials cached", async ({
-      signer,
-      token,
-      handle,
-    }) => {
-      vi.mocked(signer.readContract).mockResolvedValueOnce(handle); // confidentialBalanceOf
-
-      await expect(token.confidentialTransfer(RECIPIENT, 100n)).rejects.toMatchObject({
-        code: ZamaErrorCode.BalanceCheckUnavailable,
-      });
-    });
-
     it("throws INSUFFICIENT_CONFIDENTIAL_BALANCE when amount exceeds decrypted balance", async ({
-      relayer,
-      signer,
       token,
       handle,
+      provider,
     }) => {
-      // First, establish credentials by calling allow()
-      await token.allow();
-
-      vi.mocked(signer.readContract).mockResolvedValueOnce(handle); // confidentialBalanceOf
-      vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({ [handle]: 50n });
+      vi.mocked(provider.readContract).mockResolvedValueOnce(handle);
+      vi.mocked(token.sdk.relayer.userDecrypt).mockResolvedValueOnce({ [handle]: 50n });
 
       await expect(token.confidentialTransfer(RECIPIENT, 100n)).rejects.toMatchObject({
         code: ZamaErrorCode.InsufficientConfidentialBalance,
@@ -1384,30 +1215,24 @@ describe("Token", () => {
     });
 
     it("passes validation and submits transaction when balance is sufficient", async ({
-      relayer,
-      signer,
       token,
       handle,
+      provider,
     }) => {
-      await token.allow();
-
-      vi.mocked(signer.readContract).mockResolvedValueOnce(handle); // confidentialBalanceOf
-      vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({ [handle]: 200n });
+      vi.mocked(provider.readContract).mockResolvedValueOnce(handle);
+      vi.mocked(token.sdk.relayer.userDecrypt).mockResolvedValueOnce({ [handle]: 200n });
 
       const result = await token.confidentialTransfer(RECIPIENT, 100n);
       expect(result.txHash).toBe("0xtxhash");
     });
 
     it("passes validation when balance exactly equals amount (boundary)", async ({
-      relayer,
-      signer,
       token,
       handle,
+      provider,
     }) => {
-      await token.allow();
-
-      vi.mocked(signer.readContract).mockResolvedValueOnce(handle); // confidentialBalanceOf
-      vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({ [handle]: 100n });
+      vi.mocked(provider.readContract).mockResolvedValueOnce(handle);
+      vi.mocked(token.sdk.relayer.userDecrypt).mockResolvedValueOnce({ [handle]: 100n });
 
       const result = await token.confidentialTransfer(RECIPIENT, 100n);
       expect(result.txHash).toBe("0xtxhash");
@@ -1430,74 +1255,53 @@ describe("Token", () => {
       expect(onEncryptComplete).toHaveBeenCalled();
     });
 
-    it("allows zero-amount transfer when handle is zero", async ({ signer, token }) => {
-      vi.mocked(signer.readContract).mockResolvedValueOnce(ZERO_HANDLE); // confidentialBalanceOf
+    it("allows zero-amount transfer when handle is zero", async ({ token, provider }) => {
+      vi.mocked(provider.readContract).mockResolvedValueOnce(ZERO_HANDLE);
 
       const result = await token.confidentialTransfer(RECIPIENT, 0n);
       expect(result.txHash).toBe("0xtxhash");
     });
 
-    it("re-throws ZamaError from decryptBalance (e.g. DecryptionFailedError)", async ({
-      signer,
+    it("re-throws ZamaError from balanceOf (e.g. DecryptionFailedError)", async ({
       token,
       handle,
-      relayer,
+      provider,
     }) => {
-      await token.allow();
+      vi.mocked(provider.readContract).mockResolvedValueOnce(handle);
+      vi.mocked(token.sdk.relayer.userDecrypt).mockRejectedValueOnce(
+        new TypeError("network failure"),
+      );
 
-      vi.mocked(signer.readContract).mockResolvedValueOnce(handle); // confidentialBalanceOf
-      vi.mocked(relayer.userDecrypt).mockRejectedValueOnce(new TypeError("network failure"));
-
-      // decryptBalance wraps the TypeError as DecryptionFailedError (a ZamaError),
-      // so #assertConfidentialBalance re-throws it as-is rather than wrapping again.
+      // sdk.userDecrypt wraps the TypeError as DecryptionFailedError (a ZamaError),
+      // so #assertConfidentialBalance re-throws it as-is.
       await expect(token.confidentialTransfer(RECIPIENT, 100n)).rejects.toMatchObject({
         code: ZamaErrorCode.DecryptionFailed,
       });
     });
 
-    it("wraps non-ZamaError from decryptBalance as BALANCE_CHECK_UNAVAILABLE", async ({
-      signer,
-      token,
-      handle,
-    }) => {
-      await token.allow();
-
-      vi.mocked(signer.readContract).mockResolvedValueOnce(handle); // confidentialBalanceOf
-      // Spy on decryptBalance to throw a raw (non-ZamaError) Error, bypassing
-      // decryptBalance's own error wrapping.
-      vi.spyOn(token, "decryptBalance").mockRejectedValueOnce(new Error("unexpected crash"));
+    it("wraps non-ZamaError from balanceOf as BALANCE_CHECK_UNAVAILABLE", async ({ token }) => {
+      // Spy on balanceOf to throw a raw (non-ZamaError) Error.
+      vi.spyOn(token, "balanceOf").mockRejectedValueOnce(new Error("unexpected crash"));
 
       await expect(token.confidentialTransfer(RECIPIENT, 100n)).rejects.toMatchObject({
         code: ZamaErrorCode.BalanceCheckUnavailable,
-        message: expect.stringContaining("could not decrypt confidential balance"),
+        message: expect.stringContaining("Balance validation failed"),
       });
     });
 
-    it("wraps readConfidentialBalanceOf failure as BALANCE_CHECK_UNAVAILABLE", async ({
-      signer,
-      token,
-    }) => {
-      vi.mocked(signer.readContract).mockRejectedValueOnce(new Error("RPC unavailable"));
-
-      await expect(token.confidentialTransfer(RECIPIENT, 100n)).rejects.toMatchObject({
-        code: ZamaErrorCode.BalanceCheckUnavailable,
-        message: expect.stringContaining("Could not read confidential balance handle"),
-      });
-    });
-
-    it("uses cached plaintext balance (skips isAllowed / decrypt)", async ({
+    it("uses cached plaintext balance (skips decrypt round-trip)", async ({
       signer,
       token,
       handle,
       storage,
+      provider,
     }) => {
-      // Seed the balance cache with a sufficient balance
-      const cacheKey = `zama:balance:${getAddress(token.address)}:${getAddress(await signer.getAddress())}:${handle.toLowerCase()}`;
-      await storage.set(cacheKey, "200");
+      const owner = getAddress(await signer.getAddress());
+      const cacheKey = `zama:decrypt:${owner}:${getAddress(token.address)}:${handle.toLowerCase()}`;
+      await storage.set(cacheKey, 200n);
 
-      vi.mocked(signer.readContract).mockResolvedValueOnce(handle); // confidentialBalanceOf
+      vi.mocked(provider.readContract).mockResolvedValueOnce(handle);
 
-      // Should succeed without needing credentials (no allow() call)
       const result = await token.confidentialTransfer(RECIPIENT, 100n);
       expect(result.txHash).toBe("0xtxhash");
     });
@@ -1507,11 +1311,13 @@ describe("Token", () => {
       token,
       handle,
       storage,
+      provider,
     }) => {
-      const cacheKey = `zama:balance:${getAddress(token.address)}:${getAddress(await signer.getAddress())}:${handle.toLowerCase()}`;
-      await storage.set(cacheKey, "50");
+      const owner = getAddress(await signer.getAddress());
+      const cacheKey = `zama:decrypt:${owner}:${getAddress(token.address)}:${handle.toLowerCase()}`;
+      await storage.set(cacheKey, 50n);
 
-      vi.mocked(signer.readContract).mockResolvedValueOnce(handle); // confidentialBalanceOf
+      vi.mocked(provider.readContract).mockResolvedValueOnce(handle);
 
       await expect(token.confidentialTransfer(RECIPIENT, 100n)).rejects.toMatchObject({
         code: ZamaErrorCode.InsufficientConfidentialBalance,
@@ -1522,10 +1328,10 @@ describe("Token", () => {
 
   describe("balance validation: shield", () => {
     it("throws INSUFFICIENT_ERC20_BALANCE when ERC-20 balance too low", async ({
-      signer,
       token,
+      provider,
     }) => {
-      vi.mocked(signer.readContract)
+      vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // #getUnderlying
         .mockResolvedValueOnce(50n); // ERC-20 balanceOf < amount
 
@@ -1535,8 +1341,8 @@ describe("Token", () => {
       });
     });
 
-    it("ERC-20 check always runs regardless of options", async ({ signer, token }) => {
-      vi.mocked(signer.readContract)
+    it("ERC-20 check always runs regardless of options", async ({ token, provider }) => {
+      vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // #getUnderlying
         .mockResolvedValueOnce(50n); // ERC-20 balanceOf < amount
 
@@ -1545,8 +1351,8 @@ describe("Token", () => {
       });
     });
 
-    it("passes ERC-20 check and proceeds to shield", async ({ signer, token }) => {
-      vi.mocked(signer.readContract)
+    it("passes ERC-20 check and proceeds to shield", async ({ token, provider }) => {
+      vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // #getUnderlying
         .mockResolvedValueOnce(1000n) // ERC-20 balanceOf >= amount
         .mockResolvedValueOnce(1000n); // allowance >= amount
@@ -1556,10 +1362,10 @@ describe("Token", () => {
     });
 
     it("passes ERC-20 check when balance exactly equals amount (boundary)", async ({
-      signer,
       token,
+      provider,
     }) => {
-      vi.mocked(signer.readContract)
+      vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // #getUnderlying
         .mockResolvedValueOnce(100n) // ERC-20 balanceOf === amount
         .mockResolvedValueOnce(1000n); // allowance >= amount
@@ -1569,10 +1375,10 @@ describe("Token", () => {
     });
 
     it("skips ERC-20 check for ETH shield (underlying is zero address)", async ({
-      signer,
       token,
+      provider,
     }) => {
-      vi.mocked(signer.readContract).mockResolvedValueOnce(
+      vi.mocked(provider.readContract).mockResolvedValueOnce(
         "0x0000000000000000000000000000000000000000",
       ); // #getUnderlying = zero address
 
@@ -1580,8 +1386,8 @@ describe("Token", () => {
       expect(result.txHash).toBe("0xtxhash");
     });
 
-    it("wraps ERC-20 balanceOf read failure as ERC20_READ_FAILED", async ({ signer, token }) => {
-      vi.mocked(signer.readContract)
+    it("wraps ERC-20 balanceOf read failure as ERC20_READ_FAILED", async ({ token, provider }) => {
+      vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // #getUnderlying
         .mockRejectedValueOnce(new Error("RPC unavailable")); // balanceOf fails
 
@@ -1594,38 +1400,23 @@ describe("Token", () => {
 
   describe("balance validation: unshield", () => {
     it("throws INSUFFICIENT_CONFIDENTIAL_BALANCE when balance is zero handle", async ({
-      signer,
       token,
+      provider,
     }) => {
-      vi.mocked(signer.readContract).mockResolvedValueOnce(ZERO_HANDLE); // confidentialBalanceOf
+      vi.mocked(provider.readContract).mockResolvedValueOnce(ZERO_HANDLE);
 
       await expect(token.unshield(100n)).rejects.toMatchObject({
         code: ZamaErrorCode.InsufficientConfidentialBalance,
       });
     });
 
-    it("throws BALANCE_CHECK_UNAVAILABLE when no credentials cached", async ({
-      signer,
-      token,
-      handle,
-    }) => {
-      vi.mocked(signer.readContract).mockResolvedValueOnce(handle); // confidentialBalanceOf
-
-      await expect(token.unshield(100n)).rejects.toMatchObject({
-        code: ZamaErrorCode.BalanceCheckUnavailable,
-      });
-    });
-
     it("throws INSUFFICIENT_CONFIDENTIAL_BALANCE when amount exceeds decrypted balance", async ({
-      relayer,
-      signer,
       token,
       handle,
+      provider,
     }) => {
-      await token.allow();
-
-      vi.mocked(signer.readContract).mockResolvedValueOnce(handle); // confidentialBalanceOf
-      vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({ [handle]: 50n });
+      vi.mocked(provider.readContract).mockResolvedValueOnce(handle);
+      vi.mocked(token.sdk.relayer.userDecrypt).mockResolvedValueOnce({ [handle]: 50n });
 
       await expect(token.unshield(100n)).rejects.toMatchObject({
         code: ZamaErrorCode.InsufficientConfidentialBalance,
@@ -1634,21 +1425,22 @@ describe("Token", () => {
     });
 
     it("passes validation and submits when balance is sufficient", async ({
-      relayer,
-      signer,
       token,
       handle,
       userAddress,
+      provider,
     }) => {
-      await token.allow();
+      vi.mocked(provider.readContract).mockResolvedValueOnce(handle);
+      vi.mocked(token.sdk.relayer.userDecrypt).mockResolvedValueOnce({ [handle]: 200n });
 
-      vi.mocked(signer.readContract).mockResolvedValueOnce(handle); // confidentialBalanceOf
-      vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({ [handle]: 200n });
-
-      vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
+      vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
-            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`],
+            topics: [
+              Topics.UnwrapRequestedLegacy,
+              `0x000000000000000000000000${userAddress.slice(2)}`,
+              `0x${"ff".repeat(32)}`,
+            ],
             data: `0x${"ff".repeat(32)}`,
           },
         ],
@@ -1659,21 +1451,22 @@ describe("Token", () => {
     });
 
     it("passes validation when balance exactly equals amount (boundary)", async ({
-      relayer,
-      signer,
       token,
       handle,
       userAddress,
+      provider,
     }) => {
-      await token.allow();
+      vi.mocked(provider.readContract).mockResolvedValueOnce(handle);
+      vi.mocked(token.sdk.relayer.userDecrypt).mockResolvedValueOnce({ [handle]: 100n });
 
-      vi.mocked(signer.readContract).mockResolvedValueOnce(handle); // confidentialBalanceOf
-      vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({ [handle]: 100n });
-
-      vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
+      vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
-            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`],
+            topics: [
+              Topics.UnwrapRequestedLegacy,
+              `0x000000000000000000000000${userAddress.slice(2)}`,
+              `0x${"ff".repeat(32)}`,
+            ],
             data: `0x${"ff".repeat(32)}`,
           },
         ],
@@ -1684,14 +1477,18 @@ describe("Token", () => {
     });
 
     it("skipBalanceCheck: true bypasses confidential validation", async ({
-      signer,
       userAddress,
       token,
+      provider,
     }) => {
-      vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
+      vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
-            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`],
+            topics: [
+              Topics.UnwrapRequestedLegacy,
+              `0x000000000000000000000000${userAddress.slice(2)}`,
+              `0x${"ff".repeat(32)}`,
+            ],
             data: `0x${"ff".repeat(32)}`,
           },
         ],
@@ -1701,11 +1498,15 @@ describe("Token", () => {
       expect(result.txHash).toBe("0xtxhash");
     });
 
-    it("passes callbacks alongside skipBalanceCheck", async ({ signer, userAddress, token }) => {
-      vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
+    it("passes callbacks alongside skipBalanceCheck", async ({ userAddress, token, provider }) => {
+      vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
-            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`],
+            topics: [
+              Topics.UnwrapRequestedLegacy,
+              `0x000000000000000000000000${userAddress.slice(2)}`,
+              `0x${"ff".repeat(32)}`,
+            ],
             data: `0x${"ff".repeat(32)}`,
           },
         ],

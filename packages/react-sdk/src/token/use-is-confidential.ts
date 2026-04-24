@@ -4,7 +4,7 @@ import { useQuery, useSuspenseQuery } from "../utils/query";
 import type { UseQueryOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
 import { isConfidentialQueryOptions, isWrapperQueryOptions } from "@zama-fhe/sdk/query";
-import { useReadonlyToken } from "./use-readonly-token";
+import { useZamaSDK } from "../provider";
 
 export { isConfidentialQueryOptions, isWrapperQueryOptions };
 
@@ -25,10 +25,10 @@ export function useIsConfidential(
   tokenAddress: Address,
   options?: Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">,
 ) {
-  const token = useReadonlyToken(tokenAddress);
+  const sdk = useZamaSDK();
 
   return useQuery<boolean>({
-    ...isConfidentialQueryOptions(token.signer, tokenAddress),
+    ...isConfidentialQueryOptions(sdk, tokenAddress),
     ...options,
   });
 }
@@ -46,9 +46,9 @@ export function useIsConfidential(
  * ```
  */
 export function useIsConfidentialSuspense(tokenAddress: Address) {
-  const token = useReadonlyToken(tokenAddress);
+  const sdk = useZamaSDK();
 
-  return useSuspenseQuery<boolean>(isConfidentialQueryOptions(token.signer, tokenAddress));
+  return useSuspenseQuery<boolean>(isConfidentialQueryOptions(sdk, tokenAddress));
 }
 
 /**
@@ -68,10 +68,10 @@ export function useIsWrapper(
   tokenAddress: Address,
   options?: Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">,
 ) {
-  const token = useReadonlyToken(tokenAddress);
+  const sdk = useZamaSDK();
 
   return useQuery<boolean>({
-    ...isWrapperQueryOptions(token.signer, tokenAddress),
+    ...isWrapperQueryOptions(sdk, tokenAddress),
     ...options,
   });
 }
@@ -89,7 +89,7 @@ export function useIsWrapper(
  * ```
  */
 export function useIsWrapperSuspense(tokenAddress: Address) {
-  const token = useReadonlyToken(tokenAddress);
+  const sdk = useZamaSDK();
 
-  return useSuspenseQuery<boolean>(isWrapperQueryOptions(token.signer, tokenAddress));
+  return useSuspenseQuery<boolean>(isWrapperQueryOptions(sdk, tokenAddress));
 }

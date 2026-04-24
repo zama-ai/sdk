@@ -9,16 +9,13 @@ export {
   confidentialTotalSupplyContract,
   totalSupplyContract,
   rateContract,
-  deploymentCoordinatorContract,
-  isFinalizeUnwrapOperatorContract,
-  setFinalizeUnwrapOperatorContract,
 } from "./encrypted";
 
 export {
   finalizeUnwrapContract,
   underlyingContract,
+  inferredTotalSupplyContract,
   wrapContract,
-  wrapETHContract,
 } from "./wrapper";
 
 export {
@@ -31,24 +28,14 @@ export {
   approveContract,
 } from "./erc20";
 
-export { getWrapperContract, wrapperExistsContract } from "./deployment-coordinator";
-
 export {
   ERC7984_INTERFACE_ID,
   ERC7984_WRAPPER_INTERFACE_ID,
+  ERC7984_WRAPPER_INTERFACE_ID_LEGACY,
   supportsInterfaceContract,
   isConfidentialTokenContract,
   isConfidentialWrapperContract,
 } from "./erc165";
-
-export {
-  getWrapFeeContract,
-  getUnwrapFeeContract,
-  getBatchTransferFeeContract,
-  getFeeRecipientContract,
-} from "./fee-manager";
-
-export { confidentialBatchTransferContract, type BatchTransferData } from "./transfer-batcher";
 
 export {
   delegateForUserDecryptionContract,

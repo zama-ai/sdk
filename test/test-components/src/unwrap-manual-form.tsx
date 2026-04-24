@@ -1,14 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import { type Address, findUnwrapRequested, type Hex } from "@zama-fhe/sdk";
 import {
   useUnwrap,
   useFinalizeUnwrap,
   useConfidentialBalance,
   useMetadata,
-  findUnwrapRequested,
-  type Address,
 } from "@zama-fhe/react-sdk";
+import { useAccount } from "wagmi";
+
+type FinalizeUnwrapInput =
+  | { label: "Unwrap request ID"; params: { unwrapRequestId: Hex } }
+  | { label: "Legacy burn handle"; params: { burnAmountHandle: Hex } };
 
 export function UnwrapManualForm({
   tokenAddress,
@@ -17,9 +21,10 @@ export function UnwrapManualForm({
   tokenAddress: Address;
   wrapperAddress?: Address;
 }) {
-  const [burnAmountHandle, setBurnAmountHandle] = useState<Address | null>(null);
+  const [finalizeInput, setFinalizeInput] = useState<FinalizeUnwrapInput | null>(null);
+  const { address } = useAccount();
   const { data: metadata } = useMetadata(tokenAddress);
-  const { data: balance } = useConfidentialBalance({ tokenAddress });
+  const { data: balance } = useConfidentialBalance({ tokenAddress, account: address });
   const unwrap = useUnwrap({ tokenAddress, wrapperAddress });
   const finalizeUnwrap = useFinalizeUnwrap({ tokenAddress, wrapperAddress });
 
@@ -33,7 +38,17 @@ export function UnwrapManualForm({
           });
           const event = findUnwrapRequested(result.receipt.logs);
           if (event) {
-            setBurnAmountHandle(event.encryptedAmount as Address);
+            setFinalizeInput(
+              event.unwrapRequestId
+                ? {
+                    label: "Unwrap request ID",
+                    params: { unwrapRequestId: event.unwrapRequestId },
+                  }
+                : {
+                    label: "Legacy burn handle",
+                    params: { burnAmountHandle: event.encryptedAmount },
+                  },
+            );
           }
         }}
         className="space-y-4"
@@ -73,9 +88,12 @@ export function UnwrapManualForm({
           </p>
         )}
 
-        {burnAmountHandle && (
+        {finalizeInput && (
           <p className="text-sm text-zama-gray" data-testid="burn-handle">
-            Burn handle: {burnAmountHandle}
+            {finalizeInput.label}:{" "}
+            {"unwrapRequestId" in finalizeInput.params
+              ? finalizeInput.params.unwrapRequestId
+              : finalizeInput.params.burnAmountHandle}
           </p>
         )}
 
@@ -89,10 +107,10 @@ export function UnwrapManualForm({
       {/* Step 2: Finalize */}
       <form
         action={() => {
-          if (!burnAmountHandle) {
+          if (!finalizeInput) {
             return;
           }
-          finalizeUnwrap.mutate({ burnAmountHandle });
+          finalizeUnwrap.mutate(finalizeInput.params);
         }}
         className="space-y-4"
         data-testid="finalize-form"
@@ -101,7 +119,7 @@ export function UnwrapManualForm({
 
         <button
           type="submit"
-          disabled={finalizeUnwrap.isPending || !burnAmountHandle}
+          disabled={finalizeUnwrap.isPending || !finalizeInput}
           className="px-4 py-2 bg-zama-yellow text-zama-black font-medium rounded hover:bg-zama-yellow-hover disabled:opacity-50 transition-colors"
           data-testid="finalize-button"
         >

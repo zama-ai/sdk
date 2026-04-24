@@ -7,7 +7,11 @@ description: Mutation hook that signs an EIP-712 message authorizing decryption 
 
 Mutation hook that signs an EIP-712 message authorizing decryption of confidential handles for a list of contract addresses. This is **not token-specific** — any contract that uses FHE-encrypted values (confidential tokens, DeFi vaults, games, etc.) can be authorized in a single wallet signature.
 
-Call this early (e.g. after wallet connect) so that subsequent decrypt operations do not trigger individual wallet popups. Automatically invalidates [`useIsAllowed`](/reference/react/useIsAllowed) queries on success.
+Call this early (e.g. after wallet connect) so that [`useUserDecrypt`](/reference/react/useUserDecrypt) queries fire automatically without wallet popups. Automatically invalidates [`useIsAllowed`](/reference/react/useIsAllowed) queries on success.
+
+{% hint style="warning" %}
+**Include all contracts you plan to decrypt.** `useUserDecrypt` checks that cached credentials cover every contract address in its `handles` before firing the query. If any contract is missing, the query stays disabled.
+{% endhint %}
 
 ## Import
 
@@ -65,7 +69,7 @@ function AuthOnConnect({ contracts }: { contracts: `0x${string}`[] }) {
 
 `useAllow` takes no configuration parameters.
 
-## Mutation Variables
+## Mutation variables
 
 ### addresses
 

@@ -3,12 +3,22 @@ import { toHex } from "viem";
 import { encryptedAbi } from "../abi/encrypted.abi";
 import type { Handle } from "../relayer/relayer-sdk.types";
 
+const legacyTotalSupplyAbi = [
+  {
+    inputs: [],
+    name: "totalSupply",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+] as const;
+
 /**
  * Returns the contract config to read an encrypted balance.
  *
  * @example
  * ```ts
- * const handle = await signer.readContract(
+ * const handle = await provider.readContract(
  *   confidentialBalanceOfContract(tokenAddress, userAddress),
  * );
  * ```
@@ -76,7 +86,7 @@ export function confidentialTransferFromContract(
  *
  * @example
  * ```ts
- * const isApproved = await signer.readContract(
+ * const isApproved = await provider.readContract(
  *   isOperatorContract(tokenAddress, holder, spender),
  * );
  * ```
@@ -165,7 +175,7 @@ export function unwrapFromBalanceContract(
  *
  * @example
  * ```ts
- * const handle = await signer.readContract(
+ * const handle = await provider.readContract(
  *   confidentialTotalSupplyContract(tokenAddress),
  * );
  * ```
@@ -180,19 +190,22 @@ export function confidentialTotalSupplyContract(tokenAddress: Address) {
 }
 
 /**
- * Returns the contract config to read the plaintext total supply.
+ * Returns the contract config to read the legacy plaintext total supply.
+ *
+ * @deprecated Prefer higher-level APIs such as `totalSupplyQueryOptions` / `useTotalSupply`,
+ * which choose between legacy `totalSupply()` and upgraded `inferredTotalSupply()` via ERC-165.
  *
  * @example
  * ```ts
- * const supply = await signer.readContract(
- *   totalSupplyContract(tokenAddress),
+ * const supply = await provider.readContract(
+ *   totalSupplyContract(wrapperAddress),
  * );
  * ```
  */
-export function totalSupplyContract(tokenAddress: Address) {
+export function totalSupplyContract(wrapperAddress: Address) {
   return {
-    address: tokenAddress,
-    abi: encryptedAbi,
+    address: wrapperAddress,
+    abi: legacyTotalSupplyAbi,
     functionName: "totalSupply",
     args: [],
   } as const;
@@ -203,7 +216,7 @@ export function totalSupplyContract(tokenAddress: Address) {
  *
  * @example
  * ```ts
- * const rate = await signer.readContract(rateContract(tokenAddress));
+ * const rate = await provider.readContract(rateContract(tokenAddress));
  * ```
  */
 export function rateContract(tokenAddress: Address) {
@@ -212,72 +225,5 @@ export function rateContract(tokenAddress: Address) {
     abi: encryptedAbi,
     functionName: "rate",
     args: [],
-  } as const;
-}
-
-/**
- * Returns the contract config to read the deployment coordinator address.
- *
- * @example
- * ```ts
- * const coordinator = await signer.readContract(
- *   deploymentCoordinatorContract(tokenAddress),
- * );
- * ```
- */
-export function deploymentCoordinatorContract(tokenAddress: Address) {
-  return {
-    address: tokenAddress,
-    abi: encryptedAbi,
-    functionName: "deploymentCoordinator",
-    args: [],
-  } as const;
-}
-
-/**
- * Returns the contract config to check finalizeUnwrap operator status.
- *
- * @example
- * ```ts
- * const isOp = await signer.readContract(
- *   isFinalizeUnwrapOperatorContract(tokenAddress, holder, operator),
- * );
- * ```
- */
-export function isFinalizeUnwrapOperatorContract(
-  tokenAddress: Address,
-  holder: Address,
-  operator: Address,
-) {
-  return {
-    address: tokenAddress,
-    abi: encryptedAbi,
-    functionName: "isFinalizeUnwrapOperator",
-    args: [holder, operator],
-  } as const;
-}
-
-/**
- * Returns the contract config for setting a finalizeUnwrap operator.
- * Defaults timestamp to 1 hour from now.
- *
- * @example
- * ```ts
- * const txHash = await signer.writeContract(
- *   setFinalizeUnwrapOperatorContract(tokenAddress, operator),
- * );
- * ```
- */
-export function setFinalizeUnwrapOperatorContract(
-  tokenAddress: Address,
-  operator: Address,
-  timestamp?: number,
-) {
-  const until = timestamp ?? Math.floor(Date.now() / 1000) + 3600;
-  return {
-    address: tokenAddress,
-    abi: encryptedAbi,
-    functionName: "setFinalizeUnwrapOperator",
-    args: [operator, until],
   } as const;
 }

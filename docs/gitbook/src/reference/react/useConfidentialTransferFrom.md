@@ -76,10 +76,6 @@ const sdk = new ZamaSDK({
 
 ## Parameters
 
-```ts
-import { type UseConfidentialTransferFromParameters } from "@zama-fhe/react-sdk";
-```
-
 ### tokenAddress
 
 `Address`
@@ -102,7 +98,7 @@ const { mutateAsync: transferFrom } = useConfidentialTransferFrom({
 
 {% include ".gitbook/includes/mutation-options.md" %}
 
-## Mutation Variables
+## Mutation variables
 
 The function passed to `mutate` / `mutateAsync` accepts:
 
@@ -139,10 +135,6 @@ await transferFrom({
 {% endtabs %}
 
 ## Return Type
-
-```ts
-import { type UseConfidentialTransferFromReturnType } from "@zama-fhe/react-sdk";
-```
 
 The `data` property (after a successful mutation) is `{ txHash: Hex, receipt: TransactionReceipt }`.
 
