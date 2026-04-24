@@ -18,6 +18,9 @@ const { mockContractMethod, MockContract, MockBrowserProvider, mockGetSigner } =
           if (prop === "then") {
             return undefined;
           }
+          if (prop === "getFunction") {
+            return () => mockContractMethod;
+          }
           return mockContractMethod;
         },
       },
@@ -54,6 +57,7 @@ vi.mock(import("ethers"), () => {
 // ── Imports (after mock) ─────────────────────────────────────
 
 import { EthersSigner } from "../ethers-signer";
+import { EthersProvider } from "../ethers-provider";
 import {
   readConfidentialBalanceOfContract,
   readUnderlyingTokenContract,
@@ -349,15 +353,50 @@ describe("EthersSigner", () => {
       },
     );
   });
+});
+
+// ── EthersProvider ────────────────────────────────────────────
+
+describe("EthersProvider", () => {
+  describe("constructor", () => {
+    eit("accepts an EIP-1193 provider and creates BrowserProvider internally", async () => {
+      const mockEthereum = {
+        on: vi.fn(),
+        removeListener: vi.fn(),
+        request: vi.fn(),
+      };
+      // Does not throw
+      const provider = new EthersProvider({ ethereum: mockEthereum as never });
+      expect(provider).toBeInstanceOf(EthersProvider);
+    });
+
+    eit("accepts a pre-built Provider directly", () => {
+      const mockProvider = { getNetwork: vi.fn() };
+      const provider = new EthersProvider({ provider: mockProvider as never });
+      expect(provider).toBeInstanceOf(EthersProvider);
+    });
+  });
+
+  describe("getChainId", () => {
+    eit("returns the numeric chain ID from the provider network", async () => {
+      const mockProvider = {
+        getNetwork: vi.fn().mockResolvedValue({ chainId: 8009n }),
+      };
+      const ethersProvider = new EthersProvider({ provider: mockProvider as never });
+
+      const chainId = await ethersProvider.getChainId();
+      expect(mockProvider.getNetwork).toHaveBeenCalled();
+      expect(chainId).toBe(8009);
+    });
+  });
 
   describe("readContract", () => {
     eit(
       "creates an ethers Contract and calls the function with args",
-      async ({ tokenAddress, userAddress, createEthersMockSigner }) => {
-        const signer = createEthersMockSigner();
-        const ethersSigner = new EthersSigner({ signer: signer as never });
-
+      async ({ tokenAddress, userAddress }) => {
         mockContractMethod.mockResolvedValueOnce(42n);
+        const mockProvider = { getNetwork: vi.fn() };
+        const ethersProvider = new EthersProvider({ provider: mockProvider as never });
 
         const config = {
           address: tokenAddress,
@@ -366,7 +405,7 @@ describe("EthersSigner", () => {
           args: [userAddress] as const,
         };
 
-        const result = await ethersSigner.readContract(config);
+        const result = await ethersProvider.readContract(config);
         expect(mockContractMethod).toHaveBeenCalledWith(userAddress);
         expect(result).toBe(42n);
       },
@@ -374,126 +413,77 @@ describe("EthersSigner", () => {
   });
 
   describe("waitForTransactionReceipt", () => {
-    eit("waits for the transaction and maps logs correctly", async ({ createEthersMockSigner }) => {
-      const signer = createEthersMockSigner();
-      const ethersSigner = new EthersSigner({ signer: signer as never });
+    eit("waits for the transaction and maps logs correctly", async () => {
+      const mockProvider = {
+        waitForTransaction: vi.fn().mockResolvedValue({
+          logs: [{ topics: ["0xtopic1", null, "0xtopic3"], data: "0xdata" }],
+        }),
+      };
+      const ethersProvider = new EthersProvider({ provider: mockProvider as never });
 
-      const receipt = await ethersSigner.waitForTransactionReceipt("0xhash" as Hex);
+      const receipt = await ethersProvider.waitForTransactionReceipt("0xhash" as Hex);
 
-      expect(signer.provider.waitForTransaction).toHaveBeenCalledWith("0xhash");
+      expect(mockProvider.waitForTransaction).toHaveBeenCalledWith("0xhash");
       expect(receipt.logs).toEqual([{ topics: ["0xtopic1", "0xtopic3"], data: "0xdata" }]);
     });
 
-    eit("filters out null topics from logs", async ({ createEthersMockSigner }) => {
-      const signer = createEthersMockSigner();
-      signer.provider.waitForTransaction.mockResolvedValue({
-        logs: [{ topics: [null, "0xa", null, "0xb"], data: "0x" }],
-      });
-      const ethersSigner = new EthersSigner({ signer: signer as never });
+    eit("filters out null topics from logs", async () => {
+      const mockProvider = {
+        waitForTransaction: vi.fn().mockResolvedValue({
+          logs: [{ topics: [null, "0xa", null, "0xb"], data: "0x" }],
+        }),
+      };
+      const ethersProvider = new EthersProvider({ provider: mockProvider as never });
 
-      const receipt = await ethersSigner.waitForTransactionReceipt("0xhash" as Hex);
+      const receipt = await ethersProvider.waitForTransactionReceipt("0xhash" as Hex);
       expect(receipt.logs[0].topics).toEqual(["0xa", "0xb"]);
     });
 
-    eit("throws when signer has no provider", async ({ createEthersMockSigner }) => {
-      const signer = { ...createEthersMockSigner(), provider: null };
-      const ethersSigner = new EthersSigner({ signer: signer as never });
+    eit("throws when receipt is null", async () => {
+      const mockProvider = {
+        waitForTransaction: vi.fn().mockResolvedValue(null),
+      };
+      const ethersProvider = new EthersProvider({ provider: mockProvider as never });
 
-      await expect(ethersSigner.waitForTransactionReceipt("0xhash" as Hex)).rejects.toThrow(
-        "Signer has no provider",
-      );
-    });
-
-    eit("throws when receipt is null", async ({ createEthersMockSigner }) => {
-      const signer = createEthersMockSigner();
-      signer.provider.waitForTransaction.mockResolvedValue(null);
-      const ethersSigner = new EthersSigner({ signer: signer as never });
-
-      await expect(ethersSigner.waitForTransactionReceipt("0xhash" as Hex)).rejects.toThrow(
+      await expect(ethersProvider.waitForTransactionReceipt("0xhash" as Hex)).rejects.toThrow(
         "Transaction receipt not found",
       );
     });
+
+    eit("propagates errors from waitForTransaction", async () => {
+      const mockProvider = {
+        waitForTransaction: vi.fn().mockRejectedValue(new Error("transaction could not be found")),
+      };
+      const ethersProvider = new EthersProvider({ provider: mockProvider as never });
+
+      await expect(ethersProvider.waitForTransactionReceipt("0xhash" as Hex)).rejects.toThrow(
+        "transaction could not be found",
+      );
+    });
   });
-});
 
-// ── Read-only mode ({ provider } config) ────────────────────
+  describe("getBlockTimestamp", () => {
+    eit("returns the latest block timestamp as bigint", async () => {
+      const mockProvider = {
+        getBlock: vi.fn().mockResolvedValue({ timestamp: 1700000000 }),
+      };
+      const ethersProvider = new EthersProvider({ provider: mockProvider as never });
 
-describe("EthersSigner read-only mode ({ provider })", () => {
-  eit("readContract works with provider-only config", async ({ tokenAddress, userAddress }) => {
-    mockContractMethod.mockResolvedValue(42n);
-    const mockProvider = {
-      getNetwork: vi.fn().mockResolvedValue({ chainId: 1n }),
-    };
-    const ethersSigner = new EthersSigner({
-      provider: mockProvider as never,
+      const timestamp = await ethersProvider.getBlockTimestamp();
+      expect(mockProvider.getBlock).toHaveBeenCalledWith("latest");
+      expect(timestamp).toBe(1700000000n);
     });
 
-    const result = await ethersSigner.readContract({
-      address: tokenAddress,
-      abi: [{ name: "balanceOf" }],
-      functionName: "balanceOf",
-      args: [userAddress],
+    eit("throws when no block is returned", async () => {
+      const mockProvider = {
+        getBlock: vi.fn().mockResolvedValue(null),
+      };
+      const ethersProvider = new EthersProvider({ provider: mockProvider as never });
+
+      await expect(ethersProvider.getBlockTimestamp()).rejects.toThrow(
+        "Failed to fetch latest block",
+      );
     });
-    expect(result).toBe(42n);
-  });
-
-  eit("getChainId works with provider-only config", async () => {
-    const mockProvider = {
-      getNetwork: vi.fn().mockResolvedValue({ chainId: 8009n }),
-    };
-    const ethersSigner = new EthersSigner({ provider: mockProvider as never });
-
-    const chainId = await ethersSigner.getChainId();
-    expect(chainId).toBe(8009);
-  });
-
-  eit("getAddress throws with provider-only config", async () => {
-    const mockProvider = { getNetwork: vi.fn() };
-    const ethersSigner = new EthersSigner({ provider: mockProvider as never });
-
-    await expect(ethersSigner.getAddress()).rejects.toThrow("No signer configured");
-  });
-
-  eit("signTypedData throws with provider-only config", async () => {
-    const mockProvider = { getNetwork: vi.fn() };
-    const ethersSigner = new EthersSigner({ provider: mockProvider as never });
-
-    const typedData = {
-      domain: {},
-      types: { EIP712Domain: [], Transfer: [{ name: "to", type: "address" }] },
-      message: {},
-    };
-    await expect(ethersSigner.signTypedData(typedData as never)).rejects.toThrow(
-      "No signer configured",
-    );
-  });
-
-  eit("writeContract throws with provider-only config", async ({ tokenAddress }) => {
-    const mockProvider = { getNetwork: vi.fn() };
-    const ethersSigner = new EthersSigner({
-      provider: mockProvider as never,
-    });
-
-    await expect(
-      ethersSigner.writeContract({
-        address: tokenAddress,
-        abi: [],
-        functionName: "transfer",
-        args: [],
-      }),
-    ).rejects.toThrow("No signer configured");
-  });
-
-  eit("subscribe returns no-op with provider-only config", () => {
-    const mockProvider = { getNetwork: vi.fn() };
-    const ethersSigner = new EthersSigner({ provider: mockProvider as never });
-
-    const unsub = ethersSigner.subscribe({
-      onDisconnect: vi.fn(),
-      onAccountChange: vi.fn(),
-    });
-    expect(typeof unsub).toBe("function");
-    unsub(); // should not throw
   });
 });
 

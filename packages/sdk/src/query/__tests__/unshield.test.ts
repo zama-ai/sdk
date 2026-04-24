@@ -3,7 +3,7 @@ import { unshieldMutationOptions } from "../unshield";
 
 describe("unshieldMutationOptions", () => {
   test("delegates unshield", async ({ mockToken }) => {
-    const options = unshieldMutationOptions(mockToken);
+    const options = unshieldMutationOptions(mockToken, mockToken.address);
 
     expect(options.mutationKey).toEqual(["zama.unshield", mockToken.address]);
     await options.mutationFn({ amount: 11n });
@@ -11,7 +11,7 @@ describe("unshieldMutationOptions", () => {
   });
 
   test("delegates callbacks when provided", async ({ mockToken }) => {
-    const options = unshieldMutationOptions(mockToken);
+    const options = unshieldMutationOptions(mockToken, mockToken.address);
     const onUnwrapSubmitted = () => undefined;
     const onFinalizing = () => undefined;
 

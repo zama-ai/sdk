@@ -3,7 +3,7 @@ import { resumeUnshieldMutationOptions } from "../resume-unshield";
 
 describe("resumeUnshieldMutationOptions", () => {
   test("delegates resumeUnshield", async ({ mockToken }) => {
-    const options = resumeUnshieldMutationOptions(mockToken);
+    const options = resumeUnshieldMutationOptions(mockToken, mockToken.address);
 
     expect(options.mutationKey).toEqual(["zama.resumeUnshield", mockToken.address]);
     await options.mutationFn({
@@ -16,7 +16,7 @@ describe("resumeUnshieldMutationOptions", () => {
   });
 
   test("passes flat callbacks to resumeUnshield", async ({ mockToken }) => {
-    const options = resumeUnshieldMutationOptions(mockToken);
+    const options = resumeUnshieldMutationOptions(mockToken, mockToken.address);
     const onUnwrapSubmitted = () => {};
     const onFinalizing = () => {};
 

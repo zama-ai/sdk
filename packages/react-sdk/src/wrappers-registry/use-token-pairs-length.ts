@@ -13,7 +13,7 @@ export function useTokenPairsLength() {
   const registryAddress = useWrappersRegistryAddress();
 
   return useQuery<bigint>(
-    tokenPairsLengthQueryOptions(sdk.signer, {
+    tokenPairsLengthQueryOptions(sdk, {
       registryAddress,
     }),
   );

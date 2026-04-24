@@ -27,11 +27,11 @@ describe("useUnshieldAll", () => {
 
   test("cache: invalidates balance, allowance, and wagmi after unshield all", async ({
     renderWithProviders,
-    signer,
     relayer,
+    provider,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(HANDLE);
-    vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
+    vi.mocked(provider.readContract).mockResolvedValue(HANDLE);
+    vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
       logs: [createUnwrapRequestedLog(BURN_AMOUNT_HANDLE)],
     });
     mockPublicDecrypt(relayer);
@@ -61,11 +61,11 @@ describe("useUnshieldAll", () => {
 
   test("behavior: forwards onSuccess callback", async ({
     renderWithProviders,
-    signer,
     relayer,
+    provider,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(HANDLE);
-    vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
+    vi.mocked(provider.readContract).mockResolvedValue(HANDLE);
+    vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
       logs: [createUnwrapRequestedLog(BURN_AMOUNT_HANDLE)],
     });
     mockPublicDecrypt(relayer);

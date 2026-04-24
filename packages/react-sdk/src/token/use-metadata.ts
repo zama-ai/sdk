@@ -26,7 +26,7 @@ export function useMetadata(
 ) {
   const sdk = useZamaSDK();
   return useQuery<TokenMetadata>({
-    ...tokenMetadataQueryOptions(sdk.signer, tokenAddress),
+    ...tokenMetadataQueryOptions(sdk, tokenAddress),
     ...options,
   });
 }
@@ -45,5 +45,5 @@ export function useMetadata(
  */
 export function useMetadataSuspense(tokenAddress: Address) {
   const sdk = useZamaSDK();
-  return useSuspenseQuery<TokenMetadata>(tokenMetadataQueryOptions(sdk.signer, tokenAddress));
+  return useSuspenseQuery<TokenMetadata>(tokenMetadataQueryOptions(sdk, tokenAddress));
 }

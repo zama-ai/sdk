@@ -18,7 +18,7 @@ export function useTokenAddress({
   const registryAddress = useWrappersRegistryAddress();
 
   return useQuery<readonly [boolean, Address]>(
-    tokenAddressQueryOptions(sdk.signer, {
+    tokenAddressQueryOptions(sdk, {
       registryAddress,
       confidentialTokenAddress,
     }),

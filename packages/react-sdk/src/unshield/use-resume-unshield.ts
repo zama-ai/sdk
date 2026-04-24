@@ -39,7 +39,7 @@ export function useResumeUnshield(
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       options?.onSuccess?.(data, variables, onMutateResult, context);
-      invalidateAfterUnshield(context.client, config.tokenAddress);
+      invalidateAfterUnshield(context.client, token.address);
     },
   });
 }

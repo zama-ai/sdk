@@ -14,7 +14,7 @@ import type {
   PaginatedResult,
 } from "../contracts/wrappers-registry";
 import type { WrappersRegistry } from "../wrappers-registry";
-import type { GenericSigner } from "../types/signer";
+import type { ZamaSDK } from "../zama-sdk";
 import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
 import { filterQueryOptions } from "./utils";
@@ -28,7 +28,7 @@ export interface WrappersRegistryQueryConfig {
 }
 
 export function tokenPairsQueryOptions(
-  signer: GenericSigner,
+  sdk: ZamaSDK,
   config: WrappersRegistryQueryConfig,
 ): QueryFactoryOptions<
   readonly TokenWrapperPair[],
@@ -43,7 +43,7 @@ export function tokenPairsQueryOptions(
     queryKey,
     queryFn: async (context) => {
       const [, { registryAddress }] = context.queryKey;
-      return signer.readContract(getTokenPairsContract(registryAddress));
+      return sdk.provider.readContract(getTokenPairsContract(registryAddress));
     },
     staleTime: DEFAULT_STALE_TIME_MS,
     enabled,
@@ -55,7 +55,7 @@ export interface ConfidentialTokenAddressQueryConfig extends WrappersRegistryQue
 }
 
 export function confidentialTokenAddressQueryOptions(
-  signer: GenericSigner,
+  sdk: ZamaSDK,
   config: ConfidentialTokenAddressQueryConfig,
 ): QueryFactoryOptions<
   readonly [boolean, Address],
@@ -76,7 +76,7 @@ export function confidentialTokenAddressQueryOptions(
     queryKey,
     queryFn: async (context) => {
       const [, { registryAddress, tokenAddress }] = context.queryKey;
-      return signer.readContract(
+      return sdk.provider.readContract(
         getConfidentialTokenAddressContract(registryAddress, tokenAddress),
       );
     },
@@ -90,7 +90,7 @@ export interface TokenAddressQueryConfig extends WrappersRegistryQueryConfig {
 }
 
 export function tokenAddressQueryOptions(
-  signer: GenericSigner,
+  sdk: ZamaSDK,
   config: TokenAddressQueryConfig,
 ): QueryFactoryOptions<
   readonly [boolean, Address],
@@ -111,7 +111,7 @@ export function tokenAddressQueryOptions(
     queryKey,
     queryFn: async (context) => {
       const [, { registryAddress, confidentialTokenAddress }] = context.queryKey;
-      return signer.readContract(
+      return sdk.provider.readContract(
         getTokenAddressContract(registryAddress, confidentialTokenAddress),
       );
     },
@@ -121,7 +121,7 @@ export function tokenAddressQueryOptions(
 }
 
 export function tokenPairsLengthQueryOptions(
-  signer: GenericSigner,
+  sdk: ZamaSDK,
   config: WrappersRegistryQueryConfig,
 ): QueryFactoryOptions<
   bigint,
@@ -138,7 +138,7 @@ export function tokenPairsLengthQueryOptions(
     queryKey,
     queryFn: async (context) => {
       const [, { registryAddress }] = context.queryKey;
-      return signer.readContract(getTokenPairsLengthContract(registryAddress));
+      return sdk.provider.readContract(getTokenPairsLengthContract(registryAddress));
     },
     staleTime: DEFAULT_STALE_TIME_MS,
     enabled,
@@ -151,7 +151,7 @@ export interface TokenPairsSliceQueryConfig extends WrappersRegistryQueryConfig 
 }
 
 export function tokenPairsSliceQueryOptions(
-  signer: GenericSigner,
+  sdk: ZamaSDK,
   config: TokenPairsSliceQueryConfig,
 ): QueryFactoryOptions<
   readonly TokenWrapperPair[],
@@ -174,7 +174,7 @@ export function tokenPairsSliceQueryOptions(
     queryKey,
     queryFn: async (context) => {
       const [, { registryAddress, fromIndex, toIndex }] = context.queryKey;
-      return signer.readContract(
+      return sdk.provider.readContract(
         getTokenPairsSliceContract(registryAddress, BigInt(fromIndex), BigInt(toIndex)),
       );
     },
@@ -188,7 +188,7 @@ export interface TokenPairQueryConfig extends WrappersRegistryQueryConfig {
 }
 
 export function tokenPairQueryOptions(
-  signer: GenericSigner,
+  sdk: ZamaSDK,
   config: TokenPairQueryConfig,
 ): QueryFactoryOptions<
   TokenWrapperPair,
@@ -209,7 +209,7 @@ export function tokenPairQueryOptions(
     queryKey,
     queryFn: async (context) => {
       const [, { registryAddress, index }] = context.queryKey;
-      return signer.readContract(getTokenPairContract(registryAddress, BigInt(index)));
+      return sdk.provider.readContract(getTokenPairContract(registryAddress, BigInt(index)));
     },
     staleTime: DEFAULT_STALE_TIME_MS,
     enabled,
@@ -221,7 +221,7 @@ export interface IsConfidentialTokenValidQueryConfig extends WrappersRegistryQue
 }
 
 export function isConfidentialTokenValidQueryOptions(
-  signer: GenericSigner,
+  sdk: ZamaSDK,
   config: IsConfidentialTokenValidQueryConfig,
 ): QueryFactoryOptions<
   boolean,
@@ -242,7 +242,7 @@ export function isConfidentialTokenValidQueryOptions(
     queryKey,
     queryFn: async (context) => {
       const [, { registryAddress, confidentialTokenAddress }] = context.queryKey;
-      return signer.readContract(
+      return sdk.provider.readContract(
         isConfidentialTokenValidContract(registryAddress, confidentialTokenAddress),
       );
     },
@@ -268,7 +268,7 @@ export interface ListPairsQueryConfig {
 /**
  * Query options for paginated listing of token wrapper pairs.
  *
- * Accepts a {@link WrappersRegistry} instance rather than a raw signer so that the
+ * Accepts a {@link WrappersRegistry} instance rather than a raw provider so that the
  * class-level TTL cache is shared across multiple `queryFn` executions. Pass
  * `sdk.registry` (the ZamaSDK lazy singleton) to ensure a single shared cache.
  */
