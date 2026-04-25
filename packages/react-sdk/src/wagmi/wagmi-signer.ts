@@ -4,7 +4,6 @@ import type {
   EIP712TypedData,
   GenericSigner,
   Hex,
-  SignerIdentity,
   SignerIdentityListener,
   WriteContractArgs,
   WriteFunctionName,
@@ -14,29 +13,6 @@ import { getAddress } from "viem";
 import type { Config } from "wagmi";
 import { getChainId, signTypedData, writeContract } from "wagmi/actions";
 import { getConnection, watchConnection } from "./compat";
-
-interface WagmiConnectionSnapshot {
-  status: "connected" | "connecting" | "disconnected" | "reconnecting";
-  address?: Address;
-  chainId?: number;
-}
-
-function toIdentity(c: WagmiConnectionSnapshot): SignerIdentity | undefined {
-  if (c.status !== "connected") {
-    return undefined;
-  }
-  if (!c.address || c.chainId === undefined) {
-    return undefined;
-  }
-  return { address: getAddress(c.address), chainId: c.chainId };
-}
-
-function identitiesEqual(a: SignerIdentity | undefined, b: SignerIdentity | undefined): boolean {
-  if (!a || !b) {
-    return a === b;
-  }
-  return a.address === b.address && a.chainId === b.chainId;
-}
 
 /** Configuration for {@link WagmiSigner}. */
 export interface WagmiSignerConfig {
@@ -94,9 +70,16 @@ export class WagmiSigner implements GenericSigner {
   subscribe(onIdentityChange: SignerIdentityListener): () => void {
     return watchConnection(this.#config, {
       onChange(connection, prevConnection) {
-        const previous = toIdentity(prevConnection);
-        const next = toIdentity(connection);
-        if (!identitiesEqual(previous, next)) {
+        const previous =
+          prevConnection.status === "connected"
+            ? { address: getAddress(prevConnection.address), chainId: prevConnection.chainId }
+            : undefined;
+        const next =
+          connection.status === "connected"
+            ? { address: getAddress(connection.address), chainId: connection.chainId }
+            : undefined;
+
+        if (previous?.address !== next?.address || previous?.chainId !== next?.chainId) {
           onIdentityChange({ previous, next });
         }
       },

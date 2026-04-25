@@ -128,9 +128,7 @@ export function ZamaProvider({
     ],
   );
 
-  // SDK owns the single signer subscription: it runs credential/cache cleanup
-  // and fans identity changes out to registered listeners. The provider
-  // layers query invalidation atop that same event stream.
+  // SDK internally does credential/cache cleanup. React layer needs to handle query invalidation.
   useEffect(
     () => sdk.onIdentityChange(() => invalidateWalletLifecycleQueries(queryClient)),
     [sdk, queryClient],
