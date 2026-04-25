@@ -26,6 +26,16 @@ import { WrappersRegistry } from "./wrappers-registry";
 /** Maximum keypairTTL accepted by the fhevm ACL contract (365 days, in seconds). */
 const MAX_KEYPAIR_TTL = 365 * 86400; // 31_536_000 s
 
+/** Run a best-effort cleanup step. Errors are logged, never thrown. */
+async function swallow(label: string, fn: () => Promise<void> | void): Promise<void> {
+  try {
+    await fn();
+  } catch (error) {
+    // oxlint-disable-next-line no-console
+    console.warn(`[zama-sdk] ${label} failed:`, error);
+  }
+}
+
 /** Configuration for {@link ZamaSDK}. */
 export interface ZamaSDKConfig {
   /** FHE relayer backend (`RelayerWeb` for browser, `RelayerNode` for server). */
@@ -190,22 +200,13 @@ export class ZamaSDK {
   }
 
   async #handleIdentityChange(change: SignerIdentityChange): Promise<void> {
-    try {
-      if (change.previous) {
-        await this.credentials.revokeFor(change.previous);
-        await this.cache.clearForRequester(change.previous.address);
-      }
-    } catch (error) {
-      // oxlint-disable-next-line no-console
-      console.warn("[zama-sdk] signer lifecycle cleanup failed:", error);
+    if (change.previous) {
+      const previous = change.previous;
+      await swallow("revoke previous identity", () => this.credentials.revokeFor(previous));
+      await swallow("clear decrypt cache", () => this.cache.clearForRequester(previous.address));
     }
     for (const listener of this.#identityListeners) {
-      try {
-        listener(change);
-      } catch (error) {
-        // oxlint-disable-next-line no-console
-        console.warn("[zama-sdk] identity listener threw:", error);
-      }
+      await swallow("identity listener", () => listener(change));
     }
   }
 
@@ -487,8 +488,11 @@ export class ZamaSDK {
   async revokeSession(): Promise<void> {
     const address = await this.signer.getAddress();
     const chainId = await this.signer.getChainId();
-    await this.credentials.revokeFor({ address, chainId });
-    await this.cache.clearForRequester(address);
+    try {
+      await this.credentials.revokeFor({ address, chainId });
+    } finally {
+      await this.cache.clearForRequester(address);
+    }
   }
 
   /**

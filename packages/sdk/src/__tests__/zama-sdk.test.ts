@@ -297,7 +297,7 @@ describe("ZamaSDK", () => {
 
       await vi.waitFor(() => {
         expect(warnSpy).toHaveBeenCalledWith(
-          expect.stringContaining("signer lifecycle cleanup failed"),
+          expect.stringContaining("revoke previous identity failed"),
           expect.any(Error),
         );
       });

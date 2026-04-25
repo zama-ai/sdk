@@ -106,11 +106,17 @@ export function eip1193Subscribe(
   provider
     .request({ method: "eth_accounts" })
     .then((accounts) => handleAccountsChanged(accounts as Address[]))
-    .catch(() => {});
+    .catch((error) => {
+      // oxlint-disable-next-line no-console
+      console.warn("[zama-sdk] eth_accounts probe failed:", error);
+    });
   provider
     .request({ method: "eth_chainId" })
     .then((chainId) => handleChainChanged(chainId as string))
-    .catch(() => {});
+    .catch((error) => {
+      // oxlint-disable-next-line no-console
+      console.warn("[zama-sdk] eth_chainId probe failed:", error);
+    });
 
   return () => {
     active = false;
