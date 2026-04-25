@@ -4032,6 +4032,8 @@ Clears the session signature **and** cached decrypted values without specifying 
 await sdk.revokeSession();
 ```
 
+`revokeSession()` targets the live signer identity at invocation time. Call it before disconnecting a wallet, or rely on signer lifecycle cleanup to revoke the previous identity during disconnect, account change, or chain change handling.
+
 ### dispose
 
 `() => void`

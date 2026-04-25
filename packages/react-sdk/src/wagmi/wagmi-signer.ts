@@ -14,6 +14,14 @@ import type { Config } from "wagmi";
 import { getChainId, signTypedData, writeContract } from "wagmi/actions";
 import { getConnection, watchConnection } from "./compat";
 
+type WagmiConnection = ReturnType<typeof getConnection>;
+
+function identityFromConnection(connection: WagmiConnection) {
+  return connection.status === "connected"
+    ? { address: getAddress(connection.address), chainId: connection.chainId }
+    : undefined;
+}
+
 /** Configuration for {@link WagmiSigner}. */
 export interface WagmiSignerConfig {
   /** Wagmi `Config` — same instance passed to {@link WagmiProvider}. */
@@ -68,20 +76,20 @@ export class WagmiSigner implements GenericSigner {
   }
 
   subscribe(onIdentityChange: SignerIdentityListener): () => void {
+    function emitIfChanged(
+      previous: ReturnType<typeof identityFromConnection>,
+      next: typeof previous,
+    ) {
+      if (previous?.address !== next?.address || previous?.chainId !== next?.chainId) {
+        onIdentityChange({ previous, next });
+      }
+    }
+
+    emitIfChanged(undefined, identityFromConnection(getConnection(this.#config)));
+
     return watchConnection(this.#config, {
       onChange(connection, prevConnection) {
-        const previous =
-          prevConnection.status === "connected"
-            ? { address: getAddress(prevConnection.address), chainId: prevConnection.chainId }
-            : undefined;
-        const next =
-          connection.status === "connected"
-            ? { address: getAddress(connection.address), chainId: connection.chainId }
-            : undefined;
-
-        if (previous?.address !== next?.address || previous?.chainId !== next?.chainId) {
-          onIdentityChange({ previous, next });
-        }
+        emitIfChanged(identityFromConnection(prevConnection), identityFromConnection(connection));
       },
     });
   }

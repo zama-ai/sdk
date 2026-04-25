@@ -45,9 +45,17 @@ export function eip1193Subscribe(
   let current: SignerIdentity | undefined;
   let observedAddress: Address | undefined;
   let observedChainId: number | undefined;
+  let active = true;
 
-  function emit(next: SignerIdentity | undefined): void {
-    if (!next && !current) {
+  function reconcile(): void {
+    if (!active) {
+      return;
+    }
+    const next =
+      observedAddress && observedChainId !== undefined
+        ? { address: observedAddress, chainId: observedChainId }
+        : undefined;
+    if (current?.address === next?.address && current?.chainId === next?.chainId) {
       return;
     }
     const previous = current;
@@ -58,7 +66,8 @@ export function eip1193Subscribe(
   const handleAccountsChanged: EIP1193EventMap["accountsChanged"] = (accounts) => {
     if (accounts.length === 0 || !accounts[0]) {
       observedAddress = undefined;
-      emit(undefined);
+      observedChainId = undefined;
+      reconcile();
       return;
     }
 
@@ -68,20 +77,13 @@ export function eip1193Subscribe(
     }
 
     observedAddress = nextAddress;
-    const chainId = current?.chainId ?? observedChainId;
-    if (chainId === undefined) {
-      return;
-    }
-    if (current && nextAddress === current.address) {
-      return;
-    }
-
-    emit({ address: nextAddress, chainId });
+    reconcile();
   };
 
   const handleDisconnect: EIP1193EventMap["disconnect"] = () => {
     observedAddress = undefined;
-    emit(undefined);
+    observedChainId = undefined;
+    reconcile();
   };
 
   const handleChainChanged: EIP1193EventMap["chainChanged"] = (chainId) => {
@@ -91,16 +93,7 @@ export function eip1193Subscribe(
     }
 
     observedChainId = nextChainId;
-    if (current && nextChainId === current.chainId) {
-      return;
-    }
-
-    const nextAddress = current?.address ?? observedAddress;
-    if (!nextAddress) {
-      return;
-    }
-
-    emit({ address: nextAddress, chainId: nextChainId });
+    reconcile();
   };
 
   provider.on("accountsChanged", handleAccountsChanged);
@@ -112,14 +105,15 @@ export function eip1193Subscribe(
   // if the wallet is already connected when subscribe is called.
   provider
     .request({ method: "eth_accounts" })
-    .then(handleAccountsChanged)
+    .then((accounts) => handleAccountsChanged(accounts as Address[]))
     .catch(() => {});
   provider
     .request({ method: "eth_chainId" })
-    .then(handleChainChanged)
+    .then((chainId) => handleChainChanged(chainId as string))
     .catch(() => {});
 
   return () => {
+    active = false;
     provider.removeListener("accountsChanged", handleAccountsChanged);
     provider.removeListener("disconnect", handleDisconnect);
     provider.removeListener("chainChanged", handleChainChanged);

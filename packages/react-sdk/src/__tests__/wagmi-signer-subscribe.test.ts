@@ -4,6 +4,10 @@ import type { Config } from "wagmi";
 
 const ADDR_A = TEST_ADDR_A;
 const ADDR_B = TEST_ADDR_B;
+const { mockGetConnection, mockUnsubscribe } = vi.hoisted(() => ({
+  mockGetConnection: vi.fn().mockReturnValue({ address: "0xuser" }),
+  mockUnsubscribe: vi.fn(),
+}));
 
 interface Connection {
   status: "connected" | "connecting" | "disconnected" | "reconnecting";
@@ -13,12 +17,11 @@ interface Connection {
 type OnChange = (connection: Connection, prevConnection: Connection) => void;
 
 let capturedOnChange: OnChange | undefined;
-const mockUnsubscribe = vi.fn();
 
 vi.mock(import("wagmi/actions"), () => ({
   getChainId: vi.fn().mockReturnValue(31337),
   getBlock: vi.fn().mockResolvedValue({ timestamp: 1700000000n }),
-  getConnection: vi.fn().mockReturnValue({ address: "0xuser" }),
+  getConnection: mockGetConnection,
   readContract: vi.fn(),
   signTypedData: vi.fn(),
   waitForTransactionReceipt: vi.fn(),
@@ -47,6 +50,7 @@ const wit = base.extend<WagmiFixtures>({
   wagmiSigner: async ({ wagmiConfig }, use) => {
     capturedOnChange = undefined;
     mockUnsubscribe.mockClear();
+    mockGetConnection.mockReturnValue({ address: "0xuser" });
     await use(new WagmiSigner({ config: wagmiConfig }));
   },
   wagmiProvider: async ({ wagmiConfig }, use) => {
@@ -68,6 +72,18 @@ describe("WagmiSigner.subscribe", () => {
       expect(unsubscribe).toBe(mockUnsubscribe);
     },
   );
+
+  wit("seeds the currently connected identity", ({ wagmiSigner, onIdentityChange }) => {
+    mockGetConnection.mockReturnValue({ status: "connected", address: ADDR_A, chainId: 1 });
+
+    wagmiSigner.subscribe(onIdentityChange);
+
+    expect(onIdentityChange).toHaveBeenCalledOnce();
+    expect(onIdentityChange).toHaveBeenCalledWith({
+      previous: undefined,
+      next: { address: ADDR_A, chainId: 1 },
+    });
+  });
 
   wit(
     "fires connect when transitioning from disconnected to connected",

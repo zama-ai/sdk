@@ -12,7 +12,9 @@ import { ZamaProvider } from "./provider";
 import { createMockToken } from "./__tests__/mutation-test-helpers";
 
 export { afterEach, beforeEach, describe, expect, vi, type Mock } from "vitest";
-export { TEST_ADDR_A, TEST_ADDR_B } from "../../sdk/src/test-fixtures";
+
+export const TEST_ADDR_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as const;
+export const TEST_ADDR_B = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as const;
 
 // ---------------------------------------------------------------------------
 // Internal helpers (not exported — used by fixtures only)

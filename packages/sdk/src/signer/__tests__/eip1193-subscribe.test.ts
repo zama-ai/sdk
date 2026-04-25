@@ -17,7 +17,9 @@ const CHAIN_31337 = 31337;
 
 interface FakeProviderOptions {
   accounts?: Address[];
+  accountsPromise?: Promise<Address[]>;
   chainId?: string;
+  chainIdPromise?: Promise<string>;
 }
 
 function createFakeProvider(opts: FakeProviderOptions = {}) {
@@ -25,9 +27,15 @@ function createFakeProvider(opts: FakeProviderOptions = {}) {
   return {
     request: vi.fn((args: { method: string }) => {
       if (args.method === "eth_accounts") {
+        if (opts.accountsPromise) {
+          return opts.accountsPromise;
+        }
         return Promise.resolve(opts.accounts ?? []);
       }
       if (args.method === "eth_chainId") {
+        if (opts.chainIdPromise) {
+          return opts.chainIdPromise;
+        }
         return opts.chainId ? Promise.resolve(opts.chainId) : Promise.reject(new Error("no chain"));
       }
       return Promise.reject(new Error(`unhandled: ${args.method}`));
@@ -142,10 +150,14 @@ describe("eip1193Subscribe", () => {
 
       provider.emit("accountsChanged", []);
       provider.emit("accountsChanged", [ADDR_A]);
+      expect(onIdentityChange).toHaveBeenCalledTimes(2);
+      provider.emit("chainChanged", "0x7a69");
       expect(onIdentityChange).toHaveBeenCalledTimes(3);
 
       provider.emit("accountsChanged", []);
       provider.emit("accountsChanged", [ADDR_A]);
+      expect(onIdentityChange).toHaveBeenCalledTimes(4);
+      provider.emit("chainChanged", "0x7a69");
       expect(onIdentityChange).toHaveBeenCalledTimes(5);
     },
   );
@@ -249,6 +261,50 @@ describe("eip1193Subscribe", () => {
     provider.emit("chainChanged", "0x1");
     provider.emit("disconnect");
     expect(onIdentityChange).toHaveBeenCalledOnce();
+  });
+
+  it("does not emit when initial probes resolve after unsubscribe", async () => {
+    let resolveAccounts!: (accounts: Address[]) => void;
+    let resolveChainId!: (chainId: string) => void;
+    const accountsPromise = new Promise<Address[]>((resolve) => {
+      resolveAccounts = resolve;
+    });
+    const chainIdPromise = new Promise<string>((resolve) => {
+      resolveChainId = resolve;
+    });
+    const provider = createFakeProvider({ accountsPromise, chainIdPromise });
+    const onIdentityChange = vi.fn();
+    const unsub = eip1193Subscribe(provider, onIdentityChange);
+
+    unsub();
+    resolveAccounts([ADDR_A]);
+    resolveChainId("0x7a69");
+
+    await Promise.all([accountsPromise, chainIdPromise]);
+    expect(onIdentityChange).not.toHaveBeenCalled();
+  });
+
+  it("does not reuse a stale observed chain after disconnect", () => {
+    const provider = createFakeProvider();
+    const onIdentityChange = vi.fn();
+    eip1193Subscribe(provider, onIdentityChange);
+
+    provider.emit("accountsChanged", [ADDR_A]);
+    provider.emit("chainChanged", "0x1");
+    expect(onIdentityChange).toHaveBeenCalledOnce();
+
+    provider.emit("disconnect");
+    expect(onIdentityChange).toHaveBeenCalledTimes(2);
+
+    provider.emit("accountsChanged", [ADDR_A]);
+    expect(onIdentityChange).toHaveBeenCalledTimes(2);
+
+    provider.emit("chainChanged", "0x7a69");
+    expect(onIdentityChange).toHaveBeenCalledTimes(3);
+    expect(onIdentityChange).toHaveBeenLastCalledWith({
+      previous: undefined,
+      next: { address: ADDR_A, chainId: CHAIN_31337 },
+    });
   });
 
   it("probes initial identity from an already-connected wallet", async () => {

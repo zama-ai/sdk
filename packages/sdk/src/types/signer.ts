@@ -51,6 +51,8 @@ export interface GenericSigner {
   /**
    * Subscribe to wallet identity transitions (connect, disconnect, account
    * change, chain change). Returns an unsubscribe function.
+   * Built-in browser adapters also emit the current connected identity when
+   * subscribe is called and the wallet is already connected.
    *
    * Optional — server-side signers or custom implementations that don't
    * support lifecycle events can omit this method entirely.
