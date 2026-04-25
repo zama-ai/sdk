@@ -122,7 +122,7 @@ describe("EthersSigner", () => {
         const mockEthereum = {
           on: vi.fn(),
           removeListener: vi.fn(),
-          request: vi.fn(),
+          request: vi.fn().mockRejectedValue(new Error("not connected")),
         };
         const ethersSigner = new EthersSigner({
           ethereum: mockEthereum as never,
@@ -147,7 +147,7 @@ describe("EthersSigner", () => {
       const mockEthereum = {
         on: vi.fn(),
         removeListener: vi.fn(),
-        request: vi.fn(),
+        request: vi.fn().mockRejectedValue(new Error("not connected")),
       };
       const signer = createEthersMockSigner();
       mockGetSigner.mockResolvedValue(signer);
@@ -364,7 +364,7 @@ describe("EthersProvider", () => {
       const mockEthereum = {
         on: vi.fn(),
         removeListener: vi.fn(),
-        request: vi.fn(),
+        request: vi.fn().mockRejectedValue(new Error("not connected")),
       };
       // Does not throw
       const provider = new EthersProvider({ ethereum: mockEthereum as never });

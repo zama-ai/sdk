@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, type Mock } from "../test-fixtures";
+import { describe, it, expect, vi, type Mock, TEST_ADDR_B } from "../test-fixtures";
 import { ZamaSDK } from "../zama-sdk";
 import { ReadonlyToken } from "../token/readonly-token";
 import { Token } from "../token/token";
@@ -11,7 +11,7 @@ import type { Address } from "viem";
 import type { Handle } from "../relayer/relayer-sdk.types";
 import type { DecryptHandle } from "../query/user-decrypt";
 
-const NEXT_USER_ADDRESS = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;
+const NEXT_USER_ADDRESS = TEST_ADDR_B;
 
 describe("ZamaSDK", () => {
   it("exposes signer and storage", ({ relayer, signer, storage }) => {
@@ -180,18 +180,21 @@ describe("ZamaSDK", () => {
     );
   });
 
-  it("revokeSession calls clearCaches on credentials manager", async ({
+  it("revokeSession revokes the current session signature", async ({
     relayer,
     provider,
     signer,
     storage,
+    sessionStorage,
+    userAddress,
   }) => {
-    const sdk = new ZamaSDK({ relayer, provider, signer, storage });
-    const clearCachesSpy = vi.spyOn(sdk.credentials, "clearCaches" as never);
+    const sdk = new ZamaSDK({ relayer, provider, signer, storage, sessionStorage });
+    const key = await CredentialsManager.computeStoreKey(userAddress, 31337);
+    await sessionStorage.set(key, "0xsig");
 
     await sdk.revokeSession();
 
-    expect(clearCachesSpy).toHaveBeenCalledOnce();
+    expect(await sessionStorage.get(key)).toBeNull();
   });
 
   describe("keypairTTL validation", () => {
@@ -283,7 +286,9 @@ describe("ZamaSDK", () => {
         sessionStorage,
       });
 
-      vi.spyOn(sdk.cache, "clearAll").mockRejectedValueOnce(new Error("cache blew up"));
+      vi.spyOn(sessionStorage, "delete").mockRejectedValueOnce(new Error("session blew up"));
+      const listener = vi.fn();
+      sdk.onIdentityChange(listener);
 
       emitChange({
         previous: { address: userAddress, chainId: 31337 },
@@ -296,43 +301,19 @@ describe("ZamaSDK", () => {
           expect.any(Error),
         );
       });
-
-      warnSpy.mockRestore();
-    });
-
-    it("disconnect calls clearCaches on credentials manager", async ({
-      createMockRelayer,
-      createMockSigner,
-      userAddress,
-      storage,
-      sessionStorage,
-    }) => {
-      const { signer, emitChange } = createSubscribeSigner(createMockSigner());
-
-      const sdk = new ZamaSDK({
-        relayer: createMockRelayer(),
-        signer,
-        storage,
-        sessionStorage,
-      });
-
-      const clearCachesSpy = vi.spyOn(sdk.credentials, "clearCaches" as never);
-
-      emitChange({
+      expect(listener).toHaveBeenCalledWith({
         previous: { address: userAddress, chainId: 31337 },
         next: undefined,
       });
 
-      await vi.waitFor(() => {
-        expect(clearCachesSpy).toHaveBeenCalledOnce();
-      });
-
-      sdk.terminate();
+      warnSpy.mockRestore();
     });
 
-    it("accountChange calls clearCaches on credentials manager", async ({
+    it("initial identity discovery does not revoke sessions or clear cache", async ({
+      handle,
       createMockRelayer,
       createMockSigner,
+      tokenAddress,
       userAddress,
       storage,
       sessionStorage,
@@ -346,16 +327,52 @@ describe("ZamaSDK", () => {
         sessionStorage,
       });
 
-      const clearCachesSpy = vi.spyOn(sdk.credentials, "clearCaches" as never);
+      const keyA = await CredentialsManager.computeStoreKey(userAddress, 31337);
+      await sessionStorage.set(keyA, "0xsigA");
+      await sdk.cache.set(userAddress, tokenAddress, handle, 123n);
+
+      emitChange({
+        previous: undefined,
+        next: { address: userAddress, chainId: 31337 },
+      });
+
+      await Promise.resolve();
+      expect(await sessionStorage.get(keyA)).toBe("0xsigA");
+      expect(await sdk.cache.get(userAddress, tokenAddress, handle)).toBe(123n);
+
+      sdk.terminate();
+    });
+
+    it("clears only the previous requester's decrypt cache on identity change", async ({
+      handle,
+      createMockRelayer,
+      createMockSigner,
+      tokenAddress,
+      userAddress,
+      storage,
+      sessionStorage,
+    }) => {
+      const { signer, emitChange } = createSubscribeSigner(createMockSigner());
+
+      const sdk = new ZamaSDK({
+        relayer: createMockRelayer(),
+        signer,
+        storage,
+        sessionStorage,
+      });
+
+      await sdk.cache.set(userAddress, tokenAddress, handle, 123n);
+      await sdk.cache.set(NEXT_USER_ADDRESS, tokenAddress, handle, 456n);
 
       emitChange({
         previous: { address: userAddress, chainId: 31337 },
         next: { address: NEXT_USER_ADDRESS, chainId: 31337 },
       });
 
-      await vi.waitFor(() => {
-        expect(clearCachesSpy).toHaveBeenCalledOnce();
+      await vi.waitFor(async () => {
+        expect(await sdk.cache.get(userAddress, tokenAddress, handle)).toBeNull();
       });
+      expect(await sdk.cache.get(NEXT_USER_ADDRESS, tokenAddress, handle)).toBe(456n);
 
       sdk.terminate();
     });
@@ -474,11 +491,11 @@ describe("ZamaSDK", () => {
       createMockRelayer,
       createMockSigner,
       createMockProvider,
+      userAddress,
       storage,
       sessionStorage,
     }) => {
-      const addr = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
-      const { signer, emitChange } = createSubscribeSigner(createMockSigner(addr));
+      const { signer, emitChange } = createSubscribeSigner(createMockSigner(userAddress));
 
       const mockProvider = createMockProvider();
       const sdk = new ZamaSDK({
@@ -489,12 +506,12 @@ describe("ZamaSDK", () => {
         sessionStorage,
       });
 
-      const oldKey = await CredentialsManager.computeStoreKey(addr, 31337);
+      const oldKey = await CredentialsManager.computeStoreKey(userAddress, 31337);
       await sessionStorage.set(oldKey, "0xsigA");
 
       emitChange({
-        previous: { address: addr, chainId: 31337 },
-        next: { address: addr, chainId: 1 },
+        previous: { address: userAddress, chainId: 31337 },
+        next: { address: userAddress, chainId: 1 },
       });
 
       await vi.waitFor(async () => {
@@ -504,7 +521,7 @@ describe("ZamaSDK", () => {
       // Align both signer and provider to the new chain before calling revokeSession
       (signer.getChainId as Mock).mockResolvedValue(1);
       (mockProvider.getChainId as Mock).mockResolvedValue(1);
-      const newKey = await CredentialsManager.computeStoreKey(addr, 1);
+      const newKey = await CredentialsManager.computeStoreKey(userAddress, 1);
       await sessionStorage.set(newKey, "0xsigB");
 
       await sdk.revokeSession();

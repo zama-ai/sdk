@@ -6,7 +6,7 @@ import {
 } from "viem";
 import type { SignerIdentity, SignerIdentityListener } from "../types";
 
-type MinimalProvider = Pick<EIP1193Provider, "on" | "removeListener">;
+type MinimalProvider = Pick<EIP1193Provider, "on" | "removeListener" | "request">;
 
 function normalizeAddress(address: Address | undefined): Address | undefined {
   if (!address) {
@@ -28,9 +28,11 @@ function parseChainId(chainId: string): number | undefined {
  * Subscribe to EIP-1193 wallet events and translate them into
  * {@link SignerIdentityChange} transitions.
  *
- * Shared by `ViemSigner` and `EthersSigner`. The helper maintains a local
- * identity snapshot derived only from observed events. It never probes the
- * live signer to complete a lifecycle transition.
+ * Shared by `ViemSigner` and `EthersSigner`. On subscribe, the current
+ * accounts and chain are probed via `eth_accounts` / `eth_chainId` so that
+ * the initial identity is populated even when the wallet is already connected
+ * and no change events fire. The probe results flow through the same handlers
+ * as real events, so arrival order doesn't matter.
  */
 export function eip1193Subscribe(
   provider: MinimalProvider | undefined,
@@ -104,6 +106,18 @@ export function eip1193Subscribe(
   provider.on("accountsChanged", handleAccountsChanged);
   provider.on("disconnect", handleDisconnect);
   provider.on("chainChanged", handleChainChanged);
+
+  // Seed initial identity for already-connected wallets. EIP-1193 events only
+  // fire on *changes*, so without this probe the subscription would never emit
+  // if the wallet is already connected when subscribe is called.
+  provider
+    .request({ method: "eth_accounts" })
+    .then(handleAccountsChanged)
+    .catch(() => {});
+  provider
+    .request({ method: "eth_chainId" })
+    .then(handleChainChanged)
+    .catch(() => {});
 
   return () => {
     provider.removeListener("accountsChanged", handleAccountsChanged);

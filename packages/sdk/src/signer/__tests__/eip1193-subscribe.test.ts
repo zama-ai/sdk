@@ -1,15 +1,37 @@
 import type { Address } from "viem";
-import { test as base, describe, expect, it, vi } from "../../test-fixtures";
+import {
+  test as base,
+  describe,
+  expect,
+  it,
+  vi,
+  TEST_ADDR_A,
+  TEST_ADDR_B,
+} from "../../test-fixtures";
 import { eip1193Subscribe } from "../eip1193-subscribe";
 
-const ADDR_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
-const ADDR_B = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;
+const ADDR_A = TEST_ADDR_A;
+const ADDR_B = TEST_ADDR_B;
 const CHAIN_1 = 1;
 const CHAIN_31337 = 31337;
 
-function createFakeProvider() {
+interface FakeProviderOptions {
+  accounts?: Address[];
+  chainId?: string;
+}
+
+function createFakeProvider(opts: FakeProviderOptions = {}) {
   const listeners = new Map<string, Set<(...args: never[]) => void>>();
   return {
+    request: vi.fn((args: { method: string }) => {
+      if (args.method === "eth_accounts") {
+        return Promise.resolve(opts.accounts ?? []);
+      }
+      if (args.method === "eth_chainId") {
+        return opts.chainId ? Promise.resolve(opts.chainId) : Promise.reject(new Error("no chain"));
+      }
+      return Promise.reject(new Error(`unhandled: ${args.method}`));
+    }),
     on(event: string, fn: (...args: never[]) => void) {
       if (!listeners.has(event)) {
         listeners.set(event, new Set());
@@ -110,7 +132,7 @@ describe("eip1193Subscribe", () => {
   });
 
   eit(
-    "revokes on repeated lock/unlock cycles with same account",
+    "emits disconnect and reconnect transitions for repeated lock/unlock cycles",
     async ({ provider, onIdentityChange }) => {
       eip1193Subscribe(provider, onIdentityChange);
 
@@ -212,25 +234,47 @@ describe("eip1193Subscribe", () => {
     expect(provider.listenerCount("chainChanged")).toBe(0);
   });
 
-  eit(
-    "does not emit connect when no chain has been observed",
-    async ({ provider, onIdentityChange }) => {
-      eip1193Subscribe(provider, onIdentityChange);
+  it("does not fire events after unsubscribe", () => {
+    const provider = createFakeProvider();
+    const onIdentityChange = vi.fn();
+    const unsub = eip1193Subscribe(provider, onIdentityChange);
 
-      provider.emit("accountsChanged", [ADDR_A]);
+    provider.emit("accountsChanged", [ADDR_A]);
+    provider.emit("chainChanged", "0x7a69");
+    expect(onIdentityChange).toHaveBeenCalledOnce();
 
-      expect(onIdentityChange).not.toHaveBeenCalled();
-    },
-  );
+    unsub();
 
-  eit(
-    "does not emit connect when no address has been observed",
-    async ({ provider, onIdentityChange }) => {
-      eip1193Subscribe(provider, onIdentityChange);
+    provider.emit("accountsChanged", [ADDR_B]);
+    provider.emit("chainChanged", "0x1");
+    provider.emit("disconnect");
+    expect(onIdentityChange).toHaveBeenCalledOnce();
+  });
 
-      provider.emit("chainChanged", "0x1");
+  it("probes initial identity from an already-connected wallet", async () => {
+    const provider = createFakeProvider({ accounts: [ADDR_A], chainId: "0x7a69" });
+    const onIdentityChange = vi.fn();
+    eip1193Subscribe(provider, onIdentityChange);
 
-      expect(onIdentityChange).not.toHaveBeenCalled();
-    },
-  );
+    expect(onIdentityChange).not.toHaveBeenCalled();
+
+    await vi.waitFor(() => {
+      expect(onIdentityChange).toHaveBeenCalledOnce();
+    });
+    expect(onIdentityChange).toHaveBeenCalledWith({
+      previous: undefined,
+      next: { address: ADDR_A, chainId: CHAIN_31337 },
+    });
+  });
+
+  it("does not emit from probe when wallet is not connected", async () => {
+    const provider = createFakeProvider({ accounts: [], chainId: "0x1" });
+    const onIdentityChange = vi.fn();
+    eip1193Subscribe(provider, onIdentityChange);
+
+    await vi.waitFor(() => {
+      expect(provider.request).toHaveBeenCalledTimes(2);
+    });
+    expect(onIdentityChange).not.toHaveBeenCalled();
+  });
 });

@@ -193,8 +193,8 @@ export class ZamaSDK {
     try {
       if (change.previous) {
         await this.credentials.revokeFor(change.previous);
+        await this.cache.clearForRequester(change.previous.address);
       }
-      await this.cache.clearAll();
     } catch (error) {
       // oxlint-disable-next-line no-console
       console.warn("[zama-sdk] signer lifecycle cleanup failed:", error);

@@ -12,6 +12,7 @@ import { ZamaProvider } from "./provider";
 import { createMockToken } from "./__tests__/mutation-test-helpers";
 
 export { afterEach, beforeEach, describe, expect, vi, type Mock } from "vitest";
+export { TEST_ADDR_A, TEST_ADDR_B } from "../../sdk/src/test-fixtures";
 
 // ---------------------------------------------------------------------------
 // Internal helpers (not exported — used by fixtures only)

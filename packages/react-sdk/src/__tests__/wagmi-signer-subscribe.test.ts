@@ -1,9 +1,9 @@
-import { test as base, describe, expect } from "../test-fixtures";
+import { test as base, describe, expect, TEST_ADDR_A, TEST_ADDR_B } from "../test-fixtures";
 import type { Address } from "@zama-fhe/sdk";
 import type { Config } from "wagmi";
 
-const ADDR_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
-const ADDR_B = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;
+const ADDR_A = TEST_ADDR_A;
+const ADDR_B = TEST_ADDR_B;
 
 interface Connection {
   status: "connected" | "connecting" | "disconnected" | "reconnecting";
@@ -36,6 +36,7 @@ interface WagmiFixtures {
   wagmiConfig: Config;
   wagmiSigner: WagmiSigner;
   wagmiProvider: WagmiProvider;
+  onIdentityChange: ReturnType<typeof vi.fn>;
 }
 
 const wit = base.extend<WagmiFixtures>({
@@ -51,34 +52,41 @@ const wit = base.extend<WagmiFixtures>({
   wagmiProvider: async ({ wagmiConfig }, use) => {
     await use(new WagmiProvider({ config: wagmiConfig }));
   },
+  // eslint-disable-next-line no-empty-pattern
+  onIdentityChange: async ({}, use: (v: ReturnType<typeof vi.fn>) => Promise<void>) => {
+    await use(vi.fn());
+  },
 });
 
 describe("WagmiSigner.subscribe", () => {
-  wit("calls watchConnection and returns unsubscribe function", ({ wagmiSigner }) => {
-    const onIdentityChange = vi.fn();
-    const unsubscribe = wagmiSigner.subscribe(onIdentityChange);
+  wit(
+    "calls watchConnection and returns unsubscribe function",
+    ({ wagmiSigner, onIdentityChange }) => {
+      const unsubscribe = wagmiSigner.subscribe(onIdentityChange);
 
-    expect(capturedOnChange).toBeDefined();
-    expect(unsubscribe).toBe(mockUnsubscribe);
-  });
+      expect(capturedOnChange).toBeDefined();
+      expect(unsubscribe).toBe(mockUnsubscribe);
+    },
+  );
 
-  wit("fires connect when transitioning from disconnected to connected", ({ wagmiSigner }) => {
-    const onIdentityChange = vi.fn();
-    wagmiSigner.subscribe(onIdentityChange);
+  wit(
+    "fires connect when transitioning from disconnected to connected",
+    ({ wagmiSigner, onIdentityChange }) => {
+      wagmiSigner.subscribe(onIdentityChange);
 
-    capturedOnChange!(
-      { status: "connected", address: ADDR_A, chainId: 1 },
-      { status: "disconnected" },
-    );
-    expect(onIdentityChange).toHaveBeenCalledOnce();
-    expect(onIdentityChange).toHaveBeenCalledWith({
-      previous: undefined,
-      next: { address: ADDR_A, chainId: 1 },
-    });
-  });
+      capturedOnChange!(
+        { status: "connected", address: ADDR_A, chainId: 1 },
+        { status: "disconnected" },
+      );
+      expect(onIdentityChange).toHaveBeenCalledOnce();
+      expect(onIdentityChange).toHaveBeenCalledWith({
+        previous: undefined,
+        next: { address: ADDR_A, chainId: 1 },
+      });
+    },
+  );
 
-  wit("fires disconnect when status becomes disconnected", ({ wagmiSigner }) => {
-    const onIdentityChange = vi.fn();
+  wit("fires disconnect when status becomes disconnected", ({ wagmiSigner, onIdentityChange }) => {
     wagmiSigner.subscribe(onIdentityChange);
 
     capturedOnChange!(
@@ -92,16 +100,14 @@ describe("WagmiSigner.subscribe", () => {
     });
   });
 
-  wit("does not fire when already disconnected", ({ wagmiSigner }) => {
-    const onIdentityChange = vi.fn();
+  wit("does not fire when already disconnected", ({ wagmiSigner, onIdentityChange }) => {
     wagmiSigner.subscribe(onIdentityChange);
 
     capturedOnChange!({ status: "disconnected" }, { status: "disconnected" });
     expect(onIdentityChange).not.toHaveBeenCalled();
   });
 
-  wit("fires when address changes", ({ wagmiSigner }) => {
-    const onIdentityChange = vi.fn();
+  wit("fires when address changes", ({ wagmiSigner, onIdentityChange }) => {
     wagmiSigner.subscribe(onIdentityChange);
 
     capturedOnChange!(
@@ -115,8 +121,7 @@ describe("WagmiSigner.subscribe", () => {
     });
   });
 
-  wit("does not fire when address is unchanged", ({ wagmiSigner }) => {
-    const onIdentityChange = vi.fn();
+  wit("does not fire when address is unchanged", ({ wagmiSigner, onIdentityChange }) => {
     wagmiSigner.subscribe(onIdentityChange);
 
     capturedOnChange!(
@@ -126,8 +131,7 @@ describe("WagmiSigner.subscribe", () => {
     expect(onIdentityChange).not.toHaveBeenCalled();
   });
 
-  wit("fires when chain id changes", ({ wagmiSigner }) => {
-    const onIdentityChange = vi.fn();
+  wit("fires when chain id changes", ({ wagmiSigner, onIdentityChange }) => {
     wagmiSigner.subscribe(onIdentityChange);
 
     capturedOnChange!(
