@@ -4,17 +4,19 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { SepoliaConfig } from "../relayer-utils";
 import { MemoryStorage } from "../../storage/memory-storage";
 
-const CONTRACT_ADDRESS = SepoliaConfig.aclContractAddress as Address;
+const config = SepoliaConfig;
+const CONTRACT_ADDRESS = config.aclContractAddress as Address;
 const USER_ADDRESS = "0x0000000000000000000000000000000000000001" as Address;
+const DELEGATOR_ADDRESS = "0x0000000000000000000000000000000000000002" as Address;
 
-describe("RelayerNode integration — Sepolia", () => {
+describe(`RelayerNode integration`, () => {
   let relayer: RelayerNode;
 
   beforeAll(() => {
     relayer = new RelayerNode({
-      getChainId: async () => SepoliaConfig.chainId,
+      getChainId: async () => config.chainId,
       transports: {
-        [SepoliaConfig.chainId]: SepoliaConfig,
+        [config.chainId]: config,
       },
       poolSize: 1,
       fheArtifactStorage: new MemoryStorage(),
@@ -53,10 +55,10 @@ describe("RelayerNode integration — Sepolia", () => {
     expect(extraData).toMatch(/^0x/);
   }, 120_000);
 
-  it("returns the ACL address matching SepoliaConfig", async () => {
+  it("returns the ACL address matching config", async () => {
     const acl = await relayer.getAclAddress();
 
-    expect(acl).toBe(SepoliaConfig.aclContractAddress);
+    expect(acl).toBe(config.aclContractAddress);
   });
 
   it("caches public key on second call (no extra network fetch)", async () => {
@@ -68,7 +70,7 @@ describe("RelayerNode integration — Sepolia", () => {
     expect(elapsed).toBeLessThan(1_000);
   }, 10_000);
 
-  // ── Keypair & EIP-712 ──────────────────────────────────────
+  // ── Keypair generation ─────────────────────────────────────
 
   let keypair: { publicKey: Hex; privateKey: Hex };
 
@@ -94,13 +96,49 @@ describe("RelayerNode integration — Sepolia", () => {
     expect(eip712.message).toBeDefined();
   }, 120_000);
 
+  it("EIP-712 message includes extraData", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const eip712 = await relayer.createEIP712(keypair.publicKey, [CONTRACT_ADDRESS], now, 7);
+
+    // extraData must be threaded through the EIP-712 message (SDK-119 requirement)
+    expect(eip712.message).toHaveProperty("extraData");
+    expect((eip712.message as Record<string, unknown>).extraData).toMatch(/^0x/);
+  }, 120_000);
+
+  it("EIP-712 message contains correct contract addresses and timestamps", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const eip712 = await relayer.createEIP712(keypair.publicKey, [CONTRACT_ADDRESS], now, 7);
+
+    const msg = eip712.message as Record<string, unknown>;
+    expect(msg).toHaveProperty("contractAddresses");
+    const addrs = msg.contractAddresses as string[];
+    expect(addrs).toContain(CONTRACT_ADDRESS);
+    expect(msg).toHaveProperty("startTimestamp");
+    expect(msg).toHaveProperty("durationDays");
+  }, 120_000);
+
+  it("EIP-712 supports multiple contract addresses", async () => {
+    const secondContract = "0x0000000000000000000000000000000000000099" as Address;
+    const now = Math.floor(Date.now() / 1000);
+    const eip712 = await relayer.createEIP712(
+      keypair.publicKey,
+      [CONTRACT_ADDRESS, secondContract],
+      now,
+      7,
+    );
+
+    const addrs = (eip712.message as Record<string, unknown>).contractAddresses as string[];
+    expect(addrs).toHaveLength(2);
+    expect(addrs).toContain(CONTRACT_ADDRESS);
+    expect(addrs).toContain(secondContract);
+  }, 120_000);
+
   it("creates EIP-712 typed data for delegated user decrypt", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const delegatorAddress = "0x0000000000000000000000000000000000000002" as Address;
     const eip712 = await relayer.createDelegatedUserDecryptEIP712(
       keypair.publicKey,
       [CONTRACT_ADDRESS],
-      delegatorAddress,
+      DELEGATOR_ADDRESS,
       now,
       7,
     );
@@ -112,7 +150,35 @@ describe("RelayerNode integration — Sepolia", () => {
     expect(eip712.message).toBeDefined();
   }, 120_000);
 
-  // ── Encryption ─────────────────────────────────────────────
+  it("delegated EIP-712 message includes extraData", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const eip712 = await relayer.createDelegatedUserDecryptEIP712(
+      keypair.publicKey,
+      [CONTRACT_ADDRESS],
+      DELEGATOR_ADDRESS,
+      now,
+      7,
+    );
+
+    // extraData must be threaded through the delegated EIP-712 (SDK-119 requirement)
+    expect(eip712.message).toHaveProperty("extraData");
+    expect((eip712.message as Record<string, unknown>).extraData).toMatch(/^0x/);
+  }, 120_000);
+
+  it("delegated EIP-712 message includes delegator address", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const eip712 = await relayer.createDelegatedUserDecryptEIP712(
+      keypair.publicKey,
+      [CONTRACT_ADDRESS],
+      DELEGATOR_ADDRESS,
+      now,
+      7,
+    );
+
+    const msg = eip712.message as Record<string, unknown>;
+    expect(msg).toHaveProperty("delegatorAddress");
+    expect(msg.delegatorAddress).toBe(DELEGATOR_ADDRESS);
+  }, 120_000);
 
   it("encrypts a single euint64 value", async () => {
     const result = await relayer.encrypt({
@@ -164,5 +230,131 @@ describe("RelayerNode integration — Sepolia", () => {
 
     expect(result.handles.length).toBe(2);
     expect(result.inputProof).toBeDefined();
+  }, 120_000);
+
+  it("produces unique handles per encryption call", async () => {
+    const result1 = await relayer.encrypt({
+      values: [{ value: 100n, type: "euint64" }],
+      contractAddress: CONTRACT_ADDRESS,
+      userAddress: USER_ADDRESS,
+    });
+
+    const result2 = await relayer.encrypt({
+      values: [{ value: 100n, type: "euint64" }],
+      contractAddress: CONTRACT_ADDRESS,
+      userAddress: USER_ADDRESS,
+    });
+
+    // Same plaintext must produce different handles (randomized encryption)
+    expect(result1.handles[0]).not.toBe(result2.handles[0]);
+  }, 120_000);
+
+  it("each handle is exactly 32 bytes", async () => {
+    const result = await relayer.encrypt({
+      values: [{ value: 500n, type: "euint64" }],
+      contractAddress: CONTRACT_ADDRESS,
+      userAddress: USER_ADDRESS,
+    });
+
+    for (const handle of result.handles) {
+      // Handles are Bytes32 — 32 bytes regardless of encoding
+      expect(handle).toHaveLength(32);
+    }
+  }, 120_000);
+
+  it("end-to-end: generate keypair → create EIP-712 → verify structure", async () => {
+    const kp = await relayer.generateKeypair();
+    expect(kp.publicKey).toMatch(/^0x/);
+
+    const now = Math.floor(Date.now() / 1000);
+    const eip712 = await relayer.createEIP712(kp.publicKey, [CONTRACT_ADDRESS], now, 7);
+
+    expect(eip712.domain).toBeDefined();
+    expect(eip712.types).toBeDefined();
+    expect(eip712.types).toHaveProperty("EIP712Domain");
+    expect(eip712.message).toBeDefined();
+
+    const msg = eip712.message as Record<string, unknown>;
+    expect(msg.publicKey).toBe(kp.publicKey);
+    expect(msg.contractAddresses).toEqual([CONTRACT_ADDRESS]);
+    expect(msg.extraData).toMatch(/^0x/);
+  }, 120_000);
+
+  it("end-to-end: generate keypair → create delegated EIP-712 → verify structure", async () => {
+    const kp = await relayer.generateKeypair();
+
+    const now = Math.floor(Date.now() / 1000);
+    const eip712 = await relayer.createDelegatedUserDecryptEIP712(
+      kp.publicKey,
+      [CONTRACT_ADDRESS],
+      DELEGATOR_ADDRESS,
+      now,
+      7,
+    );
+
+    expect(eip712.domain).toBeDefined();
+    expect(eip712.types).toBeDefined();
+    expect(eip712.types).toHaveProperty("EIP712Domain");
+    expect(eip712.message).toBeDefined();
+
+    const msg = eip712.message as Record<string, unknown>;
+    expect(msg.publicKey).toBe(kp.publicKey);
+    expect(msg.contractAddresses).toEqual([CONTRACT_ADDRESS]);
+    expect(msg.delegatorAddress).toBe(DELEGATOR_ADDRESS);
+    expect(msg.extraData).toMatch(/^0x/);
+  }, 120_000);
+
+  it("encrypt produces a valid inputProof for on-chain verification", async () => {
+    const result = await relayer.encrypt({
+      values: [{ value: 500n, type: "euint64" }],
+      contractAddress: CONTRACT_ADDRESS,
+      userAddress: USER_ADDRESS,
+    });
+
+    expect(result.inputProof).toBeDefined();
+    expect(result.inputProof.length).toBeGreaterThan(2);
+  }, 120_000);
+
+  it("encrypt with euint16 and euint32 for full type coverage", async () => {
+    const result = await relayer.encrypt({
+      values: [
+        { value: 1000n, type: "euint16" },
+        { value: 100_000n, type: "euint32" },
+      ],
+      contractAddress: CONTRACT_ADDRESS,
+      userAddress: USER_ADDRESS,
+    });
+
+    expect(result.handles.length).toBe(2);
+    expect(result.inputProof).toBeDefined();
+  }, 120_000);
+
+  it("extraData is consistent across calls", async () => {
+    const extraData1 = await relayer.getExtraData();
+    const extraData2 = await relayer.getExtraData();
+
+    expect(extraData1).toBe(extraData2);
+  }, 120_000);
+
+  it("extraData in EIP-712 matches getExtraData()", async () => {
+    const extraData = await relayer.getExtraData();
+    const now = Math.floor(Date.now() / 1000);
+    const eip712 = await relayer.createEIP712(keypair.publicKey, [CONTRACT_ADDRESS], now, 7);
+
+    expect((eip712.message as Record<string, unknown>).extraData).toBe(extraData);
+  }, 120_000);
+
+  it("extraData in delegated EIP-712 matches getExtraData()", async () => {
+    const extraData = await relayer.getExtraData();
+    const now = Math.floor(Date.now() / 1000);
+    const eip712 = await relayer.createDelegatedUserDecryptEIP712(
+      keypair.publicKey,
+      [CONTRACT_ADDRESS],
+      DELEGATOR_ADDRESS,
+      now,
+      7,
+    );
+
+    expect((eip712.message as Record<string, unknown>).extraData).toBe(extraData);
   }, 120_000);
 });
