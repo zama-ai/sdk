@@ -30,10 +30,10 @@ cd my-confidential-dapp
 ## 2. Install dependencies
 
 ```bash
-pnpm add @zama-fhe/react-sdk @tanstack/react-query wagmi viem
+pnpm add @zama-fhe/sdk @zama-fhe/react-sdk @tanstack/react-query wagmi viem
 ```
 
-`@zama-fhe/react-sdk` re-exports everything from the core SDK, so we never need to import from `@zama-fhe/sdk` directly.
+`@zama-fhe/react-sdk` provides React hooks. Core SDK symbols (classes, types, chain presets, relayer factories) are imported from `@zama-fhe/sdk` directly.
 
 ## 3. Configure wagmi and the SDK
 
@@ -46,7 +46,7 @@ Create `src/config.ts`. This file sets up wagmi, the signer, and the relayer -- 
 import { createConfig, http } from "wagmi";
 import { sepolia } from "wagmi/chains";
 import { QueryClient } from "@tanstack/react-query";
-import { web } from "@zama-fhe/react-sdk";
+import { web } from "@zama-fhe/sdk";
 import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 import { sepolia as sepoliaFhe, type FheChain } from "@zama-fhe/sdk/chains";
 
@@ -308,7 +308,7 @@ Create `src/ErrorMessage.tsx`. The `matchZamaError` utility maps SDK error codes
 {% tab title="src/ErrorMessage.tsx" %}
 
 ```tsx
-import { matchZamaError } from "@zama-fhe/react-sdk";
+import { matchZamaError } from "@zama-fhe/sdk";
 
 export function ErrorMessage({ error }: { error: Error | null }) {
   if (!error) return null;

@@ -116,7 +116,7 @@ For full type information, see the [ViemSigner](/reference/sdk/ViemSigner), [Eth
 {% tab title="React + wagmi" %}
 
 ```tsx
-import { web } from "@zama-fhe/react-sdk";
+import { web } from "@zama-fhe/sdk";
 import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
 

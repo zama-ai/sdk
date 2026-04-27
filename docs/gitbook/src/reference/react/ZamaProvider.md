@@ -22,7 +22,8 @@ import { ZamaProvider } from "@zama-fhe/react-sdk";
 import { WagmiProvider, createConfig, http } from "wagmi";
 import { sepolia } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ZamaProvider, web } from "@zama-fhe/react-sdk";
+import { ZamaProvider } from "@zama-fhe/react-sdk";
+import { web } from "@zama-fhe/sdk";
 import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 import { sepolia as sepoliaFhe, type FheChain } from "@zama-fhe/sdk/chains";
 
@@ -66,7 +67,8 @@ function App() {
 import { createPublicClient, createWalletClient, custom, http } from "viem";
 import { sepolia } from "viem/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ZamaProvider, web } from "@zama-fhe/react-sdk";
+import { ZamaProvider } from "@zama-fhe/react-sdk";
+import { web } from "@zama-fhe/sdk";
 import { createConfig } from "@zama-fhe/sdk/viem";
 import { sepolia as sepoliaFhe, type FheChain } from "@zama-fhe/sdk/chains";
 
@@ -110,7 +112,8 @@ function App() {
 
 ```tsx
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ZamaProvider, cleartext } from "@zama-fhe/react-sdk";
+import { ZamaProvider } from "@zama-fhe/react-sdk";
+import { cleartext } from "@zama-fhe/sdk";
 import { createConfig } from "@zama-fhe/sdk/viem";
 import { hardhat } from "@zama-fhe/sdk/chains";
 
