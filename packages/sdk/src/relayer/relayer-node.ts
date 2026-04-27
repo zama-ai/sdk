@@ -24,12 +24,12 @@ import type {
   PublicParamsData,
   UserDecryptParams,
 } from "./relayer-sdk.types";
-import type { ExtendedFhevmInstanceConfig } from "./relayer-utils";
+import type { RelayerChainConfig } from "../chains/types";
 import { withRetry } from "./relayer-utils";
 
 export interface RelayerNodeConfig {
   /** FHE chain configuration. */
-  chain: ExtendedFhevmInstanceConfig;
+  chain: RelayerChainConfig;
   /** Worker thread pool — handles WASM operations off the main thread. */
   pool: NodeWorkerPool;
   /** Optional logger for observing worker lifecycle and request timing. */

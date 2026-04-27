@@ -1,4 +1,4 @@
-import type { FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/bundle";
+import type { RelayerChainConfig } from "../chains/types";
 import type {
   AddChainResponseData,
   CreateDelegatedEIP712Payload,
@@ -305,15 +305,17 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
     return this.sendRequest<GetPublicParamsResponseData>("GET_PUBLIC_PARAMS", params);
   }
 
-  async addChain(config: FhevmInstanceConfig): Promise<AddChainResponseData> {
-    return this.sendRequest<AddChainResponseData>(
-      "ADD_CHAIN",
-      { env: this.env, config } as any, // eslint-disable-line @typescript-eslint/no-explicit-any
-    );
+  async addChain(config: RelayerChainConfig): Promise<AddChainResponseData> {
+    return this.sendRequest<AddChainResponseData>("ADD_CHAIN", {
+      env: this.env as "node",
+      config,
+    });
   }
 
   async removeChain(chainId: number): Promise<RemoveChainResponseData> {
-    return this.sendRequest<RemoveChainResponseData>("REMOVE_CHAIN", { chainId });
+    return this.sendRequest<RemoveChainResponseData>("REMOVE_CHAIN", {
+      chainId,
+    });
   }
 
   // ===========================================================================

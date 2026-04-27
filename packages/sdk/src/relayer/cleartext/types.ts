@@ -1,16 +1,16 @@
-import type { Address, EIP1193Provider, Hex } from "viem";
+import type { Address, Hex } from "viem";
+import type { RelayerChainConfig } from "../../chains/types";
 
-export interface CleartextConfig {
-  chainId: number;
-  network: EIP1193Provider | string;
-  gatewayChainId: number;
-  aclContractAddress: Address;
+/**
+ * Configuration for the cleartext transport.
+ *
+ * Extends `RelayerChainConfig` (the shared per-chain config shape) with
+ * cleartext-specific fields. `executorAddress` is narrowed to `Address`
+ * (required) because cleartext mode reads mock plaintexts from the
+ * TFHEExecutor contract.
+ */
+export interface CleartextConfig extends RelayerChainConfig {
   executorAddress: Address;
-  registryAddress?: Address;
-  /** Address of the Decryption contract on the gateway chain. */
-  verifyingContractAddressDecryption: Address;
-  /** Address of the InputVerification contract on the gateway chain. */
-  verifyingContractAddressInputVerification: Address;
   /** Private key of the KMS signer used for EIP-712 verification of the decryption. */
   kmsSignerPrivateKey?: Hex;
   /** Private key of the input signer used for EIP-712 verification of the input verification. */

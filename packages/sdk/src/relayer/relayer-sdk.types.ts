@@ -10,7 +10,7 @@ import type {
 import type { Address, Hex } from "viem";
 import type { GenericLogger } from "../worker/worker.types";
 import type { GenericStorage } from "../types";
-import type { ExtendedFhevmInstanceConfig } from "./relayer-utils";
+import type { RelayerChainConfig } from "../chains/types";
 import type { RelayerWorkerClient } from "../worker/worker.client";
 
 // ============================================================================
@@ -39,7 +39,7 @@ export interface RelayerWebSecurityConfig {
 /** Configuration for RelayerWeb (browser backend) initialization. */
 export interface RelayerWebConfig {
   /** FHE chain configuration. */
-  chain: ExtendedFhevmInstanceConfig;
+  chain: RelayerChainConfig;
   /** Worker client — handles WASM operations off the main thread. */
   worker: RelayerWorkerClient;
   /** Security options (CSRF, CDN integrity). */

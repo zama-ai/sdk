@@ -1,17 +1,11 @@
 import type { FheChain } from "../chains";
 import { ConfigurationError } from "../errors";
-import type { ExtendedFhevmInstanceConfig } from "../relayer/relayer-utils";
+import type { RelayerChainConfig } from "../chains/types";
+import { toRelayerChainConfig } from "../chains/utils";
 import { IndexedDBStorage } from "../storage/indexeddb-storage";
 import { MemoryStorage } from "../storage/memory-storage";
 import type { GenericStorage } from "../types";
 import type { TransportConfig } from "./transports";
-
-// ── Chain normalization ─────────────────────────────────────────────────────
-
-/** Convert an `FheChain` (with `id`) to an `ExtendedFhevmInstanceConfig` (with `chainId`) for the relayer layer. */
-function toFhevmConfig({ id, ...rest }: FheChain): ExtendedFhevmInstanceConfig {
-  return { ...rest, chainId: id };
-}
 
 // ── Storage defaults ─────────────────────────────────────────────────────────
 
@@ -35,7 +29,7 @@ export function resolveStorage(
 // ── Chain transport resolution ───────────────────────────────────────────────
 
 export interface ResolvedChainTransport {
-  chain: ExtendedFhevmInstanceConfig;
+  chain: RelayerChainConfig;
   transport: TransportConfig;
 }
 
@@ -85,7 +79,7 @@ export function resolveChainTransports(
     }
 
     result.set(id, {
-      chain: toFhevmConfig(chainConfig),
+      chain: toRelayerChainConfig(chainConfig),
       transport: transportConfig,
     });
   }

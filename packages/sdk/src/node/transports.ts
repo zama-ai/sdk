@@ -1,6 +1,6 @@
 import type { TransportConfig } from "../config/transports";
 import { RelayerNode } from "../relayer/relayer-node";
-import type { ExtendedFhevmInstanceConfig } from "../relayer/relayer-utils";
+import type { RelayerChainConfig } from "../chains/types";
 import type { GenericStorage } from "../types";
 import { NodeWorkerPool } from "../worker/worker.node-pool";
 import type { GenericLogger } from "../worker/worker.types";
@@ -16,11 +16,8 @@ export interface NodePoolOptions {
 /** Node transport — narrows worker type to `NodeWorkerPool`. */
 export interface NodeTransportConfig extends TransportConfig {
   readonly type: "node";
-  readonly createWorker: (chains: ExtendedFhevmInstanceConfig[]) => NodeWorkerPool;
-  readonly createRelayer: (
-    chain: ExtendedFhevmInstanceConfig,
-    worker: NodeWorkerPool,
-  ) => RelayerNode;
+  readonly createWorker: (chains: RelayerChainConfig[]) => NodeWorkerPool;
+  readonly createRelayer: (chain: RelayerChainConfig, worker: NodeWorkerPool) => RelayerNode;
 }
 
 /**
@@ -38,7 +35,7 @@ export interface NodeTransportConfig extends TransportConfig {
  * ```
  */
 export function node(
-  chain?: Partial<ExtendedFhevmInstanceConfig>,
+  chain?: Partial<RelayerChainConfig>,
   options?: NodePoolOptions,
 ): NodeTransportConfig {
   return {

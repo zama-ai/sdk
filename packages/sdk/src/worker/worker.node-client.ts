@@ -1,6 +1,6 @@
 import { Worker } from "node:worker_threads";
 import { randomUUID } from "node:crypto";
-import type { FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/bundle";
+import type { RelayerChainConfig } from "../chains/types";
 import type {
   GenericLogger,
   WorkerEnv,
@@ -11,7 +11,7 @@ import type {
 import { BaseWorkerClient } from "./worker.base-client";
 
 export interface NodeWorkerClientConfig {
-  chains: FhevmInstanceConfig[];
+  chains: RelayerChainConfig[];
   /** Optional logger for tracing worker request lifecycle. */
   logger?: GenericLogger;
 }

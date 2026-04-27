@@ -4,7 +4,6 @@ export type {
   WebTransportConfig,
   CleartextTransportConfig,
   WebRelayerOptions,
-  CleartextChainConfig,
 } from "./transports";
 
 export type { ZamaConfig, ZamaConfigBase, AtLeastOneChain } from "./types";

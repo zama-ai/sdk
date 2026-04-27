@@ -19,7 +19,6 @@ export type {
   WebTransportConfig,
   CleartextTransportConfig,
   WebRelayerOptions,
-  CleartextChainConfig,
   AtLeastOneChain,
   ResolvedChainTransport,
 } from "./config";
@@ -56,14 +55,8 @@ export type {
 } from "@zama-fhe/relayer-sdk/bundle";
 export type { GenericLogger } from "./worker/worker.types";
 
-// Network preset configs
-export {
-  DefaultConfigs,
-  HardhatConfig,
-  MainnetConfig,
-  SepoliaConfig,
-} from "./relayer/relayer-utils";
-export type { ExtendedFhevmInstanceConfig } from "./relayer/relayer-utils";
+// Chain presets and types
+export { mainnet, sepolia, hoodi, hardhat, anvil, chains } from "./chains";
 export type { FheChain } from "./chains/types";
 
 // ERC-165 interface IDs

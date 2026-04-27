@@ -9,7 +9,8 @@ import {
   indexedDBStorage,
   savePendingUnshield,
 } from "@zama-fhe/react-sdk";
-import { RelayerCleartext, hoodiCleartextConfig } from "@zama-fhe/sdk/cleartext";
+import { RelayerCleartext } from "@zama-fhe/sdk/cleartext";
+import { hoodi } from "@zama-fhe/sdk/chains";
 import { EthersSigner } from "@zama-fhe/sdk/ethers";
 import { JsonRpcProvider } from "ethers";
 import { HOODI_RPC_URL } from "@/lib/config";
@@ -21,7 +22,7 @@ import { getEthereumProvider } from "@/lib/ethereum";
 // This file wires together the three SDK primitives every integration needs:
 //
 //   const signer  = new EthersSigner({ ethereum });
-//   const relayer = new RelayerCleartext({ ...hoodiCleartextConfig, network: HOODI_RPC_URL });
+//   const relayer = new RelayerCleartext({ chainId: hoodi.id, network: HOODI_RPC_URL, ... });
 //   <ZamaProvider relayer={relayer} signer={signer}
 //     storage={indexedDBStorage} sessionStorage={sessionDBStorage}>
 //
@@ -226,9 +227,21 @@ export function Providers({ children }: { children: ReactNode }) {
     return () => ethereum.removeListener("accountsChanged", handleAccountsChanged);
   }, []);
 
-  // hoodiCleartextConfig and HOODI_RPC_URL are build-time constants — relayer never changes.
+  // hoodi chain config and HOODI_RPC_URL are build-time constants — relayer never changes.
   const relayer = useMemo(
-    () => new RelayerCleartext({ ...hoodiCleartextConfig, network: HOODI_RPC_URL }),
+    () =>
+      new RelayerCleartext({
+        chainId: hoodi.id,
+        network: HOODI_RPC_URL,
+        gatewayChainId: hoodi.gatewayChainId,
+        aclContractAddress: hoodi.aclContractAddress as `0x${string}`,
+        executorAddress: hoodi.executorAddress!,
+        verifyingContractAddressDecryption:
+          hoodi.verifyingContractAddressDecryption as `0x${string}`,
+        verifyingContractAddressInputVerification:
+          hoodi.verifyingContractAddressInputVerification as `0x${string}`,
+        registryAddress: hoodi.registryAddress,
+      }),
     [],
   );
 

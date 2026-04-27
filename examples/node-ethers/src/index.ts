@@ -1,5 +1,5 @@
 import { Contract, formatUnits, JsonRpcProvider, Wallet } from "ethers";
-import { DelegationNotPropagatedError, MemoryStorage, SepoliaConfig, ZamaSDK } from "@zama-fhe/sdk";
+import { DelegationNotPropagatedError, MemoryStorage, sepolia, ZamaSDK } from "@zama-fhe/sdk";
 import { EthersSigner } from "@zama-fhe/sdk/ethers";
 import { RelayerNode } from "@zama-fhe/sdk/node";
 import type { Address } from "@zama-fhe/sdk";
@@ -61,9 +61,9 @@ async function main() {
   // RelayerNode uses Node.js worker_threads for FHE operations — pure backend,
   // no browser dependencies. A single instance can be shared across SDK objects.
   const relayer = new RelayerNode({
-    getChainId: async () => SepoliaConfig.chainId,
+    getChainId: async () => sepolia.id,
     transports: {
-      [SepoliaConfig.chainId]: {
+      [sepolia.id]: {
         network: SEPOLIA_RPC_URL,
         ...(auth && { auth }),
       },

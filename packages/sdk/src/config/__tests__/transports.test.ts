@@ -53,7 +53,15 @@ describe("node()", () => {
 });
 
 describe("cleartext()", () => {
-  it("returns tagged config with required chain", () => {
+  it("returns tagged config with no args", () => {
+    const result = cleartext();
+    expect(result.type).toBe("cleartext");
+    expect(result.chain).toBeUndefined();
+    expect(result.createRelayer).toBeTypeOf("function");
+    expect(result.createWorker).toBeUndefined();
+  });
+
+  it("returns tagged config with chain overrides", () => {
     const chain = { executorAddress: "0x1234" as `0x${string}` };
     const result = cleartext(chain);
     expect(result.type).toBe("cleartext");

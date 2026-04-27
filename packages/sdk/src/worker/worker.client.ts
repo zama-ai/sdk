@@ -1,4 +1,4 @@
-import type { FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/bundle";
+import type { RelayerChainConfig } from "../chains/types";
 import type {
   AddChainResponseData,
   GenericLogger,
@@ -15,7 +15,7 @@ import { default as workerCode, filename as workerFilename } from "./relayer-sdk
 /** Configuration for the worker client */
 export interface WorkerClientConfig {
   cdnUrl: string;
-  chains: FhevmInstanceConfig[];
+  chains: RelayerChainConfig[];
   csrfToken: string;
   /** Expected SHA-384 hex digest of the CDN bundle for integrity verification. */
   integrity?: string;
@@ -82,7 +82,7 @@ export class RelayerWorkerClient extends BaseWorkerClient<Worker, WorkerClientCo
     };
   }
 
-  override async addChain(config: FhevmInstanceConfig): Promise<AddChainResponseData> {
+  override async addChain(config: RelayerChainConfig): Promise<AddChainResponseData> {
     const csrfToken = this.config.csrfToken;
     return this.sendRequest<AddChainResponseData>(
       "ADD_CHAIN",

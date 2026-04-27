@@ -67,7 +67,7 @@ describe("resolveChainTransports", () => {
   });
 
   it("resolves chains with cleartext transport", () => {
-    const transport = cleartext({ executorAddress: "0xExec" as `0x${string}` });
+    const transport = cleartext();
     const result = resolveChainTransports([hoodiChain], {
       [560048]: transport,
     });
@@ -91,7 +91,7 @@ describe("resolveChainTransports", () => {
   });
 
   it("throws for cleartext transport with missing chain config", () => {
-    const transport = cleartext({ executorAddress: "0xExec" as `0x${string}` });
+    const transport = cleartext();
     expect(() => resolveChainTransports([], { [999]: transport })).toThrow(
       "Transport entries for chain(s) [999]",
     );
@@ -143,7 +143,9 @@ function buildDispatcher(
   const groups = new Map<any, [number, any][]>();
   for (const [chainId, config] of resolved) {
     const key = config.transport;
-    if (!groups.has(key)) {groups.set(key, []);}
+    if (!groups.has(key)) {
+      groups.set(key, []);
+    }
     groups.get(key)!.push([chainId, { ...config.chain, ...key.chain }]);
   }
   const relayers = new Map<number, any>();
@@ -171,7 +173,9 @@ describe("RelayerDispatcher (via transport factories)", () => {
     const groups = new Map<any, [number, any][]>();
     for (const [chainId, config] of resolved) {
       const key = config.transport;
-      if (!groups.has(key)) {groups.set(key, []);}
+      if (!groups.has(key)) {
+        groups.set(key, []);
+      }
       groups.get(key)!.push([chainId, { ...config.chain, ...key.chain }]);
     }
     const relayers = new Map<number, any>();
@@ -206,7 +210,7 @@ describe("RelayerDispatcher (via transport factories)", () => {
   it("supports mixed web + cleartext", () => {
     const relayer = buildDispatcher([sepoliaChain, hoodiChain], {
       [11155111]: web(),
-      [560048]: cleartext({ executorAddress: "0xExec" as `0x${string}` }),
+      [560048]: cleartext(),
     });
     expect(relayer.constructor.name).toBe("RelayerDispatcher");
   });

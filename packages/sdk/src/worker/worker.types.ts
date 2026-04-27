@@ -1,11 +1,11 @@
 import type {
-  FhevmInstanceConfig,
   InputProofBytesType,
   KmsDelegatedUserDecryptEIP712Type,
   KmsUserDecryptEIP712Type,
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/bundle";
 import type { ClearValueType, EncryptInput, Handle } from "../relayer/relayer-sdk.types";
+import type { RelayerChainConfig } from "../chains/types";
 import type { Address, Hex } from "viem";
 
 // ============================================================================
@@ -54,7 +54,7 @@ export interface BaseRequest {
 interface InitWebPayload {
   env: "web";
   cdnUrl: string;
-  chains: FhevmInstanceConfig[];
+  chains: RelayerChainConfig[];
   csrfToken: string;
   /** Expected SHA-384 hex digest for integrity verification. */
   integrity?: string;
@@ -64,7 +64,7 @@ interface InitWebPayload {
 
 interface InitNodePayload {
   env: "node";
-  chains: FhevmInstanceConfig[];
+  chains: RelayerChainConfig[];
 }
 
 export type InitPayload = InitWebPayload | InitNodePayload;
@@ -76,13 +76,13 @@ export interface InitRequest extends BaseRequest {
 
 interface AddChainWebPayload {
   env: "web";
-  config: FhevmInstanceConfig;
+  config: RelayerChainConfig;
   csrfToken: string;
 }
 
 interface AddChainNodePayload {
   env: "node";
-  config: FhevmInstanceConfig;
+  config: RelayerChainConfig;
 }
 
 export type AddChainPayload = AddChainWebPayload | AddChainNodePayload;

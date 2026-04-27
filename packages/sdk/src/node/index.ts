@@ -76,5 +76,5 @@ export type {
 // Storage
 export { asyncLocalStorage, AsyncLocalMapStorage } from "../storage/async-local-storage";
 
-// Network preset configs
-export { HardhatConfig, MainnetConfig, SepoliaConfig } from "../relayer/relayer-utils";
+// Chain presets
+export { mainnet, sepolia, hoodi, hardhat, anvil, chains } from "../chains";

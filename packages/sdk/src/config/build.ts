@@ -1,7 +1,7 @@
 import type { FheChain } from "../chains";
 import { RelayerDispatcher, type WorkerLike } from "../relayer/relayer-dispatcher";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
-import type { ExtendedFhevmInstanceConfig } from "../relayer/relayer-utils";
+import type { RelayerChainConfig } from "../chains/types";
 import type { GenericProvider, GenericSigner } from "../types";
 import { resolveChainTransports, resolveStorage } from "./resolve";
 import type { TransportConfig } from "./transports";
@@ -37,7 +37,7 @@ export function buildZamaConfig(
   const chainTransports = resolveChainTransports(chains, params.transports);
 
   // Group chains by transport reference — same object = same group = shared worker.
-  const groups = new Map<TransportConfig, Array<[number, ExtendedFhevmInstanceConfig]>>();
+  const groups = new Map<TransportConfig, Array<[number, RelayerChainConfig]>>();
   for (const [chainId, config] of chainTransports) {
     const key = config.transport;
     const mergedChain = { ...config.chain, ...key.chain };
