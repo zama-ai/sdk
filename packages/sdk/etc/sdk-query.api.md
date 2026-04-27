@@ -557,21 +557,11 @@ export function invalidateWalletLifecycleQueries(queryClient: QueryClientLike): 
 // @public (undocumented)
 export interface IsAllowedQueryConfig {
     contractAddresses: [Address, ...Address[]];
-    // (undocumented)
     query?: Record<string, unknown>;
-    signerScope?: IsAllowedSignerScope;
 }
 
 // @public (undocumented)
 export function isAllowedQueryOptions(sdk: ZamaSDK, config: IsAllowedQueryConfig): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.isAllowed.scope>>;
-
-// @public
-export interface IsAllowedSignerScope {
-    // (undocumented)
-    address: Address;
-    // (undocumented)
-    chainId: number;
-}
 
 // @public (undocumented)
 export interface IsConfidentialQueryConfig {
@@ -1264,13 +1254,8 @@ export const zamaQueryKeys: {
     };
     readonly isAllowed: {
         readonly all: readonly ["zama.isAllowed"];
-        readonly scope: (contractAddresses: Address[], signerScope?: {
-            address: Address;
-            chainId: number;
-        }) => readonly ["zama.isAllowed", {
+        readonly scope: (contractAddresses: Address[]) => readonly ["zama.isAllowed", {
             readonly contractAddresses: `0x${string}`[];
-            readonly signerAddress: `0x${string}` | null;
-            readonly chainId: number | null;
         }];
     };
     readonly publicKey: {

@@ -483,6 +483,9 @@ export class ReadonlyToken {
   /**
    * Whether a session signature is currently cached for the connected wallet.
    * Use this to check if decrypt operations can proceed without a wallet prompt.
+   *
+   * @returns `true` if a session signature is cached for the connected wallet and covers this token's contract.
+   * @throws {@link SignerRequiredError} if no signer is configured.
    */
   async isAllowed(): Promise<boolean> {
     return this.sdk.requireCredentials("isAllowed").isAllowed([this.address]);
@@ -495,6 +498,7 @@ export class ReadonlyToken {
    * cleared.
    *
    * @param contractAddresses - Contract addresses to revoke credentials for.
+   * @throws {@link SignerRequiredError} if no signer is configured.
    */
   async revoke(...contractAddresses: Address[]): Promise<void> {
     await this.sdk.requireCredentials("revoke").revoke(...contractAddresses);

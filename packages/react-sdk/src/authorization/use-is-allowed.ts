@@ -16,6 +16,12 @@ export interface UseIsAllowedConfig {
  * covers the given contract addresses. Returns `true` if decrypt operations
  * can proceed without a wallet prompt.
  *
+ * @returns Query result with `data: boolean` — `true` if a session signature is cached
+ *   and covers all `contractAddresses`. The query auto-disables when no signer is configured
+ *   (`data` stays `undefined`, `status` stays `"pending"`).
+ * @throws {@link SignerRequiredError} if the query runs without a signer configured
+ *   (the `enabled` guard normally prevents this; only reachable if the caller forces `query: { enabled: true }`).
+ *
  * @example
  * ```tsx
  * const { data: allowed } = useIsAllowed({ contractAddresses: ["0xToken"] });

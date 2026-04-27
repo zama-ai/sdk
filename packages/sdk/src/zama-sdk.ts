@@ -210,11 +210,12 @@ export class ZamaSDK {
   }
 
   /**
-   * Subscribe to wallet identity transitions. The SDK maintains a single
-   * internal subscription to `signer.subscribe` and fans out to listeners
-   * after running core cleanup (credential revocation + cache clear).
+   * Subscribe to wallet identity transitions.
    *
-   * Returns a no-op unsubscribe if the signer cannot emit lifecycle events.
+   * @param listener - Called on each transition with a {@link SignerIdentityChange} carrying
+   *   `previous` and `next` identity snapshots; either may be `undefined` for
+   *   connect and disconnect transitions.
+   * @returns An unsubscribe function; calling it removes the listener.
    */
   onIdentityChange(listener: SignerIdentityListener): () => void {
     this.#identityListeners.add(listener);
@@ -365,6 +366,7 @@ export class ZamaSDK {
    *
    * @param handles - Handles to decrypt, each paired with its contract address.
    * @returns A record mapping each handle to its decrypted clear-text value.
+   * @throws {@link SignerRequiredError} if no signer is configured.
    * @throws {@link ChainMismatchError} if signer and provider are on different chains.
    *
    * @example
@@ -527,6 +529,8 @@ export class ZamaSDK {
    * contract addresses. Lifecycle cleanup revokes previous identities through
    * {@link SignerIdentityChange}; this method intentionally targets the live
    * signer identity at invocation time.
+   *
+   * @throws {@link SignerRequiredError} if no signer is configured.
    *
    * @example
    * ```ts
