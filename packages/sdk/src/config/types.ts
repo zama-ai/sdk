@@ -1,10 +1,54 @@
 import type { FheChain, AtLeastOneChain } from "../chains";
 import type { ZamaSDKEventListener } from "../events";
+import type { RelayerCleartext } from "../relayer/cleartext/relayer-cleartext";
 import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
+import type { RelayerSDK } from "../relayer/relayer-sdk";
+import type { RelayerWebConfig } from "../relayer/relayer-sdk.types";
+import type { RelayerWeb } from "../relayer/relayer-web";
 import type { GenericProvider, GenericSigner, GenericStorage } from "../types";
-import type { RelayerConfig } from "./relayers";
+import type { RelayerWorkerClient } from "../worker/worker.client";
 
 export type { AtLeastOneChain };
+
+// ── Shared option shapes ─────────────────────────────────────────────────────
+
+/** Options for web() relayer (threads, security, logger, storage). */
+export type WebRelayerOptions = Partial<Omit<RelayerWebConfig, "chain" | "worker">>;
+
+// ── Relayer config types ─────────────────────────────────────────────────────
+
+/**
+ * Base relayer config.
+ *
+ * Groups chains by config reference identity, calls `createWorker`
+ * once per group with all chain configs, then calls `createRelayer`
+ * per chain with the shared worker.
+ */
+export interface RelayerConfig {
+  readonly type: string;
+  /** Create a shared worker/pool for all chains in this relayer group. */
+  // oxlint-disable-next-line typescript-eslint/no-explicit-any -- bivariant: subtypes narrow this
+  readonly createWorker?: (chains: FheChain[]) => any;
+  /** Create a single-chain relayer. `worker` is the return value of `createWorker`. */
+  readonly createRelayer: (
+    chain: FheChain,
+    // oxlint-disable-next-line typescript-eslint/no-explicit-any -- bivariant: subtypes narrow this
+    worker: any,
+  ) => RelayerSDK;
+}
+
+/** Web relayer config — narrows worker type to `RelayerWorkerClient`. */
+export interface WebRelayerConfig extends RelayerConfig {
+  readonly type: "web";
+  readonly createWorker: (chains: FheChain[]) => RelayerWorkerClient;
+  readonly createRelayer: (chain: FheChain, worker: RelayerWorkerClient) => RelayerWeb;
+}
+
+/** Cleartext relayer config — no worker, returns `RelayerCleartext`. */
+export interface CleartextRelayerConfig extends RelayerConfig {
+  readonly type: "cleartext";
+  readonly createRelayer: (chain: FheChain, worker: unknown) => RelayerCleartext;
+}
 
 /** Shared options across all adapter paths. */
 export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChain> {

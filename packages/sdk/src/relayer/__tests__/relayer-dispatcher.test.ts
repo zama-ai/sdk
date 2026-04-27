@@ -3,7 +3,7 @@ import { RelayerDispatcher, type WorkerLike } from "../relayer-dispatcher";
 import { ConfigurationError } from "../../errors";
 import { createMockRelayer } from "../../test-fixtures";
 import type { FheChain } from "../../chains/types";
-import type { RelayerConfig } from "../../config/relayers";
+import type { RelayerConfig } from "../../config/types";
 import type { RelayerSDK } from "../relayer-sdk";
 
 const chainA: FheChain = { id: 1 } as FheChain;

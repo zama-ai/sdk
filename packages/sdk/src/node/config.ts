@@ -1,4 +1,4 @@
-import type { RelayerConfig } from "../config/relayers";
+import type { RelayerConfig } from "../config/types";
 import { RelayerNode } from "../relayer/relayer-node";
 import type { FheChain } from "../chains/types";
 import type { GenericStorage } from "../types";

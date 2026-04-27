@@ -3,7 +3,7 @@ import { ConfigurationError } from "../errors";
 import { IndexedDBStorage } from "../storage/indexeddb-storage";
 import { MemoryStorage } from "../storage/memory-storage";
 import type { GenericStorage } from "../types";
-import type { RelayerConfig } from "./relayers";
+import type { RelayerConfig } from "./types";
 
 // ── Storage defaults ─────────────────────────────────────────────────────────
 

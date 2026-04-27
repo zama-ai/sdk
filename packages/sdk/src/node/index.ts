@@ -11,7 +11,7 @@
 export { node } from "./config";
 export type { NodeRelayerConfig, NodePoolOptions } from "./config";
 export { cleartext } from "../config/relayers";
-export type { RelayerConfig } from "../config/relayers";
+export type { RelayerConfig } from "../config/types";
 export { RelayerNode } from "../relayer/relayer-node";
 export type { RelayerNodeConfig } from "../relayer/relayer-node";
 export type { RelayerSDK } from "../relayer/relayer-sdk";

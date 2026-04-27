@@ -1,55 +1,14 @@
 import type { FheChain } from "../chains/types";
-import type { RelayerSDK } from "../relayer/relayer-sdk";
-import type { RelayerWebConfig } from "../relayer/relayer-sdk.types";
 import { ConfigurationError } from "../errors";
 import { RelayerCleartext } from "../relayer/cleartext/relayer-cleartext";
 import { CDN_INTEGRITY, CDN_URL, RelayerWeb } from "../relayer/relayer-web";
 import { RelayerWorkerClient } from "../worker/worker.client";
+import type { CleartextRelayerConfig, WebRelayerConfig, WebRelayerOptions } from "./types";
 
-// ── Shared option shapes ─────────────────────────────────────────────────────
-
-/** Options for web() transport (threads, security, logger, storage). */
-export type WebRelayerOptions = Partial<Omit<RelayerWebConfig, "chain" | "worker">>;
-
-// ── Transport interface ─────────────────────────────────────────────────────
+// ── Relayer factories ───────────────────────────────────────────────────────
 
 /**
- * Base relayer config. `buildZamaConfig` works with this type.
- *
- * Groups chains by transport reference identity, calls `createWorker`
- * once per group with all chain configs, then calls `createRelayer`
- * per chain with the shared worker.
- */
-export interface RelayerConfig {
-  readonly type: string;
-  /** Create a shared worker/pool for all chains in this transport group. */
-  // oxlint-disable-next-line typescript-eslint/no-explicit-any -- bivariant: subtypes narrow this
-  readonly createWorker?: (chains: FheChain[]) => any;
-  /** Create a single-chain relayer. `worker` is the return value of `createWorker`. */
-  readonly createRelayer: (
-    chain: FheChain,
-    // oxlint-disable-next-line typescript-eslint/no-explicit-any -- bivariant: subtypes narrow this
-    worker: any,
-  ) => RelayerSDK;
-}
-
-/** Web transport — narrows worker type to `RelayerWorkerClient`. */
-export interface WebRelayerConfig extends RelayerConfig {
-  readonly type: "web";
-  readonly createWorker: (chains: FheChain[]) => RelayerWorkerClient;
-  readonly createRelayer: (chain: FheChain, worker: RelayerWorkerClient) => RelayerWeb;
-}
-
-/** Cleartext transport — no worker, returns `RelayerCleartext`. */
-export interface CleartextRelayerConfig extends RelayerConfig {
-  readonly type: "cleartext";
-  readonly createRelayer: (chain: FheChain, worker: unknown) => RelayerCleartext;
-}
-
-// ── Transport factories ──────────────────────────────────────────────────────
-
-/**
- * Browser transport — routes to RelayerWeb (Web Worker + WASM).
+ * Browser relayer — routes to RelayerWeb (Web Worker + WASM).
  *
  * @param options - Worker options (threads, security, logger, storage).
  *
@@ -73,13 +32,12 @@ export function web(options?: WebRelayerOptions): WebRelayerConfig {
         logger: options?.logger,
         thread: options?.threads,
       }),
-    createRelayer: (resolvedChain, worker) =>
-      new RelayerWeb({ chain: resolvedChain, worker, ...options }),
+    createRelayer: (chain, worker) => new RelayerWeb({ chain, worker, ...options }),
   };
 }
 
 /**
- * Cleartext transport — routes to RelayerCleartext (no FHE infrastructure).
+ * Cleartext relayer — routes to RelayerCleartext (no FHE infrastructure).
  *
  * When `executorAddress` is set on the chain definition (e.g. `hardhat`, `hoodi`),
  * it is picked up automatically.

@@ -1,12 +1,14 @@
 export { web, cleartext } from "./relayers";
+
 export type {
+  ZamaConfig,
+  ZamaConfigBase,
+  AtLeastOneChain,
   RelayerConfig,
   WebRelayerConfig,
   CleartextRelayerConfig,
   WebRelayerOptions,
-} from "./relayers";
-
-export type { ZamaConfig, ZamaConfigBase, AtLeastOneChain } from "./types";
+} from "./types";
 export type { ZamaConfigViem } from "../viem/types";
 export type { ZamaConfigEthers } from "../ethers/types";
 

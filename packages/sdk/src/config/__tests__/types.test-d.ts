@@ -1,8 +1,7 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 import { mainnet, sepolia } from "../../chains";
 import type { FheChain } from "../../chains";
-import type { ZamaConfigBase } from "../types";
-import type { RelayerConfig } from "../relayers";
+import type { ZamaConfigBase, RelayerConfig } from "../types";
 import type { ZamaConfigViem } from "../../viem/types";
 import type { ZamaConfigEthers } from "../../ethers/types";
 

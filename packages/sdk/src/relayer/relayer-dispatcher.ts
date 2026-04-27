@@ -6,7 +6,7 @@ import type {
 } from "@zama-fhe/relayer-sdk/bundle";
 import type { Address, Hex } from "viem";
 import type { FheChain } from "../chains/types";
-import type { RelayerConfig } from "../config/relayers";
+import type { RelayerConfig } from "../config/types";
 import { resolveChainRelayers } from "../config/resolve";
 import { ConfigurationError } from "../errors";
 import { assertNonNullable, toError } from "../utils";
