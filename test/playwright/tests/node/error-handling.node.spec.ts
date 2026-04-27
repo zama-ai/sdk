@@ -18,8 +18,8 @@ interface CreateZamaSDKParams {
   chain: FheChain;
   publicClient: PublicClient;
   viemClient: WalletClient;
-  transportOverrides?: Partial<Parameters<typeof node>[0]>;
-  poolOptions?: Parameters<typeof node>[1];
+  transportOverrides?: Partial<FheChain>;
+  poolOptions?: Parameters<typeof node>[0];
 }
 
 function createZamaSDK({
@@ -36,7 +36,7 @@ function createZamaSDK({
       publicClient,
       walletClient: viemClient,
       relayers: {
-        [chainOverrides.id]: node(transportOverrides, poolOptions),
+        [chainOverrides.id]: node(poolOptions),
       },
     }),
   );
