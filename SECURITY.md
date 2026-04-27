@@ -34,7 +34,6 @@ The following areas are in scope for security reports:
 
 ### Web Worker / WASM
 
-- **CDN integrity** — WASM loaded from CDN for FHE operations
 - **Worker isolation** — message passing between main thread and Web Worker
 
 ## Out of Scope

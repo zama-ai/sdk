@@ -87,27 +87,6 @@ Wallet addresses are hashed before use as storage keys. The storage backend (Ind
 
 </details>
 
-## WASM bundle integrity
-
-`RelayerWeb` loads the TFHE WASM bundle from Zama's CDN (`cdn.zama.org`). Before execution, the SDK computes a SHA-384 digest of the fetched payload and compares it to a hash pinned in the library's source code. If the hashes do not match, initialization fails with a clear error.
-
-![WASM Bundle Integrity Check](../images/security-wasm-integrity.svg)
-
-This protects against CDN compromise or man-in-the-middle injection of modified WASM.
-
-Integrity checking is enabled by default. Disable it only in test environments:
-
-```ts
-const relayer = new RelayerWeb({
-  // ...
-  security: { integrityCheck: false },
-});
-```
-
-{% hint style="warning" %}
-Disabling integrity checks in production removes a critical defense layer. A compromised WASM bundle could exfiltrate FHE private keys or manipulate encrypted values.
-{% endhint %}
-
 ## Browser security headers
 
 ### COOP/COEP headers
@@ -190,8 +169,7 @@ The token is refreshed before each encrypt/decrypt call. Only POST, PUT, DELETE,
 | Credential encryption | AES-256-GCM         | 256-bit            | Web Crypto API                |
 | Key derivation        | PBKDF2-SHA-256      | 600,000 iterations | Web Crypto API                |
 | Storage key hashing   | SHA-256 (truncated) | 128-bit output     | Web Crypto API                |
-| CDN integrity         | SHA-384             | --                 | Web Crypto API                |
-| FHE encryption        | TFHE                | Network key        | WASM (`@zama-fhe/sdk (WASM)`) |
+| FHE encryption        | TFHE                | Network key        | WASM (`@fhevm/sdk`)           |
 | ZK proofs             | WASM prover         | --                 | WASM (`@zama-fhe/sdk (WASM)`) |
 | Wallet signing        | ECDSA secp256k1     | 256-bit            | User wallet                   |
 | Request tracking      | UUID v4             | 128-bit            | `crypto.randomUUID()`         |
