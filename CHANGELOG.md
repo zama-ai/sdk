@@ -8,18 +8,18 @@
 
 Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
 
-* chore(sdk): update API reports after wagmi-inspired config improvements
+- chore(sdk): update API reports after wagmi-inspired config improvements
 
 Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
 
-* fix(sdk): update CompositeRelayer tests for lazy init API
+- fix(sdk): update CompositeRelayer tests for lazy init API
 
 Tests now construct CompositeRelayer with config map instead of promise
 map, using temporary transport handlers to provide mock relayers.
 
 Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
 
-* refactor(sdk): self-register node transport handler in node() factory
+- refactor(sdk): self-register node transport handler in node() factory
 
 Move the transport handler registration from a top-level side-effect
 into the node() factory itself (lazy, runs once on first call).
@@ -28,7 +28,7 @@ node() in the transports map handles everything.
 
 Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
 
-* refactor(sdk): use static import for RelayerNode in node transport
+- refactor(sdk): use static import for RelayerNode in node transport
 
 Replace dynamic import("../relayer/relayer-node") with a direct static
 import. The /node entry point is Node-only so there's no risk of pulling
@@ -36,7 +36,7 @@ node:worker_threads into browser bundles.
 
 Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
 
-* refactor(sdk): self-register web and cleartext transport handlers in factories
+- refactor(sdk): self-register web and cleartext transport handlers in factories
 
 Move handler registrations from relayers.ts into the web() and cleartext()
 factories with static imports. Each factory self-registers on first call.
@@ -44,7 +44,7 @@ relayers.ts now only provides the registry infrastructure.
 
 Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
 
-* refactor(sdk): replace relayer registry with createRelayer on transport configs
+- refactor(sdk): replace relayer registry with createRelayer on transport configs
 
 Each transport factory (web, node, cleartext) now attaches a createRelayer
 function directly to the config object. CompositeRelayer calls it on first
@@ -58,17 +58,17 @@ use — no registry, no handler lookup, no async.
 
 Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
 
-* fix(sdk): address PR review findings
+- fix(sdk): address PR review findings
 
-- Wrap createRelayer in try-catch with chain context in CompositeRelayer
-- Document sync invariant on createRelayer (prevents duplicate relayers)
-- Remove dead types from config/types.ts (old union types, CustomSigner)
-- Deduplicate AtLeastOneChain — single definition in chains/types.ts
-- Add never guards to ZamaConfigEthers for mutual exclusion enforcement
+* Wrap createRelayer in try-catch with chain context in CompositeRelayer
+* Document sync invariant on createRelayer (prevents duplicate relayers)
+* Remove dead types from config/types.ts (old union types, CustomSigner)
+* Deduplicate AtLeastOneChain — single definition in chains/types.ts
+* Add never guards to ZamaConfigEthers for mutual exclusion enforcement
 
 Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
 
-* refactor(sdk): rename createZamaConfig to createConfig
+- refactor(sdk): rename createZamaConfig to createConfig
 
 The package path already namespaces it — no need for the Zama prefix.
 
@@ -80,52 +80,52 @@ The package path already namespaces it — no need for the Zama prefix.
 
 Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
 
-* fix(sdk): update tests for relayer→options field rename on transport configs
+- fix(sdk): update tests for relayer→options field rename on transport configs
 
 Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
 
-* refactor(sdk): rename relayer param to options on transport factories
+- refactor(sdk): rename relayer param to options on transport factories
 
 Rename the relayer-pool options parameter from `relayer` to `options`
 on web(), node(), and their transport config interfaces.
 
 Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
 
-* fix(sdk): update stale JSDoc refs and regenerate API reports
+- fix(sdk): update stale JSDoc refs and regenerate API reports
 
-- Fix JSDoc references to old `relayer` field name in transports.ts
-- Fix JSDoc and error message referencing createZamaConfig in provider.tsx
-- Regenerate all API report files (etc/*.api.md)
-
-Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
-
-* docs(sdk): update gitbook docs for createConfig API and entry-point imports
+* Fix JSDoc references to old `relayer` field name in transports.ts
+* Fix JSDoc and error message referencing createZamaConfig in provider.tsx
+* Regenerate all API report files (etc/\*.api.md)
 
 Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
 
-* chore: remove superseded design specs and implementation plans
+- docs(sdk): update gitbook docs for createConfig API and entry-point imports
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+- chore: remove superseded design specs and implementation plans
 
 These docs were written during brainstorming and are now fully
 implemented — the code is the source of truth.
 
 Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
 
-* fix(sdk): propagate transport registryAddress to chains and check delegation before cache
+- fix(sdk): propagate transport registryAddress to chains and check delegation before cache
 
-- Merge registryAddress from transport chain overrides into FheChain definitions
+* Merge registryAddress from transport chain overrides into FheChain definitions
   in buildZamaConfig so the WrappersRegistry resolves correctly for local chains
-- Simplify resolveChainTransports by deriving chainIds from chains directly
-- Move delegation check before cache lookup in decryptBalanceAs so revoked
+* Simplify resolveChainTransports by deriving chainIds from chains directly
+* Move delegation check before cache lookup in decryptBalanceAs so revoked
   delegations are caught even when a stale cached value exists
-- Update example-hoodi to use the new createConfig API
+* Update example-hoodi to use the new createConfig API
 
 Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
 
-* chore(sdk): update API report for resolveChainTransports signature change
+- chore(sdk): update API report for resolveChainTransports signature change
 
 Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
 
-* revert(example-hoodi): restore prerelease version to fix e2e CI
+- revert(example-hoodi): restore prerelease version to fix e2e CI
 
 The example uses published SDK versions (2.2.0-alpha.4) which don't have
 the new createConfig/chains APIs yet, causing e2e failures. Also add
@@ -133,7 +133,7 @@ Turbopack resolveAlias to test-nextjs to avoid rolldown ?iife imports.
 
 Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
 
-* fix(sdk): update resolve tests for 2-arg resolveChainTransports signature
+- fix(sdk): update resolve tests for 2-arg resolveChainTransports signature
 
 The chainIds parameter was removed from resolveChainTransports but the
 tests still passed a third argument. Update all call sites and error
@@ -141,12 +141,12 @@ message expectations to match the current implementation.
 
 Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
 
-* fix(sdk): address PR review findings across config, relayer, and examples
+- fix(sdk): address PR review findings across config, relayer, and examples
 
-- Sweep createZamaConfig→createConfig in all examples, READMEs, and docs
-- Fix examples to use flat config props (no more viem:{}/ethers:{} wrappers)
-- Fix react-sdk test-fixtures.tsx broken import from non-existent "./config"
-- Make anvil a strict alias for hardhat + runtime duplicate chain id detection
+* Sweep createZamaConfig→createConfig in all examples, READMEs, and docs
+* Fix examples to use flat config props (no more viem:{}/ethers:{} wrappers)
+* Fix react-sdk test-fixtures.tsx broken import from non-existent "./config"
+* Make anvil a strict alias for hardhat + runtime duplicate chain id detection
 
 ### Code Refactoring
 
