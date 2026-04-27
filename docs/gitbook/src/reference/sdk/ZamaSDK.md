@@ -346,6 +346,7 @@ import {
 
 const sdk = new ZamaSDK({
   relayer,
+  provider,
   signer,
   storage,
   onEvent: (event) => {
@@ -385,6 +386,7 @@ const emitter = new EventEmitter();
 
 const sdk = new ZamaSDK({
   relayer,
+  provider,
   signer,
   storage,
   onEvent: (event) => emitter.emit(event.type, event),

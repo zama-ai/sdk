@@ -24,6 +24,7 @@ import { useFinalizeUnwrap } from "@zama-fhe/react-sdk";
 
 ```tsx
 import { useUnwrap, useFinalizeUnwrap } from "@zama-fhe/react-sdk";
+import { findUnwrapRequested } from "@zama-fhe/sdk";
 
 function TwoStepUnshield() {
   const { mutateAsync: unwrap } = useUnwrap({ tokenAddress: "0xToken" });
@@ -32,11 +33,16 @@ function TwoStepUnshield() {
   });
 
   const handleUnshield = async () => {
-    // Step 1: submit the unwrap
-    const unwrapTxHash = await unwrap({ amount: 500n });
+    // Step 1: submit the unwrap and find the event in the receipt
+    const { receipt } = await unwrap({ amount: 500n });
+    const event = findUnwrapRequested(receipt.logs);
 
-    // Step 2: finalize with the unwrap request ID (from upgraded events)
-    await finalize({ unwrapRequestId: unwrapTxHash });
+    // Step 2: finalize with the unwrap request ID (upgraded) or burn amount handle (legacy)
+    await finalize(
+      event.unwrapRequestId
+        ? { unwrapRequestId: event.unwrapRequestId }
+        : { burnAmountHandle: event.encryptedAmount },
+    );
   };
 
   return (

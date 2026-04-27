@@ -134,23 +134,17 @@ const config = createConfig({
 });
 ```
 
-## Legacy preset configs
+## Legacy preset configs (removed)
 
-The legacy `SepoliaConfig`, `MainnetConfig`, and `HardhatConfig` objects are still available for use with manual `RelayerWeb`/`RelayerNode` construction:
+The legacy `SepoliaConfig`, `MainnetConfig`, and `HardhatConfig` objects are no longer exported from `@zama-fhe/sdk`. Use the chain presets from `@zama-fhe/sdk/chains` with `createConfig` instead:
 
 ```ts
-import { MainnetConfig, SepoliaConfig, HardhatConfig } from "@zama-fhe/sdk";
+// Before (removed)
+// import { SepoliaConfig, MainnetConfig } from "@zama-fhe/sdk";
+
+// After
+import { sepolia, mainnet } from "@zama-fhe/sdk/chains";
 ```
-
-| Preset          | Chain ID   | Network            |
-| --------------- | ---------- | ------------------ |
-| `MainnetConfig` | `1`        | Ethereum Mainnet   |
-| `SepoliaConfig` | `11155111` | Sepolia Testnet    |
-| `HardhatConfig` | `31337`    | Local Hardhat node |
-
-{% hint style="info" %}
-For new projects, prefer chain objects from `@zama-fhe/sdk/chains` with `createConfig`. The legacy preset configs work best with the manual `RelayerWeb`/`RelayerNode` constructors.
-{% endhint %}
 
 ## DefaultRegistryAddresses
 

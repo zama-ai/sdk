@@ -2659,6 +2659,7 @@ Pass `indexedDBStorage` for the encrypted FHE keypair (persistent, survives brow
 ```ts
 const sdk = new ZamaSDK({
   relayer,
+  provider,
   signer,
   storage: indexedDBStorage, // encrypted keypair — persistent
   sessionStorage: chromeSessionStorage, // wallet signature — ephemeral
@@ -4076,6 +4077,7 @@ import {
 
 const sdk = new ZamaSDK({
   relayer,
+  provider,
   signer,
   storage,
   onEvent: (event) => {
@@ -4113,6 +4115,7 @@ const emitter = new EventEmitter();
 
 const sdk = new ZamaSDK({
   relayer,
+  provider,
   signer,
   storage,
   onEvent: (event) => emitter.emit(event.type, event),
@@ -4535,7 +4538,7 @@ Instance creation via [`ZamaSDK.createReadonlyToken()`](https://raw.githubuserco
 ```ts
 import { ReadonlyToken, ZamaSDK } from "@zama-fhe/sdk";
 
-const sdk = new ZamaSDK({ relayer, signer, storage });
+const sdk = new ZamaSDK({ relayer, provider, signer, storage });
 const tokens = addresses.map((a) => sdk.createReadonlyToken(a));
 
 // One wallet signature covers all tokens
@@ -4548,23 +4551,27 @@ const { results, errors } = await ReadonlyToken.batchBalancesOf(tokens, owner);
 ### Tab: config.ts
 
 ```ts
-import { ZamaSDK, indexedDBStorage, RelayerWeb, MainnetConfig, SepoliaConfig } from "@zama-fhe/sdk";
-import { ViemSigner } from "@zama-fhe/sdk/viem";
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { web } from "@zama-fhe/sdk";
+import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
 
-const signer = new ViemSigner({ walletClient, publicClient });
-const relayer = new RelayerWeb({
-  getChainId: () => signer.getChainId(),
-  transports: {
-    [MainnetConfig.chainId]: {
-      ...MainnetConfig,
-      relayerUrl: "https://your-app.com/api/relayer/1",
-      network: "https://mainnet.infura.io/v3/YOUR_KEY",
-    },
-    [SepoliaConfig.chainId]: {
-      ...SepoliaConfig,
-      relayerUrl: "https://your-app.com/api/relayer/11155111",
-      network: "https://sepolia.infura.io/v3/YOUR_KEY",
-    },
+const mySepolia = {
+  ...sepolia,
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
+} as const satisfies FheChain;
+
+const myMainnet = {
+  ...mainnet,
+  relayerUrl: "https://your-app.com/api/relayer/1",
+} as const satisfies FheChain;
+
+const config = createConfig({
+  chains: [mySepolia, myMainnet],
+  publicClient,
+  walletClient,
+  relayers: {
+    [mySepolia.id]: web(),
+    [myMainnet.id]: web(),
   },
 });
 ```
@@ -5847,6 +5854,7 @@ const redisStorage: GenericStorage = {
 
 const sdk = new ZamaSDK({
   relayer,
+  provider,
   signer,
   storage: redisStorage,
 });
@@ -5891,6 +5899,7 @@ Browser-based persistent storage backed by IndexedDB. Survives page reloads and 
 ```ts
 const sdk = new ZamaSDK({
   relayer,
+  provider,
   signer,
   storage: indexedDBStorage,
 });
@@ -5907,6 +5916,7 @@ In-memory storage cleared when the process exits. Suitable for tests and throwaw
 ```ts
 const sdk = new ZamaSDK({
   relayer,
+  provider,
   signer,
   storage: memoryStorage,
 });
@@ -5925,7 +5935,7 @@ import { asyncLocalStorage } from "@zama-fhe/sdk/node";
 
 app.post("/api/transfer", (req, res) => {
   asyncLocalStorage.run(async () => {
-    const sdk = new ZamaSDK({ relayer, signer, storage: asyncLocalStorage });
+    const sdk = new ZamaSDK({ relayer, provider, signer, storage: asyncLocalStorage });
     await sdk.createToken("0x...").confidentialTransfer("0x...", 100n);
   });
 });
@@ -5944,6 +5954,7 @@ Pass as `sessionStorage` (not `storage`) to persist wallet signatures across ser
 ```ts
 const sdk = new ZamaSDK({
   relayer,
+  provider,
   signer,
   storage: indexedDBStorage,
   sessionStorage: chromeSessionStorage,
@@ -6701,12 +6712,12 @@ const { address, abi, functionName, args } = wrapContract(wrapperAddress, recipi
 
 Persistent cache for the FHE network public key and public parameters (CRS). Stores large binary artifacts in a `GenericStorage` backend (e.g. IndexedDB) so they are not re-downloaded on every page load. Cache keys are scoped by chain ID.
 
-`RelayerWeb` and `RelayerNode` create an `FheArtifactCache` internally — you configure it through the `fheArtifactStorage` and `fheArtifactCacheTTL` options on the relayer constructor.
+`web()` and `node()` relayer transports create an `FheArtifactCache` internally — you configure it through the `fheArtifactStorage` and `fheArtifactCacheTTL` options on the transport factory.
 
 
 > [!INFO]
-> **RelayerWeb** defaults to IndexedDB — artifact caching persists across page reloads.
-> **RelayerNode** defaults to `MemoryStorage` — artifacts are cached in-process but lost on restart. Pass a custom `GenericStorage` for cross-restart persistence.
+> **`web()`** defaults to IndexedDB — artifact caching persists across page reloads.
+> **`node()`** defaults to `MemoryStorage` — artifacts are cached in-process but lost on restart. Pass a custom `GenericStorage` for cross-restart persistence.
 
 
 ## Import
@@ -6717,22 +6728,23 @@ import { FheArtifactCache } from "@zama-fhe/sdk";
 
 ## Usage
 
-In most cases you don't instantiate `FheArtifactCache` directly. Instead, configure artifact caching through the relayer constructor:
+In most cases you don't instantiate `FheArtifactCache` directly. Instead, configure artifact caching through the relayer transport factory:
 
 
 ### Tab: Default (IndexedDB)
 
 ```ts
-import { RelayerWeb, SepoliaConfig } from "@zama-fhe/sdk";
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { web } from "@zama-fhe/sdk";
+import { sepolia } from "@zama-fhe/sdk/chains";
 
-// RelayerWeb uses IndexedDB artifact cache by default — no config needed
-const relayer = new RelayerWeb({
-  getChainId: () => signer.getChainId(),
-  transports: {
-    [SepoliaConfig.chainId]: {
-      ...SepoliaConfig,
-      network: "https://sepolia.infura.io/v3/YOUR_KEY",
-    },
+// web() uses IndexedDB artifact cache by default — no config needed
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: {
+    [sepolia.id]: web(),
   },
 });
 ```
@@ -6740,37 +6752,39 @@ const relayer = new RelayerWeb({
 ### Tab: Custom storage
 
 ```ts
-import { RelayerWeb, IndexedDBStorage, SepoliaConfig } from "@zama-fhe/sdk";
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { web, IndexedDBStorage } from "@zama-fhe/sdk";
+import { sepolia } from "@zama-fhe/sdk/chains";
 
-const relayer = new RelayerWeb({
-  getChainId: () => signer.getChainId(),
-  transports: {
-    [SepoliaConfig.chainId]: {
-      ...SepoliaConfig,
-      network: "https://sepolia.infura.io/v3/YOUR_KEY",
-    },
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: {
+    [sepolia.id]: web({
+      // Custom IndexedDB database name
+      fheArtifactStorage: new IndexedDBStorage("MyAppArtifacts", 1, "fhe"),
+      // Revalidate every 12 hours instead of the default 24h
+      fheArtifactCacheTTL: 43_200,
+    }),
   },
-  // Custom IndexedDB database name
-  fheArtifactStorage: new IndexedDBStorage("MyAppArtifacts", 1, "fhe"),
-  // Revalidate every 12 hours instead of the default 24h
-  fheArtifactCacheTTL: 43_200,
 });
 ```
 
-### Tab: RelayerNode (default)
+### Tab: node() (default)
 
 ```ts
-import { RelayerNode } from "@zama-fhe/sdk/node";
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { node } from "@zama-fhe/sdk/node";
+import { sepolia } from "@zama-fhe/sdk/chains";
 
-// RelayerNode defaults to MemoryStorage — artifacts are cached in-process
-const relayer = new RelayerNode({
-  getChainId: () => signer.getChainId(),
-  poolSize: 4,
-  transports: {
-    [11155111]: {
-      network: process.env.RPC_URL!,
-      auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY! },
-    },
+// node() defaults to MemoryStorage — artifacts are cached in-process
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: {
+    [sepolia.id]: node({ poolSize: 4 }),
   },
 });
 ```
@@ -6782,12 +6796,13 @@ const relayer = new RelayerNode({
 ### Tab: Direct instantiation
 
 ```ts
-import { FheArtifactCache, SepoliaConfig } from "@zama-fhe/sdk";
+import { FheArtifactCache } from "@zama-fhe/sdk";
+import { sepolia } from "@zama-fhe/sdk/chains";
 
 const cache = new FheArtifactCache({
   storage: myStorage,
-  chainId: 11155111,
-  relayerUrl: SepoliaConfig.relayerUrl,
+  chainId: sepolia.id,
+  relayerUrl: sepolia.relayerUrl,
   ttl: 86_400,
 });
 
@@ -6878,7 +6893,7 @@ Concurrent calls are coalesced. On transient failures (network errors, 5xx), the
 
 ## Relayer config options
 
-When using `RelayerWeb` or `RelayerNode`, configure artifact caching with these constructor options:
+When using `web()` or `node()` transport factories, configure artifact caching with these options:
 
 ### fheArtifactStorage
 
@@ -6886,8 +6901,8 @@ When using `RelayerWeb` or `RelayerNode`, configure artifact caching with these 
 
 Persistent storage backend for caching FHE artifacts.
 
-- **`RelayerWeb`**: defaults to `new IndexedDBStorage("FheArtifactCache", 1, "artifacts")` — caching is enabled automatically.
-- **`RelayerNode`**: defaults to `new MemoryStorage()` — in-process caching.
+- **`web()`**: defaults to `new IndexedDBStorage("FheArtifactCache", 1, "artifacts")` — caching is enabled automatically.
+- **`node()`**: defaults to `new MemoryStorage()` — in-process caching.
 
 FHE public parameters can be several MB — avoid `localStorage`-backed storage which caps at ~5 MB.
 
@@ -7186,11 +7201,12 @@ Delegation is enforced on-chain through the ACL contract. The delegate never rec
 
 ## Setup
 
-The ACL contract address is automatically resolved from the relayer's transport configuration. Network presets (`SepoliaConfig`, `MainnetConfig`, `HardhatConfig`) already include the correct ACL address for each chain — no manual configuration needed.
+The ACL contract address is automatically resolved from the chain configuration. Chain presets (`sepolia`, `mainnet`, `hardhat` from `@zama-fhe/sdk/chains`) already include the correct ACL address for each chain — no manual configuration needed.
 
 ```ts
 const sdk = new ZamaSDK({
   relayer,
+  provider,
   signer,
   storage,
 });
@@ -7673,24 +7689,17 @@ const config = createConfig({
 });
 ```
 
-## Legacy preset configs
+## Legacy preset configs (removed)
 
-The legacy `SepoliaConfig`, `MainnetConfig`, and `HardhatConfig` objects are still available for use with manual `RelayerWeb`/`RelayerNode` construction:
+The legacy `SepoliaConfig`, `MainnetConfig`, and `HardhatConfig` objects are no longer exported from `@zama-fhe/sdk`. Use the chain presets from `@zama-fhe/sdk/chains` with `createConfig` instead:
 
 ```ts
-import { MainnetConfig, SepoliaConfig, HardhatConfig } from "@zama-fhe/sdk";
+// Before (removed)
+// import { SepoliaConfig, MainnetConfig } from "@zama-fhe/sdk";
+
+// After
+import { sepolia, mainnet } from "@zama-fhe/sdk/chains";
 ```
-
-| Preset          | Chain ID   | Network            |
-| --------------- | ---------- | ------------------ |
-| `MainnetConfig` | `1`        | Ethereum Mainnet   |
-| `SepoliaConfig` | `11155111` | Sepolia Testnet    |
-| `HardhatConfig` | `31337`    | Local Hardhat node |
-
-
-> [!INFO]
-> For new projects, prefer chain objects from `@zama-fhe/sdk/chains` with `createConfig`. The legacy preset configs work best with the manual `RelayerWeb`/`RelayerNode` constructors.
-
 
 ## DefaultRegistryAddresses
 
@@ -7949,27 +7958,27 @@ function TokenBalance({ tokenAddress }: { tokenAddress: `0x${string}` }) {
 ### Tab: config.ts
 
 ```ts
-import { ZamaSDK, RelayerWeb, indexedDBStorage } from "@zama-fhe/sdk";
-import { ViemSigner } from "@zama-fhe/sdk/viem";
+import { createConfig } from "@zama-fhe/react-sdk/wagmi";
+import { web } from "@zama-fhe/sdk";
+import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
 
-const signer = new ViemSigner({ walletClient, publicClient });
+const mySepolia = {
+  ...sepolia,
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
+} as const satisfies FheChain;
 
-const sdk = new ZamaSDK({
-  relayer: new RelayerWeb({
-    getChainId: () => signer.getChainId(),
-    transports: {
-      [1]: {
-        relayerUrl: "https://your-app.com/api/relayer/1",
-        network: "https://mainnet.infura.io/v3/YOUR_KEY",
-      },
-      [11155111]: {
-        relayerUrl: "https://your-app.com/api/relayer/11155111",
-        network: "https://sepolia.infura.io/v3/YOUR_KEY",
-      },
-    },
-  }),
-  signer,
-  storage: indexedDBStorage,
+const myMainnet = {
+  ...mainnet,
+  relayerUrl: "https://your-app.com/api/relayer/1",
+} as const satisfies FheChain;
+
+const zamaConfig = createConfig({
+  chains: [mySepolia, myMainnet],
+  relayers: {
+    [mySepolia.id]: web(),
+    [myMainnet.id]: web(),
+  },
+  wagmiConfig,
 });
 ```
 
@@ -9920,6 +9929,7 @@ import { useFinalizeUnwrap } from "@zama-fhe/react-sdk";
 
 ```tsx
 import { useUnwrap, useFinalizeUnwrap } from "@zama-fhe/react-sdk";
+import { findUnwrapRequested } from "@zama-fhe/sdk";
 
 function TwoStepUnshield() {
   const { mutateAsync: unwrap } = useUnwrap({ tokenAddress: "0xToken" });
@@ -9928,11 +9938,16 @@ function TwoStepUnshield() {
   });
 
   const handleUnshield = async () => {
-    // Step 1: submit the unwrap
-    const unwrapTxHash = await unwrap({ amount: 500n });
+    // Step 1: submit the unwrap and find the event in the receipt
+    const { receipt } = await unwrap({ amount: 500n });
+    const event = findUnwrapRequested(receipt.logs);
 
-    // Step 2: finalize with the unwrap request ID (from upgraded events)
-    await finalize({ unwrapRequestId: unwrapTxHash });
+    // Step 2: finalize with the unwrap request ID (upgraded) or burn amount handle (legacy)
+    await finalize(
+      event.unwrapRequestId
+        ? { unwrapRequestId: event.unwrapRequestId }
+        : { burnAmountHandle: event.encryptedAmount },
+    );
   };
 
   return (
@@ -12545,27 +12560,27 @@ function AdvancedOperations() {
 ### Tab: config.ts
 
 ```ts
-import { ZamaSDK, RelayerWeb, indexedDBStorage } from "@zama-fhe/sdk";
-import { ViemSigner } from "@zama-fhe/sdk/viem";
+import { createConfig } from "@zama-fhe/react-sdk/wagmi";
+import { web } from "@zama-fhe/sdk";
+import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
 
-const signer = new ViemSigner({ walletClient, publicClient });
+const mySepolia = {
+  ...sepolia,
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
+} as const satisfies FheChain;
 
-const sdk = new ZamaSDK({
-  relayer: new RelayerWeb({
-    getChainId: () => signer.getChainId(),
-    transports: {
-      [1]: {
-        relayerUrl: "https://your-app.com/api/relayer/1",
-        network: "https://mainnet.infura.io/v3/YOUR_KEY",
-      },
-      [11155111]: {
-        relayerUrl: "https://your-app.com/api/relayer/11155111",
-        network: "https://sepolia.infura.io/v3/YOUR_KEY",
-      },
-    },
-  }),
-  signer,
-  storage: indexedDBStorage,
+const myMainnet = {
+  ...mainnet,
+  relayerUrl: "https://your-app.com/api/relayer/1",
+} as const satisfies FheChain;
+
+const zamaConfig = createConfig({
+  chains: [mySepolia, myMainnet],
+  relayers: {
+    [mySepolia.id]: web(),
+    [myMainnet.id]: web(),
+  },
+  wagmiConfig,
 });
 ```
 
@@ -12636,27 +12651,27 @@ function TokenActions() {
 ### Tab: config.ts
 
 ```ts
-import { ZamaSDK, RelayerWeb, indexedDBStorage } from "@zama-fhe/sdk";
-import { ViemSigner } from "@zama-fhe/sdk/viem";
+import { createConfig } from "@zama-fhe/react-sdk/wagmi";
+import { web } from "@zama-fhe/sdk";
+import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
 
-const signer = new ViemSigner({ walletClient, publicClient });
+const mySepolia = {
+  ...sepolia,
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
+} as const satisfies FheChain;
 
-const sdk = new ZamaSDK({
-  relayer: new RelayerWeb({
-    getChainId: () => signer.getChainId(),
-    transports: {
-      [1]: {
-        relayerUrl: "https://your-app.com/api/relayer/1",
-        network: "https://mainnet.infura.io/v3/YOUR_KEY",
-      },
-      [11155111]: {
-        relayerUrl: "https://your-app.com/api/relayer/11155111",
-        network: "https://sepolia.infura.io/v3/YOUR_KEY",
-      },
-    },
-  }),
-  signer,
-  storage: indexedDBStorage,
+const myMainnet = {
+  ...mainnet,
+  relayerUrl: "https://your-app.com/api/relayer/1",
+} as const satisfies FheChain;
+
+const zamaConfig = createConfig({
+  chains: [mySepolia, myMainnet],
+  relayers: {
+    [mySepolia.id]: web(),
+    [myMainnet.id]: web(),
+  },
+  wagmiConfig,
 });
 ```
 
@@ -12756,27 +12771,27 @@ function TokenInfo() {
 ### Tab: config.ts
 
 ```ts
-import { ZamaSDK, RelayerWeb, indexedDBStorage } from "@zama-fhe/sdk";
-import { ViemSigner } from "@zama-fhe/sdk/viem";
+import { createConfig } from "@zama-fhe/react-sdk/wagmi";
+import { web } from "@zama-fhe/sdk";
+import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
 
-const signer = new ViemSigner({ walletClient, publicClient });
+const mySepolia = {
+  ...sepolia,
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
+} as const satisfies FheChain;
 
-const sdk = new ZamaSDK({
-  relayer: new RelayerWeb({
-    getChainId: () => signer.getChainId(),
-    transports: {
-      [1]: {
-        relayerUrl: "https://your-app.com/api/relayer/1",
-        network: "https://mainnet.infura.io/v3/YOUR_KEY",
-      },
-      [11155111]: {
-        relayerUrl: "https://your-app.com/api/relayer/11155111",
-        network: "https://sepolia.infura.io/v3/YOUR_KEY",
-      },
-    },
-  }),
-  signer,
-  storage: indexedDBStorage,
+const myMainnet = {
+  ...mainnet,
+  relayerUrl: "https://your-app.com/api/relayer/1",
+} as const satisfies FheChain;
+
+const zamaConfig = createConfig({
+  chains: [mySepolia, myMainnet],
+  relayers: {
+    [mySepolia.id]: web(),
+    [myMainnet.id]: web(),
+  },
+  wagmiConfig,
 });
 ```
 
@@ -14730,7 +14745,7 @@ Wallet addresses are hashed before use as storage keys. The storage backend (Ind
 
 ## WASM bundle integrity
 
-`RelayerWeb` loads the TFHE WASM bundle from Zama's CDN (`cdn.zama.org`). Before execution, the SDK computes a SHA-384 digest of the fetched payload and compares it to a hash pinned in the library's source code. If the hashes do not match, initialization fails with a clear error.
+The `web()` relayer transport loads the TFHE WASM bundle from Zama's CDN (`cdn.zama.org`). Before execution, the SDK computes a SHA-384 digest of the fetched payload and compares it to a hash pinned in the library's source code. If the hashes do not match, initialization fails with a clear error.
 
 ![WASM Bundle Integrity Check](../images/security-wasm-integrity.svg)
 
@@ -14739,9 +14754,13 @@ This protects against CDN compromise or man-in-the-middle injection of modified 
 Integrity checking is enabled by default. Disable it only in test environments:
 
 ```ts
-const relayer = new RelayerWeb({
-  // ...
-  security: { integrityCheck: false },
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: {
+    [sepolia.id]: web({ security: { integrityCheck: false } }),
+  },
 });
 ```
 
@@ -14814,12 +14833,19 @@ After revocation, the encrypted FHE keypair remains in storage. Only the session
 
 ## CSRF protection
 
-For browser apps, `RelayerWeb` supports CSRF tokens injected into all mutating HTTP requests to the relayer proxy:
+For browser apps, the `web()` transport supports CSRF tokens injected into all mutating HTTP requests to the relayer proxy:
 
 ```ts
-const relayer = new RelayerWeb({
-  security: {
-    getCsrfToken: () => document.cookie.match(/csrf=(\w+)/)?.[1] ?? "",
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: {
+    [sepolia.id]: web({
+      security: {
+        getCsrfToken: () => document.cookie.match(/csrf=(\w+)/)?.[1] ?? "",
+      },
+    }),
   },
 });
 ```
