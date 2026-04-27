@@ -5,7 +5,7 @@ description: How to use the SDK in a Node.js server environment with worker thre
 
 # Node.js backend
 
-The SDK works in Node.js with the same API as in the browser. The main differences are the transport (native worker threads instead of Web Workers) and storage isolation for concurrent requests.
+The SDK works in Node.js with the same API as in the browser. The main differences are the relayer (native worker threads instead of Web Workers) and storage isolation for concurrent requests.
 
 ## Steps
 
@@ -15,15 +15,15 @@ The SDK works in Node.js with the same API as in the browser. The main differenc
 npm install @zama-fhe/sdk viem
 ```
 
-### 2. Create the config with a `node()` transport
+### 2. Create the config with a `node()` relayer
 
-The `node()` transport uses native `worker_threads` for FHE operations. Pass `poolSize` in the second argument to control parallelism (default: `min(CPU cores, 4)`).
+The `node()` relayer uses native `worker_threads` for FHE operations. Pass `poolSize` to control parallelism (default: `min(CPU cores, 4)`).
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
 import { ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
 import { node } from "@zama-fhe/sdk/node";
-import { sepolia } from "@zama-fhe/sdk/chains";
+import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 import { createPublicClient, createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia as sepoliaViem } from "viem/chains";
@@ -36,19 +36,15 @@ const walletClient = createWalletClient({
   transport: http(),
 });
 
+const myChain = { ...sepolia, network: "https://sepolia.infura.io/v3/YOUR_KEY" } as const satisfies FheChain;
+
 const config = createConfig({
-  chains: [sepolia],
+  chains: [myChain],
   publicClient,
   walletClient,
   storage: memoryStorage,
-  transports: {
-    [sepolia.id]: node(
-      {
-        network: "https://sepolia.infura.io/v3/YOUR_KEY",
-        auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY! },
-      },
-      { poolSize: 4 },
-    ),
+  relayers: {
+    [myChain.id]: node({ poolSize: 4 }),
   },
 });
 
@@ -79,11 +75,8 @@ app.post("/api/transfer", (req, res) => {
       publicClient,
       walletClient,
       storage: asyncLocalStorage,
-      transports: {
-        [sepolia.id]: node({
-          network: "https://sepolia.infura.io/v3/YOUR_KEY",
-          auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY! },
-        }),
+      relayers: {
+        [sepolia.id]: node(),
       },
     });
     const sdk = new ZamaSDK(config);
@@ -117,22 +110,12 @@ See the [Token Operations](/reference/sdk/Token) reference for the full API.
 
 ### 6. Use direct API key auth
 
-In a server environment, you can authenticate with the relayer directly — there is no browser to leak the key to. Pass `auth` in the chain overrides:
+In a server environment, you can authenticate with the relayer directly — there is no browser to leak the key to. The chain preset's `relayerUrl` already points at the authenticated endpoint. If you need a custom relay proxy with auth headers, override `relayerUrl` in the chain definition:
 
 ```ts
-node({
-  auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY! },
-});
-```
+import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 
-Other auth methods are also available:
-
-```ts
-// Cookie-based
-auth: { __type: "ApiKeyCookie", value: "your-api-key" }
-
-// Bearer token
-auth: { __type: "BearerToken", token: "your-bearer-token" }
+const myChain = { ...sepolia, relayerUrl: "https://your-relay-proxy.example.com" } as const satisfies FheChain;
 ```
 
 ### 7. Clean up on shutdown
@@ -149,4 +132,4 @@ process.on("SIGTERM", () => {
 
 - [RelayerNode](/reference/sdk/RelayerNode) -- full constructor options and pool behavior
 - [asyncLocalStorage](/reference/sdk/GenericStorage) -- the `GenericStorage` interface it implements
-- [Configuration](/guides/configuration) -- chains, transports, authentication, and session management
+- [Configuration](/guides/configuration) -- chains, relayers, authentication, and session management

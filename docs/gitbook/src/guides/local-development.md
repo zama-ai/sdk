@@ -91,6 +91,7 @@ If you deploy FHEVM contracts on a custom chain or at different addresses than t
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
 import { cleartext, ZamaSDK } from "@zama-fhe/sdk";
+import type { FheChain } from "@zama-fhe/sdk/chains";
 
 const myChain = {
   id: 12345,
@@ -103,7 +104,7 @@ const myChain = {
   verifyingContractAddressDecryption: "0x...",
   verifyingContractAddressInputVerification: "0x...",
   relayerUrl: "",
-};
+} as const satisfies FheChain;
 
 const config = createConfig({
   chains: [myChain],

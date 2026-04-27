@@ -46,8 +46,9 @@ Create `src/config.ts`. This file sets up wagmi, the signer, and the relayer -- 
 import { createConfig, http } from "wagmi";
 import { sepolia } from "wagmi/chains";
 import { QueryClient } from "@tanstack/react-query";
-import { relayer } from "@zama-fhe/react-sdk";
+import { web } from "@zama-fhe/react-sdk";
 import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
+import { sepolia as sepoliaFhe, type FheChain } from "@zama-fhe/sdk/chains";
 
 export const wagmiConfig = createConfig({
   chains: [sepolia],
@@ -56,10 +57,13 @@ export const wagmiConfig = createConfig({
   },
 });
 
+const myChain = { ...sepoliaFhe, relayerUrl: "https://your-app.com/api/relayer/11155111" } as const satisfies FheChain;
+
 export const zamaConfig = createZamaConfig({
+  chains: [myChain],
   wagmiConfig,
-  transports: {
-    [sepolia.id]: relayer("https://your-app.com/api/relayer/11155111"),
+  relayers: {
+    [myChain.id]: web(),
   },
 });
 

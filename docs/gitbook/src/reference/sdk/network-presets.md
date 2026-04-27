@@ -7,7 +7,7 @@ description: Pre-configured chain objects and legacy network configs for support
 
 ## Chain objects (recommended)
 
-Import pre-configured chain objects from `@zama-fhe/sdk/chains`. Each chain includes contract addresses, relayer URLs, chain IDs, and an `id` alias for use in transport config keys.
+Import pre-configured chain objects from `@zama-fhe/sdk/chains`. Each chain includes contract addresses, relayer URLs, chain IDs, and an `id` alias for use in relayer config keys.
 
 ```ts
 import { sepolia, mainnet, hoodi, hardhat } from "@zama-fhe/sdk/chains";
@@ -41,7 +41,7 @@ Each chain object implements the `FheChain` interface:
 
 ### Usage with `createConfig`
 
-Pass chain objects in the `chains` array and use `chain.id` as transport keys:
+Pass chain objects in the `chains` array and use `chain.id` as relayer keys:
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
@@ -52,42 +52,40 @@ const config = createConfig({
   chains: [sepolia, mainnet],
   publicClient,
   walletClient,
-  transports: {
-    [sepolia.id]: web({ relayerUrl: "https://your-app.com/api/relayer/11155111" }),
-    [mainnet.id]: web({ relayerUrl: "https://your-app.com/api/relayer/1" }),
+  relayers: {
+    [sepolia.id]: web(),
+    [mainnet.id]: web(),
   },
 });
 ```
 
-Per-chain overrides (e.g. `relayerUrl`, `network`) are passed to the transport function. The chain object provides all contract addresses automatically.
+Per-chain overrides (e.g. `relayerUrl`, `network`) are set by spreading the chain preset in the `chains` array. The chain object provides all contract addresses automatically.
 
 ### Browser apps
 
-In browser environments, proxy relayer requests through your backend to avoid exposing API keys. Override `relayerUrl` in the transport:
+In browser environments, proxy relayer requests through your backend to avoid exposing API keys. Override `relayerUrl` in the chain definition:
 
 ```ts
-web({ relayerUrl: "https://your-app.com/api/relayer/11155111" });
+import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
+
+const myChain = { ...sepolia, relayerUrl: "https://your-app.com/api/relayer/11155111" } as const satisfies FheChain;
 ```
 
 ### Server apps
 
-On the server, use `node()` and add authentication:
+On the server, use `node()` with pool options. Chain data (network, relayerUrl) comes from the preset:
 
 ```ts
 import { node } from "@zama-fhe/sdk/node";
+import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 
-node(
-  {
-    network: "https://sepolia.infura.io/v3/YOUR_KEY",
-    auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY! },
-  },
-  { poolSize: 4 },
-);
+const myChain = { ...sepolia, network: "https://sepolia.infura.io/v3/YOUR_KEY" } as const satisfies FheChain;
+// Then in createConfig: relayers: { [myChain.id]: node({ poolSize: 4 }) }
 ```
 
 ### Local development
 
-Use the `hardhat` chain with a `cleartext()` transport:
+Use the `hardhat` chain with a `cleartext()` relayer:
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
@@ -98,8 +96,8 @@ const config = createConfig({
   chains: [hardhat],
   publicClient,
   walletClient,
-  transports: {
-    [hardhat.id]: cleartext({ executorAddress: "0x..." }),
+  relayers: {
+    [hardhat.id]: cleartext(),
   },
 });
 ```
@@ -111,14 +109,17 @@ Support multiple networks by listing them in the `chains` array:
 ```ts
 import { createConfig } from "@zama-fhe/react-sdk/wagmi";
 import { web } from "@zama-fhe/sdk";
-import { sepolia, mainnet } from "@zama-fhe/sdk/chains";
+import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
+
+const mySepolia = { ...sepolia, relayerUrl: "/api/relayer/11155111" } as const satisfies FheChain;
+const myMainnet = { ...mainnet, relayerUrl: "/api/relayer/1" } as const satisfies FheChain;
 
 const config = createConfig({
-  chains: [sepolia, mainnet],
+  chains: [mySepolia, myMainnet],
   wagmiConfig,
-  transports: {
-    [sepolia.id]: web({ relayerUrl: "/api/relayer/11155111" }),
-    [mainnet.id]: web({ relayerUrl: "/api/relayer/1" }),
+  relayers: {
+    [mySepolia.id]: web(),
+    [myMainnet.id]: web(),
   },
 });
 ```
@@ -159,5 +160,5 @@ console.log(DefaultRegistryAddresses);
 ## Related
 
 - [WrappersRegistry](/reference/sdk/WrappersRegistry) — high-level registry query API
-- [Configuration guide](/guides/configuration) — full chains, transports, signer, and storage setup
+- [Configuration guide](/guides/configuration) — full chains, relayers, signer, and storage setup
 - [ZamaSDK](/reference/sdk/ZamaSDK) — SDK constructor reference

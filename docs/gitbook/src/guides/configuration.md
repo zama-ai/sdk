@@ -1,11 +1,11 @@
 ---
 title: Configuration
-description: How to configure the SDK with createConfig — chains, transports, signer, and storage.
+description: How to configure the SDK with createConfig — chains, relayers, signer, and storage.
 ---
 
 # Configuration
 
-The SDK uses `createConfig` to wire together chains, transports, a signer, and storage into a single configuration object. This guide walks through each piece.
+The SDK uses `createConfig` to wire together chains, relayers, a signer, and storage into a single configuration object. This guide walks through each piece.
 
 ## Steps
 
@@ -24,11 +24,11 @@ import { sepolia, mainnet, hoodi } from "@zama-fhe/sdk/chains";
 | `hoodi`   | `17000`    | Hoodi Testnet      |
 | `hardhat` | `31337`    | Local Hardhat node |
 
-### 2. Pick a transport
+### 2. Pick a relayer
 
-Transports tell the SDK how to run FHE operations on each chain.
+Relayers tell the SDK how to run FHE operations on each chain.
 
-| Transport     | Environment | Description                                  |
+| Relayer       | Environment | Description                                  |
 | ------------- | ----------- | -------------------------------------------- |
 | `web()`       | Browser     | Runs WASM in a Web Worker via CDN            |
 | `node()`      | Node.js     | Uses native worker threads                   |
@@ -39,23 +39,25 @@ import { web, cleartext } from "@zama-fhe/sdk";
 import { node } from "@zama-fhe/sdk/node";
 ```
 
-The first argument is per-chain overrides (e.g. `relayerUrl`, `network`). The optional second argument is shared relayer-pool options (e.g. `threads`, `poolSize`).
+Chain-specific data (`relayerUrl`, `network`, `executorAddress`, etc.) comes from the chain preset. The relayer factory only accepts pool/worker options.
 
 ```ts
-// Browser — proxy relayer requests through your backend
-web({ relayerUrl: "https://your-app.com/api/relayer/11155111" });
+// Browser — uses relayerUrl from the chain preset
+web();
 
-// Node.js — direct auth is safe server-side
-node(
-  {
-    network: "https://sepolia.infura.io/v3/YOUR_KEY",
-    auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY! },
-  },
-  { poolSize: 4 },
-);
+// Node.js — pool options only; chain data comes from the preset
+node({ poolSize: 4 });
 
-// Local dev — no KMS, no gateway
-cleartext({ executorAddress: "0x..." });
+// Local dev — no KMS, no gateway; executorAddress comes from the chain preset
+cleartext();
+```
+
+If you need to override a chain field (e.g. proxy relayer requests through your backend), spread the preset in the `chains` array:
+
+```ts
+import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
+
+const myChain = { ...sepolia, relayerUrl: "https://your-app.com/api/relayer/11155111" } as const satisfies FheChain;
 ```
 
 ### 3. Set up a signer
@@ -105,7 +107,7 @@ For full type information, see the [ViemSigner](/reference/sdk/ViemSigner), [Eth
 
 ### 4. Create the config
 
-`createConfig` takes your chains, transports, and signer adapter and returns a config object.
+`createConfig` takes your chains, relayers, and signer adapter and returns a config object.
 
 {% tabs %}
 {% tab title="React + wagmi" %}
@@ -113,14 +115,18 @@ For full type information, see the [ViemSigner](/reference/sdk/ViemSigner), [Eth
 ```tsx
 import { web } from "@zama-fhe/react-sdk";
 import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
-import { sepolia, mainnet } from "@zama-fhe/sdk/chains";
+import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
+
+// Override relayerUrl to proxy through your backend
+const mySepolia = { ...sepolia, relayerUrl: "https://your-app.com/api/relayer/11155111" } as const satisfies FheChain;
+const myMainnet = { ...mainnet, relayerUrl: "https://your-app.com/api/relayer/1" } as const satisfies FheChain;
 
 const zamaConfig = createZamaConfig({
-  chains: [sepolia, mainnet],
+  chains: [mySepolia, myMainnet],
   wagmiConfig,
-  transports: {
-    [sepolia.id]: web({ relayerUrl: "https://your-app.com/api/relayer/11155111" }),
-    [mainnet.id]: web({ relayerUrl: "https://your-app.com/api/relayer/1" }),
+  relayers: {
+    [mySepolia.id]: web(),
+    [myMainnet.id]: web(),
   },
 });
 ```
@@ -131,15 +137,18 @@ const zamaConfig = createZamaConfig({
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
 import { web, ZamaSDK } from "@zama-fhe/sdk";
-import { sepolia, mainnet } from "@zama-fhe/sdk/chains";
+import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
+
+const mySepolia = { ...sepolia, relayerUrl: "https://your-app.com/api/relayer/11155111" } as const satisfies FheChain;
+const myMainnet = { ...mainnet, relayerUrl: "https://your-app.com/api/relayer/1" } as const satisfies FheChain;
 
 const config = createConfig({
-  chains: [sepolia, mainnet],
+  chains: [mySepolia, myMainnet],
   publicClient,
   walletClient,
-  transports: {
-    [sepolia.id]: web({ relayerUrl: "https://your-app.com/api/relayer/11155111" }),
-    [mainnet.id]: web({ relayerUrl: "https://your-app.com/api/relayer/1" }),
+  relayers: {
+    [mySepolia.id]: web(),
+    [myMainnet.id]: web(),
   },
 });
 
@@ -152,13 +161,15 @@ const sdk = new ZamaSDK(config);
 ```ts
 import { createConfig } from "@zama-fhe/sdk/ethers";
 import { web, ZamaSDK } from "@zama-fhe/sdk";
-import { sepolia } from "@zama-fhe/sdk/chains";
+import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
+
+const mySepolia = { ...sepolia, relayerUrl: "https://your-app.com/api/relayer/11155111" } as const satisfies FheChain;
 
 const config = createConfig({
-  chains: [sepolia],
+  chains: [mySepolia],
   ethereum: window.ethereum!,
-  transports: {
-    [sepolia.id]: web({ relayerUrl: "https://your-app.com/api/relayer/11155111" }),
+  relayers: {
+    [mySepolia.id]: web(),
   },
 });
 
@@ -172,21 +183,17 @@ const sdk = new ZamaSDK(config);
 import { createConfig } from "@zama-fhe/sdk/viem";
 import { ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
 import { node } from "@zama-fhe/sdk/node";
-import { sepolia } from "@zama-fhe/sdk/chains";
+import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
+
+const myChain = { ...sepolia, network: "https://sepolia.infura.io/v3/YOUR_KEY" } as const satisfies FheChain;
 
 const config = createConfig({
-  chains: [sepolia],
+  chains: [myChain],
   publicClient,
   walletClient,
   storage: memoryStorage,
-  transports: {
-    [sepolia.id]: node(
-      {
-        network: "https://sepolia.infura.io/v3/YOUR_KEY",
-        auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY! },
-      },
-      { poolSize: 4 },
-    ),
+  relayers: {
+    [myChain.id]: node({ poolSize: 4 }),
   },
 });
 
@@ -201,16 +208,18 @@ MV3 Chrome extensions need a second storage backend for session signatures, beca
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
 import { web, ZamaSDK, indexedDBStorage, chromeSessionStorage } from "@zama-fhe/sdk";
-import { sepolia } from "@zama-fhe/sdk/chains";
+import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
+
+const mySepolia = { ...sepolia, relayerUrl: "https://your-app.com/api/relayer/11155111" } as const satisfies FheChain;
 
 const config = createConfig({
-  chains: [sepolia],
+  chains: [mySepolia],
   publicClient,
   walletClient,
   storage: indexedDBStorage,
   sessionStorage: chromeSessionStorage,
-  transports: {
-    [sepolia.id]: web({ relayerUrl: "https://your-app.com/api/relayer/11155111" }),
+  relayers: {
+    [mySepolia.id]: web(),
   },
 });
 
@@ -232,7 +241,7 @@ You can tune how long the FHE keypair and session signatures remain valid, and s
 const config = createConfig({
   chains: [sepolia],
   wagmiConfig,
-  transports: { [sepolia.id]: web({ relayerUrl: "..." }) },
+  relayers: { [sepolia.id]: web() },
   keypairTTL: 604800, // 7 days (default: 2592000 = 30 days)
   sessionTTL: 3600, // 1 hour (default: 2592000 = 30 days)
   onEvent: ({ type, tokenAddress, ...rest }) => {
@@ -263,18 +272,23 @@ For full storage options see the [GenericStorage](/reference/sdk/GenericStorage)
 
 ## Shared relayer options
 
-When multiple chains use the same transport type, pass a shared options object to reuse a single relayer instance:
+When multiple chains use the same relayer type, pass a shared options object to reuse a single relayer instance:
 
 ```ts
+import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
+
 const sharedOpts = { threads: 8, logger: console };
 
+const mySepolia = { ...sepolia, relayerUrl: "/api/relayer/11155111" } as const satisfies FheChain;
+const myMainnet = { ...mainnet, relayerUrl: "/api/relayer/1" } as const satisfies FheChain;
+
 const config = createConfig({
-  chains: [sepolia, mainnet],
+  chains: [mySepolia, myMainnet],
   publicClient,
   walletClient,
-  transports: {
-    [sepolia.id]: web({ relayerUrl: "/api/relayer/11155111" }, sharedOpts),
-    [mainnet.id]: web({ relayerUrl: "/api/relayer/1" }, sharedOpts),
+  relayers: {
+    [mySepolia.id]: web(sharedOpts),
+    [myMainnet.id]: web(sharedOpts),
   },
 });
 ```

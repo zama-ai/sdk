@@ -24,20 +24,20 @@ import { sepolia } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ZamaProvider, web } from "@zama-fhe/react-sdk";
 import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
-import { sepolia as sepoliaFhe } from "@zama-fhe/sdk/chains";
+import { sepolia as sepoliaFhe, type FheChain } from "@zama-fhe/sdk/chains";
 
 const wagmiConfig = createConfig({
   chains: [sepolia],
   transports: { [sepolia.id]: http("https://sepolia.infura.io/v3/YOUR_KEY") },
 });
 
+const mySepolia = { ...sepoliaFhe, relayerUrl: "https://your-app.com/api/relayer/11155111", network: "https://sepolia.infura.io/v3/YOUR_KEY" } as const satisfies FheChain;
+
 const zamaConfig = createZamaConfig({
-  chains: [sepoliaFhe],
+  chains: [mySepolia],
   wagmiConfig,
-  transports: {
-    [sepoliaFhe.id]: web({
-      relayerUrl: "https://your-app.com/api/relayer/11155111",
-    }),
+  relayers: {
+    [mySepolia.id]: web(),
   },
 });
 const queryClient = new QueryClient();
@@ -64,7 +64,7 @@ import { sepolia } from "viem/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ZamaProvider, web } from "@zama-fhe/react-sdk";
 import { createConfig } from "@zama-fhe/sdk/viem";
-import { sepolia as sepoliaFhe } from "@zama-fhe/sdk/chains";
+import { sepolia as sepoliaFhe, type FheChain } from "@zama-fhe/sdk/chains";
 
 const publicClient = createPublicClient({
   chain: sepolia,
@@ -75,14 +75,14 @@ const walletClient = createWalletClient({
   transport: custom(window.ethereum!),
 });
 
+const mySepolia = { ...sepoliaFhe, relayerUrl: "https://your-app.com/api/relayer/11155111" } as const satisfies FheChain;
+
 const zamaConfig = createConfig({
-  chains: [sepoliaFhe],
+  chains: [mySepolia],
   publicClient,
   walletClient,
-  transports: {
-    [sepoliaFhe.id]: web({
-      relayerUrl: "https://your-app.com/api/relayer/11155111",
-    }),
+  relayers: {
+    [mySepolia.id]: web(),
   },
 });
 const queryClient = new QueryClient();
@@ -111,8 +111,8 @@ const zamaConfig = createConfig({
   chains: [hardhat],
   publicClient,
   walletClient,
-  transports: {
-    [hardhat.id]: cleartext({ executorAddress: "0x..." }),
+  relayers: {
+    [hardhat.id]: cleartext(),
   },
 });
 const queryClient = new QueryClient();
@@ -141,7 +141,7 @@ import { type ZamaProviderProps } from "@zama-fhe/react-sdk";
 
 `ZamaConfig`
 
-Configuration object created by [`createConfig`](/guides/configuration). Wires together chains, transports, signer, and storage for the SDK.
+Configuration object created by [`createConfig`](/guides/configuration). Wires together chains, relayers, signer, and storage for the SDK.
 
 ## Related
 

@@ -80,7 +80,7 @@
       "source_type": "official-doc",
       "category": "guides",
       "logical_path": "guides/configuration",
-      "description": "How to configure the SDK with createConfig — chains, transports, signer, and storage.",
+      "description": "How to configure the SDK with createConfig — chains, relayers, signer, and storage.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
