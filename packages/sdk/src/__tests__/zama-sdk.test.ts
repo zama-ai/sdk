@@ -3,7 +3,7 @@ import { ZamaSDK } from "../zama-sdk";
 import { ReadonlyToken } from "../token/readonly-token";
 import { Token } from "../token/token";
 import { CredentialsManager } from "../credentials/credentials-manager";
-import type { ZamaError} from "../errors";
+import type { ZamaError } from "../errors";
 import { DecryptionFailedError, EncryptionFailedError, ZamaErrorCode } from "../errors";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import { ZERO_HANDLE } from "../utils/handles";
