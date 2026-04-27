@@ -160,8 +160,8 @@ const mySepolia = {
 
 const config = createConfig({
   chains: [mySepolia],
-  signer: myRelayerSigner,   // GenericSigner backed by your relayer
-  provider: myRpcProvider,    // GenericProvider backed by an RPC client
+  signer: myRelayerSigner, // GenericSigner backed by your relayer
+  provider: myRpcProvider, // GenericProvider backed by an RPC client
   storage: memoryStorage,
   relayers: {
     [mySepolia.id]: node({ poolSize: 4 }),

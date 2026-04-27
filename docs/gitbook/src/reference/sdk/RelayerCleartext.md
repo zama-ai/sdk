@@ -62,17 +62,17 @@ Takes a single `FheChain` object directly. Mainnet (1) and Sepolia (11155111) ch
 
 The `FheChain` fields relevant to cleartext mode are:
 
-| Field                                       | Type                        | Description                                                    |
-| ------------------------------------------- | --------------------------- | -------------------------------------------------------------- |
-| `id`                                        | `number`                    | Chain ID (must not be 1 or 11155111)                           |
-| `network`                                   | `EIP1193Provider \| string` | RPC URL or provider for reading on-chain state                 |
-| `gatewayChainId`                            | `number`                    | Gateway chain ID for EIP-712 domain construction               |
-| `aclContractAddress`                        | `Address`                   | ACL contract for permission checks                             |
-| `executorAddress`                           | `Address`                   | CleartextFHEVMExecutor contract storing plaintext values       |
-| `verifyingContractAddressDecryption`        | `Address`                   | EIP-712 verifying contract for decrypt operations              |
-| `verifyingContractAddressInputVerification` | `Address`                   | EIP-712 verifying contract for encrypt operations              |
-| `kmsSignerPrivateKey`                       | `Hex \| undefined`          | KMS signer private key (falls back to built-in mock key)       |
-| `inputSignerPrivateKey`                     | `Hex \| undefined`          | Input signer private key (falls back to built-in mock key)     |
+| Field                                       | Type                        | Description                                                |
+| ------------------------------------------- | --------------------------- | ---------------------------------------------------------- |
+| `id`                                        | `number`                    | Chain ID (must not be 1 or 11155111)                       |
+| `network`                                   | `EIP1193Provider \| string` | RPC URL or provider for reading on-chain state             |
+| `gatewayChainId`                            | `number`                    | Gateway chain ID for EIP-712 domain construction           |
+| `aclContractAddress`                        | `Address`                   | ACL contract for permission checks                         |
+| `executorAddress`                           | `Address`                   | CleartextFHEVMExecutor contract storing plaintext values   |
+| `verifyingContractAddressDecryption`        | `Address`                   | EIP-712 verifying contract for decrypt operations          |
+| `verifyingContractAddressInputVerification` | `Address`                   | EIP-712 verifying contract for encrypt operations          |
+| `kmsSignerPrivateKey`                       | `Hex \| undefined`          | KMS signer private key (falls back to built-in mock key)   |
+| `inputSignerPrivateKey`                     | `Hex \| undefined`          | Input signer private key (falls back to built-in mock key) |
 
 Built-in chain presets (`hardhat`, `hoodi`) already include all required fields:
 

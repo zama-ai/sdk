@@ -238,7 +238,7 @@ const mySepolia = {
 
 const config = createConfig({
   chains: [mySepolia],
-  signer: myCustomSigner,   // implements GenericSigner
+  signer: myCustomSigner, // implements GenericSigner
   provider: myCustomProvider, // implements GenericProvider
   storage: memoryStorage,
   relayers: {

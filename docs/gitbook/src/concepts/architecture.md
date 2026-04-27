@@ -44,7 +44,7 @@ Each package exposes multiple entry points for tree-shaking:
 
 **`@zama-fhe/react-sdk`**
 
-| Import Path                 | Contents                                             |
-| --------------------------- | ---------------------------------------------------- |
-| `@zama-fhe/react-sdk`       | Provider-based hooks (`ZamaProvider` + `use*` hooks) |
+| Import Path                 | Contents                                               |
+| --------------------------- | ------------------------------------------------------ |
+| `@zama-fhe/react-sdk`       | Provider-based hooks (`ZamaProvider` + `use*` hooks)   |
 | `@zama-fhe/react-sdk/wagmi` | `createConfig`, `WagmiSigner` adapter, `WagmiProvider` |

@@ -1252,7 +1252,7 @@ const mySepolia = {
 
 const config = createConfig({
   chains: [mySepolia],
-  signer: myCustomSigner,   // implements GenericSigner
+  signer: myCustomSigner, // implements GenericSigner
   provider: myCustomProvider, // implements GenericProvider
   storage: memoryStorage,
   relayers: {
@@ -2665,8 +2665,8 @@ const mySepolia = {
 
 const config = createConfig({
   chains: [mySepolia],
-  signer: myRelayerSigner,   // GenericSigner backed by your relayer
-  provider: myRpcProvider,    // GenericProvider backed by an RPC client
+  signer: myRelayerSigner, // GenericSigner backed by your relayer
+  provider: myRpcProvider, // GenericProvider backed by an RPC client
   storage: memoryStorage,
   relayers: {
     [mySepolia.id]: node({ poolSize: 4 }),
@@ -3852,7 +3852,7 @@ import { sepolia } from "@zama-fhe/sdk/chains";
 
 const config = createConfig({
   chains: [sepolia],
-  signer: myCustomSigner,   // GenericSigner
+  signer: myCustomSigner, // GenericSigner
   provider: myCustomProvider, // GenericProvider
   storage: memoryStorage,
   relayers: { [sepolia.id]: node({ poolSize: 4 }) },
@@ -5391,17 +5391,17 @@ Takes a single `FheChain` object directly. Mainnet (1) and Sepolia (11155111) ch
 
 The `FheChain` fields relevant to cleartext mode are:
 
-| Field                                       | Type                        | Description                                                    |
-| ------------------------------------------- | --------------------------- | -------------------------------------------------------------- |
-| `id`                                        | `number`                    | Chain ID (must not be 1 or 11155111)                           |
-| `network`                                   | `EIP1193Provider \| string` | RPC URL or provider for reading on-chain state                 |
-| `gatewayChainId`                            | `number`                    | Gateway chain ID for EIP-712 domain construction               |
-| `aclContractAddress`                        | `Address`                   | ACL contract for permission checks                             |
-| `executorAddress`                           | `Address`                   | CleartextFHEVMExecutor contract storing plaintext values       |
-| `verifyingContractAddressDecryption`        | `Address`                   | EIP-712 verifying contract for decrypt operations              |
-| `verifyingContractAddressInputVerification` | `Address`                   | EIP-712 verifying contract for encrypt operations              |
-| `kmsSignerPrivateKey`                       | `Hex \| undefined`          | KMS signer private key (falls back to built-in mock key)       |
-| `inputSignerPrivateKey`                     | `Hex \| undefined`          | Input signer private key (falls back to built-in mock key)     |
+| Field                                       | Type                        | Description                                                |
+| ------------------------------------------- | --------------------------- | ---------------------------------------------------------- |
+| `id`                                        | `number`                    | Chain ID (must not be 1 or 11155111)                       |
+| `network`                                   | `EIP1193Provider \| string` | RPC URL or provider for reading on-chain state             |
+| `gatewayChainId`                            | `number`                    | Gateway chain ID for EIP-712 domain construction           |
+| `aclContractAddress`                        | `Address`                   | ACL contract for permission checks                         |
+| `executorAddress`                           | `Address`                   | CleartextFHEVMExecutor contract storing plaintext values   |
+| `verifyingContractAddressDecryption`        | `Address`                   | EIP-712 verifying contract for decrypt operations          |
+| `verifyingContractAddressInputVerification` | `Address`                   | EIP-712 verifying contract for encrypt operations          |
+| `kmsSignerPrivateKey`                       | `Hex \| undefined`          | KMS signer private key (falls back to built-in mock key)   |
+| `inputSignerPrivateKey`                     | `Hex \| undefined`          | Input signer private key (falls back to built-in mock key) |
 
 Built-in chain presets (`hardhat`, `hoodi`) already include all required fields:
 
@@ -7678,22 +7678,22 @@ import { sepolia, mainnet, hoodi, hardhat } from "@zama-fhe/sdk/chains";
 
 Each chain object implements the `FheChain` interface:
 
-| Field                                       | Type                  | Description                                                                                              |
-| ------------------------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------- |
-| `id`                                        | `number`              | Chain identifier                                                                                         |
-| `gatewayChainId`                            | `number`              | Chain ID of the gateway                                                                                  |
-| `relayerUrl`                                | `string`              | Default relayer endpoint for this network                                                                |
+| Field                                       | Type                        | Description                                                                                              |
+| ------------------------------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `id`                                        | `number`                    | Chain identifier                                                                                         |
+| `gatewayChainId`                            | `number`                    | Chain ID of the gateway                                                                                  |
+| `relayerUrl`                                | `string`                    | Default relayer endpoint for this network                                                                |
 | `network`                                   | `EIP1193Provider \| string` | Default RPC URL or EIP-1193 provider for this network                                                    |
-| `aclContractAddress`                        | `Address`             | ACL contract address                                                                                     |
-| `kmsContractAddress`                        | `Address`             | KMS contract address                                                                                     |
-| `inputVerifierContractAddress`              | `Address`             | Input verifier contract address                                                                          |
-| `verifyingContractAddressDecryption`        | `Address`             | EIP-712 verifying contract for decrypt operations                                                        |
-| `verifyingContractAddressInputVerification` | `Address`             | EIP-712 verifying contract for encrypt operations                                                        |
-| `registryAddress`                           | `Address \| undefined` | Token wrapper registry contract address (undefined for chains without a deployed registry, e.g. Hardhat) |
-| `executorAddress`                           | `Address \| undefined` | TFHEExecutor contract address (cleartext mode only, undefined for real FHE chains)                       |
-| `auth`                                      | `Auth \| undefined`   | Authentication for the relayer endpoint                                                                  |
-| `kmsSignerPrivateKey`                       | `Hex \| undefined`    | KMS signer private key for EIP-712 verification (cleartext mode)                                         |
-| `inputSignerPrivateKey`                     | `Hex \| undefined`    | Input signer private key for EIP-712 verification (cleartext mode)                                       |
+| `aclContractAddress`                        | `Address`                   | ACL contract address                                                                                     |
+| `kmsContractAddress`                        | `Address`                   | KMS contract address                                                                                     |
+| `inputVerifierContractAddress`              | `Address`                   | Input verifier contract address                                                                          |
+| `verifyingContractAddressDecryption`        | `Address`                   | EIP-712 verifying contract for decrypt operations                                                        |
+| `verifyingContractAddressInputVerification` | `Address`                   | EIP-712 verifying contract for encrypt operations                                                        |
+| `registryAddress`                           | `Address \| undefined`      | Token wrapper registry contract address (undefined for chains without a deployed registry, e.g. Hardhat) |
+| `executorAddress`                           | `Address \| undefined`      | TFHEExecutor contract address (cleartext mode only, undefined for real FHE chains)                       |
+| `auth`                                      | `Auth \| undefined`         | Authentication for the relayer endpoint                                                                  |
+| `kmsSignerPrivateKey`                       | `Hex \| undefined`          | KMS signer private key for EIP-712 verification (cleartext mode)                                         |
+| `inputSignerPrivateKey`                     | `Hex \| undefined`          | Input signer private key for EIP-712 verification (cleartext mode)                                       |
 
 ### Usage with `createConfig`
 
@@ -14420,10 +14420,10 @@ Cached decrypted values. Populated by [`useUserDecrypt`](https://raw.githubuserc
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 ```
 
-| Key                                  | Scope                                       |
-| ------------------------------------ | ------------------------------------------- |
-| `.handle(handle, contractAddress?)`  | Single decrypted value by handle            |
-| `.handles(handles[])`               | Multiple decrypted values by handle array   |
+| Key                                 | Scope                                     |
+| ----------------------------------- | ----------------------------------------- |
+| `.handle(handle, contractAddress?)` | Single decrypted value by handle          |
+| `.handles(handles[])`               | Multiple decrypted values by handle array |
 
 ## Common patterns
 
@@ -14541,9 +14541,9 @@ Each package exposes multiple entry points for tree-shaking:
 
 **`@zama-fhe/react-sdk`**
 
-| Import Path                 | Contents                                             |
-| --------------------------- | ---------------------------------------------------- |
-| `@zama-fhe/react-sdk`       | Provider-based hooks (`ZamaProvider` + `use*` hooks) |
+| Import Path                 | Contents                                               |
+| --------------------------- | ------------------------------------------------------ |
+| `@zama-fhe/react-sdk`       | Provider-based hooks (`ZamaProvider` + `use*` hooks)   |
 | `@zama-fhe/react-sdk/wagmi` | `createConfig`, `WagmiSigner` adapter, `WagmiProvider` |
 
 ## Session model

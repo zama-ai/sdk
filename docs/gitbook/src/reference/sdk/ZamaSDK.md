@@ -60,7 +60,7 @@ import { sepolia } from "@zama-fhe/sdk/chains";
 
 const config = createConfig({
   chains: [sepolia],
-  signer: myCustomSigner,   // GenericSigner
+  signer: myCustomSigner, // GenericSigner
   provider: myCustomProvider, // GenericProvider
   storage: memoryStorage,
   relayers: { [sepolia.id]: node({ poolSize: 4 }) },
