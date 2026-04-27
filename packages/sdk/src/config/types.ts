@@ -13,7 +13,7 @@ export type { AtLeastOneChain };
 // ── Shared option shapes ─────────────────────────────────────────────────────
 
 /** Options for web() relayer (threads, security, logger, storage). */
-export type WebRelayerOptions = Partial<Omit<RelayerWebConfig, "chain" | "worker">>;
+export type WebRelayerOptions = Partial<Pick<RelayerWebConfig, "threads" | "security" | "logger">>;
 
 // ── Relayer config types ─────────────────────────────────────────────────────
 
