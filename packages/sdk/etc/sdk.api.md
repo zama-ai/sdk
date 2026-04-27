@@ -6,6 +6,7 @@
 
 import { Abi } from 'viem';
 import { Address } from 'viem';
+import { Auth } from '@zama-fhe/relayer-sdk/bundle';
 import { Bytes32Hex } from '@zama-fhe/relayer-sdk/bundle';
 import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle';
 import { ContractFunctionArgs } from 'viem';
@@ -6525,6 +6526,7 @@ export const ERC7984_WRAPPER_INTERFACE_ID_LEGACY: "0xd04584ba";
 export interface FheChain<TId extends number = number> {
     // (undocumented)
     readonly aclContractAddress: Address;
+    readonly auth?: Auth;
     readonly executorAddress?: Address | undefined;
     // (undocumented)
     readonly gatewayChainId: number;
@@ -18911,7 +18913,7 @@ export interface WebRelayerConfig extends RelayerConfig {
 }
 
 // @public
-export type WebRelayerOptions = Partial<Omit<RelayerWebConfig, "chain" | "worker">>;
+export type WebRelayerOptions = Partial<Pick<RelayerWebConfig, "threads" | "security" | "logger">>;
 
 // @public
 export interface WorkerLike {

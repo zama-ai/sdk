@@ -6,6 +6,7 @@
 
 import { Abi } from 'viem';
 import { Address } from 'viem';
+import { Auth } from '@zama-fhe/relayer-sdk/bundle';
 import { Bytes32Hex } from '@zama-fhe/relayer-sdk/bundle';
 import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle';
 import { ContractFunctionArgs } from 'viem';
