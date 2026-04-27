@@ -32,11 +32,11 @@ async function createInstance(chainConfig) {
     ethersProvider,
     "anvil",
     FhevmMockProviderType.Anvil,
-    chainConfig.chainId,
+    chainConfig.id,
     rpcUrl,
   );
   const config = {
-    chainId: chainConfig.chainId,
+    chainId: chainConfig.id,
     gatewayChainId: chainConfig.gatewayChainId,
     aclContractAddress: chainConfig.aclContractAddress,
     kmsContractAddress: chainConfig.kmsContractAddress,
@@ -103,7 +103,7 @@ async function handleMessage(request) {
       case "INIT": {
         const { chains } = request.payload;
         for (const chain of chains) {
-          configs.set(chain.chainId, chain);
+          configs.set(chain.id, chain);
         }
         send(id, type, { initialized: true });
         break;
@@ -111,8 +111,8 @@ async function handleMessage(request) {
 
       case "ADD_CHAIN": {
         const { config } = request.payload;
-        configs.set(config.chainId, config);
-        send(id, type, { added: true, chainId: config.chainId });
+        configs.set(config.id, config);
+        send(id, type, { added: true, chainId: config.id });
         break;
       }
 

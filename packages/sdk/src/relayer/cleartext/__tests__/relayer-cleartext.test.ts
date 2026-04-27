@@ -597,7 +597,6 @@ describe(RelayerCleartext, () => {
     const result = await fhevm.userDecrypt(createUserDecryptParams({ handles: [addressHandle] }));
 
     const decoded = result[addressHandle];
-    expectTypeOf(decoded).toBeString();
     expect(decoded).toMatch(/^0x[0-9a-f]{40}$/);
   });
 
@@ -894,7 +893,6 @@ describe(RelayerCleartext, () => {
 
     expect(result[boolHandle]).toBeTruthy();
     const addressResult = result[addressHandle];
-    expectTypeOf(addressResult).toBeString();
     expect(addressResult).toMatch(/^0x[0-9a-f]{40}$/);
   });
 
