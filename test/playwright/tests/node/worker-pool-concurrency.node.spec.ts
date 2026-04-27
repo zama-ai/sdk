@@ -2,40 +2,72 @@
  * Scenario: A high-throughput backend fires concurrent FHE requests through
  * a multi-worker pool to verify parallelism and clean shutdown.
  */
-import { nodeTest as test, expect } from "../../fixtures/node-test";
-import { RelayerNode } from "@zama-fhe/sdk/node";
-import type { ExtendedFhevmInstanceConfig } from "@zama-fhe/sdk";
+import { type FheChain, ZamaSDK } from "@zama-fhe/sdk";
+import { node } from "@zama-fhe/sdk/node";
+import { createConfig } from "@zama-fhe/sdk/viem";
+import type { PublicClient, WalletClient } from "viem";
+import { expect, nodeTest as test } from "../../fixtures/node-test";
 
-function createRelayer(chain: ExtendedFhevmInstanceConfig, poolSize: number) {
-  return new RelayerNode({
-    chain,
-    poolSize,
-  });
+interface CreateZamaSDKParams {
+  chain: FheChain;
+  publicClient: PublicClient;
+  walletClient: WalletClient;
+  poolSize: number;
 }
 
-test("2-worker pool generates 4 unique keypairs concurrently", async ({ chain }) => {
-  using relayer = createRelayer(chain, 2);
+function createZamaSDK({ chain, publicClient, walletClient, poolSize }: CreateZamaSDKParams) {
+  return new ZamaSDK(
+    createConfig({
+      chains: [chain],
+      publicClient,
+      walletClient,
+      transports: { [chain.id]: node(chain, { poolSize }) },
+    }),
+  );
+}
+
+test("2-worker pool generates 4 unique keypairs concurrently", async ({
+  chain,
+  publicClient,
+  viemClient,
+}) => {
+  using sdk = createZamaSDK({
+    chain,
+    publicClient,
+    walletClient: viemClient,
+    poolSize: 2,
+  });
   const results = await Promise.all([
-    relayer.generateKeypair(),
-    relayer.generateKeypair(),
-    relayer.generateKeypair(),
-    relayer.generateKeypair(),
+    sdk.relayer.generateKeypair(),
+    sdk.relayer.generateKeypair(),
+    sdk.relayer.generateKeypair(),
+    sdk.relayer.generateKeypair(),
   ]);
   expect(results).toHaveLength(4);
   const publicKeys = new Set(results.map((r) => r.publicKey));
   expect(publicKeys.size).toBe(4);
 });
 
-test("4-worker pool handles parallel EIP-712 creation", async ({ chain, contracts }) => {
-  using relayer = createRelayer(chain, 4);
-  const keypair = await relayer.generateKeypair();
+test("4-worker pool handles parallel EIP-712 creation", async ({
+  chain,
+  publicClient,
+  viemClient,
+  contracts,
+}) => {
+  using sdk = createZamaSDK({
+    chain,
+    publicClient,
+    walletClient: viemClient,
+    poolSize: 4,
+  });
+  const keypair = await sdk.relayer.generateKeypair();
   const now = Math.floor(Date.now() / 1000);
 
   const results = await Promise.all([
-    relayer.createEIP712(keypair.publicKey, [contracts.cUSDT], now, 7),
-    relayer.createEIP712(keypair.publicKey, [contracts.cUSDC], now, 7),
-    relayer.createEIP712(keypair.publicKey, [contracts.cUSDT], now, 14),
-    relayer.createEIP712(keypair.publicKey, [contracts.cUSDC], now, 14),
+    sdk.relayer.createEIP712(keypair.publicKey, [contracts.cUSDT], now, 7),
+    sdk.relayer.createEIP712(keypair.publicKey, [contracts.cUSDC], now, 7),
+    sdk.relayer.createEIP712(keypair.publicKey, [contracts.cUSDT], now, 14),
+    sdk.relayer.createEIP712(keypair.publicKey, [contracts.cUSDC], now, 14),
   ]);
   expect(results).toHaveLength(4);
   for (const eip712 of results) {
@@ -43,16 +75,37 @@ test("4-worker pool handles parallel EIP-712 creation", async ({ chain, contract
   }
 });
 
-test("terminate shuts down all workers in the pool", async ({ chain }) => {
-  const relayer = createRelayer(chain, 2);
-  await relayer.generateKeypair();
-  relayer.terminate();
-  await expect(relayer.generateKeypair()).rejects.toThrow("terminated");
+test("terminate and restart", async ({ chain, publicClient, viemClient }) => {
+  const sdk = createZamaSDK({
+    chain,
+    publicClient,
+    walletClient: viemClient,
+    poolSize: 2,
+  });
+  await sdk.relayer.generateKeypair();
+  sdk.terminate();
+  // Post-terminate, operations restart the pool
+  expect(await sdk.relayer.generateKeypair()).toMatchObject({
+    privateKey: expect.stringMatching(/0x/),
+    publicKey: expect.stringMatching(/0x/),
+  });
 });
 
-test("concurrent init requests share pool initialization", async ({ chain }) => {
-  using relayer = createRelayer(chain, 2);
-  const [kp1, kp2] = await Promise.all([relayer.generateKeypair(), relayer.generateKeypair()]);
+test("concurrent init requests share pool initialization", async ({
+  chain,
+  publicClient,
+  viemClient,
+}) => {
+  using sdk = createZamaSDK({
+    chain,
+    publicClient,
+    walletClient: viemClient,
+    poolSize: 2,
+  });
+  const [kp1, kp2] = await Promise.all([
+    sdk.relayer.generateKeypair(),
+    sdk.relayer.generateKeypair(),
+  ]);
   expect(kp1.publicKey).toMatch(/^0x[0-9a-fA-F]+$/);
   expect(kp2.publicKey).toMatch(/^0x[0-9a-fA-F]+$/);
 });

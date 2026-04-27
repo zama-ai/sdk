@@ -4,7 +4,8 @@
  * Replaces the real WASM worker so RelayerNode works against local anvil
  * with proper handle generation, ACL verification, and decrypt support.
  *
- * This is the Node.js equivalent of relayer-sdk.js (browser mock).
+ * Matches the multichain worker protocol: INIT receives chains[],
+ * instances are created lazily per chainId.
  */
 import { parentPort } from "node:worker_threads";
 import { ethers } from "ethers";
@@ -16,7 +17,68 @@ if (!parentPort) {
 
 const port = parentPort;
 
-let instance = null;
+/** chainId → config (registered at INIT / ADD_CHAIN) */
+const configs = new Map();
+/** chainId → MockFhevmInstance (created lazily) */
+const instances = new Map();
+/** chainId → Promise<MockFhevmInstance> (dedup inflight creation) */
+const pending = new Map();
+
+async function createInstance(chainConfig) {
+  const rpcUrl = chainConfig.network;
+  const ethersProvider = new ethers.JsonRpcProvider(rpcUrl);
+  const relayerProvider = await FhevmMockProvider.create(
+    { send: (method, params) => ethersProvider.send(method, params ?? []) },
+    ethersProvider,
+    "anvil",
+    FhevmMockProviderType.Anvil,
+    chainConfig.chainId,
+    rpcUrl,
+  );
+  const config = {
+    chainId: chainConfig.chainId,
+    gatewayChainId: chainConfig.gatewayChainId,
+    aclContractAddress: chainConfig.aclContractAddress,
+    kmsContractAddress: chainConfig.kmsContractAddress,
+    inputVerifierContractAddress: chainConfig.inputVerifierContractAddress,
+    verifyingContractAddressDecryption: chainConfig.verifyingContractAddressDecryption,
+    verifyingContractAddressInputVerification:
+      chainConfig.verifyingContractAddressInputVerification,
+  };
+  return MockFhevmInstance.create(relayerProvider, ethersProvider, config, {
+    inputVerifierProperties: {},
+    kmsVerifierProperties: {},
+  });
+}
+
+async function getInstance(chainId) {
+  let inst = instances.get(chainId);
+  if (inst) {
+    return inst;
+  }
+  let p = pending.get(chainId);
+  if (p) {
+    return p;
+  }
+  const config = configs.get(chainId);
+  if (!config) {
+    throw new Error(
+      `No config for chain ${chainId}. Available: [${[...configs.keys()].join(", ")}]`,
+    );
+  }
+  p = createInstance(config)
+    .then((i) => {
+      instances.set(chainId, i);
+      pending.delete(chainId);
+      return i;
+    })
+    .catch((err) => {
+      pending.delete(chainId);
+      throw err;
+    });
+  pending.set(chainId, p);
+  return p;
+}
 
 function send(id, type, data) {
   port.postMessage({ id, type, success: true, data });
@@ -38,47 +100,33 @@ async function handleMessage(request) {
   const { id, type } = request;
   try {
     switch (type) {
-      case "NODE_INIT": {
-        const { fhevmConfig } = request.payload;
-        const rpcUrl = fhevmConfig.network;
-
-        const ethersProvider = new ethers.JsonRpcProvider(rpcUrl);
-        const relayerProvider = await FhevmMockProvider.create(
-          {
-            send: (method, params) => ethersProvider.send(method, params ?? []),
-          },
-          ethersProvider,
-          "anvil",
-          FhevmMockProviderType.Anvil,
-          fhevmConfig.chainId,
-          rpcUrl,
-        );
-
-        const config = {
-          chainId: fhevmConfig.chainId,
-          gatewayChainId: fhevmConfig.gatewayChainId,
-          aclContractAddress: fhevmConfig.aclContractAddress,
-          kmsContractAddress: fhevmConfig.kmsContractAddress,
-          inputVerifierContractAddress: fhevmConfig.inputVerifierContractAddress,
-          verifyingContractAddressDecryption: fhevmConfig.verifyingContractAddressDecryption,
-          verifyingContractAddressInputVerification:
-            fhevmConfig.verifyingContractAddressInputVerification,
-        };
-
-        // Let MockFhevmInstance read contract properties from chain
-        instance = await MockFhevmInstance.create(relayerProvider, ethersProvider, config, {
-          inputVerifierProperties: {},
-          kmsVerifierProperties: {},
-        });
-
+      case "INIT": {
+        const { chains } = request.payload;
+        for (const chain of chains) {
+          configs.set(chain.chainId, chain);
+        }
         send(id, type, { initialized: true });
         break;
       }
 
+      case "ADD_CHAIN": {
+        const { config } = request.payload;
+        configs.set(config.chainId, config);
+        send(id, type, { added: true, chainId: config.chainId });
+        break;
+      }
+
+      case "REMOVE_CHAIN": {
+        const { chainId } = request.payload;
+        configs.delete(chainId);
+        instances.delete(chainId);
+        pending.delete(chainId);
+        send(id, type, { removed: true, chainId });
+        break;
+      }
+
       case "GENERATE_KEYPAIR": {
-        if (!instance) {
-          throw new Error("Not initialized");
-        }
+        const instance = await getInstance(request.payload.chainId);
         const kp = instance.generateKeypair();
         send(id, type, {
           publicKey: ensure0x(kp.publicKey),
@@ -88,9 +136,7 @@ async function handleMessage(request) {
       }
 
       case "CREATE_EIP712": {
-        if (!instance) {
-          throw new Error("Not initialized");
-        }
+        const instance = await getInstance(request.payload.chainId);
         const { publicKey, contractAddresses, startTimestamp, durationDays } = request.payload;
         const eip712 = instance.createEIP712(
           remove0x(publicKey),
@@ -125,9 +171,7 @@ async function handleMessage(request) {
       }
 
       case "ENCRYPT": {
-        if (!instance) {
-          throw new Error("Not initialized");
-        }
+        const instance = await getInstance(request.payload.chainId);
         const { values, contractAddress, userAddress } = request.payload;
         const input = instance.createEncryptedInput(contractAddress, userAddress);
 
@@ -172,9 +216,7 @@ async function handleMessage(request) {
       }
 
       case "USER_DECRYPT": {
-        if (!instance) {
-          throw new Error("Not initialized");
-        }
+        const instance = await getInstance(request.payload.chainId);
         const p = request.payload;
         const handleContractPairs = p.handles.map((handle) => ({
           handle,
@@ -195,18 +237,14 @@ async function handleMessage(request) {
       }
 
       case "PUBLIC_DECRYPT": {
-        if (!instance) {
-          throw new Error("Not initialized");
-        }
+        const instance = await getInstance(request.payload.chainId);
         const pdResult = await instance.publicDecrypt(request.payload.handles);
         send(id, type, pdResult);
         break;
       }
 
       case "DELEGATED_USER_DECRYPT": {
-        if (!instance) {
-          throw new Error("Not initialized");
-        }
+        const instance = await getInstance(request.payload.chainId);
         const dp = request.payload;
         const dpHandleContractPairs = dp.handles.map((handle) => ({
           handle,
@@ -228,9 +266,7 @@ async function handleMessage(request) {
       }
 
       case "CREATE_DELEGATED_EIP712": {
-        if (!instance) {
-          throw new Error("Not initialized");
-        }
+        const instance = await getInstance(request.payload.chainId);
         const {
           publicKey: pk,
           contractAddresses: ca,
@@ -250,7 +286,6 @@ async function handleMessage(request) {
       }
 
       case "GET_PUBLIC_KEY": {
-        // MockFhevmInstance throws for getPublicKey — return a mock value
         send(id, type, {
           result: {
             publicKeyId: "mock-public-key-id",
@@ -261,7 +296,6 @@ async function handleMessage(request) {
       }
 
       case "GET_PUBLIC_PARAMS": {
-        // MockFhevmInstance throws for getPublicParams — return a mock value
         send(id, type, {
           result: {
             publicParamsId: "mock-public-params-id",
@@ -283,5 +317,4 @@ async function handleMessage(request) {
   }
 }
 
-// handleMessage is async and catches all errors internally via sendError
 port.on("message", (msg) => void handleMessage(msg));
