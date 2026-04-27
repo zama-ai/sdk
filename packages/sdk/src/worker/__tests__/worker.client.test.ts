@@ -115,7 +115,6 @@ const { NodeWorkerClient } = await import("../worker.node-client");
 
 function defaultWebConfig() {
   return {
-    cdnUrl: "https://cdn.example.com/relayer.js",
     fhevmConfig: { chainId: 1 } as never,
     csrfToken: "csrf-token-123",
   };
@@ -316,7 +315,6 @@ describe("RelayerWorkerClient", () => {
     const config = {
       ...defaultWebConfig(),
       logger,
-      integrity: "sha384-abc",
       thread: 4,
     };
     const client = new RelayerWorkerClient(config);
@@ -325,17 +323,15 @@ describe("RelayerWorkerClient", () => {
     const req = getFirstPostedRequest(lastMockWorker!);
     expect(req.payload).not.toHaveProperty("logger");
     expect(req.payload).toEqual({
-      cdnUrl: config.cdnUrl,
       fhevmConfig: config.fhevmConfig,
       csrfToken: config.csrfToken,
-      integrity: "sha384-abc",
       thread: 4,
     });
 
     client.terminate();
   });
 
-  it("initWorker() initializes the worker with CDN config", async () => {
+  it("initWorker() initializes the worker with fhevm config", async () => {
     setupAutoResolvingWebWorker();
     const config = defaultWebConfig();
     const client = new RelayerWorkerClient(config);

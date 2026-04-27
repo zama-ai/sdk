@@ -23,17 +23,6 @@ import type {
 import { DefaultConfigs, withRetry } from "./relayer-utils";
 
 /**
- * Pinned relayer SDK version used for the WASM CDN bundle.
- * Update this when upgrading @zama-fhe/relayer-sdk, and keep the
- * peerDependencies range in package.json in sync (~x.y.z).
- */
-const RELAYER_SDK_VERSION = "0.4.2";
-const CDN_URL = `https://cdn.zama.org/relayer-sdk-js/${RELAYER_SDK_VERSION}/relayer-sdk-js.umd.cjs`;
-/** SHA-384 hex digest of the pinned CDN bundle for integrity verification. */
-const CDN_INTEGRITY =
-  "114438b01d518b53a447fa3e8bfbe6e71031cb42ac43219bb9f53488456fdfa4bbc8989628366d436e68f6526c7647eb";
-
-/**
  * RelayerWeb — browser encryption/decryption layer using a Web Worker.
  * Handles WASM initialization in a Web Worker for non-blocking operations.
  *
@@ -104,10 +93,8 @@ export class RelayerWeb implements RelayerSDK, Disposable {
     }
 
     return {
-      cdnUrl: CDN_URL,
       fhevmConfig: Object.assign({}, DefaultConfigs[chainId], transports[chainId]),
       csrfToken: security?.getCsrfToken?.() ?? "",
-      integrity: security?.integrityCheck === false ? undefined : CDN_INTEGRITY,
       logger: this.#config.logger,
       // Public API uses `threads` (plural, "how many threads"); upstream
       // `initSDK` expects `thread` (singular) — rename at the boundary.
