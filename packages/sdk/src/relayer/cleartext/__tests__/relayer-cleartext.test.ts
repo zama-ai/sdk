@@ -13,16 +13,11 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 import { describe, expect, it } from "vitest";
 import { hardhat } from "../../../chains";
-import { toRelayerChainConfig } from "../../../chains/utils";
 import type { Handle } from "../../relayer-sdk.types";
 import { MOCK_INPUT_SIGNER_PK, MOCK_KMS_SIGNER_PK } from "../constants";
 import { RelayerCleartext } from "../relayer-cleartext";
-import type { CleartextConfig } from "../types";
 
-const hardhatCleartextConfig: CleartextConfig = {
-  ...toRelayerChainConfig(hardhat),
-  executorAddress: hardhat.executorAddress!,
-};
+const hardhatCleartextConfig = hardhat;
 
 const USER_ADDRESS = "0x1000000000000000000000000000000000000001";
 const CONTRACT_ADDRESS = "0x2000000000000000000000000000000000000002";
@@ -227,7 +222,7 @@ describe(RelayerCleartext, () => {
         new RelayerCleartext({
           ...hardhatCleartextConfig,
           network: provider,
-          chainId: 1,
+          id: 1,
         }),
     ).toThrow(/not allowed on chain 1/);
   });
@@ -240,7 +235,7 @@ describe(RelayerCleartext, () => {
         new RelayerCleartext({
           ...hardhatCleartextConfig,
           network: provider,
-          chainId: 11155111,
+          id: 11155111,
         }),
     ).toThrow(/not allowed on chain 11155111/);
   });
@@ -275,7 +270,7 @@ describe(RelayerCleartext, () => {
     expect(typedData.domain).toEqual({
       name: "Decryption",
       version: "1",
-      chainId: BigInt(hardhatCleartextConfig.chainId),
+      chainId: BigInt(hardhatCleartextConfig.id),
       verifyingContract: hardhatCleartextConfig.verifyingContractAddressDecryption,
     });
     expect(typedData.types.UserDecryptRequestVerification.map((field) => field.name)).toEqual([

@@ -53,7 +53,7 @@ import { RelayerWeb } from "../relayer-web";
 // ---------------------------------------------------------------------------
 
 const CHAIN_CONFIG = {
-  chainId: 11155111,
+  id: 11155111,
   relayerUrl: "https://relayer.example.com",
 } as any;
 
