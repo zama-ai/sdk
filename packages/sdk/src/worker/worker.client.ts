@@ -1,6 +1,5 @@
 import type { FheChain } from "../chains/types";
 import type {
-  AddChainResponseData,
   GenericLogger,
   UpdateCsrfResponseData,
   WorkerEnv,
@@ -80,14 +79,6 @@ export class RelayerWorkerClient extends BaseWorkerClient<Worker, WorkerClientCo
       type: "INIT",
       payload: { env: "web" as const, cdnUrl, chains, csrfToken, integrity, thread },
     };
-  }
-
-  override async addChain(config: FheChain): Promise<AddChainResponseData> {
-    const csrfToken = this.config.csrfToken;
-    return this.sendRequest<AddChainResponseData>(
-      "ADD_CHAIN",
-      { env: "web" as const, config, csrfToken } as any, // eslint-disable-line @typescript-eslint/no-explicit-any
-    );
   }
 
   /**

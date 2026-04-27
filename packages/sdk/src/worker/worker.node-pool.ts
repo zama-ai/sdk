@@ -1,5 +1,4 @@
 import { availableParallelism } from "node:os";
-import type { FheChain } from "../chains/types";
 import { NodeWorkerClient } from "./worker.node-client";
 import type { NodeWorkerClientConfig } from "./worker.node-client";
 import type {
@@ -196,19 +195,5 @@ export class NodeWorkerPool {
     params: GetPublicParamsRequest["payload"],
   ): Promise<GetPublicParamsResponseData> {
     return this.#dispatch((w) => w.getPublicParams(params));
-  }
-
-  async addChain(config: FheChain): Promise<void> {
-    if (this.#workers.length === 0) {
-      throw new Error("NodeWorkerPool not initialized. Call initPool() first.");
-    }
-    await Promise.all(this.#workers.map((w) => w.addChain(config)));
-  }
-
-  async removeChain(chainId: number): Promise<void> {
-    if (this.#workers.length === 0) {
-      throw new Error("NodeWorkerPool not initialized. Call initPool() first.");
-    }
-    await Promise.all(this.#workers.map((w) => w.removeChain(chainId)));
   }
 }

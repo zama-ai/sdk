@@ -9,7 +9,6 @@ import type { FheChain } from "../chains/types";
 import { prefixHex, unprefixHex } from "../utils";
 import { getBrowserExtensionRuntime } from "./browser-extension";
 import type {
-  AddChainRequest,
   CreateDelegatedEIP712Request,
   CreateEIP712Request,
   DelegatedUserDecryptRequest,
@@ -26,7 +25,6 @@ import type {
   InitRequest,
   PublicDecryptRequest,
   PublicDecryptResponseData,
-  RemoveChainRequest,
   RequestZKProofVerificationRequest,
   SuccessResponse,
   UpdateCsrfRequest,
@@ -328,38 +326,6 @@ async function handleInit(request: InitRequest): Promise<void> {
     console.error("[Worker] Init error:", message);
     sendError(id, type, message);
   }
-}
-
-/**
- * Handle ADD_CHAIN request - register a new chain config for lazy instance creation.
- */
-function handleAddChain(request: AddChainRequest): void {
-  const { id, type, payload } = request;
-  try {
-    if (payload.env === "web" && payload.csrfToken) {
-      csrfTokenBase = payload.csrfToken;
-    }
-    const { config } = payload;
-    if (config.relayerUrl) {
-      relayerUrls.add(config.relayerUrl);
-    }
-    configs.set(config.id, config);
-    sendSuccess(id, type, { added: true, chainId: config.id });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    sendError(id, type, message);
-  }
-}
-
-/**
- * Handle REMOVE_CHAIN request - remove a chain's config and cached instance.
- */
-function handleRemoveChain(request: RemoveChainRequest): void {
-  const { id, type, payload } = request;
-  configs.delete(payload.chainId);
-  instances.delete(payload.chainId);
-  pending.delete(payload.chainId);
-  sendSuccess(id, type, { removed: true, chainId: payload.chainId });
 }
 
 /** Coerce a boolean to bigint for numeric FHE types. */
@@ -728,12 +694,6 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     switch (request.type) {
       case "INIT":
         await handleInit(request);
-        break;
-      case "ADD_CHAIN":
-        handleAddChain(request);
-        break;
-      case "REMOVE_CHAIN":
-        handleRemoveChain(request);
         break;
       case "UPDATE_CSRF":
         handleUpdateCsrf(request);

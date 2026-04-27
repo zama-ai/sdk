@@ -1,6 +1,4 @@
-import type { FheChain } from "../chains/types";
 import type {
-  AddChainResponseData,
   CreateDelegatedEIP712Payload,
   CreateDelegatedEIP712ResponseData,
   CreateEIP712Payload,
@@ -18,7 +16,6 @@ import type {
   InitResponseData,
   PublicDecryptPayload,
   PublicDecryptResponseData,
-  RemoveChainResponseData,
   RequestZKProofVerificationRequest,
   RequestZKProofVerificationResponseData,
   UserDecryptPayload,
@@ -87,7 +84,7 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
     payload: WorkerRequest["payload"];
   };
 
-  /** Subclasses set "web" or "node" — stamps the env discriminant on INIT / ADD_CHAIN payloads. */
+  /** Subclasses set "web" or "node" — stamps the env discriminant on INIT payloads. */
   protected abstract readonly env: WorkerEnv;
 
   /** Optional hook called after worker init succeeds (e.g. for node worker.unref()). */
@@ -303,19 +300,6 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
     params: GetPublicParamsRequest["payload"],
   ): Promise<GetPublicParamsResponseData> {
     return this.sendRequest<GetPublicParamsResponseData>("GET_PUBLIC_PARAMS", params);
-  }
-
-  async addChain(config: FheChain): Promise<AddChainResponseData> {
-    return this.sendRequest<AddChainResponseData>("ADD_CHAIN", {
-      env: this.env as "node",
-      config,
-    });
-  }
-
-  async removeChain(chainId: number): Promise<RemoveChainResponseData> {
-    return this.sendRequest<RemoveChainResponseData>("REMOVE_CHAIN", {
-      chainId,
-    });
   }
 
   // ===========================================================================

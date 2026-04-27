@@ -32,8 +32,6 @@ export type WorkerEnv = "web" | "node";
 
 export type WorkerRequestType =
   | "INIT"
-  | "ADD_CHAIN"
-  | "REMOVE_CHAIN"
   | "UPDATE_CSRF"
   | "ENCRYPT"
   | "USER_DECRYPT"
@@ -72,31 +70,6 @@ export type InitPayload = InitWebPayload | InitNodePayload;
 export interface InitRequest extends BaseRequest {
   type: "INIT";
   payload: InitPayload;
-}
-
-interface AddChainWebPayload {
-  env: "web";
-  config: FheChain;
-  csrfToken: string;
-}
-
-interface AddChainNodePayload {
-  env: "node";
-  config: FheChain;
-}
-
-export type AddChainPayload = AddChainWebPayload | AddChainNodePayload;
-
-export interface AddChainRequest extends BaseRequest {
-  type: "ADD_CHAIN";
-  payload: AddChainPayload;
-}
-
-export interface RemoveChainRequest extends BaseRequest {
-  type: "REMOVE_CHAIN";
-  payload: {
-    chainId: number;
-  };
 }
 
 export interface UpdateCsrfRequest extends BaseRequest {
@@ -208,8 +181,6 @@ export interface GetPublicParamsRequest extends BaseRequest {
 
 export type WorkerRequest =
   | InitRequest
-  | AddChainRequest
-  | RemoveChainRequest
   | UpdateCsrfRequest
   | EncryptRequest
   | UserDecryptRequest
@@ -262,16 +233,6 @@ export type WorkerResponse<T> = SuccessResponse<T> | ErrorResponse;
 
 export interface InitResponseData {
   initialized: true;
-}
-
-export interface AddChainResponseData {
-  added: true;
-  chainId: number;
-}
-
-export interface RemoveChainResponseData {
-  removed: true;
-  chainId: number;
 }
 
 export interface UpdateCsrfResponseData {
