@@ -14,7 +14,7 @@ import {
 } from "@zama-fhe/sdk";
 import { hardhatCleartextConfig } from "@zama-fhe/sdk/cleartext";
 import { RelayerNode } from "@zama-fhe/sdk/node";
-import { ViemSigner } from "@zama-fhe/sdk/viem";
+import { ViemProvider, ViemSigner } from "@zama-fhe/sdk/viem";
 import { createPublicClient, createTestClient, http, publicActions, walletActions } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { foundry } from "viem/chains";
@@ -91,9 +91,10 @@ export const nodeTest = base.extend<NodeTestFixtures, NodeWorkerFixtures>({
       chain: foundry,
       transport: http(transport.network as string),
     });
-    const signer = new ViemSigner({ walletClient: viemClient, publicClient });
+    const signer = new ViemSigner({ walletClient: viemClient });
+    const provider = new ViemProvider({ publicClient });
     const storage = new MemoryStorage();
-    using sdk = new ZamaSDK({ relayer, signer, storage });
+    using sdk = new ZamaSDK({ relayer, provider, signer, storage });
     await use(sdk);
   },
   // Auto-use fixture: snapshot anvil before each test, revert after.

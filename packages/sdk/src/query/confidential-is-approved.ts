@@ -1,5 +1,5 @@
 import { isOperatorContract } from "../contracts";
-import type { GenericSigner } from "../types";
+import type { ZamaSDK } from "../zama-sdk";
 import { assertNonNullable } from "../utils/assertions";
 import type { QueryFactoryOptions } from "./factory-types";
 import { filterQueryOptions } from "./utils";
@@ -13,7 +13,7 @@ export interface ConfidentialIsApprovedQueryConfig {
 }
 
 export function confidentialIsApprovedQueryOptions(
-  signer: GenericSigner,
+  sdk: ZamaSDK,
   tokenAddress: Address | undefined,
   config: ConfidentialIsApprovedQueryConfig,
 ): QueryFactoryOptions<
@@ -36,7 +36,7 @@ export function confidentialIsApprovedQueryOptions(
       assertNonNullable(keyTokenAddress, "confidentialIsApprovedQueryOptions: tokenAddress");
       assertNonNullable(keyHolder, "confidentialIsApprovedQueryOptions: holder");
       assertNonNullable(keySpender, "confidentialIsApprovedQueryOptions: spender");
-      return signer.readContract(isOperatorContract(keyTokenAddress, keyHolder, keySpender));
+      return sdk.provider.readContract(isOperatorContract(keyTokenAddress, keyHolder, keySpender));
     },
     staleTime: 30_000,
     enabled: Boolean(tokenAddress && holderKey && spenderKey) && queryEnabled,

@@ -4,19 +4,19 @@ import {
   supportsInterfaceContract,
 } from "../contracts";
 import { ConfigurationError } from "../errors";
-import type { GenericSigner } from "../types";
+import type { GenericProvider } from "../types";
 import { isContractCallError } from "../utils";
 import type { Address } from "viem";
 
 export type WrapperInterfaceVersion = "legacy" | "upgraded";
 
 async function safeSupportsInterface(
-  signer: GenericSigner,
+  provider: GenericProvider,
   wrapperAddress: Address,
   interfaceId: Address,
 ): Promise<boolean> {
   try {
-    return await signer.readContract(supportsInterfaceContract(wrapperAddress, interfaceId));
+    return await provider.readContract(supportsInterfaceContract(wrapperAddress, interfaceId));
   } catch (error) {
     if (isContractCallError(error)) {
       return false;
@@ -26,13 +26,13 @@ async function safeSupportsInterface(
 }
 
 export async function detectWrapperInterfaceVersion(
-  signer: GenericSigner,
+  provider: GenericProvider,
   wrapperAddress: Address,
 ): Promise<WrapperInterfaceVersion> {
   // Probe the upgraded interface first: it is the target steady state and lets
   // post-upgrade wrappers avoid the legacy ERC-165 read on every refetch.
   const supportsUpgraded = await safeSupportsInterface(
-    signer,
+    provider,
     wrapperAddress,
     ERC7984_WRAPPER_INTERFACE_ID,
   );
@@ -41,7 +41,7 @@ export async function detectWrapperInterfaceVersion(
   }
 
   const supportsLegacy = await safeSupportsInterface(
-    signer,
+    provider,
     wrapperAddress,
     ERC7984_WRAPPER_INTERFACE_ID_LEGACY,
   );

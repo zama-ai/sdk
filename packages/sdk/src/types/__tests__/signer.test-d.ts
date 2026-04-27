@@ -2,6 +2,7 @@ import { describe, expectTypeOf, test } from "vitest";
 import type { Address, Hex } from "viem";
 import type { GenericSigner, SignerLifecycleCallbacks } from "../signer";
 import type { TransactionReceipt } from "../transaction";
+import type { GenericProvider } from "../provider";
 
 describe("GenericSigner", () => {
   test("getChainId returns Promise<number>", () => {
@@ -17,13 +18,15 @@ describe("GenericSigner", () => {
   });
 
   test("waitForTransactionReceipt returns Promise<TransactionReceipt>", () => {
-    expectTypeOf<GenericSigner["waitForTransactionReceipt"]>().returns.toEqualTypeOf<
+    expectTypeOf<GenericProvider["waitForTransactionReceipt"]>().returns.toEqualTypeOf<
       Promise<TransactionReceipt>
     >();
   });
 
   test("getBlockTimestamp returns Promise<bigint>", () => {
-    expectTypeOf<ReturnType<GenericSigner["getBlockTimestamp"]>>().toEqualTypeOf<Promise<bigint>>();
+    expectTypeOf<ReturnType<GenericProvider["getBlockTimestamp"]>>().toEqualTypeOf<
+      Promise<bigint>
+    >();
   });
 
   test("subscribe is optional", () => {

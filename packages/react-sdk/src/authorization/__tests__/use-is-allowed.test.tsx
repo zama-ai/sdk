@@ -1,9 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
+import { waitFor } from "@testing-library/react";
 import { hashFn, zamaQueryKeys } from "@zama-fhe/sdk/query";
 import type { Address } from "@zama-fhe/sdk";
 import { describe, expect, test } from "../../test-fixtures";
 
 import { useIsAllowed } from "../use-is-allowed";
+
+const CONTRACT_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
+// Matches the USER constant in sdk/src/test-fixtures.ts used by createMockSigner
+const USER_ADDRESS = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
 
 vi.mock(import("@tanstack/react-query"), async () => {
   const actual =
@@ -11,28 +16,27 @@ vi.mock(import("@tanstack/react-query"), async () => {
   return { ...actual, useQuery: vi.fn(() => ({ data: true })) };
 });
 
-const CONTRACT_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
+vi.mock("../../use-signer-address", () => ({
+  useSignerAddress: vi.fn(() => ({ data: USER_ADDRESS })),
+}));
 
 describe("useIsAllowed", () => {
-  test("passes the shared queryKeyHashFn", ({ renderWithProviders }) => {
-    vi.mocked(useQuery)
-      .mockReturnValueOnce({ data: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" } as never)
-      .mockReturnValueOnce({ data: true } as never);
+  test("passes the shared queryKeyHashFn and scopes by signer address", async ({
+    renderWithProviders,
+  }) => {
+    vi.mocked(useQuery).mockReturnValue({ data: true } as never);
 
     renderWithProviders(() => useIsAllowed({ contractAddresses: [CONTRACT_A] }));
 
-    expect(vi.mocked(useQuery)).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({ queryKeyHashFn: hashFn }),
-    );
-    expect(vi.mocked(useQuery)).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        queryKeyHashFn: hashFn,
-        queryKey: zamaQueryKeys.isAllowed.scope("0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a", [
-          CONTRACT_A,
-        ]),
-      }),
-    );
+    // After ZamaProvider resolves signer.getAddress() the hook re-renders with the
+    // signer address in the query key.
+    await waitFor(() => {
+      expect(vi.mocked(useQuery)).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queryKeyHashFn: hashFn,
+          queryKey: zamaQueryKeys.isAllowed.scope(USER_ADDRESS, [CONTRACT_A]),
+        }),
+      );
+    });
   });
 });

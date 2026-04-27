@@ -19,8 +19,8 @@ const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
 const C_TOKEN = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
 
 describe("tokenPairsQueryOptions", () => {
-  test("includes registry address in query key", ({ signer }) => {
-    const options = tokenPairsQueryOptions(signer, {
+  test("includes registry address in query key", ({ sdk }) => {
+    const options = tokenPairsQueryOptions(sdk, {
       registryAddress: REGISTRY,
     });
     expect(options.queryKey).toEqual([
@@ -30,29 +30,29 @@ describe("tokenPairsQueryOptions", () => {
     expect(options.enabled).toBe(true);
   });
 
-  test("disabled when registryAddress is undefined", ({ signer }) => {
-    const options = tokenPairsQueryOptions(signer, {
+  test("disabled when registryAddress is undefined", ({ sdk }) => {
+    const options = tokenPairsQueryOptions(sdk, {
       registryAddress: undefined,
     });
     expect(options.enabled).toBe(false);
   });
 
-  test("queryFn calls readContract", async ({ signer }) => {
-    vi.mocked(signer.readContract).mockResolvedValue([]);
-    const options = tokenPairsQueryOptions(signer, {
+  test("queryFn calls readContract", async ({ sdk, provider }) => {
+    vi.mocked(provider.readContract).mockResolvedValue([]);
+    const options = tokenPairsQueryOptions(sdk, {
       registryAddress: REGISTRY,
     });
     const result = await options.queryFn(mockQueryContext(options.queryKey));
     expect(result).toEqual([]);
-    expect(signer.readContract).toHaveBeenCalledWith(
+    expect(provider.readContract).toHaveBeenCalledWith(
       expect.objectContaining({ functionName: "getTokenConfidentialTokenPairs" }),
     );
   });
 });
 
 describe("tokenPairsLengthQueryOptions", () => {
-  test("includes registry address in query key", ({ signer }) => {
-    const options = tokenPairsLengthQueryOptions(signer, {
+  test("includes registry address in query key", ({ sdk }) => {
+    const options = tokenPairsLengthQueryOptions(sdk, {
       registryAddress: REGISTRY,
     });
     expect(options.queryKey).toEqual([
@@ -61,9 +61,9 @@ describe("tokenPairsLengthQueryOptions", () => {
     ]);
   });
 
-  test("queryFn returns bigint", async ({ signer }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(5n);
-    const options = tokenPairsLengthQueryOptions(signer, {
+  test("queryFn returns bigint", async ({ sdk, provider }) => {
+    vi.mocked(provider.readContract).mockResolvedValue(5n);
+    const options = tokenPairsLengthQueryOptions(sdk, {
       registryAddress: REGISTRY,
     });
     const result = await options.queryFn(mockQueryContext(options.queryKey));
@@ -72,9 +72,9 @@ describe("tokenPairsLengthQueryOptions", () => {
 });
 
 describe("tokenPairsSliceQueryOptions", () => {
-  test("disabled when fromIndex or toIndex is undefined", ({ signer }) => {
+  test("disabled when fromIndex or toIndex is undefined", ({ sdk }) => {
     expect(
-      tokenPairsSliceQueryOptions(signer, {
+      tokenPairsSliceQueryOptions(sdk, {
         registryAddress: REGISTRY,
         fromIndex: undefined,
         toIndex: 10n,
@@ -82,7 +82,7 @@ describe("tokenPairsSliceQueryOptions", () => {
     ).toBe(false);
 
     expect(
-      tokenPairsSliceQueryOptions(signer, {
+      tokenPairsSliceQueryOptions(sdk, {
         registryAddress: REGISTRY,
         fromIndex: 0n,
         toIndex: undefined,
@@ -90,8 +90,8 @@ describe("tokenPairsSliceQueryOptions", () => {
     ).toBe(false);
   });
 
-  test("enabled when all params provided", ({ signer }) => {
-    const options = tokenPairsSliceQueryOptions(signer, {
+  test("enabled when all params provided", ({ sdk }) => {
+    const options = tokenPairsSliceQueryOptions(sdk, {
       registryAddress: REGISTRY,
       fromIndex: 0n,
       toIndex: 10n,
@@ -99,32 +99,34 @@ describe("tokenPairsSliceQueryOptions", () => {
     expect(options.enabled).toBe(true);
   });
 
-  test("queryFn passes bigint indices", async ({ signer }) => {
-    vi.mocked(signer.readContract).mockResolvedValue([]);
-    const options = tokenPairsSliceQueryOptions(signer, {
+  test("queryFn passes bigint indices", async ({ sdk, provider }) => {
+    vi.mocked(provider.readContract).mockResolvedValue([]);
+    const options = tokenPairsSliceQueryOptions(sdk, {
       registryAddress: REGISTRY,
       fromIndex: 5n,
       toIndex: 15n,
     });
     await options.queryFn(mockQueryContext(options.queryKey));
-    expect(signer.readContract).toHaveBeenCalledWith(expect.objectContaining({ args: [5n, 15n] }));
+    expect(provider.readContract).toHaveBeenCalledWith(
+      expect.objectContaining({ args: [5n, 15n] }),
+    );
   });
 });
 
 describe("tokenPairQueryOptions", () => {
-  test("disabled when index is undefined", ({ signer }) => {
+  test("disabled when index is undefined", ({ sdk }) => {
     expect(
-      tokenPairQueryOptions(signer, {
+      tokenPairQueryOptions(sdk, {
         registryAddress: REGISTRY,
         index: undefined,
       }).enabled,
     ).toBe(false);
   });
 
-  test("queryFn passes bigint index", async ({ signer }) => {
+  test("queryFn passes bigint index", async ({ sdk, provider }) => {
     const pair = { tokenAddress: TOKEN, confidentialTokenAddress: C_TOKEN, isValid: true };
-    vi.mocked(signer.readContract).mockResolvedValue(pair);
-    const options = tokenPairQueryOptions(signer, {
+    vi.mocked(provider.readContract).mockResolvedValue(pair);
+    const options = tokenPairQueryOptions(sdk, {
       registryAddress: REGISTRY,
       index: 3n,
     });
@@ -134,18 +136,18 @@ describe("tokenPairQueryOptions", () => {
 });
 
 describe("confidentialTokenAddressQueryOptions", () => {
-  test("disabled when tokenAddress is undefined", ({ signer }) => {
+  test("disabled when tokenAddress is undefined", ({ sdk }) => {
     expect(
-      confidentialTokenAddressQueryOptions(signer, {
+      confidentialTokenAddressQueryOptions(sdk, {
         registryAddress: REGISTRY,
         tokenAddress: undefined,
       }).enabled,
     ).toBe(false);
   });
 
-  test("queryFn returns [isValid, address] tuple", async ({ signer }) => {
-    vi.mocked(signer.readContract).mockResolvedValue([true, C_TOKEN]);
-    const options = confidentialTokenAddressQueryOptions(signer, {
+  test("queryFn returns [isValid, address] tuple", async ({ sdk, provider }) => {
+    vi.mocked(provider.readContract).mockResolvedValue([true, C_TOKEN]);
+    const options = confidentialTokenAddressQueryOptions(sdk, {
       registryAddress: REGISTRY,
       tokenAddress: TOKEN,
     });
@@ -155,18 +157,18 @@ describe("confidentialTokenAddressQueryOptions", () => {
 });
 
 describe("tokenAddressQueryOptions", () => {
-  test("disabled when confidentialTokenAddress is undefined", ({ signer }) => {
+  test("disabled when confidentialTokenAddress is undefined", ({ sdk }) => {
     expect(
-      tokenAddressQueryOptions(signer, {
+      tokenAddressQueryOptions(sdk, {
         registryAddress: REGISTRY,
         confidentialTokenAddress: undefined,
       }).enabled,
     ).toBe(false);
   });
 
-  test("queryFn returns [isValid, address] tuple", async ({ signer }) => {
-    vi.mocked(signer.readContract).mockResolvedValue([true, TOKEN]);
-    const options = tokenAddressQueryOptions(signer, {
+  test("queryFn returns [isValid, address] tuple", async ({ sdk, provider }) => {
+    vi.mocked(provider.readContract).mockResolvedValue([true, TOKEN]);
+    const options = tokenAddressQueryOptions(sdk, {
       registryAddress: REGISTRY,
       confidentialTokenAddress: C_TOKEN,
     });
@@ -176,18 +178,18 @@ describe("tokenAddressQueryOptions", () => {
 });
 
 describe("isConfidentialTokenValidQueryOptions", () => {
-  test("disabled when confidentialTokenAddress is undefined", ({ signer }) => {
+  test("disabled when confidentialTokenAddress is undefined", ({ sdk }) => {
     expect(
-      isConfidentialTokenValidQueryOptions(signer, {
+      isConfidentialTokenValidQueryOptions(sdk, {
         registryAddress: REGISTRY,
         confidentialTokenAddress: undefined,
       }).enabled,
     ).toBe(false);
   });
 
-  test("queryFn returns boolean", async ({ signer }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(true);
-    const options = isConfidentialTokenValidQueryOptions(signer, {
+  test("queryFn returns boolean", async ({ sdk, provider }) => {
+    vi.mocked(provider.readContract).mockResolvedValue(true);
+    const options = isConfidentialTokenValidQueryOptions(sdk, {
       registryAddress: REGISTRY,
       confidentialTokenAddress: C_TOKEN,
     });
@@ -195,8 +197,8 @@ describe("isConfidentialTokenValidQueryOptions", () => {
     expect(result).toBe(true);
   });
 
-  test("query key includes both addresses", ({ signer }) => {
-    const options = isConfidentialTokenValidQueryOptions(signer, {
+  test("query key includes both addresses", ({ sdk }) => {
+    const options = isConfidentialTokenValidQueryOptions(sdk, {
       registryAddress: REGISTRY,
       confidentialTokenAddress: C_TOKEN,
     });

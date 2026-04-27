@@ -95,9 +95,12 @@ describe("useFinalizeUnwrap error propagation", () => {
     });
 
     const { Wrapper } = createWrapper();
-    const { result } = renderHook(() => useMutation(finalizeUnwrapMutationOptions(token)), {
-      wrapper: Wrapper,
-    });
+    const { result } = renderHook(
+      () => useMutation(finalizeUnwrapMutationOptions(token, token.address)),
+      {
+        wrapper: Wrapper,
+      },
+    );
 
     await act(async () => {
       await expect(

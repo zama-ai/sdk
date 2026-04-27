@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import type { Address } from "@zama-fhe/sdk";
+import type { Address, Token } from "@zama-fhe/sdk";
 import { useZamaSDK } from "../provider";
 
 /** Base configuration shared by all mutation hooks that need a Token instance. */
@@ -14,7 +14,6 @@ export interface UseZamaConfig {
 
 /**
  * Get a {@link Token} instance, memoized by address pair.
- * Reads signer and storage from the nearest {@link ZamaProvider}.
  *
  * @param config - Token and optional wrapper addresses.
  * @returns A memoized `Token` instance.
@@ -24,10 +23,10 @@ export interface UseZamaConfig {
  * const token = useToken({ tokenAddress: "0xToken", wrapperAddress: "0xWrapper" });
  * ```
  */
-export function useToken(config: UseZamaConfig) {
+export function useToken(config: UseZamaConfig): Token {
   const sdk = useZamaSDK();
 
-  return useMemo(
+  return useMemo<Token>(
     () => sdk.createToken(config.tokenAddress, config.wrapperAddress),
     [sdk, config.tokenAddress, config.wrapperAddress],
   );

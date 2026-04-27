@@ -50,6 +50,9 @@
     "api-report:check:sdk": "cd packages/sdk && api-extractor run -c api-extractor.json && api-extractor run -c api-extractor.viem.json && api-extractor run -c api-extractor.ethers.json && api-extractor run -c api-extractor.node.json && api-extractor run -c api-extractor.query.json",
     "api-report:check:react-sdk": "cd packages/react-sdk && api-extractor run -c api-extractor.json && api-extractor run -c api-extractor.wagmi.json",
     "setup:claude": "node scripts/setup-claude.mjs",
+    "llm:build": "node scripts/llm/build-llms.mjs",
+    "llm:stage": "node scripts/llm/stage-artifacts.mjs",
+    "llm:check": "node scripts/llm/check.mjs",
     "size": "size-limit",
     "size:json": "size-limit --json"
   },

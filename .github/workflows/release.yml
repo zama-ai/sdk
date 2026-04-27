@@ -165,8 +165,13 @@ jobs:
     if: ${{ !cancelled() && !failure() && inputs.publish-tag == '' }}
     uses: ./.github/workflows/api-report.yml
 
+  docs:
+    needs: [validate-branch]
+    if: ${{ !cancelled() && !failure() && inputs.publish-tag == '' }}
+    uses: ./.github/workflows/docs.yml
+
   release:
-    needs: [lint, vitest, playwright, api-report]
+    needs: [lint, vitest, playwright, api-report, docs]
     if: ${{ !cancelled() && !failure() && inputs.publish-tag == '' }}
     runs-on: ubuntu-latest
     steps:

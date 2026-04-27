@@ -1,15 +1,17 @@
 import type { Address } from "viem";
 import type { ReadonlyToken } from "../token";
+import { assertNonNullable } from "../utils/assertions";
 import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
 import { filterQueryOptions } from "./utils";
 
 export interface ConfidentialBalanceQueryConfig {
   tokenAddress: Address;
-  owner?: Address;
+  account?: Address;
   query?: Record<string, unknown>;
 }
 
+/** Query options for a single confidential token balance. Auto-gated on `account`. */
 export function confidentialBalanceQueryOptions(
   token: ReadonlyToken,
   config: ConfidentialBalanceQueryConfig,
@@ -23,11 +25,12 @@ export function confidentialBalanceQueryOptions(
 
   return {
     ...filterQueryOptions(queryOpts),
-    queryKey: zamaQueryKeys.confidentialBalance.owner(config.tokenAddress, config.owner),
+    queryKey: zamaQueryKeys.confidentialBalance.owner(config.tokenAddress, config.account),
     queryFn: async (context) => {
       const [, { owner: keyOwner }] = context.queryKey;
+      assertNonNullable(keyOwner, "confidentialBalanceQueryOptions: owner");
       return token.balanceOf(keyOwner);
     },
-    enabled: queryOpts?.enabled !== false,
+    enabled: Boolean(config.account) && queryOpts?.enabled !== false,
   };
 }
