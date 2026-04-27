@@ -23,14 +23,15 @@ const wagmiConfig = createConfig({
 });
 
 const zamaConfig = createZamaConfig({
-  chains: [fheAnvil],
-  wagmiConfig,
-  relayers: {
-    [anvil.id]: cleartext({
+  chains: [
+    {
+      ...fheAnvil,
       network: rpcUrl,
       registryAddress: getAddress(deployments.wrappersRegistry),
-    }),
-  },
+    },
+  ],
+  wagmiConfig,
+  relayers: { [anvil.id]: cleartext() },
 });
 
 const queryClient = new QueryClient();

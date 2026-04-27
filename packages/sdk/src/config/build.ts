@@ -6,20 +6,6 @@ import { resolveChainRelayers, resolveStorage } from "./resolve";
 import type { RelayerConfig } from "./transports";
 import type { ZamaConfig, ZamaConfigBase } from "./types";
 
-/** Merge relayer-level `registryAddress` overrides into chain definitions. */
-function mergeRegistryAddresses(
-  chains: readonly FheChain[],
-  relayers: Readonly<Record<number, RelayerConfig>>,
-): readonly FheChain[] {
-  return chains.map((chain) => {
-    const registryAddress = relayers[chain.id]?.chain?.registryAddress;
-    if (registryAddress && registryAddress !== chain.registryAddress) {
-      return { ...chain, registryAddress };
-    }
-    return chain;
-  });
-}
-
 /**
  * @internal Shared config builder — not part of the public API.
  *
@@ -32,20 +18,18 @@ export function buildZamaConfig(
   params: ZamaConfigBase,
 ): ZamaConfig {
   const { storage, sessionStorage } = resolveStorage(params.storage, params.sessionStorage);
-  const chains = mergeRegistryAddresses(params.chains, params.relayers);
-  const chainRelayers = resolveChainRelayers(chains, params.relayers);
+  const chainRelayers = resolveChainRelayers(params.chains, params.relayers);
 
   // Group chains by relayer reference — same object = same group = shared worker.
   const groups = new Map<RelayerConfig, Array<[number, FheChain]>>();
   for (const [chainId, config] of chainRelayers) {
     const key = config.relayer;
-    const mergedChain = { ...config.chain, ...key.chain };
     let group = groups.get(key);
     if (!group) {
       group = [];
       groups.set(key, group);
     }
-    group.push([chainId, mergedChain]);
+    group.push([chainId, config.chain]);
   }
 
   // For each group: create shared worker once, then create per-chain relayers.
@@ -73,11 +57,11 @@ export function buildZamaConfig(
     throw error;
   }
 
-  const chainsMap = new Map(chains.map((c) => [c.id, c]));
+  const chainsMap = new Map(params.chains.map((c) => [c.id, c]));
   const relayer = new RelayerDispatcher(chainsMap, relayersMap, workers);
 
   return {
-    chains,
+    chains: [...params.chains],
     relayer,
     provider,
     signer,

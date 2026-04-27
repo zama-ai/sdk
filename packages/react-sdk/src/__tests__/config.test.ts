@@ -99,12 +99,12 @@ describe("createConfig", () => {
       expect(config.relayer).toBeDefined();
     });
 
-    it("merges user overrides on top of defaults", () => {
+    it("resolves relayers with default web()", () => {
       const config = createWagmiConfig({
         chains: [sepolia],
         wagmiConfig: mockWagmiConfig([11155111]),
         relayers: {
-          [11155111]: web({ relayerUrl: "https://my-relayer.example.com" }),
+          [11155111]: web(),
         },
       });
       expect(config.relayer).toBeDefined();
@@ -127,7 +127,7 @@ describe("createConfig", () => {
           //@ts-expect-error: throws when there's an orphaned relayer
           chains: [],
           wagmiConfig: mockWagmiConfig([]),
-          relayers: { [999999]: web({ relayerUrl: "https://custom.com" }) },
+          relayers: { [999999]: web() },
         }),
       ).toThrow(/999999/);
     });
@@ -175,35 +175,16 @@ describe("createConfig", () => {
   });
 
   describe("web() helper", () => {
-    it("returns tagged config with chain overrides", () => {
-      const result = web({ relayerUrl: "/api/relayer/11155111" });
+    it("returns tagged config when called with no args", () => {
+      const result = web();
       expect(result.type).toBe("web");
-      expect(result.chain).toEqual({ relayerUrl: "/api/relayer/11155111" });
       expect(result.createWorker).toBeTypeOf("function");
       expect(result.createRelayer).toBeTypeOf("function");
     });
 
     it("captures options in createWorker/createRelayer closures", () => {
-      const result = web(
-        {
-          relayerUrl: "/api/relayer/11155111",
-          network: "https://custom-rpc.com",
-        },
-        { threads: 4 },
-      );
+      const result = web({ threads: 4 });
       expect(result.type).toBe("web");
-      expect(result.chain).toEqual({
-        relayerUrl: "/api/relayer/11155111",
-        network: "https://custom-rpc.com",
-      });
-      expect(result.createWorker).toBeTypeOf("function");
-      expect(result.createRelayer).toBeTypeOf("function");
-    });
-
-    it("returns tagged empty config when called with no args", () => {
-      const result = web();
-      expect(result.type).toBe("web");
-      expect(result.chain).toBeUndefined();
       expect(result.createWorker).toBeTypeOf("function");
       expect(result.createRelayer).toBeTypeOf("function");
     });

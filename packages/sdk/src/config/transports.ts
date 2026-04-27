@@ -22,8 +22,6 @@ export type WebRelayerOptions = Partial<Omit<RelayerWebConfig, "chain" | "worker
  */
 export interface RelayerConfig {
   readonly type: string;
-  /** Per-chain overrides (e.g. relayerUrl, registryAddress). */
-  chain?: Partial<FheChain>;
   /** Create a shared worker/pool for all chains in this transport group. */
   // oxlint-disable-next-line typescript-eslint/no-explicit-any -- bivariant: subtypes narrow this
   readonly createWorker?: (chains: FheChain[]) => any;
@@ -53,21 +51,19 @@ export interface CleartextRelayerConfig extends RelayerConfig {
 /**
  * Browser transport — routes to RelayerWeb (Web Worker + WASM).
  *
- * @param chain - Per-chain FHE instance overrides (e.g. `relayerUrl`).
  * @param options - Worker options (threads, security, logger, storage).
  *
  * @example
  * ```ts
  * relayers: {
- *   [sepolia.id]: web({ relayerUrl: "/api/relayer/11155111" }),
- *   [mainnet.id]: web({ relayerUrl: "/api/relayer/1" }),
+ *   [sepolia.id]: web(),
+ *   [mainnet.id]: web(),
  * }
  * ```
  */
-export function web(chain?: Partial<FheChain>, options?: WebRelayerOptions): WebRelayerConfig {
+export function web(options?: WebRelayerOptions): WebRelayerConfig {
   return {
     type: "web",
-    chain,
     createWorker: (chains) =>
       new RelayerWorkerClient({
         cdnUrl: CDN_URL,
@@ -86,31 +82,26 @@ export function web(chain?: Partial<FheChain>, options?: WebRelayerOptions): Web
  * Cleartext transport — routes to RelayerCleartext (no FHE infrastructure).
  *
  * When `executorAddress` is set on the chain definition (e.g. `hardhat`, `hoodi`),
- * it is picked up automatically — no need to pass it here.
+ * it is picked up automatically.
  *
  * @example
  * ```ts
  * // executorAddress comes from the chain preset:
  * relayers: { [hardhat.id]: cleartext() }
- *
- * // override for a custom chain:
- * relayers: { [myChain.id]: cleartext({ executorAddress: "0x..." }) }
  * ```
  */
-export function cleartext(chain?: Partial<FheChain>): CleartextRelayerConfig {
+export function cleartext(): CleartextRelayerConfig {
   return {
     type: "cleartext",
-    chain,
     createRelayer: (resolvedChain) => {
-      const merged = { ...resolvedChain, ...chain };
-      if (!merged.executorAddress) {
+      if (!resolvedChain.executorAddress) {
         throw new ConfigurationError(
-          `Cleartext transport requires an executorAddress. ` +
+          `Cleartext relayer requires an executorAddress. ` +
             `Either use a chain preset that includes it (e.g. hardhat, hoodi) ` +
-            `or pass it explicitly: cleartext({ executorAddress: "0x..." })`,
+            `or set it on the chain definition.`,
         );
       }
-      return new RelayerCleartext(merged as FheChain);
+      return new RelayerCleartext(resolvedChain as FheChain);
     },
   };
 }

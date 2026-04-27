@@ -24,21 +24,19 @@ export interface NodeRelayerConfig extends RelayerConfig {
 /**
  * Node.js transport — routes to RelayerNode (worker thread pool).
  *
- * @param chain - Per-chain FHE instance overrides (e.g. `relayerUrl`).
  * @param options - Pool options (poolSize, logger, fheArtifactStorage, fheArtifactCacheTTL).
  *
  * @example
  * ```ts
  * relayers: {
- *   [sepolia.id]: node({ relayerUrl: "/api/sepolia" }, { poolSize: 4 }),
- *   [mainnet.id]: node({ relayerUrl: "/api/mainnet" }),
+ *   [sepolia.id]: node({ poolSize: 4 }),
+ *   [mainnet.id]: node(),
  * }
  * ```
  */
-export function node(chain?: Partial<FheChain>, options?: NodePoolOptions): NodeRelayerConfig {
+export function node(options?: NodePoolOptions): NodeRelayerConfig {
   return {
     type: "node",
-    chain,
     createWorker: (chains) =>
       new NodeWorkerPool({
         chains,
@@ -48,7 +46,7 @@ export function node(chain?: Partial<FheChain>, options?: NodePoolOptions): Node
     createRelayer: (resolvedChain, worker) => {
       assertCondition(
         !!worker,
-        "node() transport requires a worker pool — createWorker must be called first.",
+        "node() relayer requires a worker pool — createWorker must be called first.",
       );
       return new RelayerNode({
         chain: resolvedChain,

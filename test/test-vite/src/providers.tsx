@@ -22,18 +22,18 @@ const wagmiConfig = createConfig({
   transports: { [anvil.id]: http(rpcUrl) },
 });
 
+const customHardhat = {
+  ...hardhat,
+  relayerUrl: mockRelayerUrl,
+  network: rpcUrl,
+  registryAddress: getAddress(deployments.wrappersRegistry),
+};
+
 const zamaConfig = createZamaConfig({
-  chains: [hardhat],
+  chains: [customHardhat],
   wagmiConfig,
   relayers: {
-    [anvil.id]: web(
-      {
-        relayerUrl: mockRelayerUrl,
-        network: rpcUrl,
-        registryAddress: getAddress(deployments.wrappersRegistry),
-      },
-      { threads: 4, security: { integrityCheck: false } },
-    ),
+    [anvil.id]: web({ threads: 4, security: { integrityCheck: false } }),
   },
 });
 

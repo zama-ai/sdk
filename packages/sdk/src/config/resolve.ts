@@ -65,17 +65,6 @@ export function resolveChainRelayers(
       );
     }
 
-    if (
-      relayerConfig.type !== "web" &&
-      relayerConfig.type !== "node" &&
-      relayerConfig.type !== "cleartext"
-    ) {
-      throw new ConfigurationError(
-        `Chain ${id} has an unrecognized relayer (type: ${String((relayerConfig as unknown as Record<string, unknown>).type)}). ` +
-          `Use web(), node(), or cleartext() to create relayers.`,
-      );
-    }
-
     result.set(id, {
       chain: chainConfig,
       relayer: relayerConfig,

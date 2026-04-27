@@ -31,7 +31,6 @@ vi.mock(import("../../relayer/cleartext/relayer-cleartext"), async () => ({
 // Import after mocks
 const { resolveChainRelayers } = await import("../resolve");
 const { RelayerDispatcher } = await import("../../relayer/relayer-dispatcher");
-const { buildZamaConfig } = await import("../build");
 
 const sepoliaChain = sepolia;
 const mainnetChain = mainnet;
@@ -51,7 +50,7 @@ describe("resolveChainRelayers", () => {
   });
 
   it("resolves chains with explicit web relayer", () => {
-    const relayerCfg = web({ relayerUrl: "https://custom.com" });
+    const relayerCfg = web();
     const result = resolveChainRelayers([sepoliaChain], {
       [11155111]: relayerCfg,
     });
@@ -59,7 +58,7 @@ describe("resolveChainRelayers", () => {
   });
 
   it("resolves chains with node relayer", () => {
-    const relayerCfg = node({ relayerUrl: "https://custom.com" });
+    const relayerCfg = node();
     const result = resolveChainRelayers([sepoliaChain], {
       [11155111]: relayerCfg,
     });
@@ -106,13 +105,6 @@ describe("resolveChainRelayers", () => {
     );
   });
 
-  it("throws for unrecognized relayer type", () => {
-    const bad = { type: "unknown" } as any;
-    expect(() => resolveChainRelayers([sepoliaChain], { [11155111]: bad })).toThrow(
-      "unrecognized relayer",
-    );
-  });
-
   it("throws for orphaned relayer keys not in chains", () => {
     expect(() =>
       resolveChainRelayers([sepoliaChain], {
@@ -146,7 +138,7 @@ function buildDispatcher(
     if (!groups.has(key)) {
       groups.set(key, []);
     }
-    groups.get(key)!.push([chainId, { ...config.chain, ...key.chain }]);
+    groups.get(key)!.push([chainId, config.chain]);
   }
   const relayers = new Map<number, any>();
   for (const [relayerCfg, groupChains] of groups) {
@@ -176,7 +168,7 @@ describe("RelayerDispatcher (via relayer factories)", () => {
       if (!groups.has(key)) {
         groups.set(key, []);
       }
-      groups.get(key)!.push([chainId, { ...config.chain, ...key.chain }]);
+      groups.get(key)!.push([chainId, config.chain]);
     }
     const relayers = new Map<number, any>();
     for (const [t, groupChains] of groups) {
@@ -220,38 +212,5 @@ describe("RelayerDispatcher (via relayer factories)", () => {
     relayer.switchChain(11155111);
     const [a, b] = await Promise.all([relayer.generateKeypair(), relayer.generateKeypair()]);
     expect(a).toEqual(b);
-  });
-});
-
-describe("buildZamaConfig (mergeRegistryAddresses)", () => {
-  const mockSigner = {
-    getAddress: vi.fn().mockResolvedValue("0x1234" as `0x${string}`),
-    getChainId: vi.fn().mockResolvedValue(11155111),
-    signTypedData: vi.fn(),
-  };
-  const mockProvider = {
-    getChainId: vi.fn().mockResolvedValue(11155111),
-    readContract: vi.fn(),
-    waitForTransactionReceipt: vi.fn(),
-    getBlockTimestamp: vi.fn(),
-  };
-
-  it("propagates relayer registryAddress to chain config", () => {
-    const customRegistry = "0xCustomRegistry" as `0x${string}`;
-    const config = buildZamaConfig(mockSigner as any, mockProvider as any, {
-      chains: [sepoliaChain],
-      relayers: {
-        [11155111]: web({ registryAddress: customRegistry }),
-      },
-    });
-    expect(config.chains[0].registryAddress).toBe(customRegistry);
-  });
-
-  it("preserves chain registryAddress when relayer has none", () => {
-    const config = buildZamaConfig(mockSigner as any, mockProvider as any, {
-      chains: [sepoliaChain],
-      relayers: { [11155111]: web() },
-    });
-    expect(config.chains[0].registryAddress).toBe(sepoliaChain.registryAddress);
   });
 });
