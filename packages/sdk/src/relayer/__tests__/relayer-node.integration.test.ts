@@ -102,7 +102,7 @@ describe(`RelayerNode integration`, () => {
 
     // extraData must be threaded through the EIP-712 message (SDK-119 requirement)
     expect(eip712.message).toHaveProperty("extraData");
-    expect((eip712.message as Record<string, unknown>).extraData).toMatch(/^0x/);
+    expect(eip712.message.extraData).match(/^0x/);
   }, 120_000);
 
   it("EIP-712 message contains correct contract addresses and timestamps", async () => {
@@ -162,7 +162,7 @@ describe(`RelayerNode integration`, () => {
 
     // extraData must be threaded through the delegated EIP-712 (SDK-119 requirement)
     expect(eip712.message).toHaveProperty("extraData");
-    expect((eip712.message as Record<string, unknown>).extraData).toMatch(/^0x/);
+    expect(eip712.message.extraData).match(/^0x/);
   }, 120_000);
 
   it("delegated EIP-712 message includes delegator address", async () => {
@@ -341,7 +341,7 @@ describe(`RelayerNode integration`, () => {
     const now = Math.floor(Date.now() / 1000);
     const eip712 = await relayer.createEIP712(keypair.publicKey, [CONTRACT_ADDRESS], now, 7);
 
-    expect((eip712.message as Record<string, unknown>).extraData).toBe(extraData);
+    expect(eip712.message.extraData).toBe(extraData);
   }, 120_000);
 
   it("extraData in delegated EIP-712 matches getExtraData()", async () => {
@@ -355,6 +355,6 @@ describe(`RelayerNode integration`, () => {
       7,
     );
 
-    expect((eip712.message as Record<string, unknown>).extraData).toBe(extraData);
+    expect(eip712.message.extraData).toBe(extraData);
   }, 120_000);
 });
