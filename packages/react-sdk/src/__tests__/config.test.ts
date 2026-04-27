@@ -124,10 +124,10 @@ describe("createConfig", () => {
     it("throws for orphaned relayer entries with no matching chain", () => {
       expect(() =>
         createWagmiConfig({
-          //@ts-expect-error: throws when there's an orphaned relayer
-          chains: [],
-          wagmiConfig: mockWagmiConfig([]),
-          relayers: { [999999]: web() },
+          chains: [sepolia],
+          wagmiConfig: mockWagmiConfig([11155111]),
+          //@ts-expect-error: extra relayer key not in chains
+          relayers: { [11155111]: web(), [999999]: web() },
         }),
       ).toThrow(/999999/);
     });

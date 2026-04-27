@@ -8,10 +8,10 @@
  * @packageDocumentation
  */
 
-export { node } from "./transports";
-export type { NodeRelayerConfig, NodePoolOptions } from "./transports";
-export { cleartext } from "../config/transports";
-export type { RelayerConfig } from "../config/transports";
+export { node } from "./config";
+export type { NodeRelayerConfig, NodePoolOptions } from "./config";
+export { cleartext } from "../config/relayers";
+export type { RelayerConfig } from "../config/relayers";
 export { RelayerNode } from "../relayer/relayer-node";
 export type { RelayerNodeConfig } from "../relayer/relayer-node";
 export type { RelayerSDK } from "../relayer/relayer-sdk";

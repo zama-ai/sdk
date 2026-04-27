@@ -6,6 +6,8 @@ import type {
 } from "@zama-fhe/relayer-sdk/bundle";
 import type { Address, Hex } from "viem";
 import type { FheChain } from "../chains/types";
+import type { RelayerConfig } from "../config/relayers";
+import { resolveChainRelayers } from "../config/resolve";
 import { ConfigurationError } from "../errors";
 import { assertNonNullable, toError } from "../utils";
 import type { RelayerSDK } from "./relayer-sdk";
@@ -30,8 +32,11 @@ export interface WorkerLike {
 /**
  * Owns chain management (chains / activeChain / switchChain) and delegates
  * every {@link RelayerSDK} operation to the relayer for the currently active
- * chain.  Each value in the relayers map is a single-chain RelayerWeb or
- * RelayerNode instance.
+ * chain.
+ *
+ * Groups chains by relayer config reference identity, calls `createWorker`
+ * once per group with all chain configs, then calls `createRelayer`
+ * per chain with the shared worker.
  *
  * Workers/pools are held separately from relayers so the dispatcher can
  * terminate them directly — relayers never own worker lifecycle.
@@ -44,23 +49,55 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
 
   constructor(
     chains: readonly [FheChain, ...FheChain[]],
-    relayers: Map<number, RelayerSDK>,
-    workers: readonly WorkerLike[] = [],
+    configs: Readonly<Record<number, RelayerConfig>>,
   ) {
     if (chains.length === 0) {
       throw new ConfigurationError("At least one chain is required.");
     }
     this.#chains = new Map(chains.map((c) => [c.id, c]));
-    this.#relayers = new Map(relayers);
-    this.#workers = workers;
     this.#chainId = chains[0].id;
 
-    // Validate every chain has a relayer
-    for (const chain of chains) {
-      if (!this.#relayers.has(chain.id)) {
-        throw new ConfigurationError(`No relayer instance for chain ${chain.id}.`);
+    const chainRelayers = resolveChainRelayers(chains, configs);
+
+    // Group chains by relayer config reference — same object = same group = shared worker.
+    const groups = new Map<RelayerConfig, Array<[number, FheChain]>>();
+    for (const [chainId, config] of chainRelayers) {
+      const key = config.relayer;
+      let group = groups.get(key);
+      if (!group) {
+        group = [];
+        groups.set(key, group);
       }
+      group.push([chainId, config.chain]);
     }
+
+    // For each group: create shared worker once, then create per-chain relayers.
+    const relayers = new Map<number, RelayerSDK>();
+    const workers: WorkerLike[] = [];
+    try {
+      for (const [relayerCfg, groupChains] of groups) {
+        const allChainConfigs = groupChains.map(([, chain]) => chain);
+        const worker = relayerCfg.createWorker?.(allChainConfigs);
+        if (worker) {
+          workers.push(worker);
+        }
+        for (const [chainId, chain] of groupChains) {
+          relayers.set(chainId, relayerCfg.createRelayer(chain, worker));
+        }
+      }
+    } catch (error) {
+      for (const w of workers) {
+        try {
+          w.terminate();
+        } catch {
+          /* best-effort cleanup */
+        }
+      }
+      throw error;
+    }
+
+    this.#relayers = relayers;
+    this.#workers = workers;
   }
 
   get chains(): readonly FheChain[] {

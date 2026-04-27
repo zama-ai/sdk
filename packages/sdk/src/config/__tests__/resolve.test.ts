@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { web, cleartext } from "../transports";
+import { web, cleartext } from "../relayers";
 import { node } from "../../node";
 import { sepolia, mainnet, hoodi, hardhat, anvil, type FheChain } from "../../chains";
 
@@ -125,30 +125,12 @@ describe("resolveChainRelayers", () => {
   });
 });
 
-/** Helper: build a RelayerDispatcher from chains + relayer map using the same group-then-create pattern as buildZamaConfig. */
+/** Helper: build a RelayerDispatcher from chains + relayer config map. */
 function buildDispatcher(
   chains: FheChain[],
   relayerMap: Record<number, ReturnType<typeof web> | ReturnType<typeof cleartext>>,
 ) {
-  const resolved = resolveChainRelayers(chains, relayerMap);
-  // Group chains by relayer reference identity
-  const groups = new Map<any, [number, any][]>();
-  for (const [chainId, config] of resolved) {
-    const key = config.relayer;
-    if (!groups.has(key)) {
-      groups.set(key, []);
-    }
-    groups.get(key)!.push([chainId, config.chain]);
-  }
-  const relayers = new Map<number, any>();
-  for (const [relayerCfg, groupChains] of groups) {
-    const allConfigs = groupChains.map(([, c]) => c);
-    const worker = relayerCfg.createWorker?.(allConfigs);
-    for (const [chainId, chain] of groupChains) {
-      relayers.set(chainId, relayerCfg.createRelayer(chain, worker));
-    }
-  }
-  return new RelayerDispatcher(chains, relayers);
+  return new RelayerDispatcher(chains as [FheChain, ...FheChain[]], relayerMap);
 }
 
 describe("RelayerDispatcher (via relayer factories)", () => {
@@ -159,31 +141,12 @@ describe("RelayerDispatcher (via relayer factories)", () => {
     });
     const baseRelayerCfg = web();
     const relayerCfg = { ...baseRelayerCfg, createRelayer: createRelayerSpy };
-    const resolved = resolveChainRelayers([sepoliaChain], { [11155111]: relayerCfg });
-    // Use same group-then-create pattern
-    const groups = new Map<any, [number, any][]>();
-    for (const [chainId, config] of resolved) {
-      const key = config.relayer;
-      if (!groups.has(key)) {
-        groups.set(key, []);
-      }
-      groups.get(key)!.push([chainId, config.chain]);
-    }
-    const relayers = new Map<number, any>();
-    for (const [t, groupChains] of groups) {
-      const allConfigs = groupChains.map(([, c]) => c);
-      const worker = t.createWorker?.(allConfigs);
-      for (const [chainId, chain] of groupChains) {
-        relayers.set(chainId, t.createRelayer(chain, worker));
-      }
-    }
-    new RelayerDispatcher([sepoliaChain], relayers);
+    new RelayerDispatcher([sepoliaChain], { [11155111]: relayerCfg });
     expect(createRelayerSpy).toHaveBeenCalledOnce();
   });
 
   it("delegates generateKeypair to the active chain relayer", async () => {
     const relayer = buildDispatcher([sepoliaChain], { [11155111]: web() });
-    relayer.switchChain(11155111);
     const result = await relayer.generateKeypair();
     expect(result).toEqual({ publicKey: "0x", secretKey: "0x" });
   });

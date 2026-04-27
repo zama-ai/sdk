@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { web, cleartext } from "../transports";
+import { web, cleartext } from "../relayers";
 import { node } from "../../node";
 
 describe("web()", () => {

@@ -1,4 +1,4 @@
-import type { RelayerConfig } from "../config/transports";
+import type { RelayerConfig } from "../config/relayers";
 import { RelayerNode } from "../relayer/relayer-node";
 import type { FheChain } from "../chains/types";
 import type { GenericStorage } from "../types";
@@ -37,12 +37,7 @@ export interface NodeRelayerConfig extends RelayerConfig {
 export function node(options?: NodePoolOptions): NodeRelayerConfig {
   return {
     type: "node",
-    createWorker: (chains) =>
-      new NodeWorkerPool({
-        chains,
-        poolSize: options?.poolSize,
-        logger: options?.logger,
-      }),
+    createWorker: (chains) => new NodeWorkerPool({ chains, ...options }),
     createRelayer: (resolvedChain, worker) => {
       assertCondition(
         !!worker,
@@ -51,9 +46,7 @@ export function node(options?: NodePoolOptions): NodeRelayerConfig {
       return new RelayerNode({
         chain: resolvedChain,
         pool: worker,
-        logger: options?.logger,
-        fheArtifactStorage: options?.fheArtifactStorage,
-        fheArtifactCacheTTL: options?.fheArtifactCacheTTL,
+        ...options,
       });
     },
   };
