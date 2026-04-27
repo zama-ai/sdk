@@ -166,8 +166,8 @@ importers:
   packages/sdk:
     dependencies:
       '@zama-fhe/relayer-sdk':
-        specifier: ~0.4.2
-        version: 0.4.2(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+        specifier: 0.5.0-alpha.3
+        version: 0.5.0-alpha.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       ethers:
         specifier: '>=6'
         version: 6.16.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
@@ -2050,6 +2050,11 @@ packages:
     engines: {node: '>=22'}
     hasBin: true
 
+  '@zama-fhe/relayer-sdk@0.5.0-alpha.3':
+    resolution: {integrity: sha512-XY5rSLvvUGT27nKvAcb0+9PRZ5trWZDVTJ3bkgGXfIuAiYRIr/BnF5I6a411xKkVmkhI2NCD3nRhmX7toTrIdA==}
+    engines: {node: '>=22'}
+    hasBin: true
+
   abitype@1.2.3:
     resolution: {integrity: sha512-Ofer5QUnuUdTFsBRwARMoWKOH1ND5ehwYhJ3OJ/BQO+StkwQjHw0XyVh4vDttzHB7QOFhPHa/o413PJ82gU/Tg==}
     peerDependencies:
@@ -3131,8 +3136,14 @@ packages:
   node-tfhe@1.4.0-alpha.3:
     resolution: {integrity: sha512-oTcWL0OFA6t6BhScmDiGQ3VA8tU8T3EXCzIzpNxQxcuJDgQtiUF5CV6dgJLOrpWck4KCp1Bo/xLhv07uwn3q6Q==}
 
+  node-tfhe@1.5.4:
+    resolution: {integrity: sha512-azTefAcK7G/uLP+uDFN8v5XBPFlY8Cu8NZ5ZMw4rgvWB6DNbtOcoUhDoJKrhPvOD2jt1HrzQQsLfao6kNHQybA==}
+
   node-tkms@0.12.8:
     resolution: {integrity: sha512-4erFxgbSVm1HCohIN2qijDfQL2GoIGaBve7SDeIKTu2bNBZZdTRKatcW+ExwHZF5MC6CzGDTvJQhEnG9LD7T3w==}
+
+  node-tkms@0.13.10:
+    resolution: {integrity: sha512-6F3Q2qfGcNQ2ffx2b+iT3+v3Nqh7CL7TkFNP1LuuGucfIMbZpQ8Eat4pFyZ90p4zVSj66D5xvhM0btnic3zbog==}
 
   normalize-package-data@6.0.2:
     resolution: {integrity: sha512-V6gygoYb/5EmNI+MEGrWkC+e6+Rr7mTmfHrxDbLzxQogBkgzo76rkok0Am6thgSF7Mv2nLOajAJj5vDJZEFn7g==}
@@ -3873,6 +3884,9 @@ packages:
   tfhe@1.4.0-alpha.3:
     resolution: {integrity: sha512-xdla7hi2WzLFIdAx2/ihRZ/bKlKcgDDabTJGtoqp1E5oqhLM1PzTXsJE0p7tW8+ebrvxiMGfbgMAWnU3f2ZAIQ==}
 
+  tfhe@1.5.4:
+    resolution: {integrity: sha512-hN1RWB95BsCjIxVMWHAVhFyM45+qsufHCpPhTYOwoTlsHNh9KwrRZsc4aNts+BOc8EEf/GT7DajA+STR4xRhTg==}
+
   thenify-all@1.6.0:
     resolution: {integrity: sha512-RNxQH/qI8/t3thXJDwcstUO4zeqo64+Uy/+sNVRBx4Xn2OX+OZ9oP+iJnNFqplFra2ZUVeKCSa2oVWi3T4uVmA==}
     engines: {node: '>=0.8'}
@@ -3908,6 +3922,9 @@ packages:
 
   tkms@0.12.8:
     resolution: {integrity: sha512-iXS8wxz3jhx3JlKVJiBZUOibGtP69lC2H9I120EfhAI5amc/4xW/HCM7tmMtBJEuqdCoN5ssnHvfGog8gZ6UKg==}
+
+  tkms@0.13.10:
+    resolution: {integrity: sha512-9I9Zi7wXEb3ZCKRHpr/RFTmDfNPDIFiuI8MjGOb3W74Pk8muW17DlwBaIvYXInjhIVINWPQxmWuYmluX6Rt0zg==}
 
   tldts-core@7.0.28:
     resolution: {integrity: sha512-7W5Efjhsc3chVdFhqtaU0KtK32J37Zcr9RKtID54nG+tIpcY79CQK/veYPODxtD/LJ4Lue66jvrQzIX2Z2/pUQ==}
@@ -5736,6 +5753,21 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
+  '@zama-fhe/relayer-sdk@0.5.0-alpha.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)':
+    dependencies:
+      commander: 14.0.3
+      ethers: 6.16.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+      fetch-retry: 6.0.0
+      keccak: 3.0.4
+      node-tfhe: 1.5.4
+      node-tkms: 0.13.10
+      tfhe: 1.5.4
+      tkms: 0.13.10
+      wasm-feature-detect: 1.8.0
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+
   abitype@1.2.3(typescript@6.0.2)(zod@4.3.6):
     optionalDependencies:
       typescript: 6.0.2
@@ -6758,7 +6790,11 @@ snapshots:
 
   node-tfhe@1.4.0-alpha.3: {}
 
+  node-tfhe@1.5.4: {}
+
   node-tkms@0.12.8: {}
+
+  node-tkms@0.13.10: {}
 
   normalize-package-data@6.0.2:
     dependencies:
@@ -7551,6 +7587,8 @@ snapshots:
 
   tfhe@1.4.0-alpha.3: {}
 
+  tfhe@1.5.4: {}
+
   thenify-all@1.6.0:
     dependencies:
       thenify: 3.3.1
@@ -7582,6 +7620,8 @@ snapshots:
   tinyrainbow@3.1.0: {}
 
   tkms@0.12.8: {}
+
+  tkms@0.13.10: {}
 
   tldts-core@7.0.28:
     optional: true

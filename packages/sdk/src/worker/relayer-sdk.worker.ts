@@ -18,6 +18,8 @@ import type {
   ErrorResponse,
   GenerateKeypairRequest,
   GenerateKeypairResponseData,
+  GetExtraDataRequest,
+  GetExtraDataResponseData,
   GetPublicKeyRequest,
   GetPublicKeyResponseData,
   GetPublicParamsRequest,
@@ -422,6 +424,8 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
       contractAddress: payload.contractAddress,
     }));
 
+    const extraData = await instance.getExtraData();
+
     const result = await instance.userDecrypt(
       handleContractPairs,
       unprefixHex(payload.privateKey),
@@ -431,6 +435,7 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
       payload.signerAddress,
       payload.startTimestamp,
       payload.durationDays,
+      extraData,
     );
 
     const response: UserDecryptResponseData = { clearValues: result };
@@ -531,6 +536,7 @@ async function handleCreateEIP712(request: CreateEIP712Request): Promise<void> {
       payload.contractAddresses,
       payload.startTimestamp,
       payload.durationDays,
+      payload.extraData,
     );
 
     sendSuccess(id, type, eip712);
@@ -556,6 +562,7 @@ async function handleCreateDelegatedEIP712(request: CreateDelegatedEIP712Request
       payload.delegatorAddress,
       payload.startTimestamp,
       payload.durationDays,
+      payload.extraData,
     );
 
     sendSuccess(id, type, result);
@@ -580,6 +587,8 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
       contractAddress: payload.contractAddress,
     }));
 
+    const extraData = await instance.getExtraData();
+
     const result = await instance.delegatedUserDecrypt(
       handleContractPairs,
       unprefixHex(payload.privateKey),
@@ -590,6 +599,7 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
       payload.delegateAddress,
       payload.startTimestamp,
       payload.durationDays,
+      extraData,
     );
 
     const response: DelegatedUserDecryptResponseData = { clearValues: result };
@@ -676,6 +686,27 @@ async function handleGetPublicParams(request: GetPublicParamsRequest): Promise<v
 }
 
 /**
+ * Handle GET_EXTRA_DATA request.
+ */
+async function handleGetExtraData(request: GetExtraDataRequest): Promise<void> {
+  const { id, type, payload } = request;
+
+  try {
+    const instance = await getInstance(payload.chainId);
+
+    const result = await instance.getExtraData();
+
+    const response: GetExtraDataResponseData = { result };
+
+    sendSuccess(id, type, response);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("[Worker] GetExtraData error:", message);
+    sendError(id, type, message);
+  }
+}
+
+/**
  * Handle UPDATE_CSRF request - update the stored CSRF token.
  */
 function handleUpdateCsrf(request: UpdateCsrfRequest): void {
@@ -727,6 +758,9 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         break;
       case "GET_PUBLIC_PARAMS":
         await handleGetPublicParams(request);
+        break;
+      case "GET_EXTRA_DATA":
+        await handleGetExtraData(request);
         break;
       default:
         console.error("[Worker] Unknown request type:", (request as WorkerRequest).type);

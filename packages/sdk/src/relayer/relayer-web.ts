@@ -32,11 +32,11 @@ import { withRetry } from "./relayer-utils";
  * Update this when upgrading @zama-fhe/relayer-sdk, and keep the
  * peerDependencies range in package.json in sync (~x.y.z).
  */
-export const RELAYER_SDK_VERSION = "0.4.2";
+export const RELAYER_SDK_VERSION = "0.5.0-alpha.3";
 export const CDN_URL = `https://cdn.zama.org/relayer-sdk-js/${RELAYER_SDK_VERSION}/relayer-sdk-js.umd.cjs`;
 /** SHA-384 hex digest of the pinned CDN bundle for integrity verification. */
 export const CDN_INTEGRITY =
-  "114438b01d518b53a447fa3e8bfbe6e71031cb42ac43219bb9f53488456fdfa4bbc8989628366d436e68f6526c7647eb";
+  "6150be0779dc2f2cff6596adb04350ab4debf35661d2fb2435181169cda53ecacf24146b10b9aade9d04e469548b3105";
 
 /**
  * RelayerWeb — single-chain browser encryption/decryption layer.
@@ -131,12 +131,14 @@ export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
   ): Promise<EIP712TypedData> {
     await this.ensureInit();
     const chainId = this.chain.id;
+    const extraData = await this.getExtraData();
     return this.#worker.createEIP712({
       chainId,
       publicKey,
       contractAddresses,
       startTimestamp,
       durationDays,
+      extraData,
     });
   }
 
@@ -205,6 +207,7 @@ export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
   ): Promise<KmsDelegatedUserDecryptEIP712Type> {
     await this.ensureInit();
     const chainId = this.chain.id;
+    const extraData = await this.getExtraData();
     return this.#worker.createDelegatedUserDecryptEIP712({
       chainId,
       publicKey,
@@ -212,6 +215,7 @@ export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
       delegatorAddress,
       startTimestamp,
       durationDays,
+      extraData,
     });
   }
 
@@ -271,5 +275,11 @@ export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
       bits,
       async () => (await this.#worker.getPublicParams({ chainId, bits })).result,
     );
+  }
+
+  async getExtraData(): Promise<Hex> {
+    await this.ensureInit();
+    const chainId = this.chain.id;
+    return (await this.#worker.getExtraData({ chainId })).result;
   }
 }

@@ -152,7 +152,11 @@
         };
       },
 
-      createEIP712(publicKey, contractAddresses, startTimestamp, durationDays) {
+      async getExtraData() {
+        return "00";
+      },
+
+      createEIP712(publicKey, contractAddresses, startTimestamp, durationDays, _extraData) {
         return {
           domain: {
             name: "Decryption",
@@ -186,6 +190,7 @@
         delegatorAddress,
         startTimestamp,
         durationDays,
+        _extraData,
       ) {
         return {
           domain: {
@@ -225,6 +230,7 @@
         signerAddress,
         startTimestamp,
         durationDays,
+        _extraData,
       ) {
         const res = await fetch(config.relayerUrl + "/user-decrypt", {
           method: "POST",
@@ -296,6 +302,7 @@
         delegateAddress,
         startTimestamp,
         durationDays,
+        _extraData,
       ) {
         const res = await fetch(config.relayerUrl + "/delegated-user-decrypt", {
           method: "POST",

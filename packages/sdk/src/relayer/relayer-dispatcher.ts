@@ -188,6 +188,10 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
     return this.#active.getAclAddress();
   }
 
+  getExtraData(): Promise<Hex> {
+    return this.#active.getExtraData();
+  }
+
   terminate(): void {
     const errors: Error[] = [];
 

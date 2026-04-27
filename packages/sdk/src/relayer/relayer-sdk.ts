@@ -73,6 +73,9 @@ export interface FheOperations {
  * Implemented by `RelayerWeb` (browser, via Web Worker + WASM) and `RelayerNode` (Node.js, direct).
  */
 export interface RelayerSDK extends FheOperations {
+  /** Fetch the extra data bytes for the current chain (used in EIP-712 and decrypt requests). */
+  getExtraData(): Promise<Hex>;
+
   /** Return the ACL contract address for the current chain. */
   getAclAddress(): Promise<Address>;
 

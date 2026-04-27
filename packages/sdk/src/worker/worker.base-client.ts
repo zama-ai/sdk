@@ -9,6 +9,8 @@ import type {
   EncryptResponseData,
   GenerateKeypairRequest,
   GenerateKeypairResponseData,
+  GetExtraDataRequest,
+  GetExtraDataResponseData,
   GetPublicKeyRequest,
   GetPublicKeyResponseData,
   GetPublicParamsRequest,
@@ -300,6 +302,10 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
     params: GetPublicParamsRequest["payload"],
   ): Promise<GetPublicParamsResponseData> {
     return this.sendRequest<GetPublicParamsResponseData>("GET_PUBLIC_PARAMS", params);
+  }
+
+  async getExtraData(params: GetExtraDataRequest["payload"]): Promise<GetExtraDataResponseData> {
+    return this.sendRequest<GetExtraDataResponseData>("GET_EXTRA_DATA", params);
   }
 
   // ===========================================================================

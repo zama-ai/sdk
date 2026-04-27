@@ -377,9 +377,11 @@ async function handleEncrypt(req, res) {
  */
 async function handleUserDecrypt(req, res) {
   const body = await parseBody(req);
-  const { handles, network, aclContractAddress, executorAddress } = body;
+  // v0.5.0-alpha.3 sends handleContractPairs + userAddress; older versions send handles + signerAddress
+  const handles = body.handleContractPairs || body.handles;
+  const { network, aclContractAddress, executorAddress } = body;
   const contractAddress = getAddress(handles[0].contractAddress);
-  const signerAddress = getAddress(body.signerAddress);
+  const signerAddress = getAddress(body.userAddress || body.signerAddress);
   const executor = executorAddress || HARDHAT_EXECUTOR;
 
   const client = getClient(network);
@@ -437,8 +439,9 @@ async function handleUserDecrypt(req, res) {
  */
 async function handlePublicDecrypt(req, res) {
   const body = await parseBody(req);
+  // v0.5.0-alpha.3 sends ciphertextHandles; older versions send handles
+  const handles = body.ciphertextHandles || body.handles;
   const {
-    handles,
     network,
     aclContractAddress,
     verifyingContractAddressDecryption,
@@ -519,14 +522,9 @@ async function handlePublicDecrypt(req, res) {
  */
 async function handleDelegatedUserDecrypt(req, res) {
   const body = await parseBody(req);
-  const {
-    handles,
-    network,
-    aclContractAddress,
-    delegatorAddress,
-    delegateAddress,
-    executorAddress,
-  } = body;
+  // v0.5.0-alpha.3 sends handleContractPairs; older versions send handles
+  const handles = body.handleContractPairs || body.handles;
+  const { network, aclContractAddress, delegatorAddress, delegateAddress, executorAddress } = body;
   const contractAddress = getAddress(handles[0].contractAddress);
   const executor = executorAddress || HARDHAT_EXECUTOR;
 

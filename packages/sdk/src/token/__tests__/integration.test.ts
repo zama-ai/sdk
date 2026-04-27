@@ -18,9 +18,10 @@ describe("Integration: multi-step workflows", () => {
     }) => {
       const UNDERLYING = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
 
-      // Step 1: readContract calls for underlying and allowance
+      // Step 1: readContract calls for underlying, ERC-20 balance, allowance, then confidentialBalanceOf
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce(UNDERLYING) // #getUnderlying
+        .mockResolvedValueOnce(1000n) // ERC-20 balanceOf (must be >= shield amount)
         .mockResolvedValueOnce(0n) // allowance check (insufficient)
         .mockResolvedValueOnce(handle); // confidentialBalanceOf after wrap
 
@@ -32,7 +33,10 @@ describe("Integration: multi-step workflows", () => {
       expect(signer.writeContract).toHaveBeenCalledTimes(2);
       expect(signer.writeContract).toHaveBeenNthCalledWith(
         1,
-        expect.objectContaining({ functionName: "approve", args: expect.arrayContaining([500n]) }),
+        expect.objectContaining({
+          functionName: "approve",
+          args: expect.arrayContaining([500n]),
+        }),
       );
       expect(signer.writeContract).toHaveBeenNthCalledWith(
         2,
@@ -65,6 +69,9 @@ describe("Integration: multi-step workflows", () => {
       createToken,
       provider,
     }) => {
+      // Step 0: Mock confidentialBalanceOf for pre-flight balance check
+      vi.mocked(provider.readContract).mockResolvedValueOnce(handle); // confidentialBalanceOf
+
       // Step 1: Execute transfer (encrypts amount, sends tx)
       const transferResult = await token.confidentialTransfer(RECIPIENT, 250n);
       expect(transferResult.txHash).toBe("0xtxhash");
@@ -151,9 +158,13 @@ describe("Integration: multi-step workflows", () => {
       relayer,
       signer,
       token,
+      handle,
       userAddress,
       provider,
     }) => {
+      // Mock confidentialBalanceOf for pre-flight balance check
+      vi.mocked(provider.readContract).mockResolvedValueOnce(handle); // confidentialBalanceOf
+
       // Mock receipt with UnwrapRequested event for the auto-finalize path.
       // unwrap() now calls waitForTransactionReceipt (1st call),
       // then #waitAndFinalizeUnshield calls it again (2nd call) to parse the event,

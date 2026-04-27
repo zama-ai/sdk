@@ -42,7 +42,8 @@ export type WorkerRequestType =
   | "DELEGATED_USER_DECRYPT"
   | "REQUEST_ZK_PROOF_VERIFICATION"
   | "GET_PUBLIC_KEY"
-  | "GET_PUBLIC_PARAMS";
+  | "GET_PUBLIC_PARAMS"
+  | "GET_EXTRA_DATA";
 
 export interface BaseRequest {
   id: string;
@@ -126,6 +127,7 @@ export interface CreateEIP712Request extends BaseRequest {
     contractAddresses: Address[];
     startTimestamp: number;
     durationDays: number;
+    extraData: Hex;
   };
 }
 
@@ -138,6 +140,7 @@ export interface CreateDelegatedEIP712Request extends BaseRequest {
     delegatorAddress: Address;
     startTimestamp: number;
     durationDays: number;
+    extraData: Hex;
   };
 }
 
@@ -179,6 +182,11 @@ export interface GetPublicParamsRequest extends BaseRequest {
   };
 }
 
+export interface GetExtraDataRequest extends BaseRequest {
+  type: "GET_EXTRA_DATA";
+  payload: { chainId: number };
+}
+
 export type WorkerRequest =
   | InitRequest
   | UpdateCsrfRequest
@@ -191,7 +199,8 @@ export type WorkerRequest =
   | DelegatedUserDecryptRequest
   | RequestZKProofVerificationRequest
   | GetPublicKeyRequest
-  | GetPublicParamsRequest;
+  | GetPublicParamsRequest
+  | GetExtraDataRequest;
 
 // ============================================================================
 // Payload Type Aliases
@@ -272,4 +281,8 @@ export interface GetPublicKeyResponseData {
 
 export interface GetPublicParamsResponseData {
   result: { publicParams: Uint8Array; publicParamsId: string } | null;
+}
+
+export interface GetExtraDataResponseData {
+  result: Hex;
 }

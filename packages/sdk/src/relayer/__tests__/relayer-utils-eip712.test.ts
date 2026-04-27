@@ -18,6 +18,7 @@ const mockWorkerClient = {
   requestZKProofVerification: vi.fn(),
   getPublicKey: vi.fn(),
   getPublicParams: vi.fn(),
+  getExtraData: vi.fn().mockResolvedValue({ result: "0x" }),
 };
 
 import { RelayerWeb } from "../relayer-web";

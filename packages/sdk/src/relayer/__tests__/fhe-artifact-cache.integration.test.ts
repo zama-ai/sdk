@@ -33,8 +33,15 @@ function createTestServer(): { server: http.Server; start: () => Promise<TestSer
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(
         JSON.stringify({
-          fhePublicKey: { dataId: "pk-id-1", urls: [`${base}${pkPath}`] },
-          crs: { 2048: { dataId: "crs-id-1", urls: [`${base}${crsPath}`] } },
+          status: "succeeded",
+          response: {
+            fheKeyInfo: [
+              {
+                fhePublicKey: { dataId: "pk-id-1", urls: [`${base}${pkPath}`] },
+              },
+            ],
+            crs: { 2048: { dataId: "crs-id-1", urls: [`${base}${crsPath}`] } },
+          },
         }),
       );
       return;

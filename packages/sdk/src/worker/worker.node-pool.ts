@@ -12,6 +12,8 @@ import type {
   EncryptResponseData,
   GenerateKeypairRequest,
   GenerateKeypairResponseData,
+  GetExtraDataRequest,
+  GetExtraDataResponseData,
   GetPublicKeyRequest,
   GetPublicKeyResponseData,
   GetPublicParamsRequest,
@@ -195,5 +197,9 @@ export class NodeWorkerPool {
     params: GetPublicParamsRequest["payload"],
   ): Promise<GetPublicParamsResponseData> {
     return this.#dispatch((w) => w.getPublicParams(params));
+  }
+
+  async getExtraData(params: GetExtraDataRequest["payload"]): Promise<GetExtraDataResponseData> {
+    return this.#dispatch((w) => w.getExtraData(params));
   }
 }

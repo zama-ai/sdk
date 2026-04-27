@@ -378,6 +378,10 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
     };
   }
 
+  async getExtraData(): Promise<Hex> {
+    return "0x";
+  }
+
   async getAclAddress(): Promise<Address> {
     return this.#config.aclContractAddress as Address;
   }

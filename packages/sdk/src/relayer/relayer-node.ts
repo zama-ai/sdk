@@ -117,12 +117,14 @@ export class RelayerNode extends BaseRelayer implements RelayerSDK, Disposable {
   ): Promise<EIP712TypedData> {
     await this.ensureInit();
     const chainId = this.chain.id;
+    const extraData = await this.getExtraData();
     return this.#pool.createEIP712({
       chainId,
       publicKey,
       contractAddresses,
       startTimestamp,
       durationDays,
+      extraData,
     });
   }
 
@@ -166,6 +168,7 @@ export class RelayerNode extends BaseRelayer implements RelayerSDK, Disposable {
   ): Promise<KmsDelegatedUserDecryptEIP712Type> {
     await this.ensureInit();
     const chainId = this.chain.id;
+    const extraData = await this.getExtraData();
     return this.#pool.createDelegatedUserDecryptEIP712({
       chainId,
       publicKey,
@@ -173,6 +176,7 @@ export class RelayerNode extends BaseRelayer implements RelayerSDK, Disposable {
       delegatorAddress,
       startTimestamp,
       durationDays,
+      extraData,
     });
   }
 
@@ -221,5 +225,11 @@ export class RelayerNode extends BaseRelayer implements RelayerSDK, Disposable {
       );
     }
     return (await this.#pool.getPublicParams({ chainId, bits })).result;
+  }
+
+  async getExtraData(): Promise<Hex> {
+    await this.ensureInit();
+    const chainId = this.chain.id;
+    return (await this.#pool.getExtraData({ chainId })).result;
   }
 }
