@@ -1070,13 +1070,8 @@ export class Token extends ReadonlyToken {
       const txHash = await signer.writeContract(
         approveContract(underlying, this.wrapper, approvalAmount),
       );
-      // Emit immediately so callers can show an optimistic "approval pending"
-      // indicator — consistent with how every other *Submitted event fires.
       this.emit({ type: ZamaSDKEvents.ApproveUnderlyingSubmitted, txHash });
       safeCallback(() => callbacks?.onApprovalSubmitted?.(txHash));
-      // Wait for the approval to be mined before shield() submits the wrap TX.
-      // Without this, RPC providers that simulate against committed state
-      // (Alchemy, Infura) see allowance = 0 during wrap simulation and revert.
       await this.sdk.provider.waitForTransactionReceipt(txHash);
     } catch (error) {
       if (error instanceof ZamaError) {

@@ -87,9 +87,6 @@ describe("Token.shield", () => {
 
     await token.shield(500n);
 
-    // Approval must be fully mined before the wrap TX is submitted.
-    // Regression guard: a missing waitForTransactionReceipt after approve
-    // causes Alchemy/Infura to revert the wrap (committed-state simulation).
     expect(callOrder).toEqual(["write:approve", "receipt", "write:wrap", "receipt"]);
   });
 
