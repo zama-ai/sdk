@@ -105,6 +105,21 @@ export class EthersSigner implements GenericSigner {
   }
 
   subscribe(onIdentityChange: SignerIdentityListener): () => void {
-    return eip1193Subscribe(this.#eip1193, onIdentityChange);
+    return eip1193Subscribe({
+      provider: this.#eip1193,
+      getInitialIdentity: async () => {
+        const signer = await this.#signerPromise;
+        const provider = signer.provider;
+        if (!provider) {
+          return undefined;
+        }
+        const [address, network] = await Promise.all([signer.getAddress(), provider.getNetwork()]);
+        const chainId = Number(network.chainId);
+        return Number.isSafeInteger(chainId) && chainId > 0
+          ? { address: getAddress(address), chainId }
+          : undefined;
+      },
+      onIdentityChange,
+    });
   }
 }

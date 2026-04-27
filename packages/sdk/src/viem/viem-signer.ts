@@ -8,9 +8,15 @@ import type {
   Address,
   Hex,
 } from "viem";
+import { getAddress } from "viem";
 import type { writeContract } from "viem/actions";
 import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
-import type { GenericSigner, SignerIdentityListener, WriteContractConfig } from "../types";
+import type {
+  GenericSigner,
+  SignerIdentity,
+  SignerIdentityListener,
+  WriteContractConfig,
+} from "../types";
 import { eip1193Subscribe } from "../signer/eip1193-subscribe";
 
 /**
@@ -29,6 +35,18 @@ export interface ViemSignerConfig {
   /** Wallet client for signing and write operations. */
   walletClient: WalletClient;
   ethereum?: EIP1193Provider;
+}
+
+function identityFromWalletClient(walletClient: WalletClient): SignerIdentity | undefined {
+  if (!walletClient.account || !walletClient.chain) {
+    return undefined;
+  }
+  const address =
+    typeof walletClient.account === "string" ? walletClient.account : walletClient.account.address;
+  return {
+    address: getAddress(address),
+    chainId: walletClient.chain.id,
+  };
 }
 
 /**
@@ -92,6 +110,10 @@ export class ViemSigner implements GenericSigner {
   }
 
   subscribe(onIdentityChange: SignerIdentityListener): () => void {
-    return eip1193Subscribe(this.#ethereum, onIdentityChange);
+    return eip1193Subscribe({
+      provider: this.#ethereum,
+      getInitialIdentity: () => identityFromWalletClient(this.#walletClient),
+      onIdentityChange,
+    });
   }
 }

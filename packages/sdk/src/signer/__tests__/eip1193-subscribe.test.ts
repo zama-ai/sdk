@@ -80,7 +80,7 @@ describe("eip1193Subscribe", () => {
   eit(
     "emits connect once address and chain have both been observed",
     async ({ provider, onIdentityChange }) => {
-      eip1193Subscribe(provider, onIdentityChange);
+      eip1193Subscribe({ provider, onIdentityChange });
 
       provider.emit("accountsChanged", [ADDR_A]);
       expect(onIdentityChange).not.toHaveBeenCalled();
@@ -97,7 +97,7 @@ describe("eip1193Subscribe", () => {
   eit(
     "ignores disconnect when no prior identity was tracked",
     async ({ provider, onIdentityChange }) => {
-      eip1193Subscribe(provider, onIdentityChange);
+      eip1193Subscribe({ provider, onIdentityChange });
 
       provider.emit("accountsChanged", []);
       provider.emit("disconnect");
@@ -109,7 +109,7 @@ describe("eip1193Subscribe", () => {
   eit(
     "emits account change with previous and next after a prior connect",
     async ({ provider, onIdentityChange }) => {
-      eip1193Subscribe(provider, onIdentityChange);
+      eip1193Subscribe({ provider, onIdentityChange });
 
       provider.emit("accountsChanged", [ADDR_A]);
       provider.emit("chainChanged", "0x7a69");
@@ -125,7 +125,7 @@ describe("eip1193Subscribe", () => {
   );
 
   eit("emits disconnect after a prior connect", async ({ provider, onIdentityChange }) => {
-    eip1193Subscribe(provider, onIdentityChange);
+    eip1193Subscribe({ provider, onIdentityChange });
 
     provider.emit("accountsChanged", [ADDR_A]);
     provider.emit("chainChanged", "0x7a69");
@@ -142,7 +142,7 @@ describe("eip1193Subscribe", () => {
   eit(
     "emits disconnect and reconnect transitions for repeated lock/unlock cycles",
     async ({ provider, onIdentityChange }) => {
-      eip1193Subscribe(provider, onIdentityChange);
+      eip1193Subscribe({ provider, onIdentityChange });
 
       provider.emit("accountsChanged", [ADDR_A]);
       provider.emit("chainChanged", "0x7a69");
@@ -165,7 +165,7 @@ describe("eip1193Subscribe", () => {
   eit(
     "emits chain change with the previous identity carried forward",
     async ({ provider, onIdentityChange }) => {
-      eip1193Subscribe(provider, onIdentityChange);
+      eip1193Subscribe({ provider, onIdentityChange });
 
       provider.emit("accountsChanged", [ADDR_A]);
       provider.emit("chainChanged", "0x7a69");
@@ -183,7 +183,7 @@ describe("eip1193Subscribe", () => {
   eit(
     "chain change without a prior identity waits for an observed address",
     async ({ provider, onIdentityChange }) => {
-      eip1193Subscribe(provider, onIdentityChange);
+      eip1193Subscribe({ provider, onIdentityChange });
 
       provider.emit("chainChanged", "0x1");
       expect(onIdentityChange).not.toHaveBeenCalled();
@@ -200,7 +200,7 @@ describe("eip1193Subscribe", () => {
   eit(
     "does not fire when same address reconnects without disconnect",
     async ({ provider, onIdentityChange }) => {
-      eip1193Subscribe(provider, onIdentityChange);
+      eip1193Subscribe({ provider, onIdentityChange });
 
       provider.emit("accountsChanged", [ADDR_A]);
       provider.emit("chainChanged", "0x7a69");
@@ -214,7 +214,7 @@ describe("eip1193Subscribe", () => {
   eit(
     "case-insensitive address comparison prevents duplicate fires",
     async ({ provider, onIdentityChange }) => {
-      eip1193Subscribe(provider, onIdentityChange);
+      eip1193Subscribe({ provider, onIdentityChange });
 
       provider.emit("accountsChanged", [ADDR_A]);
       provider.emit("chainChanged", "0x7a69");
@@ -226,14 +226,14 @@ describe("eip1193Subscribe", () => {
   );
 
   it("returns a no-op unsubscribe when provider is undefined", () => {
-    const unsub = eip1193Subscribe(undefined, () => {});
+    const unsub = eip1193Subscribe({ provider: undefined, onIdentityChange: () => {} });
     expect(unsub).toBeTypeOf("function");
     unsub();
   });
 
   it("registers and removes all three native listeners", () => {
     const provider = createFakeProvider();
-    const unsub = eip1193Subscribe(provider, () => {});
+    const unsub = eip1193Subscribe({ provider, onIdentityChange: () => {} });
 
     expect(provider.listenerCount("accountsChanged")).toBe(1);
     expect(provider.listenerCount("disconnect")).toBe(1);
@@ -249,7 +249,7 @@ describe("eip1193Subscribe", () => {
   it("does not fire events after unsubscribe", () => {
     const provider = createFakeProvider();
     const onIdentityChange = vi.fn();
-    const unsub = eip1193Subscribe(provider, onIdentityChange);
+    const unsub = eip1193Subscribe({ provider, onIdentityChange });
 
     provider.emit("accountsChanged", [ADDR_A]);
     provider.emit("chainChanged", "0x7a69");
@@ -263,31 +263,99 @@ describe("eip1193Subscribe", () => {
     expect(onIdentityChange).toHaveBeenCalledOnce();
   });
 
-  it("does not emit when initial probes resolve after unsubscribe", async () => {
-    let resolveAccounts!: (accounts: Address[]) => void;
-    let resolveChainId!: (chainId: string) => void;
-    const accountsPromise = new Promise<Address[]>((resolve) => {
-      resolveAccounts = resolve;
-    });
-    const chainIdPromise = new Promise<string>((resolve) => {
-      resolveChainId = resolve;
-    });
-    const provider = createFakeProvider({ accountsPromise, chainIdPromise });
+  it("uses initial identity as current state without emitting a seed event", async () => {
+    const provider = createFakeProvider();
     const onIdentityChange = vi.fn();
-    const unsub = eip1193Subscribe(provider, onIdentityChange);
+    eip1193Subscribe({
+      provider,
+      getInitialIdentity: () => ({ address: ADDR_A, chainId: CHAIN_31337 }),
+      onIdentityChange,
+    });
 
-    unsub();
-    resolveAccounts([ADDR_A]);
-    resolveChainId("0x7a69");
-
-    await Promise.all([accountsPromise, chainIdPromise]);
+    await vi.waitFor(() => {
+      expect(provider.listenerCount("accountsChanged")).toBe(1);
+    });
     expect(onIdentityChange).not.toHaveBeenCalled();
+  });
+
+  it("carries initial identity as previous on account changes", async () => {
+    const provider = createFakeProvider();
+    const onIdentityChange = vi.fn();
+    const getInitialIdentity = vi.fn().mockResolvedValue({ address: ADDR_A, chainId: CHAIN_31337 });
+    eip1193Subscribe({
+      provider,
+      getInitialIdentity,
+      onIdentityChange,
+    });
+
+    await vi.waitFor(() => {
+      expect(getInitialIdentity).toHaveBeenCalledOnce();
+    });
+    await Promise.resolve();
+    provider.emit("accountsChanged", [ADDR_B]);
+
+    expect(onIdentityChange).toHaveBeenCalledOnce();
+    expect(onIdentityChange).toHaveBeenCalledWith({
+      previous: { address: ADDR_A, chainId: CHAIN_31337 },
+      next: { address: ADDR_B, chainId: CHAIN_31337 },
+    });
+  });
+
+  it("carries initial identity as previous on disconnect", async () => {
+    const provider = createFakeProvider();
+    const onIdentityChange = vi.fn();
+    const getInitialIdentity = vi.fn().mockResolvedValue({ address: ADDR_A, chainId: CHAIN_31337 });
+    eip1193Subscribe({
+      provider,
+      getInitialIdentity,
+      onIdentityChange,
+    });
+
+    await vi.waitFor(() => {
+      expect(getInitialIdentity).toHaveBeenCalledOnce();
+    });
+    await Promise.resolve();
+    provider.emit("disconnect");
+
+    expect(onIdentityChange).toHaveBeenCalledOnce();
+    expect(onIdentityChange).toHaveBeenCalledWith({
+      previous: { address: ADDR_A, chainId: CHAIN_31337 },
+      next: undefined,
+    });
+  });
+
+  it("ignores initial identity when a provider event wins the race", async () => {
+    let resolveInitial!: (identity: { address: Address; chainId: number }) => void;
+    const initialIdentityPromise = new Promise<{ address: Address; chainId: number }>((resolve) => {
+      resolveInitial = resolve;
+    });
+    const provider = createFakeProvider();
+    const onIdentityChange = vi.fn();
+    eip1193Subscribe({
+      provider,
+      getInitialIdentity: () => initialIdentityPromise,
+      onIdentityChange,
+    });
+
+    provider.emit("accountsChanged", [ADDR_B]);
+    provider.emit("chainChanged", "0x1");
+    expect(onIdentityChange).toHaveBeenCalledOnce();
+
+    resolveInitial({ address: ADDR_A, chainId: CHAIN_31337 });
+    await initialIdentityPromise;
+
+    provider.emit("chainChanged", "0x7a69");
+    expect(onIdentityChange).toHaveBeenCalledTimes(2);
+    expect(onIdentityChange).toHaveBeenLastCalledWith({
+      previous: { address: ADDR_B, chainId: CHAIN_1 },
+      next: { address: ADDR_B, chainId: CHAIN_31337 },
+    });
   });
 
   it("does not reuse a stale observed chain after disconnect", () => {
     const provider = createFakeProvider();
     const onIdentityChange = vi.fn();
-    eip1193Subscribe(provider, onIdentityChange);
+    eip1193Subscribe({ provider, onIdentityChange });
 
     provider.emit("accountsChanged", [ADDR_A]);
     provider.emit("chainChanged", "0x1");
@@ -307,30 +375,12 @@ describe("eip1193Subscribe", () => {
     });
   });
 
-  it("probes initial identity from an already-connected wallet", async () => {
+  it("does not request initial accounts or chain", () => {
     const provider = createFakeProvider({ accounts: [ADDR_A], chainId: "0x7a69" });
     const onIdentityChange = vi.fn();
-    eip1193Subscribe(provider, onIdentityChange);
+    eip1193Subscribe({ provider, onIdentityChange });
 
-    expect(onIdentityChange).not.toHaveBeenCalled();
-
-    await vi.waitFor(() => {
-      expect(onIdentityChange).toHaveBeenCalledOnce();
-    });
-    expect(onIdentityChange).toHaveBeenCalledWith({
-      previous: undefined,
-      next: { address: ADDR_A, chainId: CHAIN_31337 },
-    });
-  });
-
-  it("does not emit from probe when wallet is not connected", async () => {
-    const provider = createFakeProvider({ accounts: [], chainId: "0x1" });
-    const onIdentityChange = vi.fn();
-    eip1193Subscribe(provider, onIdentityChange);
-
-    await vi.waitFor(() => {
-      expect(provider.request).toHaveBeenCalledTimes(2);
-    });
+    expect(provider.request).not.toHaveBeenCalled();
     expect(onIdentityChange).not.toHaveBeenCalled();
   });
 });

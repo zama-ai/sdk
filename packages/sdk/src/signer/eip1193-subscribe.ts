@@ -6,7 +6,13 @@ import {
 } from "viem";
 import type { SignerIdentity, SignerIdentityListener } from "../types";
 
-type MinimalProvider = Pick<EIP1193Provider, "on" | "removeListener" | "request">;
+type MinimalProvider = Pick<EIP1193Provider, "on" | "removeListener">;
+
+export interface Eip1193SubscribeConfig {
+  provider: MinimalProvider | undefined;
+  getInitialIdentity?: () => SignerIdentity | undefined | Promise<SignerIdentity | undefined>;
+  onIdentityChange: SignerIdentityListener;
+}
 
 function normalizeAddress(address: Address | undefined): Address | undefined {
   if (!address) {
@@ -28,16 +34,15 @@ function parseChainId(chainId: string): number | undefined {
  * Subscribe to EIP-1193 wallet events and translate them into
  * {@link SignerIdentityChange} transitions.
  *
- * Shared by `ViemSigner` and `EthersSigner`. On subscribe, the current
- * accounts and chain are probed via `eth_accounts` / `eth_chainId` so that
- * the initial identity is populated even when the wallet is already connected
- * and no change events fire. The probe results flow through the same handlers
- * as real events, so arrival order doesn't matter.
+ * Shared by `ViemSigner` and `EthersSigner`. Listeners are attached before the
+ * adapter's initial identity loader runs; if any real provider event arrives
+ * first, the stale loader result is ignored.
  */
-export function eip1193Subscribe(
-  provider: MinimalProvider | undefined,
-  onIdentityChange: SignerIdentityListener,
-): () => void {
+export function eip1193Subscribe({
+  provider,
+  getInitialIdentity,
+  onIdentityChange,
+}: Eip1193SubscribeConfig): () => void {
   if (!provider) {
     return () => {};
   }
@@ -46,6 +51,11 @@ export function eip1193Subscribe(
   let observedAddress: Address | undefined;
   let observedChainId: number | undefined;
   let active = true;
+  let eventVersion = 0;
+
+  function markEvent(): void {
+    eventVersion += 1;
+  }
 
   function reconcile(): void {
     if (!active) {
@@ -64,6 +74,7 @@ export function eip1193Subscribe(
   }
 
   const handleAccountsChanged: EIP1193EventMap["accountsChanged"] = (accounts) => {
+    markEvent();
     if (accounts.length === 0 || !accounts[0]) {
       observedAddress = undefined;
       observedChainId = undefined;
@@ -81,12 +92,14 @@ export function eip1193Subscribe(
   };
 
   const handleDisconnect: EIP1193EventMap["disconnect"] = () => {
+    markEvent();
     observedAddress = undefined;
     observedChainId = undefined;
     reconcile();
   };
 
   const handleChainChanged: EIP1193EventMap["chainChanged"] = (chainId) => {
+    markEvent();
     const nextChainId = parseChainId(chainId);
     if (!nextChainId) {
       return;
@@ -100,23 +113,23 @@ export function eip1193Subscribe(
   provider.on("disconnect", handleDisconnect);
   provider.on("chainChanged", handleChainChanged);
 
-  // Seed initial identity for already-connected wallets. EIP-1193 events only
-  // fire on *changes*, so without this probe the subscription would never emit
-  // if the wallet is already connected when subscribe is called.
-  provider
-    .request({ method: "eth_accounts" })
-    .then((accounts) => handleAccountsChanged(accounts as Address[]))
-    .catch((error) => {
-      // oxlint-disable-next-line no-console
-      console.warn("[zama-sdk] eth_accounts probe failed:", error);
-    });
-  provider
-    .request({ method: "eth_chainId" })
-    .then((chainId) => handleChainChanged(chainId as string))
-    .catch((error) => {
-      // oxlint-disable-next-line no-console
-      console.warn("[zama-sdk] eth_chainId probe failed:", error);
-    });
+  if (getInitialIdentity) {
+    const initialEventVersion = eventVersion;
+    Promise.resolve()
+      .then(getInitialIdentity)
+      .then((identity) => {
+        if (!active || eventVersion !== initialEventVersion) {
+          return;
+        }
+        current = identity;
+        observedAddress = identity?.address;
+        observedChainId = identity?.chainId;
+      })
+      .catch((error) => {
+        // oxlint-disable-next-line no-console
+        console.warn("[zama-sdk] initial identity load failed:", error);
+      });
+  }
 
   return () => {
     active = false;

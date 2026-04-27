@@ -75,6 +75,7 @@ import {
 const SPENDER = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;
 const TX_HASH = "0xdeadbeef" as Hex;
 const MOCK_ADDRESS = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
+const NEXT_ADDRESS = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;
 const MOCK_SIGNATURE = ("0x" + "12".repeat(65)) as Hex;
 const VALID_HANDLE = ("0x" + "ab".repeat(32)) as Hex;
 const VALID_PROOF = ("0x" + "cd".repeat(32)) as Hex;
@@ -175,6 +176,43 @@ describe("EthersSigner", () => {
         expect.any(Function),
       );
     });
+
+    eit(
+      "subscribe loads initial identity for browser signers",
+      async ({ createEthersMockSigner }) => {
+        const mockEthereum = {
+          on: vi.fn(),
+          removeListener: vi.fn(),
+          request: vi.fn().mockRejectedValue(new Error("not connected")),
+        };
+        const signer = createEthersMockSigner();
+        mockGetSigner.mockResolvedValue(signer);
+
+        const ethersSigner = new EthersSigner({
+          ethereum: mockEthereum as never,
+        });
+
+        const onIdentityChange = vi.fn();
+        ethersSigner.subscribe(onIdentityChange);
+        await vi.waitFor(() => {
+          expect(signer.getAddress).toHaveBeenCalledOnce();
+          expect(signer.provider.getNetwork).toHaveBeenCalledOnce();
+        });
+        await Promise.resolve();
+        const accountsChanged = mockEthereum.on.mock.calls.find(
+          ([event]) => event === "accountsChanged",
+        )?.[1] as (accounts: Address[]) => void;
+
+        accountsChanged([NEXT_ADDRESS]);
+
+        expect(onIdentityChange).toHaveBeenCalledOnce();
+        expect(onIdentityChange).toHaveBeenCalledWith({
+          previous: { address: MOCK_ADDRESS, chainId: 8009 },
+          next: { address: NEXT_ADDRESS, chainId: 8009 },
+        });
+        expect(mockEthereum.request).not.toHaveBeenCalled();
+      },
+    );
 
     eit("subscribe returns no-op with { signer } config", ({ createEthersMockSigner }) => {
       const signer = createEthersMockSigner();
