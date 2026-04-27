@@ -36,6 +36,9 @@ import { ZamaProvider } from "@zama-fhe/react-sdk";
 import { createConfig as createZamaFheConfig } from "@zama-fhe/react-sdk/wagmi";
 import { web } from "@zama-fhe/sdk";
 import { sepolia as sepoliaFhe } from "@zama-fhe/sdk/chains";
+import type { FheChain } from "@zama-fhe/sdk/chains";
+
+const mySepolia = { ...sepoliaFhe, relayerUrl: "https://your-app.com/api/relayer/11155111" } as const satisfies FheChain;
 
 const wagmiConfig = createConfig({
   chains: [sepolia],
@@ -45,10 +48,10 @@ const wagmiConfig = createConfig({
 });
 
 const zamaConfig = createZamaFheConfig({
-  chains: [sepoliaFhe],
+  chains: [mySepolia],
   wagmiConfig,
   relayers: {
-    [sepoliaFhe.id]: web({ relayerUrl: "https://your-app.com/api/relayer/11155111" }),
+    [mySepolia.id]: web(),
   },
 });
 
@@ -82,12 +85,15 @@ import { ZamaProvider, useConfidentialBalance, useConfidentialTransfer } from "@
 import { createConfig } from "@zama-fhe/react-sdk/wagmi";
 import { web } from "@zama-fhe/sdk";
 import { sepolia } from "@zama-fhe/sdk/chains";
+import type { FheChain } from "@zama-fhe/sdk/chains";
+
+const mySepolia = { ...sepolia, relayerUrl: "https://your-app.com/api/relayer/11155111" } as const satisfies FheChain;
 
 const zamaConfig = createConfig({
-  chains: [sepolia],
+  chains: [mySepolia],
   signer: yourCustomSigner,
   relayers: {
-    [sepolia.id]: web({ relayerUrl: "https://your-app.com/api/relayer/11155111" }),
+    [mySepolia.id]: web(),
   },
 });
 
@@ -134,12 +140,15 @@ import { ZamaProvider } from "@zama-fhe/react-sdk";
 import { createConfig } from "@zama-fhe/react-sdk/wagmi";
 import { web } from "@zama-fhe/sdk";
 import { sepolia } from "@zama-fhe/sdk/chains";
+import type { FheChain } from "@zama-fhe/sdk/chains";
+
+const mySepolia = { ...sepolia, relayerUrl: "/api/relayer/11155111" } as const satisfies FheChain;
 
 const zamaConfig = createConfig({
-  chains: [sepolia],
+  chains: [mySepolia],
   wagmiConfig, // or use createConfig from @zama-fhe/sdk/viem or @zama-fhe/sdk/ethers
   relayers: {
-    [sepolia.id]: web({ relayerUrl: "/api/relayer/11155111" }),
+    [mySepolia.id]: web(),
   },
   // Optional fields:
   // storage: indexedDBStorage,
@@ -843,14 +852,17 @@ import { chromeSessionStorage, indexedDBStorage } from "@zama-fhe/react-sdk";
 import { createConfig } from "@zama-fhe/react-sdk/wagmi";
 import { web } from "@zama-fhe/sdk";
 import { sepolia } from "@zama-fhe/sdk/chains";
+import type { FheChain } from "@zama-fhe/sdk/chains";
+
+const mySepolia = { ...sepolia, relayerUrl: "/api/relayer/11155111" } as const satisfies FheChain;
 
 const zamaConfig = createConfig({
-  chains: [sepolia],
+  chains: [mySepolia],
   wagmiConfig,
   storage: indexedDBStorage,
   sessionStorage: chromeSessionStorage,
   relayers: {
-    [sepolia.id]: web({ relayerUrl: "/api/relayer/11155111" }),
+    [mySepolia.id]: web(),
   },
 });
 

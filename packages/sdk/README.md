@@ -68,15 +68,19 @@ The SDK works with all TypeScript `moduleResolution` modes:
 import { web, ZamaSDK } from "@zama-fhe/sdk";
 import { createConfig } from "@zama-fhe/sdk/viem";
 import { sepolia, mainnet } from "@zama-fhe/sdk/chains";
+import type { FheChain } from "@zama-fhe/sdk/chains";
+
+const mySepolia = { ...sepolia, relayerUrl: "https://your-app.com/api/relayer/11155111" } as const satisfies FheChain;
+const myMainnet = { ...mainnet, relayerUrl: "https://your-app.com/api/relayer/1" } as const satisfies FheChain;
 
 // 1. Create the config
 const config = createConfig({
-  chains: [sepolia, mainnet],
+  chains: [mySepolia, myMainnet],
   publicClient,
   walletClient,
-  relayers: {
-    [sepolia.id]: web({ relayerUrl: "https://your-app.com/api/relayer/11155111" }),
-    [mainnet.id]: web({ relayerUrl: "https://your-app.com/api/relayer/1" }),
+  relayers: { 
+    [mySepolia.id]: web(), 
+    [myMainnet.id]: web() 
   },
 });
 
@@ -102,12 +106,15 @@ const transferTx = await token.confidentialTransfer("0xRecipient", 500n);
 import { web, ZamaSDK } from "@zama-fhe/sdk";
 import { createConfig } from "@zama-fhe/sdk/ethers";
 import { sepolia } from "@zama-fhe/sdk/chains";
+import type { FheChain } from "@zama-fhe/sdk/chains";
+
+const mySepolia = { ...sepolia, relayerUrl: "https://your-app.com/api/relayer/11155111" } as const satisfies FheChain;
 
 const config = createConfig({
-  chains: [sepolia],
+  chains: [mySepolia],
   ethereum: window.ethereum!,
   relayers: {
-    [sepolia.id]: web({ relayerUrl: "https://your-app.com/api/relayer/11155111" }),
+    [mySepolia.id]: web(),
   },
 });
 
@@ -162,13 +169,16 @@ The recommended way to configure the SDK. Takes chains, relayers, and a signer a
 import { web, ZamaSDK } from "@zama-fhe/sdk";
 import { createConfig } from "@zama-fhe/sdk/viem";
 import { sepolia } from "@zama-fhe/sdk/chains";
+import type { FheChain } from "@zama-fhe/sdk/chains";
+
+const mySepolia = { ...sepolia, relayerUrl: "/api/relayer/11155111" } as const satisfies FheChain;
 
 const config = createConfig({
-  chains: [sepolia],
+  chains: [mySepolia],
   publicClient,
   walletClient, // or use createConfig from @zama-fhe/sdk/ethers with { ethereum }
   relayers: {
-    [sepolia.id]: web({ relayerUrl: "/api/relayer/11155111" }),
+    [mySepolia.id]: web(),
   },
 });
 const sdk = new ZamaSDK(config);
@@ -496,13 +506,16 @@ Use with `createConfig`:
 import { web } from "@zama-fhe/sdk";
 import { createConfig } from "@zama-fhe/sdk/viem";
 import { sepolia } from "@zama-fhe/sdk/chains";
+import type { FheChain } from "@zama-fhe/sdk/chains";
+
+const mySepolia = { ...sepolia, relayerUrl: "/api/relayer/11155111" } as const satisfies FheChain;
 
 const config = createConfig({
-  chains: [sepolia],
+  chains: [mySepolia],
   publicClient,
   walletClient,
   relayers: {
-    [sepolia.id]: web({ relayerUrl: "/api/relayer/11155111" }),
+    [mySepolia.id]: web(),
   },
 });
 ```
