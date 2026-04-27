@@ -39,7 +39,7 @@ const config = createConfig({
   publicClient,
   walletClient,
   storage: memoryStorage,
-  transports: {
+  relayers: {
     [hardhat.id]: cleartext(),
   },
 });
@@ -70,7 +70,6 @@ import type { FheChain } from "@zama-fhe/sdk/chains";
 
 const myHardhat = {
   id: 12345,
-  chainId: 12345,
   network: "http://localhost:8545",
   gatewayChainId: 10901,
   aclContractAddress: "0x...",
@@ -79,6 +78,7 @@ const myHardhat = {
   verifyingContractAddressDecryption: "0x...",
   verifyingContractAddressInputVerification: "0x...",
   executorAddress: "0x...",
+  registryAddress: undefined,
   relayerUrl: "",
 } as const satisfies FheChain;
 
@@ -86,7 +86,7 @@ const config = createConfig({
   chains: [myHardhat],
   publicClient,
   walletClient,
-  transports: {
+  relayers: {
     [myHardhat.id]: cleartext(),
   },
 });

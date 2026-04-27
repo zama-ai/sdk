@@ -19,7 +19,7 @@ import { sepolia, mainnet, hoodi, hardhat } from "@zama-fhe/sdk/chains";
 | --------- | ---------- | ------------------ |
 | `mainnet` | `1`        | Ethereum Mainnet   |
 | `sepolia` | `11155111` | Sepolia Testnet    |
-| `hoodi`   | `17000`    | Hoodi Testnet      |
+| `hoodi`   | `560048`   | Hoodi Testnet      |
 | `hardhat` | `31337`    | Local Hardhat node |
 
 ### What each chain includes

@@ -1041,7 +1041,7 @@ import { sepolia, mainnet, hoodi } from "@zama-fhe/sdk/chains";
 | --------- | ---------- | ------------------ |
 | `mainnet` | `1`        | Ethereum Mainnet   |
 | `sepolia` | `11155111` | Sepolia Testnet    |
-| `hoodi`   | `17000`    | Hoodi Testnet      |
+| `hoodi`   | `560048`   | Hoodi Testnet      |
 | `hardhat` | `31337`    | Local Hardhat node |
 
 ### 2. Pick a relayer
@@ -2718,7 +2718,7 @@ const config = createConfig({
   publicClient,
   walletClient,
   storage: memoryStorage,
-  transports: {
+  relayers: {
     [hardhat.id]: cleartext(),
   },
 });
@@ -2749,7 +2749,6 @@ import type { FheChain } from "@zama-fhe/sdk/chains";
 
 const myHardhat = {
   id: 12345,
-  chainId: 12345,
   network: "http://localhost:8545",
   gatewayChainId: 10901,
   aclContractAddress: "0x...",
@@ -2758,6 +2757,7 @@ const myHardhat = {
   verifyingContractAddressDecryption: "0x...",
   verifyingContractAddressInputVerification: "0x...",
   executorAddress: "0x...",
+  registryAddress: undefined,
   relayerUrl: "",
 } as const satisfies FheChain;
 
@@ -2765,7 +2765,7 @@ const config = createConfig({
   chains: [myHardhat],
   publicClient,
   walletClient,
-  transports: {
+  relayers: {
     [myHardhat.id]: cleartext(),
   },
 });
@@ -7668,7 +7668,7 @@ import { sepolia, mainnet, hoodi, hardhat } from "@zama-fhe/sdk/chains";
 | --------- | ---------- | ------------------ |
 | `mainnet` | `1`        | Ethereum Mainnet   |
 | `sepolia` | `11155111` | Sepolia Testnet    |
-| `hoodi`   | `17000`    | Hoodi Testnet      |
+| `hoodi`   | `560048`   | Hoodi Testnet      |
 | `hardhat` | `31337`    | Local Hardhat node |
 
 ### What each chain includes

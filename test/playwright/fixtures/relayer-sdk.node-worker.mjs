@@ -17,11 +17,8 @@ if (!parentPort) {
 
 const port = parentPort;
 
-/** chainId → config (registered at INIT / ADD_CHAIN) */
 const configs = new Map();
-/** chainId → MockFhevmInstance (created lazily) */
 const instances = new Map();
-/** chainId → Promise<MockFhevmInstance> (dedup inflight creation) */
 const pending = new Map();
 
 async function createInstance(chainConfig) {

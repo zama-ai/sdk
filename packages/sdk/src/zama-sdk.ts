@@ -220,6 +220,12 @@ export class ZamaSDK {
       await swallow("revoke previous identity", () => this.credentials.revokeFor(previous));
       await swallow("clear decrypt cache", () => this.cache.clearForRequester(previous.address));
     }
+    const nextChainId = change.next?.chainId;
+    if (nextChainId !== undefined) {
+      await swallow("switch relayer chain", () => {
+        this.relayer.switchChain(nextChainId);
+      });
+    }
     for (const listener of this.#identityListeners) {
       await swallow("identity listener", () => listener(change));
     }
