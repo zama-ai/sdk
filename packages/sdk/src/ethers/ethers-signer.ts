@@ -6,24 +6,17 @@ import {
   type Address,
   type ContractFunctionArgs,
   type ContractFunctionName,
-  type ContractFunctionReturnType,
   type EIP1193Provider,
   type Hex,
 } from "viem";
 import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
-import type {
-  GenericSigner,
-  ReadContractConfig,
-  SignerLifecycleCallbacks,
-  TransactionReceipt,
-  WriteContractConfig,
-} from "../types";
+import type { GenericSigner, SignerLifecycleCallbacks, WriteContractConfig } from "../types";
 import { eip1193Subscribe } from "../token/eip1193-subscribe";
 
 /**
  * Configuration for {@link EthersSigner}.
  *
- * Three variants:
+ * Two variants:
  *
  * - **Browser** — `{ ethereum }`: pass the raw EIP-1193 provider (e.g. `window.ethereum`).
  *   A `BrowserProvider` is created internally and `subscribe()` works automatically.
@@ -31,13 +24,9 @@ import { eip1193Subscribe } from "../token/eip1193-subscribe";
  * - **Node / direct signer** — `{ signer }`: pass an ethers `Signer` (e.g. `Wallet`).
  *   `subscribe()` is not available since there is no EIP-1193 provider.
  *
- * - **Read-only** — `{ provider }`: pass an ethers `Provider` for read-only contract calls.
- *   Signing and write operations will throw at runtime.
+ * For public chain reads, construct a separate {@link EthersProvider}.
  */
-export type EthersSignerConfig =
-  | { ethereum: EIP1193Provider }
-  | { signer: Signer }
-  | { provider: ethers.Provider };
+export type EthersSignerConfig = { ethereum: EIP1193Provider } | { signer: Signer };
 
 /**
  * GenericSigner backed by ethers.
@@ -49,50 +38,36 @@ export type EthersSignerConfig =
  * @param config - {@link EthersSignerConfig}
  */
 export class EthersSigner implements GenericSigner {
-  #signerPromise?: Promise<Signer>;
-  readonly #readProvider?: ethers.Provider;
+  readonly #signerPromise: Promise<Signer>;
   readonly #eip1193?: EIP1193Provider;
 
   constructor(config: EthersSignerConfig) {
     if ("ethereum" in config) {
       const browserProvider = new BrowserProvider(config.ethereum);
       this.#signerPromise = browserProvider.getSigner();
-      this.#readProvider = browserProvider;
       this.#eip1193 = config.ethereum;
-    } else if ("signer" in config) {
-      this.#signerPromise = Promise.resolve(config.signer);
-      this.#readProvider = config.signer.provider ?? undefined;
     } else {
-      this.#readProvider = config.provider;
+      this.#signerPromise = Promise.resolve(config.signer);
     }
-  }
-
-  async #requireSigner(): Promise<Signer> {
-    if (!this.#signerPromise) {
-      throw new TypeError("No signer configured — read-only mode");
-    }
-    return this.#signerPromise;
-  }
-
-  #requireProvider(): ethers.Provider {
-    if (!this.#readProvider) {
-      throw new TypeError("Signer has no provider");
-    }
-    return this.#readProvider;
   }
 
   async getChainId(): Promise<number> {
-    const network = await this.#requireProvider().getNetwork();
+    const signer = await this.#signerPromise;
+    const provider = signer.provider;
+    if (!provider) {
+      throw new TypeError("Signer has no provider — cannot read chain ID");
+    }
+    const network = await provider.getNetwork();
     return Number(network.chainId);
   }
 
   async getAddress(): Promise<Address> {
-    const signer = await this.#requireSigner();
+    const signer = await this.#signerPromise;
     return getAddress(await signer.getAddress());
   }
 
   async signTypedData(typedData: EIP712TypedData): Promise<Hex> {
-    const signer = await this.#requireSigner();
+    const signer = await this.#signerPromise;
     const { domain, types, message } = typedData;
     const { EIP712Domain: _, ...sigTypes } = types;
     const mutableSigTypes = Object.fromEntries(
@@ -110,7 +85,7 @@ export class EthersSigner implements GenericSigner {
     TFunctionName extends ContractFunctionName<TAbi, "nonpayable" | "payable">,
     const TArgs extends ContractFunctionArgs<TAbi, "nonpayable" | "payable", TFunctionName>,
   >(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex> {
-    const signer = await this.#requireSigner();
+    const signer = await this.#signerPromise;
     const contract = new ethers.Contract(config.address, config.abi as ethers.InterfaceAbi, signer);
     const overrides: { gasLimit?: bigint; value?: bigint } = {};
     if (config.value !== undefined) {
@@ -127,48 +102,6 @@ export class EthersSigner implements GenericSigner {
       throw new TypeError(`Expected hex string, got: ${tx.hash}`);
     }
     return tx.hash;
-  }
-
-  async readContract<
-    const TAbi extends Abi | readonly unknown[],
-    TFunctionName extends ContractFunctionName<TAbi, "pure" | "view">,
-    const TArgs extends ContractFunctionArgs<TAbi, "pure" | "view", TFunctionName>,
-  >(
-    config: ReadContractConfig<TAbi, TFunctionName, TArgs>,
-  ): Promise<ContractFunctionReturnType<TAbi, "pure" | "view", TFunctionName, TArgs>> {
-    const provider = this.#requireProvider();
-    const contract = new ethers.Contract(
-      config.address,
-      config.abi as ethers.InterfaceAbi,
-      provider,
-    );
-    return contract[config.functionName]!(...(config.args as readonly unknown[])) as Promise<
-      ContractFunctionReturnType<TAbi, "pure" | "view", TFunctionName, TArgs>
-    >;
-  }
-
-  async getBlockTimestamp(): Promise<bigint> {
-    const block = await this.#requireProvider().getBlock("latest");
-    if (!block) {
-      throw new Error("Failed to fetch latest block");
-    }
-    if (block.timestamp === null) {
-      throw new Error("Latest block has no timestamp");
-    }
-    return BigInt(block.timestamp);
-  }
-
-  async waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt> {
-    const receipt = await this.#requireProvider().waitForTransaction(hash);
-    if (!receipt) {
-      throw new Error("Transaction receipt not found");
-    }
-    return {
-      logs: receipt.logs.map((log) => ({
-        topics: log.topics.filter((t): t is Hex => t !== null),
-        data: log.data as Hex,
-      })),
-    };
   }
 
   subscribe(callbacks: SignerLifecycleCallbacks): () => void {

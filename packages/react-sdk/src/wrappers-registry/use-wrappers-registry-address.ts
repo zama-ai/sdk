@@ -21,7 +21,7 @@ export function useWrappersRegistryAddress(): Address | undefined {
 
   const { data: chainId } = useQuery<number>({
     queryKey: zamaQueryKeys.wrappersRegistry.chainId(),
-    queryFn: () => sdk.signer.getChainId(),
+    queryFn: () => sdk.provider.getChainId(),
     staleTime: 30_000,
   });
 

@@ -1,8 +1,7 @@
 import type { Address } from "viem";
 import { MAX_UINT64 } from "../contracts";
 import { getDelegationExpiryContract } from "../contracts/acl";
-import type { RelayerSDK } from "../relayer/relayer-sdk";
-import type { GenericSigner } from "../types";
+import type { ZamaSDK } from "../zama-sdk";
 import type { QueryFactoryOptions } from "./factory-types";
 import { filterQueryOptions } from "./utils";
 import { zamaQueryKeys } from "./query-keys";
@@ -21,7 +20,7 @@ export interface DelegationStatusQueryConfig {
 }
 
 export function delegationStatusQueryOptions(
-  sdk: { signer: GenericSigner; relayer: RelayerSDK },
+  sdk: ZamaSDK,
   config: DelegationStatusQueryConfig,
 ): QueryFactoryOptions<
   DelegationStatusData,
@@ -42,7 +41,7 @@ export function delegationStatusQueryOptions(
       assertNonNullable(delegatorAddress, "delegationStatusQueryOptions: delegatorAddress");
       assertNonNullable(delegateAddress, "delegationStatusQueryOptions: delegateAddress");
       const acl = await sdk.relayer.getAclAddress();
-      const expiryTimestamp = await sdk.signer.readContract(
+      const expiryTimestamp = await sdk.provider.readContract(
         getDelegationExpiryContract(acl, delegatorAddress, delegateAddress, tokenAddress),
       );
       // Derive isDelegated from expiry + chain time to stay consistent
@@ -53,7 +52,7 @@ export function delegationStatusQueryOptions(
       } else if (expiryTimestamp === MAX_UINT64) {
         isDelegated = true;
       } else {
-        const now = await sdk.signer.getBlockTimestamp();
+        const now = await sdk.provider.getBlockTimestamp();
         isDelegated = expiryTimestamp > now;
       }
       return { isDelegated, expiryTimestamp };

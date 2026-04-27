@@ -3,7 +3,7 @@ import { delegateDecryptionMutationOptions } from "../delegate-decryption";
 
 describe("delegateDecryptionMutationOptions", () => {
   test("delegates delegateDecryption", async ({ mockToken }) => {
-    const options = delegateDecryptionMutationOptions(mockToken);
+    const options = delegateDecryptionMutationOptions(mockToken, mockToken.address);
 
     expect(options.mutationKey).toEqual(["zama.delegateDecryption", mockToken.address]);
     await options.mutationFn({
@@ -16,7 +16,7 @@ describe("delegateDecryptionMutationOptions", () => {
   });
 
   test("passes options through", async ({ mockToken }) => {
-    const options = delegateDecryptionMutationOptions(mockToken);
+    const options = delegateDecryptionMutationOptions(mockToken, mockToken.address);
     const expirationDate = new Date("2030-01-01");
 
     await options.mutationFn({

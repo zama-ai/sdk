@@ -2,6 +2,7 @@
 
 import type {
   Address,
+  GenericProvider,
   GenericSigner,
   GenericStorage,
   RelayerSDK,
@@ -23,7 +24,15 @@ import {
 export interface ZamaProviderProps extends PropsWithChildren {
   /** FHE relayer backend (RelayerWeb for browser, RelayerNode for server). */
   relayer: RelayerSDK;
-  /** Wallet signer (`ViemSigner`, `EthersSigner`, or custom {@link GenericSigner}). */
+  /**
+   * Chain provider (`ViemProvider`, `EthersProvider`, `WagmiProvider`, or
+   * custom {@link GenericProvider}). Used for every public chain read.
+   */
+  provider: GenericProvider;
+  /**
+   * Wallet signer (`ViemSigner`, `EthersSigner`, `WagmiSigner`, or custom
+   * {@link GenericSigner}).
+   */
   signer: GenericSigner;
   /** Credential storage backend (IndexedDBStorage for browser, MemoryStorage for tests). */
   storage: GenericStorage;
@@ -65,7 +74,7 @@ const ZamaSDKContext = createContext<ZamaSDK | null>(null);
  *
  * @example
  * ```tsx
- * <ZamaProvider relayer={relayer} signer={signer} storage={storage}>
+ * <ZamaProvider relayer={relayer} provider={provider} signer={signer} storage={storage}>
  *   <App />
  * </ZamaProvider>
  * ```
@@ -73,6 +82,7 @@ const ZamaSDKContext = createContext<ZamaSDK | null>(null);
 export function ZamaProvider({
   children,
   relayer,
+  provider,
   signer,
   storage,
   sessionStorage,
@@ -107,6 +117,7 @@ export function ZamaProvider({
     () =>
       new ZamaSDK({
         relayer,
+        provider,
         signer,
         storage,
         sessionStorage,
@@ -119,6 +130,7 @@ export function ZamaProvider({
       }),
     [
       relayer,
+      provider,
       signer,
       storage,
       sessionStorage,
@@ -140,12 +152,12 @@ export function ZamaProvider({
 
 /**
  * Access the {@link ZamaSDK} instance from context.
- * Throws if called outside a {@link ZamaProvider} or when no signer is provided.
+ * Throws if called outside a {@link ZamaProvider}.
  *
  * @example
  * ```tsx
  * const sdk = useZamaSDK();
- * const token = sdk.createReadonlyToken("0x...");
+ * const token = sdk.createToken("0x...", "0x...");
  * ```
  */
 export function useZamaSDK(): ZamaSDK {
@@ -154,9 +166,8 @@ export function useZamaSDK(): ZamaSDK {
   if (!context) {
     throw new Error(
       "useZamaSDK must be used within a <ZamaProvider>. " +
-        "Wrap your component tree in <ZamaProvider relayer={…} signer={…} storage={…}>.",
+        "Wrap your component tree in <ZamaProvider relayer={…} provider={…} signer={…} storage={…}>.",
     );
   }
-
   return context;
 }
