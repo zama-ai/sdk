@@ -7,7 +7,7 @@ import type {
 import type { Address, Hex } from "viem";
 import type { FheChain } from "../chains/types";
 import { ConfigurationError } from "../errors";
-import { toError } from "../utils";
+import { assertNonNullable, toError } from "../utils";
 import type { RelayerSDK } from "./relayer-sdk";
 import type {
   ClearValueType,
@@ -68,8 +68,9 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
   }
 
   get chain(): FheChain {
-    // Safe: #chainId always points to a valid chain (enforced by constructor + switchChain)
-    return this.#chains.get(this.#chainId) as FheChain;
+    const chain = this.#chains.get(this.#chainId);
+    assertNonNullable(chain, "RelayerDispatcher: chain");
+    return chain;
   }
 
   switchChain(chainId: number): void {
@@ -82,8 +83,9 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
   }
 
   get #active(): RelayerSDK {
-    // Safe: constructor validates every chain has a relayer, switchChain validates chain exists
-    return this.#relayers.get(this.#chainId) as RelayerSDK;
+    const relayer = this.#relayers.get(this.#chainId);
+    assertNonNullable(relayer, "RelayerDispatcher: relayer");
+    return relayer;
   }
 
   generateKeypair(): Promise<KeypairType<Hex>> {
