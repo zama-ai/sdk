@@ -30,7 +30,7 @@ const sdk = new ZamaSDK({
 ```
 
 {% endtab %}
-{% tab title="config.ts (createConfig)" %}
+{% tab title="createConfig (viem)" %}
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
@@ -47,7 +47,26 @@ const config = createConfig({
   },
 });
 
-// config contains { relayer, provider, signer, storage } ready for new ZamaSDK(config)
+const sdk = new ZamaSDK(config);
+```
+
+{% endtab %}
+{% tab title="createConfig (custom signer)" %}
+
+```ts
+import { createConfig, ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
+import { node } from "@zama-fhe/sdk/node";
+import { sepolia } from "@zama-fhe/sdk/chains";
+
+const config = createConfig({
+  chains: [sepolia],
+  signer: myCustomSigner,   // GenericSigner
+  provider: myCustomProvider, // GenericProvider
+  storage: memoryStorage,
+  relayers: { [sepolia.id]: node({ poolSize: 4 }) },
+});
+
+const sdk = new ZamaSDK(config);
 ```
 
 {% endtab %}

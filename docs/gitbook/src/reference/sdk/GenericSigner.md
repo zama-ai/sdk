@@ -29,7 +29,26 @@ interface GenericSigner {
 For read operations (`readContract`, `waitForTransactionReceipt`), see [GenericProvider](/reference/sdk/GenericProvider).
 {% endhint %}
 
-## Usage
+## Usage with `createConfig`
+
+Pass a custom signer and provider to the generic `createConfig` from `@zama-fhe/sdk`:
+
+```ts
+import { createConfig, ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
+import { node } from "@zama-fhe/sdk/node";
+import { sepolia } from "@zama-fhe/sdk/chains";
+
+const config = createConfig({
+  chains: [sepolia],
+  signer: mySigner,
+  provider: myProvider,
+  storage: memoryStorage,
+  relayers: { [sepolia.id]: node({ poolSize: 4 }) },
+});
+const sdk = new ZamaSDK(config);
+```
+
+## Implementing a custom signer
 
 ```ts
 import type { GenericSigner } from "@zama-fhe/sdk";

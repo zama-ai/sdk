@@ -106,7 +106,7 @@ const walletClient = createWalletClient({
 {% endtab %}
 {% endtabs %}
 
-For full type information, see the [ViemSigner](/reference/sdk/ViemSigner), [EthersSigner](/reference/sdk/EthersSigner), and [WagmiSigner](/reference/sdk/WagmiSigner) reference pages. You can also implement the [GenericSigner](/reference/sdk/GenericSigner) interface for a custom wallet integration.
+For full type information, see the [ViemSigner](/reference/sdk/ViemSigner), [EthersSigner](/reference/sdk/EthersSigner), and [WagmiSigner](/reference/sdk/WagmiSigner) reference pages. You can also implement the [GenericSigner](/reference/sdk/GenericSigner) and [GenericProvider](/reference/sdk/GenericProvider) interfaces for a custom integration (e.g. a server-side relayer).
 
 ### 4. Create the config
 
@@ -220,6 +220,36 @@ const config = createConfig({
 
 const sdk = new ZamaSDK(config);
 ```
+
+{% endtab %}
+{% tab title="Custom signer/provider" %}
+
+When the built-in adapters don't fit your setup — for example, a server-side relayer that implements `GenericSigner` directly — use the generic `createConfig` from `@zama-fhe/sdk`:
+
+```ts
+import { createConfig, ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
+import { node } from "@zama-fhe/sdk/node";
+import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
+
+const mySepolia = {
+  ...sepolia,
+  network: "https://sepolia.infura.io/v3/YOUR_KEY",
+} as const satisfies FheChain;
+
+const config = createConfig({
+  chains: [mySepolia],
+  signer: myCustomSigner,   // implements GenericSigner
+  provider: myCustomProvider, // implements GenericProvider
+  storage: memoryStorage,
+  relayers: {
+    [mySepolia.id]: node({ poolSize: 4 }),
+  },
+});
+
+const sdk = new ZamaSDK(config);
+```
+
+See [GenericSigner](/reference/sdk/GenericSigner) and [GenericProvider](/reference/sdk/GenericProvider) for the interfaces your adapter must implement.
 
 {% endtab %}
 {% tab title="Web Extensions" %}

@@ -9,10 +9,18 @@
 // Config factory
 // Note: node() transport factory is exported from @zama-fhe/sdk/node instead,
 // keeping node:worker_threads out of the main browser entry.
-export { buildZamaConfig, web, cleartext, resolveChainRelayers, resolveStorage } from "./config";
+export {
+  buildZamaConfig,
+  createConfig,
+  web,
+  cleartext,
+  resolveChainRelayers,
+  resolveStorage,
+} from "./config";
 export type {
   ZamaConfig,
   ZamaConfigBase,
+  ZamaConfigGeneric,
   ZamaConfigViem,
   ZamaConfigEthers,
   RelayerConfig,

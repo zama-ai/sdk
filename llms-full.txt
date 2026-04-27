@@ -1124,7 +1124,7 @@ const walletClient = createWalletClient({
 ```
 
 
-For full type information, see the [ViemSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ViemSigner.md), [EthersSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/EthersSigner.md), and [WagmiSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WagmiSigner.md) reference pages. You can also implement the [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md) interface for a custom wallet integration.
+For full type information, see the [ViemSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ViemSigner.md), [EthersSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/EthersSigner.md), and [WagmiSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WagmiSigner.md) reference pages. You can also implement the [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md) and [GenericProvider](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericProvider.md) interfaces for a custom integration (e.g. a server-side relayer).
 
 ### 4. Create the config
 
@@ -1235,6 +1235,35 @@ const config = createConfig({
 
 const sdk = new ZamaSDK(config);
 ```
+
+### Tab: Custom signer/provider
+
+When the built-in adapters don't fit your setup — for example, a server-side relayer that implements `GenericSigner` directly — use the generic `createConfig` from `@zama-fhe/sdk`:
+
+```ts
+import { createConfig, ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
+import { node } from "@zama-fhe/sdk/node";
+import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
+
+const mySepolia = {
+  ...sepolia,
+  network: "https://sepolia.infura.io/v3/YOUR_KEY",
+} as const satisfies FheChain;
+
+const config = createConfig({
+  chains: [mySepolia],
+  signer: myCustomSigner,   // implements GenericSigner
+  provider: myCustomProvider, // implements GenericProvider
+  storage: memoryStorage,
+  relayers: {
+    [mySepolia.id]: node({ poolSize: 4 }),
+  },
+});
+
+const sdk = new ZamaSDK(config);
+```
+
+See [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md) and [GenericProvider](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericProvider.md) for the interfaces your adapter must implement.
 
 ### Tab: Web Extensions
 
@@ -2619,11 +2648,42 @@ process.on("SIGTERM", () => {
 });
 ```
 
+### 8. (Optional) Use a custom signer
+
+If you are using a transaction relayer (e.g. OpenZeppelin Defender) instead of a local wallet, implement the [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md) and [GenericProvider](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericProvider.md) interfaces and use the generic `createConfig` from `@zama-fhe/sdk`:
+
+```ts
+import { createConfig, ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
+import { node } from "@zama-fhe/sdk/node";
+import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
+
+const mySepolia = {
+  ...sepolia,
+  network: "https://sepolia.infura.io/v3/YOUR_KEY",
+  auth: { __type: "ApiKeyHeader" as const, value: process.env.RELAYER_API_KEY! },
+} as const satisfies FheChain;
+
+const config = createConfig({
+  chains: [mySepolia],
+  signer: myRelayerSigner,   // GenericSigner backed by your relayer
+  provider: myRpcProvider,    // GenericProvider backed by an RPC client
+  storage: memoryStorage,
+  relayers: {
+    [mySepolia.id]: node({ poolSize: 4 }),
+  },
+});
+
+const sdk = new ZamaSDK(config);
+```
+
+The signer handles `signTypedData` and `writeContract`; the provider handles `readContract`, `waitForTransactionReceipt`, `getChainId`, and `getBlockTimestamp`. See [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md) for the full interface.
+
 ## Next steps
 
 - [RelayerNode](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerNode.md) -- full constructor options and pool behavior
 - [asyncLocalStorage](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericStorage.md) -- the `GenericStorage` interface it implements
 - [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) -- chains, relayers, authentication, and session management
+- [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md) -- custom signer interface for non-standard wallet integrations
 
 ## Web extensions
 
@@ -3763,7 +3823,7 @@ const sdk = new ZamaSDK({
 });
 ```
 
-### Tab: config.ts (createConfig)
+### Tab: createConfig (viem)
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
@@ -3780,7 +3840,25 @@ const config = createConfig({
   },
 });
 
-// config contains { relayer, provider, signer, storage } ready for new ZamaSDK(config)
+const sdk = new ZamaSDK(config);
+```
+
+### Tab: createConfig (custom signer)
+
+```ts
+import { createConfig, ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
+import { node } from "@zama-fhe/sdk/node";
+import { sepolia } from "@zama-fhe/sdk/chains";
+
+const config = createConfig({
+  chains: [sepolia],
+  signer: myCustomSigner,   // GenericSigner
+  provider: myCustomProvider, // GenericProvider
+  storage: memoryStorage,
+  relayers: { [sepolia.id]: node({ poolSize: 4 }) },
+});
+
+const sdk = new ZamaSDK(config);
 ```
 
 
@@ -5725,7 +5803,26 @@ interface GenericSigner {
 > For read operations (`readContract`, `waitForTransactionReceipt`), see [GenericProvider](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericProvider.md).
 
 
-## Usage
+## Usage with `createConfig`
+
+Pass a custom signer and provider to the generic `createConfig` from `@zama-fhe/sdk`:
+
+```ts
+import { createConfig, ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
+import { node } from "@zama-fhe/sdk/node";
+import { sepolia } from "@zama-fhe/sdk/chains";
+
+const config = createConfig({
+  chains: [sepolia],
+  signer: mySigner,
+  provider: myProvider,
+  storage: memoryStorage,
+  relayers: { [sepolia.id]: node({ poolSize: 4 }) },
+});
+const sdk = new ZamaSDK(config);
+```
+
+## Implementing a custom signer
 
 ```ts
 import type { GenericSigner } from "@zama-fhe/sdk";

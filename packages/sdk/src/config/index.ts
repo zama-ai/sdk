@@ -1,9 +1,11 @@
 export { web } from "./web";
 export { cleartext } from "./cleartext";
+export { createConfig } from "./create";
 
 export type {
   ZamaConfig,
   ZamaConfigBase,
+  ZamaConfigGeneric,
   AtLeastOneChain,
   RelayerConfig,
   WebRelayerConfig,

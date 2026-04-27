@@ -143,8 +143,39 @@ process.on("SIGTERM", () => {
 });
 ```
 
+### 8. (Optional) Use a custom signer
+
+If you are using a transaction relayer (e.g. OpenZeppelin Defender) instead of a local wallet, implement the [GenericSigner](/reference/sdk/GenericSigner) and [GenericProvider](/reference/sdk/GenericProvider) interfaces and use the generic `createConfig` from `@zama-fhe/sdk`:
+
+```ts
+import { createConfig, ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
+import { node } from "@zama-fhe/sdk/node";
+import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
+
+const mySepolia = {
+  ...sepolia,
+  network: "https://sepolia.infura.io/v3/YOUR_KEY",
+  auth: { __type: "ApiKeyHeader" as const, value: process.env.RELAYER_API_KEY! },
+} as const satisfies FheChain;
+
+const config = createConfig({
+  chains: [mySepolia],
+  signer: myRelayerSigner,   // GenericSigner backed by your relayer
+  provider: myRpcProvider,    // GenericProvider backed by an RPC client
+  storage: memoryStorage,
+  relayers: {
+    [mySepolia.id]: node({ poolSize: 4 }),
+  },
+});
+
+const sdk = new ZamaSDK(config);
+```
+
+The signer handles `signTypedData` and `writeContract`; the provider handles `readContract`, `waitForTransactionReceipt`, `getChainId`, and `getBlockTimestamp`. See [GenericSigner](/reference/sdk/GenericSigner) for the full interface.
+
 ## Next steps
 
 - [RelayerNode](/reference/sdk/RelayerNode) -- full constructor options and pool behavior
 - [asyncLocalStorage](/reference/sdk/GenericStorage) -- the `GenericStorage` interface it implements
 - [Configuration](/guides/configuration) -- chains, relayers, authentication, and session management
+- [GenericSigner](/reference/sdk/GenericSigner) -- custom signer interface for non-standard wallet integrations

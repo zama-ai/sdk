@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { web } from "../web";
 import { cleartext } from "../cleartext";
+import { createConfig } from "../create";
 import { node } from "../../node";
 import { sepolia, mainnet, hoodi, hardhat, anvil, type FheChain } from "../../chains";
 
@@ -127,6 +128,32 @@ describe("resolveChainRelayers", () => {
 });
 
 /** Helper: build a RelayerDispatcher from chains + relayer config map. */
+describe("createConfig (generic)", () => {
+  it("accepts custom GenericSigner and GenericProvider", () => {
+    const signer = {
+      getChainId: vi.fn().mockResolvedValue(11155111),
+      getAddress: vi.fn().mockResolvedValue("0x1234567890123456789012345678901234567890"),
+      signTypedData: vi.fn().mockResolvedValue("0xsig"),
+      writeContract: vi.fn().mockResolvedValue("0xtx"),
+    };
+    const provider = {
+      getChainId: vi.fn().mockResolvedValue(11155111),
+      readContract: vi.fn(),
+      waitForTransactionReceipt: vi.fn().mockResolvedValue({ logs: [] }),
+      getBlockTimestamp: vi.fn().mockResolvedValue(1000n),
+    };
+    const config = createConfig({
+      chains: [sepoliaChain],
+      signer,
+      provider,
+      relayers: { [11155111]: web() },
+    });
+    expect(config.signer).toBe(signer);
+    expect(config.provider).toBe(provider);
+    expect(config.relayer.constructor.name).toBe("RelayerDispatcher");
+  });
+});
+
 function buildDispatcher(
   chains: FheChain[],
   relayerMap: Record<number, ReturnType<typeof web> | ReturnType<typeof cleartext>>,

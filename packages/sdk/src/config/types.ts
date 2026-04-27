@@ -70,6 +70,14 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
   onEvent?: ZamaSDKEventListener;
 }
 
+/** Generic config — pass any {@link GenericSigner} and {@link GenericProvider} directly. */
+export interface ZamaConfigGeneric<
+  TChains extends AtLeastOneChain = AtLeastOneChain,
+> extends ZamaConfigBase<TChains> {
+  signer: GenericSigner;
+  provider: GenericProvider;
+}
+
 /** Resolved config object returned by `createConfig`. */
 export interface ZamaConfig {
   readonly chains: readonly FheChain[];
