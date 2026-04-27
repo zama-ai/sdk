@@ -1,6 +1,6 @@
 import type { FheChain, AtLeastOneChain } from "../chains";
 import type { ZamaSDKEventListener } from "../events";
-import type { RelayerSDK } from "../relayer/relayer-sdk";
+import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
 import type { GenericProvider, GenericSigner, GenericStorage } from "../types";
 import type { TransportConfig } from "./transports";
 
@@ -29,7 +29,7 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
 /** Resolved config object returned by `createConfig`. */
 export interface ZamaConfig {
   readonly chains: readonly FheChain[];
-  readonly relayer: RelayerSDK;
+  readonly relayer: RelayerDispatcher;
   readonly provider: GenericProvider;
   readonly signer: GenericSigner;
   readonly storage: GenericStorage;

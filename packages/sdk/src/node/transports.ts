@@ -1,37 +1,64 @@
-import type { NodeRelayerOptions, NodeTransportConfig } from "../config/transports";
+import type { TransportConfig } from "../config/transports";
 import { RelayerNode } from "../relayer/relayer-node";
-import type { ExtendedFhevmInstanceConfig } from "../relayer/relayer-utils";
-import { assertCondition } from "../utils/assertions";
+import type { RelayerChainConfig } from "../chains/types";
+import type { GenericStorage } from "../types";
+import { NodeWorkerPool } from "../worker/worker.node-pool";
+import type { GenericLogger } from "../worker/worker.types";
+import { assertCondition } from "../utils";
+
+/** Pool options for the `node()` transport factory. */
+export interface NodePoolOptions {
+  poolSize?: number;
+  logger?: GenericLogger;
+  fheArtifactStorage?: GenericStorage;
+  fheArtifactCacheTTL?: number;
+}
+
+/** Node transport — narrows worker type to `NodeWorkerPool`. */
+export interface NodeTransportConfig extends TransportConfig {
+  readonly type: "node";
+  readonly createWorker: (chains: RelayerChainConfig[]) => NodeWorkerPool;
+  readonly createRelayer: (chain: RelayerChainConfig, worker: NodeWorkerPool) => RelayerNode;
+}
 
 /**
  * Node.js transport — routes to RelayerNode (worker thread pool).
  *
- * **Note:** This factory is a placeholder for the type. Import `node` from
- * `@zama-fhe/sdk/node` instead — it provides the actual implementation with
- * the RelayerNode class.
- *
- * @param chain - Per-chain FHE instance overrides.
- * @param options - Shared relayer-pool options (e.g. `poolSize`, `logger`).
+ * @param chain - Per-chain FHE instance overrides (e.g. `relayerUrl`).
+ * @param options - Pool options (poolSize, logger, fheArtifactStorage, fheArtifactCacheTTL).
  *
  * @example
  * ```ts
- * import { node } from "@zama-fhe/sdk/node";
- * transports: { [sepolia.id]: node({ relayerUrl: "..." }, { poolSize: 4 }) }
+ * transports: {
+ *   [sepolia.id]: node({ relayerUrl: "/api/sepolia" }, { poolSize: 4 }),
+ *   [mainnet.id]: node({ relayerUrl: "/api/mainnet" }),
+ * }
  * ```
  */
 export function node(
-  chain?: Partial<ExtendedFhevmInstanceConfig>,
-  options?: NodeRelayerOptions,
+  chain?: Partial<RelayerChainConfig>,
+  options?: NodePoolOptions,
 ): NodeTransportConfig {
   return {
     type: "node",
     chain,
-    options,
-    createRelayer: (resolvedChain, transport) => {
-      assertCondition(transport.type === "node", "Transport config must be of type `node`");
+    createWorker: (chains) =>
+      new NodeWorkerPool({
+        chains,
+        poolSize: options?.poolSize,
+        logger: options?.logger,
+      }),
+    createRelayer: (resolvedChain, worker) => {
+      assertCondition(
+        !!worker,
+        "node() transport requires a worker pool — createWorker must be called first.",
+      );
       return new RelayerNode({
-        chain: { ...resolvedChain, ...transport.chain },
-        ...transport.options,
+        chain: resolvedChain,
+        pool: worker,
+        logger: options?.logger,
+        fheArtifactStorage: options?.fheArtifactStorage,
+        fheArtifactCacheTTL: options?.fheArtifactCacheTTL,
       });
     },
   };

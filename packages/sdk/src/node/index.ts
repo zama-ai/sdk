@@ -9,8 +9,9 @@
  */
 
 export { node } from "./transports";
+export type { NodeTransportConfig, NodePoolOptions } from "./transports";
 export { cleartext } from "../config/transports";
-export type { NodeTransportConfig, CleartextTransportConfig } from "../config/transports";
+export type { TransportConfig } from "../config/transports";
 export { RelayerNode } from "../relayer/relayer-node";
 export type { RelayerNodeConfig } from "../relayer/relayer-node";
 export type { RelayerSDK } from "../relayer/relayer-sdk";
@@ -24,7 +25,11 @@ export type {
   WorkerRequest,
   WorkerResponse,
   InitRequest,
-  NodeInitRequest,
+  InitPayload,
+  AddChainRequest,
+  AddChainPayload,
+  RemoveChainRequest,
+  WorkerEnv,
   UpdateCsrfRequest,
   EncryptRequest,
   UserDecryptRequest,
@@ -71,5 +76,5 @@ export type {
 // Storage
 export { asyncLocalStorage, AsyncLocalMapStorage } from "../storage/async-local-storage";
 
-// Network preset configs
-export { HardhatConfig, MainnetConfig, SepoliaConfig } from "../relayer/relayer-utils";
+// Chain presets
+export { mainnet, sepolia, hoodi, hardhat, anvil, chains } from "../chains";

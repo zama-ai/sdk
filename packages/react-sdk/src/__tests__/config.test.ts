@@ -73,14 +73,13 @@ describe("createConfig", () => {
         transports: { [11155111]: web() },
       });
       expect(MockViemSigner).toHaveBeenCalledWith({
-        publicClient,
         walletClient,
         ethereum: undefined,
       });
     });
 
     it("creates EthersSigner from ethers config", () => {
-      const ethereum = {} as any;
+      const ethereum = { request: vi.fn() } as any;
       createEthersConfig({
         chains: [sepolia],
         ethereum,
@@ -116,6 +115,7 @@ describe("createConfig", () => {
         createWagmiConfig({
           chains: [sepolia],
           wagmiConfig: mockWagmiConfig([11155111]),
+          //@ts-expect-error: throws when there's not configured transport
           transports: {},
         }),
       ).toThrow(/Chain 11155111/);
@@ -124,6 +124,7 @@ describe("createConfig", () => {
     it("throws for orphaned transport entries with no matching chain", () => {
       expect(() =>
         createWagmiConfig({
+          //@ts-expect-error: throws when there's an orphaned transport
           chains: [],
           wagmiConfig: mockWagmiConfig([]),
           transports: { [999999]: web({ relayerUrl: "https://custom.com" }) },
@@ -135,6 +136,7 @@ describe("createConfig", () => {
       const config = createViemConfig({
         chains: [sepolia],
         publicClient: {} as any,
+        walletClient: {} as any,
         transports: { [11155111]: web() },
       });
       expect(config.relayer).toBeDefined();
@@ -148,6 +150,7 @@ describe("createConfig", () => {
       const config = createViemConfig({
         chains: [sepolia],
         publicClient: {} as any,
+        walletClient: {} as any,
         transports: { [11155111]: web() },
         storage,
         sessionStorage,
@@ -161,6 +164,7 @@ describe("createConfig", () => {
       const config = createViemConfig({
         chains: [sepolia],
         publicClient: {} as any,
+        walletClient: {} as any,
         transports: { [11155111]: web() },
         storage: sharedStorage,
         sessionStorage: sharedStorage,
@@ -173,39 +177,35 @@ describe("createConfig", () => {
   describe("web() helper", () => {
     it("returns tagged config with chain overrides", () => {
       const result = web({ relayerUrl: "/api/relayer/11155111" });
-      expect(result).toMatchObject({
-        type: "web",
-        chain: { relayerUrl: "/api/relayer/11155111" },
-        options: undefined,
-      });
+      expect(result.type).toBe("web");
+      expect(result.chain).toEqual({ relayerUrl: "/api/relayer/11155111" });
+      expect(result.createWorker).toBeTypeOf("function");
+      expect(result.createRelayer).toBeTypeOf("function");
     });
 
-    it("carries chain and options params separately", () => {
-      const relayerOpts = { threads: 4 } as const;
+    it("captures options in createWorker/createRelayer closures", () => {
       const result = web(
         {
           relayerUrl: "/api/relayer/11155111",
           network: "https://custom-rpc.com",
         },
-        relayerOpts,
+        { threads: 4 },
       );
-      expect(result).toMatchObject({
-        type: "web",
-        chain: {
-          relayerUrl: "/api/relayer/11155111",
-          network: "https://custom-rpc.com",
-        },
-        options: relayerOpts,
+      expect(result.type).toBe("web");
+      expect(result.chain).toEqual({
+        relayerUrl: "/api/relayer/11155111",
+        network: "https://custom-rpc.com",
       });
+      expect(result.createWorker).toBeTypeOf("function");
+      expect(result.createRelayer).toBeTypeOf("function");
     });
 
     it("returns tagged empty config when called with no args", () => {
       const result = web();
-      expect(result).toMatchObject({
-        type: "web",
-        chain: undefined,
-        options: undefined,
-      });
+      expect(result.type).toBe("web");
+      expect(result.chain).toBeUndefined();
+      expect(result.createWorker).toBeTypeOf("function");
+      expect(result.createRelayer).toBeTypeOf("function");
     });
   });
 
@@ -215,6 +215,7 @@ describe("createConfig", () => {
       const config = createViemConfig({
         chains: [sepolia],
         publicClient: {} as any,
+        walletClient: {} as any,
         transports: { [11155111]: web() },
         keypairTTL: 86400,
         sessionTTL: "infinite",

@@ -1,6 +1,6 @@
-import type { Handle } from "../relayer/relayer-sdk.types";
-import type { ZKProofLike } from "@zama-fhe/relayer-sdk/bundle";
+import type { RelayerChainConfig } from "../chains/types";
 import type {
+  AddChainResponseData,
   CreateDelegatedEIP712Payload,
   CreateDelegatedEIP712ResponseData,
   CreateEIP712Payload,
@@ -9,15 +9,22 @@ import type {
   DelegatedUserDecryptResponseData,
   EncryptPayload,
   EncryptResponseData,
+  GenerateKeypairRequest,
   GenerateKeypairResponseData,
+  GetPublicKeyRequest,
   GetPublicKeyResponseData,
+  GetPublicParamsRequest,
   GetPublicParamsResponseData,
   InitResponseData,
+  PublicDecryptPayload,
   PublicDecryptResponseData,
+  RemoveChainResponseData,
+  RequestZKProofVerificationRequest,
   RequestZKProofVerificationResponseData,
   UserDecryptPayload,
   UserDecryptResponseData,
   GenericLogger,
+  WorkerEnv,
   WorkerRequest,
   WorkerRequestType,
   WorkerResponse,
@@ -79,6 +86,9 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
     type: WorkerRequestType;
     payload: WorkerRequest["payload"];
   };
+
+  /** Subclasses set "web" or "node" — stamps the env discriminant on INIT / ADD_CHAIN payloads. */
+  protected abstract readonly env: WorkerEnv;
 
   /** Optional hook called after worker init succeeds (e.g. for node worker.unref()). */
   protected onWorkerReady?(_worker: TWorker): void;
@@ -242,8 +252,10 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
   // Domain methods
   // ===========================================================================
 
-  async generateKeypair(): Promise<GenerateKeypairResponseData> {
-    return this.sendRequest<GenerateKeypairResponseData>("GENERATE_KEYPAIR", {});
+  async generateKeypair(
+    params: GenerateKeypairRequest["payload"],
+  ): Promise<GenerateKeypairResponseData> {
+    return this.sendRequest<GenerateKeypairResponseData>("GENERATE_KEYPAIR", params);
   }
 
   async createEIP712(params: CreateEIP712Payload): Promise<CreateEIP712ResponseData> {
@@ -258,8 +270,8 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
     return this.sendRequest<UserDecryptResponseData>("USER_DECRYPT", params);
   }
 
-  async publicDecrypt(handles: Handle[]): Promise<PublicDecryptResponseData> {
-    return this.sendRequest<PublicDecryptResponseData>("PUBLIC_DECRYPT", { handles });
+  async publicDecrypt(params: PublicDecryptPayload): Promise<PublicDecryptResponseData> {
+    return this.sendRequest<PublicDecryptResponseData>("PUBLIC_DECRYPT", params);
   }
 
   async createDelegatedUserDecryptEIP712(
@@ -275,20 +287,35 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
   }
 
   async requestZKProofVerification(
-    zkProof: ZKProofLike,
+    params: RequestZKProofVerificationRequest["payload"],
   ): Promise<RequestZKProofVerificationResponseData> {
     return this.sendRequest<RequestZKProofVerificationResponseData>(
       "REQUEST_ZK_PROOF_VERIFICATION",
-      { zkProof },
+      params,
     );
   }
 
-  async getPublicKey(): Promise<GetPublicKeyResponseData> {
-    return this.sendRequest<GetPublicKeyResponseData>("GET_PUBLIC_KEY", {});
+  async getPublicKey(params: GetPublicKeyRequest["payload"]): Promise<GetPublicKeyResponseData> {
+    return this.sendRequest<GetPublicKeyResponseData>("GET_PUBLIC_KEY", params);
   }
 
-  async getPublicParams(bits: number): Promise<GetPublicParamsResponseData> {
-    return this.sendRequest<GetPublicParamsResponseData>("GET_PUBLIC_PARAMS", { bits });
+  async getPublicParams(
+    params: GetPublicParamsRequest["payload"],
+  ): Promise<GetPublicParamsResponseData> {
+    return this.sendRequest<GetPublicParamsResponseData>("GET_PUBLIC_PARAMS", params);
+  }
+
+  async addChain(config: RelayerChainConfig): Promise<AddChainResponseData> {
+    return this.sendRequest<AddChainResponseData>("ADD_CHAIN", {
+      env: this.env as "node",
+      config,
+    });
+  }
+
+  async removeChain(chainId: number): Promise<RemoveChainResponseData> {
+    return this.sendRequest<RemoveChainResponseData>("REMOVE_CHAIN", {
+      chainId,
+    });
   }
 
   // ===========================================================================

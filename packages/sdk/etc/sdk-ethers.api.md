@@ -21,6 +21,7 @@ import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
 import { KeypairType } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
+import { Provider } from 'ethers';
 import { ProviderConnectInfo } from 'viem';
 import { ProviderMessage } from 'viem';
 import { ProviderRpcError } from 'viem';
@@ -170,8 +171,8 @@ export type ZamaConfigEthers<TChains extends AtLeastOneChain = AtLeastOneChain> 
     ethereum?: never;
     provider?: never;
 } | {
-    provider: ethers.Provider;
-    ethereum?: never;
+    ethereum: EIP1193Provider;
+    provider: Provider;
     signer?: never;
 });
 

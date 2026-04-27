@@ -5,16 +5,12 @@
  * Domain-level FHE scenarios are covered by the browser e2e suite.
  */
 import { test as base } from "@playwright/test";
-import {
-  HardhatConfig,
-  MemoryStorage,
-  ZamaSDK,
-  type ExtendedFhevmInstanceConfig,
-} from "@zama-fhe/sdk";
-import { hardhatCleartextConfig } from "@zama-fhe/sdk/cleartext";
-import { RelayerNode } from "@zama-fhe/sdk/node";
-import { ViemProvider, ViemSigner } from "@zama-fhe/sdk/viem";
-import type { Address } from "viem";
+import type { FheChain } from "@zama-fhe/sdk";
+import { ZamaSDK } from "@zama-fhe/sdk";
+import { anvil } from "@zama-fhe/sdk/chains";
+import { node } from "@zama-fhe/sdk/node";
+import { createConfig } from "@zama-fhe/sdk/viem";
+import type { Address, PublicClient } from "viem";
 import { createPublicClient, createTestClient, http, publicActions, walletActions } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { foundry } from "viem/chains";
@@ -29,8 +25,8 @@ const contracts = {
   cUSDT: deployments.cUSDT as Address,
   USDC: deployments.erc20 as Address,
   cUSDC: deployments.cToken as Address,
-  acl: hardhatCleartextConfig.aclContractAddress as Address,
-} as const;
+  acl: anvil.aclContractAddress as Address,
+};
 
 function createViemClient(port: number) {
   return createTestClient({
@@ -48,22 +44,34 @@ type ViemClient = ReturnType<typeof createViemClient>;
 export interface NodeWorkerFixtures {
   anvilPort: number;
   viemClient: ViemClient;
+  publicClient: PublicClient;
 }
 
 export interface NodeTestFixtures {
   account: typeof account;
   contracts: typeof contracts;
-  chain: ExtendedFhevmInstanceConfig;
-  relayer: RelayerNode;
+  chain: FheChain;
   sdk: ZamaSDK;
   anvilState: undefined;
 }
 
 export const nodeTest = base.extend<NodeTestFixtures, NodeWorkerFixtures>({
-  anvilPort: [NODE_ANVIL_PORT, { option: true, scope: "worker" }],
+  anvilPort: [NODE_ANVIL_PORT, { scope: "worker" }],
   viemClient: [
     async ({ anvilPort }, use) => {
-      await use(createViemClient(anvilPort));
+      const client = createViemClient(anvilPort);
+      await use(client);
+    },
+    { scope: "worker" },
+  ],
+  publicClient: [
+    async ({ anvilPort }, use) => {
+      await use(
+        createPublicClient({
+          chain: foundry,
+          transport: http(`http://127.0.0.1:${anvilPort}`),
+        }),
+      );
     },
     { scope: "worker" },
   ],
@@ -71,31 +79,17 @@ export const nodeTest = base.extend<NodeTestFixtures, NodeWorkerFixtures>({
   contracts,
   chain: async ({ anvilPort }, use) => {
     const network = `http://127.0.0.1:${anvilPort}`;
-    await use({
-      ...HardhatConfig,
-      network,
-      relayerUrl: network,
-    } satisfies ExtendedFhevmInstanceConfig);
+    await use({ ...anvil, relayerUrl: network, network });
   },
-  relayer: async ({ chain }, use) => {
-    const relayer = new RelayerNode({
-      chain,
-      poolSize: 1,
+
+  sdk: async ({ viemClient, publicClient, chain }, use) => {
+    const config = createConfig({
+      chains: [chain],
+      publicClient,
+      walletClient: viemClient,
+      transports: { [chain.id]: node() },
     });
-    await use(relayer);
-    // Lifecycle owned by the sdk fixture via sdk.terminate() → relayer.terminate().
-    // Explicit terminate here as a safety net for tests that use relayer directly.
-    relayer.terminate();
-  },
-  sdk: async ({ viemClient, chain, relayer }, use) => {
-    const publicClient = createPublicClient({
-      chain: foundry,
-      transport: http(chain.network as string),
-    });
-    const signer = new ViemSigner({ walletClient: viemClient });
-    const provider = new ViemProvider({ publicClient });
-    const storage = new MemoryStorage();
-    using sdk = new ZamaSDK({ relayer, provider, signer, storage });
+    using sdk = new ZamaSDK(config);
     await use(sdk);
   },
   // Auto-use fixture: snapshot anvil before each test, revert after.
@@ -116,4 +110,4 @@ export const nodeTest = base.extend<NodeTestFixtures, NodeWorkerFixtures>({
   ],
 });
 
-export const expect = nodeTest.expect;
+export { expect } from "@playwright/test";

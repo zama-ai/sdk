@@ -4,56 +4,69 @@ import { node } from "../../node";
 
 describe("web()", () => {
   it("returns tagged empty config when called with no args", () => {
-    expect(web()).toMatchObject({ type: "web", chain: undefined, options: undefined });
+    const result = web();
+    expect(result.type).toBe("web");
+    expect(result.chain).toBeUndefined();
+    expect(result.createWorker).toBeTypeOf("function");
+    expect(result.createRelayer).toBeTypeOf("function");
   });
 
   it("passes chain overrides", () => {
-    expect(web({ relayerUrl: "https://r.example.com" })).toMatchObject({
-      type: "web",
-      chain: { relayerUrl: "https://r.example.com" },
-      options: undefined,
-    });
+    const result = web({ relayerUrl: "https://r.example.com" });
+    expect(result.type).toBe("web");
+    expect(result.chain).toEqual({ relayerUrl: "https://r.example.com" });
+    expect(result.createRelayer).toBeTypeOf("function");
   });
 
-  it("passes chain and options params separately", () => {
-    const relayerOpts = { threads: 4 } as const;
-    expect(web({ relayerUrl: "https://r.example.com" }, relayerOpts)).toMatchObject({
-      type: "web",
-      chain: { relayerUrl: "https://r.example.com" },
-      options: relayerOpts,
-    });
+  it("captures options in createWorker/createRelayer closures", () => {
+    const result = web({ relayerUrl: "https://r.example.com" }, { threads: 4 });
+    expect(result.type).toBe("web");
+    expect(result.chain).toEqual({ relayerUrl: "https://r.example.com" });
+    expect(result.createWorker).toBeTypeOf("function");
+    expect(result.createRelayer).toBeTypeOf("function");
   });
 });
 
 describe("node()", () => {
   it("returns tagged empty config when called with no args", () => {
-    expect(node()).toMatchObject({ type: "node", chain: undefined, options: undefined });
+    const result = node();
+    expect(result.type).toBe("node");
+    expect(result.chain).toBeUndefined();
+    expect(result.createWorker).toBeTypeOf("function");
+    expect(result.createRelayer).toBeTypeOf("function");
   });
 
   it("passes chain overrides", () => {
-    expect(node({ relayerUrl: "https://r.example.com" })).toMatchObject({
-      type: "node",
-      chain: { relayerUrl: "https://r.example.com" },
-      options: undefined,
-    });
+    const result = node({ relayerUrl: "https://r.example.com" });
+    expect(result.type).toBe("node");
+    expect(result.chain).toEqual({ relayerUrl: "https://r.example.com" });
+    expect(result.createRelayer).toBeTypeOf("function");
   });
 
-  it("passes chain and options params separately", () => {
-    const relayerOpts = { poolSize: 4 };
-    expect(node({ relayerUrl: "https://r.example.com" }, relayerOpts)).toMatchObject({
-      type: "node",
-      chain: { relayerUrl: "https://r.example.com" },
-      options: relayerOpts,
-    });
+  it("captures options in createWorker/createRelayer closures", () => {
+    const result = node({ relayerUrl: "https://r.example.com" }, { poolSize: 4, logger: console });
+    expect(result.type).toBe("node");
+    expect(result.chain).toEqual({ relayerUrl: "https://r.example.com" });
+    expect(result.createWorker).toBeTypeOf("function");
+    expect(result.createRelayer).toBeTypeOf("function");
   });
 });
 
 describe("cleartext()", () => {
-  it("returns tagged config with required chain", () => {
+  it("returns tagged config with no args", () => {
+    const result = cleartext();
+    expect(result.type).toBe("cleartext");
+    expect(result.chain).toBeUndefined();
+    expect(result.createRelayer).toBeTypeOf("function");
+    expect(result.createWorker).toBeUndefined();
+  });
+
+  it("returns tagged config with chain overrides", () => {
     const chain = { executorAddress: "0x1234" as `0x${string}` };
-    expect(cleartext(chain)).toMatchObject({
-      type: "cleartext",
-      chain,
-    });
+    const result = cleartext(chain);
+    expect(result.type).toBe("cleartext");
+    expect(result.chain).toEqual(chain);
+    expect(result.createRelayer).toBeTypeOf("function");
+    expect(result.createWorker).toBeUndefined();
   });
 });

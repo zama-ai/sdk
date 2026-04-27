@@ -11,7 +11,7 @@ import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle';
 import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
-import { FhevmInstanceConfig } from '@zama-fhe/relayer-sdk/bundle';
+import { EIP1193Provider } from 'viem';
 import { Hex } from 'viem';
 import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
 import { KeypairType } from '@zama-fhe/relayer-sdk/bundle';
@@ -1372,8 +1372,10 @@ export class ZamaSDK {
     readonly provider: GenericProvider;
     publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
     readonly registry: WrappersRegistry;
+    // Warning: (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
+    //
     // (undocumented)
-    readonly relayer: RelayerSDK;
+    readonly relayer: RelayerDispatcher;
     requireChainAlignment(operation: string): Promise<number>;
     revokeSession(): Promise<void>;
     // (undocumented)
@@ -1395,7 +1397,7 @@ export interface ZamaSDKConfig {
     provider: GenericProvider;
     registryAddresses?: Record<number, Address>;
     registryTTL?: number;
-    relayer: RelayerSDK;
+    relayer: RelayerDispatcher;
     sessionStorage?: GenericStorage;
     sessionTTL?: number | "infinite";
     signer: GenericSigner;

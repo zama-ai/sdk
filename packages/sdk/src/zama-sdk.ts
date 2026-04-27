@@ -3,12 +3,12 @@ import type { FheChain } from "./chains/types";
 import { CredentialsManager } from "./credentials/credentials-manager";
 import { DelegatedCredentialsManager } from "./credentials/delegated-credentials-manager";
 import { DecryptCache } from "./decrypt-cache";
-import { ChainMismatchError, wrapDecryptError } from "./errors";
+import { ChainMismatchError, ConfigurationError, wrapDecryptError } from "./errors";
 import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventListener } from "./events/sdk-events";
 import { ZamaSDKEvents } from "./events/sdk-events";
 import type { DecryptHandle } from "./query/user-decrypt";
 import { isZeroHandle } from "./utils/handles";
-import type { RelayerSDK } from "./relayer/relayer-sdk";
+import type { RelayerDispatcher } from "./relayer/relayer-dispatcher";
 import type { ClearValueType, Handle, PublicDecryptResult } from "./relayer/relayer-sdk.types";
 import { MemoryStorage } from "./storage/memory-storage";
 import { ReadonlyToken } from "./token/readonly-token";
@@ -31,7 +31,7 @@ export interface ZamaSDKConfig {
   /** FHE chain configurations. Registry addresses are extracted from each chain's `registryAddress`. */
   chains?: readonly FheChain[];
   /** FHE relayer backend (`RelayerWeb` for browser, `RelayerNode` for server). */
-  relayer: RelayerSDK;
+  relayer: RelayerDispatcher;
   /**
    * Read-only chain provider (`ViemProvider`, `EthersProvider`, `WagmiProvider`,
    * or custom {@link GenericProvider}). Used for every public chain read the
@@ -89,7 +89,7 @@ export interface ZamaSDKConfig {
  * Provides signer, storage, and high-level confidential contract interface.
  */
 export class ZamaSDK {
-  readonly relayer: RelayerSDK;
+  readonly relayer: RelayerDispatcher;
   readonly provider: GenericProvider;
   readonly signer: GenericSigner;
   readonly storage: GenericStorage;
@@ -171,6 +171,8 @@ export class ZamaSDK {
       const lifecycleCallbacks = config.signerLifecycleCallbacks;
       const runLifecycleEffect = (operation: string, effect: () => Promise<void>) => {
         void effect().catch((error) => {
+          // oxlint-disable-next-line no-console
+          console.error(`[ZamaSDK] lifecycle effect "${operation}" failed:`, error);
           this.emitEvent({
             type: ZamaSDKEvents.TransactionError,
             operation,
@@ -212,6 +214,7 @@ export class ZamaSDK {
           runLifecycleEffect("signerChainChange", async () => {
             await this.#revokeByTrackedIdentity();
             await this.cache.clearAll();
+            this.relayer.switchChain(newChainId);
             this.#lastChainId = newChainId;
             try {
               this.#lastAddress = await this.signer.getAddress();
@@ -256,11 +259,15 @@ export class ZamaSDK {
         this.signer.getAddress(),
         this.signer.getChainId(),
       ]);
-      // Only commit both values atomically so revokeByTrackedIdentity
-      // never sees a partial (address-only) state.
+      // switchChain first — if it throws (unknown chain), we must not
+      // commit address/chainId so revokeByTrackedIdentity stays consistent.
+      this.relayer.switchChain(chainId);
       this.#lastAddress = address;
       this.#lastChainId = chainId;
-    } catch {
+    } catch (error) {
+      if (error instanceof ConfigurationError) {
+        throw error;
+      }
       // Signer not ready yet — identity will be set on first lifecycle event
     }
   }

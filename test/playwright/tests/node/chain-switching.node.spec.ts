@@ -5,14 +5,11 @@
  */
 import { nodeTest as test, expect } from "../../fixtures/node-test";
 
-test("RelayerNode resolves correct ACL address from chain config", async ({
-  relayer,
-  contracts,
-}) => {
-  expect(await relayer.getAclAddress()).toBe(contracts.acl);
+test("RelayerNode resolves correct ACL address from chain config", async ({ sdk, contracts }) => {
+  expect(await sdk.relayer.getAclAddress()).toBe(contracts.acl);
 });
 
-test("RelayerNode generates a valid keypair", async ({ relayer }) => {
-  const kp = await relayer.generateKeypair();
+test("RelayerNode generates a valid keypair", async ({ sdk }) => {
+  const kp = await sdk.relayer.generateKeypair();
   expect(kp.publicKey).toMatch(/^0x[0-9a-fA-F]+$/);
 });

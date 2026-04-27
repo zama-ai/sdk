@@ -24,6 +24,7 @@ import type {
   KmsUserDecryptEIP712Type,
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/bundle";
+
 import type { RelayerSDK } from "../relayer-sdk";
 import type {
   ClearValueType,
@@ -182,7 +183,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
     return {
       domain: USER_DECRYPT_EIP712.domain(
         this.#config.chainId,
-        this.#config.verifyingContractAddressDecryption,
+        this.#config.verifyingContractAddressDecryption as Address,
       ),
       types: USER_DECRYPT_TYPES,
       primaryType: "UserDecryptRequestVerification",
@@ -212,7 +213,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
         ciphertextBlob,
         index,
         fheType,
-        this.#config.aclContractAddress,
+        this.#config.aclContractAddress as Address,
         BigInt(this.#config.chainId),
       ),
     );
@@ -223,7 +224,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
     const signature = await this.inputSigner.signTypedData({
       domain: INPUT_VERIFICATION_EIP712.domain(
         this.#config.gatewayChainId,
-        this.#config.verifyingContractAddressInputVerification,
+        this.#config.verifyingContractAddressInputVerification as Address,
       ),
       types: {
         CiphertextVerification: INPUT_VERIFICATION_EIP712.types.CiphertextVerification,
@@ -294,7 +295,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
     const signature = await this.kmsSigner.signTypedData({
       domain: KMS_DECRYPTION_EIP712.domain(
         this.#config.gatewayChainId,
-        this.#config.verifyingContractAddressDecryption,
+        this.#config.verifyingContractAddressDecryption as Address,
       ),
       types: KMS_DECRYPTION_TYPES,
       primaryType: "PublicDecryptVerification",
@@ -333,7 +334,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
     return {
       domain: DELEGATED_USER_DECRYPT_EIP712.domain(
         this.#config.chainId,
-        this.#config.verifyingContractAddressDecryption,
+        this.#config.verifyingContractAddressDecryption as Address,
       ),
       types: DELEGATED_USER_DECRYPT_TYPES,
       primaryType: "DelegatedUserDecryptRequestVerification",
@@ -359,15 +360,21 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
   }
 
   async getPublicKey(): Promise<PublicKeyData | null> {
-    return { publicKeyId: "mock-public-key-id", publicKey: new Uint8Array([32]) };
+    return {
+      publicKeyId: "mock-public-key-id",
+      publicKey: new Uint8Array([32]),
+    };
   }
 
   async getPublicParams(_bits: number): Promise<PublicParamsData | null> {
-    return { publicParams: new Uint8Array([32]), publicParamsId: "mock-public-params-id" };
+    return {
+      publicParams: new Uint8Array([32]),
+      publicParamsId: "mock-public-params-id",
+    };
   }
 
   async getAclAddress(): Promise<Address> {
-    return this.#config.aclContractAddress;
+    return this.#config.aclContractAddress as Address;
   }
 
   terminate(): void {
@@ -439,7 +446,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
     const results = await Promise.all(
       handles.map((handle) =>
         this.#client.readContract({
-          address: this.#config.aclContractAddress,
+          address: this.#config.aclContractAddress as Address,
           abi: ACL_ABI,
           functionName: "isHandleDelegatedForUserDecryption",
           args: [delegatorAddress, delegateAddress, contractAddress, handle],
@@ -458,7 +465,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
 
   async #persistAllowed(handle: Handle, account: Address): Promise<boolean> {
     return this.#client.readContract({
-      address: this.#config.aclContractAddress,
+      address: this.#config.aclContractAddress as Address,
       abi: ACL_ABI,
       functionName: "persistAllowed",
       args: [handle, account],
@@ -467,7 +474,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
 
   async #isAllowedForDecryption(handle: Handle): Promise<boolean> {
     return this.#client.readContract({
-      address: this.#config.aclContractAddress,
+      address: this.#config.aclContractAddress as Address,
       abi: ACL_ABI,
       functionName: "isAllowedForDecryption",
       args: [handle],

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach } from "../../test-fixtures";
 import { BaseWorkerClient, DEFAULT_TIMEOUT_MS } from "../worker.base-client";
 import type {
   GenericLogger,
+  WorkerEnv,
   WorkerRequest,
   WorkerRequestType,
   WorkerResponse,
@@ -26,11 +27,12 @@ interface TestConfig {
 let requestIdCounter = 0;
 
 class TestWorkerClient extends BaseWorkerClient<TestWorker, TestConfig> {
+  protected readonly env: WorkerEnv = "node";
   lastWorker: TestWorker | null = null;
   createWorkerCount = 0;
 
   constructor(config?: Partial<TestConfig>) {
-    const cfg: TestConfig = { initType: "NODE_INIT", ...config };
+    const cfg: TestConfig = { initType: "INIT", ...config };
     super(cfg, cfg.logger);
   }
 
@@ -160,7 +162,7 @@ describe("BaseWorkerClient", () => {
     const client = await initClient();
     autoResolvePostMessage(client, { publicKey: "pk", privateKey: "sk" });
 
-    const result = await client.generateKeypair();
+    const result = await client.generateKeypair({ chainId: 1 });
     expect(result).toEqual({ publicKey: "pk", privateKey: "sk" });
   });
 
@@ -168,7 +170,7 @@ describe("BaseWorkerClient", () => {
     const client = await initClient();
     autoRejectPostMessage(client, "decrypt failed");
 
-    await expect(client.generateKeypair()).rejects.toThrow("decrypt failed");
+    await expect(client.generateKeypair({ chainId: 1 })).rejects.toThrow("decrypt failed");
   });
 
   it("rejects with timeout when no response arrives", async () => {
@@ -182,7 +184,7 @@ describe("BaseWorkerClient", () => {
 
       // Start the request and attach rejection handler before advancing timers
       let rejectedError: Error | undefined;
-      const promise = client.generateKeypair().catch((error: Error) => {
+      const promise = client.generateKeypair({ chainId: 1 }).catch((error: Error) => {
         rejectedError = error;
       });
 
@@ -222,8 +224,8 @@ describe("BaseWorkerClient", () => {
     const client = await initClient();
     const worker = client.lastWorker!;
 
-    const p1 = client.generateKeypair();
-    const p2 = client.getPublicKey();
+    const p1 = client.generateKeypair({ chainId: 1 });
+    const p2 = client.getPublicKey({ chainId: 1 });
 
     // Flush so the requests are registered in pendingRequests
     await flush();
@@ -239,7 +241,7 @@ describe("BaseWorkerClient", () => {
     const client = await initClient();
     const worker = client.lastWorker!;
 
-    const p1 = client.generateKeypair();
+    const p1 = client.generateKeypair({ chainId: 1 });
 
     await flush();
 
@@ -252,7 +254,7 @@ describe("BaseWorkerClient", () => {
   it("terminate rejects all pending with 'Worker terminated'", async () => {
     const client = await initClient();
 
-    const p1 = client.generateKeypair();
+    const p1 = client.generateKeypair({ chainId: 1 });
 
     await flush();
 
@@ -312,6 +314,7 @@ describe("BaseWorkerClient", () => {
     const client = await initClient();
 
     const params = {
+      chainId: 1,
       handles: [HANDLE],
       contractAddress: "0xC" as `0x${string}`,
       signedContractAddresses: ["0xS" as `0x${string}`],
@@ -349,7 +352,7 @@ describe("BaseWorkerClient", () => {
     });
 
     try {
-      await client.generateKeypair();
+      await client.generateKeypair({ chainId: 1 });
       expect.unreachable("should have thrown");
     } catch (error) {
       expect((error as Error).message).toBe("rate limited");
@@ -377,6 +380,7 @@ describe("BaseWorkerClient", () => {
     autoResolvePostMessage(client, { handles: [], inputProof: "0x" });
 
     const params = {
+      chainId: 1,
       values: [{ value: 1n, type: "euint8" as const }],
       contractAddress: "0xC" as `0x${string}`,
       userAddress: "0xU" as `0x${string}`,
@@ -392,11 +396,11 @@ describe("BaseWorkerClient", () => {
     const client = await initClient();
     autoResolvePostMessage(client, { clearValues: {} });
 
-    await client.publicDecrypt([HANDLE]);
+    await client.publicDecrypt({ chainId: 1, handles: [HANDLE] });
 
     const lastCall = client.lastWorker!.postMessage.mock.calls.at(-1)![0];
     expect(lastCall.type).toBe("PUBLIC_DECRYPT");
-    expect(lastCall.payload).toEqual({ handles: [HANDLE] });
+    expect(lastCall.payload).toEqual({ chainId: 1, handles: [HANDLE] });
   });
 
   it("createEIP712 sends correct type and payload", async () => {
@@ -404,6 +408,7 @@ describe("BaseWorkerClient", () => {
     autoResolvePostMessage(client, {});
 
     const params = {
+      chainId: 1,
       publicKey: "0xpk" as `0x${string}`,
       contractAddresses: ["0x1" as `0x${string}`],
       startTimestamp: 1000,
@@ -421,6 +426,7 @@ describe("BaseWorkerClient", () => {
     autoResolvePostMessage(client, {});
 
     const params = {
+      chainId: 1,
       publicKey: "0xpk" as `0x${string}`,
       contractAddresses: ["0x1" as `0x${string}`],
       delegatorAddress: "0xD" as `0x${string}`,
@@ -439,6 +445,7 @@ describe("BaseWorkerClient", () => {
     autoResolvePostMessage(client, { clearValues: {} });
 
     const params = {
+      chainId: 1,
       handles: [HANDLE],
       contractAddress: "0xC" as `0x${string}`,
       signedContractAddresses: ["0xS" as `0x${string}`],
@@ -461,7 +468,7 @@ describe("BaseWorkerClient", () => {
     const client = await initClient();
     autoResolvePostMessage(client, "0xproof");
 
-    await client.requestZKProofVerification({ proof: "0x" } as never);
+    await client.requestZKProofVerification({ chainId: 1, zkProof: { proof: "0x" } as never });
 
     const lastCall = client.lastWorker!.postMessage.mock.calls.at(-1)![0];
     expect(lastCall.type).toBe("REQUEST_ZK_PROOF_VERIFICATION");
@@ -471,7 +478,7 @@ describe("BaseWorkerClient", () => {
     const client = await initClient();
     autoResolvePostMessage(client, { result: null });
 
-    await client.getPublicKey();
+    await client.getPublicKey({ chainId: 1 });
 
     const lastCall = client.lastWorker!.postMessage.mock.calls.at(-1)![0];
     expect(lastCall.type).toBe("GET_PUBLIC_KEY");
@@ -481,11 +488,11 @@ describe("BaseWorkerClient", () => {
     const client = await initClient();
     autoResolvePostMessage(client, { result: null });
 
-    await client.getPublicParams(2048);
+    await client.getPublicParams({ chainId: 1, bits: 2048 });
 
     const lastCall = client.lastWorker!.postMessage.mock.calls.at(-1)![0];
     expect(lastCall.type).toBe("GET_PUBLIC_PARAMS");
-    expect(lastCall.payload).toEqual({ bits: 2048 });
+    expect(lastCall.payload).toEqual({ chainId: 1, bits: 2048 });
   });
 
   it("worker error during init terminates the worker", async () => {
@@ -515,7 +522,7 @@ describe("BaseWorkerClient", () => {
 
   it("sendRequest auto-initializes worker if not yet initialized", async () => {
     const client = createAutoResolvingClient();
-    const result = await client.generateKeypair();
+    const result = await client.generateKeypair({ chainId: 1 });
     expect(result).toEqual({ initialized: true });
   });
 });

@@ -1,7 +1,9 @@
-import type { FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/bundle";
+import type { RelayerChainConfig } from "../chains/types";
 import type {
+  AddChainResponseData,
   GenericLogger,
   UpdateCsrfResponseData,
+  WorkerEnv,
   WorkerRequest,
   WorkerRequestType,
   WorkerResponse,
@@ -13,7 +15,7 @@ import { default as workerCode, filename as workerFilename } from "./relayer-sdk
 /** Configuration for the worker client */
 export interface WorkerClientConfig {
   cdnUrl: string;
-  fhevmConfig: FhevmInstanceConfig;
+  chains: RelayerChainConfig[];
   csrfToken: string;
   /** Expected SHA-384 hex digest of the CDN bundle for integrity verification. */
   integrity?: string;
@@ -28,6 +30,8 @@ export interface WorkerClientConfig {
  * Provides a promise-based API for FHE operations.
  */
 export class RelayerWorkerClient extends BaseWorkerClient<Worker, WorkerClientConfig> {
+  protected readonly env: WorkerEnv = "web";
+
   constructor(config: WorkerClientConfig) {
     super(config, config.logger);
   }
@@ -71,8 +75,19 @@ export class RelayerWorkerClient extends BaseWorkerClient<Worker, WorkerClientCo
     // Explicitly construct the payload from serializable fields only.
     // Functions (e.g. `logger`) cannot be cloned by the structured clone
     // algorithm used by `worker.postMessage()`.
-    const { cdnUrl, fhevmConfig, csrfToken, integrity, thread } = this.config;
-    return { type: "INIT", payload: { cdnUrl, fhevmConfig, csrfToken, integrity, thread } };
+    const { cdnUrl, chains, csrfToken, integrity, thread } = this.config;
+    return {
+      type: "INIT",
+      payload: { env: "web" as const, cdnUrl, chains, csrfToken, integrity, thread },
+    };
+  }
+
+  override async addChain(config: RelayerChainConfig): Promise<AddChainResponseData> {
+    const csrfToken = this.config.csrfToken;
+    return this.sendRequest<AddChainResponseData>(
+      "ADD_CHAIN",
+      { env: "web" as const, config, csrfToken } as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+    );
   }
 
   /**

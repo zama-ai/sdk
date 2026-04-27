@@ -1,10 +1,6 @@
-/* oxlint-disable no-unnecessary-type-arguments -- T["chainId"] preserves literal chain IDs */
-import type { ExtendedFhevmInstanceConfig } from "../relayer/relayer-utils";
-import type { FheChain } from "./types";
+import type { FheChain, RelayerChainConfig } from "./types";
 
-export function toFheChain<T extends ExtendedFhevmInstanceConfig>({
-  chainId,
-  ...config
-}: T): FheChain<T["chainId"]> {
-  return { ...config, id: chainId };
+/** Convert an `FheChain` (with `id`) to a `RelayerChainConfig` (with `chainId`) for the relayer layer. */
+export function toRelayerChainConfig({ id, ...rest }: FheChain): RelayerChainConfig {
+  return { ...rest, chainId: id };
 }

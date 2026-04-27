@@ -156,7 +156,7 @@ export interface ZamaConfigViem<TChains extends AtLeastOneChain = AtLeastOneChai
     // (undocumented)
     publicClient: PublicClient;
     // (undocumented)
-    walletClient?: WalletClient;
+    walletClient: WalletClient;
 }
 
 // (No @packageDocumentation comment for this package)
