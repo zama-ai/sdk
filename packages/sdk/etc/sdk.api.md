@@ -19911,6 +19911,7 @@ export class ZamaSDK {
     dispose(): void;
     // @internal
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
+    encrypt(params: EncryptParams): Promise<EncryptResult>;
     onIdentityChange(listener: SignerIdentityListener): () => void;
     // (undocumented)
     readonly provider: GenericProvider;

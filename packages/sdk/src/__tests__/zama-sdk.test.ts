@@ -3,7 +3,8 @@ import { ZamaSDK } from "../zama-sdk";
 import { ReadonlyToken } from "../token/readonly-token";
 import { Token } from "../token/token";
 import { CredentialsManager } from "../credentials/credentials-manager";
-import { DecryptionFailedError } from "../errors";
+import type { ZamaError} from "../errors";
+import { DecryptionFailedError, EncryptionFailedError, ZamaErrorCode } from "../errors";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import { ZERO_HANDLE } from "../utils/handles";
 import type { GenericSigner, SignerIdentityChange, SignerIdentityListener } from "../types";
@@ -825,6 +826,117 @@ describe("ZamaSDK", () => {
       vi.mocked(relayer.publicDecrypt).mockRejectedValueOnce(original);
 
       await expect(sdk.publicDecrypt([handle])).rejects.toBe(original);
+    });
+  });
+
+  describe("encrypt", () => {
+    const CONTRACT = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
+    const USER_ADDR = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
+
+    it("delegates to relayer.encrypt and returns the result", async ({ sdk, relayer }) => {
+      const params = {
+        values: [{ value: 1000n, type: "euint64" as const }],
+        contractAddress: CONTRACT,
+        userAddress: USER_ADDR,
+      };
+
+      const result = await sdk.encrypt(params);
+      expect(relayer.encrypt).toHaveBeenCalledWith(params);
+      expect(result).toEqual({
+        handles: [new Uint8Array([1, 2, 3])],
+        inputProof: new Uint8Array([4, 5, 6]),
+      });
+    });
+
+    it("emits EncryptStart and EncryptEnd events", async ({
+      relayer,
+      provider,
+      signer,
+      storage,
+    }) => {
+      const events: { type: string }[] = [];
+      const sdk = new ZamaSDK({
+        relayer,
+        provider,
+        signer,
+        storage,
+        onEvent: (e) => events.push(e),
+      });
+
+      await sdk.encrypt({
+        values: [{ value: 1n, type: "euint64" }],
+        contractAddress: CONTRACT,
+        userAddress: USER_ADDR,
+      });
+
+      expect(events).toContainEqual(expect.objectContaining({ type: ZamaSDKEvents.EncryptStart }));
+      expect(events).toContainEqual(
+        expect.objectContaining({
+          type: ZamaSDKEvents.EncryptEnd,
+          durationMs: expect.any(Number),
+        }),
+      );
+    });
+
+    it("emits EncryptError event on failure and wraps the error", async ({
+      relayer,
+      provider,
+      signer,
+      storage,
+    }) => {
+      const events: { type: string }[] = [];
+      const sdk = new ZamaSDK({
+        relayer,
+        provider,
+        signer,
+        storage,
+        onEvent: (e) => events.push(e),
+      });
+
+      vi.mocked(relayer.encrypt).mockRejectedValueOnce(new Error("wasm blew up"));
+
+      await expect(
+        sdk.encrypt({
+          values: [{ value: 1n, type: "euint64" }],
+          contractAddress: CONTRACT,
+          userAddress: USER_ADDR,
+        }),
+      ).rejects.toThrow(EncryptionFailedError);
+
+      expect(events).toContainEqual(expect.objectContaining({ type: ZamaSDKEvents.EncryptStart }));
+      expect(events).toContainEqual(
+        expect.objectContaining({
+          type: ZamaSDKEvents.EncryptError,
+          durationMs: expect.any(Number),
+        }),
+      );
+    });
+
+    it("wraps non-ZamaError in EncryptionFailedError", async ({ sdk, relayer }) => {
+      vi.mocked(relayer.encrypt).mockRejectedValueOnce(new Error("boom"));
+
+      await expect(
+        sdk.encrypt({
+          values: [{ value: 1n, type: "euint64" }],
+          contractAddress: CONTRACT,
+          userAddress: USER_ADDR,
+        }),
+      ).rejects.toSatisfy((err: ZamaError) => {
+        return err instanceof EncryptionFailedError && err.code === ZamaErrorCode.EncryptionFailed;
+      });
+    });
+
+    it("re-throws ZamaError as-is", async ({ sdk, relayer }) => {
+      const original = new EncryptionFailedError("already typed");
+      vi.mocked(relayer.encrypt).mockRejectedValueOnce(original);
+
+      await expect(
+        sdk.encrypt({
+          values: [{ value: 1n, type: "euint64" }],
+          contractAddress: CONTRACT,
+          userAddress: USER_ADDR,
+        }),
+      ).rejects.toBe(original);
     });
   });
 

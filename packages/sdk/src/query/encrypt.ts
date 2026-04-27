@@ -7,6 +7,6 @@ export function encryptMutationOptions(
 ): MutationFactoryOptions<readonly ["zama.encrypt"], EncryptParams, EncryptResult> {
   return {
     mutationKey: ["zama.encrypt"],
-    mutationFn: async (params) => sdk.relayer.encrypt(params),
+    mutationFn: async (params) => sdk.encrypt(params),
   };
 }

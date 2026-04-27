@@ -521,7 +521,7 @@ describe("Token", () => {
         return (
           err instanceof ZamaError &&
           err.code === ZamaErrorCode.EncryptionFailed &&
-          err.message === "Failed to encrypt transfer amount"
+          err.message === "Encryption failed"
         );
       });
     });
@@ -624,7 +624,7 @@ describe("Token", () => {
         return (
           err instanceof ZamaError &&
           err.code === ZamaErrorCode.EncryptionFailed &&
-          err.message === "Failed to encrypt transferFrom amount"
+          err.message === "Encryption failed"
         );
       });
     });
@@ -838,7 +838,7 @@ describe("Token", () => {
         return (
           err instanceof ZamaError &&
           err.code === ZamaErrorCode.EncryptionFailed &&
-          err.message === "Failed to encrypt unshield amount"
+          err.message === "Encryption failed"
         );
       });
     });
