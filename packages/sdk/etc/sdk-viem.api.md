@@ -85,7 +85,7 @@ export interface ViemProviderConfig {
 
 // Warning: (ae-forgotten-export) The symbol "GenericSigner" needs to be exported by the entry point index.d.ts
 //
-// @public
+// @public (undocumented)
 export class ViemSigner implements GenericSigner {
     constructor(config: ViemSignerConfig);
     // (undocumented)

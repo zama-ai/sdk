@@ -41,24 +41,13 @@ function identityFromWalletClient(walletClient: WalletClient): SignerIdentity | 
   if (!walletClient.account || !walletClient.chain) {
     return undefined;
   }
-  const address =
-    typeof walletClient.account === "string" ? walletClient.account : walletClient.account.address;
-  return {
-    address: getAddress(address),
-    chainId: walletClient.chain.id,
-  };
+  const address = getAddress(walletClient.account.address);
+  return { address, chainId: walletClient.chain.id };
 }
 
-/**
- * GenericSigner backed by viem.
- */
 export class ViemSigner implements GenericSigner {
   readonly #walletClient: WalletClient;
   readonly #ethereum?: EIP1193Provider;
-
-  /**
-   * @param config - {@link ViemSignerConfig} with walletClient and optional ethereum provider
-   */
   constructor(config: ViemSignerConfig) {
     this.#walletClient = config.walletClient;
     this.#ethereum = config.ethereum;

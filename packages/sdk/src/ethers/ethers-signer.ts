@@ -115,9 +115,7 @@ export class EthersSigner implements GenericSigner {
         }
         const [address, network] = await Promise.all([signer.getAddress(), provider.getNetwork()]);
         const chainId = Number(network.chainId);
-        return Number.isSafeInteger(chainId) && chainId > 0
-          ? { address: getAddress(address), chainId }
-          : undefined;
+        return { address: getAddress(address), chainId };
       },
       onIdentityChange,
     });
