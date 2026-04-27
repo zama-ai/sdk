@@ -1,4 +1,5 @@
-export { web, cleartext } from "./relayers";
+export { web } from "./web";
+export { cleartext } from "./cleartext";
 
 export type {
   ZamaConfig,

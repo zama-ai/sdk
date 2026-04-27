@@ -29,8 +29,8 @@ export interface NodeRelayerConfig extends RelayerConfig {
  * @example
  * ```ts
  * relayers: {
- *   [sepolia.id]: node({ poolSize: 4 }),
- *   [mainnet.id]: node(),
+ *   [sepolia.id]: node(),
+ *   [mainnet.id]: node({ poolSize: 4 }),
  * }
  * ```
  */
@@ -38,16 +38,12 @@ export function node(options?: NodePoolOptions): NodeRelayerConfig {
   return {
     type: "node",
     createWorker: (chains) => new NodeWorkerPool({ chains, ...options }),
-    createRelayer: (resolvedChain, worker) => {
+    createRelayer: (chain, pool) => {
       assertCondition(
-        !!worker,
+        !!pool,
         "node() relayer requires a worker pool — createWorker must be called first.",
       );
-      return new RelayerNode({
-        chain: resolvedChain,
-        pool: worker,
-        ...options,
-      });
+      return new RelayerNode({ chain, pool, ...options });
     },
   };
 }

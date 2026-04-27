@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { web, cleartext } from "../relayers";
+import { web } from "../web";
+import { cleartext } from "../cleartext";
 import { node } from "../../node";
 import { sepolia, mainnet, hoodi, hardhat, anvil, type FheChain } from "../../chains";
 

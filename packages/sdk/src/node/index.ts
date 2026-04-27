@@ -10,7 +10,7 @@
 
 export { node } from "./config";
 export type { NodeRelayerConfig, NodePoolOptions } from "./config";
-export { cleartext } from "../config/relayers";
+export { cleartext } from "../config/cleartext";
 export type { RelayerConfig } from "../config/types";
 export { RelayerNode } from "../relayer/relayer-node";
 export type { RelayerNodeConfig } from "../relayer/relayer-node";
