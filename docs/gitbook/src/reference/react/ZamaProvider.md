@@ -31,7 +31,11 @@ const wagmiConfig = createConfig({
   transports: { [sepolia.id]: http("https://sepolia.infura.io/v3/YOUR_KEY") },
 });
 
-const mySepolia = { ...sepoliaFhe, relayerUrl: "https://your-app.com/api/relayer/11155111", network: "https://sepolia.infura.io/v3/YOUR_KEY" } as const satisfies FheChain;
+const mySepolia = {
+  ...sepoliaFhe,
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
+  network: "https://sepolia.infura.io/v3/YOUR_KEY",
+} as const satisfies FheChain;
 
 const zamaConfig = createZamaConfig({
   chains: [mySepolia],
@@ -75,7 +79,10 @@ const walletClient = createWalletClient({
   transport: custom(window.ethereum!),
 });
 
-const mySepolia = { ...sepoliaFhe, relayerUrl: "https://your-app.com/api/relayer/11155111" } as const satisfies FheChain;
+const mySepolia = {
+  ...sepoliaFhe,
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
+} as const satisfies FheChain;
 
 const zamaConfig = createConfig({
   chains: [mySepolia],

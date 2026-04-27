@@ -23,9 +23,7 @@ export abstract class BaseRelayer {
 
   async getAclAddress(): Promise<Address> {
     if (!this.chain.aclContractAddress) {
-      throw new ConfigurationError(
-        `No ACL address configured for chain ${this.chain.id}`,
-      );
+      throw new ConfigurationError(`No ACL address configured for chain ${this.chain.id}`);
     }
     return this.chain.aclContractAddress;
   }

@@ -165,9 +165,7 @@ export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
    * Decrypt ciphertexts using user's private key.
    * Requires a valid EIP712 signature.
    */
-  async userDecrypt(
-    params: UserDecryptParams,
-  ): Promise<Readonly<Record<Handle, ClearValueType>>> {
+  async userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>> {
     await this.ensureInit();
     const chainId = this.chain.id;
     return withRetry(async () => {
@@ -239,9 +237,7 @@ export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
   /**
    * Submit a ZK proof to the relayer for verification.
    */
-  async requestZKProofVerification(
-    zkProof: ZKProofLike,
-  ): Promise<InputProofBytesType> {
+  async requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType> {
     await this.ensureInit();
     const chainId = this.chain.id;
     return withRetry(async () => {
@@ -273,8 +269,7 @@ export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
     const artifactCache = this.#getArtifactCache();
     return artifactCache.getPublicParams(
       bits,
-      async () =>
-        (await this.#worker.getPublicParams({ chainId, bits })).result,
+      async () => (await this.#worker.getPublicParams({ chainId, bits })).result,
     );
   }
 }

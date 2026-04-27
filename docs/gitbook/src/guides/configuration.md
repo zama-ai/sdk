@@ -57,7 +57,10 @@ If you need to override a chain field (e.g. proxy relayer requests through your 
 ```ts
 import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 
-const mySepolia = { ...sepolia, relayerUrl: "https://your-app.com/api/relayer/11155111" } as const satisfies FheChain;
+const mySepolia = {
+  ...sepolia,
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
+} as const satisfies FheChain;
 ```
 
 ### 3. Set up a signer
@@ -118,8 +121,14 @@ import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
 
 // Override relayerUrl to proxy through your backend
-const mySepolia = { ...sepolia, relayerUrl: "https://your-app.com/api/relayer/11155111" } as const satisfies FheChain;
-const myMainnet = { ...mainnet, relayerUrl: "https://your-app.com/api/relayer/1" } as const satisfies FheChain;
+const mySepolia = {
+  ...sepolia,
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
+} as const satisfies FheChain;
+const myMainnet = {
+  ...mainnet,
+  relayerUrl: "https://your-app.com/api/relayer/1",
+} as const satisfies FheChain;
 
 const zamaConfig = createZamaConfig({
   chains: [mySepolia, myMainnet],
@@ -139,8 +148,14 @@ import { createConfig } from "@zama-fhe/sdk/viem";
 import { web, ZamaSDK } from "@zama-fhe/sdk";
 import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
 
-const mySepolia = { ...sepolia, relayerUrl: "https://your-app.com/api/relayer/11155111" } as const satisfies FheChain;
-const myMainnet = { ...mainnet, relayerUrl: "https://your-app.com/api/relayer/1" } as const satisfies FheChain;
+const mySepolia = {
+  ...sepolia,
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
+} as const satisfies FheChain;
+const myMainnet = {
+  ...mainnet,
+  relayerUrl: "https://your-app.com/api/relayer/1",
+} as const satisfies FheChain;
 
 const config = createConfig({
   chains: [mySepolia, myMainnet],
@@ -163,7 +178,10 @@ import { createConfig } from "@zama-fhe/sdk/ethers";
 import { web, ZamaSDK } from "@zama-fhe/sdk";
 import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 
-const mySepolia = { ...sepolia, relayerUrl: "https://your-app.com/api/relayer/11155111" } as const satisfies FheChain;
+const mySepolia = {
+  ...sepolia,
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
+} as const satisfies FheChain;
 
 const config = createConfig({
   chains: [mySepolia],
@@ -185,7 +203,10 @@ import { ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
 import { node } from "@zama-fhe/sdk/node";
 import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 
-const mySepolia = { ...sepolia, network: "https://sepolia.infura.io/v3/YOUR_KEY" } as const satisfies FheChain;
+const mySepolia = {
+  ...sepolia,
+  network: "https://sepolia.infura.io/v3/YOUR_KEY",
+} as const satisfies FheChain;
 
 const config = createConfig({
   chains: [mySepolia],
@@ -210,7 +231,10 @@ import { createConfig } from "@zama-fhe/sdk/viem";
 import { web, ZamaSDK, indexedDBStorage, chromeSessionStorage } from "@zama-fhe/sdk";
 import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 
-const mySepolia = { ...sepolia, relayerUrl: "https://your-app.com/api/relayer/11155111" } as const satisfies FheChain;
+const mySepolia = {
+  ...sepolia,
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
+} as const satisfies FheChain;
 
 const config = createConfig({
   chains: [mySepolia],

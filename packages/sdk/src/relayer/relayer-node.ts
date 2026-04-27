@@ -135,9 +135,7 @@ export class RelayerNode extends BaseRelayer implements RelayerSDK, Disposable {
     });
   }
 
-  async userDecrypt(
-    params: UserDecryptParams,
-  ): Promise<Readonly<Record<Handle, ClearValueType>>> {
+  async userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>> {
     await this.ensureInit();
     const chainId = this.chain.id;
     return withRetry(async () => {
@@ -192,9 +190,7 @@ export class RelayerNode extends BaseRelayer implements RelayerSDK, Disposable {
     });
   }
 
-  async requestZKProofVerification(
-    zkProof: ZKProofLike,
-  ): Promise<InputProofBytesType> {
+  async requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType> {
     await this.ensureInit();
     const chainId = this.chain.id;
     return withRetry(async () => {
@@ -221,8 +217,7 @@ export class RelayerNode extends BaseRelayer implements RelayerSDK, Disposable {
     if (artifactCache) {
       return artifactCache.getPublicParams(
         bits,
-        async () =>
-          (await this.#pool.getPublicParams({ chainId, bits })).result,
+        async () => (await this.#pool.getPublicParams({ chainId, bits })).result,
       );
     }
     return (await this.#pool.getPublicParams({ chainId, bits })).result;

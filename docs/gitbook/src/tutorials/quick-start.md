@@ -19,7 +19,10 @@ The relayer requires an API key. In browser apps, proxy requests through your ba
 import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 
 // Browser apps: proxy through your backend (recommended)
-const mySepolia = { ...sepolia, relayerUrl: "https://your-app.com/api/relayer/11155111" } as const satisfies FheChain;
+const mySepolia = {
+  ...sepolia,
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
+} as const satisfies FheChain;
 ```
 
 See [Authentication](/guides/authentication) for a backend proxy example.
@@ -86,7 +89,10 @@ const wagmiConfig = createConfig({
   },
 });
 
-const mySepolia = { ...sepoliaFhe, relayerUrl: "https://your-app.com/api/relayer/11155111" } as const satisfies FheChain;
+const mySepolia = {
+  ...sepoliaFhe,
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
+} as const satisfies FheChain;
 
 const zamaConfig = createZamaConfig({
   chains: [mySepolia],
@@ -129,7 +135,10 @@ const walletClient = createWalletClient({
   transport: custom(window.ethereum!),
 });
 
-const mySepolia = { ...sepoliaFhe, relayerUrl: "https://your-app.com/api/relayer/11155111" } as const satisfies FheChain;
+const mySepolia = {
+  ...sepoliaFhe,
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
+} as const satisfies FheChain;
 
 const config = createConfig({
   chains: [mySepolia],
@@ -151,7 +160,10 @@ import { createConfig } from "@zama-fhe/sdk/ethers";
 import { web, ZamaSDK } from "@zama-fhe/sdk";
 import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 
-const mySepolia = { ...sepolia, relayerUrl: "https://your-app.com/api/relayer/11155111" } as const satisfies FheChain;
+const mySepolia = {
+  ...sepolia,
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
+} as const satisfies FheChain;
 
 const config = createConfig({
   chains: [mySepolia],

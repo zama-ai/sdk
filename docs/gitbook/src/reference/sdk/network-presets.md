@@ -68,7 +68,10 @@ In browser environments, proxy relayer requests through your backend to avoid ex
 ```ts
 import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 
-const mySepolia = { ...sepolia, relayerUrl: "https://your-app.com/api/relayer/11155111" } as const satisfies FheChain;
+const mySepolia = {
+  ...sepolia,
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
+} as const satisfies FheChain;
 ```
 
 ### Server apps
@@ -79,7 +82,10 @@ On the server, use `node()` with pool options. Chain data (network, relayerUrl) 
 import { node } from "@zama-fhe/sdk/node";
 import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 
-const mySepolia = { ...sepolia, network: "https://sepolia.infura.io/v3/YOUR_KEY" } as const satisfies FheChain;
+const mySepolia = {
+  ...sepolia,
+  network: "https://sepolia.infura.io/v3/YOUR_KEY",
+} as const satisfies FheChain;
 // Then in createConfig: relayers: { [mySepolia.id]: node({ poolSize: 4 }) }
 ```
 

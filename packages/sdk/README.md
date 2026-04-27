@@ -41,15 +41,15 @@ const { createConfig, EthersSigner } = require("@zama-fhe/sdk/ethers");
 
 ### Available subpath exports
 
-| Subpath                   | Description                                    | CJS |
-| ------------------------- | ---------------------------------------------- | --- |
-| `@zama-fhe/sdk`           | Core SDK, config, relayers, RelayerWeb, etc.   | Yes |
-| `@zama-fhe/sdk/chains`    | Pre-configured chain objects                   | Yes |
-| `@zama-fhe/sdk/viem`      | Viem adapter (ViemSigner)                      | Yes |
-| `@zama-fhe/sdk/ethers`    | Ethers adapter (EthersSigner)                  | Yes |
-| `@zama-fhe/sdk/node`      | Node.js backend (RelayerNode)                  | No  |
-| `@zama-fhe/sdk/query`     | TanStack Query integration                     | Yes |
-| `@zama-fhe/sdk/cleartext` | Cleartext testing adapter                      | Yes |
+| Subpath                   | Description                                  | CJS |
+| ------------------------- | -------------------------------------------- | --- |
+| `@zama-fhe/sdk`           | Core SDK, config, relayers, RelayerWeb, etc. | Yes |
+| `@zama-fhe/sdk/chains`    | Pre-configured chain objects                 | Yes |
+| `@zama-fhe/sdk/viem`      | Viem adapter (ViemSigner)                    | Yes |
+| `@zama-fhe/sdk/ethers`    | Ethers adapter (EthersSigner)                | Yes |
+| `@zama-fhe/sdk/node`      | Node.js backend (RelayerNode)                | No  |
+| `@zama-fhe/sdk/query`     | TanStack Query integration                   | Yes |
+| `@zama-fhe/sdk/cleartext` | Cleartext testing adapter                    | Yes |
 
 > **Note:** The `@zama-fhe/sdk/node` subpath is ESM-only because it relies on `node:worker_threads` which is inherently ESM-oriented.
 
@@ -70,17 +70,23 @@ import { createConfig } from "@zama-fhe/sdk/viem";
 import { sepolia, mainnet } from "@zama-fhe/sdk/chains";
 import type { FheChain } from "@zama-fhe/sdk/chains";
 
-const mySepolia = { ...sepolia, relayerUrl: "https://your-app.com/api/relayer/11155111" } as const satisfies FheChain;
-const myMainnet = { ...mainnet, relayerUrl: "https://your-app.com/api/relayer/1" } as const satisfies FheChain;
+const mySepolia = {
+  ...sepolia,
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
+} as const satisfies FheChain;
+const myMainnet = {
+  ...mainnet,
+  relayerUrl: "https://your-app.com/api/relayer/1",
+} as const satisfies FheChain;
 
 // 1. Create the config
 const config = createConfig({
   chains: [mySepolia, myMainnet],
   publicClient,
   walletClient,
-  relayers: { 
-    [mySepolia.id]: web(), 
-    [myMainnet.id]: web() 
+  relayers: {
+    [mySepolia.id]: web(),
+    [myMainnet.id]: web(),
   },
 });
 
@@ -108,7 +114,10 @@ import { createConfig } from "@zama-fhe/sdk/ethers";
 import { sepolia } from "@zama-fhe/sdk/chains";
 import type { FheChain } from "@zama-fhe/sdk/chains";
 
-const mySepolia = { ...sepolia, relayerUrl: "https://your-app.com/api/relayer/11155111" } as const satisfies FheChain;
+const mySepolia = {
+  ...sepolia,
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
+} as const satisfies FheChain;
 
 const config = createConfig({
   chains: [mySepolia],
