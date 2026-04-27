@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.0.0-alpha.19](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.18...v3.0.0-alpha.19) (2026-04-27)
+
+### Bug Fixes
+
+- **token:** await approval receipt before wrap in [#ensure](https://github.com/zama-ai/sdk/issues/ensure)Allowance ([#286](https://github.com/zama-ai/sdk/issues/286)) ([4b744c1]()), closes [#ensureAllowance]() [#ensureAllowance]() [#ensureAllowance]()
+
 ## [3.0.0-alpha.18](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.17...v3.0.0-alpha.18) (2026-04-24)
 
 ### Features
