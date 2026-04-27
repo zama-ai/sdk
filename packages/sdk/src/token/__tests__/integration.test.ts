@@ -18,7 +18,7 @@ describe("Integration: multi-step workflows", () => {
     }) => {
       const UNDERLYING = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
 
-      // Step 1: readContract calls for underlying and allowance
+      // Step 1: readContract calls for underlying, ERC-20 balance, allowance, then confidentialBalanceOf
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce(UNDERLYING) // #getUnderlying
         .mockResolvedValueOnce(1000n) // ERC-20 balanceOf (must be >= shield amount)
@@ -33,7 +33,10 @@ describe("Integration: multi-step workflows", () => {
       expect(signer.writeContract).toHaveBeenCalledTimes(2);
       expect(signer.writeContract).toHaveBeenNthCalledWith(
         1,
-        expect.objectContaining({ functionName: "approve", args: expect.arrayContaining([500n]) }),
+        expect.objectContaining({
+          functionName: "approve",
+          args: expect.arrayContaining([500n]),
+        }),
       );
       expect(signer.writeContract).toHaveBeenNthCalledWith(
         2,
