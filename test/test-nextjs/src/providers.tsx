@@ -25,7 +25,7 @@ const wagmiConfig = createConfig({
 const zamaConfig = createZamaConfig({
   chains: [fheAnvil],
   wagmiConfig,
-  transports: {
+  relayers: {
     [anvil.id]: cleartext({
       network: rpcUrl,
       registryAddress: getAddress(deployments.wrappersRegistry),

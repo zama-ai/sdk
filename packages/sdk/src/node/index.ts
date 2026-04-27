@@ -9,9 +9,9 @@
  */
 
 export { node } from "./transports";
-export type { NodeTransportConfig, NodePoolOptions } from "./transports";
+export type { NodeRelayerConfig, NodePoolOptions } from "./transports";
 export { cleartext } from "../config/transports";
-export type { TransportConfig } from "../config/transports";
+export type { RelayerConfig } from "../config/transports";
 export { RelayerNode } from "../relayer/relayer-node";
 export type { RelayerNodeConfig } from "../relayer/relayer-node";
 export type { RelayerSDK } from "../relayer/relayer-sdk";

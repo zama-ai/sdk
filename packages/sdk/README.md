@@ -43,7 +43,7 @@ const { createConfig, EthersSigner } = require("@zama-fhe/sdk/ethers");
 
 | Subpath                   | Description                                    | CJS |
 | ------------------------- | ---------------------------------------------- | --- |
-| `@zama-fhe/sdk`           | Core SDK, config, transports, RelayerWeb, etc. | Yes |
+| `@zama-fhe/sdk`           | Core SDK, config, relayers, RelayerWeb, etc.   | Yes |
 | `@zama-fhe/sdk/chains`    | Pre-configured chain objects                   | Yes |
 | `@zama-fhe/sdk/viem`      | Viem adapter (ViemSigner)                      | Yes |
 | `@zama-fhe/sdk/ethers`    | Ethers adapter (EthersSigner)                  | Yes |
@@ -74,7 +74,7 @@ const config = createConfig({
   chains: [sepolia, mainnet],
   publicClient,
   walletClient,
-  transports: {
+  relayers: {
     [sepolia.id]: web({ relayerUrl: "https://your-app.com/api/relayer/11155111" }),
     [mainnet.id]: web({ relayerUrl: "https://your-app.com/api/relayer/1" }),
   },
@@ -106,7 +106,7 @@ import { sepolia } from "@zama-fhe/sdk/chains";
 const config = createConfig({
   chains: [sepolia],
   ethereum: window.ethereum!,
-  transports: {
+  relayers: {
     [sepolia.id]: web({ relayerUrl: "https://your-app.com/api/relayer/11155111" }),
   },
 });
@@ -129,7 +129,7 @@ const config = createConfig({
   publicClient,
   walletClient,
   storage: memoryStorage,
-  transports: {
+  relayers: {
     [sepolia.id]: node(
       {
         network: "https://sepolia.infura.io/v3/YOUR_KEY",
@@ -156,7 +156,7 @@ const balance = await token.balanceOf();
 
 ### createConfig
 
-The recommended way to configure the SDK. Takes chains, transports, and a signer adapter and returns a config object for `ZamaSDK`. Import `createConfig` from the adapter subpath that matches your Web3 library.
+The recommended way to configure the SDK. Takes chains, relayers, and a signer adapter and returns a config object for `ZamaSDK`. Import `createConfig` from the adapter subpath that matches your Web3 library.
 
 ```ts
 import { web, ZamaSDK } from "@zama-fhe/sdk";
@@ -167,7 +167,7 @@ const config = createConfig({
   chains: [sepolia],
   publicClient,
   walletClient, // or use createConfig from @zama-fhe/sdk/ethers with { ethereum }
-  transports: {
+  relayers: {
     [sepolia.id]: web({ relayerUrl: "/api/relayer/11155111" }),
   },
 });
@@ -477,7 +477,7 @@ const sdk = new ZamaSDK({
 
 ### Chain Objects
 
-Pre-configured chain objects from `@zama-fhe/sdk/chains`. Each includes contract addresses, relayer URLs, and an `id` alias for transport config keys:
+Pre-configured chain objects from `@zama-fhe/sdk/chains`. Each includes contract addresses, relayer URLs, and an `id` alias for relayer config keys:
 
 ```ts
 import { sepolia, mainnet, hoodi, hardhat } from "@zama-fhe/sdk/chains";
@@ -501,7 +501,7 @@ const config = createConfig({
   chains: [sepolia],
   publicClient,
   walletClient,
-  transports: {
+  relayers: {
     [sepolia.id]: web({ relayerUrl: "/api/relayer/11155111" }),
   },
 });

@@ -3,7 +3,7 @@ import { ConfigurationError } from "../errors";
 import { IndexedDBStorage } from "../storage/indexeddb-storage";
 import { MemoryStorage } from "../storage/memory-storage";
 import type { GenericStorage } from "../types";
-import type { TransportConfig } from "./transports";
+import type { RelayerConfig } from "./transports";
 
 // ── Storage defaults ─────────────────────────────────────────────────────────
 
@@ -24,17 +24,17 @@ export function resolveStorage(
   return { storage, sessionStorage };
 }
 
-// ── Chain transport resolution ───────────────────────────────────────────────
+// ── Chain relayer resolution ────────────────────────────────────────────────
 
-export interface ResolvedChainTransport {
+export interface ResolvedChainRelayer {
   chain: FheChain;
-  transport: TransportConfig;
+  relayer: RelayerConfig;
 }
 
-export function resolveChainTransports(
+export function resolveChainRelayers(
   chains: readonly FheChain[],
-  transports: Readonly<Record<number, TransportConfig>>,
-): Map<number, ResolvedChainTransport> {
+  relayers: Readonly<Record<number, RelayerConfig>>,
+): Map<number, ResolvedChainRelayer> {
   const chainMap = new Map(chains.map((c) => [c.id, c]));
   if (chainMap.size !== chains.length) {
     const ids = chains.map((c) => c.id);
@@ -44,49 +44,49 @@ export function resolveChainTransports(
         `Each chain id must appear only once. Note: hardhat and anvil are aliases (both use 31337).`,
     );
   }
-  const transportMap = new Map(Object.entries(transports));
-  const result = new Map<number, ResolvedChainTransport>();
+  const relayerMap = new Map(Object.entries(relayers));
+  const result = new Map<number, ResolvedChainRelayer>();
 
   for (const id of chainMap.keys()) {
     const chainConfig = chainMap.get(id);
-    const transportConfig = transportMap.get(String(id));
+    const relayerConfig = relayerMap.get(String(id));
 
-    if (!transportConfig) {
+    if (!relayerConfig) {
       throw new ConfigurationError(
-        `Chain ${id} has no transport configured. ` +
-          `Add a transport entry: transports: { [${id}]: web() }`,
+        `Chain ${id} has no relayer configured. ` +
+          `Add a relayer entry: relayers: { [${id}]: web() }`,
       );
     }
 
     if (!chainConfig) {
       throw new ConfigurationError(
-        `Chain ${id} has a transport configured but no entry in the chains array. ` +
+        `Chain ${id} has a relayer configured but no entry in the chains array. ` +
           `Add the chain config to the chains array.`,
       );
     }
 
     if (
-      transportConfig.type !== "web" &&
-      transportConfig.type !== "node" &&
-      transportConfig.type !== "cleartext"
+      relayerConfig.type !== "web" &&
+      relayerConfig.type !== "node" &&
+      relayerConfig.type !== "cleartext"
     ) {
       throw new ConfigurationError(
-        `Chain ${id} has an unrecognized transport (type: ${String((transportConfig as unknown as Record<string, unknown>).type)}). ` +
-          `Use web(), node(), or cleartext() to create transports.`,
+        `Chain ${id} has an unrecognized relayer (type: ${String((relayerConfig as unknown as Record<string, unknown>).type)}). ` +
+          `Use web(), node(), or cleartext() to create relayers.`,
       );
     }
 
     result.set(id, {
       chain: chainConfig,
-      transport: transportConfig,
+      relayer: relayerConfig,
     });
   }
 
-  const transportIdSet = new Set(Object.keys(transports).map(Number));
-  const orphaned = new Set([...transportIdSet].filter((id) => !chainMap.has(id)));
+  const relayerIdSet = new Set(Object.keys(relayers).map(Number));
+  const orphaned = new Set([...relayerIdSet].filter((id) => !chainMap.has(id)));
   if (orphaned.size > 0) {
     throw new ConfigurationError(
-      `Transport entries for chain(s) [${[...orphaned].join(", ")}] have no matching entry ` +
+      `Relayer entries for chain(s) [${[...orphaned].join(", ")}] have no matching entry ` +
         `in the chains array. Remove them or add the corresponding chain config.`,
     );
   }

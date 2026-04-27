@@ -2,17 +2,17 @@ import type { FheChain } from "../chains";
 import { RelayerDispatcher, type WorkerLike } from "../relayer/relayer-dispatcher";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { GenericProvider, GenericSigner } from "../types";
-import { resolveChainTransports, resolveStorage } from "./resolve";
-import type { TransportConfig } from "./transports";
+import { resolveChainRelayers, resolveStorage } from "./resolve";
+import type { RelayerConfig } from "./transports";
 import type { ZamaConfig, ZamaConfigBase } from "./types";
 
-/** Merge transport-level `registryAddress` overrides into chain definitions. */
+/** Merge relayer-level `registryAddress` overrides into chain definitions. */
 function mergeRegistryAddresses(
   chains: readonly FheChain[],
-  transports: Readonly<Record<number, TransportConfig>>,
+  relayers: Readonly<Record<number, RelayerConfig>>,
 ): readonly FheChain[] {
   return chains.map((chain) => {
-    const registryAddress = transports[chain.id]?.chain?.registryAddress;
+    const registryAddress = relayers[chain.id]?.chain?.registryAddress;
     if (registryAddress && registryAddress !== chain.registryAddress) {
       return { ...chain, registryAddress };
     }
@@ -32,13 +32,13 @@ export function buildZamaConfig(
   params: ZamaConfigBase,
 ): ZamaConfig {
   const { storage, sessionStorage } = resolveStorage(params.storage, params.sessionStorage);
-  const chains = mergeRegistryAddresses(params.chains, params.transports);
-  const chainTransports = resolveChainTransports(chains, params.transports);
+  const chains = mergeRegistryAddresses(params.chains, params.relayers);
+  const chainRelayers = resolveChainRelayers(chains, params.relayers);
 
-  // Group chains by transport reference — same object = same group = shared worker.
-  const groups = new Map<TransportConfig, Array<[number, FheChain]>>();
-  for (const [chainId, config] of chainTransports) {
-    const key = config.transport;
+  // Group chains by relayer reference — same object = same group = shared worker.
+  const groups = new Map<RelayerConfig, Array<[number, FheChain]>>();
+  for (const [chainId, config] of chainRelayers) {
+    const key = config.relayer;
     const mergedChain = { ...config.chain, ...key.chain };
     let group = groups.get(key);
     if (!group) {
@@ -52,14 +52,14 @@ export function buildZamaConfig(
   const relayersMap = new Map<number, RelayerSDK>();
   const workers: WorkerLike[] = [];
   try {
-    for (const [transport, groupChains] of groups) {
+    for (const [relayerCfg, groupChains] of groups) {
       const allChainConfigs = groupChains.map(([, chain]) => chain);
-      const worker = transport.createWorker?.(allChainConfigs);
+      const worker = relayerCfg.createWorker?.(allChainConfigs);
       if (worker) {
         workers.push(worker);
       }
       for (const [chainId, chain] of groupChains) {
-        relayersMap.set(chainId, transport.createRelayer(chain, worker));
+        relayersMap.set(chainId, relayerCfg.createRelayer(chain, worker));
       }
     }
   } catch (error) {

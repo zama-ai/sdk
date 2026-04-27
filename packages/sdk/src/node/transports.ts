@@ -1,4 +1,4 @@
-import type { TransportConfig } from "../config/transports";
+import type { RelayerConfig } from "../config/transports";
 import { RelayerNode } from "../relayer/relayer-node";
 import type { FheChain } from "../chains/types";
 import type { GenericStorage } from "../types";
@@ -15,7 +15,7 @@ export interface NodePoolOptions {
 }
 
 /** Node transport — narrows worker type to `NodeWorkerPool`. */
-export interface NodeTransportConfig extends TransportConfig {
+export interface NodeRelayerConfig extends RelayerConfig {
   readonly type: "node";
   readonly createWorker: (chains: FheChain[]) => NodeWorkerPool;
   readonly createRelayer: (chain: FheChain, worker: NodeWorkerPool) => RelayerNode;
@@ -29,16 +29,13 @@ export interface NodeTransportConfig extends TransportConfig {
  *
  * @example
  * ```ts
- * transports: {
+ * relayers: {
  *   [sepolia.id]: node({ relayerUrl: "/api/sepolia" }, { poolSize: 4 }),
  *   [mainnet.id]: node({ relayerUrl: "/api/mainnet" }),
  * }
  * ```
  */
-export function node(
-  chain?: Partial<FheChain>,
-  options?: NodePoolOptions,
-): NodeTransportConfig {
+export function node(chain?: Partial<FheChain>, options?: NodePoolOptions): NodeRelayerConfig {
   return {
     type: "node",
     chain,

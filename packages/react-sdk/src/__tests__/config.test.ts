@@ -58,7 +58,7 @@ describe("createConfig", () => {
       createWagmiConfig({
         chains: [sepolia],
         wagmiConfig,
-        transports: { [11155111]: web() },
+        relayers: { [11155111]: web() },
       });
       expect(MockWagmiSigner).toHaveBeenCalledWith({ config: wagmiConfig });
     });
@@ -70,7 +70,7 @@ describe("createConfig", () => {
         chains: [sepolia],
         publicClient,
         walletClient,
-        transports: { [11155111]: web() },
+        relayers: { [11155111]: web() },
       });
       expect(MockViemSigner).toHaveBeenCalledWith({
         walletClient,
@@ -83,18 +83,18 @@ describe("createConfig", () => {
       createEthersConfig({
         chains: [sepolia],
         ethereum,
-        transports: { [11155111]: web() },
+        relayers: { [11155111]: web() },
       });
       expect(MockEthersSigner).toHaveBeenCalledWith(expect.objectContaining({ ethereum }));
     });
   });
 
-  describe("transport resolution", () => {
-    it("resolves explicit transports from wagmi chains", () => {
+  describe("relayer resolution", () => {
+    it("resolves explicit relayers from wagmi chains", () => {
       const config = createWagmiConfig({
         chains: [sepolia],
         wagmiConfig: mockWagmiConfig([11155111]),
-        transports: { [11155111]: web() },
+        relayers: { [11155111]: web() },
       });
       expect(config.relayer).toBeDefined();
     });
@@ -103,41 +103,41 @@ describe("createConfig", () => {
       const config = createWagmiConfig({
         chains: [sepolia],
         wagmiConfig: mockWagmiConfig([11155111]),
-        transports: {
+        relayers: {
           [11155111]: web({ relayerUrl: "https://my-relayer.example.com" }),
         },
       });
       expect(config.relayer).toBeDefined();
     });
 
-    it("throws when a chain has no transport configured", () => {
+    it("throws when a chain has no relayer configured", () => {
       expect(() =>
         createWagmiConfig({
           chains: [sepolia],
           wagmiConfig: mockWagmiConfig([11155111]),
-          //@ts-expect-error: throws when there's not configured transport
-          transports: {},
+          //@ts-expect-error: throws when there's no configured relayer
+          relayers: {},
         }),
       ).toThrow(/Chain 11155111/);
     });
 
-    it("throws for orphaned transport entries with no matching chain", () => {
+    it("throws for orphaned relayer entries with no matching chain", () => {
       expect(() =>
         createWagmiConfig({
-          //@ts-expect-error: throws when there's an orphaned transport
+          //@ts-expect-error: throws when there's an orphaned relayer
           chains: [],
           wagmiConfig: mockWagmiConfig([]),
-          transports: { [999999]: web({ relayerUrl: "https://custom.com" }) },
+          relayers: { [999999]: web({ relayerUrl: "https://custom.com" }) },
         }),
       ).toThrow(/999999/);
     });
 
-    it("uses explicit transports for non-wagmi paths", () => {
+    it("uses explicit relayers for non-wagmi paths", () => {
       const config = createViemConfig({
         chains: [sepolia],
         publicClient: {} as any,
         walletClient: {} as any,
-        transports: { [11155111]: web() },
+        relayers: { [11155111]: web() },
       });
       expect(config.relayer).toBeDefined();
     });
@@ -151,7 +151,7 @@ describe("createConfig", () => {
         chains: [sepolia],
         publicClient: {} as any,
         walletClient: {} as any,
-        transports: { [11155111]: web() },
+        relayers: { [11155111]: web() },
         storage,
         sessionStorage,
       });
@@ -165,7 +165,7 @@ describe("createConfig", () => {
         chains: [sepolia],
         publicClient: {} as any,
         walletClient: {} as any,
-        transports: { [11155111]: web() },
+        relayers: { [11155111]: web() },
         storage: sharedStorage,
         sessionStorage: sharedStorage,
       });
@@ -216,7 +216,7 @@ describe("createConfig", () => {
         chains: [sepolia],
         publicClient: {} as any,
         walletClient: {} as any,
-        transports: { [11155111]: web() },
+        relayers: { [11155111]: web() },
         keypairTTL: 86400,
         sessionTTL: "infinite",
         registryTTL: 3600,

@@ -35,7 +35,7 @@ function createZamaSDK({
       chains: [chainOverrides],
       publicClient,
       walletClient: viemClient,
-      transports: {
+      relayers: {
         [chainOverrides.id]: node(transportOverrides, poolOptions),
       },
     }),

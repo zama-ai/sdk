@@ -18,7 +18,7 @@ test("backend bootstraps SDK, verifies FHE infra, and shuts down cleanly", async
     chains: [chain],
     publicClient,
     walletClient: viemClient,
-    transports: { [chain.id]: node() },
+    relayers: { [chain.id]: node() },
   });
 
   const sdk = new ZamaSDK(config);
@@ -82,7 +82,7 @@ test("SDK rejects invalid keypairTTL at construction", async ({
     chains: [chain],
     publicClient,
     walletClient: viemClient,
-    transports: {
+    relayers: {
       [chain.id]: node(),
     },
     keypairTTL: 0,

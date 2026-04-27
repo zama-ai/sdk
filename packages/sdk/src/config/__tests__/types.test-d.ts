@@ -2,7 +2,7 @@ import { assertType, describe, expectTypeOf, it } from "vitest";
 import { mainnet, sepolia } from "../../chains";
 import type { FheChain } from "../../chains";
 import type { ZamaConfigBase } from "../types";
-import type { TransportConfig } from "../transports";
+import type { RelayerConfig } from "../transports";
 import type { ZamaConfigViem } from "../../viem/types";
 import type { ZamaConfigEthers } from "../../ethers/types";
 
@@ -34,23 +34,23 @@ describe("ZamaConfigEthers", () => {
   });
 });
 
-describe("ZamaConfigBase (mapped transports)", () => {
-  it("requires a transport entry for every chain in the tuple", () => {
-    // Valid: transport for every chain
+describe("ZamaConfigBase (mapped relayers)", () => {
+  it("requires a relayer entry for every chain in the tuple", () => {
+    // Valid: relayer for every chain
     assertType<ZamaConfigBase<readonly [typeof sepolia, typeof mainnet]>>({
       chains: [sepolia, mainnet] as const,
-      transports: {
-        [sepolia.id]: {} as TransportConfig,
-        [mainnet.id]: {} as TransportConfig,
+      relayers: {
+        [sepolia.id]: {} as RelayerConfig,
+        [mainnet.id]: {} as RelayerConfig,
       },
     });
   });
 
-  it("rejects missing transport entries", () => {
+  it("rejects missing relayer entries", () => {
     assertType<ZamaConfigBase<readonly [typeof sepolia, typeof mainnet]>>({
       chains: [sepolia, mainnet] as const,
-      // @ts-expect-error — mainnet transport is missing
-      transports: { [sepolia.id]: {} as TransportConfig },
+      // @ts-expect-error — mainnet relayer is missing
+      relayers: { [sepolia.id]: {} as RelayerConfig },
     });
   });
 
@@ -58,7 +58,7 @@ describe("ZamaConfigBase (mapped transports)", () => {
     // @ts-expect-error — empty tuple does not satisfy AtLeastOneChain
     assertType<ZamaConfigBase<readonly []>>({
       chains: [] as const,
-      transports: {},
+      relayers: {},
     });
   });
 });

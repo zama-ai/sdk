@@ -25,7 +25,7 @@ const wagmiConfig = createConfig({
 const zamaConfig = createZamaConfig({
   chains: [hardhat],
   wagmiConfig,
-  transports: {
+  relayers: {
     [anvil.id]: web(
       {
         relayerUrl: mockRelayerUrl,

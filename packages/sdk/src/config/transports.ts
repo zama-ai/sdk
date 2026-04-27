@@ -14,13 +14,13 @@ export type WebRelayerOptions = Partial<Omit<RelayerWebConfig, "chain" | "worker
 // ── Transport interface ─────────────────────────────────────────────────────
 
 /**
- * Base transport config. `buildZamaConfig` works with this type.
+ * Base relayer config. `buildZamaConfig` works with this type.
  *
  * Groups chains by transport reference identity, calls `createWorker`
  * once per group with all chain configs, then calls `createRelayer`
  * per chain with the shared worker.
  */
-export interface TransportConfig {
+export interface RelayerConfig {
   readonly type: string;
   /** Per-chain overrides (e.g. relayerUrl, registryAddress). */
   chain?: Partial<FheChain>;
@@ -36,14 +36,14 @@ export interface TransportConfig {
 }
 
 /** Web transport — narrows worker type to `RelayerWorkerClient`. */
-export interface WebTransportConfig extends TransportConfig {
+export interface WebRelayerConfig extends RelayerConfig {
   readonly type: "web";
   readonly createWorker: (chains: FheChain[]) => RelayerWorkerClient;
   readonly createRelayer: (chain: FheChain, worker: RelayerWorkerClient) => RelayerWeb;
 }
 
 /** Cleartext transport — no worker, returns `RelayerCleartext`. */
-export interface CleartextTransportConfig extends TransportConfig {
+export interface CleartextRelayerConfig extends RelayerConfig {
   readonly type: "cleartext";
   readonly createRelayer: (chain: FheChain, worker: unknown) => RelayerCleartext;
 }
@@ -58,16 +58,13 @@ export interface CleartextTransportConfig extends TransportConfig {
  *
  * @example
  * ```ts
- * transports: {
+ * relayers: {
  *   [sepolia.id]: web({ relayerUrl: "/api/relayer/11155111" }),
  *   [mainnet.id]: web({ relayerUrl: "/api/relayer/1" }),
  * }
  * ```
  */
-export function web(
-  chain?: Partial<FheChain>,
-  options?: WebRelayerOptions,
-): WebTransportConfig {
+export function web(chain?: Partial<FheChain>, options?: WebRelayerOptions): WebRelayerConfig {
   return {
     type: "web",
     chain,
@@ -94,13 +91,13 @@ export function web(
  * @example
  * ```ts
  * // executorAddress comes from the chain preset:
- * transports: { [hardhat.id]: cleartext() }
+ * relayers: { [hardhat.id]: cleartext() }
  *
  * // override for a custom chain:
- * transports: { [myChain.id]: cleartext({ executorAddress: "0x..." }) }
+ * relayers: { [myChain.id]: cleartext({ executorAddress: "0x..." }) }
  * ```
  */
-export function cleartext(chain?: Partial<FheChain>): CleartextTransportConfig {
+export function cleartext(chain?: Partial<FheChain>): CleartextRelayerConfig {
   return {
     type: "cleartext",
     chain,

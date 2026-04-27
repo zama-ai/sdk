@@ -47,7 +47,7 @@ const wagmiConfig = createConfig({
 const zamaConfig = createZamaFheConfig({
   chains: [sepoliaFhe],
   wagmiConfig,
-  transports: {
+  relayers: {
     [sepoliaFhe.id]: web({ relayerUrl: "https://your-app.com/api/relayer/11155111" }),
   },
 });
@@ -86,7 +86,7 @@ import { sepolia } from "@zama-fhe/sdk/chains";
 const zamaConfig = createConfig({
   chains: [sepolia],
   signer: yourCustomSigner,
-  transports: {
+  relayers: {
     [sepolia.id]: web({ relayerUrl: "https://your-app.com/api/relayer/11155111" }),
   },
 });
@@ -138,7 +138,7 @@ import { sepolia } from "@zama-fhe/sdk/chains";
 const zamaConfig = createConfig({
   chains: [sepolia],
   wagmiConfig, // or use createConfig from @zama-fhe/sdk/viem or @zama-fhe/sdk/ethers
-  transports: {
+  relayers: {
     [sepolia.id]: web({ relayerUrl: "/api/relayer/11155111" }),
   },
   // Optional fields:
@@ -849,7 +849,7 @@ const zamaConfig = createConfig({
   wagmiConfig,
   storage: indexedDBStorage,
   sessionStorage: chromeSessionStorage,
-  transports: {
+  relayers: {
     [sepolia.id]: web({ relayerUrl: "/api/relayer/11155111" }),
   },
 });

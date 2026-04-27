@@ -87,7 +87,7 @@ export const nodeTest = base.extend<NodeTestFixtures, NodeWorkerFixtures>({
       chains: [chain],
       publicClient,
       walletClient: viemClient,
-      transports: { [chain.id]: node() },
+      relayers: { [chain.id]: node() },
     });
     using sdk = new ZamaSDK(config);
     await use(sdk);

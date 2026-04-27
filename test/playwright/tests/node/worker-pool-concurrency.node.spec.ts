@@ -21,7 +21,7 @@ function createZamaSDK({ chain, publicClient, walletClient, poolSize }: CreateZa
       chains: [chain],
       publicClient,
       walletClient,
-      transports: { [chain.id]: node(chain, { poolSize }) },
+      relayers: { [chain.id]: node(chain, { poolSize }) },
     }),
   );
 }

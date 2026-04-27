@@ -2,7 +2,7 @@ import type { FheChain, AtLeastOneChain } from "../chains";
 import type { ZamaSDKEventListener } from "../events";
 import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
 import type { GenericProvider, GenericSigner, GenericStorage } from "../types";
-import type { TransportConfig } from "./transports";
+import type { RelayerConfig } from "./transports";
 
 export type { AtLeastOneChain };
 
@@ -10,8 +10,8 @@ export type { AtLeastOneChain };
 export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChain> {
   /** FHE chain configurations. Defines which chains support FHE operations. */
   chains: TChains;
-  /** Per-chain transport configuration. Every chain must have a transport entry. */
-  transports: { [K in TChains[number]["id"]]: TransportConfig };
+  /** Per-chain relayer configuration. Every chain must have a relayer entry. */
+  relayers: { [K in TChains[number]["id"]]: RelayerConfig };
   /** Credential storage. Default: IndexedDB in browser, memory in Node. */
   storage?: GenericStorage;
   /** Session storage. Default: IndexedDB in browser, memory in Node. */
