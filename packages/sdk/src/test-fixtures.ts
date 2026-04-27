@@ -27,6 +27,9 @@ const VALID_HANDLE = ("0x" + "ab".repeat(32)) as Address;
 
 export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerSDK {
   return {
+    chains: [{ id: 31337 }] as RelayerSDK["chains"],
+    activeChain: { id: 31337 } as RelayerSDK["activeChain"],
+    switchChain: vi.fn(),
     generateKeypair: vi.fn().mockResolvedValue({
       publicKey: "0xpub",
       privateKey: "0xpriv",

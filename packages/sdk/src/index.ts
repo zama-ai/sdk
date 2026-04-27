@@ -10,7 +10,6 @@
 // Note: node() transport factory is exported from @zama-fhe/sdk/node instead,
 // keeping node:worker_threads out of the main browser entry.
 export { buildZamaConfig, web, cleartext, resolveChainTransports, resolveStorage } from "./config";
-export type { CreateRelayerFn } from "./config/transports";
 export type {
   ZamaConfig,
   ZamaConfigBase,
@@ -18,10 +17,8 @@ export type {
   ZamaConfigEthers,
   TransportConfig,
   WebTransportConfig,
-  NodeTransportConfig,
   CleartextTransportConfig,
   WebRelayerOptions,
-  NodeRelayerOptions,
   CleartextChainConfig,
   AtLeastOneChain,
   ResolvedChainTransport,
@@ -29,6 +26,8 @@ export type {
 
 // Core SDK
 export { RelayerWeb } from "./relayer/relayer-web";
+export { RelayerDispatcher } from "./relayer/relayer-dispatcher";
+export type { WorkerLike } from "./relayer/relayer-dispatcher";
 export type { RelayerSDK } from "./relayer/relayer-sdk";
 export type {
   RelayerWebConfig,

@@ -3,10 +3,21 @@ import { web, cleartext } from "../transports";
 import { node } from "../../node";
 import { sepolia, mainnet, hoodi, hardhat, anvil, type FheChain } from "../../chains";
 
-vi.mock(import("../../relayer/relayer-web"), async () => ({
-  RelayerWeb: vi.fn().mockImplementation(function (this: any) {
+vi.mock(import("../../relayer/relayer-web"), async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    RelayerWeb: vi.fn().mockImplementation(function (this: any) {
+      this.terminate = vi.fn();
+      this.generateKeypair = vi.fn().mockResolvedValue({ publicKey: "0x", secretKey: "0x" });
+    }),
+  };
+});
+
+vi.mock(import("../../worker/worker.client"), async () => ({
+  RelayerWorkerClient: vi.fn().mockImplementation(function (this: any) {
+    this.initWorker = vi.fn().mockResolvedValue(undefined);
     this.terminate = vi.fn();
-    this.generateKeypair = vi.fn().mockResolvedValue({ publicKey: "0x", secretKey: "0x" });
   }),
 }));
 
@@ -19,7 +30,7 @@ vi.mock(import("../../relayer/cleartext/relayer-cleartext"), async () => ({
 
 // Import after mocks
 const { resolveChainTransports } = await import("../resolve");
-const { CompositeRelayer } = await import("../../relayer/composite-relayer");
+const { RelayerDispatcher } = await import("../../relayer/relayer-dispatcher");
 const { buildZamaConfig } = await import("../build");
 
 const sepoliaChain = sepolia;
@@ -122,57 +133,87 @@ describe("resolveChainTransports", () => {
   });
 });
 
-describe("CompositeRelayer (lazy init)", () => {
-  it("does not call createRelayer at construction time", () => {
-    const createRelayerSpy = vi.fn();
-    const transport = { ...web(), createRelayer: createRelayerSpy };
-    const transports = resolveChainTransports([sepoliaChain], {
-      [11155111]: transport,
+/** Helper: build a RelayerDispatcher from chains + transport map using the same group-then-create pattern as buildZamaConfig. */
+function buildDispatcher(
+  chains: FheChain[],
+  transportMap: Record<number, ReturnType<typeof web> | ReturnType<typeof cleartext>>,
+) {
+  const resolved = resolveChainTransports(chains, transportMap);
+  // Group chains by transport reference identity
+  const groups = new Map<any, [number, any][]>();
+  for (const [chainId, config] of resolved) {
+    const key = config.transport;
+    if (!groups.has(key)) {groups.set(key, []);}
+    groups.get(key)!.push([chainId, { ...config.chain, ...key.chain }]);
+  }
+  const relayers = new Map<number, any>();
+  for (const [transport, groupChains] of groups) {
+    const allConfigs = groupChains.map(([, c]) => c);
+    const worker = transport.createWorker?.(allConfigs);
+    for (const [chainId, chain] of groupChains) {
+      relayers.set(chainId, transport.createRelayer(chain, worker));
+    }
+  }
+  const chainMap = new Map(chains.map((c) => [c.id, c]));
+  return new RelayerDispatcher(chainMap, relayers);
+}
+
+describe("RelayerDispatcher (via transport factories)", () => {
+  it("creates relayers eagerly at construction time", () => {
+    const createRelayerSpy = vi.fn().mockReturnValue({
+      terminate: vi.fn(),
+      generateKeypair: vi.fn().mockResolvedValue({ publicKey: "0x", secretKey: "0x" }),
     });
-    new CompositeRelayer(() => Promise.resolve(11155111), transports);
-    expect(createRelayerSpy).not.toHaveBeenCalled();
+    const baseTransport = web();
+    const transport = { ...baseTransport, createRelayer: createRelayerSpy };
+    const resolved = resolveChainTransports([sepoliaChain], { [11155111]: transport });
+    // Use same group-then-create pattern
+    const groups = new Map<any, [number, any][]>();
+    for (const [chainId, config] of resolved) {
+      const key = config.transport;
+      if (!groups.has(key)) {groups.set(key, []);}
+      groups.get(key)!.push([chainId, { ...config.chain, ...key.chain }]);
+    }
+    const relayers = new Map<number, any>();
+    for (const [t, groupChains] of groups) {
+      const allConfigs = groupChains.map(([, c]) => c);
+      const worker = t.createWorker?.(allConfigs);
+      for (const [chainId, chain] of groupChains) {
+        relayers.set(chainId, t.createRelayer(chain, worker));
+      }
+    }
+    new RelayerDispatcher(new Map([[sepoliaChain.id, sepoliaChain]]), relayers);
+    expect(createRelayerSpy).toHaveBeenCalledOnce();
   });
 
-  it("calls createRelayer on first SDK operation", async () => {
-    const transports = resolveChainTransports([sepoliaChain], {
-      [11155111]: web(),
-    });
-    const relayer = new CompositeRelayer(() => Promise.resolve(11155111), transports);
-    await relayer.generateKeypair();
+  it("delegates generateKeypair to the active chain relayer", async () => {
+    const relayer = buildDispatcher([sepoliaChain], { [11155111]: web() });
+    relayer.switchChain(11155111);
+    const result = await relayer.generateKeypair();
+    expect(result).toEqual({ publicKey: "0x", secretKey: "0x" });
   });
 
-  it("throws for unconfigured chain on first use", async () => {
-    const transports = resolveChainTransports([sepoliaChain], {
-      [11155111]: web(),
-    });
-    const relayer = new CompositeRelayer(() => Promise.resolve(999999), transports);
-    await expect(relayer.generateKeypair()).rejects.toThrow(
-      "No relayer configured for chain 999999",
-    );
+  it("throws when switching to unconfigured chain", () => {
+    const relayer = buildDispatcher([sepoliaChain], { [11155111]: web() });
+    expect(() => relayer.switchChain(999999)).toThrow("No relayer configured for chain 999999");
   });
 
   it("wraps single web chain", () => {
-    const transports = resolveChainTransports([sepoliaChain], {
-      [11155111]: web(),
-    });
-    const relayer = new CompositeRelayer(() => Promise.resolve(11155111), transports);
-    expect(relayer.constructor.name).toBe("CompositeRelayer");
+    const relayer = buildDispatcher([sepoliaChain], { [11155111]: web() });
+    expect(relayer.constructor.name).toBe("RelayerDispatcher");
   });
 
   it("supports mixed web + cleartext", () => {
-    const transports = resolveChainTransports([sepoliaChain, hoodiChain], {
+    const relayer = buildDispatcher([sepoliaChain, hoodiChain], {
       [11155111]: web(),
       [560048]: cleartext({ executorAddress: "0xExec" as `0x${string}` }),
     });
-    const relayer = new CompositeRelayer(() => Promise.resolve(11155111), transports);
-    expect(relayer.constructor.name).toBe("CompositeRelayer");
+    expect(relayer.constructor.name).toBe("RelayerDispatcher");
   });
 
-  it("deduplicates concurrent first-use for the same chain", async () => {
-    const transports = resolveChainTransports([sepoliaChain], {
-      [11155111]: web(),
-    });
-    const relayer = new CompositeRelayer(() => Promise.resolve(11155111), transports);
+  it("concurrent calls to the same chain return equal results", async () => {
+    const relayer = buildDispatcher([sepoliaChain], { [11155111]: web() });
+    relayer.switchChain(11155111);
     const [a, b] = await Promise.all([relayer.generateKeypair(), relayer.generateKeypair()]);
     expect(a).toEqual(b);
   });

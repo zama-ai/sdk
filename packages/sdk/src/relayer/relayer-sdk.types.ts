@@ -11,6 +11,7 @@ import type { Address, Hex } from "viem";
 import type { GenericLogger } from "../worker/worker.types";
 import type { GenericStorage } from "../types";
 import type { ExtendedFhevmInstanceConfig } from "./relayer-utils";
+import type { RelayerWorkerClient } from "../worker/worker.client";
 
 // ============================================================================
 // Application Types
@@ -37,8 +38,10 @@ export interface RelayerWebSecurityConfig {
 
 /** Configuration for RelayerWeb (browser backend) initialization. */
 export interface RelayerWebConfig {
-  /** Single chain FHE configuration (addresses, URLs, chain ID). */
+  /** FHE chain configuration. */
   chain: ExtendedFhevmInstanceConfig;
+  /** Worker client — handles WASM operations off the main thread. */
+  worker: RelayerWorkerClient;
   /** Security options (CSRF, CDN integrity). */
   security?: RelayerWebSecurityConfig;
   /** Optional logger for observing worker lifecycle and request timing. */
@@ -57,8 +60,6 @@ export interface RelayerWebConfig {
    * When omitted, the relayer SDK uses its default (single-threaded).
    */
   threads?: number;
-  /** Called whenever the SDK status changes (e.g. idle → initializing → ready). */
-  onStatusChange?: (status: RelayerSDKStatus, error?: Error) => void;
   /**
    * Persistent storage for caching FHE public key and params across sessions.
    *

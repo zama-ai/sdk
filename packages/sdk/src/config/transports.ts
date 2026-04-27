@@ -1,83 +1,74 @@
 import type { RelayerWebConfig } from "../relayer/relayer-sdk.types";
-import type { RelayerNodeConfig } from "../relayer/relayer-node";
 import type { ExtendedFhevmInstanceConfig } from "../relayer/relayer-utils";
 import type { CleartextConfig } from "../relayer/cleartext/types";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
-import { RelayerWeb } from "../relayer/relayer-web";
+import { CDN_INTEGRITY, CDN_URL, RelayerWeb } from "../relayer/relayer-web";
 import { RelayerCleartext } from "../relayer/cleartext/relayer-cleartext";
-import { assertCondition } from "../utils";
+import { RelayerWorkerClient } from "../worker/worker.client";
 
 // ── Shared option shapes ─────────────────────────────────────────────────────
 
-/** Relayer-pool options shared across all chains using the same web relayer. */
-export type WebRelayerOptions = Partial<Omit<RelayerWebConfig, "chain">>;
-
-/** Relayer-pool options shared across all chains using the same node relayer. */
-export type NodeRelayerOptions = Partial<Omit<RelayerNodeConfig, "chain">>;
+/** Options for web() transport (threads, security, logger, storage). */
+export type WebRelayerOptions = Partial<Omit<RelayerWebConfig, "chain" | "worker">>;
 
 /** Per-chain cleartext config. `executorAddress` is required. */
 export type CleartextChainConfig = Partial<CleartextConfig> & {
   executorAddress: CleartextConfig["executorAddress"];
 };
 
-// ── Relayer factory type ────────────────────────────────────────────────────
+// ── Transport interface ─────────────────────────────────────────────────────
 
-/** Creates a RelayerSDK instance for a resolved chain + transport config. */
-export type CreateRelayerFn = (
-  chain: ExtendedFhevmInstanceConfig,
-  transport: TransportConfig,
-) => RelayerSDK;
+/**
+ * Base transport config. `buildZamaConfig` works with this type.
+ *
+ * Groups chains by transport reference identity, calls `createWorker`
+ * once per group with all chain configs, then calls `createRelayer`
+ * per chain with the shared worker.
+ */
+export interface TransportConfig {
+  readonly type: string;
+  /** Per-chain FHE instance overrides (e.g. relayerUrl). */
+  chain?: Partial<ExtendedFhevmInstanceConfig>;
+  /** Create a shared worker/pool for all chains in this transport group. */
+  // oxlint-disable-next-line typescript-eslint/no-explicit-any -- bivariant: subtypes narrow this
+  readonly createWorker?: (chains: ExtendedFhevmInstanceConfig[]) => any;
+  /** Create a single-chain relayer. `worker` is the return value of `createWorker`. */
+  readonly createRelayer: (
+    chain: ExtendedFhevmInstanceConfig,
+    // oxlint-disable-next-line typescript-eslint/no-explicit-any -- bivariant: subtypes narrow this
+    worker: any,
+  ) => RelayerSDK;
+}
 
-// ── Transport types ──────────────────────────────────────────────────────────
-
-/** Tagged transport: routes to RelayerWeb (browser). */
-export interface WebTransportConfig {
+/** Web transport — narrows worker type to `RelayerWorkerClient`. */
+export interface WebTransportConfig extends TransportConfig {
   readonly type: "web";
-  /** Per-chain FHE instance overrides (e.g. relayerUrl, network). */
-  chain?: Partial<ExtendedFhevmInstanceConfig>;
-  /** Shared relayer-pool options. Reference identity controls grouping: chains
-   * that share the same `options` object reuse a single relayer instance. */
-  options?: WebRelayerOptions;
-  /** @internal */
-  readonly createRelayer: CreateRelayerFn;
+  readonly createWorker: (chains: ExtendedFhevmInstanceConfig[]) => RelayerWorkerClient;
+  readonly createRelayer: (
+    chain: ExtendedFhevmInstanceConfig,
+    worker: RelayerWorkerClient,
+  ) => RelayerWeb;
 }
 
-/** Tagged transport: routes to RelayerNode (Node.js). */
-export interface NodeTransportConfig {
-  readonly type: "node";
-  /** Per-chain FHE instance overrides. */
-  chain?: Partial<ExtendedFhevmInstanceConfig>;
-  /** Shared relayer-pool options. Reference identity controls grouping. */
-  options?: NodeRelayerOptions;
-  /** @internal */
-  readonly createRelayer: CreateRelayerFn;
-}
-
-/** Tagged transport: routes to RelayerCleartext (local dev / testnets). */
-export interface CleartextTransportConfig {
+/** Cleartext transport — no worker, returns `RelayerCleartext`. */
+export interface CleartextTransportConfig extends TransportConfig {
   readonly type: "cleartext";
-  chain: CleartextChainConfig;
-  /** @internal */
-  readonly createRelayer: CreateRelayerFn;
+  readonly createRelayer: (chain: ExtendedFhevmInstanceConfig, worker: unknown) => RelayerCleartext;
 }
-
-/** A per-chain transport entry. */
-export type TransportConfig = WebTransportConfig | NodeTransportConfig | CleartextTransportConfig;
 
 // ── Transport factories ──────────────────────────────────────────────────────
 
 /**
  * Browser transport — routes to RelayerWeb (Web Worker + WASM).
  *
- * @param chain - Per-chain FHE instance overrides (e.g. `relayerUrl`, `network`).
- * @param options - Shared relayer-pool options (e.g. `threads`, `logger`). Chains
- *   that pass the *same* `options` object reuse a single relayer instance.
+ * @param chain - Per-chain FHE instance overrides (e.g. `relayerUrl`).
+ * @param options - Worker options (threads, security, logger, storage).
  *
  * @example
  * ```ts
  * transports: {
  *   [sepolia.id]: web({ relayerUrl: "/api/relayer/11155111" }),
- *   [mainnet.id]: web({ relayerUrl: "/api/relayer/1" }, sharedOpts),
+ *   [mainnet.id]: web({ relayerUrl: "/api/relayer/1" }),
  * }
  * ```
  */
@@ -88,14 +79,17 @@ export function web(
   return {
     type: "web",
     chain,
-    options,
-    createRelayer: (resolvedChain, transport) => {
-      assertCondition(transport.type === "web", "Transport config must be of type `web`");
-      return new RelayerWeb({
-        chain: { ...resolvedChain, ...transport.chain },
-        ...transport.options,
-      });
-    },
+    createWorker: (chains) =>
+      new RelayerWorkerClient({
+        cdnUrl: CDN_URL,
+        chains,
+        csrfToken: options?.security?.getCsrfToken?.() ?? "",
+        integrity: options?.security?.integrityCheck === false ? undefined : CDN_INTEGRITY,
+        logger: options?.logger,
+        thread: options?.threads,
+      }),
+    createRelayer: (resolvedChain, worker) =>
+      new RelayerWeb({ chain: resolvedChain, worker, ...options }),
   };
 }
 
@@ -111,15 +105,7 @@ export function cleartext(chain: CleartextChainConfig): CleartextTransportConfig
   return {
     type: "cleartext",
     chain,
-    createRelayer: (resolvedChain, transport) => {
-      assertCondition(
-        transport.type === "cleartext",
-        "Transport config must be of type `cleartext`",
-      );
-      return new RelayerCleartext({
-        ...resolvedChain,
-        ...transport.chain,
-      } as CleartextConfig);
-    },
+    createRelayer: (resolvedChain) =>
+      new RelayerCleartext({ ...resolvedChain, ...chain } as CleartextConfig),
   };
 }

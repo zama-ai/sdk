@@ -1,11 +1,9 @@
 export { web, cleartext } from "./transports";
 export type {
-  WebTransportConfig,
-  NodeTransportConfig,
-  CleartextTransportConfig,
   TransportConfig,
+  WebTransportConfig,
+  CleartextTransportConfig,
   WebRelayerOptions,
-  NodeRelayerOptions,
   CleartextChainConfig,
 } from "./transports";
 
