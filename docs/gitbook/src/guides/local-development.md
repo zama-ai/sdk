@@ -21,7 +21,7 @@ Cleartext mode is blocked on Ethereum Mainnet (chain 1) and Sepolia (chain 11155
 npm install @zama-fhe/sdk viem
 ```
 
-### 2. Use the `cleartext()` transport with `createConfig`
+### 2. Use the `cleartext()` relayer with `createConfig`
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
@@ -59,32 +59,7 @@ await token.shield(1000n);
 const balance = await token.balanceOf();
 ```
 
-### 5. (Optional) Use the standalone `RelayerCleartext` class
-
-If you prefer the manual relayer approach (e.g. for test fixtures), you can still use `RelayerCleartext` directly:
-
-```ts
-import { RelayerCleartext, hardhatCleartextConfig } from "@zama-fhe/sdk/cleartext";
-import { ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
-
-const relayer = new RelayerCleartext(hardhatCleartextConfig);
-
-const sdk = new ZamaSDK({
-  relayer,
-  signer,
-  storage: memoryStorage,
-});
-```
-
-Zama provides a cleartext deployment for the Hoodi testnet, via `hoodiCleartextConfig`:
-
-```ts
-import { RelayerCleartext, hoodiCleartextConfig } from "@zama-fhe/sdk/cleartext";
-
-const relayer = new RelayerCleartext(hoodiCleartextConfig);
-```
-
-### 6. (Optional) Create a custom config for your own chain
+### 5. (Optional) Create a custom config for your own chain
 
 If you deploy FHEVM contracts on a custom chain or at different addresses than the default ones, pass all required fields to the `cleartext()` transport:
 
