@@ -1371,6 +1371,7 @@ export class ZamaSDK {
     dispose(): void;
     // @internal
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
+    encrypt(params: EncryptParams): Promise<EncryptResult>;
     onIdentityChange(listener: SignerIdentityListener): () => void;
     // Warning: (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
     //

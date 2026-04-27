@@ -133,34 +133,12 @@ export class Token extends ReadonlyToken {
       await this.#assertConfidentialBalance(amount);
     }
 
-    let handles: Uint8Array[];
-    let inputProof: Uint8Array;
-    const t0 = Date.now();
-    try {
-      this.emit({ type: ZamaSDKEvents.EncryptStart });
-      ({ handles, inputProof } = await this.sdk.relayer.encrypt({
-        values: [{ value: amount, type: "euint64" }],
-        contractAddress: this.address,
-        userAddress: await this.sdk.signer.getAddress(),
-      }));
-      this.emit({
-        type: ZamaSDKEvents.EncryptEnd,
-        durationMs: Date.now() - t0,
-      });
-      safeCallback(() => onEncryptComplete?.());
-    } catch (error) {
-      this.emit({
-        type: ZamaSDKEvents.EncryptError,
-        error: toError(error),
-        durationMs: Date.now() - t0,
-      });
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new EncryptionFailedError("Failed to encrypt transfer amount", {
-        cause: error,
-      });
-    }
+    const { handles, inputProof } = await this.sdk.encrypt({
+      values: [{ value: amount, type: "euint64" }],
+      contractAddress: this.address,
+      userAddress: await this.sdk.signer.getAddress(),
+    });
+    safeCallback(() => onEncryptComplete?.());
 
     if (handles.length === 0) {
       throw new EncryptionFailedError("Encryption returned no handles");
@@ -216,34 +194,12 @@ export class Token extends ReadonlyToken {
     const normalizedFrom = getAddress(from);
     const normalizedTo = getAddress(to);
 
-    let handles: Uint8Array[];
-    let inputProof: Uint8Array;
-    const t0 = Date.now();
-    try {
-      this.emit({ type: ZamaSDKEvents.EncryptStart });
-      ({ handles, inputProof } = await this.sdk.relayer.encrypt({
-        values: [{ value: amount, type: "euint64" }],
-        contractAddress: this.address,
-        userAddress: normalizedFrom,
-      }));
-      this.emit({
-        type: ZamaSDKEvents.EncryptEnd,
-        durationMs: Date.now() - t0,
-      });
-      safeCallback(() => callbacks?.onEncryptComplete?.());
-    } catch (error) {
-      this.emit({
-        type: ZamaSDKEvents.EncryptError,
-        error: toError(error),
-        durationMs: Date.now() - t0,
-      });
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new EncryptionFailedError("Failed to encrypt transferFrom amount", {
-        cause: error,
-      });
-    }
+    const { handles, inputProof } = await this.sdk.encrypt({
+      values: [{ value: amount, type: "euint64" }],
+      contractAddress: this.address,
+      userAddress: normalizedFrom,
+    });
+    safeCallback(() => callbacks?.onEncryptComplete?.());
 
     if (handles.length === 0) {
       throw new EncryptionFailedError("Encryption returned no handles");
@@ -436,33 +392,11 @@ export class Token extends ReadonlyToken {
     await this.sdk.requireChainAlignment("unwrap");
     const userAddress = await this.sdk.signer.getAddress();
 
-    let handles: Uint8Array[];
-    let inputProof: Uint8Array;
-    const t0 = Date.now();
-    try {
-      this.emit({ type: ZamaSDKEvents.EncryptStart });
-      ({ handles, inputProof } = await this.sdk.relayer.encrypt({
-        values: [{ value: amount, type: "euint64" }],
-        contractAddress: this.wrapper,
-        userAddress,
-      }));
-      this.emit({
-        type: ZamaSDKEvents.EncryptEnd,
-        durationMs: Date.now() - t0,
-      });
-    } catch (error) {
-      this.emit({
-        type: ZamaSDKEvents.EncryptError,
-        error: toError(error),
-        durationMs: Date.now() - t0,
-      });
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new EncryptionFailedError("Failed to encrypt unshield amount", {
-        cause: error,
-      });
-    }
+    const { handles, inputProof } = await this.sdk.encrypt({
+      values: [{ value: amount, type: "euint64" }],
+      contractAddress: this.wrapper,
+      userAddress,
+    });
 
     if (handles.length === 0) {
       throw new EncryptionFailedError("Encryption returned no handles");
