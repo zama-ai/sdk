@@ -1,7 +1,6 @@
 import { render } from "@testing-library/react";
 import type { Address } from "@zama-fhe/sdk";
 import type { Config } from "wagmi";
-import { vi } from "vitest";
 import { describe, expect, it } from "../test-fixtures";
 import type { ZamaProviderProps } from "../provider";
 import { ZamaWagmiProvider } from "../wagmi/zama-wagmi-provider";

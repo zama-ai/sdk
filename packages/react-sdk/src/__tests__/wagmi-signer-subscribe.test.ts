@@ -73,30 +73,22 @@ describe("WagmiSigner.subscribe", () => {
     },
   );
 
-  wit("seeds the currently connected identity", ({ wagmiSigner, onIdentityChange }) => {
+  wit("does not seed the currently connected identity", ({ wagmiSigner, onIdentityChange }) => {
     mockGetConnection.mockReturnValue({ status: "connected", address: ADDR_A, chainId: 1 });
 
     wagmiSigner.subscribe(onIdentityChange);
 
-    expect(onIdentityChange).toHaveBeenCalledOnce();
-    expect(onIdentityChange).toHaveBeenCalledWith({
-      previous: undefined,
-      next: { address: ADDR_A, chainId: 1 },
-    });
+    expect(onIdentityChange).not.toHaveBeenCalled();
   });
 
   wit(
-    "seeds a reconnecting identity when wagmi has persisted state",
+    "does not seed a reconnecting identity when wagmi has persisted state",
     ({ wagmiSigner, onIdentityChange }) => {
       mockGetConnection.mockReturnValue({ status: "reconnecting", address: ADDR_A, chainId: 1 });
 
       wagmiSigner.subscribe(onIdentityChange);
 
-      expect(onIdentityChange).toHaveBeenCalledOnce();
-      expect(onIdentityChange).toHaveBeenCalledWith({
-        previous: undefined,
-        next: { address: ADDR_A, chainId: 1 },
-      });
+      expect(onIdentityChange).not.toHaveBeenCalled();
     },
   );
 

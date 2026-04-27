@@ -89,8 +89,6 @@ export class WagmiSigner implements GenericSigner {
       }
     }
 
-    emitIfChanged(undefined, identityFromConnection(getConnection(this.#config)));
-
     return watchConnection(this.#config, {
       onChange(connection, prevConnection) {
         emitIfChanged(identityFromConnection(prevConnection), identityFromConnection(connection));
