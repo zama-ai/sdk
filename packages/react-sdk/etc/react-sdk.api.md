@@ -29,7 +29,6 @@ import { FinalizeUnwrapParams } from '@zama-fhe/sdk/query';
 import { PaginatedResult } from '@zama-fhe/sdk';
 import { PropsWithChildren } from 'react';
 import { PublicKeyData } from '@zama-fhe/sdk';
-import { QueryKey } from '@tanstack/react-query';
 import { ReadonlyToken } from '@zama-fhe/sdk';
 import { ResumeUnshieldParams } from '@zama-fhe/sdk/query';
 import { RevokeDelegationParams } from '@zama-fhe/sdk/query';
@@ -50,17 +49,6 @@ import { UserDecryptQueryConfig } from '@zama-fhe/sdk/query';
 import { ZamaConfig } from '@zama-fhe/sdk';
 import { ZamaSDK } from '@zama-fhe/sdk';
 import { ZKProofLike } from '@zama-fhe/sdk';
-
-// @public (undocumented)
-export type OptimisticBalanceSnapshot = [QueryKey, bigint | undefined][];
-
-// @public
-export interface OptimisticMutateContext {
-    // (undocumented)
-    callerContext?: unknown;
-    // (undocumented)
-    snapshot: OptimisticBalanceSnapshot;
-}
 
 // @public
 export function useAllow(options?: UseMutationOptions<void, Error, Address[]>): _$_tanstack_react_query0.UseMutationResult<void, Error, `0x${string}`[], unknown>;

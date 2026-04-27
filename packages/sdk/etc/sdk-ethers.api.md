@@ -15,7 +15,6 @@ import { EIP1193EventMap } from 'viem';
 import { EIP1193Events } from 'viem';
 import { EIP1193Provider } from 'viem';
 import { ethers } from 'ethers';
-import { FhevmInstanceConfig } from '@zama-fhe/relayer-sdk/bundle';
 import { Hex } from 'viem';
 import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
 import { KeypairType } from '@zama-fhe/relayer-sdk/bundle';
