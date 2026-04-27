@@ -23,7 +23,7 @@ interface GenericSigner {
   writeContract(config: WriteContractConfig): Promise<Hex>;
   readContract(config: ReadContractConfig): Promise<unknown>;
   waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
-  subscribe?(callbacks: SignerLifecycleCallbacks): () => void;
+  subscribe?(onIdentityChange: SignerIdentityListener): () => void;
 }
 ```
 
@@ -107,16 +107,17 @@ Wait for a transaction to be mined and return the receipt.
 ### subscribe (optional)
 
 ```ts
-subscribe?(callbacks: SignerLifecycleCallbacks): () => void
+subscribe?(onIdentityChange: SignerIdentityListener): () => void
 ```
 
-Subscribe to wallet lifecycle events (disconnect, account change, chain change). Returns an unsubscribe function.
+Subscribe to wallet identity transitions (connect, disconnect, account change, chain change). Returns an unsubscribe function.
 
-The SDK calls `subscribe()` during initialization if it exists. The callbacks object contains:
+The SDK calls `subscribe()` during initialization if it exists. The listener receives a transition object:
 
-- `onDisconnect()` -- called when the wallet disconnects or locks. The SDK revokes the session.
-- `onAccountChange()` -- called when the user switches accounts. The SDK revokes the previous account's session.
-- `onChainChange(newChainId: number)` -- called when the user switches chains.
+- `previous` -- the previous `{ address, chainId }` identity, when one was known.
+- `next` -- the next `{ address, chainId }` identity, when the wallet is connected.
+
+When `previous` is present, the SDK revokes that previous identity's session signature and clears that requester's decrypt cache.
 
 {% hint style="info" %}
 Implementing `subscribe()` is optional but recommended. Without it, stale sessions persist until TTL expiry, which can create confusing UX when users switch accounts. See [`WagmiSigner`](https://github.com/zama-ai/token-sdk/blob/main/packages/react-sdk/src/wagmi/wagmi-signer.ts) for a reference implementation.

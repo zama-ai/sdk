@@ -103,7 +103,7 @@ export interface ConfidentialApproveParams {
 // @public (undocumented)
 export interface ConfidentialBalanceQueryConfig {
     // (undocumented)
-    owner?: Address;
+    account?: Address;
     // (undocumented)
     query?: Record<string, unknown>;
     // (undocumented)
@@ -116,7 +116,7 @@ export function confidentialBalanceQueryOptions(token: ReadonlyToken, config: Co
 // @public (undocumented)
 export interface ConfidentialBalancesQueryConfig {
     // (undocumented)
-    owner?: Address;
+    account?: Address;
     // (undocumented)
     query?: Record<string, unknown>;
 }
@@ -277,7 +277,7 @@ export class CredentialsManager extends BaseCredentialsManager<StoredCredentials
     isAllowed(contractAddresses: [Address, ...Address[]]): Promise<boolean>;
     isExpired(contractAddress?: Address): Promise<boolean>;
     revoke(...contractAddresses: Address[]): Promise<void>;
-    revokeByKey(key: string): Promise<void>;
+    revokeFor(identity: SignerIdentity): Promise<void>;
     // Warning: (ae-forgotten-export) The symbol "SigningMeta" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
@@ -508,7 +508,7 @@ export interface GenericSigner {
     getAddress(): Promise<Address>;
     getChainId(): Promise<number>;
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-    subscribe?: (callbacks: SignerLifecycleCallbacks) => () => void;
+    subscribe?: (onIdentityChange: SignerIdentityListener) => () => void;
     // Warning: (ae-forgotten-export) The symbol "ContractAbi" needs to be exported by the entry point index.d.ts
     // Warning: (ae-forgotten-export) The symbol "WriteFunctionName" needs to be exported by the entry point index.d.ts
     // Warning: (ae-forgotten-export) The symbol "WriteContractArgs" needs to be exported by the entry point index.d.ts
@@ -693,11 +693,11 @@ export class ReadonlyToken {
     readonly address: Address;
     allow(): Promise<void>;
     static allow(...tokens: ReadonlyToken[]): Promise<void>;
-    allowance(wrapper: Address, owner?: Address): Promise<bigint>;
-    balanceOf(owner?: Address): Promise<bigint>;
-    static batchBalancesOf(tokens: ReadonlyToken[], owner?: Address): Promise<BatchBalancesResult>;
+    allowance(wrapper: Address, owner: Address): Promise<bigint>;
+    balanceOf(owner: Address): Promise<bigint>;
+    static batchBalancesOf(tokens: ReadonlyToken[], owner: Address): Promise<BatchBalancesResult>;
     static batchDecryptBalancesAs(tokens: ReadonlyToken[], options: BatchDecryptAsOptions): Promise<Map<Address, bigint>>;
-    confidentialBalanceOf(owner?: Address): Promise<Handle>;
+    confidentialBalanceOf(owner: Address): Promise<Handle>;
     decimals(): Promise<number>;
     decryptBalanceAs(input: {
         delegatorAddress: Address;
@@ -813,11 +813,23 @@ export interface ShieldSubmittedEvent extends BaseEvent {
 export function signerAddressQueryOptions(signer: GenericSigner): QueryFactoryOptions<Address, Error, Address, ReturnType<typeof zamaQueryKeys.signerAddress.scope>>;
 
 // @public
-export interface SignerLifecycleCallbacks {
-    onAccountChange?: (newAddress: Address) => void;
-    onChainChange?: (newChainId: number) => void;
-    onDisconnect?: () => void;
+export interface SignerIdentity {
+    // (undocumented)
+    address: Address;
+    // (undocumented)
+    chainId: number;
 }
+
+// @public
+export interface SignerIdentityChange {
+    // (undocumented)
+    next?: SignerIdentity;
+    // (undocumented)
+    previous?: SignerIdentity;
+}
+
+// @public
+export type SignerIdentityListener = (change: SignerIdentityChange) => void;
 
 // @public
 export interface StoredCredentials {
@@ -853,7 +865,7 @@ export class Token extends ReadonlyToken {
         expirationDate?: Date;
     }): Promise<TransactionResult>;
     finalizeUnwrap(unwrapRequestIdOrAmount: Handle): Promise<TransactionResult>;
-    isApproved(spender: Address, holder?: Address): Promise<boolean>;
+    isApproved(spender: Address, holder: Address): Promise<boolean>;
     resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     revokeDelegation(input: {
         delegateAddress: Address;
@@ -1359,6 +1371,7 @@ export class ZamaSDK {
     dispose(): void;
     // @internal
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
+    onIdentityChange(listener: SignerIdentityListener): () => void;
     // Warning: (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
@@ -1394,7 +1407,6 @@ export interface ZamaSDKConfig {
     sessionStorage?: GenericStorage;
     sessionTTL?: number | "infinite";
     signer: GenericSigner;
-    signerLifecycleCallbacks?: SignerLifecycleCallbacks;
     storage: GenericStorage;
 }
 

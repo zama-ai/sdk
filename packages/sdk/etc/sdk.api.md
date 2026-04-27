@@ -5978,7 +5978,7 @@ export class CredentialsManager extends BaseCredentialsManager<StoredCredentials
     isAllowed(contractAddresses: [Address, ...Address[]]): Promise<boolean>;
     isExpired(contractAddress?: Address): Promise<boolean>;
     revoke(...contractAddresses: Address[]): Promise<void>;
-    revokeByKey(key: string): Promise<void>;
+    revokeFor(identity: SignerIdentity): Promise<void>;
     // Warning: (ae-forgotten-export) The symbol "SigningMeta" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
@@ -7625,7 +7625,7 @@ export interface GenericSigner {
     getAddress(): Promise<Address>;
     getChainId(): Promise<number>;
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-    subscribe?: (callbacks: SignerLifecycleCallbacks) => () => void;
+    subscribe?: (onIdentityChange: SignerIdentityListener) => () => void;
     writeContract<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex>;
 }
 
@@ -13155,11 +13155,11 @@ export class ReadonlyToken {
     readonly address: Address;
     allow(): Promise<void>;
     static allow(...tokens: ReadonlyToken[]): Promise<void>;
-    allowance(wrapper: Address, owner?: Address): Promise<bigint>;
-    balanceOf(owner?: Address): Promise<bigint>;
-    static batchBalancesOf(tokens: ReadonlyToken[], owner?: Address): Promise<BatchBalancesResult>;
+    allowance(wrapper: Address, owner: Address): Promise<bigint>;
+    balanceOf(owner: Address): Promise<bigint>;
+    static batchBalancesOf(tokens: ReadonlyToken[], owner: Address): Promise<BatchBalancesResult>;
     static batchDecryptBalancesAs(tokens: ReadonlyToken[], options: BatchDecryptAsOptions): Promise<Map<Address, bigint>>;
-    confidentialBalanceOf(owner?: Address): Promise<Handle>;
+    confidentialBalanceOf(owner: Address): Promise<Handle>;
     decimals(): Promise<number>;
     decryptBalanceAs(input: {
         delegatorAddress: Address;
@@ -14782,11 +14782,23 @@ export interface ShieldSubmittedEvent extends BaseEvent {
 }
 
 // @public
-export interface SignerLifecycleCallbacks {
-    onAccountChange?: (newAddress: Address) => void;
-    onChainChange?: (newChainId: number) => void;
-    onDisconnect?: () => void;
+export interface SignerIdentity {
+    // (undocumented)
+    address: Address;
+    // (undocumented)
+    chainId: number;
 }
+
+// @public
+export interface SignerIdentityChange {
+    // (undocumented)
+    next?: SignerIdentity;
+    // (undocumented)
+    previous?: SignerIdentity;
+}
+
+// @public
+export type SignerIdentityListener = (change: SignerIdentityChange) => void;
 
 // @public
 export class SigningFailedError extends ZamaError {
@@ -14993,7 +15005,7 @@ export class Token extends ReadonlyToken {
         expirationDate?: Date;
     }): Promise<TransactionResult>;
     finalizeUnwrap(unwrapRequestIdOrAmount: Handle): Promise<TransactionResult>;
-    isApproved(spender: Address, holder?: Address): Promise<boolean>;
+    isApproved(spender: Address, holder: Address): Promise<boolean>;
     resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     revokeDelegation(input: {
         delegateAddress: Address;
@@ -20126,6 +20138,7 @@ export class ZamaSDK {
     dispose(): void;
     // @internal
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
+    onIdentityChange(listener: SignerIdentityListener): () => void;
     // (undocumented)
     readonly provider: GenericProvider;
     publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
@@ -20156,7 +20169,6 @@ export interface ZamaSDKConfig {
     sessionStorage?: GenericStorage;
     sessionTTL?: number | "infinite";
     signer: GenericSigner;
-    signerLifecycleCallbacks?: SignerLifecycleCallbacks;
     storage: GenericStorage;
 }
 

@@ -65,12 +65,13 @@ export function useConfidentialApprove(config: UseZamaConfig, options?: UseMutat
 // @public
 export function useConfidentialBalance(config: UseConfidentialBalanceConfig, options?: UseConfidentialBalanceOptions): _$_tanstack_react_query0.UseQueryResult<bigint, Error>;
 
-// @public
+// @public (undocumented)
 export interface UseConfidentialBalanceConfig {
+    account: Address | undefined;
     tokenAddress: Address;
 }
 
-// @public
+// @public (undocumented)
 export interface UseConfidentialBalanceOptions extends Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn" | "enabled"> {
     enabled?: boolean;
 }
@@ -78,12 +79,13 @@ export interface UseConfidentialBalanceOptions extends Omit<UseQueryOptions<bigi
 // @public
 export function useConfidentialBalances(config: UseConfidentialBalancesConfig, options?: UseConfidentialBalancesOptions): _$_tanstack_react_query0.UseQueryResult<BatchBalancesResult, Error>;
 
-// @public
+// @public (undocumented)
 export interface UseConfidentialBalancesConfig {
+    account: Address | undefined;
     tokenAddresses: Address[];
 }
 
-// @public
+// @public (undocumented)
 export interface UseConfidentialBalancesOptions extends Omit<UseQueryOptions<BatchBalancesResult>, "queryKey" | "queryFn" | "enabled"> {
     enabled?: boolean;
 }
@@ -91,9 +93,9 @@ export interface UseConfidentialBalancesOptions extends Omit<UseQueryOptions<Bat
 // @public
 export function useConfidentialIsApproved(config: UseConfidentialIsApprovedConfig, options?: Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">): _$_tanstack_react_query0.UseQueryResult<boolean, Error>;
 
-// @public
+// @public (undocumented)
 export interface UseConfidentialIsApprovedConfig {
-    holder?: Address;
+    holder: Address | undefined;
     spender: Address | undefined;
     tokenAddress: Address | undefined;
 }
@@ -101,10 +103,11 @@ export interface UseConfidentialIsApprovedConfig {
 // @public
 export function useConfidentialIsApprovedSuspense(config: UseConfidentialIsApprovedSuspenseConfig): _$_tanstack_react_query0.UseSuspenseQueryResult<boolean, Error>;
 
-// @public
-export interface UseConfidentialIsApprovedSuspenseConfig extends UseZamaConfig {
-    holder?: Address;
+// @public (undocumented)
+export interface UseConfidentialIsApprovedSuspenseConfig {
+    holder: Address;
     spender: Address;
+    tokenAddress: Address;
 }
 
 // @public
@@ -288,14 +291,22 @@ export function useTotalSupplySuspense(tokenAddress: Address): _$_tanstack_react
 // @public
 export function useUnderlyingAllowance(config: UseUnderlyingAllowanceConfig, options?: Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn">): _$_tanstack_react_query0.UseQueryResult<bigint, Error>;
 
-// @public
+// @public (undocumented)
 export interface UseUnderlyingAllowanceConfig {
+    owner: Address | undefined;
     tokenAddress: Address;
     wrapperAddress: Address;
 }
 
 // @public
-export function useUnderlyingAllowanceSuspense(config: UseUnderlyingAllowanceConfig): _$_tanstack_react_query0.UseSuspenseQueryResult<bigint, Error>;
+export function useUnderlyingAllowanceSuspense(config: UseUnderlyingAllowanceSuspenseConfig): _$_tanstack_react_query0.UseSuspenseQueryResult<bigint, Error>;
+
+// @public (undocumented)
+export interface UseUnderlyingAllowanceSuspenseConfig {
+    owner: Address;
+    tokenAddress: Address;
+    wrapperAddress: Address;
+}
 
 // @public
 export function useUnshield(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, UnshieldParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, UnshieldParams, `0x${string}`>;

@@ -16,7 +16,7 @@ import { ReadContractArgs } from '@zama-fhe/sdk';
 import { ReadContractConfig } from '@zama-fhe/sdk';
 import { ReadContractReturnType } from '@zama-fhe/sdk';
 import { ReadFunctionName } from '@zama-fhe/sdk';
-import { SignerLifecycleCallbacks } from '@zama-fhe/sdk';
+import { SignerIdentityListener } from '@zama-fhe/sdk';
 import { TransactionReceipt } from '@zama-fhe/sdk';
 import { WriteContractArgs } from '@zama-fhe/sdk';
 import { WriteContractConfig } from '@zama-fhe/sdk';
@@ -54,7 +54,7 @@ export class WagmiSigner implements GenericSigner {
     // (undocumented)
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
     // (undocumented)
-    subscribe(input: SignerLifecycleCallbacks): () => void;
+    subscribe(onIdentityChange: SignerIdentityListener): () => void;
     // (undocumented)
     writeContract<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex>;
 }

@@ -5,7 +5,7 @@ import { balanceOfContract, decimalsContract, symbolContract } from "@zama-fhe/s
 import type { Address } from "@zama-fhe/sdk";
 import { useState } from "react";
 import { formatUnits } from "viem";
-import { useConnection, useReadContracts } from "wagmi";
+import { useAccount, useConnection, useReadContracts } from "wagmi";
 
 function TokenRow({
   address,
@@ -113,9 +113,11 @@ export function TokenTable({
   }>;
 }) {
   const [revealed, setRevealed] = useState(false);
+  const { address } = useAccount();
   const { mutate: allow } = useAllow();
   const { data, isFetching, isLoading } = useConfidentialBalances({
     tokenAddresses: revealed ? tokenAddresses : [],
+    account: address,
   });
 
   return (

@@ -68,6 +68,7 @@ export {
   useUnderlyingAllowance,
   useUnderlyingAllowanceSuspense,
   type UseUnderlyingAllowanceConfig,
+  type UseUnderlyingAllowanceSuspenseConfig,
 } from "./shield/use-underlying-allowance";
 export {
   useWrapperDiscovery,

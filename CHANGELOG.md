@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.0.0-alpha.18](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.17...v3.0.0-alpha.18) (2026-04-24)
+
+### Features
+
+- **sdk:** require explicit owner on token reads ([#282](https://github.com/zama-ai/sdk/issues/282)) ([82e6487]())
+
+## [3.0.0-alpha.17](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.16...v3.0.0-alpha.17) (2026-04-24)
+
+### Features
+
+- remove auto-signer resolving in hooks ([#281](https://github.com/zama-ai/sdk/issues/281)) ([6c74d9c]())
+
 ## [3.0.0-alpha.16](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.15...v3.0.0-alpha.16) (2026-04-24)
 
 ### Features

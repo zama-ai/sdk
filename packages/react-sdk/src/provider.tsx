@@ -41,18 +41,6 @@ export function ZamaProvider({ children, config }: ZamaProviderProps) {
     onEventRef.current = config.onEvent;
   });
 
-  const signerLifecycleCallbacks = useMemo(
-    () =>
-      config.signer?.subscribe
-        ? {
-            onDisconnect: () => invalidateWalletLifecycleQueries(queryClient),
-            onAccountChange: () => invalidateWalletLifecycleQueries(queryClient),
-            onChainChange: () => invalidateWalletLifecycleQueries(queryClient),
-          }
-        : undefined,
-    [queryClient, config.signer],
-  );
-
   const sdk = useMemo(
     () =>
       new ZamaSDK({
@@ -66,11 +54,18 @@ export function ZamaProvider({ children, config }: ZamaProviderProps) {
         sessionTTL: config.sessionTTL,
         registryTTL: config.registryTTL,
         onEvent: onEventRef.current,
-        signerLifecycleCallbacks,
       }),
-    [config, signerLifecycleCallbacks],
+    [config],
   );
 
+  // SDK internally does credential/cache cleanup. React layer needs to handle query invalidation.
+  useEffect(
+    () => sdk.onIdentityChange(() => invalidateWalletLifecycleQueries(queryClient)),
+    [sdk, queryClient],
+  );
+
+  // Clean up SDK-owned signer subscriptions on unmount without terminating
+  // the caller-owned relayer. dispose() is idempotent.
   useEffect(() => () => sdk.dispose(), [sdk]);
 
   return <ZamaSDKContext.Provider value={sdk}>{children}</ZamaSDKContext.Provider>;

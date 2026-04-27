@@ -64,11 +64,38 @@ describe("Token.shield", () => {
     expect(signer.writeContract).toHaveBeenCalled();
   });
 
+  it("awaits approval receipt before submitting the wrap TX", async ({
+    token,
+    signer,
+    provider,
+  }) => {
+    vi.mocked(provider.readContract)
+      .mockResolvedValueOnce(UNDERLYING) // underlying()
+      .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
+      .mockResolvedValueOnce(0n); // allowance — forces approval path
+
+    const callOrder: string[] = [];
+
+    vi.mocked(signer.writeContract).mockImplementation(async (config) => {
+      callOrder.push(`write:${(config as { functionName: string }).functionName}`);
+      return "0xtxhash";
+    });
+    vi.mocked(provider.waitForTransactionReceipt).mockImplementation(async () => {
+      callOrder.push("receipt");
+      return { logs: [] };
+    });
+
+    await token.shield(500n);
+
+    expect(callOrder).toEqual(["write:approve", "receipt", "write:wrap", "receipt"]);
+  });
+
   it("performs full shield flow with exact approval", async ({
     token,
     signer,
     relayer,
     handle: fixtureHandle,
+    userAddress,
     provider,
   }) => {
     vi.mocked(provider.readContract)
@@ -91,10 +118,10 @@ describe("Token.shield", () => {
       expect.objectContaining({ functionName: "wrap" }),
     );
 
-    const handle = await token.confidentialBalanceOf();
+    const handle = await token.confidentialBalanceOf(userAddress);
     expect(handle).toBe(fixtureHandle);
 
-    const balance = await token.balanceOf();
+    const balance = await token.balanceOf(userAddress);
     expect(balance).toBe(1000n);
     expect(relayer.userDecrypt).toHaveBeenCalledWith(
       expect.objectContaining({ handles: [fixtureHandle] }),

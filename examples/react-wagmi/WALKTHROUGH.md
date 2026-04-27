@@ -75,9 +75,9 @@ to overwrite the encrypted keypair, forcing re-signing on every balance decrypt.
 
 ## 2. Why `WagmiSigner` is different from `EthersSigner` / `ViemSigner`
 
-`WagmiSigner` has a `subscribe({ onAccountChange, onChainChange, onDisconnect })` method
-backed by `watchConnection` from wagmi. The SDK uses this internally to update its state
-whenever the account or chain changes.
+`WagmiSigner` has a `subscribe(onIdentityChange)` method backed by `watchConnection`
+from wagmi. The SDK uses this internally to update its state whenever the account or
+chain changes.
 
 **Consequences:**
 

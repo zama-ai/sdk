@@ -9,7 +9,12 @@ export type {
   WriteContractConfig,
 } from "./contract";
 export type { TransactionReceipt, TransactionResult } from "./transaction";
-export type { GenericSigner, SignerLifecycleCallbacks } from "./signer";
+export type {
+  GenericSigner,
+  SignerIdentity,
+  SignerIdentityChange,
+  SignerIdentityListener,
+} from "./signer";
 export type { GenericProvider } from "./provider";
 export type { GenericStorage } from "./storage";
 export type { StoredCredentials, DelegatedStoredCredentials } from "./credentials";

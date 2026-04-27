@@ -5,6 +5,7 @@ import { getAddress, type Address } from "viem";
 
 const TOKEN2 = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
 const VALID_HANDLE2 = ("0x" + "cd".repeat(32)) as Address;
+const OWNER = "0x3F3f3f3F3F3f3F3f3F3f3f3F3F3f3F3f3f3f3f3F" as Address;
 
 describe("ReadonlyToken", () => {
   describe("balanceOf", () => {
@@ -13,7 +14,7 @@ describe("ReadonlyToken", () => {
       provider,
     }) => {
       vi.mocked(provider.readContract).mockResolvedValue(ZERO_HANDLE);
-      const balance = await readonlyToken.balanceOf();
+      const balance = await readonlyToken.balanceOf(OWNER);
 
       expect(balance).toBe(0n);
       expect(readonlyToken.sdk.relayer.userDecrypt).not.toHaveBeenCalled();
@@ -30,7 +31,7 @@ describe("ReadonlyToken", () => {
         [handle]: 1000n,
       });
 
-      const balance = await readonlyToken.balanceOf();
+      const balance = await readonlyToken.balanceOf(OWNER);
 
       expect(balance).toBe(1000n);
       expect(readonlyToken.sdk.relayer.userDecrypt).toHaveBeenCalledWith(
@@ -45,7 +46,7 @@ describe("ReadonlyToken", () => {
       vi.mocked(provider.readContract).mockResolvedValue(handle);
       vi.mocked(readonlyToken.sdk.relayer.userDecrypt).mockRejectedValue(new Error("relayer down"));
 
-      await expect(readonlyToken.balanceOf()).rejects.toBeInstanceOf(ZamaError);
+      await expect(readonlyToken.balanceOf(OWNER)).rejects.toBeInstanceOf(ZamaError);
     });
   });
 
@@ -58,6 +59,7 @@ describe("ReadonlyToken", () => {
 
       const result = await readonlyToken.allowance(
         "0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D" as Address,
+        OWNER,
       );
 
       expect(result).toBe(500n);
@@ -75,7 +77,7 @@ describe("ReadonlyToken", () => {
 
   describe("batchBalancesOf", () => {
     it("returns empty maps for empty input", async () => {
-      const { results, errors } = await ReadonlyToken.batchBalancesOf([]);
+      const { results, errors } = await ReadonlyToken.batchBalancesOf([], OWNER);
       expect(results.size).toBe(0);
       expect(errors.size).toBe(0);
     });
@@ -105,7 +107,7 @@ describe("ReadonlyToken", () => {
         [VALID_HANDLE2]: 2000n,
       });
 
-      const { results, errors } = await ReadonlyToken.batchBalancesOf([token1, token2]);
+      const { results, errors } = await ReadonlyToken.batchBalancesOf([token1, token2], OWNER);
 
       expect(errors.size).toBe(0);
       expect(results.get(tokenAddress)).toBe(1000n);
@@ -143,7 +145,7 @@ describe("ReadonlyToken", () => {
         },
       );
 
-      const { results, errors } = await ReadonlyToken.batchBalancesOf([token1, token2]);
+      const { results, errors } = await ReadonlyToken.batchBalancesOf([token1, token2], OWNER);
 
       expect(results.get(tokenAddress)).toBe(1000n);
       expect(results.get(normalizedToken2)).toBeUndefined();
@@ -159,7 +161,7 @@ describe("ReadonlyToken", () => {
       const otherSdk = createSDK();
       const token2 = new ReadonlyToken(otherSdk, TOKEN2);
 
-      await expect(ReadonlyToken.batchBalancesOf([token1, token2])).rejects.toThrow(
+      await expect(ReadonlyToken.batchBalancesOf([token1, token2], OWNER)).rejects.toThrow(
         /must share the same ZamaSDK/,
       );
     });
@@ -177,7 +179,7 @@ describe("ReadonlyToken", () => {
         .mockResolvedValueOnce(VALID_HANDLE2);
       vi.mocked(sdk.relayer.userDecrypt).mockRejectedValue(new Error("relayer offline"));
 
-      await expect(ReadonlyToken.batchBalancesOf([token1, token2])).rejects.toBeInstanceOf(
+      await expect(ReadonlyToken.batchBalancesOf([token1, token2], OWNER)).rejects.toBeInstanceOf(
         ZamaError,
       );
     });
@@ -202,7 +204,7 @@ describe("ReadonlyToken", () => {
           throw rawError;
         });
 
-      const { errors } = await ReadonlyToken.batchBalancesOf([token1, token2]);
+      const { errors } = await ReadonlyToken.batchBalancesOf([token1, token2], OWNER);
 
       const err = errors.get(getAddress(TOKEN2));
       expect(err).toBeInstanceOf(DecryptionFailedError);
@@ -280,6 +282,6 @@ describe("ZamaSDK token factory", () => {
     vi.mocked(provider.readContract).mockResolvedValue(handle);
     vi.mocked(sdk.relayer.userDecrypt).mockResolvedValue({});
 
-    await expect(token.balanceOf()).rejects.toBeInstanceOf(DecryptionFailedError);
+    await expect(token.balanceOf(OWNER)).rejects.toBeInstanceOf(DecryptionFailedError);
   });
 });

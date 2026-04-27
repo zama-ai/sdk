@@ -3,7 +3,7 @@ import type { FheChain } from "./chains/types";
 import { CredentialsManager } from "./credentials/credentials-manager";
 import { DelegatedCredentialsManager } from "./credentials/delegated-credentials-manager";
 import { DecryptCache } from "./decrypt-cache";
-import { ChainMismatchError, ConfigurationError, wrapDecryptError } from "./errors";
+import { ChainMismatchError, wrapDecryptError } from "./errors";
 import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventListener } from "./events/sdk-events";
 import { ZamaSDKEvents } from "./events/sdk-events";
 import type { DecryptHandle } from "./query/user-decrypt";
@@ -17,7 +17,8 @@ import type {
   GenericProvider,
   GenericSigner,
   GenericStorage,
-  SignerLifecycleCallbacks,
+  SignerIdentityChange,
+  SignerIdentityListener,
 } from "./types";
 import { toError } from "./utils";
 import { pLimit } from "./utils/concurrency";
@@ -25,6 +26,16 @@ import { WrappersRegistry } from "./wrappers-registry";
 
 /** Maximum keypairTTL accepted by the fhevm ACL contract (365 days, in seconds). */
 const MAX_KEYPAIR_TTL = 365 * 86400; // 31_536_000 s
+
+/** Run a best-effort cleanup step. Errors are logged, never thrown. */
+async function swallow(label: string, fn: () => Promise<void> | void): Promise<void> {
+  try {
+    await fn();
+  } catch (error) {
+    // oxlint-disable-next-line no-console
+    console.warn(`[zama-sdk] ${label} failed:`, error);
+  }
+}
 
 /** Configuration for {@link ZamaSDK}. */
 export interface ZamaSDKConfig {
@@ -80,8 +91,6 @@ export interface ZamaSDKConfig {
    * Use for custom or local chains (e.g. Hardhat) where no default registry exists.
    */
   registryAddresses?: Record<number, Address>;
-  /** Optional signer lifecycle callbacks composed with the SDK's internal session handling. */
-  signerLifecycleCallbacks?: SignerLifecycleCallbacks;
 }
 
 /**
@@ -111,12 +120,8 @@ export class ZamaSDK {
   readonly registry: WrappersRegistry;
   readonly #registryTTL: number | undefined;
   readonly #onEvent: ZamaSDKEventListener;
+  readonly #identityListeners = new Set<SignerIdentityListener>();
   #unsubscribeSigner?: () => void;
-  // oxlint false positive: awaited in #revokeByTrackedIdentity() and revokeSession()
-  // eslint-disable-next-line no-unused-private-class-members
-  #identityReady: Promise<void>;
-  #lastAddress: Address | null = null;
-  #lastChainId: number | null = null;
 
   constructor(config: ZamaSDKConfig) {
     this.relayer = config.relayer;
@@ -164,68 +169,24 @@ export class ZamaSDK {
     };
     this.credentials = new CredentialsManager(credentialsConfig);
     this.delegatedCredentials = new DelegatedCredentialsManager(credentialsConfig);
-    this.#identityReady = this.#initIdentity();
 
-    const subscribe = this.signer.subscribe?.bind(this.signer);
-    if (subscribe) {
-      const lifecycleCallbacks = config.signerLifecycleCallbacks;
-      const runLifecycleEffect = (operation: string, effect: () => Promise<void>) => {
-        void effect().catch((error) => {
-          // oxlint-disable-next-line no-console
-          console.error(`[ZamaSDK] lifecycle effect "${operation}" failed:`, error);
-          this.emitEvent({
-            type: ZamaSDKEvents.TransactionError,
-            operation,
-            error: toError(error),
-          });
-        });
-      };
-      this.#unsubscribeSigner = subscribe({
-        onDisconnect: () => {
-          runLifecycleEffect("signerDisconnect", async () => {
-            await this.#revokeByTrackedIdentity();
-            await this.cache.clearAll();
-            this.#lastAddress = null;
-            this.#lastChainId = null;
-            lifecycleCallbacks?.onDisconnect?.();
-          });
-        },
-        onAccountChange: (newAddress: Address) => {
-          const normalized = getAddress(newAddress);
-          if (normalized === this.#lastAddress) {
-            return;
-          }
-          runLifecycleEffect("signerAccountChange", async () => {
-            await this.#revokeByTrackedIdentity();
-            await this.cache.clearAll();
-            this.#lastAddress = normalized;
-            try {
-              this.#lastChainId = await this.signer.getChainId();
-            } catch {
-              // Signer may not be ready — keep previous chainId
-            }
-            lifecycleCallbacks?.onAccountChange?.(newAddress);
-          });
-        },
-        onChainChange: (newChainId: number) => {
-          if (newChainId === this.#lastChainId) {
-            return;
-          }
-          runLifecycleEffect("signerChainChange", async () => {
-            await this.#revokeByTrackedIdentity();
-            await this.cache.clearAll();
-            this.relayer.switchChain(newChainId);
-            this.#lastChainId = newChainId;
-            try {
-              this.#lastAddress = await this.signer.getAddress();
-            } catch {
-              // Signer may not be ready — keep previous address
-            }
-            lifecycleCallbacks?.onChainChange?.(newChainId);
-          });
-        },
-      });
-    }
+    this.#unsubscribeSigner = this.signer.subscribe?.((change) => {
+      void this.#handleIdentityChange(change);
+    });
+  }
+
+  /**
+   * Subscribe to wallet identity transitions. The SDK maintains a single
+   * internal subscription to `signer.subscribe` and fans out to listeners
+   * after running core cleanup (credential revocation + cache clear).
+   *
+   * Returns a no-op unsubscribe if the signer cannot emit lifecycle events.
+   */
+  onIdentityChange(listener: SignerIdentityListener): () => void {
+    this.#identityListeners.add(listener);
+    return () => {
+      this.#identityListeners.delete(listener);
+    };
   }
 
   /**
@@ -253,32 +214,15 @@ export class ZamaSDK {
     return signerChainId;
   }
 
-  async #initIdentity(): Promise<void> {
-    try {
-      const [address, chainId] = await Promise.all([
-        this.signer.getAddress(),
-        this.signer.getChainId(),
-      ]);
-      // switchChain first — if it throws (unknown chain), we must not
-      // commit address/chainId so revokeByTrackedIdentity stays consistent.
-      this.relayer.switchChain(chainId);
-      this.#lastAddress = address;
-      this.#lastChainId = chainId;
-    } catch (error) {
-      if (error instanceof ConfigurationError) {
-        throw error;
-      }
-      // Signer not ready yet — identity will be set on first lifecycle event
+  async #handleIdentityChange(change: SignerIdentityChange): Promise<void> {
+    if (change.previous) {
+      const previous = change.previous;
+      await swallow("revoke previous identity", () => this.credentials.revokeFor(previous));
+      await swallow("clear decrypt cache", () => this.cache.clearForRequester(previous.address));
     }
-  }
-
-  async #revokeByTrackedIdentity(): Promise<void> {
-    await this.#identityReady;
-    if (this.#lastAddress === null || this.#lastChainId === null) {
-      return;
+    for (const listener of this.#identityListeners) {
+      await swallow("identity listener", () => listener(change));
     }
-    const storeKey = await CredentialsManager.computeStoreKey(this.#lastAddress, this.#lastChainId);
-    await this.credentials.revokeByKey(storeKey);
   }
 
   /**
@@ -560,13 +504,13 @@ export class ZamaSDK {
    * ```
    */
   async revokeSession(): Promise<void> {
-    await this.#identityReady;
-    const signer = this.signer;
-    const address = this.#lastAddress ?? (await signer.getAddress());
-    const chainId = this.#lastChainId ?? (await signer.getChainId());
-    const storeKey = await CredentialsManager.computeStoreKey(address, chainId);
-    await this.credentials.revokeByKey(storeKey);
-    await this.cache.clearForRequester(address);
+    const address = await this.signer.getAddress();
+    const chainId = await this.signer.getChainId();
+    try {
+      await this.credentials.revokeFor({ address, chainId });
+    } finally {
+      await this.cache.clearForRequester(address);
+    }
   }
 
   /**
@@ -577,6 +521,7 @@ export class ZamaSDK {
   dispose(): void {
     this.#unsubscribeSigner?.();
     this.#unsubscribeSigner = undefined;
+    this.#identityListeners.clear();
   }
 
   /**

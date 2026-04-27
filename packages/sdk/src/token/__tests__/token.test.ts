@@ -6,10 +6,15 @@ import { describe, expect, it, vi } from "../../test-fixtures";
 
 describe("Token", () => {
   describe("balanceOf", () => {
-    it("returns 0n for zero handle without decrypting", async ({ relayer, token, provider }) => {
+    it("returns 0n for zero handle without decrypting", async ({
+      relayer,
+      token,
+      userAddress,
+      provider,
+    }) => {
       vi.mocked(provider.readContract).mockResolvedValue(ZERO_HANDLE);
 
-      const balance = await token.balanceOf();
+      const balance = await token.balanceOf(userAddress);
 
       expect(balance).toBe(0n);
       expect(relayer.userDecrypt).not.toHaveBeenCalled();
@@ -20,11 +25,12 @@ describe("Token", () => {
       signer,
       token,
       handle,
+      userAddress,
       provider,
     }) => {
       vi.mocked(provider.readContract).mockResolvedValue(handle);
 
-      const balance = await token.balanceOf();
+      const balance = await token.balanceOf(userAddress);
 
       expect(balance).toBe(1000n);
       expect(relayer.generateKeypair).toHaveBeenCalled();
@@ -32,27 +38,20 @@ describe("Token", () => {
       expect(relayer.userDecrypt).toHaveBeenCalled();
     });
 
-    it("defaults owner to signer address", async ({ userAddress, token, provider }) => {
-      vi.mocked(provider.readContract).mockResolvedValue(ZERO_HANDLE);
-
-      await token.balanceOf();
-
-      expect(provider.readContract).toHaveBeenCalledWith(
-        expect.objectContaining({
-          functionName: "confidentialBalanceOf",
-          args: [userAddress],
-        }),
-      );
-    });
-
-    it("accepts custom owner address", async ({ token, provider }) => {
+    it("passes the caller-supplied owner address to the contract read", async ({
+      token,
+      provider,
+    }) => {
       vi.mocked(provider.readContract).mockResolvedValue(ZERO_HANDLE);
       const otherAddress = "0xdddddddddddddddddddddddddddddddddddddddd" as Address;
 
       await token.balanceOf(otherAddress);
 
       expect(provider.readContract).toHaveBeenCalledWith(
-        expect.objectContaining({ args: [getAddress(otherAddress)] }),
+        expect.objectContaining({
+          functionName: "confidentialBalanceOf",
+          args: [getAddress(otherAddress)],
+        }),
       );
     });
   });
@@ -62,11 +61,12 @@ describe("Token", () => {
       relayer,
       token,
       handle,
+      userAddress,
       provider,
     }) => {
       vi.mocked(provider.readContract).mockResolvedValue(handle);
 
-      const result = await token.confidentialBalanceOf();
+      const result = await token.confidentialBalanceOf(userAddress);
 
       expect(result).toBe(handle);
       expect(relayer.userDecrypt).not.toHaveBeenCalled();
@@ -733,6 +733,7 @@ describe("Token", () => {
 
       const result = await token.isApproved(
         "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address,
+        "0x9F9f9F9F9F9f9F9f9F9f9F9f9F9F9F9F9F9f9F9f" as Address,
       );
 
       expect(result).toBe(true);

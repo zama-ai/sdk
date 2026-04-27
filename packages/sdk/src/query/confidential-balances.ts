@@ -1,11 +1,12 @@
 import type { Address } from "viem";
 import { ReadonlyToken, type BatchBalancesResult } from "../token/readonly-token";
+import { assertNonNullable } from "../utils/assertions";
 import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
 import { filterQueryOptions } from "./utils";
 
 export interface ConfidentialBalancesQueryConfig {
-  owner?: Address;
+  account?: Address;
   query?: Record<string, unknown>;
 }
 
@@ -18,17 +19,18 @@ export function confidentialBalancesQueryOptions(
   BatchBalancesResult,
   ReturnType<typeof zamaQueryKeys.confidentialBalances.tokens>
 > {
-  const ownerKey = config?.owner;
+  const accountKey = config?.account;
   const queryOpts = config?.query ?? {};
   const tokenAddresses = tokens.map((token) => token.address);
 
   return {
     ...filterQueryOptions(queryOpts),
-    queryKey: zamaQueryKeys.confidentialBalances.tokens(tokenAddresses, ownerKey),
+    queryKey: zamaQueryKeys.confidentialBalances.tokens(tokenAddresses, accountKey),
     queryFn: async (context) => {
       const [, { owner: keyOwner }] = context.queryKey;
+      assertNonNullable(keyOwner, "confidentialBalancesQueryOptions: owner");
       return ReadonlyToken.batchBalancesOf(tokens, keyOwner);
     },
-    enabled: tokens.length > 0 && queryOpts?.enabled !== false,
+    enabled: Boolean(accountKey) && tokens.length > 0 && queryOpts?.enabled !== false,
   };
 }
