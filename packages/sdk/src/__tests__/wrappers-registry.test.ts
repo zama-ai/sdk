@@ -1,6 +1,6 @@
 import type { Address } from "viem";
 import { ConfigurationError } from "../errors";
-import { MainnetConfig, SepoliaConfig } from "../relayer/relayer-utils";
+import { mainnet, sepolia } from "../chains";
 import { describe, expect, it, vi } from "../test-fixtures";
 import type { GenericProvider } from "../types";
 import { DefaultRegistryAddresses, WrappersRegistry } from "../wrappers-registry";
@@ -13,15 +13,13 @@ const C_TOKEN = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
 describe("DefaultRegistryAddresses", () => {
   it("includes Mainnet", () => {
     expect(DefaultRegistryAddresses[1]).toBeDefined();
-    expect(DefaultRegistryAddresses[1]!.toLowerCase()).toBe(
-      MainnetConfig.registryAddress!.toLowerCase(),
-    );
+    expect(DefaultRegistryAddresses[1]!.toLowerCase()).toBe(mainnet.registryAddress!.toLowerCase());
   });
 
   it("includes Sepolia", () => {
     expect(DefaultRegistryAddresses[11155111]).toBeDefined();
     expect(DefaultRegistryAddresses[11155111]!.toLowerCase()).toBe(
-      SepoliaConfig.registryAddress!.toLowerCase(),
+      sepolia.registryAddress!.toLowerCase(),
     );
   });
 
@@ -36,14 +34,14 @@ describe("WrappersRegistry", () => {
       vi.mocked(provider.getChainId).mockResolvedValue(1);
       const registry = new WrappersRegistry({ provider });
       const addr = await registry.getRegistryAddress();
-      expect(addr.toLowerCase()).toBe(MainnetConfig.registryAddress!.toLowerCase());
+      expect(addr.toLowerCase()).toBe(mainnet.registryAddress!.toLowerCase());
     });
 
     it("resolves from defaults for Sepolia", async ({ provider }) => {
       vi.mocked(provider.getChainId).mockResolvedValue(11155111);
       const registry = new WrappersRegistry({ provider });
       const addr = await registry.getRegistryAddress();
-      expect(addr.toLowerCase()).toBe(SepoliaConfig.registryAddress!.toLowerCase());
+      expect(addr.toLowerCase()).toBe(sepolia.registryAddress!.toLowerCase());
     });
 
     it("overrides take precedence over defaults", async ({ provider }) => {

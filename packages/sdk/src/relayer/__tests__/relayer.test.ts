@@ -1,76 +1,50 @@
 import { vi } from "vitest";
-import { ConfigurationError, EncryptionFailedError } from "../../errors";
 import { MemoryStorage } from "../../storage/memory-storage";
-import { afterEach, beforeEach, describe, expect, it } from "../../test-fixtures";
+import { beforeEach, describe, expect, it } from "../../test-fixtures";
 
 // ---------------------------------------------------------------------------
 // Hoisted mocks (available inside vi.mock factories)
 // ---------------------------------------------------------------------------
 
-const { mockWorkerClient, MockRelayerWorkerClient, mockPool, MockNodeWorkerPool } = vi.hoisted(
-  () => {
-    const mockWorkerClient = {
-      initWorker: vi.fn().mockResolvedValue(undefined),
-      terminate: vi.fn(),
-      updateCsrf: vi.fn().mockResolvedValue(undefined),
-      generateKeypair: vi.fn(),
-      createEIP712: vi.fn(),
-      encrypt: vi.fn(),
-      userDecrypt: vi.fn(),
-      publicDecrypt: vi.fn(),
-      createDelegatedUserDecryptEIP712: vi.fn(),
-      delegatedUserDecrypt: vi.fn(),
-      requestZKProofVerification: vi.fn(),
-      getPublicKey: vi.fn(),
-      getPublicParams: vi.fn(),
-    };
+const { mockWorkerClient, mockPool } = vi.hoisted(() => {
+  const mockWorkerClient = {
+    initWorker: vi.fn().mockResolvedValue(undefined),
+    terminate: vi.fn(),
+    updateCsrf: vi.fn().mockResolvedValue(undefined),
+    generateKeypair: vi.fn(),
+    createEIP712: vi.fn(),
+    encrypt: vi.fn(),
+    userDecrypt: vi.fn(),
+    publicDecrypt: vi.fn(),
+    createDelegatedUserDecryptEIP712: vi.fn(),
+    delegatedUserDecrypt: vi.fn(),
+    requestZKProofVerification: vi.fn(),
+    getPublicKey: vi.fn(),
+    getPublicParams: vi.fn(),
+  };
 
-    const MockRelayerWorkerClient = vi.fn(function () {
-      return mockWorkerClient;
-    });
+  const mockPool = {
+    initPool: vi.fn().mockResolvedValue(undefined),
+    terminate: vi.fn(),
+    generateKeypair: vi.fn(),
+    createEIP712: vi.fn(),
+    encrypt: vi.fn(),
+    userDecrypt: vi.fn(),
+    publicDecrypt: vi.fn(),
+    createDelegatedUserDecryptEIP712: vi.fn(),
+    delegatedUserDecrypt: vi.fn(),
+    requestZKProofVerification: vi.fn(),
+    getPublicKey: vi.fn(),
+    getPublicParams: vi.fn(),
+  };
 
-    const mockPool = {
-      initPool: vi.fn().mockResolvedValue(undefined),
-      terminate: vi.fn(),
-      generateKeypair: vi.fn(),
-      createEIP712: vi.fn(),
-      encrypt: vi.fn(),
-      userDecrypt: vi.fn(),
-      publicDecrypt: vi.fn(),
-      createDelegatedUserDecryptEIP712: vi.fn(),
-      delegatedUserDecrypt: vi.fn(),
-      requestZKProofVerification: vi.fn(),
-      getPublicKey: vi.fn(),
-      getPublicParams: vi.fn(),
-    };
-
-    const MockNodeWorkerPool = vi.fn(function () {
-      return mockPool;
-    });
-
-    return {
-      mockWorkerClient,
-      MockRelayerWorkerClient,
-      mockPool,
-      MockNodeWorkerPool,
-    };
-  },
-);
-
-vi.mock("../../worker/worker.client", () => ({
-  RelayerWorkerClient: MockRelayerWorkerClient,
-}));
-
-vi.mock("../../worker/worker.node-pool", () => ({
-  NodeWorkerPool: MockNodeWorkerPool,
-}));
+  return { mockWorkerClient, mockPool };
+});
 
 // ---------------------------------------------------------------------------
-// Imports under test (must come after vi.mock)
+// Imports under test
 // ---------------------------------------------------------------------------
 
-import { RelayerWorkerClient } from "../../worker/worker.client";
-import { NodeWorkerPool } from "../../worker/worker.node-pool";
 import { RelayerNode } from "../relayer-node";
 import { RelayerWeb } from "../relayer-web";
 
@@ -78,17 +52,17 @@ import { RelayerWeb } from "../relayer-web";
 // Shared fixtures
 // ---------------------------------------------------------------------------
 
-const CHAIN_ID = 11155111;
-const TRANSPORTS = {
-  [CHAIN_ID]: { relayerUrl: "https://relayer.example.com" },
-};
+const CHAIN_CONFIG = {
+  id: 11155111,
+  relayerUrl: "https://relayer.example.com",
+} as any;
 
 function createWebRelayer(
   overrides: Partial<ConstructorParameters<typeof RelayerWeb>[0]> = {},
 ): RelayerWeb {
   return new RelayerWeb({
-    getChainId: vi.fn().mockResolvedValue(CHAIN_ID),
-    transports: TRANSPORTS,
+    chain: CHAIN_CONFIG,
+    worker: mockWorkerClient as any,
     // Override default IndexedDBStorage with per-test MemoryStorage for isolation
     fheArtifactStorage: new MemoryStorage(),
     ...overrides,
@@ -99,16 +73,14 @@ function createNodeRelayer(
   overrides: Partial<ConstructorParameters<typeof RelayerNode>[0]> = {},
 ): RelayerNode {
   return new RelayerNode({
-    getChainId: vi.fn().mockResolvedValue(CHAIN_ID),
-    transports: TRANSPORTS,
+    chain: CHAIN_CONFIG,
+    pool: mockPool as any,
     ...overrides,
   });
 }
 
 function resetMocks(): void {
   vi.clearAllMocks();
-  mockWorkerClient.initWorker.mockResolvedValue(undefined);
-  mockPool.initPool.mockResolvedValue(undefined);
 }
 
 // ---------------------------------------------------------------------------
@@ -119,7 +91,7 @@ const MOCK_EIP712 = {
   domain: {
     name: "test",
     version: "1",
-    chainId: CHAIN_ID,
+    chainId: 11155111,
     verifyingContract: "0xABC" as `0x${string}`,
   },
   types: {
@@ -144,69 +116,11 @@ describe("RelayerWeb", () => {
   beforeEach(resetMocks);
 
   // -------------------------------------------------------------------------
-  // Lazy initialization
-  // -------------------------------------------------------------------------
-
-  describe("lazy initialization", () => {
-    it("creates the worker on first method call", async () => {
-      const relayer = createWebRelayer();
-      mockWorkerClient.generateKeypair.mockResolvedValue({
-        publicKey: "pk",
-        privateKey: "sk",
-      });
-
-      await relayer.generateKeypair();
-
-      expect(RelayerWorkerClient).toHaveBeenCalledOnce();
-      expect(mockWorkerClient.initWorker).toHaveBeenCalledOnce();
-    });
-
-    it("reuses the same worker across multiple calls", async () => {
-      const relayer = createWebRelayer();
-      mockWorkerClient.generateKeypair.mockResolvedValue({
-        publicKey: "pk",
-        privateKey: "sk",
-      });
-
-      await relayer.generateKeypair();
-      await relayer.generateKeypair();
-
-      expect(RelayerWorkerClient).toHaveBeenCalledOnce();
-      expect(mockWorkerClient.initWorker).toHaveBeenCalledOnce();
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // Chain ID change detection
-  // -------------------------------------------------------------------------
-
-  describe("chain ID change", () => {
-    it("re-initializes the worker when chain ID changes", async () => {
-      const getChainId = vi.fn().mockResolvedValue(CHAIN_ID);
-      const relayer = createWebRelayer({ getChainId });
-      mockWorkerClient.generateKeypair.mockResolvedValue({
-        publicKey: "pk",
-        privateKey: "sk",
-      });
-
-      await relayer.generateKeypair();
-      expect(RelayerWorkerClient).toHaveBeenCalledTimes(1);
-
-      // Switch chain
-      getChainId.mockResolvedValue(1);
-      await relayer.generateKeypair();
-
-      expect(mockWorkerClient.terminate).toHaveBeenCalledOnce();
-      expect(RelayerWorkerClient).toHaveBeenCalledTimes(2);
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // Terminated state
+  // Terminate
   // -------------------------------------------------------------------------
 
   describe("terminate", () => {
-    it("terminates the worker and auto-restarts on next call", async () => {
+    it("does not terminate the worker (lifecycle not owned)", async () => {
       const relayer = createWebRelayer();
       mockWorkerClient.generateKeypair.mockResolvedValue({
         publicKey: "pk",
@@ -216,14 +130,10 @@ describe("RelayerWeb", () => {
       await relayer.generateKeypair();
       relayer.terminate();
 
-      expect(mockWorkerClient.terminate).toHaveBeenCalledOnce();
-
-      // After terminate, subsequent calls auto-restart the worker
-      const result = await relayer.generateKeypair();
-      expect(result).toEqual({ publicKey: "pk", privateKey: "sk" });
+      expect(mockWorkerClient.terminate).not.toHaveBeenCalled();
     });
 
-    it("is safe to call terminate before any initialization", () => {
+    it("is safe to call terminate before any operation", () => {
       const relayer = createWebRelayer();
       expect(() => relayer.terminate()).not.toThrow();
     });
@@ -237,47 +147,7 @@ describe("RelayerWeb", () => {
       await relayer.generateKeypair();
 
       relayer[Symbol.dispose]();
-      expect(mockWorkerClient.terminate).toHaveBeenCalledOnce();
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // Init error handling
-  // -------------------------------------------------------------------------
-
-  describe("initialization errors", () => {
-    it("wraps non-ZamaError init failures in ConfigurationError", async () => {
-      mockWorkerClient.initWorker.mockRejectedValueOnce(new Error("WASM load failed"));
-      const relayer = createWebRelayer();
-
-      const promise = relayer.generateKeypair();
-      await expect(promise).rejects.toThrow(ConfigurationError);
-      await expect(promise).rejects.toThrow("Failed to initialize FHE worker");
-    });
-
-    it("passes through ZamaError from init without re-wrapping", async () => {
-      const tokenError = new EncryptionFailedError("already an SDK error");
-      mockWorkerClient.initWorker.mockRejectedValueOnce(tokenError);
-      const relayer = createWebRelayer();
-
-      await expect(relayer.generateKeypair()).rejects.toBe(tokenError);
-    });
-
-    it("allows retry after init failure", async () => {
-      mockWorkerClient.initWorker
-        .mockRejectedValueOnce(new Error("transient"))
-        .mockResolvedValueOnce(undefined);
-      mockWorkerClient.generateKeypair.mockResolvedValue({
-        publicKey: "pk",
-        privateKey: "sk",
-      });
-
-      const relayer = createWebRelayer();
-
-      await expect(relayer.generateKeypair()).rejects.toThrow();
-
-      const result = await relayer.generateKeypair();
-      expect(result).toEqual({ publicKey: "pk", privateKey: "sk" });
+      expect(mockWorkerClient.terminate).not.toHaveBeenCalled();
     });
   });
 
@@ -362,6 +232,7 @@ describe("RelayerWeb", () => {
       const result = await relayer.createEIP712("0xpub", ["0x123" as `0x${string}`], 1000, 7);
 
       expect(mockWorkerClient.createEIP712).toHaveBeenCalledWith({
+        chainId: 11155111,
         publicKey: "0xpub",
         contractAddresses: ["0x123"],
         startTimestamp: 1000,
@@ -405,7 +276,10 @@ describe("RelayerWeb", () => {
       const result = await relayer.userDecrypt(params);
 
       expect(result).toEqual(clearValues);
-      expect(mockWorkerClient.userDecrypt).toHaveBeenCalledWith(params);
+      expect(mockWorkerClient.userDecrypt).toHaveBeenCalledWith({
+        chainId: 11155111,
+        ...params,
+      });
     });
 
     it("publicDecrypt delegates to worker and returns structured result", async () => {
@@ -423,7 +297,10 @@ describe("RelayerWeb", () => {
       const result = await relayer.publicDecrypt([HANDLE]);
 
       expect(result).toEqual(mockResult);
-      expect(mockWorkerClient.publicDecrypt).toHaveBeenCalledWith([HANDLE]);
+      expect(mockWorkerClient.publicDecrypt).toHaveBeenCalledWith({
+        chainId: 11155111,
+        handles: [HANDLE],
+      });
     });
 
     it("createDelegatedUserDecryptEIP712 delegates to worker", async () => {
@@ -441,6 +318,7 @@ describe("RelayerWeb", () => {
 
       expect(result).toBe(mockData);
       expect(mockWorkerClient.createDelegatedUserDecryptEIP712).toHaveBeenCalledWith({
+        chainId: 11155111,
         publicKey: "0xpk",
         contractAddresses: ["0xC"],
         delegatorAddress: "0xDelegator",
@@ -512,46 +390,10 @@ describe("RelayerWeb", () => {
       const result = await relayer.getPublicParams(2048);
 
       expect(result).toEqual(pp);
-      expect(mockWorkerClient.getPublicParams).toHaveBeenCalledWith(2048);
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // SDK-17: Status tracking
-  // -------------------------------------------------------------------------
-
-  describe("status tracking", () => {
-    it("starts in idle state", () => {
-      const relayer = createWebRelayer();
-      expect(relayer.status).toBe("idle");
-      expect(relayer.initError).toBeUndefined();
-    });
-
-    it("transitions to ready after successful init", async () => {
-      const onStatusChange = vi.fn();
-      const relayer = createWebRelayer({ onStatusChange });
-      mockWorkerClient.generateKeypair.mockResolvedValue({
-        publicKey: "pk",
-        privateKey: "sk",
+      expect(mockWorkerClient.getPublicParams).toHaveBeenCalledWith({
+        chainId: 11155111,
+        bits: 2048,
       });
-
-      await relayer.generateKeypair();
-
-      expect(relayer.status).toBe("ready");
-      expect(onStatusChange).toHaveBeenCalledWith("initializing", undefined);
-      expect(onStatusChange).toHaveBeenCalledWith("ready", undefined);
-    });
-
-    it("transitions to error when init fails", async () => {
-      const onStatusChange = vi.fn();
-      const relayer = createWebRelayer({ onStatusChange });
-      mockWorkerClient.initWorker.mockRejectedValue(new Error("WASM failed"));
-
-      await expect(relayer.generateKeypair()).rejects.toThrow("Failed to initialize FHE worker");
-
-      expect(relayer.status).toBe("error");
-      expect(relayer.initError).toBeInstanceOf(Error);
-      expect(onStatusChange).toHaveBeenCalledWith("error", expect.any(Error));
     });
   });
 
@@ -624,132 +466,6 @@ describe("RelayerWeb", () => {
       // Caching is always on — worker called only once
       expect(mockWorkerClient.getPublicKey).toHaveBeenCalledOnce();
     });
-
-    it("clears cache on chain switch", async () => {
-      const storage = new MemoryStorage();
-      const getChainId = vi.fn().mockResolvedValue(CHAIN_ID);
-      const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([1]) };
-      mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk });
-
-      const relayer = createWebRelayer({
-        fheArtifactStorage: storage,
-        getChainId,
-      });
-      await relayer.getPublicKey();
-      expect(mockWorkerClient.getPublicKey).toHaveBeenCalledOnce();
-
-      // Switch chain — cache should be cleared
-      getChainId.mockResolvedValue(1);
-      const pk2 = { publicKeyId: "pk-2", publicKey: new Uint8Array([2]) };
-      mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk2 });
-      const result = await relayer.getPublicKey();
-      expect(result).toEqual(pk2);
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // Revalidation integration
-  // -------------------------------------------------------------------------
-
-  describe("revalidation", () => {
-    let originalFetch: typeof globalThis.fetch;
-
-    beforeEach(() => {
-      originalFetch = globalThis.fetch;
-    });
-
-    afterEach(() => {
-      globalThis.fetch = originalFetch;
-    });
-
-    it("tears down worker when revalidation detects stale artifacts", async () => {
-      const storage = new MemoryStorage();
-      const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([1]) };
-      mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk });
-
-      const relayer = createWebRelayer({
-        fheArtifactStorage: storage,
-        fheArtifactCacheTTL: 0,
-      });
-
-      // First call — init worker, fetch and cache pk
-      await relayer.getPublicKey();
-      expect(RelayerWorkerClient).toHaveBeenCalledTimes(1);
-
-      // Seed artifact metadata + force expired timestamp so revalidation
-      // issues a conditional GET instead of just capturing validators.
-      const pkKey = `fhe:pubkey:${CHAIN_ID}`;
-      const cached = await storage.get<Record<string, unknown>>(pkKey);
-      if (cached) {
-        cached.lastValidatedAt = 0;
-        cached.artifactUrl = "https://cdn.example.com/pk.bin";
-        cached.etag = '"pk-etag-1"';
-        await storage.set(pkKey, cached);
-      }
-
-      // Mock fetch for revalidation: manifest + artifact returns 200 (changed)
-      globalThis.fetch = vi.fn().mockImplementation((url: string) => {
-        const urlStr = url;
-        if (urlStr.includes("/keyurl")) {
-          return Promise.resolve({
-            ok: true,
-            json: () =>
-              Promise.resolve({
-                status: "succeeded",
-                response: {
-                  fheKeyInfo: [
-                    {
-                      fhePublicKey: {
-                        urls: ["https://cdn.example.com/pk.bin"],
-                      },
-                    },
-                  ],
-                  crs: {},
-                },
-              }),
-          });
-        }
-        if (urlStr.includes("pk.bin")) {
-          return Promise.resolve({
-            status: 200,
-            ok: true,
-            headers: new Headers({ etag: '"pk-etag-ROTATED"' }),
-            body: null,
-          });
-        }
-        return Promise.reject(new Error(`Unexpected fetch: ${url}`));
-      });
-
-      // Next call triggers revalidation → stale → worker teardown + re-init
-      const pk2 = { publicKeyId: "pk-2", publicKey: new Uint8Array([2]) };
-      mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk2 });
-      const result = await relayer.getPublicKey();
-
-      // Worker was re-created (2nd time)
-      expect(RelayerWorkerClient).toHaveBeenCalledTimes(2);
-      expect(result).toEqual(pk2);
-    });
-
-    it("does not teardown when revalidation finds fresh artifacts", async () => {
-      const storage = new MemoryStorage();
-      const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([1]) };
-      mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk });
-
-      const relayer = createWebRelayer({
-        fheArtifactStorage: storage,
-        fheArtifactCacheTTL: 86_400,
-      });
-
-      // First call — init worker, fetch and cache pk
-      await relayer.getPublicKey();
-      expect(RelayerWorkerClient).toHaveBeenCalledTimes(1);
-
-      // No fetch mock needed — interval hasn't elapsed, so no revalidation
-      // Second call reuses same worker
-      await relayer.getPublicKey();
-      expect(RelayerWorkerClient).toHaveBeenCalledTimes(1);
-      expect(mockWorkerClient.terminate).not.toHaveBeenCalled();
-    });
   });
 });
 
@@ -761,69 +477,11 @@ describe("RelayerNode", () => {
   beforeEach(resetMocks);
 
   // -------------------------------------------------------------------------
-  // Lazy initialization
-  // -------------------------------------------------------------------------
-
-  describe("lazy initialization", () => {
-    it("creates the pool on first method call", async () => {
-      const relayer = createNodeRelayer();
-      mockPool.generateKeypair.mockResolvedValue({
-        publicKey: "pk",
-        privateKey: "sk",
-      });
-
-      await relayer.generateKeypair();
-
-      expect(NodeWorkerPool).toHaveBeenCalledOnce();
-      expect(mockPool.initPool).toHaveBeenCalledOnce();
-    });
-
-    it("reuses the same pool across multiple calls", async () => {
-      const relayer = createNodeRelayer();
-      mockPool.generateKeypair.mockResolvedValue({
-        publicKey: "pk",
-        privateKey: "sk",
-      });
-
-      await relayer.generateKeypair();
-      await relayer.generateKeypair();
-
-      expect(NodeWorkerPool).toHaveBeenCalledOnce();
-      expect(mockPool.initPool).toHaveBeenCalledOnce();
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // Chain ID change detection
-  // -------------------------------------------------------------------------
-
-  describe("chain ID change", () => {
-    it("re-initializes the pool when chain ID changes", async () => {
-      const getChainId = vi.fn().mockResolvedValue(CHAIN_ID);
-      const relayer = createNodeRelayer({ getChainId });
-      mockPool.generateKeypair.mockResolvedValue({
-        publicKey: "pk",
-        privateKey: "sk",
-      });
-
-      await relayer.generateKeypair();
-      expect(NodeWorkerPool).toHaveBeenCalledTimes(1);
-
-      // Switch chain
-      getChainId.mockResolvedValue(1);
-      await relayer.generateKeypair();
-
-      expect(mockPool.terminate).toHaveBeenCalledOnce();
-      expect(NodeWorkerPool).toHaveBeenCalledTimes(2);
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // Terminated state
+  // Terminate
   // -------------------------------------------------------------------------
 
   describe("terminate", () => {
-    it("terminates the pool and rejects subsequent calls", async () => {
+    it("does not terminate the pool (lifecycle not owned)", async () => {
       const relayer = createNodeRelayer();
       mockPool.generateKeypair.mockResolvedValue({
         publicKey: "pk",
@@ -833,13 +491,10 @@ describe("RelayerNode", () => {
       await relayer.generateKeypair();
       relayer.terminate();
 
-      expect(mockPool.terminate).toHaveBeenCalledOnce();
-
-      await expect(relayer.generateKeypair()).rejects.toThrow(ConfigurationError);
-      await expect(relayer.generateKeypair()).rejects.toThrow("RelayerNode has been terminated");
+      expect(mockPool.terminate).not.toHaveBeenCalled();
     });
 
-    it("is safe to call terminate before any initialization", () => {
+    it("is safe to call terminate before any operation", () => {
       const relayer = createNodeRelayer();
       expect(() => relayer.terminate()).not.toThrow();
     });
@@ -853,47 +508,7 @@ describe("RelayerNode", () => {
       await relayer.generateKeypair();
 
       relayer[Symbol.dispose]();
-      expect(mockPool.terminate).toHaveBeenCalledOnce();
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // Init error handling
-  // -------------------------------------------------------------------------
-
-  describe("initialization errors", () => {
-    it("wraps non-ZamaError init failures in ConfigurationError", async () => {
-      mockPool.initPool.mockRejectedValueOnce(new Error("pool init failed"));
-      const relayer = createNodeRelayer();
-
-      const promise = relayer.generateKeypair();
-      await expect(promise).rejects.toThrow(ConfigurationError);
-      await expect(promise).rejects.toThrow("Failed to initialize FHE worker pool");
-    });
-
-    it("passes through ZamaError from init without re-wrapping", async () => {
-      const tokenError = new EncryptionFailedError("already an SDK error");
-      mockPool.initPool.mockRejectedValueOnce(tokenError);
-      const relayer = createNodeRelayer();
-
-      await expect(relayer.generateKeypair()).rejects.toBe(tokenError);
-    });
-
-    it("allows retry after init failure", async () => {
-      mockPool.initPool
-        .mockRejectedValueOnce(new Error("transient"))
-        .mockResolvedValueOnce(undefined);
-      mockPool.generateKeypair.mockResolvedValue({
-        publicKey: "pk",
-        privateKey: "sk",
-      });
-
-      const relayer = createNodeRelayer();
-
-      await expect(relayer.generateKeypair()).rejects.toThrow();
-
-      const result = await relayer.generateKeypair();
-      expect(result).toEqual({ publicKey: "pk", privateKey: "sk" });
+      expect(mockPool.terminate).not.toHaveBeenCalled();
     });
   });
 
@@ -922,6 +537,7 @@ describe("RelayerNode", () => {
       const result = await relayer.createEIP712("0xpub", ["0x123" as `0x${string}`], 1000, 7);
 
       expect(mockPool.createEIP712).toHaveBeenCalledWith({
+        chainId: 11155111,
         publicKey: "0xpub",
         contractAddresses: ["0x123"],
         startTimestamp: 1000,
@@ -965,7 +581,10 @@ describe("RelayerNode", () => {
       const result = await relayer.userDecrypt(params);
 
       expect(result).toEqual(clearValues);
-      expect(mockPool.userDecrypt).toHaveBeenCalledWith(params);
+      expect(mockPool.userDecrypt).toHaveBeenCalledWith({
+        chainId: 11155111,
+        ...params,
+      });
     });
 
     it("publicDecrypt delegates to pool and returns structured result", async () => {
@@ -983,7 +602,10 @@ describe("RelayerNode", () => {
       const result = await relayer.publicDecrypt([HANDLE]);
 
       expect(result).toEqual(mockResult);
-      expect(mockPool.publicDecrypt).toHaveBeenCalledWith([HANDLE]);
+      expect(mockPool.publicDecrypt).toHaveBeenCalledWith({
+        chainId: 11155111,
+        handles: [HANDLE],
+      });
     });
 
     it("createDelegatedUserDecryptEIP712 delegates to pool", async () => {
@@ -1001,6 +623,7 @@ describe("RelayerNode", () => {
 
       expect(result).toBe(mockData);
       expect(mockPool.createDelegatedUserDecryptEIP712).toHaveBeenCalledWith({
+        chainId: 11155111,
         publicKey: "0xpk",
         contractAddresses: ["0xC"],
         delegatorAddress: "0xDelegator",
@@ -1072,7 +695,10 @@ describe("RelayerNode", () => {
       const result = await relayer.getPublicParams(2048);
 
       expect(result).toEqual(pp);
-      expect(mockPool.getPublicParams).toHaveBeenCalledWith(2048);
+      expect(mockPool.getPublicParams).toHaveBeenCalledWith({
+        chainId: 11155111,
+        bits: 2048,
+      });
     });
   });
 
@@ -1124,128 +750,6 @@ describe("RelayerNode", () => {
       await relayer.getPublicKey();
 
       expect(mockPool.getPublicKey).toHaveBeenCalledTimes(1);
-    });
-
-    it("clears cache on chain switch", async () => {
-      const storage = new MemoryStorage();
-      const getChainId = vi.fn().mockResolvedValue(CHAIN_ID);
-      const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([1]) };
-      mockPool.getPublicKey.mockResolvedValue({ result: pk });
-
-      const relayer = createNodeRelayer({
-        fheArtifactStorage: storage,
-        getChainId,
-      });
-      await relayer.getPublicKey();
-      expect(mockPool.getPublicKey).toHaveBeenCalledOnce();
-
-      // Switch chain — cache should be cleared
-      getChainId.mockResolvedValue(1);
-      const pk2 = { publicKeyId: "pk-2", publicKey: new Uint8Array([2]) };
-      mockPool.getPublicKey.mockResolvedValue({ result: pk2 });
-      const result = await relayer.getPublicKey();
-      expect(result).toEqual(pk2);
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // Revalidation integration
-  // -------------------------------------------------------------------------
-
-  describe("revalidation", () => {
-    let originalFetch: typeof globalThis.fetch;
-
-    beforeEach(() => {
-      originalFetch = globalThis.fetch;
-    });
-
-    afterEach(() => {
-      globalThis.fetch = originalFetch;
-    });
-
-    it("tears down pool when revalidation detects stale artifacts", async () => {
-      const storage = new MemoryStorage();
-      const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([1]) };
-      mockPool.getPublicKey.mockResolvedValue({ result: pk });
-
-      const relayer = createNodeRelayer({
-        fheArtifactStorage: storage,
-        fheArtifactCacheTTL: 0,
-      });
-
-      // First call — init pool, fetch and cache pk
-      await relayer.getPublicKey();
-      expect(NodeWorkerPool).toHaveBeenCalledTimes(1);
-
-      // Seed artifact metadata + force expired timestamp
-      const pkKey = `fhe:pubkey:${CHAIN_ID}`;
-      const cached = await storage.get<Record<string, unknown>>(pkKey);
-      if (cached) {
-        cached.lastValidatedAt = 0;
-        cached.artifactUrl = "https://cdn.example.com/pk.bin";
-        cached.etag = '"pk-etag-1"';
-        await storage.set(pkKey, cached);
-      }
-
-      // Mock fetch: manifest + artifact returns 200 (changed)
-      globalThis.fetch = vi.fn().mockImplementation((url: string) => {
-        const urlStr = url;
-        if (urlStr.includes("/keyurl")) {
-          return Promise.resolve({
-            ok: true,
-            json: () =>
-              Promise.resolve({
-                status: "succeeded",
-                response: {
-                  fheKeyInfo: [
-                    {
-                      fhePublicKey: {
-                        urls: ["https://cdn.example.com/pk.bin"],
-                      },
-                    },
-                  ],
-                  crs: {},
-                },
-              }),
-          });
-        }
-        if (urlStr.includes("pk.bin")) {
-          return Promise.resolve({
-            status: 200,
-            ok: true,
-            headers: new Headers({ etag: '"pk-etag-ROTATED"' }),
-            body: null,
-          });
-        }
-        return Promise.reject(new Error(`Unexpected fetch: ${url}`));
-      });
-
-      // Next call triggers revalidation → stale → pool teardown + re-init
-      const pk2 = { publicKeyId: "pk-2", publicKey: new Uint8Array([2]) };
-      mockPool.getPublicKey.mockResolvedValue({ result: pk2 });
-      const result = await relayer.getPublicKey();
-
-      expect(NodeWorkerPool).toHaveBeenCalledTimes(2);
-      expect(result).toEqual(pk2);
-    });
-
-    it("does not teardown when revalidation finds fresh artifacts", async () => {
-      const storage = new MemoryStorage();
-      const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([1]) };
-      mockPool.getPublicKey.mockResolvedValue({ result: pk });
-
-      const relayer = createNodeRelayer({
-        fheArtifactStorage: storage,
-        fheArtifactCacheTTL: 86_400,
-      });
-
-      await relayer.getPublicKey();
-      expect(NodeWorkerPool).toHaveBeenCalledTimes(1);
-
-      // Interval hasn't elapsed — no revalidation, same pool
-      await relayer.getPublicKey();
-      expect(NodeWorkerPool).toHaveBeenCalledTimes(1);
-      expect(mockPool.terminate).not.toHaveBeenCalled();
     });
   });
 });

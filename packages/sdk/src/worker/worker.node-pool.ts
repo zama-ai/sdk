@@ -1,8 +1,6 @@
 import { availableParallelism } from "node:os";
 import { NodeWorkerClient } from "./worker.node-client";
 import type { NodeWorkerClientConfig } from "./worker.node-client";
-import type { Handle } from "../relayer/relayer-sdk.types";
-import type { ZKProofLike } from "@zama-fhe/relayer-sdk/bundle";
 import type {
   CreateDelegatedEIP712Payload,
   CreateDelegatedEIP712ResponseData,
@@ -12,10 +10,15 @@ import type {
   DelegatedUserDecryptResponseData,
   EncryptPayload,
   EncryptResponseData,
+  GenerateKeypairRequest,
   GenerateKeypairResponseData,
+  GetPublicKeyRequest,
   GetPublicKeyResponseData,
+  GetPublicParamsRequest,
   GetPublicParamsResponseData,
+  PublicDecryptPayload,
   PublicDecryptResponseData,
+  RequestZKProofVerificationRequest,
   RequestZKProofVerificationResponseData,
   UserDecryptPayload,
   UserDecryptResponseData,
@@ -100,11 +103,19 @@ export class NodeWorkerPool {
   }
 
   terminate(): void {
+    const errors: Error[] = [];
     for (const worker of this.#workers) {
-      worker.terminate();
+      try {
+        worker.terminate();
+      } catch (e) {
+        errors.push(e instanceof Error ? e : new Error(String(e)));
+      }
     }
     this.#workers.length = 0;
     this.#activeCount.length = 0;
+    if (errors.length > 0) {
+      throw new AggregateError(errors, "Failed to terminate worker pool");
+    }
   }
 
   /**
@@ -136,8 +147,10 @@ export class NodeWorkerPool {
     }
   }
 
-  async generateKeypair(): Promise<GenerateKeypairResponseData> {
-    return this.#dispatch((w) => w.generateKeypair());
+  async generateKeypair(
+    params: GenerateKeypairRequest["payload"],
+  ): Promise<GenerateKeypairResponseData> {
+    return this.#dispatch((w) => w.generateKeypair(params));
   }
 
   async createEIP712(params: CreateEIP712Payload): Promise<CreateEIP712ResponseData> {
@@ -152,8 +165,8 @@ export class NodeWorkerPool {
     return this.#dispatch((w) => w.userDecrypt(params));
   }
 
-  async publicDecrypt(handles: Handle[]): Promise<PublicDecryptResponseData> {
-    return this.#dispatch((w) => w.publicDecrypt(handles));
+  async publicDecrypt(params: PublicDecryptPayload): Promise<PublicDecryptResponseData> {
+    return this.#dispatch((w) => w.publicDecrypt(params));
   }
 
   async createDelegatedUserDecryptEIP712(
@@ -169,16 +182,18 @@ export class NodeWorkerPool {
   }
 
   async requestZKProofVerification(
-    zkProof: ZKProofLike,
+    params: RequestZKProofVerificationRequest["payload"],
   ): Promise<RequestZKProofVerificationResponseData> {
-    return this.#dispatch((w) => w.requestZKProofVerification(zkProof));
+    return this.#dispatch((w) => w.requestZKProofVerification(params));
   }
 
-  async getPublicKey(): Promise<GetPublicKeyResponseData> {
-    return this.#dispatch((w) => w.getPublicKey());
+  async getPublicKey(params: GetPublicKeyRequest["payload"]): Promise<GetPublicKeyResponseData> {
+    return this.#dispatch((w) => w.getPublicKey(params));
   }
 
-  async getPublicParams(bits: number): Promise<GetPublicParamsResponseData> {
-    return this.#dispatch((w) => w.getPublicParams(bits));
+  async getPublicParams(
+    params: GetPublicParamsRequest["payload"],
+  ): Promise<GetPublicParamsResponseData> {
+    return this.#dispatch((w) => w.getPublicParams(params));
   }
 }

@@ -3,7 +3,7 @@ import { toBytes } from "viem";
 import { HANDLE_VERSION } from "../constants";
 import { fheTypeIdFromName } from "../fhe-type";
 import { computeInputHandle, computeMockCiphertext } from "../handle";
-import { hardhatCleartextConfig } from "../presets";
+import { hardhat } from "../../../chains";
 
 describe("handle", () => {
   it("computeInputHandle matches precomputed test vector for index 0", () => {
@@ -15,8 +15,8 @@ describe("handle", () => {
       mockCiphertext,
       0,
       fheTypeIdFromName("euint8"),
-      hardhatCleartextConfig.aclContractAddress,
-      BigInt(hardhatCleartextConfig.chainId),
+      hardhat.aclContractAddress,
+      BigInt(hardhat.id),
     );
     const expectedHandle = "0x9067cd93773315815e07e738be1bd5c043044a8fc1000000000000007a690200";
 
@@ -31,7 +31,7 @@ describe("handle", () => {
       mockCiphertext,
       5,
       fheTypeIdFromName("euint8"),
-      hardhatCleartextConfig.aclContractAddress,
+      hardhat.aclContractAddress,
       31_337n,
     );
     const expectedHandle = "0xcd3bf5700ed87292362798f9ee0f28510348fa3b78050000000000007a690200";
@@ -79,7 +79,7 @@ describe("handle", () => {
         mockCiphertext,
         -1,
         fheTypeIdFromName("euint8"),
-        hardhatCleartextConfig.aclContractAddress,
+        hardhat.aclContractAddress,
         31_337n,
       ),
     ).toThrow(/between 0 and 255/i);
@@ -88,7 +88,7 @@ describe("handle", () => {
         mockCiphertext,
         256,
         fheTypeIdFromName("euint8"),
-        hardhatCleartextConfig.aclContractAddress,
+        hardhat.aclContractAddress,
         31_337n,
       ),
     ).toThrow(/between 0 and 255/i);
@@ -97,7 +97,7 @@ describe("handle", () => {
         mockCiphertext,
         1.5,
         fheTypeIdFromName("euint8"),
-        hardhatCleartextConfig.aclContractAddress,
+        hardhat.aclContractAddress,
         31_337n,
       ),
     ).toThrow(/between 0 and 255/i);

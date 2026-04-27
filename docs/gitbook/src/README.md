@@ -45,7 +45,7 @@ TanStack Query-based hooks with cached decryption, automatic cache invalidation,
 | [`@zama-fhe/sdk`](/reference/sdk/ZamaSDK)              | You are building with vanilla TypeScript, Node.js, or any non-React framework |
 | [`@zama-fhe/react-sdk`](/reference/react/ZamaProvider) | You are building a React app (hooks and React-specific providers)             |
 
-If you are using React, install both packages: `@zama-fhe/react-sdk` provides the hooks and `ZamaProvider`, while `@zama-fhe/sdk` is a peer dependency that provides core classes and utilities (`RelayerWeb`, storage singletons, etc.). Signer adapters are imported from sub-paths (e.g. `@zama-fhe/sdk/viem`, `@zama-fhe/sdk/ethers`).
+If you are using React, install both packages: `@zama-fhe/react-sdk` provides the hooks and `ZamaProvider`, while `@zama-fhe/sdk` is a peer dependency that provides core utilities, relayer factories, chain presets, and error helpers. Adapter-specific `createConfig` functions are imported from sub-paths (e.g. `@zama-fhe/react-sdk/wagmi`, `@zama-fhe/sdk/viem`, `@zama-fhe/sdk/ethers`).
 
 ## Install
 
@@ -88,27 +88,28 @@ yarn add @zama-fhe/sdk
 ## Your first confidential transfer in 30 seconds
 
 ```ts
-import { ZamaSDK, RelayerWeb, indexedDBStorage } from "@zama-fhe/sdk";
-import { ViemSigner } from "@zama-fhe/sdk/viem";
+import { createPublicClient, createWalletClient, custom, http } from "viem";
+import { sepolia } from "viem/chains";
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { web, ZamaSDK } from "@zama-fhe/sdk";
+import { sepolia as sepoliaFhe, type FheChain } from "@zama-fhe/sdk/chains";
 
-const sdk = new ZamaSDK({
-  relayer: new RelayerWeb({
-    getChainId: () => signer.getChainId(),
-    transports: {
-      [1]: {
-        relayerUrl: "https://your-app.com/api/relayer/1",
-        network: "https://mainnet.infura.io/v3/YOUR_KEY",
-      },
-      [11155111]: {
-        relayerUrl: "https://your-app.com/api/relayer/11155111",
-        network: "https://sepolia.infura.io/v3/YOUR_KEY",
-      },
-    },
-  }),
-  signer: new ViemSigner({ walletClient, publicClient }),
-  storage: indexedDBStorage,
+const publicClient = createPublicClient({ chain: sepolia, transport: http() });
+const walletClient = createWalletClient({ chain: sepolia, transport: custom(window.ethereum!) });
+
+const mySepolia = {
+  ...sepoliaFhe,
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
+} as const satisfies FheChain;
+
+const config = createConfig({
+  chains: [mySepolia],
+  publicClient,
+  walletClient,
+  relayers: { [mySepolia.id]: web() },
 });
 
+const sdk = new ZamaSDK(config);
 const token = sdk.createToken("0xYourEncryptedERC20");
 
 await token.shield(1000n); // deposit public tokens

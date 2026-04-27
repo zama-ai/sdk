@@ -1,13 +1,6 @@
 "use client";
 
-import type {
-  Address,
-  GenericProvider,
-  GenericSigner,
-  GenericStorage,
-  RelayerSDK,
-  ZamaSDKEventListener,
-} from "@zama-fhe/sdk";
+import type { ZamaConfig } from "@zama-fhe/sdk";
 import { ZamaSDK } from "@zama-fhe/sdk";
 import { invalidateWalletLifecycleQueries } from "@zama-fhe/sdk/query";
 import { useQueryClient } from "@tanstack/react-query";
@@ -22,49 +15,8 @@ import {
 
 /** Props for {@link ZamaProvider}. */
 export interface ZamaProviderProps extends PropsWithChildren {
-  /** FHE relayer backend (RelayerWeb for browser, RelayerNode for server). */
-  relayer: RelayerSDK;
-  /**
-   * Chain provider (`ViemProvider`, `EthersProvider`, `WagmiProvider`, or
-   * custom {@link GenericProvider}). Used for every public chain read.
-   */
-  provider: GenericProvider;
-  /**
-   * Wallet signer (`ViemSigner`, `EthersSigner`, `WagmiSigner`, or custom
-   * {@link GenericSigner}).
-   */
-  signer: GenericSigner;
-  /** Credential storage backend (IndexedDBStorage for browser, MemoryStorage for tests). */
-  storage: GenericStorage;
-  /**
-   * Session storage for wallet signatures. Defaults to in-memory (lost on reload).
-   * Pass a `chrome.storage.session`-backed store for web extensions.
-   */
-  sessionStorage?: GenericStorage;
-  /**
-   * How long the ML-KEM re-encryption keypair remains valid, in seconds.
-   * Default: `86400` (1 day). Must be positive — `0` is rejected.
-   */
-  keypairTTL?: number;
-  /**
-   * Controls how long session signatures (EIP-712 wallet signatures) remain valid, in seconds.
-   * Default: `2592000` (30 days).
-   * - `0`: never persist — every operation triggers a signing prompt (high-security mode).
-   * - Positive number: seconds until the session signature expires and requires re-authentication.
-   */
-  sessionTTL?: number;
-  /**
-   * Per-chain wrappers registry address overrides, merged on top of built-in defaults.
-   * Use this for custom or local chains (e.g. Hardhat) where no default registry exists.
-   */
-  registryAddresses?: Record<number, Address>;
-  /**
-   * How long cached registry results remain valid, in seconds.
-   * Default: `86400` (24 hours).
-   */
-  registryTTL?: number;
-  /** Callback invoked on SDK lifecycle events. */
-  onEvent?: ZamaSDKEventListener;
+  /** Configuration object created by {@link createConfig}. */
+  config: ZamaConfig;
 }
 
 const ZamaSDKContext = createContext<ZamaSDK | null>(null);
@@ -74,58 +26,36 @@ const ZamaSDKContext = createContext<ZamaSDK | null>(null);
  *
  * @example
  * ```tsx
- * <ZamaProvider relayer={relayer} provider={provider} signer={signer} storage={storage}>
+ * <ZamaProvider config={zamaConfig}>
  *   <App />
  * </ZamaProvider>
  * ```
  */
-export function ZamaProvider({
-  children,
-  relayer,
-  provider,
-  signer,
-  storage,
-  sessionStorage,
-  keypairTTL,
-  sessionTTL,
-  registryAddresses,
-  registryTTL,
-  onEvent,
-}: ZamaProviderProps) {
+export function ZamaProvider({ children, config }: ZamaProviderProps) {
   const queryClient = useQueryClient();
 
   // Stabilize onEvent so an inline arrow doesn't recreate the SDK every render.
-  const onEventRef = useRef(onEvent);
+  const onEventRef = useRef(config.onEvent);
 
   useEffect(() => {
-    onEventRef.current = onEvent;
+    onEventRef.current = config.onEvent;
   });
 
   const sdk = useMemo(
     () =>
       new ZamaSDK({
-        relayer,
-        provider,
-        signer,
-        storage,
-        sessionStorage,
-        keypairTTL,
-        sessionTTL,
-        registryAddresses,
-        registryTTL,
+        chains: config.chains,
+        relayer: config.relayer,
+        provider: config.provider,
+        signer: config.signer,
+        storage: config.storage,
+        sessionStorage: config.sessionStorage,
+        keypairTTL: config.keypairTTL,
+        sessionTTL: config.sessionTTL,
+        registryTTL: config.registryTTL,
         onEvent: onEventRef.current,
       }),
-    [
-      relayer,
-      provider,
-      signer,
-      storage,
-      sessionStorage,
-      keypairTTL,
-      sessionTTL,
-      registryAddresses,
-      registryTTL,
-    ],
+    [config],
   );
 
   // SDK internally does credential/cache cleanup. React layer needs to handle query invalidation.
@@ -157,7 +87,7 @@ export function useZamaSDK(): ZamaSDK {
   if (!context) {
     throw new Error(
       "useZamaSDK must be used within a <ZamaProvider>. " +
-        "Wrap your component tree in <ZamaProvider relayer={…} provider={…} signer={…} storage={…}>.",
+        "Wrap your component tree in <ZamaProvider config={createConfig(...)}>.",
     );
   }
   return context;

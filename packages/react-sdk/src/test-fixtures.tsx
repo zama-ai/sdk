@@ -7,7 +7,7 @@ import type { RelayerSDK } from "../../sdk/src/relayer/relayer-sdk";
 import { test as base } from "../../sdk/src/test-fixtures";
 import type { Token } from "../../sdk/src/token";
 import type { GenericProvider, GenericSigner, GenericStorage } from "../../sdk/src/types";
-import type { ZamaProviderProps } from "./provider";
+import type { ZamaConfig } from "@zama-fhe/sdk";
 import { ZamaProvider } from "./provider";
 import { createMockToken } from "./__tests__/mutation-test-helpers";
 
@@ -23,11 +23,11 @@ export const TEST_ADDR_B = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as const
 function Providers({
   children,
   queryClient,
-  ...props
-}: PropsWithChildren<ZamaProviderProps & { queryClient: QueryClient }>) {
+  config,
+}: PropsWithChildren<{ queryClient: QueryClient; config: ZamaConfig }>) {
   return (
     <QueryClientProvider client={queryClient}>
-      <ZamaProvider {...props}>{children}</ZamaProvider>
+      <ZamaProvider config={config}>{children}</ZamaProvider>
     </QueryClientProvider>
   );
 }
@@ -39,7 +39,7 @@ function Providers({
 interface ReactSdkFixtures {
   token: Token;
   queryClient: QueryClient;
-  createWrapper: (overrides?: Partial<ZamaProviderProps>) => {
+  createWrapper: (overrides?: Partial<ZamaConfig>) => {
     Wrapper: React.FC<{ children?: React.ReactNode }>;
     queryClient: QueryClient;
     signer: GenericSigner;
@@ -49,7 +49,7 @@ interface ReactSdkFixtures {
   };
   renderWithProviders: <TResult>(
     hook: () => TResult,
-    overrides?: Partial<ZamaProviderProps>,
+    overrides?: Partial<ZamaConfig>,
     options?: Omit<RenderHookOptions<unknown>, "wrapper">,
   ) => ReturnType<typeof renderHook<TResult, unknown>> & { queryClient: QueryClient };
 }
@@ -69,12 +69,24 @@ export const test = base.extend<ReactSdkFixtures>({
     { relayer, provider, signer, storage, sessionStorage, queryClient },
     use,
   ) => {
-    function createWrapper(overrides?: Partial<ZamaProviderProps>) {
-      const props = { relayer, provider, signer, storage, sessionStorage, ...overrides };
+    function createWrapper(overrides?: Partial<ZamaConfig>) {
+      const config: ZamaConfig = {
+        chains: [],
+        relayer,
+        provider,
+        signer,
+        storage,
+        sessionStorage,
+        keypairTTL: undefined,
+        sessionTTL: undefined,
+        registryTTL: undefined,
+        onEvent: undefined,
+        ...overrides,
+      };
 
       function Wrapper({ children }: { children?: React.ReactNode }) {
         return (
-          <Providers queryClient={queryClient} {...props}>
+          <Providers queryClient={queryClient} config={config}>
             {children}
           </Providers>
         );
@@ -83,10 +95,10 @@ export const test = base.extend<ReactSdkFixtures>({
       return {
         Wrapper,
         queryClient,
-        signer: props.signer,
-        provider: props.provider,
-        relayer: props.relayer,
-        storage: props.storage,
+        signer: config.signer,
+        provider: config.provider,
+        relayer: config.relayer,
+        storage: config.storage,
       };
     }
     await use(createWrapper);
@@ -94,7 +106,7 @@ export const test = base.extend<ReactSdkFixtures>({
   renderWithProviders: async ({ createWrapper }, use) => {
     function renderWithProviders<TResult>(
       hook: () => TResult,
-      overrides?: Partial<ZamaProviderProps>,
+      overrides?: Partial<ZamaConfig>,
       options?: Omit<RenderHookOptions<unknown>, "wrapper">,
     ) {
       const { Wrapper, queryClient } = createWrapper(overrides);

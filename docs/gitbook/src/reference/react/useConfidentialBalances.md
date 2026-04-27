@@ -24,6 +24,7 @@ import { useConfidentialBalances } from "@zama-fhe/react-sdk";
 function Portfolio({ tokens }: { tokens: `0x${string}`[] }) {
   const { data: balances, isLoading } = useConfidentialBalances({
     tokenAddresses: tokens,
+    account: "0xYourAddress",
   });
 
   if (isLoading) return <span>Decrypting...</span>;
@@ -32,7 +33,7 @@ function Portfolio({ tokens }: { tokens: `0x${string}`[] }) {
     <ul>
       {tokens.map((addr) => (
         <li key={addr}>
-          {addr}: {balances?.get(addr)?.toString() ?? "—"}
+          {addr}: {balances?.results.get(addr)?.toString() ?? "—"}
         </li>
       ))}
     </ul>
@@ -44,27 +45,23 @@ function Portfolio({ tokens }: { tokens: `0x${string}`[] }) {
 {% tab title="config.ts" %}
 
 ```ts
-import { ZamaSDK, RelayerWeb, indexedDBStorage } from "@zama-fhe/sdk";
-import { ViemSigner } from "@zama-fhe/sdk/viem";
+// config.ts
+import { createConfig } from "@zama-fhe/react-sdk/wagmi";
+import { web } from "@zama-fhe/sdk";
+import { sepolia } from "@zama-fhe/sdk/chains";
+import type { FheChain } from "@zama-fhe/sdk/chains";
+import { config as wagmiConfig } from "./wagmi";
 
-const signer = new ViemSigner({ walletClient, publicClient });
+const mySepolia = {
+  ...sepolia,
+  relayerUrl: "https://your-relayer.example.com/v2",
+  network: "https://your-rpc.example.com",
+} as const satisfies FheChain;
 
-const sdk = new ZamaSDK({
-  relayer: new RelayerWeb({
-    getChainId: () => signer.getChainId(),
-    transports: {
-      [1]: {
-        relayerUrl: "https://your-app.com/api/relayer/1",
-        network: "https://mainnet.infura.io/v3/YOUR_KEY",
-      },
-      [11155111]: {
-        relayerUrl: "https://your-app.com/api/relayer/11155111",
-        network: "https://sepolia.infura.io/v3/YOUR_KEY",
-      },
-    },
-  }),
-  signer,
-  storage: indexedDBStorage,
+export const zamaConfig = createConfig({
+  chains: [mySepolia],
+  relayers: { [mySepolia.id]: web() },
+  wagmiConfig,
 });
 ```
 
@@ -93,7 +90,7 @@ const { data } = useConfidentialBalances({
 
 ---
 
-### owner
+### account
 
 `Address | undefined`
 
@@ -105,7 +102,7 @@ Address whose balances to read. Defaults to the connected wallet address from th
 ```tsx
 const { data } = useConfidentialBalances({
   tokenAddresses: ["0xTokenA", "0xTokenB"],
-  owner: "0xOwner",
+  account: "0xOwner",
 });
 ```
 
