@@ -5908,6 +5908,9 @@ export class ConfigurationError extends ZamaError {
 // @public
 export type ContractAbi = Abi | readonly unknown[];
 
+// @public
+export function createConfig<const TChains extends readonly [FheChain, ...FheChain[]]>(params: ZamaConfigGeneric<TChains>): ZamaConfig;
+
 // @public (undocumented)
 export interface CredentialsAllowedEvent extends BaseEvent {
     contractAddresses?: Address[];
@@ -20072,6 +20075,14 @@ export type ZamaConfigEthers<TChains extends AtLeastOneChain = AtLeastOneChain> 
     provider: Provider;
     signer?: never;
 });
+
+// @public
+export interface ZamaConfigGeneric<TChains extends AtLeastOneChain = AtLeastOneChain> extends ZamaConfigBase<TChains> {
+    // (undocumented)
+    provider: GenericProvider;
+    // (undocumented)
+    signer: GenericSigner;
+}
 
 // @public
 export interface ZamaConfigViem<TChains extends AtLeastOneChain = AtLeastOneChain> extends ZamaConfigBase<TChains> {
