@@ -25,15 +25,22 @@ export interface ZamaProviderProps extends PropsWithChildren {
   /** FHE relayer backend (RelayerWeb for browser, RelayerNode for server). */
   relayer: RelayerSDK;
   /**
-   * Chain provider (`ViemProvider`, `EthersProvider`, `WagmiProvider`, or
-   * custom {@link GenericProvider}). Used for every public chain read.
+   * Chain provider (`ViemProvider`, `EthersProvider`, or custom
+   * {@link GenericProvider}). Used for every public chain read.
+   *
+   * Wagmi apps should use `ZamaWagmiProvider`, which owns its wagmi-backed
+   * provider internally so it can align provider/signer lifecycle.
    */
   provider: GenericProvider;
   /**
-   * Wallet signer (`ViemSigner`, `EthersSigner`, `WagmiSigner`, or custom
-   * {@link GenericSigner}).
+   * Optional wallet signer (`ViemSigner`, `EthersSigner`, or custom
+   * {@link GenericSigner}). Signer-required operations throw
+   * `SignerRequiredError` when invoked without a signer.
+   *
+   * Wagmi signers are intentionally created only by `ZamaWagmiProvider`, which
+   * guards against disconnected wagmi configs being treated as signer-ready.
    */
-  signer: GenericSigner;
+  signer?: GenericSigner;
   /** Credential storage backend (IndexedDBStorage for browser, MemoryStorage for tests). */
   storage: GenericStorage;
   /**
@@ -128,7 +135,8 @@ export function ZamaProvider({
     ],
   );
 
-  // SDK internally does credential/cache cleanup. React layer needs to handle query invalidation.
+  // SDK internally does credential/cache cleanup. React layer clears the
+  // wallet-lifecycle query state.
   useEffect(
     () => sdk.onIdentityChange(() => invalidateWalletLifecycleQueries(queryClient)),
     [sdk, queryClient],
@@ -157,7 +165,8 @@ export function useZamaSDK(): ZamaSDK {
   if (!context) {
     throw new Error(
       "useZamaSDK must be used within a <ZamaProvider>. " +
-        "Wrap your component tree in <ZamaProvider relayer={…} provider={…} signer={…} storage={…}>.",
+        "Wrap your component tree in <ZamaProvider relayer={…} provider={…} storage={…}>. " +
+        "Pass an optional signer={…} prop when you want writes and decrypts.",
     );
   }
   return context;

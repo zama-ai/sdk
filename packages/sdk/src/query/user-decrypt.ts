@@ -33,6 +33,6 @@ export function userDecryptQueryOptions(
       return sdk.userDecrypt(handles as DecryptHandle[]);
     },
     staleTime: Infinity,
-    enabled: config.handles.length > 0,
+    enabled: config.handles.length > 0 && sdk.credentials !== undefined,
   };
 }

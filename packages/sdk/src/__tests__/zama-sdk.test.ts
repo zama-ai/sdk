@@ -197,6 +197,21 @@ describe("ZamaSDK", () => {
     expect(await sessionStorage.get(key)).toBeNull();
   });
 
+  it("revokeSession clears cache even when session revoke fails", async ({
+    relayer,
+    provider,
+    signer,
+    storage,
+  }) => {
+    const sdk = new ZamaSDK({ relayer, provider, signer, storage });
+    const credentials = sdk.requireCredentials("test");
+    const clearSpy = vi.spyOn(sdk.cache, "clearForRequester").mockResolvedValueOnce(undefined);
+    vi.spyOn(credentials, "revokeFor").mockRejectedValueOnce(new Error("session blew up"));
+
+    await expect(sdk.revokeSession()).rejects.toThrow("session blew up");
+    expect(clearSpy).toHaveBeenCalledWith(await signer.getAddress());
+  });
+
   describe("keypairTTL validation", () => {
     it("throws when keypairTTL is 0", ({ relayer, signer, storage }) => {
       expect(() => new ZamaSDK({ relayer, signer, storage, keypairTTL: 0 })).toThrow(
@@ -269,7 +284,7 @@ describe("ZamaSDK", () => {
       return { signer, emitChange };
     }
 
-    it("logs a warning when core cleanup fails, without breaking event delivery", async ({
+    it("logs cleanup warnings and clears cache when revoke fails", async ({
       createMockRelayer,
       createMockSigner,
       userAddress,
@@ -287,6 +302,7 @@ describe("ZamaSDK", () => {
       });
 
       vi.spyOn(sessionStorage, "delete").mockRejectedValueOnce(new Error("session blew up"));
+      const clearSpy = vi.spyOn(sdk.cache, "clearForRequester").mockResolvedValueOnce(undefined);
       const listener = vi.fn();
       sdk.onIdentityChange(listener);
 
@@ -301,6 +317,7 @@ describe("ZamaSDK", () => {
           expect.any(Error),
         );
       });
+      expect(clearSpy).toHaveBeenCalledWith(userAddress);
       expect(listener).toHaveBeenCalledWith({
         previous: { address: userAddress, chainId: 31337 },
         next: undefined,

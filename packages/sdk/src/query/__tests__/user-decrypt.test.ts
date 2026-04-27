@@ -1,6 +1,7 @@
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { userDecryptQueryOptions } from "../user-decrypt";
 import type { Address } from "viem";
+import { ZamaSDK } from "../../zama-sdk";
 
 const CONTRACT = "0x1111111111111111111111111111111111111111" as Address;
 
@@ -43,5 +44,16 @@ describe("userDecryptQueryOptions", () => {
       handles: [{ handle, contractAddress: CONTRACT }],
     });
     expect(options.enabled).toBe(true);
+  });
+
+  test("disabled when signer-backed credentials are absent", ({ relayer, provider, storage }) => {
+    const handle = ("0x" + "01".repeat(32)) as `0x${string}`;
+    const sdk = new ZamaSDK({ relayer, provider, storage });
+
+    const options = userDecryptQueryOptions(sdk, {
+      handles: [{ handle, contractAddress: CONTRACT }],
+    });
+
+    expect(options.enabled).toBe(false);
   });
 });

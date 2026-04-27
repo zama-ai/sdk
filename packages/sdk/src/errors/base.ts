@@ -66,6 +66,8 @@ export const ZamaErrorCode = {
   DelegationNotPropagated: "DELEGATION_NOT_PROPAGATED",
   /** Signer and provider are connected to different chains. */
   ChainMismatch: "CHAIN_MISMATCH",
+  /** Operation requires a signer but none is configured. */
+  SignerRequired: "SIGNER_REQUIRED",
 } as const;
 
 /** Union of all {@link ZamaErrorCode} string values. */

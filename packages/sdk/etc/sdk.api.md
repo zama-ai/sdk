@@ -14657,6 +14657,13 @@ export interface SignerIdentityChange {
 export type SignerIdentityListener = (change: SignerIdentityChange) => void;
 
 // @public
+export class SignerRequiredError extends ZamaError {
+    constructor(operation: string, options?: ErrorOptions);
+    // (undocumented)
+    readonly operation: string;
+}
+
+// @public
 export class SigningFailedError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
@@ -19889,7 +19896,8 @@ export const ZamaErrorCode: {
     readonly AclPaused: "ACL_PAUSED"; /** Expiration date is too soon (must be at least 1 hour in the future). */
     readonly DelegationExpirationTooSoon: "DELEGATION_EXPIRATION_TOO_SOON"; /** Delegation exists on-chain but hasn't propagated to the gateway yet. */
     readonly DelegationNotPropagated: "DELEGATION_NOT_PROPAGATED"; /** Signer and provider are connected to different chains. */
-    readonly ChainMismatch: "CHAIN_MISMATCH";
+    readonly ChainMismatch: "CHAIN_MISMATCH"; /** Operation requires a signer but none is configured. */
+    readonly SignerRequired: "SIGNER_REQUIRED";
 };
 
 // @public
@@ -19905,9 +19913,9 @@ export class ZamaSDK {
     createToken(address: Address, wrapper?: Address): Token;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
     // (undocumented)
-    readonly credentials: CredentialsManager;
+    readonly credentials: CredentialsManager | undefined;
     // (undocumented)
-    readonly delegatedCredentials: DelegatedCredentialsManager;
+    readonly delegatedCredentials: DelegatedCredentialsManager | undefined;
     dispose(): void;
     // @internal
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
@@ -19919,11 +19927,14 @@ export class ZamaSDK {
     // (undocumented)
     readonly relayer: RelayerSDK;
     requireChainAlignment(operation: string): Promise<number>;
+    requireCredentials(operation: string): CredentialsManager;
+    requireDelegatedCredentials(operation: string): DelegatedCredentialsManager;
+    requireSigner(operation: string): GenericSigner;
     revokeSession(): Promise<void>;
     // (undocumented)
     readonly sessionStorage: GenericStorage;
     // (undocumented)
-    readonly signer: GenericSigner;
+    readonly signer: GenericSigner | undefined;
     // (undocumented)
     readonly storage: GenericStorage;
     terminate(): void;
@@ -19940,7 +19951,7 @@ export interface ZamaSDKConfig {
     relayer: RelayerSDK;
     sessionStorage?: GenericStorage;
     sessionTTL?: number | "infinite";
-    signer: GenericSigner;
+    signer?: GenericSigner;
     storage: GenericStorage;
 }
 

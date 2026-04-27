@@ -4,58 +4,26 @@
 
 ```ts
 
+import * as _$react_jsx_runtime0 from 'react/jsx-runtime';
 import { Address } from '@zama-fhe/sdk';
-import { Config } from 'wagmi';
-import { ContractAbi } from '@zama-fhe/sdk';
-import { EIP712TypedData } from '@zama-fhe/sdk';
-import { GenericProvider } from '@zama-fhe/sdk';
-import { GenericSigner } from '@zama-fhe/sdk';
-import { Hex } from '@zama-fhe/sdk';
-import { ReadContractArgs } from '@zama-fhe/sdk';
-import { ReadContractConfig } from '@zama-fhe/sdk';
-import { ReadContractReturnType } from '@zama-fhe/sdk';
-import { ReadFunctionName } from '@zama-fhe/sdk';
-import { SignerIdentityListener } from '@zama-fhe/sdk';
-import { TransactionReceipt } from '@zama-fhe/sdk';
-import { WriteContractArgs } from '@zama-fhe/sdk';
-import { WriteContractConfig } from '@zama-fhe/sdk';
-import { WriteFunctionName } from '@zama-fhe/sdk';
+import { GenericStorage } from '@zama-fhe/sdk';
+import { PropsWithChildren } from 'react';
+import { RelayerSDK } from '@zama-fhe/sdk';
+import { ZamaSDKEventListener } from '@zama-fhe/sdk';
 
 // @public
-export class WagmiProvider implements GenericProvider {
-    constructor(providerConfig: WagmiProviderConfig);
-    // (undocumented)
-    getBlockTimestamp(): Promise<bigint>;
-    // (undocumented)
-    getChainId(): Promise<number>;
-    // (undocumented)
-    readContract<const TAbi extends ContractAbi, TFunctionName extends ReadFunctionName<TAbi>, const TArgs extends ReadContractArgs<TAbi, TFunctionName>>(config: ReadContractConfig<TAbi, TFunctionName, TArgs>): Promise<ReadContractReturnType<TAbi, TFunctionName, TArgs>>;
-    waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
-}
+export function ZamaWagmiProvider(input: ZamaWagmiProviderProps): _$react_jsx_runtime0.JSX.Element;
 
 // @public
-export interface WagmiProviderConfig {
-    config: Config;
-}
-
-// @public
-export class WagmiSigner implements GenericSigner {
-    constructor(signerConfig: WagmiSignerConfig);
-    // (undocumented)
-    getAddress(): Promise<Address>;
-    // (undocumented)
-    getChainId(): Promise<number>;
-    // (undocumented)
-    signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-    // (undocumented)
-    subscribe(onIdentityChange: SignerIdentityListener): () => void;
-    // (undocumented)
-    writeContract<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex>;
-}
-
-// @public
-export interface WagmiSignerConfig {
-    config: Config;
+export interface ZamaWagmiProviderProps extends PropsWithChildren {
+    keypairTTL?: number;
+    onEvent?: ZamaSDKEventListener;
+    registryAddresses?: Record<number, Address>;
+    registryTTL?: number;
+    relayer: RelayerSDK;
+    sessionStorage?: GenericStorage;
+    sessionTTL?: number;
+    storage: GenericStorage;
 }
 
 // (No @packageDocumentation comment for this package)
