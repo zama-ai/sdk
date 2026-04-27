@@ -1061,7 +1061,8 @@ export class Token extends ReadonlyToken {
       // Required by non-standard tokens like USDT, and also mitigates the
       // ERC-20 approve race condition for all tokens.
       if (allowance > 0n) {
-        await signer.writeContract(approveContract(underlying, this.wrapper, 0n));
+        const resetHash = await signer.writeContract(approveContract(underlying, this.wrapper, 0n));
+        await this.sdk.provider.waitForTransactionReceipt(resetHash);
       }
 
       const approvalAmount = maxApproval ? 2n ** 256n - 1n : amount;
@@ -1071,6 +1072,7 @@ export class Token extends ReadonlyToken {
       );
       this.emit({ type: ZamaSDKEvents.ApproveUnderlyingSubmitted, txHash });
       safeCallback(() => callbacks?.onApprovalSubmitted?.(txHash));
+      await this.sdk.provider.waitForTransactionReceipt(txHash);
     } catch (error) {
       if (error instanceof ZamaError) {
         throw error;

@@ -6,16 +6,29 @@
 
 import { Abi } from 'viem';
 import { Address } from 'viem';
+import { Auth } from '@zama-fhe/relayer-sdk/bundle';
 import { Bytes32Hex } from '@zama-fhe/relayer-sdk/bundle';
+import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle';
 import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
 import { EIP1193Provider } from 'viem';
 import { Hex } from 'viem';
+import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
+import { KeypairType } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
 import { PublicClient } from 'viem';
+import { PublicDecryptResults } from '@zama-fhe/relayer-sdk/bundle';
+import * as SDK from '@zama-fhe/relayer-sdk/bundle';
 import { WalletClient } from 'viem';
+import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
+
+// Warning: (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "ZamaConfig" needs to be exported by the entry point index.d.ts
+//
+// @public
+export function createConfig<const TChains extends readonly [FheChain, ...FheChain[]]>(params: ZamaConfigViem<TChains>): ZamaConfig;
 
 // @public (undocumented)
 export function readConfidentialBalanceOfContract(client: PublicClient, tokenAddress: Address, userAddress: Address): Promise<`0x${string}`>;
@@ -85,7 +98,7 @@ export interface ViemProviderConfig {
 
 // Warning: (ae-forgotten-export) The symbol "GenericSigner" needs to be exported by the entry point index.d.ts
 //
-// @public
+// @public (undocumented)
 export class ViemSigner implements GenericSigner {
     constructor(config: ViemSignerConfig);
     // (undocumented)
@@ -96,10 +109,10 @@ export class ViemSigner implements GenericSigner {
     //
     // (undocumented)
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-    // Warning: (ae-forgotten-export) The symbol "SignerLifecycleCallbacks" needs to be exported by the entry point index.d.ts
+    // Warning: (ae-forgotten-export) The symbol "SignerIdentityListener" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
-    subscribe(callbacks: SignerLifecycleCallbacks): () => void;
+    subscribe(onIdentityChange: SignerIdentityListener): () => void;
     // Warning: (ae-forgotten-export) The symbol "WriteContractConfig" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
@@ -132,6 +145,19 @@ export function writeUnwrapFromBalanceContract(client: WalletClient, encryptedEr
 
 // @public (undocumented)
 export function writeWrapContract(client: WalletClient, wrapperAddress: Address, to: Address, amount: bigint): Promise<`0x${string}`>;
+
+// Warning: (ae-forgotten-export) The symbol "AtLeastOneChain" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "ZamaConfigBase" needs to be exported by the entry point index.d.ts
+//
+// @public
+export interface ZamaConfigViem<TChains extends AtLeastOneChain = AtLeastOneChain> extends ZamaConfigBase<TChains> {
+    // (undocumented)
+    ethereum?: EIP1193Provider;
+    // (undocumented)
+    publicClient: PublicClient;
+    // (undocumented)
+    walletClient: WalletClient;
+}
 
 // (No @packageDocumentation comment for this package)
 

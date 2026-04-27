@@ -115,7 +115,7 @@ Maximum number of concurrent decrypt calls. Default: `Infinity`.
 
 ### onError
 
-`(error: Error, address: Address) => bigint | undefined`
+`(error: Error, address: Address) => bigint`
 
 Called when decryption fails for a single token. Return a fallback value.
 

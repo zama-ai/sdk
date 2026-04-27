@@ -30,10 +30,10 @@ cd my-confidential-dapp
 ## 2. Install dependencies
 
 ```bash
-pnpm add @zama-fhe/react-sdk @zama-fhe/sdk @tanstack/react-query wagmi viem
+pnpm add @zama-fhe/sdk @zama-fhe/react-sdk @tanstack/react-query wagmi viem
 ```
 
-`@zama-fhe/react-sdk` provides the React hooks and `ZamaProvider`. Core classes and utilities (`RelayerWeb`, `indexedDBStorage`, `matchZamaError`, etc.) are imported from `@zama-fhe/sdk`.
+`@zama-fhe/react-sdk` provides React hooks. Core SDK symbols (classes, types, chain presets, relayer factories) are imported from `@zama-fhe/sdk` directly.
 
 ## 3. Configure wagmi and the SDK
 
@@ -46,8 +46,9 @@ Create `src/config.ts`. This file sets up wagmi, the signer, and the relayer -- 
 import { createConfig, http } from "wagmi";
 import { sepolia } from "wagmi/chains";
 import { QueryClient } from "@tanstack/react-query";
-import { RelayerWeb, indexedDBStorage } from "@zama-fhe/sdk";
-import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
+import { web } from "@zama-fhe/sdk";
+import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
+import { sepolia as sepoliaFhe, type FheChain } from "@zama-fhe/sdk/chains";
 
 export const wagmiConfig = createConfig({
   chains: [sepolia],
@@ -56,21 +57,20 @@ export const wagmiConfig = createConfig({
   },
 });
 
-export const signer = new WagmiSigner({ config: wagmiConfig });
+const mySepolia = {
+  ...sepoliaFhe,
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
+} as const satisfies FheChain;
 
-export const relayer = new RelayerWeb({
-  getChainId: () => signer.getChainId(),
-  transports: {
-    [sepolia.id]: {
-      relayerUrl: "https://your-app.com/api/relayer/11155111",
-      network: "https://sepolia.infura.io/v3/YOUR_KEY",
-    },
+export const zamaConfig = createZamaConfig({
+  chains: [mySepolia],
+  wagmiConfig,
+  relayers: {
+    [mySepolia.id]: web(),
   },
 });
 
 export const queryClient = new QueryClient();
-
-export const storage = indexedDBStorage;
 
 export const TOKEN_ADDRESS = "0xYourEncryptedERC20" as const;
 
@@ -95,14 +95,14 @@ Replace the contents of `src/App.tsx`. We wrap the app in three providers: wagmi
 import { WagmiProvider } from "wagmi";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ZamaProvider } from "@zama-fhe/react-sdk";
-import { wagmiConfig, queryClient, relayer, signer, storage } from "./config";
+import { wagmiConfig, queryClient, zamaConfig } from "./config";
 import { Dashboard } from "./Dashboard";
 
 export default function App() {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <ZamaProvider relayer={relayer} signer={signer} storage={storage}>
+        <ZamaProvider config={zamaConfig}>
           <h1>Confidential Token Dashboard</h1>
           <Dashboard />
         </ZamaProvider>

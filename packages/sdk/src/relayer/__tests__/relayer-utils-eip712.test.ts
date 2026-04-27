@@ -1,37 +1,25 @@
-import { describe, it, expect, beforeEach } from "../../test-fixtures";
+import { describe, it, expect, beforeEach, vi } from "../../test-fixtures";
 
 // ---------------------------------------------------------------------------
-// Hoisted mocks
+// Mock worker client
 // ---------------------------------------------------------------------------
 
-const { mockWorkerClient, MockRelayerWorkerClient } = vi.hoisted(() => {
-  const mockWorkerClient = {
-    initWorker: vi.fn().mockResolvedValue(undefined),
-    terminate: vi.fn(),
-    updateCsrf: vi.fn().mockResolvedValue(undefined),
-    generateKeypair: vi.fn(),
-    createEIP712: vi.fn(),
-    encrypt: vi.fn(),
-    userDecrypt: vi.fn(),
-    publicDecrypt: vi.fn(),
-    createDelegatedUserDecryptEIP712: vi.fn(),
-    delegatedUserDecrypt: vi.fn(),
-    requestZKProofVerification: vi.fn(),
-    getPublicKey: vi.fn(),
-    getPublicParams: vi.fn(),
-    getExtraData: vi.fn().mockResolvedValue({ result: "0x" }),
-  };
-
-  const MockRelayerWorkerClient = vi.fn(function () {
-    return mockWorkerClient;
-  });
-
-  return { mockWorkerClient, MockRelayerWorkerClient };
-});
-
-vi.mock(import("../../worker/worker.client"), () => ({
-  RelayerWorkerClient: MockRelayerWorkerClient,
-}));
+const mockWorkerClient = {
+  initWorker: vi.fn().mockResolvedValue(undefined),
+  terminate: vi.fn(),
+  updateCsrf: vi.fn().mockResolvedValue(undefined),
+  generateKeypair: vi.fn(),
+  createEIP712: vi.fn(),
+  encrypt: vi.fn(),
+  userDecrypt: vi.fn(),
+  publicDecrypt: vi.fn(),
+  createDelegatedUserDecryptEIP712: vi.fn(),
+  delegatedUserDecrypt: vi.fn(),
+  requestZKProofVerification: vi.fn(),
+  getPublicKey: vi.fn(),
+  getPublicParams: vi.fn(),
+  getExtraData: vi.fn().mockResolvedValue({ result: "0x" }),
+};
 
 import { RelayerWeb } from "../relayer-web";
 import type { Address } from "viem";
@@ -67,8 +55,8 @@ const MOCK_EIP712 = {
 
 function createRelayer() {
   return new RelayerWeb({
-    transports: { 1: {} },
-    getChainId: async () => 1,
+    chain: { chainId: 1 } as any,
+    worker: mockWorkerClient as any,
   });
 }
 

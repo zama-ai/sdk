@@ -7,8 +7,7 @@ import { useQuery } from "../utils/query";
 
 /**
  * Resolves the wrappers registry address for the current chain.
- * Uses the merged registry addresses from `sdk.registry` (built-in defaults
- * plus any `registryAddresses` overrides passed to `ZamaSDKConfig`).
+ * Uses the registry addresses from `sdk.registry` (built-in defaults from chain configs).
  *
  * Returns `undefined` when the chain ID hasn't been fetched yet
  * or when no registry is configured for the connected chain.

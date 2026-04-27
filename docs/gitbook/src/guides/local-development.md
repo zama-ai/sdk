@@ -5,9 +5,9 @@ description: How to use the cleartext relayer for local Hardhat nodes and custom
 
 # Local development
 
-The SDK ships `RelayerCleartext`, a drop-in relayer that replaces FHE operations with cleartext operations. Values are stored as plaintext on-chain — no KMS, no gateway, no WASM. Use it for local Hardhat nodes, custom testnets, or any chain where you deploy FHEVM contracts in cleartext mode.
+The SDK ships a `cleartext()` relayer factory that creates a cleartext relayer, replacing FHE operations with cleartext operations. Values are stored as plaintext on-chain — no KMS, no gateway, no WASM. Use it for local Hardhat nodes, custom testnets, or any chain where you deploy FHEVM contracts in cleartext mode.
 
-`RelayerCleartext` implements the same `RelayerSDK` interface as `RelayerWeb` and `RelayerNode`, so the rest of your code stays unchanged.
+The `cleartext()` relayer factory implements the same `RelayerSDK` interface as `web()` and `node()`, so the rest of your code stays unchanged.
 
 {% hint style="warning" %}
 Cleartext mode is blocked on Ethereum Mainnet (chain 1) and Sepolia (chain 11155111). It is intended for development and testing only.
@@ -21,41 +21,35 @@ Cleartext mode is blocked on Ethereum Mainnet (chain 1) and Sepolia (chain 11155
 npm install @zama-fhe/sdk viem
 ```
 
-### 2. Import from the `/cleartext` sub-path
+### 2. Use the `cleartext()` relayer with `createConfig`
 
 ```ts
-import { RelayerCleartext, hardhatCleartextConfig } from "@zama-fhe/sdk/cleartext";
-import { ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
-import { ViemSigner } from "@zama-fhe/sdk/viem";
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { cleartext, ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
+import { hardhat } from "@zama-fhe/sdk/chains";
 ```
 
-### 3. Create the relayer with a preset
+### 3. Create the config with a Hardhat chain
 
-For a local Hardhat network, use the built-in `hardhatCleartextConfig` preset:
-
-```ts
-const relayer = new RelayerCleartext(hardhatCleartextConfig);
-```
-
-Zama provides a cleartext deployment for the Hoodi testnet, via `hoodiCleartextConfig`:
+For a local Hardhat network, use the built-in `hardhat` chain object:
 
 ```ts
-import { RelayerCleartext, hoodiCleartextConfig } from "@zama-fhe/sdk/cleartext";
-
-const relayer = new RelayerCleartext(hoodiCleartextConfig);
-```
-
-### 4. Plug into `ZamaSDK`
-
-The relayer is a drop-in replacement — pass it like any other relayer:
-
-```ts
-const sdk = new ZamaSDK({
-  relayer,
-  signer,
+const config = createConfig({
+  chains: [{ ...hardhat, executorAddress: "0xYourExecutorAddress" }],
+  publicClient,
+  walletClient,
   storage: memoryStorage,
+  relayers: {
+    [hardhat.id]: cleartext(),
+  },
 });
+
+const sdk = new ZamaSDK(config);
 ```
+
+The `executorAddress` is the deployed `CleartextFHEVMExecutor` contract address from your Hardhat setup. It must be set on the chain definition — `cleartext()` picks it up automatically.
+
+### 4. Use the SDK normally
 
 The token API works exactly the same:
 
@@ -67,25 +61,37 @@ const balance = await token.balanceOf();
 
 ### 5. (Optional) Create a custom config for your own chain
 
-If you deploy FHEVM contracts on a custom chain or at different addresses than the default ones, build a `CleartextConfig` manually. Each field maps to a contract address from your deployment:
+If you deploy FHEVM contracts on a custom chain or at different addresses than the default ones, pass all required fields to the chain definition used with the `cleartext()` relayer factory:
 
 ```ts
-import { RelayerCleartext } from "@zama-fhe/sdk/cleartext";
-import type { CleartextConfig } from "@zama-fhe/sdk/cleartext";
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { cleartext, ZamaSDK } from "@zama-fhe/sdk";
+import type { FheChain } from "@zama-fhe/sdk/chains";
 
-const myChainConfig: CleartextConfig = {
-  chainId: 12345,
-  network: "http://localhost:8545", // RPC URL or EIP-1193 provider
+const myHardhat = {
+  id: 12345,
+  network: "http://localhost:8545",
   gatewayChainId: 10901,
-
-  // Contract addresses from your own deployment
   aclContractAddress: "0x...",
-  executorAddress: "0x...",
+  kmsContractAddress: "0x...",
+  inputVerifierContractAddress: "0x...",
   verifyingContractAddressDecryption: "0x...",
   verifyingContractAddressInputVerification: "0x...",
-};
+  executorAddress: "0x...",
+  registryAddress: undefined,
+  relayerUrl: "",
+} as const satisfies FheChain;
 
-const relayer = new RelayerCleartext(myChainConfig);
+const config = createConfig({
+  chains: [myHardhat],
+  publicClient,
+  walletClient,
+  relayers: {
+    [myHardhat.id]: cleartext(),
+  },
+});
+
+const sdk = new ZamaSDK(config);
 ```
 
 **Where to find these addresses:**
@@ -105,5 +111,5 @@ Usually, you want to use the same `gatewayChainId` and verifying contract addres
 ## Next steps
 
 - [RelayerCleartext reference](/reference/sdk/RelayerCleartext) — full constructor options and `CleartextConfig` type
-- [Configuration](/guides/configuration) — production setup with `RelayerWeb` or `RelayerNode`
-- [Network Presets](/reference/sdk/network-presets) — preset configs for Mainnet, Sepolia, and Hardhat
+- [Configuration](/guides/configuration) — production setup with `web()` or `node()` relayer factories
+- [Chain Objects](/reference/sdk/network-presets) — pre-configured chain definitions for Mainnet, Sepolia, and more

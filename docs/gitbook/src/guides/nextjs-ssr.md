@@ -49,22 +49,25 @@ import { WagmiProvider, createConfig, http } from "wagmi";
 import { sepolia } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ZamaProvider } from "@zama-fhe/react-sdk";
-import { RelayerWeb, indexedDBStorage } from "@zama-fhe/sdk";
-import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
+import { web } from "@zama-fhe/sdk";
+import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
+import { sepolia as sepoliaFhe, type FheChain } from "@zama-fhe/sdk/chains";
 
 const wagmiConfig = createConfig({
   chains: [sepolia],
   transports: { [sepolia.id]: http() },
 });
 
-const signer = new WagmiSigner({ config: wagmiConfig });
-const relayer = new RelayerWeb({
-  getChainId: () => signer.getChainId(),
-  transports: {
-    [sepolia.id]: {
-      relayerUrl: "/api/relayer/11155111",
-      network: "https://sepolia.infura.io/v3/YOUR_KEY",
-    },
+const mySepolia = {
+  ...sepoliaFhe,
+  relayerUrl: "/api/relayer/11155111",
+} as const satisfies FheChain;
+
+const zamaConfig = createZamaConfig({
+  chains: [mySepolia],
+  wagmiConfig,
+  relayers: {
+    [mySepolia.id]: web(),
   },
 });
 
@@ -74,9 +77,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <ZamaProvider relayer={relayer} signer={signer} storage={indexedDBStorage}>
-          {children}
-        </ZamaProvider>
+        <ZamaProvider config={zamaConfig}>{children}</ZamaProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );
@@ -110,19 +111,21 @@ A common mistake is initializing the relayer or signer in a shared module that g
 
 ```ts
 // lib/sdk.ts — DO NOT do this
-import { RelayerWeb } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk";
+import { createConfig } from "@zama-fhe/sdk/viem";
 
 // This runs during SSR and crashes — Web Worker is not available
-export const relayer = new RelayerWeb({ ... });
+export const config = createConfig({ ... });
 ```
 
 Instead, keep all SDK initialization inside a `"use client"` file (like the `Providers` component above), or gate it behind a dynamic import:
 
 ```ts
 // lib/sdk.ts — safe alternative
-export async function getRelayer() {
-  const { RelayerWeb } = await import("@zama-fhe/sdk");
-  return new RelayerWeb({ ... });
+export async function getConfig() {
+  const { web } = await import("@zama-fhe/sdk");
+  const { createConfig } = await import("@zama-fhe/sdk/viem");
+  return createConfig({ ... });
 }
 ```
 

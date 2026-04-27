@@ -6,11 +6,13 @@
 
 import { Abi } from 'viem';
 import { Address } from 'viem';
+import { Auth } from '@zama-fhe/relayer-sdk/bundle';
 import { Bytes32Hex } from '@zama-fhe/relayer-sdk/bundle';
 import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle';
 import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
+import { EIP1193Provider } from 'viem';
 import { FheTypeName } from '@zama-fhe/relayer-sdk/bundle';
 import { FhevmInstanceConfig } from '@zama-fhe/relayer-sdk/bundle';
 import { Hex } from 'viem';
@@ -18,9 +20,14 @@ import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
 import { KeypairType } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
+import { PrivateKeyAccount } from 'viem/accounts';
+import { Provider } from 'ethers';
+import { PublicClient } from 'viem';
 import { PublicDecryptResults } from '@zama-fhe/relayer-sdk/bundle';
 import * as SDK from '@zama-fhe/relayer-sdk/bundle';
+import { Signer } from 'ethers';
 import { UserDecryptResults } from '@zama-fhe/relayer-sdk/bundle';
+import { WalletClient } from 'viem';
 import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
 
 // @public
@@ -185,6 +192,21 @@ export function allowanceContract(tokenAddress: Address, owner: Address, spender
 };
 
 // @public
+export const anvil: {
+    readonly id: 31337;
+    readonly gatewayChainId: 10901;
+    readonly relayerUrl: "";
+    readonly network: "http://127.0.0.1:8545";
+    readonly aclContractAddress: "0x50157CFfD6bBFA2DECe204a89ec419c23ef5755D";
+    readonly inputVerifierContractAddress: "0x36772142b74871f255CbD7A3e89B401d3e45825f";
+    readonly kmsContractAddress: "0x901F8942346f7AB3a01F6D7613119Bca447Bb030";
+    readonly verifyingContractAddressDecryption: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64";
+    readonly verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810";
+    readonly registryAddress: undefined;
+    readonly executorAddress: "0xe3a9105a3a932253A70F126eb1E3b589C643dD24";
+};
+
+// @public
 export class ApprovalFailedError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
@@ -346,6 +368,9 @@ export interface ApproveUnderlyingSubmittedEvent extends BaseEvent {
     // (undocumented)
     type: typeof ZamaSDKEvents.ApproveUnderlyingSubmitted;
 }
+
+// @public
+export type AtLeastOneChain = readonly [FheChain, ...FheChain[]];
 
 // @public
 export class BalanceCheckUnavailableError extends ZamaError {
@@ -528,6 +553,11 @@ export interface BatchDecryptAsOptions {
     onError?: (error: Error, address: Address) => bigint;
 }
 
+// Warning: (ae-internal-missing-underscore) The name "buildZamaConfig" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal
+export function buildZamaConfig(signer: GenericSigner, provider: GenericProvider, params: ZamaConfigBase): ZamaConfig;
+
 // @public
 export class ChainMismatchError extends ZamaError {
     constructor(input: {
@@ -544,6 +574,9 @@ export class ChainMismatchError extends ZamaError {
 }
 
 // @public
+export const chains: Record<number, FheChain>;
+
+// @public
 export class ChromeSessionStorage implements GenericStorage {
     // (undocumented)
     delete(key: string): Promise<void>;
@@ -558,6 +591,19 @@ export const chromeSessionStorage: ChromeSessionStorage;
 
 // @public
 export function clearPendingUnshield(storage: GenericStorage, wrapperAddress: Address): Promise<void>;
+
+// @public
+export function cleartext(): CleartextRelayerConfig;
+
+// @public
+export interface CleartextRelayerConfig extends RelayerConfig {
+    // Warning: (ae-forgotten-export) The symbol "RelayerCleartext" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    readonly createRelayer: (chain: FheChain, worker: unknown) => RelayerCleartext;
+    // (undocumented)
+    readonly type: "cleartext";
+}
 
 export { ClearValueType }
 
@@ -5862,6 +5908,9 @@ export class ConfigurationError extends ZamaError {
 // @public
 export type ContractAbi = Abi | readonly unknown[];
 
+// @public
+export function createConfig<const TChains extends readonly [FheChain, ...FheChain[]]>(params: ZamaConfigGeneric<TChains>): ZamaConfig;
+
 // @public (undocumented)
 export interface CredentialsAllowedEvent extends BaseEvent {
     contractAddresses?: Address[];
@@ -5932,7 +5981,7 @@ export class CredentialsManager extends BaseCredentialsManager<StoredCredentials
     isAllowed(contractAddresses: [Address, ...Address[]]): Promise<boolean>;
     isExpired(contractAddress?: Address): Promise<boolean>;
     revoke(...contractAddresses: Address[]): Promise<void>;
-    revokeByKey(key: string): Promise<void>;
+    revokeFor(identity: SignerIdentity): Promise<void>;
     // Warning: (ae-forgotten-export) The symbol "SigningMeta" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
@@ -6475,6 +6524,33 @@ export const ERC7984_WRAPPER_INTERFACE_ID: "0x1f1c62b2";
 
 // @public
 export const ERC7984_WRAPPER_INTERFACE_ID_LEGACY: "0xd04584ba";
+
+// @public
+export interface FheChain<TId extends number = number> {
+    // (undocumented)
+    readonly aclContractAddress: Address;
+    readonly auth?: Auth;
+    readonly executorAddress?: Address | undefined;
+    // (undocumented)
+    readonly gatewayChainId: number;
+    // (undocumented)
+    readonly id: TId;
+    readonly inputSignerPrivateKey?: Hex;
+    // (undocumented)
+    readonly inputVerifierContractAddress: Address;
+    // (undocumented)
+    readonly kmsContractAddress: Address;
+    readonly kmsSignerPrivateKey?: Hex;
+    // (undocumented)
+    readonly network: EIP1193Provider | string;
+    readonly registryAddress: Address | undefined;
+    // (undocumented)
+    readonly relayerUrl: string;
+    // (undocumented)
+    readonly verifyingContractAddressDecryption: Address;
+    // (undocumented)
+    readonly verifyingContractAddressInputVerification: Address;
+}
 
 export { FheTypeName }
 
@@ -7552,7 +7628,7 @@ export interface GenericSigner {
     getAddress(): Promise<Address>;
     getChainId(): Promise<number>;
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-    subscribe?: (callbacks: SignerLifecycleCallbacks) => () => void;
+    subscribe?: (onIdentityChange: SignerIdentityListener) => () => void;
     writeContract<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex>;
 }
 
@@ -8753,8 +8829,8 @@ export function getTokenPairsSliceContract(registry: Address, fromIndex: bigint,
 export type Handle = Bytes32Hex;
 
 // @public
-export const HardhatConfig: {
-    readonly chainId: 31337;
+export const hardhat: {
+    readonly id: 31337;
     readonly gatewayChainId: 10901;
     readonly relayerUrl: "";
     readonly network: "http://127.0.0.1:8545";
@@ -8764,9 +8840,25 @@ export const HardhatConfig: {
     readonly verifyingContractAddressDecryption: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64";
     readonly verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810";
     readonly registryAddress: undefined;
+    readonly executorAddress: "0xe3a9105a3a932253A70F126eb1E3b589C643dD24";
 };
 
 export { Hex }
+
+// @public
+export const hoodi: {
+    readonly id: 560048;
+    readonly gatewayChainId: 10901;
+    readonly relayerUrl: "";
+    readonly network: "https://rpc.hoodi.ethpandaops.io";
+    readonly aclContractAddress: "0x6D3FAf6f86e1fF9F3B0831Dda920AbA1cBd5bd68";
+    readonly kmsContractAddress: "0x901F8942346f7AB3a01F6D7613119Bca447Bb030";
+    readonly inputVerifierContractAddress: "0x36772142b74871f255CbD7A3e89B401d3e45825f";
+    readonly verifyingContractAddressDecryption: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64";
+    readonly verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810";
+    readonly registryAddress: "0x1807aE2f693F8530DFB126D0eF98F2F2518F292f";
+    readonly executorAddress: "0xC316692627de536368d82e9121F1D44a550894E6";
+};
 
 // @public
 export class IndexedDBStorage implements GenericStorage {
@@ -11496,8 +11588,8 @@ export function loadPendingUnshield(storage: GenericStorage, wrapperAddress: Add
 export function loadPendingUnshieldRequest(storage: GenericStorage, wrapperAddress: Address): Promise<PendingUnshieldRequest | null>;
 
 // @public
-export const MainnetConfig: {
-    readonly chainId: 1;
+export const mainnet: {
+    readonly id: 1;
     readonly gatewayChainId: 261131;
     readonly relayerUrl: "https://relayer.mainnet.zama.org/v2";
     readonly network: "https://ethereum-rpc.publicnode.com";
@@ -13101,65 +13193,100 @@ export class ReadonlyToken {
 }
 
 // @public
+export interface RelayerConfig {
+    readonly createRelayer: (chain: FheChain, worker: any) => RelayerSDK;
+    readonly createWorker?: (chains: FheChain[]) => any;
+    // (undocumented)
+    readonly type: string;
+}
+
+// @public
+export class RelayerDispatcher implements RelayerSDK, Disposable {
+    // (undocumented)
+    [Symbol.dispose](): void;
+    constructor(chains: readonly [FheChain, ...FheChain[]], configs: Readonly<Record<number, RelayerConfig>>);
+    // (undocumented)
+    get chain(): FheChain;
+    // (undocumented)
+    get chains(): readonly FheChain[];
+    // (undocumented)
+    createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type>;
+    // (undocumented)
+    createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
+    // (undocumented)
+    delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
+    // (undocumented)
+    encrypt(params: EncryptParams): Promise<EncryptResult>;
+    // (undocumented)
+    generateKeypair(): Promise<KeypairType<Hex>>;
+    // (undocumented)
+    getAclAddress(): Promise<Address>;
+    // (undocumented)
+    getPublicKey(): Promise<PublicKeyData | null>;
+    // (undocumented)
+    getPublicParams(bits: number): Promise<PublicParamsData | null>;
+    // (undocumented)
+    publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
+    // (undocumented)
+    requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
+    // (undocumented)
+    switchChain(chainId: number): void;
+    // (undocumented)
+    terminate(): void;
+    // (undocumented)
+    userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
+}
+
+// @public
 export class RelayerRequestFailedError extends ZamaError {
     constructor(message: string, statusCode?: number, options?: ErrorOptions);
     readonly statusCode: number | undefined;
 }
 
+// Warning: (ae-forgotten-export) The symbol "FheOperations" needs to be exported by the entry point index.d.ts
+//
 // @public
-export interface RelayerSDK {
-    createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type>;
-    createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
-    delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
-    encrypt(params: EncryptParams): Promise<EncryptResult>;
-    generateKeypair(): Promise<KeypairType<Hex>>;
+export interface RelayerSDK extends FheOperations {
     getAclAddress(): Promise<Address>;
-    getExtraData(): Promise<Hex>;
-    getPublicKey(): Promise<PublicKeyData | null>;
-    getPublicParams(bits: number): Promise<PublicParamsData | null>;
-    publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
-    requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
     terminate(): void;
-    userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
 }
 
 // @public
 export type RelayerSDKStatus = "idle" | "initializing" | "ready" | "error";
 
+// Warning: (ae-forgotten-export) The symbol "BaseRelayer" needs to be exported by the entry point index.d.ts
+//
 // @public
-export class RelayerWeb implements RelayerSDK, Disposable {
+export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
     [Symbol.dispose](): void;
     constructor(config: RelayerWebConfig);
+    // (undocumented)
+    protected get chain(): FheChain;
     createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type>;
     createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
     delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
     generateKeypair(): Promise<KeypairType<Hex>>;
-    // (undocumented)
-    getAclAddress(): Promise<Address>;
-    // (undocumented)
-    getExtraData(): Promise<Hex>;
     getPublicKey(): Promise<PublicKeyData | null>;
     getPublicParams(bits: number): Promise<PublicParamsData | null>;
-    get initError(): Error | undefined;
+    // (undocumented)
+    protected init(): Promise<void>;
     publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
     requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
-    get status(): RelayerSDKStatus;
     terminate(): void;
     userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
 }
 
 // @public
 export interface RelayerWebConfig {
+    chain: FheChain;
     fheArtifactCacheTTL?: number;
     fheArtifactStorage?: GenericStorage;
-    getChainId: () => Promise<number>;
     logger?: GenericLogger;
-    onStatusChange?: (status: RelayerSDKStatus, error?: Error) => void;
     security?: RelayerWebSecurityConfig;
     threads?: number;
-    // (undocumented)
-    transports: Record<number, Partial<SDK.FhevmInstanceConfig>>;
+    // Warning: (ae-forgotten-export) The symbol "RelayerWorkerClient" needs to be exported by the entry point index.d.ts
+    worker: RelayerWorkerClient;
 }
 
 // @public
@@ -13167,6 +13294,23 @@ export interface RelayerWebSecurityConfig {
     getCsrfToken?: () => string;
     integrityCheck?: boolean;
 }
+
+// @public (undocumented)
+export function resolveChainRelayers(chains: readonly FheChain[], relayers: Readonly<Record<number, RelayerConfig>>): Map<number, ResolvedChainRelayer>;
+
+// @public (undocumented)
+export interface ResolvedChainRelayer {
+    // (undocumented)
+    chain: FheChain;
+    // (undocumented)
+    relayer: RelayerConfig;
+}
+
+// @public (undocumented)
+export function resolveStorage(storage?: GenericStorage | undefined, sessionStorage?: GenericStorage | undefined): {
+    storage: GenericStorage;
+    sessionStorage: GenericStorage;
+};
 
 // @public
 export interface RevokedDelegationForUserDecryptionEvent {
@@ -13279,8 +13423,8 @@ export interface RevokeDelegationSubmittedEvent extends BaseEvent {
 export function savePendingUnshield(storage: GenericStorage, wrapperAddress: Address, unwrapTxHash: Hex, unwrapRequestId?: Handle): Promise<void>;
 
 // @public
-export const SepoliaConfig: {
-    readonly chainId: 11155111;
+export const sepolia: {
+    readonly id: 11155111;
     readonly gatewayChainId: 10901;
     readonly relayerUrl: "https://relayer.testnet.zama.org/v2";
     readonly network: "https://ethereum-sepolia-rpc.publicnode.com";
@@ -14641,11 +14785,23 @@ export interface ShieldSubmittedEvent extends BaseEvent {
 }
 
 // @public
-export interface SignerLifecycleCallbacks {
-    onAccountChange?: (newAddress: Address) => void;
-    onChainChange?: (newChainId: number) => void;
-    onDisconnect?: () => void;
+export interface SignerIdentity {
+    // (undocumented)
+    address: Address;
+    // (undocumented)
+    chainId: number;
 }
+
+// @public
+export interface SignerIdentityChange {
+    // (undocumented)
+    next?: SignerIdentity;
+    // (undocumented)
+    previous?: SignerIdentity;
+}
+
+// @public
+export type SignerIdentityListener = (change: SignerIdentityChange) => void;
 
 // @public
 export class SigningFailedError extends ZamaError {
@@ -18759,6 +18915,28 @@ export interface UserDecryptParams {
 }
 
 // @public
+export function web(options?: WebRelayerOptions): WebRelayerConfig;
+
+// @public
+export interface WebRelayerConfig extends RelayerConfig {
+    // (undocumented)
+    readonly createRelayer: (chain: FheChain, worker: RelayerWorkerClient) => RelayerWeb;
+    // (undocumented)
+    readonly createWorker: (chains: FheChain[]) => RelayerWorkerClient;
+    // (undocumented)
+    readonly type: "web";
+}
+
+// @public
+export type WebRelayerOptions = Partial<Pick<RelayerWebConfig, "threads" | "security" | "logger">>;
+
+// @public
+export interface WorkerLike {
+    // (undocumented)
+    terminate(): void;
+}
+
+// @public
 export function wrapContract(wrapperAddress: Address, to: Address, amount: bigint): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
@@ -19848,6 +20026,75 @@ export interface WriteContractConfig<TAbi extends ContractAbi = ContractAbi, TFu
 export type WriteFunctionName<TAbi extends ContractAbi = ContractAbi> = ContractFunctionName<TAbi, "nonpayable" | "payable">;
 
 // @public
+export interface ZamaConfig {
+    // (undocumented)
+    readonly chains: readonly FheChain[];
+    // (undocumented)
+    readonly keypairTTL: number | undefined;
+    // (undocumented)
+    readonly onEvent: ZamaSDKEventListener | undefined;
+    // (undocumented)
+    readonly provider: GenericProvider;
+    // (undocumented)
+    readonly registryTTL: number | undefined;
+    // (undocumented)
+    readonly relayer: RelayerDispatcher;
+    // (undocumented)
+    readonly sessionStorage: GenericStorage;
+    // (undocumented)
+    readonly sessionTTL: number | "infinite" | undefined;
+    // (undocumented)
+    readonly signer: GenericSigner;
+    // (undocumented)
+    readonly storage: GenericStorage;
+}
+
+// @public
+export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChain> {
+    chains: TChains;
+    keypairTTL?: number;
+    onEvent?: ZamaSDKEventListener;
+    registryTTL?: number;
+    relayers: { [K in TChains[number]["id"]]: RelayerConfig };
+    sessionStorage?: GenericStorage;
+    sessionTTL?: number | "infinite";
+    storage?: GenericStorage;
+}
+
+// @public
+export type ZamaConfigEthers<TChains extends AtLeastOneChain = AtLeastOneChain> = ZamaConfigBase<TChains> & ({
+    ethereum: EIP1193Provider;
+    signer?: never;
+    provider?: never;
+} | {
+    signer: Signer;
+    ethereum?: never;
+    provider?: never;
+} | {
+    ethereum: EIP1193Provider;
+    provider: Provider;
+    signer?: never;
+});
+
+// @public
+export interface ZamaConfigGeneric<TChains extends AtLeastOneChain = AtLeastOneChain> extends ZamaConfigBase<TChains> {
+    // (undocumented)
+    provider: GenericProvider;
+    // (undocumented)
+    signer: GenericSigner;
+}
+
+// @public
+export interface ZamaConfigViem<TChains extends AtLeastOneChain = AtLeastOneChain> extends ZamaConfigBase<TChains> {
+    // (undocumented)
+    ethereum?: EIP1193Provider;
+    // (undocumented)
+    publicClient: PublicClient;
+    // (undocumented)
+    walletClient: WalletClient;
+}
+
+// @public
 export class ZamaError extends Error {
     constructor(code: ZamaErrorCode, message: string, options?: ErrorOptions);
     readonly code: ZamaErrorCode;
@@ -19902,12 +20149,13 @@ export class ZamaSDK {
     dispose(): void;
     // @internal
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
+    onIdentityChange(listener: SignerIdentityListener): () => void;
     // (undocumented)
     readonly provider: GenericProvider;
     publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
     readonly registry: WrappersRegistry;
     // (undocumented)
-    readonly relayer: RelayerSDK;
+    readonly relayer: RelayerDispatcher;
     requireChainAlignment(operation: string): Promise<number>;
     revokeSession(): Promise<void>;
     // (undocumented)
@@ -19922,16 +20170,16 @@ export class ZamaSDK {
 
 // @public
 export interface ZamaSDKConfig {
+    chains?: readonly FheChain[];
     keypairTTL?: number;
     onEvent?: ZamaSDKEventListener;
     provider: GenericProvider;
     registryAddresses?: Record<number, Address>;
     registryTTL?: number;
-    relayer: RelayerSDK;
+    relayer: RelayerDispatcher;
     sessionStorage?: GenericStorage;
     sessionTTL?: number | "infinite";
     signer: GenericSigner;
-    signerLifecycleCallbacks?: SignerLifecycleCallbacks;
     storage: GenericStorage;
 }
 

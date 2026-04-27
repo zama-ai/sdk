@@ -14,8 +14,7 @@ import {
   symbolContract,
 } from "./contracts";
 import { ConfigurationError } from "./errors/relayer";
-import { hoodiCleartextConfig } from "./relayer/cleartext";
-import { MainnetConfig, SepoliaConfig } from "./relayer/relayer-utils";
+import { mainnet, sepolia, hoodi } from "./chains";
 import type { GenericProvider } from "./types/provider";
 
 /**
@@ -23,9 +22,9 @@ import type { GenericProvider } from "./types/provider";
  * Only includes chains where a registry is deployed (excludes Hardhat).
  */
 export const DefaultRegistryAddresses: Record<number, Address> = {
-  [MainnetConfig.chainId]: MainnetConfig.registryAddress,
-  [SepoliaConfig.chainId]: SepoliaConfig.registryAddress,
-  [hoodiCleartextConfig.chainId]: hoodiCleartextConfig.registryAddress,
+  [mainnet.id]: mainnet.registryAddress,
+  [sepolia.id]: sepolia.registryAddress,
+  [hoodi.id]: hoodi.registryAddress,
 };
 
 /** Default page size for {@link WrappersRegistry.listPairs}. */
