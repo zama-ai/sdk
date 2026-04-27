@@ -4032,6 +4032,8 @@ Clears the session signature **and** cached decrypted values without specifying 
 await sdk.revokeSession();
 ```
 
+`revokeSession()` targets the live signer identity at invocation time. Call it before disconnecting a wallet, or rely on signer lifecycle cleanup to revoke the previous identity during disconnect, account change, or chain change handling.
+
 ### dispose
 
 `() => void`
@@ -5743,7 +5745,7 @@ interface GenericSigner {
   writeContract(config: WriteContractConfig): Promise<Hex>;
   readContract(config: ReadContractConfig): Promise<unknown>;
   waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
-  subscribe?(callbacks: SignerLifecycleCallbacks): () => void;
+  subscribe?(onIdentityChange: SignerIdentityListener): () => void;
 }
 ```
 
@@ -5827,16 +5829,17 @@ Wait for a transaction to be mined and return the receipt.
 ### subscribe (optional)
 
 ```ts
-subscribe?(callbacks: SignerLifecycleCallbacks): () => void
+subscribe?(onIdentityChange: SignerIdentityListener): () => void
 ```
 
-Subscribe to wallet lifecycle events (disconnect, account change, chain change). Returns an unsubscribe function.
+Subscribe to wallet identity transitions (connect, disconnect, account change, chain change). Returns an unsubscribe function.
 
-The SDK calls `subscribe()` during initialization if it exists. The callbacks object contains:
+The SDK calls `subscribe()` during initialization if it exists. The listener receives a transition object:
 
-- `onDisconnect()` -- called when the wallet disconnects or locks. The SDK revokes the session.
-- `onAccountChange()` -- called when the user switches accounts. The SDK revokes the previous account's session.
-- `onChainChange(newChainId: number)` -- called when the user switches chains.
+- `previous` -- the previous `{ address, chainId }` identity, when one was known.
+- `next` -- the next `{ address, chainId }` identity, when the wallet is connected.
+
+When `previous` is present, the SDK revokes that previous identity's session signature and clears that requester's decrypt cache.
 
 
 > [!INFO]
@@ -17831,9 +17834,9 @@ to overwrite the encrypted keypair, forcing re-signing on every balance decrypt.
 
 ## 2. Why `WagmiSigner` is different from `EthersSigner` / `ViemSigner`
 
-`WagmiSigner` has a `subscribe({ onAccountChange, onChainChange, onDisconnect })` method
-backed by `watchConnection` from wagmi. The SDK uses this internally to update its state
-whenever the account or chain changes.
+`WagmiSigner` has a `subscribe(onIdentityChange)` method backed by `watchConnection`
+from wagmi. The SDK uses this internally to update its state whenever the account or
+chain changes.
 
 **Consequences:**
 

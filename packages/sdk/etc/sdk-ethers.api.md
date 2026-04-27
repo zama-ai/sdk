@@ -67,10 +67,10 @@ export class EthersSigner implements GenericSigner {
     //
     // (undocumented)
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-    // Warning: (ae-forgotten-export) The symbol "SignerLifecycleCallbacks" needs to be exported by the entry point index.d.ts
+    // Warning: (ae-forgotten-export) The symbol "SignerIdentityListener" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
-    subscribe(callbacks: SignerLifecycleCallbacks): () => void;
+    subscribe(onIdentityChange: SignerIdentityListener): () => void;
     // Warning: (ae-forgotten-export) The symbol "WriteContractConfig" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)

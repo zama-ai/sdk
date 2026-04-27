@@ -275,7 +275,7 @@ export class CredentialsManager extends BaseCredentialsManager<StoredCredentials
     isAllowed(contractAddresses: [Address, ...Address[]]): Promise<boolean>;
     isExpired(contractAddress?: Address): Promise<boolean>;
     revoke(...contractAddresses: Address[]): Promise<void>;
-    revokeByKey(key: string): Promise<void>;
+    revokeFor(identity: SignerIdentity): Promise<void>;
     // Warning: (ae-forgotten-export) The symbol "SigningMeta" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
@@ -506,7 +506,7 @@ export interface GenericSigner {
     getAddress(): Promise<Address>;
     getChainId(): Promise<number>;
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-    subscribe?: (callbacks: SignerLifecycleCallbacks) => () => void;
+    subscribe?: (onIdentityChange: SignerIdentityListener) => () => void;
     // Warning: (ae-forgotten-export) The symbol "ContractAbi" needs to be exported by the entry point index.d.ts
     // Warning: (ae-forgotten-export) The symbol "WriteFunctionName" needs to be exported by the entry point index.d.ts
     // Warning: (ae-forgotten-export) The symbol "WriteContractArgs" needs to be exported by the entry point index.d.ts
@@ -819,11 +819,23 @@ export interface ShieldSubmittedEvent extends BaseEvent {
 export function signerAddressQueryOptions(signer: GenericSigner): QueryFactoryOptions<Address, Error, Address, ReturnType<typeof zamaQueryKeys.signerAddress.scope>>;
 
 // @public
-export interface SignerLifecycleCallbacks {
-    onAccountChange?: (newAddress: Address) => void;
-    onChainChange?: (newChainId: number) => void;
-    onDisconnect?: () => void;
+export interface SignerIdentity {
+    // (undocumented)
+    address: Address;
+    // (undocumented)
+    chainId: number;
 }
+
+// @public
+export interface SignerIdentityChange {
+    // (undocumented)
+    next?: SignerIdentity;
+    // (undocumented)
+    previous?: SignerIdentity;
+}
+
+// @public
+export type SignerIdentityListener = (change: SignerIdentityChange) => void;
 
 // @public
 export interface StoredCredentials {
@@ -1365,6 +1377,7 @@ export class ZamaSDK {
     dispose(): void;
     // @internal
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
+    onIdentityChange(listener: SignerIdentityListener): () => void;
     // Warning: (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
@@ -1396,7 +1409,6 @@ export interface ZamaSDKConfig {
     sessionStorage?: GenericStorage;
     sessionTTL?: number | "infinite";
     signer: GenericSigner;
-    signerLifecycleCallbacks?: SignerLifecycleCallbacks;
     storage: GenericStorage;
 }
 

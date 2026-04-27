@@ -4,14 +4,27 @@ import type {
   EIP712TypedData,
   GenericSigner,
   Hex,
-  SignerLifecycleCallbacks,
+  SignerIdentityListener,
   WriteContractArgs,
   WriteFunctionName,
   WriteContractConfig,
 } from "@zama-fhe/sdk";
+import { getAddress } from "viem";
 import type { Config } from "wagmi";
 import { getChainId, signTypedData, writeContract } from "wagmi/actions";
 import { getConnection, watchConnection } from "./compat";
+
+type WagmiConnection = ReturnType<typeof getConnection>;
+
+function identityFromConnection(connection: WagmiConnection) {
+  if (connection.status === "disconnected") {
+    return undefined;
+  }
+  if (!connection.address || connection.chainId === undefined) {
+    return undefined;
+  }
+  return { address: getAddress(connection.address), chainId: connection.chainId };
+}
 
 /** Configuration for {@link WagmiSigner}. */
 export interface WagmiSignerConfig {
@@ -38,7 +51,7 @@ export class WagmiSigner implements GenericSigner {
   async getAddress(): Promise<Address> {
     const account = getConnection(this.#config);
     if (!account?.address) {
-      throw new TypeError("Invalid address");
+      throw new TypeError("Wagmi config is not connected");
     }
     return account.address;
   }
@@ -66,30 +79,21 @@ export class WagmiSigner implements GenericSigner {
     return writeContract(this.#config, config as Parameters<typeof writeContract>[1]);
   }
 
-  subscribe({
-    onDisconnect = () => {},
-    onAccountChange = () => {},
-    onChainChange = () => {},
-  }: SignerLifecycleCallbacks): () => void {
+  subscribe(onIdentityChange: SignerIdentityListener): () => void {
+    function emitIfChanged(
+      previous: ReturnType<typeof identityFromConnection>,
+      next: typeof previous,
+    ) {
+      if (previous?.address !== next?.address || previous?.chainId !== next?.chainId) {
+        onIdentityChange({ previous, next });
+      }
+    }
+
+    emitIfChanged(undefined, identityFromConnection(getConnection(this.#config)));
+
     return watchConnection(this.#config, {
       onChange(connection, prevConnection) {
-        if (connection.status === "disconnected" && prevConnection.status !== "disconnected") {
-          onDisconnect();
-        }
-        if (
-          prevConnection.address &&
-          connection.address &&
-          connection.address !== prevConnection.address
-        ) {
-          onAccountChange(connection.address);
-        }
-        if (
-          typeof prevConnection.chainId === "number" &&
-          typeof connection.chainId === "number" &&
-          connection.chainId !== prevConnection.chainId
-        ) {
-          onChainChange(connection.chainId);
-        }
+        emitIfChanged(identityFromConnection(prevConnection), identityFromConnection(connection));
       },
     });
   }
