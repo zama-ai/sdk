@@ -31,13 +31,17 @@ Each chain object implements the `FheChain` interface:
 | `id`                                        | `number`              | Chain identifier                                                                                         |
 | `gatewayChainId`                            | `number`              | Chain ID of the gateway                                                                                  |
 | `relayerUrl`                                | `string`              | Default relayer endpoint for this network                                                                |
-| `network`                                   | `string`              | Default RPC URL for this network                                                                         |
+| `network`                                   | `EIP1193Provider \| string` | Default RPC URL or EIP-1193 provider for this network                                                    |
 | `aclContractAddress`                        | `Address`             | ACL contract address                                                                                     |
 | `kmsContractAddress`                        | `Address`             | KMS contract address                                                                                     |
 | `inputVerifierContractAddress`              | `Address`             | Input verifier contract address                                                                          |
 | `verifyingContractAddressDecryption`        | `Address`             | EIP-712 verifying contract for decrypt operations                                                        |
 | `verifyingContractAddressInputVerification` | `Address`             | EIP-712 verifying contract for encrypt operations                                                        |
-| `registryAddress`                           | `string \| undefined` | Token wrapper registry contract address (undefined for chains without a deployed registry, e.g. Hardhat) |
+| `registryAddress`                           | `Address \| undefined` | Token wrapper registry contract address (undefined for chains without a deployed registry, e.g. Hardhat) |
+| `executorAddress`                           | `Address \| undefined` | TFHEExecutor contract address (cleartext mode only, undefined for real FHE chains)                       |
+| `auth`                                      | `Auth \| undefined`   | Authentication for the relayer endpoint                                                                  |
+| `kmsSignerPrivateKey`                       | `Hex \| undefined`    | KMS signer private key for EIP-712 verification (cleartext mode)                                         |
+| `inputSignerPrivateKey`                     | `Hex \| undefined`    | Input signer private key for EIP-712 verification (cleartext mode)                                       |
 
 ### Usage with `createConfig`
 
@@ -155,7 +159,7 @@ A convenience export of built-in registry addresses for known chains (Mainnet, S
 ```ts
 import { DefaultRegistryAddresses } from "@zama-fhe/sdk";
 
-// { 1: "0xeb5015fF...", 11155111: "0xDEbdfa25..." }
+// { 1: "0xeb5015fF...", 11155111: "0x2f0750Bb...", 560048: "0x1807aE2f..." }
 console.log(DefaultRegistryAddresses);
 ```
 

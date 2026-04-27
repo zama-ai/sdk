@@ -21,11 +21,13 @@ interface GenericSigner {
   getAddress(): Promise<Address>;
   signTypedData(typedData: EIP712TypedData): Promise<Hex>;
   writeContract(config: WriteContractConfig): Promise<Hex>;
-  readContract(config: ReadContractConfig): Promise<unknown>;
-  waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
   subscribe?(onIdentityChange: SignerIdentityListener): () => void;
 }
 ```
+
+{% hint style="info" %}
+For read operations (`readContract`, `waitForTransactionReceipt`), see [GenericProvider](/reference/sdk/GenericProvider).
+{% endhint %}
 
 ## Usage
 
@@ -43,12 +45,6 @@ class MySigner implements GenericSigner {
     /* ... */
   }
   async writeContract(config) {
-    /* ... */
-  }
-  async readContract(config) {
-    /* ... */
-  }
-  async waitForTransactionReceipt(hash) {
     /* ... */
   }
 }
@@ -87,22 +83,6 @@ writeContract(config: WriteContractConfig): Promise<Hex>
 ```
 
 Submit a contract write transaction and return the transaction hash. `WriteContractConfig` contains `address`, `abi`, `functionName`, `args`, and optionally `value` and `gas`.
-
-### readContract
-
-```ts
-readContract(config: ReadContractConfig): Promise<unknown>
-```
-
-Perform a read-only contract call and return the result. Must work in all modes, including read-only signers.
-
-### waitForTransactionReceipt
-
-```ts
-waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>
-```
-
-Wait for a transaction to be mined and return the receipt.
 
 ### subscribe (optional)
 

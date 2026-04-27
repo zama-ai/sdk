@@ -195,10 +195,13 @@ The SDK emits events during delegation operations. Subscribe via the `onEvent` c
 | `RevokeDelegationSubmitted` | Revocation transaction sent |
 
 ```ts
-import { createZamaSDK, ZamaSDKEvents } from "@zama-fhe/sdk";
+import { ZamaSDK, ZamaSDKEvents } from "@zama-fhe/sdk";
 
-const sdk = createZamaSDK({
-  // ... other config
+const sdk = new ZamaSDK({
+  relayer,
+  provider,
+  signer,
+  storage,
   onEvent: (event) => {
     if (event.type === ZamaSDKEvents.DelegationSubmitted) {
       console.log("Delegation tx:", event.txHash);

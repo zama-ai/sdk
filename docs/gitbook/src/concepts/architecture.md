@@ -18,6 +18,10 @@ The SDK is organized into layers, each with a clear responsibility. Higher layer
 | **Storage & Credentials**      | `CredentialsManager` with pluggable backends (IndexedDB, Memory, AsyncLocalStorage, ChromeSessionStorage) |
 | **Event System**               | `ZamaSDKEvents` lifecycle events + on-chain event decoders                                                |
 
+## `createConfig` pattern
+
+Each adapter path (`@zama-fhe/sdk/viem`, `@zama-fhe/sdk/ethers`, `@zama-fhe/react-sdk/wagmi`) exports a `createConfig()` function that wires up the provider, signer, and relayer dispatcher from framework-native objects.
+
 ## Module map
 
 The core `@zama-fhe/sdk` package is split into focused modules:
@@ -43,4 +47,4 @@ Each package exposes multiple entry points for tree-shaking:
 | Import Path                 | Contents                                             |
 | --------------------------- | ---------------------------------------------------- |
 | `@zama-fhe/react-sdk`       | Provider-based hooks (`ZamaProvider` + `use*` hooks) |
-| `@zama-fhe/react-sdk/wagmi` | `WagmiSigner` adapter                                |
+| `@zama-fhe/react-sdk/wagmi` | `createConfig`, `WagmiSigner` adapter, `WagmiProvider` |

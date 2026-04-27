@@ -75,12 +75,11 @@ app.post("/api/transfer", (req, res) => {
   asyncLocalStorage.run(async () => {
     // Everything inside this callback has its own isolated storage
     const config = createConfig({
-      chains: [sepolia],
-      publicClient,
-      walletClient,
+      chains: [mySepolia],
+      signer: wallet,
       storage: asyncLocalStorage,
       relayers: {
-        [sepolia.id]: node(),
+        [mySepolia.id]: node(),
       },
     });
     const sdk = new ZamaSDK(config);

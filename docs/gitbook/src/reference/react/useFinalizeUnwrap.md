@@ -35,8 +35,8 @@ function TwoStepUnshield() {
     // Step 1: submit the unwrap
     const unwrapTxHash = await unwrap({ amount: 500n });
 
-    // Step 2: finalize with the decryption proof
-    await finalize({ unwrapTxHash });
+    // Step 2: finalize with the unwrap request ID (from upgraded events)
+    await finalize({ unwrapRequestId: unwrapTxHash });
   };
 
   return (
@@ -66,14 +66,26 @@ const { mutateAsync: finalize } = useFinalizeUnwrap({
 
 ## Mutation variables
 
-### unwrapTxHash
+The finalize function accepts a discriminated union — pass one of these:
 
-`Hex`
+### unwrapRequestId
 
-The transaction hash returned by [`useUnwrap`](/reference/react/useUnwrap) or [`useUnwrapAll`](/reference/react/useUnwrapAll). The SDK uses this to locate and verify the decryption proof on-chain.
+`Handle`
+
+The unwrap request ID emitted by upgraded contract events. This is the preferred form.
 
 ```tsx
-await finalize({ unwrapTxHash: "0xabc..." });
+await finalize({ unwrapRequestId: requestId });
+```
+
+### burnAmountHandle
+
+`Handle`
+
+The burn amount handle from pre-upgrade contract events. Use this for legacy events only.
+
+```tsx
+await finalize({ burnAmountHandle: handle });
 ```
 
 ## Return Type

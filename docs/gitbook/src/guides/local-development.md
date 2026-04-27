@@ -1,13 +1,13 @@
 ---
 title: Local development
-description: How to use the cleartext transport for local Hardhat nodes and custom chain deployments without a KMS or gateway.
+description: How to use the cleartext relayer for local Hardhat nodes and custom chain deployments without a KMS or gateway.
 ---
 
 # Local development
 
-The SDK ships a `cleartext()` transport that replaces FHE operations with cleartext operations. Values are stored as plaintext on-chain — no KMS, no gateway, no WASM. Use it for local Hardhat nodes, custom testnets, or any chain where you deploy FHEVM contracts in cleartext mode.
+The SDK ships a `cleartext()` relayer factory that creates a cleartext relayer, replacing FHE operations with cleartext operations. Values are stored as plaintext on-chain — no KMS, no gateway, no WASM. Use it for local Hardhat nodes, custom testnets, or any chain where you deploy FHEVM contracts in cleartext mode.
 
-The `cleartext()` transport implements the same `RelayerSDK` interface as `web()` and `node()`, so the rest of your code stays unchanged.
+The `cleartext()` relayer factory implements the same `RelayerSDK` interface as `web()` and `node()`, so the rest of your code stays unchanged.
 
 {% hint style="warning" %}
 Cleartext mode is blocked on Ethereum Mainnet (chain 1) and Sepolia (chain 11155111). It is intended for development and testing only.
@@ -61,7 +61,7 @@ const balance = await token.balanceOf();
 
 ### 5. (Optional) Create a custom config for your own chain
 
-If you deploy FHEVM contracts on a custom chain or at different addresses than the default ones, pass all required fields to the `cleartext()` transport:
+If you deploy FHEVM contracts on a custom chain or at different addresses than the default ones, pass all required fields to the chain definition used with the `cleartext()` relayer factory:
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
@@ -111,5 +111,5 @@ Usually, you want to use the same `gatewayChainId` and verifying contract addres
 ## Next steps
 
 - [RelayerCleartext reference](/reference/sdk/RelayerCleartext) — full constructor options and `CleartextConfig` type
-- [Configuration](/guides/configuration) — production setup with `web()` or `node()` transports
+- [Configuration](/guides/configuration) — production setup with `web()` or `node()` relayer factories
 - [Chain Objects](/reference/sdk/network-presets) — pre-configured chain definitions for Mainnet, Sepolia, and more

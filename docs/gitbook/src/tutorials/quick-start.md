@@ -232,7 +232,7 @@ const mySepolia = { ...sepolia, network: process.env.RPC_URL! } as const satisfi
 
 const config = createConfig({
   chains: [mySepolia],
-  ethereum: provider,
+  signer: wallet,
   storage: memoryStorage,
   relayers: {
     [mySepolia.id]: node({ poolSize: 4 }),

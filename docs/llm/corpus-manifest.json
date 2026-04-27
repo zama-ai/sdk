@@ -188,7 +188,7 @@
       "source_type": "official-doc",
       "category": "guides",
       "logical_path": "guides/local-development",
-      "description": "How to use the cleartext transport for local Hardhat nodes and custom chain deployments without a KMS or gateway.",
+      "description": "How to use the cleartext relayer for local Hardhat nodes and custom chain deployments without a KMS or gateway.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },

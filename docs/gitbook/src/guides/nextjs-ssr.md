@@ -111,19 +111,21 @@ A common mistake is initializing the relayer or signer in a shared module that g
 
 ```ts
 // lib/sdk.ts — DO NOT do this
-import { RelayerWeb } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk";
+import { createConfig } from "@zama-fhe/sdk/viem";
 
 // This runs during SSR and crashes — Web Worker is not available
-export const relayer = new RelayerWeb({ ... });
+export const config = createConfig({ ... });
 ```
 
 Instead, keep all SDK initialization inside a `"use client"` file (like the `Providers` component above), or gate it behind a dynamic import:
 
 ```ts
 // lib/sdk.ts — safe alternative
-export async function getRelayer() {
-  const { RelayerWeb } = await import("@zama-fhe/sdk");
-  return new RelayerWeb({ ... });
+export async function getConfig() {
+  const { web } = await import("@zama-fhe/sdk");
+  const { createConfig } = await import("@zama-fhe/sdk/viem");
+  return createConfig({ ... });
 }
 ```
 

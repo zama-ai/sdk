@@ -32,19 +32,19 @@ Here is a minimal Express proxy:
 
 ```ts
 import express from "express";
-import { MainnetConfig, SepoliaConfig } from "@zama-fhe/sdk";
+import { mainnet, sepolia } from "@zama-fhe/sdk/chains";
 
 const app = express();
 app.use(express.json());
 
 // Map chain IDs to their network config
-const Configs: Record<string, typeof MainnetConfig> = {
-  [MainnetConfig.chainId]: MainnetConfig,
-  [SepoliaConfig.chainId]: SepoliaConfig,
+const Configs: Record<number, typeof mainnet> = {
+  [mainnet.id]: mainnet,
+  [sepolia.id]: sepolia,
 };
 
 app.use("/api/relayer/:chainId", async (req, res) => {
-  const config = Configs[req.params.chainId];
+  const config = Configs[Number(req.params.chainId)];
   if (!config) {
     res.status(400).send("Unsupported chain");
     return;
@@ -83,23 +83,34 @@ You can adapt this pattern to any server framework (Fastify, Hono, Next.js API r
 Point the `relayerUrl` at your backend endpoint instead of the relayer directly:
 
 ```ts
-import { RelayerWeb, MainnetConfig, SepoliaConfig } from "@zama-fhe/sdk";
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { ZamaSDK, web } from "@zama-fhe/sdk";
+import { mainnet, sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 
-const relayer = new RelayerWeb({
-  getChainId: () => signer.getChainId(),
-  transports: {
-    [MainnetConfig.chainId]: {
-      ...MainnetConfig,
-      relayerUrl: "https://your-app.com/api/relayer/1",
-      network: "https://mainnet.infura.io/v3/YOUR_KEY",
-    },
-    [SepoliaConfig.chainId]: {
-      ...SepoliaConfig,
-      relayerUrl: "https://your-app.com/api/relayer/11155111",
-      network: "https://sepolia.infura.io/v3/YOUR_KEY",
-    },
+const myMainnet = {
+  ...mainnet,
+  relayerUrl: "https://your-app.com/api/relayer/1",
+  network: "https://mainnet.infura.io/v3/YOUR_KEY",
+} as const satisfies FheChain;
+
+const mySepolia = {
+  ...sepolia,
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
+  network: "https://sepolia.infura.io/v3/YOUR_KEY",
+} as const satisfies FheChain;
+
+const config = createConfig({
+  chains: [myMainnet, mySepolia],
+  publicClient,
+  walletClient,
+  storage,
+  relayers: {
+    [myMainnet.id]: web(),
+    [mySepolia.id]: web(),
   },
 });
+
+const sdk = new ZamaSDK(config);
 ```
 
 No `auth` field is needed on the client side — the proxy handles authentication transparently. The SDK sends requests to your proxy URL, and your proxy appends the API key before forwarding to the relayer.
@@ -130,7 +141,7 @@ The `auth` field accepts three formats:
 | -------------- | ------------------------------------------ | --------------------------- |
 | `ApiKeyHeader` | `{ __type: "ApiKeyHeader", value: "key" }` | `x-api-key: key`            |
 | `ApiKeyCookie` | `{ __type: "ApiKeyCookie", value: "key" }` | Sets a cookie               |
-| `BearerToken`  | `{ __type: "BearerToken", token: "jwt" }`  | `Authorization: Bearer jwt` |
+| `BearerToken`  | `{ __type: "BearerToken", value: "jwt" }`  | `Authorization: Bearer jwt` |
 
 ```ts
 // API key in a header (most common)
@@ -140,7 +151,7 @@ auth: { __type: "ApiKeyHeader", value: "your-api-key" }
 auth: { __type: "ApiKeyCookie", value: "your-api-key" }
 
 // Bearer token (e.g. from your own auth system)
-auth: { __type: "BearerToken", token: "your-jwt-token" }
+auth: { __type: "BearerToken", value: "your-jwt-token" }
 ```
 
 When using `RelayerWeb` with a proxy, you can also add CSRF protection via the `security.getCsrfToken` callback. See the [RelayerWeb reference](/reference/sdk/RelayerWeb) for details.
