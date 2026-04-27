@@ -13199,7 +13199,7 @@ export interface RelayerConfig {
 export class RelayerDispatcher implements RelayerSDK, Disposable {
     // (undocumented)
     [Symbol.dispose](): void;
-    constructor(chains: readonly [FheChain, ...FheChain[]], relayers: Map<number, RelayerSDK>, workers?: readonly WorkerLike[]);
+    constructor(chains: readonly [FheChain, ...FheChain[]], configs: Readonly<Record<number, RelayerConfig>>);
     // (undocumented)
     get chain(): FheChain;
     // (undocumented)
