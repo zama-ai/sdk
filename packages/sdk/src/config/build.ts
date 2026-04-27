@@ -57,8 +57,7 @@ export function buildZamaConfig(
     throw error;
   }
 
-  const chainsMap = new Map(params.chains.map((c) => [c.id, c]));
-  const relayer = new RelayerDispatcher(chainsMap, relayersMap, workers);
+  const relayer = new RelayerDispatcher([...params.chains], relayersMap, workers);
 
   return {
     chains: [...params.chains],

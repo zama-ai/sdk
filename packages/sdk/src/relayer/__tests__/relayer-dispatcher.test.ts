@@ -22,9 +22,8 @@ function makeDispatcher(
     new Map<number, RelayerSDK>(
       chains.map((c) => [c.id, createMockRelayer() as unknown as RelayerSDK]),
     );
-  const chainMap = new Map(chains.map((c) => [c.id, c]));
   return {
-    dispatcher: new RelayerDispatcher(chainMap, relayers, workers),
+    dispatcher: new RelayerDispatcher(chains, relayers, workers),
     relayers,
   };
 }
@@ -32,7 +31,16 @@ function makeDispatcher(
 describe("RelayerDispatcher", () => {
   describe("constructor", () => {
     it("throws ConfigurationError on empty chains", () => {
-      expect(() => new RelayerDispatcher(new Map(), new Map())).toThrow(ConfigurationError);
+      expect(() => new RelayerDispatcher([], new Map())).toThrow(ConfigurationError);
+    });
+
+    it("throws ConfigurationError when chain has no matching relayer", () => {
+      const relayers = new Map<number, RelayerSDK>([
+        [1, createMockRelayer() as unknown as RelayerSDK],
+      ]);
+      expect(() => new RelayerDispatcher([chainA, chainB], relayers)).toThrow(
+        "No relayer instance for chain 2",
+      );
     });
   });
 
@@ -42,15 +50,15 @@ describe("RelayerDispatcher", () => {
       expect(dispatcher.chains).toEqual([chainA, chainB]);
     });
 
-    it("throws before switchChain is called", () => {
+    it("defaults to first chain", () => {
       const { dispatcher } = makeDispatcher([chainA, chainB]);
-      expect(() => dispatcher.chain).toThrow("No active chain");
+      expect(dispatcher.chain).toBe(chainA);
     });
 
     it("returns active chain after switchChain", () => {
       const { dispatcher } = makeDispatcher([chainA, chainB]);
-      dispatcher.switchChain(1);
-      expect(dispatcher.chain).toBe(chainA);
+      dispatcher.switchChain(2);
+      expect(dispatcher.chain).toBe(chainB);
     });
   });
 
@@ -75,15 +83,8 @@ describe("RelayerDispatcher", () => {
         [1, relayerA],
         [2, relayerB],
       ]);
-      const dispatcher = new RelayerDispatcher(
-        new Map([
-          [1, chainA],
-          [2, chainB],
-        ]),
-        relayers,
-      );
+      const dispatcher = new RelayerDispatcher([chainA, chainB], relayers);
 
-      dispatcher.switchChain(1);
       await dispatcher.encrypt({ values: [] } as any);
       expect(relayerA.encrypt).toHaveBeenCalled();
       expect(relayerB.encrypt).not.toHaveBeenCalled();
@@ -96,13 +97,7 @@ describe("RelayerDispatcher", () => {
         [1, relayerA],
         [2, relayerB],
       ]);
-      const dispatcher = new RelayerDispatcher(
-        new Map([
-          [1, chainA],
-          [2, chainB],
-        ]),
-        relayers,
-      );
+      const dispatcher = new RelayerDispatcher([chainA, chainB], relayers);
 
       dispatcher.switchChain(2);
       await dispatcher.encrypt({ values: [] } as any);
@@ -129,8 +124,7 @@ describe("RelayerDispatcher", () => {
       async (method, args) => {
         const relayer = createMockRelayer() as unknown as RelayerSDK;
         const relayers = new Map<number, RelayerSDK>([[1, relayer]]);
-        const dispatcher = new RelayerDispatcher(new Map([[1, chainA]]), relayers);
-        dispatcher.switchChain(1);
+        const dispatcher = new RelayerDispatcher([chainA], relayers);
         await (dispatcher[method] as Function)(...args);
         expect(relayer[method]).toHaveBeenCalled();
       },
@@ -160,13 +154,7 @@ describe("RelayerDispatcher", () => {
         [1, shared],
         [2, shared],
       ]);
-      const dispatcher = new RelayerDispatcher(
-        new Map([
-          [1, chainA],
-          [2, chainB],
-        ]),
-        relayers,
-      );
+      const dispatcher = new RelayerDispatcher([chainA, chainB], relayers);
       dispatcher.terminate();
       expect(shared.terminate).toHaveBeenCalledTimes(1);
     });
@@ -178,13 +166,7 @@ describe("RelayerDispatcher", () => {
         [1, relayerA],
         [2, relayerB],
       ]);
-      const dispatcher = new RelayerDispatcher(
-        new Map([
-          [1, chainA],
-          [2, chainB],
-        ]),
-        relayers,
-      );
+      const dispatcher = new RelayerDispatcher([chainA, chainB], relayers);
       dispatcher.terminate();
       expect(relayerA.terminate).toHaveBeenCalledTimes(1);
       expect(relayerB.terminate).toHaveBeenCalledTimes(1);
@@ -202,7 +184,7 @@ describe("RelayerDispatcher", () => {
         }),
       };
       const relayers = new Map<number, RelayerSDK>([[1, relayer]]);
-      const dispatcher = new RelayerDispatcher(new Map([[1, chainA]]), relayers, [worker]);
+      const dispatcher = new RelayerDispatcher([chainA], relayers, [worker]);
       expect(() => dispatcher.terminate()).toThrow("Failed to terminate relayer resources");
     });
 
@@ -217,7 +199,7 @@ describe("RelayerDispatcher", () => {
       const worker = makeMockWorker();
       const relayer = createMockRelayer() as unknown as RelayerSDK;
       const relayers = new Map<number, RelayerSDK>([[1, relayer]]);
-      const dispatcher = new RelayerDispatcher(new Map([[1, chainA]]), relayers, [worker]);
+      const dispatcher = new RelayerDispatcher([chainA], relayers, [worker]);
       dispatcher[Symbol.dispose]();
       expect(worker.terminate).toHaveBeenCalledTimes(1);
       expect(relayer.terminate).toHaveBeenCalledTimes(1);

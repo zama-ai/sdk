@@ -148,8 +148,7 @@ function buildDispatcher(
       relayers.set(chainId, relayerCfg.createRelayer(chain, worker));
     }
   }
-  const chainMap = new Map(chains.map((c) => [c.id, c]));
-  return new RelayerDispatcher(chainMap, relayers);
+  return new RelayerDispatcher(chains, relayers);
 }
 
 describe("RelayerDispatcher (via relayer factories)", () => {
@@ -178,7 +177,7 @@ describe("RelayerDispatcher (via relayer factories)", () => {
         relayers.set(chainId, t.createRelayer(chain, worker));
       }
     }
-    new RelayerDispatcher(new Map([[sepoliaChain.id, sepoliaChain]]), relayers);
+    new RelayerDispatcher([sepoliaChain], relayers);
     expect(createRelayerSpy).toHaveBeenCalledOnce();
   });
 

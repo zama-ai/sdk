@@ -40,23 +40,27 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
   readonly #chains: Map<number, FheChain>;
   readonly #relayers: Map<number, RelayerSDK>;
   readonly #workers: readonly WorkerLike[];
-  #chainId: number | null = null;
+  #chainId: number;
 
   constructor(
-    chains: Map<number, FheChain>,
+    chains: readonly [FheChain, ...FheChain[]],
     relayers: Map<number, RelayerSDK>,
     workers: readonly WorkerLike[] = [],
   ) {
-    if (chains.size === 0) {
+    if (chains.length === 0) {
       throw new ConfigurationError("At least one chain is required.");
     }
-    if (chains.size === 1) {
-      const [chain] = chains.values();
-      this.#chainId = chain ? chain.id : null;
-    }
-    this.#chains = new Map(chains);
+    this.#chains = new Map(chains.map((c) => [c.id, c]));
     this.#relayers = new Map(relayers);
     this.#workers = workers;
+    this.#chainId = chains[0].id;
+
+    // Validate every chain has a relayer
+    for (const chain of chains) {
+      if (!this.#relayers.has(chain.id)) {
+        throw new ConfigurationError(`No relayer instance for chain ${chain.id}.`);
+      }
+    }
   }
 
   get chains(): readonly FheChain[] {
@@ -64,14 +68,8 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
   }
 
   get chain(): FheChain {
-    if (this.#chainId === null) {
-      throw new ConfigurationError("No active chain. Call switchChain() first.");
-    }
-    const chain = this.#chains.get(this.#chainId);
-    if (!chain) {
-      throw new ConfigurationError(`Active chain ${this.#chainId} not found in configured chains.`);
-    }
-    return chain;
+    // Safe: #chainId always points to a valid chain (enforced by constructor + switchChain)
+    return this.#chains.get(this.#chainId) as FheChain;
   }
 
   switchChain(chainId: number): void {
@@ -83,19 +81,13 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
     this.#chainId = chainId;
   }
 
-  #active(): RelayerSDK {
-    if (this.#chainId === null) {
-      throw new ConfigurationError("No active chain. Call switchChain() first.");
-    }
-    const relayer = this.#relayers.get(this.#chainId);
-    if (!relayer) {
-      throw new ConfigurationError(`No relayer instance for active chain ${this.#chainId}.`);
-    }
-    return relayer;
+  get #active(): RelayerSDK {
+    // Safe: constructor validates every chain has a relayer, switchChain validates chain exists
+    return this.#relayers.get(this.#chainId) as RelayerSDK;
   }
 
   generateKeypair(): Promise<KeypairType<Hex>> {
-    return this.#active().generateKeypair();
+    return this.#active.generateKeypair();
   }
 
   createEIP712(
@@ -104,19 +96,19 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
     startTimestamp: number,
     durationDays?: number,
   ): Promise<EIP712TypedData> {
-    return this.#active().createEIP712(publicKey, contractAddresses, startTimestamp, durationDays);
+    return this.#active.createEIP712(publicKey, contractAddresses, startTimestamp, durationDays);
   }
 
   encrypt(params: EncryptParams): Promise<EncryptResult> {
-    return this.#active().encrypt(params);
+    return this.#active.encrypt(params);
   }
 
   userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>> {
-    return this.#active().userDecrypt(params);
+    return this.#active.userDecrypt(params);
   }
 
   publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult> {
-    return this.#active().publicDecrypt(handles);
+    return this.#active.publicDecrypt(handles);
   }
 
   createDelegatedUserDecryptEIP712(
@@ -126,7 +118,7 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
     startTimestamp: number,
     durationDays?: number,
   ): Promise<KmsDelegatedUserDecryptEIP712Type> {
-    return this.#active().createDelegatedUserDecryptEIP712(
+    return this.#active.createDelegatedUserDecryptEIP712(
       publicKey,
       contractAddresses,
       delegatorAddress,
@@ -138,23 +130,23 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
   delegatedUserDecrypt(
     params: DelegatedUserDecryptParams,
   ): Promise<Readonly<Record<Handle, ClearValueType>>> {
-    return this.#active().delegatedUserDecrypt(params);
+    return this.#active.delegatedUserDecrypt(params);
   }
 
   requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType> {
-    return this.#active().requestZKProofVerification(zkProof);
+    return this.#active.requestZKProofVerification(zkProof);
   }
 
   getPublicKey(): Promise<PublicKeyData | null> {
-    return this.#active().getPublicKey();
+    return this.#active.getPublicKey();
   }
 
   getPublicParams(bits: number): Promise<PublicParamsData | null> {
-    return this.#active().getPublicParams(bits);
+    return this.#active.getPublicParams(bits);
   }
 
   getAclAddress(): Promise<Address> {
-    return this.#active().getAclAddress();
+    return this.#active.getAclAddress();
   }
 
   terminate(): void {
