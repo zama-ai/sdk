@@ -25,8 +25,7 @@ export type {
 
 // Core SDK
 export { RelayerWeb } from "./relayer/relayer-web";
-export { RelayerDispatcher } from "./relayer/relayer-dispatcher";
-export type { WorkerLike } from "./relayer/relayer-dispatcher";
+export type { RelayerDispatcher, WorkerLike } from "./relayer/relayer-dispatcher";
 export type { RelayerSDK } from "./relayer/relayer-sdk";
 export type {
   RelayerWebConfig,
