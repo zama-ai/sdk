@@ -27,7 +27,7 @@ export interface FheChain<TId extends number = number> {
    * Required by the `cleartext()` transport to read mock plaintexts.
    * `undefined` for chains that use real FHE infrastructure.
    */
-  readonly executorAddress: Address | undefined;
+  readonly executorAddress?: Address | undefined;
   /** Private key of the KMS signer used for EIP-712 verification of the decryption (cleartext mode). */
   readonly kmsSignerPrivateKey?: Hex;
   /** Private key of the input signer used for EIP-712 verification of the input verification (cleartext mode). */

@@ -20,7 +20,6 @@ export const mainnet = {
   verifyingContractAddressDecryption: "0x0f6024a97684f7d90ddb0fAAD79cB15F2C888D24",
   verifyingContractAddressInputVerification: "0xcB1bB072f38bdAF0F328CdEf1Fc6eDa1DF029287",
   registryAddress: "0xeb5015fF021DB115aCe010f23F55C2591059bBA0",
-  executorAddress: undefined,
 } as const satisfies FheChain;
 
 /**
@@ -37,7 +36,6 @@ export const sepolia = {
   verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478",
   verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955",
   registryAddress: "0x2f0750Bbb0A246059d80e94c454586a7F27a128e",
-  executorAddress: undefined,
 } as const satisfies FheChain;
 
 /**
