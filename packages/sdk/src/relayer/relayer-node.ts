@@ -1,16 +1,16 @@
 import type {
-  FhevmInstanceConfig,
   InputProofBytesType,
   KeypairType,
   KmsDelegatedUserDecryptEIP712Type,
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/node";
 import type { Address, Hex } from "viem";
-import { ConfigurationError, ZamaError } from "../errors";
 import { MemoryStorage } from "../storage/memory-storage";
 import type { GenericStorage } from "../types";
-import { NodeWorkerPool, type NodeWorkerPoolConfig } from "../worker/worker.node-pool";
+import type { NodeWorkerPool } from "../worker/worker.node-pool";
 import type { GenericLogger } from "../worker/worker.types";
+import type { FheChain } from "../chains/types";
+import { BaseRelayer } from "./base-relayer";
 import { FheArtifactCache } from "./fhe-artifact-cache";
 import type { RelayerSDK } from "./relayer-sdk";
 import type {
@@ -25,13 +25,13 @@ import type {
   PublicParamsData,
   UserDecryptParams,
 } from "./relayer-sdk.types";
-import { DefaultConfigs, withRetry } from "./relayer-utils";
+import { withRetry } from "./relayer-utils";
 
 export interface RelayerNodeConfig {
-  transports: Record<number, Partial<FhevmInstanceConfig>>;
-  /** Resolve the current chain ID. Called lazily before each operation; the pool is re-initialized when the value changes. */
-  getChainId: () => Promise<number>;
-  poolSize?: number;
+  /** FHE chain configuration. */
+  chain: FheChain;
+  /** Worker thread pool — handles WASM operations off the main thread. */
+  pool: NodeWorkerPool;
   /** Optional logger for observing worker lifecycle and request timing. */
   logger?: GenericLogger;
   /**
@@ -45,143 +45,64 @@ export interface RelayerNodeConfig {
 }
 
 /**
- * RelayerNode — Node.js encryption/decryption layer using a worker thread pool.
- * Offloads CPU-intensive WASM/FHE operations to `node:worker_threads`.
- *
- * Uses the same promise lock pattern as {@link RelayerWeb}:
- * `#ensureLock` serializes concurrent callers, `#initPromise` caches the
- * resolved pool, and chain switches tear down the old pool within the lock.
- * See the RelayerWeb class doc for a detailed explanation.
+ * RelayerNode — Node.js encryption/decryption layer.
+ * The pool is injected at construction time; the relayer does not own its lifecycle.
  */
-export class RelayerNode implements RelayerSDK, Disposable {
+export class RelayerNode extends BaseRelayer implements RelayerSDK, Disposable {
   readonly #config: RelayerNodeConfig;
-  #pool: NodeWorkerPool | null = null;
-  #initPromise: Promise<NodeWorkerPool> | null = null;
-  #ensureLock: Promise<NodeWorkerPool> | null = null;
-  #terminated = false;
-  #resolvedChainId: number | null = null;
   #artifactCache: FheArtifactCache | null = null;
 
   constructor(config: RelayerNodeConfig) {
+    super();
     this.#config = { fheArtifactStorage: new MemoryStorage(), ...config };
   }
 
-  async #getPoolConfig(): Promise<NodeWorkerPoolConfig> {
-    const chainId = await this.#config.getChainId();
-    const { transports, poolSize } = this.#config;
-
-    return {
-      fhevmConfig: Object.assign({}, DefaultConfigs[chainId], transports[chainId]),
-      poolSize,
-      logger: this.#config.logger,
-    };
+  protected get chain(): FheChain {
+    return this.#config.chain;
   }
 
-  async #ensurePool(): Promise<NodeWorkerPool> {
-    if (this.#ensureLock) {
-      return this.#ensureLock;
-    }
-    this.#ensureLock = this.#ensurePoolInner();
-    try {
-      return await this.#ensureLock;
-    } finally {
-      this.#ensureLock = null;
-    }
+  protected async init(): Promise<void> {
+    await this.#pool.initPool();
   }
 
-  #tearDown(): void {
-    this.#pool?.terminate();
-    this.#pool = null;
-    this.#initPromise = null;
-    this.#artifactCache = null;
+  get #pool(): NodeWorkerPool {
+    return this.#config.pool;
   }
 
-  async #ensurePoolInner(): Promise<NodeWorkerPool> {
-    if (this.#terminated) {
-      throw new ConfigurationError("RelayerNode has been terminated");
+  #getArtifactCache(): FheArtifactCache | null {
+    if (!this.#config.fheArtifactStorage) {
+      return null;
     }
-
-    const chainId = await this.#config.getChainId();
-
-    // Chain changed → tear down old pool, re-init
-    if (this.#resolvedChainId !== null && chainId !== this.#resolvedChainId) {
-      this.#tearDown();
-    }
-
-    this.#resolvedChainId = chainId;
-
-    // Create cache for current chain (when storage is provided)
-    if (!this.#artifactCache && this.#config.fheArtifactStorage) {
-      const config = Object.assign({}, DefaultConfigs[chainId], this.#config.transports[chainId]);
+    if (!this.#artifactCache) {
       this.#artifactCache = new FheArtifactCache({
         storage: this.#config.fheArtifactStorage,
-        chainId,
-        relayerUrl: config.relayerUrl,
+        chainId: this.chain.id,
+        relayerUrl: this.chain.relayerUrl,
         ttl: this.#config.fheArtifactCacheTTL,
         logger: this.#config.logger,
       });
     }
-
-    // Revalidate cached artifacts if due — never let revalidation block init
-    if (this.#artifactCache) {
-      let stale = false;
-      try {
-        stale = await this.#artifactCache.revalidateIfDue();
-      } catch (err) {
-        this.#config.logger?.warn(
-          "Artifact revalidation failed, proceeding with potentially stale cache",
-          { error: err instanceof Error ? err.message : String(err) },
-        );
-      }
-      if (stale) {
-        this.#config.logger?.info("Cached FHE artifacts are stale — reinitializing");
-        this.#tearDown();
-      }
-    }
-
-    if (!this.#initPromise) {
-      this.#initPromise = this.#initPool().catch((error) => {
-        this.#initPromise = null;
-        throw error instanceof ZamaError
-          ? error
-          : new ConfigurationError("Failed to initialize FHE worker pool", {
-              cause: error,
-            });
-      });
-    }
-    return this.#initPromise;
+    return this.#artifactCache;
   }
 
-  async #initPool(): Promise<NodeWorkerPool> {
-    const poolConfig = await this.#getPoolConfig();
-    const pool = new NodeWorkerPool(poolConfig);
-    await pool.initPool();
-    if (this.#terminated) {
-      pool.terminate();
-      throw new Error("RelayerNode was terminated during initialization");
-    }
-    this.#pool = pool;
-    return pool;
-  }
-
+  /**
+   * Terminate clears the artifact cache only.
+   * The pool is externally owned — the relayer does not terminate it.
+   */
   terminate(): void {
-    this.#terminated = true;
-    if (this.#pool) {
-      this.#pool.terminate();
-      this.#pool = null;
-    }
-    this.#initPromise = null;
-    this.#ensureLock = null;
+    this.#artifactCache = null;
+    this.resetInit();
   }
 
-  /** Calls {@link terminate}, shutting down the worker thread pool. */
+  /** Calls {@link terminate}. */
   [Symbol.dispose](): void {
     this.terminate();
   }
 
   async generateKeypair(): Promise<KeypairType<Hex>> {
-    const pool = await this.#ensurePool();
-    const result = await pool.generateKeypair();
+    await this.ensureInit();
+    const chainId = this.chain.id;
+    const result = await this.#pool.generateKeypair({ chainId });
     return {
       publicKey: result.publicKey,
       privateKey: result.privateKey,
@@ -194,8 +115,10 @@ export class RelayerNode implements RelayerSDK, Disposable {
     startTimestamp: number,
     durationDays = 7,
   ): Promise<EIP712TypedData> {
-    const pool = await this.#ensurePool();
-    return pool.createEIP712({
+    await this.ensureInit();
+    const chainId = this.chain.id;
+    return this.#pool.createEIP712({
+      chainId,
       publicKey,
       contractAddresses,
       startTimestamp,
@@ -204,25 +127,28 @@ export class RelayerNode implements RelayerSDK, Disposable {
   }
 
   async encrypt(params: EncryptParams): Promise<EncryptResult> {
+    await this.ensureInit();
+    const chainId = this.chain.id;
     return withRetry(async () => {
-      const pool = await this.#ensurePool();
-      const result = await pool.encrypt(params);
+      const result = await this.#pool.encrypt({ chainId, ...params });
       return { handles: result.handles, inputProof: result.inputProof };
     });
   }
 
   async userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>> {
+    await this.ensureInit();
+    const chainId = this.chain.id;
     return withRetry(async () => {
-      const pool = await this.#ensurePool();
-      const result = await pool.userDecrypt(params);
+      const result = await this.#pool.userDecrypt({ chainId, ...params });
       return result.clearValues;
     });
   }
 
   async publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult> {
+    await this.ensureInit();
+    const chainId = this.chain.id;
     return withRetry(async () => {
-      const pool = await this.#ensurePool();
-      const result = await pool.publicDecrypt(handles);
+      const result = await this.#pool.publicDecrypt({ chainId, handles });
       return {
         clearValues: result.clearValues,
         abiEncodedClearValues: result.abiEncodedClearValues,
@@ -238,8 +164,10 @@ export class RelayerNode implements RelayerSDK, Disposable {
     startTimestamp: number,
     durationDays = 7,
   ): Promise<KmsDelegatedUserDecryptEIP712Type> {
-    const pool = await this.#ensurePool();
-    return pool.createDelegatedUserDecryptEIP712({
+    await this.ensureInit();
+    const chainId = this.chain.id;
+    return this.#pool.createDelegatedUserDecryptEIP712({
+      chainId,
       publicKey,
       contractAddresses,
       delegatorAddress,
@@ -251,45 +179,47 @@ export class RelayerNode implements RelayerSDK, Disposable {
   async delegatedUserDecrypt(
     params: DelegatedUserDecryptParams,
   ): Promise<Readonly<Record<Handle, ClearValueType>>> {
+    await this.ensureInit();
+    const chainId = this.chain.id;
     return withRetry(async () => {
-      const pool = await this.#ensurePool();
-      const result = await pool.delegatedUserDecrypt(params);
+      const result = await this.#pool.delegatedUserDecrypt({
+        chainId,
+        ...params,
+      });
       return result.clearValues;
     });
   }
 
   async requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType> {
+    await this.ensureInit();
+    const chainId = this.chain.id;
     return withRetry(async () => {
-      const pool = await this.#ensurePool();
-      return pool.requestZKProofVerification(zkProof);
+      return this.#pool.requestZKProofVerification({ chainId, zkProof });
     });
   }
 
   async getPublicKey(): Promise<PublicKeyData | null> {
-    const pool = await this.#ensurePool();
-    if (this.#artifactCache) {
-      return this.#artifactCache.getPublicKey(async () => (await pool.getPublicKey()).result);
+    await this.ensureInit();
+    const chainId = this.chain.id;
+    const artifactCache = this.#getArtifactCache();
+    if (artifactCache) {
+      return artifactCache.getPublicKey(
+        async () => (await this.#pool.getPublicKey({ chainId })).result,
+      );
     }
-    return (await pool.getPublicKey()).result;
+    return (await this.#pool.getPublicKey({ chainId })).result;
   }
 
   async getPublicParams(bits: number): Promise<PublicParamsData | null> {
-    const pool = await this.#ensurePool();
-    if (this.#artifactCache) {
-      return this.#artifactCache.getPublicParams(
+    await this.ensureInit();
+    const chainId = this.chain.id;
+    const artifactCache = this.#getArtifactCache();
+    if (artifactCache) {
+      return artifactCache.getPublicParams(
         bits,
-        async () => (await pool.getPublicParams(bits)).result,
+        async () => (await this.#pool.getPublicParams({ chainId, bits })).result,
       );
     }
-    return (await pool.getPublicParams(bits)).result;
-  }
-
-  async getAclAddress(): Promise<Address> {
-    const chainId = await this.#config.getChainId();
-    const config = Object.assign({}, DefaultConfigs[chainId], this.#config.transports[chainId]);
-    if (!config.aclContractAddress) {
-      throw new ConfigurationError(`No ACL address configured for chain ${chainId}`);
-    }
-    return config.aclContractAddress as Address;
+    return (await this.#pool.getPublicParams({ chainId, bits })).result;
   }
 }

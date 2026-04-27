@@ -30,6 +30,9 @@ export const TEST_ADDR_B = DELEGATE;
 
 export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerSDK {
   return {
+    chains: [{ id: 31337 }],
+    activeChain: { id: 31337 },
+    switchChain: vi.fn(),
     generateKeypair: vi.fn().mockResolvedValue({
       publicKey: "0xpub",
       privateKey: "0xpriv",

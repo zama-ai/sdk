@@ -43,6 +43,7 @@ const redisStorage: GenericStorage = {
 
 const sdk = new ZamaSDK({
   relayer,
+  provider,
   signer,
   storage: redisStorage,
 });
@@ -87,6 +88,7 @@ Browser-based persistent storage backed by IndexedDB. Survives page reloads and 
 ```ts
 const sdk = new ZamaSDK({
   relayer,
+  provider,
   signer,
   storage: indexedDBStorage,
 });
@@ -103,6 +105,7 @@ In-memory storage cleared when the process exits. Suitable for tests and throwaw
 ```ts
 const sdk = new ZamaSDK({
   relayer,
+  provider,
   signer,
   storage: memoryStorage,
 });
@@ -121,7 +124,7 @@ import { asyncLocalStorage } from "@zama-fhe/sdk/node";
 
 app.post("/api/transfer", (req, res) => {
   asyncLocalStorage.run(async () => {
-    const sdk = new ZamaSDK({ relayer, signer, storage: asyncLocalStorage });
+    const sdk = new ZamaSDK({ relayer, provider, signer, storage: asyncLocalStorage });
     await sdk.createToken("0x...").confidentialTransfer("0x...", 100n);
   });
 });
@@ -140,6 +143,7 @@ Pass as `sessionStorage` (not `storage`) to persist wallet signatures across ser
 ```ts
 const sdk = new ZamaSDK({
   relayer,
+  provider,
   signer,
   storage: indexedDBStorage,
   sessionStorage: chromeSessionStorage,

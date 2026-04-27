@@ -1,131 +1,150 @@
 ---
 title: Network presets
-description: Pre-configured network settings for Ethereum Mainnet, Sepolia, and Hardhat.
+description: Pre-configured chain objects and legacy network configs for supported networks.
 ---
 
 # Network presets
 
-Pre-configured objects containing relayer URLs, contract addresses, and chain IDs for supported networks.
+## Chain objects (recommended)
 
-## Import
+Import pre-configured chain objects from `@zama-fhe/sdk/chains`. Each chain includes contract addresses, relayer URLs, chain IDs, and an `id` alias for use in relayer config keys.
 
 ```ts
-import { MainnetConfig, SepoliaConfig, HardhatConfig } from "@zama-fhe/sdk";
+import { sepolia, mainnet, hoodi, hardhat } from "@zama-fhe/sdk/chains";
 ```
 
-## Available presets
+### Available chains
 
-| Preset          | Chain ID   | Network            |
-| --------------- | ---------- | ------------------ |
-| `MainnetConfig` | `1`        | Ethereum Mainnet   |
-| `SepoliaConfig` | `11155111` | Sepolia Testnet    |
-| `HardhatConfig` | `31337`    | Local Hardhat node |
+| Chain     | Chain ID   | Network            |
+| --------- | ---------- | ------------------ |
+| `mainnet` | `1`        | Ethereum Mainnet   |
+| `sepolia` | `11155111` | Sepolia Testnet    |
+| `hoodi`   | `560048`   | Hoodi Testnet      |
+| `hardhat` | `31337`    | Local Hardhat node |
 
-## What each preset includes
+### What each chain includes
 
-Each preset provides the fields needed by a relayer transport:
+Each chain object implements the `FheChain` interface:
 
-| Field                                       | Type                  | Description                                                                                              |
-| ------------------------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------- |
-| `chainId`                                   | `number`              | Chain identifier                                                                                         |
-| `gatewayChainId`                            | `number`              | Chain ID of the gateway                                                                                  |
-| `relayerUrl`                                | `string`              | Default relayer endpoint for this network                                                                |
-| `network`                                   | `string`              | Default RPC URL for this network                                                                         |
-| `aclContractAddress`                        | `Address`             | ACL contract address                                                                                     |
-| `kmsContractAddress`                        | `Address`             | KMS contract address                                                                                     |
-| `inputVerifierContractAddress`              | `Address`             | Input verifier contract address                                                                          |
-| `verifyingContractAddressDecryption`        | `Address`             | EIP-712 verifying contract for decrypt operations                                                        |
-| `verifyingContractAddressInputVerification` | `Address`             | EIP-712 verifying contract for encrypt operations                                                        |
-| `registryAddress`                           | `string \| undefined` | Token wrapper registry contract address (undefined for chains without a deployed registry, e.g. Hardhat) |
+| Field                                       | Type                        | Description                                                                                              |
+| ------------------------------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `id`                                        | `number`                    | Chain identifier                                                                                         |
+| `gatewayChainId`                            | `number`                    | Chain ID of the gateway                                                                                  |
+| `relayerUrl`                                | `string`                    | Default relayer endpoint for this network                                                                |
+| `network`                                   | `EIP1193Provider \| string` | Default RPC URL or EIP-1193 provider for this network                                                    |
+| `aclContractAddress`                        | `Address`                   | ACL contract address                                                                                     |
+| `kmsContractAddress`                        | `Address`                   | KMS contract address                                                                                     |
+| `inputVerifierContractAddress`              | `Address`                   | Input verifier contract address                                                                          |
+| `verifyingContractAddressDecryption`        | `Address`                   | EIP-712 verifying contract for decrypt operations                                                        |
+| `verifyingContractAddressInputVerification` | `Address`                   | EIP-712 verifying contract for encrypt operations                                                        |
+| `registryAddress`                           | `Address \| undefined`      | Token wrapper registry contract address (undefined for chains without a deployed registry, e.g. Hardhat) |
+| `executorAddress`                           | `Address \| undefined`      | TFHEExecutor contract address (cleartext mode only, undefined for real FHE chains)                       |
+| `auth`                                      | `Auth \| undefined`         | Authentication for the relayer endpoint                                                                  |
+| `kmsSignerPrivateKey`                       | `Hex \| undefined`          | KMS signer private key for EIP-712 verification (cleartext mode)                                         |
+| `inputSignerPrivateKey`                     | `Hex \| undefined`          | Input signer private key for EIP-712 verification (cleartext mode)                                       |
 
-## Usage
+### Usage with `createConfig`
 
-Spread a preset into your transport config and add the fields specific to your setup:
+Pass chain objects in the `chains` array and use `chain.id` as relayer keys:
 
 ```ts
-import { RelayerWeb, SepoliaConfig } from "@zama-fhe/sdk";
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { web } from "@zama-fhe/sdk";
+import { sepolia, mainnet } from "@zama-fhe/sdk/chains";
 
-const relayer = new RelayerWeb({
-  getChainId: () => signer.getChainId(),
-  transports: {
-    [SepoliaConfig.chainId]: {
-      ...SepoliaConfig,
-      network: "https://sepolia.infura.io/v3/YOUR_KEY",
-    },
+const config = createConfig({
+  chains: [sepolia, mainnet],
+  publicClient,
+  walletClient,
+  relayers: {
+    [sepolia.id]: web(),
+    [mainnet.id]: web(),
   },
 });
 ```
 
+Per-chain overrides (e.g. `relayerUrl`, `network`) are set by spreading the chain preset in the `chains` array. The chain object provides all contract addresses automatically.
+
 ### Browser apps
 
-In browser environments, proxy relayer requests through your backend to avoid exposing API keys. Override `relayerUrl` to point at your proxy:
+In browser environments, proxy relayer requests through your backend to avoid exposing API keys. Override `relayerUrl` in the chain definition:
 
 ```ts
-{
-  ...SepoliaConfig,
+import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
+
+const mySepolia = {
+  ...sepolia,
   relayerUrl: "https://your-app.com/api/relayer/11155111",
-  network: "https://sepolia.infura.io/v3/YOUR_KEY",
-}
+} as const satisfies FheChain;
 ```
 
 ### Server apps
 
-On the server, use `RelayerNode` and add authentication:
+On the server, use `node()` with pool options. Chain data (network, relayerUrl) comes from the preset:
 
 ```ts
-import { RelayerNode } from "@zama-fhe/sdk/node";
-import { SepoliaConfig } from "@zama-fhe/sdk";
+import { node } from "@zama-fhe/sdk/node";
+import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 
-const relayer = new RelayerNode({
-  getChainId: async () => 11155111,
-  transports: {
-    [SepoliaConfig.chainId]: {
-      ...SepoliaConfig,
-      network: "https://sepolia.infura.io/v3/YOUR_KEY",
-      auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY! },
-    },
-  },
-});
+const mySepolia = {
+  ...sepolia,
+  network: "https://sepolia.infura.io/v3/YOUR_KEY",
+} as const satisfies FheChain;
+// Then in createConfig: relayers: { [mySepolia.id]: node({ poolSize: 4 }) }
 ```
 
 ### Local development
 
-Use `HardhatConfig` with a local Hardhat node:
+Use the `hardhat` chain with a `cleartext()` relayer:
 
 ```ts
-import { HardhatConfig } from "@zama-fhe/sdk";
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { cleartext } from "@zama-fhe/sdk";
+import { hardhat } from "@zama-fhe/sdk/chains";
 
-const relayer = new RelayerWeb({
-  getChainId: () => signer.getChainId(),
-  transports: {
-    [HardhatConfig.chainId]: HardhatConfig,
+const config = createConfig({
+  chains: [hardhat],
+  publicClient,
+  walletClient,
+  relayers: {
+    [hardhat.id]: cleartext(),
   },
 });
 ```
 
 ### Multiple networks
 
-Support multiple networks by spreading several presets:
+Support multiple networks by listing them in the `chains` array:
 
 ```ts
-import { MainnetConfig, SepoliaConfig } from "@zama-fhe/sdk";
+import { createConfig } from "@zama-fhe/react-sdk/wagmi";
+import { web } from "@zama-fhe/sdk";
+import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
 
-const relayer = new RelayerWeb({
-  getChainId: () => signer.getChainId(),
-  transports: {
-    [MainnetConfig.chainId]: {
-      ...MainnetConfig,
-      network: "https://mainnet.infura.io/v3/YOUR_KEY",
-    },
-    [SepoliaConfig.chainId]: {
-      ...SepoliaConfig,
-      network: "https://sepolia.infura.io/v3/YOUR_KEY",
-    },
+const mySepolia = { ...sepolia, relayerUrl: "/api/relayer/11155111" } as const satisfies FheChain;
+const myMainnet = { ...mainnet, relayerUrl: "/api/relayer/1" } as const satisfies FheChain;
+
+const config = createConfig({
+  chains: [mySepolia, myMainnet],
+  wagmiConfig,
+  relayers: {
+    [mySepolia.id]: web(),
+    [myMainnet.id]: web(),
   },
 });
 ```
 
-The relayer selects the correct transport based on the chain ID returned by `getChainId()`.
+## Legacy preset configs (removed)
+
+The legacy `SepoliaConfig`, `MainnetConfig`, and `HardhatConfig` objects are no longer exported from `@zama-fhe/sdk`. Use the chain presets from `@zama-fhe/sdk/chains` with `createConfig` instead:
+
+```ts
+// Before (removed)
+// import { SepoliaConfig, MainnetConfig } from "@zama-fhe/sdk";
+
+// After
+import { sepolia, mainnet } from "@zama-fhe/sdk/chains";
+```
 
 ## DefaultRegistryAddresses
 
@@ -134,16 +153,16 @@ A convenience export of built-in registry addresses for known chains (Mainnet, S
 ```ts
 import { DefaultRegistryAddresses } from "@zama-fhe/sdk";
 
-// { 1: "0xeb5015fF...", 11155111: "0xDEbdfa25..." }
+// { 1: "0xeb5015fF...", 11155111: "0x2f0750Bb...", 560048: "0x1807aE2f..." }
 console.log(DefaultRegistryAddresses);
 ```
 
 {% hint style="info" %}
-`HardhatConfig` has no registry address by default. Pass one explicitly via `registryAddresses` when creating a [WrappersRegistry](/reference/sdk/WrappersRegistry).
+`hardhat` has no registry address by default. Pass one explicitly via `registryAddresses` when creating a [WrappersRegistry](/reference/sdk/WrappersRegistry).
 {% endhint %}
 
 ## Related
 
 - [WrappersRegistry](/reference/sdk/WrappersRegistry) — high-level registry query API
-- [Configuration guide](/guides/configuration) — full relayer, signer, and storage setup
+- [Configuration guide](/guides/configuration) — full chains, relayers, signer, and storage setup
 - [ZamaSDK](/reference/sdk/ZamaSDK) — SDK constructor reference

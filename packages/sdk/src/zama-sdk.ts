@@ -1,4 +1,5 @@
 import { getAddress, type Address } from "viem";
+import type { FheChain } from "./chains/types";
 import { CredentialsManager } from "./credentials/credentials-manager";
 import { DelegatedCredentialsManager } from "./credentials/delegated-credentials-manager";
 import { DecryptCache } from "./decrypt-cache";
@@ -7,7 +8,7 @@ import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventListener } from "./ev
 import { ZamaSDKEvents } from "./events/sdk-events";
 import type { DecryptHandle } from "./query/user-decrypt";
 import { isZeroHandle } from "./utils/handles";
-import type { RelayerSDK } from "./relayer/relayer-sdk";
+import type { RelayerDispatcher } from "./relayer/relayer-dispatcher";
 import type { ClearValueType, Handle, PublicDecryptResult } from "./relayer/relayer-sdk.types";
 import { MemoryStorage } from "./storage/memory-storage";
 import { ReadonlyToken } from "./token/readonly-token";
@@ -38,8 +39,10 @@ async function swallow(label: string, fn: () => Promise<void> | void): Promise<v
 
 /** Configuration for {@link ZamaSDK}. */
 export interface ZamaSDKConfig {
+  /** FHE chain configurations. Registry addresses are extracted from each chain's `registryAddress`. */
+  chains?: readonly FheChain[];
   /** FHE relayer backend (`RelayerWeb` for browser, `RelayerNode` for server). */
-  relayer: RelayerSDK;
+  relayer: RelayerDispatcher;
   /**
    * Read-only chain provider (`ViemProvider`, `EthersProvider`, `WagmiProvider`,
    * or custom {@link GenericProvider}). Used for every public chain read the
@@ -79,15 +82,15 @@ export interface ZamaSDKConfig {
   /** Optional structured event listener for debugging and telemetry. Never receives sensitive data. */
   onEvent?: ZamaSDKEventListener;
   /**
-   * Per-chain wrappers registry address overrides, merged on top of built-in defaults.
-   * Use this for custom or local chains (e.g. Hardhat) where no default registry exists.
-   */
-  registryAddresses?: Record<number, Address>;
-  /**
    * How long cached registry results remain valid, in seconds.
    * Default: `86400` (24 hours).
    */
   registryTTL?: number;
+  /**
+   * Per-chain wrappers registry address overrides, merged on top of chain definitions.
+   * Use for custom or local chains (e.g. Hardhat) where no default registry exists.
+   */
+  registryAddresses?: Record<number, Address>;
 }
 
 /**
@@ -95,7 +98,7 @@ export interface ZamaSDKConfig {
  * Provides signer, storage, and high-level confidential contract interface.
  */
 export class ZamaSDK {
-  readonly relayer: RelayerSDK;
+  readonly relayer: RelayerDispatcher;
   readonly provider: GenericProvider;
   readonly signer: GenericSigner;
   readonly storage: GenericStorage;
@@ -106,7 +109,7 @@ export class ZamaSDK {
   readonly cache: DecryptCache;
   /**
    * A {@link WrappersRegistry} instance auto-configured for the current chain.
-   * Uses built-in defaults merged with any `registryAddresses` overrides, and the SDK's `registryTTL` if configured.
+   * Uses built-in defaults from chain configs, and the SDK's `registryTTL` if configured.
    *
    * @example
    * ```ts
@@ -128,10 +131,18 @@ export class ZamaSDK {
     this.sessionStorage = config.sessionStorage ?? new MemoryStorage();
     this.cache = new DecryptCache(config.storage);
     this.#onEvent = config.onEvent ?? function () {};
+    // Chain definitions provide defaults; explicit registryAddresses override them.
+    const registryAddresses: Record<number, Address> = {};
+    for (const chain of config.chains ?? []) {
+      if (chain.registryAddress) {
+        registryAddresses[chain.id] = chain.registryAddress;
+      }
+    }
+    Object.assign(registryAddresses, config.registryAddresses);
     this.registry = new WrappersRegistry({
       provider: this.provider,
-      registryAddresses: config.registryAddresses,
       registryTTL: config.registryTTL,
+      registryAddresses,
     });
     this.#registryTTL = config.registryTTL;
     const credentialsConfig = {
@@ -194,7 +205,11 @@ export class ZamaSDK {
       this.provider.getChainId(),
     ]);
     if (signerChainId !== providerChainId) {
-      throw new ChainMismatchError({ operation, signerChainId, providerChainId });
+      throw new ChainMismatchError({
+        operation,
+        signerChainId,
+        providerChainId,
+      });
     }
     return signerChainId;
   }
@@ -204,6 +219,12 @@ export class ZamaSDK {
       const previous = change.previous;
       await swallow("revoke previous identity", () => this.credentials.revokeFor(previous));
       await swallow("clear decrypt cache", () => this.cache.clearForRequester(previous.address));
+    }
+    const nextChainId = change.next?.chainId;
+    if (nextChainId !== undefined) {
+      await swallow("switch relayer chain", () => {
+        this.relayer.switchChain(nextChainId);
+      });
     }
     for (const listener of this.#identityListeners) {
       await swallow("identity listener", () => listener(change));
@@ -464,7 +485,11 @@ export class ZamaSDK {
    */
   async publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult> {
     if (handles.length === 0) {
-      return { clearValues: {}, decryptionProof: "0x", abiEncodedClearValues: "0x" };
+      return {
+        clearValues: {},
+        decryptionProof: "0x",
+        abiEncodedClearValues: "0x",
+      };
     }
 
     try {
@@ -476,13 +501,12 @@ export class ZamaSDK {
 
   /**
    * Revoke the session signature for the current signer without requiring
-   * contract addresses. Lifecycle cleanup revokes previous identities through
-   * {@link SignerIdentityChange}; this method intentionally targets the live
-   * signer identity at invocation time.
+   * contract addresses. Uses the tracked identity when available (safe during
+   * account switches), falling back to querying the signer directly.
    *
    * @example
    * ```ts
-   * await sdk.revokeSession();
+   * wallet.on("disconnect", () => sdk.revokeSession());
    * ```
    */
   async revokeSession(): Promise<void> {
@@ -525,7 +549,7 @@ export class ZamaSDK {
    * {
    *   using sdk = new ZamaSDK({ relayer, provider, signer, storage });
    *   await sdk.allow([cUSDT]);
-   *   const balance = await sdk.createReadonlyToken(cUSDT).balanceOf(owner);
+   *   const balance = await sdk.createReadonlyToken(cUSDT).balanceOf();
    * } // sdk.terminate() called automatically here
    * ```
    */

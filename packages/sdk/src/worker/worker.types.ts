@@ -1,11 +1,11 @@
 import type {
-  FhevmInstanceConfig,
   InputProofBytesType,
   KmsDelegatedUserDecryptEIP712Type,
   KmsUserDecryptEIP712Type,
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/bundle";
 import type { ClearValueType, EncryptInput, Handle } from "../relayer/relayer-sdk.types";
+import type { FheChain } from "../chains/types";
 import type { Address, Hex } from "viem";
 
 // ============================================================================
@@ -28,9 +28,10 @@ export interface GenericLogger {
 // Request Types
 // ============================================================================
 
+export type WorkerEnv = "web" | "node";
+
 export type WorkerRequestType =
   | "INIT"
-  | "NODE_INIT"
   | "UPDATE_CSRF"
   | "ENCRYPT"
   | "USER_DECRYPT"
@@ -48,24 +49,27 @@ export interface BaseRequest {
   type: WorkerRequestType;
 }
 
-export interface InitRequest extends BaseRequest {
-  type: "INIT";
-  payload: {
-    cdnUrl: string;
-    fhevmConfig: FhevmInstanceConfig;
-    csrfToken: string;
-    /** Expected SHA-384 hex digest for integrity verification. */
-    integrity?: string;
-    /** Number of WASM threads for parallel FHE operations. */
-    thread?: number;
-  };
+interface InitWebPayload {
+  env: "web";
+  cdnUrl: string;
+  chains: FheChain[];
+  csrfToken: string;
+  /** Expected SHA-384 hex digest for integrity verification. */
+  integrity?: string;
+  /** Number of WASM threads for parallel FHE operations. */
+  thread?: number;
 }
 
-export interface NodeInitRequest extends BaseRequest {
-  type: "NODE_INIT";
-  payload: {
-    fhevmConfig: FhevmInstanceConfig;
-  };
+interface InitNodePayload {
+  env: "node";
+  chains: FheChain[];
+}
+
+export type InitPayload = InitWebPayload | InitNodePayload;
+
+export interface InitRequest extends BaseRequest {
+  type: "INIT";
+  payload: InitPayload;
 }
 
 export interface UpdateCsrfRequest extends BaseRequest {
@@ -78,6 +82,7 @@ export interface UpdateCsrfRequest extends BaseRequest {
 export interface EncryptRequest extends BaseRequest {
   type: "ENCRYPT";
   payload: {
+    chainId: number;
     values: EncryptInput[];
     contractAddress: Address;
     userAddress: Address;
@@ -87,6 +92,7 @@ export interface EncryptRequest extends BaseRequest {
 export interface UserDecryptRequest extends BaseRequest {
   type: "USER_DECRYPT";
   payload: {
+    chainId: number;
     handles: Handle[];
     contractAddress: Address;
     signedContractAddresses: Address[];
@@ -102,18 +108,20 @@ export interface UserDecryptRequest extends BaseRequest {
 export interface PublicDecryptRequest extends BaseRequest {
   type: "PUBLIC_DECRYPT";
   payload: {
+    chainId: number;
     handles: Handle[];
   };
 }
 
 export interface GenerateKeypairRequest extends BaseRequest {
   type: "GENERATE_KEYPAIR";
-  payload: Record<string, never>;
+  payload: { chainId: number };
 }
 
 export interface CreateEIP712Request extends BaseRequest {
   type: "CREATE_EIP712";
   payload: {
+    chainId: number;
     publicKey: Hex;
     contractAddresses: Address[];
     startTimestamp: number;
@@ -124,6 +132,7 @@ export interface CreateEIP712Request extends BaseRequest {
 export interface CreateDelegatedEIP712Request extends BaseRequest {
   type: "CREATE_DELEGATED_EIP712";
   payload: {
+    chainId: number;
     publicKey: Hex;
     contractAddresses: Address[];
     delegatorAddress: Address;
@@ -135,6 +144,7 @@ export interface CreateDelegatedEIP712Request extends BaseRequest {
 export interface DelegatedUserDecryptRequest extends BaseRequest {
   type: "DELEGATED_USER_DECRYPT";
   payload: {
+    chainId: number;
     handles: Handle[];
     contractAddress: Address;
     signedContractAddresses: Address[];
@@ -151,25 +161,26 @@ export interface DelegatedUserDecryptRequest extends BaseRequest {
 export interface RequestZKProofVerificationRequest extends BaseRequest {
   type: "REQUEST_ZK_PROOF_VERIFICATION";
   payload: {
+    chainId: number;
     zkProof: ZKProofLike;
   };
 }
 
 export interface GetPublicKeyRequest extends BaseRequest {
   type: "GET_PUBLIC_KEY";
-  payload: Record<string, never>;
+  payload: { chainId: number };
 }
 
 export interface GetPublicParamsRequest extends BaseRequest {
   type: "GET_PUBLIC_PARAMS";
   payload: {
+    chainId: number;
     bits: number;
   };
 }
 
 export type WorkerRequest =
   | InitRequest
-  | NodeInitRequest
   | UpdateCsrfRequest
   | EncryptRequest
   | UserDecryptRequest
@@ -188,6 +199,7 @@ export type WorkerRequest =
 
 export type EncryptPayload = EncryptRequest["payload"];
 export type UserDecryptPayload = UserDecryptRequest["payload"];
+export type PublicDecryptPayload = PublicDecryptRequest["payload"];
 export type DelegatedUserDecryptPayload = DelegatedUserDecryptRequest["payload"];
 export type CreateEIP712Payload = CreateEIP712Request["payload"];
 export type CreateDelegatedEIP712Payload = CreateDelegatedEIP712Request["payload"];
