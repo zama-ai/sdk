@@ -5055,9 +5055,9 @@ const relayer = new RelayerWeb({
 
 ### security
 
-`{ integrityCheck?: boolean; getCsrfToken?: () => string } | undefined`
+`{ getCsrfToken?: () => string } | undefined`
 
-Security options for the WASM bundle and relayer requests.
+Security options for relayer requests.
 
 ```ts
 const relayer = new RelayerWeb({
@@ -5066,16 +5066,14 @@ const relayer = new RelayerWeb({
     /* ... */
   },
   security: {
-    integrityCheck: true, // SHA-384 verification of WASM bundle (default: true)
     getCsrfToken: () => document.cookie.match(/csrf=(\w+)/)?.[1] ?? "",
   },
 });
 ```
 
-| Field            | Type           | Description                                         |
-| ---------------- | -------------- | --------------------------------------------------- |
-| `integrityCheck` | `boolean`      | Verify SHA-384 of the WASM bundle. Default: `true`. |
-| `getCsrfToken`   | `() => string` | Returns a CSRF token to attach to relayer requests. |
+| Field          | Type           | Description                                         |
+| -------------- | -------------- | --------------------------------------------------- |
+| `getCsrfToken` | `() => string` | Returns a CSRF token to attach to relayer requests. |
 
 ## Related
 
@@ -14749,28 +14747,6 @@ Wallet addresses are hashed before use as storage keys. The storage backend (Ind
 
 </details>
 
-## WASM bundle integrity
-
-`RelayerWeb` loads the TFHE WASM bundle from Zama's CDN (`cdn.zama.org`). Before execution, the SDK computes a SHA-384 digest of the fetched payload and compares it to a hash pinned in the library's source code. If the hashes do not match, initialization fails with a clear error.
-
-![WASM Bundle Integrity Check](../images/security-wasm-integrity.svg)
-
-This protects against CDN compromise or man-in-the-middle injection of modified WASM.
-
-Integrity checking is enabled by default. Disable it only in test environments:
-
-```ts
-const relayer = new RelayerWeb({
-  // ...
-  security: { integrityCheck: false },
-});
-```
-
-
-> [!WARNING]
-> Disabling integrity checks in production removes a critical defense layer. A compromised WASM bundle could exfiltrate FHE private keys or manipulate encrypted values.
-
-
 ## Browser security headers
 
 ### COOP/COEP headers
@@ -14854,8 +14830,7 @@ The token is refreshed before each encrypt/decrypt call. Only POST, PUT, DELETE,
 | Credential encryption | AES-256-GCM         | 256-bit            | Web Crypto API                |
 | Key derivation        | PBKDF2-SHA-256      | 600,000 iterations | Web Crypto API                |
 | Storage key hashing   | SHA-256 (truncated) | 128-bit output     | Web Crypto API                |
-| CDN integrity         | SHA-384             | --                 | Web Crypto API                |
-| FHE encryption        | TFHE                | Network key        | WASM (`@zama-fhe/sdk (WASM)`) |
+| FHE encryption        | TFHE                | Network key        | WASM (`@fhevm/sdk`)           |
 | ZK proofs             | WASM prover         | --                 | WASM (`@zama-fhe/sdk (WASM)`) |
 | Wallet signing        | ECDSA secp256k1     | 256-bit            | User wallet                   |
 | Request tracking      | UUID v4             | 128-bit            | `crypto.randomUUID()`         |
@@ -18656,12 +18631,9 @@ const sdk = new ZamaSDK({
 
 #### `RelayerWebSecurityConfig`
 
-| Field            | Type           | Description                                                                                      |
-| ---------------- | -------------- | ------------------------------------------------------------------------------------------------ |
-| `getCsrfToken`   | `() => string` | Optional. Resolve the CSRF token before each authenticated network request.                      |
-| `integrityCheck` | `boolean`      | Optional. Verify SHA-384 integrity of the CDN bundle. Defaults to `true`. Set `false` for tests. |
-
-> **Security note:** `RelayerWeb` loads FHE WASM from a CDN at runtime. The `integrityCheck` option (enabled by default) verifies the SHA-384 hash of the bundle before execution, protecting against CDN compromise or MITM attacks. Only disable it in local development or testing.
+| Field          | Type           | Description                                                                 |
+| -------------- | -------------- | --------------------------------------------------------------------------- |
+| `getCsrfToken` | `() => string` | Optional. Resolve the CSRF token before each authenticated network request. |
 
 ### `RelayerNodeConfig` (Node.js)
 

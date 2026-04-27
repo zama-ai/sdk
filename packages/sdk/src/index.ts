@@ -26,14 +26,7 @@ export type {
   PublicKeyData,
   PublicParamsData,
 } from "./relayer/relayer-sdk.types";
-export type {
-  FheTypeName,
-  KeypairType,
-  KmsDelegatedUserDecryptEIP712Type,
-  ZKProofLike,
-  InputProofBytesType,
-  FhevmInstanceConfig,
-} from "@zama-fhe/relayer-sdk/bundle";
+export type { FheTypeName, FhevmInstanceConfig } from "./relayer/relayer-sdk.types";
 export type { GenericLogger } from "./worker/worker.types";
 
 // Network preset configs

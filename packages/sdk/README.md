@@ -427,12 +427,9 @@ const sdk = new ZamaSDK({
 
 #### `RelayerWebSecurityConfig`
 
-| Field            | Type           | Description                                                                                      |
-| ---------------- | -------------- | ------------------------------------------------------------------------------------------------ |
-| `getCsrfToken`   | `() => string` | Optional. Resolve the CSRF token before each authenticated network request.                      |
-| `integrityCheck` | `boolean`      | Optional. Verify SHA-384 integrity of the CDN bundle. Defaults to `true`. Set `false` for tests. |
-
-> **Security note:** `RelayerWeb` loads FHE WASM from a CDN at runtime. The `integrityCheck` option (enabled by default) verifies the SHA-384 hash of the bundle before execution, protecting against CDN compromise or MITM attacks. Only disable it in local development or testing.
+| Field          | Type           | Description                                                                 |
+| -------------- | -------------- | --------------------------------------------------------------------------- |
+| `getCsrfToken` | `() => string` | Optional. Resolve the CSRF token before each authenticated network request. |
 
 ### `RelayerNodeConfig` (Node.js)
 

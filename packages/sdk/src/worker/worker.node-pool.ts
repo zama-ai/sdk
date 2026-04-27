@@ -2,7 +2,6 @@ import { availableParallelism } from "node:os";
 import { NodeWorkerClient } from "./worker.node-client";
 import type { NodeWorkerClientConfig } from "./worker.node-client";
 import type { Handle } from "../relayer/relayer-sdk.types";
-import type { ZKProofLike } from "@zama-fhe/relayer-sdk/bundle";
 import type {
   CreateDelegatedEIP712Payload,
   CreateDelegatedEIP712ResponseData,
@@ -169,7 +168,7 @@ export class NodeWorkerPool {
   }
 
   async requestZKProofVerification(
-    zkProof: ZKProofLike,
+    zkProof: unknown,
   ): Promise<RequestZKProofVerificationResponseData> {
     return this.#dispatch((w) => w.requestZKProofVerification(zkProof));
   }

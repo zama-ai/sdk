@@ -355,6 +355,7 @@ export class ReadonlyToken {
             delegateAddress: creds.delegateAddress,
             startTimestamp: creds.startTimestamp,
             durationDays: creds.durationDays,
+            eip712: creds.eip712,
           })
           .then(async (result) => {
             const value = result[handle];
@@ -674,6 +675,7 @@ export class ReadonlyToken {
         delegateAddress: creds.delegateAddress,
         startTimestamp: creds.startTimestamp,
         durationDays: creds.durationDays,
+        eip712: creds.eip712,
       });
 
       // Validate the relayer response before emitting DecryptEnd so subscribers

@@ -9,3 +9,4 @@ packages:
 minimumReleaseAge: 4320
 minimumReleaseAgeExclude:
   - "@zama-fhe/relayer-sdk"
+  - "@fhevm/sdk"

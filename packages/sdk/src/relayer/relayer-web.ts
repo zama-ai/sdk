@@ -1,9 +1,3 @@
-import type {
-  InputProofBytesType,
-  KeypairType,
-  KmsDelegatedUserDecryptEIP712Type,
-  ZKProofLike,
-} from "@zama-fhe/relayer-sdk/bundle";
 import type { Address, Hex } from "viem";
 import { ConfigurationError, ZamaError } from "../errors";
 import { IndexedDBStorage } from "../storage/indexeddb-storage";
@@ -17,6 +11,7 @@ import type {
   EIP712TypedData,
   EncryptParams,
   EncryptResult,
+  EncryptResult as InputProofBytesType,
   Handle,
   PublicDecryptResult,
   PublicKeyData,
@@ -26,17 +21,6 @@ import type {
   UserDecryptParams,
 } from "./relayer-sdk.types";
 import { DefaultConfigs, withRetry } from "./relayer-utils";
-
-/**
- * Pinned relayer SDK version used for the WASM CDN bundle.
- * Update this when upgrading @zama-fhe/relayer-sdk, and keep the
- * peerDependencies range in package.json in sync (~x.y.z).
- */
-const RELAYER_SDK_VERSION = "0.4.2";
-const CDN_URL = `https://cdn.zama.org/relayer-sdk-js/${RELAYER_SDK_VERSION}/relayer-sdk-js.umd.cjs`;
-/** SHA-384 hex digest of the pinned CDN bundle for integrity verification. */
-const CDN_INTEGRITY =
-  "114438b01d518b53a447fa3e8bfbe6e71031cb42ac43219bb9f53488456fdfa4bbc8989628366d436e68f6526c7647eb";
 
 /**
  * RelayerWeb — browser encryption/decryption layer using a Web Worker.
@@ -109,10 +93,8 @@ export class RelayerWeb implements RelayerSDK, Disposable {
     }
 
     return {
-      cdnUrl: CDN_URL,
       fhevmConfig: Object.assign({}, DefaultConfigs[chainId], transports[chainId]),
       csrfToken: security?.getCsrfToken?.() ?? "",
-      integrity: security?.integrityCheck === false ? undefined : CDN_INTEGRITY,
       logger: this.#config.logger,
       // Public API uses `threads` (plural, "how many threads"); upstream
       // `initSDK` expects `thread` (singular) — rename at the boundary.
@@ -270,7 +252,7 @@ export class RelayerWeb implements RelayerSDK, Disposable {
   /**
    * Generate a keypair for FHE operations.
    */
-  async generateKeypair(): Promise<KeypairType<Hex>> {
+  async generateKeypair(): Promise<{ publicKey: Hex; privateKey: Hex }> {
     const worker = await this.#ensureWorker();
     const result = await worker.generateKeypair();
     return {
@@ -355,7 +337,7 @@ export class RelayerWeb implements RelayerSDK, Disposable {
     delegatorAddress: Address,
     startTimestamp: number,
     durationDays = 7,
-  ): Promise<KmsDelegatedUserDecryptEIP712Type> {
+  ): Promise<EIP712TypedData> {
     const worker = await this.#ensureWorker();
     return worker.createDelegatedUserDecryptEIP712({
       publicKey,
@@ -384,11 +366,11 @@ export class RelayerWeb implements RelayerSDK, Disposable {
   /**
    * Submit a ZK proof to the relayer for verification.
    */
-  async requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType> {
+  async requestZKProofVerification(zkProof: unknown): Promise<InputProofBytesType> {
     return withRetry(async () => {
       const worker = await this.#ensureWorker();
       await this.#refreshCsrfToken();
-      return worker.requestZKProofVerification(zkProof);
+      return worker.requestZKProofVerification(zkProof) as unknown as Promise<InputProofBytesType>;
     });
   }
 

@@ -44,7 +44,6 @@ const relayer = new RelayerWeb({
     },
   },
   threads: 4,
-  security: { integrityCheck: false },
 });
 
 const storage = new MemoryStorage();

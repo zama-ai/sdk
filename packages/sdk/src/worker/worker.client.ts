@@ -1,5 +1,5 @@
-import type { FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/bundle";
 import type {
+  FhevmInstanceConfig,
   GenericLogger,
   UpdateCsrfResponseData,
   WorkerRequest,
@@ -12,11 +12,8 @@ import { default as workerCode, filename as workerFilename } from "./relayer-sdk
 
 /** Configuration for the worker client */
 export interface WorkerClientConfig {
-  cdnUrl: string;
   fhevmConfig: FhevmInstanceConfig;
   csrfToken: string;
-  /** Expected SHA-384 hex digest of the CDN bundle for integrity verification. */
-  integrity?: string;
   /** Optional logger for tracing worker request lifecycle. */
   logger?: GenericLogger;
   /** Number of WASM threads for parallel FHE operations (passed to `initSDK({ thread })`). */
@@ -71,8 +68,8 @@ export class RelayerWorkerClient extends BaseWorkerClient<Worker, WorkerClientCo
     // Explicitly construct the payload from serializable fields only.
     // Functions (e.g. `logger`) cannot be cloned by the structured clone
     // algorithm used by `worker.postMessage()`.
-    const { cdnUrl, fhevmConfig, csrfToken, integrity, thread } = this.config;
-    return { type: "INIT", payload: { cdnUrl, fhevmConfig, csrfToken, integrity, thread } };
+    const { fhevmConfig, csrfToken, thread } = this.config;
+    return { type: "INIT", payload: { fhevmConfig, csrfToken, thread } };
   }
 
   /**

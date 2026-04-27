@@ -1,6 +1,6 @@
-import type { KmsDelegatedUserDecryptEIP712Type } from "@zama-fhe/relayer-sdk/bundle";
 import type { Address, Hex } from "viem";
 import type { ZamaSDK } from "../zama-sdk";
+import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
 import type { MutationFactoryOptions } from "./factory-types";
 
 /** Variables for {@link createDelegatedUserDecryptEIP712MutationOptions}. */
@@ -17,7 +17,7 @@ export function createDelegatedUserDecryptEIP712MutationOptions(
 ): MutationFactoryOptions<
   readonly ["zama.createDelegatedUserDecryptEIP712"],
   CreateDelegatedUserDecryptEIP712Params,
-  KmsDelegatedUserDecryptEIP712Type
+  EIP712TypedData
 > {
   return {
     mutationKey: ["zama.createDelegatedUserDecryptEIP712"],

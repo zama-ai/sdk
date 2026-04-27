@@ -6,7 +6,6 @@
 
 import { Abi } from 'viem';
 import { Address } from 'viem';
-import { Bytes32Hex } from '@zama-fhe/relayer-sdk/bundle';
 import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
@@ -15,8 +14,6 @@ import { EIP1193Events } from 'viem';
 import { EIP1193Provider } from 'viem';
 import { ethers } from 'ethers';
 import { Hex } from 'viem';
-import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
-import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
 import { ProviderConnectInfo } from 'viem';
 import { ProviderMessage } from 'viem';
 import { ProviderRpcError } from 'viem';

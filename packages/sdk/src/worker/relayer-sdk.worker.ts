@@ -1,12 +1,17 @@
 /**
- * Web Worker for RelayerSDK FHE operations.
- * Handles CPU-intensive WASM operations off the main thread.
+ * Web Worker for FHE operations.
+ * Uses @fhevm/sdk for encryption/decryption off the main thread.
+ * This worker is bundled by the host app's bundler which resolves imports at build time.
  */
 
-import type { EncryptInput, RelayerSDKGlobal } from "../relayer/relayer-sdk.types";
-import type { FhevmInstance, FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/bundle";
-import { assertNonNullable, prefixHex, unprefixHex } from "../utils";
-import { getBrowserExtensionRuntime } from "./browser-extension";
+import { createPublicClient, http } from "viem";
+import { createFhevmClient, setFhevmRuntimeConfig } from "@fhevm/sdk/viem";
+import {
+  createKmsUserDecryptEIP712,
+  createKmsDelegatedUserDecryptEip712,
+} from "@fhevm/sdk/actions/chain";
+import type { EncryptValuesParameters } from "@fhevm/sdk/actions/encrypt";
+import type { FheTypeName } from "../relayer/relayer-sdk.types";
 import type {
   CreateDelegatedEIP712Request,
   CreateEIP712Request,
@@ -15,6 +20,7 @@ import type {
   EncryptRequest,
   EncryptResponseData,
   ErrorResponse,
+  FhevmInstanceConfig,
   GenerateKeypairRequest,
   GenerateKeypairResponseData,
   GetPublicKeyRequest,
@@ -32,25 +38,22 @@ import type {
   WorkerRequest,
 } from "./worker.types";
 
-// Global SDK instance and config
-let sdkInstance: FhevmInstance | null = null;
-let sdkGlobal: RelayerSDKGlobal | null = null;
+// ============================================================================
+// Client state
+// ============================================================================
 
-function assertSdkInstance(
-  instance: FhevmInstance | null,
-): asserts instance is NonNullable<FhevmInstance> {
-  try {
-    assertNonNullable(instance, "Relayer SDK instance");
-  } catch (error) {
-    throw new Error("Relayer SDK is not initialized. Call INIT first.", {
-      cause: error,
-    });
+type FhevmClientInstance = Awaited<ReturnType<typeof createFhevmClient>>;
+let client: FhevmClientInstance | null = null;
+
+function assertClient(c: FhevmClientInstance | null): asserts c is FhevmClientInstance {
+  if (!c) {
+    throw new Error("SDK not initialized. Call INIT first.");
   }
 }
 
-function unreachableFheType(_: never): never {
-  throw new Error("Unsupported FHE type");
-}
+// ============================================================================
+// CSRF fetch interceptor
+// ============================================================================
 
 // Store relayer URL and CSRF token for fetch interception.
 // These globals are per-worker-instance. Do NOT convert to SharedWorker
@@ -64,13 +67,45 @@ const CSRF_HEADER_NAME = "x-csrf-token";
 // Mutating HTTP methods that require CSRF token (js-set-map-lookups)
 const MUTATING_METHODS = new Set(["POST", "PUT", "DELETE", "PATCH"]);
 
-// Web Worker global scope with SDK
-interface WorkerGlobalScopeWithSDK extends Worker {
-  relayerSDK?: RelayerSDKGlobal;
-  importScripts: (...urls: string[]) => void;
+// Store original fetch for use after interception
+const originalFetch = fetch;
+
+/**
+ * Set up fetch interceptor to add credentials and CSRF token for relayer requests.
+ * Workers don't automatically include cookies, so we intercept fetch calls
+ * targeting our relayer proxy to inject credentials and CSRF headers.
+ */
+function setupFetchInterceptor(): void {
+  globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+    const method = init?.method?.toUpperCase() ?? "GET";
+
+    // Only intercept requests to our relayer proxy
+    if (relayerUrlBase && url.startsWith(relayerUrlBase)) {
+      const headers = new Headers(init?.headers);
+
+      // Add CSRF token for mutating requests
+      if (MUTATING_METHODS.has(method) && csrfTokenBase) {
+        headers.set(CSRF_HEADER_NAME, csrfTokenBase);
+      }
+
+      return originalFetch(input, {
+        ...init,
+        headers,
+        credentials: "include",
+      });
+    }
+
+    // Pass through other requests unchanged
+    return originalFetch(input, init);
+  };
 }
 
-declare const self: WorkerGlobalScopeWithSDK;
+// ============================================================================
+// Messaging helpers
+// ============================================================================
+
+declare const self: Worker;
 
 /**
  * Send a success response back to the main thread.
@@ -112,291 +147,6 @@ function sendError(
   self.postMessage(response);
 }
 
-// Store original fetch for use in SDK loading
-const originalFetch = fetch;
-
-// ── CDN URL validation ───────────────────────────────────────
-
-/** Allowed CDN hostnames for loading the relayer SDK script. */
-const ALLOWED_CDN_HOSTS = new Set<string>(["cdn.zama.org"]);
-
-/**
- * Validate the CDN URL supplied by the caller.
- * Ensures only HTTPS URLs from approved hosts are used when loading
- * SDK code into the worker.
- */
-function validateCdnUrl(rawUrl: string): string {
-  let url: URL;
-  try {
-    url = new URL(rawUrl);
-  } catch {
-    throw new Error("Invalid CDN URL");
-  }
-
-  if (url.protocol !== "https:") {
-    throw new Error("CDN URL must use https");
-  }
-
-  if (!ALLOWED_CDN_HOSTS.has(url.hostname)) {
-    throw new Error(`CDN URL host is not allowed: ${url.hostname}`);
-  }
-
-  return url.toString();
-}
-
-/**
- * Set up fetch interceptor to add credentials and CSRF token for relayer requests.
- * Workers don't automatically include cookies, so we intercept fetch calls
- * targeting our relayer proxy to inject credentials and CSRF headers.
- */
-function setupFetchInterceptor(): void {
-  globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-    const method = init?.method?.toUpperCase() ?? "GET";
-
-    // Only intercept requests to our relayer proxy
-    if (relayerUrlBase && url.startsWith(relayerUrlBase)) {
-      const headers = new Headers(init?.headers);
-
-      // Add CSRF token for mutating requests
-      if (MUTATING_METHODS.has(method) && csrfTokenBase) {
-        headers.set(CSRF_HEADER_NAME, csrfTokenBase);
-      }
-
-      return originalFetch(input, {
-        ...init,
-        headers,
-        credentials: "include",
-      });
-    }
-
-    // Pass through other requests unchanged
-    return originalFetch(input, init);
-  };
-}
-
-/**
- * Verify a fetched script's SHA-384 hash matches the expected integrity value.
- */
-async function verifyIntegrity(content: string, expectedHash: string): Promise<void> {
-  const encoder = new TextEncoder();
-  const hashBuffer = await crypto.subtle.digest("SHA-384", encoder.encode(content));
-  const hashHex = [...new Uint8Array(hashBuffer)]
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-  if (hashHex !== expectedHash) {
-    throw new Error(`CDN integrity check failed: expected SHA-384 ${expectedHash}, got ${hashHex}`);
-  }
-}
-
-/**
- * Load SDK script from CDN.
- * Uses two strategies depending on the environment:
- * - **Web apps (default):** fetch + blob URL + importScripts. Avoids MIME-type
- *   rejections (some CDNs serve .cjs as `application/node`) and CSP
- *   `unsafe-eval` violations.
- * - **Browser extensions (Chrome/Firefox/Safari):** importScripts directly.
- *   Blob URLs are blocked by extension CSP, but the CDN must be allowed
- *   in the extension's manifest CSP.
- *
- * Integrity is always verified when a hash is provided, regardless of strategy.
- */
-async function fetchScript(cdnUrl: string): Promise<string> {
-  const response = await originalFetch(cdnUrl);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch SDK: ${response.status} ${response.statusText}`);
-  }
-  return response.text();
-}
-
-async function loadSdkScript(cdnUrl: string, integrity?: string): Promise<void> {
-  // Validate CDN URL immediately before any script loading (defense-in-depth).
-  const validatedUrl = validateCdnUrl(cdnUrl);
-
-  if (getBrowserExtensionRuntime()) {
-    // Extensions: blob: URLs are forbidden. Use importScripts directly —
-    // the CDN origin must be allowed in the extension's CSP manifest.
-    if (integrity) {
-      await verifyIntegrity(await fetchScript(validatedUrl), integrity);
-    }
-    return self.importScripts(validatedUrl);
-  }
-
-  // Web apps: fetch + blob URL avoids MIME-type and eval CSP issues.
-  const scriptContent = await fetchScript(validatedUrl);
-
-  if (integrity) {
-    await verifyIntegrity(scriptContent, integrity);
-  }
-
-  const blob = new Blob([scriptContent], { type: "application/javascript" });
-  const blobUrl = URL.createObjectURL(blob);
-  try {
-    self.importScripts(blobUrl);
-  } finally {
-    URL.revokeObjectURL(blobUrl);
-  }
-}
-
-/**
- * Handle INIT request - load SDK and initialize WASM.
- */
-async function handleInit(request: InitRequest): Promise<void> {
-  const { id, type, payload } = request;
-  const { cdnUrl, fhevmConfig, csrfToken, integrity, thread } = payload;
-
-  try {
-    // Extract relayerUrl from config for fetch interception
-    relayerUrlBase = fhevmConfig.relayerUrl ?? "";
-    csrfTokenBase = csrfToken;
-
-    // Set up fetch interceptor before loading SDK
-    setupFetchInterceptor();
-
-    // Load SDK via fetch + eval (avoids MIME-type issues with importScripts)
-    await loadSdkScript(cdnUrl, integrity);
-
-    if (!self.relayerSDK) {
-      throw new Error("Failed to load relayerSDK from CDN");
-    }
-
-    sdkGlobal = self.relayerSDK;
-
-    // Initialize WASM (optionally with a rayon thread pool for parallel FHE ops)
-    await sdkGlobal.initSDK(thread !== null && thread !== undefined ? { thread } : undefined);
-
-    // Create SDK instance with caller-provided config
-    const config: FhevmInstanceConfig = {
-      ...fhevmConfig,
-      batchRpcCalls: false,
-    };
-
-    sdkInstance = await sdkGlobal.createInstance(config);
-
-    sendSuccess(id, type, { initialized: true });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error("[Worker] Init error:", message);
-    sendError(id, type, message);
-  }
-}
-
-/** Coerce a boolean to bigint for numeric FHE types. */
-function toBigInt(value: bigint | boolean): bigint {
-  return typeof value === "boolean" ? (value ? 1n : 0n) : value;
-}
-
-/**
- * Add a single typed value to the encrypted input builder.
- */
-function addTypedValue(
-  input: ReturnType<FhevmInstance["createEncryptedInput"]>,
-  entry: EncryptInput,
-): void {
-  const { value, type: fheType } = entry;
-  switch (fheType) {
-    case "ebool":
-      input.addBool(typeof value === "boolean" ? value : value !== 0n);
-      break;
-    case "euint8":
-      input.add8(toBigInt(value));
-      break;
-    case "euint16":
-      input.add16(toBigInt(value));
-      break;
-    case "euint32":
-      input.add32(toBigInt(value));
-      break;
-    case "euint64":
-      input.add64(toBigInt(value));
-      break;
-    case "euint128":
-      input.add128(toBigInt(value));
-      break;
-    case "euint256":
-      input.add256(toBigInt(value));
-      break;
-    case "eaddress":
-      input.addAddress(value);
-      break;
-    default:
-      unreachableFheType(fheType);
-  }
-}
-
-/**
- * Handle ENCRYPT request.
- */
-async function handleEncrypt(request: EncryptRequest): Promise<void> {
-  const { id, type, payload } = request;
-  const { values, contractAddress, userAddress } = payload;
-
-  try {
-    assertSdkInstance(sdkInstance);
-
-    const input = sdkInstance.createEncryptedInput(contractAddress, userAddress);
-
-    for (const entry of values) {
-      addTypedValue(input, entry);
-    }
-
-    const encrypted = await input.encrypt();
-
-    const response: EncryptResponseData = {
-      handles: encrypted.handles,
-      inputProof: encrypted.inputProof,
-    };
-
-    // Transfer ArrayBuffers for zero-copy performance
-    const transferList: Transferable[] = [
-      encrypted.inputProof.buffer,
-      ...encrypted.handles.map((h) => h.buffer),
-    ];
-
-    sendSuccess(id, type, response, transferList);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error("[Worker] Encrypt error:", message);
-    sendError(id, type, message);
-  }
-}
-
-/**
- * Handle USER_DECRYPT request.
- */
-async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
-  const { id, type, payload } = request;
-
-  try {
-    assertSdkInstance(sdkInstance);
-
-    const handleContractPairs = payload.handles.map((handle) => ({
-      handle,
-      contractAddress: payload.contractAddress,
-    }));
-
-    const result = await sdkInstance.userDecrypt(
-      handleContractPairs,
-      unprefixHex(payload.privateKey),
-      unprefixHex(payload.publicKey),
-      payload.signature,
-      payload.signedContractAddresses,
-      payload.signerAddress,
-      payload.startTimestamp,
-      payload.durationDays,
-    );
-
-    const response: UserDecryptResponseData = { clearValues: result };
-
-    sendSuccess(id, type, response);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    const statusCode = extractHttpStatus(error);
-    console.error("[Worker] UserDecrypt error:", message);
-    sendError(id, type, message, statusCode);
-  }
-}
-
 /**
  * Extract an HTTP status code from an error, if present.
  * Relayer SDK errors may carry a `status` or `statusCode` property.
@@ -425,6 +175,295 @@ function extractHttpStatus(error: unknown): number | undefined {
   return undefined;
 }
 
+// ============================================================================
+// Conversion helpers
+// ============================================================================
+
+/**
+ * Convert an FhevmInstanceConfig to the chain object expected by @fhevm/sdk.
+ */
+function configToChain(config: FhevmInstanceConfig) {
+  type Addr = `0x${string}`;
+  return {
+    id: config.chainId,
+    fhevm: {
+      contracts: {
+        acl: { address: config.aclContractAddress as Addr },
+        inputVerifier: {
+          address: (config.inputVerifierContractAddress ?? config.aclContractAddress) as Addr,
+        },
+        kmsVerifier: { address: config.kmsContractAddress as Addr },
+      },
+      relayerUrl: config.relayerUrl,
+      gateway: {
+        id: config.gatewayChainId,
+        contracts: {
+          decryption: {
+            address: config.verifyingContractAddressDecryption as Addr,
+          },
+          inputVerification: {
+            address: (config.verifyingContractAddressInputVerification ??
+              config.verifyingContractAddressDecryption) as Addr,
+          },
+        },
+      },
+    },
+  };
+}
+
+/**
+ * Map SDK FHE type names to Solidity-style type names expected by @fhevm/sdk encryptValues.
+ */
+function fheTypeToSolidityType(
+  fheType: FheTypeName,
+): EncryptValuesParameters["values"][number]["type"] {
+  switch (fheType) {
+    case "ebool":
+      return "bool";
+    case "euint8":
+      return "uint8";
+    case "euint16":
+      return "uint16";
+    case "euint32":
+      return "uint32";
+    case "euint64":
+      return "uint64";
+    case "euint128":
+      return "uint128";
+    case "euint256":
+      return "uint256";
+    case "eaddress":
+      return "address";
+    default: {
+      const _exhaustive: never = fheType;
+      throw new Error(`Unsupported FHE type: ${String(_exhaustive)}`);
+    }
+  }
+}
+
+/**
+ * Convert a hex string (0x-prefixed) to a Uint8Array.
+ */
+function hexToBytes(hex: string): Uint8Array {
+  const cleaned = hex.startsWith("0x") ? hex.slice(2) : hex;
+  const bytes = new Uint8Array(cleaned.length / 2);
+  for (let i = 0; i < cleaned.length; i += 2) {
+    bytes[i / 2] = parseInt(cleaned.substring(i, i + 2), 16);
+  }
+  return bytes;
+}
+
+// ============================================================================
+// Handlers
+// ============================================================================
+
+/**
+ * Handle INIT request - configure runtime and create FhevmClient.
+ */
+async function handleInit(request: InitRequest): Promise<void> {
+  const { id, type, payload } = request;
+  const { fhevmConfig, csrfToken, thread } = payload;
+
+  try {
+    // Extract relayerUrl from config for fetch interception
+    relayerUrlBase = fhevmConfig.relayerUrl ?? "";
+    csrfTokenBase = csrfToken;
+
+    // Set up fetch interceptor before any SDK network calls
+    setupFetchInterceptor();
+
+    // Configure WASM runtime (thread count)
+    setFhevmRuntimeConfig(
+      thread !== null && thread !== undefined ? { numberOfThreads: thread } : {},
+    );
+
+    // Build chain config and viem public client
+    const chain = configToChain(fhevmConfig);
+    const providerUrl = fhevmConfig.networkUrl ?? fhevmConfig.relayerUrl;
+    const publicClient = createPublicClient({ transport: http(providerUrl) });
+
+    // Create client and wait for it to be ready
+    client = createFhevmClient({
+      chain,
+      publicClient,
+    });
+    await client.ready;
+
+    sendSuccess(id, type, { initialized: true });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("[Worker] Init error:", message);
+    sendError(id, type, message);
+  }
+}
+
+/**
+ * Handle ENCRYPT request.
+ */
+async function handleEncrypt(request: EncryptRequest): Promise<void> {
+  const { id, type, payload } = request;
+  const { values, contractAddress, userAddress } = payload;
+
+  try {
+    assertClient(client);
+
+    // Map inputs to the format expected by @fhevm/sdk encryptValues.
+    // Each entry needs a Solidity-style type name and its value.
+    const mappedValues = values.map((entry) => ({
+      value: entry.value as never,
+      type: fheTypeToSolidityType(entry.type),
+    }));
+
+    const encrypted = await client.encryptValues({
+      values: mappedValues,
+      contractAddress,
+      userAddress,
+    });
+
+    // Convert branded hex strings to Uint8Array for structured-clone transfer.
+    const handles = encrypted.encryptedValues.map(hexToBytes);
+    const inputProof = hexToBytes(encrypted.inputProof);
+
+    const response: EncryptResponseData = {
+      handles,
+      inputProof,
+    };
+
+    // Transfer ArrayBuffers for zero-copy performance
+    const transferList: Transferable[] = [inputProof.buffer, ...handles.map((h) => h.buffer)];
+
+    sendSuccess(id, type, response, transferList);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("[Worker] Encrypt error:", message);
+    sendError(id, type, message);
+  }
+}
+
+/**
+ * Handle USER_DECRYPT request.
+ */
+async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
+  const { id, type, payload } = request;
+
+  try {
+    assertClient(client);
+
+    // 1. Parse transport keypair
+    const keypair = await client.parseTransportKeypair({
+      serialized: {
+        publicKey: payload.publicKey,
+        privateKey: payload.privateKey,
+      },
+    });
+
+    // 2. Parse signed decryption permit
+    const permit = await client.parseSignedDecryptionPermit({
+      serialized: {
+        publicKey: payload.publicKey,
+        contractAddresses: payload.signedContractAddresses,
+        signerAddress: payload.signerAddress,
+        startTimestamp: payload.startTimestamp,
+        durationDays: payload.durationDays,
+        signature: payload.signature,
+        eip712: payload.eip712,
+      },
+      transportKeypair: keypair,
+    });
+
+    // 3. Decrypt (permit is a union — the SDK dispatches based on isDelegated)
+    const decryptedValues = await client.decryptValues({
+      transportKeypair: keypair,
+      encryptedValues: payload.handles,
+      contractAddress: payload.contractAddress,
+      signedPermit: permit as never,
+    });
+
+    // 4. Map results: clearValues is TypedValue[] -> Record<Handle, value>
+    const clearValues: UserDecryptResponseData["clearValues"] = {};
+    for (let i = 0; i < payload.handles.length; i++) {
+      const handle = payload.handles[i];
+      const cv = decryptedValues[i];
+      if (handle !== undefined && cv !== undefined) {
+        clearValues[handle] = cv.value;
+      }
+    }
+
+    const response: UserDecryptResponseData = {
+      clearValues,
+    };
+
+    sendSuccess(id, type, response);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const statusCode = extractHttpStatus(error);
+    console.error("[Worker] UserDecrypt error:", message);
+    sendError(id, type, message, statusCode);
+  }
+}
+
+/**
+ * Handle DELEGATED_USER_DECRYPT request.
+ */
+async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest): Promise<void> {
+  const { id, type, payload } = request;
+
+  try {
+    assertClient(client);
+
+    // 1. Parse transport keypair
+    const keypair = await client.parseTransportKeypair({
+      serialized: {
+        publicKey: payload.publicKey,
+        privateKey: payload.privateKey,
+      },
+    });
+
+    // 2. Parse signed decryption permit (delegated)
+    const permit = await client.parseSignedDecryptionPermit({
+      serialized: {
+        publicKey: payload.publicKey,
+        contractAddresses: payload.signedContractAddresses,
+        signerAddress: payload.delegatorAddress,
+        startTimestamp: payload.startTimestamp,
+        durationDays: payload.durationDays,
+        signature: payload.signature,
+        eip712: payload.eip712,
+      },
+      transportKeypair: keypair,
+    });
+
+    // 3. Decrypt (permit is a union — the SDK dispatches based on isDelegated)
+    const decryptedValues = await client.decryptValues({
+      transportKeypair: keypair,
+      encryptedValues: payload.handles,
+      contractAddress: payload.contractAddress,
+      signedPermit: permit as never,
+    });
+
+    // 4. Map results
+    const clearValues: DelegatedUserDecryptResponseData["clearValues"] = {};
+    for (let i = 0; i < payload.handles.length; i++) {
+      const handle = payload.handles[i];
+      const cv = decryptedValues[i];
+      if (handle !== undefined && cv !== undefined) {
+        clearValues[handle] = cv.value;
+      }
+    }
+
+    const response: DelegatedUserDecryptResponseData = {
+      clearValues,
+    };
+
+    sendSuccess(id, type, response);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const statusCode = extractHttpStatus(error);
+    console.error("[Worker] DelegatedUserDecrypt error:", message);
+    sendError(id, type, message, statusCode);
+  }
+}
+
 /**
  * Handle PUBLIC_DECRYPT request.
  */
@@ -432,11 +471,27 @@ async function handlePublicDecrypt(request: PublicDecryptRequest): Promise<void>
   const { id, type, payload } = request;
 
   try {
-    assertSdkInstance(sdkInstance);
+    assertClient(client);
 
-    const result = await sdkInstance.publicDecrypt(payload.handles);
+    const result = await client.readPublicValuesWithSignatures({
+      encryptedValues: payload.handles,
+    });
 
-    const response: PublicDecryptResponseData = { ...result };
+    // Map clearValues from TypedValue[] to Record<Handle, ClearValue>
+    const clearValues: PublicDecryptResponseData["clearValues"] = {};
+    for (let i = 0; i < payload.handles.length; i++) {
+      const handle = payload.handles[i];
+      const cv = result.clearValues[i];
+      if (handle !== undefined && cv !== undefined) {
+        clearValues[handle] = cv.value;
+      }
+    }
+
+    const response: PublicDecryptResponseData = {
+      clearValues,
+      abiEncodedClearValues: result.checkSignaturesArgs.abiEncodedCleartexts,
+      decryptionProof: result.checkSignaturesArgs.decryptionProof,
+    };
 
     sendSuccess(id, type, response);
   } catch (error) {
@@ -449,17 +504,20 @@ async function handlePublicDecrypt(request: PublicDecryptRequest): Promise<void>
 /**
  * Handle GENERATE_KEYPAIR request.
  */
-function handleGenerateKeypair(request: GenerateKeypairRequest): void {
+async function handleGenerateKeypair(request: GenerateKeypairRequest): Promise<void> {
   const { id, type } = request;
 
   try {
-    assertSdkInstance(sdkInstance);
+    assertClient(client);
 
-    const keypair = sdkInstance.generateKeypair();
+    const keypair = await client.generateTransportKeypair();
+    const serialized = client.serializeTransportKeypair({
+      transportKeypair: keypair,
+    });
 
     const response: GenerateKeypairResponseData = {
-      publicKey: prefixHex(keypair.publicKey),
-      privateKey: prefixHex(keypair.privateKey),
+      publicKey: serialized.publicKey,
+      privateKey: serialized.privateKey,
     };
 
     sendSuccess(id, type, response);
@@ -477,16 +535,17 @@ function handleCreateEIP712(request: CreateEIP712Request): void {
   const { id, type, payload } = request;
 
   try {
-    assertSdkInstance(sdkInstance);
+    assertClient(client);
 
-    const eip712 = sdkInstance.createEIP712(
-      unprefixHex(payload.publicKey),
-      payload.contractAddresses,
-      payload.startTimestamp,
-      payload.durationDays,
-    );
+    const response = createKmsUserDecryptEIP712(client, {
+      publicKey: payload.publicKey,
+      contractAddresses: payload.contractAddresses,
+      startTimestamp: payload.startTimestamp,
+      durationDays: payload.durationDays,
+      extraData: "0x",
+    });
 
-    sendSuccess(id, type, eip712);
+    sendSuccess(id, type, response);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[Worker] CreateEIP712 error:", message);
@@ -501,17 +560,18 @@ function handleCreateDelegatedEIP712(request: CreateDelegatedEIP712Request): voi
   const { id, type, payload } = request;
 
   try {
-    assertSdkInstance(sdkInstance);
+    assertClient(client);
 
-    const result = sdkInstance.createDelegatedUserDecryptEIP712(
-      unprefixHex(payload.publicKey),
-      payload.contractAddresses,
-      payload.delegatorAddress,
-      payload.startTimestamp,
-      payload.durationDays,
-    );
+    const response = createKmsDelegatedUserDecryptEip712(client, {
+      publicKey: payload.publicKey,
+      contractAddresses: payload.contractAddresses,
+      delegatorAddress: payload.delegatorAddress,
+      startTimestamp: payload.startTimestamp,
+      durationDays: payload.durationDays,
+      extraData: "0x",
+    });
 
-    sendSuccess(id, type, result);
+    sendSuccess(id, type, response);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[Worker] CreateDelegatedEIP712 error:", message);
@@ -520,81 +580,39 @@ function handleCreateDelegatedEIP712(request: CreateDelegatedEIP712Request): voi
 }
 
 /**
- * Handle DELEGATED_USER_DECRYPT request.
- */
-async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest): Promise<void> {
-  const { id, type, payload } = request;
-
-  try {
-    assertSdkInstance(sdkInstance);
-
-    const handleContractPairs = payload.handles.map((handle) => ({
-      handle,
-      contractAddress: payload.contractAddress,
-    }));
-
-    const result = await sdkInstance.delegatedUserDecrypt(
-      handleContractPairs,
-      unprefixHex(payload.privateKey),
-      unprefixHex(payload.publicKey),
-      payload.signature,
-      payload.signedContractAddresses,
-      payload.delegatorAddress,
-      payload.delegateAddress,
-      payload.startTimestamp,
-      payload.durationDays,
-    );
-
-    const response: DelegatedUserDecryptResponseData = { clearValues: result };
-
-    sendSuccess(id, type, response);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    const statusCode = extractHttpStatus(error);
-    console.error("[Worker] DelegatedUserDecrypt error:", message);
-    sendError(id, type, message, statusCode);
-  }
-}
-
-/**
  * Handle REQUEST_ZK_PROOF_VERIFICATION request.
+ * ZK proof verification is built into encrypt() in @fhevm/sdk — no separate call needed.
  */
 async function handleRequestZKProofVerification(
   request: RequestZKProofVerificationRequest,
 ): Promise<void> {
-  const { id, type, payload } = request;
-
-  try {
-    assertSdkInstance(sdkInstance);
-
-    const result = await sdkInstance.requestZKProofVerification(payload.zkProof);
-
-    // Transfer ArrayBuffers for zero-copy performance
-    const transferList: Transferable[] = [
-      result.inputProof.buffer,
-      ...result.handles.map((h) => h.buffer),
-    ];
-
-    sendSuccess(id, type, result, transferList);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error("[Worker] RequestZKProofVerification error:", message);
-    sendError(id, type, message);
-  }
+  const { id, type } = request;
+  sendError(
+    id,
+    type,
+    "ZK proof verification is built into encrypt() in @fhevm/sdk. Use ENCRYPT instead.",
+  );
 }
 
 /**
  * Handle GET_PUBLIC_KEY request.
  */
-function handleGetPublicKey(request: GetPublicKeyRequest): void {
+async function handleGetPublicKey(request: GetPublicKeyRequest): Promise<void> {
   const { id, type } = request;
 
   try {
-    assertSdkInstance(sdkInstance);
+    assertClient(client);
 
-    const result = sdkInstance.getPublicKey();
+    const keyData = await client.fetchFheEncryptionKeyBytes();
 
-    const response: GetPublicKeyResponseData = { result };
+    const response: GetPublicKeyResponseData = {
+      result: keyData
+        ? {
+            publicKeyId: keyData.publicKeyBytes.id,
+            publicKey: keyData.publicKeyBytes.bytes,
+          }
+        : null,
+    };
 
     sendSuccess(id, type, response);
   } catch (error) {
@@ -606,26 +624,12 @@ function handleGetPublicKey(request: GetPublicKeyRequest): void {
 
 /**
  * Handle GET_PUBLIC_PARAMS request.
+ * Public params are no longer exposed by @fhevm/sdk.
  */
 function handleGetPublicParams(request: GetPublicParamsRequest): void {
-  const { id, type, payload } = request;
-
-  try {
-    assertSdkInstance(sdkInstance);
-
-    const result = sdkInstance.getPublicParams(
-      // oxlint-disable-next-line typescript-eslint/consistent-type-imports -- SDK loaded dynamically via CDN
-      payload.bits as keyof import("@zama-fhe/relayer-sdk/bundle").PublicParams<Uint8Array>,
-    );
-
-    const response: GetPublicParamsResponseData = { result };
-
-    sendSuccess(id, type, response);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error("[Worker] GetPublicParams error:", message);
-    sendError(id, type, message);
-  }
+  const { id, type } = request;
+  const response: GetPublicParamsResponseData = { result: null };
+  sendSuccess(id, type, response);
 }
 
 /**
@@ -637,9 +641,10 @@ function handleUpdateCsrf(request: UpdateCsrfRequest): void {
   sendSuccess(id, type, { updated: true });
 }
 
-/**
- * Main message handler.
- */
+// ============================================================================
+// Main message handler
+// ============================================================================
+
 self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   const request = event.data;
 
@@ -661,7 +666,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         await handlePublicDecrypt(request);
         break;
       case "GENERATE_KEYPAIR":
-        handleGenerateKeypair(request);
+        await handleGenerateKeypair(request);
         break;
       case "CREATE_EIP712":
         handleCreateEIP712(request);
@@ -676,7 +681,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         await handleRequestZKProofVerification(request);
         break;
       case "GET_PUBLIC_KEY":
-        handleGetPublicKey(request);
+        await handleGetPublicKey(request);
         break;
       case "GET_PUBLIC_PARAMS":
         handleGetPublicParams(request);

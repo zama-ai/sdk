@@ -6,25 +6,14 @@
 
 import { Abi } from 'viem';
 import { Address } from 'viem';
-import { Bytes32Hex } from '@zama-fhe/relayer-sdk/bundle';
-import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle';
 import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
 import { Hex } from 'viem';
-import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
-import { KeypairType } from '@zama-fhe/relayer-sdk/bundle';
-import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
-import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
-import { KmsUserDecryptEIP712UserArgsType } from '@zama-fhe/relayer-sdk/bundle';
 import { MutationFunctionContext } from '@tanstack/query-core';
-import { PublicDecryptResults } from '@zama-fhe/relayer-sdk/bundle';
 import { QueryKey } from '@tanstack/query-core';
 import { QueryObserverOptions } from '@tanstack/query-core';
-import * as SDK from '@zama-fhe/relayer-sdk/bundle';
 import { skipToken } from '@tanstack/query-core';
-import { UserDecryptResults } from '@zama-fhe/relayer-sdk/bundle';
-import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
 
 // @public (undocumented)
 export function allowMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.allow"], Address[], void>;
@@ -85,7 +74,8 @@ export function batchDecryptBalancesAsMutationOptions(tokens: ReadonlyToken[]): 
 // @public
 export type BatchDecryptBalancesAsParams = BatchDecryptAsOptions;
 
-export { ClearValueType }
+// @public
+export type ClearValueType = number | bigint | boolean | `0x${string}`;
 
 // @public (undocumented)
 export function confidentialApproveMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.confidentialApprove", Address], ConfidentialApproveParams, TransactionResult>;
@@ -179,7 +169,7 @@ export interface ConfidentialTransferParams extends TransferOptions {
 }
 
 // @public (undocumented)
-export function createDelegatedUserDecryptEIP712MutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.createDelegatedUserDecryptEIP712"], CreateDelegatedUserDecryptEIP712Params, KmsDelegatedUserDecryptEIP712Type>;
+export function createDelegatedUserDecryptEIP712MutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.createDelegatedUserDecryptEIP712"], CreateDelegatedUserDecryptEIP712Params, EIP712TypedData>;
 
 // @public
 export interface CreateDelegatedUserDecryptEIP712Params {
@@ -199,11 +189,16 @@ export interface CreateDelegatedUserDecryptEIP712Params {
 export function createEIP712MutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.createEIP712"], CreateEIP712Params, EIP712TypedData>;
 
 // @public
-export type CreateEIP712Params = Pick<KmsUserDecryptEIP712UserArgsType, "startTimestamp"> & {
-    publicKey: Hex;
+export interface CreateEIP712Params {
+    // (undocumented)
     contractAddresses: Address[];
+    // (undocumented)
     durationDays?: number;
-};
+    // (undocumented)
+    publicKey: Hex;
+    // (undocumented)
+    startTimestamp: number;
+}
 
 // @public (undocumented)
 export interface CredentialsAllowedEvent extends BaseEvent {
@@ -344,7 +339,7 @@ export interface DecryptHandle {
 }
 
 // @public
-export type DecryptResult = UserDecryptResults;
+export type DecryptResult = Record<Handle, ClearValueType>;
 
 // @public (undocumented)
 export interface DecryptStartEvent extends BaseEvent {
@@ -377,6 +372,10 @@ export interface DelegatedUserDecryptParams {
     delegatorAddress: Address;
     // (undocumented)
     durationDays: number;
+    // Warning: (ae-forgotten-export) The symbol "StoredEIP712" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    eip712: StoredEIP712;
     // (undocumented)
     handles: Handle[];
     // (undocumented)
@@ -423,7 +422,20 @@ export interface DelegationSubmittedEvent extends BaseEvent {
 }
 
 // @public
-export type EIP712TypedData = KmsUserDecryptEIP712Type | KmsDelegatedUserDecryptEIP712Type;
+export type EIP712TypedData = {
+    readonly domain: {
+        readonly name: string;
+        readonly version: string;
+        readonly chainId: bigint;
+        readonly verifyingContract: `0x${string}`;
+    };
+    readonly types: Record<string, readonly {
+        readonly name: string;
+        readonly type: string;
+    }[]>;
+    readonly primaryType: string;
+    readonly message: Record<string, unknown>;
+};
 
 // @public (undocumented)
 export interface EncryptEndEvent extends BaseEvent {
@@ -448,7 +460,7 @@ export type EncryptInput = {
     type: "ebool";
 } | {
     value: bigint;
-    type: Exclude<SDK.FheTypeName, "ebool" | "eaddress">;
+    type: Exclude<FheTypeName, "ebool" | "eaddress">;
 } | {
     value: Address;
     type: "eaddress";
@@ -467,7 +479,12 @@ export interface EncryptParams {
 }
 
 // @public
-export type EncryptResult = InputProofBytesType;
+export interface EncryptResult {
+    // (undocumented)
+    handles: Uint8Array[];
+    // (undocumented)
+    inputProof: Uint8Array;
+}
 
 // @public (undocumented)
 export interface EncryptStartEvent extends BaseEvent {
@@ -499,7 +516,10 @@ export interface FinalizeUnwrapSubmittedEvent extends BaseEvent {
 }
 
 // @public (undocumented)
-export function generateKeypairMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.generateKeypair"], void, KeypairType<Hex>>;
+export function generateKeypairMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.generateKeypair"], void, {
+    publicKey: Hex;
+    privateKey: Hex;
+}>;
 
 // @public
 export interface GenericSigner {
@@ -625,7 +645,14 @@ export type OnChainEvent = ConfidentialTransferEvent | WrappedEvent | UnwrapRequ
 export function publicDecryptMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.publicDecrypt"], Handle[], PublicDecryptResult>;
 
 // @public
-export type PublicDecryptResult = PublicDecryptResults;
+export interface PublicDecryptResult {
+    // (undocumented)
+    abiEncodedClearValues: Hex;
+    // (undocumented)
+    clearValues: Readonly<Record<Handle, ClearValueType>>;
+    // (undocumented)
+    decryptionProof: Hex;
+}
 
 // @public (undocumented)
 export interface PublicKeyQueryConfig {
@@ -727,22 +754,25 @@ export class ReadonlyToken {
 
 // @public
 export interface RelayerSDK {
-    createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type>;
+    createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
     createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
     delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
-    generateKeypair(): Promise<KeypairType<Hex>>;
+    generateKeypair(): Promise<{
+        publicKey: Hex;
+        privateKey: Hex;
+    }>;
     getAclAddress(): Promise<Address>;
     getPublicKey(): Promise<PublicKeyData | null>;
     getPublicParams(bits: number): Promise<PublicParamsData | null>;
     publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
-    requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
+    requestZKProofVerification(zkProof: unknown): Promise<EncryptResult>;
     terminate(): void;
     userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
 }
 
 // @public (undocumented)
-export function requestZKProofVerificationMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.requestZKProofVerification"], ZKProofLike, InputProofBytesType>;
+export function requestZKProofVerificationMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.requestZKProofVerification"], unknown, EncryptResult>;
 
 // @public (undocumented)
 export function resumeUnshieldMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.resumeUnshield", Address], ResumeUnshieldParams, TransactionResult>;
@@ -829,6 +859,7 @@ export interface SignerLifecycleCallbacks {
 export interface StoredCredentials {
     contractAddresses: Address[];
     durationDays: number;
+    eip712: StoredEIP712;
     privateKey: Hex;
     publicKey: Hex;
     signature: Hex;
@@ -1118,6 +1149,8 @@ export interface UserDecryptParams {
     contractAddress: Address;
     // (undocumented)
     durationDays: number;
+    // (undocumented)
+    eip712: StoredEIP712;
     // (undocumented)
     handles: Handle[];
     // (undocumented)
@@ -1441,6 +1474,10 @@ export const ZamaSDKEvents: {
     readonly UnshieldPhase2Started: "unshield:phase2_started";
     readonly UnshieldPhase2Submitted: "unshield:phase2_submitted";
 };
+
+// Warnings were encountered during analysis:
+//
+// dist/esm/relayer-sdk.types-CBurl-AZ.d.ts:486:3 - (ae-forgotten-export) The symbol "FheTypeName" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

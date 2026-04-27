@@ -1,18 +1,18 @@
 import { getAddress, type Address, type Hex } from "viem";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
-import type { StoredCredentials } from "../types";
 import { MemoryStorage } from "../storage/memory-storage";
+import type { StoredCredentials, StoredEIP712 } from "../types";
+import {
+  assertBaseEncryptedCredentials,
+  computeStoreKey,
+  normalizeAddresses,
+  type BaseEncryptedCredentials,
+} from "./credential-validation";
 import {
   BaseCredentialsManager,
   type CredentialsConfig,
   type SigningMeta,
 } from "./credentials-manager-base";
-import {
-  type BaseEncryptedCredentials,
-  assertBaseEncryptedCredentials,
-  normalizeAddresses,
-  computeStoreKey,
-} from "./credential-validation";
 
 /** Internal storage shape — same as BaseEncryptedCredentials. */
 type EncryptedCredentials = BaseEncryptedCredentials;
@@ -131,13 +131,35 @@ export class CredentialsManager extends BaseCredentialsManager<
         const startTimestamp = Math.floor(Date.now() / 1000);
         const durationDays = Math.ceil(this.keypairTTL / 86400);
 
-        const eip712 = await this.#relayer.createEIP712(
+        const eip712Raw = await this.#relayer.createEIP712(
           keypair.publicKey,
           normalized,
           startTimestamp,
           durationDays,
         );
-        const signature = await this.signer.signTypedData(eip712);
+        const signature = await this.signer.signTypedData(eip712Raw);
+
+        const msg = eip712Raw.message as Record<string, unknown>;
+        const storedEip712: StoredEIP712 = {
+          domain: {
+            ...eip712Raw.domain,
+            chainId: Number(eip712Raw.domain.chainId),
+          },
+          primaryType: eip712Raw.primaryType,
+          types: Object.fromEntries(
+            Object.entries(eip712Raw.types).map(([k, v]) => [
+              k,
+              (v as readonly { name: string; type: string }[]).map((f) => ({ ...f })),
+            ]),
+          ),
+          message: {
+            publicKey: msg.publicKey as Hex,
+            contractAddresses: [...(msg.contractAddresses as Address[])],
+            startTimestamp: Number(msg.startTimestamp),
+            durationDays: Number(msg.durationDays),
+            extraData: msg.extraData as Hex,
+          },
+        };
 
         return {
           publicKey: keypair.publicKey,
@@ -146,6 +168,7 @@ export class CredentialsManager extends BaseCredentialsManager<
           contractAddresses: normalized,
           startTimestamp,
           durationDays,
+          eip712: storedEip712,
         };
       },
       errorContext: "Failed to create decrypt credentials",
@@ -165,7 +188,7 @@ export class CredentialsManager extends BaseCredentialsManager<
       meta.startTimestamp,
       meta.durationDays,
     );
-    return this.signer.signTypedData(eip712);
+    return this.signer.signTypedData(eip712 as never);
   }
 
   protected async encryptCredentials(creds: StoredCredentials): Promise<EncryptedCredentials> {
