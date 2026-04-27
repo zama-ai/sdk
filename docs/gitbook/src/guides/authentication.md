@@ -111,14 +111,14 @@ When the SDK runs in a trusted environment (Node.js script, backend service), yo
 ```ts
 import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 
-const myChain = {
+const mySepolia = {
   ...sepolia,
   network: "https://sepolia.infura.io/v3/YOUR_KEY",
   auth: { __type: "ApiKeyHeader" as const, value: process.env.RELAYER_API_KEY! },
 } as const satisfies FheChain;
 ```
 
-Then pass `myChain` to `createConfig` — the `auth` field is picked up automatically by the relayer. See the [Node.js backend guide](/guides/node-js-backend) for a complete example.
+Then pass `mySepolia` to `createConfig` — the `auth` field is picked up automatically by the relayer. See the [Node.js backend guide](/guides/node-js-backend) for a complete example.
 
 The `auth` field supports multiple methods depending on how your relayer is configured.
 

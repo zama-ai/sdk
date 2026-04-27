@@ -93,7 +93,7 @@ import { createConfig } from "@zama-fhe/sdk/viem";
 import { cleartext, ZamaSDK } from "@zama-fhe/sdk";
 import type { FheChain } from "@zama-fhe/sdk/chains";
 
-const myChain = {
+const myHardhat = {
   id: 12345,
   chainId: 12345,
   network: "http://localhost:8545",
@@ -107,11 +107,11 @@ const myChain = {
 } as const satisfies FheChain;
 
 const config = createConfig({
-  chains: [myChain],
+  chains: [myHardhat],
   publicClient,
   walletClient,
   transports: {
-    [myChain.id]: cleartext({
+    [myHardhat.id]: cleartext({
       executorAddress: "0x...",
       chainId: 12345,
       network: "http://localhost:8545",

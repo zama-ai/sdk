@@ -57,13 +57,13 @@ export const wagmiConfig = createConfig({
   },
 });
 
-const myChain = { ...sepoliaFhe, relayerUrl: "https://your-app.com/api/relayer/11155111" } as const satisfies FheChain;
+const mySepolia = { ...sepoliaFhe, relayerUrl: "https://your-app.com/api/relayer/11155111" } as const satisfies FheChain;
 
 export const zamaConfig = createZamaConfig({
-  chains: [myChain],
+  chains: [mySepolia],
   wagmiConfig,
   relayers: {
-    [myChain.id]: web(),
+    [mySepolia.id]: web(),
   },
 });
 

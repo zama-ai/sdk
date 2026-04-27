@@ -19,7 +19,7 @@ The relayer requires an API key. In browser apps, proxy requests through your ba
 import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 
 // Browser apps: proxy through your backend (recommended)
-const myChain = { ...sepolia, relayerUrl: "https://your-app.com/api/relayer/11155111" } as const satisfies FheChain;
+const mySepolia = { ...sepolia, relayerUrl: "https://your-app.com/api/relayer/11155111" } as const satisfies FheChain;
 ```
 
 See [Authentication](/guides/authentication) for a backend proxy example.
@@ -187,15 +187,15 @@ const walletClient = createWalletClient({
   transport: http(process.env.RPC_URL),
 });
 
-const myChain = { ...sepolia, network: process.env.RPC_URL! } as const satisfies FheChain;
+const mySepolia = { ...sepolia, network: process.env.RPC_URL! } as const satisfies FheChain;
 
 const config = createConfig({
-  chains: [myChain],
+  chains: [mySepolia],
   publicClient,
   walletClient,
   storage: memoryStorage,
   relayers: {
-    [myChain.id]: node({ poolSize: 4 }),
+    [mySepolia.id]: node({ poolSize: 4 }),
   },
 });
 
@@ -215,14 +215,14 @@ import { Wallet, JsonRpcProvider } from "ethers";
 const provider = new JsonRpcProvider(process.env.RPC_URL);
 const wallet = new Wallet(process.env.PRIVATE_KEY!, provider);
 
-const myChain = { ...sepolia, network: process.env.RPC_URL! } as const satisfies FheChain;
+const mySepolia = { ...sepolia, network: process.env.RPC_URL! } as const satisfies FheChain;
 
 const config = createConfig({
-  chains: [myChain],
+  chains: [mySepolia],
   ethereum: provider,
   storage: memoryStorage,
   relayers: {
-    [myChain.id]: node({ poolSize: 4 }),
+    [mySepolia.id]: node({ poolSize: 4 }),
   },
 });
 

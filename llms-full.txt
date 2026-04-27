@@ -198,7 +198,7 @@ The relayer requires an API key. In browser apps, proxy requests through your ba
 import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 
 // Browser apps: proxy through your backend (recommended)
-const myChain = { ...sepolia, relayerUrl: "https://your-app.com/api/relayer/11155111" } as const satisfies FheChain;
+const mySepolia = { ...sepolia, relayerUrl: "https://your-app.com/api/relayer/11155111" } as const satisfies FheChain;
 ```
 
 See [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/authentication.md) for a backend proxy example.
@@ -357,15 +357,15 @@ const walletClient = createWalletClient({
   transport: http(process.env.RPC_URL),
 });
 
-const myChain = { ...sepolia, network: process.env.RPC_URL! } as const satisfies FheChain;
+const mySepolia = { ...sepolia, network: process.env.RPC_URL! } as const satisfies FheChain;
 
 const config = createConfig({
-  chains: [myChain],
+  chains: [mySepolia],
   publicClient,
   walletClient,
   storage: memoryStorage,
   relayers: {
-    [myChain.id]: node({ poolSize: 4 }),
+    [mySepolia.id]: node({ poolSize: 4 }),
   },
 });
 
@@ -384,14 +384,14 @@ import { Wallet, JsonRpcProvider } from "ethers";
 const provider = new JsonRpcProvider(process.env.RPC_URL);
 const wallet = new Wallet(process.env.PRIVATE_KEY!, provider);
 
-const myChain = { ...sepolia, network: process.env.RPC_URL! } as const satisfies FheChain;
+const mySepolia = { ...sepolia, network: process.env.RPC_URL! } as const satisfies FheChain;
 
 const config = createConfig({
-  chains: [myChain],
+  chains: [mySepolia],
   ethereum: provider,
   storage: memoryStorage,
   relayers: {
-    [myChain.id]: node({ poolSize: 4 }),
+    [mySepolia.id]: node({ poolSize: 4 }),
   },
 });
 
@@ -646,13 +646,13 @@ export const wagmiConfig = createConfig({
   },
 });
 
-const myChain = { ...sepoliaFhe, relayerUrl: "https://your-app.com/api/relayer/11155111" } as const satisfies FheChain;
+const mySepolia = { ...sepoliaFhe, relayerUrl: "https://your-app.com/api/relayer/11155111" } as const satisfies FheChain;
 
 export const zamaConfig = createZamaConfig({
-  chains: [myChain],
+  chains: [mySepolia],
   wagmiConfig,
   relayers: {
-    [myChain.id]: web(),
+    [mySepolia.id]: web(),
   },
 });
 
@@ -1062,7 +1062,7 @@ If you need to override a chain field (e.g. proxy relayer requests through your 
 ```ts
 import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 
-const myChain = { ...sepolia, relayerUrl: "https://your-app.com/api/relayer/11155111" } as const satisfies FheChain;
+const mySepolia = { ...sepolia, relayerUrl: "https://your-app.com/api/relayer/11155111" } as const satisfies FheChain;
 ```
 
 ### 3. Set up a signer
@@ -1183,15 +1183,15 @@ import { ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
 import { node } from "@zama-fhe/sdk/node";
 import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 
-const myChain = { ...sepolia, network: "https://sepolia.infura.io/v3/YOUR_KEY" } as const satisfies FheChain;
+const mySepolia = { ...sepolia, network: "https://sepolia.infura.io/v3/YOUR_KEY" } as const satisfies FheChain;
 
 const config = createConfig({
-  chains: [myChain],
+  chains: [mySepolia],
   publicClient,
   walletClient,
   storage: memoryStorage,
   relayers: {
-    [myChain.id]: node({ poolSize: 4 }),
+    [mySepolia.id]: node({ poolSize: 4 }),
   },
 });
 
@@ -1412,14 +1412,14 @@ When the SDK runs in a trusted environment (Node.js script, backend service), yo
 ```ts
 import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 
-const myChain = {
+const mySepolia = {
   ...sepolia,
   network: "https://sepolia.infura.io/v3/YOUR_KEY",
   auth: { __type: "ApiKeyHeader" as const, value: process.env.RELAYER_API_KEY! },
 } as const satisfies FheChain;
 ```
 
-Then pass `myChain` to `createConfig` — the `auth` field is picked up automatically by the relayer. See the [Node.js backend guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/node-js-backend.md) for a complete example.
+Then pass `mySepolia` to `createConfig` — the `auth` field is picked up automatically by the relayer. See the [Node.js backend guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/node-js-backend.md) for a complete example.
 
 The `auth` field supports multiple methods depending on how your relayer is configured.
 
@@ -2440,19 +2440,19 @@ const walletClient = createWalletClient({
   transport: http(),
 });
 
-const myChain = {
+const mySepolia = {
   ...sepolia,
   network: "https://sepolia.infura.io/v3/YOUR_KEY",
   auth: { __type: "ApiKeyHeader" as const, value: process.env.RELAYER_API_KEY! },
 } as const satisfies FheChain;
 
 const config = createConfig({
-  chains: [myChain],
+  chains: [mySepolia],
   publicClient,
   walletClient,
   storage: memoryStorage,
   relayers: {
-    [myChain.id]: node({ poolSize: 4 }),
+    [mySepolia.id]: node({ poolSize: 4 }),
   },
 });
 
@@ -2523,7 +2523,7 @@ In a server environment, you can authenticate with the relayer directly — ther
 ```ts
 import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 
-const myChain = {
+const mySepolia = {
   ...sepolia,
   network: "https://sepolia.infura.io/v3/YOUR_KEY",
   auth: { __type: "ApiKeyHeader" as const, value: process.env.RELAYER_API_KEY! },
@@ -2733,7 +2733,7 @@ import { createConfig } from "@zama-fhe/sdk/viem";
 import { cleartext, ZamaSDK } from "@zama-fhe/sdk";
 import type { FheChain } from "@zama-fhe/sdk/chains";
 
-const myChain = {
+const myHardhat = {
   id: 12345,
   chainId: 12345,
   network: "http://localhost:8545",
@@ -2747,11 +2747,11 @@ const myChain = {
 } as const satisfies FheChain;
 
 const config = createConfig({
-  chains: [myChain],
+  chains: [myHardhat],
   publicClient,
   walletClient,
   transports: {
-    [myChain.id]: cleartext({
+    [myHardhat.id]: cleartext({
       executorAddress: "0x...",
       chainId: 12345,
       network: "http://localhost:8545",
@@ -2987,13 +2987,13 @@ const wagmiConfig = createConfig({
   transports: { [sepolia.id]: http() },
 });
 
-const myChain = { ...sepoliaFhe, relayerUrl: "/api/relayer/11155111" } as const satisfies FheChain;
+const mySepolia = { ...sepoliaFhe, relayerUrl: "/api/relayer/11155111" } as const satisfies FheChain;
 
 const zamaConfig = createZamaConfig({
-  chains: [myChain],
+  chains: [mySepolia],
   wagmiConfig,
   relayers: {
-    [myChain.id]: web(),
+    [mySepolia.id]: web(),
   },
 });
 
@@ -7704,7 +7704,7 @@ In browser environments, proxy relayer requests through your backend to avoid ex
 ```ts
 import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 
-const myChain = { ...sepolia, relayerUrl: "https://your-app.com/api/relayer/11155111" } as const satisfies FheChain;
+const mySepolia = { ...sepolia, relayerUrl: "https://your-app.com/api/relayer/11155111" } as const satisfies FheChain;
 ```
 
 ### Server apps
@@ -7715,8 +7715,8 @@ On the server, use `node()` with pool options. Chain data (network, relayerUrl) 
 import { node } from "@zama-fhe/sdk/node";
 import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 
-const myChain = { ...sepolia, network: "https://sepolia.infura.io/v3/YOUR_KEY" } as const satisfies FheChain;
-// Then in createConfig: relayers: { [myChain.id]: node({ poolSize: 4 }) }
+const mySepolia = { ...sepolia, network: "https://sepolia.infura.io/v3/YOUR_KEY" } as const satisfies FheChain;
+// Then in createConfig: relayers: { [mySepolia.id]: node({ poolSize: 4 }) }
 ```
 
 ### Local development

@@ -36,19 +36,19 @@ const walletClient = createWalletClient({
   transport: http(),
 });
 
-const myChain = {
+const mySepolia = {
   ...sepolia,
   network: "https://sepolia.infura.io/v3/YOUR_KEY",
   auth: { __type: "ApiKeyHeader" as const, value: process.env.RELAYER_API_KEY! },
 } as const satisfies FheChain;
 
 const config = createConfig({
-  chains: [myChain],
+  chains: [mySepolia],
   publicClient,
   walletClient,
   storage: memoryStorage,
   relayers: {
-    [myChain.id]: node({ poolSize: 4 }),
+    [mySepolia.id]: node({ poolSize: 4 }),
   },
 });
 
@@ -119,7 +119,7 @@ In a server environment, you can authenticate with the relayer directly — ther
 ```ts
 import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 
-const myChain = {
+const mySepolia = {
   ...sepolia,
   network: "https://sepolia.infura.io/v3/YOUR_KEY",
   auth: { __type: "ApiKeyHeader" as const, value: process.env.RELAYER_API_KEY! },

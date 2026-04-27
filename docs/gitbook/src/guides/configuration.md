@@ -57,7 +57,7 @@ If you need to override a chain field (e.g. proxy relayer requests through your 
 ```ts
 import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 
-const myChain = { ...sepolia, relayerUrl: "https://your-app.com/api/relayer/11155111" } as const satisfies FheChain;
+const mySepolia = { ...sepolia, relayerUrl: "https://your-app.com/api/relayer/11155111" } as const satisfies FheChain;
 ```
 
 ### 3. Set up a signer
@@ -185,15 +185,15 @@ import { ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
 import { node } from "@zama-fhe/sdk/node";
 import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 
-const myChain = { ...sepolia, network: "https://sepolia.infura.io/v3/YOUR_KEY" } as const satisfies FheChain;
+const mySepolia = { ...sepolia, network: "https://sepolia.infura.io/v3/YOUR_KEY" } as const satisfies FheChain;
 
 const config = createConfig({
-  chains: [myChain],
+  chains: [mySepolia],
   publicClient,
   walletClient,
   storage: memoryStorage,
   relayers: {
-    [myChain.id]: node({ poolSize: 4 }),
+    [mySepolia.id]: node({ poolSize: 4 }),
   },
 });
 
