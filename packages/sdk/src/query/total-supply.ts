@@ -1,8 +1,9 @@
-import { totalSupplyContract } from "../contracts";
-import type { GenericSigner } from "../types";
+import { inferredTotalSupplyContract, totalSupplyContract } from "../contracts";
+import type { ZamaSDK } from "../zama-sdk";
 import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
 import { filterQueryOptions } from "./utils";
+import { detectWrapperInterfaceVersion } from "./wrapper-interface-version";
 import type { Address } from "viem";
 
 export interface TotalSupplyQueryConfig {
@@ -10,7 +11,7 @@ export interface TotalSupplyQueryConfig {
 }
 
 export function totalSupplyQueryOptions(
-  signer: GenericSigner,
+  sdk: ZamaSDK,
   tokenAddress: Address,
   config?: TotalSupplyQueryConfig,
 ): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.totalSupply.token>> {
@@ -21,7 +22,14 @@ export function totalSupplyQueryOptions(
     queryKey,
     queryFn: async (context) => {
       const [, { tokenAddress: keyTokenAddress }] = context.queryKey;
-      return signer.readContract(totalSupplyContract(keyTokenAddress));
+      // ERC-165 detection adds one or two RPC calls per refetch, which is acceptable
+      // while both legacy and upgraded wrappers coexist. Remove this branch once
+      // all supported wrappers expose `inferredTotalSupply()`.
+      const version = await detectWrapperInterfaceVersion(sdk.provider, keyTokenAddress);
+      if (version === "upgraded") {
+        return sdk.provider.readContract(inferredTotalSupplyContract(keyTokenAddress));
+      }
+      return sdk.provider.readContract(totalSupplyContract(keyTokenAddress));
     },
     staleTime: 30_000,
     enabled: config?.query?.enabled !== false,

@@ -6,6 +6,7 @@
  */
 
 export { ViemSigner, type ViemSignerConfig } from "./viem-signer";
+export { ViemProvider, type ViemProviderConfig } from "./viem-provider";
 export {
   readConfidentialBalanceOfContract,
   readUnderlyingTokenContract,

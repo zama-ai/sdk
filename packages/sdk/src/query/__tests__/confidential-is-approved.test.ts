@@ -4,9 +4,9 @@ import { confidentialIsApprovedQueryOptions } from "../confidential-is-approved"
 import { zamaQueryKeys } from "../query-keys";
 
 describe("confidentialIsApprovedQueryOptions", () => {
-  test("stays enabled with a resolved holder", ({ signer }) => {
+  test("stays enabled with a resolved holder", ({ sdk }) => {
     const options = confidentialIsApprovedQueryOptions(
-      signer,
+      sdk,
       "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       {
         holder: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
@@ -17,16 +17,16 @@ describe("confidentialIsApprovedQueryOptions", () => {
     expect(options.enabled).toBe(true);
   });
 
-  test("is disabled when holder or spender is missing", ({ signer }) => {
+  test("is disabled when holder or spender is missing", ({ sdk }) => {
     const missingHolder = confidentialIsApprovedQueryOptions(
-      signer,
+      sdk,
       "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       {
         spender: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
       },
     );
     const missingSpender = confidentialIsApprovedQueryOptions(
-      signer,
+      sdk,
       "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       {
         holder: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
@@ -37,8 +37,8 @@ describe("confidentialIsApprovedQueryOptions", () => {
     expect(missingSpender.enabled).toBe(false);
   });
 
-  test("is disabled when tokenAddress is missing", ({ signer }) => {
-    const options = confidentialIsApprovedQueryOptions(signer, undefined, {
+  test("is disabled when tokenAddress is missing", ({ sdk }) => {
+    const options = confidentialIsApprovedQueryOptions(sdk, undefined, {
       holder: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
       spender: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
     });
@@ -53,11 +53,11 @@ describe("confidentialIsApprovedQueryOptions", () => {
     ]);
   });
 
-  test("checks operator approval", async ({ signer }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(true);
+  test("checks operator approval", async ({ sdk, provider }) => {
+    vi.mocked(provider.readContract).mockResolvedValue(true);
 
     const options = confidentialIsApprovedQueryOptions(
-      signer,
+      sdk,
       "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       {
         holder: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
@@ -69,9 +69,9 @@ describe("confidentialIsApprovedQueryOptions", () => {
     expect(isApproved).toBe(true);
   });
 
-  test("includes holder and spender in queryKey", ({ signer }) => {
+  test("includes holder and spender in queryKey", ({ sdk }) => {
     const options = confidentialIsApprovedQueryOptions(
-      signer,
+      sdk,
       "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       {
         holder: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
@@ -90,12 +90,13 @@ describe("confidentialIsApprovedQueryOptions", () => {
   });
 
   test("queryFn reads tokenAddress, holder, and spender from context.queryKey", async ({
-    signer,
+    sdk,
+    provider,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(true);
+    vi.mocked(provider.readContract).mockResolvedValue(true);
 
     const options = confidentialIsApprovedQueryOptions(
-      signer,
+      sdk,
       "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       {
         holder: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
@@ -111,7 +112,7 @@ describe("confidentialIsApprovedQueryOptions", () => {
 
     await options.queryFn(mockQueryContext(key));
 
-    expect(vi.mocked(signer.readContract)).toHaveBeenCalledWith(
+    expect(vi.mocked(provider.readContract)).toHaveBeenCalledWith(
       expect.objectContaining({
         address: getAddress("0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa"),
         functionName: "isOperator",
@@ -123,63 +124,71 @@ describe("confidentialIsApprovedQueryOptions", () => {
     );
   });
 
-  test("queryFn uses the resolved holder without querying the signer", async ({ signer }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(true);
-
-    const options = confidentialIsApprovedQueryOptions(
-      signer,
-      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
-      {
-        holder: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
-        spender: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
-      },
-    );
-
-    await options.queryFn(mockQueryContext(options.queryKey));
-
-    expect(signer.getAddress).not.toHaveBeenCalled();
-    expect(vi.mocked(signer.readContract)).toHaveBeenCalledWith(
-      expect.objectContaining({
-        functionName: "isOperator",
-        args: [
-          "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
-          "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
-        ],
-      }),
-    );
-  });
-
-  test("queryFn uses the explicit holder without resolving the signer", async ({ signer }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(true);
-
-    const options = confidentialIsApprovedQueryOptions(
-      signer,
-      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
-      {
-        holder: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
-        spender: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
-      },
-    );
-
-    await options.queryFn(mockQueryContext(options.queryKey));
-
-    expect(signer.getAddress).not.toHaveBeenCalled();
-    expect(vi.mocked(signer.readContract)).toHaveBeenCalledWith(
-      expect.objectContaining({
-        functionName: "isOperator",
-        args: [
-          "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
-          "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
-        ],
-      }),
-    );
-  });
-
-  test("queryFn throws when required params are missing from context.queryKey", async ({
+  test("queryFn uses the resolved holder without querying the signer", async ({
+    sdk,
     signer,
+    provider,
   }) => {
+    vi.mocked(provider.readContract).mockResolvedValue(true);
+
     const options = confidentialIsApprovedQueryOptions(
-      signer,
+      sdk,
+      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
+      {
+        holder: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
+        spender: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
+      },
+    );
+
+    vi.mocked(signer.getAddress).mockClear();
+    await options.queryFn(mockQueryContext(options.queryKey));
+
+    expect(signer.getAddress).not.toHaveBeenCalled();
+    expect(vi.mocked(provider.readContract)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        functionName: "isOperator",
+        args: [
+          "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
+          "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
+        ],
+      }),
+    );
+  });
+
+  test("queryFn uses the explicit holder without resolving the signer", async ({
+    sdk,
+    signer,
+    provider,
+  }) => {
+    vi.mocked(provider.readContract).mockResolvedValue(true);
+
+    const options = confidentialIsApprovedQueryOptions(
+      sdk,
+      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
+      {
+        holder: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
+        spender: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
+      },
+    );
+
+    vi.mocked(signer.getAddress).mockClear();
+    await options.queryFn(mockQueryContext(options.queryKey));
+
+    expect(signer.getAddress).not.toHaveBeenCalled();
+    expect(vi.mocked(provider.readContract)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        functionName: "isOperator",
+        args: [
+          "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
+          "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
+        ],
+      }),
+    );
+  });
+
+  test("queryFn throws when required params are missing from context.queryKey", async ({ sdk }) => {
+    const options = confidentialIsApprovedQueryOptions(
+      sdk,
       "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       {
         holder: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
@@ -196,8 +205,8 @@ describe("confidentialIsApprovedQueryOptions", () => {
     ).rejects.toThrow("confidentialIsApprovedQueryOptions: holder must not be null or undefined");
   });
 
-  test("queryFn throws when tokenAddress is missing from context.queryKey", async ({ signer }) => {
-    const options = confidentialIsApprovedQueryOptions(signer, undefined, {
+  test("queryFn throws when tokenAddress is missing from context.queryKey", async ({ sdk }) => {
+    const options = confidentialIsApprovedQueryOptions(sdk, undefined, {
       holder: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
       spender: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
     });

@@ -6,6 +6,7 @@ import {
   useMetadata,
 } from "@zama-fhe/react-sdk";
 import type { Address } from "@zama-fhe/sdk";
+import { useAccount } from "wagmi";
 
 export function ApproveForm({
   tokenAddress,
@@ -14,9 +15,14 @@ export function ApproveForm({
   tokenAddress: Address;
   defaultSpender?: Address;
 }) {
+  const { address } = useAccount();
   const { data: metadata } = useMetadata(tokenAddress);
   const approve = useConfidentialApprove({ tokenAddress });
-  const { data: isApproved } = useConfidentialIsApproved({ tokenAddress, spender: defaultSpender });
+  const { data: isApproved } = useConfidentialIsApproved({
+    tokenAddress,
+    spender: defaultSpender,
+    holder: address,
+  });
 
   return (
     <form

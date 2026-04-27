@@ -4,7 +4,7 @@ import {
   supportsInterfaceContract,
   ERC7984_WRAPPER_INTERFACE_ID,
 } from "../contracts";
-import type { GenericSigner } from "../types";
+import type { ZamaSDK } from "../zama-sdk";
 import { isContractCallError } from "../utils";
 import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
@@ -16,7 +16,7 @@ export interface IsConfidentialQueryConfig {
 }
 
 export function isConfidentialQueryOptions(
-  signer: GenericSigner,
+  sdk: ZamaSDK,
   tokenAddress: Address,
   config?: IsConfidentialQueryConfig,
 ): QueryFactoryOptions<
@@ -32,7 +32,7 @@ export function isConfidentialQueryOptions(
     queryFn: async (context) => {
       const [, { tokenAddress: keyTokenAddress }] = context.queryKey;
       try {
-        return await signer.readContract(isConfidentialTokenContract(keyTokenAddress));
+        return await sdk.provider.readContract(isConfidentialTokenContract(keyTokenAddress));
       } catch (err) {
         // Only suppress contract execution reverts (non-ERC-165 contracts).
         // Re-throw network/transport errors so TanStack Query's retry logic applies.
@@ -48,7 +48,7 @@ export function isConfidentialQueryOptions(
 }
 
 export function isWrapperQueryOptions(
-  signer: GenericSigner,
+  sdk: ZamaSDK,
   tokenAddress: Address,
   config?: IsConfidentialQueryConfig,
 ): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.isWrapper.token>> {
@@ -62,8 +62,8 @@ export function isWrapperQueryOptions(
         // During the transition period, check both wrapper interface IDs in parallel.
         // Either returning true is sufficient to identify a confidential wrapper.
         const [legacyMatch, newMatch] = await Promise.all([
-          signer.readContract(isConfidentialWrapperContract(keyTokenAddress)),
-          signer.readContract(
+          sdk.provider.readContract(isConfidentialWrapperContract(keyTokenAddress)),
+          sdk.provider.readContract(
             supportsInterfaceContract(keyTokenAddress, ERC7984_WRAPPER_INTERFACE_ID),
           ),
         ]);

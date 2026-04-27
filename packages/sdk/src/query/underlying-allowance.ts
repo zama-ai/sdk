@@ -1,5 +1,5 @@
 import { allowanceContract, underlyingContract } from "../contracts";
-import type { GenericSigner } from "../types";
+import type { ZamaSDK } from "../zama-sdk";
 import { assertNonNullable } from "../utils/assertions";
 import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
@@ -13,7 +13,7 @@ export interface UnderlyingAllowanceQueryConfig {
 }
 
 export function underlyingAllowanceQueryOptions(
-  signer: GenericSigner,
+  sdk: ZamaSDK,
   tokenAddress: Address,
   config: UnderlyingAllowanceQueryConfig,
 ): QueryFactoryOptions<
@@ -38,8 +38,8 @@ export function underlyingAllowanceQueryOptions(
       const [, { owner: keyOwner, wrapperAddress: keyWrapperAddress }] = context.queryKey;
       assertNonNullable(keyOwner, "underlyingAllowanceQueryOptions: owner");
       assertNonNullable(keyWrapperAddress, "underlyingAllowanceQueryOptions: wrapperAddress");
-      const underlying = await signer.readContract(underlyingContract(keyWrapperAddress));
-      return signer.readContract(allowanceContract(underlying, keyOwner, keyWrapperAddress));
+      const underlying = await sdk.provider.readContract(underlyingContract(keyWrapperAddress));
+      return sdk.provider.readContract(allowanceContract(underlying, keyOwner, keyWrapperAddress));
     },
     staleTime: 30_000,
     enabled: Boolean(ownerKey && wrapperAddressKey) && queryEnabled,

@@ -26,10 +26,10 @@ describe("useResumeUnshield", () => {
 
   test("cache: invalidates balance, allowance, and wagmi after resume unshield", async ({
     renderWithProviders,
-    signer,
     relayer,
+    provider,
   }) => {
-    vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
+    vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
       logs: [createUnwrapRequestedLog(BURN_AMOUNT_HANDLE)],
     });
     mockPublicDecrypt(relayer);
@@ -59,10 +59,10 @@ describe("useResumeUnshield", () => {
 
   test("behavior: forwards onSuccess callback", async ({
     renderWithProviders,
-    signer,
     relayer,
+    provider,
   }) => {
-    vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
+    vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
       logs: [createUnwrapRequestedLog(BURN_AMOUNT_HANDLE)],
     });
     mockPublicDecrypt(relayer);

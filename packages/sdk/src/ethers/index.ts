@@ -6,6 +6,7 @@
  */
 
 export { EthersSigner, type EthersSignerConfig } from "./ethers-signer";
+export { EthersProvider, type EthersProviderConfig } from "./ethers-provider";
 export type {
   EIP1193Provider,
   EIP1193Events,

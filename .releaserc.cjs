@@ -24,6 +24,13 @@ module.exports = {
       "@semantic-release/commit-analyzer",
       {
         preset: "conventionalcommits",
+        // Sentinel (not []): an empty array makes the parser emit empty-
+        // title notes for every `* ` bullet in a squash body, which the
+        // analyzer treats as breaking. Header `!` still escalates via
+        // breakingHeaderPattern, which ignores noteKeywords.
+        parserOpts: {
+          noteKeywords: ["__NO_BREAKING_NOTES__"],
+        },
         releaseRules: [
           { breaking: true, release: "major" },
           { scope: "security", release: "patch" },

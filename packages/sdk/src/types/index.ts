@@ -10,6 +10,7 @@ export type {
 } from "./contract";
 export type { TransactionReceipt, TransactionResult } from "./transaction";
 export type { GenericSigner, SignerLifecycleCallbacks } from "./signer";
+export type { GenericProvider } from "./provider";
 export type { GenericStorage } from "./storage";
 export type { StoredCredentials, DelegatedStoredCredentials, StoredEIP712 } from "./credentials";
 export type { UnshieldCallbacks, ShieldCallbacks, TransferCallbacks } from "./callbacks";

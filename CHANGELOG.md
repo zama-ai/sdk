@@ -1,5 +1,50 @@
 # Changelog
 
+## [3.0.0-alpha.18](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.17...v3.0.0-alpha.18) (2026-04-24)
+
+### Features
+
+- **sdk:** require explicit owner on token reads ([#282](https://github.com/zama-ai/sdk/issues/282)) ([82e6487]())
+
+## [3.0.0-alpha.17](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.16...v3.0.0-alpha.17) (2026-04-24)
+
+### Features
+
+- remove auto-signer resolving in hooks ([#281](https://github.com/zama-ai/sdk/issues/281)) ([6c74d9c]())
+
+## [3.0.0-alpha.16](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.15...v3.0.0-alpha.16) (2026-04-24)
+
+### Features
+
+- **docs:** add LLM-ready SDK docs corpus ([#248](https://github.com/zama-ai/sdk/issues/248)) ([964bd5d]())
+- introduce concrete signer / provider split ([#268](https://github.com/zama-ai/sdk/issues/268)) ([ae45dfd]())
+
+## [3.0.0-alpha.15](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.14...v3.0.0-alpha.15) (2026-04-23)
+
+### Bug Fixes
+
+- **sdk:** run delegation check before cache lookup in decryptBalanceAs ([#278](https://github.com/zama-ai/sdk/issues/278)) ([ce6b85e]())
+
+## [3.0.0-alpha.14](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.13...v3.0.0-alpha.14) (2026-04-23)
+
+## [3.0.0-alpha.13](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.12...v3.0.0-alpha.13) (2026-04-22)
+
+## [3.0.0-alpha.12](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.11...v3.0.0-alpha.12) (2026-04-21)
+
+## [3.0.0](https://github.com/zama-ai/sdk/compare/v2.5.0...v3.0.0) (2026-04-22)
+
+## [2.5.0](https://github.com/zama-ai/sdk/compare/v2.4.0...v2.5.0) (2026-04-17)
+
+### Features
+
+- **sdk:** support upgraded unwrap events ([#239](https://github.com/zama-ai/sdk/issues/239)) ([4f4116a]()), closes [#249]()
+
+## [3.0.0-alpha.11](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.10...v3.0.0-alpha.11) (2026-04-21)
+
+### Bug Fixes
+
+- **sdk:** choose total supply method via ERC-165 ([#270](https://github.com/zama-ai/sdk/issues/270)) ([7fb55c4]())
+
 ## [3.0.0-alpha.10](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.9...v3.0.0-alpha.10) (2026-04-20)
 
 ### Bug Fixes

@@ -57,7 +57,9 @@ export {
   isZeroHandle,
   savePendingUnshield,
   loadPendingUnshield,
+  loadPendingUnshieldRequest,
   clearPendingUnshield,
+  type PendingUnshieldRequest,
 } from "./token";
 export {
   MemoryStorage,
@@ -75,6 +77,7 @@ export {
 } from "./credentials";
 export type {
   GenericSigner,
+  GenericProvider,
   GenericStorage,
   SignerLifecycleCallbacks,
   StoredCredentials,
@@ -148,6 +151,7 @@ export {
   NoCiphertextError,
   RelayerRequestFailedError,
   ConfigurationError,
+  ChainMismatchError,
   DelegationSelfNotAllowedError,
   DelegationCooldownError,
   DelegationNotFoundError,
@@ -173,6 +177,7 @@ export type {
   ConfidentialTransferEvent,
   WrappedEvent,
   UnwrapRequestedEvent,
+  UnwrapFinalizedEvent,
   UnwrappedFinalizedEvent,
   UnwrappedStartedEvent,
   OnChainEvent,
@@ -194,6 +199,7 @@ export {
   decodeConfidentialTransfer,
   decodeWrapped,
   decodeUnwrapRequested,
+  decodeUnwrapFinalized,
   decodeUnwrappedFinalized,
   decodeUnwrappedStarted,
   decodeOnChainEvent,

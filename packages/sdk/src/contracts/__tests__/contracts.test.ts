@@ -186,12 +186,10 @@ describe("Encryption contract builders", () => {
     expect(config.args).toEqual([]);
   });
 
-  it("totalSupplyContract is a deprecated alias for inferredTotalSupplyContract", ({
-    wrapperAddress,
-  }) => {
+  it("totalSupplyContract builds the legacy totalSupply call", ({ wrapperAddress }) => {
     const config = totalSupplyContract(wrapperAddress);
     expect(config.address).toBe(wrapperAddress);
-    expect(config.functionName).toBe("inferredTotalSupply");
+    expect(config.functionName).toBe("totalSupply");
   });
 
   it("rateContract", ({ tokenAddress }) => {
@@ -235,8 +233,12 @@ describe("Wrapper contract builders", () => {
 // (7 functions).
 describe("wrapperAbi version smoke test (protocol-apps@da4afe387420)", () => {
   type AbiFunction = { type: string; name: string; inputs: { type: string; name: string }[] };
+  type AbiEvent = { type: string; name: string; inputs: { type: string; name: string }[] };
   const fns = (wrapperAbi as AbiFunction[]).filter((x) => x.type === "function");
   const fn = (name: string) => fns.find((f) => f.name === name);
+  const eventSignatures = (wrapperAbi as AbiEvent[])
+    .filter((x) => x.type === "event")
+    .map((event) => `${event.name}(${event.inputs.map((input) => input.type).join(",")})`);
 
   it("finalizeUnwrap first param is bytes32 unwrapRequestId (not euint64 burntAmount)", () => {
     const f = fn("finalizeUnwrap");
@@ -255,5 +257,12 @@ describe("wrapperAbi version smoke test (protocol-apps@da4afe387420)", () => {
     const f = fn("unwrapRequester");
     expect(f).toBeDefined();
     expect(f!.inputs[0].type).toBe("bytes32");
+  });
+
+  it("keeps legacy and upgraded unwrap events in the exported wrapper ABI", () => {
+    expect(eventSignatures).toContain("UnwrapRequested(address,bytes32)");
+    expect(eventSignatures).toContain("UnwrapRequested(address,bytes32,bytes32)");
+    expect(eventSignatures).toContain("UnwrapFinalized(address,bytes32,uint64)");
+    expect(eventSignatures).toContain("UnwrapFinalized(address,bytes32,bytes32,uint64)");
   });
 });

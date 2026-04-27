@@ -2,14 +2,23 @@ import type { Address } from "viem";
 import { toHex } from "viem";
 import { encryptedAbi } from "../abi/encrypted.abi";
 import type { Handle } from "../relayer/relayer-sdk.types";
-import { inferredTotalSupplyContract } from "./wrapper";
+
+const legacyTotalSupplyAbi = [
+  {
+    inputs: [],
+    name: "totalSupply",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+] as const;
 
 /**
  * Returns the contract config to read an encrypted balance.
  *
  * @example
  * ```ts
- * const handle = await signer.readContract(
+ * const handle = await provider.readContract(
  *   confidentialBalanceOfContract(tokenAddress, userAddress),
  * );
  * ```
@@ -77,7 +86,7 @@ export function confidentialTransferFromContract(
  *
  * @example
  * ```ts
- * const isApproved = await signer.readContract(
+ * const isApproved = await provider.readContract(
  *   isOperatorContract(tokenAddress, holder, spender),
  * );
  * ```
@@ -166,7 +175,7 @@ export function unwrapFromBalanceContract(
  *
  * @example
  * ```ts
- * const handle = await signer.readContract(
+ * const handle = await provider.readContract(
  *   confidentialTotalSupplyContract(tokenAddress),
  * );
  * ```
@@ -181,20 +190,25 @@ export function confidentialTotalSupplyContract(tokenAddress: Address) {
 }
 
 /**
- * Returns the contract config to read the inferred plaintext total supply.
+ * Returns the contract config to read the legacy plaintext total supply.
  *
- * @deprecated Use {@link inferredTotalSupplyContract}. `totalSupply()` was
- * renamed to `inferredTotalSupply()` on wrapper contracts.
+ * @deprecated Prefer higher-level APIs such as `totalSupplyQueryOptions` / `useTotalSupply`,
+ * which choose between legacy `totalSupply()` and upgraded `inferredTotalSupply()` via ERC-165.
  *
  * @example
  * ```ts
- * const supply = await signer.readContract(
+ * const supply = await provider.readContract(
  *   totalSupplyContract(wrapperAddress),
  * );
  * ```
  */
 export function totalSupplyContract(wrapperAddress: Address) {
-  return inferredTotalSupplyContract(wrapperAddress);
+  return {
+    address: wrapperAddress,
+    abi: legacyTotalSupplyAbi,
+    functionName: "totalSupply",
+    args: [],
+  } as const;
 }
 
 /**
@@ -202,7 +216,7 @@ export function totalSupplyContract(wrapperAddress: Address) {
  *
  * @example
  * ```ts
- * const rate = await signer.readContract(rateContract(tokenAddress));
+ * const rate = await provider.readContract(rateContract(tokenAddress));
  * ```
  */
 export function rateContract(tokenAddress: Address) {

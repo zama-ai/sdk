@@ -10,7 +10,9 @@ export const ERC7984_WRAPPER_INTERFACE_ID_LEGACY = "0xd04584ba" as const;
 /**
  * ERC-165 interface ID for IERC7984ERC20Wrapper (confidential wrapper) — upgraded interface.
  *
- * Introduced in protocol-apps commit 93c6e7a (April 2026 security upgrade).
+ * Verified against the protocol-apps upgraded wrapper line: commit b06eb263 asserts
+ * `supportsInterface(0x1f1c62b2)` for `type(IERC7984ERC20Wrapper).interfaceId`,
+ * and the implementation exposes `inferredTotalSupply()`.
  * During the transition period, both {@link ERC7984_WRAPPER_INTERFACE_ID_LEGACY} and this
  * constant must be checked to support old and new wrappers simultaneously.
  *
@@ -27,7 +29,7 @@ export const ERC7984_WRAPPER_INTERFACE_ID = "0x1f1c62b2" as const;
  *
  * @example
  * ```ts
- * const isConfidential = await signer.readContract(
+ * const isConfidential = await provider.readContract(
  *   supportsInterfaceContract(tokenAddress, ERC7984_INTERFACE_ID),
  * );
  * ```
@@ -46,7 +48,7 @@ export function supportsInterfaceContract(tokenAddress: Address, interfaceId: Ad
  *
  * @example
  * ```ts
- * const isConfidential = await signer.readContract(
+ * const isConfidential = await provider.readContract(
  *   isConfidentialTokenContract("0xTokenAddress"),
  * );
  * ```
@@ -66,7 +68,7 @@ export function isConfidentialTokenContract(tokenAddress: Address) {
  *
  * @example
  * ```ts
- * const isWrapper = await signer.readContract(
+ * const isWrapper = await provider.readContract(
  *   isConfidentialWrapperContract("0xWrapperAddress"),
  * );
  * ```
