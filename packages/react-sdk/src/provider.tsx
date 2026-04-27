@@ -25,15 +25,20 @@ export interface ZamaProviderProps extends PropsWithChildren {
   /** FHE relayer backend (RelayerWeb for browser, RelayerNode for server). */
   relayer: RelayerSDK;
   /**
-   * Chain provider (`ViemProvider`, `EthersProvider`, `WagmiProvider`, or
-   * custom {@link GenericProvider}). Used for every public chain read.
+   * Chain provider (`ViemProvider`, `EthersProvider`, or custom
+   * {@link GenericProvider}). Used for every public chain read.
+   *
+   * Wagmi apps should use `ZamaWagmiProvider`, which owns its wagmi-backed
+   * provider internally so it can align provider/signer lifecycle.
    */
   provider: GenericProvider;
   /**
-   * Optional wallet signer (`ViemSigner`, `EthersSigner`, `WagmiSigner`, or
-   * custom {@link GenericSigner}). Omit for read-only usage (indexers, SSR,
-   * pre-wallet-connect states). Signer-required operations throw
+   * Optional wallet signer (`ViemSigner`, `EthersSigner`, or custom
+   * {@link GenericSigner}). Signer-required operations throw
    * `SignerRequiredError` when invoked without a signer.
+   *
+   * Wagmi signers are intentionally created only by `ZamaWagmiProvider`, which
+   * guards against disconnected wagmi configs being treated as signer-ready.
    */
   signer?: GenericSigner;
   /** Credential storage backend (IndexedDBStorage for browser, MemoryStorage for tests). */

@@ -3,8 +3,7 @@ import { ZamaError, ZamaErrorCode } from "./base";
 /**
  * Thrown when an operation requires a signer but none is configured.
  *
- * The SDK can be constructed without a signer (for read-only usage such as
- * indexers, SSR, or pre-wallet-connect states). Operations that need wallet
+ * The SDK can be constructed without a signer. Operations that need wallet
  * authority — writes, EIP-712 signatures, user decrypt, credentials/session
  * management — throw `SignerRequiredError` instead of probing the signer.
  *

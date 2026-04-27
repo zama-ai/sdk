@@ -31,6 +31,8 @@ export function isAllowedQueryOptions(
     },
     staleTime: 0,
     gcTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: false,
     enabled: callerEnabled && sdk.credentials !== undefined,
   } as const;
 }

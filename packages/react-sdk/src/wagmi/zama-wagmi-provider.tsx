@@ -65,6 +65,9 @@ export interface ZamaWagmiProviderProps extends PropsWithChildren {
  * disconnected signer" class of bugs while preserving persisted identities
  * during wagmi's reconnecting phase.
  *
+ * The wagmi adapter classes stay internal by design: callers provide wagmi's
+ * context, and this component decides when a signer is actually available.
+ *
  * Must be rendered inside wagmi's own `<WagmiProvider>`.
  *
  * @example

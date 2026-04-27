@@ -17,10 +17,8 @@ export interface ViemProviderConfig {
 /**
  * Read-only {@link GenericProvider} backed by a viem `PublicClient`.
  *
- * Use this for integrations that only need public chain reads — server
- * indexers, SSR, dashboards, explorers, or dApps before the user has
- * connected their wallet. Pair with a {@link ViemSigner} when wallet
- * authority is required; the two can share a transport or point at
+ * Use this for integrations that only need public chain reads before the user has Pair with a
+ * {@link ViemSigner} when wallet authority is required; the two can share a transport or point at
  * independent RPCs.
  *
  * @example
