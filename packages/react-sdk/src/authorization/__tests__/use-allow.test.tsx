@@ -1,7 +1,7 @@
 import { act } from "@testing-library/react";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { describe, expect, test, vi } from "../../test-fixtures";
-import { expectCacheInvalidated } from "../../test-helpers";
+import { expectCacheRemoved } from "../../test-helpers";
 import {
   OTHER_TOKEN,
   TOKEN,
@@ -17,20 +17,20 @@ describe("useAllow", () => {
     expectDefaultMutationState(state);
   });
 
-  test("cache: invalidates isAllowed query after allow", async ({ renderWithProviders }) => {
+  test("cache: removes isAllowed query after allow", async ({ renderWithProviders }) => {
     const { result, queryClient } = renderWithProviders(() => useAllow());
     queryClient.setQueryData(zamaQueryKeys.isAllowed.all, true);
 
     await act(() => result.current.mutateAsync([TOKEN, OTHER_TOKEN]));
 
-    expectCacheInvalidated(queryClient, zamaQueryKeys.isAllowed.all);
+    expectCacheRemoved(queryClient, zamaQueryKeys.isAllowed.all);
   });
 
   test("behavior: forwards onSuccess callback", async ({ renderWithProviders }) => {
-    let invalidatedDuringCallback: boolean | undefined;
+    let removedDuringCallback: boolean | undefined;
     const onSuccess = vi.fn((_: void, variables: unknown) => {
-      invalidatedDuringCallback =
-        queryClient.getQueryState(zamaQueryKeys.isAllowed.all)?.isInvalidated ?? false;
+      removedDuringCallback =
+        queryClient.getQueryCache().find({ queryKey: zamaQueryKeys.isAllowed.all }) === undefined;
       expect(variables).toEqual([TOKEN, OTHER_TOKEN]);
     });
     const { result, queryClient } = renderWithProviders(() =>
@@ -43,7 +43,7 @@ describe("useAllow", () => {
     await act(() => result.current.mutateAsync([TOKEN, OTHER_TOKEN]));
 
     expect(onSuccess).toHaveBeenCalledOnce();
-    expect(invalidatedDuringCallback).toBe(false);
-    expectCacheInvalidated(queryClient, zamaQueryKeys.isAllowed.all);
+    expect(removedDuringCallback).toBe(false);
+    expectCacheRemoved(queryClient, zamaQueryKeys.isAllowed.all);
   });
 });
