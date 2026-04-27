@@ -4,6 +4,7 @@
  */
 
 import type { FhevmInstance, FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/node";
+import type { FheChain } from "../chains/types";
 import { parentPort, type Transferable } from "node:worker_threads";
 import type {
   AddChainRequest,
@@ -41,7 +42,12 @@ const port = parentPort;
 // ── Multi-chain instance management ─────────────────────────────
 const instances = new Map<number, FhevmInstance>();
 const pending = new Map<number, Promise<FhevmInstance>>();
-const configs = new Map<number, FhevmInstanceConfig>();
+const configs = new Map<number, FheChain>();
+
+/** Convert an FheChain to the FhevmInstanceConfig shape expected by createInstance. */
+function toInstanceConfig(chain: FheChain): FhevmInstanceConfig {
+  return { ...chain, chainId: chain.id };
+}
 
 /**
  * Get or lazily create an FhevmInstance for the given chain.
@@ -66,7 +72,7 @@ async function getInstance(chainId: number): Promise<FhevmInstance> {
 
   const promise = (async () => {
     const nodeSdk = await import("@zama-fhe/relayer-sdk/node");
-    return nodeSdk.createInstance({ ...config, batchRpcCalls: false });
+    return nodeSdk.createInstance({ ...toInstanceConfig(config), batchRpcCalls: false });
   })()
     .then((instance) => {
       instances.set(chainId, instance);
@@ -104,7 +110,7 @@ async function handleInit(request: InitRequest): Promise<void> {
   const { id, type, payload } = request;
   try {
     for (const chain of payload.chains) {
-      configs.set(chain.chainId, chain);
+      configs.set(chain.id, chain);
     }
     sendSuccess(id, type, { initialized: true });
   } catch (error) {
@@ -121,8 +127,8 @@ function handleAddChain(request: AddChainRequest): void {
   const { id, type, payload } = request;
   try {
     const { config } = payload;
-    configs.set(config.chainId, config);
-    sendSuccess(id, type, { added: true, chainId: config.chainId });
+    configs.set(config.id, config);
+    sendSuccess(id, type, { added: true, chainId: config.id });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     sendError(id, type, message);

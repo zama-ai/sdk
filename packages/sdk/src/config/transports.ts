@@ -1,5 +1,4 @@
-import type { RelayerChainConfig } from "../chains/types";
-import type { CleartextConfig } from "../relayer/cleartext/types";
+import type { FheChain } from "../chains/types";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { RelayerWebConfig } from "../relayer/relayer-sdk.types";
 import { ConfigurationError } from "../errors";
@@ -24,13 +23,13 @@ export type WebRelayerOptions = Partial<Omit<RelayerWebConfig, "chain" | "worker
 export interface TransportConfig {
   readonly type: string;
   /** Per-chain overrides (e.g. relayerUrl, registryAddress). */
-  chain?: Partial<RelayerChainConfig>;
+  chain?: Partial<FheChain>;
   /** Create a shared worker/pool for all chains in this transport group. */
   // oxlint-disable-next-line typescript-eslint/no-explicit-any -- bivariant: subtypes narrow this
-  readonly createWorker?: (chains: RelayerChainConfig[]) => any;
+  readonly createWorker?: (chains: FheChain[]) => any;
   /** Create a single-chain relayer. `worker` is the return value of `createWorker`. */
   readonly createRelayer: (
-    chain: RelayerChainConfig,
+    chain: FheChain,
     // oxlint-disable-next-line typescript-eslint/no-explicit-any -- bivariant: subtypes narrow this
     worker: any,
   ) => RelayerSDK;
@@ -39,14 +38,14 @@ export interface TransportConfig {
 /** Web transport — narrows worker type to `RelayerWorkerClient`. */
 export interface WebTransportConfig extends TransportConfig {
   readonly type: "web";
-  readonly createWorker: (chains: RelayerChainConfig[]) => RelayerWorkerClient;
-  readonly createRelayer: (chain: RelayerChainConfig, worker: RelayerWorkerClient) => RelayerWeb;
+  readonly createWorker: (chains: FheChain[]) => RelayerWorkerClient;
+  readonly createRelayer: (chain: FheChain, worker: RelayerWorkerClient) => RelayerWeb;
 }
 
 /** Cleartext transport — no worker, returns `RelayerCleartext`. */
 export interface CleartextTransportConfig extends TransportConfig {
   readonly type: "cleartext";
-  readonly createRelayer: (chain: RelayerChainConfig, worker: unknown) => RelayerCleartext;
+  readonly createRelayer: (chain: FheChain, worker: unknown) => RelayerCleartext;
 }
 
 // ── Transport factories ──────────────────────────────────────────────────────
@@ -66,7 +65,7 @@ export interface CleartextTransportConfig extends TransportConfig {
  * ```
  */
 export function web(
-  chain?: Partial<RelayerChainConfig>,
+  chain?: Partial<FheChain>,
   options?: WebRelayerOptions,
 ): WebTransportConfig {
   return {
@@ -101,7 +100,7 @@ export function web(
  * transports: { [myChain.id]: cleartext({ executorAddress: "0x..." }) }
  * ```
  */
-export function cleartext(chain?: Partial<CleartextConfig>): CleartextTransportConfig {
+export function cleartext(chain?: Partial<FheChain>): CleartextTransportConfig {
   return {
     type: "cleartext",
     chain,
@@ -114,7 +113,7 @@ export function cleartext(chain?: Partial<CleartextConfig>): CleartextTransportC
             `or pass it explicitly: cleartext({ executorAddress: "0x..." })`,
         );
       }
-      return new RelayerCleartext(merged as CleartextConfig);
+      return new RelayerCleartext(merged as FheChain);
     },
   };
 }

@@ -1,4 +1,4 @@
-import type { RelayerChainConfig } from "../chains/types";
+import type { FheChain } from "../chains/types";
 import type {
   AddChainResponseData,
   CreateDelegatedEIP712Payload,
@@ -305,7 +305,7 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
     return this.sendRequest<GetPublicParamsResponseData>("GET_PUBLIC_PARAMS", params);
   }
 
-  async addChain(config: RelayerChainConfig): Promise<AddChainResponseData> {
+  async addChain(config: FheChain): Promise<AddChainResponseData> {
     return this.sendRequest<AddChainResponseData>("ADD_CHAIN", {
       env: this.env as "node",
       config,

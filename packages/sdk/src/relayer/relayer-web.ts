@@ -5,10 +5,11 @@ import type {
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/bundle";
 import type { Address, Hex } from "viem";
-import { ConfigurationError } from "../errors";
 import { IndexedDBStorage } from "../storage/indexeddb-storage";
 import type { GenericStorage } from "../types";
 import type { RelayerWorkerClient } from "../worker/worker.client";
+import type { FheChain } from "../chains/types";
+import { BaseRelayer } from "./base-relayer";
 import { FheArtifactCache } from "./fhe-artifact-cache";
 import type { RelayerSDK } from "./relayer-sdk";
 import type {
@@ -41,28 +42,26 @@ export const CDN_INTEGRITY =
  * RelayerWeb — single-chain browser encryption/decryption layer.
  * The worker is injected at construction time; the relayer does not own its lifecycle.
  */
-export class RelayerWeb implements RelayerSDK, Disposable {
+export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
   #artifactCache: FheArtifactCache | null = null;
   #artifactStorage: GenericStorage | null = null;
-  #initPromise: Promise<Worker> | null = null;
   readonly #config: RelayerWebConfig;
 
   constructor(config: RelayerWebConfig) {
+    super();
     this.#config = config;
+  }
+
+  protected get chain(): FheChain {
+    return this.#config.chain;
+  }
+
+  protected async init(): Promise<void> {
+    await this.#worker.initWorker();
   }
 
   get #worker(): RelayerWorkerClient {
     return this.#config.worker;
-  }
-
-  async #ensureWorker(): Promise<Worker> {
-    if (!this.#initPromise) {
-      this.#initPromise = this.#worker.initWorker().catch((error) => {
-        this.#initPromise = null;
-        throw error;
-      });
-    }
-    return this.#initPromise;
   }
 
   #getArtifactCache(): FheArtifactCache {
@@ -74,8 +73,8 @@ export class RelayerWeb implements RelayerSDK, Disposable {
       }
       this.#artifactCache = new FheArtifactCache({
         storage: this.#artifactStorage,
-        chainId: this.#config.chain.chainId,
-        relayerUrl: this.#config.chain.relayerUrl,
+        chainId: this.chain.id,
+        relayerUrl: this.chain.relayerUrl,
         ttl: this.#config.fheArtifactCacheTTL,
         logger: this.#config.logger,
       });
@@ -89,7 +88,7 @@ export class RelayerWeb implements RelayerSDK, Disposable {
    */
   terminate(): void {
     this.#artifactCache = null;
-    this.#initPromise = null;
+    this.resetInit();
   }
 
   /** Calls {@link terminate}. */
@@ -112,8 +111,8 @@ export class RelayerWeb implements RelayerSDK, Disposable {
    * Generate a keypair for FHE operations.
    */
   async generateKeypair(): Promise<KeypairType<Hex>> {
-    await this.#ensureWorker();
-    const { chainId } = this.#config.chain;
+    await this.ensureInit();
+    const chainId = this.chain.id;
     const result = await this.#worker.generateKeypair({ chainId });
     return {
       publicKey: result.publicKey,
@@ -130,8 +129,8 @@ export class RelayerWeb implements RelayerSDK, Disposable {
     startTimestamp: number,
     durationDays = 7,
   ): Promise<EIP712TypedData> {
-    await this.#ensureWorker();
-    const { chainId } = this.#config.chain;
+    await this.ensureInit();
+    const chainId = this.chain.id;
     return this.#worker.createEIP712({
       chainId,
       publicKey,
@@ -147,8 +146,8 @@ export class RelayerWeb implements RelayerSDK, Disposable {
    */
   async encrypt(params: EncryptParams): Promise<EncryptResult> {
     const { values, contractAddress, userAddress } = params;
-    await this.#ensureWorker();
-    const { chainId } = this.#config.chain;
+    await this.ensureInit();
+    const chainId = this.chain.id;
 
     return withRetry(async () => {
       await this.#refreshCsrfToken();
@@ -166,9 +165,11 @@ export class RelayerWeb implements RelayerSDK, Disposable {
    * Decrypt ciphertexts using user's private key.
    * Requires a valid EIP712 signature.
    */
-  async userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>> {
-    await this.#ensureWorker();
-    const { chainId } = this.#config.chain;
+  async userDecrypt(
+    params: UserDecryptParams,
+  ): Promise<Readonly<Record<Handle, ClearValueType>>> {
+    await this.ensureInit();
+    const chainId = this.chain.id;
     return withRetry(async () => {
       await this.#refreshCsrfToken();
       const result = await this.#worker.userDecrypt({ chainId, ...params });
@@ -181,8 +182,8 @@ export class RelayerWeb implements RelayerSDK, Disposable {
    * Used for publicly visible encrypted values.
    */
   async publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult> {
-    await this.#ensureWorker();
-    const { chainId } = this.#config.chain;
+    await this.ensureInit();
+    const chainId = this.chain.id;
     return withRetry(async () => {
       await this.#refreshCsrfToken();
       const result = await this.#worker.publicDecrypt({ chainId, handles });
@@ -204,8 +205,8 @@ export class RelayerWeb implements RelayerSDK, Disposable {
     startTimestamp: number,
     durationDays = 7,
   ): Promise<KmsDelegatedUserDecryptEIP712Type> {
-    await this.#ensureWorker();
-    const { chainId } = this.#config.chain;
+    await this.ensureInit();
+    const chainId = this.chain.id;
     return this.#worker.createDelegatedUserDecryptEIP712({
       chainId,
       publicKey,
@@ -223,8 +224,8 @@ export class RelayerWeb implements RelayerSDK, Disposable {
   async delegatedUserDecrypt(
     params: DelegatedUserDecryptParams,
   ): Promise<Readonly<Record<Handle, ClearValueType>>> {
-    await this.#ensureWorker();
-    const { chainId } = this.#config.chain;
+    await this.ensureInit();
+    const chainId = this.chain.id;
     return withRetry(async () => {
       await this.#refreshCsrfToken();
       const result = await this.#worker.delegatedUserDecrypt({
@@ -238,9 +239,11 @@ export class RelayerWeb implements RelayerSDK, Disposable {
   /**
    * Submit a ZK proof to the relayer for verification.
    */
-  async requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType> {
-    await this.#ensureWorker();
-    const { chainId } = this.#config.chain;
+  async requestZKProofVerification(
+    zkProof: ZKProofLike,
+  ): Promise<InputProofBytesType> {
+    await this.ensureInit();
+    const chainId = this.chain.id;
     return withRetry(async () => {
       await this.#refreshCsrfToken();
       return this.#worker.requestZKProofVerification({ chainId, zkProof });
@@ -252,8 +255,8 @@ export class RelayerWeb implements RelayerSDK, Disposable {
    * When storage is configured, the result is cached persistently.
    */
   async getPublicKey(): Promise<PublicKeyData | null> {
-    await this.#ensureWorker();
-    const { chainId } = this.#config.chain;
+    await this.ensureInit();
+    const chainId = this.chain.id;
     const artifactCache = this.#getArtifactCache();
     return artifactCache.getPublicKey(
       async () => (await this.#worker.getPublicKey({ chainId })).result,
@@ -265,21 +268,13 @@ export class RelayerWeb implements RelayerSDK, Disposable {
    * When storage is configured, the result is cached persistently.
    */
   async getPublicParams(bits: number): Promise<PublicParamsData | null> {
-    await this.#ensureWorker();
-    const { chainId } = this.#config.chain;
+    await this.ensureInit();
+    const chainId = this.chain.id;
     const artifactCache = this.#getArtifactCache();
     return artifactCache.getPublicParams(
       bits,
-      async () => (await this.#worker.getPublicParams({ chainId, bits })).result,
+      async () =>
+        (await this.#worker.getPublicParams({ chainId, bits })).result,
     );
-  }
-
-  async getAclAddress(): Promise<Address> {
-    if (!this.#config.chain.aclContractAddress) {
-      throw new ConfigurationError(
-        `No ACL address configured for chain ${this.#config.chain.chainId}`,
-      );
-    }
-    return this.#config.chain.aclContractAddress as Address;
   }
 }

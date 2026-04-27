@@ -1,5 +1,5 @@
 import { availableParallelism } from "node:os";
-import type { RelayerChainConfig } from "../chains/types";
+import type { FheChain } from "../chains/types";
 import { NodeWorkerClient } from "./worker.node-client";
 import type { NodeWorkerClientConfig } from "./worker.node-client";
 import type {
@@ -198,7 +198,7 @@ export class NodeWorkerPool {
     return this.#dispatch((w) => w.getPublicParams(params));
   }
 
-  async addChain(config: RelayerChainConfig): Promise<void> {
+  async addChain(config: FheChain): Promise<void> {
     if (this.#workers.length === 0) {
       throw new Error("NodeWorkerPool not initialized. Call initPool() first.");
     }

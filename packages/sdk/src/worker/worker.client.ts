@@ -1,4 +1,4 @@
-import type { RelayerChainConfig } from "../chains/types";
+import type { FheChain } from "../chains/types";
 import type {
   AddChainResponseData,
   GenericLogger,
@@ -15,7 +15,7 @@ import { default as workerCode, filename as workerFilename } from "./relayer-sdk
 /** Configuration for the worker client */
 export interface WorkerClientConfig {
   cdnUrl: string;
-  chains: RelayerChainConfig[];
+  chains: FheChain[];
   csrfToken: string;
   /** Expected SHA-384 hex digest of the CDN bundle for integrity verification. */
   integrity?: string;
@@ -82,7 +82,7 @@ export class RelayerWorkerClient extends BaseWorkerClient<Worker, WorkerClientCo
     };
   }
 
-  override async addChain(config: RelayerChainConfig): Promise<AddChainResponseData> {
+  override async addChain(config: FheChain): Promise<AddChainResponseData> {
     const csrfToken = this.config.csrfToken;
     return this.sendRequest<AddChainResponseData>(
       "ADD_CHAIN",

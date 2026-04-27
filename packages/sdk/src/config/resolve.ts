@@ -1,7 +1,5 @@
 import type { FheChain } from "../chains";
 import { ConfigurationError } from "../errors";
-import type { RelayerChainConfig } from "../chains/types";
-import { toRelayerChainConfig } from "../chains/utils";
 import { IndexedDBStorage } from "../storage/indexeddb-storage";
 import { MemoryStorage } from "../storage/memory-storage";
 import type { GenericStorage } from "../types";
@@ -29,7 +27,7 @@ export function resolveStorage(
 // ── Chain transport resolution ───────────────────────────────────────────────
 
 export interface ResolvedChainTransport {
-  chain: RelayerChainConfig;
+  chain: FheChain;
   transport: TransportConfig;
 }
 
@@ -79,7 +77,7 @@ export function resolveChainTransports(
     }
 
     result.set(id, {
-      chain: toRelayerChainConfig(chainConfig),
+      chain: chainConfig,
       transport: transportConfig,
     });
   }

@@ -52,7 +52,7 @@ import {
   type FheTypeId,
 } from "./fhe-type";
 import { computeInputHandle, computeMockCiphertext } from "./handle";
-import type { CleartextConfig } from "./types";
+import type { FheChain } from "../../chains/types";
 import { ConfigurationError, DecryptionFailedError, EncryptionFailedError } from "../../errors";
 
 const ACL_ABI = parseAbi([
@@ -144,15 +144,20 @@ function normalizeEncryptValue(entry: EncryptParams["values"][number]): {
 
 export class RelayerCleartext implements RelayerSDK, Disposable {
   readonly #client: PublicClient;
-  readonly #config: CleartextConfig;
+  readonly #config: FheChain;
   readonly kmsSigner: PrivateKeyAccount;
   readonly inputSigner: PrivateKeyAccount;
 
-  constructor(config: CleartextConfig) {
-    if (FORBIDDEN_CHAIN_IDS.has(config.chainId)) {
+  constructor(config: FheChain) {
+    if (FORBIDDEN_CHAIN_IDS.has(config.id)) {
       throw new ConfigurationError(
-        `Cleartext mode is not allowed on chain ${config.chainId}. ` +
+        `Cleartext mode is not allowed on chain ${config.id}. ` +
           `It is intended for local development and testing only.`,
+      );
+    }
+    if (!config.executorAddress) {
+      throw new ConfigurationError(
+        `Cleartext transport requires an executorAddress for chain ${config.id}.`,
       );
     }
     this.#client = createPublicClient({
@@ -182,7 +187,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
   ): Promise<EIP712TypedData> {
     return {
       domain: USER_DECRYPT_EIP712.domain(
-        this.#config.chainId,
+        this.#config.id,
         this.#config.verifyingContractAddressDecryption as Address,
       ),
       types: USER_DECRYPT_TYPES,
@@ -214,7 +219,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
         index,
         fheType,
         this.#config.aclContractAddress as Address,
-        BigInt(this.#config.chainId),
+        BigInt(this.#config.id),
       ),
     );
 
@@ -234,7 +239,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
         ctHandles: handles,
         userAddress,
         contractAddress,
-        contractChainId: BigInt(this.#config.chainId),
+        contractChainId: BigInt(this.#config.id),
         extraData: cleartextBytes,
       },
     });
@@ -333,7 +338,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
 
     return {
       domain: DELEGATED_USER_DECRYPT_EIP712.domain(
-        this.#config.chainId,
+        this.#config.id,
         this.#config.verifyingContractAddressDecryption as Address,
       ),
       types: DELEGATED_USER_DECRYPT_TYPES,

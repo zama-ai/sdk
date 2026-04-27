@@ -5,6 +5,7 @@
 
 import type { EncryptInput, RelayerSDKGlobal } from "../relayer/relayer-sdk.types";
 import type { FhevmInstance, FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/bundle";
+import type { FheChain } from "../chains/types";
 import { prefixHex, unprefixHex } from "../utils";
 import { getBrowserExtensionRuntime } from "./browser-extension";
 import type {
@@ -37,7 +38,12 @@ import type {
 // ── Multi-chain instance management ─────────────────────────────
 const instances = new Map<number, FhevmInstance>();
 const pending = new Map<number, Promise<FhevmInstance>>();
-const configs = new Map<number, FhevmInstanceConfig>();
+const configs = new Map<number, FheChain>();
+
+/** Convert an FheChain to the FhevmInstanceConfig shape expected by createInstance. */
+function toInstanceConfig(chain: FheChain): FhevmInstanceConfig {
+  return { ...chain, chainId: chain.id };
+}
 
 let sdkGlobal: RelayerSDKGlobal | null = null;
 
@@ -67,7 +73,7 @@ async function getInstance(chainId: number): Promise<FhevmInstance> {
   }
 
   const promise = sdkGlobal
-    .createInstance({ ...config, batchRpcCalls: false })
+    .createInstance({ ...toInstanceConfig(config), batchRpcCalls: false })
     .then((instance) => {
       instances.set(chainId, instance);
       pending.delete(chainId);
@@ -101,7 +107,7 @@ const MUTATING_METHODS = new Set(["POST", "PUT", "DELETE", "PATCH"]);
 /**
  * Register relayer URLs from chain configs for fetch interception.
  */
-function registerRelayerUrls(chainConfigs: FhevmInstanceConfig[]): void {
+function registerRelayerUrls(chainConfigs: FheChain[]): void {
   for (const c of chainConfigs) {
     if (c.relayerUrl) {
       relayerUrls.add(c.relayerUrl);
@@ -313,7 +319,7 @@ async function handleInit(request: InitRequest): Promise<void> {
     // Register chain configs for lazy init
     registerRelayerUrls(payload.chains);
     for (const chain of payload.chains) {
-      configs.set(chain.chainId, chain);
+      configs.set(chain.id, chain);
     }
 
     sendSuccess(id, type, { initialized: true });
@@ -337,8 +343,8 @@ function handleAddChain(request: AddChainRequest): void {
     if (config.relayerUrl) {
       relayerUrls.add(config.relayerUrl);
     }
-    configs.set(config.chainId, config);
-    sendSuccess(id, type, { added: true, chainId: config.chainId });
+    configs.set(config.id, config);
+    sendSuccess(id, type, { added: true, chainId: config.id });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     sendError(id, type, message);

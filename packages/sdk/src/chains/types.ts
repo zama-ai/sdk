@@ -1,5 +1,4 @@
-import type { FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/bundle";
-import type { Address, EIP1193Provider } from "viem";
+import type { Address, EIP1193Provider, Hex } from "viem";
 
 /**
  * Complete chain configuration — the single source of truth for
@@ -29,17 +28,11 @@ export interface FheChain<TId extends number = number> {
    * `undefined` for chains that use real FHE infrastructure.
    */
   readonly executorAddress: Address | undefined;
+  /** Private key of the KMS signer used for EIP-712 verification of the decryption (cleartext mode). */
+  readonly kmsSignerPrivateKey?: Hex;
+  /** Private key of the input signer used for EIP-712 verification of the input verification (cleartext mode). */
+  readonly inputSignerPrivateKey?: Hex;
 }
 
 /** At least one chain is required. */
 export type AtLeastOneChain = readonly [FheChain, ...FheChain[]];
-
-/**
- * Internal chain config shape expected by the relayer layer.
- * Converts `FheChain.id` → `chainId` so the relayer-sdk receives
- * the field name it expects.
- */
-export interface RelayerChainConfig extends FhevmInstanceConfig {
-  registryAddress: FheChain["registryAddress"];
-  executorAddress: FheChain["executorAddress"];
-}

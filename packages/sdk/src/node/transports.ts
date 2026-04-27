@@ -1,6 +1,6 @@
 import type { TransportConfig } from "../config/transports";
 import { RelayerNode } from "../relayer/relayer-node";
-import type { RelayerChainConfig } from "../chains/types";
+import type { FheChain } from "../chains/types";
 import type { GenericStorage } from "../types";
 import { NodeWorkerPool } from "../worker/worker.node-pool";
 import type { GenericLogger } from "../worker/worker.types";
@@ -17,8 +17,8 @@ export interface NodePoolOptions {
 /** Node transport — narrows worker type to `NodeWorkerPool`. */
 export interface NodeTransportConfig extends TransportConfig {
   readonly type: "node";
-  readonly createWorker: (chains: RelayerChainConfig[]) => NodeWorkerPool;
-  readonly createRelayer: (chain: RelayerChainConfig, worker: NodeWorkerPool) => RelayerNode;
+  readonly createWorker: (chains: FheChain[]) => NodeWorkerPool;
+  readonly createRelayer: (chain: FheChain, worker: NodeWorkerPool) => RelayerNode;
 }
 
 /**
@@ -36,7 +36,7 @@ export interface NodeTransportConfig extends TransportConfig {
  * ```
  */
 export function node(
-  chain?: Partial<RelayerChainConfig>,
+  chain?: Partial<FheChain>,
   options?: NodePoolOptions,
 ): NodeTransportConfig {
   return {
