@@ -2675,19 +2675,19 @@ For a local Hardhat network, use the built-in `hardhat` chain object:
 
 ```ts
 const config = createConfig({
-  chains: [hardhat],
+  chains: [{ ...hardhat, executorAddress: "0xYourExecutorAddress" }],
   publicClient,
   walletClient,
   storage: memoryStorage,
   transports: {
-    [hardhat.id]: cleartext({ executorAddress: "0xYourExecutorAddress" }),
+    [hardhat.id]: cleartext(),
   },
 });
 
 const sdk = new ZamaSDK(config);
 ```
 
-The `executorAddress` is the deployed `CleartextFHEVMExecutor` contract address from your Hardhat setup.
+The `executorAddress` is the deployed `CleartextFHEVMExecutor` contract address from your Hardhat setup. It must be set on the chain definition — `cleartext()` picks it up automatically.
 
 ### 4. Use the SDK normally
 
@@ -2743,6 +2743,7 @@ const myHardhat = {
   inputVerifierContractAddress: "0x...",
   verifyingContractAddressDecryption: "0x...",
   verifyingContractAddressInputVerification: "0x...",
+  executorAddress: "0x...",
   relayerUrl: "",
 } as const satisfies FheChain;
 
@@ -2751,15 +2752,7 @@ const config = createConfig({
   publicClient,
   walletClient,
   transports: {
-    [myHardhat.id]: cleartext({
-      executorAddress: "0x...",
-      chainId: 12345,
-      network: "http://localhost:8545",
-      gatewayChainId: 10901,
-      aclContractAddress: "0x...",
-      verifyingContractAddressDecryption: "0x...",
-      verifyingContractAddressInputVerification: "0x...",
-    }),
+    [myHardhat.id]: cleartext(),
   },
 });
 
