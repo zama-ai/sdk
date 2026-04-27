@@ -1,8 +1,7 @@
 import { availableParallelism } from "node:os";
+import type { FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/bundle";
 import { NodeWorkerClient } from "./worker.node-client";
 import type { NodeWorkerClientConfig } from "./worker.node-client";
-import type { Handle } from "../relayer/relayer-sdk.types";
-import type { ZKProofLike } from "@zama-fhe/relayer-sdk/bundle";
 import type {
   CreateDelegatedEIP712Payload,
   CreateDelegatedEIP712ResponseData,
@@ -12,10 +11,15 @@ import type {
   DelegatedUserDecryptResponseData,
   EncryptPayload,
   EncryptResponseData,
+  GenerateKeypairRequest,
   GenerateKeypairResponseData,
+  GetPublicKeyRequest,
   GetPublicKeyResponseData,
+  GetPublicParamsRequest,
   GetPublicParamsResponseData,
+  PublicDecryptPayload,
   PublicDecryptResponseData,
+  RequestZKProofVerificationRequest,
   RequestZKProofVerificationResponseData,
   UserDecryptPayload,
   UserDecryptResponseData,
@@ -136,8 +140,10 @@ export class NodeWorkerPool {
     }
   }
 
-  async generateKeypair(): Promise<GenerateKeypairResponseData> {
-    return this.#dispatch((w) => w.generateKeypair());
+  async generateKeypair(
+    params: GenerateKeypairRequest["payload"],
+  ): Promise<GenerateKeypairResponseData> {
+    return this.#dispatch((w) => w.generateKeypair(params));
   }
 
   async createEIP712(params: CreateEIP712Payload): Promise<CreateEIP712ResponseData> {
@@ -152,8 +158,8 @@ export class NodeWorkerPool {
     return this.#dispatch((w) => w.userDecrypt(params));
   }
 
-  async publicDecrypt(handles: Handle[]): Promise<PublicDecryptResponseData> {
-    return this.#dispatch((w) => w.publicDecrypt(handles));
+  async publicDecrypt(params: PublicDecryptPayload): Promise<PublicDecryptResponseData> {
+    return this.#dispatch((w) => w.publicDecrypt(params));
   }
 
   async createDelegatedUserDecryptEIP712(
@@ -169,16 +175,32 @@ export class NodeWorkerPool {
   }
 
   async requestZKProofVerification(
-    zkProof: ZKProofLike,
+    params: RequestZKProofVerificationRequest["payload"],
   ): Promise<RequestZKProofVerificationResponseData> {
-    return this.#dispatch((w) => w.requestZKProofVerification(zkProof));
+    return this.#dispatch((w) => w.requestZKProofVerification(params));
   }
 
-  async getPublicKey(): Promise<GetPublicKeyResponseData> {
-    return this.#dispatch((w) => w.getPublicKey());
+  async getPublicKey(params: GetPublicKeyRequest["payload"]): Promise<GetPublicKeyResponseData> {
+    return this.#dispatch((w) => w.getPublicKey(params));
   }
 
-  async getPublicParams(bits: number): Promise<GetPublicParamsResponseData> {
-    return this.#dispatch((w) => w.getPublicParams(bits));
+  async getPublicParams(
+    params: GetPublicParamsRequest["payload"],
+  ): Promise<GetPublicParamsResponseData> {
+    return this.#dispatch((w) => w.getPublicParams(params));
+  }
+
+  async addChain(config: FhevmInstanceConfig): Promise<void> {
+    if (this.#workers.length === 0) {
+      throw new Error("NodeWorkerPool not initialized. Call initPool() first.");
+    }
+    await Promise.all(this.#workers.map((w) => w.addChain(config)));
+  }
+
+  async removeChain(chainId: number): Promise<void> {
+    if (this.#workers.length === 0) {
+      throw new Error("NodeWorkerPool not initialized. Call initPool() first.");
+    }
+    await Promise.all(this.#workers.map((w) => w.removeChain(chainId)));
   }
 }
