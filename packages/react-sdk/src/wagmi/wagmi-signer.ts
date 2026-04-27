@@ -17,9 +17,13 @@ import { getConnection, watchConnection } from "./compat";
 type WagmiConnection = ReturnType<typeof getConnection>;
 
 function identityFromConnection(connection: WagmiConnection) {
-  return connection.status === "connected"
-    ? { address: getAddress(connection.address), chainId: connection.chainId }
-    : undefined;
+  if (connection.status === "disconnected") {
+    return undefined;
+  }
+  if (!connection.address || connection.chainId === undefined) {
+    return undefined;
+  }
+  return { address: getAddress(connection.address), chainId: connection.chainId };
 }
 
 /** Configuration for {@link WagmiSigner}. */

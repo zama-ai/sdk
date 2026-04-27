@@ -86,6 +86,21 @@ describe("WagmiSigner.subscribe", () => {
   });
 
   wit(
+    "seeds a reconnecting identity when wagmi has persisted state",
+    ({ wagmiSigner, onIdentityChange }) => {
+      mockGetConnection.mockReturnValue({ status: "reconnecting", address: ADDR_A, chainId: 1 });
+
+      wagmiSigner.subscribe(onIdentityChange);
+
+      expect(onIdentityChange).toHaveBeenCalledOnce();
+      expect(onIdentityChange).toHaveBeenCalledWith({
+        previous: undefined,
+        next: { address: ADDR_A, chainId: 1 },
+      });
+    },
+  );
+
+  wit(
     "fires connect when transitioning from disconnected to connected",
     ({ wagmiSigner, onIdentityChange }) => {
       wagmiSigner.subscribe(onIdentityChange);
@@ -122,6 +137,50 @@ describe("WagmiSigner.subscribe", () => {
     capturedOnChange!({ status: "disconnected" }, { status: "disconnected" });
     expect(onIdentityChange).not.toHaveBeenCalled();
   });
+
+  wit(
+    "does not fire when status flips connected to reconnecting to connected",
+    ({ wagmiSigner, onIdentityChange }) => {
+      wagmiSigner.subscribe(onIdentityChange);
+
+      capturedOnChange!(
+        { status: "reconnecting", address: ADDR_A, chainId: 1 },
+        { status: "connected", address: ADDR_A, chainId: 1 },
+      );
+      capturedOnChange!(
+        { status: "connected", address: ADDR_A, chainId: 1 },
+        { status: "reconnecting", address: ADDR_A, chainId: 1 },
+      );
+
+      expect(onIdentityChange).not.toHaveBeenCalled();
+    },
+  );
+
+  wit("fires disconnect when reconnecting fails", ({ wagmiSigner, onIdentityChange }) => {
+    wagmiSigner.subscribe(onIdentityChange);
+
+    capturedOnChange!(
+      { status: "disconnected" },
+      { status: "reconnecting", address: ADDR_A, chainId: 1 },
+    );
+
+    expect(onIdentityChange).toHaveBeenCalledOnce();
+    expect(onIdentityChange).toHaveBeenCalledWith({
+      previous: { address: ADDR_A, chainId: 1 },
+      next: undefined,
+    });
+  });
+
+  wit(
+    "does not fire on disconnected to connecting without address",
+    ({ wagmiSigner, onIdentityChange }) => {
+      wagmiSigner.subscribe(onIdentityChange);
+
+      capturedOnChange!({ status: "connecting" }, { status: "disconnected" });
+
+      expect(onIdentityChange).not.toHaveBeenCalled();
+    },
+  );
 
   wit("fires when address changes", ({ wagmiSigner, onIdentityChange }) => {
     wagmiSigner.subscribe(onIdentityChange);
