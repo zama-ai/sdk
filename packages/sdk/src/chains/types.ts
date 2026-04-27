@@ -1,3 +1,4 @@
+import type { Auth } from "@zama-fhe/relayer-sdk/bundle";
 import type { Address, EIP1193Provider, Hex } from "viem";
 
 /**
@@ -28,6 +29,12 @@ export interface FheChain<TId extends number = number> {
    * `undefined` for chains that use real FHE infrastructure.
    */
   readonly executorAddress?: Address | undefined;
+  /**
+   * Authentication for the relayer endpoint.
+   * Use `{ __type: "ApiKeyHeader", value: "your-key" }` for API-key auth,
+   * or `{ __type: "BearerToken", value: "your-token" }` for bearer auth.
+   */
+  readonly auth?: Auth;
   /** Private key of the KMS signer used for EIP-712 verification of the decryption (cleartext mode). */
   readonly kmsSignerPrivateKey?: Hex;
   /** Private key of the input signer used for EIP-712 verification of the input verification (cleartext mode). */

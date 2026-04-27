@@ -36,7 +36,11 @@ const walletClient = createWalletClient({
   transport: http(),
 });
 
-const myChain = { ...sepolia, network: "https://sepolia.infura.io/v3/YOUR_KEY" } as const satisfies FheChain;
+const myChain = {
+  ...sepolia,
+  network: "https://sepolia.infura.io/v3/YOUR_KEY",
+  auth: { __type: "ApiKeyHeader" as const, value: process.env.RELAYER_API_KEY! },
+} as const satisfies FheChain;
 
 const config = createConfig({
   chains: [myChain],
@@ -110,13 +114,25 @@ See the [Token Operations](/reference/sdk/Token) reference for the full API.
 
 ### 6. Use direct API key auth
 
-In a server environment, you can authenticate with the relayer directly — there is no browser to leak the key to. The chain preset's `relayerUrl` already points at the authenticated endpoint. If you need a custom relay proxy with auth headers, override `relayerUrl` in the chain definition:
+In a server environment, you can authenticate with the relayer directly — there is no browser to leak the key to. Pass `auth` on the chain definition:
 
 ```ts
 import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 
-const myChain = { ...sepolia, relayerUrl: "https://your-relay-proxy.example.com" } as const satisfies FheChain;
+const myChain = {
+  ...sepolia,
+  network: "https://sepolia.infura.io/v3/YOUR_KEY",
+  auth: { __type: "ApiKeyHeader" as const, value: process.env.RELAYER_API_KEY! },
+} as const satisfies FheChain;
 ```
+
+The `auth` field supports three modes:
+
+| Mode | Shape |
+|------|-------|
+| API key header | `{ __type: "ApiKeyHeader", value: "your-key" }` |
+| Bearer token | `{ __type: "BearerToken", value: "your-token" }` |
+| API key cookie | `{ __type: "ApiKeyCookie", value: "your-key" }` |
 
 ### 7. Clean up on shutdown
 

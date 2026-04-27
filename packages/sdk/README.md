@@ -119,31 +119,31 @@ const balance = await token.balanceOf();
 ### Node.js
 
 ```ts
-import { web, ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
+import { ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
 import { node } from "@zama-fhe/sdk/node";
 import { createConfig } from "@zama-fhe/sdk/viem";
-import { sepolia, mainnet } from "@zama-fhe/sdk/chains";
+import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
+
+const mySepolia = {
+  ...sepolia,
+  network: "https://sepolia.infura.io/v3/YOUR_KEY",
+  auth: { __type: "ApiKeyHeader" as const, value: process.env.RELAYER_API_KEY! },
+} as const satisfies FheChain;
+
+const myMainnet = {
+  ...mainnet,
+  network: "https://mainnet.infura.io/v3/YOUR_KEY",
+  auth: { __type: "ApiKeyHeader" as const, value: process.env.RELAYER_API_KEY! },
+} as const satisfies FheChain;
 
 const config = createConfig({
-  chains: [sepolia, mainnet],
+  chains: [mySepolia, myMainnet],
   publicClient,
   walletClient,
   storage: memoryStorage,
   relayers: {
-    [sepolia.id]: node(
-      {
-        network: "https://sepolia.infura.io/v3/YOUR_KEY",
-        auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY },
-      },
-      { poolSize: 4 },
-    ),
-    [mainnet.id]: node(
-      {
-        network: "https://mainnet.infura.io/v3/YOUR_KEY",
-        auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY },
-      },
-      { poolSize: 4 },
-    ),
+    [mySepolia.id]: node({ poolSize: 4 }),
+    [myMainnet.id]: node({ poolSize: 4 }),
   },
 });
 

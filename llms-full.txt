@@ -1407,23 +1407,19 @@ No `auth` field is needed on the client side — the proxy handles authenticatio
 
 ### 4. (Alternative) Use a direct API key for server-side apps
 
-When the SDK runs in a trusted environment (Node.js script, backend service), you can pass the API key directly in the transport configuration:
+When the SDK runs in a trusted environment (Node.js script, backend service), you can pass the API key directly on the chain definition:
 
 ```ts
-import { SepoliaConfig } from "@zama-fhe/sdk";
-import { RelayerNode } from "@zama-fhe/sdk/node";
+import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 
-const relayer = new RelayerNode({
-  getChainId: () => signer.getChainId(),
-  transports: {
-    [SepoliaConfig.chainId]: {
-      ...SepoliaConfig,
-      network: "https://sepolia.infura.io/v3/YOUR_KEY",
-      auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY! },
-    },
-  },
-});
+const myChain = {
+  ...sepolia,
+  network: "https://sepolia.infura.io/v3/YOUR_KEY",
+  auth: { __type: "ApiKeyHeader" as const, value: process.env.RELAYER_API_KEY! },
+} as const satisfies FheChain;
 ```
+
+Then pass `myChain` to `createConfig` — the `auth` field is picked up automatically by the relayer. See the [Node.js backend guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/node-js-backend.md) for a complete example.
 
 The `auth` field supports multiple methods depending on how your relayer is configured.
 
@@ -2444,7 +2440,11 @@ const walletClient = createWalletClient({
   transport: http(),
 });
 
-const myChain = { ...sepolia, network: "https://sepolia.infura.io/v3/YOUR_KEY" } as const satisfies FheChain;
+const myChain = {
+  ...sepolia,
+  network: "https://sepolia.infura.io/v3/YOUR_KEY",
+  auth: { __type: "ApiKeyHeader" as const, value: process.env.RELAYER_API_KEY! },
+} as const satisfies FheChain;
 
 const config = createConfig({
   chains: [myChain],
@@ -2518,13 +2518,25 @@ See the [Token Operations](https://raw.githubusercontent.com/zama-ai/sdk/main/do
 
 ### 6. Use direct API key auth
 
-In a server environment, you can authenticate with the relayer directly — there is no browser to leak the key to. The chain preset's `relayerUrl` already points at the authenticated endpoint. If you need a custom relay proxy with auth headers, override `relayerUrl` in the chain definition:
+In a server environment, you can authenticate with the relayer directly — there is no browser to leak the key to. Pass `auth` on the chain definition:
 
 ```ts
 import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 
-const myChain = { ...sepolia, relayerUrl: "https://your-relay-proxy.example.com" } as const satisfies FheChain;
+const myChain = {
+  ...sepolia,
+  network: "https://sepolia.infura.io/v3/YOUR_KEY",
+  auth: { __type: "ApiKeyHeader" as const, value: process.env.RELAYER_API_KEY! },
+} as const satisfies FheChain;
 ```
+
+The `auth` field supports three modes:
+
+| Mode | Shape |
+|------|-------|
+| API key header | `{ __type: "ApiKeyHeader", value: "your-key" }` |
+| Bearer token | `{ __type: "BearerToken", value: "your-token" }` |
+| API key cookie | `{ __type: "ApiKeyCookie", value: "your-key" }` |
 
 ### 7. Clean up on shutdown
 
@@ -18402,31 +18414,31 @@ const balance = await token.balanceOf();
 ### Node.js
 
 ```ts
-import { web, ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
+import { ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
 import { node } from "@zama-fhe/sdk/node";
 import { createConfig } from "@zama-fhe/sdk/viem";
-import { sepolia, mainnet } from "@zama-fhe/sdk/chains";
+import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
+
+const mySepolia = {
+  ...sepolia,
+  network: "https://sepolia.infura.io/v3/YOUR_KEY",
+  auth: { __type: "ApiKeyHeader" as const, value: process.env.RELAYER_API_KEY! },
+} as const satisfies FheChain;
+
+const myMainnet = {
+  ...mainnet,
+  network: "https://mainnet.infura.io/v3/YOUR_KEY",
+  auth: { __type: "ApiKeyHeader" as const, value: process.env.RELAYER_API_KEY! },
+} as const satisfies FheChain;
 
 const config = createConfig({
-  chains: [sepolia, mainnet],
+  chains: [mySepolia, myMainnet],
   publicClient,
   walletClient,
   storage: memoryStorage,
   relayers: {
-    [sepolia.id]: node(
-      {
-        network: "https://sepolia.infura.io/v3/YOUR_KEY",
-        auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY },
-      },
-      { poolSize: 4 },
-    ),
-    [mainnet.id]: node(
-      {
-        network: "https://mainnet.infura.io/v3/YOUR_KEY",
-        auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY },
-      },
-      { poolSize: 4 },
-    ),
+    [mySepolia.id]: node({ poolSize: 4 }),
+    [myMainnet.id]: node({ poolSize: 4 }),
   },
 });
 

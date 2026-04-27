@@ -106,23 +106,19 @@ No `auth` field is needed on the client side — the proxy handles authenticatio
 
 ### 4. (Alternative) Use a direct API key for server-side apps
 
-When the SDK runs in a trusted environment (Node.js script, backend service), you can pass the API key directly in the transport configuration:
+When the SDK runs in a trusted environment (Node.js script, backend service), you can pass the API key directly on the chain definition:
 
 ```ts
-import { SepoliaConfig } from "@zama-fhe/sdk";
-import { RelayerNode } from "@zama-fhe/sdk/node";
+import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 
-const relayer = new RelayerNode({
-  getChainId: () => signer.getChainId(),
-  transports: {
-    [SepoliaConfig.chainId]: {
-      ...SepoliaConfig,
-      network: "https://sepolia.infura.io/v3/YOUR_KEY",
-      auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY! },
-    },
-  },
-});
+const myChain = {
+  ...sepolia,
+  network: "https://sepolia.infura.io/v3/YOUR_KEY",
+  auth: { __type: "ApiKeyHeader" as const, value: process.env.RELAYER_API_KEY! },
+} as const satisfies FheChain;
 ```
+
+Then pass `myChain` to `createConfig` — the `auth` field is picked up automatically by the relayer. See the [Node.js backend guide](/guides/node-js-backend) for a complete example.
 
 The `auth` field supports multiple methods depending on how your relayer is configured.
 
