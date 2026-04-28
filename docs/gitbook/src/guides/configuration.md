@@ -1,11 +1,11 @@
 ---
 title: Configuration
-description: How to configure the SDK with createConfig — chains, relayers, signer, and storage.
+description: How to configure the SDK with createConfig — chains, relayers, provider, signer, and storage.
 ---
 
 # Configuration
 
-The SDK uses `createConfig` to wire together chains, relayers, a signer, and storage into a single configuration object. This guide walks through each piece.
+The SDK uses `createConfig` to wire together chains, relayers, a provider, an optional signer, and storage into a single configuration object. This guide walks through each piece.
 
 ## Steps
 
@@ -64,15 +64,15 @@ const mySepolia = {
 } as const satisfies FheChain;
 ```
 
-### 3. Set up a signer
+### 3. Set up chain access
 
-The signer lets the SDK interact with the user's wallet. Choose the adapter for your Web3 library.
+The SDK separates read access (provider) from wallet authority (signer). The provider handles contract reads and receipt polling. The signer handles signing and write transactions. Both are created automatically by `createConfig` — you pass your Web3 library's native objects.
 
 {% tabs %}
 {% tab title="wagmi (React)" %}
 
-```ts
-// Signer is derived automatically from wagmiConfig — no manual setup needed.
+```tsx
+// createConfig from @zama-fhe/react-sdk/wagmi accepts your wagmiConfig directly — see step 4 below.
 ```
 
 {% endtab %}
@@ -97,17 +97,17 @@ const walletClient = createWalletClient({
 
 ```ts
 // Browser — pass the raw EIP-1193 provider
-// const ethersConfig = { ethereum: window.ethereum! };
+// createConfig({ ..., ethereum: window.ethereum! })
 
-// Node.js — pass an ethers Signer directly
+// Node.js — pass an ethers Signer (provider is extracted automatically)
 // const provider = new ethers.JsonRpcProvider(rpcUrl);
-// const ethersConfig = { signer: new ethers.Wallet(privateKey, provider) };
+// createConfig({ ..., signer: new ethers.Wallet(privateKey, provider) })
 ```
 
 {% endtab %}
 {% endtabs %}
 
-For full type information, see the [ViemSigner](/reference/sdk/ViemSigner), [EthersSigner](/reference/sdk/EthersSigner), and [WagmiSigner](/reference/sdk/WagmiSigner) reference pages. You can also implement the [GenericSigner](/reference/sdk/GenericSigner) and [GenericProvider](/reference/sdk/GenericProvider) interfaces for a custom integration (e.g. a server-side relayer).
+For full type information, see the [ViemProvider](/reference/sdk/ViemProvider) / [ViemSigner](/reference/sdk/ViemSigner) and [EthersProvider](/reference/sdk/EthersProvider) / [EthersSigner](/reference/sdk/EthersSigner) reference pages. You can also implement [GenericProvider](/reference/sdk/GenericProvider) and [GenericSigner](/reference/sdk/GenericSigner) for a custom integration.
 
 ### 4. Create the config
 

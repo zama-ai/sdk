@@ -1,35 +1,47 @@
 ### viem
 
 ```ts
-import { ViemSigner } from "@zama-fhe/sdk/viem";
+import { createPublicClient, createWalletClient, custom, http } from "viem";
+import { sepolia } from "viem/chains";
+import { createConfig } from "@zama-fhe/sdk/viem";
 
-// Full mode — signing + read
-const signer = new ViemSigner({ walletClient, publicClient });
-
-// Read-only mode — omit walletClient for chain reads without a wallet
-const readOnlySigner = new ViemSigner({ publicClient });
+const publicClient = createPublicClient({
+  chain: sepolia,
+  transport: http("https://sepolia.infura.io/v3/YOUR_KEY"),
+});
+const walletClient = createWalletClient({
+  chain: sepolia,
+  transport: custom(window.ethereum!),
+});
 ```
 
 ### ethers
 
 ```ts
-import { EthersSigner } from "@zama-fhe/sdk/ethers";
+import { createConfig } from "@zama-fhe/sdk/ethers";
 
 // Browser — pass the raw EIP-1193 provider
-const signer = new EthersSigner({ ethereum: window.ethereum! });
+// createConfig({ chains: [...], ethereum: window.ethereum!, relayers: { ... } })
 
 // Node.js — pass an ethers Signer directly
-// const provider = new ethers.JsonRpcProvider(rpcUrl);
-// const signer = new EthersSigner({ signer: new ethers.Wallet(privateKey, provider) });
-
-// Read-only — pass a Provider for chain reads without a wallet
-// const signer = new EthersSigner({ provider: new ethers.JsonRpcProvider(rpcUrl) });
+// createConfig({ chains: [...], signer: wallet, relayers: { ... } })
 ```
 
 ### wagmi (React only)
 
-```ts
-import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
+```tsx
+import { ZamaProvider } from "@zama-fhe/react-sdk";
+import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
+import { web } from "@zama-fhe/sdk/web";
 
-const signer = new WagmiSigner({ config: wagmiConfig });
+const zamaConfig = createZamaConfig({
+  chains: [mySepolia],
+  wagmiConfig,
+  relayers: { [mySepolia.id]: web() },
+});
+
+// Wrap your app
+<ZamaProvider config={zamaConfig}>
+  <App />
+</ZamaProvider>;
 ```

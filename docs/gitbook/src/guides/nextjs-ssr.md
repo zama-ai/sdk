@@ -26,10 +26,13 @@ Any component that imports from `@zama-fhe/react-sdk` must be a Client Component
 "use client";
 
 import { useConfidentialBalance } from "@zama-fhe/react-sdk";
+import { useAccount } from "wagmi";
 
-export function TokenBalance({ address }: { address: string }) {
+export function TokenBalance({ tokenAddress }: { tokenAddress: string }) {
+  const { address } = useAccount();
   const { data: balance, isLoading } = useConfidentialBalance({
-    tokenAddress: address,
+    tokenAddress,
+    account: address,
   });
 
   if (isLoading) return <span>Loading...</span>;
@@ -66,9 +69,7 @@ const mySepolia = {
 const zamaConfig = createZamaConfig({
   chains: [mySepolia],
   wagmiConfig,
-  relayers: {
-    [mySepolia.id]: web(),
-  },
+  relayers: { [mySepolia.id]: web() },
 });
 
 const queryClient = new QueryClient();
@@ -141,7 +142,7 @@ export default function PortfolioPage() {
   return (
     <div>
       <h1>My Portfolio</h1>
-      <TokenBalance address="0xEncryptedERC20" />
+      <TokenBalance tokenAddress="0xEncryptedERC20" />
     </div>
   );
 }
@@ -152,10 +153,13 @@ export default function PortfolioPage() {
 "use client";
 
 import { useConfidentialBalance } from "@zama-fhe/react-sdk";
+import { useAccount } from "wagmi";
 
-export function TokenBalance({ address }: { address: string }) {
+export function TokenBalance({ tokenAddress }: { tokenAddress: string }) {
+  const { address } = useAccount();
   const { data: balance, isLoading } = useConfidentialBalance({
-    tokenAddress: address,
+    tokenAddress,
+    account: address,
   });
 
   if (isLoading) return <span>Decrypting...</span>;

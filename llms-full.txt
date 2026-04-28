@@ -68,7 +68,7 @@ TanStack Query-based hooks with cached decryption, automatic cache invalidation,
 | [`@zama-fhe/sdk`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md)              | You are building with vanilla TypeScript, Node.js, or any non-React framework |
 | [`@zama-fhe/react-sdk`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/ZamaProvider.md) | You are building a React app (hooks and React-specific providers)             |
 
-If you are using React, install both packages: `@zama-fhe/react-sdk` provides the hooks and `ZamaProvider`, while `@zama-fhe/sdk` is a peer dependency that provides core utilities, relayer factories, chain presets, and error helpers. Adapter-specific `createConfig` functions are imported from sub-paths (e.g. `@zama-fhe/react-sdk/wagmi`, `@zama-fhe/sdk/viem`, `@zama-fhe/sdk/ethers`).
+If you are using React, install both packages: `@zama-fhe/react-sdk` provides the hooks and `ZamaProvider`, while `@zama-fhe/sdk` is a peer dependency that provides core utilities, relayer factories, chain presets, and error helpers. For wagmi apps, build the config with `createConfig` from `@zama-fhe/react-sdk/wagmi` and pass it to `<ZamaProvider config={zamaConfig}>`. For non-React apps, use `createConfig` from `@zama-fhe/sdk/viem` or `@zama-fhe/sdk/ethers`.
 
 ## Install
 
@@ -133,7 +133,8 @@ const sdk = new ZamaSDK(config);
 const token = sdk.createToken("0xYourEncryptedERC20");
 
 await token.shield(1000n); // deposit public tokens
-const balance = await token.balanceOf(); // decrypt your balance
+const [address] = await walletClient.getAddresses();
+const balance = await token.balanceOf(address); // decrypt your balance
 await token.confidentialTransfer("0xRecipient", 500n); // private send
 await token.unshield(500n); // withdraw back to public
 ```
@@ -273,10 +274,9 @@ const mySepolia = {
 const zamaConfig = createZamaConfig({
   chains: [mySepolia],
   wagmiConfig,
-  relayers: {
-    [mySepolia.id]: web(),
-  },
+  relayers: { [mySepolia.id]: web() },
 });
+
 const queryClient = new QueryClient();
 
 function App() {
@@ -446,6 +446,7 @@ function MyTokenPage() {
   const { data: meta } = useMetadata(TOKEN);
   const { data: balance, isLoading } = useConfidentialBalance({
     tokenAddress: TOKEN,
+    account: address,
   });
   const { mutateAsync: shield, isPending: isShielding } = useShield({
     tokenAddress: TOKEN,
@@ -516,7 +517,8 @@ const token = sdk.createToken("0xYourEncryptedERC20");
 await token.shield(1000n);
 
 // Decrypt your balance (first call prompts a wallet signature)
-const balance = await token.balanceOf();
+const [address] = await walletClient.getAddresses();
+const balance = await token.balanceOf(address);
 console.log("Confidential balance:", balance);
 
 // Send 500 tokens privately
@@ -535,7 +537,8 @@ const token = sdk.createToken("0xYourEncryptedERC20");
 await token.shield(1000n);
 
 // Decrypt your balance (first call prompts a wallet signature)
-const balance = await token.balanceOf();
+const [address] = (await window.ethereum!.request({ method: "eth_accounts" })) as string[];
+const balance = await token.balanceOf(address as `0x${string}`);
 console.log("Confidential balance:", balance);
 
 // Send 500 tokens privately
@@ -555,7 +558,7 @@ try {
   await token.shield(1000n);
 
   // Decrypt your balance
-  const balance = await token.balanceOf();
+  const balance = await token.balanceOf(account.address);
   console.log("Confidential balance:", balance);
 
   // Send 500 tokens privately
@@ -578,7 +581,7 @@ try {
   await token.shield(1000n);
 
   // Decrypt your balance
-  const balance = await token.balanceOf();
+  const balance = await token.balanceOf(wallet.address as `0x${string}`);
   console.log("Confidential balance:", balance);
 
   // Send 500 tokens privately
@@ -596,7 +599,7 @@ The hooks and SDK methods handle FHE encryption, wallet signing, ERC-20 approval
 
 ## Next steps
 
-- [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) -- chains, relayers, signer, storage, and authentication setup
+- [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) -- chains, relayers, provider, signer, storage, and authentication setup
 - [Shield Tokens](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/shield-tokens.md) -- move tokens into confidential form
 - [Chain Objects](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/network-presets.md) -- pre-configured chain definitions for Sepolia, Mainnet, and more
 - [React Hooks](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/ZamaProvider.md) -- provider setup and all available hooks
@@ -663,7 +666,7 @@ export const wagmiConfig = createConfig({
   },
 });
 
-const mySepolia = {
+export const mySepolia = {
   ...sepoliaFhe,
   relayerUrl: "https://your-app.com/api/relayer/11155111",
 } as const satisfies FheChain;
@@ -671,9 +674,7 @@ const mySepolia = {
 export const zamaConfig = createZamaConfig({
   chains: [mySepolia],
   wagmiConfig,
-  relayers: {
-    [mySepolia.id]: web(),
-  },
+  relayers: { [mySepolia.id]: web() },
 });
 
 export const queryClient = new QueryClient();
@@ -690,7 +691,7 @@ Replace `YOUR_KEY` with your Infura (or Alchemy) project ID, and update the rela
 
 ## 4. Create the App layout with providers
 
-Replace the contents of `src/App.tsx`. We wrap the app in three providers: wagmi for wallet state, React Query for async caching, and `ZamaProvider` for FHE operations.
+Replace the contents of `src/App.tsx`. We wrap the app in three providers: wagmi for wallet state, React Query for async caching, and `ZamaProvider` for FHE operations. The Zama config is built by `createConfig` from `@zama-fhe/react-sdk/wagmi`, which derives the signer from your wagmi config so it tracks connection state automatically.
 
 
 ### Tab: src/App.tsx
@@ -726,15 +727,18 @@ Create `src/BalanceDisplay.tsx`. The `useConfidentialBalance` hook decrypts the 
 
 ```tsx
 import { useConfidentialBalance } from "@zama-fhe/react-sdk";
+import { useAccount } from "wagmi";
 import { TOKEN_ADDRESS } from "./config";
 
 export function BalanceDisplay() {
+  const { address } = useAccount();
   const {
     data: balance,
     isLoading,
     error,
   } = useConfidentialBalance({
     tokenAddress: TOKEN_ADDRESS,
+    account: address,
   });
 
   if (error) return <p>Failed to load balance.</p>;
@@ -1030,7 +1034,7 @@ Ask technical questions and discuss with the community.
 
 # Configuration
 
-The SDK uses `createConfig` to wire together chains, relayers, a signer, and storage into a single configuration object. This guide walks through each piece.
+The SDK uses `createConfig` to wire together chains, relayers, a provider, an optional signer, and storage into a single configuration object. This guide walks through each piece.
 
 ## Steps
 
@@ -1089,15 +1093,15 @@ const mySepolia = {
 } as const satisfies FheChain;
 ```
 
-### 3. Set up a signer
+### 3. Set up chain access
 
-The signer lets the SDK interact with the user's wallet. Choose the adapter for your Web3 library.
+The SDK separates read access (provider) from wallet authority (signer). The provider handles contract reads and receipt polling. The signer handles signing and write transactions. Both are created automatically by `createConfig` — you pass your Web3 library's native objects.
 
 
 ### Tab: wagmi (React)
 
-```ts
-// Signer is derived automatically from wagmiConfig — no manual setup needed.
+```tsx
+// createConfig from @zama-fhe/react-sdk/wagmi accepts your wagmiConfig directly — see step 4 below.
 ```
 
 ### Tab: viem
@@ -1120,15 +1124,15 @@ const walletClient = createWalletClient({
 
 ```ts
 // Browser — pass the raw EIP-1193 provider
-// const ethersConfig = { ethereum: window.ethereum! };
+// createConfig({ ..., ethereum: window.ethereum! })
 
-// Node.js — pass an ethers Signer directly
+// Node.js — pass an ethers Signer (provider is extracted automatically)
 // const provider = new ethers.JsonRpcProvider(rpcUrl);
-// const ethersConfig = { signer: new ethers.Wallet(privateKey, provider) };
+// createConfig({ ..., signer: new ethers.Wallet(privateKey, provider) })
 ```
 
 
-For full type information, see the [ViemSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ViemSigner.md), [EthersSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/EthersSigner.md), and [WagmiSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WagmiSigner.md) reference pages. You can also implement the [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md) and [GenericProvider](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericProvider.md) interfaces for a custom integration (e.g. a server-side relayer).
+For full type information, see the [ViemProvider](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ViemProvider.md) / [ViemSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ViemSigner.md) and [EthersProvider](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/EthersProvider.md) / [EthersSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/EthersSigner.md) reference pages. You can also implement [GenericProvider](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericProvider.md) and [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md) for a custom integration.
 
 ### 4. Create the config
 
@@ -1683,8 +1687,8 @@ Both the core SDK and React hooks return the transaction hash. You can use it to
 ```ts
 const { txHash } = await token.shield(1000n);
 
-// Wait for confirmation using your signer
-const receipt = await signer.waitForTransactionReceipt(txHash);
+// Wait for confirmation using your provider
+const receipt = await sdk.provider.waitForTransactionReceipt(txHash);
 console.log("Confirmed in block:", receipt.blockNumber);
 ```
 
@@ -1825,11 +1829,12 @@ Both the core SDK and React hooks return the transaction hash. Use it to confirm
 const { txHash } = await token.confidentialTransfer("0xRecipient", 500n);
 
 // Wait for on-chain confirmation
-const receipt = await signer.waitForTransactionReceipt(txHash);
+const receipt = await sdk.provider.waitForTransactionReceipt(txHash);
 console.log("Confirmed in block:", receipt.blockNumber);
 
 // Optionally check updated balance
-const balance = await token.balanceOf();
+const [address] = await walletClient.getAddresses();
+const balance = await token.balanceOf(address);
 console.log("New balance:", balance);
 ```
 
@@ -1857,12 +1862,14 @@ Here is a complete component that wires up the transfer with loading and error s
 
 ```tsx
 import { useConfidentialBalance, useConfidentialTransfer } from "@zama-fhe/react-sdk";
+import { useAccount } from "wagmi";
 import { matchZamaError } from "@zama-fhe/sdk";
 
 const TOKEN = "0xEncryptedERC20Address";
 
 function TransferForm() {
-  const { data: balance } = useConfidentialBalance({ tokenAddress: TOKEN });
+  const { address } = useAccount();
+  const { data: balance } = useConfidentialBalance({ tokenAddress: TOKEN, account: address });
   const {
     mutateAsync: transfer,
     isPending,
@@ -2120,14 +2127,15 @@ const config = createConfig({
 const sdk = new ZamaSDK(config);
 const token = sdk.createToken("0xEncryptedERC20");
 
-const balance = await token.balanceOf();
+const [address] = await walletClient.getAddresses();
+const balance = await token.balanceOf(address);
 console.log(`Confidential balance: ${balance}`);
 ```
 
 
 ### 2. Understand the first-time wallet signature
 
-The first `balanceOf()` call for a token prompts the user's wallet for an EIP-712 signature. This creates FHE decrypt credentials that are cached in your storage backend. Subsequent reads are silent -- no wallet popup.
+The first `balanceOf(address)` call for a token prompts the user's wallet for an EIP-712 signature. This creates FHE decrypt credentials that are cached in your storage backend. Subsequent reads are silent -- no wallet popup.
 
 
 > [!INFO]
@@ -2204,7 +2212,8 @@ These are different situations that your UI should handle separately:
 import { NoCiphertextError } from "@zama-fhe/sdk";
 
 try {
-  const balance = await token.balanceOf();
+  const [address] = await walletClient.getAddresses();
+  const balance = await token.balanceOf(address);
   showBalance(balance); // could be 0n
 } catch (error) {
   if (error instanceof NoCiphertextError) {
@@ -2264,7 +2273,9 @@ The React SDK provides hooks that handle polling, caching, and React Query integ
 
 ```tsx
 import { useConfidentialBalance } from "@zama-fhe/react-sdk";
+import { useAccount } from "wagmi";
 
+const { address } = useAccount();
 const {
   data: balance,
   isLoading,
@@ -2272,6 +2283,7 @@ const {
 } = useConfidentialBalance(
   {
     tokenAddress: "0xToken",
+    account: address,
   },
   { refetchInterval: 5_000 },
 );
@@ -2281,9 +2293,12 @@ const {
 
 ```tsx
 import { useConfidentialBalances } from "@zama-fhe/react-sdk";
+import { useAccount } from "wagmi";
 
+const { address } = useAccount();
 const { data } = useConfidentialBalances({
   tokenAddresses: ["0xTokenA", "0xTokenB", "0xTokenC"],
+  account: address,
 });
 
 const tokenABalance = data?.results.get("0xTokenA");
@@ -2361,6 +2376,7 @@ Every SDK error is an instance of `ZamaError`, which extends the native `Error` 
 | `DelegationSelfNotAllowedError`        | `DELEGATION_SELF_NOT_ALLOWED`       | Delegation cannot target self                            |
 | `DelegationCooldownError`              | `DELEGATION_COOLDOWN`               | Only one delegate/revoke per tuple per block             |
 | `DelegationNotFoundError`              | `DELEGATION_NOT_FOUND`              | No active delegation for this tuple                      |
+| `SignerRequiredError`                  | `SIGNER_REQUIRED`                   | Write/sign/decrypt called without a signer               |
 | `DelegationExpiredError`               | `DELEGATION_EXPIRED`                | The delegation has expired                               |
 
 ### 2. Catch with instanceof
@@ -2436,6 +2452,7 @@ Here is a quick reference for the most common errors and how to respond:
 | `InsufficientERC20BalanceError`        | Show the user their public token balance. They need more tokens before shielding.                                 |
 | `BalanceCheckUnavailableError`         | Call `token.allow()` to cache credentials, or pass `skipBalanceCheck: true` to bypass (useful for smart wallets). |
 | `ERC20ReadFailedError`                 | Check network connectivity and RPC endpoint. Retry the shield operation.                                          |
+| `SignerRequiredError`                  | Connect a wallet. The operation requires a signer but the SDK was configured without one.                         |
 | `DelegationSelfNotAllowedError`        | Cannot delegate to yourself. Use a different delegate address.                                                    |
 | `DelegationCooldownError`              | Wait for the next block before retrying delegate/revoke on the same tuple.                                        |
 | `DelegationNotFoundError`              | No active delegation exists. Verify the delegator, delegate, and contract addresses.                              |
@@ -2452,7 +2469,7 @@ This is a common source of confusion. They require different UI treatments:
 import { NoCiphertextError } from "@zama-fhe/sdk";
 
 try {
-  const balance = await token.balanceOf();
+  const balance = await token.balanceOf(address);
   // balance could be 0n -- that means "zero balance"
   showBalance(balance);
 } catch (error) {
@@ -2621,7 +2638,7 @@ await token.shield(1000n);
 await token.confidentialTransfer("0xRecipient", 500n);
 
 // Decrypt a balance
-const balance = await token.balanceOf();
+const balance = await token.balanceOf(account.address);
 ```
 
 See the [Token Operations](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md) reference for the full API.
@@ -2838,7 +2855,8 @@ The token API works exactly the same:
 ```ts
 const token = sdk.createToken("0xEncryptedERC20");
 await token.shield(1000n);
-const balance = await token.balanceOf();
+const [address] = await walletClient.getAddresses();
+const balance = await token.balanceOf(address);
 ```
 
 ### 5. (Optional) Create a custom config for your own chain
@@ -3066,10 +3084,13 @@ Any component that imports from `@zama-fhe/react-sdk` must be a Client Component
 "use client";
 
 import { useConfidentialBalance } from "@zama-fhe/react-sdk";
+import { useAccount } from "wagmi";
 
-export function TokenBalance({ address }: { address: string }) {
+export function TokenBalance({ tokenAddress }: { tokenAddress: string }) {
+  const { address } = useAccount();
   const { data: balance, isLoading } = useConfidentialBalance({
-    tokenAddress: address,
+    tokenAddress,
+    account: address,
   });
 
   if (isLoading) return <span>Loading...</span>;
@@ -3106,9 +3127,7 @@ const mySepolia = {
 const zamaConfig = createZamaConfig({
   chains: [mySepolia],
   wagmiConfig,
-  relayers: {
-    [mySepolia.id]: web(),
-  },
+  relayers: { [mySepolia.id]: web() },
 });
 
 const queryClient = new QueryClient();
@@ -3181,7 +3200,7 @@ export default function PortfolioPage() {
   return (
     <div>
       <h1>My Portfolio</h1>
-      <TokenBalance address="0xEncryptedERC20" />
+      <TokenBalance tokenAddress="0xEncryptedERC20" />
     </div>
   );
 }
@@ -3192,10 +3211,13 @@ export default function PortfolioPage() {
 "use client";
 
 import { useConfidentialBalance } from "@zama-fhe/react-sdk";
+import { useAccount } from "wagmi";
 
-export function TokenBalance({ address }: { address: string }) {
+export function TokenBalance({ tokenAddress }: { tokenAddress: string }) {
+  const { address } = useAccount();
   const { data: balance, isLoading } = useConfidentialBalance({
-    tokenAddress: address,
+    tokenAddress,
+    account: address,
   });
 
   if (isLoading) return <span>Decrypting...</span>;
@@ -3348,12 +3370,14 @@ Here is a complete flow that encrypts a value, sends it to a custom FHE contract
 
 ```tsx
 import { useEncrypt, useUserDecrypt, useZamaSDK } from "@zama-fhe/react-sdk";
+import { useAccount } from "wagmi";
 import { bytesToHex } from "viem";
 import { useState, type FormEvent } from "react";
 
 function ConfidentialRoundTrip() {
   const sdk = useZamaSDK();
   const encrypt = useEncrypt();
+  const { address: userAddress } = useAccount();
   const [handles, setHandles] = useState<{ handle: string; contractAddress: `0x${string}` }[]>([]);
 
   // Fires when handles are non-empty.
@@ -3362,18 +3386,17 @@ function ConfidentialRoundTrip() {
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    const userAddress = await sdk.signer.getAddress();
     const contractAddress = "0xYourContract" as `0x${string}`;
 
     // 1. Encrypt
     const encrypted = await encrypt.mutateAsync({
       values: [{ value: 42n, type: "euint64" }],
       contractAddress,
-      userAddress,
+      userAddress: userAddress!,
     });
 
     // 2. Send to contract
-    await sdk.signer.writeContract({
+    await sdk.signer!.writeContract({
       address: contractAddress,
       abi: yourContractABI,
       functionName: "store",
@@ -3381,7 +3404,7 @@ function ConfidentialRoundTrip() {
     });
 
     // 3. Read the handle back — setting handles triggers decryption
-    const handle = (await sdk.signer.readContract({
+    const handle = (await sdk.provider.readContract({
       address: contractAddress,
       abi: yourContractABI,
       functionName: "getHandle",
@@ -3551,22 +3574,24 @@ After encryption, pass the handles and proof to your custom FHE contract:
 
 ```tsx
 import { useEncrypt, useZamaSDK } from "@zama-fhe/react-sdk";
+import { useAccount } from "wagmi";
 import { bytesToHex } from "viem";
 
 function ConfidentialAction() {
   const sdk = useZamaSDK();
   const encrypt = useEncrypt();
+  const { address } = useAccount();
 
   const handleAction = async () => {
     // 1. Encrypt the value
     const { handles, inputProof } = await encrypt.mutateAsync({
       values: [{ value: 1000n, type: "euint64" }],
       contractAddress: "0xYourContract",
-      userAddress: await sdk.signer.getAddress(),
+      userAddress: address!,
     });
 
     // 2. Call your contract with the encrypted data
-    await sdk.signer.writeContract({
+    await sdk.signer!.writeContract({
       address: "0xYourContract",
       abi: yourContractABI,
       functionName: "yourFunction",
@@ -3640,6 +3665,7 @@ function DecryptGate({
 
 ```tsx
 import { useConfidentialBalance } from "@zama-fhe/react-sdk";
+import { useAccount } from "wagmi";
 import { formatUnits, type Address } from "viem";
 
 function ConfidentialBalance({
@@ -3651,7 +3677,8 @@ function ConfidentialBalance({
   decimals: number;
   symbol: string;
 }) {
-  const { data, isLoading } = useConfidentialBalance({ tokenAddress });
+  const { address } = useAccount();
+  const { data, isLoading } = useConfidentialBalance({ tokenAddress, account: address });
 
   return (
     <p>
@@ -3906,9 +3933,9 @@ const sdk = new ZamaSDK({
 
 ### signer
 
-`GenericSigner`
+`GenericSigner | undefined`
 
-Wallet interface for signing transactions and typed data. Use `ViemSigner`, `EthersSigner`, `WagmiSigner`, or implement `GenericSigner`.
+Wallet interface for signing transactions and typed data. Use `ViemSigner`, `EthersSigner`, or implement `GenericSigner`. Optional — omit for read-only usage (indexers, SSR, pre-wallet-connect states). Signer-dependent operations throw `SignerRequiredError` when invoked without a signer.
 
 ```ts
 import { ViemSigner } from "@zama-fhe/sdk/viem";
@@ -4057,9 +4084,8 @@ The cache is cleared automatically on:
 - Wallet disconnect, account change, or chain change — clears all entries
 
 ```ts
-// Manual clear for the current signer
-const address = await sdk.signer.getAddress();
-await sdk.cache.clearForRequester(address);
+// Manual clear for a specific address
+await sdk.cache.clearForRequester("0xYourAddress");
 
 // Clear everything
 await sdk.cache.clearAll();
@@ -4227,6 +4253,19 @@ emitter.on(ZamaSDKEvents.DecryptError, ({ error, durationMs, handles }: DecryptE
 > [!INFO]
 > This is the SDK-level entry point for user decryption. The method is named `userDecrypt` (not `decrypt`) because it requires the connected wallet's credentials — distinguishing it from gateway-level decryption that happens on-chain without user authentication. In React, use [`useUserDecrypt`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUserDecrypt.md) which wraps this method with TanStack Query semantics.
 
+
+### onIdentityChange
+
+`(listener: (change: SignerIdentityChange) => void) => () => void`
+
+Subscribe to signer identity transitions (connect, disconnect, account change, chain change). Returns an unsubscribe function. Each transition carries `previous` and `next` identity objects (`{ address, chainId }`).
+
+```ts
+const unsubscribe = sdk.onIdentityChange(({ previous, next }) => {
+  if (!next) console.log("Wallet disconnected");
+  else console.log(`Switched to ${next.address} on chain ${next.chainId}`);
+});
+```
 
 ### revokeSession
 
@@ -4699,20 +4738,17 @@ for (const [address, error] of errors) {
 
 ### balanceOf
 
-`(owner?: Address) => Promise<bigint>`
+`(owner: Address) => Promise<bigint>`
 
-Returns the decrypted confidential balance. First call prompts a wallet signature; subsequent calls use cached credentials.
+Returns the decrypted confidential balance for the given address. First call prompts a wallet signature; subsequent calls use cached credentials.
 
 ```ts
-const balance = await readonlyToken.balanceOf();
-
-// Another address
-const otherBalance = await readonlyToken.balanceOf("0xOwnerAddress");
+const balance = await readonlyToken.balanceOf("0xOwnerAddress");
 ```
 
 ### confidentialBalanceOf
 
-`(owner?: Address) => Promise<Hex>`
+`(owner: Address) => Promise<Hex>`
 
 Returns the raw encrypted handle without decrypting.
 
@@ -5450,333 +5486,112 @@ The cleartext relayer implements the full `RelayerSDK` interface:
 - [RelayerNode](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerNode.md) — Node.js relayer with real FHE
 - [Network Presets](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/network-presets.md) — production network configs
 
-## ViemSigner
+## GenericProvider
 
 - source_type: official-doc
-- source_path: docs/gitbook/src/reference/sdk/ViemSigner.md
-- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ViemSigner.md
-- logical_path: reference/sdk/ViemSigner
+- source_path: docs/gitbook/src/reference/sdk/GenericProvider.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericProvider.md
+- logical_path: reference/sdk/GenericProvider
 
-# ViemSigner
+# GenericProvider
 
-Signer adapter that wraps viem wallet and public clients for the SDK. Implements [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md).
+Interface that all provider adapters must implement for read-only chain access. You only need this if you are building a custom provider -- otherwise use [ViemProvider](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ViemProvider.md), [EthersProvider](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/EthersProvider.md), or the wagmi `createConfig` which builds one internally.
 
 ## Import
 
 ```ts
-import { ViemSigner } from "@zama-fhe/sdk/viem";
+import type { GenericProvider } from "@zama-fhe/sdk";
 ```
 
-## Usage
-
-
-### Tab: Full mode
+## Definition
 
 ```ts
-import { createWalletClient, createPublicClient, http } from "viem";
-import { ViemSigner } from "@zama-fhe/sdk/viem";
-
-const walletClient = createWalletClient({
-  /* ... */
-});
-const publicClient = createPublicClient({
-  /* ... */
-});
-
-const signer = new ViemSigner({ walletClient, publicClient });
+interface GenericProvider {
+  getChainId(): Promise<number>;
+  readContract(config: ReadContractConfig): Promise<unknown>;
+  waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
+  getBlockTimestamp(): Promise<bigint>;
+}
 ```
 
-### Tab: Read-only mode
+## Usage with `createConfig`
+
+Pass a custom provider to the generic `createConfig` from `@zama-fhe/sdk`:
 
 ```ts
-import { createPublicClient, http } from "viem";
-import { ViemSigner } from "@zama-fhe/sdk/viem";
-
-const publicClient = createPublicClient({
-  /* ... */
-});
-
-const signer = new ViemSigner({ publicClient });
-```
-
-
-
-> [!WARNING]
-> In read-only mode, calling `getAddress`, `signTypedData`, or `writeContract` throws at runtime. Only use read-only mode for chain reads without a connected wallet.
-
-
-## Constructor
-
-### publicClient
-
-`PublicClient`
-
-Viem public client for reading chain data.
-
-```ts
-const signer = new ViemSigner({
-  publicClient,
-});
-```
-
----
-
-### walletClient
-
-`WalletClient | undefined`
-
-Viem wallet client for signing transactions. Omit for read-only mode.
-
-```ts
-const signer = new ViemSigner({
-  walletClient,
-  publicClient,
-});
-```
-
-### ethereum
-
-`EIP1193Provider | undefined`
-
-Raw EIP-1193 provider for wallet lifecycle event subscriptions. When provided, `subscribe()` listens for disconnect and account changes. Omit if you handle lifecycle events manually.
-
-```ts
-const signer = new ViemSigner({
-  walletClient,
-  publicClient,
-  ethereum: window.ethereum,
-});
-```
-
-## Methods
-
-All methods are inherited from [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md).
-
-| Method                        | Read-only | Full                        |
-| ----------------------------- | --------- | --------------------------- |
-| `getChainId()`                | Works     | Works                       |
-| `getAddress()`                | Throws    | Works                       |
-| `signTypedData()`             | Throws    | Works                       |
-| `writeContract()`             | Throws    | Works                       |
-| `readContract()`              | Works     | Works                       |
-| `waitForTransactionReceipt()` | Works     | Works                       |
-| `subscribe()`                 | N/A       | Works (requires `ethereum`) |
-
-
-> [!INFO]
-> `subscribe()` is only available when you pass the `ethereum` option. Without it, wire wallet lifecycle events manually to `sdk.revokeSession()`. See the [Configuration guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md).
-
-
-## Related
-
-- [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md) -- interface this class implements
-- [EthersSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/EthersSigner.md) -- ethers alternative
-- [WagmiSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WagmiSigner.md) -- React adapter with auto-revoke
-- [Configuration guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) -- full setup walkthrough
-
-## EthersSigner
-
-- source_type: official-doc
-- source_path: docs/gitbook/src/reference/sdk/EthersSigner.md
-- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/EthersSigner.md
-- logical_path: reference/sdk/EthersSigner
-
-# EthersSigner
-
-Signer adapter that wraps ethers providers and signers for the SDK. Implements [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md).
-
-## Import
-
-```ts
-import { EthersSigner } from "@zama-fhe/sdk/ethers";
-```
-
-## Usage
-
-
-### Tab: Browser
-
-```ts
-import { EthersSigner } from "@zama-fhe/sdk/ethers";
-
-const signer = new EthersSigner({ ethereum: window.ethereum! });
-```
-
-### Tab: Node.js
-
-```ts
-import { ethers } from "ethers";
-import { EthersSigner } from "@zama-fhe/sdk/ethers";
-
-const provider = new ethers.JsonRpcProvider(rpcUrl);
-const wallet = new ethers.Wallet(privateKey, provider);
-
-const signer = new EthersSigner({ signer: wallet });
-```
-
-### Tab: Read-only
-
-```ts
-import { ethers } from "ethers";
-import { EthersSigner } from "@zama-fhe/sdk/ethers";
-
-const provider = new ethers.JsonRpcProvider(rpcUrl);
-
-const signer = new EthersSigner({ provider });
-```
-
-
-## Constructor
-
-Pass exactly one of the three parameters below. The SDK infers the mode from which key is present.
-
-### ethereum
-
-`EIP1193Provider`
-
-Raw EIP-1193 provider from the browser wallet (e.g. `window.ethereum`). Enables `subscribe()` for automatic session revocation on disconnect and account change.
-
-```ts
-const signer = new EthersSigner({
-  ethereum: window.ethereum!,
-});
-```
-
----
-
-### signer
-
-`ethers.Signer | undefined`
-
-Ethers signer for server-side or scripted use. `subscribe()` is not available in this mode.
-
-```ts
-const provider = new ethers.JsonRpcProvider(rpcUrl);
-const wallet = new ethers.Wallet(privateKey, provider);
-
-const signer = new EthersSigner({
-  signer: wallet,
-});
-```
-
----
-
-### provider
-
-`ethers.Provider | undefined`
-
-Ethers provider for read-only chain access. Signing methods throw at runtime.
-
-```ts
-const provider = new ethers.JsonRpcProvider(rpcUrl);
-
-const signer = new EthersSigner({
-  provider,
-});
-```
-
-## Methods
-
-All methods are inherited from [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md).
-
-| Method                        | Browser | Node.js | Read-only |
-| ----------------------------- | ------- | ------- | --------- |
-| `getChainId()`                | Works   | Works   | Works     |
-| `getAddress()`                | Works   | Works   | Throws    |
-| `signTypedData()`             | Works   | Works   | Throws    |
-| `writeContract()`             | Works   | Works   | Throws    |
-| `readContract()`              | Works   | Works   | Works     |
-| `waitForTransactionReceipt()` | Works   | Works   | Works     |
-| `subscribe()`                 | Works   | N/A     | N/A       |
-
-
-> [!INFO]
-> Only the browser mode (passing `ethereum`) supports `subscribe()`. In Node.js mode, wire wallet events manually to `sdk.revokeSession()` if needed.
-
-
-## Related
-
-- [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md) -- interface this class implements
-- [ViemSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ViemSigner.md) -- viem alternative
-- [WagmiSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WagmiSigner.md) -- React adapter with auto-revoke
-- [Configuration guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) -- full setup walkthrough
-
-## WagmiSigner
-
-- source_type: official-doc
-- source_path: docs/gitbook/src/reference/sdk/WagmiSigner.md
-- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WagmiSigner.md
-- logical_path: reference/sdk/WagmiSigner
-
-# WagmiSigner
-
-React-only signer adapter that wraps a wagmi config with automatic session revocation. Implements [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md).
-
-## Import
-
-```ts
-import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
-```
-
-## Usage
-
-```ts
-import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
-import { config } from "./wagmi"; // your wagmi config
-
-const signer = new WagmiSigner({ config });
-```
-
-
-> [!WARNING]
-> `WagmiSigner` is only available from `@zama-fhe/react-sdk/wagmi`. It is not exported from the base `@zama-fhe/sdk` package.
-
-
-## Constructor
-
-### config
-
-`WagmiConfig`
-
-Wagmi configuration object created by `createConfig()`. The signer uses it to read chain state, send transactions, and subscribe to connection events.
-
-```ts
-import { createConfig, http } from "wagmi";
-import { sepolia } from "wagmi/chains";
+import { createConfig, ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
+import { node } from "@zama-fhe/sdk/node";
+import { sepolia } from "@zama-fhe/sdk/chains";
 
 const config = createConfig({
   chains: [sepolia],
-  transports: { [sepolia.id]: http() },
+  provider: myCustomProvider,
+  storage: memoryStorage,
+  relayers: { [sepolia.id]: node({ poolSize: 4 }) },
 });
+const sdk = new ZamaSDK(config);
+```
 
-const signer = new WagmiSigner({
-  config,
-});
+## Implementing a custom provider
+
+```ts
+import type { GenericProvider } from "@zama-fhe/sdk";
+
+class MyProvider implements GenericProvider {
+  async getChainId() {
+    /* ... */
+  }
+  async readContract(config) {
+    /* ... */
+  }
+  async waitForTransactionReceipt(hash) {
+    /* ... */
+  }
+  async getBlockTimestamp() {
+    /* ... */
+  }
+}
 ```
 
 ## Methods
 
-All methods are inherited from [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md).
+### getChainId
 
-### subscribe()
+```ts
+getChainId(): Promise<number>
+```
 
-`WagmiSigner` implements the optional `subscribe()` method. It uses wagmi's `watchConnection` internally to detect:
+Return the chain ID this provider is connected to.
 
-- **Disconnect** -- clears the session signature so the next connection requires a fresh sign.
-- **Account change** -- revokes the previous account's session because the EIP-712 signature is address-scoped.
+### readContract
 
-You do not need to wire any events manually. The SDK calls `subscribe()` during initialization and handles cleanup on `terminate()`.
+```ts
+readContract(config: ReadContractConfig): Promise<unknown>
+```
 
+Execute a read-only contract call. `ReadContractConfig` contains `address`, `abi`, `functionName`, and `args`.
 
-> [!INFO]
-> Chain switches do **not** trigger revocation. Credentials are keyed by `address + chainId`, so each chain maintains an independent session.
+### waitForTransactionReceipt
 
+```ts
+waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>
+```
+
+Poll for a transaction receipt by hash.
+
+### getBlockTimestamp
+
+```ts
+getBlockTimestamp(): Promise<bigint>
+```
+
+Return the timestamp of the latest block.
 
 ## Related
 
-- [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md) -- interface this class implements
-- [ViemSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ViemSigner.md) -- viem alternative (manual lifecycle wiring)
-- [EthersSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/EthersSigner.md) -- ethers alternative
+- [ViemProvider](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ViemProvider.md) -- viem implementation
+- [EthersProvider](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/EthersProvider.md) -- ethers implementation
+- [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md) -- wallet authority interface
 - [Configuration guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) -- full setup walkthrough
 
 ## GenericSigner
@@ -5788,7 +5603,7 @@ You do not need to wire any events manually. The SDK calls `subscribe()` during 
 
 # GenericSigner
 
-Interface that all signer adapters must implement for the SDK to interact with wallets. You only need this if you are building a custom signer -- otherwise use [ViemSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ViemSigner.md), [EthersSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/EthersSigner.md), or [WagmiSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WagmiSigner.md).
+Interface that all signer adapters must implement for the SDK to interact with wallets. You only need this if you are building a custom signer -- otherwise use [ViemSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ViemSigner.md) or [EthersSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/EthersSigner.md).
 
 ## Import
 
@@ -5904,14 +5719,354 @@ When `previous` is present, the SDK revokes that previous identity's session sig
 
 
 > [!INFO]
-> Implementing `subscribe()` is optional but recommended. Without it, stale sessions persist until TTL expiry, which can create confusing UX when users switch accounts. See [`WagmiSigner`](https://github.com/zama-ai/token-sdk/blob/main/packages/react-sdk/src/wagmi/wagmi-signer.ts) for a reference implementation.
+> Implementing `subscribe()` is optional but recommended. Without it, stale sessions persist until TTL expiry, which can create confusing UX when users switch accounts.
 
 
 ## Related
 
+- [GenericProvider](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericProvider.md) -- read-only chain access interface
 - [ViemSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ViemSigner.md) -- viem implementation
 - [EthersSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/EthersSigner.md) -- ethers implementation
-- [WagmiSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WagmiSigner.md) -- wagmi implementation with auto-revoke
+- [Configuration guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) -- full setup walkthrough
+
+## ViemProvider
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/reference/sdk/ViemProvider.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ViemProvider.md
+- logical_path: reference/sdk/ViemProvider
+
+# ViemProvider
+
+Provider adapter that wraps a viem `PublicClient` for read-only chain access. Implements [GenericProvider](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericProvider.md).
+
+## Import
+
+```ts
+import { ViemProvider } from "@zama-fhe/sdk/viem";
+```
+
+## Usage
+
+```ts
+import { createPublicClient, http } from "viem";
+import { sepolia } from "viem/chains";
+import { ViemProvider } from "@zama-fhe/sdk/viem";
+
+const publicClient = createPublicClient({
+  chain: sepolia,
+  transport: http("https://sepolia.infura.io/v3/YOUR_KEY"),
+});
+
+const provider = new ViemProvider({ publicClient });
+```
+
+
+> [!INFO]
+> You rarely need to instantiate `ViemProvider` directly. The viem `createConfig` builds one from the `publicClient` you pass. Use this class when constructing `ZamaSDK` manually or when using the generic `createConfig`.
+
+
+## Constructor
+
+### publicClient
+
+`PublicClient`
+
+Viem public client for reading chain data.
+
+```ts
+const provider = new ViemProvider({
+  publicClient,
+});
+```
+
+## Methods
+
+All methods are inherited from [GenericProvider](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericProvider.md).
+
+## Related
+
+- [GenericProvider](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericProvider.md) -- interface this class implements
+- [ViemSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ViemSigner.md) -- companion signer adapter
+- [EthersProvider](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/EthersProvider.md) -- ethers alternative
+- [Configuration guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) -- full setup walkthrough
+
+## ViemSigner
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/reference/sdk/ViemSigner.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ViemSigner.md
+- logical_path: reference/sdk/ViemSigner
+
+# ViemSigner
+
+Signer adapter that wraps a viem `WalletClient` for wallet operations. Implements [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md).
+
+## Import
+
+```ts
+import { ViemSigner } from "@zama-fhe/sdk/viem";
+```
+
+## Usage
+
+```ts
+import { createWalletClient, custom } from "viem";
+import { sepolia } from "viem/chains";
+import { ViemSigner } from "@zama-fhe/sdk/viem";
+
+const walletClient = createWalletClient({
+  chain: sepolia,
+  transport: custom(window.ethereum!),
+});
+
+const signer = new ViemSigner({ walletClient, ethereum: window.ethereum });
+```
+
+
+> [!INFO]
+> You rarely need to instantiate `ViemSigner` directly. The viem `createConfig` builds one from the `walletClient` you pass. Use this class when constructing `ZamaSDK` manually or when using the generic `createConfig`.
+
+
+## Constructor
+
+### walletClient
+
+`WalletClient`
+
+Viem wallet client for signing transactions and typed data.
+
+```ts
+const signer = new ViemSigner({
+  walletClient,
+});
+```
+
+---
+
+### ethereum
+
+`EIP1193Provider | undefined`
+
+Raw EIP-1193 provider for wallet lifecycle event subscriptions. When provided, `subscribe()` listens for disconnect, account change, and chain change events. Omit if you handle lifecycle events manually.
+
+```ts
+const signer = new ViemSigner({
+  walletClient,
+  ethereum: window.ethereum,
+});
+```
+
+## Methods
+
+All methods are inherited from [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md).
+
+| Method            | Behavior                    |
+| ----------------- | --------------------------- |
+| `getChainId()`    | From wallet client          |
+| `getAddress()`    | From wallet client          |
+| `signTypedData()` | Via wallet client           |
+| `writeContract()` | Via wallet client           |
+| `subscribe()`     | Works (requires `ethereum`) |
+
+
+> [!INFO]
+> `subscribe()` is only available when you pass the `ethereum` option. Without it, the SDK still works but stale sessions persist until TTL expiry when users switch accounts.
+
+
+## Related
+
+- [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md) -- interface this class implements
+- [ViemProvider](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ViemProvider.md) -- companion provider adapter
+- [EthersSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/EthersSigner.md) -- ethers alternative
+- [Configuration guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) -- full setup walkthrough
+
+## EthersProvider
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/reference/sdk/EthersProvider.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/EthersProvider.md
+- logical_path: reference/sdk/EthersProvider
+
+# EthersProvider
+
+Provider adapter that wraps an ethers `Provider` or EIP-1193 source for read-only chain access. Implements [GenericProvider](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericProvider.md).
+
+## Import
+
+```ts
+import { EthersProvider } from "@zama-fhe/sdk/ethers";
+```
+
+## Usage
+
+
+### Tab: ethers Provider
+
+```ts
+import { JsonRpcProvider } from "ethers";
+import { EthersProvider } from "@zama-fhe/sdk/ethers";
+
+const ethersProvider = new JsonRpcProvider("https://sepolia.infura.io/v3/YOUR_KEY");
+const provider = new EthersProvider({ provider: ethersProvider });
+```
+
+### Tab: EIP-1193
+
+```ts
+import { EthersProvider } from "@zama-fhe/sdk/ethers";
+
+const provider = new EthersProvider({ ethereum: window.ethereum! });
+```
+
+
+
+> [!INFO]
+> You rarely need to instantiate `EthersProvider` directly. The ethers `createConfig` builds one from the configuration you pass. Use this class when constructing `ZamaSDK` manually or when using the generic `createConfig`.
+
+
+## Constructor
+
+Pass exactly one of the two parameters below.
+
+### provider
+
+`ethers.Provider`
+
+Pre-built ethers provider (e.g. `JsonRpcProvider`, `WebSocketProvider`).
+
+```ts
+const provider = new EthersProvider({
+  provider: new JsonRpcProvider(rpcUrl),
+});
+```
+
+---
+
+### ethereum
+
+`EIP1193Provider`
+
+Raw EIP-1193 provider from the browser wallet. The adapter wraps it in a `BrowserProvider` internally.
+
+```ts
+const provider = new EthersProvider({
+  ethereum: window.ethereum!,
+});
+```
+
+## Methods
+
+All methods are inherited from [GenericProvider](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericProvider.md).
+
+## Related
+
+- [GenericProvider](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericProvider.md) -- interface this class implements
+- [EthersSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/EthersSigner.md) -- companion signer adapter
+- [ViemProvider](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ViemProvider.md) -- viem alternative
+- [Configuration guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) -- full setup walkthrough
+
+## EthersSigner
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/reference/sdk/EthersSigner.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/EthersSigner.md
+- logical_path: reference/sdk/EthersSigner
+
+# EthersSigner
+
+Signer adapter that wraps an ethers `Signer` or EIP-1193 source for wallet operations. Implements [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md).
+
+## Import
+
+```ts
+import { EthersSigner } from "@zama-fhe/sdk/ethers";
+```
+
+## Usage
+
+
+### Tab: Browser
+
+```ts
+import { EthersSigner } from "@zama-fhe/sdk/ethers";
+
+const signer = new EthersSigner({ ethereum: window.ethereum! });
+```
+
+### Tab: Node.js
+
+```ts
+import { Wallet, JsonRpcProvider } from "ethers";
+import { EthersSigner } from "@zama-fhe/sdk/ethers";
+
+const provider = new JsonRpcProvider(rpcUrl);
+const wallet = new Wallet(privateKey, provider);
+
+const signer = new EthersSigner({ signer: wallet });
+```
+
+
+
+> [!INFO]
+> You rarely need to instantiate `EthersSigner` directly. The ethers `createConfig` builds one from the configuration you pass. Use this class when constructing `ZamaSDK` manually or when using the generic `createConfig`.
+
+
+## Constructor
+
+Pass exactly one of the two parameters below.
+
+### ethereum
+
+`EIP1193Provider`
+
+Raw EIP-1193 provider from the browser wallet (e.g. `window.ethereum`). Enables `subscribe()` for automatic session revocation on disconnect and account change.
+
+```ts
+const signer = new EthersSigner({
+  ethereum: window.ethereum!,
+});
+```
+
+---
+
+### signer
+
+`ethers.Signer`
+
+Ethers signer for server-side or scripted use. `subscribe()` is not available in this mode.
+
+```ts
+const provider = new JsonRpcProvider(rpcUrl);
+const wallet = new Wallet(privateKey, provider);
+
+const signer = new EthersSigner({
+  signer: wallet,
+});
+```
+
+## Methods
+
+All methods are inherited from [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md).
+
+| Method            | Browser | Node.js |
+| ----------------- | ------- | ------- |
+| `getChainId()`    | Works   | Works   |
+| `getAddress()`    | Works   | Works   |
+| `signTypedData()` | Works   | Works   |
+| `writeContract()` | Works   | Works   |
+| `subscribe()`     | Works   | N/A     |
+
+
+> [!INFO]
+> Only the browser mode (passing `ethereum`) supports `subscribe()`. In Node.js mode, stale sessions persist until TTL expiry when wallet identity changes.
+
+
+## Related
+
+- [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md) -- interface this class implements
+- [EthersProvider](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/EthersProvider.md) -- companion provider adapter
+- [ViemSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ViemSigner.md) -- viem alternative
 - [Configuration guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) -- full setup walkthrough
 
 ## GenericStorage
@@ -6114,6 +6269,7 @@ import {
   DelegationContractIsSelfError,
   DelegationExpirationTooSoonError,
   DelegationNotPropagatedError,
+  SignerRequiredError,
   AclPausedError,
 } from "@zama-fhe/sdk";
 ```
@@ -6173,9 +6329,30 @@ The `_` wildcard catches any `ZamaError` not explicitly handled.
 | `DelegationContractIsSelfError`         | `DELEGATION_CONTRACT_IS_SELF`         | Contract address equals caller                               |
 | `DelegationExpirationTooSoonError`      | `DELEGATION_EXPIRATION_TOO_SOON`      | Expiration date less than 1 hour in the future               |
 | `DelegationNotPropagatedError`          | `DELEGATION_NOT_PROPAGATED`           | Delegation exists on L1 but hasn't synced to gateway yet     |
+| `SignerRequiredError`                   | `SIGNER_REQUIRED`                     | Write/sign/decrypt called without a signer                   |
 | `AclPausedError`                        | `ACL_PAUSED`                          | ACL contract is paused                                       |
 
 ## Error details
+
+### SignerRequiredError
+
+**Code:** `SIGNER_REQUIRED`
+
+Thrown when a write, sign, or decrypt operation is called on an SDK instance configured without a signer. The error carries the `operation` name that was attempted.
+
+```ts
+import { SignerRequiredError } from "@zama-fhe/sdk";
+
+try {
+  await token.shield(1000n);
+} catch (error) {
+  if (error instanceof SignerRequiredError) {
+    showPrompt("Connect a wallet to perform this action");
+  }
+}
+```
+
+**How to handle:** Prompt the user to connect a wallet. Once connected, reconfigure the SDK with a signer.
 
 ### SigningRejectedError
 
@@ -6185,7 +6362,7 @@ Thrown when the user clicks "Reject" in their wallet popup during an EIP-712 sig
 
 ```ts
 try {
-  await token.balanceOf();
+  await token.balanceOf(address);
 } catch (error) {
   if (error instanceof SigningRejectedError) {
     showPrompt("Approve the signature to decrypt your balance");
@@ -6304,7 +6481,7 @@ The account has no encrypted balance on-chain — it has never shielded tokens f
 
 ```ts
 try {
-  const balance = await token.balanceOf();
+  const balance = await token.balanceOf(address);
   showBalance(balance); // could be 0n
 } catch (error) {
   if (error instanceof NoCiphertextError) {
@@ -6341,7 +6518,7 @@ These are distinct states:
 
 ```ts
 try {
-  const balance = await token.balanceOf();
+  const balance = await token.balanceOf(address);
   showBalance(balance); // 0n is a valid balance
 } catch (error) {
   if (error instanceof NoCiphertextError) {
@@ -8047,14 +8224,17 @@ import { useConfidentialBalance } from "@zama-fhe/react-sdk";
 
 ```tsx
 import { useConfidentialBalance } from "@zama-fhe/react-sdk";
+import { useAccount } from "wagmi";
 
 function TokenBalance({ tokenAddress }: { tokenAddress: `0x${string}` }) {
+  const { address } = useAccount();
   const {
     data: balance,
     isLoading,
     error,
   } = useConfidentialBalance({
     tokenAddress,
+    account: address,
   });
 
   if (isLoading) return <span>Decrypting...</span>;
@@ -8069,6 +8249,7 @@ function TokenBalance({ tokenAddress }: { tokenAddress: `0x${string}` }) {
 import { createConfig } from "@zama-fhe/react-sdk/wagmi";
 import { web } from "@zama-fhe/sdk/web";
 import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
+import { config as wagmiConfig } from "./wagmi";
 
 const mySepolia = {
   ...sepolia,
@@ -8080,7 +8261,7 @@ const myMainnet = {
   relayerUrl: "https://your-app.com/api/relayer/1",
 } as const satisfies FheChain;
 
-const zamaConfig = createConfig({
+export const zamaConfig = createConfig({
   chains: [mySepolia, myMainnet],
   relayers: {
     [mySepolia.id]: web(),
@@ -8109,25 +8290,29 @@ Contract address of the confidential ERC-20 token.
 ```tsx
 const { data } = useConfidentialBalance({
   tokenAddress: "0xToken",
+  account: address,
 });
 ```
 
 
 ---
 
-### owner
+### account
 
 `Address | undefined`
 
-Address whose balance to read. Defaults to the connected wallet address from the signer.
+Address whose balance to read. The query is disabled while `undefined`. Pass the connected wallet address from wagmi's `useAccount()`.
 
 
 ### Tab: component.tsx
 
 ```tsx
+import { useAccount } from "wagmi";
+
+const { address } = useAccount();
 const { data } = useConfidentialBalance({
   tokenAddress: "0xToken",
-  owner: "0xOwner",
+  account: address,
 });
 ```
 
@@ -8281,7 +8466,7 @@ function Portfolio({ tokens }: { tokens: `0x${string}`[] }) {
 
 ```ts
 // config.ts
-import { createConfig } from "@zama-fhe/react-sdk/wagmi";
+import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 import { web } from "@zama-fhe/sdk/web";
 import { sepolia } from "@zama-fhe/sdk/chains";
 import type { FheChain } from "@zama-fhe/sdk/chains";
@@ -8289,15 +8474,19 @@ import { config as wagmiConfig } from "./wagmi";
 
 const mySepolia = {
   ...sepolia,
-  relayerUrl: "https://your-relayer.example.com/v2",
-  network: "https://your-rpc.example.com",
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
 } as const satisfies FheChain;
 
-export const zamaConfig = createConfig({
+export const zamaConfig = createZamaConfig({
   chains: [mySepolia],
-  relayers: { [mySepolia.id]: web() },
   wagmiConfig,
+  relayers: { [mySepolia.id]: web() },
 });
+
+// In your app layout:
+// <ZamaProvider config={zamaConfig}>
+//   <App />
+// </ZamaProvider>
 ```
 
 
@@ -8315,6 +8504,7 @@ Array of confidential ERC-20 token contract addresses to query.
 ```tsx
 const { data } = useConfidentialBalances({
   tokenAddresses: ["0xTokenA", "0xTokenB", "0xTokenC"],
+  account: address,
 });
 ```
 
@@ -8325,7 +8515,7 @@ const { data } = useConfidentialBalances({
 
 `Address | undefined`
 
-Address whose balances to read. Defaults to the connected wallet address from the signer.
+Address whose balances to read. The query is disabled while `undefined`. Pass the connected wallet address from wagmi's `useAccount()`.
 
 
 ### Tab: component.tsx
@@ -8484,7 +8674,7 @@ function SendButton({ tokenAddress }: { tokenAddress: `0x${string}` }) {
 
 ```ts
 // config.ts
-import { createConfig } from "@zama-fhe/react-sdk/wagmi";
+import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 import { web } from "@zama-fhe/sdk/web";
 import { sepolia } from "@zama-fhe/sdk/chains";
 import type { FheChain } from "@zama-fhe/sdk/chains";
@@ -8492,15 +8682,19 @@ import { config as wagmiConfig } from "./wagmi";
 
 const mySepolia = {
   ...sepolia,
-  relayerUrl: "https://your-relayer.example.com/v2",
-  network: "https://your-rpc.example.com",
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
 } as const satisfies FheChain;
 
-export const zamaConfig = createConfig({
+export const zamaConfig = createZamaConfig({
   chains: [mySepolia],
-  relayers: { [mySepolia.id]: web() },
   wagmiConfig,
+  relayers: { [mySepolia.id]: web() },
 });
+
+// In your app layout:
+// <ZamaProvider config={zamaConfig}>
+//   <App />
+// </ZamaProvider>
 ```
 
 
@@ -8714,7 +8908,7 @@ function OperatorTransfer({ tokenAddress }: { tokenAddress: `0x${string}` }) {
 
 ```ts
 // config.ts
-import { createConfig } from "@zama-fhe/react-sdk/wagmi";
+import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 import { web } from "@zama-fhe/sdk/web";
 import { sepolia } from "@zama-fhe/sdk/chains";
 import type { FheChain } from "@zama-fhe/sdk/chains";
@@ -8722,15 +8916,19 @@ import { config as wagmiConfig } from "./wagmi";
 
 const mySepolia = {
   ...sepolia,
-  relayerUrl: "https://your-relayer.example.com/v2",
-  network: "https://your-rpc.example.com",
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
 } as const satisfies FheChain;
 
-export const zamaConfig = createConfig({
+export const zamaConfig = createZamaConfig({
   chains: [mySepolia],
-  relayers: { [mySepolia.id]: web() },
   wagmiConfig,
+  relayers: { [mySepolia.id]: web() },
 });
+
+// In your app layout:
+// <ZamaProvider config={zamaConfig}>
+//   <App />
+// </ZamaProvider>
 ```
 
 
@@ -8921,7 +9119,7 @@ function ShieldButton() {
 
 ```ts
 // config.ts
-import { createConfig } from "@zama-fhe/react-sdk/wagmi";
+import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 import { web } from "@zama-fhe/sdk/web";
 import { sepolia } from "@zama-fhe/sdk/chains";
 import type { FheChain } from "@zama-fhe/sdk/chains";
@@ -8929,15 +9127,19 @@ import { config as wagmiConfig } from "./wagmi";
 
 const mySepolia = {
   ...sepolia,
-  relayerUrl: "https://your-relayer.example.com/v2",
-  network: "https://your-rpc.example.com",
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
 } as const satisfies FheChain;
 
-export const zamaConfig = createConfig({
+export const zamaConfig = createZamaConfig({
   chains: [mySepolia],
-  relayers: { [mySepolia.id]: web() },
   wagmiConfig,
+  relayers: { [mySepolia.id]: web() },
 });
+
+// In your app layout:
+// <ZamaProvider config={zamaConfig}>
+//   <App />
+// </ZamaProvider>
 ```
 
 
@@ -9155,7 +9357,7 @@ function UnshieldButton() {
 
 ```ts
 // config.ts
-import { createConfig } from "@zama-fhe/react-sdk/wagmi";
+import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 import { web } from "@zama-fhe/sdk/web";
 import { sepolia } from "@zama-fhe/sdk/chains";
 import type { FheChain } from "@zama-fhe/sdk/chains";
@@ -9163,15 +9365,19 @@ import { config as wagmiConfig } from "./wagmi";
 
 const mySepolia = {
   ...sepolia,
-  relayerUrl: "https://your-relayer.example.com/v2",
-  network: "https://your-rpc.example.com",
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
 } as const satisfies FheChain;
 
-export const zamaConfig = createConfig({
+export const zamaConfig = createZamaConfig({
   chains: [mySepolia],
-  relayers: { [mySepolia.id]: web() },
   wagmiConfig,
+  relayers: { [mySepolia.id]: web() },
 });
+
+// In your app layout:
+// <ZamaProvider config={zamaConfig}>
+//   <App />
+// </ZamaProvider>
 ```
 
 
@@ -9391,7 +9597,7 @@ function UnshieldAllButton() {
 
 ```ts
 // config.ts
-import { createConfig } from "@zama-fhe/react-sdk/wagmi";
+import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 import { web } from "@zama-fhe/sdk/web";
 import { sepolia } from "@zama-fhe/sdk/chains";
 import type { FheChain } from "@zama-fhe/sdk/chains";
@@ -9399,15 +9605,19 @@ import { config as wagmiConfig } from "./wagmi";
 
 const mySepolia = {
   ...sepolia,
-  relayerUrl: "https://your-relayer.example.com/v2",
-  network: "https://your-rpc.example.com",
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
 } as const satisfies FheChain;
 
-export const zamaConfig = createConfig({
+export const zamaConfig = createZamaConfig({
   chains: [mySepolia],
-  relayers: { [mySepolia.id]: web() },
   wagmiConfig,
+  relayers: { [mySepolia.id]: web() },
 });
+
+// In your app layout:
+// <ZamaProvider config={zamaConfig}>
+//   <App />
+// </ZamaProvider>
 ```
 
 
@@ -9604,7 +9814,7 @@ function ResumeUnshieldGuard() {
 
 ```ts
 // config.ts
-import { createConfig } from "@zama-fhe/react-sdk/wagmi";
+import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 import { web } from "@zama-fhe/sdk/web";
 import { sepolia } from "@zama-fhe/sdk/chains";
 import type { FheChain } from "@zama-fhe/sdk/chains";
@@ -9612,15 +9822,19 @@ import { config as wagmiConfig } from "./wagmi";
 
 const mySepolia = {
   ...sepolia,
-  relayerUrl: "https://your-relayer.example.com/v2",
-  network: "https://your-rpc.example.com",
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
 } as const satisfies FheChain;
 
-export const zamaConfig = createConfig({
+export const zamaConfig = createZamaConfig({
   chains: [mySepolia],
-  relayers: { [mySepolia.id]: web() },
   wagmiConfig,
+  relayers: { [mySepolia.id]: web() },
 });
+
+// In your app layout:
+// <ZamaProvider config={zamaConfig}>
+//   <App />
+// </ZamaProvider>
 ```
 
 
@@ -10585,7 +10799,7 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 
 > [!INFO]
-> If you use [`WagmiSigner`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WagmiSigner.md), the SDK auto-revokes on wallet disconnect or account change. Manual revoke is for [`ViemSigner`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ViemSigner.md) and [`EthersSigner`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/EthersSigner.md) users.
+> The SDK auto-revokes sessions on wallet disconnect or account change when the signer adapter implements `subscribe()`. Manual revoke is useful when you want to clear credentials proactively.
 
 
 ## Related
@@ -10705,7 +10919,7 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 
 > [!INFO]
-> If you use [`WagmiSigner`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WagmiSigner.md), the SDK auto-revokes on wallet disconnect or account change — you do not need to call this hook manually for that case.
+> The SDK auto-revokes sessions on wallet disconnect or account change when the signer adapter implements `subscribe()`. You do not need to call this hook manually for that case.
 
 
 ## Related
@@ -12668,28 +12882,26 @@ function AdvancedOperations() {
 ### Tab: config.ts
 
 ```ts
-import { createConfig } from "@zama-fhe/react-sdk/wagmi";
+import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 import { web } from "@zama-fhe/sdk/web";
-import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
+import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
+import { config as wagmiConfig } from "./wagmi";
 
 const mySepolia = {
   ...sepolia,
   relayerUrl: "https://your-app.com/api/relayer/11155111",
 } as const satisfies FheChain;
 
-const myMainnet = {
-  ...mainnet,
-  relayerUrl: "https://your-app.com/api/relayer/1",
-} as const satisfies FheChain;
-
-const zamaConfig = createConfig({
-  chains: [mySepolia, myMainnet],
-  relayers: {
-    [mySepolia.id]: web(),
-    [myMainnet.id]: web(),
-  },
+export const zamaConfig = createZamaConfig({
+  chains: [mySepolia],
   wagmiConfig,
+  relayers: { [mySepolia.id]: web() },
 });
+
+// In your app layout:
+// <ZamaProvider config={zamaConfig}>
+//   <App />
+// </ZamaProvider>
 ```
 
 
@@ -12759,28 +12971,26 @@ function TokenActions() {
 ### Tab: config.ts
 
 ```ts
-import { createConfig } from "@zama-fhe/react-sdk/wagmi";
+import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 import { web } from "@zama-fhe/sdk/web";
-import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
+import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
+import { config as wagmiConfig } from "./wagmi";
 
 const mySepolia = {
   ...sepolia,
   relayerUrl: "https://your-app.com/api/relayer/11155111",
 } as const satisfies FheChain;
 
-const myMainnet = {
-  ...mainnet,
-  relayerUrl: "https://your-app.com/api/relayer/1",
-} as const satisfies FheChain;
-
-const zamaConfig = createConfig({
-  chains: [mySepolia, myMainnet],
-  relayers: {
-    [mySepolia.id]: web(),
-    [myMainnet.id]: web(),
-  },
+export const zamaConfig = createZamaConfig({
+  chains: [mySepolia],
   wagmiConfig,
+  relayers: { [mySepolia.id]: web() },
 });
+
+// In your app layout:
+// <ZamaProvider config={zamaConfig}>
+//   <App />
+// </ZamaProvider>
 ```
 
 
@@ -12879,28 +13089,26 @@ function TokenInfo() {
 ### Tab: config.ts
 
 ```ts
-import { createConfig } from "@zama-fhe/react-sdk/wagmi";
+import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 import { web } from "@zama-fhe/sdk/web";
-import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
+import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
+import { config as wagmiConfig } from "./wagmi";
 
 const mySepolia = {
   ...sepolia,
   relayerUrl: "https://your-app.com/api/relayer/11155111",
 } as const satisfies FheChain;
 
-const myMainnet = {
-  ...mainnet,
-  relayerUrl: "https://your-app.com/api/relayer/1",
-} as const satisfies FheChain;
-
-const zamaConfig = createConfig({
-  chains: [mySepolia, myMainnet],
-  relayers: {
-    [mySepolia.id]: web(),
-    [myMainnet.id]: web(),
-  },
+export const zamaConfig = createZamaConfig({
+  chains: [mySepolia],
   wagmiConfig,
+  relayers: { [mySepolia.id]: web() },
 });
+
+// In your app layout:
+// <ZamaProvider config={zamaConfig}>
+//   <App />
+// </ZamaProvider>
 ```
 
 
@@ -14520,7 +14728,7 @@ The SDK is organized into layers, each with a clear responsibility. Higher layer
 | **Query & Mutation Factories** | Framework-agnostic `queryOptions` / `mutationOptions` consumed by React Query (or directly)               |
 | **Contract Abstraction**       | `ZamaSDK`, `Token`, `ReadonlyToken` — the main developer-facing API                                       |
 | **Contract Call Builders**     | Pure functions returning `{ address, abi, functionName, args }` for any Web3 library                      |
-| **Signer Adapters**            | `ViemSigner`, `EthersSigner`, `WagmiSigner` — unified signing interface                                   |
+| **Provider & Signer Adapters** | `ViemProvider`/`ViemSigner`, `EthersProvider`/`EthersSigner` — read/write split per library               |
 | **Relayer**                    | `RelayerWeb` (browser WASM), `RelayerNode` (server), `RelayerCleartext` (testing)                         |
 | **Worker**                     | Web Worker + WASM in browsers, `worker_threads` pool in Node.js                                           |
 | **Storage & Credentials**      | `CredentialsManager` with pluggable backends (IndexedDB, Memory, AsyncLocalStorage, ChromeSessionStorage) |
@@ -14528,7 +14736,7 @@ The SDK is organized into layers, each with a clear responsibility. Higher layer
 
 ## `createConfig` pattern
 
-Each adapter path (`@zama-fhe/sdk/viem`, `@zama-fhe/sdk/ethers`, `@zama-fhe/react-sdk/wagmi`) exports a `createConfig()` function that wires up the provider, signer, and relayer dispatcher from framework-native objects.
+Each SDK adapter path (`@zama-fhe/sdk/viem`, `@zama-fhe/sdk/ethers`) exports a `createConfig()` function that wires up the provider, signer, and relayer dispatcher from framework-native objects. For wagmi apps, `createConfig` from `@zama-fhe/react-sdk/wagmi` builds a `ZamaConfig` from your wagmi config; pass the result to `<ZamaProvider config={zamaConfig}>`.
 
 ## Module map
 
@@ -14545,17 +14753,17 @@ Each package exposes multiple entry points for tree-shaking:
 | Import Path            | Contents                                                                    |
 | ---------------------- | --------------------------------------------------------------------------- |
 | `@zama-fhe/sdk`        | Core SDK, RelayerWeb, storage, ABIs, event decoders, contract call builders |
-| `@zama-fhe/sdk/viem`   | `ViemSigner` adapter + viem read/write contract helpers                     |
-| `@zama-fhe/sdk/ethers` | `EthersSigner` adapter + ethers read/write contract helpers                 |
+| `@zama-fhe/sdk/viem`   | `ViemProvider`, `ViemSigner` adapters + viem `createConfig`                 |
+| `@zama-fhe/sdk/ethers` | `EthersProvider`, `EthersSigner` adapters + ethers `createConfig`           |
 | `@zama-fhe/sdk/node`   | `RelayerNode`, `NodeWorkerClient`, `NodeWorkerPool`, network presets        |
 | `@zama-fhe/sdk/query`  | Query/mutation option factories, query keys, invalidation helpers           |
 
 **`@zama-fhe/react-sdk`**
 
-| Import Path                 | Contents                                               |
-| --------------------------- | ------------------------------------------------------ |
-| `@zama-fhe/react-sdk`       | Provider-based hooks (`ZamaProvider` + `use*` hooks)   |
-| `@zama-fhe/react-sdk/wagmi` | `createConfig`, `WagmiSigner` adapter, `WagmiProvider` |
+| Import Path                 | Contents                                                   |
+| --------------------------- | ---------------------------------------------------------- |
+| `@zama-fhe/react-sdk`       | Provider-based hooks (`ZamaProvider` + `use*` hooks)       |
+| `@zama-fhe/react-sdk/wagmi` | `createConfig` — builds a `ZamaConfig` from a wagmi config |
 
 ## Session model
 
@@ -14696,31 +14904,27 @@ Three methods exist for different use cases:
 - `sdk.credentials.revoke("0xTokenA", "0xTokenB")` — revoke with specific addresses (included in the `credentials:revoked` event).
 - `sdk.revokeSession()` — revoke without specifying addresses.
 
-## Wallet lifecycle events
+## Identity change events
 
-The SDK automatically revokes sessions when wallet state changes. The behavior depends on the event type.
+The SDK automatically revokes sessions when wallet identity changes. Each signer adapter that implements `subscribe()` emits a `SignerIdentityChange` with the previous and next `{ address, chainId }` pair. The SDK reacts to each transition:
 
 ### Disconnect or lock
 
-The user explicitly disconnects or locks their wallet. The session signature is cleared. The next connection requires a fresh sign.
+The user explicitly disconnects or locks their wallet. The previous identity's session is revoked. The next connection requires a fresh sign.
 
 ### Account switch
 
-The user switches from address A to address B. The previous account's session is revoked. This happens because the EIP-712 signature is address-scoped — leaving A's session active while B is connected creates confusing UX.
+The user switches from address A to address B. The previous account's session is revoked automatically — the EIP-712 signature is address-scoped.
 
 ### Chain switch
 
-The user switches networks (e.g., Sepolia to Mainnet) while keeping the same address. Session signatures are **not** revoked. Credentials are keyed by `address + chainId`, so each chain maintains independent sessions. Switching back to the original chain finds the session still active.
+The user switches networks (e.g., Sepolia to Mainnet) while keeping the same address. The previous identity's session is revoked and a new identity is established. Credentials are keyed by `address + chainId`, so switching back to the original chain finds the session still active if it hasn't expired.
 
-### Automatic vs manual wiring
+### Adapter support
 
-| Signer         | Auto-revoke                                        | Setup required                                                                             |
-| -------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `WagmiSigner`  | Built in — subscribes to wagmi's `watchConnection` | None                                                                                       |
-| `ViemSigner`   | Manual                                             | Wire `wallet.on("disconnect")` and `wallet.on("accountsChanged")` to `sdk.revokeSession()` |
-| `EthersSigner` | Manual                                             | Wire disconnect and account change events to `sdk.revokeSession()`                         |
+All built-in adapters (`ViemSigner` with `ethereum` option, `EthersSigner` with `ethereum` option, and the wagmi adapter built by `createConfig` from `@zama-fhe/react-sdk/wagmi`) implement `subscribe()` and emit identity-change events automatically.
 
-Without wiring, cached signatures remain valid until TTL expiry. This is not a security vulnerability (signatures are time-bounded and address-scoped), but it creates confusing UX when switching accounts.
+For custom signers, implementing `subscribe()` is optional but recommended. Without it, stale sessions persist until TTL expiry — not a security issue (signatures are time-bounded and address-scoped), but confusing UX when switching accounts.
 
 ## Multi-contract batching
 
