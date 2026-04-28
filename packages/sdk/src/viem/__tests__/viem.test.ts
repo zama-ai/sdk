@@ -134,7 +134,9 @@ describe("ViemSigner", () => {
     vit("throws when wallet client has no account", async ({ createMockWalletClient }) => {
       const noAccountClient = createMockWalletClient(false);
       const noAccountSigner = new ViemSigner({ walletClient: noAccountClient });
-      await expect(noAccountSigner.getAddress()).rejects.toThrow("WalletClient has no account");
+      await expect(noAccountSigner.getAddress()).rejects.toThrow(
+        "Cannot getAddress without a signer. Configure one via ZamaSDKConfig.signer or <ZamaProvider config={createConfig({ signer: ... })}>.",
+      );
     });
   });
 
@@ -189,7 +191,7 @@ describe("ViemSigner", () => {
         const noAccountClient = createMockWalletClient(false);
         const noAccountSigner = new ViemSigner({ walletClient: noAccountClient });
         await expect(noAccountSigner.signTypedData(typedData)).rejects.toThrow(
-          "WalletClient has no account",
+          "Cannot signTypedData without a signer. Configure one via ZamaSDKConfig.signer or <ZamaProvider config={createConfig({ signer: ... })}>.",
         );
       },
     );
@@ -230,7 +232,7 @@ describe("ViemSigner", () => {
         const noAccountClient = createMockWalletClient(false);
         const noAccountSigner = new ViemSigner({ walletClient: noAccountClient });
         await expect(noAccountSigner.writeContract(config)).rejects.toThrow(
-          "WalletClient has no account",
+          "Cannot writeContract without a signer. Configure one via ZamaSDKConfig.signer or <ZamaProvider config={createConfig({ signer: ... })}>.",
         );
       },
     );

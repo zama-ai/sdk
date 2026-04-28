@@ -110,7 +110,8 @@ yarn add @zama-fhe/sdk
 import { createPublicClient, createWalletClient, custom, http } from "viem";
 import { sepolia } from "viem/chains";
 import { createConfig } from "@zama-fhe/sdk/viem";
-import { web, ZamaSDK } from "@zama-fhe/sdk";
+import { ZamaSDK } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia as sepoliaFhe, type FheChain } from "@zama-fhe/sdk/chains";
 
 const publicClient = createPublicClient({ chain: sepolia, transport: http() });
@@ -252,7 +253,7 @@ import { sepolia } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ZamaProvider } from "@zama-fhe/react-sdk";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 import { sepolia as sepoliaFhe, type FheChain } from "@zama-fhe/sdk/chains";
 
@@ -297,7 +298,8 @@ function App() {
 import { createPublicClient, createWalletClient, custom, http } from "viem";
 import { sepolia } from "viem/chains";
 import { createConfig } from "@zama-fhe/sdk/viem";
-import { web, ZamaSDK } from "@zama-fhe/sdk";
+import { ZamaSDK } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia as sepoliaFhe, type FheChain } from "@zama-fhe/sdk/chains";
 
 const publicClient = createPublicClient({
@@ -330,7 +332,8 @@ const sdk = new ZamaSDK(config);
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/ethers";
-import { web, ZamaSDK } from "@zama-fhe/sdk";
+import { ZamaSDK } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 
 const mySepolia = {
@@ -649,7 +652,7 @@ Create `src/config.ts`. This file sets up wagmi, the signer, and the relayer -- 
 import { createConfig, http } from "wagmi";
 import { sepolia } from "wagmi/chains";
 import { QueryClient } from "@tanstack/react-query";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 import { sepolia as sepoliaFhe, type FheChain } from "@zama-fhe/sdk/chains";
 
@@ -1057,7 +1060,8 @@ Relayers tell the SDK how to run FHE operations on each chain.
 | `cleartext()` | Local dev   | No FHE infrastructure — cleartext operations |
 
 ```ts
-import { web, cleartext } from "@zama-fhe/sdk";
+import { cleartext } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { node } from "@zama-fhe/sdk/node";
 ```
 
@@ -1134,7 +1138,7 @@ For full type information, see the [ViemSigner](https://raw.githubusercontent.co
 ### Tab: React + wagmi
 
 ```tsx
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
 
@@ -1162,7 +1166,8 @@ const zamaConfig = createZamaConfig({
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
-import { web, ZamaSDK } from "@zama-fhe/sdk";
+import { ZamaSDK } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
 
 const mySepolia = {
@@ -1191,7 +1196,8 @@ const sdk = new ZamaSDK(config);
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/ethers";
-import { web, ZamaSDK } from "@zama-fhe/sdk";
+import { ZamaSDK } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 
 const mySepolia = {
@@ -1271,7 +1277,8 @@ MV3 Chrome extensions need a second storage backend for session signatures, beca
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
-import { web, ZamaSDK, indexedDBStorage, chromeSessionStorage } from "@zama-fhe/sdk";
+import { ZamaSDK, indexedDBStorage, chromeSessionStorage } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 
 const mySepolia = {
@@ -1455,7 +1462,8 @@ Point the `relayerUrl` at your backend endpoint instead of the relayer directly:
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
-import { ZamaSDK, web } from "@zama-fhe/sdk";
+import { ZamaSDK } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { mainnet, sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 
 const myMainnet = {
@@ -1921,7 +1929,8 @@ By default, the SDK validates the confidential balance before submitting. If the
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
-import { ZamaSDK, web } from "@zama-fhe/sdk";
+import { ZamaSDK } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia } from "@zama-fhe/sdk/chains";
 
 const config = createConfig({
@@ -2097,7 +2106,8 @@ Call `balanceOf()` on a `Token` or `ReadonlyToken` instance. The SDK fetches the
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
-import { ZamaSDK, web } from "@zama-fhe/sdk";
+import { ZamaSDK } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia } from "@zama-fhe/sdk/chains";
 
 const config = createConfig({
@@ -3079,7 +3089,7 @@ import { WagmiProvider, createConfig, http } from "wagmi";
 import { sepolia } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ZamaProvider } from "@zama-fhe/react-sdk";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 import { sepolia as sepoliaFhe, type FheChain } from "@zama-fhe/sdk/chains";
 
@@ -3141,7 +3151,7 @@ A common mistake is initializing the relayer or signer in a shared module that g
 
 ```ts
 // lib/sdk.ts — DO NOT do this
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { createConfig } from "@zama-fhe/sdk/viem";
 
 // This runs during SSR and crashes — Web Worker is not available
@@ -3827,7 +3837,7 @@ const sdk = new ZamaSDK({
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia, mainnet } from "@zama-fhe/sdk/chains";
 
 const config = createConfig({
@@ -4292,7 +4302,7 @@ await token.confidentialTransfer("0xRecipient", 500n);
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia, mainnet } from "@zama-fhe/sdk/chains";
 
 const config = createConfig({
@@ -4630,7 +4640,7 @@ const { results, errors } = await ReadonlyToken.batchBalancesOf(tokens, owner);
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
 
 const mySepolia = {
@@ -5117,7 +5127,7 @@ Browser relayer that runs FHE operations in a Web Worker via WASM. Handles encry
 ## Import
 
 ```ts
-import { RelayerWeb } from "@zama-fhe/sdk";
+import { RelayerWeb } from "@zama-fhe/sdk/web";
 ```
 
 
@@ -5132,7 +5142,7 @@ import { RelayerWeb } from "@zama-fhe/sdk";
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia } from "@zama-fhe/sdk/chains";
 
 const config = createConfig({
@@ -5148,7 +5158,7 @@ const config = createConfig({
 ### Tab: Direct construction
 
 ```ts
-import { RelayerWeb } from "@zama-fhe/sdk";
+import { RelayerWeb } from "@zama-fhe/sdk/web";
 import { sepolia } from "@zama-fhe/sdk/chains";
 
 const relayer = new RelayerWeb({
@@ -6832,7 +6842,7 @@ In most cases you don't instantiate `FheArtifactCache` directly. Instead, config
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia } from "@zama-fhe/sdk/chains";
 
 // web() uses IndexedDB artifact cache by default — no config needed
@@ -6850,7 +6860,8 @@ const config = createConfig({
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
-import { web, IndexedDBStorage } from "@zama-fhe/sdk";
+import { IndexedDBStorage } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia } from "@zama-fhe/sdk/chains";
 
 const config = createConfig({
@@ -7701,7 +7712,7 @@ Pass chain objects in the `chains` array and use `chain.id` as relayer keys:
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia, mainnet } from "@zama-fhe/sdk/chains";
 
 const config = createConfig({
@@ -7770,7 +7781,7 @@ Support multiple networks by listing them in the `chains` array:
 
 ```ts
 import { createConfig } from "@zama-fhe/react-sdk/wagmi";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
 
 const mySepolia = { ...sepolia, relayerUrl: "/api/relayer/11155111" } as const satisfies FheChain;
@@ -7881,7 +7892,7 @@ import { WagmiProvider, createConfig, http } from "wagmi";
 import { sepolia } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ZamaProvider } from "@zama-fhe/react-sdk";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 import { sepolia as sepoliaFhe, type FheChain } from "@zama-fhe/sdk/chains";
 
@@ -7925,7 +7936,7 @@ import { createPublicClient, createWalletClient, custom, http } from "viem";
 import { sepolia } from "viem/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ZamaProvider } from "@zama-fhe/react-sdk";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { createConfig } from "@zama-fhe/sdk/viem";
 import { sepolia as sepoliaFhe, type FheChain } from "@zama-fhe/sdk/chains";
 
@@ -8056,7 +8067,7 @@ function TokenBalance({ tokenAddress }: { tokenAddress: `0x${string}` }) {
 
 ```ts
 import { createConfig } from "@zama-fhe/react-sdk/wagmi";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
 
 const mySepolia = {
@@ -8271,7 +8282,7 @@ function Portfolio({ tokens }: { tokens: `0x${string}`[] }) {
 ```ts
 // config.ts
 import { createConfig } from "@zama-fhe/react-sdk/wagmi";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia } from "@zama-fhe/sdk/chains";
 import type { FheChain } from "@zama-fhe/sdk/chains";
 import { config as wagmiConfig } from "./wagmi";
@@ -8474,7 +8485,7 @@ function SendButton({ tokenAddress }: { tokenAddress: `0x${string}` }) {
 ```ts
 // config.ts
 import { createConfig } from "@zama-fhe/react-sdk/wagmi";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia } from "@zama-fhe/sdk/chains";
 import type { FheChain } from "@zama-fhe/sdk/chains";
 import { config as wagmiConfig } from "./wagmi";
@@ -8704,7 +8715,7 @@ function OperatorTransfer({ tokenAddress }: { tokenAddress: `0x${string}` }) {
 ```ts
 // config.ts
 import { createConfig } from "@zama-fhe/react-sdk/wagmi";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia } from "@zama-fhe/sdk/chains";
 import type { FheChain } from "@zama-fhe/sdk/chains";
 import { config as wagmiConfig } from "./wagmi";
@@ -8911,7 +8922,7 @@ function ShieldButton() {
 ```ts
 // config.ts
 import { createConfig } from "@zama-fhe/react-sdk/wagmi";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia } from "@zama-fhe/sdk/chains";
 import type { FheChain } from "@zama-fhe/sdk/chains";
 import { config as wagmiConfig } from "./wagmi";
@@ -9145,7 +9156,7 @@ function UnshieldButton() {
 ```ts
 // config.ts
 import { createConfig } from "@zama-fhe/react-sdk/wagmi";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia } from "@zama-fhe/sdk/chains";
 import type { FheChain } from "@zama-fhe/sdk/chains";
 import { config as wagmiConfig } from "./wagmi";
@@ -9381,7 +9392,7 @@ function UnshieldAllButton() {
 ```ts
 // config.ts
 import { createConfig } from "@zama-fhe/react-sdk/wagmi";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia } from "@zama-fhe/sdk/chains";
 import type { FheChain } from "@zama-fhe/sdk/chains";
 import { config as wagmiConfig } from "./wagmi";
@@ -9594,7 +9605,7 @@ function ResumeUnshieldGuard() {
 ```ts
 // config.ts
 import { createConfig } from "@zama-fhe/react-sdk/wagmi";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia } from "@zama-fhe/sdk/chains";
 import type { FheChain } from "@zama-fhe/sdk/chains";
 import { config as wagmiConfig } from "./wagmi";
@@ -12658,7 +12669,7 @@ function AdvancedOperations() {
 
 ```ts
 import { createConfig } from "@zama-fhe/react-sdk/wagmi";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
 
 const mySepolia = {
@@ -12749,7 +12760,7 @@ function TokenActions() {
 
 ```ts
 import { createConfig } from "@zama-fhe/react-sdk/wagmi";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
 
 const mySepolia = {
@@ -12869,7 +12880,7 @@ function TokenInfo() {
 
 ```ts
 import { createConfig } from "@zama-fhe/react-sdk/wagmi";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
 
 const mySepolia = {
@@ -18357,7 +18368,8 @@ The SDK ships both ESM and CommonJS builds. Most modern toolchains use ESM autom
 ### ESM (recommended)
 
 ```ts
-import { web, ZamaSDK } from "@zama-fhe/sdk";
+import { ZamaSDK } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { createConfig } from "@zama-fhe/sdk/viem";
 import { sepolia } from "@zama-fhe/sdk/chains";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
@@ -18396,7 +18408,8 @@ The SDK works with all TypeScript `moduleResolution` modes:
 ### Browser (viem)
 
 ```ts
-import { web, ZamaSDK } from "@zama-fhe/sdk";
+import { ZamaSDK } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { createConfig } from "@zama-fhe/sdk/viem";
 import { sepolia, mainnet } from "@zama-fhe/sdk/chains";
 import type { FheChain } from "@zama-fhe/sdk/chains";
@@ -18440,7 +18453,8 @@ const transferTx = await token.confidentialTransfer("0xRecipient", 500n);
 ### Browser (ethers)
 
 ```ts
-import { web, ZamaSDK } from "@zama-fhe/sdk";
+import { ZamaSDK } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { createConfig } from "@zama-fhe/sdk/ethers";
 import { sepolia } from "@zama-fhe/sdk/chains";
 import type { FheChain } from "@zama-fhe/sdk/chains";
@@ -18506,7 +18520,8 @@ const balance = await token.balanceOf();
 The recommended way to configure the SDK. Takes chains, relayers, and a signer adapter and returns a config object for `ZamaSDK`. Import `createConfig` from the adapter subpath that matches your Web3 library.
 
 ```ts
-import { web, ZamaSDK } from "@zama-fhe/sdk";
+import { ZamaSDK } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { createConfig } from "@zama-fhe/sdk/viem";
 import { sepolia } from "@zama-fhe/sdk/chains";
 import type { FheChain } from "@zama-fhe/sdk/chains";
@@ -18843,7 +18858,7 @@ import { sepolia, mainnet, hoodi, hardhat } from "@zama-fhe/sdk/chains";
 Use with `createConfig`:
 
 ```ts
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { createConfig } from "@zama-fhe/sdk/viem";
 import { sepolia } from "@zama-fhe/sdk/chains";
 import type { FheChain } from "@zama-fhe/sdk/chains";
@@ -19219,7 +19234,7 @@ import { sepolia } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ZamaProvider } from "@zama-fhe/react-sdk";
 import { createConfig as createZamaFheConfig } from "@zama-fhe/react-sdk/wagmi";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia as sepoliaFhe } from "@zama-fhe/sdk/chains";
 import type { FheChain } from "@zama-fhe/sdk/chains";
 
@@ -19271,7 +19286,7 @@ function TokenBalance() {
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ZamaProvider, useConfidentialBalance, useConfidentialTransfer } from "@zama-fhe/react-sdk";
 import { createConfig } from "@zama-fhe/react-sdk/wagmi";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia } from "@zama-fhe/sdk/chains";
 import type { FheChain } from "@zama-fhe/sdk/chains";
 
@@ -19329,7 +19344,7 @@ All setups use `ZamaProvider` with a config object from `createConfig`.
 ```tsx
 import { ZamaProvider } from "@zama-fhe/react-sdk";
 import { createConfig } from "@zama-fhe/react-sdk/wagmi";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia } from "@zama-fhe/sdk/chains";
 import type { FheChain } from "@zama-fhe/sdk/chains";
 
@@ -20041,7 +20056,7 @@ By default, wallet signatures are stored in memory and lost on page reload (or s
 ```tsx
 import { chromeSessionStorage, indexedDBStorage } from "@zama-fhe/react-sdk";
 import { createConfig } from "@zama-fhe/react-sdk/wagmi";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia } from "@zama-fhe/sdk/chains";
 import type { FheChain } from "@zama-fhe/sdk/chains";
 

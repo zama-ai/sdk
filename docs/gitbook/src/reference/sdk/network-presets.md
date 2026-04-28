@@ -49,7 +49,7 @@ Pass chain objects in the `chains` array and use `chain.id` as relayer keys:
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia, mainnet } from "@zama-fhe/sdk/chains";
 
 const config = createConfig({
@@ -118,7 +118,7 @@ Support multiple networks by listing them in the `chains` array:
 
 ```ts
 import { createConfig } from "@zama-fhe/react-sdk/wagmi";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
 
 const mySepolia = { ...sepolia, relayerUrl: "/api/relayer/11155111" } as const satisfies FheChain;

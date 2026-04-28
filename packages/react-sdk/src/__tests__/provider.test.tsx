@@ -57,7 +57,6 @@ describe("ZamaProvider & useZamaSDK", () => {
     // listener exercises that fan-out path end-to-end.
     expect(signer.subscribe).toHaveBeenCalledTimes(1);
     const listener = vi.mocked(signer.subscribe!).mock.calls[0]![0];
-    const signerKey = zamaQueryKeys.signerAddress.all;
     const balanceKey = zamaQueryKeys.confidentialBalance.token(
       "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
     );
@@ -66,7 +65,6 @@ describe("ZamaProvider & useZamaSDK", () => {
     );
     const wagmiBalanceKey = ["readContract", { functionName: "balanceOf" }] as const;
 
-    queryClient.setQueryData(signerKey, "0xuser");
     queryClient.setQueryData(balanceKey, 1n);
     queryClient.setQueryData(decryptionKey, 2n);
     queryClient.setQueryData(wagmiBalanceKey, 2n);
@@ -77,7 +75,6 @@ describe("ZamaProvider & useZamaSDK", () => {
     });
 
     return waitFor(() => {
-      expect(queryClient.getQueryData(signerKey)).toBeUndefined();
       expect(queryClient.getQueryData(decryptionKey)).toBeUndefined();
       expect(queryClient.getQueryState(balanceKey)?.isInvalidated).toBe(true);
       expect(queryClient.getQueryState(wagmiBalanceKey)?.isInvalidated).toBe(true);

@@ -22,6 +22,7 @@ export function confidentialBalancesQueryOptions(
   const accountKey = config?.account;
   const queryOpts = config?.query ?? {};
   const tokenAddresses = tokens.map((token) => token.address);
+  const hasSignerBackedCredentials = tokens.every((token) => token.sdk.credentials !== undefined);
 
   return {
     ...filterQueryOptions(queryOpts),
@@ -31,6 +32,10 @@ export function confidentialBalancesQueryOptions(
       assertNonNullable(keyOwner, "confidentialBalancesQueryOptions: owner");
       return ReadonlyToken.batchBalancesOf(tokens, keyOwner);
     },
-    enabled: Boolean(accountKey) && tokens.length > 0 && queryOpts?.enabled !== false,
+    enabled:
+      Boolean(accountKey) &&
+      tokens.length > 0 &&
+      hasSignerBackedCredentials &&
+      queryOpts?.enabled !== false,
   };
 }

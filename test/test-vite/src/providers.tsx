@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ZamaProvider } from "@zama-fhe/react-sdk";
 import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { hardhat } from "@zama-fhe/sdk/chains";
 import { burner } from "@zama-fhe/test-components";
 import type { ReactNode } from "react";
@@ -31,10 +31,10 @@ const customHardhat = {
 
 const zamaConfig = createZamaConfig({
   chains: [customHardhat],
-  wagmiConfig,
   relayers: {
-    [anvil.id]: web({ threads: 4, security: { integrityCheck: false } }),
+    [customHardhat.id]: web({ security: { integrityCheck: false } }),
   },
+  wagmiConfig,
 });
 
 const queryClient = new QueryClient();

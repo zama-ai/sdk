@@ -34,7 +34,7 @@ import { sepolia } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ZamaProvider } from "@zama-fhe/react-sdk";
 import { createConfig as createZamaFheConfig } from "@zama-fhe/react-sdk/wagmi";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia as sepoliaFhe } from "@zama-fhe/sdk/chains";
 import type { FheChain } from "@zama-fhe/sdk/chains";
 
@@ -86,7 +86,7 @@ function TokenBalance() {
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ZamaProvider, useConfidentialBalance, useConfidentialTransfer } from "@zama-fhe/react-sdk";
 import { createConfig } from "@zama-fhe/react-sdk/wagmi";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia } from "@zama-fhe/sdk/chains";
 import type { FheChain } from "@zama-fhe/sdk/chains";
 
@@ -144,7 +144,7 @@ All setups use `ZamaProvider` with a config object from `createConfig`.
 ```tsx
 import { ZamaProvider } from "@zama-fhe/react-sdk";
 import { createConfig } from "@zama-fhe/react-sdk/wagmi";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia } from "@zama-fhe/sdk/chains";
 import type { FheChain } from "@zama-fhe/sdk/chains";
 
@@ -856,7 +856,7 @@ By default, wallet signatures are stored in memory and lost on page reload (or s
 ```tsx
 import { chromeSessionStorage, indexedDBStorage } from "@zama-fhe/react-sdk";
 import { createConfig } from "@zama-fhe/react-sdk/wagmi";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia } from "@zama-fhe/sdk/chains";
 import type { FheChain } from "@zama-fhe/sdk/chains";
 

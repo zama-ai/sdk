@@ -7,7 +7,7 @@ import type { ZamaConfig, ZamaConfigBase } from "./types";
  * @internal Shared config builder — not part of the public API.
  */
 export function buildZamaConfig(
-  signer: GenericSigner,
+  signer: GenericSigner | undefined,
   provider: GenericProvider,
   params: ZamaConfigBase,
 ): ZamaConfig {

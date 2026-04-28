@@ -74,7 +74,12 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
 export interface ZamaConfigGeneric<
   TChains extends AtLeastOneChain = AtLeastOneChain,
 > extends ZamaConfigBase<TChains> {
-  signer: GenericSigner;
+  /**
+   * Optional wallet signer. Omit for read-only usage (indexers, SSR,
+   * pre-wallet-connect states). Signer-required SDK operations throw
+   * `SignerRequiredError` when invoked without a signer.
+   */
+  signer?: GenericSigner;
   provider: GenericProvider;
 }
 
@@ -83,7 +88,7 @@ export interface ZamaConfig {
   readonly chains: readonly FheChain[];
   readonly relayer: RelayerDispatcher;
   readonly provider: GenericProvider;
-  readonly signer: GenericSigner;
+  readonly signer: GenericSigner | undefined;
   readonly storage: GenericStorage;
   readonly sessionStorage: GenericStorage;
   readonly keypairTTL: number | undefined;

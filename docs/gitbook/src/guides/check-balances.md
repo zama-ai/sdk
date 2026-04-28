@@ -18,7 +18,8 @@ Call `balanceOf()` on a `Token` or `ReadonlyToken` instance. The SDK fetches the
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
-import { ZamaSDK, web } from "@zama-fhe/sdk";
+import { ZamaSDK } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia } from "@zama-fhe/sdk/chains";
 
 const config = createConfig({
