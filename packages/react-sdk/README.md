@@ -29,14 +29,16 @@ yarn add viem
 ## Minimal React example
 
 ```tsx
+import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ZamaProvider, useConfidentialBalance } from "@zama-fhe/react-sdk";
+import { ZamaProvider, useAllow, useConfidentialBalance, useIsAllowed } from "@zama-fhe/react-sdk";
 import { createConfig } from "@zama-fhe/sdk/viem";
 import { web } from "@zama-fhe/sdk/web";
 import { sepolia as sepoliaFhe, type FheChain } from "@zama-fhe/sdk/chains";
-import { createPublicClient, createWalletClient, custom, http } from "viem";
+import { createPublicClient, createWalletClient, custom, http, type Address } from "viem";
 import { sepolia } from "viem/chains";
 
+const tokenAddress = "0xYourEncryptedERC20" as Address;
 const rpcUrl = "https://sepolia.infura.io/v3/YOUR_KEY";
 const publicClient = createPublicClient({
   chain: sepolia,
@@ -62,9 +64,29 @@ const zamaConfig = createConfig({
   relayers: { [chain.id]: web() },
 });
 
+function AuthGate({
+  contractAddresses,
+  children,
+}: {
+  contractAddresses: Address[];
+  children: ReactNode;
+}) {
+  const { data: isAllowed, isLoading: isChecking } = useIsAllowed({ contractAddresses });
+  const { mutateAsync: allow, isPending: isAuthorizing } = useAllow();
+
+  if (isChecking) return <p>Checking authorization...</p>;
+  if (isAllowed) return <>{children}</>;
+
+  return (
+    <button onClick={() => void allow(contractAddresses)} disabled={isAuthorizing}>
+      {isAuthorizing ? "Signing..." : "Authorize decryption"}
+    </button>
+  );
+}
+
 function Balance() {
   const { data: balance, isLoading } = useConfidentialBalance({
-    tokenAddress: "0xYourEncryptedERC20",
+    tokenAddress,
   });
 
   if (isLoading) return <p>Decrypting...</p>;
@@ -75,14 +97,16 @@ export function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ZamaProvider config={zamaConfig}>
-        <Balance />
+        <AuthGate contractAddresses={[tokenAddress]}>
+          <Balance />
+        </AuthGate>
       </ZamaProvider>
     </QueryClientProvider>
   );
 }
 ```
 
-For production UIs, gate decryption behind an explicit user action with `useIsAllowed` and `useAllow` instead of calling `useConfidentialBalance` immediately on first render.
+This keeps `Balance` from mounting until the contract is authorized, so the first decrypt happens after an explicit user action instead of an unsolicited wallet popup.
 
 If you need a wagmi-based setup or another integration pattern, start from the [Quick start](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/tutorials/quick-start.md) and the [Guides](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/guides/README.md).
 
@@ -95,6 +119,7 @@ If you need a wagmi-based setup or another integration pattern, start from the [
 
 ## Common hooks
 
+- `useIsAllowed` and `useAllow` let you gate decrypt flows behind an explicit user action.
 - `useConfidentialBalance` reads and decrypts one token balance.
 - `useConfidentialTransfer` sends a confidential transfer and invalidates affected queries.
 - `useShield` converts public ERC-20 balances into confidential balances.
