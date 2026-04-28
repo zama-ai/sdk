@@ -9,6 +9,3 @@
  */
 
 export { createConfig, type ZamaConfigWagmi } from "./config";
-
-/** @deprecated Use `createConfig` + `<ZamaProvider>` instead. Will be removed in the next major. */
-export { ZamaWagmiProvider, type ZamaWagmiProviderProps } from "./zama-wagmi-provider";

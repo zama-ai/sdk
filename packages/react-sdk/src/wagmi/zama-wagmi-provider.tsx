@@ -1,6 +1,10 @@
 "use client";
 
-import { buildZamaConfig, type ZamaConfig, type ZamaConfigBase } from "@zama-fhe/sdk";
+import {
+  buildZamaConfig,
+  type ZamaConfig,
+  type ZamaConfigBase,
+} from "@zama-fhe/sdk";
 import type { AtLeastOneChain } from "@zama-fhe/sdk/chains";
 import type { PropsWithChildren } from "react";
 import { useMemo } from "react";
@@ -26,7 +30,9 @@ function hasSignerIdentity(connection: WagmiConnection): boolean {
  * Mirrors {@link ZamaConfigWagmi} but omits `wagmiConfig` — the provider reads
  * it from `useConfig()` so it can react to wagmi connection state changes.
  */
-export interface ZamaWagmiProviderProps<TChains extends AtLeastOneChain = AtLeastOneChain>
+export interface ZamaWagmiProviderProps<
+  TChains extends AtLeastOneChain = AtLeastOneChain,
+>
   extends PropsWithChildren, ZamaConfigBase<TChains> {}
 
 /**
@@ -67,7 +73,9 @@ export function ZamaWagmiProvider<TChains extends AtLeastOneChain>({
 
   const config = useMemo<ZamaConfig>(() => {
     const provider = new WagmiProvider({ config: wagmiConfig });
-    const signer = hasSigner ? new WagmiSigner({ config: wagmiConfig }) : undefined;
+    const signer = hasSigner
+      ? new WagmiSigner({ config: wagmiConfig })
+      : undefined;
     return buildZamaConfig(signer, provider, {
       chains,
       relayers,
