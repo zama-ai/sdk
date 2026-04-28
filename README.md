@@ -92,8 +92,9 @@ pnpm add @zama-fhe/sdk
 # or: npm install @zama-fhe/sdk / yarn add @zama-fhe/sdk
 
 # React hooks
-pnpm add @zama-fhe/react-sdk @tanstack/react-query
-# or: npm install @zama-fhe/react-sdk @tanstack/react-query / yarn add @zama-fhe/react-sdk @tanstack/react-query
+pnpm add @zama-fhe/react-sdk @zama-fhe/sdk @tanstack/react-query
+# or: npm install @zama-fhe/react-sdk @zama-fhe/sdk @tanstack/react-query
+# or: yarn add @zama-fhe/react-sdk @zama-fhe/sdk @tanstack/react-query
 ```
 
 ### Development
