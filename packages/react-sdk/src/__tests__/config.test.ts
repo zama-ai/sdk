@@ -1,4 +1,4 @@
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia } from "@zama-fhe/sdk/chains";
 import { createConfig as createEthersConfig, EthersSigner } from "@zama-fhe/sdk/ethers";
 import { createConfig as createViemConfig, ViemSigner } from "@zama-fhe/sdk/viem";

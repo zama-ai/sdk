@@ -4,65 +4,13 @@
 
 ```ts
 
-import { Address } from '@zama-fhe/sdk';
 import { AtLeastOneChain } from '@zama-fhe/sdk/chains';
 import { Config } from 'wagmi';
-import { ContractAbi } from '@zama-fhe/sdk';
-import { EIP712TypedData } from '@zama-fhe/sdk';
-import { GenericProvider } from '@zama-fhe/sdk';
-import { GenericSigner } from '@zama-fhe/sdk';
-import { Hex } from '@zama-fhe/sdk';
-import { ReadContractArgs } from '@zama-fhe/sdk';
-import { ReadContractConfig } from '@zama-fhe/sdk';
-import { ReadContractReturnType } from '@zama-fhe/sdk';
-import { ReadFunctionName } from '@zama-fhe/sdk';
-import { SignerIdentityListener } from '@zama-fhe/sdk';
-import { TransactionReceipt } from '@zama-fhe/sdk';
-import { WriteContractArgs } from '@zama-fhe/sdk';
-import { WriteContractConfig } from '@zama-fhe/sdk';
-import { WriteFunctionName } from '@zama-fhe/sdk';
 import { ZamaConfig } from '@zama-fhe/sdk';
 import { ZamaConfigBase } from '@zama-fhe/sdk';
 
 // @public
 export function createConfig<const TChains extends AtLeastOneChain>(params: ZamaConfigWagmi<TChains>): ZamaConfig;
-
-// @public
-export class WagmiProvider implements GenericProvider {
-    constructor(providerConfig: WagmiProviderConfig);
-    // (undocumented)
-    getBlockTimestamp(): Promise<bigint>;
-    // (undocumented)
-    getChainId(): Promise<number>;
-    // (undocumented)
-    readContract<const TAbi extends ContractAbi, TFunctionName extends ReadFunctionName<TAbi>, const TArgs extends ReadContractArgs<TAbi, TFunctionName>>(config: ReadContractConfig<TAbi, TFunctionName, TArgs>): Promise<ReadContractReturnType<TAbi, TFunctionName, TArgs>>;
-    waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
-}
-
-// @public
-export interface WagmiProviderConfig {
-    config: Config;
-}
-
-// @public
-export class WagmiSigner implements GenericSigner {
-    constructor(signerConfig: WagmiSignerConfig);
-    // (undocumented)
-    getAddress(): Promise<Address>;
-    // (undocumented)
-    getChainId(): Promise<number>;
-    // (undocumented)
-    signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-    // (undocumented)
-    subscribe(onIdentityChange: SignerIdentityListener): () => void;
-    // (undocumented)
-    writeContract<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex>;
-}
-
-// @public
-export interface WagmiSignerConfig {
-    config: Config;
-}
 
 // @public
 export interface ZamaConfigWagmi<TChains extends AtLeastOneChain = AtLeastOneChain, T = Config> extends ZamaConfigBase<TChains> {

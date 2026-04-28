@@ -556,7 +556,7 @@ export interface BatchDecryptAsOptions {
 // Warning: (ae-internal-missing-underscore) The name "buildZamaConfig" should be prefixed with an underscore because the declaration is marked as @internal
 //
 // @internal
-export function buildZamaConfig(signer: GenericSigner, provider: GenericProvider, params: ZamaConfigBase): ZamaConfig;
+export function buildZamaConfig(signer: GenericSigner | undefined, provider: GenericProvider, params: ZamaConfigBase): ZamaConfig;
 
 // @public
 export class ChainMismatchError extends ZamaError {
@@ -13254,47 +13254,6 @@ export interface RelayerSDK extends FheOperations {
 // @public
 export type RelayerSDKStatus = "idle" | "initializing" | "ready" | "error";
 
-// Warning: (ae-forgotten-export) The symbol "BaseRelayer" needs to be exported by the entry point index.d.ts
-//
-// @public
-export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
-    [Symbol.dispose](): void;
-    constructor(config: RelayerWebConfig);
-    // (undocumented)
-    protected get chain(): FheChain;
-    createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type>;
-    createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
-    delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
-    encrypt(params: EncryptParams): Promise<EncryptResult>;
-    generateKeypair(): Promise<KeypairType<Hex>>;
-    getPublicKey(): Promise<PublicKeyData | null>;
-    getPublicParams(bits: number): Promise<PublicParamsData | null>;
-    // (undocumented)
-    protected init(): Promise<void>;
-    publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
-    requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
-    terminate(): void;
-    userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
-}
-
-// @public
-export interface RelayerWebConfig {
-    chain: FheChain;
-    fheArtifactCacheTTL?: number;
-    fheArtifactStorage?: GenericStorage;
-    logger?: GenericLogger;
-    security?: RelayerWebSecurityConfig;
-    threads?: number;
-    // Warning: (ae-forgotten-export) The symbol "RelayerWorkerClient" needs to be exported by the entry point index.d.ts
-    worker: RelayerWorkerClient;
-}
-
-// @public
-export interface RelayerWebSecurityConfig {
-    getCsrfToken?: () => string;
-    integrityCheck?: boolean;
-}
-
 // @public (undocumented)
 export function resolveChainRelayers(chains: readonly FheChain[], relayers: Readonly<Record<number, RelayerConfig>>): Map<number, ResolvedChainRelayer>;
 
@@ -14802,6 +14761,13 @@ export interface SignerIdentityChange {
 
 // @public
 export type SignerIdentityListener = (change: SignerIdentityChange) => void;
+
+// @public
+export class SignerRequiredError extends ZamaError {
+    constructor(operation: string, options?: ErrorOptions);
+    // (undocumented)
+    readonly operation: string;
+}
 
 // @public
 export class SigningFailedError extends ZamaError {
@@ -18915,22 +18881,6 @@ export interface UserDecryptParams {
 }
 
 // @public
-export function web(options?: WebRelayerOptions): WebRelayerConfig;
-
-// @public
-export interface WebRelayerConfig extends RelayerConfig {
-    // (undocumented)
-    readonly createRelayer: (chain: FheChain, worker: RelayerWorkerClient) => RelayerWeb;
-    // (undocumented)
-    readonly createWorker: (chains: FheChain[]) => RelayerWorkerClient;
-    // (undocumented)
-    readonly type: "web";
-}
-
-// @public
-export type WebRelayerOptions = Partial<Pick<RelayerWebConfig, "threads" | "security" | "logger">>;
-
-// @public
 export interface WorkerLike {
     // (undocumented)
     terminate(): void;
@@ -20044,7 +19994,7 @@ export interface ZamaConfig {
     // (undocumented)
     readonly sessionTTL: number | "infinite" | undefined;
     // (undocumented)
-    readonly signer: GenericSigner;
+    readonly signer: GenericSigner | undefined;
     // (undocumented)
     readonly storage: GenericStorage;
 }
@@ -20080,8 +20030,7 @@ export type ZamaConfigEthers<TChains extends AtLeastOneChain = AtLeastOneChain> 
 export interface ZamaConfigGeneric<TChains extends AtLeastOneChain = AtLeastOneChain> extends ZamaConfigBase<TChains> {
     // (undocumented)
     provider: GenericProvider;
-    // (undocumented)
-    signer: GenericSigner;
+    signer?: GenericSigner;
 }
 
 // @public
@@ -20127,7 +20076,8 @@ export const ZamaErrorCode: {
     readonly AclPaused: "ACL_PAUSED"; /** Expiration date is too soon (must be at least 1 hour in the future). */
     readonly DelegationExpirationTooSoon: "DELEGATION_EXPIRATION_TOO_SOON"; /** Delegation exists on-chain but hasn't propagated to the gateway yet. */
     readonly DelegationNotPropagated: "DELEGATION_NOT_PROPAGATED"; /** Signer and provider are connected to different chains. */
-    readonly ChainMismatch: "CHAIN_MISMATCH";
+    readonly ChainMismatch: "CHAIN_MISMATCH"; /** Operation requires a signer but none is configured. */
+    readonly SignerRequired: "SIGNER_REQUIRED";
 };
 
 // @public
@@ -20143,9 +20093,9 @@ export class ZamaSDK {
     createToken(address: Address, wrapper?: Address): Token;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
     // (undocumented)
-    readonly credentials: CredentialsManager;
+    readonly credentials: CredentialsManager | undefined;
     // (undocumented)
-    readonly delegatedCredentials: DelegatedCredentialsManager;
+    readonly delegatedCredentials: DelegatedCredentialsManager | undefined;
     dispose(): void;
     // @internal
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
@@ -20157,11 +20107,14 @@ export class ZamaSDK {
     // (undocumented)
     readonly relayer: RelayerDispatcher;
     requireChainAlignment(operation: string): Promise<number>;
+    requireCredentials(operation: string): CredentialsManager;
+    requireDelegatedCredentials(operation: string): DelegatedCredentialsManager;
+    requireSigner(operation: string): GenericSigner;
     revokeSession(): Promise<void>;
     // (undocumented)
     readonly sessionStorage: GenericStorage;
     // (undocumented)
-    readonly signer: GenericSigner;
+    readonly signer: GenericSigner | undefined;
     // (undocumented)
     readonly storage: GenericStorage;
     terminate(): void;
@@ -20179,7 +20132,7 @@ export interface ZamaSDKConfig {
     relayer: RelayerDispatcher;
     sessionStorage?: GenericStorage;
     sessionTTL?: number | "infinite";
-    signer: GenericSigner;
+    signer?: GenericSigner;
     storage: GenericStorage;
 }
 

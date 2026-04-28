@@ -26,7 +26,8 @@ The SDK ships both ESM and CommonJS builds. Most modern toolchains use ESM autom
 ### ESM (recommended)
 
 ```ts
-import { web, ZamaSDK } from "@zama-fhe/sdk";
+import { ZamaSDK } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { createConfig } from "@zama-fhe/sdk/viem";
 import { sepolia } from "@zama-fhe/sdk/chains";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
@@ -65,7 +66,8 @@ The SDK works with all TypeScript `moduleResolution` modes:
 ### Browser (viem)
 
 ```ts
-import { web, ZamaSDK } from "@zama-fhe/sdk";
+import { ZamaSDK } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { createConfig } from "@zama-fhe/sdk/viem";
 import { sepolia, mainnet } from "@zama-fhe/sdk/chains";
 import type { FheChain } from "@zama-fhe/sdk/chains";
@@ -109,7 +111,8 @@ const transferTx = await token.confidentialTransfer("0xRecipient", 500n);
 ### Browser (ethers)
 
 ```ts
-import { web, ZamaSDK } from "@zama-fhe/sdk";
+import { ZamaSDK } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { createConfig } from "@zama-fhe/sdk/ethers";
 import { sepolia } from "@zama-fhe/sdk/chains";
 import type { FheChain } from "@zama-fhe/sdk/chains";
@@ -175,7 +178,8 @@ const balance = await token.balanceOf();
 The recommended way to configure the SDK. Takes chains, relayers, and a signer adapter and returns a config object for `ZamaSDK`. Import `createConfig` from the adapter subpath that matches your Web3 library.
 
 ```ts
-import { web, ZamaSDK } from "@zama-fhe/sdk";
+import { ZamaSDK } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { createConfig } from "@zama-fhe/sdk/viem";
 import { sepolia } from "@zama-fhe/sdk/chains";
 import type { FheChain } from "@zama-fhe/sdk/chains";
@@ -512,7 +516,7 @@ import { sepolia, mainnet, hoodi, hardhat } from "@zama-fhe/sdk/chains";
 Use with `createConfig`:
 
 ```ts
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { createConfig } from "@zama-fhe/sdk/viem";
 import { sepolia } from "@zama-fhe/sdk/chains";
 import type { FheChain } from "@zama-fhe/sdk/chains";
