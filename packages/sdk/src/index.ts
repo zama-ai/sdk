@@ -1,18 +1,18 @@
 /**
  * TypeScript SDK for Zama's fhEVM — confidential smart contracts powered by Fully Homomorphic Encryption.
  *
- * Main classes: {@link ZamaSDK}, {@link Token}, {@link ReadonlyToken}, {@link CredentialsManager}, {@link RelayerWeb}.
+ * Main classes: {@link ZamaSDK}, {@link Token}, {@link ReadonlyToken}, {@link CredentialsManager}.
  *
  * @packageDocumentation
  */
 
 // Config factory
-// Note: node() transport factory is exported from @zama-fhe/sdk/node instead,
-// keeping node:worker_threads out of the main browser entry.
+// Note: web() and node() transport factories live in their own entry points
+// (@zama-fhe/sdk/web and @zama-fhe/sdk/node) to keep environment-specific
+// dependencies out of this barrel.
 export {
   buildZamaConfig,
   createConfig,
-  web,
   cleartext,
   resolveChainRelayers,
   resolveStorage,
@@ -24,20 +24,13 @@ export type {
   ZamaConfigViem,
   ZamaConfigEthers,
   RelayerConfig,
-  WebRelayerConfig,
   CleartextRelayerConfig,
-  WebRelayerOptions,
   AtLeastOneChain,
   ResolvedChainRelayer,
 } from "./config";
-
-// Core SDK
-export { RelayerWeb } from "./relayer/relayer-web";
 export type { RelayerDispatcher, WorkerLike } from "./relayer/relayer-dispatcher";
 export type { RelayerSDK } from "./relayer/relayer-sdk";
 export type {
-  RelayerWebConfig,
-  RelayerWebSecurityConfig,
   RelayerSDKStatus,
   EncryptResult,
   EncryptParams,

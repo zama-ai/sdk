@@ -24,7 +24,7 @@ For most applications, prefer the `web()` transport factory with `createConfig` 
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia } from "@zama-fhe/sdk/chains";
 
 const config = createConfig({

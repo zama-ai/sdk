@@ -13254,47 +13254,6 @@ export interface RelayerSDK extends FheOperations {
 // @public
 export type RelayerSDKStatus = "idle" | "initializing" | "ready" | "error";
 
-// Warning: (ae-forgotten-export) The symbol "BaseRelayer" needs to be exported by the entry point index.d.ts
-//
-// @public
-export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
-    [Symbol.dispose](): void;
-    constructor(config: RelayerWebConfig);
-    // (undocumented)
-    protected get chain(): FheChain;
-    createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type>;
-    createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
-    delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
-    encrypt(params: EncryptParams): Promise<EncryptResult>;
-    generateKeypair(): Promise<KeypairType<Hex>>;
-    getPublicKey(): Promise<PublicKeyData | null>;
-    getPublicParams(bits: number): Promise<PublicParamsData | null>;
-    // (undocumented)
-    protected init(): Promise<void>;
-    publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
-    requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
-    terminate(): void;
-    userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
-}
-
-// @public
-export interface RelayerWebConfig {
-    chain: FheChain;
-    fheArtifactCacheTTL?: number;
-    fheArtifactStorage?: GenericStorage;
-    logger?: GenericLogger;
-    security?: RelayerWebSecurityConfig;
-    threads?: number;
-    // Warning: (ae-forgotten-export) The symbol "RelayerWorkerClient" needs to be exported by the entry point index.d.ts
-    worker: RelayerWorkerClient;
-}
-
-// @public
-export interface RelayerWebSecurityConfig {
-    getCsrfToken?: () => string;
-    integrityCheck?: boolean;
-}
-
 // @public (undocumented)
 export function resolveChainRelayers(chains: readonly FheChain[], relayers: Readonly<Record<number, RelayerConfig>>): Map<number, ResolvedChainRelayer>;
 
@@ -18913,22 +18872,6 @@ export interface UserDecryptParams {
     // (undocumented)
     startTimestamp: number;
 }
-
-// @public
-export function web(options?: WebRelayerOptions): WebRelayerConfig;
-
-// @public
-export interface WebRelayerConfig extends RelayerConfig {
-    // (undocumented)
-    readonly createRelayer: (chain: FheChain, worker: RelayerWorkerClient) => RelayerWeb;
-    // (undocumented)
-    readonly createWorker: (chains: FheChain[]) => RelayerWorkerClient;
-    // (undocumented)
-    readonly type: "web";
-}
-
-// @public
-export type WebRelayerOptions = Partial<Pick<RelayerWebConfig, "threads" | "security" | "logger">>;
 
 // @public
 export interface WorkerLike {

@@ -1,0 +1,9 @@
+{
+  "extends": "../../api-extractor.base.json",
+  "mainEntryPointFilePath": "<projectFolder>/dist/esm/web/index.d.ts",
+  "apiReport": {
+    "enabled": true,
+    "reportFileName": "sdk-web.api.md",
+    "reportFolder": "<projectFolder>/etc/"
+  }
+}

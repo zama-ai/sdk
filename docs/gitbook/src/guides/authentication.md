@@ -84,7 +84,8 @@ Point the `relayerUrl` at your backend endpoint instead of the relayer directly:
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
-import { ZamaSDK, web } from "@zama-fhe/sdk";
+import { ZamaSDK } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { mainnet, sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 
 const myMainnet = {
