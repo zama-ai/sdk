@@ -370,24 +370,22 @@ async function handleEncrypt(req, res) {
  * Verifies that both the requesting user and the originating contract are
  * allowed by the ACL before returning the cleartext values.
  *
- * Expected body: `{ handles: [{ handle, contractAddress }], signerAddress,
+ * Expected body: `{ handleContractPairs: [{ handle, contractAddress }], userAddress,
  *   network, aclContractAddress, executorAddress? }`
  * @param {import("node:http").IncomingMessage} req
  * @param {import("node:http").ServerResponse} res
  */
 async function handleUserDecrypt(req, res) {
   const body = await parseBody(req);
-  // v0.5.0-alpha.3 sends handleContractPairs + userAddress; older versions send handles + signerAddress
-  const handles = body.handleContractPairs || body.handles;
-  const { network, aclContractAddress, executorAddress } = body;
-  const contractAddress = getAddress(handles[0].contractAddress);
-  const signerAddress = getAddress(body.userAddress || body.signerAddress);
+  const { handleContractPairs, network, aclContractAddress, executorAddress, userAddress } = body;
+  const contractAddress = getAddress(handleContractPairs[0].contractAddress);
+  const signerAddress = getAddress(userAddress);
   const executor = executorAddress || HARDHAT_EXECUTOR;
 
   const client = getClient(network);
 
   // Check ACL
-  for (const { handle } of handles) {
+  for (const { handle } of handleContractPairs) {
     const [actorAllowed, contractAllowed] = await Promise.all([
       client.readContract({
         address: aclContractAddress,
@@ -412,7 +410,7 @@ async function handleUserDecrypt(req, res) {
 
   // Read plaintexts
   const clearValues = {};
-  for (const { handle } of handles) {
+  for (const { handle } of handleContractPairs) {
     const raw = await client.readContract({
       address: executor,
       abi: EXECUTOR_ABI,
@@ -432,15 +430,14 @@ async function handleUserDecrypt(req, res) {
  * the ACL.  Returns cleartext values together with an ABI-encoded blob and a
  * KMS-signed decryption proof consumable by the on-chain `Decryption` verifier.
  *
- * Expected body: `{ handles, network, aclContractAddress,
+ * Expected body: `{ ciphertextHandles, network, aclContractAddress,
  *   verifyingContractAddressDecryption, gatewayChainId, executorAddress? }`
  * @param {import("node:http").IncomingMessage} req
  * @param {import("node:http").ServerResponse} res
  */
 async function handlePublicDecrypt(req, res) {
   const body = await parseBody(req);
-  // v0.5.0-alpha.3 sends ciphertextHandles; older versions send handles
-  const handles = body.ciphertextHandles || body.handles;
+  const { ciphertextHandles } = body;
   const {
     network,
     aclContractAddress,
@@ -453,7 +450,7 @@ async function handlePublicDecrypt(req, res) {
   const client = getClient(network);
 
   // Check ACL
-  for (const handle of handles) {
+  for (const handle of ciphertextHandles) {
     const allowed = await client.readContract({
       address: aclContractAddress,
       abi: ACL_ABI,
@@ -468,7 +465,7 @@ async function handlePublicDecrypt(req, res) {
   // Read plaintexts
   const orderedValues = [];
   const clearValues = {};
-  for (const handle of handles) {
+  for (const handle of ciphertextHandles) {
     const raw = await client.readContract({
       address: executor,
       abi: EXECUTOR_ABI,
@@ -497,7 +494,7 @@ async function handlePublicDecrypt(req, res) {
     },
     primaryType: "PublicDecryptVerification",
     message: {
-      ctHandles: handles,
+      ctHandles: ciphertextHandles,
       decryptedResult: abiEncodedClearValues,
       extraData: "0x",
     },
@@ -515,23 +512,28 @@ async function handlePublicDecrypt(req, res) {
  * the original delegator.  Checks `isHandleDelegatedForUserDecryption` on the
  * ACL for every handle before reading plaintexts.
  *
- * Expected body: `{ handles: [{ handle, contractAddress }], delegatorAddress,
+ * Expected body: `{ handleContractPairs: [{ handle, contractAddress }], delegatorAddress,
  *   delegateAddress, network, aclContractAddress, executorAddress? }`
  * @param {import("node:http").IncomingMessage} req
  * @param {import("node:http").ServerResponse} res
  */
 async function handleDelegatedUserDecrypt(req, res) {
   const body = await parseBody(req);
-  // v0.5.0-alpha.3 sends handleContractPairs; older versions send handles
-  const handles = body.handleContractPairs || body.handles;
-  const { network, aclContractAddress, delegatorAddress, delegateAddress, executorAddress } = body;
-  const contractAddress = getAddress(handles[0].contractAddress);
+  const {
+    handleContractPairs,
+    network,
+    aclContractAddress,
+    delegatorAddress,
+    delegateAddress,
+    executorAddress,
+  } = body;
+  const contractAddress = getAddress(handleContractPairs[0].contractAddress);
   const executor = executorAddress || HARDHAT_EXECUTOR;
 
   const client = getClient(network);
 
   // Check delegation ACL
-  for (const { handle } of handles) {
+  for (const { handle } of handleContractPairs) {
     const allowed = await client.readContract({
       address: aclContractAddress,
       abi: ACL_ABI,
@@ -545,7 +547,7 @@ async function handleDelegatedUserDecrypt(req, res) {
 
   // Read plaintexts
   const clearValues = {};
-  for (const { handle } of handles) {
+  for (const { handle } of handleContractPairs) {
     const raw = await client.readContract({
       address: executor,
       abi: EXECUTOR_ABI,
