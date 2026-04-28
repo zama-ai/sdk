@@ -1,64 +1,57 @@
 import { describe, it, expect } from "../test-fixtures";
-import { ZamaSDK } from "../zama-sdk";
 import { ReadonlyToken } from "../token/readonly-token";
 import { Token } from "../token/token";
 import { SignerRequiredError, ZamaErrorCode } from "../errors";
 import type { Address } from "viem";
 
 describe("ZamaSDK without signer", () => {
-  it("constructs with signer omitted", ({ relayer, provider, storage }) => {
-    const sdk = new ZamaSDK({ relayer, provider, storage });
+  it("constructs with signer omitted", ({ createSDK }) => {
+    const sdk = createSDK({ signer: undefined });
     expect(sdk.signer).toBeUndefined();
     expect(sdk.credentials).toBeUndefined();
     expect(sdk.delegatedCredentials).toBeUndefined();
   });
 
-  it("validates keypairTTL even when signer is omitted", ({ relayer, provider, storage }) => {
-    expect(() => new ZamaSDK({ relayer, provider, storage, keypairTTL: 0 })).toThrow(
+  it("validates keypairTTL even when signer is omitted", ({ createSDK }) => {
+    expect(() => createSDK({ signer: undefined, keypairTTL: 0 })).toThrow(
       "keypairTTL must be a positive number",
     );
-    expect(() => new ZamaSDK({ relayer, provider, storage, keypairTTL: NaN })).toThrow(
+    expect(() => createSDK({ signer: undefined, keypairTTL: NaN })).toThrow(
       "keypairTTL must be a positive number",
     );
   });
 
-  it("does not subscribe to signer lifecycle", ({ relayer, provider, storage }) => {
-    new ZamaSDK({ relayer, provider, storage });
+  it("does not subscribe to signer lifecycle", ({ createSDK, provider }) => {
+    createSDK({ signer: undefined });
     expect(provider.getChainId).not.toHaveBeenCalled();
   });
 
-  it("createReadonlyToken works with no signer", ({ relayer, provider, storage, tokenAddress }) => {
-    const sdk = new ZamaSDK({ relayer, provider, storage });
+  it("createReadonlyToken works with no signer", ({ createSDK, tokenAddress }) => {
+    const sdk = createSDK({ signer: undefined });
     const token = sdk.createReadonlyToken(tokenAddress);
     expect(token).toBeInstanceOf(ReadonlyToken);
     expect(token.address).toBe(tokenAddress);
   });
 
   it("createToken works with no signer (Token guards per-method)", ({
-    relayer,
-    provider,
-    storage,
+    createSDK,
     tokenAddress,
   }) => {
-    const sdk = new ZamaSDK({ relayer, provider, storage });
+    const sdk = createSDK({ signer: undefined });
     const token = sdk.createToken(tokenAddress);
     expect(token).toBeInstanceOf(Token);
     expect(token.address).toBe(tokenAddress);
   });
 
-  it("publicDecrypt works with no signer", async ({ relayer, provider, storage }) => {
-    const sdk = new ZamaSDK({ relayer, provider, storage });
+  it("publicDecrypt works with no signer", async ({ createSDK, relayer }) => {
+    const sdk = createSDK({ signer: undefined });
     await sdk.publicDecrypt(["0xhandle"]);
     expect(relayer.publicDecrypt).toHaveBeenCalled();
   });
 
   describe("requireSigner / requireCredentials / requireDelegatedCredentials", () => {
-    it("requireSigner throws SignerRequiredError with operation", ({
-      relayer,
-      provider,
-      storage,
-    }) => {
-      const sdk = new ZamaSDK({ relayer, provider, storage });
+    it("requireSigner throws SignerRequiredError with operation", ({ createSDK }) => {
+      const sdk = createSDK({ signer: undefined });
       expect(() => sdk.requireSigner("myOp")).toThrow(SignerRequiredError);
       try {
         sdk.requireSigner("myOp");
@@ -69,77 +62,67 @@ describe("ZamaSDK without signer", () => {
       }
     });
 
-    it("requireCredentials throws SignerRequiredError", ({ relayer, provider, storage }) => {
-      const sdk = new ZamaSDK({ relayer, provider, storage });
+    it("requireCredentials throws SignerRequiredError", ({ createSDK }) => {
+      const sdk = createSDK({ signer: undefined });
       expect(() => sdk.requireCredentials("creds")).toThrow(SignerRequiredError);
     });
 
-    it("requireDelegatedCredentials throws SignerRequiredError", ({
-      relayer,
-      provider,
-      storage,
-    }) => {
-      const sdk = new ZamaSDK({ relayer, provider, storage });
+    it("requireDelegatedCredentials throws SignerRequiredError", ({ createSDK }) => {
+      const sdk = createSDK({ signer: undefined });
       expect(() => sdk.requireDelegatedCredentials("deleg")).toThrow(SignerRequiredError);
     });
 
-    it("returns the manager when signer is present", ({ relayer, provider, signer, storage }) => {
-      const sdk = new ZamaSDK({ relayer, provider, signer, storage });
-      expect(sdk.requireSigner("op")).toBe(signer);
+    it("returns the manager when signer is present", ({ createSDK }) => {
+      const sdk = createSDK();
+      expect(sdk.requireSigner("op")).toBe(sdk.signer);
       expect(sdk.requireCredentials("op")).toBe(sdk.credentials);
       expect(sdk.requireDelegatedCredentials("op")).toBe(sdk.delegatedCredentials);
     });
   });
 
   describe("signer-required SDK operations", () => {
-    it("userDecrypt throws SignerRequiredError", async ({ relayer, provider, storage }) => {
-      const sdk = new ZamaSDK({ relayer, provider, storage });
+    it("userDecrypt throws SignerRequiredError", async ({ createSDK }) => {
+      const sdk = createSDK({ signer: undefined });
       await expect(
         sdk.userDecrypt([{ handle: "0xh", contractAddress: "0x1" as Address }]),
       ).rejects.toBeInstanceOf(SignerRequiredError);
     });
 
-    it("allow throws SignerRequiredError", async ({ relayer, provider, storage }) => {
-      const sdk = new ZamaSDK({ relayer, provider, storage });
+    it("allow throws SignerRequiredError", async ({ createSDK }) => {
+      const sdk = createSDK({ signer: undefined });
       await expect(sdk.allow(["0x1" as Address])).rejects.toBeInstanceOf(SignerRequiredError);
     });
 
-    it("revokeSession throws SignerRequiredError", async ({ relayer, provider, storage }) => {
-      const sdk = new ZamaSDK({ relayer, provider, storage });
+    it("revokeSession throws SignerRequiredError", async ({ createSDK }) => {
+      const sdk = createSDK({ signer: undefined });
       await expect(sdk.revokeSession()).rejects.toBeInstanceOf(SignerRequiredError);
     });
 
     it("requireChainAlignment throws SignerRequiredError before chain check", async ({
-      relayer,
-      provider,
-      storage,
+      createSDK,
     }) => {
-      const sdk = new ZamaSDK({ relayer, provider, storage });
+      const sdk = createSDK({ signer: undefined });
       await expect(sdk.requireChainAlignment("op")).rejects.toBeInstanceOf(SignerRequiredError);
     });
   });
 
   describe("signer-required Token operations", () => {
     it("Token.confidentialTransfer throws SignerRequiredError", async ({
-      relayer,
-      provider,
-      storage,
+      createSDK,
       tokenAddress,
     }) => {
-      const sdk = new ZamaSDK({ relayer, provider, storage });
+      const sdk = createSDK({ signer: undefined });
       const token = sdk.createToken(tokenAddress);
-      await expect(
-        token.confidentialTransfer({ to: "0x1" as Address, amount: 1n }),
-      ).rejects.toBeInstanceOf(SignerRequiredError);
+      await expect(token.confidentialTransfer("0x1" as Address, 1n)).rejects.toBeInstanceOf(
+        SignerRequiredError,
+      );
     });
 
     it("ReadonlyToken.isAllowed throws SignerRequiredError", async ({
-      relayer,
-      provider,
-      storage,
+      createSDK,
       tokenAddress,
     }) => {
-      const sdk = new ZamaSDK({ relayer, provider, storage });
+      const sdk = createSDK({ signer: undefined });
       const token = sdk.createReadonlyToken(tokenAddress);
       await expect(token.isAllowed()).rejects.toBeInstanceOf(SignerRequiredError);
     });
