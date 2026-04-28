@@ -20,13 +20,7 @@ If you follow the viem example below, install `viem` too:
 pnpm add @zama-fhe/sdk viem
 ```
 
-Optional peer dependencies depend on the adapter you use:
-
-| Package                | Version | Use when...                    |
-| ---------------------- | ------- | ------------------------------ |
-| `@tanstack/query-core` | `>= 5`  | You use `@zama-fhe/sdk/query`  |
-| `viem`                 | `>= 2`  | You use `@zama-fhe/sdk/viem`   |
-| `ethers`               | `>= 6`  | You use `@zama-fhe/sdk/ethers` |
+Other optional peers depend on the adapter you use: `ethers` for `@zama-fhe/sdk/ethers` and `@tanstack/query-core` for `@zama-fhe/sdk/query`.
 
 `@zama-fhe/sdk/node` is ESM-only because it relies on `node:worker_threads`.
 
@@ -76,7 +70,6 @@ Browser apps should proxy relayer requests through their backend so the relayer 
 ## Documentation
 
 - [Official documentation](https://docs.zama.org/protocol) is the best starting point for the hosted SDK docs.
-- [Overview](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/README.md) explains what the SDK covers and how the documentation is organized.
 - [Quick start](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/tutorials/quick-start.md) gets from installation to a working confidential transfer.
 - [Guides](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/guides/README.md) cover focused topics such as authentication, configuration, balances, transfers, and unshielding.
 - [SDK reference](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/reference/sdk/README.md) documents the full core API, including `ZamaSDK`, `Token`, `ReadonlyToken`, adapters, and helpers.

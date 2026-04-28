@@ -2,8 +2,6 @@
 
 React bindings for the Zama SDK. Use this package to wire confidential token operations into a React app through `ZamaProvider` and hooks for balances, transfers, shielding, unshielding, approvals, and delegation.
 
-This package sits on top of `@zama-fhe/sdk`, which provides the core SDK, adapters, relayer factories, and chain presets.
-
 ## Installation
 
 Install the React package, the core SDK, and React Query:
@@ -26,17 +24,7 @@ npm install wagmi viem
 yarn add wagmi viem
 ```
 
-If you already build a `ZamaConfig` with the core SDK, you can pass it directly to `ZamaProvider` and only install the dependencies required by your chosen adapter.
-
-Common peer dependencies:
-
-| Package                 | Version                                      | Use when...                        |
-| ----------------------- | -------------------------------------------- | ---------------------------------- |
-| `react`                 | `>= 18`                                      | Always                             |
-| `@tanstack/react-query` | `>= 5`                                       | Always                             |
-| `@zama-fhe/sdk`         | Match the `@zama-fhe/react-sdk` release line | Always                             |
-| `wagmi`                 | `>= 2`                                       | Using the wagmi adapter            |
-| `viem`                  | `>= 2`                                       | Using wagmi or viem-based adapters |
+`react` >= 18 is required. If you already build a `ZamaConfig` with the core SDK, you can pass it directly to `ZamaProvider` and only install the dependencies required by your chosen adapter.
 
 ## Minimal React example
 
@@ -105,9 +93,7 @@ If you need a different integration pattern, start from the [Quick start](https:
 ## Documentation
 
 - [Official documentation](https://docs.zama.org/protocol) is the best starting point for the hosted SDK docs.
-- [Overview](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/README.md) explains how the SDK docs are organized.
 - [Quick start](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/tutorials/quick-start.md) shows the full React + wagmi setup from install to first transfer.
-- [Build your first confidential dApp](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/tutorials/first-confidential-dapp.md) walks through an end-to-end React app.
 - [React reference](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/reference/react/README.md) documents all hooks, provider components, and query helpers.
 - [Guides](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/guides/README.md) cover focused topics such as authentication, SSR, browser extensions, balances, and transfers.
 - [Core SDK reference](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/reference/sdk/README.md) documents lower-level SDK classes, adapters, and utilities.
