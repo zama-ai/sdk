@@ -18458,6 +18458,7 @@ yarn add wagmi viem
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { WagmiProvider, createConfig, http } from "wagmi";
 import { sepolia } from "wagmi/chains";
+import { injected } from "wagmi/connectors";
 import { useConfidentialBalance } from "@zama-fhe/react-sdk";
 import { ZamaWagmiProvider } from "@zama-fhe/react-sdk/wagmi";
 import { web } from "@zama-fhe/sdk/web";
@@ -18465,6 +18466,7 @@ import { sepolia as sepoliaFhe, type FheChain } from "@zama-fhe/sdk/chains";
 
 const wagmiConfig = createConfig({
   chains: [sepolia],
+  connectors: [injected()],
   transports: {
     [sepolia.id]: http("https://sepolia.infura.io/v3/YOUR_KEY"),
   },
@@ -18498,6 +18500,8 @@ export function App() {
   );
 }
 ```
+
+For production UIs, gate decryption behind an explicit user action with `useIsAllowed` and `useAllow` instead of calling `useConfidentialBalance` immediately on first render.
 
 If you need a different integration pattern, start from the [Quick start](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/tutorials/quick-start.md) and the [Guides](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/guides/README.md).
 
