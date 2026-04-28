@@ -13,28 +13,38 @@ Development relayer that operates in cleartext mode. Values are stored as plaint
 import { RelayerCleartext } from "@zama-fhe/sdk/cleartext";
 ```
 
+{% hint style="info" %}
+For most applications, prefer the `cleartext()` transport factory with `createConfig` instead of constructing `RelayerCleartext` directly. See [Network Presets](/reference/sdk/network-presets) for examples.
+{% endhint %}
+
 ## Usage
 
 {% tabs %}
-{% tab title="app.ts" %}
+{% tab title="Recommended (cleartext transport)" %}
 
 ```ts
-import { RelayerCleartext, hoodiCleartextConfig } from "@zama-fhe/sdk/cleartext";
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { cleartext } from "@zama-fhe/sdk";
+import { hardhat } from "@zama-fhe/sdk/chains";
 
-const relayer = new RelayerCleartext(hoodiCleartextConfig);
+const config = createConfig({
+  chains: [hardhat],
+  publicClient,
+  walletClient,
+  relayers: {
+    [hardhat.id]: cleartext(),
+  },
+});
 ```
 
 {% endtab %}
-{% tab title="sdk.ts" %}
+{% tab title="Direct construction" %}
 
 ```ts
-import { ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
+import { RelayerCleartext } from "@zama-fhe/sdk/cleartext";
+import { hardhat } from "@zama-fhe/sdk/chains";
 
-const sdk = new ZamaSDK({
-  relayer,
-  signer,
-  storage: memoryStorage,
-});
+const relayer = new RelayerCleartext(hardhat);
 ```
 
 {% endtab %}
@@ -44,90 +54,33 @@ const sdk = new ZamaSDK({
 
 ```ts
 import { RelayerCleartext } from "@zama-fhe/sdk/cleartext";
-import type { CleartextConfig } from "@zama-fhe/sdk/cleartext";
 
-const relayer = new RelayerCleartext(config);
+const relayer = new RelayerCleartext(chain);
 ```
 
-Takes a single `CleartextConfig` object.
+Takes a single `FheChain` object directly. Mainnet (1) and Sepolia (11155111) chain IDs are blocked — cleartext mode is for development only.
 
-## Config (`CleartextConfig`)
+The `FheChain` fields relevant to cleartext mode are:
 
-### chainId
+| Field                                       | Type                        | Description                                                |
+| ------------------------------------------- | --------------------------- | ---------------------------------------------------------- |
+| `id`                                        | `number`                    | Chain ID (must not be 1 or 11155111)                       |
+| `network`                                   | `EIP1193Provider \| string` | RPC URL or provider for reading on-chain state             |
+| `gatewayChainId`                            | `number`                    | Gateway chain ID for EIP-712 domain construction           |
+| `aclContractAddress`                        | `Address`                   | ACL contract for permission checks                         |
+| `executorAddress`                           | `Address`                   | CleartextFHEVMExecutor contract storing plaintext values   |
+| `verifyingContractAddressDecryption`        | `Address`                   | EIP-712 verifying contract for decrypt operations          |
+| `verifyingContractAddressInputVerification` | `Address`                   | EIP-712 verifying contract for encrypt operations          |
+| `kmsSignerPrivateKey`                       | `Hex \| undefined`          | KMS signer private key (falls back to built-in mock key)   |
+| `inputSignerPrivateKey`                     | `Hex \| undefined`          | Input signer private key (falls back to built-in mock key) |
 
-`number`
-
-Target chain ID. Mainnet (1) and Sepolia (11155111) are blocked — cleartext mode is for development only.
-
-### network
-
-`string | EIP1193Provider`
-
-RPC URL or EIP-1193 provider for reading on-chain state (ACL checks, plaintext values).
+Built-in chain presets (`hardhat`, `hoodi`) already include all required fields:
 
 ```ts
-const relayer = new RelayerCleartext({
-  ...hoodiCleartextConfig,
-  network: "http://localhost:8545",
-});
+import { hardhat, hoodi } from "@zama-fhe/sdk/chains";
+
+const relayer = new RelayerCleartext(hardhat);
 ```
-
-### gatewayChainId
-
-`number`
-
-Chain ID of the gateway chain, used in EIP-712 domain construction for signature verification.
-
-### aclContractAddress
-
-`Address`
-
-Deployed ACL contract — verifies `persistAllowed` and decryption ACLs.
-
-### executorAddress
-
-`Address`
-
-Deployed CleartextFHEVMExecutor contract — stores plaintext values.
-
-### verifyingContractAddressDecryption
-
-`Address`
-
-EIP-712 verifying contract for decrypt operations on the gateway chain.
-
-### verifyingContractAddressInputVerification
-
-`Address`
-
-EIP-712 verifying contract for encrypt operations on the gateway chain.
-
----
-
-### kmsSignerPrivateKey
-
-`Hex | undefined`
-
-Private key for the KMS signer used in EIP-712 decryption verification. Falls back to a built-in mock key when omitted.
-
-### inputSignerPrivateKey
-
-`Hex | undefined`
-
-Private key for the input signer used in EIP-712 input verification. Falls back to a built-in mock key when omitted.
-
-## Presets
-
-Two presets are exported:
-
-```ts
-import { hoodiCleartextConfig, hardhatCleartextConfig } from "@zama-fhe/sdk/cleartext";
-```
-
-| Preset                   | Chain ID | Network                            |
-| ------------------------ | -------- | ---------------------------------- |
-| `hoodiCleartextConfig`   | `560048` | `https://rpc.hoodi.ethpandaops.io` |
-| `hardhatCleartextConfig` | `31337`  | `http://127.0.0.1:8545`            |
 
 ## Methods
 

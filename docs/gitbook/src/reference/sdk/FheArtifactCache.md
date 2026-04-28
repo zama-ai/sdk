@@ -7,11 +7,11 @@ description: Persistent cache for FHE public key and public parameters, avoiding
 
 Persistent cache for the FHE network public key and public parameters (CRS). Stores large binary artifacts in a `GenericStorage` backend (e.g. IndexedDB) so they are not re-downloaded on every page load. Cache keys are scoped by chain ID.
 
-`RelayerWeb` and `RelayerNode` create an `FheArtifactCache` internally — you configure it through the `fheArtifactStorage` and `fheArtifactCacheTTL` options on the relayer constructor.
+`web()` and `node()` relayer transports create an `FheArtifactCache` internally — you configure it through the `fheArtifactStorage` and `fheArtifactCacheTTL` options on the transport factory.
 
 {% hint style="info" %}
-**RelayerWeb** defaults to IndexedDB — artifact caching persists across page reloads.
-**RelayerNode** defaults to `MemoryStorage` — artifacts are cached in-process but lost on restart. Pass a custom `GenericStorage` for cross-restart persistence.
+**`web()`** defaults to IndexedDB — artifact caching persists across page reloads.
+**`node()`** defaults to `MemoryStorage` — artifacts are cached in-process but lost on restart. Pass a custom `GenericStorage` for cross-restart persistence.
 {% endhint %}
 
 ## Import
@@ -22,22 +22,23 @@ import { FheArtifactCache } from "@zama-fhe/sdk";
 
 ## Usage
 
-In most cases you don't instantiate `FheArtifactCache` directly. Instead, configure artifact caching through the relayer constructor:
+In most cases you don't instantiate `FheArtifactCache` directly. Instead, configure artifact caching through the relayer transport factory:
 
 {% tabs %}
 {% tab title="Default (IndexedDB)" %}
 
 ```ts
-import { RelayerWeb, SepoliaConfig } from "@zama-fhe/sdk";
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { web } from "@zama-fhe/sdk";
+import { sepolia } from "@zama-fhe/sdk/chains";
 
-// RelayerWeb uses IndexedDB artifact cache by default — no config needed
-const relayer = new RelayerWeb({
-  getChainId: () => signer.getChainId(),
-  transports: {
-    [SepoliaConfig.chainId]: {
-      ...SepoliaConfig,
-      network: "https://sepolia.infura.io/v3/YOUR_KEY",
-    },
+// web() uses IndexedDB artifact cache by default — no config needed
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: {
+    [sepolia.id]: web(),
   },
 });
 ```
@@ -46,38 +47,40 @@ const relayer = new RelayerWeb({
 {% tab title="Custom storage" %}
 
 ```ts
-import { RelayerWeb, IndexedDBStorage, SepoliaConfig } from "@zama-fhe/sdk";
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { web, IndexedDBStorage } from "@zama-fhe/sdk";
+import { sepolia } from "@zama-fhe/sdk/chains";
 
-const relayer = new RelayerWeb({
-  getChainId: () => signer.getChainId(),
-  transports: {
-    [SepoliaConfig.chainId]: {
-      ...SepoliaConfig,
-      network: "https://sepolia.infura.io/v3/YOUR_KEY",
-    },
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: {
+    [sepolia.id]: web({
+      // Custom IndexedDB database name
+      fheArtifactStorage: new IndexedDBStorage("MyAppArtifacts", 1, "fhe"),
+      // Revalidate every 12 hours instead of the default 24h
+      fheArtifactCacheTTL: 43_200,
+    }),
   },
-  // Custom IndexedDB database name
-  fheArtifactStorage: new IndexedDBStorage("MyAppArtifacts", 1, "fhe"),
-  // Revalidate every 12 hours instead of the default 24h
-  fheArtifactCacheTTL: 43_200,
 });
 ```
 
 {% endtab %}
-{% tab title="RelayerNode (default)" %}
+{% tab title="node() (default)" %}
 
 ```ts
-import { RelayerNode } from "@zama-fhe/sdk/node";
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { node } from "@zama-fhe/sdk/node";
+import { sepolia } from "@zama-fhe/sdk/chains";
 
-// RelayerNode defaults to MemoryStorage — artifacts are cached in-process
-const relayer = new RelayerNode({
-  getChainId: () => signer.getChainId(),
-  poolSize: 4,
-  transports: {
-    [11155111]: {
-      network: process.env.RPC_URL!,
-      auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY! },
-    },
+// node() defaults to MemoryStorage — artifacts are cached in-process
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: {
+    [sepolia.id]: node({ poolSize: 4 }),
   },
 });
 ```
@@ -90,12 +93,13 @@ The default `MemoryStorage` caches artifacts for the lifetime of the process but
 {% tab title="Direct instantiation" %}
 
 ```ts
-import { FheArtifactCache, SepoliaConfig } from "@zama-fhe/sdk";
+import { FheArtifactCache } from "@zama-fhe/sdk";
+import { sepolia } from "@zama-fhe/sdk/chains";
 
 const cache = new FheArtifactCache({
   storage: myStorage,
-  chainId: 11155111,
-  relayerUrl: SepoliaConfig.relayerUrl,
+  chainId: sepolia.id,
+  relayerUrl: sepolia.relayerUrl,
   ttl: 86_400,
 });
 
@@ -188,7 +192,7 @@ Concurrent calls are coalesced. On transient failures (network errors, 5xx), the
 
 ## Relayer config options
 
-When using `RelayerWeb` or `RelayerNode`, configure artifact caching with these constructor options:
+When using `web()` or `node()` transport factories, configure artifact caching with these options:
 
 ### fheArtifactStorage
 
@@ -196,8 +200,8 @@ When using `RelayerWeb` or `RelayerNode`, configure artifact caching with these 
 
 Persistent storage backend for caching FHE artifacts.
 
-- **`RelayerWeb`**: defaults to `new IndexedDBStorage("FheArtifactCache", 1, "artifacts")` — caching is enabled automatically.
-- **`RelayerNode`**: defaults to `new MemoryStorage()` — in-process caching.
+- **`web()`**: defaults to `new IndexedDBStorage("FheArtifactCache", 1, "artifacts")` — caching is enabled automatically.
+- **`node()`**: defaults to `new MemoryStorage()` — in-process caching.
 
 FHE public parameters can be several MB — avoid `localStorage`-backed storage which caps at ~5 MB.
 

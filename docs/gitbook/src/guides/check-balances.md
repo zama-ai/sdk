@@ -17,9 +17,18 @@ Call `balanceOf()` on a `Token` or `ReadonlyToken` instance. The SDK fetches the
 {% tab title="SDK" %}
 
 ```ts
-import { ZamaSDK } from "@zama-fhe/sdk";
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { ZamaSDK, web } from "@zama-fhe/sdk";
+import { sepolia } from "@zama-fhe/sdk/chains";
 
-const sdk = new ZamaSDK({ relayer, signer, storage });
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  storage,
+  relayers: { [sepolia.id]: web() },
+});
+const sdk = new ZamaSDK(config);
 const token = sdk.createToken("0xEncryptedERC20");
 
 const balance = await token.balanceOf();
@@ -34,7 +43,7 @@ console.log(`Confidential balance: ${balance}`);
 The first `balanceOf()` call for a token prompts the user's wallet for an EIP-712 signature. This creates FHE decrypt credentials that are cached in your storage backend. Subsequent reads are silent -- no wallet popup.
 
 {% hint style="info" %}
-**In React apps, don't trigger this signature on render.** Gate `useConfidentialBalance` behind `useIsAllowed` and let the user click an explicit "Decrypt" button. See [Avoid blind-sign wallet popups](encrypt-decrypt.md#3-avoid-blind-sign-wallet-popups) for the full pattern.
+**In React apps, don't trigger this signature on render.** Gate `useConfidentialBalance` behind `useIsAllowed` and let the user click an explicit "Decrypt" button. See [Avoid blind-sign wallet popups](encrypt-decrypt.md#gating-useconfidentialbalance) for the full pattern.
 {% endhint %}
 
 If the user rejects the signature, the SDK throws a `SigningRejectedError`. See [Handle Errors](handle-errors.md) for recovery patterns.
@@ -75,10 +84,12 @@ Sometimes you need the encrypted handle itself, for example to check whether a b
 {% tab title="SDK" %}
 
 ```ts
-const handle = await token.confidentialBalanceOf();
+import { isZeroHandle } from "@zama-fhe/sdk";
+
+const handle = await token.confidentialBalanceOf(userAddress);
 
 // Check if the handle is zero (account has never shielded)
-if (token.isZeroHandle(handle)) {
+if (isZeroHandle(handle)) {
   console.log("No confidential balance yet");
 }
 
@@ -233,7 +244,7 @@ queryClient.invalidateQueries({
 
 ## Next steps
 
-- See [Avoid blind-sign wallet popups](encrypt-decrypt.md#3-avoid-blind-sign-wallet-popups) to gate balance queries behind explicit user action.
+- See [Avoid blind-sign wallet popups](encrypt-decrypt.md#gating-useconfidentialbalance) to gate balance queries behind explicit user action.
 - See [Token Operations](/reference/sdk/Token) for the full `Token.balanceOf` and `ReadonlyToken` API.
 - See [Hooks](/reference/react/query-keys) for `useConfidentialBalance`, `useConfidentialBalances`, and query key details.
 - To handle `NoCiphertextError` and other failures, see [Handle Errors](handle-errors.md).

@@ -25,8 +25,14 @@ const DELEGATE = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;
 const USER = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
 const VALID_HANDLE = ("0x" + "ab".repeat(32)) as Address;
 
+export const TEST_ADDR_A = ACL;
+export const TEST_ADDR_B = DELEGATE;
+
 export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerSDK {
   return {
+    chains: [{ id: 31337 }],
+    activeChain: { id: 31337 },
+    switchChain: vi.fn(),
     generateKeypair: vi.fn().mockResolvedValue({
       publicKey: "0xpub",
       privateKey: "0xpriv",

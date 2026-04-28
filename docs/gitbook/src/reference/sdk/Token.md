@@ -19,11 +19,11 @@ Created via [`ZamaSDK.createToken()`](/reference/sdk/ZamaSDK#createtoken). Not i
 ```ts
 import { ZamaSDK } from "@zama-fhe/sdk";
 
-const sdk = new ZamaSDK({ relayer, signer, storage });
+const sdk = new ZamaSDK({ relayer, provider, signer, storage });
 const token = sdk.createToken("0xEncryptedERC20");
 
 await token.shield(1000n);
-const balance = await token.balanceOf();
+const balance = await token.balanceOf(ownerAddress);
 await token.confidentialTransfer("0xRecipient", 500n);
 ```
 
@@ -31,23 +31,17 @@ await token.confidentialTransfer("0xRecipient", 500n);
 {% tab title="config.ts" %}
 
 ```ts
-import { ZamaSDK, indexedDBStorage, RelayerWeb, MainnetConfig, SepoliaConfig } from "@zama-fhe/sdk";
-import { ViemSigner } from "@zama-fhe/sdk/viem";
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { web } from "@zama-fhe/sdk";
+import { sepolia, mainnet } from "@zama-fhe/sdk/chains";
 
-const signer = new ViemSigner({ walletClient, publicClient });
-const relayer = new RelayerWeb({
-  getChainId: () => signer.getChainId(),
-  transports: {
-    [MainnetConfig.chainId]: {
-      ...MainnetConfig,
-      relayerUrl: "https://your-app.com/api/relayer/1",
-      network: "https://mainnet.infura.io/v3/YOUR_KEY",
-    },
-    [SepoliaConfig.chainId]: {
-      ...SepoliaConfig,
-      relayerUrl: "https://your-app.com/api/relayer/11155111",
-      network: "https://sepolia.infura.io/v3/YOUR_KEY",
-    },
+const config = createConfig({
+  chains: [sepolia, mainnet],
+  publicClient,
+  walletClient,
+  relayers: {
+    [sepolia.id]: web(),
+    [mainnet.id]: web(),
   },
 });
 ```
@@ -96,26 +90,22 @@ await token.shield(1000n, {
 
 ### balanceOf
 
-`(owner?: Address) => Promise<bigint>`
+`(owner: Address) => Promise<bigint>`
 
 Returns the decrypted confidential balance. The first call prompts a wallet signature to create FHE credentials; subsequent calls use cached credentials silently. Decrypted values are cached in storage automatically.
 
 ```ts
-// Your own balance
-const balance = await token.balanceOf();
-
-// Another address
-const otherBalance = await token.balanceOf("0xOwnerAddress");
+const balance = await token.balanceOf("0xOwnerAddress");
 ```
 
 ### confidentialBalanceOf
 
-`(owner?: Address) => Promise<Hex>`
+`(owner: Address) => Promise<Hex>`
 
 Returns the raw encrypted handle without decrypting. Use with `isZeroHandle()` or pass to `sdk.userDecrypt()` for decryption.
 
 ```ts
-const handle = await token.confidentialBalanceOf();
+const handle = await token.confidentialBalanceOf("0xOwnerAddress");
 ```
 
 ### confidentialTransfer
@@ -242,12 +232,12 @@ await token.approve("0xSpender", futureTimestamp);
 
 ### isApproved
 
-`(spender: Address, holder?: Address) => Promise<boolean>`
+`(spender: Address, holder: Address) => Promise<boolean>`
 
-Checks whether a spender is currently approved. Optionally pass `holder` to check on behalf of another address.
+Checks whether a spender is currently approved for a given holder.
 
 ```ts
-const approved = await token.isApproved("0xSpender");
+const approved = await token.isApproved("0xSpender", "0xHolder");
 ```
 
 ### allow

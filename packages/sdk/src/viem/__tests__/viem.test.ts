@@ -20,6 +20,7 @@ import { ViemProvider } from "../viem-provider";
 // ── Constants ────────────────────────────────────────────
 
 const ACCOUNT_ADDRESS = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
+const SECOND_ACCOUNT_ADDRESS = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;
 const SPENDER = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;
 const TX_HASH = "0xtxhash" as Hex;
 const MOCK_CHAIN = { id: 1, name: "mainnet" } as WalletClient["chain"];
@@ -72,6 +73,27 @@ const viemTest = base.extend<ViemFixtures>({
 // Re-alias it for viem-specific tests
 const vit = viemTest;
 
+function createFakeEthereum() {
+  const listeners = new Map<string, Set<(...args: never[]) => void>>();
+  return {
+    request: vi.fn(),
+    on(event: string, fn: (...args: never[]) => void) {
+      if (!listeners.has(event)) {
+        listeners.set(event, new Set());
+      }
+      listeners.get(event)!.add(fn);
+    },
+    removeListener(event: string, fn: (...args: never[]) => void) {
+      listeners.get(event)?.delete(fn);
+    },
+    emit(event: string, ...args: unknown[]) {
+      for (const fn of listeners.get(event) ?? []) {
+        (fn as (...a: unknown[]) => void)(...args);
+      }
+    },
+  };
+}
+
 // ── ViemSigner ───────────────────────────────────────────
 
 describe("ViemSigner", () => {
@@ -80,6 +102,26 @@ describe("ViemSigner", () => {
       const chainId = await viemSigner.getChainId();
       expect(chainId).toBe(1);
       expect(walletClient.getChainId).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe("subscribe", () => {
+    vit("uses walletClient account and chain as initial identity", async ({ walletClient }) => {
+      const ethereum = createFakeEthereum();
+      const viemSigner = new ViemSigner({ walletClient, ethereum: ethereum as never });
+      const onIdentityChange = vi.fn();
+
+      viemSigner.subscribe(onIdentityChange);
+      await Promise.resolve();
+      await Promise.resolve();
+      ethereum.emit("accountsChanged", [SECOND_ACCOUNT_ADDRESS]);
+
+      expect(onIdentityChange).toHaveBeenCalledOnce();
+      expect(onIdentityChange).toHaveBeenCalledWith({
+        previous: { address: ACCOUNT_ADDRESS, chainId: 1 },
+        next: { address: SECOND_ACCOUNT_ADDRESS, chainId: 1 },
+      });
+      expect(ethereum.request).not.toHaveBeenCalled();
     });
   });
 

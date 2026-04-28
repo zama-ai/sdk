@@ -1,21 +1,23 @@
+import type { EIP1193Provider } from "viem";
 import {
+  concat,
   decodeFunctionData,
   encodeFunctionResult,
+  getAddress,
   hexToBigInt,
+  pad,
   parseAbi,
   toBytes,
   toHex,
-  concat,
-  pad,
-  getAddress,
 } from "viem";
-import type { EIP1193Provider } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-
-import { RelayerCleartext } from "../relayer-cleartext";
+import { describe, expect, it } from "vitest";
+import { hardhat } from "../../../chains";
 import type { Handle } from "../../relayer-sdk.types";
 import { MOCK_INPUT_SIGNER_PK, MOCK_KMS_SIGNER_PK } from "../constants";
-import { hardhatCleartextConfig } from "../presets";
+import { RelayerCleartext } from "../relayer-cleartext";
+
+const hardhatCleartextConfig = hardhat;
 
 const USER_ADDRESS = "0x1000000000000000000000000000000000000001";
 const CONTRACT_ADDRESS = "0x2000000000000000000000000000000000000002";
@@ -138,11 +140,19 @@ function createInstance(options: MockClientOptions = {}): {
   calls: MockCall[];
 } {
   const { provider, calls } = createMockProvider(options);
-  return { fhevm: new RelayerCleartext({ ...hardhatCleartextConfig, network: provider }), calls };
+  return {
+    fhevm: new RelayerCleartext({
+      ...hardhatCleartextConfig,
+      network: provider,
+    }),
+    calls,
+  };
 }
 
 function createUserDecryptParams(
-  overrides: Omit<Partial<UserDecryptParams>, "handles"> & { handles: string[] },
+  overrides: Omit<Partial<UserDecryptParams>, "handles"> & {
+    handles: string[];
+  },
 ): UserDecryptParams {
   const { handles, ...rest } = overrides;
   return {
@@ -212,7 +222,7 @@ describe(RelayerCleartext, () => {
         new RelayerCleartext({
           ...hardhatCleartextConfig,
           network: provider,
-          chainId: 1,
+          id: 1,
         }),
     ).toThrow(/not allowed on chain 1/);
   });
@@ -225,7 +235,7 @@ describe(RelayerCleartext, () => {
         new RelayerCleartext({
           ...hardhatCleartextConfig,
           network: provider,
-          chainId: 11155111,
+          id: 11155111,
         }),
     ).toThrow(/not allowed on chain 11155111/);
   });
@@ -260,7 +270,7 @@ describe(RelayerCleartext, () => {
     expect(typedData.domain).toEqual({
       name: "Decryption",
       version: "1",
-      chainId: BigInt(hardhatCleartextConfig.chainId),
+      chainId: BigInt(hardhatCleartextConfig.id),
       verifyingContract: hardhatCleartextConfig.verifyingContractAddressDecryption,
     });
     expect(typedData.types.UserDecryptRequestVerification.map((field) => field.name)).toEqual([
@@ -587,7 +597,6 @@ describe(RelayerCleartext, () => {
     const result = await fhevm.userDecrypt(createUserDecryptParams({ handles: [addressHandle] }));
 
     const decoded = result[addressHandle];
-    expectTypeOf(decoded).toBeString();
     expect(decoded).toMatch(/^0x[0-9a-f]{40}$/);
   });
 
@@ -813,7 +822,10 @@ describe(RelayerCleartext, () => {
       getAddress(hardhatCleartextConfig.aclContractAddress),
     ).filter((call) => {
       const tx = call.params[0] as { data: string };
-      const parsed = decodeFunctionData({ abi: ACL_ABI, data: tx.data as `0x${string}` });
+      const parsed = decodeFunctionData({
+        abi: ACL_ABI,
+        data: tx.data as `0x${string}`,
+      });
       return parsed?.functionName === "isHandleDelegatedForUserDecryption";
     });
     expect(delegationCalls).toHaveLength(2);
@@ -881,7 +893,6 @@ describe(RelayerCleartext, () => {
 
     expect(result[boolHandle]).toBeTruthy();
     const addressResult = result[addressHandle];
-    expectTypeOf(addressResult).toBeString();
     expect(addressResult).toMatch(/^0x[0-9a-f]{40}$/);
   });
 

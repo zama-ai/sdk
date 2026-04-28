@@ -1,8 +1,9 @@
 import { Worker } from "node:worker_threads";
 import { randomUUID } from "node:crypto";
-import type { FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/bundle";
+import type { FheChain } from "../chains/types";
 import type {
   GenericLogger,
+  WorkerEnv,
   WorkerRequest,
   WorkerRequestType,
   WorkerResponse,
@@ -10,7 +11,7 @@ import type {
 import { BaseWorkerClient } from "./worker.base-client";
 
 export interface NodeWorkerClientConfig {
-  fhevmConfig: FhevmInstanceConfig;
+  chains: FheChain[];
   /** Optional logger for tracing worker request lifecycle. */
   logger?: GenericLogger;
 }
@@ -20,12 +21,17 @@ export interface NodeWorkerClientConfig {
  * Provides a promise-based API for FHE operations using node:worker_threads.
  */
 export class NodeWorkerClient extends BaseWorkerClient<Worker, NodeWorkerClientConfig> {
+  protected readonly env: WorkerEnv = "node";
+
   constructor(config: NodeWorkerClientConfig) {
     super(config, config.logger);
   }
 
   protected createWorker(): Worker {
-    return new Worker(new URL("relayer-sdk.node-worker.js", import.meta.url));
+    // Resolve relative to the @zama-fhe/sdk/node entry point so the path is
+    // correct regardless of which rolldown chunk this code lands in.
+    const nodeEntry = new URL(import.meta.resolve("@zama-fhe/sdk/node"));
+    return new Worker(new URL("relayer-sdk.node-worker.js", nodeEntry));
   }
 
   protected wireEvents(worker: Worker): void {
@@ -51,8 +57,8 @@ export class NodeWorkerClient extends BaseWorkerClient<Worker, NodeWorkerClientC
     payload: WorkerRequest["payload"];
   } {
     return {
-      type: "NODE_INIT",
-      payload: { fhevmConfig: this.config.fhevmConfig },
+      type: "INIT",
+      payload: { env: "node" as const, chains: this.config.chains },
     };
   }
 
