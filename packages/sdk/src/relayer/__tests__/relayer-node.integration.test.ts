@@ -119,7 +119,6 @@ describe(`RelayerNode integration`, () => {
       7,
     );
 
-    // extraData must be threaded through the EIP-712 message (SDK-119 requirement)
     expect(eip712.message).toHaveProperty("extraData");
     expect(eip712.message.extraData).match(/^0x/);
   }, 120_000);
@@ -186,7 +185,6 @@ describe(`RelayerNode integration`, () => {
       7,
     );
 
-    // extraData must be threaded through the delegated EIP-712 (SDK-119 requirement)
     expect(eip712.message).toHaveProperty("extraData");
     expect(eip712.message.extraData).match(/^0x/);
   }, 120_000);
