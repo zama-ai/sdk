@@ -264,7 +264,7 @@ describe("ReadonlyToken.decryptBalanceAs event emissions", () => {
         delegateAddress: await signer.getAddress(),
         startTimestamp: 1000n,
         durationDays: 1n,
-        extraData: "0x",
+        extraData: "0x00",
       },
     });
     relayer.delegatedUserDecrypt = vi.fn().mockResolvedValue({ [handle]: 42n });

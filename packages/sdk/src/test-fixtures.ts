@@ -50,7 +50,7 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
         contractAddresses: [TOKEN],
         startTimestamp: 1000n,
         durationDays: 1n,
-        extraData: "0x",
+        extraData: "0x00",
       },
     }),
     encrypt: vi.fn().mockResolvedValue({

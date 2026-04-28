@@ -313,7 +313,7 @@ describe("decryptBalanceAs", () => {
         delegatorAddress,
         startTimestamp: "1000",
         durationDays: "1",
-        extraData: "0x",
+        extraData: "0x00",
       },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
@@ -386,7 +386,7 @@ describe("decryptBalanceAs", () => {
         delegatorAddress,
         startTimestamp: "1000",
         durationDays: "1",
-        extraData: "0x",
+        extraData: "0x00",
       },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
@@ -437,7 +437,7 @@ describe("decryptBalanceAs", () => {
         delegatorAddress,
         startTimestamp: "1000",
         durationDays: "1",
-        extraData: "0x",
+        extraData: "0x00",
       },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
@@ -525,7 +525,7 @@ describe("decryptBalanceAs", () => {
         delegatorAddress,
         startTimestamp: "1000",
         durationDays: "1",
-        extraData: "0x",
+        extraData: "0x00",
       },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
@@ -565,7 +565,7 @@ describe("decryptBalanceAs", () => {
         delegatorAddress,
         startTimestamp: "1000",
         durationDays: "1",
-        extraData: "0x",
+        extraData: "0x00",
       },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
@@ -601,7 +601,7 @@ describe("decryptBalanceAs", () => {
         delegatorAddress,
         startTimestamp: "1000",
         durationDays: "1",
-        extraData: "0x",
+        extraData: "0x00",
       },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);

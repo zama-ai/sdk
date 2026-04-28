@@ -20,7 +20,8 @@ import { ViemProvider } from "../viem-provider";
 // ── Constants ────────────────────────────────────────────
 
 const ACCOUNT_ADDRESS = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
-const SECOND_ACCOUNT_ADDRESS = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;
+const SECOND_ACCOUNT_ADDRESS =
+  "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;
 const SPENDER = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;
 const TX_HASH = "0xtxhash" as Hex;
 const MOCK_CHAIN = { id: 1, name: "mainnet" } as WalletClient["chain"];
@@ -51,7 +52,9 @@ const viemTest = base.extend<ViemFixtures>({
     await use(
       (withAccount = true) =>
         ({
-          account: withAccount ? { address: ACCOUNT_ADDRESS, type: "json-rpc" } : undefined,
+          account: withAccount
+            ? { address: ACCOUNT_ADDRESS, type: "json-rpc" }
+            : undefined,
           chain: MOCK_CHAIN,
           getChainId: vi.fn().mockResolvedValue(1),
           signTypedData: vi.fn().mockResolvedValue("0xsignature"),
@@ -98,31 +101,40 @@ function createFakeEthereum() {
 
 describe("ViemSigner", () => {
   describe("getChainId", () => {
-    vit("delegates to walletClient.getChainId", async ({ viemSigner, walletClient }) => {
-      const chainId = await viemSigner.getChainId();
-      expect(chainId).toBe(1);
-      expect(walletClient.getChainId).toHaveBeenCalledOnce();
-    });
+    vit(
+      "delegates to walletClient.getChainId",
+      async ({ viemSigner, walletClient }) => {
+        const chainId = await viemSigner.getChainId();
+        expect(chainId).toBe(1);
+        expect(walletClient.getChainId).toHaveBeenCalledOnce();
+      },
+    );
   });
 
   describe("subscribe", () => {
-    vit("uses walletClient account and chain as initial identity", async ({ walletClient }) => {
-      const ethereum = createFakeEthereum();
-      const viemSigner = new ViemSigner({ walletClient, ethereum: ethereum as never });
-      const onIdentityChange = vi.fn();
+    vit(
+      "uses walletClient account and chain as initial identity",
+      async ({ walletClient }) => {
+        const ethereum = createFakeEthereum();
+        const viemSigner = new ViemSigner({
+          walletClient,
+          ethereum: ethereum as never,
+        });
+        const onIdentityChange = vi.fn();
 
-      viemSigner.subscribe(onIdentityChange);
-      await Promise.resolve();
-      await Promise.resolve();
-      ethereum.emit("accountsChanged", [SECOND_ACCOUNT_ADDRESS]);
+        viemSigner.subscribe(onIdentityChange);
+        await Promise.resolve();
+        await Promise.resolve();
+        ethereum.emit("accountsChanged", [SECOND_ACCOUNT_ADDRESS]);
 
-      expect(onIdentityChange).toHaveBeenCalledOnce();
-      expect(onIdentityChange).toHaveBeenCalledWith({
-        previous: { address: ACCOUNT_ADDRESS, chainId: 1 },
-        next: { address: SECOND_ACCOUNT_ADDRESS, chainId: 1 },
-      });
-      expect(ethereum.request).not.toHaveBeenCalled();
-    });
+        expect(onIdentityChange).toHaveBeenCalledOnce();
+        expect(onIdentityChange).toHaveBeenCalledWith({
+          previous: { address: ACCOUNT_ADDRESS, chainId: 1 },
+          next: { address: SECOND_ACCOUNT_ADDRESS, chainId: 1 },
+        });
+        expect(ethereum.request).not.toHaveBeenCalled();
+      },
+    );
   });
 
   describe("getAddress", () => {
@@ -131,19 +143,29 @@ describe("ViemSigner", () => {
       expect(address).toBe(ACCOUNT_ADDRESS);
     });
 
-    vit("throws when wallet client has no account", async ({ createMockWalletClient }) => {
-      const noAccountClient = createMockWalletClient(false);
-      const noAccountSigner = new ViemSigner({ walletClient: noAccountClient });
-      await expect(noAccountSigner.getAddress()).rejects.toThrow(
-        "Cannot getAddress without a signer. Configure one via ZamaSDKConfig.signer or <ZamaProvider config={createConfig({ signer: ... })}>.",
-      );
-    });
+    vit(
+      "throws when wallet client has no account",
+      async ({ createMockWalletClient }) => {
+        const noAccountClient = createMockWalletClient(false);
+        const noAccountSigner = new ViemSigner({
+          walletClient: noAccountClient,
+        });
+        await expect(noAccountSigner.getAddress()).rejects.toThrow(
+          "Cannot getAddress without a signer. Configure one via ZamaSDKConfig.signer or <ZamaProvider config={createConfig({ signer: ... })}>.",
+        );
+      },
+    );
   });
 
   describe("signTypedData", () => {
     function createTypedData(tokenAddress: Address): EIP712TypedData {
       return {
-        domain: { name: "Decryption", version: "1", chainId: 1n, verifyingContract: tokenAddress },
+        domain: {
+          name: "Decryption",
+          version: "1",
+          chainId: 1n,
+          verifyingContract: tokenAddress,
+        },
         types: {
           EIP712Domain: [
             { name: "name", type: "string" },
@@ -151,7 +173,9 @@ describe("ViemSigner", () => {
             { name: "chainId", type: "uint256" },
             { name: "verifyingContract", type: "address" },
           ],
-          UserDecryptRequestVerification: [{ name: "publicKey", type: "bytes" }],
+          UserDecryptRequestVerification: [
+            { name: "publicKey", type: "bytes" },
+          ],
         },
         primaryType: "UserDecryptRequestVerification",
         message: {
@@ -159,7 +183,7 @@ describe("ViemSigner", () => {
           contractAddresses: ["0x1" as Address],
           startTimestamp: "1000",
           durationDays: "1",
-          extraData: "0x",
+          extraData: "0x00",
         },
       } as EIP712TypedData;
     }
@@ -173,7 +197,10 @@ describe("ViemSigner", () => {
         expect(walletClient.signTypedData).toHaveBeenCalledWith({
           account: walletClient.account,
           primaryType: "UserDecryptRequestVerification",
-          types: { UserDecryptRequestVerification: typedData.types.UserDecryptRequestVerification },
+          types: {
+            UserDecryptRequestVerification:
+              typedData.types.UserDecryptRequestVerification,
+          },
           domain: typedData.domain,
           message: {
             ...typedData.message,
@@ -189,7 +216,9 @@ describe("ViemSigner", () => {
       async ({ tokenAddress, createMockWalletClient }) => {
         const typedData = createTypedData(tokenAddress);
         const noAccountClient = createMockWalletClient(false);
-        const noAccountSigner = new ViemSigner({ walletClient: noAccountClient });
+        const noAccountSigner = new ViemSigner({
+          walletClient: noAccountClient,
+        });
         await expect(noAccountSigner.signTypedData(typedData)).rejects.toThrow(
           "Cannot signTypedData without a signer. Configure one via ZamaSDKConfig.signer or <ZamaProvider config={createConfig({ signer: ... })}>.",
         );
@@ -230,7 +259,9 @@ describe("ViemSigner", () => {
       async ({ tokenAddress, userAddress, createMockWalletClient }) => {
         const config = createConfig(tokenAddress, userAddress);
         const noAccountClient = createMockWalletClient(false);
-        const noAccountSigner = new ViemSigner({ walletClient: noAccountClient });
+        const noAccountSigner = new ViemSigner({
+          walletClient: noAccountClient,
+        });
         await expect(noAccountSigner.writeContract(config)).rejects.toThrow(
           "Cannot writeContract without a signer. Configure one via ZamaSDKConfig.signer or <ZamaProvider config={createConfig({ signer: ... })}>.",
         );
@@ -270,23 +301,29 @@ describe("ViemProvider", () => {
   });
 
   describe("waitForTransactionReceipt", () => {
-    vit("delegates to publicClient.waitForTransactionReceipt", async ({ publicClient }) => {
-      const viemProvider = new ViemProvider({ publicClient });
-      const receipt = await viemProvider.waitForTransactionReceipt(TX_HASH);
-      expect(receipt).toEqual({ logs: [] });
-      expect(publicClient.waitForTransactionReceipt).toHaveBeenCalledWith({
-        hash: TX_HASH,
-      });
-    });
+    vit(
+      "delegates to publicClient.waitForTransactionReceipt",
+      async ({ publicClient }) => {
+        const viemProvider = new ViemProvider({ publicClient });
+        const receipt = await viemProvider.waitForTransactionReceipt(TX_HASH);
+        expect(receipt).toEqual({ logs: [] });
+        expect(publicClient.waitForTransactionReceipt).toHaveBeenCalledWith({
+          hash: TX_HASH,
+        });
+      },
+    );
   });
 
   describe("getBlockTimestamp", () => {
-    vit("returns block timestamp from publicClient.getBlock", async ({ publicClient }) => {
-      const viemProvider = new ViemProvider({ publicClient });
-      const timestamp = await viemProvider.getBlockTimestamp();
-      expect(timestamp).toBe(1700000000n);
-      expect(publicClient.getBlock).toHaveBeenCalled();
-    });
+    vit(
+      "returns block timestamp from publicClient.getBlock",
+      async ({ publicClient }) => {
+        const viemProvider = new ViemProvider({ publicClient });
+        const timestamp = await viemProvider.getBlockTimestamp();
+        expect(timestamp).toBe(1700000000n);
+        expect(publicClient.getBlock).toHaveBeenCalled();
+      },
+    );
   });
 });
 
@@ -296,7 +333,11 @@ describe("Viem read contract helpers", () => {
   vit(
     "readConfidentialBalanceOfContract calls readContract with correct config",
     ({ tokenAddress, userAddress, publicClient }) => {
-      readConfidentialBalanceOfContract(publicClient, tokenAddress, userAddress);
+      readConfidentialBalanceOfContract(
+        publicClient,
+        tokenAddress,
+        userAddress,
+      );
       expect(publicClient.readContract).toHaveBeenCalledWith(
         expect.objectContaining({
           address: tokenAddress,
@@ -362,7 +403,13 @@ describe("Viem write contract helpers", () => {
     ({ tokenAddress, userAddress, walletClient }) => {
       const handle = new Uint8Array([0xab, 0xcd]);
       const proof = new Uint8Array([0xef]);
-      writeConfidentialTransferContract(walletClient, tokenAddress, userAddress, handle, proof);
+      writeConfidentialTransferContract(
+        walletClient,
+        tokenAddress,
+        userAddress,
+        handle,
+        proof,
+      );
       expect(walletClient.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({
           chain: MOCK_CHAIN,
@@ -380,7 +427,14 @@ describe("Viem write contract helpers", () => {
     ({ tokenAddress, userAddress, walletClient }) => {
       const handle = new Uint8Array([0xde, 0xad]);
       const proof = new Uint8Array([0xbe, 0xef]);
-      writeUnwrapContract(walletClient, tokenAddress, userAddress, SPENDER, handle, proof);
+      writeUnwrapContract(
+        walletClient,
+        tokenAddress,
+        userAddress,
+        SPENDER,
+        handle,
+        proof,
+      );
       expect(walletClient.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({
           chain: MOCK_CHAIN,
@@ -421,7 +475,13 @@ describe("Viem write contract helpers", () => {
     ({ wrapperAddress, walletClient }) => {
       const unwrapRequestId = "0xburnt" as Address;
       const proof = "0xproof" as Address;
-      writeFinalizeUnwrapContract(walletClient, wrapperAddress, unwrapRequestId, 500n, proof);
+      writeFinalizeUnwrapContract(
+        walletClient,
+        wrapperAddress,
+        unwrapRequestId,
+        500n,
+        proof,
+      );
       expect(walletClient.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({
           chain: MOCK_CHAIN,
@@ -457,7 +517,8 @@ describe("Viem write contract helpers", () => {
       writeSetOperatorContract(walletClient, tokenAddress, SPENDER);
       const after = Math.floor(Date.now() / 1000) + 3600;
 
-      const callArgs = (walletClient.writeContract as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      const callArgs = (walletClient.writeContract as ReturnType<typeof vi.fn>)
+        .mock.calls[0][0];
       const timestamp = callArgs.args[1] as number;
       expect(timestamp).toBeGreaterThanOrEqual(before);
       expect(timestamp).toBeLessThanOrEqual(after);
@@ -481,19 +542,22 @@ describe("Viem write contract helpers", () => {
   );
 
   describe("all write helpers throw without account", () => {
-    vit("writeUnwrapContract", ({ tokenAddress, userAddress, createMockWalletClient }) => {
-      const noAccountClient = createMockWalletClient(false);
-      expect(() =>
-        writeUnwrapContract(
-          noAccountClient,
-          tokenAddress,
-          userAddress,
-          SPENDER,
-          new Uint8Array(),
-          new Uint8Array(),
-        ),
-      ).toThrow("WalletClient has no account");
-    });
+    vit(
+      "writeUnwrapContract",
+      ({ tokenAddress, userAddress, createMockWalletClient }) => {
+        const noAccountClient = createMockWalletClient(false);
+        expect(() =>
+          writeUnwrapContract(
+            noAccountClient,
+            tokenAddress,
+            userAddress,
+            SPENDER,
+            new Uint8Array(),
+            new Uint8Array(),
+          ),
+        ).toThrow("WalletClient has no account");
+      },
+    );
 
     vit(
       "writeUnwrapFromBalanceContract",
@@ -511,31 +575,40 @@ describe("Viem write contract helpers", () => {
       },
     );
 
-    vit("writeFinalizeUnwrapContract", ({ wrapperAddress, createMockWalletClient }) => {
-      const noAccountClient = createMockWalletClient(false);
-      expect(() =>
-        writeFinalizeUnwrapContract(
-          noAccountClient,
-          wrapperAddress,
-          "0x0" as Address,
-          0n,
-          "0x0" as Address,
-        ),
-      ).toThrow("WalletClient has no account");
-    });
+    vit(
+      "writeFinalizeUnwrapContract",
+      ({ wrapperAddress, createMockWalletClient }) => {
+        const noAccountClient = createMockWalletClient(false);
+        expect(() =>
+          writeFinalizeUnwrapContract(
+            noAccountClient,
+            wrapperAddress,
+            "0x0" as Address,
+            0n,
+            "0x0" as Address,
+          ),
+        ).toThrow("WalletClient has no account");
+      },
+    );
 
-    vit("writeSetOperatorContract", ({ tokenAddress, createMockWalletClient }) => {
-      const noAccountClient = createMockWalletClient(false);
-      expect(() => writeSetOperatorContract(noAccountClient, tokenAddress, SPENDER)).toThrow(
-        "WalletClient has no account",
-      );
-    });
+    vit(
+      "writeSetOperatorContract",
+      ({ tokenAddress, createMockWalletClient }) => {
+        const noAccountClient = createMockWalletClient(false);
+        expect(() =>
+          writeSetOperatorContract(noAccountClient, tokenAddress, SPENDER),
+        ).toThrow("WalletClient has no account");
+      },
+    );
 
-    vit("writeWrapContract", ({ wrapperAddress, userAddress, createMockWalletClient }) => {
-      const noAccountClient = createMockWalletClient(false);
-      expect(() => writeWrapContract(noAccountClient, wrapperAddress, userAddress, 0n)).toThrow(
-        "WalletClient has no account",
-      );
-    });
+    vit(
+      "writeWrapContract",
+      ({ wrapperAddress, userAddress, createMockWalletClient }) => {
+        const noAccountClient = createMockWalletClient(false);
+        expect(() =>
+          writeWrapContract(noAccountClient, wrapperAddress, userAddress, 0n),
+        ).toThrow("WalletClient has no account");
+      },
+    );
   });
 });

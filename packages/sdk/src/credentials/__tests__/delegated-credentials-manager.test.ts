@@ -19,7 +19,7 @@ function mockDelegatedEIP712(relayer: ReturnType<typeof createMockRelayer>) {
       delegatorAddress: DELEGATOR,
       startTimestamp: "1000",
       durationDays: "1",
-      extraData: "0x",
+      extraData: "0x00",
     },
   } as never);
 }

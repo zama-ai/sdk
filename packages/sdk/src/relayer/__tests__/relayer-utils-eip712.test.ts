@@ -18,7 +18,7 @@ const mockWorkerClient = {
   requestZKProofVerification: vi.fn(),
   getPublicKey: vi.fn(),
   getPublicParams: vi.fn(),
-  getExtraData: vi.fn().mockResolvedValue({ result: "0x" }),
+  getExtraData: vi.fn().mockResolvedValue({ result: "0x00" }),
 };
 
 import { RelayerWeb } from "../relayer-web";
@@ -49,7 +49,7 @@ const MOCK_EIP712 = {
     contractAddresses: ["0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a"],
     startTimestamp: "1000",
     durationDays: "7",
-    extraData: "0x",
+    extraData: "0x00",
   },
 };
 

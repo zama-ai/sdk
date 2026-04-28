@@ -21,7 +21,7 @@ const { mockWorkerClient, mockPool } = vi.hoisted(() => {
     requestZKProofVerification: vi.fn(),
     getPublicKey: vi.fn(),
     getPublicParams: vi.fn(),
-    getExtraData: vi.fn().mockResolvedValue({ result: "0x" }),
+    getExtraData: vi.fn().mockResolvedValue({ result: "0x00" }),
   };
 
   const mockPool = {
@@ -37,7 +37,7 @@ const { mockWorkerClient, mockPool } = vi.hoisted(() => {
     requestZKProofVerification: vi.fn(),
     getPublicKey: vi.fn(),
     getPublicParams: vi.fn(),
-    getExtraData: vi.fn().mockResolvedValue({ result: "0x" }),
+    getExtraData: vi.fn().mockResolvedValue({ result: "0x00" }),
   };
 
   return { mockWorkerClient, mockPool };
@@ -104,7 +104,7 @@ const MOCK_EIP712 = {
     contractAddresses: ["0x123"],
     startTimestamp: 1000n,
     durationDays: 7n,
-    extraData: "0x",
+    extraData: "0x00",
   },
 };
 
@@ -239,7 +239,7 @@ describe("RelayerWeb", () => {
         contractAddresses: ["0x123"],
         startTimestamp: 1000,
         durationDays: 7,
-        extraData: "0x",
+        extraData: "0x00",
       });
       expect(result.domain.name).toBe("test");
       expect(result.message.publicKey).toBe("0xpub");
@@ -327,7 +327,7 @@ describe("RelayerWeb", () => {
         delegatorAddress: "0xDelegator",
         startTimestamp: 1000,
         durationDays: 7,
-        extraData: "0x",
+        extraData: "0x00",
       });
     });
 
@@ -546,7 +546,7 @@ describe("RelayerNode", () => {
         contractAddresses: ["0x123"],
         startTimestamp: 1000,
         durationDays: 7,
-        extraData: "0x",
+        extraData: "0x00",
       });
       expect(result.domain.name).toBe("test");
       expect(result.message.publicKey).toBe("0xpub");
@@ -634,7 +634,7 @@ describe("RelayerNode", () => {
         delegatorAddress: "0xDelegator",
         startTimestamp: 1000,
         durationDays: 7,
-        extraData: "0x",
+        extraData: "0x00",
       });
     });
 

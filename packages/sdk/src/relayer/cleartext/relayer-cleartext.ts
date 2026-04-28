@@ -307,7 +307,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
       message: {
         ctHandles: normalizedHandles,
         decryptedResult: abiEncodedClearValues,
-        extraData: "0x",
+        extraData: "0x00",
       },
     });
 

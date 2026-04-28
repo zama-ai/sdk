@@ -287,7 +287,7 @@ describe("EthersSigner", () => {
             contractAddresses: [MOCK_ADDRESS],
             startTimestamp: 1000n,
             durationDays: 1n,
-            extraData: "0x",
+            extraData: "0x00",
           },
         };
 
@@ -320,7 +320,7 @@ describe("EthersSigner", () => {
           contractAddresses: [],
           startTimestamp: 1000n,
           durationDays: 1n,
-          extraData: "0x",
+          extraData: "0x00",
         },
       };
 
