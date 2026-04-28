@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ZamaWagmiProvider } from "@zama-fhe/react-sdk/wagmi";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { hardhat } from "@zama-fhe/sdk/chains";
 import { burner } from "@zama-fhe/test-components";
 import type { ReactNode } from "react";

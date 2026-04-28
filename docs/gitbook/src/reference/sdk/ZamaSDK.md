@@ -34,7 +34,7 @@ const sdk = new ZamaSDK({
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia, mainnet } from "@zama-fhe/sdk/chains";
 
 const config = createConfig({

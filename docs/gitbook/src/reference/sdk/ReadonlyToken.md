@@ -38,7 +38,7 @@ const { results, errors } = await ReadonlyToken.batchBalancesOf(tokens, owner);
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
 
 const mySepolia = {

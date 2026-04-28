@@ -49,7 +49,7 @@ import { WagmiProvider, createConfig, http } from "wagmi";
 import { sepolia } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ZamaProvider } from "@zama-fhe/react-sdk";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 import { sepolia as sepoliaFhe, type FheChain } from "@zama-fhe/sdk/chains";
 
@@ -111,7 +111,7 @@ A common mistake is initializing the relayer or signer in a shared module that g
 
 ```ts
 // lib/sdk.ts — DO NOT do this
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { createConfig } from "@zama-fhe/sdk/viem";
 
 // This runs during SSR and crashes — Web Worker is not available

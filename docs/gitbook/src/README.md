@@ -91,7 +91,8 @@ yarn add @zama-fhe/sdk
 import { createPublicClient, createWalletClient, custom, http } from "viem";
 import { sepolia } from "viem/chains";
 import { createConfig } from "@zama-fhe/sdk/viem";
-import { web, ZamaSDK } from "@zama-fhe/sdk";
+import { ZamaSDK } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia as sepoliaFhe, type FheChain } from "@zama-fhe/sdk/chains";
 
 const publicClient = createPublicClient({ chain: sepolia, transport: http() });
