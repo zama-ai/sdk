@@ -72,21 +72,14 @@ export type {
 
 // Config
 export { createConfig } from "../config/create";
-export type {
-  ZamaConfig,
-  ZamaConfigGeneric,
-  ZamaConfigBase,
-} from "../config/types";
+export type { ZamaConfig, ZamaConfigGeneric, ZamaConfigBase } from "../config/types";
 
 // SDK
 export { ZamaSDK } from "../zama-sdk";
 export type { ZamaSDKConfig } from "../zama-sdk";
 
 // Storage
-export {
-  asyncLocalStorage,
-  AsyncLocalMapStorage,
-} from "../storage/async-local-storage";
+export { asyncLocalStorage, AsyncLocalMapStorage } from "../storage/async-local-storage";
 
 // Chain presets
 export { mainnet, sepolia, hoodi, hardhat, anvil, chains } from "../chains";

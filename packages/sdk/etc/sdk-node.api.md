@@ -4,10 +4,14 @@
 
 ```ts
 
+import { Abi } from 'viem';
 import { Address } from 'viem';
 import { Auth } from '@zama-fhe/relayer-sdk/bundle';
 import { Bytes32Hex } from '@zama-fhe/relayer-sdk/bundle';
 import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle';
+import { ContractFunctionArgs } from 'viem';
+import { ContractFunctionName } from 'viem';
+import { ContractFunctionReturnType } from 'viem';
 import { EIP1193Provider } from 'viem';
 import { Hex } from 'viem';
 import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
@@ -130,6 +134,9 @@ export const chains: Record<number, FheChain>;
 export function cleartext(): CleartextRelayerConfig;
 
 export { ClearValueType }
+
+// @public
+export function createConfig<const TChains extends readonly [FheChain, ...FheChain[]]>(params: ZamaConfigGeneric<TChains>): ZamaConfig;
 
 // @public (undocumented)
 export type CreateDelegatedEIP712Payload = CreateDelegatedEIP712Request["payload"];
@@ -686,6 +693,122 @@ export type WorkerRequestType = "INIT" | "UPDATE_CSRF" | "ENCRYPT" | "USER_DECRY
 
 // @public (undocumented)
 export type WorkerResponse<T> = SuccessResponse<T> | ErrorResponse;
+
+// @public
+export interface ZamaConfig {
+    // (undocumented)
+    readonly chains: readonly FheChain[];
+    // (undocumented)
+    readonly keypairTTL: number | undefined;
+    // Warning: (ae-forgotten-export) The symbol "ZamaSDKEventListener" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    readonly onEvent: ZamaSDKEventListener | undefined;
+    // Warning: (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    readonly provider: GenericProvider;
+    // (undocumented)
+    readonly registryTTL: number | undefined;
+    // Warning: (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    readonly relayer: RelayerDispatcher;
+    // (undocumented)
+    readonly sessionStorage: GenericStorage;
+    // (undocumented)
+    readonly sessionTTL: number | "infinite" | undefined;
+    // Warning: (ae-forgotten-export) The symbol "GenericSigner" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    readonly signer: GenericSigner;
+    // (undocumented)
+    readonly storage: GenericStorage;
+}
+
+// Warning: (ae-forgotten-export) The symbol "AtLeastOneChain" needs to be exported by the entry point index.d.ts
+//
+// @public
+export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChain> {
+    chains: TChains;
+    keypairTTL?: number;
+    onEvent?: ZamaSDKEventListener;
+    registryTTL?: number;
+    relayers: { [K in TChains[number]["id"]]: RelayerConfig };
+    sessionStorage?: GenericStorage;
+    sessionTTL?: number | "infinite";
+    storage?: GenericStorage;
+}
+
+// @public
+export interface ZamaConfigGeneric<TChains extends AtLeastOneChain = AtLeastOneChain> extends ZamaConfigBase<TChains> {
+    // (undocumented)
+    provider: GenericProvider;
+    // (undocumented)
+    signer: GenericSigner;
+}
+
+// @public
+export class ZamaSDK {
+    [Symbol.dispose](): void;
+    constructor(config: ZamaSDKConfig);
+    allow(contractAddresses: Address[]): Promise<void>;
+    // Warning: (ae-forgotten-export) The symbol "DecryptCache" needs to be exported by the entry point index.d.ts
+    readonly cache: DecryptCache;
+    // Warning: (ae-forgotten-export) The symbol "ReadonlyToken" needs to be exported by the entry point index.d.ts
+    createReadonlyToken(address: Address): ReadonlyToken;
+    // Warning: (ae-forgotten-export) The symbol "Token" needs to be exported by the entry point index.d.ts
+    createToken(address: Address, wrapper?: Address): Token;
+    createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
+    // Warning: (ae-forgotten-export) The symbol "CredentialsManager" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    readonly credentials: CredentialsManager;
+    // Warning: (ae-forgotten-export) The symbol "DelegatedCredentialsManager" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    readonly delegatedCredentials: DelegatedCredentialsManager;
+    dispose(): void;
+    // Warning: (ae-forgotten-export) The symbol "ZamaSDKEventInput" needs to be exported by the entry point index.d.ts
+    //
+    // @internal
+    emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
+    // Warning: (ae-forgotten-export) The symbol "SignerIdentityListener" needs to be exported by the entry point index.d.ts
+    onIdentityChange(listener: SignerIdentityListener): () => void;
+    // (undocumented)
+    readonly provider: GenericProvider;
+    publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
+    // Warning: (ae-forgotten-export) The symbol "WrappersRegistry" needs to be exported by the entry point index.d.ts
+    readonly registry: WrappersRegistry;
+    // (undocumented)
+    readonly relayer: RelayerDispatcher;
+    requireChainAlignment(operation: string): Promise<number>;
+    revokeSession(): Promise<void>;
+    // (undocumented)
+    readonly sessionStorage: GenericStorage;
+    // (undocumented)
+    readonly signer: GenericSigner;
+    // (undocumented)
+    readonly storage: GenericStorage;
+    terminate(): void;
+    // Warning: (ae-forgotten-export) The symbol "DecryptHandle" needs to be exported by the entry point index.d.ts
+    userDecrypt(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>>;
+}
+
+// @public
+export interface ZamaSDKConfig {
+    chains?: readonly FheChain[];
+    keypairTTL?: number;
+    onEvent?: ZamaSDKEventListener;
+    provider: GenericProvider;
+    registryAddresses?: Record<number, Address>;
+    registryTTL?: number;
+    relayer: RelayerDispatcher;
+    sessionStorage?: GenericStorage;
+    sessionTTL?: number | "infinite";
+    signer: GenericSigner;
+    storage: GenericStorage;
+}
 
 // (No @packageDocumentation comment for this package)
 
