@@ -38,6 +38,8 @@ export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
     // Warning: (ae-forgotten-export) The symbol "EncryptResult" needs to be exported by the entry point index.d.ts
     encrypt(params: EncryptParams): Promise<EncryptResult>;
     generateKeypair(): Promise<KeypairType<Hex>>;
+    // (undocumented)
+    getExtraData(): Promise<Hex>;
     // Warning: (ae-forgotten-export) The symbol "PublicKeyData" needs to be exported by the entry point index.d.ts
     getPublicKey(): Promise<PublicKeyData | null>;
     // Warning: (ae-forgotten-export) The symbol "PublicParamsData" needs to be exported by the entry point index.d.ts
