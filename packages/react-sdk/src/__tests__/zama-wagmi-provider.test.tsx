@@ -42,6 +42,23 @@ function lastConfig(): ZamaConfig {
 }
 
 describe("ZamaWagmiProvider", () => {
+  it("keeps the SDK config stable across parent re-renders with stable props", () => {
+    const wagmiConfig = {} as Config;
+    mockUseConfig.mockReturnValue(wagmiConfig);
+    mockUseConnection.mockReturnValue({
+      status: "connected",
+      address: ADDRESS,
+      chainId: 31337,
+    });
+
+    const view = render(<ZamaWagmiProvider {...baseProps}>child</ZamaWagmiProvider>);
+    const initialConfig = lastConfig();
+
+    view.rerender(<ZamaWagmiProvider {...baseProps}>child</ZamaWagmiProvider>);
+
+    expect(lastConfig()).toBe(initialConfig);
+  });
+
   it("passes a signer while wagmi reconnects with persisted identity", () => {
     const wagmiConfig = {} as Config;
     mockUseConfig.mockReturnValue(wagmiConfig);

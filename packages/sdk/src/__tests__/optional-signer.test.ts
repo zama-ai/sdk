@@ -13,13 +13,13 @@ describe("ZamaSDK without signer", () => {
     expect(sdk.delegatedCredentials).toBeUndefined();
   });
 
-  it("does not validate signer-only keypairTTL when signer is omitted", ({
-    relayer,
-    provider,
-    storage,
-  }) => {
-    expect(() => new ZamaSDK({ relayer, provider, storage, keypairTTL: 0 })).not.toThrow();
-    expect(() => new ZamaSDK({ relayer, provider, storage, keypairTTL: NaN })).not.toThrow();
+  it("validates keypairTTL even when signer is omitted", ({ relayer, provider, storage }) => {
+    expect(() => new ZamaSDK({ relayer, provider, storage, keypairTTL: 0 })).toThrow(
+      "keypairTTL must be a positive number",
+    );
+    expect(() => new ZamaSDK({ relayer, provider, storage, keypairTTL: NaN })).toThrow(
+      "keypairTTL must be a positive number",
+    );
   });
 
   it("does not subscribe to signer lifecycle", ({ relayer, provider, storage }) => {
@@ -154,5 +154,6 @@ describe("SignerRequiredError", () => {
     expect(err.operation).toBe("myOp");
     expect(err.code).toBe(ZamaErrorCode.SignerRequired);
     expect(err.message).toContain("myOp");
+    expect(err.message).not.toContain("<ZamaProvider signer=");
   });
 });

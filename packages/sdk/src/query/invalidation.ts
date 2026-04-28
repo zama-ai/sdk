@@ -93,9 +93,7 @@ export function invalidateWagmiBalanceQueries(queryClient: QueryClientLike): voi
 
 export function invalidateWalletLifecycleQueries(queryClient: QueryClientLike): void {
   // Remove (not just invalidate) wallet-local caches so a stale allowed/true
-  // cannot surface between wallet disconnect and the next refetch. The
-  // primary correctness mechanism lives in the query keys (see
-  // zamaQueryKeys.isAllowed.scope): this cleanup is defense in depth.
+  // cannot surface between wallet disconnect and the next refetch.
   queryClient.removeQueries({ queryKey: zamaQueryKeys.decryption.all });
   queryClient.removeQueries({ queryKey: zamaQueryKeys.isAllowed.all });
   void queryClient.invalidateQueries({ predicate: isZamaQuery });

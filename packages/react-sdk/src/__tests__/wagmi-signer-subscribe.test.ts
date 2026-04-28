@@ -1,5 +1,5 @@
 import { test as base, describe, expect, TEST_ADDR_A, TEST_ADDR_B } from "../test-fixtures";
-import type { Address } from "@zama-fhe/sdk";
+import { SignerRequiredError, type Address } from "@zama-fhe/sdk";
 import type { Config } from "wagmi";
 
 const ADDR_A = TEST_ADDR_A;
@@ -73,24 +73,38 @@ describe("WagmiSigner.subscribe", () => {
     },
   );
 
-  wit("does not seed the currently connected identity", ({ wagmiSigner, onIdentityChange }) => {
+  wit("seeds the currently connected identity", ({ wagmiSigner, onIdentityChange }) => {
     mockGetConnection.mockReturnValue({ status: "connected", address: ADDR_A, chainId: 1 });
 
     wagmiSigner.subscribe(onIdentityChange);
 
-    expect(onIdentityChange).not.toHaveBeenCalled();
+    expect(onIdentityChange).toHaveBeenCalledOnce();
+    expect(onIdentityChange).toHaveBeenCalledWith({
+      previous: undefined,
+      next: { address: ADDR_A, chainId: 1 },
+    });
   });
 
   wit(
-    "does not seed a reconnecting identity when wagmi has persisted state",
+    "seeds a reconnecting identity when wagmi has persisted state",
     ({ wagmiSigner, onIdentityChange }) => {
       mockGetConnection.mockReturnValue({ status: "reconnecting", address: ADDR_A, chainId: 1 });
 
       wagmiSigner.subscribe(onIdentityChange);
 
-      expect(onIdentityChange).not.toHaveBeenCalled();
+      expect(onIdentityChange).toHaveBeenCalledOnce();
+      expect(onIdentityChange).toHaveBeenCalledWith({
+        previous: undefined,
+        next: { address: ADDR_A, chainId: 1 },
+      });
     },
   );
+
+  wit("throws SignerRequiredError when no account is available", async ({ wagmiSigner }) => {
+    mockGetConnection.mockReturnValue({ status: "disconnected" });
+
+    await expect(wagmiSigner.getAddress()).rejects.toBeInstanceOf(SignerRequiredError);
+  });
 
   wit(
     "fires connect when transitioning from disconnected to connected",

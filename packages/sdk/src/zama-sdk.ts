@@ -145,21 +145,21 @@ export class ZamaSDK {
       registryAddresses,
     });
     this.#registryTTL = config.registryTTL;
+    const keypairTTL = (() => {
+      const ttl = config.keypairTTL ?? 2592000;
+      if (ttl <= 0 || isNaN(ttl)) {
+        throw new Error("keypairTTL must be a positive number (seconds)");
+      }
+      if (ttl > MAX_KEYPAIR_TTL) {
+        // oxlint-disable-next-line no-console
+        console.warn(
+          `[zama-sdk] keypairTTL (${ttl}s) exceeds the fhevm maximum of 365 days (${MAX_KEYPAIR_TTL}s); capping to ${MAX_KEYPAIR_TTL}s.`,
+        );
+        return MAX_KEYPAIR_TTL;
+      }
+      return ttl;
+    })();
     if (config.signer) {
-      const keypairTTL = (() => {
-        const ttl = config.keypairTTL ?? 2592000;
-        if (ttl <= 0 || isNaN(ttl)) {
-          throw new Error("keypairTTL must be a positive number (seconds)");
-        }
-        if (ttl > MAX_KEYPAIR_TTL) {
-          // oxlint-disable-next-line no-console
-          console.warn(
-            `[zama-sdk] keypairTTL (${ttl}s) exceeds the fhevm maximum of 365 days (${MAX_KEYPAIR_TTL}s); capping to ${MAX_KEYPAIR_TTL}s.`,
-          );
-          return MAX_KEYPAIR_TTL;
-        }
-        return ttl;
-      })();
       const credentialsConfig = {
         relayer: this.relayer,
         signer: config.signer,
@@ -270,13 +270,19 @@ export class ZamaSDK {
     }
     const nextChainId = change.next?.chainId;
     if (nextChainId !== undefined) {
-      await swallow("switch relayer chain", () => {
+      try {
         this.relayer.switchChain(nextChainId);
-      });
+      } catch (error) {
+        // oxlint-disable-next-line no-console
+        console.warn(`[zama-sdk] switch relayer chain failed:`, error);
+        return;
+      }
     }
-    for (const listener of this.#identityListeners) {
-      await swallow("identity listener", () => listener(change));
-    }
+    await Promise.all(
+      Array.from(this.#identityListeners, (listener) =>
+        swallow("identity listener", () => listener(change)),
+      ),
+    );
   }
 
   /**

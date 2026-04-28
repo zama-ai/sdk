@@ -24,7 +24,7 @@ export class SignerRequiredError extends ZamaError {
   constructor(operation: string, options?: ErrorOptions) {
     super(
       ZamaErrorCode.SignerRequired,
-      `Cannot ${operation} without a signer. Configure one via ZamaSDKConfig.signer or <ZamaProvider signer={...}>.`,
+      `Cannot ${operation} without a signer. Configure one via ZamaSDKConfig.signer or <ZamaProvider config={createConfig({ signer: ... })}>.`,
       options,
     );
     this.name = "SignerRequiredError";

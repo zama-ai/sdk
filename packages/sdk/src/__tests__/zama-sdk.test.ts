@@ -450,6 +450,71 @@ describe("ZamaSDK", () => {
 
       sdk.terminate();
     });
+
+    it("does not notify listeners when relayer chain switching fails", async ({
+      createMockSigner,
+      createMockRelayer,
+      createSDK,
+    }) => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const { signer, emitChange } = createSubscribeSigner(createMockSigner());
+      const relayer = createMockRelayer({
+        switchChain: vi.fn(() => {
+          throw new Error("unknown chain");
+        }),
+      });
+      const sdk = createSDK({ relayer, signer });
+      const listener = vi.fn();
+      sdk.onIdentityChange(listener);
+
+      emitChange({
+        previous: undefined,
+        next: { address: NEXT_USER_ADDRESS, chainId: 1 },
+      });
+
+      await vi.waitFor(() => {
+        expect(warnSpy).toHaveBeenCalledWith(
+          expect.stringContaining("switch relayer chain failed"),
+          expect.any(Error),
+        );
+      });
+      expect(listener).not.toHaveBeenCalled();
+
+      warnSpy.mockRestore();
+      sdk.terminate();
+    });
+
+    it("fans out identity listeners without waiting for slow listeners", async ({
+      createMockSigner,
+      createSDK,
+    }) => {
+      const { signer, emitChange } = createSubscribeSigner(createMockSigner());
+      const sdk = createSDK({ signer });
+      let releaseSlowListener: () => void = () => {};
+      const slowListener = vi.fn(() => {
+        return new Promise<void>((resolve) => {
+          releaseSlowListener = resolve;
+        });
+      });
+      const fastListener = vi.fn();
+      sdk.onIdentityChange((change) => {
+        void slowListener(change);
+      });
+      sdk.onIdentityChange(fastListener);
+
+      emitChange({
+        previous: undefined,
+        next: undefined,
+      });
+
+      await vi.waitFor(() => {
+        expect(fastListener).toHaveBeenCalledOnce();
+      });
+      expect(slowListener).toHaveBeenCalledOnce();
+      releaseSlowListener();
+
+      sdk.terminate();
+    });
   });
 
   describe("decrypt", () => {

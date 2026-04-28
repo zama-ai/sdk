@@ -1,13 +1,12 @@
 "use client";
 
-import { buildZamaConfig, type ZamaConfig } from "@zama-fhe/sdk";
+import { buildZamaConfig, type ZamaConfig, type ZamaConfigBase } from "@zama-fhe/sdk";
 import type { AtLeastOneChain } from "@zama-fhe/sdk/chains";
 import type { PropsWithChildren } from "react";
 import { useMemo } from "react";
 import { useConfig } from "wagmi";
 import { ZamaProvider } from "../provider";
 import { useConnection } from "./compat";
-import type { ZamaConfigWagmi } from "./config";
 import { WagmiProvider } from "./wagmi-provider";
 import { WagmiSigner } from "./wagmi-signer";
 
@@ -28,7 +27,7 @@ function hasSignerIdentity(connection: WagmiConnection): boolean {
  * it from `useConfig()` so it can react to wagmi connection state changes.
  */
 export interface ZamaWagmiProviderProps<TChains extends AtLeastOneChain = AtLeastOneChain>
-  extends PropsWithChildren, Omit<ZamaConfigWagmi<TChains>, "wagmiConfig"> {}
+  extends PropsWithChildren, ZamaConfigBase<TChains> {}
 
 /**
  * Wagmi-integrated Zama provider with reactive, connection-aware signer.
@@ -54,7 +53,14 @@ export interface ZamaWagmiProviderProps<TChains extends AtLeastOneChain = AtLeas
  */
 export function ZamaWagmiProvider<TChains extends AtLeastOneChain>({
   children,
-  ...params
+  chains,
+  relayers,
+  storage,
+  sessionStorage,
+  keypairTTL,
+  sessionTTL,
+  registryTTL,
+  onEvent,
 }: ZamaWagmiProviderProps<TChains>) {
   const wagmiConfig = useConfig();
   const connection = useConnection();
@@ -64,11 +70,28 @@ export function ZamaWagmiProvider<TChains extends AtLeastOneChain>({
   const config = useMemo<ZamaConfig>(() => {
     const provider = new WagmiProvider({ config: wagmiConfig });
     const signer = hasSigner ? new WagmiSigner({ config: wagmiConfig }) : undefined;
-    return buildZamaConfig(signer, provider, params);
-    // `params` is spread; React's referential identity is stable per render.
-    // Callers that pass inline objects accept the SDK rebuild on each render.
-    // oxlint-disable-next-line react-hooks/exhaustive-deps
-  }, [wagmiConfig, hasSigner, params]);
+    return buildZamaConfig(signer, provider, {
+      chains,
+      relayers,
+      storage,
+      sessionStorage,
+      keypairTTL,
+      sessionTTL,
+      registryTTL,
+      onEvent,
+    });
+  }, [
+    wagmiConfig,
+    hasSigner,
+    chains,
+    relayers,
+    storage,
+    sessionStorage,
+    keypairTTL,
+    sessionTTL,
+    registryTTL,
+    onEvent,
+  ]);
 
   return <ZamaProvider config={config}>{children}</ZamaProvider>;
 }
