@@ -13,120 +13,82 @@ Browser relayer that runs FHE operations in a Web Worker via WASM. Handles encry
 import { RelayerWeb } from "@zama-fhe/sdk";
 ```
 
+{% hint style="info" %}
+For most applications, prefer the `web()` transport factory with `createConfig` instead of constructing `RelayerWeb` directly. See [Network Presets](/reference/sdk/network-presets) for examples.
+{% endhint %}
+
 ## Usage
 
 {% tabs %}
-{% tab title="app.ts" %}
+{% tab title="Recommended (web transport)" %}
 
 ```ts
-import { RelayerWeb, MainnetConfig, SepoliaConfig } from "@zama-fhe/sdk";
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { web } from "@zama-fhe/sdk";
+import { sepolia } from "@zama-fhe/sdk/chains";
 
-const relayer = new RelayerWeb({
-  getChainId: () => signer.getChainId(),
-  transports: {
-    [MainnetConfig.chainId]: {
-      ...MainnetConfig,
-      relayerUrl: "https://your-app.com/api/relayer/1",
-      network: "https://mainnet.infura.io/v3/YOUR_KEY",
-    },
-    [SepoliaConfig.chainId]: {
-      ...SepoliaConfig,
-      relayerUrl: "https://your-app.com/api/relayer/11155111",
-      network: "https://sepolia.infura.io/v3/YOUR_KEY",
-    },
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: {
+    [sepolia.id]: web(),
   },
 });
 ```
 
 {% endtab %}
-{% tab title="sdk.ts" %}
+{% tab title="Direct construction" %}
 
 ```ts
-import { ZamaSDK, indexedDBStorage } from "@zama-fhe/sdk";
+import { RelayerWeb } from "@zama-fhe/sdk";
+import { sepolia } from "@zama-fhe/sdk/chains";
 
-const sdk = new ZamaSDK({
-  relayer,
-  signer,
-  storage: indexedDBStorage,
+const relayer = new RelayerWeb({
+  chain: sepolia,
+  worker: relayerWorkerClient,
 });
 ```
 
 {% endtab %}
 {% endtabs %}
 
-## Constructor
+## Constructor (`RelayerWebConfig`)
 
-### getChainId
+### chain
 
-`() => Promise<number>`
+`FheChain`
 
-Called lazily to determine which transport to use. The relayer initializes (or re-initializes) its worker when the chain changes.
+FHE chain configuration. Use a built-in chain preset (`sepolia`, `mainnet`, `hoodi`, `hardhat`) or a custom `FheChain` object.
 
-```ts
-const relayer = new RelayerWeb({
-  getChainId: () => signer.getChainId(),
-  transports: {
-    /* ... */
-  },
-});
-```
+### worker
 
-### transports
+`RelayerWorkerClient`
 
-`Record<number, TransportConfig>`
+Worker client that handles WASM operations off the main thread.
 
-Per-chain configuration. Each entry maps a chain ID to its network RPC, relayer URL, and optional preset fields. Use built-in presets (`SepoliaConfig`, `MainnetConfig`, `HardhatConfig`) and override what you need.
+### security
 
-```ts
-import { SepoliaConfig, MainnetConfig } from "@zama-fhe/sdk";
+`RelayerWebSecurityConfig | undefined`
 
-const relayer = new RelayerWeb({
-  getChainId: () => signer.getChainId(),
-  transports: {
-    [MainnetConfig.chainId]: {
-      ...MainnetConfig,
-      relayerUrl: "https://your-app.com/api/relayer/1",
-      network: "https://mainnet.infura.io/v3/YOUR_KEY",
-    },
-    [SepoliaConfig.chainId]: {
-      ...SepoliaConfig,
-      relayerUrl: "https://your-app.com/api/relayer/11155111",
-      network: "https://sepolia.infura.io/v3/YOUR_KEY",
-    },
-  },
-});
-```
+Security options for the WASM bundle and relayer requests.
 
-Each transport entry accepts:
+| Field            | Type           | Description                                         |
+| ---------------- | -------------- | --------------------------------------------------- |
+| `integrityCheck` | `boolean`      | Verify SHA-384 of the WASM bundle. Default: `true`. |
+| `getCsrfToken`   | `() => string` | Returns a CSRF token to attach to relayer requests. |
 
-| Field        | Type         | Description                                             |
-| ------------ | ------------ | ------------------------------------------------------- |
-| `network`    | `string`     | RPC URL for the chain.                                  |
-| `relayerUrl` | `string`     | Your backend proxy URL for the relayer API.             |
-| `auth`       | `AuthConfig` | Direct API key auth (server-side only).                 |
-| `...preset`  | —            | Spread a preset to get contract addresses and defaults. |
+### logger
 
-{% hint style="warning" %}
-In browser apps, use `relayerUrl` to proxy through your backend. Never expose the API key client-side. Use `auth` only in server-side or prototype setups.
-{% endhint %}
+`GenericLogger | undefined`
 
----
+Optional logger for observing worker lifecycle and request timing.
 
 ### threads
 
 `number | undefined`
 
-Number of threads for parallel FHE via `wasm-bindgen-rayon` and `SharedArrayBuffer`. Default: `1` (single-threaded). The practical sweet spot is 4-8 threads; beyond that, diminishing returns and higher memory usage.
-
-```ts
-const relayer = new RelayerWeb({
-  getChainId: () => signer.getChainId(),
-  transports: {
-    /* ... */
-  },
-  threads: Math.min(navigator.hardwareConcurrency, 8),
-});
-```
+Number of WASM threads for parallel FHE operations inside the Web Worker. Default: `1` (single-threaded). The practical sweet spot is 4-8 threads; beyond that, diminishing returns and higher memory usage.
 
 {% hint style="warning" %}
 Multi-threading requires [COOP/COEP headers](https://web.dev/articles/coop-coep) for `SharedArrayBuffer` access:
@@ -139,29 +101,17 @@ Cross-Origin-Embedder-Policy: require-corp
 Without these headers, the browser blocks `SharedArrayBuffer` and the relayer falls back to single-threaded mode.
 {% endhint %}
 
-### security
+### fheArtifactStorage
 
-`{ integrityCheck?: boolean; getCsrfToken?: () => string } | undefined`
+`GenericStorage | undefined`
 
-Security options for the WASM bundle and relayer requests.
+Persistent storage for caching FHE public key and params across sessions.
 
-```ts
-const relayer = new RelayerWeb({
-  getChainId: () => signer.getChainId(),
-  transports: {
-    /* ... */
-  },
-  security: {
-    integrityCheck: true, // SHA-384 verification of WASM bundle (default: true)
-    getCsrfToken: () => document.cookie.match(/csrf=(\w+)/)?.[1] ?? "",
-  },
-});
-```
+### fheArtifactCacheTTL
 
-| Field            | Type           | Description                                         |
-| ---------------- | -------------- | --------------------------------------------------- |
-| `integrityCheck` | `boolean`      | Verify SHA-384 of the WASM bundle. Default: `true`. |
-| `getCsrfToken`   | `() => string` | Returns a CSRF token to attach to relayer requests. |
+`number | undefined`
+
+How long cached FHE artifacts remain valid, in seconds.
 
 ## Related
 

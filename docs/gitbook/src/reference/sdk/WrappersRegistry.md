@@ -17,7 +17,7 @@ import { WrappersRegistry, DefaultRegistryAddresses } from "@zama-fhe/sdk";
 
 ### From ZamaSDK
 
-The SDK exposes a shared registry instance via `sdk.registry`. This is the recommended way to access the registry — it shares the SDK's signer, `registryAddresses`, and `registryTTL`, and maintains a single in-memory cache.
+The SDK exposes a shared registry instance via `sdk.registry`. This is the recommended way to access the registry — it shares the SDK's provider, `registryAddresses`, and `registryTTL`, and maintains a single in-memory cache.
 
 ```ts
 const pairs = await sdk.registry.listPairs({ page: 1 });
@@ -36,7 +36,7 @@ const pairs = await registry.getTokenPairs();
 ```ts
 import { WrappersRegistry } from "@zama-fhe/sdk";
 
-const registry = new WrappersRegistry({ signer });
+const registry = new WrappersRegistry({ provider });
 const [isValid, cToken] = await registry.getConfidentialTokenAddress(tokenAddress);
 ```
 
@@ -50,18 +50,18 @@ const registry = sdk.createWrappersRegistry({ [31337]: "0xYourHardhatRegistry" }
 
 // Via constructor
 const registry = new WrappersRegistry({
-  signer,
+  provider,
   registryAddresses: { [31337]: "0xYourHardhatRegistry" },
 });
 ```
 
 ## Constructor
 
-### signer
+### provider
 
-`GenericSigner`
+`GenericProvider`
 
-Wallet signer for read calls. Any signer implementation works (`ViemSigner`, `EthersSigner`, `WagmiSigner`, or custom).
+Provider for read-only contract calls. Any `GenericProvider` implementation works (e.g. the one created by `createConfig` or a custom implementation).
 
 ### registryAddresses
 
@@ -77,7 +77,7 @@ How long cached registry results remain valid, in seconds. Default: `86400` (24 
 
 ```ts
 const registry = new WrappersRegistry({
-  signer,
+  provider,
   registryTTL: 3600, // 1 hour
 });
 ```

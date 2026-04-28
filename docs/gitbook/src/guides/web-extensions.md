@@ -30,6 +30,7 @@ Pass `indexedDBStorage` for the encrypted FHE keypair (persistent, survives brow
 ```ts
 const sdk = new ZamaSDK({
   relayer,
+  provider,
   signer,
   storage: indexedDBStorage, // encrypted keypair — persistent
   sessionStorage: chromeSessionStorage, // wallet signature — ephemeral
