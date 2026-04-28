@@ -2,9 +2,16 @@
  * Node.js backend for `@zama-fhe/sdk` — provides {@link RelayerNode},
  * {@link NodeWorkerClient}, and {@link NodeWorkerPool} for server-side FHE operations.
  *
+ * The `node()` transport factory self-registers its handler on first call,
+ * keeping `node:worker_threads` out of browser bundles.
+ *
  * @packageDocumentation
  */
 
+export { node } from "./config";
+export type { NodeRelayerConfig, NodePoolOptions } from "./config";
+export { cleartext } from "../config/cleartext";
+export type { RelayerConfig } from "../config/types";
 export { RelayerNode } from "../relayer/relayer-node";
 export type { RelayerNodeConfig } from "../relayer/relayer-node";
 export type { RelayerSDK } from "../relayer/relayer-sdk";
@@ -18,7 +25,8 @@ export type {
   WorkerRequest,
   WorkerResponse,
   InitRequest,
-  NodeInitRequest,
+  InitPayload,
+  WorkerEnv,
   UpdateCsrfRequest,
   EncryptRequest,
   UserDecryptRequest,
@@ -65,5 +73,5 @@ export type {
 // Storage
 export { asyncLocalStorage, AsyncLocalMapStorage } from "../storage/async-local-storage";
 
-// Network preset configs
-export { HardhatConfig, MainnetConfig, SepoliaConfig } from "../relayer/relayer-utils";
+// Chain presets
+export { mainnet, sepolia, hoodi, hardhat, anvil, chains } from "../chains";

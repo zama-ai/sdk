@@ -25,9 +25,8 @@ export type EthersProviderConfig = { ethereum: EIP1193Provider } | { provider: e
 /**
  * Read-only {@link GenericProvider} backed by ethers v6.
  *
- * Use this for integrations that only need public chain reads — server
- * indexers, SSR, dashboards, explorers, or dApps before the user has
- * connected their wallet.
+ * Use this for integrations that only need public chain reads before the user has connected their
+ * wallet.
  *
  * @example
  * ```ts

@@ -1,14 +1,14 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ZamaProvider } from "@zama-fhe/react-sdk";
-import { WagmiSigner, WagmiProvider as ZamaWagmiProvider } from "@zama-fhe/react-sdk/wagmi";
+import { ZamaWagmiProvider } from "@zama-fhe/react-sdk/wagmi";
+import { web } from "@zama-fhe/sdk/web";
+import { hardhat } from "@zama-fhe/sdk/chains";
+import { burner } from "@zama-fhe/test-components";
 import type { ReactNode } from "react";
+import { getAddress } from "viem";
 import { createConfig, http, WagmiProvider } from "wagmi";
 import { anvil } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
-import { burner } from "@zama-fhe/test-components";
-import { HardhatConfig, MemoryStorage, RelayerWeb } from "@zama-fhe/sdk";
 import deployments from "../../../contracts/deployments.json" with { type: "json" };
-import { getAddress } from "viem";
 
 const anvilPort = import.meta.env.VITE_ANVIL_PORT || "8545";
 const rpcUrl = `http://127.0.0.1:${anvilPort}`;
@@ -17,37 +17,16 @@ const mockRelayerUrl = `http://127.0.0.1:${mockRelayerPort}`;
 
 const wagmiConfig = createConfig({
   chains: [anvil],
-  connectors: [
-    burner({
-      rpcUrls: {
-        [anvil.id]: rpcUrl,
-      },
-    }),
-    injected(),
-  ],
-  transports: {
-    [anvil.id]: http(rpcUrl),
-  },
+  connectors: [burner({ rpcUrls: { [anvil.id]: rpcUrl } }), injected()],
+  transports: { [anvil.id]: http(rpcUrl) },
 });
 
-const signer = new WagmiSigner({ config: wagmiConfig });
-const provider = new ZamaWagmiProvider({ config: wagmiConfig });
-
-const relayer = new RelayerWeb({
-  getChainId: async () => anvil.id,
-  transports: {
-    [anvil.id]: {
-      ...HardhatConfig,
-      relayerUrl: mockRelayerUrl,
-      network: rpcUrl,
-      chainId: anvil.id,
-    },
-  },
-  threads: 4,
-  security: { integrityCheck: false },
-});
-
-const storage = new MemoryStorage();
+const customHardhat = {
+  ...hardhat,
+  relayerUrl: mockRelayerUrl,
+  network: rpcUrl,
+  registryAddress: getAddress(deployments.wrappersRegistry),
+};
 
 const queryClient = new QueryClient();
 
@@ -55,17 +34,14 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={wagmiConfig}>
-        <ZamaProvider
-          relayer={relayer}
-          provider={provider}
-          storage={storage}
-          signer={signer}
-          registryAddresses={{
-            [anvil.id]: getAddress(deployments.wrappersRegistry),
+        <ZamaWagmiProvider
+          chains={[customHardhat]}
+          relayers={{
+            [anvil.id]: web({ threads: 4, security: { integrityCheck: false } }),
           }}
         >
           {children}
-        </ZamaProvider>
+        </ZamaWagmiProvider>
       </WagmiProvider>
     </QueryClientProvider>
   );

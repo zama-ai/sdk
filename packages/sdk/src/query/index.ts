@@ -16,7 +16,6 @@ export {
 } from "./invalidation";
 export type { QueryClientLike, QueryFilterLike, QueryLike } from "./invalidation";
 
-export { signerAddressQueryOptions } from "./signer-address";
 export {
   tokenMetadataQueryOptions,
   type TokenMetadata,
@@ -155,7 +154,9 @@ export type {
   GenericSigner,
   GenericStorage,
   ShieldCallbacks,
-  SignerLifecycleCallbacks,
+  SignerIdentity,
+  SignerIdentityChange,
+  SignerIdentityListener,
   StoredCredentials,
   TransactionReceipt,
   TransactionResult,

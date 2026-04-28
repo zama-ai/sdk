@@ -10,8 +10,8 @@ import {
   type Hex,
 } from "viem";
 import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
-import type { GenericSigner, SignerLifecycleCallbacks, WriteContractConfig } from "../types";
-import { eip1193Subscribe } from "../token/eip1193-subscribe";
+import type { GenericSigner, SignerIdentityListener, WriteContractConfig } from "../types";
+import { eip1193Subscribe } from "../signer/eip1193-subscribe";
 
 /**
  * Configuration for {@link EthersSigner}.
@@ -104,7 +104,20 @@ export class EthersSigner implements GenericSigner {
     return tx.hash;
   }
 
-  subscribe(callbacks: SignerLifecycleCallbacks): () => void {
-    return eip1193Subscribe(this.#eip1193, () => this.getAddress(), callbacks);
+  subscribe(onIdentityChange: SignerIdentityListener): () => void {
+    return eip1193Subscribe({
+      provider: this.#eip1193,
+      getInitialIdentity: async () => {
+        const signer = await this.#signerPromise;
+        const provider = signer.provider;
+        if (!provider) {
+          return undefined;
+        }
+        const [address, network] = await Promise.all([signer.getAddress(), provider.getNetwork()]);
+        const chainId = Number(network.chainId);
+        return { address: getAddress(address), chainId };
+      },
+      onIdentityChange,
+    });
   }
 }

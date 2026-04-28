@@ -1,18 +1,14 @@
 /**
  * React hooks for confidential contract operations, built on React Query.
  *
- * Requires {@link ZamaProvider} in the component tree, and `@zama-fhe/sdk`
- * installed alongside — core classes, relayers, storage, and utilities
- * are imported directly from `@zama-fhe/sdk`.
+ * Requires {@link ZamaProvider} in the component tree. Core SDK symbols
+ * (classes, types, utilities) should be imported directly from `@zama-fhe/sdk`.
  *
  * @packageDocumentation
  */
 
 // Provider
 export { ZamaProvider, useZamaSDK, type ZamaProviderProps } from "./provider";
-
-// Signer address hooks
-export { useSignerAddress, useSignerAddressSuspense } from "./use-signer-address";
 
 // SDK method hooks
 export { useEncrypt } from "./relayer/use-encrypt";

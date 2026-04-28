@@ -52,8 +52,11 @@ describe("ZamaProvider & useZamaSDK", () => {
     const { Wrapper, queryClient } = createWrapper({ signer });
     renderHook(() => useZamaSDK(), { wrapper: Wrapper });
 
-    const lifecycle = vi.mocked(signer.subscribe!).mock.calls.at(0)?.[0];
-    const signerKey = zamaQueryKeys.signerAddress.all;
+    // The SDK owns the single signer.subscribe call; ZamaProvider layers query
+    // invalidation on top via sdk.onIdentityChange. Firing the captured signer
+    // listener exercises that fan-out path end-to-end.
+    expect(signer.subscribe).toHaveBeenCalledTimes(1);
+    const listener = vi.mocked(signer.subscribe!).mock.calls[0]![0];
     const balanceKey = zamaQueryKeys.confidentialBalance.token(
       "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
     );
@@ -62,15 +65,16 @@ describe("ZamaProvider & useZamaSDK", () => {
     );
     const wagmiBalanceKey = ["readContract", { functionName: "balanceOf" }] as const;
 
-    queryClient.setQueryData(signerKey, "0xuser");
     queryClient.setQueryData(balanceKey, 1n);
     queryClient.setQueryData(decryptionKey, 2n);
     queryClient.setQueryData(wagmiBalanceKey, 2n);
 
-    lifecycle?.onChainChange?.(1);
+    listener({
+      previous: { address: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa", chainId: 31337 },
+      next: { address: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa", chainId: 1 },
+    });
 
     return waitFor(() => {
-      expect(queryClient.getQueryData(signerKey)).toBeUndefined();
       expect(queryClient.getQueryData(decryptionKey)).toBeUndefined();
       expect(queryClient.getQueryState(balanceKey)?.isInvalidated).toBe(true);
       expect(queryClient.getQueryState(wagmiBalanceKey)?.isInvalidated).toBe(true);

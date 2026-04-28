@@ -1,17 +1,36 @@
 /**
  * TypeScript SDK for Zama's fhEVM — confidential smart contracts powered by Fully Homomorphic Encryption.
  *
- * Main classes: {@link ZamaSDK}, {@link Token}, {@link ReadonlyToken}, {@link CredentialsManager}, {@link RelayerWeb}.
+ * Main classes: {@link ZamaSDK}, {@link Token}, {@link ReadonlyToken}, {@link CredentialsManager}.
  *
  * @packageDocumentation
  */
 
-// Core SDK
-export { RelayerWeb } from "./relayer/relayer-web";
+// Config factory
+// Note: web() and node() transport factories live in their own entry points
+// (@zama-fhe/sdk/web and @zama-fhe/sdk/node) to keep environment-specific
+// dependencies out of this barrel.
+export {
+  buildZamaConfig,
+  createConfig,
+  cleartext,
+  resolveChainRelayers,
+  resolveStorage,
+} from "./config";
+export type {
+  ZamaConfig,
+  ZamaConfigBase,
+  ZamaConfigGeneric,
+  ZamaConfigViem,
+  ZamaConfigEthers,
+  RelayerConfig,
+  CleartextRelayerConfig,
+  AtLeastOneChain,
+  ResolvedChainRelayer,
+} from "./config";
+export type { RelayerDispatcher, WorkerLike } from "./relayer/relayer-dispatcher";
 export type { RelayerSDK } from "./relayer/relayer-sdk";
 export type {
-  RelayerWebConfig,
-  RelayerWebSecurityConfig,
   RelayerSDKStatus,
   EncryptResult,
   EncryptParams,
@@ -36,8 +55,9 @@ export type {
 } from "@zama-fhe/relayer-sdk/bundle";
 export type { GenericLogger } from "./worker/worker.types";
 
-// Network preset configs
-export { HardhatConfig, MainnetConfig, SepoliaConfig } from "./relayer/relayer-utils";
+// Chain presets and types
+export { mainnet, sepolia, hoodi, hardhat, anvil, chains } from "./chains";
+export type { FheChain } from "./chains/types";
 
 // ERC-165 interface IDs
 export {
@@ -86,7 +106,9 @@ export type {
   GenericSigner,
   GenericProvider,
   GenericStorage,
-  SignerLifecycleCallbacks,
+  SignerIdentity,
+  SignerIdentityChange,
+  SignerIdentityListener,
   StoredCredentials,
   DelegatedStoredCredentials,
   ContractAbi,
@@ -159,6 +181,7 @@ export {
   RelayerRequestFailedError,
   ConfigurationError,
   ChainMismatchError,
+  SignerRequiredError,
   DelegationSelfNotAllowedError,
   DelegationCooldownError,
   DelegationNotFoundError,

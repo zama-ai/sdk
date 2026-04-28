@@ -19,9 +19,19 @@ By default, the SDK validates the confidential balance before submitting. If the
 {% tab title="SDK" %}
 
 ```ts
+import { createConfig } from "@zama-fhe/sdk/viem";
 import { ZamaSDK } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
+import { sepolia } from "@zama-fhe/sdk/chains";
 
-const sdk = new ZamaSDK({ relayer, signer, storage });
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  storage,
+  relayers: { [sepolia.id]: web() },
+});
+const sdk = new ZamaSDK(config);
 const token = sdk.createToken("0xEncryptedERC20");
 
 const { txHash, receipt } = await token.unshield(500n);

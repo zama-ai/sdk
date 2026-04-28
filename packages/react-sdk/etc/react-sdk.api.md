@@ -26,14 +26,10 @@ import { DelegationStatusData } from '@zama-fhe/sdk/query';
 import { EIP712TypedData } from '@zama-fhe/sdk';
 import { EncryptParams } from '@zama-fhe/sdk';
 import { FinalizeUnwrapParams } from '@zama-fhe/sdk/query';
-import { GenericProvider } from '@zama-fhe/sdk';
-import { GenericSigner } from '@zama-fhe/sdk';
-import { GenericStorage } from '@zama-fhe/sdk';
 import { PaginatedResult } from '@zama-fhe/sdk';
 import { PropsWithChildren } from 'react';
 import { PublicKeyData } from '@zama-fhe/sdk';
 import { ReadonlyToken } from '@zama-fhe/sdk';
-import { RelayerSDK } from '@zama-fhe/sdk';
 import { ResumeUnshieldParams } from '@zama-fhe/sdk/query';
 import { RevokeDelegationParams } from '@zama-fhe/sdk/query';
 import { ShieldParams } from '@zama-fhe/sdk/query';
@@ -48,10 +44,9 @@ import { UnwrapParams } from '@zama-fhe/sdk/query';
 import { UseMutationOptions } from '@tanstack/react-query';
 import { UseMutationResult } from '@tanstack/react-query';
 import { UseQueryOptions } from '@tanstack/react-query';
-import { UseQueryResult } from '@tanstack/react-query';
 import { UserDecryptQueryConfig } from '@zama-fhe/sdk/query';
+import { ZamaConfig } from '@zama-fhe/sdk';
 import { ZamaSDK } from '@zama-fhe/sdk';
-import { ZamaSDKEventListener } from '@zama-fhe/sdk';
 import { ZKProofLike } from '@zama-fhe/sdk';
 
 // @public
@@ -256,12 +251,6 @@ export interface UseShieldConfig extends UseZamaConfig {
 }
 
 // @public
-export function useSignerAddress(): UseQueryResult<Address>;
-
-// @public
-export function useSignerAddressSuspense(): _$_tanstack_react_query0.UseSuspenseQueryResult<`0x${string}`, Error>;
-
-// @public
 export function useToken(config: UseZamaConfig): Token;
 
 // @public
@@ -365,16 +354,7 @@ export function ZamaProvider(input: ZamaProviderProps): _$react_jsx_runtime0.JSX
 
 // @public
 export interface ZamaProviderProps extends PropsWithChildren {
-    keypairTTL?: number;
-    onEvent?: ZamaSDKEventListener;
-    provider: GenericProvider;
-    registryAddresses?: Record<number, Address>;
-    registryTTL?: number;
-    relayer: RelayerSDK;
-    sessionStorage?: GenericStorage;
-    sessionTTL?: number;
-    signer: GenericSigner;
-    storage: GenericStorage;
+    config: ZamaConfig;
 }
 
 // (No @packageDocumentation comment for this package)
