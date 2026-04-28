@@ -29,7 +29,7 @@ In most cases you don't instantiate `FheArtifactCache` directly. Instead, config
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia } from "@zama-fhe/sdk/chains";
 
 // web() uses IndexedDB artifact cache by default — no config needed
@@ -48,7 +48,8 @@ const config = createConfig({
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
-import { web, IndexedDBStorage } from "@zama-fhe/sdk";
+import { IndexedDBStorage } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia } from "@zama-fhe/sdk/chains";
 
 const config = createConfig({

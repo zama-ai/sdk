@@ -1,5 +1,15 @@
 # Changelog
 
+## [3.0.0-alpha.23](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.22...v3.0.0-alpha.23) (2026-04-28)
+
+## [3.0.0-alpha.22](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.21...v3.0.0-alpha.22) (2026-04-28)
+
+### Features
+
+- optional signer [SDK-109] ([#283](https://github.com/zama-ai/sdk/issues/283)) ([0b900e8]())
+
+## [3.0.0-alpha.21](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.20...v3.0.0-alpha.21) (2026-04-28)
+
 ## [3.0.0-alpha.20](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.19...v3.0.0-alpha.20) (2026-04-27)
 
 ### ⚠ BREAKING CHANGES

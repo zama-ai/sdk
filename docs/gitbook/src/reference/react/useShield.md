@@ -43,7 +43,7 @@ function ShieldButton() {
 ```ts
 // config.ts
 import { createConfig } from "@zama-fhe/react-sdk/wagmi";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia } from "@zama-fhe/sdk/chains";
 import type { FheChain } from "@zama-fhe/sdk/chains";
 import { config as wagmiConfig } from "./wagmi";

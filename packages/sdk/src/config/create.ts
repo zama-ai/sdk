@@ -11,7 +11,8 @@ import type { ZamaConfig, ZamaConfigGeneric } from "./types";
  *
  * @example
  * ```ts
- * import { createConfig, web, memoryStorage } from "@zama-fhe/sdk";
+ * import { createConfig, memoryStorage } from "@zama-fhe/sdk";
+ * import { web } from "@zama-fhe/sdk/web";
  * import { sepolia } from "@zama-fhe/sdk/chains";
  *
  * const config = createConfig({

@@ -35,7 +35,8 @@ Relayers tell the SDK how to run FHE operations on each chain.
 | `cleartext()` | Local dev   | No FHE infrastructure — cleartext operations |
 
 ```ts
-import { web, cleartext } from "@zama-fhe/sdk";
+import { cleartext } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { node } from "@zama-fhe/sdk/node";
 ```
 
@@ -116,7 +117,7 @@ For full type information, see the [ViemSigner](/reference/sdk/ViemSigner), [Eth
 {% tab title="React + wagmi" %}
 
 ```tsx
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
 
@@ -145,7 +146,8 @@ const zamaConfig = createZamaConfig({
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
-import { web, ZamaSDK } from "@zama-fhe/sdk";
+import { ZamaSDK } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
 
 const mySepolia = {
@@ -175,7 +177,8 @@ const sdk = new ZamaSDK(config);
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/ethers";
-import { web, ZamaSDK } from "@zama-fhe/sdk";
+import { ZamaSDK } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 
 const mySepolia = {
@@ -258,7 +261,8 @@ MV3 Chrome extensions need a second storage backend for session signatures, beca
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
-import { web, ZamaSDK, indexedDBStorage, chromeSessionStorage } from "@zama-fhe/sdk";
+import { ZamaSDK, indexedDBStorage, chromeSessionStorage } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 
 const mySepolia = {

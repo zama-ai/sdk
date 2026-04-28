@@ -1,13 +1,14 @@
-import type {
-  Address,
-  ContractAbi,
-  EIP712TypedData,
-  GenericSigner,
-  Hex,
-  SignerIdentityListener,
-  WriteContractArgs,
-  WriteFunctionName,
-  WriteContractConfig,
+import {
+  SignerRequiredError,
+  type Address,
+  type ContractAbi,
+  type EIP712TypedData,
+  type GenericSigner,
+  type Hex,
+  type SignerIdentityListener,
+  type WriteContractArgs,
+  type WriteFunctionName,
+  type WriteContractConfig,
 } from "@zama-fhe/sdk";
 import { getAddress } from "viem";
 import type { Config } from "wagmi";
@@ -51,7 +52,7 @@ export class WagmiSigner implements GenericSigner {
   async getAddress(): Promise<Address> {
     const account = getConnection(this.#config);
     if (!account?.address) {
-      throw new TypeError("Wagmi config is not connected");
+      throw new SignerRequiredError("getAddress");
     }
     return account.address;
   }

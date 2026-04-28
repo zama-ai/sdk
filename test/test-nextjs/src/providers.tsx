@@ -1,8 +1,7 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ZamaProvider } from "@zama-fhe/react-sdk";
-import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
+import { ZamaWagmiProvider } from "@zama-fhe/react-sdk/wagmi";
 import { cleartext } from "@zama-fhe/sdk";
 import { anvil as fheAnvil } from "@zama-fhe/sdk/chains";
 import { burner } from "@zama-fhe/test-components";
@@ -22,25 +21,24 @@ const wagmiConfig = createConfig({
   transports: { [anvil.id]: http(rpcUrl) },
 });
 
-const zamaConfig = createZamaConfig({
-  chains: [
-    {
-      ...fheAnvil,
-      network: rpcUrl,
-      registryAddress: getAddress(deployments.wrappersRegistry),
-    },
-  ],
-  wagmiConfig,
-  relayers: { [anvil.id]: cleartext() },
-});
-
 const queryClient = new QueryClient();
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={wagmiConfig}>
-        <ZamaProvider config={zamaConfig}>{children}</ZamaProvider>
+        <ZamaWagmiProvider
+          chains={[
+            {
+              ...fheAnvil,
+              network: rpcUrl,
+              registryAddress: getAddress(deployments.wrappersRegistry),
+            },
+          ]}
+          relayers={{ [anvil.id]: cleartext() }}
+        >
+          {children}
+        </ZamaWagmiProvider>
       </WagmiProvider>
     </QueryClientProvider>
   );

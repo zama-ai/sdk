@@ -10,6 +10,7 @@ import type {
 } from "viem";
 import { getAddress } from "viem";
 import type { writeContract } from "viem/actions";
+import { SignerRequiredError } from "../errors";
 import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
 import type {
   GenericSigner,
@@ -53,9 +54,9 @@ export class ViemSigner implements GenericSigner {
     this.#ethereum = config.ethereum;
   }
 
-  #requireAccount(): { walletClient: WalletClient; account: Account } {
+  #requireAccount(operation: string): { walletClient: WalletClient; account: Account } {
     if (!this.#walletClient.account) {
-      throw new TypeError("WalletClient has no account");
+      throw new SignerRequiredError(operation);
     }
     return { walletClient: this.#walletClient, account: this.#walletClient.account };
   }
@@ -65,11 +66,11 @@ export class ViemSigner implements GenericSigner {
   }
 
   async getAddress(): Promise<Address> {
-    return this.#requireAccount().account.address;
+    return this.#requireAccount("getAddress").account.address;
   }
 
   async signTypedData(typedData: EIP712TypedData): Promise<Hex> {
-    const { walletClient, account } = this.#requireAccount();
+    const { walletClient, account } = this.#requireAccount("signTypedData");
     const { EIP712Domain: _, ...sigTypes } = typedData.types;
     return walletClient.signTypedData({
       account,
@@ -90,7 +91,7 @@ export class ViemSigner implements GenericSigner {
     TFunctionName extends ContractFunctionName<TAbi, "nonpayable" | "payable">,
     const TArgs extends ContractFunctionArgs<TAbi, "nonpayable" | "payable", TFunctionName>,
   >(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex> {
-    const { walletClient, account } = this.#requireAccount();
+    const { walletClient, account } = this.#requireAccount("writeContract");
     return walletClient.writeContract({
       chain: walletClient.chain,
       account,

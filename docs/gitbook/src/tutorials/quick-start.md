@@ -78,7 +78,7 @@ import { sepolia } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ZamaProvider } from "@zama-fhe/react-sdk";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 import { sepolia as sepoliaFhe, type FheChain } from "@zama-fhe/sdk/chains";
 
@@ -124,7 +124,8 @@ function App() {
 import { createPublicClient, createWalletClient, custom, http } from "viem";
 import { sepolia } from "viem/chains";
 import { createConfig } from "@zama-fhe/sdk/viem";
-import { web, ZamaSDK } from "@zama-fhe/sdk";
+import { ZamaSDK } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia as sepoliaFhe, type FheChain } from "@zama-fhe/sdk/chains";
 
 const publicClient = createPublicClient({
@@ -158,7 +159,8 @@ const sdk = new ZamaSDK(config);
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/ethers";
-import { web, ZamaSDK } from "@zama-fhe/sdk";
+import { ZamaSDK } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 
 const mySepolia = {

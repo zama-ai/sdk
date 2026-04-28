@@ -48,7 +48,7 @@ function TokenActions() {
 
 ```ts
 import { createConfig } from "@zama-fhe/react-sdk/wagmi";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
 
 const mySepolia = {

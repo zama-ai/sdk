@@ -1,5 +1,5 @@
 import { test as base, describe, expect, TEST_ADDR_A, TEST_ADDR_B } from "../test-fixtures";
-import type { Address } from "@zama-fhe/sdk";
+import { SignerRequiredError, type Address } from "@zama-fhe/sdk";
 import type { Config } from "wagmi";
 
 const ADDR_A = TEST_ADDR_A;
@@ -99,6 +99,12 @@ describe("WagmiSigner.subscribe", () => {
       });
     },
   );
+
+  wit("throws SignerRequiredError when no account is available", async ({ wagmiSigner }) => {
+    mockGetConnection.mockReturnValue({ status: "disconnected" });
+
+    await expect(wagmiSigner.getAddress()).rejects.toBeInstanceOf(SignerRequiredError);
+  });
 
   wit(
     "fires connect when transitioning from disconnected to connected",
