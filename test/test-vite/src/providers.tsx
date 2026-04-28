@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ZamaProvider } from "@zama-fhe/react-sdk";
 import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 import { web } from "@zama-fhe/sdk";
-import { hardhat } from "@zama-fhe/sdk/chains";
+import { anvil as fheAnvil, type FheChain } from "@zama-fhe/sdk/chains";
 import { burner } from "@zama-fhe/test-components";
 import type { ReactNode } from "react";
 import { getAddress } from "viem";
@@ -22,22 +22,22 @@ const wagmiConfig = createConfig({
   transports: { [anvil.id]: http(rpcUrl) },
 });
 
-const customHardhat = {
-  ...hardhat,
+const customAnvil = {
+  ...fheAnvil,
   relayerUrl: mockRelayerUrl,
   network: rpcUrl,
   registryAddress: getAddress(deployments.wrappersRegistry),
-};
-
-const queryClient = new QueryClient();
+} as const satisfies FheChain;
 
 const zamaConfig = createZamaConfig({
   wagmiConfig,
-  chains: [customHardhat],
+  chains: [customAnvil],
   relayers: {
     [anvil.id]: web({ threads: 4, security: { integrityCheck: false } }),
   },
 });
+
+const queryClient = new QueryClient();
 
 export function Providers({ children }: { children: ReactNode }) {
   return (

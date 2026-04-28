@@ -22,8 +22,6 @@ const wagmiConfig = createConfig({
   transports: { [anvil.id]: http(rpcUrl) },
 });
 
-const queryClient = new QueryClient();
-
 const customAnvil = {
   ...fheAnvil,
   network: rpcUrl,
@@ -35,6 +33,8 @@ const zamaConfig = createZamaConfig({
   chains: [customAnvil],
   relayers: { [anvil.id]: cleartext() },
 });
+
+const queryClient = new QueryClient();
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
