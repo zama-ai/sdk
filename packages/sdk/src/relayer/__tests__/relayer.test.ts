@@ -239,7 +239,7 @@ describe("RelayerWeb", () => {
         contractAddresses: ["0x123"],
         startTimestamp: 1000,
         durationDays: 7,
-        extraData: "0x00",
+        extraData: "0x",
       });
       expect(result.domain.name).toBe("test");
       expect(result.message.publicKey).toBe("0xpub");
@@ -327,7 +327,7 @@ describe("RelayerWeb", () => {
         delegatorAddress: "0xDelegator",
         startTimestamp: 1000,
         durationDays: 7,
-        extraData: "0x00",
+        extraData: "0x",
       });
     });
 
@@ -546,7 +546,7 @@ describe("RelayerNode", () => {
         contractAddresses: ["0x123"],
         startTimestamp: 1000,
         durationDays: 7,
-        extraData: "0x00",
+        extraData: "0x",
       });
       expect(result.domain.name).toBe("test");
       expect(result.message.publicKey).toBe("0xpub");
@@ -634,7 +634,7 @@ describe("RelayerNode", () => {
         delegatorAddress: "0xDelegator",
         startTimestamp: 1000,
         durationDays: 7,
-        extraData: "0x00",
+        extraData: "0x",
       });
     });
 

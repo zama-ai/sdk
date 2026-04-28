@@ -70,11 +70,13 @@ async function getInstance(chainId: number): Promise<FhevmInstance> {
     );
   }
 
-  const promise = (async () => {
-    const nodeSdk = await import("@zama-fhe/relayer-sdk/node");
-    return nodeSdk.createInstance({ ...toInstanceConfig(config), batchRpcCalls: false });
-  })()
+  const promise = import("@zama-fhe/relayer-sdk/node")
+    .then((m) => m.createInstance({ ...toInstanceConfig(config), batchRpcCalls: false }))
     .then((instance) => {
+      // TODO: Remove when protocol on v0.12
+      instance.getExtraData = async function getExtraData() {
+        return "0x00";
+      };
       instances.set(chainId, instance);
       pending.delete(chainId);
       return instance;
