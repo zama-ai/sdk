@@ -9,11 +9,7 @@
  */
 import { parentPort } from "node:worker_threads";
 import { ethers } from "ethers";
-import {
-  MockFhevmInstance,
-  FhevmMockProvider,
-  FhevmMockProviderType,
-} from "@fhevm/mock-utils";
+import { MockFhevmInstance, FhevmMockProvider, FhevmMockProviderType } from "@fhevm/mock-utils";
 
 if (!parentPort) {
   throw new Error("This script must be run as a worker thread");
@@ -42,8 +38,7 @@ async function createInstance(chainConfig) {
     aclContractAddress: chainConfig.aclContractAddress,
     kmsContractAddress: chainConfig.kmsContractAddress,
     inputVerifierContractAddress: chainConfig.inputVerifierContractAddress,
-    verifyingContractAddressDecryption:
-      chainConfig.verifyingContractAddressDecryption,
+    verifyingContractAddressDecryption: chainConfig.verifyingContractAddressDecryption,
     verifyingContractAddressInputVerification:
       chainConfig.verifyingContractAddressInputVerification,
   };
@@ -139,8 +134,7 @@ async function handleMessage(request) {
 
       case "CREATE_EIP712": {
         const instance = await getInstance(request.payload.chainId);
-        const { publicKey, contractAddresses, startTimestamp, durationDays } =
-          request.payload;
+        const { publicKey, contractAddresses, startTimestamp, durationDays } = request.payload;
         const eip712 = instance.createEIP712(
           remove0x(publicKey),
           contractAddresses,
@@ -155,11 +149,12 @@ async function handleMessage(request) {
             verifyingContract: eip712.domain.verifyingContract,
           },
           types: {
-            UserDecryptRequestVerification:
-              eip712.types.UserDecryptRequestVerification.map((f) => ({
+            UserDecryptRequestVerification: eip712.types.UserDecryptRequestVerification.map(
+              (f) => ({
                 name: f.name,
                 type: f.type,
-              })),
+              }),
+            ),
           },
           message: {
             publicKey: ensure0x(eip712.message.publicKey),
@@ -175,10 +170,7 @@ async function handleMessage(request) {
       case "ENCRYPT": {
         const instance = await getInstance(request.payload.chainId);
         const { values, contractAddress, userAddress } = request.payload;
-        const input = instance.createEncryptedInput(
-          contractAddress,
-          userAddress,
-        );
+        const input = instance.createEncryptedInput(contractAddress, userAddress);
 
         for (const entry of values) {
           const { value, type: fheType } = entry;
@@ -187,34 +179,22 @@ async function handleMessage(request) {
               input.addBool(typeof value === "boolean" ? value : value !== 0n);
               break;
             case "euint8":
-              input.add8(
-                typeof value === "boolean" ? (value ? 1n : 0n) : value,
-              );
+              input.add8(typeof value === "boolean" ? (value ? 1n : 0n) : value);
               break;
             case "euint16":
-              input.add16(
-                typeof value === "boolean" ? (value ? 1n : 0n) : value,
-              );
+              input.add16(typeof value === "boolean" ? (value ? 1n : 0n) : value);
               break;
             case "euint32":
-              input.add32(
-                typeof value === "boolean" ? (value ? 1n : 0n) : value,
-              );
+              input.add32(typeof value === "boolean" ? (value ? 1n : 0n) : value);
               break;
             case "euint64":
-              input.add64(
-                typeof value === "boolean" ? (value ? 1n : 0n) : value,
-              );
+              input.add64(typeof value === "boolean" ? (value ? 1n : 0n) : value);
               break;
             case "euint128":
-              input.add128(
-                typeof value === "boolean" ? (value ? 1n : 0n) : value,
-              );
+              input.add128(typeof value === "boolean" ? (value ? 1n : 0n) : value);
               break;
             case "euint256":
-              input.add256(
-                typeof value === "boolean" ? (value ? 1n : 0n) : value,
-              );
+              input.add256(typeof value === "boolean" ? (value ? 1n : 0n) : value);
               break;
             case "eaddress":
               input.addAddress(String(value));

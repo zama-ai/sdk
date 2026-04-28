@@ -7,8 +7,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 const config = sepolia;
 const CONTRACT_ADDRESS = config.aclContractAddress as Address;
 const USER_ADDRESS = "0x0000000000000000000000000000000000000001" as Address;
-const DELEGATOR_ADDRESS =
-  "0x0000000000000000000000000000000000000002" as Address;
+const DELEGATOR_ADDRESS = "0x0000000000000000000000000000000000000002" as Address;
 
 describe(`RelayerNode integration`, () => {
   let sdk: ZamaSDK;
@@ -98,12 +97,7 @@ describe(`RelayerNode integration`, () => {
 
   it("creates EIP-712 typed data for user decrypt", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const eip712 = await sdk.relayer.createEIP712(
-      keypair.publicKey,
-      [CONTRACT_ADDRESS],
-      now,
-      7,
-    );
+    const eip712 = await sdk.relayer.createEIP712(keypair.publicKey, [CONTRACT_ADDRESS], now, 7);
 
     expect(eip712).toBeDefined();
     expect(eip712.domain).toBeDefined();
@@ -114,12 +108,7 @@ describe(`RelayerNode integration`, () => {
 
   it("EIP-712 message includes extraData", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const eip712 = await sdk.relayer.createEIP712(
-      keypair.publicKey,
-      [CONTRACT_ADDRESS],
-      now,
-      7,
-    );
+    const eip712 = await sdk.relayer.createEIP712(keypair.publicKey, [CONTRACT_ADDRESS], now, 7);
 
     expect(eip712.message).toHaveProperty("extraData");
     expect(eip712.message.extraData).match(/^0x/);
@@ -127,12 +116,7 @@ describe(`RelayerNode integration`, () => {
 
   it("EIP-712 message contains correct contract addresses and timestamps", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const eip712 = await sdk.relayer.createEIP712(
-      keypair.publicKey,
-      [CONTRACT_ADDRESS],
-      now,
-      7,
-    );
+    const eip712 = await sdk.relayer.createEIP712(keypair.publicKey, [CONTRACT_ADDRESS], now, 7);
 
     const msg = eip712.message as Record<string, unknown>;
     expect(msg).toHaveProperty("contractAddresses");
@@ -143,8 +127,7 @@ describe(`RelayerNode integration`, () => {
   }, 120_000);
 
   it("EIP-712 supports multiple contract addresses", async () => {
-    const secondContract =
-      "0x0000000000000000000000000000000000000099" as Address;
+    const secondContract = "0x0000000000000000000000000000000000000099" as Address;
     const now = Math.floor(Date.now() / 1000);
     const eip712 = await sdk.relayer.createEIP712(
       keypair.publicKey,
@@ -153,8 +136,7 @@ describe(`RelayerNode integration`, () => {
       7,
     );
 
-    const addrs = (eip712.message as Record<string, unknown>)
-      .contractAddresses as string[];
+    const addrs = (eip712.message as Record<string, unknown>).contractAddresses as string[];
     expect(addrs).toHaveLength(2);
     expect(addrs).toContain(CONTRACT_ADDRESS);
     expect(addrs).toContain(secondContract);
@@ -293,12 +275,7 @@ describe(`RelayerNode integration`, () => {
     expect(kp.publicKey).toMatch(/^0x/);
 
     const now = Math.floor(Date.now() / 1000);
-    const eip712 = await sdk.relayer.createEIP712(
-      kp.publicKey,
-      [CONTRACT_ADDRESS],
-      now,
-      7,
-    );
+    const eip712 = await sdk.relayer.createEIP712(kp.publicKey, [CONTRACT_ADDRESS], now, 7);
 
     expect(eip712.domain).toBeDefined();
     expect(eip712.types).toBeDefined();
@@ -370,12 +347,7 @@ describe(`RelayerNode integration`, () => {
   it("extraData in EIP-712 matches getExtraData()", async () => {
     const extraData = await sdk.relayer.getExtraData();
     const now = Math.floor(Date.now() / 1000);
-    const eip712 = await sdk.relayer.createEIP712(
-      keypair.publicKey,
-      [CONTRACT_ADDRESS],
-      now,
-      7,
-    );
+    const eip712 = await sdk.relayer.createEIP712(keypair.publicKey, [CONTRACT_ADDRESS], now, 7);
 
     expect(eip712.message.extraData).toBe(extraData);
   }, 120_000);

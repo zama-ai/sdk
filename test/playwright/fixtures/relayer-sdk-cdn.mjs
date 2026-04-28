@@ -123,9 +123,7 @@
           }),
         });
         if (!res.ok) {
-          throw new Error(
-            "Mock encrypt failed: " + res.status + " " + (await res.text()),
-          );
+          throw new Error("Mock encrypt failed: " + res.status + " " + (await res.text()));
         }
         const data = await res.json();
         return {
@@ -144,11 +142,7 @@
       config,
 
       createEncryptedInput(contractAddress, userAddress) {
-        return createEncryptedInputBuilder(
-          config,
-          contractAddress,
-          userAddress,
-        );
+        return createEncryptedInputBuilder(config, contractAddress, userAddress);
       },
 
       generateKeypair() {
@@ -162,13 +156,7 @@
         return "0x00";
       },
 
-      createEIP712(
-        publicKey,
-        contractAddresses,
-        startTimestamp,
-        durationDays,
-        _extraData,
-      ) {
+      createEIP712(publicKey, contractAddresses, startTimestamp, durationDays, _extraData) {
         return {
           domain: {
             name: "Decryption",
@@ -289,8 +277,7 @@
             handles: handleStrings,
             network: typeof config.network === "string" ? config.network : null,
             aclContractAddress: config.aclContractAddress,
-            verifyingContractAddressDecryption:
-              config.verifyingContractAddressDecryption,
+            verifyingContractAddressDecryption: config.verifyingContractAddressDecryption,
             gatewayChainId: config.gatewayChainId,
           }),
         });
@@ -338,9 +325,7 @@
           }),
         });
         if (!res.ok) {
-          throw new Error(
-            "Mock delegatedUserDecrypt failed: " + (await res.text()),
-          );
+          throw new Error("Mock delegatedUserDecrypt failed: " + (await res.text()));
         }
         const data = await res.json();
         return parseClearValues(data.clearValues);
