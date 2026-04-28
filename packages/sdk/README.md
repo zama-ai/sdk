@@ -1,6 +1,6 @@
 # @zama-fhe/sdk
 
-Core TypeScript SDK for building confidential dApps and backend integrations on the Zama Protocol. Use this package for browser or Node.js code outside React when you need confidential balances, shielding, unshielding, or private transfers.
+Core TypeScript SDK for building confidential dApps and backend integrations on the Zama Protocol. Use this package for browser or Node.js code outside React when you need confidential smart contract operations such as authorization, encryption, balances, transfers, shielding, and unshielding.
 
 If you are building a React app, pair this package with `@zama-fhe/react-sdk`.
 
