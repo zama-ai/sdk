@@ -53,7 +53,11 @@ import {
 } from "./fhe-type";
 import { computeInputHandle, computeMockCiphertext } from "./handle";
 import type { FheChain } from "../../chains/types";
-import { ConfigurationError, DecryptionFailedError, EncryptionFailedError } from "../../errors";
+import {
+  ConfigurationError,
+  DecryptionFailedError,
+  EncryptionFailedError,
+} from "../../errors";
 
 const ACL_ABI = parseAbi([
   "function persistAllowed(bytes32 handle, address account) view returns (bool)",
@@ -61,7 +65,9 @@ const ACL_ABI = parseAbi([
   "function isHandleDelegatedForUserDecryption(address delegator, address delegate, address contractAddress, bytes32 handle) view returns (bool)",
 ]);
 
-const EXECUTOR_ABI = parseAbi(["function plaintexts(bytes32 handle) view returns (uint256)"]);
+const EXECUTOR_ABI = parseAbi([
+  "function plaintexts(bytes32 handle) view returns (uint256)",
+]);
 
 const STANDARD_EIP712_DOMAIN = [
   { name: "name", type: "string" },
@@ -72,7 +78,8 @@ const STANDARD_EIP712_DOMAIN = [
 
 const USER_DECRYPT_TYPES = {
   EIP712Domain: STANDARD_EIP712_DOMAIN,
-  UserDecryptRequestVerification: USER_DECRYPT_EIP712.types.UserDecryptRequestVerification,
+  UserDecryptRequestVerification:
+    USER_DECRYPT_EIP712.types.UserDecryptRequestVerification,
 } satisfies KmsUserDecryptEIP712Type["types"];
 const DELEGATED_USER_DECRYPT_TYPES = {
   EIP712Domain: STANDARD_EIP712_DOMAIN,
@@ -81,7 +88,8 @@ const DELEGATED_USER_DECRYPT_TYPES = {
 } satisfies KmsDelegatedUserDecryptEIP712Type["types"];
 const KMS_DECRYPTION_TYPES = {
   EIP712Domain: STANDARD_EIP712_DOMAIN,
-  PublicDecryptVerification: KMS_DECRYPTION_EIP712.types.PublicDecryptVerification,
+  PublicDecryptVerification:
+    KMS_DECRYPTION_EIP712.types.PublicDecryptVerification,
 } satisfies KmsPublicDecryptEIP712Type["types"];
 
 const FORBIDDEN_CHAIN_IDS = new Set<number>([mainnet.id, sepolia.id]);
@@ -90,7 +98,10 @@ const FORBIDDEN_CHAIN_IDS = new Set<number>([mainnet.id, sepolia.id]);
 const EBOOL_ID: FheTypeId = 0;
 const EADDRESS_ID: FheTypeId = 7;
 
-function decodeClearValueType(handle: Handle, rawValue: bigint): ClearValueType {
+function decodeClearValueType(
+  handle: Handle,
+  rawValue: bigint,
+): ClearValueType {
   const typeByte = Number((BigInt(handle) >> 8n) & 0xffn);
   if (typeByte === EBOOL_ID) {
     return rawValue !== 0n;
@@ -118,7 +129,9 @@ function normalizeEncryptValue(entry: EncryptParams["values"][number]): {
     } else {
       value = entry.value;
       if (value !== 0n && value !== 1n) {
-        throw new EncryptionFailedError("Bool value must be 0, 1, true, or false");
+        throw new EncryptionFailedError(
+          "Bool value must be 0, 1, true, or false",
+        );
       }
     }
   } else if (entry.type === "eaddress") {
@@ -128,7 +141,9 @@ function normalizeEncryptValue(entry: EncryptParams["values"][number]): {
   }
 
   if (value < 0n) {
-    throw new EncryptionFailedError("Only non-negative cleartext values are supported");
+    throw new EncryptionFailedError(
+      "Only non-negative cleartext values are supported",
+    );
   }
 
   const bits = encryptionBitsFromFheTypeId(fheType);
@@ -161,11 +176,18 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
       );
     }
     this.#client = createPublicClient({
-      transport: typeof config.network === "string" ? http(config.network) : custom(config.network),
+      transport:
+        typeof config.network === "string"
+          ? http(config.network)
+          : custom(config.network),
     });
     this.#config = config;
-    this.kmsSigner = privateKeyToAccount(config.kmsSignerPrivateKey ?? MOCK_KMS_SIGNER_PK);
-    this.inputSigner = privateKeyToAccount(config.inputSignerPrivateKey ?? MOCK_INPUT_SIGNER_PK);
+    this.kmsSigner = privateKeyToAccount(
+      config.kmsSignerPrivateKey ?? MOCK_KMS_SIGNER_PK,
+    );
+    this.inputSigner = privateKeyToAccount(
+      config.inputSignerPrivateKey ?? MOCK_INPUT_SIGNER_PK,
+    );
   }
 
   async generateKeypair(): Promise<KeypairType<Hex>> {
@@ -208,10 +230,16 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
     const userAddress = getAddress(params.userAddress);
 
     const mockCiphertexts = entries.map(({ fheType, value }) =>
-      computeMockCiphertext(fheType, value, crypto.getRandomValues(new Uint8Array(32))),
+      computeMockCiphertext(
+        fheType,
+        value,
+        crypto.getRandomValues(new Uint8Array(32)),
+      ),
     );
 
-    const ciphertextBlob = keccak256(mockCiphertexts.length > 0 ? concat(mockCiphertexts) : "0x");
+    const ciphertextBlob = keccak256(
+      mockCiphertexts.length > 0 ? concat(mockCiphertexts) : "0x",
+    );
 
     const handles = entries.map(({ fheType }, index) =>
       computeInputHandle(
@@ -223,8 +251,11 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
       ),
     );
 
-    const cleartextParts = entries.map(({ value }) => pad(toHex(value), { size: 32 }));
-    const cleartextBytes: Hex = cleartextParts.length > 0 ? concat(cleartextParts) : "0x";
+    const cleartextParts = entries.map(({ value }) =>
+      pad(toHex(value), { size: 32 }),
+    );
+    const cleartextBytes: Hex =
+      cleartextParts.length > 0 ? concat(cleartextParts) : "0x";
 
     const signature = await this.inputSigner.signTypedData({
       domain: INPUT_VERIFICATION_EIP712.domain(
@@ -232,7 +263,8 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
         this.#config.verifyingContractAddressInputVerification as Address,
       ),
       types: {
-        CiphertextVerification: INPUT_VERIFICATION_EIP712.types.CiphertextVerification,
+        CiphertextVerification:
+          INPUT_VERIFICATION_EIP712.types.CiphertextVerification,
       },
       primaryType: "CiphertextVerification",
       message: {
@@ -260,7 +292,9 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
     };
   }
 
-  async userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>> {
+  async userDecrypt(
+    params: UserDecryptParams,
+  ): Promise<Readonly<Record<Handle, ClearValueType>>> {
     await this.#assertDecryptAuthorization(
       params.handles,
       getAddress(params.signerAddress),
@@ -278,7 +312,9 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
     const allowedResults = await Promise.all(
       normalizedHandles.map((handle) => this.#isAllowedForDecryption(handle)),
     );
-    const unauthorizedIndex = allowedResults.findIndex((isAllowed) => !isAllowed);
+    const unauthorizedIndex = allowedResults.findIndex(
+      (isAllowed) => !isAllowed,
+    );
     if (unauthorizedIndex !== -1) {
       throw new DecryptionFailedError(
         `Handle ${normalizedHandles[unauthorizedIndex]!} is not allowed for public decryption`,
@@ -295,7 +331,9 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
       ]),
     );
 
-    const abiEncodedClearValues = concat(orderedValues.map((v) => pad(toHex(v), { size: 32 })));
+    const abiEncodedClearValues = concat(
+      orderedValues.map((v) => pad(toHex(v), { size: 32 })),
+    );
 
     const signature = await this.kmsSigner.signTypedData({
       domain: KMS_DECRYPTION_EIP712.domain(
@@ -360,7 +398,9 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
     return this.#decryptHandles(params.handles);
   }
 
-  async requestZKProofVerification(_zkProof: ZKProofLike): Promise<InputProofBytesType> {
+  async requestZKProofVerification(
+    _zkProof: ZKProofLike,
+  ): Promise<InputProofBytesType> {
     throw new ConfigurationError("Not implemented in cleartext mode");
   }
 
@@ -379,7 +419,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
   }
 
   async getExtraData(): Promise<Hex> {
-    return "0x";
+    return "0x00";
   }
 
   async getAclAddress(): Promise<Address> {
