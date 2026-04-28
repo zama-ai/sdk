@@ -32,22 +32,20 @@ export interface ZamaWagmiProviderProps<TChains extends AtLeastOneChain = AtLeas
 /**
  * Wagmi-integrated Zama provider with reactive, connection-aware signer.
  *
- * Reads wagmi's `Config` from context and watches connection state. Builds a
- * {@link ZamaConfig} with a `WagmiSigner` only when wagmi exposes a concrete
- * wallet identity; otherwise leaves `signer` undefined for read-only usage.
- * The wrapped {@link ZamaProvider} re-creates its `ZamaSDK` whenever the
- * config identity changes (e.g. on connect/disconnect).
+ * @deprecated Use `createConfig` from `@zama-fhe/react-sdk/wagmi` with
+ * `<ZamaProvider>` instead. The `WagmiSigner` handles connect/disconnect
+ * lifecycle via `subscribe()` — no special provider is needed.
  *
- * Must be rendered inside wagmi's own `<WagmiProvider>`.
- *
- * @example
  * ```tsx
+ * import { createConfig } from "@zama-fhe/react-sdk/wagmi";
+ * import { ZamaProvider } from "@zama-fhe/react-sdk";
+ *
+ * const zamaConfig = createConfig({ wagmiConfig, chains, relayers });
+ *
  * <WagmiProvider config={wagmiConfig}>
- *   <QueryClientProvider client={queryClient}>
- *     <ZamaWagmiProvider chains={[sepolia]} relayers={{ [sepolia.id]: web() }}>
- *       <App />
- *     </ZamaWagmiProvider>
- *   </QueryClientProvider>
+ *   <ZamaProvider config={zamaConfig}>
+ *     <App />
+ *   </ZamaProvider>
  * </WagmiProvider>
  * ```
  */

@@ -1,12 +1,14 @@
 /**
  * Wagmi integration for the Zama React SDK.
  *
- * Use {@link ZamaWagmiProvider} as the single entry point for wagmi-based
- * React apps. Low-level wagmi provider and signer adapters are intentionally
- * not exported from this package entry point, keeping disconnected and
- * reconnecting states from being exposed as valid signing capabilities.
+ * Use {@link createConfig} to build a {@link ZamaConfig} from a wagmi
+ * `Config`, then pass it to `<ZamaProvider>`. The signer handles
+ * connect/disconnect lifecycle via `subscribe()` — no special provider needed.
  *
  * @packageDocumentation
  */
 
+export { createConfig, type ZamaConfigWagmi } from "./config";
+
+/** @deprecated Use `createConfig` + `<ZamaProvider>` instead. Will be removed in the next major. */
 export { ZamaWagmiProvider, type ZamaWagmiProviderProps } from "./zama-wagmi-provider";
