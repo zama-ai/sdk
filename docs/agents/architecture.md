@@ -10,7 +10,7 @@
 
 The directory structure is shallow, so understanding how data moves through the system requires knowing the layers.
 
-**SDK layers:** `ZamaSDK` orchestrates `provider` (read-only RPC: `ViemProvider`, `EthersProvider`, `WagmiProvider`), `signer` (wallet: `ViemSigner`, `EthersSigner`, `WagmiSigner`), `relayer` (encrypt/decrypt backend), `storage` (credential store), and a `CredentialsManager`. `ZamaSDK` creates `Token` / `ReadonlyToken` instances that share these. `Token` (write ops) and `ReadonlyToken` (read ops) fetch encrypted handles via `sdk.provider.readContract` and go through `sdk.userDecrypt` / `sdk.publicDecrypt` for decryption. React hooks follow a three-layer pattern: core action (`packages/sdk/src/query/`) → query options factory → framework hook (`packages/react-sdk/src/`).
+**SDK layers:** `ZamaSDK` orchestrates a read-only chain provider, an optional wallet signer (read-only flows work without one; write operations require it), an encrypt/decrypt relayer backend, credential storage, and a `CredentialsManager`. `ZamaSDK` creates `Token` / `ReadonlyToken` instances that share these. `Token` (write ops) and `ReadonlyToken` (read ops) fetch encrypted handles from the chain via the provider, and go through `sdk.userDecrypt` / `sdk.publicDecrypt` primitives for decryption. React hooks follow a three-layer pattern: core action (`packages/sdk/src/query/`) → query options factory → framework hook (`packages/react-sdk/src/`).
 
 **Balance flow:** `useConfidentialBalance` runs a single `useQuery` whose `queryFn` calls `ReadonlyToken.balanceOf(owner)`. That method reads the encrypted handle from the host-chain RPC and then calls `sdk.userDecrypt([{ handle, contractAddress }])` to get the plaintext — both in one pass, no separate polling phase. EIP-712 credentials are required for decryption: the first decrypt per session needs an explicit user click, and subsequent decrypts reuse the cached credentials. Plaintext balances are cached by React Query in memory; there is no on-disk balance cache.
 
@@ -20,4 +20,4 @@ The directory structure is shallow, so understanding how data moves through the 
 
 **Unshield (confidential → public):** two-phase — request (encrypt + contract call) then finalize (after off-chain processing).
 
-**Transparent routing:** the SDK routes between host-chain RPC and Relayer API automatically. Callers never choose which backend to use. The decision is made at initialization: `RelayerWeb` for browser (Web Worker), `RelayerNode` for Node.js (worker_threads).
+**Transparent routing:** the SDK routes between host-chain RPC and Relayer API automatically. Callers never choose which backend to use. Multiple relayer implementations exist (browser, Node.js, multichain), but all expose the same `RelayerSDK` interface, so SDK and Token code never branches on the runtime.
