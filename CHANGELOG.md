@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.0.0-alpha.25](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.24...v3.0.0-alpha.25) (2026-04-28)
+
+### Features
+
+- **sdk:** update code to sdk latest version ([#291](https://github.com/zama-ai/sdk/issues/291)) ([2b5908a]())
+
 ## [3.0.0-alpha.24](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.23...v3.0.0-alpha.24) (2026-04-28)
 
 ## [3.0.0-alpha.23](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.22...v3.0.0-alpha.23) (2026-04-28)
