@@ -111,7 +111,7 @@ describe(`RelayerNode integration`, () => {
     expect(eip712.domain.name).toBeTypeOf("string");
     expect(eip712.types).toHaveProperty("EIP712Domain");
 
-    const msg = eip712.message as Record<string, unknown>;
+    const msg = eip712.message;
     expect(msg.publicKey).toBe(kp.publicKey);
     const addrs = msg.contractAddresses as string[];
     expect(addrs).toHaveLength(2);
@@ -136,7 +136,7 @@ describe(`RelayerNode integration`, () => {
     expect(eip712.domain.name).toBeTypeOf("string");
     expect(eip712.types).toHaveProperty("EIP712Domain");
 
-    const msg = eip712.message as Record<string, unknown>;
+    const msg = eip712.message;
     expect(msg.publicKey).toBe(kp.publicKey);
     expect(msg.contractAddresses).toEqual([CONTRACT_ADDRESS]);
     expect(msg.delegatorAddress).toBe(DELEGATOR_ADDRESS);
