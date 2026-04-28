@@ -307,7 +307,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
       message: {
         ctHandles: normalizedHandles,
         decryptedResult: abiEncodedClearValues,
-        extraData: "0x00",
+        extraData: "0x",
       },
     });
 
@@ -379,7 +379,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
   }
 
   async getExtraData(): Promise<Hex> {
-    return "0x00";
+    return "0x";
   }
 
   async getAclAddress(): Promise<Address> {
