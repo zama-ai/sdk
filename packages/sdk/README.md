@@ -34,11 +34,13 @@ import { web } from "@zama-fhe/sdk/web";
 import { createConfig } from "@zama-fhe/sdk/viem";
 import { sepolia as sepoliaFhe, type FheChain } from "@zama-fhe/sdk/chains";
 
-const publicClient = createPublicClient({ chain: sepolia, transport: http() });
+const rpcUrl = "https://sepolia.infura.io/v3/YOUR_KEY";
+const publicClient = createPublicClient({ chain: sepolia, transport: http(rpcUrl) });
 const walletClient = createWalletClient({ chain: sepolia, transport: custom(window.ethereum!) });
 
 const chain = {
   ...sepoliaFhe,
+  network: rpcUrl,
   relayerUrl: "https://your-app.com/api/relayer/11155111",
 } as const satisfies FheChain;
 
