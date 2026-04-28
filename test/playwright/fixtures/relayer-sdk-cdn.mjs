@@ -236,7 +236,7 @@
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            handles: handleContractPairs.map((h) => ({
+            handleContractPairs: handleContractPairs.map((h) => ({
               handle: h.handle,
               contractAddress: h.contractAddress,
             })),
@@ -244,7 +244,7 @@
             publicKey,
             signature,
             contractAddresses,
-            signerAddress,
+            userAddress: signerAddress,
             startTimestamp,
             durationDays,
             network: typeof config.network === "string" ? config.network : null,
@@ -274,7 +274,7 @@
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            handles: handleStrings,
+            ciphertextHandles: handleStrings,
             network: typeof config.network === "string" ? config.network : null,
             aclContractAddress: config.aclContractAddress,
             verifyingContractAddressDecryption: config.verifyingContractAddressDecryption,
@@ -308,7 +308,7 @@
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            handles: handleContractPairs.map((h) => ({
+            handleContractPairs: handleContractPairs.map((h) => ({
               handle: h.handle,
               contractAddress: h.contractAddress,
             })),
