@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { isAddress } from "ethers";
 import { useDelegateDecryption } from "@zama-fhe/react-sdk";
-import type { Address } from "@zama-fhe/react-sdk";
+import type { Address } from "@zama-fhe/sdk";
 import { SEPOLIA_EXPLORER_URL } from "@/lib/config";
 
 interface DelegateDecryptionCardProps {

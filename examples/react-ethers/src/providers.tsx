@@ -2,16 +2,16 @@
 
 import { useState, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ZamaProvider } from "@zama-fhe/react-sdk";
+import { EthersSigner } from "@zama-fhe/sdk/ethers";
 import {
-  ZamaProvider,
+  SepoliaConfig,
   ZamaSDKEvents,
   IndexedDBStorage,
   indexedDBStorage,
   savePendingUnshield,
   RelayerWeb,
-} from "@zama-fhe/react-sdk";
-import { EthersSigner } from "@zama-fhe/sdk/ethers";
-import { SepoliaConfig } from "@zama-fhe/sdk";
+} from "@zama-fhe/sdk";
 import { SEPOLIA_RPC_URL } from "@/lib/config";
 import { getActiveUnshieldToken, setActiveUnshieldToken } from "@/lib/activeUnshield";
 import { getEthereumProvider } from "@/lib/ethereum";
