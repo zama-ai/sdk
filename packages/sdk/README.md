@@ -52,7 +52,7 @@ const config = createConfig({
 });
 
 const sdk = new ZamaSDK(config);
-const token = sdk.createToken("0xYourEncryptedERC20");
+const token = sdk.createToken("0xYourConfidentialToken");
 
 const balance = await token.balanceOf();
 await token.confidentialTransfer("0xRecipient", 100n);

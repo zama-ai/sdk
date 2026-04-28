@@ -18394,7 +18394,7 @@ const config = createConfig({
 });
 
 const sdk = new ZamaSDK(config);
-const token = sdk.createToken("0xYourEncryptedERC20");
+const token = sdk.createToken("0xYourConfidentialToken");
 
 const balance = await token.balanceOf();
 await token.confidentialTransfer("0xRecipient", 100n);
@@ -18466,7 +18466,7 @@ import { sepolia as sepoliaFhe, type FheChain } from "@zama-fhe/sdk/chains";
 import { createPublicClient, createWalletClient, custom, http, type Address } from "viem";
 import { sepolia } from "viem/chains";
 
-const tokenAddress = "0xYourEncryptedERC20" as Address;
+const tokenAddress = "0xYourConfidentialToken" as Address;
 const rpcUrl = "https://sepolia.infura.io/v3/YOUR_KEY";
 const publicClient = createPublicClient({
   chain: sepolia,
