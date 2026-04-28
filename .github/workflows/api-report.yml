@@ -50,7 +50,6 @@ jobs:
 
       - name: Build API diff comment
         if: github.event_name == 'pull_request'
-        id: api-diff
         run: |
           mkdir -p /tmp/api-reports/pr
           cp packages/sdk/etc/*.api.md packages/react-sdk/etc/*.api.md /tmp/api-reports/pr/
@@ -58,8 +57,7 @@ jobs:
             --base-dir /tmp/api-reports/base \
             --pr-dir   /tmp/api-reports/pr \
             --out      /tmp/api-reports/comment.md \
-            --summary  "$GITHUB_STEP_SUMMARY" \
-            | tee -a "$GITHUB_OUTPUT"
+            --summary  "$GITHUB_STEP_SUMMARY"
 
       - name: Post or update PR comment
         if: github.event_name == 'pull_request'
