@@ -268,23 +268,14 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
     assertClient(client);
 
     // 1. Parse transport keypair
-    const keypair = await client.parseTransportKeypair({
-      serialized: {
-        publicKey: payload.publicKey,
-        privateKey: payload.privateKey,
-      },
-    });
+    const keypair = await client.parseTransportKeypair(payload);
 
     // 2. Parse signed decryption permit
     const permit = await client.parseSignedDecryptionPermit({
-      serialized: {
-        publicKey: payload.publicKey,
-        contractAddresses: payload.signedContractAddresses,
+      serializedPermit: {
         signerAddress: payload.signerAddress,
-        startTimestamp: payload.startTimestamp,
-        durationDays: payload.durationDays,
         signature: payload.signature,
-        eip712: payload.eip712,
+        eip712: payload.eip712 as never,
       },
       transportKeypair: keypair,
     });
@@ -294,7 +285,7 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
       transportKeypair: keypair,
       encryptedValues: payload.handles,
       contractAddress: payload.contractAddress,
-      signedPermit: permit as never,
+      signedPermit: permit,
     });
 
     // 4. Map results: clearValues is TypedValue[] -> Record<Handle, value>
@@ -331,22 +322,16 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
 
     // 1. Parse transport keypair
     const keypair = await client.parseTransportKeypair({
-      serialized: {
-        publicKey: payload.publicKey,
-        privateKey: payload.privateKey,
-      },
+      publicKey: payload.publicKey,
+      privateKey: payload.privateKey,
     });
 
     // 2. Parse signed decryption permit (delegated)
     const permit = await client.parseSignedDecryptionPermit({
-      serialized: {
-        publicKey: payload.publicKey,
-        contractAddresses: payload.signedContractAddresses,
+      serializedPermit: {
         signerAddress: payload.delegatorAddress,
-        startTimestamp: payload.startTimestamp,
-        durationDays: payload.durationDays,
         signature: payload.signature,
-        eip712: payload.eip712,
+        eip712: payload.eip712 as never,
       },
       transportKeypair: keypair,
     });
@@ -356,7 +341,7 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
       transportKeypair: keypair,
       encryptedValues: payload.handles,
       contractAddress: payload.contractAddress,
-      signedPermit: permit as never,
+      signedPermit: permit,
     });
 
     // 4. Map results
@@ -428,13 +413,13 @@ async function handleGenerateKeypair(request: GenerateKeypairRequest): Promise<v
     assertClient(client);
 
     const keypair = await client.generateTransportKeypair();
-    const serialized = client.serializeTransportKeypair({
+    const serializedPermit = client.serializeTransportKeypair({
       transportKeypair: keypair,
     });
 
     const response: GenerateKeypairResponseData = {
-      publicKey: serialized.publicKey,
-      privateKey: serialized.privateKey,
+      publicKey: serializedPermit.publicKey,
+      privateKey: serializedPermit.privateKey,
     };
 
     sendSuccess(id, type, response);
@@ -454,8 +439,8 @@ async function handleCreateEIP712(request: CreateEIP712Request): Promise<void> {
   try {
     assertClient(client);
 
-    const { createKmsUserDecryptEIP712 } = await import("@fhevm/sdk/actions/chain");
-    const response = createKmsUserDecryptEIP712(client, {
+    const { createKmsUserDecryptEip712 } = await import("@fhevm/sdk/actions/chain");
+    const response = createKmsUserDecryptEip712(client, {
       publicKey: payload.publicKey,
       contractAddresses: payload.contractAddresses,
       startTimestamp: payload.startTimestamp,

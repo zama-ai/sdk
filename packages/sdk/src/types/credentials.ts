@@ -5,6 +5,14 @@ import type { Address, Hex } from "viem";
  * Uses `number` instead of `bigint` so the object survives JSON round-trips
  * and structured-clone across worker boundaries.
  */
+/**
+ * Serializable EIP-712 typed data stored alongside credentials.
+ * Uses plain types (not branded) so the object survives JSON round-trips
+ * and structured-clone across worker boundaries.
+ *
+ * At the boundary with @fhevm/sdk (which uses branded Uint64BigInt,
+ * ChecksummedAddress), a cast is needed — see worker files.
+ */
 export interface StoredEIP712 {
   domain: {
     name: string;

@@ -256,7 +256,7 @@ export interface GenerateKeypairResponseData {
   privateKey: Hex;
 }
 
-export type { CreateKmsUserDecryptEIP712ReturnType as CreateEIP712ResponseData } from "@fhevm/sdk/actions/chain";
+export type { CreateKmsUserDecryptEip712ReturnType as CreateEIP712ResponseData } from "@fhevm/sdk/actions/chain";
 export type { CreateKmsDelegatedUserDecryptEip712ReturnType as CreateDelegatedEIP712ResponseData } from "@fhevm/sdk/actions/chain";
 
 export interface DelegatedUserDecryptResponseData {
