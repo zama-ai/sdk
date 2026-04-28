@@ -22,13 +22,13 @@ If you already build a `ZamaConfig` with the core SDK, you can pass it directly 
 
 Common peer dependencies:
 
-| Package                 | Version | Use when...                                      |
-| ----------------------- | ------- | ------------------------------------------------ |
-| `react`                 | `>= 18` | Always                                           |
-| `@tanstack/react-query` | `>= 5`  | Always                                           |
-| `@zama-fhe/sdk`         | Match the `@zama-fhe/react-sdk` release line | Always |
-| `wagmi`                 | `>= 2`  | Using the wagmi adapter                          |
-| `viem`                  | `>= 2`  | Using wagmi or viem-based adapters               |
+| Package                 | Version                                      | Use when...                        |
+| ----------------------- | -------------------------------------------- | ---------------------------------- |
+| `react`                 | `>= 18`                                      | Always                             |
+| `@tanstack/react-query` | `>= 5`                                       | Always                             |
+| `@zama-fhe/sdk`         | Match the `@zama-fhe/react-sdk` release line | Always                             |
+| `wagmi`                 | `>= 2`                                       | Using the wagmi adapter            |
+| `viem`                  | `>= 2`                                       | Using wagmi or viem-based adapters |
 
 ## Minimal React example
 
@@ -56,7 +56,9 @@ const chain = {
 const queryClient = new QueryClient();
 
 function Balance() {
-  const { data: balance, isLoading } = useConfidentialBalance({ tokenAddress: "0xYourEncryptedERC20" });
+  const { data: balance, isLoading } = useConfidentialBalance({
+    tokenAddress: "0xYourEncryptedERC20",
+  });
 
   if (isLoading) return <p>Decrypting...</p>;
   return <p>Balance: {balance?.toString()}</p>;

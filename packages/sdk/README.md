@@ -22,11 +22,11 @@ pnpm add @zama-fhe/sdk viem
 
 Optional peer dependencies depend on the adapter you use:
 
-| Package                 | Version | Use when...                    |
-| ----------------------- | ------- | ------------------------------ |
-| `@tanstack/query-core`  | `>= 5`  | You use `@zama-fhe/sdk/query`  |
-| `viem`                  | `>= 2`  | You use `@zama-fhe/sdk/viem`   |
-| `ethers`                | `>= 6`  | You use `@zama-fhe/sdk/ethers` |
+| Package                | Version | Use when...                    |
+| ---------------------- | ------- | ------------------------------ |
+| `@tanstack/query-core` | `>= 5`  | You use `@zama-fhe/sdk/query`  |
+| `viem`                 | `>= 2`  | You use `@zama-fhe/sdk/viem`   |
+| `ethers`               | `>= 6`  | You use `@zama-fhe/sdk/ethers` |
 
 `@zama-fhe/sdk/node` is ESM-only because it relies on `node:worker_threads`.
 
