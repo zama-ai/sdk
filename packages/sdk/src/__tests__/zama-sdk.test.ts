@@ -142,6 +142,16 @@ describe("ZamaSDK", () => {
     expect(await sessionStorage.get(key)).toBeNull();
   });
 
+  it("revokeSession clears cache even when session revoke fails", async ({ createSDK, signer }) => {
+    const sdk = createSDK();
+    const credentials = sdk.requireCredentials("test");
+    const clearSpy = vi.spyOn(sdk.cache, "clearForRequester").mockResolvedValueOnce(undefined);
+    vi.spyOn(credentials, "revokeFor").mockRejectedValueOnce(new Error("session blew up"));
+
+    await expect(sdk.revokeSession()).rejects.toThrow("session blew up");
+    expect(clearSpy).toHaveBeenCalledWith(await signer.getAddress());
+  });
+
   describe("keypairTTL validation", () => {
     it("throws when keypairTTL is 0", ({ createSDK }) => {
       expect(() => createSDK({ keypairTTL: 0 })).toThrow(
@@ -206,7 +216,7 @@ describe("ZamaSDK", () => {
       return { signer, emitChange };
     }
 
-    it("logs a warning when core cleanup fails, without breaking event delivery", async ({
+    it("logs cleanup warnings and clears cache when revoke fails", async ({
       createMockSigner,
       createSDK,
       userAddress,
@@ -220,6 +230,7 @@ describe("ZamaSDK", () => {
       });
 
       vi.spyOn(sessionStorage, "delete").mockRejectedValueOnce(new Error("session blew up"));
+      const clearSpy = vi.spyOn(sdk.cache, "clearForRequester").mockResolvedValueOnce(undefined);
       const listener = vi.fn();
       sdk.onIdentityChange(listener);
 
@@ -234,6 +245,7 @@ describe("ZamaSDK", () => {
           expect.any(Error),
         );
       });
+      expect(clearSpy).toHaveBeenCalledWith(userAddress);
       expect(listener).toHaveBeenCalledWith({
         previous: { address: userAddress, chainId: 31337 },
         next: undefined,
@@ -435,6 +447,71 @@ describe("ZamaSDK", () => {
       await sdk.revokeSession();
 
       expect(await sessionStorage.get(newKey)).toBeNull();
+
+      sdk.terminate();
+    });
+
+    it("does not notify listeners when relayer chain switching fails", async ({
+      createMockSigner,
+      createMockRelayer,
+      createSDK,
+    }) => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const { signer, emitChange } = createSubscribeSigner(createMockSigner());
+      const relayer = createMockRelayer({
+        switchChain: vi.fn(() => {
+          throw new Error("unknown chain");
+        }),
+      });
+      const sdk = createSDK({ relayer, signer });
+      const listener = vi.fn();
+      sdk.onIdentityChange(listener);
+
+      emitChange({
+        previous: undefined,
+        next: { address: NEXT_USER_ADDRESS, chainId: 1 },
+      });
+
+      await vi.waitFor(() => {
+        expect(warnSpy).toHaveBeenCalledWith(
+          expect.stringContaining("switch relayer chain failed"),
+          expect.any(Error),
+        );
+      });
+      expect(listener).not.toHaveBeenCalled();
+
+      warnSpy.mockRestore();
+      sdk.terminate();
+    });
+
+    it("fans out identity listeners without waiting for slow listeners", async ({
+      createMockSigner,
+      createSDK,
+    }) => {
+      const { signer, emitChange } = createSubscribeSigner(createMockSigner());
+      const sdk = createSDK({ signer });
+      let releaseSlowListener: () => void = () => {};
+      const slowListener = vi.fn(() => {
+        return new Promise<void>((resolve) => {
+          releaseSlowListener = resolve;
+        });
+      });
+      const fastListener = vi.fn();
+      sdk.onIdentityChange((change) => {
+        void slowListener(change);
+      });
+      sdk.onIdentityChange(fastListener);
+
+      emitChange({
+        previous: undefined,
+        next: undefined,
+      });
+
+      await vi.waitFor(() => {
+        expect(fastListener).toHaveBeenCalledOnce();
+      });
+      expect(slowListener).toHaveBeenCalledOnce();
+      releaseSlowListener();
 
       sdk.terminate();
     });

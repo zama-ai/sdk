@@ -5,6 +5,7 @@ export { ApprovalFailedError, TransactionRevertedError } from "./transaction";
 export { KeypairExpiredError, InvalidKeypairError, NoCiphertextError } from "./credential";
 export { RelayerRequestFailedError, ConfigurationError } from "./relayer";
 export { ChainMismatchError } from "./chain";
+export { SignerRequiredError } from "./signer";
 export {
   DelegationSelfNotAllowedError,
   DelegationCooldownError,

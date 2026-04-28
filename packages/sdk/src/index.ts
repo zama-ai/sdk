@@ -188,6 +188,7 @@ export {
   RelayerRequestFailedError,
   ConfigurationError,
   ChainMismatchError,
+  SignerRequiredError,
   DelegationSelfNotAllowedError,
   DelegationCooldownError,
   DelegationNotFoundError,

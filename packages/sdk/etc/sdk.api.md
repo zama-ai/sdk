@@ -556,7 +556,7 @@ export interface BatchDecryptAsOptions {
 // Warning: (ae-internal-missing-underscore) The name "buildZamaConfig" should be prefixed with an underscore because the declaration is marked as @internal
 //
 // @internal
-export function buildZamaConfig(signer: GenericSigner, provider: GenericProvider, params: ZamaConfigBase): ZamaConfig;
+export function buildZamaConfig(signer: GenericSigner | undefined, provider: GenericProvider, params: ZamaConfigBase): ZamaConfig;
 
 // @public
 export class ChainMismatchError extends ZamaError {
@@ -14804,6 +14804,13 @@ export interface SignerIdentityChange {
 export type SignerIdentityListener = (change: SignerIdentityChange) => void;
 
 // @public
+export class SignerRequiredError extends ZamaError {
+    constructor(operation: string, options?: ErrorOptions);
+    // (undocumented)
+    readonly operation: string;
+}
+
+// @public
 export class SigningFailedError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
@@ -20044,7 +20051,7 @@ export interface ZamaConfig {
     // (undocumented)
     readonly sessionTTL: number | "infinite" | undefined;
     // (undocumented)
-    readonly signer: GenericSigner;
+    readonly signer: GenericSigner | undefined;
     // (undocumented)
     readonly storage: GenericStorage;
 }
@@ -20080,8 +20087,7 @@ export type ZamaConfigEthers<TChains extends AtLeastOneChain = AtLeastOneChain> 
 export interface ZamaConfigGeneric<TChains extends AtLeastOneChain = AtLeastOneChain> extends ZamaConfigBase<TChains> {
     // (undocumented)
     provider: GenericProvider;
-    // (undocumented)
-    signer: GenericSigner;
+    signer?: GenericSigner;
 }
 
 // @public
@@ -20127,7 +20133,8 @@ export const ZamaErrorCode: {
     readonly AclPaused: "ACL_PAUSED"; /** Expiration date is too soon (must be at least 1 hour in the future). */
     readonly DelegationExpirationTooSoon: "DELEGATION_EXPIRATION_TOO_SOON"; /** Delegation exists on-chain but hasn't propagated to the gateway yet. */
     readonly DelegationNotPropagated: "DELEGATION_NOT_PROPAGATED"; /** Signer and provider are connected to different chains. */
-    readonly ChainMismatch: "CHAIN_MISMATCH";
+    readonly ChainMismatch: "CHAIN_MISMATCH"; /** Operation requires a signer but none is configured. */
+    readonly SignerRequired: "SIGNER_REQUIRED";
 };
 
 // @public
@@ -20143,9 +20150,9 @@ export class ZamaSDK {
     createToken(address: Address, wrapper?: Address): Token;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
     // (undocumented)
-    readonly credentials: CredentialsManager;
+    readonly credentials: CredentialsManager | undefined;
     // (undocumented)
-    readonly delegatedCredentials: DelegatedCredentialsManager;
+    readonly delegatedCredentials: DelegatedCredentialsManager | undefined;
     dispose(): void;
     // @internal
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
@@ -20157,11 +20164,14 @@ export class ZamaSDK {
     // (undocumented)
     readonly relayer: RelayerDispatcher;
     requireChainAlignment(operation: string): Promise<number>;
+    requireCredentials(operation: string): CredentialsManager;
+    requireDelegatedCredentials(operation: string): DelegatedCredentialsManager;
+    requireSigner(operation: string): GenericSigner;
     revokeSession(): Promise<void>;
     // (undocumented)
     readonly sessionStorage: GenericStorage;
     // (undocumented)
-    readonly signer: GenericSigner;
+    readonly signer: GenericSigner | undefined;
     // (undocumented)
     readonly storage: GenericStorage;
     terminate(): void;
@@ -20179,7 +20189,7 @@ export interface ZamaSDKConfig {
     relayer: RelayerDispatcher;
     sessionStorage?: GenericStorage;
     sessionTTL?: number | "infinite";
-    signer: GenericSigner;
+    signer?: GenericSigner;
     storage: GenericStorage;
 }
 

@@ -192,22 +192,36 @@ describe("ReadonlyToken", () => {
     }) => {
       const token1 = new ReadonlyToken(sdk, tokenAddress);
       const token2 = new ReadonlyToken(sdk, TOKEN2);
-      vi.mocked(provider.readContract)
-        .mockResolvedValueOnce(handle)
-        .mockResolvedValueOnce(VALID_HANDLE2);
+      const normalizedToken2 = getAddress(TOKEN2);
+      vi.mocked(provider.readContract).mockImplementation(async ({ address }) => {
+        if (address === tokenAddress) {
+          return handle;
+        }
+        if (address === normalizedToken2) {
+          return VALID_HANDLE2;
+        }
+        throw new Error(`Unexpected readContract address ${address}`);
+      });
       const rawError = new TypeError("malformed response");
-      vi.mocked(sdk.relayer.userDecrypt)
-        .mockImplementationOnce(async ({ handles }) => ({
-          [handles[0]]: 1000n,
-        }))
-        .mockImplementationOnce(async () => {
-          throw rawError;
-        });
+      vi.mocked(sdk.relayer.userDecrypt).mockImplementation(
+        async ({ contractAddress, handles }) => {
+          if (contractAddress === tokenAddress) {
+            return {
+              [handles[0]]: 1000n,
+            };
+          }
+          if (contractAddress === normalizedToken2) {
+            throw rawError;
+          }
+          throw new Error(`Unexpected userDecrypt contract ${contractAddress}`);
+        },
+      );
 
       const { errors } = await ReadonlyToken.batchBalancesOf([token1, token2], OWNER);
 
-      const err = errors.get(getAddress(TOKEN2));
+      const err = errors.get(normalizedToken2);
       expect(err).toBeInstanceOf(DecryptionFailedError);
+      expect(err?.cause).toBe(rawError);
     });
   });
 
