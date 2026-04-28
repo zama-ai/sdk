@@ -32,7 +32,7 @@ const config = createConfig({
 const sdk = new ZamaSDK(config);
 const token = sdk.createToken("0xEncryptedERC20");
 
-const address = await sdk.requireSigner("balanceOf").getAddress();
+const [address] = await walletClient.getAddresses();
 const balance = await token.balanceOf(address);
 console.log(`Confidential balance: ${balance}`);
 ```
@@ -122,7 +122,7 @@ These are different situations that your UI should handle separately:
 import { NoCiphertextError } from "@zama-fhe/sdk";
 
 try {
-  const address = await sdk.requireSigner("balanceOf").getAddress();
+  const [address] = await walletClient.getAddresses();
   const balance = await token.balanceOf(address);
   showBalance(balance); // could be 0n
 } catch (error) {

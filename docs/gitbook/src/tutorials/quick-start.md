@@ -347,7 +347,7 @@ const token = sdk.createToken("0xYourEncryptedERC20");
 await token.shield(1000n);
 
 // Decrypt your balance (first call prompts a wallet signature)
-const address = await sdk.requireSigner("balanceOf").getAddress();
+const [address] = await walletClient.getAddresses();
 const balance = await token.balanceOf(address);
 console.log("Confidential balance:", balance);
 
@@ -368,8 +368,8 @@ const token = sdk.createToken("0xYourEncryptedERC20");
 await token.shield(1000n);
 
 // Decrypt your balance (first call prompts a wallet signature)
-const address = await sdk.requireSigner("balanceOf").getAddress();
-const balance = await token.balanceOf(address);
+const [address] = (await window.ethereum!.request({ method: "eth_accounts" })) as string[];
+const balance = await token.balanceOf(address as `0x${string}`);
 console.log("Confidential balance:", balance);
 
 // Send 500 tokens privately
@@ -390,8 +390,7 @@ try {
   await token.shield(1000n);
 
   // Decrypt your balance
-  const address = await sdk.requireSigner("balanceOf").getAddress();
-  const balance = await token.balanceOf(address);
+  const balance = await token.balanceOf(account.address);
   console.log("Confidential balance:", balance);
 
   // Send 500 tokens privately
@@ -415,8 +414,7 @@ try {
   await token.shield(1000n);
 
   // Decrypt your balance
-  const address = await sdk.requireSigner("balanceOf").getAddress();
-  const balance = await token.balanceOf(address);
+  const balance = await token.balanceOf(wallet.address as `0x${string}`);
   console.log("Confidential balance:", balance);
 
   // Send 500 tokens privately

@@ -133,7 +133,7 @@ const sdk = new ZamaSDK(config);
 const token = sdk.createToken("0xYourEncryptedERC20");
 
 await token.shield(1000n); // deposit public tokens
-const address = await sdk.requireSigner("balanceOf").getAddress();
+const [address] = await walletClient.getAddresses();
 const balance = await token.balanceOf(address); // decrypt your balance
 await token.confidentialTransfer("0xRecipient", 500n); // private send
 await token.unshield(500n); // withdraw back to public
@@ -517,7 +517,7 @@ const token = sdk.createToken("0xYourEncryptedERC20");
 await token.shield(1000n);
 
 // Decrypt your balance (first call prompts a wallet signature)
-const address = await sdk.requireSigner("balanceOf").getAddress();
+const [address] = await walletClient.getAddresses();
 const balance = await token.balanceOf(address);
 console.log("Confidential balance:", balance);
 
@@ -537,8 +537,8 @@ const token = sdk.createToken("0xYourEncryptedERC20");
 await token.shield(1000n);
 
 // Decrypt your balance (first call prompts a wallet signature)
-const address = await sdk.requireSigner("balanceOf").getAddress();
-const balance = await token.balanceOf(address);
+const [address] = (await window.ethereum!.request({ method: "eth_accounts" })) as string[];
+const balance = await token.balanceOf(address as `0x${string}`);
 console.log("Confidential balance:", balance);
 
 // Send 500 tokens privately
@@ -558,8 +558,7 @@ try {
   await token.shield(1000n);
 
   // Decrypt your balance
-  const address = await sdk.requireSigner("balanceOf").getAddress();
-  const balance = await token.balanceOf(address);
+  const balance = await token.balanceOf(account.address);
   console.log("Confidential balance:", balance);
 
   // Send 500 tokens privately
@@ -582,8 +581,7 @@ try {
   await token.shield(1000n);
 
   // Decrypt your balance
-  const address = await sdk.requireSigner("balanceOf").getAddress();
-  const balance = await token.balanceOf(address);
+  const balance = await token.balanceOf(wallet.address as `0x${string}`);
   console.log("Confidential balance:", balance);
 
   // Send 500 tokens privately
@@ -1835,7 +1833,7 @@ const receipt = await sdk.provider.waitForTransactionReceipt(txHash);
 console.log("Confirmed in block:", receipt.blockNumber);
 
 // Optionally check updated balance
-const address = await sdk.requireSigner("balanceOf").getAddress();
+const [address] = await walletClient.getAddresses();
 const balance = await token.balanceOf(address);
 console.log("New balance:", balance);
 ```
@@ -2129,7 +2127,7 @@ const config = createConfig({
 const sdk = new ZamaSDK(config);
 const token = sdk.createToken("0xEncryptedERC20");
 
-const address = await sdk.requireSigner("balanceOf").getAddress();
+const [address] = await walletClient.getAddresses();
 const balance = await token.balanceOf(address);
 console.log(`Confidential balance: ${balance}`);
 ```
@@ -2214,7 +2212,7 @@ These are different situations that your UI should handle separately:
 import { NoCiphertextError } from "@zama-fhe/sdk";
 
 try {
-  const address = await sdk.requireSigner("balanceOf").getAddress();
+  const [address] = await walletClient.getAddresses();
   const balance = await token.balanceOf(address);
   showBalance(balance); // could be 0n
 } catch (error) {
@@ -2640,8 +2638,7 @@ await token.shield(1000n);
 await token.confidentialTransfer("0xRecipient", 500n);
 
 // Decrypt a balance
-const address = await sdk.requireSigner("balanceOf").getAddress();
-const balance = await token.balanceOf(address);
+const balance = await token.balanceOf(account.address);
 ```
 
 See the [Token Operations](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md) reference for the full API.
@@ -2858,7 +2855,7 @@ The token API works exactly the same:
 ```ts
 const token = sdk.createToken("0xEncryptedERC20");
 await token.shield(1000n);
-const address = await sdk.requireSigner("balanceOf").getAddress();
+const [address] = await walletClient.getAddresses();
 const balance = await token.balanceOf(address);
 ```
 
@@ -3373,12 +3370,14 @@ Here is a complete flow that encrypts a value, sends it to a custom FHE contract
 
 ```tsx
 import { useEncrypt, useUserDecrypt, useZamaSDK } from "@zama-fhe/react-sdk";
+import { useAccount } from "wagmi";
 import { bytesToHex } from "viem";
 import { useState, type FormEvent } from "react";
 
 function ConfidentialRoundTrip() {
   const sdk = useZamaSDK();
   const encrypt = useEncrypt();
+  const { address: userAddress } = useAccount();
   const [handles, setHandles] = useState<{ handle: string; contractAddress: `0x${string}` }[]>([]);
 
   // Fires when handles are non-empty.
@@ -3387,18 +3386,17 @@ function ConfidentialRoundTrip() {
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    const userAddress = await sdk.requireSigner("encrypt").getAddress();
     const contractAddress = "0xYourContract" as `0x${string}`;
 
     // 1. Encrypt
     const encrypted = await encrypt.mutateAsync({
       values: [{ value: 42n, type: "euint64" }],
       contractAddress,
-      userAddress,
+      userAddress: userAddress!,
     });
 
     // 2. Send to contract
-    await sdk.requireSigner("writeContract").writeContract({
+    await sdk.signer!.writeContract({
       address: contractAddress,
       abi: yourContractABI,
       functionName: "store",
@@ -3576,22 +3574,24 @@ After encryption, pass the handles and proof to your custom FHE contract:
 
 ```tsx
 import { useEncrypt, useZamaSDK } from "@zama-fhe/react-sdk";
+import { useAccount } from "wagmi";
 import { bytesToHex } from "viem";
 
 function ConfidentialAction() {
   const sdk = useZamaSDK();
   const encrypt = useEncrypt();
+  const { address } = useAccount();
 
   const handleAction = async () => {
     // 1. Encrypt the value
     const { handles, inputProof } = await encrypt.mutateAsync({
       values: [{ value: 1000n, type: "euint64" }],
       contractAddress: "0xYourContract",
-      userAddress: await sdk.requireSigner("encrypt").getAddress(),
+      userAddress: address!,
     });
 
     // 2. Call your contract with the encrypted data
-    await sdk.requireSigner("writeContract").writeContract({
+    await sdk.signer!.writeContract({
       address: "0xYourContract",
       abi: yourContractABI,
       functionName: "yourFunction",
@@ -4084,10 +4084,8 @@ The cache is cleared automatically on:
 - Wallet disconnect, account change, or chain change — clears all entries
 
 ```ts
-// Manual clear for the current signer
-const signer = sdk.requireSigner("clearCache");
-const address = await signer.getAddress();
-await sdk.cache.clearForRequester(address);
+// Manual clear for a specific address
+await sdk.cache.clearForRequester("0xYourAddress");
 
 // Clear everything
 await sdk.cache.clearAll();

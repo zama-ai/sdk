@@ -119,7 +119,7 @@ const receipt = await sdk.provider.waitForTransactionReceipt(txHash);
 console.log("Confirmed in block:", receipt.blockNumber);
 
 // Optionally check updated balance
-const address = await sdk.requireSigner("balanceOf").getAddress();
+const [address] = await walletClient.getAddresses();
 const balance = await token.balanceOf(address);
 console.log("New balance:", balance);
 ```

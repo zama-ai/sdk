@@ -56,7 +56,7 @@ The token API works exactly the same:
 ```ts
 const token = sdk.createToken("0xEncryptedERC20");
 await token.shield(1000n);
-const address = await sdk.requireSigner("balanceOf").getAddress();
+const [address] = await walletClient.getAddresses();
 const balance = await token.balanceOf(address);
 ```
 

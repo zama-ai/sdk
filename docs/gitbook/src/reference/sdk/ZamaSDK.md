@@ -257,10 +257,8 @@ The cache is cleared automatically on:
 - Wallet disconnect, account change, or chain change — clears all entries
 
 ```ts
-// Manual clear for the current signer
-const signer = sdk.requireSigner("clearCache");
-const address = await signer.getAddress();
-await sdk.cache.clearForRequester(address);
+// Manual clear for a specific address
+await sdk.cache.clearForRequester("0xYourAddress");
 
 // Clear everything
 await sdk.cache.clearAll();

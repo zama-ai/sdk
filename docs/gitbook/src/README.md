@@ -114,7 +114,7 @@ const sdk = new ZamaSDK(config);
 const token = sdk.createToken("0xYourEncryptedERC20");
 
 await token.shield(1000n); // deposit public tokens
-const address = await sdk.requireSigner("balanceOf").getAddress();
+const [address] = await walletClient.getAddresses();
 const balance = await token.balanceOf(address); // decrypt your balance
 await token.confidentialTransfer("0xRecipient", 500n); // private send
 await token.unshield(500n); // withdraw back to public

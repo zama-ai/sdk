@@ -17,12 +17,14 @@ Here is a complete flow that encrypts a value, sends it to a custom FHE contract
 
 ```tsx
 import { useEncrypt, useUserDecrypt, useZamaSDK } from "@zama-fhe/react-sdk";
+import { useAccount } from "wagmi";
 import { bytesToHex } from "viem";
 import { useState, type FormEvent } from "react";
 
 function ConfidentialRoundTrip() {
   const sdk = useZamaSDK();
   const encrypt = useEncrypt();
+  const { address: userAddress } = useAccount();
   const [handles, setHandles] = useState<{ handle: string; contractAddress: `0x${string}` }[]>([]);
 
   // Fires when handles are non-empty.
@@ -31,18 +33,17 @@ function ConfidentialRoundTrip() {
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    const userAddress = await sdk.requireSigner("encrypt").getAddress();
     const contractAddress = "0xYourContract" as `0x${string}`;
 
     // 1. Encrypt
     const encrypted = await encrypt.mutateAsync({
       values: [{ value: 42n, type: "euint64" }],
       contractAddress,
-      userAddress,
+      userAddress: userAddress!,
     });
 
     // 2. Send to contract
-    await sdk.requireSigner("writeContract").writeContract({
+    await sdk.signer!.writeContract({
       address: contractAddress,
       abi: yourContractABI,
       functionName: "store",
@@ -216,22 +217,24 @@ After encryption, pass the handles and proof to your custom FHE contract:
 
 ```tsx
 import { useEncrypt, useZamaSDK } from "@zama-fhe/react-sdk";
+import { useAccount } from "wagmi";
 import { bytesToHex } from "viem";
 
 function ConfidentialAction() {
   const sdk = useZamaSDK();
   const encrypt = useEncrypt();
+  const { address } = useAccount();
 
   const handleAction = async () => {
     // 1. Encrypt the value
     const { handles, inputProof } = await encrypt.mutateAsync({
       values: [{ value: 1000n, type: "euint64" }],
       contractAddress: "0xYourContract",
-      userAddress: await sdk.requireSigner("encrypt").getAddress(),
+      userAddress: address!,
     });
 
     // 2. Call your contract with the encrypted data
-    await sdk.requireSigner("writeContract").writeContract({
+    await sdk.signer!.writeContract({
       address: "0xYourContract",
       abi: yourContractABI,
       functionName: "yourFunction",
