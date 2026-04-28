@@ -227,9 +227,8 @@ export class RelayerNode extends BaseRelayer implements RelayerSDK, Disposable {
     return (await this.#pool.getPublicParams({ chainId, bits })).result;
   }
 
+  // TODO: replace with `this.#pool.getExtraData()` once on v0.12
   async getExtraData(): Promise<Hex> {
-    await this.ensureInit();
-    const chainId = this.chain.id;
-    return (await this.#pool.getExtraData({ chainId })).result;
+    return "0x00";
   }
 }

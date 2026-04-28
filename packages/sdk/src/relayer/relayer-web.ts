@@ -277,9 +277,8 @@ export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
     );
   }
 
+  // TODO: Replace with `this.#worker.getExtraData()` once on v0.12
   async getExtraData(): Promise<Hex> {
-    await this.ensureInit();
-    const chainId = this.chain.id;
-    return (await this.#worker.getExtraData({ chainId })).result;
+    return "0x00";
   }
 }
