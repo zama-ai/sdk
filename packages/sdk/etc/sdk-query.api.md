@@ -732,6 +732,7 @@ export class ReadonlyToken {
 // @public
 export interface RelayerSDK extends FheOperations {
     getAclAddress(): Promise<Address>;
+    getExtraData(): Promise<Hex>;
     terminate(): void;
 }
 

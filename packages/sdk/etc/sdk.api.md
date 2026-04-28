@@ -13222,6 +13222,8 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
     // (undocumented)
     getAclAddress(): Promise<Address>;
     // (undocumented)
+    getExtraData(): Promise<Hex>;
+    // (undocumented)
     getPublicKey(): Promise<PublicKeyData | null>;
     // (undocumented)
     getPublicParams(bits: number): Promise<PublicParamsData | null>;
@@ -13248,6 +13250,7 @@ export class RelayerRequestFailedError extends ZamaError {
 // @public
 export interface RelayerSDK extends FheOperations {
     getAclAddress(): Promise<Address>;
+    getExtraData(): Promise<Hex>;
     terminate(): void;
 }
 
@@ -13267,6 +13270,8 @@ export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
     delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
     generateKeypair(): Promise<KeypairType<Hex>>;
+    // (undocumented)
+    getExtraData(): Promise<Hex>;
     getPublicKey(): Promise<PublicKeyData | null>;
     getPublicParams(bits: number): Promise<PublicParamsData | null>;
     // (undocumented)

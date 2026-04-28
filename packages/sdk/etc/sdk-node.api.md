@@ -81,6 +81,11 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
     // (undocumented)
     generateKeypair(params: GenerateKeypairRequest["payload"]): Promise<GenerateKeypairResponseData>;
     protected abstract generateRequestId(): string;
+    // Warning: (ae-forgotten-export) The symbol "GetExtraDataRequest" needs to be exported by the entry point index.d.ts
+    // Warning: (ae-forgotten-export) The symbol "GetExtraDataResponseData" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    getExtraData(params: GetExtraDataRequest["payload"]): Promise<GetExtraDataResponseData>;
     protected abstract getInitPayload(): {
         type: WorkerRequestType;
         payload: WorkerRequest["payload"];
@@ -144,6 +149,7 @@ export interface CreateDelegatedEIP712Request extends BaseRequest {
         delegatorAddress: Address;
         startTimestamp: number;
         durationDays: number;
+        extraData: Hex;
     };
     // (undocumented)
     type: "CREATE_DELEGATED_EIP712";
@@ -164,6 +170,7 @@ export interface CreateEIP712Request extends BaseRequest {
         contractAddresses: Address[];
         startTimestamp: number;
         durationDays: number;
+        extraData: Hex;
     };
     // (undocumented)
     type: "CREATE_EIP712";
@@ -470,6 +477,8 @@ export class NodeWorkerPool {
     // (undocumented)
     generateKeypair(params: GenerateKeypairRequest["payload"]): Promise<GenerateKeypairResponseData>;
     // (undocumented)
+    getExtraData(params: GetExtraDataRequest["payload"]): Promise<GetExtraDataResponseData>;
+    // (undocumented)
     getPublicKey(params: GetPublicKeyRequest["payload"]): Promise<GetPublicKeyResponseData>;
     // (undocumented)
     getPublicParams(params: GetPublicParamsRequest["payload"]): Promise<GetPublicParamsResponseData>;
@@ -543,6 +552,8 @@ export class RelayerNode extends BaseRelayer implements RelayerSDK, Disposable {
     encrypt(params: EncryptParams): Promise<EncryptResult>;
     // (undocumented)
     generateKeypair(): Promise<KeypairType_2<Hex>>;
+    // (undocumented)
+    getExtraData(): Promise<Hex>;
     // Warning: (ae-forgotten-export) The symbol "PublicKeyData" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
@@ -576,6 +587,7 @@ export interface RelayerNodeConfig {
 // @public
 export interface RelayerSDK extends FheOperations {
     getAclAddress(): Promise<Address>;
+    getExtraData(): Promise<Hex>;
     terminate(): void;
 }
 
@@ -679,10 +691,10 @@ export interface UserDecryptResponseData {
 export type WorkerEnv = "web" | "node";
 
 // @public (undocumented)
-export type WorkerRequest = InitRequest | UpdateCsrfRequest | EncryptRequest | UserDecryptRequest | PublicDecryptRequest | GenerateKeypairRequest | CreateEIP712Request | CreateDelegatedEIP712Request | DelegatedUserDecryptRequest | RequestZKProofVerificationRequest | GetPublicKeyRequest | GetPublicParamsRequest;
+export type WorkerRequest = InitRequest | UpdateCsrfRequest | EncryptRequest | UserDecryptRequest | PublicDecryptRequest | GenerateKeypairRequest | CreateEIP712Request | CreateDelegatedEIP712Request | DelegatedUserDecryptRequest | RequestZKProofVerificationRequest | GetPublicKeyRequest | GetPublicParamsRequest | GetExtraDataRequest;
 
 // @public (undocumented)
-export type WorkerRequestType = "INIT" | "UPDATE_CSRF" | "ENCRYPT" | "USER_DECRYPT" | "PUBLIC_DECRYPT" | "GENERATE_KEYPAIR" | "CREATE_EIP712" | "CREATE_DELEGATED_EIP712" | "DELEGATED_USER_DECRYPT" | "REQUEST_ZK_PROOF_VERIFICATION" | "GET_PUBLIC_KEY" | "GET_PUBLIC_PARAMS";
+export type WorkerRequestType = "INIT" | "UPDATE_CSRF" | "ENCRYPT" | "USER_DECRYPT" | "PUBLIC_DECRYPT" | "GENERATE_KEYPAIR" | "CREATE_EIP712" | "CREATE_DELEGATED_EIP712" | "DELEGATED_USER_DECRYPT" | "REQUEST_ZK_PROOF_VERIFICATION" | "GET_PUBLIC_KEY" | "GET_PUBLIC_PARAMS" | "GET_EXTRA_DATA";
 
 // @public (undocumented)
 export type WorkerResponse<T> = SuccessResponse<T> | ErrorResponse;
