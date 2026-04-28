@@ -42,7 +42,8 @@ describe("confidentialBalanceQueryOptions", () => {
     expect(options.enabled).toBe(false);
   });
 
-  test("enabled is false when signer-backed credentials are absent", ({ sdk }) => {
+  test("enabled is false when signer-backed credentials are absent", ({ createSDK }) => {
+    const sdk = createSDK({ signer: undefined });
     const token = new ReadonlyToken(sdk, tokenAddress);
 
     const options = confidentialBalanceQueryOptions(token, { tokenAddress, account: owner });
