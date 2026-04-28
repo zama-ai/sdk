@@ -1,4 +1,6 @@
-import { createConfig, node, sepolia, ZamaSDK } from "@zama-fhe/sdk/node";
+import { node, sepolia } from "@zama-fhe/sdk/node";
+import { createConfig } from "../../config/create";
+import { ZamaSDK } from "../../zama-sdk";
 import type { Address, Hex } from "viem";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
