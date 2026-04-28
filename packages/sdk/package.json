@@ -115,6 +115,9 @@
       "ethers": [
         "./dist/esm/ethers/index.d.ts"
       ],
+      "web": [
+        "./dist/esm/web/index.d.ts"
+      ],
       "node": [
         "./dist/esm/node/index.d.ts"
       ],

@@ -10,7 +10,7 @@ Browser relayer that runs FHE operations in a Web Worker via WASM. Handles encry
 ## Import
 
 ```ts
-import { RelayerWeb } from "@zama-fhe/sdk";
+import { RelayerWeb } from "@zama-fhe/sdk/web";
 ```
 
 {% hint style="info" %}
@@ -41,7 +41,7 @@ const config = createConfig({
 {% tab title="Direct construction" %}
 
 ```ts
-import { RelayerWeb } from "@zama-fhe/sdk";
+import { RelayerWeb } from "@zama-fhe/sdk/web";
 import { sepolia } from "@zama-fhe/sdk/chains";
 
 const relayer = new RelayerWeb({
