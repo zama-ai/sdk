@@ -3,13 +3,9 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { isError } from "ethers";
-import {
-  useZamaSDK,
-  allowanceContract,
-  approveContract,
-  balanceOfContract,
-} from "@zama-fhe/react-sdk";
-import type { Address } from "@zama-fhe/react-sdk";
+import { useZamaSDK } from "@zama-fhe/react-sdk";
+import { allowanceContract, approveContract, balanceOfContract } from "@zama-fhe/sdk";
+import type { Address } from "@zama-fhe/sdk";
 import { parseAmount } from "@/lib/parseAmount";
 import { SEPOLIA_EXPLORER_URL } from "@/lib/config";
 
