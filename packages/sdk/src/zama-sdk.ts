@@ -529,19 +529,25 @@ export class ZamaSDK {
   async encrypt(params: EncryptParams): Promise<EncryptResult> {
     const t0 = Date.now();
     try {
-      this.emitEvent({ type: ZamaSDKEvents.EncryptStart });
+      this.emitEvent({ type: ZamaSDKEvents.EncryptStart }, params.contractAddress);
       const result = await this.relayer.encrypt(params);
-      this.emitEvent({
-        type: ZamaSDKEvents.EncryptEnd,
-        durationMs: Date.now() - t0,
-      });
+      this.emitEvent(
+        {
+          type: ZamaSDKEvents.EncryptEnd,
+          durationMs: Date.now() - t0,
+        },
+        params.contractAddress,
+      );
       return result;
     } catch (error) {
-      this.emitEvent({
-        type: ZamaSDKEvents.EncryptError,
-        error: toError(error),
-        durationMs: Date.now() - t0,
-      });
+      this.emitEvent(
+        {
+          type: ZamaSDKEvents.EncryptError,
+          error: toError(error),
+          durationMs: Date.now() - t0,
+        },
+        params.contractAddress,
+      );
       if (error instanceof ZamaError) {
         throw error;
       }

@@ -771,15 +771,24 @@ describe("ZamaSDK", () => {
       expect(result.inputProof).toBeInstanceOf(Uint8Array);
     });
 
-    it("emits EncryptStart and EncryptEnd events", async ({ createSDK }) => {
-      const events: { type: string }[] = [];
+    it("emits EncryptStart and EncryptEnd events with tokenAddress", async ({ createSDK }) => {
+      const events: { type: string; tokenAddress?: Address }[] = [];
       const sdk = createSDK({ onEvent: (e) => events.push(e) });
 
       await sdk.encrypt(ENCRYPT_PARAMS);
 
-      expect(events).toContainEqual(expect.objectContaining({ type: ZamaSDKEvents.EncryptStart }));
       expect(events).toContainEqual(
-        expect.objectContaining({ type: ZamaSDKEvents.EncryptEnd, durationMs: expect.any(Number) }),
+        expect.objectContaining({
+          type: ZamaSDKEvents.EncryptStart,
+          tokenAddress: ENCRYPT_PARAMS.contractAddress,
+        }),
+      );
+      expect(events).toContainEqual(
+        expect.objectContaining({
+          type: ZamaSDKEvents.EncryptEnd,
+          tokenAddress: ENCRYPT_PARAMS.contractAddress,
+          durationMs: expect.any(Number),
+        }),
       );
     });
 
@@ -802,8 +811,8 @@ describe("ZamaSDK", () => {
       await expect(sdk.encrypt(ENCRYPT_PARAMS)).rejects.toBe(original);
     });
 
-    it("emits EncryptError on failure", async ({ createSDK, relayer }) => {
-      const events: { type: string }[] = [];
+    it("emits EncryptError with tokenAddress on failure", async ({ createSDK, relayer }) => {
+      const events: { type: string; tokenAddress?: Address }[] = [];
       const sdk = createSDK({ onEvent: (e) => events.push(e) });
       vi.mocked(relayer.encrypt).mockRejectedValueOnce(new Error("boom"));
 
@@ -812,6 +821,7 @@ describe("ZamaSDK", () => {
       expect(events).toContainEqual(
         expect.objectContaining({
           type: ZamaSDKEvents.EncryptError,
+          tokenAddress: ENCRYPT_PARAMS.contractAddress,
           durationMs: expect.any(Number),
         }),
       );

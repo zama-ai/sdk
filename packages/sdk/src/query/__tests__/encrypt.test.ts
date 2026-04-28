@@ -1,4 +1,5 @@
 import { describe, expect, test } from "../../test-fixtures";
+import { ZamaSDKEvents } from "../../events/sdk-events";
 import { ZamaSDK } from "../../zama-sdk";
 
 import { encryptMutationOptions } from "../encrypt";
@@ -18,5 +19,26 @@ describe("encryptMutationOptions", () => {
     await options.mutationFn(params);
 
     expect(relayer.encrypt).toHaveBeenCalledWith(params);
+  });
+
+  test("emits encrypt lifecycle events", async ({ signer, relayer, storage }) => {
+    const events: { type: string }[] = [];
+    const sdk = new ZamaSDK({
+      relayer,
+      signer,
+      storage,
+      onEvent: (e) => events.push(e),
+    });
+    const options = encryptMutationOptions(sdk);
+    const params = {
+      values: [{ value: 1n, type: "euint64" as const }],
+      contractAddress: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address,
+      userAddress: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address,
+    };
+
+    await options.mutationFn(params);
+
+    expect(events).toContainEqual(expect.objectContaining({ type: ZamaSDKEvents.EncryptStart }));
+    expect(events).toContainEqual(expect.objectContaining({ type: ZamaSDKEvents.EncryptEnd }));
   });
 });
