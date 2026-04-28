@@ -1,5 +1,7 @@
 # Changelog
 
+## [3.0.0-alpha.23](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.22...v3.0.0-alpha.23) (2026-04-28)
+
 ## [3.0.0-alpha.22](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.21...v3.0.0-alpha.22) (2026-04-28)
 
 ### Features
