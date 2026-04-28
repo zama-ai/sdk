@@ -2,7 +2,6 @@ import type { Address } from "viem";
 import { DecryptionFailedError } from "../../errors";
 import { describe, expect, test, vi, mockQueryContext } from "../../test-fixtures";
 import { ReadonlyToken } from "../../token/readonly-token";
-import { ZamaSDK } from "../../zama-sdk";
 import { confidentialBalancesQueryOptions } from "../confidential-balances";
 
 describe("confidentialBalancesQueryOptions", () => {
@@ -53,12 +52,7 @@ describe("confidentialBalancesQueryOptions", () => {
     expect(options.enabled).toBe(false);
   });
 
-  test("enabled is false when signer-backed credentials are absent", ({
-    relayer,
-    provider,
-    storage,
-  }) => {
-    const sdk = new ZamaSDK({ relayer, provider, storage });
+  test("enabled is false when signer-backed credentials are absent", ({ sdk }) => {
     const token = new ReadonlyToken(sdk, tokenA);
 
     const options = confidentialBalancesQueryOptions([token], { account: owner });
