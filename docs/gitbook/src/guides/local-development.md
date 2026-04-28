@@ -56,7 +56,8 @@ The token API works exactly the same:
 ```ts
 const token = sdk.createToken("0xEncryptedERC20");
 await token.shield(1000n);
-const balance = await token.balanceOf();
+const address = await sdk.requireSigner("balanceOf").getAddress();
+const balance = await token.balanceOf(address);
 ```
 
 ### 5. (Optional) Create a custom config for your own chain

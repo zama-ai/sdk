@@ -99,20 +99,17 @@ for (const [address, error] of errors) {
 
 ### balanceOf
 
-`(owner?: Address) => Promise<bigint>`
+`(owner: Address) => Promise<bigint>`
 
-Returns the decrypted confidential balance. First call prompts a wallet signature; subsequent calls use cached credentials.
+Returns the decrypted confidential balance for the given address. First call prompts a wallet signature; subsequent calls use cached credentials.
 
 ```ts
-const balance = await readonlyToken.balanceOf();
-
-// Another address
-const otherBalance = await readonlyToken.balanceOf("0xOwnerAddress");
+const balance = await readonlyToken.balanceOf("0xOwnerAddress");
 ```
 
 ### confidentialBalanceOf
 
-`(owner?: Address) => Promise<Hex>`
+`(owner: Address) => Promise<Hex>`
 
 Returns the raw encrypted handle without decrypting.
 

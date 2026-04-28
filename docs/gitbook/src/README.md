@@ -45,7 +45,7 @@ TanStack Query-based hooks with cached decryption, automatic cache invalidation,
 | [`@zama-fhe/sdk`](/reference/sdk/ZamaSDK)              | You are building with vanilla TypeScript, Node.js, or any non-React framework |
 | [`@zama-fhe/react-sdk`](/reference/react/ZamaProvider) | You are building a React app (hooks and React-specific providers)             |
 
-If you are using React, install both packages: `@zama-fhe/react-sdk` provides the hooks and `ZamaProvider`, while `@zama-fhe/sdk` is a peer dependency that provides core utilities, relayer factories, chain presets, and error helpers. Adapter-specific `createConfig` functions are imported from sub-paths (e.g. `@zama-fhe/react-sdk/wagmi`, `@zama-fhe/sdk/viem`, `@zama-fhe/sdk/ethers`).
+If you are using React, install both packages: `@zama-fhe/react-sdk` provides the hooks and `ZamaProvider`, while `@zama-fhe/sdk` is a peer dependency that provides core utilities, relayer factories, chain presets, and error helpers. For wagmi apps, build the config with `createConfig` from `@zama-fhe/react-sdk/wagmi` and pass it to `<ZamaProvider config={zamaConfig}>`. For non-React apps, use `createConfig` from `@zama-fhe/sdk/viem` or `@zama-fhe/sdk/ethers`.
 
 ## Install
 
@@ -114,7 +114,8 @@ const sdk = new ZamaSDK(config);
 const token = sdk.createToken("0xYourEncryptedERC20");
 
 await token.shield(1000n); // deposit public tokens
-const balance = await token.balanceOf(); // decrypt your balance
+const address = await sdk.requireSigner("balanceOf").getAddress();
+const balance = await token.balanceOf(address); // decrypt your balance
 await token.confidentialTransfer("0xRecipient", 500n); // private send
 await token.unshield(500n); // withdraw back to public
 ```

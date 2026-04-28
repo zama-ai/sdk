@@ -150,8 +150,8 @@ Both the core SDK and React hooks return the transaction hash. You can use it to
 ```ts
 const { txHash } = await token.shield(1000n);
 
-// Wait for confirmation using your signer
-const receipt = await signer.waitForTransactionReceipt(txHash);
+// Wait for confirmation using your provider
+const receipt = await sdk.provider.waitForTransactionReceipt(txHash);
 console.log("Confirmed in block:", receipt.blockNumber);
 ```
 

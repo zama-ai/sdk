@@ -98,10 +98,9 @@ const mySepolia = {
 const zamaConfig = createZamaConfig({
   chains: [mySepolia],
   wagmiConfig,
-  relayers: {
-    [mySepolia.id]: web(),
-  },
+  relayers: { [mySepolia.id]: web() },
 });
+
 const queryClient = new QueryClient();
 
 function App() {
@@ -276,6 +275,7 @@ function MyTokenPage() {
   const { data: meta } = useMetadata(TOKEN);
   const { data: balance, isLoading } = useConfidentialBalance({
     tokenAddress: TOKEN,
+    account: address,
   });
   const { mutateAsync: shield, isPending: isShielding } = useShield({
     tokenAddress: TOKEN,
@@ -347,7 +347,8 @@ const token = sdk.createToken("0xYourEncryptedERC20");
 await token.shield(1000n);
 
 // Decrypt your balance (first call prompts a wallet signature)
-const balance = await token.balanceOf();
+const address = await sdk.requireSigner("balanceOf").getAddress();
+const balance = await token.balanceOf(address);
 console.log("Confidential balance:", balance);
 
 // Send 500 tokens privately
@@ -367,7 +368,8 @@ const token = sdk.createToken("0xYourEncryptedERC20");
 await token.shield(1000n);
 
 // Decrypt your balance (first call prompts a wallet signature)
-const balance = await token.balanceOf();
+const address = await sdk.requireSigner("balanceOf").getAddress();
+const balance = await token.balanceOf(address);
 console.log("Confidential balance:", balance);
 
 // Send 500 tokens privately
@@ -388,7 +390,8 @@ try {
   await token.shield(1000n);
 
   // Decrypt your balance
-  const balance = await token.balanceOf();
+  const address = await sdk.requireSigner("balanceOf").getAddress();
+  const balance = await token.balanceOf(address);
   console.log("Confidential balance:", balance);
 
   // Send 500 tokens privately
@@ -412,7 +415,8 @@ try {
   await token.shield(1000n);
 
   // Decrypt your balance
-  const balance = await token.balanceOf();
+  const address = await sdk.requireSigner("balanceOf").getAddress();
+  const balance = await token.balanceOf(address);
   console.log("Confidential balance:", balance);
 
   // Send 500 tokens privately
@@ -432,7 +436,7 @@ The hooks and SDK methods handle FHE encryption, wallet signing, ERC-20 approval
 
 ## Next steps
 
-- [Configuration](/guides/configuration) -- chains, relayers, signer, storage, and authentication setup
+- [Configuration](/guides/configuration) -- chains, relayers, provider, signer, storage, and authentication setup
 - [Shield Tokens](/guides/shield-tokens) -- move tokens into confidential form
 - [Chain Objects](/reference/sdk/network-presets) -- pre-configured chain definitions for Sepolia, Mainnet, and more
 - [React Hooks](/reference/react/ZamaProvider) -- provider setup and all available hooks

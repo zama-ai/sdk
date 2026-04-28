@@ -33,6 +33,7 @@ Every SDK error is an instance of `ZamaError`, which extends the native `Error` 
 | `DelegationSelfNotAllowedError`        | `DELEGATION_SELF_NOT_ALLOWED`       | Delegation cannot target self                            |
 | `DelegationCooldownError`              | `DELEGATION_COOLDOWN`               | Only one delegate/revoke per tuple per block             |
 | `DelegationNotFoundError`              | `DELEGATION_NOT_FOUND`              | No active delegation for this tuple                      |
+| `SignerRequiredError`                  | `SIGNER_REQUIRED`                   | Write/sign/decrypt called without a signer               |
 | `DelegationExpiredError`               | `DELEGATION_EXPIRED`                | The delegation has expired                               |
 
 ### 2. Catch with instanceof
@@ -112,6 +113,7 @@ Here is a quick reference for the most common errors and how to respond:
 | `InsufficientERC20BalanceError`        | Show the user their public token balance. They need more tokens before shielding.                                 |
 | `BalanceCheckUnavailableError`         | Call `token.allow()` to cache credentials, or pass `skipBalanceCheck: true` to bypass (useful for smart wallets). |
 | `ERC20ReadFailedError`                 | Check network connectivity and RPC endpoint. Retry the shield operation.                                          |
+| `SignerRequiredError`                  | Connect a wallet. The operation requires a signer but the SDK was configured without one.                         |
 | `DelegationSelfNotAllowedError`        | Cannot delegate to yourself. Use a different delegate address.                                                    |
 | `DelegationCooldownError`              | Wait for the next block before retrying delegate/revoke on the same tuple.                                        |
 | `DelegationNotFoundError`              | No active delegation exists. Verify the delegator, delegate, and contract addresses.                              |
@@ -128,7 +130,7 @@ This is a common source of confusion. They require different UI treatments:
 import { NoCiphertextError } from "@zama-fhe/sdk";
 
 try {
-  const balance = await token.balanceOf();
+  const balance = await token.balanceOf(address);
   // balance could be 0n -- that means "zero balance"
   showBalance(balance);
 } catch (error) {

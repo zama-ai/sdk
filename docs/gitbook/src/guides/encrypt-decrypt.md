@@ -31,7 +31,7 @@ function ConfidentialRoundTrip() {
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    const userAddress = await sdk.signer.getAddress();
+    const userAddress = await sdk.requireSigner("encrypt").getAddress();
     const contractAddress = "0xYourContract" as `0x${string}`;
 
     // 1. Encrypt
@@ -42,7 +42,7 @@ function ConfidentialRoundTrip() {
     });
 
     // 2. Send to contract
-    await sdk.signer.writeContract({
+    await sdk.requireSigner("writeContract").writeContract({
       address: contractAddress,
       abi: yourContractABI,
       functionName: "store",
@@ -50,7 +50,7 @@ function ConfidentialRoundTrip() {
     });
 
     // 3. Read the handle back — setting handles triggers decryption
-    const handle = (await sdk.signer.readContract({
+    const handle = (await sdk.provider.readContract({
       address: contractAddress,
       abi: yourContractABI,
       functionName: "getHandle",
@@ -227,11 +227,11 @@ function ConfidentialAction() {
     const { handles, inputProof } = await encrypt.mutateAsync({
       values: [{ value: 1000n, type: "euint64" }],
       contractAddress: "0xYourContract",
-      userAddress: await sdk.signer.getAddress(),
+      userAddress: await sdk.requireSigner("encrypt").getAddress(),
     });
 
     // 2. Call your contract with the encrypted data
-    await sdk.signer.writeContract({
+    await sdk.requireSigner("writeContract").writeContract({
       address: "0xYourContract",
       abi: yourContractABI,
       functionName: "yourFunction",
@@ -305,6 +305,7 @@ function DecryptGate({
 
 ```tsx
 import { useConfidentialBalance } from "@zama-fhe/react-sdk";
+import { useAccount } from "wagmi";
 import { formatUnits, type Address } from "viem";
 
 function ConfidentialBalance({
@@ -316,7 +317,8 @@ function ConfidentialBalance({
   decimals: number;
   symbol: string;
 }) {
-  const { data, isLoading } = useConfidentialBalance({ tokenAddress });
+  const { address } = useAccount();
+  const { data, isLoading } = useConfidentialBalance({ tokenAddress, account: address });
 
   return (
     <p>
