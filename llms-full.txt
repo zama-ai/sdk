@@ -18259,10 +18259,9 @@ Zama SDK is designed for developers who want to integrate confidential operation
 pnpm add @zama-fhe/sdk
 # or: npm install @zama-fhe/sdk / yarn add @zama-fhe/sdk
 
-# React hooks (add `wagmi` and `viem` too if you follow the standard wagmi setup)
-pnpm add @zama-fhe/react-sdk @zama-fhe/sdk @tanstack/react-query
-# or: npm install @zama-fhe/react-sdk @zama-fhe/sdk @tanstack/react-query
-# or: yarn add @zama-fhe/react-sdk @zama-fhe/sdk @tanstack/react-query
+# React hooks
+pnpm add @zama-fhe/react-sdk @tanstack/react-query
+# or: npm install @zama-fhe/react-sdk @tanstack/react-query / yarn add @zama-fhe/react-sdk @tanstack/react-query
 ```
 
 ### Development
@@ -18425,11 +18424,6 @@ Browser apps should proxy relayer requests through their backend so the relayer 
 - [SDK reference](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/reference/sdk/README.md) documents the full core API, including `ZamaSDK`, `Token`, `ReadonlyToken`, adapters, and helpers.
 - [React SDK docs](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/reference/react/README.md) cover the provider and hook layer for React apps.
 
-## Support
-
-- [Community forum](https://community.zama.ai/c/zama-protocol/15)
-- [Discord channel](https://discord.com/invite/zama)
-
 ## @zama-fhe/react-sdk
 
 - source_type: package-readme
@@ -18445,17 +18439,25 @@ This package sits on top of `@zama-fhe/sdk`, which provides the core SDK, adapte
 
 ## Installation
 
-The example below uses `wagmi`, so install:
+Install the React package, the core SDK, and React Query:
 
 ```bash
-pnpm add @zama-fhe/react-sdk @zama-fhe/sdk @tanstack/react-query wagmi viem
+pnpm add @zama-fhe/react-sdk @zama-fhe/sdk @tanstack/react-query
 # or
-npm install @zama-fhe/react-sdk @zama-fhe/sdk @tanstack/react-query wagmi viem
+npm install @zama-fhe/react-sdk @zama-fhe/sdk @tanstack/react-query
 # or
-yarn add @zama-fhe/react-sdk @zama-fhe/sdk @tanstack/react-query wagmi viem
+yarn add @zama-fhe/react-sdk @zama-fhe/sdk @tanstack/react-query
 ```
 
-React apps typically install both `@zama-fhe/react-sdk` and `@zama-fhe/sdk`.
+If you follow the wagmi example below, add `wagmi` and `viem` too:
+
+```bash
+pnpm add wagmi viem
+# or
+npm install wagmi viem
+# or
+yarn add wagmi viem
+```
 
 If you already build a `ZamaConfig` with the core SDK, you can pass it directly to `ZamaProvider` and only install the dependencies required by your chosen adapter.
 
@@ -18542,8 +18544,3 @@ If you need a different integration pattern, start from the [Quick start](https:
 - [React reference](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/reference/react/README.md) documents all hooks, provider components, and query helpers.
 - [Guides](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/guides/README.md) cover focused topics such as authentication, SSR, browser extensions, balances, and transfers.
 - [Core SDK reference](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/reference/sdk/README.md) documents lower-level SDK classes, adapters, and utilities.
-
-## Support
-
-- [Community forum](https://community.zama.ai/c/zama-protocol/15)
-- [Discord channel](https://discord.com/invite/zama)

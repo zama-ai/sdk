@@ -81,8 +81,3 @@ Browser apps should proxy relayer requests through their backend so the relayer 
 - [Guides](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/guides/README.md) cover focused topics such as authentication, configuration, balances, transfers, and unshielding.
 - [SDK reference](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/reference/sdk/README.md) documents the full core API, including `ZamaSDK`, `Token`, `ReadonlyToken`, adapters, and helpers.
 - [React SDK docs](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/reference/react/README.md) cover the provider and hook layer for React apps.
-
-## Support
-
-- [Community forum](https://community.zama.ai/c/zama-protocol/15)
-- [Discord channel](https://discord.com/invite/zama)
