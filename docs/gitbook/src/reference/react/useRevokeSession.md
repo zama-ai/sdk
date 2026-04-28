@@ -60,7 +60,7 @@ revokeSession();
 - After revoking, any balance decrypt or FHE operation will prompt a new wallet signature.
 
 {% hint style="info" %}
-If you use [`WagmiSigner`](/reference/sdk/WagmiSigner), the SDK auto-revokes on wallet disconnect or account change — you do not need to call this hook manually for that case.
+The SDK auto-revokes sessions on wallet disconnect or account change when the signer adapter implements `subscribe()`. You do not need to call this hook manually for that case.
 {% endhint %}
 
 ## Related

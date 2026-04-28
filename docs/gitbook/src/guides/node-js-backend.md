@@ -106,7 +106,7 @@ await token.shield(1000n);
 await token.confidentialTransfer("0xRecipient", 500n);
 
 // Decrypt a balance
-const balance = await token.balanceOf();
+const balance = await token.balanceOf(account.address);
 ```
 
 See the [Token Operations](/reference/sdk/Token) reference for the full API.
