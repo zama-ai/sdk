@@ -1,6 +1,6 @@
 # @zama-fhe/react-sdk
 
-React bindings for the Zama SDK. Use this package to wire confidential token operations into a React app through `ZamaProvider` and hooks for balances, transfers, shielding, unshielding, approvals, and delegation.
+React bindings for the Zama SDK. Use this package to wire confidential token operations into a React app through provider components and hooks for balances, transfers, shielding, unshielding, approvals, and delegation.
 
 ## Installation
 
