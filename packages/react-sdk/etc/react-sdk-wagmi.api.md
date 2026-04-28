@@ -4,16 +4,19 @@
 
 ```ts
 
-import * as _$react_jsx_runtime0 from 'react/jsx-runtime';
 import { AtLeastOneChain } from '@zama-fhe/sdk/chains';
-import { PropsWithChildren } from 'react';
+import { Config } from 'wagmi';
+import { ZamaConfig } from '@zama-fhe/sdk';
 import { ZamaConfigBase } from '@zama-fhe/sdk';
 
 // @public
-export function ZamaWagmiProvider<TChains extends AtLeastOneChain>(input: ZamaWagmiProviderProps<TChains>): _$react_jsx_runtime0.JSX.Element;
+export function createConfig<const TChains extends AtLeastOneChain>(params: ZamaConfigWagmi<TChains>): ZamaConfig;
 
 // @public
-export interface ZamaWagmiProviderProps<TChains extends AtLeastOneChain = AtLeastOneChain> extends PropsWithChildren, ZamaConfigBase<TChains> {}
+export interface ZamaConfigWagmi<TChains extends AtLeastOneChain = AtLeastOneChain, T = Config> extends ZamaConfigBase<TChains> {
+    // (undocumented)
+    wagmiConfig: T;
+}
 
 // (No @packageDocumentation comment for this package)
 
