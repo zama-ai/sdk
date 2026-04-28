@@ -31,6 +31,7 @@ relayer/        → RelayerWeb, RelayerNode, RelayerCleartext
 viem/           → ViemSigner (GenericSigner), ViemProvider (GenericProvider)
 ethers/         → EthersSigner (GenericSigner), EthersProvider (GenericProvider)
 credentials/    → session management, credential signing
+query/          → core async actions (layer 1 of the three-layer React hook pattern)
 storage/        → IndexedDBStorage, MemoryStorage
 worker/         → Web Worker + Node.js thread pool (offloads heavy FHE operations)
 chains/         → network presets: sepolia, hoodi, mainnet, hardhat, anvil
