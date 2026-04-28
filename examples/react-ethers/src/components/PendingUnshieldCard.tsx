@@ -1,13 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  useZamaSDK,
-  useResumeUnshield,
-  loadPendingUnshield,
-  clearPendingUnshield,
-} from "@zama-fhe/react-sdk";
-import type { Address, Hex } from "@zama-fhe/react-sdk";
+import { useZamaSDK, useResumeUnshield } from "@zama-fhe/react-sdk";
+import { loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/sdk";
+import type { Address, Hex } from "@zama-fhe/sdk";
 import { SEPOLIA_EXPLORER_URL } from "@/lib/config";
 
 interface PendingUnshieldCardProps {
