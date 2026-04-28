@@ -18426,7 +18426,7 @@ Browser apps should proxy relayer requests through their backend so the relayer 
 
 # @zama-fhe/react-sdk
 
-React bindings for the Zama SDK. Use this package to wire confidential token operations into a React app through provider components and hooks for balances, transfers, shielding, unshielding, approvals, and delegation.
+React bindings for the Zama SDK. Use this package to wire confidential smart contract operations into a React app through provider components and hooks for authorization, encryption, balances, transfers, shielding, unshielding, approvals, and delegation.
 
 ## Installation
 
