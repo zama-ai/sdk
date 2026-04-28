@@ -91,7 +91,7 @@ Zama SDK is designed for developers who want to integrate confidential operation
 pnpm add @zama-fhe/sdk
 # or: npm install @zama-fhe/sdk / yarn add @zama-fhe/sdk
 
-# React hooks
+# React hooks (add `wagmi` and `viem` too if you follow the standard wagmi setup)
 pnpm add @zama-fhe/react-sdk @zama-fhe/sdk @tanstack/react-query
 # or: npm install @zama-fhe/react-sdk @zama-fhe/sdk @tanstack/react-query
 # or: yarn add @zama-fhe/react-sdk @zama-fhe/sdk @tanstack/react-query

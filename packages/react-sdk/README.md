@@ -36,8 +36,8 @@ Common peer dependencies:
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { WagmiProvider, createConfig, http } from "wagmi";
 import { sepolia } from "wagmi/chains";
-import { ZamaProvider, useConfidentialBalance } from "@zama-fhe/react-sdk";
-import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
+import { useConfidentialBalance } from "@zama-fhe/react-sdk";
+import { ZamaWagmiProvider } from "@zama-fhe/react-sdk/wagmi";
 import { web } from "@zama-fhe/sdk/web";
 import { sepolia as sepoliaFhe, type FheChain } from "@zama-fhe/sdk/chains";
 
@@ -53,12 +53,6 @@ const chain = {
   relayerUrl: "https://your-app.com/api/relayer/11155111",
 } as const satisfies FheChain;
 
-const zamaConfig = createZamaConfig({
-  chains: [chain],
-  wagmiConfig,
-  relayers: { [chain.id]: web() },
-});
-
 const queryClient = new QueryClient();
 
 function Balance() {
@@ -72,9 +66,9 @@ export function App() {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <ZamaProvider config={zamaConfig}>
+        <ZamaWagmiProvider chains={[chain]} relayers={{ [chain.id]: web() }}>
           <Balance />
-        </ZamaProvider>
+        </ZamaWagmiProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );
@@ -85,9 +79,9 @@ If you need a different integration pattern, start from the [Quick start](https:
 
 ## Using the provider and hooks
 
-- `ZamaProvider` accepts a `ZamaConfig` and makes the SDK available through context.
+- For wagmi-based apps, `ZamaWagmiProvider` is the shortest setup. It derives the signer and provider from wagmi context for you.
+- `ZamaProvider` accepts a prebuilt `ZamaConfig` when you need a custom or non-wagmi integration.
 - Hooks from `@zama-fhe/react-sdk` handle confidential operations, cached decryption, and query invalidation for you.
-- The standard React setup helper lives in `@zama-fhe/react-sdk/wagmi`.
 - Lower-level SDK utilities, adapters, and token classes still come from `@zama-fhe/sdk`.
 
 ## Common hooks

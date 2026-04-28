@@ -14,6 +14,12 @@ npm install @zama-fhe/sdk
 yarn add @zama-fhe/sdk
 ```
 
+If you follow the viem example below, install `viem` too:
+
+```bash
+pnpm add @zama-fhe/sdk viem
+```
+
 Optional peer dependencies depend on the adapter you use:
 
 | Package                 | Version | Use when...                    |
@@ -64,7 +70,7 @@ Browser apps should proxy relayer requests through their backend so the relayer 
 - `Token` exposes read/write confidential token operations such as shield, confidential transfer, unwrap, and unshield.
 - `ReadonlyToken` exposes read-only token access such as metadata, total supply, and balance decryption.
 - Adapter-specific `createConfig` helpers are available from `@zama-fhe/sdk/viem` and `@zama-fhe/sdk/ethers`.
-- Relayer factories such as `web()` and `cleartext()` come from the SDK. The browser `web()` factory is imported from `@zama-fhe/sdk/web`, and the Node.js relayer factory comes from `@zama-fhe/sdk/node`.
+- Relayer factories are split by runtime: browser `web()` comes from `@zama-fhe/sdk/web`, Node.js `node()` comes from `@zama-fhe/sdk/node`, and local `cleartext()` comes from `@zama-fhe/sdk`.
 - Chain presets such as `sepolia`, `mainnet`, `hoodi`, `hardhat`, and `anvil` are available from `@zama-fhe/sdk/chains`.
 
 ## Documentation
