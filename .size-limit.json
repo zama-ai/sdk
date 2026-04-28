@@ -7,7 +7,7 @@
   {
     "name": "@zama-fhe/sdk (CJS)",
     "path": "packages/sdk/dist/cjs/**/*.cjs",
-    "limit": "40 KB"
+    "limit": "41 KB"
   },
   {
     "name": "@zama-fhe/react-sdk (all JS)",

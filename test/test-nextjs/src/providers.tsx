@@ -1,39 +1,24 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryStorage } from "@zama-fhe/sdk";
 import { ZamaWagmiProvider } from "@zama-fhe/react-sdk/wagmi";
+import { cleartext } from "@zama-fhe/sdk";
+import { anvil as fheAnvil } from "@zama-fhe/sdk/chains";
+import { burner } from "@zama-fhe/test-components";
 import type { ReactNode } from "react";
+import { getAddress } from "viem";
 import { createConfig, http, WagmiProvider } from "wagmi";
 import { anvil } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
-import { burner } from "@zama-fhe/test-components";
-import { RelayerCleartext, hardhatCleartextConfig } from "@zama-fhe/sdk/cleartext";
 import deployments from "../../../contracts/deployments.json" with { type: "json" };
-import { getAddress } from "viem";
 
 const anvilPort = process.env.NEXT_PUBLIC_ANVIL_PORT || "8545";
 const rpcUrl = `http://127.0.0.1:${anvilPort}`;
 
 const wagmiConfig = createConfig({
   chains: [anvil],
-  connectors: [
-    burner({
-      rpcUrls: {
-        [anvil.id]: rpcUrl,
-      },
-    }),
-    injected(),
-  ],
-  transports: {
-    [anvil.id]: http(rpcUrl),
-  },
-});
-
-const storage = new MemoryStorage();
-const relayer = new RelayerCleartext({
-  ...hardhatCleartextConfig,
-  network: rpcUrl,
+  connectors: [burner({ rpcUrls: { [anvil.id]: rpcUrl } }), injected()],
+  transports: { [anvil.id]: http(rpcUrl) },
 });
 
 const queryClient = new QueryClient();
@@ -43,11 +28,14 @@ export function Providers({ children }: { children: ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={wagmiConfig}>
         <ZamaWagmiProvider
-          relayer={relayer}
-          storage={storage}
-          registryAddresses={{
-            [anvil.id]: getAddress(deployments.wrappersRegistry),
-          }}
+          chains={[
+            {
+              ...fheAnvil,
+              network: rpcUrl,
+              registryAddress: getAddress(deployments.wrappersRegistry),
+            },
+          ]}
+          relayers={{ [anvil.id]: cleartext() }}
         >
           {children}
         </ZamaWagmiProvider>

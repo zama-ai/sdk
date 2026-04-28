@@ -23,7 +23,7 @@ Instance creation via [`ZamaSDK.createReadonlyToken()`](/reference/sdk/ZamaSDK#c
 ```ts
 import { ReadonlyToken, ZamaSDK } from "@zama-fhe/sdk";
 
-const sdk = new ZamaSDK({ relayer, signer, storage });
+const sdk = new ZamaSDK({ relayer, provider, signer, storage });
 const tokens = addresses.map((a) => sdk.createReadonlyToken(a));
 
 // One wallet signature covers all tokens
@@ -37,23 +37,27 @@ const { results, errors } = await ReadonlyToken.batchBalancesOf(tokens, owner);
 {% tab title="config.ts" %}
 
 ```ts
-import { ZamaSDK, indexedDBStorage, RelayerWeb, MainnetConfig, SepoliaConfig } from "@zama-fhe/sdk";
-import { ViemSigner } from "@zama-fhe/sdk/viem";
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { web } from "@zama-fhe/sdk";
+import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
 
-const signer = new ViemSigner({ walletClient, publicClient });
-const relayer = new RelayerWeb({
-  getChainId: () => signer.getChainId(),
-  transports: {
-    [MainnetConfig.chainId]: {
-      ...MainnetConfig,
-      relayerUrl: "https://your-app.com/api/relayer/1",
-      network: "https://mainnet.infura.io/v3/YOUR_KEY",
-    },
-    [SepoliaConfig.chainId]: {
-      ...SepoliaConfig,
-      relayerUrl: "https://your-app.com/api/relayer/11155111",
-      network: "https://sepolia.infura.io/v3/YOUR_KEY",
-    },
+const mySepolia = {
+  ...sepolia,
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
+} as const satisfies FheChain;
+
+const myMainnet = {
+  ...mainnet,
+  relayerUrl: "https://your-app.com/api/relayer/1",
+} as const satisfies FheChain;
+
+const config = createConfig({
+  chains: [mySepolia, myMainnet],
+  publicClient,
+  walletClient,
+  relayers: {
+    [mySepolia.id]: web(),
+    [myMainnet.id]: web(),
   },
 });
 ```

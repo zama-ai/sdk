@@ -6,8 +6,34 @@
  * @packageDocumentation
  */
 
+// Config factory
+// Note: node() transport factory is exported from @zama-fhe/sdk/node instead,
+// keeping node:worker_threads out of the main browser entry.
+export {
+  buildZamaConfig,
+  createConfig,
+  web,
+  cleartext,
+  resolveChainRelayers,
+  resolveStorage,
+} from "./config";
+export type {
+  ZamaConfig,
+  ZamaConfigBase,
+  ZamaConfigGeneric,
+  ZamaConfigViem,
+  ZamaConfigEthers,
+  RelayerConfig,
+  WebRelayerConfig,
+  CleartextRelayerConfig,
+  WebRelayerOptions,
+  AtLeastOneChain,
+  ResolvedChainRelayer,
+} from "./config";
+
 // Core SDK
 export { RelayerWeb } from "./relayer/relayer-web";
+export type { RelayerDispatcher, WorkerLike } from "./relayer/relayer-dispatcher";
 export type { RelayerSDK } from "./relayer/relayer-sdk";
 export type {
   RelayerWebConfig,
@@ -36,8 +62,9 @@ export type {
 } from "@zama-fhe/relayer-sdk/bundle";
 export type { GenericLogger } from "./worker/worker.types";
 
-// Network preset configs
-export { HardhatConfig, MainnetConfig, SepoliaConfig } from "./relayer/relayer-utils";
+// Chain presets and types
+export { mainnet, sepolia, hoodi, hardhat, anvil, chains } from "./chains";
+export type { FheChain } from "./chains/types";
 
 // ERC-165 interface IDs
 export {

@@ -23,35 +23,50 @@ import { ZamaSDK, indexedDBStorage } from "@zama-fhe/sdk";
 
 const sdk = new ZamaSDK({
   relayer,
+  provider,
   signer,
   storage: indexedDBStorage,
 });
 ```
 
 {% endtab %}
-{% tab title="config.ts" %}
+{% tab title="createConfig (viem)" %}
 
 ```ts
-import { RelayerWeb, MainnetConfig, SepoliaConfig } from "@zama-fhe/sdk";
-import { ViemSigner } from "@zama-fhe/sdk/viem";
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { web } from "@zama-fhe/sdk";
+import { sepolia, mainnet } from "@zama-fhe/sdk/chains";
 
-const signer = new ViemSigner({ walletClient, publicClient });
-
-const relayer = new RelayerWeb({
-  getChainId: () => signer.getChainId(),
-  transports: {
-    [MainnetConfig.chainId]: {
-      ...MainnetConfig,
-      relayerUrl: "https://your-app.com/api/relayer/1",
-      network: "https://mainnet.infura.io/v3/YOUR_KEY",
-    },
-    [SepoliaConfig.chainId]: {
-      ...SepoliaConfig,
-      relayerUrl: "https://your-app.com/api/relayer/11155111",
-      network: "https://sepolia.infura.io/v3/YOUR_KEY",
-    },
+const config = createConfig({
+  chains: [sepolia, mainnet],
+  publicClient,
+  walletClient,
+  relayers: {
+    [sepolia.id]: web(),
+    [mainnet.id]: web(),
   },
 });
+
+const sdk = new ZamaSDK(config);
+```
+
+{% endtab %}
+{% tab title="createConfig (custom signer)" %}
+
+```ts
+import { createConfig, ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
+import { node } from "@zama-fhe/sdk/node";
+import { sepolia } from "@zama-fhe/sdk/chains";
+
+const config = createConfig({
+  chains: [sepolia],
+  signer: myCustomSigner, // GenericSigner
+  provider: myCustomProvider, // GenericProvider
+  storage: memoryStorage,
+  relayers: { [sepolia.id]: node({ poolSize: 4 }) },
+});
+
+const sdk = new ZamaSDK(config);
 ```
 
 {% endtab %}
@@ -61,13 +76,29 @@ const relayer = new RelayerWeb({
 
 ### relayer
 
-`RelayerWeb | RelayerNode`
+`RelayerDispatcher`
 
 Handles FHE encryption, decryption, and keypair management.
 
 ```ts
 const sdk = new ZamaSDK({
   relayer,
+  provider,
+  signer,
+  storage: indexedDBStorage,
+});
+```
+
+### provider
+
+`GenericProvider`
+
+Read-only provider for contract reads and transaction receipt polling. Created automatically by `createConfig`, or implement `GenericProvider` manually.
+
+```ts
+const sdk = new ZamaSDK({
+  relayer,
+  provider,
   signer,
   storage: indexedDBStorage,
 });
@@ -82,9 +113,10 @@ Wallet interface for signing transactions and typed data. Use `ViemSigner`, `Eth
 ```ts
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 
-const signer = new ViemSigner({ walletClient, publicClient });
+const signer = new ViemSigner({ walletClient });
 const sdk = new ZamaSDK({
   relayer,
+  provider,
   signer,
   storage: indexedDBStorage,
 });
@@ -101,6 +133,7 @@ import { indexedDBStorage } from "@zama-fhe/sdk";
 
 const sdk = new ZamaSDK({
   relayer,
+  provider,
   signer,
   storage: indexedDBStorage,
 });
@@ -119,6 +152,7 @@ import { chromeSessionStorage } from "@zama-fhe/sdk";
 
 const sdk = new ZamaSDK({
   relayer,
+  provider,
   signer,
   storage: indexedDBStorage,
   sessionStorage: chromeSessionStorage,
@@ -134,6 +168,7 @@ FHE keypair validity duration in seconds. Default: `2592000` (30 days). After ex
 ```ts
 const sdk = new ZamaSDK({
   relayer,
+  provider,
   signer,
   storage: indexedDBStorage,
   keypairTTL: 604800, // 7 days
@@ -149,6 +184,7 @@ Session signature lifetime in seconds. Default: `2592000` (30 days). Set to `0` 
 ```ts
 const sdk = new ZamaSDK({
   relayer,
+  provider,
   signer,
   storage: indexedDBStorage,
   sessionTTL: 3600, // 1 hour
@@ -164,6 +200,7 @@ Per-chain wrappers registry address overrides, merged on top of built-in default
 ```ts
 const sdk = new ZamaSDK({
   relayer,
+  provider,
   signer,
   storage: indexedDBStorage,
   registryAddresses: { [31337]: "0xYourHardhatRegistry" },
@@ -179,6 +216,7 @@ How long cached registry results remain valid, in seconds. Default: `86400` (24 
 ```ts
 const sdk = new ZamaSDK({
   relayer,
+  provider,
   signer,
   storage: indexedDBStorage,
   registryTTL: 3600, // 1 hour
@@ -194,6 +232,7 @@ Lifecycle event callback for debugging and telemetry. Events never contain sensi
 ```ts
 const sdk = new ZamaSDK({
   relayer,
+  provider,
   signer,
   storage: indexedDBStorage,
   onEvent: ({ type, tokenAddress, ...rest }) => {
@@ -230,7 +269,7 @@ await sdk.cache.clearAll();
 
 `WrappersRegistry` (readonly)
 
-Auto-configured wrappers registry instance. Shares the SDK's signer, `registryAddresses`, and `registryTTL`. Prefer this over `createWrappersRegistry()` to benefit from a single shared cache.
+Auto-configured wrappers registry instance. Shares the SDK's provider, `registryAddresses`, and `registryTTL`. Prefer this over `createWrappersRegistry()` to benefit from a single shared cache.
 
 ```ts
 const pairs = await sdk.registry.listPairs({ page: 1 });
@@ -326,6 +365,7 @@ import {
 
 const sdk = new ZamaSDK({
   relayer,
+  provider,
   signer,
   storage,
   onEvent: (event) => {
@@ -365,6 +405,7 @@ const emitter = new EventEmitter();
 
 const sdk = new ZamaSDK({
   relayer,
+  provider,
   signer,
   storage,
   onEvent: (event) => emitter.emit(event.type, event),

@@ -5,6 +5,10 @@
  * @packageDocumentation
  */
 
+export type { ZamaConfigViem } from "./types";
+
+export { createConfig } from "./config";
+
 export { ViemSigner, type ViemSignerConfig } from "./viem-signer";
 export { ViemProvider, type ViemProviderConfig } from "./viem-provider";
 export {

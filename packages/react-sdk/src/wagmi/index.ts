@@ -5,13 +5,10 @@
  * It reads wagmi's connection state internally and passes the appropriate
  * provider/signer to the generic {@link ZamaProvider}.
  *
- * The low-level wagmi provider and signer adapters are intentionally not
- * exported from this public entry point. They depend on wagmi connection
- * semantics where a config can exist before a usable signer identity exists;
- * centralizing construction in {@link ZamaWagmiProvider} keeps disconnected
- * and reconnecting states from being exposed as valid signing capabilities.
- *
  * @packageDocumentation
  */
 
+export { WagmiSigner, type WagmiSignerConfig } from "./wagmi-signer";
+export { createConfig, type ZamaConfigWagmi } from "./config";
+export { WagmiProvider, type WagmiProviderConfig } from "./wagmi-provider";
 export { ZamaWagmiProvider, type ZamaWagmiProviderProps } from "./zama-wagmi-provider";

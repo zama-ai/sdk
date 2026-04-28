@@ -5,7 +5,8 @@
 
 import type { EncryptInput, RelayerSDKGlobal } from "../relayer/relayer-sdk.types";
 import type { FhevmInstance, FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/bundle";
-import { assertNonNullable, prefixHex, unprefixHex } from "../utils";
+import type { FheChain } from "../chains/types";
+import { prefixHex, unprefixHex } from "../utils";
 import { getBrowserExtensionRuntime } from "./browser-extension";
 import type {
   CreateDelegatedEIP712Request,
@@ -32,30 +33,67 @@ import type {
   WorkerRequest,
 } from "./worker.types";
 
-// Global SDK instance and config
-let sdkInstance: FhevmInstance | null = null;
+// ── Multi-chain instance management ─────────────────────────────
+const instances = new Map<number, FhevmInstance>();
+const pending = new Map<number, Promise<FhevmInstance>>();
+const configs = new Map<number, FheChain>();
+
+/** Convert an FheChain to the FhevmInstanceConfig shape expected by createInstance. */
+function toInstanceConfig(chain: FheChain): FhevmInstanceConfig {
+  return { ...chain, chainId: chain.id };
+}
+
 let sdkGlobal: RelayerSDKGlobal | null = null;
 
-function assertSdkInstance(
-  instance: FhevmInstance | null,
-): asserts instance is NonNullable<FhevmInstance> {
-  try {
-    assertNonNullable(instance, "Relayer SDK instance");
-  } catch (error) {
-    throw new Error("Relayer SDK is not initialized. Call INIT first.", {
-      cause: error,
-    });
+/**
+ * Get or lazily create an FhevmInstance for the given chain.
+ */
+async function getInstance(chainId: number): Promise<FhevmInstance> {
+  const existing = instances.get(chainId);
+  if (existing) {
+    return existing;
   }
+
+  const inflight = pending.get(chainId);
+  if (inflight) {
+    return inflight;
+  }
+
+  const config = configs.get(chainId);
+  if (!config) {
+    throw new Error(
+      `No config for chain ${chainId}. Available: [${[...configs.keys()].join(", ")}]`,
+    );
+  }
+
+  if (!sdkGlobal) {
+    throw new Error("Relayer SDK is not initialized. Call INIT first.");
+  }
+
+  const promise = sdkGlobal
+    .createInstance({ ...toInstanceConfig(config), batchRpcCalls: false })
+    .then((instance) => {
+      instances.set(chainId, instance);
+      pending.delete(chainId);
+      return instance;
+    })
+    .catch((err) => {
+      pending.delete(chainId);
+      throw err;
+    });
+
+  pending.set(chainId, promise);
+  return promise;
 }
 
 function unreachableFheType(_: never): never {
   throw new Error("Unsupported FHE type");
 }
 
-// Store relayer URL and CSRF token for fetch interception.
+// ── Fetch interception for relayer CSRF ─────────────────────────
 // These globals are per-worker-instance. Do NOT convert to SharedWorker
 // without rearchitecting CSRF token management to be per-connection.
-let relayerUrlBase = "";
+const relayerUrls = new Set<string>();
 let csrfTokenBase = "";
 
 // CSRF header name (must match server expectation)
@@ -63,6 +101,17 @@ const CSRF_HEADER_NAME = "x-csrf-token";
 
 // Mutating HTTP methods that require CSRF token (js-set-map-lookups)
 const MUTATING_METHODS = new Set(["POST", "PUT", "DELETE", "PATCH"]);
+
+/**
+ * Register relayer URLs from chain configs for fetch interception.
+ */
+function registerRelayerUrls(chainConfigs: FheChain[]): void {
+  for (const c of chainConfigs) {
+    if (c.relayerUrl) {
+      relayerUrls.add(c.relayerUrl);
+    }
+  }
+}
 
 // Web Worker global scope with SDK
 interface WorkerGlobalScopeWithSDK extends Worker {
@@ -155,7 +204,10 @@ function setupFetchInterceptor(): void {
     const method = init?.method?.toUpperCase() ?? "GET";
 
     // Only intercept requests to our relayer proxy
-    if (relayerUrlBase && url.startsWith(relayerUrlBase)) {
+    const matchesRelayer =
+      relayerUrls.size > 0 && [...relayerUrls].some((base) => url.startsWith(base));
+
+    if (matchesRelayer) {
       const headers = new Headers(init?.headers);
 
       // Add CSRF token for mutating requests
@@ -239,21 +291,20 @@ async function loadSdkScript(cdnUrl: string, integrity?: string): Promise<void> 
 }
 
 /**
- * Handle INIT request - load SDK and initialize WASM.
+ * Handle INIT request - load SDK WASM and register chain configs (instances are lazy).
  */
 async function handleInit(request: InitRequest): Promise<void> {
   const { id, type, payload } = request;
-  const { cdnUrl, fhevmConfig, csrfToken, integrity, thread } = payload;
 
   try {
-    // Extract relayerUrl from config for fetch interception
-    relayerUrlBase = fhevmConfig.relayerUrl ?? "";
+    if (payload.env !== "web") {
+      throw new Error(`Web worker received unexpected env: ${payload.env}`);
+    }
+
+    const { cdnUrl, csrfToken, integrity, thread } = payload;
+
     csrfTokenBase = csrfToken;
-
-    // Set up fetch interceptor before loading SDK
     setupFetchInterceptor();
-
-    // Load SDK via fetch + eval (avoids MIME-type issues with importScripts)
     await loadSdkScript(cdnUrl, integrity);
 
     if (!self.relayerSDK) {
@@ -261,17 +312,13 @@ async function handleInit(request: InitRequest): Promise<void> {
     }
 
     sdkGlobal = self.relayerSDK;
-
-    // Initialize WASM (optionally with a rayon thread pool for parallel FHE ops)
     await sdkGlobal.initSDK(thread !== null && thread !== undefined ? { thread } : undefined);
 
-    // Create SDK instance with caller-provided config
-    const config: FhevmInstanceConfig = {
-      ...fhevmConfig,
-      batchRpcCalls: false,
-    };
-
-    sdkInstance = await sdkGlobal.createInstance(config);
+    // Register chain configs for lazy init
+    registerRelayerUrls(payload.chains);
+    for (const chain of payload.chains) {
+      configs.set(chain.id, chain);
+    }
 
     sendSuccess(id, type, { initialized: true });
   } catch (error) {
@@ -332,9 +379,9 @@ async function handleEncrypt(request: EncryptRequest): Promise<void> {
   const { values, contractAddress, userAddress } = payload;
 
   try {
-    assertSdkInstance(sdkInstance);
+    const instance = await getInstance(payload.chainId);
 
-    const input = sdkInstance.createEncryptedInput(contractAddress, userAddress);
+    const input = instance.createEncryptedInput(contractAddress, userAddress);
 
     for (const entry of values) {
       addTypedValue(input, entry);
@@ -368,14 +415,14 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
   const { id, type, payload } = request;
 
   try {
-    assertSdkInstance(sdkInstance);
+    const instance = await getInstance(payload.chainId);
 
     const handleContractPairs = payload.handles.map((handle) => ({
       handle,
       contractAddress: payload.contractAddress,
     }));
 
-    const result = await sdkInstance.userDecrypt(
+    const result = await instance.userDecrypt(
       handleContractPairs,
       unprefixHex(payload.privateKey),
       unprefixHex(payload.publicKey),
@@ -432,9 +479,9 @@ async function handlePublicDecrypt(request: PublicDecryptRequest): Promise<void>
   const { id, type, payload } = request;
 
   try {
-    assertSdkInstance(sdkInstance);
+    const instance = await getInstance(payload.chainId);
 
-    const result = await sdkInstance.publicDecrypt(payload.handles);
+    const result = await instance.publicDecrypt(payload.handles);
 
     const response: PublicDecryptResponseData = { ...result };
 
@@ -449,13 +496,13 @@ async function handlePublicDecrypt(request: PublicDecryptRequest): Promise<void>
 /**
  * Handle GENERATE_KEYPAIR request.
  */
-function handleGenerateKeypair(request: GenerateKeypairRequest): void {
-  const { id, type } = request;
+async function handleGenerateKeypair(request: GenerateKeypairRequest): Promise<void> {
+  const { id, type, payload } = request;
 
   try {
-    assertSdkInstance(sdkInstance);
+    const instance = await getInstance(payload.chainId);
 
-    const keypair = sdkInstance.generateKeypair();
+    const keypair = instance.generateKeypair();
 
     const response: GenerateKeypairResponseData = {
       publicKey: prefixHex(keypair.publicKey),
@@ -473,13 +520,13 @@ function handleGenerateKeypair(request: GenerateKeypairRequest): void {
 /**
  * Handle CREATE_EIP712 request.
  */
-function handleCreateEIP712(request: CreateEIP712Request): void {
+async function handleCreateEIP712(request: CreateEIP712Request): Promise<void> {
   const { id, type, payload } = request;
 
   try {
-    assertSdkInstance(sdkInstance);
+    const instance = await getInstance(payload.chainId);
 
-    const eip712 = sdkInstance.createEIP712(
+    const eip712 = instance.createEIP712(
       unprefixHex(payload.publicKey),
       payload.contractAddresses,
       payload.startTimestamp,
@@ -497,13 +544,13 @@ function handleCreateEIP712(request: CreateEIP712Request): void {
 /**
  * Handle CREATE_DELEGATED_EIP712 request.
  */
-function handleCreateDelegatedEIP712(request: CreateDelegatedEIP712Request): void {
+async function handleCreateDelegatedEIP712(request: CreateDelegatedEIP712Request): Promise<void> {
   const { id, type, payload } = request;
 
   try {
-    assertSdkInstance(sdkInstance);
+    const instance = await getInstance(payload.chainId);
 
-    const result = sdkInstance.createDelegatedUserDecryptEIP712(
+    const result = instance.createDelegatedUserDecryptEIP712(
       unprefixHex(payload.publicKey),
       payload.contractAddresses,
       payload.delegatorAddress,
@@ -526,14 +573,14 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
   const { id, type, payload } = request;
 
   try {
-    assertSdkInstance(sdkInstance);
+    const instance = await getInstance(payload.chainId);
 
     const handleContractPairs = payload.handles.map((handle) => ({
       handle,
       contractAddress: payload.contractAddress,
     }));
 
-    const result = await sdkInstance.delegatedUserDecrypt(
+    const result = await instance.delegatedUserDecrypt(
       handleContractPairs,
       unprefixHex(payload.privateKey),
       unprefixHex(payload.publicKey),
@@ -565,9 +612,9 @@ async function handleRequestZKProofVerification(
   const { id, type, payload } = request;
 
   try {
-    assertSdkInstance(sdkInstance);
+    const instance = await getInstance(payload.chainId);
 
-    const result = await sdkInstance.requestZKProofVerification(payload.zkProof);
+    const result = await instance.requestZKProofVerification(payload.zkProof);
 
     // Transfer ArrayBuffers for zero-copy performance
     const transferList: Transferable[] = [
@@ -586,13 +633,13 @@ async function handleRequestZKProofVerification(
 /**
  * Handle GET_PUBLIC_KEY request.
  */
-function handleGetPublicKey(request: GetPublicKeyRequest): void {
-  const { id, type } = request;
+async function handleGetPublicKey(request: GetPublicKeyRequest): Promise<void> {
+  const { id, type, payload } = request;
 
   try {
-    assertSdkInstance(sdkInstance);
+    const instance = await getInstance(payload.chainId);
 
-    const result = sdkInstance.getPublicKey();
+    const result = instance.getPublicKey();
 
     const response: GetPublicKeyResponseData = { result };
 
@@ -607,13 +654,13 @@ function handleGetPublicKey(request: GetPublicKeyRequest): void {
 /**
  * Handle GET_PUBLIC_PARAMS request.
  */
-function handleGetPublicParams(request: GetPublicParamsRequest): void {
+async function handleGetPublicParams(request: GetPublicParamsRequest): Promise<void> {
   const { id, type, payload } = request;
 
   try {
-    assertSdkInstance(sdkInstance);
+    const instance = await getInstance(payload.chainId);
 
-    const result = sdkInstance.getPublicParams(
+    const result = instance.getPublicParams(
       // oxlint-disable-next-line typescript-eslint/consistent-type-imports -- SDK loaded dynamically via CDN
       payload.bits as keyof import("@zama-fhe/relayer-sdk/bundle").PublicParams<Uint8Array>,
     );
@@ -661,13 +708,13 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         await handlePublicDecrypt(request);
         break;
       case "GENERATE_KEYPAIR":
-        handleGenerateKeypair(request);
+        await handleGenerateKeypair(request);
         break;
       case "CREATE_EIP712":
-        handleCreateEIP712(request);
+        await handleCreateEIP712(request);
         break;
       case "CREATE_DELEGATED_EIP712":
-        handleCreateDelegatedEIP712(request);
+        await handleCreateDelegatedEIP712(request);
         break;
       case "DELEGATED_USER_DECRYPT":
         await handleDelegatedUserDecrypt(request);
@@ -676,10 +723,10 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         await handleRequestZKProofVerification(request);
         break;
       case "GET_PUBLIC_KEY":
-        handleGetPublicKey(request);
+        await handleGetPublicKey(request);
         break;
       case "GET_PUBLIC_PARAMS":
-        handleGetPublicParams(request);
+        await handleGetPublicParams(request);
         break;
       default:
         console.error("[Worker] Unknown request type:", (request as WorkerRequest).type);

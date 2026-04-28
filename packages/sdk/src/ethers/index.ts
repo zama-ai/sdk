@@ -5,6 +5,10 @@
  * @packageDocumentation
  */
 
+export type { ZamaConfigEthers } from "./types";
+
+export { createConfig } from "./config";
+
 export { EthersSigner, type EthersSignerConfig } from "./ethers-signer";
 export { EthersProvider, type EthersProviderConfig } from "./ethers-provider";
 export type {

@@ -1,5 +1,7 @@
 import { render } from "@testing-library/react";
-import type { Address } from "@zama-fhe/sdk";
+import type { Address, ZamaConfig } from "@zama-fhe/sdk";
+import { cleartext } from "@zama-fhe/sdk";
+import { hardhat } from "@zama-fhe/sdk/chains";
 import type { Config } from "wagmi";
 import { describe, expect, it } from "../test-fixtures";
 import type { ZamaProviderProps } from "../provider";
@@ -29,8 +31,18 @@ vi.mock("../provider", () => ({
 
 const ADDRESS = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
 
+const baseProps = {
+  chains: [hardhat] as const,
+  relayers: { [hardhat.id]: cleartext() },
+} as const;
+
+function lastConfig(): ZamaConfig {
+  const props = capturedProviderProps.at(-1) as ZamaProviderProps;
+  return props.config;
+}
+
 describe("ZamaWagmiProvider", () => {
-  it("passes a signer while wagmi reconnects with persisted identity", ({ relayer, storage }) => {
+  it("passes a signer while wagmi reconnects with persisted identity", () => {
     const wagmiConfig = {} as Config;
     mockUseConfig.mockReturnValue(wagmiConfig);
     mockUseConnection.mockReturnValue({
@@ -39,32 +51,22 @@ describe("ZamaWagmiProvider", () => {
       chainId: 31337,
     });
 
-    render(
-      <ZamaWagmiProvider relayer={relayer} storage={storage}>
-        child
-      </ZamaWagmiProvider>,
-    );
+    render(<ZamaWagmiProvider {...baseProps}>child</ZamaWagmiProvider>);
 
-    const props = capturedProviderProps.at(-1) as ZamaProviderProps;
-    expect(props.signer).toBeInstanceOf(WagmiSigner);
+    expect(lastConfig().signer).toBeInstanceOf(WagmiSigner);
   });
 
-  it("omits signer when wagmi is disconnected", ({ relayer, storage }) => {
+  it("omits signer when wagmi is disconnected", () => {
     const wagmiConfig = {} as Config;
     mockUseConfig.mockReturnValue(wagmiConfig);
     mockUseConnection.mockReturnValue({ status: "disconnected" });
 
-    render(
-      <ZamaWagmiProvider relayer={relayer} storage={storage}>
-        child
-      </ZamaWagmiProvider>,
-    );
+    render(<ZamaWagmiProvider {...baseProps}>child</ZamaWagmiProvider>);
 
-    const props = capturedProviderProps.at(-1) as ZamaProviderProps;
-    expect(props.signer).toBeUndefined();
+    expect(lastConfig().signer).toBeUndefined();
   });
 
-  it("omits signer until wagmi exposes both address and chain id", ({ relayer, storage }) => {
+  it("omits signer until wagmi exposes both address and chain id", () => {
     const wagmiConfig = {} as Config;
     mockUseConfig.mockReturnValue(wagmiConfig);
     mockUseConnection.mockReturnValue({
@@ -72,13 +74,8 @@ describe("ZamaWagmiProvider", () => {
       address: ADDRESS,
     });
 
-    render(
-      <ZamaWagmiProvider relayer={relayer} storage={storage}>
-        child
-      </ZamaWagmiProvider>,
-    );
+    render(<ZamaWagmiProvider {...baseProps}>child</ZamaWagmiProvider>);
 
-    const props = capturedProviderProps.at(-1) as ZamaProviderProps;
-    expect(props.signer).toBeUndefined();
+    expect(lastConfig().signer).toBeUndefined();
   });
 });
