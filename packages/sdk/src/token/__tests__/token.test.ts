@@ -510,33 +510,6 @@ describe("Token", () => {
   // ── Additional coverage ──────────────────────────────────────────────
 
   describe("confidentialTransfer (error handling)", () => {
-    it("wraps non-ZamaError in EncryptionFailed", async ({ relayer, token }) => {
-      vi.mocked(relayer.encrypt).mockRejectedValueOnce(new Error("boom"));
-
-      await expect(
-        token.confidentialTransfer("0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address, 100n, {
-          skipBalanceCheck: true,
-        }),
-      ).rejects.toSatisfy((err: ZamaError) => {
-        return (
-          err instanceof ZamaError &&
-          err.code === ZamaErrorCode.EncryptionFailed &&
-          err.message === "Encryption failed"
-        );
-      });
-    });
-
-    it("re-throws ZamaError from encrypt as-is", async ({ relayer, token }) => {
-      const original = new ZamaError(ZamaErrorCode.EncryptionFailed, "already wrapped");
-      vi.mocked(relayer.encrypt).mockRejectedValueOnce(original);
-
-      await expect(
-        token.confidentialTransfer("0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address, 100n, {
-          skipBalanceCheck: true,
-        }),
-      ).rejects.toBe(original);
-    });
-
     it("throws EncryptionFailed when encrypt returns empty handles", async ({
       relayer,
 
@@ -609,37 +582,6 @@ describe("Token", () => {
       );
       expect(result.txHash).toBe("0xtxhash");
       expect(result.receipt).toEqual({ logs: [] });
-    });
-
-    it("wraps non-ZamaError in EncryptionFailed", async ({ relayer, token }) => {
-      vi.mocked(relayer.encrypt).mockRejectedValueOnce(new Error("boom"));
-
-      await expect(
-        token.confidentialTransferFrom(
-          "0xcccccccccccccccccccccccccccccccccccccccc" as Address,
-          "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address,
-          200n,
-        ),
-      ).rejects.toSatisfy((err: ZamaError) => {
-        return (
-          err instanceof ZamaError &&
-          err.code === ZamaErrorCode.EncryptionFailed &&
-          err.message === "Encryption failed"
-        );
-      });
-    });
-
-    it("re-throws ZamaError from encrypt as-is", async ({ relayer, token }) => {
-      const original = new ZamaError(ZamaErrorCode.EncryptionFailed, "already wrapped");
-      vi.mocked(relayer.encrypt).mockRejectedValueOnce(original);
-
-      await expect(
-        token.confidentialTransferFrom(
-          "0xcccccccccccccccccccccccccccccccccccccccc" as Address,
-          "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address,
-          200n,
-        ),
-      ).rejects.toBe(original);
     });
 
     it("throws EncryptionFailed when encrypt returns empty handles", async ({
@@ -831,25 +773,6 @@ describe("Token", () => {
   });
 
   describe("unwrap (error handling)", () => {
-    it("wraps encrypt failure in EncryptionFailed", async ({ relayer, token }) => {
-      vi.mocked(relayer.encrypt).mockRejectedValueOnce(new Error("encrypt failed"));
-
-      await expect(token.unwrap(50n)).rejects.toSatisfy((err: ZamaError) => {
-        return (
-          err instanceof ZamaError &&
-          err.code === ZamaErrorCode.EncryptionFailed &&
-          err.message === "Encryption failed"
-        );
-      });
-    });
-
-    it("re-throws ZamaError from encrypt as-is", async ({ relayer, token }) => {
-      const original = new ZamaError(ZamaErrorCode.EncryptionFailed, "already wrapped");
-      vi.mocked(relayer.encrypt).mockRejectedValueOnce(original);
-
-      await expect(token.unwrap(50n)).rejects.toBe(original);
-    });
-
     it("throws EncryptionFailed when encrypt returns empty handles", async ({
       relayer,
 

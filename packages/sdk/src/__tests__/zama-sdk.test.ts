@@ -2,7 +2,7 @@ import { describe, it, expect, vi, type Mock, TEST_ADDR_B } from "../test-fixtur
 import { ReadonlyToken } from "../token/readonly-token";
 import { Token } from "../token/token";
 import { CredentialsManager } from "../credentials/credentials-manager";
-import { DecryptionFailedError } from "../errors";
+import { DecryptionFailedError, ZamaError, ZamaErrorCode } from "../errors";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import { ZERO_HANDLE } from "../utils/handles";
 import type { GenericSigner, SignerIdentityChange, SignerIdentityListener } from "../types";
@@ -753,6 +753,68 @@ describe("ZamaSDK", () => {
       // After revokeSession, cache should be cleared — relayer called again
       await sdk.userDecrypt(handles);
       expect(relayer.userDecrypt).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe("encrypt", () => {
+    const ENCRYPT_PARAMS = {
+      values: [{ value: 100n, type: "euint64" as const }],
+      contractAddress: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address,
+      userAddress: "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address,
+    };
+
+    it("delegates to relayer.encrypt and returns result", async ({ sdk, relayer }) => {
+      const result = await sdk.encrypt(ENCRYPT_PARAMS);
+
+      expect(relayer.encrypt).toHaveBeenCalledWith(ENCRYPT_PARAMS);
+      expect(result.handles).toHaveLength(1);
+      expect(result.inputProof).toBeInstanceOf(Uint8Array);
+    });
+
+    it("emits EncryptStart and EncryptEnd events", async ({ createSDK }) => {
+      const events: { type: string }[] = [];
+      const sdk = createSDK({ onEvent: (e) => events.push(e) });
+
+      await sdk.encrypt(ENCRYPT_PARAMS);
+
+      expect(events).toContainEqual(expect.objectContaining({ type: ZamaSDKEvents.EncryptStart }));
+      expect(events).toContainEqual(
+        expect.objectContaining({ type: ZamaSDKEvents.EncryptEnd, durationMs: expect.any(Number) }),
+      );
+    });
+
+    it("wraps non-ZamaError in EncryptionFailed", async ({ sdk, relayer }) => {
+      vi.mocked(relayer.encrypt).mockRejectedValueOnce(new Error("boom"));
+
+      await expect(sdk.encrypt(ENCRYPT_PARAMS)).rejects.toSatisfy((err: ZamaError) => {
+        return (
+          err instanceof ZamaError &&
+          err.code === ZamaErrorCode.EncryptionFailed &&
+          err.message === "Encryption failed"
+        );
+      });
+    });
+
+    it("re-throws ZamaError as-is", async ({ sdk, relayer }) => {
+      const original = new ZamaError(ZamaErrorCode.EncryptionFailed, "already wrapped");
+      vi.mocked(relayer.encrypt).mockRejectedValueOnce(original);
+
+      await expect(sdk.encrypt(ENCRYPT_PARAMS)).rejects.toBe(original);
+    });
+
+    it("emits EncryptError on failure", async ({ createSDK, relayer }) => {
+      const events: { type: string }[] = [];
+      const sdk = createSDK({ onEvent: (e) => events.push(e) });
+      vi.mocked(relayer.encrypt).mockRejectedValueOnce(new Error("boom"));
+
+      await expect(sdk.encrypt(ENCRYPT_PARAMS)).rejects.toThrow();
+
+      expect(events).toContainEqual(
+        expect.objectContaining({
+          type: ZamaSDKEvents.EncryptError,
+          durationMs: expect.any(Number),
+        }),
+      );
     });
   });
 });
