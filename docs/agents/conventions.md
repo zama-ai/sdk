@@ -44,7 +44,7 @@ Concrete implementations: `ViemSigner`/`ViemProvider` (`packages/sdk/src/viem/`)
 
 - **Formatter:** `oxfmt` (config: `.oxfmtrc.json`) — 100 col, 2-space indent, double quotes, trailing commas. Run `pnpm format` to apply.
 - **Linter:** `oxlint` (config: `.oxlintrc.json`) + `ast-grep` (config: `sgconfig.yml`). Two distinct tools: oxlint covers standard TypeScript rules; ast-grep enforces structural patterns (e.g. the `useQueries` wrapper rule in `react-sdk`).
-- **Pre-commit:** Husky runs three things in order: lint-staged (oxlint --fix + ast-grep scan + oxfmt on staged `.ts`/`.tsx`/`.js`/`.json`/`.yml` files), then `pnpm typecheck` (full monorepo typecheck), then `pnpm llm:stage` (auto-stages updated LLM artifacts).
+- **Pre-commit:** Husky runs three things in order: lint-staged (oxlint --fix + ast-grep scan on staged `.ts`/`.tsx`/`.js` files; oxfmt on staged `.ts`/`.tsx`/`.js`/`.json`/`.yml` files), then `pnpm typecheck` (full monorepo typecheck), then `pnpm llm:stage` (auto-stages updated LLM artifacts).
 - **Claude Code:** a PostToolUse hook in `claude-setup/settings.json` runs `pnpm format` after every Write or Edit.
 
 ## TypeScript

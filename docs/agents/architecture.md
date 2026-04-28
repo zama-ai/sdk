@@ -24,7 +24,7 @@ Entry points exported by the package: `@zama-fhe/sdk` (main), `/viem`, `/ethers`
 ```
 types/          → GenericSigner (signer.ts), GenericProvider (provider.ts), all supporting types
 token/          → Token and ReadonlyToken (shield, unshield, confidentialTransfer, balanceOf)
-relayer/        → RelayerWeb, RelayerNode, RelayerCleartext
+relayer/        → RelayerWeb (via /web), RelayerNode (via /node), RelayerCleartext (via /cleartext)
 viem/           → ViemSigner (GenericSigner), ViemProvider (GenericProvider)
 ethers/         → EthersSigner (GenericSigner), EthersProvider (GenericProvider)
 credentials/    → session management, credential signing
