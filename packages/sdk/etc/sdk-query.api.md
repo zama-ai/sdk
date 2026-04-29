@@ -367,7 +367,15 @@ export interface DelegateDecryptionParams {
 }
 
 // @public (undocumented)
-export function delegatedUserDecryptMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.delegatedUserDecrypt"], DelegatedUserDecryptParams, Readonly<Record<Handle, ClearValueType>>>;
+export function delegatedUserDecryptMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.delegatedUserDecrypt"], DelegatedUserDecryptMutationParams, Readonly<Record<Handle, ClearValueType>>>;
+
+// @public (undocumented)
+export interface DelegatedUserDecryptMutationParams {
+    // (undocumented)
+    delegatorAddress: Address;
+    // (undocumented)
+    handles: DecryptHandle[];
+}
 
 // @public
 export interface DelegatedUserDecryptParams {
@@ -1355,6 +1363,7 @@ export class ZamaSDK {
     //
     // (undocumented)
     readonly delegatedCredentials: DelegatedCredentialsManager | undefined;
+    delegatedUserDecrypt(handles: DecryptHandle[], delegatorAddress: Address, requesterAddress?: Address): Promise<Record<Handle, ClearValueType>>;
     dispose(): void;
     // @internal
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;

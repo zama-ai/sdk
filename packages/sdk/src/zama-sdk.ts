@@ -563,7 +563,7 @@ export class ZamaSDK {
   async delegatedUserDecrypt(
     handles: DecryptHandle[],
     delegatorAddress: Address,
-    options?: { requesterAddress?: Address },
+    requesterAddress: Address = delegatorAddress,
   ): Promise<Record<Handle, ClearValueType>> {
     this.requireSigner("delegatedUserDecrypt");
     const delegatedCredentials = this.requireDelegatedCredentials("delegatedUserDecrypt");
@@ -573,9 +573,7 @@ export class ZamaSDK {
     }
 
     const normalizedDelegator = getAddress(delegatorAddress);
-    const requester = options?.requesterAddress
-      ? getAddress(options.requesterAddress)
-      : normalizedDelegator;
+    const normalizedRequester = getAddress(requesterAddress);
 
     // Normalize addresses once at the top
     const normalized = handles.map((h) => ({
@@ -603,7 +601,7 @@ export class ZamaSDK {
     const uncached: DecryptHandle[] = [];
 
     for (const h of nonZero) {
-      const cached = await this.cache.get(requester, h.contractAddress, h.handle);
+      const cached = await this.cache.get(normalizedRequester, h.contractAddress, h.handle);
       if (cached !== null) {
         result[h.handle] = cached;
       } else {
@@ -659,7 +657,7 @@ export class ZamaSDK {
 
           for (const [handle, value] of Object.entries(decrypted)) {
             result[handle as Handle] = value;
-            await this.cache.set(requester, contractAddress, handle as Handle, value);
+            await this.cache.set(normalizedRequester, contractAddress, handle as Handle, value);
           }
         }),
         5,
