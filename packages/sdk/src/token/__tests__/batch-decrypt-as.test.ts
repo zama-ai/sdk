@@ -42,13 +42,10 @@ function stubDelegatedCredentials(sdk: ZamaSDK, contractAddresses: Address[]) {
 
 describe("ReadonlyToken.batchDecryptBalancesAs", () => {
   test("decrypts balances for multiple tokens using delegated credentials", async ({
-    sdk,
     relayer,
-    signer,
     createMockSigner,
     createSDK,
   }) => {
-    // The fixture signer is the connected user; the delegate is DELEGATE
     const delegateSigner = createMockSigner(DELEGATE);
     const delegateProvider = createMockProvider();
     const delegateSdk = createSDK({
@@ -67,7 +64,7 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     const tokenA = new ReadonlyToken(delegateSdk, TOKEN_A);
     const tokenB = new ReadonlyToken(delegateSdk, TOKEN_B);
 
-    const allowMock = stubDelegatedCredentials(delegateSdk, [TOKEN_A, TOKEN_B]);
+    stubDelegatedCredentials(delegateSdk, [TOKEN_A, TOKEN_B]);
 
     const balances = await ReadonlyToken.batchDecryptBalancesAs([tokenA, tokenB], {
       delegatorAddress: DELEGATOR,
@@ -75,11 +72,6 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
 
     expect(balances.get(TOKEN_A)).toBe(100n);
     expect(balances.get(TOKEN_B)).toBe(200n);
-    // Don't assert on internal relayer/credential calls — batchDecryptBalancesAs
-    // delegates to sdk.delegatedUserDecrypt() which owns that orchestration.
-    void allowMock;
-    void sdk;
-    void signer;
   });
 
   test("returns empty map for empty token list", async () => {
