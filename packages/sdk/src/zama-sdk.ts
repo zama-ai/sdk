@@ -3,13 +3,25 @@ import type { FheChain } from "./chains/types";
 import { CredentialsManager } from "./credentials/credentials-manager";
 import { DelegatedCredentialsManager } from "./credentials/delegated-credentials-manager";
 import { DecryptCache } from "./decrypt-cache";
-import { ChainMismatchError, SignerRequiredError, wrapDecryptError } from "./errors";
+import {
+  ChainMismatchError,
+  EncryptionFailedError,
+  SignerRequiredError,
+  wrapDecryptError,
+  ZamaError,
+} from "./errors";
 import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventListener } from "./events/sdk-events";
 import { ZamaSDKEvents } from "./events/sdk-events";
 import type { DecryptHandle } from "./query/user-decrypt";
 import { isZeroHandle } from "./utils/handles";
 import type { RelayerDispatcher } from "./relayer/relayer-dispatcher";
-import type { ClearValueType, Handle, PublicDecryptResult } from "./relayer/relayer-sdk.types";
+import type {
+  ClearValueType,
+  EncryptParams,
+  EncryptResult,
+  Handle,
+  PublicDecryptResult,
+} from "./relayer/relayer-sdk.types";
 import { MemoryStorage } from "./storage/memory-storage";
 import { ReadonlyToken } from "./token/readonly-token";
 import { Token } from "./token/token";
@@ -552,6 +564,53 @@ export class ZamaSDK {
       return await this.relayer.publicDecrypt(handles);
     } catch (error) {
       throw wrapDecryptError(error, "Public decryption failed");
+    }
+  }
+
+  /**
+   * Encrypt one or more plaintext values into FHE ciphertexts.
+   *
+   * @param params - Typed FHE inputs, the target contract address, and the user address.
+   * @returns Encrypted handles and the input proof for on-chain submission.
+   * @throws {@link EncryptionFailedError} if FHE encryption fails.
+   *
+   * @example
+   * ```ts
+   * const { handles, inputProof } = await sdk.encrypt({
+   *   values: [{ value: 1000n, type: "euint64" }],
+   *   contractAddress: "0xToken",
+   *   userAddress: "0xUser",
+   * });
+   * ```
+   */
+  async encrypt(params: EncryptParams): Promise<EncryptResult> {
+    const t0 = Date.now();
+    try {
+      this.emitEvent({ type: ZamaSDKEvents.EncryptStart }, params.contractAddress);
+      const result = await this.relayer.encrypt(params);
+      this.emitEvent(
+        {
+          type: ZamaSDKEvents.EncryptEnd,
+          durationMs: Date.now() - t0,
+        },
+        params.contractAddress,
+      );
+      return result;
+    } catch (error) {
+      this.emitEvent(
+        {
+          type: ZamaSDKEvents.EncryptError,
+          error: toError(error),
+          durationMs: Date.now() - t0,
+        },
+        params.contractAddress,
+      );
+      if (error instanceof ZamaError) {
+        throw error;
+      }
+      throw new EncryptionFailedError("Encryption failed", {
+        cause: error,
+      });
     }
   }
 
