@@ -75,10 +75,6 @@ async function getInstance(chainId: number): Promise<FhevmInstance> {
   const promise = sdkGlobal
     .createInstance({ ...toInstanceConfig(config), batchRpcCalls: false })
     .then((instance) => {
-      // TODO: Remove when protocol on v0.12
-      instance.getExtraData = async function getExtraData() {
-        return "0x00";
-      };
       instances.set(chainId, instance);
       pending.delete(chainId);
       return instance;
