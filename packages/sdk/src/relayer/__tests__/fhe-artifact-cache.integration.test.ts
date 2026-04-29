@@ -1,3 +1,6 @@
+// oxlint-disable no-empty-pattern
+// oxlint-disable jest/expect-expect
+// oxlint-disable jest/no-disabled-tests
 import { randomBytes } from "node:crypto";
 import http from "node:http";
 import { test as base, describe, expect } from "vitest";
@@ -15,7 +18,10 @@ interface TestServer {
 /** Size of fake binary artifacts served by the test server (bytes). */
 const FAKE_BIN_SIZE = 1024;
 
-function createTestServer(): { server: http.Server; start: () => Promise<TestServer> } {
+function createTestServer(): {
+  server: http.Server;
+  start: () => Promise<TestServer>;
+} {
   let pkEtag = '"pk-etag-v1"';
   let crsEtag = '"crs-etag-v1"';
   let pkBody = randomBytes(FAKE_BIN_SIZE);
@@ -104,10 +110,12 @@ interface CacheFixtures {
   /** Create a fresh cache instance sharing the same storage (simulates app restart). */
   createCache: (opts?: { ttl?: number; relayerUrl?: string }) => FheArtifactCache;
   pkFetcher: () => Promise<{ publicKeyId: string; publicKey: Uint8Array }>;
-  paramsFetcher: () => Promise<{ publicParamsId: string; publicParams: Uint8Array }>;
+  paramsFetcher: () => Promise<{
+    publicParamsId: string;
+    publicParams: Uint8Array;
+  }>;
 }
 
-/* eslint-disable no-empty-pattern */
 const test = base.extend<CacheFixtures>({
   testServer: async ({}, use) => {
     const { server, start } = createTestServer();
