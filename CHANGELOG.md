@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.0.0-alpha.26](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.25...v3.0.0-alpha.26) (2026-04-29)
+
+### Features
+
+- **sdk:** add sdk.encrypt() top-level entrypoint [SDK-124] ([#287](https://github.com/zama-ai/sdk/issues/287)) ([72301f1]())
+
 ## [3.0.0-alpha.25](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.24...v3.0.0-alpha.25) (2026-04-28)
 
 ### Features

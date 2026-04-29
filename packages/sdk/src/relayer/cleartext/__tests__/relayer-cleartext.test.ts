@@ -180,7 +180,7 @@ function filterEthCallsTo(calls: MockCall[], to: string): MockCall[] {
   });
 }
 
-describe(RelayerCleartext, () => {
+describe("RelayerCleartext", () => {
   it("constructor uses kms/input private keys from config", () => {
     const customInputKey =
       "0x0000000000000000000000000000000000000000000000000000000000000001" as const;

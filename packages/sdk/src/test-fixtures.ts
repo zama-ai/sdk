@@ -1,3 +1,5 @@
+// oxlint-disable jest/expect-expect
+// oxlint-disable jest/no-disabled-tests
 /* eslint-disable no-empty-pattern */
 import { test as base, vi } from "vitest";
 import { ZamaSDKEvents } from "./events/sdk-events";
@@ -142,7 +144,12 @@ function createMockReadonlyToken(address: Address, signer: GenericSigner): Reado
     credentials: {},
     userDecrypt: vi.fn().mockResolvedValue({}),
     allow: vi.fn().mockResolvedValue(undefined),
-    cache: { get: vi.fn(), set: vi.fn(), clearAll: vi.fn(), clearForRequester: vi.fn() },
+    cache: {
+      get: vi.fn(),
+      set: vi.fn(),
+      clearAll: vi.fn(),
+      clearForRequester: vi.fn(),
+    },
   };
   return {
     address,
