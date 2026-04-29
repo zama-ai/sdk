@@ -198,25 +198,36 @@ describe("invalidation", () => {
     expect(qc.getQueryState(otherWagmiKey)?.isInvalidated).toBe(false);
   });
 
-  test("invalidateWalletLifecycleQueries removes signerAddress and invalidates zama queries", () => {
+  test("invalidateWalletLifecycleQueries removes decryption cache and invalidates zama queries", () => {
     const qc = createQueryClient();
-    const signerKey = zamaQueryKeys.signerAddress.all;
     const balanceKey = zamaQueryKeys.confidentialBalance.token(TOKEN);
     const decryptionKey = zamaQueryKeys.decryption.handle(
       "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa",
     );
     const wagmiBalanceKey = ["readContract", { functionName: "balanceOf" }] as const;
 
-    qc.setQueryData(signerKey, "0xuser");
     qc.setQueryData(balanceKey, { balance: 1n });
     qc.setQueryData(decryptionKey, 123n);
     qc.setQueryData(wagmiBalanceKey, "balance");
 
     invalidateWalletLifecycleQueries(qc);
 
-    expect(qc.getQueryData(signerKey)).toBeUndefined();
     expect(qc.getQueryData(decryptionKey)).toBeUndefined();
     expect(qc.getQueryState(balanceKey)?.isInvalidated).toBe(true);
     expect(qc.getQueryState(wagmiBalanceKey)?.isInvalidated).toBe(true);
+  });
+
+  test("invalidateWalletLifecycleQueries removes wallet-local isAllowed cache", () => {
+    const qc = createQueryClient();
+    const isAllowedKey = zamaQueryKeys.isAllowed.scope([TOKEN]);
+
+    qc.setQueryData(isAllowedKey, true);
+    expect(qc.getQueryData(isAllowedKey)).toBe(true);
+
+    invalidateWalletLifecycleQueries(qc);
+
+    // Cache is removed outright so a disconnected or swapped signer cannot
+    // read a stale `true` before the next refetch.
+    expect(qc.getQueryData(isAllowedKey)).toBeUndefined();
   });
 });

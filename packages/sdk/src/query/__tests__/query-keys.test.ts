@@ -16,7 +16,6 @@ const HANDLE_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaa
 
 describe("zamaQueryKeys", () => {
   test.each([
-    ["signerAddress", zamaQueryKeys.signerAddress.all],
     ["confidentialBalance", zamaQueryKeys.confidentialBalance.all],
     ["confidentialBalances", zamaQueryKeys.confidentialBalances.all],
     ["tokenMetadata", zamaQueryKeys.tokenMetadata.all],
@@ -31,12 +30,6 @@ describe("zamaQueryKeys", () => {
     ["decryption", zamaQueryKeys.decryption.all],
   ])("all keys are namespaced with zama.* (%s)", (_, key) => {
     expect(key[0]).toMatch(/^zama\./);
-  });
-
-  test("signerAddress scope key is stable per scope and namespaced", () => {
-    expect(zamaQueryKeys.signerAddress.scope(1)).toEqual(["zama.signerAddress", { scope: 1 }]);
-    expect(zamaQueryKeys.signerAddress.scope(1)).toEqual(zamaQueryKeys.signerAddress.scope(1));
-    expect(zamaQueryKeys.signerAddress.scope(1)).not.toEqual(zamaQueryKeys.signerAddress.scope(2));
   });
 
   test("tokenMetadata token key uses 2-element tuple shape", () => {
@@ -98,7 +91,6 @@ describe("zamaQueryKeys", () => {
 
   test("all parameterized keys are 2-element tuples", () => {
     const parameterizedKeys = [
-      zamaQueryKeys.signerAddress.scope(1),
       zamaQueryKeys.confidentialBalance.owner(TOKEN_LOWER, OWNER_LOWER),
       zamaQueryKeys.confidentialBalances.tokens([TOKEN_LOWER, TOKEN_B_LOWER], OWNER_LOWER),
       zamaQueryKeys.tokenMetadata.token(TOKEN_LOWER),
@@ -172,10 +164,7 @@ describe("zamaQueryKeys", () => {
           getAddress(SPENDER_LOWER),
         ),
       ],
-      [
-        zamaQueryKeys.isAllowed.scope(OWNER_LOWER, [TOKEN_LOWER]),
-        zamaQueryKeys.isAllowed.scope(OWNER_UPPER, [TOKEN_UPPER]),
-      ],
+      [zamaQueryKeys.isAllowed.scope([TOKEN_LOWER]), zamaQueryKeys.isAllowed.scope([TOKEN_UPPER])],
       [zamaQueryKeys.totalSupply.token(TOKEN_LOWER), zamaQueryKeys.totalSupply.token(TOKEN_UPPER)],
       [
         zamaQueryKeys.decryption.handle(HANDLE_A, WRAPPER_LOWER),
@@ -188,11 +177,10 @@ describe("zamaQueryKeys", () => {
     }
   });
 
-  test("isAllowed scope key includes account and contractAddresses", () => {
-    expect(zamaQueryKeys.isAllowed.scope(OWNER_LOWER, [TOKEN_LOWER])).toEqual([
+  test("isAllowed scope key includes contractAddresses", () => {
+    expect(zamaQueryKeys.isAllowed.scope([TOKEN_LOWER])).toEqual([
       "zama.isAllowed",
       {
-        account: getAddress(OWNER_LOWER),
         contractAddresses: [getAddress(TOKEN_LOWER)],
       },
     ]);

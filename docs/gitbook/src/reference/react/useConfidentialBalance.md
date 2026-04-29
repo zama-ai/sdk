@@ -20,14 +20,17 @@ import { useConfidentialBalance } from "@zama-fhe/react-sdk";
 
 ```tsx
 import { useConfidentialBalance } from "@zama-fhe/react-sdk";
+import { useAccount } from "wagmi";
 
 function TokenBalance({ tokenAddress }: { tokenAddress: `0x${string}` }) {
+  const { address } = useAccount();
   const {
     data: balance,
     isLoading,
     error,
   } = useConfidentialBalance({
     tokenAddress,
+    account: address,
   });
 
   if (isLoading) return <span>Decrypting...</span>;
@@ -41,8 +44,9 @@ function TokenBalance({ tokenAddress }: { tokenAddress: `0x${string}` }) {
 
 ```ts
 import { createConfig } from "@zama-fhe/react-sdk/wagmi";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
+import { config as wagmiConfig } from "./wagmi";
 
 const mySepolia = {
   ...sepolia,
@@ -54,7 +58,7 @@ const myMainnet = {
   relayerUrl: "https://your-app.com/api/relayer/1",
 } as const satisfies FheChain;
 
-const zamaConfig = createConfig({
+export const zamaConfig = createConfig({
   chains: [mySepolia, myMainnet],
   relayers: {
     [mySepolia.id]: web(),
@@ -85,6 +89,7 @@ Contract address of the confidential ERC-20 token.
 ```tsx
 const { data } = useConfidentialBalance({
   tokenAddress: "0xToken",
+  account: address,
 });
 ```
 
@@ -93,19 +98,22 @@ const { data } = useConfidentialBalance({
 
 ---
 
-### owner
+### account
 
 `Address | undefined`
 
-Address whose balance to read. Defaults to the connected wallet address from the signer.
+Address whose balance to read. The query is disabled while `undefined`. Pass the connected wallet address from wagmi's `useAccount()`.
 
 {% tabs %}
 {% tab title="component.tsx" %}
 
 ```tsx
+import { useAccount } from "wagmi";
+
+const { address } = useAccount();
 const { data } = useConfidentialBalance({
   tokenAddress: "0xToken",
-  owner: "0xOwner",
+  account: address,
 });
 ```
 

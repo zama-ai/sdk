@@ -40,28 +40,26 @@ function AdvancedOperations() {
 {% tab title="config.ts" %}
 
 ```ts
-import { createConfig } from "@zama-fhe/react-sdk/wagmi";
-import { web } from "@zama-fhe/sdk";
-import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
+import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
+import { web } from "@zama-fhe/sdk/web";
+import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
+import { config as wagmiConfig } from "./wagmi";
 
 const mySepolia = {
   ...sepolia,
   relayerUrl: "https://your-app.com/api/relayer/11155111",
 } as const satisfies FheChain;
 
-const myMainnet = {
-  ...mainnet,
-  relayerUrl: "https://your-app.com/api/relayer/1",
-} as const satisfies FheChain;
-
-const zamaConfig = createConfig({
-  chains: [mySepolia, myMainnet],
-  relayers: {
-    [mySepolia.id]: web(),
-    [myMainnet.id]: web(),
-  },
+export const zamaConfig = createZamaConfig({
+  chains: [mySepolia],
   wagmiConfig,
+  relayers: { [mySepolia.id]: web() },
 });
+
+// In your app layout:
+// <ZamaProvider config={zamaConfig}>
+//   <App />
+// </ZamaProvider>
 ```
 
 {% endtab %}

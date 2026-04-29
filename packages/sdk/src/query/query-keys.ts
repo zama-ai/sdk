@@ -17,11 +17,6 @@ const normalizeAddress = (address?: Address): Address | undefined =>
  * ```
  */
 export const zamaQueryKeys = {
-  signerAddress: {
-    all: ["zama.signerAddress"] as const,
-    scope: (scope: number) => ["zama.signerAddress", { scope }] as const,
-  },
-
   confidentialBalance: {
     all: ["zama.confidentialBalance"] as const,
     token: (tokenAddress: Address) =>
@@ -127,11 +122,10 @@ export const zamaQueryKeys = {
 
   isAllowed: {
     all: ["zama.isAllowed"] as const,
-    scope: (account: Address, contractAddresses: Address[]) =>
+    scope: (contractAddresses: Address[]) =>
       [
         "zama.isAllowed",
         {
-          account: getAddress(account),
           contractAddresses: normalizeAddresses(contractAddresses).toSorted(),
         },
       ] as const,

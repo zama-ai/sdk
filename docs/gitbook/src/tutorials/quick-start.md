@@ -78,7 +78,7 @@ import { sepolia } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ZamaProvider } from "@zama-fhe/react-sdk";
-import { web } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 import { sepolia as sepoliaFhe, type FheChain } from "@zama-fhe/sdk/chains";
 
@@ -98,10 +98,9 @@ const mySepolia = {
 const zamaConfig = createZamaConfig({
   chains: [mySepolia],
   wagmiConfig,
-  relayers: {
-    [mySepolia.id]: web(),
-  },
+  relayers: { [mySepolia.id]: web() },
 });
+
 const queryClient = new QueryClient();
 
 function App() {
@@ -124,7 +123,8 @@ function App() {
 import { createPublicClient, createWalletClient, custom, http } from "viem";
 import { sepolia } from "viem/chains";
 import { createConfig } from "@zama-fhe/sdk/viem";
-import { web, ZamaSDK } from "@zama-fhe/sdk";
+import { ZamaSDK } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia as sepoliaFhe, type FheChain } from "@zama-fhe/sdk/chains";
 
 const publicClient = createPublicClient({
@@ -158,7 +158,8 @@ const sdk = new ZamaSDK(config);
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/ethers";
-import { web, ZamaSDK } from "@zama-fhe/sdk";
+import { ZamaSDK } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
 import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 
 const mySepolia = {
@@ -274,6 +275,7 @@ function MyTokenPage() {
   const { data: meta } = useMetadata(TOKEN);
   const { data: balance, isLoading } = useConfidentialBalance({
     tokenAddress: TOKEN,
+    account: address,
   });
   const { mutateAsync: shield, isPending: isShielding } = useShield({
     tokenAddress: TOKEN,
@@ -345,7 +347,8 @@ const token = sdk.createToken("0xYourEncryptedERC20");
 await token.shield(1000n);
 
 // Decrypt your balance (first call prompts a wallet signature)
-const balance = await token.balanceOf();
+const [address] = await walletClient.getAddresses();
+const balance = await token.balanceOf(address);
 console.log("Confidential balance:", balance);
 
 // Send 500 tokens privately
@@ -365,7 +368,8 @@ const token = sdk.createToken("0xYourEncryptedERC20");
 await token.shield(1000n);
 
 // Decrypt your balance (first call prompts a wallet signature)
-const balance = await token.balanceOf();
+const [address] = (await window.ethereum!.request({ method: "eth_accounts" })) as string[];
+const balance = await token.balanceOf(address as `0x${string}`);
 console.log("Confidential balance:", balance);
 
 // Send 500 tokens privately
@@ -386,7 +390,7 @@ try {
   await token.shield(1000n);
 
   // Decrypt your balance
-  const balance = await token.balanceOf();
+  const balance = await token.balanceOf(account.address);
   console.log("Confidential balance:", balance);
 
   // Send 500 tokens privately
@@ -410,7 +414,7 @@ try {
   await token.shield(1000n);
 
   // Decrypt your balance
-  const balance = await token.balanceOf();
+  const balance = await token.balanceOf(wallet.address as `0x${string}`);
   console.log("Confidential balance:", balance);
 
   // Send 500 tokens privately
@@ -430,7 +434,7 @@ The hooks and SDK methods handle FHE encryption, wallet signing, ERC-20 approval
 
 ## Next steps
 
-- [Configuration](/guides/configuration) -- chains, relayers, signer, storage, and authentication setup
+- [Configuration](/guides/configuration) -- chains, relayers, provider, signer, storage, and authentication setup
 - [Shield Tokens](/guides/shield-tokens) -- move tokens into confidential form
 - [Chain Objects](/reference/sdk/network-presets) -- pre-configured chain definitions for Sepolia, Mainnet, and more
 - [React Hooks](/reference/react/ZamaProvider) -- provider setup and all available hooks

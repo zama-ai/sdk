@@ -30,8 +30,8 @@ const zamaConfig = createZamaConfig({
       registryAddress: getAddress(deployments.wrappersRegistry),
     },
   ],
+  relayers: { [fheAnvil.id]: cleartext() },
   wagmiConfig,
-  relayers: { [anvil.id]: cleartext() },
 });
 
 const queryClient = new QueryClient();
