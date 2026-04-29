@@ -75,8 +75,9 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
 
     expect(balances.get(TOKEN_A)).toBe(100n);
     expect(balances.get(TOKEN_B)).toBe(200n);
-    expect(allowMock).toHaveBeenCalledOnce();
-    expect(allowMock).toHaveBeenCalledWith(DELEGATOR, TOKEN_A, TOKEN_B);
+    // Each per-token call goes through sdk.delegatedUserDecrypt(), which fetches
+    // credentials internally — so allow is called once per uncached token.
+    expect(allowMock).toHaveBeenCalledTimes(2);
     expect(relayer.delegatedUserDecrypt).toHaveBeenCalledTimes(2);
     // unused but captured so the fixture isn't complained about
     void sdk;

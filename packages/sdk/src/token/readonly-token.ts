@@ -331,68 +331,46 @@ export class ReadonlyToken {
       return results;
     }
 
-    const uncachedAddresses = uncached.map((entry) => entry.token.address);
-    const delegatedCredentials =
-      firstToken.sdk.requireDelegatedCredentials("batchDecryptBalancesAs");
-    const creds = await delegatedCredentials.allow(delegatorAddress, ...uncachedAddresses);
-
     const errors: { address: Address; error: Error }[] = [];
     const decryptFns: (() => Promise<void>)[] = [];
 
     for (const { token, handle } of uncached) {
-      decryptFns.push(() =>
-        firstToken.sdk.relayer
-          .delegatedUserDecrypt({
-            handles: [handle],
-            contractAddress: token.address,
-            signedContractAddresses: creds.contractAddresses,
-            privateKey: creds.privateKey,
-            publicKey: creds.publicKey,
-            signature: creds.signature,
-            delegatorAddress: creds.delegatorAddress,
-            delegateAddress: creds.delegateAddress,
-            startTimestamp: creds.startTimestamp,
-            durationDays: creds.durationDays,
-          })
-          .then(async (result) => {
-            const value = result[handle];
-            if (value === undefined) {
-              throw new DecryptionFailedError(
-                `Batch delegated decryption returned no value for handle ${handle} on token ${token.address}`,
-              );
-            }
-            assertBigint(value, "batchDecryptBalancesAs: result[handle]");
-            results.set(token.address, value);
-            // Cache write is best-effort — log on failure so a broken cache
-            // backend doesn't silently force re-decryption forever.
-            firstToken.sdk.cache
-              .set(normalizedAccount, token.address, handle, value)
-              .catch((cacheErr: unknown) => {
-                // oxlint-disable-next-line no-console
-                console.warn("[zama-sdk] Failed to cache decrypted value:", cacheErr);
+      decryptFns.push(async () => {
+        try {
+          const decrypted = await firstToken.sdk.delegatedUserDecrypt(
+            [{ handle, contractAddress: token.address }],
+            delegatorAddress,
+            { requesterAddress: normalizedAccount },
+          );
+          const value = decrypted[handle];
+          if (value === undefined) {
+            throw new DecryptionFailedError(
+              `Batch delegated decryption returned no value for handle ${handle} on token ${token.address}`,
+            );
+          }
+          assertBigint(value, "batchDecryptBalancesAs: result[handle]");
+          results.set(token.address, value);
+        } catch (error) {
+          // Session-level failures apply to every token — re-throw so the
+          // whole batch aborts with the original typed error.
+          if (isSessionError(error)) {
+            throw error;
+          }
+          const err = toError(error);
+          if (onError) {
+            try {
+              results.set(token.address, onError(err, token.address));
+            } catch (callbackError) {
+              errors.push({
+                address: token.address,
+                error: toError(callbackError),
               });
-          })
-          .catch((error) => {
-            // Session-level failures apply to every token — re-throw so the
-            // whole batch aborts with the original typed error.
-            if (isSessionError(error)) {
-              throw error;
             }
-            const err = toError(error);
-            if (onError) {
-              try {
-                results.set(token.address, onError(err, token.address));
-              } catch (callbackError) {
-                errors.push({
-                  address: token.address,
-                  error: toError(callbackError),
-                });
-              }
-            } else {
-              errors.push({ address: token.address, error: err });
-            }
-          }),
-      );
+          } else {
+            errors.push({ address: token.address, error: err });
+          }
+        }
+      });
     }
 
     await pLimit(decryptFns, maxConcurrency);
