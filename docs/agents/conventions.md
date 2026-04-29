@@ -17,29 +17,6 @@ The SDK is for all Zama Protocol use cases, not just tokens. The code is in tran
 - **Generic interfaces over framework primitives.** Stateful framework dependencies — wallet, RPC, storage — are typed as `Generic*` interfaces in the core (e.g. `GenericSigner`, `GenericProvider`, `GenericStorage`). New framework-touching code reuses or defines a `Generic*`; framework-specific code lives in adapter sub-paths, not the core.
 - **Token method params mirror Solidity.** `Token`/`ReadonlyToken` method signatures (arg order and names) strictly track the underlying contract ABI per-method: `confidentialBalanceOf(account)`, `allowance(owner, spender)`, `isOperator(holder, operator)`. SDK-internal inconsistency across methods is accepted — do not "normalize" these, since callers cross-reference the Solidity source.
 
-## Generic interface contracts
-
-`GenericSigner` and `GenericProvider` are in `packages/sdk/src/types/`. They are the integration seam for custom wallet and RPC adapters.
-
-**`GenericSigner`** (`types/signer.ts`) — wallet operations only. Requires:
-
-- `getChainId(): Promise<number>`
-- `getAddress(): Promise<Address>`
-- `signTypedData(typedData: EIP712TypedData): Promise<Hex>`
-- `writeContract(config): Promise<Hex>`
-- `subscribe?` — optional; listen to identity transitions (connect, disconnect, account/chain change); omit for server-side signers
-
-**`GenericProvider`** (`types/provider.ts`) — read-only chain access. Requires:
-
-- `getChainId(): Promise<number>`
-- `readContract(config): Promise<...>`
-- `waitForTransactionReceipt(hash): Promise<TransactionReceipt>`
-- `getBlockTimestamp(): Promise<bigint>`
-
-Concrete implementations: `ViemSigner`/`ViemProvider` (`packages/sdk/src/viem/`), `EthersSigner`/`EthersProvider` (`packages/sdk/src/ethers/`), `WagmiSigner`/`WagmiProvider` (`packages/react-sdk/src/wagmi/`). Use `ViemSigner` as the canonical reference when implementing a custom `GenericSigner`.
-
-**EIP-712 in `signTypedData`:** strip `EIP712Domain` from the `types` object before calling `walletClient.signTypedData`. Viem injects it automatically from the `domain` field — passing it in `types` causes a signature mismatch that surfaces as a credential rejection at decrypt time.
-
 ## Code quality
 
 - **Formatter:** `oxfmt` (config: `.oxfmtrc.json`) — 100 col, 2-space indent, double quotes, trailing commas. Run `pnpm format` to apply.
