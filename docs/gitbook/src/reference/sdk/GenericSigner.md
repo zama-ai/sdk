@@ -5,7 +5,7 @@ description: Interface that all signer adapters must implement for the SDK to in
 
 # GenericSigner
 
-Interface that all signer adapters must implement for the SDK to interact with wallets. You only need this if you are building a custom signer -- otherwise use [ViemSigner](/reference/sdk/ViemSigner), [EthersSigner](/reference/sdk/EthersSigner), or [WagmiSigner](/reference/sdk/WagmiSigner).
+Interface that all signer adapters must implement for the SDK to interact with wallets. You only need this if you are building a custom signer -- otherwise use [ViemSigner](/reference/sdk/ViemSigner) or [EthersSigner](/reference/sdk/EthersSigner).
 
 ## Import
 
@@ -119,12 +119,12 @@ The SDK calls `subscribe()` during initialization if it exists. The listener rec
 When `previous` is present, the SDK revokes that previous identity's session signature and clears that requester's decrypt cache.
 
 {% hint style="info" %}
-Implementing `subscribe()` is optional but recommended. Without it, stale sessions persist until TTL expiry, which can create confusing UX when users switch accounts. See [`WagmiSigner`](https://github.com/zama-ai/token-sdk/blob/main/packages/react-sdk/src/wagmi/wagmi-signer.ts) for a reference implementation.
+Implementing `subscribe()` is optional but recommended. Without it, stale sessions persist until TTL expiry, which can create confusing UX when users switch accounts.
 {% endhint %}
 
 ## Related
 
+- [GenericProvider](/reference/sdk/GenericProvider) -- read-only chain access interface
 - [ViemSigner](/reference/sdk/ViemSigner) -- viem implementation
 - [EthersSigner](/reference/sdk/EthersSigner) -- ethers implementation
-- [WagmiSigner](/reference/sdk/WagmiSigner) -- wagmi implementation with auto-revoke
 - [Configuration guide](/guides/configuration) -- full setup walkthrough

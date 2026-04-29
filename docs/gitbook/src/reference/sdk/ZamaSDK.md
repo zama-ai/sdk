@@ -106,9 +106,9 @@ const sdk = new ZamaSDK({
 
 ### signer
 
-`GenericSigner`
+`GenericSigner | undefined`
 
-Wallet interface for signing transactions and typed data. Use `ViemSigner`, `EthersSigner`, `WagmiSigner`, or implement `GenericSigner`.
+Wallet interface for signing transactions and typed data. Use `ViemSigner`, `EthersSigner`, or implement `GenericSigner`. Optional — omit for read-only usage (indexers, SSR, pre-wallet-connect states). Signer-dependent operations throw `SignerRequiredError` when invoked without a signer.
 
 ```ts
 import { ViemSigner } from "@zama-fhe/sdk/viem";
@@ -257,9 +257,8 @@ The cache is cleared automatically on:
 - Wallet disconnect, account change, or chain change — clears all entries
 
 ```ts
-// Manual clear for the current signer
-const address = await sdk.signer.getAddress();
-await sdk.cache.clearForRequester(address);
+// Manual clear for a specific address
+await sdk.cache.clearForRequester("0xYourAddress");
 
 // Clear everything
 await sdk.cache.clearAll();
@@ -430,6 +429,19 @@ emitter.on(ZamaSDKEvents.DecryptError, ({ error, durationMs, handles }: DecryptE
 {% hint style="info" %}
 This is the SDK-level entry point for user decryption. The method is named `userDecrypt` (not `decrypt`) because it requires the connected wallet's credentials — distinguishing it from gateway-level decryption that happens on-chain without user authentication. In React, use [`useUserDecrypt`](/reference/react/useUserDecrypt) which wraps this method with TanStack Query semantics.
 {% endhint %}
+
+### onIdentityChange
+
+`(listener: (change: SignerIdentityChange) => void) => () => void`
+
+Subscribe to signer identity transitions (connect, disconnect, account change, chain change). Returns an unsubscribe function. Each transition carries `previous` and `next` identity objects (`{ address, chainId }`).
+
+```ts
+const unsubscribe = sdk.onIdentityChange(({ previous, next }) => {
+  if (!next) console.log("Wallet disconnected");
+  else console.log(`Switched to ${next.address} on chain ${next.chainId}`);
+});
+```
 
 ### revokeSession
 

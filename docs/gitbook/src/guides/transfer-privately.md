@@ -115,11 +115,12 @@ Both the core SDK and React hooks return the transaction hash. Use it to confirm
 const { txHash } = await token.confidentialTransfer("0xRecipient", 500n);
 
 // Wait for on-chain confirmation
-const receipt = await signer.waitForTransactionReceipt(txHash);
+const receipt = await sdk.provider.waitForTransactionReceipt(txHash);
 console.log("Confirmed in block:", receipt.blockNumber);
 
 // Optionally check updated balance
-const balance = await token.balanceOf();
+const [address] = await walletClient.getAddresses();
+const balance = await token.balanceOf(address);
 console.log("New balance:", balance);
 ```
 
@@ -150,12 +151,14 @@ Here is a complete component that wires up the transfer with loading and error s
 
 ```tsx
 import { useConfidentialBalance, useConfidentialTransfer } from "@zama-fhe/react-sdk";
+import { useAccount } from "wagmi";
 import { matchZamaError } from "@zama-fhe/sdk";
 
 const TOKEN = "0xEncryptedERC20Address";
 
 function TransferForm() {
-  const { data: balance } = useConfidentialBalance({ tokenAddress: TOKEN });
+  const { address } = useAccount();
+  const { data: balance } = useConfidentialBalance({ tokenAddress: TOKEN, account: address });
   const {
     mutateAsync: transfer,
     isPending,

@@ -37,6 +37,7 @@ import {
   DelegationContractIsSelfError,
   DelegationExpirationTooSoonError,
   DelegationNotPropagatedError,
+  SignerRequiredError,
   AclPausedError,
 } from "@zama-fhe/sdk";
 ```
@@ -96,9 +97,30 @@ The `_` wildcard catches any `ZamaError` not explicitly handled.
 | `DelegationContractIsSelfError`         | `DELEGATION_CONTRACT_IS_SELF`         | Contract address equals caller                               |
 | `DelegationExpirationTooSoonError`      | `DELEGATION_EXPIRATION_TOO_SOON`      | Expiration date less than 1 hour in the future               |
 | `DelegationNotPropagatedError`          | `DELEGATION_NOT_PROPAGATED`           | Delegation exists on L1 but hasn't synced to gateway yet     |
+| `SignerRequiredError`                   | `SIGNER_REQUIRED`                     | Write/sign/decrypt called without a signer                   |
 | `AclPausedError`                        | `ACL_PAUSED`                          | ACL contract is paused                                       |
 
 ## Error details
+
+### SignerRequiredError
+
+**Code:** `SIGNER_REQUIRED`
+
+Thrown when a write, sign, or decrypt operation is called on an SDK instance configured without a signer. The error carries the `operation` name that was attempted.
+
+```ts
+import { SignerRequiredError } from "@zama-fhe/sdk";
+
+try {
+  await token.shield(1000n);
+} catch (error) {
+  if (error instanceof SignerRequiredError) {
+    showPrompt("Connect a wallet to perform this action");
+  }
+}
+```
+
+**How to handle:** Prompt the user to connect a wallet. Once connected, reconfigure the SDK with a signer.
 
 ### SigningRejectedError
 
@@ -108,7 +130,7 @@ Thrown when the user clicks "Reject" in their wallet popup during an EIP-712 sig
 
 ```ts
 try {
-  await token.balanceOf();
+  await token.balanceOf(address);
 } catch (error) {
   if (error instanceof SigningRejectedError) {
     showPrompt("Approve the signature to decrypt your balance");
@@ -227,7 +249,7 @@ The account has no encrypted balance on-chain — it has never shielded tokens f
 
 ```ts
 try {
-  const balance = await token.balanceOf();
+  const balance = await token.balanceOf(address);
   showBalance(balance); // could be 0n
 } catch (error) {
   if (error instanceof NoCiphertextError) {
@@ -264,7 +286,7 @@ These are distinct states:
 
 ```ts
 try {
-  const balance = await token.balanceOf();
+  const balance = await token.balanceOf(address);
   showBalance(balance); // 0n is a valid balance
 } catch (error) {
   if (error instanceof NoCiphertextError) {
