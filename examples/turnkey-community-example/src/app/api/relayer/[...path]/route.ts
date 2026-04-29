@@ -1,11 +1,10 @@
 import { NextRequest } from "next/server";
-import { MainnetConfig, SepoliaConfig } from "@zama-fhe/sdk";
+import { zamaConfig } from "@/lib/config";
 
 // Disable static caching — all relayer responses are dynamic.
 export const dynamic = "force-dynamic";
 
-const RELAYER_BASE =
-  process.env.NEXT_PUBLIC_CHAIN === "mainnet" ? MainnetConfig.relayerUrl : SepoliaConfig.relayerUrl;
+const RELAYER_BASE = zamaConfig.relayerUrl;
 
 type RouteContext = { params: Promise<{ path: string[] }> };
 
@@ -16,9 +15,18 @@ async function proxy(request: NextRequest, path: string[]): Promise<Response> {
     target.searchParams.set(key, value);
   });
 
+  // SSRF guard: reject paths that resolve to a different origin than the relayer base.
+  if (target.origin !== new URL(RELAYER_BASE).origin) {
+    return Response.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const headers: Record<string, string> = {
     "Content-Type": request.headers.get("Content-Type") ?? "application/json",
   };
+
+  if (process.env.ZAMA_RELAYER_API_KEY) {
+    headers["Authorization"] = `Bearer ${process.env.ZAMA_RELAYER_API_KEY}`;
+  }
 
   const body =
     request.method !== "GET" && request.method !== "HEAD" ? await request.text() : undefined;
@@ -39,18 +47,8 @@ async function proxy(request: NextRequest, path: string[]): Promise<Response> {
   });
 }
 
-export async function GET(request: NextRequest, context: RouteContext) {
+async function handler(request: NextRequest, context: RouteContext) {
   return proxy(request, (await context.params).path);
 }
 
-export async function POST(request: NextRequest, context: RouteContext) {
-  return proxy(request, (await context.params).path);
-}
-
-export async function PUT(request: NextRequest, context: RouteContext) {
-  return proxy(request, (await context.params).path);
-}
-
-export async function DELETE(request: NextRequest, context: RouteContext) {
-  return proxy(request, (await context.params).path);
-}
+export { handler as GET, handler as POST, handler as PUT, handler as DELETE };

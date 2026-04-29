@@ -18,7 +18,7 @@ It validates four core operations:
 
 ## Requirements
 
-- Node.js 20+
+- Node.js 22+
 - a Turnkey organization
 - a Turnkey Auth Proxy Config ID with Auth Proxy enabled
 - a funded wallet on the selected network
@@ -88,5 +88,5 @@ The Zama web relayer is reached through a local Next.js route at `/api/relayer/*
 
 - `src/app/page.tsx`: demo UI and confidential token flows
 - `src/components/providers.tsx`: Turnkey signer + Zama provider wiring
-- `src/lib/chain-config.ts`: Sepolia/mainnet selection
+- `src/lib/config.ts`: chain selection, Zama config, RPC URL
 - `src/app/api/relayer/[...path]/route.ts`: relayer proxy

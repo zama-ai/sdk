@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { formatUnits, formatEther, parseUnits, isAddress } from "viem";
+import { formatUnits, formatEther, parseUnits, isAddress, zeroAddress } from "viem";
 import type { Address, Hex } from "viem";
 import { AuthState, ClientState } from "@turnkey/react-wallet-kit";
 import {
@@ -24,11 +24,7 @@ import {
 } from "@zama-fhe/react-sdk";
 import type { TokenWrapperPairWithMetadata } from "@zama-fhe/react-sdk";
 import { useTurnkeyZama } from "@/components/providers";
-import { explorerUrl, RPC_URL, viemChain, isTestnet } from "@/lib/config";
-
-// Placeholder used while no token pair is selected, to satisfy React's rule
-// that hooks must be called unconditionally.
-const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as Address;
+import { explorerUrl, viemChain, isTestnet } from "@/lib/config";
 
 const MINT_ABI = [
   {
@@ -75,7 +71,7 @@ export default function Home() {
       <LoginState
         clientState={clientState}
         onLogin={() => {
-          void handleLogin().catch(console.error);
+          void handleLogin();
         }}
       />
     );
@@ -89,7 +85,7 @@ export default function Home() {
         action={
           <button
             onClick={() => {
-              void createEmbeddedWallet().catch(console.error);
+              void createEmbeddedWallet();
             }}
             disabled={isCreatingWallet}
             className="btn btn-primary min-w-44"
@@ -110,9 +106,10 @@ export default function Home() {
 
 function AuthenticatedHome({ walletAddress }: { walletAddress: Address }) {
   const sdk = useZamaSDK();
-  const { waitForTransactionReceipt } = useTurnkeyZama();
+  const { publicClient, waitForTransactionReceipt } = useTurnkeyZama();
 
   const [selectedTokenAddressState, setSelectedTokenAddress] = useState<Address | null>(null);
+  const [isBalanceRequested, setIsBalanceRequested] = useState(false);
   const [isMinting, setIsMinting] = useState(false);
   const [mintError, setMintError] = useState<string | null>(null);
   const [pendingUnshieldHash, setPendingUnshieldHash] = useState<Hex | null>(null);
@@ -136,24 +133,11 @@ function AuthenticatedHome({ walletAddress }: { walletAddress: Address }) {
     [validPairs, selectedTokenAddress],
   );
 
-  // ── ETH balance — fetched via TanStack Query ──────────────────────────────
+  // ── ETH balance ───────────────────────────────────────────────────────────
   const { data: ethBalance } = useQuery({
     queryKey: ["ethBalance", walletAddress],
-    queryFn: async () => {
-      const response = await fetch(RPC_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          method: "eth_getBalance",
-          params: [walletAddress, "latest"],
-          id: 1,
-        }),
-      });
-
-      const data = (await response.json()) as { result?: string };
-      return data.result ? BigInt(data.result) : 0n;
-    },
+    queryFn: () => publicClient!.getBalance({ address: walletAddress }),
+    enabled: !!publicClient,
   });
 
   // ── Public ERC-20 balance — fetched and refreshed via TanStack Query ─────
@@ -162,10 +146,7 @@ function AuthenticatedHome({ walletAddress }: { walletAddress: Address }) {
     enabled: !!selectedPair,
     refetchInterval: 10_000,
     queryFn: async () => {
-      if (!selectedPair) {
-        throw new Error("No token selected");
-      }
-
+      if (!selectedPair) throw new Error("No token selected");
       return (await sdk.signer.readContract(
         balanceOfContract(selectedPair.tokenAddress, walletAddress),
       )) as bigint;
@@ -181,14 +162,14 @@ function AuthenticatedHome({ walletAddress }: { walletAddress: Address }) {
         if (!cancelled) setPendingUnshieldHash(null);
         return;
       }
-
       try {
         const hash = await loadPendingUnshield(
           indexedDBStorage,
           selectedPair.confidentialTokenAddress,
         );
         if (!cancelled) setPendingUnshieldHash(hash as Hex | null);
-      } catch {
+      } catch (e) {
+        console.error("Failed to load pending unshield:", e);
         if (!cancelled) setPendingUnshieldHash(null);
       }
     }
@@ -199,27 +180,21 @@ function AuthenticatedHome({ walletAddress }: { walletAddress: Address }) {
     };
   }, [selectedPair]);
 
-  // ── Zama hooks — always called; ZERO_ADDRESS + enabled:false when no pair ─
-  const tokenAddress = selectedPair?.confidentialTokenAddress ?? ZERO_ADDRESS;
+  // ── Zama hooks — always called; zeroAddress + enabled:false when no pair ─
+  const tokenAddress = selectedPair?.confidentialTokenAddress ?? (zeroAddress as Address);
 
   const {
     data: confidentialBalance,
     isLoading: isBalanceLoading,
     isError: isBalanceError,
     error: balanceError,
-  } = useConfidentialBalance({ tokenAddress }, { enabled: !!selectedPair });
-
-  const shield = useShield({ tokenAddress });
-  const transfer = useConfidentialTransfer({ tokenAddress });
-  const unshield = useUnshield({ tokenAddress, wrapperAddress: tokenAddress });
-  const resumeUnshield = useResumeUnshield({ tokenAddress, wrapperAddress: tokenAddress });
+  } = useConfidentialBalance({ tokenAddress }, { enabled: !!selectedPair && isBalanceRequested });
 
   // ── ERC-20 approval — awaits receipt before shield is submitted ───────────
   //
-  // The SDK's internal #ensureAllowance submits the approve tx but does NOT
-  // await its receipt before submitting the wrap tx. Alchemy simulates wrap
-  // against the committed state (allowance = 0) → revert. Fix: do the approval
-  // ourselves with a confirmed receipt, then pass approvalStrategy: "skip".
+  // We manage the approval ourselves (rather than letting the SDK handle it) to
+  // show distinct "Approving…" / "Shielding…" UX states and to reset non-zero
+  // allowances first — required by USDT-like tokens that reject approve(non-zero → non-zero).
   const preApproveShield = useCallback(
     async (amount: bigint): Promise<void> => {
       if (!selectedPair) return;
@@ -233,7 +208,6 @@ function AuthenticatedHome({ walletAddress }: { walletAddress: Address }) {
 
       if (allowance >= amount) return;
 
-      // Reset non-zero allowance first — required by USDT-like tokens.
       if (allowance > 0n) {
         const resetHash = await sdk.signer.writeContract(approveContract(underlying, wrapper, 0n));
         await waitForTransactionReceipt(resetHash as Hex);
@@ -313,6 +287,7 @@ function AuthenticatedHome({ walletAddress }: { walletAddress: Address }) {
             onChange={(e) => {
               setSelectedTokenAddress(e.target.value as Address);
               setPendingUnshieldHash(null);
+              setIsBalanceRequested(false);
             }}
             className="input w-full"
           >
@@ -352,10 +327,17 @@ function AuthenticatedHome({ walletAddress }: { walletAddress: Address }) {
               </div>
             </div>
 
-            {/* Confidential balance row */}
+            {/* Confidential balance row — gated behind explicit user action */}
             <div className="flex items-center justify-between py-2.5">
               <span className="text-sm text-zinc-500">Confidential (Private)</span>
-              {isBalanceLoading ? (
+              {!isBalanceRequested ? (
+                <button
+                  onClick={() => setIsBalanceRequested(true)}
+                  className="btn btn-secondary py-0.5 px-2 text-xs"
+                >
+                  Reveal
+                </button>
+              ) : isBalanceLoading ? (
                 <span className="text-sm text-zinc-400">Decrypting…</span>
               ) : isBalanceError ? (
                 <span className="text-sm text-red-500">Error</span>
@@ -391,7 +373,7 @@ function AuthenticatedHome({ walletAddress }: { walletAddress: Address }) {
           {/* Resume unshield — shown only when phase 1 completed but phase 2 was interrupted */}
           {pendingUnshieldHash && (
             <ResumeUnshieldCard
-              resumeUnshield={resumeUnshield}
+              tokenAddress={tokenAddress}
               txHash={pendingUnshieldHash}
               onSuccess={handleUnshieldSuccess}
             />
@@ -399,7 +381,7 @@ function AuthenticatedHome({ walletAddress }: { walletAddress: Address }) {
 
           {/* Shield */}
           <ShieldCard
-            shield={shield}
+            tokenAddress={tokenAddress}
             decimals={selectedPair.underlying.decimals}
             symbol={selectedPair.underlying.symbol}
             onSuccess={() => {
@@ -410,14 +392,13 @@ function AuthenticatedHome({ walletAddress }: { walletAddress: Address }) {
 
           {/* Confidential transfer */}
           <TransferCard
-            transfer={transfer}
+            tokenAddress={tokenAddress}
             decimals={selectedPair.confidential.decimals}
             symbol={selectedPair.confidential.symbol}
           />
 
           {/* Unshield */}
           <UnshieldCard
-            unshield={unshield}
             tokenAddress={tokenAddress}
             decimals={selectedPair.confidential.decimals}
             symbol={selectedPair.confidential.symbol}
@@ -499,18 +480,19 @@ function BalanceAmount({
 }
 
 function ShieldCard({
-  shield,
+  tokenAddress,
   decimals,
   symbol,
   onSuccess,
   preApprove,
 }: {
-  shield: ReturnType<typeof useShield>;
+  tokenAddress: Address;
   decimals: number;
   symbol: string;
   onSuccess: () => void;
   preApprove: (amount: bigint) => Promise<void>;
 }) {
+  const shield = useShield({ tokenAddress });
   const [amount, setAmount] = useState("");
   const [isApproving, setIsApproving] = useState(false);
   const [approveError, setApproveError] = useState<string | null>(null);
@@ -572,14 +554,15 @@ function ShieldCard({
 }
 
 function TransferCard({
-  transfer,
+  tokenAddress,
   decimals,
   symbol,
 }: {
-  transfer: ReturnType<typeof useConfidentialTransfer>;
+  tokenAddress: Address;
   decimals: number;
   symbol: string;
 }) {
+  const transfer = useConfidentialTransfer({ tokenAddress });
   const [to, setTo] = useState("");
   const [amount, setAmount] = useState("");
 
@@ -634,18 +617,17 @@ function TransferCard({
 }
 
 function UnshieldCard({
-  unshield,
   tokenAddress,
   decimals,
   symbol,
   onSuccess,
 }: {
-  unshield: ReturnType<typeof useUnshield>;
   tokenAddress: Address;
   decimals: number;
   symbol: string;
   onSuccess: () => void;
 }) {
+  const unshield = useUnshield({ tokenAddress, wrapperAddress: tokenAddress });
   const [amount, setAmount] = useState("");
   const [phase, setPhase] = useState<1 | 2>(1);
 
@@ -709,14 +691,16 @@ function UnshieldCard({
 }
 
 function ResumeUnshieldCard({
-  resumeUnshield,
+  tokenAddress,
   txHash,
   onSuccess,
 }: {
-  resumeUnshield: ReturnType<typeof useResumeUnshield>;
+  tokenAddress: Address;
   txHash: Hex;
   onSuccess: () => void;
 }) {
+  const resumeUnshield = useResumeUnshield({ tokenAddress, wrapperAddress: tokenAddress });
+
   return (
     <div className="card border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950">
       <div className="card-title text-amber-700 dark:text-amber-300">

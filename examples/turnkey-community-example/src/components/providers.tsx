@@ -26,6 +26,7 @@ import {
   type Address,
   type Hex,
   type WalletClient,
+  type PublicClient,
 } from "viem";
 import { toAccount } from "viem/accounts";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
@@ -131,6 +132,7 @@ type TurnkeyZamaContextValue = {
   clientState: ClientState | undefined;
   authState: AuthState;
   walletAddress: Address | null;
+  publicClient: PublicClient | null;
   isSignerReady: boolean;
   initError: string | null;
   needsWalletCreation: boolean;
@@ -179,9 +181,7 @@ function TurnkeyZamaBridge({ children }: { children: ReactNode }) {
     signTransaction,
   } = useTurnkey();
   const [signer, setSigner] = useState<ViemSigner | null>(null);
-  const [receiptWaiter, setReceiptWaiter] = useState<((hash: Hex) => Promise<unknown>) | null>(
-    null,
-  );
+  const [publicClient, setPublicClient] = useState<PublicClient | null>(null);
   const [walletAddress, setWalletAddress] = useState<Address | null>(null);
   const [initError, setInitError] = useState<string | null>(null);
   const [needsWalletCreation, setNeedsWalletCreation] = useState(false);
@@ -205,13 +205,17 @@ function TurnkeyZamaBridge({ children }: { children: ReactNode }) {
     let cancelled = false;
 
     async function syncSigner() {
+      function reset(opts: { needsWallet?: boolean; error?: string } = {}) {
+        if (cancelled) return;
+        setSigner(null);
+        setPublicClient(null);
+        setWalletAddress(null);
+        setInitError(opts.error ?? null);
+        setNeedsWalletCreation(opts.needsWallet ?? false);
+      }
+
       if (clientState !== ClientState.Ready || !httpClient) {
-        if (!cancelled) {
-          setSigner(null);
-          setWalletAddress(null);
-          setInitError(null);
-          setNeedsWalletCreation(false);
-        }
+        reset();
         return;
       }
 
@@ -224,12 +228,7 @@ function TurnkeyZamaBridge({ children }: { children: ReactNode }) {
               : [];
 
         if (availableWallets.length === 0) {
-          if (!cancelled) {
-            setSigner(null);
-            setWalletAddress(null);
-            setInitError(null);
-            setNeedsWalletCreation(true);
-          }
+          reset({ needsWallet: true });
           return;
         }
 
@@ -238,12 +237,7 @@ function TurnkeyZamaBridge({ children }: { children: ReactNode }) {
         );
 
         if (!embeddedWallet) {
-          if (!cancelled) {
-            setSigner(null);
-            setWalletAddress(null);
-            setInitError(null);
-            setNeedsWalletCreation(true);
-          }
+          reset({ needsWallet: true });
           return;
         }
 
@@ -268,26 +262,20 @@ function TurnkeyZamaBridge({ children }: { children: ReactNode }) {
           transport: http(RPC_URL),
         }) as WalletClient;
 
-        const publicClient = createPublicClient({
+        const client = createPublicClient({
           chain: viemChain,
           transport: http(RPC_URL),
         });
 
         if (!cancelled) {
           setWalletAddress(ethAccount.address as Address);
-          setSigner(new ViemSigner({ walletClient, publicClient }));
-          setReceiptWaiter(() => (hash: Hex) => publicClient.waitForTransactionReceipt({ hash }));
+          setSigner(new ViemSigner({ walletClient, publicClient: client }));
+          setPublicClient(client);
           setInitError(null);
           setNeedsWalletCreation(false);
         }
       } catch (e: unknown) {
-        if (!cancelled) {
-          setSigner(null);
-          setReceiptWaiter(null);
-          setWalletAddress(null);
-          setInitError(e instanceof Error ? e.message : "Failed to initialize Turnkey wallet");
-          setNeedsWalletCreation(false);
-        }
+        reset({ error: e instanceof Error ? e.message : "Failed to initialize Turnkey wallet" });
       }
     }
 
@@ -307,7 +295,11 @@ function TurnkeyZamaBridge({ children }: { children: ReactNode }) {
   ]);
 
   const login = useCallback(async () => {
-    await handleLogin();
+    try {
+      await handleLogin();
+    } catch (e: unknown) {
+      setInitError(e instanceof Error ? e.message : "Login failed");
+    }
   }, [handleLogin]);
 
   const createEmbeddedWallet = useCallback(async () => {
@@ -320,6 +312,8 @@ function TurnkeyZamaBridge({ children }: { children: ReactNode }) {
       });
       await refreshWallets();
       setNeedsWalletCreation(false);
+    } catch (e: unknown) {
+      setInitError(e instanceof Error ? e.message : "Failed to create wallet");
     } finally {
       setIsCreatingWallet(false);
     }
@@ -330,6 +324,7 @@ function TurnkeyZamaBridge({ children }: { children: ReactNode }) {
       clientState,
       authState,
       walletAddress,
+      publicClient,
       isSignerReady: !!signer && !!relayer,
       initError,
       needsWalletCreation,
@@ -337,16 +332,17 @@ function TurnkeyZamaBridge({ children }: { children: ReactNode }) {
       handleLogin: login,
       createEmbeddedWallet,
       waitForTransactionReceipt: async (hash: Hex) => {
-        if (!receiptWaiter) {
+        if (!publicClient) {
           throw new Error("Wallet provider is not ready");
         }
-        return receiptWaiter(hash);
+        return publicClient.waitForTransactionReceipt({ hash });
       },
     }),
     [
       clientState,
       authState,
       walletAddress,
+      publicClient,
       signer,
       relayer,
       initError,
@@ -354,7 +350,6 @@ function TurnkeyZamaBridge({ children }: { children: ReactNode }) {
       isCreatingWallet,
       login,
       createEmbeddedWallet,
-      receiptWaiter,
     ],
   );
 

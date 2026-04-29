@@ -40,3 +40,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# npm lockfile — this project uses npm but lives in a pnpm monorepo
+package-lock.json
