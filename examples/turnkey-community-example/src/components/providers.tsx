@@ -135,6 +135,7 @@ type TurnkeyZamaContextValue = {
   publicClient: PublicClient | null;
   isSignerReady: boolean;
   initError: string | null;
+  walletCreationError: string | null;
   needsWalletCreation: boolean;
   isCreatingWallet: boolean;
   handleLogin: () => Promise<void>;
@@ -184,6 +185,7 @@ function TurnkeyZamaBridge({ children }: { children: ReactNode }) {
   const [publicClient, setPublicClient] = useState<PublicClient | null>(null);
   const [walletAddress, setWalletAddress] = useState<Address | null>(null);
   const [initError, setInitError] = useState<string | null>(null);
+  const [walletCreationError, setWalletCreationError] = useState<string | null>(null);
   const [needsWalletCreation, setNeedsWalletCreation] = useState(false);
   const [isCreatingWallet, setIsCreatingWallet] = useState(false);
 
@@ -304,7 +306,7 @@ function TurnkeyZamaBridge({ children }: { children: ReactNode }) {
 
   const createEmbeddedWallet = useCallback(async () => {
     setIsCreatingWallet(true);
-    setInitError(null);
+    setWalletCreationError(null);
     try {
       await createWallet({
         walletName: "Zama Confidential Tokens",
@@ -313,7 +315,7 @@ function TurnkeyZamaBridge({ children }: { children: ReactNode }) {
       await refreshWallets();
       setNeedsWalletCreation(false);
     } catch (e: unknown) {
-      setInitError(e instanceof Error ? e.message : "Failed to create wallet");
+      setWalletCreationError(e instanceof Error ? e.message : "Failed to create wallet");
     } finally {
       setIsCreatingWallet(false);
     }
@@ -327,6 +329,7 @@ function TurnkeyZamaBridge({ children }: { children: ReactNode }) {
       publicClient,
       isSignerReady: !!signer && !!relayer,
       initError,
+      walletCreationError,
       needsWalletCreation,
       isCreatingWallet,
       handleLogin: login,
@@ -346,6 +349,7 @@ function TurnkeyZamaBridge({ children }: { children: ReactNode }) {
       signer,
       relayer,
       initError,
+      walletCreationError,
       needsWalletCreation,
       isCreatingWallet,
       login,

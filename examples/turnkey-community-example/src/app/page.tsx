@@ -56,6 +56,7 @@ export default function Home() {
     walletAddress,
     isSignerReady,
     initError,
+    walletCreationError,
     needsWalletCreation,
     isCreatingWallet,
     handleLogin,
@@ -82,6 +83,7 @@ export default function Home() {
       <CenteredState
         title="Create a Turnkey wallet"
         body="Your Turnkey session is authenticated, but no embedded wallet is available yet. Create one to continue with the Zama flows."
+        error={walletCreationError}
         action={
           <button
             onClick={() => {
@@ -436,11 +438,13 @@ function CenteredState({
   title,
   body,
   tone = "neutral",
+  error,
   action,
 }: {
   title: string;
   body: string;
   tone?: "neutral" | "error";
+  error?: string | null;
   action?: ReactNode;
 }) {
   return (
@@ -452,6 +456,9 @@ function CenteredState({
         >
           {body}
         </p>
+        {error && (
+          <p className="mt-2 text-xs font-mono text-red-600 dark:text-red-400 break-all">{error}</p>
+        )}
         {action && <div className="mt-5 flex justify-center">{action}</div>}
       </div>
     </div>

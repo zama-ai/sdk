@@ -5,6 +5,7 @@ import { zamaConfig } from "@/lib/config";
 export const dynamic = "force-dynamic";
 
 const RELAYER_BASE = zamaConfig.relayerUrl;
+const RELAYER_ORIGIN = new URL(RELAYER_BASE).origin;
 
 type RouteContext = { params: Promise<{ path: string[] }> };
 
@@ -16,7 +17,7 @@ async function proxy(request: NextRequest, path: string[]): Promise<Response> {
   });
 
   // SSRF guard: reject paths that resolve to a different origin than the relayer base.
-  if (target.origin !== new URL(RELAYER_BASE).origin) {
+  if (target.origin !== RELAYER_ORIGIN) {
     return Response.json({ error: "Forbidden" }, { status: 403 });
   }
 
