@@ -11,7 +11,7 @@
 | `react-ethers` | React + ethers |
 | `node-viem` | Node.js + viem |
 | `node-ethers` | Node.js + ethers |
-| `example-hoodi` | React + ethers (ACL delegation) |
+| `example-hoodi` | React + ethers (Hoodi testnet, cleartext mode) |
 
 **For SDK developers and agents:** `contracts/` has the Solidity smart contracts (Foundry/forge) — ERC-7984 confidential tokens, wrappers, registries, batchers. `test/` has E2E infrastructure (Playwright, Next.js/Vite test apps, shared React test components). `tools/ast-grep/` has custom AST lint rules. `claude-setup/` has agent configuration (copied to `.claude/` by `pnpm setup:claude`). `docs/gitbook/` has user-facing documentation. `docs/agents/` has this guidance.
 
