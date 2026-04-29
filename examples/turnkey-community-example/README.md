@@ -3,12 +3,14 @@
 Working Next.js example for using Turnkey embedded wallets with the Zama SDK on Ethereum Sepolia or mainnet.
 
 This repo demonstrates the flow implemented in code today:
+
 - `TurnkeyProvider` from `@turnkey/react-wallet-kit` handles authentication
 - the app derives a Turnkey-backed viem signer from the authenticated embedded wallet session
 - a local `/api/relayer/*` proxy forwards Zama relayer requests
 - the app uses `@zama-fhe/react-sdk` with `ZamaProvider`
 
 It validates four core operations:
+
 - shield public ERC-20 into the confidential wrapper
 - decrypt confidential balances
 - confidential transfer
