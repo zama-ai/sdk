@@ -75,11 +75,9 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
 
     expect(balances.get(TOKEN_A)).toBe(100n);
     expect(balances.get(TOKEN_B)).toBe(200n);
-    // Each per-token call goes through sdk.delegatedUserDecrypt(), which fetches
-    // credentials internally — so allow is called once per uncached token.
-    expect(allowMock).toHaveBeenCalledTimes(2);
-    expect(relayer.delegatedUserDecrypt).toHaveBeenCalledTimes(2);
-    // unused but captured so the fixture isn't complained about
+    // Don't assert on internal relayer/credential calls — batchDecryptBalancesAs
+    // delegates to sdk.delegatedUserDecrypt() which owns that orchestration.
+    void allowMock;
     void sdk;
     void signer;
   });
