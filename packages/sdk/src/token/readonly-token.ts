@@ -340,7 +340,7 @@ export class ReadonlyToken {
           const decrypted = await firstToken.sdk.delegatedUserDecrypt(
             [{ handle, contractAddress: token.address }],
             delegatorAddress,
-            { requesterAddress: normalizedAccount },
+            normalizedAccount,
           );
           const value = decrypted[handle];
           if (value === undefined) {
@@ -641,7 +641,7 @@ export class ReadonlyToken {
     const result = await this.sdk.delegatedUserDecrypt(
       [{ handle, contractAddress: this.address }],
       normalizedDelegator,
-      { requesterAddress: normalizedAccount },
+      normalizedAccount,
     );
 
     const value = result[handle];
