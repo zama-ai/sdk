@@ -157,10 +157,7 @@ function AuthenticatedHome({ walletAddress }: { walletAddress: Address }) {
   });
 
   // ── Public ERC-20 balance — fetched and refreshed via TanStack Query ─────
-  const {
-    data: publicBalance,
-    refetch: refetchPublicBalance,
-  } = useQuery({
+  const { data: publicBalance, refetch: refetchPublicBalance } = useQuery({
     queryKey: ["publicBalance", selectedPair?.tokenAddress, walletAddress],
     enabled: !!selectedPair,
     refetchInterval: 10_000,
