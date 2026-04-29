@@ -314,8 +314,8 @@ describe(RelayerCleartext, () => {
 
     const encrypted = await fhevm.encrypt({
       values: [
-        { value: 42n, type: "euint64" },
-        { value: 99n, type: "euint64" },
+        { value: 42n, type: "uint64" },
+        { value: 99n, type: "uint64" },
       ],
       contractAddress: CONTRACT_ADDRESS,
       userAddress: USER_ADDRESS,
@@ -331,11 +331,11 @@ describe(RelayerCleartext, () => {
 
     const encrypted = await fhevm.encrypt({
       values: [
-        { value: true, type: "ebool" },
-        { value: 200n, type: "euint8" },
-        { value: 50000n, type: "euint16" },
-        { value: 1000000n, type: "euint32" },
-        { value: 42n, type: "euint64" },
+        { value: true, type: "bool" },
+        { value: 200n, type: "uint8" },
+        { value: 50000n, type: "uint16" },
+        { value: 1000000n, type: "uint32" },
+        { value: 42n, type: "uint64" },
       ],
       contractAddress: CONTRACT_ADDRESS,
       userAddress: USER_ADDRESS,
@@ -363,8 +363,8 @@ describe(RelayerCleartext, () => {
 
     const encrypted = await fhevm.encrypt({
       values: [
-        { value: 42n, type: "euint8" },
-        { value: 99n, type: "euint8" },
+        { value: 42n, type: "uint8" },
+        { value: 99n, type: "uint8" },
       ],
       contractAddress: CONTRACT_ADDRESS,
       userAddress: USER_ADDRESS,
@@ -406,7 +406,7 @@ describe(RelayerCleartext, () => {
 
     await expect(
       fhevm.encrypt({
-        values: [{ value: -1n, type: "euint8" }],
+        values: [{ value: -1n, type: "uint8" }],
         contractAddress: CONTRACT_ADDRESS,
         userAddress: USER_ADDRESS,
       }),
@@ -418,7 +418,7 @@ describe(RelayerCleartext, () => {
 
     await expect(
       fhevm.encrypt({
-        values: [{ value: 256n, type: "euint8" }],
+        values: [{ value: 256n, type: "uint8" }],
         contractAddress: CONTRACT_ADDRESS,
         userAddress: USER_ADDRESS,
       }),
@@ -430,7 +430,7 @@ describe(RelayerCleartext, () => {
 
     await expect(
       fhevm.encrypt({
-        values: [{ value: 2n, type: "ebool" }],
+        values: [{ value: 2n, type: "bool" }],
         contractAddress: CONTRACT_ADDRESS,
         userAddress: USER_ADDRESS,
       }),

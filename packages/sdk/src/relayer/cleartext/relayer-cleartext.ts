@@ -104,19 +104,19 @@ function normalizeEncryptValue(entry: EncryptParams["values"][number]): {
   const fheType = fheTypeIdFromName(entry.type);
 
   let value: bigint;
-  if (entry.type === "ebool") {
+  if (entry.type === "bool") {
     if (typeof entry.value === "boolean") {
       value = entry.value ? 1n : 0n;
     } else {
-      value = entry.value;
+      value = BigInt(entry.value);
       if (value !== 0n && value !== 1n) {
         throw new EncryptionFailedError("Bool value must be 0, 1, true, or false");
       }
     }
-  } else if (entry.type === "eaddress") {
+  } else if (entry.type === "address") {
     value = BigInt(getAddress(entry.value));
   } else {
-    value = entry.value;
+    value = BigInt(entry.value);
   }
 
   if (value < 0n) {

@@ -1,6 +1,6 @@
+import type { Address, Hex } from "viem";
 import type { ClearValueType, EncryptInput, Handle } from "../relayer/relayer-sdk.types";
 import type { StoredEIP712 } from "../types/credentials";
-import type { Address, Hex } from "viem";
 
 /** Network configuration for the FHE VM instance */
 export interface FhevmInstanceConfig {
@@ -256,8 +256,10 @@ export interface GenerateKeypairResponseData {
   privateKey: Hex;
 }
 
-export type { CreateKmsUserDecryptEip712ReturnType as CreateEIP712ResponseData } from "@fhevm/sdk/actions/chain";
-export type { CreateKmsDelegatedUserDecryptEip712ReturnType as CreateDelegatedEIP712ResponseData } from "@fhevm/sdk/actions/chain";
+export type {
+  CreateKmsDelegatedUserDecryptEip712ReturnType as CreateDelegatedEIP712ResponseData,
+  CreateKmsUserDecryptEip712ReturnType as CreateEIP712ResponseData,
+} from "@fhevm/sdk/actions/chain";
 
 export interface DelegatedUserDecryptResponseData {
   clearValues: Record<Handle, ClearValueType>;

@@ -138,7 +138,6 @@ export type {
 } from "../relayer/relayer-sdk.types";
 export type {
   DelegatedUserDecryptParams,
-  EncryptInput,
   EIP712TypedData,
   PublicDecryptResult,
   UserDecryptParams,

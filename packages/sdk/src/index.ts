@@ -15,7 +15,6 @@ export type {
   RelayerSDKStatus,
   EncryptResult,
   EncryptParams,
-  EncryptInput,
   Handle,
   ClearValueType,
   UserDecryptParams,

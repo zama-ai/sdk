@@ -166,8 +166,8 @@ importers:
   packages/sdk:
     dependencies:
       '@fhevm/sdk':
-        specifier: 1.0.0-alpha.1
-        version: 1.0.0-alpha.1(ethers@6.16.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(typescript@6.0.2)(viem@2.47.12(bufferutil@4.1.0)(typescript@6.0.2)(utf-8-validate@5.0.10)(zod@4.3.6))
+        specifier: 1.0.0-alpha.3
+        version: 1.0.0-alpha.3(ethers@6.16.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(typescript@6.0.2)(viem@2.47.12(bufferutil@4.1.0)(typescript@6.0.2)(utf-8-validate@5.0.10)(zod@4.3.6))
       '@zama-fhe/relayer-sdk':
         specifier: ~0.4.2
         version: 0.4.2(bufferutil@4.1.0)(utf-8-validate@5.0.10)
@@ -205,7 +205,7 @@ importers:
     devDependencies:
       '@fhevm/mock-utils':
         specifier: 0.4.2
-        version: 0.4.2(@zama-fhe/relayer-sdk@0.4.2(bufferutil@4.1.0)(utf-8-validate@5.0.10))(ethers@6.16.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(typescript@6.0.2)
+        version: 0.4.2(@zama-fhe/relayer-sdk@0.4.1(bufferutil@4.1.0)(utf-8-validate@5.0.10))(ethers@6.16.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(typescript@6.0.2)
       '@types/node':
         specifier: ^22.19.17
         version: 22.19.17
@@ -722,11 +722,11 @@ packages:
       typescript:
         optional: true
 
-  '@fhevm/sdk@1.0.0-alpha.1':
-    resolution: {integrity: sha512-5TFQdhx3xP1KjJhIyxI+VsuO77bhdtQT7O068wMglzU1ZEqMOB7Equcg9/R6PGkjC2pf+iBsr5ijiaWkGUqFNg==}
+  '@fhevm/sdk@1.0.0-alpha.3':
+    resolution: {integrity: sha512-F3P3/QzUJZjIgrj1r3ko3Mw0Jv4jXFGdE0NGFLAH3tnub3I3h8owafe9yIglepZOIJeLm2KBOQ4pfBRg2xb7bw==}
     engines: {node: '>=22.0'}
     peerDependencies:
-      ethers: '>=6'
+      ethers: '>=6.8.0'
       typescript: '>=5.0.4'
       viem: '>=2'
     peerDependenciesMeta:
@@ -994,6 +994,10 @@ packages:
   '@noble/curves@1.9.7':
     resolution: {integrity: sha512-gbKGcRUYIjA3/zCCNaWDciTMFI0dCkvou3TL8Zmy5Nc7sJ47a0jtOeZoTaMxkuqRo9cRhjOdZJXegxYE5FN/xw==}
     engines: {node: ^14.21.3 || >=16}
+
+  '@noble/curves@2.0.1':
+    resolution: {integrity: sha512-vs1Az2OOTBiP4q0pwjW5aF0xp9n4MxVrmkFBxc6EKZc6ddYx5gaZiAsZoq0uRRXWbi3AT/sBqn05eRPtn1JCPw==}
+    engines: {node: '>= 20.19.0'}
 
   '@noble/hashes@1.3.2':
     resolution: {integrity: sha512-MVC8EAQp7MvEcm30KWENFjgR+Mkmf+D189XJTkFIlwohU5hcBbn1ZkKq7KVTi2Hme3PMGF390DaL52beVrIihQ==}
@@ -2061,6 +2065,11 @@ packages:
         optional: true
       typescript:
         optional: true
+
+  '@zama-fhe/relayer-sdk@0.4.1':
+    resolution: {integrity: sha512-bS7tVQbXnsPFgiqm5R4pJ8hbPMYZuRh/Pv89S+jxO60y0mD296F4qIKEO7dgiHjC87V5GFM9DqCLNejjCNVw2Q==}
+    engines: {node: '>=22'}
+    hasBin: true
 
   '@zama-fhe/relayer-sdk@0.4.2':
     resolution: {integrity: sha512-3Q0tINKxz6YseaDxOrNP/648j5Wr2C4Utnjx5npZESjLAc20tWgWFE7BOfx0Kjhs8cx/ykU+tMZBq40+DsiUvA==}
@@ -4666,6 +4675,13 @@ snapshots:
 
   '@faker-js/faker@10.4.0': {}
 
+  '@fhevm/mock-utils@0.4.2(@zama-fhe/relayer-sdk@0.4.1(bufferutil@4.1.0)(utf-8-validate@5.0.10))(ethers@6.16.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(typescript@6.0.2)':
+    dependencies:
+      '@zama-fhe/relayer-sdk': 0.4.1(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+      ethers: 6.16.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+    optionalDependencies:
+      typescript: 6.0.2
+
   '@fhevm/mock-utils@0.4.2(@zama-fhe/relayer-sdk@0.4.2(bufferutil@4.1.0)(utf-8-validate@5.0.10))(ethers@6.16.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(typescript@6.0.2)':
     dependencies:
       '@zama-fhe/relayer-sdk': 0.4.2(bufferutil@4.1.0)(utf-8-validate@5.0.10)
@@ -4673,8 +4689,9 @@ snapshots:
     optionalDependencies:
       typescript: 6.0.2
 
-  '@fhevm/sdk@1.0.0-alpha.1(ethers@6.16.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(typescript@6.0.2)(viem@2.47.12(bufferutil@4.1.0)(typescript@6.0.2)(utf-8-validate@5.0.10)(zod@4.3.6))':
+  '@fhevm/sdk@1.0.0-alpha.3(ethers@6.16.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(typescript@6.0.2)(viem@2.47.12(bufferutil@4.1.0)(typescript@6.0.2)(utf-8-validate@5.0.10)(zod@4.3.6))':
     dependencies:
+      '@noble/curves': 2.0.1
       '@noble/hashes': 2.0.1
       wasm-feature-detect: 1.8.0
     optionalDependencies:
@@ -4880,6 +4897,10 @@ snapshots:
   '@noble/curves@1.9.7':
     dependencies:
       '@noble/hashes': 1.8.0
+
+  '@noble/curves@2.0.1':
+    dependencies:
+      '@noble/hashes': 2.0.1
 
   '@noble/hashes@1.3.2': {}
 
@@ -5726,6 +5747,21 @@ snapshots:
       - immer
       - react
       - use-sync-external-store
+
+  '@zama-fhe/relayer-sdk@0.4.1(bufferutil@4.1.0)(utf-8-validate@5.0.10)':
+    dependencies:
+      commander: 14.0.3
+      ethers: 6.16.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+      fetch-retry: 6.0.0
+      keccak: 3.0.4
+      node-tfhe: 1.4.0-alpha.3
+      node-tkms: 0.12.8
+      tfhe: 1.4.0-alpha.3
+      tkms: 0.12.8
+      wasm-feature-detect: 1.8.0
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
 
   '@zama-fhe/relayer-sdk@0.4.2(bufferutil@4.1.0)(utf-8-validate@5.0.10)':
     dependencies:

@@ -2,7 +2,6 @@ import type { Address, Hex } from "viem";
 import type { FhevmInstanceConfig, GenericLogger } from "../worker/worker.types";
 import type { GenericStorage } from "../types";
 import type { StoredEIP712 } from "../types/credentials";
-
 // ============================================================================
 // Application Types
 // ============================================================================
@@ -68,31 +67,27 @@ export type Handle = `0x${string}`;
 /** Decrypted value type returned by FHE operations. Includes `number` for the SDK's branded uint8/16/32 types. */
 export type ClearValueType = number | bigint | boolean | `0x${string}`;
 
-/** FHE type names for encryption. */
+/** FHE type names used by the SDK's public encrypt API (matches @fhevm/sdk ValueTypeName). */
 export type FheTypeName =
-  | "ebool"
-  | "euint8"
-  | "euint16"
-  | "euint32"
-  | "euint64"
-  | "euint128"
-  | "euint256"
-  | "eaddress";
+  | "bool"
+  | "uint8"
+  | "uint16"
+  | "uint32"
+  | "uint64"
+  | "uint128"
+  | "uint256"
+  | "address";
 
-/** A single value to encrypt with its FHE type. */
+/** A single typed value for encryption — plain JS values accepted, no branded types required. */
 export type EncryptInput =
-  | {
-      value: boolean | bigint;
-      type: "ebool";
-    }
-  | {
-      value: bigint;
-      type: Exclude<FheTypeName, "ebool" | "eaddress">;
-    }
-  | {
-      value: Address;
-      type: "eaddress";
-    };
+  | { type: "bool"; value: boolean | number | bigint }
+  | { type: "uint8"; value: number | bigint }
+  | { type: "uint16"; value: number | bigint }
+  | { type: "uint32"; value: number | bigint }
+  | { type: "uint64"; value: number | bigint }
+  | { type: "uint128"; value: number | bigint }
+  | { type: "uint256"; value: number | bigint }
+  | { type: "address"; value: string };
 
 /** Parameters for encryption */
 export interface EncryptParams {

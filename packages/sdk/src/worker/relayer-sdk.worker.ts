@@ -4,14 +4,14 @@
  * This worker is bundled by the host app's bundler which resolves imports at build time.
  */
 
-import { createPublicClient, http } from "viem";
-import { createFhevmClient, setFhevmRuntimeConfig } from "@fhevm/sdk/viem";
 import {
-  createKmsUserDecryptEip712,
   createKmsDelegatedUserDecryptEip712,
+  createKmsUserDecryptEip712,
 } from "@fhevm/sdk/actions/chain";
-import type { EncryptValuesParameters } from "@fhevm/sdk/actions/encrypt";
-import type { FheTypeName } from "../relayer/relayer-sdk.types";
+import { createTypedValueArray } from "@fhevm/sdk/base";
+import { createFhevmClient, setFhevmRuntimeConfig } from "@fhevm/sdk/viem";
+import { createPublicClient, http } from "viem";
+import type { TypedValue } from "@fhevm/sdk/types";
 import type {
   CreateDelegatedEIP712Request,
   CreateEIP712Request,
@@ -212,36 +212,6 @@ function configToChain(config: FhevmInstanceConfig) {
 }
 
 /**
- * Map SDK FHE type names to Solidity-style type names expected by @fhevm/sdk encryptValues.
- */
-function fheTypeToSolidityType(
-  fheType: FheTypeName,
-): EncryptValuesParameters["values"][number]["type"] {
-  switch (fheType) {
-    case "ebool":
-      return "bool";
-    case "euint8":
-      return "uint8";
-    case "euint16":
-      return "uint16";
-    case "euint32":
-      return "uint32";
-    case "euint64":
-      return "uint64";
-    case "euint128":
-      return "uint128";
-    case "euint256":
-      return "uint256";
-    case "eaddress":
-      return "address";
-    default: {
-      const _exhaustive: never = fheType;
-      throw new Error(`Unsupported FHE type: ${String(_exhaustive)}`);
-    }
-  }
-}
-
-/**
  * Convert a hex string (0x-prefixed) to a Uint8Array.
  */
 function hexToBytes(hex: string): Uint8Array {
@@ -307,15 +277,11 @@ async function handleEncrypt(request: EncryptRequest): Promise<void> {
   try {
     assertClient(client);
 
-    // Map inputs to the format expected by @fhevm/sdk encryptValues.
-    // Each entry needs a Solidity-style type name and its value.
-    const mappedValues = values.map((entry) => ({
-      value: entry.value,
-      type: fheTypeToSolidityType(entry.type),
-    }));
-
+    // EncryptInput matches TypedValueLike structurally; cast needed because
+    // EncryptInput fields are mutable while TypedValueLike's are readonly.
+    const typedValues = createTypedValueArray(values as unknown as TypedValue[]);
     const encrypted = await client.encryptValues({
-      values: mappedValues as EncryptValuesParameters["values"],
+      values: typedValues,
       contractAddress,
       userAddress,
     });
@@ -350,24 +316,24 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
     assertClient(client);
 
     // 1. Parse transport keypair
-    const keypair = await client.parseTransportKeypair(payload);
+    const transportKeypair = await client.parseTransportKeypair(payload);
 
     // 2. Parse signed decryption permit
-    const permit = await client.parseSignedDecryptionPermit({
+    const signedPermit = await client.parseSignedDecryptionPermit({
       serializedPermit: {
         signerAddress: payload.signerAddress,
         signature: payload.signature,
-        eip712: payload.eip712 as never,
+        eip712: payload.eip712,
       },
-      transportKeypair: keypair,
+      transportKeypair,
     });
 
     // 3. Decrypt (permit is a union — the SDK dispatches based on isDelegated)
     const decryptedValues = await client.decryptValues({
-      transportKeypair: keypair,
+      transportKeypair,
+      signedPermit,
       encryptedValues: payload.handles,
       contractAddress: payload.contractAddress,
-      signedPermit: permit,
     });
 
     // 4. Map results: clearValues is TypedValue[] -> Record<Handle, value>
@@ -403,27 +369,27 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
     assertClient(client);
 
     // 1. Parse transport keypair
-    const keypair = await client.parseTransportKeypair({
+    const transportKeypair = await client.parseTransportKeypair({
       privateKey: payload.privateKey,
       publicKey: payload.publicKey,
     });
 
     // 2. Parse signed decryption permit (delegated)
-    const permit = await client.parseSignedDecryptionPermit({
+    const signedPermit = await client.parseSignedDecryptionPermit({
       serializedPermit: {
         signerAddress: payload.delegatorAddress,
         signature: payload.signature,
-        eip712: payload.eip712 as never,
+        eip712: payload.eip712,
       },
-      transportKeypair: keypair,
+      transportKeypair,
     });
 
     // 3. Decrypt (permit is a union — the SDK dispatches based on isDelegated)
     const decryptedValues = await client.decryptValues({
-      transportKeypair: keypair,
+      transportKeypair,
+      signedPermit,
       encryptedValues: payload.handles,
       contractAddress: payload.contractAddress,
-      signedPermit: permit,
     });
 
     // 4. Map results

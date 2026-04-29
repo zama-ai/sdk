@@ -3,10 +3,8 @@
  * Uses @fhevm/sdk for encryption/decryption off the main thread using node:worker_threads.
  */
 
-import { createPublicClient, http } from "viem";
 import { parentPort, type Transferable } from "node:worker_threads";
-import type { EncryptValuesParameters } from "@fhevm/sdk/actions/encrypt";
-import type { FheTypeName } from "../relayer/relayer-sdk.types";
+import { createPublicClient, http } from "viem";
 import type {
   CreateDelegatedEIP712Request,
   CreateEIP712Request,
@@ -145,36 +143,6 @@ function configToChain(config: FhevmInstanceConfig) {
 }
 
 /**
- * Map SDK FHE type names to Solidity-style type names expected by @fhevm/sdk encryptValues.
- */
-function fheTypeToSolidityType(
-  fheType: FheTypeName,
-): EncryptValuesParameters["values"][number]["type"] {
-  switch (fheType) {
-    case "ebool":
-      return "bool";
-    case "euint8":
-      return "uint8";
-    case "euint16":
-      return "uint16";
-    case "euint32":
-      return "uint32";
-    case "euint64":
-      return "uint64";
-    case "euint128":
-      return "uint128";
-    case "euint256":
-      return "uint256";
-    case "eaddress":
-      return "address";
-    default: {
-      const _exhaustive: never = fheType;
-      throw new Error(`Unsupported FHE type: ${String(_exhaustive)}`);
-    }
-  }
-}
-
-/**
  * Convert a hex string (0x-prefixed) to a Uint8Array.
  */
 function hexToBytes(hex: string): Uint8Array {
@@ -229,13 +197,11 @@ async function handleEncrypt(request: EncryptRequest): Promise<void> {
   try {
     assertClient(client);
 
-    const mappedValues = values.map((entry) => ({
-      value: entry.value as never,
-      type: fheTypeToSolidityType(entry.type),
-    }));
-
+    const { createTypedValueArray } = await import("@fhevm/sdk/base");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- EncryptInput is structurally compatible with TypedValueLike
+    const typedValues = createTypedValueArray(values as any);
     const encrypted = await client.encryptValues({
-      values: mappedValues,
+      values: typedValues,
       contractAddress,
       userAddress,
     });
@@ -275,7 +241,7 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
       serializedPermit: {
         signerAddress: payload.signerAddress,
         signature: payload.signature,
-        eip712: payload.eip712 as never,
+        eip712: payload.eip712,
       },
       transportKeypair: keypair,
     });
@@ -331,7 +297,7 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
       serializedPermit: {
         signerAddress: payload.delegatorAddress,
         signature: payload.signature,
-        eip712: payload.eip712 as never,
+        eip712: payload.eip712,
       },
       transportKeypair: keypair,
     });

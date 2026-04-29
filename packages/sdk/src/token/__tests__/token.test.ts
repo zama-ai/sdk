@@ -213,7 +213,7 @@ describe("Token", () => {
       );
 
       expect(relayer.encrypt).toHaveBeenCalledWith({
-        values: [{ value: 100n, type: "euint64" }],
+        values: [{ value: 100n, type: "uint64" }],
         contractAddress: tokenAddress,
         userAddress: userAddress,
       });
@@ -289,7 +289,7 @@ describe("Token", () => {
       const result = await token.unwrap(50n);
 
       expect(relayer.encrypt).toHaveBeenCalledWith({
-        values: [{ value: 50n, type: "euint64" }],
+        values: [{ value: 50n, type: "uint64" }],
         contractAddress: tokenAddress,
         userAddress,
       });
@@ -598,7 +598,7 @@ describe("Token", () => {
       const result = await token.confidentialTransferFrom(from, to, 200n);
 
       expect(relayer.encrypt).toHaveBeenCalledWith({
-        values: [{ value: 200n, type: "euint64" }],
+        values: [{ value: 200n, type: "uint64" }],
         contractAddress: tokenAddress,
         userAddress: getAddress(from),
       });

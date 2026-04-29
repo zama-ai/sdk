@@ -377,7 +377,7 @@ describe("BaseWorkerClient", () => {
     autoResolvePostMessage(client, { handles: [], inputProof: "0x" });
 
     const params = {
-      values: [{ value: 1n, type: "euint8" as const }],
+      values: [{ value: 1n, type: "uint8" as const }],
       contractAddress: "0xC" as `0x${string}`,
       userAddress: "0xU" as `0x${string}`,
     };

@@ -139,12 +139,12 @@ describe("NodeWorkerPool", () => {
     });
 
     await pool.encrypt({
-      values: [{ value: 1n, type: "euint8" as const }],
+      values: [{ value: 1n, type: "uint8" as const }],
       contractAddress: "0xC",
       userAddress: "0xU",
     });
     expect(instance.encrypt).toHaveBeenCalledWith({
-      values: [{ value: 1n, type: "euint8" as const }],
+      values: [{ value: 1n, type: "uint8" as const }],
       contractAddress: "0xC",
       userAddress: "0xU",
     });

@@ -71,7 +71,7 @@ describe("Integration: multi-step workflows", () => {
 
       // Verify encrypt was called with correct params
       expect(relayer.encrypt).toHaveBeenCalledWith({
-        values: [{ value: 250n, type: "euint64" }],
+        values: [{ value: 250n, type: "uint64" }],
         contractAddress: tokenAddress,
         userAddress,
       });
@@ -112,7 +112,7 @@ describe("Integration: multi-step workflows", () => {
 
       // Verify encryption happened
       expect(relayer.encrypt).toHaveBeenCalledWith({
-        values: [{ value: 500n, type: "euint64" }],
+        values: [{ value: 500n, type: "uint64" }],
         contractAddress: tokenAddress,
         userAddress,
       });

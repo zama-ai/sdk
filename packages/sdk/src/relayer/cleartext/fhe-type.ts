@@ -7,38 +7,38 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 export interface FheTypeNameToIdMap {
-  ebool: 0;
-  //euint4: 1; deprecated
-  euint8: 2;
-  euint16: 3;
-  euint32: 4;
-  euint64: 5;
-  euint128: 6;
-  eaddress: 7;
-  euint256: 8;
+  bool: 0;
+  //uint4: 1; deprecated
+  uint8: 2;
+  uint16: 3;
+  uint32: 4;
+  uint64: 5;
+  uint128: 6;
+  address: 7;
+  uint256: 8;
 }
 
 export interface FheTypeIdToNameMap {
-  0: "ebool";
-  //1: 'euint4'; deprecated
-  2: "euint8";
-  3: "euint16";
-  4: "euint32";
-  5: "euint64";
-  6: "euint128";
-  7: "eaddress";
-  8: "euint256";
+  0: "bool";
+  //1: 'uint4'; deprecated
+  2: "uint8";
+  3: "uint16";
+  4: "uint32";
+  5: "uint64";
+  6: "uint128";
+  7: "address";
+  8: "uint256";
 }
 
 export interface FheTypeEncryptionBitwidthToIdMap {
-  2: FheTypeNameToIdMap["ebool"];
-  8: FheTypeNameToIdMap["euint8"];
-  16: FheTypeNameToIdMap["euint16"];
-  32: FheTypeNameToIdMap["euint32"];
-  64: FheTypeNameToIdMap["euint64"];
-  128: FheTypeNameToIdMap["euint128"];
-  160: FheTypeNameToIdMap["eaddress"];
-  256: FheTypeNameToIdMap["euint256"];
+  2: FheTypeNameToIdMap["bool"];
+  8: FheTypeNameToIdMap["uint8"];
+  16: FheTypeNameToIdMap["uint16"];
+  32: FheTypeNameToIdMap["uint32"];
+  64: FheTypeNameToIdMap["uint64"];
+  128: FheTypeNameToIdMap["uint128"];
+  160: FheTypeNameToIdMap["address"];
+  256: FheTypeNameToIdMap["uint256"];
 }
 
 export type FheTypeIdToEncryptionBitwidthMap = {
@@ -58,27 +58,27 @@ export type EncryptionBits = Prettify<keyof FheTypeEncryptionBitwidthToIdMap>;
 const MINIMUM_ENCRYPTION_BIT_WIDTH = 2;
 
 const FheTypeNameToId: FheTypeNameToIdMap = {
-  ebool: 0,
-  //euint4: 1, deprecated
-  euint8: 2,
-  euint16: 3,
-  euint32: 4,
-  euint64: 5,
-  euint128: 6,
-  eaddress: 7,
-  euint256: 8,
+  bool: 0,
+  //uint4: 1, deprecated
+  uint8: 2,
+  uint16: 3,
+  uint32: 4,
+  uint64: 5,
+  uint128: 6,
+  address: 7,
+  uint256: 8,
 } as const;
 
 const FheTypeIdToName: FheTypeIdToNameMap = {
-  0: "ebool",
-  //1: 'euint4', deprecated
-  2: "euint8",
-  3: "euint16",
-  4: "euint32",
-  5: "euint64",
-  6: "euint128",
-  7: "eaddress",
-  8: "euint256",
+  0: "bool",
+  //1: 'uint4', deprecated
+  2: "uint8",
+  3: "uint16",
+  4: "uint32",
+  5: "uint64",
+  6: "uint128",
+  7: "address",
+  8: "uint256",
 } as const;
 
 const FheTypeIdToEncryptionBitwidth: FheTypeIdToEncryptionBitwidthMap = {
