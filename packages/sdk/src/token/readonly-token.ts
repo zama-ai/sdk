@@ -19,10 +19,9 @@ import {
   DelegationExpiredError,
   DelegationNotFoundError,
   isSessionError,
-  wrapDecryptError,
   ZamaError,
 } from "../errors";
-import { ZamaSDKEvents, type ZamaSDKEventInput } from "../events/sdk-events";
+import type { ZamaSDKEventInput } from "../events/sdk-events";
 import { isZeroHandle, ZERO_HANDLE } from "../utils/handles";
 import type { ClearValueType, Handle } from "../relayer/relayer-sdk.types";
 import { toError } from "../utils";
@@ -661,54 +660,20 @@ export class ReadonlyToken {
       return cached;
     }
 
-    const t0 = Date.now();
-    try {
-      this.emit({ type: ZamaSDKEvents.DecryptStart, handles: [handle] });
+    const result = await this.sdk.delegatedUserDecrypt(
+      [{ handle, contractAddress: this.address }],
+      normalizedDelegator,
+      { requesterAddress: normalizedAccount },
+    );
 
-      const delegatedCredentials = this.sdk.requireDelegatedCredentials("decryptBalanceAs");
-      const creds = await delegatedCredentials.allow(normalizedDelegator, this.address);
-
-      const result = await this.sdk.relayer.delegatedUserDecrypt({
-        handles: [handle],
-        contractAddress: this.address,
-        signedContractAddresses: creds.contractAddresses,
-        privateKey: creds.privateKey,
-        publicKey: creds.publicKey,
-        signature: creds.signature,
-        delegatorAddress: creds.delegatorAddress,
-        delegateAddress: creds.delegateAddress,
-        startTimestamp: creds.startTimestamp,
-        durationDays: creds.durationDays,
-      });
-
-      // Validate the relayer response before emitting DecryptEnd so subscribers
-      // never see a contradictory `Start → End → Error` sequence.
-      const value = result[handle];
-      if (value === undefined) {
-        throw new DecryptionFailedError(
-          `Delegated decryption returned no value for handle ${handle}`,
-        );
-      }
-      assertBigint(value, "decryptBalanceAs: result[handle]");
-
-      this.emit({
-        type: ZamaSDKEvents.DecryptEnd,
-        durationMs: Date.now() - t0,
-        handles: [handle],
-        result,
-      });
-
-      await this.sdk.cache.set(normalizedAccount, this.address, handle, value);
-      return value;
-    } catch (error) {
-      this.emit({
-        type: ZamaSDKEvents.DecryptError,
-        error: toError(error),
-        durationMs: Date.now() - t0,
-        handles: [handle],
-      });
-      throw wrapDecryptError(error, "Failed to decrypt delegated balance", true);
+    const value = result[handle];
+    if (value === undefined) {
+      throw new DecryptionFailedError(
+        `Delegated decryption returned no value for handle ${handle}`,
+      );
     }
+    assertBigint(value, "decryptBalanceAs: result[handle]");
+    return value;
   }
 
   /**
