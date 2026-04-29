@@ -570,11 +570,6 @@ export class ZamaSDK {
   /**
    * Encrypt one or more plaintext values into FHE ciphertexts.
    *
-   * This is the canonical encryption entrypoint — all internal write paths
-   * (Token transfers, unshield) and the query-layer mutation factory delegate
-   * here. Event lifecycle (`EncryptStart`/`End`/`Error`) is emitted in exactly
-   * one place.
-   *
    * @param params - Typed FHE inputs, the target contract address, and the user address.
    * @returns Encrypted handles and the input proof for on-chain submission.
    * @throws {@link EncryptionFailedError} if FHE encryption fails.
