@@ -545,8 +545,7 @@ export class ZamaSDK {
    *
    * @param handles - FHE handles paired with their contract addresses.
    * @param delegatorAddress - The address that granted delegation rights.
-   * @param options - Optional overrides.
-   * @param options.requesterAddress - Address used as the cache key's "requester"
+   * @param delegateAddress - Address used as the cache key's "requester"
    *   dimension. Defaults to `delegatorAddress`. Pass the actual account address
    *   when decrypting on behalf of someone whose balance is stored under a
    *   different address (e.g. `decryptBalanceAs` with an explicit `accountAddress`).
@@ -563,7 +562,7 @@ export class ZamaSDK {
   async delegatedUserDecrypt(
     handles: DecryptHandle[],
     delegatorAddress: Address,
-    requesterAddress: Address = delegatorAddress,
+    delegateAddress: Address = delegatorAddress,
   ): Promise<Record<Handle, ClearValueType>> {
     this.requireSigner("delegatedUserDecrypt");
     const delegatedCredentials = this.requireDelegatedCredentials("delegatedUserDecrypt");
@@ -573,7 +572,7 @@ export class ZamaSDK {
     }
 
     const normalizedDelegator = getAddress(delegatorAddress);
-    const normalizedRequester = getAddress(requesterAddress);
+    const requester = getAddress(delegateAddress);
 
     // Normalize addresses once at the top
     const normalized = handles.map((h) => ({
@@ -601,7 +600,7 @@ export class ZamaSDK {
     const uncached: DecryptHandle[] = [];
 
     for (const h of nonZero) {
-      const cached = await this.cache.get(normalizedRequester, h.contractAddress, h.handle);
+      const cached = await this.cache.get(requester, h.contractAddress, h.handle);
       if (cached !== null) {
         result[h.handle] = cached;
       } else {
@@ -657,7 +656,7 @@ export class ZamaSDK {
 
           for (const [handle, value] of Object.entries(decrypted)) {
             result[handle as Handle] = value;
-            await this.cache.set(normalizedRequester, contractAddress, handle as Handle, value);
+            await this.cache.set(requester, contractAddress, handle as Handle, value);
           }
         }),
         5,

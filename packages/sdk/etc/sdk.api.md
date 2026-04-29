@@ -20096,7 +20096,7 @@ export class ZamaSDK {
     readonly credentials: CredentialsManager | undefined;
     // (undocumented)
     readonly delegatedCredentials: DelegatedCredentialsManager | undefined;
-    delegatedUserDecrypt(handles: DecryptHandle[], delegatorAddress: Address, requesterAddress?: Address): Promise<Record<Handle, ClearValueType>>;
+    delegatedUserDecrypt(handles: DecryptHandle[], delegatorAddress: Address, delegateAddress?: Address): Promise<Record<Handle, ClearValueType>>;
     dispose(): void;
     // @internal
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
