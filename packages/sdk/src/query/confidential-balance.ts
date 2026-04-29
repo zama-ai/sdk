@@ -32,8 +32,6 @@ export function confidentialBalanceQueryOptions(
       return token.balanceOf(keyOwner);
     },
     enabled:
-      Boolean(config.account) &&
-      token.sdk.credentials !== undefined &&
-      queryOpts?.enabled !== false,
+      Boolean(config.account) && token.sdk.signer !== undefined && queryOpts?.enabled !== false,
   };
 }

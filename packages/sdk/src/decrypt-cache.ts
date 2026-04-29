@@ -27,7 +27,7 @@ import type { GenericStorage } from "./types";
  *
  * Lifecycle:
  * - Populated by {@link ZamaSDK.decrypt} after relayer calls.
- * - Cleared by {@link ZamaSDK.revoke} / {@link ZamaSDK.revokeSession} (per-requester).
+ * - Cleared by {@link ZamaSDK.revokePermits} / {@link ZamaSDK.clearCredentials} (per-requester).
  * - Cleared by signer lifecycle events (disconnect, account change, chain change).
  * - Survives page reloads when backed by persistent storage (e.g. IndexedDB).
  */

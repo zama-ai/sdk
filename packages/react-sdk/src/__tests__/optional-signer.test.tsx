@@ -13,8 +13,6 @@ describe("ZamaProvider with signer={undefined}", () => {
 
     expect(result.current).toBeDefined();
     expect(result.current.signer).toBeUndefined();
-    expect(result.current.credentials).toBeUndefined();
-    expect(result.current.delegatedCredentials).toBeUndefined();
   });
 
   it("useIsAllowed idles when no signer is configured", async ({ renderWithProviders }) => {

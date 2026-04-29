@@ -146,20 +146,20 @@ describe("createConfig", () => {
   describe("storage resolution", () => {
     it("uses user-provided storage", () => {
       const storage = createMockStorage();
-      const sessionStorage = createMockStorage();
+      const permitStorage = createMockStorage();
       const config = createViemConfig({
         chains: [sepolia],
         publicClient: {} as any,
         walletClient: {} as any,
         relayers: { [11155111]: web() },
         storage,
-        sessionStorage,
+        permitStorage,
       });
       expect(config.storage).toBe(storage);
-      expect(config.sessionStorage).toBe(sessionStorage);
+      expect(config.permitStorage).toBe(permitStorage);
     });
 
-    it("accepts the same storage instance for both storage and sessionStorage", () => {
+    it("accepts the same storage instance for both storage and permitStorage", () => {
       const sharedStorage = createMockStorage();
       const config = createViemConfig({
         chains: [sepolia],
@@ -167,10 +167,10 @@ describe("createConfig", () => {
         walletClient: {} as any,
         relayers: { [11155111]: web() },
         storage: sharedStorage,
-        sessionStorage: sharedStorage,
+        permitStorage: sharedStorage,
       });
       expect(config.storage).toBe(sharedStorage);
-      expect(config.sessionStorage).toBe(sharedStorage);
+      expect(config.permitStorage).toBe(sharedStorage);
     });
   });
 
@@ -191,7 +191,7 @@ describe("createConfig", () => {
   });
 
   describe("options passthrough", () => {
-    it("passes keypairTTL, sessionTTL, registryTTL, onEvent through", () => {
+    it("passes keypairTTL, permitDuration, registryTTL, onEvent through", () => {
       const onEvent = vi.fn();
       const config = createViemConfig({
         chains: [sepolia],
@@ -199,12 +199,12 @@ describe("createConfig", () => {
         walletClient: {} as any,
         relayers: { [11155111]: web() },
         keypairTTL: 86400,
-        sessionTTL: "infinite",
+        permitDuration: 7,
         registryTTL: 3600,
         onEvent,
       });
       expect(config.keypairTTL).toBe(86400);
-      expect(config.sessionTTL).toBe("infinite");
+      expect(config.permitDuration).toBe(7);
       expect(config.registryTTL).toBe(3600);
       expect(config.onEvent).toBe(onEvent);
     });

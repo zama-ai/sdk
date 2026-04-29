@@ -1,16 +1,25 @@
 import { getAddress, type Address } from "viem";
 import type { FheChain } from "./chains/types";
-import { CredentialsManager } from "./credentials/credentials-manager";
-import { DelegatedCredentialsManager } from "./credentials/delegated-credentials-manager";
+import {
+  CredentialService,
+  KeypairTTLSchema,
+  PermitDurationSchema,
+  type CredentialServiceConfig,
+} from "./credentials/credential-service";
+import type { AllowResult } from "./credentials/types";
 import { DecryptCache } from "./decrypt-cache";
-import { ChainMismatchError, SignerRequiredError, wrapDecryptError } from "./errors";
+import {
+  ChainMismatchError,
+  DecryptionFailedError,
+  SignerRequiredError,
+  wrapDecryptError,
+} from "./errors";
 import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventListener } from "./events/sdk-events";
 import { ZamaSDKEvents } from "./events/sdk-events";
 import type { DecryptHandle } from "./query/user-decrypt";
 import { isZeroHandle } from "./utils/handles";
 import type { RelayerDispatcher } from "./relayer/relayer-dispatcher";
 import type { ClearValueType, Handle, PublicDecryptResult } from "./relayer/relayer-sdk.types";
-import { MemoryStorage } from "./storage/memory-storage";
 import { ReadonlyToken } from "./token/readonly-token";
 import { Token } from "./token/token";
 import type {
@@ -23,9 +32,6 @@ import type {
 import { toError } from "./utils";
 import { pLimit } from "./utils/concurrency";
 import { WrappersRegistry } from "./wrappers-registry";
-
-/** Maximum keypairTTL accepted by the fhevm ACL contract (365 days, in seconds). */
-const MAX_KEYPAIR_TTL = 365 * 86400; // 31_536_000 s
 
 /** Run a best-effort cleanup step. Errors are logged, never thrown. */
 async function swallow(label: string, fn: () => Promise<void> | void): Promise<void> {
@@ -58,12 +64,6 @@ export interface ZamaSDKConfig {
   /** Credential storage backend (`IndexedDBStorage` for browser, `MemoryStorage` for tests). */
   storage: GenericStorage;
   /**
-   * Session storage for wallet signatures. Shared across all contracts in this SDK instance.
-   * Defaults to an in-memory store (lost on page reload). Pass a `chrome.storage.session`-backed
-   * implementation for web extensions so signatures survive service worker restarts.
-   */
-  sessionStorage?: GenericStorage;
-  /**
    * How long the ML-KEM re-encryption keypair remains valid, in seconds.
    * Default: `2592000` (30 days). Must be a positive number — `0` is rejected
    * because the keypair is required to establish the relayer connection.
@@ -72,13 +72,16 @@ export interface ZamaSDKConfig {
    */
   keypairTTL?: number;
   /**
-   * Controls how long session signatures (EIP-712 wallet signatures) remain valid, in seconds.
-   * Default: `2592000` (30 days).
-   * - `0`: never persist — every operation triggers a signing prompt (high-security mode).
-   * - `"infinite"`: session never expires.
-   * - Positive number: seconds until the session signature expires and requires re-authentication.
+   * Permit lifetime in days. Default: 30. Implicitly bounded by the keypair TTL —
+   * values above `keypairTTL / 86400` are clamped with a warning.
    */
-  sessionTTL?: number | "infinite";
+  permitDuration?: number;
+  /**
+   * Optional dedicated storage for permits. Defaults to `storage`. Use this
+   * to keep permits out of long-lived storage (e.g. IndexedDB → MemoryStorage)
+   * for high-security flows.
+   */
+  permitStorage?: GenericStorage;
   /** Optional structured event listener for debugging and telemetry. Never receives sensitive data. */
   onEvent?: ZamaSDKEventListener;
   /**
@@ -102,25 +105,17 @@ export class ZamaSDK {
   readonly provider: GenericProvider;
   readonly signer: GenericSigner | undefined;
   readonly storage: GenericStorage;
-  readonly sessionStorage: GenericStorage;
-  readonly credentials: CredentialsManager | undefined;
-  readonly delegatedCredentials: DelegatedCredentialsManager | undefined;
   /** Persistent cache for decrypted FHE plaintext values, scoped by (requester, contract, handle). */
   readonly cache: DecryptCache;
   /**
    * A {@link WrappersRegistry} instance auto-configured for the current chain.
    * Uses built-in defaults from chain configs, and the SDK's `registryTTL` if configured.
-   *
-   * @example
-   * ```ts
-   * const pairs = await sdk.registry.listPairs({ page: 1 });
-   * const result = await sdk.registry.getConfidentialToken(erc20Address);
-   * ```
    */
   readonly registry: WrappersRegistry;
   readonly #registryTTL: number | undefined;
   readonly #onEvent: ZamaSDKEventListener;
   readonly #identityListeners = new Set<SignerIdentityListener>();
+  readonly #credentialService: CredentialService | undefined;
   #unsubscribeSigner?: () => void;
 
   constructor(config: ZamaSDKConfig) {
@@ -128,7 +123,6 @@ export class ZamaSDK {
     this.provider = config.provider;
     this.signer = config.signer;
     this.storage = config.storage;
-    this.sessionStorage = config.sessionStorage ?? new MemoryStorage();
     this.cache = new DecryptCache(config.storage);
     this.#onEvent = config.onEvent ?? function () {};
     // Chain definitions provide defaults; explicit registryAddresses override them.
@@ -145,47 +139,39 @@ export class ZamaSDK {
       registryAddresses,
     });
     this.#registryTTL = config.registryTTL;
-    const keypairTTL = (() => {
-      const ttl = config.keypairTTL ?? 2592000;
-      if (ttl <= 0 || isNaN(ttl)) {
-        throw new Error("keypairTTL must be a positive number (seconds)");
-      }
-      if (ttl > MAX_KEYPAIR_TTL) {
-        // oxlint-disable-next-line no-console
-        console.warn(
-          `[zama-sdk] keypairTTL (${ttl}s) exceeds the fhevm maximum of 365 days (${MAX_KEYPAIR_TTL}s); capping to ${MAX_KEYPAIR_TTL}s.`,
-        );
-        return MAX_KEYPAIR_TTL;
-      }
-      return ttl;
-    })();
+    // Validate numeric config early — before the signer check — so callers get a fast,
+    // clear error even when constructing a read-only (no-signer) SDK instance.
+    if (config.keypairTTL !== undefined) {
+      KeypairTTLSchema.parse(config.keypairTTL);
+    }
+    if (config.permitDuration !== undefined) {
+      PermitDurationSchema.parse(config.permitDuration);
+    }
     if (config.signer) {
-      const credentialsConfig = {
-        relayer: this.relayer,
-        signer: config.signer,
-        storage: this.storage,
-        sessionStorage: this.sessionStorage,
-        keypairTTL,
-        sessionTTL: config.sessionTTL ?? 2592000,
-        onEvent: this.#onEvent,
-      };
-      this.credentials = new CredentialsManager(credentialsConfig);
-      this.delegatedCredentials = new DelegatedCredentialsManager(credentialsConfig);
+      const signer = config.signer;
+      this.#credentialService = new CredentialService(
+        buildCredentialServiceConfig(this.relayer, signer, {
+          keypairTTL: config.keypairTTL,
+          permitDuration: config.permitDuration,
+          storage: this.storage,
+          permitStorage: config.permitStorage,
+          onEvent: this.#onEvent,
+        }),
+      );
 
-      this.#unsubscribeSigner = config.signer.subscribe?.((change) => {
+      this.#unsubscribeSigner = signer.subscribe?.((change) => {
         void this.#handleIdentityChange(change);
       });
+
+      // Eager init — best-effort, errors swallowed.
+      void this.#credentialService.initialize();
     } else {
-      this.credentials = undefined;
-      this.delegatedCredentials = undefined;
+      this.#credentialService = undefined;
     }
   }
 
   /**
    * Return the configured signer or throw {@link SignerRequiredError}.
-   *
-   * Use this at the edge of any signer-required operation. The `operation`
-   * name surfaces in the error message so callers can distinguish failures.
    *
    * @throws {@link SignerRequiredError} if no signer is configured.
    */
@@ -196,28 +182,11 @@ export class ZamaSDK {
     return this.signer;
   }
 
-  /**
-   * Return the {@link CredentialsManager} or throw {@link SignerRequiredError}.
-   *
-   * @throws {@link SignerRequiredError} if no signer is configured.
-   */
-  requireCredentials(operation: string): CredentialsManager {
-    if (!this.credentials) {
+  #requireCredentialService(operation: string): CredentialService {
+    if (!this.#credentialService) {
       throw new SignerRequiredError(operation);
     }
-    return this.credentials;
-  }
-
-  /**
-   * Return the {@link DelegatedCredentialsManager} or throw {@link SignerRequiredError}.
-   *
-   * @throws {@link SignerRequiredError} if no signer is configured.
-   */
-  requireDelegatedCredentials(operation: string): DelegatedCredentialsManager {
-    if (!this.delegatedCredentials) {
-      throw new SignerRequiredError(operation);
-    }
-    return this.delegatedCredentials;
+    return this.#credentialService;
   }
 
   /**
@@ -262,10 +231,14 @@ export class ZamaSDK {
   }
 
   async #handleIdentityChange(change: SignerIdentityChange): Promise<void> {
-    const credentials = this.credentials;
-    if (change.previous && credentials) {
-      const previous = change.previous;
-      await swallow("revoke previous identity", () => credentials.revokeFor(previous));
+    const credentialService = this.#credentialService;
+    if (credentialService) {
+      await swallow("credential identity change", () =>
+        credentialService.handleIdentityChange(change.previous, change.next),
+      );
+    }
+    const previous = change.previous;
+    if (previous) {
       await swallow("clear decrypt cache", () => this.cache.clearForRequester(previous.address));
     }
     const nextChainId = change.next?.chainId;
@@ -360,27 +333,119 @@ export class ZamaSDK {
   }
 
   /**
-   * Pre-authorize contract addresses for decryption, triggering a single
-   * wallet signature prompt. Subsequent {@link userDecrypt} calls whose
-   * handles span the same set will reuse the cached credentials without
-   * an additional prompt.
+   * Pre-authorize contract addresses for direct decryption.
    *
-   * @param contractAddresses - One or more contract addresses to authorize.
+   * If a permit covering the requested set already exists, no wallet prompt
+   * occurs. Otherwise the SDK chunks the uncovered subset into groups of ≤10
+   * contracts and prompts once per chunk; partial mid-flight rejection is
+   * preserved (already-signed chunks are persisted before the next prompt).
    *
-   * @example
-   * ```ts
-   * // Sign once for three tokens, then decrypt individually
-   * await sdk.allow([cUSDT, cDAI, cWETH]);
-   * const a = await sdk.userDecrypt([{ handle: h1, contractAddress: cUSDT }]);
-   * const b = await sdk.userDecrypt([{ handle: h2, contractAddress: cDAI }]);
-   * ```
+   * @param contracts - Contract addresses to authorize.
    */
-  async allow(contractAddresses: Address[]): Promise<void> {
-    if (contractAddresses.length === 0) {
+  async allow(contracts: Address[]): Promise<void> {
+    if (contracts.length === 0) {
       return;
     }
-    const credentials = this.requireCredentials("allow");
-    await credentials.allow(...contractAddresses);
+    const service = this.#requireCredentialService("allow");
+    await service.allow(contracts);
+  }
+
+  /**
+   * Pre-authorize contract addresses for delegated decryption on behalf of `delegator`.
+   *
+   * @param delegator - The address that delegated decryption rights to the connected signer.
+   * @param contracts - Contract addresses to authorize.
+   */
+  async allowAs(delegator: Address, contracts: Address[]): Promise<void> {
+    if (contracts.length === 0) {
+      return;
+    }
+    const service = this.#requireCredentialService("allowAs");
+    await service.allow(contracts, delegator);
+  }
+
+  /**
+   * Pure store lookup: are stored permits sufficient to cover `contracts`?
+   * No wallet prompt, no keypair generation. Returns `false` when no signer
+   * is configured.
+   */
+  async isAllowed(contracts: Address[]): Promise<boolean> {
+    if (!this.#credentialService) {
+      return false;
+    }
+    return this.#credentialService.isAllowed(contracts);
+  }
+
+  /**
+   * Pure store lookup for a delegated scope. No wallet prompt. See {@link isAllowed}.
+   *
+   * @param delegator - The address that delegated decryption rights to the connected signer.
+   * @param contracts - Contract addresses to check.
+   * @returns `true` if cached delegated permits cover all requested contracts.
+   */
+  async isAllowedAs(delegator: Address, contracts: Address[]): Promise<boolean> {
+    if (!this.#credentialService) {
+      return false;
+    }
+    return this.#credentialService.isAllowed(contracts, delegator);
+  }
+
+  /**
+   * Decrypt FHE handles using delegated credentials without exposing key material
+   * or permit records to token-level callers.
+   *
+   * @internal
+   */
+  async delegatedUserDecrypt(
+    delegator: Address,
+    requests: { contractAddress: Address; handles: Handle[] }[],
+  ): Promise<Record<Handle, ClearValueType>> {
+    if (requests.length === 0) {
+      return {};
+    }
+    const signer = this.requireSigner("delegatedUserDecrypt");
+    const service = this.#requireCredentialService("delegatedUserDecrypt");
+    const normalizedDelegator = getAddress(delegator);
+    const normalizedRequests = requests.map((request) => ({
+      contractAddress: getAddress(request.contractAddress),
+      handles: request.handles,
+    }));
+    const contracts = [...new Set(normalizedRequests.map((request) => request.contractAddress))];
+    const { keypair, permissions } = await service.allow(contracts, normalizedDelegator);
+    if (keypair === null) {
+      throw new DecryptionFailedError("Delegated decryption requires at least one contract");
+    }
+    const delegateAddress = await signer.getAddress();
+    const result: Record<Handle, ClearValueType> = {};
+
+    await pLimit(
+      normalizedRequests.map((request) => async () => {
+        const permission = pickPermissionFor(permissions, request.contractAddress);
+        if (!permission) {
+          throw new DecryptionFailedError(
+            `No delegated permit covers contract ${request.contractAddress} after allow()`,
+          );
+        }
+        Object.assign(
+          result,
+          await this.relayer.delegatedUserDecrypt({
+            handles: request.handles,
+            contractAddress: request.contractAddress,
+            signedContractAddresses: permission.signedContractAddresses,
+            privateKey: keypair.privateKey,
+            publicKey: keypair.publicKey,
+            signature: permission.signature,
+            delegatorAddress: permission.delegatorAddress,
+            delegateAddress,
+            startTimestamp: permission.startTimestamp,
+            durationDays: permission.durationDays,
+          }),
+        );
+      }),
+      5,
+    );
+
+    return result;
   }
 
   /**
@@ -406,7 +471,7 @@ export class ZamaSDK {
    */
   async userDecrypt(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>> {
     const signer = this.requireSigner("userDecrypt");
-    const credentials = this.requireCredentials("userDecrypt");
+    const service = this.#requireCredentialService("userDecrypt");
     await this.requireChainAlignment("userDecrypt");
     if (handles.length === 0) {
       return {};
@@ -451,10 +516,15 @@ export class ZamaSDK {
       return result;
     }
 
-    // Derive contract addresses from ALL handles for stable credential cache key
-    const creds = await credentials.allow(...new Set(normalized.map((h) => h.contractAddress)));
+    // Use ALL handle contracts (not just uncached) so the credential dedup key stays stable
+    // across calls — avoids spinning up a new signing flow when the cached set changes.
+    const allContracts = Array.from(new Set(normalized.map((h) => h.contractAddress)));
+    const { keypair, permissions } = await service.allow(allContracts);
+    if (keypair === null) {
+      throw new DecryptionFailedError("User decryption requires at least one contract");
+    }
 
-    // Group uncached by contract
+    // Group uncached handles by contract.
     const byContract = new Map<Address, Handle[]>();
     for (const h of uncached) {
       const existing = byContract.get(h.contractAddress);
@@ -465,7 +535,6 @@ export class ZamaSDK {
       }
     }
 
-    // Decrypt per contract group with bounded concurrency
     const t0 = Date.now();
     const uncachedHandles = uncached.map((h) => h.handle);
 
@@ -477,16 +546,22 @@ export class ZamaSDK {
 
       await pLimit(
         [...byContract.entries()].map(([contractAddress, contractHandles]) => async () => {
+          const permission = pickPermissionFor(permissions, contractAddress);
+          if (!permission) {
+            throw new DecryptionFailedError(
+              `No permit covers contract ${contractAddress} after allow()`,
+            );
+          }
           const decrypted = await this.relayer.userDecrypt({
             handles: contractHandles,
             contractAddress,
-            signedContractAddresses: creds.contractAddresses,
-            privateKey: creds.privateKey,
-            publicKey: creds.publicKey,
-            signature: creds.signature,
+            signedContractAddresses: permission.signedContractAddresses,
+            privateKey: keypair.privateKey,
+            publicKey: keypair.publicKey,
+            signature: permission.signature,
             signerAddress,
-            startTimestamp: creds.startTimestamp,
-            durationDays: creds.durationDays,
+            startTimestamp: permission.startTimestamp,
+            durationDays: permission.durationDays,
           });
 
           for (const [handle, value] of Object.entries(decrypted)) {
@@ -556,26 +631,37 @@ export class ZamaSDK {
   }
 
   /**
-   * Revoke the session signature for the current signer without requiring
-   * contract addresses. Uses the tracked identity when available (safe during
-   * account switches), falling back to querying the signer directly.
+   * Wipe permits for the current direct-decrypt scope. With no argument, every
+   * permit for `(signer, chainId)` is removed; the keypair survives. Pass a
+   * contract list to remove only those addresses from existing permits.
    *
    * @throws {@link SignerRequiredError} if no signer is configured.
-   *
-   * @example
-   * ```ts
-   * wallet.on("disconnect", () => sdk.revokeSession());
-   * ```
    */
-  async revokeSession(): Promise<void> {
-    const signer = this.requireSigner("revokeSession");
-    const credentials = this.requireCredentials("revokeSession");
-    const address = await signer.getAddress();
-    const chainId = await signer.getChainId();
+  async revokePermits(contracts?: Address[]): Promise<void> {
+    const signer = this.requireSigner("revokePermits");
+    const service = this.#requireCredentialService("revokePermits");
+    const signerAddress = await signer.getAddress();
     try {
-      await credentials.revokeFor({ address, chainId });
+      await service.revokePermits(contracts);
     } finally {
-      await this.cache.clearForRequester(address);
+      await swallow("clear decrypt cache", () => this.cache.clearForRequester(signerAddress));
+    }
+  }
+
+  /**
+   * Wipe the keypair for the current signer and cascade-delete every permit
+   * (across chains and delegators) referencing it.
+   *
+   * @throws {@link SignerRequiredError} if no signer is configured.
+   */
+  async clearCredentials(): Promise<void> {
+    const signer = this.requireSigner("clearCredentials");
+    const service = this.#requireCredentialService("clearCredentials");
+    const signerAddress = await signer.getAddress();
+    try {
+      await service.clearCredentials();
+    } finally {
+      await swallow("clear decrypt cache", () => this.cache.clearForRequester(signerAddress));
     }
   }
 
@@ -616,4 +702,53 @@ export class ZamaSDK {
   [Symbol.dispose](): void {
     this.terminate();
   }
+}
+
+function pickPermissionFor(permissions: AllowResult["permissions"], contractAddress: Address) {
+  const target = getAddress(contractAddress);
+  for (const p of permissions) {
+    if (p.signedContractAddresses.some((a) => getAddress(a) === target)) {
+      return p;
+    }
+  }
+  return undefined;
+}
+
+function buildCredentialServiceConfig(
+  relayer: RelayerDispatcher,
+  signer: GenericSigner,
+  opts: Pick<
+    CredentialServiceConfig,
+    "keypairTTL" | "permitDuration" | "storage" | "permitStorage" | "onEvent"
+  >,
+): CredentialServiceConfig {
+  return {
+    keypairGenerator: {
+      generateKeypair: () => relayer.generateKeypair(),
+    },
+    permitFactory: {
+      createEIP712: (publicKey, contracts, startTimestamp, durationDays) =>
+        relayer.createEIP712(publicKey, contracts, startTimestamp, durationDays),
+      createDelegatedUserDecryptEIP712: (
+        publicKey,
+        contracts,
+        delegator,
+        startTimestamp,
+        durationDays,
+      ) =>
+        relayer.createDelegatedUserDecryptEIP712(
+          publicKey,
+          contracts,
+          delegator,
+          startTimestamp,
+          durationDays,
+        ),
+    },
+    permitSigner: {
+      signTypedData: (td) => signer.signTypedData(td),
+      getAddress: () => signer.getAddress(),
+      getChainId: () => signer.getChainId(),
+    },
+    ...opts,
+  };
 }

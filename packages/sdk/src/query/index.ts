@@ -97,7 +97,8 @@ export { requestZKProofVerificationMutationOptions } from "./request-zk-proof-ve
 export { allowMutationOptions } from "./allow";
 export { isAllowedQueryOptions, type IsAllowedQueryConfig } from "./is-allowed";
 export { revokeMutationOptions } from "./revoke";
-export { revokeSessionMutationOptions } from "./revoke-session";
+export { revokePermitsMutationOptions } from "./revoke-permits";
+export { clearCredentialsMutationOptions } from "./clear-credentials";
 export {
   delegateDecryptionMutationOptions,
   type DelegateDecryptionParams,
@@ -148,8 +149,7 @@ export type { ReadonlyToken } from "../token/readonly-token";
 export type { Token } from "../token/token";
 export type { ZamaSDKConfig } from "../zama-sdk";
 export type { ZamaSDK } from "../zama-sdk";
-export type { CredentialsManager } from "../credentials/credentials-manager";
-export type { CredentialsManagerConfig } from "../credentials/credentials-manager";
+export type { Keypair, KeypairGenerator, PermitFactory, PermitSigner } from "../credentials";
 export type {
   GenericSigner,
   GenericStorage,
@@ -157,7 +157,6 @@ export type {
   SignerIdentity,
   SignerIdentityChange,
   SignerIdentityListener,
-  StoredCredentials,
   TransactionReceipt,
   TransactionResult,
   ShieldOptions,

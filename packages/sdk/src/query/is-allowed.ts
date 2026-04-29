@@ -10,7 +10,7 @@ export interface IsAllowedQueryConfig {
   /**
    * Standard TanStack query options. `isAllowed` intentionally overrides cache
    * timing because credential state is wallet-local session state, not server
-   * state: every fetch should read the SDK credential manager directly.
+   * state: every fetch should read the SDK credential service directly.
    */
   query?: Record<string, unknown>;
 }
@@ -25,14 +25,12 @@ export function isAllowedQueryOptions(
     queryKey: zamaQueryKeys.isAllowed.scope(config.contractAddresses),
     queryFn: (context) => {
       const [, { contractAddresses }] = context.queryKey;
-      return sdk
-        .requireCredentials("isAllowed")
-        .isAllowed(contractAddresses as [Address, ...Address[]]);
+      return sdk.isAllowed(contractAddresses as Address[]);
     },
     staleTime: 0,
     gcTime: 0,
     refetchOnMount: "always",
     refetchOnWindowFocus: false,
-    enabled: callerEnabled && sdk.credentials !== undefined,
+    enabled: callerEnabled && sdk.signer !== undefined,
   } as const;
 }

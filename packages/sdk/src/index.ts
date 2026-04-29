@@ -1,7 +1,7 @@
 /**
  * TypeScript SDK for Zama's fhEVM — confidential smart contracts powered by Fully Homomorphic Encryption.
  *
- * Main classes: {@link ZamaSDK}, {@link Token}, {@link ReadonlyToken}, {@link CredentialsManager}.
+ * Main classes: {@link ZamaSDK}, {@link Token}, {@link ReadonlyToken}.
  *
  * @packageDocumentation
  */
@@ -96,12 +96,7 @@ export {
   ChromeSessionStorage,
   chromeSessionStorage,
 } from "./storage";
-export {
-  CredentialsManager,
-  type CredentialsManagerConfig,
-  DelegatedCredentialsManager,
-  type DelegatedCredentialsManagerConfig,
-} from "./credentials";
+export type { Keypair, KeypairGenerator, PermitFactory, PermitSigner } from "./credentials";
 export type {
   GenericSigner,
   GenericProvider,
@@ -109,8 +104,6 @@ export type {
   SignerIdentity,
   SignerIdentityChange,
   SignerIdentityListener,
-  StoredCredentials,
-  DelegatedStoredCredentials,
   ContractAbi,
   ReadContractConfig,
   ReadContractArgs,

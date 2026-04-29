@@ -1,13 +1,13 @@
 "use client";
 
-import { useIsAllowed, useRevoke, useRevokeSession, useAllow } from "@zama-fhe/react-sdk";
+import { useIsAllowed, useRevoke, useRevokePermits, useAllow } from "@zama-fhe/react-sdk";
 import type { Address } from "@zama-fhe/sdk";
 
 export function SessionPanel({ tokenAddresses }: { tokenAddresses: [Address, ...Address[]] }) {
   const { data: isAllowed, isLoading } = useIsAllowed({ contractAddresses: tokenAddresses });
   const { mutate: allow } = useAllow();
   const revoke = useRevoke();
-  const revokeSession = useRevokeSession();
+  const revokePermits = useRevokePermits();
 
   return (
     <div className="space-y-6" data-testid="session-panel">
@@ -37,12 +37,12 @@ export function SessionPanel({ tokenAddresses }: { tokenAddresses: [Address, ...
           </button>
 
           <button
-            onClick={() => revokeSession.mutate()}
-            disabled={revokeSession.isPending}
+            onClick={() => revokePermits.mutate([])}
+            disabled={revokePermits.isPending}
             className="px-4 py-2 bg-zama-surface border border-zama-border text-white font-medium rounded hover:bg-zama-border transition-colors disabled:opacity-50"
             data-testid="session-revoke-session-button"
           >
-            {revokeSession.isPending ? "Revoking..." : "Revoke Session"}
+            {revokePermits.isPending ? "Revoking... permits" : "Revoked Permits"}
           </button>
         </div>
 
@@ -56,14 +56,14 @@ export function SessionPanel({ tokenAddresses }: { tokenAddresses: [Address, ...
             Error: {revoke.error.message}
           </p>
         )}
-        {revokeSession.isSuccess && (
-          <p className="text-zama-success" data-testid="revoke-session-success">
-            Session revoked successfully
+        {revokePermits.isSuccess && (
+          <p className="text-zama-success" data-testid="revoke-permits-success">
+            Permits revoked successfully
           </p>
         )}
-        {revokeSession.isError && (
-          <p className="text-zama-error" data-testid="revoke-session-error">
-            Error: {revokeSession.error.message}
+        {revokePermits.isError && (
+          <p className="text-zama-error" data-testid="revoke-permits-error">
+            Error: {revokePermits.error.message}
           </p>
         )}
       </div>

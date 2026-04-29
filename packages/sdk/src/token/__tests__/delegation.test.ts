@@ -1,4 +1,4 @@
-import { createMockRelayer, describe, expect, it, vi } from "../../test-fixtures";
+import { createMockRelayer, describe, expect, it, TEST_PUBLIC_KEY, vi } from "../../test-fixtures";
 import { ReadonlyToken, ZERO_HANDLE } from "../readonly-token";
 import { Token } from "../token";
 import { getAddress, type Address } from "viem";
@@ -308,7 +308,7 @@ describe("decryptBalanceAs", () => {
       },
       types: { DelegatedUserDecryptRequestVerification: [] },
       message: {
-        publicKey: "0xpub",
+        publicKey: TEST_PUBLIC_KEY,
         contractAddresses: [tokenAddress],
         delegatorAddress,
         startTimestamp: "1000",
@@ -326,7 +326,7 @@ describe("decryptBalanceAs", () => {
     expect(balance).toBe(500n);
     expect(relayer.generateKeypair).toHaveBeenCalled();
     expect(relayer.createDelegatedUserDecryptEIP712).toHaveBeenCalledWith(
-      "0xpub",
+      TEST_PUBLIC_KEY,
       [tokenAddress],
       delegatorAddress,
       expect.any(Number),
@@ -381,7 +381,7 @@ describe("decryptBalanceAs", () => {
       },
       types: { DelegatedUserDecryptRequestVerification: [] },
       message: {
-        publicKey: "0xpub",
+        publicKey: TEST_PUBLIC_KEY,
         contractAddresses: [tokenAddress],
         delegatorAddress,
         startTimestamp: "1000",
@@ -432,7 +432,7 @@ describe("decryptBalanceAs", () => {
       },
       types: { DelegatedUserDecryptRequestVerification: [] },
       message: {
-        publicKey: "0xpub",
+        publicKey: TEST_PUBLIC_KEY,
         contractAddresses: [tokenAddress],
         delegatorAddress,
         startTimestamp: "1000",
@@ -520,7 +520,7 @@ describe("decryptBalanceAs", () => {
       },
       types: { DelegatedUserDecryptRequestVerification: [] },
       message: {
-        publicKey: "0xpub",
+        publicKey: TEST_PUBLIC_KEY,
         contractAddresses: [tokenAddress],
         delegatorAddress,
         startTimestamp: "1000",
@@ -560,7 +560,7 @@ describe("decryptBalanceAs", () => {
       },
       types: { DelegatedUserDecryptRequestVerification: [] },
       message: {
-        publicKey: "0xpub",
+        publicKey: TEST_PUBLIC_KEY,
         contractAddresses: [tokenAddress],
         delegatorAddress,
         startTimestamp: "1000",
@@ -596,7 +596,7 @@ describe("decryptBalanceAs", () => {
       domain: { name: "Decryption", version: "1", chainId: 1n, verifyingContract: "0xkms" },
       types: { DelegatedUserDecryptRequestVerification: [] },
       message: {
-        publicKey: "0xpub",
+        publicKey: TEST_PUBLIC_KEY,
         contractAddresses: [tokenAddress],
         delegatorAddress,
         startTimestamp: "1000",

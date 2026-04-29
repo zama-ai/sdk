@@ -332,29 +332,20 @@ export class ReadonlyToken {
       return results;
     }
 
-    const uncachedAddresses = uncached.map((entry) => entry.token.address);
-    const delegatedCredentials =
-      firstToken.sdk.requireDelegatedCredentials("batchDecryptBalancesAs");
-    const creds = await delegatedCredentials.allow(delegatorAddress, ...uncachedAddresses);
+    await firstToken.sdk.allowAs(
+      delegatorAddress,
+      uncached.map((entry) => entry.token.address),
+    );
 
     const errors: { address: Address; error: Error }[] = [];
     const decryptFns: (() => Promise<void>)[] = [];
 
     for (const { token, handle } of uncached) {
       decryptFns.push(() =>
-        firstToken.sdk.relayer
-          .delegatedUserDecrypt({
-            handles: [handle],
-            contractAddress: token.address,
-            signedContractAddresses: creds.contractAddresses,
-            privateKey: creds.privateKey,
-            publicKey: creds.publicKey,
-            signature: creds.signature,
-            delegatorAddress: creds.delegatorAddress,
-            delegateAddress: creds.delegateAddress,
-            startTimestamp: creds.startTimestamp,
-            durationDays: creds.durationDays,
-          })
+        firstToken.sdk
+          .delegatedUserDecrypt(delegatorAddress, [
+            { contractAddress: token.address, handles: [handle] },
+          ])
           .then(async (result) => {
             const value = result[handle];
             if (value === undefined) {
@@ -488,20 +479,18 @@ export class ReadonlyToken {
    * @throws {@link SignerRequiredError} if no signer is configured.
    */
   async isAllowed(): Promise<boolean> {
-    return this.sdk.requireCredentials("isAllowed").isAllowed([this.address]);
+    return this.sdk.isAllowed([this.address]);
   }
 
   /**
-   * Revoke cached session signatures for the given contract addresses, forcing
-   * a fresh wallet signature on the next decrypt operation for those contracts.
-   * Stored credentials remain intact; only the in-memory session signature is
-   * cleared.
+   * Revoke the stored permit covering this token by removing its address
+   * from every direct-decrypt permission for the current signer/chain. The
+   * keypair survives.
    *
-   * @param contractAddresses - Contract addresses to revoke credentials for.
    * @throws {@link SignerRequiredError} if no signer is configured.
    */
-  async revoke(...contractAddresses: Address[]): Promise<void> {
-    await this.sdk.requireCredentials("revoke").revoke(...contractAddresses);
+  async revoke(): Promise<void> {
+    await this.sdk.revokePermits([this.address]);
   }
 
   /**
@@ -665,21 +654,9 @@ export class ReadonlyToken {
     try {
       this.emit({ type: ZamaSDKEvents.DecryptStart, handles: [handle] });
 
-      const delegatedCredentials = this.sdk.requireDelegatedCredentials("decryptBalanceAs");
-      const creds = await delegatedCredentials.allow(normalizedDelegator, this.address);
-
-      const result = await this.sdk.relayer.delegatedUserDecrypt({
-        handles: [handle],
-        contractAddress: this.address,
-        signedContractAddresses: creds.contractAddresses,
-        privateKey: creds.privateKey,
-        publicKey: creds.publicKey,
-        signature: creds.signature,
-        delegatorAddress: creds.delegatorAddress,
-        delegateAddress: creds.delegateAddress,
-        startTimestamp: creds.startTimestamp,
-        durationDays: creds.durationDays,
-      });
+      const result = await this.sdk.delegatedUserDecrypt(normalizedDelegator, [
+        { contractAddress: this.address, handles: [handle] },
+      ]);
 
       // Validate the relayer response before emitting DecryptEnd so subscribers
       // never see a contradictory `Start → End → Error` sequence.

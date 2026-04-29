@@ -31,7 +31,7 @@ vi.mock(import("../../relayer/cleartext/relayer-cleartext"), async () => ({
 }));
 
 // Import after mocks
-const { resolveChainRelayers } = await import("../resolve");
+const { resolveChainRelayers, resolveStorage } = await import("../resolve");
 const { RelayerDispatcher } = await import("../../relayer/relayer-dispatcher");
 
 const sepoliaChain = sepolia;
@@ -124,6 +124,18 @@ describe("resolveChainRelayers", () => {
         [888]: node(),
       }),
     ).toThrow("Relayer entries for chain(s) [888, 999]");
+  });
+});
+
+describe("resolveStorage", () => {
+  it("defaults permitStorage to the resolved credential storage", () => {
+    const storage = {
+      get: vi.fn(),
+      set: vi.fn(),
+      delete: vi.fn(),
+    };
+
+    expect(resolveStorage(storage).permitStorage).toBe(storage);
   });
 });
 

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, type MockSigner } from "../../test-fixtures";
+import { describe, expect, it, TEST_PUBLIC_KEY, vi, type MockSigner } from "../../test-fixtures";
 import type { GenericProvider, GenericStorage } from "../../types";
 import { Topics } from "../../events";
 import { ReadonlyToken } from "../readonly-token";
@@ -8,12 +8,11 @@ import {
   type ZamaSDKEventListener,
   ZamaSDKEvents,
 } from "../../events/sdk-events";
-import { CredentialsManager } from "../../credentials/credentials-manager";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import { ZamaSDK } from "../../zama-sdk";
 import type { Address } from "viem";
 import { ZERO_HANDLE } from "../../utils/handles";
-const TOKEN_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
+const _TOKEN_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
 
 /**
  * Build a ZamaSDK with an event listener wired up, together with a fresh
@@ -25,7 +24,7 @@ function setupSdkWithEvents(opts: {
   signer: MockSigner;
   provider: GenericProvider;
   storage: GenericStorage;
-  sessionStorage: GenericStorage;
+  sessionStorage?: GenericStorage;
   tokenAddress: Address;
   wrapper?: Address;
 }) {
@@ -36,7 +35,6 @@ function setupSdkWithEvents(opts: {
     provider: opts.provider,
     signer: opts.signer,
     storage: opts.storage,
-    sessionStorage: opts.sessionStorage,
     onEvent,
   });
   const readonlyToken = new ReadonlyToken(sdk, opts.tokenAddress);
@@ -258,7 +256,7 @@ describe("ReadonlyToken.decryptBalanceAs event emissions", () => {
       domain: { name: "test", version: "1", chainId: 1, verifyingContract: "0xkms" },
       types: { DelegatedUserDecryptRequestVerification: [] },
       message: {
-        publicKey: "0xpub",
+        publicKey: TEST_PUBLIC_KEY,
         contractAddresses: [tokenAddress],
         delegatorAddress,
         delegateAddress: await signer.getAddress(),
@@ -868,175 +866,5 @@ describe("Token event emissions", () => {
       expect(txError).toBeDefined();
       expect("operation" in txError! && txError.operation).toBe("finalizeUnwrap");
     });
-  });
-});
-
-describe("CredentialsManager event emissions", () => {
-  it("emits CredentialsLoading and CredentialsCreating/Created on first call", async ({
-    relayer,
-    signer,
-    storage,
-    sessionStorage,
-  }) => {
-    const events: ZamaSDKEvent[] = [];
-    const onEvent: ZamaSDKEventListener = (event) => events.push(event);
-    const manager = new CredentialsManager({
-      relayer,
-      signer,
-      storage,
-      sessionStorage,
-      keypairTTL: 86400,
-      onEvent,
-    });
-
-    await manager.allow(TOKEN_A);
-
-    const types = events.map((e) => e.type);
-    expect(types).toContain(ZamaSDKEvents.CredentialsLoading);
-    expect(types).toContain(ZamaSDKEvents.CredentialsCreating);
-    expect(types).toContain(ZamaSDKEvents.CredentialsCreated);
-  });
-
-  it("emits CredentialsCached on cache hit", async ({ relayer, signer, createMockStorage }) => {
-    const events: ZamaSDKEvent[] = [];
-    const onEvent: ZamaSDKEventListener = (event) => events.push(event);
-    const store = createMockStorage();
-    const manager = new CredentialsManager({
-      relayer,
-      signer,
-      storage: store,
-      sessionStorage: createMockStorage(),
-      keypairTTL: 86400,
-      onEvent,
-    });
-
-    await manager.allow(TOKEN_A);
-    events.length = 0;
-
-    await manager.allow(TOKEN_A);
-
-    const types = events.map((e) => e.type);
-    expect(types).toContain(ZamaSDKEvents.CredentialsLoading);
-    expect(types).toContain(ZamaSDKEvents.CredentialsCached);
-    expect(types).not.toContain(ZamaSDKEvents.CredentialsCreating);
-  });
-
-  it("emits CredentialsExpired when credentials are expired", async ({
-    relayer,
-    signer,
-    createMockStorage,
-  }) => {
-    const events: ZamaSDKEvent[] = [];
-    const onEvent: ZamaSDKEventListener = (event) => events.push(event);
-    const store = createMockStorage();
-    const manager = new CredentialsManager({
-      relayer,
-      signer,
-      storage: store,
-      sessionStorage: createMockStorage(),
-      keypairTTL: 86400,
-      onEvent,
-    });
-
-    await manager.allow(TOKEN_A);
-
-    const storeKey = await CredentialsManager.computeStoreKey(
-      await signer.getAddress(),
-      await signer.getChainId(),
-    );
-    const stored = await store.get(storeKey);
-    const parsed = { ...(stored as Record<string, unknown>) };
-    parsed.startTimestamp = Math.floor(Date.now() / 1000) - 8 * 86400;
-    await store.set(storeKey, parsed);
-
-    events.length = 0;
-
-    const manager2 = new CredentialsManager({
-      relayer,
-      signer,
-      storage: store,
-      sessionStorage: createMockStorage(),
-      keypairTTL: 86400,
-      onEvent,
-    });
-    await manager2.allow(TOKEN_A);
-
-    const types = events.map((e) => e.type);
-    expect(types).toContain(ZamaSDKEvents.CredentialsExpired);
-    expect(types).toContain(ZamaSDKEvents.CredentialsCreating);
-    expect(types).toContain(ZamaSDKEvents.CredentialsCreated);
-  }, 30000);
-
-  it("includes contractAddresses on credential events", async ({
-    relayer,
-    signer,
-    storage,
-    sessionStorage,
-  }) => {
-    const events: ZamaSDKEvent[] = [];
-    const onEvent: ZamaSDKEventListener = (event) => events.push(event);
-    const manager = new CredentialsManager({
-      relayer,
-      signer,
-      storage,
-      sessionStorage,
-      keypairTTL: 86400,
-      onEvent,
-    });
-
-    await manager.allow(TOKEN_A);
-
-    const credEvents = events.filter(
-      (e) =>
-        e.type === ZamaSDKEvents.CredentialsLoading ||
-        e.type === ZamaSDKEvents.CredentialsCreating ||
-        e.type === ZamaSDKEvents.CredentialsCreated,
-    );
-    expect(credEvents.length).toBe(3);
-    for (const event of credEvents) {
-      expect("contractAddresses" in event && event.contractAddresses).toEqual([TOKEN_A]);
-    }
-  });
-
-  it("adds timestamp to all emitted events", async ({
-    relayer,
-    signer,
-    storage,
-    sessionStorage,
-  }) => {
-    const events: ZamaSDKEvent[] = [];
-    const onEvent: ZamaSDKEventListener = (event) => events.push(event);
-    const manager = new CredentialsManager({
-      relayer,
-      signer,
-      storage,
-      sessionStorage,
-      keypairTTL: 86400,
-      onEvent,
-    });
-
-    await manager.allow(TOKEN_A);
-
-    for (const event of events) {
-      expect(event.timestamp).toBeGreaterThan(0);
-    }
-  });
-
-  it("works without onEvent (no-op, does not throw)", async ({
-    relayer,
-    signer,
-    storage,
-    sessionStorage,
-  }) => {
-    const manager = new CredentialsManager({
-      relayer,
-      signer,
-      storage,
-      sessionStorage,
-      keypairTTL: 86400,
-    });
-
-    const creds = await manager.allow(TOKEN_A);
-    expect(creds.publicKey).toBe("0xpub");
   });
 });

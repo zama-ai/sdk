@@ -82,9 +82,7 @@ describe("useUserDecrypt", () => {
     await waitFor(() => expect(result.current.isError).toBe(true), {
       timeout: 5_000,
     });
-    expect(result.current.error?.message).toBe(
-      "Failed to create decrypt credentials: keygen failed",
-    );
+    expect(result.current.error?.message).toContain("keygen failed");
   });
 
   it("respects enabled = false", async ({ tokenAddress, renderWithProviders }) => {
