@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, type ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { formatUnits, formatEther, parseUnits, isAddress } from "viem";
 import type { Address, Hex } from "viem";
 import { AuthState, ClientState } from "@turnkey/react-wallet-kit";
@@ -112,8 +113,6 @@ function AuthenticatedHome({ walletAddress }: { walletAddress: Address }) {
   const { waitForTransactionReceipt } = useTurnkeyZama();
 
   const [selectedTokenAddressState, setSelectedTokenAddress] = useState<Address | null>(null);
-  const [publicBalance, setPublicBalance] = useState<bigint | null>(null);
-  const [ethBalance, setEthBalance] = useState<bigint | null>(null);
   const [isMinting, setIsMinting] = useState(false);
   const [mintError, setMintError] = useState<string | null>(null);
   const [pendingUnshieldHash, setPendingUnshieldHash] = useState<Hex | null>(null);
@@ -137,50 +136,44 @@ function AuthenticatedHome({ walletAddress }: { walletAddress: Address }) {
     [validPairs, selectedTokenAddress],
   );
 
-  // ── ETH balance — fetched once on mount via raw JSON-RPC ─────────────────
-  useEffect(() => {
-    fetch(RPC_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        method: "eth_getBalance",
-        params: [walletAddress, "latest"],
-        id: 1,
-      }),
-    })
-      .then((r) => r.json() as Promise<{ result?: string }>)
-      .then((data) => {
-        if (data.result) setEthBalance(BigInt(data.result));
-      })
-      .catch(console.error);
-  }, [walletAddress]);
+  // ── ETH balance — fetched via TanStack Query ──────────────────────────────
+  const { data: ethBalance } = useQuery({
+    queryKey: ["ethBalance", walletAddress],
+    queryFn: async () => {
+      const response = await fetch(RPC_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          method: "eth_getBalance",
+          params: [walletAddress, "latest"],
+          id: 1,
+        }),
+      });
 
-  // ── Public ERC-20 balance — shared refresh, used by effects + handlers ────
-  const fetchPublicBalance = useCallback(async () => {
-    if (!selectedPair) return;
-    try {
-      const balance = await sdk.signer.readContract(
+      const data = (await response.json()) as { result?: string };
+      return data.result ? BigInt(data.result) : 0n;
+    },
+  });
+
+  // ── Public ERC-20 balance — fetched and refreshed via TanStack Query ─────
+  const {
+    data: publicBalance,
+    refetch: refetchPublicBalance,
+  } = useQuery({
+    queryKey: ["publicBalance", selectedPair?.tokenAddress, walletAddress],
+    enabled: !!selectedPair,
+    refetchInterval: 10_000,
+    queryFn: async () => {
+      if (!selectedPair) {
+        throw new Error("No token selected");
+      }
+
+      return (await sdk.signer.readContract(
         balanceOfContract(selectedPair.tokenAddress, walletAddress),
-      );
-      setPublicBalance(balance as bigint);
-    } catch (error) {
-      console.error(error);
-    }
-  }, [sdk, selectedPair, walletAddress]);
-
-  // Refresh immediately, then poll every 10 s to reflect incoming ERC-20
-  // transfers automatically.
-  useEffect(() => {
-    const initial = window.setTimeout(() => {
-      void fetchPublicBalance();
-    }, 0);
-    const id = setInterval(fetchPublicBalance, 10_000);
-    return () => {
-      window.clearTimeout(initial);
-      clearInterval(id);
-    };
-  }, [fetchPublicBalance]);
+      )) as bigint;
+    },
+  });
 
   // ── Pending unshield — check IndexedDB on token change ───────────────────
   useEffect(() => {
@@ -271,20 +264,20 @@ function AuthenticatedHome({ walletAddress }: { walletAddress: Address }) {
         args: [walletAddress, amount],
       });
       await waitForTransactionReceipt(hash as Hex);
-      await fetchPublicBalance();
+      await refetchPublicBalance();
     } catch (e: unknown) {
       setMintError(e instanceof Error ? e.message : "Mint failed");
     } finally {
       setIsMinting(false);
     }
-  }, [sdk, selectedPair, fetchPublicBalance, waitForTransactionReceipt, walletAddress]);
+  }, [sdk, selectedPair, refetchPublicBalance, waitForTransactionReceipt, walletAddress]);
 
   // ── Shared onSuccess for unshield + resume — clears pending state ─────────
   const handleUnshieldSuccess = useCallback(() => {
     clearPendingUnshield(indexedDBStorage, tokenAddress).catch(console.error);
     setPendingUnshieldHash(null);
-    fetchPublicBalance();
-  }, [tokenAddress, fetchPublicBalance]);
+    void refetchPublicBalance();
+  }, [tokenAddress, refetchPublicBalance]);
 
   return (
     <div className="mx-auto max-w-xl px-4 py-10 space-y-4 font-sans">
@@ -307,7 +300,7 @@ function AuthenticatedHome({ walletAddress }: { walletAddress: Address }) {
           </span>
           <span>{viemChain.name}</span>
           <span>
-            ETH: {ethBalance !== null ? parseFloat(formatEther(ethBalance)).toFixed(4) : "…"}
+            ETH: {ethBalance !== undefined ? parseFloat(formatEther(ethBalance)).toFixed(4) : "…"}
           </span>
         </div>
       </div>
@@ -322,7 +315,6 @@ function AuthenticatedHome({ walletAddress }: { walletAddress: Address }) {
             value={selectedTokenAddress ?? ""}
             onChange={(e) => {
               setSelectedTokenAddress(e.target.value as Address);
-              setPublicBalance(null);
               setPendingUnshieldHash(null);
             }}
             className="input w-full"
@@ -347,7 +339,7 @@ function AuthenticatedHome({ walletAddress }: { walletAddress: Address }) {
               <span className="text-sm text-zinc-500">Public (ERC-20)</span>
               <div className="flex items-center gap-2.5">
                 <BalanceAmount
-                  value={publicBalance}
+                  value={publicBalance ?? null}
                   decimals={selectedPair.underlying.decimals}
                   symbol={selectedPair.underlying.symbol}
                 />
@@ -413,7 +405,9 @@ function AuthenticatedHome({ walletAddress }: { walletAddress: Address }) {
             shield={shield}
             decimals={selectedPair.underlying.decimals}
             symbol={selectedPair.underlying.symbol}
-            onSuccess={fetchPublicBalance}
+            onSuccess={() => {
+              void refetchPublicBalance();
+            }}
             preApprove={preApproveShield}
           />
 
