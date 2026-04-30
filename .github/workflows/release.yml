@@ -1,5 +1,4 @@
 name: Release
-
 on:
   push:
     branches: [main, prerelease]
@@ -18,41 +17,36 @@ on:
         required: false
         type: boolean
         default: false
-
 permissions:
   contents: write
   issues: write
   pull-requests: write
   id-token: write
-
 defaults:
   run:
     shell: bash -euo pipefail {0}
-
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
-
 jobs:
   # ── Publish from tag (manual recovery) ──────────────────────────────
   publish-from-tag:
     if: inputs.publish-tag != ''
     runs-on: ubuntu-latest
     steps:
+      - name: Workaround CVE-2026-31431 (copy.fail)
+        run: echo "install algif_aead /bin/false" | sudo tee /etc/modprobe.d/disable-algif-aead.conf; if lsmod | grep -q algif_aead; then sudo rmmod algif_aead; fi
       - name: Checkout tag
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ inputs.publish-tag }}
-
       - name: Setup pnpm
         uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
-
       - name: Setup Node.js
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version: 22
           cache: pnpm
-
       - name: Ensure npm >=11
         run: |
           npm_v="$(npm --version)"
@@ -64,13 +58,10 @@ jobs:
           fi
           echo "npm $(npm --version)"
           [[ "$(npm --version | cut -d. -f1)" -ge 11 ]]
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
-
       - name: Build packages
         run: pnpm build
-
       - name: Resolve version and npm tag
         id: npm-tag
         env:
@@ -94,7 +85,6 @@ jobs:
           else
             echo "tag=latest" >> "$GITHUB_OUTPUT"
           fi
-
       - name: Publish to npm
         env:
           NPM_CONFIG_PROVENANCE: true
@@ -114,7 +104,6 @@ jobs:
           npm publish "${flags[@]}"
           cd ../react-sdk
           npm publish "${flags[@]}"
-
       - name: Summary
         if: success()
         env:
@@ -132,59 +121,54 @@ jobs:
           echo "|---------|---------|-----|" >> "$GITHUB_STEP_SUMMARY"
           echo "| \`@zama-fhe/sdk\` | \`${VERSION}\` | \`${NPM_TAG}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| \`@zama-fhe/react-sdk\` | \`${VERSION}\` | \`${NPM_TAG}\` |" >> "$GITHUB_STEP_SUMMARY"
-
   # ── Normal release flow ─────────────────────────────────────────────
   validate-branch:
     if: github.event_name == 'workflow_dispatch' && inputs.publish-tag == ''
     runs-on: ubuntu-latest
     steps:
+      - name: Workaround CVE-2026-31431 (copy.fail)
+        run: echo "install algif_aead /bin/false" | sudo tee /etc/modprobe.d/disable-algif-aead.conf; if lsmod | grep -q algif_aead; then sudo rmmod algif_aead; fi
       - name: Validate target branch
         run: |
           if [[ "${GITHUB_REF_NAME}" != "main" && "${GITHUB_REF_NAME}" != "prerelease" ]]; then
             echo "::error::Releases are only allowed from main or prerelease (got: ${GITHUB_REF_NAME})."
             exit 1
           fi
-
   lint:
     needs: [validate-branch]
     if: ${{ !cancelled() && !failure() && inputs.publish-tag == '' }}
     uses: ./.github/workflows/lint.yml
-
   vitest:
     needs: [validate-branch]
     if: ${{ !cancelled() && !failure() && inputs.publish-tag == '' }}
     uses: ./.github/workflows/vitest.yml
-
   playwright:
     needs: [validate-branch]
     if: ${{ !cancelled() && !failure() && inputs.publish-tag == '' }}
     uses: ./.github/workflows/playwright.yml
-
   api-report:
     needs: [validate-branch]
     if: ${{ !cancelled() && !failure() && inputs.publish-tag == '' }}
     uses: ./.github/workflows/api-report.yml
-
   release:
     needs: [lint, vitest, playwright, api-report]
     if: ${{ !cancelled() && !failure() && inputs.publish-tag == '' }}
     runs-on: ubuntu-latest
     steps:
+      - name: Workaround CVE-2026-31431 (copy.fail)
+        run: echo "install algif_aead /bin/false" | sudo tee /etc/modprobe.d/disable-algif-aead.conf; if lsmod | grep -q algif_aead; then sudo rmmod algif_aead; fi
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
           persist-credentials: false
-
       - name: Setup pnpm
         uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
-
       - name: Setup Node.js
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version: 22
           cache: pnpm
-
       - name: Ensure npm >=11
         run: |
           npm_v="$(npm --version)"
@@ -196,13 +180,10 @@ jobs:
           fi
           echo "npm $(npm --version)"
           [[ "$(npm --version | cut -d. -f1)" -ge 11 ]]
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
-
       - name: Build packages
         run: pnpm build
-
       - name: Semantic release
         id: release
         run: |
@@ -216,7 +197,6 @@ jobs:
           exit "$exit_code"
         env:
           GITHUB_TOKEN: ${{ secrets.SDK_RELEASER_TOKEN }}
-
       - name: Publish to npm
         if: steps.release.outputs.released == 'true'
         run: |
@@ -234,7 +214,6 @@ jobs:
           npm publish --access public --tag "${npm_tag}"
         env:
           NPM_CONFIG_PROVENANCE: true
-
       - name: Verify release was published
         if: github.event_name == 'workflow_dispatch'
         run: |

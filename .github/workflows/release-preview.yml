@@ -1,48 +1,43 @@
 name: Release Preview
-
 on:
   workflow_dispatch:
-
 permissions:
   contents: read
-
 defaults:
   run:
     shell: bash -euo pipefail {0}
-
 concurrency:
   group: release-preview-${{ github.ref }}
   cancel-in-progress: true
-
 jobs:
   validate-branch:
     runs-on: ubuntu-latest
     steps:
+      - name: Workaround CVE-2026-31431 (copy.fail)
+        run: echo "install algif_aead /bin/false" | sudo tee /etc/modprobe.d/disable-algif-aead.conf; if lsmod | grep -q algif_aead; then sudo rmmod algif_aead; fi
       - name: Validate target branch
         run: |
           if [[ "${GITHUB_REF_NAME}" != "main" && "${GITHUB_REF_NAME}" != "prerelease" ]]; then
             echo "Release preview is only allowed from main or prerelease (got: ${GITHUB_REF_NAME})."
             exit 1
           fi
-
   preview:
     needs: [validate-branch]
     runs-on: ubuntu-latest
     steps:
+      - name: Workaround CVE-2026-31431 (copy.fail)
+        run: echo "install algif_aead /bin/false" | sudo tee /etc/modprobe.d/disable-algif-aead.conf; if lsmod | grep -q algif_aead; then sudo rmmod algif_aead; fi
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
-
       - name: Setup pnpm
         uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
-
       - name: Setup Node.js
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version: 22
           cache: pnpm
-
       - name: Ensure npm >=11
         run: |
           npm_v="$(npm --version)"
@@ -54,18 +49,14 @@ jobs:
           fi
           echo "npm $(npm --version)"
           [[ "$(npm --version | cut -d. -f1)" -ge 11 ]]
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
-
       - name: Build packages
         run: pnpm build
-
       - name: Semantic release (dry-run)
         run: pnpm release:dry-run 2>&1 | tee /tmp/dry-run-output.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Write preview summary
         if: always()
         run: |

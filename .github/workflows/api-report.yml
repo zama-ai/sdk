@@ -1,42 +1,35 @@
 name: API Report
-
 on:
   pull_request:
     branches: [main, prerelease]
   workflow_call:
-
 concurrency:
   group: api-report-${{ github.ref }}
   cancel-in-progress: true
-
 permissions:
   contents: read
   pull-requests: write
-
 jobs:
   api-report:
     runs-on: ubuntu-latest
     steps:
+      - name: Workaround CVE-2026-31431 (copy.fail)
+        run: echo "install algif_aead /bin/false" | sudo tee /etc/modprobe.d/disable-algif-aead.conf; if lsmod | grep -q algif_aead; then sudo rmmod algif_aead; fi
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           submodules: false
-
       - name: Setup pnpm
         uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
-
       - name: Setup Node.js
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version: 22
           cache: pnpm
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
-
       - name: Check API reports are up to date
         run: pnpm api-report:check
-
       - name: Extract base branch reports
         if: github.event_name == 'pull_request'
         env:
@@ -47,7 +40,6 @@ jobs:
           for f in $(git ls-tree -r --name-only "$BASE_SHA" -- packages/sdk/etc packages/react-sdk/etc 2>/dev/null | grep '\.api\.md$'); do
             git show "$BASE_SHA:$f" > "/tmp/api-reports/base/$(basename "$f")" 2>/dev/null || true
           done
-
       - name: Generate API diff
         if: github.event_name == 'pull_request'
         id: api-diff
@@ -63,7 +55,6 @@ jobs:
           else
             echo "No public API changes detected." >> "$GITHUB_STEP_SUMMARY"
           fi
-
       - name: Post or update PR comment
         if: github.event_name == 'pull_request'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
