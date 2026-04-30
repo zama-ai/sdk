@@ -96,7 +96,15 @@ export {
   ChromeSessionStorage,
   chromeSessionStorage,
 } from "./storage";
-export type { Keypair, KeypairGenerator, PermitFactory, PermitSigner } from "./credentials";
+export type {
+  CredentialBundle,
+  Keypair,
+  KeypairGenerator,
+  Permission,
+  PermitFactory,
+  PermitSigner,
+  StoredKeypair,
+} from "./credentials";
 export type {
   GenericSigner,
   GenericProvider,

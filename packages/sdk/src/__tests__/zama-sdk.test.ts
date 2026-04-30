@@ -624,6 +624,27 @@ describe("ZamaSDK", () => {
       await sdk.delegatedUserDecrypt([{ handle, contractAddress: CONTRACT_A }], DELEGATOR);
       expect(events.filter((e) => e.type === ZamaSDKEvents.DecryptStart)).toHaveLength(0);
     });
+
+    it("validates delegated credentials before returning cached plaintext", async ({
+      createSDK,
+      relayer,
+      signer,
+      handle,
+    }) => {
+      const sdk = createSDK();
+
+      await sdk.delegatedUserDecrypt([{ handle, contractAddress: CONTRACT_A }], DELEGATOR);
+      expect(relayer.delegatedUserDecrypt).toHaveBeenCalledOnce();
+
+      await sdk.clearCredentials();
+      vi.mocked(signer.signTypedData).mockRejectedValueOnce(new Error("rejected"));
+
+      await expect(
+        sdk.delegatedUserDecrypt([{ handle, contractAddress: CONTRACT_A }], DELEGATOR),
+      ).rejects.toThrow();
+
+      expect(relayer.delegatedUserDecrypt).toHaveBeenCalledOnce();
+    });
   });
 
   describe("publicDecrypt", () => {

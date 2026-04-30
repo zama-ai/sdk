@@ -36,7 +36,7 @@ export const StoredKeypairSchema = z.object({
   publicKey: hex,
   privateKey: hex,
   createdAt: unixSeconds,
-  durationSeconds: positiveSeconds,
+  expiresAt: positiveSeconds,
 });
 
 export const PermissionSchema = z.object({

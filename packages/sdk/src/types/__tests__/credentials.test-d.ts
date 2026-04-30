@@ -7,7 +7,7 @@ describe("StoredKeypair", () => {
     expectTypeOf<StoredKeypair["publicKey"]>().toEqualTypeOf<Hex>();
     expectTypeOf<StoredKeypair["privateKey"]>().toEqualTypeOf<Hex>();
     expectTypeOf<StoredKeypair["createdAt"]>().toEqualTypeOf<number>();
-    expectTypeOf<StoredKeypair["durationSeconds"]>().toEqualTypeOf<number>();
+    expectTypeOf<StoredKeypair["expiresAt"]>().toEqualTypeOf<number>();
   });
 });
 

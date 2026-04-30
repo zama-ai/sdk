@@ -9,11 +9,7 @@ export interface Keypair {
   privateKey: Hex;
 }
 
-/**
- * Persisted FHE keypair entry with a bounded lifetime.
- *
- * @remarks The private key is stored in plaintext; security depends on the chosen storage backend.
- */
+/** Persisted FHE keypair entry with a bounded lifetime. */
 export type StoredKeypair = z.infer<typeof StoredKeypairSchema>;
 
 /**
@@ -22,13 +18,10 @@ export type StoredKeypair = z.infer<typeof StoredKeypairSchema>;
  */
 export type Permission = z.infer<typeof PermissionSchema>;
 
-/**
- * Result returned by {@link CredentialService.allow} — the resolved keypair
- * and the permissions that cover the requested contract set.
- */
-export interface AllowResult {
-  keypair: StoredKeypair | null;
-  permissions: Permission[];
+/** Resolved credentials for a decrypt operation. */
+export interface CredentialBundle {
+  readonly keypair: StoredKeypair;
+  readonly permits: readonly Permission[];
 }
 
 /** Generates fresh ML-KEM keypairs. */

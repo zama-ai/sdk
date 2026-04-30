@@ -4,8 +4,8 @@ import { PermissionListSchema, ScopeIndexSchema } from "./schemas";
 import type { Permission } from "./types";
 import { permissionIndexKey, permissionScopeKey } from "./storage-keys";
 import {
+  deletePermitsTouchingContracts,
   pruneUnusablePermissions,
-  removeContractsFromPermissions,
   upsertPermission,
 } from "./permissions";
 
@@ -68,7 +68,7 @@ export class PermissionStore {
    * Return permissions that are still live and bound to the current keypair.
    * Expired or stale-keypair permissions are pruned in one storage pass.
    */
-  async listUsable(scope: PermissionScope, keypairPublicKey: Hex): Promise<Permission[]> {
+  async listUsableAndPrune(scope: PermissionScope, keypairPublicKey: Hex): Promise<Permission[]> {
     const all = await this.list(scope);
     const { permissions, changed } = pruneUnusablePermissions({
       permissions: all,
@@ -89,28 +89,39 @@ export class PermissionStore {
   }
 
   /**
-   * Persist a new permission for the given scope, replacing any existing entry
-   * with the same signed contract address set.
+   * Append signed permits for the given scope.
+   *
+   * Signed permit payloads are immutable. Existing entries with the same signed
+   * contract set are replaced wholesale; no signed field is edited in place.
    */
-  async add(scope: PermissionScope, permission: Permission): Promise<void> {
+  async append(scope: PermissionScope, permissions: readonly Permission[]): Promise<void> {
+    if (permissions.length === 0) {
+      return;
+    }
     const key = await PermissionStore.scopeKey(scope);
     const existing = await this.list(scope);
+    const next = permissions.reduce<Permission[]>(
+      (acc, permission) => upsertPermission(acc, permission),
+      existing,
+    );
 
     await this.#trackScope(scope);
-    await this.#storage.set(key, upsertPermission(existing, permission));
+    await this.#storage.set(key, next);
   }
 
   /**
-   * Remove specific contract addresses from every permission in the scope.
-   * Permissions that become empty after filtering are dropped entirely.
+   * Delete every permit whose signed payload touches any listed contract.
+   *
+   * The store never edits `signedContractAddresses`, because that field is part
+   * of the EIP-712 payload covered by `signature`.
    */
-  async removeContracts(scope: PermissionScope, contractsToRemove: Address[]): Promise<void> {
+  async deletePermitsTouching(scope: PermissionScope, contractsToRemove: Address[]): Promise<void> {
     const key = await PermissionStore.scopeKey(scope);
     const existing = await this.list(scope);
     if (existing.length === 0) {
       return;
     }
-    const next = removeContractsFromPermissions(existing, contractsToRemove);
+    const next = deletePermitsTouchingContracts(existing, contractsToRemove);
     if (next.length === 0) {
       await safeDelete(this.#storage, key);
     } else {

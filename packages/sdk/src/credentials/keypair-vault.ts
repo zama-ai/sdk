@@ -34,12 +34,7 @@ export class KeypairVault {
     return keypairStorageKey(signerAddress);
   }
 
-  /**
-   * Read the stored keypair for the given signer address.
-   *
-   * @returns The keypair, or `null` if absent or expired.
-   */
-  async get(signerAddress: Address): Promise<StoredKeypair | null> {
+  async readStored(signerAddress: Address): Promise<StoredKeypair | null> {
     const key = await KeypairVault.storageKey(signerAddress);
     const raw = await this.#storage.get(key);
     if (raw === null || raw === undefined) {
@@ -47,22 +42,16 @@ export class KeypairVault {
     }
     const parsed = StoredKeypairSchema.safeParse(raw);
     if (!parsed.success) {
-      // Treat invalid shape as corruption — drop the entry so a fresh one can be generated.
       await safeDelete(this.#storage, key);
       return null;
     }
     const stored = parsed.data;
     const nowSeconds = Math.floor(Date.now() / 1000);
-    if (nowSeconds >= stored.createdAt + stored.durationSeconds) {
+    if (nowSeconds >= stored.expiresAt) {
       await safeDelete(this.#storage, key);
       return null;
     }
     return stored;
-  }
-
-  /** Returns `true` if a valid, non-expired keypair exists for the given address. */
-  async has(signerAddress: Address): Promise<boolean> {
-    return (await this.get(signerAddress)) !== null;
   }
 
   /**
@@ -78,16 +67,17 @@ export class KeypairVault {
     }
 
     const promise = (async () => {
-      const cached = await this.get(checksummed);
+      const cached = await this.readStored(checksummed);
       if (cached !== null) {
         return cached;
       }
       const fresh = await this.#generator.generateKeypair();
+      const createdAt = Math.floor(Date.now() / 1000);
       const stored: StoredKeypair = {
         publicKey: fresh.publicKey,
         privateKey: fresh.privateKey,
-        createdAt: Math.floor(Date.now() / 1000),
-        durationSeconds: this.#ttl,
+        createdAt,
+        expiresAt: createdAt + this.#ttl,
       };
       const key = await KeypairVault.storageKey(checksummed);
       try {

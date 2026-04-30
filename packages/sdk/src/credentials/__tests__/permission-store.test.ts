@@ -46,7 +46,7 @@ describe("PermissionStore", () => {
   it("add then list round-trips a permission", async () => {
     const store = new PermissionStore({ storage: new MemoryStorage() });
     const permission = makePermission({ signedContractAddresses: [TOKEN_A] });
-    await store.add(directScope, permission);
+    await store.append(directScope, [permission]);
     const list = await store.list(directScope);
     expect(list).toHaveLength(1);
     expect(list[0]!.signedContractAddresses).toEqual([TOKEN_A]);
@@ -54,63 +54,61 @@ describe("PermissionStore", () => {
 
   it("add replaces in place when signedContractAddresses match", async () => {
     const store = new PermissionStore({ storage: new MemoryStorage() });
-    await store.add(
-      directScope,
+    await store.append(directScope, [
       makePermission({ signedContractAddresses: [TOKEN_A], signature: SIGNATURE }),
-    );
-    await store.add(
-      directScope,
+    ]);
+    await store.append(directScope, [
       makePermission({ signedContractAddresses: [TOKEN_A], signature: OTHER_SIGNATURE }),
-    );
+    ]);
     const list = await store.list(directScope);
     expect(list).toHaveLength(1);
     expect(list[0]!.signature).toBe(OTHER_SIGNATURE);
   });
 
-  it("removeContracts drops listed addresses; permissions emptied are removed", async () => {
+  it("deletePermitsTouching drops every permit that contains a listed address", async () => {
     const store = new PermissionStore({ storage: new MemoryStorage() });
-    await store.add(directScope, makePermission({ signedContractAddresses: [TOKEN_A, TOKEN_B] }));
-    await store.removeContracts(directScope, [TOKEN_A]);
+    await store.append(directScope, [
+      makePermission({ signedContractAddresses: [TOKEN_A, TOKEN_B] }),
+    ]);
+    await store.deletePermitsTouching(directScope, [TOKEN_A]);
     const list = await store.list(directScope);
-    expect(list).toHaveLength(1);
-    expect(list[0]!.signedContractAddresses).toEqual([TOKEN_B]);
+    expect(list).toHaveLength(0);
 
-    await store.removeContracts(directScope, [TOKEN_B]);
+    await store.append(directScope, [makePermission({ signedContractAddresses: [TOKEN_B] })]);
+    await store.deletePermitsTouching(directScope, [TOKEN_B]);
     const after = await store.list(directScope);
     expect(after).toHaveLength(0);
   });
 
   it("clear() removes the scope entry", async () => {
     const store = new PermissionStore({ storage: new MemoryStorage() });
-    await store.add(directScope, makePermission({ signedContractAddresses: [TOKEN_A] }));
+    await store.append(directScope, [makePermission({ signedContractAddresses: [TOKEN_A] })]);
     await store.clear(directScope);
     expect(await store.list(directScope)).toEqual([]);
   });
 
   it("direct and delegated scopes do not collide", async () => {
     const store = new PermissionStore({ storage: new MemoryStorage() });
-    await store.add(directScope, makePermission({ signedContractAddresses: [TOKEN_A] }));
-    await store.add(
-      delegatedScope,
+    await store.append(directScope, [makePermission({ signedContractAddresses: [TOKEN_A] })]);
+    await store.append(delegatedScope, [
       makePermission({
         signedContractAddresses: [TOKEN_B],
         delegatorAddress: DELEGATOR,
       }),
-    );
+    ]);
     expect(await store.list(directScope)).toHaveLength(1);
     expect(await store.list(delegatedScope)).toHaveLength(1);
   });
 
   it("clearAllForSigner wipes every scope across delegators", async () => {
     const store = new PermissionStore({ storage: new MemoryStorage() });
-    await store.add(directScope, makePermission({ signedContractAddresses: [TOKEN_A] }));
-    await store.add(
-      delegatedScope,
+    await store.append(directScope, [makePermission({ signedContractAddresses: [TOKEN_A] })]);
+    await store.append(delegatedScope, [
       makePermission({
         signedContractAddresses: [TOKEN_B],
         delegatorAddress: DELEGATOR,
       }),
-    );
+    ]);
     await store.clearAllForSigner(USER);
     expect(await store.list(directScope)).toEqual([]);
     expect(await store.list(delegatedScope)).toEqual([]);
@@ -142,31 +140,28 @@ describe("PermissionStore", () => {
     expect(await storage.get(indexKey)).toBeNull();
   });
 
-  it("listUsable removes time-expired permits", async () => {
+  it("listUsableAndPrune removes time-expired permits", async () => {
     const store = new PermissionStore({ storage: new MemoryStorage() });
-    await store.add(
-      directScope,
+    await store.append(directScope, [
       makePermission({
         signedContractAddresses: [TOKEN_A],
         startTimestamp: Math.floor(Date.now() / 1000) - 60 * 86400,
         durationDays: 30,
       }),
-    );
-    const surviving = await store.listUsable(directScope, PUBLIC_KEY);
+    ]);
+    const surviving = await store.listUsableAndPrune(directScope, PUBLIC_KEY);
     expect(surviving).toEqual([]);
   });
 
-  it("listUsable filters out permissions bound to other keypairs", async () => {
+  it("listUsableAndPrune filters out permissions bound to other keypairs", async () => {
     const store = new PermissionStore({ storage: new MemoryStorage() });
-    await store.add(
-      directScope,
+    await store.append(directScope, [
       makePermission({ signedContractAddresses: [TOKEN_A], keypairPublicKey: OTHER_PUBLIC_KEY }),
-    );
-    await store.add(
-      directScope,
+    ]);
+    await store.append(directScope, [
       makePermission({ signedContractAddresses: [TOKEN_B], keypairPublicKey: PUBLIC_KEY }),
-    );
-    const surviving = await store.listUsable(directScope, PUBLIC_KEY);
+    ]);
+    const surviving = await store.listUsableAndPrune(directScope, PUBLIC_KEY);
     expect(surviving).toHaveLength(1);
     expect(surviving[0]!.signedContractAddresses).toEqual([TOKEN_B]);
   });

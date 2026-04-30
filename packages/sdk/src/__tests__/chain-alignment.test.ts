@@ -76,6 +76,43 @@ describe("requireChainAlignment", () => {
     expect(relayer.userDecrypt).not.toHaveBeenCalled();
   });
 
+  it("sdk.allow throws ChainMismatchError before signing credentials", async ({
+    relayer,
+    provider,
+    signer,
+    storage,
+    tokenAddress,
+  }) => {
+    vi.mocked(signer.getChainId).mockResolvedValue(1);
+    vi.mocked(provider.getChainId).mockResolvedValue(11155111);
+    const sdk = new ZamaSDK({ relayer, provider, signer, storage });
+
+    await expect(sdk.allow([tokenAddress as Address])).rejects.toBeInstanceOf(ChainMismatchError);
+
+    expect(signer.signTypedData).not.toHaveBeenCalled();
+    expect(relayer.createEIP712).not.toHaveBeenCalled();
+  });
+
+  it("sdk.allowAs throws ChainMismatchError before signing delegated credentials", async ({
+    relayer,
+    provider,
+    signer,
+    storage,
+    tokenAddress,
+    delegatorAddress,
+  }) => {
+    vi.mocked(signer.getChainId).mockResolvedValue(1);
+    vi.mocked(provider.getChainId).mockResolvedValue(11155111);
+    const sdk = new ZamaSDK({ relayer, provider, signer, storage });
+
+    await expect(sdk.allowAs(delegatorAddress, [tokenAddress as Address])).rejects.toBeInstanceOf(
+      ChainMismatchError,
+    );
+
+    expect(signer.signTypedData).not.toHaveBeenCalled();
+    expect(relayer.createDelegatedUserDecryptEIP712).not.toHaveBeenCalled();
+  });
+
   it("ReadonlyToken.decryptBalanceAs throws ChainMismatchError before calling relayer", async ({
     relayer,
     provider,

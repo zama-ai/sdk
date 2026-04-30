@@ -49,17 +49,17 @@ describe("KeypairVault", () => {
     expect(generator.generateKeypair).toHaveBeenCalledTimes(2);
   });
 
-  it("has() returns false when no keypair exists", async () => {
+  it("readStored returns null when no keypair exists", async () => {
     const generator = createGenerator();
     const vault = new KeypairVault({ generator, storage: new MemoryStorage(), ttl: 86400 });
-    expect(await vault.has(USER)).toBe(false);
+    expect(await vault.readStored(USER)).toBeNull();
   });
 
-  it("has() returns true after getOrCreate", async () => {
+  it("readStored returns the keypair after getOrCreate", async () => {
     const generator = createGenerator();
     const vault = new KeypairVault({ generator, storage: new MemoryStorage(), ttl: 86400 });
-    await vault.getOrCreate(USER);
-    expect(await vault.has(USER)).toBe(true);
+    const keypair = await vault.getOrCreate(USER);
+    expect(await vault.readStored(USER)).toEqual(keypair);
   });
 
   it("clear() removes the entry", async () => {
@@ -67,7 +67,7 @@ describe("KeypairVault", () => {
     const vault = new KeypairVault({ generator, storage: new MemoryStorage(), ttl: 86400 });
     await vault.getOrCreate(USER);
     await vault.clear(USER);
-    expect(await vault.has(USER)).toBe(false);
+    expect(await vault.readStored(USER)).toBeNull();
   });
 
   it("drops malformed stored keypairs", async () => {
@@ -79,10 +79,10 @@ describe("KeypairVault", () => {
       publicKey: "0xnot-hex",
       privateKey: PRIVATE_KEY,
       createdAt: Math.floor(Date.now() / 1000),
-      durationSeconds: 86400,
+      expiresAt: Math.floor(Date.now() / 1000) + 86400,
     });
 
-    expect(await vault.get(USER)).toBeNull();
+    expect(await vault.readStored(USER)).toBeNull();
     expect(await storage.get(key)).toBeNull();
   });
 
@@ -95,10 +95,10 @@ describe("KeypairVault", () => {
       publicKey: PUBLIC_KEY,
       privateKey: PRIVATE_KEY,
       createdAt: Math.floor(Date.now() / 1000) - 86401,
-      durationSeconds: 86400,
+      expiresAt: Math.floor(Date.now() / 1000) - 1,
     });
 
-    expect(await vault.get(USER)).toBeNull();
+    expect(await vault.readStored(USER)).toBeNull();
     expect(await storage.get(key)).toBeNull();
   });
 

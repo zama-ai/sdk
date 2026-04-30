@@ -270,7 +270,7 @@ export class ReadonlyToken {
       return new Map();
     }
 
-    const { delegatorAddress, handles, accountAddress, onError } = options;
+    const { delegatorAddress, handles, accountAddress, onError, maxConcurrency } = options;
     const normalizedAccount = accountAddress
       ? getAddress(accountAddress)
       : getAddress(delegatorAddress);

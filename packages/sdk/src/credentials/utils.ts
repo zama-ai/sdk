@@ -4,12 +4,12 @@ import { getAddress, type Address } from "viem";
 export const MAX_CONTRACTS_PER_PERMIT = 10;
 
 /** Deduplicate and sort a list of addresses by their checksummed form. */
-export function normalizeAddresses(addresses: Address[]): Address[] {
+export function normalizeAddresses(addresses: readonly Address[]): Address[] {
   return [...new Set(addresses.map((address) => getAddress(address)))].toSorted();
 }
 
 /** Check that the signed address set covers all required addresses. */
-export function coversContracts(signed: Address[], required: Address[]): boolean {
+export function coversContracts(signed: readonly Address[], required: readonly Address[]): boolean {
   if (required.length === 0) {
     return true;
   }

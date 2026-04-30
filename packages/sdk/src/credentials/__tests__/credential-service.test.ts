@@ -105,13 +105,14 @@ describe("CredentialService.allow", () => {
     expect(signer.signTypedData).toHaveBeenCalledTimes(2);
   });
 
-  it("does not create a keypair for an empty contract list", async () => {
+  it("warms a keypair without prompting for permits", async () => {
     const { service, generator } = setup();
 
     const result = await service.allow([]);
 
-    expect(result).toEqual({ keypair: null, permissions: [] });
-    expect(generator.generateKeypair).not.toHaveBeenCalled();
+    expect(result.keypair.publicKey).toBe(PUBLIC_KEY);
+    expect(result.permits).toEqual([]);
+    expect(generator.generateKeypair).toHaveBeenCalledOnce();
   });
 
   it("emits CredentialsCreated and CredentialsAllowed", async () => {
@@ -160,12 +161,12 @@ describe("CredentialService.revokePermits", () => {
     expect(await service.isAllowed([TOKEN_A])).toBe(false);
   });
 
-  it("removes only the specified contracts", async () => {
+  it("removes permits that touch the specified contracts", async () => {
     const { service } = setup();
     await service.allow([TOKEN_A, TOKEN_B]);
     await service.revokePermits([TOKEN_A]);
     expect(await service.isAllowed([TOKEN_A])).toBe(false);
-    expect(await service.isAllowed([TOKEN_B])).toBe(true);
+    expect(await service.isAllowed([TOKEN_B])).toBe(false);
   });
 
   it("emits CredentialsRevoked", async () => {

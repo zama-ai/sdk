@@ -6,11 +6,13 @@ import {
   PermitDurationSchema,
   type CredentialServiceConfig,
 } from "./credentials/credential-service";
-import type { AllowResult } from "./credentials/types";
+import {
+  resolveDelegatedDecryptPermit,
+  resolveUserDecryptPermit,
+} from "./credentials/decrypt-permit";
 import { DecryptCache } from "./decrypt-cache";
 import {
   ChainMismatchError,
-  DecryptionFailedError,
   EncryptionFailedError,
   SignerRequiredError,
   wrapDecryptError,
@@ -355,6 +357,7 @@ export class ZamaSDK {
       return;
     }
     const service = this.#requireCredentialService("allow");
+    await this.requireChainAlignment("allow");
     await service.allow(contracts);
   }
 
@@ -369,6 +372,7 @@ export class ZamaSDK {
       return;
     }
     const service = this.#requireCredentialService("allowAs");
+    await this.requireChainAlignment("allowAs");
     await service.allow(contracts, delegator);
   }
 
@@ -466,13 +470,9 @@ export class ZamaSDK {
       return result;
     }
 
-    // Use ALL handle contracts (not just uncached) so the credential dedup key stays stable
-    // across calls — avoids spinning up a new signing flow when the cached set changes.
+    // Derive contract addresses from ALL handles for stable credential cache key
     const allContracts = Array.from(new Set(normalized.map((h) => h.contractAddress)));
-    const { keypair, permissions } = await service.allow(allContracts);
-    if (keypair === null) {
-      throw new DecryptionFailedError("User decryption requires at least one contract");
-    }
+    const credentials = await service.allow(allContracts);
 
     // Group uncached handles by contract.
     const byContract = new Map<Address, Handle[]>();
@@ -496,22 +496,11 @@ export class ZamaSDK {
 
       await pLimit(
         [...byContract.entries()].map(([contractAddress, contractHandles]) => async () => {
-          const permission = pickPermissionFor(permissions, contractAddress);
-          if (!permission) {
-            throw new DecryptionFailedError(
-              `No permit covers contract ${contractAddress} after allow()`,
-            );
-          }
           const decrypted = await this.relayer.userDecrypt({
             handles: contractHandles,
             contractAddress,
-            signedContractAddresses: permission.signedContractAddresses,
-            privateKey: keypair.privateKey,
-            publicKey: keypair.publicKey,
-            signature: permission.signature,
+            ...resolveUserDecryptPermit(credentials, contractAddress),
             signerAddress,
-            startTimestamp: permission.startTimestamp,
-            durationDays: permission.durationDays,
           });
 
           for (const [handle, value] of Object.entries(decrypted)) {
@@ -609,6 +598,12 @@ export class ZamaSDK {
       return result;
     }
 
+    // Delegated cache hits must still sit behind the current delegate's
+    // authorization. Otherwise shared storage could return plaintext from a
+    // previous delegate/session without a live delegated permit.
+    const allContracts = Array.from(new Set(normalized.map((h) => h.contractAddress)));
+    const credentials = await service.allow(allContracts, normalizedDelegator);
+
     // Cache partition
     const uncached: DecryptHandle[] = [];
 
@@ -625,12 +620,6 @@ export class ZamaSDK {
       return result;
     }
 
-    // Derive contract addresses from ALL handles for stable credential cache key
-    const allContracts = Array.from(new Set(normalized.map((h) => h.contractAddress)));
-    const { keypair, permissions } = await service.allow(allContracts, normalizedDelegator);
-    if (keypair === null) {
-      throw new DecryptionFailedError("Delegated decryption requires at least one contract");
-    }
     const delegateAddress = await signer.getAddress();
 
     // Group uncached by contract
@@ -656,23 +645,11 @@ export class ZamaSDK {
 
       await pLimit(
         [...byContract.entries()].map(([contractAddress, contractHandles]) => async () => {
-          const permission = pickPermissionFor(permissions, contractAddress);
-          if (!permission) {
-            throw new DecryptionFailedError(
-              `No delegated permit covers contract ${contractAddress} after allow()`,
-            );
-          }
           const decrypted = await this.relayer.delegatedUserDecrypt({
             handles: contractHandles,
             contractAddress,
-            signedContractAddresses: permission.signedContractAddresses,
-            privateKey: keypair.privateKey,
-            publicKey: keypair.publicKey,
-            signature: permission.signature,
-            delegatorAddress: permission.delegatorAddress,
+            ...resolveDelegatedDecryptPermit(credentials, contractAddress),
             delegateAddress,
-            startTimestamp: permission.startTimestamp,
-            durationDays: permission.durationDays,
           });
 
           for (const [handle, value] of Object.entries(decrypted)) {
@@ -789,7 +766,9 @@ export class ZamaSDK {
   /**
    * Wipe permits for the current direct-decrypt scope. With no argument, every
    * permit for `(signer, chainId)` is removed; the keypair survives. Pass a
-   * contract list to remove only those addresses from existing permits.
+   * contract list to remove every signed permit whose immutable payload touches
+   * any listed address. This may also remove coverage for other contracts that
+   * were signed into the same permit.
    *
    * @throws {@link SignerRequiredError} if no signer is configured.
    */
@@ -858,16 +837,6 @@ export class ZamaSDK {
   [Symbol.dispose](): void {
     this.terminate();
   }
-}
-
-function pickPermissionFor(permissions: AllowResult["permissions"], contractAddress: Address) {
-  const target = getAddress(contractAddress);
-  for (const p of permissions) {
-    if (p.signedContractAddresses.some((a) => getAddress(a) === target)) {
-      return p;
-    }
-  }
-  return undefined;
 }
 
 function buildCredentialServiceConfig(

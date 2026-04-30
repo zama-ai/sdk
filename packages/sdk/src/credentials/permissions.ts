@@ -12,17 +12,14 @@ export function upsertPermission(existing: Permission[], incoming: Permission): 
   ];
 }
 
-export function removeContractsFromPermissions(
+export function deletePermitsTouchingContracts(
   permissions: Permission[],
   contractsToRemove: Address[],
 ): Permission[] {
   const removeSet = new Set(contractsToRemove.map((a) => getAddress(a)));
-  return permissions.flatMap((entry) => {
-    const filtered = entry.signedContractAddresses.filter(
-      (addr) => !removeSet.has(getAddress(addr)),
-    );
-    return filtered.length > 0 ? [{ ...entry, signedContractAddresses: filtered }] : [];
-  });
+  return permissions.filter(
+    (entry) => !entry.signedContractAddresses.some((addr) => removeSet.has(getAddress(addr))),
+  );
 }
 
 export function pruneUnusablePermissions(input: {

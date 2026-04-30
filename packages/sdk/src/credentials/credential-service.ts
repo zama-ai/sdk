@@ -15,7 +15,7 @@ import type { PermissionScope } from "./permission-store";
 import { PermissionStore } from "./permission-store";
 import { KeypairTTLSchema, PermitDurationSchema } from "./schemas";
 import type {
-  AllowResult,
+  CredentialBundle,
   KeypairGenerator,
   Permission,
   PermitFactory,
@@ -50,9 +50,8 @@ export interface CredentialServiceConfig {
 /**
  * Single facade coordinating the keypair vault and the permission store.
  *
- * `CredentialService` is the only credentials object held by `ZamaSDK`. It
- * exposes a small public surface (`allow`, `isAllowed`, `revokePermits`,
- * `clearCredentials`) and accepts identity transitions via `handleIdentityChange`.
+ * `CredentialService` is the only credentials object held by `ZamaSDK`. It accepts identity
+ * transitions via `handleIdentityChange`.
  */
 export class CredentialService {
   readonly #vault: KeypairVault;
@@ -61,7 +60,7 @@ export class CredentialService {
   readonly #permitSigner: PermitSigner;
   readonly #permitDurationDays: number;
   readonly #onEvent: ZamaSDKEventListener;
-  readonly #pendingAllow = new Map<string, Promise<AllowResult>>();
+  readonly #pendingAllow = new Map<string, Promise<CredentialBundle>>();
   #identity: SignerIdentity | undefined;
 
   /** @throws {Error} if `keypairTTL` or `permitDuration` is not a positive integer. */
@@ -119,31 +118,45 @@ export class CredentialService {
         this.#permitSigner.getChainId(),
       ]);
       this.#identity = { address: getAddress(address), chainId };
-      // Warm the vault so concurrent isAllowed/allow calls don't race on lookup.
-      await this.#vault.get(getAddress(address));
+      await this.#warmKeypairFor(getAddress(address));
     } catch (error) {
       // oxlint-disable-next-line no-console
       console.warn("[zama-sdk] CredentialService initialize failed:", error);
     }
   }
 
+  /** Warm the current signer's keypair without creating any signed permits. */
+  async warmKeypair(): Promise<StoredKeypair> {
+    return this.#warmKeypairFor(getAddress(await this.#permitSigner.getAddress()));
+  }
+
   /**
    * Resolve a keypair and the permissions covering `contracts`.
    *
+   * Passing an empty contract list warms the keypair without creating signed
+   * permits.
+   *
    * If existing permissions already cover the requested set, no wallet prompt
    * occurs. Otherwise the uncovered subset is chunked into groups of ≤10 and
-   * one permit per chunk is signed sequentially. Each permit is persisted
-   * before the next prompt so partial mid-flight rejections survive.
+   * one permit per chunk is signed sequentially. Each signed chunk is persisted
+   * before the next prompt, and newly signed permits are returned in-memory even
+   * when best-effort persistence fails.
    *
-   * @returns The resolved keypair and permissions covering the requested contracts.
+   * @returns The resolved keypair and permits covering the requested contracts.
    * @throws {@link SigningRejectedError} if the user rejects a wallet signature prompt.
    * @throws {@link SigningFailedError} if signing fails for any other reason.
    */
-  async allow(contracts: Address[], delegator?: Address): Promise<AllowResult> {
+  async allow(contracts: readonly Address[], delegator?: Address): Promise<CredentialBundle> {
     const signerAddress = getAddress(await this.#permitSigner.getAddress());
     const chainId = await this.#permitSigner.getChainId();
     const delegatorAddress = delegator ? getAddress(delegator) : signerAddress;
     const normalized = normalizeAddresses(contracts);
+    if (normalized.length === 0) {
+      return {
+        keypair: await this.#warmKeypairFor(signerAddress),
+        permits: [],
+      };
+    }
 
     const dedupKey = allowDedupKey({
       signerAddress,
@@ -175,17 +188,9 @@ export class CredentialService {
     delegatorAddress: Address;
     delegator?: Address;
     normalized: Address[];
-  }): Promise<AllowResult> {
+  }): Promise<CredentialBundle> {
     const { signerAddress, chainId, delegatorAddress, delegator, normalized } = params;
     const scope: PermissionScope = { signerAddress, chainId, delegatorAddress };
-
-    if (normalized.length === 0) {
-      this.#emit({
-        type: ZamaSDKEvents.CredentialsAllowed,
-        contractAddresses: normalized,
-      });
-      return { keypair: null, permissions: [] };
-    }
 
     this.#emit({
       type: ZamaSDKEvents.CredentialsLoading,
@@ -193,7 +198,7 @@ export class CredentialService {
     });
 
     const keypair = await this.#vault.getOrCreate(signerAddress);
-    const live = await this.#store.listUsable(scope, keypair.publicKey);
+    const live = await this.#store.listUsableAndPrune(scope, keypair.publicKey);
 
     const coverage = classifyPermissionCoverage(live, normalized);
 
@@ -206,9 +211,10 @@ export class CredentialService {
         type: ZamaSDKEvents.CredentialsAllowed,
         contractAddresses: normalized,
       });
-      return { keypair, permissions: coverage.permissions };
+      return { keypair, permits: coverage.permissions };
     }
 
+    const signed: Permission[] = [];
     for (const chunk of coverage.uncoveredChunks) {
       const permission = await this.#signPermit({
         chunk,
@@ -218,9 +224,10 @@ export class CredentialService {
         delegatorAddress,
         delegator,
       });
+      signed.push(permission);
 
       try {
-        await this.#store.add(scope, permission);
+        await this.#store.append(scope, [permission]);
       } catch (error) {
         // oxlint-disable-next-line no-console
         console.warn("[zama-sdk] Failed to persist permit:", error);
@@ -232,16 +239,20 @@ export class CredentialService {
 
       this.#emit({
         type: ZamaSDKEvents.CredentialsCreated,
-        contractAddresses: chunk,
+        contractAddresses: permission.signedContractAddresses,
       });
     }
 
-    const finalPermissions = await this.#store.listUsable(scope, keypair.publicKey);
+    const finalPermissions = [...live, ...signed];
     this.#emit({
       type: ZamaSDKEvents.CredentialsAllowed,
       contractAddresses: normalized,
     });
-    return { keypair, permissions: filterRelevantPermissions(finalPermissions, normalized) };
+    return { keypair, permits: filterRelevantPermissions(finalPermissions, normalized) };
+  }
+
+  async #warmKeypairFor(signerAddress: Address): Promise<StoredKeypair> {
+    return this.#vault.getOrCreate(signerAddress);
   }
 
   /**
@@ -257,20 +268,20 @@ export class CredentialService {
     const signerAddress = getAddress(await this.#permitSigner.getAddress());
     const chainId = await this.#permitSigner.getChainId();
     const delegatorAddress = delegator ? getAddress(delegator) : signerAddress;
-    const keypair = await this.#vault.get(signerAddress);
+    const keypair = await this.#vault.readStored(signerAddress);
     if (keypair === null) {
       return false;
     }
     const scope: PermissionScope = { signerAddress, chainId, delegatorAddress };
-    const matching = await this.#store.listUsable(scope, keypair.publicKey);
+    const matching = await this.#store.listUsableAndPrune(scope, keypair.publicKey);
     const normalized = normalizeAddresses(contracts);
     return coversContracts(unionSignedContracts(matching), normalized);
   }
 
   /**
    * Wipe permissions for the current `(signer, chainId)` direct-decrypt scope.
-   * Pass an explicit address list to remove only those addresses from each
-   * permission; permissions whose address set becomes empty are dropped.
+   * Pass an explicit address list to delete every signed permit whose immutable
+   * payload touches any of those addresses.
    *
    * @remarks
    * Operates on the direct-decrypt scope only. Delegated permissions are
@@ -296,7 +307,7 @@ export class CredentialService {
       this.#emit({ type: ZamaSDKEvents.CredentialsRevoked, contractAddresses: normalized });
       return;
     }
-    await this.#store.removeContracts(scope, normalized);
+    await this.#store.deletePermitsTouching(scope, normalized);
     this.#emit({ type: ZamaSDKEvents.CredentialsRevoked, contractAddresses: normalized });
   }
 
@@ -334,16 +345,6 @@ export class CredentialService {
       }
     }
     this.#identity = next;
-  }
-
-  /**
-   * Resolve a stored keypair without prompting the wallet.
-   *
-   * @returns The stored keypair, or `null` if none exists yet.
-   */
-  async getKeypair(signerAddress?: Address): Promise<StoredKeypair | null> {
-    const address = signerAddress ?? (await this.#permitSigner.getAddress());
-    return this.#vault.get(address);
   }
 
   /** Cached identity snapshot, set by `handleIdentityChange` / `initialize`. */
