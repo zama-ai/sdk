@@ -172,12 +172,6 @@ export type {
   ApproveSubmittedEvent,
   ApproveUnderlyingSubmittedEvent,
   BaseEvent,
-  CredentialsAllowedEvent,
-  CredentialsCachedEvent,
-  CredentialsCreatedEvent,
-  CredentialsCreatingEvent,
-  CredentialsLoadingEvent,
-  CredentialsRevokedEvent,
   DecryptEndEvent,
   DecryptErrorEvent,
   DecryptStartEvent,
@@ -198,5 +192,4 @@ export type {
   ZamaSDKEventListener,
   DelegationSubmittedEvent,
   RevokeDelegationSubmittedEvent,
-  CredentialsPersistFailedEvent,
 } from "../events/sdk-events";

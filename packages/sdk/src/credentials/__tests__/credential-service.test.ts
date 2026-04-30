@@ -170,12 +170,6 @@ describe("CredentialService.revokePermits", () => {
     expect(await service.isAllowed([TOKEN_A])).toBe(false);
     expect(await service.isAllowed([TOKEN_B])).toBe(false);
   });
-
-  it("emits CredentialsRevoked", async () => {
-    const { service, events } = setup();
-    await service.revokePermits();
-    expect(events.some((e) => e.type === ZamaSDKEvents.CredentialsRevoked)).toBe(true);
-  });
 });
 
 describe("CredentialService.clearCredentials", () => {
@@ -239,7 +233,7 @@ describe("CredentialService.allow signing-error wrapping", () => {
 });
 
 describe("CredentialService delegator-scope isolation", () => {
-  it("different delegators get separate scopes", async () => {
+  it("different delegators get independently addressable scopes", async () => {
     const { service } = setup();
 
     // Direct scope (delegator implicitly = signer = USER) and delegated scope to DELEGATOR_B
@@ -249,10 +243,27 @@ describe("CredentialService delegator-scope isolation", () => {
 
     expect(await service.isAllowed([TOKEN_A])).toBe(true);
     expect(await service.isAllowed([TOKEN_A], DELEGATOR_B)).toBe(true);
+  });
 
-    // revokePermits() clears only the direct-decrypt scope; the delegated-to-DELEGATOR_B
-    // scope must remain intact.
+  it("revokePermits() with no args wipes both direct and delegated scopes", async () => {
+    const { service } = setup();
+
+    await service.allow([TOKEN_A]);
+    await service.allow([TOKEN_A], DELEGATOR_B);
+
     await service.revokePermits();
+
+    expect(await service.isAllowed([TOKEN_A])).toBe(false);
+    expect(await service.isAllowed([TOKEN_A], DELEGATOR_B)).toBe(false);
+  });
+
+  it("revokePermits([contracts]) only touches the direct-decrypt scope", async () => {
+    const { service } = setup();
+
+    await service.allow([TOKEN_A]);
+    await service.allow([TOKEN_A], DELEGATOR_B);
+
+    await service.revokePermits([TOKEN_A]);
 
     expect(await service.isAllowed([TOKEN_A])).toBe(false);
     expect(await service.isAllowed([TOKEN_A], DELEGATOR_B)).toBe(true);

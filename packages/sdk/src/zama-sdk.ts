@@ -785,11 +785,15 @@ export class ZamaSDK {
   }
 
   /**
-   * Wipe permits for the current direct-decrypt scope. With no argument, every
-   * permit for `(signer, chainId)` is removed; the keypair survives. Pass a
-   * contract list to remove every signed permit whose immutable payload touches
-   * any listed address. This may also remove coverage for other contracts that
-   * were signed into the same permit.
+   * Wipe FHE permits for the current signer.
+   *
+   * - With no argument: every permit referencing this signer is removed across
+   *   all chains and delegators. The keypair survives — use
+   *   {@link clearCredentials} to also wipe the keypair.
+   * - With a contract list: every signed permit in the direct-decrypt scope
+   *   (current chain) whose immutable payload touches any listed address is
+   *   removed. May also drop coverage for other contracts that shared the same
+   *   permit. Delegated permits are not touched in this mode.
    *
    * @throws {@link SignerRequiredError} if no signer is configured.
    */

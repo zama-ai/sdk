@@ -1,10 +1,8 @@
 import { getAddress, type Address } from "viem";
-import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
-import { ZamaSDKEvents } from "../events/sdk-events";
+import type { ZamaSDKEventListener } from "../events/sdk-events";
 import type { GenericStorage, SignerIdentity } from "../types";
 import { ZamaError } from "../errors/base";
 import { wrapSigningError } from "../errors/signing";
-import { toError } from "../utils/error";
 import { KeypairVault } from "./keypair-vault";
 import {
   classifyPermissionCoverage,
@@ -59,7 +57,6 @@ export class CredentialService {
   readonly #permitFactory: PermitFactory;
   readonly #permitSigner: PermitSigner;
   readonly #permitDurationDays: number;
-  readonly #onEvent: ZamaSDKEventListener;
   readonly #pendingAllow = new Map<string, Promise<CredentialBundle>>();
   #identity: SignerIdentity | undefined;
 
@@ -107,7 +104,6 @@ export class CredentialService {
     this.#permitFactory = config.permitFactory;
     this.#permitSigner = config.permitSigner;
     this.#permitDurationDays = permitDuration;
-    this.#onEvent = config.onEvent ?? (() => {});
   }
 
   /** Eagerly resolve the current identity and warm the vault. Best-effort. */
@@ -192,25 +188,12 @@ export class CredentialService {
     const { signerAddress, chainId, delegatorAddress, delegator, normalized } = params;
     const scope: PermissionScope = { signerAddress, chainId, delegatorAddress };
 
-    this.#emit({
-      type: ZamaSDKEvents.CredentialsLoading,
-      contractAddresses: normalized,
-    });
-
     const keypair = await this.#vault.getOrCreate(signerAddress);
     const live = await this.#store.listUsableAndPrune(scope, keypair.publicKey);
 
     const coverage = classifyPermissionCoverage(live, normalized);
 
     if (coverage.type === "covered") {
-      this.#emit({
-        type: ZamaSDKEvents.CredentialsCached,
-        contractAddresses: normalized,
-      });
-      this.#emit({
-        type: ZamaSDKEvents.CredentialsAllowed,
-        contractAddresses: normalized,
-      });
       return { keypair, permits: coverage.permissions };
     }
 
@@ -231,23 +214,10 @@ export class CredentialService {
       } catch (error) {
         // oxlint-disable-next-line no-console
         console.warn("[zama-sdk] Failed to persist permit:", error);
-        this.#emit({
-          type: ZamaSDKEvents.CredentialsPersistFailed,
-          error: toError(error),
-        });
       }
-
-      this.#emit({
-        type: ZamaSDKEvents.CredentialsCreated,
-        contractAddresses: permission.signedContractAddresses,
-      });
     }
 
     const finalPermissions = [...live, ...signed];
-    this.#emit({
-      type: ZamaSDKEvents.CredentialsAllowed,
-      contractAddresses: normalized,
-    });
     return { keypair, permits: filterRelevantPermissions(finalPermissions, normalized) };
   }
 
@@ -280,36 +250,34 @@ export class CredentialService {
   }
 
   /**
-   * Wipe permissions for the current `(signer, chainId)` direct-decrypt scope.
-   * Pass an explicit address list to delete every signed permit whose immutable
-   * payload touches any of those addresses.
+   * Wipe FHE permits for the current signer.
    *
-   * @remarks
-   * Operates on the direct-decrypt scope only. Delegated permissions are
-   * untouched — use {@link clearCredentials} to wipe everything.
+   * - With no argument: every permit referencing this signer is removed across
+   *   all chains and delegators. The keypair survives — use
+   *   {@link clearCredentials} to also wipe the keypair.
+   * - With a contract list: every signed permit in the direct-decrypt scope
+   *   (current chain) whose immutable payload touches any listed address is
+   *   removed. Delegated permits are not touched in this mode.
    *
    * @throws {@link SigningFailedError} if reading the signer address fails.
    */
   async revokePermits(contracts?: Address[]): Promise<void> {
     const signerAddress = getAddress(await this.#permitSigner.getAddress());
+    if (contracts === undefined) {
+      await this.#store.clearAllForSigner(signerAddress);
+      return;
+    }
+    const normalized = normalizeAddresses(contracts);
+    if (normalized.length === 0) {
+      return;
+    }
     const chainId = await this.#permitSigner.getChainId();
     const scope: PermissionScope = {
       signerAddress,
       chainId,
       delegatorAddress: signerAddress,
     };
-    if (contracts === undefined) {
-      await this.#store.clear(scope);
-      this.#emit({ type: ZamaSDKEvents.CredentialsRevoked });
-      return;
-    }
-    const normalized = normalizeAddresses(contracts);
-    if (normalized.length === 0) {
-      this.#emit({ type: ZamaSDKEvents.CredentialsRevoked, contractAddresses: normalized });
-      return;
-    }
     await this.#store.deletePermitsTouching(scope, normalized);
-    this.#emit({ type: ZamaSDKEvents.CredentialsRevoked, contractAddresses: normalized });
   }
 
   /**
@@ -322,7 +290,6 @@ export class CredentialService {
     const signerAddress = getAddress(await this.#permitSigner.getAddress());
     await this.#vault.clear(signerAddress);
     await this.#store.clearAllForSigner(signerAddress);
-    this.#emit({ type: ZamaSDKEvents.CredentialsRevoked });
   }
 
   /**
@@ -339,7 +306,6 @@ export class CredentialService {
       try {
         await this.#vault.clear(prevAddr);
         await this.#store.clearAllForSigner(prevAddr);
-        this.#emit({ type: ZamaSDKEvents.CredentialsRevoked });
       } catch (error) {
         // oxlint-disable-next-line no-console
         console.warn("[zama-sdk] cascade-clear for prev identity failed:", error);
@@ -363,11 +329,6 @@ export class CredentialService {
   }): Promise<Permission> {
     const startTimestamp = Math.floor(Date.now() / 1000);
     const durationDays = this.#permitDurationDays;
-
-    this.#emit({
-      type: ZamaSDKEvents.CredentialsCreating,
-      contractAddresses: input.chunk,
-    });
 
     try {
       const eip712 = input.delegator
@@ -402,15 +363,6 @@ export class CredentialService {
         throw error;
       }
       return wrapSigningError(error, "Credential signing failed");
-    }
-  }
-
-  #emit(input: ZamaSDKEventInput): void {
-    try {
-      this.#onEvent({ ...input, timestamp: Date.now() } as ZamaSDKEvent);
-    } catch (error) {
-      // oxlint-disable-next-line no-console
-      console.error("[zama-sdk] credential event listener threw:", error);
     }
   }
 }

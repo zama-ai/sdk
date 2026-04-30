@@ -43,12 +43,6 @@ function setupSdkWithEvents(opts: {
 
 describe("ZamaSDKEvents constants", () => {
   it("has all expected event keys", () => {
-    expect(ZamaSDKEvents.CredentialsLoading).toBe("credentials:loading");
-    expect(ZamaSDKEvents.CredentialsCached).toBe("credentials:cached");
-    expect(ZamaSDKEvents.CredentialsCreating).toBe("credentials:creating");
-    expect(ZamaSDKEvents.CredentialsCreated).toBe("credentials:created");
-    expect(ZamaSDKEvents.CredentialsRevoked).toBe("credentials:revoked");
-    expect(ZamaSDKEvents.CredentialsAllowed).toBe("credentials:allowed");
     expect(ZamaSDKEvents.EncryptStart).toBe("encrypt:start");
     expect(ZamaSDKEvents.EncryptEnd).toBe("encrypt:end");
     expect(ZamaSDKEvents.EncryptError).toBe("encrypt:error");
@@ -66,7 +60,6 @@ describe("ZamaSDKEvents constants", () => {
     expect(ZamaSDKEvents.UnshieldPhase1Submitted).toBe("unshield:phase1_submitted");
     expect(ZamaSDKEvents.UnshieldPhase2Started).toBe("unshield:phase2_started");
     expect(ZamaSDKEvents.UnshieldPhase2Submitted).toBe("unshield:phase2_submitted");
-    expect(ZamaSDKEvents.CredentialsPersistFailed).toBe("credentials:persist_failed");
     expect(ZamaSDKEvents.DelegationSubmitted).toBe("delegation:submitted");
     expect(ZamaSDKEvents.RevokeDelegationSubmitted).toBe("revokeDelegation:submitted");
   });

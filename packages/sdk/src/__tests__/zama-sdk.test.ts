@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, type Mock, TEST_ADDR_B } from "../test-fixtures";
+import { describe, it, expect, vi, TEST_ADDR_B } from "../test-fixtures";
 import { ReadonlyToken } from "../token/readonly-token";
 import { Token } from "../token/token";
 import { DecryptionFailedError, ZamaError, ZamaErrorCode } from "../errors";
@@ -85,45 +85,6 @@ describe("ZamaSDK", () => {
 
   it("does not fail when subscribe returns a no-op unsubscribe", ({ sdk }) => {
     sdk.terminate();
-  });
-
-  describe("revokePermits", () => {
-    const CONTRACT_A = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
-
-    it("emits CredentialsRevoked event when called with no args", async ({ createSDK }) => {
-      const events: { type: string }[] = [];
-      const sdk = createSDK({ onEvent: (e) => events.push(e) });
-
-      await sdk.revokePermits();
-
-      expect(events).toContainEqual(
-        expect.objectContaining({ type: ZamaSDKEvents.CredentialsRevoked }),
-      );
-    });
-
-    it("emits CredentialsRevoked event when called with addresses", async ({ createSDK }) => {
-      const events: { type: string }[] = [];
-      const sdk = createSDK({ onEvent: (e) => events.push(e) });
-
-      await sdk.revokePermits([CONTRACT_A]);
-
-      expect(events).toContainEqual(
-        expect.objectContaining({ type: ZamaSDKEvents.CredentialsRevoked }),
-      );
-    });
-  });
-
-  describe("clearCredentials", () => {
-    it("emits CredentialsRevoked", async ({ createSDK }) => {
-      const events: { type: string }[] = [];
-      const sdk = createSDK({ onEvent: (e) => events.push(e) });
-
-      await sdk.clearCredentials();
-
-      expect(events).toContainEqual(
-        expect.objectContaining({ type: ZamaSDKEvents.CredentialsRevoked }),
-      );
-    });
   });
 
   describe("keypairTTL validation", () => {
@@ -937,6 +898,3 @@ describe("ZamaSDK", () => {
     });
   });
 });
-
-// Avoid TS6133 on Mock import
-export const __unused_Mock = null as Mock | null;

@@ -154,15 +154,8 @@ export type {
   DecryptStartEvent,
   DecryptEndEvent,
   DecryptErrorEvent,
-  CredentialsLoadingEvent,
-  CredentialsCachedEvent,
-  CredentialsCreatingEvent,
-  CredentialsCreatedEvent,
-  CredentialsRevokedEvent,
-  CredentialsAllowedEvent,
   DelegationSubmittedEvent,
   RevokeDelegationSubmittedEvent,
-  CredentialsPersistFailedEvent,
 } from "./events";
 export {
   ZamaError,

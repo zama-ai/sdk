@@ -5,14 +5,6 @@ import type { ClearValueType, Handle } from "../relayer/relayer-sdk.types";
  * All SDK event keys, accessible as `ZamaSDKEvents.EncryptStart` etc.
  */
 export const ZamaSDKEvents = {
-  // Credentials lifecycle
-  CredentialsLoading: "credentials:loading",
-  CredentialsCached: "credentials:cached",
-  CredentialsCreating: "credentials:creating",
-  CredentialsCreated: "credentials:created",
-  CredentialsRevoked: "credentials:revoked",
-  CredentialsPersistFailed: "credentials:persist_failed",
-  CredentialsAllowed: "credentials:allowed",
   // FHE operations
   EncryptStart: "encrypt:start",
   EncryptEnd: "encrypt:end",
@@ -51,47 +43,6 @@ export interface BaseEvent {
 }
 
 // -- Per-event typed payloads --
-
-export interface CredentialsLoadingEvent extends BaseEvent {
-  type: typeof ZamaSDKEvents.CredentialsLoading;
-  /** Contract addresses being requested. */
-  contractAddresses?: Address[];
-}
-
-export interface CredentialsCachedEvent extends BaseEvent {
-  type: typeof ZamaSDKEvents.CredentialsCached;
-  /** Contract addresses covered by the cached credentials. */
-  contractAddresses?: Address[];
-}
-
-export interface CredentialsCreatingEvent extends BaseEvent {
-  type: typeof ZamaSDKEvents.CredentialsCreating;
-  /** Contract addresses being authorized. */
-  contractAddresses?: Address[];
-}
-
-export interface CredentialsCreatedEvent extends BaseEvent {
-  type: typeof ZamaSDKEvents.CredentialsCreated;
-  /** Contract addresses covered by the new credentials. */
-  contractAddresses?: Address[];
-}
-
-export interface CredentialsRevokedEvent extends BaseEvent {
-  type: typeof ZamaSDKEvents.CredentialsRevoked;
-  contractAddresses?: Address[];
-}
-
-export interface CredentialsPersistFailedEvent extends BaseEvent {
-  type: typeof ZamaSDKEvents.CredentialsPersistFailed;
-  /** The error that caused the persist failure. */
-  error: Error;
-}
-
-export interface CredentialsAllowedEvent extends BaseEvent {
-  type: typeof ZamaSDKEvents.CredentialsAllowed;
-  /** Contract addresses covered by the authorized credentials. */
-  contractAddresses?: Address[];
-}
 
 export interface EncryptStartEvent extends BaseEvent {
   type: typeof ZamaSDKEvents.EncryptStart;
@@ -208,13 +159,6 @@ export interface UnshieldPhase2SubmittedEvent extends BaseEvent {
  * private keys, session signatures, or ZK proofs.
  */
 export type ZamaSDKEvent =
-  | CredentialsLoadingEvent
-  | CredentialsCachedEvent
-  | CredentialsCreatingEvent
-  | CredentialsCreatedEvent
-  | CredentialsRevokedEvent
-  | CredentialsPersistFailedEvent
-  | CredentialsAllowedEvent
   | EncryptStartEvent
   | EncryptEndEvent
   | EncryptErrorEvent

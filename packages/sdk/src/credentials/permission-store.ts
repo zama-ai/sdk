@@ -124,6 +124,7 @@ export class PermissionStore {
     const next = deletePermitsTouchingContracts(existing, contractsToRemove);
     if (next.length === 0) {
       await safeDelete(this.#storage, key);
+      await this.#untrackScope(scope);
     } else {
       await this.#storage.set(key, next);
     }
