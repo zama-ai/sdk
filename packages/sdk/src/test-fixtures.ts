@@ -73,7 +73,24 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
         decryptionProof: "0xproof",
       });
     }),
-    createDelegatedUserDecryptEIP712: vi.fn(),
+    createDelegatedUserDecryptEIP712: vi.fn().mockResolvedValue({
+      domain: {
+        name: "Decryption",
+        version: "1",
+        chainId: 31337n,
+        verifyingContract: "0x0000000000000000000000000000000000000001",
+      },
+      primaryType: "DelegatedUserDecryptRequestVerification",
+      types: { EIP712Domain: [], DelegatedUserDecryptRequestVerification: [] },
+      message: {
+        publicKey: "0xpk",
+        contractAddresses: ["0x01"],
+        startTimestamp: "100",
+        durationDays: "7",
+        extraData: "0x",
+        delegatorAddress: "0x01",
+      },
+    }),
     delegatedUserDecrypt: vi.fn().mockResolvedValue({
       [VALID_HANDLE as string]: 1000n,
     }),

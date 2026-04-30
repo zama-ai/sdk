@@ -115,7 +115,6 @@ const { NodeWorkerClient } = await import("../worker.node-client");
 
 function defaultWebConfig() {
   return {
-    cdnUrl: "https://cdn.example.com/relayer.js",
     chains: [{ chainId: 1 } as never],
     csrfToken: "csrf-token-123",
   };
@@ -325,7 +324,6 @@ describe("RelayerWorkerClient", () => {
     expect(req.payload).not.toHaveProperty("logger");
     expect(req.payload).toEqual({
       env: "web",
-      cdnUrl: config.cdnUrl,
       chains: config.chains,
       csrfToken: config.csrfToken,
       thread: 4,
