@@ -492,13 +492,10 @@ export class ZamaSDK {
           const decrypted = await this.relayer.userDecrypt({
             handles: contractHandles,
             contractAddress,
-            signedContractAddresses: creds.contractAddresses,
             privateKey: creds.privateKey,
             publicKey: creds.publicKey,
             signature: creds.signature,
             signerAddress,
-            startTimestamp: creds.startTimestamp,
-            durationDays: creds.durationDays,
             eip712: creds.eip712,
           });
 
@@ -645,14 +642,10 @@ export class ZamaSDK {
           const decrypted = await this.relayer.delegatedUserDecrypt({
             handles: contractHandles,
             contractAddress,
-            signedContractAddresses: creds.contractAddresses,
             privateKey: creds.privateKey,
             publicKey: creds.publicKey,
             signature: creds.signature,
             delegatorAddress: creds.delegatorAddress,
-            delegateAddress: creds.delegateAddress,
-            startTimestamp: creds.startTimestamp,
-            durationDays: creds.durationDays,
             eip712: creds.eip712,
           });
 

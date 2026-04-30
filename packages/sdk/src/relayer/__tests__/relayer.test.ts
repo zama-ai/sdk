@@ -265,13 +265,10 @@ describe("RelayerWeb", () => {
       const params = {
         handles: [HANDLE],
         contractAddress: "0xC" as `0x${string}`,
-        signedContractAddresses: ["0xC" as `0x${string}`],
         privateKey: "0xsk" as `0x${string}`,
         publicKey: "0xpk" as `0x${string}`,
         signature: "0xsig" as `0x${string}`,
         signerAddress: "0xS" as `0x${string}`,
-        startTimestamp: 1000,
-        durationDays: 7,
       };
       const result = await relayer.userDecrypt(params);
 
@@ -336,14 +333,10 @@ describe("RelayerWeb", () => {
       const params = {
         handles: [HANDLE],
         contractAddress: "0xC" as `0x${string}`,
-        signedContractAddresses: ["0xC" as `0x${string}`],
         privateKey: "0xsk" as `0x${string}`,
         publicKey: "0xpk" as `0x${string}`,
         signature: "0xsig" as `0x${string}`,
         delegatorAddress: "0xD" as `0x${string}`,
-        delegateAddress: "0xE" as `0x${string}`,
-        startTimestamp: 1000,
-        durationDays: 7,
       };
       const result = await relayer.delegatedUserDecrypt(params);
 
@@ -570,13 +563,10 @@ describe("RelayerNode", () => {
       const params = {
         handles: [HANDLE],
         contractAddress: "0xC" as `0x${string}`,
-        signedContractAddresses: ["0xC" as `0x${string}`],
         privateKey: "0xsk" as `0x${string}`,
         publicKey: "0xpk" as `0x${string}`,
         signature: "0xsig" as `0x${string}`,
         signerAddress: "0xS" as `0x${string}`,
-        startTimestamp: 1000,
-        durationDays: 7,
       };
       const result = await relayer.userDecrypt(params);
 
@@ -641,14 +631,10 @@ describe("RelayerNode", () => {
       const params = {
         handles: [HANDLE],
         contractAddress: "0xC" as `0x${string}`,
-        signedContractAddresses: ["0xC" as `0x${string}`],
         privateKey: "0xsk" as `0x${string}`,
         publicKey: "0xpk" as `0x${string}`,
         signature: "0xsig" as `0x${string}`,
         delegatorAddress: "0xD" as `0x${string}`,
-        delegateAddress: "0xE" as `0x${string}`,
-        startTimestamp: 1000,
-        durationDays: 7,
       };
       const result = await relayer.delegatedUserDecrypt(params);
 

@@ -103,13 +103,10 @@ export interface UserDecryptRequest extends BaseRequest {
     chainId: number;
     handles: Handle[];
     contractAddress: Address;
-    signedContractAddresses: Address[];
     privateKey: Hex;
     publicKey: Hex;
     signature: Hex;
     signerAddress: Address;
-    startTimestamp: number;
-    durationDays: number;
     eip712: StoredEIP712;
   };
 }
@@ -156,14 +153,10 @@ export interface DelegatedUserDecryptRequest extends BaseRequest {
     chainId: number;
     handles: Handle[];
     contractAddress: Address;
-    signedContractAddresses: Address[];
     privateKey: Hex;
     publicKey: Hex;
     signature: Hex;
     delegatorAddress: Address;
-    delegateAddress: Address;
-    startTimestamp: number;
-    durationDays: number;
     eip712: StoredEIP712;
   };
 }

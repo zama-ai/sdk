@@ -346,13 +346,6 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
   async delegatedUserDecrypt(
     params: DelegatedUserDecryptParams,
   ): Promise<Readonly<Record<Handle, ClearValueType>>> {
-    await this.#assertDelegation(
-      params.handles,
-      getAddress(params.delegatorAddress),
-      getAddress(params.delegateAddress),
-      getAddress(params.contractAddress),
-    );
-
     return this.#decryptHandles(params.handles);
   }
 
@@ -433,32 +426,6 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
       if (!contractAllowed) {
         throw new DecryptionFailedError(
           `Contract ${contractAddress} is not authorized for ${operationLabel} of handle ${normalizedHandles[i]!}`,
-        );
-      }
-    }
-  }
-
-  async #assertDelegation(
-    handles: Handle[],
-    delegatorAddress: Address,
-    delegateAddress: Address,
-    contractAddress: Address,
-  ): Promise<void> {
-    const results = await Promise.all(
-      handles.map((handle) =>
-        this.#client.readContract({
-          address: this.#config.aclContractAddress as Address,
-          abi: ACL_ABI,
-          functionName: "isHandleDelegatedForUserDecryption",
-          args: [delegatorAddress, delegateAddress, contractAddress, handle],
-        }),
-      ),
-    );
-
-    for (let i = 0; i < handles.length; i++) {
-      if (!results[i]) {
-        throw new DecryptionFailedError(
-          `Handle ${handles[i]!} is not delegated for user decryption`,
         );
       }
     }

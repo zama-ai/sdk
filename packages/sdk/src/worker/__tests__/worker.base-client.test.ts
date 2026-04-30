@@ -317,13 +317,10 @@ describe("BaseWorkerClient", () => {
       chainId: 1,
       handles: [HANDLE],
       contractAddress: "0xC" as `0x${string}`,
-      signedContractAddresses: ["0xS" as `0x${string}`],
       privateKey: "0xsk" as `0x${string}`,
       publicKey: "0xpk" as `0x${string}`,
       signature: "0xsig" as `0x${string}`,
       signerAddress: "0xA" as `0x${string}`,
-      startTimestamp: 100,
-      durationDays: 7,
       eip712: {
         domain: {
           name: "test",
@@ -465,14 +462,10 @@ describe("BaseWorkerClient", () => {
       chainId: 1,
       handles: [HANDLE],
       contractAddress: "0xC" as `0x${string}`,
-      signedContractAddresses: ["0xS" as `0x${string}`],
       privateKey: "0xsk" as `0x${string}`,
       publicKey: "0xpk" as `0x${string}`,
       signature: "0xsig" as `0x${string}`,
       delegatorAddress: "0xD" as `0x${string}`,
-      delegateAddress: "0xE" as `0x${string}`,
-      startTimestamp: 100,
-      durationDays: 7,
       eip712: {
         domain: {
           name: "test",

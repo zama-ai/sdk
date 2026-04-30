@@ -102,13 +102,10 @@ export interface EncryptParams {
 export interface UserDecryptParams {
   handles: Handle[];
   contractAddress: Address;
-  signedContractAddresses: Address[];
   privateKey: Hex;
   publicKey: Hex;
   signature: Hex;
   signerAddress: Address;
-  startTimestamp: number;
-  durationDays: number;
   eip712: StoredEIP712;
 }
 
@@ -150,14 +147,10 @@ export interface PublicParamsData {
 export interface DelegatedUserDecryptParams {
   handles: Handle[];
   contractAddress: Address;
-  signedContractAddresses: Address[];
   privateKey: Hex;
   publicKey: Hex;
   signature: Hex;
   delegatorAddress: Address;
-  delegateAddress: Address;
-  startTimestamp: number;
-  durationDays: number;
   eip712: StoredEIP712;
 }
 

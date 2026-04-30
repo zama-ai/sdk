@@ -178,13 +178,10 @@ function createUserDecryptParams(
   return {
     handles: handles as Handle[],
     contractAddress: CONTRACT_ADDRESS,
-    signedContractAddresses: [CONTRACT_ADDRESS],
     privateKey: `0x${"01".repeat(32)}`,
     publicKey: `0x${"02".repeat(32)}`,
     signature: `0x${"03".repeat(65)}`,
     signerAddress: USER_ADDRESS,
-    startTimestamp: 1,
-    durationDays: 1,
     eip712: EIP712,
     ...rest,
   };
@@ -722,146 +719,7 @@ describe("RelayerCleartext", () => {
     expect(typedData.message.contractAddresses).toEqual([CONTRACT_ADDRESS]);
   });
 
-  it("delegatedUserDecrypt throws when delegation check returns false", async () => {
-    const handle = asHandle("0x" + "12".repeat(32));
-    const delegatorAddress = USER_ADDRESS;
-    const delegateAddress = "0x3000000000000000000000000000000000000003";
-    const { fhevm, calls } = createInstance({
-      isHandleDelegatedForUserDecryption: () => false,
-    });
-
-    await expect(
-      fhevm.delegatedUserDecrypt({
-        handles: [handle],
-        contractAddress: CONTRACT_ADDRESS,
-        signedContractAddresses: [CONTRACT_ADDRESS],
-        privateKey: `0x${"01".repeat(32)}`,
-        publicKey: `0x${"02".repeat(32)}`,
-        signature: `0x${"03".repeat(65)}`,
-        delegatorAddress,
-        delegateAddress,
-        startTimestamp: 1,
-        durationDays: 1,
-        eip712: EIP712,
-      }),
-    ).rejects.toThrow(/not delegated/i);
-
-    const plaintextCalls = filterEthCallsTo(calls, hardhatCleartextConfig.executorAddress);
-    expect(plaintextCalls).toHaveLength(0);
-  });
-
-  it("delegatedUserDecrypt calls isHandleDelegatedForUserDecryption per handle", async () => {
-    const handleA = asHandle("0x" + "01".repeat(32));
-    const handleB = asHandle("0x" + "02".repeat(32));
-    const delegatorAddress = USER_ADDRESS;
-    const delegateAddress = "0x3000000000000000000000000000000000000003";
-
-    const { fhevm, calls } = createInstance({
-      plaintexts: {
-        [handleA.toLowerCase()]: 7n,
-        [handleB.toLowerCase()]: 11n,
-      },
-    });
-
-    const result = await fhevm.delegatedUserDecrypt({
-      handles: [handleA, handleB],
-      contractAddress: CONTRACT_ADDRESS,
-      signedContractAddresses: [CONTRACT_ADDRESS],
-      privateKey: `0x${"11".repeat(32)}`,
-      publicKey: `0x${"22".repeat(32)}`,
-      signature: `0x${"33".repeat(65)}`,
-      delegatorAddress,
-      delegateAddress,
-      startTimestamp: 1,
-      durationDays: 1,
-      eip712: EIP712,
-    });
-
-    expect(result[handleA]).toBe(7n);
-    expect(result[handleB]).toBe(11n);
-
-    const callNames = calls
-      .filter((call) => call.method === "eth_call")
-      .map((call) => {
-        const tx = call.params[0] as { to: string; data: string };
-        const target = getAddress(tx.to);
-        if (target === getAddress(hardhatCleartextConfig.aclContractAddress)) {
-          const parsed = decodeFunctionData({
-            abi: ACL_ABI,
-            data: tx.data as `0x${string}`,
-          });
-          return parsed?.functionName ?? "unknown";
-        }
-        if (target === getAddress(hardhatCleartextConfig.executorAddress)) {
-          const parsed = decodeFunctionData({
-            abi: EXECUTOR_ABI,
-            data: tx.data as `0x${string}`,
-          });
-          return parsed?.functionName ?? "unknown";
-        }
-        return "unknown";
-      });
-    expect(callNames).toEqual([
-      "isHandleDelegatedForUserDecryption",
-      "isHandleDelegatedForUserDecryption",
-      "plaintexts",
-      "plaintexts",
-    ]);
-  });
-
-  it("delegatedUserDecrypt partial delegation failure throws with second handle and makes exactly 2 delegation calls", async () => {
-    const handleA = asHandle("0x" + "a1".repeat(32));
-    const handleB = asHandle("0x" + "b2".repeat(32));
-    const normalizedB = toHex(hexToBigInt(handleB), { size: 32 });
-    const delegatorAddress = USER_ADDRESS;
-    const delegateAddress = "0x3000000000000000000000000000000000000003";
-
-    const { fhevm, calls } = createInstance({
-      isHandleDelegatedForUserDecryption: (_delegator, _delegate, _contractAddress, handle) =>
-        handle.toLowerCase() !== normalizedB.toLowerCase(),
-      plaintexts: {
-        [handleA.toLowerCase()]: 7n,
-        [handleB.toLowerCase()]: 11n,
-      },
-    });
-
-    await expect(
-      fhevm.delegatedUserDecrypt({
-        handles: [handleA, handleB],
-        contractAddress: CONTRACT_ADDRESS,
-        signedContractAddresses: [CONTRACT_ADDRESS],
-        privateKey: `0x${"01".repeat(32)}`,
-        publicKey: `0x${"02".repeat(32)}`,
-        signature: `0x${"03".repeat(65)}`,
-        delegatorAddress,
-        delegateAddress,
-        startTimestamp: 1,
-        durationDays: 1,
-        eip712: EIP712,
-      }),
-    ).rejects.toThrow(new RegExp(normalizedB));
-
-    const delegationCalls = filterEthCallsTo(
-      calls,
-      getAddress(hardhatCleartextConfig.aclContractAddress),
-    ).filter((call) => {
-      const tx = call.params[0] as { data: string };
-      const parsed = decodeFunctionData({
-        abi: ACL_ABI,
-        data: tx.data as `0x${string}`,
-      });
-      return parsed?.functionName === "isHandleDelegatedForUserDecryption";
-    });
-    expect(delegationCalls).toHaveLength(2);
-
-    const executorCalls = filterEthCallsTo(
-      calls,
-      getAddress(hardhatCleartextConfig.executorAddress),
-    );
-    expect(executorCalls).toHaveLength(0);
-  });
-
-  it("delegatedUserDecrypt returns cleartext values when delegation is valid", async () => {
+  it("delegatedUserDecrypt returns cleartext values", async () => {
     const handleA = asHandle("0x" + "01".repeat(32));
     const handleB = asHandle("0x" + "02".repeat(32));
     const { fhevm } = createInstance({
@@ -875,14 +733,10 @@ describe("RelayerCleartext", () => {
     const result = await fhevm.delegatedUserDecrypt({
       handles: [handleA, handleB],
       contractAddress: CONTRACT_ADDRESS,
-      signedContractAddresses: [CONTRACT_ADDRESS],
       privateKey: `0x${"11".repeat(32)}`,
       publicKey: `0x${"22".repeat(32)}`,
       signature: `0x${"33".repeat(65)}`,
       delegatorAddress: USER_ADDRESS,
-      delegateAddress: "0x3000000000000000000000000000000000000003",
-      startTimestamp: 1,
-      durationDays: 1,
       eip712: EIP712,
     });
 
@@ -906,14 +760,10 @@ describe("RelayerCleartext", () => {
     const result = await fhevm.delegatedUserDecrypt({
       handles: [boolHandle, addressHandle],
       contractAddress: CONTRACT_ADDRESS,
-      signedContractAddresses: [CONTRACT_ADDRESS],
       privateKey: `0x${"11".repeat(32)}`,
       publicKey: `0x${"22".repeat(32)}`,
       signature: `0x${"33".repeat(65)}`,
       delegatorAddress: USER_ADDRESS,
-      delegateAddress: "0x3000000000000000000000000000000000000003",
-      startTimestamp: 1,
-      durationDays: 1,
       eip712: EIP712,
     });
 

@@ -165,13 +165,10 @@ describe("NodeWorkerPool", () => {
       chainId: 1,
       handles: [HANDLE],
       contractAddress: "0xC",
-      signedContractAddresses: ["0xS"],
       privateKey: "0xsk",
       publicKey: "0xpk",
       signature: "0xsig",
       signerAddress: "0xA",
-      startTimestamp: 100,
-      durationDays: 7,
       eip712: {
         domain: {
           name: "test",
@@ -209,14 +206,10 @@ describe("NodeWorkerPool", () => {
       chainId: 1,
       handles: [HANDLE],
       contractAddress: "0xC",
-      signedContractAddresses: ["0xS"],
       privateKey: "0xsk",
       publicKey: "0xpk",
       signature: "0xsig",
       delegatorAddress: "0xD",
-      delegateAddress: "0xE",
-      startTimestamp: 100,
-      durationDays: 7,
       eip712: {
         domain: {
           name: "test",
