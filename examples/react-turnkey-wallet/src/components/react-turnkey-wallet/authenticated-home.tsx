@@ -29,7 +29,10 @@ export function AuthenticatedHome({ walletAddress }: { walletAddress: Address })
   const { isRegistryPending, validPairs, selectedTokenAddress, selectedPair } =
     useTokenPairs(selectedTokenAddressState);
   const { data: ethBalance } = useEthBalance(publicClient, walletAddress);
-  const { publicBalance, refetchPublicBalance } = usePublicTokenBalance(selectedPair, walletAddress);
+  const { publicBalance, refetchPublicBalance } = usePublicTokenBalance(
+    selectedPair,
+    walletAddress,
+  );
   const { pendingUnshieldHash, setPendingUnshieldHash, clearStoredPendingUnshield } =
     usePendingUnshield(selectedPair);
 

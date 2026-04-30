@@ -23,9 +23,7 @@ export function CenteredState({
           {body}
         </p>
         {error && (
-          <p className="mt-2 break-all font-mono text-xs text-red-600 dark:text-red-400">
-            {error}
-          </p>
+          <p className="mt-2 break-all font-mono text-xs text-red-600 dark:text-red-400">{error}</p>
         )}
         {action && <div className="mt-5 flex justify-center">{action}</div>}
       </div>
