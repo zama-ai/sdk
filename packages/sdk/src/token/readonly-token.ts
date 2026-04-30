@@ -331,67 +331,58 @@ export class ReadonlyToken {
       return results;
     }
 
-    const allHandles = uncached.map(({ token, handle }) => ({
-      handle,
-      contractAddress: token.address,
-    }));
+    const errors: { address: Address; error: Error }[] = [];
+    const decryptFns: (() => Promise<void>)[] = [];
 
-    try {
-      const decrypted = await firstToken.sdk.delegatedUserDecrypt(
-        allHandles,
-        delegatorAddress,
-        normalizedAccount,
-      );
-
-      const errors: { address: Address; error: Error }[] = [];
-
-      for (const { token, handle } of uncached) {
-        const value = decrypted[handle];
-        if (value === undefined) {
-          const err = new DecryptionFailedError(
-            `Batch delegated decryption returned no value for handle ${handle} on token ${token.address}`,
+    for (const { token, handle } of uncached) {
+      decryptFns.push(async () => {
+        try {
+          const decrypted = await firstToken.sdk.delegatedUserDecrypt(
+            [{ handle, contractAddress: token.address }],
+            delegatorAddress,
+            normalizedAccount,
           );
+          const value = decrypted[handle];
+          if (value === undefined) {
+            throw new DecryptionFailedError(
+              `Batch delegated decryption returned no value for handle ${handle} on token ${token.address}`,
+            );
+          }
+          assertBigint(value, "batchDecryptBalancesAs: result[handle]");
+          results.set(token.address, value);
+        } catch (error) {
+          // Session-level failures apply to every token — re-throw so the
+          // whole batch aborts with the original typed error.
+          if (isSessionError(error)) {
+            throw error;
+          }
+          const err = toError(error);
           if (onError) {
             try {
               results.set(token.address, onError(err, token.address));
             } catch (callbackError) {
-              errors.push({ address: token.address, error: toError(callbackError) });
+              errors.push({
+                address: token.address,
+                error: toError(callbackError),
+              });
             }
           } else {
             errors.push({ address: token.address, error: err });
           }
-          continue;
         }
-        assertBigint(value, "batchDecryptBalancesAs: result[handle]");
-        results.set(token.address, value);
-      }
+      });
+    }
 
-      if (errors.length > 0) {
-        const message = errors.map((e) => `${e.address}: ${e.error.message}`).join("; ");
-        throw new DecryptionFailedError(
-          `Batch delegated decryption failed for ${errors.length} token(s): ${message}`,
-          { cause: errors[0]!.error },
-        );
-      }
-    } catch (error) {
-      if (error instanceof DecryptionFailedError) {
-        throw error;
-      }
-      if (isSessionError(error)) {
-        throw error;
-      }
-      const err = toError(error);
-      if (onError) {
-        for (const { token } of uncached) {
-          if (!results.has(token.address)) {
-            results.set(token.address, onError(err, token.address));
-          }
-        }
-      } else {
-        throw new DecryptionFailedError(`Batch delegated decryption failed: ${err.message}`, {
-          cause: err,
-        });
-      }
+    await pLimit(decryptFns, maxConcurrency);
+
+    if (errors.length > 0) {
+      const message = errors.map((e) => `${e.address}: ${e.error.message}`).join("; ");
+      // Preserve the first original error as `cause` so callers can still
+      // `instanceof`-check the underlying failure type.
+      throw new DecryptionFailedError(
+        `Batch delegated decryption failed for ${errors.length} token(s): ${message}`,
+        { cause: errors[0]!.error },
+      );
     }
 
     return results;
