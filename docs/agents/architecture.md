@@ -19,8 +19,6 @@
 
 ### packages/sdk/src/
 
-Entry points exported by the package: `@zama-fhe/sdk` (main), `/viem`, `/ethers`, `/chains`, `/web`, `/node`, `/query`, `/cleartext`.
-
 ```
 types/          → GenericSigner (signer.ts), GenericProvider (provider.ts), all supporting types
 token/          → Token and ReadonlyToken (shield, unshield, confidentialTransfer, balanceOf)
@@ -37,35 +35,7 @@ errors/         → error hierarchy (TokenError and subclasses)
 
 ### packages/react-sdk/src/
 
-Entry points exported by the package: `@zama-fhe/react-sdk` (main), `/wagmi`.
-
 For React-sdk hook design rules, naming conventions, and package-specific gotchas, see [`packages/react-sdk/AGENTS.md`](../../packages/react-sdk/AGENTS.md).
-
-## Commands
-
-```bash
-# Build — sdk must be built before react-sdk (react-sdk resolves against sdk dist)
-pnpm build                   # both packages in order
-pnpm build:sdk               # @zama-fhe/sdk only
-pnpm build:react-sdk         # @zama-fhe/react-sdk only (sdk must be built first)
-
-# Test
-pnpm test                    # vitest — watch mode
-pnpm test:run                # single run
-pnpm test:integration        # runs packages/**/__tests__/*.integration.test.ts
-pnpm e2e:test                # Playwright E2E (requires build first)
-
-# Code quality
-pnpm typecheck               # tsc --noEmit across all packages in parallel
-pnpm lint                    # oxlint + ast-grep scan
-pnpm lint:fix                # oxlint --fix --fix-suggestions
-pnpm format                  # oxfmt (auto-format)
-pnpm format:check            # verify formatting (CI)
-
-# Required after specific changes — CI blocks merges if either is stale
-pnpm api-report              # regenerate API surface reports; run after any public API change
-pnpm llm:build               # regenerate llms.txt + llms-full.txt; run when docs/, examples/, or package READMEs change
-```
 
 ## How operations flow
 

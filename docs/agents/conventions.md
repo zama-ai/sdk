@@ -17,13 +17,6 @@ The SDK is for all Zama Protocol use cases, not just tokens. The code is in tran
 - **Generic interfaces over framework primitives.** Stateful framework dependencies — wallet, RPC, storage — are typed as `Generic*` interfaces in the core (e.g. `GenericSigner`, `GenericProvider`, `GenericStorage`). New framework-touching code reuses or defines a `Generic*`; framework-specific code lives in adapter sub-paths, not the core.
 - **Token method params mirror Solidity.** `Token`/`ReadonlyToken` method signatures (arg order and names) strictly track the underlying contract ABI per-method: `confidentialBalanceOf(account)`, `allowance(owner, spender)`, `isOperator(holder, operator)`. SDK-internal inconsistency across methods is accepted — do not "normalize" these, since callers cross-reference the Solidity source.
 
-## Code quality
-
-- **Formatter:** `oxfmt` (config: `.oxfmtrc.json`) — 100 col, 2-space indent, double quotes, trailing commas. Run `pnpm format` to apply.
-- **Linter:** `oxlint` (config: `.oxlintrc.json`) + `ast-grep` (config: `sgconfig.yml`). Two distinct tools: oxlint covers standard TypeScript rules; ast-grep enforces structural patterns (e.g. the `useQueries` wrapper rule in `react-sdk`).
-- **Pre-commit:** Husky runs three things in order: lint-staged (oxlint --fix + ast-grep scan on staged `.ts`/`.tsx`/`.js` files; oxfmt on staged `.ts`/`.tsx`/`.js`/`.json`/`.yml` files), then `pnpm typecheck` (full monorepo typecheck), then `pnpm llm:stage` (auto-stages updated LLM artifacts).
-- **Claude Code:** a PostToolUse hook in `claude-setup/settings.json` runs `pnpm format` after every Write or Edit.
-
 ## TypeScript
 
 - **ESM-only** — `"type": "module"` on every package; no `require()`, no `module.exports`
