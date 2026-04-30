@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.0.0-alpha.27](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.26...v3.0.0-alpha.27) (2026-04-30)
+
+### Features
+
+- **sdk:** add sdk.delegatedUserDecrypt() top-level entrypoint [SDK-125] ([#301](https://github.com/zama-ai/sdk/issues/301)) ([359ec05]())
+
 ## [3.0.0-alpha.26](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.25...v3.0.0-alpha.26) (2026-04-29)
 
 ### Features
