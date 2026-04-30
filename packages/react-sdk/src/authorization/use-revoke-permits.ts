@@ -14,13 +14,13 @@ import { useZamaSDK } from "../provider";
  * ```tsx
  * const { mutate: revokePermits } = useRevokePermits();
  * revokePermits([tokenAddress]);
- * revokePermits(undefined); // clear every permit for current signer/chain
+ * revokePermits(); // clear every permit for current signer/chain
  * ```
  */
-export function useRevokePermits(options?: UseMutationOptions<void, Error, Address[] | undefined>) {
+export function useRevokePermits(options?: UseMutationOptions<void, Error, Address[] | void>) {
   const sdk = useZamaSDK();
 
-  return useMutation<void, Error, Address[] | undefined>({
+  return useMutation<void, Error, Address[] | void>({
     ...revokePermitsMutationOptions(sdk),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
