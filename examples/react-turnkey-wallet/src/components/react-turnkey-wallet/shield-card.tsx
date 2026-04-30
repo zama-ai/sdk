@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useShield } from "@zama-fhe/react-sdk";
 import type { Address } from "viem";
-import { parseAmountSafe } from "@/lib/turnkey-community-example/utils";
+import { parseAmountSafe } from "@/lib/react-turnkey-wallet/utils";
 import { MutationStatus } from "./mutation-status";
 
 export function ShieldCard({

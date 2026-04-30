@@ -1,4 +1,4 @@
-# Turnkey × Zama Confidential Tokens Example
+# React Turnkey Wallet Example
 
 Working Next.js example for using Turnkey embedded wallets with the Zama SDK on Ethereum Sepolia or mainnet.
 

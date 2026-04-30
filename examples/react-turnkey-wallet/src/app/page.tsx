@@ -2,9 +2,9 @@
 
 import { AuthState } from "@turnkey/react-wallet-kit";
 import { useTurnkeyZama } from "@/components/providers";
-import { AuthenticatedHome } from "@/components/turnkey-community-example/authenticated-home";
-import { CenteredState } from "@/components/turnkey-community-example/centered-state";
-import { LoginState } from "@/components/turnkey-community-example/login-state";
+import { AuthenticatedHome } from "@/components/react-turnkey-wallet/authenticated-home";
+import { CenteredState } from "@/components/react-turnkey-wallet/centered-state";
+import { LoginState } from "@/components/react-turnkey-wallet/login-state";
 
 export default function Home() {
   const {

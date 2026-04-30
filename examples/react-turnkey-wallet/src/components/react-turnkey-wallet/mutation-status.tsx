@@ -1,5 +1,5 @@
 import type { Hex } from "viem";
-import { shortAddr, txLink, type MutationLike } from "@/lib/turnkey-community-example/utils";
+import { shortAddr, txLink, type MutationLike } from "@/lib/react-turnkey-wallet/utils";
 
 export function MutationStatus({ mutation }: { mutation: MutationLike }) {
   if (!mutation.isSuccess && !mutation.isError) return null;

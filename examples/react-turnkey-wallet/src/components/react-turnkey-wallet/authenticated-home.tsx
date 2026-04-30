@@ -11,11 +11,11 @@ import { TransferCard } from "./transfer-card";
 import { WalletHeader } from "./wallet-header";
 import { useTurnkeyZama } from "@/components/providers";
 import { explorerUrl, isTestnet, viemChain } from "@/lib/config";
-import { MINT_ABI, ZERO_ADDRESS, shortAddr } from "@/lib/turnkey-community-example/utils";
-import { useEthBalance } from "@/hooks/turnkey-community-example/use-eth-balance";
-import { usePendingUnshield } from "@/hooks/turnkey-community-example/use-pending-unshield";
-import { usePublicTokenBalance } from "@/hooks/turnkey-community-example/use-public-token-balance";
-import { useTokenPairs } from "@/hooks/turnkey-community-example/use-token-pairs";
+import { MINT_ABI, ZERO_ADDRESS, shortAddr } from "@/lib/react-turnkey-wallet/utils";
+import { useEthBalance } from "@/hooks/react-turnkey-wallet/use-eth-balance";
+import { usePendingUnshield } from "@/hooks/react-turnkey-wallet/use-pending-unshield";
+import { usePublicTokenBalance } from "@/hooks/react-turnkey-wallet/use-public-token-balance";
+import { useTokenPairs } from "@/hooks/react-turnkey-wallet/use-token-pairs";
 
 export function AuthenticatedHome({ walletAddress }: { walletAddress: Address }) {
   const sdk = useZamaSDK();
