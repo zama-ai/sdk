@@ -46,6 +46,14 @@ npm run dev
 
 Open `http://localhost:3000`.
 
+Run the example checks:
+
+```bash
+npm run lint
+npm run typecheck
+npm run build -- --webpack
+```
+
 ## Environment
 
 The example expects these variables:
@@ -86,7 +94,9 @@ The Zama web relayer is reached through a local Next.js route at `/api/relayer/*
 
 ## Project structure
 
-- `src/app/page.tsx`: demo UI and confidential token flows
+- `src/app/page.tsx`: top-level auth and wallet gating
 - `src/components/providers.tsx`: Turnkey signer + Zama provider wiring
+- `src/components/react-turnkey-wallet/*`: example UI and operation components
+- `src/hooks/react-turnkey-wallet/*`: example-specific balance and persistence hooks
 - `src/lib/config.ts`: chain selection, Zama config, RPC URL
 - `src/app/api/relayer/[...path]/route.ts`: relayer proxy
