@@ -298,7 +298,7 @@ export const test = base.extend<SdkFixtures>({
         permitFactory,
         permitSigner,
         keypairTTL: config.keypairTTL ?? 86400,
-        permitDuration: config.permitDuration,
+        permitTTL: config.permitTTL ?? 1,
         storage: config.storage ?? storage,
         permitStorage: config.permitStorage,
         onEvent: config.onEvent,

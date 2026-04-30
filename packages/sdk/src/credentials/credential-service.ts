@@ -11,7 +11,7 @@ import {
 } from "./permission-coverage";
 import type { PermissionScope } from "./permission-store";
 import { PermissionStore } from "./permission-store";
-import { KeypairTTLSchema, PermitDurationSchema } from "./schemas";
+import { KeypairTTLSchema, PermitTTLSchema } from "./schemas";
 import type {
   CredentialBundle,
   KeypairGenerator,
@@ -24,19 +24,17 @@ import { coversContracts, normalizeAddresses } from "./utils";
 
 const DEFAULT_KEYPAIR_TTL_SECONDS = 30 * 86400;
 const DEFAULT_PERMIT_DURATION_DAYS = 30;
-/** Maximum keypairTTL accepted by the fhevm ACL contract (365 days, in seconds). */
-const MAX_KEYPAIR_TTL_SECONDS = 365 * 86400;
-export { KeypairTTLSchema, PermitDurationSchema };
+export { KeypairTTLSchema, PermitTTLSchema };
 
 /** Configuration for {@link CredentialService}. */
 export interface CredentialServiceConfig {
   keypairGenerator: KeypairGenerator;
   permitFactory: PermitFactory;
   permitSigner: PermitSigner;
-  /** Keypair lifetime in seconds. Default: 30 days. Capped at 365 days. */
+  /** Keypair lifetime in seconds. Default: 30 days. Must not exceed 365 days. */
   keypairTTL?: number;
-  /** Permit lifetime in days. Default: 30. Clamped to `keypairTTL / 86400`. */
-  permitDuration?: number;
+  /** Permit lifetime in days. Default: 30. */
+  permitTTL?: number;
   /** Backing storage for keypairs (and permits if `permitStorage` is omitted). */
   storage: GenericStorage;
   /** Optional dedicated storage for permits; defaults to `storage`. */
@@ -56,42 +54,18 @@ export class CredentialService {
   readonly #store: PermissionStore;
   readonly #permitFactory: PermitFactory;
   readonly #permitSigner: PermitSigner;
-  readonly #permitDurationDays: number;
+  readonly #permitTTLDays: number;
   readonly #pendingAllow = new Map<string, Promise<CredentialBundle>>();
   #identity: SignerIdentity | undefined;
 
-  /** @throws {Error} if `keypairTTL` or `permitDuration` is not a positive integer. */
+  /**
+   * @throws {ZodError} if `keypairTTL` or `permitTTL` is not a positive integer,
+   *   or if `keypairTTL` exceeds the fhevm ACL maximum of 365 days.
+   * @throws {ConfigurationError} if `permitTTL` (days) exceeds `keypairTTL / 86400`.
+   */
   constructor(config: CredentialServiceConfig) {
-    const ttl = (() => {
-      const value = KeypairTTLSchema.parse(config.keypairTTL ?? DEFAULT_KEYPAIR_TTL_SECONDS);
-      if (value > MAX_KEYPAIR_TTL_SECONDS) {
-        // oxlint-disable-next-line no-console
-        console.warn(
-          `[zama-sdk] keypairTTL (${value}s) exceeds the fhevm maximum of 365 days (${MAX_KEYPAIR_TTL_SECONDS}s); capping to ${MAX_KEYPAIR_TTL_SECONDS}s.`,
-        );
-        return MAX_KEYPAIR_TTL_SECONDS;
-      }
-      return value;
-    })();
-
-    const permitDuration = (() => {
-      const requested = PermitDurationSchema.parse(
-        config.permitDuration ?? DEFAULT_PERMIT_DURATION_DAYS,
-      );
-      const max = Math.floor(ttl / 86400);
-      // Sub-day keypairTTL (test/dev): can't express the bound in whole days, skip clamping.
-      if (max <= 0) {
-        return requested;
-      }
-      if (requested > max) {
-        // oxlint-disable-next-line no-console
-        console.warn(
-          `[zama-sdk] permitDuration (${requested}d) exceeds keypairTTL (${max}d); capping to ${max}d.`,
-        );
-        return max;
-      }
-      return requested;
-    })();
+    const ttl = KeypairTTLSchema.parse(config.keypairTTL ?? DEFAULT_KEYPAIR_TTL_SECONDS);
+    const permitTTL = PermitTTLSchema.parse(config.permitTTL ?? DEFAULT_PERMIT_DURATION_DAYS);
 
     this.#vault = new KeypairVault({
       generator: config.keypairGenerator,
@@ -103,22 +77,17 @@ export class CredentialService {
     });
     this.#permitFactory = config.permitFactory;
     this.#permitSigner = config.permitSigner;
-    this.#permitDurationDays = permitDuration;
+    this.#permitTTLDays = permitTTL;
   }
 
   /** Eagerly resolve the current identity and warm the vault. Best-effort. */
   async initialize(): Promise<void> {
-    try {
-      const [address, chainId] = await Promise.all([
-        this.#permitSigner.getAddress(),
-        this.#permitSigner.getChainId(),
-      ]);
-      this.#identity = { address: getAddress(address), chainId };
-      await this.#warmKeypairFor(getAddress(address));
-    } catch (error) {
-      // oxlint-disable-next-line no-console
-      console.warn("[zama-sdk] CredentialService initialize failed:", error);
-    }
+    const [address, chainId] = await Promise.all([
+      this.#permitSigner.getAddress(),
+      this.#permitSigner.getChainId(),
+    ]);
+    this.#identity = { address: getAddress(address), chainId };
+    await this.#warmKeypairFor(getAddress(address));
   }
 
   /** Warm the current signer's keypair without creating any signed permits. */
@@ -169,7 +138,6 @@ export class CredentialService {
       signerAddress,
       chainId,
       delegatorAddress,
-      delegator,
       normalized,
     }).finally(() => {
       this.#pendingAllow.delete(dedupKey);
@@ -182,10 +150,9 @@ export class CredentialService {
     signerAddress: Address;
     chainId: number;
     delegatorAddress: Address;
-    delegator?: Address;
     normalized: Address[];
   }): Promise<CredentialBundle> {
-    const { signerAddress, chainId, delegatorAddress, delegator, normalized } = params;
+    const { signerAddress, chainId, delegatorAddress, normalized } = params;
     const scope: PermissionScope = { signerAddress, chainId, delegatorAddress };
 
     const keypair = await this.#vault.getOrCreate(signerAddress);
@@ -205,7 +172,6 @@ export class CredentialService {
         signerAddress,
         chainId,
         delegatorAddress,
-        delegator,
       });
       signed.push(permission);
 
@@ -325,13 +291,13 @@ export class CredentialService {
     signerAddress: Address;
     chainId: number;
     delegatorAddress: Address;
-    delegator?: Address;
   }): Promise<Permission> {
     const startTimestamp = Math.floor(Date.now() / 1000);
-    const durationDays = this.#permitDurationDays;
+    const durationDays = this.#permitTTLDays;
+    const isDelegated = input.delegatorAddress !== input.signerAddress;
 
     try {
-      const eip712 = input.delegator
+      const eip712 = isDelegated
         ? await this.#permitFactory.createDelegatedUserDecryptEIP712(
             input.keypair.publicKey,
             input.chunk,

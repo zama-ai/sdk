@@ -23,7 +23,7 @@ export function buildZamaConfig(
     storage,
     permitStorage,
     keypairTTL: params.keypairTTL,
-    permitDuration: params.permitDuration,
+    permitTTL: params.permitTTL,
     registryTTL: params.registryTTL,
     onEvent: params.onEvent,
   };

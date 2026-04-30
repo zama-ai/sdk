@@ -1286,8 +1286,8 @@ export interface ZamaSDKConfig {
     chains?: readonly FheChain[];
     keypairTTL?: number;
     onEvent?: ZamaSDKEventListener;
-    permitDuration?: number;
     permitStorage?: GenericStorage;
+    permitTTL?: number;
     provider: GenericProvider;
     registryAddresses?: Record<number, Address>;
     registryTTL?: number;

@@ -40,13 +40,13 @@ const test = baseTest.extend<{ fakeTime: void }>({
  *     permit and does not prompt for re-signature.
  */
 describe("ZamaSDK credentials lifecycle", () => {
-  test("re-signs after permitDuration elapses but reuses the FHE keypair", async ({
+  test("re-signs after permitTTL elapses but reuses the FHE keypair", async ({
     fakeTime: _fakeTime,
     createSDK,
     signer,
     relayer,
   }) => {
-    const sdk = createSDK({ permitDuration: PERMIT_DURATION_DAYS });
+    const sdk = createSDK({ permitTTL: PERMIT_DURATION_DAYS });
 
     await sdk.allow([CONTRACT_A]);
     expect(signer.signTypedData).toHaveBeenCalledOnce();
@@ -63,12 +63,8 @@ describe("ZamaSDK credentials lifecycle", () => {
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
   });
 
-  test("does not re-sign within permitDuration", async ({
-    fakeTime: _fakeTime,
-    createSDK,
-    signer,
-  }) => {
-    const sdk = createSDK({ permitDuration: PERMIT_DURATION_DAYS });
+  test("does not re-sign within permitTTL", async ({ fakeTime: _fakeTime, createSDK, signer }) => {
+    const sdk = createSDK({ permitTTL: PERMIT_DURATION_DAYS });
 
     await sdk.allow([CONTRACT_A]);
     expect(signer.signTypedData).toHaveBeenCalledOnce();

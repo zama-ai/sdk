@@ -51,7 +51,7 @@ export function ZamaProvider({ children, config }: ZamaProviderProps) {
         storage: config.storage,
         permitStorage: config.permitStorage,
         keypairTTL: config.keypairTTL,
-        permitDuration: config.permitDuration,
+        permitTTL: config.permitTTL,
         registryTTL: config.registryTTL,
         onEvent: onEventRef.current,
       }),

@@ -18,19 +18,26 @@ const chainId = z.number().finite().int().positive();
 const permitScopeKey = z.string().regex(/^permits:[0-9a-f]{32}$/u, "expected permit scope key");
 
 const keypairTTLError = "keypairTTL must be a positive integer number of seconds";
-const permitDurationError = "permitDuration must be a positive integer number of days";
+const permitTTLError = "permitTTL must be a positive integer number of days";
+
+/** Maximum keypairTTL accepted by the fhevm ACL contract (365 days, in seconds). */
+export const MAX_KEYPAIR_TTL_SECONDS = 365 * 86400;
 
 export const KeypairTTLSchema = z
   .number(keypairTTLError)
   .finite(keypairTTLError)
   .int(keypairTTLError)
-  .positive(keypairTTLError);
+  .positive(keypairTTLError)
+  .max(
+    MAX_KEYPAIR_TTL_SECONDS,
+    `keypairTTL must not exceed the fhevm ACL maximum of ${MAX_KEYPAIR_TTL_SECONDS}s (365 days)`,
+  );
 
-export const PermitDurationSchema = z
-  .number(permitDurationError)
-  .finite(permitDurationError)
-  .int(permitDurationError)
-  .positive(permitDurationError);
+export const PermitTTLSchema = z
+  .number(permitTTLError)
+  .finite(permitTTLError)
+  .int(permitTTLError)
+  .positive(permitTTLError);
 
 export const StoredKeypairSchema = z.object({
   publicKey: hex,

@@ -63,7 +63,7 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
   /** ML-KEM keypair TTL in seconds. Default: 2592000 (30 days). */
   keypairTTL?: number;
   /** Permit lifetime in days. Default: 30. Clamped to `keypairTTL / 86400`. */
-  permitDuration?: number;
+  permitTTL?: number;
   /** Registry cache TTL in seconds. Default: 86400 (24h). */
   registryTTL?: number;
   /** SDK lifecycle event listener. */
@@ -92,7 +92,7 @@ export interface ZamaConfig {
   readonly storage: GenericStorage;
   readonly permitStorage: GenericStorage;
   readonly keypairTTL: number | undefined;
-  readonly permitDuration: number | undefined;
+  readonly permitTTL: number | undefined;
   readonly registryTTL: number | undefined;
   readonly onEvent: ZamaSDKEventListener | undefined;
 }

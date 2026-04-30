@@ -75,7 +75,7 @@ export const test = base.extend<ReactSdkFixtures>({
         storage,
         permitStorage: undefined,
         keypairTTL: undefined,
-        permitDuration: undefined,
+        permitTTL: undefined,
         registryTTL: undefined,
         onEvent: undefined,
         ...overrides,

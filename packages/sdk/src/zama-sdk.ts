@@ -3,7 +3,7 @@ import type { FheChain } from "./chains/types";
 import {
   CredentialService,
   KeypairTTLSchema,
-  PermitDurationSchema,
+  PermitTTLSchema,
   type CredentialServiceConfig,
 } from "./credentials/credential-service";
 import {
@@ -79,14 +79,13 @@ export interface ZamaSDKConfig {
    * Default: `2592000` (30 days). Must be a positive number — `0` is rejected
    * because the keypair is required to establish the relayer connection.
    * Maximum: `31536000` (365 days) — the fhevm contract rejects `durationDays > 365`.
-   * Values above this maximum are automatically capped with a console warning.
+   * Values above this maximum throw a validation error at construction.
    */
   keypairTTL?: number;
   /**
-   * Permit lifetime in days. Default: 30. Implicitly bounded by the keypair TTL —
-   * values above `keypairTTL / 86400` are clamped with a warning.
+   * Permit lifetime in days. Default: 30. Throws `ConfigurationError` on violation.
    */
-  permitDuration?: number;
+  permitTTL?: number;
   /**
    * Optional dedicated storage for permits. Defaults to `storage`. Use this
    * to keep permits out of long-lived storage (e.g. IndexedDB → MemoryStorage)
@@ -155,15 +154,15 @@ export class ZamaSDK {
     if (config.keypairTTL !== undefined) {
       KeypairTTLSchema.parse(config.keypairTTL);
     }
-    if (config.permitDuration !== undefined) {
-      PermitDurationSchema.parse(config.permitDuration);
+    if (config.permitTTL !== undefined) {
+      PermitTTLSchema.parse(config.permitTTL);
     }
     if (config.signer) {
       const signer = config.signer;
       this.#credentialService = new CredentialService(
         buildCredentialServiceConfig(this.relayer, signer, {
           keypairTTL: config.keypairTTL,
-          permitDuration: config.permitDuration,
+          permitTTL: config.permitTTL,
           storage: this.storage,
           permitStorage: config.permitStorage,
           onEvent: this.#onEvent,
@@ -174,7 +173,6 @@ export class ZamaSDK {
         void this.#handleIdentityChange(change);
       });
 
-      // Eager init — best-effort, errors swallowed.
       void this.#credentialService.initialize();
     } else {
       this.#credentialService = undefined;
@@ -869,7 +867,7 @@ function buildCredentialServiceConfig(
   signer: GenericSigner,
   opts: Pick<
     CredentialServiceConfig,
-    "keypairTTL" | "permitDuration" | "storage" | "permitStorage" | "onEvent"
+    "keypairTTL" | "permitTTL" | "storage" | "permitStorage" | "onEvent"
   >,
 ): CredentialServiceConfig {
   return {

@@ -19860,9 +19860,9 @@ export interface ZamaConfig {
     // (undocumented)
     readonly onEvent: ZamaSDKEventListener | undefined;
     // (undocumented)
-    readonly permitDuration: number | undefined;
-    // (undocumented)
     readonly permitStorage: GenericStorage;
+    // (undocumented)
+    readonly permitTTL: number | undefined;
     // (undocumented)
     readonly provider: GenericProvider;
     // (undocumented)
@@ -19880,8 +19880,8 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
     chains: TChains;
     keypairTTL?: number;
     onEvent?: ZamaSDKEventListener;
-    permitDuration?: number;
     permitStorage?: GenericStorage;
+    permitTTL?: number;
     registryTTL?: number;
     relayers: { [K in TChains[number]["id"]]: RelayerConfig };
     storage?: GenericStorage;
@@ -20000,8 +20000,8 @@ export interface ZamaSDKConfig {
     chains?: readonly FheChain[];
     keypairTTL?: number;
     onEvent?: ZamaSDKEventListener;
-    permitDuration?: number;
     permitStorage?: GenericStorage;
+    permitTTL?: number;
     provider: GenericProvider;
     registryAddresses?: Record<number, Address>;
     registryTTL?: number;

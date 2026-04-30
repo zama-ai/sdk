@@ -114,17 +114,6 @@ describe("ZamaSDK", () => {
       warnSpy.mockRestore();
     });
 
-    it("caps keypairTTL above 365 days and emits a warning", ({ createSDK }) => {
-      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-      const MAX = 365 * 86400;
-      const TOO_BIG = MAX + 1;
-      createSDK({ keypairTTL: TOO_BIG });
-      expect(warnSpy).toHaveBeenCalled();
-      expect(warnSpy.mock.calls[0]![0]).toContain("keypairTTL");
-      expect(warnSpy.mock.calls[0]![0]).toContain("365 days");
-      warnSpy.mockRestore();
-    });
-
     it("throws when keypairTTL is Infinity", ({ createSDK }) => {
       expect(() => createSDK({ keypairTTL: Infinity })).toThrow(
         "keypairTTL must be a positive integer number of seconds",
