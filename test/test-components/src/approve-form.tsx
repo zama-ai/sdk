@@ -1,8 +1,8 @@
 "use client";
 
 import {
-  useConfidentialApprove,
-  useConfidentialIsApproved,
+  useConfidentialSetOperator,
+  useConfidentialIsOperator,
   useMetadata,
 } from "@zama-fhe/react-sdk";
 import type { Address } from "@zama-fhe/sdk";
@@ -17,8 +17,8 @@ export function ApproveForm({
 }) {
   const { address } = useAccount();
   const { data: metadata } = useMetadata(tokenAddress);
-  const approve = useConfidentialApprove({ tokenAddress });
-  const { data: isApproved } = useConfidentialIsApproved({
+  const setOperator = useConfidentialSetOperator({ tokenAddress });
+  const { data: isOperator } = useConfidentialIsOperator({
     tokenAddress,
     spender: defaultSpender,
     holder: address,
@@ -27,23 +27,23 @@ export function ApproveForm({
   return (
     <form
       action={(formData) => {
-        approve.mutate({ spender: formData.get("spender") as Address });
+        setOperator.mutate({ operator: formData.get("operator") as Address });
       }}
       className="space-y-4"
       data-testid="approve-form"
     >
-      <h2 className="text-xl font-semibold text-white">Approve {metadata?.symbol ?? "..."}</h2>
+      <h2 className="text-xl font-semibold text-white">Set Operator {metadata?.symbol ?? "..."}</h2>
 
-      {isApproved !== undefined && (
+      {isOperator !== undefined && (
         <p className="text-sm text-zama-gray" data-testid="approval-status">
-          Approved: {isApproved ? "true" : "false"}
+          Approved: {isOperator ? "true" : "false"}
         </p>
       )}
 
       <input
         type="text"
-        name="spender"
-        placeholder="Spender address (0x...)"
+        name="operator"
+        placeholder="Operator address (0x...)"
         defaultValue={defaultSpender ?? ""}
         required
         className="w-full px-3 py-2 bg-zama-surface border border-zama-border rounded outline-none text-white placeholder:text-zama-gray focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
@@ -52,22 +52,22 @@ export function ApproveForm({
 
       <button
         type="submit"
-        disabled={approve.isPending}
+        disabled={setOperator.isPending}
         className="px-4 py-2 bg-zama-yellow text-zama-black font-medium rounded hover:bg-zama-yellow-hover disabled:opacity-50 transition-colors"
         data-testid="approve-button"
       >
-        {approve.isPending ? "Approving..." : "Approve"}
+        {setOperator.isPending ? "Approving..." : "Approve"}
       </button>
 
-      {approve.isSuccess && (
+      {setOperator.isSuccess && (
         <p className="text-zama-success" data-testid="approve-success">
-          Approved successfully! Tx: {approve.data?.txHash}
+          Approved successfully! Tx: {setOperator.data?.txHash}
         </p>
       )}
 
-      {approve.isError && (
+      {setOperator.isError && (
         <p className="text-zama-error" data-testid="approve-error">
-          Error: {approve.error.message}
+          Error: {setOperator.error.message}
         </p>
       )}
     </form>

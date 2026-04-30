@@ -28,7 +28,7 @@ export const ZamaSDKEvents = {
   ShieldSubmitted: "shield:submitted",
   TransferSubmitted: "transfer:submitted",
   TransferFromSubmitted: "transferFrom:submitted",
-  ApproveSubmitted: "approve:submitted",
+  SetOperatorSubmitted: "setOperator:submitted",
   ApproveUnderlyingSubmitted: "approveUnderlying:submitted",
   UnwrapSubmitted: "unwrap:submitted",
   FinalizeUnwrapSubmitted: "finalizeUnwrap:submitted",
@@ -177,8 +177,8 @@ export interface TransferFromSubmittedEvent extends BaseEvent {
   txHash: Hex;
 }
 
-export interface ApproveSubmittedEvent extends BaseEvent {
-  type: typeof ZamaSDKEvents.ApproveSubmitted;
+export interface SetOperatorSubmittedEvent extends BaseEvent {
+  type: typeof ZamaSDKEvents.SetOperatorSubmitted;
   txHash: Hex;
 }
 
@@ -249,7 +249,7 @@ export type ZamaSDKEvent =
   | ShieldSubmittedEvent
   | TransferSubmittedEvent
   | TransferFromSubmittedEvent
-  | ApproveSubmittedEvent
+  | SetOperatorSubmittedEvent
   | ApproveUnderlyingSubmittedEvent
   | UnwrapSubmittedEvent
   | FinalizeUnwrapSubmittedEvent

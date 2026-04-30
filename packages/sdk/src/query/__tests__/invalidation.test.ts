@@ -1,7 +1,7 @@
 import { describe, expect, test } from "../../test-fixtures";
 import { QueryClient } from "@tanstack/react-query";
 import {
-  invalidateAfterApprove,
+  invalidateAfterSetOperator,
   invalidateAfterApproveUnderlying,
   invalidateAfterShield,
   invalidateAfterTransfer,
@@ -162,15 +162,15 @@ describe("invalidation", () => {
     }
   });
 
-  test("invalidateAfterApprove invalidates confidential approval key", () => {
+  test("invalidateAfterSetOperator invalidates confidential operator key", () => {
     const qc = createQueryClient();
-    const approvalKey = zamaQueryKeys.confidentialIsApproved.token(TOKEN);
+    const operatorKey = zamaQueryKeys.confidentialIsOperator.token(TOKEN);
 
-    qc.setQueryData(approvalKey, true);
-    invalidateAfterApprove(qc, TOKEN);
+    qc.setQueryData(operatorKey, true);
+    invalidateAfterSetOperator(qc, TOKEN);
 
-    expect(qc.getQueryData(approvalKey)).toBe(true);
-    expect(qc.getQueryState(approvalKey)?.isInvalidated).toBe(true);
+    expect(qc.getQueryData(operatorKey)).toBe(true);
+    expect(qc.getQueryState(operatorKey)?.isInvalidated).toBe(true);
   });
 
   test("invalidateAfterApproveUnderlying invalidates underlying allowance and keeps data", () => {

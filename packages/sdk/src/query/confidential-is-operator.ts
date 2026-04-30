@@ -6,26 +6,26 @@ import { filterQueryOptions } from "./utils";
 import { zamaQueryKeys } from "./query-keys";
 import type { Address } from "viem";
 
-export interface ConfidentialIsApprovedQueryConfig {
+export interface ConfidentialIsOperatorQueryConfig {
   holder?: Address;
   spender?: Address;
   query?: Record<string, unknown>;
 }
 
-export function confidentialIsApprovedQueryOptions(
+export function confidentialIsOperatorQueryOptions(
   sdk: ZamaSDK,
   tokenAddress: Address | undefined,
-  config: ConfidentialIsApprovedQueryConfig,
+  config: ConfidentialIsOperatorQueryConfig,
 ): QueryFactoryOptions<
   boolean,
   Error,
   boolean,
-  ReturnType<typeof zamaQueryKeys.confidentialIsApproved.scope>
+  ReturnType<typeof zamaQueryKeys.confidentialIsOperator.scope>
 > {
   const holderKey = config.holder;
   const spenderKey = config.spender;
   const queryEnabled = config.query?.enabled !== false;
-  const queryKey = zamaQueryKeys.confidentialIsApproved.scope(tokenAddress, holderKey, spenderKey);
+  const queryKey = zamaQueryKeys.confidentialIsOperator.scope(tokenAddress, holderKey, spenderKey);
 
   return {
     ...filterQueryOptions(config.query ?? {}),
@@ -33,9 +33,9 @@ export function confidentialIsApprovedQueryOptions(
     queryFn: async (context) => {
       const [, { tokenAddress: keyTokenAddress, holder: keyHolder, spender: keySpender }] =
         context.queryKey;
-      assertNonNullable(keyTokenAddress, "confidentialIsApprovedQueryOptions: tokenAddress");
-      assertNonNullable(keyHolder, "confidentialIsApprovedQueryOptions: holder");
-      assertNonNullable(keySpender, "confidentialIsApprovedQueryOptions: spender");
+      assertNonNullable(keyTokenAddress, "confidentialIsOperatorQueryOptions: tokenAddress");
+      assertNonNullable(keyHolder, "confidentialIsOperatorQueryOptions: holder");
+      assertNonNullable(keySpender, "confidentialIsOperatorQueryOptions: spender");
       return sdk.provider.readContract(isOperatorContract(keyTokenAddress, keyHolder, keySpender));
     },
     staleTime: 30_000,

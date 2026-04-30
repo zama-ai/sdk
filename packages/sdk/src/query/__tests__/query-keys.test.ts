@@ -23,7 +23,7 @@ describe("zamaQueryKeys", () => {
     ["isWrapper", zamaQueryKeys.isWrapper.all],
     ["wrapperDiscovery", zamaQueryKeys.wrapperDiscovery.all],
     ["underlyingAllowance", zamaQueryKeys.underlyingAllowance.all],
-    ["confidentialIsApproved", zamaQueryKeys.confidentialIsApproved.all],
+    ["confidentialIsOperator", zamaQueryKeys.confidentialIsOperator.all],
     ["totalSupply", zamaQueryKeys.totalSupply.all],
     ["publicKey", zamaQueryKeys.publicKey.all],
     ["publicParams", zamaQueryKeys.publicParams.all],
@@ -99,8 +99,8 @@ describe("zamaQueryKeys", () => {
       zamaQueryKeys.wrapperDiscovery.token(TOKEN_LOWER, ERC20_LOWER),
       zamaQueryKeys.underlyingAllowance.token(TOKEN_LOWER),
       zamaQueryKeys.underlyingAllowance.scope(TOKEN_LOWER, OWNER_LOWER, WRAPPER_LOWER),
-      zamaQueryKeys.confidentialIsApproved.token(TOKEN_LOWER),
-      zamaQueryKeys.confidentialIsApproved.scope(TOKEN_LOWER, OWNER_LOWER, SPENDER_LOWER),
+      zamaQueryKeys.confidentialIsOperator.token(TOKEN_LOWER),
+      zamaQueryKeys.confidentialIsOperator.scope(TOKEN_LOWER, OWNER_LOWER, SPENDER_LOWER),
       zamaQueryKeys.totalSupply.token(TOKEN_LOWER),
       zamaQueryKeys.publicParams.bits(2048),
       zamaQueryKeys.decryption.handle(HANDLE_A, WRAPPER_LOWER),
@@ -153,12 +153,12 @@ describe("zamaQueryKeys", () => {
         zamaQueryKeys.underlyingAllowance.token(TOKEN_UPPER),
       ],
       [
-        zamaQueryKeys.confidentialIsApproved.token(TOKEN_LOWER),
-        zamaQueryKeys.confidentialIsApproved.token(TOKEN_UPPER),
+        zamaQueryKeys.confidentialIsOperator.token(TOKEN_LOWER),
+        zamaQueryKeys.confidentialIsOperator.token(TOKEN_UPPER),
       ],
       [
-        zamaQueryKeys.confidentialIsApproved.scope(TOKEN_LOWER, OWNER_LOWER, SPENDER_LOWER),
-        zamaQueryKeys.confidentialIsApproved.scope(
+        zamaQueryKeys.confidentialIsOperator.scope(TOKEN_LOWER, OWNER_LOWER, SPENDER_LOWER),
+        zamaQueryKeys.confidentialIsOperator.scope(
           TOKEN_UPPER,
           OWNER_UPPER,
           getAddress(SPENDER_LOWER),
@@ -191,8 +191,8 @@ describe("zamaQueryKeys", () => {
       "zama.underlyingAllowance",
       { tokenAddress: getAddress(TOKEN_LOWER) },
     ]);
-    expect(zamaQueryKeys.confidentialIsApproved.scope(TOKEN_LOWER, OWNER_LOWER)).toEqual([
-      "zama.confidentialIsApproved",
+    expect(zamaQueryKeys.confidentialIsOperator.scope(TOKEN_LOWER, OWNER_LOWER)).toEqual([
+      "zama.confidentialIsOperator",
       {
         tokenAddress: getAddress(TOKEN_LOWER),
         holder: getAddress(OWNER_LOWER),

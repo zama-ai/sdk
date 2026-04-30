@@ -165,7 +165,7 @@ function createMockReadonlyToken(address: Address, signer: GenericSigner): Reado
     isConfidential: vi.fn().mockResolvedValue(true),
     isWrapper: vi.fn().mockResolvedValue(false),
     allowance: vi.fn().mockResolvedValue(0n),
-    isApproved: vi.fn().mockResolvedValue(false),
+    isOperator: vi.fn().mockResolvedValue(false),
   } as unknown as ReadonlyToken;
 }
 
@@ -356,7 +356,7 @@ export const test = base.extend<SdkFixtures>({
         signer: sig,
         confidentialTransfer: vi.fn().mockResolvedValue(txResult),
         confidentialTransferFrom: vi.fn().mockResolvedValue(txResult),
-        approve: vi.fn().mockResolvedValue(txResult),
+        setOperator: vi.fn().mockResolvedValue(txResult),
         approveUnderlying: vi.fn().mockResolvedValue(txResult),
         shield: vi.fn().mockResolvedValue(txResult),
         unwrap: vi.fn().mockResolvedValue(txResult),

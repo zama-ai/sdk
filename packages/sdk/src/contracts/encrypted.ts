@@ -102,22 +102,22 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
 
 /**
  * Returns the contract config for setting an operator.
- * Defaults timestamp to 1 hour from now.
+ * Defaults until to 1 hour from now.
  *
  * @example
  * ```ts
  * const txHash = await signer.writeContract(
- *   setOperatorContract(tokenAddress, spender),
+ *   setOperatorContract(tokenAddress, operator),
  * );
  * ```
  */
-export function setOperatorContract(tokenAddress: Address, spender: Address, timestamp?: number) {
-  const until = timestamp ?? Math.floor(Date.now() / 1000) + 3600;
+export function setOperatorContract(tokenAddress: Address, operator: Address, until?: number) {
+  const effectiveUntil = until ?? Math.floor(Date.now() / 1000) + 3600;
   return {
     address: tokenAddress,
     abi: encryptedAbi,
     functionName: "setOperator",
-    args: [spender, until],
+    args: [operator, effectiveUntil],
   } as const;
 }
 

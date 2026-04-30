@@ -63,7 +63,7 @@ describe("ZamaSDKEvents constants", () => {
     expect(ZamaSDKEvents.ShieldSubmitted).toBe("shield:submitted");
     expect(ZamaSDKEvents.TransferSubmitted).toBe("transfer:submitted");
     expect(ZamaSDKEvents.TransferFromSubmitted).toBe("transferFrom:submitted");
-    expect(ZamaSDKEvents.ApproveSubmitted).toBe("approve:submitted");
+    expect(ZamaSDKEvents.SetOperatorSubmitted).toBe("setOperator:submitted");
     expect(ZamaSDKEvents.ApproveUnderlyingSubmitted).toBe("approveUnderlying:submitted");
     expect(ZamaSDKEvents.UnwrapSubmitted).toBe("unwrap:submitted");
     expect(ZamaSDKEvents.FinalizeUnwrapSubmitted).toBe("finalizeUnwrap:submitted");
@@ -468,8 +468,8 @@ describe("Token event emissions", () => {
     });
   });
 
-  describe("approve events", () => {
-    it("emits ApproveSubmitted", async ({
+  describe("setOperator events", () => {
+    it("emits SetOperatorSubmitted", async ({
       relayer,
       signer,
       tokenAddress,
@@ -485,13 +485,13 @@ describe("Token event emissions", () => {
         sessionStorage,
         tokenAddress,
       });
-      await token.approve("0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address);
+      await token.setOperator("0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address);
 
       const types = events.map((e) => e.type);
-      expect(types).toContain(ZamaSDKEvents.ApproveSubmitted);
+      expect(types).toContain(ZamaSDKEvents.SetOperatorSubmitted);
     });
 
-    it("includes txHash on ApproveSubmitted event", async ({
+    it("includes txHash on SetOperatorSubmitted event", async ({
       relayer,
       signer,
       tokenAddress,
@@ -507,9 +507,9 @@ describe("Token event emissions", () => {
         sessionStorage,
         tokenAddress,
       });
-      await token.approve("0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address);
+      await token.setOperator("0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address);
 
-      const submitted = events.find((e) => e.type === ZamaSDKEvents.ApproveSubmitted);
+      const submitted = events.find((e) => e.type === ZamaSDKEvents.SetOperatorSubmitted);
       expect(submitted).toBeDefined();
       expect("txHash" in submitted! && submitted.txHash).toBe("0xtxhash");
     });
@@ -793,7 +793,7 @@ describe("Token event emissions", () => {
       expect("operation" in txError! && txError.operation).toBe("shield");
     });
 
-    it("emits TransactionError with operation 'approve' on approve failure", async ({
+    it("emits TransactionError with operation 'setOperator' on setOperator failure", async ({
       relayer,
       signer,
       tokenAddress,
@@ -801,7 +801,7 @@ describe("Token event emissions", () => {
       sessionStorage,
       provider,
     }) => {
-      vi.mocked(signer.writeContract).mockRejectedValue(new Error("approve failed"));
+      vi.mocked(signer.writeContract).mockRejectedValue(new Error("setOperator failed"));
       const { token, events } = setupSdkWithEvents({
         relayer,
         signer,
@@ -812,12 +812,12 @@ describe("Token event emissions", () => {
       });
 
       await expect(
-        token.approve("0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address),
+        token.setOperator("0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address),
       ).rejects.toThrow();
 
       const txError = events.find((e) => e.type === ZamaSDKEvents.TransactionError);
       expect(txError).toBeDefined();
-      expect("operation" in txError! && txError.operation).toBe("approve");
+      expect("operation" in txError! && txError.operation).toBe("setOperator");
     });
 
     it("emits TransactionError with operation 'unwrap' on unwrap write failure", async ({
