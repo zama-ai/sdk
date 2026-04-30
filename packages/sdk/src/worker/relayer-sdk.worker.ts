@@ -8,10 +8,8 @@ import {
   createKmsDelegatedUserDecryptEip712,
   createKmsUserDecryptEip712,
 } from "@fhevm/sdk/actions/chain";
-import { createTypedValueArray } from "@fhevm/sdk/base";
 import { createFhevmClient, setFhevmRuntimeConfig } from "@fhevm/sdk/viem";
 import { createPublicClient, http } from "viem";
-import type { TypedValue } from "@fhevm/sdk/types";
 import type { FheChain } from "../chains/types";
 import type {
   CreateDelegatedEIP712Request,
@@ -337,11 +335,8 @@ async function handleEncrypt(request: EncryptRequest): Promise<void> {
   try {
     const client = await getClient(payload.chainId);
 
-    // EncryptInput matches TypedValueLike structurally; cast needed because
-    // EncryptInput fields are mutable while TypedValueLike's are readonly.
-    const typedValues = createTypedValueArray(values as unknown as TypedValue[]);
     const encrypted = await client.encryptValues({
-      values: typedValues,
+      values,
       contractAddress,
       userAddress,
     });

@@ -159,7 +159,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@fhevm/sdk": "1.0.0-alpha.3",
+    "@fhevm/sdk": "1.0.0-alpha.4",
     "@zama-fhe/relayer-sdk": "~0.4.2",
     "viem": ">=2"
   },

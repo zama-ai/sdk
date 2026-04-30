@@ -240,11 +240,8 @@ async function handleEncrypt(request: EncryptRequest): Promise<void> {
   try {
     const client = await getClient(payload.chainId);
 
-    const { createTypedValueArray } = await import("@fhevm/sdk/base");
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- EncryptInput is structurally compatible with TypedValueLike
-    const typedValues = createTypedValueArray(values as any);
     const encrypted = await client.encryptValues({
-      values: typedValues,
+      values,
       contractAddress,
       userAddress,
     });
