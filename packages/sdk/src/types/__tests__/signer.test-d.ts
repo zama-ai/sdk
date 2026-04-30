@@ -1,6 +1,11 @@
 import { describe, expectTypeOf, test } from "vitest";
 import type { Address, Hex } from "viem";
-import type { GenericSigner, SignerLifecycleCallbacks } from "../signer";
+import type {
+  GenericSigner,
+  SignerIdentityChange,
+  SignerIdentityListener,
+  SignerIdentity,
+} from "../signer";
 import type { TransactionReceipt } from "../transaction";
 import type { GenericProvider } from "../provider";
 
@@ -29,27 +34,34 @@ describe("GenericSigner", () => {
     >();
   });
 
-  test("subscribe is optional", () => {
+  test("subscribe is optional and takes a direct listener", () => {
     expectTypeOf<GenericSigner["subscribe"]>().toEqualTypeOf<
-      ((callbacks: SignerLifecycleCallbacks) => () => void) | undefined
+      ((onIdentityChange: SignerIdentityListener) => () => void) | undefined
     >();
   });
 });
 
-describe("SignerLifecycleCallbacks", () => {
-  test("all callbacks are optional", () => {
-    expectTypeOf<SignerLifecycleCallbacks["onDisconnect"]>().toEqualTypeOf<
-      (() => void) | undefined
-    >();
-    expectTypeOf<SignerLifecycleCallbacks["onAccountChange"]>().toEqualTypeOf<
-      ((newAddress: Address) => void) | undefined
-    >();
-    expectTypeOf<SignerLifecycleCallbacks["onChainChange"]>().toEqualTypeOf<
-      ((newChainId: number) => void) | undefined
-    >();
+describe("SignerIdentityListener", () => {
+  test("is a function of SignerIdentityChange returning void", () => {
+    expectTypeOf<SignerIdentityListener>().toEqualTypeOf<(change: SignerIdentityChange) => void>();
+  });
+});
+
+describe("SignerIdentityChange", () => {
+  test("previous and next are optional SignerIdentity", () => {
+    expectTypeOf<SignerIdentityChange["previous"]>().toEqualTypeOf<SignerIdentity | undefined>();
+    expectTypeOf<SignerIdentityChange["next"]>().toEqualTypeOf<SignerIdentity | undefined>();
   });
 
-  test("accepts empty object", () => {
-    expectTypeOf<{}>().toExtend<SignerLifecycleCallbacks>();
+  test("accepts connect shape (next only)", () => {
+    expectTypeOf<{
+      next: { address: Address; chainId: number };
+    }>().toExtend<SignerIdentityChange>();
+  });
+
+  test("accepts disconnect shape (previous only)", () => {
+    expectTypeOf<{
+      previous: { address: Address; chainId: number };
+    }>().toExtend<SignerIdentityChange>();
   });
 });

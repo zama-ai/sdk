@@ -16,7 +16,6 @@ export {
 } from "./invalidation";
 export type { QueryClientLike, QueryFilterLike, QueryLike } from "./invalidation";
 
-export { signerAddressQueryOptions } from "./signer-address";
 export {
   tokenMetadataQueryOptions,
   type TokenMetadata,
@@ -92,7 +91,10 @@ export {
   createDelegatedUserDecryptEIP712MutationOptions,
   type CreateDelegatedUserDecryptEIP712Params,
 } from "./create-delegated-user-decrypt-eip712";
-export { delegatedUserDecryptMutationOptions } from "./delegated-user-decrypt";
+export {
+  delegatedUserDecryptMutationOptions,
+  type DelegatedUserDecryptMutationParams,
+} from "./delegated-user-decrypt";
 export { publicDecryptMutationOptions } from "./public-decrypt";
 export { requestZKProofVerificationMutationOptions } from "./request-zk-proof-verification";
 export { allowMutationOptions } from "./allow";
@@ -154,7 +156,9 @@ export type {
   GenericSigner,
   GenericStorage,
   ShieldCallbacks,
-  SignerLifecycleCallbacks,
+  SignerIdentity,
+  SignerIdentityChange,
+  SignerIdentityListener,
   StoredCredentials,
   TransactionReceipt,
   TransactionResult,

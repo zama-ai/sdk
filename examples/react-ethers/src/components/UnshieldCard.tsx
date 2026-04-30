@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useUnshield, useZamaSDK, clearPendingUnshield } from "@zama-fhe/react-sdk";
-import type { Address } from "@zama-fhe/react-sdk";
+import { useUnshield, useZamaSDK } from "@zama-fhe/react-sdk";
+import { clearPendingUnshield } from "@zama-fhe/sdk";
+import type { Address } from "@zama-fhe/sdk";
 import { parseAmount } from "@/lib/parseAmount";
 import { SEPOLIA_EXPLORER_URL } from "@/lib/config";
 import { setActiveUnshieldToken } from "@/lib/activeUnshield";
@@ -57,10 +58,8 @@ export function UnshieldCard({
     setActiveUnshieldToken(tokenAddress);
     unshield.mutate({
       amount: parsedAmount,
-      callbacks: {
-        // onFinalizing fires between the two on-chain transactions, marking step 2.
-        onFinalizing: () => setStep(2),
-      },
+      // onFinalizing fires between the two on-chain transactions, marking step 2.
+      onFinalizing: () => setStep(2),
     });
   }
 

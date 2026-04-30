@@ -115,14 +115,15 @@ const { NodeWorkerClient } = await import("../worker.node-client");
 
 function defaultWebConfig() {
   return {
-    fhevmConfig: { chainId: 1 } as never,
+    cdnUrl: "https://cdn.example.com/relayer.js",
+    chains: [{ chainId: 1 } as never],
     csrfToken: "csrf-token-123",
   };
 }
 
 function defaultNodeConfig() {
   return {
-    fhevmConfig: { chainId: 1 } as never,
+    chains: [{ chainId: 1 } as never],
   };
 }
 
@@ -299,7 +300,7 @@ describe("RelayerWorkerClient", () => {
 
     const req = getFirstPostedRequest(lastMockWorker!);
     expect(req.type).toBe("INIT");
-    expect(req.payload).toEqual(config);
+    expect(req.payload).toEqual({ env: "web", ...config });
 
     client.terminate();
   });
@@ -323,7 +324,9 @@ describe("RelayerWorkerClient", () => {
     const req = getFirstPostedRequest(lastMockWorker!);
     expect(req.payload).not.toHaveProperty("logger");
     expect(req.payload).toEqual({
-      fhevmConfig: config.fhevmConfig,
+      env: "web",
+      cdnUrl: config.cdnUrl,
+      chains: config.chains,
       csrfToken: config.csrfToken,
       thread: 4,
     });
@@ -341,7 +344,7 @@ describe("RelayerWorkerClient", () => {
 
     const req = getFirstPostedRequest(lastMockWorker!);
     expect(req.type).toBe("INIT");
-    expect(req.payload).toEqual(config);
+    expect(req.payload).toEqual({ env: "web", ...config });
 
     client.terminate();
   });
@@ -355,7 +358,7 @@ describe("RelayerWorkerClient", () => {
     // Reset postMessage for subsequent requests
     worker.postMessage.mockImplementation(() => {});
 
-    const keypairPromise = client.generateKeypair();
+    const keypairPromise = client.generateKeypair({ chainId: 1 });
     await flush();
 
     const req = getLastPostedRequest(worker);
@@ -384,7 +387,7 @@ describe("RelayerWorkerClient", () => {
 
     worker.postMessage.mockImplementation(() => {});
 
-    const keypairPromise = client.generateKeypair();
+    const keypairPromise = client.generateKeypair({ chainId: 1 });
     await flush();
 
     worker.onerror?.(new ErrorEvent("error", { message: "worker crashed" }));
@@ -400,7 +403,7 @@ describe("RelayerWorkerClient", () => {
 
     worker.postMessage.mockImplementation(() => {});
 
-    const keypairPromise = client.generateKeypair();
+    const keypairPromise = client.generateKeypair({ chainId: 1 });
     await flush();
 
     worker.onmessageerror?.();
@@ -446,7 +449,7 @@ describe("RelayerWorkerClient", () => {
 
     worker.postMessage.mockImplementation(() => {});
 
-    const keypairPromise = client.generateKeypair();
+    const keypairPromise = client.generateKeypair({ chainId: 1 });
     await flush();
 
     const req = getLastPostedRequest(worker);
@@ -526,7 +529,7 @@ describe("NodeWorkerClient", () => {
 
     expect(lastMockNodeWorker!.postMessage).toHaveBeenCalledOnce();
     const req = getFirstPostedRequest(lastMockNodeWorker!);
-    expect(req.type).toBe("NODE_INIT");
+    expect(req.type).toBe("INIT");
 
     client.terminate();
   });
@@ -552,15 +555,15 @@ describe("NodeWorkerClient", () => {
     client.terminate();
   });
 
-  it("getInitPayload() returns NODE_INIT type with fhevmConfig", async () => {
+  it("getInitPayload() returns INIT type with env:'node' and chains", async () => {
     setupAutoResolvingNodeWorker();
     const config = defaultNodeConfig();
     const client = new NodeWorkerClient(config);
     await client.initWorker();
 
     const req = getFirstPostedRequest(lastMockNodeWorker!);
-    expect(req.type).toBe("NODE_INIT");
-    expect(req.payload).toEqual({ fhevmConfig: config.fhevmConfig });
+    expect(req.type).toBe("INIT");
+    expect(req.payload).toEqual({ env: "node", chains: config.chains });
 
     client.terminate();
   });
@@ -583,7 +586,7 @@ describe("NodeWorkerClient", () => {
 
     worker.postMessage.mockImplementation(() => {});
 
-    const keypairPromise = client.generateKeypair();
+    const keypairPromise = client.generateKeypair({ chainId: 1 });
     await flush();
 
     const req = getLastPostedRequest(worker);
@@ -609,7 +612,7 @@ describe("NodeWorkerClient", () => {
 
     worker.postMessage.mockImplementation(() => {});
 
-    const keypairPromise = client.generateKeypair();
+    const keypairPromise = client.generateKeypair({ chainId: 1 });
     await flush();
 
     const errorHandler = worker.listeners["error"]?.[0];
@@ -626,7 +629,7 @@ describe("NodeWorkerClient", () => {
 
     worker.postMessage.mockImplementation(() => {});
 
-    const keypairPromise = client.generateKeypair();
+    const keypairPromise = client.generateKeypair({ chainId: 1 });
     await flush();
 
     const messageerrorHandler = worker.listeners["messageerror"]?.[0];

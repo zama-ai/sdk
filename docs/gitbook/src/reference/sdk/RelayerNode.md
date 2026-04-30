@@ -17,124 +17,81 @@ import { RelayerNode } from "@zama-fhe/sdk/node";
 `RelayerNode` is exported from the `/node` sub-path, not the main entry point.
 {% endhint %}
 
+{% hint style="info" %}
+For most applications, prefer the `node()` transport factory with `createConfig` instead of constructing `RelayerNode` directly. See [Network Presets](/reference/sdk/network-presets) for examples.
+{% endhint %}
+
 ## Usage
 
 {% tabs %}
-{% tab title="server.ts" %}
+{% tab title="Recommended (node transport)" %}
 
 ```ts
-import { RelayerNode } from "@zama-fhe/sdk/node";
-import { SepoliaConfig } from "@zama-fhe/sdk";
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { node } from "@zama-fhe/sdk/node";
+import { sepolia } from "@zama-fhe/sdk/chains";
 
-const relayer = new RelayerNode({
-  getChainId: () => signer.getChainId(),
-  transports: {
-    [SepoliaConfig.chainId]: {
-      ...SepoliaConfig,
-      network: "https://sepolia.infura.io/v3/YOUR_KEY",
-      auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY },
-    },
+const config = createConfig({
+  chains: [{ ...sepolia, auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY } }],
+  publicClient,
+  walletClient,
+  relayers: {
+    [sepolia.id]: node({ poolSize: 4 }),
   },
 });
 ```
 
 {% endtab %}
-{% tab title="sdk.ts" %}
+{% tab title="Direct construction" %}
 
 ```ts
-import { ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
+import { RelayerNode } from "@zama-fhe/sdk/node";
+import { sepolia } from "@zama-fhe/sdk/chains";
 
-const sdk = new ZamaSDK({
-  relayer,
-  signer,
-  storage: memoryStorage,
+const relayer = new RelayerNode({
+  chain: {
+    ...sepolia,
+    network: "https://sepolia.infura.io/v3/YOUR_KEY",
+    auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY },
+  },
+  pool: nodeWorkerPool,
 });
 ```
 
 {% endtab %}
 {% endtabs %}
 
-## Constructor
+## Constructor (`RelayerNodeConfig`)
 
-### getChainId
+### chain
 
-`() => Promise<number>`
+`FheChain`
 
-Called lazily to determine which transport to use. The relayer initializes (or re-initializes) its thread pool when the chain changes.
+FHE chain configuration. Use a built-in chain preset (`sepolia`, `mainnet`, `hoodi`, `hardhat`) or a custom `FheChain` object. Include `auth` for relayer authentication.
 
-```ts
-const relayer = new RelayerNode({
-  getChainId: () => signer.getChainId(),
-  transports: {
-    /* ... */
-  },
-});
-```
+### pool
 
-### transports
+`NodeWorkerPool`
 
-`Record<number, TransportConfig>`
+Native worker thread pool for FHE operations.
 
-Per-chain configuration. Each entry maps a chain ID to its network RPC and authentication. Use built-in presets (`SepoliaConfig`, `MainnetConfig`, `HardhatConfig`) and add your `network` and `auth`.
+### logger
 
-```ts
-import { SepoliaConfig, MainnetConfig } from "@zama-fhe/sdk";
+`GenericLogger | undefined`
 
-const relayer = new RelayerNode({
-  getChainId: () => signer.getChainId(),
-  transports: {
-    [SepoliaConfig.chainId]: {
-      ...SepoliaConfig,
-      network: "https://sepolia.infura.io/v3/YOUR_KEY",
-      auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY },
-    },
-  },
-});
-```
+Optional logger for observing worker lifecycle and request timing.
 
-Each transport entry accepts:
+### fheArtifactStorage
 
-| Field        | Type         | Description                                             |
-| ------------ | ------------ | ------------------------------------------------------- |
-| `network`    | `string`     | RPC URL for the chain.                                  |
-| `auth`       | `AuthConfig` | API key or bearer token for the relayer.                |
-| `relayerUrl` | `string`     | Custom relayer endpoint (overrides preset).             |
-| `...preset`  | —            | Spread a preset to get contract addresses and defaults. |
+`GenericStorage | undefined`
 
-Auth types:
+Persistent storage for caching FHE public key and params.
 
-```ts
-// API key in header
-auth: { __type: "ApiKeyHeader", value: "your-api-key" }
-
-// API key in cookie
-auth: { __type: "ApiKeyCookie", value: "your-api-key" }
-
-// Bearer token
-auth: { __type: "BearerToken", token: "your-bearer-token" }
-```
-
----
-
-### poolSize
+### fheArtifactCacheTTL
 
 `number | undefined`
 
-Number of native worker threads for FHE operations. Default: `Math.min(os.cpus().length, 4)`.
-
-```ts
-const relayer = new RelayerNode({
-  getChainId: () => signer.getChainId(),
-  transports: {
-    /* ... */
-  },
-  poolSize: 8,
-});
-```
-
-{% hint style="info" %}
-The default of `min(CPU cores, 4)` works well for most server deployments. Increase for high-throughput services; decrease for memory-constrained environments.
-{% endhint %}
+How long cached FHE artifacts remain valid, in seconds.
 
 ## Related
 

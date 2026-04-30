@@ -64,13 +64,11 @@ describe("isAllowedQueryOptions", () => {
     const isAllowedSpy = vi.spyOn(sdk.credentials, "isAllowed").mockResolvedValue(true);
 
     const options = isAllowedQueryOptions(sdk, {
-      account: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"],
     });
     expect(options.queryKey).toEqual([
       "zama.isAllowed",
       {
-        account: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
         contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"],
       },
     ]);
@@ -96,7 +94,6 @@ describe("isAllowedQueryOptions", () => {
     ] as [Address, ...Address[]];
 
     const options = isAllowedQueryOptions(sdk, {
-      account: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       contractAddresses: contracts,
     });
 
@@ -107,26 +104,80 @@ describe("isAllowedQueryOptions", () => {
     expect(isAllowedSpy).toHaveBeenCalledWith(contracts);
   });
 
-  test("staleTime should be 30 seconds", ({ signer, relayer, storage }) => {
+  test("opts out of query result caching", ({ signer, relayer, storage }) => {
     const sdk = new ZamaSDK({ relayer, signer, storage });
 
     const options = isAllowedQueryOptions(sdk, {
-      account: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"],
     });
 
-    expect(options.staleTime).toBe(30_000);
+    expect(options.staleTime).toBe(0);
+    expect(options.gcTime).toBe(0);
   });
 
   test("enabled is false when query.enabled is false", ({ signer, relayer, storage }) => {
     const sdk = new ZamaSDK({ relayer, signer, storage });
 
     const options = isAllowedQueryOptions(sdk, {
-      account: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"],
       query: { enabled: false },
     });
 
     expect(options.enabled).toBe(false);
+  });
+
+  test("is disabled when signer-backed credentials are absent", ({
+    relayer,
+    provider,
+    storage,
+  }) => {
+    const sdk = new ZamaSDK({ relayer, provider, storage });
+
+    const options = isAllowedQueryOptions(sdk, {
+      contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"],
+    });
+
+    expect(options.enabled).toBe(false);
+    expect(options.queryKey).toEqual([
+      "zama.isAllowed",
+      {
+        contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"],
+      },
+    ]);
+  });
+
+  test("manual fetch without signer-backed credentials throws instead of caching a value", async ({
+    relayer,
+    provider,
+    storage,
+  }) => {
+    const sdk = new ZamaSDK({ relayer, provider, storage });
+
+    const options = isAllowedQueryOptions(sdk, {
+      contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"],
+    });
+
+    expect(() =>
+      options.queryFn({
+        queryKey: options.queryKey,
+      } as Parameters<typeof options.queryFn>[0]),
+    ).toThrow("Cannot isAllowed without a signer");
+  });
+
+  test("contract addresses are the only query key parameters", ({ signer, relayer, storage }) => {
+    const sdk = new ZamaSDK({ relayer, signer, storage });
+
+    const optionsA = isAllowedQueryOptions(sdk, {
+      contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"],
+    });
+    const optionsB = isAllowedQueryOptions(sdk, {
+      contractAddresses: ["0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a"],
+    });
+
+    expect(optionsA.enabled).toBe(true);
+    expect(optionsA.queryKey).not.toEqual(optionsB.queryKey);
+    expect(optionsA.queryKey[1]).toEqual({
+      contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"],
+    });
   });
 });

@@ -131,31 +131,27 @@ Three methods exist for different use cases:
 - `sdk.credentials.revoke("0xTokenA", "0xTokenB")` — revoke with specific addresses (included in the `credentials:revoked` event).
 - `sdk.revokeSession()` — revoke without specifying addresses.
 
-## Wallet lifecycle events
+## Identity change events
 
-The SDK automatically revokes sessions when wallet state changes. The behavior depends on the event type.
+The SDK automatically revokes sessions when wallet identity changes. Each signer adapter that implements `subscribe()` emits a `SignerIdentityChange` with the previous and next `{ address, chainId }` pair. The SDK reacts to each transition:
 
 ### Disconnect or lock
 
-The user explicitly disconnects or locks their wallet. The session signature is cleared. The next connection requires a fresh sign.
+The user explicitly disconnects or locks their wallet. The previous identity's session is revoked. The next connection requires a fresh sign.
 
 ### Account switch
 
-The user switches from address A to address B. The previous account's session is revoked. This happens because the EIP-712 signature is address-scoped — leaving A's session active while B is connected creates confusing UX.
+The user switches from address A to address B. The previous account's session is revoked automatically — the EIP-712 signature is address-scoped.
 
 ### Chain switch
 
-The user switches networks (e.g., Sepolia to Mainnet) while keeping the same address. Session signatures are **not** revoked. Credentials are keyed by `address + chainId`, so each chain maintains independent sessions. Switching back to the original chain finds the session still active.
+The user switches networks (e.g., Sepolia to Mainnet) while keeping the same address. The previous identity's session is revoked and a new identity is established. Credentials are keyed by `address + chainId`, so switching back to the original chain finds the session still active if it hasn't expired.
 
-### Automatic vs manual wiring
+### Adapter support
 
-| Signer         | Auto-revoke                                        | Setup required                                                                             |
-| -------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `WagmiSigner`  | Built in — subscribes to wagmi's `watchConnection` | None                                                                                       |
-| `ViemSigner`   | Manual                                             | Wire `wallet.on("disconnect")` and `wallet.on("accountsChanged")` to `sdk.revokeSession()` |
-| `EthersSigner` | Manual                                             | Wire disconnect and account change events to `sdk.revokeSession()`                         |
+All built-in adapters (`ViemSigner` with `ethereum` option, `EthersSigner` with `ethereum` option, and the wagmi adapter built by `createConfig` from `@zama-fhe/react-sdk/wagmi`) implement `subscribe()` and emit identity-change events automatically.
 
-Without wiring, cached signatures remain valid until TTL expiry. This is not a security vulnerability (signatures are time-bounded and address-scoped), but it creates confusing UX when switching accounts.
+For custom signers, implementing `subscribe()` is optional but recommended. Without it, stale sessions persist until TTL expiry — not a security issue (signatures are time-bounded and address-scoped), but confusing UX when switching accounts.
 
 ## Multi-contract batching
 

@@ -17,12 +17,23 @@ Call `balanceOf()` on a `Token` or `ReadonlyToken` instance. The SDK fetches the
 {% tab title="SDK" %}
 
 ```ts
+import { createConfig } from "@zama-fhe/sdk/viem";
 import { ZamaSDK } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
+import { sepolia } from "@zama-fhe/sdk/chains";
 
-const sdk = new ZamaSDK({ relayer, signer, storage });
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  storage,
+  relayers: { [sepolia.id]: web() },
+});
+const sdk = new ZamaSDK(config);
 const token = sdk.createToken("0xEncryptedERC20");
 
-const balance = await token.balanceOf();
+const [address] = await walletClient.getAddresses();
+const balance = await token.balanceOf(address);
 console.log(`Confidential balance: ${balance}`);
 ```
 
@@ -31,10 +42,10 @@ console.log(`Confidential balance: ${balance}`);
 
 ### 2. Understand the first-time wallet signature
 
-The first `balanceOf()` call for a token prompts the user's wallet for an EIP-712 signature. This creates FHE decrypt credentials that are cached in your storage backend. Subsequent reads are silent -- no wallet popup.
+The first `balanceOf(address)` call for a token prompts the user's wallet for an EIP-712 signature. This creates FHE decrypt credentials that are cached in your storage backend. Subsequent reads are silent -- no wallet popup.
 
 {% hint style="info" %}
-**In React apps, don't trigger this signature on render.** Gate `useConfidentialBalance` behind `useIsAllowed` and let the user click an explicit "Decrypt" button. See [Avoid blind-sign wallet popups](encrypt-decrypt.md#3-avoid-blind-sign-wallet-popups) for the full pattern.
+**In React apps, don't trigger this signature on render.** Gate `useConfidentialBalance` behind `useIsAllowed` and let the user click an explicit "Decrypt" button. See [Avoid blind-sign wallet popups](encrypt-decrypt.md#gating-useconfidentialbalance) for the full pattern.
 {% endhint %}
 
 If the user rejects the signature, the SDK throws a `SigningRejectedError`. See [Handle Errors](handle-errors.md) for recovery patterns.
@@ -75,10 +86,12 @@ Sometimes you need the encrypted handle itself, for example to check whether a b
 {% tab title="SDK" %}
 
 ```ts
-const handle = await token.confidentialBalanceOf();
+import { isZeroHandle } from "@zama-fhe/sdk";
+
+const handle = await token.confidentialBalanceOf(userAddress);
 
 // Check if the handle is zero (account has never shielded)
-if (token.isZeroHandle(handle)) {
+if (isZeroHandle(handle)) {
   console.log("No confidential balance yet");
 }
 
@@ -109,7 +122,8 @@ These are different situations that your UI should handle separately:
 import { NoCiphertextError } from "@zama-fhe/sdk";
 
 try {
-  const balance = await token.balanceOf();
+  const [address] = await walletClient.getAddresses();
+  const balance = await token.balanceOf(address);
   showBalance(balance); // could be 0n
 } catch (error) {
   if (error instanceof NoCiphertextError) {
@@ -173,7 +187,9 @@ The React SDK provides hooks that handle polling, caching, and React Query integ
 
 ```tsx
 import { useConfidentialBalance } from "@zama-fhe/react-sdk";
+import { useAccount } from "wagmi";
 
+const { address } = useAccount();
 const {
   data: balance,
   isLoading,
@@ -181,6 +197,7 @@ const {
 } = useConfidentialBalance(
   {
     tokenAddress: "0xToken",
+    account: address,
   },
   { refetchInterval: 5_000 },
 );
@@ -191,9 +208,12 @@ const {
 
 ```tsx
 import { useConfidentialBalances } from "@zama-fhe/react-sdk";
+import { useAccount } from "wagmi";
 
+const { address } = useAccount();
 const { data } = useConfidentialBalances({
   tokenAddresses: ["0xTokenA", "0xTokenB", "0xTokenC"],
+  account: address,
 });
 
 const tokenABalance = data?.results.get("0xTokenA");
@@ -233,7 +253,7 @@ queryClient.invalidateQueries({
 
 ## Next steps
 
-- See [Avoid blind-sign wallet popups](encrypt-decrypt.md#3-avoid-blind-sign-wallet-popups) to gate balance queries behind explicit user action.
+- See [Avoid blind-sign wallet popups](encrypt-decrypt.md#gating-useconfidentialbalance) to gate balance queries behind explicit user action.
 - See [Token Operations](/reference/sdk/Token) for the full `Token.balanceOf` and `ReadonlyToken` API.
 - See [Hooks](/reference/react/query-keys) for `useConfidentialBalance`, `useConfidentialBalances`, and query key details.
 - To handle `NoCiphertextError` and other failures, see [Handle Errors](handle-errors.md).

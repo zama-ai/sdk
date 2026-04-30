@@ -1,3 +1,5 @@
+// oxlint-disable jest/expect-expect
+// oxlint-disable jest/no-disabled-tests
 /* eslint-disable no-empty-pattern */
 import { test as base, vi } from "vitest";
 import { ZamaSDKEvents } from "./events/sdk-events";
@@ -25,8 +27,14 @@ const DELEGATE = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;
 const USER = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
 const VALID_HANDLE = ("0x" + "ab".repeat(32)) as Address;
 
+export const TEST_ADDR_A = ACL;
+export const TEST_ADDR_B = DELEGATE;
+
 export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerSDK {
   return {
+    chains: [{ id: 31337 }],
+    activeChain: { id: 31337 },
+    switchChain: vi.fn(),
     generateKeypair: vi.fn().mockResolvedValue({
       publicKey: "0xpub",
       privateKey: "0xpriv",
@@ -66,7 +74,9 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
       });
     }),
     createDelegatedUserDecryptEIP712: vi.fn(),
-    delegatedUserDecrypt: vi.fn(),
+    delegatedUserDecrypt: vi.fn().mockResolvedValue({
+      [VALID_HANDLE as string]: 1000n,
+    }),
     requestZKProofVerification: vi.fn(),
     getAclAddress: vi.fn().mockResolvedValue(ACL),
     getPublicKey: vi.fn().mockResolvedValue({
@@ -131,9 +141,15 @@ export function createMockStorage(): GenericStorage {
 function createMockReadonlyToken(address: Address, signer: GenericSigner): ReadonlyToken {
   const mockSdk = {
     signer,
+    credentials: {},
     userDecrypt: vi.fn().mockResolvedValue({}),
     allow: vi.fn().mockResolvedValue(undefined),
-    cache: { get: vi.fn(), set: vi.fn(), clearAll: vi.fn(), clearForRequester: vi.fn() },
+    cache: {
+      get: vi.fn(),
+      set: vi.fn(),
+      clearAll: vi.fn(),
+      clearForRequester: vi.fn(),
+    },
   };
   return {
     address,

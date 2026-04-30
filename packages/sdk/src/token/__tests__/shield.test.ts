@@ -64,6 +64,32 @@ describe("Token.shield", () => {
     expect(signer.writeContract).toHaveBeenCalled();
   });
 
+  it("awaits approval receipt before submitting the wrap TX", async ({
+    token,
+    signer,
+    provider,
+  }) => {
+    vi.mocked(provider.readContract)
+      .mockResolvedValueOnce(UNDERLYING) // underlying()
+      .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
+      .mockResolvedValueOnce(0n); // allowance — forces approval path
+
+    const callOrder: string[] = [];
+
+    vi.mocked(signer.writeContract).mockImplementation(async (config) => {
+      callOrder.push(`write:${(config as { functionName: string }).functionName}`);
+      return "0xtxhash";
+    });
+    vi.mocked(provider.waitForTransactionReceipt).mockImplementation(async () => {
+      callOrder.push("receipt");
+      return { logs: [] };
+    });
+
+    await token.shield(500n);
+
+    expect(callOrder).toEqual(["write:approve", "receipt", "write:wrap", "receipt"]);
+  });
+
   it("performs full shield flow with exact approval", async ({
     token,
     signer,

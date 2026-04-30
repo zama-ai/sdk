@@ -2,16 +2,16 @@
 
 import { useState, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ZamaProvider } from "@zama-fhe/react-sdk";
+import { EthersSigner } from "@zama-fhe/sdk/ethers";
 import {
-  ZamaProvider,
+  SepoliaConfig,
   ZamaSDKEvents,
   IndexedDBStorage,
   indexedDBStorage,
   savePendingUnshield,
   RelayerWeb,
-} from "@zama-fhe/react-sdk";
-import { EthersSigner } from "@zama-fhe/sdk/ethers";
-import { SepoliaConfig } from "@zama-fhe/sdk";
+} from "@zama-fhe/sdk";
 import { SEPOLIA_RPC_URL } from "@/lib/config";
 import { getActiveUnshieldToken, setActiveUnshieldToken } from "@/lib/activeUnshield";
 import { getEthereumProvider } from "@/lib/ethereum";
@@ -95,10 +95,9 @@ export function Providers({ children }: { children: ReactNode }) {
     };
     // Remount ZamaProvider on network change so the EthersSigner gets a fresh BrowserProvider
     // bound to the new chain. Also invalidate all cached queries — any data fetched on the
-    // previous network is stale (different contracts / balances). The ZamaProvider's internal
-    // signerLifecycleCallbacks.onChainChange already calls invalidateWalletLifecycleQueries,
-    // but that path can hang if the SDK's initial setup (getAddress via eth_requestAccounts)
-    // is still pending. The explicit invalidation here acts as a safety net.
+    // previous network is stale (different contracts / balances). The ZamaProvider also
+    // invalidates wallet-scoped queries through sdk.onIdentityChange, but this explicit
+    // invalidation remains a safety net around the forced remount.
     const handleChainChanged = () => {
       setWalletKey((k) => k + 1);
       queryClient.invalidateQueries();

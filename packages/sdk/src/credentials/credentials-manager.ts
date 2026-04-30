@@ -1,7 +1,7 @@
 import { getAddress, type Address, type Hex } from "viem";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
+import type { SignerIdentity, StoredCredentials, StoredEIP712 } from "../types";
 import { MemoryStorage } from "../storage/memory-storage";
-import type { StoredCredentials, StoredEIP712 } from "../types";
 import {
   assertBaseEncryptedCredentials,
   computeStoreKey,
@@ -101,9 +101,11 @@ export class CredentialsManager extends BaseCredentialsManager<
     );
   }
 
-  /** Revoke the session signature for a pre-computed store key. */
-  async revokeByKey(key: string): Promise<void> {
-    await this.revokeSession(key);
+  /** Revoke the session signature for a specific wallet identity (address, chainId). */
+  async revokeFor(identity: SignerIdentity): Promise<void> {
+    await this.revokeSession(
+      await CredentialsManager.computeStoreKey(identity.address, identity.chainId),
+    );
   }
 
   /** Whether a session signature is currently cached and covers the given contracts. */

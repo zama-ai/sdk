@@ -1,23 +1,24 @@
+import type { EIP1193Provider } from "viem";
 import {
+  concat,
   decodeFunctionData,
   encodeFunctionResult,
+  getAddress,
   hexToBigInt,
+  pad,
   parseAbi,
   toBytes,
   toHex,
-  concat,
-  pad,
-  getAddress,
 } from "viem";
-import type { EIP1193Provider } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-
-import { RelayerCleartext } from "../relayer-cleartext";
+import { describe, expect, it } from "vitest";
+import { hardhat } from "../../../chains";
 import type { Handle } from "../../relayer-sdk.types";
 import type { StoredEIP712 } from "../../../types/credentials";
 import { MOCK_INPUT_SIGNER_PK, MOCK_KMS_SIGNER_PK } from "../constants";
-import { hardhatCleartextConfig } from "../presets";
-import { describe, expect, it } from "vitest";
+import { RelayerCleartext } from "../relayer-cleartext";
+
+const hardhatCleartextConfig = hardhat;
 
 const USER_ADDRESS = "0x1000000000000000000000000000000000000001";
 const CONTRACT_ADDRESS = "0x2000000000000000000000000000000000000002";
@@ -200,7 +201,7 @@ function filterEthCallsTo(calls: MockCall[], to: string): MockCall[] {
   });
 }
 
-describe(RelayerCleartext, () => {
+describe("RelayerCleartext", () => {
   it("constructor uses kms/input private keys from config", () => {
     const customInputKey =
       "0x0000000000000000000000000000000000000000000000000000000000000001" as const;
@@ -242,7 +243,7 @@ describe(RelayerCleartext, () => {
         new RelayerCleartext({
           ...hardhatCleartextConfig,
           network: provider,
-          chainId: 1,
+          id: 1,
         }),
     ).toThrow(/not allowed on chain 1/);
   });
@@ -255,7 +256,7 @@ describe(RelayerCleartext, () => {
         new RelayerCleartext({
           ...hardhatCleartextConfig,
           network: provider,
-          chainId: 11155111,
+          id: 11155111,
         }),
     ).toThrow(/not allowed on chain 11155111/);
   });
@@ -290,7 +291,7 @@ describe(RelayerCleartext, () => {
     expect(typedData.domain).toEqual({
       name: "Decryption",
       version: "1",
-      chainId: BigInt(hardhatCleartextConfig.chainId),
+      chainId: BigInt(hardhatCleartextConfig.id),
       verifyingContract: hardhatCleartextConfig.verifyingContractAddressDecryption,
     });
     expect(typedData.types.UserDecryptRequestVerification.map((field) => field.name)).toEqual([

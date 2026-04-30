@@ -3,6 +3,7 @@
  * Uses @fhevm/sdk for encryption/decryption off the main thread using node:worker_threads.
  */
 
+import type { FheChain } from "../chains/types";
 import { parentPort, type Transferable } from "node:worker_threads";
 import { createPublicClient, http } from "viem";
 import type {
@@ -20,7 +21,7 @@ import type {
   GetPublicKeyResponseData,
   GetPublicParamsRequest,
   GetPublicParamsResponseData,
-  NodeInitRequest,
+  InitRequest,
   PublicDecryptRequest,
   PublicDecryptResponseData,
   RequestZKProofVerificationRequest,
@@ -36,21 +37,107 @@ if (!parentPort) {
 
 const port = parentPort;
 
-// ============================================================================
-// Client state
-// ============================================================================
+// ── Multi-chain client management ─────────────────────────────
 
 // oxlint-disable-next-line typescript-eslint/consistent-type-imports -- dynamic import type extraction
 type FhevmSdk = typeof import("@fhevm/sdk/viem");
 type FhevmClient = ReturnType<FhevmSdk["createFhevmClient"]>;
 type FhevmClientInstance = Awaited<FhevmClient>;
 
-let client: FhevmClientInstance | null = null;
+const clients = new Map<number, FhevmClientInstance>();
+const pending = new Map<number, Promise<FhevmClientInstance>>();
+const configs = new Map<number, FheChain>();
 
-function assertClient(c: FhevmClientInstance | null): asserts c is FhevmClientInstance {
-  if (!c) {
-    throw new Error("SDK not initialized. Call NODE_INIT first.");
+/**
+ * Convert an FhevmInstanceConfig to the chain object expected by @fhevm/sdk.
+ */
+function configToChain(config: FhevmInstanceConfig) {
+  type Addr = `0x${string}`;
+  return {
+    id: config.chainId,
+    fhevm: {
+      contracts: {
+        acl: { address: config.aclContractAddress as Addr },
+        inputVerifier: {
+          address: (config.inputVerifierContractAddress ?? config.aclContractAddress) as Addr,
+        },
+        kmsVerifier: { address: config.kmsContractAddress as Addr },
+      },
+      relayerUrl: config.relayerUrl,
+      gateway: {
+        id: config.gatewayChainId,
+        contracts: {
+          decryption: {
+            address: config.verifyingContractAddressDecryption as Addr,
+          },
+          inputVerification: {
+            address: (config.verifyingContractAddressInputVerification ??
+              config.verifyingContractAddressDecryption) as Addr,
+          },
+        },
+      },
+    },
+  };
+}
+
+/** Convert an FheChain to the FhevmInstanceConfig shape. */
+function toInstanceConfig(chain: FheChain): FhevmInstanceConfig {
+  const { network, ...rest } = chain;
+  return {
+    ...rest,
+    chainId: chain.id,
+    network: typeof network === "string" ? network : undefined,
+  };
+}
+
+/**
+ * Get or lazily create an FhevmClient for the given chain.
+ */
+async function getClient(chainId: number): Promise<FhevmClientInstance> {
+  const existing = clients.get(chainId);
+  if (existing) {
+    return existing;
   }
+
+  const inflight = pending.get(chainId);
+  if (inflight) {
+    return inflight;
+  }
+
+  const config = configs.get(chainId);
+  if (!config) {
+    throw new Error(
+      `No config for chain ${chainId}. Available: [${[...configs.keys()].join(", ")}]`,
+    );
+  }
+
+  const promise = (async () => {
+    const { createFhevmClient, setFhevmRuntimeConfig } = await import("@fhevm/sdk/viem");
+
+    // Node worker runs single-threaded (no SharedArrayBuffer support needed)
+    setFhevmRuntimeConfig({ singleThread: true });
+
+    const fhevmConfig = toInstanceConfig(config);
+    const chain = configToChain(fhevmConfig);
+    const providerUrl = fhevmConfig.networkUrl ?? fhevmConfig.relayerUrl;
+    const publicClient = createPublicClient({ transport: http(providerUrl) });
+
+    const client = createFhevmClient({ chain, publicClient });
+    await client.ready;
+    return client;
+  })()
+    .then((client) => {
+      clients.set(chainId, client);
+      pending.delete(chainId);
+      return client;
+    })
+    .catch((err) => {
+      pending.delete(chainId);
+      throw err;
+    });
+
+  pending.set(chainId, promise);
+  return promise;
 }
 
 // ============================================================================
@@ -111,38 +198,6 @@ function extractHttpStatus(error: unknown): number | undefined {
 // ============================================================================
 
 /**
- * Convert an FhevmInstanceConfig to the chain object expected by @fhevm/sdk.
- */
-function configToChain(config: FhevmInstanceConfig) {
-  type Addr = `0x${string}`;
-  return {
-    id: config.chainId,
-    fhevm: {
-      contracts: {
-        acl: { address: config.aclContractAddress as Addr },
-        inputVerifier: {
-          address: (config.inputVerifierContractAddress ?? config.aclContractAddress) as Addr,
-        },
-        kmsVerifier: { address: config.kmsContractAddress as Addr },
-      },
-      relayerUrl: config.relayerUrl,
-      gateway: {
-        id: config.gatewayChainId,
-        contracts: {
-          decryption: {
-            address: config.verifyingContractAddressDecryption as Addr,
-          },
-          inputVerification: {
-            address: (config.verifyingContractAddressInputVerification ??
-              config.verifyingContractAddressDecryption) as Addr,
-          },
-        },
-      },
-    },
-  };
-}
-
-/**
  * Convert a hex string (0x-prefixed) to a Uint8Array.
  */
 function hexToBytes(hex: string): Uint8Array {
@@ -159,26 +214,14 @@ function hexToBytes(hex: string): Uint8Array {
 // ============================================================================
 
 /**
- * Handle NODE_INIT request - configure runtime and create FhevmClient.
- * Node worker uses singleThread: true (no SharedArrayBuffer/Atomics needed).
+ * Handle INIT request - register chain configs (instances are lazy).
  */
-async function handleNodeInit(request: NodeInitRequest): Promise<void> {
+async function handleInit(request: InitRequest): Promise<void> {
   const { id, type, payload } = request;
-  const { fhevmConfig } = payload;
-
   try {
-    const { createFhevmClient, setFhevmRuntimeConfig } = await import("@fhevm/sdk/viem");
-
-    // Node worker runs single-threaded (no SharedArrayBuffer support needed)
-    setFhevmRuntimeConfig({ singleThread: true });
-
-    const chain = configToChain(fhevmConfig);
-    const providerUrl = fhevmConfig.networkUrl ?? fhevmConfig.relayerUrl;
-    const publicClient = createPublicClient({ transport: http(providerUrl) });
-
-    client = createFhevmClient({ chain, publicClient });
-    await client.ready;
-
+    for (const chain of payload.chains) {
+      configs.set(chain.id, chain);
+    }
     sendSuccess(id, type, { initialized: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -195,7 +238,7 @@ async function handleEncrypt(request: EncryptRequest): Promise<void> {
   const { values, contractAddress, userAddress } = payload;
 
   try {
-    assertClient(client);
+    const client = await getClient(payload.chainId);
 
     const { createTypedValueArray } = await import("@fhevm/sdk/base");
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- EncryptInput is structurally compatible with TypedValueLike
@@ -231,7 +274,7 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
   const { id, type, payload } = request;
 
   try {
-    assertClient(client);
+    const client = await getClient(payload.chainId);
 
     // 1. Parse transport keypair
     const keypair = await client.parseTransportKeypair(payload);
@@ -284,7 +327,7 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
   const { id, type, payload } = request;
 
   try {
-    assertClient(client);
+    const client = await getClient(payload.chainId);
 
     // 1. Parse transport keypair
     const keypair = await client.parseTransportKeypair({
@@ -340,7 +383,7 @@ async function handlePublicDecrypt(request: PublicDecryptRequest): Promise<void>
   const { id, type, payload } = request;
 
   try {
-    assertClient(client);
+    const client = await getClient(payload.chainId);
 
     const result = await client.readPublicValuesWithSignatures({
       encryptedValues: payload.handles,
@@ -373,10 +416,10 @@ async function handlePublicDecrypt(request: PublicDecryptRequest): Promise<void>
  * Handle GENERATE_KEYPAIR request.
  */
 async function handleGenerateKeypair(request: GenerateKeypairRequest): Promise<void> {
-  const { id, type } = request;
+  const { id, type, payload } = request;
 
   try {
-    assertClient(client);
+    const client = await getClient(payload.chainId);
 
     const keypair = await client.generateTransportKeypair();
     const serializedPermit = client.serializeTransportKeypair({
@@ -396,14 +439,11 @@ async function handleGenerateKeypair(request: GenerateKeypairRequest): Promise<v
   }
 }
 
-/**
- * Handle CREATE_EIP712 request.
- */
 async function handleCreateEIP712(request: CreateEIP712Request): Promise<void> {
   const { id, type, payload } = request;
 
   try {
-    assertClient(client);
+    const client = await getClient(payload.chainId);
 
     const { createKmsUserDecryptEip712 } = await import("@fhevm/sdk/actions/chain");
     const response = createKmsUserDecryptEip712(client, {
@@ -422,14 +462,11 @@ async function handleCreateEIP712(request: CreateEIP712Request): Promise<void> {
   }
 }
 
-/**
- * Handle CREATE_DELEGATED_EIP712 request.
- */
 async function handleCreateDelegatedEIP712(request: CreateDelegatedEIP712Request): Promise<void> {
   const { id, type, payload } = request;
 
   try {
-    assertClient(client);
+    const client = await getClient(payload.chainId);
 
     const { createKmsDelegatedUserDecryptEip712 } = await import("@fhevm/sdk/actions/chain");
     const response = createKmsDelegatedUserDecryptEip712(client, {
@@ -468,10 +505,10 @@ async function handleRequestZKProofVerification(
  * Handle GET_PUBLIC_KEY request.
  */
 async function handleGetPublicKey(request: GetPublicKeyRequest): Promise<void> {
-  const { id, type } = request;
+  const { id, type, payload } = request;
 
   try {
-    assertClient(client);
+    const client = await getClient(payload.chainId);
 
     const keyData = await client.fetchFheEncryptionKeyBytes();
 
@@ -509,8 +546,8 @@ function handleGetPublicParams(request: GetPublicParamsRequest): void {
 async function handleMessage(request: WorkerRequest): Promise<void> {
   try {
     switch (request.type) {
-      case "NODE_INIT":
-        await handleNodeInit(request);
+      case "INIT":
+        await handleInit(request);
         break;
       case "ENCRYPT":
         await handleEncrypt(request);

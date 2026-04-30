@@ -12,6 +12,7 @@ import { createTypedValueArray } from "@fhevm/sdk/base";
 import { createFhevmClient, setFhevmRuntimeConfig } from "@fhevm/sdk/viem";
 import { createPublicClient, http } from "viem";
 import type { TypedValue } from "@fhevm/sdk/types";
+import type { FheChain } from "../chains/types";
 import type {
   CreateDelegatedEIP712Request,
   CreateEIP712Request,
@@ -38,27 +39,109 @@ import type {
   WorkerRequest,
 } from "./worker.types";
 
-// ============================================================================
-// Client state
-// ============================================================================
+// ── Multi-chain client management ─────────────────────────────
 
 type FhevmClientInstance = Awaited<ReturnType<typeof createFhevmClient>>;
-let client: FhevmClientInstance | null = null;
 
-function assertClient(c: FhevmClientInstance | null): asserts c is FhevmClientInstance {
-  if (!c) {
-    throw new Error("SDK not initialized. Call INIT first.");
+const clients = new Map<number, FhevmClientInstance>();
+const pending = new Map<number, Promise<FhevmClientInstance>>();
+const configs = new Map<number, FheChain>();
+
+/**
+ * Convert an FhevmInstanceConfig to the chain object expected by @fhevm/sdk.
+ */
+function configToChain(config: FhevmInstanceConfig) {
+  type Addr = `0x${string}`;
+  return {
+    id: config.chainId,
+    fhevm: {
+      contracts: {
+        acl: { address: config.aclContractAddress as Addr },
+        inputVerifier: {
+          address: (config.inputVerifierContractAddress ?? config.aclContractAddress) as Addr,
+        },
+        kmsVerifier: { address: config.kmsContractAddress as Addr },
+      },
+      relayerUrl: config.relayerUrl,
+      gateway: {
+        id: config.gatewayChainId,
+        contracts: {
+          decryption: {
+            address: config.verifyingContractAddressDecryption as Addr,
+          },
+          inputVerification: {
+            address: (config.verifyingContractAddressInputVerification ??
+              config.verifyingContractAddressDecryption) as Addr,
+          },
+        },
+      },
+    },
+  };
+}
+
+/** Convert an FheChain to the FhevmInstanceConfig shape. */
+function toInstanceConfig(chain: FheChain): FhevmInstanceConfig {
+  const { network, ...rest } = chain;
+  return {
+    ...rest,
+    chainId: chain.id,
+    network: typeof network === "string" ? network : undefined,
+  };
+}
+
+/**
+ * Get or lazily create an FhevmClient for the given chain.
+ */
+async function getClient(chainId: number): Promise<FhevmClientInstance> {
+  const existing = clients.get(chainId);
+  if (existing) {
+    return existing;
   }
+
+  const inflight = pending.get(chainId);
+  if (inflight) {
+    return inflight;
+  }
+
+  const config = configs.get(chainId);
+  if (!config) {
+    throw new Error(
+      `No config for chain ${chainId}. Available: [${[...configs.keys()].join(", ")}]`,
+    );
+  }
+
+  const promise = (async () => {
+    const fhevmConfig = toInstanceConfig(config);
+    const chain = configToChain(fhevmConfig);
+    const providerUrl = fhevmConfig.networkUrl ?? fhevmConfig.relayerUrl;
+    const publicClient = createPublicClient({ transport: http(providerUrl) });
+
+    const client = createFhevmClient({ chain, publicClient });
+    await client.ready;
+    return client;
+  })()
+    .then((client) => {
+      clients.set(chainId, client);
+      pending.delete(chainId);
+      return client;
+    })
+    .catch((err) => {
+      pending.delete(chainId);
+      throw err;
+    });
+
+  pending.set(chainId, promise);
+  return promise;
 }
 
 // ============================================================================
 // CSRF fetch interceptor
 // ============================================================================
 
-// Store relayer URL and CSRF token for fetch interception.
+// ── Fetch interception for relayer CSRF ─────────────────────────
 // These globals are per-worker-instance. Do NOT convert to SharedWorker
 // without rearchitecting CSRF token management to be per-connection.
-let relayerUrlBase = "";
+const relayerUrls = new Set<string>();
 let csrfTokenBase = "";
 
 // CSRF header name (must match server expectation)
@@ -71,6 +154,17 @@ const MUTATING_METHODS = new Set(["POST", "PUT", "DELETE", "PATCH"]);
 const originalFetch = fetch;
 
 /**
+ * Register relayer URLs from chain configs for fetch interception.
+ */
+function registerRelayerUrls(chainConfigs: FheChain[]): void {
+  for (const c of chainConfigs) {
+    if (c.relayerUrl) {
+      relayerUrls.add(c.relayerUrl);
+    }
+  }
+}
+
+/**
  * Set up fetch interceptor to add credentials and CSRF token for relayer requests.
  * Workers don't automatically include cookies, so we intercept fetch calls
  * targeting our relayer proxy to inject credentials and CSRF headers.
@@ -81,7 +175,10 @@ function setupFetchInterceptor(): void {
     const method = init?.method?.toUpperCase() ?? "GET";
 
     // Only intercept requests to our relayer proxy
-    if (relayerUrlBase && url.startsWith(relayerUrlBase)) {
+    const matchesRelayer =
+      relayerUrls.size > 0 && [...relayerUrls].some((base) => url.startsWith(base));
+
+    if (matchesRelayer) {
       const headers = new Headers(init?.headers);
 
       // Add CSRF token for mutating requests
@@ -180,38 +277,6 @@ function extractHttpStatus(error: unknown): number | undefined {
 // ============================================================================
 
 /**
- * Convert an FhevmInstanceConfig to the chain object expected by @fhevm/sdk.
- */
-function configToChain(config: FhevmInstanceConfig) {
-  type Addr = `0x${string}`;
-  return {
-    id: config.chainId,
-    fhevm: {
-      contracts: {
-        acl: { address: config.aclContractAddress as Addr },
-        inputVerifier: {
-          address: (config.inputVerifierContractAddress ?? config.aclContractAddress) as Addr,
-        },
-        kmsVerifier: { address: config.kmsContractAddress as Addr },
-      },
-      relayerUrl: config.relayerUrl,
-      gateway: {
-        id: config.gatewayChainId,
-        contracts: {
-          decryption: {
-            address: config.verifyingContractAddressDecryption as Addr,
-          },
-          inputVerification: {
-            address: (config.verifyingContractAddressInputVerification ??
-              config.verifyingContractAddressDecryption) as Addr,
-          },
-        },
-      },
-    },
-  };
-}
-
-/**
  * Convert a hex string (0x-prefixed) to a Uint8Array.
  */
 function hexToBytes(hex: string): Uint8Array {
@@ -228,18 +293,19 @@ function hexToBytes(hex: string): Uint8Array {
 // ============================================================================
 
 /**
- * Handle INIT request - configure runtime and create FhevmClient.
+ * Handle INIT request - configure runtime and register chain configs (instances are lazy).
  */
 async function handleInit(request: InitRequest): Promise<void> {
   const { id, type, payload } = request;
-  const { fhevmConfig, csrfToken, thread } = payload;
 
   try {
-    // Extract relayerUrl from config for fetch interception
-    relayerUrlBase = fhevmConfig.relayerUrl ?? "";
-    csrfTokenBase = csrfToken;
+    if (payload.env !== "web") {
+      throw new Error(`Web worker received unexpected env: ${payload.env}`);
+    }
 
-    // Set up fetch interceptor before any SDK network calls
+    const { csrfToken, thread } = payload;
+
+    csrfTokenBase = csrfToken;
     setupFetchInterceptor();
 
     // Configure WASM runtime (thread count)
@@ -247,17 +313,11 @@ async function handleInit(request: InitRequest): Promise<void> {
       thread !== null && thread !== undefined ? { numberOfThreads: thread } : {},
     );
 
-    // Build chain config and viem public client
-    const chain = configToChain(fhevmConfig);
-    const providerUrl = fhevmConfig.networkUrl ?? fhevmConfig.relayerUrl;
-    const publicClient = createPublicClient({ transport: http(providerUrl) });
-
-    // Create client and wait for it to be ready
-    client = createFhevmClient({
-      chain,
-      publicClient,
-    });
-    await client.ready;
+    // Register chain configs for lazy init
+    registerRelayerUrls(payload.chains);
+    for (const chain of payload.chains) {
+      configs.set(chain.id, chain);
+    }
 
     sendSuccess(id, type, { initialized: true });
   } catch (error) {
@@ -275,7 +335,7 @@ async function handleEncrypt(request: EncryptRequest): Promise<void> {
   const { values, contractAddress, userAddress } = payload;
 
   try {
-    assertClient(client);
+    const client = await getClient(payload.chainId);
 
     // EncryptInput matches TypedValueLike structurally; cast needed because
     // EncryptInput fields are mutable while TypedValueLike's are readonly.
@@ -313,7 +373,7 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
   const { id, type, payload } = request;
 
   try {
-    assertClient(client);
+    const client = await getClient(payload.chainId);
 
     // 1. Parse transport keypair
     const transportKeypair = await client.parseTransportKeypair(payload);
@@ -366,7 +426,7 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
   const { id, type, payload } = request;
 
   try {
-    assertClient(client);
+    const client = await getClient(payload.chainId);
 
     // 1. Parse transport keypair
     const transportKeypair = await client.parseTransportKeypair({
@@ -422,7 +482,7 @@ async function handlePublicDecrypt(request: PublicDecryptRequest): Promise<void>
   const { id, type, payload } = request;
 
   try {
-    assertClient(client);
+    const client = await getClient(payload.chainId);
 
     const result = await client.readPublicValuesWithSignatures({
       encryptedValues: payload.handles,
@@ -456,10 +516,10 @@ async function handlePublicDecrypt(request: PublicDecryptRequest): Promise<void>
  * Handle GENERATE_KEYPAIR request.
  */
 async function handleGenerateKeypair(request: GenerateKeypairRequest): Promise<void> {
-  const { id, type } = request;
+  const { id, type, payload } = request;
 
   try {
-    assertClient(client);
+    const client = await getClient(payload.chainId);
 
     const keypair = await client.generateTransportKeypair();
     const serialized = client.serializeTransportKeypair({
@@ -482,11 +542,11 @@ async function handleGenerateKeypair(request: GenerateKeypairRequest): Promise<v
 /**
  * Handle CREATE_EIP712 request.
  */
-function handleCreateEIP712(request: CreateEIP712Request): void {
+async function handleCreateEIP712(request: CreateEIP712Request): Promise<void> {
   const { id, type, payload } = request;
 
   try {
-    assertClient(client);
+    const client = await getClient(payload.chainId);
 
     const response = createKmsUserDecryptEip712(client, {
       publicKey: payload.publicKey,
@@ -507,11 +567,11 @@ function handleCreateEIP712(request: CreateEIP712Request): void {
 /**
  * Handle CREATE_DELEGATED_EIP712 request.
  */
-function handleCreateDelegatedEIP712(request: CreateDelegatedEIP712Request): void {
+async function handleCreateDelegatedEIP712(request: CreateDelegatedEIP712Request): Promise<void> {
   const { id, type, payload } = request;
 
   try {
-    assertClient(client);
+    const client = await getClient(payload.chainId);
 
     const response = createKmsDelegatedUserDecryptEip712(client, {
       publicKey: payload.publicKey,
@@ -549,10 +609,10 @@ async function handleRequestZKProofVerification(
  * Handle GET_PUBLIC_KEY request.
  */
 async function handleGetPublicKey(request: GetPublicKeyRequest): Promise<void> {
-  const { id, type } = request;
+  const { id, type, payload } = request;
 
   try {
-    assertClient(client);
+    const client = await getClient(payload.chainId);
 
     const keyData = await client.fetchFheEncryptionKeyBytes();
 
@@ -620,10 +680,10 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         await handleGenerateKeypair(request);
         break;
       case "CREATE_EIP712":
-        handleCreateEIP712(request);
+        await handleCreateEIP712(request);
         break;
       case "CREATE_DELEGATED_EIP712":
-        handleCreateDelegatedEIP712(request);
+        await handleCreateDelegatedEIP712(request);
         break;
       case "DELEGATED_USER_DECRYPT":
         await handleDelegatedUserDecrypt(request);

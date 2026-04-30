@@ -87,6 +87,31 @@ Wallet addresses are hashed before use as storage keys. The storage backend (Ind
 
 </details>
 
+## WASM bundle integrity
+
+The `web()` relayer transport loads the TFHE WASM bundle from Zama's CDN (`cdn.zama.org`). Before execution, the SDK computes a SHA-384 digest of the fetched payload and compares it to a hash pinned in the library's source code. If the hashes do not match, initialization fails with a clear error.
+
+![WASM Bundle Integrity Check](../images/security-wasm-integrity.svg)
+
+This protects against CDN compromise or man-in-the-middle injection of modified WASM.
+
+Integrity checking is enabled by default. Disable it only in test environments:
+
+```ts
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: {
+    [sepolia.id]: web({ security: { integrityCheck: false } }),
+  },
+});
+```
+
+{% hint style="warning" %}
+Disabling integrity checks in production removes a critical defense layer. A compromised WASM bundle could exfiltrate FHE private keys or manipulate encrypted values.
+{% endhint %}
+
 ## Browser security headers
 
 ### COOP/COEP headers
@@ -150,12 +175,19 @@ After revocation, the encrypted FHE keypair remains in storage. Only the session
 
 ## CSRF protection
 
-For browser apps, `RelayerWeb` supports CSRF tokens injected into all mutating HTTP requests to the relayer proxy:
+For browser apps, the `web()` transport supports CSRF tokens injected into all mutating HTTP requests to the relayer proxy:
 
 ```ts
-const relayer = new RelayerWeb({
-  security: {
-    getCsrfToken: () => document.cookie.match(/csrf=(\w+)/)?.[1] ?? "",
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: {
+    [sepolia.id]: web({
+      security: {
+        getCsrfToken: () => document.cookie.match(/csrf=(\w+)/)?.[1] ?? "",
+      },
+    }),
   },
 });
 ```

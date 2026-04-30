@@ -25,7 +25,7 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 ### Guides
 
 - [Overview](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/README.md): Step-by-step guides for common tasks with the Zama SDK. Each guide covers a single topic with code examples for both the core SDK and React hooks.
-- [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md): How to set up the SDK's three required pieces — relayer, signer, and storage.
+- [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md): How to configure the SDK with createConfig — chains, relayers, provider, signer, and storage.
 - [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/authentication.md): How to authenticate with the relayer using a backend proxy or a direct API key.
 - [Shield tokens](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/shield-tokens.md): How to convert public ERC-20 tokens into their confidential form.
 - [Transfer privately](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/transfer-privately.md): How to send confidential tokens so the amount stays hidden on-chain.
@@ -50,17 +50,19 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [RelayerWeb](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerWeb.md): Browser relayer that runs FHE operations in a Web Worker via WASM.
 - [RelayerNode](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerNode.md): Node.js relayer that runs FHE operations in native worker threads.
 - [RelayerCleartext](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerCleartext.md): Development relayer that operates in cleartext mode without FHE, KMS, or gateway dependencies.
-- [ViemSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ViemSigner.md): Signer adapter that wraps viem wallet and public clients for the SDK.
-- [EthersSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/EthersSigner.md): Signer adapter that wraps ethers providers and signers for the SDK.
-- [WagmiSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WagmiSigner.md): React-only signer adapter that wraps a wagmi config with automatic session revocation.
+- [GenericProvider](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericProvider.md): Interface that all provider adapters must implement for read-only chain access.
 - [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md): Interface that all signer adapters must implement for the SDK to interact with wallets.
+- [ViemProvider](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ViemProvider.md): Provider adapter that wraps a viem PublicClient for read-only chain access.
+- [ViemSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ViemSigner.md): Signer adapter that wraps a viem WalletClient for wallet operations.
+- [EthersProvider](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/EthersProvider.md): Provider adapter that wraps an ethers Provider or EIP-1193 source for read-only chain access.
+- [EthersSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/EthersSigner.md): Signer adapter that wraps an ethers Signer or EIP-1193 source for wallet operations.
 - [GenericStorage](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericStorage.md): Interface for async key-value storage used to persist FHE keypairs and session signatures.
 - [Error types](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/errors.md): All SDK error classes, codes, and the matchZamaError utility.
 - [Contract call builders](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/contract-builders.md): Low-level builders that return raw contract call configs for viem, ethers, or custom execution layers.
 - [FheArtifactCache](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/FheArtifactCache.md): Persistent cache for FHE public key and public parameters, avoiding re-downloads across sessions.
 - [Event decoders](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/event-decoders.md): Decode on-chain logs into typed event objects.
 - [Delegated decryption](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/delegation.md): Delegation lets one address grant another address the right to decrypt its confidential balance.
-- [Network presets](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/network-presets.md): Pre-configured network settings for Ethereum Mainnet, Sepolia, and Hardhat.
+- [Network presets](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/network-presets.md): Pre-configured chain objects and legacy network configs for supported networks.
 
 ### React Reference
 

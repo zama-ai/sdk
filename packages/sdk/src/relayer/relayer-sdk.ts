@@ -14,10 +14,10 @@ import type {
 import type { Address, Hex } from "viem";
 
 /**
- * Interface for FHE relayer operations.
- * Implemented by `RelayerWeb` (browser, via Web Worker + WASM) and `RelayerNode` (Node.js, direct).
+ * Core FHE cryptographic operations — the 10 methods that perform
+ * encryption, decryption, key generation, and proof verification.
  */
-export interface RelayerSDK {
+export interface FheOperations {
   /** Generate an FHE keypair (public + private key). */
   generateKeypair(): Promise<{ publicKey: Hex; privateKey: Hex }>;
 
@@ -60,7 +60,14 @@ export interface RelayerSDK {
 
   /** Fetch FHE public parameters for a given bit size. Returns `null` if not available. */
   getPublicParams(bits: number): Promise<PublicParamsData | null>;
+}
 
+/**
+ * Interface for FHE relayer operations.
+ * Extends `FheOperations` with lifecycle and chain-specific methods.
+ * Implemented by `RelayerWeb` (browser, via Web Worker + WASM) and `RelayerNode` (Node.js, direct).
+ */
+export interface RelayerSDK extends FheOperations {
   /** Return the ACL contract address for the current chain. */
   getAclAddress(): Promise<Address>;
 

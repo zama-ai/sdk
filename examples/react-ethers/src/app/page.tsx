@@ -9,11 +9,10 @@ import {
   useAllow,
   useListPairs,
   useZamaSDK,
-  balanceOfContract,
 } from "@zama-fhe/react-sdk";
-import type { TokenWrapperPair, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
+import { balanceOfContract } from "@zama-fhe/sdk";
+import type { TokenWrapperPair, TokenWrapperPairWithMetadata, Address } from "@zama-fhe/sdk";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query"; // query key builders for SDK-managed caches — /query subpath export
-import type { Address } from "@zama-fhe/react-sdk";
 import { BalancesCard } from "@/components/BalancesCard";
 import { ShieldCard } from "@/components/ShieldCard";
 import { TransferCard } from "@/components/TransferCard";
@@ -150,8 +149,7 @@ export default function Home() {
 
   // Check whether cached credentials cover the currently selected confidential token.
   const { data: isAllowed } = useIsAllowed({
-    contractAddresses: token ? [token.confidentialTokenAddress] : [],
-    query: { enabled: Boolean(token) },
+    contractAddresses: [token?.confidentialTokenAddress ?? ZERO_ADDRESS],
   });
 
   // Metadata for the selected token pair — sourced directly from the registry response
@@ -288,7 +286,7 @@ export default function Home() {
     // any operation that changes the confidential balance (shield, unshield, transfer).
     if (token) {
       queryClient.invalidateQueries({
-        queryKey: zamaQueryKeys.confidentialHandle.token(token.confidentialTokenAddress),
+        queryKey: zamaQueryKeys.confidentialBalance.token(token.confidentialTokenAddress),
       });
     }
   };
@@ -443,9 +441,7 @@ export default function Home() {
       <BalancesCard
         formattedErc20={formattedErc20}
         formattedConfidential={formattedConfidential}
-        // handleQuery.isLoading: fetching the encrypted handle from chain (Phase 1).
-        // balance.isLoading: decrypting it via RelayerWeb (Phase 2).
-        isLoadingConfidential={balance.handleQuery.isLoading || balance.isLoading}
+        isLoadingConfidential={balance.isLoading}
         erc20Symbol={erc20Symbol}
         onMint={() => mint.mutate()}
         isMinting={mint.isPending}
