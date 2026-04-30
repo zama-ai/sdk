@@ -57,7 +57,7 @@ export const wagmiConfig = createConfig({
   },
 });
 
-const mySepolia = {
+export const mySepolia = {
   ...sepoliaFhe,
   relayerUrl: "https://your-app.com/api/relayer/11155111",
 } as const satisfies FheChain;
@@ -65,9 +65,7 @@ const mySepolia = {
 export const zamaConfig = createZamaConfig({
   chains: [mySepolia],
   wagmiConfig,
-  relayers: {
-    [mySepolia.id]: web(),
-  },
+  relayers: { [mySepolia.id]: web() },
 });
 
 export const queryClient = new QueryClient();
@@ -86,7 +84,7 @@ Replace `YOUR_KEY` with your Infura (or Alchemy) project ID, and update the rela
 
 ## 4. Create the App layout with providers
 
-Replace the contents of `src/App.tsx`. We wrap the app in three providers: wagmi for wallet state, React Query for async caching, and `ZamaProvider` for FHE operations.
+Replace the contents of `src/App.tsx`. We wrap the app in three providers: wagmi for wallet state, React Query for async caching, and `ZamaProvider` for FHE operations. The Zama config is built by `createConfig` from `@zama-fhe/react-sdk/wagmi`, which derives the signer from your wagmi config so it tracks connection state automatically.
 
 {% tabs %}
 {% tab title="src/App.tsx" %}
@@ -124,15 +122,18 @@ Create `src/BalanceDisplay.tsx`. The `useConfidentialBalance` hook decrypts the 
 
 ```tsx
 import { useConfidentialBalance } from "@zama-fhe/react-sdk";
+import { useAccount } from "wagmi";
 import { TOKEN_ADDRESS } from "./config";
 
 export function BalanceDisplay() {
+  const { address } = useAccount();
   const {
     data: balance,
     isLoading,
     error,
   } = useConfidentialBalance({
     tokenAddress: TOKEN_ADDRESS,
+    account: address,
   });
 
   if (error) return <p>Failed to load balance.</p>;

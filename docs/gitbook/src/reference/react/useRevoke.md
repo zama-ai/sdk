@@ -64,7 +64,7 @@ revoke(["0xContractA", "0xContractB"]);
 - Does **not** delete stored FHE credentials — only the session-level signature is cleared.
 
 {% hint style="info" %}
-If you use [`WagmiSigner`](/reference/sdk/WagmiSigner), the SDK auto-revokes on wallet disconnect or account change. Manual revoke is for [`ViemSigner`](/reference/sdk/ViemSigner) and [`EthersSigner`](/reference/sdk/EthersSigner) users.
+The SDK auto-revokes sessions on wallet disconnect or account change when the signer adapter implements `subscribe()`. Manual revoke is useful when you want to clear credentials proactively.
 {% endhint %}
 
 ## Related

@@ -46,7 +46,7 @@ function Portfolio({ tokens }: { tokens: `0x${string}`[] }) {
 
 ```ts
 // config.ts
-import { createConfig } from "@zama-fhe/react-sdk/wagmi";
+import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 import { web } from "@zama-fhe/sdk/web";
 import { sepolia } from "@zama-fhe/sdk/chains";
 import type { FheChain } from "@zama-fhe/sdk/chains";
@@ -54,15 +54,19 @@ import { config as wagmiConfig } from "./wagmi";
 
 const mySepolia = {
   ...sepolia,
-  relayerUrl: "https://your-relayer.example.com/v2",
-  network: "https://your-rpc.example.com",
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
 } as const satisfies FheChain;
 
-export const zamaConfig = createConfig({
+export const zamaConfig = createZamaConfig({
   chains: [mySepolia],
-  relayers: { [mySepolia.id]: web() },
   wagmiConfig,
+  relayers: { [mySepolia.id]: web() },
 });
+
+// In your app layout:
+// <ZamaProvider config={zamaConfig}>
+//   <App />
+// </ZamaProvider>
 ```
 
 {% endtab %}
@@ -82,6 +86,7 @@ Array of confidential ERC-20 token contract addresses to query.
 ```tsx
 const { data } = useConfidentialBalances({
   tokenAddresses: ["0xTokenA", "0xTokenB", "0xTokenC"],
+  account: address,
 });
 ```
 
@@ -94,7 +99,7 @@ const { data } = useConfidentialBalances({
 
 `Address | undefined`
 
-Address whose balances to read. Defaults to the connected wallet address from the signer.
+Address whose balances to read. The query is disabled while `undefined`. Pass the connected wallet address from wagmi's `useAccount()`.
 
 {% tabs %}
 {% tab title="component.tsx" %}
