@@ -506,12 +506,6 @@ export interface Keypair {
     publicKey: Hex;
 }
 
-// @public
-export interface KeypairGenerator {
-    // (undocumented)
-    generateKeypair(): Promise<Keypair>;
-}
-
 // @public (undocumented)
 export interface ListPairsQueryConfig {
     // (undocumented)
@@ -545,24 +539,6 @@ export interface MutationFactoryOptions<TMutationKey extends readonly unknown[],
 
 // @public
 export type OnChainEvent = ConfidentialTransferEvent | WrappedEvent | UnwrapRequestedEvent | UnwrapFinalizedEvent | UnwrappedFinalizedEvent | UnwrappedStartedEvent;
-
-// @public
-export interface PermitFactory {
-    // (undocumented)
-    createDelegatedUserDecryptEIP712(publicKey: Hex, contracts: Address[], delegator: Address, startTimestamp: number, durationDays: number): Promise<EIP712TypedData>;
-    // (undocumented)
-    createEIP712(publicKey: Hex, contracts: Address[], startTimestamp: number, durationDays: number): Promise<EIP712TypedData>;
-}
-
-// @public
-export interface PermitSigner {
-    // (undocumented)
-    getAddress(): Promise<Address>;
-    // (undocumented)
-    getChainId(): Promise<number>;
-    // (undocumented)
-    signTypedData(td: EIP712TypedData): Promise<Hex>;
-}
 
 // @public (undocumented)
 export function publicDecryptMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.publicDecrypt"], Handle[], PublicDecryptResult>;

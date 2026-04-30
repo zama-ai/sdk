@@ -11452,12 +11452,6 @@ export class KeypairExpiredError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
 
-// @public
-export interface KeypairGenerator {
-    // (undocumented)
-    generateKeypair(): Promise<Keypair>;
-}
-
 export { KeypairType }
 
 export { KmsDelegatedUserDecryptEIP712Type }
@@ -11686,24 +11680,6 @@ export interface PendingUnshieldRequest {
 //
 // @public
 export type Permission = output<typeof PermissionSchema>;
-
-// @public
-export interface PermitFactory {
-    // (undocumented)
-    createDelegatedUserDecryptEIP712(publicKey: Hex, contracts: Address[], delegator: Address, startTimestamp: number, durationDays: number): Promise<EIP712TypedData>;
-    // (undocumented)
-    createEIP712(publicKey: Hex, contracts: Address[], startTimestamp: number, durationDays: number): Promise<EIP712TypedData>;
-}
-
-// @public
-export interface PermitSigner {
-    // (undocumented)
-    getAddress(): Promise<Address>;
-    // (undocumented)
-    getChainId(): Promise<number>;
-    // (undocumented)
-    signTypedData(td: EIP712TypedData): Promise<Hex>;
-}
 
 // @public
 export type PublicDecryptResult = PublicDecryptResults;
