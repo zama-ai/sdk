@@ -25,7 +25,7 @@ function ApproveOperator({ tokenAddress }: { tokenAddress: `0x${string}` }) {
   const { mutateAsync: setOperator, isPending } = useConfidentialSetOperator({ tokenAddress });
 
   const handleApprove = async () => {
-    const txHash = await setOperator({ operator: "0xDEX" });
+    const { txHash } = await setOperator({ operator: "0xDEX" });
     console.log("Operator set:", txHash);
   };
 
@@ -87,7 +87,7 @@ await setOperator({
 
 ## Return Type
 
-The mutation resolves with a transaction hash (`Hex`).
+`data` is `{ txHash: Hex; receipt: TransactionReceipt }` — the submitted transaction hash and its confirmed on-chain receipt.
 
 {% include ".gitbook/includes/mutation-result.md" %}
 

@@ -1786,7 +1786,7 @@ The user sees a single wallet prompt. The encrypted amount is included in the tr
 
 ### 3. Send as an operator (transferFrom)
 
-If an owner has approved you as an operator (via `token.approve()`), you can transfer on their behalf using `confidentialTransferFrom`:
+If an owner has approved you as an operator (via `token.setOperator()`), you can transfer on their behalf using `confidentialTransferFrom`:
 
 
 ### Tab: Core SDK
@@ -4524,28 +4524,28 @@ if (request) {
 }
 ```
 
-### approve
+### setOperator
 
-`(spender: Address, until?: number) => Promise<{ txHash: Hex; receipt: TransactionReceipt }>`
+`(operator: Address, until?: number) => Promise<{ txHash: Hex; receipt: TransactionReceipt }>`
 
 Approves another address to operate on your confidential tokens (e.g. a DEX or multisig). Default duration: 1 hour.
 
 ```ts
 // Approve for 1 hour (default)
-await token.approve("0xSpender");
+await token.setOperator("0xOperator");
 
 // Approve until a specific timestamp
-await token.approve("0xSpender", futureTimestamp);
+await token.setOperator("0xOperator", futureTimestamp);
 ```
 
-### isApproved
+### isOperator
 
-`(spender: Address, holder: Address) => Promise<boolean>`
+`(holder: Address, spender: Address) => Promise<boolean>`
 
-Checks whether a spender is currently approved for a given holder.
+Checks whether a spender is currently an approved operator for a given holder.
 
 ```ts
-const approved = await token.isApproved("0xSpender", "0xHolder");
+const approved = await token.isOperator("0xHolder", "0xSpender");
 ```
 
 ### allow
@@ -8867,7 +8867,7 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 # useConfidentialTransferFrom
 
-Transfer confidential tokens on behalf of an owner who approved you as an operator. The sender must have been granted approval via [`useConfidentialApprove`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialApprove.md) before calling this hook. Automatically invalidates the [`useConfidentialBalance`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialBalance.md) cache on success.
+Transfer confidential tokens on behalf of an owner who approved you as an operator. The sender must have been granted approval via [`useConfidentialSetOperator`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialSetOperator.md) before calling this hook. Automatically invalidates the [`useConfidentialBalance`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialBalance.md) cache on success.
 
 ## Import
 
@@ -9071,7 +9071,7 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 ## Related
 
 - [useConfidentialTransfer](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialTransfer.md) -- direct transfer (no operator)
-- [useConfidentialApprove](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialApprove.md) -- grant operator approval
+- [useConfidentialSetOperator](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialSetOperator.md) -- grant operator approval
 - [Operator Approvals guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/operator-approvals.md)
 - [useConfidentialBalance](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialBalance.md) -- auto-invalidated on success
 
@@ -10958,7 +10958,7 @@ function ApproveOperator({ tokenAddress }: { tokenAddress: `0x${string}` }) {
   const { mutateAsync: setOperator, isPending } = useConfidentialSetOperator({ tokenAddress });
 
   const handleApprove = async () => {
-    const txHash = await setOperator({ operator: "0xDEX" });
+    const { txHash } = await setOperator({ operator: "0xDEX" });
     console.log("Operator set:", txHash);
   };
 
@@ -11018,7 +11018,7 @@ await setOperator({
 
 ## Return Type
 
-The mutation resolves with a transaction hash (`Hex`).
+`data` is `{ txHash: Hex; receipt: TransactionReceipt }` — the submitted transaction hash and its confirmed on-chain receipt.
 
 ### `mutate`
 

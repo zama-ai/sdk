@@ -69,7 +69,7 @@ The user sees a single wallet prompt. The encrypted amount is included in the tr
 
 ### 3. Send as an operator (transferFrom)
 
-If an owner has approved you as an operator (via `token.approve()`), you can transfer on their behalf using `confidentialTransferFrom`:
+If an owner has approved you as an operator (via `token.setOperator()`), you can transfer on their behalf using `confidentialTransferFrom`:
 
 {% tabs %}
 {% tab title="Core SDK" %}

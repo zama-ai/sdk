@@ -216,28 +216,28 @@ if (request) {
 }
 ```
 
-### approve
+### setOperator
 
-`(spender: Address, until?: number) => Promise<{ txHash: Hex; receipt: TransactionReceipt }>`
+`(operator: Address, until?: number) => Promise<{ txHash: Hex; receipt: TransactionReceipt }>`
 
 Approves another address to operate on your confidential tokens (e.g. a DEX or multisig). Default duration: 1 hour.
 
 ```ts
 // Approve for 1 hour (default)
-await token.approve("0xSpender");
+await token.setOperator("0xOperator");
 
 // Approve until a specific timestamp
-await token.approve("0xSpender", futureTimestamp);
+await token.setOperator("0xOperator", futureTimestamp);
 ```
 
-### isApproved
+### isOperator
 
-`(spender: Address, holder: Address) => Promise<boolean>`
+`(holder: Address, spender: Address) => Promise<boolean>`
 
-Checks whether a spender is currently approved for a given holder.
+Checks whether a spender is currently an approved operator for a given holder.
 
 ```ts
-const approved = await token.isApproved("0xSpender", "0xHolder");
+const approved = await token.isOperator("0xHolder", "0xSpender");
 ```
 
 ### allow
