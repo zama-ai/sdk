@@ -108,16 +108,15 @@ async function getClient(chainId: number): Promise<FhevmClientInstance> {
     );
   }
 
-  const promise = (async () => {
+  const promise = Promise.try(async () => {
     const fhevmConfig = toInstanceConfig(config);
     const chain = configToChain(fhevmConfig);
     const providerUrl = fhevmConfig.networkUrl ?? fhevmConfig.relayerUrl;
     const publicClient = createPublicClient({ transport: http(providerUrl) });
-
     const client = createFhevmClient({ chain, publicClient });
     await client.ready;
     return client;
-  })()
+  })
     .then((client) => {
       clients.set(chainId, client);
       pending.delete(chainId);

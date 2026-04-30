@@ -111,21 +111,18 @@ async function getClient(chainId: number): Promise<FhevmClientInstance> {
     );
   }
 
-  const promise = (async () => {
-    const { createFhevmClient, setFhevmRuntimeConfig } = await import("@fhevm/sdk/viem");
-
+  const promise = Promise.try(async () => {
+    const nodeSdk = await import("@fhevm/sdk/viem");
     // Node worker runs single-threaded (no SharedArrayBuffer support needed)
-    setFhevmRuntimeConfig({ singleThread: true });
-
+    nodeSdk.setFhevmRuntimeConfig({ singleThread: true });
     const fhevmConfig = toInstanceConfig(config);
     const chain = configToChain(fhevmConfig);
     const providerUrl = fhevmConfig.networkUrl ?? fhevmConfig.relayerUrl;
     const publicClient = createPublicClient({ transport: http(providerUrl) });
-
-    const client = createFhevmClient({ chain, publicClient });
+    const client = nodeSdk.createFhevmClient({ chain, publicClient });
     await client.ready;
     return client;
-  })()
+  })
     .then((client) => {
       clients.set(chainId, client);
       pending.delete(chainId);
