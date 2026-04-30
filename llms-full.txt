@@ -1816,7 +1816,7 @@ await transferFrom({
 ```
 
 
-The operator must have been approved beforehand. Check approval status with `token.isApproved("0xOperator")` or the `useConfidentialIsApproved` hook.
+The operator must have been approved beforehand. Check approval status with `token.isOperator("0xHolder", "0xOperator")` or the `useConfidentialIsOperator` hook.
 
 ### 4. Handle the transaction result
 
@@ -3248,16 +3248,16 @@ Operator approval lets another address (a DEX contract, multisig, or automated s
 
 ### 1. Approve an operator
 
-Call `approve` on a token instance. By default, the approval is valid for 1 hour:
+Call `setOperator` on a token instance. By default, the approval is valid for 1 hour:
 
 ```ts
 const token = sdk.createToken("0xEncryptedERC20");
 
 // Approve with the default 1-hour duration
-await token.approve("0xSpender");
+await token.setOperator("0xOperator");
 ```
 
-The SDK sends a single on-chain transaction. The spender can call `confidentialTransferFrom` until the approval expires.
+The SDK sends a single on-chain transaction. The operator can call `confidentialTransferFrom` until the approval expires.
 
 ### 2. Approve with a custom expiry
 
@@ -3266,22 +3266,17 @@ Pass a Unix timestamp (in seconds) as the second argument to set a longer or sho
 ```ts
 // Approve until a specific timestamp (e.g. 24 hours from now)
 const expiry = Math.floor(Date.now() / 1000) + 86400;
-await token.approve("0xSpender", expiry);
+await token.setOperator("0xOperator", expiry);
 ```
 
-### 3. Check approval status
+### 3. Check operator status
 
-Query whether a spender is currently approved:
+Query whether a spender is currently an approved operator:
 
 ```ts
-const approved = await token.isApproved("0xSpender");
+// holder is the token owner, spender is the operator to check
+const approved = await token.isOperator("0xHolder", "0xSpender");
 // returns true if the approval is active and has not expired
-```
-
-You can also check for a specific owner (not yourself):
-
-```ts
-const approved = await token.isApproved("0xSpender", "0xOwner");
 ```
 
 ### 4. Use operator transfer
@@ -3297,7 +3292,7 @@ await token.confidentialTransferFrom("0xFrom", "0xTo", 500n);
 
 The amount is encrypted before submission, just like a regular `confidentialTransfer`. On-chain observers see the transaction but not the value.
 
-### 5. React: use the approval hooks
+### 5. React: use the operator hooks
 
 The React SDK provides hooks that wrap these operations with loading states and error handling:
 
@@ -3305,15 +3300,21 @@ The React SDK provides hooks that wrap these operations with loading states and 
 "use client";
 
 import {
-  useConfidentialApprove,
-  useConfidentialIsApproved,
+  useConfidentialSetOperator,
+  useConfidentialIsOperator,
   useConfidentialTransferFrom,
 } from "@zama-fhe/react-sdk";
+import { useAccount } from "wagmi";
 
-function ApprovalPanel({ tokenAddress }: { tokenAddress: `0x${string}` }) {
-  const { mutateAsync: approve, isPending: isApproving } = useConfidentialApprove({ tokenAddress });
+function OperatorPanel({ tokenAddress }: { tokenAddress: `0x${string}` }) {
+  const { address } = useAccount();
+  const { mutateAsync: setOperator, isPending: isSettingOperator } = useConfidentialSetOperator({ tokenAddress });
 
-  const { data: isApproved } = useConfidentialIsApproved({ tokenAddress, spender: "0xSpender" });
+  const { data: isOperator } = useConfidentialIsOperator({
+    tokenAddress,
+    holder: address,
+    spender: "0xOperator",
+  });
 
   const { mutateAsync: transferFrom, isPending: isTransferring } = useConfidentialTransferFrom({
     tokenAddress,
@@ -3321,9 +3322,9 @@ function ApprovalPanel({ tokenAddress }: { tokenAddress: `0x${string}` }) {
 
   return (
     <div>
-      <p>Approved: {isApproved ? "Yes" : "No"}</p>
-      <button onClick={() => approve({ spender: "0xSpender" })} disabled={isApproving}>
-        Approve Operator
+      <p>Operator approved: {isOperator ? "Yes" : "No"}</p>
+      <button onClick={() => setOperator({ operator: "0xOperator" })} disabled={isSettingOperator}>
+        Set Operator
       </button>
       <button
         onClick={() => transferFrom({ from: "0xOwner", to: "0xRecipient", amount: 500n })}
@@ -3338,15 +3339,15 @@ function ApprovalPanel({ tokenAddress }: { tokenAddress: `0x${string}` }) {
 
 ### 6. Finalize-unwrap operator approval
 
-Operator approval also applies to the unshield (unwrap + finalize) flow. If an operator needs to unshield tokens on the owner's behalf, the owner must approve the operator separately for this action. The approval mechanism is the same -- `token.approve("0xOperator")` -- and the operator can then call `unshield` or `unshieldAll` on the owner's tokens.
+Operator approval also applies to the unshield (unwrap + finalize) flow. If an operator needs to unshield tokens on the owner's behalf, the owner must approve the operator separately for this action. The approval mechanism is the same -- `token.setOperator("0xOperator")` -- and the operator can then call `unshield` or `unshieldAll` on the owner's tokens.
 
 This is a distinct concern from transfer approval: approving an operator for transfers does not automatically allow them to unshield.
 
 ## Next steps
 
-- [Token.approve](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md) -- full method signature and options
-- [useConfidentialApprove](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialApprove.md) -- React hook reference
-- [useConfidentialIsApproved](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialIsApproved.md) -- query hook reference
+- [Token.setOperator](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md) -- full method signature and options
+- [useConfidentialSetOperator](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialSetOperator.md) -- React hook reference
+- [useConfidentialIsOperator](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialIsOperator.md) -- query hook reference
 - [useConfidentialTransferFrom](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialTransferFrom.md) -- operator transfer hook reference
 
 ## Encrypt & decrypt
@@ -6879,7 +6880,7 @@ import {
 | `confidentialTransferContract(token, to, handle, inputProof)`           | Encrypted transfer                 |
 | `confidentialTransferFromContract(token, from, to, handle, inputProof)` | Operator encrypted transfer        |
 | `isOperatorContract(token, holder, spender)`                            | Check operator approval            |
-| `setOperatorContract(token, spender, timestamp?)`                       | Set operator approval              |
+| `setOperatorContract(token, operator, until?)`                          | Set operator approval              |
 | `confidentialTotalSupplyContract(token)`                                | Read encrypted total supply handle |
 | `rateContract(token)`                                                   | Read conversion rate               |
 
@@ -10928,21 +10929,21 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 - [`useAllow`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useAllow.md) — pre-authorize contracts with a single wallet signature
 - [`useIsAllowed`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsAllowed.md) — check whether a session signature is valid
 
-## useConfidentialApprove
+## useConfidentialSetOperator
 
 - source_type: official-doc
-- source_path: docs/gitbook/src/reference/react/useConfidentialApprove.md
-- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialApprove.md
-- logical_path: reference/react/useConfidentialApprove
+- source_path: docs/gitbook/src/reference/react/useConfidentialSetOperator.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialSetOperator.md
+- logical_path: reference/react/useConfidentialSetOperator
 
-# useConfidentialApprove
+# useConfidentialSetOperator
 
 Approve an operator to act on your confidential tokens (e.g. a DEX or multisig).
 
 ## Import
 
 ```ts
-import { useConfidentialApprove } from "@zama-fhe/react-sdk";
+import { useConfidentialSetOperator } from "@zama-fhe/react-sdk";
 ```
 
 ## Usage
@@ -10951,19 +10952,19 @@ import { useConfidentialApprove } from "@zama-fhe/react-sdk";
 ### Tab: ApproveOperator.tsx
 
 ```tsx
-import { useConfidentialApprove } from "@zama-fhe/react-sdk";
+import { useConfidentialSetOperator } from "@zama-fhe/react-sdk";
 
 function ApproveOperator({ tokenAddress }: { tokenAddress: `0x${string}` }) {
-  const { mutateAsync: approve, isPending } = useConfidentialApprove({ tokenAddress });
+  const { mutateAsync: setOperator, isPending } = useConfidentialSetOperator({ tokenAddress });
 
   const handleApprove = async () => {
-    const txHash = await approve({ spender: "0xDEX" });
-    console.log("Approved:", txHash);
+    const txHash = await setOperator({ operator: "0xDEX" });
+    console.log("Operator set:", txHash);
   };
 
   return (
     <button onClick={handleApprove} disabled={isPending}>
-      {isPending ? "Approving..." : "Approve DEX"}
+      {isPending ? "Setting operator..." : "Set Operator"}
     </button>
   );
 }
@@ -10979,22 +10980,22 @@ function ApproveOperator({ tokenAddress }: { tokenAddress: `0x${string}` }) {
 Address of the confidential ERC-20 wrapper contract.
 
 ```ts
-const { mutateAsync: approve } = useConfidentialApprove({
+const { mutateAsync: setOperator } = useConfidentialSetOperator({
   tokenAddress: "0xToken",
 });
 ```
 
 ## Mutation variables
 
-### spender
+### operator
 
 `Address`
 
 Address of the operator to approve.
 
 ```ts
-await approve({
-  spender: "0xDEX",
+await setOperator({
+  operator: "0xDEX",
 });
 ```
 
@@ -11009,8 +11010,8 @@ Unix timestamp (seconds) when the approval expires. Defaults to 1 hour from now.
 ```ts
 const oneDay = Math.floor(Date.now() / 1000) + 86_400;
 
-await approve({
-  spender: "0xDEX",
+await setOperator({
+  operator: "0xDEX",
   until: oneDay,
 });
 ```
@@ -11070,49 +11071,52 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 ## Related
 
-- [`useConfidentialIsApproved`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialIsApproved.md) — check if a spender is currently approved
+- [`useConfidentialIsOperator`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialIsOperator.md) — check if a spender is currently an operator
 - [`useConfidentialTransferFrom`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialTransferFrom.md) — operator transfer using an existing approval
-- [`Token.approve()`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md#approve) — imperative equivalent on the SDK class
+- [`Token.setOperator()`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md#setoperator) — imperative equivalent on the SDK class
 
-## useConfidentialIsApproved
+## useConfidentialIsOperator
 
 - source_type: official-doc
-- source_path: docs/gitbook/src/reference/react/useConfidentialIsApproved.md
-- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialIsApproved.md
-- logical_path: reference/react/useConfidentialIsApproved
+- source_path: docs/gitbook/src/reference/react/useConfidentialIsOperator.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialIsOperator.md
+- logical_path: reference/react/useConfidentialIsOperator
 
-# useConfidentialIsApproved
+# useConfidentialIsOperator
 
-Check if a spender is approved as operator for your confidential tokens.
+Check if a spender is an approved operator for a holder's confidential tokens.
 
 ## Import
 
 ```ts
-import { useConfidentialIsApproved } from "@zama-fhe/react-sdk";
+import { useConfidentialIsOperator } from "@zama-fhe/react-sdk";
 ```
 
 ## Usage
 
 
-### Tab: ApprovalStatus.tsx
+### Tab: OperatorStatus.tsx
 
 ```tsx
-import { useConfidentialIsApproved } from "@zama-fhe/react-sdk";
+import { useConfidentialIsOperator } from "@zama-fhe/react-sdk";
 
-function ApprovalStatus({
+function OperatorStatus({
   tokenAddress,
+  holder,
   spender,
 }: {
   tokenAddress: `0x${string}`;
+  holder: `0x${string}`;
   spender: `0x${string}`;
 }) {
-  const { data: isApproved, isLoading } = useConfidentialIsApproved({
+  const { data: isOperator, isLoading } = useConfidentialIsOperator({
     tokenAddress,
+    holder,
     spender,
   });
 
-  if (isLoading) return <span>Checking approval...</span>;
-  return <span>{isApproved ? "Approved" : "Not approved"}</span>;
+  if (isLoading) return <span>Checking operator status...</span>;
+  return <span>{isOperator ? "Approved" : "Not approved"}</span>;
 }
 ```
 
@@ -11125,29 +11129,29 @@ function ApprovalStatus({
 
 Address of the confidential ERC-20 wrapper contract.
 
-```ts
-const { data: isApproved } = useConfidentialIsApproved({
-  tokenAddress: "0xToken",
-  spender: "0xDEX",
-});
-```
+### holder
+
+`Address | undefined`
+
+Address of the token holder. The query is disabled while `undefined`.
 
 ### spender
 
-`Address`
+`Address | undefined`
 
-Address of the operator to check.
+Address of the operator to check. The query is disabled while `undefined`.
 
 ```ts
-const { data: isApproved } = useConfidentialIsApproved({
+const { data: isOperator } = useConfidentialIsOperator({
   tokenAddress: "0xToken",
+  holder: "0xOwner",
   spender: "0xDEX",
 });
 ```
 
 ## Return Type
 
-`data` is `boolean` — `true` if the spender has an active approval, `false` otherwise.
+`data` is `boolean` — `true` if the spender has an active approval for the given holder, `false` otherwise.
 
 ### `data`
 
@@ -11206,32 +11210,35 @@ The current status of the query. Prefer the boolean flags above for conditional 
 
 ## Suspense
 
-Use `useConfidentialIsApprovedSuspense` inside a `<Suspense>` boundary. The hook throws a promise while loading, so `data` is always defined.
+Use `useConfidentialIsOperatorSuspense` inside a `<Suspense>` boundary. The hook throws a promise while loading, so `data` is always defined.
 
 ```tsx
-import { useConfidentialIsApprovedSuspense } from "@zama-fhe/react-sdk";
+import { useConfidentialIsOperatorSuspense } from "@zama-fhe/react-sdk";
 import { Suspense } from "react";
 
-function ApprovalCheck({
+function OperatorCheck({
   tokenAddress,
+  holder,
   spender,
 }: {
   tokenAddress: `0x${string}`;
+  holder: `0x${string}`;
   spender: `0x${string}`;
 }) {
-  const { data: isApproved } = useConfidentialIsApprovedSuspense({
+  const { data: isOperator } = useConfidentialIsOperatorSuspense({
     tokenAddress,
+    holder,
     spender,
   });
 
   // data is always defined — no loading state needed
-  return <span>{isApproved ? "Approved" : "Not approved"}</span>;
+  return <span>{isOperator ? "Approved" : "Not approved"}</span>;
 }
 
 function App() {
   return (
     <Suspense fallback={<span>Loading...</span>}>
-      <ApprovalCheck tokenAddress="0xToken" spender="0xDEX" />
+      <OperatorCheck tokenAddress="0xToken" holder="0xOwner" spender="0xDEX" />
     </Suspense>
   );
 }
@@ -11239,8 +11246,8 @@ function App() {
 
 ## Related
 
-- [`useConfidentialApprove`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialApprove.md) — approve an operator
-- [`Token.isApproved()`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md#isapproved) — imperative equivalent on the SDK class
+- [`useConfidentialSetOperator`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialSetOperator.md) — approve an operator
+- [`Token.isOperator()`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md#isoperator) — imperative equivalent on the SDK class
 
 ## useUnderlyingAllowance
 

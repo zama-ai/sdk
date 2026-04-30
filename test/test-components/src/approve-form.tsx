@@ -30,7 +30,7 @@ export function ApproveForm({
         setOperator.mutate({ operator: formData.get("operator") as Address });
       }}
       className="space-y-4"
-      data-testid="approve-form"
+      data-testid="operator-form"
     >
       <h2 className="text-xl font-semibold text-white">Set Operator {metadata?.symbol ?? "..."}</h2>
 
@@ -47,26 +47,26 @@ export function ApproveForm({
         defaultValue={defaultSpender ?? ""}
         required
         className="w-full px-3 py-2 bg-zama-surface border border-zama-border rounded outline-none text-white placeholder:text-zama-gray focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
-        data-testid="spender-input"
+        data-testid="operator-input"
       />
 
       <button
         type="submit"
         disabled={setOperator.isPending}
         className="px-4 py-2 bg-zama-yellow text-zama-black font-medium rounded hover:bg-zama-yellow-hover disabled:opacity-50 transition-colors"
-        data-testid="approve-button"
+        data-testid="set-operator-button"
       >
-        {setOperator.isPending ? "Approving..." : "Approve"}
+        {setOperator.isPending ? "Setting operator..." : "Set Operator"}
       </button>
 
       {setOperator.isSuccess && (
-        <p className="text-zama-success" data-testid="approve-success">
-          Approved successfully! Tx: {setOperator.data?.txHash}
+        <p className="text-zama-success" data-testid="set-operator-success">
+          Operator set successfully! Tx: {setOperator.data?.txHash}
         </p>
       )}
 
       {setOperator.isError && (
-        <p className="text-zama-error" data-testid="approve-error">
+        <p className="text-zama-error" data-testid="set-operator-error">
           Error: {setOperator.error.message}
         </p>
       )}

@@ -102,7 +102,7 @@ await transferFrom({
 {% endtab %}
 {% endtabs %}
 
-The operator must have been approved beforehand. Check approval status with `token.isApproved("0xOperator")` or the `useConfidentialIsApproved` hook.
+The operator must have been approved beforehand. Check approval status with `token.isOperator("0xHolder", "0xOperator")` or the `useConfidentialIsOperator` hook.
 
 ### 4. Handle the transaction result
 
