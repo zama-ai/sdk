@@ -100,7 +100,7 @@ describe("ZamaSDK", () => {
     await sessionStorage.set(storeKey, "0xsomeSignature");
     expect(await sessionStorage.get(storeKey)).toBe("0xsomeSignature");
 
-    await sdk.credentials.revoke();
+    await sdk.credentials!.revoke();
 
     expect(await sessionStorage.get(storeKey)).toBeNull();
   });
@@ -175,7 +175,7 @@ describe("ZamaSDK", () => {
       const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
       const MAX = 365 * 86400;
       const sdk = createSDK({ keypairTTL: MAX });
-      expect(sdk.credentials.keypairTTL).toBe(MAX);
+      expect(sdk.credentials!.keypairTTL).toBe(MAX);
       expect(warnSpy).not.toHaveBeenCalled();
       warnSpy.mockRestore();
     });
@@ -196,7 +196,7 @@ describe("ZamaSDK", () => {
       const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
       const MAX = 365 * 86400;
       const sdk = createSDK({ keypairTTL: Infinity });
-      expect(sdk.credentials.keypairTTL).toBe(MAX);
+      expect(sdk.credentials!.keypairTTL).toBe(MAX);
       expect(warnSpy).toHaveBeenCalledOnce();
       warnSpy.mockRestore();
     });
@@ -714,7 +714,7 @@ describe("ZamaSDK", () => {
 
       // First call caches handle for CONTRACT_A
       await sdk.userDecrypt([{ handle, contractAddress: CONTRACT_A }]);
-      const allowSpy = vi.spyOn(sdk.credentials, "allow");
+      const allowSpy = vi.spyOn(sdk.credentials!, "allow");
 
       // Second call: handle is cached, handle2 is not — both contracts should be in allow()
       vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({
@@ -730,6 +730,165 @@ describe("ZamaSDK", () => {
       const allowArgs = allowSpy.mock.calls[0]!;
       // Both contract addresses should be present (checksummed via getAddress)
       expect(allowArgs).toHaveLength(2);
+    });
+  });
+
+  describe("delegatedUserDecrypt", () => {
+    const CONTRACT_A = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
+    const CONTRACT_B = "0x3C3c3C3c3C3C3c3c3c3C3c3C3C3c3c3C3c3c3C3C" as Address;
+    const DELEGATOR = "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC" as Address;
+
+    it("decrypts handles via relayer and caches results", async ({ sdk, relayer, handle }) => {
+      const handles: DecryptHandle[] = [{ handle, contractAddress: CONTRACT_A }];
+
+      const result1 = await sdk.delegatedUserDecrypt(handles, DELEGATOR);
+      expect(result1[handle]).toBe(1000n);
+      expect(relayer.delegatedUserDecrypt).toHaveBeenCalledOnce();
+
+      // Second call should hit cache
+      const result2 = await sdk.delegatedUserDecrypt(handles, DELEGATOR);
+      expect(result2[handle]).toBe(1000n);
+      expect(relayer.delegatedUserDecrypt).toHaveBeenCalledOnce();
+    });
+
+    it("returns empty object when no handles provided", async ({ sdk, relayer }) => {
+      const result = await sdk.delegatedUserDecrypt([], DELEGATOR);
+      expect(result).toEqual({});
+      expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
+    });
+
+    it("maps zero handles to 0n without hitting the relayer", async ({ sdk, relayer }) => {
+      const result = await sdk.delegatedUserDecrypt(
+        [{ handle: ZERO_HANDLE as Handle, contractAddress: CONTRACT_A }],
+        DELEGATOR,
+      );
+      expect(result[ZERO_HANDLE]).toBe(0n);
+      expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
+    });
+
+    it("handles mix of zero and real handles", async ({ sdk, relayer, handle }) => {
+      const result = await sdk.delegatedUserDecrypt(
+        [
+          { handle: ZERO_HANDLE as Handle, contractAddress: CONTRACT_A },
+          { handle, contractAddress: CONTRACT_A },
+        ],
+        DELEGATOR,
+      );
+      expect(result[ZERO_HANDLE]).toBe(0n);
+      expect(result[handle]).toBe(1000n);
+      expect(relayer.delegatedUserDecrypt).toHaveBeenCalledOnce();
+    });
+
+    it("groups handles by contract address", async ({ sdk, relayer, handle }) => {
+      const handle2 = ("0x" + "cd".repeat(32)) as Address;
+      vi.mocked(relayer.delegatedUserDecrypt)
+        .mockResolvedValueOnce({ [handle]: 1000n })
+        .mockResolvedValueOnce({ [handle2]: 2000n });
+
+      const result = await sdk.delegatedUserDecrypt(
+        [
+          { handle, contractAddress: CONTRACT_A },
+          { handle: handle2, contractAddress: CONTRACT_B },
+        ],
+        DELEGATOR,
+      );
+      expect(result[handle]).toBe(1000n);
+      expect(result[handle2]).toBe(2000n);
+      expect(relayer.delegatedUserDecrypt).toHaveBeenCalledTimes(2);
+    });
+
+    it("skips already-cached handles", async ({ sdk, relayer, handle }) => {
+      const handle2 = ("0x" + "cd".repeat(32)) as Address;
+
+      await sdk.delegatedUserDecrypt([{ handle, contractAddress: CONTRACT_A }], DELEGATOR);
+      expect(relayer.delegatedUserDecrypt).toHaveBeenCalledOnce();
+
+      vi.mocked(relayer.delegatedUserDecrypt).mockResolvedValueOnce({
+        [handle2]: 2000n,
+      });
+
+      const result = await sdk.delegatedUserDecrypt(
+        [
+          { handle, contractAddress: CONTRACT_A },
+          { handle: handle2, contractAddress: CONTRACT_A },
+        ],
+        DELEGATOR,
+      );
+      expect(result[handle2]).toBe(2000n);
+      expect(relayer.delegatedUserDecrypt).toHaveBeenCalledTimes(2);
+
+      const secondCall = vi.mocked(relayer.delegatedUserDecrypt).mock.calls[1]![0];
+      expect(secondCall.handles).toEqual([handle2]);
+    });
+
+    it("emits DecryptStart and DecryptEnd events", async ({ createSDK, handle }) => {
+      const events: { type: string }[] = [];
+      const sdk = createSDK({ onEvent: (e) => events.push(e) });
+
+      await sdk.delegatedUserDecrypt([{ handle, contractAddress: CONTRACT_A }], DELEGATOR);
+
+      expect(events).toContainEqual(
+        expect.objectContaining({
+          type: ZamaSDKEvents.DecryptStart,
+          handles: [handle],
+        }),
+      );
+      expect(events).toContainEqual(
+        expect.objectContaining({
+          type: ZamaSDKEvents.DecryptEnd,
+          durationMs: expect.any(Number),
+          handles: [handle],
+          result: { [handle]: 1000n },
+        }),
+      );
+    });
+
+    it("emits DecryptError on failure and wraps with isDelegated=true", async ({
+      createSDK,
+      relayer,
+      handle,
+    }) => {
+      const events: { type: string }[] = [];
+      const sdk = createSDK({ onEvent: (e) => events.push(e) });
+
+      vi.mocked(relayer.delegatedUserDecrypt).mockRejectedValueOnce(new Error("relayer down"));
+
+      await expect(
+        sdk.delegatedUserDecrypt([{ handle, contractAddress: CONTRACT_A }], DELEGATOR),
+      ).rejects.toThrow(DecryptionFailedError);
+
+      expect(events).toContainEqual(
+        expect.objectContaining({
+          type: ZamaSDKEvents.DecryptError,
+          handles: [handle],
+        }),
+      );
+    });
+
+    it("uses delegateAddress for cache key when provided", async ({ sdk, relayer, handle }) => {
+      const ACCOUNT = "0xdDdDddDdDdddDDddDDddDDDDdDdDDdDDdDDDDDDd" as Address;
+
+      await sdk.delegatedUserDecrypt([{ handle, contractAddress: CONTRACT_A }], DELEGATOR, ACCOUNT);
+      expect(relayer.delegatedUserDecrypt).toHaveBeenCalledOnce();
+
+      // Same call with same delegateAddress should hit cache
+      await sdk.delegatedUserDecrypt([{ handle, contractAddress: CONTRACT_A }], DELEGATOR, ACCOUNT);
+      expect(relayer.delegatedUserDecrypt).toHaveBeenCalledOnce();
+
+      // Same call with different delegateAddress (default = delegator) should NOT hit cache
+      await sdk.delegatedUserDecrypt([{ handle, contractAddress: CONTRACT_A }], DELEGATOR);
+      expect(relayer.delegatedUserDecrypt).toHaveBeenCalledTimes(2);
+    });
+
+    it("does not emit events for fully-cached calls", async ({ createSDK, handle }) => {
+      const events: { type: string }[] = [];
+      const sdk = createSDK({ onEvent: (e) => events.push(e) });
+
+      await sdk.delegatedUserDecrypt([{ handle, contractAddress: CONTRACT_A }], DELEGATOR);
+
+      events.length = 0;
+      await sdk.delegatedUserDecrypt([{ handle, contractAddress: CONTRACT_A }], DELEGATOR);
+      expect(events.filter((e) => e.type === ZamaSDKEvents.DecryptStart)).toHaveLength(0);
     });
   });
 
@@ -780,14 +939,14 @@ describe("ZamaSDK", () => {
     const CONTRACT_B = "0x3C3c3C3c3C3C3c3c3c3C3c3C3C3c3c3C3c3c3C3C" as Address;
 
     it("delegates to credentials.allow, forwarding addresses as-is", async ({ sdk }) => {
-      const allowSpy = vi.spyOn(sdk.credentials, "allow");
+      const allowSpy = vi.spyOn(sdk.credentials!, "allow");
       await sdk.allow([CONTRACT_A, CONTRACT_B]);
       // credentials.allow owns normalization — sdk.allow is just a thin forwarder.
       expect(allowSpy).toHaveBeenCalledWith(CONTRACT_A, CONTRACT_B);
     });
 
     it("returns immediately for empty array without calling credentials.allow", async ({ sdk }) => {
-      const allowSpy = vi.spyOn(sdk.credentials, "allow");
+      const allowSpy = vi.spyOn(sdk.credentials!, "allow");
       await sdk.allow([]);
       expect(allowSpy).not.toHaveBeenCalled();
     });
@@ -806,8 +965,8 @@ describe("ZamaSDK", () => {
       await sdk.userDecrypt(handles);
       expect(relayer.userDecrypt).toHaveBeenCalledOnce();
 
-      await sdk.credentials.revoke();
-      const address = await sdk.signer.getAddress();
+      await sdk.credentials!.revoke();
+      const address = await sdk.signer!.getAddress();
       await sdk.cache.clearForRequester(address);
 
       // After revoke, cache should be cleared — relayer called again
