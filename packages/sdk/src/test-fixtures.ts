@@ -74,7 +74,9 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
       });
     }),
     createDelegatedUserDecryptEIP712: vi.fn(),
-    delegatedUserDecrypt: vi.fn(),
+    delegatedUserDecrypt: vi.fn().mockResolvedValue({
+      [VALID_HANDLE as string]: 1000n,
+    }),
     requestZKProofVerification: vi.fn(),
     getAclAddress: vi.fn().mockResolvedValue(ACL),
     getPublicKey: vi.fn().mockResolvedValue({

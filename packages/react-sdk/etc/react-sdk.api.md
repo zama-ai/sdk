@@ -21,7 +21,7 @@ import { CreateEIP712Params } from '@zama-fhe/sdk/query';
 import { DecryptBalanceAsParams } from '@zama-fhe/sdk/query';
 import { DecryptResult } from '@zama-fhe/sdk/query';
 import { DelegateDecryptionParams } from '@zama-fhe/sdk/query';
-import { DelegatedUserDecryptParams } from '@zama-fhe/sdk';
+import { DelegatedUserDecryptMutationParams } from '@zama-fhe/sdk/query';
 import { DelegationStatusData } from '@zama-fhe/sdk/query';
 import { EIP712TypedData } from '@zama-fhe/sdk';
 import { EncryptParams } from '@zama-fhe/sdk';
@@ -143,7 +143,7 @@ export function useDecryptBalanceAs(tokenAddress: Address, options?: UseMutation
 export function useDelegateDecryption(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, DelegateDecryptionParams>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, DelegateDecryptionParams, unknown>;
 
 // @public
-export function useDelegatedUserDecrypt(): _$_tanstack_react_query0.UseMutationResult<Record<`0x${string}`, ClearValueType>, Error, DelegatedUserDecryptParams, unknown>;
+export function useDelegatedUserDecrypt(): _$_tanstack_react_query0.UseMutationResult<Record<`0x${string}`, ClearValueType>, Error, DelegatedUserDecryptMutationParams, unknown>;
 
 // @public
 export function useDelegationStatus(config: UseDelegationStatusConfig, options?: Omit<UseQueryOptions<DelegationStatusData>, "queryKey" | "queryFn">): _$_tanstack_react_query0.UseQueryResult<DelegationStatusData, Error>;
