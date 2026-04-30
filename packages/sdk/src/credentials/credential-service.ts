@@ -21,6 +21,7 @@ import type {
   StoredKeypair,
 } from "./types";
 import { coversContracts, normalizeAddresses } from "./utils";
+import { SignerRequiredError } from "../errors";
 
 const DEFAULT_KEYPAIR_TTL_SECONDS = 30 * 86400;
 const DEFAULT_PERMIT_DURATION_DAYS = 30;
@@ -82,12 +83,21 @@ export class CredentialService {
 
   /** Eagerly resolve the current identity and warm the vault. Best-effort. */
   async initialize(): Promise<void> {
-    const [address, chainId] = await Promise.all([
-      this.#permitSigner.getAddress(),
-      this.#permitSigner.getChainId(),
-    ]);
-    this.#identity = { address: getAddress(address), chainId };
-    await this.#warmKeypairFor(getAddress(address));
+    try {
+      const [address, chainId] = await Promise.all([
+        this.#permitSigner.getAddress(),
+        this.#permitSigner.getChainId(),
+      ]);
+      this.#identity = { address: getAddress(address), chainId };
+      await this.#warmKeypairFor(getAddress(address));
+    } catch (error) {
+      if (error instanceof SignerRequiredError) {
+        // Best-effort catch for SSR. TODO: a better refactor of the signer system needs to be
+        // addressed for SSR concerns, where we'd get a `get-or-undefined` rather than `get-or-throw`
+        // behavior.
+        return;
+      }
+    }
   }
 
   /** Warm the current signer's keypair without creating any signed permits. */

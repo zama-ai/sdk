@@ -57,12 +57,12 @@ export function SessionPanel({ tokenAddresses }: { tokenAddresses: [Address, ...
           </p>
         )}
         {revokePermits.isSuccess && (
-          <p className="text-zama-success" data-testid="revoke-permits-success">
-            Permits revoked successfully
+          <p className="text-zama-success" data-testid="revoke-session-success">
+            Session revoked successfully
           </p>
         )}
         {revokePermits.isError && (
-          <p className="text-zama-error" data-testid="revoke-permits-error">
+          <p className="text-zama-error" data-testid="revoke-session-error">
             Error: {revokePermits.error.message}
           </p>
         )}
