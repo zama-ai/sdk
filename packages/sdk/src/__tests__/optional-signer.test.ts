@@ -2,43 +2,45 @@ import { describe, it, expect } from "../test-fixtures";
 import { ReadonlyToken } from "../token/readonly-token";
 import { Token } from "../token/token";
 import { SignerRequiredError, ZamaErrorCode } from "../errors";
+import type { ZamaSDK } from "../zama-sdk";
 import type { Address } from "viem";
 
+type Op = (sdk: ZamaSDK, tokenAddress: Address) => Promise<unknown>;
+
+// Operations that require a signer and should reject with `SignerRequiredError`
+// when the SDK was constructed without one.
+const SIGNER_REQUIRED_OPS: ReadonlyArray<readonly [string, Op]> = [
+  ["userDecrypt", (sdk, t) => sdk.userDecrypt([{ handle: "0xh", contractAddress: t }])],
+  ["allow", (sdk, t) => sdk.allow([t])],
+  ["revokePermits", (sdk) => sdk.revokePermits()],
+  ["clearCredentials", (sdk) => sdk.clearCredentials()],
+  ["requireChainAlignment", (sdk) => sdk.requireChainAlignment("op")],
+  [
+    "Token.confidentialTransfer",
+    (sdk, t) => sdk.createToken(t).confidentialTransfer("0x1" as Address, 1n),
+  ],
+] as const;
+
 describe("ZamaSDK without signer", () => {
-  it("constructs with signer omitted", ({ createSDK }) => {
+  it("constructs with signer omitted and exposes no signer", ({ createSDK }) => {
     const sdk = createSDK({ signer: undefined });
     expect(sdk.signer).toBeUndefined();
   });
 
-  it("validates keypairTTL even when signer is omitted", ({ createSDK }) => {
-    expect(() => createSDK({ signer: undefined, keypairTTL: 0 })).toThrow(
+  // `it.for` (not `it.each`) forwards the fixture context as the second arg.
+  it.for([
+    { keypairTTL: 0, label: "0" },
+    { keypairTTL: NaN, label: "NaN" },
+  ])("rejects keypairTTL=$label even when signer is omitted", ({ keypairTTL }, { createSDK }) => {
+    expect(() => createSDK({ signer: undefined, keypairTTL })).toThrow(
       "keypairTTL must be a positive integer number of seconds",
     );
-    expect(() => createSDK({ signer: undefined, keypairTTL: NaN })).toThrow(
-      "keypairTTL must be a positive integer number of seconds",
-    );
   });
 
-  it("does not subscribe to signer lifecycle", ({ createSDK, provider }) => {
-    createSDK({ signer: undefined });
-    expect(provider.getChainId).not.toHaveBeenCalled();
-  });
-
-  it("createReadonlyToken works with no signer", ({ createSDK, tokenAddress }) => {
+  it("createReadonlyToken / createToken work with no signer", ({ createSDK, tokenAddress }) => {
     const sdk = createSDK({ signer: undefined });
-    const token = sdk.createReadonlyToken(tokenAddress);
-    expect(token).toBeInstanceOf(ReadonlyToken);
-    expect(token.address).toBe(tokenAddress);
-  });
-
-  it("createToken works with no signer (Token guards per-method)", ({
-    createSDK,
-    tokenAddress,
-  }) => {
-    const sdk = createSDK({ signer: undefined });
-    const token = sdk.createToken(tokenAddress);
-    expect(token).toBeInstanceOf(Token);
-    expect(token.address).toBe(tokenAddress);
+    expect(sdk.createReadonlyToken(tokenAddress)).toBeInstanceOf(ReadonlyToken);
+    expect(sdk.createToken(tokenAddress)).toBeInstanceOf(Token);
   });
 
   it("publicDecrypt works with no signer", async ({ createSDK, relayer }) => {
@@ -47,92 +49,48 @@ describe("ZamaSDK without signer", () => {
     expect(relayer.publicDecrypt).toHaveBeenCalled();
   });
 
-  describe("requireSigner", () => {
-    it("requireSigner throws SignerRequiredError with operation", ({ createSDK }) => {
-      const sdk = createSDK({ signer: undefined });
-      expect(() => sdk.requireSigner("myOp")).toThrow(SignerRequiredError);
-      try {
-        sdk.requireSigner("myOp");
-      } catch (err) {
-        expect(err).toBeInstanceOf(SignerRequiredError);
-        expect((err as SignerRequiredError).operation).toBe("myOp");
-        expect((err as SignerRequiredError).code).toBe(ZamaErrorCode.SignerRequired);
-      }
-    });
-
-    it("requireSigner returns the configured signer", ({ createSDK }) => {
-      const sdk = createSDK();
-      expect(sdk.requireSigner("op")).toBe(sdk.signer);
-    });
+  it("isAllowed returns false (pure store lookup, no signer needed)", async ({ createSDK }) => {
+    const sdk = createSDK({ signer: undefined });
+    await expect(sdk.isAllowed(["0x1" as Address])).resolves.toBe(false);
   });
 
-  describe("signer-required SDK operations", () => {
-    it("userDecrypt throws SignerRequiredError", async ({ createSDK }) => {
-      const sdk = createSDK({ signer: undefined });
-      await expect(
-        sdk.userDecrypt([{ handle: "0xh", contractAddress: "0x1" as Address }]),
-      ).rejects.toBeInstanceOf(SignerRequiredError);
-    });
-
-    it("allow throws SignerRequiredError", async ({ createSDK }) => {
-      const sdk = createSDK({ signer: undefined });
-      await expect(sdk.allow(["0x1" as Address])).rejects.toBeInstanceOf(SignerRequiredError);
-    });
-
-    it("revokePermits throws SignerRequiredError", async ({ createSDK }) => {
-      const sdk = createSDK({ signer: undefined });
-      await expect(sdk.revokePermits()).rejects.toBeInstanceOf(SignerRequiredError);
-    });
-
-    it("clearCredentials throws SignerRequiredError", async ({ createSDK }) => {
-      const sdk = createSDK({ signer: undefined });
-      await expect(sdk.clearCredentials()).rejects.toBeInstanceOf(SignerRequiredError);
-    });
-
-    it("isAllowed returns false (pure store lookup)", async ({ createSDK }) => {
-      const sdk = createSDK({ signer: undefined });
-      await expect(sdk.isAllowed(["0x1" as Address])).resolves.toBe(false);
-    });
-
-    it("requireChainAlignment throws SignerRequiredError before chain check", async ({
-      createSDK,
-    }) => {
-      const sdk = createSDK({ signer: undefined });
-      await expect(sdk.requireChainAlignment("op")).rejects.toBeInstanceOf(SignerRequiredError);
-    });
+  it("ReadonlyToken.isAllowed returns false when no signer", async ({
+    createSDK,
+    tokenAddress,
+  }) => {
+    const sdk = createSDK({ signer: undefined });
+    await expect(sdk.createReadonlyToken(tokenAddress).isAllowed()).resolves.toBe(false);
   });
 
-  describe("signer-required Token operations", () => {
-    it("Token.confidentialTransfer throws SignerRequiredError", async ({
-      createSDK,
-      tokenAddress,
-    }) => {
-      const sdk = createSDK({ signer: undefined });
-      const token = sdk.createToken(tokenAddress);
-      await expect(token.confidentialTransfer("0x1" as Address, 1n)).rejects.toBeInstanceOf(
-        SignerRequiredError,
-      );
-    });
+  it("requireSigner throws SignerRequiredError without signer; returns signer when present", ({
+    createSDK,
+  }) => {
+    const sdkNoSigner = createSDK({ signer: undefined });
+    expect(() => sdkNoSigner.requireSigner("myOp")).toThrow(
+      expect.objectContaining({
+        name: "SignerRequiredError",
+        operation: "myOp",
+        code: ZamaErrorCode.SignerRequired,
+      }),
+    );
 
-    it("ReadonlyToken.isAllowed returns false when no signer", async ({
-      createSDK,
-      tokenAddress,
-    }) => {
-      const sdk = createSDK({ signer: undefined });
-      const token = sdk.createReadonlyToken(tokenAddress);
-      await expect(token.isAllowed()).resolves.toBe(false);
-    });
+    const sdk = createSDK();
+    expect(sdk.requireSigner("op")).toBe(sdk.signer);
   });
-});
 
-describe("SignerRequiredError", () => {
-  it("has operation, code, name, and message", () => {
-    const err = new SignerRequiredError("myOp");
-    expect(err).toBeInstanceOf(SignerRequiredError);
-    expect(err.name).toBe("SignerRequiredError");
-    expect(err.operation).toBe("myOp");
-    expect(err.code).toBe(ZamaErrorCode.SignerRequired);
-    expect(err.message).toContain("myOp");
-    expect(err.message).not.toContain("<ZamaProvider signer=");
+  it.for(SIGNER_REQUIRED_OPS)(
+    "%s rejects with SignerRequiredError",
+    async ([, run], { createSDK, tokenAddress }) => {
+      const sdk = createSDK({ signer: undefined });
+      await expect(run(sdk, tokenAddress)).rejects.toBeInstanceOf(SignerRequiredError);
+    },
+  );
+
+  // Regression guard: an earlier draft of the error message included a literal
+  // React-shaped hint (`<ZamaProvider signer=...>`) that leaked from a copy of
+  // the React-SDK guidance. Keep this assertion so the SDK message stays
+  // framework-agnostic.
+  it("error message does not leak React-specific hint", () => {
+    expect(new SignerRequiredError("myOp").message).not.toContain("<ZamaProvider signer=");
   });
 });

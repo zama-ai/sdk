@@ -4,19 +4,25 @@ import { SignerRequiredError } from "../errors";
 import { ViemSigner } from "../viem/viem-signer";
 
 describe("ViemSigner", () => {
-  it("throws SignerRequiredError when no account is available", async () => {
+  // Same no-account invariant applied to each method that needs an account —
+  // parametrized so failures name the offending method.
+  it.each([
+    ["getAddress", (s: ViemSigner) => s.getAddress()],
+    [
+      "signTypedData",
+      (s: ViemSigner) => s.signTypedData({} as Parameters<ViemSigner["signTypedData"]>[0]),
+    ],
+    [
+      "writeContract",
+      (s: ViemSigner) => s.writeContract({} as Parameters<ViemSigner["writeContract"]>[0]),
+    ],
+  ] as const)("%s throws SignerRequiredError when no account is configured", async (_, call) => {
     const signer = new ViemSigner({
       walletClient: {
         getChainId: vi.fn().mockResolvedValue(31337),
       } as unknown as WalletClient,
     });
 
-    await expect(signer.getAddress()).rejects.toBeInstanceOf(SignerRequiredError);
-    await expect(
-      signer.signTypedData({} as Parameters<typeof signer.signTypedData>[0]),
-    ).rejects.toBeInstanceOf(SignerRequiredError);
-    await expect(
-      signer.writeContract({} as Parameters<typeof signer.writeContract>[0]),
-    ).rejects.toBeInstanceOf(SignerRequiredError);
+    await expect(call(signer)).rejects.toBeInstanceOf(SignerRequiredError);
   });
 });

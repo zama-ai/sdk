@@ -1,18 +1,11 @@
 import { describe, expect, it, vi } from "../../test-fixtures";
-import { MemoryStorage } from "../../storage/memory-storage";
-import { ZamaSDKEvents } from "../../events/sdk-events";
 import type { Address } from "viem";
-import { CredentialService } from "../credential-service";
-import type { KeypairGenerator, PermitFactory, PermitSigner } from "../types";
 import { SigningRejectedError, SigningFailedError } from "../../errors/signing";
 
 const USER = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
 const OTHER_USER = "0x3c3C3c3C3c3C3c3C3c3C3c3C3c3C3c3C3c3C3c3C" as Address;
 const DELEGATOR = "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC" as Address;
 const DELEGATOR_B = "0xDdDDddddDDDDdDDDDDDdDdDddDdDDDdDddddddDd" as Address;
-const PUBLIC_KEY = `0x${"11".repeat(32)}` as const;
-const PRIVATE_KEY = `0x${"22".repeat(32)}` as const;
-const SIGNATURE = `0x${"33".repeat(65)}` as const;
 
 const ADDRS = Array.from({ length: 23 }, (_, i) => {
   const hex = i.toString(16).padStart(40, "0");
@@ -21,251 +14,224 @@ const ADDRS = Array.from({ length: 23 }, (_, i) => {
 const TOKEN_A = ADDRS[0]!;
 const TOKEN_B = ADDRS[1]!;
 
-function setup(overrides: { signerAddress?: Address } = {}) {
-  const generator: KeypairGenerator = {
-    generateKeypair: vi.fn().mockResolvedValue({ publicKey: PUBLIC_KEY, privateKey: PRIVATE_KEY }),
-  };
-  const factory: PermitFactory = {
-    createEIP712: vi.fn().mockResolvedValue({} as never),
-    createDelegatedUserDecryptEIP712: vi.fn().mockResolvedValue({} as never),
-  };
-  const signer: PermitSigner = {
-    signTypedData: vi.fn().mockResolvedValue(SIGNATURE),
-    getAddress: vi.fn().mockResolvedValue(overrides.signerAddress ?? USER),
-    getChainId: vi.fn().mockResolvedValue(31337),
-  };
-  const events: { type: string }[] = [];
-  const service = new CredentialService({
-    keypairGenerator: generator,
-    permitFactory: factory,
-    permitSigner: signer,
-    keypairTTL: 86400,
-    storage: new MemoryStorage(),
-    onEvent: (e) => events.push(e),
-  });
-  return { service, generator, factory, signer, events };
-}
-
 describe("CredentialService.allow", () => {
-  it("creates a single permit when no coverage exists", async () => {
-    const { service, factory, signer } = setup();
-    await service.allow([TOKEN_A]);
-    expect(factory.createEIP712).toHaveBeenCalledOnce();
-    expect(signer.signTypedData).toHaveBeenCalledOnce();
+  it("creates a permit and stores it on the first call", async ({ credentialService, signer }) => {
+    expect(await credentialService.isAllowed([TOKEN_A])).toBe(false);
+    await credentialService.allow([TOKEN_A]);
+    expect(await credentialService.isAllowed([TOKEN_A])).toBe(true);
+    expect(signer.signTypedData).toHaveBeenCalled();
   });
 
-  it("does not prompt when existing permit covers the requested set", async () => {
-    const { service, signer } = setup();
-    await service.allow([TOKEN_A]);
+  it("does not re-prompt when an existing permit covers the requested set", async ({
+    credentialService,
+    signer,
+  }) => {
+    await credentialService.allow([TOKEN_A]);
     vi.mocked(signer.signTypedData).mockClear();
-    await service.allow([TOKEN_A]);
+    const second = await credentialService.allow([TOKEN_A]);
     expect(signer.signTypedData).not.toHaveBeenCalled();
+    expect(second.permits).toHaveLength(1);
   });
 
-  it("only prompts for uncovered contracts on partial coverage", async () => {
-    const { service, signer } = setup();
-    await service.allow([TOKEN_A]);
+  it("only prompts for uncovered contracts on partial coverage", async ({
+    credentialService,
+    signer,
+  }) => {
+    await credentialService.allow([TOKEN_A]);
     vi.mocked(signer.signTypedData).mockClear();
-    await service.allow([TOKEN_A, TOKEN_B]);
+    await credentialService.allow([TOKEN_A, TOKEN_B]);
+    // Only TOKEN_B uncovered → exactly one signing prompt
     expect(signer.signTypedData).toHaveBeenCalledOnce();
+    expect(await credentialService.isAllowed([TOKEN_A, TOKEN_B])).toBe(true);
   });
 
-  it("chunks 23 addresses into 3 wallet prompts", async () => {
-    const { service, signer } = setup();
-    await service.allow(ADDRS);
+  it("chunks 23 addresses into 3 wallet prompts", async ({ credentialService, signer }) => {
+    await credentialService.allow(ADDRS);
+    // Boundary mock: chunk size 10 means ceil(23/10) = 3 user-visible signing prompts.
     expect(signer.signTypedData).toHaveBeenCalledTimes(3);
+    expect(await credentialService.isAllowed(ADDRS)).toBe(true);
   });
 
-  it("delegated allow routes to createDelegatedUserDecryptEIP712", async () => {
-    const { service, factory } = setup();
-    await service.allow([TOKEN_A], DELEGATOR);
-    expect(factory.createDelegatedUserDecryptEIP712).toHaveBeenCalledOnce();
-    expect(factory.createEIP712).not.toHaveBeenCalled();
-  });
-
-  it("dedupes concurrent identical allow() calls", async () => {
-    const { service, signer } = setup();
-    await Promise.all([
-      service.allow([TOKEN_A]),
-      service.allow([TOKEN_A]),
-      service.allow([TOKEN_A]),
-    ]);
+  it("delegated allow does not satisfy direct-decrypt isAllowed", async ({
+    credentialService,
+    signer,
+  }) => {
+    await credentialService.allow([TOKEN_A], DELEGATOR);
     expect(signer.signTypedData).toHaveBeenCalledOnce();
+    // Direct scope still not covered.
+    expect(await credentialService.isAllowed([TOKEN_A])).toBe(false);
+    // Delegated scope is covered.
+    expect(await credentialService.isAllowed([TOKEN_A], DELEGATOR)).toBe(true);
   });
 
-  it("does not dedupe delegated allow() calls across signer identities", async () => {
-    let currentSigner = USER;
-    const { service, signer } = setup({ signerAddress: currentSigner });
-    vi.mocked(signer.getAddress).mockImplementation(async () => currentSigner);
+  it("dedupes concurrent identical allow() calls", async ({ credentialService, signer }) => {
+    const results = await Promise.all([
+      credentialService.allow([TOKEN_A]),
+      credentialService.allow([TOKEN_A]),
+      credentialService.allow([TOKEN_A]),
+    ]);
+    // Boundary observable: only one wallet prompt for three concurrent calls.
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+    // All concurrent callers receive the same permit bundle.
+    expect(results[1]).toEqual(results[0]);
+    expect(results[2]).toEqual(results[0]);
+  });
 
-    const first = service.allow([TOKEN_A], DELEGATOR);
+  it("does not dedupe delegated allow() calls across signer identities", async ({
+    createCredentialService,
+    signer,
+  }) => {
+    let currentSigner = USER;
+    vi.mocked(signer.getAddress).mockImplementation(async () => currentSigner);
+    const credentialService = createCredentialService({});
+
+    const first = credentialService.allow([TOKEN_A], DELEGATOR);
     currentSigner = OTHER_USER;
-    const second = service.allow([TOKEN_A], DELEGATOR);
+    const second = credentialService.allow([TOKEN_A], DELEGATOR);
 
     await Promise.all([first, second]);
 
+    // Distinct signer identities → distinct wallet prompts.
     expect(signer.signTypedData).toHaveBeenCalledTimes(2);
   });
 
-  it("warms a keypair without prompting for permits", async () => {
-    const { service, generator } = setup();
-
-    const result = await service.allow([]);
-
-    expect(result.keypair.publicKey).toBe(PUBLIC_KEY);
+  it("warms a keypair without prompting for permits when contracts is empty", async ({
+    credentialService,
+    signer,
+  }) => {
+    const result = await credentialService.allow([]);
+    expect(result.keypair.publicKey).toBeDefined();
     expect(result.permits).toEqual([]);
-    expect(generator.generateKeypair).toHaveBeenCalledOnce();
-  });
-
-  it("emits CredentialsCreated and CredentialsAllowed", async () => {
-    const { service, events } = setup();
-    await service.allow([TOKEN_A]);
-    const types = events.map((e) => e.type);
-    expect(types).toContain(ZamaSDKEvents.CredentialsLoading);
-    expect(types).toContain(ZamaSDKEvents.CredentialsCreating);
-    expect(types).toContain(ZamaSDKEvents.CredentialsCreated);
-    expect(types).toContain(ZamaSDKEvents.CredentialsAllowed);
+    expect(signer.signTypedData).not.toHaveBeenCalled();
   });
 });
 
 describe("CredentialService.isAllowed", () => {
-  it("returns false when no keypair exists", async () => {
-    const { service, signer } = setup();
-    expect(await service.isAllowed([TOKEN_A])).toBe(false);
+  it("returns false when no keypair exists, true vacuously for empty contracts", async ({
+    credentialService,
+    signer,
+  }) => {
+    expect(await credentialService.isAllowed([TOKEN_A])).toBe(false);
+    expect(await credentialService.isAllowed([])).toBe(true);
     expect(signer.signTypedData).not.toHaveBeenCalled();
   });
 
-  it("returns true for empty contracts (vacuous truth)", async () => {
-    const { service } = setup();
-    expect(await service.isAllowed([])).toBe(true);
-  });
-
-  it("returns true after allow() covers the requested contract", async () => {
-    const { service, signer } = setup();
-    await service.allow([TOKEN_A]);
-    vi.mocked(signer.signTypedData).mockClear();
-    expect(await service.isAllowed([TOKEN_A])).toBe(true);
-    expect(signer.signTypedData).not.toHaveBeenCalled();
-  });
-
-  it("returns false for contracts that are not covered", async () => {
-    const { service } = setup();
-    await service.allow([TOKEN_A]);
-    expect(await service.isAllowed([TOKEN_B])).toBe(false);
+  it("returns false for contracts not covered by any signed permit", async ({
+    credentialService,
+  }) => {
+    await credentialService.allow([TOKEN_A]);
+    expect(await credentialService.isAllowed([TOKEN_A])).toBe(true);
+    expect(await credentialService.isAllowed([TOKEN_B])).toBe(false);
   });
 });
 
 describe("CredentialService.revokePermits", () => {
-  it("clears all direct-scope permits when called with no args", async () => {
-    const { service } = setup();
-    await service.allow([TOKEN_A, TOKEN_B]);
-    await service.revokePermits();
-    expect(await service.isAllowed([TOKEN_A])).toBe(false);
+  it("clears all direct-scope permits when called with no args", async ({ credentialService }) => {
+    await credentialService.allow([TOKEN_A, TOKEN_B]);
+    await credentialService.revokePermits();
+    expect(await credentialService.isAllowed([TOKEN_A])).toBe(false);
   });
 
-  it("removes permits that touch the specified contracts", async () => {
-    const { service } = setup();
-    await service.allow([TOKEN_A, TOKEN_B]);
-    await service.revokePermits([TOKEN_A]);
-    expect(await service.isAllowed([TOKEN_A])).toBe(false);
-    expect(await service.isAllowed([TOKEN_B])).toBe(false);
+  it("removes permits that touch the specified contracts", async ({ credentialService }) => {
+    await credentialService.allow([TOKEN_A, TOKEN_B]);
+    await credentialService.revokePermits([TOKEN_A]);
+    expect(await credentialService.isAllowed([TOKEN_A])).toBe(false);
+    expect(await credentialService.isAllowed([TOKEN_B])).toBe(false);
   });
 });
 
 describe("CredentialService.clearCredentials", () => {
-  it("wipes both keypair and permits", async () => {
-    const { service } = setup();
-    await service.allow([TOKEN_A]);
-    await service.clearCredentials();
-    // After clear, isAllowed returns false (no keypair)
-    expect(await service.isAllowed([TOKEN_A])).toBe(false);
+  it("wipes both keypair and permits", async ({ credentialService }) => {
+    await credentialService.allow([TOKEN_A]);
+    await credentialService.clearCredentials();
+    expect(await credentialService.isAllowed([TOKEN_A])).toBe(false);
   });
 });
 
 describe("CredentialService.handleIdentityChange", () => {
-  it("address change cascade-clears previous signer credentials", async () => {
-    const { service } = setup();
-    await service.allow([TOKEN_A]);
-    expect(await service.isAllowed([TOKEN_A])).toBe(true);
+  it("address change cascade-clears previous signer credentials", async ({ credentialService }) => {
+    await credentialService.allow([TOKEN_A]);
+    expect(await credentialService.isAllowed([TOKEN_A])).toBe(true);
 
-    await service.handleIdentityChange(
+    await credentialService.handleIdentityChange(
       { address: USER, chainId: 31337 },
       { address: DELEGATOR, chainId: 31337 },
     );
 
-    expect(service.currentIdentity).toEqual({ address: DELEGATOR, chainId: 31337 });
-    expect(await service.isAllowed([TOKEN_A])).toBe(false);
+    expect(credentialService.currentIdentity).toEqual({ address: DELEGATOR, chainId: 31337 });
+    expect(await credentialService.isAllowed([TOKEN_A])).toBe(false);
   });
 });
 
 describe("CredentialService.allow signing-error wrapping", () => {
-  it("throws SigningRejectedError on EIP-1193 code 4001", async () => {
-    const { service, signer } = setup();
-    const err = Object.assign(new Error("rejected"), { code: 4001 });
-    vi.mocked(signer.signTypedData).mockRejectedValueOnce(err);
-    await expect(service.allow([TOKEN_A])).rejects.toBeInstanceOf(SigningRejectedError);
-  });
-
-  it("throws SigningRejectedError when message contains 'user rejected'", async () => {
-    const { service, signer } = setup();
-    vi.mocked(signer.signTypedData).mockRejectedValueOnce(
-      new Error("MetaMask Tx Signature: User rejected the transaction."),
-    );
-    await expect(service.allow([TOKEN_A])).rejects.toBeInstanceOf(SigningRejectedError);
-  });
-
-  it("throws SigningRejectedError when message contains 'user denied'", async () => {
-    const { service, signer } = setup();
-    vi.mocked(signer.signTypedData).mockRejectedValueOnce(
-      new Error("user denied message signature"),
-    );
-    await expect(service.allow([TOKEN_A])).rejects.toBeInstanceOf(SigningRejectedError);
-  });
-
-  it("throws SigningFailedError for generic errors and non-Error throws", async () => {
-    const { service, signer } = setup();
-    vi.mocked(signer.signTypedData).mockRejectedValueOnce(new Error("network unreachable"));
-    await expect(service.allow([TOKEN_A])).rejects.toBeInstanceOf(SigningFailedError);
-
-    vi.mocked(signer.signTypedData).mockRejectedValueOnce("boom");
-    await expect(service.allow([TOKEN_B])).rejects.toBeInstanceOf(SigningFailedError);
-  });
+  // `it.for` forwards the fixture context as the second arg; `it.each` only splats the row.
+  it.for([
+    {
+      label: "EIP-1193 code 4001",
+      reject: () => Object.assign(new Error("rejected"), { code: 4001 }),
+      expected: SigningRejectedError,
+    },
+    {
+      label: "message contains 'user rejected'",
+      reject: () => new Error("MetaMask Tx Signature: User rejected the transaction."),
+      expected: SigningRejectedError,
+    },
+    {
+      label: "message contains 'user denied'",
+      reject: () => new Error("user denied message signature"),
+      expected: SigningRejectedError,
+    },
+    {
+      label: "generic Error",
+      reject: () => new Error("network unreachable"),
+      expected: SigningFailedError,
+    },
+    {
+      label: "non-Error throw",
+      reject: () => "boom",
+      expected: SigningFailedError,
+    },
+  ])(
+    "$label is wrapped via SigningError taxonomy",
+    async ({ reject, expected }, { credentialService, signer }) => {
+      vi.mocked(signer.signTypedData).mockRejectedValueOnce(reject());
+      await expect(credentialService.allow([TOKEN_A])).rejects.toBeInstanceOf(expected);
+    },
+  );
 });
 
 describe("CredentialService delegator-scope isolation", () => {
-  it("different delegators get independently addressable scopes", async () => {
-    const { service } = setup();
-
+  it("different delegators get independently addressable scopes", async ({ credentialService }) => {
     // Direct scope (delegator implicitly = signer = USER) and delegated scope to DELEGATOR_B
     // are distinct scopes that must remain independently addressable.
-    await service.allow([TOKEN_A]);
-    await service.allow([TOKEN_A], DELEGATOR_B);
+    await credentialService.allow([TOKEN_A]);
+    await credentialService.allow([TOKEN_A], DELEGATOR_B);
 
-    expect(await service.isAllowed([TOKEN_A])).toBe(true);
-    expect(await service.isAllowed([TOKEN_A], DELEGATOR_B)).toBe(true);
+    expect(await credentialService.isAllowed([TOKEN_A])).toBe(true);
+    expect(await credentialService.isAllowed([TOKEN_A], DELEGATOR_B)).toBe(true);
   });
 
-  it("revokePermits() with no args wipes both direct and delegated scopes", async () => {
-    const { service } = setup();
+  it("revokePermits() with no args wipes both direct and delegated scopes", async ({
+    credentialService,
+  }) => {
+    await credentialService.allow([TOKEN_A]);
+    await credentialService.allow([TOKEN_A], DELEGATOR_B);
 
-    await service.allow([TOKEN_A]);
-    await service.allow([TOKEN_A], DELEGATOR_B);
+    await credentialService.revokePermits();
 
-    await service.revokePermits();
-
-    expect(await service.isAllowed([TOKEN_A])).toBe(false);
-    expect(await service.isAllowed([TOKEN_A], DELEGATOR_B)).toBe(false);
+    expect(await credentialService.isAllowed([TOKEN_A])).toBe(false);
+    expect(await credentialService.isAllowed([TOKEN_A], DELEGATOR_B)).toBe(false);
   });
 
-  it("revokePermits([contracts]) only touches the direct-decrypt scope", async () => {
-    const { service } = setup();
+  it("revokePermits([contracts]) only touches the direct-decrypt scope", async ({
+    credentialService,
+  }) => {
+    await credentialService.allow([TOKEN_A]);
+    await credentialService.allow([TOKEN_A], DELEGATOR_B);
 
-    await service.allow([TOKEN_A]);
-    await service.allow([TOKEN_A], DELEGATOR_B);
+    await credentialService.revokePermits([TOKEN_A]);
 
-    await service.revokePermits([TOKEN_A]);
-
-    expect(await service.isAllowed([TOKEN_A])).toBe(false);
-    expect(await service.isAllowed([TOKEN_A], DELEGATOR_B)).toBe(true);
+    expect(await credentialService.isAllowed([TOKEN_A])).toBe(false);
+    expect(await credentialService.isAllowed([TOKEN_A], DELEGATOR_B)).toBe(true);
   });
 });

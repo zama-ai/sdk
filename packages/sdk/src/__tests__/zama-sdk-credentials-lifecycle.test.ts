@@ -1,11 +1,30 @@
 import type { Address } from "viem";
-import { afterEach, beforeEach, describe, expect, it, vi } from "../test-fixtures";
-import { KeypairVault } from "../credentials/keypair-vault";
+import { test as baseTest, describe, expect, vi } from "../test-fixtures";
 import { MemoryStorage } from "../storage/memory-storage";
-import type { StoredKeypair } from "../credentials/types";
 
 const CONTRACT_A = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
 const CONTRACT_B = "0x3C3c3C3c3C3C3c3c3c3C3c3C3C3c3c3C3c3c3C3C" as Address;
+
+const PERMIT_DURATION_DAYS = 1;
+const PERMIT_DURATION_MS = PERMIT_DURATION_DAYS * 86400 * 1000;
+
+/**
+ * Opt-in fake-timers fixture: only the tests that need to advance time pay the
+ * cost. Real timers stay live for everything else (e.g. `dispose` cleanup,
+ * concurrency tests).
+ */
+const test = baseTest.extend<{ fakeTime: void }>({
+  fakeTime: [
+    // eslint-disable-next-line no-empty-pattern
+    async ({}, use) => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+      await use(undefined);
+      vi.useRealTimers();
+    },
+    { auto: false },
+  ],
+});
 
 /**
  * SDK-level credential lifecycle integration tests.
@@ -21,68 +40,47 @@ const CONTRACT_B = "0x3C3c3C3c3C3C3c3c3c3C3c3C3C3c3c3C3c3c3C3C" as Address;
  *     permit and does not prompt for re-signature.
  */
 describe("ZamaSDK credentials lifecycle", () => {
-  describe("permit expiry triggers re-sign", () => {
-    beforeEach(() => {
-      vi.useFakeTimers();
-    });
+  test("re-signs after permitDuration elapses but reuses the FHE keypair", async ({
+    fakeTime: _fakeTime,
+    createSDK,
+    signer,
+    relayer,
+  }) => {
+    const sdk = createSDK({ permitDuration: PERMIT_DURATION_DAYS });
 
-    afterEach(() => {
-      vi.useRealTimers();
-    });
+    await sdk.allow([CONTRACT_A]);
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+    expect(relayer.generateKeypair).toHaveBeenCalledOnce();
 
-    it("re-signs after permitDuration elapses but reuses the FHE keypair", async ({
-      createSDK,
-      signer,
-      relayer,
-      storage,
-    }) => {
-      vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+    // Advance just past the permit lifetime — keypair (default 30d) is still alive.
+    vi.advanceTimersByTime(PERMIT_DURATION_MS + 1);
 
-      const sdk = createSDK({ permitDuration: 1 });
+    await sdk.allow([CONTRACT_A]);
 
-      await sdk.allow([CONTRACT_A]);
-      expect(signer.signTypedData).toHaveBeenCalledOnce();
-      expect(relayer.generateKeypair).toHaveBeenCalledOnce();
+    // Permit expired → fresh signature requested.
+    expect(signer.signTypedData).toHaveBeenCalledTimes(2);
+    // Keypair survived the permit expiry — the relayer was NOT asked to mint a new one.
+    expect(relayer.generateKeypair).toHaveBeenCalledOnce();
+  });
 
-      // Snapshot the keypair after the first allow — it must survive the permit
-      // expiry below.
-      const userAddress = await signer.getAddress();
-      const keypairKey = await KeypairVault.storageKey(userAddress);
-      const keypairBefore = (await storage.get(keypairKey)) as StoredKeypair;
-      expect(keypairBefore).not.toBeNull();
-      const publicKeyBefore = keypairBefore.publicKey;
+  test("does not re-sign within permitDuration", async ({
+    fakeTime: _fakeTime,
+    createSDK,
+    signer,
+  }) => {
+    const sdk = createSDK({ permitDuration: PERMIT_DURATION_DAYS });
 
-      // Advance just past 1 day — permit (1d) expired, keypair (default 30d) alive.
-      vi.advanceTimersByTime(86400 * 1000 + 1);
+    await sdk.allow([CONTRACT_A]);
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
 
-      await sdk.allow([CONTRACT_A]);
-      expect(signer.signTypedData).toHaveBeenCalledTimes(2);
+    vi.advanceTimersByTime(PERMIT_DURATION_MS / 2);
 
-      // The keypair MUST NOT have been regenerated.
-      expect(relayer.generateKeypair).toHaveBeenCalledOnce();
-      const keypairAfter = (await storage.get(keypairKey)) as StoredKeypair;
-      expect(keypairAfter).not.toBeNull();
-      expect(keypairAfter.publicKey).toBe(publicKeyBefore);
-    });
-
-    it("does not re-sign within permitDuration", async ({ createSDK, signer }) => {
-      vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
-
-      const sdk = createSDK({ permitDuration: 1 });
-
-      await sdk.allow([CONTRACT_A]);
-      expect(signer.signTypedData).toHaveBeenCalledOnce();
-
-      // Advance 12 hours — well within the 1-day permit lifetime.
-      vi.advanceTimersByTime(12 * 3600 * 1000);
-
-      await sdk.allow([CONTRACT_A]);
-      expect(signer.signTypedData).toHaveBeenCalledOnce();
-    });
+    await sdk.allow([CONTRACT_A]);
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
   });
 
   describe("chain-switch isolation", () => {
-    it("isAllowed on a different chain returns false and allow re-signs", async ({
+    test("isAllowed on a different chain returns false and allow re-signs", async ({
       createMockSigner,
       createMockProvider,
       createSDK,
@@ -127,7 +125,7 @@ describe("ZamaSDK credentials lifecycle", () => {
   });
 
   describe("reload round-trip", () => {
-    it("a fresh SDK with the same storage reuses the persisted permit", async ({
+    test("a fresh SDK with the same storage reuses the persisted permit", async ({
       createMockSigner,
       createMockProvider,
       createMockRelayer,

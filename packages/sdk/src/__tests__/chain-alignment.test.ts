@@ -1,220 +1,75 @@
 import { describe, it, expect, vi } from "../test-fixtures";
-import { ZamaSDK } from "../zama-sdk";
 import { ChainMismatchError } from "../errors";
+import { ReadonlyToken } from "../token/readonly-token";
+import type { ZamaSDK } from "../zama-sdk";
 import type { Address } from "viem";
+
+type Op = (sdk: ZamaSDK, tokenAddress: Address) => Promise<unknown>;
+
+const HANDLE = ("0x" + "ab".repeat(32)) as Address;
+const OTHER_USER = "0x3F3f3f3F3F3f3F3f3F3f3f3F3F3f3F3f3f3f3f3F" as Address;
+const RECIPIENT = "0x000000000000000000000000000000000000dEaD" as Address;
+
+// One row per public operation that calls `requireChainAlignment` before any
+// network or signing side-effect. Each entry is `[operation-name, run]` where
+// `operation-name` matches the string passed to `requireChainAlignment` inside
+// the SUT and is asserted on the thrown error.
+const MISMATCHED_OPS: ReadonlyArray<readonly [string, Op]> = [
+  ["shield", (sdk, t) => sdk.createToken(t).shield(1000n)],
+  ["userDecrypt", (sdk, t) => sdk.userDecrypt([{ handle: HANDLE, contractAddress: t }])],
+  ["allow", (sdk, t) => sdk.allow([t])],
+  ["allowAs", (sdk, t) => sdk.allowAs(OTHER_USER, [t])],
+  [
+    "decryptBalanceAs",
+    (sdk, t) => sdk.createReadonlyToken(t).decryptBalanceAs({ delegatorAddress: OTHER_USER }),
+  ],
+  [
+    "batchBalancesOf",
+    (sdk, t) => ReadonlyToken.batchBalancesOf([sdk.createReadonlyToken(t)], OTHER_USER),
+  ],
+  [
+    "confidentialTransfer",
+    (sdk, t) =>
+      sdk.createToken(t).confidentialTransfer(RECIPIENT, 100n, { skipBalanceCheck: true }),
+  ],
+  ["unwrap", (sdk, t) => sdk.createToken(t).unwrap(100n)],
+  [
+    "delegateDecryption",
+    (sdk, t) => sdk.createToken(t).delegateDecryption({ delegateAddress: OTHER_USER }),
+  ],
+] as const;
 
 describe("requireChainAlignment", () => {
   it("returns the shared chain ID when signer and provider match", async ({
-    relayer,
-    provider,
+    sdk,
     signer,
-    storage,
+    provider,
   }) => {
     vi.mocked(signer.getChainId).mockResolvedValue(11155111);
     vi.mocked(provider.getChainId).mockResolvedValue(11155111);
-    const sdk = new ZamaSDK({ relayer, provider, signer, storage });
 
     await expect(sdk.requireChainAlignment("testOp")).resolves.toBe(11155111);
   });
 
-  it("throws ChainMismatchError with operation, signerChainId, providerChainId", async ({
-    relayer,
-    provider,
-    signer,
-    storage,
-  }) => {
-    vi.mocked(signer.getChainId).mockResolvedValue(1);
-    vi.mocked(provider.getChainId).mockResolvedValue(11155111);
-    const sdk = new ZamaSDK({ relayer, provider, signer, storage });
+  // `it.for` (not `it.each`) is the API that forwards the fixture context as
+  // the second argument; `it.each` only splats the row.
+  it.for(MISMATCHED_OPS)(
+    "%s throws ChainMismatchError before any side-effect",
+    async ([operation, run], { sdk, signer, provider, relayer, tokenAddress }) => {
+      vi.mocked(signer.getChainId).mockResolvedValue(1);
+      vi.mocked(provider.getChainId).mockResolvedValue(11155111);
 
-    try {
-      await sdk.requireChainAlignment("shield");
-      throw new Error("expected ChainMismatchError to be thrown");
-    } catch (error) {
-      expect(error).toBeInstanceOf(ChainMismatchError);
-      const mismatch = error as ChainMismatchError;
-      expect(mismatch.operation).toBe("shield");
-      expect(mismatch.signerChainId).toBe(1);
-      expect(mismatch.providerChainId).toBe(11155111);
-    }
-  });
+      await expect(run(sdk, tokenAddress)).rejects.toMatchObject({
+        operation,
+        signerChainId: 1,
+        providerChainId: 11155111,
+      });
+      await expect(run(sdk, tokenAddress)).rejects.toBeInstanceOf(ChainMismatchError);
 
-  it("token.shield throws ChainMismatchError before calling writeContract or relayer.encrypt", async ({
-    relayer,
-    provider,
-    signer,
-    storage,
-    tokenAddress,
-  }) => {
-    vi.mocked(signer.getChainId).mockResolvedValue(1);
-    vi.mocked(provider.getChainId).mockResolvedValue(11155111);
-    const sdk = new ZamaSDK({ relayer, provider, signer, storage });
-    const token = sdk.createToken(tokenAddress);
-
-    await expect(token.shield(1000n)).rejects.toBeInstanceOf(ChainMismatchError);
-
-    expect(signer.writeContract).not.toHaveBeenCalled();
-    expect(relayer.encrypt).not.toHaveBeenCalled();
-  });
-
-  it("sdk.userDecrypt throws ChainMismatchError before calling relayer.userDecrypt", async ({
-    relayer,
-    provider,
-    signer,
-    storage,
-    tokenAddress,
-    handle,
-  }) => {
-    vi.mocked(signer.getChainId).mockResolvedValue(1);
-    vi.mocked(provider.getChainId).mockResolvedValue(11155111);
-    const sdk = new ZamaSDK({ relayer, provider, signer, storage });
-
-    await expect(
-      sdk.userDecrypt([{ handle, contractAddress: tokenAddress as Address }]),
-    ).rejects.toBeInstanceOf(ChainMismatchError);
-
-    expect(relayer.userDecrypt).not.toHaveBeenCalled();
-  });
-
-  it("sdk.allow throws ChainMismatchError before signing credentials", async ({
-    relayer,
-    provider,
-    signer,
-    storage,
-    tokenAddress,
-  }) => {
-    vi.mocked(signer.getChainId).mockResolvedValue(1);
-    vi.mocked(provider.getChainId).mockResolvedValue(11155111);
-    const sdk = new ZamaSDK({ relayer, provider, signer, storage });
-
-    await expect(sdk.allow([tokenAddress as Address])).rejects.toBeInstanceOf(ChainMismatchError);
-
-    expect(signer.signTypedData).not.toHaveBeenCalled();
-    expect(relayer.createEIP712).not.toHaveBeenCalled();
-  });
-
-  it("sdk.allowAs throws ChainMismatchError before signing delegated credentials", async ({
-    relayer,
-    provider,
-    signer,
-    storage,
-    tokenAddress,
-    delegatorAddress,
-  }) => {
-    vi.mocked(signer.getChainId).mockResolvedValue(1);
-    vi.mocked(provider.getChainId).mockResolvedValue(11155111);
-    const sdk = new ZamaSDK({ relayer, provider, signer, storage });
-
-    await expect(sdk.allowAs(delegatorAddress, [tokenAddress as Address])).rejects.toBeInstanceOf(
-      ChainMismatchError,
-    );
-
-    expect(signer.signTypedData).not.toHaveBeenCalled();
-    expect(relayer.createDelegatedUserDecryptEIP712).not.toHaveBeenCalled();
-  });
-
-  it("ReadonlyToken.decryptBalanceAs throws ChainMismatchError before calling relayer", async ({
-    relayer,
-    provider,
-    signer,
-    storage,
-    tokenAddress,
-    delegatorAddress,
-  }) => {
-    vi.mocked(signer.getChainId).mockResolvedValue(1);
-    vi.mocked(provider.getChainId).mockResolvedValue(11155111);
-    const sdk = new ZamaSDK({ relayer, provider, signer, storage });
-    const token = sdk.createReadonlyToken(tokenAddress);
-
-    await expect(token.decryptBalanceAs({ delegatorAddress })).rejects.toBeInstanceOf(
-      ChainMismatchError,
-    );
-
-    expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
-  });
-
-  it("ReadonlyToken.batchBalancesOf throws ChainMismatchError before calling sdk.allow", async ({
-    relayer,
-    provider,
-    signer,
-    storage,
-    tokenAddress,
-  }) => {
-    vi.mocked(signer.getChainId).mockResolvedValue(1);
-    vi.mocked(provider.getChainId).mockResolvedValue(11155111);
-    const sdk = new ZamaSDK({ relayer, provider, signer, storage });
-    const token = sdk.createReadonlyToken(tokenAddress);
-    const allowSpy = vi.spyOn(sdk, "allow");
-
-    const { ReadonlyToken } = await import("../token/readonly-token");
-    await expect(
-      ReadonlyToken.batchBalancesOf(
-        [token],
-        "0x3F3f3f3F3F3f3F3f3F3f3f3F3F3f3F3f3f3f3f3F" as Address,
-      ),
-    ).rejects.toBeInstanceOf(ChainMismatchError);
-
-    expect(allowSpy).not.toHaveBeenCalled();
-    expect(signer.signTypedData).not.toHaveBeenCalled();
-  });
-
-  it("token.confidentialTransfer throws ChainMismatchError before encrypting or writing", async ({
-    relayer,
-    provider,
-    signer,
-    storage,
-    tokenAddress,
-  }) => {
-    vi.mocked(signer.getChainId).mockResolvedValue(1);
-    vi.mocked(provider.getChainId).mockResolvedValue(11155111);
-    const sdk = new ZamaSDK({ relayer, provider, signer, storage });
-    const token = sdk.createToken(tokenAddress);
-
-    await expect(
-      token.confidentialTransfer("0x000000000000000000000000000000000000dEaD" as Address, 100n, {
-        skipBalanceCheck: true,
-      }),
-    ).rejects.toBeInstanceOf(ChainMismatchError);
-
-    expect(signer.writeContract).not.toHaveBeenCalled();
-    expect(relayer.encrypt).not.toHaveBeenCalled();
-  });
-
-  it("token.unwrap throws ChainMismatchError before calling writeContract", async ({
-    relayer,
-    provider,
-    signer,
-    storage,
-    tokenAddress,
-  }) => {
-    vi.mocked(signer.getChainId).mockResolvedValue(1);
-    vi.mocked(provider.getChainId).mockResolvedValue(11155111);
-    const sdk = new ZamaSDK({ relayer, provider, signer, storage });
-    const token = sdk.createToken(tokenAddress);
-
-    await expect(token.unwrap(100n)).rejects.toBeInstanceOf(ChainMismatchError);
-
-    expect(signer.writeContract).not.toHaveBeenCalled();
-    expect(relayer.encrypt).not.toHaveBeenCalled();
-  });
-
-  it("token.delegateDecryption throws ChainMismatchError before calling writeContract", async ({
-    relayer,
-    provider,
-    signer,
-    storage,
-    tokenAddress,
-    delegatorAddress,
-  }) => {
-    vi.mocked(signer.getChainId).mockResolvedValue(1);
-    vi.mocked(provider.getChainId).mockResolvedValue(11155111);
-    const sdk = new ZamaSDK({ relayer, provider, signer, storage });
-    const token = sdk.createToken(tokenAddress);
-
-    await expect(
-      token.delegateDecryption({ delegateAddress: delegatorAddress }),
-    ).rejects.toBeInstanceOf(ChainMismatchError);
-
-    expect(signer.writeContract).not.toHaveBeenCalled();
-  });
+      // No write or relayer-mutation side-effects — chain check must run first.
+      expect(signer.signTypedData).not.toHaveBeenCalled();
+      expect(signer.writeContract).not.toHaveBeenCalled();
+      expect(relayer.encrypt).not.toHaveBeenCalled();
+    },
+  );
 });

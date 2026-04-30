@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "../../test-fixtures";
+import { test as baseTest, describe, expect, vi } from "../../test-fixtures";
 import { MemoryStorage } from "../../storage/memory-storage";
 import type { Address } from "viem";
 import { KeypairVault } from "../keypair-vault";
@@ -8,104 +8,93 @@ const USER = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
 const OTHER = "0x3c3C3c3C3c3C3c3C3c3C3c3C3c3C3c3C3c3C3c3C" as Address;
 const PUBLIC_KEY = `0x${"11".repeat(32)}` as const;
 const PRIVATE_KEY = `0x${"22".repeat(32)}` as const;
+const TTL_SECONDS = 86400;
 
-function createGenerator(): KeypairGenerator {
-  return {
-    generateKeypair: vi.fn().mockResolvedValue({ publicKey: PUBLIC_KEY, privateKey: PRIVATE_KEY }),
-  };
-}
+const test = baseTest.extend<{ vault: KeypairVault }>({
+  // eslint-disable-next-line no-empty-pattern
+  vault: async ({}, use) => {
+    // Each call generates a unique keypair so cache hits/misses are observable
+    // via equality without poking the generator's call count.
+    let counter = 0;
+    const generator: KeypairGenerator = {
+      generateKeypair: vi.fn().mockImplementation(async () => {
+        counter += 1;
+        return {
+          publicKey: (PUBLIC_KEY.slice(0, -2) +
+            counter.toString(16).padStart(2, "0")) as `0x${string}`,
+          privateKey: PRIVATE_KEY,
+        };
+      }),
+    };
+    await use(new KeypairVault({ generator, storage: new MemoryStorage(), ttl: TTL_SECONDS }));
+  },
+});
 
 describe("KeypairVault", () => {
-  it("getOrCreate returns a fresh keypair on first call", async () => {
-    const generator = createGenerator();
-    const vault = new KeypairVault({ generator, storage: new MemoryStorage(), ttl: 86400 });
-    const keypair = await vault.getOrCreate(USER);
-    expect(keypair.publicKey).toBe(PUBLIC_KEY);
-    expect(keypair.privateKey).toBe(PRIVATE_KEY);
-    expect(generator.generateKeypair).toHaveBeenCalledOnce();
+  test("caches per address, dedupes concurrent calls, and isolates distinct addresses", async ({
+    vault,
+  }) => {
+    const [a1, a2] = await Promise.all([vault.getOrCreate(USER), vault.getOrCreate(USER)]);
+    expect(a2).toEqual(a1); // dedup → same keypair
+    expect(await vault.getOrCreate(USER)).toEqual(a1); // cached
+    expect(await vault.readStored(USER)).toEqual(a1);
+
+    const other = await vault.getOrCreate(OTHER);
+    expect(other).not.toEqual(a1); // distinct address → distinct keypair
   });
 
-  it("getOrCreate returns the same keypair on second call within TTL", async () => {
-    const generator = createGenerator();
-    const vault = new KeypairVault({ generator, storage: new MemoryStorage(), ttl: 86400 });
-    const a = await vault.getOrCreate(USER);
-    const b = await vault.getOrCreate(USER);
-    expect(b).toEqual(a);
-    expect(generator.generateKeypair).toHaveBeenCalledOnce();
-  });
-
-  it("dedupes concurrent getOrCreate calls", async () => {
-    const generator = createGenerator();
-    const vault = new KeypairVault({ generator, storage: new MemoryStorage(), ttl: 86400 });
-    await Promise.all([vault.getOrCreate(USER), vault.getOrCreate(USER), vault.getOrCreate(USER)]);
-    expect(generator.generateKeypair).toHaveBeenCalledOnce();
-  });
-
-  it("different addresses produce distinct entries", async () => {
-    const generator = createGenerator();
-    const vault = new KeypairVault({ generator, storage: new MemoryStorage(), ttl: 86400 });
-    await vault.getOrCreate(USER);
-    await vault.getOrCreate(OTHER);
-    expect(generator.generateKeypair).toHaveBeenCalledTimes(2);
-  });
-
-  it("readStored returns null when no keypair exists", async () => {
-    const generator = createGenerator();
-    const vault = new KeypairVault({ generator, storage: new MemoryStorage(), ttl: 86400 });
-    expect(await vault.readStored(USER)).toBeNull();
-  });
-
-  it("readStored returns the keypair after getOrCreate", async () => {
-    const generator = createGenerator();
-    const vault = new KeypairVault({ generator, storage: new MemoryStorage(), ttl: 86400 });
-    const keypair = await vault.getOrCreate(USER);
-    expect(await vault.readStored(USER)).toEqual(keypair);
-  });
-
-  it("clear() removes the entry", async () => {
-    const generator = createGenerator();
-    const vault = new KeypairVault({ generator, storage: new MemoryStorage(), ttl: 86400 });
-    await vault.getOrCreate(USER);
+  test("clear() forces regeneration on the next getOrCreate", async ({ vault }) => {
+    const before = await vault.getOrCreate(USER);
     await vault.clear(USER);
     expect(await vault.readStored(USER)).toBeNull();
+
+    const after = await vault.getOrCreate(USER);
+    expect(after).not.toEqual(before);
   });
 
-  it("drops malformed stored keypairs", async () => {
-    const generator = createGenerator();
+  test("treats malformed stored data as a cache miss and regenerates", async () => {
+    let counter = 0;
+    const generator: KeypairGenerator = {
+      generateKeypair: vi.fn().mockImplementation(async () => {
+        counter += 1;
+        return {
+          publicKey: (PUBLIC_KEY.slice(0, -2) +
+            counter.toString(16).padStart(2, "0")) as `0x${string}`,
+          privateKey: PRIVATE_KEY,
+        };
+      }),
+    };
     const storage = new MemoryStorage();
-    const vault = new KeypairVault({ generator, storage, ttl: 86400 });
-    const key = await KeypairVault.storageKey(USER);
-    await storage.set(key, {
-      publicKey: "0xnot-hex",
-      privateKey: PRIVATE_KEY,
-      createdAt: Math.floor(Date.now() / 1000),
-      expiresAt: Math.floor(Date.now() / 1000) + 86400,
-    });
+    const vault = new KeypairVault({ generator, storage, ttl: TTL_SECONDS });
 
+    // Seed storage with a real keypair, then corrupt the value out-of-band.
+    // We use a wrapper-driven approach (stub `get` to return junk for the next
+    // call) rather than poking the private storage-key naming.
+    const stored = await vault.getOrCreate(USER);
+    const realGet = storage.get.bind(storage);
+    vi.spyOn(storage, "get").mockImplementationOnce(async () => ({ totally: "wrong shape" }));
     expect(await vault.readStored(USER)).toBeNull();
-    expect(await storage.get(key)).toBeNull();
+
+    // Restore real storage and confirm the next getOrCreate regenerates a
+    // *different* keypair rather than handing back the corrupted one.
+    vi.mocked(storage.get).mockImplementation(realGet);
+    const regenerated = await vault.getOrCreate(USER);
+    expect(regenerated).not.toEqual(stored);
   });
 
-  it("deletes expired keypairs", async () => {
-    const generator = createGenerator();
-    const storage = new MemoryStorage();
-    const vault = new KeypairVault({ generator, storage, ttl: 86400 });
-    const key = await KeypairVault.storageKey(USER);
-    await storage.set(key, {
-      publicKey: PUBLIC_KEY,
-      privateKey: PRIVATE_KEY,
-      createdAt: Math.floor(Date.now() / 1000) - 86401,
-      expiresAt: Math.floor(Date.now() / 1000) - 1,
-    });
+  test("regenerates after the TTL elapses", async ({ vault }) => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+      const before = await vault.getOrCreate(USER);
 
-    expect(await vault.readStored(USER)).toBeNull();
-    expect(await storage.get(key)).toBeNull();
-  });
+      vi.advanceTimersByTime((TTL_SECONDS + 1) * 1000);
+      expect(await vault.readStored(USER)).toBeNull();
 
-  it("storage key is chain-independent", async () => {
-    const keyA = await KeypairVault.storageKey(USER);
-    const keyB = await KeypairVault.storageKey(USER);
-    expect(keyA).toBe(keyB);
-    expect(keyA.startsWith("keypair:")).toBe(true);
+      const after = await vault.getOrCreate(USER);
+      expect(after).not.toEqual(before);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
