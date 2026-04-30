@@ -8,29 +8,9 @@ React-specific guidance for `@zama-fhe/react-sdk`. Merges with the root [`AGENTS
 - **Generic hooks omit the domain.** `useRevoke`, not `useRevokeTokens`. `useAllow`, not `useAllowTokens`. These work against any confidential contract type — matching the SDK-level "contracts" naming.
 - **Token-specific hooks include the domain.** `useConfidentialBalance`, `useConfidentialTransfer`, `useShield`, `useUnshield`. These are explicitly token-flavoured operations.
 - **First decrypt requires an explicit user click.** The first EIP-712 blind sign per session must be triggered by user action (e.g. a "Decrypt Balance" button). Gate initial decrypt queries with `enabled: false` until the user opts in. After that, cached credentials let subsequent decrypts run automatically on re-render.
-
-## Source layout
-
-```
-packages/react-sdk/src/
-
-authorization/        → useAllow, useIsAllowed, useRevoke, useRevokeSession
-balance/              → useConfidentialBalance, useConfidentialBalances
-transfer/             → useConfidentialTransfer, useConfidentialApprove, useConfidentialIsApproved
-shield/               → useShield
-unshield/             → useUnshield, useUnshieldAll, useResumeUnshield (high-level 2-phase orchestrator)
-unwrap/               → useUnwrap, useUnwrapAll, useFinalizeUnwrap (low-level phase primitives)
-token/                → useToken, useReadonlyToken, useMetadata, useTotalSupply
-delegation/           → useDelegateDecryption, useDecryptBalanceAs, useDelegationStatus, useRevokeDelegation
-relayer/              → useEncrypt, useGenerateKeypair, useUserDecrypt, usePublicKey
-wrappers-registry/    → useListPairs, useTokenPair, useConfidentialTokenAddress
-wagmi/                → WagmiSigner (GenericSigner), WagmiProvider (GenericProvider) — wagmi sub-path adapters
-utils/                → query.ts (useQueries wrapper), shared helpers
-provider.tsx          → ZamaProvider (React context, ZamaSDK lifecycle)
-```
-
-`unshield/` vs `unwrap/`: prefer the `unshield` hooks for product code — they orchestrate the full two-phase flow. `unwrap` hooks are low-level building blocks for custom flows.
+- **`unshield` vs `unwrap` hooks.** Prefer the `unshield/*` hooks in product code — they orchestrate the full two-phase request-then-finalize flow. The `unwrap/*` hooks are low-level building blocks exposed for custom flows; reach for them only when you need control over each phase.
 
 ## Gotchas
 
-- **TanStack `useQueries` wrapper is mandatory.** Never import `useQueries` directly from `@tanstack/react-query` — use the wrapper in `packages/react-sdk/src/utils/query.ts`, which injects the custom `queryKeyHashFn` needed for bigint-friendly keys. An ast-grep rule (`tools/ast-grep/rules/no-direct-tanstack-useQueries.yml`) enforces this.
+- **TanStack `useQueries` wrapper is mandatory.** Never import `useQueries` directly from `@tanstack/react-query` — use the wrapper in `packages/react-sdk/src/utils/query.ts`, which injects the custom `queryKeyHashFn` needed for bigint-friendly keys. An ast-grep rule enforces this.
+- **`"use client"` directive on every hook/component file.** All hook and component source files in `packages/react-sdk/src/` must start with `"use client"` (RSC compatibility). Barrel exports, internal utilities, and pure adapter modules without React are exempt.

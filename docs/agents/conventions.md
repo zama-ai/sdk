@@ -15,13 +15,4 @@ The SDK is for all Zama Protocol use cases, not just tokens. The code is in tran
 
 - **Contract call builders are pure.** Functions in `packages/sdk/src/contracts/` return `{ address, abi, functionName, args }` config objects. They never execute transactions. Library-specific sub-paths (`/viem`, `/ethers`) compose these.
 - **Generic interfaces over framework primitives.** Stateful framework dependencies — wallet, RPC, storage — are typed as `Generic*` interfaces in the core (e.g. `GenericSigner`, `GenericProvider`, `GenericStorage`). New framework-touching code reuses or defines a `Generic*`; framework-specific code lives in adapter sub-paths, not the core.
-- **Token method params mirror Solidity.** `Token`/`ReadonlyToken` method signatures (arg order and names) strictly track the underlying contract ABI per-method: `confidentialBalanceOf(account)`, `allowance(owner, spender)`, `isOperator(holder, operator)`. SDK-internal inconsistency across methods is accepted — do not "normalize" these, since callers cross-reference the Solidity source.
-
-## TypeScript
-
-- **ESM-only** — `"type": "module"` on every package; no `require()`, no `module.exports`
-- **Strict** — no `any`, no non-null assertions (`!`) except in files whitelisted in `.oxlintrc.json`
-- **Type imports** — use `import type` for type-only imports (`@typescript-eslint/consistent-type-imports` is enforced)
-- **Unused variables** — prefix with `_` (e.g., `_unused`)
-- **Async** — no floating promises
-- **`"use client"` in react-sdk** — all hook and component source files in `packages/react-sdk/src/` must have `"use client"` as the first line (RSC compatibility); barrel exports, wagmi-subpath adapters, and internal utilities are exempt
+- **Token method params mirror Solidity, per-method.** `Token`/`ReadonlyToken` method signatures (arg order and names) track the underlying contract ABI per-method, with SDK-internal exceptions accepted where the SDK method does something semantically different. Do not "normalize" inconsistencies across methods — callers cross-reference the Solidity source.

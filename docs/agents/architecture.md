@@ -2,40 +2,9 @@
 
 ## Repository layout
 
-**For SDK users:** `packages/sdk/` is the core SDK, `packages/react-sdk/` is the React hooks layer, and `examples/` has official working integration examples:
+**For SDK users:** `packages/sdk/` is the core SDK, `packages/react-sdk/` is the React hooks layer, and `examples/` has approved working integrations across React (wagmi, viem, ethers) and Node.js (viem, ethers) stacks.
 
-| Example         | Stack                                          |
-| --------------- | ---------------------------------------------- |
-| `react-wagmi`   | React + wagmi + viem                           |
-| `react-viem`    | React + viem                                   |
-| `react-ethers`  | React + ethers                                 |
-| `node-viem`     | Node.js + viem                                 |
-| `node-ethers`   | Node.js + ethers                               |
-| `example-hoodi` | React + ethers (Hoodi testnet, cleartext mode) |
-
-**For SDK developers and agents:** `contracts/` has the Solidity smart contracts (Foundry/forge) — ERC-7984 confidential tokens, wrappers, registries, batchers. `test/` has E2E infrastructure (Playwright, Next.js/Vite test apps, shared React test components). `tools/ast-grep/` has custom AST lint rules. `claude-setup/` has agent configuration (copied to `.claude/` by `pnpm setup:claude`). `docs/gitbook/` has user-facing documentation. `docs/agents/` has this guidance.
-
-## Source layout
-
-### packages/sdk/src/
-
-```
-types/          → GenericSigner (signer.ts), GenericProvider (provider.ts), all supporting types
-token/          → Token and ReadonlyToken (shield, unshield, confidentialTransfer, balanceOf)
-relayer/        → RelayerWeb (via /web), RelayerNode (via /node), RelayerCleartext (via /cleartext)
-viem/           → ViemSigner (GenericSigner), ViemProvider (GenericProvider)
-ethers/         → EthersSigner (GenericSigner), EthersProvider (GenericProvider)
-credentials/    → session management, credential signing
-query/          → core async actions (layer 1 of the three-layer React hook pattern)
-storage/        → IndexedDBStorage, MemoryStorage
-worker/         → Web Worker + Node.js thread pool (offloads heavy FHE operations)
-chains/         → network presets: sepolia, hoodi, mainnet, hardhat, anvil
-errors/         → error hierarchy (TokenError and subclasses)
-```
-
-### packages/react-sdk/src/
-
-For React-sdk hook design rules, naming conventions, and package-specific gotchas, see [`packages/react-sdk/AGENTS.md`](../../packages/react-sdk/AGENTS.md).
+**For SDK developers and agents:** `contracts/` has the Solidity smart contracts (Foundry/forge) — ERC-7984 confidential tokens, wrappers, registries, batchers. `test/` has E2E infrastructure (Playwright, Next.js/Vite test apps, shared React test components). `tools/ast-grep/` has custom AST lint rules. `claude-setup/` has agent configuration (copied to `.claude/` by `pnpm setup:claude`). `docs/gitbook/` has user-facing documentation. `docs/agents/` has this guidance. For react-sdk hook design rules and gotchas, see [`packages/react-sdk/AGENTS.md`](../../packages/react-sdk/AGENTS.md).
 
 ## How operations flow
 
