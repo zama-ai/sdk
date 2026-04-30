@@ -11,15 +11,23 @@ import { DecryptCache } from "./decrypt-cache";
 import {
   ChainMismatchError,
   DecryptionFailedError,
+  EncryptionFailedError,
   SignerRequiredError,
   wrapDecryptError,
+  ZamaError,
 } from "./errors";
 import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventListener } from "./events/sdk-events";
 import { ZamaSDKEvents } from "./events/sdk-events";
 import type { DecryptHandle } from "./query/user-decrypt";
 import { isZeroHandle } from "./utils/handles";
 import type { RelayerDispatcher } from "./relayer/relayer-dispatcher";
-import type { ClearValueType, Handle, PublicDecryptResult } from "./relayer/relayer-sdk.types";
+import type {
+  ClearValueType,
+  EncryptParams,
+  EncryptResult,
+  Handle,
+  PublicDecryptResult,
+} from "./relayer/relayer-sdk.types";
 import { ReadonlyToken } from "./token/readonly-token";
 import { Token } from "./token/token";
 import type {
@@ -391,64 +399,6 @@ export class ZamaSDK {
   }
 
   /**
-   * Decrypt FHE handles using delegated credentials without exposing key material
-   * or permit records to token-level callers.
-   *
-   * @internal
-   */
-  async delegatedUserDecrypt(
-    delegator: Address,
-    requests: { contractAddress: Address; handles: Handle[] }[],
-  ): Promise<Record<Handle, ClearValueType>> {
-    if (requests.length === 0) {
-      return {};
-    }
-    const signer = this.requireSigner("delegatedUserDecrypt");
-    const service = this.#requireCredentialService("delegatedUserDecrypt");
-    const normalizedDelegator = getAddress(delegator);
-    const normalizedRequests = requests.map((request) => ({
-      contractAddress: getAddress(request.contractAddress),
-      handles: request.handles,
-    }));
-    const contracts = [...new Set(normalizedRequests.map((request) => request.contractAddress))];
-    const { keypair, permissions } = await service.allow(contracts, normalizedDelegator);
-    if (keypair === null) {
-      throw new DecryptionFailedError("Delegated decryption requires at least one contract");
-    }
-    const delegateAddress = await signer.getAddress();
-    const result: Record<Handle, ClearValueType> = {};
-
-    await pLimit(
-      normalizedRequests.map((request) => async () => {
-        const permission = pickPermissionFor(permissions, request.contractAddress);
-        if (!permission) {
-          throw new DecryptionFailedError(
-            `No delegated permit covers contract ${request.contractAddress} after allow()`,
-          );
-        }
-        Object.assign(
-          result,
-          await this.relayer.delegatedUserDecrypt({
-            handles: request.handles,
-            contractAddress: request.contractAddress,
-            signedContractAddresses: permission.signedContractAddresses,
-            privateKey: keypair.privateKey,
-            publicKey: keypair.publicKey,
-            signature: permission.signature,
-            delegatorAddress: permission.delegatorAddress,
-            delegateAddress,
-            startTimestamp: permission.startTimestamp,
-            durationDays: permission.durationDays,
-          }),
-        );
-      }),
-      5,
-    );
-
-    return result;
-  }
-
-  /**
    * Decrypt one or more FHE handles. Results are cached — repeated calls
    * for the same handle skip the relayer round-trip.
    *
@@ -600,6 +550,165 @@ export class ZamaSDK {
   }
 
   /**
+   * Decrypt one or more FHE handles using delegated credentials.
+   *
+   * Mirrors {@link userDecrypt} with delegated credentials — same caching,
+   * zero-handle short-circuit, event lifecycle, and error wrapping. The
+   * delegator address identifies the account that granted delegation rights.
+   *
+   * @param handles - FHE handles paired with their contract addresses.
+   * @param delegatorAddress - The address that granted delegation rights.
+   * @param accountAddress - Address used as the cache key's "requester"
+   *   dimension. Defaults to `delegatorAddress`. Pass the actual account address
+   *   when decrypting on behalf of someone whose balance is stored under a
+   *   different address (e.g. `decryptBalanceAs` with an explicit `accountAddress`).
+   * @returns Map of handle → clear-text value.
+   *
+   * @example
+   * ```ts
+   * const values = await sdk.delegatedUserDecrypt([
+   *   { handle: balanceHandle, contractAddress: tokenAddr },
+   * ], delegatorAddr);
+   * console.log(values[balanceHandle]); // 1000n
+   * ```
+   */
+  async delegatedUserDecrypt(
+    handles: DecryptHandle[],
+    delegatorAddress: Address,
+    accountAddress: Address = delegatorAddress,
+  ): Promise<Record<Handle, ClearValueType>> {
+    const signer = this.requireSigner("delegatedUserDecrypt");
+    const service = this.#requireCredentialService("delegatedUserDecrypt");
+    await this.requireChainAlignment("delegatedUserDecrypt");
+    if (handles.length === 0) {
+      return {};
+    }
+
+    const normalizedDelegator = getAddress(delegatorAddress);
+    const normalizedAccount = getAddress(accountAddress);
+
+    // Normalize addresses once at the top
+    const normalized = handles.map((h) => ({
+      handle: h.handle,
+      contractAddress: getAddress(h.contractAddress),
+    }));
+
+    const result: Record<Handle, ClearValueType> = {};
+    const nonZero: DecryptHandle[] = [];
+
+    // Filter zero handles → 0n without relayer
+    for (const h of normalized) {
+      if (isZeroHandle(h.handle)) {
+        result[h.handle] = 0n;
+      } else {
+        nonZero.push(h);
+      }
+    }
+
+    if (nonZero.length === 0) {
+      return result;
+    }
+
+    // Cache partition
+    const uncached: DecryptHandle[] = [];
+
+    for (const h of nonZero) {
+      const cached = await this.cache.get(normalizedAccount, h.contractAddress, h.handle);
+      if (cached !== null) {
+        result[h.handle] = cached;
+      } else {
+        uncached.push(h);
+      }
+    }
+
+    if (uncached.length === 0) {
+      return result;
+    }
+
+    // Derive contract addresses from ALL handles for stable credential cache key
+    const allContracts = Array.from(new Set(normalized.map((h) => h.contractAddress)));
+    const { keypair, permissions } = await service.allow(allContracts, normalizedDelegator);
+    if (keypair === null) {
+      throw new DecryptionFailedError("Delegated decryption requires at least one contract");
+    }
+    const delegateAddress = await signer.getAddress();
+
+    // Group uncached by contract
+    const byContract = new Map<Address, Handle[]>();
+    for (const h of uncached) {
+      const existing = byContract.get(h.contractAddress);
+      if (existing) {
+        existing.push(h.handle);
+      } else {
+        byContract.set(h.contractAddress, [h.handle]);
+      }
+    }
+
+    // Decrypt per contract group with bounded concurrency
+    const t0 = Date.now();
+    const uncachedHandles = uncached.map((h) => h.handle);
+
+    try {
+      this.emitEvent({
+        type: ZamaSDKEvents.DecryptStart,
+        handles: uncachedHandles,
+      });
+
+      await pLimit(
+        [...byContract.entries()].map(([contractAddress, contractHandles]) => async () => {
+          const permission = pickPermissionFor(permissions, contractAddress);
+          if (!permission) {
+            throw new DecryptionFailedError(
+              `No delegated permit covers contract ${contractAddress} after allow()`,
+            );
+          }
+          const decrypted = await this.relayer.delegatedUserDecrypt({
+            handles: contractHandles,
+            contractAddress,
+            signedContractAddresses: permission.signedContractAddresses,
+            privateKey: keypair.privateKey,
+            publicKey: keypair.publicKey,
+            signature: permission.signature,
+            delegatorAddress: permission.delegatorAddress,
+            delegateAddress,
+            startTimestamp: permission.startTimestamp,
+            durationDays: permission.durationDays,
+          });
+
+          for (const [handle, value] of Object.entries(decrypted)) {
+            result[handle as Handle] = value;
+            await this.cache.set(normalizedAccount, contractAddress, handle as Handle, value);
+          }
+        }),
+        5,
+      );
+
+      const uncachedResult: Record<Handle, ClearValueType> = {};
+      for (const handle of uncachedHandles) {
+        const value = result[handle];
+        if (value !== undefined) {
+          uncachedResult[handle] = value;
+        }
+      }
+      this.emitEvent({
+        type: ZamaSDKEvents.DecryptEnd,
+        durationMs: Date.now() - t0,
+        handles: uncachedHandles,
+        result: uncachedResult,
+      });
+      return result;
+    } catch (error) {
+      this.emitEvent({
+        type: ZamaSDKEvents.DecryptError,
+        error: toError(error),
+        durationMs: Date.now() - t0,
+        handles: uncachedHandles,
+      });
+      throw wrapDecryptError(error, "Failed to decrypt delegated handles", true);
+    }
+  }
+
+  /**
    * Publicly decrypt one or more FHE handles.
    *
    * Returns the decryption proof alongside the clear-text values so callers
@@ -627,6 +736,53 @@ export class ZamaSDK {
       return await this.relayer.publicDecrypt(handles);
     } catch (error) {
       throw wrapDecryptError(error, "Public decryption failed");
+    }
+  }
+
+  /**
+   * Encrypt one or more plaintext values into FHE ciphertexts.
+   *
+   * @param params - Typed FHE inputs, the target contract address, and the user address.
+   * @returns Encrypted handles and the input proof for on-chain submission.
+   * @throws {@link EncryptionFailedError} if FHE encryption fails.
+   *
+   * @example
+   * ```ts
+   * const { handles, inputProof } = await sdk.encrypt({
+   *   values: [{ value: 1000n, type: "euint64" }],
+   *   contractAddress: "0xToken",
+   *   userAddress: "0xUser",
+   * });
+   * ```
+   */
+  async encrypt(params: EncryptParams): Promise<EncryptResult> {
+    const t0 = Date.now();
+    try {
+      this.emitEvent({ type: ZamaSDKEvents.EncryptStart }, params.contractAddress);
+      const result = await this.relayer.encrypt(params);
+      this.emitEvent(
+        {
+          type: ZamaSDKEvents.EncryptEnd,
+          durationMs: Date.now() - t0,
+        },
+        params.contractAddress,
+      );
+      return result;
+    } catch (error) {
+      this.emitEvent(
+        {
+          type: ZamaSDKEvents.EncryptError,
+          error: toError(error),
+          durationMs: Date.now() - t0,
+        },
+        params.contractAddress,
+      );
+      if (error instanceof ZamaError) {
+        throw error;
+      }
+      throw new EncryptionFailedError("Encryption failed", {
+        cause: error,
+      });
     }
   }
 

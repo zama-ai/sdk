@@ -19,10 +19,9 @@ import {
   DelegationExpiredError,
   DelegationNotFoundError,
   isSessionError,
-  wrapDecryptError,
   ZamaError,
 } from "../errors";
-import { ZamaSDKEvents, type ZamaSDKEventInput } from "../events/sdk-events";
+import type { ZamaSDKEventInput } from "../events/sdk-events";
 import { isZeroHandle, ZERO_HANDLE } from "../utils/handles";
 import type { ClearValueType, Handle } from "../relayer/relayer-sdk.types";
 import { toError } from "../utils";
@@ -271,7 +270,7 @@ export class ReadonlyToken {
       return new Map();
     }
 
-    const { delegatorAddress, handles, accountAddress, onError, maxConcurrency } = options;
+    const { delegatorAddress, handles, accountAddress, onError } = options;
     const normalizedAccount = accountAddress
       ? getAddress(accountAddress)
       : getAddress(delegatorAddress);
@@ -332,71 +331,67 @@ export class ReadonlyToken {
       return results;
     }
 
-    await firstToken.sdk.allowAs(
-      delegatorAddress,
-      uncached.map((entry) => entry.token.address),
-    );
+    const allHandles = uncached.map(({ token, handle }) => ({
+      handle,
+      contractAddress: token.address,
+    }));
 
-    const errors: { address: Address; error: Error }[] = [];
-    const decryptFns: (() => Promise<void>)[] = [];
-
-    for (const { token, handle } of uncached) {
-      decryptFns.push(() =>
-        firstToken.sdk
-          .delegatedUserDecrypt(delegatorAddress, [
-            { contractAddress: token.address, handles: [handle] },
-          ])
-          .then(async (result) => {
-            const value = result[handle];
-            if (value === undefined) {
-              throw new DecryptionFailedError(
-                `Batch delegated decryption returned no value for handle ${handle} on token ${token.address}`,
-              );
-            }
-            assertBigint(value, "batchDecryptBalancesAs: result[handle]");
-            results.set(token.address, value);
-            // Cache write is best-effort — log on failure so a broken cache
-            // backend doesn't silently force re-decryption forever.
-            firstToken.sdk.cache
-              .set(normalizedAccount, token.address, handle, value)
-              .catch((cacheErr: unknown) => {
-                // oxlint-disable-next-line no-console
-                console.warn("[zama-sdk] Failed to cache decrypted value:", cacheErr);
-              });
-          })
-          .catch((error) => {
-            // Session-level failures apply to every token — re-throw so the
-            // whole batch aborts with the original typed error.
-            if (isSessionError(error)) {
-              throw error;
-            }
-            const err = toError(error);
-            if (onError) {
-              try {
-                results.set(token.address, onError(err, token.address));
-              } catch (callbackError) {
-                errors.push({
-                  address: token.address,
-                  error: toError(callbackError),
-                });
-              }
-            } else {
-              errors.push({ address: token.address, error: err });
-            }
-          }),
+    try {
+      const decrypted = await firstToken.sdk.delegatedUserDecrypt(
+        allHandles,
+        delegatorAddress,
+        normalizedAccount,
       );
-    }
 
-    await pLimit(decryptFns, maxConcurrency);
+      const errors: { address: Address; error: Error }[] = [];
 
-    if (errors.length > 0) {
-      const message = errors.map((e) => `${e.address}: ${e.error.message}`).join("; ");
-      // Preserve the first original error as `cause` so callers can still
-      // `instanceof`-check the underlying failure type.
-      throw new DecryptionFailedError(
-        `Batch delegated decryption failed for ${errors.length} token(s): ${message}`,
-        { cause: errors[0]!.error },
-      );
+      for (const { token, handle } of uncached) {
+        const value = decrypted[handle];
+        if (value === undefined) {
+          const err = new DecryptionFailedError(
+            `Batch delegated decryption returned no value for handle ${handle} on token ${token.address}`,
+          );
+          if (onError) {
+            try {
+              results.set(token.address, onError(err, token.address));
+            } catch (callbackError) {
+              errors.push({ address: token.address, error: toError(callbackError) });
+            }
+          } else {
+            errors.push({ address: token.address, error: err });
+          }
+          continue;
+        }
+        assertBigint(value, "batchDecryptBalancesAs: result[handle]");
+        results.set(token.address, value);
+      }
+
+      if (errors.length > 0) {
+        const message = errors.map((e) => `${e.address}: ${e.error.message}`).join("; ");
+        throw new DecryptionFailedError(
+          `Batch delegated decryption failed for ${errors.length} token(s): ${message}`,
+          { cause: errors[0]!.error },
+        );
+      }
+    } catch (error) {
+      if (error instanceof DecryptionFailedError) {
+        throw error;
+      }
+      if (isSessionError(error)) {
+        throw error;
+      }
+      const err = toError(error);
+      if (onError) {
+        for (const { token } of uncached) {
+          if (!results.has(token.address)) {
+            results.set(token.address, onError(err, token.address));
+          }
+        }
+      } else {
+        throw new DecryptionFailedError(`Batch delegated decryption failed: ${err.message}`, {
+          cause: err,
+        });
+      }
     }
 
     return results;
@@ -650,42 +645,20 @@ export class ReadonlyToken {
       return cached;
     }
 
-    const t0 = Date.now();
-    try {
-      this.emit({ type: ZamaSDKEvents.DecryptStart, handles: [handle] });
+    const result = await this.sdk.delegatedUserDecrypt(
+      [{ handle, contractAddress: this.address }],
+      normalizedDelegator,
+      normalizedAccount,
+    );
 
-      const result = await this.sdk.delegatedUserDecrypt(normalizedDelegator, [
-        { contractAddress: this.address, handles: [handle] },
-      ]);
-
-      // Validate the relayer response before emitting DecryptEnd so subscribers
-      // never see a contradictory `Start → End → Error` sequence.
-      const value = result[handle];
-      if (value === undefined) {
-        throw new DecryptionFailedError(
-          `Delegated decryption returned no value for handle ${handle}`,
-        );
-      }
-      assertBigint(value, "decryptBalanceAs: result[handle]");
-
-      this.emit({
-        type: ZamaSDKEvents.DecryptEnd,
-        durationMs: Date.now() - t0,
-        handles: [handle],
-        result,
-      });
-
-      await this.sdk.cache.set(normalizedAccount, this.address, handle, value);
-      return value;
-    } catch (error) {
-      this.emit({
-        type: ZamaSDKEvents.DecryptError,
-        error: toError(error),
-        durationMs: Date.now() - t0,
-        handles: [handle],
-      });
-      throw wrapDecryptError(error, "Failed to decrypt delegated balance", true);
+    const value = result[handle];
+    if (value === undefined) {
+      throw new DecryptionFailedError(
+        `Delegated decryption returned no value for handle ${handle}`,
+      );
     }
+    assertBigint(value, "decryptBalanceAs: result[handle]");
+    return value;
   }
 
   /**

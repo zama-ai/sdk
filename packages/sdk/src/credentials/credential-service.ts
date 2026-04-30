@@ -2,6 +2,8 @@ import { getAddress, type Address } from "viem";
 import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { GenericStorage, SignerIdentity } from "../types";
+import { ZamaError } from "../errors/base";
+import { wrapSigningError } from "../errors/signing";
 import { toError } from "../utils/error";
 import { KeypairVault } from "./keypair-vault";
 import {
@@ -365,33 +367,40 @@ export class CredentialService {
       contractAddresses: input.chunk,
     });
 
-    const eip712 = input.delegator
-      ? await this.#permitFactory.createDelegatedUserDecryptEIP712(
-          input.keypair.publicKey,
-          input.chunk,
-          input.delegatorAddress,
-          startTimestamp,
-          durationDays,
-        )
-      : await this.#permitFactory.createEIP712(
-          input.keypair.publicKey,
-          input.chunk,
-          startTimestamp,
-          durationDays,
-        );
+    try {
+      const eip712 = input.delegator
+        ? await this.#permitFactory.createDelegatedUserDecryptEIP712(
+            input.keypair.publicKey,
+            input.chunk,
+            input.delegatorAddress,
+            startTimestamp,
+            durationDays,
+          )
+        : await this.#permitFactory.createEIP712(
+            input.keypair.publicKey,
+            input.chunk,
+            startTimestamp,
+            durationDays,
+          );
 
-    const signature = await this.#permitSigner.signTypedData(eip712);
+      const signature = await this.#permitSigner.signTypedData(eip712);
 
-    return {
-      keypairPublicKey: input.keypair.publicKey,
-      signerAddress: input.signerAddress,
-      delegatorAddress: input.delegatorAddress,
-      chainId: input.chainId,
-      signedContractAddresses: input.chunk,
-      signature,
-      startTimestamp,
-      durationDays,
-    };
+      return {
+        keypairPublicKey: input.keypair.publicKey,
+        signerAddress: input.signerAddress,
+        delegatorAddress: input.delegatorAddress,
+        chainId: input.chainId,
+        signedContractAddresses: input.chunk,
+        signature,
+        startTimestamp,
+        durationDays,
+      };
+    } catch (error) {
+      if (error instanceof ZamaError) {
+        throw error;
+      }
+      return wrapSigningError(error, "Credential signing failed");
+    }
   }
 
   #emit(input: ZamaSDKEventInput): void {

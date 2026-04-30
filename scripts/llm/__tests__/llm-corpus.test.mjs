@@ -79,6 +79,7 @@ describe("LLM corpus manifest", () => {
       for (const fileName of corpusConfig.examples.docFiles) {
         const sourcePath = `examples/${exampleName}/${fileName}`;
         if (existsSync(join(repoRoot, sourcePath))) {
+          // oxlint-disable-next-line jest/no-conditional-expect
           expect(sourcePaths).toContain(sourcePath);
         }
       }

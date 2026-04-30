@@ -35,6 +35,15 @@ const baseConfig = {
 } as unknown as NodeWorkerPoolConfig;
 
 describe("NodeWorkerPool", () => {
+  /** Get mock instances created by NodeWorkerClient constructor. */
+  function getInstances(offset = 0) {
+    return (
+      NodeWorkerClient as unknown as { mock: { results: { value: ReturnType<typeof vi.fn> }[] } }
+    ).mock.results
+      .slice(offset)
+      .map((r) => r.value);
+  }
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -55,7 +64,7 @@ describe("NodeWorkerPool", () => {
     await pool.initPool();
 
     expect(NodeWorkerClient).toHaveBeenCalledTimes(3);
-    const instances = vi.mocked(NodeWorkerClient).mock.results.map((r) => r.value);
+    const instances = getInstances();
     for (const instance of instances) {
       expect(instance.initWorker).toHaveBeenCalledOnce();
     }
@@ -65,7 +74,7 @@ describe("NodeWorkerPool", () => {
     const pool = new NodeWorkerPool({ ...baseConfig, poolSize: 3 });
     await pool.initPool();
 
-    const instances = vi.mocked(NodeWorkerClient).mock.results.map((r) => r.value);
+    const instances = getInstances();
 
     // All resolve immediately so active count returns to 0 each time — always picks worker 0
     await pool.generateKeypair({ chainId: 1 });
@@ -81,7 +90,7 @@ describe("NodeWorkerPool", () => {
     const pool = new NodeWorkerPool({ ...baseConfig, poolSize: 2 });
     await pool.initPool();
 
-    const instances = vi.mocked(NodeWorkerClient).mock.results.map((r) => r.value);
+    const instances = getInstances();
 
     // Make worker 0's generateKeypair block until we resolve it
     let resolveWorker0!: (v: unknown) => void;
@@ -107,7 +116,7 @@ describe("NodeWorkerPool", () => {
     const pool = new NodeWorkerPool({ ...baseConfig, poolSize: 2 });
     await pool.initPool();
 
-    const instances = vi.mocked(NodeWorkerClient).mock.results.map((r) => r.value);
+    const instances = getInstances();
 
     pool.terminate();
 
@@ -212,10 +221,7 @@ describe("NodeWorkerPool", () => {
 
     // Re-init creates fresh workers
     await pool.initPool();
-    const newInstances = vi
-      .mocked(NodeWorkerClient)
-      .mock.results.slice(2)
-      .map((r) => r.value);
+    const newInstances = getInstances(2);
 
     await pool.generateKeypair({ chainId: 1 });
     expect(newInstances[0].generateKeypair).toHaveBeenCalledTimes(1);
@@ -225,7 +231,7 @@ describe("NodeWorkerPool", () => {
     const pool = new NodeWorkerPool({ ...baseConfig, poolSize: 2 });
     await pool.initPool();
 
-    const instances = vi.mocked(NodeWorkerClient).mock.results.map((r) => r.value);
+    const instances = getInstances();
     instances[0].generateKeypair.mockRejectedValueOnce(new Error("boom"));
 
     await pool.generateKeypair({ chainId: 1 }).catch(() => {});

@@ -18,12 +18,10 @@ const HANDLE_B = ("0x" + "b2".repeat(32)) as Handle;
  * ReadonlyToken batching without priming the full EIP-712 sign flow.
  */
 function stubDelegatedUserDecrypt(sdk: ZamaSDK, values: Record<Handle, bigint>) {
-  const stub = vi.fn().mockImplementation(async (_delegator, requests) => {
+  const stub = vi.fn().mockImplementation(async (handles: { handle: Handle }[]) => {
     const result: Record<Handle, bigint> = {};
-    for (const request of requests) {
-      for (const handle of request.handles) {
-        result[handle] = values[handle]!;
-      }
+    for (const { handle } of handles) {
+      result[handle] = values[handle]!;
     }
     return result;
   });
@@ -36,13 +34,10 @@ function stubDelegatedUserDecrypt(sdk: ZamaSDK, values: Record<Handle, bigint>) 
 
 describe("ReadonlyToken.batchDecryptBalancesAs", () => {
   test("decrypts balances for multiple tokens using delegated credentials", async ({
-    sdk,
     relayer,
-    signer,
     createMockSigner,
     createSDK,
   }) => {
-    // The fixture signer is the connected user; the delegate is DELEGATE
     const delegateSigner = createMockSigner(DELEGATE);
     const delegateProvider = createMockProvider();
     const delegateSdk = createSDK({
@@ -57,11 +52,9 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     const tokenA = new ReadonlyToken(delegateSdk, TOKEN_A);
     const tokenB = new ReadonlyToken(delegateSdk, TOKEN_B);
 
-    const allowMock = vi.spyOn(delegateSdk, "allowAs").mockResolvedValue();
-    const decryptMock = stubDelegatedUserDecrypt(delegateSdk, {
-      [HANDLE_A]: 100n,
-      [HANDLE_B]: 200n,
-    });
+    vi.mocked(relayer.delegatedUserDecrypt)
+      .mockResolvedValueOnce({ [HANDLE_A]: 100n })
+      .mockResolvedValueOnce({ [HANDLE_B]: 200n });
 
     const balances = await ReadonlyToken.batchDecryptBalancesAs([tokenA, tokenB], {
       delegatorAddress: DELEGATOR,
@@ -69,13 +62,6 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
 
     expect(balances.get(TOKEN_A)).toBe(100n);
     expect(balances.get(TOKEN_B)).toBe(200n);
-    expect(allowMock).toHaveBeenCalledOnce();
-    expect(allowMock).toHaveBeenCalledWith(DELEGATOR, [TOKEN_A, TOKEN_B]);
-    expect(decryptMock).toHaveBeenCalledTimes(2);
-    expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
-    // unused but captured so the fixture isn't complained about
-    void sdk;
-    void signer;
   });
 
   test("returns empty map for empty token list", async () => {

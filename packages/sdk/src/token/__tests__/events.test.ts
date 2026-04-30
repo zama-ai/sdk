@@ -227,10 +227,10 @@ describe("ReadonlyToken.balanceOf event emissions", () => {
 });
 
 describe("ReadonlyToken.decryptBalanceAs event emissions", () => {
-  // decryptBalanceAs emits directly through ReadonlyToken.emit → sdk.emitEvent,
-  // which sets tokenAddress to the token's address.
+  // decryptBalanceAs delegates to sdk.delegatedUserDecrypt(), which emits events
+  // at the SDK level (without tokenAddress). Events still carry timestamp.
 
-  it("populates tokenAddress and timestamp on decrypt events", async ({
+  it("emits decrypt events with timestamp (no tokenAddress — SDK-level emission)", async ({
     relayer,
     signer,
     tokenAddress,
@@ -274,7 +274,8 @@ describe("ReadonlyToken.decryptBalanceAs event emissions", () => {
     );
     expect(decryptEvents.length).toBeGreaterThan(0);
     for (const event of decryptEvents) {
-      expect(event.tokenAddress).toBe(tokenAddress);
+      // SDK-level delegatedUserDecrypt does not scope events to a token address
+      expect(event.tokenAddress).toBeUndefined();
       expect(event.timestamp).toBeGreaterThan(0);
       expect(typeof event.timestamp).toBe("number");
     }

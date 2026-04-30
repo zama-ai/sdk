@@ -1,3 +1,5 @@
+// oxlint-disable jest/expect-expect
+// oxlint-disable jest/no-disabled-tests
 /* eslint-disable no-empty-pattern */
 import { test as base, vi } from "vitest";
 import { ZamaSDKEvents } from "./events/sdk-events";
@@ -83,7 +85,9 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
       types: { DelegatedUserDecryptRequestVerification: [] },
       message: {},
     }),
-    delegatedUserDecrypt: vi.fn(),
+    delegatedUserDecrypt: vi.fn().mockResolvedValue({
+      [VALID_HANDLE as string]: 1000n,
+    }),
     requestZKProofVerification: vi.fn(),
     getAclAddress: vi.fn().mockResolvedValue(ACL),
     getPublicKey: vi.fn().mockResolvedValue({
@@ -152,7 +156,12 @@ function createMockReadonlyToken(address: Address, signer: GenericSigner): Reado
     allow: vi.fn().mockResolvedValue(undefined),
     isAllowed: vi.fn().mockResolvedValue(true),
     revokePermits: vi.fn().mockResolvedValue(undefined),
-    cache: { get: vi.fn(), set: vi.fn(), clearAll: vi.fn(), clearForRequester: vi.fn() },
+    cache: {
+      get: vi.fn(),
+      set: vi.fn(),
+      clearAll: vi.fn(),
+      clearForRequester: vi.fn(),
+    },
   };
   return {
     address,
