@@ -59,9 +59,6 @@ export function useApproveUnderlying(config: UseZamaConfig, options?: UseMutatio
 export function useBatchDecryptBalancesAs(tokens: ReadonlyToken[], options?: UseMutationOptions<Map<Address, bigint>, Error, BatchDecryptBalancesAsParams>): _$_tanstack_react_query0.UseMutationResult<Map<`0x${string}`, bigint>, Error, _$_zama_fhe_sdk0.BatchDecryptAsOptions, unknown>;
 
 // @public
-export function useConfidentialSetOperator(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, ConfidentialSetOperatorParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, ConfidentialSetOperatorParams, `0x${string}`>;
-
-// @public
 export function useConfidentialBalance(config: UseConfidentialBalanceConfig, options?: UseConfidentialBalanceOptions): _$_tanstack_react_query0.UseQueryResult<bigint, Error>;
 
 // @public (undocumented)
@@ -108,6 +105,9 @@ export interface UseConfidentialIsOperatorSuspenseConfig {
     spender: Address;
     tokenAddress: Address;
 }
+
+// @public
+export function useConfidentialSetOperator(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, ConfidentialSetOperatorParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, ConfidentialSetOperatorParams, `0x${string}`>;
 
 // @public
 export function useConfidentialTokenAddress(input: {
