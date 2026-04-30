@@ -31,6 +31,6 @@ export function isAllowedQueryOptions(
     gcTime: 0,
     refetchOnMount: "always",
     refetchOnWindowFocus: false,
-    enabled: callerEnabled && sdk.signer !== undefined,
+    enabled: callerEnabled && sdk.signer !== undefined && config.contractAddresses.length > 0,
   } as const;
 }

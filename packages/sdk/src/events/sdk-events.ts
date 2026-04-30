@@ -8,14 +8,11 @@ export const ZamaSDKEvents = {
   // Credentials lifecycle
   CredentialsLoading: "credentials:loading",
   CredentialsCached: "credentials:cached",
-  CredentialsExpired: "credentials:expired",
   CredentialsCreating: "credentials:creating",
   CredentialsCreated: "credentials:created",
   CredentialsRevoked: "credentials:revoked",
   CredentialsPersistFailed: "credentials:persist_failed",
   CredentialsAllowed: "credentials:allowed",
-  CredentialsCorrupted: "credentials:corrupted",
-  SessionExpired: "session:expired",
   // FHE operations
   EncryptStart: "encrypt:start",
   EncryptEnd: "encrypt:end",
@@ -67,12 +64,6 @@ export interface CredentialsCachedEvent extends BaseEvent {
   contractAddresses?: Address[];
 }
 
-export interface CredentialsExpiredEvent extends BaseEvent {
-  type: typeof ZamaSDKEvents.CredentialsExpired;
-  /** Contract addresses that need re-authorization. */
-  contractAddresses?: Address[];
-}
-
 export interface CredentialsCreatingEvent extends BaseEvent {
   type: typeof ZamaSDKEvents.CredentialsCreating;
   /** Contract addresses being authorized. */
@@ -100,18 +91,6 @@ export interface CredentialsAllowedEvent extends BaseEvent {
   type: typeof ZamaSDKEvents.CredentialsAllowed;
   /** Contract addresses covered by the authorized credentials. */
   contractAddresses?: Address[];
-}
-
-export interface CredentialsCorruptedEvent extends BaseEvent {
-  type: typeof ZamaSDKEvents.CredentialsCorrupted;
-  /** The error that revealed storage corruption. */
-  error: Error;
-}
-
-export interface SessionExpiredEvent extends BaseEvent {
-  type: typeof ZamaSDKEvents.SessionExpired;
-  /** Why the session expired. Currently always `"ttl"`, extensible for future inactivity timeout. */
-  reason: "ttl";
 }
 
 export interface EncryptStartEvent extends BaseEvent {
@@ -231,14 +210,11 @@ export interface UnshieldPhase2SubmittedEvent extends BaseEvent {
 export type ZamaSDKEvent =
   | CredentialsLoadingEvent
   | CredentialsCachedEvent
-  | CredentialsExpiredEvent
   | CredentialsCreatingEvent
   | CredentialsCreatedEvent
   | CredentialsRevokedEvent
   | CredentialsPersistFailedEvent
   | CredentialsAllowedEvent
-  | CredentialsCorruptedEvent
-  | SessionExpiredEvent
   | EncryptStartEvent
   | EncryptEndEvent
   | EncryptErrorEvent

@@ -26,7 +26,6 @@ export { usePublicParams } from "./relayer/use-public-params";
 // Authorization hooks (generic — any contract with encrypted state)
 export { useAllow } from "./authorization/use-allow";
 export { useIsAllowed, type UseIsAllowedConfig } from "./authorization/use-is-allowed";
-export { useRevoke } from "./authorization/use-revoke";
 export { useRevokePermits } from "./authorization/use-revoke-permits";
 export { useClearCredentials } from "./authorization/use-clear-credentials";
 

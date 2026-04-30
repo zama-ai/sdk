@@ -24,7 +24,6 @@ function setupSdkWithEvents(opts: {
   signer: MockSigner;
   provider: GenericProvider;
   storage: GenericStorage;
-  sessionStorage?: GenericStorage;
   tokenAddress: Address;
   wrapper?: Address;
 }) {
@@ -46,7 +45,6 @@ describe("ZamaSDKEvents constants", () => {
   it("has all expected event keys", () => {
     expect(ZamaSDKEvents.CredentialsLoading).toBe("credentials:loading");
     expect(ZamaSDKEvents.CredentialsCached).toBe("credentials:cached");
-    expect(ZamaSDKEvents.CredentialsExpired).toBe("credentials:expired");
     expect(ZamaSDKEvents.CredentialsCreating).toBe("credentials:creating");
     expect(ZamaSDKEvents.CredentialsCreated).toBe("credentials:created");
     expect(ZamaSDKEvents.CredentialsRevoked).toBe("credentials:revoked");
@@ -73,8 +71,8 @@ describe("ZamaSDKEvents constants", () => {
     expect(ZamaSDKEvents.RevokeDelegationSubmitted).toBe("revokeDelegation:submitted");
   });
 
-  it("has exactly 29 event types", () => {
-    expect(Object.keys(ZamaSDKEvents)).toHaveLength(29);
+  it("has exactly 26 event types", () => {
+    expect(Object.keys(ZamaSDKEvents)).toHaveLength(26);
   });
 
   it("has unique event values", () => {
@@ -94,7 +92,6 @@ describe("ReadonlyToken.balanceOf event emissions", () => {
     tokenAddress,
     handle,
     storage,
-    sessionStorage,
     userAddress,
     provider,
   }) => {
@@ -103,7 +100,6 @@ describe("ReadonlyToken.balanceOf event emissions", () => {
       signer,
       provider,
       storage,
-      sessionStorage,
       tokenAddress,
     });
     vi.mocked(provider.readContract).mockResolvedValue(handle);
@@ -123,7 +119,6 @@ describe("ReadonlyToken.balanceOf event emissions", () => {
     signer,
     tokenAddress,
     storage,
-    sessionStorage,
     userAddress,
     provider,
   }) => {
@@ -132,7 +127,6 @@ describe("ReadonlyToken.balanceOf event emissions", () => {
       signer,
       provider,
       storage,
-      sessionStorage,
       tokenAddress,
     });
     vi.mocked(provider.readContract).mockResolvedValue(ZERO_HANDLE);
@@ -150,7 +144,6 @@ describe("ReadonlyToken.balanceOf event emissions", () => {
     tokenAddress,
     handle,
     storage,
-    sessionStorage,
     userAddress,
     provider,
   }) => {
@@ -159,7 +152,6 @@ describe("ReadonlyToken.balanceOf event emissions", () => {
       signer,
       provider,
       storage,
-      sessionStorage,
       tokenAddress,
     });
     vi.mocked(provider.readContract).mockResolvedValue(handle);
@@ -179,7 +171,6 @@ describe("ReadonlyToken.balanceOf event emissions", () => {
     tokenAddress,
     handle,
     storage,
-    sessionStorage,
     userAddress,
     provider,
   }) => {
@@ -189,7 +180,6 @@ describe("ReadonlyToken.balanceOf event emissions", () => {
       signer,
       provider,
       storage,
-      sessionStorage,
       tokenAddress,
     });
     vi.mocked(provider.readContract).mockResolvedValue(handle);
@@ -209,7 +199,6 @@ describe("ReadonlyToken.balanceOf event emissions", () => {
     tokenAddress,
     handle,
     storage,
-    sessionStorage,
     userAddress,
     provider,
   }) => {
@@ -218,7 +207,6 @@ describe("ReadonlyToken.balanceOf event emissions", () => {
       provider,
       signer,
       storage,
-      sessionStorage,
     });
     const token = new ReadonlyToken(sdk, tokenAddress);
     vi.mocked(provider.readContract).mockResolvedValue(handle);
@@ -236,7 +224,6 @@ describe("ReadonlyToken.decryptBalanceAs event emissions", () => {
     tokenAddress,
     handle,
     storage,
-    sessionStorage,
     delegatorAddress,
     provider,
   }) => {
@@ -245,7 +232,6 @@ describe("ReadonlyToken.decryptBalanceAs event emissions", () => {
       signer,
       provider,
       storage,
-      sessionStorage,
       tokenAddress,
     });
     // readConfidentialBalanceOf → non-zero handle; getDelegationExpiry → permanent (skips block-timestamp RPC)
@@ -289,7 +275,6 @@ describe("Token event emissions", () => {
       signer,
       tokenAddress,
       storage,
-      sessionStorage,
       provider,
     }) => {
       const { token, events } = setupSdkWithEvents({
@@ -297,7 +282,6 @@ describe("Token event emissions", () => {
         signer,
         provider,
         storage,
-        sessionStorage,
         tokenAddress,
       });
       await token.confidentialTransfer(
@@ -321,7 +305,6 @@ describe("Token event emissions", () => {
       signer,
       tokenAddress,
       storage,
-      sessionStorage,
       provider,
     }) => {
       const { token, events } = setupSdkWithEvents({
@@ -329,7 +312,6 @@ describe("Token event emissions", () => {
         signer,
         provider,
         storage,
-        sessionStorage,
         tokenAddress,
       });
       await token.confidentialTransfer(
@@ -348,7 +330,6 @@ describe("Token event emissions", () => {
       signer,
       tokenAddress,
       storage,
-      sessionStorage,
       provider,
     }) => {
       const { token, events } = setupSdkWithEvents({
@@ -356,7 +337,6 @@ describe("Token event emissions", () => {
         signer,
         provider,
         storage,
-        sessionStorage,
         tokenAddress,
       });
       await token.confidentialTransfer(
@@ -375,7 +355,6 @@ describe("Token event emissions", () => {
       signer,
       tokenAddress,
       storage,
-      sessionStorage,
       provider,
     }) => {
       relayer.encrypt = vi.fn().mockRejectedValue(new Error("encrypt boom"));
@@ -384,7 +363,6 @@ describe("Token event emissions", () => {
         signer,
         provider,
         storage,
-        sessionStorage,
         tokenAddress,
       });
 
@@ -406,7 +384,6 @@ describe("Token event emissions", () => {
       signer,
       tokenAddress,
       storage,
-      sessionStorage,
       provider,
     }) => {
       vi.mocked(signer.writeContract).mockRejectedValue(new Error("tx reverted"));
@@ -415,7 +392,6 @@ describe("Token event emissions", () => {
         signer,
         provider,
         storage,
-        sessionStorage,
         tokenAddress,
       });
 
@@ -442,7 +418,6 @@ describe("Token event emissions", () => {
       signer,
       tokenAddress,
       storage,
-      sessionStorage,
       provider,
     }) => {
       const { token, events } = setupSdkWithEvents({
@@ -450,7 +425,6 @@ describe("Token event emissions", () => {
         signer,
         provider,
         storage,
-        sessionStorage,
         tokenAddress,
       });
       await token.confidentialTransferFrom(
@@ -467,20 +441,12 @@ describe("Token event emissions", () => {
   });
 
   describe("approve events", () => {
-    it("emits ApproveSubmitted", async ({
-      relayer,
-      signer,
-      tokenAddress,
-      storage,
-      sessionStorage,
-      provider,
-    }) => {
+    it("emits ApproveSubmitted", async ({ relayer, signer, tokenAddress, storage, provider }) => {
       const { token, events } = setupSdkWithEvents({
         relayer,
         signer,
         provider,
         storage,
-        sessionStorage,
         tokenAddress,
       });
       await token.approve("0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address);
@@ -494,7 +460,6 @@ describe("Token event emissions", () => {
       signer,
       tokenAddress,
       storage,
-      sessionStorage,
       provider,
     }) => {
       const { token, events } = setupSdkWithEvents({
@@ -502,7 +467,6 @@ describe("Token event emissions", () => {
         signer,
         provider,
         storage,
-        sessionStorage,
         tokenAddress,
       });
       await token.approve("0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address);
@@ -519,7 +483,6 @@ describe("Token event emissions", () => {
       signer,
       tokenAddress,
       storage,
-      sessionStorage,
       provider,
     }) => {
       vi.mocked(provider.readContract)
@@ -531,7 +494,6 @@ describe("Token event emissions", () => {
         signer,
         provider,
         storage,
-        sessionStorage,
         tokenAddress,
       });
 
@@ -548,7 +510,6 @@ describe("Token event emissions", () => {
       signer,
       tokenAddress,
       storage,
-      sessionStorage,
       provider,
     }) => {
       const { token, events } = setupSdkWithEvents({
@@ -556,7 +517,6 @@ describe("Token event emissions", () => {
         signer,
         provider,
         storage,
-        sessionStorage,
         tokenAddress,
       });
       await token.unwrap(50n);
@@ -569,20 +529,12 @@ describe("Token event emissions", () => {
   });
 
   describe("unwrapAll events", () => {
-    it("emits UnwrapSubmitted", async ({
-      relayer,
-      signer,
-      tokenAddress,
-      storage,
-      sessionStorage,
-      provider,
-    }) => {
+    it("emits UnwrapSubmitted", async ({ relayer, signer, tokenAddress, storage, provider }) => {
       const { token, events } = setupSdkWithEvents({
         relayer,
         signer,
         provider,
         storage,
-        sessionStorage,
         tokenAddress,
       });
       await token.unwrapAll();
@@ -598,7 +550,6 @@ describe("Token event emissions", () => {
       signer,
       tokenAddress,
       storage,
-      sessionStorage,
       provider,
     }) => {
       const { token, events } = setupSdkWithEvents({
@@ -606,7 +557,6 @@ describe("Token event emissions", () => {
         signer,
         provider,
         storage,
-        sessionStorage,
         tokenAddress,
       });
       await token.finalizeUnwrap("0xburn" as Address);
@@ -622,7 +572,6 @@ describe("Token event emissions", () => {
       signer,
       tokenAddress,
       storage,
-      sessionStorage,
       provider,
     }) => {
       vi.mocked(provider.readContract).mockResolvedValue(
@@ -633,7 +582,6 @@ describe("Token event emissions", () => {
         signer,
         provider,
         storage,
-        sessionStorage,
         tokenAddress,
       });
       await token.approveUnderlying(100n);
@@ -665,7 +613,6 @@ describe("Token event emissions", () => {
       tokenAddress,
       userAddress,
       storage,
-      sessionStorage,
       provider,
     }) => {
       const { token, events } = setupSdkWithEvents({
@@ -673,7 +620,6 @@ describe("Token event emissions", () => {
         signer,
         provider,
         storage,
-        sessionStorage,
         tokenAddress,
       });
       mockReceiptWithUnwrapRequested(provider, userAddress);
@@ -702,7 +648,6 @@ describe("Token event emissions", () => {
       tokenAddress,
       userAddress,
       storage,
-      sessionStorage,
       provider,
     }) => {
       const { token, events } = setupSdkWithEvents({
@@ -710,7 +655,6 @@ describe("Token event emissions", () => {
         signer,
         provider,
         storage,
-        sessionStorage,
         tokenAddress,
       });
       mockReceiptWithUnwrapRequested(provider, userAddress);
@@ -732,7 +676,6 @@ describe("Token event emissions", () => {
       tokenAddress,
       userAddress,
       storage,
-      sessionStorage,
       provider,
     }) => {
       const { token, events } = setupSdkWithEvents({
@@ -740,7 +683,6 @@ describe("Token event emissions", () => {
         signer,
         provider,
         storage,
-        sessionStorage,
         tokenAddress,
       });
       mockReceiptWithUnwrapRequested(provider, userAddress);
@@ -768,7 +710,6 @@ describe("Token event emissions", () => {
       signer,
       tokenAddress,
       storage,
-      sessionStorage,
       provider,
     }) => {
       vi.mocked(provider.readContract)
@@ -780,7 +721,6 @@ describe("Token event emissions", () => {
         signer,
         provider,
         storage,
-        sessionStorage,
         tokenAddress,
       });
 
@@ -796,7 +736,6 @@ describe("Token event emissions", () => {
       signer,
       tokenAddress,
       storage,
-      sessionStorage,
       provider,
     }) => {
       vi.mocked(signer.writeContract).mockRejectedValue(new Error("approve failed"));
@@ -805,7 +744,6 @@ describe("Token event emissions", () => {
         signer,
         provider,
         storage,
-        sessionStorage,
         tokenAddress,
       });
 
@@ -823,7 +761,6 @@ describe("Token event emissions", () => {
       signer,
       tokenAddress,
       storage,
-      sessionStorage,
       provider,
     }) => {
       vi.mocked(signer.writeContract).mockRejectedValue(new Error("unwrap failed"));
@@ -832,7 +769,6 @@ describe("Token event emissions", () => {
         signer,
         provider,
         storage,
-        sessionStorage,
         tokenAddress,
       });
 
@@ -848,7 +784,6 @@ describe("Token event emissions", () => {
       signer,
       tokenAddress,
       storage,
-      sessionStorage,
       provider,
     }) => {
       vi.mocked(signer.writeContract).mockRejectedValue(new Error("finalize tx failed"));
@@ -857,7 +792,6 @@ describe("Token event emissions", () => {
         signer,
         provider,
         storage,
-        sessionStorage,
         tokenAddress,
       });
 

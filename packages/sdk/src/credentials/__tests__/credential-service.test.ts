@@ -4,10 +4,12 @@ import { ZamaSDKEvents } from "../../events/sdk-events";
 import type { Address } from "viem";
 import { CredentialService } from "../credential-service";
 import type { KeypairGenerator, PermitFactory, PermitSigner } from "../types";
+import { SigningRejectedError, SigningFailedError } from "../../errors/signing";
 
 const USER = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
 const OTHER_USER = "0x3c3C3c3C3c3C3c3C3c3C3c3C3c3C3c3C3c3C3c3C" as Address;
 const DELEGATOR = "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC" as Address;
+const DELEGATOR_B = "0xDdDDddddDDDDdDDDDDDdDdDddDdDDDdDddddddDd" as Address;
 const PUBLIC_KEY = `0x${"11".repeat(32)}` as const;
 const PRIVATE_KEY = `0x${"22".repeat(32)}` as const;
 const SIGNATURE = `0x${"33".repeat(65)}` as const;
@@ -133,9 +135,9 @@ describe("CredentialService.isAllowed", () => {
     expect(signer.signTypedData).not.toHaveBeenCalled();
   });
 
-  it("returns false for empty contracts", async () => {
+  it("returns true for empty contracts (vacuous truth)", async () => {
     const { service } = setup();
-    expect(await service.isAllowed([])).toBe(false);
+    expect(await service.isAllowed([])).toBe(true);
   });
 
   it("returns true after allow() covers the requested contract", async () => {
@@ -199,5 +201,60 @@ describe("CredentialService.handleIdentityChange", () => {
 
     expect(service.currentIdentity).toEqual({ address: DELEGATOR, chainId: 31337 });
     expect(await service.isAllowed([TOKEN_A])).toBe(false);
+  });
+});
+
+describe("CredentialService.allow signing-error wrapping", () => {
+  it("throws SigningRejectedError on EIP-1193 code 4001", async () => {
+    const { service, signer } = setup();
+    const err = Object.assign(new Error("rejected"), { code: 4001 });
+    vi.mocked(signer.signTypedData).mockRejectedValueOnce(err);
+    await expect(service.allow([TOKEN_A])).rejects.toBeInstanceOf(SigningRejectedError);
+  });
+
+  it("throws SigningRejectedError when message contains 'user rejected'", async () => {
+    const { service, signer } = setup();
+    vi.mocked(signer.signTypedData).mockRejectedValueOnce(
+      new Error("MetaMask Tx Signature: User rejected the transaction."),
+    );
+    await expect(service.allow([TOKEN_A])).rejects.toBeInstanceOf(SigningRejectedError);
+  });
+
+  it("throws SigningRejectedError when message contains 'user denied'", async () => {
+    const { service, signer } = setup();
+    vi.mocked(signer.signTypedData).mockRejectedValueOnce(
+      new Error("user denied message signature"),
+    );
+    await expect(service.allow([TOKEN_A])).rejects.toBeInstanceOf(SigningRejectedError);
+  });
+
+  it("throws SigningFailedError for generic errors and non-Error throws", async () => {
+    const { service, signer } = setup();
+    vi.mocked(signer.signTypedData).mockRejectedValueOnce(new Error("network unreachable"));
+    await expect(service.allow([TOKEN_A])).rejects.toBeInstanceOf(SigningFailedError);
+
+    vi.mocked(signer.signTypedData).mockRejectedValueOnce("boom");
+    await expect(service.allow([TOKEN_B])).rejects.toBeInstanceOf(SigningFailedError);
+  });
+});
+
+describe("CredentialService delegator-scope isolation", () => {
+  it("different delegators get separate scopes", async () => {
+    const { service } = setup();
+
+    // Direct scope (delegator implicitly = signer = USER) and delegated scope to DELEGATOR_B
+    // are distinct scopes that must remain independently addressable.
+    await service.allow([TOKEN_A]);
+    await service.allow([TOKEN_A], DELEGATOR_B);
+
+    expect(await service.isAllowed([TOKEN_A])).toBe(true);
+    expect(await service.isAllowed([TOKEN_A], DELEGATOR_B)).toBe(true);
+
+    // revokePermits() clears only the direct-decrypt scope; the delegated-to-DELEGATOR_B
+    // scope must remain intact.
+    await service.revokePermits();
+
+    expect(await service.isAllowed([TOKEN_A])).toBe(false);
+    expect(await service.isAllowed([TOKEN_A], DELEGATOR_B)).toBe(true);
   });
 });

@@ -369,9 +369,10 @@ describe("decryptBalanceAs", () => {
   }) => {
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce(handle) // confidentialBalanceOf (first call)
-      .mockResolvedValueOnce(MAX_UINT64) // getDelegationExpiry (first call)
+      .mockResolvedValueOnce(MAX_UINT64) // getDelegationExpiry (token-level pre-flight)
+      .mockResolvedValueOnce(MAX_UINT64) // getDelegationExpiry (sdk.delegatedUserDecrypt freshness check)
       .mockResolvedValueOnce(handle) // confidentialBalanceOf (second call)
-      .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry (second call — runs before cache lookup)
+      .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry (token-level pre-flight, 2nd call hits cache before sdk)
     vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue({
       domain: {
         name: "Decryption",
@@ -420,9 +421,10 @@ describe("decryptBalanceAs", () => {
   }) => {
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce(handle) // confidentialBalanceOf (first call)
-      .mockResolvedValueOnce(MAX_UINT64) // getDelegationExpiry → permanent
+      .mockResolvedValueOnce(MAX_UINT64) // getDelegationExpiry → permanent (token-level pre-flight)
+      .mockResolvedValueOnce(MAX_UINT64) // getDelegationExpiry → permanent (sdk.delegatedUserDecrypt freshness check)
       .mockResolvedValueOnce(handle) // confidentialBalanceOf (second call)
-      .mockResolvedValueOnce(0n); // getDelegationExpiry → revoked
+      .mockResolvedValueOnce(0n); // getDelegationExpiry → revoked (token-level pre-flight)
     vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue({
       domain: {
         name: "Decryption",

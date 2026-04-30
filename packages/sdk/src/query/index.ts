@@ -99,7 +99,6 @@ export { publicDecryptMutationOptions } from "./public-decrypt";
 export { requestZKProofVerificationMutationOptions } from "./request-zk-proof-verification";
 export { allowMutationOptions } from "./allow";
 export { isAllowedQueryOptions, type IsAllowedQueryConfig } from "./is-allowed";
-export { revokeMutationOptions } from "./revoke";
 export { revokePermitsMutationOptions } from "./revoke-permits";
 export { clearCredentialsMutationOptions } from "./clear-credentials";
 export {
@@ -177,7 +176,6 @@ export type {
   CredentialsCachedEvent,
   CredentialsCreatedEvent,
   CredentialsCreatingEvent,
-  CredentialsExpiredEvent,
   CredentialsLoadingEvent,
   CredentialsRevokedEvent,
   DecryptEndEvent,
@@ -198,9 +196,7 @@ export type {
   ZamaSDKEvent,
   ZamaSDKEventInput,
   ZamaSDKEventListener,
-  SessionExpiredEvent,
   DelegationSubmittedEvent,
   RevokeDelegationSubmittedEvent,
   CredentialsPersistFailedEvent,
-  CredentialsCorruptedEvent,
 } from "../events/sdk-events";

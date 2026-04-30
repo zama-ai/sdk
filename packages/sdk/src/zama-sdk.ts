@@ -10,6 +10,7 @@ import {
   resolveDelegatedDecryptPermit,
   resolveUserDecryptPermit,
 } from "./credentials/decrypt-permit";
+import { findRevokedDelegations } from "./credentials/delegation-check";
 import { DecryptCache } from "./decrypt-cache";
 import {
   ChainMismatchError,
@@ -604,10 +605,32 @@ export class ZamaSDK {
     const allContracts = Array.from(new Set(normalized.map((h) => h.contractAddress)));
     const credentials = await service.allow(allContracts, normalizedDelegator);
 
+    const delegateAddress = await signer.getAddress();
+
+    // Verify on-chain delegation is still active for each contract before
+    // serving cached delegated plaintext. The SDK-side `service.allow()` only
+    // proves the delegate signed a permit — it does NOT detect on-chain
+    // revocation or expiry. Without this check, a cache hit could leak
+    // plaintext that the delegator has since revoked on-chain.
+    const revokedContracts = await findRevokedDelegations({
+      provider: this.provider,
+      relayer: this.relayer,
+      contractAddresses: allContracts,
+      delegatorAddress: normalizedDelegator,
+      delegateAddress,
+    });
+
     // Cache partition
     const uncached: DecryptHandle[] = [];
 
     for (const h of nonZero) {
+      if (revokedContracts.has(h.contractAddress)) {
+        // Drop any cached plaintext for revoked contracts so the next path
+        // fetches fresh (and the relayer enforces its own on-chain check).
+        await this.cache.delete(normalizedAccount, h.contractAddress, h.handle);
+        uncached.push(h);
+        continue;
+      }
       const cached = await this.cache.get(normalizedAccount, h.contractAddress, h.handle);
       if (cached !== null) {
         result[h.handle] = cached;
@@ -619,8 +642,6 @@ export class ZamaSDK {
     if (uncached.length === 0) {
       return result;
     }
-
-    const delegateAddress = await signer.getAddress();
 
     // Group uncached by contract
     const byContract = new Map<Address, Handle[]>();

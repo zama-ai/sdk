@@ -240,9 +240,6 @@ export const test = base.extend<SdkFixtures>({
   storage: async ({}, use) => {
     await use(new MemoryStorage());
   },
-  sessionStorage: async ({}, use) => {
-    await use(new MemoryStorage());
-  },
   token: async ({ sdk, tokenAddress }, use) => {
     await use(new Token(sdk, tokenAddress));
   },

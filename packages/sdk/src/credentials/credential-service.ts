@@ -258,12 +258,13 @@ export class CredentialService {
   /**
    * Pure store lookup: are stored permits sufficient to cover `contracts`? No wallet prompt.
    *
-   * @returns `true` if cached permits cover all requested contracts; `false` if no keypair exists
-   *   or coverage is incomplete.
+   * @returns `true` if cached permits cover all requested contracts (vacuously
+   *   true for an empty list); `false` if no keypair exists or coverage is
+   *   incomplete.
    */
   async isAllowed(contracts: Address[], delegator?: Address): Promise<boolean> {
     if (contracts.length === 0) {
-      return false;
+      return true;
     }
     const signerAddress = getAddress(await this.#permitSigner.getAddress());
     const chainId = await this.#permitSigner.getChainId();

@@ -1,12 +1,12 @@
 "use client";
 
-import { useIsAllowed, useRevoke, useRevokePermits, useAllow } from "@zama-fhe/react-sdk";
+import { useIsAllowed, useRevokePermits, useAllow } from "@zama-fhe/react-sdk";
 import type { Address } from "@zama-fhe/sdk";
 
 export function SessionPanel({ tokenAddresses }: { tokenAddresses: [Address, ...Address[]] }) {
   const { data: isAllowed, isLoading } = useIsAllowed({ contractAddresses: tokenAddresses });
   const { mutate: allow } = useAllow();
-  const revoke = useRevoke();
+  const revoke = useRevokePermits();
   const revokePermits = useRevokePermits();
 
   return (
@@ -37,7 +37,7 @@ export function SessionPanel({ tokenAddresses }: { tokenAddresses: [Address, ...
           </button>
 
           <button
-            onClick={() => revokePermits.mutate([])}
+            onClick={() => revokePermits.mutate(undefined)}
             disabled={revokePermits.isPending}
             className="px-4 py-2 bg-zama-surface border border-zama-border text-white font-medium rounded hover:bg-zama-border transition-colors disabled:opacity-50"
             data-testid="session-revoke-session-button"

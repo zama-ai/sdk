@@ -471,8 +471,19 @@ describe("ZamaSDK", () => {
     const CONTRACT_A = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
     const CONTRACT_B = "0x3C3c3C3c3C3C3c3c3c3C3c3C3C3c3c3C3c3c3C3C" as Address;
     const DELEGATOR = "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC" as Address;
+    // uint64 max — permanent on-chain delegation. The freshness check inside
+    // `delegatedUserDecrypt` reads `getUserDecryptionDelegationExpirationDate`
+    // before serving cached plaintext; tests that exercise the cache return
+    // path must therefore mock readContract.
+    const ACTIVE_DELEGATION = 2n ** 64n - 1n;
 
-    it("decrypts handles via relayer and caches results", async ({ sdk, relayer, handle }) => {
+    it("decrypts handles via relayer and caches results", async ({
+      sdk,
+      relayer,
+      provider,
+      handle,
+    }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(ACTIVE_DELEGATION);
       const handles: DecryptHandle[] = [{ handle, contractAddress: CONTRACT_A }];
 
       const result1 = await sdk.delegatedUserDecrypt(handles, DELEGATOR);
@@ -531,7 +542,8 @@ describe("ZamaSDK", () => {
       expect(relayer.delegatedUserDecrypt).toHaveBeenCalledTimes(2);
     });
 
-    it("skips already-cached handles", async ({ sdk, relayer, handle }) => {
+    it("skips already-cached handles", async ({ sdk, relayer, provider, handle }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(ACTIVE_DELEGATION);
       const handle2 = ("0x" + "cd".repeat(32)) as Address;
 
       await sdk.delegatedUserDecrypt([{ handle, contractAddress: CONTRACT_A }], DELEGATOR);
@@ -599,7 +611,13 @@ describe("ZamaSDK", () => {
       );
     });
 
-    it("uses delegateAddress for cache key when provided", async ({ sdk, relayer, handle }) => {
+    it("uses delegateAddress for cache key when provided", async ({
+      sdk,
+      relayer,
+      provider,
+      handle,
+    }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(ACTIVE_DELEGATION);
       const ACCOUNT = "0xdDdDddDdDdddDDddDDddDDDDdDdDDdDDdDDDDDDd" as Address;
 
       await sdk.delegatedUserDecrypt([{ handle, contractAddress: CONTRACT_A }], DELEGATOR, ACCOUNT);
@@ -614,7 +632,8 @@ describe("ZamaSDK", () => {
       expect(relayer.delegatedUserDecrypt).toHaveBeenCalledTimes(2);
     });
 
-    it("does not emit events for fully-cached calls", async ({ createSDK, handle }) => {
+    it("does not emit events for fully-cached calls", async ({ createSDK, provider, handle }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(ACTIVE_DELEGATION);
       const events: { type: string }[] = [];
       const sdk = createSDK({ onEvent: (e) => events.push(e) });
 
@@ -629,8 +648,10 @@ describe("ZamaSDK", () => {
       createSDK,
       relayer,
       signer,
+      provider,
       handle,
     }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(ACTIVE_DELEGATION);
       const sdk = createSDK();
 
       await sdk.delegatedUserDecrypt([{ handle, contractAddress: CONTRACT_A }], DELEGATOR);
@@ -644,6 +665,106 @@ describe("ZamaSDK", () => {
       ).rejects.toThrow();
 
       expect(relayer.delegatedUserDecrypt).toHaveBeenCalledOnce();
+    });
+
+    it("treats time-bound delegation with future expiry as active", async ({
+      sdk,
+      relayer,
+      provider,
+      handle,
+    }) => {
+      const now = BigInt(Math.floor(Date.now() / 1000));
+      vi.mocked(provider.getBlockTimestamp).mockResolvedValue(now);
+      vi.mocked(provider.readContract).mockResolvedValue(now + 3600n); // expires in 1h
+
+      await sdk.delegatedUserDecrypt([{ handle, contractAddress: CONTRACT_A }], DELEGATOR);
+      await sdk.delegatedUserDecrypt([{ handle, contractAddress: CONTRACT_A }], DELEGATOR);
+      expect(relayer.delegatedUserDecrypt).toHaveBeenCalledOnce();
+    });
+
+    it("rejects cached plaintext and re-fetches when on-chain delegation is revoked", async ({
+      sdk,
+      relayer,
+      provider,
+      handle,
+    }) => {
+      // First call: delegation active, cache populated.
+      vi.mocked(provider.readContract).mockResolvedValueOnce(ACTIVE_DELEGATION);
+      await sdk.delegatedUserDecrypt([{ handle, contractAddress: CONTRACT_A }], DELEGATOR);
+      expect(relayer.delegatedUserDecrypt).toHaveBeenCalledOnce();
+
+      // Second call: on-chain expiry == 0n → revoked. Cache must be ignored
+      // and a fresh relayer call must be issued.
+      vi.mocked(provider.readContract).mockResolvedValueOnce(0n);
+      await sdk.delegatedUserDecrypt([{ handle, contractAddress: CONTRACT_A }], DELEGATOR);
+      expect(relayer.delegatedUserDecrypt).toHaveBeenCalledTimes(2);
+    });
+
+    it("rejects cached plaintext when on-chain delegation has expired", async ({
+      sdk,
+      relayer,
+      provider,
+      handle,
+    }) => {
+      const now = BigInt(Math.floor(Date.now() / 1000));
+      vi.mocked(provider.getBlockTimestamp).mockResolvedValue(now);
+
+      // First call: permanent delegation, cache populated.
+      vi.mocked(provider.readContract).mockResolvedValueOnce(ACTIVE_DELEGATION);
+      await sdk.delegatedUserDecrypt([{ handle, contractAddress: CONTRACT_A }], DELEGATOR);
+      expect(relayer.delegatedUserDecrypt).toHaveBeenCalledOnce();
+
+      // Second call: expiry in the past → not active.
+      vi.mocked(provider.readContract).mockResolvedValueOnce(now - 1n);
+      await sdk.delegatedUserDecrypt([{ handle, contractAddress: CONTRACT_A }], DELEGATOR);
+      expect(relayer.delegatedUserDecrypt).toHaveBeenCalledTimes(2);
+    });
+
+    it("invalidates cache only for contracts whose delegation was revoked", async ({
+      sdk,
+      relayer,
+      provider,
+      handle,
+    }) => {
+      const handle2 = ("0x" + "cd".repeat(32)) as Handle;
+
+      // Seed cache for both contracts with active delegations.
+      vi.mocked(provider.readContract).mockResolvedValue(ACTIVE_DELEGATION);
+      vi.mocked(relayer.delegatedUserDecrypt)
+        .mockResolvedValueOnce({ [handle]: 1000n })
+        .mockResolvedValueOnce({ [handle2]: 2000n });
+      await sdk.delegatedUserDecrypt(
+        [
+          { handle, contractAddress: CONTRACT_A },
+          { handle: handle2, contractAddress: CONTRACT_B },
+        ],
+        DELEGATOR,
+      );
+      expect(relayer.delegatedUserDecrypt).toHaveBeenCalledTimes(2);
+
+      // Revoke only CONTRACT_A's delegation; CONTRACT_B remains active. The
+      // ACL read order matches `allContracts`, which is the dedup'd input
+      // contract list — first CONTRACT_A, then CONTRACT_B.
+      vi.mocked(provider.readContract)
+        .mockReset()
+        .mockResolvedValueOnce(0n) // CONTRACT_A → revoked
+        .mockResolvedValueOnce(ACTIVE_DELEGATION); // CONTRACT_B → active
+
+      vi.mocked(relayer.delegatedUserDecrypt).mockResolvedValueOnce({ [handle]: 1000n });
+
+      await sdk.delegatedUserDecrypt(
+        [
+          { handle, contractAddress: CONTRACT_A },
+          { handle: handle2, contractAddress: CONTRACT_B },
+        ],
+        DELEGATOR,
+      );
+
+      // CONTRACT_A → relayer called again (cache dropped). CONTRACT_B → cache hit.
+      expect(relayer.delegatedUserDecrypt).toHaveBeenCalledTimes(3);
+      const lastCall = vi.mocked(relayer.delegatedUserDecrypt).mock.calls.at(-1)![0];
+      expect(lastCall.contractAddress).toBe(CONTRACT_A);
+      expect(lastCall.handles).toEqual([handle]);
     });
   });
 
