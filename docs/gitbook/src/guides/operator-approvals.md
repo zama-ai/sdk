@@ -71,7 +71,9 @@ import { useAccount } from "wagmi";
 
 function OperatorPanel({ tokenAddress }: { tokenAddress: `0x${string}` }) {
   const { address } = useAccount();
-  const { mutateAsync: setOperator, isPending: isSettingOperator } = useConfidentialSetOperator({ tokenAddress });
+  const { mutateAsync: setOperator, isPending: isSettingOperator } = useConfidentialSetOperator({
+    tokenAddress,
+  });
 
   const { data: isOperator } = useConfidentialIsOperator({
     tokenAddress,
