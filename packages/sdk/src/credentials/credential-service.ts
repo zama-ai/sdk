@@ -1,47 +1,32 @@
-import { getAddress, type Address } from "viem";
-import type { ZamaSDKEventListener } from "../events/sdk-events";
-import type { GenericStorage, SignerIdentity } from "../types";
+import type { Address } from "viem";
+import type { GenericSigner, GenericStorage } from "../types";
+import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
 import { ZamaError } from "../errors/base";
 import { wrapSigningError } from "../errors/signing";
+import { swallow } from "../utils/swallow";
 import { KeypairVault } from "./keypair-vault";
-import {
-  classifyPermissionCoverage,
-  filterRelevantPermissions,
-  unionSignedContracts,
-} from "./permission-coverage";
-import type { PermissionScope } from "./permission-store";
+import { chunkContracts, uncoveredContracts } from "./permissions";
 import { PermissionStore } from "./permission-store";
-import { KeypairTTLSchema, PermitTTLSchema } from "./schemas";
-import type {
-  CredentialBundle,
-  KeypairGenerator,
-  Permission,
-  PermitFactory,
-  PermitSigner,
-  StoredKeypair,
-} from "./types";
-import { coversContracts, normalizeAddresses } from "./utils";
-import { SignerRequiredError } from "../errors";
+import type { PermissionScope } from "./storage-keys";
+import type { CredentialBundle, Permission, StoredKeypair } from "./types";
+import type { ChecksummedAddress } from "./utils";
+import { checksum, normalizeAddresses, nowSeconds, SECONDS_PER_DAY } from "./utils";
 
-const DEFAULT_KEYPAIR_TTL_SECONDS = 30 * 86400;
-const DEFAULT_PERMIT_DURATION_DAYS = 30;
-export { KeypairTTLSchema, PermitTTLSchema };
+export const DEFAULT_KEYPAIR_TTL_SECONDS = 30 * SECONDS_PER_DAY;
+export const DEFAULT_PERMIT_DURATION_DAYS = 30;
 
-/** Configuration for {@link CredentialService}. */
+/** Configuration for {@link CredentialService}. TTLs are pre-validated by the caller. */
 export interface CredentialServiceConfig {
-  keypairGenerator: KeypairGenerator;
-  permitFactory: PermitFactory;
-  permitSigner: PermitSigner;
-  /** Keypair lifetime in seconds. Default: 30 days. Must not exceed 365 days. */
-  keypairTTL?: number;
-  /** Permit lifetime in days. Default: 30. */
-  permitTTL?: number;
+  relayer: RelayerDispatcher;
+  signer: GenericSigner;
+  /** Keypair lifetime in seconds. Pre-validated. */
+  keypairTTL: number;
+  /** Permit lifetime in days. Pre-validated. */
+  permitTTL: number;
   /** Backing storage for keypairs (and permits if `permitStorage` is omitted). */
   storage: GenericStorage;
   /** Optional dedicated storage for permits; defaults to `storage`. */
   permitStorage?: GenericStorage;
-  /** Optional structured event listener for debugging and telemetry. Never receives sensitive data. */
-  onEvent?: ZamaSDKEventListener;
 }
 
 /**
@@ -53,56 +38,32 @@ export interface CredentialServiceConfig {
 export class CredentialService {
   readonly #vault: KeypairVault;
   readonly #store: PermissionStore;
-  readonly #permitFactory: PermitFactory;
-  readonly #permitSigner: PermitSigner;
-  readonly #permitTTLDays: number;
-  readonly #pendingAllow = new Map<string, Promise<CredentialBundle>>();
-  #identity: SignerIdentity | undefined;
+  readonly #relayer: RelayerDispatcher;
+  readonly #signer: GenericSigner;
+  readonly #permitTTL: number;
 
-  /**
-   * @throws {ZodError} if `keypairTTL` or `permitTTL` is not a positive integer,
-   *   or if `keypairTTL` exceeds the fhevm ACL maximum of 365 days.
-   * @throws {ConfigurationError} if `permitTTL` (days) exceeds `keypairTTL / 86400`.
-   */
   constructor(config: CredentialServiceConfig) {
-    const ttl = KeypairTTLSchema.parse(config.keypairTTL ?? DEFAULT_KEYPAIR_TTL_SECONDS);
-    const permitTTL = PermitTTLSchema.parse(config.permitTTL ?? DEFAULT_PERMIT_DURATION_DAYS);
-
     this.#vault = new KeypairVault({
-      generator: config.keypairGenerator,
+      generator: () => config.relayer.generateKeypair(),
       storage: config.storage,
-      ttl,
+      ttl: config.keypairTTL,
     });
     this.#store = new PermissionStore({
       storage: config.permitStorage ?? config.storage,
     });
-    this.#permitFactory = config.permitFactory;
-    this.#permitSigner = config.permitSigner;
-    this.#permitTTLDays = permitTTL;
+    this.#relayer = config.relayer;
+    this.#signer = config.signer;
+    this.#permitTTL = config.permitTTL;
   }
 
-  /** Eagerly resolve the current identity and warm the vault. Best-effort. */
+  /** Eagerly warm the current signer's keypair. Best-effort (silent on SSR / no signer). */
   async initialize(): Promise<void> {
-    try {
-      const [address, chainId] = await Promise.all([
-        this.#permitSigner.getAddress(),
-        this.#permitSigner.getChainId(),
-      ]);
-      this.#identity = { address: getAddress(address), chainId };
-      await this.#warmKeypairFor(getAddress(address));
-    } catch (error) {
-      if (error instanceof SignerRequiredError) {
-        // Best-effort catch for SSR. TODO: a better refactor of the signer system needs to be
-        // addressed for SSR concerns, where we'd get a `get-or-undefined` rather than `get-or-throw`
-        // behavior.
-        return;
-      }
-    }
-  }
-
-  /** Warm the current signer's keypair without creating any signed permits. */
-  async warmKeypair(): Promise<StoredKeypair> {
-    return this.#warmKeypairFor(getAddress(await this.#permitSigner.getAddress()));
+    // TODO: a better refactor of the signer system needs to be addressed for SSR concerns,
+    // where we'd get a `get-or-undefined` rather than `get-or-throw` behavior.
+    await swallow("credentials initialize", async () => {
+      const address = await this.#signer.getAddress();
+      await this.#vault.getOrCreate(checksum(address));
+    });
   }
 
   /**
@@ -122,83 +83,32 @@ export class CredentialService {
    * @throws {@link SigningFailedError} if signing fails for any other reason.
    */
   async allow(contracts: readonly Address[], delegator?: Address): Promise<CredentialBundle> {
-    const signerAddress = getAddress(await this.#permitSigner.getAddress());
-    const chainId = await this.#permitSigner.getChainId();
-    const delegatorAddress = delegator ? getAddress(delegator) : signerAddress;
-    const normalized = normalizeAddresses(contracts);
-    if (normalized.length === 0) {
-      return {
-        keypair: await this.#warmKeypairFor(signerAddress),
-        permits: [],
-      };
-    }
-
-    const dedupKey = allowDedupKey({
-      signerAddress,
-      chainId,
-      delegatorAddress,
-      contracts: normalized,
-    });
-    const inflight = this.#pendingAllow.get(dedupKey);
-    if (inflight) {
-      return inflight;
-    }
-
-    const promise = this.#runAllow({
-      signerAddress,
-      chainId,
-      delegatorAddress,
-      normalized,
-    }).finally(() => {
-      this.#pendingAllow.delete(dedupKey);
-    });
-    this.#pendingAllow.set(dedupKey, promise);
-    return promise;
-  }
-
-  async #runAllow(params: {
-    signerAddress: Address;
-    chainId: number;
-    delegatorAddress: Address;
-    normalized: Address[];
-  }): Promise<CredentialBundle> {
-    const { signerAddress, chainId, delegatorAddress, normalized } = params;
-    const scope: PermissionScope = { signerAddress, chainId, delegatorAddress };
-
+    const signerAddress = checksum(await this.#signer.getAddress());
+    const requested = normalizeAddresses(contracts);
     const keypair = await this.#vault.getOrCreate(signerAddress);
-    const live = await this.#store.listUsableAndPrune(scope, keypair.publicKey);
-
-    const coverage = classifyPermissionCoverage(live, normalized);
-
-    if (coverage.type === "covered") {
-      return { keypair, permits: coverage.permissions };
+    if (requested.length === 0) {
+      return { keypair, permits: [] };
     }
 
-    const signed: Permission[] = [];
-    for (const chunk of coverage.uncoveredChunks) {
-      const permission = await this.#signPermit({
-        chunk,
-        keypair,
-        signerAddress,
-        chainId,
-        delegatorAddress,
-      });
-      signed.push(permission);
+    const chainId = await this.#signer.getChainId();
+    const scope: PermissionScope = {
+      signerAddress,
+      chainId,
+      delegatorAddress: delegator ? checksum(delegator) : signerAddress,
+    };
+    const permits = await this.#store.listUsableAndPrune(scope, keypair.publicKey);
 
-      try {
-        await this.#store.append(scope, [permission]);
-      } catch (error) {
-        // oxlint-disable-next-line no-console
-        console.warn("[zama-sdk] Failed to persist permit:", error);
-      }
+    for (const chunk of chunkContracts(uncoveredContracts(permits, requested))) {
+      const permission = await this.#signPermit({ chunk, keypair, scope });
+      permits.push(permission);
+      await swallow("persist permit", () => this.#store.append(scope, [permission]));
     }
 
-    const finalPermissions = [...live, ...signed];
-    return { keypair, permits: filterRelevantPermissions(finalPermissions, normalized) };
-  }
-
-  async #warmKeypairFor(signerAddress: Address): Promise<StoredKeypair> {
-    return this.#vault.getOrCreate(signerAddress);
+    const requestedSet = new Set(requested);
+    return {
+      keypair,
+      permits: permits.filter((p) => p.signedContractAddresses.some((a) => requestedSet.has(a))),
+    };
   }
 
   /**
@@ -208,21 +118,20 @@ export class CredentialService {
    *   true for an empty list); `false` if no keypair exists or coverage is
    *   incomplete.
    */
-  async isAllowed(contracts: Address[], delegator?: Address): Promise<boolean> {
+  async isAllowed(contracts: readonly Address[], delegator?: Address): Promise<boolean> {
     if (contracts.length === 0) {
       return true;
     }
-    const signerAddress = getAddress(await this.#permitSigner.getAddress());
-    const chainId = await this.#permitSigner.getChainId();
-    const delegatorAddress = delegator ? getAddress(delegator) : signerAddress;
+    const signerAddress = checksum(await this.#signer.getAddress());
     const keypair = await this.#vault.readStored(signerAddress);
     if (keypair === null) {
       return false;
     }
+    const chainId = await this.#signer.getChainId();
+    const delegatorAddress = delegator ? checksum(delegator) : signerAddress;
     const scope: PermissionScope = { signerAddress, chainId, delegatorAddress };
-    const matching = await this.#store.listUsableAndPrune(scope, keypair.publicKey);
-    const normalized = normalizeAddresses(contracts);
-    return coversContracts(unionSignedContracts(matching), normalized);
+    const permits = await this.#store.listUsableAndPrune(scope, keypair.publicKey);
+    return uncoveredContracts(permits, normalizeAddresses(contracts)).length === 0;
   }
 
   /**
@@ -237,8 +146,8 @@ export class CredentialService {
    *
    * @throws {@link SigningFailedError} if reading the signer address fails.
    */
-  async revokePermits(contracts?: Address[]): Promise<void> {
-    const signerAddress = getAddress(await this.#permitSigner.getAddress());
+  async revokePermits(contracts?: readonly Address[]): Promise<void> {
+    const signerAddress = checksum(await this.#signer.getAddress());
     if (contracts === undefined) {
       await this.#store.clearAllForSigner(signerAddress);
       return;
@@ -247,13 +156,11 @@ export class CredentialService {
     if (normalized.length === 0) {
       return;
     }
-    const chainId = await this.#permitSigner.getChainId();
-    const scope: PermissionScope = {
-      signerAddress,
-      chainId,
-      delegatorAddress: signerAddress,
-    };
-    await this.#store.deletePermitsTouching(scope, normalized);
+    const chainId = await this.#signer.getChainId();
+    await this.#store.deletePermitsTouching(
+      { signerAddress, chainId, delegatorAddress: signerAddress },
+      normalized,
+    );
   }
 
   /**
@@ -263,7 +170,7 @@ export class CredentialService {
    * @throws {@link SigningFailedError} if reading the signer address fails.
    */
   async clearCredentials(): Promise<void> {
-    const signerAddress = getAddress(await this.#permitSigner.getAddress());
+    const signerAddress = checksum(await this.#signer.getAddress());
     await this.#vault.clear(signerAddress);
     await this.#store.clearAllForSigner(signerAddress);
   }
@@ -271,88 +178,74 @@ export class CredentialService {
   /**
    * Apply a wallet identity transition.
    *
-   * Address change clears persisted credentials for the previous identity.
-   * Chain-only changes keep credentials intact because permits are chain-scoped
-   * already and stale decrypt plaintext is cleared by `ZamaSDK`.
+   * Address change clears persisted credentials for the previous identity and
+   * eagerly warms a keypair for the new one so the first decrypt does not stall
+   * on key generation. Chain-only changes keep credentials intact because
+   * permits are chain-scoped already and stale decrypt plaintext is cleared by
+   * `ZamaSDK`.
    */
-  async handleIdentityChange(prev?: SignerIdentity, next?: SignerIdentity): Promise<void> {
-    const prevAddr = prev ? getAddress(prev.address) : undefined;
-    const nextAddr = next ? getAddress(next.address) : undefined;
-    if (prevAddr !== nextAddr && prevAddr) {
-      try {
-        await this.#vault.clear(prevAddr);
-        await this.#store.clearAllForSigner(prevAddr);
-      } catch (error) {
-        // oxlint-disable-next-line no-console
-        console.warn("[zama-sdk] cascade-clear for prev identity failed:", error);
-      }
+  async handleIdentityChange(
+    prev?: { address: Address },
+    next?: { address: Address },
+  ): Promise<void> {
+    const prevAddr = prev ? checksum(prev.address) : undefined;
+    const nextAddr = next ? checksum(next.address) : undefined;
+    if (prevAddr === nextAddr) {
+      return;
     }
-    this.#identity = next;
-  }
-
-  /** Cached identity snapshot, set by `handleIdentityChange` / `initialize`. */
-  get currentIdentity(): SignerIdentity | undefined {
-    return this.#identity;
+    if (prevAddr) {
+      await this.#vault.clear(prevAddr);
+      await this.#store.clearAllForSigner(prevAddr);
+    }
+    if (nextAddr) {
+      await swallow("warm keypair", async () => {
+        await this.#vault.getOrCreate(nextAddr);
+      });
+    }
   }
 
   async #signPermit(input: {
-    chunk: Address[];
+    chunk: ChecksummedAddress[];
     keypair: StoredKeypair;
-    signerAddress: Address;
-    chainId: number;
-    delegatorAddress: Address;
+    scope: PermissionScope;
   }): Promise<Permission> {
-    const startTimestamp = Math.floor(Date.now() / 1000);
-    const durationDays = this.#permitTTLDays;
-    const isDelegated = input.delegatorAddress !== input.signerAddress;
+    const { chunk, keypair, scope } = input;
+    const startTimestamp = nowSeconds();
+    const isDelegated = scope.delegatorAddress !== scope.signerAddress;
 
     try {
       const eip712 = isDelegated
-        ? await this.#permitFactory.createDelegatedUserDecryptEIP712(
-            input.keypair.publicKey,
-            input.chunk,
-            input.delegatorAddress,
+        ? await this.#relayer.createDelegatedUserDecryptEIP712(
+            keypair.publicKey,
+            chunk,
+            scope.delegatorAddress,
             startTimestamp,
-            durationDays,
+            this.#permitTTL,
           )
-        : await this.#permitFactory.createEIP712(
-            input.keypair.publicKey,
-            input.chunk,
+        : await this.#relayer.createEIP712(
+            keypair.publicKey,
+            chunk,
             startTimestamp,
-            durationDays,
+            this.#permitTTL,
           );
 
-      const signature = await this.#permitSigner.signTypedData(eip712);
+      const signature = await this.#signer.signTypedData(eip712);
 
       return {
-        keypairPublicKey: input.keypair.publicKey,
-        signerAddress: input.signerAddress,
-        delegatorAddress: input.delegatorAddress,
-        chainId: input.chainId,
-        signedContractAddresses: input.chunk,
+        keypairPublicKey: keypair.publicKey,
+        signerAddress: scope.signerAddress,
+        delegatorAddress: scope.delegatorAddress,
+        chainId: scope.chainId,
+        signedContractAddresses: chunk,
         signature,
         startTimestamp,
-        durationDays,
+        durationDays: this.#permitTTL,
       };
     } catch (error) {
       if (error instanceof ZamaError) {
         throw error;
       }
-      return wrapSigningError(error, "Credential signing failed");
+      throw wrapSigningError(error, "Credential signing failed");
     }
   }
-}
-
-function allowDedupKey(input: {
-  signerAddress: Address;
-  chainId: number;
-  delegatorAddress: Address;
-  contracts: Address[];
-}): string {
-  return [
-    getAddress(input.signerAddress),
-    input.chainId,
-    getAddress(input.delegatorAddress),
-    ...input.contracts,
-  ].join(":");
 }

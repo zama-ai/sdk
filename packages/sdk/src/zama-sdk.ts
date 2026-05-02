@@ -2,18 +2,19 @@ import { getAddress, type Address } from "viem";
 import type { FheChain } from "./chains/types";
 import {
   CredentialService,
-  KeypairTTLSchema,
-  PermitTTLSchema,
-  type CredentialServiceConfig,
+  DEFAULT_KEYPAIR_TTL_SECONDS,
+  DEFAULT_PERMIT_DURATION_DAYS,
 } from "./credentials/credential-service";
 import {
   resolveDelegatedDecryptPermit,
   resolveUserDecryptPermit,
 } from "./credentials/decrypt-permit";
 import { findRevokedDelegations } from "./credentials/delegation-check";
+import { KeypairTTLSchema, PermitTTLSchema } from "./credentials/schemas";
 import { DecryptCache } from "./decrypt-cache";
 import {
   ChainMismatchError,
+  ConfigurationError,
   EncryptionFailedError,
   SignerRequiredError,
   wrapDecryptError,
@@ -40,19 +41,9 @@ import type {
   SignerIdentityChange,
   SignerIdentityListener,
 } from "./types";
-import { toError } from "./utils";
+import { swallow, toError } from "./utils";
 import { pLimit } from "./utils/concurrency";
 import { WrappersRegistry } from "./wrappers-registry";
-
-/** Run a best-effort cleanup step. Errors are logged, never thrown. */
-async function swallow(label: string, fn: () => Promise<void> | void): Promise<void> {
-  try {
-    await fn();
-  } catch (error) {
-    // oxlint-disable-next-line no-console
-    console.warn(`[zama-sdk] ${label} failed:`, error);
-  }
-}
 
 /** Configuration for {@link ZamaSDK}. */
 export interface ZamaSDKConfig {
@@ -149,25 +140,21 @@ export class ZamaSDK {
       registryAddresses,
     });
     this.#registryTTL = config.registryTTL;
-    // Validate numeric config early — before the signer check — so callers get a fast,
-    // clear error even when constructing a read-only (no-signer) SDK instance.
-    if (config.keypairTTL !== undefined) {
-      KeypairTTLSchema.parse(config.keypairTTL);
-    }
-    if (config.permitTTL !== undefined) {
-      PermitTTLSchema.parse(config.permitTTL);
-    }
+    // Validate numeric config early — before the signer check — so read-only
+    // (no-signer) callers also get a fast, clear error. CredentialService
+    // trusts these values once they reach it.
+    const keypairTTL = KeypairTTLSchema.parse(config.keypairTTL ?? DEFAULT_KEYPAIR_TTL_SECONDS);
+    const permitTTL = PermitTTLSchema.parse(config.permitTTL ?? DEFAULT_PERMIT_DURATION_DAYS);
     if (config.signer) {
       const signer = config.signer;
-      this.#credentialService = new CredentialService(
-        buildCredentialServiceConfig(this.relayer, signer, {
-          keypairTTL: config.keypairTTL,
-          permitTTL: config.permitTTL,
-          storage: this.storage,
-          permitStorage: config.permitStorage,
-          onEvent: this.#onEvent,
-        }),
-      );
+      this.#credentialService = new CredentialService({
+        relayer: this.relayer,
+        signer,
+        keypairTTL,
+        permitTTL,
+        storage: this.storage,
+        permitStorage: config.permitStorage,
+      });
 
       this.#unsubscribeSigner = signer.subscribe?.((change) => {
         void this.#handleIdentityChange(change);
@@ -860,43 +847,4 @@ export class ZamaSDK {
   [Symbol.dispose](): void {
     this.terminate();
   }
-}
-
-function buildCredentialServiceConfig(
-  relayer: RelayerDispatcher,
-  signer: GenericSigner,
-  opts: Pick<
-    CredentialServiceConfig,
-    "keypairTTL" | "permitTTL" | "storage" | "permitStorage" | "onEvent"
-  >,
-): CredentialServiceConfig {
-  return {
-    keypairGenerator: {
-      generateKeypair: () => relayer.generateKeypair(),
-    },
-    permitFactory: {
-      createEIP712: (publicKey, contracts, startTimestamp, durationDays) =>
-        relayer.createEIP712(publicKey, contracts, startTimestamp, durationDays),
-      createDelegatedUserDecryptEIP712: (
-        publicKey,
-        contracts,
-        delegator,
-        startTimestamp,
-        durationDays,
-      ) =>
-        relayer.createDelegatedUserDecryptEIP712(
-          publicKey,
-          contracts,
-          delegator,
-          startTimestamp,
-          durationDays,
-        ),
-    },
-    permitSigner: {
-      signTypedData: (td) => signer.signTypedData(td),
-      getAddress: () => signer.getAddress(),
-      getChainId: () => signer.getChainId(),
-    },
-    ...opts,
-  };
 }

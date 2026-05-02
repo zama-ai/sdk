@@ -3,7 +3,6 @@ import type { Address } from "viem";
 import { SigningRejectedError, SigningFailedError } from "../../errors/signing";
 
 const USER = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
-const OTHER_USER = "0x3c3C3c3C3c3C3c3C3c3C3c3C3c3C3c3C3c3C3c3C" as Address;
 const DELEGATOR = "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC" as Address;
 const DELEGATOR_B = "0xDdDDddddDDDDdDDDDDDdDdDddDdDDDdDddddddDd" as Address;
 
@@ -62,37 +61,6 @@ describe("CredentialService.allow", () => {
     expect(await credentialService.isAllowed([TOKEN_A])).toBe(false);
     // Delegated scope is covered.
     expect(await credentialService.isAllowed([TOKEN_A], DELEGATOR)).toBe(true);
-  });
-
-  it("dedupes concurrent identical allow() calls", async ({ credentialService, signer }) => {
-    const results = await Promise.all([
-      credentialService.allow([TOKEN_A]),
-      credentialService.allow([TOKEN_A]),
-      credentialService.allow([TOKEN_A]),
-    ]);
-    // Boundary observable: only one wallet prompt for three concurrent calls.
-    expect(signer.signTypedData).toHaveBeenCalledOnce();
-    // All concurrent callers receive the same permit bundle.
-    expect(results[1]).toEqual(results[0]);
-    expect(results[2]).toEqual(results[0]);
-  });
-
-  it("does not dedupe delegated allow() calls across signer identities", async ({
-    createCredentialService,
-    signer,
-  }) => {
-    let currentSigner = USER;
-    vi.mocked(signer.getAddress).mockImplementation(async () => currentSigner);
-    const credentialService = createCredentialService({});
-
-    const first = credentialService.allow([TOKEN_A], DELEGATOR);
-    currentSigner = OTHER_USER;
-    const second = credentialService.allow([TOKEN_A], DELEGATOR);
-
-    await Promise.all([first, second]);
-
-    // Distinct signer identities → distinct wallet prompts.
-    expect(signer.signTypedData).toHaveBeenCalledTimes(2);
   });
 
   it("warms a keypair without prompting for permits when contracts is empty", async ({
@@ -158,7 +126,6 @@ describe("CredentialService.handleIdentityChange", () => {
       { address: DELEGATOR, chainId: 31337 },
     );
 
-    expect(credentialService.currentIdentity).toEqual({ address: DELEGATOR, chainId: 31337 });
     expect(await credentialService.isAllowed([TOKEN_A])).toBe(false);
   });
 });

@@ -9,7 +9,6 @@ import type { QueryClient } from "@tanstack/query-core";
 import type { Address, Hex } from "viem";
 import type { CredentialServiceConfig } from "./credentials/credential-service";
 import { CredentialService } from "./credentials/credential-service";
-import type { KeypairGenerator, PermitFactory, PermitSigner } from "./credentials/types";
 import { MemoryStorage } from "./storage/memory-storage";
 import { ReadonlyToken } from "./token/readonly-token";
 import { Token } from "./token/token";
@@ -267,41 +266,13 @@ export const test = base.extend<SdkFixtures>({
   },
   createCredentialService: async ({ relayer, signer, storage }, use) => {
     function factory(config: Partial<CredentialServiceConfig> = {}) {
-      const keypairGenerator: KeypairGenerator = config.keypairGenerator ?? {
-        generateKeypair: () => relayer.generateKeypair(),
-      };
-      const permitFactory: PermitFactory = config.permitFactory ?? {
-        createEIP712: (publicKey, contracts, startTimestamp, durationDays) =>
-          relayer.createEIP712(publicKey, contracts, startTimestamp, durationDays),
-        createDelegatedUserDecryptEIP712: (
-          publicKey,
-          contracts,
-          delegator,
-          startTimestamp,
-          durationDays,
-        ) =>
-          relayer.createDelegatedUserDecryptEIP712(
-            publicKey,
-            contracts,
-            delegator,
-            startTimestamp,
-            durationDays,
-          ),
-      };
-      const permitSigner: PermitSigner = config.permitSigner ?? {
-        signTypedData: (td) => signer.signTypedData(td),
-        getAddress: () => signer.getAddress(),
-        getChainId: () => signer.getChainId(),
-      };
       return new CredentialService({
-        keypairGenerator,
-        permitFactory,
-        permitSigner,
+        relayer: (config.relayer ?? relayer) as CredentialServiceConfig["relayer"],
+        signer: config.signer ?? signer,
         keypairTTL: config.keypairTTL ?? 86400,
         permitTTL: config.permitTTL ?? 1,
         storage: config.storage ?? storage,
         permitStorage: config.permitStorage,
-        onEvent: config.onEvent,
       });
     }
     await use(factory);

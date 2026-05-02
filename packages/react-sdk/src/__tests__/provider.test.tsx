@@ -87,6 +87,7 @@ describe("ZamaProvider & useZamaSDK", () => {
     const onEvent: ZamaSDKEventListener = vi.fn();
     const { Wrapper, signer, relayer } = createWrapper({
       keypairTTL: 604800,
+      permitTTL: 1,
       onEvent,
     });
 

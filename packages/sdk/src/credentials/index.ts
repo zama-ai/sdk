@@ -1,9 +1,2 @@
-export type {
-  CredentialBundle,
-  Keypair,
-  KeypairGenerator,
-  Permission,
-  PermitFactory,
-  PermitSigner,
-  StoredKeypair,
-} from "./types";
+export type { CredentialBundle, Keypair, Permission, StoredKeypair } from "./types";
+export type { ChecksummedAddress } from "./utils";

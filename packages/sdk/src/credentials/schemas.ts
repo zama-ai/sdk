@@ -1,27 +1,27 @@
-import { getAddress, isAddress, isHex, type Address, type Hex } from "viem";
+import { isAddress, isHex, type Hex } from "viem";
 import { z } from "zod";
+import type { ChecksummedAddress } from "./utils";
+import { checksum, MAX_CONTRACTS_PER_PERMIT, SECONDS_PER_DAY } from "./utils";
 
 const hex = z
   .string()
-  .refine((v) => isHex(v, { strict: true }), "expected 0x-prefixed hex string")
-  .transform((v) => v as Hex);
+  .refine((v): v is Hex => isHex(v, { strict: true }), "expected 0x-prefixed hex string");
 
 const address = z
   .string()
-  .refine((v) => isAddress(v, { strict: false }), "expected EVM address")
-  .transform((v) => getAddress(v) as Address);
+  .refine((v): v is `0x${string}` => isAddress(v, { strict: false }), "expected EVM address")
+  .transform((v): ChecksummedAddress => checksum(v));
 
 const unixSeconds = z.number().finite().int().nonnegative();
 const positiveSeconds = z.number().finite().int().positive();
 const positiveDays = z.number().finite().int().positive();
 const chainId = z.number().finite().int().positive();
-const permitScopeKey = z.string().regex(/^permits:[0-9a-f]{32}$/u, "expected permit scope key");
 
 const keypairTTLError = "keypairTTL must be a positive integer number of seconds";
 const permitTTLError = "permitTTL must be a positive integer number of days";
 
 /** Maximum keypairTTL accepted by the fhevm ACL contract (365 days, in seconds). */
-export const MAX_KEYPAIR_TTL_SECONDS = 365 * 86400;
+export const MAX_KEYPAIR_TTL_SECONDS = 365 * SECONDS_PER_DAY;
 
 export const KeypairTTLSchema = z
   .number(keypairTTLError)
@@ -51,7 +51,7 @@ export const PermissionSchema = z.object({
   signerAddress: address,
   delegatorAddress: address,
   chainId,
-  signedContractAddresses: z.array(address),
+  signedContractAddresses: z.array(address).max(MAX_CONTRACTS_PER_PERMIT),
   signature: hex,
   startTimestamp: unixSeconds,
   durationDays: positiveDays,
@@ -59,4 +59,4 @@ export const PermissionSchema = z.object({
 
 export const PermissionListSchema = z.array(PermissionSchema);
 
-export const ScopeIndexSchema = z.array(permitScopeKey);
+export const ScopeIndexSchema = z.array(z.string());

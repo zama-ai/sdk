@@ -1,32 +1,38 @@
 import { test as baseTest, describe, expect, vi } from "../../test-fixtures";
 import { MemoryStorage } from "../../storage/memory-storage";
-import type { Address } from "viem";
 import { KeypairVault } from "../keypair-vault";
-import type { KeypairGenerator } from "../types";
+import type { Keypair } from "../types";
+import { checksum } from "../utils";
 
-const USER = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
-const OTHER = "0x3c3C3c3C3c3C3c3C3c3C3c3C3c3C3c3C3c3C3c3C" as Address;
+const USER = checksum("0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B");
+const OTHER = checksum("0x3c3C3c3C3c3C3c3C3c3C3c3C3c3C3c3C3c3C3c3C");
 const PUBLIC_KEY = `0x${"11".repeat(32)}` as const;
 const PRIVATE_KEY = `0x${"22".repeat(32)}` as const;
 const TTL_SECONDS = 86400;
 
+function makeGenerator(): () => Promise<Keypair> {
+  // Each call generates a unique keypair so cache hits/misses are observable
+  // via equality without poking the generator's call count.
+  let counter = 0;
+  return vi.fn().mockImplementation(async () => {
+    counter += 1;
+    return {
+      publicKey: (PUBLIC_KEY.slice(0, -2) + counter.toString(16).padStart(2, "0")) as `0x${string}`,
+      privateKey: PRIVATE_KEY,
+    };
+  });
+}
+
 const test = baseTest.extend<{ vault: KeypairVault }>({
   // eslint-disable-next-line no-empty-pattern
   vault: async ({}, use) => {
-    // Each call generates a unique keypair so cache hits/misses are observable
-    // via equality without poking the generator's call count.
-    let counter = 0;
-    const generator: KeypairGenerator = {
-      generateKeypair: vi.fn().mockImplementation(async () => {
-        counter += 1;
-        return {
-          publicKey: (PUBLIC_KEY.slice(0, -2) +
-            counter.toString(16).padStart(2, "0")) as `0x${string}`,
-          privateKey: PRIVATE_KEY,
-        };
+    await use(
+      new KeypairVault({
+        generator: makeGenerator(),
+        storage: new MemoryStorage(),
+        ttl: TTL_SECONDS,
       }),
-    };
-    await use(new KeypairVault({ generator, storage: new MemoryStorage(), ttl: TTL_SECONDS }));
+    );
   },
 });
 
@@ -53,19 +59,8 @@ describe("KeypairVault", () => {
   });
 
   test("treats malformed stored data as a cache miss and regenerates", async () => {
-    let counter = 0;
-    const generator: KeypairGenerator = {
-      generateKeypair: vi.fn().mockImplementation(async () => {
-        counter += 1;
-        return {
-          publicKey: (PUBLIC_KEY.slice(0, -2) +
-            counter.toString(16).padStart(2, "0")) as `0x${string}`,
-          privateKey: PRIVATE_KEY,
-        };
-      }),
-    };
     const storage = new MemoryStorage();
-    const vault = new KeypairVault({ generator, storage, ttl: TTL_SECONDS });
+    const vault = new KeypairVault({ generator: makeGenerator(), storage, ttl: TTL_SECONDS });
 
     // Seed storage with a real keypair, then corrupt the value out-of-band.
     // We use a wrapper-driven approach (stub `get` to return junk for the next

@@ -1,7 +1,8 @@
-import { getAddress, type Address } from "viem";
+import type { Address } from "viem";
 import { DecryptionFailedError } from "../errors";
 import type { DelegatedUserDecryptParams, UserDecryptParams } from "../relayer/relayer-sdk.types";
 import type { CredentialBundle, Permission } from "./types";
+import { checksum } from "./utils";
 
 export type UserDecryptPermitParams = Pick<
   UserDecryptParams,
@@ -32,9 +33,7 @@ export function resolveUserDecryptPermit(
   if (!permission) {
     throw new DecryptionFailedError(`No permit covers contract ${contractAddress} after allow()`);
   }
-  return {
-    ...commonPermitParams(credentials, permission),
-  };
+  return commonPermitParams(credentials, permission);
 }
 
 export function resolveDelegatedDecryptPermit(
@@ -68,8 +67,8 @@ function findPermissionFor(
   credentials: CredentialBundle,
   contractAddress: Address,
 ): Permission | undefined {
-  const target = getAddress(contractAddress);
+  const target = checksum(contractAddress);
   return credentials.permits.find((permission) =>
-    permission.signedContractAddresses.some((address) => getAddress(address) === target),
+    permission.signedContractAddresses.includes(target),
   );
 }

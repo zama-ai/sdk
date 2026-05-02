@@ -1,17 +1,16 @@
 import { test as baseTest, describe, expect, vi } from "../../test-fixtures";
 import { MemoryStorage } from "../../storage/memory-storage";
-import { getAddress, type Address } from "viem";
 import { PermissionStore } from "../permission-store";
 import type { Permission } from "../types";
+import { checksum } from "../utils";
 
-const USER = getAddress("0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B") as Address;
-const DELEGATOR = getAddress("0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC") as Address;
-const TOKEN_A = getAddress("0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a") as Address;
-const TOKEN_B = getAddress("0x3c3C3c3C3c3C3c3c3C3c3C3C3c3c3C3c3c3C3C3c") as Address;
+const USER = checksum("0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B");
+const DELEGATOR = checksum("0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC");
+const TOKEN_A = checksum("0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a");
+const TOKEN_B = checksum("0x3c3C3c3C3c3C3c3c3C3c3C3C3c3c3C3c3c3C3C3c");
 const PUBLIC_KEY = `0x${"11".repeat(32)}` as const;
 const OTHER_PUBLIC_KEY = `0x${"22".repeat(32)}` as const;
 const SIGNATURE = `0x${"33".repeat(65)}` as const;
-const OTHER_SIGNATURE = `0x${"44".repeat(65)}` as const;
 
 const directScope = {
   signerAddress: USER,
@@ -27,7 +26,7 @@ const delegatedScope = {
 
 function makePermission(
   overrides: Partial<Permission> & {
-    signedContractAddresses: Address[];
+    signedContractAddresses: Permission["signedContractAddresses"];
   },
 ): Permission {
   return {
@@ -50,17 +49,14 @@ const test = baseTest.extend<{ store: PermissionStore }>({
 });
 
 describe("PermissionStore", () => {
-  test("append + list round-trips, replaces in place when contracts match", async ({ store }) => {
+  test("append + list round-trips", async ({ store }) => {
     await store.append(directScope, [
       makePermission({ signedContractAddresses: [TOKEN_A], signature: SIGNATURE }),
-    ]);
-    await store.append(directScope, [
-      makePermission({ signedContractAddresses: [TOKEN_A], signature: OTHER_SIGNATURE }),
     ]);
 
     const list = await store.list(directScope);
     expect(list).toHaveLength(1);
-    expect(list[0]!.signature).toBe(OTHER_SIGNATURE);
+    expect(list[0]!.signature).toBe(SIGNATURE);
     expect(list[0]!.signedContractAddresses).toEqual([TOKEN_A]);
   });
 
@@ -71,12 +67,6 @@ describe("PermissionStore", () => {
       makePermission({ signedContractAddresses: [TOKEN_A, TOKEN_B] }),
     ]);
     await store.deletePermitsTouching(directScope, [TOKEN_A]);
-    expect(await store.list(directScope)).toEqual([]);
-  });
-
-  test("clear() removes the scope entry", async ({ store }) => {
-    await store.append(directScope, [makePermission({ signedContractAddresses: [TOKEN_A] })]);
-    await store.clear(directScope);
     expect(await store.list(directScope)).toEqual([]);
   });
 

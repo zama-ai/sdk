@@ -1,20 +1,13 @@
-import type { Address, Hex } from "viem";
+import type { Hex } from "viem";
 import type { GenericStorage } from "../types";
-import { PermissionListSchema, ScopeIndexSchema } from "./schemas";
+import { swallow } from "../utils/swallow";
+import { pruneUnusable, withoutPermitsTouching } from "./permissions";
+import { PermissionListSchema, PermissionSchema, ScopeIndexSchema } from "./schemas";
+import { permissionIndexKey, permissionScopeKey, type PermissionScope } from "./storage-keys";
 import type { Permission } from "./types";
-import { permissionIndexKey, permissionScopeKey } from "./storage-keys";
-import {
-  deletePermitsTouchingContracts,
-  pruneUnusablePermissions,
-  upsertPermission,
-} from "./permissions";
+import type { ChecksummedAddress } from "./utils";
 
-/** Identifies a 1-to-many permission scope: (signer, chain, delegator). */
-export interface PermissionScope {
-  signerAddress: Address;
-  chainId: number;
-  delegatorAddress: Address;
-}
+export type { PermissionScope };
 
 interface PermissionStoreConfig {
   storage: GenericStorage;
@@ -35,78 +28,54 @@ export class PermissionStore {
     this.#storage = config.storage;
   }
 
-  /** @internal */
-  static async scopeKey(scope: PermissionScope): Promise<string> {
-    return permissionScopeKey(scope);
-  }
-
-  /** @internal */
-  static async indexKey(signerAddress: Address): Promise<string> {
-    return permissionIndexKey(signerAddress);
-  }
-
-  /**
-   * Read all stored permissions for the given scope.
-   *
-   * @returns All valid permissions, or an empty array if none are stored.
-   */
+  /** Read all stored permissions for the given scope. Returns `[]` if none. */
   async list(scope: PermissionScope): Promise<Permission[]> {
-    const key = await PermissionStore.scopeKey(scope);
+    const key = permissionScopeKey(scope);
     const raw = await this.#storage.get(key);
     if (raw === null || raw === undefined) {
       return [];
     }
     const parsed = PermissionListSchema.safeParse(raw);
     if (!parsed.success) {
-      await safeDelete(this.#storage, key);
+      await this.#deleteScope(key);
       return [];
     }
     return parsed.data;
   }
 
   /**
-   * Return permissions that are still live and bound to the current keypair.
+   * Return permissions still live and bound to the current keypair.
    * Expired or stale-keypair permissions are pruned in one storage pass.
    */
   async listUsableAndPrune(scope: PermissionScope, keypairPublicKey: Hex): Promise<Permission[]> {
     const all = await this.list(scope);
-    const { permissions, changed } = pruneUnusablePermissions({
-      permissions: all,
-      keypairPublicKey,
-      nowSeconds: Math.floor(Date.now() / 1000),
-    });
+    const usable = pruneUnusable(all, keypairPublicKey, Math.floor(Date.now() / 1000));
 
-    if (changed) {
-      const key = await PermissionStore.scopeKey(scope);
-      if (permissions.length === 0) {
-        await safeDelete(this.#storage, key);
+    if (usable.length !== all.length) {
+      const key = permissionScopeKey(scope);
+      if (usable.length === 0) {
+        await this.#deleteScope(key);
       } else {
-        await safeSet(this.#storage, key, permissions);
+        await swallow("update permit entry", () => this.#storage.set(key, usable));
       }
     }
-
-    return permissions;
+    return usable;
   }
 
   /**
-   * Append signed permits for the given scope.
-   *
-   * Signed permit payloads are immutable. Existing entries with the same signed
-   * contract set are replaced wholesale; no signed field is edited in place.
+   * Append signed permits to the given scope. Every permission is run through
+   * `PermissionSchema` so the schema is the single normalization point for both
+   * read and write paths. Signed payloads themselves are immutable and never
+   * edited — only addresses and types are normalized.
    */
   async append(scope: PermissionScope, permissions: readonly Permission[]): Promise<void> {
     if (permissions.length === 0) {
       return;
     }
-    const key = await PermissionStore.scopeKey(scope);
+    const validated = permissions.map((p) => PermissionSchema.parse(p));
     const existing = await this.list(scope);
-    const next = permissions.reduce<Permission[]>(
-      (acc, permission) => upsertPermission(acc, permission),
-      existing,
-    );
-
     await this.#trackScope(scope);
-    await this.#storage.set(key, next);
+    await this.#storage.set(permissionScopeKey(scope), [...existing, ...validated]);
   }
 
   /**
@@ -115,39 +84,33 @@ export class PermissionStore {
    * The store never edits `signedContractAddresses`, because that field is part
    * of the EIP-712 payload covered by `signature`.
    */
-  async deletePermitsTouching(scope: PermissionScope, contractsToRemove: Address[]): Promise<void> {
-    const key = await PermissionStore.scopeKey(scope);
+  async deletePermitsTouching(
+    scope: PermissionScope,
+    contractsToRemove: ChecksummedAddress[],
+  ): Promise<void> {
     const existing = await this.list(scope);
     if (existing.length === 0) {
       return;
     }
-    const next = deletePermitsTouchingContracts(existing, contractsToRemove);
+    const key = permissionScopeKey(scope);
+    const next = withoutPermitsTouching(existing, contractsToRemove);
     if (next.length === 0) {
-      await safeDelete(this.#storage, key);
+      await this.#deleteScope(key);
       await this.#untrackScope(scope);
     } else {
       await this.#storage.set(key, next);
     }
   }
 
-  /** Delete all permissions for the given scope and remove it from the signer index. */
-  async clear(scope: PermissionScope): Promise<void> {
-    const key = await PermissionStore.scopeKey(scope);
-    await safeDelete(this.#storage, key);
-    await this.#untrackScope(scope);
-  }
-
   /**
    * Delete every permission for the given signer across all chains and delegators.
    * Uses the per-signer scope index to cascade without enumerating all storage keys.
    */
-  async clearAllForSigner(signerAddress: Address): Promise<void> {
-    const indexKey = await PermissionStore.indexKey(signerAddress);
-    const list = await this.#readIndex(indexKey);
-    for (const entry of list) {
-      await safeDelete(this.#storage, entry);
-    }
-    await safeDelete(this.#storage, indexKey);
+  async clearAllForSigner(signerAddress: ChecksummedAddress): Promise<void> {
+    const indexKey = permissionIndexKey(signerAddress);
+    const scopeKeys = await this.#readIndex(indexKey);
+    await Promise.all(scopeKeys.map((k) => this.#deleteScope(k)));
+    await swallow("delete permit index", () => this.#storage.delete(indexKey));
   }
 
   async #readIndex(indexKey: string): Promise<string[]> {
@@ -157,57 +120,38 @@ export class PermissionStore {
     }
     const parsed = ScopeIndexSchema.safeParse(raw);
     if (!parsed.success) {
-      await safeDelete(this.#storage, indexKey);
+      await swallow("delete permit index", () => this.#storage.delete(indexKey));
       return [];
     }
     return parsed.data;
   }
 
   async #trackScope(scope: PermissionScope): Promise<void> {
-    const indexKey = await PermissionStore.indexKey(scope.signerAddress);
-    const scopeKey = await PermissionStore.scopeKey(scope);
+    const indexKey = permissionIndexKey(scope.signerAddress);
+    const scopeKey = permissionScopeKey(scope);
     const list = await this.#readIndex(indexKey);
-    if (!list.includes(scopeKey)) {
-      list.push(scopeKey);
-      await this.#storage.set(indexKey, list);
+    if (list.includes(scopeKey)) {
+      return;
     }
+    await this.#storage.set(indexKey, [...list, scopeKey]);
   }
 
   async #untrackScope(scope: PermissionScope): Promise<void> {
-    const indexKey = await PermissionStore.indexKey(scope.signerAddress);
-    const scopeKey = await PermissionStore.scopeKey(scope);
+    const indexKey = permissionIndexKey(scope.signerAddress);
+    const scopeKey = permissionScopeKey(scope);
     const list = await this.#readIndex(indexKey);
     const next = list.filter((entry) => entry !== scopeKey);
     if (next.length === list.length) {
       return;
     }
-    try {
-      if (next.length === 0) {
-        await this.#storage.delete(indexKey);
-      } else {
-        await this.#storage.set(indexKey, next);
-      }
-    } catch (error) {
-      // oxlint-disable-next-line no-console
-      console.warn("[zama-sdk] Failed to update permit index:", error);
+    if (next.length === 0) {
+      await swallow("delete permit index", () => this.#storage.delete(indexKey));
+    } else {
+      await swallow("update permit index", () => this.#storage.set(indexKey, next));
     }
   }
-}
 
-async function safeDelete(storage: GenericStorage, key: string): Promise<void> {
-  try {
-    await storage.delete(key);
-  } catch (error) {
-    // oxlint-disable-next-line no-console
-    console.warn("[zama-sdk] Failed to delete permit entry:", error);
-  }
-}
-
-async function safeSet(storage: GenericStorage, key: string, value: unknown): Promise<void> {
-  try {
-    await storage.set(key, value);
-  } catch (error) {
-    // oxlint-disable-next-line no-console
-    console.warn("[zama-sdk] Failed to update permit entry:", error);
+  async #deleteScope(scopeKey: string): Promise<void> {
+    await swallow("delete permit entry", () => this.#storage.delete(scopeKey));
   }
 }

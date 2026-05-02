@@ -1,13 +1,15 @@
-import { getAddress, type Address } from "viem";
 import type { GenericStorage } from "../types";
-import { KeypairTTLSchema, StoredKeypairSchema } from "./schemas";
-import type { KeypairGenerator, StoredKeypair } from "./types";
+import { swallow } from "../utils/swallow";
 import { keypairStorageKey } from "./storage-keys";
+import { StoredKeypairSchema } from "./schemas";
+import type { Keypair, StoredKeypair } from "./types";
+import type { ChecksummedAddress } from "./utils";
+import { nowSeconds } from "./utils";
 
 interface KeypairVaultConfig {
-  generator: KeypairGenerator;
+  generator: () => Promise<Keypair>;
   storage: GenericStorage;
-  /** Keypair lifetime in seconds. */
+  /** Keypair lifetime in seconds. Pre-validated by the caller. */
   ttl: number;
 }
 
@@ -18,37 +20,31 @@ interface KeypairVaultConfig {
  * permit revocations. Storage entries are keyed only by the signer address.
  */
 export class KeypairVault {
-  readonly #generator: KeypairGenerator;
+  readonly #generator: () => Promise<Keypair>;
   readonly #storage: GenericStorage;
   readonly #ttl: number;
-  readonly #pending = new Map<string, Promise<StoredKeypair>>();
+  readonly #pending = new Map<ChecksummedAddress, Promise<StoredKeypair>>();
 
   constructor(config: KeypairVaultConfig) {
     this.#generator = config.generator;
     this.#storage = config.storage;
-    this.#ttl = KeypairTTLSchema.parse(config.ttl);
+    this.#ttl = config.ttl;
   }
 
-  /** @internal */
-  static async storageKey(signerAddress: Address): Promise<string> {
-    return keypairStorageKey(signerAddress);
-  }
-
-  async readStored(signerAddress: Address): Promise<StoredKeypair | null> {
-    const key = await KeypairVault.storageKey(signerAddress);
+  async readStored(signerAddress: ChecksummedAddress): Promise<StoredKeypair | null> {
+    const key = keypairStorageKey(signerAddress);
     const raw = await this.#storage.get(key);
     if (raw === null || raw === undefined) {
       return null;
     }
     const parsed = StoredKeypairSchema.safeParse(raw);
     if (!parsed.success) {
-      await safeDelete(this.#storage, key);
+      await swallow("delete keypair entry", () => this.#storage.delete(key));
       return null;
     }
     const stored = parsed.data;
-    const nowSeconds = Math.floor(Date.now() / 1000);
-    if (nowSeconds >= stored.expiresAt) {
-      await safeDelete(this.#storage, key);
+    if (nowSeconds() >= stored.expiresAt) {
+      await swallow("delete keypair entry", () => this.#storage.delete(key));
       return null;
     }
     return stored;
@@ -59,54 +55,39 @@ export class KeypairVault {
    *
    * @remarks Deduplicates concurrent calls — simultaneous requests share one generation promise.
    */
-  async getOrCreate(signerAddress: Address): Promise<StoredKeypair> {
-    const checksummed = getAddress(signerAddress);
-    const existing = this.#pending.get(checksummed);
+  async getOrCreate(signerAddress: ChecksummedAddress): Promise<StoredKeypair> {
+    const existing = this.#pending.get(signerAddress);
     if (existing) {
       return existing;
     }
 
     const promise = (async () => {
-      const cached = await this.readStored(checksummed);
+      const cached = await this.readStored(signerAddress);
       if (cached !== null) {
         return cached;
       }
-      const fresh = await this.#generator.generateKeypair();
-      const createdAt = Math.floor(Date.now() / 1000);
+      const fresh = await this.#generator();
+      const createdAt = nowSeconds();
       const stored: StoredKeypair = {
         publicKey: fresh.publicKey,
         privateKey: fresh.privateKey,
         createdAt,
         expiresAt: createdAt + this.#ttl,
       };
-      const key = await KeypairVault.storageKey(checksummed);
-      try {
-        await this.#storage.set(key, stored);
-      } catch (error) {
-        // oxlint-disable-next-line no-console
-        console.warn("[zama-sdk] Failed to persist keypair:", error);
-      }
+      const key = keypairStorageKey(signerAddress);
+      await swallow("persist keypair", () => this.#storage.set(key, stored));
       return stored;
     })().finally(() => {
-      this.#pending.delete(checksummed);
+      this.#pending.delete(signerAddress);
     });
 
-    this.#pending.set(checksummed, promise);
+    this.#pending.set(signerAddress, promise);
     return promise;
   }
 
   /** Delete the stored keypair for the given address. */
-  async clear(signerAddress: Address): Promise<void> {
-    const key = await KeypairVault.storageKey(signerAddress);
-    await safeDelete(this.#storage, key);
-  }
-}
-
-async function safeDelete(storage: GenericStorage, key: string): Promise<void> {
-  try {
-    await storage.delete(key);
-  } catch (error) {
-    // oxlint-disable-next-line no-console
-    console.warn("[zama-sdk] Failed to delete keypair entry:", error);
+  async clear(signerAddress: ChecksummedAddress): Promise<void> {
+    const key = keypairStorageKey(signerAddress);
+    await swallow("delete keypair entry", () => this.#storage.delete(key));
   }
 }
