@@ -167,8 +167,8 @@ describe("useUserDecrypt", () => {
     renderWithProviders,
   }) => {
     // SDK-42 pattern: the consumer gates the decrypt hook on useIsAllowed.
-    // When no session exists, isAllowed resolves to false and decrypt must
-    // stay idle — no EIP-712 prompt on mount.
+    // When no permit covers the contract, isAllowed resolves to false and
+    // decrypt must stay idle — no EIP-712 prompt on mount.
     const { result } = renderWithProviders(() => {
       const isAllowed = useIsAllowed({ contractAddresses: [tokenAddress] });
       const decrypt = useUserDecrypt(

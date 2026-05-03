@@ -156,7 +156,7 @@ export interface UnshieldPhase2SubmittedEvent extends BaseEvent {
  *
  * Decrypt events carry handles and decrypted clear-text values so event
  * subscribers can correlate and bind them in UI layers. Events never carry
- * private keys, session signatures, or ZK proofs.
+ * private keys, permit signatures, or ZK proofs.
  */
 export type ZamaSDKEvent =
   | EncryptStartEvent

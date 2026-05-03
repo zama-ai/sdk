@@ -9,8 +9,8 @@ export interface IsAllowedQueryConfig {
   contractAddresses: [Address, ...Address[]];
   /**
    * Standard TanStack query options. `isAllowed` intentionally overrides cache
-   * timing because credential state is wallet-local session state, not server
-   * state: every fetch should read the SDK credential service directly.
+   * timing because permit state is wallet-local, not server state: every fetch
+   * should read the SDK credential service directly.
    */
   query?: Record<string, unknown>;
 }

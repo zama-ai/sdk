@@ -268,7 +268,7 @@ describe("ReadonlyToken", () => {
   });
 
   describe("revoke", () => {
-    it("clears the session so isAllowed returns false", async ({ readonlyToken, tokenAddress }) => {
+    it("removes the permit so isAllowed returns false", async ({ readonlyToken, tokenAddress }) => {
       await readonlyToken.allow();
       expect(await readonlyToken.isAllowed()).toBe(true);
 

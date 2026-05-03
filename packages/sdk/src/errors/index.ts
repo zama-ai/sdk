@@ -27,4 +27,4 @@ export {
 } from "./balance";
 export { matchAclRevert } from "./acl-revert";
 export { wrapDecryptError } from "./decrypt";
-export { isSessionError } from "./session";
+export { isFatalBatchError } from "./fatal-batch";

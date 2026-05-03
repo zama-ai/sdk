@@ -585,7 +585,7 @@ export class ZamaSDK {
 
     // Delegated cache hits must still sit behind the current delegate's
     // authorization. Otherwise shared storage could return plaintext from a
-    // previous delegate/session without a live delegated permit.
+    // previous delegate without a live delegated permit.
     const allContracts = Array.from(new Set(normalized.map((h) => h.contractAddress)));
     const credentials = await service.allow(allContracts, normalizedDelegator);
 

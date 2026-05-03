@@ -40,7 +40,7 @@ export default function App() {
           <Route path="resume-unshield" Component={lazy(() => import("./pages/resume-unshield"))} />
           <Route path="delegation" Component={lazy(() => import("./pages/delegation"))} />
           <Route path="token-metadata" Component={lazy(() => import("./pages/token-metadata"))} />
-          <Route path="session" Component={lazy(() => import("./pages/session"))} />
+          <Route path="permits" Component={lazy(() => import("./pages/permits"))} />
           <Route
             path="delegation-status"
             Component={lazy(() => import("./pages/delegation-status"))}

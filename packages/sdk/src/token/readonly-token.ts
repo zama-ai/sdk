@@ -18,7 +18,7 @@ import {
   DecryptionFailedError,
   DelegationExpiredError,
   DelegationNotFoundError,
-  isSessionError,
+  isFatalBatchError,
   ZamaError,
 } from "../errors";
 import type { ZamaSDKEventInput } from "../events/sdk-events";
@@ -212,9 +212,9 @@ export class ReadonlyToken {
         results.set(tokenAddress, outcome.value);
       } else {
         const reason = outcome.reason;
-        // Session-level failures (user rejected signature, SDK misconfigured)
+        // Systemic failures (user rejected signature, SDK misconfigured)
         // apply to every token — surface them instead of collecting per-token.
-        if (isSessionError(reason)) {
+        if (isFatalBatchError(reason)) {
           throw reason;
         }
         const error =
@@ -351,9 +351,9 @@ export class ReadonlyToken {
           assertBigint(value, "batchDecryptBalancesAs: result[handle]");
           results.set(token.address, value);
         } catch (error) {
-          // Session-level failures apply to every token — re-throw so the
+          // Systemic failures apply to every token — re-throw so the
           // whole batch aborts with the original typed error.
-          if (isSessionError(error)) {
+          if (isFatalBatchError(error)) {
             throw error;
           }
           const err = toError(error);
@@ -458,10 +458,10 @@ export class ReadonlyToken {
   }
 
   /**
-   * Whether a session signature is currently cached for the connected wallet.
+   * Whether a permit covering this token is currently cached for the connected wallet.
    * Use this to check if decrypt operations can proceed without a wallet prompt.
    *
-   * @returns `true` if a session signature is cached for the connected wallet and covers this token's contract.
+   * @returns `true` if a stored permit covers this token's contract for the connected signer.
    * @throws {@link SignerRequiredError} if no signer is configured.
    */
   async isAllowed(): Promise<boolean> {

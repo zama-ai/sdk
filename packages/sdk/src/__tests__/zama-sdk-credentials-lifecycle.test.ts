@@ -27,11 +27,8 @@ const test = baseTest.extend<{ fakeTime: void }>({
 });
 
 /**
- * SDK-level credential lifecycle integration tests.
- *
- * These tests validate the post-refactor invariants that the deleted
- * `session-ttl.test.ts` previously covered for the legacy `CredentialsManager`,
- * now reframed against the `KeypairVault` + `PermissionStore` split:
+ * SDK-level credential lifecycle integration tests against the
+ * `KeypairVault` + `PermissionStore` split:
  *
  *  1. Permit expiry triggers a fresh signature, but the FHE keypair is reused.
  *  2. Permits are chain-scoped — switching chains forces a fresh signature on
