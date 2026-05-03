@@ -56,7 +56,7 @@ export class CredentialService {
     this.#permitTTL = config.permitTTL;
   }
 
-  /** Eagerly warm the current signer's keypair. Best-effort (silent on SSR / no signer). */
+  /** Eagerly warm the current signer's keypair. */
   async initialize(): Promise<void> {
     // TODO: a better refactor of the signer system needs to be addressed for SSR concerns,
     // where we'd get a `get-or-undefined` rather than `get-or-throw` behavior.

@@ -14,7 +14,6 @@ import { KeypairTTLSchema, PermitTTLSchema } from "./credentials/schemas";
 import { DecryptCache } from "./decrypt-cache";
 import {
   ChainMismatchError,
-  ConfigurationError,
   EncryptionFailedError,
   SignerRequiredError,
   wrapDecryptError,

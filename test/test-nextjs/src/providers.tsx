@@ -20,6 +20,7 @@ const wagmiConfig = createConfig({
   chains: [anvil],
   connectors: [burner({ rpcUrls: { [anvil.id]: rpcUrl } }), injected()],
   transports: { [anvil.id]: http(rpcUrl) },
+  ssr: true,
 });
 
 const zamaConfig = createZamaConfig({
