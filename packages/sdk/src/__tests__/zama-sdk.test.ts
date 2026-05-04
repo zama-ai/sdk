@@ -1,4 +1,12 @@
-import { createMockRelayer, describe, it, expect, vi, type Mock, TEST_ADDR_B } from "../test-fixtures";
+import {
+  createMockRelayer,
+  describe,
+  it,
+  expect,
+  vi,
+  type Mock,
+  TEST_ADDR_B,
+} from "../test-fixtures";
 import { ReadonlyToken } from "../token/readonly-token";
 import { Token } from "../token/token";
 import { CredentialsManager } from "../credentials/credentials-manager";
@@ -1081,9 +1089,7 @@ describe("ZamaSDK", () => {
     const CONTRACT_B = "0x3C3c3C3c3C3C3c3c3c3C3c3C3C3c3c3C3c3c3C3C" as Address;
 
     it("delegates to credentials.isAllowed with the given addresses", async ({ sdk }) => {
-      const isAllowedSpy = vi
-        .spyOn(sdk.credentials!, "isAllowed")
-        .mockResolvedValueOnce(true);
+      const isAllowedSpy = vi.spyOn(sdk.credentials!, "isAllowed").mockResolvedValueOnce(true);
       await expect(sdk.isAllowed([CONTRACT_A, CONTRACT_B])).resolves.toBe(true);
       expect(isAllowedSpy).toHaveBeenCalledWith([CONTRACT_A, CONTRACT_B]);
     });

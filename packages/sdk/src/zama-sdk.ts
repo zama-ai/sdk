@@ -465,9 +465,9 @@ export class ZamaSDK {
    * attempting delegated decryption. The delegation is recorded on L1 immediately,
    * but the gateway must sync the ACL state via cross-chain event propagation.
    *
-   * @param params.contractAddress - The confidential contract address to delegate on.
-   * @param params.delegateAddress - Address to delegate decryption rights to.
-   * @param params.expirationDate - Optional expiration date (defaults to permanent delegation via `uint64.max`).
+   * @param contractAddress - The confidential contract address to delegate on.
+   * @param delegateAddress - Address to delegate decryption rights to.
+   * @param expirationDate - Optional expiration date (defaults to permanent delegation via `uint64.max`).
    * @returns The transaction hash and mined receipt.
    * @throws {@link SignerRequiredError} if no signer is configured.
    * @throws {@link ChainMismatchError} if signer and provider are on different chains.
@@ -559,8 +559,8 @@ export class ZamaSDK {
    * Revoke decryption delegation for a confidential contract.
    * Calls `ACL.revokeDelegationForUserDecryption()` on-chain.
    *
-   * @param params.contractAddress - The confidential contract address to revoke delegation on.
-   * @param params.delegateAddress - Address to revoke delegation from.
+   * @param contractAddress - The confidential contract address to revoke delegation on.
+   * @param delegateAddress - Address to revoke delegation from.
    * @returns The transaction hash and mined receipt.
    * @throws {@link SignerRequiredError} if no signer is configured.
    * @throws {@link ChainMismatchError} if signer and provider are on different chains.
@@ -623,9 +623,9 @@ export class ZamaSDK {
   /**
    * Check whether a delegation is active for the given contract address.
    *
-   * @param params.contractAddress - The confidential contract address.
-   * @param params.delegatorAddress - The address that granted the delegation.
-   * @param params.delegateAddress - The address that received delegation rights.
+   * @param contractAddress - The confidential contract address.
+   * @param delegatorAddress - The address that granted the delegation.
+   * @param delegateAddress - The address that received delegation rights.
    * @returns `true` if the delegation exists and has not expired.
    */
   async isDelegated(params: {
@@ -648,9 +648,9 @@ export class ZamaSDK {
   /**
    * Get the expiration timestamp of a delegation for the given contract.
    *
-   * @param params.contractAddress - The confidential contract address.
-   * @param params.delegatorAddress - The address that granted the delegation.
-   * @param params.delegateAddress - The address that received delegation rights.
+   * @param contractAddress - The confidential contract address.
+   * @param delegatorAddress - The address that granted the delegation.
+   * @param delegateAddress - The address that received delegation rights.
    * @returns Unix timestamp as bigint. `0n` = no delegation. `2^64 - 1` = permanent.
    */
   async getDelegationExpiry({
