@@ -23,13 +23,25 @@ export function walletAccountsEqual(
 export class MutableWalletAccountStore implements WalletAccountStore {
   readonly #listeners = new Set<WalletAccountListener>();
   #snapshot: WalletAccount | undefined;
+  #resolved: boolean;
 
   constructor(initial?: WalletAccount) {
     this.#snapshot = initial;
+    this.#resolved = initial !== undefined;
   }
 
   getSnapshot(): WalletAccount | undefined {
     return this.#snapshot;
+  }
+
+  /**
+   * Whether the store has received at least one snapshot (via the constructor
+   * or {@link setSnapshot}). Adapters whose initial account is only available
+   * asynchronously start unresolved; callers can distinguish "still loading"
+   * from "wallet not connected".
+   */
+  isReady(): boolean {
+    return this.#resolved;
   }
 
   /**
@@ -38,6 +50,7 @@ export class MutableWalletAccountStore implements WalletAccountStore {
    * subscriber otherwise.
    */
   setSnapshot(next: WalletAccount | undefined): void {
+    this.#resolved = true;
     const previous = this.#snapshot;
     if (walletAccountsEqual(previous, next)) {
       return;

@@ -159,6 +159,7 @@ export class ZamaSDK {
 
       this.#unsubscribeSigner = signer.walletAccount.subscribe((change) => {
         this.#handleWalletAccountChange(change).catch((error) => {
+          // oxlint-disable-next-line no-console
           console.warn("[zama-sdk] wallet account handler failed:", error);
         });
       });
@@ -256,13 +257,7 @@ export class ZamaSDK {
     }
     const nextChainId = nextAccount?.chainId;
     if (nextChainId !== undefined) {
-      try {
-        this.relayer.switchChain(nextChainId);
-      } catch (error) {
-        // oxlint-disable-next-line no-console
-        console.warn(`[zama-sdk] switch relayer chain failed:`, error);
-        return;
-      }
+      this.relayer.switchChain(nextChainId);
     }
     await Promise.all(
       Array.from(this.#walletAccountListeners, (listener) =>
@@ -836,7 +831,6 @@ export class ZamaSDK {
     this.#unsubscribeSigner?.();
     this.#unsubscribeSigner = undefined;
     this.#walletAccountListeners.clear();
-    this.signer?.dispose?.();
   }
 
   /**
@@ -846,6 +840,7 @@ export class ZamaSDK {
   terminate(): void {
     this.dispose();
     this.relayer.terminate();
+    this.signer?.dispose?.();
   }
 
   /**

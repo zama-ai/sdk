@@ -17,6 +17,7 @@ import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
 import { eip1193Subscribe } from "../signer/eip1193-subscribe";
 import { MutableWalletAccountStore } from "../signer/wallet-account-store";
 import type { GenericSigner, WalletAccount, WriteContractConfig } from "../types";
+import { swallow } from "../utils";
 
 /**
  * Configuration for {@link EthersSigner}.
@@ -50,7 +51,6 @@ export class EthersSigner implements GenericSigner {
   readonly #eip1193?: EIP1193Provider;
   readonly #unsubscribeProvider: () => void;
   #accountPromise: Promise<WalletAccount | undefined> | undefined;
-  #resolvingInitialAccount = false;
   #disposed = false;
 
   constructor(config: EthersSignerConfig) {
@@ -67,14 +67,15 @@ export class EthersSigner implements GenericSigner {
     } else {
       this.#directSigner = config.signer;
       this.#unsubscribeProvider = () => {};
-      this.#resolvingInitialAccount = true;
-      void this.refreshWalletAccount().catch(() => undefined);
+      swallow("refresh wallet account", async () => {
+        await this.refreshWalletAccount();
+      });
     }
   }
 
   requireWalletAccount(operation: string): WalletAccount {
     const account = this.walletAccount.getSnapshot();
-    if (!account && this.#resolvingInitialAccount) {
+    if (!account && !this.walletAccount.isReady()) {
       throw new WalletAccountNotReadyError(operation);
     }
     if (!account) {
@@ -164,7 +165,6 @@ export class EthersSigner implements GenericSigner {
       })
       .finally(() => {
         this.#accountPromise = undefined;
-        this.#resolvingInitialAccount = false;
       });
     return this.#accountPromise;
   }

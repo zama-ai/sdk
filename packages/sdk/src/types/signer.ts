@@ -33,6 +33,12 @@ export interface WalletAccountStore {
   /** Synchronous, non-prompting snapshot of the currently connected wallet account. */
   getSnapshot(): WalletAccount | undefined;
   /**
+   * Whether the store has received at least one snapshot. Adapters whose
+   * initial account is only available asynchronously start unready; callers
+   * can distinguish "still loading" from "wallet not connected".
+   */
+  isReady(): boolean;
+  /**
    * Subscribe to wallet account transitions (connect, disconnect, account
    * change, chain change). Returns an unsubscribe function.
    *

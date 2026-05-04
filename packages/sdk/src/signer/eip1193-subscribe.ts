@@ -124,9 +124,7 @@ export function eip1193Subscribe({
         current = account;
         observedAddress = account?.address;
         observedChainId = account?.chainId;
-        if (account) {
-          onWalletAccountChange({ previous: undefined, next: account });
-        }
+        onWalletAccountChange({ previous: undefined, next: account });
       })
       .catch((error) => {
         // oxlint-disable-next-line no-console

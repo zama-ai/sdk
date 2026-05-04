@@ -1,6 +1,6 @@
 import {
+  type MutableWalletAccountStore,
   createWalletAccountStore,
-  MutableWalletAccountStore,
   WalletNotConnectedError,
   type ContractAbi,
   type EIP712TypedData,

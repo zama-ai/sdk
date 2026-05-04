@@ -5656,26 +5656,55 @@ const sdk = new ZamaSDK(config);
 ## Implementing a custom signer
 
 ```ts
-import type { GenericSigner } from "@zama-fhe/sdk";
+import {
+  createWalletAccountStore,
+  WalletNotConnectedError,
+  type GenericSigner,
+} from "@zama-fhe/sdk";
 
 class MySigner implements GenericSigner {
   readonly walletAccount = createWalletAccountStore();
+  #unsubscribe: () => void;
 
-  requireWalletAccount(operation) {
+  constructor(provider: MyProvider) {
+    // Seed and watch the underlying wallet provider. Push every connect,
+    // disconnect, account change, or chain change through `setSnapshot`.
+    this.walletAccount.setSnapshot(provider.currentAccount());
+    this.#unsubscribe = provider.on("change", (account) => {
+      this.walletAccount.setSnapshot(account);
+    });
+  }
+
+  requireWalletAccount(operation: string) {
     const account = this.walletAccount.getSnapshot();
     if (!account) {
       throw new WalletNotConnectedError(operation);
     }
     return account;
   }
+
   async signTypedData(typedData) {
     /* ... */
   }
+
   async writeContract(config) {
     /* ... */
   }
+
+  dispose() {
+    this.#unsubscribe();
+  }
 }
 ```
+
+
+> [!INFO]
+> `createWalletAccountStore()` returns a `MutableWalletAccountStore`, which extends `WalletAccountStore` with `setSnapshot(next)`. Use `setSnapshot` from inside your adapter to publish wallet transitions; consumers (the SDK, React hooks) only see the read side via `getSnapshot()` and `subscribe()`.
+>
+> If your adapter resolves its initial account asynchronously (e.g. an ethers `Signer` wrapping a JSON-RPC provider), implement the optional `refreshWalletAccount(): Promise<WalletAccount | undefined>` so action paths can await non-prompting discovery before throwing `WalletNotConnectedError`.
+>
+> If your adapter wires up provider event listeners, implement `dispose()` to release them — the SDK calls it from `ZamaSDK.dispose()` and `ZamaSDK.terminate()`.
+
 
 ## Methods
 
