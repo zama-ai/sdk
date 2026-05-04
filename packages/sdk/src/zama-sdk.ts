@@ -1,12 +1,26 @@
 import { getAddress, type Address } from "viem";
 import type { FheChain } from "./chains/types";
+import {
+  delegateForUserDecryptionContract,
+  getDelegationExpiryContract,
+  MAX_UINT64,
+  revokeDelegationContract,
+} from "./contracts";
 import { CredentialsManager } from "./credentials/credentials-manager";
 import { DelegatedCredentialsManager } from "./credentials/delegated-credentials-manager";
 import { DecryptCache } from "./decrypt-cache";
 import {
   ChainMismatchError,
+  ConfigurationError,
+  DelegationDelegateEqualsContractError,
+  DelegationExpirationTooSoonError,
+  DelegationExpiryUnchangedError,
+  DelegationNotFoundError,
+  DelegationSelfNotAllowedError,
   EncryptionFailedError,
   SignerRequiredError,
+  TransactionRevertedError,
+  matchAclRevert,
   wrapDecryptError,
   ZamaError,
 } from "./errors";
@@ -31,6 +45,7 @@ import type {
   GenericStorage,
   SignerIdentityChange,
   SignerIdentityListener,
+  TransactionResult,
 } from "./types";
 import { toError } from "./utils";
 import { pLimit } from "./utils/concurrency";
@@ -393,6 +408,269 @@ export class ZamaSDK {
     }
     const credentials = this.requireCredentials("allow");
     await credentials.allow(...contractAddresses);
+  }
+
+  /**
+   * Whether a session signature is currently cached for the connected wallet
+   * and covers all of the given contract addresses.
+   *
+   * @param contractAddresses - One or more contract addresses to check.
+   *   Must contain at least one address.
+   * @returns `true` if a session signature is cached and covers every address.
+   * @throws {@link ConfigurationError} if `contractAddresses` is empty.
+   * @throws {@link SignerRequiredError} if no signer is configured.
+   *
+   * @example
+   * ```ts
+   * if (await sdk.isAllowed([cUSDT, cDAI])) {
+   *   // Decrypt without prompting the wallet
+   * }
+   * ```
+   */
+  async isAllowed(contractAddresses: Address[]): Promise<boolean> {
+    if (contractAddresses.length === 0) {
+      throw new ConfigurationError("isAllowed: contractAddresses must not be empty");
+    }
+    const credentials = this.requireCredentials("isAllowed");
+    return credentials.isAllowed(contractAddresses as [Address, ...Address[]]);
+  }
+
+  /**
+   * Revoke cached session signatures, forcing a fresh wallet signature on
+   * the next decrypt operation. Stored credentials remain intact; only the
+   * in-memory session signature is cleared.
+   *
+   * Called without arguments, the entire session is revoked. Otherwise the
+   * given contract addresses are listed in the {@link ZamaSDKEvents.CredentialsRevoked}
+   * event payload.
+   *
+   * @param contractAddresses - Optional contract addresses associated with the revocation.
+   * @throws {@link SignerRequiredError} if no signer is configured.
+   *
+   * @example
+   * ```ts
+   * await sdk.revokeCredentials(cUSDT, cDAI);
+   * ```
+   */
+  async revokeCredentials(...contractAddresses: Address[]): Promise<void> {
+    const credentials = this.requireCredentials("revokeCredentials");
+    await credentials.revoke(...contractAddresses);
+  }
+
+  /**
+   * Delegate decryption rights for a confidential contract to another address.
+   * Calls `ACL.delegateForUserDecryption()` on-chain.
+   *
+   * **Important:** After the transaction is mined, allow **1–2 minutes** before
+   * attempting delegated decryption. The delegation is recorded on L1 immediately,
+   * but the gateway must sync the ACL state via cross-chain event propagation.
+   *
+   * @param params.contractAddress - The confidential contract address to delegate on.
+   * @param params.delegateAddress - Address to delegate decryption rights to.
+   * @param params.expirationDate - Optional expiration date (defaults to permanent delegation via `uint64.max`).
+   * @returns The transaction hash and mined receipt.
+   * @throws {@link SignerRequiredError} if no signer is configured.
+   * @throws {@link ChainMismatchError} if signer and provider are on different chains.
+   * @throws {@link DelegationExpirationTooSoonError} if `expirationDate` is less than 1 hour in the future.
+   * @throws {@link DelegationSelfNotAllowedError} if the delegate equals the connected wallet.
+   * @throws {@link DelegationDelegateEqualsContractError} if the delegate equals the contract address.
+   * @throws {@link DelegationExpiryUnchangedError} if the new expiry equals the current one.
+   * @throws {@link TransactionRevertedError} if the delegation transaction reverts.
+   */
+  async delegateDecryption({
+    contractAddress,
+    delegateAddress,
+    expirationDate,
+  }: {
+    contractAddress: Address;
+    delegateAddress: Address;
+    expirationDate?: Date;
+  }): Promise<TransactionResult> {
+    const signer = this.requireSigner("delegateDecryption");
+    await this.requireChainAlignment("delegateDecryption");
+    if (expirationDate && expirationDate.getTime() < Date.now() + 3600_000) {
+      throw new DelegationExpirationTooSoonError(
+        "Expiration date must be at least 1 hour in the future",
+      );
+    }
+
+    const normalizedContract = getAddress(contractAddress);
+    const normalizedDelegate = getAddress(delegateAddress);
+
+    // Pre-flight: delegate cannot be the connected wallet (SenderCannotBeDelegate)
+    const signerAddress = await signer.getAddress();
+    if (normalizedDelegate === getAddress(signerAddress)) {
+      throw new DelegationSelfNotAllowedError(
+        "Cannot delegate to yourself (delegate === msg.sender).",
+      );
+    }
+
+    // Pre-flight: delegate cannot be the contract address (DelegateCannotBeContractAddress)
+    if (normalizedDelegate === normalizedContract) {
+      throw new DelegationDelegateEqualsContractError(
+        `Delegate address cannot be the same as the contract address (${normalizedContract}).`,
+      );
+    }
+
+    const acl = await this.relayer.getAclAddress();
+    // uint64 max → no practical expiry
+    const expDate = expirationDate
+      ? BigInt(Math.floor(expirationDate.getTime() / 1000))
+      : MAX_UINT64;
+
+    // Pre-flight with RPC: new expiry must differ from current (ExpirationDateAlreadySetToSameValue)
+    let currentExpiry: bigint;
+    try {
+      currentExpiry = await this.getDelegationExpiry({
+        contractAddress: normalizedContract,
+        delegatorAddress: signerAddress,
+        delegateAddress: normalizedDelegate,
+      });
+    } catch {
+      currentExpiry = -1n; // RPC failure — skip client-side check, let the contract enforce
+    }
+    if (currentExpiry === expDate) {
+      throw new DelegationExpiryUnchangedError(
+        `The new expiration date (${expDate}) is the same as the current one. No on-chain change needed.`,
+      );
+    }
+
+    try {
+      const txHash = await signer.writeContract(
+        delegateForUserDecryptionContract(acl, normalizedDelegate, normalizedContract, expDate),
+      );
+      const receipt = await this.provider.waitForTransactionReceipt(txHash);
+      return { txHash, receipt };
+    } catch (error) {
+      if (error instanceof ZamaError) {
+        throw error;
+      }
+      const mapped = matchAclRevert(error);
+      if (mapped) {
+        throw mapped;
+      }
+      throw new TransactionRevertedError("Delegation transaction failed", {
+        cause: error,
+      });
+    }
+  }
+
+  /**
+   * Revoke decryption delegation for a confidential contract.
+   * Calls `ACL.revokeDelegationForUserDecryption()` on-chain.
+   *
+   * @param params.contractAddress - The confidential contract address to revoke delegation on.
+   * @param params.delegateAddress - Address to revoke delegation from.
+   * @returns The transaction hash and mined receipt.
+   * @throws {@link SignerRequiredError} if no signer is configured.
+   * @throws {@link ChainMismatchError} if signer and provider are on different chains.
+   * @throws {@link DelegationNotFoundError} if no delegation exists for this (delegator, delegate, contract) tuple.
+   * @throws {@link TransactionRevertedError} if the revocation transaction reverts.
+   */
+  async revokeDelegation({
+    contractAddress,
+    delegateAddress,
+  }: {
+    contractAddress: Address;
+    delegateAddress: Address;
+  }): Promise<TransactionResult> {
+    const signer = this.requireSigner("revokeDelegation");
+    await this.requireChainAlignment("revokeDelegation");
+    const normalizedContract = getAddress(contractAddress);
+    const normalizedDelegate = getAddress(delegateAddress);
+    const signerAddress = await signer.getAddress();
+    const acl = await this.relayer.getAclAddress();
+
+    // Pre-flight: reject if never delegated (expiry === 0).
+    // Expired delegations (non-zero expiry in the past) are allowed through —
+    // the ACL contract accepts revocation of expired delegations.
+    let currentExpiry: bigint;
+    try {
+      currentExpiry = await this.getDelegationExpiry({
+        contractAddress: normalizedContract,
+        delegatorAddress: signerAddress,
+        delegateAddress: normalizedDelegate,
+      });
+    } catch {
+      currentExpiry = 1n; // RPC failure — skip client-side check, let the contract enforce
+    }
+    if (currentExpiry === 0n) {
+      throw new DelegationNotFoundError(
+        `No active delegation found for delegate ${normalizedDelegate} on contract ${normalizedContract}.`,
+      );
+    }
+
+    try {
+      const txHash = await signer.writeContract(
+        revokeDelegationContract(acl, normalizedDelegate, normalizedContract),
+      );
+      const receipt = await this.provider.waitForTransactionReceipt(txHash);
+      return { txHash, receipt };
+    } catch (error) {
+      if (error instanceof ZamaError) {
+        throw error;
+      }
+      const mapped = matchAclRevert(error);
+      if (mapped) {
+        throw mapped;
+      }
+      throw new TransactionRevertedError("Revoke delegation transaction failed", {
+        cause: error,
+      });
+    }
+  }
+
+  /**
+   * Check whether a delegation is active for the given contract address.
+   *
+   * @param params.contractAddress - The confidential contract address.
+   * @param params.delegatorAddress - The address that granted the delegation.
+   * @param params.delegateAddress - The address that received delegation rights.
+   * @returns `true` if the delegation exists and has not expired.
+   */
+  async isDelegated(params: {
+    contractAddress: Address;
+    delegatorAddress: Address;
+    delegateAddress: Address;
+  }): Promise<boolean> {
+    const expiry = await this.getDelegationExpiry(params);
+    if (expiry === 0n) {
+      return false;
+    }
+    // Permanent delegation (uint64 max) — skip the RPC round-trip for block timestamp.
+    if (expiry === MAX_UINT64) {
+      return true;
+    }
+    const now = await this.provider.getBlockTimestamp();
+    return expiry > now;
+  }
+
+  /**
+   * Get the expiration timestamp of a delegation for the given contract.
+   *
+   * @param params.contractAddress - The confidential contract address.
+   * @param params.delegatorAddress - The address that granted the delegation.
+   * @param params.delegateAddress - The address that received delegation rights.
+   * @returns Unix timestamp as bigint. `0n` = no delegation. `2^64 - 1` = permanent.
+   */
+  async getDelegationExpiry({
+    contractAddress,
+    delegatorAddress,
+    delegateAddress,
+  }: {
+    contractAddress: Address;
+    delegatorAddress: Address;
+    delegateAddress: Address;
+  }): Promise<bigint> {
+    const acl = await this.relayer.getAclAddress();
+    return this.provider.readContract(
+      getDelegationExpiryContract(
+        acl,
+        getAddress(delegatorAddress),
+        getAddress(delegateAddress),
+        getAddress(contractAddress),
+      ),
+    );
   }
 
   /**

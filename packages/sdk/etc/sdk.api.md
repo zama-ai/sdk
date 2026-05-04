@@ -20096,11 +20096,27 @@ export class ZamaSDK {
     readonly credentials: CredentialsManager | undefined;
     // (undocumented)
     readonly delegatedCredentials: DelegatedCredentialsManager | undefined;
+    delegateDecryption(input: {
+        contractAddress: Address;
+        delegateAddress: Address;
+        expirationDate?: Date;
+    }): Promise<TransactionResult>;
     delegatedUserDecrypt(handles: DecryptHandle[], delegatorAddress: Address, accountAddress?: Address): Promise<Record<Handle, ClearValueType>>;
     dispose(): void;
     // @internal
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
+    getDelegationExpiry(input: {
+        contractAddress: Address;
+        delegatorAddress: Address;
+        delegateAddress: Address;
+    }): Promise<bigint>;
+    isAllowed(contractAddresses: Address[]): Promise<boolean>;
+    isDelegated(params: {
+        contractAddress: Address;
+        delegatorAddress: Address;
+        delegateAddress: Address;
+    }): Promise<boolean>;
     onIdentityChange(listener: SignerIdentityListener): () => void;
     // (undocumented)
     readonly provider: GenericProvider;
@@ -20112,6 +20128,11 @@ export class ZamaSDK {
     requireCredentials(operation: string): CredentialsManager;
     requireDelegatedCredentials(operation: string): DelegatedCredentialsManager;
     requireSigner(operation: string): GenericSigner;
+    revokeCredentials(...contractAddresses: Address[]): Promise<void>;
+    revokeDelegation(input: {
+        contractAddress: Address;
+        delegateAddress: Address;
+    }): Promise<TransactionResult>;
     revokeSession(): Promise<void>;
     // (undocumented)
     readonly sessionStorage: GenericStorage;
