@@ -86,7 +86,7 @@ export function confidentialTransferFromContract(
  *
  * @example
  * ```ts
- * const isApproved = await provider.readContract(
+ * const isOperator = await provider.readContract(
  *   isOperatorContract(tokenAddress, holder, spender),
  * );
  * ```
