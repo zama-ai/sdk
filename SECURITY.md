@@ -23,7 +23,6 @@ We aim to acknowledge reports within **48 hours** and provide an initial assessm
 In scope:
 
 - The published `@zama-fhe/sdk` and `@zama-fhe/react-sdk` packages from this repo.
-- The Solidity contracts under `contracts/` in this repo.
 - The browser FHE worker assumes WASM is loaded from `cdn.zama.org` over HTTPS with an SHA-384 integrity check, not bundled — keep that in mind when modelling the trust boundary.
 
 ## Out of Scope
