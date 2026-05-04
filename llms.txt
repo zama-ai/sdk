@@ -83,8 +83,8 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [useIsAllowed](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsAllowed.md): Query hook that checks whether a session signature is cached and valid.
 - [useRevoke](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevoke.md): Revoke the EIP-712 decrypt authorization for specific contract addresses.
 - [useRevokeSession](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevokeSession.md): Revoke the entire session for the connected wallet.
-- [useConfidentialApprove](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialApprove.md): Approve an operator to act on your confidential tokens.
-- [useConfidentialIsApproved](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialIsApproved.md): Check if a spender is approved as operator for your confidential tokens.
+- [useConfidentialSetOperator](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialSetOperator.md): Approve an operator to act on your confidential tokens.
+- [useConfidentialIsOperator](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialIsOperator.md): Check if a spender is an approved operator for a holder's confidential tokens.
 - [useUnderlyingAllowance](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnderlyingAllowance.md): Read the ERC-20 allowance of the underlying public token for the wrapper contract.
 - [useWrapperDiscovery](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useWrapperDiscovery.md): Find the confidential wrapper contract address for an ERC-20 token via the on-chain registry.
 - [useWrappersRegistryAddress](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useWrappersRegistryAddress.md): Resolve the wrappers registry contract address for the current chain.

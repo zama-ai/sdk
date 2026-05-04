@@ -3,24 +3,22 @@
 import { useQuery, useSuspenseQuery } from "../utils/query";
 import type { UseQueryOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
-import { confidentialIsApprovedQueryOptions } from "@zama-fhe/sdk/query";
+import { confidentialIsOperatorQueryOptions } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 
-export { confidentialIsApprovedQueryOptions };
-
-export interface UseConfidentialIsApprovedConfig {
+export interface UseConfidentialIsOperatorConfig {
   /** Address of the confidential token contract. The query is disabled while `undefined`. */
   tokenAddress: Address | undefined;
-  /** Address to check approval for. The query is disabled while `undefined`. */
+  /** Address to check operator status for. The query is disabled while `undefined`. */
   spender: Address | undefined;
   /** Token holder address. The query is disabled while `undefined`. */
   holder: Address | undefined;
 }
 
-export interface UseConfidentialIsApprovedSuspenseConfig {
+export interface UseConfidentialIsOperatorSuspenseConfig {
   /** Address of the confidential token contract. */
   tokenAddress: Address;
-  /** Address to check approval for. */
+  /** Address to check operator status for. */
   spender: Address;
   /** Token holder address. */
   holder: Address;
@@ -34,20 +32,20 @@ export interface UseConfidentialIsApprovedSuspenseConfig {
  *
  * @example
  * ```tsx
- * const { data: isApproved } = useConfidentialIsApproved({
+ * const { data: isOperator } = useConfidentialIsOperator({
  *   tokenAddress: "0xToken",
  *   spender: "0xSpender",
  *   holder: "0xHolder",
  * });
  * ```
  */
-export function useConfidentialIsApproved(
-  config: UseConfidentialIsApprovedConfig,
+export function useConfidentialIsOperator(
+  config: UseConfidentialIsOperatorConfig,
   options?: Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">,
 ) {
   const { tokenAddress, spender, holder } = config;
   const sdk = useZamaSDK();
-  const baseOpts = confidentialIsApprovedQueryOptions(sdk, tokenAddress, {
+  const baseOpts = confidentialIsOperatorQueryOptions(sdk, tokenAddress, {
     holder,
     spender,
   });
@@ -60,24 +58,24 @@ export function useConfidentialIsApproved(
 }
 
 /**
- * Suspense variant of {@link useConfidentialIsApproved}. Suspends rendering
- * until the approval check resolves.
+ * Suspense variant of {@link useConfidentialIsOperator}. Suspends rendering
+ * until the operator check resolves.
  *
  * @example
  * ```tsx
- * const { data: isApproved } = useConfidentialIsApprovedSuspense({
+ * const { data: isOperator } = useConfidentialIsOperatorSuspense({
  *   tokenAddress: "0xToken",
  *   spender: "0xSpender",
  *   holder: "0xHolder",
  * });
  * ```
  */
-export function useConfidentialIsApprovedSuspense(config: UseConfidentialIsApprovedSuspenseConfig) {
+export function useConfidentialIsOperatorSuspense(config: UseConfidentialIsOperatorSuspenseConfig) {
   const { spender, holder, tokenAddress } = config;
   const sdk = useZamaSDK();
 
   return useSuspenseQuery<boolean>(
-    confidentialIsApprovedQueryOptions(sdk, tokenAddress, {
+    confidentialIsOperatorQueryOptions(sdk, tokenAddress, {
       holder,
       spender,
     }),

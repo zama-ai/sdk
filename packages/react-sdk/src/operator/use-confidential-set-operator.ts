@@ -4,9 +4,9 @@ import type { UseMutationOptions } from "@tanstack/react-query";
 import { useMutation } from "@tanstack/react-query";
 import type { Address, TransactionResult } from "@zama-fhe/sdk";
 import {
-  confidentialApproveMutationOptions,
-  invalidateAfterApprove,
-  type ConfidentialApproveParams,
+  confidentialSetOperatorMutationOptions,
+  invalidateAfterSetOperator,
+  type ConfidentialSetOperatorParams,
 } from "@zama-fhe/sdk/query";
 import { useToken, type UseZamaConfig } from "../token/use-token";
 
@@ -22,22 +22,22 @@ import { useToken, type UseZamaConfig } from "../token/use-token";
  *
  * @example
  * ```tsx
- * const approve = useConfidentialApprove({ tokenAddress: "0x..." });
- * approve.mutate({ spender: "0xOperator" });
+ * const setOperator = useConfidentialSetOperator({ tokenAddress: "0x..." });
+ * setOperator.mutate({ operator: "0xOperator" });
  * ```
  */
-export function useConfidentialApprove(
+export function useConfidentialSetOperator(
   config: UseZamaConfig,
-  options?: UseMutationOptions<TransactionResult, Error, ConfidentialApproveParams, Address>,
+  options?: UseMutationOptions<TransactionResult, Error, ConfidentialSetOperatorParams, Address>,
 ) {
   const token = useToken(config);
 
-  return useMutation<TransactionResult, Error, ConfidentialApproveParams, Address>({
-    ...confidentialApproveMutationOptions(token),
+  return useMutation<TransactionResult, Error, ConfidentialSetOperatorParams, Address>({
+    ...confidentialSetOperatorMutationOptions(token),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       options?.onSuccess?.(data, variables, onMutateResult, context);
-      invalidateAfterApprove(context.client, token.address);
+      invalidateAfterSetOperator(context.client, token.address);
     },
   });
 }

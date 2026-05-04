@@ -85,7 +85,7 @@ import {
 | `confidentialTransferContract(token, to, handle, inputProof)`           | Encrypted transfer                 |
 | `confidentialTransferFromContract(token, from, to, handle, inputProof)` | Operator encrypted transfer        |
 | `isOperatorContract(token, holder, spender)`                            | Check operator approval            |
-| `setOperatorContract(token, spender, timestamp?)`                       | Set operator approval              |
+| `setOperatorContract(token, operator, until?)`                          | Set operator approval              |
 | `confidentialTotalSupplyContract(token)`                                | Read encrypted total supply handle |
 | `rateContract(token)`                                                   | Read conversion rate               |
 

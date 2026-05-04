@@ -166,10 +166,10 @@ export function writeFinalizeUnwrapContract(
 export function writeSetOperatorContract(
   signer: EthersTransactionSigner,
   tokenAddress: Address,
-  spender: Address,
-  timestamp?: number,
+  operator: Address,
+  until?: number,
 ) {
-  return ethersWrite(signer, setOperatorContract(tokenAddress, spender, timestamp));
+  return ethersWrite(signer, setOperatorContract(tokenAddress, operator, until));
 }
 
 export function writeWrapContract(
