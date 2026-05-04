@@ -61,7 +61,12 @@ export function ZamaProvider({ children, config }: ZamaProviderProps) {
   // SDK internally does credential/cache cleanup. React layer clears the
   // wallet-lifecycle query state.
   useEffect(
-    () => sdk.onIdentityChange(() => invalidateWalletLifecycleQueries(queryClient)),
+    () =>
+      sdk.onWalletAccountChange(({ previous }) => {
+        if (previous) {
+          invalidateWalletLifecycleQueries(queryClient);
+        }
+      }),
     [sdk, queryClient],
   );
 

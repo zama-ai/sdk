@@ -97,30 +97,40 @@ The `_` wildcard catches any `ZamaError` not explicitly handled.
 | `DelegationContractIsSelfError`         | `DELEGATION_CONTRACT_IS_SELF`         | Contract address equals caller                               |
 | `DelegationExpirationTooSoonError`      | `DELEGATION_EXPIRATION_TOO_SOON`      | Expiration date less than 1 hour in the future               |
 | `DelegationNotPropagatedError`          | `DELEGATION_NOT_PROPAGATED`           | Delegation exists on L1 but hasn't synced to gateway yet     |
-| `SignerRequiredError`                   | `SIGNER_REQUIRED`                     | Write/sign/decrypt called without a signer                   |
+| `SignerNotConfiguredError`              | `SIGNER_NOT_CONFIGURED`               | SDK operation needs a signer but none is configured          |
+| `WalletNotConnectedError`               | `WALLET_NOT_CONNECTED`                | Signer exists but has no connected wallet account            |
+| `WalletAccountNotReadyError`            | `WALLET_ACCOUNT_NOT_READY`            | Async signer adapter has not resolved its account yet        |
 | `AclPausedError`                        | `ACL_PAUSED`                          | ACL contract is paused                                       |
 
 ## Error details
 
-### SignerRequiredError
+### SignerNotConfiguredError
 
-**Code:** `SIGNER_REQUIRED`
+**Code:** `SIGNER_NOT_CONFIGURED`
 
 Thrown when a write, sign, or decrypt operation is called on an SDK instance configured without a signer. The error carries the `operation` name that was attempted.
 
 ```ts
-import { SignerRequiredError } from "@zama-fhe/sdk";
+import { SignerNotConfiguredError } from "@zama-fhe/sdk";
 
 try {
   await token.shield(1000n);
 } catch (error) {
-  if (error instanceof SignerRequiredError) {
-    showPrompt("Connect a wallet to perform this action");
+  if (error instanceof SignerNotConfiguredError) {
+    showConfigurationError("Configure a signer to perform this action");
   }
 }
 ```
 
-**How to handle:** Prompt the user to connect a wallet. Once connected, reconfigure the SDK with a signer.
+**How to handle:** Reconfigure the SDK with a signer.
+
+### WalletNotConnectedError
+
+**Code:** `WALLET_NOT_CONNECTED`
+
+Thrown when a signer adapter is configured but does not currently have a connected wallet account.
+
+**How to handle:** Prompt the user to connect or unlock their wallet.
 
 ### SigningRejectedError
 

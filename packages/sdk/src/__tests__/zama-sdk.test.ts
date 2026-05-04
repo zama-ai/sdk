@@ -1,10 +1,15 @@
 import { describe, it, expect, vi, TEST_ADDR_B } from "../test-fixtures";
 import { ReadonlyToken } from "../token/readonly-token";
 import { Token } from "../token/token";
-import { DecryptionFailedError, ZamaError, ZamaErrorCode } from "../errors";
+import {
+  DecryptionFailedError,
+  WalletAccountNotReadyError,
+  ZamaError,
+  ZamaErrorCode,
+} from "../errors";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import { ZERO_HANDLE } from "../utils/handles";
-import type { GenericSigner, SignerIdentityChange, SignerIdentityListener } from "../types";
+import type { GenericSigner } from "../types";
 import type { Address } from "viem";
 import type { Handle } from "../relayer/relayer-sdk.types";
 import type { DecryptHandle } from "../query/user-decrypt";
@@ -55,32 +60,84 @@ describe("ZamaSDK", () => {
     expect(relayer.terminate).toHaveBeenCalledOnce();
   });
 
-  it("calls signer.subscribe when available", ({ createMockSigner, createSDK }) => {
+  it("subscribes to signer wallet account changes", ({ createMockSigner, createSDK }) => {
     const unsubscribe = vi.fn();
+    const walletAccount = createMockSigner().walletAccount.getSnapshot();
+    const subscribe = vi.fn((listener: SignerWalletAccountListener) => {
+      if (walletAccount) {
+        listener({ previous: undefined, next: walletAccount });
+      }
+      return unsubscribe;
+    });
     const subscribeSigner = {
       ...createMockSigner(),
-      subscribe: vi.fn().mockReturnValue(unsubscribe),
+      walletAccount: {
+        getSnapshot: vi.fn().mockReturnValue(walletAccount),
+        subscribe,
+      },
     };
 
     const sdk = createSDK({ signer: subscribeSigner });
 
-    expect(subscribeSigner.subscribe).toHaveBeenCalledOnce();
-    expect(subscribeSigner.subscribe).toHaveBeenCalledWith(expect.any(Function));
+    expect(subscribe).toHaveBeenCalledOnce();
+    expect(subscribe).toHaveBeenCalledWith(expect.any(Function));
 
     sdk.terminate();
   });
 
-  it("terminate calls unsubscribe from signer.subscribe", ({ createMockSigner, createSDK }) => {
+  it("terminate calls unsubscribe from signer wallet account subscription", ({
+    createMockSigner,
+    createSDK,
+  }) => {
     const unsubscribe = vi.fn();
     const subscribeSigner = {
       ...createMockSigner(),
-      subscribe: vi.fn().mockReturnValue(unsubscribe),
+      walletAccount: {
+        getSnapshot: vi.fn().mockReturnValue(createMockSigner().walletAccount.getSnapshot()),
+        subscribe: vi.fn().mockReturnValue(unsubscribe),
+      },
     };
 
     const sdk = createSDK({ signer: subscribeSigner });
 
     sdk.terminate();
     expect(unsubscribe).toHaveBeenCalledOnce();
+  });
+
+  it("dispose calls signer.dispose", ({ createMockSigner, createSDK }) => {
+    const dispose = vi.fn();
+    const sdk = createSDK({ signer: { ...createMockSigner(), dispose } });
+
+    sdk.dispose();
+
+    expect(dispose).toHaveBeenCalledOnce();
+  });
+
+  it("refreshes a not-ready signer once before checking chain alignment", async ({
+    createMockSigner,
+    createSDK,
+    provider,
+  }) => {
+    const walletAccount = createMockSigner().walletAccount.getSnapshot()!;
+    const requireWalletAccount = vi
+      .fn()
+      .mockImplementationOnce(() => {
+        throw new WalletAccountNotReadyError("testOp");
+      })
+      .mockReturnValue(walletAccount);
+    const refreshWalletAccount = vi.fn().mockResolvedValue(walletAccount);
+    const sdk = createSDK({
+      signer: {
+        ...createMockSigner(),
+        requireWalletAccount,
+        refreshWalletAccount,
+      },
+    });
+    vi.mocked(provider.getChainId).mockResolvedValue(walletAccount.chainId);
+
+    await expect(sdk.requireChainAlignment("testOp")).resolves.toBe(walletAccount.chainId);
+    expect(refreshWalletAccount).toHaveBeenCalledOnce();
+    expect(requireWalletAccount).toHaveBeenCalledTimes(2);
   });
 
   it("does not fail when subscribe returns a no-op unsubscribe", ({ sdk }) => {
@@ -127,17 +184,21 @@ describe("ZamaSDK", () => {
     });
   });
 
-  describe("lifecycle identity change", () => {
+  describe("lifecycle wallet account change", () => {
     function createSubscribeSigner(mockSigner: GenericSigner) {
-      let capturedOnIdentityChange: SignerIdentityListener;
+      let capturedOnWalletAccountChange: SignerWalletAccountListener;
       const signer = {
         ...mockSigner,
-        subscribe: vi.fn((onIdentityChange: SignerIdentityListener) => {
-          capturedOnIdentityChange = onIdentityChange;
-          return () => {};
-        }),
+        walletAccount: {
+          getSnapshot: vi.fn().mockReturnValue(mockSigner.walletAccount.getSnapshot()),
+          subscribe: vi.fn((onWalletAccountChange: SignerWalletAccountListener) => {
+            capturedOnWalletAccountChange = onWalletAccountChange;
+            return () => {};
+          }),
+        },
       };
-      const emitChange = (change: SignerIdentityChange) => capturedOnIdentityChange(change);
+      const emitChange = (change: SignerWalletAccountChange) =>
+        capturedOnWalletAccountChange(change);
       return { signer, emitChange };
     }
 
@@ -182,7 +243,7 @@ describe("ZamaSDK", () => {
       });
       const sdk = createSDK({ relayer, signer });
       const listener = vi.fn();
-      sdk.onIdentityChange(listener);
+      sdk.onWalletAccountChange(listener);
 
       emitChange({
         previous: undefined,
@@ -201,7 +262,7 @@ describe("ZamaSDK", () => {
       sdk.terminate();
     });
 
-    it("fans out identity listeners without waiting for slow listeners", async ({
+    it("fans out wallet account listeners without waiting for slow listeners", async ({
       createMockSigner,
       createSDK,
     }) => {
@@ -214,10 +275,10 @@ describe("ZamaSDK", () => {
         });
       });
       const fastListener = vi.fn();
-      sdk.onIdentityChange((change) => {
+      sdk.onWalletAccountChange((change) => {
         void slowListener(change);
       });
-      sdk.onIdentityChange(fastListener);
+      sdk.onWalletAccountChange(fastListener);
 
       emitChange({
         previous: undefined,

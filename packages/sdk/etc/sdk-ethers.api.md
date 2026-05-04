@@ -74,17 +74,21 @@ export type EthersProviderConfig = {
 export class EthersSigner implements GenericSigner {
     constructor(config: EthersSignerConfig);
     // (undocumented)
-    getAddress(): Promise<Address>;
+    dispose(): void;
     // (undocumented)
-    getChainId(): Promise<number>;
+    refreshWalletAccount(): Promise<WalletAccount | undefined>;
+    // Warning: (ae-forgotten-export) The symbol "WalletAccount" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    requireWalletAccount(operation: string): WalletAccount;
     // Warning: (ae-forgotten-export) The symbol "EIP712TypedData" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-    // Warning: (ae-forgotten-export) The symbol "SignerIdentityListener" needs to be exported by the entry point index.d.ts
+    // Warning: (ae-forgotten-export) The symbol "MutableWalletAccountStore" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
-    subscribe(onIdentityChange: SignerIdentityListener): () => void;
+    readonly walletAccount: MutableWalletAccountStore;
     // Warning: (ae-forgotten-export) The symbol "WriteContractConfig" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)

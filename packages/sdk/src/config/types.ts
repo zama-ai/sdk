@@ -77,7 +77,7 @@ export interface ZamaConfigGeneric<
   /**
    * Optional wallet signer. Omit for read-only usage (indexers, SSR,
    * pre-wallet-connect states). Signer-required SDK operations throw
-   * `SignerRequiredError` when invoked without a signer.
+   * `SignerNotConfiguredError` when invoked without a signer.
    */
   signer?: GenericSigner;
   provider: GenericProvider;

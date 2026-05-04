@@ -234,7 +234,7 @@ describe("ReadonlyToken.decryptBalanceAs event emissions", () => {
         publicKey: TEST_PUBLIC_KEY,
         contractAddresses: [tokenAddress],
         delegatorAddress,
-        delegateAddress: await signer.getAddress(),
+        delegateAddress: signer.walletAccount.getSnapshot()!.address,
         startTimestamp: 1000n,
         durationDays: 1n,
         extraData: "0x",

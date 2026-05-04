@@ -1,23 +1,24 @@
 import {
-  SignerRequiredError,
-  type Address,
+  createWalletAccountStore,
+  MutableWalletAccountStore,
+  WalletNotConnectedError,
   type ContractAbi,
   type EIP712TypedData,
   type GenericSigner,
   type Hex,
-  type SignerIdentityListener,
+  type WalletAccount,
   type WriteContractArgs,
   type WriteFunctionName,
   type WriteContractConfig,
 } from "@zama-fhe/sdk";
 import { getAddress } from "viem";
 import type { Config } from "wagmi";
-import { getChainId, signTypedData, writeContract } from "wagmi/actions";
+import { signTypedData, writeContract } from "wagmi/actions";
 import { getConnection, watchConnection } from "./compat";
 
 type WagmiConnection = ReturnType<typeof getConnection>;
 
-function identityFromConnection(connection: WagmiConnection) {
+function walletAccountFromConnection(connection: WagmiConnection): WalletAccount | undefined {
   if (connection.status === "disconnected") {
     return undefined;
   }
@@ -39,22 +40,29 @@ export interface WagmiSignerConfig {
  * @param signerConfig - {@link WagmiSignerConfig} with wagmi config
  */
 export class WagmiSigner implements GenericSigner {
+  readonly walletAccount: MutableWalletAccountStore;
   readonly #config: Config;
+  readonly #unsubscribeConnection: () => void;
+  #disposed = false;
 
   constructor(signerConfig: WagmiSignerConfig) {
     this.#config = signerConfig.config;
+    this.walletAccount = createWalletAccountStore(
+      walletAccountFromConnection(getConnection(this.#config)),
+    );
+    this.#unsubscribeConnection = watchConnection(this.#config, {
+      onChange: (connection) => {
+        this.walletAccount.setSnapshot(walletAccountFromConnection(connection));
+      },
+    });
   }
 
-  async getChainId(): Promise<number> {
-    return getChainId(this.#config);
-  }
-
-  async getAddress(): Promise<Address> {
-    const account = getConnection(this.#config);
-    if (!account?.address) {
-      throw new SignerRequiredError("getAddress");
+  requireWalletAccount(operation: string): WalletAccount {
+    const account = this.walletAccount.getSnapshot();
+    if (!account) {
+      throw new WalletNotConnectedError(operation);
     }
-    return account.address;
+    return account;
   }
 
   async signTypedData(typedData: EIP712TypedData): Promise<Hex> {
@@ -80,22 +88,11 @@ export class WagmiSigner implements GenericSigner {
     return writeContract(this.#config, config as Parameters<typeof writeContract>[1]);
   }
 
-  subscribe(onIdentityChange: SignerIdentityListener): () => void {
-    function emitIfChanged(
-      previous: ReturnType<typeof identityFromConnection>,
-      next: typeof previous,
-    ) {
-      if (previous?.address !== next?.address || previous?.chainId !== next?.chainId) {
-        onIdentityChange({ previous, next });
-      }
+  dispose(): void {
+    if (this.#disposed) {
+      return;
     }
-
-    emitIfChanged(undefined, identityFromConnection(getConnection(this.#config)));
-
-    return watchConnection(this.#config, {
-      onChange(connection, prevConnection) {
-        emitIfChanged(identityFromConnection(prevConnection), identityFromConnection(connection));
-      },
-    });
+    this.#disposed = true;
+    this.#unsubscribeConnection();
   }
 }

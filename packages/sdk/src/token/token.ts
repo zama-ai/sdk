@@ -125,7 +125,7 @@ export class Token extends ReadonlyToken {
     options?: TransferOptions,
   ): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("confidentialTransfer");
-    await this.sdk.requireChainAlignment("confidentialTransfer");
+    const account = await this.sdk.requireAlignedWalletAccount("confidentialTransfer");
     const { skipBalanceCheck = false, onEncryptComplete, onTransferSubmitted } = options ?? {};
 
     const normalizedTo = getAddress(to);
@@ -137,7 +137,7 @@ export class Token extends ReadonlyToken {
     const { handles, inputProof } = await this.sdk.encrypt({
       values: [{ value: amount, type: "euint64" }],
       contractAddress: this.address,
-      userAddress: await signer.getAddress(),
+      userAddress: getAddress(account.address),
     });
     safeCallback(() => onEncryptComplete?.());
 
@@ -322,13 +322,13 @@ export class Token extends ReadonlyToken {
    */
   async shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("shield");
-    await this.sdk.requireChainAlignment("shield");
+    const account = await this.sdk.requireAlignedWalletAccount("shield");
     const underlying = await this.#getUnderlying();
+    const userAddress = getAddress(account.address);
 
     // ERC-20 balance check always runs (public read, no signing needed, works for all wallet types)
     let erc20Balance: bigint;
     try {
-      const userAddress = await signer.getAddress();
       erc20Balance = await this.sdk.provider.readContract(
         balanceOfContract(underlying, userAddress),
       );
@@ -354,7 +354,7 @@ export class Token extends ReadonlyToken {
     }
 
     try {
-      const recipient = options?.to ? getAddress(options.to) : await signer.getAddress();
+      const recipient = options?.to ? getAddress(options.to) : userAddress;
       const txHash = await signer.writeContract(wrapContract(this.wrapper, recipient, amount));
       this.emit({ type: ZamaSDKEvents.ShieldSubmitted, txHash });
       safeCallback(() => options?.onShieldSubmitted?.(txHash));
@@ -392,8 +392,8 @@ export class Token extends ReadonlyToken {
    */
   async unwrap(amount: bigint): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("unwrap");
-    await this.sdk.requireChainAlignment("unwrap");
-    const userAddress = await signer.getAddress();
+    const account = await this.sdk.requireAlignedWalletAccount("unwrap");
+    const userAddress = getAddress(account.address);
 
     const { handles, inputProof } = await this.sdk.encrypt({
       values: [{ value: amount, type: "euint64" }],
@@ -444,8 +444,8 @@ export class Token extends ReadonlyToken {
    */
   async unwrapAll(): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("unwrapAll");
-    await this.sdk.requireChainAlignment("unwrapAll");
-    const userAddress = await signer.getAddress();
+    const account = await this.sdk.requireAlignedWalletAccount("unwrapAll");
+    const userAddress = getAddress(account.address);
     const handle = await this.readConfidentialBalanceOf(userAddress);
 
     if (isZeroHandle(handle)) {
@@ -628,14 +628,14 @@ export class Token extends ReadonlyToken {
    */
   async approveUnderlying(amount?: bigint): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("approveUnderlying");
-    await this.sdk.requireChainAlignment("approveUnderlying");
+    const account = await this.sdk.requireAlignedWalletAccount("approveUnderlying");
     const underlying = await this.#getUnderlying();
+    const userAddress = getAddress(account.address);
 
     const approvalAmount = amount ?? 2n ** 256n - 1n;
 
     try {
       if (approvalAmount > 0n) {
-        const userAddress = await signer.getAddress();
         const currentAllowance = await this.sdk.provider.readContract(
           allowanceContract(underlying, userAddress, this.wrapper),
         );
@@ -693,7 +693,7 @@ export class Token extends ReadonlyToken {
     expirationDate?: Date;
   }): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("delegateDecryption");
-    await this.sdk.requireChainAlignment("delegateDecryption");
+    const account = await this.sdk.requireAlignedWalletAccount("delegateDecryption");
     if (expirationDate && expirationDate.getTime() < Date.now() + 3600_000) {
       throw new DelegationExpirationTooSoonError(
         "Expiration date must be at least 1 hour in the future",
@@ -703,7 +703,7 @@ export class Token extends ReadonlyToken {
     const normalizedDelegate = getAddress(delegateAddress);
 
     // Pre-flight: delegate cannot be the connected wallet (SenderCannotBeDelegate)
-    const signerAddress = await signer.getAddress();
+    const signerAddress = getAddress(account.address);
     if (normalizedDelegate === getAddress(signerAddress)) {
       throw new DelegationSelfNotAllowedError(
         "Cannot delegate to yourself (delegate === msg.sender).",
@@ -780,9 +780,9 @@ export class Token extends ReadonlyToken {
     delegateAddress: Address;
   }): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("revokeDelegation");
-    await this.sdk.requireChainAlignment("revokeDelegation");
+    const account = await this.sdk.requireAlignedWalletAccount("revokeDelegation");
     const normalizedDelegate = getAddress(delegateAddress);
-    const signerAddress = await signer.getAddress();
+    const signerAddress = getAddress(account.address);
     const acl = await this.getAclAddress();
 
     // Pre-flight: reject if never delegated (expiry === 0).
@@ -921,8 +921,8 @@ export class Token extends ReadonlyToken {
 
     let balance: bigint;
     try {
-      const signer = this.sdk.requireSigner("assertConfidentialBalance");
-      balance = await this.balanceOf(await signer.getAddress());
+      const account = await this.sdk.requireAlignedWalletAccount("assertConfidentialBalance");
+      balance = await this.balanceOf(getAddress(account.address));
     } catch (error) {
       if (error instanceof ZamaError) {
         throw error;
@@ -986,7 +986,8 @@ export class Token extends ReadonlyToken {
   ): Promise<void> {
     const signer = this.sdk.requireSigner("approveUnderlying");
     const underlying = await this.#getUnderlying();
-    const userAddress = await signer.getAddress();
+    const account = await this.sdk.requireAlignedWalletAccount("approveUnderlying");
+    const userAddress = getAddress(account.address);
     const allowance = await this.sdk.provider.readContract(
       allowanceContract(underlying, userAddress, this.wrapper),
     );

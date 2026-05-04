@@ -33,7 +33,7 @@ export interface CredentialServiceConfig {
  * Single facade coordinating the keypair vault and the permission store.
  *
  * `CredentialService` is the only credentials object held by `ZamaSDK`. It accepts identity
- * transitions via `handleIdentityChange`.
+ * transitions via `handleWalletAccountChange`.
  */
 export class CredentialService {
   readonly #vault: KeypairVault;
@@ -56,16 +56,6 @@ export class CredentialService {
     this.#permitTTL = config.permitTTL;
   }
 
-  /** Eagerly warm the current signer's keypair. */
-  async initialize(): Promise<void> {
-    // TODO: a better refactor of the signer system needs to be addressed for SSR concerns,
-    // where we'd get a `get-or-undefined` rather than `get-or-throw` behavior.
-    await swallow("credentials initialize", async () => {
-      const address = await this.#signer.getAddress();
-      await this.#vault.getOrCreate(checksum(address));
-    });
-  }
-
   /**
    * Resolve a keypair and the permissions covering `contracts`.
    *
@@ -83,14 +73,15 @@ export class CredentialService {
    * @throws {@link SigningFailedError} if signing fails for any other reason.
    */
   async allow(contracts: readonly Address[], delegator?: Address): Promise<CredentialBundle> {
-    const signerAddress = checksum(await this.#signer.getAddress());
+    const account = this.#signer.requireWalletAccount("allow");
+    const signerAddress = checksum(account.address);
     const requested = normalizeAddresses(contracts);
     const keypair = await this.#vault.getOrCreate(signerAddress);
     if (requested.length === 0) {
       return { keypair, permits: [] };
     }
 
-    const chainId = await this.#signer.getChainId();
+    const chainId = account.chainId;
     const scope: PermissionScope = {
       signerAddress,
       chainId,
@@ -122,12 +113,16 @@ export class CredentialService {
     if (contracts.length === 0) {
       return true;
     }
-    const signerAddress = checksum(await this.#signer.getAddress());
+    const account = this.#signer.walletAccount.getSnapshot();
+    if (!account) {
+      return false;
+    }
+    const signerAddress = checksum(account.address);
     const keypair = await this.#vault.readStored(signerAddress);
     if (keypair === null) {
       return false;
     }
-    const chainId = await this.#signer.getChainId();
+    const chainId = account.chainId;
     const delegatorAddress = delegator ? checksum(delegator) : signerAddress;
     const scope: PermissionScope = { signerAddress, chainId, delegatorAddress };
     const permits = await this.#store.listUsableAndPrune(scope, keypair.publicKey);
@@ -147,7 +142,8 @@ export class CredentialService {
    * @throws {@link SigningFailedError} if reading the signer address fails.
    */
   async revokePermits(contracts?: readonly Address[]): Promise<void> {
-    const signerAddress = checksum(await this.#signer.getAddress());
+    const account = this.#signer.requireWalletAccount("revokePermits");
+    const signerAddress = checksum(account.address);
     if (contracts === undefined) {
       await this.#store.clearAllForSigner(signerAddress);
       return;
@@ -156,7 +152,7 @@ export class CredentialService {
     if (normalized.length === 0) {
       return;
     }
-    const chainId = await this.#signer.getChainId();
+    const chainId = account.chainId;
     await this.#store.deletePermitsTouching(
       { signerAddress, chainId, delegatorAddress: signerAddress },
       normalized,
@@ -170,21 +166,22 @@ export class CredentialService {
    * @throws {@link SigningFailedError} if reading the signer address fails.
    */
   async clearCredentials(): Promise<void> {
-    const signerAddress = checksum(await this.#signer.getAddress());
+    const account = this.#signer.requireWalletAccount("clearCredentials");
+    const signerAddress = checksum(account.address);
     await this.#vault.clear(signerAddress);
     await this.#store.clearAllForSigner(signerAddress);
   }
 
   /**
-   * Apply a wallet identity transition.
+   * Apply a wallet account transition.
    *
-   * Address change clears persisted credentials for the previous identity and
+   * Address change clears persisted credentials for the previous account and
    * eagerly warms a keypair for the new one so the first decrypt does not stall
    * on key generation. Chain-only changes keep credentials intact because
    * permits are chain-scoped already and stale decrypt plaintext is cleared by
    * `ZamaSDK`.
    */
-  async handleIdentityChange(
+  async handleWalletAccountChange(
     prev?: { address: Address },
     next?: { address: Address },
   ): Promise<void> {

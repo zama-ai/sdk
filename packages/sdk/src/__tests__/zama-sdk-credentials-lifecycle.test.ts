@@ -81,7 +81,20 @@ describe("ZamaSDK credentials lifecycle", () => {
       const CHAIN_A = 31337;
       const CHAIN_B = 11155111;
 
-      const signerA = createMockSigner({ getChainId: vi.fn().mockResolvedValue(CHAIN_A) });
+      const signerAAccount = {
+        address: createMockSigner().walletAccount.getSnapshot()!.address,
+        chainId: CHAIN_A,
+      };
+      const signerA = createMockSigner({
+        walletAccount: {
+          getSnapshot: vi.fn().mockReturnValue(signerAAccount),
+          subscribe: vi.fn((listener) => {
+            listener({ previous: undefined, next: signerAAccount });
+            return () => {};
+          }),
+        },
+        requireWalletAccount: vi.fn().mockReturnValue(signerAAccount),
+      });
       const providerA = createMockProvider({ getChainId: vi.fn().mockResolvedValue(CHAIN_A) });
 
       // Shared storage so reconfigured signer/provider can find the keypair —
@@ -95,7 +108,17 @@ describe("ZamaSDK credentials lifecycle", () => {
 
       // Reconstruct on chain B with the same backing storage. Same signer
       // address (default USER), different chain id.
-      const signerB = createMockSigner({ getChainId: vi.fn().mockResolvedValue(CHAIN_B) });
+      const signerBAccount = { address: signerAAccount.address, chainId: CHAIN_B };
+      const signerB = createMockSigner({
+        walletAccount: {
+          getSnapshot: vi.fn().mockReturnValue(signerBAccount),
+          subscribe: vi.fn((listener) => {
+            listener({ previous: undefined, next: signerBAccount });
+            return () => {};
+          }),
+        },
+        requireWalletAccount: vi.fn().mockReturnValue(signerBAccount),
+      });
       const providerB = createMockProvider({ getChainId: vi.fn().mockResolvedValue(CHAIN_B) });
       const sdkB = createSDK({ signer: signerB, provider: providerB, storage });
 
@@ -106,7 +129,16 @@ describe("ZamaSDK credentials lifecycle", () => {
       expect(signerB.signTypedData).toHaveBeenCalledOnce();
 
       // Switch back to chain A — the original permit must still be honored.
-      const signerA2 = createMockSigner({ getChainId: vi.fn().mockResolvedValue(CHAIN_A) });
+      const signerA2 = createMockSigner({
+        walletAccount: {
+          getSnapshot: vi.fn().mockReturnValue(signerAAccount),
+          subscribe: vi.fn((listener) => {
+            listener({ previous: undefined, next: signerAAccount });
+            return () => {};
+          }),
+        },
+        requireWalletAccount: vi.fn().mockReturnValue(signerAAccount),
+      });
       const providerA2 = createMockProvider({ getChainId: vi.fn().mockResolvedValue(CHAIN_A) });
       const sdkA2 = createSDK({ signer: signerA2, provider: providerA2, storage });
 

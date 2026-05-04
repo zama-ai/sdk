@@ -113,12 +113,19 @@ export function createMockSigner(
   address: Address = USER,
   overrides: Partial<GenericSigner> = {},
 ): GenericSigner {
+  const walletAccount = { address, chainId: 31337 };
+  const store = {
+    getSnapshot: vi.fn().mockReturnValue(walletAccount),
+    subscribe: vi.fn((listener) => {
+      listener({ previous: undefined, next: walletAccount });
+      return () => {};
+    }),
+  };
   return {
-    getChainId: vi.fn().mockResolvedValue(31337),
-    getAddress: vi.fn().mockResolvedValue(address),
+    walletAccount: store,
+    requireWalletAccount: vi.fn().mockReturnValue(walletAccount),
     signTypedData: vi.fn().mockResolvedValue(TEST_SIGNATURE),
     writeContract: vi.fn().mockResolvedValue("0xtxhash"),
-    subscribe: vi.fn().mockReturnValue(() => {}),
     ...overrides,
   };
 }

@@ -1,10 +1,18 @@
 import { getAddress } from "viem";
 import type { Address } from "viem";
+import type { WalletAccount } from "../types";
 
 const normalizeAddresses = (addresses: Address[]): Address[] =>
   addresses.map((address) => getAddress(address));
 const normalizeAddress = (address?: Address): Address | undefined =>
   address === undefined ? undefined : getAddress(address);
+const walletAccountKey = (walletAccount?: WalletAccount) =>
+  walletAccount
+    ? {
+        walletAddress: getAddress(walletAccount.address),
+        walletChainId: walletAccount.chainId,
+      }
+    : {};
 
 /**
  * Canonical query-key namespace for `@zama-fhe/sdk/query`.
@@ -21,11 +29,12 @@ export const zamaQueryKeys = {
     all: ["zama.confidentialBalance"] as const,
     token: (tokenAddress: Address) =>
       ["zama.confidentialBalance", { tokenAddress: getAddress(tokenAddress) }] as const,
-    owner: (tokenAddress: Address, owner?: Address) =>
+    owner: (tokenAddress: Address, owner?: Address, walletAccount?: WalletAccount) =>
       [
         "zama.confidentialBalance",
         {
           tokenAddress: getAddress(tokenAddress),
+          ...walletAccountKey(walletAccount),
           ...(owner ? { owner: getAddress(owner) } : {}),
         },
       ] as const,
@@ -33,11 +42,12 @@ export const zamaQueryKeys = {
 
   confidentialBalances: {
     all: ["zama.confidentialBalances"] as const,
-    tokens: (tokenAddresses: Address[], owner?: Address) =>
+    tokens: (tokenAddresses: Address[], owner?: Address, walletAccount?: WalletAccount) =>
       [
         "zama.confidentialBalances",
         {
           tokenAddresses: normalizeAddresses(tokenAddresses),
+          ...walletAccountKey(walletAccount),
           ...(owner ? { owner: getAddress(owner) } : {}),
         },
       ] as const,
@@ -122,10 +132,11 @@ export const zamaQueryKeys = {
 
   isAllowed: {
     all: ["zama.isAllowed"] as const,
-    scope: (contractAddresses: Address[]) =>
+    scope: (contractAddresses: Address[], walletAccount?: WalletAccount) =>
       [
         "zama.isAllowed",
         {
+          ...walletAccountKey(walletAccount),
           contractAddresses: normalizeAddresses(contractAddresses).toSorted(),
         },
       ] as const,
@@ -173,10 +184,14 @@ export const zamaQueryKeys = {
             : { contractAddress: getAddress(contractAddress) }),
         },
       ] as const,
-    handles: (handles: readonly { handle: string; contractAddress: Address }[]) =>
+    handles: (
+      handles: readonly { handle: string; contractAddress: Address }[],
+      walletAccount?: WalletAccount,
+    ) =>
       [
         "zama.decryption",
         {
+          ...walletAccountKey(walletAccount),
           handles: [...handles]
             .toSorted((a, b) => a.handle.localeCompare(b.handle))
             .map((h) => ({

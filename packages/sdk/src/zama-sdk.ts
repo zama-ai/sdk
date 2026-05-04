@@ -15,7 +15,8 @@ import { DecryptCache } from "./decrypt-cache";
 import {
   ChainMismatchError,
   EncryptionFailedError,
-  SignerRequiredError,
+  SignerNotConfiguredError,
+  WalletAccountNotReadyError,
   wrapDecryptError,
   ZamaError,
 } from "./errors";
@@ -37,8 +38,9 @@ import type {
   GenericProvider,
   GenericSigner,
   GenericStorage,
-  SignerIdentityChange,
-  SignerIdentityListener,
+  WalletAccount,
+  WalletAccountChange,
+  WalletAccountListener,
 } from "./types";
 import { swallow, toError } from "./utils";
 import { pLimit } from "./utils/concurrency";
@@ -59,7 +61,7 @@ export interface ZamaSDKConfig {
   /**
    * Optional wallet signer (`ViemSigner`, `EthersSigner`, `WagmiSigner`, or
    * custom {@link GenericSigner}). Signer-required operations throw
-   * {@link SignerRequiredError} when invoked without a signer.
+   * {@link SignerNotConfiguredError} when invoked without a signer.
    */
   signer?: GenericSigner;
   /** Credential storage backend (`IndexedDBStorage` for browser, `MemoryStorage` for tests). */
@@ -114,7 +116,7 @@ export class ZamaSDK {
   readonly registry: WrappersRegistry;
   readonly #registryTTL: number | undefined;
   readonly #onEvent: ZamaSDKEventListener;
-  readonly #identityListeners = new Set<SignerIdentityListener>();
+  readonly #walletAccountListeners = new Set<WalletAccountListener>();
   readonly #credentialService: CredentialService | undefined;
   #unsubscribeSigner?: () => void;
 
@@ -155,47 +157,49 @@ export class ZamaSDK {
         permitStorage: config.permitStorage,
       });
 
-      this.#unsubscribeSigner = signer.subscribe?.((change) => {
-        void this.#handleIdentityChange(change);
+      this.#unsubscribeSigner = signer.walletAccount.subscribe((change) => {
+        this.#handleWalletAccountChange(change).catch((error) => {
+          console.warn("[zama-sdk] wallet account handler failed:", error);
+        });
       });
-
-      void this.#credentialService.initialize();
     } else {
       this.#credentialService = undefined;
     }
   }
 
   /**
-   * Return the configured signer or throw {@link SignerRequiredError}.
+   * Return the configured signer or throw {@link SignerNotConfiguredError}.
    *
-   * @throws {@link SignerRequiredError} if no signer is configured.
+   * @throws {@link SignerNotConfiguredError} if no signer is configured.
    */
   requireSigner(operation: string): GenericSigner {
     if (!this.signer) {
-      throw new SignerRequiredError(operation);
+      throw new SignerNotConfiguredError(operation);
     }
     return this.signer;
   }
 
   #requireCredentialService(operation: string): CredentialService {
     if (!this.#credentialService) {
-      throw new SignerRequiredError(operation);
+      throw new SignerNotConfiguredError(operation);
     }
     return this.#credentialService;
   }
 
   /**
-   * Subscribe to wallet identity transitions.
+   * Subscribe to wallet account transitions.
    *
-   * @param listener - Called on each transition with a {@link SignerIdentityChange} carrying
-   *   `previous` and `next` identity snapshots; either may be `undefined` for
+   * @param listener - Called on each transition with a {@link WalletAccountChange} carrying
+   *   `previous` and `next` wallet account snapshots; either may be `undefined` for
    *   connect and disconnect transitions.
    * @returns An unsubscribe function; calling it removes the listener.
+   *
+   * @internal
    */
-  onIdentityChange(listener: SignerIdentityListener): () => void {
-    this.#identityListeners.add(listener);
+  onWalletAccountChange(listener: WalletAccountListener): () => void {
+    this.#walletAccountListeners.add(listener);
     return () => {
-      this.#identityListeners.delete(listener);
+      this.#walletAccountListeners.delete(listener);
     };
   }
 
@@ -206,37 +210,51 @@ export class ZamaSDK {
    *
    * @param operation - The operation name, included in the error message.
    * @returns The chain ID shared by both signer and provider.
-   * @throws {@link SignerRequiredError} if no signer is configured.
+   * @throws {@link SignerNotConfiguredError} if no signer is configured.
    * @throws {@link ChainMismatchError} if signer and provider report different chain IDs.
    */
-  async requireChainAlignment(operation: string): Promise<number> {
+  async requireAlignedWalletAccount(operation: string): Promise<WalletAccount> {
     const signer = this.requireSigner(operation);
-    const [signerChainId, providerChainId] = await Promise.all([
-      signer.getChainId(),
-      this.provider.getChainId(),
-    ]);
-    if (signerChainId !== providerChainId) {
+    let account: WalletAccount;
+    try {
+      account = signer.requireWalletAccount(operation);
+    } catch (error) {
+      if (!(error instanceof WalletAccountNotReadyError) || !signer.refreshWalletAccount) {
+        throw error;
+      }
+      await signer.refreshWalletAccount();
+      account = signer.requireWalletAccount(operation);
+    }
+    const providerChainId = await this.provider.getChainId();
+    if (account.chainId !== providerChainId) {
       throw new ChainMismatchError({
         operation,
-        signerChainId,
+        signerChainId: account.chainId,
         providerChainId,
       });
     }
-    return signerChainId;
+    return account;
   }
 
-  async #handleIdentityChange(change: SignerIdentityChange): Promise<void> {
+  async requireChainAlignment(operation: string): Promise<number> {
+    return (await this.requireAlignedWalletAccount(operation)).chainId;
+  }
+
+  async #handleWalletAccountChange(change: WalletAccountChange): Promise<void> {
+    const previousAccount = change.previous;
+    const nextAccount = change.next;
     const credentialService = this.#credentialService;
     if (credentialService) {
-      await swallow("credential identity change", () =>
-        credentialService.handleIdentityChange(change.previous, change.next),
+      await swallow("credential wallet account change", () =>
+        credentialService.handleWalletAccountChange(previousAccount, nextAccount),
       );
     }
-    const previous = change.previous;
-    if (previous) {
-      await swallow("clear decrypt cache", () => this.cache.clearForRequester(previous.address));
+    if (previousAccount) {
+      await swallow("clear decrypt cache", () =>
+        this.cache.clearForRequester(previousAccount.address),
+      );
     }
-    const nextChainId = change.next?.chainId;
+    const nextChainId = nextAccount?.chainId;
     if (nextChainId !== undefined) {
       try {
         this.relayer.switchChain(nextChainId);
@@ -247,8 +265,10 @@ export class ZamaSDK {
       }
     }
     await Promise.all(
-      Array.from(this.#identityListeners, (listener) =>
-        swallow("identity listener", () => listener(change)),
+      Array.from(this.#walletAccountListeners, (listener) =>
+        swallow("wallet account listener", () =>
+          listener({ previous: previousAccount, next: nextAccount }),
+        ),
       ),
     );
   }
@@ -397,7 +417,7 @@ export class ZamaSDK {
    *
    * @param handles - Handles to decrypt, each paired with its contract address.
    * @returns A record mapping each handle to its decrypted clear-text value.
-   * @throws {@link SignerRequiredError} if no signer is configured.
+   * @throws {@link SignerNotConfiguredError} if no signer is configured.
    * @throws {@link ChainMismatchError} if signer and provider are on different chains.
    *
    * @example
@@ -409,9 +429,8 @@ export class ZamaSDK {
    * ```
    */
   async userDecrypt(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>> {
-    const signer = this.requireSigner("userDecrypt");
     const service = this.#requireCredentialService("userDecrypt");
-    await this.requireChainAlignment("userDecrypt");
+    const account = await this.requireAlignedWalletAccount("userDecrypt");
     if (handles.length === 0) {
       return {};
     }
@@ -439,7 +458,7 @@ export class ZamaSDK {
     }
 
     // Cache partition
-    const signerAddress = await signer.getAddress();
+    const signerAddress = getAddress(account.address);
     const uncached: DecryptHandle[] = [];
 
     for (const h of nonZero) {
@@ -551,9 +570,8 @@ export class ZamaSDK {
     delegatorAddress: Address,
     accountAddress: Address = delegatorAddress,
   ): Promise<Record<Handle, ClearValueType>> {
-    const signer = this.requireSigner("delegatedUserDecrypt");
     const service = this.#requireCredentialService("delegatedUserDecrypt");
-    await this.requireChainAlignment("delegatedUserDecrypt");
+    const account = await this.requireAlignedWalletAccount("delegatedUserDecrypt");
     if (handles.length === 0) {
       return {};
     }
@@ -589,7 +607,7 @@ export class ZamaSDK {
     const allContracts = Array.from(new Set(normalized.map((h) => h.contractAddress)));
     const credentials = await service.allow(allContracts, normalizedDelegator);
 
-    const delegateAddress = await signer.getAddress();
+    const delegateAddress = getAddress(account.address);
 
     // Verify on-chain delegation is still active for each contract before
     // serving cached delegated plaintext. The SDK-side `service.allow()` only
@@ -779,12 +797,12 @@ export class ZamaSDK {
    *   removed. May also drop coverage for other contracts that shared the same
    *   permit. Delegated permits are not touched in this mode.
    *
-   * @throws {@link SignerRequiredError} if no signer is configured.
+   * @throws {@link SignerNotConfiguredError} if no signer is configured.
    */
   async revokePermits(contracts?: Address[]): Promise<void> {
-    const signer = this.requireSigner("revokePermits");
     const service = this.#requireCredentialService("revokePermits");
-    const signerAddress = await signer.getAddress();
+    const account = await this.requireAlignedWalletAccount("revokePermits");
+    const signerAddress = getAddress(account.address);
     try {
       await service.revokePermits(contracts);
     } finally {
@@ -796,12 +814,12 @@ export class ZamaSDK {
    * Wipe the keypair for the current signer and cascade-delete every permit
    * (across chains and delegators) referencing it.
    *
-   * @throws {@link SignerRequiredError} if no signer is configured.
+   * @throws {@link SignerNotConfiguredError} if no signer is configured.
    */
   async clearCredentials(): Promise<void> {
-    const signer = this.requireSigner("clearCredentials");
     const service = this.#requireCredentialService("clearCredentials");
-    const signerAddress = await signer.getAddress();
+    const account = await this.requireAlignedWalletAccount("clearCredentials");
+    const signerAddress = getAddress(account.address);
     try {
       await service.clearCredentials();
     } finally {
@@ -817,7 +835,8 @@ export class ZamaSDK {
   dispose(): void {
     this.#unsubscribeSigner?.();
     this.#unsubscribeSigner = undefined;
-    this.#identityListeners.clear();
+    this.#walletAccountListeners.clear();
+    this.signer?.dispose?.();
   }
 
   /**
