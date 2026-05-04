@@ -730,7 +730,9 @@ export class Token extends ReadonlyToken {
         delegatorAddress: signerAddress,
         delegateAddress: normalizedDelegate,
       });
-    } catch {
+    } catch (error) {
+      // oxlint-disable-next-line no-console
+      console.warn("[zama-sdk] Token.delegateDecryption: pre-flight expiry check failed:", error);
       currentExpiry = -1n; // RPC failure — skip client-side check, let the contract enforce
     }
     if (currentExpiry === expDate) {
@@ -794,7 +796,9 @@ export class Token extends ReadonlyToken {
         delegatorAddress: signerAddress,
         delegateAddress: normalizedDelegate,
       });
-    } catch {
+    } catch (error) {
+      // oxlint-disable-next-line no-console
+      console.warn("[zama-sdk] Token.revokeDelegation: pre-flight expiry check failed:", error);
       currentExpiry = 1n; // RPC failure — skip client-side check, let the contract enforce
     }
     if (currentExpiry === 0n) {
