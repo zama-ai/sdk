@@ -1052,7 +1052,7 @@
       "source_type": "official-doc",
       "category": "concepts",
       "logical_path": "concepts/permit-model",
-      "description": "How the SDK manages FHE keypairs, signed permits, and wallet account lifecycle.",
+      "description": "How EIP-712 signed permits authorize FHE decryption for specific contracts.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },

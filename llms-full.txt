@@ -15088,176 +15088,108 @@ Each package exposes multiple entry points for tree-shaking:
 
 # Permit model
 
-The SDK uses a two-layer authorization model to protect FHE credentials. An FHE keypair is generated once and persisted in storage. Signed EIP-712 permits authorize decryption for specific contract addresses. This separation means the expensive keypair generation happens rarely, while the lightweight permit signing repeats only when new contracts need coverage.
+Decrypting an on-chain FHE ciphertext requires two things: an FHE keypair (generated once, stored persistently — see [Security Model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/security-model.md#credential-storage)) and a **signed permit** that authorizes decryption for specific contract addresses. This page explains how permits work.
 
-## The two layers
+## What is a permit
 
-### Layer 1: FHE keypair (persistent, chain-independent)
+A permit is an EIP-712 typed data signature from the user's wallet. It binds:
 
-The FHE keypair consists of a public key and a private key. The public key is sent to the relayer so it can re-encrypt on-chain ciphertexts. The private key decrypts the re-encrypted values locally. Together, they give a user the ability to read their own confidential balances.
+- A set of **contract addresses** (up to 10 per permit).
+- A **chain ID**.
+- A **start timestamp** and **duration** (derived from `permitTTL`).
+- The **signer address**.
+- An optional **delegator address** (for delegated decryption).
 
-The keypair is generated once and stored in the configured storage backend (IndexedDB by default). It is scoped by signer address only — it survives chain switches, permit revocations, and page reloads. Regeneration happens only when the keypair expires (controlled by `keypairTTL`).
+The relayer verifies this signature before re-encrypting any ciphertext. Without a valid permit covering the target contract, the relayer rejects the request.
 
-### Layer 2: Signed permits (persistent, chain-scoped)
-
-A permit is an EIP-712 typed data signature from the user's wallet. It authorizes decryption for a specific set of contract addresses on a specific chain.
-
-Permits are:
+## Key properties
 
 - **Immutable** — the signed contract addresses are part of the EIP-712 payload and cannot be edited after signing.
-- **Chunked** — each permit covers at most 10 contracts. When more are needed, the SDK chunks the addresses and requests one signature per chunk.
-- **Chain-scoped** — stored under `(signerAddress, chainId, delegatorAddress)` so direct and delegated permits never collide.
-- **Additive** — when you call `allow()` with new contracts, the SDK signs additional permits for the uncovered subset. Existing permits remain valid.
+- **Chunked** — each permit covers at most 10 contracts. When more are needed, the SDK chunks the addresses and requests one wallet signature per chunk.
+- **Chain-scoped** — stored under `(signerAddress, chainId, delegatorAddress)`, so permits on Sepolia never collide with permits on Mainnet, and direct permits never collide with delegated ones.
+- **Additive** — calling `allow()` with new contracts signs additional permits for the uncovered subset only. Existing permits remain valid and are not re-signed.
+- **Time-bounded** — each permit records its creation timestamp and duration. Expired permits are pruned on next access.
 
-## Lifecycle flow
+## Lifecycle
 
 ### First visit
 
 1. User connects wallet.
-2. SDK generates an FHE keypair via WASM and stores it (keyed by signer address).
-3. App calls `allow([contractA, contractB])`.
-4. SDK builds EIP-712 typed data (includes contract addresses, timestamp, duration).
-5. Wallet signs EIP-712 → permit.
-6. Store permit in storage (keyed by signer address, chain ID, and delegator).
-7. Ready — decrypts reuse the stored permit, no further popups.
+2. App calls `allow([contractA, contractB])`.
+3. SDK checks storage — no permits cover these contracts yet.
+4. SDK builds EIP-712 typed data (contract addresses, timestamp, duration) and requests a wallet signature.
+5. Wallet signs → permit is stored (keyed by signer address, chain ID, and delegator).
+6. Ready — subsequent decrypts reuse the stored permit silently.
 
-### Subsequent page load
+### Returning visit
 
-1. Page loads → SDK reads the keypair and permits from storage.
-2. SDK checks permits → coverage found for the requested contracts.
-3. Ready — no wallet popup required.
+1. Page loads → SDK reads permits from storage.
+2. Permits cover the requested contracts and haven't expired.
+3. Ready — no wallet popup.
 
 ### New contract coverage
 
 1. Decrypt request arrives for a contract not covered by existing permits.
-2. SDK prompts wallet to sign EIP-712 for the uncovered contracts → new permit.
-3. New permit is appended to storage alongside existing ones.
-4. Ready — both old and new permits are available.
+2. SDK signs a new permit for the uncovered contracts only.
+3. New permit is appended alongside existing ones — nothing is invalidated.
 
-## What lives where
+### Expiration
 
-| Data            | Storage location                                  | Lifetime                             | Survives reload? |
-| --------------- | ------------------------------------------------- | ------------------------------------ | ---------------- |
-| FHE public key  | Persistent storage (IndexedDB)                    | Until `keypairTTL` expires           | Yes              |
-| FHE private key | Persistent storage (IndexedDB)                    | Until `keypairTTL` expires           | Yes              |
-| Signed permits  | Persistent storage (IndexedDB or `permitStorage`) | Until `permitTTL` expires or revoked | Yes              |
-| Wallet address  | Storage key (checksummed)                         | Matches keypair lifetime             | Yes              |
+1. A permit's duration elapses (default: 30 days, configurable via `permitTTL`).
+2. Permit is pruned from storage on next access.
+3. The next decrypt for that contract set prompts a single wallet re-sign.
+4. The FHE keypair is not affected.
 
 
 > [!INFO]
-> The FHE private key is stored in plaintext in the configured storage backend. In browsers, IndexedDB is only accessible to same-origin scripts. See [Security Model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/security-model.md) for the full threat model.
+> Each permit records its start timestamp and duration at creation time. Changing `permitTTL` between sessions does not retroactively alter existing permits — they use their original duration.
 
 
-## TTL: two independent clocks
+## How additive permits work
 
-The SDK has two separate time-to-live settings that control different aspects of credential lifecycle.
-
-### `keypairTTL` — keypair regeneration
-
-Controls how long the FHE keypair remains valid. Default: 2,592,000 seconds (30 days). Maximum: 31,536,000 seconds (365 days).
-
-When the keypair expires:
-
-- A new FHE keypair is generated.
-- Existing permits bound to the old keypair are pruned on next access.
-- This is the more disruptive expiry — it requires WASM-based key generation.
-
-### `permitTTL` — permit expiration
-
-Controls how long each signed permit remains valid, in days. Default: 30 days.
-
-When a permit expires:
-
-- The permit is pruned from storage on next access.
-- The next decrypt for that contract set prompts a single wallet re-sign.
-- The existing FHE keypair is not affected — no regeneration.
-
-
-> [!INFO]
-> Each permit records its start timestamp and duration at creation time. If you change the `permitTTL` configuration between sessions, existing permits use their original duration, not the new value.
-
-
-## The allow / revoke flow
-
-### Allow (pre-authorize)
-
-Call `allow()` early — ideally right after wallet connect — to prompt the signature upfront rather than during a balance read.
-
-Permits are additive: if existing permits already cover the requested contracts, no wallet prompt occurs. Only uncovered contracts trigger new signatures. Contracts are chunked into groups of up to 10 per permit, with one wallet signature prompt per chunk.
+Unlike a session model where re-authorizing replaces the previous authorization, permits are purely additive:
 
 ```ts
-// First call — signs permits for all three contracts
+// Signs permits for all three contracts
 await sdk.allow(["0xContractA", "0xContractB", "0xContractC"]);
 
-// Later — ContractD is new, so only one additional permit is signed
+// ContractA is already covered — only ContractD triggers a new signature
 await sdk.allow(["0xContractA", "0xContractD"]);
 ```
 
+This means users see fewer wallet popups over time. As they interact with more contracts, their permit coverage grows without invalidating earlier permits.
+
 
 > [!INFO]
-> Batch all contract addresses you expect to need into a single `allow()` call to minimize wallet popups. Each uncovered chunk triggers one signature prompt.
+> Batch all contract addresses you expect to need into a single `allow()` call to minimize wallet popups. Each uncovered chunk of up to 10 contracts triggers one signature prompt.
 
 
-### Revoke permits
+## Revocation
 
-`revokePermits()` deletes stored permits. The keypair in storage is not affected.
+Permits can be removed in two ways:
 
-Two modes exist for different use cases:
+- **Selective** — `sdk.revokePermits(["0xTokenA"])` removes permits touching those contracts on the current chain. Other permits are untouched.
+- **Full wipe** — `sdk.revokePermits()` removes all permits for the current signer across all chains and delegators. The FHE keypair is not affected.
 
-- `sdk.revokePermits(["0xTokenA", "0xTokenB"])` — removes permits touching those contracts on the current chain.
-- `sdk.revokePermits()` — removes all permits for the current signer across all chains and delegators.
+For a complete "log out" that also removes the FHE keypair, use `sdk.clearCredentials()`. See the [ZamaSDK reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md#revokepermits) for the full API.
 
-### Clear credentials (nuclear)
+## Wallet account changes
 
-`sdk.clearCredentials()` wipes both the keypair and all permits for the current signer. Use this for "log out" flows that should leave no trace.
+The SDK automatically manages permits when the wallet state changes:
 
-```ts
-await sdk.clearCredentials();
-```
+| Event                 | Effect on permits                                                                 |
+| --------------------- | --------------------------------------------------------------------------------- |
+| **Disconnect / lock** | All permits and keypair cleared for the previous account                          |
+| **Account switch**    | Previous account's permits cleared; new account starts fresh                      |
+| **Chain switch**      | Permits are chain-scoped, so existing permits on the previous chain remain intact |
 
-## Wallet account change events
+See [ZamaSDK.onWalletAccountChange](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md#onwalletaccountchange) for programmatic access to these transitions.
 
-The SDK automatically clears credentials when the wallet account changes. The signer adapter exposes a `walletAccount` store that emits transitions. The SDK reacts to each transition:
+## Related
 
-### Disconnect or lock
-
-The user explicitly disconnects or locks their wallet. The previous account's keypair and permits are cleared. The next connection starts fresh.
-
-### Account switch
-
-The user switches from address A to address B. The previous account's credentials are cleared automatically. The SDK eagerly warms a new keypair for address B.
-
-### Chain switch
-
-The user switches networks (e.g., Sepolia to Mainnet) while keeping the same address. Permits are chain-scoped, so existing permits for the original chain remain intact. Stale decrypt cache entries are cleared by the SDK.
-
-### Adapter support
-
-All built-in adapters (`ViemSigner` with `ethereum` option, `EthersSigner` with `ethereum` option, and the wagmi adapter built by `createConfig` from `@zama-fhe/react-sdk/wagmi`) emit wallet account transitions automatically via the `walletAccount` store.
-
-For custom signers, implementing the `walletAccount` store is required. Use `BaseSigner` or `createWalletAccountStore()` from `@zama-fhe/sdk` for the standard implementation.
-
-## Multi-contract batching
-
-A single `allow()` call can cover multiple contracts:
-
-```ts
-await sdk.allow(["0xContractA", "0xContractB", "0xContractC"]);
-```
-
-Contracts are chunked into groups of up to 10. Each chunk produces one EIP-712 signature and one stored permit. Any `balanceOf` call on a covered contract reuses the stored permit without additional popups.
-
-Adding new contracts later does not invalidate existing permits. Only the uncovered contracts trigger new signatures.
-
-## Security properties
-
-| Property                | Guarantee                                                     |
-| ----------------------- | ------------------------------------------------------------- |
-| FHE private key at rest | Stored in plaintext in IndexedDB (same-origin access only)    |
-| Permit scope            | Address-scoped, chain-scoped, and time-bounded via EIP-712    |
-| Permit storage          | Persisted in configured storage backend alongside the keypair |
-
-For the full threat model and trust assumptions, see the [Security Model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/security-model.md).
+- [Security Model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/security-model.md) — keypair storage, threat model, and trust assumptions
+- [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md#5-optional-configure-ttls-and-event-listener) — `keypairTTL` and `permitTTL` settings
+- [ZamaSDK](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md) — `allow()`, `revokePermits()`, `clearCredentials()` API
 
 ## Security model
 
