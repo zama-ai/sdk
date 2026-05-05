@@ -31,6 +31,9 @@ import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
 // @public (undocumented)
 export function allowMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.allow"], Address[], void>;
 
+// @public
+export type ApprovalStrategy = "max" | "exact" | "skip";
+
 // @public (undocumented)
 export function approveUnderlyingMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.approveUnderlying", Address], ApproveUnderlyingParams, TransactionResult>;
 
@@ -699,9 +702,7 @@ export function shieldMutationOptions(token: Token): MutationFactoryOptions<read
 
 // @public
 export interface ShieldOptions extends ShieldCallbacks {
-    // Warning: (ae-forgotten-export) The symbol "ApprovalStrategy" needs to be exported by the entry point index.d.ts
     approvalStrategy?: ApprovalStrategy;
-    // Warning: (ae-forgotten-export) The symbol "ShieldStrategy" needs to be exported by the entry point index.d.ts
     shieldStrategy?: ShieldStrategy;
     to?: Address;
 }
@@ -712,9 +713,14 @@ export interface ShieldParams extends ShieldOptions {
     amount: bigint;
 }
 
+// @public
+export type ShieldPath = Exclude<ShieldStrategy, "auto">;
+
+// @public
+export type ShieldStrategy = "auto" | "transferAndCall" | "approveAndWrap";
+
 // @public (undocumented)
 export interface ShieldSubmittedEvent extends BaseEvent {
-    // Warning: (ae-forgotten-export) The symbol "ShieldPath" needs to be exported by the entry point index.d.ts
     shieldPath: ShieldPath;
     // (undocumented)
     txHash: Hex;
@@ -829,12 +835,14 @@ export function totalSupplyQueryOptions(sdk: ZamaSDK, tokenAddress: Address, con
 // @public (undocumented)
 export interface TransactionErrorEvent extends BaseEvent {
     error: Error;
-    // Warning: (ae-forgotten-export) The symbol "TransactionErrorOperation" needs to be exported by the entry point index.d.ts
     operation: TransactionErrorOperation;
     shieldPath?: ShieldPath;
     // (undocumented)
     type: typeof ZamaSDKEvents.TransactionError;
 }
+
+// @public
+export type TransactionErrorOperation = "approveUnderlying" | "delegateDecryption" | "finalizeUnwrap" | "isPayable" | "revokeDelegation" | "setOperator" | "shield" | "transfer" | "transferFrom" | "unwrap";
 
 // @public
 export interface TransactionReceipt {

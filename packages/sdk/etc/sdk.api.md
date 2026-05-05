@@ -212,6 +212,9 @@ export class ApprovalFailedError extends ZamaError {
 }
 
 // @public
+export type ApprovalStrategy = "max" | "exact" | "skip";
+
+// @public
 export function approveContract(tokenAddress: Address, spender: Address, value: bigint): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
@@ -14656,7 +14659,6 @@ export interface ShieldCallbacks {
 
 // @public
 export interface ShieldOptions extends ShieldCallbacks {
-    // Warning: (ae-forgotten-export) The symbol "ApprovalStrategy" needs to be exported by the entry point index.d.ts
     approvalStrategy?: ApprovalStrategy;
     shieldStrategy?: ShieldStrategy;
     to?: Address;
@@ -14969,12 +14971,14 @@ export function totalSupplyContract(wrapperAddress: Address): {
 // @public (undocumented)
 export interface TransactionErrorEvent extends BaseEvent {
     error: Error;
-    // Warning: (ae-forgotten-export) The symbol "TransactionErrorOperation" needs to be exported by the entry point index.d.ts
     operation: TransactionErrorOperation;
     shieldPath?: ShieldPath;
     // (undocumented)
     type: typeof ZamaSDKEvents.TransactionError;
 }
+
+// @public
+export type TransactionErrorOperation = "approveUnderlying" | "delegateDecryption" | "finalizeUnwrap" | "isPayable" | "revokeDelegation" | "setOperator" | "shield" | "transfer" | "transferFrom" | "unwrap";
 
 // @public
 export interface TransactionReceipt {
