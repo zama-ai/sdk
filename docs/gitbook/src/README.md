@@ -10,7 +10,7 @@ description: TypeScript SDK for confidential smart contracts — shield, transfe
 {% hint style="info" %}
 **Looking for the legacy Relayer SDK?**
 
-This is the new default SDK for building on the Zama Confidential Blockchain Protocol. The legacy `@zama-fhe/relayer-sdk` lives at [github.com/zama-ai/relayer-sdk](https://github.com/zama-ai/relayer-sdk).
+This is the new default SDK for building on the Zama Protocol. The legacy `@zama-fhe/relayer-sdk` lives at [github.com/zama-ai/relayer-sdk](https://github.com/zama-ai/relayer-sdk).
 {% endhint %}
 
 ## Where to go next

@@ -5,7 +5,7 @@ description: How wallets and exchanges support ERC-7984 confidential tokens with
 
 # Wallet & exchange integration
 
-This guide is for wallet developers, dApp developers, and exchanges who want to support confidential tokens on the Zama Confidential Blockchain Protocol. It covers ERC-7984 wallet flows (showing decrypted balances, sending transfers with encrypted inputs), the Confidential Token Wrappers Registry, and wrapping/unwrapping between ERC-20 and ERC-7984.
+This guide is for wallet developers, dApp developers, and exchanges who want to support confidential tokens on the Zama Protocol. It covers ERC-7984 wallet flows (showing decrypted balances, sending transfers with encrypted inputs), the Confidential Token Wrappers Registry, and wrapping/unwrapping between ERC-20 and ERC-7984.
 
 By the end of this guide, you will be able to:
 
@@ -45,7 +45,11 @@ You do **not** need to run FHE infrastructure to integrate. Wallets and exchange
 
 ## Display confidential balances
 
-Balances are stored as ciphertext handles. To display a balance, the user must EIP-712-authorize the wallet's session and the SDK then performs **user decryption** to obtain the cleartext value. The SDK caches the session, so subsequent decryptions for authorized contracts complete without prompting.
+Balances are stored as ciphertext handles. To display one, the user authorizes the wallet's session via an EIP-712 signature, after which the SDK performs **user decryption** to obtain the cleartext value. The session signature is cached, so subsequent decryptions for authorized contracts complete without prompting.
+
+{% hint style="warning" %}
+**Don't trigger the first signature automatically.** Gate the initial EIP-712 prompt behind an explicit user action — a "View balance" or "Authorize" button — so users opt into the wallet popup instead of being surprised by it. Once the session is cached, balance reads in other components decrypt silently.
+{% endhint %}
 
 {% tabs %}
 {% tab title="SDK" %}
@@ -56,7 +60,9 @@ import { ZamaSDK } from "@zama-fhe/sdk";
 const sdk = new ZamaSDK({ relayer, signer, storage });
 const token = sdk.createToken("0xConfidentialToken");
 
-const balance = await token.balanceOf(); // user is the connected wallet
+// First call prompts the wallet for an EIP-712 session signature;
+// invoke it from a user action, not on app start.
+const balance = await token.balanceOf(); // connected wallet
 const peer = await token.balanceOf("0xUserAddr"); // explicit holder
 ```
 
@@ -64,20 +70,36 @@ const peer = await token.balanceOf("0xUserAddr"); // explicit holder
 {% tab title="React" %}
 
 ```tsx
-import { useConfidentialBalance } from "@zama-fhe/react-sdk";
+import { useAllow, useIsAllowed, useConfidentialBalance } from "@zama-fhe/react-sdk";
 
-function Balance({ tokenAddress }: { tokenAddress: `0x${string}` }) {
-  const { data, error, isPending } = useConfidentialBalance({ token: tokenAddress });
+const TOKEN = "0xConfidentialToken" as const;
+
+function Balance() {
+  const { mutate: allow, isPending: isAllowing } = useAllow();
+  const { data: isAllowed } = useIsAllowed({ contractAddresses: [TOKEN] });
+
+  const { data, isPending, error } = useConfidentialBalance(
+    { tokenAddress: TOKEN },
+    { enabled: !!isAllowed },
+  );
+
+  if (!isAllowed) {
+    return (
+      <button onClick={() => allow([TOKEN])} disabled={isAllowing}>
+        {isAllowing ? "Signing…" : "View balance"}
+      </button>
+    );
+  }
   if (isPending) return <span>Decrypting…</span>;
   if (error) return <span>{error.message}</span>;
-  return <span>{data.toString()}</span>;
+  return <span>{data?.toString()}</span>;
 }
 ```
 
 {% endtab %}
 {% endtabs %}
 
-For more detail and batch decryption (multiple tokens in one query), see [Check balances](/guides/check-balances).
+A common pattern is to call `useAllow` once when the user first connects (covering every confidential contract you'll touch), then read balances anywhere in the app without further prompts. Credentials persist in IndexedDB and survive page reloads. See [Encrypt & decrypt](/guides/encrypt-decrypt) for the full pre-authorization pattern, and [Check balances](/guides/check-balances) for batch decryption across multiple tokens.
 
 ## Send a confidential transfer
 
