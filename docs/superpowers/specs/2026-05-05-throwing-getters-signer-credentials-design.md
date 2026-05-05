@@ -44,11 +44,17 @@ class ZamaSDK {
 
   /** Throws {@link SignerNotConfiguredError} if no signer is configured. */
   get signer(): GenericSigner {
-    if (!this.#signer) throw new SignerNotConfiguredError();
-    return this.#signer;
+    try {
+      assertNonNullable(this.#signer, "signer");
+      return this.#signer;
+    } catch (cause) {
+      throw new SignerNotConfiguredError({ cause });
+    }
   }
 }
 ```
+
+`assertNonNullable` is the existing utility in `packages/sdk/src/utils/assertions.ts` — it throws a `TypeError("signer must not be null or undefined")`. We catch and rethrow as `SignerNotConfiguredError` with the original `TypeError` attached as `cause`, so consumers see the SDK's typed error while preserving the underlying assertion in the error chain for diagnostics.
 
 - The public field `signer: GenericSigner | undefined` becomes the throwing getter `signer: GenericSigner`.
 - New public boolean `hasSigner` for non-throwing peeks.
@@ -64,8 +70,12 @@ class ZamaSDK {
   readonly #credentialServiceInternal: CredentialService | undefined;
 
   get #credentialService(): CredentialService {
-    if (!this.#credentialServiceInternal) throw new SignerNotConfiguredError();
-    return this.#credentialServiceInternal;
+    try {
+      assertNonNullable(this.#credentialServiceInternal, "credentialService");
+      return this.#credentialServiceInternal;
+    } catch (cause) {
+      throw new SignerNotConfiguredError({ cause });
+    }
   }
 }
 ```
@@ -127,6 +137,7 @@ The destructure pattern from the original abandoned branch (`const { signer } = 
 
 - `packages/sdk/src/__tests__/optional-signer.test.ts:27`: `expect(sdk.signer).toBeUndefined()` → `expect(sdk.hasSigner).toBe(false)`. Add `expect(() => sdk.signer).toThrow(SignerNotConfiguredError)`.
 - `optional-signer.test.ts:78`: `expect(sdk.requireSigner("op")).toBe(sdk.signer)` → `expect(sdk.signer).toBe(theSigner)`.
+- New test: when no signer is configured, reading `sdk.signer` throws `SignerNotConfiguredError` whose `cause` is a `TypeError` with the message `"signer must not be null or undefined"`.
 - `zama-sdk.test.ts:28`: `expect(sdk.signer).toBe(signer)` stays valid (signer configured).
 - `packages/react-sdk/src/__tests__/optional-signer.test.tsx:15`: same change as SDK twin.
 - `provider.test.tsx:34,97` (`expect(result.current.signer).toBeDefined()` / `.toBe(signer)`) keep working as-is — signer is configured in those cases, the getter resolves.
