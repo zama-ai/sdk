@@ -38,6 +38,7 @@ export class PermissionStore {
     const parsed = PermissionListSchema.safeParse(raw);
     if (!parsed.success) {
       await this.#deleteScope(key);
+      await this.#untrackScope(scope);
       return [];
     }
     return parsed.data;
@@ -55,6 +56,7 @@ export class PermissionStore {
       const key = permissionScopeKey(scope);
       if (usable.length === 0) {
         await this.#deleteScope(key);
+        await this.#untrackScope(scope);
       } else {
         await swallow("update permit entry", () => this.#storage.set(key, usable));
       }
@@ -74,8 +76,8 @@ export class PermissionStore {
     }
     const validated = permissions.map((p) => PermissionSchema.parse(p));
     const existing = await this.list(scope);
-    await this.#trackScope(scope);
     await this.#storage.set(permissionScopeKey(scope), [...existing, ...validated]);
+    await this.#trackScope(scope);
   }
 
   /**
