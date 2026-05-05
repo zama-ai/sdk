@@ -1,6 +1,6 @@
-import type { Address } from "viem";
+import { type Address, encodeAbiParameters, parseAbiParameters, getAddress } from "viem";
 import { describe, expect, it, vi } from "../../test-fixtures";
-import { ERC1363NotSupportedError } from "../../errors";
+import { ERC1363NotSupportedError, ZamaErrorCode } from "../../errors";
 import { ZamaSDKEvents } from "../../events/sdk-events";
 
 const UNDERLYING = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
@@ -252,5 +252,146 @@ describe("Token.shield — ERC-1363 routing", () => {
     const result2 = await token.supportsTransferAndCall();
     expect(result2).toBe(true);
     expect(provider.readContract).toHaveBeenCalledTimes(2); // underlying + supportsInterface only
+  });
+
+  // --- Data encoding ---
+
+  it("self-shield via transferAndCall sends empty data (0x)", async ({
+    token,
+    signer,
+    provider,
+  }) => {
+    vi.mocked(provider.readContract)
+      .mockResolvedValueOnce(UNDERLYING)
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(1000n);
+
+    await token.shield(100n); // no `to` → self-shield
+
+    const callArgs = vi.mocked(signer.writeContract).mock.calls[0]![0] as {
+      args: unknown[];
+    };
+    expect(callArgs.args[2]).toBe("0x");
+  });
+
+  it("shield-to-other via transferAndCall sends ABI-encoded recipient", async ({
+    token,
+    signer,
+    provider,
+  }) => {
+    vi.mocked(provider.readContract)
+      .mockResolvedValueOnce(UNDERLYING)
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(1000n);
+
+    await token.shield(100n, { to: OTHER_RECIPIENT });
+
+    const callArgs = vi.mocked(signer.writeContract).mock.calls[0]![0] as {
+      args: unknown[];
+    };
+    const expectedData = encodeAbiParameters(parseAbiParameters("address"), [
+      getAddress(OTHER_RECIPIENT),
+    ]);
+    expect(callArgs.args[2]).toBe(expectedData);
+  });
+
+  // --- approvalStrategy interaction ---
+
+  it("approvalStrategy is ignored when transferAndCall path is used", async ({
+    token,
+    signer,
+    provider,
+  }) => {
+    vi.mocked(provider.readContract)
+      .mockResolvedValueOnce(UNDERLYING)
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(1000n);
+
+    // Pass approvalStrategy: "max" but expect no approve call
+    await token.shield(100n, { approvalStrategy: "max" });
+
+    expect(signer.writeContract).toHaveBeenCalledOnce();
+    expect(signer.writeContract).toHaveBeenCalledWith(
+      expect.objectContaining({ functionName: "transferAndCall" }),
+    );
+  });
+
+  it("onApprovalSubmitted callback is never fired on transferAndCall path", async ({
+    token,
+    provider,
+  }) => {
+    vi.mocked(provider.readContract)
+      .mockResolvedValueOnce(UNDERLYING)
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(1000n);
+
+    const onApprovalSubmitted = vi.fn();
+    await token.shield(100n, { onApprovalSubmitted });
+
+    expect(onApprovalSubmitted).not.toHaveBeenCalled();
+  });
+
+  // --- Cache behaviour after runtime revert ---
+
+  it("cache is NOT poisoned after transferAndCall runtime revert in auto mode", async ({
+    token,
+    signer,
+    provider,
+  }) => {
+    // First shield: transferAndCall reverts, falls back to approveAndWrap
+    vi.mocked(provider.readContract)
+      .mockResolvedValueOnce(UNDERLYING)
+      .mockResolvedValueOnce(true) // supportsInterface → true
+      .mockResolvedValueOnce(1000n) // balanceOf
+      .mockResolvedValueOnce(0n); // allowance (for fallback)
+
+    vi.mocked(signer.writeContract)
+      .mockRejectedValueOnce(new Error("revert")) // transferAndCall fails
+      .mockResolvedValueOnce("0xtxhash") // approve
+      .mockResolvedValueOnce("0xtxhash"); // wrap
+
+    await token.shield(100n);
+
+    // Second shield: should still try transferAndCall (cache not poisoned)
+    vi.mocked(provider.readContract).mockResolvedValueOnce(1000n); // balanceOf only (underlying + supportsInterface cached)
+    vi.mocked(signer.writeContract).mockResolvedValueOnce("0xtxhash"); // transferAndCall succeeds this time
+
+    await token.shield(200n);
+
+    // The 4th writeContract call should be transferAndCall, not approve
+    expect(signer.writeContract).toHaveBeenNthCalledWith(
+      4,
+      expect.objectContaining({ functionName: "transferAndCall" }),
+    );
+  });
+
+  // --- Error class ---
+
+  it("ERC1363NotSupportedError has correct code and includes token address", async ({
+    token,
+    provider,
+  }) => {
+    vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(false);
+
+    try {
+      await token.shield(100n, { shieldStrategy: "transferAndCall" });
+      expect.unreachable("should have thrown");
+    } catch (error) {
+      expect(error).toBeInstanceOf(ERC1363NotSupportedError);
+      expect((error as ERC1363NotSupportedError).code).toBe(ZamaErrorCode.ERC1363NotSupported);
+      expect((error as ERC1363NotSupportedError).message).toContain(UNDERLYING);
+    }
+  });
+
+  // --- shieldStrategy passthrough in query mutation ---
+
+  it("shieldMutationOptions passes shieldStrategy to token.shield", async ({ mockToken }) => {
+    const { shieldMutationOptions } = await import("../../query/shield");
+    const options = shieldMutationOptions(mockToken, mockToken.address);
+
+    await options.mutationFn({ amount: 1n, shieldStrategy: "transferAndCall" });
+    expect(mockToken.shield).toHaveBeenCalledWith(1n, {
+      shieldStrategy: "transferAndCall",
+    });
   });
 });
