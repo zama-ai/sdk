@@ -7,7 +7,7 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 /// @dev ERC-1363 test token with open mint. Used by e2e tests to verify
 ///      the SDK's `transferAndCall` shielding path.
 contract TestERC1363 is ERC1363 {
-    uint8 public _decimals;
+    uint8 private _decimals;
 
     constructor(string memory name_, string memory symbol_, uint8 decimals_) ERC20(name_, symbol_) {
         _decimals = decimals_;

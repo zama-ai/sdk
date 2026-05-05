@@ -47,6 +47,7 @@ import type {
   ShieldCallbacks,
   ShieldOptions,
   ShieldPath,
+  ShieldStrategy,
   TransactionResult,
   TransferCallbacks,
   TransferOptions,
@@ -111,14 +112,12 @@ export class Token extends ReadonlyToken {
         supportsInterfaceContract(underlying, ERC1363_INTERFACE_ID),
       );
     } catch {
-      this.#erc1363Supported = false;
+      return false;
     }
     return this.#erc1363Supported;
   }
 
-  async #resolveShieldingPath(
-    strategy: ShieldOptions["shieldStrategy"] = "auto",
-  ): Promise<ShieldPath> {
+  async #resolveShieldingPath(strategy: ShieldStrategy = "auto"): Promise<ShieldPath> {
     if (strategy === "approveAndWrap") {
       return "approveAndWrap";
     }
@@ -392,52 +391,67 @@ export class Token extends ReadonlyToken {
     }
 
     if (shieldingPath === "transferAndCall") {
-      try {
-        return await this.#shieldViaTransferAndCall(amount, underlying, options);
-      } catch (error) {
-        // If user explicitly chose transferAndCall, don't fall back — surface the error
-        if (options?.shieldStrategy === "transferAndCall") {
-          this.emit({
-            type: ZamaSDKEvents.TransactionError,
-            operation: "shield",
-            error: toError(error),
-          });
-          if (error instanceof ZamaError) {
-            throw error;
-          }
-          throw new TransactionRevertedError("Shield transaction failed", {
-            cause: error,
-          });
-        }
+      const txHash = await this.#submitTransferAndCall(amount, underlying, options);
+      if (txHash) {
+        // Transaction was submitted on-chain — commit to this path (no fallback)
+        this.emit({
+          type: ZamaSDKEvents.ShieldSubmitted,
+          txHash,
+          shieldPath: "transferAndCall",
+        });
+        safeCallback(() => options?.onShieldSubmitted?.(txHash));
+        const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
+        return { txHash, receipt };
       }
+      // txHash is null → writeContract rejected before submission, fallback is safe
     }
 
     return this.#shieldViaApproveAndWrap(amount, options);
   }
 
-  async #shieldViaTransferAndCall(
+  /**
+   * Attempt to submit a transferAndCall transaction. Returns the tx hash on success,
+   * or `null` if writeContract rejected and fallback is safe (auto mode only).
+   * Throws on explicit strategy or post-submit errors.
+   */
+  async #submitTransferAndCall(
     amount: bigint,
     underlying: Address,
     options?: ShieldOptions,
-  ): Promise<TransactionResult> {
+  ): Promise<Hex | null> {
     const signer = this.sdk.requireSigner("shield");
-    const userAddress = await signer.getAddress();
+    const userAddress = getAddress(await signer.getAddress());
     const recipient = options?.to ? getAddress(options.to) : userAddress;
     const data: Hex =
       recipient === userAddress
         ? "0x"
         : encodeAbiParameters(parseAbiParameters("address"), [recipient]);
-    const txHash = await signer.writeContract(
-      transferAndCallContract(underlying, this.wrapper, amount, data),
-    );
-    this.emit({
-      type: ZamaSDKEvents.ShieldSubmitted,
-      txHash,
-      shieldPath: "transferAndCall",
-    });
-    safeCallback(() => options?.onShieldSubmitted?.(txHash));
-    const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
-    return { txHash, receipt };
+    try {
+      return await signer.writeContract(
+        transferAndCallContract(underlying, this.wrapper, amount, data),
+      );
+    } catch (error) {
+      if (options?.shieldStrategy === "transferAndCall") {
+        // Explicit mode: surface the error, no fallback
+        this.emit({
+          type: ZamaSDKEvents.TransactionError,
+          operation: "shield",
+          error: toError(error),
+        });
+        throw error instanceof ZamaError
+          ? error
+          : new TransactionRevertedError("Shield transaction failed", {
+              cause: error,
+            });
+      }
+      // Auto mode: writeContract rejected, emit warning and allow fallback
+      this.emit({
+        type: ZamaSDKEvents.TransactionError,
+        operation: "shield",
+        error: toError(error),
+      });
+      return null;
+    }
   }
 
   async #shieldViaApproveAndWrap(

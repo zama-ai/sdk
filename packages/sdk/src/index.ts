@@ -127,6 +127,7 @@ export type {
   ShieldCallbacks,
   ShieldOptions,
   ShieldPath,
+  ShieldStrategy,
   TransferCallbacks,
   TransferOptions,
 } from "./types";
