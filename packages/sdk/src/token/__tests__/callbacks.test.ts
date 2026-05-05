@@ -176,6 +176,7 @@ describe("Shield callbacks (SDK-19)", () => {
   it("fires onApprovalSubmitted and onShieldSubmitted callbacks", async ({ token, provider }) => {
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce(UNDERLYING)
+      .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
       .mockResolvedValueOnce(1000n)
       .mockResolvedValueOnce(0n);
 
@@ -191,6 +192,7 @@ describe("Shield callbacks (SDK-19)", () => {
   it("skips onApprovalSubmitted when allowance is sufficient", async ({ token, provider }) => {
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce(UNDERLYING)
+      .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
       .mockResolvedValueOnce(1000n)
       .mockResolvedValueOnce(1000n);
 
@@ -206,6 +208,7 @@ describe("Shield callbacks (SDK-19)", () => {
   it("completes shield even when callbacks throw", async ({ token, provider }) => {
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce(UNDERLYING)
+      .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
       .mockResolvedValueOnce(1000n)
       .mockResolvedValueOnce(0n);
 
@@ -224,6 +227,7 @@ describe("Shield callbacks (SDK-19)", () => {
   it("passes to parameter for shield recipient", async ({ token, signer, provider }) => {
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce(UNDERLYING)
+      .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
       .mockResolvedValueOnce(1000n)
       .mockResolvedValueOnce(1000n);
 

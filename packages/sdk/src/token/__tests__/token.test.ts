@@ -231,6 +231,7 @@ describe("Token", () => {
     it("checks allowance and shields", async ({ signer, token, provider }) => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // #getUnderlying
+        .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
         .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
         .mockResolvedValueOnce(0n); // allowance
 
@@ -253,6 +254,7 @@ describe("Token", () => {
     it("skips approval when allowance is sufficient", async ({ signer, token, provider }) => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // #getUnderlying
+        .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
         .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
         .mockResolvedValueOnce(200n); // enough allowance
 
@@ -268,12 +270,13 @@ describe("Token", () => {
     it("skips approval when approvalStrategy is skip", async ({ signer, token, provider }) => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // #getUnderlying
+        .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
         .mockResolvedValueOnce(1000n); // ERC-20 balanceOf
 
       await token.shield(100n, { approvalStrategy: "skip" });
 
-      // readContract for #getUnderlying + ERC-20 balanceOf, no allowance check
-      expect(provider.readContract).toHaveBeenCalledTimes(2);
+      // readContract for #getUnderlying + supportsInterface + ERC-20 balanceOf, no allowance check
+      expect(provider.readContract).toHaveBeenCalledTimes(3);
       expect(signer.writeContract).toHaveBeenCalledOnce();
     });
   });
@@ -691,6 +694,7 @@ describe("Token", () => {
     it("approves max uint256 with approvalStrategy max", async ({ signer, token, provider }) => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // #getUnderlying
+        .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
         .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
         .mockResolvedValueOnce(0n); // allowance
 
@@ -713,6 +717,7 @@ describe("Token", () => {
     }) => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // #getUnderlying
+        .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
         .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
         .mockResolvedValueOnce(50n); // existing non-zero allowance < amount
 
@@ -741,9 +746,10 @@ describe("Token", () => {
     });
 
     it("wraps write failure in TransactionReverted", async ({ signer, token, provider }) => {
-      vi.mocked(provider.readContract).mockResolvedValueOnce(
-        "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c",
-      ); // #getUnderlying
+      vi.mocked(provider.readContract)
+        .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // #getUnderlying
+        .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
+        .mockResolvedValueOnce(1000n); // ERC-20 balanceOf
       // skip approval
       vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("tx failed"));
 
@@ -761,6 +767,7 @@ describe("Token", () => {
     it("wraps allowance check failure in ApprovalFailed", async ({ signer, token, provider }) => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // #getUnderlying
+        .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
         .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
         .mockResolvedValueOnce(0n); // allowance
 
@@ -1023,6 +1030,7 @@ describe("Token", () => {
     }) => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // #getUnderlying
+        .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
         .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
         .mockResolvedValueOnce(0n); // allowance
 
@@ -1035,6 +1043,7 @@ describe("Token", () => {
     it("re-throws ZamaError from wrap writeContract as-is", async ({ signer, token, provider }) => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // #getUnderlying
+        .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
         .mockResolvedValueOnce(1000n); // ERC-20 balanceOf
 
       const original = new ZamaError(ZamaErrorCode.TransactionReverted, "already wrapped");
@@ -1256,6 +1265,7 @@ describe("Token", () => {
     }) => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // #getUnderlying
+        .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
         .mockResolvedValueOnce(50n); // ERC-20 balanceOf < amount
 
       await expect(token.shield(100n)).rejects.toMatchObject({
@@ -1267,6 +1277,7 @@ describe("Token", () => {
     it("ERC-20 check always runs regardless of options", async ({ token, provider }) => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // #getUnderlying
+        .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
         .mockResolvedValueOnce(50n); // ERC-20 balanceOf < amount
 
       await expect(token.shield(100n)).rejects.toMatchObject({
@@ -1277,6 +1288,7 @@ describe("Token", () => {
     it("passes ERC-20 check and proceeds to shield", async ({ token, provider }) => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // #getUnderlying
+        .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
         .mockResolvedValueOnce(1000n) // ERC-20 balanceOf >= amount
         .mockResolvedValueOnce(1000n); // allowance >= amount
 
@@ -1290,6 +1302,7 @@ describe("Token", () => {
     }) => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // #getUnderlying
+        .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
         .mockResolvedValueOnce(100n) // ERC-20 balanceOf === amount
         .mockResolvedValueOnce(1000n); // allowance >= amount
 
@@ -1301,9 +1314,9 @@ describe("Token", () => {
       token,
       provider,
     }) => {
-      vi.mocked(provider.readContract).mockResolvedValueOnce(
-        "0x0000000000000000000000000000000000000000",
-      ); // #getUnderlying = zero address
+      vi.mocked(provider.readContract)
+        .mockResolvedValueOnce("0x0000000000000000000000000000000000000000") // #getUnderlying = zero address
+        .mockResolvedValueOnce(false); // supportsInterface (ERC-1363)
 
       const result = await token.shield(100n);
       expect(result.txHash).toBe("0xtxhash");
@@ -1312,6 +1325,7 @@ describe("Token", () => {
     it("wraps ERC-20 balanceOf read failure as ERC20_READ_FAILED", async ({ token, provider }) => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // #getUnderlying
+        .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
         .mockRejectedValueOnce(new Error("RPC unavailable")); // balanceOf fails
 
       await expect(token.shield(100n)).rejects.toMatchObject({

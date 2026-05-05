@@ -1,4 +1,4 @@
-import { type Address, getAddress, type Hex } from "viem";
+import { type Address, getAddress, type Hex, encodeAbiParameters, parseAbiParameters } from "viem";
 import {
   allowanceContract,
   approveContract,
@@ -6,11 +6,14 @@ import {
   confidentialTransferContract,
   confidentialTransferFromContract,
   delegateForUserDecryptionContract,
+  ERC1363_INTERFACE_ID,
   finalizeUnwrapContract,
   isOperatorContract,
   MAX_UINT64,
   revokeDelegationContract,
   setOperatorContract,
+  supportsInterfaceContract,
+  transferAndCallContract,
   underlyingContract,
   unwrapContract,
   unwrapFromBalanceContract,
@@ -24,6 +27,7 @@ import {
   ApprovalFailedError,
   BalanceCheckUnavailableError,
   DecryptionFailedError,
+  ERC1363NotSupportedError,
   ERC20ReadFailedError,
   DelegationDelegateEqualsContractError,
   DelegationExpirationTooSoonError,
@@ -65,6 +69,7 @@ export class Token extends ReadonlyToken {
   readonly wrapper: Address;
   #underlying: Address | undefined;
   #underlyingPromise: Promise<Address> | null = null;
+  #erc1363Supported: boolean | null = null;
 
   constructor(sdk: ZamaSDK, address: Address, wrapper?: Address) {
     super(sdk, address);
@@ -89,6 +94,41 @@ export class Token extends ReadonlyToken {
         });
     }
     return this.#underlyingPromise;
+  }
+
+  /**
+   * Check whether the underlying ERC-20 supports ERC-1363 `transferAndCall`.
+   * Result is cached per Token instance after the first call.
+   */
+  async supportsTransferAndCall(): Promise<boolean> {
+    if (this.#erc1363Supported !== null) {
+      return this.#erc1363Supported;
+    }
+    const underlying = await this.#getUnderlying();
+    try {
+      this.#erc1363Supported = await this.sdk.provider.readContract(
+        supportsInterfaceContract(underlying, ERC1363_INTERFACE_ID),
+      );
+    } catch {
+      this.#erc1363Supported = false;
+    }
+    return this.#erc1363Supported;
+  }
+
+  async #resolveShieldingPath(
+    strategy: ShieldOptions["shieldStrategy"] = "auto",
+  ): Promise<"transferAndCall" | "approveAndWrap"> {
+    if (strategy === "approveAndWrap") {
+      return "approveAndWrap";
+    }
+
+    const supported = await this.supportsTransferAndCall();
+
+    if (strategy === "transferAndCall" && !supported) {
+      throw new ERC1363NotSupportedError(await this.#getUnderlying());
+    }
+
+    return supported ? "transferAndCall" : "approveAndWrap";
   }
 
   // WRITE OPERATIONS
@@ -323,9 +363,11 @@ export class Token extends ReadonlyToken {
   async shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("shield");
     await this.sdk.requireChainAlignment("shield");
+
+    const shieldingPath = await this.#resolveShieldingPath(options?.shieldStrategy);
     const underlying = await this.#getUnderlying();
 
-    // ERC-20 balance check always runs (public read, no signing needed, works for all wallet types)
+    // ERC-20 balance check (public read, no signing needed)
     let erc20Balance: bigint;
     try {
       const userAddress = await signer.getAddress();
@@ -348,6 +390,47 @@ export class Token extends ReadonlyToken {
       );
     }
 
+    if (shieldingPath === "transferAndCall") {
+      try {
+        const userAddress = await signer.getAddress();
+        const recipient = options?.to ? getAddress(options.to) : userAddress;
+        const data: Hex =
+          recipient.toLowerCase() === userAddress.toLowerCase()
+            ? "0x"
+            : encodeAbiParameters(parseAbiParameters("address"), [recipient]);
+        const txHash = await signer.writeContract(
+          transferAndCallContract(underlying, this.wrapper, amount, data),
+        );
+        this.emit({
+          type: ZamaSDKEvents.ShieldSubmitted,
+          txHash,
+          shieldPath: "transferAndCall",
+        });
+        safeCallback(() => options?.onShieldSubmitted?.(txHash));
+        const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
+        return { txHash, receipt };
+      } catch (error) {
+        // If user explicitly chose transferAndCall, don't fall back — surface the error
+        if (options?.shieldStrategy === "transferAndCall") {
+          this.emit({
+            type: ZamaSDKEvents.TransactionError,
+            operation: "shield",
+            error: toError(error),
+          });
+          if (error instanceof ZamaError) {
+            throw error;
+          }
+          throw new TransactionRevertedError("Shield transaction failed", {
+            cause: error,
+          });
+        }
+        // Auto mode: transferAndCall reverted, fall back to approveAndWrap
+        // Invalidate cache so we don't try transferAndCall again for this token
+        this.#erc1363Supported = false;
+      }
+    }
+
+    // approveAndWrap path (or fallback from failed transferAndCall)
     const strategy = options?.approvalStrategy ?? "exact";
     if (strategy !== "skip") {
       await this.#ensureAllowance(amount, strategy === "max", options);
@@ -356,7 +439,11 @@ export class Token extends ReadonlyToken {
     try {
       const recipient = options?.to ? getAddress(options.to) : await signer.getAddress();
       const txHash = await signer.writeContract(wrapContract(this.wrapper, recipient, amount));
-      this.emit({ type: ZamaSDKEvents.ShieldSubmitted, txHash, shieldPath: "approveAndWrap" });
+      this.emit({
+        type: ZamaSDKEvents.ShieldSubmitted,
+        txHash,
+        shieldPath: "approveAndWrap",
+      });
       safeCallback(() => options?.onShieldSubmitted?.(txHash));
       const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
       return { txHash, receipt };

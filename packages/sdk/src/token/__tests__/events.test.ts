@@ -526,6 +526,7 @@ describe("Token event emissions", () => {
     }) => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // underlying
+        .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
         .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
         .mockResolvedValueOnce(2n ** 256n - 1n); // allowance
       const { token, events } = setupSdkWithEvents({
@@ -775,6 +776,7 @@ describe("Token event emissions", () => {
     }) => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c")
+        .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
         .mockResolvedValueOnce(1000n);
       vi.mocked(signer.writeContract).mockRejectedValue(new Error("shield failed"));
       const { token, events } = setupSdkWithEvents({

@@ -7,6 +7,7 @@ describe("Token.shield", () => {
   it("fires onApprovalSubmitted and onShieldSubmitted callbacks", async ({ token, provider }) => {
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce(UNDERLYING) // underlying()
+      .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
       .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
       .mockResolvedValueOnce(0n); // allowance
 
@@ -22,6 +23,7 @@ describe("Token.shield", () => {
   it("skips onApprovalSubmitted when allowance is sufficient", async ({ token, provider }) => {
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce(UNDERLYING)
+      .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
       .mockResolvedValueOnce(1000n)
       .mockResolvedValueOnce(1000n);
 
@@ -37,6 +39,7 @@ describe("Token.shield", () => {
   it("completes shield even when callbacks throw", async ({ token, provider }) => {
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce(UNDERLYING)
+      .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
       .mockResolvedValueOnce(1000n)
       .mockResolvedValueOnce(0n);
 
@@ -55,6 +58,7 @@ describe("Token.shield", () => {
   it("passes to parameter for shield recipient", async ({ token, signer, provider }) => {
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce(UNDERLYING)
+      .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
       .mockResolvedValueOnce(1000n)
       .mockResolvedValueOnce(1000n);
 
@@ -71,6 +75,7 @@ describe("Token.shield", () => {
   }) => {
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce(UNDERLYING) // underlying()
+      .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
       .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
       .mockResolvedValueOnce(0n); // allowance — forces approval path
 
@@ -100,6 +105,7 @@ describe("Token.shield", () => {
   }) => {
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce(UNDERLYING)
+      .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
       .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
       .mockResolvedValueOnce(0n) // allowance
       .mockResolvedValue(fixtureHandle); // subsequent confidentialBalanceOf calls
