@@ -1,6 +1,6 @@
 {
   "name": "@zama-fhe/react-sdk",
-  "version": "3.0.0-alpha.30",
+  "version": "3.0.0-alpha.31",
   "description": "React hooks for Zama SDK",
   "license": "BSD-3-Clause-Clear",
   "author": "Zama",
@@ -59,12 +59,12 @@
   "devDependencies": {
     "@zama-fhe/sdk": "workspace:*",
     "rolldown": "1.0.0-rc.17",
-    "rolldown-plugin-dts": "^0.23.2",
+    "rolldown-plugin-dts": "^0.24.1",
     "viem": "^2.47.12"
   },
   "peerDependencies": {
     "@tanstack/react-query": ">=5",
-    "@zama-fhe/sdk": "^3.0.0-alpha.30",
+    "@zama-fhe/sdk": "^3.0.0-alpha.31",
     "react": ">=18",
     "viem": "^2.47.0",
     "wagmi": ">=2"
