@@ -5912,6 +5912,9 @@ export type ContractAbi = Abi | readonly unknown[];
 export function createConfig<const TChains extends readonly [FheChain, ...FheChain[]]>(params: ZamaConfigGeneric<TChains>): ZamaConfig;
 
 // @public
+export function createWalletAccountStore(initial?: WalletAccount): MutableWalletAccountStore;
+
+// @public
 export interface CredentialBundle {
     // (undocumented)
     readonly keypair: StoredKeypair;
@@ -7499,10 +7502,11 @@ export interface GenericProvider {
 
 // @public
 export interface GenericSigner {
-    getAddress(): Promise<Address>;
-    getChainId(): Promise<number>;
+    dispose?(): void;
+    refreshWalletAccount?(): Promise<WalletAccount | undefined>;
+    requireWalletAccount(operation: string): WalletAccount;
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-    subscribe?: (onIdentityChange: SignerIdentityListener) => () => void;
+    readonly walletAccount: WalletAccountStore;
     writeContract<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex>;
 }
 
@@ -11505,6 +11509,16 @@ export class MemoryStorage implements GenericStorage {
 export const memoryStorage: MemoryStorage;
 
 // @public
+export class MutableWalletAccountStore implements WalletAccountStore {
+    constructor(initial?: WalletAccount);
+    // (undocumented)
+    getSnapshot(): WalletAccount | undefined;
+    setSnapshot(next: WalletAccount | undefined): void;
+    // (undocumented)
+    subscribe(listener: WalletAccountListener): () => void;
+}
+
+// @public
 export function nameContract(tokenAddress: Address): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
@@ -14625,27 +14639,13 @@ export interface ShieldSubmittedEvent extends BaseEvent {
 }
 
 // @public
-export interface SignerIdentity {
-    // (undocumented)
-    address: Address;
-    // (undocumented)
-    chainId: number;
+export class SignerNotConfiguredError extends SignerRequiredError {
+    constructor(operation: string, options?: ErrorOptions);
 }
-
-// @public
-export interface SignerIdentityChange {
-    // (undocumented)
-    next?: SignerIdentity;
-    // (undocumented)
-    previous?: SignerIdentity;
-}
-
-// @public
-export type SignerIdentityListener = (change: SignerIdentityChange) => void;
 
 // @public
 export class SignerRequiredError extends ZamaError {
-    constructor(operation: string, options?: ErrorOptions);
+    constructor(code: ZamaErrorCode, operation: string, message: string, options?: ErrorOptions);
     // (undocumented)
     readonly operation: string;
 }
@@ -18757,6 +18757,41 @@ export interface UserDecryptParams {
 }
 
 // @public
+export interface WalletAccount {
+    // (undocumented)
+    address: Address;
+    // (undocumented)
+    chainId: number;
+}
+
+// @public
+export interface WalletAccountChange {
+    // (undocumented)
+    next?: WalletAccount;
+    // (undocumented)
+    previous?: WalletAccount;
+}
+
+// @public
+export type WalletAccountListener = (change: WalletAccountChange) => void;
+
+// @public
+export class WalletAccountNotReadyError extends SignerRequiredError {
+    constructor(operation: string, options?: ErrorOptions);
+}
+
+// @public
+export interface WalletAccountStore {
+    getSnapshot(): WalletAccount | undefined;
+    subscribe(onWalletAccountChange: WalletAccountListener): () => void;
+}
+
+// @public
+export class WalletNotConnectedError extends SignerRequiredError {
+    constructor(operation: string, options?: ErrorOptions);
+}
+
+// @public
 export interface WorkerLike {
     // (undocumented)
     terminate(): void;
@@ -19953,7 +19988,9 @@ export const ZamaErrorCode: {
     readonly DelegationExpirationTooSoon: "DELEGATION_EXPIRATION_TOO_SOON"; /** Delegation exists on-chain but hasn't propagated to the gateway yet. */
     readonly DelegationNotPropagated: "DELEGATION_NOT_PROPAGATED"; /** Signer and provider are connected to different chains. */
     readonly ChainMismatch: "CHAIN_MISMATCH"; /** Operation requires a signer but none is configured. */
-    readonly SignerRequired: "SIGNER_REQUIRED";
+    readonly SignerNotConfigured: "SIGNER_NOT_CONFIGURED"; /** Operation requires a connected wallet account. */
+    readonly WalletNotConnected: "WALLET_NOT_CONNECTED"; /** Wallet account discovery is still resolving. */
+    readonly WalletAccountNotReady: "WALLET_ACCOUNT_NOT_READY";
 };
 
 // @public
@@ -19977,13 +20014,16 @@ export class ZamaSDK {
     encrypt(params: EncryptParams): Promise<EncryptResult>;
     isAllowed(contracts: Address[]): Promise<boolean>;
     isAllowedAs(delegator: Address, contracts: Address[]): Promise<boolean>;
-    onIdentityChange(listener: SignerIdentityListener): () => void;
+    // @internal
+    onWalletAccountChange(listener: WalletAccountListener): () => void;
     // (undocumented)
     readonly provider: GenericProvider;
     publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
     readonly registry: WrappersRegistry;
     // (undocumented)
     readonly relayer: RelayerDispatcher;
+    requireAlignedWalletAccount(operation: string): Promise<WalletAccount>;
+    // (undocumented)
     requireChainAlignment(operation: string): Promise<number>;
     requireSigner(operation: string): GenericSigner;
     revokePermits(contracts?: Address[]): Promise<void>;

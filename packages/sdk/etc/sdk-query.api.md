@@ -113,8 +113,10 @@ export interface ConfidentialBalanceQueryConfig {
     tokenAddress: Address;
 }
 
+// Warning: (ae-forgotten-export) The symbol "SignerQueryContext" needs to be exported by the entry point index.d.ts
+//
 // @public
-export function confidentialBalanceQueryOptions(token: ReadonlyToken, config: ConfidentialBalanceQueryConfig): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.confidentialBalance.owner>>;
+export function confidentialBalanceQueryOptions(token: ReadonlyToken, config: ConfidentialBalanceQueryConfig, signerContext?: SignerQueryContext): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.confidentialBalance.owner>>;
 
 // @public (undocumented)
 export interface ConfidentialBalancesQueryConfig {
@@ -125,7 +127,7 @@ export interface ConfidentialBalancesQueryConfig {
 }
 
 // @public (undocumented)
-export function confidentialBalancesQueryOptions(tokens: ReadonlyToken[], config?: ConfidentialBalancesQueryConfig): QueryFactoryOptions<BatchBalancesResult, Error, BatchBalancesResult, ReturnType<typeof zamaQueryKeys.confidentialBalances.tokens>>;
+export function confidentialBalancesQueryOptions(tokens: ReadonlyToken[], config?: ConfidentialBalancesQueryConfig, signerContext?: SignerQueryContext): QueryFactoryOptions<BatchBalancesResult, Error, BatchBalancesResult, ReturnType<typeof zamaQueryKeys.confidentialBalances.tokens>>;
 
 // @public (undocumented)
 export interface ConfidentialIsApprovedQueryConfig {
@@ -417,10 +419,12 @@ export function generateKeypairMutationOptions(sdk: ZamaSDK): MutationFactoryOpt
 
 // @public
 export interface GenericSigner {
-    getAddress(): Promise<Address>;
-    getChainId(): Promise<number>;
+    dispose?(): void;
+    refreshWalletAccount?(): Promise<WalletAccount | undefined>;
+    requireWalletAccount(operation: string): WalletAccount;
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-    subscribe?: (onIdentityChange: SignerIdentityListener) => () => void;
+    // Warning: (ae-forgotten-export) The symbol "WalletAccountStore" needs to be exported by the entry point index.d.ts
+    readonly walletAccount: WalletAccountStore;
     // Warning: (ae-forgotten-export) The symbol "ContractAbi" needs to be exported by the entry point index.d.ts
     // Warning: (ae-forgotten-export) The symbol "WriteFunctionName" needs to be exported by the entry point index.d.ts
     // Warning: (ae-forgotten-export) The symbol "WriteContractArgs" needs to be exported by the entry point index.d.ts
@@ -475,7 +479,7 @@ export interface IsAllowedQueryConfig {
 }
 
 // @public (undocumented)
-export function isAllowedQueryOptions(sdk: ZamaSDK, config: IsAllowedQueryConfig): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.isAllowed.scope>>;
+export function isAllowedQueryOptions(sdk: ZamaSDK, config: IsAllowedQueryConfig, signerContext?: SignerQueryContext): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.isAllowed.scope>>;
 
 // @public (undocumented)
 export interface IsConfidentialQueryConfig {
@@ -715,25 +719,6 @@ export interface ShieldSubmittedEvent extends BaseEvent {
     // (undocumented)
     type: typeof ZamaSDKEvents.ShieldSubmitted;
 }
-
-// @public
-export interface SignerIdentity {
-    // (undocumented)
-    address: Address;
-    // (undocumented)
-    chainId: number;
-}
-
-// @public
-export interface SignerIdentityChange {
-    // (undocumented)
-    next?: SignerIdentity;
-    // (undocumented)
-    previous?: SignerIdentity;
-}
-
-// @public
-export type SignerIdentityListener = (change: SignerIdentityChange) => void;
 
 // @public (undocumented)
 export type StrippedQueryOptionKeys = "gcTime" | "staleTime" | "enabled" | "select" | "refetchInterval" | "refetchOnMount" | "refetchOnWindowFocus" | "refetchOnReconnect" | "retry" | "retryDelay" | "retryOnMount" | "queryFn" | "queryKey" | "queryKeyHashFn" | "initialData" | "initialDataUpdatedAt" | "placeholderData" | "structuralSharing" | "throwOnError" | "meta" | "query" | "pollingInterval";
@@ -1041,7 +1026,26 @@ export interface UserDecryptQueryConfig {
 }
 
 // @public (undocumented)
-export function userDecryptQueryOptions(sdk: ZamaSDK, config: UserDecryptQueryConfig): QueryFactoryOptions<DecryptResult, Error, DecryptResult, ReturnType<typeof zamaQueryKeys.decryption.handles>>;
+export function userDecryptQueryOptions(sdk: ZamaSDK, config: UserDecryptQueryConfig, signerContext?: SignerQueryContext): QueryFactoryOptions<DecryptResult, Error, DecryptResult, ReturnType<typeof zamaQueryKeys.decryption.handles>>;
+
+// @public
+export interface WalletAccount {
+    // (undocumented)
+    address: Address;
+    // (undocumented)
+    chainId: number;
+}
+
+// @public
+export interface WalletAccountChange {
+    // (undocumented)
+    next?: WalletAccount;
+    // (undocumented)
+    previous?: WalletAccount;
+}
+
+// @public
+export type WalletAccountListener = (change: WalletAccountChange) => void;
 
 // @public
 export interface WrappedEvent {
@@ -1078,15 +1082,29 @@ export const zamaQueryKeys: {
         readonly token: (tokenAddress: Address) => readonly ["zama.confidentialBalance", {
             readonly tokenAddress: `0x${string}`;
         }];
-        readonly owner: (tokenAddress: Address, owner?: Address) => readonly ["zama.confidentialBalance", {
+        readonly owner: (tokenAddress: Address, owner?: Address, walletAccount?: WalletAccount) => readonly ["zama.confidentialBalance", {
             readonly owner?: `0x${string}` | undefined;
+            readonly walletAddress: `0x${string}`;
+            readonly walletChainId: number;
+            readonly tokenAddress: `0x${string}`;
+        } | {
+            readonly owner?: `0x${string}` | undefined;
+            readonly walletAddress?: undefined;
+            readonly walletChainId?: undefined;
             readonly tokenAddress: `0x${string}`;
         }];
     };
     readonly confidentialBalances: {
         readonly all: readonly ["zama.confidentialBalances"];
-        readonly tokens: (tokenAddresses: Address[], owner?: Address) => readonly ["zama.confidentialBalances", {
+        readonly tokens: (tokenAddresses: Address[], owner?: Address, walletAccount?: WalletAccount) => readonly ["zama.confidentialBalances", {
             readonly owner?: `0x${string}` | undefined;
+            readonly walletAddress: `0x${string}`;
+            readonly walletChainId: number;
+            readonly tokenAddresses: `0x${string}`[];
+        } | {
+            readonly owner?: `0x${string}` | undefined;
+            readonly walletAddress?: undefined;
+            readonly walletChainId?: undefined;
             readonly tokenAddresses: `0x${string}`[];
         }];
     };
@@ -1148,8 +1166,14 @@ export const zamaQueryKeys: {
     };
     readonly isAllowed: {
         readonly all: readonly ["zama.isAllowed"];
-        readonly scope: (contractAddresses: Address[]) => readonly ["zama.isAllowed", {
+        readonly scope: (contractAddresses: Address[], walletAccount?: WalletAccount) => readonly ["zama.isAllowed", {
             readonly contractAddresses: `0x${string}`[];
+            readonly walletAddress: `0x${string}`;
+            readonly walletChainId: number;
+        } | {
+            readonly contractAddresses: `0x${string}`[];
+            readonly walletAddress?: undefined;
+            readonly walletChainId?: undefined;
         }];
     };
     readonly publicKey: {
@@ -1183,11 +1207,20 @@ export const zamaQueryKeys: {
         readonly handles: (handles: readonly {
             handle: string;
             contractAddress: Address;
-        }[]) => readonly ["zama.decryption", {
+        }[], walletAccount?: WalletAccount) => readonly ["zama.decryption", {
             readonly handles: {
                 handle: string;
                 contractAddress: `0x${string}`;
             }[];
+            readonly walletAddress: `0x${string}`;
+            readonly walletChainId: number;
+        } | {
+            readonly handles: {
+                handle: string;
+                contractAddress: `0x${string}`;
+            }[];
+            readonly walletAddress?: undefined;
+            readonly walletChainId?: undefined;
         }];
     };
     readonly wrappersRegistry: {
@@ -1258,7 +1291,8 @@ export class ZamaSDK {
     encrypt(params: EncryptParams): Promise<EncryptResult>;
     isAllowed(contracts: Address[]): Promise<boolean>;
     isAllowedAs(delegator: Address, contracts: Address[]): Promise<boolean>;
-    onIdentityChange(listener: SignerIdentityListener): () => void;
+    // @internal
+    onWalletAccountChange(listener: WalletAccountListener): () => void;
     // Warning: (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
@@ -1269,6 +1303,8 @@ export class ZamaSDK {
     //
     // (undocumented)
     readonly relayer: RelayerDispatcher;
+    requireAlignedWalletAccount(operation: string): Promise<WalletAccount>;
+    // (undocumented)
     requireChainAlignment(operation: string): Promise<number>;
     requireSigner(operation: string): GenericSigner;
     revokePermits(contracts?: Address[]): Promise<void>;

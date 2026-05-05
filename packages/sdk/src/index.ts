@@ -101,9 +101,10 @@ export type {
   GenericSigner,
   GenericProvider,
   GenericStorage,
-  SignerIdentity,
-  SignerIdentityChange,
-  SignerIdentityListener,
+  WalletAccount,
+  WalletAccountChange,
+  WalletAccountListener,
+  WalletAccountStore,
   ContractAbi,
   ReadContractConfig,
   ReadContractArgs,
@@ -165,6 +166,9 @@ export {
   ConfigurationError,
   ChainMismatchError,
   SignerRequiredError,
+  SignerNotConfiguredError,
+  WalletNotConnectedError,
+  WalletAccountNotReadyError,
   DelegationSelfNotAllowedError,
   DelegationCooldownError,
   DelegationNotFoundError,
@@ -183,6 +187,8 @@ export {
   matchZamaError,
   matchAclRevert,
 } from "./errors";
+export { BaseSigner } from "./signer/base-signer";
+export { createWalletAccountStore, MutableWalletAccountStore } from "./signer/wallet-account-store";
 
 // Event decoders and types
 export type {

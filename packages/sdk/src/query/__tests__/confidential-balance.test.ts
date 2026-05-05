@@ -7,19 +7,39 @@ describe("confidentialBalanceQueryOptions", () => {
   const tokenAddress = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
   const owner = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
 
-  test("query key includes tokenAddress and owner (no handle)", ({ createMockReadonlyToken }) => {
+  test("query key includes tokenAddress and owner (no handle)", ({
+    createMockReadonlyToken,
+    signer,
+  }) => {
     const token = createMockReadonlyToken(tokenAddress);
-    const options = confidentialBalanceQueryOptions(token, {
-      tokenAddress,
-      account: owner,
-    });
+    const walletAccount = signer.walletAccount.getSnapshot();
+    const options = confidentialBalanceQueryOptions(
+      token,
+      {
+        tokenAddress,
+        account: owner,
+      },
+      { walletAccount },
+    );
 
-    expect(options.queryKey).toEqual(["zama.confidentialBalance", { tokenAddress, owner }]);
+    expect(options.queryKey).toEqual([
+      "zama.confidentialBalance",
+      {
+        tokenAddress,
+        walletAddress: walletAccount!.address,
+        walletChainId: walletAccount!.chainId,
+        owner,
+      },
+    ]);
   });
 
-  test("enabled is true when owner is provided", ({ createMockReadonlyToken }) => {
+  test("enabled is true when owner is provided", ({ createMockReadonlyToken, signer }) => {
     const token = createMockReadonlyToken(tokenAddress);
-    const options = confidentialBalanceQueryOptions(token, { tokenAddress, account: owner });
+    const options = confidentialBalanceQueryOptions(
+      token,
+      { tokenAddress, account: owner },
+      { walletAccount: signer.walletAccount.getSnapshot() },
+    );
 
     expect(options.enabled).toBe(true);
   });
@@ -31,13 +51,17 @@ describe("confidentialBalanceQueryOptions", () => {
     expect(options.enabled).toBe(false);
   });
 
-  test("enabled is false when query.enabled is false", ({ createMockReadonlyToken }) => {
+  test("enabled is false when query.enabled is false", ({ createMockReadonlyToken, signer }) => {
     const token = createMockReadonlyToken(tokenAddress);
-    const options = confidentialBalanceQueryOptions(token, {
-      tokenAddress,
-      account: owner,
-      query: { enabled: false },
-    });
+    const options = confidentialBalanceQueryOptions(
+      token,
+      {
+        tokenAddress,
+        account: owner,
+        query: { enabled: false },
+      },
+      { walletAccount: signer.walletAccount.getSnapshot() },
+    );
 
     expect(options.enabled).toBe(false);
   });
@@ -53,14 +77,19 @@ describe("confidentialBalanceQueryOptions", () => {
 
   test("queryFn delegates to token.balanceOf using the owner from queryKey", async ({
     createMockReadonlyToken,
+    signer,
   }) => {
     const token = createMockReadonlyToken(tokenAddress);
     vi.mocked(token.balanceOf).mockResolvedValue(42n);
 
-    const options = confidentialBalanceQueryOptions(token, {
-      tokenAddress,
-      account: owner,
-    });
+    const options = confidentialBalanceQueryOptions(
+      token,
+      {
+        tokenAddress,
+        account: owner,
+      },
+      { walletAccount: signer.walletAccount.getSnapshot() },
+    );
 
     const value = await options.queryFn(mockQueryContext(options.queryKey));
     expect(value).toBe(42n);

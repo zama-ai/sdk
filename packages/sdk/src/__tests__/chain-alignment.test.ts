@@ -45,7 +45,12 @@ describe("requireChainAlignment", () => {
     signer,
     provider,
   }) => {
-    vi.mocked(signer.getChainId).mockResolvedValue(11155111);
+    const walletAccount = {
+      address: signer.walletAccount.getSnapshot()!.address,
+      chainId: 11155111,
+    };
+    vi.mocked(signer.walletAccount.getSnapshot).mockReturnValue(walletAccount);
+    vi.mocked(signer.requireWalletAccount).mockReturnValue(walletAccount);
     vi.mocked(provider.getChainId).mockResolvedValue(11155111);
 
     await expect(sdk.requireChainAlignment("testOp")).resolves.toBe(11155111);
@@ -56,15 +61,22 @@ describe("requireChainAlignment", () => {
   it.for(MISMATCHED_OPS)(
     "%s throws ChainMismatchError before any side-effect",
     async ([operation, run], { sdk, signer, provider, relayer, tokenAddress }) => {
-      vi.mocked(signer.getChainId).mockResolvedValue(1);
+      const walletAccount = {
+        address: signer.walletAccount.getSnapshot()!.address,
+        chainId: 1,
+      };
+      vi.mocked(signer.walletAccount.getSnapshot).mockReturnValue(walletAccount);
+      vi.mocked(signer.requireWalletAccount).mockReturnValue(walletAccount);
       vi.mocked(provider.getChainId).mockResolvedValue(11155111);
 
-      await expect(run(sdk, tokenAddress)).rejects.toMatchObject({
+      const result = run(sdk, tokenAddress);
+
+      await expect(result).rejects.toMatchObject({
         operation,
         signerChainId: 1,
         providerChainId: 11155111,
       });
-      await expect(run(sdk, tokenAddress)).rejects.toBeInstanceOf(ChainMismatchError);
+      await expect(result).rejects.toThrow(ChainMismatchError);
 
       // No write or relayer-mutation side-effects — chain check must run first.
       expect(signer.signTypedData).not.toHaveBeenCalled();

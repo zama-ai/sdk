@@ -1,19 +1,12 @@
 import { describe, expect, test, vi } from "../../test-fixtures";
 
 import type { Address } from "viem";
-import { ZamaSDK } from "../../zama-sdk";
 import { allowMutationOptions } from "../allow";
 import { isAllowedQueryOptions } from "../is-allowed";
 import { revokePermitsMutationOptions } from "../revoke-permits";
 
 describe("allowMutationOptions", () => {
-  test("calls sdk.allow with provided addresses", async ({
-    signer,
-    provider,
-    relayer,
-    storage,
-  }) => {
-    const sdk = new ZamaSDK({ relayer, provider, signer, storage });
+  test("calls sdk.allow with provided addresses", async ({ sdk }) => {
     const allowSpy = vi.spyOn(sdk, "allow").mockResolvedValue();
 
     const options = allowMutationOptions(sdk);
@@ -30,13 +23,7 @@ describe("allowMutationOptions", () => {
 });
 
 describe("revokePermitsMutationOptions", () => {
-  test("calls sdk.revokePermits with no arguments", async ({
-    signer,
-    provider,
-    relayer,
-    storage,
-  }) => {
-    const sdk = new ZamaSDK({ relayer, provider, signer, storage });
+  test("calls sdk.revokePermits with no arguments", async ({ sdk }) => {
     const revokeSpy = vi.spyOn(sdk, "revokePermits").mockResolvedValue(undefined);
 
     const options = revokePermitsMutationOptions(sdk);
@@ -50,8 +37,7 @@ describe("revokePermitsMutationOptions", () => {
 });
 
 describe("isAllowedQueryOptions", () => {
-  test("calls sdk.isAllowed", async ({ signer, provider, relayer, storage }) => {
-    const sdk = new ZamaSDK({ relayer, provider, signer, storage });
+  test("calls sdk.isAllowed", async ({ sdk }) => {
     const isAllowedSpy = vi.spyOn(sdk, "isAllowed").mockResolvedValue(true);
 
     const options = isAllowedQueryOptions(sdk, {
@@ -71,13 +57,7 @@ describe("isAllowedQueryOptions", () => {
     expect(isAllowedSpy).toHaveBeenCalledTimes(1);
   });
 
-  test("forwards contractAddresses to sdk.isAllowed", async ({
-    signer,
-    provider,
-    relayer,
-    storage,
-  }) => {
-    const sdk = new ZamaSDK({ relayer, provider, signer, storage });
+  test("forwards contractAddresses to sdk.isAllowed", async ({ sdk }) => {
     const isAllowedSpy = vi.spyOn(sdk, "isAllowed").mockResolvedValue(true);
 
     const contracts = [
@@ -96,9 +76,7 @@ describe("isAllowedQueryOptions", () => {
     expect(isAllowedSpy).toHaveBeenCalledWith(contracts);
   });
 
-  test("opts out of query result caching", ({ signer, provider, relayer, storage }) => {
-    const sdk = new ZamaSDK({ relayer, provider, signer, storage });
-
+  test("opts out of query result caching", ({ sdk }) => {
     const options = isAllowedQueryOptions(sdk, {
       contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"],
     });
@@ -107,9 +85,7 @@ describe("isAllowedQueryOptions", () => {
     expect(options.gcTime).toBe(0);
   });
 
-  test("enabled is false when query.enabled is false", ({ signer, provider, relayer, storage }) => {
-    const sdk = new ZamaSDK({ relayer, provider, signer, storage });
-
+  test("enabled is false when query.enabled is false", ({ sdk }) => {
     const options = isAllowedQueryOptions(sdk, {
       contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"],
       query: { enabled: false },
@@ -118,9 +94,8 @@ describe("isAllowedQueryOptions", () => {
     expect(options.enabled).toBe(false);
   });
 
-  test("is disabled when signer is absent", ({ relayer, provider, storage }) => {
-    const sdk = new ZamaSDK({ relayer, provider, storage });
-
+  test("is disabled when signer is absent", ({ createSDK }) => {
+    const sdk = createSDK({ signer: undefined });
     const options = isAllowedQueryOptions(sdk, {
       contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"],
     });
@@ -134,12 +109,8 @@ describe("isAllowedQueryOptions", () => {
     ]);
   });
 
-  test("manual fetch without signer returns false (pure store lookup)", async ({
-    relayer,
-    provider,
-    storage,
-  }) => {
-    const sdk = new ZamaSDK({ relayer, provider, storage });
+  test("manual fetch without signer returns false (pure store lookup)", async ({ createSDK }) => {
+    const sdk = createSDK({ signer: undefined });
 
     const options = isAllowedQueryOptions(sdk, {
       contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"],
@@ -151,24 +122,29 @@ describe("isAllowedQueryOptions", () => {
     expect(result).toBe(false);
   });
 
-  test("contract addresses are the only query key parameters", ({
-    signer,
-    provider,
-    relayer,
-    storage,
-  }) => {
-    const sdk = new ZamaSDK({ relayer, provider, signer, storage });
+  test("contract addresses and wallet account scope the query key", ({ sdk, signer }) => {
+    const walletAccount = signer.walletAccount.getSnapshot();
 
-    const optionsA = isAllowedQueryOptions(sdk, {
-      contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"],
-    });
-    const optionsB = isAllowedQueryOptions(sdk, {
-      contractAddresses: ["0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a"],
-    });
+    const optionsA = isAllowedQueryOptions(
+      sdk,
+      {
+        contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"],
+      },
+      { walletAccount },
+    );
+    const optionsB = isAllowedQueryOptions(
+      sdk,
+      {
+        contractAddresses: ["0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a"],
+      },
+      { walletAccount },
+    );
 
     expect(optionsA.enabled).toBe(true);
     expect(optionsA.queryKey).not.toEqual(optionsB.queryKey);
     expect(optionsA.queryKey[1]).toEqual({
+      walletAddress: walletAccount!.address,
+      walletChainId: walletAccount!.chainId,
       contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"],
     });
   });

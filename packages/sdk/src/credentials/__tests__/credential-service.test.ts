@@ -116,12 +116,12 @@ describe("CredentialService.clearCredentials", () => {
   });
 });
 
-describe("CredentialService.handleIdentityChange", () => {
+describe("CredentialService.handleWalletAccountChange", () => {
   it("address change cascade-clears previous signer credentials", async ({ credentialService }) => {
     await credentialService.allow([TOKEN_A]);
     expect(await credentialService.isAllowed([TOKEN_A])).toBe(true);
 
-    await credentialService.handleIdentityChange(
+    await credentialService.handleWalletAccountChange(
       { address: USER, chainId: 31337 },
       { address: DELEGATOR, chainId: 31337 },
     );
@@ -162,7 +162,7 @@ describe("CredentialService.allow signing-error wrapping", () => {
     "$label is wrapped via SigningError taxonomy",
     async ({ reject, expected }, { credentialService, signer }) => {
       vi.mocked(signer.signTypedData).mockRejectedValueOnce(reject());
-      await expect(credentialService.allow([TOKEN_A])).rejects.toBeInstanceOf(expected);
+      await expect(credentialService.allow([TOKEN_A])).rejects.toThrow(expected);
     },
   );
 });

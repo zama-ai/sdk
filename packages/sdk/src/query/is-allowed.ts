@@ -2,6 +2,7 @@ import type { Address } from "viem";
 import type { ZamaSDK } from "../zama-sdk";
 import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
+import type { SignerQueryContext } from "./signer-query-context";
 import { filterQueryOptions } from "./utils";
 
 export interface IsAllowedQueryConfig {
@@ -18,11 +19,12 @@ export interface IsAllowedQueryConfig {
 export function isAllowedQueryOptions(
   sdk: ZamaSDK,
   config: IsAllowedQueryConfig,
+  signerContext: SignerQueryContext = {},
 ): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.isAllowed.scope>> {
   const callerEnabled = config.query?.enabled !== false;
   return {
     ...filterQueryOptions(config?.query ?? {}),
-    queryKey: zamaQueryKeys.isAllowed.scope(config.contractAddresses),
+    queryKey: zamaQueryKeys.isAllowed.scope(config.contractAddresses, signerContext.walletAccount),
     queryFn: (context) => {
       const [, { contractAddresses }] = context.queryKey;
       return sdk.isAllowed(contractAddresses as Address[]);
@@ -31,6 +33,9 @@ export function isAllowedQueryOptions(
     gcTime: 0,
     refetchOnMount: "always",
     refetchOnWindowFocus: false,
-    enabled: callerEnabled && sdk.signer !== undefined && config.contractAddresses.length > 0,
+    enabled:
+      callerEnabled &&
+      signerContext.walletAccount !== undefined &&
+      config.contractAddresses.length > 0,
   } as const;
 }

@@ -3,6 +3,7 @@ import { ReadonlyToken, type BatchBalancesResult } from "../token/readonly-token
 import { assertNonNullable } from "../utils/assertions";
 import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
+import type { SignerQueryContext } from "./signer-query-context";
 import { filterQueryOptions } from "./utils";
 
 export interface ConfidentialBalancesQueryConfig {
@@ -13,6 +14,7 @@ export interface ConfidentialBalancesQueryConfig {
 export function confidentialBalancesQueryOptions(
   tokens: ReadonlyToken[],
   config?: ConfidentialBalancesQueryConfig,
+  signerContext: SignerQueryContext = {},
 ): QueryFactoryOptions<
   BatchBalancesResult,
   Error,
@@ -20,22 +22,22 @@ export function confidentialBalancesQueryOptions(
   ReturnType<typeof zamaQueryKeys.confidentialBalances.tokens>
 > {
   const accountKey = config?.account;
+  const walletAccount = signerContext.walletAccount;
   const queryOpts = config?.query ?? {};
   const tokenAddresses = tokens.map((token) => token.address);
-  const hasSignerBackedCredentials = tokens.every((token) => token.sdk.signer !== undefined);
 
   return {
     ...filterQueryOptions(queryOpts),
-    queryKey: zamaQueryKeys.confidentialBalances.tokens(tokenAddresses, accountKey),
-    queryFn: async (context) => {
-      const [, { owner: keyOwner }] = context.queryKey;
+    queryKey: zamaQueryKeys.confidentialBalances.tokens(tokenAddresses, accountKey, walletAccount),
+    queryFn: async (signerContextQuery) => {
+      const [, { owner: keyOwner }] = signerContextQuery.queryKey;
       assertNonNullable(keyOwner, "confidentialBalancesQueryOptions: owner");
       return ReadonlyToken.batchBalancesOf(tokens, keyOwner);
     },
     enabled:
       Boolean(accountKey) &&
       tokens.length > 0 &&
-      hasSignerBackedCredentials &&
+      walletAccount !== undefined &&
       queryOpts?.enabled !== false,
   };
 }
