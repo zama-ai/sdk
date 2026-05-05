@@ -161,6 +161,8 @@ export interface TransactionErrorEvent extends BaseEvent {
   operation: string;
   /** The error that caused the transaction to fail. */
   error: Error;
+  /** For shield errors: which execution path failed. */
+  shieldPath?: ShieldPath;
 }
 
 export interface ShieldSubmittedEvent extends BaseEvent {
