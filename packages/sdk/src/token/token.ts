@@ -431,21 +431,6 @@ export class Token extends ReadonlyToken {
         transferAndCallContract(underlying, this.wrapper, amount, data),
       );
     } catch (error) {
-      if (options?.shieldStrategy === "transferAndCall") {
-        // Explicit mode: surface the error, no fallback
-        this.emit({
-          type: ZamaSDKEvents.TransactionError,
-          operation: "shield",
-          shieldPath: "transferAndCall",
-          error: toError(error),
-        });
-        if (error instanceof ZamaError) {
-          throw error;
-        }
-        throw new TransactionRevertedError("Shield transaction failed", {
-          cause: error,
-        });
-      }
       // Auto mode: writeContract rejected, emit warning and allow fallback
       this.emit({
         type: ZamaSDKEvents.TransactionError,
@@ -453,6 +438,16 @@ export class Token extends ReadonlyToken {
         shieldPath: "transferAndCall",
         error: toError(error),
       });
+
+      if (options?.shieldStrategy === "transferAndCall") {
+        if (error instanceof ZamaError) {
+          throw error;
+        }
+        throw new TransactionRevertedError("Shield transaction failed", {
+          cause: error,
+        });
+      }
+
       return null;
     }
   }
