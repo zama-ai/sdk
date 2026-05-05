@@ -125,8 +125,8 @@ export class Token extends ReadonlyToken {
     amount: bigint,
     options?: TransferOptions,
   ): Promise<TransactionResult> {
-    const { signer, provider, requireChainAlignment, encrypt } = this.sdk;
-    await requireChainAlignment();
+    const { signer, provider } = this.sdk;
+    await this.sdk.requireChainAlignment();
     const { skipBalanceCheck = false, onEncryptComplete, onTransferSubmitted } = options ?? {};
 
     const normalizedTo = getAddress(to);
@@ -135,7 +135,7 @@ export class Token extends ReadonlyToken {
       await this.#assertConfidentialBalance(amount);
     }
 
-    const { handles, inputProof } = await encrypt({
+    const { handles, inputProof } = await this.sdk.encrypt({
       values: [{ value: amount, type: "euint64" }],
       contractAddress: this.address,
       userAddress: await signer.getAddress(),
@@ -192,12 +192,12 @@ export class Token extends ReadonlyToken {
     amount: bigint,
     callbacks?: TransferCallbacks,
   ): Promise<TransactionResult> {
-    const { signer, provider, requireChainAlignment, encrypt } = this.sdk;
-    await requireChainAlignment();
+    const { signer, provider } = this.sdk;
+    await this.sdk.requireChainAlignment();
     const normalizedFrom = getAddress(from);
     const normalizedTo = getAddress(to);
 
-    const { handles, inputProof } = await encrypt({
+    const { handles, inputProof } = await this.sdk.encrypt({
       values: [{ value: amount, type: "euint64" }],
       contractAddress: this.address,
       userAddress: normalizedFrom,
@@ -253,8 +253,8 @@ export class Token extends ReadonlyToken {
    * ```
    */
   async setOperator(operator: Address, until?: number): Promise<TransactionResult> {
-    const { signer, provider, requireChainAlignment } = this.sdk;
-    await requireChainAlignment();
+    const { signer, provider } = this.sdk;
+    await this.sdk.requireChainAlignment();
     const normalizedOperator = getAddress(operator);
     try {
       const txHash = await signer.writeContract(
@@ -323,8 +323,8 @@ export class Token extends ReadonlyToken {
    * ```
    */
   async shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult> {
-    const { signer, provider, requireChainAlignment } = this.sdk;
-    await requireChainAlignment();
+    const { signer, provider } = this.sdk;
+    await this.sdk.requireChainAlignment();
     const underlying = await this.#getUnderlying();
 
     // ERC-20 balance check always runs (public read, no signing needed, works for all wallet types)
@@ -391,11 +391,11 @@ export class Token extends ReadonlyToken {
    * ```
    */
   async unwrap(amount: bigint): Promise<TransactionResult> {
-    const { signer, provider, requireChainAlignment, encrypt } = this.sdk;
-    await requireChainAlignment();
+    const { signer, provider } = this.sdk;
+    await this.sdk.requireChainAlignment();
     const userAddress = await signer.getAddress();
 
-    const { handles, inputProof } = await encrypt({
+    const { handles, inputProof } = await this.sdk.encrypt({
       values: [{ value: amount, type: "euint64" }],
       contractAddress: this.wrapper,
       userAddress,
@@ -443,8 +443,8 @@ export class Token extends ReadonlyToken {
    * ```
    */
   async unwrapAll(): Promise<TransactionResult> {
-    const { signer, provider, requireChainAlignment } = this.sdk;
-    await requireChainAlignment();
+    const { signer, provider } = this.sdk;
+    await this.sdk.requireChainAlignment();
     const userAddress = await signer.getAddress();
     const handle = await this.readConfidentialBalanceOf(userAddress);
 
@@ -578,9 +578,9 @@ export class Token extends ReadonlyToken {
    * ```
    */
   async finalizeUnwrap(unwrapRequestIdOrAmount: Handle): Promise<TransactionResult> {
-    const { signer, provider, requireChainAlignment, publicDecrypt } = this.sdk;
-    await requireChainAlignment();
-    const result = await publicDecrypt([unwrapRequestIdOrAmount]);
+    const { signer, provider } = this.sdk;
+    await this.sdk.requireChainAlignment();
+    const result = await this.sdk.publicDecrypt([unwrapRequestIdOrAmount]);
     const clearValue = result.clearValues[unwrapRequestIdOrAmount];
     assertBigint(clearValue, "finalizeUnwrap: clearValue");
     try {
@@ -627,8 +627,8 @@ export class Token extends ReadonlyToken {
    * ```
    */
   async approveUnderlying(amount?: bigint): Promise<TransactionResult> {
-    const { signer, provider, requireChainAlignment } = this.sdk;
-    await requireChainAlignment();
+    const { signer, provider } = this.sdk;
+    await this.sdk.requireChainAlignment();
     const underlying = await this.#getUnderlying();
 
     const approvalAmount = amount ?? 2n ** 256n - 1n;
@@ -692,8 +692,8 @@ export class Token extends ReadonlyToken {
     delegateAddress: Address;
     expirationDate?: Date;
   }): Promise<TransactionResult> {
-    const { signer, provider, requireChainAlignment } = this.sdk;
-    await requireChainAlignment();
+    const { signer, provider } = this.sdk;
+    await this.sdk.requireChainAlignment();
     if (expirationDate && expirationDate.getTime() < Date.now() + 3600_000) {
       throw new DelegationExpirationTooSoonError(
         "Expiration date must be at least 1 hour in the future",
@@ -779,8 +779,8 @@ export class Token extends ReadonlyToken {
   }: {
     delegateAddress: Address;
   }): Promise<TransactionResult> {
-    const { signer, provider, requireChainAlignment } = this.sdk;
-    await requireChainAlignment();
+    const { signer, provider } = this.sdk;
+    await this.sdk.requireChainAlignment();
     const normalizedDelegate = getAddress(delegateAddress);
     const signerAddress = await signer.getAddress();
     const acl = await this.getAclAddress();
