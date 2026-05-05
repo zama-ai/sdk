@@ -1,6 +1,6 @@
 {
   "name": "@zama-fhe/sdk",
-  "version": "3.0.0-alpha.29",
+  "version": "3.0.0-alpha.30",
   "description": "TypeScript SDK for Zama fhEVM confidential smart contracts",
   "license": "BSD-3-Clause-Clear",
   "author": "Zama",
@@ -160,7 +160,8 @@
   },
   "dependencies": {
     "@zama-fhe/relayer-sdk": "~0.4.2",
-    "viem": ">=2"
+    "viem": ">=2",
+    "zod": ">=4"
   },
   "devDependencies": {
     "@tanstack/query-core": "^5.99.2",

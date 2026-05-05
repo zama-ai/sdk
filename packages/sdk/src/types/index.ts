@@ -11,13 +11,13 @@ export type {
 export type { TransactionReceipt, TransactionResult } from "./transaction";
 export type {
   GenericSigner,
-  SignerIdentity,
-  SignerIdentityChange,
-  SignerIdentityListener,
+  WalletAccount,
+  WalletAccountChange,
+  WalletAccountListener,
+  WalletAccountStore,
 } from "./signer";
 export type { GenericProvider } from "./provider";
 export type { GenericStorage } from "./storage";
-export type { StoredCredentials, DelegatedStoredCredentials } from "./credentials";
 export type { UnshieldCallbacks, ShieldCallbacks, TransferCallbacks } from "./callbacks";
 export type {
   TransferOptions,

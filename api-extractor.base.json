@@ -38,7 +38,9 @@
       "ae-unresolved-link": { "logLevel": "none" }
     },
     "tsdocMessageReporting": {
-      "default": { "logLevel": "warning" }
+      "default": { "logLevel": "warning" },
+      "tsdoc-undefined-tag": { "logLevel": "none" },
+      "tsdoc-missing-deprecation-message": { "logLevel": "none" }
     }
   }
 }

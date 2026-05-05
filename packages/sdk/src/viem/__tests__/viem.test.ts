@@ -75,6 +75,9 @@ const vit = viemTest;
 
 function createFakeEthereum() {
   const listeners = new Map<string, Set<(...args: never[]) => void>>();
+  const removeListener = vi.fn((event: string, fn: (...args: never[]) => void) => {
+    listeners.get(event)?.delete(fn);
+  });
   return {
     request: vi.fn(),
     on(event: string, fn: (...args: never[]) => void) {
@@ -83,9 +86,7 @@ function createFakeEthereum() {
       }
       listeners.get(event)!.add(fn);
     },
-    removeListener(event: string, fn: (...args: never[]) => void) {
-      listeners.get(event)?.delete(fn);
-    },
+    removeListener,
     emit(event: string, ...args: unknown[]) {
       for (const fn of listeners.get(event) ?? []) {
         (fn as (...a: unknown[]) => void)(...args);
@@ -97,45 +98,56 @@ function createFakeEthereum() {
 // ── ViemSigner ───────────────────────────────────────────
 
 describe("ViemSigner", () => {
-  describe("getChainId", () => {
-    vit("delegates to walletClient.getChainId", async ({ viemSigner, walletClient }) => {
-      const chainId = await viemSigner.getChainId();
-      expect(chainId).toBe(1);
-      expect(walletClient.getChainId).toHaveBeenCalledOnce();
-    });
-  });
-
   describe("subscribe", () => {
-    vit("uses walletClient account and chain as initial identity", async ({ walletClient }) => {
+    vit(
+      "uses walletClient account and chain as initial wallet account",
+      async ({ walletClient }) => {
+        const ethereum = createFakeEthereum();
+        const viemSigner = new ViemSigner({ walletClient, ethereum: ethereum as never });
+        const onWalletAccountChange = vi.fn();
+
+        viemSigner.walletAccount.subscribe(onWalletAccountChange);
+        await Promise.resolve();
+        await Promise.resolve();
+        ethereum.emit("accountsChanged", [SECOND_ACCOUNT_ADDRESS]);
+
+        expect(onWalletAccountChange).toHaveBeenCalledTimes(2);
+        expect(onWalletAccountChange).toHaveBeenLastCalledWith({
+          previous: { address: ACCOUNT_ADDRESS, chainId: 1 },
+          next: { address: SECOND_ACCOUNT_ADDRESS, chainId: 1 },
+        });
+        expect(ethereum.request).not.toHaveBeenCalled();
+      },
+    );
+
+    vit("dispose removes EIP-1193 listeners once", async ({ walletClient }) => {
       const ethereum = createFakeEthereum();
       const viemSigner = new ViemSigner({ walletClient, ethereum: ethereum as never });
-      const onIdentityChange = vi.fn();
 
-      viemSigner.subscribe(onIdentityChange);
-      await Promise.resolve();
-      await Promise.resolve();
-      ethereum.emit("accountsChanged", [SECOND_ACCOUNT_ADDRESS]);
+      viemSigner.dispose();
+      viemSigner.dispose();
 
-      expect(onIdentityChange).toHaveBeenCalledOnce();
-      expect(onIdentityChange).toHaveBeenCalledWith({
-        previous: { address: ACCOUNT_ADDRESS, chainId: 1 },
-        next: { address: SECOND_ACCOUNT_ADDRESS, chainId: 1 },
-      });
-      expect(ethereum.request).not.toHaveBeenCalled();
+      expect(ethereum.removeListener).toHaveBeenCalledTimes(3);
+      expect(ethereum.removeListener).toHaveBeenCalledWith("accountsChanged", expect.any(Function));
+      expect(ethereum.removeListener).toHaveBeenCalledWith("disconnect", expect.any(Function));
+      expect(ethereum.removeListener).toHaveBeenCalledWith("chainChanged", expect.any(Function));
     });
   });
 
-  describe("getAddress", () => {
+  describe("walletAccount", () => {
     vit("returns the wallet account address", async ({ viemSigner }) => {
-      const address = await viemSigner.getAddress();
-      expect(address).toBe(ACCOUNT_ADDRESS);
+      expect(viemSigner.walletAccount.getSnapshot()).toEqual({
+        address: ACCOUNT_ADDRESS,
+        chainId: 1,
+      });
     });
 
     vit("throws when wallet client has no account", async ({ createMockWalletClient }) => {
       const noAccountClient = createMockWalletClient(false);
       const noAccountSigner = new ViemSigner({ walletClient: noAccountClient });
-      await expect(noAccountSigner.getAddress()).rejects.toThrow(
-        "Cannot getAddress without a signer. Configure one via ZamaSDKConfig.signer or <ZamaProvider config={createConfig({ signer: ... })}>.",
+      expect(noAccountSigner.walletAccount.getSnapshot()).toBeUndefined();
+      expect(() => noAccountSigner.requireWalletAccount("test")).toThrow(
+        "Cannot test without a connected wallet account.",
       );
     });
   });
@@ -191,7 +203,7 @@ describe("ViemSigner", () => {
         const noAccountClient = createMockWalletClient(false);
         const noAccountSigner = new ViemSigner({ walletClient: noAccountClient });
         await expect(noAccountSigner.signTypedData(typedData)).rejects.toThrow(
-          "Cannot signTypedData without a signer. Configure one via ZamaSDKConfig.signer or <ZamaProvider config={createConfig({ signer: ... })}>.",
+          "Cannot signTypedData without a connected wallet account.",
         );
       },
     );
@@ -232,7 +244,7 @@ describe("ViemSigner", () => {
         const noAccountClient = createMockWalletClient(false);
         const noAccountSigner = new ViemSigner({ walletClient: noAccountClient });
         await expect(noAccountSigner.writeContract(config)).rejects.toThrow(
-          "Cannot writeContract without a signer. Configure one via ZamaSDKConfig.signer or <ZamaProvider config={createConfig({ signer: ... })}>.",
+          "Cannot writeContract without a connected wallet account.",
         );
       },
     );

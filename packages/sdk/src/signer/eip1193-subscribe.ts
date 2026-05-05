@@ -4,14 +4,14 @@ import {
   type EIP1193EventMap,
   type EIP1193Provider,
 } from "viem";
-import type { SignerIdentity, SignerIdentityListener } from "../types";
+import type { WalletAccount, WalletAccountListener } from "../types";
 
 type MinimalProvider = Pick<EIP1193Provider, "on" | "removeListener">;
 
 export interface Eip1193SubscribeConfig {
   provider: MinimalProvider | undefined;
-  getInitialIdentity?: () => SignerIdentity | undefined | Promise<SignerIdentity | undefined>;
-  onIdentityChange: SignerIdentityListener;
+  getInitialWalletAccount?: () => WalletAccount | undefined | Promise<WalletAccount | undefined>;
+  onWalletAccountChange: WalletAccountListener;
 }
 
 function normalizeAddress(address: Address | undefined): Address | undefined {
@@ -32,7 +32,7 @@ function parseChainId(chainId: string): number | undefined {
 
 /**
  * Subscribe to EIP-1193 wallet events and translate them into
- * {@link SignerIdentityChange} transitions.
+ * {@link WalletAccountChange} transitions.
  *
  * Shared by `ViemSigner` and `EthersSigner`. Listeners are attached before the
  * adapter's initial identity loader runs; if any real provider event arrives
@@ -40,14 +40,14 @@ function parseChainId(chainId: string): number | undefined {
  */
 export function eip1193Subscribe({
   provider,
-  getInitialIdentity,
-  onIdentityChange,
+  getInitialWalletAccount,
+  onWalletAccountChange,
 }: Eip1193SubscribeConfig): () => void {
   if (!provider) {
     return () => {};
   }
 
-  let current: SignerIdentity | undefined;
+  let current: WalletAccount | undefined;
   let observedAddress: Address | undefined;
   let observedChainId: number | undefined;
   let active = true;
@@ -70,7 +70,7 @@ export function eip1193Subscribe({
     }
     const previous = current;
     current = next;
-    onIdentityChange({ previous, next });
+    onWalletAccountChange({ previous, next });
   }
 
   const handleAccountsChanged: EIP1193EventMap["accountsChanged"] = (accounts) => {
@@ -113,17 +113,18 @@ export function eip1193Subscribe({
   provider.on("disconnect", handleDisconnect);
   provider.on("chainChanged", handleChainChanged);
 
-  if (getInitialIdentity) {
+  if (getInitialWalletAccount) {
     const initialEventVersion = eventVersion;
     Promise.resolve()
-      .then(getInitialIdentity)
-      .then((identity) => {
+      .then(getInitialWalletAccount)
+      .then((account) => {
         if (!active || eventVersion !== initialEventVersion) {
           return;
         }
-        current = identity;
-        observedAddress = identity?.address;
-        observedChainId = identity?.chainId;
+        current = account;
+        observedAddress = account?.address;
+        observedChainId = account?.chainId;
+        onWalletAccountChange({ previous: undefined, next: account });
       })
       .catch((error) => {
         // oxlint-disable-next-line no-console

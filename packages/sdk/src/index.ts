@@ -1,7 +1,7 @@
 /**
  * TypeScript SDK for Zama's fhEVM — confidential smart contracts powered by Fully Homomorphic Encryption.
  *
- * Main classes: {@link ZamaSDK}, {@link Token}, {@link ReadonlyToken}, {@link CredentialsManager}.
+ * Main classes: {@link ZamaSDK}, {@link Token}, {@link ReadonlyToken}.
  *
  * @packageDocumentation
  */
@@ -97,21 +97,15 @@ export {
   ChromeSessionStorage,
   chromeSessionStorage,
 } from "./storage";
-export {
-  CredentialsManager,
-  type CredentialsManagerConfig,
-  DelegatedCredentialsManager,
-  type DelegatedCredentialsManagerConfig,
-} from "./credentials";
+export type { CredentialBundle, Keypair, Permission, StoredKeypair } from "./credentials";
 export type {
   GenericSigner,
   GenericProvider,
   GenericStorage,
-  SignerIdentity,
-  SignerIdentityChange,
-  SignerIdentityListener,
-  StoredCredentials,
-  DelegatedStoredCredentials,
+  WalletAccount,
+  WalletAccountChange,
+  WalletAccountListener,
+  WalletAccountStore,
   ContractAbi,
   ReadContractConfig,
   ReadContractArgs,
@@ -156,18 +150,8 @@ export type {
   DecryptStartEvent,
   DecryptEndEvent,
   DecryptErrorEvent,
-  CredentialsLoadingEvent,
-  CredentialsCachedEvent,
-  CredentialsExpiredEvent,
-  CredentialsCreatingEvent,
-  CredentialsCreatedEvent,
-  CredentialsRevokedEvent,
-  CredentialsAllowedEvent,
-  SessionExpiredEvent,
   DelegationSubmittedEvent,
   RevokeDelegationSubmittedEvent,
-  CredentialsPersistFailedEvent,
-  CredentialsCorruptedEvent,
 } from "./events";
 export {
   ZamaError,
@@ -186,6 +170,9 @@ export {
   ConfigurationError,
   ChainMismatchError,
   SignerRequiredError,
+  SignerNotConfiguredError,
+  WalletNotConnectedError,
+  WalletAccountNotReadyError,
   DelegationSelfNotAllowedError,
   DelegationCooldownError,
   DelegationNotFoundError,
@@ -204,6 +191,8 @@ export {
   matchZamaError,
   matchAclRevert,
 } from "./errors";
+export { BaseSigner } from "./signer/base-signer";
+export { createWalletAccountStore, MutableWalletAccountStore } from "./signer/wallet-account-store";
 
 // Event decoders and types
 export type {

@@ -1228,7 +1228,7 @@ describe("Token", () => {
       storage,
       provider,
     }) => {
-      const owner = getAddress(await signer.getAddress());
+      const owner = getAddress(signer.walletAccount.getSnapshot()!.address);
       const cacheKey = `zama:decrypt:${owner}:${getAddress(token.address)}:${handle.toLowerCase()}`;
       await storage.set(cacheKey, 200n);
 
@@ -1245,7 +1245,7 @@ describe("Token", () => {
       storage,
       provider,
     }) => {
-      const owner = getAddress(await signer.getAddress());
+      const owner = getAddress(signer.walletAccount.getSnapshot()!.address);
       const cacheKey = `zama:decrypt:${owner}:${getAddress(token.address)}:${handle.toLowerCase()}`;
       await storage.set(cacheKey, 50n);
 

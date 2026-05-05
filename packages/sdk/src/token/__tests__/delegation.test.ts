@@ -1,4 +1,4 @@
-import { createMockRelayer, describe, expect, it, vi } from "../../test-fixtures";
+import { createMockRelayer, describe, expect, it, TEST_PUBLIC_KEY, vi } from "../../test-fixtures";
 import { ReadonlyToken, ZERO_HANDLE } from "../readonly-token";
 import { Token } from "../token";
 import { getAddress, type Address } from "viem";
@@ -308,7 +308,7 @@ describe("decryptBalanceAs", () => {
       },
       types: { DelegatedUserDecryptRequestVerification: [] },
       message: {
-        publicKey: "0xpub",
+        publicKey: TEST_PUBLIC_KEY,
         contractAddresses: [tokenAddress],
         delegatorAddress,
         startTimestamp: "1000",
@@ -326,7 +326,7 @@ describe("decryptBalanceAs", () => {
     expect(balance).toBe(500n);
     expect(relayer.generateKeypair).toHaveBeenCalled();
     expect(relayer.createDelegatedUserDecryptEIP712).toHaveBeenCalledWith(
-      "0xpub",
+      TEST_PUBLIC_KEY,
       [tokenAddress],
       delegatorAddress,
       expect.any(Number),
@@ -369,9 +369,10 @@ describe("decryptBalanceAs", () => {
   }) => {
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce(handle) // confidentialBalanceOf (first call)
-      .mockResolvedValueOnce(MAX_UINT64) // getDelegationExpiry (first call)
+      .mockResolvedValueOnce(MAX_UINT64) // getDelegationExpiry (token-level pre-flight)
+      .mockResolvedValueOnce(MAX_UINT64) // getDelegationExpiry (sdk.delegatedUserDecrypt freshness check)
       .mockResolvedValueOnce(handle) // confidentialBalanceOf (second call)
-      .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry (second call — runs before cache lookup)
+      .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry (token-level pre-flight, 2nd call hits cache before sdk)
     vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue({
       domain: {
         name: "Decryption",
@@ -381,7 +382,7 @@ describe("decryptBalanceAs", () => {
       },
       types: { DelegatedUserDecryptRequestVerification: [] },
       message: {
-        publicKey: "0xpub",
+        publicKey: TEST_PUBLIC_KEY,
         contractAddresses: [tokenAddress],
         delegatorAddress,
         startTimestamp: "1000",
@@ -420,9 +421,10 @@ describe("decryptBalanceAs", () => {
   }) => {
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce(handle) // confidentialBalanceOf (first call)
-      .mockResolvedValueOnce(MAX_UINT64) // getDelegationExpiry → permanent
+      .mockResolvedValueOnce(MAX_UINT64) // getDelegationExpiry → permanent (token-level pre-flight)
+      .mockResolvedValueOnce(MAX_UINT64) // getDelegationExpiry → permanent (sdk.delegatedUserDecrypt freshness check)
       .mockResolvedValueOnce(handle) // confidentialBalanceOf (second call)
-      .mockResolvedValueOnce(0n); // getDelegationExpiry → revoked
+      .mockResolvedValueOnce(0n); // getDelegationExpiry → revoked (token-level pre-flight)
     vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue({
       domain: {
         name: "Decryption",
@@ -432,7 +434,7 @@ describe("decryptBalanceAs", () => {
       },
       types: { DelegatedUserDecryptRequestVerification: [] },
       message: {
-        publicKey: "0xpub",
+        publicKey: TEST_PUBLIC_KEY,
         contractAddresses: [tokenAddress],
         delegatorAddress,
         startTimestamp: "1000",
@@ -520,7 +522,7 @@ describe("decryptBalanceAs", () => {
       },
       types: { DelegatedUserDecryptRequestVerification: [] },
       message: {
-        publicKey: "0xpub",
+        publicKey: TEST_PUBLIC_KEY,
         contractAddresses: [tokenAddress],
         delegatorAddress,
         startTimestamp: "1000",
@@ -560,7 +562,7 @@ describe("decryptBalanceAs", () => {
       },
       types: { DelegatedUserDecryptRequestVerification: [] },
       message: {
-        publicKey: "0xpub",
+        publicKey: TEST_PUBLIC_KEY,
         contractAddresses: [tokenAddress],
         delegatorAddress,
         startTimestamp: "1000",
@@ -596,7 +598,7 @@ describe("decryptBalanceAs", () => {
       domain: { name: "Decryption", version: "1", chainId: 1n, verifyingContract: "0xkms" },
       types: { DelegatedUserDecryptRequestVerification: [] },
       message: {
-        publicKey: "0xpub",
+        publicKey: TEST_PUBLIC_KEY,
         contractAddresses: [tokenAddress],
         delegatorAddress,
         startTimestamp: "1000",

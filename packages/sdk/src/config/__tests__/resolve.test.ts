@@ -1,206 +1,104 @@
-import { describe, expect, it, vi } from "vitest";
-import { web } from "../web";
-import { cleartext } from "../cleartext";
-import { createConfig } from "../create";
-import { node } from "../../node";
-import { sepolia, mainnet, hoodi, hardhat, anvil, type FheChain } from "../../chains";
+import { describe, expect, it, vi, createMockRelayer } from "../../test-fixtures";
+import { resolveChainRelayers, resolveStorage } from "../resolve";
+import { sepolia, mainnet, hardhat, anvil, type FheChain } from "../../chains";
+import type { RelayerConfig } from "../types";
+import type { RelayerSDK } from "../../relayer/relayer-sdk";
 
-vi.mock(import("../../relayer/relayer-web"), async (importOriginal) => {
-  const actual = await importOriginal();
+/** Stub the public RelayerConfig seam — no internal-module mocking. */
+function mockRelayerConfig(type: RelayerConfig["type"] = "web"): RelayerConfig {
   return {
-    ...actual,
-    RelayerWeb: vi.fn().mockImplementation(function (this: any) {
-      this.terminate = vi.fn();
-      this.generateKeypair = vi.fn().mockResolvedValue({ publicKey: "0x", secretKey: "0x" });
-    }),
+    type,
+    createRelayer: () => createMockRelayer() as unknown as RelayerSDK,
   };
-});
-
-vi.mock(import("../../worker/worker.client"), async () => ({
-  RelayerWorkerClient: vi.fn().mockImplementation(function (this: any) {
-    this.initWorker = vi.fn().mockResolvedValue(undefined);
-    this.terminate = vi.fn();
-  }),
-}));
-
-vi.mock(import("../../relayer/cleartext/relayer-cleartext"), async () => ({
-  RelayerCleartext: vi.fn().mockImplementation(function (this: any) {
-    this.terminate = vi.fn();
-    this.generateKeypair = vi.fn().mockResolvedValue({ publicKey: "0x", secretKey: "0x" });
-  }),
-}));
-
-// Import after mocks
-const { resolveChainRelayers } = await import("../resolve");
-const { RelayerDispatcher } = await import("../../relayer/relayer-dispatcher");
-
-const sepoliaChain = sepolia;
-const mainnetChain = mainnet;
-const hoodiChain = hoodi;
+}
 
 describe("resolveChainRelayers", () => {
   it("throws for duplicate chain ids (e.g. hardhat + anvil alias)", () => {
-    expect(() => resolveChainRelayers([hardhat, anvil], { [31337]: web() })).toThrow(
+    expect(() => resolveChainRelayers([hardhat, anvil], { [31337]: mockRelayerConfig() })).toThrow(
       "Duplicate chain id(s) [31337]",
     );
   });
 
-  it("throws when a chain has no relayer entry", () => {
-    expect(() => resolveChainRelayers([sepoliaChain], {})).toThrow(
-      "Chain 11155111 has no relayer configured",
-    );
+  it.each([
+    {
+      label: "single chain with no relayer entry",
+      chains: [sepolia],
+      relayers: {},
+      expected: "Chain 11155111 has no relayer configured",
+    },
+    {
+      label: "second chain missing a relayer entry",
+      chains: [sepolia, { id: 999999 } as FheChain],
+      relayers: { [11155111]: mockRelayerConfig() },
+      expected: "Chain 999999 has no relayer configured",
+    },
+  ])("throws when $label", ({ chains, relayers, expected }) => {
+    expect(() => resolveChainRelayers(chains, relayers)).toThrow(expected);
   });
 
-  it("resolves chains with explicit web relayer", () => {
-    const relayerCfg = web();
-    const result = resolveChainRelayers([sepoliaChain], {
-      [11155111]: relayerCfg,
-    });
-    expect(result.get(11155111)?.relayer).toBe(relayerCfg);
+  it.each([
+    {
+      label: "single orphaned key",
+      chains: [],
+      relayers: { [999]: mockRelayerConfig() },
+      expected: "Relayer entries for chain(s) [999]",
+    },
+    {
+      label: "orphan alongside a valid entry",
+      chains: [sepolia],
+      relayers: { [11155111]: mockRelayerConfig(), [999]: mockRelayerConfig() },
+      expected: "Relayer entries for chain(s) [999]",
+    },
+    {
+      label: "multiple orphans listed in order",
+      chains: [sepolia],
+      relayers: {
+        [11155111]: mockRelayerConfig(),
+        [999]: mockRelayerConfig(),
+        [888]: mockRelayerConfig("cleartext"),
+      },
+      expected: "Relayer entries for chain(s) [888, 999]",
+    },
+  ])("throws for orphaned relayer keys ($label)", ({ chains, relayers, expected }) => {
+    expect(() => resolveChainRelayers(chains, relayers)).toThrow(expected);
   });
 
-  it("resolves chains with node relayer", () => {
-    const relayerCfg = node();
-    const result = resolveChainRelayers([sepoliaChain], {
-      [11155111]: relayerCfg,
-    });
-    expect(result.get(11155111)?.relayer).toBe(relayerCfg);
-  });
-
-  it("resolves chains with cleartext relayer", () => {
-    const relayerCfg = cleartext();
-    const result = resolveChainRelayers([hoodiChain], {
-      [560048]: relayerCfg,
-    });
-    expect(result.get(560048)?.relayer).toBe(relayerCfg);
-  });
-
-  it("resolves multiple chains", () => {
-    const result = resolveChainRelayers([sepoliaChain, mainnetChain], {
-      [11155111]: web(),
-      [1]: web(),
+  it("resolves multiple chains and binds each to its relayer config", () => {
+    const sepoliaCfg = mockRelayerConfig();
+    const mainnetCfg = mockRelayerConfig();
+    const result = resolveChainRelayers([sepolia, mainnet], {
+      [11155111]: sepoliaCfg,
+      [1]: mainnetCfg,
     });
     expect(result.size).toBe(2);
-  });
-
-  it("throws for chain with no relayer entry", () => {
-    expect(() =>
-      resolveChainRelayers([sepoliaChain, { id: 999999 } as FheChain], {
-        [11155111]: web(),
-      }),
-    ).toThrow("Chain 999999 has no relayer configured");
-  });
-
-  it("throws for cleartext relayer with missing chain config", () => {
-    const relayerCfg = cleartext();
-    expect(() => resolveChainRelayers([], { [999]: relayerCfg })).toThrow(
-      "Relayer entries for chain(s) [999]",
-    );
-  });
-
-  it("throws for web/node relayer with missing chain config", () => {
-    expect(() => resolveChainRelayers([], { [999]: web() })).toThrow(
-      "Relayer entries for chain(s) [999]",
-    );
-    expect(() => resolveChainRelayers([], { [999]: node() })).toThrow(
-      "Relayer entries for chain(s) [999]",
-    );
-  });
-
-  it("throws for orphaned relayer keys not in chains", () => {
-    expect(() =>
-      resolveChainRelayers([sepoliaChain], {
-        [11155111]: web(),
-        [999]: web(),
-      }),
-    ).toThrow("Relayer entries for chain(s) [999]");
-  });
-
-  it("throws for multiple orphaned relayer keys", () => {
-    expect(() =>
-      resolveChainRelayers([sepoliaChain], {
-        [11155111]: web(),
-        [999]: web(),
-        [888]: node(),
-      }),
-    ).toThrow("Relayer entries for chain(s) [888, 999]");
+    expect(result.get(11155111)).toEqual({ chain: sepolia, relayer: sepoliaCfg });
+    expect(result.get(1)).toEqual({ chain: mainnet, relayer: mainnetCfg });
   });
 });
 
-/** Helper: build a RelayerDispatcher from chains + relayer config map. */
-describe("createConfig (generic)", () => {
-  it("accepts custom GenericSigner and GenericProvider", () => {
-    const signer = {
-      getChainId: vi.fn().mockResolvedValue(11155111),
-      getAddress: vi.fn().mockResolvedValue("0x1234567890123456789012345678901234567890"),
-      signTypedData: vi.fn().mockResolvedValue("0xsig"),
-      writeContract: vi.fn().mockResolvedValue("0xtx"),
-    };
-    const provider = {
-      getChainId: vi.fn().mockResolvedValue(11155111),
-      readContract: vi.fn(),
-      waitForTransactionReceipt: vi.fn().mockResolvedValue({ logs: [] }),
-      getBlockTimestamp: vi.fn().mockResolvedValue(1000n),
-    };
-    const config = createConfig({
-      chains: [sepoliaChain],
-      signer,
-      provider,
-      relayers: { [11155111]: web() },
-    });
-    expect(config.signer).toBe(signer);
-    expect(config.provider).toBe(provider);
-    expect(config.relayer.constructor.name).toBe("RelayerDispatcher");
-  });
-});
-
-function buildDispatcher(
-  chains: FheChain[],
-  relayerMap: Record<number, ReturnType<typeof web> | ReturnType<typeof cleartext>>,
-) {
-  return new RelayerDispatcher(chains as [FheChain, ...FheChain[]], relayerMap);
-}
-
-describe("RelayerDispatcher (via relayer factories)", () => {
-  it("creates relayers eagerly at construction time", () => {
-    const createRelayerSpy = vi.fn().mockReturnValue({
-      terminate: vi.fn(),
-      generateKeypair: vi.fn().mockResolvedValue({ publicKey: "0x", secretKey: "0x" }),
-    });
-    const baseRelayerCfg = web();
-    const relayerCfg = { ...baseRelayerCfg, createRelayer: createRelayerSpy };
-    new RelayerDispatcher([sepoliaChain], { [11155111]: relayerCfg });
-    expect(createRelayerSpy).toHaveBeenCalledOnce();
+describe("resolveStorage", () => {
+  it("defaults permitStorage to the credential storage when omitted", () => {
+    const storage = { get: vi.fn(), set: vi.fn(), delete: vi.fn() };
+    const resolved = resolveStorage(storage);
+    expect(resolved.storage).toBe(storage);
+    expect(resolved.permitStorage).toBe(storage);
   });
 
-  it("delegates generateKeypair to the active chain relayer", async () => {
-    const relayer = buildDispatcher([sepoliaChain], { [11155111]: web() });
-    const result = await relayer.generateKeypair();
-    expect(result).toEqual({ publicKey: "0x", secretKey: "0x" });
+  it("uses an explicit permitStorage when provided", () => {
+    const storage = { get: vi.fn(), set: vi.fn(), delete: vi.fn() };
+    const permitStorage = { get: vi.fn(), set: vi.fn(), delete: vi.fn() };
+    const resolved = resolveStorage(storage, permitStorage);
+    expect(resolved.storage).toBe(storage);
+    expect(resolved.permitStorage).toBe(permitStorage);
   });
 
-  it("throws when switching to unconfigured chain", () => {
-    const relayer = buildDispatcher([sepoliaChain], { [11155111]: web() });
-    expect(() => relayer.switchChain(999999)).toThrow("No relayer configured for chain 999999");
-  });
-
-  it("wraps single web chain", () => {
-    const relayer = buildDispatcher([sepoliaChain], { [11155111]: web() });
-    expect(relayer.constructor.name).toBe("RelayerDispatcher");
-  });
-
-  it("supports mixed web + cleartext", () => {
-    const relayer = buildDispatcher([sepoliaChain, hoodiChain], {
-      [11155111]: web(),
-      [560048]: cleartext(),
-    });
-    expect(relayer.constructor.name).toBe("RelayerDispatcher");
-  });
-
-  it("concurrent calls to the same chain return equal results", async () => {
-    const relayer = buildDispatcher([sepoliaChain], { [11155111]: web() });
-    relayer.switchChain(11155111);
-    const [a, b] = await Promise.all([relayer.generateKeypair(), relayer.generateKeypair()]);
-    expect(a).toEqual(b);
+  it("falls back to a working default storage when none is provided", async () => {
+    const { storage, permitStorage } = resolveStorage();
+    expect(storage).toBe(permitStorage);
+    // Drive the contract: a defaulted storage is a real GenericStorage that round-trips.
+    await storage.set("k", { v: 1 });
+    expect(await storage.get("k")).toEqual({ v: 1 });
+    await storage.delete("k");
+    expect(await storage.get("k")).toBeNull();
   });
 });

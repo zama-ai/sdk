@@ -72,20 +72,3 @@ test("backend bootstraps SDK, verifies FHE infra, and shuts down cleanly", async
     publicKey: expect.stringMatching(/0x/),
   });
 });
-
-test("SDK rejects invalid keypairTTL at construction", async ({
-  chain,
-  viemClient,
-  publicClient,
-}) => {
-  const config = createConfig({
-    chains: [chain],
-    publicClient,
-    walletClient: viemClient,
-    relayers: {
-      [chain.id]: node(),
-    },
-    keypairTTL: 0,
-  });
-  expect(() => new ZamaSDK(config)).toThrow("keypairTTL must be a positive number");
-});

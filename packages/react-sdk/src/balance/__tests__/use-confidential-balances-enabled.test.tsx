@@ -14,7 +14,12 @@ vi.mock("../../utils/query", async () => {
 });
 
 const mockSdk = {
-  signer: { getAddress: vi.fn().mockResolvedValue(OWNER) },
+  signer: {
+    walletAccount: {
+      getSnapshot: vi.fn().mockReturnValue({ address: OWNER, chainId: 31337 }),
+    },
+  },
+  onWalletAccountChange: vi.fn().mockReturnValue(() => {}),
   provider: { readContract: vi.fn() },
   createReadonlyToken: vi.fn((address: Address) => ({ address })),
 };

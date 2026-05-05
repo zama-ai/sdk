@@ -9,7 +9,12 @@ export {
 export { KeypairExpiredError, InvalidKeypairError, NoCiphertextError } from "./credential";
 export { RelayerRequestFailedError, ConfigurationError } from "./relayer";
 export { ChainMismatchError } from "./chain";
-export { SignerRequiredError } from "./signer";
+export {
+  SignerRequiredError,
+  SignerNotConfiguredError,
+  WalletNotConnectedError,
+  WalletAccountNotReadyError,
+} from "./signer";
 export {
   DelegationSelfNotAllowedError,
   DelegationCooldownError,
@@ -31,4 +36,4 @@ export {
 } from "./balance";
 export { matchAclRevert } from "./acl-revert";
 export { wrapDecryptError } from "./decrypt";
-export { isSessionError } from "./session";
+export { isFatalBatchError } from "./fatal-batch";

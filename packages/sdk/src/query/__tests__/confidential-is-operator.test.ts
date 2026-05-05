@@ -140,10 +140,10 @@ describe("confidentialIsOperatorQueryOptions", () => {
       },
     );
 
-    vi.mocked(signer.getAddress).mockClear();
+    vi.mocked(signer.requireWalletAccount).mockClear();
     await options.queryFn(mockQueryContext(options.queryKey));
 
-    expect(signer.getAddress).not.toHaveBeenCalled();
+    expect(signer.requireWalletAccount).not.toHaveBeenCalled();
     expect(vi.mocked(provider.readContract)).toHaveBeenCalledWith(
       expect.objectContaining({
         functionName: "isOperator",
@@ -171,10 +171,10 @@ describe("confidentialIsOperatorQueryOptions", () => {
       },
     );
 
-    vi.mocked(signer.getAddress).mockClear();
+    vi.mocked(signer.requireWalletAccount).mockClear();
     await options.queryFn(mockQueryContext(options.queryKey));
 
-    expect(signer.getAddress).not.toHaveBeenCalled();
+    expect(signer.requireWalletAccount).not.toHaveBeenCalled();
     expect(vi.mocked(provider.readContract)).toHaveBeenCalledWith(
       expect.objectContaining({
         functionName: "isOperator",

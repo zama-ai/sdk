@@ -17,9 +17,16 @@ vi.mock(import("@tanstack/react-query"), async () => {
 });
 
 function makeSigner(): GenericSigner {
+  const walletAccount = { address: SIGNER_ADDRESS, chainId: CHAIN_ID };
   return {
-    getAddress: vi.fn().mockResolvedValue(SIGNER_ADDRESS),
-    getChainId: vi.fn().mockResolvedValue(CHAIN_ID),
+    walletAccount: {
+      getSnapshot: vi.fn().mockReturnValue(walletAccount),
+      subscribe: vi.fn((listener) => {
+        listener({ previous: undefined, next: walletAccount });
+        return () => {};
+      }),
+    },
+    requireWalletAccount: vi.fn().mockReturnValue(walletAccount),
     signTypedData: vi.fn(),
     writeContract: vi.fn(),
   } as unknown as GenericSigner;
@@ -38,7 +45,7 @@ describe("useIsAllowed", () => {
       expect(vi.mocked(useQuery)).toHaveBeenCalledWith(
         expect.objectContaining({
           queryKeyHashFn: hashFn,
-          queryKey: zamaQueryKeys.isAllowed.scope([CONTRACT_A]),
+          queryKey: zamaQueryKeys.isAllowed.scope([CONTRACT_A], signer.walletAccount.getSnapshot()),
           enabled: true,
           staleTime: 0,
           gcTime: 0,
