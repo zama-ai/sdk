@@ -1,4 +1,4 @@
-import { type Address, getAddress, type Hex, encodeAbiParameters, parseAbiParameters } from "viem";
+import { type Address, getAddress, type Hex } from "viem";
 import {
   allowanceContract,
   approveContract,
@@ -21,7 +21,7 @@ import {
 import { findUnwrapRequested } from "../events/onchain-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { Handle } from "../relayer/relayer-sdk.types";
-import { toError } from "../utils";
+import { isContractCallError, toError } from "../utils";
 import {
   ApprovalFailedError,
   BalanceCheckUnavailableError,
@@ -99,7 +99,11 @@ export class Token extends ReadonlyToken {
 
   /**
    * Check whether the underlying ERC-20 supports ERC-1363 (payable token).
-   * Result is cached per Token instance after the first call.
+   * Result is cached per Token instance after the first call. Probe failures
+   * (`underlying()` revert, `supportsInterface` revert, RPC error, …) are
+   * cached as `false` so a non-payable token does not trigger a probe on
+   * every shield. The failure is emitted as a {@link TransactionError} event
+   * with `operation: "isPayable"` for observability.
    */
   async isPayable(): Promise<boolean> {
     if (this.#isPayable !== null) {
@@ -109,7 +113,13 @@ export class Token extends ReadonlyToken {
       const underlying = await this.#getUnderlying();
       this.#isPayable = await this.sdk.provider.readContract(isPayableTokenContract(underlying));
       return this.#isPayable;
-    } catch {
+    } catch (error) {
+      this.emit({
+        type: ZamaSDKEvents.TransactionError,
+        operation: "isPayable",
+        error: toError(error),
+      });
+      this.#isPayable = false;
       return false;
     }
   }
@@ -336,29 +346,41 @@ export class Token extends ReadonlyToken {
 
   /**
    * Shield public ERC-20 tokens into confidential tokens.
-   * Handles ERC-20 approval automatically based on `approvalStrategy`
-   * (`"exact"` by default, `"max"` for unlimited approval, `"skip"` to opt out).
    *
-   * The ERC-20 balance is validated before submitting (public read, no signing
-   * required).
+   * Routing is controlled by `shieldStrategy`:
+   * - `"auto"` (default): probes the underlying with ERC-165 and uses
+   *   ERC-1363 `transferAndCall` (single tx, no approval) when supported,
+   *   otherwise falls back to `approve` + `wrap` (two txs).
+   * - `"transferAndCall"`: forces the single-tx path. Throws
+   *   {@link ERC1363NotSupportedError} when the underlying does not
+   *   advertise ERC-1363 support.
+   * - `"approveAndWrap"`: skips detection and runs `approve` + `wrap`.
+   *
+   * On the `approveAndWrap` path, ERC-20 approval is handled automatically
+   * via `approvalStrategy` (`"exact"` by default, `"max"` for unlimited
+   * approval, `"skip"` to opt out). `approvalStrategy` is **ignored** on
+   * the `transferAndCall` path (the single tx authorizes itself).
+   *
+   * The ERC-20 balance is validated before submitting (public read, no
+   * signing required).
    *
    * @param amount - The plaintext amount to shield.
-   * @param options - Optional configuration: `approvalStrategy` (`"exact"` | `"max"` | `"skip"`, default `"exact"`).
+   * @param options - Optional: `shieldStrategy`, `approvalStrategy`, `to`, callbacks.
    * @returns The transaction hash and mined receipt.
    * @throws {@link ChainMismatchError} if signer and provider are on different chains.
    * @throws {@link InsufficientERC20BalanceError} if the ERC-20 balance is less than `amount`.
+   * @throws {@link ERC1363NotSupportedError} if `shieldStrategy: "transferAndCall"` is forced on a non-payable token.
    * @throws {@link ApprovalFailedError} if the ERC-20 approval step fails.
    * @throws {@link TransactionRevertedError} if the shield transaction reverts.
    *
    * @example
    * ```ts
    * const txHash = await token.shield(1000n);
-   * // or with exact approval:
-   * const txHash = await token.shield(1000n, { approvalStrategy: "exact" });
+   * // Force the legacy two-tx path:
+   * const txHash = await token.shield(1000n, { shieldStrategy: "approveAndWrap" });
    * ```
    */
   async shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult> {
-    this.sdk.requireSigner("shield");
     const account = await this.sdk.requireAlignedWalletAccount("shield");
 
     const shieldingPath = await this.#resolveShieldingPath(options?.shieldStrategy);
@@ -397,8 +419,23 @@ export class Token extends ReadonlyToken {
           shieldPath: "transferAndCall",
         });
         safeCallback(() => options?.onShieldSubmitted?.(txHash));
-        const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
-        return { txHash, receipt };
+        try {
+          const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
+          return { txHash, receipt };
+        } catch (error) {
+          this.emit({
+            type: ZamaSDKEvents.TransactionError,
+            operation: "shield",
+            shieldPath: "transferAndCall",
+            error: toError(error),
+          });
+          if (error instanceof ZamaError) {
+            throw error;
+          }
+          throw new TransactionRevertedError("Shield transaction failed", {
+            cause: error,
+          });
+        }
       }
       // txHash is null → writeContract rejected before submission, fallback is safe
     }
@@ -407,9 +444,13 @@ export class Token extends ReadonlyToken {
   }
 
   /**
-   * Attempt to submit a transferAndCall transaction. Returns the tx hash on success,
-   * or `null` if writeContract rejected and fallback is safe (auto mode only).
-   * Throws on explicit strategy or post-submit errors.
+   * Attempt to submit an ERC-1363 `transferAndCall` transaction. Returns the
+   * tx hash on success, or `null` when `writeContract` rejected with a
+   * contract revert and the caller may fall back to `approveAndWrap`. Only
+   * possible when `shieldStrategy` is `"auto"`. Throws when `shieldStrategy`
+   * is `"transferAndCall"` (no fallback), and also throws on non-revert
+   * errors (user rejection, RPC failure) so we never trigger a second
+   * wallet popup or risk a duplicate broadcast.
    */
   async #submitTransferAndCall(
     amount: bigint,
@@ -419,16 +460,18 @@ export class Token extends ReadonlyToken {
   ): Promise<Hex | null> {
     const signer = this.sdk.requireSigner("shield");
     const recipient = options?.to ? getAddress(options.to) : userAddress;
-    const data: Hex =
-      recipient === userAddress
-        ? "0x"
-        : encodeAbiParameters(parseAbiParameters("address"), [recipient]);
+    // ERC7984ERC20Wrapper.onTransferReceived decodes the recipient via
+    // `address(bytes20(data))` — i.e. the first 20 bytes of `data`. We pass
+    // the raw 20-byte address (not ABI-encoded), and the empty payload `0x`
+    // for self-shield so the wrapper falls back to `from`.
+    const data: Hex = recipient === userAddress ? "0x" : recipient;
     try {
       return await signer.writeContract(
         transferAndCallContract(underlying, this.wrapper, amount, data),
       );
     } catch (error) {
-      // Auto mode: writeContract rejected, emit warning and allow fallback
+      // Always emit so observers see the failure; fall back only when the
+      // strategy was not the explicit "transferAndCall".
       this.emit({
         type: ZamaSDKEvents.TransactionError,
         operation: "shield",
@@ -437,6 +480,19 @@ export class Token extends ReadonlyToken {
       });
 
       if (options?.shieldStrategy === "transferAndCall") {
+        if (error instanceof ZamaError) {
+          throw error;
+        }
+        throw new TransactionRevertedError("Shield transaction failed", {
+          cause: error,
+        });
+      }
+
+      // Auto mode: only fall back on simulation/contract reverts. Any other
+      // error class (user rejection, RPC failure, etc.) gets wrapped and
+      // thrown so we never trigger a second wallet popup or risk duplicate
+      // broadcasts.
+      if (!isContractCallError(error)) {
         if (error instanceof ZamaError) {
           throw error;
         }

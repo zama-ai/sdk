@@ -699,21 +699,23 @@ export function shieldMutationOptions(token: Token): MutationFactoryOptions<read
 
 // @public
 export interface ShieldOptions extends ShieldCallbacks {
-    approvalStrategy?: "max" | "exact" | "skip";
+    // Warning: (ae-forgotten-export) The symbol "ApprovalStrategy" needs to be exported by the entry point index.d.ts
+    approvalStrategy?: ApprovalStrategy;
+    // Warning: (ae-forgotten-export) The symbol "ShieldStrategy" needs to be exported by the entry point index.d.ts
+    shieldStrategy?: ShieldStrategy;
     to?: Address;
 }
 
 // @public
-export interface ShieldParams extends ShieldCallbacks {
+export interface ShieldParams extends ShieldOptions {
     // (undocumented)
     amount: bigint;
-    // (undocumented)
-    approvalStrategy?: "max" | "exact" | "skip";
-    to?: Address;
 }
 
 // @public (undocumented)
 export interface ShieldSubmittedEvent extends BaseEvent {
+    // Warning: (ae-forgotten-export) The symbol "ShieldPath" needs to be exported by the entry point index.d.ts
+    shieldPath: ShieldPath;
     // (undocumented)
     txHash: Hex;
     // (undocumented)
@@ -744,6 +746,7 @@ export class Token extends ReadonlyToken {
     }): Promise<TransactionResult>;
     finalizeUnwrap(unwrapRequestIdOrAmount: Handle): Promise<TransactionResult>;
     isOperator(holder: Address, spender: Address): Promise<boolean>;
+    isPayable(): Promise<boolean>;
     resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     revokeDelegation(input: {
         delegateAddress: Address;
@@ -826,7 +829,9 @@ export function totalSupplyQueryOptions(sdk: ZamaSDK, tokenAddress: Address, con
 // @public (undocumented)
 export interface TransactionErrorEvent extends BaseEvent {
     error: Error;
-    operation: string;
+    // Warning: (ae-forgotten-export) The symbol "TransactionErrorOperation" needs to be exported by the entry point index.d.ts
+    operation: TransactionErrorOperation;
+    shieldPath?: ShieldPath;
     // (undocumented)
     type: typeof ZamaSDKEvents.TransactionError;
 }

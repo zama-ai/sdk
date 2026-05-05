@@ -1,10 +1,21 @@
-import { type Address, encodeAbiParameters, parseAbiParameters, getAddress } from "viem";
+import { type Address, getAddress } from "viem";
 import { describe, expect, it, vi } from "../../test-fixtures";
 import { ERC1363NotSupportedError, ZamaErrorCode } from "../../errors";
 import { ZamaSDKEvents } from "../../events/sdk-events";
 
 const UNDERLYING = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
 const OTHER_RECIPIENT = "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address;
+
+/**
+ * Build an Error shaped like viem's ContractFunctionRevertedError so
+ * `isContractCallError` recognises it as a contract revert (and the shield
+ * fallback path treats it as safe to retry).
+ */
+function contractRevert(message: string): Error {
+  const err = new Error(message);
+  err.name = "ContractFunctionRevertedError";
+  return err;
+}
 
 describe("Token.shield", () => {
   // --- Callbacks (approveAndWrap path) ---
@@ -220,7 +231,7 @@ describe("Token.shield", () => {
         .mockResolvedValueOnce(0n);
 
       vi.mocked(signer.writeContract)
-        .mockRejectedValueOnce(new Error("transferAndCall reverted"))
+        .mockRejectedValueOnce(contractRevert("transferAndCall reverted"))
         .mockResolvedValueOnce("0xtxhash")
         .mockResolvedValueOnce("0xtxhash");
 
@@ -250,7 +261,7 @@ describe("Token.shield", () => {
         .mockResolvedValueOnce(UNDERLYING)
         .mockResolvedValueOnce(false);
 
-      await expect(token.shield(100n, { shieldStrategy: "transferAndCall" })).rejects.toThrowError(
+      await expect(token.shield(100n, { shieldStrategy: "transferAndCall" })).rejects.toThrow(
         ERC1363NotSupportedError,
       );
     });
@@ -267,7 +278,7 @@ describe("Token.shield", () => {
 
       vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("transferAndCall reverted"));
 
-      await expect(token.shield(100n, { shieldStrategy: "transferAndCall" })).rejects.toThrowError(
+      await expect(token.shield(100n, { shieldStrategy: "transferAndCall" })).rejects.toThrow(
         "Shield transaction failed",
       );
 
@@ -291,6 +302,44 @@ describe("Token.shield", () => {
       expect(result.txHash).toBe("0xtxhash");
       expect(signer.writeContract).toHaveBeenCalledTimes(2);
     });
+
+    it("auto + transferAndCall non-revert error (e.g. user rejection): does NOT fall back", async ({
+      token,
+      signer,
+      provider,
+    }) => {
+      vi.mocked(provider.readContract)
+        .mockResolvedValueOnce(UNDERLYING)
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(1000n);
+
+      // Plain Error, not a ContractFunctionRevertedError — represents a user
+      // rejection or RPC failure where falling back would be hostile UX.
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("User rejected the request"));
+
+      await expect(token.shield(100n)).rejects.toThrow("Shield transaction failed");
+      expect(signer.writeContract).toHaveBeenCalledOnce();
+    });
+
+    it("auto + transferAndCall succeeds but receipt fails: does NOT fall back", async ({
+      token,
+      signer,
+      provider,
+    }) => {
+      vi.mocked(provider.readContract)
+        .mockResolvedValueOnce(UNDERLYING)
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(1000n);
+
+      vi.mocked(signer.writeContract).mockResolvedValueOnce("0xtxhash");
+      vi.mocked(provider.waitForTransactionReceipt).mockRejectedValueOnce(
+        new Error("network dropped"),
+      );
+
+      await expect(token.shield(100n)).rejects.toThrow("Shield transaction failed");
+      // Submission happened exactly once — no second wallet popup.
+      expect(signer.writeContract).toHaveBeenCalledOnce();
+    });
   });
 
   // --- Data encoding ---
@@ -304,30 +353,16 @@ describe("Token.shield", () => {
 
       await token.shield(100n);
 
-      const callArgs = vi.mocked(signer.writeContract).mock.calls[0]![0] as {
-        args: unknown[];
+      const callArgs = vi.mocked(signer.writeContract).mock.calls[0]![0] as unknown as {
+        args: readonly unknown[];
       };
       expect(callArgs.args[2]).toBe("0x");
     });
 
-    it("shield-to-other sends ABI-encoded recipient", async ({ token, signer, provider }) => {
-      vi.mocked(provider.readContract)
-        .mockResolvedValueOnce(UNDERLYING)
-        .mockResolvedValueOnce(true)
-        .mockResolvedValueOnce(1000n);
-
-      await token.shield(100n, { to: OTHER_RECIPIENT });
-
-      const callArgs = vi.mocked(signer.writeContract).mock.calls[0]![0] as {
-        args: unknown[];
-      };
-      const expectedData = encodeAbiParameters(parseAbiParameters("address"), [
-        getAddress(OTHER_RECIPIENT),
-      ]);
-      expect(callArgs.args[2]).toBe(expectedData);
-    });
-
-    it("encodes recipient in data param for shield-to-other", async ({
+    // The wrapper decodes the recipient via address(bytes20(data)). We send the
+    // raw 20-byte address (not ABI-encoded); ABI encoding would left-pad with
+    // 12 zero bytes and bytes20() would slice them, corrupting the recipient.
+    it("shield-to-other sends raw 20-byte recipient address (not ABI-encoded)", async ({
       token,
       signer,
       provider,
@@ -339,13 +374,31 @@ describe("Token.shield", () => {
 
       await token.shield(100n, { to: OTHER_RECIPIENT });
 
-      expect(signer.writeContract).toHaveBeenCalledOnce();
-      const callArgs = vi.mocked(signer.writeContract).mock.calls[0]![0] as {
-        functionName: string;
-        args: unknown[];
+      const callArgs = vi.mocked(signer.writeContract).mock.calls[0]![0] as unknown as {
+        args: readonly unknown[];
       };
-      expect(callArgs.functionName).toBe("transferAndCall");
-      expect(callArgs.args[2]).not.toBe("0x");
+      expect(callArgs.args[2]).toBe(getAddress(OTHER_RECIPIENT));
+    });
+
+    it("explicit to=userAddress (case-insensitive) is treated as self-shield (data: 0x)", async ({
+      token,
+      signer,
+      userAddress,
+      provider,
+    }) => {
+      vi.mocked(provider.readContract)
+        .mockResolvedValueOnce(UNDERLYING)
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(1000n);
+
+      // Pass the user's own address in lowercase to make sure normalization
+      // via getAddress() collapses to the self-shield branch.
+      await token.shield(100n, { to: userAddress.toLowerCase() as Address });
+
+      const callArgs = vi.mocked(signer.writeContract).mock.calls[0]![0] as unknown as {
+        args: readonly unknown[];
+      };
+      expect(callArgs.args[2]).toBe("0x");
     });
   });
 
@@ -415,7 +468,7 @@ describe("Token.shield", () => {
         .mockResolvedValueOnce(0n);
 
       vi.mocked(signer.writeContract)
-        .mockRejectedValueOnce(new Error("revert"))
+        .mockRejectedValueOnce(contractRevert("revert"))
         .mockResolvedValueOnce("0xtxhash")
         .mockResolvedValueOnce("0xtxhash");
 
@@ -440,6 +493,30 @@ describe("Token.shield", () => {
       expect(await token.isPayable()).toBe(true);
       expect(await token.isPayable()).toBe(true);
       expect(provider.readContract).toHaveBeenCalledTimes(2);
+    });
+
+    it("isPayable() caches false when supportsInterface reverts", async ({ token, provider }) => {
+      vi.mocked(provider.readContract)
+        .mockResolvedValueOnce(UNDERLYING)
+        .mockRejectedValueOnce(contractRevert("supportsInterface reverted"));
+
+      expect(await token.isPayable()).toBe(false);
+      expect(await token.isPayable()).toBe(false);
+      // First call: underlying (1) + supportsInterface (1) = 2 reads.
+      // Second call: cache hit, no additional reads.
+      expect(provider.readContract).toHaveBeenCalledTimes(2);
+    });
+
+    it("isPayable() caches false when underlying() reverts", async ({ token, provider }) => {
+      vi.mocked(provider.readContract).mockRejectedValueOnce(
+        contractRevert("underlying() reverted"),
+      );
+
+      expect(await token.isPayable()).toBe(false);
+      expect(await token.isPayable()).toBe(false);
+      // The #underlyingPromise retries on failure (separate cache), but
+      // #isPayable is cached as false so the second call short-circuits.
+      expect(provider.readContract).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -509,23 +586,77 @@ describe("Token.shield", () => {
       );
     });
 
-    it("emits TransactionError when transferAndCall fails in auto mode", async ({
-      token,
-      signer,
+    it("emits TransactionError with shieldPath: transferAndCall when transferAndCall fails in auto mode", async ({
+      createSDK,
       provider,
+      tokenAddress,
     }) => {
+      const emitted: unknown[] = [];
+      const sdk = createSDK({
+        onEvent: (event: unknown) => emitted.push(event),
+      });
+      const { Token } = await import("../../token/token");
+      const token = new Token(sdk, tokenAddress);
+
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce(UNDERLYING)
         .mockResolvedValueOnce(true)
         .mockResolvedValueOnce(1000n)
         .mockResolvedValueOnce(0n);
 
-      vi.mocked(signer.writeContract)
-        .mockRejectedValueOnce(new Error("transferAndCall reverted"))
+      vi.mocked(sdk.signer!.writeContract)
+        .mockRejectedValueOnce(contractRevert("transferAndCall reverted"))
         .mockResolvedValueOnce("0xtxhash")
         .mockResolvedValueOnce("0xtxhash");
 
       await token.shield(100n);
+
+      const errorEvents = emitted.filter(
+        (e) => (e as { type: string }).type === ZamaSDKEvents.TransactionError,
+      );
+      expect(errorEvents).toHaveLength(1);
+      expect(errorEvents[0]).toEqual(
+        expect.objectContaining({
+          type: ZamaSDKEvents.TransactionError,
+          operation: "shield",
+          shieldPath: "transferAndCall",
+        }),
+      );
+    });
+
+    it("emits TransactionError with shieldPath: approveAndWrap when approveAndWrap fails", async ({
+      createSDK,
+      provider,
+      tokenAddress,
+    }) => {
+      const emitted: unknown[] = [];
+      const sdk = createSDK({
+        onEvent: (event: unknown) => emitted.push(event),
+      });
+      const { Token } = await import("../../token/token");
+      const token = new Token(sdk, tokenAddress);
+
+      vi.mocked(provider.readContract)
+        .mockResolvedValueOnce(UNDERLYING)
+        .mockResolvedValueOnce(false) // not payable → approveAndWrap path
+        .mockResolvedValueOnce(1000n)
+        .mockResolvedValueOnce(1000n);
+
+      vi.mocked(sdk.signer!.writeContract).mockRejectedValueOnce(contractRevert("wrap reverted"));
+
+      await expect(token.shield(100n)).rejects.toThrow();
+
+      const errorEvents = emitted.filter(
+        (e) => (e as { type: string }).type === ZamaSDKEvents.TransactionError,
+      );
+      expect(errorEvents).toHaveLength(1);
+      expect(errorEvents[0]).toEqual(
+        expect.objectContaining({
+          type: ZamaSDKEvents.TransactionError,
+          operation: "shield",
+          shieldPath: "approveAndWrap",
+        }),
+      );
     });
   });
 

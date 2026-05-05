@@ -170,73 +170,8 @@ describe("Unshield callbacks (P4)", () => {
   });
 });
 
-describe("Shield callbacks (SDK-19)", () => {
-  const UNDERLYING = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c";
-
-  it("fires onApprovalSubmitted and onShieldSubmitted callbacks", async ({ token, provider }) => {
-    vi.mocked(provider.readContract)
-      .mockResolvedValueOnce(UNDERLYING)
-      .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
-      .mockResolvedValueOnce(1000n)
-      .mockResolvedValueOnce(0n);
-
-    const onApprovalSubmitted = vi.fn();
-    const onShieldSubmitted = vi.fn();
-
-    await token.shield(100n, { onApprovalSubmitted, onShieldSubmitted });
-
-    expect(onApprovalSubmitted).toHaveBeenCalledWith("0xtxhash");
-    expect(onShieldSubmitted).toHaveBeenCalledWith("0xtxhash");
-  });
-
-  it("skips onApprovalSubmitted when allowance is sufficient", async ({ token, provider }) => {
-    vi.mocked(provider.readContract)
-      .mockResolvedValueOnce(UNDERLYING)
-      .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
-      .mockResolvedValueOnce(1000n)
-      .mockResolvedValueOnce(1000n);
-
-    const onApprovalSubmitted = vi.fn();
-    const onShieldSubmitted = vi.fn();
-
-    await token.shield(100n, { onApprovalSubmitted, onShieldSubmitted });
-
-    expect(onApprovalSubmitted).not.toHaveBeenCalled();
-    expect(onShieldSubmitted).toHaveBeenCalledOnce();
-  });
-
-  it("completes shield even when callbacks throw", async ({ token, provider }) => {
-    vi.mocked(provider.readContract)
-      .mockResolvedValueOnce(UNDERLYING)
-      .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
-      .mockResolvedValueOnce(1000n)
-      .mockResolvedValueOnce(0n);
-
-    const result = await token.shield(100n, {
-      onApprovalSubmitted: () => {
-        throw new Error("callback exploded");
-      },
-      onShieldSubmitted: () => {
-        throw new Error("callback exploded again");
-      },
-    });
-
-    expect(result.txHash).toBe("0xtxhash");
-  });
-
-  it("passes to parameter for shield recipient", async ({ token, signer, provider }) => {
-    vi.mocked(provider.readContract)
-      .mockResolvedValueOnce(UNDERLYING)
-      .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
-      .mockResolvedValueOnce(1000n)
-      .mockResolvedValueOnce(1000n);
-
-    const recipient = "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address;
-    await token.shield(100n, { to: recipient });
-
-    expect(signer.writeContract).toHaveBeenCalled();
-  });
-});
+// Shield callback tests live in shield.test.ts so all shield routing,
+// data-encoding, and callback semantics stay co-located.
 
 describe("Transfer callbacks (SDK-19)", () => {
   it("fires onEncryptComplete and onTransferSubmitted callbacks", async ({ token }) => {

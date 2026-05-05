@@ -1,3 +1,4 @@
+import type { Address } from "viem";
 import { ZamaError, ZamaErrorCode } from "./base";
 
 /** ERC-20 approval transaction failed. */
@@ -18,9 +19,9 @@ export class TransactionRevertedError extends ZamaError {
 
 /** The underlying ERC-20 does not support ERC-1363 (payable token). */
 export class ERC1363NotSupportedError extends ZamaError {
-  readonly tokenAddress: string;
+  readonly tokenAddress: Address;
 
-  constructor(tokenAddress: string, options?: ErrorOptions) {
+  constructor(tokenAddress: Address, options?: ErrorOptions) {
     super(
       ZamaErrorCode.ERC1363NotSupported,
       `Underlying token ${tokenAddress} does not support ERC-1363`,

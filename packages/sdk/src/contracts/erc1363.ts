@@ -9,9 +9,13 @@ import { erc1363Abi } from "../abi/erc1363.abi";
  * callback handles minting confidential tokens.
  *
  * @param tokenAddress - The ERC-20 token to transfer from (the underlying, not the wrapper).
- * @param to - The recipient of the transfer (the wrapper contract).
+ * @param to - The recipient of the ERC-20 transfer. In `Token.shield`, this is
+ *   the wrapper contract whose `onTransferReceived` callback mints
+ *   confidential tokens to the address encoded in `data`.
  * @param amount - The amount to transfer.
- * @param data - Optional ABI-encoded recipient address for shield-to-other. Empty for self-shield.
+ * @param data - Raw 20-byte recipient address for shield-to-other (decoded by
+ *   the wrapper as `address(bytes20(data))`). Empty `0x` for self-shield —
+ *   the wrapper falls back to `from`.
  */
 export function transferAndCallContract(
   tokenAddress: Address,

@@ -6400,6 +6400,16 @@ export interface EncryptStartEvent extends BaseEvent {
 }
 
 // @public
+export const ERC1363_INTERFACE_ID: "0xb0202a11";
+
+// @public
+export class ERC1363NotSupportedError extends ZamaError {
+    constructor(tokenAddress: Address, options?: ErrorOptions);
+    // (undocumented)
+    readonly tokenAddress: Address;
+}
+
+// @public
 export class ERC20ReadFailedError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
@@ -14646,12 +14656,21 @@ export interface ShieldCallbacks {
 
 // @public
 export interface ShieldOptions extends ShieldCallbacks {
-    approvalStrategy?: "max" | "exact" | "skip";
+    // Warning: (ae-forgotten-export) The symbol "ApprovalStrategy" needs to be exported by the entry point index.d.ts
+    approvalStrategy?: ApprovalStrategy;
+    shieldStrategy?: ShieldStrategy;
     to?: Address;
 }
 
+// @public
+export type ShieldPath = Exclude<ShieldStrategy, "auto">;
+
+// @public
+export type ShieldStrategy = "auto" | "transferAndCall" | "approveAndWrap";
+
 // @public (undocumented)
 export interface ShieldSubmittedEvent extends BaseEvent {
+    shieldPath: ShieldPath;
     // (undocumented)
     txHash: Hex;
     // (undocumented)
@@ -14870,6 +14889,7 @@ export class Token extends ReadonlyToken {
     }): Promise<TransactionResult>;
     finalizeUnwrap(unwrapRequestIdOrAmount: Handle): Promise<TransactionResult>;
     isOperator(holder: Address, spender: Address): Promise<boolean>;
+    isPayable(): Promise<boolean>;
     resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     revokeDelegation(input: {
         delegateAddress: Address;
@@ -14949,7 +14969,9 @@ export function totalSupplyContract(wrapperAddress: Address): {
 // @public (undocumented)
 export interface TransactionErrorEvent extends BaseEvent {
     error: Error;
-    operation: string;
+    // Warning: (ae-forgotten-export) The symbol "TransactionErrorOperation" needs to be exported by the entry point index.d.ts
+    operation: TransactionErrorOperation;
+    shieldPath?: ShieldPath;
     // (undocumented)
     type: typeof ZamaSDKEvents.TransactionError;
 }
@@ -14969,6 +14991,32 @@ export interface TransactionResult {
 export class TransactionRevertedError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
+
+// @public
+export function transferAndCallContract(tokenAddress: Address, to: Address, amount: bigint, data?: Hex): {
+    readonly address: `0x${string}`;
+    readonly abi: readonly [{
+        readonly type: "function";
+        readonly name: "transferAndCall";
+        readonly stateMutability: "nonpayable";
+        readonly inputs: readonly [{
+            readonly name: "to";
+            readonly type: "address";
+        }, {
+            readonly name: "value";
+            readonly type: "uint256";
+        }, {
+            readonly name: "data";
+            readonly type: "bytes";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bool";
+        }];
+    }];
+    readonly functionName: "transferAndCall";
+    readonly args: readonly [`0x${string}`, bigint, `0x${string}`];
+};
 
 // @public
 export interface TransferCallbacks {
@@ -20001,7 +20049,8 @@ export const ZamaErrorCode: {
     readonly InsufficientConfidentialBalance: "INSUFFICIENT_CONFIDENTIAL_BALANCE"; /** ERC-20 balance is insufficient for the requested shield amount. */
     readonly InsufficientERC20Balance: "INSUFFICIENT_ERC20_BALANCE"; /** Balance validation could not be performed (no cached credentials and decryption not possible). */
     readonly BalanceCheckUnavailable: "BALANCE_CHECK_UNAVAILABLE"; /** Public ERC-20 read (e.g. balanceOf) failed due to a network or contract error. */
-    readonly ERC20ReadFailed: "ERC20_READ_FAILED"; /** The new expiration date equals the current one — no on-chain change needed. */
+    readonly ERC20ReadFailed: "ERC20_READ_FAILED"; /** The underlying ERC-20 does not support ERC-1363 `transferAndCall`. */
+    readonly ERC1363NotSupported: "ERC1363_NOT_SUPPORTED"; /** The new expiration date equals the current one — no on-chain change needed. */
     readonly DelegationExpiryUnchanged: "DELEGATION_EXPIRY_UNCHANGED"; /** Delegate address cannot be the contract address. */
     readonly DelegationDelegateEqualsContract: "DELEGATION_DELEGATE_EQUALS_CONTRACT"; /** Contract address cannot be the sender address. */
     readonly DelegationContractIsSelf: "DELEGATION_CONTRACT_IS_SELF"; /** The ACL contract is paused. */

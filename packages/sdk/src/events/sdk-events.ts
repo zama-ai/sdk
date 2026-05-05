@@ -85,13 +85,28 @@ export interface DecryptErrorEvent extends BaseEvent {
   handles: Handle[];
 }
 
+/**
+ * Identifier for the SDK operation that emitted a {@link TransactionErrorEvent}.
+ */
+export type TransactionErrorOperation =
+  | "approveUnderlying"
+  | "delegateDecryption"
+  | "finalizeUnwrap"
+  | "isPayable"
+  | "revokeDelegation"
+  | "setOperator"
+  | "shield"
+  | "transfer"
+  | "transferFrom"
+  | "unwrap";
+
 export interface TransactionErrorEvent extends BaseEvent {
   type: typeof ZamaSDKEvents.TransactionError;
-  /** Which write operation failed. */
-  operation: string;
+  /** Which SDK operation failed. */
+  operation: TransactionErrorOperation;
   /** The error that caused the transaction to fail. */
   error: Error;
-  /** For shield errors: which execution path failed. */
+  /** For shield errors: which execution path failed. Always set when `operation === "shield"`. */
   shieldPath?: ShieldPath;
 }
 

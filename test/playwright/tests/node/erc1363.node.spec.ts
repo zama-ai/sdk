@@ -1,7 +1,7 @@
 /**
- * Scenario: Token.supportsERC1363() detects ERC-1363 support on-chain
- * using ERC-165 supportsInterface. Verifies detection works correctly against
- * both ERC-1363 tokens (TestERC1363) and standard ERC-20s (TestERC20).
+ * Scenario: Token.isPayable() detects ERC-1363 support on-chain using ERC-165
+ * supportsInterface. Verifies detection works correctly against both ERC-1363
+ * tokens (TestERC1363) and standard ERC-20s (TestERC20).
  *
  * These tests validate the SDK's on-chain detection path end-to-end against
  * real contracts on Anvil — the unit tests cover routing logic with mocks.
