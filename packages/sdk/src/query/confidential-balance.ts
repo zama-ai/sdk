@@ -3,6 +3,7 @@ import type { ReadonlyToken } from "../token";
 import { assertNonNullable } from "../utils/assertions";
 import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
+import type { SignerQueryContext } from "./signer-query-context";
 import { filterQueryOptions } from "./utils";
 
 export interface ConfidentialBalanceQueryConfig {
@@ -15,6 +16,7 @@ export interface ConfidentialBalanceQueryConfig {
 export function confidentialBalanceQueryOptions(
   token: ReadonlyToken,
   config: ConfidentialBalanceQueryConfig,
+  signerContext: SignerQueryContext = {},
 ): QueryFactoryOptions<
   bigint,
   Error,
@@ -25,7 +27,11 @@ export function confidentialBalanceQueryOptions(
 
   return {
     ...filterQueryOptions(queryOpts),
-    queryKey: zamaQueryKeys.confidentialBalance.owner(config.tokenAddress, config.account),
+    queryKey: zamaQueryKeys.confidentialBalance.owner(
+      config.tokenAddress,
+      config.account,
+      signerContext.walletAccount,
+    ),
     queryFn: async (context) => {
       const [, { owner: keyOwner }] = context.queryKey;
       assertNonNullable(keyOwner, "confidentialBalanceQueryOptions: owner");
@@ -33,7 +39,7 @@ export function confidentialBalanceQueryOptions(
     },
     enabled:
       Boolean(config.account) &&
-      token.sdk.credentials !== undefined &&
+      signerContext.walletAccount !== undefined &&
       queryOpts?.enabled !== false,
   };
 }

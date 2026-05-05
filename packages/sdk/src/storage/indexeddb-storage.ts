@@ -5,9 +5,9 @@ import type { GenericStorage } from "../types";
 /**
  * IndexedDB-backed {@link GenericStorage}.
  *
- * Stores encrypted credential objects keyed by a hashed wallet address.
- * Encryption is handled by {@link CredentialsManager} — this store only
- * persists opaque values.
+ * Stores keypair and permit objects keyed by a hashed wallet address. The
+ * SDK delegates security to the storage backend — values are persisted
+ * verbatim with no SDK-layer encryption.
  */
 export class IndexedDBStorage implements GenericStorage {
   #db: IDBDatabase | null = null;

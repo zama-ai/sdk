@@ -1,19 +1,22 @@
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { userDecryptQueryOptions } from "../user-decrypt";
 import type { Address } from "viem";
-import { ZamaSDK } from "../../zama-sdk";
 
 const CONTRACT = "0x1111111111111111111111111111111111111111" as Address;
 
 describe("userDecryptQueryOptions", () => {
-  test("decrypts handles via sdk.decrypt", async ({ sdk, relayer }) => {
+  test("decrypts handles via sdk.decrypt", async ({ sdk, relayer, signer }) => {
     const handle = ("0x" + "01".repeat(32)) as `0x${string}`;
 
     vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({ [handle]: 100n });
 
-    const options = userDecryptQueryOptions(sdk, {
-      handles: [{ handle, contractAddress: CONTRACT }],
-    });
+    const options = userDecryptQueryOptions(
+      sdk,
+      {
+        handles: [{ handle, contractAddress: CONTRACT }],
+      },
+      { walletAccount: signer.walletAccount.getSnapshot() },
+    );
     const result = await options.queryFn({
       queryKey: options.queryKey,
       signal: AbortSignal.timeout(5000),
@@ -37,18 +40,21 @@ describe("userDecryptQueryOptions", () => {
     expect(options.enabled).toBe(false);
   });
 
-  test("enabled when handles are provided", ({ sdk }) => {
+  test("enabled when handles are provided", ({ sdk, signer }) => {
     const handle = ("0x" + "01".repeat(32)) as `0x${string}`;
 
-    const options = userDecryptQueryOptions(sdk, {
-      handles: [{ handle, contractAddress: CONTRACT }],
-    });
+    const options = userDecryptQueryOptions(
+      sdk,
+      {
+        handles: [{ handle, contractAddress: CONTRACT }],
+      },
+      { walletAccount: signer.walletAccount.getSnapshot() },
+    );
     expect(options.enabled).toBe(true);
   });
 
-  test("disabled when signer-backed credentials are absent", ({ relayer, provider, storage }) => {
+  test("disabled when wallet account is absent", ({ sdk }) => {
     const handle = ("0x" + "01".repeat(32)) as `0x${string}`;
-    const sdk = new ZamaSDK({ relayer, provider, storage });
 
     const options = userDecryptQueryOptions(sdk, {
       handles: [{ handle, contractAddress: CONTRACT }],

@@ -6,6 +6,7 @@ import type { UseQueryOptions } from "@tanstack/react-query";
 import type { Address, BatchBalancesResult } from "@zama-fhe/sdk";
 import { confidentialBalancesQueryOptions } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
+import { useWalletAccount } from "../utils/wallet-account";
 
 export interface UseConfidentialBalancesConfig {
   /** Addresses of the confidential token contracts to batch-query. The query is disabled while empty. */
@@ -49,15 +50,20 @@ export function useConfidentialBalances(
   const { tokenAddresses, account } = config;
   const { enabled = true } = options ?? {};
   const sdk = useZamaSDK();
+  const walletAccount = useWalletAccount(sdk);
 
   const tokens = useMemo(
     () => tokenAddresses.map((addr) => sdk.createReadonlyToken(addr)),
     [sdk, tokenAddresses],
   );
 
-  const baseOptions = confidentialBalancesQueryOptions(tokens, {
-    account,
-  });
+  const baseOptions = confidentialBalancesQueryOptions(
+    tokens,
+    {
+      account,
+    },
+    { walletAccount },
+  );
 
   return useQuery<BatchBalancesResult>({
     ...baseOptions,

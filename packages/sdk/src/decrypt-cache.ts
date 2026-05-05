@@ -27,7 +27,7 @@ import type { GenericStorage } from "./types";
  *
  * Lifecycle:
  * - Populated by {@link ZamaSDK.decrypt} after relayer calls.
- * - Cleared by {@link ZamaSDK.revoke} / {@link ZamaSDK.revokeSession} (per-requester).
+ * - Cleared by {@link ZamaSDK.revokePermits} / {@link ZamaSDK.clearCredentials} (per-requester).
  * - Cleared by signer lifecycle events (disconnect, account change, chain change).
  * - Survives page reloads when backed by persistent storage (e.g. IndexedDB).
  */
@@ -76,6 +76,31 @@ export class DecryptCache {
       await this.#indexWriteQueue;
     } catch (error) {
       console.warn("[zama-sdk] DecryptCache.set failed:", error); // eslint-disable-line no-console
+    }
+  }
+
+  /**
+   * Removes a single cached entry for `(requester, contractAddress, handle)`.
+   * Best-effort — storage errors are swallowed.
+   */
+  async delete(requester: Address, contractAddress: Address, handle: Handle): Promise<void> {
+    const key = this.#buildStorageKey(requester, contractAddress, handle);
+    // Serialise with the index write queue so the index stays consistent with
+    // concurrent set() calls for the same key.
+    this.#indexWriteQueue = this.#indexWriteQueue.then(() =>
+      this.#doDelete(key).catch((error) => {
+        console.warn("[zama-sdk] DecryptCache.delete failed:", error); // eslint-disable-line no-console
+      }),
+    );
+    await this.#indexWriteQueue;
+  }
+
+  async #doDelete(key: string): Promise<void> {
+    await this.#storage.delete(key).catch(() => {});
+    const keys = await this.#readIndex();
+    const remaining = keys.filter((k) => k !== key);
+    if (remaining.length !== keys.length) {
+      await this.#storage.set(this.#decryptKeysNamespace, remaining);
     }
   }
 

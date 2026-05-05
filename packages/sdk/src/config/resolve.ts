@@ -13,15 +13,11 @@ function getDefaultStorage(): GenericStorage {
     : new MemoryStorage();
 }
 
-function getDefaultSessionStorage(): GenericStorage {
-  return typeof window !== "undefined" ? new IndexedDBStorage("SessionStore") : new MemoryStorage();
-}
-
 export function resolveStorage(
   storage: GenericStorage | undefined = getDefaultStorage(),
-  sessionStorage: GenericStorage | undefined = getDefaultSessionStorage(),
-): { storage: GenericStorage; sessionStorage: GenericStorage } {
-  return { storage, sessionStorage };
+  permitStorage: GenericStorage | undefined = storage,
+): { storage: GenericStorage; permitStorage: GenericStorage } {
+  return { storage, permitStorage };
 }
 
 // ── Chain relayer resolution ────────────────────────────────────────────────

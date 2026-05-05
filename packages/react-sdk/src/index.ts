@@ -26,8 +26,8 @@ export { usePublicParams } from "./relayer/use-public-params";
 // Authorization hooks (generic — any contract with encrypted state)
 export { useAllow } from "./authorization/use-allow";
 export { useIsAllowed, type UseIsAllowedConfig } from "./authorization/use-is-allowed";
-export { useRevoke } from "./authorization/use-revoke";
-export { useRevokeSession } from "./authorization/use-revoke-session";
+export { useRevokePermits } from "./authorization/use-revoke-permits";
+export { useClearCredentials } from "./authorization/use-clear-credentials";
 
 // Token hooks (ERC-20 token operations)
 export { useToken, type UseZamaConfig } from "./token/use-token";

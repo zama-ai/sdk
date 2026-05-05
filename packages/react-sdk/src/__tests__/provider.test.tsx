@@ -52,11 +52,11 @@ describe("ZamaProvider & useZamaSDK", () => {
     const { Wrapper, queryClient } = createWrapper({ signer });
     renderHook(() => useZamaSDK(), { wrapper: Wrapper });
 
-    // The SDK owns the single signer.subscribe call; ZamaProvider layers query
+    // The SDK owns the single signer.walletAccount.subscribe call; ZamaProvider layers query
     // invalidation on top via sdk.onIdentityChange. Firing the captured signer
     // listener exercises that fan-out path end-to-end.
-    expect(signer.subscribe).toHaveBeenCalledTimes(1);
-    const listener = vi.mocked(signer.subscribe!).mock.calls[0]![0];
+    expect(signer.walletAccount.subscribe).toHaveBeenCalledTimes(1);
+    const listener = vi.mocked(signer.walletAccount.subscribe).mock.calls[0]![0];
     const balanceKey = zamaQueryKeys.confidentialBalance.token(
       "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
     );
@@ -87,6 +87,7 @@ describe("ZamaProvider & useZamaSDK", () => {
     const onEvent: ZamaSDKEventListener = vi.fn();
     const { Wrapper, signer, relayer } = createWrapper({
       keypairTTL: 604800,
+      permitTTL: 1,
       onEvent,
     });
 

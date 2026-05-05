@@ -1,24 +1,25 @@
 "use client";
 
 import { useMutation, type UseMutationOptions } from "@tanstack/react-query";
-import { revokeSessionMutationOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
+import { clearCredentialsMutationOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 
 /**
- * Revoke the session signature for the connected wallet without
- * specifying contract addresses. Useful for wallet disconnect handlers.
+ * Wipe the keypair for the current signer and cascade-delete every permit
+ * (across chains and delegators) referencing it. Useful for "log out"
+ * handlers that should leave no trace.
  *
  * @example
  * ```tsx
- * const { mutate: revokeSession } = useRevokeSession();
- * revokeSession();
+ * const { mutate: clearCredentials } = useClearCredentials();
+ * clearCredentials();
  * ```
  */
-export function useRevokeSession(options?: UseMutationOptions<void>) {
+export function useClearCredentials(options?: UseMutationOptions<void>) {
   const sdk = useZamaSDK();
 
   return useMutation<void>({
-    ...revokeSessionMutationOptions(sdk),
+    ...clearCredentialsMutationOptions(sdk),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       options?.onSuccess?.(data, variables, onMutateResult, context);

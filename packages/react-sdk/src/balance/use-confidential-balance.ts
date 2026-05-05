@@ -5,6 +5,7 @@ import type { Address } from "@zama-fhe/sdk";
 import { confidentialBalanceQueryOptions } from "@zama-fhe/sdk/query";
 import { useReadonlyToken } from "../token/use-readonly-token";
 import { useQuery } from "../utils/query";
+import { useWalletAccount } from "../utils/wallet-account";
 
 export interface UseConfidentialBalanceConfig {
   /** Address of the confidential token contract. */
@@ -41,11 +42,16 @@ export function useConfidentialBalance(
   const { tokenAddress, account } = config;
   const { enabled = true } = options ?? {};
   const token = useReadonlyToken(tokenAddress);
+  const walletAccount = useWalletAccount(token.sdk);
 
-  const baseOptions = confidentialBalanceQueryOptions(token, {
-    tokenAddress,
-    account,
-  });
+  const baseOptions = confidentialBalanceQueryOptions(
+    token,
+    {
+      tokenAddress,
+      account,
+    },
+    { walletAccount },
+  );
 
   return useQuery<bigint>({
     ...baseOptions,

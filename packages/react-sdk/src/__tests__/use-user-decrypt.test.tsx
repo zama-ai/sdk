@@ -82,9 +82,7 @@ describe("useUserDecrypt", () => {
     await waitFor(() => expect(result.current.isError).toBe(true), {
       timeout: 5_000,
     });
-    expect(result.current.error?.message).toBe(
-      "Failed to create decrypt credentials: keygen failed",
-    );
+    expect(result.current.error?.message).toContain("keygen failed");
   });
 
   it("respects enabled = false", async ({ tokenAddress, renderWithProviders }) => {
@@ -169,8 +167,8 @@ describe("useUserDecrypt", () => {
     renderWithProviders,
   }) => {
     // SDK-42 pattern: the consumer gates the decrypt hook on useIsAllowed.
-    // When no session exists, isAllowed resolves to false and decrypt must
-    // stay idle — no EIP-712 prompt on mount.
+    // When no permit covers the contract, isAllowed resolves to false and
+    // decrypt must stay idle — no EIP-712 prompt on mount.
     const { result } = renderWithProviders(() => {
       const isAllowed = useIsAllowed({ contractAddresses: [tokenAddress] });
       const decrypt = useUserDecrypt(
