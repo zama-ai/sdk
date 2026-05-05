@@ -125,12 +125,14 @@ The `react-wagmi` SDK 3.x upgrade exposed concrete checks the agent must make fo
 
 - Prefer the high-level `@zama-fhe/react-sdk/wagmi` config adapter and `@zama-fhe/sdk/web` browser transport when the API reports/docs expose them. Do not keep direct `WagmiSigner` or `RelayerWeb` wiring unless the target SDK still requires it.
 - Prefer domain-level React SDK hooks over local orchestration. If a hook such as `useShield`, `useUnshield`, `useConfidentialTransfer`, `useAllow`, or `useDelegateDecryption` exists, do not reimplement it with local `useMutation`, low-level contract builders, direct `readContract`/`writeContract`, or manual cache invalidation unless the example is intentionally teaching a custom low-level flow.
+- Avoid placeholder contract/token addresses in upgraded examples. If a selected token/pair may be undefined, prefer a token-dependent child component that only mounts SDK/wagmi hooks once real registry data exists. Only use a placeholder address when the consumed published SDK/API requires an address-shaped input and there is no cleaner component boundary; document that tradeoff explicitly.
+- Do not assume an unreleased local SDK API is available to the example. Example apps compile against the SDK version declared in their own `package.json`, so hook options and types must match the published target package, not just the monorepo source.
 - Use absolute browser relayer URLs for SDK relayer config, for example `new URL("/api/relayer", window.location.origin).toString()`. Relative URLs can fail inside the relayer worker before any browser Network entry appears.
 - For wagmi/viem E2E RPC mocks, account for Multicall3 reads. A mechanically updated app can pass typecheck but fail tests if mocks only handle direct `eth_call` targets.
 - Playwright RPC route callbacks should fail closed with fixture-style fallback data for unknown or malformed mock inputs. Avoid uncaught decoding/parsing throws inside `page.route` callbacks because they often surface as confusing browser network timeouts.
 - When wrapper behavior matters, verify whether the registry points to upgraded proxies and avoid legacy APIs unless the code explicitly uses `*Legacy*` paths for compatibility.
 - Re-read nearby comments after mechanical API migrations. Comments that mention old hook options, disabled queries, provider ordering, or signer/relayer wiring must be updated or removed with the code.
-- Keep README/WALKTHROUGH aligned with the actual SDK wiring, then commit regenerated LLM corpus artifacts.
+- Keep README/WALKTHROUGH aligned with the actual SDK wiring, then commit regenerated LLM corpus artifacts. Run `pnpm format:check` after `pnpm llm:build`; CI `lint` fails on generated or markdown formatting drift.
 
 ## Source Priority
 

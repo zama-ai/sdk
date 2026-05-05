@@ -32,7 +32,10 @@ Use this checklist after deterministic checks pass. Keep the list practical and 
 - The example still teaches the intended stack, not just a mechanically compiling integration.
 - The implementation follows "clear-text in, clear-text out"; FHE details stay inside SDK calls.
 - App code uses domain-level SDK hooks/utils instead of reimplementing available SDK primitives.
+- Token-dependent hooks use real token/contract addresses. Placeholder addresses are avoided unless the consumed published SDK API leaves no cleaner option.
+- Hook options and types match the SDK version declared by the example app, not only the current monorepo source.
 - Comments near migrated SDK calls still describe the current behavior.
 - Test fixtures and RPC mocks handle unknown or malformed inputs with explicit fallback behavior.
 - Legacy wrapper/API paths are not used unless intentionally required for compatibility.
+- `pnpm format:check` passes after any doc or generated LLM corpus update.
 - No changes were made outside the intended example directory unless explicitly planned.

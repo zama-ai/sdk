@@ -600,8 +600,11 @@ ${contextList}
 5. Apply the required upgrade changes.
 6. Run the validation command from the agent task.
 7. If README.md, WALKTHROUGH.md, or docs changed, run \`pnpm llm:build\` and keep the generated LLM corpus artifacts.
-8. Generate or update the report.
-9. In your final answer, summarize changes, validation results, and remaining manual checks.
+8. Run \`pnpm format:check\` after generated docs/artifacts change; CI lint includes formatting.
+9. Avoid placeholder token/contract addresses. Prefer a child component that only mounts token-dependent hooks once real registry/config data exists. If the published target SDK type forces a placeholder, document why.
+10. Verify hook options against the example app's declared SDK package version, not only local monorepo source.
+11. Generate or update the report.
+12. In your final answer, summarize changes, validation results, and remaining manual checks.
 
 Do not modify apps marked future or excluded in \`examples/examples-upgrade.config.json\`.
 
