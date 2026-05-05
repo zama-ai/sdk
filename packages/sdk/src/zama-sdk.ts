@@ -407,6 +407,8 @@ export class ZamaSDK {
    * ```
    */
   async userDecrypt(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>> {
+    const signer = this.signer;
+    const credentials = this.credentials;
     await this.requireChainAlignment();
     if (handles.length === 0) {
       return {};
@@ -435,7 +437,7 @@ export class ZamaSDK {
     }
 
     // Cache partition
-    const signerAddress = await this.signer.getAddress();
+    const signerAddress = await signer.getAddress();
     const uncached: DecryptHandle[] = [];
 
     for (const h of nonZero) {
@@ -452,9 +454,7 @@ export class ZamaSDK {
     }
 
     // Derive contract addresses from ALL handles for stable credential cache key
-    const creds = await this.credentials.allow(
-      ...new Set(normalized.map((h) => h.contractAddress)),
-    );
+    const creds = await credentials.allow(...new Set(normalized.map((h) => h.contractAddress)));
 
     // Group uncached by contract
     const byContract = new Map<Address, Handle[]>();
@@ -766,10 +766,12 @@ export class ZamaSDK {
    * ```
    */
   async revokeSession(): Promise<void> {
-    const address = await this.signer.getAddress();
-    const chainId = await this.signer.getChainId();
+    const signer = this.signer;
+    const credentials = this.credentials;
+    const address = await signer.getAddress();
+    const chainId = await signer.getChainId();
     try {
-      await this.credentials.revokeFor({ address, chainId });
+      await credentials.revokeFor({ address, chainId });
     } finally {
       await this.cache.clearForRequester(address);
     }
