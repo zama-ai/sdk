@@ -46,6 +46,8 @@ Zama SDK is designed for developers who want to integrate confidential operation
 - **Framework-agnostic core:** Works with viem, ethers, or any EVM library.
 - **React-ready:** First-class React hooks powered by `@tanstack/react-query`.
 
+> **Migrating from the Relayer SDK?** This is the new default SDK for the Zama Protocol. The legacy [`@zama-fhe/relayer-sdk`](https://github.com/zama-ai/relayer-sdk) is still available for reference.
+
 ### Table of contents
 
 - [About](#about)
@@ -53,6 +55,7 @@ Zama SDK is designed for developers who want to integrate confidential operation
   - [Table of contents](#table-of-contents)
   - [Packages](#packages)
   - [Main features](#main-features)
+  - [Quick example](#quick-example)
 - [Working with Zama SDK](#working-with-zama-sdk)
   - [Install](#install)
   - [Development](#development)
@@ -77,6 +80,40 @@ Zama SDK is designed for developers who want to integrate confidential operation
 - **React hooks:** Dedicated React package with hooks for encrypting, decrypting, reencrypting, and querying confidential state — all backed by `@tanstack/react-query` for caching and suspense.
 - **Workers:** Offload heavy FHE operations to workers in Web and Node.js environments for non-blocking performance.
 - **Wagmi integration:** Drop-in wagmi connector support for seamless wallet and provider management in React apps.
+
+### Quick example
+
+```ts
+import { ZamaSDK, RelayerWeb, indexedDBStorage } from "@zama-fhe/sdk";
+import { ViemSigner } from "@zama-fhe/sdk/viem";
+
+const sdk = new ZamaSDK({
+  relayer: new RelayerWeb({
+    getChainId: () => signer.getChainId(),
+    transports: {
+      [1]: {
+        relayerUrl: "https://your-app.com/api/relayer/1",
+        network: "https://mainnet.infura.io/v3/YOUR_KEY",
+      },
+      [11155111]: {
+        relayerUrl: "https://your-app.com/api/relayer/11155111",
+        network: "https://sepolia.infura.io/v3/YOUR_KEY",
+      },
+    },
+  }),
+  signer: new ViemSigner({ walletClient, publicClient }),
+  storage: indexedDBStorage,
+});
+
+const token = sdk.createToken("0xYourEncryptedERC20");
+
+await token.shield(1000n); // deposit public tokens
+const balance = await token.balanceOf(); // decrypt your balance
+await token.confidentialTransfer("0xRecipient", 500n); // private send
+await token.unshield(500n); // withdraw back to public
+```
+
+See the [Quick start](https://docs.zama.org/protocol) for a full working example with your stack.
 
 <p align="right">
   <a href="#about" > ↑ Back to top </a>
