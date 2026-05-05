@@ -1,4 +1,5 @@
 ---
+title: Overview
 description: TypeScript SDK for confidential smart contracts — shield, transfer, and unshield tokens with Fully Homomorphic Encryption.
 ---
 
@@ -6,7 +7,11 @@ description: TypeScript SDK for confidential smart contracts — shield, transfe
 
 **Welcome to the Zama SDK!**
 
-TypeScript SDK for building confidential dApps with FHEVM — shield, transfer, and unshield tokens using Fully Homomorphic Encryption (FHE).
+{% hint style="info" %}
+**Looking for the legacy Relayer SDK?**
+
+This is the new default SDK for building on the Zama Confidential Blockchain Protocol. The legacy `@zama-fhe/relayer-sdk` lives at [github.com/zama-ai/relayer-sdk](https://github.com/zama-ai/relayer-sdk).
+{% endhint %}
 
 ## Where to go next
 
