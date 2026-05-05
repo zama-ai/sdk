@@ -63,9 +63,12 @@ export function invalidateAfterApproveUnderlying(
   invalidateUnderlyingAllowanceQueries(queryClient, tokenAddress);
 }
 
-export function invalidateAfterApprove(queryClient: QueryClientLike, tokenAddress: Address): void {
+export function invalidateAfterSetOperator(
+  queryClient: QueryClientLike,
+  tokenAddress: Address,
+): void {
   void queryClient.invalidateQueries({
-    queryKey: zamaQueryKeys.confidentialIsApproved.token(tokenAddress),
+    queryKey: zamaQueryKeys.confidentialIsOperator.token(tokenAddress),
   });
 }
 

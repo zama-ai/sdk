@@ -147,7 +147,7 @@ export function writeConfidentialTransferContract(signer: EthersTransactionSigne
 export function writeFinalizeUnwrapContract(signer: EthersTransactionSigner, wrapper: Address, unwrapRequestId: Handle, burntAmountCleartext: bigint, decryptionProof: Hex): Promise<`0x${string}`>;
 
 // @public (undocumented)
-export function writeSetOperatorContract(signer: EthersTransactionSigner, tokenAddress: Address, spender: Address, timestamp?: number): Promise<`0x${string}`>;
+export function writeSetOperatorContract(signer: EthersTransactionSigner, tokenAddress: Address, operator: Address, until?: number): Promise<`0x${string}`>;
 
 // @public (undocumented)
 export function writeUnwrapContract(signer: EthersTransactionSigner, encryptedErc20: Address, from: Address, to: Address, encryptedAmount: Uint8Array, inputProof: Uint8Array): Promise<`0x${string}`>;

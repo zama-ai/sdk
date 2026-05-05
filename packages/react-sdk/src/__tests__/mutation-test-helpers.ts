@@ -78,7 +78,7 @@ export function createMockToken(
     signer,
     confidentialTransfer: vi.fn().mockResolvedValue(mockResult),
     confidentialTransferFrom: vi.fn().mockResolvedValue(mockResult),
-    approve: vi.fn().mockResolvedValue(mockResult),
+    setOperator: vi.fn().mockResolvedValue(mockResult),
     approveUnderlying: vi.fn().mockResolvedValue(mockResult),
     shield: vi.fn().mockResolvedValue(mockResult),
     unwrap: vi.fn().mockResolvedValue(mockResult),

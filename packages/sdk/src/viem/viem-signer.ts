@@ -74,9 +74,9 @@ export class ViemSigner implements GenericSigner {
   }
 
   async signTypedData(typedData: EIP712TypedData): Promise<Hex> {
-    const { EIP712Domain: _, ...sigTypes } = typedData.types;
     const walletClient = this.#walletClient;
     const account = this.#account;
+    const { EIP712Domain: _, ...sigTypes } = typedData.types;
     return walletClient.signTypedData({
       account,
       primaryType: typedData.primaryType,

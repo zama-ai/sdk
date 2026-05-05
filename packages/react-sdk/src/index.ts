@@ -47,13 +47,13 @@ export {
   type UseConfidentialTransferConfig,
 } from "./transfer/use-confidential-transfer";
 export { useConfidentialTransferFrom } from "./transfer/use-confidential-transfer-from";
-export { useConfidentialApprove } from "./transfer/use-confidential-approve";
+export { useConfidentialSetOperator } from "./operator/use-confidential-set-operator";
 export {
-  useConfidentialIsApproved,
-  useConfidentialIsApprovedSuspense,
-  type UseConfidentialIsApprovedConfig,
-  type UseConfidentialIsApprovedSuspenseConfig,
-} from "./transfer/use-confidential-is-approved";
+  useConfidentialIsOperator,
+  useConfidentialIsOperatorSuspense,
+  type UseConfidentialIsOperatorConfig,
+  type UseConfidentialIsOperatorSuspenseConfig,
+} from "./operator/use-confidential-is-operator";
 export { useShield, type UseShieldConfig } from "./shield/use-shield";
 export { useUnwrap } from "./unwrap/use-unwrap";
 export { useUnwrapAll } from "./unwrap/use-unwrap-all";

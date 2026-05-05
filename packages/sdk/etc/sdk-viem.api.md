@@ -135,7 +135,7 @@ export function writeConfidentialTransferContract(client: WalletClient, tokenAdd
 export function writeFinalizeUnwrapContract(client: WalletClient, wrapper: Address, unwrapRequestId: Handle, burntAmountCleartext: bigint, decryptionProof: Hex): Promise<`0x${string}`>;
 
 // @public (undocumented)
-export function writeSetOperatorContract(client: WalletClient, tokenAddress: Address, spender: Address, timestamp?: number): Promise<`0x${string}`>;
+export function writeSetOperatorContract(client: WalletClient, tokenAddress: Address, operator: Address, until?: number): Promise<`0x${string}`>;
 
 // @public (undocumented)
 export function writeUnwrapContract(client: WalletClient, encryptedErc20: Address, from: Address, to: Address, encryptedAmount: Uint8Array, inputProof: Uint8Array): Promise<`0x${string}`>;

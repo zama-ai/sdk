@@ -4,11 +4,12 @@
 
 If you discover a security vulnerability in the Zama SDK, please report it responsibly.
 
-**Do not open a public GitHub issue for security vulnerabilities.**
+**Do not open a public GitHub issue.** Use one of the following private channels:
 
-Instead, please email: **security@zama.ai**
+- **Preferred:** open a draft GitHub Security Advisory at <https://github.com/zama-ai/sdk/security/advisories/new>.
+- **Alternate:** email <security@zama.ai>.
 
-Include the following in your report:
+Please include:
 
 - Description of the vulnerability
 - Steps to reproduce
@@ -19,48 +20,20 @@ We aim to acknowledge reports within **48 hours** and provide an initial assessm
 
 ## Scope
 
-The following areas are in scope for security reports:
+In scope:
 
-### FHE Credential Management
-
-- **Key derivation** — AES-GCM keys derived from wallet signatures via PBKDF2 (see `CredentialsManager`)
-- **Credential storage** — encrypted private keys stored via `GenericStorage` (IndexedDB in browsers)
-- **EIP-712 signatures** — authorization scoping (contract addresses, expiration)
-
-### Signer Adapters
-
-- **Type safety** — ensuring `Hex`/`Address` types prevent injection of malformed data
-- **Transaction construction** — contract call builders producing correct ABI-encoded calls
-
-### Web Worker / WASM
-
-- **CDN integrity** — WASM loaded from CDN for FHE operations
-- **Worker isolation** — message passing between main thread and Web Worker
+- The published `@zama-fhe/sdk` and `@zama-fhe/react-sdk` packages from this repo.
+- The browser FHE worker assumes WASM is loaded from `cdn.zama.org` over HTTPS with an SHA-384 integrity check, not bundled — keep that in mind when modelling the trust boundary.
 
 ## Out of Scope
 
-- Vulnerabilities in third-party dependencies (viem, ethers, wagmi) — report these upstream
-- Vulnerabilities in the underlying fhEVM smart contracts — report to the [fhEVM repository](https://github.com/zama-ai/fhevm)
-- Vulnerabilities in `@zama-fhe/relayer-sdk` — report separately to Zama
-
-## Security Considerations for SDK Users
-
-### Credential Storage
-
-FHE private keys are encrypted with AES-GCM before storage. The encryption key is derived from the wallet's EIP-712 signature using PBKDF2 (600,000 iterations). However:
-
-- **Browser storage** (IndexedDB) is accessible to same-origin scripts. Ensure your application follows CSP best practices.
-- **Custom storage backends** — if implementing `GenericStorage`, ensure the backend provides appropriate access controls.
-
-### EIP-712 Authorization
-
-Decrypt credentials are scoped to specific contract addresses and have a configurable expiration (`durationDays`). Use the shortest practical duration for your use case.
+- Vulnerabilities in third-party dependencies (`viem`, `ethers`, `wagmi`, etc.) — please report those to the upstream projects.
+- Vulnerabilities in the underlying Zama Protocol contracts — see the [fhEVM security policy](https://github.com/zama-ai/fhevm/security/policy).
+- Vulnerabilities in `@zama-fhe/relayer-sdk` (the legacy low-level SDK) — same channels as this policy: a draft advisory on its repo if enabled, or <security@zama.ai>.
 
 ## Supported Versions
 
-| Version | Supported |
-| ------- | --------- |
-| 0.x     | Yes       |
+We provide security fixes for the two most recent major release lines of `@zama-fhe/sdk` and `@zama-fhe/react-sdk`.
 
 ## Acknowledgments
 

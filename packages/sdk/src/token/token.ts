@@ -239,7 +239,7 @@ export class Token extends ReadonlyToken {
    * Set operator approval for the confidential token.
    * Defaults to 1 hour from now if `until` is not specified.
    *
-   * @param spender - The address to approve as an operator.
+   * @param operator - The address to set as an operator.
    * @param until - Optional Unix timestamp for approval expiry. Defaults to now + 1 hour.
    * @returns The transaction hash and mined receipt.
    * @throws {@link ChainMismatchError} if signer and provider are on different chains.
@@ -247,24 +247,24 @@ export class Token extends ReadonlyToken {
    *
    * @example
    * ```ts
-   * const txHash = await token.approve("0xSpender");
+   * const txHash = await token.setOperator("0xOperator");
    * ```
    */
-  async approve(spender: Address, until?: number): Promise<TransactionResult> {
-    const signer = this.sdk.signer; //"approve");
+  async setOperator(operator: Address, until?: number): Promise<TransactionResult> {
+    const signer = this.sdk.signer;
     await this.sdk.requireChainAlignment();
-    const normalizedSpender = getAddress(spender);
+    const normalizedOperator = getAddress(operator);
     try {
       const txHash = await signer.writeContract(
-        setOperatorContract(this.address, normalizedSpender, until),
+        setOperatorContract(this.address, normalizedOperator, until),
       );
-      this.emit({ type: ZamaSDKEvents.ApproveSubmitted, txHash });
+      this.emit({ type: ZamaSDKEvents.SetOperatorSubmitted, txHash });
       const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
       return { txHash, receipt };
     } catch (error) {
       this.emit({
         type: ZamaSDKEvents.TransactionError,
-        operation: "approve",
+        operation: "setOperator",
         error: toError(error),
       });
       if (error instanceof ZamaError) {
@@ -279,18 +279,18 @@ export class Token extends ReadonlyToken {
   /**
    * Check if a spender is an approved operator for a given holder.
    *
-   * @param spender - The address to check operator approval for.
    * @param holder - The token holder address.
+   * @param spender - The address to check operator approval for.
    * @returns `true` if the spender is an approved operator for the holder.
    *
    * @example
    * ```ts
-   * if (await token.isApproved("0xSpender", "0xHolder")) {
+   * if (await token.isOperator("0xHolder", "0xSpender")) {
    *   // spender can call transferFrom on behalf of holder
    * }
    * ```
    */
-  async isApproved(spender: Address, holder: Address): Promise<boolean> {
+  async isOperator(holder: Address, spender: Address): Promise<boolean> {
     return this.sdk.provider.readContract(
       isOperatorContract(this.address, getAddress(holder), getAddress(spender)),
     );
