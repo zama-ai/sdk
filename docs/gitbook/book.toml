@@ -14,6 +14,6 @@ command = "node scripts/mdbook-gitbook-preprocessor.mjs"
 [output.html]
 default-theme = "light"
 preferred-dark-theme = "ayu"
-git-repository-url = "https://github.com/zama-ai/token-sdk"
+git-repository-url = "https://github.com/zama-ai/sdk"
 additional-css = ["theme/gitbook.css"]
 additional-js = ["theme/tabs.js"]
