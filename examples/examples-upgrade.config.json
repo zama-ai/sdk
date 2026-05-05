@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 1,
+  "defaults": {
+    "packageManager": "npm",
+    "sdkPackages": ["@zama-fhe/sdk", "@zama-fhe/react-sdk"],
+    "docs": ["README.md", "WALKTHROUGH.md"],
+    "generatedReportsDir": ".tmp/example-upgrades"
+  },
+  "apps": [
+    {
+      "name": "example-hoodi",
+      "path": "examples/example-hoodi",
+      "status": "active",
+      "stack": ["react", "nextjs", "ethers", "hoodi", "cleartext"],
+      "packageManager": "npm",
+      "sdkPackages": ["@zama-fhe/sdk", "@zama-fhe/react-sdk"],
+      "validation": {
+        "install": ["npm ci"],
+        "checks": ["npm run typecheck", "npm run build", "npm run test:e2e"],
+        "playwrightInstall": "npx playwright install --with-deps chromium"
+      },
+      "notes": [
+        "Dedicated CI workflow runs npm ci and npm run test:e2e from this app directory.",
+        "Uses RelayerCleartext and Hoodi-specific config."
+      ]
+    },
+    {
+      "name": "node-ethers",
+      "path": "examples/node-ethers",
+      "status": "active",
+      "stack": ["node", "ethers"],
+      "packageManager": "npm",
+      "sdkPackages": ["@zama-fhe/sdk"],
+      "validation": {
+        "install": ["npm ci"],
+        "checks": ["npm run typecheck"],
+        "envSensitiveChecks": ["npm start"]
+      },
+      "notes": ["npm start requires RPC, relayer, wallet, and token environment configuration."]
+    },
+    {
+      "name": "node-viem",
+      "path": "examples/node-viem",
+      "status": "active",
+      "stack": ["node", "viem"],
+      "packageManager": "npm",
+      "sdkPackages": ["@zama-fhe/sdk"],
+      "validation": {
+        "install": ["npm ci"],
+        "checks": ["npm run typecheck"],
+        "envSensitiveChecks": ["npm start"]
+      },
+      "notes": ["npm start requires RPC, relayer, wallet, and token environment configuration."]
+    },
+    {
+      "name": "react-ethers",
+      "path": "examples/react-ethers",
+      "status": "active",
+      "stack": ["react", "nextjs", "ethers"],
+      "packageManager": "npm",
+      "sdkPackages": ["@zama-fhe/sdk", "@zama-fhe/react-sdk"],
+      "validation": {
+        "install": ["npm ci"],
+        "checks": ["npm run typecheck", "npm run build", "npm run test:e2e"],
+        "playwrightInstall": "npx playwright install --with-deps chromium"
+      },
+      "notes": ["Contains local Playwright coverage for wallet and confidential-token UX."]
+    },
+    {
+      "name": "react-viem",
+      "path": "examples/react-viem",
+      "status": "active",
+      "stack": ["react", "nextjs", "viem"],
+      "packageManager": "npm",
+      "sdkPackages": ["@zama-fhe/sdk", "@zama-fhe/react-sdk"],
+      "validation": {
+        "install": ["npm ci"],
+        "checks": ["npm run typecheck", "npm run build", "npm run test:e2e"],
+        "playwrightInstall": "npx playwright install --with-deps chromium"
+      },
+      "notes": ["Good first React app for validating SDK integration migrations."]
+    },
+    {
+      "name": "react-wagmi",
+      "path": "examples/react-wagmi",
+      "status": "active",
+      "stack": ["react", "nextjs", "wagmi", "viem"],
+      "packageManager": "npm",
+      "sdkPackages": ["@zama-fhe/sdk", "@zama-fhe/react-sdk"],
+      "validation": {
+        "install": ["npm ci"],
+        "checks": ["npm run typecheck", "npm run build", "npm run test:e2e"],
+        "playwrightInstall": "npx playwright install --with-deps chromium"
+      },
+      "notes": ["Covers the @zama-fhe/react-sdk/wagmi adapter."]
+    },
+    {
+      "name": "react-turnkey-wallet",
+      "path": "examples/react-turnkey-wallet",
+      "status": "future",
+      "stack": ["react", "nextjs", "turnkey", "viem"],
+      "packageManager": "npm",
+      "sdkPackages": ["@zama-fhe/sdk", "@zama-fhe/react-sdk"],
+      "reason": "Out of scope for the first process iteration because wallet setup is app-specific."
+    },
+    {
+      "name": "react-ledger",
+      "path": "examples/react-ledger",
+      "status": "future",
+      "stack": ["react", "ledger"],
+      "reason": "Placeholder/incomplete example; keep out of scope until the app is ready."
+    },
+    {
+      "name": "compatibility-harness",
+      "path": "examples/compatibility-harness",
+      "status": "excluded",
+      "reason": "Compatibility harness is not an SDK example app for this upgrade process."
+    },
+    {
+      "name": "turnkey-community-example",
+      "path": "examples/turnkey-community-example",
+      "status": "excluded",
+      "reason": "Superseded by react-turnkey-wallet."
+    }
+  ]
+}

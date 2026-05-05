@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 1,
+  "priorityOrder": [
+    "local-example",
+    "current-package-metadata",
+    "changelog",
+    "api-reports",
+    "official-docs",
+    "usage-scan",
+    "ci-workflows"
+  ],
+  "sources": {
+    "localExample": {
+      "description": "The app being upgraded is the primary source for current behavior, scripts, docs, and tests.",
+      "files": [
+        "package.json",
+        "package-lock.json",
+        "README.md",
+        "WALKTHROUGH.md",
+        "src/**",
+        "e2e/**"
+      ]
+    },
+    "currentPackageMetadata": {
+      "description": "Local package versions and export surfaces in this repository.",
+      "files": ["packages/sdk/package.json", "packages/react-sdk/package.json"]
+    },
+    "changelog": {
+      "description": "Release notes and breaking-change narrative.",
+      "files": ["CHANGELOG.md"]
+    },
+    "apiReports": {
+      "description": "Fallback source for precise public API changes.",
+      "files": [
+        "packages/sdk/etc/sdk.api.md",
+        "packages/sdk/etc/sdk-ethers.api.md",
+        "packages/sdk/etc/sdk-node.api.md",
+        "packages/sdk/etc/sdk-query.api.md",
+        "packages/sdk/etc/sdk-viem.api.md",
+        "packages/sdk/etc/sdk-web.api.md",
+        "packages/react-sdk/etc/react-sdk.api.md",
+        "packages/react-sdk/etc/react-sdk-wagmi.api.md"
+      ]
+    },
+    "officialDocs": {
+      "description": "User-facing integration guidance. Prefer docs before examples when they answer the question.",
+      "common": [
+        "llms.txt",
+        "docs/gitbook/src/guides/configuration.md",
+        "docs/gitbook/src/guides/handle-errors.md",
+        "docs/gitbook/src/reference/sdk/ZamaSDK.md",
+        "docs/gitbook/src/reference/react/ZamaProvider.md"
+      ],
+      "byStack": {
+        "node": ["docs/gitbook/src/guides/node-js-backend.md"],
+        "react": [
+          "docs/gitbook/src/guides/nextjs-ssr.md",
+          "docs/gitbook/src/guides/check-balances.md",
+          "docs/gitbook/src/guides/shield-tokens.md",
+          "docs/gitbook/src/guides/transfer-privately.md",
+          "docs/gitbook/src/guides/unshield-tokens.md"
+        ],
+        "wagmi": ["docs/gitbook/src/reference/react/README.md"],
+        "viem": [
+          "docs/gitbook/src/reference/sdk/ViemSigner.md",
+          "docs/gitbook/src/reference/sdk/ViemProvider.md"
+        ],
+        "ethers": [
+          "docs/gitbook/src/reference/sdk/EthersSigner.md",
+          "docs/gitbook/src/reference/sdk/EthersProvider.md"
+        ]
+      }
+    },
+    "usageScan": {
+      "description": "Patterns used to identify SDK-sensitive call sites.",
+      "includeExtensions": [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".md"],
+      "excludeDirs": ["node_modules", ".next", "dist", "coverage", "playwright-report"],
+      "patterns": [
+        "@zama-fhe/sdk",
+        "@zama-fhe/react-sdk",
+        "ZamaSDK",
+        "ZamaProvider",
+        "RelayerWeb",
+        "RelayerNode",
+        "RelayerCleartext",
+        "createConfig",
+        "createZamaConfig",
+        "ViemSigner",
+        "EthersSigner",
+        "WagmiSigner",
+        "useZamaSDK",
+        "useConfidential",
+        "useShield",
+        "useUnshield",
+        "useAllow",
+        "useRevoke",
+        "zamaQueryKeys"
+      ]
+    },
+    "ciWorkflows": {
+      "description": "CI parity references for validation planning.",
+      "files": [
+        ".github/workflows/lint.yml",
+        ".github/workflows/vitest.yml",
+        ".github/workflows/playwright.yml",
+        ".github/workflows/docs.yml",
+        ".github/workflows/api-report.yml",
+        ".github/workflows/example-hoodi-e2e.yml"
+      ]
+    }
+  }
+}
