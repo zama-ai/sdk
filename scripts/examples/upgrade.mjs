@@ -8,7 +8,38 @@ const manifestPath = "examples/examples-upgrade.config.json";
 const sourcesPath = "docs/agents/example-upgrade-sources.json";
 const manifest = readJson(manifestPath);
 const sources = readJson(sourcesPath);
+const defaultAgent = manifest.defaults.agent ?? "claude";
+const defaultClaudeModel = manifest.defaults.model ?? "claude-sonnet-4-6";
 const defaultCodexModel = "gpt-5.5";
+const validAgentNames = new Set(["codex", "claude"]);
+const requiredAnalysisHeadings = [
+  "# Summary",
+  "# Relevant Findings",
+  "# Impact On Target Example",
+  "# Required Changes",
+  "# Risks",
+  "# Validation Suggestions",
+];
+const analysisRoles = [
+  {
+    id: "history",
+    label: "History Analyst",
+    promptFile: "history-analyst.md",
+    outputFile: "history-analysis.md",
+  },
+  {
+    id: "docs-pattern",
+    label: "Docs Pattern Analyst",
+    promptFile: "docs-pattern-analyst.md",
+    outputFile: "docs-pattern-analysis.md",
+  },
+  {
+    id: "source",
+    label: "Source Analyst",
+    promptFile: "source-analyst.md",
+    outputFile: "source-analysis.md",
+  },
+];
 
 const { values } = parseArgs({
   args: cliArgs(),
@@ -16,14 +47,18 @@ const { values } = parseArgs({
     example: { type: "string", default: "active" },
     target: { type: "string", default: "latest" },
     stage: { type: "string" },
+    analysis: { type: "string" },
     out: { type: "string" },
     "run-id": { type: "string" },
     agent: { type: "string" },
     model: { type: "string" },
+    "analyst-agent": { type: "string" },
+    "analyst-model": { type: "string" },
     sandbox: { type: "string", default: "workspace-write" },
     approval: { type: "string", default: "on-request" },
     profile: { type: "string" },
     effort: { type: "string" },
+    skill: { type: "string", default: "zama-example-upgrade" },
     pr: { type: "string", default: "none" },
     branch: { type: "string", default: "chore/update-examples-sdk" },
     base: { type: "string", default: "prerelease" },
@@ -34,6 +69,7 @@ const { values } = parseArgs({
     "include-env-sensitive": { type: "boolean", default: false },
     "include-playwright-install": { type: "boolean", default: false },
     "ci-parity": { type: "boolean", default: false },
+    "allow-missing-analysis": { type: "boolean", default: false },
     "dry-run": { type: "boolean", default: false },
     help: { type: "boolean", default: false },
   },
@@ -48,8 +84,12 @@ const outRoot = values.out ?? manifest.defaults.generatedReportsDir;
 const runId = values["run-id"] ?? `upgrade-${timestamp()}`;
 const outDir = join(root, outRoot, runId);
 const stage = resolveStage();
-const agent = values.agent ?? "codex";
-const model = values.model ?? (agent === "codex" ? defaultCodexModel : undefined);
+const analysisMode = values.analysis ?? manifest.defaults.analysis ?? "deep";
+const agent = values.agent ?? defaultAgent;
+const model = values.model ?? defaultModelFor(agent);
+const analystAgent = values["analyst-agent"] ?? manifest.defaults.analystAgent ?? agent;
+const analystModel =
+  values["analyst-model"] ?? manifest.defaults.analystModel ?? defaultModelFor(analystAgent);
 
 validateOptions();
 mkdirSync(outDir, { recursive: true });
@@ -57,6 +97,11 @@ mkdirSync(outDir, { recursive: true });
 if (stage === "prepare" || stage === "all") {
   generateContext();
   writeAgentTask();
+  writeAnalysisPrompts();
+}
+
+if (stage === "analysis" || stage === "all") {
+  runAnalysis();
 }
 
 if (stage === "agent" || stage === "all") {
@@ -93,11 +138,15 @@ function resolveStage() {
 }
 
 function validateOptions() {
-  const validStages = new Set(["prepare", "agent", "verify", "report", "pr", "all"]);
+  const validStages = new Set(["prepare", "analysis", "agent", "verify", "report", "pr", "all"]);
   if (!validStages.has(stage)) {
     throw new Error(
-      `Unsupported --stage '${stage}'. Use prepare, agent, verify, report, pr, or all.`,
+      `Unsupported --stage '${stage}'. Use prepare, analysis, agent, verify, report, pr, or all.`,
     );
+  }
+  const validAnalysisModes = new Set(["standard", "deep"]);
+  if (!validAnalysisModes.has(analysisMode)) {
+    throw new Error(`Unsupported --analysis '${analysisMode}'. Use standard or deep.`);
   }
   const validPrModes = new Set(["none", "draft", "ready"]);
   if (!validPrModes.has(values.pr)) {
@@ -105,6 +154,12 @@ function validateOptions() {
   }
   if ((stage === "agent" || stage === "all") && agent === "none") {
     throw new Error("Cannot run the agent stage with --agent none.");
+  }
+  if ((stage === "analysis" || stage === "all") && analysisMode === "deep") {
+    validateAgentName(analystAgent, "--analyst-agent");
+  }
+  if (stage === "agent" || stage === "all") {
+    validateAgentName(agent, "--agent");
   }
 }
 
@@ -220,7 +275,13 @@ Target: \`${values.target}\`
 
 Scope: \`${values.example}\`
 
+Analysis mode: \`${analysisMode}\`
+
+Skill: \`${values.skill}\`
+
 ## Required Inputs
+
+Use the \`${values.skill}\` skill if it is available.
 
 Read \`docs/agents/example-upgrade.md\` before editing.
 
@@ -228,12 +289,23 @@ Read these generated context reports:
 
 ${contextList}
 
+${
+  analysisMode === "deep"
+    ? `Read the generated analyst reports before implementation:
+
+- ${relative(root, analysisReportPath("history"))}
+- ${relative(root, analysisReportPath("docs-pattern"))}
+- ${relative(root, analysisReportPath("source"))}
+`
+    : "No separate analyst reports are required in standard mode."
+}
+
 ## Required Work
 
 - Produce an impact plan before editing.
 - Apply code, docs, test, and lockfile changes only for active scoped apps.
 - Keep app changes inside each scoped \`examples/<app>/**\` directory.
-- Run \`pnpm examples:upgrade -- --stage verify --run-id ${runId} --example ${values.example}\` after edits.
+- Run \`pnpm examples:upgrade --stage verify --run-id ${runId} --example ${values.example}\` after edits.
 - Complete \`docs/agents/example-upgrade-checklist.md\` during human review.
 `;
   writeFileSync(join(outDir, "agent-task.md"), body);
@@ -244,6 +316,9 @@ function runAgent() {
   if (!existsSync(taskPath)) {
     throw new Error(`Agent task not found. Run --stage prepare first or use --stage all.`);
   }
+  if (analysisMode === "deep" && !values["dry-run"]) {
+    assertAnalysisReportsReady();
+  }
   assertSafeBranch();
 
   const prompt = buildAgentPrompt(taskPath);
@@ -251,17 +326,81 @@ function runAgent() {
   const outputPath = join(outDir, "agent-last-message.md");
   writeFileSync(promptPath, prompt);
 
-  const command = buildAgentCommand(outputPath, prompt);
+  runAgentInvocation({
+    role: "implementation",
+    agentName: agent,
+    modelName: model,
+    prompt,
+    promptPath,
+    outputPath,
+    commandPath: join(outDir, "agent-command.json"),
+  });
+}
+
+function writeAnalysisPrompts() {
+  if (analysisMode !== "deep") {
+    return;
+  }
+  const promptsDir = join(outDir, "prompts");
+  mkdirSync(promptsDir, { recursive: true });
+  mkdirSync(join(outDir, "analysis"), { recursive: true });
+  for (const role of analysisRoles) {
+    const promptPath = join(promptsDir, role.promptFile);
+    writeFileSync(promptPath, buildAnalysisPrompt(role));
+  }
+}
+
+function runAnalysis() {
+  if (analysisMode !== "deep") {
+    console.log("Skipping analysis stage because --analysis standard.");
+    return;
+  }
+  const taskPath = join(outDir, "agent-task.md");
+  if (!existsSync(taskPath)) {
+    throw new Error(`Agent task not found. Run --stage prepare first or use --stage all.`);
+  }
+  writeAnalysisPrompts();
+  for (const role of analysisRoles) {
+    const promptPath = join(outDir, "prompts", role.promptFile);
+    const outputPath = analysisReportPath(role.id);
+    const prompt = readFileSync(promptPath, "utf8");
+    runAgentInvocation({
+      role: role.id,
+      agentName: analystAgent,
+      modelName: analystModel,
+      prompt,
+      promptPath,
+      outputPath,
+      commandPath: join(outDir, "analysis", `${role.id}-command.json`),
+    });
+  }
+  if (values["dry-run"]) {
+    return;
+  }
+  assertAnalysisReportsReady();
+}
+
+function runAgentInvocation({
+  role,
+  agentName,
+  modelName,
+  prompt,
+  promptPath,
+  outputPath,
+  commandPath,
+}) {
+  const command = buildAgentCommand({ agentName, modelName, outputPath, prompt });
   writeFileSync(
-    join(outDir, "agent-command.json"),
+    commandPath,
     `${JSON.stringify(
       {
         schemaVersion: 1,
         runId,
-        agent,
-        model: model ?? null,
+        role,
+        agent: agentName,
+        model: modelName ?? null,
         cwd: root,
-        command: displayAgentCommand(command, prompt, promptPath),
+        command: displayAgentCommand(command, agentName, prompt, promptPath),
         prompt: relative(root, promptPath),
         output: relative(root, outputPath),
       },
@@ -274,7 +413,9 @@ function runAgent() {
     console.log(`Prompt written to ${relative(root, promptPath)}`);
     console.log(`Output would be written to ${relative(root, outputPath)}`);
     console.log(
-      `Command: ${displayAgentCommand(command, prompt, promptPath).map(shellQuote).join(" ")}`,
+      `Command: ${displayAgentCommand(command, agentName, prompt, promptPath)
+        .map(shellQuote)
+        .join(" ")}`,
     );
     return;
   }
@@ -283,10 +424,21 @@ function runAgent() {
   const result = spawnSync(binary, args, {
     cwd: root,
     input: prompt,
-    stdio: ["pipe", "inherit", "inherit"],
+    encoding: "utf8",
+    maxBuffer: 20 * 1024 * 1024,
+    stdio: ["pipe", "pipe", "pipe"],
   });
+  if (result.stdout) {
+    process.stdout.write(result.stdout);
+  }
+  if (result.stderr) {
+    process.stderr.write(result.stderr);
+  }
   if (result.status !== 0) {
     process.exit(result.status ?? 1);
+  }
+  if (!existsSync(outputPath)) {
+    writeFileSync(outputPath, result.stdout?.trim() ? `${result.stdout.trim()}\n` : "");
   }
 }
 
@@ -577,6 +729,9 @@ function buildAgentPrompt(taskPath) {
   const contextFiles = contextPaths();
   const contextList =
     contextFiles.map((path) => `- ${path}`).join("\n") || "- No context files found.";
+  const analysisFiles = analysisRoles
+    .map((role) => `- ${role.label}: ${relative(root, analysisReportPath(role.id))}`)
+    .join("\n");
   const exampleLine =
     values.example && values.example !== "active"
       ? `Only work on the \`${values.example}\` example unless the task explicitly says otherwise.`
@@ -592,19 +747,22 @@ ${exampleLine}
 
 Follow these instructions exactly:
 
-1. Read \`docs/agents/example-upgrade.md\`.
-2. Read \`${relative(root, taskPath)}\`.
-3. Read the generated context file(s):
+1. Use the \`${values.skill}\` skill if it is available.
+2. Read \`docs/agents/example-upgrade.md\`.
+3. Read \`${relative(root, taskPath)}\`.
+4. Read the generated context file(s):
 ${contextList}
-4. Produce an impact plan before editing.
-5. Apply the required upgrade changes.
-6. Run the validation command from the agent task.
-7. If README.md, WALKTHROUGH.md, or docs changed, run \`pnpm llm:build\` and keep the generated LLM corpus artifacts.
-8. Run \`pnpm format:check\` after generated docs/artifacts change; CI lint includes formatting.
-9. Avoid placeholder token/contract addresses. Prefer a child component that only mounts token-dependent hooks once real registry/config data exists. If the published target SDK type forces a placeholder, document why.
-10. Verify hook options against the example app's declared SDK package version, not only local monorepo source.
-11. Generate or update the report.
-12. In your final answer, summarize changes, validation results, and remaining manual checks.
+5. Read these analyst reports before editing:
+${analysisMode === "deep" ? analysisFiles : "- Standard mode: no separate analyst reports."}
+6. Produce an impact plan before editing.
+7. Apply the required upgrade changes.
+8. Run the validation command from the agent task.
+9. If README.md, WALKTHROUGH.md, or docs changed, run \`pnpm llm:build\` and keep the generated LLM corpus artifacts.
+10. Run \`pnpm format:check\` after generated docs/artifacts change; CI lint includes formatting.
+11. Avoid placeholder token/contract addresses. Prefer a child component that only mounts token-dependent hooks once real registry/config data exists. If the published target SDK type forces a placeholder, document why.
+12. Verify hook options against the example app's declared SDK package version, not only local monorepo source.
+13. Generate or update the report.
+14. In your final answer, summarize changes, validation results, and remaining manual checks.
 
 Do not modify apps marked future or excluded in \`examples/examples-upgrade.config.json\`.
 
@@ -614,8 +772,82 @@ ${task}
 `;
 }
 
-function buildAgentCommand(outputPath, prompt) {
-  if (agent === "codex") {
+function buildAnalysisPrompt(role) {
+  const contextFiles = contextPaths();
+  const contextList =
+    contextFiles.map((path) => `- ${path}`).join("\n") || "- No context files found.";
+  const sourceGuide = relative(root, join(outDir, "agent-task.md"));
+  const commonHeader = `You are the ${role.label} for a Zama SDK example upgrade.
+
+Repository root: ${root}
+
+Run ID: ${runId}
+
+Scope: ${values.example}
+
+Target: ${values.target}
+
+Use the \`${values.skill}\` skill if it is available.
+
+Read first:
+
+- docs/agents/example-upgrade.md
+- ${sourceGuide}
+- Generated context files:
+${contextList}
+
+Output a concise markdown report with exactly these headings:
+
+# Summary
+# Relevant Findings
+# Impact On Target Example
+# Required Changes
+# Risks
+# Validation Suggestions
+
+Do not edit files. Do not run implementation commands.`;
+
+  if (role.id === "history") {
+    return `${commonHeader}
+
+Focus:
+
+- Compare the app's declared SDK package versions with the resolved target versions.
+- Read CHANGELOG.md excerpts and relevant API report changes.
+- Use git history only to identify relevant SDK changes since the app's current declared version or last upgrade commit when discoverable.
+- Highlight behavior/API changes that can affect the scoped example.
+`;
+  }
+
+  if (role.id === "docs-pattern") {
+    return `${commonHeader}
+
+Focus:
+
+- Read the recommended official docs from the generated context.
+- Identify current high-level SDK and React SDK patterns the example should use.
+- Prefer documented hooks/utilities over local orchestration.
+- Flag docs/source mismatches and any manual checklist items that need human verification.
+`;
+  }
+
+  if (role.id === "source") {
+    return `${commonHeader}
+
+Focus:
+
+- Inspect package exports, API reports, and SDK/react-sdk source for the exact primitives available to the target version.
+- Verify hook signatures and options against the example app's declared package version.
+- Identify local reimplementations that should be replaced by SDK hooks/utils.
+- Flag risky migrations such as placeholder addresses, direct relayer calls, manual cache invalidation, or legacy APIs.
+`;
+  }
+
+  throw new Error(`Unknown analysis role '${role.id}'.`);
+}
+
+function buildAgentCommand({ agentName, modelName, outputPath, prompt }) {
+  if (agentName === "codex") {
     const command = [
       "codex",
       "--ask-for-approval",
@@ -628,8 +860,8 @@ function buildAgentCommand(outputPath, prompt) {
       "--output-last-message",
       outputPath,
     ];
-    if (model) {
-      command.push("--model", model);
+    if (modelName) {
+      command.push("--model", modelName);
     }
     if (values.profile) {
       command.push("--profile", values.profile);
@@ -638,10 +870,10 @@ function buildAgentCommand(outputPath, prompt) {
     return command;
   }
 
-  if (agent === "claude") {
+  if (agentName === "claude") {
     const command = ["claude", "--print"];
-    if (model) {
-      command.push("--model", model);
+    if (modelName) {
+      command.push("--model", modelName);
     }
     if (values.effort) {
       command.push("--effort", values.effort);
@@ -652,16 +884,73 @@ function buildAgentCommand(outputPath, prompt) {
     return command;
   }
 
-  throw new Error(`Unsupported --agent '${agent}'. Use codex or claude.`);
+  throw new Error(`Unsupported agent '${agentName}'. Use codex or claude.`);
 }
 
-function displayAgentCommand(command, prompt, promptPath) {
-  if (agent !== "claude") {
+function displayAgentCommand(command, agentName, prompt, promptPath) {
+  if (agentName !== "claude") {
     return command;
   }
   return command.map((arg) =>
     arg === prompt ? `<prompt from ${relative(root, promptPath)}>` : arg,
   );
+}
+
+function defaultModelFor(agentName) {
+  if (agentName === "codex") {
+    return defaultCodexModel;
+  }
+  if (agentName === "claude") {
+    return defaultClaudeModel;
+  }
+  return undefined;
+}
+
+function validateAgentName(agentName, optionName) {
+  if (!validAgentNames.has(agentName)) {
+    throw new Error(`Unsupported ${optionName} '${agentName}'. Use codex or claude.`);
+  }
+}
+
+function analysisReportPath(roleId) {
+  const role = analysisRoles.find((candidate) => candidate.id === roleId);
+  if (!role) {
+    throw new Error(`Unknown analysis role '${roleId}'.`);
+  }
+  return join(outDir, "analysis", role.outputFile);
+}
+
+function assertAnalysisReportsReady() {
+  const failures = analysisRoles.flatMap((role) => {
+    const path = analysisReportPath(role.id);
+    if (!existsSync(path)) {
+      return [`Missing ${role.label} report: ${relative(root, path)}`];
+    }
+    const text = readFileSync(path, "utf8");
+    const missingHeadings = requiredAnalysisHeadings.filter((heading) => !text.includes(heading));
+    if (missingHeadings.length === 0) {
+      return [];
+    }
+    return [
+      `${role.label} report is missing headings in ${relative(root, path)}: ${missingHeadings.join(
+        ", ",
+      )}`,
+    ];
+  });
+
+  if (failures.length === 0) {
+    return;
+  }
+  const message = `Deep analysis reports are incomplete.\n${failures
+    .map((failure) => `- ${failure}`)
+    .join("\n")}\nRun \`pnpm examples:upgrade --stage analysis --run-id ${runId} --example ${
+    values.example
+  } --target ${values.target}\` before the agent stage.`;
+  if (values["allow-missing-analysis"]) {
+    console.warn(`${message}\nContinuing because --allow-missing-analysis was provided.`);
+    return;
+  }
+  throw new Error(`${message}\nUse --allow-missing-analysis only for manual debugging.`);
 }
 
 function selectApps(example) {
@@ -954,6 +1243,7 @@ function assertAllowedFiles(statusLines) {
     "docs/agents/example-upgrade",
     "examples/examples-upgrade.config.json",
     "scripts/examples/",
+    "skills/zama-example-upgrade/",
   ];
   const disallowed = files.filter((file) => {
     if (selectedAppPrefixes.some((prefix) => file.startsWith(prefix))) {
@@ -1052,8 +1342,19 @@ function run(command, args) {
 function printNextCommands() {
   const next = [];
   if (stage === "prepare") {
+    if (analysisMode === "deep") {
+      next.push({
+        label: "Run deep analysis",
+        command: upgradeCommand({
+          commandStage: "analysis",
+          commandRunId: runId,
+          example: values.example,
+        }),
+      });
+    }
     next.push({
-      label: "Run the agent",
+      label:
+        analysisMode === "deep" ? "Run the implementation agent after analysis" : "Run the agent",
       command: upgradeCommand({
         commandStage: "agent",
         commandRunId: runId,
@@ -1067,6 +1368,16 @@ function printNextCommands() {
         commandRunId: runId,
         example: values.example,
         pr: "draft",
+      }),
+    });
+  }
+  if (stage === "analysis") {
+    next.push({
+      label: "Run the implementation agent",
+      command: upgradeCommand({
+        commandStage: "agent",
+        commandRunId: runId,
+        example: values.example,
       }),
     });
   }
@@ -1111,8 +1422,11 @@ function upgradeCommand({ commandStage, commandRunId, example, pr = values.pr })
     `--run-id ${commandRunId}`,
     example && example !== "active" ? `--example ${example}` : null,
     `--target ${values.target}`,
+    `--analysis ${analysisMode}`,
     `--agent ${agent}`,
     model ? `--model ${model}` : null,
+    analysisMode === "deep" ? `--analyst-agent ${analystAgent}` : null,
+    analysisMode === "deep" && analystModel ? `--analyst-model ${analystModel}` : null,
     pr !== "none" ? `--pr ${pr}` : null,
   ]
     .filter(Boolean)
@@ -1134,16 +1448,22 @@ function cliArgs() {
 function printHelp() {
   console.log(`Usage:
   pnpm examples:upgrade --example react-wagmi --target latest
-  pnpm examples:upgrade --example react-wagmi --target latest --agent codex --model gpt-5.5
-  pnpm examples:upgrade --example react-wagmi --target latest --agent codex --model gpt-5.5 --pr draft
+  pnpm examples:upgrade --stage analysis --run-id <run-id> --example react-wagmi
+  pnpm examples:upgrade --stage agent --run-id <run-id> --example react-wagmi
+  pnpm examples:upgrade --example react-wagmi --target latest --pr draft
 
 Key options:
-  --stage prepare|agent|verify|report|pr|all  Default: prepare, or all when --agent/--pr is provided.
-  --example <name|active>                      Default: active.
-  --target latest|highest|local|<version>      Default: latest. latest/highest use newest npm publish time, including prereleases.
-  --agent codex|claude                         Default: codex.
-  --model <model>                              Default for codex: gpt-5.5.
-  --pr none|draft|ready                        Default: none.
-  --dry-run                                    Generate reports/commands without running agent, checks, or PR changes.
+  --stage prepare|analysis|agent|verify|report|pr|all  Default: prepare, or all when --agent/--pr is provided.
+  --example <name|active>                             Default: active.
+  --target latest|highest|local|<version>             Default: latest. latest/highest use newest npm publish time, including prereleases.
+  --analysis standard|deep                            Default: deep.
+  --agent codex|claude                                Default: claude.
+  --model <model>                                     Default for claude: claude-sonnet-4-6. Default for codex: gpt-5.5.
+  --analyst-agent codex|claude                        Default: claude.
+  --analyst-model <model>                             Default: claude-sonnet-4-6.
+  --skill <name>                                      Default: zama-example-upgrade.
+  --allow-missing-analysis                            Allow agent stage without complete deep analysis reports.
+  --pr none|draft|ready                               Default: none.
+  --dry-run                                           Generate reports/commands without running agent, checks, or PR changes.
 `);
 }

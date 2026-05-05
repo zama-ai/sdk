@@ -4,7 +4,12 @@
     "packageManager": "npm",
     "sdkPackages": ["@zama-fhe/sdk", "@zama-fhe/react-sdk"],
     "docs": ["README.md", "WALKTHROUGH.md"],
-    "generatedReportsDir": ".tmp/example-upgrades"
+    "generatedReportsDir": ".tmp/example-upgrades",
+    "analysis": "deep",
+    "agent": "claude",
+    "model": "claude-sonnet-4-6",
+    "analystAgent": "claude",
+    "analystModel": "claude-sonnet-4-6"
   },
   "apps": [
     {

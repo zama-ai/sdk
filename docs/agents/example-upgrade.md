@@ -25,8 +25,11 @@ pnpm examples:upgrade --example react-wagmi --target latest
 Run the full AI-assisted pipeline and open a Draft PR:
 
 ```sh
-pnpm examples:upgrade --example react-wagmi --target latest --agent codex --model gpt-5.5 --pr draft
+pnpm examples:upgrade --example react-wagmi --target latest --pr draft
 ```
+
+By default the pipeline uses `--analysis deep`, `--agent claude`, and `--model claude-sonnet-4-6` (Sonnet 4.6).
+Use `--agent codex --model gpt-5.5` when you explicitly want Codex instead.
 
 The command prints the next command to run at the end of each stage, with the `run-id` already filled in.
 
@@ -35,6 +38,7 @@ The command prints the next command to run at the end of each stage, with the `r
 Use `--stage` when you want to run one part of the pipeline:
 
 - `--stage prepare`: generate context and an agent task. This is the default when no agent or PR mode is requested.
+- `--stage analysis`: run the deep analyst passes for an existing prepared run.
 - `--stage agent`: run an LLM over an existing prepared run.
 - `--stage verify`: run validation and generate the consolidated report for an existing run.
 - `--stage report`: generate only the consolidated report.
@@ -45,6 +49,7 @@ Examples:
 
 ```sh
 pnpm examples:upgrade --example react-wagmi --target latest
+pnpm examples:upgrade --stage analysis --run-id <run-id> --example react-wagmi
 pnpm examples:upgrade --stage agent --run-id <run-id> --example react-wagmi --agent codex --model gpt-5.5
 pnpm examples:upgrade --stage verify --run-id <run-id> --example react-wagmi --include-install --include-playwright-install
 pnpm examples:upgrade --stage pr --run-id <run-id> --example react-wagmi --pr draft
@@ -53,18 +58,29 @@ pnpm examples:upgrade --stage pr --run-id <run-id> --example react-wagmi --pr dr
 ## Workflow
 
 1. Generate context with the prepare stage.
-2. Read the generated context report for the target app.
-3. Read the app's `package.json`, docs, SDK-sensitive source files, and tests.
-4. Read only the relevant docs/API reports listed in the context report.
-5. Compare current SDK package versions with the resolved target versions.
-6. Identify API and behavior changes that affect the app. Do not migrate unrelated code.
-7. Produce an impact plan before editing.
-8. Update package versions and lockfile with the app's declared package manager.
-9. Update source, tests, README, and WALKTHROUGH as needed.
-10. Regenerate the LLM corpus artifacts if README, WALKTHROUGH, or docs changed. The pipeline runs `pnpm llm:build` automatically before verify/report/PR stages.
-11. Run deterministic validation with the verify stage.
-12. Complete the manual checklist in `docs/agents/example-upgrade-checklist.md`.
-13. Open or update a PR with `--stage pr --pr draft` once the report is ready.
+2. In deep mode, run the analysis stage. It produces separate history, docs-pattern, and source reports.
+3. Read the generated context report and analyst reports for the target app.
+4. Read the app's `package.json`, docs, SDK-sensitive source files, and tests.
+5. Read only the relevant docs/API reports listed in the context report.
+6. Compare current SDK package versions with the resolved target versions.
+7. Identify API and behavior changes that affect the app. Do not migrate unrelated code.
+8. Produce an impact plan before editing.
+9. Update package versions and lockfile with the app's declared package manager.
+10. Update source, tests, README, and WALKTHROUGH as needed.
+11. Regenerate the LLM corpus artifacts if README, WALKTHROUGH, or docs changed. The pipeline runs `pnpm llm:build` automatically before verify/report/PR stages.
+12. Run deterministic validation with the verify stage.
+13. Complete the manual checklist in `docs/agents/example-upgrade-checklist.md`.
+14. Open or update a PR with `--stage pr --pr draft` once the report is ready.
+
+## Deep Analysis
+
+Deep analysis is the default. The script orchestrates three read-only analyst prompts before implementation:
+
+- History analyst: commit history, changelog excerpts, API report changes, and version deltas.
+- Docs-pattern analyst: current documented SDK and React SDK usage patterns.
+- Source analyst: package exports, API reports, source-level hook signatures, and risky local reimplementations.
+
+Reports are written under `.tmp/example-upgrades/<run-id>/analysis/`. The implementation agent must read them before editing. Use `--analysis standard` only for quick manual debugging or very small follow-up fixes.
 
 ## Agent Runner
 
@@ -78,6 +94,11 @@ The agent stage writes two audit files before execution:
 - `.tmp/example-upgrades/<run-id>/agent-prompt.md`
 - `.tmp/example-upgrades/<run-id>/agent-command.json`
 
+The analysis stage writes one prompt and one command audit file per analyst under:
+
+- `.tmp/example-upgrades/<run-id>/prompts/`
+- `.tmp/example-upgrades/<run-id>/analysis/`
+
 Dry-run the exact agent command and prompt path before launching it:
 
 ```sh
@@ -88,6 +109,8 @@ Useful options:
 
 - `--model <model>` selects the model for the underlying agent CLI.
 - `--agent codex|claude` selects the runner backend.
+- `--analysis standard|deep` controls whether the three read-only analyst passes are required before implementation.
+- `--analyst-agent codex|claude` and `--analyst-model <model>` select the read-only analyst runner.
 - `--sandbox read-only|workspace-write|danger-full-access` is passed to Codex.
 - `--approval on-request|never` is passed to Codex as `--ask-for-approval`; Claude maps this to a permission mode.
 - `--profile <name>` is passed to Codex for configuration from `~/.codex/config.toml`.
