@@ -126,7 +126,9 @@ The `react-wagmi` SDK 3.x upgrade exposed concrete checks the agent must make fo
 - Prefer the high-level `@zama-fhe/react-sdk/wagmi` config adapter and `@zama-fhe/sdk/web` browser transport when the API reports/docs expose them. Do not keep direct `WagmiSigner` or `RelayerWeb` wiring unless the target SDK still requires it.
 - Use absolute browser relayer URLs for SDK relayer config, for example `new URL("/api/relayer", window.location.origin).toString()`. Relative URLs can fail inside the relayer worker before any browser Network entry appears.
 - For wagmi/viem E2E RPC mocks, account for Multicall3 reads. A mechanically updated app can pass typecheck but fail tests if mocks only handle direct `eth_call` targets.
+- Playwright RPC route callbacks should fail closed with fixture-style fallback data for unknown or malformed mock inputs. Avoid uncaught decoding/parsing throws inside `page.route` callbacks because they often surface as confusing browser network timeouts.
 - When wrapper behavior matters, verify whether the registry points to upgraded proxies and avoid legacy APIs unless the code explicitly uses `*Legacy*` paths for compatibility.
+- Re-read nearby comments after mechanical API migrations. Comments that mention old hook options, disabled queries, provider ordering, or signer/relayer wiring must be updated or removed with the code.
 - Keep README/WALKTHROUGH aligned with the actual SDK wiring, then commit regenerated LLM corpus artifacts.
 
 ## Source Priority

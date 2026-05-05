@@ -31,5 +31,7 @@ Use this checklist after deterministic checks pass. Keep the list practical and 
 - If README or WALKTHROUGH changed, `llms.txt` / `llms-full.txt` artifacts were regenerated and committed.
 - The example still teaches the intended stack, not just a mechanically compiling integration.
 - The implementation follows "clear-text in, clear-text out"; FHE details stay inside SDK calls.
+- Comments near migrated SDK calls still describe the current behavior.
+- Test fixtures and RPC mocks handle unknown or malformed inputs with explicit fallback behavior.
 - Legacy wrapper/API paths are not used unless intentionally required for compatibility.
 - No changes were made outside the intended example directory unless explicitly planned.
