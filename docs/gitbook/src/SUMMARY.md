@@ -1,6 +1,6 @@
 # Table of contents
 
-[Overview](README.md)
+[Overview](README.md "Overview")
 
 - [Getting started](tutorials/README.md)
   - [Quick start](tutorials/quick-start.md)
