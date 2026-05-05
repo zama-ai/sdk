@@ -3,14 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatEther, formatUnits, parseAbi, parseUnits } from "viem";
-import {
-  useAccount,
-  useBalance,
-  useChainId,
-  useConnect,
-  useReadContract,
-  useSwitchChain,
-} from "wagmi";
+import { useAccount, useBalance, useConnect, useReadContract, useSwitchChain } from "wagmi";
 import { injected } from "wagmi/connectors";
 import { sepolia } from "wagmi/chains";
 import {
@@ -20,9 +13,8 @@ import {
   useListPairs,
   useZamaSDK,
 } from "@zama-fhe/react-sdk";
-import type { TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
+import type { Address, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
-import type { Address } from "@zama-fhe/react-sdk";
 import { BalancesCard } from "@/components/BalancesCard";
 import { ShieldCard } from "@/components/ShieldCard";
 import { TransferCard } from "@/components/TransferCard";
@@ -48,11 +40,10 @@ const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as Address;
 
 export default function Home() {
   // ── Wagmi hooks — wallet state managed reactively by wagmi ──────────────────
-  // WagmiSigner subscribes to wagmiConfig.watchConnection internally, so account
-  // and chain changes are handled automatically — no manual eth_accounts polling
-  // or walletKey/refSeededRef remount pattern needed (unlike EthersSigner/ViemSigner).
-  const { address, isConnected } = useAccount();
-  const chainId = useChainId();
+  // The Zama wagmi config adapter subscribes to wagmi connection state internally,
+  // so account and chain changes are handled automatically — no manual eth_accounts
+  // polling or walletKey/refSeededRef remount pattern needed.
+  const { address, chainId, isConnected } = useAccount();
   const { connect, isPending: isConnecting, error: connectError } = useConnect();
   const { switchChain, isPending: isSwitching, error: switchError } = useSwitchChain();
 
@@ -102,9 +93,11 @@ export default function Home() {
   const token = validPairs.find((p) => p.confidentialTokenAddress === selectedTokenAddress);
 
   // Check whether cached credentials cover the currently selected confidential token.
+  const allowedContractAddresses = token
+    ? ([token.confidentialTokenAddress] as [Address, ...Address[]])
+    : ([ZERO_ADDRESS] as [Address, ...Address[]]);
   const { data: isAllowed } = useIsAllowed({
-    contractAddresses: token ? [token.confidentialTokenAddress] : [],
-    query: { enabled: Boolean(token) },
+    contractAddresses: allowedContractAddresses,
   });
 
   // Metadata for the selected token pair — sourced directly from the registry response
@@ -146,7 +139,7 @@ export default function Home() {
     // any operation that changes the confidential balance (shield, unshield, transfer).
     if (token) {
       queryClient.invalidateQueries({
-        queryKey: zamaQueryKeys.confidentialHandle.token(token.confidentialTokenAddress),
+        queryKey: zamaQueryKeys.confidentialBalance.token(token.confidentialTokenAddress),
       });
     }
   };
@@ -156,20 +149,24 @@ export default function Home() {
   // ZERO_ADDRESS is used as a stable placeholder while no token pair is selected —
   // the query is disabled (enabled: false) so no actual RPC call is made.
   const balance = useConfidentialBalance(
-    { tokenAddress: token?.confidentialTokenAddress ?? ZERO_ADDRESS },
+    { tokenAddress: token?.confidentialTokenAddress ?? ZERO_ADDRESS, account: address },
     { enabled: isConnected && isSepolia && !!isAllowed && !!token },
   );
 
   // Mint 10 whole tokens on the underlying ERC-20 contract.
   const mint = useMutation({
     mutationFn: async () => {
-      const txHash = await sdk.signer.writeContract({
+      const signer = sdk.signer;
+      if (!signer) {
+        throw new Error("Connect a wallet before minting tokens.");
+      }
+      const txHash = await signer.writeContract({
         address: token!.tokenAddress,
         abi: MINT_ABI,
         functionName: "mint",
         args: [address as Address, parseUnits("10", erc20Decimals)],
       });
-      await sdk.signer.waitForTransactionReceipt(txHash);
+      await sdk.provider.waitForTransactionReceipt(txHash);
       return txHash;
     },
     onSuccess: refreshBalances,
@@ -310,9 +307,7 @@ export default function Home() {
       <BalancesCard
         formattedErc20={formattedErc20}
         formattedConfidential={formattedConfidential}
-        // handleQuery.isLoading: fetching the encrypted handle from chain (Phase 1).
-        // balance.isLoading: decrypting it via RelayerWeb (Phase 2).
-        isLoadingConfidential={balance.handleQuery.isLoading || balance.isLoading}
+        isLoadingConfidential={balance.isLoading}
         erc20Symbol={erc20Symbol}
         onMint={() => mint.mutate()}
         isMinting={mint.isPending}

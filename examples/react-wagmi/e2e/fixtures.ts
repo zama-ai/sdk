@@ -1,4 +1,5 @@
 import { test as base, expect, type Page } from "@playwright/test";
+import { decodeFunctionData, encodeAbiParameters, parseAbi, type Hex } from "viem";
 
 export const SEPOLIA_CHAIN_ID_HEX = "0xaa36a7"; // 11155111 in hex — Sepolia chain ID
 export const WRONG_CHAIN_ID = "0x1"; // Ethereum mainnet — used for wrong-network tests
@@ -69,6 +70,11 @@ function abiStr(s: string): string {
 // ── Mock contract addresses (lowercase for case-insensitive comparison) ───────
 
 const REGISTRY = REGISTRY_ADDRESS.toLowerCase();
+const MULTICALL3 = "0xca11bde05977b3631167028862be2a173976ca11";
+
+const MULTICALL3_ABI = parseAbi([
+  "function aggregate3((address target,bool allowFailure,bytes callData)[] calls) view returns ((bool success, bytes returnData)[] returnData)",
+]);
 
 const T1 = MOCK_TOKEN1_ADDRESS.toLowerCase();
 const CT1 = MOCK_CTOKEN1_ADDRESS.toLowerCase();
@@ -90,32 +96,30 @@ const TOKEN_META: Record<string, { name: string; symbol: string; decimals: numbe
  * opposite of react-ethers (EthersSigner routes reads through BrowserProvider →
  * window.ethereum). Routing happens here in interceptRpc, not in injectMockWallet.
  */
-function resolveEthCall(params: unknown[] | undefined, options: RpcOptions): string {
-  const [tx = {}] = (params ?? []) as Array<{ to?: string; data?: string }>;
-  const to = (tx.to ?? "").toLowerCase();
-  const sel = (tx.data ?? "").slice(0, 10).toLowerCase();
-
+function resolveDirectEthCall(to: string, data: string, options: RpcOptions): Hex {
+  const hex = (value: string) => value as Hex;
+  const sel = data.slice(0, 10).toLowerCase();
   if (to === REGISTRY) {
     // getTokenConfidentialTokenPairsLength() → uint256
     if (sel === "0x483cdcf4") {
-      return "0x" + abiU256(options.emptyRegistry ? 0 : 2);
+      return hex("0x" + abiU256(options.emptyRegistry ? 0 : 2));
     }
     // getTokenConfidentialTokenPairsSlice(uint256,uint256) → tuple[]
     if (sel === "0x90c60535") {
       if (options.emptyRegistry) {
         // ABI encoding of empty tuple[]: offset + length=0
-        return "0x" + abiU256(32) + abiU256(0);
+        return hex("0x" + abiU256(32) + abiU256(0));
       }
-      return (
+      return hex(
         "0x" +
-        abiU256(32) + // offset to array data
-        abiU256(2) + // array length
-        abiAddr(T1) +
-        abiAddr(CT1) +
-        abiBool(true) + // pair[0]
-        abiAddr(T2) +
-        abiAddr(CT2) +
-        abiBool(true) // pair[1]
+          abiU256(32) + // offset to array data
+          abiU256(2) + // array length
+          abiAddr(T1) +
+          abiAddr(CT1) +
+          abiBool(true) + // pair[0]
+          abiAddr(T2) +
+          abiAddr(CT2) +
+          abiBool(true), // pair[1]
       );
     }
   }
@@ -124,16 +128,50 @@ function resolveEthCall(params: unknown[] | undefined, options: RpcOptions): str
   // Called by the SDK on both underlying and confidential token addresses.
   const meta = TOKEN_META[to];
   if (meta) {
-    if (sel === "0x06fdde03") return abiStr(meta.name); // name()
-    if (sel === "0x95d89b41") return abiStr(meta.symbol); // symbol()
-    if (sel === "0x313ce567") return "0x" + abiU256(meta.decimals); // decimals()
+    if (sel === "0x06fdde03") return hex(abiStr(meta.name)); // name()
+    if (sel === "0x95d89b41") return hex(abiStr(meta.symbol)); // symbol()
+    if (sel === "0x313ce567") return hex("0x" + abiU256(meta.decimals)); // decimals()
   }
   // totalSupply() — called only on the underlying ERC-20; returns uint256
-  if (sel === "0x18160ddd") return "0x" + abiU256(0);
+  if (sel === "0x18160ddd") return hex("0x" + abiU256(0));
 
   // All other eth_call requests (e.g. balanceOf) return empty data,
   // causing the caller to fail gracefully (query error → "—" in UI).
   return "0x";
+}
+
+function resolveEthCall(params: unknown[] | undefined, options: RpcOptions): string {
+  const [tx = {}] = (params ?? []) as Array<{ to?: string; data?: string }>;
+  const to = (tx.to ?? "").toLowerCase();
+  const data = tx.data ?? "0x";
+  const sel = data.slice(0, 10).toLowerCase();
+
+  if (to === MULTICALL3 && sel === "0x82ad56cb") {
+    const { args } = decodeFunctionData({
+      abi: MULTICALL3_ABI,
+      data: data as Hex,
+    });
+    const [calls] = args;
+    const results = calls.map((call) => ({
+      success: true,
+      returnData: resolveDirectEthCall(call.target.toLowerCase(), call.callData, options),
+    }));
+
+    return encodeAbiParameters(
+      [
+        {
+          type: "tuple[]",
+          components: [
+            { name: "success", type: "bool" },
+            { name: "returnData", type: "bytes" },
+          ],
+        },
+      ],
+      [results],
+    );
+  }
+
+  return resolveDirectEthCall(to, data, options);
 }
 
 /**

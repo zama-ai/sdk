@@ -8,7 +8,7 @@ A step-by-step guide to how this app integrates `@zama-fhe/react-sdk` using wagm
 
 ```
 page.tsx                         — wallet connect (wagmi hooks), token selector, layout
-├── providers.tsx                — ZamaProvider + WagmiSigner + RelayerWeb wiring
+├── providers.tsx                — wagmi + ZamaProvider config wiring
 │   └── /api/relayer/[...path]   — Next.js proxy (keeps RELAYER_API_KEY server-side)
 ├── BalancesCard.tsx             — ETH / ERC-20 / confidential balance display
 ├── ShieldCard.tsx               — ERC-20 → confidential (with manual approval flow)
@@ -24,60 +24,48 @@ page.tsx                         — wallet connect (wagmi hooks), token selecto
 
 ## 1. Wiring the SDK (`providers.tsx`)
 
-Three objects are required: a `signer`, a `relayer`, and a `storage`.
+SDK 3.x uses a single Zama config object. The wagmi adapter creates the SDK signer
+and provider from the app's `wagmiConfig`; `web()` creates the browser FHE relayer
+transport from the configured FHE chain.
 
 ```ts
-// wagmiConfig and signer are created at module level (outside the component) because:
-// - createConfig does not access window at construction time (transports are lazy).
-// - WagmiSigner wraps the config directly — no SSR issue at construction.
-// - providers.tsx is wrapped in next/dynamic ssr:false, so this module is never
-//   evaluated server-side.
-// Both are stable references — recreating them on re-render would reset wagmi's state.
 const wagmiConfig = createConfig({
   chains: [sepolia],
   connectors: [injected()],
   transports: { [sepolia.id]: http(SEPOLIA_RPC_URL) },
 });
-const signer = new WagmiSigner({ config: wagmiConfig });
 
-// RelayerWeb must be in useMemo because it accesses window.location.origin at construction.
-const relayer = useMemo(
-  () =>
-    new RelayerWeb({
-      getChainId: () => signer.getChainId(),
-      transports: {
-        [SepoliaConfig.chainId]: {
-          ...SepoliaConfig,
-          relayerUrl: `${window.location.origin}/api/relayer`,
-          network: SEPOLIA_RPC_URL,
-        },
-      },
-    }),
-  [],
-);
+const mySepolia = {
+  ...fheSepolia,
+  relayerUrl: new URL("/api/relayer", window.location.origin).toString(),
+  network: SEPOLIA_RPC_URL,
+} as const satisfies FheChain;
+
+const zamaConfig = createZamaConfig({
+  chains: [mySepolia],
+  wagmiConfig,
+  relayers: { [mySepolia.id]: web() },
+  storage: indexedDBStorage,
+  sessionStorage: sessionDBStorage,
+});
 ```
 
-`ZamaProvider` takes two separate IndexedDB instances:
+`ZamaProvider` receives the resolved config:
 
 ```ts
-<ZamaProvider
-  relayer={relayer}
-  storage={indexedDBStorage}          // "CredentialStore" — encrypted keypair
-  sessionStorage={sessionDBStorage}   // "SessionStore"    — EIP-712 session signatures
-  signer={signer}
->
+<ZamaProvider config={zamaConfig}>
 ```
 
-Both use the same internal key. Sharing one database instance would cause the session entry
-to overwrite the encrypted keypair, forcing re-signing on every balance decrypt.
+`storage` and `sessionStorage` are still two separate IndexedDB instances. Both use the
+same internal key, so sharing one database instance would cause the session entry to
+overwrite the encrypted keypair, forcing re-signing on every balance decrypt.
 
 ---
 
 ## 2. Why `WagmiSigner` is different from `EthersSigner` / `ViemSigner`
 
-`WagmiSigner` has a `subscribe(onIdentityChange)` method backed by `watchConnection`
-from wagmi. The SDK uses this internally to update its state whenever the account or
-chain changes.
+The wagmi config adapter creates a `WagmiSigner` internally. It subscribes to
+`watchConnection` from wagmi, so the SDK updates whenever the account or chain changes.
 
 **Consequences:**
 

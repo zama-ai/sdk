@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { isAddress, formatUnits } from "viem";
 import { useDelegationStatus, useDecryptBalanceAs } from "@zama-fhe/react-sdk";
-import type { Address } from "@zama-fhe/react-sdk";
-import { DelegationNotFoundError, DelegationExpiredError } from "@zama-fhe/sdk";
+import { DelegationExpiredError, DelegationNotFoundError, type Address } from "@zama-fhe/sdk";
 
 // Sentinel value used by the ACL contract to represent permanent (no-expiry) delegations.
 // The SDK sends this on-chain when expirationDate is undefined. Not exported by the SDK —

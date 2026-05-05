@@ -3,13 +3,8 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { ContractFunctionExecutionError, UserRejectedRequestError } from "viem";
-import {
-  useZamaSDK,
-  allowanceContract,
-  approveContract,
-  balanceOfContract,
-} from "@zama-fhe/react-sdk";
-import type { Address } from "@zama-fhe/react-sdk";
+import { useZamaSDK } from "@zama-fhe/react-sdk";
+import { allowanceContract, approveContract, balanceOfContract, type Address } from "@zama-fhe/sdk";
 import { parseAmount } from "@/lib/parseAmount";
 import { SEPOLIA_EXPLORER_URL } from "@/lib/config";
 
@@ -61,17 +56,21 @@ export function ShieldCard({
   // (UserRejectedRequestError) are re-thrown immediately — no silent fallback.
   const shield = useMutation({
     mutationFn: async (amount: bigint) => {
+      const signer = sdk.signer;
+      if (!signer) {
+        throw new Error("Connect a wallet before shielding tokens.");
+      }
       const token = sdk.createToken(tokenAddress);
-      const userAddress = await sdk.signer.getAddress();
+      const userAddress = await signer.getAddress();
 
       // Read the current ERC-20 allowance granted to the wrapper.
-      const currentAllowance = (await sdk.signer.readContract(
+      const currentAllowance = (await sdk.provider.readContract(
         allowanceContract(underlyingAddress, userAddress, tokenAddress),
       )) as bigint;
 
       if (currentAllowance < amount) {
         // Fetch the user's full ERC-20 balance to use as the new spend cap.
-        const erc20Balance = (await sdk.signer.readContract(
+        const erc20Balance = (await sdk.provider.readContract(
           balanceOfContract(underlyingAddress, userAddress),
         )) as bigint;
 
@@ -89,7 +88,7 @@ export function ShieldCard({
             // is submitted → USDT-style token detected. waitForTransactionReceipt is
             // intentionally outside: a receipt error (on-chain revert, timeout) should
             // propagate as a real error, not silently trigger the USDT reset path.
-            overwriteTxHash = await sdk.signer.writeContract(
+            overwriteTxHash = await signer.writeContract(
               approveContract(underlyingAddress, tokenAddress, erc20Balance),
             );
           } catch (err) {
@@ -100,26 +99,26 @@ export function ShieldCard({
             needsReset = true;
           }
           if (overwriteTxHash) {
-            await sdk.signer.waitForTransactionReceipt(overwriteTxHash);
+            await sdk.provider.waitForTransactionReceipt(overwriteTxHash);
           }
 
           if (needsReset) {
             // USDT-style reset path: approve(0) then approve(fullBalance) — two confirmations.
-            const resetTxHash = await sdk.signer.writeContract(
+            const resetTxHash = await signer.writeContract(
               approveContract(underlyingAddress, tokenAddress, 0n),
             );
-            await sdk.signer.waitForTransactionReceipt(resetTxHash);
-            const approveTxHash = await sdk.signer.writeContract(
+            await sdk.provider.waitForTransactionReceipt(resetTxHash);
+            const approveTxHash = await signer.writeContract(
               approveContract(underlyingAddress, tokenAddress, erc20Balance),
             );
-            await sdk.signer.waitForTransactionReceipt(approveTxHash);
+            await sdk.provider.waitForTransactionReceipt(approveTxHash);
           }
         } else {
           // Zero allowance — any token type accepts a direct approve from 0.
-          const txHash = await sdk.signer.writeContract(
+          const txHash = await signer.writeContract(
             approveContract(underlyingAddress, tokenAddress, erc20Balance),
           );
-          await sdk.signer.waitForTransactionReceipt(txHash);
+          await sdk.provider.waitForTransactionReceipt(txHash);
         }
 
         setPhase("wrap-after-approve");
