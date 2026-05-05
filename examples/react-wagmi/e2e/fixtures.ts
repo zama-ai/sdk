@@ -147,28 +147,32 @@ function resolveEthCall(params: unknown[] | undefined, options: RpcOptions): str
   const sel = data.slice(0, 10).toLowerCase();
 
   if (to === MULTICALL3 && sel === "0x82ad56cb") {
-    const { args } = decodeFunctionData({
-      abi: MULTICALL3_ABI,
-      data: data as Hex,
-    });
-    const [calls] = args;
-    const results = calls.map((call) => ({
-      success: true,
-      returnData: resolveDirectEthCall(call.target.toLowerCase(), call.callData, options),
-    }));
+    try {
+      const { args } = decodeFunctionData({
+        abi: MULTICALL3_ABI,
+        data: data as Hex,
+      });
+      const [calls] = args;
+      const results = calls.map((call) => ({
+        success: true,
+        returnData: resolveDirectEthCall(call.target.toLowerCase(), call.callData, options),
+      }));
 
-    return encodeAbiParameters(
-      [
-        {
-          type: "tuple[]",
-          components: [
-            { name: "success", type: "bool" },
-            { name: "returnData", type: "bytes" },
-          ],
-        },
-      ],
-      [results],
-    );
+      return encodeAbiParameters(
+        [
+          {
+            type: "tuple[]",
+            components: [
+              { name: "success", type: "bool" },
+              { name: "returnData", type: "bytes" },
+            ],
+          },
+        ],
+        [results],
+      );
+    } catch {
+      return "0x";
+    }
   }
 
   return resolveDirectEthCall(to, data, options);

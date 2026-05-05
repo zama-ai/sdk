@@ -34,8 +34,9 @@ const BALANCE_ABI = parseAbi(["function balanceOf(address) view returns (uint256
 const MINT_ABI = parseAbi(["function mint(address to, uint256 amount)"]);
 
 // Stable zero address used as a hook placeholder when no token is selected yet.
-// SDK hooks must not be called conditionally (React rules of hooks), so we pass this
-// address with enabled: false until a real token pair is available from the registry.
+// SDK hooks must not be called conditionally (React rules of hooks), so ZERO_ADDRESS
+// is passed to keep hook calls unconditional; balance polling is additionally gated
+// via `enabled: isConnected && isSepolia && !!isAllowed && !!token`.
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as Address;
 
 export default function Home() {
