@@ -79,3 +79,17 @@ export function isConfidentialTokenContract(tokenAddress: Address) {
 export function isConfidentialWrapperContract(tokenAddress: Address) {
   return supportsInterfaceContract(tokenAddress, ERC7984_WRAPPER_INTERFACE_ID_LEGACY);
 }
+
+/**
+ * Returns contract config to check if a token implements ERC-1363 (payable token).
+ *
+ * @example
+ * ```ts
+ * const isPayable = await provider.readContract(
+ *   isPayableTokenContract("0xTokenAddress"),
+ * );
+ * ```
+ */
+export function isPayableTokenContract(tokenAddress: Address) {
+  return supportsInterfaceContract(tokenAddress, ERC1363_INTERFACE_ID);
+}

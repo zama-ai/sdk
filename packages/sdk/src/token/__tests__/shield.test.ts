@@ -114,7 +114,9 @@ describe("Token.shield", () => {
       .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
       .mockResolvedValueOnce(0n) // allowance
       .mockResolvedValue(fixtureHandle); // subsequent confidentialBalanceOf calls
-    vi.mocked(relayer.userDecrypt).mockResolvedValue({ [fixtureHandle]: 1000n });
+    vi.mocked(relayer.userDecrypt).mockResolvedValue({
+      [fixtureHandle]: 1000n,
+    });
 
     const shieldResult = await token.shield(500n);
     expect(shieldResult.txHash).toBe("0xtxhash");
@@ -122,7 +124,10 @@ describe("Token.shield", () => {
     expect(signer.writeContract).toHaveBeenCalledTimes(2);
     expect(signer.writeContract).toHaveBeenNthCalledWith(
       1,
-      expect.objectContaining({ functionName: "approve", args: expect.arrayContaining([500n]) }),
+      expect.objectContaining({
+        functionName: "approve",
+        args: expect.arrayContaining([500n]),
+      }),
     );
     expect(signer.writeContract).toHaveBeenNthCalledWith(
       2,
@@ -279,7 +284,9 @@ describe("Token.shield", () => {
         .mockResolvedValueOnce(1000n)
         .mockResolvedValueOnce(0n);
 
-      const result = await token.shield(100n, { shieldStrategy: "approveAndWrap" });
+      const result = await token.shield(100n, {
+        shieldStrategy: "approveAndWrap",
+      });
 
       expect(result.txHash).toBe("0xtxhash");
       expect(signer.writeContract).toHaveBeenCalledTimes(2);
@@ -425,16 +432,13 @@ describe("Token.shield", () => {
       );
     });
 
-    it("supportsTransferAndCall() returns and caches detection result", async ({
-      token,
-      provider,
-    }) => {
+    it("isPayable() returns and caches detection result", async ({ token, provider }) => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce(UNDERLYING)
         .mockResolvedValueOnce(true);
 
-      expect(await token.supportsTransferAndCall()).toBe(true);
-      expect(await token.supportsTransferAndCall()).toBe(true);
+      expect(await token.isPayable()).toBe(true);
+      expect(await token.isPayable()).toBe(true);
       expect(provider.readContract).toHaveBeenCalledTimes(2);
     });
   });
@@ -448,7 +452,9 @@ describe("Token.shield", () => {
       tokenAddress,
     }) => {
       const emitted: unknown[] = [];
-      const sdk = createSDK({ onEvent: (event: unknown) => emitted.push(event) });
+      const sdk = createSDK({
+        onEvent: (event: unknown) => emitted.push(event),
+      });
       const { Token } = await import("../../token/token");
       const token = new Token(sdk, tokenAddress);
 
@@ -477,7 +483,9 @@ describe("Token.shield", () => {
       tokenAddress,
     }) => {
       const emitted: unknown[] = [];
-      const sdk = createSDK({ onEvent: (event: unknown) => emitted.push(event) });
+      const sdk = createSDK({
+        onEvent: (event: unknown) => emitted.push(event),
+      });
       const { Token } = await import("../../token/token");
       const token = new Token(sdk, tokenAddress);
 

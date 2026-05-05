@@ -36,6 +36,7 @@ export {
   supportsInterfaceContract,
   isConfidentialTokenContract,
   isConfidentialWrapperContract,
+  isPayableTokenContract,
 } from "./erc165";
 
 export { transferAndCallContract } from "./erc1363";

@@ -6,13 +6,12 @@ import {
   confidentialTransferContract,
   confidentialTransferFromContract,
   delegateForUserDecryptionContract,
-  ERC1363_INTERFACE_ID,
   finalizeUnwrapContract,
+  isPayableTokenContract,
   isOperatorContract,
   MAX_UINT64,
   revokeDelegationContract,
   setOperatorContract,
-  supportsInterfaceContract,
   transferAndCallContract,
   underlyingContract,
   unwrapContract,
@@ -71,7 +70,7 @@ export class Token extends ReadonlyToken {
   readonly wrapper: Address;
   #underlying: Address | undefined;
   #underlyingPromise: Promise<Address> | null = null;
-  #erc1363Supported: boolean | null = null;
+  #isPayable: boolean | null = null;
 
   constructor(sdk: ZamaSDK, address: Address, wrapper?: Address) {
     super(sdk, address);
@@ -99,22 +98,20 @@ export class Token extends ReadonlyToken {
   }
 
   /**
-   * Check whether the underlying ERC-20 supports ERC-1363 `transferAndCall`.
+   * Check whether the underlying ERC-20 supports ERC-1363 (payable token).
    * Result is cached per Token instance after the first call.
    */
-  async supportsTransferAndCall(): Promise<boolean> {
-    if (this.#erc1363Supported !== null) {
-      return this.#erc1363Supported;
+  async isPayable(): Promise<boolean> {
+    if (this.#isPayable !== null) {
+      return this.#isPayable;
     }
-    const underlying = await this.#getUnderlying();
     try {
-      this.#erc1363Supported = await this.sdk.provider.readContract(
-        supportsInterfaceContract(underlying, ERC1363_INTERFACE_ID),
-      );
+      const underlying = await this.#getUnderlying();
+      this.#isPayable = await this.sdk.provider.readContract(isPayableTokenContract(underlying));
+      return this.#isPayable;
     } catch {
       return false;
     }
-    return this.#erc1363Supported;
   }
 
   async #resolveShieldingPath(strategy: ShieldStrategy = "auto"): Promise<ShieldPath> {
@@ -122,13 +119,13 @@ export class Token extends ReadonlyToken {
       return "approveAndWrap";
     }
 
-    const supported = await this.supportsTransferAndCall();
+    const isPayableToken = await this.isPayable();
 
-    if (strategy === "transferAndCall" && !supported) {
+    if (strategy === "transferAndCall" && !isPayableToken) {
       throw new ERC1363NotSupportedError(await this.#getUnderlying());
     }
 
-    return supported ? "transferAndCall" : "approveAndWrap";
+    return isPayableToken ? "transferAndCall" : "approveAndWrap";
   }
 
   // WRITE OPERATIONS
