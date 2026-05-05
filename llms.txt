@@ -34,7 +34,7 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [Check balances](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/check-balances.md): Decrypt and read confidential token balances using the SDK and React hooks.
 - [Handle errors](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/handle-errors.md): Catch, match, and recover from SDK errors in your application.
 - [Node.js backend](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/node-js-backend.md): How to use the SDK in a Node.js server environment with worker threads and per-request isolation.
-- [Web extensions](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/web-extensions.md): How to use the SDK in MV3 Chrome extensions with persistent session storage.
+- [Web extensions](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/web-extensions.md): How to use the SDK in MV3 Chrome extensions with persistent permit storage.
 - [Local development](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/local-development.md): How to use the cleartext relayer for local Hardhat nodes and custom chain deployments without a KMS or gateway.
 - [Build with an LLM](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/build-with-an-llm.md): How to give coding agents high-quality Zama SDK context through llms files and the external Zama Protocol Claude Code skill.
 - [Next.js / SSR](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/nextjs-ssr.md): How to use the SDK with Next.js and server-side rendering frameworks.
@@ -57,7 +57,7 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [ViemSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ViemSigner.md): Signer adapter that wraps a viem WalletClient for wallet operations.
 - [EthersProvider](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/EthersProvider.md): Provider adapter that wraps an ethers Provider or EIP-1193 source for read-only chain access.
 - [EthersSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/EthersSigner.md): Signer adapter that wraps an ethers Signer or EIP-1193 source for wallet operations.
-- [GenericStorage](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericStorage.md): Interface for async key-value storage used to persist FHE keypairs and session signatures.
+- [GenericStorage](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericStorage.md): Interface for async key-value storage used to persist FHE keypairs and signed permits.
 - [Error types](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/errors.md): All SDK error classes, codes, and the matchZamaError utility.
 - [Contract call builders](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/contract-builders.md): Low-level builders that return raw contract call configs for viem, ethers, or custom execution layers.
 - [FheArtifactCache](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/FheArtifactCache.md): Persistent cache for FHE public key and public parameters, avoiding re-downloads across sessions.
@@ -81,9 +81,9 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [useUnwrapAll](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnwrapAll.md): Low-level mutation hook that requests an unwrap for the full confidential balance.
 - [useFinalizeUnwrap](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useFinalizeUnwrap.md): Low-level mutation hook that finalizes an unwrap with the decryption proof.
 - [useAllow](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useAllow.md): Mutation hook that signs an EIP-712 message authorizing decryption of confidential handles for any contract.
-- [useIsAllowed](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsAllowed.md): Query hook that checks whether a session signature is cached and valid.
-- [useRevoke](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevoke.md): Revoke the EIP-712 decrypt authorization for specific contract addresses.
-- [useRevokeSession](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevokeSession.md): Revoke the entire session for the connected wallet.
+- [useIsAllowed](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsAllowed.md): Query hook that checks whether stored permits cover the requested contract addresses.
+- [useRevokePermits](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevokePermits.md): Revoke FHE permits for specific contract addresses, or all permits at once.
+- [useClearCredentials](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useClearCredentials.md): Wipe the FHE keypair and all permits for the connected wallet.
 - [useConfidentialSetOperator](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialSetOperator.md): Approve an operator to act on your confidential tokens.
 - [useConfidentialIsOperator](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialIsOperator.md): Check if a spender is an approved operator for a holder's confidential tokens.
 - [useUnderlyingAllowance](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnderlyingAllowance.md): Read the ERC-20 allowance of the underlying public token for the wrapper contract.
@@ -113,9 +113,9 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 
 ### Concepts
 
-- [Overview](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/README.md): Core concepts and architecture behind the Zama SDK. These pages explain how the SDK works under the hood — the session model, security guarantees, and caching strategy.
+- [Overview](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/README.md): Core concepts and architecture behind the Zama SDK. These pages explain how the SDK works under the hood — the permit model, security guarantees, and caching strategy.
 - [Architecture](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/architecture.md): The SDK is organized into layers, each with a clear responsibility. Higher layers depend on lower layers but never the reverse.
-- [Session model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/session-model.md): How the SDK manages FHE keypairs, wallet signatures, and session lifecycle.
+- [Permit model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/permit-model.md): How the SDK manages FHE keypairs, signed permits, and wallet account lifecycle.
 - [Security model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/security-model.md): Threat model, trust assumptions, and security architecture of the Zama SDK.
 
 ## Official Examples

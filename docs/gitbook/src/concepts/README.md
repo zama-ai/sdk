@@ -2,7 +2,7 @@
 
 **Welcome to Concepts!**
 
-Core concepts and architecture behind the Zama SDK. These pages explain how the SDK works under the hood — the session model, security guarantees, and caching strategy.
+Core concepts and architecture behind the Zama SDK. These pages explain how the SDK works under the hood — the permit model, security guarantees, and caching strategy.
 
 ## Where to go next
 
@@ -12,7 +12,7 @@ Otherwise:
 
 🟨 Go to [**Architecture**](architecture.md) to understand the SDK's layered module structure.
 
-🟨 Go to [**Session model**](session-model.md) to learn how FHE keypairs and wallet signatures are managed.
+🟨 Go to [**Permit model**](permit-model.md) to learn how FHE keypairs and signed permits are managed.
 
 🟨 Go to [**Security model**](security-model.md) for the full threat model and trust assumptions.
 

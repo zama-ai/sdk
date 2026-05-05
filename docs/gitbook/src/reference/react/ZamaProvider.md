@@ -156,4 +156,4 @@ Configuration object created by [`createConfig`](/guides/configuration). Wires t
 ## Related
 
 - [Configuration guide](/guides/configuration)
-- [Session Model](/concepts/session-model)
+- [Permit Model](/concepts/permit-model)

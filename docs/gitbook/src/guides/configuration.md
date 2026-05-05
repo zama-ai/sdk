@@ -257,7 +257,7 @@ See [GenericSigner](/reference/sdk/GenericSigner) and [GenericProvider](/referen
 {% endtab %}
 {% tab title="Web Extensions" %}
 
-MV3 Chrome extensions need a second storage backend for session signatures, because the service worker can be terminated at any time and in-memory state is lost. Use `chromeSessionStorage` alongside `indexedDBStorage`:
+MV3 Chrome extensions can use `chromeSessionStorage` as `permitStorage` so permits survive service worker restarts:
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
@@ -275,7 +275,7 @@ const config = createConfig({
   publicClient,
   walletClient,
   storage: indexedDBStorage,
-  sessionStorage: chromeSessionStorage,
+  permitStorage: chromeSessionStorage,
   relayers: {
     [mySepolia.id]: web(),
   },
@@ -293,22 +293,22 @@ Browser apps should proxy relayer requests through a backend to keep the API key
 
 ### 5. (Optional) Configure TTLs and event listener
 
-You can tune how long the FHE keypair and session signatures remain valid, and subscribe to lifecycle events for debugging:
+You can tune how long the FHE keypair and permits remain valid, and subscribe to lifecycle events for debugging:
 
 ```ts
 const config = createConfig({
   chains: [sepolia],
   wagmiConfig,
   relayers: { [sepolia.id]: web() },
-  keypairTTL: 604800, // 7 days (default: 2592000 = 30 days)
-  sessionTTL: 3600, // 1 hour (default: 2592000 = 30 days)
+  keypairTTL: 604800, // 7 days in seconds (default: 2592000 = 30 days)
+  permitTTL: 7, // 7 days (default: 30 days)
   onEvent: ({ type, tokenAddress, ...rest }) => {
     console.debug(`[zama] ${type}`, rest);
   },
 });
 ```
 
-Setting `sessionTTL: 0` disables session caching entirely — every operation triggers a wallet prompt. When done with the SDK, call `sdk.terminate()` to clean up the Web Worker or thread pool.
+When done with the SDK, call `sdk.terminate()` to clean up the Web Worker or thread pool.
 
 ### 6. (Optional) Choose a storage backend
 

@@ -1,11 +1,11 @@
 ---
 title: GenericStorage
-description: Interface for async key-value storage used to persist FHE keypairs and session signatures.
+description: Interface for async key-value storage used to persist FHE keypairs and signed permits.
 ---
 
 # GenericStorage
 
-Interface for async key-value storage used to persist FHE keypairs and session signatures. The SDK ships with four built-in implementations -- you only need this interface if building a custom backend.
+Interface for async key-value storage used to persist FHE keypairs and signed permits. The SDK ships with four built-in implementations -- you only need this interface if building a custom backend.
 
 ## Import
 
@@ -136,7 +136,7 @@ import { chromeSessionStorage } from "@zama-fhe/sdk";
 
 MV3 web extension storage backed by `chrome.storage.session`. Survives service worker restarts and is shared across popup, background, and content script contexts. Cleared when the browser closes.
 
-Pass as `sessionStorage` (not `storage`) to persist wallet signatures across service worker restarts:
+Pass as `permitStorage` (not `storage`) to persist signed permits across service worker restarts:
 
 ```ts
 const config = createConfig({
@@ -144,7 +144,7 @@ const config = createConfig({
   publicClient,
   walletClient,
   storage: indexedDBStorage,
-  sessionStorage: chromeSessionStorage,
+  permitStorage: chromeSessionStorage,
   relayers: { [mySepolia.id]: web() },
 });
 const sdk = new ZamaSDK(config);
@@ -152,5 +152,5 @@ const sdk = new ZamaSDK(config);
 
 ## Related
 
-- [ZamaSDK](/reference/sdk/ZamaSDK) -- accepts `storage` and `sessionStorage` parameters
+- [ZamaSDK](/reference/sdk/ZamaSDK) -- accepts `storage` and `permitStorage` parameters
 - [Configuration guide](/guides/configuration) -- storage selection guidance

@@ -92,7 +92,7 @@ await token.shield(1000n, {
 
 `(owner: Address) => Promise<bigint>`
 
-Returns the decrypted confidential balance. The first call prompts a wallet signature to create FHE credentials; subsequent calls use cached credentials silently. Decrypted values are cached in storage automatically.
+Returns the decrypted confidential balance. The first call prompts a wallet signature to create FHE permits; subsequent calls use cached permits silently. Decrypted values are cached in storage automatically.
 
 ```ts
 const balance = await token.balanceOf("0xOwnerAddress");
@@ -132,7 +132,7 @@ await token.confidentialTransfer("0xRecipient", 500n, { skipBalanceCheck: true }
 **Throws:**
 
 - `InsufficientConfidentialBalanceError` — if the confidential balance is less than `amount` (exposes `requested`, `available`, `token`)
-- `BalanceCheckUnavailableError` — if balance validation is required but decryption is not possible (no cached credentials). Call `allow()` first or use `skipBalanceCheck: true`
+- `BalanceCheckUnavailableError` — if balance validation is required but decryption is not possible (no stored permits). Call `allow()` first or use `skipBalanceCheck: true`
 
 ### confidentialTransferFrom
 
@@ -244,7 +244,7 @@ const approved = await token.isOperator("0xHolder", "0xSpender");
 
 `() => Promise<void>`
 
-Prompts the wallet to sign and caches session credentials for this token.
+Signs permits for this token's contract address if not already covered.
 
 ```ts
 await token.allow();
@@ -254,7 +254,7 @@ await token.allow();
 
 `() => Promise<void>`
 
-Clears session credentials for this token.
+Revokes permits touching this token's contract address on the current chain.
 
 ```ts
 await token.revoke();
@@ -264,7 +264,7 @@ await token.revoke();
 
 `() => Promise<boolean>`
 
-Returns whether the session has active credentials for this token.
+Returns whether stored permits cover this token's contract address.
 
 ```ts
 const allowed = await token.isAllowed();

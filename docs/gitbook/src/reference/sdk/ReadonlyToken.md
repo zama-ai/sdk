@@ -101,7 +101,7 @@ for (const [address, error] of errors) {
 
 `(owner: Address) => Promise<bigint>`
 
-Returns the decrypted confidential balance for the given address. First call prompts a wallet signature; subsequent calls use cached credentials.
+Returns the decrypted confidential balance for the given address. First call prompts a wallet signature; subsequent calls use cached permits.
 
 ```ts
 const balance = await readonlyToken.balanceOf("0xOwnerAddress");
@@ -194,7 +194,7 @@ const ownerAllowance = await readonlyToken.allowance("0xWrapperAddress", "0xOwne
 
 `() => Promise<void>`
 
-Prompts the wallet to sign and caches session credentials for this token.
+Signs permits for this token's contract address if not already covered.
 
 ```ts
 await readonlyToken.allow();
@@ -204,7 +204,7 @@ await readonlyToken.allow();
 
 `() => Promise<void>`
 
-Clears session credentials for this token.
+Revokes permits touching this token's contract address on the current chain.
 
 ```ts
 await readonlyToken.revoke();
@@ -214,7 +214,7 @@ await readonlyToken.revoke();
 
 `() => Promise<boolean>`
 
-Returns whether the session has active credentials for this token.
+Returns whether stored permits cover this token's contract address.
 
 ```ts
 const allowed = await readonlyToken.isAllowed();

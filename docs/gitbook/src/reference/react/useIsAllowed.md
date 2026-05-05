@@ -1,13 +1,13 @@
 ---
 title: useIsAllowed
-description: Query hook that checks whether a session signature is cached and valid.
+description: Query hook that checks whether stored permits cover the requested contract addresses.
 ---
 
 # useIsAllowed
 
-Query hook that checks whether a session signature is cached and valid.
+Query hook that checks whether stored permits cover the requested contract addresses.
 
-Returns `true` if decrypt operations can proceed without a wallet prompt. Returns `false` once the `sessionTTL` has expired (default: 30 days).
+Returns `true` if decrypt operations can proceed without a wallet prompt. Returns `false` when no permits exist or the `permitTTL` has expired.
 
 ## Import
 
@@ -29,13 +29,13 @@ function AuthGuard() {
   const { data: allowed, isLoading } = useIsAllowed({ contractAddresses: [...CONTRACTS] });
   const { mutateAsync: allow } = useAllow();
 
-  if (isLoading) return <span>Checking session...</span>;
+  if (isLoading) return <span>Checking permits...</span>;
 
   if (!allowed) {
     return <button onClick={() => allow([...CONTRACTS])}>Authorize wallet</button>;
   }
 
-  return <span>Session active — decrypts will not prompt the wallet</span>;
+  return <span>Permits active — decrypts will not prompt the wallet</span>;
 }
 ```
 
@@ -77,7 +77,7 @@ function GatedDecrypt({
 
 `Address[]` — **required**
 
-Contract addresses to check credentials against. Returns `true` only when cached credentials cover **all** specified addresses.
+Contract addresses to check credentials against. Returns `true` only when stored permits cover **all** specified addresses.
 
 ```tsx
 const { data: allowed } = useIsAllowed({
@@ -86,7 +86,7 @@ const { data: allowed } = useIsAllowed({
 ```
 
 {% hint style="warning" %}
-**You must gate decrypt queries yourself.** `useUserDecrypt` does not automatically wait for credentials — if you call it before `useAllow`, the user sees an unexpected wallet popup. Use `useIsAllowed` to conditionally enable the decrypt query via `{ enabled: !!allowed }` as the second argument, or conditionally render the decrypt component only when `allowed` is `true`.
+**You must gate decrypt queries yourself.** `useUserDecrypt` does not automatically wait for permits — if you call it before `useAllow`, the user sees an unexpected wallet popup. Use `useIsAllowed` to conditionally enable the decrypt query via `{ enabled: !!allowed }` as the second argument, or conditionally render the decrypt component only when `allowed` is `true`.
 {% endhint %}
 
 ## Return Type
@@ -97,8 +97,8 @@ const { data: allowed } = useIsAllowed({
 
 `data` is a `boolean`:
 
-- `true` -- a valid session signature is cached; decrypts will not prompt the wallet.
-- `false` -- no cached signature, or the `sessionTTL` has expired. Call [`useAllow`](/reference/react/useAllow) to re-authorize.
+- `true` -- stored permits cover all specified addresses; decrypts will not prompt the wallet.
+- `false` -- no stored permits, or the `permitTTL` has expired. Call [`useAllow`](/reference/react/useAllow) to authorize.
 
 {% include ".gitbook/includes/query-result.md" %}
 
@@ -106,5 +106,5 @@ const { data: allowed } = useIsAllowed({
 
 - [Avoid blind-sign wallet popups](/guides/encrypt-decrypt#3-avoid-blind-sign-wallet-popups) -- gating balance queries to avoid blind-sign popups
 - [`useAllow`](/reference/react/useAllow) -- pre-authorize contracts with one wallet signature
-- [`useRevoke`](/reference/react/useRevoke) -- revoke session credentials
-- [Session Model](/concepts/session-model) -- security model and TTL configuration
+- [`useRevokePermits`](/reference/react/useRevokePermits) -- revoke permits
+- [Permit Model](/concepts/permit-model) -- permit lifecycle and TTL configuration
