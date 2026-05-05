@@ -1357,17 +1357,15 @@ export class ZamaSDK {
     createReadonlyToken(address: Address): ReadonlyToken;
     createToken(address: Address, wrapper?: Address): Token;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
-    // (undocumented)
-    readonly credentials: CredentialsManager | undefined;
+    get credentials(): CredentialsManager;
     // Warning: (ae-forgotten-export) The symbol "DelegatedCredentialsManager" needs to be exported by the entry point index.d.ts
-    //
-    // (undocumented)
-    readonly delegatedCredentials: DelegatedCredentialsManager | undefined;
+    get delegatedCredentials(): DelegatedCredentialsManager;
     delegatedUserDecrypt(handles: DecryptHandle[], delegatorAddress: Address, accountAddress?: Address): Promise<Record<Handle, ClearValueType>>;
     dispose(): void;
     // @internal
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
+    get hasSigner(): boolean;
     onIdentityChange(listener: SignerIdentityListener): () => void;
     // Warning: (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
     //
@@ -1379,15 +1377,11 @@ export class ZamaSDK {
     //
     // (undocumented)
     readonly relayer: RelayerDispatcher;
-    requireChainAlignment(operation: string): Promise<number>;
-    requireCredentials(operation: string): CredentialsManager;
-    requireDelegatedCredentials(operation: string): DelegatedCredentialsManager;
-    requireSigner(operation: string): GenericSigner;
+    requireChainAlignment(): Promise<number>;
     revokeSession(): Promise<void>;
     // (undocumented)
     readonly sessionStorage: GenericStorage;
-    // (undocumented)
-    readonly signer: GenericSigner | undefined;
+    get signer(): GenericSigner;
     // (undocumented)
     readonly storage: GenericStorage;
     terminate(): void;

@@ -553,12 +553,9 @@ export function buildZamaConfig(signer: GenericSigner | undefined, provider: Gen
 // @public
 export class ChainMismatchError extends ZamaError {
     constructor(input: {
-        operation: string;
         signerChainId: number;
         providerChainId: number;
     }, options?: ErrorOptions);
-    // (undocumented)
-    readonly operation: string;
     // (undocumented)
     readonly providerChainId: number;
     // (undocumented)
@@ -14764,9 +14761,7 @@ export type SignerIdentityListener = (change: SignerIdentityChange) => void;
 
 // @public
 export class SignerRequiredError extends ZamaError {
-    constructor(operation: string, options?: ErrorOptions);
-    // (undocumented)
-    readonly operation: string;
+    constructor(options?: ErrorOptions);
 }
 
 // @public
@@ -20092,15 +20087,14 @@ export class ZamaSDK {
     createReadonlyToken(address: Address): ReadonlyToken;
     createToken(address: Address, wrapper?: Address): Token;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
-    // (undocumented)
-    readonly credentials: CredentialsManager | undefined;
-    // (undocumented)
-    readonly delegatedCredentials: DelegatedCredentialsManager | undefined;
+    get credentials(): CredentialsManager;
+    get delegatedCredentials(): DelegatedCredentialsManager;
     delegatedUserDecrypt(handles: DecryptHandle[], delegatorAddress: Address, accountAddress?: Address): Promise<Record<Handle, ClearValueType>>;
     dispose(): void;
     // @internal
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
+    get hasSigner(): boolean;
     onIdentityChange(listener: SignerIdentityListener): () => void;
     // (undocumented)
     readonly provider: GenericProvider;
@@ -20108,15 +20102,11 @@ export class ZamaSDK {
     readonly registry: WrappersRegistry;
     // (undocumented)
     readonly relayer: RelayerDispatcher;
-    requireChainAlignment(operation: string): Promise<number>;
-    requireCredentials(operation: string): CredentialsManager;
-    requireDelegatedCredentials(operation: string): DelegatedCredentialsManager;
-    requireSigner(operation: string): GenericSigner;
+    requireChainAlignment(): Promise<number>;
     revokeSession(): Promise<void>;
     // (undocumented)
     readonly sessionStorage: GenericStorage;
-    // (undocumented)
-    readonly signer: GenericSigner | undefined;
+    get signer(): GenericSigner;
     // (undocumented)
     readonly storage: GenericStorage;
     terminate(): void;
