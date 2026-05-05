@@ -14,9 +14,9 @@ import {
   WalletNotConnectedError,
 } from "../errors";
 import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
+import { BaseSigner } from "../signer/base-signer";
 import { eip1193Subscribe } from "../signer/eip1193-subscribe";
-import { MutableWalletAccountStore } from "../signer/wallet-account-store";
-import type { GenericSigner, WalletAccount, WriteContractConfig } from "../types";
+import type { WalletAccount, WriteContractConfig } from "../types";
 import { swallow } from "../utils";
 
 /**
@@ -44,16 +44,15 @@ export type EthersSignerConfig = { ethereum: EIP1193Provider } | { signer: Signe
  *
  * @param config - {@link EthersSignerConfig}
  */
-export class EthersSigner implements GenericSigner {
-  readonly walletAccount = new MutableWalletAccountStore();
+export class EthersSigner extends BaseSigner {
   readonly #browserProvider?: BrowserProvider;
   readonly #directSigner?: Signer;
   readonly #eip1193?: EIP1193Provider;
   readonly #unsubscribeProvider: () => void;
   #accountPromise: Promise<WalletAccount | undefined> | undefined;
-  #disposed = false;
 
   constructor(config: EthersSignerConfig) {
+    super();
     if ("ethereum" in config) {
       this.#browserProvider = new BrowserProvider(config.ethereum);
       this.#eip1193 = config.ethereum;
@@ -67,13 +66,13 @@ export class EthersSigner implements GenericSigner {
     } else {
       this.#directSigner = config.signer;
       this.#unsubscribeProvider = () => {};
-      swallow("refresh wallet account", async () => {
+      void swallow("refresh wallet account", async () => {
         await this.refreshWalletAccount();
       });
     }
   }
 
-  requireWalletAccount(operation: string): WalletAccount {
+  override requireWalletAccount(operation: string): WalletAccount {
     const account = this.walletAccount.getSnapshot();
     if (!account && !this.walletAccount.isReady()) {
       throw new WalletAccountNotReadyError(operation);
@@ -94,11 +93,7 @@ export class EthersSigner implements GenericSigner {
     return Promise.resolve(undefined);
   }
 
-  dispose(): void {
-    if (this.#disposed) {
-      return;
-    }
-    this.#disposed = true;
+  protected override onDispose(): void {
     this.#unsubscribeProvider();
   }
 

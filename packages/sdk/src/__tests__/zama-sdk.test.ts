@@ -104,11 +104,11 @@ describe("ZamaSDK", () => {
     expect(unsubscribe).toHaveBeenCalledOnce();
   });
 
-  it("dispose calls signer.dispose", ({ createMockSigner, createSDK }) => {
+  it("terminate calls signer.dispose", ({ createMockSigner, createSDK }) => {
     const dispose = vi.fn();
     const sdk = createSDK({ signer: { ...createMockSigner(), dispose } });
 
-    sdk.dispose();
+    sdk.terminate();
 
     expect(dispose).toHaveBeenCalledOnce();
   });
@@ -229,7 +229,7 @@ describe("ZamaSDK", () => {
       sdk.terminate();
     });
 
-    it("does not notify listeners when relayer chain switching fails", async ({
+    it("notifies listeners even when relayer chain switching fails", async ({
       createMockSigner,
       createMockRelayer,
       createSDK,
@@ -251,12 +251,15 @@ describe("ZamaSDK", () => {
       });
 
       await vi.waitFor(() => {
-        expect(warnSpy).toHaveBeenCalledWith(
-          expect.stringContaining("switch relayer chain failed"),
-          expect.any(Error),
-        );
+        expect(listener).toHaveBeenCalledWith({
+          previous: undefined,
+          next: { address: NEXT_USER_ADDRESS, chainId: 1 },
+        });
       });
-      expect(listener).not.toHaveBeenCalled();
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("switch relayer chain"),
+        expect.any(Error),
+      );
 
       warnSpy.mockRestore();
       sdk.terminate();

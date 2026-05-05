@@ -11,9 +11,9 @@ import { getAddress } from "viem";
 import type { writeContract } from "viem/actions";
 import { WalletNotConnectedError } from "../errors";
 import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
-import type { GenericSigner, WalletAccount, WriteContractConfig } from "../types";
+import { BaseSigner } from "../signer/base-signer";
 import { eip1193Subscribe } from "../signer/eip1193-subscribe";
-import { MutableWalletAccountStore } from "../signer/wallet-account-store";
+import type { WalletAccount, WriteContractConfig } from "../types";
 
 /**
  * Configuration for {@link ViemSigner}.
@@ -41,28 +41,16 @@ function walletAccountFromWalletClient(walletClient: WalletClient): WalletAccoun
   return { address, chainId: walletClient.chain.id };
 }
 
-export class ViemSigner implements GenericSigner {
-  readonly walletAccount: MutableWalletAccountStore;
+export class ViemSigner extends BaseSigner {
   readonly #walletClient: WalletClient;
   readonly #ethereum?: EIP1193Provider;
   readonly #unsubscribeProvider: () => void;
-  #disposed = false;
 
   constructor(config: ViemSignerConfig) {
+    super(walletAccountFromWalletClient(config.walletClient));
     this.#walletClient = config.walletClient;
     this.#ethereum = config.ethereum;
-    this.walletAccount = new MutableWalletAccountStore(
-      walletAccountFromWalletClient(config.walletClient),
-    );
     this.#unsubscribeProvider = this.#subscribeToProvider();
-  }
-
-  requireWalletAccount(operation: string): WalletAccount {
-    const account = this.walletAccount.getSnapshot();
-    if (!account) {
-      throw new WalletNotConnectedError(operation);
-    }
-    return account;
   }
 
   #requireAccount(operation: string): { walletClient: WalletClient; account: Account } {
@@ -115,11 +103,7 @@ export class ViemSigner implements GenericSigner {
     });
   }
 
-  dispose(): void {
-    if (this.#disposed) {
-      return;
-    }
-    this.#disposed = true;
+  protected override onDispose(): void {
     this.#unsubscribeProvider();
   }
 }

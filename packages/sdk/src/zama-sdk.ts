@@ -257,7 +257,7 @@ export class ZamaSDK {
     }
     const nextChainId = nextAccount?.chainId;
     if (nextChainId !== undefined) {
-      this.relayer.switchChain(nextChainId);
+      void swallow("switch relayer chain", () => this.relayer.switchChain(nextChainId));
     }
     await Promise.all(
       Array.from(this.#walletAccountListeners, (listener) =>

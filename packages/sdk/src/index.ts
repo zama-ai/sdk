@@ -187,6 +187,7 @@ export {
   matchZamaError,
   matchAclRevert,
 } from "./errors";
+export { BaseSigner } from "./signer/base-signer";
 export { createWalletAccountStore, MutableWalletAccountStore } from "./signer/wallet-account-store";
 
 // Event decoders and types

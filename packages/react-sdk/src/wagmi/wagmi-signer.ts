@@ -1,10 +1,7 @@
 import {
-  type MutableWalletAccountStore,
-  createWalletAccountStore,
-  WalletNotConnectedError,
+  BaseSigner,
   type ContractAbi,
   type EIP712TypedData,
-  type GenericSigner,
   type Hex,
   type WalletAccount,
   type WriteContractArgs,
@@ -39,30 +36,18 @@ export interface WagmiSignerConfig {
  *
  * @param signerConfig - {@link WagmiSignerConfig} with wagmi config
  */
-export class WagmiSigner implements GenericSigner {
-  readonly walletAccount: MutableWalletAccountStore;
+export class WagmiSigner extends BaseSigner {
   readonly #config: Config;
   readonly #unsubscribeConnection: () => void;
-  #disposed = false;
 
   constructor(signerConfig: WagmiSignerConfig) {
+    super(walletAccountFromConnection(getConnection(signerConfig.config)));
     this.#config = signerConfig.config;
-    this.walletAccount = createWalletAccountStore(
-      walletAccountFromConnection(getConnection(this.#config)),
-    );
     this.#unsubscribeConnection = watchConnection(this.#config, {
       onChange: (connection) => {
         this.walletAccount.setSnapshot(walletAccountFromConnection(connection));
       },
     });
-  }
-
-  requireWalletAccount(operation: string): WalletAccount {
-    const account = this.walletAccount.getSnapshot();
-    if (!account) {
-      throw new WalletNotConnectedError(operation);
-    }
-    return account;
   }
 
   async signTypedData(typedData: EIP712TypedData): Promise<Hex> {
@@ -88,11 +73,7 @@ export class WagmiSigner implements GenericSigner {
     return writeContract(this.#config, config as Parameters<typeof writeContract>[1]);
   }
 
-  dispose(): void {
-    if (this.#disposed) {
-      return;
-    }
-    this.#disposed = true;
+  protected override onDispose(): void {
     this.#unsubscribeConnection();
   }
 }
