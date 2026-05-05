@@ -1159,7 +1159,7 @@ describe("ZamaSDK", () => {
       signer,
       tokenAddress,
     }) => {
-      const signerAddress = await signer.getAddress();
+      const signerAddress = signer.walletAccount.getSnapshot()?.address!;
       await expect(
         sdk.delegateDecryption({
           contractAddress: tokenAddress,
