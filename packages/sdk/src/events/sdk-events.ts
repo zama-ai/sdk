@@ -1,5 +1,6 @@
 import type { Address, Hex } from "viem";
 import type { ClearValueType, Handle } from "../relayer/relayer-sdk.types";
+import type { ShieldPath } from "../types/options";
 
 /**
  * All SDK event keys, accessible as `ZamaSDKEvents.EncryptStart` etc.
@@ -166,7 +167,7 @@ export interface ShieldSubmittedEvent extends BaseEvent {
   type: typeof ZamaSDKEvents.ShieldSubmitted;
   txHash: Hex;
   /** Which execution path was used: single-tx `transferAndCall` or two-tx `approveAndWrap`. */
-  shieldPath: "transferAndCall" | "approveAndWrap";
+  shieldPath: ShieldPath;
 }
 
 export interface TransferSubmittedEvent extends BaseEvent {
