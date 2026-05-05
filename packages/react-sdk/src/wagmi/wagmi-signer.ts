@@ -56,7 +56,7 @@ export class WagmiSigner implements GenericSigner {
   async getAddress(): Promise<Address> {
     try {
       const account = getConnection(this.#config);
-      assertNonNullable(account?.address, "WagmiSigner: wallet not connected");
+      assertNonNullable(account?.address, "account.address");
       return account.address;
     } catch (cause) {
       throw new SignerRequiredError({ cause });
