@@ -1,6 +1,6 @@
 # Example SDK Upgrade Playbook
 
-This playbook is for manually running an AI-assisted upgrade of SDK example apps. The short-term goal is a reliable local workflow. The long-term goal is a semi-automated process that can open or update pull requests after npm releases.
+This playbook is for running AI-assisted upgrades of SDK example apps. The short-term goal is a reliable local workflow. The long-term goal is a semi-automated process that can open or update pull requests after npm releases.
 
 ## Scope
 
@@ -10,92 +10,76 @@ During an app upgrade, code changes must stay under that app's directory, for ex
 
 Run upgrade work from a dedicated branch based on `prerelease`, preferably in a separate worktree. The agent is allowed to modify code in that branch. Do not run app-upgrade edits directly on `prerelease` or in a shared dirty checkout.
 
-## Inputs
+## One Command
 
-Start from generated context, not from memory:
+`pnpm examples:upgrade` is the only public command.
 
-```sh
-pnpm examples:upgrade:context -- --example <app> --target latest
-```
-
-The context report points to relevant docs, API reports, changelog entries, usage scan results, app scripts, and validation commands.
-
-For multi-app runs, prefer the orchestrator:
+Prepare context only:
 
 ```sh
-pnpm examples:upgrade -- --mode prepare --target latest
+pnpm examples:upgrade --example react-wagmi --target latest
 ```
 
-This generates context for all active apps plus `.tmp/example-upgrades/<run-id>/agent-task.md`.
+Run the full AI-assisted pipeline and open a Draft PR:
+
+```sh
+pnpm examples:upgrade --example react-wagmi --target latest --agent codex --model gpt-5.5 --pr draft
+```
+
+The command prints the next command to run at the end of each stage, with the `run-id` already filled in.
+
+## Stages
+
+Use `--stage` when you want to run one part of the pipeline:
+
+- `--stage prepare`: generate context and an agent task. This is the default when no agent or PR mode is requested.
+- `--stage agent`: run an LLM over an existing prepared run.
+- `--stage verify`: run validation and generate the consolidated report for an existing run.
+- `--stage report`: generate only the consolidated report.
+- `--stage pr`: commit, push, and create/update a PR for an existing run.
+- `--stage all`: prepare, run the agent, validate, report, and optionally open/update a PR.
+
+Examples:
+
+```sh
+pnpm examples:upgrade --example react-wagmi --target latest
+pnpm examples:upgrade --stage agent --run-id <run-id> --example react-wagmi --agent codex --model gpt-5.5
+pnpm examples:upgrade --stage verify --run-id <run-id> --example react-wagmi --include-install --include-playwright-install
+pnpm examples:upgrade --stage pr --run-id <run-id> --example react-wagmi --pr draft
+```
 
 ## Workflow
 
-1. Read the generated context report for the target app.
-2. Read the app's `package.json`, docs, SDK-sensitive source files, and tests.
-3. Read only the relevant docs/API reports listed in the context report.
-4. Compare current SDK package versions with the resolved target versions.
-5. Identify API and behavior changes that affect the app. Do not migrate unrelated code.
-6. Write a concise impact plan before editing.
-7. Update package versions and lockfile with the app's declared package manager.
-8. Update source, tests, README, and WALKTHROUGH as needed.
-9. Run deterministic validation:
-
-```sh
-pnpm examples:upgrade:validate -- --example <app>
-```
-
-Use `--include-install` when dependency installation should be part of validation. Use `--include-env-sensitive` only when required environment variables are configured.
-
-10. Generate or update the report:
-
-```sh
-pnpm examples:upgrade:report -- --example <app>
-```
-
+1. Generate context with the prepare stage.
+2. Read the generated context report for the target app.
+3. Read the app's `package.json`, docs, SDK-sensitive source files, and tests.
+4. Read only the relevant docs/API reports listed in the context report.
+5. Compare current SDK package versions with the resolved target versions.
+6. Identify API and behavior changes that affect the app. Do not migrate unrelated code.
+7. Produce an impact plan before editing.
+8. Update package versions and lockfile with the app's declared package manager.
+9. Update source, tests, README, and WALKTHROUGH as needed.
+10. Run deterministic validation with the verify stage.
 11. Complete the manual checklist in `docs/agents/example-upgrade-checklist.md`.
-
-## Orchestrator Modes
-
-Use `pnpm examples:upgrade` for V2-style local runs:
-
-- `--mode prepare`: generate context and an agent task. Use this before code edits.
-- `--mode verify`: run validation and generate the consolidated report for an existing run.
-- `--mode full`: generate context, run validation, and generate the consolidated report for the current tree.
-
-Common examples:
-
-```sh
-pnpm examples:upgrade -- --mode prepare --target latest
-pnpm examples:upgrade -- --mode verify --run-id <run-id> --include-install
-pnpm examples:upgrade -- --mode full --target local --dry-run
-```
-
-The orchestrator does not call an LLM by itself. The agent reads `agent-task.md`, edits the apps, then runs `--mode verify`.
+12. Open or update a PR with `--stage pr --pr draft` once the report is ready.
 
 ## Agent Runner
-
-Use `examples:upgrade:agent` to run an LLM over a prepared run:
-
-```sh
-pnpm examples:upgrade -- --mode prepare --example react-wagmi --target latest
-pnpm examples:upgrade:agent -- --run-id <run-id> --example react-wagmi --agent codex --model gpt-5.5
-```
-
-The runner writes two audit files before execution:
-
-- `.tmp/example-upgrades/<run-id>/agent-prompt.md`
-- `.tmp/example-upgrades/<run-id>/agent-command.json`
-
-Dry-run the exact command and prompt path before launching the agent:
-
-```sh
-pnpm examples:upgrade:agent -- --run-id <run-id> --example react-wagmi --agent codex --model gpt-5.5 --dry-run
-```
 
 Supported agents:
 
 - `codex`: runs `codex exec` with `--cd <repo>`, `--sandbox workspace-write`, and configurable `--ask-for-approval`.
 - `claude`: runs `claude --print` with configurable `--model` and permission mode mapping.
+
+The agent stage writes two audit files before execution:
+
+- `.tmp/example-upgrades/<run-id>/agent-prompt.md`
+- `.tmp/example-upgrades/<run-id>/agent-command.json`
+
+Dry-run the exact agent command and prompt path before launching it:
+
+```sh
+pnpm examples:upgrade --stage agent --run-id <run-id> --example react-wagmi --agent codex --model gpt-5.5 --dry-run
+```
 
 Useful options:
 
@@ -106,21 +90,20 @@ Useful options:
 - `--profile <name>` is passed to Codex for configuration from `~/.codex/config.toml`.
 - `--effort <level>` is passed to Claude.
 
-## Pull Request Helper
+## Pull Requests
 
-After review and validation, a local helper can create or update a branch and PR:
+After review and validation, use the PR stage:
 
 ```sh
-pnpm examples:upgrade:pr -- --dry-run --allow-process-files
-pnpm examples:upgrade:pr -- --allow-process-files --push --create-pr --body-file .tmp/example-upgrades/<run-id>/report.md
+pnpm examples:upgrade --stage pr --run-id <run-id> --example react-wagmi --pr draft
 ```
 
 Safety defaults:
 
 - It refuses to commit non-example files unless `--allow-process-files` is set.
-- It does not push or create a PR unless `--push` or `--create-pr` is set.
+- It does not create a PR unless `--pr draft` or `--pr ready` is set.
 - It targets `prerelease` by default.
-- It creates draft PRs by default.
+- `--pr draft` opens a Draft PR; `--pr ready` opens a ready-for-review PR.
 - Keep PRs as Draft until human review has validated the upgrade and manual checklist.
 
 ## Validation Rules

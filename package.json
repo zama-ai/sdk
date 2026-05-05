@@ -55,11 +55,6 @@
     "llm:stage": "node scripts/llm/stage-artifacts.mjs",
     "llm:check": "node scripts/llm/check.mjs",
     "examples:upgrade": "node scripts/examples/upgrade.mjs",
-    "examples:upgrade:agent": "node scripts/examples/upgrade-agent.mjs",
-    "examples:upgrade:context": "node scripts/examples/upgrade-context.mjs",
-    "examples:upgrade:validate": "node scripts/examples/upgrade-validate.mjs",
-    "examples:upgrade:report": "node scripts/examples/upgrade-report.mjs",
-    "examples:upgrade:pr": "node scripts/examples/upgrade-pr.mjs",
     "size": "size-limit",
     "size:json": "size-limit --json"
   },
