@@ -15,3 +15,15 @@ export class TransactionRevertedError extends ZamaError {
     this.name = "TransactionRevertedError";
   }
 }
+
+/** The underlying ERC-20 does not support ERC-1363 `transferAndCall`. */
+export class ERC1363NotSupportedError extends ZamaError {
+  constructor(tokenAddress: string, options?: ErrorOptions) {
+    super(
+      ZamaErrorCode.ERC1363NotSupported,
+      `Underlying token ${tokenAddress} does not support ERC-1363 transferAndCall`,
+      options,
+    );
+    this.name = "ERC1363NotSupportedError";
+  }
+}

@@ -356,7 +356,7 @@ export class Token extends ReadonlyToken {
     try {
       const recipient = options?.to ? getAddress(options.to) : await signer.getAddress();
       const txHash = await signer.writeContract(wrapContract(this.wrapper, recipient, amount));
-      this.emit({ type: ZamaSDKEvents.ShieldSubmitted, txHash });
+      this.emit({ type: ZamaSDKEvents.ShieldSubmitted, txHash, shieldPath: "approveAndWrap" });
       safeCallback(() => options?.onShieldSubmitted?.(txHash));
       const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
       return { txHash, receipt };

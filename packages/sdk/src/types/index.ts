@@ -19,4 +19,4 @@ export type { GenericProvider } from "./provider";
 export type { GenericStorage } from "./storage";
 export type { StoredCredentials, DelegatedStoredCredentials } from "./credentials";
 export type { UnshieldCallbacks, ShieldCallbacks, TransferCallbacks } from "./callbacks";
-export type { TransferOptions, ShieldOptions, UnshieldOptions } from "./options";
+export type { TransferOptions, ShieldOptions, UnshieldOptions, ShieldPath } from "./options";

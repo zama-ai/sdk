@@ -7,6 +7,8 @@ import type { Address } from "viem";
 export interface ShieldParams extends ShieldCallbacks {
   amount: bigint;
   approvalStrategy?: "max" | "exact" | "skip";
+  /** Shielding method: `"auto"` (default), `"transferAndCall"`, or `"approveAndWrap"`. */
+  shieldStrategy?: "auto" | "transferAndCall" | "approveAndWrap";
   /** Recipient address for the shielded tokens. Defaults to the connected wallet. */
   to?: Address;
 }

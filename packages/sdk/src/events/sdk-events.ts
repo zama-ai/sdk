@@ -165,6 +165,8 @@ export interface TransactionErrorEvent extends BaseEvent {
 export interface ShieldSubmittedEvent extends BaseEvent {
   type: typeof ZamaSDKEvents.ShieldSubmitted;
   txHash: Hex;
+  /** Which execution path was used: single-tx `transferAndCall` or two-tx `approveAndWrap`. */
+  shieldPath: "transferAndCall" | "approveAndWrap";
 }
 
 export interface TransferSubmittedEvent extends BaseEvent {
