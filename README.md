@@ -46,6 +46,8 @@ Zama SDK is designed for developers who want to integrate confidential operation
 - **Framework-agnostic core:** Works with viem, ethers, or any EVM library.
 - **React-ready:** First-class React hooks powered by `@tanstack/react-query`.
 
+> **Migrating from the Relayer SDK?** This is the new default SDK for the Zama Protocol. The legacy [`@zama-fhe/relayer-sdk`](https://github.com/zama-ai/relayer-sdk) is still available for reference.
+
 ### Table of contents
 
 - [About](#about)

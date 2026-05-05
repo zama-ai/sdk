@@ -1,7 +1,6 @@
 # Table of contents
 
-[Overview](README.md "Overview")
-
+- [Overview](overview.md)
 - [Getting started](tutorials/README.md)
   - [Quick start](tutorials/quick-start.md)
   - [First confidential dApp](tutorials/first-confidential-dapp.md)
