@@ -56,8 +56,8 @@ import { ZamaSDK } from "@zama-fhe/sdk";
 const sdk = new ZamaSDK({ relayer, signer, storage });
 const token = sdk.createToken("0xConfidentialToken");
 
-const balance = await token.balanceOf();           // user is the connected wallet
-const peer = await token.balanceOf("0xUserAddr");  // explicit holder
+const balance = await token.balanceOf(); // user is the connected wallet
+const peer = await token.balanceOf("0xUserAddr"); // explicit holder
 ```
 
 {% endtab %}
