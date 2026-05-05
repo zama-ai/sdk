@@ -38,7 +38,7 @@
 
 ### What is Zama SDK?
 
-**Zama SDK** is a suite of TypeScript libraries for building privacy-preserving dApps on EVM-compatible blockchains powered by the _Zama Confidential Blockchain Protocol_. It provides everything you need to interact with confidential smart contracts using [Fully Homomorphic Encryption (FHE)](https://docs.zama.org/protocol/protocol/overview) — from encrypting inputs and decrypting results to managing access control — all from familiar TypeScript and React environments.
+**Zama SDK** is a suite of TypeScript libraries for building privacy-preserving dApps on EVM-compatible blockchains powered by the _Zama Protocol_. It provides everything you need to interact with confidential smart contracts using [Fully Homomorphic Encryption (FHE)](https://docs.zama.org/protocol/protocol/overview) — from encrypting inputs and decrypting results to managing access control — all from familiar TypeScript and React environments.
 
 Zama SDK is designed for developers who want to integrate confidential operations into their applications without learning cryptography:
 
@@ -150,7 +150,7 @@ This software is distributed under the **BSD-3-Clause-Clear** license. Read [thi
 
 ## Resources
 
-- [Documentation](https://docs.zama.org/protocol) — Official documentation of the Zama Confidential Blockchain Protocol.
+- [Documentation](https://docs.zama.org/protocol) — Official documentation of the Zama Protocol.
 - [Awesome Zama – FHEVM](https://github.com/zama-ai/awesome-zama?tab=readme-ov-file#fhevm) — Curated articles, talks, and ecosystem projects.
 
 ## Support
