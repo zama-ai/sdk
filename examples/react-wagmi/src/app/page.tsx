@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { formatEther, formatUnits, parseAbi, parseUnits } from "viem";
 import { useAccount, useBalance, useConnect, useReadContract, useSwitchChain } from "wagmi";
 import { injected } from "wagmi/connectors";
@@ -14,7 +14,6 @@ import {
   useZamaSDK,
 } from "@zama-fhe/react-sdk";
 import type { Address, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
-import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { BalancesCard } from "@/components/BalancesCard";
 import { ShieldCard } from "@/components/ShieldCard";
 import { TransferCard } from "@/components/TransferCard";
@@ -52,8 +51,6 @@ export default function Home() {
 
   const isSepolia = chainId === SEPOLIA_CHAIN_ID;
 
-  // Stable reference from the QueryClientProvider in providers.tsx.
-  const queryClient = useQueryClient();
   const sdk = useZamaSDK();
 
   // Fetch all valid token pairs from the on-chain WrappersRegistry.
@@ -133,16 +130,9 @@ export default function Home() {
     query: { enabled: isConnected && isSepolia && !!token },
   });
 
-  const refreshBalances = () => {
+  const refreshPublicBalances = () => {
     void refetchErc20();
     void refetchEth();
-    // Invalidate the encrypted handle so useConfidentialBalance re-polls after
-    // any operation that changes the confidential balance (shield, unshield, transfer).
-    if (token) {
-      queryClient.invalidateQueries({
-        queryKey: zamaQueryKeys.confidentialBalance.token(token.confidentialTokenAddress),
-      });
-    }
   };
 
   // Only run once the user has explicitly authorized decrypt for the selected token.
@@ -170,7 +160,7 @@ export default function Home() {
       await sdk.provider.waitForTransactionReceipt(txHash);
       return txHash;
     },
-    onSuccess: refreshBalances,
+    onSuccess: refreshPublicBalances,
   });
 
   // Clear stale mutation state when the wallet account changes so the BalancesCard
@@ -328,7 +318,7 @@ export default function Home() {
           key={`${pair.confidentialTokenAddress}-${address}`}
           tokenAddress={pair.confidentialTokenAddress}
           label={pair.underlying.symbol}
-          onSuccess={refreshBalances}
+          onSuccess={refreshPublicBalances}
         />
       ))}
 
@@ -338,11 +328,10 @@ export default function Home() {
       <ShieldCard
         key={`shield-${address}-${selectedTokenAddress}`}
         tokenAddress={token?.confidentialTokenAddress ?? ZERO_ADDRESS}
-        underlyingAddress={token?.tokenAddress ?? ZERO_ADDRESS}
         decimals={erc20Decimals}
         symbol={erc20Symbol}
         disabled={actionsDisabled}
-        onSuccess={refreshBalances}
+        onSuccess={refreshPublicBalances}
       />
 
       <TransferCard
@@ -352,7 +341,7 @@ export default function Home() {
         symbol={confidentialSymbol}
         disabled={actionsDisabled}
         balanceDecryptRequired={!isAllowed}
-        onSuccess={refreshBalances}
+        onSuccess={refreshPublicBalances}
       />
 
       <UnshieldCard
@@ -362,7 +351,7 @@ export default function Home() {
         symbol={confidentialSymbol}
         disabled={actionsDisabled}
         balanceDecryptRequired={!isAllowed}
-        onSuccess={refreshBalances}
+        onSuccess={refreshPublicBalances}
       />
 
       {/* ── Delegation — token owner perspective ──────────────────────────────
