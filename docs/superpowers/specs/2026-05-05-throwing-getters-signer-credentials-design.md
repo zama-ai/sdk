@@ -85,13 +85,20 @@ class ZamaSDK {
 
 ### `SignerNotConfiguredError` simplification
 
-Drop the operation argument and field:
+`SignerRequiredError` keeps `operation` as optional metadata (used by `WalletNotConnectedError` / `WalletAccountNotReadyError`). `SignerNotConfiguredError` drops the operation parameter and message interpolation:
 
 ```ts
 export class SignerRequiredError extends ZamaError {
-  constructor(code: ZamaErrorCode, message: string, options?: ErrorOptions) {
+  readonly operation: string | undefined;
+
+  constructor(
+    code: ZamaErrorCode,
+    message: string,
+    options?: ErrorOptions & { operation?: string },
+  ) {
     super(code, message, options);
     this.name = "SignerRequiredError";
+    this.operation = options?.operation;
   }
 }
 
@@ -102,12 +109,35 @@ export class SignerNotConfiguredError extends SignerRequiredError {
       "Signer not configured. Configure one via ZamaSDKConfig.signer or <ZamaProvider config={createConfig({ signer: ... })}>.",
       options,
     );
+    this.name = "SignerNotConfiguredError";
+  }
+}
+
+export class WalletNotConnectedError extends SignerRequiredError {
+  constructor(operation: string, options?: ErrorOptions) {
+    super(
+      ZamaErrorCode.WalletNotConnected,
+      `Cannot ${operation} without a connected wallet account.`,
+      { ...options, operation },
+    );
+    this.name = "WalletNotConnectedError";
+  }
+}
+
+export class WalletAccountNotReadyError extends SignerRequiredError {
+  constructor(operation: string, options?: ErrorOptions) {
+    super(
+      ZamaErrorCode.WalletAccountNotReady,
+      `Cannot ${operation} before the wallet account is ready.`,
+      { ...options, operation },
+    );
+    this.name = "WalletAccountNotReadyError";
   }
 }
 ```
 
-- `operation: string` removed from `SignerRequiredError`.
-- All subclass constructors of `SignerRequiredError` lose the operation parameter (see Migration below).
+- `operation` becomes `string | undefined` on `SignerRequiredError` (passed via the options bag). `WalletNotConnectedError` and `WalletAccountNotReadyError` continue to accept and forward `operation` because they're thrown from the async-path methods that are out of scope.
+- Only `SignerNotConfiguredError`'s constructor loses the `operation` parameter.
 
 ### Call site migration
 
