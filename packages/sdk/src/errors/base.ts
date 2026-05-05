@@ -67,7 +67,11 @@ export const ZamaErrorCode = {
   /** Signer and provider are connected to different chains. */
   ChainMismatch: "CHAIN_MISMATCH",
   /** Operation requires a signer but none is configured. */
-  SignerRequired: "SIGNER_REQUIRED",
+  SignerNotConfigured: "SIGNER_NOT_CONFIGURED",
+  /** Operation requires a connected wallet account. */
+  WalletNotConnected: "WALLET_NOT_CONNECTED",
+  /** Wallet account discovery is still resolving. */
+  WalletAccountNotReady: "WALLET_ACCOUNT_NOT_READY",
 } as const;
 
 /** Union of all {@link ZamaErrorCode} string values. */

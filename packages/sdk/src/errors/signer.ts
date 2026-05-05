@@ -1,33 +1,69 @@
 import { ZamaError, ZamaErrorCode } from "./base";
 
 /**
+ * Base class for signer/account readiness failures.
+ */
+export class SignerRequiredError extends ZamaError {
+  readonly operation: string;
+
+  constructor(code: ZamaErrorCode, operation: string, message: string, options?: ErrorOptions) {
+    super(code, message, options);
+    this.name = "SignerRequiredError";
+    this.operation = operation;
+  }
+}
+
+/**
  * Thrown when an operation requires a signer but none is configured.
  *
  * The SDK can be constructed without a signer. Operations that need wallet
- * authority — writes, EIP-712 signatures, user decrypt, credentials/session
- * management — throw `SignerRequiredError` instead of probing the signer.
+ * authority throw this before probing wallet state.
  *
  * @example
  * ```ts
  * try {
  *   await token.confidentialTransfer("0xTo", 100n);
  * } catch (e) {
- *   if (e instanceof SignerRequiredError) {
- *     // Prompt the user to connect their wallet.
+ *   if (e instanceof SignerNotConfiguredError) {
+ *     // Fix SDK/provider configuration.
  *   }
  * }
  * ```
  */
-export class SignerRequiredError extends ZamaError {
-  readonly operation: string;
-
+export class SignerNotConfiguredError extends SignerRequiredError {
   constructor(operation: string, options?: ErrorOptions) {
     super(
-      ZamaErrorCode.SignerRequired,
+      ZamaErrorCode.SignerNotConfigured,
+      operation,
       `Cannot ${operation} without a signer. Configure one via ZamaSDKConfig.signer or <ZamaProvider config={createConfig({ signer: ... })}>.`,
       options,
     );
-    this.name = "SignerRequiredError";
-    this.operation = operation;
+    this.name = "SignerNotConfiguredError";
+  }
+}
+
+/** Thrown when a signer exists but no wallet account is currently connected. */
+export class WalletNotConnectedError extends SignerRequiredError {
+  constructor(operation: string, options?: ErrorOptions) {
+    super(
+      ZamaErrorCode.WalletNotConnected,
+      operation,
+      `Cannot ${operation} without a connected wallet account.`,
+      options,
+    );
+    this.name = "WalletNotConnectedError";
+  }
+}
+
+/** Thrown when an async adapter has not resolved its initial wallet account yet. */
+export class WalletAccountNotReadyError extends SignerRequiredError {
+  constructor(operation: string, options?: ErrorOptions) {
+    super(
+      ZamaErrorCode.WalletAccountNotReady,
+      operation,
+      `Cannot ${operation} before the wallet account is ready.`,
+      options,
+    );
+    this.name = "WalletAccountNotReadyError";
   }
 }

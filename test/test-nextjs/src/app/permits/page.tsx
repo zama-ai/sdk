@@ -1,8 +1,8 @@
-import { SessionPanel } from "@zama-fhe/test-components";
+import { PermitsPanel } from "@zama-fhe/test-components";
 import type { Address } from "@zama-fhe/sdk";
 import { CONFIDENTIAL_TOKEN_ADDRESSES } from "@/constants";
 
-export default async function SessionPage({
+export default async function PermitsPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | undefined>>;
@@ -14,8 +14,8 @@ export default async function SessionPage({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Session Management</h1>
-      <SessionPanel tokenAddresses={tokens} />
+      <h1 className="text-2xl font-bold">Permits</h1>
+      <PermitsPanel tokenAddresses={tokens} />
     </div>
   );
 }

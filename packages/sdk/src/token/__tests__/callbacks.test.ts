@@ -123,7 +123,7 @@ describe("Unshield callbacks (P4)", () => {
   it("throws TransactionRevertedError when receipt fetch fails", async ({ token, provider }) => {
     vi.mocked(provider.waitForTransactionReceipt).mockRejectedValue(new Error("network error"));
 
-    await expect(token.unshield(50n, { skipBalanceCheck: true })).rejects.toBeInstanceOf(
+    await expect(token.unshield(50n, { skipBalanceCheck: true })).rejects.toThrow(
       TransactionRevertedError,
     );
   });
@@ -134,7 +134,7 @@ describe("Unshield callbacks (P4)", () => {
   }) => {
     vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({ logs: [] });
 
-    await expect(token.unshield(50n, { skipBalanceCheck: true })).rejects.toBeInstanceOf(
+    await expect(token.unshield(50n, { skipBalanceCheck: true })).rejects.toThrow(
       TransactionRevertedError,
     );
   });
@@ -150,7 +150,7 @@ describe("Unshield callbacks (P4)", () => {
       .mockResolvedValueOnce("0xunwraphash") // unwrap succeeds
       .mockRejectedValueOnce(new Error("finalize failed")); // finalize fails
 
-    await expect(token.unshield(50n, { skipBalanceCheck: true })).rejects.toBeInstanceOf(
+    await expect(token.unshield(50n, { skipBalanceCheck: true })).rejects.toThrow(
       TransactionRevertedError,
     );
   });
@@ -164,7 +164,7 @@ describe("Unshield callbacks (P4)", () => {
     mockReceiptWithUnwrapRequested(provider, userAddress);
     vi.mocked(relayer.publicDecrypt).mockRejectedValue(new Error("decrypt error"));
 
-    await expect(token.unshield(50n, { skipBalanceCheck: true })).rejects.toBeInstanceOf(
+    await expect(token.unshield(50n, { skipBalanceCheck: true })).rejects.toThrow(
       DecryptionFailedError,
     );
   });

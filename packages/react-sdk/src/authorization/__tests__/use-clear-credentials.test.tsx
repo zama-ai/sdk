@@ -1,34 +1,44 @@
 import { act } from "@testing-library/react";
+import { ZamaSDK } from "@zama-fhe/sdk";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
-import { describe, expect, test, vi } from "../../test-fixtures";
+import { afterEach, describe, expect, test, vi } from "../../test-fixtures";
 import { expectCacheRemoved } from "../../test-helpers";
 import { expectDefaultMutationState } from "../../__tests__/mutation-test-helpers";
-import { useRevokeSession } from "../use-revoke-session";
+import { useClearCredentials } from "../use-clear-credentials";
 
-describe("useRevokeSession", () => {
+describe("useClearCredentials", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   test("default", ({ renderWithProviders }) => {
-    const { result } = renderWithProviders(() => useRevokeSession());
+    const { result } = renderWithProviders(() => useClearCredentials());
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
     expectDefaultMutationState(state);
   });
 
-  test("cache: invalidates isAllowed query after revokeSession", async ({
+  test("cache: removes isAllowed and decryption queries after clearCredentials", async ({
     renderWithProviders,
   }) => {
-    const { result, queryClient } = renderWithProviders(() => useRevokeSession());
+    vi.spyOn(ZamaSDK.prototype, "clearCredentials").mockResolvedValue(undefined);
+    const { result, queryClient } = renderWithProviders(() => useClearCredentials());
     queryClient.setQueryData(zamaQueryKeys.isAllowed.all, true);
+    queryClient.setQueryData(zamaQueryKeys.decryption.all, { foo: 1n });
 
     await act(() => result.current.mutateAsync());
 
     expectCacheRemoved(queryClient, zamaQueryKeys.isAllowed.all);
+    expectCacheRemoved(queryClient, zamaQueryKeys.decryption.all);
   });
 
   test("behavior: forwards onSuccess callback", async ({ renderWithProviders }) => {
+    vi.spyOn(ZamaSDK.prototype, "clearCredentials").mockResolvedValue(undefined);
     const onSuccess = vi.fn();
 
-    const { result, queryClient } = renderWithProviders(() => useRevokeSession({ onSuccess }));
+    const { result, queryClient } = renderWithProviders(() => useClearCredentials({ onSuccess }));
     queryClient.setQueryData(zamaQueryKeys.isAllowed.all, true);
+    queryClient.setQueryData(zamaQueryKeys.decryption.all, { foo: 1n });
 
     await act(() => result.current.mutateAsync());
 
@@ -36,5 +46,6 @@ describe("useRevokeSession", () => {
     expect(onSuccess.mock.calls[0]?.[0]).toBeUndefined();
     expect(onSuccess.mock.calls[0]?.[1]).toBeUndefined();
     expectCacheRemoved(queryClient, zamaQueryKeys.isAllowed.all);
+    expectCacheRemoved(queryClient, zamaQueryKeys.decryption.all);
   });
 });

@@ -15,5 +15,5 @@ export { Sidebar } from "./sidebar";
 export { DelegationPanel } from "./delegation-panel";
 export { DelegationStatusPanel } from "./delegation-status-panel";
 export { TokenMetadataPanel } from "./token-metadata-panel";
-export { SessionPanel } from "./session-panel";
+export { PermitsPanel } from "./permits-panel";
 export { burner } from "./burner-connector";

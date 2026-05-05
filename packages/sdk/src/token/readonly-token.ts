@@ -17,7 +17,7 @@ import {
   DecryptionFailedError,
   DelegationExpiredError,
   DelegationNotFoundError,
-  isSessionError,
+  isFatalBatchError,
   ZamaError,
 } from "../errors";
 import type { ZamaSDKEventInput } from "../events/sdk-events";
@@ -211,9 +211,9 @@ export class ReadonlyToken {
         results.set(tokenAddress, outcome.value);
       } else {
         const reason = outcome.reason;
-        // Session-level failures (user rejected signature, SDK misconfigured)
+        // Systemic failures (user rejected signature, SDK misconfigured)
         // apply to every token — surface them instead of collecting per-token.
-        if (isSessionError(reason)) {
+        if (isFatalBatchError(reason)) {
           throw reason;
         }
         const error =
@@ -350,9 +350,9 @@ export class ReadonlyToken {
           assertBigint(value, "batchDecryptBalancesAs: result[handle]");
           results.set(token.address, value);
         } catch (error) {
-          // Session-level failures apply to every token — re-throw so the
+          // Systemic failures apply to every token — re-throw so the
           // whole batch aborts with the original typed error.
-          if (isSessionError(error)) {
+          if (isFatalBatchError(error)) {
             throw error;
           }
           const err = toError(error);
@@ -457,27 +457,25 @@ export class ReadonlyToken {
   }
 
   /**
-   * Whether a session signature is currently cached for the connected wallet.
+   * Whether a permit covering this token is currently cached for the connected wallet.
    * Use this to check if decrypt operations can proceed without a wallet prompt.
    *
-   * @returns `true` if a session signature is cached for the connected wallet and covers this token's contract.
-   * @throws {@link SignerRequiredError} if no signer is configured.
+   * @returns `true` if a stored permit covers this token's contract for the connected signer.
+   * @throws {@link SignerNotConfiguredError} if no signer is configured.
    */
   async isAllowed(): Promise<boolean> {
-    return this.sdk.requireCredentials("isAllowed").isAllowed([this.address]);
+    return this.sdk.isAllowed([this.address]);
   }
 
   /**
-   * Revoke cached session signatures for the given contract addresses, forcing
-   * a fresh wallet signature on the next decrypt operation for those contracts.
-   * Stored credentials remain intact; only the in-memory session signature is
-   * cleared.
+   * Revoke the stored permit covering this token by removing its address
+   * from every direct-decrypt permission for the current signer/chain. The
+   * keypair survives.
    *
-   * @param contractAddresses - Contract addresses to revoke credentials for.
-   * @throws {@link SignerRequiredError} if no signer is configured.
+   * @throws {@link SignerNotConfiguredError} if no signer is configured.
    */
-  async revoke(...contractAddresses: Address[]): Promise<void> {
-    await this.sdk.requireCredentials("revoke").revoke(...contractAddresses);
+  async revoke(): Promise<void> {
+    await this.sdk.revokePermits([this.address]);
   }
 
   /**
@@ -547,8 +545,8 @@ export class ReadonlyToken {
    * connected signer for this token contract.
    */
   async #assertDelegationActive(delegatorAddress: Address): Promise<void> {
-    const signer = this.sdk.requireSigner("decryptBalanceAs");
-    const delegateAddress = await signer.getAddress();
+    const account = await this.sdk.requireAlignedWalletAccount("decryptBalanceAs");
+    const delegateAddress = getAddress(account.address);
     const expiry = await this.getDelegationExpiry({
       delegatorAddress,
       delegateAddress,

@@ -11,7 +11,7 @@ export function buildZamaConfig(
   provider: GenericProvider,
   params: ZamaConfigBase,
 ): ZamaConfig {
-  const { storage, sessionStorage } = resolveStorage(params.storage, params.sessionStorage);
+  const { storage, permitStorage } = resolveStorage(params.storage, params.permitStorage);
 
   const relayer = new RelayerDispatcher(params.chains, params.relayers);
 
@@ -21,9 +21,9 @@ export function buildZamaConfig(
     provider,
     signer,
     storage,
-    sessionStorage,
+    permitStorage,
     keypairTTL: params.keypairTTL,
-    sessionTTL: params.sessionTTL,
+    permitTTL: params.permitTTL,
     registryTTL: params.registryTTL,
     onEvent: params.onEvent,
   };

@@ -135,7 +135,7 @@ describe("useConfidentialIsOperator", () => {
     provider,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValue(true);
-    const getAddressSpy = vi.mocked(signer.getAddress);
+    vi.mocked(signer.requireWalletAccount).mockClear();
 
     const { result } = renderWithProviders(() =>
       useConfidentialIsOperator({
@@ -153,10 +153,7 @@ describe("useConfidentialIsOperator", () => {
         args: [HOLDER, SPENDER],
       }),
     );
-    // Hook must not trigger a signer-address query. SDK lifecycle code may
-    // still call signer.getAddress for its own identity bootstrap, so allow
-    // at most one call.
-    expect(getAddressSpy.mock.calls.length).toBeLessThanOrEqual(1);
+    expect(signer.requireWalletAccount).not.toHaveBeenCalled();
   });
 });
 
