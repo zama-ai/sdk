@@ -1,15 +1,22 @@
-import { describe, it, expect, vi, TEST_ADDR_B } from "../test-fixtures";
+import { createMockRelayer, describe, it, expect, vi, TEST_ADDR_B } from "../test-fixtures";
 import { ReadonlyToken } from "../token/readonly-token";
 import { Token } from "../token/token";
 import {
   DecryptionFailedError,
+  DelegationDelegateEqualsContractError,
+  DelegationExpirationTooSoonError,
+  DelegationExpiryUnchangedError,
+  DelegationNotFoundError,
+  DelegationSelfNotAllowedError,
+  SignerNotConfiguredError,
   WalletAccountNotReadyError,
   ZamaError,
   ZamaErrorCode,
 } from "../errors";
+import { MAX_UINT64 } from "../contracts/constants";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import { ZERO_HANDLE } from "../utils/handles";
-import type { GenericSigner } from "../types";
+import type { GenericSigner, WalletAccountChange, WalletAccountListener } from "../types";
 import type { Address } from "viem";
 import type { Handle } from "../relayer/relayer-sdk.types";
 import type { DecryptHandle } from "../query/user-decrypt";
@@ -63,7 +70,7 @@ describe("ZamaSDK", () => {
   it("subscribes to signer wallet account changes", ({ createMockSigner, createSDK }) => {
     const unsubscribe = vi.fn();
     const walletAccount = createMockSigner().walletAccount.getSnapshot();
-    const subscribe = vi.fn((listener: SignerWalletAccountListener) => {
+    const subscribe = vi.fn((listener: WalletAccountListener) => {
       if (walletAccount) {
         listener({ previous: undefined, next: walletAccount });
       }
@@ -74,6 +81,7 @@ describe("ZamaSDK", () => {
       walletAccount: {
         getSnapshot: vi.fn().mockReturnValue(walletAccount),
         subscribe,
+        isReady: vi.fn().mockReturnValue(true),
       },
     };
 
@@ -95,6 +103,7 @@ describe("ZamaSDK", () => {
       walletAccount: {
         getSnapshot: vi.fn().mockReturnValue(createMockSigner().walletAccount.getSnapshot()),
         subscribe: vi.fn().mockReturnValue(unsubscribe),
+        isReady: vi.fn().mockReturnValue(true),
       },
     };
 
@@ -186,19 +195,19 @@ describe("ZamaSDK", () => {
 
   describe("lifecycle wallet account change", () => {
     function createSubscribeSigner(mockSigner: GenericSigner) {
-      let capturedOnWalletAccountChange: SignerWalletAccountListener;
+      let capturedOnWalletAccountChange: WalletAccountListener;
       const signer = {
         ...mockSigner,
         walletAccount: {
           getSnapshot: vi.fn().mockReturnValue(mockSigner.walletAccount.getSnapshot()),
-          subscribe: vi.fn((onWalletAccountChange: SignerWalletAccountListener) => {
+          subscribe: vi.fn((onWalletAccountChange: WalletAccountListener) => {
             capturedOnWalletAccountChange = onWalletAccountChange;
             return () => {};
           }),
+          isReady: vi.fn().mockReturnValue(true),
         },
       };
-      const emitChange = (change: SignerWalletAccountChange) =>
-        capturedOnWalletAccountChange(change);
+      const emitChange = (change: WalletAccountChange) => capturedOnWalletAccountChange(change);
       return { signer, emitChange };
     }
 
@@ -948,6 +957,377 @@ describe("ZamaSDK", () => {
           durationMs: expect.any(Number),
         }),
       );
+    });
+  });
+
+  describe("getDelegationExpiry (sdk)", () => {
+    it("reads from ACL contract with the given contract address", async ({
+      sdk,
+      provider,
+      aclAddress,
+      tokenAddress,
+      delegatorAddress,
+      delegateAddress,
+    }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(1700000000n);
+
+      const expiry = await sdk.getDelegationExpiry({
+        contractAddress: tokenAddress,
+        delegatorAddress,
+        delegateAddress,
+      });
+
+      expect(provider.readContract).toHaveBeenCalledWith(
+        expect.objectContaining({
+          address: aclAddress,
+          functionName: "getUserDecryptionDelegationExpirationDate",
+          args: [delegatorAddress, delegateAddress, tokenAddress],
+        }),
+      );
+      expect(expiry).toBe(1700000000n);
+    });
+
+    it("throws when relayer cannot resolve ACL", async ({
+      createSDK,
+      tokenAddress,
+      delegatorAddress,
+      delegateAddress,
+    }) => {
+      const relayerNoAcl = createMockRelayer({
+        getAclAddress: vi.fn().mockRejectedValue(new Error("no transport config")),
+      });
+      const sdkNoAcl = createSDK({ relayer: relayerNoAcl });
+
+      await expect(
+        sdkNoAcl.getDelegationExpiry({
+          contractAddress: tokenAddress,
+          delegatorAddress,
+          delegateAddress,
+        }),
+      ).rejects.toThrow("no transport config");
+    });
+  });
+
+  describe("isDelegated (sdk)", () => {
+    it("returns true when expiry is in the future", async ({
+      sdk,
+      provider,
+      tokenAddress,
+      delegatorAddress,
+      delegateAddress,
+    }) => {
+      const futureTimestamp = BigInt(Math.floor(Date.now() / 1000) + 3600);
+      vi.mocked(provider.readContract).mockResolvedValue(futureTimestamp);
+
+      expect(
+        await sdk.isDelegated({
+          contractAddress: tokenAddress,
+          delegatorAddress,
+          delegateAddress,
+        }),
+      ).toBe(true);
+    });
+
+    it("returns false when expiry is 0", async ({
+      sdk,
+      provider,
+      tokenAddress,
+      delegatorAddress,
+      delegateAddress,
+    }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(0n);
+
+      expect(
+        await sdk.isDelegated({
+          contractAddress: tokenAddress,
+          delegatorAddress,
+          delegateAddress,
+        }),
+      ).toBe(false);
+    });
+
+    it("returns false when expiry is in the past", async ({
+      sdk,
+      provider,
+      tokenAddress,
+      delegatorAddress,
+      delegateAddress,
+    }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(1000n);
+
+      expect(
+        await sdk.isDelegated({
+          contractAddress: tokenAddress,
+          delegatorAddress,
+          delegateAddress,
+        }),
+      ).toBe(false);
+    });
+
+    it("short-circuits for permanent delegation without fetching block timestamp", async ({
+      sdk,
+      provider,
+      tokenAddress,
+      delegatorAddress,
+      delegateAddress,
+    }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
+
+      expect(
+        await sdk.isDelegated({
+          contractAddress: tokenAddress,
+          delegatorAddress,
+          delegateAddress,
+        }),
+      ).toBe(true);
+      expect(provider.getBlockTimestamp).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("delegateDecryption (sdk)", () => {
+    it("calls ACL with the given contract address and expiration date", async ({
+      sdk,
+      signer,
+      aclAddress,
+      tokenAddress,
+      delegateAddress,
+    }) => {
+      const expiry = new Date("2030-01-01T00:00:00Z");
+
+      await sdk.delegateDecryption({
+        contractAddress: tokenAddress,
+        delegateAddress,
+        expirationDate: expiry,
+      });
+
+      expect(signer.writeContract).toHaveBeenCalledWith(
+        expect.objectContaining({
+          address: aclAddress,
+          functionName: "delegateForUserDecryption",
+          args: [delegateAddress, tokenAddress, BigInt(Math.floor(expiry.getTime() / 1000))],
+        }),
+      );
+    });
+
+    it("uses uint64 max when expirationDate is omitted", async ({
+      sdk,
+      signer,
+      tokenAddress,
+      delegateAddress,
+    }) => {
+      await sdk.delegateDecryption({ contractAddress: tokenAddress, delegateAddress });
+
+      expect(signer.writeContract).toHaveBeenCalledWith(
+        expect.objectContaining({
+          functionName: "delegateForUserDecryption",
+          args: [delegateAddress, tokenAddress, MAX_UINT64],
+        }),
+      );
+    });
+
+    it("returns TransactionResult on success", async ({
+      sdk,
+      provider,
+      tokenAddress,
+      delegateAddress,
+    }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(1000n);
+      const result = await sdk.delegateDecryption({
+        contractAddress: tokenAddress,
+        delegateAddress,
+      });
+      expect(result).toEqual({ txHash: "0xtxhash", receipt: { logs: [] } });
+    });
+
+    it("throws DelegationExpirationTooSoonError when expirationDate is too soon", async ({
+      sdk,
+      tokenAddress,
+      delegateAddress,
+    }) => {
+      const tooSoon = new Date(Date.now() + 60_000);
+      await expect(
+        sdk.delegateDecryption({
+          contractAddress: tokenAddress,
+          delegateAddress,
+          expirationDate: tooSoon,
+        }),
+      ).rejects.toBeInstanceOf(DelegationExpirationTooSoonError);
+    });
+
+    it("throws DelegationSelfNotAllowedError when delegate equals signer", async ({
+      sdk,
+      signer,
+      tokenAddress,
+    }) => {
+      const signerAddress = await signer.getAddress();
+      await expect(
+        sdk.delegateDecryption({
+          contractAddress: tokenAddress,
+          delegateAddress: signerAddress,
+        }),
+      ).rejects.toBeInstanceOf(DelegationSelfNotAllowedError);
+    });
+
+    it("throws DelegationDelegateEqualsContractError when delegate equals contract", async ({
+      sdk,
+      tokenAddress,
+    }) => {
+      await expect(
+        sdk.delegateDecryption({
+          contractAddress: tokenAddress,
+          delegateAddress: tokenAddress,
+        }),
+      ).rejects.toBeInstanceOf(DelegationDelegateEqualsContractError);
+    });
+
+    it("throws DelegationExpiryUnchangedError when current expiry equals new expiry", async ({
+      sdk,
+      provider,
+      tokenAddress,
+      delegateAddress,
+    }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
+      await expect(
+        sdk.delegateDecryption({ contractAddress: tokenAddress, delegateAddress }),
+      ).rejects.toBeInstanceOf(DelegationExpiryUnchangedError);
+    });
+
+    it("wraps revert as TransactionRevertedError", async ({
+      sdk,
+      signer,
+      tokenAddress,
+      delegateAddress,
+    }) => {
+      vi.mocked(signer.writeContract).mockRejectedValue(new Error("revert"));
+      await expect(
+        sdk.delegateDecryption({ contractAddress: tokenAddress, delegateAddress }),
+      ).rejects.toThrow(expect.objectContaining({ code: "TRANSACTION_REVERTED" }));
+    });
+
+    it("maps AlreadyDelegatedOrRevokedInSameBlock to DelegationCooldownError", async ({
+      sdk,
+      signer,
+      tokenAddress,
+      delegateAddress,
+    }) => {
+      vi.mocked(signer.writeContract).mockRejectedValue(
+        new Error("AlreadyDelegatedOrRevokedInSameBlock"),
+      );
+      await expect(
+        sdk.delegateDecryption({ contractAddress: tokenAddress, delegateAddress }),
+      ).rejects.toThrow(expect.objectContaining({ code: "DELEGATION_COOLDOWN" }));
+    });
+
+    it("maps EnforcedPause to AclPausedError", async ({
+      sdk,
+      signer,
+      tokenAddress,
+      delegateAddress,
+    }) => {
+      vi.mocked(signer.writeContract).mockRejectedValue(new Error("EnforcedPause"));
+      await expect(
+        sdk.delegateDecryption({ contractAddress: tokenAddress, delegateAddress }),
+      ).rejects.toThrow(expect.objectContaining({ code: "ACL_PAUSED" }));
+    });
+
+    it("throws SignerNotConfiguredError when no signer is configured", async ({
+      createSDK,
+      tokenAddress,
+      delegateAddress,
+    }) => {
+      const sdk = createSDK({ signer: undefined });
+      await expect(
+        sdk.delegateDecryption({ contractAddress: tokenAddress, delegateAddress }),
+      ).rejects.toBeInstanceOf(SignerNotConfiguredError);
+    });
+  });
+
+  describe("revokeDelegation (sdk)", () => {
+    it("calls ACL.revokeDelegationForUserDecryption with the given contract", async ({
+      sdk,
+      signer,
+      provider,
+      aclAddress,
+      tokenAddress,
+      delegateAddress,
+    }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
+      await sdk.revokeDelegation({ contractAddress: tokenAddress, delegateAddress });
+
+      expect(signer.writeContract).toHaveBeenCalledWith(
+        expect.objectContaining({
+          address: aclAddress,
+          functionName: "revokeDelegationForUserDecryption",
+          args: [delegateAddress, tokenAddress],
+        }),
+      );
+    });
+
+    it("throws DelegationNotFoundError when no delegation exists (expiry === 0n)", async ({
+      sdk,
+      provider,
+      tokenAddress,
+      delegateAddress,
+    }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(0n);
+      await expect(
+        sdk.revokeDelegation({ contractAddress: tokenAddress, delegateAddress }),
+      ).rejects.toBeInstanceOf(DelegationNotFoundError);
+    });
+
+    it("returns TransactionResult on success", async ({
+      sdk,
+      provider,
+      tokenAddress,
+      delegateAddress,
+    }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
+      const result = await sdk.revokeDelegation({
+        contractAddress: tokenAddress,
+        delegateAddress,
+      });
+      expect(result).toEqual({ txHash: "0xtxhash", receipt: { logs: [] } });
+    });
+
+    it("wraps revert as TransactionRevertedError", async ({
+      sdk,
+      signer,
+      provider,
+      tokenAddress,
+      delegateAddress,
+    }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
+      vi.mocked(signer.writeContract).mockRejectedValue(new Error("revert"));
+      await expect(
+        sdk.revokeDelegation({ contractAddress: tokenAddress, delegateAddress }),
+      ).rejects.toThrow(expect.objectContaining({ code: "TRANSACTION_REVERTED" }));
+    });
+
+    it("maps AlreadyDelegatedOrRevokedInSameBlock to DelegationCooldownError", async ({
+      sdk,
+      signer,
+      provider,
+      tokenAddress,
+      delegateAddress,
+    }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
+      vi.mocked(signer.writeContract).mockRejectedValue(
+        new Error("AlreadyDelegatedOrRevokedInSameBlock"),
+      );
+      await expect(
+        sdk.revokeDelegation({ contractAddress: tokenAddress, delegateAddress }),
+      ).rejects.toThrow(expect.objectContaining({ code: "DELEGATION_COOLDOWN" }));
+    });
+
+    it("throws SignerNotConfiguredError when no signer is configured", async ({
+      createSDK,
+      tokenAddress,
+      delegateAddress,
+    }) => {
+      const sdk = createSDK({ signer: undefined });
+      await expect(
+        sdk.revokeDelegation({ contractAddress: tokenAddress, delegateAddress }),
+      ).rejects.toBeInstanceOf(SignerNotConfiguredError);
     });
   });
 });

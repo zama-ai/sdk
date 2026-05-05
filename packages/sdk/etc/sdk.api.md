@@ -20028,13 +20028,28 @@ export class ZamaSDK {
     createReadonlyToken(address: Address): ReadonlyToken;
     createToken(address: Address, wrapper?: Address): Token;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
+    delegateDecryption(input: {
+        contractAddress: Address;
+        delegateAddress: Address;
+        expirationDate?: Date;
+    }): Promise<TransactionResult>;
     delegatedUserDecrypt(handles: DecryptHandle[], delegatorAddress: Address, accountAddress?: Address): Promise<Record<Handle, ClearValueType>>;
     dispose(): void;
     // @internal
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
+    getDelegationExpiry(input: {
+        contractAddress: Address;
+        delegatorAddress: Address;
+        delegateAddress: Address;
+    }): Promise<bigint>;
     isAllowed(contracts: Address[]): Promise<boolean>;
     isAllowedAs(delegator: Address, contracts: Address[]): Promise<boolean>;
+    isDelegated(params: {
+        contractAddress: Address;
+        delegatorAddress: Address;
+        delegateAddress: Address;
+    }): Promise<boolean>;
     // @internal
     onWalletAccountChange(listener: WalletAccountListener): () => void;
     // (undocumented)
@@ -20047,6 +20062,10 @@ export class ZamaSDK {
     // (undocumented)
     requireChainAlignment(operation: string): Promise<number>;
     requireSigner(operation: string): GenericSigner;
+    revokeDelegation(input: {
+        contractAddress: Address;
+        delegateAddress: Address;
+    }): Promise<TransactionResult>;
     revokePermits(contracts?: Address[]): Promise<void>;
     // (undocumented)
     readonly signer: GenericSigner | undefined;

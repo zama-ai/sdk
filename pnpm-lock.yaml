@@ -175,7 +175,7 @@ importers:
         specifier: '>=2'
         version: 2.48.4(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6)
       zod:
-        specifier: ^4.3.6
+        specifier: '>=4'
         version: 4.3.6
     devDependencies:
       '@tanstack/query-core':

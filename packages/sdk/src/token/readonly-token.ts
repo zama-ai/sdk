@@ -6,7 +6,6 @@ import {
   ERC7984_INTERFACE_ID,
   ERC7984_WRAPPER_INTERFACE_ID,
   ERC7984_WRAPPER_INTERFACE_ID_LEGACY,
-  getDelegationExpiryContract,
   MAX_UINT64,
   nameContract,
   supportsInterfaceContract,
@@ -517,16 +516,7 @@ export class ReadonlyToken {
     delegatorAddress: Address;
     delegateAddress: Address;
   }): Promise<boolean> {
-    const expiry = await this.getDelegationExpiry(params);
-    if (expiry === 0n) {
-      return false;
-    }
-    // Permanent delegation (uint64 max) — skip the RPC round-trip for block timestamp.
-    if (expiry === MAX_UINT64) {
-      return true;
-    }
-    const now = await this.sdk.provider.getBlockTimestamp();
-    return expiry > now;
+    return this.sdk.isDelegated({ ...params, contractAddress: this.address });
   }
 
   /**
@@ -543,15 +533,11 @@ export class ReadonlyToken {
     delegatorAddress: Address;
     delegateAddress: Address;
   }): Promise<bigint> {
-    const acl = await this.getAclAddress();
-    return this.sdk.provider.readContract(
-      getDelegationExpiryContract(
-        acl,
-        getAddress(delegatorAddress),
-        getAddress(delegateAddress),
-        this.address,
-      ),
-    );
+    return this.sdk.getDelegationExpiry({
+      contractAddress: this.address,
+      delegatorAddress,
+      delegateAddress,
+    });
   }
 
   /**

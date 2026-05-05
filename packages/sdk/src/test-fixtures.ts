@@ -120,6 +120,7 @@ export function createMockSigner(
       listener({ previous: undefined, next: walletAccount });
       return () => {};
     }),
+    isReady: vi.fn().mockReturnValue(true),
   };
   return {
     walletAccount: store,
