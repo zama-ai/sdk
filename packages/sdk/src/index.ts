@@ -61,6 +61,7 @@ export type { FheChain } from "./chains/types";
 
 // ERC-165 interface IDs
 export {
+  ERC1363_INTERFACE_ID,
   ERC7984_INTERFACE_ID,
   ERC7984_WRAPPER_INTERFACE_ID,
   ERC7984_WRAPPER_INTERFACE_ID_LEGACY,
@@ -256,6 +257,7 @@ export {
   supportsInterfaceContract,
   isConfidentialTokenContract,
   isConfidentialWrapperContract,
+  transferAndCallContract,
   nameContract,
   symbolContract,
   decimalsContract,
