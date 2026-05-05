@@ -69,7 +69,6 @@ describe("ZamaSDK without signer", () => {
     expect(() => sdkNoSigner.requireSigner("myOp")).toThrow(
       expect.objectContaining({
         name: "SignerNotConfiguredError",
-        operation: "myOp",
         code: ZamaErrorCode.SignerNotConfigured,
       }),
     );
@@ -91,6 +90,6 @@ describe("ZamaSDK without signer", () => {
   // the React-SDK guidance. Keep this assertion so the SDK message stays
   // framework-agnostic.
   it("error message does not leak React-specific hint", () => {
-    expect(new SignerNotConfiguredError("myOp").message).not.toContain("<ZamaProvider signer=");
+    expect(new SignerNotConfiguredError().message).not.toContain("<ZamaProvider signer=");
   });
 });

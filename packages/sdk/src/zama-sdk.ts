@@ -187,16 +187,16 @@ export class ZamaSDK {
    *
    * @throws {@link SignerNotConfiguredError} if no signer is configured.
    */
-  requireSigner(operation: string): GenericSigner {
+  requireSigner(_operation: string): GenericSigner {
     if (!this.signer) {
-      throw new SignerNotConfiguredError(operation);
+      throw new SignerNotConfiguredError();
     }
     return this.signer;
   }
 
-  #requireCredentialService(operation: string): CredentialService {
+  #requireCredentialService(_operation: string): CredentialService {
     if (!this.#credentialService) {
-      throw new SignerNotConfiguredError(operation);
+      throw new SignerNotConfiguredError();
     }
     return this.#credentialService;
   }

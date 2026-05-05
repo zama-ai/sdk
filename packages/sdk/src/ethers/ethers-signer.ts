@@ -102,7 +102,7 @@ export class EthersSigner extends BaseSigner {
       return this.#directSigner;
     }
     if (!this.#browserProvider) {
-      throw new SignerNotConfiguredError("resolveSigner");
+      throw new SignerNotConfiguredError();
     }
     return this.#browserProvider.getSigner();
   }

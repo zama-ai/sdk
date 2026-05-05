@@ -4,12 +4,16 @@ import { ZamaError, ZamaErrorCode } from "./base";
  * Base class for signer/account readiness failures.
  */
 export class SignerRequiredError extends ZamaError {
-  readonly operation: string;
+  readonly operation: string | undefined;
 
-  constructor(code: ZamaErrorCode, operation: string, message: string, options?: ErrorOptions) {
+  constructor(
+    code: ZamaErrorCode,
+    message: string,
+    options?: ErrorOptions & { operation?: string },
+  ) {
     super(code, message, options);
     this.name = "SignerRequiredError";
-    this.operation = operation;
+    this.operation = options?.operation;
   }
 }
 
@@ -17,7 +21,7 @@ export class SignerRequiredError extends ZamaError {
  * Thrown when an operation requires a signer but none is configured.
  *
  * The SDK can be constructed without a signer. Operations that need wallet
- * authority throw this before probing wallet state.
+ * authority throw this when accessed.
  *
  * @example
  * ```ts
@@ -31,11 +35,10 @@ export class SignerRequiredError extends ZamaError {
  * ```
  */
 export class SignerNotConfiguredError extends SignerRequiredError {
-  constructor(operation: string, options?: ErrorOptions) {
+  constructor(options?: ErrorOptions) {
     super(
       ZamaErrorCode.SignerNotConfigured,
-      operation,
-      `Cannot ${operation} without a signer. Configure one via ZamaSDKConfig.signer or <ZamaProvider config={createConfig({ signer: ... })}>.`,
+      "Signer not configured. Configure one via ZamaSDKConfig.signer or createConfig({ signer: ... }).",
       options,
     );
     this.name = "SignerNotConfiguredError";
@@ -47,9 +50,8 @@ export class WalletNotConnectedError extends SignerRequiredError {
   constructor(operation: string, options?: ErrorOptions) {
     super(
       ZamaErrorCode.WalletNotConnected,
-      operation,
       `Cannot ${operation} without a connected wallet account.`,
-      options,
+      { ...options, operation },
     );
     this.name = "WalletNotConnectedError";
   }
@@ -60,9 +62,8 @@ export class WalletAccountNotReadyError extends SignerRequiredError {
   constructor(operation: string, options?: ErrorOptions) {
     super(
       ZamaErrorCode.WalletAccountNotReady,
-      operation,
       `Cannot ${operation} before the wallet account is ready.`,
-      options,
+      { ...options, operation },
     );
     this.name = "WalletAccountNotReadyError";
   }
