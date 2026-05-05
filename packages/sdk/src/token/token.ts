@@ -402,15 +402,13 @@ export class Token extends ReadonlyToken {
             operation: "shield",
             error: toError(error),
           });
-          throw error instanceof ZamaError
-            ? error
-            : new TransactionRevertedError("Shield transaction failed", {
-                cause: error,
-              });
+          if (error instanceof ZamaError) {
+            throw error;
+          }
+          throw new TransactionRevertedError("Shield transaction failed", {
+            cause: error,
+          });
         }
-        // Auto mode: transferAndCall reverted at runtime, fall back to approveAndWrap.
-        // Don't invalidate #erc1363Supported — the token does support ERC-1363,
-        // the revert was a runtime issue (frontrun, pause, etc.), not a capability issue.
       }
     }
 
@@ -469,11 +467,13 @@ export class Token extends ReadonlyToken {
         operation: "shield",
         error: toError(error),
       });
-      throw error instanceof ZamaError
-        ? error
-        : new TransactionRevertedError("Shield transaction failed", {
-            cause: error,
-          });
+
+      if (error instanceof ZamaError) {
+        throw error;
+      }
+      throw new TransactionRevertedError("Shield transaction failed", {
+        cause: error,
+      });
     }
   }
 
