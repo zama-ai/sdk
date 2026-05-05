@@ -5,20 +5,15 @@ import type {
   ContractFunctionName,
   EIP1193Provider,
   WalletClient,
-  Address,
   Hex,
 } from "viem";
 import { getAddress } from "viem";
 import type { writeContract } from "viem/actions";
-import { SignerRequiredError } from "../errors";
+import { WalletNotConnectedError } from "../errors";
 import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
-import type {
-  GenericSigner,
-  SignerIdentity,
-  SignerIdentityListener,
-  WriteContractConfig,
-} from "../types";
+import { BaseSigner } from "../signer/base-signer";
 import { eip1193Subscribe } from "../signer/eip1193-subscribe";
+import type { WalletAccount, WriteContractConfig } from "../types";
 
 /**
  * Configuration for {@link ViemSigner}.
@@ -38,7 +33,7 @@ export interface ViemSignerConfig {
   ethereum?: EIP1193Provider;
 }
 
-function identityFromWalletClient(walletClient: WalletClient): SignerIdentity | undefined {
+function walletAccountFromWalletClient(walletClient: WalletClient): WalletAccount | undefined {
   if (!walletClient.account || !walletClient.chain) {
     return undefined;
   }
@@ -46,27 +41,23 @@ function identityFromWalletClient(walletClient: WalletClient): SignerIdentity | 
   return { address, chainId: walletClient.chain.id };
 }
 
-export class ViemSigner implements GenericSigner {
+export class ViemSigner extends BaseSigner {
   readonly #walletClient: WalletClient;
   readonly #ethereum?: EIP1193Provider;
+  readonly #unsubscribeProvider: () => void;
+
   constructor(config: ViemSignerConfig) {
+    super(walletAccountFromWalletClient(config.walletClient));
     this.#walletClient = config.walletClient;
     this.#ethereum = config.ethereum;
+    this.#unsubscribeProvider = this.#subscribeToProvider();
   }
 
   #requireAccount(operation: string): { walletClient: WalletClient; account: Account } {
     if (!this.#walletClient.account) {
-      throw new SignerRequiredError(operation);
+      throw new WalletNotConnectedError(operation);
     }
     return { walletClient: this.#walletClient, account: this.#walletClient.account };
-  }
-
-  async getChainId(): Promise<number> {
-    return this.#walletClient.getChainId();
-  }
-
-  async getAddress(): Promise<Address> {
-    return this.#requireAccount("getAddress").account.address;
   }
 
   async signTypedData(typedData: EIP712TypedData): Promise<Hex> {
@@ -99,11 +90,20 @@ export class ViemSigner implements GenericSigner {
     } as Parameters<typeof writeContract>[1]);
   }
 
-  subscribe(onIdentityChange: SignerIdentityListener): () => void {
+  #subscribeToProvider(): () => void {
+    if (!this.#ethereum) {
+      return () => {};
+    }
     return eip1193Subscribe({
       provider: this.#ethereum,
-      getInitialIdentity: () => identityFromWalletClient(this.#walletClient),
-      onIdentityChange,
+      getInitialWalletAccount: () => walletAccountFromWalletClient(this.#walletClient),
+      onWalletAccountChange: ({ next }) => {
+        this.walletAccount.setSnapshot(next);
+      },
     });
+  }
+
+  protected override onDispose(): void {
+    this.#unsubscribeProvider();
   }
 }

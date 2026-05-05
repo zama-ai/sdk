@@ -1,23 +1,21 @@
 import {
-  SignerRequiredError,
-  type Address,
+  BaseSigner,
   type ContractAbi,
   type EIP712TypedData,
-  type GenericSigner,
   type Hex,
-  type SignerIdentityListener,
+  type WalletAccount,
   type WriteContractArgs,
   type WriteFunctionName,
   type WriteContractConfig,
 } from "@zama-fhe/sdk";
 import { getAddress } from "viem";
 import type { Config } from "wagmi";
-import { getChainId, signTypedData, writeContract } from "wagmi/actions";
+import { signTypedData, writeContract } from "wagmi/actions";
 import { getConnection, watchConnection } from "./compat";
 
 type WagmiConnection = ReturnType<typeof getConnection>;
 
-function identityFromConnection(connection: WagmiConnection) {
+function walletAccountFromConnection(connection: WagmiConnection): WalletAccount | undefined {
   if (connection.status === "disconnected") {
     return undefined;
   }
@@ -38,23 +36,18 @@ export interface WagmiSignerConfig {
  *
  * @param signerConfig - {@link WagmiSignerConfig} with wagmi config
  */
-export class WagmiSigner implements GenericSigner {
+export class WagmiSigner extends BaseSigner {
   readonly #config: Config;
+  readonly #unsubscribeConnection: () => void;
 
   constructor(signerConfig: WagmiSignerConfig) {
+    super(walletAccountFromConnection(getConnection(signerConfig.config)));
     this.#config = signerConfig.config;
-  }
-
-  async getChainId(): Promise<number> {
-    return getChainId(this.#config);
-  }
-
-  async getAddress(): Promise<Address> {
-    const account = getConnection(this.#config);
-    if (!account?.address) {
-      throw new SignerRequiredError("getAddress");
-    }
-    return account.address;
+    this.#unsubscribeConnection = watchConnection(this.#config, {
+      onChange: (connection) => {
+        this.walletAccount.setSnapshot(walletAccountFromConnection(connection));
+      },
+    });
   }
 
   async signTypedData(typedData: EIP712TypedData): Promise<Hex> {
@@ -80,22 +73,7 @@ export class WagmiSigner implements GenericSigner {
     return writeContract(this.#config, config as Parameters<typeof writeContract>[1]);
   }
 
-  subscribe(onIdentityChange: SignerIdentityListener): () => void {
-    function emitIfChanged(
-      previous: ReturnType<typeof identityFromConnection>,
-      next: typeof previous,
-    ) {
-      if (previous?.address !== next?.address || previous?.chainId !== next?.chainId) {
-        onIdentityChange({ previous, next });
-      }
-    }
-
-    emitIfChanged(undefined, identityFromConnection(getConnection(this.#config)));
-
-    return watchConnection(this.#config, {
-      onChange(connection, prevConnection) {
-        emitIfChanged(identityFromConnection(prevConnection), identityFromConnection(connection));
-      },
-    });
+  protected override onDispose(): void {
+    this.#unsubscribeConnection();
   }
 }

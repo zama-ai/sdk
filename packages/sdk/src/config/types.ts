@@ -58,12 +58,12 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
   relayers: { [K in TChains[number]["id"]]: RelayerConfig };
   /** Credential storage. Default: IndexedDB in browser, memory in Node. */
   storage?: GenericStorage;
-  /** Session storage. Default: IndexedDB in browser, memory in Node. */
-  sessionStorage?: GenericStorage;
+  /** Optional dedicated storage for permits. Defaults to `storage`. */
+  permitStorage?: GenericStorage;
   /** ML-KEM keypair TTL in seconds. Default: 2592000 (30 days). */
   keypairTTL?: number;
-  /** Session signature TTL in seconds. Default: 2592000 (30 days). */
-  sessionTTL?: number | "infinite";
+  /** Permit lifetime in days. Default: 30. Clamped to `keypairTTL / 86400`. */
+  permitTTL?: number;
   /** Registry cache TTL in seconds. Default: 86400 (24h). */
   registryTTL?: number;
   /** SDK lifecycle event listener. */
@@ -77,7 +77,7 @@ export interface ZamaConfigGeneric<
   /**
    * Optional wallet signer. Omit for read-only usage (indexers, SSR,
    * pre-wallet-connect states). Signer-required SDK operations throw
-   * `SignerRequiredError` when invoked without a signer.
+   * `SignerNotConfiguredError` when invoked without a signer.
    */
   signer?: GenericSigner;
   provider: GenericProvider;
@@ -90,9 +90,9 @@ export interface ZamaConfig {
   readonly provider: GenericProvider;
   readonly signer: GenericSigner | undefined;
   readonly storage: GenericStorage;
-  readonly sessionStorage: GenericStorage;
+  readonly permitStorage: GenericStorage;
   readonly keypairTTL: number | undefined;
-  readonly sessionTTL: number | "infinite" | undefined;
+  readonly permitTTL: number | undefined;
   readonly registryTTL: number | undefined;
   readonly onEvent: ZamaSDKEventListener | undefined;
 }

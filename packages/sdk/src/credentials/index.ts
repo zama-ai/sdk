@@ -1,4 +1,2 @@
-export { CredentialsManager } from "./credentials-manager";
-export type { CredentialsManagerConfig } from "./credentials-manager";
-export { DelegatedCredentialsManager } from "./delegated-credentials-manager";
-export type { DelegatedCredentialsManagerConfig } from "./delegated-credentials-manager";
+export type { CredentialBundle, Keypair, Permission, StoredKeypair } from "./types";
+export type { ChecksummedAddress } from "./utils";

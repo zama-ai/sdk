@@ -9,3 +9,4 @@ export {
   assertNonNullable,
 } from "./assertions";
 export { ZERO_HANDLE, isZeroHandle } from "./handles";
+export { swallow } from "./swallow";

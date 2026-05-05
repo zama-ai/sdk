@@ -17,11 +17,17 @@ import type { GenericSigner } from "@zama-fhe/sdk";
 
 ```ts
 interface GenericSigner {
-  getChainId(): Promise<number>;
-  getAddress(): Promise<Address>;
+  readonly walletAccount: WalletAccountStore;
+  requireWalletAccount(operation: string): WalletAccount;
+  refreshWalletAccount?(): Promise<WalletAccount | undefined>;
   signTypedData(typedData: EIP712TypedData): Promise<Hex>;
   writeContract(config: WriteContractConfig): Promise<Hex>;
-  subscribe?(onIdentityChange: SignerIdentityListener): () => void;
+  dispose?(): void;
+}
+
+interface WalletAccountStore {
+  getSnapshot(): WalletAccount | undefined;
+  subscribe(onWalletAccountChange: WalletAccountListener): () => void;
 }
 ```
 
@@ -51,41 +57,75 @@ const sdk = new ZamaSDK(config);
 ## Implementing a custom signer
 
 ```ts
-import type { GenericSigner } from "@zama-fhe/sdk";
+import { BaseSigner } from "@zama-fhe/sdk";
 
-class MySigner implements GenericSigner {
-  async getChainId() {
-    /* ... */
+class MySigner extends BaseSigner {
+  #unsubscribe: () => void;
+
+  constructor(provider: MyProvider) {
+    super(provider.currentAccount());
+    this.#unsubscribe = provider.on("change", (account) => {
+      this.walletAccount.setSnapshot(account);
+    });
   }
-  async getAddress() {
-    /* ... */
-  }
+
   async signTypedData(typedData) {
     /* ... */
   }
+
   async writeContract(config) {
     /* ... */
+  }
+
+  protected override onDispose() {
+    this.#unsubscribe();
   }
 }
 ```
 
+{% hint style="info" %}
+`BaseSigner` provides `walletAccount` (a `MutableWalletAccountStore`), `requireWalletAccount`, idempotent `dispose` / `[Symbol.dispose]`, so subclasses only need to implement `signTypedData`, `writeContract`, and optionally `onDispose` for cleanup. Pass the initial wallet account snapshot to `super()`.
+
+If your adapter resolves its initial account asynchronously (e.g. an ethers `Signer` wrapping a JSON-RPC provider), override `refreshWalletAccount(): Promise<WalletAccount | undefined>` so action paths can await non-prompting discovery before throwing `WalletNotConnectedError`.
+
+Using `BaseSigner` is optional — implementing the `GenericSigner` interface directly with `createWalletAccountStore()` remains fully supported.
+{% endhint %}
+
 ## Methods
 
-### getChainId
+### walletAccount
 
 ```ts
-getChainId(): Promise<number>
+walletAccount: WalletAccountStore;
 ```
 
-Return the currently connected chain ID.
+Synchronous observable store for wallet account readiness. React integrations use this store to avoid SSR and hydration races.
 
-### getAddress
+Direct store subscriptions observe raw signer transitions. For SDK-coordinated cleanup and query invalidation, subscribe through the SDK lifecycle instead so credential and decrypt-cache cleanup runs first.
+
+### requireWalletAccount
 
 ```ts
-getAddress(): Promise<Address>
+requireWalletAccount(operation: string): WalletAccount
 ```
 
-Return the connected wallet address. Read-only signers should throw here.
+Return the current `{ address, chainId }` snapshot or throw `WalletNotConnectedError`. This method must not prompt the wallet.
+
+### refreshWalletAccount (optional)
+
+```ts
+refreshWalletAccount?(): Promise<WalletAccount | undefined>
+```
+
+Optional non-prompting discovery hook for adapters whose initial account snapshot is only available asynchronously.
+
+### dispose (optional)
+
+```ts
+dispose?(): void
+```
+
+Release adapter-owned wallet watchers or provider event listeners. `ZamaSDK.terminate()` calls this when present.
 
 ### signTypedData
 
@@ -103,24 +143,20 @@ writeContract(config: WriteContractConfig): Promise<Hex>
 
 Submit a contract write transaction and return the transaction hash. `WriteContractConfig` contains `address`, `abi`, `functionName`, `args`, and optionally `value` and `gas`.
 
-### subscribe (optional)
+### walletAccount.subscribe
 
 ```ts
-subscribe?(onIdentityChange: SignerIdentityListener): () => void
+walletAccount.subscribe(onWalletAccountChange: WalletAccountListener): () => void
 ```
 
 Subscribe to wallet identity transitions (connect, disconnect, account change, chain change). Returns an unsubscribe function.
 
-The SDK calls `subscribe()` during initialization if it exists. The listener receives a transition object:
+The SDK calls `walletAccount.subscribe()` during initialization. The listener receives a transition object:
 
 - `previous` -- the previous `{ address, chainId }` identity, when one was known.
 - `next` -- the next `{ address, chainId }` identity, when the wallet is connected.
 
 When `previous` is present, the SDK revokes that previous identity's session signature and clears that requester's decrypt cache.
-
-{% hint style="info" %}
-Implementing `subscribe()` is optional but recommended. Without it, stale sessions persist until TTL expiry, which can create confusing UX when users switch accounts.
-{% endhint %}
 
 ## Related
 

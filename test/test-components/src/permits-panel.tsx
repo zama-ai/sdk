@@ -1,20 +1,20 @@
 "use client";
 
-import { useIsAllowed, useRevoke, useRevokeSession, useAllow } from "@zama-fhe/react-sdk";
+import { useIsAllowed, useRevokePermits, useAllow } from "@zama-fhe/react-sdk";
 import type { Address } from "@zama-fhe/sdk";
 
-export function SessionPanel({ tokenAddresses }: { tokenAddresses: [Address, ...Address[]] }) {
+export function PermitsPanel({ tokenAddresses }: { tokenAddresses: [Address, ...Address[]] }) {
   const { data: isAllowed, isLoading } = useIsAllowed({ contractAddresses: tokenAddresses });
   const { mutate: allow } = useAllow();
-  const revoke = useRevoke();
-  const revokeSession = useRevokeSession();
+  const revoke = useRevokePermits();
+  const revokeAll = useRevokePermits();
 
   return (
-    <div className="space-y-6" data-testid="session-panel">
-      <h2 className="text-xl font-semibold text-white">Session Management</h2>
+    <div className="space-y-6" data-testid="permits-panel">
+      <h2 className="text-xl font-semibold text-white">Permits</h2>
 
       <div className="space-y-2">
-        <p className="text-sm text-zama-gray" data-testid="session-status">
+        <p className="text-sm text-zama-gray" data-testid="permits-status">
           {isLoading ? "Loading..." : `Allowed: ${isAllowed ? "true" : "false"}`}
         </p>
 
@@ -22,7 +22,7 @@ export function SessionPanel({ tokenAddresses }: { tokenAddresses: [Address, ...
           <button
             onClick={() => allow(tokenAddresses)}
             className="px-4 py-2 bg-zama-yellow text-zama-black font-medium rounded hover:bg-zama-yellow-hover transition-colors"
-            data-testid="session-allow-button"
+            data-testid="permits-allow-button"
           >
             Allow
           </button>
@@ -31,18 +31,18 @@ export function SessionPanel({ tokenAddresses }: { tokenAddresses: [Address, ...
             onClick={() => revoke.mutate(tokenAddresses)}
             disabled={revoke.isPending}
             className="px-4 py-2 bg-zama-surface border border-zama-border text-white font-medium rounded hover:bg-zama-border transition-colors disabled:opacity-50"
-            data-testid="session-revoke-button"
+            data-testid="permits-revoke-button"
           >
             {revoke.isPending ? "Revoking..." : "Revoke"}
           </button>
 
           <button
-            onClick={() => revokeSession.mutate()}
-            disabled={revokeSession.isPending}
+            onClick={() => revokeAll.mutate()}
+            disabled={revokeAll.isPending}
             className="px-4 py-2 bg-zama-surface border border-zama-border text-white font-medium rounded hover:bg-zama-border transition-colors disabled:opacity-50"
-            data-testid="session-revoke-session-button"
+            data-testid="permits-revoke-all-button"
           >
-            {revokeSession.isPending ? "Revoking..." : "Revoke Session"}
+            {revokeAll.isPending ? "Revoking..." : "Revoke All"}
           </button>
         </div>
 
@@ -56,14 +56,14 @@ export function SessionPanel({ tokenAddresses }: { tokenAddresses: [Address, ...
             Error: {revoke.error.message}
           </p>
         )}
-        {revokeSession.isSuccess && (
-          <p className="text-zama-success" data-testid="revoke-session-success">
-            Session revoked successfully
+        {revokeAll.isSuccess && (
+          <p className="text-zama-success" data-testid="revoke-all-success">
+            All permits revoked successfully
           </p>
         )}
-        {revokeSession.isError && (
-          <p className="text-zama-error" data-testid="revoke-session-error">
-            Error: {revokeSession.error.message}
+        {revokeAll.isError && (
+          <p className="text-zama-error" data-testid="revoke-all-error">
+            Error: {revokeAll.error.message}
           </p>
         )}
       </div>

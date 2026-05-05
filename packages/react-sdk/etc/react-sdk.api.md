@@ -59,6 +59,9 @@ export function useApproveUnderlying(config: UseZamaConfig, options?: UseMutatio
 export function useBatchDecryptBalancesAs(tokens: ReadonlyToken[], options?: UseMutationOptions<Map<Address, bigint>, Error, BatchDecryptBalancesAsParams>): _$_tanstack_react_query0.UseMutationResult<Map<`0x${string}`, bigint>, Error, _$_zama_fhe_sdk0.BatchDecryptAsOptions, unknown>;
 
 // @public
+export function useClearCredentials(options?: UseMutationOptions<void>): _$_tanstack_react_query0.UseMutationResult<void, Error, void, unknown>;
+
+// @public
 export function useConfidentialBalance(config: UseConfidentialBalanceConfig, options?: UseConfidentialBalanceOptions): _$_tanstack_react_query0.UseQueryResult<bigint, Error>;
 
 // @public (undocumented)
@@ -234,13 +237,10 @@ export function useRequestZKProofVerification(): _$_tanstack_react_query0.UseMut
 export function useResumeUnshield(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, ResumeUnshieldParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, ResumeUnshieldParams, `0x${string}`>;
 
 // @public
-export function useRevoke(options?: UseMutationOptions<void, Error, Address[]>): _$_tanstack_react_query0.UseMutationResult<void, Error, `0x${string}`[], unknown>;
-
-// @public
 export function useRevokeDelegation(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, RevokeDelegationParams>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, RevokeDelegationParams, unknown>;
 
 // @public
-export function useRevokeSession(options?: UseMutationOptions<void>): _$_tanstack_react_query0.UseMutationResult<void, Error, void, unknown>;
+export function useRevokePermits(options?: UseMutationOptions<void, Error, Address[] | void>): _$_tanstack_react_query0.UseMutationResult<void, Error, void | `0x${string}`[], unknown>;
 
 // @public
 export function useShield<TContext = unknown>(config: UseShieldConfig, options?: UseMutationOptions<TransactionResult, Error, ShieldParams, TContext>): UseMutationResult<TransactionResult, Error, ShieldParams, TContext>;

@@ -1,5 +1,5 @@
 import { waitFor } from "@testing-library/react";
-import { SignerRequiredError } from "@zama-fhe/sdk";
+import { SignerNotConfiguredError } from "@zama-fhe/sdk";
 import type { Address } from "@zama-fhe/sdk";
 import { describe, expect, it, vi } from "../test-fixtures";
 import { useZamaSDK } from "../provider";
@@ -13,8 +13,6 @@ describe("ZamaProvider with signer={undefined}", () => {
 
     expect(result.current).toBeDefined();
     expect(result.current.signer).toBeUndefined();
-    expect(result.current.credentials).toBeUndefined();
-    expect(result.current.delegatedCredentials).toBeUndefined();
   });
 
   it("useIsAllowed idles when no signer is configured", async ({ renderWithProviders }) => {
@@ -40,7 +38,7 @@ describe("ZamaProvider with signer={undefined}", () => {
     expect(result.current.data).toEqual({ name: "TestToken", symbol: "TT", decimals: 18 });
   });
 
-  it("mutation hooks mount and surface SignerRequiredError on invoke", async ({
+  it("mutation hooks mount and surface SignerNotConfiguredError on invoke", async ({
     renderWithProviders,
     tokenAddress,
     wrapperAddress,
@@ -57,6 +55,6 @@ describe("ZamaProvider with signer={undefined}", () => {
     result.current.mutate({ to: recipient, amount: 1n });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
-    expect(result.current.error).toBeInstanceOf(SignerRequiredError);
+    expect(result.current.error).toBeInstanceOf(SignerNotConfiguredError);
   });
 });

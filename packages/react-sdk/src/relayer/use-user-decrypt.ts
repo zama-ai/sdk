@@ -5,6 +5,7 @@ import type { DecryptResult, UserDecryptQueryConfig } from "@zama-fhe/sdk/query"
 import { userDecryptQueryOptions } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 import { useQuery } from "../utils/query";
+import { useWalletAccount } from "../utils/wallet-account";
 
 /**
  * React hook for FHE user decryption. Thin wrapper around
@@ -15,7 +16,8 @@ export function useUserDecrypt(
   options?: Omit<UseQueryOptions<DecryptResult>, "queryKey" | "queryFn">,
 ) {
   const sdk = useZamaSDK();
-  const queryOpts = userDecryptQueryOptions(sdk, config);
+  const walletAccount = useWalletAccount(sdk);
+  const queryOpts = userDecryptQueryOptions(sdk, config, { walletAccount });
   return useQuery<DecryptResult>({
     ...queryOpts,
     ...options,

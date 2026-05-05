@@ -96,23 +96,17 @@ export interface ViemProviderConfig {
     publicClient: PublicClient;
 }
 
-// Warning: (ae-forgotten-export) The symbol "GenericSigner" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "BaseSigner" needs to be exported by the entry point index.d.ts
 //
 // @public (undocumented)
-export class ViemSigner implements GenericSigner {
+export class ViemSigner extends BaseSigner {
     constructor(config: ViemSignerConfig);
     // (undocumented)
-    getAddress(): Promise<Address>;
-    // (undocumented)
-    getChainId(): Promise<number>;
+    protected onDispose(): void;
     // Warning: (ae-forgotten-export) The symbol "EIP712TypedData" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-    // Warning: (ae-forgotten-export) The symbol "SignerIdentityListener" needs to be exported by the entry point index.d.ts
-    //
-    // (undocumented)
-    subscribe(onIdentityChange: SignerIdentityListener): () => void;
     // Warning: (ae-forgotten-export) The symbol "WriteContractConfig" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)

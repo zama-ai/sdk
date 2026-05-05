@@ -1,5 +1,5 @@
 import { waitFor } from "@testing-library/react";
-import { describe, expect, it } from "../../test-fixtures";
+import { describe, expect, it, vi } from "../../test-fixtures";
 import { useGenerateKeypair } from "../use-generate-keypair";
 
 describe("useGenerateKeypair", () => {
@@ -8,6 +8,13 @@ describe("useGenerateKeypair", () => {
 
     expect(result.current.mutate).toBeDefined();
     expect(result.current.isIdle).toBe(true);
+
+    await waitFor(() => expect(relayer.generateKeypair).toHaveBeenCalledOnce());
+    vi.mocked(relayer.generateKeypair).mockClear();
+    vi.mocked(relayer.generateKeypair).mockResolvedValueOnce({
+      publicKey: "0xpub",
+      privateKey: "0xpriv",
+    });
 
     result.current.mutate();
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
