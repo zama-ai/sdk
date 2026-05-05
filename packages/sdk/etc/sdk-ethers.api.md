@@ -68,13 +68,13 @@ export type EthersProviderConfig = {
     provider: ethers.Provider;
 };
 
-// Warning: (ae-forgotten-export) The symbol "GenericSigner" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "BaseSigner" needs to be exported by the entry point index.d.ts
 //
 // @public
-export class EthersSigner implements GenericSigner {
+export class EthersSigner extends BaseSigner {
     constructor(config: EthersSignerConfig);
     // (undocumented)
-    dispose(): void;
+    protected onDispose(): void;
     // (undocumented)
     refreshWalletAccount(): Promise<WalletAccount | undefined>;
     // Warning: (ae-forgotten-export) The symbol "WalletAccount" needs to be exported by the entry point index.d.ts
@@ -85,10 +85,6 @@ export class EthersSigner implements GenericSigner {
     //
     // (undocumented)
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-    // Warning: (ae-forgotten-export) The symbol "MutableWalletAccountStore" needs to be exported by the entry point index.d.ts
-    //
-    // (undocumented)
-    readonly walletAccount: MutableWalletAccountStore;
     // Warning: (ae-forgotten-export) The symbol "WriteContractConfig" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
@@ -151,7 +147,7 @@ export function writeConfidentialTransferContract(signer: EthersTransactionSigne
 export function writeFinalizeUnwrapContract(signer: EthersTransactionSigner, wrapper: Address, unwrapRequestId: Handle, burntAmountCleartext: bigint, decryptionProof: Hex): Promise<`0x${string}`>;
 
 // @public (undocumented)
-export function writeSetOperatorContract(signer: EthersTransactionSigner, tokenAddress: Address, spender: Address, timestamp?: number): Promise<`0x${string}`>;
+export function writeSetOperatorContract(signer: EthersTransactionSigner, tokenAddress: Address, operator: Address, until?: number): Promise<`0x${string}`>;
 
 // @public (undocumented)
 export function writeUnwrapContract(signer: EthersTransactionSigner, encryptedErc20: Address, from: Address, to: Address, encryptedAmount: Uint8Array, inputProof: Uint8Array): Promise<`0x${string}`>;

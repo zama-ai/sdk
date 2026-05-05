@@ -103,18 +103,18 @@ export const zamaQueryKeys = {
       ] as const,
   },
 
-  confidentialIsApproved: {
-    all: ["zama.confidentialIsApproved"] as const,
+  confidentialIsOperator: {
+    all: ["zama.confidentialIsOperator"] as const,
     token: (tokenAddress?: Address) => {
       const t = normalizeAddress(tokenAddress);
-      return ["zama.confidentialIsApproved", t ? { tokenAddress: t } : {}] as const;
+      return ["zama.confidentialIsOperator", t ? { tokenAddress: t } : {}] as const;
     },
     scope: (tokenAddress?: Address, holder?: Address, spender?: Address) => {
       const t = normalizeAddress(tokenAddress);
       const h = normalizeAddress(holder);
       const s = normalizeAddress(spender);
       return [
-        "zama.confidentialIsApproved",
+        "zama.confidentialIsOperator",
         {
           ...(t ? { tokenAddress: t } : {}),
           ...(h ? { holder: h } : {}),

@@ -32,14 +32,6 @@ import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
 export function allowMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.allow"], Address[], void>;
 
 // @public (undocumented)
-export interface ApproveSubmittedEvent extends BaseEvent {
-    // (undocumented)
-    txHash: Hex;
-    // (undocumented)
-    type: typeof ZamaSDKEvents.ApproveSubmitted;
-}
-
-// @public (undocumented)
 export function approveUnderlyingMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.approveUnderlying", Address], ApproveUnderlyingParams, TransactionResult>;
 
 // @public
@@ -93,17 +85,6 @@ export function clearCredentialsMutationOptions(sdk: ZamaSDK): MutationFactoryOp
 export { ClearValueType }
 
 // @public (undocumented)
-export function confidentialApproveMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.confidentialApprove", Address], ConfidentialApproveParams, TransactionResult>;
-
-// @public
-export interface ConfidentialApproveParams {
-    // (undocumented)
-    spender: Address;
-    // (undocumented)
-    until?: number;
-}
-
-// @public (undocumented)
 export interface ConfidentialBalanceQueryConfig {
     // (undocumented)
     account?: Address;
@@ -130,7 +111,7 @@ export interface ConfidentialBalancesQueryConfig {
 export function confidentialBalancesQueryOptions(tokens: ReadonlyToken[], config?: ConfidentialBalancesQueryConfig, signerContext?: SignerQueryContext): QueryFactoryOptions<BatchBalancesResult, Error, BatchBalancesResult, ReturnType<typeof zamaQueryKeys.confidentialBalances.tokens>>;
 
 // @public (undocumented)
-export interface ConfidentialIsApprovedQueryConfig {
+export interface ConfidentialIsOperatorQueryConfig {
     // (undocumented)
     holder?: Address;
     // (undocumented)
@@ -140,7 +121,18 @@ export interface ConfidentialIsApprovedQueryConfig {
 }
 
 // @public (undocumented)
-export function confidentialIsApprovedQueryOptions(sdk: ZamaSDK, tokenAddress: Address | undefined, config: ConfidentialIsApprovedQueryConfig): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.confidentialIsApproved.scope>>;
+export function confidentialIsOperatorQueryOptions(sdk: ZamaSDK, tokenAddress: Address | undefined, config: ConfidentialIsOperatorQueryConfig): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.confidentialIsOperator.scope>>;
+
+// @public (undocumented)
+export function confidentialSetOperatorMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.confidentialSetOperator", Address], ConfidentialSetOperatorParams, TransactionResult>;
+
+// @public
+export interface ConfidentialSetOperatorParams {
+    // (undocumented)
+    operator: Address;
+    // (undocumented)
+    until?: number;
+}
 
 // @public (undocumented)
 export interface ConfidentialTokenAddressQueryConfig extends WrappersRegistryQueryConfig {
@@ -446,10 +438,10 @@ export type Handle = Bytes32Hex;
 export function hashFn(queryKey: readonly unknown[]): string;
 
 // @public (undocumented)
-export function invalidateAfterApprove(queryClient: QueryClientLike, tokenAddress: Address): void;
+export function invalidateAfterApproveUnderlying(queryClient: QueryClientLike, tokenAddress: Address): void;
 
 // @public (undocumented)
-export function invalidateAfterApproveUnderlying(queryClient: QueryClientLike, tokenAddress: Address): void;
+export function invalidateAfterSetOperator(queryClient: QueryClientLike, tokenAddress: Address): void;
 
 // @public (undocumented)
 export function invalidateAfterShield(queryClient: QueryClientLike, tokenAddress: Address): void;
@@ -688,6 +680,14 @@ export interface RevokeDelegationSubmittedEvent extends BaseEvent {
 // @public
 export function revokePermitsMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.revokePermits"], Address[] | void, void>;
 
+// @public (undocumented)
+export interface SetOperatorSubmittedEvent extends BaseEvent {
+    // (undocumented)
+    txHash: Hex;
+    // (undocumented)
+    type: typeof ZamaSDKEvents.SetOperatorSubmitted;
+}
+
 // @public
 export interface ShieldCallbacks {
     onApprovalSubmitted?: (txHash: Hex) => void;
@@ -726,7 +726,6 @@ export type StrippedQueryOptionKeys = "gcTime" | "staleTime" | "enabled" | "sele
 // @public
 export class Token extends ReadonlyToken {
     constructor(sdk: ZamaSDK, address: Address, wrapper?: Address);
-    approve(spender: Address, until?: number): Promise<TransactionResult>;
     approveUnderlying(amount?: bigint): Promise<TransactionResult>;
     static batchDelegateDecryption(input: {
         tokens: Token[];
@@ -744,11 +743,12 @@ export class Token extends ReadonlyToken {
         expirationDate?: Date;
     }): Promise<TransactionResult>;
     finalizeUnwrap(unwrapRequestIdOrAmount: Handle): Promise<TransactionResult>;
-    isApproved(spender: Address, holder: Address): Promise<boolean>;
+    isOperator(holder: Address, spender: Address): Promise<boolean>;
     resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     revokeDelegation(input: {
         delegateAddress: Address;
     }): Promise<TransactionResult>;
+    setOperator(operator: Address, until?: number): Promise<TransactionResult>;
     shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult>;
     unshield(amount: bigint, options?: UnshieldOptions): Promise<TransactionResult>;
     unshieldAll(callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
@@ -1145,14 +1145,14 @@ export const zamaQueryKeys: {
             readonly tokenAddress: `0x${string}`;
         }];
     };
-    readonly confidentialIsApproved: {
-        readonly all: readonly ["zama.confidentialIsApproved"];
-        readonly token: (tokenAddress?: Address) => readonly ["zama.confidentialIsApproved", {
+    readonly confidentialIsOperator: {
+        readonly all: readonly ["zama.confidentialIsOperator"];
+        readonly token: (tokenAddress?: Address) => readonly ["zama.confidentialIsOperator", {
             tokenAddress: `0x${string}`;
         } | {
             tokenAddress?: undefined;
         }];
-        readonly scope: (tokenAddress?: Address, holder?: Address, spender?: Address) => readonly ["zama.confidentialIsApproved", {
+        readonly scope: (tokenAddress?: Address, holder?: Address, spender?: Address) => readonly ["zama.confidentialIsOperator", {
             readonly spender?: `0x${string}` | undefined;
             readonly holder?: `0x${string}` | undefined;
             readonly tokenAddress?: `0x${string}` | undefined;
@@ -1333,7 +1333,7 @@ export interface ZamaSDKConfig {
 }
 
 // @public
-export type ZamaSDKEvent = EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | ApproveSubmittedEvent | ApproveUnderlyingSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | DelegationSubmittedEvent | RevokeDelegationSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
+export type ZamaSDKEvent = EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | SetOperatorSubmittedEvent | ApproveUnderlyingSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | DelegationSubmittedEvent | RevokeDelegationSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
 
 // @public
 export type ZamaSDKEventInput = ZamaSDKEvent extends infer E ? E extends ZamaSDKEvent ? Omit<E, "timestamp" | "tokenAddress"> : never : never;
@@ -1353,7 +1353,7 @@ export const ZamaSDKEvents: {
     readonly ShieldSubmitted: "shield:submitted";
     readonly TransferSubmitted: "transfer:submitted";
     readonly TransferFromSubmitted: "transferFrom:submitted";
-    readonly ApproveSubmitted: "approve:submitted";
+    readonly SetOperatorSubmitted: "setOperator:submitted";
     readonly ApproveUnderlyingSubmitted: "approveUnderlying:submitted";
     readonly UnwrapSubmitted: "unwrap:submitted";
     readonly FinalizeUnwrapSubmitted: "finalizeUnwrap:submitted";

@@ -2,17 +2,17 @@ import { describe, expect, test, vi } from "../../test-fixtures";
 import { renderHook, waitFor } from "@testing-library/react";
 import type { Address } from "viem";
 import {
-  useConfidentialIsApproved,
-  useConfidentialIsApprovedSuspense,
-} from "../use-confidential-is-approved";
+  useConfidentialIsOperator,
+  useConfidentialIsOperatorSuspense,
+} from "../use-confidential-is-operator";
 import { TOKEN, SPENDER } from "../../__tests__/mutation-test-helpers";
 
 const HOLDER = "0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D" as Address;
 
-describe("useConfidentialIsApproved", () => {
+describe("useConfidentialIsOperator", () => {
   test("behavior: disabled when tokenAddress is undefined", ({ renderWithProviders }) => {
     const { result } = renderWithProviders(() =>
-      useConfidentialIsApproved({ tokenAddress: undefined, spender: SPENDER, holder: HOLDER }),
+      useConfidentialIsOperator({ tokenAddress: undefined, spender: SPENDER, holder: HOLDER }),
     );
 
     expect(result.current.isPending).toBe(true);
@@ -22,7 +22,7 @@ describe("useConfidentialIsApproved", () => {
 
   test("behavior: disabled when spender is undefined", ({ renderWithProviders }) => {
     const { result } = renderWithProviders(() =>
-      useConfidentialIsApproved({ tokenAddress: TOKEN, spender: undefined, holder: HOLDER }),
+      useConfidentialIsOperator({ tokenAddress: TOKEN, spender: undefined, holder: HOLDER }),
     );
 
     expect(result.current.isPending).toBe(true);
@@ -35,7 +35,7 @@ describe("useConfidentialIsApproved", () => {
     provider,
   }) => {
     const { result } = renderWithProviders(() =>
-      useConfidentialIsApproved({ tokenAddress: TOKEN, spender: SPENDER, holder: undefined }),
+      useConfidentialIsOperator({ tokenAddress: TOKEN, spender: SPENDER, holder: undefined }),
     );
 
     expect(result.current.isPending).toBe(true);
@@ -48,7 +48,7 @@ describe("useConfidentialIsApproved", () => {
 
     const ctx = createWrapper({ signer });
     const { result, rerender } = renderHook(
-      ({ spender }) => useConfidentialIsApproved({ tokenAddress: TOKEN, spender, holder: HOLDER }),
+      ({ spender }) => useConfidentialIsOperator({ tokenAddress: TOKEN, spender, holder: HOLDER }),
       {
         wrapper: ctx.Wrapper,
         initialProps: { spender: undefined as Address | undefined },
@@ -74,7 +74,7 @@ describe("useConfidentialIsApproved", () => {
     const ctx = createWrapper({ signer });
     const { result, rerender } = renderHook(
       ({ tokenAddress }) =>
-        useConfidentialIsApproved({ tokenAddress, spender: SPENDER, holder: HOLDER }),
+        useConfidentialIsOperator({ tokenAddress, spender: SPENDER, holder: HOLDER }),
       {
         wrapper: ctx.Wrapper,
         initialProps: { tokenAddress: undefined as Address | undefined },
@@ -94,7 +94,7 @@ describe("useConfidentialIsApproved", () => {
     vi.mocked(provider.readContract).mockResolvedValue(true);
 
     const { result } = renderWithProviders(() =>
-      useConfidentialIsApproved(
+      useConfidentialIsOperator(
         {
           tokenAddress: TOKEN,
           spender: SPENDER,
@@ -112,7 +112,7 @@ describe("useConfidentialIsApproved", () => {
     vi.mocked(provider.readContract).mockResolvedValue(true);
 
     const { result } = renderWithProviders(() =>
-      useConfidentialIsApproved({
+      useConfidentialIsOperator({
         tokenAddress: TOKEN,
         spender: SPENDER,
         holder: HOLDER,
@@ -138,7 +138,7 @@ describe("useConfidentialIsApproved", () => {
     vi.mocked(signer.requireWalletAccount).mockClear();
 
     const { result } = renderWithProviders(() =>
-      useConfidentialIsApproved({
+      useConfidentialIsOperator({
         tokenAddress: TOKEN,
         spender: SPENDER,
         holder: HOLDER,
@@ -157,12 +157,12 @@ describe("useConfidentialIsApproved", () => {
   });
 });
 
-describe("useConfidentialIsApprovedSuspense", () => {
+describe("useConfidentialIsOperatorSuspense", () => {
   test("uses the caller-supplied holder address", async ({ renderWithProviders, provider }) => {
     vi.mocked(provider.readContract).mockResolvedValue(true);
 
     const { result } = renderWithProviders(() =>
-      useConfidentialIsApprovedSuspense({
+      useConfidentialIsOperatorSuspense({
         tokenAddress: TOKEN,
         spender: SPENDER,
         holder: HOLDER,
@@ -187,7 +187,7 @@ describe("useConfidentialIsApprovedSuspense", () => {
 
     const OTHER = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
     const { result } = renderWithProviders(() =>
-      useConfidentialIsApprovedSuspense({
+      useConfidentialIsOperatorSuspense({
         tokenAddress: TOKEN,
         spender: SPENDER,
         holder: OTHER,

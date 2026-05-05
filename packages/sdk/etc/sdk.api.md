@@ -354,14 +354,6 @@ export function approveContract(tokenAddress: Address, spender: Address, value: 
 };
 
 // @public (undocumented)
-export interface ApproveSubmittedEvent extends BaseEvent {
-    // (undocumented)
-    txHash: Hex;
-    // (undocumented)
-    type: typeof ZamaSDKEvents.ApproveSubmitted;
-}
-
-// @public (undocumented)
 export interface ApproveUnderlyingSubmittedEvent extends BaseEvent {
     // (undocumented)
     txHash: Hex;
@@ -536,6 +528,25 @@ export interface BaseEvent {
     timestamp: number;
     // (undocumented)
     tokenAddress?: Address;
+}
+
+// @public
+export abstract class BaseSigner implements GenericSigner, Disposable {
+    // (undocumented)
+    [Symbol.dispose](): void;
+    constructor(initial?: WalletAccount);
+    // (undocumented)
+    dispose(): void;
+    // (undocumented)
+    protected onDispose(): void;
+    // (undocumented)
+    requireWalletAccount(operation: string): WalletAccount;
+    // (undocumented)
+    abstract signTypedData(typedData: EIP712TypedData): Promise<Hex>;
+    // (undocumented)
+    readonly walletAccount: MutableWalletAccountStore;
+    // (undocumented)
+    abstract writeContract<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex>;
 }
 
 // @public
@@ -11513,6 +11524,7 @@ export class MutableWalletAccountStore implements WalletAccountStore {
     constructor(initial?: WalletAccount);
     // (undocumented)
     getSnapshot(): WalletAccount | undefined;
+    isReady(): boolean;
     setSnapshot(next: WalletAccount | undefined): void;
     // (undocumented)
     subscribe(listener: WalletAccountListener): () => void;
@@ -13298,7 +13310,7 @@ export const sepolia: {
 };
 
 // @public
-export function setOperatorContract(tokenAddress: Address, spender: Address, timestamp?: number): {
+export function setOperatorContract(tokenAddress: Address, operator: Address, until?: number): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
         readonly inputs: readonly [];
@@ -14618,6 +14630,14 @@ export function setOperatorContract(tokenAddress: Address, spender: Address, tim
     readonly args: readonly [`0x${string}`, number];
 };
 
+// @public (undocumented)
+export interface SetOperatorSubmittedEvent extends BaseEvent {
+    // (undocumented)
+    txHash: Hex;
+    // (undocumented)
+    type: typeof ZamaSDKEvents.SetOperatorSubmitted;
+}
+
 // @public
 export interface ShieldCallbacks {
     onApprovalSubmitted?: (txHash: Hex) => void;
@@ -14832,7 +14852,6 @@ export function symbolContract(tokenAddress: Address): {
 // @public
 export class Token extends ReadonlyToken {
     constructor(sdk: ZamaSDK, address: Address, wrapper?: Address);
-    approve(spender: Address, until?: number): Promise<TransactionResult>;
     approveUnderlying(amount?: bigint): Promise<TransactionResult>;
     static batchDelegateDecryption(input: {
         tokens: Token[];
@@ -14850,11 +14869,12 @@ export class Token extends ReadonlyToken {
         expirationDate?: Date;
     }): Promise<TransactionResult>;
     finalizeUnwrap(unwrapRequestIdOrAmount: Handle): Promise<TransactionResult>;
-    isApproved(spender: Address, holder: Address): Promise<boolean>;
+    isOperator(holder: Address, spender: Address): Promise<boolean>;
     resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     revokeDelegation(input: {
         delegateAddress: Address;
     }): Promise<TransactionResult>;
+    setOperator(operator: Address, until?: number): Promise<TransactionResult>;
     shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult>;
     unshield(amount: bigint, options?: UnshieldOptions): Promise<TransactionResult>;
     unshieldAll(callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
@@ -18783,6 +18803,7 @@ export class WalletAccountNotReadyError extends SignerRequiredError {
 // @public
 export interface WalletAccountStore {
     getSnapshot(): WalletAccount | undefined;
+    isReady(): boolean;
     subscribe(onWalletAccountChange: WalletAccountListener): () => void;
 }
 
@@ -20051,7 +20072,7 @@ export interface ZamaSDKConfig {
 }
 
 // @public
-export type ZamaSDKEvent = EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | ApproveSubmittedEvent | ApproveUnderlyingSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | DelegationSubmittedEvent | RevokeDelegationSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
+export type ZamaSDKEvent = EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | SetOperatorSubmittedEvent | ApproveUnderlyingSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | DelegationSubmittedEvent | RevokeDelegationSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
 
 // @public
 export type ZamaSDKEventInput = ZamaSDKEvent extends infer E ? E extends ZamaSDKEvent ? Omit<E, "timestamp" | "tokenAddress"> : never : never;
@@ -20071,7 +20092,7 @@ export const ZamaSDKEvents: {
     readonly ShieldSubmitted: "shield:submitted";
     readonly TransferSubmitted: "transfer:submitted";
     readonly TransferFromSubmitted: "transferFrom:submitted";
-    readonly ApproveSubmitted: "approve:submitted";
+    readonly SetOperatorSubmitted: "setOperator:submitted";
     readonly ApproveUnderlyingSubmitted: "approveUnderlying:submitted";
     readonly UnwrapSubmitted: "unwrap:submitted";
     readonly FinalizeUnwrapSubmitted: "finalizeUnwrap:submitted";

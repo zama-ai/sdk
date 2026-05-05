@@ -5,7 +5,7 @@ export { zamaQueryKeys } from "./query-keys";
 
 export {
   invalidateAfterApproveUnderlying,
-  invalidateAfterApprove,
+  invalidateAfterSetOperator,
   invalidateAfterShield,
   invalidateAfterTransfer,
   invalidateAfterUnwrap,
@@ -36,9 +36,9 @@ export {
   type UnderlyingAllowanceQueryConfig,
 } from "./underlying-allowance";
 export {
-  confidentialIsApprovedQueryOptions,
-  type ConfidentialIsApprovedQueryConfig,
-} from "./confidential-is-approved";
+  confidentialIsOperatorQueryOptions,
+  type ConfidentialIsOperatorQueryConfig,
+} from "./confidential-is-operator";
 export { publicKeyQueryOptions, type PublicKeyQueryConfig } from "./public-key";
 export { publicParamsQueryOptions, type PublicParamsQueryConfig } from "./public-params";
 export {
@@ -73,7 +73,10 @@ export {
   confidentialTransferFromMutationOptions,
   type ConfidentialTransferFromParams,
 } from "./transfer-from";
-export { confidentialApproveMutationOptions, type ConfidentialApproveParams } from "./approve";
+export {
+  confidentialSetOperatorMutationOptions,
+  type ConfidentialSetOperatorParams,
+} from "./set-operator";
 export {
   approveUnderlyingMutationOptions,
   type ApproveUnderlyingParams,
@@ -169,7 +172,7 @@ export type {
 } from "../types";
 export { ZamaSDKEvents } from "../events/sdk-events";
 export type {
-  ApproveSubmittedEvent,
+  SetOperatorSubmittedEvent,
   ApproveUnderlyingSubmittedEvent,
   BaseEvent,
   DecryptEndEvent,

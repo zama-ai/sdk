@@ -133,7 +133,7 @@ export type {
   ShieldSubmittedEvent,
   TransferSubmittedEvent,
   TransferFromSubmittedEvent,
-  ApproveSubmittedEvent,
+  SetOperatorSubmittedEvent,
   ApproveUnderlyingSubmittedEvent,
   UnwrapSubmittedEvent,
   FinalizeUnwrapSubmittedEvent,

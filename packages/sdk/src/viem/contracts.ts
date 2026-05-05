@@ -112,13 +112,13 @@ export function writeFinalizeUnwrapContract(
 export function writeSetOperatorContract(
   client: WalletClient,
   tokenAddress: Address,
-  spender: Address,
-  timestamp?: number,
+  operator: Address,
+  until?: number,
 ) {
   return client.writeContract({
     chain: client.chain,
     account: requireAccount(client),
-    ...setOperatorContract(tokenAddress, spender, timestamp),
+    ...setOperatorContract(tokenAddress, operator, until),
   });
 }
 

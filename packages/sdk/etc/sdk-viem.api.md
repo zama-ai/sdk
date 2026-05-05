@@ -96,25 +96,17 @@ export interface ViemProviderConfig {
     publicClient: PublicClient;
 }
 
-// Warning: (ae-forgotten-export) The symbol "GenericSigner" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "BaseSigner" needs to be exported by the entry point index.d.ts
 //
 // @public (undocumented)
-export class ViemSigner implements GenericSigner {
+export class ViemSigner extends BaseSigner {
     constructor(config: ViemSignerConfig);
     // (undocumented)
-    dispose(): void;
-    // Warning: (ae-forgotten-export) The symbol "WalletAccount" needs to be exported by the entry point index.d.ts
-    //
-    // (undocumented)
-    requireWalletAccount(operation: string): WalletAccount;
+    protected onDispose(): void;
     // Warning: (ae-forgotten-export) The symbol "EIP712TypedData" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-    // Warning: (ae-forgotten-export) The symbol "MutableWalletAccountStore" needs to be exported by the entry point index.d.ts
-    //
-    // (undocumented)
-    readonly walletAccount: MutableWalletAccountStore;
     // Warning: (ae-forgotten-export) The symbol "WriteContractConfig" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
@@ -137,7 +129,7 @@ export function writeConfidentialTransferContract(client: WalletClient, tokenAdd
 export function writeFinalizeUnwrapContract(client: WalletClient, wrapper: Address, unwrapRequestId: Handle, burntAmountCleartext: bigint, decryptionProof: Hex): Promise<`0x${string}`>;
 
 // @public (undocumented)
-export function writeSetOperatorContract(client: WalletClient, tokenAddress: Address, spender: Address, timestamp?: number): Promise<`0x${string}`>;
+export function writeSetOperatorContract(client: WalletClient, tokenAddress: Address, operator: Address, until?: number): Promise<`0x${string}`>;
 
 // @public (undocumented)
 export function writeUnwrapContract(client: WalletClient, encryptedErc20: Address, from: Address, to: Address, encryptedAmount: Uint8Array, inputProof: Uint8Array): Promise<`0x${string}`>;

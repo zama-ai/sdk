@@ -13,7 +13,7 @@ import { ApproveUnderlyingParams } from '@zama-fhe/sdk/query';
 import { BatchBalancesResult } from '@zama-fhe/sdk';
 import { BatchDecryptBalancesAsParams } from '@zama-fhe/sdk/query';
 import { ClearValueType } from '@zama-fhe/sdk';
-import { ConfidentialApproveParams } from '@zama-fhe/sdk/query';
+import { ConfidentialSetOperatorParams } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferFromParams } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferParams } from '@zama-fhe/sdk/query';
 import { CreateDelegatedUserDecryptEIP712Params } from '@zama-fhe/sdk/query';
@@ -62,9 +62,6 @@ export function useBatchDecryptBalancesAs(tokens: ReadonlyToken[], options?: Use
 export function useClearCredentials(options?: UseMutationOptions<void>): _$_tanstack_react_query0.UseMutationResult<void, Error, void, unknown>;
 
 // @public
-export function useConfidentialApprove(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, ConfidentialApproveParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, ConfidentialApproveParams, `0x${string}`>;
-
-// @public
 export function useConfidentialBalance(config: UseConfidentialBalanceConfig, options?: UseConfidentialBalanceOptions): _$_tanstack_react_query0.UseQueryResult<bigint, Error>;
 
 // @public (undocumented)
@@ -93,24 +90,27 @@ export interface UseConfidentialBalancesOptions extends Omit<UseQueryOptions<Bat
 }
 
 // @public
-export function useConfidentialIsApproved(config: UseConfidentialIsApprovedConfig, options?: Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">): _$_tanstack_react_query0.UseQueryResult<boolean, Error>;
+export function useConfidentialIsOperator(config: UseConfidentialIsOperatorConfig, options?: Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">): _$_tanstack_react_query0.UseQueryResult<boolean, Error>;
 
 // @public (undocumented)
-export interface UseConfidentialIsApprovedConfig {
+export interface UseConfidentialIsOperatorConfig {
     holder: Address | undefined;
     spender: Address | undefined;
     tokenAddress: Address | undefined;
 }
 
 // @public
-export function useConfidentialIsApprovedSuspense(config: UseConfidentialIsApprovedSuspenseConfig): _$_tanstack_react_query0.UseSuspenseQueryResult<boolean, Error>;
+export function useConfidentialIsOperatorSuspense(config: UseConfidentialIsOperatorSuspenseConfig): _$_tanstack_react_query0.UseSuspenseQueryResult<boolean, Error>;
 
 // @public (undocumented)
-export interface UseConfidentialIsApprovedSuspenseConfig {
+export interface UseConfidentialIsOperatorSuspenseConfig {
     holder: Address;
     spender: Address;
     tokenAddress: Address;
 }
+
+// @public
+export function useConfidentialSetOperator(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, ConfidentialSetOperatorParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, ConfidentialSetOperatorParams, `0x${string}`>;
 
 // @public
 export function useConfidentialTokenAddress(input: {

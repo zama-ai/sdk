@@ -638,16 +638,16 @@ describe("Token", () => {
     });
   });
 
-  describe("approve", () => {
-    it("calls setOperatorContract with spender", async ({ signer, token }) => {
-      const spender = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;
+  describe("setOperator", () => {
+    it("calls setOperatorContract with operator", async ({ signer, token }) => {
+      const operator = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;
 
-      const result = await token.approve(spender);
+      const result = await token.setOperator(operator);
 
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({
           functionName: "setOperator",
-          args: expect.arrayContaining([spender]),
+          args: expect.arrayContaining([operator]),
         }),
       );
       expect(result.txHash).toBe("0xtxhash");
@@ -658,7 +658,7 @@ describe("Token", () => {
       vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("tx failed"));
 
       await expect(
-        token.approve("0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address),
+        token.setOperator("0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address),
       ).rejects.toSatisfy((err: ZamaError) => {
         return (
           err instanceof ZamaError &&
@@ -669,13 +669,13 @@ describe("Token", () => {
     });
   });
 
-  describe("isApproved", () => {
+  describe("isOperator", () => {
     it("returns boolean result from readContract", async ({ token, provider }) => {
       vi.mocked(provider.readContract).mockResolvedValueOnce(true);
 
-      const result = await token.isApproved(
-        "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address,
+      const result = await token.isOperator(
         "0x9F9f9F9F9F9f9F9f9F9f9F9f9F9F9F9F9F9f9F9f" as Address,
+        "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address,
       );
 
       expect(result).toBe(true);
@@ -1004,13 +1004,13 @@ describe("Token", () => {
     });
   });
 
-  describe("approve (ZamaError re-throw)", () => {
+  describe("setOperator (ZamaError re-throw)", () => {
     it("re-throws ZamaError from writeContract as-is", async ({ signer, token }) => {
       const original = new ZamaError(ZamaErrorCode.ApprovalFailed, "already wrapped");
       vi.mocked(signer.writeContract).mockRejectedValueOnce(original);
 
       await expect(
-        token.approve("0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address),
+        token.setOperator("0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address),
       ).rejects.toBe(original);
     });
   });
