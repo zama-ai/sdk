@@ -14,7 +14,9 @@ Run upgrade work from a dedicated branch based on `prerelease`, preferably in a 
 
 `pnpm examples:upgrade` is the only public command.
 
-Prepare context only:
+Prepare context only. `--target latest` means the most recently published npm version,
+including prereleases such as alpha versions. It is intentionally not limited to the
+`latest` npm dist-tag.
 
 ```sh
 pnpm examples:upgrade --example react-wagmi --target latest

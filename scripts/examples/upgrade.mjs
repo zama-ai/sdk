@@ -648,10 +648,8 @@ function resolveTargetVersion(packageName, target, packageMetadata) {
     return { version: packageMetadata[packageName]?.version, source: "local-package-json" };
   }
   try {
-    if (target === "highest") {
-      const raw = npmView(packageName, "versions");
-      const versions = JSON.parse(raw);
-      return { version: versions.at(-1), source: "npm versions" };
+    if (target === "latest" || target === "highest") {
+      return resolveLatestPublishedVersion(packageName);
     }
     const raw = npmView(packageName, `dist-tags.${target}`);
     return { version: JSON.parse(raw), source: `npm dist-tag ${target}` };
@@ -662,6 +660,29 @@ function resolveTargetVersion(packageName, target, packageMetadata) {
       error: error.message,
     };
   }
+}
+
+function resolveLatestPublishedVersion(packageName) {
+  const raw = npmView(packageName, "time");
+  const time = JSON.parse(raw);
+  const versions = Object.entries(time)
+    .filter(([version]) => version !== "created" && version !== "modified")
+    .map(([version, publishedAt]) => ({
+      version,
+      publishedAt: new Date(publishedAt).getTime(),
+    }))
+    .filter((entry) => Number.isFinite(entry.publishedAt))
+    .toSorted((a, b) => b.publishedAt - a.publishedAt);
+
+  if (versions.length === 0) {
+    throw new Error(`No published versions found for ${packageName}.`);
+  }
+
+  return {
+    version: versions[0].version,
+    source: "npm time latest published version",
+    publishedAt: new Date(versions[0].publishedAt).toISOString(),
+  };
 }
 
 function npmView(packageName, field) {
@@ -1063,7 +1084,7 @@ function printHelp() {
 Key options:
   --stage prepare|agent|verify|report|pr|all  Default: prepare, or all when --agent/--pr is provided.
   --example <name|active>                      Default: active.
-  --target latest|highest|local|<version>      Default: latest.
+  --target latest|highest|local|<version>      Default: latest. latest/highest use newest npm publish time, including prereleases.
   --agent codex|claude                         Default: codex.
   --model <model>                              Default for codex: gpt-5.5.
   --pr none|draft|ready                        Default: none.
