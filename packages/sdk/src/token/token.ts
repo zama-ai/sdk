@@ -392,45 +392,49 @@ export class Token extends ReadonlyToken {
 
     if (shieldingPath === "transferAndCall") {
       try {
-        const userAddress = await signer.getAddress();
-        const recipient = options?.to ? getAddress(options.to) : userAddress;
-        const data: Hex =
-          recipient.toLowerCase() === userAddress.toLowerCase()
-            ? "0x"
-            : encodeAbiParameters(parseAbiParameters("address"), [recipient]);
-        const txHash = await signer.writeContract(
-          transferAndCallContract(underlying, this.wrapper, amount, data),
-        );
-        this.emit({
-          type: ZamaSDKEvents.ShieldSubmitted,
-          txHash,
-          shieldPath: "transferAndCall",
-        });
-        safeCallback(() => options?.onShieldSubmitted?.(txHash));
-        const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
-        return { txHash, receipt };
+        return await this.#shieldViaTransferAndCall(amount, underlying, options);
       } catch (error) {
         // If user explicitly chose transferAndCall, don't fall back — surface the error
         if (options?.shieldStrategy === "transferAndCall") {
-          this.emit({
-            type: ZamaSDKEvents.TransactionError,
-            operation: "shield",
-            error: toError(error),
-          });
-          if (error instanceof ZamaError) {
-            throw error;
-          }
-          throw new TransactionRevertedError("Shield transaction failed", {
-            cause: error,
-          });
+          this.#emitShieldError(error);
+          throw error instanceof ZamaError
+            ? error
+            : new TransactionRevertedError("Shield transaction failed", { cause: error });
         }
         // Auto mode: transferAndCall reverted, fall back to approveAndWrap
-        // Invalidate cache so we don't try transferAndCall again for this token
         this.#erc1363Supported = false;
       }
     }
 
-    // approveAndWrap path (or fallback from failed transferAndCall)
+    return this.#shieldViaApproveAndWrap(amount, options);
+  }
+
+  async #shieldViaTransferAndCall(
+    amount: bigint,
+    underlying: Address,
+    options?: ShieldOptions,
+  ): Promise<TransactionResult> {
+    const signer = this.sdk.requireSigner("shield");
+    const userAddress = await signer.getAddress();
+    const recipient = options?.to ? getAddress(options.to) : userAddress;
+    const data: Hex =
+      recipient.toLowerCase() === userAddress.toLowerCase()
+        ? "0x"
+        : encodeAbiParameters(parseAbiParameters("address"), [recipient]);
+    const txHash = await signer.writeContract(
+      transferAndCallContract(underlying, this.wrapper, amount, data),
+    );
+    this.emit({ type: ZamaSDKEvents.ShieldSubmitted, txHash, shieldPath: "transferAndCall" });
+    safeCallback(() => options?.onShieldSubmitted?.(txHash));
+    const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
+    return { txHash, receipt };
+  }
+
+  async #shieldViaApproveAndWrap(
+    amount: bigint,
+    options?: ShieldOptions,
+  ): Promise<TransactionResult> {
+    const signer = this.sdk.requireSigner("shield");
     const strategy = options?.approvalStrategy ?? "exact";
     if (strategy !== "skip") {
       await this.#ensureAllowance(amount, strategy === "max", options);
@@ -439,27 +443,24 @@ export class Token extends ReadonlyToken {
     try {
       const recipient = options?.to ? getAddress(options.to) : await signer.getAddress();
       const txHash = await signer.writeContract(wrapContract(this.wrapper, recipient, amount));
-      this.emit({
-        type: ZamaSDKEvents.ShieldSubmitted,
-        txHash,
-        shieldPath: "approveAndWrap",
-      });
+      this.emit({ type: ZamaSDKEvents.ShieldSubmitted, txHash, shieldPath: "approveAndWrap" });
       safeCallback(() => options?.onShieldSubmitted?.(txHash));
       const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
       return { txHash, receipt };
     } catch (error) {
-      this.emit({
-        type: ZamaSDKEvents.TransactionError,
-        operation: "shield",
-        error: toError(error),
-      });
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new TransactionRevertedError("Shield transaction failed", {
-        cause: error,
-      });
+      this.#emitShieldError(error);
+      throw error instanceof ZamaError
+        ? error
+        : new TransactionRevertedError("Shield transaction failed", { cause: error });
     }
+  }
+
+  #emitShieldError(error: unknown): void {
+    this.emit({
+      type: ZamaSDKEvents.TransactionError,
+      operation: "shield",
+      error: toError(error),
+    });
   }
 
   /**
