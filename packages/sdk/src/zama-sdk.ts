@@ -407,8 +407,7 @@ export class ZamaSDK {
    * ```
    */
   async userDecrypt(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>> {
-    const signer = this.signer;
-    const credentials = this.credentials;
+    const { signer, credentials } = this;
     await this.requireChainAlignment();
     if (handles.length === 0) {
       return {};
@@ -766,8 +765,7 @@ export class ZamaSDK {
    * ```
    */
   async revokeSession(): Promise<void> {
-    const signer = this.signer;
-    const credentials = this.credentials;
+    const { signer, credentials } = this;
     const address = await signer.getAddress();
     const chainId = await signer.getChainId();
     try {
