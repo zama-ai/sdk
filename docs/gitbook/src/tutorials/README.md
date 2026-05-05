@@ -14,6 +14,8 @@ Otherwise:
 
 🟨 Go to [**Build your first confidential dApp**](first-confidential-dapp.md) for an end-to-end React tutorial with wagmi.
 
+🟨 Go to [**Wallet & exchange integration**](wallet-exchange-integration.md) if you're integrating ERC-7984 confidential tokens into a wallet, custodial backend, or exchange.
+
 ## Help center
 
 Ask technical questions and discuss with the community.

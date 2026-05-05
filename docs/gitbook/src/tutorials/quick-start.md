@@ -5,6 +5,12 @@ description: Get from zero to a working confidential transfer in under 5 minutes
 
 # Quick start
 
+{% hint style="info" %}
+**Looking for the legacy Relayer SDK?**
+
+This is the new default SDK for building on the Zama Protocol. The legacy `@zama-fhe/relayer-sdk` lives at [github.com/zama-ai/relayer-sdk](https://github.com/zama-ai/relayer-sdk).
+{% endhint %}
+
 Pick your stack. Each tab gets you from install to a working confidential transfer.
 
 The first three tabs are for **browser apps** (React dApp, vanilla viem, or ethers). The **Node.js** tabs are for backend services, scripts, and bots that operate on confidential tokens server-side — they use native worker threads instead of a Web Worker and store keys in memory.
