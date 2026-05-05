@@ -144,7 +144,7 @@ describe("ZamaSDK", () => {
 
   it("revokeSession clears cache even when session revoke fails", async ({ createSDK, signer }) => {
     const sdk = createSDK();
-    const credentials = sdk.requireCredentials("test");
+    const credentials = sdk.credentials;
     const clearSpy = vi.spyOn(sdk.cache, "clearForRequester").mockResolvedValueOnce(undefined);
     vi.spyOn(credentials, "revokeFor").mockRejectedValueOnce(new Error("session blew up"));
 

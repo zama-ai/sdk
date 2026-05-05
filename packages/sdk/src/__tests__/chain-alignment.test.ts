@@ -14,10 +14,10 @@ describe("requireChainAlignment", () => {
     vi.mocked(provider.getChainId).mockResolvedValue(11155111);
     const sdk = new ZamaSDK({ relayer, provider, signer, storage });
 
-    await expect(sdk.requireChainAlignment("testOp")).resolves.toBe(11155111);
+    await expect(sdk.requireChainAlignment()).resolves.toBe(11155111);
   });
 
-  it("throws ChainMismatchError with operation, signerChainId, providerChainId", async ({
+  it("throws ChainMismatchError with signerChainId and providerChainId", async ({
     relayer,
     provider,
     signer,
@@ -28,12 +28,11 @@ describe("requireChainAlignment", () => {
     const sdk = new ZamaSDK({ relayer, provider, signer, storage });
 
     try {
-      await sdk.requireChainAlignment("shield");
+      await sdk.requireChainAlignment();
       throw new Error("expected ChainMismatchError to be thrown");
     } catch (error) {
       expect(error).toBeInstanceOf(ChainMismatchError);
       const mismatch = error as ChainMismatchError;
-      expect(mismatch.operation).toBe("shield");
       expect(mismatch.signerChainId).toBe(1);
       expect(mismatch.providerChainId).toBe(11155111);
     }

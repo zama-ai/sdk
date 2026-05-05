@@ -31,9 +31,6 @@ export function confidentialBalanceQueryOptions(
       assertNonNullable(keyOwner, "confidentialBalanceQueryOptions: owner");
       return token.balanceOf(keyOwner);
     },
-    enabled:
-      Boolean(config.account) &&
-      token.sdk.credentials !== undefined &&
-      queryOpts?.enabled !== false,
+    enabled: Boolean(config.account) && token.sdk.hasSigner && queryOpts?.enabled !== false,
   };
 }

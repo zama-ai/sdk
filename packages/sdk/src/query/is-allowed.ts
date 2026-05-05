@@ -25,14 +25,12 @@ export function isAllowedQueryOptions(
     queryKey: zamaQueryKeys.isAllowed.scope(config.contractAddresses),
     queryFn: (context) => {
       const [, { contractAddresses }] = context.queryKey;
-      return sdk
-        .requireCredentials("isAllowed")
-        .isAllowed(contractAddresses as [Address, ...Address[]]);
+      return sdk.credentials.isAllowed(contractAddresses as [Address, ...Address[]]);
     },
     staleTime: 0,
     gcTime: 0,
     refetchOnMount: "always",
     refetchOnWindowFocus: false,
-    enabled: callerEnabled && sdk.credentials !== undefined,
+    enabled: callerEnabled && sdk.hasSigner,
   } as const;
 }

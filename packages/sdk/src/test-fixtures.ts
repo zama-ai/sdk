@@ -141,6 +141,7 @@ export function createMockStorage(): GenericStorage {
 function createMockReadonlyToken(address: Address, signer: GenericSigner): ReadonlyToken {
   const mockSdk = {
     signer,
+    hasSigner: true,
     credentials: {},
     userDecrypt: vi.fn().mockResolvedValue({}),
     allow: vi.fn().mockResolvedValue(undefined),

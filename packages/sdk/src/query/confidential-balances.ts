@@ -22,7 +22,7 @@ export function confidentialBalancesQueryOptions(
   const accountKey = config?.account;
   const queryOpts = config?.query ?? {};
   const tokenAddresses = tokens.map((token) => token.address);
-  const hasSignerBackedCredentials = tokens.every((token) => token.sdk.credentials !== undefined);
+  const hasSignerBackedCredentials = tokens.every((token) => token.sdk.hasSigner);
 
   return {
     ...filterQueryOptions(queryOpts),

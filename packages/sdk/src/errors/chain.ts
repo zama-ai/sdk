@@ -22,26 +22,19 @@ import { ZamaError, ZamaErrorCode } from "./base";
  * ```
  */
 export class ChainMismatchError extends ZamaError {
-  readonly operation: string;
   readonly signerChainId: number;
   readonly providerChainId: number;
 
   constructor(
-    {
-      operation,
-      signerChainId,
-      providerChainId,
-    }: { operation: string; signerChainId: number; providerChainId: number },
+    { signerChainId, providerChainId }: { signerChainId: number; providerChainId: number },
     options?: ErrorOptions,
   ) {
     super(
       ZamaErrorCode.ChainMismatch,
-      `Operation "${operation}" requires signer and provider to be on the same chain, ` +
-        `but signer is on chain ${signerChainId} and provider is on chain ${providerChainId}.`,
+      `Signer is on chain ${signerChainId} but provider is on chain ${providerChainId}.`,
       options,
     );
     this.name = "ChainMismatchError";
-    this.operation = operation;
     this.signerChainId = signerChainId;
     this.providerChainId = providerChainId;
   }

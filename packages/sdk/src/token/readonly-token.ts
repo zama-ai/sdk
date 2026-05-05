@@ -184,7 +184,7 @@ export class ReadonlyToken {
 
     const sdk = ReadonlyToken.assertSameSdk(tokens);
     // Fail fast on chain mismatch before prompting the wallet for a signature.
-    await sdk.requireChainAlignment("batchBalancesOf");
+    await sdk.requireChainAlignment();
     // Pre-authorize the full token set in one wallet signature so subsequent
     // per-token userDecrypt calls reuse the cached credentials.
     await sdk.allow(tokens.map((t) => t.address));
@@ -277,7 +277,7 @@ export class ReadonlyToken {
     const firstToken = tokens[0]!;
     ReadonlyToken.assertSameSdk(tokens);
     // TODO: code smell; an instance of SDK should be passed as argument of batchDecryptBalancesAs instead.
-    await firstToken.sdk.requireChainAlignment("batchDecryptBalancesAs");
+    await firstToken.sdk.requireChainAlignment();
 
     const resolvedHandles =
       handles ??
@@ -465,7 +465,7 @@ export class ReadonlyToken {
    * @throws {@link SignerRequiredError} if no signer is configured.
    */
   async isAllowed(): Promise<boolean> {
-    return this.sdk.requireCredentials("isAllowed").isAllowed([this.address]);
+    return this.sdk.credentials.isAllowed([this.address]);
   }
 
   /**
@@ -478,7 +478,7 @@ export class ReadonlyToken {
    * @throws {@link SignerRequiredError} if no signer is configured.
    */
   async revoke(...contractAddresses: Address[]): Promise<void> {
-    await this.sdk.requireCredentials("revoke").revoke(...contractAddresses);
+    await this.sdk.credentials.revoke(...contractAddresses);
   }
 
   /**
@@ -561,7 +561,7 @@ export class ReadonlyToken {
    * connected signer for this token contract.
    */
   async #assertDelegationActive(delegatorAddress: Address): Promise<void> {
-    const signer = this.sdk.requireSigner("decryptBalanceAs");
+    const signer = this.sdk.signer;
     const delegateAddress = await signer.getAddress();
     const expiry = await this.getDelegationExpiry({
       delegatorAddress,
@@ -619,7 +619,7 @@ export class ReadonlyToken {
     delegatorAddress: Address;
     accountAddress?: Address;
   }): Promise<bigint> {
-    await this.sdk.requireChainAlignment("decryptBalanceAs");
+    await this.sdk.requireChainAlignment();
     const normalizedDelegator = getAddress(delegatorAddress);
     const normalizedAccount = accountAddress ? getAddress(accountAddress) : normalizedDelegator;
 

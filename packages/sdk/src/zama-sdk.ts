@@ -32,7 +32,7 @@ import type {
   SignerIdentityChange,
   SignerIdentityListener,
 } from "./types";
-import { toError } from "./utils";
+import { assertNonNullable, toError } from "./utils";
 import { pLimit } from "./utils/concurrency";
 import { WrappersRegistry } from "./wrappers-registry";
 
@@ -112,11 +112,11 @@ export interface ZamaSDKConfig {
 export class ZamaSDK {
   readonly relayer: RelayerDispatcher;
   readonly provider: GenericProvider;
-  readonly signer: GenericSigner | undefined;
+  readonly #signer: GenericSigner | undefined;
   readonly storage: GenericStorage;
   readonly sessionStorage: GenericStorage;
-  readonly credentials: CredentialsManager | undefined;
-  readonly delegatedCredentials: DelegatedCredentialsManager | undefined;
+  readonly #credentials: CredentialsManager | undefined;
+  readonly #delegatedCredentials: DelegatedCredentialsManager | undefined;
   /** Persistent cache for decrypted FHE plaintext values, scoped by (requester, contract, handle). */
   readonly cache: DecryptCache;
   /**
@@ -138,7 +138,7 @@ export class ZamaSDK {
   constructor(config: ZamaSDKConfig) {
     this.relayer = config.relayer;
     this.provider = config.provider;
-    this.signer = config.signer;
+    this.#signer = config.signer;
     this.storage = config.storage;
     this.sessionStorage = config.sessionStorage ?? new MemoryStorage();
     this.cache = new DecryptCache(config.storage);
@@ -181,55 +181,51 @@ export class ZamaSDK {
         sessionTTL: config.sessionTTL ?? 2592000,
         onEvent: this.#onEvent,
       };
-      this.credentials = new CredentialsManager(credentialsConfig);
-      this.delegatedCredentials = new DelegatedCredentialsManager(credentialsConfig);
+      this.#credentials = new CredentialsManager(credentialsConfig);
+      this.#delegatedCredentials = new DelegatedCredentialsManager(credentialsConfig);
 
       this.#unsubscribeSigner = config.signer.subscribe?.((change) => {
         void this.#handleIdentityChange(change);
       });
     } else {
-      this.credentials = undefined;
-      this.delegatedCredentials = undefined;
+      this.#credentials = undefined;
+      this.#delegatedCredentials = undefined;
     }
   }
 
-  /**
-   * Return the configured signer or throw {@link SignerRequiredError}.
-   *
-   * Use this at the edge of any signer-required operation. The `operation`
-   * name surfaces in the error message so callers can distinguish failures.
-   *
-   * @throws {@link SignerRequiredError} if no signer is configured.
-   */
-  requireSigner(operation: string): GenericSigner {
-    if (!this.signer) {
-      throw new SignerRequiredError(operation);
-    }
-    return this.signer;
+  /** Whether a signer is configured (non-throwing check). */
+  get hasSigner(): boolean {
+    return this.#signer !== undefined;
   }
 
-  /**
-   * Return the {@link CredentialsManager} or throw {@link SignerRequiredError}.
-   *
-   * @throws {@link SignerRequiredError} if no signer is configured.
-   */
-  requireCredentials(operation: string): CredentialsManager {
-    if (!this.credentials) {
-      throw new SignerRequiredError(operation);
+  /** Return the configured signer or throw {@link SignerRequiredError}. */
+  get signer(): GenericSigner {
+    try {
+      assertNonNullable(this.#signer, "signer");
+      return this.#signer;
+    } catch (cause) {
+      throw new SignerRequiredError({ cause });
     }
-    return this.credentials;
   }
 
-  /**
-   * Return the {@link DelegatedCredentialsManager} or throw {@link SignerRequiredError}.
-   *
-   * @throws {@link SignerRequiredError} if no signer is configured.
-   */
-  requireDelegatedCredentials(operation: string): DelegatedCredentialsManager {
-    if (!this.delegatedCredentials) {
-      throw new SignerRequiredError(operation);
+  /** Return the {@link CredentialsManager} or throw {@link SignerRequiredError}. */
+  get credentials(): CredentialsManager {
+    try {
+      assertNonNullable(this.#credentials, "credentials");
+      return this.#credentials;
+    } catch (cause) {
+      throw new SignerRequiredError({ cause });
     }
-    return this.delegatedCredentials;
+  }
+
+  /** Return the {@link DelegatedCredentialsManager} or throw {@link SignerRequiredError}. */
+  get delegatedCredentials(): DelegatedCredentialsManager {
+    try {
+      assertNonNullable(this.#delegatedCredentials, "delegatedCredentials");
+      return this.#delegatedCredentials;
+    } catch (cause) {
+      throw new SignerRequiredError({ cause });
+    }
   }
 
   /**
@@ -252,23 +248,17 @@ export class ZamaSDK {
    *
    * Throws {@link ChainMismatchError} if they differ.
    *
-   * @param operation - The operation name, included in the error message.
    * @returns The chain ID shared by both signer and provider.
    * @throws {@link SignerRequiredError} if no signer is configured.
    * @throws {@link ChainMismatchError} if signer and provider report different chain IDs.
    */
-  async requireChainAlignment(operation: string): Promise<number> {
-    const signer = this.requireSigner(operation);
+  async requireChainAlignment(): Promise<number> {
     const [signerChainId, providerChainId] = await Promise.all([
-      signer.getChainId(),
+      this.signer.getChainId(),
       this.provider.getChainId(),
     ]);
     if (signerChainId !== providerChainId) {
-      throw new ChainMismatchError({
-        operation,
-        signerChainId,
-        providerChainId,
-      });
+      throw new ChainMismatchError({ signerChainId, providerChainId });
     }
     return signerChainId;
   }
@@ -391,7 +381,7 @@ export class ZamaSDK {
     if (contractAddresses.length === 0) {
       return;
     }
-    const credentials = this.requireCredentials("allow");
+    const credentials = this.credentials;
     await credentials.allow(...contractAddresses);
   }
 
@@ -417,9 +407,7 @@ export class ZamaSDK {
    * ```
    */
   async userDecrypt(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>> {
-    const signer = this.requireSigner("userDecrypt");
-    const credentials = this.requireCredentials("userDecrypt");
-    await this.requireChainAlignment("userDecrypt");
+    await this.requireChainAlignment();
     if (handles.length === 0) {
       return {};
     }
@@ -447,7 +435,7 @@ export class ZamaSDK {
     }
 
     // Cache partition
-    const signerAddress = await signer.getAddress();
+    const signerAddress = await this.signer.getAddress();
     const uncached: DecryptHandle[] = [];
 
     for (const h of nonZero) {
@@ -464,7 +452,9 @@ export class ZamaSDK {
     }
 
     // Derive contract addresses from ALL handles for stable credential cache key
-    const creds = await credentials.allow(...new Set(normalized.map((h) => h.contractAddress)));
+    const creds = await this.credentials.allow(
+      ...new Set(normalized.map((h) => h.contractAddress)),
+    );
 
     // Group uncached by contract
     const byContract = new Map<Address, Handle[]>();
@@ -564,9 +554,7 @@ export class ZamaSDK {
     delegatorAddress: Address,
     accountAddress: Address = delegatorAddress,
   ): Promise<Record<Handle, ClearValueType>> {
-    this.requireSigner("delegatedUserDecrypt");
-    const delegatedCredentials = this.requireDelegatedCredentials("delegatedUserDecrypt");
-    await this.requireChainAlignment("delegatedUserDecrypt");
+    await this.requireChainAlignment();
     if (handles.length === 0) {
       return {};
     }
@@ -613,7 +601,7 @@ export class ZamaSDK {
     }
 
     // Derive contract addresses from ALL handles for stable credential cache key
-    const creds = await delegatedCredentials.allow(
+    const creds = await this.delegatedCredentials.allow(
       normalizedDelegator,
       ...new Set(normalized.map((h) => h.contractAddress)),
     );
@@ -778,12 +766,10 @@ export class ZamaSDK {
    * ```
    */
   async revokeSession(): Promise<void> {
-    const signer = this.requireSigner("revokeSession");
-    const credentials = this.requireCredentials("revokeSession");
-    const address = await signer.getAddress();
-    const chainId = await signer.getChainId();
+    const address = await this.signer.getAddress();
+    const chainId = await this.signer.getChainId();
     try {
-      await credentials.revokeFor({ address, chainId });
+      await this.credentials.revokeFor({ address, chainId });
     } finally {
       await this.cache.clearForRequester(address);
     }

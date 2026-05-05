@@ -7,9 +7,10 @@ import {
   type Hex,
   type SignerIdentityListener,
   type WriteContractArgs,
-  type WriteFunctionName,
   type WriteContractConfig,
+  type WriteFunctionName,
 } from "@zama-fhe/sdk";
+import { assertNonNullable } from "@zama-fhe/sdk/utils";
 import { getAddress } from "viem";
 import type { Config } from "wagmi";
 import { getChainId, signTypedData, writeContract } from "wagmi/actions";
@@ -24,7 +25,10 @@ function identityFromConnection(connection: WagmiConnection) {
   if (!connection.address || connection.chainId === undefined) {
     return undefined;
   }
-  return { address: getAddress(connection.address), chainId: connection.chainId };
+  return {
+    address: getAddress(connection.address),
+    chainId: connection.chainId,
+  };
 }
 
 /** Configuration for {@link WagmiSigner}. */
@@ -50,11 +54,13 @@ export class WagmiSigner implements GenericSigner {
   }
 
   async getAddress(): Promise<Address> {
-    const account = getConnection(this.#config);
-    if (!account?.address) {
-      throw new SignerRequiredError("getAddress");
+    try {
+      const account = getConnection(this.#config);
+      assertNonNullable(account?.address, "WagmiSigner: wallet not connected");
+      return account.address;
+    } catch (cause) {
+      throw new SignerRequiredError({ cause });
     }
-    return account.address;
   }
 
   async signTypedData(typedData: EIP712TypedData): Promise<Hex> {

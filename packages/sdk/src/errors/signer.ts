@@ -19,15 +19,12 @@ import { ZamaError, ZamaErrorCode } from "./base";
  * ```
  */
 export class SignerRequiredError extends ZamaError {
-  readonly operation: string;
-
-  constructor(operation: string, options?: ErrorOptions) {
+  constructor(options?: ErrorOptions) {
     super(
       ZamaErrorCode.SignerRequired,
-      `Cannot ${operation} without a signer. Configure one via ZamaSDKConfig.signer or <ZamaProvider config={createConfig({ signer: ... })}>.`,
+      `No signer configured. Configure one via ZamaSDKConfig.signer or <ZamaProvider config={createConfig({ signer: ... })}>.`,
       options,
     );
     this.name = "SignerRequiredError";
-    this.operation = operation;
   }
 }

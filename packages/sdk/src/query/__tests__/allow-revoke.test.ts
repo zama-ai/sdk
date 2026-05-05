@@ -161,7 +161,7 @@ describe("isAllowedQueryOptions", () => {
       options.queryFn({
         queryKey: options.queryKey,
       } as Parameters<typeof options.queryFn>[0]),
-    ).toThrow("Cannot isAllowed without a signer");
+    ).toThrow("No signer configured");
   });
 
   test("contract addresses are the only query key parameters", ({ signer, relayer, storage }) => {

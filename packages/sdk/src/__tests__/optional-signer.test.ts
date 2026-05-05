@@ -7,9 +7,10 @@ import type { Address } from "viem";
 describe("ZamaSDK without signer", () => {
   it("constructs with signer omitted", ({ createSDK }) => {
     const sdk = createSDK({ signer: undefined });
-    expect(sdk.signer).toBeUndefined();
-    expect(sdk.credentials).toBeUndefined();
-    expect(sdk.delegatedCredentials).toBeUndefined();
+    expect(sdk.hasSigner).toBe(false);
+    expect(() => sdk.signer).toThrow(SignerRequiredError);
+    expect(() => sdk.credentials).toThrow(SignerRequiredError);
+    expect(() => sdk.delegatedCredentials).toThrow(SignerRequiredError);
   });
 
   it("validates keypairTTL even when signer is omitted", ({ createSDK }) => {
@@ -49,34 +50,34 @@ describe("ZamaSDK without signer", () => {
     expect(relayer.publicDecrypt).toHaveBeenCalled();
   });
 
-  describe("requireSigner / requireCredentials / requireDelegatedCredentials", () => {
-    it("requireSigner throws SignerRequiredError with operation", ({ createSDK }) => {
+  describe("throwing getters", () => {
+    it("signer getter throws SignerRequiredError", ({ createSDK }) => {
       const sdk = createSDK({ signer: undefined });
-      expect(() => sdk.requireSigner("myOp")).toThrow(SignerRequiredError);
+      expect(() => sdk.signer).toThrow(SignerRequiredError);
       try {
-        sdk.requireSigner("myOp");
+        void sdk.signer;
       } catch (err) {
         expect(err).toBeInstanceOf(SignerRequiredError);
-        expect((err as SignerRequiredError).operation).toBe("myOp");
         expect((err as SignerRequiredError).code).toBe(ZamaErrorCode.SignerRequired);
       }
     });
 
-    it("requireCredentials throws SignerRequiredError", ({ createSDK }) => {
+    it("credentials getter throws SignerRequiredError", ({ createSDK }) => {
       const sdk = createSDK({ signer: undefined });
-      expect(() => sdk.requireCredentials("creds")).toThrow(SignerRequiredError);
+      expect(() => sdk.credentials).toThrow(SignerRequiredError);
     });
 
-    it("requireDelegatedCredentials throws SignerRequiredError", ({ createSDK }) => {
+    it("delegatedCredentials getter throws SignerRequiredError", ({ createSDK }) => {
       const sdk = createSDK({ signer: undefined });
-      expect(() => sdk.requireDelegatedCredentials("deleg")).toThrow(SignerRequiredError);
+      expect(() => sdk.delegatedCredentials).toThrow(SignerRequiredError);
     });
 
-    it("returns the manager when signer is present", ({ createSDK }) => {
+    it("returns the value when signer is present", ({ createSDK }) => {
       const sdk = createSDK();
-      expect(sdk.requireSigner("op")).toBe(sdk.signer);
-      expect(sdk.requireCredentials("op")).toBe(sdk.credentials);
-      expect(sdk.requireDelegatedCredentials("op")).toBe(sdk.delegatedCredentials);
+      expect(sdk.hasSigner).toBe(true);
+      expect(sdk.signer).toBeDefined();
+      expect(sdk.credentials).toBeDefined();
+      expect(sdk.delegatedCredentials).toBeDefined();
     });
   });
 
@@ -102,7 +103,7 @@ describe("ZamaSDK without signer", () => {
       createSDK,
     }) => {
       const sdk = createSDK({ signer: undefined });
-      await expect(sdk.requireChainAlignment("op")).rejects.toBeInstanceOf(SignerRequiredError);
+      await expect(sdk.requireChainAlignment()).rejects.toBeInstanceOf(SignerRequiredError);
     });
   });
 
@@ -130,13 +131,11 @@ describe("ZamaSDK without signer", () => {
 });
 
 describe("SignerRequiredError", () => {
-  it("has operation, code, name, and message", () => {
-    const err = new SignerRequiredError("myOp");
+  it("has code, name, and message", () => {
+    const err = new SignerRequiredError();
     expect(err).toBeInstanceOf(SignerRequiredError);
     expect(err.name).toBe("SignerRequiredError");
-    expect(err.operation).toBe("myOp");
     expect(err.code).toBe(ZamaErrorCode.SignerRequired);
-    expect(err.message).toContain("myOp");
-    expect(err.message).not.toContain("<ZamaProvider signer=");
+    expect(err.message).toContain("No signer configured");
   });
 });

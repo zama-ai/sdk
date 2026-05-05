@@ -1,24 +1,25 @@
 import type {
-  Account,
   Abi,
+  Account,
+  Address,
   ContractFunctionArgs,
   ContractFunctionName,
   EIP1193Provider,
-  WalletClient,
-  Address,
   Hex,
+  WalletClient,
 } from "viem";
 import { getAddress } from "viem";
 import type { writeContract } from "viem/actions";
 import { SignerRequiredError } from "../errors";
 import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
+import { eip1193Subscribe } from "../signer/eip1193-subscribe";
 import type {
   GenericSigner,
   SignerIdentity,
   SignerIdentityListener,
   WriteContractConfig,
 } from "../types";
-import { eip1193Subscribe } from "../signer/eip1193-subscribe";
+import { assertNonNullable } from "../utils";
 
 /**
  * Configuration for {@link ViemSigner}.
@@ -54,11 +55,14 @@ export class ViemSigner implements GenericSigner {
     this.#ethereum = config.ethereum;
   }
 
-  #requireAccount(operation: string): { walletClient: WalletClient; account: Account } {
-    if (!this.#walletClient.account) {
-      throw new SignerRequiredError(operation);
+  get #account(): Account {
+    try {
+      const { account } = this.#walletClient;
+      assertNonNullable(account, "account");
+      return account;
+    } catch (cause) {
+      throw new SignerRequiredError({ cause });
     }
-    return { walletClient: this.#walletClient, account: this.#walletClient.account };
   }
 
   async getChainId(): Promise<number> {
@@ -66,12 +70,13 @@ export class ViemSigner implements GenericSigner {
   }
 
   async getAddress(): Promise<Address> {
-    return this.#requireAccount("getAddress").account.address;
+    return this.#account.address;
   }
 
   async signTypedData(typedData: EIP712TypedData): Promise<Hex> {
-    const { walletClient, account } = this.#requireAccount("signTypedData");
     const { EIP712Domain: _, ...sigTypes } = typedData.types;
+    const walletClient = this.#walletClient;
+    const account = this.#account;
     return walletClient.signTypedData({
       account,
       primaryType: typedData.primaryType,
@@ -91,7 +96,8 @@ export class ViemSigner implements GenericSigner {
     TFunctionName extends ContractFunctionName<TAbi, "nonpayable" | "payable">,
     const TArgs extends ContractFunctionArgs<TAbi, "nonpayable" | "payable", TFunctionName>,
   >(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex> {
-    const { walletClient, account } = this.#requireAccount("writeContract");
+    const walletClient = this.#walletClient;
+    const account = this.#account;
     return walletClient.writeContract({
       chain: walletClient.chain,
       account,
