@@ -18226,13 +18226,10 @@ With `WagmiSigner` (viem-based), named fields (`tokenAddress`, `confidentialToke
 `EthersSigner`, where ethers `Result` non-enumerable prototype getters require a numeric
 index fallback).
 
-**`ZERO_ADDRESS` placeholder**: SDK hooks cannot be called conditionally (React rules of
-hooks). While no pair is selected, `ZERO_ADDRESS` is passed as a stable placeholder. Queries
-that can run before a pair exists, such as the confidential balance query, are additionally
-gated with `enabled`.
-
-**`actionsDisabled`** is `!isSepolia || !token` — `token` is only defined once the registry
-has resolved and a pair has been selected (metadata is implicitly available at that point).
+**Token-dependent hooks live in `TokenWorkspace`**: hooks such as `useIsAllowed`,
+`useConfidentialBalance`, and the ERC-20 `useReadContract` are mounted only after a registry
+pair has been selected. This keeps React hook calls unconditional inside the component while
+avoiding placeholder addresses such as `ZERO_ADDRESS`.
 
 **`isPending` vs `isLoading`**: `isPending` is used rather than `isLoading` for the registry
 guard. In TanStack Query v5, `isLoading = isPending && isFetching`, which is `false` when the
@@ -18254,13 +18251,12 @@ const { data: ethBalanceData, refetch: refetchEth } = useBalance({
 });
 
 // ERC-20 balance — raw bigint, formatted with formatUnits().
-// ZERO_ADDRESS + enabled: false prevents RPC calls before a token is selected.
+// TokenWorkspace only mounts once a token is selected, so the address is always real.
 const { data: erc20Balance, refetch: refetchErc20 } = useReadContract({
-  address: token?.tokenAddress ?? ZERO_ADDRESS,
+  address: token.tokenAddress,
   abi: BALANCE_ABI,
   functionName: "balanceOf",
-  args: [address as Address],
-  query: { enabled: isConnected && isSepolia && !!token },
+  args: [address],
 });
 ```
 
@@ -18284,11 +18280,11 @@ gas-spending operations.
 
 Three balances are shown:
 
-| Balance      | Source                  | Hook / method                                                                               |
-| ------------ | ----------------------- | ------------------------------------------------------------------------------------------- |
-| ETH          | wagmi `useBalance`      | `refetchEth` from `useBalance({ address })`                                                 |
-| ERC-20       | wagmi `useReadContract` | `useReadContract({ address: token?.tokenAddress, ... })`                                    |
-| Confidential | Relayer decryption      | `useConfidentialBalance({ tokenAddress: token?.confidentialTokenAddress ?? ZERO_ADDRESS })` |
+| Balance      | Source                  | Hook / method                                                                   |
+| ------------ | ----------------------- | ------------------------------------------------------------------------------- |
+| ETH          | wagmi `useBalance`      | `refetchEth` from `useBalance({ address })`                                     |
+| ERC-20       | wagmi `useReadContract` | `useReadContract({ address: token.tokenAddress, ... })`                         |
+| Confidential | Relayer decryption      | `useConfidentialBalance({ tokenAddress: token.confidentialTokenAddress, ... })` |
 
 **Explicit decrypt pattern**: `useConfidentialBalance` is only enabled after the user has
 authorized FHE decryption via an EIP-712 wallet signature. `useIsAllowed({ contractAddresses })`
@@ -18298,7 +18294,7 @@ prompts on mount.
 
 ```ts
 const { data: isAllowed } = useIsAllowed({
-  contractAddresses: token ? [token.confidentialTokenAddress] : [ZERO_ADDRESS],
+  contractAddresses: [token.confidentialTokenAddress],
 });
 // All registry pairs are passed at once to useAllow — one signature covers all tokens,
 // so switching tokens does not prompt the wallet again.
@@ -18321,10 +18317,7 @@ Shielding uses `useShield`; the app does not read ERC-20 allowance, submit appro
 call wrapper contracts directly:
 
 ```ts
-const shield = useShield(
-  { tokenAddress, wrapperAddress: tokenAddress },
-  { onSuccess },
-);
+const shield = useShield({ tokenAddress, wrapperAddress: tokenAddress }, { onSuccess });
 
 shield.mutate({
   amount: parsedAmount,
