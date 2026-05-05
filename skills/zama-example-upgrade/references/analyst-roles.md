@@ -1,6 +1,6 @@
 # Analyst Roles
 
-Deep analysis produces three read-only reports before implementation. Analysts must not edit files.
+Deep analysis produces three read-only reports before implementation. Analysts must not edit files; Codex analyst runs should use the script's read-only analyst sandbox unless explicitly debugging the pipeline itself.
 
 Required report headings:
 

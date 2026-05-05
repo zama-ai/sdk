@@ -16,7 +16,8 @@ Run upgrade work from a dedicated branch based on `prerelease`, preferably in a 
 
 Prepare context only. `--target latest` means the most recently published npm version,
 including prereleases such as alpha versions. It is intentionally not limited to the
-`latest` npm dist-tag.
+`latest` npm dist-tag. The prepare stage fails if any scoped SDK package target
+version cannot be resolved.
 
 ```sh
 pnpm examples:upgrade --example react-wagmi --target latest
@@ -111,6 +112,7 @@ Useful options:
 - `--agent codex|claude` selects the runner backend.
 - `--analysis standard|deep` controls whether the three read-only analyst passes are required before implementation.
 - `--analyst-agent codex|claude` and `--analyst-model <model>` select the read-only analyst runner.
+- `--analyst-sandbox read-only|workspace-write|danger-full-access` defaults to `read-only` for Codex analyst runs.
 - `--sandbox read-only|workspace-write|danger-full-access` is passed to Codex.
 - `--approval on-request|never` is passed to Codex as `--ask-for-approval`; Claude maps this to a permission mode.
 - `--profile <name>` is passed to Codex for configuration from `~/.codex/config.toml`.
@@ -129,6 +131,7 @@ Safety defaults:
 - It refuses to commit files outside the selected example app(s), except generated LLM corpus artifacts.
 - It refuses process-tooling files unless `--allow-process-files` is set.
 - It does not create a PR unless `--pr draft` or `--pr ready` is set.
+- It refuses to create or update a PR when deterministic validation failed.
 - It targets `prerelease` by default.
 - `--pr draft` opens a Draft PR; `--pr ready` opens a ready-for-review PR.
 - Keep PRs as Draft until human review has validated the upgrade and manual checklist.

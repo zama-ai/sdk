@@ -54,6 +54,7 @@ const { values } = parseArgs({
     model: { type: "string" },
     "analyst-agent": { type: "string" },
     "analyst-model": { type: "string" },
+    "analyst-sandbox": { type: "string", default: "read-only" },
     sandbox: { type: "string", default: "workspace-write" },
     approval: { type: "string", default: "on-request" },
     profile: { type: "string" },
@@ -90,42 +91,55 @@ const model = values.model ?? defaultModelFor(agent);
 const analystAgent = values["analyst-agent"] ?? manifest.defaults.analystAgent ?? agent;
 const analystModel =
   values["analyst-model"] ?? manifest.defaults.analystModel ?? defaultModelFor(analystAgent);
+let validationFailed = false;
 
-validateOptions();
-mkdirSync(outDir, { recursive: true });
-
-if (stage === "prepare" || stage === "all") {
-  generateContext();
-  writeAgentTask();
-  writeAnalysisPrompts();
+try {
+  main();
+} catch (error) {
+  console.error(`error: ${error.message}`);
+  process.exit(1);
 }
 
-if (stage === "analysis" || stage === "all") {
-  runAnalysis();
-}
+function main() {
+  validateOptions();
+  mkdirSync(outDir, { recursive: true });
 
-if (stage === "agent" || stage === "all") {
-  runAgent();
-}
+  if (stage === "prepare" || stage === "all") {
+    generateContext();
+    writeAgentTask();
+    writeAnalysisPrompts();
+  }
 
-if (stage === "verify" || stage === "report" || stage === "pr" || stage === "all") {
-  syncGeneratedLlmArtifacts();
-}
+  if (stage === "analysis" || stage === "all") {
+    runAnalysis();
+  }
 
-if (stage === "verify" || stage === "all") {
-  runValidation();
-  generateReport();
-}
+  if (stage === "agent" || stage === "all") {
+    runAgent();
+  }
 
-if (stage === "report") {
-  generateReport();
-}
+  if (stage === "verify" || stage === "report" || stage === "pr" || stage === "all") {
+    syncGeneratedLlmArtifacts();
+  }
 
-if (stage === "pr" || (stage === "all" && values.pr !== "none")) {
-  createOrUpdatePr();
-}
+  if (stage === "verify" || stage === "all") {
+    runValidation();
+    generateReport();
+  }
 
-printNextCommands();
+  if (stage === "report") {
+    generateReport();
+  }
+
+  if (stage === "pr" || (stage === "all" && values.pr !== "none")) {
+    if (validationFailed) {
+      throw new Error("Refusing to create or update a PR because deterministic validation failed.");
+    }
+    createOrUpdatePr();
+  }
+
+  printNextCommands();
+}
 
 function resolveStage() {
   if (values.stage) {
@@ -147,6 +161,17 @@ function validateOptions() {
   const validAnalysisModes = new Set(["standard", "deep"]);
   if (!validAnalysisModes.has(analysisMode)) {
     throw new Error(`Unsupported --analysis '${analysisMode}'. Use standard or deep.`);
+  }
+  const validSandboxModes = new Set(["read-only", "workspace-write", "danger-full-access"]);
+  if (!validSandboxModes.has(values.sandbox)) {
+    throw new Error(
+      `Unsupported --sandbox '${values.sandbox}'. Use read-only, workspace-write, or danger-full-access.`,
+    );
+  }
+  if (!validSandboxModes.has(values["analyst-sandbox"])) {
+    throw new Error(
+      `Unsupported --analyst-sandbox '${values["analyst-sandbox"]}'. Use read-only, workspace-write, or danger-full-access.`,
+    );
   }
   const validPrModes = new Set(["none", "draft", "ready"]);
   if (!validPrModes.has(values.pr)) {
@@ -179,6 +204,7 @@ function generateContext() {
     writeFileSync(join(appDir, "context.json"), `${JSON.stringify(report, null, 2)}\n`);
     writeFileSync(join(appDir, "context.md"), renderContextMarkdown(report));
   }
+  assertResolvedTargetVersions(reports);
 
   writeFileSync(
     join(outDir, "index.json"),
@@ -305,7 +331,7 @@ ${
 - Produce an impact plan before editing.
 - Apply code, docs, test, and lockfile changes only for active scoped apps.
 - Keep app changes inside each scoped \`examples/<app>/**\` directory.
-- Run \`pnpm examples:upgrade --stage verify --run-id ${runId} --example ${values.example}\` after edits.
+- Run \`pnpm examples:upgrade --stage verify --run-id ${runId} --example ${values.example} --target ${values.target}\` after edits.
 - Complete \`docs/agents/example-upgrade-checklist.md\` during human review.
 `;
   writeFileSync(join(outDir, "agent-task.md"), body);
@@ -328,6 +354,7 @@ function runAgent() {
 
   runAgentInvocation({
     role: "implementation",
+    mode: "implementation",
     agentName: agent,
     modelName: model,
     prompt,
@@ -366,6 +393,7 @@ function runAnalysis() {
     const prompt = readFileSync(promptPath, "utf8");
     runAgentInvocation({
       role: role.id,
+      mode: "analysis",
       agentName: analystAgent,
       modelName: analystModel,
       prompt,
@@ -382,6 +410,7 @@ function runAnalysis() {
 
 function runAgentInvocation({
   role,
+  mode,
   agentName,
   modelName,
   prompt,
@@ -389,7 +418,7 @@ function runAgentInvocation({
   outputPath,
   commandPath,
 }) {
-  const command = buildAgentCommand({ agentName, modelName, outputPath, prompt });
+  const command = buildAgentCommand({ mode, agentName, modelName, outputPath, prompt });
   writeFileSync(
     commandPath,
     `${JSON.stringify(
@@ -397,6 +426,7 @@ function runAgentInvocation({
         schemaVersion: 1,
         runId,
         role,
+        mode,
         agent: agentName,
         model: modelName ?? null,
         cwd: root,
@@ -478,6 +508,7 @@ function runValidation() {
     .filter((result) => result.status === "failed");
   console.log(`Validation report written to ${relative(root, outDir)}`);
   if (failed.length > 0) {
+    validationFailed = true;
     process.exitCode = 1;
   }
 }
@@ -568,6 +599,7 @@ function runValidationCommand(command, cwd, kind) {
 function generateReport() {
   const apps = selectApps(values.example);
   const sections = apps.map((app) => renderAppReport(app)).join("\n\n");
+  const analysisSection = renderAnalysisReportSection();
   const llmValidation = readOptionalJson(join(outDir, "repo-llm-artifacts.validation.json"));
   const llmSection = renderValidationSection("Repository LLM Artifacts", llmValidation);
   const ciValidation = readOptionalJson(join(outDir, "ci-parity.validation.json"));
@@ -582,11 +614,31 @@ Generated: ${new Date().toISOString()}
 
 ${sections}
 
+${analysisSection}
+
 ${llmSection}${ciSection}
 `;
 
   writeFileSync(join(outDir, "report.md"), body);
   console.log(`Report written to ${relative(root, join(outDir, "report.md"))}`);
+}
+
+function renderAnalysisReportSection() {
+  if (analysisMode !== "deep") {
+    return `## Deep Analysis
+
+- Mode: \`standard\`; no separate analyst reports were required.`;
+  }
+
+  const lines = analysisRoles.map((role) => {
+    const path = analysisReportPath(role.id);
+    const status = existsSync(path) ? "available" : "missing";
+    return `- ${role.label}: ${status} at \`${relative(root, path)}\``;
+  });
+
+  return `## Deep Analysis
+
+${lines.join("\n")}`;
 }
 
 function renderValidationSection(title, validation) {
@@ -657,6 +709,16 @@ function createOrUpdatePr() {
     return;
   }
 
+  const reportPath = join(outDir, "report.md");
+  if (!existsSync(reportPath)) {
+    throw new Error(
+      `PR report not found at ${relative(
+        root,
+        reportPath,
+      )}. Run --stage verify or --stage report before --stage pr.`,
+    );
+  }
+
   const changedFiles = git(["status", "--short"]).split(/\r?\n/).filter(Boolean);
   if (changedFiles.length === 0) {
     throw new Error("No changes to commit.");
@@ -700,13 +762,21 @@ function upsertPullRequest() {
     "--jq",
     ".[0].number // empty",
   ]).trim();
-  const bodyArgs = ["--body-file", relative(root, join(outDir, "report.md"))];
   if (existing) {
-    run("gh", ["pr", "edit", existing, "--title", values.title, ...bodyArgs]);
+    const inputPath = join(outDir, "pr-update.json");
+    writeFileSync(
+      inputPath,
+      `${JSON.stringify({
+        title: values.title,
+        body: readFileSync(join(outDir, "report.md"), "utf8"),
+      })}\n`,
+    );
+    run("gh", ["api", `repos/:owner/:repo/pulls/${existing}`, "-X", "PATCH", "--input", inputPath]);
     console.log(`Updated PR #${existing}.`);
     return;
   }
 
+  const bodyArgs = ["--body-file", relative(root, join(outDir, "report.md"))];
   const args = [
     "pr",
     "create",
@@ -846,7 +916,7 @@ Focus:
   throw new Error(`Unknown analysis role '${role.id}'.`);
 }
 
-function buildAgentCommand({ agentName, modelName, outputPath, prompt }) {
+function buildAgentCommand({ mode, agentName, modelName, outputPath, prompt }) {
   if (agentName === "codex") {
     const command = [
       "codex",
@@ -856,7 +926,7 @@ function buildAgentCommand({ agentName, modelName, outputPath, prompt }) {
       "--cd",
       root,
       "--sandbox",
-      values.sandbox,
+      mode === "analysis" ? values["analyst-sandbox"] : values.sandbox,
       "--output-last-message",
       outputPath,
     ];
@@ -879,6 +949,9 @@ function buildAgentCommand({ agentName, modelName, outputPath, prompt }) {
       command.push("--effort", values.effort);
     }
     command.push("--permission-mode", mapClaudePermissionMode(values.approval));
+    if (mode === "analysis") {
+      command.push("--disallowedTools", "Edit,MultiEdit,Write,NotebookEdit");
+    }
     command.push("--add-dir", root);
     command.push(prompt);
     return command;
@@ -966,6 +1039,32 @@ function selectApps(example) {
     throw new Error(`Example '${example}' has status '${selected.status}' and is not active.`);
   }
   return [selected];
+}
+
+function assertResolvedTargetVersions(reports) {
+  const unresolved = reports.flatMap((report) =>
+    Object.entries(report.packageVersions.target)
+      .filter(([, result]) => !result?.version)
+      .map(([packageName, result]) => ({
+        app: report.app.name,
+        packageName,
+        source: result?.source ?? "unknown",
+        error: result?.error,
+      })),
+  );
+  if (unresolved.length === 0) {
+    return;
+  }
+  throw new Error(
+    `Cannot continue because target SDK package versions could not be resolved:\n${unresolved
+      .map(
+        (entry) =>
+          `- ${entry.app}: ${entry.packageName} from ${entry.source}${
+            entry.error ? ` (${entry.error})` : ""
+          }`,
+      )
+      .join("\n")}`,
+  );
 }
 
 function resolveTargetVersion(packageName, target, packageMetadata) {
@@ -1425,8 +1524,15 @@ function upgradeCommand({ commandStage, commandRunId, example, pr = values.pr })
     `--analysis ${analysisMode}`,
     `--agent ${agent}`,
     model ? `--model ${model}` : null,
+    values.sandbox !== "workspace-write" ? `--sandbox ${values.sandbox}` : null,
+    values.approval !== "on-request" ? `--approval ${values.approval}` : null,
+    values.profile ? `--profile ${values.profile}` : null,
+    values.effort ? `--effort ${values.effort}` : null,
     analysisMode === "deep" ? `--analyst-agent ${analystAgent}` : null,
     analysisMode === "deep" && analystModel ? `--analyst-model ${analystModel}` : null,
+    analysisMode === "deep" && values["analyst-sandbox"] !== "read-only"
+      ? `--analyst-sandbox ${values["analyst-sandbox"]}`
+      : null,
     pr !== "none" ? `--pr ${pr}` : null,
   ]
     .filter(Boolean)
@@ -1461,6 +1567,7 @@ Key options:
   --model <model>                                     Default for claude: claude-sonnet-4-6. Default for codex: gpt-5.5.
   --analyst-agent codex|claude                        Default: claude.
   --analyst-model <model>                             Default: claude-sonnet-4-6.
+  --analyst-sandbox <mode>                            Default: read-only for Codex analyst runs.
   --skill <name>                                      Default: zama-example-upgrade.
   --allow-missing-analysis                            Allow agent stage without complete deep analysis reports.
   --pr none|draft|ready                               Default: none.
