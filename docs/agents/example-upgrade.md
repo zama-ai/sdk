@@ -6,7 +6,7 @@ This playbook is for running AI-assisted upgrades of SDK example apps. The short
 
 Active apps are listed in `examples/examples-upgrade.config.json` with `"status": "active"`. Do not modify apps marked `"future"` or `"excluded"` unless the user explicitly changes the scope.
 
-During an app upgrade, code changes must stay under that app's directory, for example `examples/react-viem/**`. Process-tooling changes may touch `docs/agents/**`, `scripts/examples/**`, root `package.json`, `.gitignore`, and `examples/examples-upgrade.config.json`.
+During an app upgrade, code changes must stay under that app's directory, for example `examples/react-viem/**`. Generated LLM corpus artifacts (`llms.txt`, `llms-full.txt`, and `docs/llm/corpus-manifest.json`) are allowed when app docs change because the docs CI verifies them. Process-tooling changes may touch `docs/agents/**`, `scripts/examples/**`, root `package.json`, `.gitignore`, and `examples/examples-upgrade.config.json`.
 
 Run upgrade work from a dedicated branch based on `prerelease`, preferably in a separate worktree. The agent is allowed to modify code in that branch. Do not run app-upgrade edits directly on `prerelease` or in a shared dirty checkout.
 
@@ -61,9 +61,10 @@ pnpm examples:upgrade --stage pr --run-id <run-id> --example react-wagmi --pr dr
 7. Produce an impact plan before editing.
 8. Update package versions and lockfile with the app's declared package manager.
 9. Update source, tests, README, and WALKTHROUGH as needed.
-10. Run deterministic validation with the verify stage.
-11. Complete the manual checklist in `docs/agents/example-upgrade-checklist.md`.
-12. Open or update a PR with `--stage pr --pr draft` once the report is ready.
+10. Regenerate the LLM corpus artifacts if README, WALKTHROUGH, or docs changed. The pipeline runs `pnpm llm:build` automatically before verify/report/PR stages.
+11. Run deterministic validation with the verify stage.
+12. Complete the manual checklist in `docs/agents/example-upgrade-checklist.md`.
+13. Open or update a PR with `--stage pr --pr draft` once the report is ready.
 
 ## Agent Runner
 
@@ -102,7 +103,8 @@ pnpm examples:upgrade --stage pr --run-id <run-id> --example react-wagmi --pr dr
 
 Safety defaults:
 
-- It refuses to commit non-example files unless `--allow-process-files` is set.
+- It refuses to commit files outside the selected example app(s), except generated LLM corpus artifacts.
+- It refuses process-tooling files unless `--allow-process-files` is set.
 - It does not create a PR unless `--pr draft` or `--pr ready` is set.
 - It targets `prerelease` by default.
 - `--pr draft` opens a Draft PR; `--pr ready` opens a ready-for-review PR.
@@ -111,10 +113,21 @@ Safety defaults:
 ## Validation Rules
 
 - Treat typecheck/build/test failures as blockers unless the report explicitly marks them as environment-blocked.
+- Treat generated LLM artifact failures as blockers; regenerate and commit generated LLM corpus artifacts when app docs change. The full `pnpm llm:check` runs under `--ci-parity` and in CI.
 - Do not mark a network, wallet, or secret-dependent check as passed unless it actually ran successfully.
 - If a check cannot run because secrets or RPC configuration are missing, mark it `blocked-env`.
 - If a script does not exist for an app, mark it `skipped`, not `passed`.
 - Do not weaken tests to make the upgrade pass. Update tests only to match intended SDK behavior.
+
+## React Wagmi Lessons
+
+The `react-wagmi` SDK 3.x upgrade exposed concrete checks the agent must make for future React/wagmi updates:
+
+- Prefer the high-level `@zama-fhe/react-sdk/wagmi` config adapter and `@zama-fhe/sdk/web` browser transport when the API reports/docs expose them. Do not keep direct `WagmiSigner` or `RelayerWeb` wiring unless the target SDK still requires it.
+- Use absolute browser relayer URLs for SDK relayer config, for example `new URL("/api/relayer", window.location.origin).toString()`. Relative URLs can fail inside the relayer worker before any browser Network entry appears.
+- For wagmi/viem E2E RPC mocks, account for Multicall3 reads. A mechanically updated app can pass typecheck but fail tests if mocks only handle direct `eth_call` targets.
+- When wrapper behavior matters, verify whether the registry points to upgraded proxies and avoid legacy APIs unless the code explicitly uses `*Legacy*` paths for compatibility.
+- Keep README/WALKTHROUGH aligned with the actual SDK wiring, then commit regenerated LLM corpus artifacts.
 
 ## Source Priority
 

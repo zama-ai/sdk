@@ -63,6 +63,10 @@ if (stage === "agent" || stage === "all") {
   runAgent();
 }
 
+if (stage === "verify" || stage === "report" || stage === "pr" || stage === "all") {
+  syncGeneratedLlmArtifacts();
+}
+
 if (stage === "verify" || stage === "all") {
   runValidation();
   generateReport();
@@ -296,6 +300,13 @@ function runValidation() {
     writeFileSync(join(appDir, "validation.json"), `${JSON.stringify(appResults, null, 2)}\n`);
   }
 
+  const llmResults = validateGeneratedLlmArtifacts();
+  results.push({ app: "repo-llm-artifacts", path: ".", results: llmResults });
+  writeFileSync(
+    join(outDir, "repo-llm-artifacts.validation.json"),
+    `${JSON.stringify(llmResults, null, 2)}\n`,
+  );
+
   if (values["ci-parity"]) {
     const ciResults = validateCiParity();
     results.push({ app: "repo-ci-parity", path: ".", results: ciResults });
@@ -361,6 +372,10 @@ function validateApp(app) {
   });
 }
 
+function validateGeneratedLlmArtifacts() {
+  return [runValidationCommand("pnpm llm:build", ".", "repo-generated-docs")];
+}
+
 function validateCiParity() {
   const commands = [
     "pnpm build",
@@ -401,6 +416,12 @@ function runValidationCommand(command, cwd, kind) {
 function generateReport() {
   const apps = selectApps(values.example);
   const sections = apps.map((app) => renderAppReport(app)).join("\n\n");
+  const llmValidation = readOptionalJson(join(outDir, "repo-llm-artifacts.validation.json"));
+  const llmSection = renderValidationSection("Repository LLM Artifacts", llmValidation);
+  const ciValidation = readOptionalJson(join(outDir, "ci-parity.validation.json"));
+  const ciSection = ciValidation
+    ? `\n\n${renderValidationSection("Repository CI Parity", ciValidation)}`
+    : "";
   const body = `# Example Upgrade Report
 
 Run ID: \`${runId}\`
@@ -408,10 +429,24 @@ Run ID: \`${runId}\`
 Generated: ${new Date().toISOString()}
 
 ${sections}
+
+${llmSection}${ciSection}
 `;
 
   writeFileSync(join(outDir, "report.md"), body);
   console.log(`Report written to ${relative(root, join(outDir, "report.md"))}`);
+}
+
+function renderValidationSection(title, validation) {
+  const lines = validation
+    ? validation.map(
+        (entry) =>
+          `- ${entry.status}: \`${entry.command ?? entry.kind}\`${entry.message ? ` - ${entry.message}` : ""}`,
+      )
+    : ["- No validation results found for this run."];
+  return `## ${title}
+
+${lines.join("\n")}`;
 }
 
 function renderAppReport(app) {
@@ -564,8 +599,9 @@ ${contextList}
 4. Produce an impact plan before editing.
 5. Apply the required upgrade changes.
 6. Run the validation command from the agent task.
-7. Generate or update the report.
-8. In your final answer, summarize changes, validation results, and remaining manual checks.
+7. If README.md, WALKTHROUGH.md, or docs changed, run \`pnpm llm:build\` and keep the generated LLM corpus artifacts.
+8. Generate or update the report.
+9. In your final answer, summarize changes, validation results, and remaining manual checks.
 
 Do not modify apps marked future or excluded in \`examples/examples-upgrade.config.json\`.
 
@@ -903,6 +939,12 @@ function assertSafeBranch() {
 
 function assertAllowedFiles(statusLines) {
   const files = statusLines.map((line) => line.slice(3));
+  const selectedAppPrefixes = selectApps(values.example).map((app) => `${app.path}/`);
+  const generatedLlmArtifacts = new Set([
+    "llms.txt",
+    "llms-full.txt",
+    "docs/llm/corpus-manifest.json",
+  ]);
   const processPrefixes = [
     ".gitignore",
     "package.json",
@@ -911,7 +953,10 @@ function assertAllowedFiles(statusLines) {
     "scripts/examples/",
   ];
   const disallowed = files.filter((file) => {
-    if (file.startsWith("examples/")) {
+    if (selectedAppPrefixes.some((prefix) => file.startsWith(prefix))) {
+      return false;
+    }
+    if (generatedLlmArtifacts.has(file)) {
       return false;
     }
     return !(
@@ -920,11 +965,19 @@ function assertAllowedFiles(statusLines) {
   });
   if (disallowed.length > 0) {
     throw new Error(
-      `Refusing to commit files outside examples/**. Re-run with --allow-process-files for process tooling.\n${disallowed.join(
+      `Refusing to commit files outside the selected example(s) or generated LLM artifacts. Re-run with --allow-process-files for process tooling.\n${disallowed.join(
         "\n",
       )}`,
     );
   }
+}
+
+function syncGeneratedLlmArtifacts() {
+  if (values["dry-run"]) {
+    console.log("Dry run: would run pnpm llm:build before validation/report/PR.");
+    return;
+  }
+  run("pnpm", ["llm:build"]);
 }
 
 function ensureBranch(branch) {
