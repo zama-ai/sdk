@@ -202,7 +202,54 @@ export default function Home() {
           refetchEth={refetchEth}
         />
       )}
+      {!token && !isRegistryPending && <NoTokenWorkspace />}
     </div>
+  );
+}
+
+function NoTokenWorkspace() {
+  return (
+    <>
+      <BalancesCard
+        formattedErc20="—"
+        formattedConfidential="—"
+        isLoadingConfidential={false}
+        erc20Symbol=""
+        onMint={() => {}}
+        isMinting={false}
+        mintDisabled
+        mintError={null}
+        mintTxHash={null}
+        isAllowed={false}
+        onDecrypt={() => {}}
+        isDecrypting={false}
+        decryptDisabled
+        decryptError={null}
+      />
+
+      <div className="section-label">Operations</div>
+
+      <div className="card">
+        <div className="card-title">Shield — ERC-20 → Confidential</div>
+        <button type="button" className="btn btn-primary" disabled>
+          Shield
+        </button>
+      </div>
+
+      <div className="card">
+        <div className="card-title">Confidential Transfer</div>
+        <button type="button" className="btn btn-primary" disabled>
+          Transfer
+        </button>
+      </div>
+
+      <div className="card">
+        <div className="card-title">Unshield — Confidential → ERC-20</div>
+        <button type="button" className="btn btn-primary" disabled>
+          Unshield
+        </button>
+      </div>
+    </>
   );
 }
 

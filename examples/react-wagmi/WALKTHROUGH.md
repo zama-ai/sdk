@@ -37,7 +37,7 @@ const wagmiConfig = createConfig({
 
 const mySepolia = {
   ...fheSepolia,
-  relayerUrl: new URL("/api/relayer", window.location.origin).toString(),
+  relayerUrl: "http://localhost:3000/api/relayer",
   network: SEPOLIA_RPC_URL,
 } as const satisfies FheChain;
 
@@ -46,7 +46,7 @@ const zamaConfig = createZamaConfig({
   wagmiConfig,
   relayers: { [mySepolia.id]: web() },
   storage: indexedDBStorage,
-  sessionStorage: sessionDBStorage,
+  sessionStorage: indexedDBStorage,
 });
 ```
 
@@ -56,9 +56,8 @@ const zamaConfig = createZamaConfig({
 <ZamaProvider config={zamaConfig}>
 ```
 
-`storage` and `sessionStorage` are still two separate IndexedDB instances. Both use the
-same internal key, so sharing one database instance would cause the session entry to
-overwrite the encrypted keypair, forcing re-signing on every balance decrypt.
+`storage` and `sessionStorage` use the same IndexedDB-backed storage in this browser app so
+credentials and wallet signatures survive page reloads during local development.
 
 ---
 
