@@ -420,7 +420,7 @@ export class Token extends ReadonlyToken {
       if (error instanceof ZamaError) {
         throw error;
       }
-      throw new TransactionRevertedError("Shield transaction failed", {
+      throw new TransactionRevertedError("TransferAndCall shield transaction failed", {
         cause: error,
       });
     }
@@ -458,7 +458,7 @@ export class Token extends ReadonlyToken {
       if (error instanceof ZamaError) {
         throw error;
       }
-      throw new TransactionRevertedError("Shield transaction failed", {
+      throw new TransactionRevertedError("ApproveAndWrap shield transaction failed", {
         cause: error,
       });
     }
