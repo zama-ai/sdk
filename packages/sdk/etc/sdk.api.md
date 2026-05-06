@@ -6109,16 +6109,6 @@ export function decodeUnwrapRequested(log: RawLog): UnwrapRequestedEvent | null;
 // @public
 export function decodeWrapped(log: RawLog): WrappedEvent | null;
 
-// @public
-export class DecryptCache {
-    constructor(storage: GenericStorage);
-    clearAll(): Promise<void>;
-    clearForRequester(requester: Address): Promise<void>;
-    delete(requester: Address, contractAddress: Address, handle: Handle): Promise<void>;
-    get(requester: Address, contractAddress: Address, handle: Handle): Promise<ClearValueType | null>;
-    set(requester: Address, contractAddress: Address, handle: Handle, value: ClearValueType): Promise<void>;
-}
-
 // @public (undocumented)
 export interface DecryptEndEvent extends BaseEvent {
     // (undocumented)
@@ -20050,11 +20040,19 @@ export class ZamaSDK {
     constructor(config: ZamaConfig);
     allow(contracts: Address[]): Promise<void>;
     allowAs(delegator: Address, contracts: Address[]): Promise<void>;
-    readonly cache: DecryptCache;
     clearCredentials(): Promise<void>;
     createReadonlyToken(address: Address): ReadonlyToken;
     createToken(address: Address, wrapper?: Address): Token;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
+    // Warning: (ae-forgotten-export) The symbol "BatchDecryptHandlesResult" needs to be exported by the entry point index.d.ts
+    //
+    // @internal (undocumented)
+    delegatedBatchDecryptHandlesAs(input: {
+        handles: DecryptHandle[];
+        delegatorAddress: Address;
+        accountAddress?: Address;
+        maxConcurrency?: number;
+    }): Promise<BatchDecryptHandlesResult>;
     delegateDecryption(input: {
         contractAddress: Address;
         delegateAddress: Address;

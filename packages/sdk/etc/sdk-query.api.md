@@ -1302,12 +1302,19 @@ export class ZamaSDK {
     constructor(config: ZamaConfig);
     allow(contracts: Address[]): Promise<void>;
     allowAs(delegator: Address, contracts: Address[]): Promise<void>;
-    // Warning: (ae-forgotten-export) The symbol "DecryptCache" needs to be exported by the entry point index.d.ts
-    readonly cache: DecryptCache;
     clearCredentials(): Promise<void>;
     createReadonlyToken(address: Address): ReadonlyToken;
     createToken(address: Address, wrapper?: Address): Token;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
+    // Warning: (ae-forgotten-export) The symbol "BatchDecryptHandlesResult" needs to be exported by the entry point index.d.ts
+    //
+    // @internal (undocumented)
+    delegatedBatchDecryptHandlesAs(input: {
+        handles: DecryptHandle[];
+        delegatorAddress: Address;
+        accountAddress?: Address;
+        maxConcurrency?: number;
+    }): Promise<BatchDecryptHandlesResult>;
     delegateDecryption(input: {
         contractAddress: Address;
         delegateAddress: Address;

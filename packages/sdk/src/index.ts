@@ -61,9 +61,6 @@ export {
   ERC7984_WRAPPER_INTERFACE_ID_LEGACY,
 } from "./contracts";
 
-// Decrypt cache
-export { DecryptCache } from "./decrypt-cache";
-
 // Token abstraction layer
 export { ZamaSDK } from "./zama-sdk";
 export type { DecryptHandle, DecryptResult } from "./query/user-decrypt";
