@@ -31,8 +31,9 @@ In addition to everything inherited from [`Token`](Token.md):
 
 - `underlying()` — read the underlying ERC-20 address
 - `allowance(owner)` — read ERC-20 allowance the owner granted to the wrapper
+- `isPayable()` — ERC-1363 detection on the underlying (cached); used by `shield()` to pick the execution path
 - `approveUnderlying(amount?)` — approve the wrapper to spend the underlying
-- `shield(amount, options?)` — deposit ERC-20 → mint confidential balance
+- `shield(amount, options?)` — deposit ERC-20 → mint confidential balance (auto-routes via ERC-1363 `transferAndCall` when supported, otherwise `approve` + `wrap`)
 - `unshield(amount, options?)` — burn confidential balance → redeem ERC-20
 - `unshieldAll(options?)` — unshield the entire confidential balance
 - `resumeUnshield(unwrapTxHash, options?)` — resume an in-flight unshield

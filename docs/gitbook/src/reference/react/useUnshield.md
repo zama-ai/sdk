@@ -167,4 +167,4 @@ Auto-invalidates the `confidentialBalance` cache on success.
 - [useUnshieldAll](/reference/react/useUnshieldAll) — unshield the entire confidential balance
 - [useResumeUnshield](/reference/react/useResumeUnshield) — resume an interrupted unshield
 - [useShield](/reference/react/useShield) — reverse operation, shield public tokens
-- [Token.unshield](/reference/sdk/Token#unshield) — imperative equivalent on the `Token` class
+- [WrappedToken.unshield](/reference/sdk/WrappedToken#unshield) — imperative equivalent on the `WrappedToken` class

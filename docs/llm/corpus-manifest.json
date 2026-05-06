@@ -284,7 +284,7 @@
       "source_type": "official-doc",
       "category": "reference-sdk",
       "logical_path": "reference/sdk/Token",
-      "description": "Read/write interface for confidential ERC-20 operations.",
+      "description": "Read/write interface for an ERC-7984 confidential token — balances, transfers, operator approvals.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
@@ -896,7 +896,7 @@
       "source_type": "official-doc",
       "category": "reference-react",
       "logical_path": "reference/react/useToken",
-      "description": "Hook to get a memoized Token instance for a given address.",
+      "description": "Hook returning a memoised Token instance for a given address.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },

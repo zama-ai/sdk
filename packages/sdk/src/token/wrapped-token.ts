@@ -102,18 +102,27 @@ export class WrappedToken extends Token {
 
   /**
    * Shield public ERC-20 tokens into confidential tokens.
-   * Handles ERC-20 approval automatically based on `approvalStrategy`
-   * (`"exact"` by default, `"max"` for unlimited approval, `"skip"` to opt out).
    *
-   * The ERC-20 balance is validated before submitting (public read, no signing
-   * required).
+   * The execution path is decided automatically by ERC-165 introspection on
+   * the underlying ERC-20:
+   * - **`transferAndCall`** (single tx): when the underlying supports
+   *   ERC-1363, no approval is required — the wrapper's `onTransferReceived`
+   *   callback mints confidential tokens directly. `approvalStrategy` is
+   *   **ignored** on this path. See {@link ShieldPath}.
+   * - **`approveAndWrap`** (two-tx fallback): otherwise, an `approve` is
+   *   followed by a `wrap`. Approval is controlled by `approvalStrategy`
+   *   (`"exact"` by default, `"max"` for unlimited, `"skip"` to opt out).
+   *
+   * The ERC-20 balance is validated before submitting (public read, no
+   * signing required) so the call works for all wallet types, including
+   * smart wallets.
    *
    * @param amount - The plaintext amount to shield.
-   * @param options - Optional configuration: `approvalStrategy`, `to`, callbacks.
+   * @param options - Optional: `approvalStrategy`, `to`, callbacks.
    * @returns The transaction hash and mined receipt.
    * @throws {@link ChainMismatchError} if signer and provider are on different chains.
    * @throws {@link InsufficientERC20BalanceError} if the ERC-20 balance is less than `amount`.
-   * @throws {@link ApprovalFailedError} if the ERC-20 approval step fails.
+   * @throws {@link ApprovalFailedError} if the ERC-20 approval step fails (approveAndWrap path).
    * @throws {@link TransactionRevertedError} if the shield transaction reverts.
    *
    * @example
@@ -418,7 +427,7 @@ export class WrappedToken extends Token {
       if (error instanceof ZamaError) {
         throw error;
       }
-      throw new TransactionRevertedError("Unshield transaction failed", {
+      throw new TransactionRevertedError("Unwrap transaction failed", {
         cause: error,
       });
     }
@@ -463,7 +472,7 @@ export class WrappedToken extends Token {
       if (error instanceof ZamaError) {
         throw error;
       }
-      throw new TransactionRevertedError("Unshield-all transaction failed", {
+      throw new TransactionRevertedError("UnwrapAll transaction failed", {
         cause: error,
       });
     }

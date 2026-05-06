@@ -279,25 +279,22 @@ const result = await sdk.registry.getConfidentialToken(erc20Address);
 
 ### createToken
 
-`(address: Address, wrapperAddress?: Address) => Token`
+`(address: Address) => Token`
 
-Creates a read/write token instance for shielding, transferring, and unshielding.
+Creates a [`Token`](Token.md) instance for an ERC-7984 confidential token. Supports balance reads, encrypted transfers, operator approvals, and delegated decryption.
 
 ```ts
-const token = sdk.createToken("0xEncryptedERC20");
-
-// When the wrapper differs from the encrypted ERC-20 contract
-const token = sdk.createToken("0xTokenAddress", "0xWrapperAddress");
+const token = sdk.createToken("0xConfidentialToken");
 ```
 
-### createReadonlyToken
+### createWrappedToken
 
-`(address: Address) => ReadonlyToken`
+`(address: Address) => WrappedToken`
 
-Creates a read-only token instance for balance decryption and metadata queries.
+Creates a [`WrappedToken`](WrappedToken.md) instance for an ERC-7984 ERC-20 wrapper. Adds wrapper-specific operations (shield, unshield, allowance) on top of the base `Token` API. The address is the wrapper contract itself — the wrapper IS the confidential token.
 
 ```ts
-const readonlyToken = sdk.createReadonlyToken("0xEncryptedERC20");
+const wrappedToken = sdk.createWrappedToken("0xWrapper");
 ```
 
 ### createWrappersRegistry
@@ -478,6 +475,6 @@ sdk.terminate();
 ## Related
 
 - [Token](/reference/sdk/Token) — read/write token operations
-- [ReadonlyToken](/reference/sdk/ReadonlyToken) — read-only token operations
+- [WrappedToken](/reference/sdk/WrappedToken) — ERC-7984 ERC-20 wrapper operations (shield, unshield, allowance)
 - [WrappersRegistry](/reference/sdk/WrappersRegistry) — on-chain token wrappers registry
 - [Configuration guide](/guides/configuration) — relayer, signer, and storage setup

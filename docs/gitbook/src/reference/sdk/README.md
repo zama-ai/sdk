@@ -8,9 +8,9 @@ API reference for the core `@zama-fhe/sdk` package. Each page documents a single
 
 🟨 Go to [**ZamaSDK**](ZamaSDK.md) for the main entry point — creates tokens, manages sessions, and coordinates the relayer and signer.
 
-🟨 Go to [**Token**](Token.md) for read/write operations — shield, transfer, unshield, and balance decryption.
+🟨 Go to [**Token**](Token.md) for the base ERC-7984 confidential token operations — balance decryption, transfers, operator approvals.
 
-🟨 Go to [**ReadonlyToken**](ReadonlyToken.md) for read-only balance decryption and batch operations.
+🟨 Go to [**WrappedToken**](WrappedToken.md) for ERC-7984 ERC-20 wrapper operations — shield, unshield, allowance.
 
 🟨 Go to [**RelayerWeb**](RelayerWeb.md) for browser-side FHE encryption via Web Workers and WASM.
 

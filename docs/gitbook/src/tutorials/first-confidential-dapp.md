@@ -132,7 +132,7 @@ export function BalanceDisplay() {
     isLoading,
     error,
   } = useConfidentialBalance({
-    tokenAddress: TOKEN_ADDRESS,
+    address: TOKEN_ADDRESS,
     account: address,
   });
 
@@ -166,8 +166,7 @@ import { TOKEN_ADDRESS, WRAPPER_ADDRESS } from "./config";
 
 export function ShieldForm() {
   const { mutateAsync: shield, isPending } = useShield({
-    tokenAddress: TOKEN_ADDRESS,
-    wrapperAddress: WRAPPER_ADDRESS,
+    address: WRAPPER_ADDRESS,
   });
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -212,7 +211,7 @@ import { TOKEN_ADDRESS } from "./config";
 
 export function TransferForm() {
   const { mutateAsync: transfer, isPending } = useConfidentialTransfer({
-    tokenAddress: TOKEN_ADDRESS,
+    address: TOKEN_ADDRESS,
   });
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -260,10 +259,7 @@ import { TOKEN_ADDRESS, WRAPPER_ADDRESS } from "./config";
 
 export function UnshieldForm() {
   const [status, setStatus] = useState("");
-  const { mutateAsync: unshield, isPending } = useUnshield({
-    tokenAddress: TOKEN_ADDRESS,
-    wrapperAddress: WRAPPER_ADDRESS,
-  });
+  const { mutateAsync: unshield, isPending } = useUnshield(WRAPPER_ADDRESS);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -332,11 +328,7 @@ export function ErrorMessage({ error }: { error: Error | null }) {
 Use this component alongside any mutation hook. Pass the hook's `error` property:
 
 ```tsx
-const {
-  mutateAsync: shield,
-  isPending,
-  error,
-} = useShield({ tokenAddress: TOKEN_ADDRESS, wrapperAddress: WRAPPER_ADDRESS });
+const { mutateAsync: shield, isPending, error } = useShield({ address: WRAPPER_ADDRESS });
 
 // In your JSX:
 <ErrorMessage error={error} />;

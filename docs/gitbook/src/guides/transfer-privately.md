@@ -158,7 +158,7 @@ const TOKEN = "0xEncryptedERC20Address";
 
 function TransferForm() {
   const { address } = useAccount();
-  const { data: balance } = useConfidentialBalance({ tokenAddress: TOKEN, account: address });
+  const { data: balance } = useConfidentialBalance({ address: TOKEN, account: address });
   const {
     mutateAsync: transfer,
     isPending,

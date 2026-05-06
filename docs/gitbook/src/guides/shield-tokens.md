@@ -9,7 +9,7 @@ Shielding converts public ERC-20 tokens into confidential tokens. The SDK handle
 
 ## Shielding paths
 
-`Token.shield()` exposes a single API but routes through one of two on-chain paths depending on the underlying ERC-20:
+`WrappedToken.shield()` exposes a single API but routes through one of two on-chain paths depending on the underlying ERC-20:
 
 | Path               | Triggered when                                | Wallet prompts | Notes                                                                                 |
 | ------------------ | --------------------------------------------- | -------------- | ------------------------------------------------------------------------------------- |
@@ -208,5 +208,5 @@ In React, balance caches are automatically invalidated after a successful shield
 ## Next steps
 
 - [Transfer Privately](/guides/transfer-privately) — send confidential tokens to another address
-- [Token.shield reference](/reference/sdk/Token#shield) — full API signature and options
+- [WrappedToken.shield reference](/reference/sdk/WrappedToken#shield) — full API signature and options
 - [useShield reference](/reference/react/useShield) — React hook details

@@ -10,7 +10,7 @@ The SDK is organized into layers, each with a clear responsibility. Higher layer
 | ------------------------------ | --------------------------------------------------------------------------------------------------------- |
 | **React SDK**                  | `ZamaProvider` context + hooks wrapping `@tanstack/react-query`                                           |
 | **Query & Mutation Factories** | Framework-agnostic `queryOptions` / `mutationOptions` consumed by React Query (or directly)               |
-| **Contract Abstraction**       | `ZamaSDK`, `Token`, `ReadonlyToken` — the main developer-facing API                                       |
+| **Contract Abstraction**       | `ZamaSDK`, `Token`, `Token` — the main developer-facing API                                               |
 | **Contract Call Builders**     | Pure functions returning `{ address, abi, functionName, args }` for any Web3 library                      |
 | **Provider & Signer Adapters** | `ViemProvider`/`ViemSigner`, `EthersProvider`/`EthersSigner` — read/write split per library               |
 | **Relayer**                    | `RelayerWeb` (browser WASM), `RelayerNode` (server), `RelayerCleartext` (testing)                         |

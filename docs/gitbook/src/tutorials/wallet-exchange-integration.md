@@ -118,7 +118,7 @@ const { txHash, receipt } = await token.confidentialTransfer("0xRecipient", 500n
 ```tsx
 import { useConfidentialTransfer } from "@zama-fhe/react-sdk";
 
-const { mutate, isPending } = useConfidentialTransfer({ token: tokenAddress });
+const { mutate, isPending } = useConfidentialTransfer({ address: tokenAddress });
 mutate({ to: "0xRecipient", amount: 500n });
 ```
 
@@ -146,20 +146,20 @@ In all cases, the user sees a single unified balance for the underlying asset.
 
 ### Shield (wrap)
 
-`Token.shield` wraps a standard ERC-20 into its ERC-7984 form. The SDK handles the wrapping flow internally — using `transferAndCall` for ERC-1363 underlyings (one transaction) or `approve` + `wrap` for everything else (two transactions) — plus decimal conversion. The encrypted balance lands in the recipient's address (defaulting to the connected wallet). See [Shielding paths](/guides/shield-tokens#shielding-paths) for which currently-wrapped tokens use which path.
+`WrappedToken.shield` wraps a standard ERC-20 into its ERC-7984 form. The SDK handles the wrapping flow internally — using `transferAndCall` for ERC-1363 underlyings (one transaction) or `approve` + `wrap` for everything else (two transactions) — plus decimal conversion. The encrypted balance lands in the recipient's address (defaulting to the connected wallet). See [Shielding paths](/guides/shield-tokens#shielding-paths) for which currently-wrapped tokens use which path.
 
 {% tabs %}
 {% tab title="SDK" %}
 
 ```ts
 // Exact-amount approval (default)
-await token.shield(1000n);
+await wrappedToken.shield(1000n);
 
 // Custom recipient (e.g. exchange's hot wallet)
-await token.shield(1000n, { to: "0xExchangeWallet" });
+await wrappedToken.shield(1000n, { to: "0xExchangeWallet" });
 
 // Skip approval if you've already approved the wrapper
-await token.shield(1000n, { approvalStrategy: "skip" });
+await wrappedToken.shield(1000n, { approvalStrategy: "skip" });
 ```
 
 {% endtab %}
@@ -179,23 +179,23 @@ See [Shield tokens](/guides/shield-tokens) for the full options surface, includi
 
 ### Unshield (unwrap)
 
-Unwrapping is a **two-step asynchronous process** at the contract level: an unwrap request burns the encrypted amount, then a finalize call sends the cleartext amount of underlying ERC-20 once the gateway has publicly decrypted it. `Token.unshield` does both steps in one SDK call, including waiting for the decryption proof.
+Unwrapping is a **two-step asynchronous process** at the contract level: an unwrap request burns the encrypted amount, then a finalize call sends the cleartext amount of underlying ERC-20 once the gateway has publicly decrypted it. `WrappedToken.unshield` does both steps in one SDK call, including waiting for the decryption proof.
 
 {% tabs %}
 {% tab title="SDK" %}
 
 ```ts
-const { txHash, receipt } = await token.unshield(500n);
+const { txHash, receipt } = await wrappedToken.unshield(500n);
 
 // Track each phase for UI updates
-await token.unshield(500n, {
+await wrappedToken.unshield(500n, {
   onUnwrapSubmitted: (h) => updateUI("Unwrap submitted…"),
   onFinalizing: () => updateUI("Waiting for decryption proof…"),
   onFinalizeSubmitted: (h) => updateUI("Unshield complete!"),
 });
 
 // Drain the entire balance
-await token.unshieldAll();
+await wrappedToken.unshieldAll();
 ```
 
 {% endtab %}
@@ -211,7 +211,7 @@ mutate({ amount: 500n });
 {% endtab %}
 {% endtabs %}
 
-If the user closes the page between unwrap and finalize, resume with `Token.resumeUnshield` / [`useResumeUnshield`](/reference/react/useResumeUnshield). See [Unshield tokens](/guides/unshield-tokens) for the full flow.
+If the user closes the page between unwrap and finalize, resume with `WrappedToken.resumeUnshield` / [`useResumeUnshield`](/reference/react/useResumeUnshield). See [Unshield tokens](/guides/unshield-tokens) for the full flow.
 
 ### Decimal conversion in your UI
 

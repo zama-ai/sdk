@@ -96,7 +96,7 @@ test("isConfidential on non-ERC-165 contract reverts with a ContractFunction err
   sdk,
   contracts,
 }) => {
-  const nonErc165Token = sdk.createReadonlyToken(contracts.acl);
+  const nonErc165Token = sdk.createToken(contracts.acl);
   try {
     await nonErc165Token.isConfidential();
     expect(true, "Expected isConfidential to throw on a non-ERC-165 contract").toBe(false);

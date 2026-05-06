@@ -8,7 +8,7 @@ import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
  * Read the on-chain ACL delegation expiry for `(delegator, delegate, contract)`
  * and decide whether the delegation is currently active.
  *
- * Mirrors `ReadonlyToken.isDelegated` semantics so cache freshness checks stay
+ * Mirrors `ZamaSDK.isDelegated` semantics so cache freshness checks stay
  * consistent with the public delegation API:
  * - `0n` → not delegated
  * - `MAX_UINT64` → permanent
