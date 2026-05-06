@@ -1307,7 +1307,7 @@ export class ZamaSDK {
         delegatorAddress: Address;
         delegateAddress: Address;
     }): Promise<bigint>;
-    getWalletAccount(): Promise<WalletAccount>;
+    getAccount(): Promise<WalletAccount>;
     get hasSigner(): boolean;
     isAllowed(contracts: Address[]): Promise<boolean>;
     isAllowedAs(delegator: Address, contracts: Address[]): Promise<boolean>;

@@ -14,6 +14,7 @@ import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
 import { BaseSigner } from "../signer/base-signer";
 import { eip1193Subscribe } from "../signer/eip1193-subscribe";
 import type { WalletAccount, WriteContractConfig } from "../types";
+import { assertNonNullable } from "../utils";
 
 /**
  * Configuration for {@link ViemSigner}.
@@ -53,15 +54,18 @@ export class ViemSigner extends BaseSigner {
     this.#unsubscribeProvider = this.#subscribeToProvider();
   }
 
-  #requireAccount(): { walletClient: WalletClient; account: Account } {
-    if (!this.#walletClient.account) {
-      throw new WalletNotConnectedError();
+  get #account(): Account {
+    try {
+      assertNonNullable(this.#walletClient.account, "walletClient.account");
+      return this.#walletClient.account;
+    } catch (cause) {
+      throw new WalletNotConnectedError({ cause });
     }
-    return { walletClient: this.#walletClient, account: this.#walletClient.account };
   }
 
   async signTypedData(typedData: EIP712TypedData): Promise<Hex> {
-    const { walletClient, account } = this.#requireAccount();
+    const account = this.#account;
+    const walletClient = this.#walletClient;
     const { EIP712Domain: _, ...sigTypes } = typedData.types;
     return walletClient.signTypedData({
       account,
@@ -82,7 +86,8 @@ export class ViemSigner extends BaseSigner {
     TFunctionName extends ContractFunctionName<TAbi, "nonpayable" | "payable">,
     const TArgs extends ContractFunctionArgs<TAbi, "nonpayable" | "payable", TFunctionName>,
   >(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex> {
-    const { walletClient, account } = this.#requireAccount();
+    const account = this.#account;
+    const walletClient = this.#walletClient;
     return walletClient.writeContract({
       chain: walletClient.chain,
       account,

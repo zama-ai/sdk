@@ -10,7 +10,7 @@ const HANDLE = ("0x" + "ab".repeat(32)) as Address;
 const OTHER_USER = "0x3F3f3f3F3F3f3F3f3F3f3f3F3F3f3F3f3f3f3f3F" as Address;
 const RECIPIENT = "0x000000000000000000000000000000000000dEaD" as Address;
 
-// One row per public operation that awaits `sdk.getWalletAccount()` (the chain
+// One row per public operation that awaits `sdk.getAccount()` (the chain
 // alignment + wallet readiness pre-flight) before any network or signing side-effect.
 const MISMATCHED_OPS: ReadonlyArray<readonly [string, Op]> = [
   ["shield", (sdk, t) => sdk.createToken(t).shield(1000n)],
@@ -37,7 +37,7 @@ const MISMATCHED_OPS: ReadonlyArray<readonly [string, Op]> = [
   ],
 ] as const;
 
-describe("getWalletAccount (chain alignment)", () => {
+describe("getAccount (chain alignment)", () => {
   it("returns the wallet account when signer and provider chains match", async ({
     sdk,
     signer,
@@ -51,7 +51,7 @@ describe("getWalletAccount (chain alignment)", () => {
     vi.mocked(signer.requireWalletAccount).mockReturnValue(walletAccount);
     vi.mocked(provider.getChainId).mockResolvedValue(11155111);
 
-    await expect(sdk.getWalletAccount()).resolves.toEqual(walletAccount);
+    await expect(sdk.getAccount()).resolves.toEqual(walletAccount);
   });
 
   // `it.for` (not `it.each`) is the API that forwards the fixture context as
