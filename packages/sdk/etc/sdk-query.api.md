@@ -842,7 +842,7 @@ export interface TransactionErrorEvent extends BaseEvent {
 }
 
 // @public
-export type TransactionErrorOperation = "approveUnderlying" | "delegateDecryption" | "finalizeUnwrap" | "isPayable" | "revokeDelegation" | "setOperator" | "shield" | "transfer" | "transferFrom" | "unwrap";
+export type TransactionErrorOperation = "approveUnderlying" | "delegateDecryption" | "finalizeUnwrap" | "revokeDelegation" | "setOperator" | "shield" | "transfer" | "transferFrom" | "unwrap";
 
 // @public
 export interface TransactionReceipt {

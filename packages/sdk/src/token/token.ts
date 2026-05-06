@@ -102,8 +102,7 @@ export class Token extends ReadonlyToken {
    * Result is cached per Token instance after the first call. Probe failures
    * (`underlying()` revert, `supportsInterface` revert, RPC error, …) are
    * cached as `false` so a non-payable token does not trigger a probe on
-   * every shield. The failure is emitted as a {@link TransactionError} event
-   * with `operation: "isPayable"` for observability.
+   * every shield.
    */
   async isPayable(): Promise<boolean> {
     if (this.#isPayable !== null) {
@@ -113,12 +112,7 @@ export class Token extends ReadonlyToken {
       const underlying = await this.#getUnderlying();
       this.#isPayable = await this.sdk.provider.readContract(isPayableTokenContract(underlying));
       return this.#isPayable;
-    } catch (error) {
-      this.emit({
-        type: ZamaSDKEvents.TransactionError,
-        operation: "isPayable",
-        error: toError(error),
-      });
+    } catch {
       this.#isPayable = false;
       return false;
     }

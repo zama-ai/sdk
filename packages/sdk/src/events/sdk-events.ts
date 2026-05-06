@@ -92,7 +92,6 @@ export type TransactionErrorOperation =
   | "approveUnderlying"
   | "delegateDecryption"
   | "finalizeUnwrap"
-  | "isPayable"
   | "revokeDelegation"
   | "setOperator"
   | "shield"
