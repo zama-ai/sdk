@@ -232,13 +232,13 @@ export class ZamaSDK {
     const signer = this.requireSigner(operation);
     let account: WalletAccount;
     try {
-      account = signer.requireWalletAccount(operation);
+      account = signer.requireWalletAccount();
     } catch (error) {
       if (!(error instanceof WalletAccountNotReadyError) || !signer.refreshWalletAccount) {
         throw error;
       }
       await signer.refreshWalletAccount();
-      account = signer.requireWalletAccount(operation);
+      account = signer.requireWalletAccount();
     }
     const providerChainId = await this.provider.getChainId();
     if (account.chainId !== providerChainId) {

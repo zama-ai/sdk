@@ -53,15 +53,15 @@ export class ViemSigner extends BaseSigner {
     this.#unsubscribeProvider = this.#subscribeToProvider();
   }
 
-  #requireAccount(operation: string): { walletClient: WalletClient; account: Account } {
+  #requireAccount(): { walletClient: WalletClient; account: Account } {
     if (!this.#walletClient.account) {
-      throw new WalletNotConnectedError(operation);
+      throw new WalletNotConnectedError();
     }
     return { walletClient: this.#walletClient, account: this.#walletClient.account };
   }
 
   async signTypedData(typedData: EIP712TypedData): Promise<Hex> {
-    const { walletClient, account } = this.#requireAccount("signTypedData");
+    const { walletClient, account } = this.#requireAccount();
     const { EIP712Domain: _, ...sigTypes } = typedData.types;
     return walletClient.signTypedData({
       account,
@@ -82,7 +82,7 @@ export class ViemSigner extends BaseSigner {
     TFunctionName extends ContractFunctionName<TAbi, "nonpayable" | "payable">,
     const TArgs extends ContractFunctionArgs<TAbi, "nonpayable" | "payable", TFunctionName>,
   >(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex> {
-    const { walletClient, account } = this.#requireAccount("writeContract");
+    const { walletClient, account } = this.#requireAccount();
     return walletClient.writeContract({
       chain: walletClient.chain,
       account,

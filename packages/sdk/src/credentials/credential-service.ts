@@ -73,7 +73,7 @@ export class CredentialService {
    * @throws {@link SigningFailedError} if signing fails for any other reason.
    */
   async allow(contracts: readonly Address[], delegator?: Address): Promise<CredentialBundle> {
-    const account = this.#signer.requireWalletAccount("allow");
+    const account = this.#signer.requireWalletAccount();
     const signerAddress = checksum(account.address);
     const requested = normalizeAddresses(contracts);
     const keypair = await this.#vault.getOrCreate(signerAddress);
@@ -142,7 +142,7 @@ export class CredentialService {
    * @throws {@link SigningFailedError} if reading the signer address fails.
    */
   async revokePermits(contracts?: readonly Address[]): Promise<void> {
-    const account = this.#signer.requireWalletAccount("revokePermits");
+    const account = this.#signer.requireWalletAccount();
     const signerAddress = checksum(account.address);
     if (contracts === undefined) {
       await this.#store.clearAllForSigner(signerAddress);
@@ -166,7 +166,7 @@ export class CredentialService {
    * @throws {@link SigningFailedError} if reading the signer address fails.
    */
   async clearCredentials(): Promise<void> {
-    const account = this.#signer.requireWalletAccount("clearCredentials");
+    const account = this.#signer.requireWalletAccount();
     const signerAddress = checksum(account.address);
     await this.#vault.clear(signerAddress);
     await this.#store.clearAllForSigner(signerAddress);

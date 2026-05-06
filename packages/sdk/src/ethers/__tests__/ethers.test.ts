@@ -207,7 +207,7 @@ describe("EthersSigner", () => {
       const signer = new EthersSigner({ signer: new Wallet(PRIVATE_KEY) });
 
       await expect(signer.refreshWalletAccount()).resolves.toBeUndefined();
-      expect(() => signer.requireWalletAccount("test")).toThrow(WalletNotConnectedError);
+      expect(() => signer.requireWalletAccount()).toThrow(WalletNotConnectedError);
     });
 
     test("does not hide provider errors during explicit wallet-account resolution", async () => {
@@ -233,7 +233,7 @@ describe("EthersSigner", () => {
         address: WALLET_ADDRESS,
         chainId: CHAIN_ID,
       });
-      expect(signer.requireWalletAccount("test")).toEqual({
+      expect(signer.requireWalletAccount()).toEqual({
         address: WALLET_ADDRESS,
         chainId: CHAIN_ID,
       });

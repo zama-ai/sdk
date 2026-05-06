@@ -28,10 +28,10 @@ export abstract class BaseSigner implements GenericSigner, Disposable {
     this.walletAccount = new MutableWalletAccountStore(initial);
   }
 
-  requireWalletAccount(operation: string): WalletAccount {
+  requireWalletAccount(): WalletAccount {
     const account = this.walletAccount.getSnapshot();
     if (!account) {
-      throw new WalletNotConnectedError(operation);
+      throw new WalletNotConnectedError();
     }
     return account;
   }

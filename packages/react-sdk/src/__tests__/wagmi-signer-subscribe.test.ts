@@ -117,7 +117,7 @@ describe("WagmiSigner.subscribe", () => {
     mockGetConnection.mockReturnValue({ status: "disconnected" });
 
     expect(wagmiSigner.walletAccount.getSnapshot()).toBeUndefined();
-    expect(() => wagmiSigner.requireWalletAccount("test")).toThrow(WalletNotConnectedError);
+    expect(() => wagmiSigner.requireWalletAccount()).toThrow(WalletNotConnectedError);
   });
 
   wit(

@@ -131,7 +131,7 @@ describe("ZamaSDK", () => {
     const requireWalletAccount = vi
       .fn()
       .mockImplementationOnce(() => {
-        throw new WalletAccountNotReadyError("testOp");
+        throw new WalletAccountNotReadyError();
       })
       .mockReturnValue(walletAccount);
     const refreshWalletAccount = vi.fn().mockResolvedValue(walletAccount);

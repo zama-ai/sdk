@@ -7,7 +7,7 @@ describe("ViemSigner", () => {
   // Same no-account invariant applied to each method that needs an account —
   // parametrized so failures name the offending method.
   it.each([
-    ["requireWalletAccount", (s: ViemSigner) => s.requireWalletAccount("test")],
+    ["requireWalletAccount", (s: ViemSigner) => s.requireWalletAccount()],
     [
       "signTypedData",
       (s: ViemSigner) => s.signTypedData({} as Parameters<ViemSigner["signTypedData"]>[0]),

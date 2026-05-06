@@ -165,7 +165,6 @@ export {
   RelayerRequestFailedError,
   ConfigurationError,
   ChainMismatchError,
-  SignerRequiredError,
   SignerNotConfiguredError,
   WalletNotConnectedError,
   WalletAccountNotReadyError,

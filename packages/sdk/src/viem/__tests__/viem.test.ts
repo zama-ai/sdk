@@ -146,9 +146,7 @@ describe("ViemSigner", () => {
       const noAccountClient = createMockWalletClient(false);
       const noAccountSigner = new ViemSigner({ walletClient: noAccountClient });
       expect(noAccountSigner.walletAccount.getSnapshot()).toBeUndefined();
-      expect(() => noAccountSigner.requireWalletAccount("test")).toThrow(
-        "Cannot test without a connected wallet account.",
-      );
+      expect(() => noAccountSigner.requireWalletAccount()).toThrow("No connected wallet account.");
     });
   });
 
@@ -203,7 +201,7 @@ describe("ViemSigner", () => {
         const noAccountClient = createMockWalletClient(false);
         const noAccountSigner = new ViemSigner({ walletClient: noAccountClient });
         await expect(noAccountSigner.signTypedData(typedData)).rejects.toThrow(
-          "Cannot signTypedData without a connected wallet account.",
+          "No connected wallet account.",
         );
       },
     );
@@ -244,7 +242,7 @@ describe("ViemSigner", () => {
         const noAccountClient = createMockWalletClient(false);
         const noAccountSigner = new ViemSigner({ walletClient: noAccountClient });
         await expect(noAccountSigner.writeContract(config)).rejects.toThrow(
-          "Cannot writeContract without a connected wallet account.",
+          "No connected wallet account.",
         );
       },
     );

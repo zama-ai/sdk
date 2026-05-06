@@ -6,7 +6,6 @@ export { KeypairExpiredError, InvalidKeypairError, NoCiphertextError } from "./c
 export { RelayerRequestFailedError, ConfigurationError } from "./relayer";
 export { ChainMismatchError } from "./chain";
 export {
-  SignerRequiredError,
   SignerNotConfiguredError,
   WalletNotConnectedError,
   WalletAccountNotReadyError,

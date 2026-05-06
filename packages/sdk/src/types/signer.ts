@@ -65,7 +65,7 @@ export interface GenericSigner {
    * Return the currently connected wallet account or throw
    * {@link WalletNotConnectedError}. Must not initiate wallet connection.
    */
-  requireWalletAccount(operation: string): WalletAccount;
+  requireWalletAccount(): WalletAccount;
   /**
    * Optional non-prompting account discovery hook for adapters whose initial
    * account snapshot is only available asynchronously.

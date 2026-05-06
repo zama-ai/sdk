@@ -72,13 +72,13 @@ export class EthersSigner extends BaseSigner {
     }
   }
 
-  override requireWalletAccount(operation: string): WalletAccount {
+  override requireWalletAccount(): WalletAccount {
     const account = this.walletAccount.getSnapshot();
     if (!account && !this.walletAccount.isReady()) {
-      throw new WalletAccountNotReadyError(operation);
+      throw new WalletAccountNotReadyError();
     }
     if (!account) {
-      throw new WalletNotConnectedError(operation);
+      throw new WalletNotConnectedError();
     }
     return account;
   }
