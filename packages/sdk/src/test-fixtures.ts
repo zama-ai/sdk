@@ -35,7 +35,7 @@ export const TEST_ADDR_B = DELEGATE;
 const STUB_ADDRESS = "0x0000000000000000000000000000000000000001" as Address;
 
 /**
- * Build a complete {@link FheChain} stub that satisfies {@link FheChainSchema}.
+ * Build a complete {@link FheChain} stub for tests.
  * Use this in tests that only care about `chain.id` but flow through code paths
  * that schema-validate the chain shape (e.g. `RelayerDispatcher`).
  */
@@ -379,7 +379,7 @@ export const test = base.extend<SdkFixtures>({
         permitTTL: 1,
         registryTTL: 86400,
         onEvent: undefined,
-      }),
+      } as unknown as ZamaConfig),
     );
   },
   createSDK: async ({ provider, signer, relayer, storage }, use) => {
@@ -396,7 +396,7 @@ export const test = base.extend<SdkFixtures>({
         registryTTL: 86400,
         onEvent: undefined,
         ...overrides,
-      });
+      } as ZamaConfig);
     });
   },
   events: ZamaSDKEvents,

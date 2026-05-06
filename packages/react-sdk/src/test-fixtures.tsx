@@ -67,7 +67,7 @@ export const test = base.extend<ReactSdkFixtures>({
   },
   createWrapper: async ({ relayer, provider, signer, storage, queryClient }, use) => {
     function createWrapper(overrides?: Partial<ZamaConfig>) {
-      const config: ZamaConfig = {
+      const config = {
         chains: [createMockChain({ id: 31337 })],
         relayer,
         provider,
@@ -79,7 +79,7 @@ export const test = base.extend<ReactSdkFixtures>({
         registryTTL: 86400,
         onEvent: undefined,
         ...overrides,
-      };
+      } as unknown as ZamaConfig;
 
       function Wrapper({ children }: { children?: React.ReactNode }) {
         return (

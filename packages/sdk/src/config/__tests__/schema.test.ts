@@ -6,7 +6,7 @@ import {
   createMockProvider,
   createMockRelayer,
 } from "../../test-fixtures";
-import { hardhat, type FheChain } from "../../chains";
+import { hardhat } from "../../chains";
 import { ConfigurationError } from "../../errors";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import { node } from "../../node/config";
@@ -37,19 +37,6 @@ describe("createConfig validation", () => {
     expect(config.registryTTL).toBe(60);
   });
 
-  it("rejects invalid chain shape before relayers are constructed", () => {
-    const relayer = mockRelayerConfig();
-
-    expect(() =>
-      createConfig({
-        chains: [{ ...hardhat, aclContractAddress: "not-an-address" } as FheChain],
-        relayers: { [hardhat.id]: relayer },
-        provider: createMockProvider(),
-      }),
-    ).toThrow("expected EVM address");
-    expect(relayer.createRelayer).not.toHaveBeenCalled();
-  });
-
   it("rejects invalid TTLs at createConfig", () => {
     expect(() =>
       createConfig({
@@ -65,6 +52,25 @@ describe("createConfig validation", () => {
         relayers: { [hardhat.id]: mockRelayerConfig() },
         provider: createMockProvider(),
         keypairTTL: 0,
+      }),
+    ).toThrow("keypairTTL must be a positive integer number of seconds");
+  });
+
+  it("rejects invalid keypairTTL even without a signer", () => {
+    expect(() =>
+      createConfig({
+        chains: [hardhat],
+        relayers: { [hardhat.id]: mockRelayerConfig() },
+        provider: createMockProvider(),
+        keypairTTL: 0,
+      }),
+    ).toThrow("keypairTTL must be a positive integer number of seconds");
+    expect(() =>
+      createConfig({
+        chains: [hardhat],
+        relayers: { [hardhat.id]: mockRelayerConfig() },
+        provider: createMockProvider(),
+        keypairTTL: NaN,
       }),
     ).toThrow("keypairTTL must be a positive integer number of seconds");
   });

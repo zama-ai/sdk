@@ -19943,30 +19943,20 @@ export interface WriteContractConfig<TAbi extends ContractAbi = ContractAbi, TFu
 export type WriteFunctionName<TAbi extends ContractAbi = ContractAbi> = ContractFunctionName<TAbi, "nonpayable" | "payable">;
 
 // @public
-export interface ZamaConfig {
-    // (undocumented)
+export type ZamaConfig = {
     readonly chains: readonly FheChain[];
-    // (undocumented)
-    readonly keypairTTL: number;
-    // (undocumented)
-    readonly onEvent: ZamaSDKEventListener | undefined;
-    // (undocumented)
-    readonly permitStorage: GenericStorage;
-    // (undocumented)
-    readonly permitTTL: number;
-    // (undocumented)
-    readonly provider: GenericProvider;
-    // (undocumented)
-    readonly registryAddresses: Record<number, Address>;
-    // (undocumented)
-    readonly registryTTL: number;
-    // (undocumented)
     readonly relayer: RelayerDispatcher;
-    // (undocumented)
+    readonly provider: GenericProvider;
     readonly signer: GenericSigner | undefined;
-    // (undocumented)
     readonly storage: GenericStorage;
-}
+    readonly permitStorage: GenericStorage;
+    readonly keypairTTL: number;
+    readonly permitTTL: number;
+    readonly registryTTL: number;
+    readonly onEvent: ZamaSDKEventListener | undefined;
+} & {
+    readonly [zamaConfigBrand]: true;
+};
 
 // @public
 export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChain> {
@@ -20057,7 +20047,7 @@ export type ZamaErrorCode = (typeof ZamaErrorCode)[keyof typeof ZamaErrorCode];
 // @public
 export class ZamaSDK {
     [Symbol.dispose](): void;
-    constructor(config: ZamaConfig | ZamaSDKConfig);
+    constructor(config: ZamaConfig);
     allow(contracts: Address[]): Promise<void>;
     allowAs(delegator: Address, contracts: Address[]): Promise<void>;
     readonly cache: DecryptCache;
@@ -20110,20 +20100,6 @@ export class ZamaSDK {
     readonly storage: GenericStorage;
     terminate(): void;
     userDecrypt(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>>;
-}
-
-// @public
-export interface ZamaSDKConfig {
-    chains?: readonly FheChain[];
-    keypairTTL?: number;
-    onEvent?: ZamaSDKEventListener;
-    permitStorage?: GenericStorage;
-    permitTTL?: number;
-    provider: GenericProvider;
-    registryTTL?: number;
-    relayer: RelayerDispatcher;
-    signer?: GenericSigner;
-    storage: GenericStorage;
 }
 
 // @public

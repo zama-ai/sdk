@@ -1,6 +1,5 @@
 import { getAddress, type Address } from "viem";
-import { normalizeZamaSDKConfig } from "./config/build";
-import type { ZamaConfig, ZamaSDKConfig } from "./config/types";
+import type { ZamaConfig } from "./config/types";
 import {
   delegateForUserDecryptionContract,
   getDelegationExpiryContract,
@@ -79,30 +78,35 @@ export class ZamaSDK {
   readonly #credentialService: CredentialService | undefined;
   #unsubscribeSigner?: () => void;
 
-  constructor(config: ZamaConfig | ZamaSDKConfig) {
-    const resolved = normalizeZamaSDKConfig(config);
-    this.relayer = resolved.relayer;
-    this.provider = resolved.provider;
-    this.signer = resolved.signer;
-    this.storage = resolved.storage;
-    this.cache = new DecryptCache(resolved.storage);
-    this.#onEvent = resolved.onEvent ?? function () {};
+  constructor(config: ZamaConfig) {
+    this.relayer = config.relayer;
+    this.provider = config.provider;
+    this.signer = config.signer;
+    this.storage = config.storage;
+    this.cache = new DecryptCache(config.storage);
+    this.#onEvent = config.onEvent ?? function () {};
+    const registryAddresses: Record<number, Address> = {};
+    for (const chain of config.chains) {
+      if (chain.registryAddress) {
+        registryAddresses[chain.id] = chain.registryAddress;
+      }
+    }
+    this.#registryAddresses = registryAddresses;
     this.registry = new WrappersRegistry({
       provider: this.provider,
-      registryTTL: resolved.registryTTL,
-      registryAddresses: resolved.registryAddresses,
+      registryTTL: config.registryTTL,
+      registryAddresses,
     });
-    this.#registryTTL = resolved.registryTTL;
-    this.#registryAddresses = resolved.registryAddresses;
-    if (resolved.signer) {
-      const signer = resolved.signer;
+    this.#registryTTL = config.registryTTL;
+    if (config.signer) {
+      const signer = config.signer;
       this.#credentialService = new CredentialService({
         relayer: this.relayer,
         signer,
-        keypairTTL: resolved.keypairTTL,
-        permitTTL: resolved.permitTTL,
+        keypairTTL: config.keypairTTL,
+        permitTTL: config.permitTTL,
         storage: this.storage,
-        permitStorage: resolved.permitStorage,
+        permitStorage: config.permitStorage,
       });
 
       this.#unsubscribeSigner = signer.walletAccount.subscribe((change) => {

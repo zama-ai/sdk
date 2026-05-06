@@ -27,16 +27,6 @@ describe("ZamaSDK without signer", () => {
     expect(sdk.signer).toBeUndefined();
   });
 
-  // `it.for` (not `it.each`) forwards the fixture context as the second arg.
-  it.for([
-    { keypairTTL: 0, label: "0" },
-    { keypairTTL: NaN, label: "NaN" },
-  ])("rejects keypairTTL=$label even when signer is omitted", ({ keypairTTL }, { createSDK }) => {
-    expect(() => createSDK({ signer: undefined, keypairTTL })).toThrow(
-      "keypairTTL must be a positive integer number of seconds",
-    );
-  });
-
   it("createReadonlyToken / createToken work with no signer", ({ createSDK, tokenAddress }) => {
     const sdk = createSDK({ signer: undefined });
     expect(sdk.createReadonlyToken(tokenAddress)).toBeInstanceOf(ReadonlyToken);

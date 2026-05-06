@@ -1084,36 +1084,20 @@ export interface WrappersRegistryQueryConfig {
 }
 
 // @public
-export interface ZamaConfig {
-    // Warning: (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
-    //
-    // (undocumented)
+export type ZamaConfig = {
     readonly chains: readonly FheChain[];
-    // (undocumented)
-    readonly keypairTTL: number;
-    // (undocumented)
-    readonly onEvent: ZamaSDKEventListener | undefined;
-    // (undocumented)
-    readonly permitStorage: GenericStorage;
-    // (undocumented)
-    readonly permitTTL: number;
-    // Warning: (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
-    //
-    // (undocumented)
-    readonly provider: GenericProvider;
-    // (undocumented)
-    readonly registryAddresses: Record<number, Address>;
-    // (undocumented)
-    readonly registryTTL: number;
-    // Warning: (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
-    //
-    // (undocumented)
     readonly relayer: RelayerDispatcher;
-    // (undocumented)
+    readonly provider: GenericProvider;
     readonly signer: GenericSigner | undefined;
-    // (undocumented)
     readonly storage: GenericStorage;
-}
+    readonly permitStorage: GenericStorage;
+    readonly keypairTTL: number;
+    readonly permitTTL: number;
+    readonly registryTTL: number;
+    readonly onEvent: ZamaSDKEventListener | undefined;
+} & {
+    readonly [zamaConfigBrand]: true;
+};
 
 // @public
 export const zamaQueryKeys: {
@@ -1315,7 +1299,7 @@ export const zamaQueryKeys: {
 // @public
 export class ZamaSDK {
     [Symbol.dispose](): void;
-    constructor(config: ZamaConfig | ZamaSDKConfig);
+    constructor(config: ZamaConfig);
     allow(contracts: Address[]): Promise<void>;
     allowAs(delegator: Address, contracts: Address[]): Promise<void>;
     // Warning: (ae-forgotten-export) The symbol "DecryptCache" needs to be exported by the entry point index.d.ts
@@ -1372,20 +1356,6 @@ export class ZamaSDK {
 }
 
 // @public
-export interface ZamaSDKConfig {
-    chains?: readonly FheChain[];
-    keypairTTL?: number;
-    onEvent?: ZamaSDKEventListener;
-    permitStorage?: GenericStorage;
-    permitTTL?: number;
-    provider: GenericProvider;
-    registryTTL?: number;
-    relayer: RelayerDispatcher;
-    signer?: GenericSigner;
-    storage: GenericStorage;
-}
-
-// @public
 export type ZamaSDKEvent = EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | SetOperatorSubmittedEvent | ApproveUnderlyingSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | DelegationSubmittedEvent | RevokeDelegationSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
 
 // @public
@@ -1416,6 +1386,12 @@ export const ZamaSDKEvents: {
     readonly UnshieldPhase2Started: "unshield:phase2_started";
     readonly UnshieldPhase2Submitted: "unshield:phase2_submitted";
 };
+
+// Warnings were encountered during analysis:
+//
+// dist/esm/types-T0tr_-1R.d.ts:561:3 - (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
+// dist/esm/types-T0tr_-1R.d.ts:562:3 - (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
+// dist/esm/types-T0tr_-1R.d.ts:563:3 - (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

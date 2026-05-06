@@ -8,7 +8,6 @@ import {
   DelegationExpiryUnchangedError,
   DelegationNotFoundError,
   DelegationSelfNotAllowedError,
-  ConfigurationError,
   SignerNotConfiguredError,
   WalletAccountNotReadyError,
   ZamaError,
@@ -16,7 +15,6 @@ import {
 } from "../errors";
 import { MAX_UINT64 } from "../contracts/constants";
 import { ZamaSDKEvents } from "../events/sdk-events";
-import { ZamaSDK } from "../zama-sdk";
 import { ZERO_HANDLE } from "../utils/handles";
 import type { GenericSigner, WalletAccountChange, WalletAccountListener } from "../types";
 import type { Address } from "viem";
@@ -153,66 +151,6 @@ describe("ZamaSDK", () => {
 
   it("does not fail when subscribe returns a no-op unsubscribe", ({ sdk }) => {
     sdk.terminate();
-  });
-
-  describe("keypairTTL validation", () => {
-    it("throws when keypairTTL is 0", ({ createSDK }) => {
-      expect(() => createSDK({ keypairTTL: 0 })).toThrow(ConfigurationError);
-      expect(() => createSDK({ keypairTTL: 0 })).toThrow(
-        "keypairTTL must be a positive integer number of seconds",
-      );
-    });
-
-    it("throws when keypairTTL is negative", ({ createSDK }) => {
-      expect(() => createSDK({ keypairTTL: -1 })).toThrow(
-        "keypairTTL must be a positive integer number of seconds",
-      );
-    });
-
-    it("throws when keypairTTL is NaN", ({ createSDK }) => {
-      expect(() => createSDK({ keypairTTL: NaN })).toThrow(
-        "keypairTTL must be a positive integer number of seconds",
-      );
-    });
-
-    it("accepts keypairTTL exactly at the 365-day maximum without warning", ({ createSDK }) => {
-      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-      const MAX = 365 * 86400;
-      createSDK({ keypairTTL: MAX });
-      expect(warnSpy).not.toHaveBeenCalled();
-      warnSpy.mockRestore();
-    });
-
-    it("throws when keypairTTL is Infinity", ({ createSDK }) => {
-      expect(() => createSDK({ keypairTTL: Infinity })).toThrow(
-        "keypairTTL must be a positive integer number of seconds",
-      );
-    });
-
-    it("throws when keypairTTL is fractional", ({ createSDK }) => {
-      expect(() => createSDK({ keypairTTL: 1.5 })).toThrow(
-        "keypairTTL must be a positive integer number of seconds",
-      );
-    });
-  });
-
-  describe("constructor config normalization", () => {
-    it("accepts direct constructor input without chains", ({
-      provider,
-      relayer,
-      signer,
-      storage,
-    }) => {
-      const sdk = new ZamaSDK({
-        relayer: relayer as never,
-        provider,
-        signer,
-        storage,
-      });
-
-      expect(sdk.signer).toBe(signer);
-      expect(sdk.storage).toBe(storage);
-    });
   });
 
   describe("lifecycle wallet account change", () => {
