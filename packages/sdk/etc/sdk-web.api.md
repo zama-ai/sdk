@@ -89,7 +89,7 @@ export interface WebRelayerConfig extends RelayerConfig {
 }
 
 // @public
-export type WebRelayerOptions = Partial<Pick<RelayerWebConfig, "threads" | "security" | "logger">>;
+export type WebRelayerOptions = Partial<Pick<RelayerWebConfig, "threads" | "security" | "logger" | "fheArtifactStorage" | "fheArtifactCacheTTL">>;
 
 // (No @packageDocumentation comment for this package)
 

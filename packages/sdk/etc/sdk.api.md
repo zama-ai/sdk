@@ -19952,13 +19952,13 @@ export interface ZamaConfig {
     // (undocumented)
     readonly chains: readonly FheChain[];
     // (undocumented)
-    readonly keypairTTL: number | undefined;
+    readonly keypairTTL: number;
     // (undocumented)
     readonly onEvent: ZamaSDKEventListener | undefined;
     // (undocumented)
     readonly permitStorage: GenericStorage;
     // (undocumented)
-    readonly permitTTL: number | undefined;
+    readonly permitTTL: number;
     // (undocumented)
     readonly provider: GenericProvider;
     // (undocumented)
@@ -20060,7 +20060,7 @@ export type ZamaErrorCode = (typeof ZamaErrorCode)[keyof typeof ZamaErrorCode];
 // @public
 export class ZamaSDK {
     [Symbol.dispose](): void;
-    constructor(config: ZamaSDKConfig);
+    constructor(rawConfig: ZamaSDKConfig);
     allow(contracts: Address[]): Promise<void>;
     allowAs(delegator: Address, contracts: Address[]): Promise<void>;
     readonly cache: DecryptCache;

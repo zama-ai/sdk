@@ -10,8 +10,8 @@ import type { Address, EIP1193Provider, Hex } from "viem";
  *
  * Validated at runtime by {@link FheChainSchema} at the config boundary.
  */
-export interface FheChain {
-  readonly id: number;
+export interface FheChain<TId extends number = number> {
+  readonly id: TId;
   readonly gatewayChainId: number;
   readonly relayerUrl: string;
   readonly network: EIP1193Provider | string;
