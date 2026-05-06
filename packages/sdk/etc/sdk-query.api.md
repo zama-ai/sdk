@@ -832,13 +832,12 @@ export function totalSupplyQueryOptions(sdk: ZamaSDK, tokenAddress: Address, con
 export interface TransactionErrorEvent extends BaseEvent {
     error: Error;
     operation: TransactionErrorOperation;
-    shieldPath?: ShieldPath;
     // (undocumented)
     type: typeof ZamaSDKEvents.TransactionError;
 }
 
 // @public
-export type TransactionErrorOperation = "approveUnderlying" | "delegateDecryption" | "finalizeUnwrap" | "revokeDelegation" | "setOperator" | "shield" | "transfer" | "transferFrom" | "unwrap";
+export type TransactionErrorOperation = "approveUnderlying" | "delegateDecryption" | "finalizeUnwrap" | "revokeDelegation" | "setOperator" | "shield:transferAndCall" | "shield:approveAndWrap" | "transfer" | "transferFrom" | "unwrap";
 
 // @public
 export interface TransactionReceipt {

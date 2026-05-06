@@ -18,9 +18,10 @@ export type ApprovalStrategy = "max" | "exact" | "skip";
 
 /**
  * The resolved shielding execution path — what actually ran on-chain.
- * Reported on {@link ShieldSubmittedEvent} and on {@link TransactionErrorEvent}
- * when `operation === "shield"`. The path is decided automatically by ERC-165
- * introspection on the underlying ERC-20.
+ * Reported on {@link ShieldSubmittedEvent}; on a failure, the path is
+ * encoded in {@link TransactionErrorEvent.operation} as
+ * `"shield:transferAndCall"` or `"shield:approveAndWrap"`. Decided
+ * automatically by ERC-165 introspection on the underlying ERC-20.
  *
  * - `"transferAndCall"`: single tx via ERC-1363 (no approval).
  * - `"approveAndWrap"`: legacy two-tx path (`approve` then `wrap`).

@@ -87,6 +87,9 @@ export interface DecryptErrorEvent extends BaseEvent {
 
 /**
  * Identifier for the SDK operation that emitted a {@link TransactionErrorEvent}.
+ * Shield failures encode the execution path in the operation string itself
+ * (`shield:transferAndCall` or `shield:approveAndWrap`) so observers can route
+ * on a single field.
  */
 export type TransactionErrorOperation =
   | "approveUnderlying"
@@ -94,7 +97,8 @@ export type TransactionErrorOperation =
   | "finalizeUnwrap"
   | "revokeDelegation"
   | "setOperator"
-  | "shield"
+  | "shield:transferAndCall"
+  | "shield:approveAndWrap"
   | "transfer"
   | "transferFrom"
   | "unwrap";
@@ -105,8 +109,6 @@ export interface TransactionErrorEvent extends BaseEvent {
   operation: TransactionErrorOperation;
   /** The error that caused the transaction to fail. */
   error: Error;
-  /** For shield errors: which execution path failed. Always set when `operation === "shield"`. */
-  shieldPath?: ShieldPath;
 }
 
 export interface ShieldSubmittedEvent extends BaseEvent {

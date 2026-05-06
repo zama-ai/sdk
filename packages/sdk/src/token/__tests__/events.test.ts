@@ -701,7 +701,7 @@ describe("Token event emissions", () => {
   });
 
   describe("TransactionError events", () => {
-    it("emits TransactionError with operation 'shield' on shield failure", async ({
+    it("emits TransactionError with operation 'shield:approveAndWrap' on shield failure", async ({
       relayer,
       signer,
       tokenAddress,
@@ -725,7 +725,7 @@ describe("Token event emissions", () => {
 
       const txError = events.find((e) => e.type === ZamaSDKEvents.TransactionError);
       expect(txError).toBeDefined();
-      expect("operation" in txError! && txError.operation).toBe("shield");
+      expect("operation" in txError! && txError.operation).toBe("shield:approveAndWrap");
     });
 
     it("emits TransactionError with operation 'setOperator' on setOperator failure", async ({

@@ -479,7 +479,7 @@ describe("Token.shield", () => {
       );
     });
 
-    it("emits TransactionError with shieldPath: transferAndCall when transferAndCall fails in auto mode", async ({
+    it('emits TransactionError with operation: "shield:transferAndCall" when transferAndCall fails', async ({
       createSDK,
       provider,
       tokenAddress,
@@ -509,13 +509,12 @@ describe("Token.shield", () => {
       expect(errorEvents[0]).toEqual(
         expect.objectContaining({
           type: ZamaSDKEvents.TransactionError,
-          operation: "shield",
-          shieldPath: "transferAndCall",
+          operation: "shield:transferAndCall",
         }),
       );
     });
 
-    it("emits TransactionError with shieldPath: approveAndWrap when approveAndWrap fails", async ({
+    it('emits TransactionError with operation: "shield:approveAndWrap" when approveAndWrap fails', async ({
       createSDK,
       provider,
       tokenAddress,
@@ -544,8 +543,7 @@ describe("Token.shield", () => {
       expect(errorEvents[0]).toEqual(
         expect.objectContaining({
           type: ZamaSDKEvents.TransactionError,
-          operation: "shield",
-          shieldPath: "approveAndWrap",
+          operation: "shield:approveAndWrap",
         }),
       );
     });

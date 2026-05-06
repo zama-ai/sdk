@@ -414,8 +414,7 @@ export class Token extends ReadonlyToken {
     } catch (error) {
       this.emit({
         type: ZamaSDKEvents.TransactionError,
-        operation: "shield",
-        shieldPath: "transferAndCall",
+        operation: "shield:transferAndCall",
         error: toError(error),
       });
       if (error instanceof ZamaError) {
@@ -452,8 +451,7 @@ export class Token extends ReadonlyToken {
     } catch (error) {
       this.emit({
         type: ZamaSDKEvents.TransactionError,
-        operation: "shield",
-        shieldPath: "approveAndWrap",
+        operation: "shield:approveAndWrap",
         error: toError(error),
       });
 
