@@ -35,24 +35,11 @@ export type ShieldStrategy = "auto" | "transferAndCall" | "approveAndWrap";
 
 /**
  * The resolved shielding execution path — what actually ran on-chain.
+ * Reported on {@link ShieldSubmittedEvent} and on {@link TransactionErrorEvent}
+ * when `operation === "shield"`.
  *
- * Reported on {@link ShieldSubmittedEvent} (always set) and on
- * {@link TransactionErrorEvent} when `operation === "shield"` (set to the
- * path that failed). Distinct from {@link ShieldStrategy} which is the
- * user-facing input and adds `"auto"`; `"auto"` is never a `ShieldPath`
- * because it has been resolved by the time an event fires.
- *
- * - `"transferAndCall"`: single transaction. The user calls
- *   `underlying.transferAndCall(wrapper, amount, data)`; the wrapper's
- *   `onTransferReceived` callback receives the underlying tokens and mints
- *   confidential tokens to `from` (self-shield, `data === "0x"`) or to the
- *   address encoded in `data` (shield-to-other, raw 20-byte address). No
- *   ERC-20 approval is needed.
- * - `"approveAndWrap"`: two transactions. The user calls `underlying.approve`
- *   (skipped when `approvalStrategy === "skip"` or the existing allowance is
- *   sufficient) and then `wrapper.wrap(recipient, amount)`. Used when the
- *   underlying does not implement ERC-1363, or when the caller forced
- *   `shieldStrategy: "approveAndWrap"`.
+ * - `"transferAndCall"`: single tx via ERC-1363 (no approval).
+ * - `"approveAndWrap"`: legacy two-tx path (`approve` then `wrap`).
  */
 export type ShieldPath = Exclude<ShieldStrategy, "auto">;
 
