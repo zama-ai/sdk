@@ -20,6 +20,9 @@ export const ERC7984_WRAPPER_INTERFACE_ID_LEGACY = "0xd04584ba" as const;
  */
 export const ERC7984_WRAPPER_INTERFACE_ID = "0x1f1c62b2" as const;
 
+/** ERC-165 interface ID for ERC-1363 (payable token — `transferAndCall`). */
+export const ERC1363_INTERFACE_ID = "0xb0202a11" as const;
+
 /**
  * Returns the contract config for an ERC-165 `supportsInterface` check.
  *
@@ -75,4 +78,18 @@ export function isConfidentialTokenContract(tokenAddress: Address) {
  */
 export function isConfidentialWrapperContract(tokenAddress: Address) {
   return supportsInterfaceContract(tokenAddress, ERC7984_WRAPPER_INTERFACE_ID_LEGACY);
+}
+
+/**
+ * Returns contract config to check if a token implements ERC-1363 (payable token).
+ *
+ * @example
+ * ```ts
+ * const isPayable = await provider.readContract(
+ *   isPayableTokenContract("0xTokenAddress"),
+ * );
+ * ```
+ */
+export function isPayableTokenContract(tokenAddress: Address) {
+  return supportsInterfaceContract(tokenAddress, ERC1363_INTERFACE_ID);
 }

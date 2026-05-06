@@ -158,6 +158,7 @@ export type { Keypair } from "../credentials";
 export type {
   GenericSigner,
   GenericStorage,
+  ApprovalStrategy,
   ShieldCallbacks,
   WalletAccount,
   WalletAccountChange,
@@ -165,6 +166,7 @@ export type {
   TransactionReceipt,
   TransactionResult,
   ShieldOptions,
+  ShieldPath,
   TransferCallbacks,
   TransferOptions,
   UnshieldCallbacks,
@@ -184,6 +186,7 @@ export type {
   FinalizeUnwrapSubmittedEvent,
   ShieldSubmittedEvent,
   TransactionErrorEvent,
+  TransactionErrorOperation,
   TransferFromSubmittedEvent,
   TransferSubmittedEvent,
   UnshieldPhase1SubmittedEvent,
