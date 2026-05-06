@@ -1294,6 +1294,7 @@ export class ZamaSDK {
     // @internal
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
+    getAccount(): Promise<WalletAccount>;
     getDelegationExpiry(input: {
         contractAddress: Address;
         delegatorAddress: Address;
@@ -1319,9 +1320,6 @@ export class ZamaSDK {
     //
     // (undocumented)
     readonly relayer: RelayerDispatcher;
-    requireAlignedWalletAccount(operation: string): Promise<WalletAccount>;
-    // (undocumented)
-    requireChainAlignment(operation: string): Promise<number>;
     revokeDelegation(input: {
         contractAddress: Address;
         delegateAddress: Address;

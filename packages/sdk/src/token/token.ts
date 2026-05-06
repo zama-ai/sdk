@@ -125,7 +125,7 @@ export class Token extends ReadonlyToken {
     options?: TransferOptions,
   ): Promise<TransactionResult> {
     const signer = this.sdk.signer;
-    const account = await this.sdk.requireAlignedWalletAccount("confidentialTransfer");
+    const account = await this.sdk.getAccount();
     const { skipBalanceCheck = false, onEncryptComplete, onTransferSubmitted } = options ?? {};
 
     const normalizedTo = getAddress(to);
@@ -192,7 +192,7 @@ export class Token extends ReadonlyToken {
     callbacks?: TransferCallbacks,
   ): Promise<TransactionResult> {
     const signer = this.sdk.signer;
-    await this.sdk.requireChainAlignment("confidentialTransferFrom");
+    await this.sdk.getAccount();
     const normalizedFrom = getAddress(from);
     const normalizedTo = getAddress(to);
 
@@ -253,7 +253,7 @@ export class Token extends ReadonlyToken {
    */
   async setOperator(operator: Address, until?: number): Promise<TransactionResult> {
     const signer = this.sdk.signer;
-    await this.sdk.requireChainAlignment("setOperator");
+    await this.sdk.getAccount();
     const normalizedOperator = getAddress(operator);
     try {
       const txHash = await signer.writeContract(
@@ -322,7 +322,7 @@ export class Token extends ReadonlyToken {
    */
   async shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult> {
     const signer = this.sdk.signer;
-    const account = await this.sdk.requireAlignedWalletAccount("shield");
+    const account = await this.sdk.getAccount();
     const underlying = await this.#getUnderlying();
     const userAddress = getAddress(account.address);
 
@@ -392,7 +392,7 @@ export class Token extends ReadonlyToken {
    */
   async unwrap(amount: bigint): Promise<TransactionResult> {
     const signer = this.sdk.signer;
-    const account = await this.sdk.requireAlignedWalletAccount("unwrap");
+    const account = await this.sdk.getAccount();
     const userAddress = getAddress(account.address);
 
     const { handles, inputProof } = await this.sdk.encrypt({
@@ -444,7 +444,7 @@ export class Token extends ReadonlyToken {
    */
   async unwrapAll(): Promise<TransactionResult> {
     const signer = this.sdk.signer;
-    const account = await this.sdk.requireAlignedWalletAccount("unwrapAll");
+    const account = await this.sdk.getAccount();
     const userAddress = getAddress(account.address);
     const handle = await this.readConfidentialBalanceOf(userAddress);
 
@@ -579,7 +579,7 @@ export class Token extends ReadonlyToken {
    */
   async finalizeUnwrap(unwrapRequestIdOrAmount: Handle): Promise<TransactionResult> {
     const signer = this.sdk.signer;
-    await this.sdk.requireChainAlignment("finalizeUnwrap");
+    await this.sdk.getAccount();
     const result = await this.sdk.publicDecrypt([unwrapRequestIdOrAmount]);
     const clearValue = result.clearValues[unwrapRequestIdOrAmount];
     assertBigint(clearValue, "finalizeUnwrap: clearValue");
@@ -628,7 +628,7 @@ export class Token extends ReadonlyToken {
    */
   async approveUnderlying(amount?: bigint): Promise<TransactionResult> {
     const signer = this.sdk.signer;
-    const account = await this.sdk.requireAlignedWalletAccount("approveUnderlying");
+    const account = await this.sdk.getAccount();
     const underlying = await this.#getUnderlying();
     const userAddress = getAddress(account.address);
 
@@ -693,7 +693,7 @@ export class Token extends ReadonlyToken {
     expirationDate?: Date;
   }): Promise<TransactionResult> {
     const signer = this.sdk.signer;
-    const account = await this.sdk.requireAlignedWalletAccount("delegateDecryption");
+    const account = await this.sdk.getAccount();
     if (expirationDate && expirationDate.getTime() < Date.now() + 3600_000) {
       throw new DelegationExpirationTooSoonError(
         "Expiration date must be at least 1 hour in the future",
@@ -782,7 +782,7 @@ export class Token extends ReadonlyToken {
     delegateAddress: Address;
   }): Promise<TransactionResult> {
     const signer = this.sdk.signer;
-    const account = await this.sdk.requireAlignedWalletAccount("revokeDelegation");
+    const account = await this.sdk.getAccount();
     const normalizedDelegate = getAddress(delegateAddress);
     const signerAddress = getAddress(account.address);
     const acl = await this.getAclAddress();
@@ -925,7 +925,7 @@ export class Token extends ReadonlyToken {
 
     let balance: bigint;
     try {
-      const account = await this.sdk.requireAlignedWalletAccount("assertConfidentialBalance");
+      const account = await this.sdk.getAccount();
       balance = await this.balanceOf(getAddress(account.address));
     } catch (error) {
       if (error instanceof ZamaError) {
@@ -990,7 +990,7 @@ export class Token extends ReadonlyToken {
   ): Promise<void> {
     const signer = this.sdk.signer;
     const underlying = await this.#getUnderlying();
-    const account = await this.sdk.requireAlignedWalletAccount("approveUnderlying");
+    const account = await this.sdk.getAccount();
     const userAddress = getAddress(account.address);
     const allowance = await this.sdk.provider.readContract(
       allowanceContract(underlying, userAddress, this.wrapper),

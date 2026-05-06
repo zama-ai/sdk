@@ -229,16 +229,18 @@ export class ZamaSDK {
   }
 
   /**
-   * Pre-flight chain coherence check for signer-required operations.
+   * The connected wallet account, after a pre-flight check that the signer
+   * and provider are on the same chain.
    *
-   * Throws {@link ChainMismatchError} if they differ.
-   *
-   * @param operation - The operation name, included in the error message.
-   * @returns The chain ID shared by both signer and provider.
    * @throws {@link SignerNotConfiguredError} if no signer is configured.
+   * @throws {@link WalletNotConnectedError} if the signer has no connected account.
    * @throws {@link ChainMismatchError} if signer and provider report different chain IDs.
    */
-  async requireAlignedWalletAccount(operation: string): Promise<WalletAccount> {
+  getAccount(): Promise<WalletAccount> {
+    return this.#resolveAlignedWalletAccount();
+  }
+
+  async #resolveAlignedWalletAccount(): Promise<WalletAccount> {
     const signer = this.signer;
     let account: WalletAccount;
     try {
@@ -253,16 +255,11 @@ export class ZamaSDK {
     const providerChainId = await this.provider.getChainId();
     if (account.chainId !== providerChainId) {
       throw new ChainMismatchError({
-        operation,
         signerChainId: account.chainId,
         providerChainId,
       });
     }
     return account;
-  }
-
-  async requireChainAlignment(operation: string): Promise<number> {
-    return (await this.requireAlignedWalletAccount(operation)).chainId;
   }
 
   async #handleWalletAccountChange(change: WalletAccountChange): Promise<void> {
@@ -381,7 +378,7 @@ export class ZamaSDK {
       return;
     }
     const credentials = this.#credentials;
-    await this.requireChainAlignment("allow");
+    await this.getAccount();
     await credentials.allow(contracts);
   }
 
@@ -396,7 +393,7 @@ export class ZamaSDK {
       return;
     }
     const credentials = this.#credentials;
-    await this.requireChainAlignment("allowAs");
+    await this.getAccount();
     await credentials.allow(contracts, delegator);
   }
 
@@ -456,7 +453,7 @@ export class ZamaSDK {
     expirationDate?: Date;
   }): Promise<TransactionResult> {
     const signer = this.signer;
-    const account = await this.requireAlignedWalletAccount("delegateDecryption");
+    const account = await this.getAccount();
     if (expirationDate && expirationDate.getTime() < Date.now() + 3600_000) {
       throw new DelegationExpirationTooSoonError(
         "Expiration date must be at least 1 hour in the future",
@@ -546,7 +543,7 @@ export class ZamaSDK {
     delegateAddress: Address;
   }): Promise<TransactionResult> {
     const signer = this.signer;
-    const account = await this.requireAlignedWalletAccount("revokeDelegation");
+    const account = await this.getAccount();
     const normalizedContract = getAddress(contractAddress);
     const normalizedDelegate = getAddress(delegateAddress);
     const signerAddress = getAddress(account.address);
@@ -669,7 +666,7 @@ export class ZamaSDK {
    */
   async userDecrypt(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>> {
     const credentials = this.#credentials;
-    const account = await this.requireAlignedWalletAccount("userDecrypt");
+    const account = await this.getAccount();
     if (handles.length === 0) {
       return {};
     }
@@ -810,7 +807,7 @@ export class ZamaSDK {
     accountAddress: Address = delegatorAddress,
   ): Promise<Record<Handle, ClearValueType>> {
     const credentials = this.#credentials;
-    const account = await this.requireAlignedWalletAccount("delegatedUserDecrypt");
+    const account = await this.getAccount();
     if (handles.length === 0) {
       return {};
     }
@@ -1040,7 +1037,7 @@ export class ZamaSDK {
    */
   async revokePermits(contracts?: Address[]): Promise<void> {
     const credentials = this.#credentials;
-    const account = await this.requireAlignedWalletAccount("revokePermits");
+    const account = await this.getAccount();
     const signerAddress = getAddress(account.address);
     try {
       await credentials.revokePermits(contracts);
@@ -1057,7 +1054,7 @@ export class ZamaSDK {
    */
   async clearCredentials(): Promise<void> {
     const credentials = this.#credentials;
-    const account = await this.requireAlignedWalletAccount("clearCredentials");
+    const account = await this.getAccount();
     const signerAddress = getAddress(account.address);
     try {
       await credentials.clearCredentials();

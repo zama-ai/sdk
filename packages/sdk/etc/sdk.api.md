@@ -572,12 +572,9 @@ export function buildZamaConfig(signer: GenericSigner | undefined, provider: Gen
 // @public
 export class ChainMismatchError extends ZamaError {
     constructor(input: {
-        operation: string;
         signerChainId: number;
         providerChainId: number;
     }, options?: ErrorOptions);
-    // (undocumented)
-    readonly operation: string;
     // (undocumented)
     readonly providerChainId: number;
     // (undocumented)
@@ -20031,6 +20028,7 @@ export class ZamaSDK {
     // @internal
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
+    getAccount(): Promise<WalletAccount>;
     getDelegationExpiry(input: {
         contractAddress: Address;
         delegatorAddress: Address;
@@ -20052,9 +20050,6 @@ export class ZamaSDK {
     readonly registry: WrappersRegistry;
     // (undocumented)
     readonly relayer: RelayerDispatcher;
-    requireAlignedWalletAccount(operation: string): Promise<WalletAccount>;
-    // (undocumented)
-    requireChainAlignment(operation: string): Promise<number>;
     revokeDelegation(input: {
         contractAddress: Address;
         delegateAddress: Address;
