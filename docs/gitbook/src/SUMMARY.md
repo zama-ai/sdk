@@ -1,11 +1,11 @@
 # Table of contents
 
 - [Overview](overview.md)
-- [Getting started](tutorials/README.md)
+## Getting Started
   - [Quick start](tutorials/quick-start.md)
   - [First confidential dApp](tutorials/first-confidential-dapp.md)
   - [Wallet & exchange integration](tutorials/wallet-exchange-integration.md)
-- [Guides](guides/README.md)
+## Guides
   - [Configuration](guides/configuration.md)
   - [Authentication](guides/authentication.md)
   - [Shield tokens](guides/shield-tokens.md)
@@ -20,6 +20,7 @@
   - [Next.js SSR](guides/nextjs-ssr.md)
   - [Operator approvals](guides/operator-approvals.md)
   - [Encrypt & decrypt](guides/encrypt-decrypt.md)
+## API
 - [SDK reference](reference/sdk/README.md)
   - [ZamaSDK](reference/sdk/ZamaSDK.md)
   - [Token](reference/sdk/Token.md)
@@ -83,7 +84,7 @@
   - [useDecryptBalanceAs](reference/react/useDecryptBalanceAs.md)
   - [useBatchDecryptBalancesAs](reference/react/useBatchDecryptBalancesAs.md)
   - [Query keys](reference/react/query-keys.md)
-- [Concepts](concepts/README.md)
+## Concepts
   - [Architecture](concepts/architecture.md)
   - [Session model](concepts/session-model.md)
   - [Security model](concepts/security-model.md)
