@@ -3,7 +3,7 @@ import { swallow } from "../utils/swallow";
 import { keypairStorageKey } from "./storage-keys";
 import { StoredKeypairSchema } from "./schemas";
 import type { Keypair, StoredKeypair } from "./types";
-import type { ChecksummedAddress } from "./utils";
+import type { ChecksummedAddress } from "../schemas/primitives";
 import { nowSeconds } from "./utils";
 
 interface KeypairVaultConfig {

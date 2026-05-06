@@ -6,17 +6,13 @@ import {
   MAX_UINT64,
   revokeDelegationContract,
 } from "./contracts";
-import {
-  CredentialService,
-  DEFAULT_KEYPAIR_TTL_SECONDS,
-  DEFAULT_PERMIT_DURATION_DAYS,
-} from "./credentials/credential-service";
+import { CredentialService } from "./credentials/credential-service";
 import {
   resolveDelegatedDecryptPermit,
   resolveUserDecryptPermit,
 } from "./credentials/decrypt-permit";
 import { findRevokedDelegations } from "./credentials/delegation-check";
-import { KeypairTTLSchema, PermitTTLSchema } from "./credentials/schemas";
+import { parseZamaSDKConfig } from "./config/schema";
 import { DecryptCache } from "./decrypt-cache";
 import {
   ChainMismatchError,
@@ -134,39 +130,36 @@ export class ZamaSDK {
   readonly #credentialService: CredentialService | undefined;
   #unsubscribeSigner?: () => void;
 
-  constructor(config: ZamaSDKConfig) {
+  constructor(rawConfig: ZamaSDKConfig) {
+    const config = parseZamaSDKConfig(rawConfig);
     this.relayer = config.relayer;
     this.provider = config.provider;
     this.signer = config.signer;
     this.storage = config.storage;
     this.cache = new DecryptCache(config.storage);
     this.#onEvent = config.onEvent ?? function () {};
-    // Chain definitions provide defaults; explicit registryAddresses override them.
     const registryAddresses: Record<number, Address> = {};
     for (const chain of config.chains ?? []) {
       if (chain.registryAddress) {
         registryAddresses[chain.id] = chain.registryAddress;
       }
     }
-    Object.assign(registryAddresses, config.registryAddresses);
+    if (config.registryAddresses) {
+      Object.assign(registryAddresses, config.registryAddresses);
+    }
     this.registry = new WrappersRegistry({
       provider: this.provider,
       registryTTL: config.registryTTL,
       registryAddresses,
     });
     this.#registryTTL = config.registryTTL;
-    // Validate numeric config early — before the signer check — so read-only
-    // (no-signer) callers also get a fast, clear error. CredentialService
-    // trusts these values once they reach it.
-    const keypairTTL = KeypairTTLSchema.parse(config.keypairTTL ?? DEFAULT_KEYPAIR_TTL_SECONDS);
-    const permitTTL = PermitTTLSchema.parse(config.permitTTL ?? DEFAULT_PERMIT_DURATION_DAYS);
     if (config.signer) {
       const signer = config.signer;
       this.#credentialService = new CredentialService({
         relayer: this.relayer,
         signer,
-        keypairTTL,
-        permitTTL,
+        keypairTTL: config.keypairTTL,
+        permitTTL: config.permitTTL,
         storage: this.storage,
         permitStorage: config.permitStorage,
       });

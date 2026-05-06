@@ -5,7 +5,7 @@ import { pruneUnusable, withoutPermitsTouching } from "./permissions";
 import { PermissionListSchema, PermissionSchema, ScopeIndexSchema } from "./schemas";
 import { permissionIndexKey, permissionScopeKey, type PermissionScope } from "./storage-keys";
 import type { Permission } from "./types";
-import type { ChecksummedAddress } from "./utils";
+import type { ChecksummedAddress } from "../schemas/primitives";
 
 export type { PermissionScope };
 

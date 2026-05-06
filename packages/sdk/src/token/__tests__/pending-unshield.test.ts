@@ -51,4 +51,15 @@ describe("pending-unshield persistence", () => {
     await savePendingUnshield(storage, wrapperAddress, TX_HASH);
     expect(await loadPendingUnshield(storage, OTHER)).toBeNull();
   });
+
+  it("normalizes wrapper addresses for storage keys", async ({ storage, wrapperAddress }) => {
+    await savePendingUnshield(storage, wrapperAddress.toLowerCase() as Address, TX_HASH);
+    expect(await loadPendingUnshield(storage, wrapperAddress)).toBe(TX_HASH);
+  });
+
+  it("deletes invalid persisted pending unshield data", async ({ storage, wrapperAddress }) => {
+    await storage.set(`zama:pending-unshield:${wrapperAddress}`, { unwrapTxHash: 123 });
+    expect(await loadPendingUnshield(storage, wrapperAddress)).toBeNull();
+    expect(await storage.get(`zama:pending-unshield:${wrapperAddress}`)).toBeNull();
+  });
 });

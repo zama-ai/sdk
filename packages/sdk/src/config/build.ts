@@ -1,6 +1,7 @@
 import { RelayerDispatcher } from "../relayer/relayer-dispatcher";
 import type { GenericProvider, GenericSigner } from "../types";
 import { resolveStorage } from "./resolve";
+import { parseZamaConfigBase } from "./schema";
 import type { ZamaConfig, ZamaConfigBase } from "./types";
 
 /**
@@ -11,20 +12,21 @@ export function buildZamaConfig(
   provider: GenericProvider,
   params: ZamaConfigBase,
 ): ZamaConfig {
-  const { storage, permitStorage } = resolveStorage(params.storage, params.permitStorage);
+  const config = parseZamaConfigBase(params);
+  const { storage, permitStorage } = resolveStorage(config.storage, config.permitStorage);
 
-  const relayer = new RelayerDispatcher(params.chains, params.relayers);
+  const relayer = new RelayerDispatcher(config.chains, config.relayers);
 
   return {
-    chains: params.chains,
+    chains: config.chains,
     relayer,
     provider,
     signer,
     storage,
     permitStorage,
-    keypairTTL: params.keypairTTL,
-    permitTTL: params.permitTTL,
-    registryTTL: params.registryTTL,
-    onEvent: params.onEvent,
+    keypairTTL: config.keypairTTL,
+    permitTTL: config.permitTTL,
+    registryTTL: config.registryTTL,
+    onEvent: config.onEvent,
   };
 }

@@ -13,7 +13,12 @@ export type { AtLeastOneChain };
 // ── Shared option shapes ─────────────────────────────────────────────────────
 
 /** Options for web() relayer (threads, security, logger, storage). */
-export type WebRelayerOptions = Partial<Pick<RelayerWebConfig, "threads" | "security" | "logger">>;
+export type WebRelayerOptions = Partial<
+  Pick<
+    RelayerWebConfig,
+    "threads" | "security" | "logger" | "fheArtifactStorage" | "fheArtifactCacheTTL"
+  >
+>;
 
 // ── Relayer config types ─────────────────────────────────────────────────────
 
@@ -91,8 +96,8 @@ export interface ZamaConfig {
   readonly signer: GenericSigner | undefined;
   readonly storage: GenericStorage;
   readonly permitStorage: GenericStorage;
-  readonly keypairTTL: number | undefined;
-  readonly permitTTL: number | undefined;
+  readonly keypairTTL: number;
+  readonly permitTTL: number;
   readonly registryTTL: number | undefined;
   readonly onEvent: ZamaSDKEventListener | undefined;
 }

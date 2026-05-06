@@ -53,6 +53,10 @@ describe("NodeWorkerPool", () => {
     expect(pool.poolSize).toBe(2);
   });
 
+  it("rejects invalid pool size", () => {
+    expect(() => new NodeWorkerPool({ ...baseConfig, poolSize: 0 })).toThrow();
+  });
+
   it("defaults pool size to min(availableParallelism, 4)", () => {
     const pool = new NodeWorkerPool(baseConfig);
     expect(pool.poolSize).toBeGreaterThanOrEqual(1);
