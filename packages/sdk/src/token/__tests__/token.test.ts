@@ -758,7 +758,7 @@ describe("Token", () => {
           return (
             err instanceof ZamaError &&
             err.code === ZamaErrorCode.TransactionReverted &&
-            err.message === "Shield transaction failed"
+            err.message === "ApproveAndWrap shield transaction failed"
           );
         },
       );

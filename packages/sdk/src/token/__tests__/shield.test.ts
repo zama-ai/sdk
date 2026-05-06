@@ -223,7 +223,7 @@ describe("Token.shield", () => {
 
       vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("transferAndCall reverted"));
 
-      await expect(token.shield(100n)).rejects.toThrow("Shield transaction failed");
+      await expect(token.shield(100n)).rejects.toThrow("TransferAndCall shield transaction failed");
       expect(signer.writeContract).toHaveBeenCalledOnce();
     });
 
@@ -241,7 +241,7 @@ describe("Token.shield", () => {
       // rejection or RPC failure where falling back would be hostile UX.
       vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("User rejected the request"));
 
-      await expect(token.shield(100n)).rejects.toThrow("Shield transaction failed");
+      await expect(token.shield(100n)).rejects.toThrow("TransferAndCall shield transaction failed");
       expect(signer.writeContract).toHaveBeenCalledOnce();
     });
 
@@ -260,7 +260,7 @@ describe("Token.shield", () => {
         new Error("network dropped"),
       );
 
-      await expect(token.shield(100n)).rejects.toThrow("Shield transaction failed");
+      await expect(token.shield(100n)).rejects.toThrow("TransferAndCall shield transaction failed");
       // Submission happened exactly once — no second wallet popup.
       expect(signer.writeContract).toHaveBeenCalledOnce();
     });
