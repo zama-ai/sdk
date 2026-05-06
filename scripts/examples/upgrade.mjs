@@ -12,32 +12,43 @@ const defaultAgent = manifest.defaults.agent ?? "claude";
 const defaultClaudeModel = manifest.defaults.model ?? "claude-sonnet-4-6";
 const defaultCodexModel = "gpt-5.5";
 const validAgentNames = new Set(["codex", "claude"]);
-const requiredAnalysisHeadings = [
-  "# Summary",
-  "# Relevant Findings",
-  "# Impact On Target Example",
-  "# Required Changes",
-  "# Risks",
-  "# Validation Suggestions",
-];
+const validFindingSeverities = new Set(["required", "recommended", "optional", "info"]);
+const validFindingCategories = new Set([
+  "sdk-api",
+  "docs",
+  "tests",
+  "ci",
+  "ux",
+  "security",
+  "migration",
+]);
+const validResolutionStatuses = new Set([
+  "implemented",
+  "not-applicable",
+  "deferred",
+  "not-resolved",
+]);
 const analysisRoles = [
   {
     id: "history",
     label: "History Analyst",
     promptFile: "history-analyst.md",
-    outputFile: "history-analysis.md",
+    outputFile: "history-analysis.json",
+    markdownFile: "history-analysis.md",
   },
   {
     id: "docs-pattern",
     label: "Docs Pattern Analyst",
     promptFile: "docs-pattern-analyst.md",
-    outputFile: "docs-pattern-analysis.md",
+    outputFile: "docs-pattern-analysis.json",
+    markdownFile: "docs-pattern-analysis.md",
   },
   {
     id: "source",
     label: "Source Analyst",
     promptFile: "source-analyst.md",
-    outputFile: "source-analysis.md",
+    outputFile: "source-analysis.json",
+    markdownFile: "source-analysis.md",
   },
 ];
 
@@ -317,8 +328,9 @@ ${contextList}
 
 ${
   analysisMode === "deep"
-    ? `Read the generated analyst reports before implementation:
+    ? `Read the generated impact plan and analyst reports before implementation:
 
+- ${relative(root, impactPlanPath())}
 - ${relative(root, analysisReportPath("history"))}
 - ${relative(root, analysisReportPath("docs-pattern"))}
 - ${relative(root, analysisReportPath("source"))}
@@ -328,7 +340,8 @@ ${
 
 ## Required Work
 
-- Produce an impact plan before editing.
+- Read the structured impact plan before editing.
+- Complete \`${relative(root, implementationResolutionPath())}\` with a resolution for every finding.
 - Apply code, docs, test, and lockfile changes only for active scoped apps.
 - Keep app changes inside each scoped \`examples/<app>/**\` directory.
 - Run \`pnpm examples:upgrade --stage verify --run-id ${runId} --example ${values.example} --target ${values.target}\` after edits.
@@ -344,7 +357,9 @@ function runAgent() {
   }
   if (analysisMode === "deep" && !values["dry-run"]) {
     assertAnalysisReportsReady();
+    generateImpactPlan();
   }
+  ensureImplementationResolutionSkeleton();
   assertSafeBranch();
 
   const prompt = buildAgentPrompt(taskPath);
@@ -401,11 +416,323 @@ function runAnalysis() {
       outputPath,
       commandPath: join(outDir, "analysis", `${role.id}-command.json`),
     });
+    if (!values["dry-run"]) {
+      normalizeAnalysisReport(role);
+    }
   }
   if (values["dry-run"]) {
     return;
   }
   assertAnalysisReportsReady();
+  generateImpactPlan();
+  ensureImplementationResolutionSkeleton();
+}
+
+function normalizeAnalysisReport(role) {
+  const path = analysisReportPath(role.id);
+  if (!existsSync(path)) {
+    throw new Error(`${role.label} did not produce ${relative(root, path)}.`);
+  }
+  const report = parseJsonArtifact(path, `${role.label} report`);
+  validateAnalysisReport(report, role);
+  writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`);
+  writeFileSync(analysisMarkdownPath(role.id), renderAnalysisMarkdown(report));
+}
+
+function generateImpactPlan() {
+  if (analysisMode !== "deep") {
+    const plan = {
+      schemaVersion: 1,
+      runId,
+      generatedAt: new Date().toISOString(),
+      example: values.example,
+      target: values.target,
+      mode: "standard",
+      sources: [],
+      findings: [],
+      manualChecks: [],
+      notes: ["Standard analysis mode: no structured analyst findings were generated."],
+    };
+    writeImpactPlan(plan);
+    return plan;
+  }
+
+  const reports = analysisRoles.map((role) => {
+    const report = readJsonAbsolute(analysisReportPath(role.id));
+    validateAnalysisReport(report, role);
+    if (!existsSync(analysisMarkdownPath(role.id))) {
+      writeFileSync(analysisMarkdownPath(role.id), renderAnalysisMarkdown(report));
+    }
+    return report;
+  });
+  const findings = normalizeImpactFindings(reports.flatMap((report) => report.findings ?? []));
+  const manualChecks = uniqueStrings(
+    reports.flatMap((report) => report.manualChecks ?? []).filter(Boolean),
+  );
+  const plan = {
+    schemaVersion: 1,
+    runId,
+    generatedAt: new Date().toISOString(),
+    example: values.example,
+    target: values.target,
+    mode: "deep",
+    sources: reports.map((report) => ({
+      role: report.role,
+      report: relative(root, analysisReportPath(report.role)),
+    })),
+    findings,
+    requiredFindingIds: findings
+      .filter((finding) => finding.severity === "required")
+      .map((finding) => finding.id),
+    manualChecks,
+    notes: uniqueStrings(reports.flatMap((report) => report.notes ?? []).filter(Boolean)),
+  };
+  writeImpactPlan(plan);
+  return plan;
+}
+
+function writeImpactPlan(plan) {
+  mkdirSync(join(outDir, "analysis"), { recursive: true });
+  validateImpactPlan(plan);
+  writeFileSync(impactPlanPath(), `${JSON.stringify(plan, null, 2)}\n`);
+  writeFileSync(impactPlanMarkdownPath(), renderImpactPlanMarkdown(plan));
+}
+
+function ensureImplementationResolutionSkeleton() {
+  const plan = readOptionalJson(impactPlanPath()) ?? generateImpactPlan();
+  const path = implementationResolutionPath();
+  if (existsSync(path)) {
+    const existing = readJsonAbsolute(path);
+    return existing;
+  }
+
+  const skeleton = {
+    schemaVersion: 1,
+    runId,
+    generatedAt: new Date().toISOString(),
+    example: values.example,
+    target: values.target,
+    instructions:
+      "The implementation agent must update each resolution status and justification after editing the scoped example app.",
+    resolutions: (plan.findings ?? []).map((finding) => ({
+      findingId: finding.id,
+      status: "pending",
+      changedFiles: [],
+      notes: "",
+    })),
+    followUpProcessIssues: [],
+  };
+  writeFileSync(path, `${JSON.stringify(skeleton, null, 2)}\n`);
+  return skeleton;
+}
+
+function normalizeImpactFindings(findings) {
+  const seen = new Set();
+  return findings.map((finding, index) => {
+    let id = slugify(finding.id || `finding-${index + 1}`);
+    if (seen.has(id)) {
+      id = `${id}-${index + 1}`;
+    }
+    seen.add(id);
+    return {
+      id,
+      severity: finding.severity,
+      category: finding.category,
+      summary: finding.summary,
+      evidence: normalizeStringArray(finding.evidence),
+      affectedFiles: normalizeStringArray(finding.affectedFiles),
+      recommendedChange: finding.recommendedChange,
+      validation: normalizeStringArray(finding.validation),
+      sourceRole: finding.sourceRole ?? finding.role ?? null,
+    };
+  });
+}
+
+function validateAnalysisReport(report, role) {
+  const errors = [];
+  if (report.schemaVersion !== 1) {
+    errors.push("schemaVersion must be 1");
+  }
+  if (report.runId !== runId) {
+    errors.push(`runId must be '${runId}'`);
+  }
+  if (report.role !== role.id) {
+    errors.push(`role must be '${role.id}'`);
+  }
+  if (typeof report.summary !== "string" || report.summary.trim() === "") {
+    errors.push("summary must be a non-empty string");
+  }
+  if (!Array.isArray(report.findings)) {
+    errors.push("findings must be an array");
+  } else {
+    report.findings.forEach((finding, index) => {
+      errors.push(...validateFinding(finding, `findings[${index}]`));
+      finding.sourceRole = finding.sourceRole ?? role.id;
+    });
+  }
+  if (report.manualChecks && !Array.isArray(report.manualChecks)) {
+    errors.push("manualChecks must be an array when present");
+  }
+  if (report.notes && !Array.isArray(report.notes)) {
+    errors.push("notes must be an array when present");
+  }
+  if (errors.length > 0) {
+    throw new Error(
+      `${role.label} report is invalid (${relative(root, analysisReportPath(role.id))}):\n${errors
+        .map((error) => `- ${error}`)
+        .join("\n")}`,
+    );
+  }
+}
+
+function validateImpactPlan(plan) {
+  const errors = [];
+  if (plan.schemaVersion !== 1) {
+    errors.push("schemaVersion must be 1");
+  }
+  if (plan.runId !== runId) {
+    errors.push(`runId must be '${runId}'`);
+  }
+  if (!Array.isArray(plan.findings)) {
+    errors.push("findings must be an array");
+  } else {
+    const ids = new Set();
+    plan.findings.forEach((finding, index) => {
+      errors.push(...validateFinding(finding, `findings[${index}]`));
+      if (ids.has(finding.id)) {
+        errors.push(`findings[${index}].id duplicates '${finding.id}'`);
+      }
+      ids.add(finding.id);
+    });
+  }
+  if (errors.length > 0) {
+    throw new Error(
+      `Impact plan is invalid (${relative(root, impactPlanPath())}):\n${errors
+        .map((error) => `- ${error}`)
+        .join("\n")}`,
+    );
+  }
+}
+
+function validateFinding(finding, prefix) {
+  const errors = [];
+  if (!finding || typeof finding !== "object") {
+    return [`${prefix} must be an object`];
+  }
+  if (typeof finding.id !== "string" || finding.id.trim() === "") {
+    errors.push(`${prefix}.id must be a non-empty string`);
+  }
+  if (!validFindingSeverities.has(finding.severity)) {
+    errors.push(`${prefix}.severity must be one of ${[...validFindingSeverities].join(", ")}`);
+  }
+  if (!validFindingCategories.has(finding.category)) {
+    errors.push(`${prefix}.category must be one of ${[...validFindingCategories].join(", ")}`);
+  }
+  if (typeof finding.summary !== "string" || finding.summary.trim() === "") {
+    errors.push(`${prefix}.summary must be a non-empty string`);
+  }
+  if (!Array.isArray(finding.evidence)) {
+    errors.push(`${prefix}.evidence must be an array`);
+  }
+  if (!Array.isArray(finding.affectedFiles)) {
+    errors.push(`${prefix}.affectedFiles must be an array`);
+  }
+  if (typeof finding.recommendedChange !== "string" || finding.recommendedChange.trim() === "") {
+    errors.push(`${prefix}.recommendedChange must be a non-empty string`);
+  }
+  if (!Array.isArray(finding.validation)) {
+    errors.push(`${prefix}.validation must be an array`);
+  }
+  return errors;
+}
+
+function validateImplementationResolution({ impactPlan, implementationResolution }) {
+  const errors = [];
+  const unresolvedFindingIds = [];
+  if (!impactPlan) {
+    errors.push("impact-plan.json is missing");
+  }
+  if (!implementationResolution) {
+    return {
+      valid: false,
+      errors: ["implementation-resolution.json is missing", ...errors],
+      unresolvedFindingIds: impactPlan?.findings?.map((finding) => finding.id) ?? [],
+    };
+  }
+  if (implementationResolution.schemaVersion !== 1) {
+    errors.push("implementation-resolution.schemaVersion must be 1");
+  }
+  if (implementationResolution.runId !== runId) {
+    errors.push(`implementation-resolution.runId must be '${runId}'`);
+  }
+  if (!Array.isArray(implementationResolution.resolutions)) {
+    errors.push("implementation-resolution.resolutions must be an array");
+  }
+
+  const findingIds = new Set(
+    (impactPlan?.findings ?? [])
+      .map((finding) => finding.id)
+      .filter((findingId) => typeof findingId === "string"),
+  );
+  const resolutionByFinding = new Map();
+  for (const [index, resolution] of (implementationResolution.resolutions ?? []).entries()) {
+    if (typeof resolution.findingId !== "string" || resolution.findingId.trim() === "") {
+      errors.push(`resolutions[${index}].findingId must be a non-empty string`);
+      continue;
+    }
+    if (resolutionByFinding.has(resolution.findingId)) {
+      errors.push(`resolutions[${index}] duplicates finding '${resolution.findingId}'`);
+    }
+    resolutionByFinding.set(resolution.findingId, resolution);
+    if (!findingIds.has(resolution.findingId)) {
+      errors.push(
+        `resolutions[${index}].findingId '${resolution.findingId}' is not in impact plan`,
+      );
+    }
+    if (!validResolutionStatuses.has(resolution.status)) {
+      errors.push(
+        `resolutions[${index}].status must be one of ${[...validResolutionStatuses].join(", ")}`,
+      );
+      unresolvedFindingIds.push(resolution.findingId);
+    }
+    if (!Array.isArray(resolution.changedFiles)) {
+      errors.push(`resolutions[${index}].changedFiles must be an array`);
+    }
+    const notes = typeof resolution.notes === "string" ? resolution.notes.trim() : "";
+    if (resolution.status === "implemented" && resolution.changedFiles?.length === 0 && !notes) {
+      errors.push(
+        `resolutions[${index}] for '${resolution.findingId}' is implemented but has no changedFiles or notes`,
+      );
+    }
+    if (resolution.status !== "implemented" && !notes) {
+      errors.push(
+        `resolutions[${index}] for '${resolution.findingId}' must justify status '${resolution.status}' in notes`,
+      );
+    }
+    if (resolution.status === "deferred" || resolution.status === "not-resolved") {
+      unresolvedFindingIds.push(resolution.findingId);
+    }
+  }
+
+  for (const findingId of findingIds) {
+    if (!resolutionByFinding.has(findingId)) {
+      const missingFindingId = String(findingId);
+      errors.push(`Missing resolution for finding '${missingFindingId}'`);
+      unresolvedFindingIds.push(missingFindingId);
+    }
+  }
+  if (
+    implementationResolution.followUpProcessIssues &&
+    !Array.isArray(implementationResolution.followUpProcessIssues)
+  ) {
+    errors.push("implementation-resolution.followUpProcessIssues must be an array when present");
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    unresolvedFindingIds: uniqueStrings(unresolvedFindingIds),
+  };
 }
 
 function runAgentInvocation({
@@ -598,8 +925,13 @@ function runValidationCommand(command, cwd, kind) {
 
 function generateReport() {
   const apps = selectApps(values.example);
+  const finalReport = buildFinalReport(apps);
+  validatePrResolutionPolicy(finalReport);
+  writeFileSync(join(outDir, "final-report.json"), `${JSON.stringify(finalReport, null, 2)}\n`);
   const sections = apps.map((app) => renderAppReport(app)).join("\n\n");
   const analysisSection = renderAnalysisReportSection();
+  const impactSection = renderImpactPlanSection(finalReport.impactPlan);
+  const resolutionSection = renderResolutionSection(finalReport);
   const llmValidation = readOptionalJson(join(outDir, "repo-llm-artifacts.validation.json"));
   const llmSection = renderValidationSection("Repository LLM Artifacts", llmValidation);
   const ciValidation = readOptionalJson(join(outDir, "ci-parity.validation.json"));
@@ -616,11 +948,170 @@ ${sections}
 
 ${analysisSection}
 
+${impactSection}
+
+${resolutionSection}
+
 ${llmSection}${ciSection}
 `;
 
   writeFileSync(join(outDir, "report.md"), body);
+  writeFileSync(join(outDir, "final-report.md"), body);
   console.log(`Report written to ${relative(root, join(outDir, "report.md"))}`);
+}
+
+function buildFinalReport(apps) {
+  const impactPlan = readOptionalJson(impactPlanPath());
+  const implementationResolution = readOptionalJson(implementationResolutionPath());
+  const resolutionValidation = validateImplementationResolution({
+    impactPlan,
+    implementationResolution,
+  });
+  const validationIndex = readOptionalJson(join(outDir, "validation-index.json"));
+  const unresolvedFindings = resolutionValidation.unresolvedFindingIds.map((findingId) => {
+    const finding = impactPlan?.findings?.find((entry) => entry.id === findingId) ?? null;
+    const resolution =
+      implementationResolution?.resolutions?.find((entry) => entry.findingId === findingId) ?? null;
+    return { findingId, finding, resolution };
+  });
+
+  return {
+    schemaVersion: 1,
+    runId,
+    generatedAt: new Date().toISOString(),
+    target: values.target,
+    example: values.example,
+    apps: apps.map((app) => buildAppReportData(app)),
+    analysis: buildAnalysisSummary(),
+    impactPlan,
+    implementationResolution,
+    resolutionValidation,
+    unresolvedFindings,
+    validation: validationIndex,
+  };
+}
+
+function buildAppReportData(app) {
+  const appDir = join(outDir, app.name);
+  const context = readOptionalJson(join(appDir, "context.json"));
+  return {
+    name: app.name,
+    path: app.path,
+    stack: app.stack ?? [],
+    packageVersions: context?.packageVersions ?? null,
+    changedFiles: gitChangedFiles(app.path),
+    validation: readOptionalJson(join(appDir, "validation.json")),
+  };
+}
+
+function buildAnalysisSummary() {
+  if (analysisMode !== "deep") {
+    return { mode: "standard", reports: [] };
+  }
+  return {
+    mode: "deep",
+    reports: analysisRoles.map((role) => ({
+      role: role.id,
+      label: role.label,
+      json: relative(root, analysisReportPath(role.id)),
+      markdown: relative(root, analysisMarkdownPath(role.id)),
+      status: existsSync(analysisReportPath(role.id)) ? "available" : "missing",
+    })),
+  };
+}
+
+function renderImpactPlanSection(impactPlan) {
+  if (!impactPlan) {
+    return `## Impact Plan
+
+- No structured impact plan found for this run.`;
+  }
+  const findings = impactPlan.findings ?? [];
+  const lines =
+    findings.length > 0
+      ? findings.map(
+          (finding) =>
+            `- ${finding.severity}/${finding.category}: \`${finding.id}\` - ${finding.summary}`,
+        )
+      : ["- No findings produced by the analysis stage."];
+  const manualChecks =
+    (impactPlan.manualChecks ?? []).map((item) => `- ${item}`).join("\n") ||
+    "- No additional manual checks.";
+  return `## Impact Plan
+
+Source of truth: \`${relative(root, impactPlanPath())}\`
+
+${lines.join("\n")}
+
+### Manual Checks From Analysis
+
+${manualChecks}`;
+}
+
+function renderResolutionSection(finalReport) {
+  const validation = finalReport.resolutionValidation;
+  const implementationResolution = finalReport.implementationResolution;
+  if (!implementationResolution) {
+    return `## Implementation Resolution
+
+- Missing \`${relative(root, implementationResolutionPath())}\`. The agent must complete one resolution per impact-plan finding before the PR is considered ready.`;
+  }
+
+  const resolutionLines =
+    implementationResolution.resolutions?.map((resolution) => {
+      const suffix = resolution.notes ? ` - ${resolution.notes}` : "";
+      return `- ${resolution.status}: \`${resolution.findingId}\`${suffix}`;
+    }) ?? [];
+  const unresolvedLines =
+    finalReport.unresolvedFindings.length > 0
+      ? finalReport.unresolvedFindings.map((entry) => {
+          const summary = entry.finding?.summary ?? "Unknown finding";
+          const notes = entry.resolution?.notes?.trim() || "No justification provided.";
+          return `- ${entry.resolution?.status ?? "missing"}: \`${entry.findingId}\` - ${summary} Justification: ${notes}`;
+        })
+      : ["- None."];
+  const processIssues =
+    (implementationResolution.followUpProcessIssues ?? [])
+      .map((issue) => `- ${issue}`)
+      .join("\n") || "- None.";
+  const validationLines =
+    validation.errors.length > 0
+      ? validation.errors.map((error) => `- ${error}`)
+      : ["- Resolution file is structurally valid."];
+
+  return `## Implementation Resolution
+
+Source of truth: \`${relative(root, implementationResolutionPath())}\`
+
+${resolutionLines.join("\n") || "- No resolutions found."}
+
+### Unresolved Findings
+
+${unresolvedLines.join("\n")}
+
+### Follow-up Process Issues
+
+${processIssues}
+
+### Resolution Validation
+
+${validationLines.join("\n")}`;
+}
+
+function validatePrResolutionPolicy(finalReport) {
+  if (values.pr !== "ready") {
+    return;
+  }
+  const requiredUnresolved = finalReport.unresolvedFindings.filter(
+    (entry) => entry.finding?.severity === "required",
+  );
+  if (requiredUnresolved.length > 0) {
+    throw new Error(
+      `Refusing to open a ready PR because required findings remain unresolved:\n${requiredUnresolved
+        .map((entry) => `- ${entry.findingId}: ${entry.finding?.summary ?? "Unknown finding"}`)
+        .join("\n")}\nUse --pr draft if human follow-up is still expected.`,
+    );
+  }
 }
 
 function renderAnalysisReportSection() {
@@ -633,7 +1124,10 @@ function renderAnalysisReportSection() {
   const lines = analysisRoles.map((role) => {
     const path = analysisReportPath(role.id);
     const status = existsSync(path) ? "available" : "missing";
-    return `- ${role.label}: ${status} at \`${relative(root, path)}\``;
+    return `- ${role.label}: ${status} at \`${relative(root, path)}\` (rendered: \`${relative(
+      root,
+      analysisMarkdownPath(role.id),
+    )}\`)`;
   });
 
   return `## Deep Analysis
@@ -710,6 +1204,7 @@ function createOrUpdatePr() {
   }
 
   const reportPath = join(outDir, "report.md");
+  const finalReportPath = join(outDir, "final-report.json");
   if (!existsSync(reportPath)) {
     throw new Error(
       `PR report not found at ${relative(
@@ -718,6 +1213,15 @@ function createOrUpdatePr() {
       )}. Run --stage verify or --stage report before --stage pr.`,
     );
   }
+  if (!existsSync(finalReportPath)) {
+    throw new Error(
+      `Structured final report not found at ${relative(
+        root,
+        finalReportPath,
+      )}. Run --stage verify or --stage report before --stage pr.`,
+    );
+  }
+  validatePrResolutionPolicy(readJsonAbsolute(finalReportPath));
 
   const changedFiles = git(["status", "--short"]).split(/\r?\n/).filter(Boolean);
   if (changedFiles.length === 0) {
@@ -802,6 +1306,7 @@ function buildAgentPrompt(taskPath) {
   const analysisFiles = analysisRoles
     .map((role) => `- ${role.label}: ${relative(root, analysisReportPath(role.id))}`)
     .join("\n");
+  const resolutionPath = relative(root, implementationResolutionPath());
   const exampleLine =
     values.example && values.example !== "active"
       ? `Only work on the \`${values.example}\` example unless the task explicitly says otherwise.`
@@ -824,15 +1329,17 @@ Follow these instructions exactly:
 ${contextList}
 5. Read these analyst reports before editing:
 ${analysisMode === "deep" ? analysisFiles : "- Standard mode: no separate analyst reports."}
-6. Produce an impact plan before editing.
+6. Read \`${relative(root, impactPlanPath())}\` before editing.
 7. Apply the required upgrade changes.
-8. Run the validation command from the agent task.
-9. If README.md, WALKTHROUGH.md, or docs changed, run \`pnpm llm:build\` and keep the generated LLM corpus artifacts.
-10. Run \`pnpm format:check\` after generated docs/artifacts change; CI lint includes formatting.
-11. Avoid placeholder token/contract addresses. Prefer a child component that only mounts token-dependent hooks once real registry/config data exists. If the published target SDK type forces a placeholder, document why.
-12. Verify hook options against the example app's declared SDK package version, not only local monorepo source.
-13. Generate or update the report.
-14. In your final answer, summarize changes, validation results, and remaining manual checks.
+8. Update \`${resolutionPath}\`: every impact-plan finding must have status \`implemented\`, \`not-applicable\`, \`deferred\`, or \`not-resolved\`. Non-implemented findings require a concrete justification in \`notes\`.
+9. If you discover a process/pipeline issue, add it to \`followUpProcessIssues\`; do not modify process files during an app upgrade.
+10. Run the validation command from the agent task.
+11. If README.md, WALKTHROUGH.md, or docs changed, run \`pnpm llm:build\` and keep the generated LLM corpus artifacts.
+12. Run \`pnpm format:check\` after generated docs/artifacts change; CI lint includes formatting.
+13. Avoid placeholder token/contract addresses. Prefer a child component that only mounts token-dependent hooks once real registry/config data exists. If the published target SDK type forces a placeholder, document why.
+14. Verify hook options against the example app's declared SDK package version, not only local monorepo source.
+15. Generate or update the report.
+16. In your final answer, summarize changes, validation results, unresolved findings, and remaining manual checks.
 
 Do not modify apps marked future or excluded in \`examples/examples-upgrade.config.json\`.
 
@@ -866,14 +1373,30 @@ Read first:
 - Generated context files:
 ${contextList}
 
-Output a concise markdown report with exactly these headings:
+Output valid JSON only. Do not wrap it in markdown fences.
 
-# Summary
-# Relevant Findings
-# Impact On Target Example
-# Required Changes
-# Risks
-# Validation Suggestions
+Use exactly this top-level shape:
+
+{
+  "schemaVersion": 1,
+  "runId": "${runId}",
+  "role": "${role.id}",
+  "summary": "Short synthesis of the role-specific analysis.",
+  "findings": [
+    {
+      "id": "stable-kebab-case-id",
+      "severity": "required|recommended|optional|info",
+      "category": "sdk-api|docs|tests|ci|ux|security|migration",
+      "summary": "One concise finding.",
+      "evidence": ["Specific source, file, API report, changelog, or docs evidence."],
+      "affectedFiles": ["examples/<app>/path.ts"],
+      "recommendedChange": "Concrete change expected from the implementation agent.",
+      "validation": ["Command, test, or manual check that validates this finding."]
+    }
+  ],
+  "manualChecks": ["Human/manual checks that remain useful after deterministic validation."],
+  "notes": ["Optional caveats, including uncertainty or non-app process follow-ups."]
+}
 
 Do not edit files. Do not run implementation commands.`;
 
@@ -920,9 +1443,9 @@ function buildAgentCommand({ mode, agentName, modelName, outputPath, prompt }) {
   if (agentName === "codex") {
     const command = [
       "codex",
+      "exec",
       "--ask-for-approval",
       values.approval,
-      "exec",
       "--cd",
       root,
       "--sandbox",
@@ -993,22 +1516,39 @@ function analysisReportPath(roleId) {
   return join(outDir, "analysis", role.outputFile);
 }
 
+function analysisMarkdownPath(roleId) {
+  const role = analysisRoles.find((candidate) => candidate.id === roleId);
+  if (!role) {
+    throw new Error(`Unknown analysis role '${roleId}'.`);
+  }
+  return join(outDir, "analysis", role.markdownFile);
+}
+
+function impactPlanPath() {
+  return join(outDir, "analysis", "impact-plan.json");
+}
+
+function impactPlanMarkdownPath() {
+  return join(outDir, "analysis", "impact-plan.md");
+}
+
+function implementationResolutionPath() {
+  return join(outDir, "implementation-resolution.json");
+}
+
 function assertAnalysisReportsReady() {
   const failures = analysisRoles.flatMap((role) => {
     const path = analysisReportPath(role.id);
     if (!existsSync(path)) {
       return [`Missing ${role.label} report: ${relative(root, path)}`];
     }
-    const text = readFileSync(path, "utf8");
-    const missingHeadings = requiredAnalysisHeadings.filter((heading) => !text.includes(heading));
-    if (missingHeadings.length === 0) {
+    try {
+      const report = readJsonAbsolute(path);
+      validateAnalysisReport(report, role);
       return [];
+    } catch (error) {
+      return [`${role.label} report is invalid in ${relative(root, path)}: ${error.message}`];
     }
-    return [
-      `${role.label} report is missing headings in ${relative(root, path)}: ${missingHeadings.join(
-        ", ",
-      )}`,
-    ];
   });
 
   if (failures.length === 0) {
@@ -1308,6 +1848,105 @@ ${report.nextSteps.map((step) => `- ${step}`).join("\n")}
 `;
 }
 
+function renderAnalysisMarkdown(report) {
+  const findings =
+    report.findings.length > 0
+      ? report.findings
+          .map(
+            (finding) => `### ${finding.id}
+
+- Severity: \`${finding.severity}\`
+- Category: \`${finding.category}\`
+- Summary: ${finding.summary}
+- Affected files: ${finding.affectedFiles.join(", ") || "not specified"}
+- Recommended change: ${finding.recommendedChange}
+- Evidence: ${finding.evidence.join("; ") || "not specified"}
+- Validation: ${finding.validation.join("; ") || "not specified"}`,
+          )
+          .join("\n\n")
+      : "No findings.";
+  const manualChecks =
+    normalizeStringArray(report.manualChecks)
+      .map((item) => `- ${item}`)
+      .join("\n") || "- No additional manual checks.";
+  const notes =
+    normalizeStringArray(report.notes)
+      .map((item) => `- ${item}`)
+      .join("\n") || "- None.";
+
+  return `# ${report.role} Analysis
+
+Source JSON: \`${relative(root, analysisReportPath(report.role))}\`
+
+## Summary
+
+${report.summary}
+
+## Findings
+
+${findings}
+
+## Manual Checks
+
+${manualChecks}
+
+## Notes
+
+${notes}
+`;
+}
+
+function renderImpactPlanMarkdown(plan) {
+  const findings =
+    plan.findings.length > 0
+      ? plan.findings
+          .map(
+            (finding) => `### ${finding.id}
+
+- Severity: \`${finding.severity}\`
+- Category: \`${finding.category}\`
+- Source role: \`${finding.sourceRole ?? "unknown"}\`
+- Summary: ${finding.summary}
+- Affected files: ${finding.affectedFiles.join(", ") || "not specified"}
+- Recommended change: ${finding.recommendedChange}
+- Evidence: ${finding.evidence.join("; ") || "not specified"}
+- Validation: ${finding.validation.join("; ") || "not specified"}`,
+          )
+          .join("\n\n")
+      : "No findings.";
+  const manualChecks =
+    normalizeStringArray(plan.manualChecks)
+      .map((item) => `- ${item}`)
+      .join("\n") || "- No additional manual checks.";
+  const notes =
+    normalizeStringArray(plan.notes)
+      .map((item) => `- ${item}`)
+      .join("\n") || "- None.";
+
+  return `# Example Upgrade Impact Plan
+
+Source JSON: \`${relative(root, impactPlanPath())}\`
+
+Run ID: \`${plan.runId}\`
+
+Target: \`${plan.target}\`
+
+Analysis mode: \`${plan.mode}\`
+
+## Findings
+
+${findings}
+
+## Manual Checks
+
+${manualChecks}
+
+## Notes
+
+${notes}
+`;
+}
+
 function contextPaths() {
   const indexPath = join(outDir, "index.json");
   if (existsSync(indexPath)) {
@@ -1414,8 +2053,59 @@ function readJson(path) {
   return JSON.parse(readFileSync(join(root, path), "utf8"));
 }
 
+function readJsonAbsolute(path) {
+  return JSON.parse(readFileSync(path, "utf8"));
+}
+
 function readOptionalJson(path) {
   return existsSync(path) ? JSON.parse(readFileSync(path, "utf8")) : null;
+}
+
+function parseJsonArtifact(path, label) {
+  const text = readFileSync(path, "utf8").trim();
+  try {
+    return JSON.parse(text);
+  } catch {
+    const extracted = extractJsonObject(text);
+    if (!extracted) {
+      throw new Error(`${label} is not valid JSON: ${relative(root, path)}`);
+    }
+    try {
+      return JSON.parse(extracted);
+    } catch (error) {
+      throw new Error(`${label} contains an invalid JSON object: ${error.message}`, {
+        cause: error,
+      });
+    }
+  }
+}
+
+function extractJsonObject(text) {
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start === -1 || end === -1 || end <= start) {
+    return null;
+  }
+  return text.slice(start, end + 1);
+}
+
+function normalizeStringArray(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter((item) => typeof item === "string" && item.trim() !== "");
+}
+
+function uniqueStrings(items) {
+  return [...new Set(items.filter((value) => typeof value === "string" && value.trim() !== ""))];
+}
+
+function slugify(value) {
+  const slug = String(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || "finding";
 }
 
 function git(args) {
@@ -1502,7 +2192,7 @@ function printNextCommands() {
     });
     next.push({
       label: "Read the report",
-      command: `cat .tmp/example-upgrades/${runId}/report.md`,
+      command: `cat ${outRoot}/${runId}/report.md`,
     });
   }
   if (next.length > 0) {
@@ -1521,6 +2211,7 @@ function upgradeCommand({ commandStage, commandRunId, example, pr = values.pr })
     `--run-id ${commandRunId}`,
     example && example !== "active" ? `--example ${example}` : null,
     `--target ${values.target}`,
+    values.out ? `--out ${values.out}` : null,
     `--analysis ${analysisMode}`,
     `--agent ${agent}`,
     model ? `--model ${model}` : null,

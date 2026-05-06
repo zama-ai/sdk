@@ -2,6 +2,9 @@
 
 - Upgrade only active scoped apps from `examples/examples-upgrade.config.json`.
 - Keep app edits inside each scoped `examples/<app>/**` directory.
+- Read `analysis/impact-plan.json` before editing.
+- Complete `implementation-resolution.json` after editing with one resolution per impact-plan finding.
+- Record process/pipeline issues in `followUpProcessIssues`; do not modify process files in an app upgrade PR.
 - Update app package versions and lockfiles with the app's declared package manager.
 - Use clear-text-in, clear-text-out SDK APIs. Hide FHE protocol details behind SDK primitives.
 - Prefer `@zama-fhe/react-sdk` hooks and SDK utilities over local orchestration.

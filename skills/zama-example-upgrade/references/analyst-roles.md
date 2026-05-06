@@ -1,15 +1,18 @@
 # Analyst Roles
 
-Deep analysis produces three read-only reports before implementation. Analysts must not edit files; Codex analyst runs should use the script's read-only analyst sandbox unless explicitly debugging the pipeline itself.
+Deep analysis produces three read-only JSON reports before implementation. Analysts must not edit files; Codex analyst runs should use the script's read-only analyst sandbox unless explicitly debugging the pipeline itself.
 
-Required report headings:
+Required JSON shape:
 
-- `# Summary`
-- `# Relevant Findings`
-- `# Impact On Target Example`
-- `# Required Changes`
-- `# Risks`
-- `# Validation Suggestions`
+- `schemaVersion: 1`
+- `runId`
+- `role`
+- `summary`
+- `findings[]`
+- `manualChecks[]`
+- `notes[]`
+
+Each finding must include `id`, `severity`, `category`, `summary`, `evidence`, `affectedFiles`, `recommendedChange`, and `validation`. Markdown reports are generated from JSON and are not source-of-truth artifacts.
 
 History analyst:
 

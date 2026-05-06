@@ -59,19 +59,20 @@ pnpm examples:upgrade --stage pr --run-id <run-id> --example react-wagmi --pr dr
 ## Workflow
 
 1. Generate context with the prepare stage.
-2. In deep mode, run the analysis stage. It produces separate history, docs-pattern, and source reports.
-3. Read the generated context report and analyst reports for the target app.
+2. In deep mode, run the analysis stage. It produces separate history, docs-pattern, and source JSON reports, then derives a consolidated impact plan.
+3. Read the generated context report, `analysis/impact-plan.json`, and analyst reports for the target app.
 4. Read the app's `package.json`, docs, SDK-sensitive source files, and tests.
 5. Read only the relevant docs/API reports listed in the context report.
 6. Compare current SDK package versions with the resolved target versions.
 7. Identify API and behavior changes that affect the app. Do not migrate unrelated code.
-8. Produce an impact plan before editing.
+8. Use `analysis/impact-plan.json` as the source of truth before editing. `analysis/impact-plan.md` is generated for human reading only.
 9. Update package versions and lockfile with the app's declared package manager.
 10. Update source, tests, README, and WALKTHROUGH as needed.
-11. Regenerate the LLM corpus artifacts if README, WALKTHROUGH, or docs changed. The pipeline runs `pnpm llm:build` automatically before verify/report/PR stages.
-12. Run deterministic validation with the verify stage.
-13. Complete the manual checklist in `docs/agents/example-upgrade-checklist.md`.
-14. Open or update a PR with `--stage pr --pr draft` once the report is ready.
+11. Complete `implementation-resolution.json`: every impact-plan finding must be marked `implemented`, `not-applicable`, `deferred`, or `not-resolved`.
+12. Regenerate the LLM corpus artifacts if README, WALKTHROUGH, or docs changed. The pipeline runs `pnpm llm:build` automatically before verify/report/PR stages.
+13. Run deterministic validation with the verify stage.
+14. Complete the manual checklist in `docs/agents/example-upgrade-checklist.md`.
+15. Open or update a PR with `--stage pr --pr draft` once the report is ready.
 
 ## Deep Analysis
 
@@ -81,7 +82,26 @@ Deep analysis is the default. The script orchestrates three read-only analyst pr
 - Docs-pattern analyst: current documented SDK and React SDK usage patterns.
 - Source analyst: package exports, API reports, source-level hook signatures, and risky local reimplementations.
 
-Reports are written under `.tmp/example-upgrades/<run-id>/analysis/`. The implementation agent must read them before editing. Use `--analysis standard` only for quick manual debugging or very small follow-up fixes.
+Structured reports are written under `.tmp/example-upgrades/<run-id>/analysis/`:
+
+- `history-analysis.json`
+- `docs-pattern-analysis.json`
+- `source-analysis.json`
+- `impact-plan.json`
+
+Markdown files in the same directory are generated from JSON for human reading and must not be treated as the source of truth. The implementation agent must read `impact-plan.json` before editing. Use `--analysis standard` only for quick manual debugging or very small follow-up fixes.
+
+## Structured Artifacts
+
+The pipeline is JSON-first so automation can reason over findings without parsing free-form Markdown.
+
+- Analyst JSON reports contain `findings[]`, `manualChecks[]`, and `notes[]`.
+- Each finding has `id`, `severity`, `category`, `summary`, `evidence`, `affectedFiles`, `recommendedChange`, and `validation`.
+- `analysis/impact-plan.json` consolidates analyst findings and is the implementation input.
+- `implementation-resolution.json` is generated as a skeleton before the agent edits code. The agent must complete one resolution per finding.
+- `final-report.json` and `final-report.md` are generated during report/verify. `report.md` is kept as a compatibility alias for PR bodies.
+
+Valid finding severities are `required`, `recommended`, `optional`, and `info`. Valid resolution statuses are `implemented`, `not-applicable`, `deferred`, and `not-resolved`. Non-implemented statuses require a concrete justification in `notes`.
 
 ## Agent Runner
 
@@ -132,6 +152,8 @@ Safety defaults:
 - It refuses process-tooling files unless `--allow-process-files` is set.
 - It does not create a PR unless `--pr draft` or `--pr ready` is set.
 - It refuses to create or update a PR when deterministic validation failed.
+- Draft PRs may be opened when a finding remains `deferred` or `not-resolved`, including a `required` finding, but the unresolved point must be visible in the final report and PR body with justification and expected human action.
+- Ready PRs refuse unresolved `required` findings.
 - It targets `prerelease` by default.
 - `--pr draft` opens a Draft PR; `--pr ready` opens a ready-for-review PR.
 - Keep PRs as Draft until human review has validated the upgrade and manual checklist.

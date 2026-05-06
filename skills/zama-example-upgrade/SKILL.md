@@ -17,7 +17,9 @@ For generated upgrade runs, read:
 
 - `.tmp/example-upgrades/<run-id>/agent-task.md`
 - `.tmp/example-upgrades/<run-id>/<app>/context.md`
-- `.tmp/example-upgrades/<run-id>/analysis/*.md` when deep analysis is enabled
+- `.tmp/example-upgrades/<run-id>/analysis/impact-plan.json` when deep analysis is enabled
+- `.tmp/example-upgrades/<run-id>/analysis/*-analysis.json` when you need role-specific evidence
+- `.tmp/example-upgrades/<run-id>/implementation-resolution.json` before and after editing
 
 Load bundled references only when needed:
 
@@ -25,4 +27,4 @@ Load bundled references only when needed:
 - `references/implementation-rules.md` immediately before editing example app code.
 - `references/review-rules.md` before final validation, report generation, or PR preparation.
 
-Keep changes inside scoped `examples/<app>/**` unless the playbook explicitly allows generated LLM corpus artifacts or process-tooling changes. Prefer high-level `@zama-fhe/sdk` and `@zama-fhe/react-sdk` hooks/utilities over local reimplementations.
+Keep changes inside scoped `examples/<app>/**` unless the playbook explicitly allows generated LLM corpus artifacts. Do not modify pipeline/process files during an app upgrade; record such discoveries in `followUpProcessIssues` instead. Prefer high-level `@zama-fhe/sdk` and `@zama-fhe/react-sdk` hooks/utilities over local reimplementations.
