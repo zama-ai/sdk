@@ -49,7 +49,7 @@ describe("createConfig validation", () => {
     expect(relayer.createRelayer).not.toHaveBeenCalled();
   });
 
-  it("rejects invalid TTLs at createConfig instead of SDK construction", () => {
+  it("rejects invalid TTLs at createConfig", () => {
     expect(() =>
       createConfig({
         chains: [hardhat],

@@ -1281,9 +1281,32 @@ export const zamaQueryKeys: {
 };
 
 // @public
+export interface ZamaConfig {
+    // (undocumented)
+    readonly chains: readonly FheChain[];
+    // (undocumented)
+    readonly keypairTTL: number;
+    // (undocumented)
+    readonly onEvent: ZamaSDKEventListener | undefined;
+    // (undocumented)
+    readonly permitStorage: GenericStorage;
+    // (undocumented)
+    readonly permitTTL: number;
+    // (undocumented)
+    readonly provider: GenericProvider;
+    // (undocumented)
+    readonly registryTTL: number;
+    // (undocumented)
+    readonly relayer: RelayerDispatcher;
+    // (undocumented)
+    readonly signer: GenericSigner | undefined;
+    // (undocumented)
+    readonly storage: GenericStorage;
+}
+
+// @public
 export class ZamaSDK {
     [Symbol.dispose](): void;
-    // Warning: (ae-forgotten-export) The symbol "ZamaConfig" needs to be exported by the entry point index.d.ts
     constructor(config: ZamaConfig);
     allow(contracts: Address[]): Promise<void>;
     allowAs(delegator: Address, contracts: Address[]): Promise<void>;

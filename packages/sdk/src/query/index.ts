@@ -153,6 +153,7 @@ export type { BatchBalancesResult, BatchDecryptAsOptions } from "../token/readon
 export type { ReadonlyToken } from "../token/readonly-token";
 export type { Token } from "../token/token";
 export type { ZamaSDK } from "../zama-sdk";
+export type { ZamaConfig } from "../config";
 export type { Keypair } from "../credentials";
 export type {
   GenericSigner,

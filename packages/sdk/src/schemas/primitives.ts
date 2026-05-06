@@ -30,6 +30,9 @@ export const unixSeconds = z.number().int().nonnegative();
 /** Positive integer count of seconds (e.g. a TTL). */
 export const positiveSeconds = z.number().int().positive();
 
+/** Non-negative integer count of seconds (e.g. a cache TTL where 0 disables caching). */
+export const nonNegativeSeconds = z.number().int().nonnegative();
+
 /** Positive integer count of days (e.g. a permit duration). */
 export const positiveDays = z.number().int().positive();
 

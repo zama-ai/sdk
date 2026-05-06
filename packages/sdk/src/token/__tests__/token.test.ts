@@ -1133,12 +1133,13 @@ describe("Token", () => {
     });
 
     it("throws INSUFFICIENT_CONFIDENTIAL_BALANCE when amount exceeds decrypted balance", async ({
+      relayer,
       token,
       handle,
       provider,
     }) => {
       vi.mocked(provider.readContract).mockResolvedValueOnce(handle);
-      vi.mocked(token.sdk.relayer.userDecrypt).mockResolvedValueOnce({ [handle]: 50n });
+      vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({ [handle]: 50n });
 
       await expect(token.confidentialTransfer(RECIPIENT, 100n)).rejects.toMatchObject({
         code: ZamaErrorCode.InsufficientConfidentialBalance,
@@ -1147,24 +1148,26 @@ describe("Token", () => {
     });
 
     it("passes validation and submits transaction when balance is sufficient", async ({
+      relayer,
       token,
       handle,
       provider,
     }) => {
       vi.mocked(provider.readContract).mockResolvedValueOnce(handle);
-      vi.mocked(token.sdk.relayer.userDecrypt).mockResolvedValueOnce({ [handle]: 200n });
+      vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({ [handle]: 200n });
 
       const result = await token.confidentialTransfer(RECIPIENT, 100n);
       expect(result.txHash).toBe("0xtxhash");
     });
 
     it("passes validation when balance exactly equals amount (boundary)", async ({
+      relayer,
       token,
       handle,
       provider,
     }) => {
       vi.mocked(provider.readContract).mockResolvedValueOnce(handle);
-      vi.mocked(token.sdk.relayer.userDecrypt).mockResolvedValueOnce({ [handle]: 100n });
+      vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({ [handle]: 100n });
 
       const result = await token.confidentialTransfer(RECIPIENT, 100n);
       expect(result.txHash).toBe("0xtxhash");
@@ -1195,14 +1198,13 @@ describe("Token", () => {
     });
 
     it("re-throws ZamaError from balanceOf (e.g. DecryptionFailedError)", async ({
+      relayer,
       token,
       handle,
       provider,
     }) => {
       vi.mocked(provider.readContract).mockResolvedValueOnce(handle);
-      vi.mocked(token.sdk.relayer.userDecrypt).mockRejectedValueOnce(
-        new TypeError("network failure"),
-      );
+      vi.mocked(relayer.userDecrypt).mockRejectedValueOnce(new TypeError("network failure"));
 
       // sdk.userDecrypt wraps the TypeError as DecryptionFailedError (a ZamaError),
       // so #assertConfidentialBalance re-throws it as-is.
@@ -1348,12 +1350,13 @@ describe("Token", () => {
     });
 
     it("throws INSUFFICIENT_CONFIDENTIAL_BALANCE when amount exceeds decrypted balance", async ({
+      relayer,
       token,
       handle,
       provider,
     }) => {
       vi.mocked(provider.readContract).mockResolvedValueOnce(handle);
-      vi.mocked(token.sdk.relayer.userDecrypt).mockResolvedValueOnce({ [handle]: 50n });
+      vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({ [handle]: 50n });
 
       await expect(token.unshield(100n)).rejects.toMatchObject({
         code: ZamaErrorCode.InsufficientConfidentialBalance,
@@ -1362,13 +1365,14 @@ describe("Token", () => {
     });
 
     it("passes validation and submits when balance is sufficient", async ({
+      relayer,
       token,
       handle,
       userAddress,
       provider,
     }) => {
       vi.mocked(provider.readContract).mockResolvedValueOnce(handle);
-      vi.mocked(token.sdk.relayer.userDecrypt).mockResolvedValueOnce({ [handle]: 200n });
+      vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({ [handle]: 200n });
 
       vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
         logs: [
@@ -1388,13 +1392,14 @@ describe("Token", () => {
     });
 
     it("passes validation when balance exactly equals amount (boundary)", async ({
+      relayer,
       token,
       handle,
       userAddress,
       provider,
     }) => {
       vi.mocked(provider.readContract).mockResolvedValueOnce(handle);
-      vi.mocked(token.sdk.relayer.userDecrypt).mockResolvedValueOnce({ [handle]: 100n });
+      vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({ [handle]: 100n });
 
       vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
         logs: [

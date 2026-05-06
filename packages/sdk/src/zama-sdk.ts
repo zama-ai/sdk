@@ -1,4 +1,5 @@
 import { getAddress, type Address } from "viem";
+import { validateResolvedZamaConfig } from "./config/build";
 import type { ZamaConfig } from "./config/types";
 import {
   delegateForUserDecryptionContract,
@@ -78,6 +79,7 @@ export class ZamaSDK {
   #unsubscribeSigner?: () => void;
 
   constructor(config: ZamaConfig) {
+    validateResolvedZamaConfig(config);
     this.relayer = config.relayer;
     this.provider = config.provider;
     this.signer = config.signer;

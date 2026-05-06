@@ -1,4 +1,8 @@
-import { buildZamaConfig, type ZamaConfig, type ZamaConfigBase } from "@zama-fhe/sdk";
+import {
+  createConfig as createCoreConfig,
+  type ZamaConfig,
+  type ZamaConfigBase,
+} from "@zama-fhe/sdk";
 import type { AtLeastOneChain } from "@zama-fhe/sdk/chains";
 import type { Config } from "wagmi";
 import { WagmiProvider } from "./wagmi-provider";
@@ -16,8 +20,8 @@ export interface ZamaConfigWagmi<
 export function createConfig<const TChains extends AtLeastOneChain>(
   params: ZamaConfigWagmi<TChains>,
 ): ZamaConfig {
-  const { wagmiConfig } = params;
+  const { wagmiConfig, ...baseParams } = params;
   const signer = new WagmiSigner({ config: wagmiConfig });
   const provider = new WagmiProvider({ config: wagmiConfig });
-  return buildZamaConfig(signer, provider, params);
+  return createCoreConfig({ ...baseParams, signer, provider });
 }

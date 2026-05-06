@@ -1,4 +1,5 @@
-import { RegistryTTLSchema } from "../chains/schema";
+import { z } from "zod";
+import { FheChainSchema } from "../chains/schema";
 import {
   DEFAULT_KEYPAIR_TTL_SECONDS,
   DEFAULT_PERMIT_DURATION_DAYS,
@@ -6,9 +7,22 @@ import {
 import { KeypairTTLSchema, PermitTTLSchema } from "../credentials/schemas";
 import { RelayerDispatcher } from "../relayer/relayer-dispatcher";
 import type { GenericProvider, GenericSigner } from "../types";
-import { DEFAULT_REGISTRY_TTL_SECONDS } from "../wrappers-registry";
+import { DEFAULT_REGISTRY_TTL_SECONDS, RegistryTTLSchema } from "../wrappers-registry";
 import { resolveStorage } from "./resolve";
 import type { ZamaConfig, ZamaConfigBase } from "./types";
+
+const ResolvedZamaConfigInvariantsSchema = z
+  .object({
+    chains: z.array(FheChainSchema).nonempty(),
+    keypairTTL: KeypairTTLSchema,
+    permitTTL: PermitTTLSchema,
+    registryTTL: RegistryTTLSchema,
+  })
+  .loose();
+
+export function validateResolvedZamaConfig(config: ZamaConfig): void {
+  ResolvedZamaConfigInvariantsSchema.parse(config);
+}
 
 /**
  * @internal Shared config builder — not part of the public API.
@@ -21,6 +35,7 @@ export function buildZamaConfig(
   provider: GenericProvider,
   params: ZamaConfigBase,
 ): ZamaConfig {
+  z.array(FheChainSchema).nonempty().parse(params.chains);
   const { storage, permitStorage } = resolveStorage(params.storage, params.permitStorage);
   const relayer = new RelayerDispatcher(params.chains, params.relayers);
 

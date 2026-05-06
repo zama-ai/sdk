@@ -3,6 +3,7 @@
 /* eslint-disable no-empty-pattern */
 import { test as base, vi } from "vitest";
 import type { FheChain } from "./chains/types";
+import type { ZamaConfig } from "./config/types";
 import { ZamaSDKEvents } from "./events/sdk-events";
 import type { RelayerSDK } from "./relayer/relayer-sdk";
 import type { Handle } from "./relayer/relayer-sdk.types";
@@ -14,7 +15,6 @@ import { MemoryStorage } from "./storage/memory-storage";
 import { ReadonlyToken } from "./token/readonly-token";
 import { Token } from "./token/token";
 import type { GenericProvider, GenericSigner, GenericStorage, TransactionResult } from "./types";
-import type { ZamaConfig } from "./config/types";
 import { ZamaSDK } from "./zama-sdk";
 export { afterEach, beforeEach, describe, expect, vi, type Mock } from "vitest";
 
@@ -369,13 +369,13 @@ export const test = base.extend<SdkFixtures>({
   sdk: async ({ relayer, provider, signer, storage }, use) => {
     await use(
       new ZamaSDK({
-        chains: [],
+        chains: [createMockChain({ id: 31337 })],
         relayer: relayer as unknown as ZamaConfig["relayer"],
         provider,
         signer,
         storage,
         permitStorage: storage,
-        keypairTTL: 86400,
+        keypairTTL: 2592000,
         permitTTL: 1,
         registryTTL: 86400,
         onEvent: undefined,
@@ -385,13 +385,13 @@ export const test = base.extend<SdkFixtures>({
   createSDK: async ({ provider, signer, relayer, storage }, use) => {
     await use((overrides?: Partial<ZamaConfig>) => {
       return new ZamaSDK({
-        chains: [],
+        chains: [createMockChain({ id: 31337 })],
         relayer: relayer as unknown as ZamaConfig["relayer"],
         provider,
         signer,
         storage,
         permitStorage: storage,
-        keypairTTL: 86400,
+        keypairTTL: 2592000,
         permitTTL: 1,
         registryTTL: 86400,
         onEvent: undefined,

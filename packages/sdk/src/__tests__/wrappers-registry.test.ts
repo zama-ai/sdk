@@ -4,7 +4,6 @@ import { mainnet, sepolia } from "../chains";
 import { describe, expect, it, vi } from "../test-fixtures";
 import type { GenericProvider } from "../types";
 import { DefaultRegistryAddresses, WrappersRegistry } from "../wrappers-registry";
-import { ZamaSDK } from "../zama-sdk";
 
 const CUSTOM_REGISTRY = "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e" as Address;
 const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
@@ -511,6 +510,12 @@ describe("WrappersRegistry", () => {
       const second = await registry.listPairs();
       expect(second.total).toBe(2);
     });
+
+    it("rejects invalid registryTTL config", ({ provider }) => {
+      expect(() => new WrappersRegistry({ provider, registryTTL: -1 })).toThrow();
+      expect(() => new WrappersRegistry({ provider, registryTTL: NaN })).toThrow();
+      expect(() => new WrappersRegistry({ provider, registryTTL: 1.5 })).toThrow();
+    });
   });
 
   describe("ZamaSDK.registry", () => {
@@ -547,10 +552,14 @@ describe("WrappersRegistry", () => {
       expect(registry.provider).toBe(sdk.provider);
     });
 
-    it("forwards registryTTL from the SDK", ({ relayer, provider, signer, storage }) => {
-      const sdk = new ZamaSDK({ relayer, provider, signer, storage, registryTTL: 60 });
+    it("forwards registryTTL from the SDK", ({ createSDK }) => {
+      const sdk = createSDK({ registryTTL: 60 });
       const registry = sdk.createWrappersRegistry();
       expect(registry.ttlMs).toBe(60_000);
+    });
+
+    it("rejects invalid registryTTL from the SDK constructor", ({ createSDK }) => {
+      expect(() => createSDK({ registryTTL: -1 })).toThrow();
     });
   });
 });

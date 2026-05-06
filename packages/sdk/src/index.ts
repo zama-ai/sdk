@@ -10,13 +10,7 @@
 // Note: web() and node() transport factories live in their own entry points
 // (@zama-fhe/sdk/web and @zama-fhe/sdk/node) to keep environment-specific
 // dependencies out of this barrel.
-export {
-  createConfig,
-  cleartext,
-  resolveChainRelayers,
-  resolveStorage,
-  buildZamaConfig,
-} from "./config";
+export { createConfig, cleartext, resolveChainRelayers, resolveStorage } from "./config";
 export type {
   ZamaConfig,
   ZamaConfigBase,

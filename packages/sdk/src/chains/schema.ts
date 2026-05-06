@@ -1,13 +1,7 @@
 import type { Auth } from "@zama-fhe/relayer-sdk/bundle";
 import type { EIP1193Provider } from "viem";
 import { z } from "zod";
-import {
-  checksummedAddress,
-  evmAddress,
-  chainId,
-  hex,
-  positiveSeconds,
-} from "../schemas/primitives";
+import { evmAddress, chainId, hex } from "../schemas/primitives";
 
 export const FheChainSchema = z
   .object({
@@ -27,12 +21,3 @@ export const FheChainSchema = z
     inputSignerPrivateKey: hex.optional(),
   })
   .loose();
-
-/** Per-chain wrappers-registry address overrides. */
-export const RegistryAddressesSchema = z.record(
-  z.string().regex(/^\d+$/, "expected numeric chain id key"),
-  checksummedAddress,
-);
-
-/** TTL (seconds) for cached registry results. */
-export const RegistryTTLSchema = positiveSeconds;
