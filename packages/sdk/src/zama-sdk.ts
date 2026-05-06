@@ -72,7 +72,6 @@ export class ZamaSDK {
    */
   readonly registry: WrappersRegistry;
   readonly #registryTTL: number;
-  readonly #registryAddresses: Record<number, Address>;
   readonly #onEvent: ZamaSDKEventListener;
   readonly #walletAccountListeners = new Set<WalletAccountListener>();
   readonly #credentialService: CredentialService | undefined;
@@ -91,11 +90,10 @@ export class ZamaSDK {
         registryAddresses[chain.id] = chain.registryAddress;
       }
     }
-    this.#registryAddresses = registryAddresses;
     this.registry = new WrappersRegistry({
       provider: this.provider,
-      registryTTL: config.registryTTL,
       registryAddresses,
+      registryTTL: config.registryTTL,
     });
     this.#registryTTL = config.registryTTL;
     if (config.signer) {
@@ -289,7 +287,7 @@ export class ZamaSDK {
   createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry {
     return new WrappersRegistry({
       provider: this.provider,
-      registryAddresses: { ...this.#registryAddresses, ...registryAddresses },
+      registryAddresses,
       registryTTL: this.#registryTTL,
     });
   }

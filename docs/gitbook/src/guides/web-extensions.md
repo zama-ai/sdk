@@ -28,13 +28,24 @@ import { ZamaSDK, indexedDBStorage, chromeSessionStorage } from "@zama-fhe/sdk";
 Pass `indexedDBStorage` for the encrypted FHE keypair (persistent, survives browser close) and `chromeSessionStorage` for the session signature (ephemeral, survives service worker restarts):
 
 ```ts
-const sdk = new ZamaSDK({
-  relayer,
-  provider,
-  signer,
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { web } from "@zama-fhe/sdk/web";
+import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
+
+const mySepolia = {
+  ...sepolia,
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
+} as const satisfies FheChain;
+
+const config = createConfig({
+  chains: [mySepolia],
+  publicClient,
+  walletClient,
   storage: indexedDBStorage, // encrypted keypair — persistent
   sessionStorage: chromeSessionStorage, // wallet signature — ephemeral
+  relayers: { [mySepolia.id]: web() },
 });
+const sdk = new ZamaSDK(config);
 ```
 
 {% tabs %}

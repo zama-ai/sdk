@@ -41,12 +41,14 @@ const redisStorage: GenericStorage = {
   },
 };
 
-const sdk = new ZamaSDK({
-  relayer,
-  provider,
-  signer,
+const config = createConfig({
+  chains: [sepolia],
+  signer: mySigner,
+  provider: myProvider,
   storage: redisStorage,
+  relayers: { [sepolia.id]: node() },
 });
+const sdk = new ZamaSDK(config);
 ```
 
 ## Methods
@@ -86,12 +88,7 @@ import { indexedDBStorage } from "@zama-fhe/sdk";
 Browser-based persistent storage backed by IndexedDB. Survives page reloads and browser restarts. Use this as the primary `storage` in browser apps.
 
 ```ts
-const sdk = new ZamaSDK({
-  relayer,
-  provider,
-  signer,
-  storage: indexedDBStorage,
-});
+const sdk = new ZamaSDK(config); // config from createConfig()
 ```
 
 ### memoryStorage
@@ -103,12 +100,7 @@ import { memoryStorage } from "@zama-fhe/sdk";
 In-memory storage cleared when the process exits. Suitable for tests and throwaway scripts.
 
 ```ts
-const sdk = new ZamaSDK({
-  relayer,
-  provider,
-  signer,
-  storage: memoryStorage,
-});
+const sdk = new ZamaSDK(config); // config from createConfig()
 ```
 
 ### asyncLocalStorage
@@ -124,7 +116,13 @@ import { asyncLocalStorage } from "@zama-fhe/sdk/node";
 
 app.post("/api/transfer", (req, res) => {
   asyncLocalStorage.run(async () => {
-    const sdk = new ZamaSDK({ relayer, provider, signer, storage: asyncLocalStorage });
+    const config = createConfig({
+      chains: [mySepolia],
+      signer: wallet,
+      storage: asyncLocalStorage,
+      relayers: { [mySepolia.id]: node() },
+    });
+    const sdk = new ZamaSDK(config);
     await sdk.createToken("0x...").confidentialTransfer("0x...", 100n);
   });
 });
@@ -141,13 +139,15 @@ MV3 web extension storage backed by `chrome.storage.session`. Survives service w
 Pass as `sessionStorage` (not `storage`) to persist wallet signatures across service worker restarts:
 
 ```ts
-const sdk = new ZamaSDK({
-  relayer,
-  provider,
-  signer,
+const config = createConfig({
+  chains: [mySepolia],
+  publicClient,
+  walletClient,
   storage: indexedDBStorage,
   sessionStorage: chromeSessionStorage,
+  relayers: { [mySepolia.id]: web() },
 });
+const sdk = new ZamaSDK(config);
 ```
 
 ## Related
