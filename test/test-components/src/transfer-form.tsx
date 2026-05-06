@@ -4,17 +4,11 @@ import { useConfidentialTransfer, useConfidentialBalance, useMetadata } from "@z
 import type { Address } from "@zama-fhe/sdk";
 import { useAccount } from "wagmi";
 
-export function TransferForm({
-  tokenAddress,
-  wrapperAddress,
-}: {
-  tokenAddress: Address;
-  wrapperAddress?: Address;
-}) {
+export function TransferForm({ tokenAddress }: { tokenAddress: Address }) {
   const { address } = useAccount();
   const { data: metadata } = useMetadata(tokenAddress);
-  const { data: balance } = useConfidentialBalance({ tokenAddress, account: address });
-  const transfer = useConfidentialTransfer({ tokenAddress, wrapperAddress });
+  const { data: balance } = useConfidentialBalance({ address: tokenAddress, account: address });
+  const transfer = useConfidentialTransfer({ address: tokenAddress });
 
   return (
     <form

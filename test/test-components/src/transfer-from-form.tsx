@@ -11,16 +11,14 @@ import { useAccount } from "wagmi";
 export function TransferFromForm({
   tokenAddress,
   defaultFrom,
-  wrapperAddress,
 }: {
   tokenAddress: Address;
   defaultFrom?: Address;
-  wrapperAddress?: Address;
 }) {
   const { address } = useAccount();
   const { data: metadata } = useMetadata(tokenAddress);
-  const { data: balance } = useConfidentialBalance({ tokenAddress, account: address });
-  const transferFrom = useConfidentialTransferFrom({ tokenAddress, wrapperAddress });
+  const { data: balance } = useConfidentialBalance({ address: tokenAddress, account: address });
+  const transferFrom = useConfidentialTransferFrom(tokenAddress);
 
   return (
     <form
