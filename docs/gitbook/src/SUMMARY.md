@@ -4,28 +4,28 @@
 
 ## Getting Started
 
-  - [Quick start](tutorials/quick-start.md)
-  - [First confidential dApp](tutorials/first-confidential-dapp.md)
-  - [Wallet & exchange integration](tutorials/wallet-exchange-integration.md)
+- [Quick start](tutorials/quick-start.md)
+- [First confidential dApp](tutorials/first-confidential-dapp.md)
+- [Wallet & exchange integration](tutorials/wallet-exchange-integration.md)
 
 ## Guides
 
-  - [Configuration](guides/configuration.md)
-  - [Authentication](guides/authentication.md)
-  - [Shield tokens](guides/shield-tokens.md)
-  - [Transfer privately](guides/transfer-privately.md)
-  - [Unshield tokens](guides/unshield-tokens.md)
-  - [Check balances](guides/check-balances.md)
-  - [Handle errors](guides/handle-errors.md)
-  - [Activity feeds](guides/activity-feeds.md)
-  - [Node.js backend](guides/node-js-backend.md)
-  - [Web extensions](guides/web-extensions.md)
-  - [Local development](guides/local-development.md)
-  - [Next.js SSR](guides/nextjs-ssr.md)
-  - [Operator approvals](guides/operator-approvals.md)
-  - [Encrypt & decrypt](guides/encrypt-decrypt.md)
+- [Configuration](guides/configuration.md)
+- [Authentication](guides/authentication.md)
+- [Shield tokens](guides/shield-tokens.md)
+- [Transfer privately](guides/transfer-privately.md)
+- [Unshield tokens](guides/unshield-tokens.md)
+- [Check balances](guides/check-balances.md)
+- [Handle errors](guides/handle-errors.md)
+- [Activity feeds](guides/activity-feeds.md)
+- [Node.js backend](guides/node-js-backend.md)
+- [Web extensions](guides/web-extensions.md)
+- [Local development](guides/local-development.md)
+- [Next.js SSR](guides/nextjs-ssr.md)
+- [Operator approvals](guides/operator-approvals.md)
+- [Encrypt & decrypt](guides/encrypt-decrypt.md)
 
-  ## API References
+## API References
 
 - [SDK reference](reference/sdk/README.md)
   - [ZamaSDK](reference/sdk/ZamaSDK.md)
@@ -92,7 +92,6 @@
   - [Query keys](reference/react/query-keys.md)
 
   ## Concepts
-
   - [Architecture](concepts/architecture.md)
   - [Session model](concepts/session-model.md)
   - [Security model](concepts/security-model.md)
