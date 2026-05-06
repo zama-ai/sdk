@@ -540,7 +540,7 @@ export abstract class BaseSigner implements GenericSigner, Disposable {
     // (undocumented)
     protected onDispose(): void;
     // (undocumented)
-    requireWalletAccount(operation: string): WalletAccount;
+    requireWalletAccount(): WalletAccount;
     // (undocumented)
     abstract signTypedData(typedData: EIP712TypedData): Promise<Hex>;
     // (undocumented)
@@ -7515,7 +7515,7 @@ export interface GenericProvider {
 export interface GenericSigner {
     dispose?(): void;
     refreshWalletAccount?(): Promise<WalletAccount | undefined>;
-    requireWalletAccount(operation: string): WalletAccount;
+    requireWalletAccount(): WalletAccount;
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
     readonly walletAccount: WalletAccountStore;
     writeContract<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex>;
@@ -14659,15 +14659,8 @@ export interface ShieldSubmittedEvent extends BaseEvent {
 }
 
 // @public
-export class SignerNotConfiguredError extends SignerRequiredError {
-    constructor(operation: string, options?: ErrorOptions);
-}
-
-// @public
-export class SignerRequiredError extends ZamaError {
-    constructor(code: ZamaErrorCode, operation: string, message: string, options?: ErrorOptions);
-    // (undocumented)
-    readonly operation: string;
+export class SignerNotConfiguredError extends ZamaError {
+    constructor(options?: ErrorOptions);
 }
 
 // @public
@@ -18796,8 +18789,8 @@ export interface WalletAccountChange {
 export type WalletAccountListener = (change: WalletAccountChange) => void;
 
 // @public
-export class WalletAccountNotReadyError extends SignerRequiredError {
-    constructor(operation: string, options?: ErrorOptions);
+export class WalletAccountNotReadyError extends ZamaError {
+    constructor(options?: ErrorOptions);
 }
 
 // @public
@@ -18808,8 +18801,8 @@ export interface WalletAccountStore {
 }
 
 // @public
-export class WalletNotConnectedError extends SignerRequiredError {
-    constructor(operation: string, options?: ErrorOptions);
+export class WalletNotConnectedError extends ZamaError {
+    constructor(options?: ErrorOptions);
 }
 
 // @public
@@ -20043,6 +20036,7 @@ export class ZamaSDK {
         delegatorAddress: Address;
         delegateAddress: Address;
     }): Promise<bigint>;
+    get hasSigner(): boolean;
     isAllowed(contracts: Address[]): Promise<boolean>;
     isAllowedAs(delegator: Address, contracts: Address[]): Promise<boolean>;
     isDelegated(params: {
@@ -20061,14 +20055,12 @@ export class ZamaSDK {
     requireAlignedWalletAccount(operation: string): Promise<WalletAccount>;
     // (undocumented)
     requireChainAlignment(operation: string): Promise<number>;
-    requireSigner(operation: string): GenericSigner;
     revokeDelegation(input: {
         contractAddress: Address;
         delegateAddress: Address;
     }): Promise<TransactionResult>;
     revokePermits(contracts?: Address[]): Promise<void>;
-    // (undocumented)
-    readonly signer: GenericSigner | undefined;
+    get signer(): GenericSigner;
     // (undocumented)
     readonly storage: GenericStorage;
     terminate(): void;

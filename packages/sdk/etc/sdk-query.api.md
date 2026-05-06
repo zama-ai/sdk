@@ -413,7 +413,7 @@ export function generateKeypairMutationOptions(sdk: ZamaSDK): MutationFactoryOpt
 export interface GenericSigner {
     dispose?(): void;
     refreshWalletAccount?(): Promise<WalletAccount | undefined>;
-    requireWalletAccount(operation: string): WalletAccount;
+    requireWalletAccount(): WalletAccount;
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
     // Warning: (ae-forgotten-export) The symbol "WalletAccountStore" needs to be exported by the entry point index.d.ts
     readonly walletAccount: WalletAccountStore;
@@ -1299,6 +1299,7 @@ export class ZamaSDK {
         delegatorAddress: Address;
         delegateAddress: Address;
     }): Promise<bigint>;
+    get hasSigner(): boolean;
     isAllowed(contracts: Address[]): Promise<boolean>;
     isAllowedAs(delegator: Address, contracts: Address[]): Promise<boolean>;
     isDelegated(params: {
@@ -1321,14 +1322,12 @@ export class ZamaSDK {
     requireAlignedWalletAccount(operation: string): Promise<WalletAccount>;
     // (undocumented)
     requireChainAlignment(operation: string): Promise<number>;
-    requireSigner(operation: string): GenericSigner;
     revokeDelegation(input: {
         contractAddress: Address;
         delegateAddress: Address;
     }): Promise<TransactionResult>;
     revokePermits(contracts?: Address[]): Promise<void>;
-    // (undocumented)
-    readonly signer: GenericSigner | undefined;
+    get signer(): GenericSigner;
     // (undocumented)
     readonly storage: GenericStorage;
     terminate(): void;

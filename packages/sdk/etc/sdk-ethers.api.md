@@ -80,7 +80,7 @@ export class EthersSigner extends BaseSigner {
     // Warning: (ae-forgotten-export) The symbol "WalletAccount" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
-    requireWalletAccount(operation: string): WalletAccount;
+    requireWalletAccount(): WalletAccount;
     // Warning: (ae-forgotten-export) The symbol "EIP712TypedData" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
