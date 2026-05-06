@@ -26,7 +26,6 @@ import {
   ApprovalFailedError,
   BalanceCheckUnavailableError,
   DecryptionFailedError,
-  ERC1363NotSupportedError,
   ERC20ReadFailedError,
   DelegationDelegateEqualsContractError,
   DelegationExpirationTooSoonError,
@@ -45,8 +44,6 @@ import { ReadonlyToken } from "./readonly-token";
 import type {
   ShieldCallbacks,
   ShieldOptions,
-  ShieldPath,
-  ShieldStrategy,
   TransactionResult,
   TransferCallbacks,
   TransferOptions,
@@ -116,20 +113,6 @@ export class Token extends ReadonlyToken {
       this.#isPayable = false;
       return false;
     }
-  }
-
-  async #resolveShieldingPath(strategy: ShieldStrategy = "auto"): Promise<ShieldPath> {
-    if (strategy === "approveAndWrap") {
-      return "approveAndWrap";
-    }
-
-    const isPayableToken = await this.isPayable();
-
-    if (strategy === "transferAndCall" && !isPayableToken) {
-      throw new ERC1363NotSupportedError(await this.#getUnderlying());
-    }
-
-    return isPayableToken ? "transferAndCall" : "approveAndWrap";
   }
 
   // WRITE OPERATIONS
@@ -341,15 +324,9 @@ export class Token extends ReadonlyToken {
   /**
    * Shield public ERC-20 tokens into confidential tokens.
    *
-   * Routing is controlled by `shieldStrategy` and resolved via ERC-165
-   * introspection — there is no runtime fallback between paths:
-   * - `"auto"` (default): probes the underlying with `supportsInterface`
-   *   and uses ERC-1363 `transferAndCall` (single tx, no approval) when
-   *   supported, otherwise runs `approve` + `wrap` (two txs).
-   * - `"transferAndCall"`: forces the single-tx path. Throws
-   *   {@link ERC1363NotSupportedError} when the underlying does not
-   *   advertise ERC-1363 support.
-   * - `"approveAndWrap"`: skips detection and runs `approve` + `wrap`.
+   * Routing is decided automatically by ERC-165 introspection on the
+   * underlying ERC-20: ERC-1363 `transferAndCall` (single tx, no approval)
+   * when supported, otherwise `approve` + `wrap` (two txs).
    *
    * On the `approveAndWrap` path, ERC-20 approval is handled automatically
    * via `approvalStrategy` (`"exact"` by default, `"max"` for unlimited
@@ -360,25 +337,22 @@ export class Token extends ReadonlyToken {
    * signing required).
    *
    * @param amount - The plaintext amount to shield.
-   * @param options - Optional: `shieldStrategy`, `approvalStrategy`, `to`, callbacks.
+   * @param options - Optional: `approvalStrategy`, `to`, callbacks.
    * @returns The transaction hash and mined receipt.
    * @throws {@link ChainMismatchError} if signer and provider are on different chains.
    * @throws {@link InsufficientERC20BalanceError} if the ERC-20 balance is less than `amount`.
-   * @throws {@link ERC1363NotSupportedError} if `shieldStrategy: "transferAndCall"` is forced on a non-payable token.
    * @throws {@link ApprovalFailedError} if the ERC-20 approval step fails.
    * @throws {@link TransactionRevertedError} if the shield transaction reverts.
    *
    * @example
    * ```ts
    * const txHash = await token.shield(1000n);
-   * // Force the legacy two-tx path:
-   * const txHash = await token.shield(1000n, { shieldStrategy: "approveAndWrap" });
    * ```
    */
   async shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult> {
     const account = await this.sdk.requireAlignedWalletAccount("shield");
 
-    const shieldingPath = await this.#resolveShieldingPath(options?.shieldStrategy);
+    const isPayableToken = await this.isPayable();
     const underlying = await this.#getUnderlying();
     const userAddress = getAddress(account.address);
 
@@ -404,7 +378,7 @@ export class Token extends ReadonlyToken {
       );
     }
 
-    if (shieldingPath === "transferAndCall") {
+    if (isPayableToken) {
       return this.#shieldViaTransferAndCall(amount, underlying, userAddress, options);
     }
 

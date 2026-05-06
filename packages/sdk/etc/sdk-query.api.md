@@ -703,7 +703,6 @@ export function shieldMutationOptions(token: Token): MutationFactoryOptions<read
 // @public
 export interface ShieldOptions extends ShieldCallbacks {
     approvalStrategy?: ApprovalStrategy;
-    shieldStrategy?: ShieldStrategy;
     to?: Address;
 }
 
@@ -714,10 +713,7 @@ export interface ShieldParams extends ShieldOptions {
 }
 
 // @public
-export type ShieldPath = Exclude<ShieldStrategy, "auto">;
-
-// @public
-export type ShieldStrategy = "auto" | "transferAndCall" | "approveAndWrap";
+export type ShieldPath = "transferAndCall" | "approveAndWrap";
 
 // @public (undocumented)
 export interface ShieldSubmittedEvent extends BaseEvent {

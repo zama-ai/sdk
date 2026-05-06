@@ -122,7 +122,6 @@ export type {
   ShieldCallbacks,
   ShieldOptions,
   ShieldPath,
-  ShieldStrategy,
   TransferCallbacks,
   TransferOptions,
 } from "./types";
@@ -164,7 +163,6 @@ export {
   DecryptionFailedError,
   ApprovalFailedError,
   TransactionRevertedError,
-  ERC1363NotSupportedError,
   KeypairExpiredError,
   InvalidKeypairError,
   NoCiphertextError,

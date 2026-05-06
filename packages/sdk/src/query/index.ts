@@ -167,7 +167,6 @@ export type {
   TransactionResult,
   ShieldOptions,
   ShieldPath,
-  ShieldStrategy,
   TransferCallbacks,
   TransferOptions,
   UnshieldCallbacks,

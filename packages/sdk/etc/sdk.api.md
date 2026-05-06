@@ -6406,13 +6406,6 @@ export interface EncryptStartEvent extends BaseEvent {
 export const ERC1363_INTERFACE_ID: "0xb0202a11";
 
 // @public
-export class ERC1363NotSupportedError extends ZamaError {
-    constructor(tokenAddress: Address, options?: ErrorOptions);
-    // (undocumented)
-    readonly tokenAddress: Address;
-}
-
-// @public
 export class ERC20ReadFailedError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
@@ -14660,15 +14653,11 @@ export interface ShieldCallbacks {
 // @public
 export interface ShieldOptions extends ShieldCallbacks {
     approvalStrategy?: ApprovalStrategy;
-    shieldStrategy?: ShieldStrategy;
     to?: Address;
 }
 
 // @public
-export type ShieldPath = Exclude<ShieldStrategy, "auto">;
-
-// @public
-export type ShieldStrategy = "auto" | "transferAndCall" | "approveAndWrap";
+export type ShieldPath = "transferAndCall" | "approveAndWrap";
 
 // @public (undocumented)
 export interface ShieldSubmittedEvent extends BaseEvent {
@@ -20053,8 +20042,7 @@ export const ZamaErrorCode: {
     readonly InsufficientConfidentialBalance: "INSUFFICIENT_CONFIDENTIAL_BALANCE"; /** ERC-20 balance is insufficient for the requested shield amount. */
     readonly InsufficientERC20Balance: "INSUFFICIENT_ERC20_BALANCE"; /** Balance validation could not be performed (no cached credentials and decryption not possible). */
     readonly BalanceCheckUnavailable: "BALANCE_CHECK_UNAVAILABLE"; /** Public ERC-20 read (e.g. balanceOf) failed due to a network or contract error. */
-    readonly ERC20ReadFailed: "ERC20_READ_FAILED"; /** The underlying ERC-20 does not support ERC-1363 `transferAndCall`. */
-    readonly ERC1363NotSupported: "ERC1363_NOT_SUPPORTED"; /** The new expiration date equals the current one — no on-chain change needed. */
+    readonly ERC20ReadFailed: "ERC20_READ_FAILED"; /** The new expiration date equals the current one — no on-chain change needed. */
     readonly DelegationExpiryUnchanged: "DELEGATION_EXPIRY_UNCHANGED"; /** Delegate address cannot be the contract address. */
     readonly DelegationDelegateEqualsContract: "DELEGATION_DELEGATE_EQUALS_CONTRACT"; /** Contract address cannot be the sender address. */
     readonly DelegationContractIsSelf: "DELEGATION_CONTRACT_IS_SELF"; /** The ACL contract is paused. */

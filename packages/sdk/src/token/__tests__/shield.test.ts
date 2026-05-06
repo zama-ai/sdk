@@ -1,6 +1,5 @@
 import { type Address, getAddress } from "viem";
 import { describe, expect, it, vi } from "../../test-fixtures";
-import { ERC1363NotSupportedError, ZamaErrorCode } from "../../errors";
 import { ZamaSDKEvents } from "../../events/sdk-events";
 
 const UNDERLYING = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
@@ -226,56 +225,6 @@ describe("Token.shield", () => {
 
       await expect(token.shield(100n)).rejects.toThrow("Shield transaction failed");
       expect(signer.writeContract).toHaveBeenCalledOnce();
-    });
-
-    it('explicit "transferAndCall" + not supported: throws ERC1363NotSupportedError', async ({
-      token,
-      provider,
-    }) => {
-      vi.mocked(provider.readContract)
-        .mockResolvedValueOnce(UNDERLYING)
-        .mockResolvedValueOnce(false);
-
-      await expect(token.shield(100n, { shieldStrategy: "transferAndCall" })).rejects.toThrow(
-        ERC1363NotSupportedError,
-      );
-    });
-
-    it('explicit "transferAndCall" + reverts at runtime: does NOT fall back', async ({
-      token,
-      signer,
-      provider,
-    }) => {
-      vi.mocked(provider.readContract)
-        .mockResolvedValueOnce(UNDERLYING)
-        .mockResolvedValueOnce(true)
-        .mockResolvedValueOnce(1000n);
-
-      vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("transferAndCall reverted"));
-
-      await expect(token.shield(100n, { shieldStrategy: "transferAndCall" })).rejects.toThrow(
-        "Shield transaction failed",
-      );
-
-      expect(signer.writeContract).toHaveBeenCalledOnce();
-    });
-
-    it('explicit "approveAndWrap": skips detection entirely', async ({
-      token,
-      signer,
-      provider,
-    }) => {
-      vi.mocked(provider.readContract)
-        .mockResolvedValueOnce(UNDERLYING)
-        .mockResolvedValueOnce(1000n)
-        .mockResolvedValueOnce(0n);
-
-      const result = await token.shield(100n, {
-        shieldStrategy: "approveAndWrap",
-      });
-
-      expect(result.txHash).toBe("0xtxhash");
-      expect(signer.writeContract).toHaveBeenCalledTimes(2);
     });
 
     it("auto + transferAndCall non-revert error (e.g. user rejection): does NOT fall back", async ({
@@ -602,34 +551,13 @@ describe("Token.shield", () => {
     });
   });
 
-  // --- Error class ---
-
-  describe("ERC1363NotSupportedError", () => {
-    it("has correct code and includes token address", async ({ token, provider }) => {
-      vi.mocked(provider.readContract)
-        .mockResolvedValueOnce(UNDERLYING)
-        .mockResolvedValueOnce(false);
-
-      try {
-        await token.shield(100n, { shieldStrategy: "transferAndCall" });
-        expect.unreachable("should have thrown");
-      } catch (error) {
-        expect(error).toBeInstanceOf(ERC1363NotSupportedError);
-        expect((error as ERC1363NotSupportedError).code).toBe(ZamaErrorCode.ERC1363NotSupported);
-        expect((error as ERC1363NotSupportedError).message).toContain(UNDERLYING);
-      }
-    });
-  });
-
   // --- Query mutation passthrough ---
 
-  it("shieldMutationOptions passes shieldStrategy to token.shield", async ({ mockToken }) => {
+  it("shieldMutationOptions forwards options to token.shield", async ({ mockToken }) => {
     const { shieldMutationOptions } = await import("../../query/shield");
     const options = shieldMutationOptions(mockToken);
 
-    await options.mutationFn({ amount: 1n, shieldStrategy: "transferAndCall" });
-    expect(mockToken.shield).toHaveBeenCalledWith(1n, {
-      shieldStrategy: "transferAndCall",
-    });
+    await options.mutationFn({ amount: 1n, approvalStrategy: "max" });
+    expect(mockToken.shield).toHaveBeenCalledWith(1n, { approvalStrategy: "max" });
   });
 });
