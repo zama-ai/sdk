@@ -7,9 +7,11 @@ import type { Address, EIP1193Provider, Hex } from "viem";
  *
  * All built-in presets (`mainnet`, `sepolia`, `hardhat`, `hoodi`)
  * are `FheChain` objects exported from `@zama-fhe/sdk/chains`.
+ *
+ * Validated at runtime by {@link FheChainSchema} at the config boundary.
  */
-export interface FheChain<TId extends number = number> {
-  readonly id: TId;
+export interface FheChain {
+  readonly id: number;
   readonly gatewayChainId: number;
   readonly relayerUrl: string;
   readonly network: EIP1193Provider | string;

@@ -16,15 +16,13 @@ export const hex = z
   .string()
   .refine((v): v is Hex => isHex(v, { strict: true }), "expected 0x-prefixed hex string");
 
-/**
- * EVM address that has been EIP-55 checksummed by the schema. Output type is
- * the {@link ChecksummedAddress} brand, so any value flowing out of `.parse`
- * is safe to use as a stable storage / query key.
- */
-export const address = z
+/** Validates an EVM address string. Output type is `Address` (`` `0x${string}` ``). */
+export const evmAddress = z
   .string()
-  .refine((v): v is `0x${string}` => isAddress(v, { strict: false }), "expected EVM address")
-  .transform(checksum);
+  .refine((v): v is Address => isAddress(v, { strict: false }), "expected EVM address");
+
+/** Validates and EIP-55 checksums an EVM address. Output is {@link ChecksummedAddress}. */
+export const checksummedAddress = evmAddress.transform(checksum);
 
 /** Non-negative integer Unix timestamp in seconds. */
 export const unixSeconds = z.number().int().nonnegative();

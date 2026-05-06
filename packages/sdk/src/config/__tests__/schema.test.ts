@@ -21,22 +21,16 @@ function mockRelayerConfig(): RelayerConfig {
 }
 
 describe("createConfig validation", () => {
-  it("normalizes chain addresses and numeric config once at the public entrypoint", () => {
-    const chain = {
-      ...hardhat,
-      aclContractAddress: hardhat.aclContractAddress.toLowerCase(),
-    } satisfies FheChain;
-
+  it("validates and applies numeric defaults at the public entrypoint", () => {
     const config = createConfig({
-      chains: [chain],
-      relayers: { [chain.id]: mockRelayerConfig() },
+      chains: [hardhat],
+      relayers: { [hardhat.id]: mockRelayerConfig() },
       provider: createMockProvider(),
       keypairTTL: 86400,
       permitTTL: 7,
       registryTTL: 60,
     });
 
-    expect(config.chains[0].aclContractAddress).toBe(hardhat.aclContractAddress);
     expect(config.keypairTTL).toBe(86400);
     expect(config.permitTTL).toBe(7);
     expect(config.registryTTL).toBe(60);

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import {
-  address,
+  checksummedAddress,
   chainId,
   hex,
   positiveDays,
@@ -40,10 +40,10 @@ export const StoredKeypairSchema = z.object({
 
 export const PermissionSchema = z.object({
   keypairPublicKey: hex,
-  signerAddress: address,
-  delegatorAddress: address,
+  signerAddress: checksummedAddress,
+  delegatorAddress: checksummedAddress,
   chainId,
-  signedContractAddresses: z.array(address).max(MAX_CONTRACTS_PER_PERMIT),
+  signedContractAddresses: z.array(checksummedAddress).max(MAX_CONTRACTS_PER_PERMIT),
   signature: hex,
   startTimestamp: unixSeconds,
   durationDays: positiveDays,
