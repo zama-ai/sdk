@@ -2376,7 +2376,7 @@ Every SDK error is an instance of `ZamaError`, which extends the native `Error` 
 | `DelegationSelfNotAllowedError`        | `DELEGATION_SELF_NOT_ALLOWED`       | Delegation cannot target self                            |
 | `DelegationCooldownError`              | `DELEGATION_COOLDOWN`               | Only one delegate/revoke per tuple per block             |
 | `DelegationNotFoundError`              | `DELEGATION_NOT_FOUND`              | No active delegation for this tuple                      |
-| `SignerRequiredError`                  | `SIGNER_REQUIRED`                   | Write/sign/decrypt called without a signer               |
+| `SignerNotConfiguredError`             | `SIGNER_NOT_CONFIGURED`             | Write/sign/decrypt called without a signer               |
 | `DelegationExpiredError`               | `DELEGATION_EXPIRED`                | The delegation has expired                               |
 
 ### 2. Catch with instanceof
@@ -2452,7 +2452,7 @@ Here is a quick reference for the most common errors and how to respond:
 | `InsufficientERC20BalanceError`        | Show the user their public token balance. They need more tokens before shielding.                                 |
 | `BalanceCheckUnavailableError`         | Call `token.allow()` to cache credentials, or pass `skipBalanceCheck: true` to bypass (useful for smart wallets). |
 | `ERC20ReadFailedError`                 | Check network connectivity and RPC endpoint. Retry the shield operation.                                          |
-| `SignerRequiredError`                  | Connect a wallet. The operation requires a signer but the SDK was configured without one.                         |
+| `SignerNotConfiguredError`             | Connect a wallet. The operation requires a signer but the SDK was configured without one.                         |
 | `DelegationSelfNotAllowedError`        | Cannot delegate to yourself. Use a different delegate address.                                                    |
 | `DelegationCooldownError`              | Wait for the next block before retrying delegate/revoke on the same tuple.                                        |
 | `DelegationNotFoundError`              | No active delegation exists. Verify the delegator, delegate, and contract addresses.                              |
@@ -6308,7 +6308,6 @@ import {
   DelegationContractIsSelfError,
   DelegationExpirationTooSoonError,
   DelegationNotPropagatedError,
-  SignerRequiredError,
   AclPausedError,
 } from "@zama-fhe/sdk";
 ```
@@ -6379,7 +6378,7 @@ The `_` wildcard catches any `ZamaError` not explicitly handled.
 
 **Code:** `SIGNER_NOT_CONFIGURED`
 
-Thrown when a write, sign, or decrypt operation is called on an SDK instance configured without a signer. The error carries the `operation` name that was attempted.
+Thrown when a write, sign, or decrypt operation is called on an SDK instance configured without a signer.
 
 ```ts
 import { SignerNotConfiguredError } from "@zama-fhe/sdk";

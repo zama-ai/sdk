@@ -37,7 +37,6 @@ import {
   DelegationContractIsSelfError,
   DelegationExpirationTooSoonError,
   DelegationNotPropagatedError,
-  SignerRequiredError,
   AclPausedError,
 } from "@zama-fhe/sdk";
 ```
@@ -108,7 +107,7 @@ The `_` wildcard catches any `ZamaError` not explicitly handled.
 
 **Code:** `SIGNER_NOT_CONFIGURED`
 
-Thrown when a write, sign, or decrypt operation is called on an SDK instance configured without a signer. The error carries the `operation` name that was attempted.
+Thrown when a write, sign, or decrypt operation is called on an SDK instance configured without a signer.
 
 ```ts
 import { SignerNotConfiguredError } from "@zama-fhe/sdk";
