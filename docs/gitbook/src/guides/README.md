@@ -14,6 +14,8 @@ Otherwise:
 
 🟨 Go to [**Authentication**](authentication.md) to learn about API key management and backend proxies.
 
+🟨 Go to [**Relayer API keys**](relayer-api-keys.md) to obtain and securely manage your Zama-hosted Relayer API key.
+
 🟨 Go to [**Shield tokens**](shield-tokens.md) to convert public ERC-20 tokens into confidential form.
 
 🟨 Go to [**Transfer privately**](transfer-privately.md) to send encrypted amounts on-chain.

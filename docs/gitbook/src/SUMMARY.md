@@ -12,6 +12,7 @@
 
 - [Configuration](guides/configuration.md)
 - [Authentication](guides/authentication.md)
+- [Relayer API keys](guides/relayer-api-keys.md)
 - [Shield tokens](guides/shield-tokens.md)
 - [Transfer privately](guides/transfer-privately.md)
 - [Unshield tokens](guides/unshield-tokens.md)
