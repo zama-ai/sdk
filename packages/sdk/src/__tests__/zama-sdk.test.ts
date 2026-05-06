@@ -1,5 +1,4 @@
 import { createMockRelayer, describe, it, expect, vi, TEST_ADDR_B } from "../test-fixtures";
-import { ReadonlyToken } from "../token/readonly-token";
 import { Token } from "../token/token";
 import {
   DecryptionFailedError,
@@ -29,29 +28,21 @@ describe("ZamaSDK", () => {
     expect(sdk.storage).toBe(storage);
   });
 
-  it("createReadonlyToken returns ReadonlyToken", ({ sdk, tokenAddress }) => {
-    const token = sdk.createReadonlyToken(tokenAddress);
-    expect(token).toBeInstanceOf(ReadonlyToken);
-    expect(token.address).toBe(tokenAddress);
-    expect(token.sdk).toBe(sdk);
-  });
-
   it("createToken returns Token", ({ sdk, tokenAddress }) => {
     const token = sdk.createToken(tokenAddress);
     expect(token).toBeInstanceOf(Token);
     expect(token.address).toBe(tokenAddress);
+    expect(token.sdk).toBe(sdk);
   });
 
-  for (const method of ["createToken", "createReadonlyToken"] as const) {
-    it(`${method} exposes the SDK instance`, ({ sdk, tokenAddress }) => {
-      const token = sdk[method](tokenAddress);
-      expect(token.sdk).toBe(sdk);
-    });
-  }
+  it("createToken exposes the SDK instance", ({ sdk, tokenAddress }) => {
+    const token = sdk.createToken(tokenAddress);
+    expect(token.sdk).toBe(sdk);
+  });
 
   it("creates distinct instances per address", ({ sdk }) => {
-    const t1 = sdk.createReadonlyToken("0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address);
-    const t2 = sdk.createReadonlyToken("0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address);
+    const t1 = sdk.createToken("0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address);
+    const t2 = sdk.createToken("0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address);
     expect(t1).not.toBe(t2);
     expect(t1.address).toBe("0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa");
     expect(t2.address).toBe("0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB");

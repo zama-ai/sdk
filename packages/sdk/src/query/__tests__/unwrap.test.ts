@@ -2,11 +2,11 @@ import { describe, expect, test } from "../../test-fixtures";
 import { unwrapMutationOptions } from "../unwrap";
 
 describe("unwrapMutationOptions", () => {
-  test("delegates unwrap", async ({ mockToken }) => {
-    const options = unwrapMutationOptions(mockToken, mockToken.address);
+  test("delegates unwrap", async ({ mockWrappedToken }) => {
+    const options = unwrapMutationOptions(mockWrappedToken);
 
-    expect(options.mutationKey).toEqual(["zama.unwrap", mockToken.address]);
+    expect(options.mutationKey).toEqual(["zama.unwrap", mockWrappedToken.address]);
     await options.mutationFn({ amount: 12n });
-    expect(mockToken.unwrap).toHaveBeenCalledWith(12n);
+    expect(mockWrappedToken.unwrap).toHaveBeenCalledWith(12n);
   });
 });

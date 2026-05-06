@@ -45,8 +45,8 @@ import type {
   Handle,
   PublicDecryptResult,
 } from "./relayer/relayer-sdk.types";
-import { ReadonlyToken } from "./token/readonly-token";
 import { Token } from "./token/token";
+import { WrappedToken } from "./token/wrapped-token";
 import type {
   GenericProvider,
   GenericSigner,
@@ -283,30 +283,35 @@ export class ZamaSDK {
   }
 
   /**
-   * Create a read-only interface for a confidential token.
-   * Supports balance queries and authorization without a wrapper address.
+   * Create a {@link Token} interface for an ERC-7984 confidential token.
+   * Supports balance queries, transfers, and operator approval.
+   *
+   * For ERC-7984 wrappers (shield/unshield), use {@link createWrappedToken} instead.
    *
    * @param address - The confidential token contract address.
-   * @returns A {@link ReadonlyToken} instance bound to this SDK.
-   */
-  createReadonlyToken(address: Address): ReadonlyToken {
-    return new ReadonlyToken(this, address);
-  }
-
-  /**
-   * Create a high-level ERC-20-like interface for a confidential token.
-   * Includes write operations (transfer, shield, unshield).
-   *
-   * @param address - The confidential token contract address (also used as wrapper by default).
-   * @param wrapper - Optional explicit wrapper address, if it differs from the token address.
    * @returns A {@link Token} instance bound to this SDK.
    */
-  createToken(address: Address, wrapper?: Address): Token {
-    return new Token(this, address, wrapper);
+  createToken(address: Address): Token {
+    return new Token(this, address);
   }
 
   /**
-   * Emit a structured SDK event. Used by {@link Token}/{@link ReadonlyToken}
+   * Create a {@link WrappedToken} interface for an ERC-7984 ERC-20 wrapper.
+   * Adds wrapper-specific operations (shield, unshield, underlying, allowance)
+   * on top of the base {@link Token} API.
+   *
+   * The address is the wrapper contract address itself — the wrapper IS the
+   * confidential token.
+   *
+   * @param address - The confidential wrapper contract address.
+   * @returns A {@link WrappedToken} instance bound to this SDK.
+   */
+  createWrappedToken(address: Address): WrappedToken {
+    return new WrappedToken(this, address);
+  }
+
+  /**
+   * Emit a structured SDK event. Used by {@link Token}/{@link WrappedToken}
    * to surface lifecycle events through the unified SDK event stream.
    *
    * Listener exceptions are caught and logged so that a misbehaving subscriber
@@ -1087,7 +1092,7 @@ export class ZamaSDK {
    * {
    *   using sdk = new ZamaSDK({ relayer, provider, signer, storage });
    *   await sdk.allow([cUSDT]);
-   *   const balance = await sdk.createReadonlyToken(cUSDT).balanceOf();
+   *   const balance = await sdk.createToken(cUSDT).balanceOf(userAddress);
    * } // sdk.terminate() called automatically here
    * ```
    */

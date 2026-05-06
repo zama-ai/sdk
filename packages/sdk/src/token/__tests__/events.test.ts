@@ -1,8 +1,8 @@
 import { describe, expect, it, TEST_PUBLIC_KEY, vi, type MockSigner } from "../../test-fixtures";
 import type { GenericProvider, GenericStorage } from "../../types";
 import { Topics } from "../../events";
-import { ReadonlyToken } from "../readonly-token";
 import { Token } from "../token";
+import { WrappedToken } from "../wrapped-token";
 import {
   type ZamaSDKEvent,
   type ZamaSDKEventListener,
@@ -16,7 +16,7 @@ const _TOKEN_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
 
 /**
  * Build a ZamaSDK with an event listener wired up, together with a fresh
- * ReadonlyToken/Token pair bound to it. Each test gets a fresh event array
+ * Token/Token pair bound to it. Each test gets a fresh event array
  * to inspect.
  */
 function setupSdkWithEvents(opts: {
@@ -36,8 +36,8 @@ function setupSdkWithEvents(opts: {
     storage: opts.storage,
     onEvent,
   });
-  const readonlyToken = new ReadonlyToken(sdk, opts.tokenAddress);
-  const token = new Token(sdk, opts.tokenAddress, opts.wrapper);
+  const readonlyToken = new Token(sdk, opts.tokenAddress);
+  const token = new WrappedToken(sdk, opts.wrapper ?? opts.tokenAddress);
   return { sdk, events, readonlyToken, token };
 }
 
@@ -70,7 +70,7 @@ describe("ZamaSDKEvents constants", () => {
   });
 });
 
-describe("ReadonlyToken.balanceOf event emissions", () => {
+describe("Token.balanceOf event emissions", () => {
   // balanceOf delegates to sdk.userDecrypt, so decrypt events come from the SDK's
   // unified pipeline. They carry `handles` and `durationMs`, but not `tokenAddress`
   // (the pipeline is token-agnostic — callers correlate by handle).
@@ -197,13 +197,13 @@ describe("ReadonlyToken.balanceOf event emissions", () => {
       signer,
       storage,
     });
-    const token = new ReadonlyToken(sdk, tokenAddress);
+    const token = new Token(sdk, tokenAddress);
     vi.mocked(provider.readContract).mockResolvedValue(handle);
     await expect(token.balanceOf(userAddress)).resolves.toBe(1000n);
   });
 });
 
-describe("ReadonlyToken.decryptBalanceAs event emissions", () => {
+describe("Token.decryptBalanceAs event emissions", () => {
   // decryptBalanceAs delegates to sdk.delegatedUserDecrypt(), which emits events
   // at the SDK level (without tokenAddress). Events still carry timestamp.
 

@@ -1,5 +1,4 @@
 import { describe, it, expect } from "../test-fixtures";
-import { ReadonlyToken } from "../token/readonly-token";
 import { Token } from "../token/token";
 import { SignerNotConfiguredError, ZamaErrorCode } from "../errors";
 import type { ZamaSDK } from "../zama-sdk";
@@ -37,9 +36,9 @@ describe("ZamaSDK without signer", () => {
     );
   });
 
-  it("createReadonlyToken / createToken work with no signer", ({ createSDK, tokenAddress }) => {
+  it("createToken / createToken work with no signer", ({ createSDK, tokenAddress }) => {
     const sdk = createSDK({ signer: undefined });
-    expect(sdk.createReadonlyToken(tokenAddress)).toBeInstanceOf(ReadonlyToken);
+    expect(sdk.createToken(tokenAddress)).toBeInstanceOf(Token);
     expect(sdk.createToken(tokenAddress)).toBeInstanceOf(Token);
   });
 
@@ -54,12 +53,9 @@ describe("ZamaSDK without signer", () => {
     await expect(sdk.isAllowed(["0x1" as Address])).resolves.toBe(false);
   });
 
-  it("ReadonlyToken.isAllowed returns false when no signer", async ({
-    createSDK,
-    tokenAddress,
-  }) => {
+  it("sdk.isAllowed returns false when no signer", async ({ createSDK, tokenAddress }) => {
     const sdk = createSDK({ signer: undefined });
-    await expect(sdk.createReadonlyToken(tokenAddress).isAllowed()).resolves.toBe(false);
+    await expect(sdk.isAllowed([tokenAddress])).resolves.toBe(false);
   });
 
   it("requireSigner throws SignerNotConfiguredError without signer; returns signer when present", ({

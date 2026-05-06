@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "../test-fixtures";
 import { ChainMismatchError } from "../errors";
-import { ReadonlyToken } from "../token/readonly-token";
+import { Token } from "../token/token";
 import type { ZamaSDK } from "../zama-sdk";
 import type { Address } from "viem";
 
@@ -15,27 +15,24 @@ const RECIPIENT = "0x000000000000000000000000000000000000dEaD" as Address;
 // `operation-name` matches the string passed to `requireChainAlignment` inside
 // the SUT and is asserted on the thrown error.
 const MISMATCHED_OPS: ReadonlyArray<readonly [string, Op]> = [
-  ["shield", (sdk, t) => sdk.createToken(t).shield(1000n)],
+  ["shield", (sdk, t) => sdk.createWrappedToken(t).shield(1000n)],
   ["userDecrypt", (sdk, t) => sdk.userDecrypt([{ handle: HANDLE, contractAddress: t }])],
   ["allow", (sdk, t) => sdk.allow([t])],
   ["allowAs", (sdk, t) => sdk.allowAs(OTHER_USER, [t])],
   [
     "decryptBalanceAs",
-    (sdk, t) => sdk.createReadonlyToken(t).decryptBalanceAs({ delegatorAddress: OTHER_USER }),
+    (sdk, t) => sdk.createToken(t).decryptBalanceAs({ delegatorAddress: OTHER_USER }),
   ],
-  [
-    "batchBalancesOf",
-    (sdk, t) => ReadonlyToken.batchBalancesOf([sdk.createReadonlyToken(t)], OTHER_USER),
-  ],
+  ["batchBalancesOf", (sdk, t) => Token.batchBalancesOf([sdk.createToken(t)], OTHER_USER)],
   [
     "confidentialTransfer",
     (sdk, t) =>
       sdk.createToken(t).confidentialTransfer(RECIPIENT, 100n, { skipBalanceCheck: true }),
   ],
-  ["unwrap", (sdk, t) => sdk.createToken(t).unwrap(100n)],
+  ["unwrap", (sdk, t) => sdk.createWrappedToken(t).unwrap(100n)],
   [
     "delegateDecryption",
-    (sdk, t) => sdk.createToken(t).delegateDecryption({ delegateAddress: OTHER_USER }),
+    (sdk, t) => sdk.delegateDecryption({ contractAddress: t, delegateAddress: OTHER_USER }),
   ],
 ] as const;
 
