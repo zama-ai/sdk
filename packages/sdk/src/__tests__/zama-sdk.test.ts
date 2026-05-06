@@ -144,7 +144,7 @@ describe("ZamaSDK", () => {
     });
     vi.mocked(provider.getChainId).mockResolvedValue(walletAccount.chainId);
 
-    await expect(sdk.getAccount()).resolves.toEqual(walletAccount);
+    await expect(sdk.getWalletAccount()).resolves.toEqual(walletAccount);
     expect(refreshWalletAccount).toHaveBeenCalledOnce();
     expect(requireWalletAccount).toHaveBeenCalledTimes(2);
   });

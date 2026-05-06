@@ -1294,12 +1294,12 @@ export class ZamaSDK {
     // @internal
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
-    getAccount(): Promise<WalletAccount>;
     getDelegationExpiry(input: {
         contractAddress: Address;
         delegatorAddress: Address;
         delegateAddress: Address;
     }): Promise<bigint>;
+    getWalletAccount(): Promise<WalletAccount>;
     get hasSigner(): boolean;
     isAllowed(contracts: Address[]): Promise<boolean>;
     isAllowedAs(delegator: Address, contracts: Address[]): Promise<boolean>;

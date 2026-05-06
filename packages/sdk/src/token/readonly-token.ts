@@ -183,7 +183,7 @@ export class ReadonlyToken {
 
     const sdk = ReadonlyToken.assertSameSdk(tokens);
     // Fail fast on chain mismatch before prompting the wallet for a signature.
-    await sdk.getAccount();
+    await sdk.getWalletAccount();
     // Pre-authorize the full token set in one wallet signature so subsequent
     // per-token userDecrypt calls reuse the cached credentials.
     await sdk.allow(tokens.map((t) => t.address));
@@ -276,7 +276,7 @@ export class ReadonlyToken {
     const firstToken = tokens[0]!;
     ReadonlyToken.assertSameSdk(tokens);
     // TODO: code smell; an instance of SDK should be passed as argument of batchDecryptBalancesAs instead.
-    await firstToken.sdk.getAccount();
+    await firstToken.sdk.getWalletAccount();
 
     const resolvedHandles =
       handles ??
@@ -545,7 +545,7 @@ export class ReadonlyToken {
    * connected signer for this token contract.
    */
   async #assertDelegationActive(delegatorAddress: Address): Promise<void> {
-    const account = await this.sdk.getAccount();
+    const account = await this.sdk.getWalletAccount();
     const delegateAddress = getAddress(account.address);
     const expiry = await this.getDelegationExpiry({
       delegatorAddress,
@@ -603,7 +603,7 @@ export class ReadonlyToken {
     delegatorAddress: Address;
     accountAddress?: Address;
   }): Promise<bigint> {
-    await this.sdk.getAccount();
+    await this.sdk.getWalletAccount();
     const normalizedDelegator = getAddress(delegatorAddress);
     const normalizedAccount = accountAddress ? getAddress(accountAddress) : normalizedDelegator;
 

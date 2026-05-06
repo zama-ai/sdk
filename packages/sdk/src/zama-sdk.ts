@@ -236,11 +236,7 @@ export class ZamaSDK {
    * @throws {@link WalletNotConnectedError} if the signer has no connected account.
    * @throws {@link ChainMismatchError} if signer and provider report different chain IDs.
    */
-  getAccount(): Promise<WalletAccount> {
-    return this.#resolveAlignedWalletAccount();
-  }
-
-  async #resolveAlignedWalletAccount(): Promise<WalletAccount> {
+  async getWalletAccount(): Promise<WalletAccount> {
     const signer = this.signer;
     let account: WalletAccount;
     try {
@@ -378,7 +374,7 @@ export class ZamaSDK {
       return;
     }
     const credentials = this.#credentials;
-    await this.getAccount();
+    await this.getWalletAccount();
     await credentials.allow(contracts);
   }
 
@@ -393,7 +389,7 @@ export class ZamaSDK {
       return;
     }
     const credentials = this.#credentials;
-    await this.getAccount();
+    await this.getWalletAccount();
     await credentials.allow(contracts, delegator);
   }
 
@@ -453,7 +449,7 @@ export class ZamaSDK {
     expirationDate?: Date;
   }): Promise<TransactionResult> {
     const signer = this.signer;
-    const account = await this.getAccount();
+    const account = await this.getWalletAccount();
     if (expirationDate && expirationDate.getTime() < Date.now() + 3600_000) {
       throw new DelegationExpirationTooSoonError(
         "Expiration date must be at least 1 hour in the future",
@@ -543,7 +539,7 @@ export class ZamaSDK {
     delegateAddress: Address;
   }): Promise<TransactionResult> {
     const signer = this.signer;
-    const account = await this.getAccount();
+    const account = await this.getWalletAccount();
     const normalizedContract = getAddress(contractAddress);
     const normalizedDelegate = getAddress(delegateAddress);
     const signerAddress = getAddress(account.address);
@@ -666,7 +662,7 @@ export class ZamaSDK {
    */
   async userDecrypt(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>> {
     const credentials = this.#credentials;
-    const account = await this.getAccount();
+    const account = await this.getWalletAccount();
     if (handles.length === 0) {
       return {};
     }
@@ -807,7 +803,7 @@ export class ZamaSDK {
     accountAddress: Address = delegatorAddress,
   ): Promise<Record<Handle, ClearValueType>> {
     const credentials = this.#credentials;
-    const account = await this.getAccount();
+    const account = await this.getWalletAccount();
     if (handles.length === 0) {
       return {};
     }
@@ -1037,7 +1033,7 @@ export class ZamaSDK {
    */
   async revokePermits(contracts?: Address[]): Promise<void> {
     const credentials = this.#credentials;
-    const account = await this.getAccount();
+    const account = await this.getWalletAccount();
     const signerAddress = getAddress(account.address);
     try {
       await credentials.revokePermits(contracts);
@@ -1054,7 +1050,7 @@ export class ZamaSDK {
    */
   async clearCredentials(): Promise<void> {
     const credentials = this.#credentials;
-    const account = await this.getAccount();
+    const account = await this.getWalletAccount();
     const signerAddress = getAddress(account.address);
     try {
       await credentials.clearCredentials();
