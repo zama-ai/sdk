@@ -16,7 +16,7 @@ The directory structure is shallow, so understanding how data moves through the 
 
 **Transfer:** encrypt amount via relayer → single contract call → wait for receipt.
 
-**Shield (public ERC-20 → confidential ERC-7984):** approve underlying ERC-20 → wrap into confidential token.
+**Shield (public ERC-20 → confidential ERC-7984):** `Token.shield()` is the public API. Internally the SDK detects ERC-1363 support on the underlying ERC-20 and either calls `transferAndCall` on the underlying (single tx; the wrapper's `onTransferReceived` mints the confidential balance) or falls back to `approve` + `wrap` (two txs). Callers never pick the path — `approvalStrategy` only applies on the `approve` + `wrap` branch. See [`docs/gitbook/src/guides/shield-tokens.md`](../gitbook/src/guides/shield-tokens.md) for the per-token routing table.
 
 **Unshield (confidential → public):** two-phase — request (encrypt + contract call) then finalize (after off-chain processing).
 
