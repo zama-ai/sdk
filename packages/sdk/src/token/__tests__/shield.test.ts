@@ -6,17 +6,6 @@ import { ZamaSDKEvents } from "../../events/sdk-events";
 const UNDERLYING = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
 const OTHER_RECIPIENT = "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address;
 
-/**
- * Build an Error shaped like viem's ContractFunctionRevertedError so
- * `isContractCallError` recognises it as a contract revert (and the shield
- * fallback path treats it as safe to retry).
- */
-function contractRevert(message: string): Error {
-  const err = new Error(message);
-  err.name = "ContractFunctionRevertedError";
-  return err;
-}
-
 describe("Token.shield", () => {
   // --- Callbacks (approveAndWrap path) ---
 
@@ -219,7 +208,11 @@ describe("Token.shield", () => {
       expect(signer.writeContract).toHaveBeenCalledTimes(2);
     });
 
-    it("auto + transferAndCall reverts at runtime: falls back to approve+wrap", async ({
+    // ERC-165 introspection is the source of truth for routing — if a token
+    // advertises ERC-1363 support but reverts on transferAndCall at runtime,
+    // we throw rather than falling back. Users can opt out with
+    // `shieldStrategy: "approveAndWrap"`.
+    it("auto + transferAndCall reverts at runtime: throws (no fallback)", async ({
       token,
       signer,
       provider,
@@ -227,30 +220,12 @@ describe("Token.shield", () => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce(UNDERLYING)
         .mockResolvedValueOnce(true)
-        .mockResolvedValueOnce(1000n)
-        .mockResolvedValueOnce(0n);
+        .mockResolvedValueOnce(1000n);
 
-      vi.mocked(signer.writeContract)
-        .mockRejectedValueOnce(contractRevert("transferAndCall reverted"))
-        .mockResolvedValueOnce("0xtxhash")
-        .mockResolvedValueOnce("0xtxhash");
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("transferAndCall reverted"));
 
-      const result = await token.shield(100n);
-
-      expect(result.txHash).toBe("0xtxhash");
-      expect(signer.writeContract).toHaveBeenCalledTimes(3);
-      expect(signer.writeContract).toHaveBeenNthCalledWith(
-        1,
-        expect.objectContaining({ functionName: "transferAndCall" }),
-      );
-      expect(signer.writeContract).toHaveBeenNthCalledWith(
-        2,
-        expect.objectContaining({ functionName: "approve" }),
-      );
-      expect(signer.writeContract).toHaveBeenNthCalledWith(
-        3,
-        expect.objectContaining({ functionName: "wrap" }),
-      );
+      await expect(token.shield(100n)).rejects.toThrow("Shield transaction failed");
+      expect(signer.writeContract).toHaveBeenCalledOnce();
     });
 
     it('explicit "transferAndCall" + not supported: throws ERC1363NotSupportedError', async ({
@@ -456,35 +431,6 @@ describe("Token.shield", () => {
       expect(provider.readContract).toHaveBeenCalledTimes(4);
     });
 
-    it("cache is NOT poisoned after transferAndCall runtime revert", async ({
-      token,
-      signer,
-      provider,
-    }) => {
-      vi.mocked(provider.readContract)
-        .mockResolvedValueOnce(UNDERLYING)
-        .mockResolvedValueOnce(true)
-        .mockResolvedValueOnce(1000n)
-        .mockResolvedValueOnce(0n);
-
-      vi.mocked(signer.writeContract)
-        .mockRejectedValueOnce(contractRevert("revert"))
-        .mockResolvedValueOnce("0xtxhash")
-        .mockResolvedValueOnce("0xtxhash");
-
-      await token.shield(100n);
-
-      vi.mocked(provider.readContract).mockResolvedValueOnce(1000n);
-      vi.mocked(signer.writeContract).mockResolvedValueOnce("0xtxhash");
-
-      await token.shield(200n);
-
-      expect(signer.writeContract).toHaveBeenNthCalledWith(
-        4,
-        expect.objectContaining({ functionName: "transferAndCall" }),
-      );
-    });
-
     it("isPayable() returns and caches detection result", async ({ token, provider }) => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce(UNDERLYING)
@@ -498,7 +444,7 @@ describe("Token.shield", () => {
     it("isPayable() caches false when supportsInterface reverts", async ({ token, provider }) => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce(UNDERLYING)
-        .mockRejectedValueOnce(contractRevert("supportsInterface reverted"));
+        .mockRejectedValueOnce(new Error("supportsInterface reverted"));
 
       expect(await token.isPayable()).toBe(false);
       expect(await token.isPayable()).toBe(false);
@@ -508,9 +454,7 @@ describe("Token.shield", () => {
     });
 
     it("isPayable() caches false when underlying() reverts", async ({ token, provider }) => {
-      vi.mocked(provider.readContract).mockRejectedValueOnce(
-        contractRevert("underlying() reverted"),
-      );
+      vi.mocked(provider.readContract).mockRejectedValueOnce(new Error("underlying() reverted"));
 
       expect(await token.isPayable()).toBe(false);
       expect(await token.isPayable()).toBe(false);
@@ -601,15 +545,13 @@ describe("Token.shield", () => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce(UNDERLYING)
         .mockResolvedValueOnce(true)
-        .mockResolvedValueOnce(1000n)
-        .mockResolvedValueOnce(0n);
+        .mockResolvedValueOnce(1000n);
 
-      vi.mocked(sdk.signer!.writeContract)
-        .mockRejectedValueOnce(contractRevert("transferAndCall reverted"))
-        .mockResolvedValueOnce("0xtxhash")
-        .mockResolvedValueOnce("0xtxhash");
+      vi.mocked(sdk.signer!.writeContract).mockRejectedValueOnce(
+        new Error("transferAndCall reverted"),
+      );
 
-      await token.shield(100n);
+      await expect(token.shield(100n)).rejects.toThrow();
 
       const errorEvents = emitted.filter(
         (e) => (e as { type: string }).type === ZamaSDKEvents.TransactionError,
@@ -642,7 +584,7 @@ describe("Token.shield", () => {
         .mockResolvedValueOnce(1000n)
         .mockResolvedValueOnce(1000n);
 
-      vi.mocked(sdk.signer!.writeContract).mockRejectedValueOnce(contractRevert("wrap reverted"));
+      vi.mocked(sdk.signer!.writeContract).mockRejectedValueOnce(new Error("wrap reverted"));
 
       await expect(token.shield(100n)).rejects.toThrow();
 

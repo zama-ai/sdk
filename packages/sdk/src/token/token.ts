@@ -21,7 +21,7 @@ import {
 import { findUnwrapRequested } from "../events/onchain-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { Handle } from "../relayer/relayer-sdk.types";
-import { isContractCallError, toError } from "../utils";
+import { toError } from "../utils";
 import {
   ApprovalFailedError,
   BalanceCheckUnavailableError,
@@ -347,10 +347,11 @@ export class Token extends ReadonlyToken {
   /**
    * Shield public ERC-20 tokens into confidential tokens.
    *
-   * Routing is controlled by `shieldStrategy`:
-   * - `"auto"` (default): probes the underlying with ERC-165 and uses
-   *   ERC-1363 `transferAndCall` (single tx, no approval) when supported,
-   *   otherwise falls back to `approve` + `wrap` (two txs).
+   * Routing is controlled by `shieldStrategy` and resolved via ERC-165
+   * introspection — there is no runtime fallback between paths:
+   * - `"auto"` (default): probes the underlying with `supportsInterface`
+   *   and uses ERC-1363 `transferAndCall` (single tx, no approval) when
+   *   supported, otherwise runs `approve` + `wrap` (two txs).
    * - `"transferAndCall"`: forces the single-tx path. Throws
    *   {@link ERC1363NotSupportedError} when the underlying does not
    *   advertise ERC-1363 support.
@@ -410,54 +411,18 @@ export class Token extends ReadonlyToken {
     }
 
     if (shieldingPath === "transferAndCall") {
-      const txHash = await this.#submitTransferAndCall(amount, underlying, userAddress, options);
-      if (txHash) {
-        // Transaction was submitted on-chain — commit to this path (no fallback)
-        this.emit({
-          type: ZamaSDKEvents.ShieldSubmitted,
-          txHash,
-          shieldPath: "transferAndCall",
-        });
-        safeCallback(() => options?.onShieldSubmitted?.(txHash));
-        try {
-          const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
-          return { txHash, receipt };
-        } catch (error) {
-          this.emit({
-            type: ZamaSDKEvents.TransactionError,
-            operation: "shield",
-            shieldPath: "transferAndCall",
-            error: toError(error),
-          });
-          if (error instanceof ZamaError) {
-            throw error;
-          }
-          throw new TransactionRevertedError("Shield transaction failed", {
-            cause: error,
-          });
-        }
-      }
-      // txHash is null → writeContract rejected before submission, fallback is safe
+      return this.#shieldViaTransferAndCall(amount, underlying, userAddress, options);
     }
 
     return this.#shieldViaApproveAndWrap(amount, userAddress, options);
   }
 
-  /**
-   * Attempt to submit an ERC-1363 `transferAndCall` transaction. Returns the
-   * tx hash on success, or `null` when `writeContract` rejected with a
-   * contract revert and the caller may fall back to `approveAndWrap`. Only
-   * possible when `shieldStrategy` is `"auto"`. Throws when `shieldStrategy`
-   * is `"transferAndCall"` (no fallback), and also throws on non-revert
-   * errors (user rejection, RPC failure) so we never trigger a second
-   * wallet popup or risk a duplicate broadcast.
-   */
-  async #submitTransferAndCall(
+  async #shieldViaTransferAndCall(
     amount: bigint,
     underlying: Address,
     userAddress: Address,
     options?: ShieldOptions,
-  ): Promise<Hex | null> {
+  ): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("shield");
     const recipient = options?.to ? getAddress(options.to) : userAddress;
     // ERC7984ERC20Wrapper.onTransferReceived decodes the recipient via
@@ -465,43 +430,32 @@ export class Token extends ReadonlyToken {
     // the raw 20-byte address (not ABI-encoded), and the empty payload `0x`
     // for self-shield so the wrapper falls back to `from`.
     const data: Hex = recipient === userAddress ? "0x" : recipient;
+
     try {
-      return await signer.writeContract(
+      const txHash = await signer.writeContract(
         transferAndCallContract(underlying, this.wrapper, amount, data),
       );
+      this.emit({
+        type: ZamaSDKEvents.ShieldSubmitted,
+        txHash,
+        shieldPath: "transferAndCall",
+      });
+      safeCallback(() => options?.onShieldSubmitted?.(txHash));
+      const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
+      return { txHash, receipt };
     } catch (error) {
-      // Always emit so observers see the failure; fall back only when the
-      // strategy was not the explicit "transferAndCall".
       this.emit({
         type: ZamaSDKEvents.TransactionError,
         operation: "shield",
         shieldPath: "transferAndCall",
         error: toError(error),
       });
-
-      if (options?.shieldStrategy === "transferAndCall") {
-        if (error instanceof ZamaError) {
-          throw error;
-        }
-        throw new TransactionRevertedError("Shield transaction failed", {
-          cause: error,
-        });
+      if (error instanceof ZamaError) {
+        throw error;
       }
-
-      // Auto mode: only fall back on simulation/contract reverts. Any other
-      // error class (user rejection, RPC failure, etc.) gets wrapped and
-      // thrown so we never trigger a second wallet popup or risk duplicate
-      // broadcasts.
-      if (!isContractCallError(error)) {
-        if (error instanceof ZamaError) {
-          throw error;
-        }
-        throw new TransactionRevertedError("Shield transaction failed", {
-          cause: error,
-        });
-      }
-
-      return null;
+      throw new TransactionRevertedError("Shield transaction failed", {
+        cause: error,
+      });
     }
   }
 
