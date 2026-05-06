@@ -1084,6 +1084,38 @@ export interface WrappersRegistryQueryConfig {
 }
 
 // @public
+export interface ZamaConfig {
+    // Warning: (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    readonly chains: readonly FheChain[];
+    // (undocumented)
+    readonly keypairTTL: number;
+    // (undocumented)
+    readonly onEvent: ZamaSDKEventListener | undefined;
+    // (undocumented)
+    readonly permitStorage: GenericStorage;
+    // (undocumented)
+    readonly permitTTL: number;
+    // Warning: (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    readonly provider: GenericProvider;
+    // (undocumented)
+    readonly registryAddresses: Record<number, Address>;
+    // (undocumented)
+    readonly registryTTL: number;
+    // Warning: (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    readonly relayer: RelayerDispatcher;
+    // (undocumented)
+    readonly signer: GenericSigner | undefined;
+    // (undocumented)
+    readonly storage: GenericStorage;
+}
+
+// @public
 export const zamaQueryKeys: {
     readonly confidentialBalance: {
         readonly all: readonly ["zama.confidentialBalance"];
@@ -1281,33 +1313,9 @@ export const zamaQueryKeys: {
 };
 
 // @public
-export interface ZamaConfig {
-    // (undocumented)
-    readonly chains: readonly FheChain[];
-    // (undocumented)
-    readonly keypairTTL: number;
-    // (undocumented)
-    readonly onEvent: ZamaSDKEventListener | undefined;
-    // (undocumented)
-    readonly permitStorage: GenericStorage;
-    // (undocumented)
-    readonly permitTTL: number;
-    // (undocumented)
-    readonly provider: GenericProvider;
-    // (undocumented)
-    readonly registryTTL: number;
-    // (undocumented)
-    readonly relayer: RelayerDispatcher;
-    // (undocumented)
-    readonly signer: GenericSigner | undefined;
-    // (undocumented)
-    readonly storage: GenericStorage;
-}
-
-// @public
 export class ZamaSDK {
     [Symbol.dispose](): void;
-    constructor(config: ZamaConfig);
+    constructor(config: ZamaConfig | ZamaSDKConfig);
     allow(contracts: Address[]): Promise<void>;
     allowAs(delegator: Address, contracts: Address[]): Promise<void>;
     // Warning: (ae-forgotten-export) The symbol "DecryptCache" needs to be exported by the entry point index.d.ts
@@ -1340,14 +1348,10 @@ export class ZamaSDK {
     }): Promise<boolean>;
     // @internal
     onWalletAccountChange(listener: WalletAccountListener): () => void;
-    // Warning: (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     readonly provider: GenericProvider;
     publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
     readonly registry: WrappersRegistry;
-    // Warning: (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     readonly relayer: RelayerDispatcher;
     requireAlignedWalletAccount(operation: string): Promise<WalletAccount>;
@@ -1365,6 +1369,20 @@ export class ZamaSDK {
     readonly storage: GenericStorage;
     terminate(): void;
     userDecrypt(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>>;
+}
+
+// @public
+export interface ZamaSDKConfig {
+    chains?: readonly FheChain[];
+    keypairTTL?: number;
+    onEvent?: ZamaSDKEventListener;
+    permitStorage?: GenericStorage;
+    permitTTL?: number;
+    provider: GenericProvider;
+    registryTTL?: number;
+    relayer: RelayerDispatcher;
+    signer?: GenericSigner;
+    storage: GenericStorage;
 }
 
 // @public

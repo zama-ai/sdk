@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { CDN_INTEGRITY, CDN_URL, RelayerWeb } from "../relayer/relayer-web";
+import { parseConfiguration } from "../validation";
 import { RelayerWorkerClient } from "../worker/worker.client";
 import type { WebRelayerConfig, WebRelayerOptions } from "./types";
 
@@ -23,7 +24,7 @@ const WebRelayerOptionsSchema = z.object({
  */
 export function web(options?: WebRelayerOptions): WebRelayerConfig {
   if (options !== undefined) {
-    WebRelayerOptionsSchema.parse(options);
+    parseConfiguration(WebRelayerOptionsSchema, options);
   }
   return {
     type: "web",

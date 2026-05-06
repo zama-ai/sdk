@@ -19957,6 +19957,8 @@ export interface ZamaConfig {
     // (undocumented)
     readonly provider: GenericProvider;
     // (undocumented)
+    readonly registryAddresses: Record<number, Address>;
+    // (undocumented)
     readonly registryTTL: number;
     // (undocumented)
     readonly relayer: RelayerDispatcher;
@@ -20055,7 +20057,7 @@ export type ZamaErrorCode = (typeof ZamaErrorCode)[keyof typeof ZamaErrorCode];
 // @public
 export class ZamaSDK {
     [Symbol.dispose](): void;
-    constructor(config: ZamaConfig);
+    constructor(config: ZamaConfig | ZamaSDKConfig);
     allow(contracts: Address[]): Promise<void>;
     allowAs(delegator: Address, contracts: Address[]): Promise<void>;
     readonly cache: DecryptCache;
@@ -20108,6 +20110,20 @@ export class ZamaSDK {
     readonly storage: GenericStorage;
     terminate(): void;
     userDecrypt(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>>;
+}
+
+// @public
+export interface ZamaSDKConfig {
+    chains?: readonly FheChain[];
+    keypairTTL?: number;
+    onEvent?: ZamaSDKEventListener;
+    permitStorage?: GenericStorage;
+    permitTTL?: number;
+    provider: GenericProvider;
+    registryTTL?: number;
+    relayer: RelayerDispatcher;
+    signer?: GenericSigner;
+    storage: GenericStorage;
 }
 
 // @public

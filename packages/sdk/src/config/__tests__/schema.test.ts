@@ -7,6 +7,7 @@ import {
   createMockRelayer,
 } from "../../test-fixtures";
 import { hardhat, type FheChain } from "../../chains";
+import { ConfigurationError } from "../../errors";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import { node } from "../../node/config";
 import { web } from "../web";
@@ -57,16 +58,24 @@ describe("createConfig validation", () => {
         provider: createMockProvider(),
         keypairTTL: 0,
       }),
+    ).toThrow(ConfigurationError);
+    expect(() =>
+      createConfig({
+        chains: [hardhat],
+        relayers: { [hardhat.id]: mockRelayerConfig() },
+        provider: createMockProvider(),
+        keypairTTL: 0,
+      }),
     ).toThrow("keypairTTL must be a positive integer number of seconds");
   });
 
   it("rejects invalid web transport numeric options at the factory boundary", () => {
-    expect(() => web({ threads: 0 })).toThrow();
-    expect(() => web({ fheArtifactCacheTTL: -1 })).toThrow();
+    expect(() => web({ threads: 0 })).toThrow(ConfigurationError);
+    expect(() => web({ fheArtifactCacheTTL: -1 })).toThrow(ConfigurationError);
   });
 
   it("rejects invalid node transport numeric options at the factory boundary", () => {
-    expect(() => node({ poolSize: 0 })).toThrow();
-    expect(() => node({ fheArtifactCacheTTL: -1 })).toThrow();
+    expect(() => node({ poolSize: 0 })).toThrow(ConfigurationError);
+    expect(() => node({ fheArtifactCacheTTL: -1 })).toThrow(ConfigurationError);
   });
 });

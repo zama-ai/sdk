@@ -13,6 +13,7 @@
 export { createConfig, cleartext, resolveChainRelayers, resolveStorage } from "./config";
 export type {
   ZamaConfig,
+  ZamaSDKConfig,
   ZamaConfigBase,
   ZamaConfigGeneric,
   ZamaConfigViem,

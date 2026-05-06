@@ -3,6 +3,7 @@ import type { RelayerConfig } from "../config/types";
 import { RelayerNode } from "../relayer/relayer-node";
 import type { FheChain } from "../chains/types";
 import type { GenericStorage } from "../types";
+import { parseConfiguration } from "../validation";
 import { NodeWorkerPool } from "../worker/worker.node-pool";
 import type { GenericLogger } from "../worker/worker.types";
 import { assertCondition } from "../utils";
@@ -42,7 +43,7 @@ const NodePoolOptionsSchema = z.object({
  */
 export function node(options?: NodePoolOptions): NodeRelayerConfig {
   if (options !== undefined) {
-    NodePoolOptionsSchema.parse(options);
+    parseConfiguration(NodePoolOptionsSchema, options);
   }
   return {
     type: "node",

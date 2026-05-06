@@ -8,6 +8,7 @@ import {
   DelegationExpiryUnchangedError,
   DelegationNotFoundError,
   DelegationSelfNotAllowedError,
+  ConfigurationError,
   SignerNotConfiguredError,
   WalletAccountNotReadyError,
   ZamaError,
@@ -15,6 +16,7 @@ import {
 } from "../errors";
 import { MAX_UINT64 } from "../contracts/constants";
 import { ZamaSDKEvents } from "../events/sdk-events";
+import { ZamaSDK } from "../zama-sdk";
 import { ZERO_HANDLE } from "../utils/handles";
 import type { GenericSigner, WalletAccountChange, WalletAccountListener } from "../types";
 import type { Address } from "viem";
@@ -155,6 +157,7 @@ describe("ZamaSDK", () => {
 
   describe("keypairTTL validation", () => {
     it("throws when keypairTTL is 0", ({ createSDK }) => {
+      expect(() => createSDK({ keypairTTL: 0 })).toThrow(ConfigurationError);
       expect(() => createSDK({ keypairTTL: 0 })).toThrow(
         "keypairTTL must be a positive integer number of seconds",
       );
@@ -190,6 +193,25 @@ describe("ZamaSDK", () => {
       expect(() => createSDK({ keypairTTL: 1.5 })).toThrow(
         "keypairTTL must be a positive integer number of seconds",
       );
+    });
+  });
+
+  describe("constructor config normalization", () => {
+    it("accepts direct constructor input without chains", ({
+      provider,
+      relayer,
+      signer,
+      storage,
+    }) => {
+      const sdk = new ZamaSDK({
+        relayer: relayer as never,
+        provider,
+        signer,
+        storage,
+      });
+
+      expect(sdk.signer).toBe(signer);
+      expect(sdk.storage).toBe(storage);
     });
   });
 

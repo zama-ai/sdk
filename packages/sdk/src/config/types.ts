@@ -1,4 +1,5 @@
 import type { FheChain, AtLeastOneChain } from "../chains";
+import type { Address } from "viem";
 import type { ZamaSDKEventListener } from "../events";
 import type { RelayerCleartext } from "../relayer/cleartext/relayer-cleartext";
 import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
@@ -99,5 +100,30 @@ export interface ZamaConfig {
   readonly keypairTTL: number;
   readonly permitTTL: number;
   readonly registryTTL: number;
+  readonly registryAddresses: Record<number, Address>;
   readonly onEvent: ZamaSDKEventListener | undefined;
+}
+
+/** Public constructor input for {@link ZamaSDK}. Prefer `createConfig()` when possible. */
+export interface ZamaSDKConfig {
+  /** FHE chain configurations. Registry addresses are extracted from each chain's `registryAddress`. */
+  chains?: readonly FheChain[];
+  /** FHE relayer backend (`RelayerWeb` for browser, `RelayerNode` for server). */
+  relayer: RelayerDispatcher;
+  /** Read-only chain provider used for public chain reads. */
+  provider: GenericProvider;
+  /** Optional wallet signer. Signer-required operations throw if omitted. */
+  signer?: GenericSigner;
+  /** Credential storage backend. */
+  storage: GenericStorage;
+  /** Optional dedicated storage for permits. Defaults to `storage`. */
+  permitStorage?: GenericStorage;
+  /** ML-KEM keypair TTL in seconds. Default: 2592000 (30 days). */
+  keypairTTL?: number;
+  /** Permit lifetime in days. Default: 30. */
+  permitTTL?: number;
+  /** Registry cache TTL in seconds. Default: 86400 (24h). */
+  registryTTL?: number;
+  /** SDK lifecycle event listener. */
+  onEvent?: ZamaSDKEventListener;
 }

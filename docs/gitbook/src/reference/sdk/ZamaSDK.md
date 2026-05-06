@@ -191,22 +191,6 @@ const sdk = new ZamaSDK({
 });
 ```
 
-### registryAddresses
-
-`Record<number, Address> | undefined`
-
-Per-chain wrappers registry address overrides, merged on top of built-in defaults. Use this for custom or local chains (e.g. Hardhat) where no default registry exists.
-
-```ts
-const sdk = new ZamaSDK({
-  relayer,
-  provider,
-  signer,
-  storage: indexedDBStorage,
-  registryAddresses: { [31337]: "0xYourHardhatRegistry" },
-});
-```
-
 ### registryTTL
 
 `number | undefined`
@@ -268,7 +252,7 @@ await sdk.cache.clearAll();
 
 `WrappersRegistry` (readonly)
 
-Auto-configured wrappers registry instance. Shares the SDK's provider, `registryAddresses`, and `registryTTL`. Prefer this over `createWrappersRegistry()` to benefit from a single shared cache.
+Auto-configured wrappers registry instance. Shares the SDK's provider, chain registry addresses, and `registryTTL`. Prefer this over `createWrappersRegistry()` to benefit from a single shared cache.
 
 ```ts
 const pairs = await sdk.registry.listPairs({ page: 1 });
@@ -304,13 +288,13 @@ const readonlyToken = sdk.createReadonlyToken("0xEncryptedERC20");
 
 `(registryAddresses?: Record<number, Address>) => WrappersRegistry`
 
-Creates a wrappers registry instance for querying on-chain token wrapper pairs. On Mainnet and Sepolia the registry address is resolved automatically.
+Creates a wrappers registry instance for querying on-chain token wrapper pairs. Registry addresses come from built-in defaults, configured chain definitions, and optional overrides passed to this method.
 
 ```ts
 // Mainnet / Sepolia — resolved automatically
 const registry = sdk.createWrappersRegistry();
 
-// Hardhat or custom chain — override per chain
+// Hardhat or custom chain — override per chain for this registry instance
 const registry = sdk.createWrappersRegistry({ [31337]: "0xYourRegistry" });
 
 const pairs = await registry.getTokenPairs();

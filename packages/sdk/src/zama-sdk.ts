@@ -1,6 +1,6 @@
 import { getAddress, type Address } from "viem";
-import { validateResolvedZamaConfig } from "./config/build";
-import type { ZamaConfig } from "./config/types";
+import { normalizeZamaSDKConfig } from "./config/build";
+import type { ZamaConfig, ZamaSDKConfig } from "./config/types";
 import {
   delegateForUserDecryptionContract,
   getDelegationExpiryContract,
@@ -73,40 +73,36 @@ export class ZamaSDK {
    */
   readonly registry: WrappersRegistry;
   readonly #registryTTL: number;
+  readonly #registryAddresses: Record<number, Address>;
   readonly #onEvent: ZamaSDKEventListener;
   readonly #walletAccountListeners = new Set<WalletAccountListener>();
   readonly #credentialService: CredentialService | undefined;
   #unsubscribeSigner?: () => void;
 
-  constructor(config: ZamaConfig) {
-    validateResolvedZamaConfig(config);
-    this.relayer = config.relayer;
-    this.provider = config.provider;
-    this.signer = config.signer;
-    this.storage = config.storage;
-    this.cache = new DecryptCache(config.storage);
-    this.#onEvent = config.onEvent ?? function () {};
-    const registryAddresses: Record<number, Address> = {};
-    for (const chain of config.chains) {
-      if (chain.registryAddress) {
-        registryAddresses[chain.id] = chain.registryAddress;
-      }
-    }
+  constructor(config: ZamaConfig | ZamaSDKConfig) {
+    const resolved = normalizeZamaSDKConfig(config);
+    this.relayer = resolved.relayer;
+    this.provider = resolved.provider;
+    this.signer = resolved.signer;
+    this.storage = resolved.storage;
+    this.cache = new DecryptCache(resolved.storage);
+    this.#onEvent = resolved.onEvent ?? function () {};
     this.registry = new WrappersRegistry({
       provider: this.provider,
-      registryTTL: config.registryTTL,
-      registryAddresses,
+      registryTTL: resolved.registryTTL,
+      registryAddresses: resolved.registryAddresses,
     });
-    this.#registryTTL = config.registryTTL;
-    if (config.signer) {
-      const signer = config.signer;
+    this.#registryTTL = resolved.registryTTL;
+    this.#registryAddresses = resolved.registryAddresses;
+    if (resolved.signer) {
+      const signer = resolved.signer;
       this.#credentialService = new CredentialService({
         relayer: this.relayer,
         signer,
-        keypairTTL: config.keypairTTL,
-        permitTTL: config.permitTTL,
+        keypairTTL: resolved.keypairTTL,
+        permitTTL: resolved.permitTTL,
         storage: this.storage,
-        permitStorage: config.permitStorage,
+        permitStorage: resolved.permitStorage,
       });
 
       this.#unsubscribeSigner = signer.walletAccount.subscribe((change) => {
@@ -272,7 +268,7 @@ export class ZamaSDK {
    * Create a {@link WrappersRegistry} instance bound to this SDK's provider.
    * On Mainnet and Sepolia the registry address is resolved automatically.
    *
-   * @param registryAddresses - Optional per-chain overrides (e.g. Hardhat).
+   * @param registryAddresses - Optional per-chain overrides for this registry instance.
    * @returns A {@link WrappersRegistry} instance.
    *
    * @example
@@ -280,7 +276,7 @@ export class ZamaSDK {
    * // Mainnet / Sepolia — resolved automatically
    * const registry = sdk.createWrappersRegistry();
    *
-   * // Hardhat or custom chain — override per chain
+   * // Hardhat or custom chain — override per chain for this registry instance
    * const registry = sdk.createWrappersRegistry({ [31337]: "0xYourRegistry" });
    *
    * const pairs = await registry.getTokenPairs();
@@ -289,7 +285,7 @@ export class ZamaSDK {
   createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry {
     return new WrappersRegistry({
       provider: this.provider,
-      registryAddresses,
+      registryAddresses: { ...this.#registryAddresses, ...registryAddresses },
       registryTTL: this.#registryTTL,
     });
   }

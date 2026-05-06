@@ -558,6 +558,17 @@ describe("WrappersRegistry", () => {
       expect(registry.ttlMs).toBe(60_000);
     });
 
+    it("accepts registryAddresses for the created registry instance", async ({
+      createSDK,
+      provider,
+    }) => {
+      vi.mocked(provider.getChainId).mockResolvedValue(31337);
+      const sdk = createSDK();
+      const registry = sdk.createWrappersRegistry({ [31337]: CUSTOM_REGISTRY });
+
+      await expect(registry.getRegistryAddress()).resolves.toBe(CUSTOM_REGISTRY);
+    });
+
     it("rejects invalid registryTTL from the SDK constructor", ({ createSDK }) => {
       expect(() => createSDK({ registryTTL: -1 })).toThrow();
     });

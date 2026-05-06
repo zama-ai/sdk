@@ -18,6 +18,7 @@ import { ConfigurationError } from "./errors/relayer";
 import { mainnet, sepolia, hoodi } from "./chains";
 import { checksummedAddress, nonNegativeSeconds } from "./schemas/primitives";
 import type { GenericProvider } from "./types/provider";
+import { parseConfiguration } from "./validation";
 
 /**
  * Default wrappers registry addresses for known chains.
@@ -126,10 +127,11 @@ export class WrappersRegistry {
     this.#addresses = Object.assign(
       {},
       DefaultRegistryAddresses,
-      RegistryAddressesSchema.optional().parse(config.registryAddresses),
+      parseConfiguration(RegistryAddressesSchema.optional(), config.registryAddresses),
     );
     this.#ttlMs =
-      RegistryTTLSchema.parse(config.registryTTL ?? DEFAULT_REGISTRY_TTL_SECONDS) * 1000;
+      parseConfiguration(RegistryTTLSchema, config.registryTTL ?? DEFAULT_REGISTRY_TTL_SECONDS) *
+      1000;
   }
 
   /**

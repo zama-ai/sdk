@@ -3,6 +3,7 @@ export { createConfig } from "./create";
 
 export type {
   ZamaConfig,
+  ZamaSDKConfig,
   ZamaConfigBase,
   ZamaConfigGeneric,
   AtLeastOneChain,
