@@ -13,13 +13,13 @@
   "excluded_examples": ["react-ledger"],
   "entries": [
     {
-      "id": "doc:README",
+      "id": "doc:overview",
       "title": "Overview",
-      "source_path": "docs/gitbook/src/README.md",
-      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/README.md",
+      "source_path": "docs/gitbook/src/overview.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/overview.md",
       "source_type": "official-doc",
       "category": "introduction",
-      "logical_path": "README",
+      "logical_path": "overview",
       "description": "TypeScript SDK for confidential smart contracts — shield, transfer, and unshield tokens with Fully Homomorphic Encryption.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
@@ -57,6 +57,18 @@
       "category": "tutorials",
       "logical_path": "tutorials/first-confidential-dapp",
       "description": "End-to-end tutorial building a token dashboard with React, wagmi, and the Zama React SDK.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
+      "id": "doc:tutorials/wallet-exchange-integration",
+      "title": "Wallet & exchange integration",
+      "source_path": "docs/gitbook/src/tutorials/wallet-exchange-integration.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/wallet-exchange-integration.md",
+      "source_type": "official-doc",
+      "category": "tutorials",
+      "logical_path": "tutorials/wallet-exchange-integration",
+      "description": "How wallets and exchanges support ERC-7984 confidential tokens with the Zama SDK — display balances, build transfers, manage operators, and wrap/unwrap between ERC-20 and confidential form.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },

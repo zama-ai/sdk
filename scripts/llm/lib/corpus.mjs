@@ -463,7 +463,7 @@ export function categoryFromLogicalPath(logicalPath) {
   if (logicalPath.startsWith("concepts/")) {
     return "concepts";
   }
-  if (logicalPath === "README") {
+  if (logicalPath === "README" || logicalPath === "overview") {
     return "introduction";
   }
   return "docs";
