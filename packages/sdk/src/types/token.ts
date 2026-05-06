@@ -17,17 +17,15 @@ export interface TransferOptions extends TransferCallbacks {
 export type ApprovalStrategy = "max" | "exact" | "skip";
 
 /**
- * User-facing shielding strategy.
+ * User-facing shielding strategy. ERC-165 introspection is the source of
+ * truth for routing — there is no runtime fallback between paths.
  *
- * - `"auto"` (default): probe the underlying with ERC-165 and use ERC-1363
- *   `transferAndCall` (single tx, no approval) when supported, otherwise
- *   fall back to `approve` + `wrap` (two txs). On the auto path, a contract
- *   revert during `transferAndCall` falls back to `approveAndWrap`; user
- *   rejections and RPC failures do not (they propagate so the caller never
- *   sees a second wallet popup or risks a duplicate broadcast).
+ * - `"auto"` (default): probe the underlying with `supportsInterface` and
+ *   use ERC-1363 `transferAndCall` (single tx, no approval) when supported,
+ *   otherwise run `approve` + `wrap` (two txs).
  * - `"transferAndCall"`: force the single-tx path. Throws
  *   {@link ERC1363NotSupportedError} when the underlying does not advertise
- *   ERC-1363 support, and never falls back on revert.
+ *   ERC-1363 support.
  * - `"approveAndWrap"`: skip detection and run the legacy two-tx path
  *   (`approve` then `wrap`). Honours `approvalStrategy`.
  */
