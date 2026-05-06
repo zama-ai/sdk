@@ -132,7 +132,7 @@ export class ZamaSDK {
   readonly #registryTTL: number | undefined;
   readonly #onEvent: ZamaSDKEventListener;
   readonly #walletAccountListeners = new Set<WalletAccountListener>();
-  readonly #credentialServiceField: CredentialService | undefined;
+  readonly #credentialService: CredentialService | undefined;
   #unsubscribeSigner?: () => void;
 
   constructor(config: ZamaSDKConfig) {
@@ -163,7 +163,7 @@ export class ZamaSDK {
     const permitTTL = PermitTTLSchema.parse(config.permitTTL ?? DEFAULT_PERMIT_DURATION_DAYS);
     if (config.signer) {
       const signer = config.signer;
-      this.#credentialServiceField = new CredentialService({
+      this.#credentialService = new CredentialService({
         relayer: this.relayer,
         signer,
         keypairTTL,
@@ -179,7 +179,7 @@ export class ZamaSDK {
         });
       });
     } else {
-      this.#credentialServiceField = undefined;
+      this.#credentialService = undefined;
     }
   }
 
@@ -202,10 +202,10 @@ export class ZamaSDK {
     }
   }
 
-  get #credentialService(): CredentialService {
+  get #credentials(): CredentialService {
     try {
-      assertNonNullable(this.#credentialServiceField, "credentialService");
-      return this.#credentialServiceField;
+      assertNonNullable(this.#credentialService, "credentialService");
+      return this.#credentialService;
     } catch (cause) {
       throw new SignerNotConfiguredError({ cause });
     }
@@ -268,10 +268,10 @@ export class ZamaSDK {
   async #handleWalletAccountChange(change: WalletAccountChange): Promise<void> {
     const previousAccount = change.previous;
     const nextAccount = change.next;
-    const credentialService = this.#credentialServiceField;
-    if (credentialService) {
+    const credentials = this.#credentials;
+    if (credentials) {
       await swallow("credential wallet account change", () =>
-        credentialService.handleWalletAccountChange(previousAccount, nextAccount),
+        credentials.handleWalletAccountChange(previousAccount, nextAccount),
       );
     }
     if (previousAccount) {
@@ -380,9 +380,9 @@ export class ZamaSDK {
     if (contracts.length === 0) {
       return;
     }
-    const service = this.#credentialService;
+    const credentials = this.#credentials;
     await this.requireChainAlignment("allow");
-    await service.allow(contracts);
+    await credentials.allow(contracts);
   }
 
   /**
@@ -395,9 +395,9 @@ export class ZamaSDK {
     if (contracts.length === 0) {
       return;
     }
-    const service = this.#credentialService;
+    const credentials = this.#credentials;
     await this.requireChainAlignment("allowAs");
-    await service.allow(contracts, delegator);
+    await credentials.allow(contracts, delegator);
   }
 
   /**
@@ -406,10 +406,10 @@ export class ZamaSDK {
    * is configured.
    */
   async isAllowed(contracts: Address[]): Promise<boolean> {
-    if (!this.#credentialServiceField) {
+    if (!this.#credentialService) {
       return false;
     }
-    return this.#credentialServiceField.isAllowed(contracts);
+    return this.#credentialService.isAllowed(contracts);
   }
 
   /**
@@ -420,10 +420,10 @@ export class ZamaSDK {
    * @returns `true` if cached delegated permits cover all requested contracts.
    */
   async isAllowedAs(delegator: Address, contracts: Address[]): Promise<boolean> {
-    if (!this.#credentialServiceField) {
+    if (!this.#credentialService) {
       return false;
     }
-    return this.#credentialServiceField.isAllowed(contracts, delegator);
+    return this.#credentialService.isAllowed(contracts, delegator);
   }
 
   /**
@@ -668,7 +668,7 @@ export class ZamaSDK {
    * ```
    */
   async userDecrypt(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>> {
-    const service = this.#credentialService;
+    const credentials = this.#credentials;
     const account = await this.requireAlignedWalletAccount("userDecrypt");
     if (handles.length === 0) {
       return {};
@@ -715,7 +715,7 @@ export class ZamaSDK {
 
     // Derive contract addresses from ALL handles for stable credential cache key
     const allContracts = Array.from(new Set(normalized.map((h) => h.contractAddress)));
-    const credentials = await service.allow(allContracts);
+    const bundle = await credentials.allow(allContracts);
 
     // Group uncached handles by contract.
     const byContract = new Map<Address, Handle[]>();
@@ -742,7 +742,7 @@ export class ZamaSDK {
           const decrypted = await this.relayer.userDecrypt({
             handles: contractHandles,
             contractAddress,
-            ...resolveUserDecryptPermit(credentials, contractAddress),
+            ...resolveUserDecryptPermit(bundle, contractAddress),
             signerAddress,
           });
 
@@ -809,7 +809,7 @@ export class ZamaSDK {
     delegatorAddress: Address,
     accountAddress: Address = delegatorAddress,
   ): Promise<Record<Handle, ClearValueType>> {
-    const service = this.#credentialService;
+    const credentials = this.#credentials;
     const account = await this.requireAlignedWalletAccount("delegatedUserDecrypt");
     if (handles.length === 0) {
       return {};
@@ -844,12 +844,12 @@ export class ZamaSDK {
     // authorization. Otherwise shared storage could return plaintext from a
     // previous delegate without a live delegated permit.
     const allContracts = Array.from(new Set(normalized.map((h) => h.contractAddress)));
-    const credentials = await service.allow(allContracts, normalizedDelegator);
+    const bundle = await credentials.allow(allContracts, normalizedDelegator);
 
     const delegateAddress = getAddress(account.address);
 
     // Verify on-chain delegation is still active for each contract before
-    // serving cached delegated plaintext. The SDK-side `service.allow()` only
+    // serving cached delegated plaintext. The SDK-side `credentials.allow()` only
     // proves the delegate signed a permit — it does NOT detect on-chain
     // revocation or expiry. Without this check, a cache hit could leak
     // plaintext that the delegator has since revoked on-chain.
@@ -910,7 +910,7 @@ export class ZamaSDK {
           const decrypted = await this.relayer.delegatedUserDecrypt({
             handles: contractHandles,
             contractAddress,
-            ...resolveDelegatedDecryptPermit(credentials, contractAddress),
+            ...resolveDelegatedDecryptPermit(bundle, contractAddress),
             delegateAddress,
           });
 
@@ -1039,11 +1039,11 @@ export class ZamaSDK {
    * @throws {@link SignerNotConfiguredError} if no signer is configured.
    */
   async revokePermits(contracts?: Address[]): Promise<void> {
-    const service = this.#credentialService;
+    const credentials = this.#credentials;
     const account = await this.requireAlignedWalletAccount("revokePermits");
     const signerAddress = getAddress(account.address);
     try {
-      await service.revokePermits(contracts);
+      await credentials.revokePermits(contracts);
     } finally {
       await swallow("clear decrypt cache", () => this.cache.clearForRequester(signerAddress));
     }
@@ -1056,11 +1056,11 @@ export class ZamaSDK {
    * @throws {@link SignerNotConfiguredError} if no signer is configured.
    */
   async clearCredentials(): Promise<void> {
-    const service = this.#credentialService;
+    const credentials = this.#credentials;
     const account = await this.requireAlignedWalletAccount("clearCredentials");
     const signerAddress = getAddress(account.address);
     try {
-      await service.clearCredentials();
+      await credentials.clearCredentials();
     } finally {
       await swallow("clear decrypt cache", () => this.cache.clearForRequester(signerAddress));
     }
