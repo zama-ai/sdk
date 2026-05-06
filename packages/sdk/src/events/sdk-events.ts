@@ -1,6 +1,6 @@
 import type { Address, Hex } from "viem";
 import type { ClearValueType, Handle } from "../relayer/relayer-sdk.types";
-import type { ShieldPath } from "../types/options";
+import type { ShieldPath } from "../types/token";
 
 /**
  * All SDK event keys, accessible as `ZamaSDKEvents.EncryptStart` etc.

@@ -26,4 +26,4 @@ export type {
   UnshieldOptions,
   ShieldPath,
   ShieldStrategy,
-} from "./options";
+} from "./token";

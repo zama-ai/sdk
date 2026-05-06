@@ -53,7 +53,11 @@ describe("Unshield callbacks (P4)", () => {
     const onFinalizing = vi.fn();
     const onFinalizeSubmitted = vi.fn();
 
-    await token.unshieldAll({ onUnwrapSubmitted, onFinalizing, onFinalizeSubmitted });
+    await token.unshieldAll({
+      onUnwrapSubmitted,
+      onFinalizing,
+      onFinalizeSubmitted,
+    });
 
     expect(onUnwrapSubmitted).toHaveBeenCalledWith("0xtxhash");
     expect(onFinalizing).toHaveBeenCalledOnce();
@@ -66,7 +70,10 @@ describe("Unshield callbacks (P4)", () => {
     const onFinalizing = vi.fn();
     const onFinalizeSubmitted = vi.fn();
 
-    await token.resumeUnshield("0xprevioustx", { onFinalizing, onFinalizeSubmitted });
+    await token.resumeUnshield("0xprevioustx", {
+      onFinalizing,
+      onFinalizeSubmitted,
+    });
 
     expect(provider.waitForTransactionReceipt).toHaveBeenCalledWith("0xprevioustx");
     expect(onFinalizing).toHaveBeenCalledOnce();
@@ -132,7 +139,9 @@ describe("Unshield callbacks (P4)", () => {
     token,
     provider,
   }) => {
-    vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({ logs: [] });
+    vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
+      logs: [],
+    });
 
     await expect(token.unshield(50n, { skipBalanceCheck: true })).rejects.toThrow(
       TransactionRevertedError,
@@ -169,9 +178,6 @@ describe("Unshield callbacks (P4)", () => {
     );
   });
 });
-
-// Shield callback tests live in shield.test.ts so all shield routing,
-// data-encoding, and callback semantics stay co-located.
 
 describe("Transfer callbacks (SDK-19)", () => {
   it("fires onEncryptComplete and onTransferSubmitted callbacks", async ({ token }) => {

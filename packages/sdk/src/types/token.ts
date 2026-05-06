@@ -6,6 +6,7 @@ export interface TransferOptions extends TransferCallbacks {
   /** Skip confidential balance validation (e.g. for smart wallets). Default: `false`. */
   skipBalanceCheck?: boolean;
 }
+
 /**
  * User-facing approval strategy.
  *
