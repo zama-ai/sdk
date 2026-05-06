@@ -156,7 +156,8 @@ describe("WrappedToken.shield", () => {
   // --- ERC-1363 routing ---
 
   describe("ERC-1363 routing", () => {
-    it("auto + ERC-1363 supported: uses transferAndCall on the underlying token", async ({ wrappedToken: token,
+    it("auto + ERC-1363 supported: uses transferAndCall on the underlying token", async ({
+      wrappedToken: token,
       signer,
       provider,
     }) => {
@@ -174,7 +175,8 @@ describe("WrappedToken.shield", () => {
       );
     });
 
-    it("auto + ERC-1363 not supported: falls back to approve+wrap", async ({ wrappedToken: token,
+    it("auto + ERC-1363 not supported: falls back to approve+wrap", async ({
+      wrappedToken: token,
       signer,
       provider,
     }) => {
@@ -198,7 +200,8 @@ describe("WrappedToken.shield", () => {
       );
     });
 
-    it("auto + supportsInterface reverts: falls back to approve+wrap", async ({ wrappedToken: token,
+    it("auto + supportsInterface reverts: falls back to approve+wrap", async ({
+      wrappedToken: token,
       signer,
       provider,
     }) => {
@@ -218,7 +221,8 @@ describe("WrappedToken.shield", () => {
     // advertises ERC-1363 support but reverts on transferAndCall at runtime,
     // we throw rather than falling back. Users can opt out with
     // `shieldStrategy: "approveAndWrap"`.
-    it("auto + transferAndCall reverts at runtime: throws (no fallback)", async ({ wrappedToken: token,
+    it("auto + transferAndCall reverts at runtime: throws (no fallback)", async ({
+      wrappedToken: token,
       signer,
       provider,
     }) => {
@@ -233,7 +237,8 @@ describe("WrappedToken.shield", () => {
       expect(signer.writeContract).toHaveBeenCalledOnce();
     });
 
-    it("auto + transferAndCall non-revert error (e.g. user rejection): does NOT fall back", async ({ wrappedToken: token,
+    it("auto + transferAndCall non-revert error (e.g. user rejection): does NOT fall back", async ({
+      wrappedToken: token,
       signer,
       provider,
     }) => {
@@ -250,7 +255,8 @@ describe("WrappedToken.shield", () => {
       expect(signer.writeContract).toHaveBeenCalledOnce();
     });
 
-    it("auto + transferAndCall succeeds but receipt fails: does NOT fall back", async ({ wrappedToken: token,
+    it("auto + transferAndCall succeeds but receipt fails: does NOT fall back", async ({
+      wrappedToken: token,
       signer,
       provider,
     }) => {
@@ -290,7 +296,8 @@ describe("WrappedToken.shield", () => {
     // The wrapper decodes the recipient via address(bytes20(data)). We send the
     // raw 20-byte address (not ABI-encoded); ABI encoding would left-pad with
     // 12 zero bytes and bytes20() would slice them, corrupting the recipient.
-    it("shield-to-other sends raw 20-byte recipient address (not ABI-encoded)", async ({ wrappedToken: token,
+    it("shield-to-other sends raw 20-byte recipient address (not ABI-encoded)", async ({
+      wrappedToken: token,
       signer,
       provider,
     }) => {
@@ -307,7 +314,8 @@ describe("WrappedToken.shield", () => {
       expect(callArgs.args[2]).toBe(getAddress(OTHER_RECIPIENT));
     });
 
-    it("explicit to=userAddress (case-insensitive) is treated as self-shield (data: 0x)", async ({ wrappedToken: token,
+    it("explicit to=userAddress (case-insensitive) is treated as self-shield (data: 0x)", async ({
+      wrappedToken: token,
       signer,
       userAddress,
       provider,
@@ -331,7 +339,8 @@ describe("WrappedToken.shield", () => {
   // --- approvalStrategy interaction ---
 
   describe("approvalStrategy interaction with transferAndCall", () => {
-    it("approvalStrategy is ignored when transferAndCall path is used", async ({ wrappedToken: token,
+    it("approvalStrategy is ignored when transferAndCall path is used", async ({
+      wrappedToken: token,
       signer,
       provider,
     }) => {
@@ -348,7 +357,8 @@ describe("WrappedToken.shield", () => {
       );
     });
 
-    it("onApprovalSubmitted callback is never fired on transferAndCall path", async ({ wrappedToken: token,
+    it("onApprovalSubmitted callback is never fired on transferAndCall path", async ({
+      wrappedToken: token,
       provider,
     }) => {
       vi.mocked(provider.readContract)
@@ -380,7 +390,10 @@ describe("WrappedToken.shield", () => {
       expect(provider.readContract).toHaveBeenCalledTimes(4);
     });
 
-    it("isPayable() returns and caches detection result", async ({ wrappedToken: token, provider }) => {
+    it("isPayable() returns and caches detection result", async ({
+      wrappedToken: token,
+      provider,
+    }) => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce(UNDERLYING)
         .mockResolvedValueOnce(true);
@@ -390,7 +403,10 @@ describe("WrappedToken.shield", () => {
       expect(provider.readContract).toHaveBeenCalledTimes(2);
     });
 
-    it("isPayable() caches false when supportsInterface reverts", async ({ wrappedToken: token, provider }) => {
+    it("isPayable() caches false when supportsInterface reverts", async ({
+      wrappedToken: token,
+      provider,
+    }) => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce(UNDERLYING)
         .mockRejectedValueOnce(new Error("supportsInterface reverted"));
@@ -402,7 +418,10 @@ describe("WrappedToken.shield", () => {
       expect(provider.readContract).toHaveBeenCalledTimes(2);
     });
 
-    it("isPayable() caches false when underlying() reverts", async ({ wrappedToken: token, provider }) => {
+    it("isPayable() caches false when underlying() reverts", async ({
+      wrappedToken: token,
+      provider,
+    }) => {
       vi.mocked(provider.readContract).mockRejectedValueOnce(new Error("underlying() reverted"));
 
       expect(await token.isPayable()).toBe(false);
@@ -425,8 +444,8 @@ describe("WrappedToken.shield", () => {
       const sdk = createSDK({
         onEvent: (event: unknown) => emitted.push(event),
       });
-      const { Token } = await import("../../token/token");
-      const token = new Token(sdk, tokenAddress);
+      const { WrappedToken } = await import("../../token/wrapped-token");
+      const token = new WrappedToken(sdk, tokenAddress);
 
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce(UNDERLYING)
@@ -456,8 +475,8 @@ describe("WrappedToken.shield", () => {
       const sdk = createSDK({
         onEvent: (event: unknown) => emitted.push(event),
       });
-      const { Token } = await import("../../token/token");
-      const token = new Token(sdk, tokenAddress);
+      const { WrappedToken } = await import("../../token/wrapped-token");
+      const token = new WrappedToken(sdk, tokenAddress);
 
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce(UNDERLYING)
@@ -488,8 +507,8 @@ describe("WrappedToken.shield", () => {
       const sdk = createSDK({
         onEvent: (event: unknown) => emitted.push(event),
       });
-      const { Token } = await import("../../token/token");
-      const token = new Token(sdk, tokenAddress);
+      const { WrappedToken } = await import("../../token/wrapped-token");
+      const token = new WrappedToken(sdk, tokenAddress);
 
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce(UNDERLYING)
@@ -523,8 +542,8 @@ describe("WrappedToken.shield", () => {
       const sdk = createSDK({
         onEvent: (event: unknown) => emitted.push(event),
       });
-      const { Token } = await import("../../token/token");
-      const token = new Token(sdk, tokenAddress);
+      const { WrappedToken } = await import("../../token/wrapped-token");
+      const token = new WrappedToken(sdk, tokenAddress);
 
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce(UNDERLYING)
@@ -551,9 +570,9 @@ describe("WrappedToken.shield", () => {
 
   // --- Query mutation passthrough ---
 
-  it("shieldMutationOptions forwards options to token.shield", async ({ mockToken }) => {
+  it("shieldMutationOptions forwards options to token.shield", async ({ mockWrappedToken }) => {
     const { shieldMutationOptions } = await import("../../query/shield");
-    const options = shieldMutationOptions(mockToken);
+    const options = shieldMutationOptions(mockWrappedToken);
 
     await options.mutationFn({ amount: 1n, approvalStrategy: "max" });
     expect(mockWrappedToken.shield).toHaveBeenCalledWith(1n, { approvalStrategy: "max" });

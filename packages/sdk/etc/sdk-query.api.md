@@ -35,7 +35,7 @@ export function allowMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<reado
 export type ApprovalStrategy = "max" | "exact" | "skip";
 
 // @public (undocumented)
-export function approveUnderlyingMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.approveUnderlying", Address], ApproveUnderlyingParams, TransactionResult>;
+export function approveUnderlyingMutationOptions(token: WrappedToken): MutationFactoryOptions<readonly ["zama.approveUnderlying", Address], ApproveUnderlyingParams, TransactionResult>;
 
 // @public
 export interface ApproveUnderlyingParams {
@@ -77,7 +77,7 @@ export interface BatchDecryptAsOptions {
 }
 
 // @public (undocumented)
-export function batchDecryptBalancesAsMutationOptions(tokens: ReadonlyToken[]): MutationFactoryOptions<readonly ["zama.batchDecryptBalancesAs", ...Address[]], BatchDecryptBalancesAsParams, Map<Address, bigint>>;
+export function batchDecryptBalancesAsMutationOptions(tokens: Token[]): MutationFactoryOptions<readonly ["zama.batchDecryptBalancesAs", ...Address[]], BatchDecryptBalancesAsParams, Map<Address, bigint>>;
 
 // @public
 export type BatchDecryptBalancesAsParams = BatchDecryptAsOptions;
@@ -100,7 +100,7 @@ export interface ConfidentialBalanceQueryConfig {
 // Warning: (ae-forgotten-export) The symbol "SignerQueryContext" needs to be exported by the entry point index.d.ts
 //
 // @public
-export function confidentialBalanceQueryOptions(token: ReadonlyToken, config: ConfidentialBalanceQueryConfig, signerContext?: SignerQueryContext): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.confidentialBalance.owner>>;
+export function confidentialBalanceQueryOptions(token: Token, config: ConfidentialBalanceQueryConfig, signerContext?: SignerQueryContext): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.confidentialBalance.owner>>;
 
 // @public (undocumented)
 export interface ConfidentialBalancesQueryConfig {
@@ -111,7 +111,7 @@ export interface ConfidentialBalancesQueryConfig {
 }
 
 // @public (undocumented)
-export function confidentialBalancesQueryOptions(tokens: ReadonlyToken[], config?: ConfidentialBalancesQueryConfig, signerContext?: SignerQueryContext): QueryFactoryOptions<BatchBalancesResult, Error, BatchBalancesResult, ReturnType<typeof zamaQueryKeys.confidentialBalances.tokens>>;
+export function confidentialBalancesQueryOptions(tokens: Token[], config?: ConfidentialBalancesQueryConfig, signerContext?: SignerQueryContext): QueryFactoryOptions<BatchBalancesResult, Error, BatchBalancesResult, ReturnType<typeof zamaQueryKeys.confidentialBalances.tokens>>;
 
 // @public (undocumented)
 export interface ConfidentialIsOperatorQueryConfig {
@@ -208,7 +208,7 @@ export type CreateEIP712Params = Pick<KmsUserDecryptEIP712UserArgsType, "startTi
 };
 
 // @public (undocumented)
-export function decryptBalanceAsMutationOptions(readonlyToken: ReadonlyToken): MutationFactoryOptions<readonly ["zama.decryptBalanceAs", Address], DecryptBalanceAsParams, bigint>;
+export function decryptBalanceAsMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.decryptBalanceAs", Address], DecryptBalanceAsParams, bigint>;
 
 // @public
 export interface DecryptBalanceAsParams {
@@ -257,7 +257,7 @@ export interface DecryptStartEvent extends BaseEvent {
 }
 
 // @public (undocumented)
-export function delegateDecryptionMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.delegateDecryption", Address], DelegateDecryptionParams, TransactionResult>;
+export function delegateDecryptionMutationOptions(sdk: ZamaSDK, contractAddress: Address): MutationFactoryOptions<readonly ["zama.delegateDecryption", Address], DelegateDecryptionParams, TransactionResult>;
 
 // @public
 export interface DelegateDecryptionParams {
@@ -390,7 +390,7 @@ export interface EncryptStartEvent extends BaseEvent {
 export function filterQueryOptions<TOptions extends Record<string, unknown>>(options: TOptions): Omit<TOptions, StrippedQueryOptionKeys>;
 
 // @public (undocumented)
-export function finalizeUnwrapMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.finalizeUnwrap", Address], FinalizeUnwrapParams, TransactionResult>;
+export function finalizeUnwrapMutationOptions(token: WrappedToken): MutationFactoryOptions<readonly ["zama.finalizeUnwrap", Address], FinalizeUnwrapParams, TransactionResult>;
 
 // @public
 export type FinalizeUnwrapParams = /** Preferred input from upgraded `UnwrapRequested` events. */{
@@ -602,47 +602,6 @@ export interface RawLog {
     readonly topics: readonly Hex[];
 }
 
-// @public
-export class ReadonlyToken {
-    constructor(sdk: ZamaSDK, address: Address);
-    // (undocumented)
-    readonly address: Address;
-    allow(): Promise<void>;
-    static allow(...tokens: ReadonlyToken[]): Promise<void>;
-    allowance(wrapper: Address, owner: Address): Promise<bigint>;
-    balanceOf(owner: Address): Promise<bigint>;
-    static batchBalancesOf(tokens: ReadonlyToken[], owner: Address): Promise<BatchBalancesResult>;
-    static batchDecryptBalancesAs(tokens: ReadonlyToken[], options: BatchDecryptAsOptions): Promise<Map<Address, bigint>>;
-    confidentialBalanceOf(owner: Address): Promise<Handle>;
-    decimals(): Promise<number>;
-    decryptBalanceAs(input: {
-        delegatorAddress: Address;
-        accountAddress?: Address;
-    }): Promise<bigint>;
-    protected emit(input: ZamaSDKEventInput): void;
-    // (undocumented)
-    protected getAclAddress(): Promise<Address>;
-    getDelegationExpiry(input: {
-        delegatorAddress: Address;
-        delegateAddress: Address;
-    }): Promise<bigint>;
-    isAllowed(): Promise<boolean>;
-    isConfidential(): Promise<boolean>;
-    isDelegated(params: {
-        delegatorAddress: Address;
-        delegateAddress: Address;
-    }): Promise<boolean>;
-    isWrapper(): Promise<boolean>;
-    name(): Promise<string>;
-    // (undocumented)
-    protected readConfidentialBalanceOf(owner: Address): Promise<Handle>;
-    revoke(): Promise<void>;
-    // (undocumented)
-    readonly sdk: ZamaSDK;
-    symbol(): Promise<string>;
-    underlyingToken(): Promise<Address>;
-}
-
 // Warning: (ae-forgotten-export) The symbol "FheOperations" needs to be exported by the entry point index.d.ts
 //
 // @public
@@ -655,7 +614,7 @@ export interface RelayerSDK extends FheOperations {
 export function requestZKProofVerificationMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.requestZKProofVerification"], ZKProofLike, InputProofBytesType>;
 
 // @public (undocumented)
-export function resumeUnshieldMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.resumeUnshield", Address], ResumeUnshieldParams, TransactionResult>;
+export function resumeUnshieldMutationOptions(token: WrappedToken): MutationFactoryOptions<readonly ["zama.resumeUnshield", Address], ResumeUnshieldParams, TransactionResult>;
 
 // @public
 export interface ResumeUnshieldParams extends UnshieldCallbacks {
@@ -664,7 +623,7 @@ export interface ResumeUnshieldParams extends UnshieldCallbacks {
 }
 
 // @public (undocumented)
-export function revokeDelegationMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.revokeDelegation", Address], RevokeDelegationParams, TransactionResult>;
+export function revokeDelegationMutationOptions(sdk: ZamaSDK, contractAddress: Address): MutationFactoryOptions<readonly ["zama.revokeDelegation", Address], RevokeDelegationParams, TransactionResult>;
 
 // @public
 export interface RevokeDelegationParams {
@@ -698,7 +657,7 @@ export interface ShieldCallbacks {
 }
 
 // @public (undocumented)
-export function shieldMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.shield", Address], ShieldParams, TransactionResult>;
+export function shieldMutationOptions(token: WrappedToken): MutationFactoryOptions<readonly ["zama.shield", Address], ShieldParams, TransactionResult>;
 
 // @public
 export interface ShieldOptions extends ShieldCallbacks {
@@ -728,41 +687,35 @@ export interface ShieldSubmittedEvent extends BaseEvent {
 export type StrippedQueryOptionKeys = "gcTime" | "staleTime" | "enabled" | "select" | "refetchInterval" | "refetchOnMount" | "refetchOnWindowFocus" | "refetchOnReconnect" | "retry" | "retryDelay" | "retryOnMount" | "queryFn" | "queryKey" | "queryKeyHashFn" | "initialData" | "initialDataUpdatedAt" | "placeholderData" | "structuralSharing" | "throwOnError" | "meta" | "query" | "pollingInterval";
 
 // @public
-export class Token extends ReadonlyToken {
-    constructor(sdk: ZamaSDK, address: Address, wrapper?: Address);
-    approveUnderlying(amount?: bigint): Promise<TransactionResult>;
-    static batchDelegateDecryption(input: {
-        tokens: Token[];
-        delegateAddress: Address;
-        expirationDate?: Date;
-    }): Promise<Map<Address, TransactionResult | ZamaError>>;
-    static batchRevokeDelegation(input: {
-        tokens: Token[];
-        delegateAddress: Address;
-    }): Promise<Map<Address, TransactionResult | ZamaError>>;
+export class Token {
+    constructor(sdk: ZamaSDK, address: Address);
+    // (undocumented)
+    readonly address: Address;
+    // @internal
+    protected assertConfidentialBalance(amount: bigint): Promise<void>;
+    balanceOf(owner: Address): Promise<bigint>;
+    static batchBalancesOf(tokens: Token[], owner: Address): Promise<BatchBalancesResult>;
+    static batchDecryptBalancesAs(tokens: Token[], options: BatchDecryptAsOptions): Promise<Map<Address, bigint>>;
+    confidentialBalanceOf(owner: Address): Promise<Handle>;
     confidentialTransfer(to: Address, amount: bigint, options?: TransferOptions): Promise<TransactionResult>;
     confidentialTransferFrom(from: Address, to: Address, amount: bigint, callbacks?: TransferCallbacks): Promise<TransactionResult>;
-    delegateDecryption(input: {
-        delegateAddress: Address;
-        expirationDate?: Date;
-    }): Promise<TransactionResult>;
-    finalizeUnwrap(unwrapRequestIdOrAmount: Handle): Promise<TransactionResult>;
+    decimals(): Promise<number>;
+    decryptBalanceAs(input: {
+        delegatorAddress: Address;
+        accountAddress?: Address;
+    }): Promise<bigint>;
+    // @internal
+    protected emit(input: ZamaSDKEventInput): void;
+    isConfidential(): Promise<boolean>;
     isOperator(holder: Address, spender: Address): Promise<boolean>;
-    isPayable(): Promise<boolean>;
-    resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
-    revokeDelegation(input: {
-        delegateAddress: Address;
-    }): Promise<TransactionResult>;
+    isWrapper(): Promise<boolean>;
+    name(): Promise<string>;
+    // @internal
+    protected readConfidentialBalanceOf(owner: Address): Promise<Handle>;
+    // (undocumented)
+    readonly sdk: ZamaSDK;
     setOperator(operator: Address, until?: number): Promise<TransactionResult>;
-    shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult>;
-    unshield(amount: bigint, options?: UnshieldOptions): Promise<TransactionResult>;
-    unshieldAll(callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
-    unwrap(amount: bigint): Promise<TransactionResult>;
-    unwrapAll(): Promise<TransactionResult>;
-    // (undocumented)
-    readonly wrapper: Address;
-    // (undocumented)
-    static readonly ZERO_ADDRESS: Address;
+    symbol(): Promise<string>;
 }
 
 // @public (undocumented)
@@ -891,7 +844,7 @@ export interface UnderlyingAllowanceQueryConfig {
 export function underlyingAllowanceQueryOptions(sdk: ZamaSDK, tokenAddress: Address, config: UnderlyingAllowanceQueryConfig): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.underlyingAllowance.scope>>;
 
 // @public (undocumented)
-export function unshieldAllMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.unshieldAll", Address], UnshieldAllParams | void, TransactionResult>;
+export function unshieldAllMutationOptions(token: WrappedToken): MutationFactoryOptions<readonly ["zama.unshieldAll", Address], UnshieldAllParams | void, TransactionResult>;
 
 // @public
 export interface UnshieldAllParams extends UnshieldCallbacks {}
@@ -904,7 +857,7 @@ export interface UnshieldCallbacks {
 }
 
 // @public (undocumented)
-export function unshieldMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.unshield", Address], UnshieldParams, TransactionResult>;
+export function unshieldMutationOptions(token: WrappedToken): MutationFactoryOptions<readonly ["zama.unshield", Address], UnshieldParams, TransactionResult>;
 
 // @public
 export interface UnshieldOptions extends UnshieldCallbacks {
@@ -940,7 +893,7 @@ export interface UnshieldPhase2SubmittedEvent extends BaseEvent {
 }
 
 // @public (undocumented)
-export function unwrapAllMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.unwrapAll", Address], void, TransactionResult>;
+export function unwrapAllMutationOptions(token: WrappedToken): MutationFactoryOptions<readonly ["zama.unwrapAll", Address], void, TransactionResult>;
 
 // @public
 export interface UnwrapFinalizedEvent {
@@ -953,7 +906,7 @@ export interface UnwrapFinalizedEvent {
 }
 
 // @public (undocumented)
-export function unwrapMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.unwrap", Address], UnwrapParams, TransactionResult>;
+export function unwrapMutationOptions(token: WrappedToken): MutationFactoryOptions<readonly ["zama.unwrap", Address], UnwrapParams, TransactionResult>;
 
 // @public
 export interface UnwrapParams {
@@ -1061,6 +1014,21 @@ export interface WrappedEvent {
     // (undocumented)
     readonly eventName: "Wrapped";
     readonly to: Address;
+}
+
+// @public
+export class WrappedToken extends Token {
+    allowance(owner: Address): Promise<bigint>;
+    approveUnderlying(amount?: bigint): Promise<TransactionResult>;
+    finalizeUnwrap(unwrapRequestIdOrAmount: Handle): Promise<TransactionResult>;
+    isPayable(): Promise<boolean>;
+    resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
+    shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult>;
+    underlying(): Promise<Address>;
+    unshield(amount: bigint, options?: UnshieldOptions): Promise<TransactionResult>;
+    unshieldAll(callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
+    unwrap(amount: bigint): Promise<TransactionResult>;
+    unwrapAll(): Promise<TransactionResult>;
 }
 
 // @public (undocumented)
@@ -1289,8 +1257,8 @@ export class ZamaSDK {
     // Warning: (ae-forgotten-export) The symbol "DecryptCache" needs to be exported by the entry point index.d.ts
     readonly cache: DecryptCache;
     clearCredentials(): Promise<void>;
-    createReadonlyToken(address: Address): ReadonlyToken;
-    createToken(address: Address, wrapper?: Address): Token;
+    createToken(address: Address): Token;
+    createWrappedToken(address: Address): WrappedToken;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
     delegateDecryption(input: {
         contractAddress: Address;

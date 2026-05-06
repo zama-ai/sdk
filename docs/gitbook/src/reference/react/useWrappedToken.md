@@ -26,9 +26,7 @@ function useWrappedToken(address: Address): WrappedToken;
 ```tsx
 function ShieldButton({ wrapperAddress }: { wrapperAddress: Address }) {
   const wrappedToken = useWrappedToken(wrapperAddress);
-  return (
-    <button onClick={() => wrappedToken.shield(1000n)}>Shield</button>
-  );
+  return <button onClick={() => wrappedToken.shield(1000n)}>Shield</button>;
 }
 ```
 

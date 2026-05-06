@@ -143,7 +143,10 @@ describe("WrappedToken", () => {
       wrappedToken,
       provider,
     }) => {
-      vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(false).mockResolvedValueOnce(50n);
+      vi.mocked(provider.readContract)
+        .mockResolvedValueOnce(UNDERLYING)
+        .mockResolvedValueOnce(false)
+        .mockResolvedValueOnce(50n);
 
       await expect(wrappedToken.shield(100n)).rejects.toMatchObject({
         code: ZamaErrorCode.InsufficientERC20Balance,
