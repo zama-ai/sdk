@@ -19,7 +19,7 @@ import {
 describe("useShield", () => {
   test("default", ({ renderWithProviders }) => {
     const { result } = renderWithProviders(() =>
-      useShield({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
+      useShield({ address: TOKEN, wrapperAddress: WRAPPER }),
     );
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
@@ -33,7 +33,7 @@ describe("useShield", () => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
 
     const { result, queryClient } = renderWithProviders(() =>
-      useShield({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
+      useShield({ address: TOKEN, wrapperAddress: WRAPPER }),
     );
 
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
@@ -65,7 +65,7 @@ describe("useShield", () => {
     const onSuccess = vi.fn();
 
     const { result, queryClient } = renderWithProviders(() =>
-      useShield({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }, { onSuccess }),
+      useShield({ address: TOKEN, wrapperAddress: WRAPPER }, { onSuccess }),
     );
 
     queryClient.setQueryData(balanceKey, 3000n);
@@ -95,7 +95,7 @@ describe("useShield", () => {
     const onSuccess = vi.fn();
 
     const { result } = renderWithProviders(() =>
-      useShield({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }, { onMutate, onSuccess }),
+      useShield({ address: TOKEN, wrapperAddress: WRAPPER }, { onMutate, onSuccess }),
     );
 
     await act(() => result.current.mutateAsync({ amount: 500n }));
@@ -119,7 +119,7 @@ describe("useShield", () => {
     const onError = vi.fn();
 
     const { result } = renderWithProviders(() =>
-      useShield({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }, { onMutate, onError }),
+      useShield({ address: TOKEN, wrapperAddress: WRAPPER }, { onMutate, onError }),
     );
 
     await act(async () => {
@@ -143,7 +143,7 @@ describe("useShield", () => {
     const onSettled = vi.fn();
 
     const { result } = renderWithProviders(() =>
-      useShield({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }, { onMutate, onSettled }),
+      useShield({ address: TOKEN, wrapperAddress: WRAPPER }, { onMutate, onSettled }),
     );
 
     await act(() => result.current.mutateAsync({ amount: 500n }));
@@ -166,7 +166,7 @@ describe("useShield", () => {
 
     const { result } = renderWithProviders(() =>
       useShield(
-        { tokenAddress: TOKEN, wrapperAddress: WRAPPER, optimistic: true },
+        { address: TOKEN, wrapperAddress: WRAPPER, optimistic: true },
         {
           onMutate,
           onSuccess,
@@ -196,7 +196,7 @@ describe("useShield", () => {
 
     const { result } = renderWithProviders(() =>
       useShield(
-        { tokenAddress: TOKEN, wrapperAddress: WRAPPER, optimistic: true },
+        { address: TOKEN, wrapperAddress: WRAPPER, optimistic: true },
         {
           onMutate,
           onError,
@@ -226,7 +226,7 @@ describe("useShield", () => {
 
     const { result } = renderWithProviders(() =>
       useShield(
-        { tokenAddress: TOKEN, wrapperAddress: WRAPPER, optimistic: true },
+        { address: TOKEN, wrapperAddress: WRAPPER, optimistic: true },
         {
           onMutate,
           onSettled,
@@ -255,7 +255,7 @@ describe("useShield optimistic updates", () => {
     );
 
     const { result, queryClient } = renderWithProviders(() =>
-      useShield({ tokenAddress: TOKEN, wrapperAddress: WRAPPER, optimistic: true }),
+      useShield({ address: TOKEN, wrapperAddress: WRAPPER, optimistic: true }),
     );
 
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
@@ -295,7 +295,7 @@ describe("useShield optimistic updates", () => {
     vi.mocked(signer.writeContract).mockRejectedValue(new Error("shield failed"));
 
     const { result, queryClient } = renderWithProviders(() =>
-      useShield({ tokenAddress: TOKEN, wrapperAddress: WRAPPER, optimistic: true }),
+      useShield({ address: TOKEN, wrapperAddress: WRAPPER, optimistic: true }),
     );
 
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
@@ -339,7 +339,7 @@ describe("useShield optimistic updates", () => {
     );
 
     const { result, queryClient } = renderWithProviders(() =>
-      useShield({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
+      useShield({ address: TOKEN, wrapperAddress: WRAPPER }),
     );
 
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
@@ -365,7 +365,7 @@ describe("useShield optimistic updates", () => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
     const { result, queryClient } = renderWithProviders(() =>
-      useShield({ tokenAddress: TOKEN, wrapperAddress: WRAPPER, optimistic: true }),
+      useShield({ address: TOKEN, wrapperAddress: WRAPPER, optimistic: true }),
     );
 
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);

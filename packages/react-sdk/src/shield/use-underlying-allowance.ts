@@ -9,19 +9,15 @@ import { useZamaSDK } from "../provider";
 export { underlyingAllowanceQueryOptions };
 
 export interface UseUnderlyingAllowanceConfig {
-  /** Address of the confidential token contract used to scope the query cache. */
-  tokenAddress: Address;
-  /** Address of the wrapper contract whose underlying ERC-20 allowance is checked. */
-  wrapperAddress: Address;
+  /** Address of the confidential wrapper contract. */
+  address: Address;
   /** Owner to fetch allowance for. The query is disabled while `undefined`. */
   owner: Address | undefined;
 }
 
 export interface UseUnderlyingAllowanceSuspenseConfig {
-  /** Address of the confidential token contract used to scope the query cache. */
-  tokenAddress: Address;
-  /** Address of the wrapper contract whose underlying ERC-20 allowance is checked. */
-  wrapperAddress: Address;
+  /** Address of the confidential wrapper contract. */
+  address: Address;
   /** Owner to fetch allowance for. */
   owner: Address;
 }
@@ -33,8 +29,7 @@ export interface UseUnderlyingAllowanceSuspenseConfig {
  * @example
  * ```tsx
  * const { data: allowance } = useUnderlyingAllowance({
- *   tokenAddress: "0xConfidentialToken",
- *   wrapperAddress: "0xWrapper",
+ *   address: "0xWrapper",
  *   owner: "0xOwner",
  * });
  * ```
@@ -43,12 +38,12 @@ export function useUnderlyingAllowance(
   config: UseUnderlyingAllowanceConfig,
   options?: Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn">,
 ) {
-  const { tokenAddress, wrapperAddress, owner } = config;
+  const { address, owner } = config;
   const sdk = useZamaSDK();
 
-  const baseOpts = underlyingAllowanceQueryOptions(sdk, tokenAddress, {
+  const baseOpts = underlyingAllowanceQueryOptions(sdk, address, {
     owner,
-    wrapperAddress,
+    wrapperAddress: address,
   });
 
   return useQuery<bigint>({
@@ -65,20 +60,19 @@ export function useUnderlyingAllowance(
  * @example
  * ```tsx
  * const { data: allowance } = useUnderlyingAllowanceSuspense({
- *   tokenAddress: "0xConfidentialToken",
- *   wrapperAddress: "0xWrapper",
+ *   address: "0xWrapper",
  *   owner: "0xOwner",
  * });
  * ```
  */
 export function useUnderlyingAllowanceSuspense(config: UseUnderlyingAllowanceSuspenseConfig) {
-  const { tokenAddress, wrapperAddress, owner } = config;
+  const { address, owner } = config;
   const sdk = useZamaSDK();
 
   return useSuspenseQuery<bigint>(
-    underlyingAllowanceQueryOptions(sdk, tokenAddress, {
+    underlyingAllowanceQueryOptions(sdk, address, {
       owner,
-      wrapperAddress,
+      wrapperAddress: address,
     }),
   );
 }

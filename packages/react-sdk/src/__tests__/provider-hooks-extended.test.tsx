@@ -13,7 +13,6 @@ import { USER } from "./mutation-test-helpers";
 describe("useUnderlyingAllowance", () => {
   it("returns allowance value", async ({
     signer,
-    tokenAddress,
     wrapperAddress,
     renderWithProviders,
     provider,
@@ -25,8 +24,7 @@ describe("useUnderlyingAllowance", () => {
     const { result } = renderWithProviders(
       () =>
         useUnderlyingAllowance({
-          tokenAddress,
-          wrapperAddress,
+          address: wrapperAddress,
           owner: USER,
         }),
       { signer },
@@ -39,8 +37,8 @@ describe("useUnderlyingAllowance", () => {
 });
 
 describe("useUnshield", () => {
-  it("provides mutate function", ({ tokenAddress, wrapperAddress, renderWithProviders }) => {
-    const { result } = renderWithProviders(() => useUnshield({ tokenAddress, wrapperAddress }));
+  it("provides mutate function", ({ wrapperAddress, renderWithProviders }) => {
+    const { result } = renderWithProviders(() => useUnshield(wrapperAddress));
 
     expect(result.current.mutate).toBeDefined();
     expect(result.current.isIdle).toBe(true);
@@ -48,8 +46,8 @@ describe("useUnshield", () => {
 });
 
 describe("useUnshieldAll", () => {
-  it("provides mutate function", ({ tokenAddress, wrapperAddress, renderWithProviders }) => {
-    const { result } = renderWithProviders(() => useUnshieldAll({ tokenAddress, wrapperAddress }));
+  it("provides mutate function", ({ wrapperAddress, renderWithProviders }) => {
+    const { result } = renderWithProviders(() => useUnshieldAll(wrapperAddress));
 
     expect(result.current.mutate).toBeDefined();
     expect(result.current.isIdle).toBe(true);

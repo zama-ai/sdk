@@ -30,8 +30,8 @@ export { useRevokePermits } from "./authorization/use-revoke-permits";
 export { useClearCredentials } from "./authorization/use-clear-credentials";
 
 // Token hooks (ERC-20 token operations)
-export { useToken, type UseZamaConfig } from "./token/use-token";
-export { useReadonlyToken } from "./token/use-readonly-token";
+export { useToken } from "./token/use-token";
+export { useWrappedToken } from "./token/use-wrapped-token";
 export {
   useConfidentialBalance,
   type UseConfidentialBalanceConfig,

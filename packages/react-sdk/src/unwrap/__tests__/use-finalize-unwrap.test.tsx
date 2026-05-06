@@ -20,7 +20,7 @@ import {
 
 describe("useFinalizeUnwrap", () => {
   test("default", ({ renderWithProviders }) => {
-    const { result } = renderWithProviders(() => useFinalizeUnwrap({ tokenAddress: TOKEN }));
+    const { result } = renderWithProviders(() => useFinalizeUnwrap(TOKEN));
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
     expectDefaultMutationState(state);
@@ -32,9 +32,7 @@ describe("useFinalizeUnwrap", () => {
   }) => {
     mockPublicDecrypt(relayer);
 
-    const { result, queryClient } = renderWithProviders(() =>
-      useFinalizeUnwrap({ tokenAddress: TOKEN }),
-    );
+    const { result, queryClient } = renderWithProviders(() => useFinalizeUnwrap(TOKEN));
 
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
     const allowanceKey = zamaQueryKeys.underlyingAllowance.token(TOKEN);
@@ -63,7 +61,7 @@ describe("useFinalizeUnwrap", () => {
     const onSuccess = vi.fn();
 
     const { result, queryClient } = renderWithProviders(() =>
-      useFinalizeUnwrap({ tokenAddress: TOKEN }, { onSuccess }),
+      useFinalizeUnwrap(TOKEN, { onSuccess }),
     );
 
     queryClient.setQueryData(balanceKey, 3000n);
