@@ -56,7 +56,7 @@ import type {
   WalletAccountChange,
   WalletAccountListener,
 } from "./types";
-import { swallow, toError } from "./utils";
+import { swallow, toError, assertNonNullable } from "./utils";
 import { pLimit } from "./utils/concurrency";
 import { WrappersRegistry } from "./wrappers-registry";
 
@@ -74,8 +74,9 @@ export interface ZamaSDKConfig {
   provider: GenericProvider;
   /**
    * Optional wallet signer (`ViemSigner`, `EthersSigner`, `WagmiSigner`, or
-   * custom {@link GenericSigner}). Signer-required operations throw
-   * {@link SignerNotConfiguredError} when invoked without a signer.
+   * custom {@link GenericSigner}). Reading {@link ZamaSDK.signer} when no
+   * signer is configured throws {@link SignerNotConfiguredError}. Use
+   * {@link ZamaSDK.hasSigner} for non-throwing checks.
    */
   signer?: GenericSigner;
   /** Credential storage backend (`IndexedDBStorage` for browser, `MemoryStorage` for tests). */
@@ -119,7 +120,7 @@ export interface ZamaSDKConfig {
 export class ZamaSDK {
   readonly relayer: RelayerDispatcher;
   readonly provider: GenericProvider;
-  readonly signer: GenericSigner | undefined;
+  readonly #signer: GenericSigner | undefined;
   readonly storage: GenericStorage;
   /** Persistent cache for decrypted FHE plaintext values, scoped by (requester, contract, handle). */
   readonly cache: DecryptCache;
@@ -137,7 +138,7 @@ export class ZamaSDK {
   constructor(config: ZamaSDKConfig) {
     this.relayer = config.relayer;
     this.provider = config.provider;
-    this.signer = config.signer;
+    this.#signer = config.signer;
     this.storage = config.storage;
     this.cache = new DecryptCache(config.storage);
     this.#onEvent = config.onEvent ?? function () {};
@@ -182,16 +183,23 @@ export class ZamaSDK {
     }
   }
 
+  /** Whether a signer is configured. Non-throwing. */
+  get hasSigner(): boolean {
+    return this.#signer !== undefined;
+  }
+
   /**
-   * Return the configured signer or throw {@link SignerNotConfiguredError}.
+   * The configured signer.
    *
    * @throws {@link SignerNotConfiguredError} if no signer is configured.
    */
-  requireSigner(_operation: string): GenericSigner {
-    if (!this.signer) {
-      throw new SignerNotConfiguredError();
+  get signer(): GenericSigner {
+    try {
+      assertNonNullable(this.#signer, "signer");
+      return this.#signer;
+    } catch (cause) {
+      throw new SignerNotConfiguredError({ cause });
     }
-    return this.signer;
   }
 
   #requireCredentialService(_operation: string): CredentialService {
@@ -229,7 +237,7 @@ export class ZamaSDK {
    * @throws {@link ChainMismatchError} if signer and provider report different chain IDs.
    */
   async requireAlignedWalletAccount(operation: string): Promise<WalletAccount> {
-    const signer = this.requireSigner(operation);
+    const signer = this.signer;
     let account: WalletAccount;
     try {
       account = signer.requireWalletAccount();
@@ -445,7 +453,7 @@ export class ZamaSDK {
     delegateAddress: Address;
     expirationDate?: Date;
   }): Promise<TransactionResult> {
-    const signer = this.requireSigner("delegateDecryption");
+    const signer = this.signer;
     const account = await this.requireAlignedWalletAccount("delegateDecryption");
     if (expirationDate && expirationDate.getTime() < Date.now() + 3600_000) {
       throw new DelegationExpirationTooSoonError(
@@ -535,7 +543,7 @@ export class ZamaSDK {
     contractAddress: Address;
     delegateAddress: Address;
   }): Promise<TransactionResult> {
-    const signer = this.requireSigner("revokeDelegation");
+    const signer = this.signer;
     const account = await this.requireAlignedWalletAccount("revokeDelegation");
     const normalizedContract = getAddress(contractAddress);
     const normalizedDelegate = getAddress(delegateAddress);
@@ -1074,7 +1082,7 @@ export class ZamaSDK {
   terminate(): void {
     this.dispose();
     this.relayer.terminate();
-    this.signer?.dispose?.();
+    this.#signer?.dispose?.();
   }
 
   /**

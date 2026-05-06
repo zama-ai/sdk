@@ -22,9 +22,33 @@ const SIGNER_REQUIRED_OPS: ReadonlyArray<readonly [string, Op]> = [
 ] as const;
 
 describe("ZamaSDK without signer", () => {
-  it("constructs with signer omitted and exposes no signer", ({ createSDK }) => {
+  it("constructs with signer omitted and exposes hasSigner=false", ({ createSDK }) => {
     const sdk = createSDK({ signer: undefined });
-    expect(sdk.signer).toBeUndefined();
+    expect(sdk.hasSigner).toBe(false);
+  });
+
+  it("signer getter throws SignerNotConfiguredError with TypeError cause when no signer", ({
+    createSDK,
+  }) => {
+    const sdk = createSDK({ signer: undefined });
+    let caught: unknown;
+    try {
+      void sdk.signer;
+    } catch (e) {
+      caught = e;
+    }
+    expect(caught).toBeInstanceOf(SignerNotConfiguredError);
+    expect((caught as SignerNotConfiguredError).code).toBe(ZamaErrorCode.SignerNotConfigured);
+    expect((caught as SignerNotConfiguredError).cause).toBeInstanceOf(TypeError);
+    expect(((caught as SignerNotConfiguredError).cause as TypeError).message).toBe(
+      "signer must not be null or undefined",
+    );
+  });
+
+  it("signer getter returns the configured signer; hasSigner is true", ({ createSDK }) => {
+    const sdk = createSDK();
+    expect(sdk.hasSigner).toBe(true);
+    expect(sdk.signer).toBeDefined();
   });
 
   // `it.for` (not `it.each`) forwards the fixture context as the second arg.
@@ -60,21 +84,6 @@ describe("ZamaSDK without signer", () => {
   }) => {
     const sdk = createSDK({ signer: undefined });
     await expect(sdk.createReadonlyToken(tokenAddress).isAllowed()).resolves.toBe(false);
-  });
-
-  it("requireSigner throws SignerNotConfiguredError without signer; returns signer when present", ({
-    createSDK,
-  }) => {
-    const sdkNoSigner = createSDK({ signer: undefined });
-    expect(() => sdkNoSigner.requireSigner("myOp")).toThrow(
-      expect.objectContaining({
-        name: "SignerNotConfiguredError",
-        code: ZamaErrorCode.SignerNotConfigured,
-      }),
-    );
-
-    const sdk = createSDK();
-    expect(sdk.requireSigner("op")).toBe(sdk.signer);
   });
 
   it.for(SIGNER_REQUIRED_OPS)(
