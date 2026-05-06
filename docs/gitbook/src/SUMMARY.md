@@ -1,10 +1,10 @@
 # Table of contents
 
-[Introduction](README.md)
-
+- [Overview](overview.md)
 - [Getting started](tutorials/README.md)
   - [Quick start](tutorials/quick-start.md)
   - [First confidential dApp](tutorials/first-confidential-dapp.md)
+  - [Wallet & exchange integration](tutorials/wallet-exchange-integration.md)
 - [Guides](guides/README.md)
   - [Configuration](guides/configuration.md)
   - [Authentication](guides/authentication.md)

@@ -7,10 +7,12 @@ import {
   confidentialTransferFromContract,
   delegateForUserDecryptionContract,
   finalizeUnwrapContract,
+  isPayableTokenContract,
   isOperatorContract,
   MAX_UINT64,
   revokeDelegationContract,
   setOperatorContract,
+  transferAndCallContract,
   underlyingContract,
   unwrapContract,
   unwrapFromBalanceContract,
@@ -65,6 +67,7 @@ export class Token extends ReadonlyToken {
   readonly wrapper: Address;
   #underlying: Address | undefined;
   #underlyingPromise: Promise<Address> | null = null;
+  #isPayable: boolean | null = null;
 
   constructor(sdk: ZamaSDK, address: Address, wrapper?: Address) {
     super(sdk, address);
@@ -89,6 +92,27 @@ export class Token extends ReadonlyToken {
         });
     }
     return this.#underlyingPromise;
+  }
+
+  /**
+   * Check whether the underlying ERC-20 supports ERC-1363 (payable token).
+   * Result is cached per Token instance after the first call. Probe failures
+   * (`underlying()` revert, `supportsInterface` revert, RPC error, …) are
+   * cached as `false` so a non-payable token does not trigger a probe on
+   * every shield.
+   */
+  async isPayable(): Promise<boolean> {
+    if (this.#isPayable !== null) {
+      return this.#isPayable;
+    }
+    try {
+      const underlying = await this.#getUnderlying();
+      this.#isPayable = await this.sdk.provider.readContract(isPayableTokenContract(underlying));
+      return this.#isPayable;
+    } catch {
+      this.#isPayable = false;
+      return false;
+    }
   }
 
   // WRITE OPERATIONS
@@ -299,14 +323,21 @@ export class Token extends ReadonlyToken {
 
   /**
    * Shield public ERC-20 tokens into confidential tokens.
-   * Handles ERC-20 approval automatically based on `approvalStrategy`
-   * (`"exact"` by default, `"max"` for unlimited approval, `"skip"` to opt out).
    *
-   * The ERC-20 balance is validated before submitting (public read, no signing
-   * required).
+   * Routing is decided automatically by ERC-165 introspection on the
+   * underlying ERC-20: ERC-1363 `transferAndCall` (single tx, no approval)
+   * when supported, otherwise `approve` + `wrap` (two txs).
+   *
+   * On the `approveAndWrap` path, ERC-20 approval is handled automatically
+   * via `approvalStrategy` (`"exact"` by default, `"max"` for unlimited
+   * approval, `"skip"` to opt out). `approvalStrategy` is **ignored** on
+   * the `transferAndCall` path (the single tx authorizes itself).
+   *
+   * The ERC-20 balance is validated before submitting (public read, no
+   * signing required).
    *
    * @param amount - The plaintext amount to shield.
-   * @param options - Optional configuration: `approvalStrategy` (`"exact"` | `"max"` | `"skip"`, default `"exact"`).
+   * @param options - Optional: `approvalStrategy`, `to`, callbacks.
    * @returns The transaction hash and mined receipt.
    * @throws {@link ChainMismatchError} if signer and provider are on different chains.
    * @throws {@link InsufficientERC20BalanceError} if the ERC-20 balance is less than `amount`.
@@ -316,17 +347,16 @@ export class Token extends ReadonlyToken {
    * @example
    * ```ts
    * const txHash = await token.shield(1000n);
-   * // or with exact approval:
-   * const txHash = await token.shield(1000n, { approvalStrategy: "exact" });
    * ```
    */
   async shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult> {
-    const signer = this.sdk.signer;
     const account = await this.sdk.getWalletAccount();
+
+    const isPayableToken = await this.isPayable();
     const underlying = await this.#getUnderlying();
     const userAddress = getAddress(account.address);
 
-    // ERC-20 balance check always runs (public read, no signing needed, works for all wallet types)
+    // ERC-20 balance check (public read, no signing needed)
     let erc20Balance: bigint;
     try {
       erc20Balance = await this.sdk.provider.readContract(
@@ -348,6 +378,60 @@ export class Token extends ReadonlyToken {
       );
     }
 
+    if (isPayableToken) {
+      return this.#shieldViaTransferAndCall(amount, underlying, userAddress, options);
+    }
+
+    return this.#shieldViaApproveAndWrap(amount, userAddress, options);
+  }
+
+  async #shieldViaTransferAndCall(
+    amount: bigint,
+    underlying: Address,
+    userAddress: Address,
+    options?: ShieldOptions,
+  ): Promise<TransactionResult> {
+    const signer = this.sdk.signer;
+    const recipient = options?.to ? getAddress(options.to) : userAddress;
+    // ERC7984ERC20Wrapper.onTransferReceived decodes the recipient via
+    // `address(bytes20(data))` — i.e. the first 20 bytes of `data`. We pass
+    // the raw 20-byte address (not ABI-encoded), and the empty payload `0x`
+    // for self-shield so the wrapper falls back to `from`.
+    const data: Hex = recipient === userAddress ? "0x" : recipient;
+
+    try {
+      const txHash = await signer.writeContract(
+        transferAndCallContract(underlying, this.wrapper, amount, data),
+      );
+      this.emit({
+        type: ZamaSDKEvents.ShieldSubmitted,
+        txHash,
+        shieldPath: "transferAndCall",
+      });
+      safeCallback(() => options?.onShieldSubmitted?.(txHash));
+      const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
+      return { txHash, receipt };
+    } catch (error) {
+      this.emit({
+        type: ZamaSDKEvents.TransactionError,
+        operation: "shield:transferAndCall",
+        error: toError(error),
+      });
+      if (error instanceof ZamaError) {
+        throw error;
+      }
+      throw new TransactionRevertedError("TransferAndCall shield transaction failed", {
+        cause: error,
+      });
+    }
+  }
+
+  async #shieldViaApproveAndWrap(
+    amount: bigint,
+    userAddress: Address,
+    options?: ShieldOptions,
+  ): Promise<TransactionResult> {
+    const signer = this.sdk.signer;
     const strategy = options?.approvalStrategy ?? "exact";
     if (strategy !== "skip") {
       await this.#ensureAllowance(amount, strategy === "max", options);
@@ -356,20 +440,25 @@ export class Token extends ReadonlyToken {
     try {
       const recipient = options?.to ? getAddress(options.to) : userAddress;
       const txHash = await signer.writeContract(wrapContract(this.wrapper, recipient, amount));
-      this.emit({ type: ZamaSDKEvents.ShieldSubmitted, txHash });
+      this.emit({
+        type: ZamaSDKEvents.ShieldSubmitted,
+        txHash,
+        shieldPath: "approveAndWrap",
+      });
       safeCallback(() => options?.onShieldSubmitted?.(txHash));
       const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
       return { txHash, receipt };
     } catch (error) {
       this.emit({
         type: ZamaSDKEvents.TransactionError,
-        operation: "shield",
+        operation: "shield:approveAndWrap",
         error: toError(error),
       });
+
       if (error instanceof ZamaError) {
         throw error;
       }
-      throw new TransactionRevertedError("Shield transaction failed", {
+      throw new TransactionRevertedError("ApproveAndWrap shield transaction failed", {
         cause: error,
       });
     }

@@ -7,6 +7,32 @@ description: How to convert public ERC-20 tokens into their confidential form.
 
 Shielding converts public ERC-20 tokens into confidential tokens. The SDK handles the ERC-20 approval and the shield transaction in a single call via `token.shield()`. In React, use the `useShield` hook.
 
+## Shielding paths
+
+`Token.shield()` exposes a single API but routes through one of two on-chain paths depending on the underlying ERC-20:
+
+| Path               | Triggered when                                | Wallet prompts | Notes                                                                                 |
+| ------------------ | --------------------------------------------- | -------------- | ------------------------------------------------------------------------------------- |
+| `transferAndCall`  | Underlying ERC-20 implements ERC-1363         | 1              | The wrapper's `onTransferReceived` mints the confidential balance in one transaction. |
+| `approve` + `wrap` | Underlying ERC-20 does not implement ERC-1363 | 2              | An ERC-20 `approve` followed by a `wrap` call on the wrapper.                         |
+
+The SDK detects ERC-1363 support automatically via ERC-165 `supportsInterface` against the underlying token. **You don't need to choose a path or detect ERC-1363 yourself** — `token.shield(amount)` routes correctly for any token. `approvalStrategy` only applies to the `approve` + `wrap` path; on the `transferAndCall` path there is no allowance step.
+
+### Which path will my token take?
+
+Among the wrapped tokens registered on Ethereum mainnet today, the routing is:
+
+| Confidential wrapper | Underlying | Shield path                   |
+| -------------------- | ---------- | ----------------------------- |
+| cTGBP                | tGBP       | `transferAndCall` (single tx) |
+| cZAMA                | ZAMA       | `transferAndCall` (single tx) |
+| cUSDC                | USDC       | `approve` + `wrap` (two txs)  |
+| cUSDT                | USDT       | `approve` + `wrap` (two txs)  |
+| cWETH                | WETH       | `approve` + `wrap` (two txs)  |
+| cBRON                | BRON       | `approve` + `wrap` (two txs)  |
+
+ERC-1363 is a conditional optimisation, not a recommended new default — only a small subset of tokens implement it today. Tokens that don't (USDC, USDT, DAI, and most existing ERC-20s) continue to use `approve` + `wrap`. Any newly deployed wrapper picks up the `transferAndCall` path automatically if its underlying ERC-20 implements ERC-1363 — no opt-in is required from your code. See the [`WrappersRegistry` reference](/reference/sdk/WrappersRegistry) for how to look up the wrapper for a given ERC-20.
+
 ## Steps
 
 ### 1. Create a token instance
@@ -90,11 +116,11 @@ const txHash = await shield({ amount: 1000n });
 {% endtab %}
 {% endtabs %}
 
-The SDK sends two transactions: an ERC-20 `approve` for 1000 tokens, followed by the shield (wrap) call. The user sees two wallet prompts.
+On the `approve` + `wrap` path, the SDK sends two transactions: an ERC-20 `approve` for 1000 tokens, followed by the shield (wrap) call. The user sees two wallet prompts. On the `transferAndCall` path (ERC-1363 underlyings), shielding completes in a single transaction and `approvalStrategy` doesn't apply — see [Shielding paths](#shielding-paths) for details.
 
 ### 3. Shield with max approval
 
-To avoid a separate approval transaction every time, pass `approvalStrategy: "max"`. This grants an unlimited allowance on the first shield, and subsequent shields skip the approval step:
+`approvalStrategy` only affects the `approve` + `wrap` path; on `transferAndCall` it's ignored. To avoid a separate approval transaction every time on `approve` + `wrap` tokens, pass `approvalStrategy: "max"`. This grants an unlimited allowance on the first shield, and subsequent shields skip the approval step:
 
 {% tabs %}
 {% tab title="Core SDK" %}

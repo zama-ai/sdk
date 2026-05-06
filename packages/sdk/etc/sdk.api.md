@@ -212,6 +212,9 @@ export class ApprovalFailedError extends ZamaError {
 }
 
 // @public
+export type ApprovalStrategy = "max" | "exact" | "skip";
+
+// @public
 export function approveContract(tokenAddress: Address, spender: Address, value: bigint): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
@@ -6395,6 +6398,9 @@ export interface EncryptStartEvent extends BaseEvent {
     // (undocumented)
     type: typeof ZamaSDKEvents.EncryptStart;
 }
+
+// @public
+export const ERC1363_INTERFACE_ID: "0xb0202a11";
 
 // @public
 export class ERC20ReadFailedError extends ZamaError {
@@ -14643,12 +14649,16 @@ export interface ShieldCallbacks {
 
 // @public
 export interface ShieldOptions extends ShieldCallbacks {
-    approvalStrategy?: "max" | "exact" | "skip";
+    approvalStrategy?: ApprovalStrategy;
     to?: Address;
 }
 
+// @public
+export type ShieldPath = "transferAndCall" | "approveAndWrap";
+
 // @public (undocumented)
 export interface ShieldSubmittedEvent extends BaseEvent {
+    shieldPath: ShieldPath;
     // (undocumented)
     txHash: Hex;
     // (undocumented)
@@ -14860,6 +14870,7 @@ export class Token extends ReadonlyToken {
     }): Promise<TransactionResult>;
     finalizeUnwrap(unwrapRequestIdOrAmount: Handle): Promise<TransactionResult>;
     isOperator(holder: Address, spender: Address): Promise<boolean>;
+    isPayable(): Promise<boolean>;
     resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     revokeDelegation(input: {
         delegateAddress: Address;
@@ -14939,10 +14950,13 @@ export function totalSupplyContract(wrapperAddress: Address): {
 // @public (undocumented)
 export interface TransactionErrorEvent extends BaseEvent {
     error: Error;
-    operation: string;
+    operation: TransactionErrorOperation;
     // (undocumented)
     type: typeof ZamaSDKEvents.TransactionError;
 }
+
+// @public
+export type TransactionErrorOperation = "approveUnderlying" | "delegateDecryption" | "finalizeUnwrap" | "revokeDelegation" | "setOperator" | "shield:transferAndCall" | "shield:approveAndWrap" | "transfer" | "transferFrom" | "unwrap";
 
 // @public
 export interface TransactionReceipt {
@@ -14959,6 +14973,32 @@ export interface TransactionResult {
 export class TransactionRevertedError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
+
+// @public
+export function transferAndCallContract(tokenAddress: Address, to: Address, amount: bigint, data?: Hex): {
+    readonly address: `0x${string}`;
+    readonly abi: readonly [{
+        readonly type: "function";
+        readonly name: "transferAndCall";
+        readonly stateMutability: "nonpayable";
+        readonly inputs: readonly [{
+            readonly name: "to";
+            readonly type: "address";
+        }, {
+            readonly name: "value";
+            readonly type: "uint256";
+        }, {
+            readonly name: "data";
+            readonly type: "bytes";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bool";
+        }];
+    }];
+    readonly functionName: "transferAndCall";
+    readonly args: readonly [`0x${string}`, bigint, `0x${string}`];
+};
 
 // @public
 export interface TransferCallbacks {

@@ -482,6 +482,7 @@ describe("Token event emissions", () => {
     }) => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // underlying
+        .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
         .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
         .mockResolvedValueOnce(2n ** 256n - 1n); // allowance
       const { token, events } = setupSdkWithEvents({
@@ -700,7 +701,7 @@ describe("Token event emissions", () => {
   });
 
   describe("TransactionError events", () => {
-    it("emits TransactionError with operation 'shield' on shield failure", async ({
+    it("emits TransactionError with operation 'shield:approveAndWrap' on shield failure", async ({
       relayer,
       signer,
       tokenAddress,
@@ -709,6 +710,7 @@ describe("Token event emissions", () => {
     }) => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c")
+        .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
         .mockResolvedValueOnce(1000n);
       vi.mocked(signer.writeContract).mockRejectedValue(new Error("shield failed"));
       const { token, events } = setupSdkWithEvents({
@@ -723,7 +725,7 @@ describe("Token event emissions", () => {
 
       const txError = events.find((e) => e.type === ZamaSDKEvents.TransactionError);
       expect(txError).toBeDefined();
-      expect("operation" in txError! && txError.operation).toBe("shield");
+      expect("operation" in txError! && txError.operation).toBe("shield:approveAndWrap");
     });
 
     it("emits TransactionError with operation 'setOperator' on setOperator failure", async ({

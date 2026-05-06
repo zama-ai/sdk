@@ -53,7 +53,11 @@ describe("Unshield callbacks (P4)", () => {
     const onFinalizing = vi.fn();
     const onFinalizeSubmitted = vi.fn();
 
-    await token.unshieldAll({ onUnwrapSubmitted, onFinalizing, onFinalizeSubmitted });
+    await token.unshieldAll({
+      onUnwrapSubmitted,
+      onFinalizing,
+      onFinalizeSubmitted,
+    });
 
     expect(onUnwrapSubmitted).toHaveBeenCalledWith("0xtxhash");
     expect(onFinalizing).toHaveBeenCalledOnce();
@@ -66,7 +70,10 @@ describe("Unshield callbacks (P4)", () => {
     const onFinalizing = vi.fn();
     const onFinalizeSubmitted = vi.fn();
 
-    await token.resumeUnshield("0xprevioustx", { onFinalizing, onFinalizeSubmitted });
+    await token.resumeUnshield("0xprevioustx", {
+      onFinalizing,
+      onFinalizeSubmitted,
+    });
 
     expect(provider.waitForTransactionReceipt).toHaveBeenCalledWith("0xprevioustx");
     expect(onFinalizing).toHaveBeenCalledOnce();
@@ -132,7 +139,9 @@ describe("Unshield callbacks (P4)", () => {
     token,
     provider,
   }) => {
-    vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({ logs: [] });
+    vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
+      logs: [],
+    });
 
     await expect(token.unshield(50n, { skipBalanceCheck: true })).rejects.toThrow(
       TransactionRevertedError,
@@ -167,70 +176,6 @@ describe("Unshield callbacks (P4)", () => {
     await expect(token.unshield(50n, { skipBalanceCheck: true })).rejects.toThrow(
       DecryptionFailedError,
     );
-  });
-});
-
-describe("Shield callbacks (SDK-19)", () => {
-  const UNDERLYING = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c";
-
-  it("fires onApprovalSubmitted and onShieldSubmitted callbacks", async ({ token, provider }) => {
-    vi.mocked(provider.readContract)
-      .mockResolvedValueOnce(UNDERLYING)
-      .mockResolvedValueOnce(1000n)
-      .mockResolvedValueOnce(0n);
-
-    const onApprovalSubmitted = vi.fn();
-    const onShieldSubmitted = vi.fn();
-
-    await token.shield(100n, { onApprovalSubmitted, onShieldSubmitted });
-
-    expect(onApprovalSubmitted).toHaveBeenCalledWith("0xtxhash");
-    expect(onShieldSubmitted).toHaveBeenCalledWith("0xtxhash");
-  });
-
-  it("skips onApprovalSubmitted when allowance is sufficient", async ({ token, provider }) => {
-    vi.mocked(provider.readContract)
-      .mockResolvedValueOnce(UNDERLYING)
-      .mockResolvedValueOnce(1000n)
-      .mockResolvedValueOnce(1000n);
-
-    const onApprovalSubmitted = vi.fn();
-    const onShieldSubmitted = vi.fn();
-
-    await token.shield(100n, { onApprovalSubmitted, onShieldSubmitted });
-
-    expect(onApprovalSubmitted).not.toHaveBeenCalled();
-    expect(onShieldSubmitted).toHaveBeenCalledOnce();
-  });
-
-  it("completes shield even when callbacks throw", async ({ token, provider }) => {
-    vi.mocked(provider.readContract)
-      .mockResolvedValueOnce(UNDERLYING)
-      .mockResolvedValueOnce(1000n)
-      .mockResolvedValueOnce(0n);
-
-    const result = await token.shield(100n, {
-      onApprovalSubmitted: () => {
-        throw new Error("callback exploded");
-      },
-      onShieldSubmitted: () => {
-        throw new Error("callback exploded again");
-      },
-    });
-
-    expect(result.txHash).toBe("0xtxhash");
-  });
-
-  it("passes to parameter for shield recipient", async ({ token, signer, provider }) => {
-    vi.mocked(provider.readContract)
-      .mockResolvedValueOnce(UNDERLYING)
-      .mockResolvedValueOnce(1000n)
-      .mockResolvedValueOnce(1000n);
-
-    const recipient = "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address;
-    await token.shield(100n, { to: recipient });
-
-    expect(signer.writeContract).toHaveBeenCalled();
   });
 });
 

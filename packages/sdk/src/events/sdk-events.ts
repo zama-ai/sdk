@@ -1,5 +1,6 @@
 import type { Address, Hex } from "viem";
 import type { ClearValueType, Handle } from "../relayer/relayer-sdk.types";
+import type { ShieldPath } from "../types/token";
 
 /**
  * All SDK event keys, accessible as `ZamaSDKEvents.EncryptStart` etc.
@@ -84,10 +85,28 @@ export interface DecryptErrorEvent extends BaseEvent {
   handles: Handle[];
 }
 
+/**
+ * Identifier for the SDK operation that emitted a {@link TransactionErrorEvent}.
+ * Shield failures encode the execution path in the operation string itself
+ * (`shield:transferAndCall` or `shield:approveAndWrap`) so observers can route
+ * on a single field.
+ */
+export type TransactionErrorOperation =
+  | "approveUnderlying"
+  | "delegateDecryption"
+  | "finalizeUnwrap"
+  | "revokeDelegation"
+  | "setOperator"
+  | "shield:transferAndCall"
+  | "shield:approveAndWrap"
+  | "transfer"
+  | "transferFrom"
+  | "unwrap";
+
 export interface TransactionErrorEvent extends BaseEvent {
   type: typeof ZamaSDKEvents.TransactionError;
-  /** Which write operation failed. */
-  operation: string;
+  /** Which SDK operation failed. */
+  operation: TransactionErrorOperation;
   /** The error that caused the transaction to fail. */
   error: Error;
 }
@@ -95,6 +114,8 @@ export interface TransactionErrorEvent extends BaseEvent {
 export interface ShieldSubmittedEvent extends BaseEvent {
   type: typeof ZamaSDKEvents.ShieldSubmitted;
   txHash: Hex;
+  /** Which execution path was used: single-tx `transferAndCall` or two-tx `approveAndWrap`. */
+  shieldPath: ShieldPath;
 }
 
 export interface TransferSubmittedEvent extends BaseEvent {
