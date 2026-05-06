@@ -98,6 +98,6 @@ export interface ZamaConfig {
   readonly permitStorage: GenericStorage;
   readonly keypairTTL: number;
   readonly permitTTL: number;
-  readonly registryTTL: number | undefined;
+  readonly registryTTL: number;
   readonly onEvent: ZamaSDKEventListener | undefined;
 }

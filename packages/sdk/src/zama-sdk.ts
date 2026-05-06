@@ -1,5 +1,5 @@
 import { getAddress, type Address } from "viem";
-import type { FheChain } from "./chains/types";
+import type { ZamaConfig } from "./config/types";
 import {
   delegateForUserDecryptionContract,
   getDelegationExpiryContract,
@@ -12,7 +12,6 @@ import {
   resolveUserDecryptPermit,
 } from "./credentials/decrypt-permit";
 import { findRevokedDelegations } from "./credentials/delegation-check";
-import { parseZamaSDKConfig } from "./config/schema";
 import { DecryptCache } from "./decrypt-cache";
 import {
   ChainMismatchError,
@@ -56,58 +55,6 @@ import { swallow, toError } from "./utils";
 import { pLimit } from "./utils/concurrency";
 import { WrappersRegistry } from "./wrappers-registry";
 
-/** Configuration for {@link ZamaSDK}. */
-export interface ZamaSDKConfig {
-  /** FHE chain configurations. Registry addresses are extracted from each chain's `registryAddress`. */
-  chains?: readonly FheChain[];
-  /** FHE relayer backend (`RelayerWeb` for browser, `RelayerNode` for server). */
-  relayer: RelayerDispatcher;
-  /**
-   * Read-only chain provider (`ViemProvider`, `EthersProvider`, `WagmiProvider`,
-   * or custom {@link GenericProvider}). Used for every public chain read the
-   * SDK issues.
-   */
-  provider: GenericProvider;
-  /**
-   * Optional wallet signer (`ViemSigner`, `EthersSigner`, `WagmiSigner`, or
-   * custom {@link GenericSigner}). Signer-required operations throw
-   * {@link SignerNotConfiguredError} when invoked without a signer.
-   */
-  signer?: GenericSigner;
-  /** Credential storage backend (`IndexedDBStorage` for browser, `MemoryStorage` for tests). */
-  storage: GenericStorage;
-  /**
-   * How long the ML-KEM re-encryption keypair remains valid, in seconds.
-   * Default: `2592000` (30 days). Must be a positive number — `0` is rejected
-   * because the keypair is required to establish the relayer connection.
-   * Maximum: `31536000` (365 days) — the fhevm contract rejects `durationDays > 365`.
-   * Values above this maximum throw a validation error at construction.
-   */
-  keypairTTL?: number;
-  /**
-   * Permit lifetime in days. Default: 30. Throws `ConfigurationError` on violation.
-   */
-  permitTTL?: number;
-  /**
-   * Optional dedicated storage for permits. Defaults to `storage`. Use this
-   * to keep permits out of long-lived storage (e.g. IndexedDB → MemoryStorage)
-   * for high-security flows.
-   */
-  permitStorage?: GenericStorage;
-  /** Optional structured event listener for debugging and telemetry. Never receives sensitive data. */
-  onEvent?: ZamaSDKEventListener;
-  /**
-   * How long cached registry results remain valid, in seconds.
-   * Default: `86400` (24 hours).
-   */
-  registryTTL?: number;
-  /**
-   * Per-chain wrappers registry address overrides, merged on top of chain definitions.
-   * Use for custom or local chains (e.g. Hardhat) where no default registry exists.
-   */
-  registryAddresses?: Record<number, Address>;
-}
-
 /**
  * ZamaSDK — composes a RelayerSDK with contract abstraction.
  * Provides signer, storage, and high-level confidential contract interface.
@@ -124,14 +71,13 @@ export class ZamaSDK {
    * Uses built-in defaults from chain configs, and the SDK's `registryTTL` if configured.
    */
   readonly registry: WrappersRegistry;
-  readonly #registryTTL: number | undefined;
+  readonly #registryTTL: number;
   readonly #onEvent: ZamaSDKEventListener;
   readonly #walletAccountListeners = new Set<WalletAccountListener>();
   readonly #credentialService: CredentialService | undefined;
   #unsubscribeSigner?: () => void;
 
-  constructor(rawConfig: ZamaSDKConfig) {
-    const config = parseZamaSDKConfig(rawConfig);
+  constructor(config: ZamaConfig) {
     this.relayer = config.relayer;
     this.provider = config.provider;
     this.signer = config.signer;
@@ -139,13 +85,10 @@ export class ZamaSDK {
     this.cache = new DecryptCache(config.storage);
     this.#onEvent = config.onEvent ?? function () {};
     const registryAddresses: Record<number, Address> = {};
-    for (const chain of config.chains ?? []) {
+    for (const chain of config.chains) {
       if (chain.registryAddress) {
         registryAddresses[chain.id] = chain.registryAddress;
       }
-    }
-    if (config.registryAddresses) {
-      Object.assign(registryAddresses, config.registryAddresses);
     }
     this.registry = new WrappersRegistry({
       provider: this.provider,

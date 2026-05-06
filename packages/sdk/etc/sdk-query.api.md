@@ -1283,7 +1283,8 @@ export const zamaQueryKeys: {
 // @public
 export class ZamaSDK {
     [Symbol.dispose](): void;
-    constructor(rawConfig: ZamaSDKConfig);
+    // Warning: (ae-forgotten-export) The symbol "ZamaConfig" needs to be exported by the entry point index.d.ts
+    constructor(config: ZamaConfig);
     allow(contracts: Address[]): Promise<void>;
     allowAs(delegator: Address, contracts: Address[]): Promise<void>;
     // Warning: (ae-forgotten-export) The symbol "DecryptCache" needs to be exported by the entry point index.d.ts
@@ -1341,22 +1342,6 @@ export class ZamaSDK {
     readonly storage: GenericStorage;
     terminate(): void;
     userDecrypt(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>>;
-}
-
-// @public
-export interface ZamaSDKConfig {
-    // Warning: (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
-    chains?: readonly FheChain[];
-    keypairTTL?: number;
-    onEvent?: ZamaSDKEventListener;
-    permitStorage?: GenericStorage;
-    permitTTL?: number;
-    provider: GenericProvider;
-    registryAddresses?: Record<number, Address>;
-    registryTTL?: number;
-    relayer: RelayerDispatcher;
-    signer?: GenericSigner;
-    storage: GenericStorage;
 }
 
 // @public

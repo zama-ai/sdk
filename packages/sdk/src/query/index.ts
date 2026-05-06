@@ -152,7 +152,6 @@ export type { RelayerSDK } from "../relayer/relayer-sdk";
 export type { BatchBalancesResult, BatchDecryptAsOptions } from "../token/readonly-token";
 export type { ReadonlyToken } from "../token/readonly-token";
 export type { Token } from "../token/token";
-export type { ZamaSDKConfig } from "../zama-sdk";
 export type { ZamaSDK } from "../zama-sdk";
 export type { Keypair } from "../credentials";
 export type {

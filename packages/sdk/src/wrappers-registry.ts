@@ -27,11 +27,11 @@ export const DefaultRegistryAddresses: Record<number, Address> = {
   [hoodi.id]: hoodi.registryAddress,
 };
 
+/** Default registry TTL in seconds (24 hours). */
+export const DEFAULT_REGISTRY_TTL_SECONDS = 86_400;
+
 /** Default page size for {@link WrappersRegistry.listPairs}. */
 const DEFAULT_PAGE_SIZE = 100;
-
-/** Default registry TTL in seconds (24 hours). */
-const DEFAULT_REGISTRY_TTL = 86400;
 
 /** Configuration for {@link WrappersRegistry}. */
 export interface WrappersRegistryConfig {
@@ -113,7 +113,7 @@ export class WrappersRegistry {
   constructor(config: WrappersRegistryConfig) {
     this.provider = config.provider;
     this.#addresses = Object.assign({}, DefaultRegistryAddresses, config.registryAddresses);
-    this.#ttlMs = (config.registryTTL ?? DEFAULT_REGISTRY_TTL) * 1000;
+    this.#ttlMs = (config.registryTTL ?? DEFAULT_REGISTRY_TTL_SECONDS) * 1000;
   }
 
   /**

@@ -14,7 +14,7 @@ import { MemoryStorage } from "./storage/memory-storage";
 import { ReadonlyToken } from "./token/readonly-token";
 import { Token } from "./token/token";
 import type { GenericProvider, GenericSigner, GenericStorage, TransactionResult } from "./types";
-import type { ZamaSDKConfig } from "./zama-sdk";
+import type { ZamaConfig } from "./config/types";
 import { ZamaSDK } from "./zama-sdk";
 export { afterEach, beforeEach, describe, expect, vi, type Mock } from "vitest";
 
@@ -245,7 +245,7 @@ interface SdkFixtures {
   createToken: (sdk: ZamaSDK, address?: Address, wrapper?: Address) => Token;
   createReadonlyToken: (sdk: ZamaSDK, address?: Address) => ReadonlyToken;
   sdk: ZamaSDK;
-  createSDK: (overrides?: Partial<ZamaSDKConfig>) => ZamaSDK;
+  createSDK: (overrides?: Partial<ZamaConfig>) => ZamaSDK;
   events: typeof ZamaSDKEvents;
 }
 
@@ -367,15 +367,34 @@ export const test = base.extend<SdkFixtures>({
     await use((address?: Address) => createMockReadonlyToken(address ?? tokenAddress, signer));
   },
   sdk: async ({ relayer, provider, signer, storage }, use) => {
-    await use(new ZamaSDK({ relayer, provider, signer, storage }));
-  },
-  createSDK: async ({ provider, signer, relayer, storage }, use) => {
-    await use((overrides?: Partial<ZamaSDKConfig>) => {
-      return new ZamaSDK({
-        relayer,
+    await use(
+      new ZamaSDK({
+        chains: [],
+        relayer: relayer as unknown as ZamaConfig["relayer"],
         provider,
         signer,
         storage,
+        permitStorage: storage,
+        keypairTTL: 86400,
+        permitTTL: 1,
+        registryTTL: 86400,
+        onEvent: undefined,
+      }),
+    );
+  },
+  createSDK: async ({ provider, signer, relayer, storage }, use) => {
+    await use((overrides?: Partial<ZamaConfig>) => {
+      return new ZamaSDK({
+        chains: [],
+        relayer: relayer as unknown as ZamaConfig["relayer"],
+        provider,
+        signer,
+        storage,
+        permitStorage: storage,
+        keypairTTL: 86400,
+        permitTTL: 1,
+        registryTTL: 86400,
+        onEvent: undefined,
         ...overrides,
       });
     });
