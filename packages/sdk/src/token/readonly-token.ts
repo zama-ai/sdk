@@ -39,9 +39,9 @@ export interface BatchDecryptAsOptions {
    * Matches the `account` parameter of `confidentialBalanceOf(account)` on-chain.
    */
   accountAddress?: Address;
-  /** Reserved for future per-token failure handling. */
+  /** Maximum number of concurrent decrypt calls. Default: 10. */
   maxConcurrency?: number;
-  /** Reserved for future per-token failure handling. */
+  /** Called when decryption fails for a single token. Return a fallback bigint. */
   onError?: (error: Error, address: Address) => bigint;
 }
 
@@ -231,22 +231,26 @@ export class ReadonlyToken {
    * Batch decrypt confidential balances as a delegate across multiple tokens.
    * Mirrors {@link batchBalancesOf} but uses delegated credentials.
    *
+   * **Error handling:** If a per-token decryption fails and no `onError` callback
+   * is provided, errors are collected and thrown as an aggregated
+   * `DecryptionFailedError` with the first error as `cause`.
+   * When the relayer returns no value for a handle,
+   * a `DecryptionFailedError` is thrown for that token (never silently returns `0n`).
+   * Pass `onError: () => 0n` to opt into the silent zero behavior.
+   *
    * @param tokens - Array of ReadonlyToken instances to decrypt balances for.
    * @param options - Delegated decryption configuration.
-   * **Error handling:** this public API preserves the historical all-or-nothing
-   * contract. Internal service code may collect per-token failures, but this
-   * wrapper throws the first collected error instead of returning partial data.
-   *
    * @returns A Map from token address to decrypted balance.
    * @throws {@link DelegationNotFoundError} if no active delegation exists from the delegator to the connected signer.
    * @throws {@link DelegationExpiredError} if the delegation has expired.
-   * @throws {@link DecryptionFailedError} if decryption fails or returns no value for a handle.
+   * @throws {@link DecryptionFailedError} if any decryption fails and no `onError` callback is provided.
    * @throws {@link SigningRejectedError} if the user rejects the wallet signature prompt.
    *
    * @example
    * ```ts
    * const balances = await ReadonlyToken.batchDecryptBalancesAs(tokens, {
    *   delegatorAddress: "0xDelegator",
+   *   onError: (err, addr) => { console.error(addr, err); return 0n; },
    * });
    * ```
    */
@@ -264,7 +268,7 @@ export class ReadonlyToken {
     const normalizedAccount = options.accountAddress
       ? getAddress(options.accountAddress)
       : getAddress(options.delegatorAddress);
-    const maxConcurrency = options.maxConcurrency ?? 5;
+    const maxConcurrency = options.maxConcurrency ?? 10;
     if (options.handles && tokens.length !== options.handles.length) {
       throw new DecryptionFailedError(
         `tokens.length (${tokens.length}) must equal handles.length (${options.handles.length})`,
@@ -326,24 +330,20 @@ export class ReadonlyToken {
 
     if (options.onError) {
       for (const [address, error] of errors) {
-        results.set(address, options.onError(error, address));
+        try {
+          results.set(address, options.onError(error, address));
+        } catch (callbackError) {
+          throw toError(callbackError);
+        }
       }
       return results;
     }
 
+    const errorEntries = Array.from(errors.entries());
+    const message = errorEntries.map(([addr, e]) => `${addr}: ${e.message}`).join("; ");
     throw new DecryptionFailedError(
-      `Failed to decrypt ${errors.size} token balance${errors.size === 1 ? "" : "s"}`,
-      {
-        cause: new AggregateError(
-          Array.from(errors.entries()).map(
-            ([address, error]) =>
-              new DecryptionFailedError(`Failed to decrypt balance for token ${address}`, {
-                cause: error,
-              }),
-          ),
-          "One or more token balance decryptions failed",
-        ),
-      },
+      `Batch delegated decryption failed for ${errors.size} token(s): ${message}`,
+      { cause: errorEntries[0]?.[1] },
     );
   }
 

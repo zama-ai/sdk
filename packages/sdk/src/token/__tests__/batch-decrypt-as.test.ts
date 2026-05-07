@@ -44,28 +44,20 @@ function createBatchHarness({
   };
 }
 
-async function expectAggregateTokenFailure(
+async function expectBatchDecryptFailure(
   promise: Promise<unknown>,
   expectedTokenAddresses: Address[],
 ) {
   await expect(promise).rejects.toMatchObject({
     code: "DECRYPTION_FAILED",
-    cause: expect.any(AggregateError),
+    message: expect.stringContaining(`${expectedTokenAddresses.length} token(s)`),
   });
 
   try {
     await promise;
   } catch (error) {
-    const cause = (error as Error).cause;
-    expect(cause).toBeInstanceOf(AggregateError);
-    expect((cause as AggregateError).errors).toHaveLength(expectedTokenAddresses.length);
     for (const address of expectedTokenAddresses) {
-      expect((cause as AggregateError).errors).toContainEqual(
-        expect.objectContaining({
-          code: "DECRYPTION_FAILED",
-          message: expect.stringContaining(address),
-        }),
-      );
+      expect((error as Error).message).toContain(address);
     }
   }
 }
@@ -151,7 +143,7 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
 
     vi.mocked(relayer.delegatedUserDecrypt).mockRejectedValue(new Error("decrypt failed"));
 
-    await expectAggregateTokenFailure(
+    await expectBatchDecryptFailure(
       ReadonlyToken.batchDecryptBalancesAs([tokenA], {
         delegatorAddress: DELEGATOR,
       }),
@@ -173,7 +165,7 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
 
     vi.mocked(provider.readContract).mockResolvedValueOnce(HANDLE_A).mockResolvedValueOnce(0n); // getDelegationExpiry → no delegation
 
-    await expectAggregateTokenFailure(
+    await expectBatchDecryptFailure(
       ReadonlyToken.batchDecryptBalancesAs([tokenA], {
         delegatorAddress: DELEGATOR,
       }),
@@ -197,7 +189,7 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(HANDLE_A).mockResolvedValueOnce(1000n); // past timestamp
     vi.mocked(provider.getBlockTimestamp).mockResolvedValue(2000n);
 
-    await expectAggregateTokenFailure(
+    await expectBatchDecryptFailure(
       ReadonlyToken.batchDecryptBalancesAs([tokenA], {
         delegatorAddress: DELEGATOR,
       }),
@@ -256,7 +248,7 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
       .mockResolvedValueOnce({ [HANDLE_A]: 100n })
       .mockRejectedValueOnce(new Error("decrypt failed"));
 
-    await expectAggregateTokenFailure(
+    await expectBatchDecryptFailure(
       ReadonlyToken.batchDecryptBalancesAs([tokenA, tokenB], {
         delegatorAddress: DELEGATOR,
         maxConcurrency: 1,

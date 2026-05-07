@@ -233,8 +233,7 @@ export class DecryptionService {
       return result;
     }
 
-    const uncachedContracts = Array.from(new Set(uncached.map((h) => h.contractAddress)));
-    const credentials = await strategy.resolveCredentials(uncachedContracts);
+    const credentials = await strategy.resolveCredentials(nonZeroContracts);
 
     const byContract = new Map<Address, Handle[]>();
     for (const h of uncached) {
