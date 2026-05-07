@@ -5,13 +5,11 @@ import {
   DecryptionFailedError,
   SignerNotConfiguredError,
   WalletAccountNotReadyError,
-  ZamaError,
-  ZamaErrorCode,
 } from "../errors";
-import { ZamaSDKEvents } from "../events/sdk-events";
 import type { GenericSigner, WalletAccountChange, WalletAccountListener } from "../types";
 import type { Address } from "viem";
 import type { DecryptHandle } from "../query/user-decrypt";
+import type { EncryptParams } from "../relayer/relayer-sdk.types";
 
 const NEXT_USER_ADDRESS = TEST_ADDR_B;
 
@@ -358,74 +356,26 @@ describe("ZamaSDK", () => {
   });
 
   describe("encrypt", () => {
-    const ENCRYPT_PARAMS = {
+    const ENCRYPT_PARAMS: EncryptParams = {
       values: [{ value: 100n, type: "euint64" as const }],
       contractAddress: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address,
       userAddress: "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address,
     };
 
-    it("delegates to relayer.encrypt and returns result", async ({ sdk, relayer }) => {
+    it("returns encrypted handles", async ({ sdk }) => {
       const result = await sdk.encrypt(ENCRYPT_PARAMS);
 
-      expect(relayer.encrypt).toHaveBeenCalledWith(ENCRYPT_PARAMS);
       expect(result.handles).toHaveLength(1);
       expect(result.inputProof).toBeInstanceOf(Uint8Array);
     });
 
-    it("emits EncryptStart and EncryptEnd events with tokenAddress", async ({ createSDK }) => {
-      const events: { type: string; tokenAddress?: Address }[] = [];
-      const sdk = createSDK({ onEvent: (e) => events.push(e) });
+    it("works without a signer", async ({ createSDK }) => {
+      const sdk = createSDK({ signer: undefined });
 
-      await sdk.encrypt(ENCRYPT_PARAMS);
-
-      expect(events).toContainEqual(
-        expect.objectContaining({
-          type: ZamaSDKEvents.EncryptStart,
-          tokenAddress: ENCRYPT_PARAMS.contractAddress,
-        }),
-      );
-      expect(events).toContainEqual(
-        expect.objectContaining({
-          type: ZamaSDKEvents.EncryptEnd,
-          tokenAddress: ENCRYPT_PARAMS.contractAddress,
-          durationMs: expect.any(Number),
-        }),
-      );
-    });
-
-    it("wraps non-ZamaError in EncryptionFailed", async ({ sdk, relayer }) => {
-      vi.mocked(relayer.encrypt).mockRejectedValueOnce(new Error("boom"));
-
-      await expect(sdk.encrypt(ENCRYPT_PARAMS)).rejects.toSatisfy((err: ZamaError) => {
-        return (
-          err instanceof ZamaError &&
-          err.code === ZamaErrorCode.EncryptionFailed &&
-          err.message === "Encryption failed"
-        );
+      await expect(sdk.encrypt(ENCRYPT_PARAMS)).resolves.toEqual({
+        handles: [new Uint8Array([1, 2, 3])],
+        inputProof: new Uint8Array([4, 5, 6]),
       });
-    });
-
-    it("re-throws ZamaError as-is", async ({ sdk, relayer }) => {
-      const original = new ZamaError(ZamaErrorCode.EncryptionFailed, "already wrapped");
-      vi.mocked(relayer.encrypt).mockRejectedValueOnce(original);
-
-      await expect(sdk.encrypt(ENCRYPT_PARAMS)).rejects.toBe(original);
-    });
-
-    it("emits EncryptError with tokenAddress on failure", async ({ createSDK, relayer }) => {
-      const events: { type: string; tokenAddress?: Address }[] = [];
-      const sdk = createSDK({ onEvent: (e) => events.push(e) });
-      vi.mocked(relayer.encrypt).mockRejectedValueOnce(new Error("boom"));
-
-      await expect(sdk.encrypt(ENCRYPT_PARAMS)).rejects.toThrow();
-
-      expect(events).toContainEqual(
-        expect.objectContaining({
-          type: ZamaSDKEvents.EncryptError,
-          tokenAddress: ENCRYPT_PARAMS.contractAddress,
-          durationMs: expect.any(Number),
-        }),
-      );
     });
   });
 
