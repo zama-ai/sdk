@@ -11,20 +11,20 @@ import { ZamaError, ZamaErrorCode } from "./base";
  * try {
  *   await token.confidentialTransfer("0xTo", 100n);
  * } catch (e) {
- *   if (e instanceof SignerNotConfiguredError) {
+ *   if (e instanceof SignerRequiredError) {
  *     // Fix SDK/provider configuration.
  *   }
  * }
  * ```
  */
-export class SignerNotConfiguredError extends ZamaError {
+export class SignerRequiredError extends ZamaError {
   constructor(options?: ErrorOptions) {
     super(
-      ZamaErrorCode.SignerNotConfigured,
+      ZamaErrorCode.SignerRequired,
       "Signer not configured. Configure one via ZamaSDKConfig.signer or createConfig({ signer: ... }).",
       options,
     );
-    this.name = "SignerNotConfiguredError";
+    this.name = "SignerRequiredError";
   }
 }
 

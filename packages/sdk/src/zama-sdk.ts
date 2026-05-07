@@ -26,7 +26,7 @@ import {
   DelegationNotFoundError,
   DelegationSelfNotAllowedError,
   EncryptionFailedError,
-  SignerNotConfiguredError,
+  SignerRequiredError,
   TransactionRevertedError,
   WalletAccountNotReadyError,
   matchAclRevert,
@@ -75,7 +75,7 @@ export interface ZamaSDKConfig {
   /**
    * Optional wallet signer (`ViemSigner`, `EthersSigner`, `WagmiSigner`, or
    * custom {@link GenericSigner}). Reading {@link ZamaSDK.signer} when no
-   * signer is configured throws {@link SignerNotConfiguredError}. Use
+   * signer is configured throws {@link SignerRequiredError}. Use
    * {@link ZamaSDK.hasSigner} for non-throwing checks.
    */
   signer?: GenericSigner;
@@ -191,14 +191,14 @@ export class ZamaSDK {
   /**
    * The configured signer.
    *
-   * @throws {@link SignerNotConfiguredError} if no signer is configured.
+   * @throws {@link SignerRequiredError} if no signer is configured.
    */
   get signer(): GenericSigner {
     try {
       assertNonNullable(this.#signer, "signer");
       return this.#signer;
     } catch (cause) {
-      throw new SignerNotConfiguredError({ cause });
+      throw new SignerRequiredError({ cause });
     }
   }
 
@@ -207,7 +207,7 @@ export class ZamaSDK {
       assertNonNullable(this.#credentialService, "credentialService");
       return this.#credentialService;
     } catch (cause) {
-      throw new SignerNotConfiguredError({ cause });
+      throw new SignerRequiredError({ cause });
     }
   }
 
@@ -232,7 +232,7 @@ export class ZamaSDK {
    * The connected wallet account, after a pre-flight check that the signer
    * and provider are on the same chain.
    *
-   * @throws {@link SignerNotConfiguredError} if no signer is configured.
+   * @throws {@link SignerRequiredError} if no signer is configured.
    * @throws {@link WalletNotConnectedError} if the signer has no connected account.
    * @throws {@link ChainMismatchError} if signer and provider report different chain IDs.
    */
@@ -431,7 +431,7 @@ export class ZamaSDK {
    * @param delegateAddress - Address to delegate decryption rights to.
    * @param expirationDate - Optional expiration date (defaults to permanent delegation via `uint64.max`).
    * @returns The transaction hash and mined receipt.
-   * @throws {@link SignerNotConfiguredError} if no signer is configured.
+   * @throws {@link SignerRequiredError} if no signer is configured.
    * @throws {@link ChainMismatchError} if signer and provider are on different chains.
    * @throws {@link DelegationExpirationTooSoonError} if `expirationDate` is less than 1 hour in the future.
    * @throws {@link DelegationSelfNotAllowedError} if the delegate equals the connected wallet.
@@ -526,7 +526,7 @@ export class ZamaSDK {
    * @param contractAddress - The confidential contract address to revoke delegation on.
    * @param delegateAddress - Address to revoke delegation from.
    * @returns The transaction hash and mined receipt.
-   * @throws {@link SignerNotConfiguredError} if no signer is configured.
+   * @throws {@link SignerRequiredError} if no signer is configured.
    * @throws {@link ChainMismatchError} if signer and provider are on different chains.
    * @throws {@link DelegationNotFoundError} if no delegation exists for this (delegator, delegate, contract) tuple.
    * @throws {@link TransactionRevertedError} if the revocation transaction reverts.
@@ -649,7 +649,7 @@ export class ZamaSDK {
    *
    * @param handles - Handles to decrypt, each paired with its contract address.
    * @returns A record mapping each handle to its decrypted clear-text value.
-   * @throws {@link SignerNotConfiguredError} if no signer is configured.
+   * @throws {@link SignerRequiredError} if no signer is configured.
    * @throws {@link ChainMismatchError} if signer and provider are on different chains.
    *
    * @example
@@ -1029,7 +1029,7 @@ export class ZamaSDK {
    *   removed. May also drop coverage for other contracts that shared the same
    *   permit. Delegated permits are not touched in this mode.
    *
-   * @throws {@link SignerNotConfiguredError} if no signer is configured.
+   * @throws {@link SignerRequiredError} if no signer is configured.
    */
   async revokePermits(contracts?: Address[]): Promise<void> {
     const credentials = this.#credentials;
@@ -1046,7 +1046,7 @@ export class ZamaSDK {
    * Wipe the keypair for the current signer and cascade-delete every permit
    * (across chains and delegators) referencing it.
    *
-   * @throws {@link SignerNotConfiguredError} if no signer is configured.
+   * @throws {@link SignerRequiredError} if no signer is configured.
    */
   async clearCredentials(): Promise<void> {
     const credentials = this.#credentials;

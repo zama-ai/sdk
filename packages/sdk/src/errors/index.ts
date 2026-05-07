@@ -5,11 +5,7 @@ export { ApprovalFailedError, TransactionRevertedError } from "./transaction";
 export { KeypairExpiredError, InvalidKeypairError, NoCiphertextError } from "./credential";
 export { RelayerRequestFailedError, ConfigurationError } from "./relayer";
 export { ChainMismatchError } from "./chain";
-export {
-  SignerNotConfiguredError,
-  WalletNotConnectedError,
-  WalletAccountNotReadyError,
-} from "./signer";
+export { SignerRequiredError, WalletNotConnectedError, WalletAccountNotReadyError } from "./signer";
 export {
   DelegationSelfNotAllowedError,
   DelegationCooldownError,

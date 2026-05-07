@@ -1,13 +1,13 @@
 import { describe, it, expect } from "../test-fixtures";
 import { ReadonlyToken } from "../token/readonly-token";
 import { Token } from "../token/token";
-import { SignerNotConfiguredError, ZamaErrorCode } from "../errors";
+import { SignerRequiredError, ZamaErrorCode } from "../errors";
 import type { ZamaSDK } from "../zama-sdk";
 import type { Address } from "viem";
 
 type Op = (sdk: ZamaSDK, tokenAddress: Address) => Promise<unknown>;
 
-// Operations that require a signer and should reject with `SignerNotConfiguredError`
+// Operations that require a signer and should reject with `SignerRequiredError`
 // when the SDK was constructed without one.
 const SIGNER_REQUIRED_OPS: ReadonlyArray<readonly [string, Op]> = [
   ["userDecrypt", (sdk, t) => sdk.userDecrypt([{ handle: "0xh", contractAddress: t }])],
@@ -27,7 +27,7 @@ describe("ZamaSDK without signer", () => {
     expect(sdk.hasSigner).toBe(false);
   });
 
-  it("signer getter throws SignerNotConfiguredError with TypeError cause when no signer", ({
+  it("signer getter throws SignerRequiredError with TypeError cause when no signer", ({
     createSDK,
   }) => {
     const sdk = createSDK({ signer: undefined });
@@ -37,10 +37,10 @@ describe("ZamaSDK without signer", () => {
     } catch (e) {
       caught = e;
     }
-    expect(caught).toBeInstanceOf(SignerNotConfiguredError);
-    expect((caught as SignerNotConfiguredError).code).toBe(ZamaErrorCode.SignerNotConfigured);
-    expect((caught as SignerNotConfiguredError).cause).toBeInstanceOf(TypeError);
-    expect(((caught as SignerNotConfiguredError).cause as TypeError).message).toBe(
+    expect(caught).toBeInstanceOf(SignerRequiredError);
+    expect((caught as SignerRequiredError).code).toBe(ZamaErrorCode.SignerRequired);
+    expect((caught as SignerRequiredError).cause).toBeInstanceOf(TypeError);
+    expect(((caught as SignerRequiredError).cause as TypeError).message).toBe(
       "signer must not be null or undefined",
     );
   });
@@ -87,10 +87,10 @@ describe("ZamaSDK without signer", () => {
   });
 
   it.for(SIGNER_REQUIRED_OPS)(
-    "%s rejects with SignerNotConfiguredError",
+    "%s rejects with SignerRequiredError",
     async ([, run], { createSDK, tokenAddress }) => {
       const sdk = createSDK({ signer: undefined });
-      await expect(run(sdk, tokenAddress)).rejects.toBeInstanceOf(SignerNotConfiguredError);
+      await expect(run(sdk, tokenAddress)).rejects.toBeInstanceOf(SignerRequiredError);
     },
   );
 
@@ -99,6 +99,6 @@ describe("ZamaSDK without signer", () => {
   // the React-SDK guidance. Keep this assertion so the SDK message stays
   // framework-agnostic.
   it("error message does not leak React-specific hint", () => {
-    expect(new SignerNotConfiguredError().message).not.toContain("<ZamaProvider signer=");
+    expect(new SignerRequiredError().message).not.toContain("<ZamaProvider signer=");
   });
 });

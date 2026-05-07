@@ -96,26 +96,26 @@ The `_` wildcard catches any `ZamaError` not explicitly handled.
 | `DelegationContractIsSelfError`         | `DELEGATION_CONTRACT_IS_SELF`         | Contract address equals caller                               |
 | `DelegationExpirationTooSoonError`      | `DELEGATION_EXPIRATION_TOO_SOON`      | Expiration date less than 1 hour in the future               |
 | `DelegationNotPropagatedError`          | `DELEGATION_NOT_PROPAGATED`           | Delegation exists on L1 but hasn't synced to gateway yet     |
-| `SignerNotConfiguredError`              | `SIGNER_NOT_CONFIGURED`               | SDK operation needs a signer but none is configured          |
+| `SignerRequiredError`              | `SIGNER_REQUIRED`               | SDK operation needs a signer but none is configured          |
 | `WalletNotConnectedError`               | `WALLET_NOT_CONNECTED`                | Signer exists but has no connected wallet account            |
 | `WalletAccountNotReadyError`            | `WALLET_ACCOUNT_NOT_READY`            | Async signer adapter has not resolved its account yet        |
 | `AclPausedError`                        | `ACL_PAUSED`                          | ACL contract is paused                                       |
 
 ## Error details
 
-### SignerNotConfiguredError
+### SignerRequiredError
 
-**Code:** `SIGNER_NOT_CONFIGURED`
+**Code:** `SIGNER_REQUIRED`
 
 Thrown when a write, sign, or decrypt operation is called on an SDK instance configured without a signer.
 
 ```ts
-import { SignerNotConfiguredError } from "@zama-fhe/sdk";
+import { SignerRequiredError } from "@zama-fhe/sdk";
 
 try {
   await token.shield(1000n);
 } catch (error) {
-  if (error instanceof SignerNotConfiguredError) {
+  if (error instanceof SignerRequiredError) {
     showConfigurationError("Configure a signer to perform this action");
   }
 }

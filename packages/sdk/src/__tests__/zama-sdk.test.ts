@@ -8,7 +8,7 @@ import {
   DelegationExpiryUnchangedError,
   DelegationNotFoundError,
   DelegationSelfNotAllowedError,
-  SignerNotConfiguredError,
+  SignerRequiredError,
   WalletAccountNotReadyError,
   ZamaError,
   ZamaErrorCode,
@@ -1230,7 +1230,7 @@ describe("ZamaSDK", () => {
       ).rejects.toThrow(expect.objectContaining({ code: "ACL_PAUSED" }));
     });
 
-    it("throws SignerNotConfiguredError when no signer is configured", async ({
+    it("throws SignerRequiredError when no signer is configured", async ({
       createSDK,
       tokenAddress,
       delegateAddress,
@@ -1238,7 +1238,7 @@ describe("ZamaSDK", () => {
       const sdk = createSDK({ signer: undefined });
       await expect(
         sdk.delegateDecryption({ contractAddress: tokenAddress, delegateAddress }),
-      ).rejects.toBeInstanceOf(SignerNotConfiguredError);
+      ).rejects.toBeInstanceOf(SignerRequiredError);
     });
   });
 
@@ -1319,7 +1319,7 @@ describe("ZamaSDK", () => {
       ).rejects.toThrow(expect.objectContaining({ code: "DELEGATION_COOLDOWN" }));
     });
 
-    it("throws SignerNotConfiguredError when no signer is configured", async ({
+    it("throws SignerRequiredError when no signer is configured", async ({
       createSDK,
       tokenAddress,
       delegateAddress,
@@ -1327,7 +1327,7 @@ describe("ZamaSDK", () => {
       const sdk = createSDK({ signer: undefined });
       await expect(
         sdk.revokeDelegation({ contractAddress: tokenAddress, delegateAddress }),
-      ).rejects.toBeInstanceOf(SignerNotConfiguredError);
+      ).rejects.toBeInstanceOf(SignerRequiredError);
     });
   });
 });

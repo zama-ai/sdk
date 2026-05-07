@@ -461,7 +461,7 @@ export class ReadonlyToken {
    * Use this to check if decrypt operations can proceed without a wallet prompt.
    *
    * @returns `true` if a stored permit covers this token's contract for the connected signer.
-   * @throws {@link SignerNotConfiguredError} if no signer is configured.
+   * @throws {@link SignerRequiredError} if no signer is configured.
    */
   async isAllowed(): Promise<boolean> {
     return this.sdk.isAllowed([this.address]);
@@ -472,7 +472,7 @@ export class ReadonlyToken {
    * from every direct-decrypt permission for the current signer/chain. The
    * keypair survives.
    *
-   * @throws {@link SignerNotConfiguredError} if no signer is configured.
+   * @throws {@link SignerRequiredError} if no signer is configured.
    */
   async revoke(): Promise<void> {
     await this.sdk.revokePermits([this.address]);

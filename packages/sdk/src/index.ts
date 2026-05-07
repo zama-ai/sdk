@@ -169,7 +169,7 @@ export {
   RelayerRequestFailedError,
   ConfigurationError,
   ChainMismatchError,
-  SignerNotConfiguredError,
+  SignerRequiredError,
   WalletNotConnectedError,
   WalletAccountNotReadyError,
   DelegationSelfNotAllowedError,

@@ -108,7 +108,7 @@ const sdk = new ZamaSDK({
 
 `GenericSigner | undefined`
 
-Wallet interface for signing transactions and typed data. Use `ViemSigner`, `EthersSigner`, or implement `GenericSigner`. Optional — omit for read-only usage (indexers, SSR, pre-wallet-connect states). Signer-dependent operations throw `SignerNotConfiguredError` when invoked without a signer.
+Wallet interface for signing transactions and typed data. Use `ViemSigner`, `EthersSigner`, or implement `GenericSigner`. Optional — omit for read-only usage (indexers, SSR, pre-wallet-connect states). Signer-dependent operations throw `SignerRequiredError` when invoked without a signer.
 
 ```ts
 import { ViemSigner } from "@zama-fhe/sdk/viem";

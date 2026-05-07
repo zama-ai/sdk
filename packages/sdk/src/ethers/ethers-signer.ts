@@ -9,7 +9,7 @@ import {
   type Hex,
 } from "viem";
 import {
-  SignerNotConfiguredError,
+  SignerRequiredError,
   WalletAccountNotReadyError,
   WalletNotConnectedError,
 } from "../errors";
@@ -102,7 +102,7 @@ export class EthersSigner extends BaseSigner {
       return this.#directSigner;
     }
     if (!this.#browserProvider) {
-      throw new SignerNotConfiguredError();
+      throw new SignerRequiredError();
     }
     return this.#browserProvider.getSigner();
   }

@@ -14666,7 +14666,7 @@ export interface ShieldSubmittedEvent extends BaseEvent {
 }
 
 // @public
-export class SignerNotConfiguredError extends ZamaError {
+export class SignerRequiredError extends ZamaError {
     constructor(options?: ErrorOptions);
 }
 
@@ -20039,7 +20039,7 @@ export const ZamaErrorCode: {
     readonly DelegationExpirationTooSoon: "DELEGATION_EXPIRATION_TOO_SOON"; /** Delegation exists on-chain but hasn't propagated to the gateway yet. */
     readonly DelegationNotPropagated: "DELEGATION_NOT_PROPAGATED"; /** Signer and provider are connected to different chains. */
     readonly ChainMismatch: "CHAIN_MISMATCH"; /** Operation requires a signer but none is configured. */
-    readonly SignerNotConfigured: "SIGNER_NOT_CONFIGURED"; /** Operation requires a connected wallet account. */
+    readonly SignerRequired: "SIGNER_REQUIRED"; /** Operation requires a connected wallet account. */
     readonly WalletNotConnected: "WALLET_NOT_CONNECTED"; /** Wallet account discovery is still resolving. */
     readonly WalletAccountNotReady: "WALLET_ACCOUNT_NOT_READY";
 };
