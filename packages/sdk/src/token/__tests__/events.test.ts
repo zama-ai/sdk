@@ -1,4 +1,12 @@
-import { describe, expect, it, TEST_PUBLIC_KEY, vi, type MockSigner } from "../../test-fixtures";
+import {
+  createMockChain,
+  describe,
+  expect,
+  it,
+  TEST_PUBLIC_KEY,
+  vi,
+  type MockSigner,
+} from "../../test-fixtures";
 import type { GenericProvider, GenericStorage } from "../../types";
 import { Topics } from "../../events";
 import { ReadonlyToken } from "../readonly-token";
@@ -10,6 +18,7 @@ import {
 } from "../../events/sdk-events";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import { ZamaSDK } from "../../zama-sdk";
+import type { ZamaConfig } from "../../config/types";
 import type { Address } from "viem";
 import { ZERO_HANDLE } from "../../utils/handles";
 const _TOKEN_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
@@ -30,10 +39,15 @@ function setupSdkWithEvents(opts: {
   const events: ZamaSDKEvent[] = [];
   const onEvent: ZamaSDKEventListener = (event) => events.push(event);
   const sdk = new ZamaSDK({
-    relayer: opts.relayer,
+    chains: [createMockChain({ id: 31337 })],
+    relayer: opts.relayer as unknown as ZamaConfig["relayer"],
     provider: opts.provider,
     signer: opts.signer,
     storage: opts.storage,
+    permitStorage: opts.storage,
+    keypairTTL: 2592000,
+    permitTTL: 1,
+    registryTTL: 86400,
     onEvent,
   });
   const readonlyToken = new ReadonlyToken(sdk, opts.tokenAddress);
@@ -192,10 +206,16 @@ describe("ReadonlyToken.balanceOf event emissions", () => {
     provider,
   }) => {
     const sdk = new ZamaSDK({
-      relayer,
+      chains: [createMockChain({ id: 31337 })],
+      relayer: relayer as unknown as ZamaConfig["relayer"],
       provider,
       signer,
       storage,
+      permitStorage: storage,
+      keypairTTL: 2592000,
+      permitTTL: 1,
+      registryTTL: 86400,
+      onEvent: undefined,
     });
     const token = new ReadonlyToken(sdk, tokenAddress);
     vi.mocked(provider.readContract).mockResolvedValue(handle);
@@ -482,6 +502,7 @@ describe("Token event emissions", () => {
     }) => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // underlying
+        .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
         .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
         .mockResolvedValueOnce(2n ** 256n - 1n); // allowance
       const { token, events } = setupSdkWithEvents({
@@ -700,7 +721,7 @@ describe("Token event emissions", () => {
   });
 
   describe("TransactionError events", () => {
-    it("emits TransactionError with operation 'shield' on shield failure", async ({
+    it("emits TransactionError with operation 'shield:approveAndWrap' on shield failure", async ({
       relayer,
       signer,
       tokenAddress,
@@ -709,6 +730,7 @@ describe("Token event emissions", () => {
     }) => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c")
+        .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
         .mockResolvedValueOnce(1000n);
       vi.mocked(signer.writeContract).mockRejectedValue(new Error("shield failed"));
       const { token, events } = setupSdkWithEvents({
@@ -723,7 +745,7 @@ describe("Token event emissions", () => {
 
       const txError = events.find((e) => e.type === ZamaSDKEvents.TransactionError);
       expect(txError).toBeDefined();
-      expect("operation" in txError! && txError.operation).toBe("shield");
+      expect("operation" in txError! && txError.operation).toBe("shield:approveAndWrap");
     });
 
     it("emits TransactionError with operation 'setOperator' on setOperator failure", async ({

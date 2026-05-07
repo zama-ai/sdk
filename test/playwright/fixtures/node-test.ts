@@ -25,6 +25,8 @@ const contracts = {
   cUSDT: deployments.cUSDT as Address,
   USDC: deployments.erc20 as Address,
   cUSDC: deployments.cToken as Address,
+  ERC1363: (deployments as Record<string, string>).ERC1363 as Address,
+  cERC1363: (deployments as Record<string, string>).cERC1363 as Address,
   acl: anvil.aclContractAddress as Address,
 };
 

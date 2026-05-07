@@ -1057,7 +1057,7 @@ Balances are stored as ciphertext handles. To display one, the user authorizes t
 ```ts
 import { ZamaSDK } from "@zama-fhe/sdk";
 
-const sdk = new ZamaSDK({ relayer, signer, storage });
+const sdk = new ZamaSDK(config); // config from createConfig()
 const token = sdk.createToken("0xConfidentialToken");
 
 // First call prompts the wallet for an EIP-712 session signature;
@@ -1140,7 +1140,7 @@ In all cases, the user sees a single unified balance for the underlying asset.
 
 ### Shield (wrap)
 
-`Token.shield` wraps a standard ERC-20 into its ERC-7984 form. The SDK handles the underlying ERC-20 approval, the wrapper deposit, and decimal conversion. The encrypted balance lands in the recipient's address (defaulting to the connected wallet).
+`Token.shield` wraps a standard ERC-20 into its ERC-7984 form. The SDK handles the wrapping flow internally — using `transferAndCall` for ERC-1363 underlyings (one transaction) or `approve` + `wrap` for everything else (two transactions) — plus decimal conversion. The encrypted balance lands in the recipient's address (defaulting to the connected wallet). See [Shielding paths](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/shield-tokens.md#shielding-paths) for which currently-wrapped tokens use which path.
 
 
 ### Tab: SDK
@@ -1893,7 +1893,7 @@ When using `RelayerWeb` with a proxy, you can also add CSRF protection via the `
 - [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) — full relayer, signer, and storage setup
 - [Shield Tokens](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/shield-tokens.md) — start converting public tokens to confidential form
 - [RelayerWeb reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerWeb.md) — security options and multi-threading
-- [RelayerNode reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerNode.md) — Node.js-specific configuration
+- [RelayerNode reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerNode.md) — `node()` transport factory
 
 ## Shield tokens
 
@@ -1905,6 +1905,32 @@ When using `RelayerWeb` with a proxy, you can also add CSRF protection via the `
 # Shield tokens
 
 Shielding converts public ERC-20 tokens into confidential tokens. The SDK handles the ERC-20 approval and the shield transaction in a single call via `token.shield()`. In React, use the `useShield` hook.
+
+## Shielding paths
+
+`Token.shield()` exposes a single API but routes through one of two on-chain paths depending on the underlying ERC-20:
+
+| Path               | Triggered when                                | Wallet prompts | Notes                                                                                 |
+| ------------------ | --------------------------------------------- | -------------- | ------------------------------------------------------------------------------------- |
+| `transferAndCall`  | Underlying ERC-20 implements ERC-1363         | 1              | The wrapper's `onTransferReceived` mints the confidential balance in one transaction. |
+| `approve` + `wrap` | Underlying ERC-20 does not implement ERC-1363 | 2              | An ERC-20 `approve` followed by a `wrap` call on the wrapper.                         |
+
+The SDK detects ERC-1363 support automatically via ERC-165 `supportsInterface` against the underlying token. **You don't need to choose a path or detect ERC-1363 yourself** — `token.shield(amount)` routes correctly for any token. `approvalStrategy` only applies to the `approve` + `wrap` path; on the `transferAndCall` path there is no allowance step.
+
+### Which path will my token take?
+
+Among the wrapped tokens registered on Ethereum mainnet today, the routing is:
+
+| Confidential wrapper | Underlying | Shield path                   |
+| -------------------- | ---------- | ----------------------------- |
+| cTGBP                | tGBP       | `transferAndCall` (single tx) |
+| cZAMA                | ZAMA       | `transferAndCall` (single tx) |
+| cUSDC                | USDC       | `approve` + `wrap` (two txs)  |
+| cUSDT                | USDT       | `approve` + `wrap` (two txs)  |
+| cWETH                | WETH       | `approve` + `wrap` (two txs)  |
+| cBRON                | BRON       | `approve` + `wrap` (two txs)  |
+
+ERC-1363 is a conditional optimisation, not a recommended new default — only a small subset of tokens implement it today. Tokens that don't (USDC, USDT, DAI, and most existing ERC-20s) continue to use `approve` + `wrap`. Any newly deployed wrapper picks up the `transferAndCall` path automatically if its underlying ERC-20 implements ERC-1363 — no opt-in is required from your code. See the [`WrappersRegistry` reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WrappersRegistry.md) for how to look up the wrapper for a given ERC-20.
 
 ## Steps
 
@@ -1982,11 +2008,11 @@ const txHash = await shield({ amount: 1000n });
 ```
 
 
-The SDK sends two transactions: an ERC-20 `approve` for 1000 tokens, followed by the shield (wrap) call. The user sees two wallet prompts.
+On the `approve` + `wrap` path, the SDK sends two transactions: an ERC-20 `approve` for 1000 tokens, followed by the shield (wrap) call. The user sees two wallet prompts. On the `transferAndCall` path (ERC-1363 underlyings), shielding completes in a single transaction and `approvalStrategy` doesn't apply — see [Shielding paths](#shielding-paths) for details.
 
 ### 3. Shield with max approval
 
-To avoid a separate approval transaction every time, pass `approvalStrategy: "max"`. This grants an unlimited allowance on the first shield, and subsequent shields skip the approval step:
+`approvalStrategy` only affects the `approve` + `wrap` path; on `transferAndCall` it's ignored. To avoid a separate approval transaction every time on `approve` + `wrap` tokens, pass `approvalStrategy: "max"`. This grants an unlimited allowance on the first shield, and subsequent shields skip the approval step:
 
 
 ### Tab: Core SDK
@@ -3056,7 +3082,7 @@ The signer handles `signTypedData` and `writeContract`; the provider handles `re
 
 ## Next steps
 
-- [RelayerNode](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerNode.md) -- full constructor options and pool behavior
+- [RelayerNode](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerNode.md) -- `node()` transport factory options
 - [asyncLocalStorage](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericStorage.md) -- the `GenericStorage` interface it implements
 - [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) -- chains, relayers, authentication, and session management
 - [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md) -- custom signer interface for non-standard wallet integrations
@@ -3093,13 +3119,24 @@ import { ZamaSDK, indexedDBStorage, chromeSessionStorage } from "@zama-fhe/sdk";
 Pass `indexedDBStorage` for the encrypted FHE keypair (persistent, survives browser close) and `chromeSessionStorage` for the session signature (ephemeral, survives service worker restarts):
 
 ```ts
-const sdk = new ZamaSDK({
-  relayer,
-  provider,
-  signer,
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { web } from "@zama-fhe/sdk/web";
+import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
+
+const mySepolia = {
+  ...sepolia,
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
+} as const satisfies FheChain;
+
+const config = createConfig({
+  chains: [mySepolia],
+  publicClient,
+  walletClient,
   storage: indexedDBStorage, // encrypted keypair — persistent
   sessionStorage: chromeSessionStorage, // wallet signature — ephemeral
+  relayers: { [mySepolia.id]: web() },
 });
+const sdk = new ZamaSDK(config);
 ```
 
 
@@ -3396,7 +3433,7 @@ Use the official Zama SDK docs and the approved react-wagmi example to integrate
 ```
 
 ```text
-Use the official Zama SDK docs and the approved node-viem example to build a Node.js backend flow with RelayerNode and per-request isolation.
+Use the official Zama SDK docs and the approved node-viem example to build a Node.js backend flow with the node() transport factory and per-request isolation.
 ```
 
 ```text
@@ -4111,7 +4148,7 @@ const { data } = useUserDecrypt({
 
 #### Persistent caching
 
-Decrypted values are stored in the SDK's persistent decrypt cache (`sdk.cache`), scoped by signer and contract address. Cached values survive page reloads — `useUserDecrypt` returns them instantly without hitting the relayer.
+Decrypted values are stored through the SDK's internal CachingService, scoped by signer and contract address. Cached values survive page reloads — `useUserDecrypt` returns them instantly without hitting the relayer.
 
 The cache is cleared on `revoke()`, `revokeSession()`, or wallet lifecycle events (disconnect, account/chain change).
 
@@ -4166,7 +4203,7 @@ API reference for the core `@zama-fhe/sdk` package. Each page documents a single
 
 🟨 Go to [**RelayerWeb**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerWeb.md) for browser-side FHE encryption via Web Workers and WASM.
 
-🟨 Go to [**RelayerNode**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerNode.md) for server-side FHE encryption with native worker threads.
+🟨 Go to [**RelayerNode**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerNode.md) for the `node()` transport factory and server-side FHE operations.
 
 🟨 Go to [**Network presets**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/network-presets.md) for pre-configured contract addresses on Sepolia, Mainnet, and Hardhat.
 
@@ -4199,23 +4236,11 @@ import { ZamaSDK } from "@zama-fhe/sdk";
 ## Usage
 
 
-### Tab: app.ts
-
-```ts
-import { ZamaSDK, indexedDBStorage } from "@zama-fhe/sdk";
-
-const sdk = new ZamaSDK({
-  relayer,
-  provider,
-  signer,
-  storage: indexedDBStorage,
-});
-```
-
-### Tab: createConfig (viem)
+### Tab: viem
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
+import { ZamaSDK } from "@zama-fhe/sdk";
 import { web } from "@zama-fhe/sdk/web";
 import { sepolia, mainnet } from "@zama-fhe/sdk/chains";
 
@@ -4232,7 +4257,7 @@ const config = createConfig({
 const sdk = new ZamaSDK(config);
 ```
 
-### Tab: createConfig (custom signer)
+### Tab: custom signer
 
 ```ts
 import { createConfig, ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
@@ -4251,74 +4276,55 @@ const sdk = new ZamaSDK(config);
 ```
 
 
-## Constructor
 
-### relayer
+> [!WARNING]
+> `ZamaConfig` is a branded type — always obtain it via `createConfig()` (or an adapter-specific factory like `createConfig` from `@zama-fhe/sdk/viem`). Do not construct the config object by hand.
 
-`RelayerDispatcher`
 
-Handles FHE encryption, decryption, and keypair management.
+## createConfig options
+
+All options below are passed to `createConfig()`, which validates them and returns a `ZamaConfig` for the `ZamaSDK` constructor.
+
+### chains
+
+`readonly FheChain[]`
+
+FHE chain configurations. At least one chain is required. Use built-in presets from `@zama-fhe/sdk/chains`.
 
 ```ts
-const sdk = new ZamaSDK({
-  relayer,
-  provider,
-  signer,
-  storage: indexedDBStorage,
+import { sepolia, mainnet } from "@zama-fhe/sdk/chains";
+
+const config = createConfig({
+  chains: [sepolia, mainnet],
+  // ...
 });
 ```
 
-### provider
+### relayers
 
-`GenericProvider`
+`Record<number, RelayerConfig>`
 
-Read-only provider for contract reads and transaction receipt polling. Created automatically by `createConfig`, or implement `GenericProvider` manually.
+Per-chain relayer factories. Each chain in `chains` must have a matching entry.
 
 ```ts
-const sdk = new ZamaSDK({
-  relayer,
-  provider,
-  signer,
-  storage: indexedDBStorage,
+import { web } from "@zama-fhe/sdk/web";
+
+const config = createConfig({
+  chains: [sepolia],
+  relayers: { [sepolia.id]: web() },
+  // ...
 });
 ```
 
-### signer
+### provider / signer
 
-`GenericSigner | undefined`
-
-Wallet interface for signing transactions and typed data. Use `ViemSigner`, `EthersSigner`, or implement `GenericSigner`. Optional — omit for read-only usage (indexers, SSR, pre-wallet-connect states). Signer-dependent operations throw `SignerNotConfiguredError` when invoked without a signer.
-
-```ts
-import { ViemSigner } from "@zama-fhe/sdk/viem";
-
-const signer = new ViemSigner({ walletClient });
-const sdk = new ZamaSDK({
-  relayer,
-  provider,
-  signer,
-  storage: indexedDBStorage,
-});
-```
+Created automatically by adapter-specific `createConfig` (viem, ethers, wagmi). For the generic `createConfig` from `@zama-fhe/sdk`, pass a `GenericProvider` and optionally a `GenericSigner`. Omit the signer for read-only usage (indexers, SSR). Signer-dependent operations throw `SignerNotConfiguredError` when invoked without a signer.
 
 ### storage
 
-`GenericStorage`
+`GenericStorage | undefined`
 
-Persists the encrypted FHE keypair across sessions. Use `indexedDBStorage` (browser), `memoryStorage` (tests), or `asyncLocalStorage` (Node.js servers).
-
-```ts
-import { indexedDBStorage } from "@zama-fhe/sdk";
-
-const sdk = new ZamaSDK({
-  relayer,
-  provider,
-  signer,
-  storage: indexedDBStorage,
-});
-```
-
----
+Persists the encrypted FHE keypair across sessions. Use `indexedDBStorage` (browser), `memoryStorage` (tests), or `asyncLocalStorage` (Node.js servers). Defaults to `indexedDBStorage` in browsers, `memoryStorage` elsewhere.
 
 ### sessionStorage
 
@@ -4326,33 +4332,11 @@ const sdk = new ZamaSDK({
 
 Stores wallet signatures for the current session. Defaults to in-memory storage. Use `chromeSessionStorage` for MV3 web extensions.
 
-```ts
-import { chromeSessionStorage } from "@zama-fhe/sdk";
-
-const sdk = new ZamaSDK({
-  relayer,
-  provider,
-  signer,
-  storage: indexedDBStorage,
-  sessionStorage: chromeSessionStorage,
-});
-```
-
 ### keypairTTL
 
 `number | undefined`
 
-FHE keypair validity duration in seconds. Default: `2592000` (30 days). After expiry, the next decrypt prompts a wallet signature to regenerate the keypair.
-
-```ts
-const sdk = new ZamaSDK({
-  relayer,
-  provider,
-  signer,
-  storage: indexedDBStorage,
-  keypairTTL: 604800, // 7 days
-});
-```
+FHE keypair validity duration in seconds. Default: `2592000` (30 days). Must be a positive integer. After expiry, the next decrypt prompts a wallet signature to regenerate the keypair.
 
 ### sessionTTL
 
@@ -4360,47 +4344,11 @@ const sdk = new ZamaSDK({
 
 Session signature lifetime in seconds. Default: `2592000` (30 days). Set to `0` to require a wallet signature on every operation. Pass `"infinite"` for a session that never expires.
 
-```ts
-const sdk = new ZamaSDK({
-  relayer,
-  provider,
-  signer,
-  storage: indexedDBStorage,
-  sessionTTL: 3600, // 1 hour
-});
-```
-
-### registryAddresses
-
-`Record<number, Address> | undefined`
-
-Per-chain wrappers registry address overrides, merged on top of built-in defaults. Use this for custom or local chains (e.g. Hardhat) where no default registry exists.
-
-```ts
-const sdk = new ZamaSDK({
-  relayer,
-  provider,
-  signer,
-  storage: indexedDBStorage,
-  registryAddresses: { [31337]: "0xYourHardhatRegistry" },
-});
-```
-
 ### registryTTL
 
 `number | undefined`
 
-How long cached registry results remain valid, in seconds. Default: `86400` (24 hours).
-
-```ts
-const sdk = new ZamaSDK({
-  relayer,
-  provider,
-  signer,
-  storage: indexedDBStorage,
-  registryTTL: 3600, // 1 hour
-});
-```
+How long cached registry results remain valid, in seconds. Default: `86400` (24 hours). Must be a non-negative integer.
 
 ### onEvent
 
@@ -4409,11 +4357,11 @@ const sdk = new ZamaSDK({
 Lifecycle event callback for debugging and telemetry. Events never contain sensitive data.
 
 ```ts
-const sdk = new ZamaSDK({
-  relayer,
-  provider,
-  signer,
-  storage: indexedDBStorage,
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: { [sepolia.id]: web() },
   onEvent: ({ type, tokenAddress, ...rest }) => {
     console.debug(`[zama] ${type}`, rest);
   },
@@ -4422,32 +4370,11 @@ const sdk = new ZamaSDK({
 
 ## Properties
 
-### cache
-
-`DecryptCache` (readonly)
-
-Persistent cache for decrypted FHE plaintext values. Backed by the same `GenericStorage` passed to the constructor (e.g. IndexedDB in browsers), so **cached values survive page reloads**.
-
-Entries are scoped by `(requester, contractAddress, handle)` — a different signer cannot read another user's cached decryptions, mirroring the on-chain ACL. When the on-chain handle changes (e.g. after a transfer), the old entry is automatically a miss.
-
-The cache is cleared automatically on:
-
-- `revoke()` / `revokeSession()` — clears entries for the current signer
-- Wallet disconnect, account change, or chain change — clears all entries
-
-```ts
-// Manual clear for a specific address
-await sdk.cache.clearForRequester("0xYourAddress");
-
-// Clear everything
-await sdk.cache.clearAll();
-```
-
 ### registry
 
 `WrappersRegistry` (readonly)
 
-Auto-configured wrappers registry instance. Shares the SDK's provider, `registryAddresses`, and `registryTTL`. Prefer this over `createWrappersRegistry()` to benefit from a single shared cache.
+Auto-configured wrappers registry instance. Shares the SDK's provider, chain registry addresses, and `registryTTL`. Prefer this over `createWrappersRegistry()` to benefit from a single shared cache.
 
 ```ts
 const pairs = await sdk.registry.listPairs({ page: 1 });
@@ -4483,13 +4410,13 @@ const readonlyToken = sdk.createReadonlyToken("0xEncryptedERC20");
 
 `(registryAddresses?: Record<number, Address>) => WrappersRegistry`
 
-Creates a wrappers registry instance for querying on-chain token wrapper pairs. On Mainnet and Sepolia the registry address is resolved automatically.
+Creates a wrappers registry instance for querying on-chain token wrapper pairs. Registry addresses come from built-in defaults, configured chain definitions, and optional overrides passed to this method.
 
 ```ts
 // Mainnet / Sepolia — resolved automatically
 const registry = sdk.createWrappersRegistry();
 
-// Hardhat or custom chain — override per chain
+// Hardhat or custom chain — override per chain for this registry instance
 const registry = sdk.createWrappersRegistry({ [31337]: "0xYourRegistry" });
 
 const pairs = await registry.getTokenPairs();
@@ -4512,11 +4439,11 @@ const b = await sdk.userDecrypt([{ handle: h2, contractAddress: cDAI }]);
 
 `(handles: DecryptHandle[]) => Promise<Record<Handle, ClearValueType>>`
 
-Decrypt one or more FHE handles. Returns cached values when available, only calling the relayer for uncached handles. Results are written to the persistent cache (`sdk.cache`) so subsequent calls for the same handles return instantly.
+Decrypt one or more FHE handles. Returns cached values when available, only calling the relayer for uncached handles. Results are written through the SDK's internal CachingService so subsequent calls for the same handles return instantly.
 
 Handles from different contracts can be mixed — they are grouped by `contractAddress` and batched into one relayer call per contract (up to 5 concurrently). Zero handles (32 zero bytes) resolve to `0n` without hitting the relayer.
 
-When the relayer is actually called, credentials are derived from the contract addresses of the full input handle set (including cached and zero handles), ensuring a stable credential cache key regardless of which handles happen to be cached. If every handle is zero or already cached, no credentials are acquired and no wallet prompt is shown.
+When the relayer is actually called, credentials are derived from the contract addresses of the uncached handle set. If every handle is zero or already cached, no credentials are acquired and no wallet prompt is shown.
 
 ```ts
 const values = await sdk.userDecrypt([
@@ -4541,15 +4468,16 @@ import {
   type DecryptErrorEvent,
 } from "@zama-fhe/sdk";
 
-const sdk = new ZamaSDK({
-  relayer,
-  provider,
-  signer,
-  storage,
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: { [sepolia.id]: web() },
   onEvent: (event) => {
     window.dispatchEvent(new CustomEvent(event.type, { detail: event }));
   },
 });
+const sdk = new ZamaSDK(config);
 
 window.addEventListener(ZamaSDKEvents.DecryptEnd, (e: CustomEvent<DecryptEndEvent>) => {
   const { durationMs, handles, result } = e.detail;
@@ -4579,13 +4507,14 @@ import {
 
 const emitter = new EventEmitter();
 
-const sdk = new ZamaSDK({
-  relayer,
-  provider,
-  signer,
-  storage,
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: { [sepolia.id]: node() },
   onEvent: (event) => emitter.emit(event.type, event),
 });
+const sdk = new ZamaSDK(config);
 
 emitter.on(ZamaSDKEvents.DecryptEnd, ({ durationMs, handles, result }: DecryptEndEvent) => {
   console.log(`Decrypted ${handles.length} handle(s) in ${durationMs}ms`);
@@ -4681,7 +4610,7 @@ Created via [`ZamaSDK.createToken()`](https://raw.githubusercontent.com/zama-ai/
 ```ts
 import { ZamaSDK } from "@zama-fhe/sdk";
 
-const sdk = new ZamaSDK({ relayer, provider, signer, storage });
+const sdk = new ZamaSDK(config); // config from createConfig()
 const token = sdk.createToken("0xEncryptedERC20");
 
 await token.shield(1000n);
@@ -5017,7 +4946,7 @@ Instance creation via [`ZamaSDK.createReadonlyToken()`](https://raw.githubuserco
 ```ts
 import { ReadonlyToken, ZamaSDK } from "@zama-fhe/sdk";
 
-const sdk = new ZamaSDK({ relayer, provider, signer, storage });
+const sdk = new ZamaSDK(config); // config from createConfig()
 const tokens = addresses.map((a) => sdk.createReadonlyToken(a));
 
 // One wallet signature covers all tokens
@@ -5250,7 +5179,7 @@ import { WrappersRegistry, DefaultRegistryAddresses } from "@zama-fhe/sdk";
 
 ### From ZamaSDK
 
-The SDK exposes a shared registry instance via `sdk.registry`. This is the recommended way to access the registry — it shares the SDK's provider, `registryAddresses`, and `registryTTL`, and maintains a single in-memory cache.
+The SDK exposes a shared registry instance via `sdk.registry`. This is the recommended way to access the registry — it shares the SDK's provider, chain registry addresses, and `registryTTL`, and maintains a single in-memory cache.
 
 ```ts
 const pairs = await sdk.registry.listPairs({ page: 1 });
@@ -5634,29 +5563,16 @@ How long cached FHE artifacts remain valid, in seconds.
 
 Node.js relayer that runs FHE operations in native worker threads. The server-side counterpart to `RelayerWeb`.
 
-## Import
 
-```ts
-import { RelayerNode } from "@zama-fhe/sdk/node";
-```
-
-
-> [!INFO]
-> `RelayerNode` is exported from the `/node` sub-path, not the main entry point.
-
-
-
-> [!INFO]
-> For most applications, prefer the `node()` transport factory with `createConfig` instead of constructing `RelayerNode` directly. See [Network Presets](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/network-presets.md) for examples.
+> [!WARNING]
+> `RelayerNode`, `NodeWorkerClient`, and `NodeWorkerPool` are internal classes — they are no longer exported from `@zama-fhe/sdk/node`. Use the `node()` transport factory with `createConfig` instead.
 
 
 ## Usage
 
-
-### Tab: Recommended (node transport)
-
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
+import { ZamaSDK } from "@zama-fhe/sdk";
 import { node } from "@zama-fhe/sdk/node";
 import { sepolia } from "@zama-fhe/sdk/chains";
 
@@ -5668,38 +5584,17 @@ const config = createConfig({
     [sepolia.id]: node({ poolSize: 4 }),
   },
 });
+
+const sdk = new ZamaSDK(config);
 ```
 
-### Tab: Direct construction
+## `node()` options
 
-```ts
-import { RelayerNode } from "@zama-fhe/sdk/node";
-import { sepolia } from "@zama-fhe/sdk/chains";
+### poolSize
 
-const relayer = new RelayerNode({
-  chain: {
-    ...sepolia,
-    network: "https://sepolia.infura.io/v3/YOUR_KEY",
-    auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY },
-  },
-  pool: nodeWorkerPool,
-});
-```
+`number | undefined`
 
-
-## Constructor (`RelayerNodeConfig`)
-
-### chain
-
-`FheChain`
-
-FHE chain configuration. Use a built-in chain preset (`sepolia`, `mainnet`, `hoodi`, `hardhat`) or a custom `FheChain` object. Include `auth` for relayer authentication.
-
-### pool
-
-`NodeWorkerPool`
-
-Native worker thread pool for FHE operations.
+Number of native worker threads. Default: `min(CPU cores, 4)`. Must be a positive integer.
 
 ### logger
 
@@ -5717,11 +5612,11 @@ Persistent storage for caching FHE public key and params.
 
 `number | undefined`
 
-How long cached FHE artifacts remain valid, in seconds.
+How long cached FHE artifacts remain valid, in seconds. Must be a non-negative integer.
 
 ## Related
 
-- [ZamaSDK](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md) — pass the relayer to the SDK constructor
+- [ZamaSDK](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md) — pass the config to the SDK constructor
 - [RelayerWeb](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerWeb.md) — browser variant using Web Workers and WASM
 - [Configuration guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) — authentication and network presets
 
@@ -6053,7 +5948,7 @@ walletAccount: WalletAccountStore;
 
 Synchronous observable store for wallet account readiness. React integrations use this store to avoid SSR and hydration races.
 
-Direct store subscriptions observe raw signer transitions. For SDK-coordinated cleanup and query invalidation, subscribe through the SDK lifecycle instead so credential and decrypt-cache cleanup runs first.
+Direct store subscriptions observe raw signer transitions. For SDK-coordinated cleanup and query invalidation, subscribe through the SDK lifecycle instead so credential and CachingService cleanup runs first.
 
 ### requireWalletAccount
 
@@ -6502,12 +6397,14 @@ const redisStorage: GenericStorage = {
   },
 };
 
-const sdk = new ZamaSDK({
-  relayer,
-  provider,
-  signer,
+const config = createConfig({
+  chains: [sepolia],
+  signer: mySigner,
+  provider: myProvider,
   storage: redisStorage,
+  relayers: { [sepolia.id]: node() },
 });
+const sdk = new ZamaSDK(config);
 ```
 
 ## Methods
@@ -6547,12 +6444,7 @@ import { indexedDBStorage } from "@zama-fhe/sdk";
 Browser-based persistent storage backed by IndexedDB. Survives page reloads and browser restarts. Use this as the primary `storage` in browser apps.
 
 ```ts
-const sdk = new ZamaSDK({
-  relayer,
-  provider,
-  signer,
-  storage: indexedDBStorage,
-});
+const sdk = new ZamaSDK(config); // config from createConfig()
 ```
 
 ### memoryStorage
@@ -6564,12 +6456,7 @@ import { memoryStorage } from "@zama-fhe/sdk";
 In-memory storage cleared when the process exits. Suitable for tests and throwaway scripts.
 
 ```ts
-const sdk = new ZamaSDK({
-  relayer,
-  provider,
-  signer,
-  storage: memoryStorage,
-});
+const sdk = new ZamaSDK(config); // config from createConfig()
 ```
 
 ### asyncLocalStorage
@@ -6585,7 +6472,13 @@ import { asyncLocalStorage } from "@zama-fhe/sdk/node";
 
 app.post("/api/transfer", (req, res) => {
   asyncLocalStorage.run(async () => {
-    const sdk = new ZamaSDK({ relayer, provider, signer, storage: asyncLocalStorage });
+    const config = createConfig({
+      chains: [mySepolia],
+      signer: wallet,
+      storage: asyncLocalStorage,
+      relayers: { [mySepolia.id]: node() },
+    });
+    const sdk = new ZamaSDK(config);
     await sdk.createToken("0x...").confidentialTransfer("0x...", 100n);
   });
 });
@@ -6602,13 +6495,15 @@ MV3 web extension storage backed by `chrome.storage.session`. Survives service w
 Pass as `sessionStorage` (not `storage`) to persist wallet signatures across service worker restarts:
 
 ```ts
-const sdk = new ZamaSDK({
-  relayer,
-  provider,
-  signer,
+const config = createConfig({
+  chains: [mySepolia],
+  publicClient,
+  walletClient,
   storage: indexedDBStorage,
   sessionStorage: chromeSessionStorage,
+  relayers: { [mySepolia.id]: web() },
 });
+const sdk = new ZamaSDK(config);
 ```
 
 ## Related
@@ -7887,14 +7782,9 @@ Delegation is enforced on-chain through the ACL contract. The delegate never rec
 The ACL contract address is automatically resolved from the chain configuration. Chain presets (`sepolia`, `mainnet`, `hardhat` from `@zama-fhe/sdk/chains`) already include the correct ACL address for each chain — no manual configuration needed.
 
 ```ts
-const sdk = new ZamaSDK({
-  relayer,
-  provider,
-  signer,
-  storage,
-});
+const sdk = new ZamaSDK(config); // config from createConfig()
 
-// Both tokens use the same ACL — resolved automatically from the relayer config
+// Both tokens use the same ACL — resolved automatically from the chain config
 const tokenA = sdk.createToken("0xTokenA");
 const tokenB = sdk.createToken("0xTokenB");
 ```
@@ -8073,11 +7963,11 @@ The SDK emits events during delegation operations. Subscribe via the `onEvent` c
 ```ts
 import { ZamaSDK, ZamaSDKEvents } from "@zama-fhe/sdk";
 
-const sdk = new ZamaSDK({
-  relayer,
-  provider,
-  signer,
-  storage,
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: { [sepolia.id]: web() },
   onEvent: (event) => {
     if (event.type === ZamaSDKEvents.DelegationSubmitted) {
       console.log("Delegation tx:", event.txHash);
@@ -8087,6 +7977,7 @@ const sdk = new ZamaSDK({
     }
   },
 });
+const sdk = new ZamaSDK(config);
 ```
 
 ## Delegation states
@@ -8397,7 +8288,7 @@ console.log(DefaultRegistryAddresses);
 
 
 > [!INFO]
-> `hardhat` has no registry address by default. Pass one explicitly via `registryAddresses` when creating a [WrappersRegistry](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WrappersRegistry.md).
+> `hardhat` has no registry address by default. Pass one via `registryAddresses` when creating a [WrappersRegistry](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WrappersRegistry.md), or set `registryAddress` on the chain definition.
 
 
 ## Related
@@ -11972,7 +11863,7 @@ function WrapperInfo({ tokenAddress }: { tokenAddress: `0x${string}` }) {
 
 # useWrappersRegistryAddress
 
-Resolves the wrappers registry address for the connected chain. Uses built-in defaults (Mainnet, Sepolia) merged with any `registryAddresses` overrides passed to `ZamaProvider`.
+Resolves the wrappers registry address for the connected chain. Uses built-in defaults (Mainnet, Sepolia) merged with chain-level registry addresses from the config.
 
 Returns `undefined` when the chain ID hasn't been fetched yet or when no registry is configured for the connected chain.
 
@@ -13803,7 +13694,7 @@ Pass `{ enabled: false }` as the second argument to disable the query.
 
 Returns a standard `useQuery` result. `data` resolves to `Record<Handle, ClearValueType>` — a map from each handle to its decrypted plaintext value (`bigint`, `boolean`, or `string`).
 
-When all requested handles are already cached, `data` contains the cached values immediately (no relayer call). Freshly decrypted results are written to the SDK's persistent decrypt cache (`sdk.cache`) — scoped by `(signer, contract, handle)` — so that subsequent renders return instantly, even after a page reload. The cache is cleared automatically on `revoke()`, `revokeSession()`, or wallet lifecycle events (disconnect, account change, chain change).
+When all requested handles are already cached, `data` contains the cached values immediately (no relayer call). Freshly decrypted results are written through the SDK's internal CachingService — scoped by `(signer, contract, handle)` — so that subsequent renders return instantly, even after a page reload. The cache is cleared automatically on `revoke()`, `revokeSession()`, or wallet lifecycle events (disconnect, account change, chain change).
 
 ### `data`
 
@@ -15159,7 +15050,7 @@ Each package exposes multiple entry points for tree-shaking:
 | `@zama-fhe/sdk`        | Core SDK, RelayerWeb, storage, ABIs, event decoders, contract call builders |
 | `@zama-fhe/sdk/viem`   | `ViemProvider`, `ViemSigner` adapters + viem `createConfig`                 |
 | `@zama-fhe/sdk/ethers` | `EthersProvider`, `EthersSigner` adapters + ethers `createConfig`           |
-| `@zama-fhe/sdk/node`   | `RelayerNode`, `NodeWorkerClient`, `NodeWorkerPool`, network presets        |
+| `@zama-fhe/sdk/node`   | `node()` transport factory, network presets, type-only exports              |
 | `@zama-fhe/sdk/query`  | Query/mutation option factories, query keys, invalidation helpers           |
 
 **`@zama-fhe/react-sdk`**

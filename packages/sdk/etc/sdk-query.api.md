@@ -31,6 +31,9 @@ import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
 // @public (undocumented)
 export function allowMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.allow"], Address[], void>;
 
+// @public
+export type ApprovalStrategy = "max" | "exact" | "skip";
+
 // @public (undocumented)
 export function approveUnderlyingMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.approveUnderlying", Address], ApproveUnderlyingParams, TransactionResult>;
 
@@ -699,21 +702,22 @@ export function shieldMutationOptions(token: Token): MutationFactoryOptions<read
 
 // @public
 export interface ShieldOptions extends ShieldCallbacks {
-    approvalStrategy?: "max" | "exact" | "skip";
+    approvalStrategy?: ApprovalStrategy;
     to?: Address;
 }
 
 // @public
-export interface ShieldParams extends ShieldCallbacks {
+export interface ShieldParams extends ShieldOptions {
     // (undocumented)
     amount: bigint;
-    // (undocumented)
-    approvalStrategy?: "max" | "exact" | "skip";
-    to?: Address;
 }
+
+// @public
+export type ShieldPath = "transferAndCall" | "approveAndWrap";
 
 // @public (undocumented)
 export interface ShieldSubmittedEvent extends BaseEvent {
+    shieldPath: ShieldPath;
     // (undocumented)
     txHash: Hex;
     // (undocumented)
@@ -744,6 +748,7 @@ export class Token extends ReadonlyToken {
     }): Promise<TransactionResult>;
     finalizeUnwrap(unwrapRequestIdOrAmount: Handle): Promise<TransactionResult>;
     isOperator(holder: Address, spender: Address): Promise<boolean>;
+    isPayable(): Promise<boolean>;
     resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     revokeDelegation(input: {
         delegateAddress: Address;
@@ -826,10 +831,13 @@ export function totalSupplyQueryOptions(sdk: ZamaSDK, tokenAddress: Address, con
 // @public (undocumented)
 export interface TransactionErrorEvent extends BaseEvent {
     error: Error;
-    operation: string;
+    operation: TransactionErrorOperation;
     // (undocumented)
     type: typeof ZamaSDKEvents.TransactionError;
 }
+
+// @public
+export type TransactionErrorOperation = "approveUnderlying" | "delegateDecryption" | "finalizeUnwrap" | "revokeDelegation" | "setOperator" | "shield:transferAndCall" | "shield:approveAndWrap" | "transfer" | "transferFrom" | "unwrap";
 
 // @public
 export interface TransactionReceipt {
@@ -1076,6 +1084,22 @@ export interface WrappersRegistryQueryConfig {
 }
 
 // @public
+export type ZamaConfig = {
+    readonly chains: readonly FheChain[];
+    readonly relayer: RelayerDispatcher;
+    readonly provider: GenericProvider;
+    readonly signer: GenericSigner | undefined;
+    readonly storage: GenericStorage;
+    readonly permitStorage: GenericStorage;
+    readonly keypairTTL: number;
+    readonly permitTTL: number;
+    readonly registryTTL: number;
+    readonly onEvent: ZamaSDKEventListener | undefined;
+} & {
+    readonly [zamaConfigBrand]: true;
+};
+
+// @public
 export const zamaQueryKeys: {
     readonly confidentialBalance: {
         readonly all: readonly ["zama.confidentialBalance"];
@@ -1275,15 +1299,22 @@ export const zamaQueryKeys: {
 // @public
 export class ZamaSDK {
     [Symbol.dispose](): void;
-    constructor(config: ZamaSDKConfig);
+    constructor(config: ZamaConfig);
     allow(contracts: Address[]): Promise<void>;
     allowAs(delegator: Address, contracts: Address[]): Promise<void>;
-    // Warning: (ae-forgotten-export) The symbol "DecryptCache" needs to be exported by the entry point index.d.ts
-    readonly cache: DecryptCache;
     clearCredentials(): Promise<void>;
     createReadonlyToken(address: Address): ReadonlyToken;
     createToken(address: Address, wrapper?: Address): Token;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
+    // Warning: (ae-forgotten-export) The symbol "BatchDecryptHandlesResult" needs to be exported by the entry point index.d.ts
+    //
+    // @internal (undocumented)
+    delegatedBatchDecryptHandlesAs(input: {
+        handles: DecryptHandle[];
+        delegatorAddress: Address;
+        accountAddress?: Address;
+        maxConcurrency?: number;
+    }): Promise<BatchDecryptHandlesResult>;
     delegateDecryption(input: {
         contractAddress: Address;
         delegateAddress: Address;
@@ -1308,14 +1339,10 @@ export class ZamaSDK {
     }): Promise<boolean>;
     // @internal
     onWalletAccountChange(listener: WalletAccountListener): () => void;
-    // Warning: (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     readonly provider: GenericProvider;
     publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
     readonly registry: WrappersRegistry;
-    // Warning: (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     readonly relayer: RelayerDispatcher;
     requireAlignedWalletAccount(operation: string): Promise<WalletAccount>;
@@ -1333,22 +1360,6 @@ export class ZamaSDK {
     readonly storage: GenericStorage;
     terminate(): void;
     userDecrypt(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>>;
-}
-
-// @public
-export interface ZamaSDKConfig {
-    // Warning: (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
-    chains?: readonly FheChain[];
-    keypairTTL?: number;
-    onEvent?: ZamaSDKEventListener;
-    permitStorage?: GenericStorage;
-    permitTTL?: number;
-    provider: GenericProvider;
-    registryAddresses?: Record<number, Address>;
-    registryTTL?: number;
-    relayer: RelayerDispatcher;
-    signer?: GenericSigner;
-    storage: GenericStorage;
 }
 
 // @public
@@ -1382,6 +1393,12 @@ export const ZamaSDKEvents: {
     readonly UnshieldPhase2Started: "unshield:phase2_started";
     readonly UnshieldPhase2Submitted: "unshield:phase2_submitted";
 };
+
+// Warnings were encountered during analysis:
+//
+// dist/esm/types-T0tr_-1R.d.ts:561:3 - (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
+// dist/esm/types-T0tr_-1R.d.ts:562:3 - (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
+// dist/esm/types-T0tr_-1R.d.ts:563:3 - (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

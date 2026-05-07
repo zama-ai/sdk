@@ -57,7 +57,7 @@ Balances are stored as ciphertext handles. To display one, the user authorizes t
 ```ts
 import { ZamaSDK } from "@zama-fhe/sdk";
 
-const sdk = new ZamaSDK({ relayer, signer, storage });
+const sdk = new ZamaSDK(config); // config from createConfig()
 const token = sdk.createToken("0xConfidentialToken");
 
 // First call prompts the wallet for an EIP-712 session signature;
@@ -146,7 +146,7 @@ In all cases, the user sees a single unified balance for the underlying asset.
 
 ### Shield (wrap)
 
-`Token.shield` wraps a standard ERC-20 into its ERC-7984 form. The SDK handles the underlying ERC-20 approval, the wrapper deposit, and decimal conversion. The encrypted balance lands in the recipient's address (defaulting to the connected wallet).
+`Token.shield` wraps a standard ERC-20 into its ERC-7984 form. The SDK handles the wrapping flow internally — using `transferAndCall` for ERC-1363 underlyings (one transaction) or `approve` + `wrap` for everything else (two transactions) — plus decimal conversion. The encrypted balance lands in the recipient's address (defaulting to the connected wallet). See [Shielding paths](/guides/shield-tokens#shielding-paths) for which currently-wrapped tokens use which path.
 
 {% tabs %}
 {% tab title="SDK" %}

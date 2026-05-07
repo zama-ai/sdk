@@ -212,6 +212,9 @@ export class ApprovalFailedError extends ZamaError {
 }
 
 // @public
+export type ApprovalStrategy = "max" | "exact" | "skip";
+
+// @public
 export function approveContract(tokenAddress: Address, spender: Address, value: bigint): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
@@ -564,10 +567,23 @@ export interface BatchDecryptAsOptions {
     onError?: (error: Error, address: Address) => bigint;
 }
 
-// Warning: (ae-internal-missing-underscore) The name "buildZamaConfig" should be prefixed with an underscore because the declaration is marked as @internal
-//
-// @internal
-export function buildZamaConfig(signer: GenericSigner | undefined, provider: GenericProvider, params: ZamaConfigBase): ZamaConfig;
+// @public (undocumented)
+export interface BatchDecryptHandleItem {
+    // (undocumented)
+    contractAddress: Address;
+    // (undocumented)
+    error?: ZamaError;
+    // (undocumented)
+    handle: Handle;
+    // (undocumented)
+    value?: ClearValueType;
+}
+
+// @public (undocumented)
+export interface BatchDecryptHandlesResult {
+    // (undocumented)
+    items: BatchDecryptHandleItem[];
+}
 
 // @public
 export class ChainMismatchError extends ZamaError {
@@ -6111,16 +6127,6 @@ export function decodeUnwrapRequested(log: RawLog): UnwrapRequestedEvent | null;
 // @public
 export function decodeWrapped(log: RawLog): WrappedEvent | null;
 
-// @public
-export class DecryptCache {
-    constructor(storage: GenericStorage);
-    clearAll(): Promise<void>;
-    clearForRequester(requester: Address): Promise<void>;
-    delete(requester: Address, contractAddress: Address, handle: Handle): Promise<void>;
-    get(requester: Address, contractAddress: Address, handle: Handle): Promise<ClearValueType | null>;
-    set(requester: Address, contractAddress: Address, handle: Handle, value: ClearValueType): Promise<void>;
-}
-
 // @public (undocumented)
 export interface DecryptEndEvent extends BaseEvent {
     // (undocumented)
@@ -6398,6 +6404,9 @@ export interface EncryptStartEvent extends BaseEvent {
     // (undocumented)
     type: typeof ZamaSDKEvents.EncryptStart;
 }
+
+// @public
+export const ERC1363_INTERFACE_ID: "0xb0202a11";
 
 // @public
 export class ERC20ReadFailedError extends ZamaError {
@@ -14646,12 +14655,16 @@ export interface ShieldCallbacks {
 
 // @public
 export interface ShieldOptions extends ShieldCallbacks {
-    approvalStrategy?: "max" | "exact" | "skip";
+    approvalStrategy?: ApprovalStrategy;
     to?: Address;
 }
 
+// @public
+export type ShieldPath = "transferAndCall" | "approveAndWrap";
+
 // @public (undocumented)
 export interface ShieldSubmittedEvent extends BaseEvent {
+    shieldPath: ShieldPath;
     // (undocumented)
     txHash: Hex;
     // (undocumented)
@@ -14870,6 +14883,7 @@ export class Token extends ReadonlyToken {
     }): Promise<TransactionResult>;
     finalizeUnwrap(unwrapRequestIdOrAmount: Handle): Promise<TransactionResult>;
     isOperator(holder: Address, spender: Address): Promise<boolean>;
+    isPayable(): Promise<boolean>;
     resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     revokeDelegation(input: {
         delegateAddress: Address;
@@ -14949,10 +14963,13 @@ export function totalSupplyContract(wrapperAddress: Address): {
 // @public (undocumented)
 export interface TransactionErrorEvent extends BaseEvent {
     error: Error;
-    operation: string;
+    operation: TransactionErrorOperation;
     // (undocumented)
     type: typeof ZamaSDKEvents.TransactionError;
 }
+
+// @public
+export type TransactionErrorOperation = "approveUnderlying" | "delegateDecryption" | "finalizeUnwrap" | "revokeDelegation" | "setOperator" | "shield:transferAndCall" | "shield:approveAndWrap" | "transfer" | "transferFrom" | "unwrap";
 
 // @public
 export interface TransactionReceipt {
@@ -14969,6 +14986,32 @@ export interface TransactionResult {
 export class TransactionRevertedError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
+
+// @public
+export function transferAndCallContract(tokenAddress: Address, to: Address, amount: bigint, data?: Hex): {
+    readonly address: `0x${string}`;
+    readonly abi: readonly [{
+        readonly type: "function";
+        readonly name: "transferAndCall";
+        readonly stateMutability: "nonpayable";
+        readonly inputs: readonly [{
+            readonly name: "to";
+            readonly type: "address";
+        }, {
+            readonly name: "value";
+            readonly type: "uint256";
+        }, {
+            readonly name: "data";
+            readonly type: "bytes";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bool";
+        }];
+    }];
+    readonly functionName: "transferAndCall";
+    readonly args: readonly [`0x${string}`, bigint, `0x${string}`];
+};
 
 // @public
 export interface TransferCallbacks {
@@ -19908,28 +19951,20 @@ export interface WriteContractConfig<TAbi extends ContractAbi = ContractAbi, TFu
 export type WriteFunctionName<TAbi extends ContractAbi = ContractAbi> = ContractFunctionName<TAbi, "nonpayable" | "payable">;
 
 // @public
-export interface ZamaConfig {
-    // (undocumented)
+export type ZamaConfig = {
     readonly chains: readonly FheChain[];
-    // (undocumented)
-    readonly keypairTTL: number | undefined;
-    // (undocumented)
-    readonly onEvent: ZamaSDKEventListener | undefined;
-    // (undocumented)
-    readonly permitStorage: GenericStorage;
-    // (undocumented)
-    readonly permitTTL: number | undefined;
-    // (undocumented)
-    readonly provider: GenericProvider;
-    // (undocumented)
-    readonly registryTTL: number | undefined;
-    // (undocumented)
     readonly relayer: RelayerDispatcher;
-    // (undocumented)
+    readonly provider: GenericProvider;
     readonly signer: GenericSigner | undefined;
-    // (undocumented)
     readonly storage: GenericStorage;
-}
+    readonly permitStorage: GenericStorage;
+    readonly keypairTTL: number;
+    readonly permitTTL: number;
+    readonly registryTTL: number;
+    readonly onEvent: ZamaSDKEventListener | undefined;
+} & {
+    readonly [zamaConfigBrand]: true;
+};
 
 // @public
 export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChain> {
@@ -20020,14 +20055,20 @@ export type ZamaErrorCode = (typeof ZamaErrorCode)[keyof typeof ZamaErrorCode];
 // @public
 export class ZamaSDK {
     [Symbol.dispose](): void;
-    constructor(config: ZamaSDKConfig);
+    constructor(config: ZamaConfig);
     allow(contracts: Address[]): Promise<void>;
     allowAs(delegator: Address, contracts: Address[]): Promise<void>;
-    readonly cache: DecryptCache;
     clearCredentials(): Promise<void>;
     createReadonlyToken(address: Address): ReadonlyToken;
     createToken(address: Address, wrapper?: Address): Token;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
+    // @internal (undocumented)
+    delegatedBatchDecryptHandlesAs(input: {
+        handles: DecryptHandle[];
+        delegatorAddress: Address;
+        accountAddress?: Address;
+        maxConcurrency?: number;
+    }): Promise<BatchDecryptHandlesResult>;
     delegateDecryption(input: {
         contractAddress: Address;
         delegateAddress: Address;
@@ -20073,21 +20114,6 @@ export class ZamaSDK {
     readonly storage: GenericStorage;
     terminate(): void;
     userDecrypt(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>>;
-}
-
-// @public
-export interface ZamaSDKConfig {
-    chains?: readonly FheChain[];
-    keypairTTL?: number;
-    onEvent?: ZamaSDKEventListener;
-    permitStorage?: GenericStorage;
-    permitTTL?: number;
-    provider: GenericProvider;
-    registryAddresses?: Record<number, Address>;
-    registryTTL?: number;
-    relayer: RelayerDispatcher;
-    signer?: GenericSigner;
-    storage: GenericStorage;
 }
 
 // @public

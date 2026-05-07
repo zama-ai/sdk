@@ -41,22 +41,7 @@ export function ZamaProvider({ children, config }: ZamaProviderProps) {
     onEventRef.current = config.onEvent;
   });
 
-  const sdk = useMemo(
-    () =>
-      new ZamaSDK({
-        chains: config.chains,
-        relayer: config.relayer,
-        provider: config.provider,
-        signer: config.signer,
-        storage: config.storage,
-        permitStorage: config.permitStorage,
-        keypairTTL: config.keypairTTL,
-        permitTTL: config.permitTTL,
-        registryTTL: config.registryTTL,
-        onEvent: onEventRef.current,
-      }),
-    [config],
-  );
+  const sdk = useMemo(() => new ZamaSDK({ ...config, onEvent: onEventRef.current }), [config]);
 
   // SDK internally does credential/cache cleanup. React layer clears the
   // wallet-lifecycle query state.

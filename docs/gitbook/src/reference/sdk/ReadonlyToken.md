@@ -23,7 +23,7 @@ Instance creation via [`ZamaSDK.createReadonlyToken()`](/reference/sdk/ZamaSDK#c
 ```ts
 import { ReadonlyToken, ZamaSDK } from "@zama-fhe/sdk";
 
-const sdk = new ZamaSDK({ relayer, provider, signer, storage });
+const sdk = new ZamaSDK(config); // config from createConfig()
 const tokens = addresses.map((a) => sdk.createReadonlyToken(a));
 
 // One wallet signature covers all tokens

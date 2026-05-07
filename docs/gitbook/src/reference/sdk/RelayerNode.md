@@ -7,27 +7,15 @@ description: Node.js relayer that runs FHE operations in native worker threads.
 
 Node.js relayer that runs FHE operations in native worker threads. The server-side counterpart to `RelayerWeb`.
 
-## Import
-
-```ts
-import { RelayerNode } from "@zama-fhe/sdk/node";
-```
-
-{% hint style="info" %}
-`RelayerNode` is exported from the `/node` sub-path, not the main entry point.
-{% endhint %}
-
-{% hint style="info" %}
-For most applications, prefer the `node()` transport factory with `createConfig` instead of constructing `RelayerNode` directly. See [Network Presets](/reference/sdk/network-presets) for examples.
+{% hint style="warning" %}
+`RelayerNode`, `NodeWorkerClient`, and `NodeWorkerPool` are internal classes — they are no longer exported from `@zama-fhe/sdk/node`. Use the `node()` transport factory with `createConfig` instead.
 {% endhint %}
 
 ## Usage
 
-{% tabs %}
-{% tab title="Recommended (node transport)" %}
-
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
+import { ZamaSDK } from "@zama-fhe/sdk";
 import { node } from "@zama-fhe/sdk/node";
 import { sepolia } from "@zama-fhe/sdk/chains";
 
@@ -39,41 +27,17 @@ const config = createConfig({
     [sepolia.id]: node({ poolSize: 4 }),
   },
 });
+
+const sdk = new ZamaSDK(config);
 ```
 
-{% endtab %}
-{% tab title="Direct construction" %}
+## `node()` options
 
-```ts
-import { RelayerNode } from "@zama-fhe/sdk/node";
-import { sepolia } from "@zama-fhe/sdk/chains";
+### poolSize
 
-const relayer = new RelayerNode({
-  chain: {
-    ...sepolia,
-    network: "https://sepolia.infura.io/v3/YOUR_KEY",
-    auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY },
-  },
-  pool: nodeWorkerPool,
-});
-```
+`number | undefined`
 
-{% endtab %}
-{% endtabs %}
-
-## Constructor (`RelayerNodeConfig`)
-
-### chain
-
-`FheChain`
-
-FHE chain configuration. Use a built-in chain preset (`sepolia`, `mainnet`, `hoodi`, `hardhat`) or a custom `FheChain` object. Include `auth` for relayer authentication.
-
-### pool
-
-`NodeWorkerPool`
-
-Native worker thread pool for FHE operations.
+Number of native worker threads. Default: `min(CPU cores, 4)`. Must be a positive integer.
 
 ### logger
 
@@ -91,10 +55,10 @@ Persistent storage for caching FHE public key and params.
 
 `number | undefined`
 
-How long cached FHE artifacts remain valid, in seconds.
+How long cached FHE artifacts remain valid, in seconds. Must be a non-negative integer.
 
 ## Related
 
-- [ZamaSDK](/reference/sdk/ZamaSDK) — pass the relayer to the SDK constructor
+- [ZamaSDK](/reference/sdk/ZamaSDK) — pass the config to the SDK constructor
 - [RelayerWeb](/reference/sdk/RelayerWeb) — browser variant using Web Workers and WASM
 - [Configuration guide](/guides/configuration) — authentication and network presets

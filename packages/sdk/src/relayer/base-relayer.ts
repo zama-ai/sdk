@@ -1,6 +1,5 @@
 import type { Address } from "viem";
 import type { FheChain } from "../chains/types";
-import { ConfigurationError } from "../errors";
 
 export abstract class BaseRelayer {
   #initPromise: Promise<void> | null = null;
@@ -22,9 +21,6 @@ export abstract class BaseRelayer {
   }
 
   async getAclAddress(): Promise<Address> {
-    if (!this.chain.aclContractAddress) {
-      throw new ConfigurationError(`No ACL address configured for chain ${this.chain.id}`);
-    }
     return this.chain.aclContractAddress;
   }
 }

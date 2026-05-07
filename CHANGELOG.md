@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.0.0-alpha.33](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.32...v3.0.0-alpha.33) (2026-05-07)
+
+## [3.0.0-alpha.32](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.31...v3.0.0-alpha.32) (2026-05-06)
+
+### Features
+
+- **sdk:** detect ERC-1363 support and route Token.shield() accordingly [SDK-145] ([#320](https://github.com/zama-ai/sdk/issues/320)) ([36f6923]()), closes [#shieldViaTransferAndCall]() [#shieldViaApproveAndWrap]() [#resolveShieldingPath]() [#erc1363Supported]() [#resolveShieldingPath]() [#shieldViaTransferAndCall]()
+
 ## [3.0.0-alpha.31](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.30...v3.0.0-alpha.31) (2026-05-05)
 
 ## [3.0.0-alpha.30](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.29...v3.0.0-alpha.30) (2026-05-05)

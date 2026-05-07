@@ -152,12 +152,13 @@ export type { RelayerSDK } from "../relayer/relayer-sdk";
 export type { BatchBalancesResult, BatchDecryptAsOptions } from "../token/readonly-token";
 export type { ReadonlyToken } from "../token/readonly-token";
 export type { Token } from "../token/token";
-export type { ZamaSDKConfig } from "../zama-sdk";
 export type { ZamaSDK } from "../zama-sdk";
+export type { ZamaConfig } from "../config";
 export type { Keypair } from "../credentials";
 export type {
   GenericSigner,
   GenericStorage,
+  ApprovalStrategy,
   ShieldCallbacks,
   WalletAccount,
   WalletAccountChange,
@@ -165,6 +166,7 @@ export type {
   TransactionReceipt,
   TransactionResult,
   ShieldOptions,
+  ShieldPath,
   TransferCallbacks,
   TransferOptions,
   UnshieldCallbacks,
@@ -184,6 +186,7 @@ export type {
   FinalizeUnwrapSubmittedEvent,
   ShieldSubmittedEvent,
   TransactionErrorEvent,
+  TransactionErrorOperation,
   TransferFromSubmittedEvent,
   TransferSubmittedEvent,
   UnshieldPhase1SubmittedEvent,

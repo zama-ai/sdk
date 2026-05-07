@@ -17,7 +17,7 @@ import { WrappersRegistry, DefaultRegistryAddresses } from "@zama-fhe/sdk";
 
 ### From ZamaSDK
 
-The SDK exposes a shared registry instance via `sdk.registry`. This is the recommended way to access the registry — it shares the SDK's provider, `registryAddresses`, and `registryTTL`, and maintains a single in-memory cache.
+The SDK exposes a shared registry instance via `sdk.registry`. This is the recommended way to access the registry — it shares the SDK's provider, chain registry addresses, and `registryTTL`, and maintains a single in-memory cache.
 
 ```ts
 const pairs = await sdk.registry.listPairs({ page: 1 });

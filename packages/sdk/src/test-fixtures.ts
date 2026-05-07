@@ -2,9 +2,12 @@
 // oxlint-disable jest/no-disabled-tests
 /* eslint-disable no-empty-pattern */
 import { test as base, vi } from "vitest";
+import type { FheChain } from "./chains/types";
+import type { ZamaConfig } from "./config/types";
 import { ZamaSDKEvents } from "./events/sdk-events";
 import type { RelayerSDK } from "./relayer/relayer-sdk";
 import type { Handle } from "./relayer/relayer-sdk.types";
+import { CachingService } from "./services/caching-service";
 import type { QueryClient } from "@tanstack/query-core";
 import type { Address, Hex } from "viem";
 import type { CredentialServiceConfig } from "./credentials/credential-service";
@@ -13,8 +16,10 @@ import { MemoryStorage } from "./storage/memory-storage";
 import { ReadonlyToken } from "./token/readonly-token";
 import { Token } from "./token/token";
 import type { GenericProvider, GenericSigner, GenericStorage, TransactionResult } from "./types";
-import type { ZamaSDKConfig } from "./zama-sdk";
 import { ZamaSDK } from "./zama-sdk";
+import { DecryptionService } from "./services/decryption-service";
+import { DelegationService } from "./services/delegation-service";
+import type { ZamaSDKEventInput } from "./events/sdk-events";
 export { afterEach, beforeEach, describe, expect, vi, type Mock } from "vitest";
 
 const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
@@ -30,6 +35,28 @@ export const TEST_SIGNATURE = `0x${"33".repeat(65)}` as Hex;
 
 export const TEST_ADDR_A = ACL;
 export const TEST_ADDR_B = DELEGATE;
+
+const STUB_ADDRESS = "0x0000000000000000000000000000000000000001" as Address;
+
+/**
+ * Build a complete {@link FheChain} stub for tests.
+ * Use this in tests that only care about `chain.id` but flow through code paths
+ * that schema-validate the chain shape (e.g. `RelayerDispatcher`).
+ */
+export function createMockChain(overrides: Partial<FheChain> & { id: number }): FheChain {
+  return {
+    gatewayChainId: 1,
+    relayerUrl: "",
+    network: "http://localhost",
+    aclContractAddress: STUB_ADDRESS,
+    kmsContractAddress: STUB_ADDRESS,
+    inputVerifierContractAddress: STUB_ADDRESS,
+    verifyingContractAddressDecryption: STUB_ADDRESS,
+    verifyingContractAddressInputVerification: STUB_ADDRESS,
+    registryAddress: undefined,
+    ...overrides,
+  };
+}
 
 export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerSDK {
   return {
@@ -163,12 +190,6 @@ function createMockReadonlyToken(address: Address, signer: GenericSigner): Reado
     allow: vi.fn().mockResolvedValue(undefined),
     isAllowed: vi.fn().mockResolvedValue(true),
     revokePermits: vi.fn().mockResolvedValue(undefined),
-    cache: {
-      get: vi.fn(),
-      set: vi.fn(),
-      clearAll: vi.fn(),
-      clearForRequester: vi.fn(),
-    },
   };
   return {
     address,
@@ -203,6 +224,9 @@ interface SdkFixtures {
   readonlyToken: ReadonlyToken;
   mockToken: Token;
   credentialService: CredentialService;
+  cache: CachingService;
+  delegationService: DelegationService;
+  decryptionService: DecryptionService;
   storage: GenericStorage;
   createMockRelayer: typeof createMockRelayer;
   createMockSigner: (addressOrOverrides?: Address | Partial<GenericSigner>) => GenericSigner;
@@ -219,10 +243,22 @@ interface SdkFixtures {
   ) => Token;
   createMockReadonlyToken: (address?: Address) => ReadonlyToken;
   createCredentialService: (config: Partial<CredentialServiceConfig>) => CredentialService;
+  createDelegationService: (overrides?: {
+    provider?: GenericProvider;
+    relayer?: RelayerSDK;
+    emitEvent?: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
+  }) => DelegationService;
+  createDecryptionService: (overrides?: {
+    cache?: CachingService;
+    credentialService?: CredentialService;
+    delegationService?: DelegationService;
+    relayer?: RelayerSDK;
+    emitEvent?: (input: ZamaSDKEventInput) => void;
+  }) => DecryptionService;
   createToken: (sdk: ZamaSDK, address?: Address, wrapper?: Address) => Token;
   createReadonlyToken: (sdk: ZamaSDK, address?: Address) => ReadonlyToken;
   sdk: ZamaSDK;
-  createSDK: (overrides?: Partial<ZamaSDKConfig>) => ZamaSDK;
+  createSDK: (overrides?: Partial<ZamaConfig>) => ZamaSDK;
   events: typeof ZamaSDKEvents;
 }
 
@@ -288,6 +324,40 @@ export const test = base.extend<SdkFixtures>({
   credentialService: async ({ createCredentialService }, use) => {
     await use(createCredentialService({}));
   },
+  cache: async ({ storage }, use) => {
+    await use(new CachingService(storage));
+  },
+  createDelegationService: async ({ provider, relayer }, use) => {
+    await use(
+      (overrides = {}) =>
+        new DelegationService({
+          provider: overrides.provider ?? provider,
+          relayer: overrides.relayer ?? relayer,
+          emitEvent: overrides.emitEvent,
+        }),
+    );
+  },
+  delegationService: async ({ createDelegationService }, use) => {
+    await use(createDelegationService());
+  },
+  createDecryptionService: async (
+    { cache, credentialService, delegationService, relayer },
+    use,
+  ) => {
+    await use(
+      (overrides = {}) =>
+        new DecryptionService({
+          cache: overrides.cache ?? cache,
+          credentialService: overrides.credentialService ?? credentialService,
+          delegationService: overrides.delegationService ?? delegationService,
+          relayer: overrides.relayer ?? relayer,
+          emitEvent: overrides.emitEvent ?? vi.fn(),
+        }),
+    );
+  },
+  decryptionService: async ({ createDecryptionService }, use) => {
+    await use(createDecryptionService());
+  },
   createToken: async ({ tokenAddress }, use) => {
     await use(
       (sdk: ZamaSDK, address?: Address, wrapper?: Address) =>
@@ -344,17 +414,36 @@ export const test = base.extend<SdkFixtures>({
     await use((address?: Address) => createMockReadonlyToken(address ?? tokenAddress, signer));
   },
   sdk: async ({ relayer, provider, signer, storage }, use) => {
-    await use(new ZamaSDK({ relayer, provider, signer, storage }));
-  },
-  createSDK: async ({ provider, signer, relayer, storage }, use) => {
-    await use((overrides?: Partial<ZamaSDKConfig>) => {
-      return new ZamaSDK({
-        relayer,
+    await use(
+      new ZamaSDK({
+        chains: [createMockChain({ id: 31337 })],
+        relayer: relayer as unknown as ZamaConfig["relayer"],
         provider,
         signer,
         storage,
+        permitStorage: storage,
+        keypairTTL: 2592000,
+        permitTTL: 1,
+        registryTTL: 86400,
+        onEvent: undefined,
+      } as unknown as ZamaConfig),
+    );
+  },
+  createSDK: async ({ provider, signer, relayer, storage }, use) => {
+    await use((overrides?: Partial<ZamaConfig>) => {
+      return new ZamaSDK({
+        chains: [createMockChain({ id: 31337 })],
+        relayer: relayer as unknown as ZamaConfig["relayer"],
+        provider,
+        signer,
+        storage,
+        permitStorage: storage,
+        keypairTTL: 2592000,
+        permitTTL: 1,
+        registryTTL: 86400,
+        onEvent: undefined,
         ...overrides,
-      });
+      } as ZamaConfig);
     });
   },
   events: ZamaSDKEvents,
