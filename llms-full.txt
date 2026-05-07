@@ -459,14 +459,14 @@ function MyTokenPage() {
 
   const { data: meta } = useMetadata(TOKEN);
   const { data: balance, isLoading } = useConfidentialBalance({
-    tokenAddress: TOKEN,
+    address: TOKEN,
     account: address,
   });
   const { mutateAsync: shield, isPending: isShielding } = useShield({
-    tokenAddress: TOKEN,
+    address: TOKEN,
   });
   const { mutateAsync: transfer, isPending: isSending } = useConfidentialTransfer({
-    tokenAddress: TOKEN,
+    address: TOKEN,
   });
 
   if (!isConnected) {
@@ -1062,15 +1062,17 @@ const peer = await token.balanceOf("0xUserAddr"); // explicit holder
 
 ```tsx
 import { useAllow, useIsAllowed, useConfidentialBalance } from "@zama-fhe/react-sdk";
+import { useAccount } from "wagmi";
 
 const TOKEN = "0xConfidentialToken" as const;
 
 function Balance() {
+  const { address } = useAccount();
   const { mutate: allow, isPending: isAllowing } = useAllow();
   const { data: isAllowed } = useIsAllowed({ contractAddresses: [TOKEN] });
 
   const { data, isPending, error } = useConfidentialBalance(
-    { tokenAddress: TOKEN },
+    { address: TOKEN, account: address },
     { enabled: !!isAllowed },
   );
 
@@ -1153,7 +1155,7 @@ await wrappedToken.shield(1000n, { approvalStrategy: "skip" });
 ```tsx
 import { useShield } from "@zama-fhe/react-sdk";
 
-const { mutate, isPending } = useShield({ token: confidentialTokenAddress });
+const { mutate, isPending } = useShield({ address: confidentialTokenAddress });
 mutate({ amount: 1000n });
 ```
 
@@ -1186,7 +1188,7 @@ await wrappedToken.unshieldAll();
 ```tsx
 import { useUnshield, useUnshieldAll } from "@zama-fhe/react-sdk";
 
-const { mutate } = useUnshield({ token: confidentialTokenAddress });
+const { mutate } = useUnshield(confidentialTokenAddress);
 mutate({ amount: 500n });
 ```
 
@@ -1233,8 +1235,8 @@ if (result?.isValid) {
 ```tsx
 import { useConfidentialTokenAddress } from "@zama-fhe/react-sdk";
 
-const { data } = useConfidentialTokenAddress({ token: "0xUSDC" });
-// data: { confidentialTokenAddress, isValid } | null
+const { data } = useConfidentialTokenAddress({ tokenAddress: "0xUSDC" });
+// data: readonly [isValid: boolean, confidentialTokenAddress: Address]
 ```
 
 
@@ -1252,7 +1254,7 @@ const result = await sdk.registry.getUnderlyingToken("0xConfidentialToken");
 ```tsx
 import { useTokenAddress } from "@zama-fhe/react-sdk";
 
-const { data } = useTokenAddress({ token: confidentialTokenAddress });
+const { data } = useTokenAddress({ confidentialTokenAddress });
 ```
 
 
@@ -1926,23 +1928,17 @@ ERC-1363 is a conditional optimisation, not a recommended new default — only a
 
 ## Steps
 
-### 1. Create a token instance
+### 1. Create a wrapped-token instance
 
-Start from a configured SDK instance (see [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md)) and create a token pointing at your encrypted ERC-20 contract.
+Start from a configured SDK instance (see [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md)) and create a `WrappedToken` pointing at your confidential wrapper contract. The wrapper *is* the confidential token: `createWrappedToken(addr)` takes a single address — the wrapper's own address.
 
-Some deployments use a **wrapper contract** that is separate from the token contract itself. If your setup has a separate wrapper address, pass it as the second argument to `createToken` or as `wrapperAddress` in hooks. If the token _is_ the wrapper (single-contract deployments), you can omit it.
-
-You can resolve the wrapper address on-chain using the built-in registry:
+If you only have the underlying ERC-20 address, the built-in registry resolves the matching wrapper.
 
 
 ### Tab: Core SDK
 
 ```ts
-// Single-contract deployment (token is the wrapper)
-const token = sdk.createToken("0xEncryptedERC20Address");
-
-// Separate wrapper — pass it explicitly
-const tokenWithWrapper = sdk.createToken("0xTokenAddress", "0xWrapperAddress");
+const token = sdk.createWrappedToken("0xWrapperAddress");
 ```
 
 ### Tab: Resolve wrapper via registry
@@ -1950,25 +1946,18 @@ const tokenWithWrapper = sdk.createToken("0xTokenAddress", "0xWrapperAddress");
 ```ts
 // The registry resolves the confidential wrapper for any registered ERC-20.
 // On Mainnet, Sepolia, and Hoodi the registry address is built-in.
-const result = await sdk.registry.getConfidentialToken("0xTokenAddress");
+const result = await sdk.registry.getConfidentialToken("0xUnderlyingERC20");
 if (!result) throw new Error("No wrapper registered for this token");
 
-const token = sdk.createToken("0xTokenAddress", result.confidentialTokenAddress);
+const token = sdk.createWrappedToken(result.confidentialTokenAddress);
 ```
 
 ### Tab: React
 
 ```tsx
-import { useToken } from "@zama-fhe/react-sdk";
+import { useWrappedToken } from "@zama-fhe/react-sdk";
 
-// Without wrapper (single-contract)
-const token = useToken({ tokenAddress: "0xEncryptedERC20Address" });
-
-// With separate wrapper
-const tokenWithWrapper = useToken({
-  tokenAddress: "0xTokenAddress",
-  wrapperAddress: "0xWrapperAddress",
-});
+const token = useWrappedToken("0xWrapperAddress");
 ```
 
 
@@ -1992,8 +1981,7 @@ console.log("Shield tx:", txHash);
 import { useShield } from "@zama-fhe/react-sdk";
 
 const { mutateAsync: shield, isPending } = useShield({
-  tokenAddress: "0xEncryptedERC20Address",
-  wrapperAddress: "0xWrapperAddress", // omit if token is the wrapper
+  address: "0xWrapperAddress",
 });
 
 const txHash = await shield({ amount: 1000n });
@@ -2067,8 +2055,7 @@ const {
   isPending,
   isSuccess,
 } = useShield({
-  tokenAddress: "0xEncryptedERC20Address",
-  wrapperAddress: "0xWrapperAddress", // omit if token is the wrapper
+  address: "0xWrapperAddress",
 });
 
 // isPending is true while the transaction is in flight
@@ -2115,7 +2102,7 @@ const token = sdk.createToken("0xEncryptedERC20Address");
 ```tsx
 import { useToken } from "@zama-fhe/react-sdk";
 
-const token = useToken({ tokenAddress: "0xEncryptedERC20Address" });
+const token = useToken("0xEncryptedERC20Address");
 ```
 
 
@@ -2139,7 +2126,7 @@ console.log("Transfer tx:", txHash);
 import { useConfidentialTransfer } from "@zama-fhe/react-sdk";
 
 const { mutateAsync: transfer, isPending } = useConfidentialTransfer({
-  tokenAddress: "0xEncryptedERC20Address",
+  address: "0xEncryptedERC20Address",
 });
 
 const txHash = await transfer({
@@ -2171,9 +2158,9 @@ const { txHash } = await token.confidentialTransferFrom(
 ```tsx
 import { useConfidentialTransferFrom } from "@zama-fhe/react-sdk";
 
-const { mutateAsync: transferFrom } = useConfidentialTransferFrom({
-  tokenAddress: "0xEncryptedERC20Address",
-});
+const { mutateAsync: transferFrom } = useConfidentialTransferFrom(
+  "0xEncryptedERC20Address",
+);
 
 await transferFrom({
   from: "0xOwnerAddress",
@@ -2214,7 +2201,7 @@ const {
   isSuccess, // true after the mutation completes
   error, // populated if the transfer fails
 } = useConfidentialTransfer({
-  tokenAddress: "0xEncryptedERC20Address",
+  address: "0xEncryptedERC20Address",
 });
 
 // Balance caches are invalidated automatically on success.
@@ -2242,7 +2229,7 @@ function TransferForm() {
     isPending,
     error,
   } = useConfidentialTransfer({
-    tokenAddress: TOKEN,
+    address: TOKEN,
   });
 
   const handleTransfer = async () => {
@@ -2404,10 +2391,7 @@ The React SDK provides hooks that wrap the above operations with React Query mut
 ```tsx
 import { useUnshield } from "@zama-fhe/react-sdk";
 
-const { mutateAsync: unshield, isPending } = useUnshield({
-  tokenAddress: "0xToken",
-  wrapperAddress: "0xWrapper", // omit if token is the wrapper
-});
+const { mutateAsync: unshield, isPending } = useUnshield("0xWrapper");
 
 await unshield({
   amount: 500n,
@@ -2422,10 +2406,7 @@ await unshield({
 ```tsx
 import { useUnshieldAll } from "@zama-fhe/react-sdk";
 
-const { mutateAsync: unshieldAll } = useUnshieldAll({
-  tokenAddress: "0xToken",
-  wrapperAddress: "0xWrapper", // omit if token is the wrapper
-});
+const { mutateAsync: unshieldAll } = useUnshieldAll("0xWrapper");
 
 await unshieldAll();
 ```
@@ -2436,16 +2417,14 @@ await unshieldAll();
 import { useResumeUnshield } from "@zama-fhe/react-sdk";
 import { loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/sdk";
 
-const { mutateAsync: resumeUnshield } = useResumeUnshield({
-  tokenAddress: "0xToken",
-  wrapperAddress: "0xWrapper", // omit if token is the wrapper
-});
+const WRAPPER = "0xWrapper";
+const { mutateAsync: resumeUnshield } = useResumeUnshield(WRAPPER);
 
 // On mount
-const pending = await loadPendingUnshield(storage, wrapperAddress);
+const pending = await loadPendingUnshield(storage, WRAPPER);
 if (pending) {
   await resumeUnshield({ unwrapTxHash: pending });
-  await clearPendingUnshield(storage, wrapperAddress);
+  await clearPendingUnshield(storage, WRAPPER);
 }
 ```
 
@@ -2647,7 +2626,7 @@ const {
   error,
 } = useConfidentialBalance(
   {
-    tokenAddress: "0xToken",
+    address: "0xToken",
     account: address,
   },
   { refetchInterval: 5_000 },
@@ -2662,7 +2641,7 @@ import { useAccount } from "wagmi";
 
 const { address } = useAccount();
 const { data } = useConfidentialBalances({
-  tokenAddresses: ["0xTokenA", "0xTokenB", "0xTokenC"],
+  addresses: ["0xTokenA", "0xTokenB", "0xTokenC"],
   account: address,
 });
 
@@ -3673,19 +3652,17 @@ import { useAccount } from "wagmi";
 
 function OperatorPanel({ tokenAddress }: { tokenAddress: `0x${string}` }) {
   const { address } = useAccount();
-  const { mutateAsync: setOperator, isPending: isSettingOperator } = useConfidentialSetOperator({
-    tokenAddress,
-  });
+  const { mutateAsync: setOperator, isPending: isSettingOperator } =
+    useConfidentialSetOperator(tokenAddress);
 
   const { data: isOperator } = useConfidentialIsOperator({
-    tokenAddress,
+    address: tokenAddress,
     holder: address,
     spender: "0xOperator",
   });
 
-  const { mutateAsync: transferFrom, isPending: isTransferring } = useConfidentialTransferFrom({
-    tokenAddress,
-  });
+  const { mutateAsync: transferFrom, isPending: isTransferring } =
+    useConfidentialTransferFrom(tokenAddress);
 
   return (
     <div>
@@ -8155,7 +8132,7 @@ function TokenBalance({ tokenAddress }: { tokenAddress: `0x${string}` }) {
     isLoading,
     error,
   } = useConfidentialBalance({
-    tokenAddress,
+    address: tokenAddress,
     account: address,
   });
 
@@ -8200,18 +8177,18 @@ export const zamaConfig = createConfig({
 import { type UseConfidentialBalanceConfig } from "@zama-fhe/react-sdk";
 ```
 
-### tokenAddress
+### address
 
 `Address`
 
-Contract address of the confidential ERC-20 token.
+Contract address of the confidential token.
 
 
 ### Tab: component.tsx
 
 ```tsx
 const { data } = useConfidentialBalance({
-  tokenAddress: "0xToken",
+  address: "0xToken",
   account: address,
 });
 ```
@@ -8233,7 +8210,7 @@ import { useAccount } from "wagmi";
 
 const { address } = useAccount();
 const { data } = useConfidentialBalance({
-  tokenAddress: "0xToken",
+  address: "0xToken",
   account: address,
 });
 ```
@@ -8366,7 +8343,7 @@ import { useConfidentialBalances } from "@zama-fhe/react-sdk";
 
 function Portfolio({ tokens }: { tokens: `0x${string}`[] }) {
   const { data: balances, isLoading } = useConfidentialBalances({
-    tokenAddresses: tokens,
+    addresses: tokens,
     account: "0xYourAddress",
   });
 
@@ -8414,18 +8391,18 @@ export const zamaConfig = createZamaConfig({
 
 ## Parameters
 
-### tokenAddresses
+### addresses
 
 `Address[]`
 
-Array of confidential ERC-20 token contract addresses to query.
+Array of confidential token contract addresses to query.
 
 
 ### Tab: component.tsx
 
 ```tsx
 const { data } = useConfidentialBalances({
-  tokenAddresses: ["0xTokenA", "0xTokenB", "0xTokenC"],
+  addresses: ["0xTokenA", "0xTokenB", "0xTokenC"],
   account: address,
 });
 ```
@@ -8444,7 +8421,7 @@ Address whose balances to read. The query is disabled while `undefined`. Pass th
 
 ```tsx
 const { data } = useConfidentialBalances({
-  tokenAddresses: ["0xTokenA", "0xTokenB"],
+  addresses: ["0xTokenA", "0xTokenB"],
   account: "0xOwner",
 });
 ```
@@ -8573,7 +8550,7 @@ import { useConfidentialTransfer } from "@zama-fhe/react-sdk";
 
 function SendButton({ tokenAddress }: { tokenAddress: `0x${string}` }) {
   const { mutateAsync: transfer, isPending } = useConfidentialTransfer({
-    tokenAddress,
+    address: tokenAddress,
   });
 
   async function handleSend() {
@@ -8626,21 +8603,34 @@ export const zamaConfig = createZamaConfig({
 import { type UseConfidentialTransferConfig } from "@zama-fhe/react-sdk";
 ```
 
-### tokenAddress
+### address
 
 `Address`
 
-Contract address of the confidential ERC-20 token.
+Contract address of the confidential token.
 
 
 ### Tab: component.tsx
 
 ```tsx
 const { mutateAsync: transfer } = useConfidentialTransfer({
-  tokenAddress: "0xToken",
+  address: "0xToken",
 });
 ```
 
+
+### optimistic
+
+`boolean | undefined`
+
+Default: `false`. When `true`, optimistically subtracts the transfer amount from the cached confidential balance before the transaction confirms; rolls back on error.
+
+```tsx
+const { mutateAsync: transfer } = useConfidentialTransfer({
+  address: "0xToken",
+  optimistic: true,
+});
+```
 
 ---
 
@@ -8805,9 +8795,7 @@ import { useConfidentialTransferFrom } from "@zama-fhe/react-sdk";
 import { useConfidentialTransferFrom } from "@zama-fhe/react-sdk";
 
 function OperatorTransfer({ tokenAddress }: { tokenAddress: `0x${string}` }) {
-  const { mutateAsync: transferFrom, isPending } = useConfidentialTransferFrom({
-    tokenAddress,
-  });
+  const { mutateAsync: transferFrom, isPending } = useConfidentialTransferFrom(tokenAddress);
 
   async function handleTransfer() {
     const { txHash, receipt } = await transferFrom({
@@ -8856,19 +8844,17 @@ export const zamaConfig = createZamaConfig({
 
 ## Parameters
 
-### tokenAddress
+### address
 
 `Address`
 
-Contract address of the confidential ERC-20 token.
+Contract address of the confidential token. Passed positionally as the first argument.
 
 
 ### Tab: component.tsx
 
 ```tsx
-const { mutateAsync: transferFrom } = useConfidentialTransferFrom({
-  tokenAddress: "0xToken",
-});
+const { mutateAsync: transferFrom } = useConfidentialTransferFrom("0xToken");
 ```
 
 
@@ -9022,7 +9008,7 @@ import { useShield } from "@zama-fhe/react-sdk";
 import { useShield } from "@zama-fhe/react-sdk";
 
 function ShieldButton() {
-  const { mutateAsync: shield, isPending, error } = useShield({ tokenAddress: "0xToken" });
+  const { mutateAsync: shield, isPending, error } = useShield({ address: "0xWrapper" });
 
   async function handleShield() {
     const { txHash, receipt } = await shield({ amount: 1000n });
@@ -9071,15 +9057,28 @@ export const zamaConfig = createZamaConfig({
 import { type UseShieldConfig } from "@zama-fhe/react-sdk";
 ```
 
-### tokenAddress
+### address
 
 `Address`
 
-Address of the confidential ERC-20 wrapper contract.
+Address of the confidential wrapper contract.
 
 ```ts
 const { mutateAsync: shield } = useShield({
-  tokenAddress: "0xToken",
+  address: "0xWrapper",
+});
+```
+
+### optimistic
+
+`boolean | undefined`
+
+Default: `false`. When `true`, optimistically adds the wrapped amount to the cached confidential balance before the transaction confirms; rolls back on error.
+
+```ts
+const { mutateAsync: shield } = useShield({
+  address: "0xWrapper",
+  optimistic: true,
 });
 ```
 
@@ -9256,7 +9255,7 @@ import { useUnshield } from "@zama-fhe/react-sdk";
 import { useUnshield } from "@zama-fhe/react-sdk";
 
 function UnshieldButton() {
-  const { mutateAsync: unshield, isPending } = useUnshield({ tokenAddress: "0xToken" });
+  const { mutateAsync: unshield, isPending } = useUnshield("0xWrapper");
 
   async function handleUnshield() {
     await unshield({
@@ -9305,20 +9304,14 @@ export const zamaConfig = createZamaConfig({
 
 ## Parameters
 
-```ts
-import { type UnshieldParams } from "@zama-fhe/sdk/query";
-```
-
-### tokenAddress
+### address
 
 `Address`
 
-Address of the confidential ERC-20 wrapper contract.
+Address of the confidential wrapper contract. Passed positionally as the first argument.
 
 ```ts
-const { mutateAsync: unshield } = useUnshield({
-  tokenAddress: "0xToken",
-});
+const { mutateAsync: unshield } = useUnshield("0xWrapper");
 ```
 
 ---
@@ -9497,7 +9490,7 @@ import { useUnshieldAll } from "@zama-fhe/react-sdk";
 import { useUnshieldAll } from "@zama-fhe/react-sdk";
 
 function UnshieldAllButton() {
-  const { mutateAsync: unshieldAll, isPending } = useUnshieldAll({ tokenAddress: "0xToken" });
+  const { mutateAsync: unshieldAll, isPending } = useUnshieldAll("0xWrapper");
 
   async function handleUnshieldAll() {
     await unshieldAll({
@@ -9545,16 +9538,14 @@ export const zamaConfig = createZamaConfig({
 
 ## Parameters
 
-### tokenAddress
+### address
 
 `Address`
 
-Address of the confidential ERC-20 wrapper contract.
+Address of the confidential wrapper contract. Passed positionally as the first argument.
 
 ```ts
-const { mutateAsync: unshieldAll } = useUnshieldAll({
-  tokenAddress: "0xToken",
-});
+const { mutateAsync: unshieldAll } = useUnshieldAll("0xWrapper");
 ```
 
 ---
@@ -9713,9 +9704,7 @@ const TOKEN = "0xToken" as const;
 
 function ResumeUnshieldGuard() {
   const sdk = useZamaSDK();
-  const { mutateAsync: resumeUnshield } = useResumeUnshield({
-    tokenAddress: TOKEN,
-  });
+  const { mutateAsync: resumeUnshield } = useResumeUnshield(TOKEN);
 
   useEffect(() => {
     async function checkPending() {
@@ -9762,16 +9751,14 @@ export const zamaConfig = createZamaConfig({
 
 ## Parameters
 
-### tokenAddress
+### address
 
 `Address`
 
-Address of the confidential ERC-20 wrapper contract.
+Address of the confidential wrapper contract. Passed positionally as the first argument.
 
 ```ts
-const { mutateAsync: resumeUnshield } = useResumeUnshield({
-  tokenAddress: "0xToken",
-});
+const { mutateAsync: resumeUnshield } = useResumeUnshield("0xWrapper");
 ```
 
 ---
@@ -9884,7 +9871,7 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 - [useUnshield](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnshield.md) — standard unshield (handles both steps automatically)
 - [useUnshieldAll](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnshieldAll.md) — unshield the entire balance
-- [Token.resumeUnshield](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md#resumeunshield) — imperative equivalent on the `Token` class
+- [WrappedToken.resumeUnshield](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WrappedToken.md#resumeunshield) — imperative equivalent on the `WrappedToken` class
 
 ## useUnwrap
 
@@ -9917,9 +9904,7 @@ import { useUnwrap } from "@zama-fhe/react-sdk";
 import { useUnwrap } from "@zama-fhe/react-sdk";
 
 function UnwrapButton() {
-  const { mutateAsync: unwrap, isPending } = useUnwrap({
-    tokenAddress: "0xToken",
-  });
+  const { mutateAsync: unwrap, isPending } = useUnwrap("0xWrapper");
 
   const handleUnwrap = async () => {
     const txHash = await unwrap({ amount: 500n });
@@ -9938,16 +9923,14 @@ function UnwrapButton() {
 
 ## Parameters
 
-### tokenAddress
+### address
 
 `Address`
 
-Address of the confidential token wrapper contract.
+Address of the confidential wrapper contract. Passed positionally as the first argument.
 
 ```tsx
-const { mutateAsync: unwrap } = useUnwrap({
-  tokenAddress: "0xToken",
-});
+const { mutateAsync: unwrap } = useUnwrap("0xWrapper");
 ```
 
 ## Mutation variables
@@ -10052,9 +10035,7 @@ import { useUnwrapAll } from "@zama-fhe/react-sdk";
 import { useUnwrapAll } from "@zama-fhe/react-sdk";
 
 function UnwrapAllButton() {
-  const { mutateAsync: unwrapAll, isPending } = useUnwrapAll({
-    tokenAddress: "0xToken",
-  });
+  const { mutateAsync: unwrapAll, isPending } = useUnwrapAll("0xWrapper");
 
   const handleUnwrapAll = async () => {
     const txHash = await unwrapAll();
@@ -10073,16 +10054,14 @@ function UnwrapAllButton() {
 
 ## Parameters
 
-### tokenAddress
+### address
 
 `Address`
 
-Address of the confidential token wrapper contract.
+Address of the confidential wrapper contract. Passed positionally as the first argument.
 
 ```tsx
-const { mutateAsync: unwrapAll } = useUnwrapAll({
-  tokenAddress: "0xToken",
-});
+const { mutateAsync: unwrapAll } = useUnwrapAll("0xWrapper");
 ```
 
 ## Return Type
@@ -10176,10 +10155,8 @@ import { useUnwrap, useFinalizeUnwrap } from "@zama-fhe/react-sdk";
 import { findUnwrapRequested } from "@zama-fhe/sdk";
 
 function TwoStepUnshield() {
-  const { mutateAsync: unwrap } = useUnwrap({ tokenAddress: "0xToken" });
-  const { mutateAsync: finalize, isPending } = useFinalizeUnwrap({
-    tokenAddress: "0xToken",
-  });
+  const { mutateAsync: unwrap } = useUnwrap("0xWrapper");
+  const { mutateAsync: finalize, isPending } = useFinalizeUnwrap("0xWrapper");
 
   const handleUnshield = async () => {
     // Step 1: submit the unwrap and find the event in the receipt
@@ -10205,16 +10182,14 @@ function TwoStepUnshield() {
 
 ## Parameters
 
-### tokenAddress
+### address
 
 `Address`
 
-Address of the confidential token wrapper contract.
+Address of the confidential wrapper contract. Passed positionally as the first argument.
 
 ```tsx
-const { mutateAsync: finalize } = useFinalizeUnwrap({
-  tokenAddress: "0xToken",
-});
+const { mutateAsync: finalize } = useFinalizeUnwrap("0xWrapper");
 ```
 
 ## Mutation variables
@@ -10894,11 +10869,11 @@ function ApproveOperator({ tokenAddress }: { tokenAddress: `0x${string}` }) {
 
 ## Parameters
 
-### tokenAddress
+### address
 
 `Address`
 
-Address of the confidential ERC-20 wrapper contract.
+Address of the confidential token contract. Passed positionally as the first argument.
 
 ```ts
 const { mutateAsync: setOperator } = useConfidentialSetOperator("0xToken");
@@ -11029,7 +11004,7 @@ function OperatorStatus({
   spender: `0x${string}`;
 }) {
   const { data: isOperator, isLoading } = useConfidentialIsOperator({
-    tokenAddress,
+    address: tokenAddress,
     holder,
     spender,
   });
@@ -11042,11 +11017,11 @@ function OperatorStatus({
 
 ## Parameters
 
-### tokenAddress
+### address
 
 `Address`
 
-Address of the confidential ERC-20 wrapper contract.
+Address of the confidential token contract.
 
 ### holder
 
@@ -11062,7 +11037,7 @@ Address of the operator to check. The query is disabled while `undefined`.
 
 ```ts
 const { data: isOperator } = useConfidentialIsOperator({
-  tokenAddress: "0xToken",
+  address: "0xToken",
   holder: "0xOwner",
   spender: "0xDEX",
 });
@@ -11193,9 +11168,16 @@ import { useUnderlyingAllowance } from "@zama-fhe/react-sdk";
 ```tsx
 import { useUnderlyingAllowance } from "@zama-fhe/react-sdk";
 
-function AllowanceDisplay({ tokenAddress }: { tokenAddress: `0x${string}` }) {
+function AllowanceDisplay({
+  wrapperAddress,
+  owner,
+}: {
+  wrapperAddress: `0x${string}`;
+  owner: `0x${string}` | undefined;
+}) {
   const { data: allowance, isLoading } = useUnderlyingAllowance({
-    tokenAddress,
+    address: wrapperAddress,
+    owner,
   });
 
   if (isLoading) return <span>Loading allowance...</span>;
@@ -11206,15 +11188,16 @@ function AllowanceDisplay({ tokenAddress }: { tokenAddress: `0x${string}` }) {
 
 ## Parameters
 
-### tokenAddress
+### address
 
 `Address`
 
-Address of the confidential ERC-20 wrapper contract. The hook reads the underlying ERC-20 allowance granted to this wrapper.
+Address of the confidential wrapper contract. The hook reads the underlying ERC-20 allowance granted by `owner` to this wrapper.
 
 ```ts
 const { data: allowance } = useUnderlyingAllowance({
-  tokenAddress: "0xWrapper",
+  address: "0xWrapper",
+  owner: "0xOwner",
 });
 ```
 
@@ -11224,25 +11207,12 @@ const { data: allowance } = useUnderlyingAllowance({
 
 `Address | undefined`
 
-Address of the token owner. Defaults to the connected wallet address.
+Address whose allowance to read. The query is disabled while `undefined`.
 
 ```ts
 const { data: allowance } = useUnderlyingAllowance({
-  tokenAddress: "0xWrapper",
+  address: "0xWrapper",
   owner: "0xOwner",
-});
-```
-
-### spender
-
-`Address | undefined`
-
-Address of the spender. Defaults to the wrapper contract address.
-
-```ts
-const { data: allowance } = useUnderlyingAllowance({
-  tokenAddress: "0xWrapper",
-  spender: "0xSpender",
 });
 ```
 
@@ -11313,9 +11283,16 @@ Use `useUnderlyingAllowanceSuspense` inside a `<Suspense>` boundary. The hook th
 import { useUnderlyingAllowanceSuspense } from "@zama-fhe/react-sdk";
 import { Suspense } from "react";
 
-function Allowance({ tokenAddress }: { tokenAddress: `0x${string}` }) {
+function Allowance({
+  wrapperAddress,
+  owner,
+}: {
+  wrapperAddress: `0x${string}`;
+  owner: `0x${string}`;
+}) {
   const { data: allowance } = useUnderlyingAllowanceSuspense({
-    tokenAddress,
+    address: wrapperAddress,
+    owner,
   });
 
   // data is always defined — no loading state needed
@@ -11325,7 +11302,7 @@ function Allowance({ tokenAddress }: { tokenAddress: `0x${string}` }) {
 function App() {
   return (
     <Suspense fallback={<span>Loading...</span>}>
-      <Allowance tokenAddress="0xWrapper" />
+      <Allowance wrapperAddress="0xWrapper" owner="0xOwner" />
     </Suspense>
   );
 }
@@ -13446,7 +13423,7 @@ import { useDelegateDecryption } from "@zama-fhe/react-sdk";
 import { useDelegateDecryption } from "@zama-fhe/react-sdk";
 
 function DelegateButton({ tokenAddress }: { tokenAddress: `0x${string}` }) {
-  const { mutateAsync: delegate, isPending, error } = useDelegateDecryption({ tokenAddress });
+  const { mutateAsync: delegate, isPending, error } = useDelegateDecryption(tokenAddress);
 
   async function handleDelegate() {
     const { txHash } = await delegate({
@@ -13471,16 +13448,14 @@ function DelegateButton({ tokenAddress }: { tokenAddress: `0x${string}` }) {
 import { type UseZamaConfig } from "@zama-fhe/react-sdk";
 ```
 
-### tokenAddress
+### address
 
 `Address`
 
-Address of the confidential ERC-20 token contract.
+Address of the confidential token contract. Passed positionally as the first argument.
 
 ```ts
-const { mutateAsync: delegate } = useDelegateDecryption({
-  tokenAddress: "0xToken",
-});
+const { mutateAsync: delegate } = useDelegateDecryption("0xToken");
 ```
 
 ---
@@ -13619,7 +13594,7 @@ import { useRevokeDelegation } from "@zama-fhe/react-sdk";
 import { useRevokeDelegation } from "@zama-fhe/react-sdk";
 
 function RevokeButton({ tokenAddress }: { tokenAddress: `0x${string}` }) {
-  const { mutateAsync: revoke, isPending } = useRevokeDelegation({ tokenAddress });
+  const { mutateAsync: revoke, isPending } = useRevokeDelegation(tokenAddress);
 
   async function handleRevoke() {
     const { txHash } = await revoke({ delegateAddress: "0xDelegate" });
@@ -13641,16 +13616,14 @@ function RevokeButton({ tokenAddress }: { tokenAddress: `0x${string}` }) {
 import { type UseZamaConfig } from "@zama-fhe/react-sdk";
 ```
 
-### tokenAddress
+### address
 
 `Address`
 
-Address of the confidential ERC-20 token contract.
+Address of the confidential token contract. Passed positionally as the first argument.
 
 ```ts
-const { mutateAsync: revoke } = useRevokeDelegation({
-  tokenAddress: "0xToken",
-});
+const { mutateAsync: revoke } = useRevokeDelegation("0xToken");
 ```
 
 ---
@@ -13996,11 +13969,11 @@ function DelegatedBalance({
 
 ## Parameters
 
-### tokenAddress
+### address
 
 `Address`
 
-Address of the confidential token contract. Passed as the first argument to `useDecryptBalanceAs`.
+Address of the confidential token contract. Passed positionally as the first argument.
 
 ```ts
 const { mutateAsync: decryptAs } = useDecryptBalanceAs("0xToken");

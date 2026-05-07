@@ -194,7 +194,7 @@ const {
   error,
 } = useConfidentialBalance(
   {
-    tokenAddress: "0xToken",
+    address: "0xToken",
     account: address,
   },
   { refetchInterval: 5_000 },
@@ -210,7 +210,7 @@ import { useAccount } from "wagmi";
 
 const { address } = useAccount();
 const { data } = useConfidentialBalances({
-  tokenAddresses: ["0xTokenA", "0xTokenB", "0xTokenC"],
+  addresses: ["0xTokenA", "0xTokenB", "0xTokenC"],
   account: address,
 });
 

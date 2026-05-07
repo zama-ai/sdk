@@ -42,11 +42,11 @@ function ApproveOperator({ tokenAddress }: { tokenAddress: `0x${string}` }) {
 
 ## Parameters
 
-### tokenAddress
+### address
 
 `Address`
 
-Address of the confidential ERC-20 wrapper contract.
+Address of the confidential token contract. Passed positionally as the first argument.
 
 ```ts
 const { mutateAsync: setOperator } = useConfidentialSetOperator("0xToken");

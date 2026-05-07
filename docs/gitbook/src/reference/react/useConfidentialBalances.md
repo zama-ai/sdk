@@ -23,7 +23,7 @@ import { useConfidentialBalances } from "@zama-fhe/react-sdk";
 
 function Portfolio({ tokens }: { tokens: `0x${string}`[] }) {
   const { data: balances, isLoading } = useConfidentialBalances({
-    tokenAddresses: tokens,
+    addresses: tokens,
     account: "0xYourAddress",
   });
 
@@ -74,18 +74,18 @@ export const zamaConfig = createZamaConfig({
 
 ## Parameters
 
-### tokenAddresses
+### addresses
 
 `Address[]`
 
-Array of confidential ERC-20 token contract addresses to query.
+Array of confidential token contract addresses to query.
 
 {% tabs %}
 {% tab title="component.tsx" %}
 
 ```tsx
 const { data } = useConfidentialBalances({
-  tokenAddresses: ["0xTokenA", "0xTokenB", "0xTokenC"],
+  addresses: ["0xTokenA", "0xTokenB", "0xTokenC"],
   account: address,
 });
 ```
@@ -106,7 +106,7 @@ Address whose balances to read. The query is disabled while `undefined`. Pass th
 
 ```tsx
 const { data } = useConfidentialBalances({
-  tokenAddresses: ["0xTokenA", "0xTokenB"],
+  addresses: ["0xTokenA", "0xTokenB"],
   account: "0xOwner",
 });
 ```

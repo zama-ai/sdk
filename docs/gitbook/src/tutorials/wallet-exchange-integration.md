@@ -71,15 +71,17 @@ const peer = await token.balanceOf("0xUserAddr"); // explicit holder
 
 ```tsx
 import { useAllow, useIsAllowed, useConfidentialBalance } from "@zama-fhe/react-sdk";
+import { useAccount } from "wagmi";
 
 const TOKEN = "0xConfidentialToken" as const;
 
 function Balance() {
+  const { address } = useAccount();
   const { mutate: allow, isPending: isAllowing } = useAllow();
   const { data: isAllowed } = useIsAllowed({ contractAddresses: [TOKEN] });
 
   const { data, isPending, error } = useConfidentialBalance(
-    { tokenAddress: TOKEN },
+    { address: TOKEN, account: address },
     { enabled: !!isAllowed },
   );
 
@@ -168,7 +170,7 @@ await wrappedToken.shield(1000n, { approvalStrategy: "skip" });
 ```tsx
 import { useShield } from "@zama-fhe/react-sdk";
 
-const { mutate, isPending } = useShield({ token: confidentialTokenAddress });
+const { mutate, isPending } = useShield({ address: confidentialTokenAddress });
 mutate({ amount: 1000n });
 ```
 
@@ -204,7 +206,7 @@ await wrappedToken.unshieldAll();
 ```tsx
 import { useUnshield, useUnshieldAll } from "@zama-fhe/react-sdk";
 
-const { mutate } = useUnshield({ token: confidentialTokenAddress });
+const { mutate } = useUnshield(confidentialTokenAddress);
 mutate({ amount: 500n });
 ```
 
@@ -253,8 +255,8 @@ if (result?.isValid) {
 ```tsx
 import { useConfidentialTokenAddress } from "@zama-fhe/react-sdk";
 
-const { data } = useConfidentialTokenAddress({ token: "0xUSDC" });
-// data: { confidentialTokenAddress, isValid } | null
+const { data } = useConfidentialTokenAddress({ tokenAddress: "0xUSDC" });
+// data: readonly [isValid: boolean, confidentialTokenAddress: Address]
 ```
 
 {% endtab %}
@@ -275,7 +277,7 @@ const result = await sdk.registry.getUnderlyingToken("0xConfidentialToken");
 ```tsx
 import { useTokenAddress } from "@zama-fhe/react-sdk";
 
-const { data } = useTokenAddress({ token: confidentialTokenAddress });
+const { data } = useTokenAddress({ confidentialTokenAddress });
 ```
 
 {% endtab %}

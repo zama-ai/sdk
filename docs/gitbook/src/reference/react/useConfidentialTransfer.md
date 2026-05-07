@@ -23,7 +23,7 @@ import { useConfidentialTransfer } from "@zama-fhe/react-sdk";
 
 function SendButton({ tokenAddress }: { tokenAddress: `0x${string}` }) {
   const { mutateAsync: transfer, isPending } = useConfidentialTransfer({
-    tokenAddress,
+    address: tokenAddress,
   });
 
   async function handleSend() {
@@ -79,23 +79,36 @@ export const zamaConfig = createZamaConfig({
 import { type UseConfidentialTransferConfig } from "@zama-fhe/react-sdk";
 ```
 
-### tokenAddress
+### address
 
 `Address`
 
-Contract address of the confidential ERC-20 token.
+Contract address of the confidential token.
 
 {% tabs %}
 {% tab title="component.tsx" %}
 
 ```tsx
 const { mutateAsync: transfer } = useConfidentialTransfer({
-  tokenAddress: "0xToken",
+  address: "0xToken",
 });
 ```
 
 {% endtab %}
 {% endtabs %}
+
+### optimistic
+
+`boolean | undefined`
+
+Default: `false`. When `true`, optimistically subtracts the transfer amount from the cached confidential balance before the transaction confirms; rolls back on error.
+
+```tsx
+const { mutateAsync: transfer } = useConfidentialTransfer({
+  address: "0xToken",
+  optimistic: true,
+});
+```
 
 ---
 

@@ -22,9 +22,7 @@ import { useConfidentialTransferFrom } from "@zama-fhe/react-sdk";
 import { useConfidentialTransferFrom } from "@zama-fhe/react-sdk";
 
 function OperatorTransfer({ tokenAddress }: { tokenAddress: `0x${string}` }) {
-  const { mutateAsync: transferFrom, isPending } = useConfidentialTransferFrom({
-    tokenAddress,
-  });
+  const { mutateAsync: transferFrom, isPending } = useConfidentialTransferFrom(tokenAddress);
 
   async function handleTransfer() {
     const { txHash, receipt } = await transferFrom({
@@ -76,19 +74,17 @@ export const zamaConfig = createZamaConfig({
 
 ## Parameters
 
-### tokenAddress
+### address
 
 `Address`
 
-Contract address of the confidential ERC-20 token.
+Contract address of the confidential token. Passed positionally as the first argument.
 
 {% tabs %}
 {% tab title="component.tsx" %}
 
 ```tsx
-const { mutateAsync: transferFrom } = useConfidentialTransferFrom({
-  tokenAddress: "0xToken",
-});
+const { mutateAsync: transferFrom } = useConfidentialTransferFrom("0xToken");
 ```
 
 {% endtab %}

@@ -403,32 +403,36 @@ describe("WrappedToken.shield", () => {
       expect(provider.readContract).toHaveBeenCalledTimes(2);
     });
 
-    it("isPayable() caches false when supportsInterface reverts", async ({
+    it("isPayable() re-probes when supportsInterface reverts (no negative cache)", async ({
       wrappedToken: token,
       provider,
     }) => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce(UNDERLYING)
-        .mockRejectedValueOnce(new Error("supportsInterface reverted"));
+        .mockRejectedValueOnce(new Error("supportsInterface reverted"))
+        .mockResolvedValueOnce(true);
 
       expect(await token.isPayable()).toBe(false);
-      expect(await token.isPayable()).toBe(false);
-      // First call: underlying (1) + supportsInterface (1) = 2 reads.
-      // Second call: cache hit, no additional reads.
-      expect(provider.readContract).toHaveBeenCalledTimes(2);
+      // Second call re-probes: underlying is cached, but supportsInterface is retried.
+      expect(await token.isPayable()).toBe(true);
+      // Call 1: underlying (1) + supportsInterface (1) = 2 reads.
+      // Call 2: underlying cache hit (0) + supportsInterface (1) = 1 read.
+      expect(provider.readContract).toHaveBeenCalledTimes(3);
     });
 
-    it("isPayable() caches false when underlying() reverts", async ({
+    it("isPayable() re-probes when underlying() reverts (no negative cache)", async ({
       wrappedToken: token,
       provider,
     }) => {
-      vi.mocked(provider.readContract).mockRejectedValueOnce(new Error("underlying() reverted"));
+      vi.mocked(provider.readContract)
+        .mockRejectedValueOnce(new Error("underlying() reverted"))
+        .mockResolvedValueOnce(UNDERLYING)
+        .mockResolvedValueOnce(true);
 
       expect(await token.isPayable()).toBe(false);
-      expect(await token.isPayable()).toBe(false);
-      // The #underlyingPromise retries on failure (separate cache), but
-      // #isPayable is cached as false so the second call short-circuits.
-      expect(provider.readContract).toHaveBeenCalledTimes(1);
+      // Second call re-probes both underlying() and supportsInterface().
+      expect(await token.isPayable()).toBe(true);
+      expect(provider.readContract).toHaveBeenCalledTimes(3);
     });
   });
 
