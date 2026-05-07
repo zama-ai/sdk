@@ -152,27 +152,6 @@ const config = createConfig({
 
 ## Properties
 
-### cache
-
-`DecryptCache` (readonly)
-
-Persistent cache for decrypted FHE plaintext values. Backed by the same `GenericStorage` passed to the constructor (e.g. IndexedDB in browsers), so **cached values survive page reloads**.
-
-Entries are scoped by `(requester, contractAddress, handle)` — a different signer cannot read another user's cached decryptions, mirroring the on-chain ACL. When the on-chain handle changes (e.g. after a transfer), the old entry is automatically a miss.
-
-The cache is cleared automatically on:
-
-- `revoke()` / `revokeSession()` — clears entries for the current signer
-- Wallet disconnect, account change, or chain change — clears all entries
-
-```ts
-// Manual clear for a specific address
-await sdk.cache.clearForRequester("0xYourAddress");
-
-// Clear everything
-await sdk.cache.clearAll();
-```
-
 ### registry
 
 `WrappersRegistry` (readonly)
@@ -242,11 +221,11 @@ const b = await sdk.userDecrypt([{ handle: h2, contractAddress: cDAI }]);
 
 `(handles: DecryptHandle[]) => Promise<Record<Handle, ClearValueType>>`
 
-Decrypt one or more FHE handles. Returns cached values when available, only calling the relayer for uncached handles. Results are written to the persistent cache (`sdk.cache`) so subsequent calls for the same handles return instantly.
+Decrypt one or more FHE handles. Returns cached values when available, only calling the relayer for uncached handles. Results are written through the SDK's internal CachingService so subsequent calls for the same handles return instantly.
 
 Handles from different contracts can be mixed — they are grouped by `contractAddress` and batched into one relayer call per contract (up to 5 concurrently). Zero handles (32 zero bytes) resolve to `0n` without hitting the relayer.
 
-When the relayer is actually called, credentials are derived from the contract addresses of the full input handle set (including cached and zero handles), ensuring a stable credential cache key regardless of which handles happen to be cached. If every handle is zero or already cached, no credentials are acquired and no wallet prompt is shown.
+When the relayer is actually called, credentials are derived from the contract addresses of the uncached handle set. If every handle is zero or already cached, no credentials are acquired and no wallet prompt is shown.
 
 ```ts
 const values = await sdk.userDecrypt([
