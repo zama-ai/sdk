@@ -18511,7 +18511,7 @@ With `WagmiSigner` (viem-based), named fields (`tokenAddress`, `confidentialToke
 `EthersSigner`, where ethers `Result` non-enumerable prototype getters require a numeric
 index fallback).
 
-**Token-dependent hooks live in `TokenWorkspace`**: hooks such as `useIsAllowed`,
+**Token-dependent hooks live in the local `TokenWorkspace` component**: hooks such as `useIsAllowed`,
 `useConfidentialBalance`, and the ERC-20 `useReadContract` are mounted only after a registry
 pair has been selected. This keeps React hook calls unconditional inside the component while
 avoiding placeholder addresses such as `ZERO_ADDRESS`.
