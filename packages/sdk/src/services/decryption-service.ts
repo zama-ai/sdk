@@ -10,7 +10,7 @@ import type { ZamaSDKEventInput } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { DecryptHandle } from "../query/user-decrypt";
 import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
-import type { ClearValueType, Handle } from "../relayer/relayer-sdk.types";
+import type { ClearValueType, Handle, PublicDecryptResult } from "../relayer/relayer-sdk.types";
 import { pLimit } from "../utils/concurrency";
 import { isZeroHandle } from "../utils/handles";
 import { toError } from "../utils";
@@ -183,6 +183,22 @@ export class DecryptionService {
     );
 
     return { items };
+  }
+
+  async publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult> {
+    if (handles.length === 0) {
+      return {
+        clearValues: {},
+        decryptionProof: "0x",
+        abiEncodedClearValues: "0x",
+      };
+    }
+
+    try {
+      return await this.#relayer.publicDecrypt(handles);
+    } catch (error) {
+      throw wrapDecryptError(error, "Public decryption failed");
+    }
   }
 
   async #decrypt(

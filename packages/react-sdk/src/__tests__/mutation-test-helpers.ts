@@ -1,8 +1,7 @@
 import { act } from "@testing-library/react";
 import { QueryClient, type QueryKey } from "@tanstack/react-query";
-import type { Address, GenericSigner, RawLog, Token } from "@zama-fhe/sdk";
+import { ZamaSDK, type Address, type GenericSigner, type RawLog, type Token } from "@zama-fhe/sdk";
 import { expect, vi } from "../test-fixtures";
-import type { createMockRelayer } from "../../../sdk/src/test-fixtures";
 import { createMockSigner } from "../../../sdk/src/test-fixtures";
 import { expectCacheInvalidated } from "../test-helpers";
 
@@ -53,8 +52,8 @@ export function createUnwrapRequestedLog(unwrapRequestId: Address): RawLog {
   };
 }
 
-export function mockPublicDecrypt(relayer: ReturnType<typeof createMockRelayer>) {
-  vi.mocked(relayer.publicDecrypt).mockImplementation((handles: string[]) => {
+export function mockPublicDecrypt() {
+  vi.spyOn(ZamaSDK.prototype, "publicDecrypt").mockImplementation((handles) => {
     const clearValues: Record<string, bigint> = {};
     for (const h of handles) {
       clearValues[h] = 1n;

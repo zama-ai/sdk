@@ -1,12 +1,7 @@
 import { getAddress, type Address } from "viem";
 import type { ZamaConfig } from "./config/types";
 import { CredentialService } from "./credentials/credential-service";
-import {
-  ChainMismatchError,
-  SignerNotConfiguredError,
-  WalletAccountNotReadyError,
-  wrapDecryptError,
-} from "./errors";
+import { ChainMismatchError, SignerNotConfiguredError, WalletAccountNotReadyError } from "./errors";
 import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventListener } from "./events/sdk-events";
 import type { DecryptHandle } from "./query/user-decrypt";
 import type { RelayerDispatcher } from "./relayer/relayer-dispatcher";
@@ -104,7 +99,6 @@ export class ZamaSDK {
         relayer: this.relayer,
         emitEvent: (input) => this.emitEvent(input),
       });
-
       this.#unsubscribeSigner = signer.walletAccount.subscribe((change) => {
         this.#handleWalletAccountChange(change).catch((error) => {
           // oxlint-disable-next-line no-console
@@ -557,6 +551,7 @@ export class ZamaSDK {
    *
    * @param handles - FHE handles to decrypt publicly.
    * @returns Clear-text values, ABI-encoded values, and the decryption proof.
+   * @throws {@link SignerNotConfiguredError} if no signer is configured.
    *
    * @example
    * ```ts
@@ -565,19 +560,7 @@ export class ZamaSDK {
    * ```
    */
   async publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult> {
-    if (handles.length === 0) {
-      return {
-        clearValues: {},
-        decryptionProof: "0x",
-        abiEncodedClearValues: "0x",
-      };
-    }
-
-    try {
-      return await this.relayer.publicDecrypt(handles);
-    } catch (error) {
-      throw wrapDecryptError(error, "Public decryption failed");
-    }
+    return this.#requireDecryptionService("publicDecrypt").publicDecrypt(handles);
   }
 
   /**

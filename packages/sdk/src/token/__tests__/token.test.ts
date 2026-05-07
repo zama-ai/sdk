@@ -3,6 +3,7 @@ import { getAddress, type Address } from "viem";
 import { DecryptionFailedError, ZamaError, ZamaErrorCode } from "../../errors";
 import { isZeroHandle, ZERO_HANDLE } from "../../utils/handles";
 import { describe, expect, it, vi } from "../../test-fixtures";
+import type { Handle } from "../../relayer/relayer-sdk.types";
 
 describe("Token", () => {
   describe("balanceOf", () => {
@@ -337,17 +338,17 @@ describe("Token", () => {
   });
 
   describe("finalizeUnwrap", () => {
-    it("calls publicDecrypt with unwrapRequestId and finalizes on-chain", async ({
-      relayer,
+    it("calls SDK publicDecrypt with unwrapRequestId and finalizes on-chain", async ({
       signer,
       token,
     }) => {
       // unwrapRequestId comes from the UnwrapRequested event — it is a bytes32 identifier,
       // not the burn amount handle. publicDecrypt must receive this exact value.
-      const unwrapRequestId = ("0x" + "ab".repeat(32)) as `0x${string}`;
+      const unwrapRequestId = ("0x" + "ab".repeat(32)) as Handle;
+      const publicDecrypt = vi.spyOn(token.sdk, "publicDecrypt");
       const result = await token.finalizeUnwrap(unwrapRequestId);
 
-      expect(relayer.publicDecrypt).toHaveBeenCalledWith([unwrapRequestId]);
+      expect(publicDecrypt).toHaveBeenCalledWith([unwrapRequestId]);
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "finalizeUnwrap" }),
       );
@@ -357,8 +358,8 @@ describe("Token", () => {
   });
 
   describe("unshield", () => {
-    const BURN_HANDLE = "0x" + "ff".repeat(32);
-    const UNWRAP_REQUEST_ID = ("0x" + "aa".repeat(32)) as `0x${string}`;
+    const BURN_HANDLE = ("0x" + "ff".repeat(32)) as Handle;
+    const UNWRAP_REQUEST_ID = ("0x" + "aa".repeat(32)) as Handle;
 
     it("orchestrates unwrap → receipt → finalizeUnwrap", async ({
       relayer,
@@ -367,6 +368,7 @@ describe("Token", () => {
       token,
       provider,
     }) => {
+      const publicDecrypt = vi.spyOn(token.sdk, "publicDecrypt");
       vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
@@ -387,7 +389,7 @@ describe("Token", () => {
         expect.objectContaining({ functionName: "unwrap" }),
       );
       expect(provider.waitForTransactionReceipt).toHaveBeenCalledWith("0xtxhash");
-      expect(relayer.publicDecrypt).toHaveBeenCalledWith([BURN_HANDLE]);
+      expect(publicDecrypt).toHaveBeenCalledWith([BURN_HANDLE]);
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "finalizeUnwrap" }),
       );
@@ -396,12 +398,12 @@ describe("Token", () => {
     });
 
     it("uses unwrapRequestId from upgraded UnwrapRequested events", async ({
-      relayer,
       signer,
       userAddress,
       token,
       provider,
     }) => {
+      const publicDecrypt = vi.spyOn(token.sdk, "publicDecrypt");
       vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
@@ -417,7 +419,7 @@ describe("Token", () => {
 
       await token.unshield(50n, { skipBalanceCheck: true });
 
-      expect(relayer.publicDecrypt).toHaveBeenCalledWith([UNWRAP_REQUEST_ID]);
+      expect(publicDecrypt).toHaveBeenCalledWith([UNWRAP_REQUEST_ID]);
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({
           functionName: "finalizeUnwrap",
@@ -463,16 +465,16 @@ describe("Token", () => {
   });
 
   describe("unshieldAll", () => {
-    const BURN_HANDLE = "0x" + "ff".repeat(32);
+    const BURN_HANDLE = ("0x" + "ff".repeat(32)) as Handle;
 
     it("orchestrates unwrapAll → receipt → finalizeUnwrap", async ({
-      relayer,
       signer,
       userAddress,
       token,
       handle,
       provider,
     }) => {
+      const publicDecrypt = vi.spyOn(token.sdk, "publicDecrypt");
       vi.mocked(provider.readContract).mockResolvedValue(handle);
       vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
         logs: [
@@ -493,7 +495,7 @@ describe("Token", () => {
         expect.objectContaining({ functionName: "unwrap" }),
       );
       expect(provider.waitForTransactionReceipt).toHaveBeenCalledWith("0xtxhash");
-      expect(relayer.publicDecrypt).toHaveBeenCalledWith([BURN_HANDLE]);
+      expect(publicDecrypt).toHaveBeenCalledWith([BURN_HANDLE]);
       expect(result.txHash).toBe("0xtxhash");
       expect(result.receipt).toBeDefined();
     });
@@ -850,63 +852,41 @@ describe("Token", () => {
   });
 
   describe("finalizeUnwrap (error handling)", () => {
-    it("wraps publicDecrypt failure in DecryptionFailed", async ({
-      relayer,
-
-      token,
-    }) => {
-      vi.mocked(relayer.publicDecrypt).mockRejectedValueOnce(new Error("decrypt failed"));
-
-      await expect(token.finalizeUnwrap("0xburn" as Address)).rejects.toSatisfy(
-        (err: ZamaError) => {
-          return (
-            err instanceof ZamaError &&
-            err.code === ZamaErrorCode.DecryptionFailed &&
-            err.message === "Public decryption failed"
-          );
-        },
-      );
-    });
-
-    it("re-throws DecryptionFailedError from publicDecrypt as-is", async ({
-      relayer,
-
-      token,
-    }) => {
+    it("re-throws DecryptionFailedError from publicDecrypt as-is", async ({ token }) => {
+      const burnHandle = ("0x" + "bd".repeat(32)) as Handle;
       const original = new DecryptionFailedError("already wrapped");
-      vi.mocked(relayer.publicDecrypt).mockRejectedValueOnce(original);
+      vi.spyOn(token.sdk, "publicDecrypt").mockRejectedValueOnce(original);
 
-      await expect(token.finalizeUnwrap("0xburn" as Address)).rejects.toBe(original);
+      await expect(token.finalizeUnwrap(burnHandle)).rejects.toBe(original);
     });
 
-    it("throws TypeError when clearValues does not contain the handle", async ({
-      relayer,
-
-      token,
-    }) => {
-      vi.mocked(relayer.publicDecrypt).mockResolvedValueOnce({
+    it("throws TypeError when clearValues does not contain the handle", async ({ token }) => {
+      const burnHandle = ("0x" + "be".repeat(32)) as Handle;
+      vi.spyOn(token.sdk, "publicDecrypt").mockResolvedValueOnce({
         clearValues: {},
         abiEncodedClearValues: "0x00",
         decryptionProof: "0x12",
       });
 
-      await expect(token.finalizeUnwrap("0xburn" as Address)).rejects.toThrow(TypeError);
+      await expect(token.finalizeUnwrap(burnHandle)).rejects.toThrow(TypeError);
     });
 
     it("re-throws ZamaError from writeContract as-is", async ({ signer, token }) => {
+      const burnHandle = ("0x" + "bf".repeat(32)) as Handle;
       const original = new ZamaError(ZamaErrorCode.TransactionReverted, "already wrapped");
       vi.mocked(signer.writeContract).mockRejectedValueOnce(original);
 
-      await expect(token.finalizeUnwrap("0xburn" as Address)).rejects.toBe(original);
+      await expect(token.finalizeUnwrap(burnHandle)).rejects.toBe(original);
     });
 
     it("wraps non-ZamaError from writeContract in TransactionReverted", async ({
       signer,
       token,
     }) => {
+      const burnHandle = ("0x" + "c0".repeat(32)) as Handle;
       vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("tx failed"));
 
-      await expect(token.finalizeUnwrap("0xburn" as Address)).rejects.toMatchObject({
+      await expect(token.finalizeUnwrap(burnHandle)).rejects.toMatchObject({
         code: ZamaErrorCode.TransactionReverted,
         message: "Failed to finalize unshield",
       });
@@ -1054,15 +1034,11 @@ describe("Token", () => {
   });
 
   describe("resumeUnshield", () => {
-    const BURN_HANDLE = "0x" + "ff".repeat(32);
-    const UNWRAP_REQUEST_ID = ("0x" + "aa".repeat(32)) as `0x${string}`;
+    const BURN_HANDLE = ("0x" + "ff".repeat(32)) as Handle;
+    const UNWRAP_REQUEST_ID = ("0x" + "aa".repeat(32)) as Handle;
 
-    it("resumes from an existing unwrap tx hash", async ({
-      relayer,
-      userAddress,
-      token,
-      provider,
-    }) => {
+    it("resumes from an existing unwrap tx hash", async ({ userAddress, token, provider }) => {
+      const publicDecrypt = vi.spyOn(token.sdk, "publicDecrypt");
       vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
@@ -1079,17 +1055,17 @@ describe("Token", () => {
       const result = await token.resumeUnshield("0xprevioustx" as `0x${string}`);
 
       expect(provider.waitForTransactionReceipt).toHaveBeenCalledWith("0xprevioustx");
-      expect(relayer.publicDecrypt).toHaveBeenCalledWith([BURN_HANDLE]);
+      expect(publicDecrypt).toHaveBeenCalledWith([BURN_HANDLE]);
       expect(result.txHash).toBe("0xtxhash");
     });
 
     it("uses unwrapRequestId from upgraded UnwrapRequested events", async ({
-      relayer,
       provider,
       signer,
       userAddress,
       token,
     }) => {
+      const publicDecrypt = vi.spyOn(token.sdk, "publicDecrypt");
       vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
@@ -1106,7 +1082,7 @@ describe("Token", () => {
       await token.resumeUnshield("0xprevioustx" as `0x${string}`);
 
       expect(provider.waitForTransactionReceipt).toHaveBeenCalledWith("0xprevioustx");
-      expect(relayer.publicDecrypt).toHaveBeenCalledWith([UNWRAP_REQUEST_ID]);
+      expect(publicDecrypt).toHaveBeenCalledWith([UNWRAP_REQUEST_ID]);
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({
           functionName: "finalizeUnwrap",

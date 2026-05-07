@@ -1,11 +1,7 @@
 import { describe, it, expect, vi, TEST_ADDR_B } from "../test-fixtures";
 import { ReadonlyToken } from "../token/readonly-token";
 import { Token } from "../token/token";
-import {
-  DecryptionFailedError,
-  SignerNotConfiguredError,
-  WalletAccountNotReadyError,
-} from "../errors";
+import { SignerNotConfiguredError, WalletAccountNotReadyError } from "../errors";
 import type { GenericSigner, WalletAccountChange, WalletAccountListener } from "../types";
 import type { Address } from "viem";
 import type { DecryptHandle } from "../query/user-decrypt";
@@ -259,13 +255,8 @@ describe("ZamaSDK", () => {
   });
 
   describe("publicDecrypt", () => {
-    it("delegates to relayer.publicDecrypt and returns the result", async ({
-      sdk,
-      relayer,
-      handle,
-    }) => {
+    it("returns the public decrypt result", async ({ sdk, handle }) => {
       const result = await sdk.publicDecrypt([handle]);
-      expect(relayer.publicDecrypt).toHaveBeenCalledWith([handle]);
       expect(result).toEqual({
         clearValues: { [handle]: 500n },
         abiEncodedClearValues: "0x1f4",
@@ -273,30 +264,13 @@ describe("ZamaSDK", () => {
       });
     });
 
-    it("returns empty result for empty handles without calling relayer", async ({
-      sdk,
-      relayer,
-    }) => {
+    it("returns empty result for empty handles", async ({ sdk }) => {
       const result = await sdk.publicDecrypt([]);
       expect(result).toEqual({
         clearValues: {},
         decryptionProof: "0x",
         abiEncodedClearValues: "0x",
       });
-      expect(relayer.publicDecrypt).not.toHaveBeenCalled();
-    });
-
-    it("wraps error on failure", async ({ sdk, relayer, handle }) => {
-      vi.mocked(relayer.publicDecrypt).mockRejectedValueOnce(new Error("relayer down"));
-
-      await expect(sdk.publicDecrypt([handle])).rejects.toThrow(DecryptionFailedError);
-    });
-
-    it("re-throws DecryptionFailedError as-is", async ({ sdk, relayer, handle }) => {
-      const original = new DecryptionFailedError("already typed");
-      vi.mocked(relayer.publicDecrypt).mockRejectedValueOnce(original);
-
-      await expect(sdk.publicDecrypt([handle])).rejects.toBe(original);
     });
   });
 

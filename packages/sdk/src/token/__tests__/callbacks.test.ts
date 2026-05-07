@@ -165,13 +165,14 @@ describe("Unshield callbacks (P4)", () => {
   });
 
   it("throws DecryptionFailedError when publicDecrypt fails during finalize", async ({
-    relayer,
     userAddress,
     token,
     provider,
   }) => {
     mockReceiptWithUnwrapRequested(provider, userAddress);
-    vi.mocked(relayer.publicDecrypt).mockRejectedValue(new Error("decrypt error"));
+    vi.spyOn(token.sdk, "publicDecrypt").mockRejectedValue(
+      new DecryptionFailedError("decrypt error"),
+    );
 
     await expect(token.unshield(50n, { skipBalanceCheck: true })).rejects.toThrow(
       DecryptionFailedError,

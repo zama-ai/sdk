@@ -28,9 +28,8 @@ describe("useFinalizeUnwrap", () => {
 
   test("cache: invalidates balance, allowance, and wagmi after finalize", async ({
     renderWithProviders,
-    relayer,
   }) => {
-    mockPublicDecrypt(relayer);
+    mockPublicDecrypt();
 
     const { result, queryClient } = renderWithProviders(() =>
       useFinalizeUnwrap({ tokenAddress: TOKEN }),
@@ -55,8 +54,8 @@ describe("useFinalizeUnwrap", () => {
     expectCacheUntouched(queryClient, otherAllowanceKey, 333n);
   });
 
-  test("behavior: forwards onSuccess callback", async ({ renderWithProviders, relayer }) => {
-    mockPublicDecrypt(relayer);
+  test("behavior: forwards onSuccess callback", async ({ renderWithProviders }) => {
+    mockPublicDecrypt();
 
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
     const allowanceKey = zamaQueryKeys.underlyingAllowance.token(TOKEN);

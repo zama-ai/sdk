@@ -1,5 +1,6 @@
 import { getAddress, type Address } from "viem";
 import { MAX_UINT64 } from "../../contracts";
+import { DecryptionFailedError } from "../../errors";
 import type { DecryptHandle } from "../../query/user-decrypt";
 import type { Handle } from "../../relayer/relayer-sdk.types";
 import { describe, expect, test, TEST_PUBLIC_KEY, vi } from "../../test-fixtures";
@@ -245,5 +246,48 @@ describe("DecryptionService", () => {
     await expect(
       service.userDecrypt(handles([[HANDLE_A, CONTRACT_A]]), userAddress),
     ).resolves.toEqual({ [HANDLE_A]: 10n });
+  });
+
+  test("publicDecrypt delegates to relayer", async ({ createDecryptionService, relayer }) => {
+    const service = createDecryptionService();
+
+    await expect(service.publicDecrypt([HANDLE_A])).resolves.toEqual({
+      clearValues: { [HANDLE_A]: 500n },
+      abiEncodedClearValues: "0x1f4",
+      decryptionProof: "0xproof",
+    });
+    expect(relayer.publicDecrypt).toHaveBeenCalledWith([HANDLE_A]);
+  });
+
+  test("publicDecrypt returns empty result without relayer round-trip", async ({
+    createDecryptionService,
+    relayer,
+  }) => {
+    const service = createDecryptionService();
+
+    await expect(service.publicDecrypt([])).resolves.toEqual({
+      clearValues: {},
+      decryptionProof: "0x",
+      abiEncodedClearValues: "0x",
+    });
+    expect(relayer.publicDecrypt).not.toHaveBeenCalled();
+  });
+
+  test("publicDecrypt wraps relayer failures", async ({ createDecryptionService, relayer }) => {
+    const service = createDecryptionService();
+    vi.mocked(relayer.publicDecrypt).mockRejectedValueOnce(new Error("relayer down"));
+
+    await expect(service.publicDecrypt([HANDLE_A])).rejects.toThrow(DecryptionFailedError);
+  });
+
+  test("publicDecrypt rethrows DecryptionFailedError as-is", async ({
+    createDecryptionService,
+    relayer,
+  }) => {
+    const service = createDecryptionService();
+    const original = new DecryptionFailedError("already typed");
+    vi.mocked(relayer.publicDecrypt).mockRejectedValueOnce(original);
+
+    await expect(service.publicDecrypt([HANDLE_A])).rejects.toBe(original);
   });
 });

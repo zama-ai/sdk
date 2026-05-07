@@ -33,10 +33,9 @@ describe("ZamaSDK without signer", () => {
     expect(sdk.createToken(tokenAddress)).toBeInstanceOf(Token);
   });
 
-  it("publicDecrypt works with no signer", async ({ createSDK, relayer }) => {
+  it("publicDecrypt requires a signer", async ({ createSDK }) => {
     const sdk = createSDK({ signer: undefined });
-    await sdk.publicDecrypt(["0xhandle"]);
-    expect(relayer.publicDecrypt).toHaveBeenCalled();
+    await expect(sdk.publicDecrypt(["0xhandle"])).rejects.toThrow(SignerNotConfiguredError);
   });
 
   it("isAllowed returns false (pure store lookup, no signer needed)", async ({ createSDK }) => {

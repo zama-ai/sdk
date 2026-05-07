@@ -27,14 +27,13 @@ describe("useUnshieldAll", () => {
 
   test("cache: invalidates balance, allowance, and wagmi after unshield all", async ({
     renderWithProviders,
-    relayer,
     provider,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValue(HANDLE);
     vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
       logs: [createUnwrapRequestedLog(BURN_AMOUNT_HANDLE)],
     });
-    mockPublicDecrypt(relayer);
+    mockPublicDecrypt();
 
     const { result, queryClient } = renderWithProviders(() =>
       useUnshieldAll({ tokenAddress: TOKEN }),
@@ -59,16 +58,12 @@ describe("useUnshieldAll", () => {
     expectCacheUntouched(queryClient, otherAllowanceKey, 333n);
   });
 
-  test("behavior: forwards onSuccess callback", async ({
-    renderWithProviders,
-    relayer,
-    provider,
-  }) => {
+  test("behavior: forwards onSuccess callback", async ({ renderWithProviders, provider }) => {
     vi.mocked(provider.readContract).mockResolvedValue(HANDLE);
     vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
       logs: [createUnwrapRequestedLog(BURN_AMOUNT_HANDLE)],
     });
-    mockPublicDecrypt(relayer);
+    mockPublicDecrypt();
 
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
     const allowanceKey = zamaQueryKeys.underlyingAllowance.token(TOKEN);

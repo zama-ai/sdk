@@ -2,9 +2,10 @@ import { Topics } from "../../events";
 import type { RawLog } from "../../events";
 import { describe, expect, it, vi } from "../../test-fixtures";
 import type { Address } from "viem";
+import type { Handle } from "../../relayer/relayer-sdk.types";
 
 const RECIPIENT = "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address;
-const BURN_HANDLE = ("0x" + "ff".repeat(32)) as Address;
+const BURN_HANDLE = ("0x" + "ff".repeat(32)) as Handle;
 
 describe("Integration: multi-step workflows", () => {
   describe("shield flow: approve → shield → verify balance", () => {
@@ -106,6 +107,7 @@ describe("Integration: multi-step workflows", () => {
       userAddress,
       provider,
     }) => {
+      const publicDecrypt = vi.spyOn(token.sdk, "publicDecrypt");
       // Step 1: Execute unwrap (encrypts amount, sends tx)
       const unwrapResult = await token.unwrap(500n);
       expect(unwrapResult.txHash).toBe("0xtxhash");
@@ -138,8 +140,7 @@ describe("Integration: multi-step workflows", () => {
       const finalizeResult = await token.finalizeUnwrap(BURN_HANDLE);
       expect(finalizeResult.txHash).toBe("0xfinalizetx");
 
-      // Verify publicDecrypt was called with the burn handle
-      expect(relayer.publicDecrypt).toHaveBeenCalledWith([BURN_HANDLE]);
+      expect(publicDecrypt).toHaveBeenCalledWith([BURN_HANDLE]);
 
       // Verify finalizeUnwrap contract call
       expect(signer.writeContract).toHaveBeenCalledWith(
@@ -154,6 +155,7 @@ describe("Integration: multi-step workflows", () => {
       userAddress,
       provider,
     }) => {
+      const publicDecrypt = vi.spyOn(token.sdk, "publicDecrypt");
       // Mock receipt with UnwrapRequested event for the auto-finalize path.
       // unwrap() now calls waitForTransactionReceipt (1st call),
       // then #waitAndFinalizeUnshield calls it again (2nd call) to parse the event,
@@ -183,7 +185,7 @@ describe("Integration: multi-step workflows", () => {
         expect.objectContaining({ functionName: "unwrap" }),
       );
       expect(provider.waitForTransactionReceipt).toHaveBeenCalled();
-      expect(relayer.publicDecrypt).toHaveBeenCalledWith([BURN_HANDLE]);
+      expect(publicDecrypt).toHaveBeenCalledWith([BURN_HANDLE]);
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "finalizeUnwrap" }),
       );
