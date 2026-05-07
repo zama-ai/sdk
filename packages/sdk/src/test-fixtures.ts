@@ -6,6 +6,7 @@ import type { FheChain } from "./chains/types";
 import type { ZamaConfig } from "./config/types";
 import { ZamaSDKEvents } from "./events/sdk-events";
 import type { RelayerSDK } from "./relayer/relayer-sdk";
+import type { RelayerDispatcher } from "./relayer/relayer-dispatcher";
 import type { Handle } from "./relayer/relayer-sdk.types";
 import { CachingService } from "./services/caching-service";
 import type { QueryClient } from "@tanstack/query-core";
@@ -19,6 +20,7 @@ import type { GenericProvider, GenericSigner, GenericStorage, TransactionResult 
 import { ZamaSDK } from "./zama-sdk";
 import { DecryptionService } from "./services/decryption-service";
 import { DelegationService } from "./services/delegation-service";
+import { EncryptionService } from "./services/encryption-service";
 import type { ZamaSDKEventInput } from "./events/sdk-events";
 export { afterEach, beforeEach, describe, expect, vi, type Mock } from "vitest";
 
@@ -227,6 +229,7 @@ interface SdkFixtures {
   cache: CachingService;
   delegationService: DelegationService;
   decryptionService: DecryptionService;
+  encryptionService: EncryptionService;
   storage: GenericStorage;
   createMockRelayer: typeof createMockRelayer;
   createMockSigner: (addressOrOverrides?: Address | Partial<GenericSigner>) => GenericSigner;
@@ -255,6 +258,10 @@ interface SdkFixtures {
     relayer?: RelayerSDK;
     emitEvent?: (input: ZamaSDKEventInput) => void;
   }) => DecryptionService;
+  createEncryptionService: (overrides?: {
+    relayer?: RelayerSDK;
+    emitEvent?: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
+  }) => EncryptionService;
   createToken: (sdk: ZamaSDK, address?: Address, wrapper?: Address) => Token;
   createReadonlyToken: (sdk: ZamaSDK, address?: Address) => ReadonlyToken;
   sdk: ZamaSDK;
@@ -357,6 +364,18 @@ export const test = base.extend<SdkFixtures>({
   },
   decryptionService: async ({ createDecryptionService }, use) => {
     await use(createDecryptionService());
+  },
+  createEncryptionService: async ({ relayer }, use) => {
+    await use(
+      (overrides = {}) =>
+        new EncryptionService({
+          relayer: (overrides.relayer ?? relayer) as unknown as RelayerDispatcher,
+          emitEvent: overrides.emitEvent ?? vi.fn(),
+        }),
+    );
+  },
+  encryptionService: async ({ createEncryptionService }, use) => {
+    await use(createEncryptionService());
   },
   createToken: async ({ tokenAddress }, use) => {
     await use(

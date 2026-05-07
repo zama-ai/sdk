@@ -3,14 +3,11 @@ import type { ZamaConfig } from "./config/types";
 import { CredentialService } from "./credentials/credential-service";
 import {
   ChainMismatchError,
-  EncryptionFailedError,
   SignerNotConfiguredError,
   WalletAccountNotReadyError,
   wrapDecryptError,
-  ZamaError,
 } from "./errors";
 import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventListener } from "./events/sdk-events";
-import { ZamaSDKEvents } from "./events/sdk-events";
 import type { DecryptHandle } from "./query/user-decrypt";
 import type { RelayerDispatcher } from "./relayer/relayer-dispatcher";
 import type {
@@ -31,10 +28,11 @@ import type {
   WalletAccountChange,
   WalletAccountListener,
 } from "./types";
-import { swallow, toError } from "./utils";
+import { swallow } from "./utils";
 import { CachingService } from "./services/caching-service";
 import { DecryptionService, type BatchDecryptHandlesResult } from "./services/decryption-service";
 import { DelegationService } from "./services/delegation-service";
+import { EncryptionService } from "./services/encryption-service";
 import { WrappersRegistry } from "./wrappers-registry";
 
 /**
@@ -58,6 +56,7 @@ export class ZamaSDK {
   readonly #credentialService: CredentialService | undefined;
   readonly #delegationService: DelegationService;
   readonly #decryptionService: DecryptionService | undefined;
+  readonly #encryptionService: EncryptionService;
   #unsubscribeSigner?: () => void;
 
   constructor(config: ZamaConfig) {
@@ -69,6 +68,10 @@ export class ZamaSDK {
     this.#onEvent = config.onEvent ?? function () {};
     this.#delegationService = new DelegationService({
       provider: this.provider,
+      relayer: this.relayer,
+      emitEvent: (input, tokenAddress) => this.emitEvent(input, tokenAddress),
+    });
+    this.#encryptionService = new EncryptionService({
       relayer: this.relayer,
       emitEvent: (input, tokenAddress) => this.emitEvent(input, tokenAddress),
     });
@@ -594,34 +597,7 @@ export class ZamaSDK {
    * ```
    */
   async encrypt(params: EncryptParams): Promise<EncryptResult> {
-    const t0 = Date.now();
-    try {
-      this.emitEvent({ type: ZamaSDKEvents.EncryptStart }, params.contractAddress);
-      const result = await this.relayer.encrypt(params);
-      this.emitEvent(
-        {
-          type: ZamaSDKEvents.EncryptEnd,
-          durationMs: Date.now() - t0,
-        },
-        params.contractAddress,
-      );
-      return result;
-    } catch (error) {
-      this.emitEvent(
-        {
-          type: ZamaSDKEvents.EncryptError,
-          error: toError(error),
-          durationMs: Date.now() - t0,
-        },
-        params.contractAddress,
-      );
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new EncryptionFailedError("Encryption failed", {
-        cause: error,
-      });
-    }
+    return this.#encryptionService.encrypt(params);
   }
 
   /**
