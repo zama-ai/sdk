@@ -147,6 +147,33 @@ describe("DelegationService", () => {
     );
   });
 
+  test("delegateDecryption emits submitted event after broadcast before receipt wait", async ({
+    createDelegationService,
+    provider,
+    signer,
+    userAddress,
+    delegateAddress,
+    events,
+  }) => {
+    const emitEvent = vi.fn();
+    const service = createDelegationService({ emitEvent });
+    vi.mocked(provider.readContract).mockResolvedValue(0n);
+    vi.mocked(provider.waitForTransactionReceipt).mockRejectedValue(new Error("receipt timeout"));
+
+    await expect(
+      service.delegateDecryption(signer, {
+        contractAddress: CONTRACT,
+        delegatorAddress: userAddress,
+        delegateAddress,
+      }),
+    ).rejects.toMatchObject({ code: "TRANSACTION_REVERTED" });
+
+    expect(emitEvent).toHaveBeenCalledWith(
+      { type: events.DelegationSubmitted, txHash: "0xtxhash" },
+      CONTRACT,
+    );
+  });
+
   test("revokeDelegation rejects missing delegations before writing", async ({
     delegationService,
     provider,
@@ -164,6 +191,33 @@ describe("DelegationService", () => {
       }),
     ).rejects.toMatchObject({ code: "DELEGATION_NOT_FOUND" });
     expect(signer.writeContract).not.toHaveBeenCalled();
+  });
+
+  test("revokeDelegation emits submitted event after broadcast before receipt wait", async ({
+    createDelegationService,
+    provider,
+    signer,
+    userAddress,
+    delegateAddress,
+    events,
+  }) => {
+    const emitEvent = vi.fn();
+    const service = createDelegationService({ emitEvent });
+    vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
+    vi.mocked(provider.waitForTransactionReceipt).mockRejectedValue(new Error("receipt timeout"));
+
+    await expect(
+      service.revokeDelegation(signer, {
+        contractAddress: CONTRACT,
+        delegatorAddress: userAddress,
+        delegateAddress,
+      }),
+    ).rejects.toMatchObject({ code: "TRANSACTION_REVERTED" });
+
+    expect(emitEvent).toHaveBeenCalledWith(
+      { type: events.RevokeDelegationSubmitted, txHash: "0xtxhash" },
+      CONTRACT,
+    );
   });
 
   test("transaction failures are mapped to SDK errors", async ({

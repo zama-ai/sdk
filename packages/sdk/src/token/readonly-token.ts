@@ -234,6 +234,8 @@ export class ReadonlyToken {
    * **Error handling:** If a per-token decryption fails and no `onError` callback
    * is provided, errors are collected and thrown as an aggregated
    * `DecryptionFailedError` with the first error as `cause`.
+   * If `onError` itself throws, every failed token still receives a callback,
+   * then callback failures are aggregated into a `DecryptionFailedError`.
    * When the relayer returns no value for a handle,
    * a `DecryptionFailedError` is thrown for that token (never silently returns `0n`).
    * Pass `onError: () => 0n` to opt into the silent zero behavior.
@@ -329,12 +331,22 @@ export class ReadonlyToken {
     }
 
     if (options.onError) {
+      const callbackErrors: Array<{ address: Address; error: Error }> = [];
       for (const [address, error] of errors) {
         try {
           results.set(address, options.onError(error, address));
         } catch (callbackError) {
-          throw toError(callbackError);
+          callbackErrors.push({ address, error: toError(callbackError) });
         }
+      }
+      if (callbackErrors.length > 0) {
+        const message = callbackErrors
+          .map(({ address, error }) => `${address}: ${error.message}`)
+          .join("; ");
+        throw new DecryptionFailedError(
+          `Batch delegated decryption onError callback failed for ${callbackErrors.length} token(s): ${message}`,
+          { cause: callbackErrors[0]?.error },
+        );
       }
       return results;
     }
@@ -512,6 +524,8 @@ export class ReadonlyToken {
    * `(account, token, handle)`. Because every on-chain balance change
    * produces a new encrypted handle, stale cache entries are never served.
    * Cache write failures are silently ignored — they do not affect the returned value.
+   * The SDK verifies delegation before consulting the cache, so revoked or
+   * expired delegation fails even if the plaintext was previously cached.
    *
    * @param delegatorAddress - The address of the account that delegated decryption rights.
    * @param account - The account whose on-chain balance to read (matches

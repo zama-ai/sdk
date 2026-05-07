@@ -81,6 +81,34 @@ describe("DecryptionService", () => {
     expect(relayer.userDecrypt).not.toHaveBeenCalled();
   });
 
+  test("userDecrypt resolves credentials against all contracts including zero handles", async ({
+    decryptionService,
+    relayer,
+    userAddress,
+  }) => {
+    vi.mocked(relayer.userDecrypt).mockResolvedValue({ [HANDLE_B]: 20n });
+
+    await expect(
+      decryptionService.userDecrypt(
+        handles([
+          [ZERO_HANDLE, CONTRACT_A],
+          [HANDLE_B, CONTRACT_B],
+        ]),
+        userAddress,
+      ),
+    ).resolves.toEqual({ [ZERO_HANDLE]: 0n, [HANDLE_B]: 20n });
+
+    expect(relayer.createEIP712).toHaveBeenCalledWith(
+      TEST_PUBLIC_KEY,
+      [CONTRACT_A, CONTRACT_B],
+      expect.anything(),
+      expect.any(Number),
+    );
+    expect(relayer.userDecrypt).toHaveBeenCalledWith(
+      expect.objectContaining({ handles: [HANDLE_B], contractAddress: CONTRACT_B }),
+    );
+  });
+
   test("delegatedUserDecrypt validates delegation before returning cached values", async ({
     cache,
     decryptionService,

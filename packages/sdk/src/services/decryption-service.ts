@@ -131,10 +131,10 @@ export class DecryptionService {
     accountAddress: Address;
     maxConcurrency?: number;
   }): Promise<BatchDecryptHandlesResult> {
-    const items = handles.map((h) => ({
+    const items: BatchDecryptHandleItem[] = handles.map((h) => ({
       handle: h.handle,
       contractAddress: getAddress(h.contractAddress),
-    })) as BatchDecryptHandleItem[];
+    }));
     if (items.length === 0) {
       return { items };
     }
@@ -156,10 +156,8 @@ export class DecryptionService {
         throw error;
       }
       if (items.length === 1) {
-        const [item] = items;
-        if (item) {
-          item.error = this.#toZamaError(error, "Failed to decrypt delegated handles", true);
-        }
+        const [item = this.#missingBatchItem()] = items;
+        item.error = this.#toZamaError(error, "Failed to decrypt delegated handles", true);
         return { items };
       }
     }
@@ -214,6 +212,7 @@ export class DecryptionService {
       return result;
     }
 
+    const allContracts = Array.from(new Set(normalized.map((h) => h.contractAddress)));
     const nonZeroContracts = Array.from(new Set(nonZero.map((h) => h.contractAddress)));
     if (strategy.validate) {
       await strategy.validate(nonZeroContracts);
@@ -233,7 +232,7 @@ export class DecryptionService {
       return result;
     }
 
-    const credentials = await strategy.resolveCredentials(nonZeroContracts);
+    const credentials = await strategy.resolveCredentials(allContracts);
 
     const byContract = new Map<Address, Handle[]>();
     for (const h of uncached) {
@@ -314,6 +313,10 @@ export class DecryptionService {
     return error instanceof ZamaError ? error : wrapDecryptError(error, fallbackMessage, delegated);
   }
 
+  #missingBatchItem(): never {
+    throw new DecryptionFailedError("Batch delegated decryption invariant failed: missing item");
+  }
+
   async #assertAllDelegationsActive(
     contractAddresses: readonly Address[],
     {
@@ -332,9 +335,8 @@ export class DecryptionService {
     if (inactive.size === 0) {
       return;
     }
-    const firstInactive = inactive.values().next().value;
-    if (firstInactive) {
-      throw firstInactive;
+    for (const error of inactive.values()) {
+      throw error;
     }
   }
 }

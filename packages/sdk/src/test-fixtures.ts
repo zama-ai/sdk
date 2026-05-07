@@ -246,6 +246,7 @@ interface SdkFixtures {
   createDelegationService: (overrides?: {
     provider?: GenericProvider;
     relayer?: RelayerSDK;
+    emitEvent?: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
   }) => DelegationService;
   createDecryptionService: (overrides?: {
     cache?: CachingService;
@@ -332,6 +333,7 @@ export const test = base.extend<SdkFixtures>({
         new DelegationService({
           provider: overrides.provider ?? provider,
           relayer: overrides.relayer ?? relayer,
+          emitEvent: overrides.emitEvent,
         }),
     );
   },

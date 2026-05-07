@@ -293,4 +293,42 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     expect(onError).toHaveBeenCalledOnce();
     expect(onError.mock.calls[0]?.[1]).toBe(TOKEN_B);
   });
+
+  test("aggregates onError callback failures after invoking every failed token callback", async ({
+    relayer,
+    createMockSigner,
+    createMockProvider,
+    createSDK,
+  }) => {
+    const { provider, tokenA, tokenB } = createBatchHarness({
+      createMockSigner,
+      createMockProvider,
+      createSDK,
+    });
+
+    vi.mocked(provider.readContract)
+      .mockResolvedValueOnce(HANDLE_A)
+      .mockResolvedValueOnce(HANDLE_B)
+      .mockResolvedValueOnce(MAX_UINT64)
+      .mockResolvedValueOnce(MAX_UINT64);
+    vi.mocked(relayer.delegatedUserDecrypt).mockRejectedValue(new Error("decrypt failed"));
+
+    const onError = vi.fn((error: Error, address: Address) => {
+      throw new Error(`fallback failed for ${address}: ${error.message}`);
+    });
+
+    await expect(
+      ReadonlyToken.batchDecryptBalancesAs([tokenA, tokenB], {
+        delegatorAddress: DELEGATOR,
+        maxConcurrency: 1,
+        onError,
+      }),
+    ).rejects.toMatchObject({
+      code: "DECRYPTION_FAILED",
+      message: expect.stringContaining("2 token(s)"),
+    });
+
+    expect(onError).toHaveBeenCalledTimes(2);
+    expect(onError.mock.calls.map(([, address]) => address)).toEqual([TOKEN_A, TOKEN_B]);
+  });
 });

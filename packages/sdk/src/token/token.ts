@@ -773,13 +773,11 @@ export class Token extends ReadonlyToken {
     expirationDate?: Date;
   }): Promise<TransactionResult> {
     try {
-      const { txHash, receipt } = await this.sdk.delegateDecryption({
+      return await this.sdk.delegateDecryption({
         contractAddress: this.address,
         delegateAddress,
         expirationDate,
       });
-      this.emit({ type: ZamaSDKEvents.DelegationSubmitted, txHash });
-      return { txHash, receipt };
     } catch (error) {
       this.emit({
         type: ZamaSDKEvents.TransactionError,
@@ -805,12 +803,10 @@ export class Token extends ReadonlyToken {
     delegateAddress: Address;
   }): Promise<TransactionResult> {
     try {
-      const { txHash, receipt } = await this.sdk.revokeDelegation({
+      return await this.sdk.revokeDelegation({
         contractAddress: this.address,
         delegateAddress,
       });
-      this.emit({ type: ZamaSDKEvents.RevokeDelegationSubmitted, txHash });
-      return { txHash, receipt };
     } catch (error) {
       this.emit({
         type: ZamaSDKEvents.TransactionError,

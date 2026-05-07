@@ -567,6 +567,24 @@ export interface BatchDecryptAsOptions {
     onError?: (error: Error, address: Address) => bigint;
 }
 
+// @public (undocumented)
+export interface BatchDecryptHandleItem {
+    // (undocumented)
+    contractAddress: Address;
+    // (undocumented)
+    error?: ZamaError;
+    // (undocumented)
+    handle: Handle;
+    // (undocumented)
+    value?: ClearValueType;
+}
+
+// @public (undocumented)
+export interface BatchDecryptHandlesResult {
+    // (undocumented)
+    items: BatchDecryptHandleItem[];
+}
+
 // @public
 export class ChainMismatchError extends ZamaError {
     constructor(input: {
@@ -20044,8 +20062,6 @@ export class ZamaSDK {
     createReadonlyToken(address: Address): ReadonlyToken;
     createToken(address: Address, wrapper?: Address): Token;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
-    // Warning: (ae-forgotten-export) The symbol "BatchDecryptHandlesResult" needs to be exported by the entry point index.d.ts
-    //
     // @internal (undocumented)
     delegatedBatchDecryptHandlesAs(input: {
         handles: DecryptHandle[];

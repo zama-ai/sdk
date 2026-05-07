@@ -16,16 +16,28 @@ import {
   matchAclRevert,
   ZamaError,
 } from "../errors";
+import type { ZamaSDKEventInput } from "../events/sdk-events";
+import { ZamaSDKEvents } from "../events/sdk-events";
 import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
 import type { GenericProvider, GenericSigner, TransactionResult } from "../types";
 
 export class DelegationService {
   readonly #provider: GenericProvider;
   readonly #relayer: RelayerDispatcher;
+  readonly #emitEvent: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
 
-  constructor({ provider, relayer }: { provider: GenericProvider; relayer: RelayerDispatcher }) {
+  constructor({
+    provider,
+    relayer,
+    emitEvent = () => {},
+  }: {
+    provider: GenericProvider;
+    relayer: RelayerDispatcher;
+    emitEvent?: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
+  }) {
     this.#provider = provider;
     this.#relayer = relayer;
+    this.#emitEvent = emitEvent;
   }
 
   async delegateDecryption(
@@ -86,22 +98,13 @@ export class DelegationService {
       );
     }
 
-    try {
-      const txHash = await signer.writeContract(
-        delegateForUserDecryptionContract(acl, normalizedDelegate, normalizedContract, expDate),
-      );
-      const receipt = await this.#provider.waitForTransactionReceipt(txHash);
-      return { txHash, receipt };
-    } catch (error) {
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      const mapped = matchAclRevert(error);
-      if (mapped) {
-        throw mapped;
-      }
-      throw new TransactionRevertedError("Delegation transaction failed", { cause: error });
-    }
+    return this.#executeAclTx(
+      signer,
+      delegateForUserDecryptionContract(acl, normalizedDelegate, normalizedContract, expDate),
+      "Delegation transaction failed",
+      ZamaSDKEvents.DelegationSubmitted,
+      normalizedContract,
+    );
   }
 
   async revokeDelegation(
@@ -138,24 +141,13 @@ export class DelegationService {
       );
     }
 
-    try {
-      const txHash = await signer.writeContract(
-        revokeDelegationContract(acl, normalizedDelegate, normalizedContract),
-      );
-      const receipt = await this.#provider.waitForTransactionReceipt(txHash);
-      return { txHash, receipt };
-    } catch (error) {
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      const mapped = matchAclRevert(error);
-      if (mapped) {
-        throw mapped;
-      }
-      throw new TransactionRevertedError("Revoke delegation transaction failed", {
-        cause: error,
-      });
-    }
+    return this.#executeAclTx(
+      signer,
+      revokeDelegationContract(acl, normalizedDelegate, normalizedContract),
+      "Revoke delegation transaction failed",
+      ZamaSDKEvents.RevokeDelegationSubmitted,
+      normalizedContract,
+    );
   }
 
   async isDelegated(params: {
@@ -242,6 +234,36 @@ export class DelegationService {
           `Delegation from ${normalizedDelegator} to ${normalizedDelegate} for ${normalizedContract} has expired`,
         );
       }
+    }
+  }
+
+  async #executeAclTx(
+    signer: GenericSigner,
+    call: Parameters<GenericSigner["writeContract"]>[0],
+    failureMessage: string,
+    submittedType:
+      | typeof ZamaSDKEvents.DelegationSubmitted
+      | typeof ZamaSDKEvents.RevokeDelegationSubmitted,
+    tokenAddress: Address,
+  ): Promise<TransactionResult> {
+    try {
+      const txHash = await signer.writeContract(call);
+      if (submittedType === ZamaSDKEvents.DelegationSubmitted) {
+        this.#emitEvent({ type: ZamaSDKEvents.DelegationSubmitted, txHash }, tokenAddress);
+      } else {
+        this.#emitEvent({ type: ZamaSDKEvents.RevokeDelegationSubmitted, txHash }, tokenAddress);
+      }
+      const receipt = await this.#provider.waitForTransactionReceipt(txHash);
+      return { txHash, receipt };
+    } catch (error) {
+      if (error instanceof ZamaError) {
+        throw error;
+      }
+      const mapped = matchAclRevert(error);
+      if (mapped) {
+        throw mapped;
+      }
+      throw new TransactionRevertedError(failureMessage, { cause: error });
     }
   }
 }

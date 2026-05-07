@@ -9,6 +9,8 @@ const CONTRACT_A = getAddress("0x3333333333333333333333333333333333333333") as A
 const CONTRACT_B = getAddress("0x4444444444444444444444444444444444444444") as Address;
 const HANDLE_A = `0x${"aa".repeat(32)}` as Handle;
 const HANDLE_B = `0x${"bb".repeat(32)}` as Handle;
+const HANDLE_C = `0x${"cc".repeat(32)}` as Handle;
+const HANDLE_D = `0x${"dd".repeat(32)}` as Handle;
 
 describe("CachingService", () => {
   test("returns null for cache misses", async ({ cache }) => {
@@ -20,11 +22,15 @@ describe("CachingService", () => {
     await cache.set(REQUESTER_B, CONTRACT_A, HANDLE_A, 2n);
     await cache.set(REQUESTER_A, CONTRACT_B, HANDLE_A, true);
     await cache.set(REQUESTER_A, CONTRACT_A, HANDLE_B, getAddress(REQUESTER_B));
+    await cache.set(REQUESTER_A, CONTRACT_B, HANDLE_C, 0n);
+    await cache.set(REQUESTER_A, CONTRACT_B, HANDLE_D, false);
 
     expect(await cache.get(REQUESTER_A, CONTRACT_A, HANDLE_A)).toBe(1n);
     expect(await cache.get(REQUESTER_B, CONTRACT_A, HANDLE_A)).toBe(2n);
     expect(await cache.get(REQUESTER_A, CONTRACT_B, HANDLE_A)).toBe(true);
     expect(await cache.get(REQUESTER_A, CONTRACT_A, HANDLE_B)).toBe(getAddress(REQUESTER_B));
+    expect(await cache.get(REQUESTER_A, CONTRACT_B, HANDLE_C)).toBe(0n);
+    expect(await cache.get(REQUESTER_A, CONTRACT_B, HANDLE_D)).toBe(false);
   });
 
   test("normalizes address and handle casing for lookups", async ({ cache }) => {

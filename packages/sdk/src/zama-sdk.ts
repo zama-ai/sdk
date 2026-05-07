@@ -70,6 +70,7 @@ export class ZamaSDK {
     this.#delegationService = new DelegationService({
       provider: this.provider,
       relayer: this.relayer,
+      emitEvent: (input, tokenAddress) => this.emitEvent(input, tokenAddress),
     });
     const registryAddresses: Record<number, Address> = {};
     for (const chain of config.chains) {
@@ -491,9 +492,10 @@ export class ZamaSDK {
   /**
    * Decrypt one or more FHE handles using delegated credentials.
    *
-   * Mirrors {@link userDecrypt} with delegated credentials — same caching,
-   * zero-handle short-circuit, event lifecycle, and error wrapping. The
-   * delegator address identifies the account that granted delegation rights.
+   * Mirrors {@link userDecrypt} with delegated credentials — same caching and
+   * zero-handle short-circuit. Before reading from cache or calling the relayer,
+   * every non-zero handle's contract must have an active delegation from the
+   * delegator to the connected signer; missing or expired delegations fail fast.
    *
    * @param handles - FHE handles paired with their contract addresses.
    * @param delegatorAddress - The address that granted delegation rights.
