@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { isAddress } from "viem";
 import { useConfidentialTransfer } from "@zama-fhe/react-sdk";
-import type { Address } from "@zama-fhe/react-sdk";
+import type { Address } from "@zama-fhe/sdk";
 import { parseAmount } from "@/lib/parseAmount";
 import { SEPOLIA_EXPLORER_URL } from "@/lib/config";
 
@@ -38,7 +38,7 @@ export function TransferCard({
     transfer.mutate({
       to: recipient as Address,
       amount: parsedAmount,
-      callbacks: { onEncryptComplete: () => setStep(2) },
+      onEncryptComplete: () => setStep(2),
     });
   }
 

@@ -1,16 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { formatEther, formatUnits, parseAbi, parseUnits } from "viem";
-import {
-  useAccount,
-  useBalance,
-  useChainId,
-  useConnect,
-  useReadContract,
-  useSwitchChain,
-} from "wagmi";
+import { useAccount, useBalance, useConnect, useReadContract, useSwitchChain } from "wagmi";
 import { injected } from "wagmi/connectors";
 import { sepolia } from "wagmi/chains";
 import {
@@ -20,9 +13,7 @@ import {
   useListPairs,
   useZamaSDK,
 } from "@zama-fhe/react-sdk";
-import type { TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
-import { zamaQueryKeys } from "@zama-fhe/sdk/query";
-import type { Address } from "@zama-fhe/react-sdk";
+import type { Address, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import { BalancesCard } from "@/components/BalancesCard";
 import { ShieldCard } from "@/components/ShieldCard";
 import { TransferCard } from "@/components/TransferCard";
@@ -41,28 +32,18 @@ const BALANCE_ABI = parseAbi(["function balanceOf(address) view returns (uint256
 // function added to both test tokens for easy balance top-ups during development.
 const MINT_ABI = parseAbi(["function mint(address to, uint256 amount)"]);
 
-// Stable zero address used as a hook placeholder when no token is selected yet.
-// SDK hooks must not be called conditionally (React rules of hooks), so we pass this
-// address with enabled: false until a real token pair is available from the registry.
-const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as Address;
-
 export default function Home() {
   // ── Wagmi hooks — wallet state managed reactively by wagmi ──────────────────
-  // WagmiSigner subscribes to wagmiConfig.watchConnection internally, so account
-  // and chain changes are handled automatically — no manual eth_accounts polling
-  // or walletKey/refSeededRef remount pattern needed (unlike EthersSigner/ViemSigner).
-  const { address, isConnected } = useAccount();
-  const chainId = useChainId();
+  // The Zama wagmi config adapter subscribes to wagmi connection state internally,
+  // so account and chain changes are handled automatically — no manual eth_accounts
+  // polling or walletKey/refSeededRef remount pattern needed.
+  const { address, chainId, isConnected } = useAccount();
   const { connect, isPending: isConnecting, error: connectError } = useConnect();
   const { switchChain, isPending: isSwitching, error: switchError } = useSwitchChain();
 
   const [selectedTokenAddress, setSelectedTokenAddress] = useState<Address | null>(null);
 
   const isSepolia = chainId === SEPOLIA_CHAIN_ID;
-
-  // Stable reference from the QueryClientProvider in providers.tsx.
-  const queryClient = useQueryClient();
-  const sdk = useZamaSDK();
 
   // Fetch all valid token pairs from the on-chain WrappersRegistry.
   // Registry address is resolved automatically from the connected chain via DefaultRegistryAddresses
@@ -101,105 +82,11 @@ export default function Home() {
   // Currently selected token pair, or undefined while the registry is loading.
   const token = validPairs.find((p) => p.confidentialTokenAddress === selectedTokenAddress);
 
-  // Check whether cached credentials cover the currently selected confidential token.
-  const { data: isAllowed } = useIsAllowed({
-    contractAddresses: token ? [token.confidentialTokenAddress] : [],
-    query: { enabled: Boolean(token) },
-  });
-
-  // Metadata for the selected token pair — sourced directly from the registry response
-  // (useListPairs with metadata: true). Defaults to safe zero values until the pair loads.
-  const decimals = token?.confidential.decimals ?? 0;
-  const erc20Decimals = token?.underlying.decimals ?? 0;
-  const confidentialSymbol = token?.confidential.symbol ?? "";
-  const erc20Symbol = token?.underlying.symbol ?? "";
-
-  // Triggers the EIP-712 wallet signature to create FHE decrypt credentials.
-  // All registry pairs are passed at once — a single signature covers all tokens,
-  // so switching tokens does not require a second wallet prompt.
-  const allowTokens = useAllow();
-  function handleDecrypt() {
-    if (validPairs.length === 0) return;
-    allowTokens.mutate(validPairs.map((p) => p.confidentialTokenAddress));
-  }
-
   // ETH balance via wagmi transport (SEPOLIA_RPC_URL) — auto-updates on account switch.
   const { data: ethBalanceData, refetch: refetchEth } = useBalance({
     address,
     query: { enabled: isConnected && isSepolia },
   });
-
-  // ERC-20 balance via wagmi — auto-refetches when args (address) change on account switch.
-  // Uses the wagmi HTTP transport, not window.ethereum, so polling is fast.
-  const { data: erc20Balance, refetch: refetchErc20 } = useReadContract({
-    address: token?.tokenAddress ?? ZERO_ADDRESS,
-    abi: BALANCE_ABI,
-    functionName: "balanceOf",
-    args: [address as Address],
-    query: { enabled: isConnected && isSepolia && !!token },
-  });
-
-  const refreshBalances = () => {
-    void refetchErc20();
-    void refetchEth();
-    // Invalidate the encrypted handle so useConfidentialBalance re-polls after
-    // any operation that changes the confidential balance (shield, unshield, transfer).
-    if (token) {
-      queryClient.invalidateQueries({
-        queryKey: zamaQueryKeys.confidentialHandle.token(token.confidentialTokenAddress),
-      });
-    }
-  };
-
-  // Only run once the user has explicitly authorized decrypt for the selected token.
-  // Prevents the hook from firing an EIP-712 prompt on mount (blind-signing anti-pattern).
-  // ZERO_ADDRESS is used as a stable placeholder while no token pair is selected —
-  // the query is disabled (enabled: false) so no actual RPC call is made.
-  const balance = useConfidentialBalance(
-    { tokenAddress: token?.confidentialTokenAddress ?? ZERO_ADDRESS },
-    { enabled: isConnected && isSepolia && !!isAllowed && !!token },
-  );
-
-  // Mint 10 whole tokens on the underlying ERC-20 contract.
-  const mint = useMutation({
-    mutationFn: async () => {
-      const txHash = await sdk.signer.writeContract({
-        address: token!.tokenAddress,
-        abi: MINT_ABI,
-        functionName: "mint",
-        args: [address as Address, parseUnits("10", erc20Decimals)],
-      });
-      await sdk.signer.waitForTransactionReceipt(txHash);
-      return txHash;
-    },
-    onSuccess: refreshBalances,
-  });
-
-  // Clear stale mutation state when the wallet account changes so the BalancesCard
-  // does not show a pending/success/error badge belonging to the previous account.
-  // Both reset functions are omitted from deps: useMutation returns a new object every
-  // render, so including them would re-run this effect on every render. The resets are
-  // idempotent so running them only on address changes is both correct and sufficient.
-  useEffect(() => {
-    mint.reset();
-    allowTokens.reset();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [address]);
-
-  // Guard on token too: if balance resolves before the registry, decimals defaults to 0
-  // and symbol to "" — the raw integer would be displayed without unit or decimal conversion.
-  const formattedErc20 =
-    erc20Balance !== undefined && token
-      ? `${formatUnits(erc20Balance, erc20Decimals)} ${erc20Symbol}`
-      : "—";
-  const formattedConfidential =
-    balance.data !== undefined && token
-      ? `${formatUnits(balance.data, decimals)} ${confidentialSymbol}`
-      : "—";
-
-  // Actions are disabled until the registry has loaded a valid token pair
-  // and until the wallet is on the Sepolia network.
-  const actionsDisabled = !isSepolia || !token;
 
   // ── Screen 1: No wallet connected ─────────────────────────────────────────
   if (!isConnected) {
@@ -283,7 +170,6 @@ export default function Home() {
           value={selectedTokenAddress ?? ""}
           onChange={(e) => {
             setSelectedTokenAddress(e.target.value as Address);
-            mint.reset();
           }}
           disabled={isRegistryPending || isRegistryError || validPairs.length === 0}
         >
@@ -307,16 +193,165 @@ export default function Home() {
         )}
       </div>
 
+      {token && (
+        <TokenWorkspace
+          key={`${address}-${token.confidentialTokenAddress}`}
+          address={address as Address}
+          token={token}
+          validPairs={validPairs}
+          refetchEth={refetchEth}
+        />
+      )}
+      {!token && !isRegistryPending && <NoTokenWorkspace />}
+    </div>
+  );
+}
+
+function NoTokenWorkspace() {
+  return (
+    <>
+      <BalancesCard
+        formattedErc20="—"
+        formattedConfidential="—"
+        isLoadingConfidential={false}
+        erc20Symbol=""
+        onMint={() => {}}
+        isMinting={false}
+        mintDisabled
+        mintError={null}
+        mintTxHash={null}
+        isAllowed={false}
+        onDecrypt={() => {}}
+        isDecrypting={false}
+        decryptDisabled
+        decryptError={null}
+      />
+
+      <div className="section-label">Operations</div>
+
+      <div className="card">
+        <div className="card-title">Shield — ERC-20 → Confidential</div>
+        <button type="button" className="btn btn-primary" disabled>
+          Shield
+        </button>
+      </div>
+
+      <div className="card">
+        <div className="card-title">Confidential Transfer</div>
+        <button type="button" className="btn btn-primary" disabled>
+          Transfer
+        </button>
+      </div>
+
+      <div className="card">
+        <div className="card-title">Unshield — Confidential → ERC-20</div>
+        <button type="button" className="btn btn-primary" disabled>
+          Unshield
+        </button>
+      </div>
+    </>
+  );
+}
+
+interface TokenWorkspaceProps {
+  address: Address;
+  token: TokenWrapperPairWithMetadata;
+  validPairs: TokenWrapperPairWithMetadata[];
+  refetchEth: () => unknown;
+}
+
+function TokenWorkspace({ address, token, validPairs, refetchEth }: TokenWorkspaceProps) {
+  const sdk = useZamaSDK();
+
+  // Check whether cached credentials cover the selected confidential token.
+  // This component only mounts once a token is selected, so no placeholder address is needed.
+  const { data: isAllowed } = useIsAllowed({
+    contractAddresses: [token.confidentialTokenAddress],
+  });
+
+  // Metadata for the selected token pair is sourced directly from the registry response
+  // (useListPairs with metadata: true), removing separate metadata queries.
+  const decimals = token.confidential.decimals;
+  const erc20Decimals = token.underlying.decimals;
+  const confidentialSymbol = token.confidential.symbol;
+  const erc20Symbol = token.underlying.symbol;
+
+  // Triggers the EIP-712 wallet signature to create FHE decrypt credentials.
+  // All registry pairs are passed at once — a single signature covers all tokens,
+  // so switching tokens does not require a second wallet prompt.
+  const allowTokens = useAllow();
+  function handleDecrypt() {
+    allowTokens.mutate(validPairs.map((p) => p.confidentialTokenAddress));
+  }
+
+  // ERC-20 balance via wagmi — auto-refetches when args (address) change on account switch.
+  // Uses the wagmi HTTP transport, not window.ethereum, so polling is fast.
+  const { data: erc20Balance, refetch: refetchErc20 } = useReadContract({
+    address: token.tokenAddress,
+    abi: BALANCE_ABI,
+    functionName: "balanceOf",
+    args: [address],
+  });
+
+  const refreshPublicBalances = () => {
+    void refetchErc20();
+    void refetchEth();
+  };
+
+  // Only run once the user has explicitly authorized decrypt for the selected token.
+  // Prevents the hook from firing an EIP-712 prompt on mount (blind-signing anti-pattern).
+  const balance = useConfidentialBalance(
+    { tokenAddress: token.confidentialTokenAddress, account: address },
+    { enabled: !!isAllowed },
+  );
+
+  // Mint 10 whole tokens on the underlying ERC-20 contract.
+  const mint = useMutation({
+    mutationFn: async () => {
+      const signer = sdk.signer;
+      if (!signer) {
+        throw new Error("Connect a wallet before minting tokens.");
+      }
+      const txHash = await signer.writeContract({
+        address: token.tokenAddress,
+        abi: MINT_ABI,
+        functionName: "mint",
+        args: [address, parseUnits("10", erc20Decimals)],
+      });
+      await sdk.provider.waitForTransactionReceipt(txHash);
+      return txHash;
+    },
+    onSuccess: refreshPublicBalances,
+  });
+
+  // Clear stale mutation state when the wallet account changes so the BalancesCard
+  // does not show a pending/success/error badge belonging to the previous account.
+  // Both reset functions are omitted from deps: useMutation returns a new object every
+  // render, so including them would re-run this effect on every render. The resets are
+  // idempotent so running them only on address changes is both correct and sufficient.
+  useEffect(() => {
+    mint.reset();
+    allowTokens.reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [address]);
+
+  const formattedErc20 =
+    erc20Balance !== undefined ? `${formatUnits(erc20Balance, erc20Decimals)} ${erc20Symbol}` : "—";
+  const formattedConfidential =
+    balance.data !== undefined
+      ? `${formatUnits(balance.data, decimals)} ${confidentialSymbol}`
+      : "—";
+
+  return (
+    <>
       <BalancesCard
         formattedErc20={formattedErc20}
         formattedConfidential={formattedConfidential}
-        // handleQuery.isLoading: fetching the encrypted handle from chain (Phase 1).
-        // balance.isLoading: decrypting it via RelayerWeb (Phase 2).
-        isLoadingConfidential={balance.handleQuery.isLoading || balance.isLoading}
+        isLoadingConfidential={balance.isLoading}
         erc20Symbol={erc20Symbol}
         onMint={() => mint.mutate()}
         isMinting={mint.isPending}
-        mintDisabled={actionsDisabled}
+        mintDisabled={false}
         mintError={mint.isError ? (mint.error?.message ?? null) : null}
         mintTxHash={mint.isSuccess && mint.data ? mint.data : null}
         isAllowed={!!isAllowed}
@@ -332,41 +367,40 @@ export default function Home() {
           key={`${pair.confidentialTokenAddress}-${address}`}
           tokenAddress={pair.confidentialTokenAddress}
           label={pair.underlying.symbol}
-          onSuccess={refreshBalances}
+          onSuccess={refreshPublicBalances}
         />
       ))}
 
       <div className="section-label">Operations</div>
 
-      {/* key includes address and selectedTokenAddress so cards remount (inputs + state reset) on wallet or token change */}
+      {/* key includes address and token so cards remount (inputs + state reset) on wallet or token change */}
       <ShieldCard
-        key={`shield-${address}-${selectedTokenAddress}`}
-        tokenAddress={token?.confidentialTokenAddress ?? ZERO_ADDRESS}
-        underlyingAddress={token?.tokenAddress ?? ZERO_ADDRESS}
+        key={`shield-${address}-${token.confidentialTokenAddress}`}
+        tokenAddress={token.confidentialTokenAddress}
         decimals={erc20Decimals}
         symbol={erc20Symbol}
-        disabled={actionsDisabled}
-        onSuccess={refreshBalances}
+        disabled={false}
+        onSuccess={refreshPublicBalances}
       />
 
       <TransferCard
-        key={`transfer-${address}-${selectedTokenAddress}`}
-        tokenAddress={token?.confidentialTokenAddress ?? ZERO_ADDRESS}
+        key={`transfer-${address}-${token.confidentialTokenAddress}`}
+        tokenAddress={token.confidentialTokenAddress}
         decimals={decimals}
         symbol={confidentialSymbol}
-        disabled={actionsDisabled}
+        disabled={false}
         balanceDecryptRequired={!isAllowed}
-        onSuccess={refreshBalances}
+        onSuccess={refreshPublicBalances}
       />
 
       <UnshieldCard
-        key={`unshield-${address}-${selectedTokenAddress}`}
-        tokenAddress={token?.confidentialTokenAddress ?? ZERO_ADDRESS}
+        key={`unshield-${address}-${token.confidentialTokenAddress}`}
+        tokenAddress={token.confidentialTokenAddress}
         decimals={decimals}
         symbol={confidentialSymbol}
-        disabled={actionsDisabled}
+        disabled={false}
         balanceDecryptRequired={!isAllowed}
-        onSuccess={refreshBalances}
+        onSuccess={refreshPublicBalances}
       />
 
       {/* ── Delegation — token owner perspective ──────────────────────────────
@@ -375,15 +409,15 @@ export default function Home() {
       <div className="section-label">Delegation — as owner</div>
 
       <DelegateDecryptionCard
-        key={`grant-delegation-${address}-${selectedTokenAddress}`}
-        tokenAddress={token?.confidentialTokenAddress ?? ZERO_ADDRESS}
-        disabled={actionsDisabled}
+        key={`grant-delegation-${address}-${token.confidentialTokenAddress}`}
+        tokenAddress={token.confidentialTokenAddress}
+        disabled={false}
       />
 
       <RevokeDelegationCard
-        key={`revoke-delegation-${address}-${selectedTokenAddress}`}
-        tokenAddress={token?.confidentialTokenAddress ?? ZERO_ADDRESS}
-        disabled={actionsDisabled}
+        key={`revoke-delegation-${address}-${token.confidentialTokenAddress}`}
+        tokenAddress={token.confidentialTokenAddress}
+        disabled={false}
       />
 
       {/* ── Delegation — delegate perspective ────────────────────────────────
@@ -392,13 +426,13 @@ export default function Home() {
       <div className="section-label">Delegation — as delegate</div>
 
       <DecryptAsCard
-        key={`decrypt-as-${address}-${selectedTokenAddress}`}
-        tokenAddress={token?.confidentialTokenAddress ?? ZERO_ADDRESS}
+        key={`decrypt-as-${address}-${token.confidentialTokenAddress}`}
+        tokenAddress={token.confidentialTokenAddress}
         decimals={decimals}
         symbol={confidentialSymbol}
-        disabled={actionsDisabled}
-        connectedAddress={address as Address}
+        disabled={false}
+        connectedAddress={address}
       />
-    </div>
+    </>
   );
 }
