@@ -244,14 +244,14 @@ export class DelegationService {
     submittedType:
       | typeof ZamaSDKEvents.DelegationSubmitted
       | typeof ZamaSDKEvents.RevokeDelegationSubmitted,
-    tokenAddress: Address,
+    contractAddress: Address,
   ): Promise<TransactionResult> {
     try {
       const txHash = await signer.writeContract(call);
       if (submittedType === ZamaSDKEvents.DelegationSubmitted) {
-        this.#emitEvent({ type: ZamaSDKEvents.DelegationSubmitted, txHash }, tokenAddress);
+        this.#emitEvent({ type: ZamaSDKEvents.DelegationSubmitted, txHash }, contractAddress);
       } else {
-        this.#emitEvent({ type: ZamaSDKEvents.RevokeDelegationSubmitted, txHash }, tokenAddress);
+        this.#emitEvent({ type: ZamaSDKEvents.RevokeDelegationSubmitted, txHash }, contractAddress);
       }
       const receipt = await this.#provider.waitForTransactionReceipt(txHash);
       return { txHash, receipt };

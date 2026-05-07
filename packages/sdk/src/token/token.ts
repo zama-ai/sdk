@@ -772,20 +772,11 @@ export class Token extends ReadonlyToken {
     delegateAddress: Address;
     expirationDate?: Date;
   }): Promise<TransactionResult> {
-    try {
-      return await this.sdk.delegateDecryption({
-        contractAddress: this.address,
-        delegateAddress,
-        expirationDate,
-      });
-    } catch (error) {
-      this.emit({
-        type: ZamaSDKEvents.TransactionError,
-        operation: "delegateDecryption",
-        error: toError(error),
-      });
-      throw error;
-    }
+    return this.sdk.delegateDecryption({
+      contractAddress: this.address,
+      delegateAddress,
+      expirationDate,
+    });
   }
 
   /**
@@ -802,19 +793,10 @@ export class Token extends ReadonlyToken {
   }: {
     delegateAddress: Address;
   }): Promise<TransactionResult> {
-    try {
-      return await this.sdk.revokeDelegation({
-        contractAddress: this.address,
-        delegateAddress,
-      });
-    } catch (error) {
-      this.emit({
-        type: ZamaSDKEvents.TransactionError,
-        operation: "revokeDelegation",
-        error: toError(error),
-      });
-      throw error;
-    }
+    return this.sdk.revokeDelegation({
+      contractAddress: this.address,
+      delegateAddress,
+    });
   }
 
   // BATCH DELEGATION

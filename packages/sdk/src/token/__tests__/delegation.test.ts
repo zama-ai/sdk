@@ -1,6 +1,5 @@
 import { getAddress, type Address } from "viem";
 import { describe, expect, it, vi } from "../../test-fixtures";
-import { ZamaSDKEvents } from "../../events/sdk-events";
 import type { Handle } from "../../relayer/relayer-sdk.types";
 import { ReadonlyToken, ZERO_HANDLE } from "../readonly-token";
 import { Token } from "../token";
@@ -49,14 +48,13 @@ describe("delegation read methods", () => {
 });
 
 describe("delegation write methods", () => {
-  it("delegateDecryption delegates to the SDK with this token address and emits the token event", async ({
+  it("delegateDecryption delegates to the SDK with this token address", async ({
     createSDK,
     createToken,
     tokenAddress,
     delegateAddress,
   }) => {
-    const events: Array<{ type: string; tokenAddress?: Address }> = [];
-    const sdk = createSDK({ onEvent: (event) => events.push(event) });
+    const sdk = createSDK();
     const token = createToken(sdk);
     const delegateDecryption = vi.spyOn(sdk, "delegateDecryption").mockResolvedValue({
       txHash: `0x${"11".repeat(32)}`,
@@ -72,22 +70,15 @@ describe("delegation write methods", () => {
       delegateAddress,
       expirationDate,
     });
-    expect(events).toContainEqual(
-      expect.objectContaining({
-        type: ZamaSDKEvents.DelegationSubmitted,
-        tokenAddress,
-      }),
-    );
   });
 
-  it("revokeDelegation delegates to the SDK with this token address and emits the token event", async ({
+  it("revokeDelegation delegates to the SDK with this token address", async ({
     createSDK,
     createToken,
     tokenAddress,
     delegateAddress,
   }) => {
-    const events: Array<{ type: string; tokenAddress?: Address }> = [];
-    const sdk = createSDK({ onEvent: (event) => events.push(event) });
+    const sdk = createSDK();
     const token = createToken(sdk);
     const revokeDelegation = vi.spyOn(sdk, "revokeDelegation").mockResolvedValue({
       txHash: `0x${"22".repeat(32)}`,
@@ -101,33 +92,18 @@ describe("delegation write methods", () => {
       contractAddress: tokenAddress,
       delegateAddress,
     });
-    expect(events).toContainEqual(
-      expect.objectContaining({
-        type: ZamaSDKEvents.RevokeDelegationSubmitted,
-        tokenAddress,
-      }),
-    );
   });
 
-  it("emits transaction:error when SDK delegation fails", async ({
+  it("propagates SDK delegation errors to caller", async ({
     createSDK,
     createToken,
     delegateAddress,
-    tokenAddress,
   }) => {
-    const events: Array<{ type: string; tokenAddress?: Address; operation?: string }> = [];
-    const sdk = createSDK({ onEvent: (event) => events.push(event) });
+    const sdk = createSDK();
     const token = createToken(sdk);
     vi.spyOn(sdk, "delegateDecryption").mockRejectedValue(new Error("revert"));
 
     await expect(token.delegateDecryption({ delegateAddress })).rejects.toThrow("revert");
-    expect(events).toContainEqual(
-      expect.objectContaining({
-        type: ZamaSDKEvents.TransactionError,
-        operation: "delegateDecryption",
-        tokenAddress,
-      }),
-    );
   });
 });
 
