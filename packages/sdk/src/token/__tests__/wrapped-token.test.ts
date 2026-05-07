@@ -153,6 +153,20 @@ describe("WrappedToken", () => {
       });
     });
 
+    it("passes ERC-20 check when balance exactly equals amount (boundary)", async ({
+      wrappedToken,
+      provider,
+    }) => {
+      vi.mocked(provider.readContract)
+        .mockResolvedValueOnce(UNDERLYING)
+        .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
+        .mockResolvedValueOnce(100n) // ERC-20 balanceOf === amount
+        .mockResolvedValueOnce(1000n); // allowance >= amount
+
+      const result = await wrappedToken.shield(100n);
+      expect(result.txHash).toBe("0xtxhash");
+    });
+
     it("wraps ERC-20 balanceOf read failure as ERC20_READ_FAILED", async ({
       wrappedToken,
       provider,
@@ -443,6 +457,33 @@ describe("WrappedToken", () => {
       });
     });
 
+    it("passes validation when balance exactly equals amount (boundary)", async ({
+      relayer,
+      wrappedToken,
+      handle,
+      userAddress,
+      provider,
+    }) => {
+      vi.mocked(provider.readContract).mockResolvedValueOnce(handle);
+      vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({ [handle]: 100n });
+
+      vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
+        logs: [
+          {
+            topics: [
+              Topics.UnwrapRequestedLegacy,
+              `0x000000000000000000000000${userAddress.slice(2)}`,
+              `0x${"ff".repeat(32)}`,
+            ],
+            data: `0x${"ff".repeat(32)}`,
+          },
+        ],
+      });
+
+      const result = await wrappedToken.unshield(100n);
+      expect(result.txHash).toBe("0xtxhash");
+    });
+
     it("skipBalanceCheck: true bypasses confidential validation", async ({
       userAddress,
       wrappedToken,
@@ -463,6 +504,33 @@ describe("WrappedToken", () => {
 
       const result = await wrappedToken.unshield(50n, { skipBalanceCheck: true });
       expect(result.txHash).toBe("0xtxhash");
+    });
+
+    it("passes callbacks alongside skipBalanceCheck", async ({
+      userAddress,
+      wrappedToken,
+      provider,
+    }) => {
+      vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
+        logs: [
+          {
+            topics: [
+              Topics.UnwrapRequestedLegacy,
+              `0x000000000000000000000000${userAddress.slice(2)}`,
+              `0x${"ff".repeat(32)}`,
+            ],
+            data: `0x${"ff".repeat(32)}`,
+          },
+        ],
+      });
+
+      const onUnwrapSubmitted = vi.fn();
+      const result = await wrappedToken.unshield(50n, {
+        skipBalanceCheck: true,
+        onUnwrapSubmitted,
+      });
+      expect(result.txHash).toBe("0xtxhash");
+      expect(onUnwrapSubmitted).toHaveBeenCalled();
     });
   });
 

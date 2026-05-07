@@ -144,46 +144,6 @@ describe("ZamaSDK", () => {
     sdk.terminate();
   });
 
-  describe("keypairTTL validation", () => {
-    it("throws when keypairTTL is 0", ({ createSDK }) => {
-      expect(() => createSDK({ keypairTTL: 0 })).toThrow(
-        "keypairTTL must be a positive integer number of seconds",
-      );
-    });
-
-    it("throws when keypairTTL is negative", ({ createSDK }) => {
-      expect(() => createSDK({ keypairTTL: -1 })).toThrow(
-        "keypairTTL must be a positive integer number of seconds",
-      );
-    });
-
-    it("throws when keypairTTL is NaN", ({ createSDK }) => {
-      expect(() => createSDK({ keypairTTL: NaN })).toThrow(
-        "keypairTTL must be a positive integer number of seconds",
-      );
-    });
-
-    it("accepts keypairTTL exactly at the 365-day maximum without warning", ({ createSDK }) => {
-      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-      const MAX = 365 * 86400;
-      createSDK({ keypairTTL: MAX });
-      expect(warnSpy).not.toHaveBeenCalled();
-      warnSpy.mockRestore();
-    });
-
-    it("throws when keypairTTL is Infinity", ({ createSDK }) => {
-      expect(() => createSDK({ keypairTTL: Infinity })).toThrow(
-        "keypairTTL must be a positive integer number of seconds",
-      );
-    });
-
-    it("throws when keypairTTL is fractional", ({ createSDK }) => {
-      expect(() => createSDK({ keypairTTL: 1.5 })).toThrow(
-        "keypairTTL must be a positive integer number of seconds",
-      );
-    });
-  });
-
   describe("lifecycle wallet account change", () => {
     function createSubscribeSigner(mockSigner: GenericSigner) {
       let capturedOnWalletAccountChange: WalletAccountListener;

@@ -4,7 +4,7 @@ import { renderHook, type RenderHookOptions } from "@testing-library/react";
 import type { PropsWithChildren } from "react";
 import React from "react";
 import type { RelayerSDK } from "../../sdk/src/relayer/relayer-sdk";
-import { test as base } from "../../sdk/src/test-fixtures";
+import { createMockChain, test as base } from "../../sdk/src/test-fixtures";
 import type { Token } from "../../sdk/src/token";
 import type { GenericProvider, GenericSigner, GenericStorage } from "../../sdk/src/types";
 import type { ZamaConfig } from "@zama-fhe/sdk";
@@ -67,19 +67,19 @@ export const test = base.extend<ReactSdkFixtures>({
   },
   createWrapper: async ({ relayer, provider, signer, storage, queryClient }, use) => {
     function createWrapper(overrides?: Partial<ZamaConfig>) {
-      const config: ZamaConfig = {
-        chains: [],
+      const config = {
+        chains: [createMockChain({ id: 31337 })],
         relayer,
         provider,
         signer,
         storage,
-        permitStorage: undefined,
-        keypairTTL: undefined,
-        permitTTL: undefined,
-        registryTTL: undefined,
+        permitStorage: storage,
+        keypairTTL: 2592000,
+        permitTTL: 1,
+        registryTTL: 86400,
         onEvent: undefined,
         ...overrides,
-      };
+      } as unknown as ZamaConfig;
 
       function Wrapper({ children }: { children?: React.ReactNode }) {
         return (

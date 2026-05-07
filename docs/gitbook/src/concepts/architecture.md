@@ -39,7 +39,7 @@ Each package exposes multiple entry points for tree-shaking:
 | `@zama-fhe/sdk`        | Core SDK, RelayerWeb, storage, ABIs, event decoders, contract call builders |
 | `@zama-fhe/sdk/viem`   | `ViemProvider`, `ViemSigner` adapters + viem `createConfig`                 |
 | `@zama-fhe/sdk/ethers` | `EthersProvider`, `EthersSigner` adapters + ethers `createConfig`           |
-| `@zama-fhe/sdk/node`   | `RelayerNode`, `NodeWorkerClient`, `NodeWorkerPool`, network presets        |
+| `@zama-fhe/sdk/node`   | `node()` transport factory, network presets, type-only exports              |
 | `@zama-fhe/sdk/query`  | Query/mutation option factories, query keys, invalidation helpers           |
 
 **`@zama-fhe/react-sdk`**

@@ -309,12 +309,13 @@ describe("Token", () => {
     });
 
     it("throws INSUFFICIENT_CONFIDENTIAL_BALANCE when amount exceeds decrypted balance", async ({
+      relayer,
       token,
       handle,
       provider,
     }) => {
       vi.mocked(provider.readContract).mockResolvedValueOnce(handle);
-      vi.mocked(token.sdk.relayer.userDecrypt).mockResolvedValueOnce({ [handle]: 50n });
+      vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({ [handle]: 50n });
 
       await expect(token.confidentialTransfer(RECIPIENT, 100n)).rejects.toMatchObject({
         code: ZamaErrorCode.InsufficientConfidentialBalance,
@@ -323,12 +324,26 @@ describe("Token", () => {
     });
 
     it("passes validation and submits transaction when balance is sufficient", async ({
+      relayer,
       token,
       handle,
       provider,
     }) => {
       vi.mocked(provider.readContract).mockResolvedValueOnce(handle);
-      vi.mocked(token.sdk.relayer.userDecrypt).mockResolvedValueOnce({ [handle]: 200n });
+      vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({ [handle]: 200n });
+
+      const result = await token.confidentialTransfer(RECIPIENT, 100n);
+      expect(result.txHash).toBe("0xtxhash");
+    });
+
+    it("passes validation when balance exactly equals amount (boundary)", async ({
+      relayer,
+      token,
+      handle,
+      provider,
+    }) => {
+      vi.mocked(provider.readContract).mockResolvedValueOnce(handle);
+      vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({ [handle]: 100n });
 
       const result = await token.confidentialTransfer(RECIPIENT, 100n);
       expect(result.txHash).toBe("0xtxhash");
@@ -341,11 +356,31 @@ describe("Token", () => {
       expect(result.txHash).toBe("0xtxhash");
     });
 
-    it("re-throws ZamaError from balanceOf", async ({ token, handle, provider }) => {
+    it("passes callbacks alongside skipBalanceCheck", async ({ token }) => {
+      const onEncryptComplete = vi.fn();
+      const result = await token.confidentialTransfer(RECIPIENT, 100n, {
+        skipBalanceCheck: true,
+        onEncryptComplete,
+      });
+      expect(result.txHash).toBe("0xtxhash");
+      expect(onEncryptComplete).toHaveBeenCalled();
+    });
+
+    it("allows zero-amount transfer when handle is zero", async ({ token, provider }) => {
+      vi.mocked(provider.readContract).mockResolvedValueOnce(ZERO_HANDLE);
+
+      const result = await token.confidentialTransfer(RECIPIENT, 0n);
+      expect(result.txHash).toBe("0xtxhash");
+    });
+
+    it("re-throws ZamaError from balanceOf (e.g. DecryptionFailedError)", async ({
+      relayer,
+      token,
+      handle,
+      provider,
+    }) => {
       vi.mocked(provider.readContract).mockResolvedValueOnce(handle);
-      vi.mocked(token.sdk.relayer.userDecrypt).mockRejectedValueOnce(
-        new TypeError("network failure"),
-      );
+      vi.mocked(relayer.userDecrypt).mockRejectedValueOnce(new TypeError("network failure"));
 
       await expect(token.confidentialTransfer(RECIPIENT, 100n)).rejects.toMatchObject({
         code: ZamaErrorCode.DecryptionFailed,
@@ -359,7 +394,46 @@ describe("Token", () => {
         code: ZamaErrorCode.BalanceCheckUnavailable,
       });
     });
+
+    it("uses cached plaintext balance (skips decrypt round-trip)", async ({
+      signer,
+      token,
+      handle,
+      storage,
+      provider,
+    }) => {
+      const owner = getAddress(signer.walletAccount.getSnapshot()!.address);
+      const cacheKey = `zama:decrypt:${owner}:${getAddress(token.address)}:${handle.toLowerCase()}`;
+      await storage.set(cacheKey, 200n);
+
+      vi.mocked(provider.readContract).mockResolvedValueOnce(handle);
+
+      const result = await token.confidentialTransfer(RECIPIENT, 100n);
+      expect(result.txHash).toBe("0xtxhash");
+    });
+
+    it("rejects from cache when cached balance is insufficient", async ({
+      signer,
+      token,
+      handle,
+      storage,
+      provider,
+    }) => {
+      const owner = getAddress(signer.walletAccount.getSnapshot()!.address);
+      const cacheKey = `zama:decrypt:${owner}:${getAddress(token.address)}:${handle.toLowerCase()}`;
+      await storage.set(cacheKey, 50n);
+
+      vi.mocked(provider.readContract).mockResolvedValueOnce(handle);
+
+      await expect(token.confidentialTransfer(RECIPIENT, 100n)).rejects.toMatchObject({
+        code: ZamaErrorCode.InsufficientConfidentialBalance,
+        message: expect.stringContaining("requested 100"),
+      });
+    });
   });
+
+  // shield / unshield balance-validation lives on WrappedToken — see
+  // wrapped-token.test.ts for the ERC-20 and confidential balance checks.
 });
 
 // Suppress unused import warning when DecryptionFailedError isn't referenced above

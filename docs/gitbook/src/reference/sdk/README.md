@@ -14,7 +14,7 @@ API reference for the core `@zama-fhe/sdk` package. Each page documents a single
 
 🟨 Go to [**RelayerWeb**](RelayerWeb.md) for browser-side FHE encryption via Web Workers and WASM.
 
-🟨 Go to [**RelayerNode**](RelayerNode.md) for server-side FHE encryption with native worker threads.
+🟨 Go to [**RelayerNode**](RelayerNode.md) for the `node()` transport factory and server-side FHE operations.
 
 🟨 Go to [**Network presets**](network-presets.md) for pre-configured contract addresses on Sepolia, Mainnet, and Hardhat.
 

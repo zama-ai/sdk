@@ -57,7 +57,7 @@ Balances are stored as ciphertext handles. To display one, the user authorizes t
 ```ts
 import { ZamaSDK } from "@zama-fhe/sdk";
 
-const sdk = new ZamaSDK({ relayer, signer, storage });
+const sdk = new ZamaSDK(config); // config from createConfig()
 const token = sdk.createToken("0xConfidentialToken");
 
 // First call prompts the wallet for an EIP-712 session signature;

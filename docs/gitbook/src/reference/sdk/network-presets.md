@@ -158,7 +158,7 @@ console.log(DefaultRegistryAddresses);
 ```
 
 {% hint style="info" %}
-`hardhat` has no registry address by default. Pass one explicitly via `registryAddresses` when creating a [WrappersRegistry](/reference/sdk/WrappersRegistry).
+`hardhat` has no registry address by default. Pass one via `registryAddresses` when creating a [WrappersRegistry](/reference/sdk/WrappersRegistry), or set `registryAddress` on the chain definition.
 {% endhint %}
 
 ## Related

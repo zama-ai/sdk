@@ -75,9 +75,10 @@ test("matchZamaError routes to the correct handler", async () => {
   ).toBe("fallback");
 });
 
-test("zero poolSize rejects on first operation", async ({ chain, publicClient, viemClient }) => {
-  using sdk = createZamaSDK({ chain, publicClient, viemClient, poolOptions: { poolSize: 0 } });
-  await expect(sdk.relayer.generateKeypair()).rejects.toThrow();
+test("zero poolSize rejects at config creation", async ({ chain, publicClient, viemClient }) => {
+  expect(() =>
+    createZamaSDK({ chain, publicClient, viemClient, poolOptions: { poolSize: 0 } }),
+  ).toThrow();
 });
 
 test("init failure resets so next call retries", async ({ chain, publicClient, viemClient }) => {

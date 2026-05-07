@@ -13,7 +13,12 @@ export type { AtLeastOneChain };
 // ── Shared option shapes ─────────────────────────────────────────────────────
 
 /** Options for web() relayer (threads, security, logger, storage). */
-export type WebRelayerOptions = Partial<Pick<RelayerWebConfig, "threads" | "security" | "logger">>;
+export type WebRelayerOptions = Partial<
+  Pick<
+    RelayerWebConfig,
+    "threads" | "security" | "logger" | "fheArtifactStorage" | "fheArtifactCacheTTL"
+  >
+>;
 
 // ── Relayer config types ─────────────────────────────────────────────────────
 
@@ -83,16 +88,21 @@ export interface ZamaConfigGeneric<
   provider: GenericProvider;
 }
 
-/** Resolved config object returned by `createConfig`. */
-export interface ZamaConfig {
+declare const zamaConfigBrand: unique symbol;
+
+/**
+ * Resolved, validated config object. Obtain via `createConfig()` or an
+ * adapter-specific factory — never construct by hand.
+ */
+export type ZamaConfig = {
   readonly chains: readonly FheChain[];
   readonly relayer: RelayerDispatcher;
   readonly provider: GenericProvider;
   readonly signer: GenericSigner | undefined;
   readonly storage: GenericStorage;
   readonly permitStorage: GenericStorage;
-  readonly keypairTTL: number | undefined;
-  readonly permitTTL: number | undefined;
-  readonly registryTTL: number | undefined;
+  readonly keypairTTL: number;
+  readonly permitTTL: number;
+  readonly registryTTL: number;
   readonly onEvent: ZamaSDKEventListener | undefined;
-}
+} & { readonly [zamaConfigBrand]: true };

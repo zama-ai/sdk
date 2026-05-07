@@ -128,7 +128,7 @@ Use the official Zama SDK docs and the approved react-wagmi example to integrate
 ```
 
 ```text
-Use the official Zama SDK docs and the approved node-viem example to build a Node.js backend flow with RelayerNode and per-request isolation.
+Use the official Zama SDK docs and the approved node-viem example to build a Node.js backend flow with the node() transport factory and per-request isolation.
 ```
 
 ```text

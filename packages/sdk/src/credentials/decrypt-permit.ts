@@ -2,7 +2,7 @@ import type { Address } from "viem";
 import { DecryptionFailedError } from "../errors";
 import type { DelegatedUserDecryptParams, UserDecryptParams } from "../relayer/relayer-sdk.types";
 import type { CredentialBundle, Permission } from "./types";
-import { checksum } from "./utils";
+import { checksum } from "../schemas/primitives";
 
 export type UserDecryptPermitParams = Pick<
   UserDecryptParams,

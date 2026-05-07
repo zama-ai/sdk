@@ -1,12 +1,10 @@
 import { describe, expect, test } from "../../test-fixtures";
-import { ZamaSDK } from "../../zama-sdk";
 
 import { encryptMutationOptions } from "../encrypt";
 import type { Address } from "viem";
 
 describe("encryptMutationOptions", () => {
-  test("delegates sdk.relayer.encrypt", async ({ signer, relayer, storage }) => {
-    const sdk = new ZamaSDK({ relayer, signer, storage });
+  test("delegates sdk.relayer.encrypt", async ({ sdk, relayer }) => {
     const options = encryptMutationOptions(sdk);
 
     expect(options.mutationKey).toEqual(["zama.encrypt"]);

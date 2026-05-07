@@ -35,7 +35,7 @@ export class SignerNotConfiguredError extends SignerRequiredError {
     super(
       ZamaErrorCode.SignerNotConfigured,
       operation,
-      `Cannot ${operation} without a signer. Configure one via ZamaSDKConfig.signer or <ZamaProvider config={createConfig({ signer: ... })}>.`,
+      `Cannot ${operation} without a signer. Configure one via createConfig({ signer: ... }) or <ZamaProvider config={createConfig({ signer: ... })}>.`,
       options,
     );
     this.name = "SignerNotConfiguredError";

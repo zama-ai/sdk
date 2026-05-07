@@ -16,8 +16,16 @@ For ERC-7984 ERC-20 wrappers (shield / unshield / allowance), use [`WrappedToken
 Created via [`ZamaSDK.createToken()`](ZamaSDK.md):
 
 ```ts
+import { ZamaSDK } from "@zama-fhe/sdk";
+
+const sdk = new ZamaSDK(config); // config from createConfig()
 const token = sdk.createToken("0xConfidentialToken");
+
+const balance = await token.balanceOf(ownerAddress);
+await token.confidentialTransfer("0xRecipient", 500n);
 ```
+
+For shield / unshield, create a `WrappedToken` via `sdk.createWrappedToken("0xWrapper")` — see [`WrappedToken`](WrappedToken.md).
 
 ## Methods
 

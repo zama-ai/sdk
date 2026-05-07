@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { RelayerDispatcher, type WorkerLike } from "../relayer-dispatcher";
 import { ConfigurationError } from "../../errors";
-import { createMockRelayer } from "../../test-fixtures";
+import { createMockChain, createMockRelayer } from "../../test-fixtures";
 import type { FheChain } from "../../chains/types";
 import type { RelayerConfig } from "../../config/types";
 import type { RelayerSDK } from "../relayer-sdk";
 
-const chainA: FheChain = { id: 1 } as FheChain;
-const chainB: FheChain = { id: 2 } as FheChain;
+const chainA: FheChain = createMockChain({ id: 1 });
+const chainB: FheChain = createMockChain({ id: 2 });
 
 function makeMockWorker(): WorkerLike {
   return { terminate: vi.fn<() => void>() };
@@ -57,13 +57,13 @@ describe("RelayerDispatcher", () => {
 
     it("defaults to first chain", () => {
       const dispatcher = makeDispatcher([chainA, chainB]);
-      expect(dispatcher.chain).toBe(chainA);
+      expect(dispatcher.chain).toEqual(chainA);
     });
 
     it("returns active chain after switchChain", () => {
       const dispatcher = makeDispatcher([chainA, chainB]);
       dispatcher.switchChain(2);
-      expect(dispatcher.chain).toBe(chainB);
+      expect(dispatcher.chain).toEqual(chainB);
     });
   });
 
@@ -71,7 +71,7 @@ describe("RelayerDispatcher", () => {
     it("switches the active chain", () => {
       const dispatcher = makeDispatcher([chainA, chainB]);
       dispatcher.switchChain(2);
-      expect(dispatcher.chain).toBe(chainB);
+      expect(dispatcher.chain).toEqual(chainB);
     });
 
     it("throws ConfigurationError on unknown chainId", () => {
