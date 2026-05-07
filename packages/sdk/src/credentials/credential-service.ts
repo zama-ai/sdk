@@ -9,8 +9,9 @@ import { chunkContracts, uncoveredContracts } from "./permissions";
 import { PermissionStore } from "./permission-store";
 import type { PermissionScope } from "./storage-keys";
 import type { CredentialBundle, Permission, StoredKeypair } from "./types";
-import type { ChecksummedAddress } from "./utils";
-import { checksum, normalizeAddresses, nowSeconds, SECONDS_PER_DAY } from "./utils";
+import type { ChecksummedAddress } from "../schemas/primitives";
+import { checksum } from "../schemas/primitives";
+import { normalizeAddresses, nowSeconds, SECONDS_PER_DAY } from "./utils";
 
 export const DEFAULT_KEYPAIR_TTL_SECONDS = 30 * SECONDS_PER_DAY;
 export const DEFAULT_PERMIT_DURATION_DAYS = 30;

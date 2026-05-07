@@ -10,13 +10,7 @@
 // Note: web() and node() transport factories live in their own entry points
 // (@zama-fhe/sdk/web and @zama-fhe/sdk/node) to keep environment-specific
 // dependencies out of this barrel.
-export {
-  buildZamaConfig,
-  createConfig,
-  cleartext,
-  resolveChainRelayers,
-  resolveStorage,
-} from "./config";
+export { createConfig, cleartext, resolveChainRelayers, resolveStorage } from "./config";
 export type {
   ZamaConfig,
   ZamaConfigBase,
@@ -72,7 +66,6 @@ export { DecryptCache } from "./decrypt-cache";
 
 // Token abstraction layer
 export { ZamaSDK } from "./zama-sdk";
-export type { ZamaSDKConfig } from "./zama-sdk";
 export type { DecryptHandle, DecryptResult } from "./query/user-decrypt";
 export { WrappersRegistry, DefaultRegistryAddresses } from "./wrappers-registry";
 export type { WrappersRegistryConfig, ListPairsOptions } from "./wrappers-registry";

@@ -1,7 +1,9 @@
+import { z } from "zod";
 import type { RelayerConfig } from "../config/types";
 import { RelayerNode } from "../relayer/relayer-node";
 import type { FheChain } from "../chains/types";
 import type { GenericStorage } from "../types";
+import { parseConfiguration } from "../validation";
 import { NodeWorkerPool } from "../worker/worker.node-pool";
 import type { GenericLogger } from "../worker/worker.types";
 import { assertCondition } from "../utils";
@@ -21,6 +23,11 @@ export interface NodeRelayerConfig extends RelayerConfig {
   readonly createRelayer: (chain: FheChain, worker: NodeWorkerPool) => RelayerNode;
 }
 
+const NodePoolOptionsSchema = z.object({
+  poolSize: z.number().int().positive().optional(),
+  fheArtifactCacheTTL: z.number().int().nonnegative().optional(),
+});
+
 /**
  * Node.js transport — routes to RelayerNode (worker thread pool).
  *
@@ -35,6 +42,9 @@ export interface NodeRelayerConfig extends RelayerConfig {
  * ```
  */
 export function node(options?: NodePoolOptions): NodeRelayerConfig {
+  if (options !== undefined) {
+    parseConfiguration(NodePoolOptionsSchema, options);
+  }
   return {
     type: "node",
     createWorker: (chains) => new NodeWorkerPool({ chains, ...options }),

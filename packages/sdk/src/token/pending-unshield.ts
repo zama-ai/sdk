@@ -1,4 +1,6 @@
 import type { Address, Hex } from "viem";
+import { z } from "zod";
+import { checksum, hex } from "../schemas/primitives";
 import type { GenericStorage } from "../types";
 import type { Handle } from "../relayer/relayer-sdk.types";
 
@@ -26,26 +28,19 @@ interface StoredPendingUnshieldRequest extends PendingUnshieldRequest {
 }
 
 function storageKey(wrapperAddress: Address): string {
-  return `${STORAGE_PREFIX}${wrapperAddress}`;
+  return `${STORAGE_PREFIX}${checksum(wrapperAddress)}`;
 }
 
-function normalizePendingUnshield(
-  value: Hex | StoredPendingUnshieldRequest | null,
-): PendingUnshieldRequest | null {
-  if (value === null) {
-    return null;
-  }
-  if (typeof value === "string") {
-    return { unwrapTxHash: value };
-  }
-  if (typeof value === "object" && "unwrapTxHash" in value) {
-    return {
-      unwrapTxHash: value.unwrapTxHash,
-      unwrapRequestId: value.unwrapRequestId,
-    };
-  }
-  return null;
-}
+const PendingUnshieldRequestSchema = z.union([
+  hex.transform((unwrapTxHash) => ({ unwrapTxHash })),
+  z
+    .object({
+      version: z.literal(CURRENT_VERSION),
+      unwrapTxHash: hex,
+      unwrapRequestId: hex.optional(),
+    })
+    .transform(({ unwrapTxHash, unwrapRequestId }) => ({ unwrapTxHash, unwrapRequestId })),
+]);
 
 /**
  * Persist the unwrap tx hash so an interrupted unshield can be resumed later
@@ -92,8 +87,17 @@ export async function loadPendingUnshieldRequest(
   storage: GenericStorage,
   wrapperAddress: Address,
 ): Promise<PendingUnshieldRequest | null> {
-  const value = await storage.get<Hex | StoredPendingUnshieldRequest>(storageKey(wrapperAddress));
-  return normalizePendingUnshield(value);
+  const key = storageKey(wrapperAddress);
+  const value = await storage.get<Hex | StoredPendingUnshieldRequest>(key);
+  if (value === null || value === undefined) {
+    return null;
+  }
+  const parsed = PendingUnshieldRequestSchema.safeParse(value);
+  if (!parsed.success) {
+    await storage.delete(key);
+    return null;
+  }
+  return parsed.data as PendingUnshieldRequest;
 }
 
 /**
