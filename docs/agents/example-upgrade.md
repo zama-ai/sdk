@@ -107,7 +107,7 @@ Valid finding severities are `required`, `recommended`, `optional`, and `info`. 
 
 Supported agents:
 
-- `codex`: runs `codex exec` with `--cd <repo>`, `--sandbox workspace-write`, and configurable `--ask-for-approval`.
+- `codex`: runs `codex exec` with `--cd <repo>`, configurable `--sandbox`, and an audited prompt/command file.
 - `claude`: runs `claude --print` with configurable `--model` and permission mode mapping.
 
 The agent stage writes two audit files before execution:
@@ -134,9 +134,10 @@ Useful options:
 - `--analyst-agent codex|claude` and `--analyst-model <model>` select the read-only analyst runner.
 - `--analyst-sandbox read-only|workspace-write|danger-full-access` defaults to `read-only` for Codex analyst runs.
 - `--sandbox read-only|workspace-write|danger-full-access` is passed to Codex.
-- `--approval on-request|never` is passed to Codex as `--ask-for-approval`; Claude maps this to a permission mode.
+- `--approval on-request|never` maps to Claude permission mode. Codex approval behavior is configured by the installed Codex CLI/profile; the runner does not pass deprecated approval flags.
 - `--profile <name>` is passed to Codex for configuration from `~/.codex/config.toml`.
 - `--effort <level>` is passed to Claude.
+- `--analysis-timeout-minutes <n>` and `--agent-timeout-minutes <n>` bound analyst and implementation runs. If an implementation agent times out, keep the generated analysis artifacts and either rerun the agent stage or implement manually from `analysis/impact-plan.json`.
 
 ## Pull Requests
 
@@ -181,6 +182,18 @@ The `react-wagmi` SDK 3.x upgrade exposed concrete checks the agent must make fo
 - When wrapper behavior matters, verify whether the registry points to upgraded proxies and avoid legacy APIs unless the code explicitly uses `*Legacy*` paths for compatibility.
 - Re-read nearby comments after mechanical API migrations. Comments that mention old hook options, disabled queries, provider ordering, or signer/relayer wiring must be updated or removed with the code.
 - Keep README/WALKTHROUGH aligned with the actual SDK wiring, then commit regenerated LLM corpus artifacts. Run `pnpm format:check` after `pnpm llm:build`; CI `lint` fails on generated or markdown formatting drift.
+
+## React Ethers Lessons
+
+The `react-ethers` SDK 3.x upgrade added ethers-specific checks that also apply to future framework upgrades:
+
+- Prefer config-based provider setup with `@zama-fhe/sdk/ethers` `createConfig`, `@zama-fhe/sdk/chains`, and `@zama-fhe/sdk/web`. Avoid carrying forward legacy manual `EthersSigner`, direct `RelayerWeb`, or ad hoc provider wiring when the target SDK exposes the config adapter.
+- Prefer SDK-owned provider/signer helpers for contract IO. Reads should go through the SDK provider created by config, and writes should use the SDK signer helper expected by the target package. Do not assume wallet `eth_call` mocks still observe all reads after migrating to a configured JSON-RPC provider.
+- Replace local shield approval orchestration with `useShield` when available. The SDK owns approval strategy, ERC-1363 routing, USDT reset behavior, and pending transaction state; the example should demonstrate the high-level hook unless it intentionally teaches a low-level flow.
+- Verify hook required parameters against the published target package. For example, `useConfidentialBalance` may require both `tokenAddress` and `account`; missing account inputs can pass review superficially but break typecheck or runtime behavior.
+- Keep token-dependent ethers hooks inside a component that only mounts after registry data exists. This avoids `ZERO_ADDRESS` placeholders and makes disabled UI state easier to reason about.
+- E2E mocks must follow the actual read path after migration. If reads move from `window.ethereum` to a configured `JsonRpcProvider`, mock the RPC endpoint used by that provider rather than only mocking wallet methods.
+- When the implementation agent stalls or times out, do not discard the run. The deep analysis artifacts are still useful: finish the app manually from `analysis/impact-plan.json`, record the stall in `implementation-resolution.followUpProcessIssues`, and mention it in the PR body.
 
 ## Source Priority
 

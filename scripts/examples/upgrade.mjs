@@ -1,6 +1,6 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { join, relative } from "node:path";
+import { isAbsolute, join, relative } from "node:path";
 import { parseArgs } from "node:util";
 
 const root = process.cwd();
@@ -68,6 +68,8 @@ const { values } = parseArgs({
     "analyst-sandbox": { type: "string", default: "read-only" },
     sandbox: { type: "string", default: "workspace-write" },
     approval: { type: "string", default: "on-request" },
+    "agent-timeout-minutes": { type: "string", default: "45" },
+    "analysis-timeout-minutes": { type: "string", default: "20" },
     profile: { type: "string" },
     effort: { type: "string" },
     skill: { type: "string", default: "zama-example-upgrade" },
@@ -94,7 +96,7 @@ if (values.help) {
 
 const outRoot = values.out ?? manifest.defaults.generatedReportsDir;
 const runId = values["run-id"] ?? `upgrade-${timestamp()}`;
-const outDir = join(root, outRoot, runId);
+const outDir = join(isAbsolute(outRoot) ? outRoot : join(root, outRoot), runId);
 const stage = resolveStage();
 const analysisMode = values.analysis ?? manifest.defaults.analysis ?? "deep";
 const agent = values.agent ?? defaultAgent;
@@ -102,6 +104,14 @@ const model = values.model ?? defaultModelFor(agent);
 const analystAgent = values["analyst-agent"] ?? manifest.defaults.analystAgent ?? agent;
 const analystModel =
   values["analyst-model"] ?? manifest.defaults.analystModel ?? defaultModelFor(analystAgent);
+const agentTimeoutMs = minutesToMilliseconds(
+  values["agent-timeout-minutes"],
+  "--agent-timeout-minutes",
+);
+const analysisTimeoutMs = minutesToMilliseconds(
+  values["analysis-timeout-minutes"],
+  "--analysis-timeout-minutes",
+);
 let validationFailed = false;
 
 try {
@@ -760,6 +770,7 @@ function runAgentInvocation({
         command: displayAgentCommand(command, agentName, prompt, promptPath),
         prompt: relative(root, promptPath),
         output: relative(root, outputPath),
+        timeoutMs: mode === "analysis" ? analysisTimeoutMs : agentTimeoutMs,
       },
       null,
       2,
@@ -783,6 +794,7 @@ function runAgentInvocation({
     input: prompt,
     encoding: "utf8",
     maxBuffer: 20 * 1024 * 1024,
+    timeout: mode === "analysis" ? analysisTimeoutMs : agentTimeoutMs,
     stdio: ["pipe", "pipe", "pipe"],
   });
   if (result.stdout) {
@@ -790,6 +802,17 @@ function runAgentInvocation({
   }
   if (result.stderr) {
     process.stderr.write(result.stderr);
+  }
+  if (result.error?.code === "ETIMEDOUT") {
+    const timeoutMinutes =
+      mode === "analysis" ? values["analysis-timeout-minutes"] : values["agent-timeout-minutes"];
+    throw new Error(
+      `${role} ${mode} agent invocation timed out after ${timeoutMinutes} minute(s). ` +
+        `Inspect ${relative(root, commandPath)} and ${relative(root, promptPath)}, then rerun this stage or implement manually from the generated analysis.`,
+    );
+  }
+  if (result.error) {
+    throw result.error;
   }
   if (result.status !== 0) {
     process.exit(result.status ?? 1);
@@ -1338,8 +1361,9 @@ ${analysisMode === "deep" ? analysisFiles : "- Standard mode: no separate analys
 12. Run \`pnpm format:check\` after generated docs/artifacts change; CI lint includes formatting.
 13. Avoid placeholder token/contract addresses. Prefer a child component that only mounts token-dependent hooks once real registry/config data exists. If the published target SDK type forces a placeholder, document why.
 14. Verify hook options against the example app's declared SDK package version, not only local monorepo source.
-15. Generate or update the report.
-16. In your final answer, summarize changes, validation results, unresolved findings, and remaining manual checks.
+15. For ethers examples, prefer the config-based \`@zama-fhe/sdk/ethers\` adapter, SDK provider/signer helpers, and React SDK hooks over local signer/provider or approval orchestration.
+16. Generate or update the report.
+17. In your final answer, summarize changes, validation results, unresolved findings, and remaining manual checks.
 
 Do not modify apps marked future or excluded in \`examples/examples-upgrade.config.json\`.
 
@@ -1432,7 +1456,8 @@ Focus:
 - Inspect package exports, API reports, and SDK/react-sdk source for the exact primitives available to the target version.
 - Verify hook signatures and options against the example app's declared package version.
 - Identify local reimplementations that should be replaced by SDK hooks/utils.
-- Flag risky migrations such as placeholder addresses, direct relayer calls, manual cache invalidation, or legacy APIs.
+- Flag risky migrations such as placeholder addresses, direct relayer calls, manual cache invalidation, manual approval orchestration, or legacy APIs.
+- For ethers examples, check whether config-based \`@zama-fhe/sdk/ethers\` setup, SDK provider/signer helpers, and high-level hooks should replace local primitives.
 `;
   }
 
@@ -1444,8 +1469,6 @@ function buildAgentCommand({ mode, agentName, modelName, outputPath, prompt }) {
     const command = [
       "codex",
       "exec",
-      "--ask-for-approval",
-      values.approval,
       "--cd",
       root,
       "--sandbox",
@@ -1500,6 +1523,14 @@ function defaultModelFor(agentName) {
     return defaultClaudeModel;
   }
   return undefined;
+}
+
+function minutesToMilliseconds(value, optionName) {
+  const minutes = Number(value);
+  if (!Number.isFinite(minutes) || minutes <= 0) {
+    throw new Error(`${optionName} must be a positive number of minutes.`);
+  }
+  return Math.round(minutes * 60 * 1000);
 }
 
 function validateAgentName(agentName, optionName) {
@@ -2259,6 +2290,8 @@ Key options:
   --analyst-agent codex|claude                        Default: claude.
   --analyst-model <model>                             Default: claude-sonnet-4-6.
   --analyst-sandbox <mode>                            Default: read-only for Codex analyst runs.
+  --analysis-timeout-minutes <n>                      Default: 20.
+  --agent-timeout-minutes <n>                         Default: 45.
   --skill <name>                                      Default: zama-example-upgrade.
   --allow-missing-analysis                            Allow agent stage without complete deep analysis reports.
   --pr none|draft|ready                               Default: none.

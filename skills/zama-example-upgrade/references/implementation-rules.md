@@ -8,8 +8,10 @@
 - Update app package versions and lockfiles with the app's declared package manager.
 - Use clear-text-in, clear-text-out SDK APIs. Hide FHE protocol details behind SDK primitives.
 - Prefer `@zama-fhe/react-sdk` hooks and SDK utilities over local orchestration.
+- For ethers examples, prefer `@zama-fhe/sdk/ethers` `createConfig`, SDK provider/signer helpers, and high-level hooks such as `useShield` over manual signer, relayer, approval, or receipt orchestration.
 - Do not use `@zama-fhe/relayer-sdk` directly unless the example intentionally demonstrates low-level legacy behavior.
 - Avoid placeholder token or contract addresses. Prefer component boundaries that mount token-dependent hooks only after real registry/config data exists.
 - Verify hook options and types against the example app's declared published package version, not only local monorepo source.
+- Update E2E mocks to follow the post-migration read path. Configured JSON-RPC provider reads may bypass wallet `eth_call` mocks.
 - Keep README and WALKTHROUGH aligned with actual app behavior. If they change, run `pnpm llm:build` and keep generated corpus artifacts.
 - Do not weaken tests to pass validation. Update tests only for intended SDK behavior.
