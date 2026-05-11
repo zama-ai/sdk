@@ -106,12 +106,13 @@ describe("LifecycleService", () => {
         chainId: 1,
       } as const;
       dispatch!({ previous: prev, next });
-      await new Promise((resolve) => setTimeout(resolve, 0));
 
+      await vi.waitFor(() => {
+        expect(calls).toEqual(["credential", "cache", "relayer", "listener"]);
+      });
       expect(handleWalletAccountChange).toHaveBeenCalledWith(prev, next);
       expect(clearForRequester).toHaveBeenCalledWith(prev.address);
       expect(switchChain).toHaveBeenCalledWith(1);
-      expect(calls).toEqual(["credential", "cache", "relayer", "listener"]);
     });
 
     test("skips cache clear when previous account is undefined", async ({
@@ -132,14 +133,15 @@ describe("LifecycleService", () => {
         },
       });
       const service = createLifecycleService({ signer, cache });
-      service.onWalletAccountChange(() => {});
+      const listener = vi.fn();
+      service.onWalletAccountChange(listener);
 
       dispatch!({
         previous: undefined,
         next: { address: "0x1111111111111111111111111111111111111111", chainId: 31337 },
       });
-      await new Promise((resolve) => setTimeout(resolve, 0));
 
+      await vi.waitFor(() => expect(listener).toHaveBeenCalledOnce());
       expect(clearForRequester).not.toHaveBeenCalled();
     });
 
@@ -162,14 +164,15 @@ describe("LifecycleService", () => {
         },
       });
       const service = createLifecycleService({ signer, relayer });
-      service.onWalletAccountChange(() => {});
+      const listener = vi.fn();
+      service.onWalletAccountChange(listener);
 
       dispatch!({
         previous: { address: "0x1111111111111111111111111111111111111111", chainId: 31337 },
         next: undefined,
       });
-      await new Promise((resolve) => setTimeout(resolve, 0));
 
+      await vi.waitFor(() => expect(listener).toHaveBeenCalledOnce());
       expect(switchChain).not.toHaveBeenCalled();
     });
 
@@ -208,9 +211,8 @@ describe("LifecycleService", () => {
         previous: { address: "0x1111111111111111111111111111111111111111", chainId: 31337 },
         next: { address: "0x2222222222222222222222222222222222222222", chainId: 1 },
       });
-      await new Promise((resolve) => setTimeout(resolve, 0));
 
-      expect(listener).toHaveBeenCalledOnce();
+      await vi.waitFor(() => expect(listener).toHaveBeenCalledOnce());
     });
 
     test("a throwing listener does not prevent others from running", async ({
@@ -240,9 +242,8 @@ describe("LifecycleService", () => {
         chainId: 31337,
       } as const;
       dispatch!({ previous: undefined, next: account });
-      await new Promise((resolve) => setTimeout(resolve, 0));
 
-      expect(survivor).toHaveBeenCalledOnce();
+      await vi.waitFor(() => expect(survivor).toHaveBeenCalledOnce());
     });
 
     test("unsubscribed listener is not invoked", async ({
@@ -261,18 +262,19 @@ describe("LifecycleService", () => {
         },
       });
       const service = createLifecycleService({ signer });
-      const listener = vi.fn();
-      const unsub = service.onWalletAccountChange(listener);
-      unsub();
+      const unsubscribed = vi.fn();
+      service.onWalletAccountChange(unsubscribed)();
+      const stillSubscribed = vi.fn();
+      service.onWalletAccountChange(stillSubscribed);
 
       const account = {
         address: "0x1111111111111111111111111111111111111111",
         chainId: 31337,
       } as const;
       dispatch!({ previous: undefined, next: account });
-      await new Promise((resolve) => setTimeout(resolve, 0));
 
-      expect(listener).not.toHaveBeenCalled();
+      await vi.waitFor(() => expect(stillSubscribed).toHaveBeenCalledOnce());
+      expect(unsubscribed).not.toHaveBeenCalled();
     });
   });
 });
