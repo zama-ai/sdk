@@ -104,4 +104,12 @@ describe("AccountService", () => {
       expect(refreshWalletAccount).not.toHaveBeenCalled();
     });
   });
+
+  describe("requireChainAlignment", () => {
+    test("returns the aligned chain ID", async ({ createAccountService, createMockSigner }) => {
+      const service = createAccountService({ signer: createMockSigner() });
+
+      await expect(service.requireChainAlignment("op")).resolves.toBe(31337);
+    });
+  });
 });

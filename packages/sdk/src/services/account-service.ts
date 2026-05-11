@@ -60,6 +60,10 @@ export class AccountService {
     return account;
   }
 
+  async requireChainAlignment(operation: string): Promise<number> {
+    return (await this.requireAlignedWalletAccount(operation)).chainId;
+  }
+
   onWalletAccountChange(listener: WalletAccountListener): () => void {
     this.#walletAccountListeners.add(listener);
     return () => {
