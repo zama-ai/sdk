@@ -96,7 +96,7 @@ Pass `{ enabled: false }` as the second argument to disable the query.
 
 Returns a standard `useQuery` result. `data` resolves to `Record<Handle, ClearValueType>` — a map from each handle to its decrypted plaintext value (`bigint`, `boolean`, or `string`).
 
-When all requested handles are already cached, `data` contains the cached values immediately (no relayer call). Freshly decrypted results are written through the SDK's internal CachingService — scoped by `(signer, contract, handle)` — so that subsequent renders return instantly, even after a page reload. The cache is cleared automatically on `revoke()`, `revokeSession()`, or wallet lifecycle events (disconnect, account change, chain change).
+When all requested handles are already cached, `data` contains the cached values immediately (no relayer call). Freshly decrypted results are written through the SDK's internal CachingService — scoped by `(signer, contract, handle)` — so that subsequent renders return instantly, even after a page reload. The cache is cleared automatically on `revokePermits()`, `clearCredentials()`, or wallet lifecycle events (disconnect, account change, chain change).
 
 {% include ".gitbook/includes/query-result.md" %}
 
@@ -108,7 +108,7 @@ When all requested handles are already cached, `data` contains the cached values
 2. **Decrypt** — calls `sdk.userDecrypt(handles)` which checks the persistent cache, then hits the relayer for any uncached handles.
 
 {% hint style="warning" %}
-**`useUserDecrypt` does not automatically gate on credentials.** If credentials are not cached when the query fires, the SDK will prompt the user's wallet for a signature. To avoid unexpected popups, gate the query yourself using [`useIsAllowed`](/reference/react/useIsAllowed):
+**`useUserDecrypt` does not automatically gate on permits.** If permits are not cached when the query fires, the SDK will prompt the user's wallet for a signature. To avoid unexpected popups, gate the query yourself using [`useIsAllowed`](/reference/react/useIsAllowed):
 
 ```tsx
 const { data: allowed } = useIsAllowed({ contractAddresses: ["0xContract"] });
@@ -121,20 +121,20 @@ const { data } = useUserDecrypt(
 This ensures the decrypt query only fires after `useAllow` has been called.
 {% endhint %}
 
-## Credential caching
+## Permit caching
 
-`useUserDecrypt` relies on credentials acquired via [`useAllow`](/reference/react/useAllow):
+`useUserDecrypt` relies on permits acquired via [`useAllow`](/reference/react/useAllow):
 
-- **First `allow()` call** — generates a new FHE keypair, creates EIP-712 typed data, and requests a wallet signature. The credentials are then cached.
-- **Subsequent queries** — reuse the cached credentials if they are still valid (not expired).
-- **Expiry** — credentials expire after `keypairTTL` seconds (default: 2592000 = 30 days, configurable via SDK config). Once expired, call `allow()` again to generate fresh credentials.
+- **First `allow()` call** — generates a new FHE keypair, creates EIP-712 typed data, and requests a wallet signature. The permits are then cached.
+- **Subsequent queries** — reuse the cached permits if they are still valid (not expired).
+- **Expiry** — the FHE keypair expires after `keypairTTL` seconds (default: 2592000 = 30 days, configurable via SDK config). Permits expire after `permitTTL` days (default: 30). Once expired, call `allow()` again to generate fresh permits.
 
-This means users only see a wallet signature prompt once per session (or per TTL window), even if they decrypt multiple times.
+This means users only see a wallet signature prompt once per TTL window, even if they decrypt multiple times.
 
 ## Related
 
 - [`useAllow`](/reference/react/useAllow) — pre-authorize contracts with one wallet signature (required before `useUserDecrypt` fires)
-- [`useIsAllowed`](/reference/react/useIsAllowed) — check whether credentials are cached and cover specific contracts
+- [`useIsAllowed`](/reference/react/useIsAllowed) — check whether permits are cached and cover specific contracts
 - [`useConfidentialBalance`](/reference/react/useConfidentialBalance) — high-level hook that decrypts token balances with automatic caching
 - [`useEncrypt`](/reference/react/useEncrypt) — reverse operation, encrypt a plaintext value for on-chain submission
 - [Encrypt & Decrypt guide](/guides/encrypt-decrypt) — full walkthrough with end-to-end examples

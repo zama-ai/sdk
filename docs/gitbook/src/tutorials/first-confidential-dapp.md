@@ -150,7 +150,7 @@ export function BalanceDisplay() {
 {% endtab %}
 {% endtabs %}
 
-The first call prompts the wallet for a signature to generate FHE decrypt credentials. Subsequent calls reuse cached credentials silently.
+The first call prompts the wallet for a signature to generate FHE decrypt permits. Subsequent calls reuse cached permits silently.
 
 ## 6. Add shielding
 
@@ -314,7 +314,7 @@ export function ErrorMessage({ error }: { error: Error | null }) {
     SIGNING_REJECTED: () => "Transaction cancelled -- please approve in your wallet.",
     ENCRYPTION_FAILED: () => "Encryption failed -- try again.",
     TRANSACTION_REVERTED: () => "Transaction failed on-chain -- check your balance.",
-    KEYPAIR_EXPIRED: () => "Session expired -- sign again to continue.",
+    KEYPAIR_EXPIRED: () => "Keypair expired -- sign again to continue.",
     _: (e) => e.message,
   });
 

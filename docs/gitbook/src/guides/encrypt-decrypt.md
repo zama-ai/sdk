@@ -250,13 +250,13 @@ function ConfidentialAction() {
 
 ### 3. Decryption of the encrypted data
 
-Decrypting on-chain data requires the user to sign an EIP-712 message that grants your app a **reusable credential** for the relevant contracts. Hooks like `useUserDecrypt` and `useConfidentialBalance` trigger this signature automatically the first time they run. If your app calls these hooks on render without gating, users see an unsolicited MetaMask popup before they have taken any action — a confusing experience that often leads to rejection.
+Decrypting on-chain data requires the user to sign an EIP-712 message that grants your app a **reusable permit** for the relevant contracts. Hooks like `useUserDecrypt` and `useConfidentialBalance` trigger this signature automatically the first time they run. If your app calls these hooks on render without gating, users see an unsolicited MetaMask popup before they have taken any action — a confusing experience that often leads to rejection.
 
 A good decryption UX follows three steps:
 
-1. **Check credentials** — use `useIsAllowed` to see whether the user has already signed.
+1. **Check permits** — use `useIsAllowed` to see whether the user has already signed.
 2. **Show a locked state** — display a clear "Decrypt" button so the user understands what they are authorizing.
-3. **Decrypt on demand** — only mount balance or decrypt components after the credential exists.
+3. **Decrypt on demand** — only mount balance or decrypt components after permits exist.
 
 {% hint style="danger" %}
 **Never** call `useConfidentialBalance` or `useUserDecrypt` without gating on `useIsAllowed`:
@@ -359,7 +359,7 @@ function App() {
 {% endtab %}
 {% endtabs %}
 
-`DecryptGate` only renders its children once `useIsAllowed` returns true. This means `ConfidentialBalance` never mounts without credentials — no `enabled` guard needed, no wallet popup on render. Returning users skip the prompt entirely because credentials persist in IndexedDB (default TTL: 30 days).
+`DecryptGate` only renders its children once `useIsAllowed` returns true. This means `ConfidentialBalance` never mounts without permits — no `enabled` guard needed, no wallet popup on render. Returning users skip the prompt entirely because permits persist in IndexedDB (default TTL: 30 days).
 
 The same pattern works with `useUserDecrypt` and any other decrypt hook — anything nested inside `DecryptGate` can decrypt freely without triggering a wallet prompt.
 
@@ -407,10 +407,10 @@ const { data } = useUserDecrypt({
 
 Decrypted values are stored through the SDK's internal CachingService, scoped by signer and contract address. Cached values survive page reloads — `useUserDecrypt` returns them instantly without hitting the relayer.
 
-The cache is cleared on `revoke()`, `revokeSession()`, or wallet lifecycle events (disconnect, account/chain change).
+The cache is cleared on `revokePermits()`, `clearCredentials()`, or wallet lifecycle events (disconnect, account/chain change).
 
 {% hint style="info" %}
-**Decryption fails with "invalid keypair" or "expired credentials"?** The FHE keypair has a TTL (default: 30 days). If the keypair was generated more than `keypairTTL` seconds ago, the relayer rejects it. Call `useAllow` again to generate fresh credentials.
+**Decryption fails with "invalid keypair" or "expired keypair"?** The FHE keypair has a TTL (default: 30 days). If the keypair was generated more than `keypairTTL` seconds ago, the relayer rejects it. Call `useAllow` again to generate a fresh keypair and permits.
 {% endhint %}
 
 ### 4. Decrypt with usePublicDecrypt (advanced)

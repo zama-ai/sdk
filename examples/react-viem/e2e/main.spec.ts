@@ -95,11 +95,11 @@ test.describe("registry empty state", () => {
     await expect(page.getByText("No tokens available.")).toBeVisible();
   });
 
-  test("action buttons are disabled when no tokens are available", async ({ page }) => {
-    // !token → actionsDisabled = true for all primary action buttons.
-    await expect(page.getByRole("button", { name: "Shield", exact: true })).toBeDisabled();
-    await expect(page.getByRole("button", { name: "Transfer", exact: true })).toBeDisabled();
-    await expect(page.getByRole("button", { name: "Unshield", exact: true })).toBeDisabled();
-    await expect(page.getByRole("button", { name: /Mint/ })).toBeDisabled();
+  test("operation cards are hidden when no tokens are available", async ({ page }) => {
+    // Token-scoped SDK hooks are only rendered once a real registry token exists.
+    await expect(page.getByText("Balances")).not.toBeVisible();
+    await expect(page.getByText("Shield — ERC-20 → Confidential")).not.toBeVisible();
+    await expect(page.getByText("Confidential Transfer")).not.toBeVisible();
+    await expect(page.getByText("Unshield — Confidential → ERC-20")).not.toBeVisible();
   });
 });

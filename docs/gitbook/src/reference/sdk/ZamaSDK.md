@@ -5,7 +5,7 @@ description: Entry point for all confidential contract operations.
 
 # ZamaSDK
 
-Entry point for all confidential contract operations — creates tokens, manages sessions, and coordinates the relayer and signer.
+Entry point for all confidential contract operations — creates tokens, manages permits, and coordinates the relayer and signer.
 
 ## Import
 
@@ -108,11 +108,11 @@ Created automatically by adapter-specific `createConfig` (viem, ethers, wagmi). 
 
 Persists the encrypted FHE keypair across sessions. Use `indexedDBStorage` (browser), `memoryStorage` (tests), or `asyncLocalStorage` (Node.js servers). Defaults to `indexedDBStorage` in browsers, `memoryStorage` elsewhere.
 
-### sessionStorage
+### permitStorage
 
 `GenericStorage | undefined`
 
-Stores wallet signatures for the current session. Defaults to in-memory storage. Use `chromeSessionStorage` for MV3 web extensions.
+Optional dedicated storage for permits. Defaults to `storage`. Use this to keep permits out of long-lived storage (e.g. IndexedDB for keypair, memory for permits) for high-security flows.
 
 ### keypairTTL
 
@@ -120,11 +120,11 @@ Stores wallet signatures for the current session. Defaults to in-memory storage.
 
 FHE keypair validity duration in seconds. Default: `2592000` (30 days). Must be a positive integer. After expiry, the next decrypt prompts a wallet signature to regenerate the keypair.
 
-### sessionTTL
+### permitTTL
 
-`number | "infinite" | undefined`
+`number | undefined`
 
-Session signature lifetime in seconds. Default: `2592000` (30 days). Set to `0` to require a wallet signature on every operation. Pass `"infinite"` for a session that never expires.
+Permit lifetime in days. Default: `30`. Controls how long each signed EIP-712 permit remains valid.
 
 ### registryTTL
 
@@ -205,7 +205,7 @@ const pairs = await registry.getTokenPairs();
 
 `(contractAddresses: Address[]) => Promise<void>`
 
-Pre-authorize contract addresses for decryption, triggering a single wallet signature prompt. Subsequent [`userDecrypt`](#userdecrypt) calls whose handles span the same set reuse the cached credentials without another prompt.
+Pre-authorize contract addresses for decryption. Signs permits only for contracts not already covered by existing permits. Subsequent [`userDecrypt`](#userdecrypt) calls whose handles span the covered set proceed without a wallet prompt.
 
 ```ts
 // Sign once for three tokens, then decrypt individually
@@ -222,7 +222,7 @@ Decrypt one or more FHE handles. Returns cached values when available, only call
 
 Handles from different contracts can be mixed — they are grouped by `contractAddress` and batched into one relayer call per contract (up to 5 concurrently). Zero handles (32 zero bytes) resolve to `0n` without hitting the relayer.
 
-When the relayer is actually called, credentials are derived from the contract addresses of the uncached handle set. If every handle is zero or already cached, no credentials are acquired and no wallet prompt is shown.
+When the relayer is actually called, permits are resolved from the contract addresses of the full input handle set (including cached and zero handles), ensuring a stable permit scope regardless of which handles happen to be cached. If every handle is zero or already cached, no permits are needed and no wallet prompt is shown.
 
 ```ts
 const values = await sdk.userDecrypt([
@@ -317,30 +317,39 @@ emitter.on(ZamaSDKEvents.DecryptError, ({ error, durationMs, handles }: DecryptE
 This is the SDK-level entry point for user decryption. The method is named `userDecrypt` (not `decrypt`) because it requires the connected wallet's credentials — distinguishing it from gateway-level decryption that happens on-chain without user authentication. In React, use [`useUserDecrypt`](/reference/react/useUserDecrypt) which wraps this method with TanStack Query semantics.
 {% endhint %}
 
-### onIdentityChange
+### onWalletAccountChange
 
-`(listener: (change: SignerIdentityChange) => void) => () => void`
+`(listener: (change: WalletAccountChange) => void) => () => void`
 
-Subscribe to signer identity transitions (connect, disconnect, account change, chain change). Returns an unsubscribe function. Each transition carries `previous` and `next` identity objects (`{ address, chainId }`).
+Subscribe to wallet account transitions (connect, disconnect, account change, chain change). Returns an unsubscribe function. Each transition carries `previous` and `next` wallet account objects (`{ address, chainId }`).
 
 ```ts
-const unsubscribe = sdk.onIdentityChange(({ previous, next }) => {
+const unsubscribe = sdk.onWalletAccountChange(({ previous, next }) => {
   if (!next) console.log("Wallet disconnected");
   else console.log(`Switched to ${next.address} on chain ${next.chainId}`);
 });
 ```
 
-### revokeSession
+### revokePermits
+
+`(contracts?: Address[]) => Promise<void>`
+
+Remove signed permits for the current signer. With a contract list, removes permits on the current chain whose payload touches any listed address. Without arguments, removes all permits across all chains and delegators. The keypair is not affected.
+
+```ts
+await sdk.revokePermits(["0xTokenA"]); // current chain only
+await sdk.revokePermits(); // all permits, all chains
+```
+
+### clearCredentials
 
 `() => Promise<void>`
 
-Clears the session signature **and** cached decrypted values without specifying addresses. The next decrypt requires a fresh wallet signature.
+Wipe the keypair **and** cascade-delete every permit for the current signer. Use for "log out" flows.
 
 ```ts
-await sdk.revokeSession();
+await sdk.clearCredentials();
 ```
-
-`revokeSession()` targets the live signer identity at invocation time. Call it before disconnecting a wallet, or rely on signer lifecycle cleanup to revoke the previous identity during disconnect, account change, or chain change handling.
 
 ### dispose
 

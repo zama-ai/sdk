@@ -64,7 +64,7 @@ Encrypt amounts client-side before submitting on-chain. On-chain observers see t
 
 ### React hooks
 
-TanStack Query-based hooks with cached decryption, automatic cache invalidation, and one-signature session management.
+TanStack Query-based hooks with cached decryption, automatic cache invalidation, and one-signature permit management.
 
 ## Two packages, one import
 
@@ -767,7 +767,7 @@ export function BalanceDisplay() {
 ```
 
 
-The first call prompts the wallet for a signature to generate FHE decrypt credentials. Subsequent calls reuse cached credentials silently.
+The first call prompts the wallet for a signature to generate FHE decrypt permits. Subsequent calls reuse cached permits silently.
 
 ## 6. Add shielding
 
@@ -925,7 +925,7 @@ export function ErrorMessage({ error }: { error: Error | null }) {
     SIGNING_REJECTED: () => "Transaction cancelled -- please approve in your wallet.",
     ENCRYPTION_FAILED: () => "Encryption failed -- try again.",
     TRANSACTION_REVERTED: () => "Transaction failed on-chain -- check your balance.",
-    KEYPAIR_EXPIRED: () => "Session expired -- sign again to continue.",
+    KEYPAIR_EXPIRED: () => "Keypair expired -- sign again to continue.",
     _: (e) => e.message,
   });
 
@@ -1620,7 +1620,7 @@ See [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitb
 
 ### Tab: Web Extensions
 
-MV3 Chrome extensions need a second storage backend for session signatures, because the service worker can be terminated at any time and in-memory state is lost. Use `chromeSessionStorage` alongside `indexedDBStorage`:
+MV3 Chrome extensions can use `chromeSessionStorage` as `permitStorage` so permits survive service worker restarts:
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
@@ -1638,7 +1638,7 @@ const config = createConfig({
   publicClient,
   walletClient,
   storage: indexedDBStorage,
-  sessionStorage: chromeSessionStorage,
+  permitStorage: chromeSessionStorage,
   relayers: {
     [mySepolia.id]: web(),
   },
@@ -1654,22 +1654,22 @@ Browser apps should proxy relayer requests through a backend to keep the API key
 
 ### 5. (Optional) Configure TTLs and event listener
 
-You can tune how long the FHE keypair and session signatures remain valid, and subscribe to lifecycle events for debugging:
+You can tune how long the FHE keypair and permits remain valid, and subscribe to lifecycle events for debugging:
 
 ```ts
 const config = createConfig({
   chains: [sepolia],
   wagmiConfig,
   relayers: { [sepolia.id]: web() },
-  keypairTTL: 604800, // 7 days (default: 2592000 = 30 days)
-  sessionTTL: 3600, // 1 hour (default: 2592000 = 30 days)
+  keypairTTL: 604800, // 7 days in seconds (default: 2592000 = 30 days)
+  permitTTL: 7, // 7 days (default: 30 days)
   onEvent: ({ type, tokenAddress, ...rest }) => {
     console.debug(`[zama] ${type}`, rest);
   },
 });
 ```
 
-Setting `sessionTTL: 0` disables session caching entirely — every operation triggers a wallet prompt. When done with the SDK, call `sdk.terminate()` to clean up the Web Worker or thread pool.
+When done with the SDK, call `sdk.terminate()` to clean up the Web Worker or thread pool.
 
 ### 6. (Optional) Choose a storage backend
 
@@ -2110,7 +2110,7 @@ const token = useToken("0xEncryptedERC20Address");
 
 Pass the recipient address and the plaintext amount. The SDK encrypts the amount using FHE before submitting the transaction.
 
-By default, the SDK validates the confidential balance before submitting. If cached credentials exist, it decrypts silently. If the balance is insufficient, it throws `InsufficientConfidentialBalanceError` before any transaction is sent. Pass `skipBalanceCheck: true` to bypass (e.g. for smart wallets that cannot produce EIP-712 signatures).
+By default, the SDK validates the confidential balance before submitting. If stored permits exist, it decrypts silently. If the balance is insufficient, it throws `InsufficientConfidentialBalanceError` before any transaction is sent. Pass `skipBalanceCheck: true` to bypass (e.g. for smart wallets that cannot produce EIP-712 signatures).
 
 
 ### Tab: Core SDK
@@ -2446,7 +2446,7 @@ All mutation hooks automatically invalidate balance queries on success, so your 
 
 # Check balances
 
-Confidential balances are stored on-chain as encrypted handles. To display a human-readable number, the SDK decrypts them using FHE credentials tied to the user's wallet. This guide walks through reading balances, understanding the caching layer, and working with multiple tokens.
+Confidential balances are stored on-chain as encrypted handles. To display a human-readable number, the SDK decrypts them using FHE permits tied to the user's wallet. This guide walks through reading balances, understanding the caching layer, and working with multiple tokens.
 
 ## Steps
 
@@ -2481,7 +2481,7 @@ console.log(`Confidential balance: ${balance}`);
 
 ### 2. Understand the first-time wallet signature
 
-The first `balanceOf(address)` call for a token prompts the user's wallet for an EIP-712 signature. This creates FHE decrypt credentials that are cached in your storage backend. Subsequent reads are silent -- no wallet popup.
+The first `balanceOf(address)` call for a token prompts the user's wallet for an EIP-712 signature. This creates FHE decrypt permits that are cached in your storage backend. Subsequent reads are silent -- no wallet popup.
 
 
 > [!INFO]
@@ -2715,7 +2715,7 @@ Every SDK error is an instance of `ZamaError`, which extends the native `Error` 
 | `ConfigurationError`                   | `CONFIGURATION`                     | Invalid SDK config or FHE worker failed to initialize    |
 | `InsufficientConfidentialBalanceError` | `INSUFFICIENT_CONFIDENTIAL_BALANCE` | Confidential balance too low for transfer or unshield    |
 | `InsufficientERC20BalanceError`        | `INSUFFICIENT_ERC20_BALANCE`        | ERC-20 balance too low for shield                        |
-| `BalanceCheckUnavailableError`         | `BALANCE_CHECK_UNAVAILABLE`         | Balance check impossible (no cached credentials)         |
+| `BalanceCheckUnavailableError`         | `BALANCE_CHECK_UNAVAILABLE`         | Balance check impossible (no stored permits)             |
 | `ERC20ReadFailedError`                 | `ERC20_READ_FAILED`                 | Public ERC-20 read failed (network or contract error)    |
 | `DelegationSelfNotAllowedError`        | `DELEGATION_SELF_NOT_ALLOWED`       | Delegation cannot target self                            |
 | `DelegationCooldownError`              | `DELEGATION_COOLDOWN`               | Only one delegate/revoke per tuple per block             |
@@ -2780,27 +2780,27 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. If the error is
 
 Here is a quick reference for the most common errors and how to respond:
 
-| Error                                  | Recommended action                                                                                                |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `SigningRejectedError`                 | Show a retry prompt. The user needs to approve the wallet signature.                                              |
-| `SigningFailedError`                   | Check wallet connectivity. Hardware wallets may need a firmware update.                                           |
-| `EncryptionFailedError`                | Check your CSP headers -- the Web Worker needs `wasm-unsafe-eval`.                                                |
-| `DecryptionFailedError`                | May indicate an interrupted unshield. Check for pending state with `loadPendingUnshield()`.                       |
-| `TransactionRevertedError`             | Inspect the revert reason. Common causes: insufficient balance, expired approval.                                 |
-| `InvalidKeypairError`                  | The FHE keypair is stale. Revoke the session and prompt for a fresh signature.                                    |
-| `KeypairExpiredError`                  | Same as above -- the keypair TTL has elapsed.                                                                     |
-| `NoCiphertextError`                    | Not an error per se. The account has never shielded. Show an empty state in your UI.                              |
-| `RelayerRequestFailedError`            | Verify `relayerUrl` in your config. If using API key auth, check the `auth` option. Inspect `.statusCode`.        |
-| `ConfigurationError`                   | Invalid SDK configuration or FHE worker failed to initialize. Check your transport config and CSP headers.        |
-| `InsufficientConfidentialBalanceError` | Show the user their balance and the shortfall. The operation needs more confidential tokens.                      |
-| `InsufficientERC20BalanceError`        | Show the user their public token balance. They need more tokens before shielding.                                 |
-| `BalanceCheckUnavailableError`         | Call `token.allow()` to cache credentials, or pass `skipBalanceCheck: true` to bypass (useful for smart wallets). |
-| `ERC20ReadFailedError`                 | Check network connectivity and RPC endpoint. Retry the shield operation.                                          |
-| `SignerRequiredError`                  | Connect a wallet. The operation requires a signer but the SDK was configured without one.                         |
-| `DelegationSelfNotAllowedError`        | Cannot delegate to yourself. Use a different delegate address.                                                    |
-| `DelegationCooldownError`              | Wait for the next block before retrying delegate/revoke on the same tuple.                                        |
-| `DelegationNotFoundError`              | No active delegation exists. Verify the delegator, delegate, and contract addresses.                              |
-| `DelegationExpiredError`               | The delegation has expired. Create a new delegation.                                                              |
+| Error                                  | Recommended action                                                                                           |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `SigningRejectedError`                 | Show a retry prompt. The user needs to approve the wallet signature.                                         |
+| `SigningFailedError`                   | Check wallet connectivity. Hardware wallets may need a firmware update.                                      |
+| `EncryptionFailedError`                | Check your CSP headers -- the Web Worker needs `wasm-unsafe-eval`.                                           |
+| `DecryptionFailedError`                | May indicate an interrupted unshield. Check for pending state with `loadPendingUnshield()`.                  |
+| `TransactionRevertedError`             | Inspect the revert reason. Common causes: insufficient balance, expired approval.                            |
+| `InvalidKeypairError`                  | The FHE keypair is stale. Clear credentials and prompt for a fresh signature.                                |
+| `KeypairExpiredError`                  | Same as above -- the keypair TTL has elapsed.                                                                |
+| `NoCiphertextError`                    | Not an error per se. The account has never shielded. Show an empty state in your UI.                         |
+| `RelayerRequestFailedError`            | Verify `relayerUrl` in your config. If using API key auth, check the `auth` option. Inspect `.statusCode`.   |
+| `ConfigurationError`                   | Invalid SDK configuration or FHE worker failed to initialize. Check your transport config and CSP headers.   |
+| `InsufficientConfidentialBalanceError` | Show the user their balance and the shortfall. The operation needs more confidential tokens.                 |
+| `InsufficientERC20BalanceError`        | Show the user their public token balance. They need more tokens before shielding.                            |
+| `BalanceCheckUnavailableError`         | Call `token.allow()` to sign permits, or pass `skipBalanceCheck: true` to bypass (useful for smart wallets). |
+| `ERC20ReadFailedError`                 | Check network connectivity and RPC endpoint. Retry the shield operation.                                     |
+| `SignerRequiredError`                  | Connect a wallet. The operation requires a signer but the SDK was configured without one.                    |
+| `DelegationSelfNotAllowedError`        | Cannot delegate to yourself. Use a different delegate address.                                               |
+| `DelegationCooldownError`              | Wait for the next block before retrying delegate/revoke on the same tuple.                                   |
+| `DelegationNotFoundError`              | No active delegation exists. Verify the delegator, delegate, and contract addresses.                         |
+| `DelegationExpiredError`               | The delegation has expired. Create a new delegation.                                                         |
 
 ### 5. Distinguish "no balance" from "zero balance"
 
@@ -3053,7 +3053,7 @@ The signer handles `signTypedData` and `writeContract`; the provider handles `re
 
 - [RelayerNode](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerNode.md) -- `node()` transport factory options
 - [asyncLocalStorage](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericStorage.md) -- the `GenericStorage` interface it implements
-- [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) -- chains, relayers, authentication, and session management
+- [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) -- chains, relayers, authentication, and permit management
 - [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md) -- custom signer interface for non-standard wallet integrations
 
 ## Web extensions
@@ -3065,19 +3065,19 @@ The signer handles `signTypedData` and `writeContract`; the provider handles `re
 
 # Web extensions
 
-MV3 Chrome extensions present a unique challenge: the background service worker can be terminated by Chrome at any time. When that happens, anything stored in JavaScript memory is lost -- including the SDK's default in-memory session storage. This guide shows how to keep sessions alive across service worker restarts.
+MV3 Chrome extensions present a unique challenge: the background service worker can be terminated by Chrome at any time. When that happens, anything stored in JavaScript memory is lost -- including the SDK's default in-memory permit storage. This guide shows how to keep permits alive across service worker restarts.
 
 ## Steps
 
 ### 1. Understand the problem
 
-By default, the SDK stores the wallet signature (used to unlock the FHE keypair) in an in-memory JavaScript object. In a normal web page, that memory lives for the duration of the tab. In an MV3 extension, the service worker can shut down after 30 seconds of inactivity.
+By default, the SDK stores signed permits (used to authorize FHE decryption) in an in-memory JavaScript object. In a normal web page, that memory lives for the duration of the tab. In an MV3 extension, the service worker can shut down after 30 seconds of inactivity.
 
-When the service worker restarts, the in-memory session is gone. The user would need to re-sign with their wallet on every interaction -- a broken experience.
+When the service worker restarts, the in-memory permits are gone. The user would need to re-sign with their wallet on every interaction -- a broken experience.
 
-### 2. Use `chromeSessionStorage` for session persistence
+### 2. Use `chromeSessionStorage` for permit persistence
 
-The SDK ships a `chromeSessionStorage` adapter that stores the wallet signature in `chrome.storage.session` instead of in-memory. This API is backed by Chrome's own persistence layer, not your JavaScript heap.
+The SDK ships a `chromeSessionStorage` adapter that stores signed permits in `chrome.storage.session` instead of in-memory. This API is backed by Chrome's own persistence layer, not your JavaScript heap.
 
 ```ts
 import { ZamaSDK, indexedDBStorage, chromeSessionStorage } from "@zama-fhe/sdk";
@@ -3085,7 +3085,7 @@ import { ZamaSDK, indexedDBStorage, chromeSessionStorage } from "@zama-fhe/sdk";
 
 ### 3. Configure the SDK with both storage backends
 
-Pass `indexedDBStorage` for the encrypted FHE keypair (persistent, survives browser close) and `chromeSessionStorage` for the session signature (ephemeral, survives service worker restarts):
+Pass `indexedDBStorage` for the FHE keypair (persistent, survives browser close) and `chromeSessionStorage` for permits (ephemeral, survives service worker restarts):
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
@@ -3102,7 +3102,7 @@ const config = createConfig({
   publicClient,
   walletClient,
   storage: indexedDBStorage, // encrypted keypair — persistent
-  sessionStorage: chromeSessionStorage, // wallet signature — ephemeral
+  permitStorage: chromeSessionStorage, // signed permits — ephemeral
   relayers: { [mySepolia.id]: web() },
 });
 const sdk = new ZamaSDK(config);
@@ -3130,24 +3130,24 @@ With `chromeSessionStorage` in place, you get three things:
 
 **Popup, background, and content script sharing** -- all extension contexts read from the same `chrome.storage.session` store. The user signs once in the popup, and the background script can decrypt balances without another prompt.
 
-**Service worker restart survival** -- `chrome.storage.session` is not tied to JavaScript memory. When Chrome terminates and restarts the service worker, the session signature is still available.
+**Service worker restart survival** -- `chrome.storage.session` is not tied to JavaScript memory. When Chrome terminates and restarts the service worker, signed permits are still available.
 
-**Automatic cleanup on browser close** -- Chrome purges `chrome.storage.session` when the browser closes. The user starts fresh on the next launch, which matches the expected security behavior for wallet signatures.
+**Automatic cleanup on browser close** -- Chrome purges `chrome.storage.session` when the browser closes. The user starts fresh on the next launch, which matches the expected security behavior for wallet-signed permits.
 
 ### 5. Browser close behavior
 
 When the user closes Chrome entirely:
 
-1. `chrome.storage.session` is cleared by the browser -- the wallet signature is gone
-2. `indexedDB` persists -- the encrypted FHE keypair survives
-3. On next launch, the user re-signs once to unlock their existing keypair
+1. `chrome.storage.session` is cleared by the browser -- signed permits are gone
+2. `indexedDB` persists -- the FHE keypair survives
+3. On next launch, the user re-signs once to create fresh permits for their existing keypair
 
-This mirrors the default browser SDK behavior (in-memory session lost on tab close) but extends the session lifetime to cover service worker restarts within the same browser session.
+This mirrors the default browser SDK behavior (in-memory permits lost on tab close) but extends the permit lifetime to cover service worker restarts within the same browser session.
 
 ## Next steps
 
 - [GenericStorage](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericStorage.md) -- implement a custom storage adapter for other extension APIs
-- [Session Model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/session-model.md) -- how keypair encryption, session signatures, and storage interact
+- [Permit Model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/permit-model.md) -- how the keypair vault, signed permits, and storage interact
 
 ## Local development
 
@@ -3963,13 +3963,13 @@ function ConfidentialAction() {
 
 ### 3. Decryption of the encrypted data
 
-Decrypting on-chain data requires the user to sign an EIP-712 message that grants your app a **reusable credential** for the relevant contracts. Hooks like `useUserDecrypt` and `useConfidentialBalance` trigger this signature automatically the first time they run. If your app calls these hooks on render without gating, users see an unsolicited MetaMask popup before they have taken any action — a confusing experience that often leads to rejection.
+Decrypting on-chain data requires the user to sign an EIP-712 message that grants your app a **reusable permit** for the relevant contracts. Hooks like `useUserDecrypt` and `useConfidentialBalance` trigger this signature automatically the first time they run. If your app calls these hooks on render without gating, users see an unsolicited MetaMask popup before they have taken any action — a confusing experience that often leads to rejection.
 
 A good decryption UX follows three steps:
 
-1. **Check credentials** — use `useIsAllowed` to see whether the user has already signed.
+1. **Check permits** — use `useIsAllowed` to see whether the user has already signed.
 2. **Show a locked state** — display a clear "Decrypt" button so the user understands what they are authorizing.
-3. **Decrypt on demand** — only mount balance or decrypt components after the credential exists.
+3. **Decrypt on demand** — only mount balance or decrypt components after permits exist.
 
 
 > [!DANGER]
@@ -4069,7 +4069,7 @@ function App() {
 ```
 
 
-`DecryptGate` only renders its children once `useIsAllowed` returns true. This means `ConfidentialBalance` never mounts without credentials — no `enabled` guard needed, no wallet popup on render. Returning users skip the prompt entirely because credentials persist in IndexedDB (default TTL: 30 days).
+`DecryptGate` only renders its children once `useIsAllowed` returns true. This means `ConfidentialBalance` never mounts without permits — no `enabled` guard needed, no wallet popup on render. Returning users skip the prompt entirely because permits persist in IndexedDB (default TTL: 30 days).
 
 The same pattern works with `useUserDecrypt` and any other decrypt hook — anything nested inside `DecryptGate` can decrypt freely without triggering a wallet prompt.
 
@@ -4117,11 +4117,11 @@ const { data } = useUserDecrypt({
 
 Decrypted values are stored through the SDK's internal CachingService, scoped by signer and contract address. Cached values survive page reloads — `useUserDecrypt` returns them instantly without hitting the relayer.
 
-The cache is cleared on `revoke()`, `revokeSession()`, or wallet lifecycle events (disconnect, account/chain change).
+The cache is cleared on `revokePermits()`, `clearCredentials()`, or wallet lifecycle events (disconnect, account/chain change).
 
 
 > [!INFO]
-> **Decryption fails with "invalid keypair" or "expired credentials"?** The FHE keypair has a TTL (default: 30 days). If the keypair was generated more than `keypairTTL` seconds ago, the relayer rejects it. Call `useAllow` again to generate fresh credentials.
+> **Decryption fails with "invalid keypair" or "expired keypair"?** The FHE keypair has a TTL (default: 30 days). If the keypair was generated more than `keypairTTL` seconds ago, the relayer rejects it. Call `useAllow` again to generate a fresh keypair and permits.
 
 
 ### 4. Decrypt with usePublicDecrypt (advanced)
@@ -4192,7 +4192,7 @@ Ask technical questions and discuss with the community.
 
 # ZamaSDK
 
-Entry point for all confidential contract operations — creates tokens, manages sessions, and coordinates the relayer and signer.
+Entry point for all confidential contract operations — creates tokens, manages permits, and coordinates the relayer and signer.
 
 ## Import
 
@@ -4293,11 +4293,11 @@ Created automatically by adapter-specific `createConfig` (viem, ethers, wagmi). 
 
 Persists the encrypted FHE keypair across sessions. Use `indexedDBStorage` (browser), `memoryStorage` (tests), or `asyncLocalStorage` (Node.js servers). Defaults to `indexedDBStorage` in browsers, `memoryStorage` elsewhere.
 
-### sessionStorage
+### permitStorage
 
 `GenericStorage | undefined`
 
-Stores wallet signatures for the current session. Defaults to in-memory storage. Use `chromeSessionStorage` for MV3 web extensions.
+Optional dedicated storage for permits. Defaults to `storage`. Use this to keep permits out of long-lived storage (e.g. IndexedDB for keypair, memory for permits) for high-security flows.
 
 ### keypairTTL
 
@@ -4305,11 +4305,11 @@ Stores wallet signatures for the current session. Defaults to in-memory storage.
 
 FHE keypair validity duration in seconds. Default: `2592000` (30 days). Must be a positive integer. After expiry, the next decrypt prompts a wallet signature to regenerate the keypair.
 
-### sessionTTL
+### permitTTL
 
-`number | "infinite" | undefined`
+`number | undefined`
 
-Session signature lifetime in seconds. Default: `2592000` (30 days). Set to `0` to require a wallet signature on every operation. Pass `"infinite"` for a session that never expires.
+Permit lifetime in days. Default: `30`. Controls how long each signed EIP-712 permit remains valid.
 
 ### registryTTL
 
@@ -4390,7 +4390,7 @@ const pairs = await registry.getTokenPairs();
 
 `(contractAddresses: Address[]) => Promise<void>`
 
-Pre-authorize contract addresses for decryption, triggering a single wallet signature prompt. Subsequent [`userDecrypt`](#userdecrypt) calls whose handles span the same set reuse the cached credentials without another prompt.
+Pre-authorize contract addresses for decryption. Signs permits only for contracts not already covered by existing permits. Subsequent [`userDecrypt`](#userdecrypt) calls whose handles span the covered set proceed without a wallet prompt.
 
 ```ts
 // Sign once for three tokens, then decrypt individually
@@ -4407,7 +4407,7 @@ Decrypt one or more FHE handles. Returns cached values when available, only call
 
 Handles from different contracts can be mixed — they are grouped by `contractAddress` and batched into one relayer call per contract (up to 5 concurrently). Zero handles (32 zero bytes) resolve to `0n` without hitting the relayer.
 
-When the relayer is actually called, credentials are derived from the contract addresses of the uncached handle set. If every handle is zero or already cached, no credentials are acquired and no wallet prompt is shown.
+When the relayer is actually called, permits are resolved from the contract addresses of the full input handle set (including cached and zero handles), ensuring a stable permit scope regardless of which handles happen to be cached. If every handle is zero or already cached, no permits are needed and no wallet prompt is shown.
 
 ```ts
 const values = await sdk.userDecrypt([
@@ -4499,30 +4499,39 @@ emitter.on(ZamaSDKEvents.DecryptError, ({ error, durationMs, handles }: DecryptE
 > This is the SDK-level entry point for user decryption. The method is named `userDecrypt` (not `decrypt`) because it requires the connected wallet's credentials — distinguishing it from gateway-level decryption that happens on-chain without user authentication. In React, use [`useUserDecrypt`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUserDecrypt.md) which wraps this method with TanStack Query semantics.
 
 
-### onIdentityChange
+### onWalletAccountChange
 
-`(listener: (change: SignerIdentityChange) => void) => () => void`
+`(listener: (change: WalletAccountChange) => void) => () => void`
 
-Subscribe to signer identity transitions (connect, disconnect, account change, chain change). Returns an unsubscribe function. Each transition carries `previous` and `next` identity objects (`{ address, chainId }`).
+Subscribe to wallet account transitions (connect, disconnect, account change, chain change). Returns an unsubscribe function. Each transition carries `previous` and `next` wallet account objects (`{ address, chainId }`).
 
 ```ts
-const unsubscribe = sdk.onIdentityChange(({ previous, next }) => {
+const unsubscribe = sdk.onWalletAccountChange(({ previous, next }) => {
   if (!next) console.log("Wallet disconnected");
   else console.log(`Switched to ${next.address} on chain ${next.chainId}`);
 });
 ```
 
-### revokeSession
+### revokePermits
+
+`(contracts?: Address[]) => Promise<void>`
+
+Remove signed permits for the current signer. With a contract list, removes permits on the current chain whose payload touches any listed address. Without arguments, removes all permits across all chains and delegators. The keypair is not affected.
+
+```ts
+await sdk.revokePermits(["0xTokenA"]); // current chain only
+await sdk.revokePermits(); // all permits, all chains
+```
+
+### clearCredentials
 
 `() => Promise<void>`
 
-Clears the session signature **and** cached decrypted values without specifying addresses. The next decrypt requires a fresh wallet signature.
+Wipe the keypair **and** cascade-delete every permit for the current signer. Use for "log out" flows.
 
 ```ts
-await sdk.revokeSession();
+await sdk.clearCredentials();
 ```
-
-`revokeSession()` targets the live signer identity at invocation time. Call it before disconnecting a wallet, or rely on signer lifecycle cleanup to revoke the previous identity during disconnect, account change, or chain change handling.
 
 ### dispose
 
@@ -4560,8 +4569,6 @@ sdk.terminate();
 
 # Token
 
-> ⚠️ This page is a placeholder — full reference docs are coming.
-
 `Token` is the high-level ERC-20-style interface for an ERC-7984 confidential token. It hides FHE complexity (encryption, decryption, EIP-712 signing) behind familiar methods.
 
 For ERC-7984 ERC-20 wrappers (shield / unshield / allowance), use [`WrappedToken`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WrappedToken.md) instead — it extends `Token` with wrapper-specific operations.
@@ -4584,17 +4591,131 @@ For shield / unshield, create a `WrappedToken` via `sdk.createWrappedToken("0xWr
 
 ## Methods
 
-- `name()` / `symbol()` / `decimals()` — ERC-20-style metadata reads
-- `isConfidential()` / `isWrapper()` — ERC-165 introspection
-- `balanceOf(owner)` — decrypt and return the plaintext balance
-- `confidentialBalanceOf(owner)` — return the raw encrypted handle without decrypting
-- `decryptBalanceAs({ delegatorAddress, ... })` — decrypt a delegator's balance using delegated credentials
-- `confidentialTransfer(to, amount, options?)` — encrypted transfer
-- `confidentialTransferFrom(from, to, amount, callbacks?)` — operator transfer
-- `setOperator(spender, until)` — set or revoke an operator approval
-- `isOperator(holder, spender)` — read whether `spender` is an approved operator
-- `Token.batchBalancesOf(tokens, owner)` _(static)_ — decrypt multiple balances in one batch
-- `Token.batchDecryptBalancesAs(tokens, options)` _(static)_ — batch delegated decryption
+### balanceOf
+
+`(owner: Address) => Promise<bigint>`
+
+Returns the decrypted confidential balance. The first call prompts a wallet signature to create FHE permits; subsequent calls use cached permits silently. Decrypted values are cached in storage automatically.
+
+```ts
+const balance = await token.balanceOf("0xOwnerAddress");
+```
+
+### confidentialBalanceOf
+
+`(owner: Address) => Promise<Hex>`
+
+Returns the raw encrypted handle without decrypting. Use with `isZeroHandle()` or pass to `sdk.userDecrypt()` for decryption.
+
+```ts
+const handle = await token.confidentialBalanceOf("0xOwnerAddress");
+```
+
+### decryptBalanceAs
+
+`({ delegatorAddress, accountAddress?, handle? }) => Promise<bigint>`
+
+Decrypt a delegator's balance using delegated credentials. The connected wallet must hold an active delegation from `delegatorAddress` covering this token's contract.
+
+```ts
+const balance = await token.decryptBalanceAs({ delegatorAddress: "0xDelegator" });
+```
+
+### confidentialTransfer
+
+`(to: Address, amount: bigint, options?: TransferOptions) => Promise<TransactionResult>`
+
+Transfers encrypted tokens. The amount is encrypted before hitting the chain.
+
+By default, the SDK validates the confidential balance before submitting. If credentials are cached, it auto-decrypts silently. Set `skipBalanceCheck: true` to bypass (e.g. for smart wallets that cannot produce EIP-712 signatures).
+
+| Option                | Type               | Default | Description                          |
+| --------------------- | ------------------ | ------- | ------------------------------------ |
+| `skipBalanceCheck`    | `boolean`          | `false` | Skip balance validation              |
+| `onEncryptComplete`   | `() => void`       | —       | Fired after FHE encryption completes |
+| `onTransferSubmitted` | `(txHash) => void` | —       | Fired after transfer tx submitted    |
+
+```ts
+await token.confidentialTransfer("0xRecipient", 500n);
+
+// Smart wallet (skip balance check)
+await token.confidentialTransfer("0xRecipient", 500n, { skipBalanceCheck: true });
+```
+
+**Throws:**
+
+- `InsufficientConfidentialBalanceError` — if the confidential balance is less than `amount` (exposes `requested`, `available`, `token`)
+- `BalanceCheckUnavailableError` — if balance validation is required but decryption is not possible (no stored permits). Call `allow()` first or use `skipBalanceCheck: true`
+
+### confidentialTransferFrom
+
+`(from: Address, to: Address, amount: bigint, callbacks?: TransferCallbacks) => Promise<TransactionResult>`
+
+Operator transfer on behalf of an address that has approved you.
+
+```ts
+await token.confidentialTransferFrom("0xFrom", "0xTo", 500n);
+```
+
+### setOperator
+
+`(operator: Address, until?: number) => Promise<{ txHash: Hex; receipt: TransactionReceipt }>`
+
+Approves another address to operate on your confidential tokens (e.g. a DEX or multisig). Default duration: 1 hour.
+
+```ts
+// Approve for 1 hour (default)
+await token.setOperator("0xOperator");
+
+// Approve until a specific timestamp
+await token.setOperator("0xOperator", futureTimestamp);
+```
+
+### isOperator
+
+`(holder: Address, spender: Address) => Promise<boolean>`
+
+Checks whether a spender is currently an approved operator for a given holder.
+
+```ts
+const approved = await token.isOperator("0xHolder", "0xSpender");
+```
+
+### name / symbol / decimals
+
+ERC-20-style metadata reads. Each returns a `Promise` of the value.
+
+```ts
+const name = await token.name();
+const symbol = await token.symbol();
+const decimals = await token.decimals();
+```
+
+### isConfidential / isWrapper
+
+ERC-165 introspection.
+
+```ts
+const isErc7984 = await token.isConfidential();
+const isWrapper = await token.isWrapper();
+```
+
+### Token.batchBalancesOf _(static)_
+
+`(tokens: Token[], owner: Address) => Promise<BatchBalancesResult>`
+
+Decrypts multiple balances in one batch.
+
+### Token.batchDecryptBalancesAs _(static)_
+
+`(tokens: Token[], options: BatchDecryptAsOptions) => Promise<Map<Address, bigint>>`
+
+Batch delegated decryption.
+
+## Related
+
+- [ZamaSDK](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md) — creates `Token` via `createToken()`
+- [WrappedToken](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WrappedToken.md) — extends `Token` with shield / unshield / allowance / wrapper operations
 
 ## WrappedToken
 
@@ -5463,7 +5584,7 @@ Release adapter-owned wallet watchers or provider event listeners. `ZamaSDK.term
 signTypedData(typedData: EIP712TypedData): Promise<Hex>
 ```
 
-Sign an EIP-712 typed data payload and return the signature. The SDK uses this to create FHE keypair authorization signatures and session signatures.
+Sign an EIP-712 typed data payload and return the signature. The SDK uses this to sign FHE decrypt permits.
 
 ### writeContract
 
@@ -5486,7 +5607,7 @@ The SDK calls `walletAccount.subscribe()` during initialization. The listener re
 - `previous` -- the previous `{ address, chainId }` identity, when one was known.
 - `next` -- the next `{ address, chainId }` identity, when the wallet is connected.
 
-When `previous` is present, the SDK revokes that previous identity's session signature and clears that requester's decrypt cache.
+When `previous` is present, the SDK clears that previous account's keypair, permits, and decrypt cache.
 
 ## Related
 
@@ -5614,7 +5735,7 @@ const signer = new ViemSigner({
 
 `EIP1193Provider | undefined`
 
-Raw EIP-1193 provider for wallet lifecycle event subscriptions. When provided, `subscribe()` listens for disconnect, account change, and chain change events. Omit if you handle lifecycle events manually.
+Raw EIP-1193 provider for wallet lifecycle event subscriptions. When provided, the signer emits wallet account transitions on disconnect, account change, and chain change. Omit if you handle lifecycle events manually.
 
 ```ts
 const signer = new ViemSigner({
@@ -5627,17 +5748,16 @@ const signer = new ViemSigner({
 
 All methods are inherited from [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md).
 
-| Method            | Behavior                    |
-| ----------------- | --------------------------- |
-| `getChainId()`    | From wallet client          |
-| `getAddress()`    | From wallet client          |
-| `signTypedData()` | Via wallet client           |
-| `writeContract()` | Via wallet client           |
-| `subscribe()`     | Works (requires `ethereum`) |
+| Method                   | Behavior              |
+| ------------------------ | --------------------- |
+| `walletAccount` store    | Sync observable store |
+| `requireWalletAccount()` | From wallet client    |
+| `signTypedData()`        | Via wallet client     |
+| `writeContract()`        | Via wallet client     |
 
 
 > [!INFO]
-> `subscribe()` is only available when you pass the `ethereum` option. Without it, the SDK still works but stale sessions persist until TTL expiry when users switch accounts.
+> Wallet account transitions are only emitted when you pass the `ethereum` option. Without it, the SDK still works but credentials are not automatically cleared when users switch accounts.
 
 
 ## Related
@@ -5786,7 +5906,7 @@ Pass exactly one of the two parameters below.
 
 `EIP1193Provider`
 
-Raw EIP-1193 provider from the browser wallet (e.g. `window.ethereum`). Enables `subscribe()` for automatic session revocation on disconnect and account change.
+Raw EIP-1193 provider from the browser wallet (e.g. `window.ethereum`). Enables automatic credential cleanup on disconnect and account change.
 
 ```ts
 const signer = new EthersSigner({
@@ -5815,17 +5935,16 @@ const signer = new EthersSigner({
 
 All methods are inherited from [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericSigner.md).
 
-| Method            | Browser | Node.js |
-| ----------------- | ------- | ------- |
-| `getChainId()`    | Works   | Works   |
-| `getAddress()`    | Works   | Works   |
-| `signTypedData()` | Works   | Works   |
-| `writeContract()` | Works   | Works   |
-| `subscribe()`     | Works   | N/A     |
+| Method                   | Browser | Node.js |
+| ------------------------ | ------- | ------- |
+| `walletAccount` store    | Works   | Works   |
+| `requireWalletAccount()` | Works   | Works   |
+| `signTypedData()`        | Works   | Works   |
+| `writeContract()`        | Works   | Works   |
 
 
 > [!INFO]
-> Only the browser mode (passing `ethereum`) supports `subscribe()`. In Node.js mode, stale sessions persist until TTL expiry when wallet identity changes.
+> Only the browser mode (passing `ethereum`) emits wallet account transitions. In Node.js mode, credentials are not automatically cleared on wallet changes.
 
 
 ## Related
@@ -5844,7 +5963,7 @@ All methods are inherited from [GenericSigner](https://raw.githubusercontent.com
 
 # GenericStorage
 
-Interface for async key-value storage used to persist FHE keypairs and session signatures. The SDK ships with four built-in implementations -- you only need this interface if building a custom backend.
+Interface for async key-value storage used to persist FHE keypairs and signed permits. The SDK ships with four built-in implementations -- you only need this interface if building a custom backend.
 
 ## Import
 
@@ -5975,7 +6094,7 @@ import { chromeSessionStorage } from "@zama-fhe/sdk";
 
 MV3 web extension storage backed by `chrome.storage.session`. Survives service worker restarts and is shared across popup, background, and content script contexts. Cleared when the browser closes.
 
-Pass as `sessionStorage` (not `storage`) to persist wallet signatures across service worker restarts:
+Pass as `permitStorage` (not `storage`) to persist signed permits across service worker restarts:
 
 ```ts
 const config = createConfig({
@@ -5983,7 +6102,7 @@ const config = createConfig({
   publicClient,
   walletClient,
   storage: indexedDBStorage,
-  sessionStorage: chromeSessionStorage,
+  permitStorage: chromeSessionStorage,
   relayers: { [mySepolia.id]: web() },
 });
 const sdk = new ZamaSDK(config);
@@ -5991,7 +6110,7 @@ const sdk = new ZamaSDK(config);
 
 ## Related
 
-- [ZamaSDK](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md) -- accepts `storage` and `sessionStorage` parameters
+- [ZamaSDK](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md) -- accepts `storage` and `permitStorage` parameters
 - [Configuration guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) -- storage selection guidance
 
 ## Error types
@@ -6084,7 +6203,7 @@ The `_` wildcard catches any `ZamaError` not explicitly handled.
 | `ConfigurationError`                    | `CONFIGURATION`                       | Invalid SDK configuration or FHE worker failed to initialize |
 | `InsufficientConfidentialBalanceError`  | `INSUFFICIENT_CONFIDENTIAL_BALANCE`   | Confidential balance too low for transfer or unshield        |
 | `InsufficientERC20BalanceError`         | `INSUFFICIENT_ERC20_BALANCE`          | ERC-20 balance too low for shield                            |
-| `BalanceCheckUnavailableError`          | `BALANCE_CHECK_UNAVAILABLE`           | Balance validation impossible (no cached credentials)        |
+| `BalanceCheckUnavailableError`          | `BALANCE_CHECK_UNAVAILABLE`           | Balance validation impossible (no stored permits)            |
 | `ERC20ReadFailedError`                  | `ERC20_READ_FAILED`                   | Public ERC-20 read failed (network or contract error)        |
 | `DelegationSelfNotAllowedError`         | `DELEGATION_SELF_NOT_ALLOWED`         | Delegate equals connected wallet                             |
 | `DelegationDelegateEqualsContractError` | `DELEGATION_DELEGATE_EQUALS_CONTRACT` | Delegate equals contract address                             |
@@ -6188,7 +6307,7 @@ matchZamaError(error, {
 });
 ```
 
-**How to handle:** If this happens after a page reload during unshield, use `loadPendingUnshield()` and `resumeUnshield()` to recover. Otherwise, calling `sdk.revokeSession()` and retrying forces a fresh keypair.
+**How to handle:** If this happens after a page reload during unshield, use `loadPendingUnshield()` and `resumeUnshield()` to recover. Otherwise, calling `sdk.clearCredentials()` and retrying forces a fresh keypair.
 
 ### ApprovalFailedError
 
@@ -6227,13 +6346,13 @@ The relayer rejected the FHE keypair. This happens when the keypair is malformed
 ```ts
 matchZamaError(error, {
   INVALID_KEYPAIR: () => {
-    sdk.revokeSession();
-    showPrompt("Session expired — sign again to continue");
+    sdk.clearCredentials();
+    showPrompt("Keypair rejected — sign again to continue");
   },
 });
 ```
 
-**How to handle:** Revoke the session and prompt the user to re-sign. The SDK generates a fresh keypair on the next operation.
+**How to handle:** Clear credentials and prompt the user to re-sign. The SDK generates a fresh keypair on the next operation.
 
 ### KeypairExpiredError
 
@@ -6243,7 +6362,7 @@ The FHE keypair exceeded its TTL (default: 24 hours). The user needs to sign aga
 
 ```ts
 matchZamaError(error, {
-  KEYPAIR_EXPIRED: () => showPrompt("Session expired — sign to refresh"),
+  KEYPAIR_EXPIRED: () => showPrompt("Keypair expired — sign to refresh"),
 });
 ```
 
@@ -6373,7 +6492,7 @@ try {
 
 **Code:** `BALANCE_CHECK_UNAVAILABLE`
 
-Balance validation could not be performed. For confidential operations (`confidentialTransfer`, `unshield`), this means no cached credentials exist and the SDK cannot decrypt the balance without prompting a wallet signature. For `shield`, this means the ERC-20 balance read failed.
+Balance validation could not be performed. For confidential operations (`confidentialTransfer`, `unshield`), this means no stored permits exist and the SDK cannot decrypt the balance without prompting a wallet signature. For `shield`, this means the ERC-20 balance read failed.
 
 ```ts
 matchZamaError(error, {
@@ -6382,7 +6501,7 @@ matchZamaError(error, {
 });
 ```
 
-**How to handle:** Either call `token.allow()` first to cache credentials, or pass `skipBalanceCheck: true` to bypass validation (useful for smart wallets that cannot produce EIP-712 signatures).
+**How to handle:** Either call `token.allow()` first to sign permits, or pass `skipBalanceCheck: true` to bypass validation (useful for smart wallets that cannot produce EIP-712 signatures).
 
 ### ERC20ReadFailedError
 
@@ -6557,13 +6676,13 @@ matchZamaError(error, {
 | `RelayerRequestFailedError`               | Wrong relayer URL or missing auth           | Verify `relayerUrl` in transport config. Check the `auth` option if using API key auth.    |
 | `InsufficientConfidentialBalanceError`    | Confidential balance < requested amount     | Show the user their balance and the shortfall. Wait for incoming transfers or shield more. |
 | `InsufficientERC20BalanceError`           | ERC-20 balance < requested shield amount    | Show the user their public token balance. They need to acquire more tokens.                |
-| `BalanceCheckUnavailableError`            | No cached credentials for balance check     | Call `token.allow()` first, or pass `skipBalanceCheck: true`.                              |
+| `BalanceCheckUnavailableError`            | No stored permits for balance check         | Call `token.allow()` first, or pass `skipBalanceCheck: true`.                              |
 | `ERC20ReadFailedError`                    | ERC-20 balanceOf read failed                | Check network connectivity and RPC endpoint. Retry the shield.                             |
 
 ## Related
 
 - [Error handling guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/handle-errors.md) — practical patterns for catching and displaying errors
-- [ZamaSDK](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md) — SDK constructor and session management
+- [ZamaSDK](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md) — SDK constructor and permit management
 
 ## Contract call builders
 
@@ -7544,7 +7663,7 @@ try {
 }
 ```
 
-> **Note:** `SigningRejectedError` is always propagated — if the user rejects a wallet prompt, the SDK never silently retries or falls through to a fresh credential flow. This ensures users can always cancel.
+> **Note:** `SigningRejectedError` is always propagated — if the user rejects a wallet prompt, the SDK never silently retries or falls through to a fresh permit flow. This ensures users can always cancel.
 
 > **Note:** The SDK automatically maps known ACL Solidity revert reasons (e.g. `AlreadyDelegatedOrRevokedInSameBlock`, `EnforcedPause`) to typed `ZamaError` subclasses. Unmapped reverts fall through to `TransactionRevertedError`.
 
@@ -7970,7 +8089,7 @@ Configuration object created by [`createConfig`](https://raw.githubusercontent.c
 ## Related
 
 - [Configuration guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md)
-- [Session Model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/session-model.md)
+- [Permit Model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/permit-model.md)
 
 ## useConfidentialBalance
 
@@ -8578,7 +8697,7 @@ await transfer({
 **Throws:**
 
 - `InsufficientConfidentialBalanceError` -- if the confidential balance is less than `amount` (exposes `requested`, `available`, `token`)
-- `BalanceCheckUnavailableError` -- if balance validation is required but decryption is not possible (no cached credentials). Call `allow()` first or use `skipBalanceCheck: true`
+- `BalanceCheckUnavailableError` -- if balance validation is required but decryption is not possible (no stored permits). Call `allow()` first or use `skipBalanceCheck: true`
 
 ## Return Type
 
@@ -9269,7 +9388,7 @@ await unshield({
 **Throws:**
 
 - `InsufficientConfidentialBalanceError` -- if the confidential balance is less than `amount` (exposes `requested`, `available`, `token`)
-- `BalanceCheckUnavailableError` -- if balance validation is required but decryption is not possible (no cached credentials). Call `allow()` first or use `skipBalanceCheck: true`
+- `BalanceCheckUnavailableError` -- if balance validation is required but decryption is not possible (no stored permits). Call `allow()` first or use `skipBalanceCheck: true`
 
 ## Return Type
 
@@ -10162,7 +10281,7 @@ Call this early (e.g. after wallet connect) so that [`useUserDecrypt`](https://r
 
 
 > [!WARNING]
-> **Include all contracts you plan to decrypt.** `useUserDecrypt` checks that cached credentials cover every contract address in its `handles` before firing the query. If any contract is missing, the query stays disabled.
+> **Include all contracts you plan to decrypt.** `useUserDecrypt` checks that stored permits cover every contract address in its `handles` before firing the query. If any contract is missing, the query stays disabled.
 
 
 ## Import
@@ -10184,7 +10303,7 @@ function AllowButton({ contracts }: { contracts: `0x${string}`[] }) {
 
   const handleAllow = async () => {
     await allow(contracts);
-    // All subsequent decrypt operations reuse the cached credential
+    // All subsequent decrypt operations reuse the cached permits
   };
 
   return (
@@ -10286,10 +10405,10 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 ## Related
 
-- [`useIsAllowed`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsAllowed.md) -- check whether a session signature is cached
-- [`useRevoke`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevoke.md) -- revoke decrypt authorization for specific contracts
-- [`useRevokeSession`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevokeSession.md) -- revoke the entire session
-- [Session Model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/session-model.md) -- security model and TTL configuration
+- [`useIsAllowed`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsAllowed.md) -- check whether stored permits cover contracts
+- [`useRevokePermits`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevokePermits.md) -- revoke permits for specific contracts
+- [`useClearCredentials`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useClearCredentials.md) -- wipe the keypair and all permits
+- [Permit Model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/permit-model.md) -- permit lifecycle and TTL configuration
 
 ## useIsAllowed
 
@@ -10300,9 +10419,9 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 # useIsAllowed
 
-Query hook that checks whether a session signature is cached and valid.
+Query hook that checks whether stored permits cover the requested contract addresses.
 
-Returns `true` if decrypt operations can proceed without a wallet prompt. Returns `false` once the `sessionTTL` has expired (default: 30 days).
+Returns `true` if decrypt operations can proceed without a wallet prompt. Returns `false` when no permits exist or the `permitTTL` has expired.
 
 ## Import
 
@@ -10324,13 +10443,13 @@ function AuthGuard() {
   const { data: allowed, isLoading } = useIsAllowed({ contractAddresses: [...CONTRACTS] });
   const { mutateAsync: allow } = useAllow();
 
-  if (isLoading) return <span>Checking session...</span>;
+  if (isLoading) return <span>Checking permits...</span>;
 
   if (!allowed) {
     return <button onClick={() => allow([...CONTRACTS])}>Authorize wallet</button>;
   }
 
-  return <span>Session active — decrypts will not prompt the wallet</span>;
+  return <span>Permits active — decrypts will not prompt the wallet</span>;
 }
 ```
 
@@ -10369,7 +10488,7 @@ function GatedDecrypt({
 
 `Address[]` — **required**
 
-Contract addresses to check credentials against. Returns `true` only when cached credentials cover **all** specified addresses.
+Contract addresses to check credentials against. Returns `true` only when stored permits cover **all** specified addresses.
 
 ```tsx
 const { data: allowed } = useIsAllowed({
@@ -10379,7 +10498,7 @@ const { data: allowed } = useIsAllowed({
 
 
 > [!WARNING]
-> **You must gate decrypt queries yourself.** `useUserDecrypt` does not automatically wait for credentials — if you call it before `useAllow`, the user sees an unexpected wallet popup. Use `useIsAllowed` to conditionally enable the decrypt query via `{ enabled: !!allowed }` as the second argument, or conditionally render the decrypt component only when `allowed` is `true`.
+> **You must gate decrypt queries yourself.** `useUserDecrypt` does not automatically wait for permits — if you call it before `useAllow`, the user sees an unexpected wallet popup. Use `useIsAllowed` to conditionally enable the decrypt query via `{ enabled: !!allowed }` as the second argument, or conditionally render the decrypt component only when `allowed` is `true`.
 
 
 ## Return Type
@@ -10390,8 +10509,8 @@ const { data: allowed } = useIsAllowed({
 
 `data` is a `boolean`:
 
-- `true` -- a valid session signature is cached; decrypts will not prompt the wallet.
-- `false` -- no cached signature, or the `sessionTTL` has expired. Call [`useAllow`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useAllow.md) to re-authorize.
+- `true` -- stored permits cover all specified addresses; decrypts will not prompt the wallet.
+- `false` -- no stored permits, or the `permitTTL` has expired. Call [`useAllow`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useAllow.md) to authorize.
 
 ### `data`
 
@@ -10452,24 +10571,24 @@ The current status of the query. Prefer the boolean flags above for conditional 
 
 - [Avoid blind-sign wallet popups](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/encrypt-decrypt.md#3-avoid-blind-sign-wallet-popups) -- gating balance queries to avoid blind-sign popups
 - [`useAllow`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useAllow.md) -- pre-authorize contracts with one wallet signature
-- [`useRevoke`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevoke.md) -- revoke session credentials
-- [Session Model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/session-model.md) -- security model and TTL configuration
+- [`useRevokePermits`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevokePermits.md) -- revoke permits
+- [Permit Model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/permit-model.md) -- permit lifecycle and TTL configuration
 
-## useRevoke
+## useRevokePermits
 
 - source_type: official-doc
-- source_path: docs/gitbook/src/reference/react/useRevoke.md
-- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevoke.md
-- logical_path: reference/react/useRevoke
+- source_path: docs/gitbook/src/reference/react/useRevokePermits.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevokePermits.md
+- logical_path: reference/react/useRevokePermits
 
-# useRevoke
+# useRevokePermits
 
-Revoke the EIP-712 decrypt authorization for specific contract addresses. This is **not token-specific** — it works for any contract that uses FHE-encrypted values. Stored credentials remain intact — the next decrypt requires a fresh wallet signature.
+Revoke FHE permits for the current signer. With a contract list, removes direct-decrypt permits on the current chain. Without arguments, removes every permit across all chains and delegators. The keypair survives — use [`useClearCredentials`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useClearCredentials.md) to also wipe the keypair.
 
 ## Import
 
 ```ts
-import { useRevoke } from "@zama-fhe/react-sdk";
+import { useRevokePermits } from "@zama-fhe/react-sdk";
 ```
 
 ## Usage
@@ -10478,14 +10597,30 @@ import { useRevoke } from "@zama-fhe/react-sdk";
 ### Tab: RevokeButton.tsx
 
 ```tsx
-import { useRevoke } from "@zama-fhe/react-sdk";
+import { useRevokePermits } from "@zama-fhe/react-sdk";
 
 function RevokeButton({ contracts }: { contracts: `0x${string}`[] }) {
-  const { mutate: revoke, isPending, isSuccess } = useRevoke();
+  const { mutate: revokePermits, isPending, isSuccess } = useRevokePermits();
 
   return (
-    <button onClick={() => revoke(contracts)} disabled={isPending}>
-      {isPending ? "Revoking..." : "Revoke authorization"}
+    <button onClick={() => revokePermits(contracts)} disabled={isPending}>
+      {isPending ? "Revoking..." : "Revoke permits"}
+    </button>
+  );
+}
+```
+
+### Tab: RevokeAll.tsx
+
+```tsx
+import { useRevokePermits } from "@zama-fhe/react-sdk";
+
+function RevokeAllButton() {
+  const { mutate: revokePermits, isPending } = useRevokePermits();
+
+  return (
+    <button onClick={() => revokePermits()} disabled={isPending}>
+      {isPending ? "Revoking all..." : "Revoke all permits"}
     </button>
   );
 }
@@ -10494,20 +10629,21 @@ function RevokeButton({ contracts }: { contracts: `0x${string}`[] }) {
 
 ## Parameters
 
-`useRevoke` takes no constructor parameters.
+`useRevokePermits` takes no constructor parameters.
 
 ## Mutation variables
 
 ### addresses
 
-`Address[]`
+`Address[] | void`
 
-Array of contract addresses to revoke decrypt authorization for. These can be any contracts that use FHE-encrypted values — not limited to tokens.
+Optional array of contract addresses. When provided, revokes permits on the current chain whose payload touches any listed address. When omitted, revokes all permits across all chains and delegators.
 
 ```ts
-const { mutate: revoke } = useRevoke();
+const { mutate: revokePermits } = useRevokePermits();
 
-revoke(["0xContractA", "0xContractB"]);
+revokePermits(["0xContractA", "0xContractB"]); // current chain only
+revokePermits(); // all permits, all chains
 ```
 
 ## Return Type
@@ -10563,53 +10699,47 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 ## Behavior
 
-- Clears the cached session signature for each contract in the array.
+- Removes signed permits from the permission store.
 - Auto-invalidates all [`useIsAllowed`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsAllowed.md) queries on success.
-- Does **not** delete stored FHE credentials — only the session-level signature is cleared.
-
-
-> [!INFO]
-> The SDK auto-revokes sessions on wallet disconnect or account change when the signer adapter implements `subscribe()`. Manual revoke is useful when you want to clear credentials proactively.
-
+- The FHE keypair is not affected — only permits are removed.
 
 ## Related
 
-- [`useRevokeSession`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevokeSession.md) — revoke the entire session instead of specific contracts
-- [`useAllow`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useAllow.md) — authorize decryption for contracts with a single wallet signature
-- [`useIsAllowed`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsAllowed.md) — check whether a session signature is valid
-- [`Token.revoke()`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md#revoke) — imperative equivalent on the SDK class
+- [`useClearCredentials`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useClearCredentials.md) — wipe the keypair and all permits
+- [`useAllow`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useAllow.md) — sign permits for contracts
+- [`useIsAllowed`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsAllowed.md) — check whether stored permits cover contracts
 
-## useRevokeSession
+## useClearCredentials
 
 - source_type: official-doc
-- source_path: docs/gitbook/src/reference/react/useRevokeSession.md
-- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevokeSession.md
-- logical_path: reference/react/useRevokeSession
+- source_path: docs/gitbook/src/reference/react/useClearCredentials.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useClearCredentials.md
+- logical_path: reference/react/useClearCredentials
 
-# useRevokeSession
+# useClearCredentials
 
-Revoke the entire session for the connected wallet. Unlike [`useRevoke`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevoke.md) which targets specific contract addresses, this clears the session-level signature.
+Wipe the keypair for the current signer and cascade-delete every permit (across chains and delegators) referencing it. Use this for "log out" handlers that should leave no trace.
 
 ## Import
 
 ```ts
-import { useRevokeSession } from "@zama-fhe/react-sdk";
+import { useClearCredentials } from "@zama-fhe/react-sdk";
 ```
 
 ## Usage
 
 
-### Tab: DisconnectPanel.tsx
+### Tab: LogoutPanel.tsx
 
 ```tsx
-import { useRevokeSession } from "@zama-fhe/react-sdk";
+import { useClearCredentials } from "@zama-fhe/react-sdk";
 
-function DisconnectPanel() {
-  const { mutate: revokeSession, isPending } = useRevokeSession();
+function LogoutPanel() {
+  const { mutate: clearCredentials, isPending } = useClearCredentials();
 
   return (
-    <button onClick={() => revokeSession()} disabled={isPending}>
-      {isPending ? "Revoking session..." : "Revoke session"}
+    <button onClick={() => clearCredentials()} disabled={isPending}>
+      {isPending ? "Clearing..." : "Clear all credentials"}
     </button>
   );
 }
@@ -10618,16 +10748,16 @@ function DisconnectPanel() {
 
 ## Parameters
 
-`useRevokeSession` takes no constructor parameters.
+`useClearCredentials` takes no constructor parameters.
 
 ## Mutation variables
 
 No mutation variables. Call `mutate()` or `mutateAsync()` with no arguments.
 
 ```ts
-const { mutate: revokeSession } = useRevokeSession();
+const { mutate: clearCredentials } = useClearCredentials();
 
-revokeSession();
+clearCredentials();
 ```
 
 ## Return Type
@@ -10683,20 +10813,21 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 ## Behavior
 
-- Clears the session-level signature for the connected wallet.
+- Wipes the FHE keypair for the connected wallet.
+- Cascade-deletes every permit across all chains and delegators.
 - Auto-invalidates all [`useIsAllowed`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsAllowed.md) queries on success.
-- After revoking, any balance decrypt or FHE operation will prompt a new wallet signature.
+- After clearing, any decrypt operation will generate a fresh keypair and prompt for new permits.
 
 
 > [!INFO]
-> The SDK auto-revokes sessions on wallet disconnect or account change when the signer adapter implements `subscribe()`. You do not need to call this hook manually for that case.
+> The SDK auto-clears credentials on wallet disconnect or account change when the signer adapter implements `walletAccount.subscribe()`. You do not need to call this hook manually for that case.
 
 
 ## Related
 
-- [`useRevoke`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevoke.md) — revoke specific contract addresses instead of the full session
-- [`useAllow`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useAllow.md) — pre-authorize contracts with a single wallet signature
-- [`useIsAllowed`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsAllowed.md) — check whether a session signature is valid
+- [`useRevokePermits`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevokePermits.md) — remove permits without touching the keypair
+- [`useAllow`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useAllow.md) — sign permits for contracts
+- [`useIsAllowed`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsAllowed.md) — check whether stored permits cover contracts
 
 ## useConfidentialSetOperator
 
@@ -13049,7 +13180,7 @@ Pass `{ enabled: false }` as the second argument to disable the query.
 
 Returns a standard `useQuery` result. `data` resolves to `Record<Handle, ClearValueType>` — a map from each handle to its decrypted plaintext value (`bigint`, `boolean`, or `string`).
 
-When all requested handles are already cached, `data` contains the cached values immediately (no relayer call). Freshly decrypted results are written through the SDK's internal CachingService — scoped by `(signer, contract, handle)` — so that subsequent renders return instantly, even after a page reload. The cache is cleared automatically on `revoke()`, `revokeSession()`, or wallet lifecycle events (disconnect, account change, chain change).
+When all requested handles are already cached, `data` contains the cached values immediately (no relayer call). Freshly decrypted results are written through the SDK's internal CachingService — scoped by `(signer, contract, handle)` — so that subsequent renders return instantly, even after a page reload. The cache is cleared automatically on `revokePermits()`, `clearCredentials()`, or wallet lifecycle events (disconnect, account change, chain change).
 
 ### `data`
 
@@ -13115,7 +13246,7 @@ The current status of the query. Prefer the boolean flags above for conditional 
 
 
 > [!WARNING]
-> **`useUserDecrypt` does not automatically gate on credentials.** If credentials are not cached when the query fires, the SDK will prompt the user's wallet for a signature. To avoid unexpected popups, gate the query yourself using [`useIsAllowed`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsAllowed.md):
+> **`useUserDecrypt` does not automatically gate on permits.** If permits are not cached when the query fires, the SDK will prompt the user's wallet for a signature. To avoid unexpected popups, gate the query yourself using [`useIsAllowed`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsAllowed.md):
 >
 > ```tsx
 > const { data: allowed } = useIsAllowed({ contractAddresses: ["0xContract"] });
@@ -13128,20 +13259,20 @@ The current status of the query. Prefer the boolean flags above for conditional 
 > This ensures the decrypt query only fires after `useAllow` has been called.
 
 
-## Credential caching
+## Permit caching
 
-`useUserDecrypt` relies on credentials acquired via [`useAllow`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useAllow.md):
+`useUserDecrypt` relies on permits acquired via [`useAllow`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useAllow.md):
 
-- **First `allow()` call** — generates a new FHE keypair, creates EIP-712 typed data, and requests a wallet signature. The credentials are then cached.
-- **Subsequent queries** — reuse the cached credentials if they are still valid (not expired).
-- **Expiry** — credentials expire after `keypairTTL` seconds (default: 2592000 = 30 days, configurable via SDK config). Once expired, call `allow()` again to generate fresh credentials.
+- **First `allow()` call** — generates a new FHE keypair, creates EIP-712 typed data, and requests a wallet signature. The permits are then cached.
+- **Subsequent queries** — reuse the cached permits if they are still valid (not expired).
+- **Expiry** — the FHE keypair expires after `keypairTTL` seconds (default: 2592000 = 30 days, configurable via SDK config). Permits expire after `permitTTL` days (default: 30). Once expired, call `allow()` again to generate fresh permits.
 
-This means users only see a wallet signature prompt once per session (or per TTL window), even if they decrypt multiple times.
+This means users only see a wallet signature prompt once per TTL window, even if they decrypt multiple times.
 
 ## Related
 
 - [`useAllow`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useAllow.md) — pre-authorize contracts with one wallet signature (required before `useUserDecrypt` fires)
-- [`useIsAllowed`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsAllowed.md) — check whether credentials are cached and cover specific contracts
+- [`useIsAllowed`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsAllowed.md) — check whether permits are cached and cover specific contracts
 - [`useConfidentialBalance`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialBalance.md) — high-level hook that decrypts token balances with automatic caching
 - [`useEncrypt`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useEncrypt.md) — reverse operation, encrypt a plaintext value for on-chain submission
 - [Encrypt & Decrypt guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/encrypt-decrypt.md) — full walkthrough with end-to-end examples
@@ -13159,7 +13290,7 @@ Low-level mutation hook that generates a fresh FHE keypair via the relayer. Retu
 
 
 > [!WARNING]
-> [`useUserDecrypt`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUserDecrypt.md), [`useAllow`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useAllow.md), and [`useConfidentialBalance`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialBalance.md) handle keypair generation automatically. Call `useGenerateKeypair` only when managing FHE credentials manually.
+> [`useUserDecrypt`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUserDecrypt.md), [`useAllow`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useAllow.md), and [`useConfidentialBalance`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialBalance.md) handle keypair generation automatically. Call `useGenerateKeypair` only when managing FHE keypairs manually.
 
 
 ## Import
@@ -13266,7 +13397,7 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 ## Related
 
-- [`useAllow`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useAllow.md) — high-level hook that generates a keypair and caches the session signature
+- [`useAllow`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useAllow.md) — high-level hook that generates a keypair and signs permits
 - [`useUserDecrypt`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUserDecrypt.md) — uses the generated keypair to decrypt handles
 - [`useEncrypt`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useEncrypt.md) — encrypt values (does not require a keypair)
 
@@ -14332,7 +14463,7 @@ queryClient.removeQueries({ queryKey: zamaQueryKeys.confidentialBalance.all });
 
 **Welcome to Concepts!**
 
-Core concepts and architecture behind the Zama SDK. These pages explain how the SDK works under the hood — the session model, security guarantees, and caching strategy.
+Core concepts and architecture behind the Zama SDK. These pages explain how the SDK works under the hood — the permit model, security guarantees, and caching strategy.
 
 ## Where to go next
 
@@ -14342,7 +14473,7 @@ Otherwise:
 
 🟨 Go to [**Architecture**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/architecture.md) to understand the SDK's layered module structure.
 
-🟨 Go to [**Session model**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/session-model.md) to learn how FHE keypairs and wallet signatures are managed.
+🟨 Go to [**Permit model**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/permit-model.md) to learn how FHE keypairs and signed permits are managed.
 
 🟨 Go to [**Security model**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/security-model.md) for the full threat model and trust assumptions.
 
@@ -14368,17 +14499,17 @@ The SDK is organized into layers, each with a clear responsibility. Higher layer
 
 ![Zama SDK Architecture Layers](../images/layers.svg)
 
-| Layer                          | Responsibility                                                                                            |
-| ------------------------------ | --------------------------------------------------------------------------------------------------------- |
-| **React SDK**                  | `ZamaProvider` context + hooks wrapping `@tanstack/react-query`                                           |
-| **Query & Mutation Factories** | Framework-agnostic `queryOptions` / `mutationOptions` consumed by React Query (or directly)               |
-| **Contract Abstraction**       | `ZamaSDK`, `Token`, `Token` — the main developer-facing API                                               |
-| **Contract Call Builders**     | Pure functions returning `{ address, abi, functionName, args }` for any Web3 library                      |
-| **Provider & Signer Adapters** | `ViemProvider`/`ViemSigner`, `EthersProvider`/`EthersSigner` — read/write split per library               |
-| **Relayer**                    | `RelayerWeb` (browser WASM), `RelayerNode` (server), `RelayerCleartext` (testing)                         |
-| **Worker**                     | Web Worker + WASM in browsers, `worker_threads` pool in Node.js                                           |
-| **Storage & Credentials**      | `CredentialsManager` with pluggable backends (IndexedDB, Memory, AsyncLocalStorage, ChromeSessionStorage) |
-| **Event System**               | `ZamaSDKEvents` lifecycle events + on-chain event decoders                                                |
+| Layer                          | Responsibility                                                                                    |
+| ------------------------------ | ------------------------------------------------------------------------------------------------- |
+| **React SDK**                  | `ZamaProvider` context + hooks wrapping `@tanstack/react-query`                                   |
+| **Query & Mutation Factories** | Framework-agnostic `queryOptions` / `mutationOptions` consumed by React Query (or directly)       |
+| **Contract Abstraction**       | `ZamaSDK`, `Token`, `WrappedToken` — the main developer-facing API                                |
+| **Contract Call Builders**     | Pure functions returning `{ address, abi, functionName, args }` for any Web3 library              |
+| **Provider & Signer Adapters** | `ViemProvider`/`ViemSigner`, `EthersProvider`/`EthersSigner` — read/write split per library       |
+| **Relayer**                    | `RelayerWeb` (browser WASM), `RelayerNode` (server), `RelayerCleartext` (testing)                 |
+| **Worker**                     | Web Worker + WASM in browsers, `worker_threads` pool in Node.js                                   |
+| **Storage & Credentials**      | `KeypairVault` + `PermissionStore` with pluggable backends (IndexedDB, Memory, AsyncLocalStorage) |
+| **Event System**               | `ZamaSDKEvents` lifecycle events + on-chain event decoders                                        |
 
 ## `createConfig` pattern
 
@@ -14411,202 +14542,117 @@ Each package exposes multiple entry points for tree-shaking:
 | `@zama-fhe/react-sdk`       | Provider-based hooks (`ZamaProvider` + `use*` hooks)       |
 | `@zama-fhe/react-sdk/wagmi` | `createConfig` — builds a `ZamaConfig` from a wagmi config |
 
-## Session model
+## Permit model
 
 - source_type: official-doc
-- source_path: docs/gitbook/src/concepts/session-model.md
-- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/session-model.md
-- logical_path: concepts/session-model
+- source_path: docs/gitbook/src/concepts/permit-model.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/permit-model.md
+- logical_path: concepts/permit-model
 
-# Session model
+# Permit model
 
-The SDK uses a two-layer authorization model to protect FHE credentials. An FHE keypair is generated once and persisted in encrypted form. A wallet signature — the session — unlocks that keypair for the current browsing session. This separation means the expensive keypair generation happens rarely, while the lightweight signing step repeats once per session.
+Decrypting an on-chain FHE ciphertext requires two things: an FHE keypair (generated once, stored persistently — see [Security Model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/security-model.md#credential-storage)) and a **signed permit** that authorizes decryption for specific contract addresses. This page explains how permits work.
 
-![Two-Layer Authorization Model](../images/session-two-layers.svg)
+## What is a permit
 
-## The two layers
+A permit is an EIP-712 typed data signature from the user's wallet. It binds:
 
-### Layer 1: FHE keypair (persistent)
+- A set of **contract addresses** (up to 10 per permit).
+- A **chain ID**.
+- A **start timestamp** and **duration** (derived from `permitTTL`).
+- The **signer address**.
+- An optional **delegator address** (for delegated decryption).
 
-The FHE keypair consists of a public key and a private key. The public key is sent to the relayer so it can re-encrypt on-chain ciphertexts. The private key decrypts the re-encrypted values locally. Together, they give a user the ability to read their own confidential balances.
+The relayer verifies this signature before re-encrypting any ciphertext. Without a valid permit covering the target contract, the relayer rejects the request.
 
-The keypair is generated once and encrypted before storage. It persists across page reloads, browser restarts, and session changes. Regeneration happens only when the keypair expires (controlled by `keypairTTL`).
+## Key properties
 
-### Layer 2: Session signature (ephemeral)
+- **Immutable** — the signed contract addresses are part of the EIP-712 payload and cannot be edited after signing.
+- **Chunked** — each permit covers at most 10 contracts. When more are needed, the SDK chunks the addresses and requests one wallet signature per chunk.
+- **Chain-scoped** — stored under `(signerAddress, chainId, delegatorAddress)`, so permits on Sepolia never collide with permits on Mainnet, and direct permits never collide with delegated ones.
+- **Additive** — calling `allow()` with new contracts signs additional permits for the uncovered subset only. Existing permits remain valid and are not re-signed.
+- **Time-bounded** — each permit records its creation timestamp and duration. Expired permits are pruned on next access.
 
-The session signature is an EIP-712 typed data signature from the user's wallet. It serves two purposes:
-
-1. **Authorization** — proves the user consents to decrypt balances for specific contract addresses.
-2. **Key derivation** — the signature's raw bytes are used as input to PBKDF2, producing the AES-GCM key that encrypts and decrypts the FHE private key.
-
-By default, the session signature lives in memory only. It is lost on page reload, tab close, or explicit revocation.
-
-## Lifecycle flow
-
-![Session Lifecycle](../images/session-lifecycle.svg)
+## Lifecycle
 
 ### First visit
 
 1. User connects wallet.
-2. SDK generates an FHE keypair via WASM.
-3. SDK builds EIP-712 typed data (includes contract addresses, timestamp, duration).
-4. Wallet signs EIP-712 → signature.
-5. Derive AES-256-GCM key via PBKDF2 (signature + address as salt) → encrypt FHE private key → store to IndexedDB.
-6. Cache signature in memory (session map).
-7. Ready — decrypts reuse cached signature, no further popups.
+2. App calls `allow([contractA, contractB])`.
+3. SDK checks storage — no permits cover these contracts yet.
+4. SDK builds EIP-712 typed data (contract addresses, timestamp, duration) and requests a wallet signature.
+5. Wallet signs → permit is stored (keyed by signer address, chain ID, and delegator).
+6. Ready — subsequent decrypts reuse the stored permit silently.
 
-### Subsequent page load
+### Returning visit
 
-1. Page loads → SDK loads encrypted keypair from IndexedDB.
-2. SDK checks session map → empty (memory was cleared).
-3. SDK prompts wallet to re-sign EIP-712 → signature.
-4. Derive AES key → decrypt FHE private key. Cache signature in session map.
-5. Ready — same session, no further popups.
+1. Page loads → SDK reads permits from storage.
+2. Permits cover the requested contracts and haven't expired.
+3. Ready — no wallet popup.
 
-### Same session (already authorized)
+### New contract coverage
 
-1. Balance request arrives.
-2. SDK checks session map → signature found.
-3. Decrypt FHE private key from storage using cached signature.
-4. Decrypt balance via relayer — no wallet popup.
+1. Decrypt request arrives for a contract not covered by existing permits.
+2. SDK signs a new permit for the uncovered contracts only.
+3. New permit is appended alongside existing ones — nothing is invalidated.
 
-## What lives where
+### Expiration
 
-| Data                        | Storage location                       | Lifetime                                           | Survives reload?                         |
-| --------------------------- | -------------------------------------- | -------------------------------------------------- | ---------------------------------------- |
-| FHE public key              | Persistent storage (IndexedDB)         | Until `keypairTTL` expires                         | Yes                                      |
-| FHE private key (encrypted) | Persistent storage (IndexedDB)         | Until `keypairTTL` expires                         | Yes                                      |
-| FHE private key (plaintext) | JavaScript memory only                 | Current decrypt operation                          | No                                       |
-| AES-GCM derived key         | JavaScript memory only                 | Current encrypt/decrypt operation                  | No                                       |
-| EIP-712 signature           | Session storage (in-memory by default) | Until revoked, tab closed, or `sessionTTL` expires | No (unless using `chromeSessionStorage`) |
-| Wallet address hash         | Storage key                            | Matches keypair lifetime                           | Yes                                      |
+1. A permit's duration elapses (default: 30 days, configurable via `permitTTL`).
+2. Permit is pruned from storage on next access.
+3. The next decrypt for that contract set prompts a single wallet re-sign.
+4. The FHE keypair is not affected.
 
 
 > [!INFO]
-> The plaintext FHE private key and the derived AES key exist in memory only for the duration of a single operation. They are not cached or stored anywhere.
+> Each permit records its start timestamp and duration at creation time. Changing `permitTTL` between sessions does not retroactively alter existing permits — they use their original duration.
 
 
-## TTL: two independent clocks
+## How additive permits work
 
-The SDK has two separate time-to-live settings that control different aspects of the session.
-
-### `keypairTTL` — keypair regeneration
-
-Controls how long the FHE keypair remains valid. Default: 2,592,000 seconds (30 days).
-
-When the keypair expires:
-
-- A new FHE keypair is generated.
-- The wallet is prompted to sign new EIP-712 data.
-- The new keypair is encrypted and stored, replacing the old one.
-
-This is the more disruptive expiry — it requires WASM-based key generation.
-
-### `sessionTTL` — re-sign frequency
-
-Controls how long the cached wallet signature remains valid. Default: 2,592,000 seconds (30 days).
-
-When the session expires:
-
-- The cached signature is cleared from session storage.
-- A `session:expired` event is emitted.
-- The next decrypt prompts a single wallet re-sign.
-- The existing FHE keypair is not affected — no regeneration.
-
-
-> [!INFO]
-> For high-security contexts, set `sessionTTL: 0` to require a wallet signature on every operation. This provides maximum security at the cost of frequent wallet popups.
-
-
-
-> [!INFO]
-> **`sessionTTL` is clamped to `keypairTTL`.** If you set `sessionTTL` greater than `keypairTTL`, the SDK automatically reduces it to match `keypairTTL` and emits a console warning. This prevents a state where `isAllowed()` returns `true` (session still valid) but the FHE keypair has expired, which would cause unexpected wallet prompts.
-
-
-Each session entry records its TTL at creation time. If you change the `sessionTTL` configuration between sessions, existing sessions use their original TTL, not the new value.
-
-## The allow / revoke flow
-
-![Allow / Revoke Flow](../images/session-allow-revoke.svg)
-
-### Allow (pre-authorize)
-
-Call `allow()` early — ideally right after wallet connect — to prompt the signature upfront rather than during a balance read.
-
-A single signature covers all contract addresses passed to `allow()`. The signed EIP-712 message includes the exact set of contracts. If you later call `allow()` with a contract not in the original set, the SDK generates a fresh keypair and requests a new wallet signature.
-
-
-> [!WARNING]
-> Batch all contract addresses into a single `allow()` call. Each call with a new contract set triggers a new keypair and wallet popup. Plan your allow calls to minimize signing prompts.
-
-
-### Revoke (clear session)
-
-Revocation clears the cached signature. The encrypted keypair in persistent storage is not affected.
-
-Three methods exist for different use cases:
-
-- `token.revoke()` — revoke from a specific token instance.
-- `sdk.credentials.revoke("0xTokenA", "0xTokenB")` — revoke with specific addresses (included in the `credentials:revoked` event).
-- `sdk.revokeSession()` — revoke without specifying addresses.
-
-## Identity change events
-
-The SDK automatically revokes sessions when wallet identity changes. Each signer adapter that implements `subscribe()` emits a `SignerIdentityChange` with the previous and next `{ address, chainId }` pair. The SDK reacts to each transition:
-
-### Disconnect or lock
-
-The user explicitly disconnects or locks their wallet. The previous identity's session is revoked. The next connection requires a fresh sign.
-
-### Account switch
-
-The user switches from address A to address B. The previous account's session is revoked automatically — the EIP-712 signature is address-scoped.
-
-### Chain switch
-
-The user switches networks (e.g., Sepolia to Mainnet) while keeping the same address. The previous identity's session is revoked and a new identity is established. Credentials are keyed by `address + chainId`, so switching back to the original chain finds the session still active if it hasn't expired.
-
-### Adapter support
-
-All built-in adapters (`ViemSigner` with `ethereum` option, `EthersSigner` with `ethereum` option, and the wagmi adapter built by `createConfig` from `@zama-fhe/react-sdk/wagmi`) implement `subscribe()` and emit identity-change events automatically.
-
-For custom signers, implementing `subscribe()` is optional but recommended. Without it, stale sessions persist until TTL expiry — not a security issue (signatures are time-bounded and address-scoped), but confusing UX when switching accounts.
-
-## Multi-contract batching
-
-A single `allow()` call can cover multiple contracts:
+Unlike a session model where re-authorizing replaces the previous authorization, permits are purely additive:
 
 ```ts
+// Signs permits for all three contracts
 await sdk.allow(["0xContractA", "0xContractB", "0xContractC"]);
+
+// ContractA is already covered — only ContractD triggers a new signature
+await sdk.allow(["0xContractA", "0xContractD"]);
 ```
 
-This produces one EIP-712 signature covering all three contracts. The signed message includes the full list of contract addresses, the start timestamp, and the duration. Any `balanceOf` call on ContractA, ContractB, or ContractC reuses the cached signature without additional popups.
+This means users see fewer wallet popups over time. As they interact with more contracts, their permit coverage grows without invalidating earlier permits.
 
-The tradeoff: if you later need to add ContractD, the SDK must generate a new keypair and request a fresh signature covering `[A, B, C, D]`. Plan your contract set upfront when possible.
 
-## Web extensions
+> [!INFO]
+> Batch all contract addresses you expect to need into a single `allow()` call to minimize wallet popups. Each uncovered chunk of up to 10 contracts triggers one signature prompt.
 
-MV3 Chrome extensions run background logic in service workers that Chrome can terminate at any time. The default in-memory session storage is lost on termination.
 
-To solve this, pass `chromeSessionStorage` as the `sessionStorage` option. This uses `chrome.storage.session`, which:
+## Revocation
 
-- Survives service worker restarts.
-- Is shared across popup, background, and content script contexts.
-- Is automatically cleared when the browser closes.
+Permits can be removed in two ways:
 
-See the [Web Extensions guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/web-extensions.md) for the full setup.
+- **Selective** — `sdk.revokePermits(["0xTokenA"])` removes permits touching those contracts on the current chain. Other permits are untouched.
+- **Full wipe** — `sdk.revokePermits()` removes all permits for the current signer across all chains and delegators. The FHE keypair is not affected.
 
-## Security properties
+For a complete "log out" that also removes the FHE keypair, use `sdk.clearCredentials()`. See the [ZamaSDK reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md#revokepermits) for the full API.
 
-| Property                | Guarantee                                                                 |
-| ----------------------- | ------------------------------------------------------------------------- |
-| FHE private key at rest | Encrypted with AES-256-GCM; key derived via PBKDF2 (600,000 iterations)   |
-| Signature scope         | Address-scoped and time-bounded via EIP-712                               |
-| Signature storage       | In-memory by default; never written to disk                               |
-| Storage key privacy     | Wallet addresses are SHA-256 hashed before use as storage keys            |
-| Plaintext exposure      | FHE private key exists in plaintext only during active decrypt operations |
+## Wallet account changes
 
-For the full threat model and trust assumptions, see the [Security Model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/security-model.md).
+The SDK automatically manages permits when the wallet state changes:
+
+| Event                 | Effect on permits                                                                 |
+| --------------------- | --------------------------------------------------------------------------------- |
+| **Disconnect / lock** | All permits and keypair cleared for the previous account                          |
+| **Account switch**    | Previous account's permits cleared; new account starts fresh                      |
+| **Chain switch**      | Permits are chain-scoped, so existing permits on the previous chain remain intact |
+
+See [ZamaSDK.onWalletAccountChange](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md#onwalletaccountchange) for programmatic access to these transitions.
+
+## Related
+
+- [Security Model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/security-model.md) — keypair storage, threat model, and trust assumptions
+- [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md#5-optional-configure-ttls-and-event-listener) — `keypairTTL` and `permitTTL` settings
+- [ZamaSDK](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md) — `allow()`, `revokePermits()`, `clearCredentials()` API
 
 ## Security model
 
@@ -14666,37 +14712,27 @@ The on-chain FHE coprocessor (FHEVM) executes homomorphic operations. It must co
 
 The wallet signs EIP-712 typed data to authorize FHE operations. The SDK trusts that the wallet correctly implements `eth_signTypedData_v4` and that the signing key is under the user's control. A compromised wallet compromises the FHE session — the attacker could sign authorization requests and decrypt the user's balances.
 
-## Credential storage security
+## Credential storage
 
-### Encryption at rest
+### Keypair storage
 
-The FHE private key is encrypted with AES-256-GCM before being written to storage (typically IndexedDB in browsers). The encryption key is derived from the wallet's EIP-712 signature using PBKDF2.
+The FHE private key is stored in plaintext in the configured storage backend (typically IndexedDB in browsers). There is no encryption-at-rest layer.
 
-![Credential Encryption at Rest](../images/security-key-derivation.svg)
+| Parameter  | Value                                                            |
+| ---------- | ---------------------------------------------------------------- |
+| Storage    | IndexedDB (browser), memory (tests), AsyncLocalStorage (Node.js) |
+| Key format | Plaintext ML-KEM keypair                                         |
+| Scope      | One keypair per signer address (chain-independent)               |
 
-| Parameter     | Value                          |
-| ------------- | ------------------------------ |
-| KDF           | PBKDF2                         |
-| Hash function | SHA-256                        |
-| Iterations    | 600,000                        |
-| Salt          | Lowercase wallet address       |
-| Key length    | 256 bits                       |
-| Cipher        | AES-256-GCM                    |
-| IV            | 12 random bytes per encryption |
-
-The signature itself is never persisted. It lives only in the in-memory session map, cleared on page reload or revocation. See [Session Model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/session-model.md) for the full lifecycle.
-
-### Storage key privacy
-
-Wallet addresses are hashed before use as storage keys. The storage backend (IndexedDB, memory, or custom) never sees the raw wallet address.
+The security model relies on same-origin isolation: only JavaScript running on the same origin can read IndexedDB. See [Permit Model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/permit-model.md) for the full lifecycle.
 
 ### Limitations
 
 <details>
-<summary>What AES-GCM at rest does NOT protect against</summary>
+<summary>What same-origin isolation does NOT protect against</summary>
 
-- **Same-origin scripts** — any JavaScript running on the same origin can read IndexedDB. A cross-site scripting (XSS) vulnerability could access the encrypted keypair. The attacker would still need the wallet signature to decrypt it, but reducing XSS surface is essential.
-- **Physical device access** — someone with access to the device's file system can read the IndexedDB contents. Again, they need the wallet signature to decrypt, but defense in depth applies.
+- **Same-origin scripts** — any JavaScript running on the same origin can read IndexedDB. A cross-site scripting (XSS) vulnerability could access the FHE private key directly. Reducing XSS surface is essential.
+- **Physical device access** — someone with access to the device's file system can read the IndexedDB contents.
 - **Malicious browser extensions** — extensions with broad permissions can access IndexedDB. Users should audit their installed extensions.
 
 </details>
@@ -14768,26 +14804,26 @@ The `wasm-unsafe-eval` directive allows WASM compilation and execution without r
 
 </details>
 
-## Session security
+## Permit security
 
 ### Time-bounded signatures
 
-EIP-712 signatures include a start timestamp and duration. The relayer rejects signatures outside their validity window. This limits the damage from a leaked signature — it becomes useless after expiry.
+EIP-712 permit signatures include a start timestamp and duration (in days). The relayer rejects permits outside their validity window. This limits the damage from a leaked permit — it becomes useless after expiry.
 
 Two TTL controls are available:
 
 - `keypairTTL` — how long the FHE keypair remains valid (default: 30 days).
-- `sessionTTL` — how long the cached wallet signature remains valid (default: 30 days).
+- `permitTTL` — how long signed permits remain valid, in days (default: 30).
 
 ### Address-scoped authorization
 
-The EIP-712 typed data includes the wallet address. A signature from address A cannot authorize decryption for address B. Combined with contract-scoped authorization (the signed message lists specific contract addresses), each signature is tightly bound to a specific user and set of contracts.
+The EIP-712 typed data includes the wallet address. A permit signed by address A cannot authorize decryption for address B. Combined with contract-scoped authorization (the signed message lists specific contract addresses), each permit is tightly bound to a specific user and set of contracts.
 
 ### Revocation
 
-Sessions can be revoked programmatically via `sdk.revokeSession()` or automatically via wallet lifecycle events (disconnect, account switch). Revocation clears the signature from the session map immediately.
+Permits can be revoked programmatically via `sdk.revokePermits()` or automatically via wallet lifecycle events (disconnect, account switch). Revocation removes permits from storage immediately.
 
-After revocation, the encrypted FHE keypair remains in storage. Only the session signature is cleared. The next operation prompts a fresh wallet sign.
+After revoking permits, the FHE keypair remains in storage. Use `sdk.clearCredentials()` to also wipe the keypair.
 
 ## CSRF protection
 
@@ -14812,16 +14848,13 @@ The token is refreshed before each encrypt/decrypt call. Only POST, PUT, DELETE,
 
 ## Summary of cryptographic algorithms
 
-| Operation             | Algorithm           | Key size           | Source                        |
-| --------------------- | ------------------- | ------------------ | ----------------------------- |
-| Credential encryption | AES-256-GCM         | 256-bit            | Web Crypto API                |
-| Key derivation        | PBKDF2-SHA-256      | 600,000 iterations | Web Crypto API                |
-| Storage key hashing   | SHA-256 (truncated) | 128-bit output     | Web Crypto API                |
-| CDN integrity         | SHA-384             | --                 | Web Crypto API                |
-| FHE encryption        | TFHE                | Network key        | WASM (`@zama-fhe/sdk (WASM)`) |
-| ZK proofs             | WASM prover         | --                 | WASM (`@zama-fhe/sdk (WASM)`) |
-| Wallet signing        | ECDSA secp256k1     | 256-bit            | User wallet                   |
-| Request tracking      | UUID v4             | 128-bit            | `crypto.randomUUID()`         |
+| Operation        | Algorithm       | Key size    | Source                        |
+| ---------------- | --------------- | ----------- | ----------------------------- |
+| CDN integrity    | SHA-384         | --          | Web Crypto API                |
+| FHE encryption   | TFHE            | Network key | WASM (`@zama-fhe/sdk (WASM)`) |
+| ZK proofs        | WASM prover     | --          | WASM (`@zama-fhe/sdk (WASM)`) |
+| Wallet signing   | ECDSA secp256k1 | 256-bit     | User wallet                   |
+| Request tracking | UUID v4         | 128-bit     | `crypto.randomUUID()`         |
 
 ## Reporting vulnerabilities
 
@@ -17152,9 +17185,9 @@ Covers: connect wallet, shield ERC-20 → confidential, confidential transfer, u
 - **Next.js 16** (App Router, Webpack — Turbopack not yet supported with WASM)
 - **React 19** + **viem v2** (`isAddress`, `parseAbi`, `parseUnits`, `formatUnits`, `createPublicClient`, `createWalletClient`)
 - **TanStack Query v5** for async state
-- **@zama-fhe/react-sdk** — `ZamaProvider`, `useConfidentialBalance`, `useUnshield`, `useDelegateDecryption`, etc.
-- **ViemSigner** — wraps viem `walletClient` + `publicClient` for all SDK operations
-- **RelayerWeb** — browser FHE worker, routes through a local Next.js proxy (`/api/relayer`)
+- **@zama-fhe/react-sdk** — `ZamaProvider`, `useShield`, `useConfidentialBalance`, `useUnshield`, `useDelegateDecryption`, etc.
+- **@zama-fhe/sdk** — `createConfig`, Sepolia chain preset, `ViemProvider`, optional `ViemSigner`, and `web()` relayer factory
+- **Next.js relayer proxy** — routes browser relayer requests through `/api/relayer` so API credentials stay server-side
 
 ## Setup
 
@@ -17208,10 +17241,10 @@ A step-by-step guide to how this app integrates `@zama-fhe/react-sdk` using viem
 
 ```
 page.tsx                         — wallet connect, token selector, layout
-├── providers.tsx                — ZamaProvider + ViemSigner + RelayerWeb wiring
+├── providers.tsx                — SDK createConfig + ZamaProvider wiring
 │   └── /api/relayer/[...path]   — Next.js proxy (keeps RELAYER_API_KEY server-side)
 ├── BalancesCard.tsx             — ETH / ERC-20 / confidential balance display
-├── ShieldCard.tsx               — ERC-20 → confidential (with manual approval flow)
+├── ShieldCard.tsx               — ERC-20 → confidential via useShield
 ├── TransferCard.tsx             — confidential → confidential
 ├── UnshieldCard.tsx             — confidential → ERC-20 (2-phase)
 ├── PendingUnshieldCard.tsx      — recover an interrupted unshield from IndexedDB
@@ -17224,72 +17257,49 @@ page.tsx                         — wallet connect, token selector, layout
 
 ## 1. Wiring the SDK (`providers.tsx`)
 
-Three objects are required: a `signer`, a `relayer`, and a `storage`.
+`ZamaProvider` takes one SDK config object. The app builds it with a read provider,
+an optional signer, a chain preset, storage, permit storage, and a browser relayer
+factory.
 
 ```ts
-// Signer — wraps viem clients for read/write operations.
-// publicClient is always created (needed for reads even without a wallet).
-// walletClient is only created when window.ethereum is available.
-// Recreated on wallet switch (walletKey pattern) so ViemSigner is always bound to the
-// correct account.
-//
-// NOTE: This is a simplified illustration. ViemSigner requires walletClient.account to be
-// set at construction time (viem does not infer it at call time like ethers does).
-// The actual implementation normalizes the address with getAddress() and bumps walletKey
-// after the initial eth_accounts seed. See §"Wallet reactivity" for the full details.
-const signer = useMemo(() => {
-  const ethereum = getEthereumProvider();
-  const publicClient = createPublicClient({ chain: sepolia, transport: http(SEPOLIA_RPC_URL) });
-  if (!ethereum) {
-    return new ViemSigner({ publicClient }); // read-only when no wallet installed
-  }
-  const walletClient = createWalletClient({ chain: sepolia, transport: custom(ethereum) });
-  return new ViemSigner({ walletClient, publicClient });
-}, [walletKey]);
+const publicClient = createPublicClient({ chain: sepolia, transport: http(SEPOLIA_RPC_URL) });
+const provider = new ViemProvider({ publicClient });
+const zamaSepolia = {
+  ...fheSepolia,
+  relayerUrl: new URL("/api/relayer", window.location.origin).toString(),
+  network: SEPOLIA_RPC_URL,
+} as const;
 
-// Relayer — browser FHE worker loaded from CDN.
-// Routes through the local /api/relayer Next.js proxy so RELAYER_API_KEY stays server-side.
-// SepoliaConfig provides the chain parameters and contract addresses.
-// relayerUrl is overridden to point at the proxy; network is the RPC endpoint for reads.
-// getChainId reads window.ethereum directly (not via walletClient closure, which would be
-// stale after walletKey remounts).
-const relayer = useMemo(
-  () =>
-    new RelayerWeb({
-      getChainId: async () => {
-        const ethereum = getEthereumProvider();
-        if (!ethereum) return SepoliaConfig.chainId;
-        const hex = (await ethereum.request({ method: "eth_chainId" })) as string;
-        return parseInt(hex, 16);
-      },
-      transports: {
-        [SepoliaConfig.chainId]: {
-          ...SepoliaConfig,
-          relayerUrl: `${window.location.origin}/api/relayer`,
-          network: SEPOLIA_RPC_URL,
-        },
-      },
-    }),
-  [],
-);
+const walletClient = createWalletClient({
+  account,
+  chain: sepolia,
+  transport: custom(ethereum),
+});
+const signer = ethereum ? new ViemSigner({ walletClient, ethereum }) : undefined;
+
+const zamaConfig = createConfig({
+  chains: [zamaSepolia],
+  provider,
+  signer,
+  storage: indexedDBStorage,
+  permitStorage: permitDBStorage,
+  relayers: { [zamaSepolia.id]: web() },
+  onEvent,
+});
 ```
 
-`ZamaProvider` takes two separate IndexedDB instances:
+`ZamaProvider` receives only the config:
 
 ```ts
-<ZamaProvider
-  signer={signer}
-  relayer={relayer}
-  storage={indexedDBStorage}          // "CredentialStore" — encrypted keypair
-  sessionStorage={sessionDBStorage}   // "SessionStore"    — EIP-712 session signatures
->
+<ZamaProvider config={zamaConfig}>{children}</ZamaProvider>
 ```
 
-They must be **separate** databases. Both use the same internal key — if shared, the session entry overwrites the encrypted keypair, forcing the user to re-sign on every decrypt.
+`storage` and `permitStorage` use separate IndexedDB databases. Sharing the same instance
+can overwrite credential data and force the user to re-sign on every decrypt.
 
 ### Relayer proxy (`/api/relayer/[...path]/route.ts`)
 
-`RelayerWeb` runs in a Web Worker loaded from CDN. Workers require absolute URLs, so the proxy URL is constructed with `window.location.origin`:
+The `web()` relayer factory creates a browser worker loaded from CDN. Workers require absolute URLs, so the proxy URL is constructed with `new URL("/api/relayer", window.location.origin).toString()`:
 
 ```
 Browser Worker → http://localhost:3000/api/relayer/keyurl
@@ -17387,17 +17397,16 @@ useEffect(() => {
 }, [validPairs, selectedTokenAddress]);
 ```
 
-With `ViemSigner` (viem-based), named fields (`tokenAddress`, `confidentialTokenAddress`,
-`isValid`) are directly accessible — no `normalizePair` workaround needed (unlike
-`EthersSigner`, where ethers `Result` non-enumerable prototype getters require a numeric
-index fallback).
+With viem contract reads, named fields (`tokenAddress`, `confidentialTokenAddress`, `isValid`)
+are directly accessible — no `normalizePair` workaround needed (unlike `EthersSigner`, where
+ethers `Result` non-enumerable prototype getters require a numeric index fallback).
 
-**`ZERO_ADDRESS` placeholder**: SDK hooks cannot be called conditionally (React rules of
-hooks). While no pair is selected, `ZERO_ADDRESS` is passed with `enabled: false`, so no
-actual RPC call is made.
+The token-dependent hooks live inside `SelectedTokenPanel`, which only renders after a real
+registry pair is selected. This keeps SDK hooks from mounting against placeholder token
+addresses while still following React's rules of hooks.
 
-**`actionsDisabled`** is `!isSepolia || !token` — `token` is only defined once the registry
-has resolved and a pair has been selected (metadata is implicitly available at that point).
+Inside `SelectedTokenPanel`, `actionsDisabled` is `!isSepolia`; the component is only mounted
+after a real token pair exists.
 
 **`isPending` vs `isLoading`**: In TanStack Query v5, `isLoading = isPending && isFetching`,
 which is `false` when the query is disabled (`enabled: false`). `isPending` stays `true`
@@ -17409,26 +17418,22 @@ resolved internally (during which the query is still disabled).
 ## 4. Shield (`ShieldCard.tsx`)
 
 ```ts
-const token = sdk.createToken(tokenAddress); // ERC-7984 wrapper
-return token.shield(amount, { approvalStrategy: "skip" });
+const shield = useShield({ tokenAddress, wrapperAddress: tokenAddress }, { onSuccess });
+shield.mutate({
+  amount: parsedAmount,
+  approvalStrategy: "max",
+  onApprovalSubmitted: () => setPhase("approve"),
+  onShieldSubmitted: () => setPhase("submit"),
+});
 ```
 
-Approval is handled manually before calling `shield` so the UI can show a 2-step progress indicator.
-The spend cap is set to the full ERC-20 balance (not the exact shield amount) to avoid re-approval on subsequent shields within the cap.
+`useShield` owns the full shield flow. The SDK detects whether the underlying ERC-20 supports
+ERC-1363 and chooses `transferAndCall` or `approve` + `wrap` automatically. The app does not
+read allowances, send approval transactions, or choose a route itself.
 
-**Why the USDT reset path exists**
-
-USDT (and some forks, including the USDT Mock token used here) implement a front-running guard from the original Tether contract: `approve(spender, newAmount)` reverts when the current allowance is already non-zero. The ERC-20 spec allows this, but it is not the OpenZeppelin default.
-
-Detection: `eth_estimateGas` on the overwrite call reverts before the wallet is prompted. The component catches that and falls back to `approve(0)` → `approve(fullBalance)` (two wallet confirmations). User rejections (`UserRejectedRequestError` from `"viem"`) re-throw immediately — no silent fallback to the reset path when the user said no.
-
-Flow:
-
-1. `currentAllowance === 0` → `approve(fullBalance)` — one confirmation, works for all token types.
-2. `currentAllowance > 0 && < amount` → try `approve(fullBalance)` directly:
-   - Succeeds → standard token, one confirmation.
-   - `estimateGas` reverts → USDT-style token → `approve(0)` then `approve(fullBalance)`, two confirmations.
-3. Call `token.shield(amount, { approvalStrategy: "skip" })` — SDK skips its own approval.
+`approvalStrategy: "max"` only affects the `approve` + `wrap` path. It lets the SDK request a
+reusable allowance on the first shield; ERC-1363-routed tokens ignore the option because no
+separate approval is required.
 
 ---
 
@@ -17439,7 +17444,7 @@ const transfer = useConfidentialTransfer({ tokenAddress }, { onSuccess });
 transfer.mutate({
   to: recipient,
   amount: parsedAmount,
-  callbacks: { onEncryptComplete: () => setStep(2) },
+  onEncryptComplete: () => setStep(2),
 });
 ```
 
@@ -17535,11 +17540,11 @@ Note: `useDecryptBalanceAs` takes a positional `tokenAddress` (unlike `useDelega
 
 Three balances are shown:
 
-| Balance      | Source                            | Hook / method                                                                               |
-| ------------ | --------------------------------- | ------------------------------------------------------------------------------------------- |
-| ETH          | Direct RPC (`createPublicClient`) | `useQuery` → `rpcClient.getBalance({ address })`                                            |
-| ERC-20       | Direct RPC via SDK signer         | `useQuery` → `sdk.signer.readContract(balanceOfContract(token.tokenAddress, ...))`          |
-| Confidential | Relayer decryption                | `useConfidentialBalance({ tokenAddress: token?.confidentialTokenAddress ?? ZERO_ADDRESS })` |
+| Balance      | Source                            | Hook / method                                                                                |
+| ------------ | --------------------------------- | -------------------------------------------------------------------------------------------- |
+| ETH          | Direct RPC (`createPublicClient`) | `useQuery` → `rpcClient.getBalance({ address })`                                             |
+| ERC-20       | SDK read provider                 | `useQuery` → `sdk.provider.readContract(balanceOfContract(token.tokenAddress, address))`     |
+| Confidential | Relayer decryption                | `useConfidentialBalance({ tokenAddress: token.confidentialTokenAddress, account: address })` |
 
 **Explicit decrypt pattern**: `useConfidentialBalance` is only enabled after the user has
 authorized FHE decryption via an EIP-712 wallet signature. `useIsAllowed({ contractAddresses })`
@@ -17549,8 +17554,7 @@ prompts on mount.
 
 ```ts
 const { data: isAllowed } = useIsAllowed({
-  contractAddresses: token ? [token.confidentialTokenAddress] : [],
-  query: { enabled: Boolean(token) },
+  contractAddresses: [token.confidentialTokenAddress],
 });
 // All registry pairs are passed at once — one signature covers all tokens,
 // so switching tokens does not prompt the wallet again.
@@ -17561,15 +17565,13 @@ function handleDecrypt() {
 }
 ```
 
-`useConfidentialBalance` has two loading phases:
+`useConfidentialBalance` returns a standard TanStack Query result. The app uses
+`balance.isLoading || balance.isFetching` to drive the "Decrypting…" display in
+`BalancesCard`.
 
-- `balance.handleQuery.isLoading` — fetching the encrypted handle from chain
-- `balance.isLoading` — decrypting it via the relayer
-
-Both are OR'd to drive the "Decrypting…" display in `BalancesCard`.
-
-**`actionsDisabled`** is `!isSepolia || !token` — `token` is only defined once the registry
-has resolved and a pair has been selected (decimals and symbol are implicitly available).
+Token-dependent balance and authorization hooks are inside `SelectedTokenPanel`, so
+`useIsAllowed` always receives a non-empty contract tuple and `useConfidentialBalance`
+always receives a real token address plus an explicit owner account.
 
 ### Mint
 
@@ -17642,11 +17644,10 @@ Tests use Playwright with a mock EIP-1193 provider injected via `page.addInitScr
 - `page` override — aborts all `/api/relayer/**` requests for every test; no real network
   calls to the Zama relayer in CI
 
-**Why `mockRpc` intercepts `eth_call` (not `mockWallet`)**: `ViemSigner` routes all contract
+**Why `mockRpc` intercepts `eth_call` (not `mockWallet`)**: `ViemProvider` routes SDK contract
 reads (registry, metadata, balances) through its `publicClient` HTTP transport — not through
 `window.ethereum`. Mocking registry data must be done in the HTTP route interceptor
-(`mockRpc`), not in `injectMockWallet`. This is the opposite of `EthersSigner`, where
-`BrowserProvider` routes reads through `window.ethereum`.
+(`mockRpc`), not in `injectMockWallet`.
 
 ```bash
 npm run test:e2e   # starts dev server and runs all specs
