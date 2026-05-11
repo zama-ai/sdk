@@ -10,7 +10,7 @@ Mutation hook that signs an EIP-712 message authorizing decryption of confidenti
 Call this early (e.g. after wallet connect) so that [`useUserDecrypt`](/reference/react/useUserDecrypt) queries fire automatically without wallet popups. Automatically invalidates [`useIsAllowed`](/reference/react/useIsAllowed) queries on success.
 
 {% hint style="warning" %}
-**Include all contracts you plan to decrypt.** `useUserDecrypt` checks that cached credentials cover every contract address in its `handles` before firing the query. If any contract is missing, the query stays disabled.
+**Include all contracts you plan to decrypt.** `useUserDecrypt` checks that stored permits cover every contract address in its `handles` before firing the query. If any contract is missing, the query stays disabled.
 {% endhint %}
 
 ## Import
@@ -32,7 +32,7 @@ function AllowButton({ contracts }: { contracts: `0x${string}`[] }) {
 
   const handleAllow = async () => {
     await allow(contracts);
-    // All subsequent decrypt operations reuse the cached credential
+    // All subsequent decrypt operations reuse the cached permits
   };
 
   return (
@@ -90,7 +90,7 @@ Returns a standard TanStack Query `UseMutationResult<void, Error, Address[]>`.
 
 ## Related
 
-- [`useIsAllowed`](/reference/react/useIsAllowed) -- check whether a session signature is cached
-- [`useRevoke`](/reference/react/useRevoke) -- revoke decrypt authorization for specific contracts
-- [`useRevokeSession`](/reference/react/useRevokeSession) -- revoke the entire session
-- [Session Model](/concepts/session-model) -- security model and TTL configuration
+- [`useIsAllowed`](/reference/react/useIsAllowed) -- check whether stored permits cover contracts
+- [`useRevokePermits`](/reference/react/useRevokePermits) -- revoke permits for specific contracts
+- [`useClearCredentials`](/reference/react/useClearCredentials) -- wipe the keypair and all permits
+- [Permit Model](/concepts/permit-model) -- permit lifecycle and TTL configuration

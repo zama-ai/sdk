@@ -291,7 +291,7 @@ try {
 }
 ```
 
-> **Note:** `SigningRejectedError` is always propagated — if the user rejects a wallet prompt, the SDK never silently retries or falls through to a fresh credential flow. This ensures users can always cancel.
+> **Note:** `SigningRejectedError` is always propagated — if the user rejects a wallet prompt, the SDK never silently retries or falls through to a fresh permit flow. This ensures users can always cancel.
 
 > **Note:** The SDK automatically maps known ACL Solidity revert reasons (e.g. `AlreadyDelegatedOrRevokedInSameBlock`, `EnforcedPause`) to typed `ZamaError` subclasses. Unmapped reverts fall through to `TransactionRevertedError`.
 

@@ -86,7 +86,7 @@ The `_` wildcard catches any `ZamaError` not explicitly handled.
 | `ConfigurationError`                    | `CONFIGURATION`                       | Invalid SDK configuration or FHE worker failed to initialize |
 | `InsufficientConfidentialBalanceError`  | `INSUFFICIENT_CONFIDENTIAL_BALANCE`   | Confidential balance too low for transfer or unshield        |
 | `InsufficientERC20BalanceError`         | `INSUFFICIENT_ERC20_BALANCE`          | ERC-20 balance too low for shield                            |
-| `BalanceCheckUnavailableError`          | `BALANCE_CHECK_UNAVAILABLE`           | Balance validation impossible (no cached credentials)        |
+| `BalanceCheckUnavailableError`          | `BALANCE_CHECK_UNAVAILABLE`           | Balance validation impossible (no stored permits)            |
 | `ERC20ReadFailedError`                  | `ERC20_READ_FAILED`                   | Public ERC-20 read failed (network or contract error)        |
 | `DelegationSelfNotAllowedError`         | `DELEGATION_SELF_NOT_ALLOWED`         | Delegate equals connected wallet                             |
 | `DelegationDelegateEqualsContractError` | `DELEGATION_DELEGATE_EQUALS_CONTRACT` | Delegate equals contract address                             |
@@ -190,7 +190,7 @@ matchZamaError(error, {
 });
 ```
 
-**How to handle:** If this happens after a page reload during unshield, use `loadPendingUnshield()` and `resumeUnshield()` to recover. Otherwise, calling `sdk.revokeSession()` and retrying forces a fresh keypair.
+**How to handle:** If this happens after a page reload during unshield, use `loadPendingUnshield()` and `resumeUnshield()` to recover. Otherwise, calling `sdk.clearCredentials()` and retrying forces a fresh keypair.
 
 ### ApprovalFailedError
 
@@ -229,13 +229,13 @@ The relayer rejected the FHE keypair. This happens when the keypair is malformed
 ```ts
 matchZamaError(error, {
   INVALID_KEYPAIR: () => {
-    sdk.revokeSession();
-    showPrompt("Session expired — sign again to continue");
+    sdk.clearCredentials();
+    showPrompt("Keypair rejected — sign again to continue");
   },
 });
 ```
 
-**How to handle:** Revoke the session and prompt the user to re-sign. The SDK generates a fresh keypair on the next operation.
+**How to handle:** Clear credentials and prompt the user to re-sign. The SDK generates a fresh keypair on the next operation.
 
 ### KeypairExpiredError
 
@@ -245,7 +245,7 @@ The FHE keypair exceeded its TTL (default: 24 hours). The user needs to sign aga
 
 ```ts
 matchZamaError(error, {
-  KEYPAIR_EXPIRED: () => showPrompt("Session expired — sign to refresh"),
+  KEYPAIR_EXPIRED: () => showPrompt("Keypair expired — sign to refresh"),
 });
 ```
 
@@ -375,7 +375,7 @@ try {
 
 **Code:** `BALANCE_CHECK_UNAVAILABLE`
 
-Balance validation could not be performed. For confidential operations (`confidentialTransfer`, `unshield`), this means no cached credentials exist and the SDK cannot decrypt the balance without prompting a wallet signature. For `shield`, this means the ERC-20 balance read failed.
+Balance validation could not be performed. For confidential operations (`confidentialTransfer`, `unshield`), this means no stored permits exist and the SDK cannot decrypt the balance without prompting a wallet signature. For `shield`, this means the ERC-20 balance read failed.
 
 ```ts
 matchZamaError(error, {
@@ -384,7 +384,7 @@ matchZamaError(error, {
 });
 ```
 
-**How to handle:** Either call `token.allow()` first to cache credentials, or pass `skipBalanceCheck: true` to bypass validation (useful for smart wallets that cannot produce EIP-712 signatures).
+**How to handle:** Either call `token.allow()` first to sign permits, or pass `skipBalanceCheck: true` to bypass validation (useful for smart wallets that cannot produce EIP-712 signatures).
 
 ### ERC20ReadFailedError
 
@@ -558,10 +558,10 @@ The SDK automatically maps known ACL Solidity revert reasons to typed `ZamaError
 | `RelayerRequestFailedError`               | Wrong relayer URL or missing auth           | Verify `relayerUrl` in transport config. Check the `auth` option if using API key auth.    |
 | `InsufficientConfidentialBalanceError`    | Confidential balance < requested amount     | Show the user their balance and the shortfall. Wait for incoming transfers or shield more. |
 | `InsufficientERC20BalanceError`           | ERC-20 balance < requested shield amount    | Show the user their public token balance. They need to acquire more tokens.                |
-| `BalanceCheckUnavailableError`            | No cached credentials for balance check     | Call `token.allow()` first, or pass `skipBalanceCheck: true`.                              |
+| `BalanceCheckUnavailableError`            | No stored permits for balance check         | Call `token.allow()` first, or pass `skipBalanceCheck: true`.                              |
 | `ERC20ReadFailedError`                    | ERC-20 balanceOf read failed                | Check network connectivity and RPC endpoint. Retry the shield.                             |
 
 ## Related
 
 - [Error handling guide](/guides/handle-errors) — practical patterns for catching and displaying errors
-- [ZamaSDK](/reference/sdk/ZamaSDK) — SDK constructor and session management
+- [ZamaSDK](/reference/sdk/ZamaSDK) — SDK constructor and permit management

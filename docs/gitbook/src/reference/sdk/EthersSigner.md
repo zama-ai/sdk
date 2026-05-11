@@ -52,7 +52,7 @@ Pass exactly one of the two parameters below.
 
 `EIP1193Provider`
 
-Raw EIP-1193 provider from the browser wallet (e.g. `window.ethereum`). Enables `subscribe()` for automatic session revocation on disconnect and account change.
+Raw EIP-1193 provider from the browser wallet (e.g. `window.ethereum`). Enables automatic credential cleanup on disconnect and account change.
 
 ```ts
 const signer = new EthersSigner({
@@ -81,16 +81,15 @@ const signer = new EthersSigner({
 
 All methods are inherited from [GenericSigner](/reference/sdk/GenericSigner).
 
-| Method            | Browser | Node.js |
-| ----------------- | ------- | ------- |
-| `getChainId()`    | Works   | Works   |
-| `getAddress()`    | Works   | Works   |
-| `signTypedData()` | Works   | Works   |
-| `writeContract()` | Works   | Works   |
-| `subscribe()`     | Works   | N/A     |
+| Method                   | Browser | Node.js |
+| ------------------------ | ------- | ------- |
+| `walletAccount` store    | Works   | Works   |
+| `requireWalletAccount()` | Works   | Works   |
+| `signTypedData()`        | Works   | Works   |
+| `writeContract()`        | Works   | Works   |
 
 {% hint style="info" %}
-Only the browser mode (passing `ethereum`) supports `subscribe()`. In Node.js mode, stale sessions persist until TTL expiry when wallet identity changes.
+Only the browser mode (passing `ethereum`) emits wallet account transitions. In Node.js mode, credentials are not automatically cleared on wallet changes.
 {% endhint %}
 
 ## Related

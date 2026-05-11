@@ -133,7 +133,7 @@ Release adapter-owned wallet watchers or provider event listeners. `ZamaSDK.term
 signTypedData(typedData: EIP712TypedData): Promise<Hex>
 ```
 
-Sign an EIP-712 typed data payload and return the signature. The SDK uses this to create FHE keypair authorization signatures and session signatures.
+Sign an EIP-712 typed data payload and return the signature. The SDK uses this to sign FHE decrypt permits.
 
 ### writeContract
 
@@ -156,7 +156,7 @@ The SDK calls `walletAccount.subscribe()` during initialization. The listener re
 - `previous` -- the previous `{ address, chainId }` identity, when one was known.
 - `next` -- the next `{ address, chainId }` identity, when the wallet is connected.
 
-When `previous` is present, the SDK revokes that previous identity's session signature and clears that requester's decrypt cache.
+When `previous` is present, the SDK clears that previous account's keypair, permits, and decrypt cache.
 
 ## Related
 

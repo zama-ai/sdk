@@ -52,7 +52,7 @@ const signer = new ViemSigner({
 
 `EIP1193Provider | undefined`
 
-Raw EIP-1193 provider for wallet lifecycle event subscriptions. When provided, `subscribe()` listens for disconnect, account change, and chain change events. Omit if you handle lifecycle events manually.
+Raw EIP-1193 provider for wallet lifecycle event subscriptions. When provided, the signer emits wallet account transitions on disconnect, account change, and chain change. Omit if you handle lifecycle events manually.
 
 ```ts
 const signer = new ViemSigner({
@@ -65,16 +65,15 @@ const signer = new ViemSigner({
 
 All methods are inherited from [GenericSigner](/reference/sdk/GenericSigner).
 
-| Method            | Behavior                    |
-| ----------------- | --------------------------- |
-| `getChainId()`    | From wallet client          |
-| `getAddress()`    | From wallet client          |
-| `signTypedData()` | Via wallet client           |
-| `writeContract()` | Via wallet client           |
-| `subscribe()`     | Works (requires `ethereum`) |
+| Method                   | Behavior              |
+| ------------------------ | --------------------- |
+| `walletAccount` store    | Sync observable store |
+| `requireWalletAccount()` | From wallet client    |
+| `signTypedData()`        | Via wallet client     |
+| `writeContract()`        | Via wallet client     |
 
 {% hint style="info" %}
-`subscribe()` is only available when you pass the `ethereum` option. Without it, the SDK still works but stale sessions persist until TTL expiry when users switch accounts.
+Wallet account transitions are only emitted when you pass the `ethereum` option. Without it, the SDK still works but credentials are not automatically cleared when users switch accounts.
 {% endhint %}
 
 ## Related
