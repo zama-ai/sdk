@@ -88,9 +88,7 @@ const { txHash } = await token.confidentialTransferFrom(
 ```tsx
 import { useConfidentialTransferFrom } from "@zama-fhe/react-sdk";
 
-const { mutateAsync: transferFrom } = useConfidentialTransferFrom(
-  "0xEncryptedERC20Address",
-);
+const { mutateAsync: transferFrom } = useConfidentialTransferFrom("0xEncryptedERC20Address");
 
 await transferFrom({
   from: "0xOwnerAddress",

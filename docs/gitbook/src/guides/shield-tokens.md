@@ -37,7 +37,7 @@ ERC-1363 is a conditional optimisation, not a recommended new default — only a
 
 ### 1. Create a wrapped-token instance
 
-Start from a configured SDK instance (see [Configuration](/guides/configuration)) and create a `WrappedToken` pointing at your confidential wrapper contract. The wrapper *is* the confidential token: `createWrappedToken(addr)` takes a single address — the wrapper's own address.
+Start from a configured SDK instance (see [Configuration](/guides/configuration)) and create a `WrappedToken` pointing at your confidential wrapper contract. The wrapper _is_ the confidential token: `createWrappedToken(addr)` takes a single address — the wrapper's own address.
 
 If you only have the underlying ERC-20 address, the built-in registry resolves the matching wrapper.
 

@@ -17,9 +17,7 @@ import {
 
 describe("useShield", () => {
   test("default", ({ renderWithProviders }) => {
-    const { result } = renderWithProviders(() =>
-      useShield({ address: TOKEN }),
-    );
+    const { result } = renderWithProviders(() => useShield({ address: TOKEN }));
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
     expectDefaultMutationState(state);
@@ -31,9 +29,7 @@ describe("useShield", () => {
   }) => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
 
-    const { result, queryClient } = renderWithProviders(() =>
-      useShield({ address: TOKEN }),
-    );
+    const { result, queryClient } = renderWithProviders(() => useShield({ address: TOKEN }));
 
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
     const allowanceKey = zamaQueryKeys.underlyingAllowance.token(TOKEN);
@@ -337,9 +333,7 @@ describe("useShield optimistic updates", () => {
       }),
     );
 
-    const { result, queryClient } = renderWithProviders(() =>
-      useShield({ address: TOKEN }),
-    );
+    const { result, queryClient } = renderWithProviders(() => useShield({ address: TOKEN }));
 
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
     queryClient.setQueryData(balanceKey, 3000n);
