@@ -20026,8 +20026,6 @@ export class ZamaSDK {
     constructor(config: ZamaConfig);
     allow(contracts: Address[]): Promise<void>;
     allowAs(delegator: Address, contracts: Address[]): Promise<void>;
-    // Warning: (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
-    readonly cache: CachingService;
     clearCredentials(): Promise<void>;
     createToken(address: Address): Token;
     createWrappedToken(address: Address): WrappedToken;

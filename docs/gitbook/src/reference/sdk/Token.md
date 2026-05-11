@@ -49,7 +49,7 @@ const handle = await token.confidentialBalanceOf("0xOwnerAddress");
 
 ### decryptBalanceAs
 
-`({ delegatorAddress, accountAddress?, handle? }) => Promise<bigint>`
+`({ delegatorAddress, accountAddress? }) => Promise<bigint>`
 
 Decrypt a delegator's balance using delegated credentials. The connected wallet must hold an active delegation from `delegatorAddress` covering this token's contract.
 

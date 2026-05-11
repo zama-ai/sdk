@@ -41,10 +41,7 @@ export function useUnderlyingAllowance(
   const { address, owner } = config;
   const sdk = useZamaSDK();
 
-  const baseOpts = underlyingAllowanceQueryOptions(sdk, address, {
-    owner,
-    wrapperAddress: address,
-  });
+  const baseOpts = underlyingAllowanceQueryOptions(sdk, address, { owner });
 
   return useQuery<bigint>({
     ...baseOpts,
@@ -69,10 +66,5 @@ export function useUnderlyingAllowanceSuspense(config: UseUnderlyingAllowanceSus
   const { address, owner } = config;
   const sdk = useZamaSDK();
 
-  return useSuspenseQuery<bigint>(
-    underlyingAllowanceQueryOptions(sdk, address, {
-      owner,
-      wrapperAddress: address,
-    }),
-  );
+  return useSuspenseQuery<bigint>(underlyingAllowanceQueryOptions(sdk, address, { owner }));
 }

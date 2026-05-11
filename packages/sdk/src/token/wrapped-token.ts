@@ -65,11 +65,9 @@ export class WrappedToken extends Token {
 
   /**
    * Check whether the underlying ERC-20 supports ERC-1363 (payable token).
-   * Successful results are cached per WrappedToken instance. Probe failures
-   * (`underlying()` revert, `supportsInterface` revert, RPC error, …) are
-   * **not** cached: the next call re-probes so a transient RPC error does
-   * not permanently route every subsequent `shield()` through the
-   * `approve` + `wrap` path.
+   * Result is cached per WrappedToken instance (negative results included):
+   * once we know an underlying does not support ERC-1363, subsequent shields
+   * go straight to the `approve` + `wrap` path without re-probing.
    */
   async isPayable(): Promise<boolean> {
     if (this.#isPayable !== null) {
@@ -78,15 +76,10 @@ export class WrappedToken extends Token {
     try {
       const underlying = await this.#getUnderlying();
       this.#isPayable = await this.sdk.provider.readContract(isPayableTokenContract(underlying));
-      return this.#isPayable;
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.warn(
-        "[zama-sdk] isPayable probe failed; defaulting to approve+wrap path for this call",
-        error,
-      );
-      return false;
+    } catch {
+      this.#isPayable = false;
     }
+    return this.#isPayable;
   }
 
   /**

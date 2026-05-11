@@ -14,18 +14,27 @@ const HANDLE_A = ("0x" + "a1".repeat(32)) as Handle;
 const HANDLE_B = ("0x" + "b2".repeat(32)) as Handle;
 
 /**
- * Swap out the SDK's delegated decrypt call so these tests can focus on
+ * Swap out the SDK's delegated batch decrypt call so these tests can focus on
  * Token batching without priming the full EIP-712 sign flow.
  */
-function stubDelegatedUserDecrypt(sdk: ZamaSDK, values: Record<Handle, bigint>) {
-  const stub = vi.fn().mockImplementation(async (handles: { handle: Handle }[]) => {
-    const result: Record<Handle, bigint> = {};
-    for (const { handle } of handles) {
-      result[handle] = values[handle]!;
-    }
-    return result;
-  });
-  Object.defineProperty(sdk, "delegatedUserDecrypt", {
+function stubDelegatedBatchDecrypt(sdk: ZamaSDK, values: Record<Handle, bigint>) {
+  const stub = vi
+    .fn()
+    .mockImplementation(
+      async ({ handles }: { handles: { handle: Handle; contractAddress: Address }[] }) => ({
+        items: handles.map(({ handle, contractAddress }) => {
+          const value = values[handle];
+          return value !== undefined
+            ? { handle, contractAddress, value }
+            : {
+                handle,
+                contractAddress,
+                error: new Error(`No value for ${handle}`),
+              };
+        }),
+      }),
+    );
+  Object.defineProperty(sdk, "delegatedBatchDecryptHandlesAs", {
     value: stub,
     configurable: true,
   });
@@ -107,6 +116,7 @@ describe("Token.batchDecryptBalancesAs", () => {
     relayer,
     createMockSigner,
     createSDK,
+    cache,
   }) => {
     const delegateSigner = createMockSigner(DELEGATE);
     const delegateProvider = createMockProvider();
@@ -114,8 +124,8 @@ describe("Token.batchDecryptBalancesAs", () => {
       signer: delegateSigner,
       provider: delegateProvider,
     });
-    // Pre-populate cache: ownerAddress = DELEGATOR (default for batchDecryptBalancesAs)
-    await delegateSdk.cache.set(DELEGATOR, TOKEN_A, HANDLE_A, 42n);
+    // Pre-populate cache via shared storage: ownerAddress = DELEGATOR
+    await cache.set(DELEGATOR, TOKEN_A, HANDLE_A, 42n);
 
     vi.mocked(delegateProvider.readContract)
       .mockResolvedValueOnce(HANDLE_A) // confidentialBalanceOf
@@ -138,6 +148,7 @@ describe("Token.batchDecryptBalancesAs", () => {
     relayer,
     createMockSigner,
     createSDK,
+    cache,
   }) => {
     const delegateSigner = createMockSigner(DELEGATE);
     const delegateProvider = createMockProvider();
@@ -145,7 +156,7 @@ describe("Token.batchDecryptBalancesAs", () => {
       signer: delegateSigner,
       provider: delegateProvider,
     });
-    await delegateSdk.cache.set(DELEGATOR, TOKEN_A, HANDLE_A, 42n);
+    await cache.set(DELEGATOR, TOKEN_A, HANDLE_A, 42n);
 
     vi.mocked(delegateProvider.readContract)
       .mockResolvedValueOnce(HANDLE_A) // confidentialBalanceOf
@@ -177,7 +188,7 @@ describe("Token.batchDecryptBalancesAs", () => {
       .mockResolvedValueOnce(MAX_UINT64);
 
     const token = new Token(delegateSdk, TOKEN_A);
-    stubDelegatedUserDecrypt(delegateSdk, {});
+    stubDelegatedBatchDecrypt(delegateSdk, {});
     const onError = vi.fn().mockReturnValue(0n);
 
     const balances = await Token.batchDecryptBalancesAs([token], {
@@ -268,7 +279,7 @@ describe("Token.batchDecryptBalancesAs", () => {
       .mockResolvedValueOnce(MAX_UINT64);
 
     const token = new Token(delegateSdk, TOKEN_A);
-    stubDelegatedUserDecrypt(delegateSdk, { [HANDLE_A]: 42n });
+    stubDelegatedBatchDecrypt(delegateSdk, { [HANDLE_A]: 42n });
 
     const balances = await Token.batchDecryptBalancesAs([token], {
       delegatorAddress: DELEGATOR,
@@ -294,7 +305,7 @@ describe("Token.batchDecryptBalancesAs", () => {
       .mockResolvedValueOnce(MAX_UINT64);
 
     const token = new Token(delegateSdk, TOKEN_A);
-    stubDelegatedUserDecrypt(delegateSdk, {});
+    stubDelegatedBatchDecrypt(delegateSdk, {});
 
     const throwingOnError = vi.fn().mockImplementation(() => {
       throw new Error("callback exploded");
@@ -327,7 +338,7 @@ describe("Token.batchDecryptBalancesAs", () => {
       .mockResolvedValueOnce(MAX_UINT64);
 
     const token = new Token(delegateSdk, TOKEN_A);
-    stubDelegatedUserDecrypt(delegateSdk, { [HANDLE_A]: 99n });
+    stubDelegatedBatchDecrypt(delegateSdk, { [HANDLE_A]: 99n });
 
     // Sabotage the storage so any cache write fails — decrypt should still succeed.
     vi.spyOn(storage, "set").mockRejectedValue(new Error("storage full"));

@@ -836,8 +836,6 @@ export interface UnderlyingAllowanceQueryConfig {
     owner?: Address;
     // (undocumented)
     query?: Record<string, unknown>;
-    // (undocumented)
-    wrapperAddress?: Address;
 }
 
 // @public (undocumented)
@@ -1131,8 +1129,7 @@ export const zamaQueryKeys: {
         readonly token: (tokenAddress: Address) => readonly ["zama.underlyingAllowance", {
             readonly tokenAddress: `0x${string}`;
         }];
-        readonly scope: (tokenAddress: Address, owner?: Address, wrapperAddress?: Address) => readonly ["zama.underlyingAllowance", {
-            readonly wrapperAddress?: `0x${string}` | undefined;
+        readonly scope: (tokenAddress: Address, owner?: Address) => readonly ["zama.underlyingAllowance", {
             readonly owner?: `0x${string}` | undefined;
             readonly tokenAddress: `0x${string}`;
         }];
@@ -1270,8 +1267,6 @@ export class ZamaSDK {
     constructor(config: ZamaConfig);
     allow(contracts: Address[]): Promise<void>;
     allowAs(delegator: Address, contracts: Address[]): Promise<void>;
-    // Warning: (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
-    readonly cache: CachingService;
     clearCredentials(): Promise<void>;
     createToken(address: Address): Token;
     createWrappedToken(address: Address): WrappedToken;

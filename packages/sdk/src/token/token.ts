@@ -8,7 +8,6 @@ import {
   ERC7984_WRAPPER_INTERFACE_ID,
   ERC7984_WRAPPER_INTERFACE_ID_LEGACY,
   isOperatorContract,
-  MAX_UINT64,
   nameContract,
   setOperatorContract,
   supportsInterfaceContract,
@@ -19,8 +18,6 @@ import {
   BalanceCheckUnavailableError,
   ConfigurationError,
   DecryptionFailedError,
-  DelegationExpiredError,
-  DelegationNotFoundError,
   EncryptionFailedError,
   InsufficientConfidentialBalanceError,
   isFatalBatchError,
@@ -222,16 +219,6 @@ export class Token {
       return 0n;
     }
 
-    // Pre-flight delegation check — must run before cache lookup so that
-    // revoked delegations are caught even when a stale cached value exists.
-    await this.#assertDelegationActive(normalizedDelegator);
-
-    const cached = await this.sdk.cache.get(normalizedAccount, this.address, handle);
-    if (cached !== null) {
-      assertBigint(cached, "decryptBalanceAs: cached");
-      return cached;
-    }
-
     const result = await this.sdk.delegatedUserDecrypt(
       [{ handle, contractAddress: this.address }],
       normalizedDelegator,
@@ -361,13 +348,10 @@ export class Token {
     }
 
     const { delegatorAddress, handles, accountAddress, onError, maxConcurrency } = options;
+    const sdk = Token.assertSameSdk(tokens);
     const normalizedAccount = accountAddress
       ? getAddress(accountAddress)
       : getAddress(delegatorAddress);
-    const firstToken = tokens[0]!;
-    Token.assertSameSdk(tokens);
-    // TODO: code smell; an instance of SDK should be passed as argument of batchDecryptBalancesAs instead.
-    await firstToken.sdk.requireChainAlignment("batchDecryptBalancesAs");
 
     const resolvedHandles =
       handles ??
@@ -379,86 +363,46 @@ export class Token {
       );
     }
 
-    // Pre-flight delegation check — must run before cache lookups so that
-    // revoked delegations are caught even when stale cached values exist.
-    if (resolvedHandles.some((h) => !isZeroHandle(h))) {
-      await firstToken.#assertDelegationActive(delegatorAddress);
-    }
+    const decryptHandles = tokens.map((token, i) => ({
+      handle: resolvedHandles[i]!,
+      contractAddress: token.address,
+    }));
+
+    const { items } = await sdk.delegatedBatchDecryptHandlesAs({
+      handles: decryptHandles,
+      delegatorAddress,
+      accountAddress: normalizedAccount,
+      maxConcurrency,
+    });
 
     const results = new Map<Address, bigint>();
+    const errors: { address: Address; error: Error }[] = [];
 
-    const uncached: { token: Token; handle: Handle }[] = [];
-    const cachedValues = await Promise.all(
-      tokens.map(async (token, i) => {
-        const handle = resolvedHandles[i]!;
-        if (isZeroHandle(handle)) {
-          return 0n;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i]!;
+      const tokenAddress = tokens[i]!.address;
+      if (item.error) {
+        if (onError) {
+          try {
+            results.set(tokenAddress, onError(item.error, tokenAddress));
+          } catch (callbackError) {
+            errors.push({ address: tokenAddress, error: toError(callbackError) });
+          }
+        } else {
+          errors.push({ address: tokenAddress, error: item.error });
         }
-        return firstToken.sdk.cache.get(normalizedAccount, token.address, handle);
-      }),
-    );
-
-    for (let i = 0; i < tokens.length; i++) {
-      const token = tokens[i]!;
-      const handle = resolvedHandles[i]!;
-      const cached = cachedValues[i];
-
-      if (cached !== null && cached !== undefined) {
-        assertBigint(cached, "batchDecryptBalancesAs: cached");
-        results.set(token.address, cached);
         continue;
       }
-
-      uncached.push({ token, handle });
+      if (item.value !== undefined) {
+        assertBigint(item.value, "batchDecryptBalancesAs: result[handle]");
+        results.set(tokenAddress, item.value);
+      }
     }
 
-    if (uncached.length === 0) {
-      return results;
+    if (errors.length === 1) {
+      throw errors[0]!.error;
     }
-
-    const errors: { address: Address; error: Error }[] = [];
-    const decryptFns: (() => Promise<void>)[] = [];
-
-    for (const { token, handle } of uncached) {
-      decryptFns.push(async () => {
-        try {
-          const decrypted = await firstToken.sdk.delegatedUserDecrypt(
-            [{ handle, contractAddress: token.address }],
-            delegatorAddress,
-            normalizedAccount,
-          );
-          const value = decrypted[handle];
-          if (value === undefined) {
-            throw new DecryptionFailedError(
-              `Batch delegated decryption returned no value for handle ${handle} on token ${token.address}`,
-            );
-          }
-          assertBigint(value, "batchDecryptBalancesAs: result[handle]");
-          results.set(token.address, value);
-        } catch (error) {
-          if (isFatalBatchError(error)) {
-            throw error;
-          }
-          const err = toError(error);
-          if (onError) {
-            try {
-              results.set(token.address, onError(err, token.address));
-            } catch (callbackError) {
-              errors.push({
-                address: token.address,
-                error: toError(callbackError),
-              });
-            }
-          } else {
-            errors.push({ address: token.address, error: err });
-          }
-        }
-      });
-    }
-
-    await pLimit(decryptFns, maxConcurrency);
-
-    if (errors.length > 0) {
+    if (errors.length > 1) {
       const message = errors.map((e) => `${e.address}: ${e.error.message}`).join("; ");
       throw new DecryptionFailedError(
         `Batch delegated decryption failed for ${errors.length} token(s): ${message}`,
@@ -724,31 +668,6 @@ export class Token {
    */
   protected emit(input: ZamaSDKEventInput): void {
     this.sdk.emitEvent(input, this.address);
-  }
-
-  // PRIVATE HELPERS
-
-  async #assertDelegationActive(delegatorAddress: Address): Promise<void> {
-    const signer = this.sdk.requireSigner("decryptBalanceAs");
-    const delegateAddress = signer.requireWalletAccount("decryptBalanceAs").address;
-    const expiry = await this.sdk.getDelegationExpiry({
-      contractAddress: this.address,
-      delegatorAddress,
-      delegateAddress,
-    });
-    if (expiry === 0n) {
-      throw new DelegationNotFoundError(
-        `No active delegation from ${delegatorAddress} to ${delegateAddress} for ${this.address}`,
-      );
-    }
-    if (expiry !== MAX_UINT64) {
-      const now = await this.sdk.provider.getBlockTimestamp();
-      if (expiry <= now) {
-        throw new DelegationExpiredError(
-          `Delegation from ${delegatorAddress} to ${delegateAddress} for ${this.address} has expired`,
-        );
-      }
-    }
   }
 
   /** Verify all tokens share the same SDK instance and return it. */

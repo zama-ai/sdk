@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, TEST_ADDR_B } from "../test-fixtures";
 import { Token } from "../token/token";
+import { WrappedToken } from "../token/wrapped-token";
 import {
   DecryptionFailedError,
   SignerNotConfiguredError,
@@ -36,6 +37,22 @@ describe("ZamaSDK", () => {
     expect(t1).not.toBe(t2);
     expect(t1.address).toBe("0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa");
     expect(t2.address).toBe("0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB");
+  });
+
+  it("createWrappedToken returns WrappedToken (extending Token)", ({ sdk, wrapperAddress }) => {
+    const wrapped = sdk.createWrappedToken(wrapperAddress);
+    expect(wrapped).toBeInstanceOf(WrappedToken);
+    expect(wrapped).toBeInstanceOf(Token);
+    expect(wrapped.address).toBe(wrapperAddress);
+    expect(wrapped.sdk).toBe(sdk);
+  });
+
+  it("createWrappedToken yields distinct instances per address", ({ sdk }) => {
+    const w1 = sdk.createWrappedToken("0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address);
+    const w2 = sdk.createWrappedToken("0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address);
+    expect(w1).not.toBe(w2);
+    expect(w1.address).toBe("0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa");
+    expect(w2.address).toBe("0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB");
   });
 
   it("terminate delegates to relayer.terminate", ({ sdk, relayer }) => {

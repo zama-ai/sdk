@@ -434,6 +434,56 @@ describe("Token", () => {
 
   // shield / unshield balance-validation lives on WrappedToken — see
   // wrapped-token.test.ts for the ERC-20 and confidential balance checks.
+
+  describe("decryptBalanceAs", () => {
+    const DELEGATOR = "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC" as Address;
+
+    it("returns 0n for zero handle without calling relayer", async ({
+      relayer,
+      token,
+      provider,
+    }) => {
+      vi.mocked(provider.readContract).mockResolvedValueOnce(ZERO_HANDLE);
+
+      const balance = await token.decryptBalanceAs({ delegatorAddress: DELEGATOR });
+
+      expect(balance).toBe(0n);
+      expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
+    });
+
+    it("decrypts via sdk.delegatedUserDecrypt on happy path", async ({
+      relayer,
+      token,
+      handle,
+      provider,
+    }) => {
+      vi.mocked(provider.readContract)
+        .mockResolvedValueOnce(handle) // confidentialBalanceOf
+        .mockResolvedValueOnce(2n ** 64n - 1n); // getDelegationExpiry → permanent
+      vi.mocked(relayer.delegatedUserDecrypt).mockResolvedValueOnce({ [handle]: 1234n });
+
+      const balance = await token.decryptBalanceAs({ delegatorAddress: DELEGATOR });
+
+      expect(balance).toBe(1234n);
+      expect(relayer.delegatedUserDecrypt).toHaveBeenCalledOnce();
+    });
+
+    it("throws DecryptionFailedError when relayer returns no value for handle", async ({
+      relayer,
+      token,
+      handle,
+      provider,
+    }) => {
+      vi.mocked(provider.readContract)
+        .mockResolvedValueOnce(handle)
+        .mockResolvedValueOnce(2n ** 64n - 1n);
+      vi.mocked(relayer.delegatedUserDecrypt).mockResolvedValueOnce({});
+
+      await expect(token.decryptBalanceAs({ delegatorAddress: DELEGATOR })).rejects.toMatchObject({
+        code: ZamaErrorCode.DecryptionFailed,
+      });
+    });
+  });
 });
 
 // Suppress unused import warning when DecryptionFailedError isn't referenced above

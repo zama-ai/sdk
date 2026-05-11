@@ -53,7 +53,7 @@ export class ZamaSDK {
   readonly #onEvent: ZamaSDKEventListener;
   readonly #walletAccountListeners = new Set<WalletAccountListener>();
   /** Persistent cache for decrypted FHE plaintext values, scoped by (requester, contract, handle). */
-  readonly cache: CachingService;
+  readonly #cache: CachingService;
   readonly #credentialService: CredentialService | undefined;
   readonly #delegationService: DelegationService;
   readonly #decryptionService: DecryptionService | undefined;
@@ -65,7 +65,7 @@ export class ZamaSDK {
     this.provider = config.provider;
     this.signer = config.signer;
     this.storage = config.storage;
-    this.cache = new CachingService(config.storage);
+    this.#cache = new CachingService(config.storage);
     this.#onEvent = config.onEvent ?? function () {};
     this.#delegationService = new DelegationService({
       provider: this.provider,
@@ -99,7 +99,7 @@ export class ZamaSDK {
         permitStorage: config.permitStorage,
       });
       this.#decryptionService = new DecryptionService({
-        cache: this.cache,
+        cache: this.#cache,
         credentialService: this.#credentialService,
         delegationService: this.#delegationService,
         relayer: this.relayer,
@@ -209,7 +209,7 @@ export class ZamaSDK {
     }
     if (previousAccount) {
       await swallow("clear decrypt cache", () =>
-        this.cache.clearForRequester(previousAccount.address),
+        this.#cache.clearForRequester(previousAccount.address),
       );
     }
     const nextChainId = nextAccount?.chainId;
@@ -622,7 +622,7 @@ export class ZamaSDK {
     try {
       await service.revokePermits(contracts);
     } finally {
-      await swallow("clear decrypt cache", () => this.cache.clearForRequester(signerAddress));
+      await swallow("clear decrypt cache", () => this.#cache.clearForRequester(signerAddress));
     }
   }
 
@@ -639,7 +639,7 @@ export class ZamaSDK {
     try {
       await service.clearCredentials();
     } finally {
-      await swallow("clear decrypt cache", () => this.cache.clearForRequester(signerAddress));
+      await swallow("clear decrypt cache", () => this.#cache.clearForRequester(signerAddress));
     }
   }
 
