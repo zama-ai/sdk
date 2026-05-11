@@ -19,15 +19,18 @@ import type {
   GenericSigner,
   GenericStorage,
   TransactionResult,
-  WalletAccount,
   WalletAccountListener,
 } from "./types";
 import { swallow } from "./utils";
-import { AccountService } from "./services/account-service";
+import {
+  requireAlignedWalletAccount,
+  requireChainAlignment,
+} from "./utils/wallet-account-alignment";
 import { CachingService } from "./services/caching-service";
 import { DecryptionService, type BatchDecryptHandlesResult } from "./services/decryption-service";
 import { DelegationService } from "./services/delegation-service";
 import { EncryptionService } from "./services/encryption-service";
+import { LifecycleService } from "./services/lifecycle-service";
 import { WrappersRegistry } from "./wrappers-registry";
 
 /**
@@ -51,7 +54,7 @@ export class ZamaSDK {
   readonly #delegationService: DelegationService;
   readonly #decryptionService: DecryptionService | undefined;
   readonly #encryptionService: EncryptionService;
-  readonly #accountService: AccountService;
+  readonly #lifecycleService: LifecycleService;
 
   constructor(config: ZamaConfig) {
     this.relayer = config.relayer;
@@ -103,8 +106,7 @@ export class ZamaSDK {
       this.#decryptionService = undefined;
     }
 
-    this.#accountService = new AccountService({
-      provider: this.provider,
+    this.#lifecycleService = new LifecycleService({
       signer: config.signer,
       cache: this.#cache,
       relayer: this.relayer,
@@ -149,25 +151,7 @@ export class ZamaSDK {
    * @internal
    */
   onWalletAccountChange(listener: WalletAccountListener): () => void {
-    return this.#accountService.onWalletAccountChange(listener);
-  }
-
-  /**
-   * Pre-flight chain coherence check for signer-required operations.
-   *
-   * Throws {@link ChainMismatchError} if they differ.
-   *
-   * @param operation - The operation name, included in the error message.
-   * @returns The chain ID shared by both signer and provider.
-   * @throws {@link SignerNotConfiguredError} if no signer is configured.
-   * @throws {@link ChainMismatchError} if signer and provider report different chain IDs.
-   */
-  async requireAlignedWalletAccount(operation: string): Promise<WalletAccount> {
-    return this.#accountService.requireAlignedWalletAccount(operation);
-  }
-
-  async requireChainAlignment(operation: string): Promise<number> {
-    return this.#accountService.requireChainAlignment(operation);
+    return this.#lifecycleService.onWalletAccountChange(listener);
   }
 
   /**
@@ -259,7 +243,7 @@ export class ZamaSDK {
       return;
     }
     const service = this.#requireCredentialService("allow");
-    await this.requireChainAlignment("allow");
+    await requireChainAlignment("allow", this.signer, this.provider);
     await service.allow(contracts);
   }
 
@@ -274,7 +258,7 @@ export class ZamaSDK {
       return;
     }
     const service = this.#requireCredentialService("allowAs");
-    await this.requireChainAlignment("allowAs");
+    await requireChainAlignment("allowAs", this.signer, this.provider);
     await service.allow(contracts, delegator);
   }
 
@@ -334,7 +318,11 @@ export class ZamaSDK {
     expirationDate?: Date;
   }): Promise<TransactionResult> {
     const signer = this.requireSigner("delegateDecryption");
-    const account = await this.requireAlignedWalletAccount("delegateDecryption");
+    const account = await requireAlignedWalletAccount(
+      "delegateDecryption",
+      this.signer,
+      this.provider,
+    );
     return this.#delegationService.delegateDecryption(signer, {
       contractAddress,
       delegateAddress,
@@ -363,7 +351,11 @@ export class ZamaSDK {
     delegateAddress: Address;
   }): Promise<TransactionResult> {
     const signer = this.requireSigner("revokeDelegation");
-    const account = await this.requireAlignedWalletAccount("revokeDelegation");
+    const account = await requireAlignedWalletAccount(
+      "revokeDelegation",
+      this.signer,
+      this.provider,
+    );
     return this.#delegationService.revokeDelegation(signer, {
       contractAddress,
       delegateAddress,
@@ -434,7 +426,7 @@ export class ZamaSDK {
    */
   async userDecrypt(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>> {
     const service = this.#requireDecryptionService("userDecrypt");
-    const account = await this.requireAlignedWalletAccount("userDecrypt");
+    const account = await requireAlignedWalletAccount("userDecrypt", this.signer, this.provider);
     return service.userDecrypt(handles, account.address);
   }
 
@@ -468,7 +460,11 @@ export class ZamaSDK {
     accountAddress: Address = delegatorAddress,
   ): Promise<Record<Handle, ClearValueType>> {
     const service = this.#requireDecryptionService("delegatedUserDecrypt");
-    const account = await this.requireAlignedWalletAccount("delegatedUserDecrypt");
+    const account = await requireAlignedWalletAccount(
+      "delegatedUserDecrypt",
+      this.signer,
+      this.provider,
+    );
     return service.delegatedUserDecrypt(handles, delegatorAddress, account.address, accountAddress);
   }
 
@@ -485,7 +481,11 @@ export class ZamaSDK {
     maxConcurrency?: number;
   }): Promise<BatchDecryptHandlesResult> {
     const service = this.#requireDecryptionService("delegatedBatchDecryptHandlesAs");
-    const account = await this.requireAlignedWalletAccount("delegatedBatchDecryptHandlesAs");
+    const account = await requireAlignedWalletAccount(
+      "delegatedBatchDecryptHandlesAs",
+      this.signer,
+      this.provider,
+    );
     return service.delegatedBatchDecryptHandlesAs({
       handles,
       delegatorAddress,
@@ -561,7 +561,7 @@ export class ZamaSDK {
    */
   async revokePermits(contracts?: Address[]): Promise<void> {
     const service = this.#requireCredentialService("revokePermits");
-    const account = await this.requireAlignedWalletAccount("revokePermits");
+    const account = await requireAlignedWalletAccount("revokePermits", this.signer, this.provider);
     const signerAddress = getAddress(account.address);
     try {
       await service.revokePermits(contracts);
@@ -578,7 +578,11 @@ export class ZamaSDK {
    */
   async clearCredentials(): Promise<void> {
     const service = this.#requireCredentialService("clearCredentials");
-    const account = await this.requireAlignedWalletAccount("clearCredentials");
+    const account = await requireAlignedWalletAccount(
+      "clearCredentials",
+      this.signer,
+      this.provider,
+    );
     const signerAddress = getAddress(account.address);
     try {
       await service.clearCredentials();
@@ -593,7 +597,7 @@ export class ZamaSDK {
    * (e.g. React provider remount in Strict Mode).
    */
   dispose(): void {
-    this.#accountService.dispose();
+    this.#lifecycleService.dispose();
   }
 
   /**

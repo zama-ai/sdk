@@ -18,6 +18,7 @@ import type { ClearValueType, Handle } from "../relayer/relayer-sdk.types";
 import { toError } from "../utils";
 import { assertBigint } from "../utils/assertions";
 import { pLimit } from "../utils/concurrency";
+import { requireChainAlignment } from "../utils/wallet-account-alignment";
 import type { ZamaSDK } from "../zama-sdk";
 
 // Re-exported so consumers importing via `./token` keep a single canonical
@@ -175,7 +176,7 @@ export class ReadonlyToken {
 
     const sdk = ReadonlyToken.assertSameSdk(tokens);
     // Fail fast on chain mismatch before prompting the wallet for a signature.
-    await sdk.requireChainAlignment("batchBalancesOf");
+    await requireChainAlignment("batchBalancesOf", sdk.signer, sdk.provider);
     // Pre-authorize the full token set in one wallet signature so subsequent
     // per-token userDecrypt calls reuse the cached credentials.
     await sdk.allow(tokens.map((t) => t.address));
@@ -551,7 +552,7 @@ export class ReadonlyToken {
     delegatorAddress: Address;
     accountAddress?: Address;
   }): Promise<bigint> {
-    await this.sdk.requireChainAlignment("decryptBalanceAs");
+    await requireChainAlignment("decryptBalanceAs", this.sdk.signer, this.sdk.provider);
     const normalizedDelegator = getAddress(delegatorAddress);
     const normalizedAccount = accountAddress ? getAddress(accountAddress) : normalizedDelegator;
 

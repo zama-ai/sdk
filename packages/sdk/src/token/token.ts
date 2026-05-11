@@ -31,6 +31,10 @@ import {
   ZamaError,
 } from "../errors";
 import { isZeroHandle } from "../utils/handles";
+import {
+  requireAlignedWalletAccount,
+  requireChainAlignment,
+} from "../utils/wallet-account-alignment";
 import { ReadonlyToken } from "./readonly-token";
 import type {
   ShieldCallbacks,
@@ -140,7 +144,11 @@ export class Token extends ReadonlyToken {
     options?: TransferOptions,
   ): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("confidentialTransfer");
-    const account = await this.sdk.requireAlignedWalletAccount("confidentialTransfer");
+    const account = await requireAlignedWalletAccount(
+      "confidentialTransfer",
+      this.sdk.signer,
+      this.sdk.provider,
+    );
     const { skipBalanceCheck = false, onEncryptComplete, onTransferSubmitted } = options ?? {};
 
     const normalizedTo = getAddress(to);
@@ -207,7 +215,7 @@ export class Token extends ReadonlyToken {
     callbacks?: TransferCallbacks,
   ): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("confidentialTransferFrom");
-    await this.sdk.requireChainAlignment("confidentialTransferFrom");
+    await requireChainAlignment("confidentialTransferFrom", this.sdk.signer, this.sdk.provider);
     const normalizedFrom = getAddress(from);
     const normalizedTo = getAddress(to);
 
@@ -268,7 +276,7 @@ export class Token extends ReadonlyToken {
    */
   async setOperator(operator: Address, until?: number): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("setOperator");
-    await this.sdk.requireChainAlignment("setOperator");
+    await requireChainAlignment("setOperator", this.sdk.signer, this.sdk.provider);
     const normalizedOperator = getAddress(operator);
     try {
       const txHash = await signer.writeContract(
@@ -341,7 +349,7 @@ export class Token extends ReadonlyToken {
    * ```
    */
   async shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult> {
-    const account = await this.sdk.requireAlignedWalletAccount("shield");
+    const account = await requireAlignedWalletAccount("shield", this.sdk.signer, this.sdk.provider);
 
     const isPayableToken = await this.isPayable();
     const underlying = await this.#getUnderlying();
@@ -472,7 +480,7 @@ export class Token extends ReadonlyToken {
    */
   async unwrap(amount: bigint): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("unwrap");
-    const account = await this.sdk.requireAlignedWalletAccount("unwrap");
+    const account = await requireAlignedWalletAccount("unwrap", this.sdk.signer, this.sdk.provider);
     const userAddress = getAddress(account.address);
 
     const { handles, inputProof } = await this.sdk.encrypt({
@@ -524,7 +532,11 @@ export class Token extends ReadonlyToken {
    */
   async unwrapAll(): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("unwrapAll");
-    const account = await this.sdk.requireAlignedWalletAccount("unwrapAll");
+    const account = await requireAlignedWalletAccount(
+      "unwrapAll",
+      this.sdk.signer,
+      this.sdk.provider,
+    );
     const userAddress = getAddress(account.address);
     const handle = await this.readConfidentialBalanceOf(userAddress);
 
@@ -659,7 +671,7 @@ export class Token extends ReadonlyToken {
    */
   async finalizeUnwrap(unwrapRequestIdOrAmount: Handle): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("finalizeUnwrap");
-    await this.sdk.requireChainAlignment("finalizeUnwrap");
+    await requireChainAlignment("finalizeUnwrap", this.sdk.signer, this.sdk.provider);
     const result = await this.sdk.publicDecrypt([unwrapRequestIdOrAmount]);
     const clearValue = result.clearValues[unwrapRequestIdOrAmount];
     assertBigint(clearValue, "finalizeUnwrap: clearValue");
@@ -708,7 +720,11 @@ export class Token extends ReadonlyToken {
    */
   async approveUnderlying(amount?: bigint): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("approveUnderlying");
-    const account = await this.sdk.requireAlignedWalletAccount("approveUnderlying");
+    const account = await requireAlignedWalletAccount(
+      "approveUnderlying",
+      this.sdk.signer,
+      this.sdk.provider,
+    );
     const underlying = await this.#getUnderlying();
     const userAddress = getAddress(account.address);
 
@@ -891,7 +907,11 @@ export class Token extends ReadonlyToken {
 
     let balance: bigint;
     try {
-      const account = await this.sdk.requireAlignedWalletAccount("assertConfidentialBalance");
+      const account = await requireAlignedWalletAccount(
+        "assertConfidentialBalance",
+        this.sdk.signer,
+        this.sdk.provider,
+      );
       balance = await this.balanceOf(getAddress(account.address));
     } catch (error) {
       if (error instanceof ZamaError) {
@@ -956,7 +976,11 @@ export class Token extends ReadonlyToken {
   ): Promise<void> {
     const signer = this.sdk.requireSigner("approveUnderlying");
     const underlying = await this.#getUnderlying();
-    const account = await this.sdk.requireAlignedWalletAccount("approveUnderlying");
+    const account = await requireAlignedWalletAccount(
+      "approveUnderlying",
+      this.sdk.signer,
+      this.sdk.provider,
+    );
     const userAddress = getAddress(account.address);
     const allowance = await this.sdk.provider.readContract(
       allowanceContract(underlying, userAddress, this.wrapper),

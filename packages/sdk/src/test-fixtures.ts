@@ -21,7 +21,7 @@ import { ZamaSDK } from "./zama-sdk";
 import { DecryptionService } from "./services/decryption-service";
 import { DelegationService } from "./services/delegation-service";
 import { EncryptionService } from "./services/encryption-service";
-import { AccountService } from "./services/account-service";
+import { LifecycleService } from "./services/lifecycle-service";
 import type { ZamaSDKEventInput } from "./events/sdk-events";
 export { afterEach, beforeEach, describe, expect, vi, type Mock } from "vitest";
 
@@ -266,13 +266,12 @@ interface SdkFixtures {
     relayer?: RelayerSDK;
     emitEvent?: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
   }) => EncryptionService;
-  createAccountService: (overrides?: {
-    provider?: GenericProvider;
+  createLifecycleService: (overrides?: {
     signer?: GenericSigner;
     cache?: CachingService;
     relayer?: RelayerSDK;
     credentialService?: CredentialService;
-  }) => AccountService;
+  }) => LifecycleService;
   createToken: (sdk: ZamaSDK, address?: Address, wrapper?: Address) => Token;
   createReadonlyToken: (sdk: ZamaSDK, address?: Address) => ReadonlyToken;
   sdk: ZamaSDK;
@@ -397,11 +396,10 @@ export const test = base.extend<SdkFixtures>({
   encryptionService: async ({ createEncryptionService }, use) => {
     await use(createEncryptionService());
   },
-  createAccountService: async ({ provider, signer, cache, relayer }, use) => {
+  createLifecycleService: async ({ signer, cache, relayer }, use) => {
     await use(
       (overrides = {}) =>
-        new AccountService({
-          provider: overrides.provider ?? provider,
+        new LifecycleService({
           signer: "signer" in overrides ? overrides.signer : signer,
           cache: overrides.cache ?? cache,
           relayer: (overrides.relayer ?? relayer) as unknown as RelayerDispatcher,

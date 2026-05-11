@@ -1,22 +1,10 @@
 import type { CredentialService } from "../credentials/credential-service";
-import {
-  ChainMismatchError,
-  SignerNotConfiguredError,
-  WalletAccountNotReadyError,
-} from "../errors";
 import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
-import type {
-  GenericProvider,
-  GenericSigner,
-  WalletAccount,
-  WalletAccountChange,
-  WalletAccountListener,
-} from "../types";
+import type { GenericSigner, WalletAccountChange, WalletAccountListener } from "../types";
 import { swallow } from "../utils";
 import type { CachingService } from "./caching-service";
 
-export type AccountServiceOptions = {
-  provider: GenericProvider;
+export type LifecycleServiceOptions = {
   signer?: GenericSigner;
   cache: CachingService;
   relayer: RelayerDispatcher;
@@ -24,15 +12,14 @@ export type AccountServiceOptions = {
 };
 
 /**
- * Owns wallet-account state for {@link ZamaSDK}: signer subscription,
- * chain-alignment validation, and change dispatch — first running the
- * SDK-side cleanup (credential rotation, cache invalidation, relayer chain
- * switch) and then fanning out to external listeners.
+ * Owns signer-lifecycle wiring for {@link ZamaSDK}: subscribes to the signer's
+ * wallet-account store on construction, runs the SDK-side cleanup (credential
+ * rotation, decrypt-cache invalidation, relayer chain switch) on every change,
+ * then fans out to external listeners. Unsubscribes on {@link dispose}.
  *
  * @internal — consumed by ZamaSDK; not part of the public surface.
  */
-export class AccountService {
-  readonly #provider: GenericProvider;
+export class LifecycleService {
   readonly #signer: GenericSigner | undefined;
   readonly #cache: CachingService;
   readonly #relayer: RelayerDispatcher;
@@ -40,8 +27,7 @@ export class AccountService {
   readonly #walletAccountListeners = new Set<WalletAccountListener>();
   #unsubscribeSigner?: () => void;
 
-  constructor(opts: AccountServiceOptions) {
-    this.#provider = opts.provider;
+  constructor(opts: LifecycleServiceOptions) {
     this.#signer = opts.signer;
     this.#cache = opts.cache;
     this.#relayer = opts.relayer;
@@ -54,36 +40,6 @@ export class AccountService {
         });
       });
     }
-  }
-
-  async requireAlignedWalletAccount(operation: string): Promise<WalletAccount> {
-    if (!this.#signer) {
-      throw new SignerNotConfiguredError(operation);
-    }
-    const signer = this.#signer;
-    let account: WalletAccount;
-    try {
-      account = signer.requireWalletAccount(operation);
-    } catch (error) {
-      if (!(error instanceof WalletAccountNotReadyError) || !signer.refreshWalletAccount) {
-        throw error;
-      }
-      await signer.refreshWalletAccount();
-      account = signer.requireWalletAccount(operation);
-    }
-    const providerChainId = await this.#provider.getChainId();
-    if (account.chainId !== providerChainId) {
-      throw new ChainMismatchError({
-        operation,
-        signerChainId: account.chainId,
-        providerChainId,
-      });
-    }
-    return account;
-  }
-
-  async requireChainAlignment(operation: string): Promise<number> {
-    return (await this.requireAlignedWalletAccount(operation)).chainId;
   }
 
   onWalletAccountChange(listener: WalletAccountListener): () => void {

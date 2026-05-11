@@ -1,141 +1,40 @@
 import { describe, expect, test, vi } from "../../test-fixtures";
 import type { CredentialService } from "../../credentials/credential-service";
-import {
-  ChainMismatchError,
-  SignerNotConfiguredError,
-  WalletAccountNotReadyError,
-} from "../../errors";
 import type { CachingService } from "../caching-service";
 import type { WalletAccountChange } from "../../types";
 
-describe("AccountService", () => {
-  describe("without signer", () => {
-    test("requireAlignedWalletAccount throws SignerNotConfiguredError", async ({
-      createAccountService,
+describe("LifecycleService", () => {
+  describe("subscription lifecycle", () => {
+    test("subscribes to signer.walletAccount on construct", ({
+      createLifecycleService,
+      createMockSigner,
     }) => {
-      const service = createAccountService({ signer: undefined });
+      const signer = createMockSigner();
+      createLifecycleService({ signer });
 
-      await expect(service.requireAlignedWalletAccount("op")).rejects.toBeInstanceOf(
-        SignerNotConfiguredError,
-      );
+      expect(signer.walletAccount.subscribe).toHaveBeenCalledOnce();
     });
 
-    test("onWalletAccountChange returns a working unsubscribe", ({ createAccountService }) => {
-      const service = createAccountService({ signer: undefined });
+    test("does NOT subscribe when no signer", ({ createLifecycleService, createMockSigner }) => {
+      const signer = createMockSigner();
+      createLifecycleService({ signer: undefined });
+
+      expect(signer.walletAccount.subscribe).not.toHaveBeenCalled();
+    });
+
+    test("onWalletAccountChange returns a working unsubscribe when no signer", ({
+      createLifecycleService,
+    }) => {
+      const service = createLifecycleService({ signer: undefined });
       const listener = vi.fn();
 
       const unsubscribe = service.onWalletAccountChange(listener);
       expect(typeof unsubscribe).toBe("function");
       expect(() => unsubscribe()).not.toThrow();
     });
-  });
-
-  describe("requireAlignedWalletAccount", () => {
-    test("returns the wallet account when chain IDs match", async ({
-      createAccountService,
-      createMockSigner,
-      createMockProvider,
-    }) => {
-      const signer = createMockSigner();
-      const provider = createMockProvider();
-      const service = createAccountService({ signer, provider });
-
-      const account = await service.requireAlignedWalletAccount("op");
-
-      expect(account.chainId).toBe(31337);
-      expect(signer.requireWalletAccount).toHaveBeenCalledWith("op");
-    });
-
-    test("throws ChainMismatchError when signer and provider chains differ", async ({
-      createAccountService,
-      createMockSigner,
-      createMockProvider,
-    }) => {
-      const signer = createMockSigner();
-      const provider = createMockProvider({
-        getChainId: vi.fn().mockResolvedValue(1),
-      });
-      const service = createAccountService({ signer, provider });
-
-      await expect(service.requireAlignedWalletAccount("op")).rejects.toBeInstanceOf(
-        ChainMismatchError,
-      );
-    });
-
-    test("refreshes on WalletAccountNotReadyError and retries", async ({
-      createAccountService,
-      createMockSigner,
-    }) => {
-      const account = {
-        address: "0x1111111111111111111111111111111111111111",
-        chainId: 31337,
-      } as const;
-      const requireWalletAccount = vi
-        .fn()
-        .mockImplementationOnce(() => {
-          throw new WalletAccountNotReadyError("op");
-        })
-        .mockReturnValueOnce(account);
-      const refreshWalletAccount = vi.fn().mockResolvedValue(account);
-      const signer = createMockSigner(undefined, {
-        requireWalletAccount,
-        refreshWalletAccount,
-      });
-      const service = createAccountService({ signer });
-
-      const result = await service.requireAlignedWalletAccount("op");
-
-      expect(refreshWalletAccount).toHaveBeenCalledOnce();
-      expect(requireWalletAccount).toHaveBeenCalledTimes(2);
-      expect(result).toEqual(account);
-    });
-
-    test("rethrows non-WalletAccountNotReadyError errors without refresh", async ({
-      createAccountService,
-      createMockSigner,
-    }) => {
-      const refreshWalletAccount = vi.fn();
-      const signer = createMockSigner(undefined, {
-        requireWalletAccount: vi.fn(() => {
-          throw new Error("boom");
-        }),
-        refreshWalletAccount,
-      });
-      const service = createAccountService({ signer });
-
-      await expect(service.requireAlignedWalletAccount("op")).rejects.toThrow("boom");
-      expect(refreshWalletAccount).not.toHaveBeenCalled();
-    });
-  });
-
-  describe("requireChainAlignment", () => {
-    test("returns the aligned chain ID", async ({ createAccountService, createMockSigner }) => {
-      const service = createAccountService({ signer: createMockSigner() });
-
-      await expect(service.requireChainAlignment("op")).resolves.toBe(31337);
-    });
-  });
-
-  describe("subscription lifecycle", () => {
-    test("subscribes to signer.walletAccount on construct", ({
-      createAccountService,
-      createMockSigner,
-    }) => {
-      const signer = createMockSigner();
-      createAccountService({ signer });
-
-      expect(signer.walletAccount.subscribe).toHaveBeenCalledOnce();
-    });
-
-    test("does NOT subscribe when no signer", ({ createAccountService, createMockSigner }) => {
-      const signer = createMockSigner();
-      createAccountService({ signer: undefined });
-
-      expect(signer.walletAccount.subscribe).not.toHaveBeenCalled();
-    });
 
     test("dispose() calls the unsubscribe and clears listeners", ({
-      createAccountService,
+      createLifecycleService,
       createMockSigner,
     }) => {
       const unsubscribe = vi.fn();
@@ -146,7 +45,7 @@ describe("AccountService", () => {
           isReady: vi.fn().mockReturnValue(true),
         },
       });
-      const service = createAccountService({ signer });
+      const service = createLifecycleService({ signer });
       const listener = vi.fn();
       service.onWalletAccountChange(listener);
 
@@ -162,7 +61,7 @@ describe("AccountService", () => {
 
   describe("change dispatch", () => {
     test("runs credential cleanup, cache clear, and relayer switch before listeners", async ({
-      createAccountService,
+      createLifecycleService,
       createMockSigner,
       createMockRelayer,
     }) => {
@@ -193,7 +92,7 @@ describe("AccountService", () => {
           isReady: vi.fn().mockReturnValue(true),
         },
       });
-      const service = createAccountService({ signer, cache, relayer, credentialService });
+      const service = createLifecycleService({ signer, cache, relayer, credentialService });
       service.onWalletAccountChange(() => {
         calls.push("listener");
       });
@@ -216,7 +115,7 @@ describe("AccountService", () => {
     });
 
     test("skips cache clear when previous account is undefined", async ({
-      createAccountService,
+      createLifecycleService,
       createMockSigner,
     }) => {
       const clearForRequester = vi.fn();
@@ -232,7 +131,7 @@ describe("AccountService", () => {
           isReady: vi.fn().mockReturnValue(true),
         },
       });
-      const service = createAccountService({ signer, cache });
+      const service = createLifecycleService({ signer, cache });
       service.onWalletAccountChange(() => {});
 
       dispatch!({
@@ -245,7 +144,7 @@ describe("AccountService", () => {
     });
 
     test("skips relayer switch when next account is undefined", async ({
-      createAccountService,
+      createLifecycleService,
       createMockSigner,
       createMockRelayer,
     }) => {
@@ -262,7 +161,7 @@ describe("AccountService", () => {
           isReady: vi.fn().mockReturnValue(true),
         },
       });
-      const service = createAccountService({ signer, relayer });
+      const service = createLifecycleService({ signer, relayer });
       service.onWalletAccountChange(() => {});
 
       dispatch!({
@@ -275,7 +174,7 @@ describe("AccountService", () => {
     });
 
     test("errors in cleanup steps are swallowed and listeners still run", async ({
-      createAccountService,
+      createLifecycleService,
       createMockSigner,
       createMockRelayer,
     }) => {
@@ -301,7 +200,7 @@ describe("AccountService", () => {
           isReady: vi.fn().mockReturnValue(true),
         },
       });
-      const service = createAccountService({ signer, cache, relayer, credentialService });
+      const service = createLifecycleService({ signer, cache, relayer, credentialService });
       const listener = vi.fn();
       service.onWalletAccountChange(listener);
 
@@ -315,7 +214,7 @@ describe("AccountService", () => {
     });
 
     test("a throwing listener does not prevent others from running", async ({
-      createAccountService,
+      createLifecycleService,
       createMockSigner,
     }) => {
       let dispatch: ((change: WalletAccountChange) => void) | undefined;
@@ -329,7 +228,7 @@ describe("AccountService", () => {
           isReady: vi.fn().mockReturnValue(true),
         },
       });
-      const service = createAccountService({ signer });
+      const service = createLifecycleService({ signer });
       const survivor = vi.fn();
       service.onWalletAccountChange(() => {
         throw new Error("listener boom");
@@ -347,7 +246,7 @@ describe("AccountService", () => {
     });
 
     test("unsubscribed listener is not invoked", async ({
-      createAccountService,
+      createLifecycleService,
       createMockSigner,
     }) => {
       let dispatch: ((change: WalletAccountChange) => void) | undefined;
@@ -361,7 +260,7 @@ describe("AccountService", () => {
           isReady: vi.fn().mockReturnValue(true),
         },
       });
-      const service = createAccountService({ signer });
+      const service = createLifecycleService({ signer });
       const listener = vi.fn();
       const unsub = service.onWalletAccountChange(listener);
       unsub();
