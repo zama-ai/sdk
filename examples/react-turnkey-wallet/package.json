@@ -15,7 +15,7 @@
     "@turnkey/viem": "^0.14.28",
     "@zama-fhe/react-sdk": "^3.0.0",
     "@zama-fhe/sdk": "^3.0.0",
-    "next": "16.2.4",
+    "next": "^16.2.5",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "viem": "^2.48.4"
