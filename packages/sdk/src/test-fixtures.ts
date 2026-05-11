@@ -239,7 +239,10 @@ interface SdkFixtures {
   encryptionService: EncryptionService;
   storage: GenericStorage;
   createMockRelayer: typeof createMockRelayer;
-  createMockSigner: (addressOrOverrides?: Address | Partial<GenericSigner>) => GenericSigner;
+  createMockSigner: (
+    addressOrOverrides?: Address | Partial<GenericSigner>,
+    overrides?: Partial<GenericSigner>,
+  ) => GenericSigner;
   createMockProvider: typeof createMockProvider;
   createMockStorage: typeof createMockStorage;
   createMockToken: (
@@ -315,11 +318,20 @@ export const test = base.extend<SdkFixtures>({
     await use(createMockRelayer);
   },
   createMockSigner: async ({ userAddress }, use) => {
-    await use((addressOrOverrides?: Address | Partial<GenericSigner>) => {
-      const address = typeof addressOrOverrides === "string" ? addressOrOverrides : userAddress;
-      const overrides = typeof addressOrOverrides === "object" ? addressOrOverrides : {};
-      return createMockSigner(address, overrides);
-    });
+    await use(
+      (
+        addressOrOverrides?: Address | Partial<GenericSigner>,
+        overridesArg?: Partial<GenericSigner>,
+      ) => {
+        if (typeof addressOrOverrides === "string") {
+          return createMockSigner(addressOrOverrides, overridesArg ?? {});
+        }
+        if (typeof addressOrOverrides === "object" && addressOrOverrides !== null) {
+          return createMockSigner(userAddress, addressOrOverrides);
+        }
+        return createMockSigner(userAddress, overridesArg ?? {});
+      },
+    );
   },
   createMockProvider: async ({}, use) => {
     await use(createMockProvider);

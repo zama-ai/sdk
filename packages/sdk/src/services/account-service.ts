@@ -1,4 +1,8 @@
-import { SignerNotConfiguredError } from "../errors";
+import {
+  ChainMismatchError,
+  SignerNotConfiguredError,
+  WalletAccountNotReadyError,
+} from "../errors";
 import type {
   GenericProvider,
   GenericSigner,
@@ -21,10 +25,12 @@ export type AccountServiceOptions = {
  * @internal — consumed by ZamaSDK; not part of the public surface.
  */
 export class AccountService {
+  readonly #provider: GenericProvider;
   readonly #signer: GenericSigner | undefined;
   readonly #walletAccountListeners = new Set<WalletAccountListener>();
 
   constructor(opts: AccountServiceOptions) {
+    this.#provider = opts.provider;
     this.#signer = opts.signer;
   }
 
@@ -32,7 +38,26 @@ export class AccountService {
     if (!this.#signer) {
       throw new SignerNotConfiguredError(operation);
     }
-    throw new Error("not yet implemented");
+    const signer = this.#signer;
+    let account: WalletAccount;
+    try {
+      account = signer.requireWalletAccount(operation);
+    } catch (error) {
+      if (!(error instanceof WalletAccountNotReadyError) || !signer.refreshWalletAccount) {
+        throw error;
+      }
+      await signer.refreshWalletAccount();
+      account = signer.requireWalletAccount(operation);
+    }
+    const providerChainId = await this.#provider.getChainId();
+    if (account.chainId !== providerChainId) {
+      throw new ChainMismatchError({
+        operation,
+        signerChainId: account.chainId,
+        providerChainId,
+      });
+    }
+    return account;
   }
 
   onWalletAccountChange(listener: WalletAccountListener): () => void {
