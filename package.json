@@ -105,7 +105,8 @@
       "oxlint --fix",
       "ast-grep scan --config sgconfig.yml"
     ],
-    "*.{ts,tsx,js,mjs,cjs,json,yaml,yml}": "oxfmt"
+    "*.{ts,tsx,js,mjs,cjs,yaml,yml}": "oxfmt",
+    "!(package-lock).json": "oxfmt"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
