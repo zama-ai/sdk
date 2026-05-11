@@ -175,7 +175,7 @@ The signer handles `signTypedData` and `writeContract`; the provider handles `re
 
 ## Next steps
 
-- [RelayerNode](/reference/sdk/RelayerNode) -- full constructor options and pool behavior
+- [RelayerNode](/reference/sdk/RelayerNode) -- `node()` transport factory options
 - [asyncLocalStorage](/reference/sdk/GenericStorage) -- the `GenericStorage` interface it implements
 - [Configuration](/guides/configuration) -- chains, relayers, authentication, and session management
 - [GenericSigner](/reference/sdk/GenericSigner) -- custom signer interface for non-standard wallet integrations

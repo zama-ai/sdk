@@ -1,21 +1,13 @@
-import { isAddress, isHex, type Hex } from "viem";
 import { z } from "zod";
-import type { ChecksummedAddress } from "./utils";
-import { checksum, MAX_CONTRACTS_PER_PERMIT, SECONDS_PER_DAY } from "./utils";
-
-const hex = z
-  .string()
-  .refine((v): v is Hex => isHex(v, { strict: true }), "expected 0x-prefixed hex string");
-
-const address = z
-  .string()
-  .refine((v): v is `0x${string}` => isAddress(v, { strict: false }), "expected EVM address")
-  .transform((v): ChecksummedAddress => checksum(v));
-
-const unixSeconds = z.number().finite().int().nonnegative();
-const positiveSeconds = z.number().finite().int().positive();
-const positiveDays = z.number().finite().int().positive();
-const chainId = z.number().finite().int().positive();
+import {
+  checksummedAddress,
+  chainId,
+  hex,
+  positiveDays,
+  positiveSeconds,
+  unixSeconds,
+} from "../schemas/primitives";
+import { MAX_CONTRACTS_PER_PERMIT, SECONDS_PER_DAY } from "./utils";
 
 const keypairTTLError = "keypairTTL must be a positive integer number of seconds";
 const permitTTLError = "permitTTL must be a positive integer number of days";
@@ -48,10 +40,10 @@ export const StoredKeypairSchema = z.object({
 
 export const PermissionSchema = z.object({
   keypairPublicKey: hex,
-  signerAddress: address,
-  delegatorAddress: address,
+  signerAddress: checksummedAddress,
+  delegatorAddress: checksummedAddress,
   chainId,
-  signedContractAddresses: z.array(address).max(MAX_CONTRACTS_PER_PERMIT),
+  signedContractAddresses: z.array(checksummedAddress).max(MAX_CONTRACTS_PER_PERMIT),
   signature: hex,
   startTimestamp: unixSeconds,
   durationDays: positiveDays,

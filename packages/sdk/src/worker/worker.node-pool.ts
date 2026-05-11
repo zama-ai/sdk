@@ -44,13 +44,14 @@ const MAX_DEFAULT_POOL_SIZE = 4;
  * - Memory-constrained environments: decrease to 1–2 workers.
  *
  * **Lifecycle:**
- * 1. Construct with config: `new NodeWorkerPool({ fhevmConfig })`
- * 2. Initialize all workers: `await pool.initPool()`
- * 3. Use: `await pool.encrypt(...)`, `await pool.userDecrypt(...)`, etc.
- * 4. Shut down: `pool.terminate()`
+ * 1. Initialize all workers: `await pool.initPool()`
+ * 2. Use: `await pool.encrypt(...)`, `await pool.userDecrypt(...)`, etc.
+ * 3. Shut down: `pool.terminate()`
  *
  * `initPool()` is idempotent — concurrent calls share the same initialization promise.
  * If any worker fails to initialize, all workers are terminated and the error is propagated.
+ *
+ * @internal Instantiated by the `node()` transport factory — not part of the public API.
  */
 export class NodeWorkerPool {
   readonly #workers: NodeWorkerClient[] = [];

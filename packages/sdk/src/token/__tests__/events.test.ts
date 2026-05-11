@@ -1,4 +1,12 @@
-import { describe, expect, it, TEST_PUBLIC_KEY, vi, type MockSigner } from "../../test-fixtures";
+import {
+  createMockChain,
+  describe,
+  expect,
+  it,
+  TEST_PUBLIC_KEY,
+  vi,
+  type MockSigner,
+} from "../../test-fixtures";
 import type { GenericProvider, GenericStorage } from "../../types";
 import { Topics } from "../../events";
 import { ReadonlyToken } from "../readonly-token";
@@ -10,6 +18,7 @@ import {
 } from "../../events/sdk-events";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import { ZamaSDK } from "../../zama-sdk";
+import type { ZamaConfig } from "../../config/types";
 import type { Address } from "viem";
 import { ZERO_HANDLE } from "../../utils/handles";
 const _TOKEN_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
@@ -30,10 +39,15 @@ function setupSdkWithEvents(opts: {
   const events: ZamaSDKEvent[] = [];
   const onEvent: ZamaSDKEventListener = (event) => events.push(event);
   const sdk = new ZamaSDK({
-    relayer: opts.relayer,
+    chains: [createMockChain({ id: 31337 })],
+    relayer: opts.relayer as unknown as ZamaConfig["relayer"],
     provider: opts.provider,
     signer: opts.signer,
     storage: opts.storage,
+    permitStorage: opts.storage,
+    keypairTTL: 2592000,
+    permitTTL: 1,
+    registryTTL: 86400,
     onEvent,
   });
   const readonlyToken = new ReadonlyToken(sdk, opts.tokenAddress);
@@ -192,10 +206,16 @@ describe("ReadonlyToken.balanceOf event emissions", () => {
     provider,
   }) => {
     const sdk = new ZamaSDK({
-      relayer,
+      chains: [createMockChain({ id: 31337 })],
+      relayer: relayer as unknown as ZamaConfig["relayer"],
       provider,
       signer,
       storage,
+      permitStorage: storage,
+      keypairTTL: 2592000,
+      permitTTL: 1,
+      registryTTL: 86400,
+      onEvent: undefined,
     });
     const token = new ReadonlyToken(sdk, tokenAddress);
     vi.mocked(provider.readContract).mockResolvedValue(handle);

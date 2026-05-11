@@ -162,4 +162,4 @@ When using `RelayerWeb` with a proxy, you can also add CSRF protection via the `
 - [Configuration](/guides/configuration) — full relayer, signer, and storage setup
 - [Shield Tokens](/guides/shield-tokens) — start converting public tokens to confidential form
 - [RelayerWeb reference](/reference/sdk/RelayerWeb) — security options and multi-threading
-- [RelayerNode reference](/reference/sdk/RelayerNode) — Node.js-specific configuration
+- [RelayerNode reference](/reference/sdk/RelayerNode) — `node()` transport factory

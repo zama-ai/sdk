@@ -13,14 +13,9 @@ Delegation is enforced on-chain through the ACL contract. The delegate never rec
 The ACL contract address is automatically resolved from the chain configuration. Chain presets (`sepolia`, `mainnet`, `hardhat` from `@zama-fhe/sdk/chains`) already include the correct ACL address for each chain — no manual configuration needed.
 
 ```ts
-const sdk = new ZamaSDK({
-  relayer,
-  provider,
-  signer,
-  storage,
-});
+const sdk = new ZamaSDK(config); // config from createConfig()
 
-// Both tokens use the same ACL — resolved automatically from the relayer config
+// Both tokens use the same ACL — resolved automatically from the chain config
 const tokenA = sdk.createToken("0xTokenA");
 const tokenB = sdk.createToken("0xTokenB");
 ```
@@ -198,11 +193,11 @@ The SDK emits events during delegation operations. Subscribe via the `onEvent` c
 ```ts
 import { ZamaSDK, ZamaSDKEvents } from "@zama-fhe/sdk";
 
-const sdk = new ZamaSDK({
-  relayer,
-  provider,
-  signer,
-  storage,
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: { [sepolia.id]: web() },
   onEvent: (event) => {
     if (event.type === ZamaSDKEvents.DelegationSubmitted) {
       console.log("Delegation tx:", event.txHash);
@@ -212,6 +207,7 @@ const sdk = new ZamaSDK({
     }
   },
 });
+const sdk = new ZamaSDK(config);
 ```
 
 ## Delegation states

@@ -11,30 +11,32 @@ describe("ReadonlyToken", () => {
   describe("balanceOf", () => {
     it("returns 0n for zero handle without hitting relayer", async ({
       readonlyToken,
+      relayer,
       provider,
     }) => {
       vi.mocked(provider.readContract).mockResolvedValue(ZERO_HANDLE);
       const balance = await readonlyToken.balanceOf(OWNER);
 
       expect(balance).toBe(0n);
-      expect(readonlyToken.sdk.relayer.userDecrypt).not.toHaveBeenCalled();
+      expect(relayer.userDecrypt).not.toHaveBeenCalled();
     });
 
     it("decrypts non-zero handle and returns balance", async ({
       readonlyToken,
+      relayer,
       handle,
       tokenAddress,
       provider,
     }) => {
       vi.mocked(provider.readContract).mockResolvedValue(handle);
-      vi.mocked(readonlyToken.sdk.relayer.userDecrypt).mockResolvedValue({
+      vi.mocked(relayer.userDecrypt).mockResolvedValue({
         [handle]: 1000n,
       });
 
       const balance = await readonlyToken.balanceOf(OWNER);
 
       expect(balance).toBe(1000n);
-      expect(readonlyToken.sdk.relayer.userDecrypt).toHaveBeenCalledWith(
+      expect(relayer.userDecrypt).toHaveBeenCalledWith(
         expect.objectContaining({
           handles: [handle],
           contractAddress: tokenAddress,
@@ -42,9 +44,14 @@ describe("ReadonlyToken", () => {
       );
     });
 
-    it("throws ZamaError on decryption failure", async ({ readonlyToken, handle, provider }) => {
+    it("throws ZamaError on decryption failure", async ({
+      readonlyToken,
+      relayer,
+      handle,
+      provider,
+    }) => {
       vi.mocked(provider.readContract).mockResolvedValue(handle);
-      vi.mocked(readonlyToken.sdk.relayer.userDecrypt).mockRejectedValue(new Error("relayer down"));
+      vi.mocked(relayer.userDecrypt).mockRejectedValue(new Error("relayer down"));
 
       await expect(readonlyToken.balanceOf(OWNER)).rejects.toBeInstanceOf(ZamaError);
     });
@@ -84,6 +91,7 @@ describe("ReadonlyToken", () => {
 
     it("pre-authorizes the full token set in one signature", async ({
       sdk,
+      relayer,
       signer,
       tokenAddress,
       handle,
@@ -102,7 +110,7 @@ describe("ReadonlyToken", () => {
         }
         throw new Error(`Unexpected readContract address ${address}`);
       });
-      vi.mocked(sdk.relayer.userDecrypt).mockResolvedValue({
+      vi.mocked(relayer.userDecrypt).mockResolvedValue({
         [handle]: 1000n,
         [VALID_HANDLE2]: 2000n,
       });
@@ -118,6 +126,7 @@ describe("ReadonlyToken", () => {
 
     it("captures per-token decryption failures in the errors map", async ({
       sdk,
+      relayer,
       tokenAddress,
       handle,
       provider,
@@ -136,14 +145,12 @@ describe("ReadonlyToken", () => {
         }
         throw new Error(`Unexpected readContract address ${address}`);
       });
-      vi.mocked(sdk.relayer.userDecrypt).mockImplementation(
-        async ({ contractAddress, handles }) => {
-          if (contractAddress === tokenAddress) {
-            return { [handles[0]]: 1000n };
-          }
-          throw new Error("relayer down for token2");
-        },
-      );
+      vi.mocked(relayer.userDecrypt).mockImplementation(async ({ contractAddress, handles }) => {
+        if (contractAddress === tokenAddress) {
+          return { [handles[0]]: 1000n };
+        }
+        throw new Error("relayer down for token2");
+      });
 
       const { results, errors } = await ReadonlyToken.batchBalancesOf([token1, token2], OWNER);
 
@@ -168,6 +175,7 @@ describe("ReadonlyToken", () => {
 
     it("throws when every token fails to decrypt", async ({
       sdk,
+      relayer,
       tokenAddress,
       handle,
       provider,
@@ -177,7 +185,7 @@ describe("ReadonlyToken", () => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce(handle)
         .mockResolvedValueOnce(VALID_HANDLE2);
-      vi.mocked(sdk.relayer.userDecrypt).mockRejectedValue(new Error("relayer offline"));
+      vi.mocked(relayer.userDecrypt).mockRejectedValue(new Error("relayer offline"));
 
       await expect(ReadonlyToken.batchBalancesOf([token1, token2], OWNER)).rejects.toBeInstanceOf(
         ZamaError,
@@ -186,6 +194,7 @@ describe("ReadonlyToken", () => {
 
     it("wraps non-ZamaError per-token failures as DecryptionFailedError preserving the cause", async ({
       sdk,
+      relayer,
       tokenAddress,
       handle,
       provider,
@@ -203,19 +212,17 @@ describe("ReadonlyToken", () => {
         throw new Error(`Unexpected readContract address ${address}`);
       });
       const rawError = new TypeError("malformed response");
-      vi.mocked(sdk.relayer.userDecrypt).mockImplementation(
-        async ({ contractAddress, handles }) => {
-          if (contractAddress === tokenAddress) {
-            return {
-              [handles[0]]: 1000n,
-            };
-          }
-          if (contractAddress === normalizedToken2) {
-            throw rawError;
-          }
-          throw new Error(`Unexpected userDecrypt contract ${contractAddress}`);
-        },
-      );
+      vi.mocked(relayer.userDecrypt).mockImplementation(async ({ contractAddress, handles }) => {
+        if (contractAddress === tokenAddress) {
+          return {
+            [handles[0]]: 1000n,
+          };
+        }
+        if (contractAddress === normalizedToken2) {
+          throw rawError;
+        }
+        throw new Error(`Unexpected userDecrypt contract ${contractAddress}`);
+      });
 
       const { errors } = await ReadonlyToken.batchBalancesOf([token1, token2], OWNER);
 
@@ -288,13 +295,14 @@ describe("ZamaSDK token factory", () => {
 
   it("throws when handle not found in decrypt result", async ({
     sdk,
+    relayer,
     tokenAddress,
     handle,
     provider,
   }) => {
     const token = new ReadonlyToken(sdk, tokenAddress);
     vi.mocked(provider.readContract).mockResolvedValue(handle);
-    vi.mocked(sdk.relayer.userDecrypt).mockResolvedValue({});
+    vi.mocked(relayer.userDecrypt).mockResolvedValue({});
 
     await expect(token.balanceOf(OWNER)).rejects.toBeInstanceOf(DecryptionFailedError);
   });

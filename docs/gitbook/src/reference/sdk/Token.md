@@ -19,7 +19,7 @@ Created via [`ZamaSDK.createToken()`](/reference/sdk/ZamaSDK#createtoken). Not i
 ```ts
 import { ZamaSDK } from "@zama-fhe/sdk";
 
-const sdk = new ZamaSDK({ relayer, provider, signer, storage });
+const sdk = new ZamaSDK(config); // config from createConfig()
 const token = sdk.createToken("0xEncryptedERC20");
 
 await token.shield(1000n);

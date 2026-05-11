@@ -567,10 +567,23 @@ export interface BatchDecryptAsOptions {
     onError?: (error: Error, address: Address) => bigint;
 }
 
-// Warning: (ae-internal-missing-underscore) The name "buildZamaConfig" should be prefixed with an underscore because the declaration is marked as @internal
-//
-// @internal
-export function buildZamaConfig(signer: GenericSigner | undefined, provider: GenericProvider, params: ZamaConfigBase): ZamaConfig;
+// @public (undocumented)
+export interface BatchDecryptHandleItem {
+    // (undocumented)
+    contractAddress: Address;
+    // (undocumented)
+    error?: ZamaError;
+    // (undocumented)
+    handle: Handle;
+    // (undocumented)
+    value?: ClearValueType;
+}
+
+// @public (undocumented)
+export interface BatchDecryptHandlesResult {
+    // (undocumented)
+    items: BatchDecryptHandleItem[];
+}
 
 // @public
 export class ChainMismatchError extends ZamaError {
@@ -6113,16 +6126,6 @@ export function decodeUnwrapRequested(log: RawLog): UnwrapRequestedEvent | null;
 
 // @public
 export function decodeWrapped(log: RawLog): WrappedEvent | null;
-
-// @public
-export class DecryptCache {
-    constructor(storage: GenericStorage);
-    clearAll(): Promise<void>;
-    clearForRequester(requester: Address): Promise<void>;
-    delete(requester: Address, contractAddress: Address, handle: Handle): Promise<void>;
-    get(requester: Address, contractAddress: Address, handle: Handle): Promise<ClearValueType | null>;
-    set(requester: Address, contractAddress: Address, handle: Handle, value: ClearValueType): Promise<void>;
-}
 
 // @public (undocumented)
 export interface DecryptEndEvent extends BaseEvent {
@@ -19948,28 +19951,20 @@ export interface WriteContractConfig<TAbi extends ContractAbi = ContractAbi, TFu
 export type WriteFunctionName<TAbi extends ContractAbi = ContractAbi> = ContractFunctionName<TAbi, "nonpayable" | "payable">;
 
 // @public
-export interface ZamaConfig {
-    // (undocumented)
+export type ZamaConfig = {
     readonly chains: readonly FheChain[];
-    // (undocumented)
-    readonly keypairTTL: number | undefined;
-    // (undocumented)
-    readonly onEvent: ZamaSDKEventListener | undefined;
-    // (undocumented)
-    readonly permitStorage: GenericStorage;
-    // (undocumented)
-    readonly permitTTL: number | undefined;
-    // (undocumented)
-    readonly provider: GenericProvider;
-    // (undocumented)
-    readonly registryTTL: number | undefined;
-    // (undocumented)
     readonly relayer: RelayerDispatcher;
-    // (undocumented)
+    readonly provider: GenericProvider;
     readonly signer: GenericSigner | undefined;
-    // (undocumented)
     readonly storage: GenericStorage;
-}
+    readonly permitStorage: GenericStorage;
+    readonly keypairTTL: number;
+    readonly permitTTL: number;
+    readonly registryTTL: number;
+    readonly onEvent: ZamaSDKEventListener | undefined;
+} & {
+    readonly [zamaConfigBrand]: true;
+};
 
 // @public
 export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChain> {
@@ -20060,14 +20055,20 @@ export type ZamaErrorCode = (typeof ZamaErrorCode)[keyof typeof ZamaErrorCode];
 // @public
 export class ZamaSDK {
     [Symbol.dispose](): void;
-    constructor(config: ZamaSDKConfig);
+    constructor(config: ZamaConfig);
     allow(contracts: Address[]): Promise<void>;
     allowAs(delegator: Address, contracts: Address[]): Promise<void>;
-    readonly cache: DecryptCache;
     clearCredentials(): Promise<void>;
     createReadonlyToken(address: Address): ReadonlyToken;
     createToken(address: Address, wrapper?: Address): Token;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
+    // @internal (undocumented)
+    delegatedBatchDecryptHandlesAs(input: {
+        handles: DecryptHandle[];
+        delegatorAddress: Address;
+        accountAddress?: Address;
+        maxConcurrency?: number;
+    }): Promise<BatchDecryptHandlesResult>;
     delegateDecryption(input: {
         contractAddress: Address;
         delegateAddress: Address;
@@ -20113,21 +20114,6 @@ export class ZamaSDK {
     readonly storage: GenericStorage;
     terminate(): void;
     userDecrypt(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>>;
-}
-
-// @public
-export interface ZamaSDKConfig {
-    chains?: readonly FheChain[];
-    keypairTTL?: number;
-    onEvent?: ZamaSDKEventListener;
-    permitStorage?: GenericStorage;
-    permitTTL?: number;
-    provider: GenericProvider;
-    registryAddresses?: Record<number, Address>;
-    registryTTL?: number;
-    relayer: RelayerDispatcher;
-    signer?: GenericSigner;
-    storage: GenericStorage;
 }
 
 // @public

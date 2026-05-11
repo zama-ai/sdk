@@ -1,4 +1,4 @@
-import type { ChecksummedAddress } from "./utils";
+import type { ChecksummedAddress } from "../schemas/primitives";
 
 export interface PermissionScope {
   signerAddress: ChecksummedAddress;
