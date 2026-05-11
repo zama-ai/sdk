@@ -67,3 +67,38 @@ export class WalletAccountNotReadyError extends SignerRequiredError {
     this.name = "WalletAccountNotReadyError";
   }
 }
+
+/**
+ * Capabilities a {@link GenericSigner} may declare. `writeContract` covers
+ * atomic broadcast-from-wallet flows; `signTransaction` covers the deferred
+ * custodian path where the SDK builds an unsigned tx, the signer returns
+ * signed bytes, and the SDK broadcasts via `provider.sendRawTransaction`.
+ */
+export type SignerCapability = "writeContract" | "signTransaction";
+
+/**
+ * Thrown when an operation needs a signer capability that the configured
+ * signer does not expose — e.g. calling an atomic write op on a
+ * broadcast-only signer that has `signTransaction` but no `writeContract`.
+ *
+ * Distinct from {@link SignerNotConfiguredError}: a signer *is* configured
+ * but cannot perform the requested operation. The operation may be available
+ * via the deferred `prepare* / complete*` path instead.
+ */
+export class SignerCapabilityError extends SignerRequiredError {
+  readonly capability: SignerCapability;
+
+  constructor(operation: string, capability: SignerCapability, options?: ErrorOptions) {
+    super(
+      ZamaErrorCode.SignerMissingCapability,
+      operation,
+      `Cannot ${operation}: the configured signer does not implement ${capability}. ` +
+        (capability === "writeContract"
+          ? "Use the deferred prepare*/complete* path, or configure an atomic signer."
+          : "Configure a signer that supports offline signing (e.g. BroadcastSigner)."),
+      options,
+    );
+    this.name = "SignerCapabilityError";
+    this.capability = capability;
+  }
+}

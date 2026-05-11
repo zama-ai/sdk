@@ -19,6 +19,7 @@ import {
 import type { ZamaSDKEventInput } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
+import { assertWriteContract } from "../signer/capabilities";
 import type { GenericProvider, GenericSigner, TransactionResult } from "../types";
 
 export class DelegationService {
@@ -239,13 +240,18 @@ export class DelegationService {
 
   async #executeAclTx(
     signer: GenericSigner,
-    call: Parameters<GenericSigner["writeContract"]>[0],
+    call: Parameters<NonNullable<GenericSigner["writeContract"]>>[0],
     failureMessage: string,
     submittedType:
       | typeof ZamaSDKEvents.DelegationSubmitted
       | typeof ZamaSDKEvents.RevokeDelegationSubmitted,
     contractAddress: Address,
   ): Promise<TransactionResult> {
+    const operation =
+      submittedType === ZamaSDKEvents.DelegationSubmitted
+        ? "delegateDecryption"
+        : "revokeDelegation";
+    assertWriteContract(signer, operation);
     try {
       const txHash = await signer.writeContract(call);
       if (submittedType === ZamaSDKEvents.DelegationSubmitted) {

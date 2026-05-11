@@ -72,6 +72,8 @@ export const ZamaErrorCode = {
   WalletNotConnected: "WALLET_NOT_CONNECTED",
   /** Wallet account discovery is still resolving. */
   WalletAccountNotReady: "WALLET_ACCOUNT_NOT_READY",
+  /** Signer lacks a capability required by the requested operation. */
+  SignerMissingCapability: "SIGNER_MISSING_CAPABILITY",
 } as const;
 
 /** Union of all {@link ZamaErrorCode} string values. */

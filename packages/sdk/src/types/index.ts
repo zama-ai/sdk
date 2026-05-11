@@ -16,6 +16,7 @@ export type {
   WalletAccountListener,
   WalletAccountStore,
 } from "./signer";
+export type { Broadcaster } from "./broadcaster";
 export type { GenericProvider } from "./provider";
 export type { GenericStorage } from "./storage";
 export type { UnshieldCallbacks, ShieldCallbacks, TransferCallbacks } from "./callbacks";

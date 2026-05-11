@@ -40,4 +40,18 @@ export interface GenericProvider {
    * against the chain clock instead of the local clock.
    */
   getBlockTimestamp(): Promise<bigint>;
+  /**
+   * Broadcast a previously-signed transaction and return its hash.
+   *
+   * Used by the SDK's deferred-signing path: a custodian / HSM / policy
+   * engine returns signed bytes via
+   * {@link GenericSigner.signTransaction}, and the SDK submits them through
+   * this method. Atomic signers (`writeContract`) do not exercise this
+   * path — their wallet broadcasts directly.
+   *
+   * Custom adapters delegate to the underlying client's raw-send method:
+   * `publicClient.sendRawTransaction({ serializedTransaction })` (viem),
+   * `provider.broadcastTransaction(signedTx)` (ethers v6).
+   */
+  sendRawTransaction(signedTx: Hex): Promise<Hex>;
 }

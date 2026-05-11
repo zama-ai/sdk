@@ -56,4 +56,8 @@ export class ViemProvider implements GenericProvider {
     const block = await this.#publicClient.getBlock();
     return block.timestamp;
   }
+
+  async sendRawTransaction(signedTx: Hex): Promise<Hex> {
+    return this.#publicClient.sendRawTransaction({ serializedTransaction: signedTx });
+  }
 }

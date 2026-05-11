@@ -96,4 +96,9 @@ export class EthersProvider implements GenericProvider {
       })),
     };
   }
+
+  async sendRawTransaction(signedTx: Hex): Promise<Hex> {
+    const response = await this.#readProvider.broadcastTransaction(signedTx);
+    return response.hash as Hex;
+  }
 }

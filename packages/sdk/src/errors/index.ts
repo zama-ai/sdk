@@ -10,7 +10,9 @@ export {
   SignerNotConfiguredError,
   WalletNotConnectedError,
   WalletAccountNotReadyError,
+  SignerCapabilityError,
 } from "./signer";
+export type { SignerCapability } from "./signer";
 export {
   DelegationSelfNotAllowedError,
   DelegationCooldownError,

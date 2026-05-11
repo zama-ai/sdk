@@ -1,21 +1,15 @@
 import type { Hex } from "viem";
 import { WalletNotConnectedError } from "../errors";
 import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
-import type {
-  ContractAbi,
-  GenericSigner,
-  WalletAccount,
-  WriteContractArgs,
-  WriteContractConfig,
-  WriteFunctionName,
-} from "../types";
+import type { GenericSigner, WalletAccount } from "../types";
 import { MutableWalletAccountStore } from "./wallet-account-store";
 
 /**
  * Abstract base class that implements the shared {@link GenericSigner}
  * boilerplate: wallet-account store, `requireWalletAccount`, idempotent
- * `dispose` / `Disposable`. Subclasses provide `signTypedData`,
- * `writeContract`, and optionally override `onDispose` for cleanup.
+ * `dispose` / `Disposable`. Subclasses provide `signTypedData` and one of
+ * `writeContract` / `signTransaction` (the SDK's capability bag), and
+ * optionally override `onDispose` for cleanup.
  *
  * Using this class is optional — implementing {@link GenericSigner} directly
  * with {@link createWalletAccountStore} remains fully supported.
@@ -37,12 +31,6 @@ export abstract class BaseSigner implements GenericSigner, Disposable {
   }
 
   abstract signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-
-  abstract writeContract<
-    const TAbi extends ContractAbi,
-    TFunctionName extends WriteFunctionName<TAbi>,
-    const TArgs extends WriteContractArgs<TAbi, TFunctionName>,
-  >(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex>;
 
   dispose(): void {
     if (this.#disposed) {

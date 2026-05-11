@@ -30,6 +30,7 @@ import {
   TransactionRevertedError,
   ZamaError,
 } from "../errors";
+import { assertWriteContract } from "../signer/capabilities";
 import { isZeroHandle } from "../utils/handles";
 import { ReadonlyToken } from "./readonly-token";
 import type {
@@ -140,6 +141,7 @@ export class Token extends ReadonlyToken {
     options?: TransferOptions,
   ): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("confidentialTransfer");
+    assertWriteContract(signer, "confidentialTransfer");
     const account = await this.sdk.requireAlignedWalletAccount("confidentialTransfer");
     const { skipBalanceCheck = false, onEncryptComplete, onTransferSubmitted } = options ?? {};
 
@@ -207,6 +209,7 @@ export class Token extends ReadonlyToken {
     callbacks?: TransferCallbacks,
   ): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("confidentialTransferFrom");
+    assertWriteContract(signer, "confidentialTransferFrom");
     await this.sdk.requireChainAlignment("confidentialTransferFrom");
     const normalizedFrom = getAddress(from);
     const normalizedTo = getAddress(to);
@@ -268,6 +271,7 @@ export class Token extends ReadonlyToken {
    */
   async setOperator(operator: Address, until?: number): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("setOperator");
+    assertWriteContract(signer, "setOperator");
     await this.sdk.requireChainAlignment("setOperator");
     const normalizedOperator = getAddress(operator);
     try {
@@ -383,6 +387,7 @@ export class Token extends ReadonlyToken {
     options?: ShieldOptions,
   ): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("shield");
+    assertWriteContract(signer, "shield");
     const recipient = options?.to ? getAddress(options.to) : userAddress;
     // ERC7984ERC20Wrapper.onTransferReceived decodes the recipient via
     // `address(bytes20(data))` — i.e. the first 20 bytes of `data`. We pass
@@ -423,6 +428,7 @@ export class Token extends ReadonlyToken {
     options?: ShieldOptions,
   ): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("shield");
+    assertWriteContract(signer, "shield");
     const strategy = options?.approvalStrategy ?? "exact";
     if (strategy !== "skip") {
       await this.#ensureAllowance(amount, strategy === "max", options);
@@ -472,6 +478,7 @@ export class Token extends ReadonlyToken {
    */
   async unwrap(amount: bigint): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("unwrap");
+    assertWriteContract(signer, "unwrap");
     const account = await this.sdk.requireAlignedWalletAccount("unwrap");
     const userAddress = getAddress(account.address);
 
@@ -524,6 +531,7 @@ export class Token extends ReadonlyToken {
    */
   async unwrapAll(): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("unwrapAll");
+    assertWriteContract(signer, "unwrapAll");
     const account = await this.sdk.requireAlignedWalletAccount("unwrapAll");
     const userAddress = getAddress(account.address);
     const handle = await this.readConfidentialBalanceOf(userAddress);
@@ -659,6 +667,7 @@ export class Token extends ReadonlyToken {
    */
   async finalizeUnwrap(unwrapRequestIdOrAmount: Handle): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("finalizeUnwrap");
+    assertWriteContract(signer, "finalizeUnwrap");
     await this.sdk.requireChainAlignment("finalizeUnwrap");
     const result = await this.sdk.publicDecrypt([unwrapRequestIdOrAmount]);
     const clearValue = result.clearValues[unwrapRequestIdOrAmount];
@@ -708,6 +717,7 @@ export class Token extends ReadonlyToken {
    */
   async approveUnderlying(amount?: bigint): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("approveUnderlying");
+    assertWriteContract(signer, "approveUnderlying");
     const account = await this.sdk.requireAlignedWalletAccount("approveUnderlying");
     const underlying = await this.#getUnderlying();
     const userAddress = getAddress(account.address);
@@ -955,6 +965,7 @@ export class Token extends ReadonlyToken {
     callbacks?: ShieldCallbacks,
   ): Promise<void> {
     const signer = this.sdk.requireSigner("approveUnderlying");
+    assertWriteContract(signer, "approveUnderlying");
     const underlying = await this.#getUnderlying();
     const account = await this.sdk.requireAlignedWalletAccount("approveUnderlying");
     const userAddress = getAddress(account.address);

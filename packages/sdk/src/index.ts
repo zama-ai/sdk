@@ -96,6 +96,7 @@ export type {
   GenericSigner,
   GenericProvider,
   GenericStorage,
+  Broadcaster,
   WalletAccount,
   WalletAccountChange,
   WalletAccountListener,
@@ -186,6 +187,8 @@ export {
   matchAclRevert,
 } from "./errors";
 export { BaseSigner } from "./signer/base-signer";
+export { BroadcastSigner } from "./signer/broadcast-signer";
+export type { BroadcastSignerConfig } from "./signer/broadcast-signer";
 export { createWalletAccountStore, MutableWalletAccountStore } from "./signer/wallet-account-store";
 
 // Event decoders and types

@@ -10,7 +10,13 @@ import type {
 } from "@zama-fhe/sdk";
 import { TransactionRevertedError } from "@zama-fhe/sdk";
 import type { Config } from "wagmi";
-import { getBlock, getChainId, readContract, waitForTransactionReceipt } from "wagmi/actions";
+import {
+  getBlock,
+  getChainId,
+  getPublicClient,
+  readContract,
+  waitForTransactionReceipt,
+} from "wagmi/actions";
 
 /** Configuration for {@link WagmiProvider}. */
 export interface WagmiProviderConfig {
@@ -80,5 +86,15 @@ export class WagmiProvider implements GenericProvider {
   async getBlockTimestamp(): Promise<bigint> {
     const block = await getBlock(this.#config);
     return block.timestamp;
+  }
+
+  async sendRawTransaction(signedTx: Hex): Promise<Hex> {
+    const publicClient = getPublicClient(this.#config);
+    if (!publicClient) {
+      throw new Error(
+        "WagmiProvider.sendRawTransaction: no public client configured for the active chain.",
+      );
+    }
+    return publicClient.sendRawTransaction({ serializedTransaction: signedTx });
   }
 }

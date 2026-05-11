@@ -52,11 +52,32 @@ export interface WalletAccountStore {
 }
 
 /**
- * Framework-agnostic signer interface — wallet authority only.
+ * Framework-agnostic signer interface — wallet authority as a capability bag.
  *
  * Public chain reads have moved to {@link GenericProvider}. A signer is only
  * required for operations that involve a user-controlled wallet
- * (`requireWalletAccount`, `signTypedData`, `writeContract`).
+ * (`requireWalletAccount`, `signTypedData`, plus one of `writeContract` /
+ * `signTransaction`).
+ *
+ * **Capabilities.** A signer declares which transaction-emitting strategies
+ * it supports:
+ *
+ * - `writeContract` — atomic. Sign and broadcast in one wallet round-trip
+ *   (browser wallets, embedded wallets in non-policy mode, server-side EOAs).
+ * - `signTransaction` — deferred. Return signed bytes for an SDK-built
+ *   unsigned transaction; the SDK broadcasts via
+ *   {@link GenericProvider.sendRawTransaction}. Used by institutional custody
+ *   (Dfns, Fireblocks, Fordefi, Turnkey policy mode).
+ *
+ * At least one of the two must be present for any write op to succeed. A
+ * signer may implement both — the SDK prefers `writeContract` for atomic
+ * call sites and falls back to `signTransaction + sendRawTransaction`
+ * otherwise.
+ *
+ * Calling an atomic op on a signer that only exposes `signTransaction`
+ * throws {@link SignerCapabilityError}; route through the deferred
+ * `prepare*` / `complete*` surface (or rely on the SDK's transparent
+ * fallback once enabled) instead.
  */
 export interface GenericSigner {
   /** Observable wallet account readiness state. */
@@ -73,14 +94,25 @@ export interface GenericSigner {
   refreshWalletAccount?(): Promise<WalletAccount | undefined>;
   /** Sign EIP-712 typed data (used for decrypt authorization). */
   signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-  /** Send a write transaction and return the tx hash. */
-  writeContract<
+  /**
+   * Sign and broadcast a write transaction in a single step, returning the
+   * tx hash. Absent on broadcast-only signers (custodian / HSM / policy
+   * engine) that defer broadcast to the SDK.
+   */
+  writeContract?<
     const TAbi extends ContractAbi,
     TFunctionName extends WriteFunctionName<TAbi>,
     const TArgs extends WriteContractArgs<TAbi, TFunctionName>,
   >(
     config: WriteContractConfig<TAbi, TFunctionName, TArgs>,
   ): Promise<Hex>;
+  /**
+   * Sign an SDK-built unsigned transaction and return RLP-encoded signed
+   * bytes. The SDK broadcasts the result via
+   * {@link GenericProvider.sendRawTransaction}. Absent on classic
+   * sign-and-broadcast signers that prefer {@link writeContract}.
+   */
+  signTransaction?(unsignedTx: Hex): Promise<Hex>;
   /** Release adapter-owned wallet watchers or provider event listeners. */
   dispose?(): void;
 }
