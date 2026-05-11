@@ -106,23 +106,9 @@ export class ZamaSDK {
     this.#accountService = new AccountService({
       provider: this.provider,
       signer: config.signer,
-      onBeforeDispatch: async (change) => {
-        const prev = change.previous;
-        const next = change.next;
-        const credentialService = this.#credentialService;
-        if (credentialService) {
-          await swallow("credential wallet account change", () =>
-            credentialService.handleWalletAccountChange(prev, next),
-          );
-        }
-        if (prev) {
-          await swallow("clear decrypt cache", () => this.#cache.clearForRequester(prev.address));
-        }
-        const nextChainId = next?.chainId;
-        if (nextChainId !== undefined) {
-          void swallow("switch relayer chain", () => this.relayer.switchChain(nextChainId));
-        }
-      },
+      cache: this.#cache,
+      relayer: this.relayer,
+      credentialService: this.#credentialService,
     });
   }
 

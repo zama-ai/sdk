@@ -1,9 +1,11 @@
 import { describe, expect, test, vi } from "../../test-fixtures";
+import type { CredentialService } from "../../credentials/credential-service";
 import {
   ChainMismatchError,
   SignerNotConfiguredError,
   WalletAccountNotReadyError,
 } from "../../errors";
+import type { CachingService } from "../caching-service";
 import type { WalletAccountChange } from "../../types";
 
 describe("AccountService", () => {
@@ -159,14 +161,134 @@ describe("AccountService", () => {
   });
 
   describe("change dispatch", () => {
-    test("invokes onBeforeDispatch before listeners", async ({
+    test("runs credential cleanup, cache clear, and relayer switch before listeners", async ({
+      createAccountService,
+      createMockSigner,
+      createMockRelayer,
+    }) => {
+      const calls: string[] = [];
+      const handleWalletAccountChange = vi.fn(async () => {
+        await Promise.resolve();
+        calls.push("credential");
+      });
+      const credentialService = {
+        handleWalletAccountChange,
+      } as unknown as CredentialService;
+      const clearForRequester = vi.fn(async () => {
+        calls.push("cache");
+      });
+      const cache = { clearForRequester } as unknown as CachingService;
+      const switchChain = vi.fn(() => {
+        calls.push("relayer");
+      });
+      const relayer = createMockRelayer({ switchChain });
+      let dispatch: ((change: WalletAccountChange) => void) | undefined;
+      const signer = createMockSigner(undefined, {
+        walletAccount: {
+          getSnapshot: vi.fn(),
+          subscribe: vi.fn((listener: (change: WalletAccountChange) => void) => {
+            dispatch = listener;
+            return () => {};
+          }),
+          isReady: vi.fn().mockReturnValue(true),
+        },
+      });
+      const service = createAccountService({ signer, cache, relayer, credentialService });
+      service.onWalletAccountChange(() => {
+        calls.push("listener");
+      });
+
+      const prev = {
+        address: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        chainId: 31337,
+      } as const;
+      const next = {
+        address: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        chainId: 1,
+      } as const;
+      dispatch!({ previous: prev, next });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(handleWalletAccountChange).toHaveBeenCalledWith(prev, next);
+      expect(clearForRequester).toHaveBeenCalledWith(prev.address);
+      expect(switchChain).toHaveBeenCalledWith(1);
+      expect(calls).toEqual(["credential", "cache", "relayer", "listener"]);
+    });
+
+    test("skips cache clear when previous account is undefined", async ({
       createAccountService,
       createMockSigner,
     }) => {
-      const calls: string[] = [];
-      const onBeforeDispatch = vi.fn(async () => {
-        await Promise.resolve();
-        calls.push("before");
+      const clearForRequester = vi.fn();
+      const cache = { clearForRequester } as unknown as CachingService;
+      let dispatch: ((change: WalletAccountChange) => void) | undefined;
+      const signer = createMockSigner(undefined, {
+        walletAccount: {
+          getSnapshot: vi.fn(),
+          subscribe: vi.fn((listener: (change: WalletAccountChange) => void) => {
+            dispatch = listener;
+            return () => {};
+          }),
+          isReady: vi.fn().mockReturnValue(true),
+        },
+      });
+      const service = createAccountService({ signer, cache });
+      service.onWalletAccountChange(() => {});
+
+      dispatch!({
+        previous: undefined,
+        next: { address: "0x1111111111111111111111111111111111111111", chainId: 31337 },
+      });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(clearForRequester).not.toHaveBeenCalled();
+    });
+
+    test("skips relayer switch when next account is undefined", async ({
+      createAccountService,
+      createMockSigner,
+      createMockRelayer,
+    }) => {
+      const switchChain = vi.fn();
+      const relayer = createMockRelayer({ switchChain });
+      let dispatch: ((change: WalletAccountChange) => void) | undefined;
+      const signer = createMockSigner(undefined, {
+        walletAccount: {
+          getSnapshot: vi.fn(),
+          subscribe: vi.fn((listener: (change: WalletAccountChange) => void) => {
+            dispatch = listener;
+            return () => {};
+          }),
+          isReady: vi.fn().mockReturnValue(true),
+        },
+      });
+      const service = createAccountService({ signer, relayer });
+      service.onWalletAccountChange(() => {});
+
+      dispatch!({
+        previous: { address: "0x1111111111111111111111111111111111111111", chainId: 31337 },
+        next: undefined,
+      });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(switchChain).not.toHaveBeenCalled();
+    });
+
+    test("errors in cleanup steps are swallowed and listeners still run", async ({
+      createAccountService,
+      createMockSigner,
+      createMockRelayer,
+    }) => {
+      const credentialService = {
+        handleWalletAccountChange: vi.fn().mockRejectedValue(new Error("credential boom")),
+      } as unknown as CredentialService;
+      const cache = {
+        clearForRequester: vi.fn().mockRejectedValue(new Error("cache boom")),
+      } as unknown as CachingService;
+      const relayer = createMockRelayer({
+        switchChain: vi.fn(() => {
+          throw new Error("relayer boom");
+        }),
       });
       let dispatch: ((change: WalletAccountChange) => void) | undefined;
       const signer = createMockSigner(undefined, {
@@ -179,20 +301,17 @@ describe("AccountService", () => {
           isReady: vi.fn().mockReturnValue(true),
         },
       });
-      const service = createAccountService({ signer, onBeforeDispatch });
-      service.onWalletAccountChange(() => {
-        calls.push("listener");
-      });
+      const service = createAccountService({ signer, cache, relayer, credentialService });
+      const listener = vi.fn();
+      service.onWalletAccountChange(listener);
 
-      const account = {
-        address: "0x1111111111111111111111111111111111111111",
-        chainId: 31337,
-      } as const;
-      dispatch!({ previous: undefined, next: account });
+      dispatch!({
+        previous: { address: "0x1111111111111111111111111111111111111111", chainId: 31337 },
+        next: { address: "0x2222222222222222222222222222222222222222", chainId: 1 },
+      });
       await new Promise((resolve) => setTimeout(resolve, 0));
 
-      expect(onBeforeDispatch).toHaveBeenCalledOnce();
-      expect(calls).toEqual(["before", "listener"]);
+      expect(listener).toHaveBeenCalledOnce();
     });
 
     test("a throwing listener does not prevent others from running", async ({
@@ -225,36 +344,6 @@ describe("AccountService", () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(survivor).toHaveBeenCalledOnce();
-    });
-
-    test("a rejecting onBeforeDispatch is swallowed and listeners still run", async ({
-      createAccountService,
-      createMockSigner,
-    }) => {
-      let dispatch: ((change: WalletAccountChange) => void) | undefined;
-      const signer = createMockSigner(undefined, {
-        walletAccount: {
-          getSnapshot: vi.fn(),
-          subscribe: vi.fn((listener: (change: WalletAccountChange) => void) => {
-            dispatch = listener;
-            return () => {};
-          }),
-          isReady: vi.fn().mockReturnValue(true),
-        },
-      });
-      const onBeforeDispatch = vi.fn().mockRejectedValue(new Error("before boom"));
-      const service = createAccountService({ signer, onBeforeDispatch });
-      const listener = vi.fn();
-      service.onWalletAccountChange(listener);
-
-      const account = {
-        address: "0x1111111111111111111111111111111111111111",
-        chainId: 31337,
-      } as const;
-      dispatch!({ previous: undefined, next: account });
-      await new Promise((resolve) => setTimeout(resolve, 0));
-
-      expect(listener).toHaveBeenCalledOnce();
     });
 
     test("unsubscribed listener is not invoked", async ({

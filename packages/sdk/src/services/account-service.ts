@@ -1,8 +1,10 @@
+import type { CredentialService } from "../credentials/credential-service";
 import {
   ChainMismatchError,
   SignerNotConfiguredError,
   WalletAccountNotReadyError,
 } from "../errors";
+import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
 import type {
   GenericProvider,
   GenericSigner,
@@ -11,31 +13,39 @@ import type {
   WalletAccountListener,
 } from "../types";
 import { swallow } from "../utils";
+import type { CachingService } from "./caching-service";
 
 export type AccountServiceOptions = {
   provider: GenericProvider;
   signer?: GenericSigner;
-  onBeforeDispatch?: (change: WalletAccountChange) => Promise<void>;
+  cache: CachingService;
+  relayer: RelayerDispatcher;
+  credentialService?: CredentialService;
 };
 
 /**
  * Owns wallet-account state for {@link ZamaSDK}: signer subscription,
- * chain-alignment validation, change dispatch with optional internal cleanup
- * (`onBeforeDispatch`) followed by external listener fan-out.
+ * chain-alignment validation, and change dispatch — first running the
+ * SDK-side cleanup (credential rotation, cache invalidation, relayer chain
+ * switch) and then fanning out to external listeners.
  *
  * @internal — consumed by ZamaSDK; not part of the public surface.
  */
 export class AccountService {
   readonly #provider: GenericProvider;
   readonly #signer: GenericSigner | undefined;
-  readonly #onBeforeDispatch?: (change: WalletAccountChange) => Promise<void>;
+  readonly #cache: CachingService;
+  readonly #relayer: RelayerDispatcher;
+  readonly #credentialService: CredentialService | undefined;
   readonly #walletAccountListeners = new Set<WalletAccountListener>();
   #unsubscribeSigner?: () => void;
 
   constructor(opts: AccountServiceOptions) {
     this.#provider = opts.provider;
     this.#signer = opts.signer;
-    this.#onBeforeDispatch = opts.onBeforeDispatch;
+    this.#cache = opts.cache;
+    this.#relayer = opts.relayer;
+    this.#credentialService = opts.credentialService;
     if (this.#signer) {
       this.#unsubscribeSigner = this.#signer.walletAccount.subscribe((change) => {
         this.#handleWalletAccountChange(change).catch((error) => {
@@ -90,9 +100,20 @@ export class AccountService {
   }
 
   async #handleWalletAccountChange(change: WalletAccountChange): Promise<void> {
-    const beforeDispatch = this.#onBeforeDispatch;
-    if (beforeDispatch) {
-      await swallow("account before-dispatch", () => beforeDispatch(change));
+    const prev = change.previous;
+    const next = change.next;
+    const credentialService = this.#credentialService;
+    if (credentialService) {
+      await swallow("credential wallet account change", () =>
+        credentialService.handleWalletAccountChange(prev, next),
+      );
+    }
+    if (prev) {
+      await swallow("clear decrypt cache", () => this.#cache.clearForRequester(prev.address));
+    }
+    const nextChainId = next?.chainId;
+    if (nextChainId !== undefined) {
+      void swallow("switch relayer chain", () => this.#relayer.switchChain(nextChainId));
     }
     await Promise.all(
       Array.from(this.#walletAccountListeners, (listener) =>

@@ -16,13 +16,7 @@ import { CredentialService } from "./credentials/credential-service";
 import { MemoryStorage } from "./storage/memory-storage";
 import { ReadonlyToken } from "./token/readonly-token";
 import { Token } from "./token/token";
-import type {
-  GenericProvider,
-  GenericSigner,
-  GenericStorage,
-  TransactionResult,
-  WalletAccountChange,
-} from "./types";
+import type { GenericProvider, GenericSigner, GenericStorage, TransactionResult } from "./types";
 import { ZamaSDK } from "./zama-sdk";
 import { DecryptionService } from "./services/decryption-service";
 import { DelegationService } from "./services/delegation-service";
@@ -275,7 +269,9 @@ interface SdkFixtures {
   createAccountService: (overrides?: {
     provider?: GenericProvider;
     signer?: GenericSigner;
-    onBeforeDispatch?: (change: WalletAccountChange) => Promise<void>;
+    cache?: CachingService;
+    relayer?: RelayerSDK;
+    credentialService?: CredentialService;
   }) => AccountService;
   createToken: (sdk: ZamaSDK, address?: Address, wrapper?: Address) => Token;
   createReadonlyToken: (sdk: ZamaSDK, address?: Address) => ReadonlyToken;
@@ -401,13 +397,15 @@ export const test = base.extend<SdkFixtures>({
   encryptionService: async ({ createEncryptionService }, use) => {
     await use(createEncryptionService());
   },
-  createAccountService: async ({ provider, signer }, use) => {
+  createAccountService: async ({ provider, signer, cache, relayer }, use) => {
     await use(
       (overrides = {}) =>
         new AccountService({
           provider: overrides.provider ?? provider,
           signer: "signer" in overrides ? overrides.signer : signer,
-          onBeforeDispatch: overrides.onBeforeDispatch,
+          cache: overrides.cache ?? cache,
+          relayer: (overrides.relayer ?? relayer) as unknown as RelayerDispatcher,
+          credentialService: overrides.credentialService,
         }),
     );
   },
