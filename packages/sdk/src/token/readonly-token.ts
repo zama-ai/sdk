@@ -18,7 +18,7 @@ import type { ClearValueType, Handle } from "../relayer/relayer-sdk.types";
 import { toError } from "../utils";
 import { assertBigint } from "../utils/assertions";
 import { pLimit } from "../utils/concurrency";
-import { requireChainAlignment } from "../utils/wallet-account-alignment";
+import { requireChainAlignment } from "../utils/alignment";
 import type { ZamaSDK } from "../zama-sdk";
 
 // Re-exported so consumers importing via `./token` keep a single canonical

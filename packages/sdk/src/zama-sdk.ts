@@ -22,10 +22,7 @@ import type {
   WalletAccountListener,
 } from "./types";
 import { swallow } from "./utils";
-import {
-  requireAlignedWalletAccount,
-  requireChainAlignment,
-} from "./utils/wallet-account-alignment";
+import { requireAlignedWalletAccount, requireChainAlignment } from "./utils/alignment";
 import { CachingService } from "./services/caching-service";
 import { DecryptionService, type BatchDecryptHandlesResult } from "./services/decryption-service";
 import { DelegationService } from "./services/delegation-service";

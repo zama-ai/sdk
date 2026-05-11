@@ -31,10 +31,7 @@ import {
   ZamaError,
 } from "../errors";
 import { isZeroHandle } from "../utils/handles";
-import {
-  requireAlignedWalletAccount,
-  requireChainAlignment,
-} from "../utils/wallet-account-alignment";
+import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
 import { ReadonlyToken } from "./readonly-token";
 import type {
   ShieldCallbacks,
