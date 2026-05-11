@@ -4,7 +4,7 @@ import {
   WalletAccountNotReadyError,
 } from "../../errors";
 import { describe, expect, test, vi } from "../../test-fixtures";
-import { requireAlignedWalletAccount, requireChainAlignment } from "../wallet-account-alignment";
+import { requireAlignedWalletAccount, requireChainAlignment } from "../alignment";
 
 describe("requireAlignedWalletAccount", () => {
   test("throws SignerNotConfiguredError when no signer is provided", async ({

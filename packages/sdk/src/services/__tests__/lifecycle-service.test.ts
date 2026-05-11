@@ -29,7 +29,6 @@ describe("LifecycleService", () => {
       const listener = vi.fn();
 
       const unsubscribe = service.onWalletAccountChange(listener);
-      expect(typeof unsubscribe).toBe("function");
       expect(() => unsubscribe()).not.toThrow();
     });
 
@@ -92,7 +91,12 @@ describe("LifecycleService", () => {
           isReady: vi.fn().mockReturnValue(true),
         },
       });
-      const service = createLifecycleService({ signer, cache, relayer, credentialService });
+      const service = createLifecycleService({
+        signer,
+        cache,
+        relayer,
+        credentialService,
+      });
       service.onWalletAccountChange(() => {
         calls.push("listener");
       });
@@ -138,7 +142,10 @@ describe("LifecycleService", () => {
 
       dispatch!({
         previous: undefined,
-        next: { address: "0x1111111111111111111111111111111111111111", chainId: 31337 },
+        next: {
+          address: "0x1111111111111111111111111111111111111111",
+          chainId: 31337,
+        },
       });
 
       await vi.waitFor(() => expect(listener).toHaveBeenCalledOnce());
@@ -168,7 +175,10 @@ describe("LifecycleService", () => {
       service.onWalletAccountChange(listener);
 
       dispatch!({
-        previous: { address: "0x1111111111111111111111111111111111111111", chainId: 31337 },
+        previous: {
+          address: "0x1111111111111111111111111111111111111111",
+          chainId: 31337,
+        },
         next: undefined,
       });
 
@@ -203,13 +213,24 @@ describe("LifecycleService", () => {
           isReady: vi.fn().mockReturnValue(true),
         },
       });
-      const service = createLifecycleService({ signer, cache, relayer, credentialService });
+      const service = createLifecycleService({
+        signer,
+        cache,
+        relayer,
+        credentialService,
+      });
       const listener = vi.fn();
       service.onWalletAccountChange(listener);
 
       dispatch!({
-        previous: { address: "0x1111111111111111111111111111111111111111", chainId: 31337 },
-        next: { address: "0x2222222222222222222222222222222222222222", chainId: 1 },
+        previous: {
+          address: "0x1111111111111111111111111111111111111111",
+          chainId: 31337,
+        },
+        next: {
+          address: "0x2222222222222222222222222222222222222222",
+          chainId: 1,
+        },
       });
 
       await vi.waitFor(() => expect(listener).toHaveBeenCalledOnce());
