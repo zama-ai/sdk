@@ -405,7 +405,7 @@ const { data } = useUserDecrypt({
 
 #### Persistent caching
 
-Decrypted values are stored in the SDK's persistent decrypt cache (`sdk.cache`), scoped by signer and contract address. Cached values survive page reloads — `useUserDecrypt` returns them instantly without hitting the relayer.
+Decrypted values are stored through the SDK's internal CachingService, scoped by signer and contract address. Cached values survive page reloads — `useUserDecrypt` returns them instantly without hitting the relayer.
 
 The cache is cleared on `revoke()`, `revokeSession()`, or wallet lifecycle events (disconnect, account/chain change).
 

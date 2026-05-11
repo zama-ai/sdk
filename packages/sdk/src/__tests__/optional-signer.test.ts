@@ -1,5 +1,6 @@
 import { describe, it, expect } from "../test-fixtures";
 import { Token } from "../token/token";
+import { WrappedToken } from "../token/wrapped-token";
 import { SignerNotConfiguredError, ZamaErrorCode } from "../errors";
 import type { ZamaSDK } from "../zama-sdk";
 import type { Address } from "viem";
@@ -29,7 +30,11 @@ describe("ZamaSDK without signer", () => {
   it("createToken works with no signer", ({ createSDK, tokenAddress }) => {
     const sdk = createSDK({ signer: undefined });
     expect(sdk.createToken(tokenAddress)).toBeInstanceOf(Token);
-    expect(sdk.createToken(tokenAddress)).toBeInstanceOf(Token);
+  });
+
+  it("createWrappedToken works with no signer", ({ createSDK, wrapperAddress }) => {
+    const sdk = createSDK({ signer: undefined });
+    expect(sdk.createWrappedToken(wrapperAddress)).toBeInstanceOf(WrappedToken);
   });
 
   it("publicDecrypt works with no signer", async ({ createSDK, relayer }) => {

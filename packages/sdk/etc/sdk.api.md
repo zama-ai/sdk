@@ -567,6 +567,24 @@ export interface BatchDecryptAsOptions {
     onError?: (error: Error, address: Address) => bigint;
 }
 
+// @public (undocumented)
+export interface BatchDecryptHandleItem {
+    // (undocumented)
+    contractAddress: Address;
+    // (undocumented)
+    error?: ZamaError;
+    // (undocumented)
+    handle: Handle;
+    // (undocumented)
+    value?: ClearValueType;
+}
+
+// @public (undocumented)
+export interface BatchDecryptHandlesResult {
+    // (undocumented)
+    items: BatchDecryptHandleItem[];
+}
+
 // @public
 export class ChainMismatchError extends ZamaError {
     constructor(input: {
@@ -6108,16 +6126,6 @@ export function decodeUnwrapRequested(log: RawLog): UnwrapRequestedEvent | null;
 
 // @public
 export function decodeWrapped(log: RawLog): WrappedEvent | null;
-
-// @public
-export class DecryptCache {
-    constructor(storage: GenericStorage);
-    clearAll(): Promise<void>;
-    clearForRequester(requester: Address): Promise<void>;
-    delete(requester: Address, contractAddress: Address, handle: Handle): Promise<void>;
-    get(requester: Address, contractAddress: Address, handle: Handle): Promise<ClearValueType | null>;
-    set(requester: Address, contractAddress: Address, handle: Handle, value: ClearValueType): Promise<void>;
-}
 
 // @public (undocumented)
 export interface DecryptEndEvent extends BaseEvent {
@@ -20018,11 +20026,19 @@ export class ZamaSDK {
     constructor(config: ZamaConfig);
     allow(contracts: Address[]): Promise<void>;
     allowAs(delegator: Address, contracts: Address[]): Promise<void>;
-    readonly cache: DecryptCache;
+    // Warning: (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
+    readonly cache: CachingService;
     clearCredentials(): Promise<void>;
     createToken(address: Address): Token;
     createWrappedToken(address: Address): WrappedToken;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
+    // @internal (undocumented)
+    delegatedBatchDecryptHandlesAs(input: {
+        handles: DecryptHandle[];
+        delegatorAddress: Address;
+        accountAddress?: Address;
+        maxConcurrency?: number;
+    }): Promise<BatchDecryptHandlesResult>;
     delegateDecryption(input: {
         contractAddress: Address;
         delegateAddress: Address;

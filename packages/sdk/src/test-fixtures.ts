@@ -6,7 +6,9 @@ import type { FheChain } from "./chains/types";
 import type { ZamaConfig } from "./config/types";
 import { ZamaSDKEvents } from "./events/sdk-events";
 import type { RelayerSDK } from "./relayer/relayer-sdk";
+import type { RelayerDispatcher } from "./relayer/relayer-dispatcher";
 import type { Handle } from "./relayer/relayer-sdk.types";
+import { CachingService } from "./services/caching-service";
 import type { QueryClient } from "@tanstack/query-core";
 import type { Address, Hex } from "viem";
 import type { CredentialServiceConfig } from "./credentials/credential-service";
@@ -16,6 +18,10 @@ import { Token } from "./token/token";
 import { WrappedToken } from "./token/wrapped-token";
 import type { GenericProvider, GenericSigner, GenericStorage, TransactionResult } from "./types";
 import { ZamaSDK } from "./zama-sdk";
+import { DecryptionService } from "./services/decryption-service";
+import { DelegationService } from "./services/delegation-service";
+import { EncryptionService } from "./services/encryption-service";
+import type { ZamaSDKEventInput } from "./events/sdk-events";
 export { afterEach, beforeEach, describe, expect, vi, type Mock } from "vitest";
 
 const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
@@ -186,12 +192,6 @@ function createMockTokenInternal(address: Address, signer: GenericSigner): Token
     allow: vi.fn().mockResolvedValue(undefined),
     isAllowed: vi.fn().mockResolvedValue(true),
     revokePermits: vi.fn().mockResolvedValue(undefined),
-    cache: {
-      get: vi.fn(),
-      set: vi.fn(),
-      clearAll: vi.fn(),
-      clearForRequester: vi.fn(),
-    },
   };
   return {
     address,
@@ -224,6 +224,10 @@ interface SdkFixtures {
   mockToken: Token;
   mockWrappedToken: WrappedToken;
   credentialService: CredentialService;
+  cache: CachingService;
+  delegationService: DelegationService;
+  decryptionService: DecryptionService;
+  encryptionService: EncryptionService;
   storage: GenericStorage;
   createMockRelayer: typeof createMockRelayer;
   createMockSigner: (addressOrOverrides?: Address | Partial<GenericSigner>) => GenericSigner;
@@ -247,10 +251,23 @@ interface SdkFixtures {
           txResult?: TransactionResult;
         },
   ) => WrappedToken;
-  createCredentialManager: (config: CredentialsManagerConfig) => CredentialsManager;
-  createDelegatedCredentialManager: (
-    config: DelegatedCredentialsManagerConfig,
-  ) => DelegatedCredentialsManager;
+  createCredentialService: (config: Partial<CredentialServiceConfig>) => CredentialService;
+  createDelegationService: (overrides?: {
+    provider?: GenericProvider;
+    relayer?: RelayerSDK;
+    emitEvent?: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
+  }) => DelegationService;
+  createDecryptionService: (overrides?: {
+    cache?: CachingService;
+    credentialService?: CredentialService;
+    delegationService?: DelegationService;
+    relayer?: RelayerSDK;
+    emitEvent?: (input: ZamaSDKEventInput) => void;
+  }) => DecryptionService;
+  createEncryptionService: (overrides?: {
+    relayer?: RelayerSDK;
+    emitEvent?: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
+  }) => EncryptionService;
   createToken: (sdk: ZamaSDK, address?: Address) => Token;
   createWrappedToken: (sdk: ZamaSDK, address?: Address) => WrappedToken;
   sdk: ZamaSDK;
@@ -322,6 +339,52 @@ export const test = base.extend<SdkFixtures>({
   },
   credentialService: async ({ createCredentialService }, use) => {
     await use(createCredentialService({}));
+  },
+  cache: async ({ storage }, use) => {
+    await use(new CachingService(storage));
+  },
+  createDelegationService: async ({ provider, relayer }, use) => {
+    await use(
+      (overrides = {}) =>
+        new DelegationService({
+          provider: overrides.provider ?? provider,
+          relayer: overrides.relayer ?? relayer,
+          emitEvent: overrides.emitEvent,
+        }),
+    );
+  },
+  delegationService: async ({ createDelegationService }, use) => {
+    await use(createDelegationService());
+  },
+  createDecryptionService: async (
+    { cache, credentialService, delegationService, relayer },
+    use,
+  ) => {
+    await use(
+      (overrides = {}) =>
+        new DecryptionService({
+          cache: overrides.cache ?? cache,
+          credentialService: overrides.credentialService ?? credentialService,
+          delegationService: overrides.delegationService ?? delegationService,
+          relayer: overrides.relayer ?? relayer,
+          emitEvent: overrides.emitEvent ?? vi.fn(),
+        }),
+    );
+  },
+  decryptionService: async ({ createDecryptionService }, use) => {
+    await use(createDecryptionService());
+  },
+  createEncryptionService: async ({ relayer }, use) => {
+    await use(
+      (overrides = {}) =>
+        new EncryptionService({
+          relayer: (overrides.relayer ?? relayer) as unknown as RelayerDispatcher,
+          emitEvent: overrides.emitEvent ?? vi.fn(),
+        }),
+    );
+  },
+  encryptionService: async ({ createEncryptionService }, use) => {
+    await use(createEncryptionService());
   },
   createToken: async ({ tokenAddress }, use) => {
     await use((sdk: ZamaSDK, address?: Address) => new Token(sdk, address ?? tokenAddress));

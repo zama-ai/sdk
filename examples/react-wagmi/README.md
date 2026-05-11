@@ -11,8 +11,8 @@ Covers: connect wallet, shield ERC-20 → confidential, confidential transfer, u
 - **React 19** + **wagmi v3** + **viem v2**
 - **TanStack Query v5** for async state
 - **@zama-fhe/react-sdk** — `ZamaProvider`, `useConfidentialBalance`, `useUnshield`, `useDelegateDecryption`, etc.
-- **WagmiSigner** — wallet reactivity via wagmi's `watchConnection`
-- **RelayerWeb** — browser FHE worker, routes through a local Next.js proxy (`/api/relayer`)
+- **@zama-fhe/react-sdk/wagmi** — `createConfig` adapter for wagmi signer/provider wiring
+- **@zama-fhe/sdk/web** — browser FHE worker transport via `web()`, routed through a local Next.js proxy (`/api/relayer`)
 
 ## Setup
 

@@ -1,37 +1,14 @@
 import { getAddress, type Address } from "viem";
 import type { ZamaConfig } from "./config/types";
-import {
-  delegateForUserDecryptionContract,
-  getDelegationExpiryContract,
-  MAX_UINT64,
-  revokeDelegationContract,
-} from "./contracts";
 import { CredentialService } from "./credentials/credential-service";
 import {
-  resolveDelegatedDecryptPermit,
-  resolveUserDecryptPermit,
-} from "./credentials/decrypt-permit";
-import { findRevokedDelegations } from "./credentials/delegation-check";
-import { DecryptCache } from "./decrypt-cache";
-import {
   ChainMismatchError,
-  DelegationDelegateEqualsContractError,
-  DelegationExpirationTooSoonError,
-  DelegationExpiryUnchangedError,
-  DelegationNotFoundError,
-  DelegationSelfNotAllowedError,
-  EncryptionFailedError,
   SignerNotConfiguredError,
-  TransactionRevertedError,
   WalletAccountNotReadyError,
-  matchAclRevert,
   wrapDecryptError,
-  ZamaError,
 } from "./errors";
 import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventListener } from "./events/sdk-events";
-import { ZamaSDKEvents } from "./events/sdk-events";
 import type { DecryptHandle } from "./query/user-decrypt";
-import { isZeroHandle } from "./utils/handles";
 import type { RelayerDispatcher } from "./relayer/relayer-dispatcher";
 import type {
   ClearValueType,
@@ -51,8 +28,11 @@ import type {
   WalletAccountChange,
   WalletAccountListener,
 } from "./types";
-import { swallow, toError } from "./utils";
-import { pLimit } from "./utils/concurrency";
+import { swallow } from "./utils";
+import { CachingService } from "./services/caching-service";
+import { DecryptionService, type BatchDecryptHandlesResult } from "./services/decryption-service";
+import { DelegationService } from "./services/delegation-service";
+import { EncryptionService } from "./services/encryption-service";
 import { WrappersRegistry } from "./wrappers-registry";
 
 /**
@@ -64,8 +44,6 @@ export class ZamaSDK {
   readonly provider: GenericProvider;
   readonly signer: GenericSigner | undefined;
   readonly storage: GenericStorage;
-  /** Persistent cache for decrypted FHE plaintext values, scoped by (requester, contract, handle). */
-  readonly cache: DecryptCache;
   /**
    * A {@link WrappersRegistry} instance auto-configured for the current chain.
    * Uses built-in defaults from chain configs, and the SDK's `registryTTL` if configured.
@@ -74,7 +52,12 @@ export class ZamaSDK {
   readonly #registryTTL: number;
   readonly #onEvent: ZamaSDKEventListener;
   readonly #walletAccountListeners = new Set<WalletAccountListener>();
+  /** Persistent cache for decrypted FHE plaintext values, scoped by (requester, contract, handle). */
+  readonly cache: CachingService;
   readonly #credentialService: CredentialService | undefined;
+  readonly #delegationService: DelegationService;
+  readonly #decryptionService: DecryptionService | undefined;
+  readonly #encryptionService: EncryptionService;
   #unsubscribeSigner?: () => void;
 
   constructor(config: ZamaConfig) {
@@ -82,8 +65,17 @@ export class ZamaSDK {
     this.provider = config.provider;
     this.signer = config.signer;
     this.storage = config.storage;
-    this.cache = new DecryptCache(config.storage);
+    this.cache = new CachingService(config.storage);
     this.#onEvent = config.onEvent ?? function () {};
+    this.#delegationService = new DelegationService({
+      provider: this.provider,
+      relayer: this.relayer,
+      emitEvent: (input, tokenAddress) => this.emitEvent(input, tokenAddress),
+    });
+    this.#encryptionService = new EncryptionService({
+      relayer: this.relayer,
+      emitEvent: (input, tokenAddress) => this.emitEvent(input, tokenAddress),
+    });
     const registryAddresses: Record<number, Address> = {};
     for (const chain of config.chains) {
       if (chain.registryAddress) {
@@ -106,6 +98,13 @@ export class ZamaSDK {
         storage: this.storage,
         permitStorage: config.permitStorage,
       });
+      this.#decryptionService = new DecryptionService({
+        cache: this.cache,
+        credentialService: this.#credentialService,
+        delegationService: this.#delegationService,
+        relayer: this.relayer,
+        emitEvent: (input) => this.emitEvent(input),
+      });
 
       this.#unsubscribeSigner = signer.walletAccount.subscribe((change) => {
         this.#handleWalletAccountChange(change).catch((error) => {
@@ -115,6 +114,7 @@ export class ZamaSDK {
       });
     } else {
       this.#credentialService = undefined;
+      this.#decryptionService = undefined;
     }
   }
 
@@ -135,6 +135,13 @@ export class ZamaSDK {
       throw new SignerNotConfiguredError(operation);
     }
     return this.#credentialService;
+  }
+
+  #requireDecryptionService(operation: string): DecryptionService {
+    if (!this.#decryptionService) {
+      throw new SignerNotConfiguredError(operation);
+    }
+    return this.#decryptionService;
   }
 
   /**
@@ -219,10 +226,10 @@ export class ZamaSDK {
   }
 
   /**
-   * Create a {@link Token} interface for an ERC-7984 confidential token.
-   * Supports balance queries, transfers, and operator approval.
+   * Create a high-level ERC-20-style interface for an ERC-7984 confidential token.
+   * Supports balance queries, transfers, operator approvals, and decryption.
    *
-   * For ERC-7984 wrappers (shield/unshield), use {@link createWrappedToken} instead.
+   * For ERC-7984 wrappers (shield/unshield/allowance), use {@link createWrappedToken} instead.
    *
    * @param address - The confidential token contract address.
    * @returns A {@link Token} instance bound to this SDK.
@@ -232,14 +239,10 @@ export class ZamaSDK {
   }
 
   /**
-   * Create a {@link WrappedToken} interface for an ERC-7984 ERC-20 wrapper.
-   * Adds wrapper-specific operations (shield, unshield, underlying, allowance)
-   * on top of the base {@link Token} API.
+   * Create a high-level interface for an ERC-7984 wrapper token.
+   * Extends {@link Token} with shield/unshield/allowance/finalize-unwrap operations.
    *
-   * The address is the wrapper contract address itself — the wrapper IS the
-   * confidential token.
-   *
-   * @param address - The confidential wrapper contract address.
+   * @param address - The wrapper token contract address.
    * @returns A {@link WrappedToken} instance bound to this SDK.
    */
   createWrappedToken(address: Address): WrappedToken {
@@ -388,73 +391,12 @@ export class ZamaSDK {
   }): Promise<TransactionResult> {
     const signer = this.requireSigner("delegateDecryption");
     const account = await this.requireAlignedWalletAccount("delegateDecryption");
-    if (expirationDate && expirationDate.getTime() < Date.now() + 3600_000) {
-      throw new DelegationExpirationTooSoonError(
-        "Expiration date must be at least 1 hour in the future",
-      );
-    }
-
-    const normalizedContract = getAddress(contractAddress);
-    const normalizedDelegate = getAddress(delegateAddress);
-
-    // Pre-flight: delegate cannot be the connected wallet (SenderCannotBeDelegate)
-    const signerAddress = getAddress(account.address);
-    if (normalizedDelegate === signerAddress) {
-      throw new DelegationSelfNotAllowedError(
-        "Cannot delegate to yourself (delegate === msg.sender).",
-      );
-    }
-
-    // Pre-flight: delegate cannot be the contract address (DelegateCannotBeContractAddress)
-    if (normalizedDelegate === normalizedContract) {
-      throw new DelegationDelegateEqualsContractError(
-        `Delegate address cannot be the same as the contract address (${normalizedContract}).`,
-      );
-    }
-
-    const acl = await this.relayer.getAclAddress();
-    // uint64 max → no practical expiry
-    const expDate = expirationDate
-      ? BigInt(Math.floor(expirationDate.getTime() / 1000))
-      : MAX_UINT64;
-
-    // Pre-flight with RPC: new expiry must differ from current (ExpirationDateAlreadySetToSameValue)
-    let currentExpiry: bigint;
-    try {
-      currentExpiry = await this.getDelegationExpiry({
-        contractAddress: normalizedContract,
-        delegatorAddress: signerAddress,
-        delegateAddress: normalizedDelegate,
-      });
-    } catch (error) {
-      // oxlint-disable-next-line no-console
-      console.warn("[zama-sdk] delegateDecryption: pre-flight expiry check failed:", error);
-      currentExpiry = -1n; // RPC failure — skip client-side check, let the contract enforce
-    }
-    if (currentExpiry === expDate) {
-      throw new DelegationExpiryUnchangedError(
-        `The new expiration date (${expDate}) is the same as the current one. No on-chain change needed.`,
-      );
-    }
-
-    try {
-      const txHash = await signer.writeContract(
-        delegateForUserDecryptionContract(acl, normalizedDelegate, normalizedContract, expDate),
-      );
-      const receipt = await this.provider.waitForTransactionReceipt(txHash);
-      return { txHash, receipt };
-    } catch (error) {
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      const mapped = matchAclRevert(error);
-      if (mapped) {
-        throw mapped;
-      }
-      throw new TransactionRevertedError("Delegation transaction failed", {
-        cause: error,
-      });
-    }
+    return this.#delegationService.delegateDecryption(signer, {
+      contractAddress,
+      delegateAddress,
+      delegatorAddress: account.address,
+      expirationDate,
+    });
   }
 
   /**
@@ -478,50 +420,11 @@ export class ZamaSDK {
   }): Promise<TransactionResult> {
     const signer = this.requireSigner("revokeDelegation");
     const account = await this.requireAlignedWalletAccount("revokeDelegation");
-    const normalizedContract = getAddress(contractAddress);
-    const normalizedDelegate = getAddress(delegateAddress);
-    const signerAddress = getAddress(account.address);
-    const acl = await this.relayer.getAclAddress();
-
-    // Pre-flight: reject if never delegated (expiry === 0).
-    // Expired delegations (non-zero expiry in the past) are allowed through —
-    // the ACL contract accepts revocation of expired delegations.
-    let currentExpiry: bigint;
-    try {
-      currentExpiry = await this.getDelegationExpiry({
-        contractAddress: normalizedContract,
-        delegatorAddress: signerAddress,
-        delegateAddress: normalizedDelegate,
-      });
-    } catch (error) {
-      // oxlint-disable-next-line no-console
-      console.warn("[zama-sdk] revokeDelegation: pre-flight expiry check failed:", error);
-      currentExpiry = 1n; // RPC failure — skip client-side check, let the contract enforce
-    }
-    if (currentExpiry === 0n) {
-      throw new DelegationNotFoundError(
-        `No active delegation found for delegate ${normalizedDelegate} on contract ${normalizedContract}.`,
-      );
-    }
-
-    try {
-      const txHash = await signer.writeContract(
-        revokeDelegationContract(acl, normalizedDelegate, normalizedContract),
-      );
-      const receipt = await this.provider.waitForTransactionReceipt(txHash);
-      return { txHash, receipt };
-    } catch (error) {
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      const mapped = matchAclRevert(error);
-      if (mapped) {
-        throw mapped;
-      }
-      throw new TransactionRevertedError("Revoke delegation transaction failed", {
-        cause: error,
-      });
-    }
+    return this.#delegationService.revokeDelegation(signer, {
+      contractAddress,
+      delegateAddress,
+      delegatorAddress: account.address,
+    });
   }
 
   /**
@@ -537,16 +440,7 @@ export class ZamaSDK {
     delegatorAddress: Address;
     delegateAddress: Address;
   }): Promise<boolean> {
-    const expiry = await this.getDelegationExpiry(params);
-    if (expiry === 0n) {
-      return false;
-    }
-    // Permanent delegation (uint64 max) — skip the RPC round-trip for block timestamp.
-    if (expiry === MAX_UINT64) {
-      return true;
-    }
-    const now = await this.provider.getBlockTimestamp();
-    return expiry > now;
+    return this.#delegationService.isDelegated(params);
   }
 
   /**
@@ -566,15 +460,11 @@ export class ZamaSDK {
     delegatorAddress: Address;
     delegateAddress: Address;
   }): Promise<bigint> {
-    const acl = await this.relayer.getAclAddress();
-    return this.provider.readContract(
-      getDelegationExpiryContract(
-        acl,
-        getAddress(delegatorAddress),
-        getAddress(delegateAddress),
-        getAddress(contractAddress),
-      ),
-    );
+    return this.#delegationService.getDelegationExpiry({
+      contractAddress,
+      delegatorAddress,
+      delegateAddress,
+    });
   }
 
   /**
@@ -599,125 +489,18 @@ export class ZamaSDK {
    * ```
    */
   async userDecrypt(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>> {
-    const service = this.#requireCredentialService("userDecrypt");
+    const service = this.#requireDecryptionService("userDecrypt");
     const account = await this.requireAlignedWalletAccount("userDecrypt");
-    if (handles.length === 0) {
-      return {};
-    }
-
-    // Normalize addresses once at the top
-    const normalized = handles.map((h) => ({
-      handle: h.handle,
-      contractAddress: getAddress(h.contractAddress),
-    }));
-
-    const result: Record<Handle, ClearValueType> = {};
-    const nonZero: DecryptHandle[] = [];
-
-    // Filter zero handles → 0n without relayer
-    for (const h of normalized) {
-      if (isZeroHandle(h.handle)) {
-        result[h.handle] = 0n;
-      } else {
-        nonZero.push(h);
-      }
-    }
-
-    if (nonZero.length === 0) {
-      return result;
-    }
-
-    // Cache partition
-    const signerAddress = getAddress(account.address);
-    const uncached: DecryptHandle[] = [];
-
-    for (const h of nonZero) {
-      const cached = await this.cache.get(signerAddress, h.contractAddress, h.handle);
-      if (cached !== null) {
-        result[h.handle] = cached;
-      } else {
-        uncached.push(h);
-      }
-    }
-
-    if (uncached.length === 0) {
-      return result;
-    }
-
-    // Derive contract addresses from ALL handles for stable credential cache key
-    const allContracts = Array.from(new Set(normalized.map((h) => h.contractAddress)));
-    const credentials = await service.allow(allContracts);
-
-    // Group uncached handles by contract.
-    const byContract = new Map<Address, Handle[]>();
-    for (const h of uncached) {
-      const existing = byContract.get(h.contractAddress);
-      if (existing) {
-        existing.push(h.handle);
-      } else {
-        byContract.set(h.contractAddress, [h.handle]);
-      }
-    }
-
-    const t0 = Date.now();
-    const uncachedHandles = uncached.map((h) => h.handle);
-
-    try {
-      this.emitEvent({
-        type: ZamaSDKEvents.DecryptStart,
-        handles: uncachedHandles,
-      });
-
-      await pLimit(
-        [...byContract.entries()].map(([contractAddress, contractHandles]) => async () => {
-          const decrypted = await this.relayer.userDecrypt({
-            handles: contractHandles,
-            contractAddress,
-            ...resolveUserDecryptPermit(credentials, contractAddress),
-            signerAddress,
-          });
-
-          for (const [handle, value] of Object.entries(decrypted)) {
-            result[handle as Handle] = value;
-            await this.cache.set(signerAddress, contractAddress, handle as Handle, value);
-          }
-        }),
-        5,
-      );
-
-      // Emit only the freshly-decrypted subset in `result` so its keys match
-      // `handles`. Cached and zero-handle entries are intentionally excluded.
-      const uncachedResult: Record<Handle, ClearValueType> = {};
-      for (const handle of uncachedHandles) {
-        const value = result[handle];
-        if (value !== undefined) {
-          uncachedResult[handle] = value;
-        }
-      }
-      this.emitEvent({
-        type: ZamaSDKEvents.DecryptEnd,
-        durationMs: Date.now() - t0,
-        handles: uncachedHandles,
-        result: uncachedResult,
-      });
-      return result;
-    } catch (error) {
-      this.emitEvent({
-        type: ZamaSDKEvents.DecryptError,
-        error: toError(error),
-        durationMs: Date.now() - t0,
-        handles: uncachedHandles,
-      });
-      throw wrapDecryptError(error, "Failed to decrypt handles");
-    }
+    return service.userDecrypt(handles, account.address);
   }
 
   /**
    * Decrypt one or more FHE handles using delegated credentials.
    *
-   * Mirrors {@link userDecrypt} with delegated credentials — same caching,
-   * zero-handle short-circuit, event lifecycle, and error wrapping. The
-   * delegator address identifies the account that granted delegation rights.
+   * Mirrors {@link userDecrypt} with delegated credentials — same caching and
+   * zero-handle short-circuit. Before reading from cache or calling the relayer,
+   * every non-zero handle's contract must have an active delegation from the
+   * delegator to the connected signer; missing or expired delegations fail fast.
    *
    * @param handles - FHE handles paired with their contract addresses.
    * @param delegatorAddress - The address that granted delegation rights.
@@ -740,142 +523,32 @@ export class ZamaSDK {
     delegatorAddress: Address,
     accountAddress: Address = delegatorAddress,
   ): Promise<Record<Handle, ClearValueType>> {
-    const service = this.#requireCredentialService("delegatedUserDecrypt");
+    const service = this.#requireDecryptionService("delegatedUserDecrypt");
     const account = await this.requireAlignedWalletAccount("delegatedUserDecrypt");
-    if (handles.length === 0) {
-      return {};
-    }
+    return service.delegatedUserDecrypt(handles, delegatorAddress, account.address, accountAddress);
+  }
 
-    const normalizedDelegator = getAddress(delegatorAddress);
-    const normalizedAccount = getAddress(accountAddress);
-
-    // Normalize addresses once at the top
-    const normalized = handles.map((h) => ({
-      handle: h.handle,
-      contractAddress: getAddress(h.contractAddress),
-    }));
-
-    const result: Record<Handle, ClearValueType> = {};
-    const nonZero: DecryptHandle[] = [];
-
-    // Filter zero handles → 0n without relayer
-    for (const h of normalized) {
-      if (isZeroHandle(h.handle)) {
-        result[h.handle] = 0n;
-      } else {
-        nonZero.push(h);
-      }
-    }
-
-    if (nonZero.length === 0) {
-      return result;
-    }
-
-    // Delegated cache hits must still sit behind the current delegate's
-    // authorization. Otherwise shared storage could return plaintext from a
-    // previous delegate without a live delegated permit.
-    const allContracts = Array.from(new Set(normalized.map((h) => h.contractAddress)));
-    const credentials = await service.allow(allContracts, normalizedDelegator);
-
-    const delegateAddress = getAddress(account.address);
-
-    // Verify on-chain delegation is still active for each contract before
-    // serving cached delegated plaintext. The SDK-side `service.allow()` only
-    // proves the delegate signed a permit — it does NOT detect on-chain
-    // revocation or expiry. Without this check, a cache hit could leak
-    // plaintext that the delegator has since revoked on-chain.
-    const revokedContracts = await findRevokedDelegations({
-      provider: this.provider,
-      relayer: this.relayer,
-      contractAddresses: allContracts,
-      delegatorAddress: normalizedDelegator,
-      delegateAddress,
+  /** @internal */
+  async delegatedBatchDecryptHandlesAs({
+    handles,
+    delegatorAddress,
+    accountAddress = delegatorAddress,
+    maxConcurrency,
+  }: {
+    handles: DecryptHandle[];
+    delegatorAddress: Address;
+    accountAddress?: Address;
+    maxConcurrency?: number;
+  }): Promise<BatchDecryptHandlesResult> {
+    const service = this.#requireDecryptionService("delegatedBatchDecryptHandlesAs");
+    const account = await this.requireAlignedWalletAccount("delegatedBatchDecryptHandlesAs");
+    return service.delegatedBatchDecryptHandlesAs({
+      handles,
+      delegatorAddress,
+      delegateAddress: account.address,
+      accountAddress,
+      maxConcurrency,
     });
-
-    // Cache partition
-    const uncached: DecryptHandle[] = [];
-
-    for (const h of nonZero) {
-      if (revokedContracts.has(h.contractAddress)) {
-        // Drop any cached plaintext for revoked contracts so the next path
-        // fetches fresh (and the relayer enforces its own on-chain check).
-        await this.cache.delete(normalizedAccount, h.contractAddress, h.handle);
-        uncached.push(h);
-        continue;
-      }
-      const cached = await this.cache.get(normalizedAccount, h.contractAddress, h.handle);
-      if (cached !== null) {
-        result[h.handle] = cached;
-      } else {
-        uncached.push(h);
-      }
-    }
-
-    if (uncached.length === 0) {
-      return result;
-    }
-
-    // Group uncached by contract
-    const byContract = new Map<Address, Handle[]>();
-    for (const h of uncached) {
-      const existing = byContract.get(h.contractAddress);
-      if (existing) {
-        existing.push(h.handle);
-      } else {
-        byContract.set(h.contractAddress, [h.handle]);
-      }
-    }
-
-    // Decrypt per contract group with bounded concurrency
-    const t0 = Date.now();
-    const uncachedHandles = uncached.map((h) => h.handle);
-
-    try {
-      this.emitEvent({
-        type: ZamaSDKEvents.DecryptStart,
-        handles: uncachedHandles,
-      });
-
-      await pLimit(
-        [...byContract.entries()].map(([contractAddress, contractHandles]) => async () => {
-          const decrypted = await this.relayer.delegatedUserDecrypt({
-            handles: contractHandles,
-            contractAddress,
-            ...resolveDelegatedDecryptPermit(credentials, contractAddress),
-            delegateAddress,
-          });
-
-          for (const [handle, value] of Object.entries(decrypted)) {
-            result[handle as Handle] = value;
-            await this.cache.set(normalizedAccount, contractAddress, handle as Handle, value);
-          }
-        }),
-        5,
-      );
-
-      const uncachedResult: Record<Handle, ClearValueType> = {};
-      for (const handle of uncachedHandles) {
-        const value = result[handle];
-        if (value !== undefined) {
-          uncachedResult[handle] = value;
-        }
-      }
-      this.emitEvent({
-        type: ZamaSDKEvents.DecryptEnd,
-        durationMs: Date.now() - t0,
-        handles: uncachedHandles,
-        result: uncachedResult,
-      });
-      return result;
-    } catch (error) {
-      this.emitEvent({
-        type: ZamaSDKEvents.DecryptError,
-        error: toError(error),
-        durationMs: Date.now() - t0,
-        handles: uncachedHandles,
-      });
-      throw wrapDecryptError(error, "Failed to decrypt delegated handles", true);
-    }
   }
 
   /**
@@ -926,34 +599,7 @@ export class ZamaSDK {
    * ```
    */
   async encrypt(params: EncryptParams): Promise<EncryptResult> {
-    const t0 = Date.now();
-    try {
-      this.emitEvent({ type: ZamaSDKEvents.EncryptStart }, params.contractAddress);
-      const result = await this.relayer.encrypt(params);
-      this.emitEvent(
-        {
-          type: ZamaSDKEvents.EncryptEnd,
-          durationMs: Date.now() - t0,
-        },
-        params.contractAddress,
-      );
-      return result;
-    } catch (error) {
-      this.emitEvent(
-        {
-          type: ZamaSDKEvents.EncryptError,
-          error: toError(error),
-          durationMs: Date.now() - t0,
-        },
-        params.contractAddress,
-      );
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new EncryptionFailedError("Encryption failed", {
-        cause: error,
-      });
-    }
+    return this.#encryptionService.encrypt(params);
   }
 
   /**

@@ -1270,12 +1270,21 @@ export class ZamaSDK {
     constructor(config: ZamaConfig);
     allow(contracts: Address[]): Promise<void>;
     allowAs(delegator: Address, contracts: Address[]): Promise<void>;
-    // Warning: (ae-forgotten-export) The symbol "DecryptCache" needs to be exported by the entry point index.d.ts
-    readonly cache: DecryptCache;
+    // Warning: (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
+    readonly cache: CachingService;
     clearCredentials(): Promise<void>;
     createToken(address: Address): Token;
     createWrappedToken(address: Address): WrappedToken;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
+    // Warning: (ae-forgotten-export) The symbol "BatchDecryptHandlesResult" needs to be exported by the entry point index.d.ts
+    //
+    // @internal (undocumented)
+    delegatedBatchDecryptHandlesAs(input: {
+        handles: DecryptHandle[];
+        delegatorAddress: Address;
+        accountAddress?: Address;
+        maxConcurrency?: number;
+    }): Promise<BatchDecryptHandlesResult>;
     delegateDecryption(input: {
         contractAddress: Address;
         delegateAddress: Address;
@@ -1357,9 +1366,9 @@ export const ZamaSDKEvents: {
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/types-T0tr_-1R.d.ts:561:3 - (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
-// dist/esm/types-T0tr_-1R.d.ts:562:3 - (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
-// dist/esm/types-T0tr_-1R.d.ts:563:3 - (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
+// dist/esm/types-57wtSyfb.d.ts:561:3 - (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
+// dist/esm/types-57wtSyfb.d.ts:562:3 - (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
+// dist/esm/types-57wtSyfb.d.ts:563:3 - (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 
