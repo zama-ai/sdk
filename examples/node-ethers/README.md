@@ -91,11 +91,16 @@ confirmation — paste any hash into
 
 ### Section 1 — Setup
 
-Initialises the ethers `Wallet` + `JsonRpcProvider`, creates two `EthersSigner`
-instances (Account A and Account B), and wires them up to a shared `RelayerNode`.
+Initialises the ethers `Wallet` + `JsonRpcProvider`, then creates one SDK config per
+wallet with:
 
-`RelayerNode` runs FHE operations in Node.js worker threads — no browser
-dependencies required. A single instance is shared between both SDK objects.
+- `createConfig` from `@zama-fhe/sdk/ethers`
+- the Sepolia preset from `@zama-fhe/sdk/chains`
+- the Node.js relayer transport from `@zama-fhe/sdk/node`
+- per-wallet `MemoryStorage`
+
+The `node()` transport runs FHE operations in Node.js worker threads — no browser
+dependencies required.
 
 ### Section 2 — Mint
 
@@ -108,7 +113,7 @@ transfer instead.
 | Step                  | Description                                                 |
 | --------------------- | ----------------------------------------------------------- |
 | Decrypt balance       | Read Account A's confidential cUSDT balance                 |
-| Shield                | Approve + wrap 100 USDT into 100 cUSDT                      |
+| Shield                | Convert 100 USDT into 100 cUSDT through SDK-owned routing   |
 | Decrypt balance       | Confirm new cUSDT balance                                   |
 | Confidential transfer | Send 10 cUSDT from A to B (amount encrypted on-chain)       |
 | Unshield              | Unwrap 50 cUSDT back to USDT (two-phase: unwrap + finalize) |
@@ -138,9 +143,8 @@ the process exits. In a production backend, implement `GenericStorage` backed by
 a persistent store (e.g. Redis) so credentials survive process restarts.
 
 For per-request isolation in an HTTP server (each request gets its own credential
-context), the SDK also exports `AsyncLocalMapStorage` from `@zama-fhe/sdk/node`,
-which uses Node.js `AsyncLocalStorage` under the hood — see the SDK documentation
-for usage.
+context), the SDK also exports `asyncLocalStorage` from `@zama-fhe/sdk/node`,
+which wraps Node.js `AsyncLocalStorage` — see the SDK documentation for usage.
 
 ---
 
