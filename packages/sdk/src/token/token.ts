@@ -588,7 +588,11 @@ export class Token {
     callbacks?: TransferCallbacks,
   ): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("confidentialTransferFrom");
-    await requireChainAlignment("confidentialTransferFrom", this.sdk.signer, this.sdk.provider);
+    await requireAlignedWalletAccount(
+      "confidentialTransferFrom",
+      this.sdk.signer,
+      this.sdk.provider,
+    );
     const normalizedFrom = getAddress(from);
     const normalizedTo = getAddress(to);
 

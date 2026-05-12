@@ -130,12 +130,11 @@ export class WrappedToken extends Token {
    * ```
    */
   async shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult> {
-    const signer = this.sdk.requireSigner("shield");
-    await requireChainAlignment("shield", this.sdk.signer, this.sdk.provider);
+    const account = await requireAlignedWalletAccount("shield", this.sdk.signer, this.sdk.provider);
 
     const isPayableToken = await this.isPayable();
     const underlying = await this.#getUnderlying();
-    const userAddress = signer.requireWalletAccount("shield").address;
+    const userAddress = getAddress(account.address);
 
     // ERC-20 balance check always runs (public read, no signing needed, works for all wallet types)
     let erc20Balance: bigint;
@@ -400,8 +399,8 @@ export class WrappedToken extends Token {
    */
   async unwrap(amount: bigint): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("unwrap");
-    await requireChainAlignment("unwrap", this.sdk.signer, this.sdk.provider);
-    const userAddress = signer.requireWalletAccount("unwrap").address;
+    const account = await requireAlignedWalletAccount("unwrap", this.sdk.signer, this.sdk.provider);
+    const userAddress = getAddress(account.address);
 
     const { handles, inputProof } = await this.sdk.encrypt({
       values: [{ value: amount, type: "euint64" }],
@@ -451,8 +450,12 @@ export class WrappedToken extends Token {
    */
   async unwrapAll(): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("unwrapAll");
-    await requireChainAlignment("unwrapAll", this.sdk.signer, this.sdk.provider);
-    const userAddress = signer.requireWalletAccount("unwrapAll").address;
+    const account = await requireAlignedWalletAccount(
+      "unwrapAll",
+      this.sdk.signer,
+      this.sdk.provider,
+    );
+    const userAddress = getAddress(account.address);
     const handle = await this.readConfidentialBalanceOf(userAddress);
 
     if (isZeroHandle(handle)) {
@@ -600,7 +603,12 @@ export class WrappedToken extends Token {
   ): Promise<void> {
     const signer = this.sdk.requireSigner("approveUnderlying");
     const underlying = await this.#getUnderlying();
-    const userAddress = signer.requireWalletAccount("approveUnderlying").address;
+    const account = await requireAlignedWalletAccount(
+      "approveUnderlying",
+      this.sdk.signer,
+      this.sdk.provider,
+    );
+    const userAddress = getAddress(account.address);
     const allowance = await this.sdk.provider.readContract(
       allowanceContract(underlying, userAddress, this.address),
     );
