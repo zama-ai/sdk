@@ -361,6 +361,8 @@ export interface ApproveUnderlyingRequest {
     // (undocumented)
     readonly amount: bigint;
     // (undocumented)
+    readonly from: Address;
+    // (undocumented)
     readonly kind: "ApproveUnderlying";
     // (undocumented)
     readonly spender: Address;
@@ -545,10 +547,8 @@ export interface BaseEvent {
     tokenAddress?: Address;
 }
 
-// Warning: (ae-forgotten-export) The symbol "CoreSigner" needs to be exported by the entry point index.d.ts
-//
 // @public
-export abstract class BaseSigner implements CoreSigner, Disposable {
+export abstract class BaseSigner implements Disposable {
     // (undocumented)
     [Symbol.dispose](): void;
     constructor(initial?: WalletAccount);
@@ -595,27 +595,6 @@ export interface BatchDecryptHandleItem {
 export interface BatchDecryptHandlesResult {
     // (undocumented)
     items: BatchDecryptHandleItem[];
-}
-
-// @public
-export interface Broadcaster {
-    signTransaction(unsignedTx: Hex): Promise<Hex>;
-    signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-}
-
-// @public
-export class BroadcastSigner extends BaseSigner implements OfflineSigner {
-    constructor(config: BroadcastSignerConfig);
-    // (undocumented)
-    signTransaction(unsignedTx: Hex): Promise<Hex>;
-    // (undocumented)
-    signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-}
-
-// @public
-export interface BroadcastSignerConfig {
-    account: WalletAccount;
-    broadcaster: Broadcaster;
 }
 
 // @public
@@ -5964,10 +5943,10 @@ export function confidentialTransferFromContract(encryptedErc20: Address, from: 
 export interface ConfidentialTransferFromRequest {
     // (undocumented)
     readonly amount: bigint;
-    // (undocumented)
     readonly from: Address;
     // (undocumented)
     readonly kind: "ConfidentialTransferFrom";
+    readonly owner: Address;
     // (undocumented)
     readonly to: Address;
     // (undocumented)
@@ -5977,6 +5956,7 @@ export interface ConfidentialTransferFromRequest {
 // @public
 export interface ConfidentialTransferRequest {
     readonly amount: bigint;
+    readonly from: Address;
     // (undocumented)
     readonly kind: "ConfidentialTransfer";
     readonly to: Address;
@@ -6005,12 +5985,38 @@ export interface CredentialBundle {
     readonly permits: readonly Permission[];
 }
 
+// Warning: (ae-internal-missing-underscore) The name "CredentialPermitContext" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal
+export interface CredentialPermitContext {
+    // (undocumented)
+    readonly chainId: number;
+    // (undocumented)
+    readonly chunk: readonly Address[];
+    // (undocumented)
+    readonly delegatorAddress: Address;
+    // (undocumented)
+    readonly keypairPublicKey: Hex;
+    // (undocumented)
+    readonly signerAddress: Address;
+    // (undocumented)
+    readonly startTimestamp: number;
+}
+
 // @public
 export interface CredentialPermitRequest {
     readonly contracts: readonly Address[];
     readonly delegator?: Address;
+    readonly from: Address;
     // (undocumented)
     readonly kind: "CredentialPermit";
+}
+
+// @public
+export interface CredentialPermitResult {
+    readonly contracts: readonly Address[];
+    readonly durationDays: number;
+    readonly startTimestamp: number;
 }
 
 // @public
@@ -6247,6 +6253,8 @@ export interface DelegateDecryptionRequest {
     readonly delegateAddress: Address;
     readonly expirationDate?: Date;
     // (undocumented)
+    readonly from: Address;
+    // (undocumented)
     readonly kind: "DelegateDecryption";
 }
 
@@ -6481,6 +6489,9 @@ export interface EncryptStartEvent extends BaseEvent {
     // (undocumented)
     type: typeof ZamaSDKEvents.EncryptStart;
 }
+
+// @public
+export function ensureHexSignature(value: unknown, method: string): Hex;
 
 // @public
 export const ERC1363_INTERFACE_ID: "0xb0202a11";
@@ -7563,6 +7574,8 @@ export function finalizeUnwrapContract(wrapper: Address, unwrapRequestIdOrAmount
 // @public
 export interface FinalizeUnwrapRequest {
     // (undocumented)
+    readonly from: Address;
+    // (undocumented)
     readonly kind: "FinalizeUnwrap";
     readonly unwrapRequestIdOrAmount: Handle;
     // (undocumented)
@@ -7608,6 +7621,10 @@ export interface GenericProvider {
     prepareTransaction<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(args: {
         from: Address;
         call: WriteContractConfig<TAbi, TFunctionName, TArgs>;
+        nonce?: number;
+        maxFeePerGas?: bigint;
+        maxPriorityFeePerGas?: bigint;
+        gasLimit?: bigint;
     }): Promise<Hex>;
     readContract<const TAbi extends ContractAbi, TFunctionName extends ReadFunctionName<TAbi>, const TArgs extends ReadContractArgs<TAbi, TFunctionName>>(config: ReadContractConfig<TAbi, TFunctionName, TArgs>): Promise<ReadContractReturnType<TAbi, TFunctionName, TArgs>>;
     sendRawTransaction(signedTx: Hex): Promise<Hex>;
@@ -7615,7 +7632,15 @@ export interface GenericProvider {
 }
 
 // @public
-export type GenericSigner = OnlineSigner | OfflineSigner;
+export interface GenericSigner {
+    dispose?(): void;
+    refreshWalletAccount?(): Promise<WalletAccount | undefined>;
+    requireWalletAccount(operation: string): WalletAccount;
+    signTransaction?(unsignedTx: Hex): Promise<Hex>;
+    signTypedData(typedData: EIP712TypedData): Promise<Hex>;
+    readonly walletAccount: WalletAccountStore;
+    writeContract?<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex>;
+}
 
 // @public
 export interface GenericStorage {
@@ -11777,29 +11802,17 @@ export class NoCiphertextError extends ZamaError {
 }
 
 // @public
-export interface OfflineSigner extends CoreSigner {
-    // (undocumented)
-    signTransaction(unsignedTx: Hex): Promise<Hex>;
-    // (undocumented)
-    writeContract?<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex>;
-}
-
-// @public
 export interface OfflineSigningOptions {
+    readonly gasLimit?: bigint;
+    readonly maxFeePerGas?: bigint;
+    readonly maxPriorityFeePerGas?: bigint;
+    readonly nonce?: number;
     // (undocumented)
     readonly signal?: AbortSignal;
 }
 
 // @public
 export type OnChainEvent = ConfidentialTransferEvent | WrappedEvent | UnwrapRequestedEvent | UnwrapFinalizedEvent | UnwrappedFinalizedEvent | UnwrappedStartedEvent;
-
-// @public
-export interface OnlineSigner extends CoreSigner {
-    // (undocumented)
-    signTransaction?(unsignedTx: Hex): Promise<Hex>;
-    // (undocumented)
-    writeContract<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex>;
-}
 
 // @public
 export interface PaginatedResult<T> {
@@ -11826,11 +11839,35 @@ export interface PendingUnshieldRequest {
 export type Permission = output<typeof PermissionSchema>;
 
 // @public
+export type PermitKind = "CredentialPermit";
+
+// @public
+export interface PreparedCredentialPermit {
+    // (undocumented)
+    readonly chainId: number;
+    // @internal
+    readonly context: CredentialPermitContext;
+    // (undocumented)
+    readonly from: Address;
+    // (undocumented)
+    readonly kind: "CredentialPermit";
+    // (undocumented)
+    readonly request: CredentialPermitRequest;
+    // (undocumented)
+    readonly typedData: EIP712TypedData | null;
+}
+
+// @public
 export type PreparedFor<K extends TransactionKind> = PreparedTransaction & {
     readonly kind: K;
     readonly request: Extract<TransactionPrepareRequest, {
         kind: K;
     }>;
+};
+
+// @public
+export type PreparedPermitFor<K extends PermitKind> = PreparedCredentialPermit & {
+    readonly kind: K;
 };
 
 // @public
@@ -13435,6 +13472,8 @@ export interface RevokeDelegationRequest {
     // (undocumented)
     readonly delegateAddress: Address;
     // (undocumented)
+    readonly from: Address;
+    // (undocumented)
     readonly kind: "RevokeDelegation";
 }
 
@@ -14787,6 +14826,8 @@ export function setOperatorContract(tokenAddress: Address, operator: Address, un
 // @public
 export interface SetOperatorRequest {
     // (undocumented)
+    readonly from: Address;
+    // (undocumented)
     readonly kind: "SetOperator";
     // (undocumented)
     readonly operator: Address;
@@ -14835,6 +14876,30 @@ export interface ShieldSubmittedEvent extends BaseEvent {
     txHash: Hex;
     // (undocumented)
     type: typeof ZamaSDKEvents.ShieldSubmitted;
+}
+
+// @public
+export class SignerAddressMismatchError extends ZamaError {
+    constructor(params: {
+        requested: Address;
+        configured: Address;
+        operation: string;
+    }, options?: ErrorOptions);
+    // (undocumented)
+    readonly configured: Address;
+    // (undocumented)
+    readonly operation: string;
+    // (undocumented)
+    readonly requested: Address;
+}
+
+// @public
+export class SignerCapabilityError extends SignerRequiredError {
+    constructor(operation: string, capability: SignerCapability, options?: ErrorOptions);
+    // Warning: (ae-forgotten-export) The symbol "SignerCapability" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    readonly capability: SignerCapability;
 }
 
 // @public
@@ -15079,7 +15144,7 @@ export class Token extends ReadonlyToken {
     }): Promise<PreparedFor<"ConfidentialTransfer">>;
     // (undocumented)
     prepareConfidentialTransferFrom(args: {
-        from: Address;
+        owner: Address;
         to: Address;
         amount: bigint;
     }): Promise<PreparedFor<"ConfidentialTransferFrom">>;
@@ -15250,6 +15315,8 @@ export interface TransferAndCallRequest {
     // (undocumented)
     readonly amount: bigint;
     // (undocumented)
+    readonly from: Address;
+    // (undocumented)
     readonly kind: "TransferAndCall";
     // (undocumented)
     readonly recipientData?: Hex;
@@ -15285,6 +15352,9 @@ export interface TransferSubmittedEvent extends BaseEvent {
     // (undocumented)
     type: typeof ZamaSDKEvents.TransferSubmitted;
 }
+
+// @public
+export type TxKind = TransactionKind;
 
 // @public
 export function underlyingContract(wrapperAddress: Address): {
@@ -16349,6 +16419,8 @@ export interface UnshieldPhase2SubmittedEvent extends BaseEvent {
 
 // @public
 export interface UnwrapAllRequest {
+    // (undocumented)
+    readonly from: Address;
     // (undocumented)
     readonly kind: "UnwrapAll";
     // (undocumented)
@@ -19040,6 +19112,8 @@ export interface UnwrappedStartedEvent {
 export interface UnwrapRequest {
     readonly amount: bigint;
     // (undocumented)
+    readonly from: Address;
+    // (undocumented)
     readonly kind: "Unwrap";
     readonly to: Address;
     readonly token: Address;
@@ -20204,6 +20278,8 @@ export interface WrapRequest {
     // (undocumented)
     readonly amount: bigint;
     // (undocumented)
+    readonly from: Address;
+    // (undocumented)
     readonly kind: "Wrap";
     // (undocumented)
     readonly to: Address;
@@ -20324,7 +20400,8 @@ export const ZamaErrorCode: {
     readonly SignerNotConfigured: "SIGNER_NOT_CONFIGURED"; /** Operation requires a connected wallet account. */
     readonly WalletNotConnected: "WALLET_NOT_CONNECTED"; /** Wallet account discovery is still resolving. */
     readonly WalletAccountNotReady: "WALLET_ACCOUNT_NOT_READY"; /** Signer lacks a capability required by the requested operation. */
-    readonly SignerMissingCapability: "SIGNER_MISSING_CAPABILITY";
+    readonly SignerMissingCapability: "SIGNER_MISSING_CAPABILITY"; /** A configured signer's wallet address does not match `request.from`. */
+    readonly SignerAddressMismatch: "SIGNER_ADDRESS_MISMATCH";
 };
 
 // @public
@@ -20359,11 +20436,9 @@ export class ZamaSDK {
     // @internal
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
-    execute(input: PreparedTransaction, options?: OfflineSigningOptions): Promise<TransactionResult>;
-    // (undocumented)
     execute(input: TransactionPrepareRequest, options?: OfflineSigningOptions): Promise<TransactionResult>;
     // (undocumented)
-    execute(input: CredentialPermitRequest, options?: OfflineSigningOptions): Promise<void>;
+    execute(input: CredentialPermitRequest, options?: OfflineSigningOptions): Promise<CredentialPermitResult | void>;
     getDelegationExpiry(input: {
         contractAddress: Address;
         delegatorAddress: Address;
@@ -20382,8 +20457,12 @@ export class ZamaSDK {
         kind: K;
     }>, options?: OfflineSigningOptions): Promise<PreparedFor<K>>;
     // (undocumented)
+    prepare<K extends PermitKind>(request: CredentialPermitRequest, options?: OfflineSigningOptions): Promise<PreparedPermitFor<K>>;
+    // (undocumented)
     readonly provider: GenericProvider;
     publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
+    refreshPrepared<K extends TransactionKind>(prepared: PreparedFor<K>, options?: OfflineSigningOptions): Promise<PreparedFor<K>>;
+    registerPermit<K extends PermitKind>(prepared: PreparedPermitFor<K>, signature: Hex, options?: OfflineSigningOptions): Promise<CredentialPermitResult>;
     readonly registry: WrappersRegistry;
     // (undocumented)
     readonly relayer: RelayerDispatcher;

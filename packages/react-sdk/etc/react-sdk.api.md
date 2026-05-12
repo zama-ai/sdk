@@ -12,12 +12,15 @@ import { Address } from '@zama-fhe/sdk';
 import { ApproveUnderlyingParams } from '@zama-fhe/sdk/query';
 import { BatchBalancesResult } from '@zama-fhe/sdk';
 import { BatchDecryptBalancesAsParams } from '@zama-fhe/sdk/query';
+import { BroadcastParams } from '@zama-fhe/sdk/query';
 import { ClearValueType } from '@zama-fhe/sdk';
+import { CompleteFromTxHashParams } from '@zama-fhe/sdk/query';
 import { ConfidentialSetOperatorParams } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferFromParams } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferParams } from '@zama-fhe/sdk/query';
 import { CreateDelegatedUserDecryptEIP712Params } from '@zama-fhe/sdk/query';
 import { CreateEIP712Params } from '@zama-fhe/sdk/query';
+import { CredentialPermitResult } from '@zama-fhe/sdk';
 import { DecryptBalanceAsParams } from '@zama-fhe/sdk/query';
 import { DecryptResult } from '@zama-fhe/sdk/query';
 import { DelegateDecryptionParams } from '@zama-fhe/sdk/query';
@@ -25,18 +28,29 @@ import { DelegatedUserDecryptMutationParams } from '@zama-fhe/sdk/query';
 import { DelegationStatusData } from '@zama-fhe/sdk/query';
 import { EIP712TypedData } from '@zama-fhe/sdk';
 import { EncryptParams } from '@zama-fhe/sdk';
+import { ExecuteParams } from '@zama-fhe/sdk/query';
+import { ExecuteResult } from '@zama-fhe/sdk/query';
 import { FinalizeUnwrapParams } from '@zama-fhe/sdk/query';
+import { Hex } from '@zama-fhe/sdk';
 import { PaginatedResult } from '@zama-fhe/sdk';
+import { PermitKind } from '@zama-fhe/sdk';
+import { PreparedFor } from '@zama-fhe/sdk';
+import { PreparedPermitFor } from '@zama-fhe/sdk';
+import { PrepareParams } from '@zama-fhe/sdk/query';
 import { PropsWithChildren } from 'react';
 import { PublicKeyData } from '@zama-fhe/sdk';
 import { ReadonlyToken } from '@zama-fhe/sdk';
+import { RefreshPreparedParams } from '@zama-fhe/sdk/query';
+import { RegisterPermitParams } from '@zama-fhe/sdk/query';
 import { ResumeUnshieldParams } from '@zama-fhe/sdk/query';
 import { RevokeDelegationParams } from '@zama-fhe/sdk/query';
 import { ShieldParams } from '@zama-fhe/sdk/query';
+import { SignParams } from '@zama-fhe/sdk/query';
 import { Token } from '@zama-fhe/sdk';
 import { TokenMetadata } from '@zama-fhe/sdk/query';
 import { TokenWrapperPair } from '@zama-fhe/sdk';
 import { TokenWrapperPairWithMetadata } from '@zama-fhe/sdk';
+import { TransactionKind } from '@zama-fhe/sdk';
 import { TransactionResult } from '@zama-fhe/sdk';
 import { UnshieldAllParams } from '@zama-fhe/sdk/query';
 import { UnshieldParams } from '@zama-fhe/sdk/query';
@@ -59,7 +73,13 @@ export function useApproveUnderlying(config: UseZamaConfig, options?: UseMutatio
 export function useBatchDecryptBalancesAs(tokens: ReadonlyToken[], options?: UseMutationOptions<Map<Address, bigint>, Error, BatchDecryptBalancesAsParams>): _$_tanstack_react_query0.UseMutationResult<Map<`0x${string}`, bigint>, Error, _$_zama_fhe_sdk0.BatchDecryptAsOptions, unknown>;
 
 // @public
+export function useBroadcast<TContext = unknown>(options?: UseMutationOptions<TransactionResult, Error, BroadcastParams, TContext>): UseMutationResult<TransactionResult, Error, BroadcastParams, TContext>;
+
+// @public
 export function useClearCredentials(options?: UseMutationOptions<void>): _$_tanstack_react_query0.UseMutationResult<void, Error, void, unknown>;
+
+// @public
+export function useCompleteFromTxHash<TContext = unknown>(options?: UseMutationOptions<TransactionResult, Error, CompleteFromTxHashParams, TContext>): UseMutationResult<TransactionResult, Error, CompleteFromTxHashParams, TContext>;
 
 // @public
 export function useConfidentialBalance(config: UseConfidentialBalanceConfig, options?: UseConfidentialBalanceOptions): _$_tanstack_react_query0.UseQueryResult<bigint, Error>;
@@ -165,6 +185,9 @@ export function useEncrypt(): _$_tanstack_react_query0.UseMutationResult<Readonl
 }>, Error, EncryptParams, unknown>;
 
 // @public
+export function useExecute<TContext = unknown>(options?: UseMutationOptions<ExecuteResult, Error, ExecuteParams, TContext>): UseMutationResult<ExecuteResult, Error, ExecuteParams, TContext>;
+
+// @public
 export function useFinalizeUnwrap(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, FinalizeUnwrapParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, FinalizeUnwrapParams, `0x${string}`>;
 
 // @public
@@ -209,6 +232,9 @@ export function useMetadata(tokenAddress: Address, options?: Omit<UseQueryOption
 export function useMetadataSuspense(tokenAddress: Address): _$_tanstack_react_query0.UseSuspenseQueryResult<TokenMetadata, Error>;
 
 // @public
+export function usePrepare<TContext = unknown>(options?: UseMutationOptions<PreparedFor<TransactionKind> | PreparedPermitFor<PermitKind>, Error, PrepareParams, TContext>): UseMutationResult<PreparedFor<TransactionKind> | PreparedPermitFor<PermitKind>, Error, PrepareParams, TContext>;
+
+// @public
 export function usePublicDecrypt(): _$_tanstack_react_query0.UseMutationResult<Readonly<{
     clearValues: _$_zama_fhe_relayer_sdk_web0.ClearValues;
     abiEncodedClearValues: `0x${string}`;
@@ -226,6 +252,12 @@ export function usePublicParams(bits: number): _$_tanstack_react_query0.UseQuery
 
 // @public
 export function useReadonlyToken(address: Address): _$_zama_fhe_sdk0.ReadonlyToken;
+
+// @public
+export function useRefreshPrepared<TContext = unknown>(options?: UseMutationOptions<PreparedFor<TransactionKind>, Error, RefreshPreparedParams, TContext>): UseMutationResult<PreparedFor<TransactionKind>, Error, RefreshPreparedParams, TContext>;
+
+// @public
+export function useRegisterPermit<TContext = unknown>(options?: UseMutationOptions<CredentialPermitResult, Error, RegisterPermitParams, TContext>): UseMutationResult<CredentialPermitResult, Error, RegisterPermitParams, TContext>;
 
 // @public
 export function useRequestZKProofVerification(): _$_tanstack_react_query0.UseMutationResult<Readonly<{
@@ -249,6 +281,9 @@ export function useShield<TContext = unknown>(config: UseShieldConfig, options?:
 export interface UseShieldConfig extends UseZamaConfig {
     optimistic?: boolean;
 }
+
+// @public
+export function useSign<TContext = unknown>(options?: UseMutationOptions<Hex, Error, SignParams, TContext>): UseMutationResult<Hex, Error, SignParams, TContext>;
 
 // @public
 export function useToken(config: UseZamaConfig): Token;

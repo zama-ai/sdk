@@ -83,9 +83,39 @@ export function batchDecryptBalancesAsMutationOptions(tokens: ReadonlyToken[]): 
 export type BatchDecryptBalancesAsParams = BatchDecryptAsOptions;
 
 // @public
+export function broadcastMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.broadcast"], BroadcastParams, TransactionResult>;
+
+// @public
+export interface BroadcastParams {
+    // Warning: (ae-forgotten-export) The symbol "OfflineSigningOptions" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    readonly options?: OfflineSigningOptions;
+    // Warning: (ae-forgotten-export) The symbol "PreparedTransaction" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    readonly prepared: PreparedTransaction;
+    // (undocumented)
+    readonly signedTx: Hex;
+}
+
+// @public
 export function clearCredentialsMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.clearCredentials"], void, void>;
 
 export { ClearValueType }
+
+// @public
+export function completeFromTxHashMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.completeFromTxHash"], CompleteFromTxHashParams, TransactionResult>;
+
+// @public
+export interface CompleteFromTxHashParams {
+    // (undocumented)
+    readonly options?: OfflineSigningOptions;
+    // (undocumented)
+    readonly prepared: PreparedTransaction;
+    // (undocumented)
+    readonly txHash: Hex;
+}
 
 // @public (undocumented)
 export interface ConfidentialBalanceQueryConfig {
@@ -387,6 +417,25 @@ export interface EncryptStartEvent extends BaseEvent {
 }
 
 // @public
+export function executeMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.execute"], ExecuteParams, ExecuteResult>;
+
+// @public
+export interface ExecuteParams {
+    // (undocumented)
+    readonly options?: OfflineSigningOptions;
+    // Warning: (ae-forgotten-export) The symbol "TransactionPrepareRequest" needs to be exported by the entry point index.d.ts
+    // Warning: (ae-forgotten-export) The symbol "CredentialPermitRequest" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    readonly request: TransactionPrepareRequest | CredentialPermitRequest;
+}
+
+// Warning: (ae-forgotten-export) The symbol "CredentialPermitResult" needs to be exported by the entry point index.d.ts
+//
+// @public
+export type ExecuteResult = TransactionResult | CredentialPermitResult | void;
+
+// @public
 export function filterQueryOptions<TOptions extends Record<string, unknown>>(options: TOptions): Omit<TOptions, StrippedQueryOptionKeys>;
 
 // @public (undocumented)
@@ -412,11 +461,21 @@ export interface FinalizeUnwrapSubmittedEvent extends BaseEvent {
 // @public (undocumented)
 export function generateKeypairMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.generateKeypair"], void, KeypairType<Hex>>;
 
-// Warning: (ae-forgotten-export) The symbol "OnlineSigner" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "OfflineSigner" needs to be exported by the entry point index.d.ts
-//
 // @public
-export type GenericSigner = OnlineSigner | OfflineSigner;
+export interface GenericSigner {
+    dispose?(): void;
+    refreshWalletAccount?(): Promise<WalletAccount | undefined>;
+    requireWalletAccount(operation: string): WalletAccount;
+    signTransaction?(unsignedTx: Hex): Promise<Hex>;
+    signTypedData(typedData: EIP712TypedData): Promise<Hex>;
+    // Warning: (ae-forgotten-export) The symbol "WalletAccountStore" needs to be exported by the entry point index.d.ts
+    readonly walletAccount: WalletAccountStore;
+    // Warning: (ae-forgotten-export) The symbol "ContractAbi" needs to be exported by the entry point index.d.ts
+    // Warning: (ae-forgotten-export) The symbol "WriteFunctionName" needs to be exported by the entry point index.d.ts
+    // Warning: (ae-forgotten-export) The symbol "WriteContractArgs" needs to be exported by the entry point index.d.ts
+    // Warning: (ae-forgotten-export) The symbol "WriteContractConfig" needs to be exported by the entry point index.d.ts
+    writeContract?<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex>;
+}
 
 // @public
 export interface GenericStorage {
@@ -530,6 +589,25 @@ export interface MutationFactoryOptions<TMutationKey extends readonly unknown[],
 // @public
 export type OnChainEvent = ConfidentialTransferEvent | WrappedEvent | UnwrapRequestedEvent | UnwrapFinalizedEvent | UnwrappedFinalizedEvent | UnwrappedStartedEvent;
 
+// @public
+export function prepareMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.prepare"], PrepareParams, PrepareResult>;
+
+// @public
+export interface PrepareParams {
+    // (undocumented)
+    readonly options?: OfflineSigningOptions;
+    // (undocumented)
+    readonly request: TransactionPrepareRequest | CredentialPermitRequest;
+}
+
+// Warning: (ae-forgotten-export) The symbol "PreparedFor" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "TransactionKind" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "PreparedPermitFor" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "PermitKind" needs to be exported by the entry point index.d.ts
+//
+// @public
+export type PrepareResult = PreparedFor<TransactionKind> | PreparedPermitFor<PermitKind>;
+
 // @public (undocumented)
 export function publicDecryptMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.publicDecrypt"], Handle[], PublicDecryptResult>;
 
@@ -634,6 +712,30 @@ export class ReadonlyToken {
     underlyingToken(): Promise<Address>;
 }
 
+// @public
+export function refreshPreparedMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.refreshPrepared"], RefreshPreparedParams, PreparedFor<TransactionKind>>;
+
+// @public
+export interface RefreshPreparedParams {
+    // (undocumented)
+    readonly options?: OfflineSigningOptions;
+    // (undocumented)
+    readonly prepared: PreparedFor<TransactionKind>;
+}
+
+// @public
+export function registerPermitMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.registerPermit"], RegisterPermitParams, CredentialPermitResult>;
+
+// @public
+export interface RegisterPermitParams {
+    // (undocumented)
+    readonly options?: OfflineSigningOptions;
+    // (undocumented)
+    readonly prepared: PreparedPermitFor<PermitKind>;
+    // (undocumented)
+    readonly signature: Hex;
+}
+
 // Warning: (ae-forgotten-export) The symbol "FheOperations" needs to be exported by the entry point index.d.ts
 //
 // @public
@@ -715,6 +817,17 @@ export interface ShieldSubmittedEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.ShieldSubmitted;
 }
 
+// @public
+export function signMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.sign"], SignParams, Hex>;
+
+// @public
+export interface SignParams {
+    // (undocumented)
+    readonly options?: OfflineSigningOptions;
+    // (undocumented)
+    readonly prepared: PreparedTransaction;
+}
+
 // @public (undocumented)
 export type StrippedQueryOptionKeys = "gcTime" | "staleTime" | "enabled" | "select" | "refetchInterval" | "refetchOnMount" | "refetchOnWindowFocus" | "refetchOnReconnect" | "retry" | "retryDelay" | "retryOnMount" | "queryFn" | "queryKey" | "queryKeyHashFn" | "initialData" | "initialDataUpdatedAt" | "placeholderData" | "structuralSharing" | "throwOnError" | "meta" | "query" | "pollingInterval";
 
@@ -762,8 +875,6 @@ export class Token extends ReadonlyToken {
     prepareApproveUnderlying(args: {
         amount: bigint;
     }): Promise<PreparedFor<"ApproveUnderlying">>;
-    // Warning: (ae-forgotten-export) The symbol "PreparedFor" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     prepareConfidentialTransfer(args: {
         to: Address;
@@ -771,7 +882,7 @@ export class Token extends ReadonlyToken {
     }): Promise<PreparedFor<"ConfidentialTransfer">>;
     // (undocumented)
     prepareConfidentialTransferFrom(args: {
-        from: Address;
+        owner: Address;
         to: Address;
         amount: bigint;
     }): Promise<PreparedFor<"ConfidentialTransferFrom">>;
@@ -1381,13 +1492,9 @@ export class ZamaSDK {
     // @internal
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
-    execute(input: PreparedTransaction, options?: OfflineSigningOptions): Promise<TransactionResult>;
-    // (undocumented)
     execute(input: TransactionPrepareRequest, options?: OfflineSigningOptions): Promise<TransactionResult>;
-    // Warning: (ae-forgotten-export) The symbol "CredentialPermitRequest" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
-    execute(input: CredentialPermitRequest, options?: OfflineSigningOptions): Promise<void>;
+    execute(input: CredentialPermitRequest, options?: OfflineSigningOptions): Promise<CredentialPermitResult | void>;
     getDelegationExpiry(input: {
         contractAddress: Address;
         delegatorAddress: Address;
@@ -1402,15 +1509,16 @@ export class ZamaSDK {
     }): Promise<boolean>;
     // @internal
     onWalletAccountChange(listener: WalletAccountListener): () => void;
-    // Warning: (ae-forgotten-export) The symbol "TransactionKind" needs to be exported by the entry point index.d.ts
-    // Warning: (ae-forgotten-export) The symbol "TransactionPrepareRequest" needs to be exported by the entry point index.d.ts
-    // Warning: (ae-forgotten-export) The symbol "OfflineSigningOptions" needs to be exported by the entry point index.d.ts
     prepare<K extends TransactionKind>(request: Extract<TransactionPrepareRequest, {
         kind: K;
     }>, options?: OfflineSigningOptions): Promise<PreparedFor<K>>;
     // (undocumented)
+    prepare<K extends PermitKind>(request: CredentialPermitRequest, options?: OfflineSigningOptions): Promise<PreparedPermitFor<K>>;
+    // (undocumented)
     readonly provider: GenericProvider;
     publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
+    refreshPrepared<K extends TransactionKind>(prepared: PreparedFor<K>, options?: OfflineSigningOptions): Promise<PreparedFor<K>>;
+    registerPermit<K extends PermitKind>(prepared: PreparedPermitFor<K>, signature: Hex, options?: OfflineSigningOptions): Promise<CredentialPermitResult>;
     readonly registry: WrappersRegistry;
     // (undocumented)
     readonly relayer: RelayerDispatcher;
@@ -1420,7 +1528,6 @@ export class ZamaSDK {
         delegateAddress: Address;
     }): Promise<TransactionResult>;
     revokePermits(contracts?: Address[]): Promise<void>;
-    // Warning: (ae-forgotten-export) The symbol "PreparedTransaction" needs to be exported by the entry point index.d.ts
     sign(prepared: PreparedTransaction, options?: OfflineSigningOptions): Promise<Hex>;
     // (undocumented)
     readonly signer: GenericSigner | undefined;
@@ -1464,9 +1571,9 @@ export const ZamaSDKEvents: {
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/types-BItYuAYE.d.ts:561:3 - (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
-// dist/esm/types-BItYuAYE.d.ts:562:3 - (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
-// dist/esm/types-BItYuAYE.d.ts:563:3 - (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
+// dist/esm/types-BYZ5lTem.d.ts:561:3 - (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
+// dist/esm/types-BYZ5lTem.d.ts:562:3 - (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
+// dist/esm/types-BYZ5lTem.d.ts:563:3 - (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

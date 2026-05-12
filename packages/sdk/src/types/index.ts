@@ -11,8 +11,6 @@ export type {
 export type { TransactionReceipt, TransactionResult } from "./transaction";
 export type {
   GenericSigner,
-  OfflineSigner,
-  OnlineSigner,
   WalletAccount,
   WalletAccountChange,
   WalletAccountListener,

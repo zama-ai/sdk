@@ -3,7 +3,7 @@ import {
   type ContractAbi,
   type EIP712TypedData,
   type Hex,
-  type OnlineSigner,
+  type GenericSigner,
   type WalletAccount,
   type WriteContractArgs,
   type WriteFunctionName,
@@ -37,7 +37,7 @@ export interface WagmiSignerConfig {
  *
  * @param signerConfig - {@link WagmiSignerConfig} with wagmi config
  */
-export class WagmiSigner extends BaseSigner implements OnlineSigner {
+export class WagmiSigner extends BaseSigner implements GenericSigner {
   readonly #config: Config;
   readonly #unsubscribeConnection: () => void;
 

@@ -13,7 +13,7 @@ import { WalletNotConnectedError } from "../errors";
 import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
 import { BaseSigner } from "../signer/base-signer";
 import { eip1193Subscribe } from "../signer/eip1193-subscribe";
-import type { OnlineSigner, WalletAccount, WriteContractConfig } from "../types";
+import type { GenericSigner, WalletAccount, WriteContractConfig } from "../types";
 
 /**
  * Configuration for {@link ViemSigner}.
@@ -41,7 +41,7 @@ function walletAccountFromWalletClient(walletClient: WalletClient): WalletAccoun
   return { address, chainId: walletClient.chain.id };
 }
 
-export class ViemSigner extends BaseSigner implements OnlineSigner {
+export class ViemSigner extends BaseSigner implements GenericSigner {
   readonly #walletClient: WalletClient;
   readonly #ethereum?: EIP1193Provider;
   readonly #unsubscribeProvider: () => void;

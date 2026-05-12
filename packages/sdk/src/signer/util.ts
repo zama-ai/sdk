@@ -13,7 +13,7 @@ import { SigningFailedError } from "../errors";
  *
  * @example
  * ```ts
- * class MyCustodianSigner extends BaseSigner implements OfflineSigner {
+ * class MyCustodianSigner extends BaseSigner implements GenericSigner {
  *   async signTransaction(unsignedTx: Hex): Promise<Hex> {
  *     const raw = await this.custodianClient.sign(unsignedTx);
  *     return ensureHexSignature(raw, "signTransaction");

@@ -52,17 +52,23 @@ export interface WalletAccountStore {
 }
 
 /**
- * Common shape every signer must satisfy: wallet account observability,
- * `requireWalletAccount`, and `signTypedData`. The capability methods
- * (`writeContract` / `signTransaction`) are added on top via
- * {@link GenericSigner} so the type can enforce "at least one capability".
+ * Framework-agnostic signer. Always exposes wallet-account observability,
+ * `requireWalletAccount`, and `signTypedData`. Tx-signing is offered through
+ * two optional capabilities — `writeContract` (atomic sign+broadcast in one
+ * wallet round-trip; browser wallets, embedded wallets, server-side EOAs)
+ * and `signTransaction` (return signed bytes for the SDK to broadcast via
+ * {@link GenericProvider.sendRawTransaction}; HSM-backed or in-process
+ * air-gap signers). A signer may expose either, both (hybrid), or neither
+ * (typed-data-only).
  *
- * Internal adapters extend {@link BaseSigner} (which implements this); third
- * parties typically don't need to name this type directly.
- *
- * @internal
+ * The SDK gates capability mismatches at runtime via
+ * {@link SignerCapabilityError}: atomic write methods throw when
+ * `writeContract` is absent, and the deferred `sign` path throws when
+ * `signTransaction` is absent. Implementers extend {@link BaseSigner} for
+ * the wallet-account / dispose boilerplate, or implement this interface
+ * directly with {@link createWalletAccountStore}.
  */
-export interface CoreSigner {
+export interface GenericSigner {
   /** Observable wallet account readiness state. */
   readonly walletAccount: WalletAccountStore;
   /**
@@ -77,35 +83,7 @@ export interface CoreSigner {
   refreshWalletAccount?(): Promise<WalletAccount | undefined>;
   /** Sign EIP-712 typed data (used for decrypt authorization). */
   signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-  /** Release adapter-owned wallet watchers or provider event listeners. */
-  dispose?(): void;
-}
-
-/**
- * Online signer: signs and broadcasts a write transaction in a single
- * wallet round-trip via `writeContract`. Browser wallets, embedded wallets
- * in non-policy mode, and server-side EOAs (viem / ethers / wagmi adapters)
- * fall in this group. `signTransaction` MAY also be present for hybrid use.
- */
-export interface OnlineSigner extends CoreSigner {
-  writeContract<
-    const TAbi extends ContractAbi,
-    TFunctionName extends WriteFunctionName<TAbi>,
-    const TArgs extends WriteContractArgs<TAbi, TFunctionName>,
-  >(
-    config: WriteContractConfig<TAbi, TFunctionName, TArgs>,
-  ): Promise<Hex>;
-  signTransaction?(unsignedTx: Hex): Promise<Hex>;
-}
-
-/**
- * Offline signer: returns signed bytes for an SDK-built unsigned
- * transaction via `signTransaction`; the SDK broadcasts via
- * {@link GenericProvider.sendRawTransaction}. Institutional custody
- * (Dfns, Fireblocks, Fordefi, Turnkey policy mode) and HSM-backed signers
- * fall in this group. `writeContract` MAY also be present for hybrid use.
- */
-export interface OfflineSigner extends CoreSigner {
+  /** Atomic sign-and-broadcast in one wallet round-trip. */
   writeContract?<
     const TAbi extends ContractAbi,
     TFunctionName extends WriteFunctionName<TAbi>,
@@ -113,18 +91,8 @@ export interface OfflineSigner extends CoreSigner {
   >(
     config: WriteContractConfig<TAbi, TFunctionName, TArgs>,
   ): Promise<Hex>;
-  signTransaction(unsignedTx: Hex): Promise<Hex>;
+  /** Return signed bytes for an SDK-built unsigned transaction. */
+  signTransaction?(unsignedTx: Hex): Promise<Hex>;
+  /** Release adapter-owned wallet watchers or provider event listeners. */
+  dispose?(): void;
 }
-
-/**
- * Framework-agnostic signer — either an {@link OnlineSigner} (writeContract)
- * or an {@link OfflineSigner} (signTransaction). The type enforces "at least
- * one capability" — a literal with neither method fails to assign. A signer
- * may satisfy both arms (hybrid).
- *
- * The SDK accepts `GenericSigner` everywhere and gates the wrong-flavour-
- * for-the-method case at runtime: atomic write methods throw
- * {@link SignerCapabilityError} when only `signTransaction` is present, and
- * vice versa for the deferred `prepare* / sign / broadcast` pipeline.
- */
-export type GenericSigner = OnlineSigner | OfflineSigner;

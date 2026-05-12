@@ -89,6 +89,10 @@ export class ViemProvider implements GenericProvider {
     prepareTransaction<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(args: {
         from: Address;
         call: WriteContractConfig<TAbi, TFunctionName, TArgs>;
+        nonce?: number;
+        maxFeePerGas?: bigint;
+        maxPriorityFeePerGas?: bigint;
+        gasLimit?: bigint;
     }): Promise<Hex>;
     // Warning: (ae-forgotten-export) The symbol "ReadContractConfig" needs to be exported by the entry point index.d.ts
     //
@@ -108,10 +112,10 @@ export interface ViemProviderConfig {
 }
 
 // Warning: (ae-forgotten-export) The symbol "BaseSigner" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "OnlineSigner" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "GenericSigner" needs to be exported by the entry point index.d.ts
 //
 // @public (undocumented)
-export class ViemSigner extends BaseSigner implements OnlineSigner {
+export class ViemSigner extends BaseSigner implements GenericSigner {
     constructor(config: ViemSignerConfig);
     // (undocumented)
     protected onDispose(): void;

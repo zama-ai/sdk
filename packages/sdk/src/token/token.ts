@@ -1107,14 +1107,14 @@ export class Token extends ReadonlyToken {
    * const plan = await token.prepareShield(1_000n);
    * for (const step of plan.steps) {
    *   const prepared = await sdk.prepare(step);
-   *   const signed   = await broadcaster.signTransaction(prepared.unsignedTx);
+   *   const signed   = await externalSigner.signTransaction(prepared.unsignedTx);
    *   await sdk.broadcast(prepared, signed);
    * }
    * ```
    */
   async prepareShield(amount: bigint, options?: { recipient?: Address }): Promise<ShieldPlan> {
     // Chain-align before any custodian round-trip so a wrong-chain plan
-    // never reaches the broadcaster.
+    // never reaches the external signer.
     const account = await requireAlignedWalletAccount(
       "prepareShield",
       this.sdk.signer,
