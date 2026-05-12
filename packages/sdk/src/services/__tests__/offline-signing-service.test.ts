@@ -21,9 +21,9 @@ const ACCOUNT = {
 };
 const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
 const RECIPIENT = "0x3333333333333333333333333333333333333333" as Address;
-const UNSIGNED = "0xunsignedtx" as Hex;
-const SIGNED = "0xsignedtx" as Hex;
-const TX_HASH = "0xtxhash" as Hex;
+const UNSIGNED = "0xdeadbeef" as Hex;
+const SIGNED = "0xfeedface" as Hex;
+const TX_HASH = ("0x" + "ab".repeat(32)) as Hex;
 
 function makeBroadcaster(overrides: Partial<Broadcaster> = {}): Broadcaster {
   return {

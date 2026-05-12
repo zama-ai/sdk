@@ -75,9 +75,11 @@ export interface FinalizeUnwrapRequest {
  * ERC-20 `approve(spender, value)` on the underlying token, used to grant
  * the wrapper spending rights before a non-1363 `wrap`.
  *
- * For USDT-style tokens that require a zero-reset, callers issue two
- * `ApproveUnderlying` requests in sequence (`amount: 0n` then `amount: N`)
- * or rely on the `Token.prepareShield` multi-step planner.
+ * For USDT-style tokens that revert on a non-zero → non-zero approval,
+ * callers must issue two `ApproveUnderlying` requests in sequence
+ * (`amount: 0n` then `amount: N`). `Token.prepareShield` does not detect
+ * this case; check existing allowance first when integrating with USDT-like
+ * underlyings.
  */
 export interface ApproveUnderlyingRequest {
   readonly kind: "ApproveUnderlying";
@@ -129,11 +131,8 @@ export interface RevokeDelegationRequest {
  * FHE credential permit request. Used via {@link ZamaSDK.execute} for both
  * online and broadcast signers — the underlying flow signs typed data (not
  * a transaction), so this kind never appears in {@link PreparedTransaction}.
- *
- * The cross-process "prepare typed-data, sign externally, store later" flow
- * lands in Phase 3 with dedicated `prepareCredentialPermit` /
- * `completeCredentialPermit` helpers; in Phase 2 only the atomic
- * {@link ZamaSDK.execute} path exists.
+ * Currently only reachable atomically; per-step `prepare*` / `complete*`
+ * helpers for cross-process typed-data signing are not yet exposed.
  */
 export interface CredentialPermitRequest {
   readonly kind: "CredentialPermit";
@@ -185,10 +184,12 @@ export type ExecuteRequest = TransactionPrepareRequest | CredentialPermitRequest
  * {@link PreparedFor} for kind-specific narrowing (e.g. on Token-level
  * `prepareX` return types).
  *
- * JSON-serializable: ship to another process with `JSON.stringify`,
- * revive with `JSON.parse` (bigints inside the request are out of scope —
- * none of the supported kinds carry bigints at this layer; bigint fields
- * like `amount` are folded into the unsigned tx during `prepare`).
+ * The `unsignedTx` + `from` / `to` / `chainId` fields are JSON-safe and
+ * cover everything `broadcast` / `completeFromTxHash` need. The `request`
+ * field is preserved for diagnostics and includes the original caller input
+ * — several kinds carry `bigint` fields (`amount`, …), so callers shipping
+ * a {@link PreparedTransaction} across a process boundary should strip or
+ * stringify `request` before `JSON.stringify`.
  */
 export interface PreparedTransaction {
   readonly kind: TransactionKind;
@@ -203,6 +204,12 @@ export interface PreparedTransaction {
  * {@link PreparedTransaction} narrowed by `kind` — return type of
  * `sdk.prepare(request)` and the Token-level `prepareX` sugar methods.
  * Always a subtype of {@link PreparedTransaction}.
+ *
+ * Modeled as an intersection (not a standalone interface) so kind-narrowed
+ * values stay assignable to the wide `PreparedTransaction` despite
+ * `Extract<…, { kind: K }>` being invariant in `K` — a separate
+ * `interface PreparedFor<K>` would reject `PreparedFor<"X">` where the
+ * wide form is expected.
  */
 export type PreparedFor<K extends TransactionKind> = PreparedTransaction & {
   readonly kind: K;

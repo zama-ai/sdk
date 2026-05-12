@@ -170,7 +170,7 @@ export class ZamaSDK {
     return this.#offlineSigningService;
   }
 
-  // ─── Deferred signing pipeline (SDK-75) ──────────────────────────────
+  // ─── Deferred signing pipeline ───────────────────────────────────────
   // For institutional custody / HSM / policy-engine workflows where build,
   // sign, and broadcast cannot run synchronously in a single Promise.
   // Atomic call sites (`Token.confidentialTransfer`, etc.) remain unchanged.
@@ -230,10 +230,7 @@ export class ZamaSDK {
     input: PreparedTransaction | ExecuteRequest,
     options?: OfflineSigningOptions,
   ): Promise<TransactionResult | void> {
-    return this.#requireOfflineSigningService("execute").execute(
-      input as TransactionPrepareRequest,
-      options,
-    );
+    return this.#requireOfflineSigningService("execute").execute(input, options);
   }
 
   /**

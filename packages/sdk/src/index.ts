@@ -75,6 +75,7 @@ export {
   ReadonlyToken,
   type BatchBalancesResult,
   type BatchDecryptAsOptions,
+  type ShieldPlan,
   ZERO_HANDLE,
   isZeroHandle,
   savePendingUnshield,

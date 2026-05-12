@@ -70,14 +70,13 @@ export interface WalletAccountStore {
  *   (Dfns, Fireblocks, Fordefi, Turnkey policy mode).
  *
  * At least one of the two must be present for any write op to succeed. A
- * signer may implement both — the SDK prefers `writeContract` for atomic
- * call sites and falls back to `signTransaction + sendRawTransaction`
- * otherwise.
+ * signer may implement both — atomic call sites use `writeContract`, the
+ * deferred `prepare* / sign / broadcast` pipeline uses `signTransaction`;
+ * the SDK does not currently route between them automatically.
  *
  * Calling an atomic op on a signer that only exposes `signTransaction`
  * throws {@link SignerCapabilityError}; route through the deferred
- * `prepare*` / `complete*` surface (or rely on the SDK's transparent
- * fallback once enabled) instead.
+ * `prepare* / complete*` surface instead.
  */
 export interface GenericSigner {
   /** Observable wallet account readiness state. */

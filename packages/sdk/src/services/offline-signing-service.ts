@@ -20,6 +20,7 @@ import {
   ConfigurationError,
   EncryptionFailedError,
   TransactionRevertedError,
+  wrapDecryptError,
   ZamaError,
 } from "../errors";
 import type { TransactionErrorOperation, ZamaSDKEventInput } from "../events/sdk-events";
@@ -64,8 +65,9 @@ export interface OfflineSigningServiceConfig {
 
 /**
  * Optional behaviour overrides shared by every {@link OfflineSigningService}
- * method. Reserved for Phase 3+ extensions (custom nonces, fee overrides,
- * idempotency keys). Phase 2 only honours `signal`.
+ * method. The shape exists so future additions (custom nonces, fee overrides,
+ * idempotency keys, cancellation) are non-breaking. No fields are currently
+ * wired through to the underlying provider / signer calls.
  */
 export interface OfflineSigningOptions {
   readonly signal?: AbortSignal;
@@ -100,17 +102,15 @@ const ERROR_OPERATION_BY_KIND: Record<TransactionKind, TransactionErrorOperation
 };
 
 /**
- * Deferred-signing pipeline for SDK-75 — separates `prepare`, `sign`, and
- * `broadcast` for institutional custody and policy-engine workflows where
- * the three phases cannot run synchronously in a single Promise.
+ * Deferred-signing pipeline. Separates `prepare`, `sign`, and `broadcast`
+ * for institutional custody and policy-engine workflows where the three
+ * phases cannot run synchronously in a single Promise.
  *
  * Atomic call sites (`Token.confidentialTransfer`, etc.) keep their
  * `signer.writeContract` path; this service is the parallel route for
  * signers that expose `signTransaction` instead.
  *
- * Owned by {@link ZamaSDK}. Public methods are forwarded as
- * `sdk.prepare` / `sdk.sign` / `sdk.broadcast` / `sdk.execute` /
- * `sdk.completeFromTxHash`.
+ * Owned by {@link ZamaSDK}.
  *
  * @internal
  */
@@ -177,17 +177,27 @@ export class OfflineSigningService {
   /**
    * Submit a previously-signed transaction, await its receipt, emit the
    * matching `*Submitted` event, and return the {@link TransactionResult}.
+   *
+   * Re-checks chain alignment between `prepared.chainId` and the configured
+   * provider before sending — the gap between prepare and broadcast is the
+   * whole point of deferred signing, and the user may have switched chains
+   * meanwhile.
+   *
+   * Errors are reported in two distinct shapes so subscribers can recover:
+   * a pre-submit failure (chain mismatch, RPC reject) is wrapped as
+   * `TransactionRevertedError("Broadcast failed for …")`; a post-submit
+   * failure (receipt wait timeout or revert) preserves `txHash` in the
+   * message so the caller can resume via {@link completeFromTxHash}.
    */
   async broadcast(
     prepared: PreparedTransaction,
     signedTx: Hex,
     _options?: OfflineSigningOptions,
   ): Promise<TransactionResult> {
+    await this.#assertSameChainAsPrepared(prepared, "broadcast");
+    let txHash: Hex;
     try {
-      const txHash = await this.#provider.sendRawTransaction(signedTx);
-      this.#emitSubmitted(prepared, txHash);
-      const receipt = await this.#provider.waitForTransactionReceipt(txHash);
-      return { txHash, receipt };
+      txHash = await this.#provider.sendRawTransaction(signedTx);
     } catch (error) {
       this.#emitTransactionError(prepared, error);
       if (error instanceof ZamaError) {
@@ -195,6 +205,8 @@ export class OfflineSigningService {
       }
       throw new TransactionRevertedError(`Broadcast failed for ${prepared.kind}`, { cause: error });
     }
+    this.#emitSubmitted(prepared, txHash);
+    return this.#awaitReceipt(prepared, txHash);
   }
 
   // ── execute (overloaded) ───────────────────────────────────────────────
@@ -211,17 +223,21 @@ export class OfflineSigningService {
     options?: OfflineSigningOptions,
   ): Promise<TransactionResult>;
   execute(input: CredentialPermitRequest, options?: OfflineSigningOptions): Promise<void>;
+  execute(
+    input: PreparedTransaction | ExecuteRequest,
+    options?: OfflineSigningOptions,
+  ): Promise<TransactionResult | void>;
   async execute(
     input: PreparedTransaction | ExecuteRequest,
     options?: OfflineSigningOptions,
   ): Promise<TransactionResult | void> {
+    if (isCredentialPermitRequest(input)) {
+      await this.#credentials.allow(input.contracts, input.delegator);
+      return;
+    }
     if (isPreparedTransaction(input)) {
       const signedTx = await this.sign(input, options);
       return this.broadcast(input, signedTx, options);
-    }
-    if (input.kind === "CredentialPermit") {
-      await this.#credentials.allow(input.contracts, input.delegator);
-      return;
     }
     const prepared = await this.prepare(input, options);
     const signedTx = await this.sign(prepared, options);
@@ -241,9 +257,9 @@ export class OfflineSigningService {
     txHash: Hex,
     _options?: OfflineSigningOptions,
   ): Promise<TransactionResult> {
+    await this.#assertSameChainAsPrepared(prepared, "completeFromTxHash");
     this.#emitSubmitted(prepared, txHash);
-    const receipt = await this.#provider.waitForTransactionReceipt(txHash);
-    return { txHash, receipt };
+    return this.#awaitReceipt(prepared, txHash);
   }
 
   // ── internals ──────────────────────────────────────────────────────────
@@ -364,16 +380,18 @@ export class OfflineSigningService {
   async #buildFinalizeUnwrap(
     request: FinalizeUnwrapRequest,
   ): Promise<ReturnType<typeof finalizeUnwrapContract>> {
-    const { clearValues, decryptionProof } = await this.#relayer.publicDecrypt([
-      request.unwrapRequestIdOrAmount,
-    ]);
-    const raw = clearValues[request.unwrapRequestIdOrAmount];
+    const decrypted = await this.#relayer
+      .publicDecrypt([request.unwrapRequestIdOrAmount])
+      .catch((error: unknown) => {
+        throw wrapDecryptError(error, "Public decryption failed during FinalizeUnwrap");
+      });
+    const raw = decrypted.clearValues[request.unwrapRequestIdOrAmount];
     assertBigint(raw, "FinalizeUnwrap: publicDecrypt(handle).clearValue");
     return finalizeUnwrapContract(
       request.wrapper,
       request.unwrapRequestIdOrAmount,
       raw,
-      decryptionProof,
+      decrypted.decryptionProof,
     );
   }
 
@@ -433,6 +451,36 @@ export class OfflineSigningService {
     return account.address;
   }
 
+  async #assertSameChainAsPrepared(
+    prepared: PreparedTransaction,
+    operation: string,
+  ): Promise<void> {
+    const providerChainId = await this.#provider.getChainId();
+    if (prepared.chainId !== providerChainId) {
+      throw new ChainMismatchError({
+        operation: `${operation}(${prepared.kind})`,
+        signerChainId: prepared.chainId,
+        providerChainId,
+      });
+    }
+  }
+
+  async #awaitReceipt(prepared: PreparedTransaction, txHash: Hex): Promise<TransactionResult> {
+    try {
+      const receipt = await this.#provider.waitForTransactionReceipt(txHash);
+      return { txHash, receipt };
+    } catch (error) {
+      this.#emitTransactionError(prepared, error);
+      if (error instanceof ZamaError) {
+        throw error;
+      }
+      throw new TransactionRevertedError(
+        `Receipt wait failed for ${prepared.kind} (txHash ${txHash}); resume with completeFromTxHash`,
+        { cause: error },
+      );
+    }
+  }
+
   #emitSubmitted(prepared: PreparedTransaction, txHash: Hex): void {
     const type = SUBMITTED_EVENT_BY_KIND[prepared.kind];
     this.#emitEvent({ type, txHash } as ZamaSDKEventInput, prepared.to);
@@ -450,12 +498,20 @@ export class OfflineSigningService {
   }
 }
 
-function isPreparedTransaction(value: unknown): value is PreparedTransaction {
+function isCredentialPermitRequest(
+  value: PreparedTransaction | ExecuteRequest,
+): value is CredentialPermitRequest {
+  return "kind" in value && (value as { kind: unknown }).kind === "CredentialPermit";
+}
+
+function isPreparedTransaction(
+  value: PreparedTransaction | ExecuteRequest,
+): value is PreparedTransaction {
   return (
-    typeof value === "object" &&
-    value !== null &&
     "unsignedTx" in value &&
     "request" in value &&
-    "from" in value
+    "from" in value &&
+    "to" in value &&
+    "chainId" in value
   );
 }

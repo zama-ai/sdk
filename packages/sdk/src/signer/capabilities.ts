@@ -11,10 +11,6 @@ import type { GenericSigner } from "../types";
  * `TypeError: signer.writeContract is not a function`.
  *
  * After this call, TypeScript treats `signer.writeContract` as non-optional.
- *
- * Phase 4 of SDK-75 will replace these throws with a transparent fallback
- * through `prepare + signTransaction + sendRawTransaction`; until then,
- * atomic flows continue to require an atomic signer.
  */
 export function assertWriteContract(
   signer: GenericSigner,

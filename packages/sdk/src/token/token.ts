@@ -831,7 +831,7 @@ export class Token extends ReadonlyToken {
     });
   }
 
-  // ── Deferred-signing surface (SDK-75) ────────────────────────────────
+  // ── Deferred-signing surface ────────────────────────────────────────
   // For each atomic write method above, a paired prepare* / complete*
   // returns / consumes a PreparedTransaction so a custodian or HSM signer
   // can sign out-of-process and the SDK still owns calldata building,
@@ -1023,13 +1023,12 @@ export class Token extends ReadonlyToken {
    */
   async prepareShield(amount: bigint, options?: { recipient?: Address }): Promise<ShieldPlan> {
     const account = this.sdk.requireSigner("prepareShield").requireWalletAccount("prepareShield");
-    const recipient = options?.recipient
-      ? getAddress(options.recipient)
-      : getAddress(account.address);
+    const userAddress = getAddress(account.address);
+    const recipient = options?.recipient ? getAddress(options.recipient) : userAddress;
     const underlying = await this.#getUnderlying();
     const isPayable = await this.isPayable();
     if (isPayable) {
-      const recipientData = ("0x" + recipient.slice(2).toLowerCase().padStart(40, "0")) as Hex;
+      const recipientData: Hex = recipient === userAddress ? "0x" : recipient;
       return {
         path: "transferAndCall",
         steps: [

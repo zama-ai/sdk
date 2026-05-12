@@ -13,8 +13,8 @@ const ACCOUNT: WalletAccount = {
 
 function makeBroadcaster(overrides: Partial<Broadcaster> = {}): Broadcaster {
   return {
-    signTransaction: vi.fn(async () => "0xsignedtx" as Hex),
-    signTypedData: vi.fn(async () => "0xsignedtypeddata" as Hex),
+    signTransaction: vi.fn(async () => "0xdeadbeef" as Hex),
+    signTypedData: vi.fn(async () => "0xfeedface" as Hex),
     ...overrides,
   };
 }
@@ -41,16 +41,16 @@ describe("BroadcastSigner", () => {
       message: {},
     } as unknown as EIP712TypedData;
     const sig = await signer.signTypedData(typedData);
-    expect(sig).toBe("0xsignedtypeddata");
+    expect(sig).toBe("0xfeedface");
     expect(broadcaster.signTypedData).toHaveBeenCalledWith(typedData);
   });
 
   test("signTransaction delegates to the broadcaster", async () => {
     const broadcaster = makeBroadcaster();
     const signer = new BroadcastSigner({ account: ACCOUNT, broadcaster });
-    const signed = await signer.signTransaction("0xunsigned" as Hex);
-    expect(signed).toBe("0xsignedtx");
-    expect(broadcaster.signTransaction).toHaveBeenCalledWith("0xunsigned");
+    const signed = await signer.signTransaction("0xbeef" as Hex);
+    expect(signed).toBe("0xdeadbeef");
+    expect(broadcaster.signTransaction).toHaveBeenCalledWith("0xbeef");
   });
 
   test("does not implement writeContract (capability bag enforces deferred path)", () => {
@@ -88,9 +88,9 @@ describe("signer capability guards", () => {
     const signer = new BroadcastSigner({ account: ACCOUNT, broadcaster });
     assertSignTransaction(signer, "prepareConfidentialTransfer");
     // After the assert, TS treats signer.signTransaction as non-optional.
-    const signed = await signer.signTransaction("0xunsigned" as Hex);
-    expect(signed).toBe("0xsignedtx");
-    expect(broadcaster.signTransaction).toHaveBeenCalledWith("0xunsigned");
+    const signed = await signer.signTransaction("0xbeef" as Hex);
+    expect(signed).toBe("0xdeadbeef");
+    expect(broadcaster.signTransaction).toHaveBeenCalledWith("0xbeef");
   });
 
   test("assertSignTransaction throws on a signer without signTransaction", () => {
