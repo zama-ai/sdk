@@ -1,6 +1,6 @@
-import type { Token } from "../token/token";
 import type { Address } from "viem";
 import type { TransactionResult } from "../types";
+import type { ZamaSDK } from "../zama-sdk";
 import type { MutationFactoryOptions } from "./factory-types";
 
 /** Variables for {@link delegateDecryptionMutationOptions}. */
@@ -10,15 +10,16 @@ export interface DelegateDecryptionParams {
 }
 
 export function delegateDecryptionMutationOptions(
-  token: Token,
+  sdk: ZamaSDK,
+  contractAddress: Address,
 ): MutationFactoryOptions<
   readonly ["zama.delegateDecryption", Address],
   DelegateDecryptionParams,
   TransactionResult
 > {
   return {
-    mutationKey: ["zama.delegateDecryption", token.address] as const,
+    mutationKey: ["zama.delegateDecryption", contractAddress] as const,
     mutationFn: async ({ delegateAddress, expirationDate }) =>
-      token.delegateDecryption({ delegateAddress, expirationDate }),
+      sdk.delegateDecryption({ contractAddress, delegateAddress, expirationDate }),
   };
 }

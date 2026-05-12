@@ -1,5 +1,5 @@
 import type { Address } from "viem";
-import type { ReadonlyToken } from "../token";
+import type { Token } from "../token";
 import { assertNonNullable } from "../utils/assertions";
 import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
@@ -14,7 +14,7 @@ export interface ConfidentialBalanceQueryConfig {
 
 /** Query options for a single confidential token balance. Auto-gated on `account`. */
 export function confidentialBalanceQueryOptions(
-  token: ReadonlyToken,
+  token: Token,
   config: ConfidentialBalanceQueryConfig,
   signerContext: SignerQueryContext = {},
 ): QueryFactoryOptions<

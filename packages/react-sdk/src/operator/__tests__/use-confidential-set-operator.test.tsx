@@ -13,9 +13,7 @@ import {
 
 describe("useConfidentialSetOperator", () => {
   test("default", ({ renderWithProviders }) => {
-    const { result } = renderWithProviders(() =>
-      useConfidentialSetOperator({ tokenAddress: TOKEN }),
-    );
+    const { result } = renderWithProviders(() => useConfidentialSetOperator(TOKEN));
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
     expectDefaultMutationState(state);
@@ -27,9 +25,7 @@ describe("useConfidentialSetOperator", () => {
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
-    const { result, queryClient } = renderWithProviders(() =>
-      useConfidentialSetOperator({ tokenAddress: TOKEN }),
-    );
+    const { result, queryClient } = renderWithProviders(() => useConfidentialSetOperator(TOKEN));
 
     const operatorKey = zamaQueryKeys.confidentialIsOperator.token(TOKEN);
     const otherOperatorKey = zamaQueryKeys.confidentialIsOperator.token(OTHER_TOKEN);
@@ -50,7 +46,7 @@ describe("useConfidentialSetOperator", () => {
     const onSuccess = vi.fn();
 
     const { result, queryClient } = renderWithProviders(() =>
-      useConfidentialSetOperator({ tokenAddress: TOKEN }, { onSuccess }),
+      useConfidentialSetOperator(TOKEN, { onSuccess }),
     );
 
     queryClient.setQueryData(operatorKey, true);

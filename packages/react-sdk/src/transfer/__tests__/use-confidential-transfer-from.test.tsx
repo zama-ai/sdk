@@ -16,9 +16,7 @@ import {
 
 describe("useConfidentialTransferFrom", () => {
   test("default", ({ renderWithProviders }) => {
-    const { result } = renderWithProviders(() =>
-      useConfidentialTransferFrom({ tokenAddress: TOKEN }),
-    );
+    const { result } = renderWithProviders(() => useConfidentialTransferFrom(TOKEN));
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
     expectDefaultMutationState(state);
@@ -30,9 +28,7 @@ describe("useConfidentialTransferFrom", () => {
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
-    const { result, queryClient } = renderWithProviders(() =>
-      useConfidentialTransferFrom({ tokenAddress: TOKEN }),
-    );
+    const { result, queryClient } = renderWithProviders(() => useConfidentialTransferFrom(TOKEN));
 
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
     const otherBalanceKey = zamaQueryKeys.confidentialBalance.owner(OTHER_TOKEN, USER);
@@ -58,7 +54,7 @@ describe("useConfidentialTransferFrom", () => {
     const onSuccess = vi.fn();
 
     const { result, queryClient } = renderWithProviders(() =>
-      useConfidentialTransferFrom({ tokenAddress: TOKEN }, { onSuccess }),
+      useConfidentialTransferFrom(TOKEN, { onSuccess }),
     );
 
     queryClient.setQueryData(balanceKey, 1000n);

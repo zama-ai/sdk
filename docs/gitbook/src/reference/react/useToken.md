@@ -1,11 +1,15 @@
 ---
 title: useToken
-description: Hook to get a memoized Token instance for a given address.
+description: Hook returning a memoised Token instance for a given address.
 ---
 
 # useToken
 
-Hook to get a memoized `Token` instance for a given address. The returned reference is stable across re-renders, making it safe to use in dependency arrays.
+> ⚠️ This page is a placeholder — full reference docs are coming.
+
+Returns a memoised [`Token`](../sdk/Token.md) instance bound to the SDK in the current `ZamaProvider`. The reference is stable across re-renders, making it safe to use in dependency arrays.
+
+For ERC-7984 wrapper operations (shield, unshield, allowance), use [`useWrappedToken`](useWrappedToken.md) instead.
 
 ## Import
 
@@ -13,104 +17,31 @@ Hook to get a memoized `Token` instance for a given address. The returned refere
 import { useToken } from "@zama-fhe/react-sdk";
 ```
 
-## Usage
+## Signature
 
-{% tabs %}
-{% tab title="component.tsx" %}
+```ts
+function useToken(address: Address): Token;
+```
+
+## Example
 
 ```tsx
 import { useToken } from "@zama-fhe/react-sdk";
 
-function TokenActions() {
-  const token = useToken({ tokenAddress: "0xToken" });
-
-  async function handleAllow() {
-    await token.allow();
-    console.log("Session authorized");
-  }
+function TokenActions({ tokenAddress }: { tokenAddress: Address }) {
+  const token = useToken(tokenAddress);
 
   async function handleTransfer() {
     const { txHash } = await token.confidentialTransfer("0xRecipient", 500n);
     console.log("Transfer:", txHash);
   }
 
-  return (
-    <div>
-      <button onClick={handleAllow}>Allow</button>
-      <button onClick={handleTransfer}>Transfer 500</button>
-    </div>
-  );
+  return <button onClick={handleTransfer}>Transfer 500</button>;
 }
 ```
 
-{% endtab %}
-{% tab title="config.ts" %}
-
-```ts
-import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
-import { web } from "@zama-fhe/sdk/web";
-import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
-import { config as wagmiConfig } from "./wagmi";
-
-const mySepolia = {
-  ...sepolia,
-  relayerUrl: "https://your-app.com/api/relayer/11155111",
-} as const satisfies FheChain;
-
-export const zamaConfig = createZamaConfig({
-  chains: [mySepolia],
-  wagmiConfig,
-  relayers: { [mySepolia.id]: web() },
-});
-
-// In your app layout:
-// <ZamaProvider config={zamaConfig}>
-//   <App />
-// </ZamaProvider>
-```
-
-{% endtab %}
-{% endtabs %}
-
-## Parameters
-
-```ts
-import { type UseZamaConfig } from "@zama-fhe/react-sdk";
-```
-
-### tokenAddress
-
-`Address`
-
-Address of the confidential token contract.
-
-```ts
-const token = useToken({
-  tokenAddress: "0xToken",
-});
-```
-
-### wrapperAddress
-
-`Address | undefined`
-
-Explicit wrapper address. When omitted, the SDK resolves it automatically via the deployment coordinator.
-
-```ts
-const token = useToken({
-  tokenAddress: "0xToken",
-  wrapperAddress: "0xWrapper",
-});
-```
-
-## Return Type
-
-`Token`
-
-A memoized `Token` instance with full read and write access. The reference stays the same as long as the input addresses do not change.
-
 ## Related
 
-- [useReadonlyToken](/reference/react/useReadonlyToken) — read-only variant (no signing required)
-- [useZamaSDK](/reference/react/useZamaSDK) — access the underlying SDK instance directly
-- [Token](/reference/sdk/Token) — full API reference for the `Token` class
+- [`useWrappedToken`](useWrappedToken.md) — wrapper operations (shield, unshield, allowance)
+- [`useZamaSDK`](useZamaSDK.md) — access the underlying SDK instance directly
+- [`Token`](../sdk/Token.md) — the underlying class

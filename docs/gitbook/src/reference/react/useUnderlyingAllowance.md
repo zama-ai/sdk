@@ -21,9 +21,16 @@ import { useUnderlyingAllowance } from "@zama-fhe/react-sdk";
 ```tsx
 import { useUnderlyingAllowance } from "@zama-fhe/react-sdk";
 
-function AllowanceDisplay({ tokenAddress }: { tokenAddress: `0x${string}` }) {
+function AllowanceDisplay({
+  wrapperAddress,
+  owner,
+}: {
+  wrapperAddress: `0x${string}`;
+  owner: `0x${string}` | undefined;
+}) {
   const { data: allowance, isLoading } = useUnderlyingAllowance({
-    tokenAddress,
+    address: wrapperAddress,
+    owner,
   });
 
   if (isLoading) return <span>Loading allowance...</span>;
@@ -36,15 +43,16 @@ function AllowanceDisplay({ tokenAddress }: { tokenAddress: `0x${string}` }) {
 
 ## Parameters
 
-### tokenAddress
+### address
 
 `Address`
 
-Address of the confidential ERC-20 wrapper contract. The hook reads the underlying ERC-20 allowance granted to this wrapper.
+Address of the confidential wrapper contract. The hook reads the underlying ERC-20 allowance granted by `owner` to this wrapper.
 
 ```ts
 const { data: allowance } = useUnderlyingAllowance({
-  tokenAddress: "0xWrapper",
+  address: "0xWrapper",
+  owner: "0xOwner",
 });
 ```
 
@@ -54,25 +62,12 @@ const { data: allowance } = useUnderlyingAllowance({
 
 `Address | undefined`
 
-Address of the token owner. Defaults to the connected wallet address.
+Address whose allowance to read. The query is disabled while `undefined`.
 
 ```ts
 const { data: allowance } = useUnderlyingAllowance({
-  tokenAddress: "0xWrapper",
+  address: "0xWrapper",
   owner: "0xOwner",
-});
-```
-
-### spender
-
-`Address | undefined`
-
-Address of the spender. Defaults to the wrapper contract address.
-
-```ts
-const { data: allowance } = useUnderlyingAllowance({
-  tokenAddress: "0xWrapper",
-  spender: "0xSpender",
 });
 ```
 
@@ -90,9 +85,16 @@ Use `useUnderlyingAllowanceSuspense` inside a `<Suspense>` boundary. The hook th
 import { useUnderlyingAllowanceSuspense } from "@zama-fhe/react-sdk";
 import { Suspense } from "react";
 
-function Allowance({ tokenAddress }: { tokenAddress: `0x${string}` }) {
+function Allowance({
+  wrapperAddress,
+  owner,
+}: {
+  wrapperAddress: `0x${string}`;
+  owner: `0x${string}`;
+}) {
   const { data: allowance } = useUnderlyingAllowanceSuspense({
-    tokenAddress,
+    address: wrapperAddress,
+    owner,
   });
 
   // data is always defined — no loading state needed
@@ -102,7 +104,7 @@ function Allowance({ tokenAddress }: { tokenAddress: `0x${string}` }) {
 function App() {
   return (
     <Suspense fallback={<span>Loading...</span>}>
-      <Allowance tokenAddress="0xWrapper" />
+      <Allowance wrapperAddress="0xWrapper" owner="0xOwner" />
     </Suspense>
   );
 }

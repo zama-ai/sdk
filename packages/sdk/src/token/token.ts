@@ -1,117 +1,498 @@
-import { type Address, getAddress, type Hex } from "viem";
+import { type Address, getAddress } from "viem";
 import {
-  allowanceContract,
-  approveContract,
-  balanceOfContract,
+  confidentialBalanceOfContract,
   confidentialTransferContract,
   confidentialTransferFromContract,
-  finalizeUnwrapContract,
-  isPayableTokenContract,
+  decimalsContract,
+  ERC7984_INTERFACE_ID,
+  ERC7984_WRAPPER_INTERFACE_ID,
+  ERC7984_WRAPPER_INTERFACE_ID_LEGACY,
   isOperatorContract,
+  nameContract,
   setOperatorContract,
-  transferAndCallContract,
-  underlyingContract,
-  unwrapContract,
-  unwrapFromBalanceContract,
-  wrapContract,
+  supportsInterfaceContract,
+  symbolContract,
 } from "../contracts";
-import { findUnwrapRequested } from "../events/onchain-events";
-import { ZamaSDKEvents } from "../events/sdk-events";
-import type { Handle } from "../relayer/relayer-sdk.types";
-import { toError } from "../utils";
 import {
   ApprovalFailedError,
   BalanceCheckUnavailableError,
+  ConfigurationError,
   DecryptionFailedError,
-  ERC20ReadFailedError,
   EncryptionFailedError,
   InsufficientConfidentialBalanceError,
-  InsufficientERC20BalanceError,
+  isFatalBatchError,
   TransactionRevertedError,
   ZamaError,
 } from "../errors";
-import { isZeroHandle } from "../utils/handles";
+import type { ZamaSDKEventInput } from "../events/sdk-events";
+import { ZamaSDKEvents } from "../events/sdk-events";
+import type { ClearValueType, Handle } from "../relayer/relayer-sdk.types";
+import { toError } from "../utils";
 import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
-import { ReadonlyToken } from "./readonly-token";
-import type {
-  ShieldCallbacks,
-  ShieldOptions,
-  TransactionResult,
-  TransferCallbacks,
-  TransferOptions,
-  UnshieldCallbacks,
-  UnshieldOptions,
-} from "../types";
-import type { ZamaSDK } from "../zama-sdk";
 import { assertBigint } from "../utils/assertions";
+import { pLimit } from "../utils/concurrency";
+import { isZeroHandle } from "../utils/handles";
+import { swallow } from "../utils/swallow";
+import type { TransactionResult, TransferCallbacks, TransferOptions } from "../types";
+import type { ZamaSDK } from "../zama-sdk";
+
+/** Options for {@link Token.batchDecryptBalancesAs}. */
+export interface BatchDecryptAsOptions {
+  /** The address of the account that delegated decryption rights. */
+  delegatorAddress: Address;
+  /** Pre-fetched encrypted handles. When omitted, handles are fetched from the chain. */
+  handles?: Handle[];
+  /**
+   * The account whose on-chain balance to read. Defaults to the delegator
+   * address, which is the common case (the delegator grants permission to
+   * decrypt their own balance). Only set this when the account differs
+   * from the delegator.
+   *
+   * Matches the `account` parameter of `confidentialBalanceOf(account)` on-chain.
+   */
+  accountAddress?: Address;
+  /** Maximum number of concurrent decrypt calls. Default: 10. */
+  maxConcurrency?: number;
+  /** Called when decryption fails for a single token. Return a fallback bigint. */
+  onError?: (error: Error, address: Address) => bigint;
+}
+
+/** Result of {@link Token.batchBalancesOf}. */
+export interface BatchBalancesResult {
+  /** Successfully decrypted balances, keyed by token address. */
+  results: Map<Address, bigint>;
+  /** Per-token errors for tokens that failed to decrypt. */
+  errors: Map<Address, ZamaError>;
+}
 
 /**
- * ERC-20-like interface for a single confidential token.
- * Hides all FHE complexity (encryption, decryption, EIP-712 signing)
- * behind familiar methods.
+ * High-level interface for an ERC-7984 confidential token.
+ * Hides FHE complexity (encryption, decryption, EIP-712 signing) behind
+ * familiar ERC-20-like methods.
  *
- * Extends {@link ReadonlyToken} with write operations
- * (transfer, shield, unshield).
+ * For ERC-7984 wrappers (shield/unshield), use {@link WrappedToken} instead —
+ * it extends `Token` with wrapper-specific operations.
+ *
+ * Decryption, credentials, caching, and event emission are handled by the
+ * owning {@link ZamaSDK} — this class only exposes token-scoped helpers
+ * that delegate to {@link ZamaSDK.userDecrypt} and {@link ZamaSDK.allow}.
  */
-export class Token extends ReadonlyToken {
-  static readonly ZERO_ADDRESS: Address = "0x0000000000000000000000000000000000000000";
+export class Token {
+  readonly sdk: ZamaSDK;
+  readonly address: Address;
 
-  readonly wrapper: Address;
-  #underlying: Address | undefined;
-  #underlyingPromise: Promise<Address> | null = null;
-  #isPayable: boolean | null = null;
-
-  constructor(sdk: ZamaSDK, address: Address, wrapper?: Address) {
-    super(sdk, address);
-    this.wrapper = wrapper ? getAddress(wrapper) : this.address;
+  constructor(sdk: ZamaSDK, address: Address) {
+    this.sdk = sdk;
+    this.address = getAddress(address);
   }
 
-  async #getUnderlying(): Promise<Address> {
-    if (this.#underlying !== undefined) {
-      return this.#underlying;
-    }
-    if (!this.#underlyingPromise) {
-      this.#underlyingPromise = this.sdk.provider
-        .readContract(underlyingContract(this.wrapper))
-        .then((v) => {
-          this.#underlying = v;
-          this.#underlyingPromise = null;
-          return v;
-        })
-        .catch((error) => {
-          this.#underlyingPromise = null;
-          throw error;
-        });
-    }
-    return this.#underlyingPromise;
+  // METADATA
+
+  /** Read the token name from the contract. */
+  async name(): Promise<string> {
+    return this.sdk.provider.readContract(nameContract(this.address));
+  }
+
+  /** Read the token symbol from the contract. */
+  async symbol(): Promise<string> {
+    return this.sdk.provider.readContract(symbolContract(this.address));
+  }
+
+  /** Read the token decimals from the contract. */
+  async decimals(): Promise<number> {
+    return this.sdk.provider.readContract(decimalsContract(this.address));
+  }
+
+  // ERC-165 DISCOVERY
+
+  /**
+   * ERC-165 check for {@link ERC7984_INTERFACE_ID} support.
+   *
+   * @returns `true` if the contract implements the ERC-7984 confidential token interface.
+   */
+  async isConfidential(): Promise<boolean> {
+    return this.sdk.provider.readContract(
+      supportsInterfaceContract(this.address, ERC7984_INTERFACE_ID),
+    );
   }
 
   /**
-   * Check whether the underlying ERC-20 supports ERC-1363 (payable token).
-   * Result is cached per Token instance after the first call. Probe failures
-   * (`underlying()` revert, `supportsInterface` revert, RPC error, …) are
-   * cached as `false` so a non-payable token does not trigger a probe on
-   * every shield.
+   * ERC-165 check for IERC7984ERC20Wrapper support.
+   *
+   * During the transition period, checks both {@link ERC7984_WRAPPER_INTERFACE_ID_LEGACY}
+   * (`0xd04584ba`) and {@link ERC7984_WRAPPER_INTERFACE_ID} (`0x1f1c62b2`) in parallel,
+   * returning `true` if either matches.
+   *
+   * @returns `true` if the contract implements the ERC-7984 wrapper interface.
    */
-  async isPayable(): Promise<boolean> {
-    if (this.#isPayable !== null) {
-      return this.#isPayable;
+  async isWrapper(): Promise<boolean> {
+    const [legacyMatch, newMatch] = await Promise.all([
+      this.sdk.provider.readContract(
+        supportsInterfaceContract(this.address, ERC7984_WRAPPER_INTERFACE_ID_LEGACY),
+      ),
+      this.sdk.provider.readContract(
+        supportsInterfaceContract(this.address, ERC7984_WRAPPER_INTERFACE_ID),
+      ),
+    ]);
+    return legacyMatch || newMatch;
+  }
+
+  // BALANCES
+
+  /**
+   * Decrypt and return the plaintext balance for the given owner.
+   * Acquires FHE credentials via a wallet signature if none are cached.
+   *
+   * @param owner - Balance owner address.
+   * @returns The decrypted plaintext balance as a bigint.
+   * @throws {@link DecryptionFailedError} if FHE decryption fails.
+   *
+   * @example
+   * ```ts
+   * const balance = await token.balanceOf("0xOwner");
+   * ```
+   */
+  async balanceOf(owner: Address): Promise<bigint> {
+    const ownerAddress = getAddress(owner);
+    const handle = await this.readConfidentialBalanceOf(ownerAddress);
+    const result = await this.sdk.userDecrypt([{ handle, contractAddress: this.address }]);
+    const value = result[handle];
+    if (value === undefined) {
+      throw new DecryptionFailedError(`Decryption returned no value for handle ${handle}`);
     }
-    try {
-      const underlying = await this.#getUnderlying();
-      this.#isPayable = await this.sdk.provider.readContract(isPayableTokenContract(underlying));
-      return this.#isPayable;
-    } catch {
-      this.#isPayable = false;
-      return false;
+    assertBigint(value, "balanceOf: result[handle]");
+    return value;
+  }
+
+  /**
+   * Return the raw encrypted balance handle without decrypting.
+   *
+   * @param owner - Balance owner address.
+   * @returns The encrypted balance handle as a hex string.
+   *
+   * @example
+   * ```ts
+   * const handle = await token.confidentialBalanceOf("0xOwner");
+   * ```
+   */
+  async confidentialBalanceOf(owner: Address): Promise<Handle> {
+    return this.readConfidentialBalanceOf(getAddress(owner));
+  }
+
+  /**
+   * Decrypt the balance of a delegator using delegated decryption credentials.
+   * The connected signer acts as the delegatee who has been granted permission
+   * by the delegator to decrypt their balance.
+   *
+   * Decrypted values are cached in storage keyed by `(account, token, handle)`.
+   * Because every on-chain balance change produces a new encrypted handle,
+   * stale cache entries are never served. Cache write failures are silently
+   * ignored — they do not affect the returned value.
+   *
+   * @param delegatorAddress - The address of the account that delegated decryption rights.
+   * @param accountAddress - The account whose on-chain balance to read. Defaults
+   *   to the delegator address.
+   * @returns The decrypted plaintext balance as a bigint.
+   * @throws {@link DelegationNotFoundError} if no active delegation exists.
+   * @throws {@link DelegationExpiredError} if the delegation has expired.
+   * @throws {@link DecryptionFailedError} if delegated decryption fails.
+   *
+   * @example
+   * ```ts
+   * const balance = await token.decryptBalanceAs({
+   *   delegatorAddress: "0xDelegator",
+   * });
+   * ```
+   */
+  async decryptBalanceAs({
+    delegatorAddress,
+    accountAddress,
+  }: {
+    delegatorAddress: Address;
+    accountAddress?: Address;
+  }): Promise<bigint> {
+    await requireChainAlignment("decryptBalanceAs", this.sdk.signer, this.sdk.provider);
+    const normalizedDelegator = getAddress(delegatorAddress);
+    const normalizedAccount = accountAddress ? getAddress(accountAddress) : normalizedDelegator;
+
+    const handle = await this.readConfidentialBalanceOf(normalizedAccount);
+    if (isZeroHandle(handle)) {
+      return 0n;
     }
+
+    const result = await this.sdk.delegatedUserDecrypt(
+      [{ handle, contractAddress: this.address }],
+      normalizedDelegator,
+      normalizedAccount,
+    );
+
+    const value = result[handle];
+    if (value === undefined) {
+      throw new DecryptionFailedError(
+        `Delegated decryption returned no value for handle ${handle}`,
+      );
+    }
+    assertBigint(value, "decryptBalanceAs: result[handle]");
+    return value;
+  }
+
+  // BATCH STATICS
+
+  /**
+   * Decrypt confidential balances for multiple tokens in parallel, returning
+   * successes and per-token errors separately. Pre-authorizes all token
+   * addresses in a single wallet signature, then delegates each decrypt to
+   * {@link ZamaSDK.userDecrypt}.
+   *
+   * Tokens that fail to decrypt land in `errors` rather than aborting the
+   * whole batch — caller decides how to surface them.
+   *
+   * @param tokens - Array of {@link Token} instances bound to the same SDK.
+   * @param owner - Balance owner address.
+   * @returns `{ results, errors }` partitioning the per-token outcomes.
+   *
+   * @example
+   * ```ts
+   * const { results, errors } = await Token.batchBalancesOf(tokens, owner);
+   * ```
+   */
+  static async batchBalancesOf(tokens: Token[], owner: Address): Promise<BatchBalancesResult> {
+    const results = new Map<Address, bigint>();
+    const errors = new Map<Address, ZamaError>();
+    if (tokens.length === 0) {
+      return { results, errors };
+    }
+
+    const sdk = Token.assertSameSdk(tokens);
+    // Fail fast on chain mismatch before prompting the wallet for a signature.
+    await requireChainAlignment("batchBalancesOf", sdk.signer, sdk.provider);
+    // Pre-authorize the full token set in one wallet signature so subsequent
+    // per-token userDecrypt calls reuse the cached credentials.
+    await sdk.allow(tokens.map((t) => t.address));
+
+    const outcomes = await pLimit(
+      tokens.map((t) => async () => {
+        try {
+          return {
+            status: "fulfilled" as const,
+            value: await t.balanceOf(owner),
+          };
+        } catch (reason) {
+          return { status: "rejected" as const, reason };
+        }
+      }),
+      5,
+    );
+
+    for (let i = 0; i < tokens.length; i++) {
+      const tokenAddress = tokens[i]!.address;
+      const outcome = outcomes[i]!;
+      if (outcome.status === "fulfilled") {
+        results.set(tokenAddress, outcome.value);
+      } else {
+        const reason = outcome.reason;
+        // Session-level failures (user rejected signature, SDK misconfigured)
+        // apply to every token — surface them instead of collecting per-token.
+        if (isFatalBatchError(reason)) {
+          throw reason;
+        }
+        const error =
+          reason instanceof ZamaError
+            ? reason
+            : new DecryptionFailedError(toError(reason).message, {
+                cause: reason,
+              });
+        errors.set(tokenAddress, error);
+      }
+    }
+
+    // Total failure: surface the first error so callers know nothing decrypted.
+    if (errors.size === tokens.length) {
+      const firstError = errors.values().next().value;
+      throw firstError ?? new DecryptionFailedError("All token balance decryptions failed");
+    }
+
+    return { results, errors };
+  }
+
+  /**
+   * Batch decrypt confidential balances as a delegate across multiple tokens.
+   * Mirrors {@link batchBalancesOf} but uses delegated credentials.
+   *
+   * **Error handling:** If a per-token decryption fails and no `onError` callback
+   * is provided, errors are collected and thrown as an aggregated
+   * `DecryptionFailedError`. When the relayer returns no value for a handle,
+   * a `DecryptionFailedError` is thrown for that token (never silently returns `0n`).
+   * Pass `onError: () => 0n` to opt into the silent zero behavior.
+   *
+   * @param tokens - Array of Token instances to decrypt balances for.
+   * @param options - Delegated decryption configuration.
+   * @returns A Map from token address to decrypted balance.
+   * @throws {@link DelegationNotFoundError} if no active delegation exists.
+   * @throws {@link DelegationExpiredError} if the delegation has expired.
+   * @throws {@link DecryptionFailedError} if any decryption fails and no `onError` is provided.
+   *
+   * @example
+   * ```ts
+   * const balances = await Token.batchDecryptBalancesAs(tokens, {
+   *   delegatorAddress: "0xDelegator",
+   *   onError: (err, addr) => { console.error(addr, err); return 0n; },
+   * });
+   * ```
+   */
+  static async batchDecryptBalancesAs(
+    tokens: Token[],
+    options: BatchDecryptAsOptions,
+  ): Promise<Map<Address, bigint>> {
+    if (tokens.length === 0) {
+      return new Map();
+    }
+
+    const sdk = Token.assertSameSdk(tokens);
+    const results = new Map<Address, bigint>();
+    const errors = new Map<Address, ZamaError>();
+    const normalizedAccount = options.accountAddress
+      ? getAddress(options.accountAddress)
+      : getAddress(options.delegatorAddress);
+    const maxConcurrency = options.maxConcurrency ?? 10;
+    if (options.handles && tokens.length !== options.handles.length) {
+      throw new DecryptionFailedError(
+        `tokens.length (${tokens.length}) must equal handles.length (${options.handles.length})`,
+      );
+    }
+    const resolvedHandles =
+      options.handles ??
+      (await Token.readBalanceHandlesBatch(tokens, normalizedAccount, errors, maxConcurrency));
+
+    const decryptRequests: Array<{ token: Token; handle: Handle }> = [];
+    for (const [index, token] of tokens.entries()) {
+      const handle = resolvedHandles[index];
+      if (!handle || errors.has(token.address)) {
+        continue;
+      }
+      if (isZeroHandle(handle)) {
+        // Zero balance → skip the relayer; no decryption needed.
+        results.set(token.address, 0n);
+      } else {
+        decryptRequests.push({ token, handle });
+      }
+    }
+
+    if (decryptRequests.length > 0) {
+      const decrypted = await sdk.delegatedBatchDecryptHandlesAs({
+        handles: decryptRequests.map(({ token, handle }) => ({
+          handle,
+          contractAddress: token.address,
+        })),
+        delegatorAddress: options.delegatorAddress,
+        accountAddress: options.accountAddress,
+        maxConcurrency,
+      });
+
+      for (const [index, item] of decrypted.items.entries()) {
+        const request = decryptRequests[index];
+        if (!request) {
+          continue;
+        }
+        if (item.error) {
+          errors.set(request.token.address, item.error);
+          continue;
+        }
+        const value = item.value;
+        if (value === undefined) {
+          errors.set(
+            request.token.address,
+            new DecryptionFailedError(
+              `Batch delegated decryption returned no value for handle ${item.handle} on token ${request.token.address}`,
+            ),
+          );
+          continue;
+        }
+        assertBigint(value, "batchDecryptBalancesAs: result[handle]");
+        results.set(request.token.address, value);
+      }
+    }
+
+    if (errors.size === 0) {
+      return results;
+    }
+
+    if (options.onError) {
+      const callbackErrors: Array<{ address: Address; error: Error }> = [];
+      for (const [address, error] of errors) {
+        try {
+          results.set(address, options.onError(error, address));
+        } catch (callbackError) {
+          callbackErrors.push({ address, error: toError(callbackError) });
+        }
+      }
+      if (callbackErrors.length > 0) {
+        const message = callbackErrors
+          .map(({ address, error }) => `${address}: ${error.message}`)
+          .join("; ");
+        throw new DecryptionFailedError(
+          `Batch delegated decryption onError callback failed for ${callbackErrors.length} token(s): ${message}`,
+          { cause: callbackErrors[0]?.error },
+        );
+      }
+      return results;
+    }
+
+    const errorEntries = Array.from(errors.entries());
+    const message = errorEntries.map(([addr, e]) => `${addr}: ${e.message}`).join("; ");
+    throw new DecryptionFailedError(
+      `Batch delegated decryption failed for ${errors.size} token(s): ${message}`,
+      { cause: errorEntries[0]?.[1] },
+    );
+  }
+
+  private static async readBalanceHandlesBatch(
+    tokens: Token[],
+    accountAddress: Address,
+    errors: Map<Address, ZamaError>,
+    maxConcurrency: number,
+  ): Promise<Array<Handle | undefined>> {
+    const outcomes = await pLimit(
+      tokens.map((token) => async () => {
+        try {
+          return {
+            status: "fulfilled" as const,
+            value: await token.readConfidentialBalanceOf(accountAddress),
+          };
+        } catch (reason) {
+          return { status: "rejected" as const, reason };
+        }
+      }),
+      maxConcurrency,
+    );
+
+    const handles: Array<Handle | undefined> = [];
+    for (const [index, token] of tokens.entries()) {
+      const outcome = outcomes[index];
+      if (!outcome) {
+        continue;
+      }
+      if (outcome.status === "fulfilled") {
+        handles[index] = outcome.value;
+        continue;
+      }
+      if (isFatalBatchError(outcome.reason)) {
+        throw outcome.reason;
+      }
+      errors.set(
+        token.address,
+        outcome.reason instanceof ZamaError
+          ? outcome.reason
+          : new DecryptionFailedError(toError(outcome.reason).message, { cause: outcome.reason }),
+      );
+    }
+    return handles;
   }
 
   // WRITE OPERATIONS
 
   /**
    * Confidential transfer. Encrypts the amount via FHE, then calls the contract.
-   * Returns the transaction hash.
    *
    * By default, the SDK validates the confidential balance before submitting.
    * If a cached plaintext balance exists it is used; otherwise, if credentials
@@ -123,16 +504,14 @@ export class Token extends ReadonlyToken {
    * @param options - Optional: `skipBalanceCheck` (default `false`).
    * @returns The transaction hash and mined receipt.
    * @throws {@link ChainMismatchError} if signer and provider are on different chains.
-   * @throws {@link InsufficientConfidentialBalanceError} if the confidential balance is less than `amount`.
-   * @throws {@link BalanceCheckUnavailableError} if balance validation is required but decryption is not possible (no cached credentials).
+   * @throws {@link InsufficientConfidentialBalanceError} if the balance is less than `amount`.
+   * @throws {@link BalanceCheckUnavailableError} if balance validation requires decryption that is not possible.
    * @throws {@link EncryptionFailedError} if FHE encryption fails.
    * @throws {@link TransactionRevertedError} if the on-chain transfer reverts.
    *
    * @example
    * ```ts
    * const txHash = await token.confidentialTransfer("0xRecipient", 1000n);
-   * // Smart wallet (skip balance check):
-   * const txHash = await token.confidentialTransfer("0xRecipient", 1000n, { skipBalanceCheck: true });
    * ```
    */
   async confidentialTransfer(
@@ -151,7 +530,7 @@ export class Token extends ReadonlyToken {
     const normalizedTo = getAddress(to);
 
     if (!skipBalanceCheck) {
-      await this.#assertConfidentialBalance(amount);
+      await this.assertConfidentialBalance(amount);
     }
 
     const { handles, inputProof } = await this.sdk.encrypt({
@@ -159,7 +538,7 @@ export class Token extends ReadonlyToken {
       contractAddress: this.address,
       userAddress: getAddress(account.address),
     });
-    safeCallback(() => onEncryptComplete?.());
+    void swallow("transfer: onEncryptComplete", () => onEncryptComplete?.());
 
     if (handles.length === 0) {
       throw new EncryptionFailedError("Encryption returned no handles");
@@ -170,7 +549,7 @@ export class Token extends ReadonlyToken {
         confidentialTransferContract(this.address, normalizedTo, handles[0]!, inputProof),
       );
       this.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash });
-      safeCallback(() => onTransferSubmitted?.(txHash));
+      void swallow("transfer: onTransferSubmitted", () => onTransferSubmitted?.(txHash));
       const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
       return { txHash, receipt };
     } catch (error) {
@@ -196,9 +575,6 @@ export class Token extends ReadonlyToken {
    * @param to - Recipient address.
    * @param amount - Plaintext amount to transfer (encrypted automatically via FHE).
    * @returns The transaction hash and mined receipt.
-   * @throws {@link ChainMismatchError} if signer and provider are on different chains.
-   * @throws {@link EncryptionFailedError} if FHE encryption fails.
-   * @throws {@link TransactionRevertedError} if the on-chain transfer reverts.
    *
    * @example
    * ```ts
@@ -212,7 +588,11 @@ export class Token extends ReadonlyToken {
     callbacks?: TransferCallbacks,
   ): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("confidentialTransferFrom");
-    await requireChainAlignment("confidentialTransferFrom", this.sdk.signer, this.sdk.provider);
+    await requireAlignedWalletAccount(
+      "confidentialTransferFrom",
+      this.sdk.signer,
+      this.sdk.provider,
+    );
     const normalizedFrom = getAddress(from);
     const normalizedTo = getAddress(to);
 
@@ -221,7 +601,7 @@ export class Token extends ReadonlyToken {
       contractAddress: this.address,
       userAddress: normalizedFrom,
     });
-    safeCallback(() => callbacks?.onEncryptComplete?.());
+    void swallow("transferFrom: onEncryptComplete", () => callbacks?.onEncryptComplete?.());
 
     if (handles.length === 0) {
       throw new EncryptionFailedError("Encryption returned no handles");
@@ -238,7 +618,9 @@ export class Token extends ReadonlyToken {
         ),
       );
       this.emit({ type: ZamaSDKEvents.TransferFromSubmitted, txHash });
-      safeCallback(() => callbacks?.onTransferSubmitted?.(txHash));
+      void swallow("transferFrom: onTransferSubmitted", () =>
+        callbacks?.onTransferSubmitted?.(txHash),
+      );
       const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
       return { txHash, receipt };
     } catch (error) {
@@ -256,6 +638,8 @@ export class Token extends ReadonlyToken {
     }
   }
 
+  // OPERATOR APPROVAL
+
   /**
    * Set operator approval for the confidential token.
    * Defaults to 1 hour from now if `until` is not specified.
@@ -263,8 +647,6 @@ export class Token extends ReadonlyToken {
    * @param operator - The address to set as an operator.
    * @param until - Optional Unix timestamp for approval expiry. Defaults to now + 1 hour.
    * @returns The transaction hash and mined receipt.
-   * @throws {@link ChainMismatchError} if signer and provider are on different chains.
-   * @throws {@link ApprovalFailedError} if the approval transaction fails.
    *
    * @example
    * ```ts
@@ -317,587 +699,26 @@ export class Token extends ReadonlyToken {
     );
   }
 
-  /**
-   * Shield public ERC-20 tokens into confidential tokens.
-   *
-   * Routing is decided automatically by ERC-165 introspection on the
-   * underlying ERC-20: ERC-1363 `transferAndCall` (single tx, no approval)
-   * when supported, otherwise `approve` + `wrap` (two txs).
-   *
-   * On the `approveAndWrap` path, ERC-20 approval is handled automatically
-   * via `approvalStrategy` (`"exact"` by default, `"max"` for unlimited
-   * approval, `"skip"` to opt out). `approvalStrategy` is **ignored** on
-   * the `transferAndCall` path (the single tx authorizes itself).
-   *
-   * The ERC-20 balance is validated before submitting (public read, no
-   * signing required).
-   *
-   * @param amount - The plaintext amount to shield.
-   * @param options - Optional: `approvalStrategy`, `to`, callbacks.
-   * @returns The transaction hash and mined receipt.
-   * @throws {@link ChainMismatchError} if signer and provider are on different chains.
-   * @throws {@link InsufficientERC20BalanceError} if the ERC-20 balance is less than `amount`.
-   * @throws {@link ApprovalFailedError} if the ERC-20 approval step fails.
-   * @throws {@link TransactionRevertedError} if the shield transaction reverts.
-   *
-   * @example
-   * ```ts
-   * const txHash = await token.shield(1000n);
-   * ```
-   */
-  async shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult> {
-    const account = await requireAlignedWalletAccount("shield", this.sdk.signer, this.sdk.provider);
-
-    const isPayableToken = await this.isPayable();
-    const underlying = await this.#getUnderlying();
-    const userAddress = getAddress(account.address);
-
-    // ERC-20 balance check (public read, no signing needed)
-    let erc20Balance: bigint;
-    try {
-      erc20Balance = await this.sdk.provider.readContract(
-        balanceOfContract(underlying, userAddress),
-      );
-    } catch (error) {
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new ERC20ReadFailedError(
-        `Could not read ERC-20 balance for shield validation (token: ${underlying})`,
-        { cause: toError(error) },
-      );
-    }
-    if (erc20Balance < amount) {
-      throw new InsufficientERC20BalanceError(
-        `Insufficient ERC-20 balance: requested ${amount}, available ${erc20Balance} (token: ${underlying})`,
-        { requested: amount, available: erc20Balance, token: underlying },
-      );
-    }
-
-    if (isPayableToken) {
-      return this.#shieldViaTransferAndCall(amount, underlying, userAddress, options);
-    }
-
-    return this.#shieldViaApproveAndWrap(amount, userAddress, options);
-  }
-
-  async #shieldViaTransferAndCall(
-    amount: bigint,
-    underlying: Address,
-    userAddress: Address,
-    options?: ShieldOptions,
-  ): Promise<TransactionResult> {
-    const signer = this.sdk.requireSigner("shield");
-    const recipient = options?.to ? getAddress(options.to) : userAddress;
-    // ERC7984ERC20Wrapper.onTransferReceived decodes the recipient via
-    // `address(bytes20(data))` — i.e. the first 20 bytes of `data`. We pass
-    // the raw 20-byte address (not ABI-encoded), and the empty payload `0x`
-    // for self-shield so the wrapper falls back to `from`.
-    const data: Hex = recipient === userAddress ? "0x" : recipient;
-
-    try {
-      const txHash = await signer.writeContract(
-        transferAndCallContract(underlying, this.wrapper, amount, data),
-      );
-      this.emit({
-        type: ZamaSDKEvents.ShieldSubmitted,
-        txHash,
-        shieldPath: "transferAndCall",
-      });
-      safeCallback(() => options?.onShieldSubmitted?.(txHash));
-      const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
-      return { txHash, receipt };
-    } catch (error) {
-      this.emit({
-        type: ZamaSDKEvents.TransactionError,
-        operation: "shield:transferAndCall",
-        error: toError(error),
-      });
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new TransactionRevertedError("TransferAndCall shield transaction failed", {
-        cause: error,
-      });
-    }
-  }
-
-  async #shieldViaApproveAndWrap(
-    amount: bigint,
-    userAddress: Address,
-    options?: ShieldOptions,
-  ): Promise<TransactionResult> {
-    const signer = this.sdk.requireSigner("shield");
-    const strategy = options?.approvalStrategy ?? "exact";
-    if (strategy !== "skip") {
-      await this.#ensureAllowance(amount, strategy === "max", options);
-    }
-
-    try {
-      const recipient = options?.to ? getAddress(options.to) : userAddress;
-      const txHash = await signer.writeContract(wrapContract(this.wrapper, recipient, amount));
-      this.emit({
-        type: ZamaSDKEvents.ShieldSubmitted,
-        txHash,
-        shieldPath: "approveAndWrap",
-      });
-      safeCallback(() => options?.onShieldSubmitted?.(txHash));
-      const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
-      return { txHash, receipt };
-    } catch (error) {
-      this.emit({
-        type: ZamaSDKEvents.TransactionError,
-        operation: "shield:approveAndWrap",
-        error: toError(error),
-      });
-
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new TransactionRevertedError("ApproveAndWrap shield transaction failed", {
-        cause: error,
-      });
-    }
-  }
+  // PROTECTED HELPERS (also used by WrappedToken subclass)
 
   /**
-   * Request an unwrap for a specific amount. Encrypts the amount first.
-   * Call {@link finalizeUnwrap} after the request is processed on-chain.
+   * Read the on-chain encrypted balance handle for a given owner.
    *
-   * @param amount - The plaintext amount to unwrap (encrypted automatically).
-   * @returns The transaction hash and mined receipt.
-   * @throws {@link ChainMismatchError} if signer and provider are on different chains.
-   * @throws {@link EncryptionFailedError} if FHE encryption fails.
-   * @throws {@link TransactionRevertedError} if the unwrap transaction reverts.
-   *
-   * @example
-   * ```ts
-   * const txHash = await token.unwrap(500n);
-   * ```
+   * @internal
    */
-  async unwrap(amount: bigint): Promise<TransactionResult> {
-    const signer = this.sdk.requireSigner("unwrap");
-    const account = await requireAlignedWalletAccount("unwrap", this.sdk.signer, this.sdk.provider);
-    const userAddress = getAddress(account.address);
-
-    const { handles, inputProof } = await this.sdk.encrypt({
-      values: [{ value: amount, type: "euint64" }],
-      contractAddress: this.wrapper,
-      userAddress,
-    });
-
-    if (handles.length === 0) {
-      throw new EncryptionFailedError("Encryption returned no handles");
-    }
-
-    try {
-      const txHash = await signer.writeContract(
-        unwrapContract(this.address, userAddress, userAddress, handles[0]!, inputProof),
-      );
-      this.emit({ type: ZamaSDKEvents.UnwrapSubmitted, txHash });
-      const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
-      return { txHash, receipt };
-    } catch (error) {
-      this.emit({
-        type: ZamaSDKEvents.TransactionError,
-        operation: "unwrap",
-        error: toError(error),
-      });
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new TransactionRevertedError("Unshield transaction failed", {
-        cause: error,
-      });
-    }
+  protected async readConfidentialBalanceOf(owner: Address): Promise<Handle> {
+    return await this.sdk.provider.readContract(confidentialBalanceOfContract(this.address, owner));
   }
-
-  /**
-   * Request an unwrap for the entire confidential balance.
-   * Uses the on-chain balance handle directly (no encryption needed).
-   * Throws if the balance is zero.
-   *
-   * @returns The transaction hash and mined receipt.
-   * @throws {@link ChainMismatchError} if signer and provider are on different chains.
-   * @throws {@link DecryptionFailedError} if the balance is zero.
-   * @throws {@link TransactionRevertedError} if the unwrap transaction reverts.
-   *
-   * @example
-   * ```ts
-   * const txHash = await token.unwrapAll();
-   * ```
-   */
-  async unwrapAll(): Promise<TransactionResult> {
-    const signer = this.sdk.requireSigner("unwrapAll");
-    const account = await requireAlignedWalletAccount(
-      "unwrapAll",
-      this.sdk.signer,
-      this.sdk.provider,
-    );
-    const userAddress = getAddress(account.address);
-    const handle = await this.readConfidentialBalanceOf(userAddress);
-
-    if (isZeroHandle(handle)) {
-      throw new DecryptionFailedError("Cannot unshield: balance is zero");
-    }
-
-    try {
-      const txHash = await signer.writeContract(
-        unwrapFromBalanceContract(this.address, userAddress, userAddress, handle),
-      );
-      this.emit({ type: ZamaSDKEvents.UnwrapSubmitted, txHash });
-      const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
-      return { txHash, receipt };
-    } catch (error) {
-      this.emit({
-        type: ZamaSDKEvents.TransactionError,
-        operation: "unwrap",
-        error: toError(error),
-      });
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new TransactionRevertedError("Unshield-all transaction failed", {
-        cause: error,
-      });
-    }
-  }
-
-  /**
-   * Unshield a specific amount and finalize in one call.
-   * Orchestrates: unshield → wait for receipt → parse event → finalize.
-   *
-   * By default, the SDK validates the confidential balance before submitting.
-   * Set `skipBalanceCheck: true` to bypass this validation (e.g. for smart wallets).
-   *
-   * @param amount - The plaintext amount to unshield.
-   * @param options - Optional: `skipBalanceCheck` (default `false`), `callbacks`.
-   * @returns The finalize transaction hash and mined receipt.
-   * @throws {@link InsufficientConfidentialBalanceError} if the confidential balance is less than `amount`.
-   * @throws {@link BalanceCheckUnavailableError} if balance validation is required but decryption is not possible.
-   * @throws {@link EncryptionFailedError} if FHE encryption fails.
-   * @throws {@link TransactionRevertedError} if any transaction in the flow reverts.
-   *
-   * @example
-   * ```ts
-   * const txHash = await token.unshield(500n);
-   * // Smart wallet (skip balance check):
-   * const txHash = await token.unshield(500n, { skipBalanceCheck: true });
-   * ```
-   */
-  async unshield(amount: bigint, options?: UnshieldOptions): Promise<TransactionResult> {
-    const {
-      skipBalanceCheck = false,
-      onUnwrapSubmitted,
-      onFinalizing,
-      onFinalizeSubmitted,
-    } = options ?? {};
-
-    if (!skipBalanceCheck) {
-      await this.#assertConfidentialBalance(amount);
-    }
-
-    const callbacks: UnshieldCallbacks = {
-      onFinalizing,
-      onFinalizeSubmitted,
-    };
-    const operationId = crypto.randomUUID();
-    const unwrapResult = await this.unwrap(amount);
-    safeCallback(() => onUnwrapSubmitted?.(unwrapResult.txHash));
-    return this.#waitAndFinalizeUnshield(unwrapResult.txHash, operationId, callbacks);
-  }
-
-  /**
-   * Unshield the entire balance and finalize in one call.
-   * Orchestrates: unshieldAll → wait for receipt → parse event → finalize.
-   *
-   * @param callbacks - Optional progress callbacks for each phase.
-   * @returns The finalize transaction hash and mined receipt.
-   * @throws {@link DecryptionFailedError} if the balance is zero.
-   * @throws {@link TransactionRevertedError} if any transaction in the flow reverts.
-   *
-   * @example
-   * ```ts
-   * const txHash = await token.unshieldAll();
-   * ```
-   */
-  async unshieldAll(callbacks?: UnshieldCallbacks): Promise<TransactionResult> {
-    const operationId = crypto.randomUUID();
-    const unwrapResult = await this.unwrapAll();
-    safeCallback(() => callbacks?.onUnwrapSubmitted?.(unwrapResult.txHash));
-    return this.#waitAndFinalizeUnshield(unwrapResult.txHash, operationId, callbacks);
-  }
-
-  /**
-   * Resume an in-progress unshield from an existing unwrap tx hash.
-   * Useful when the user already submitted the unwrap but the finalize step
-   * was interrupted (e.g. page reload, network error).
-   *
-   * @param unwrapTxHash - The transaction hash of the previously submitted unwrap.
-   * @param callbacks - Optional progress callbacks.
-   * @returns The finalize transaction hash and mined receipt.
-   * @throws {@link TransactionRevertedError} if finalization fails.
-   *
-   * @example
-   * ```ts
-   * const txHash = await token.resumeUnshield(previousUnwrapTxHash);
-   * ```
-   */
-  async resumeUnshield(
-    unwrapTxHash: Hex,
-    callbacks?: UnshieldCallbacks,
-  ): Promise<TransactionResult> {
-    return this.#waitAndFinalizeUnshield(unwrapTxHash, crypto.randomUUID(), callbacks);
-  }
-
-  /**
-   * Complete an unwrap by providing the public decryption proof.
-   * Call this after an unshield request has been processed on-chain.
-   *
-   * @param unwrapRequestIdOrAmount - `unwrapRequestId` from upgraded wrappers, or the encrypted amount handle from legacy wrappers.
-   * @returns The transaction hash and mined receipt.
-   * @throws {@link ChainMismatchError} if signer and provider are on different chains.
-   * @throws {@link DecryptionFailedError} if public decryption fails.
-   * @throws {@link TransactionRevertedError} if the finalize transaction reverts.
-   *
-   * @example
-   * ```ts
-   * const event = findUnwrapRequested(receipt.logs);
-   * const txHash = await token.finalizeUnwrap(event.unwrapRequestId ?? event.encryptedAmount);
-   * ```
-   */
-  async finalizeUnwrap(unwrapRequestIdOrAmount: Handle): Promise<TransactionResult> {
-    const signer = this.sdk.requireSigner("finalizeUnwrap");
-    await requireChainAlignment("finalizeUnwrap", this.sdk.signer, this.sdk.provider);
-    const result = await this.sdk.publicDecrypt([unwrapRequestIdOrAmount]);
-    const clearValue = result.clearValues[unwrapRequestIdOrAmount];
-    assertBigint(clearValue, "finalizeUnwrap: clearValue");
-    try {
-      const txHash = await signer.writeContract(
-        finalizeUnwrapContract(
-          this.wrapper,
-          unwrapRequestIdOrAmount,
-          clearValue,
-          result.decryptionProof,
-        ),
-      );
-      this.emit({ type: ZamaSDKEvents.FinalizeUnwrapSubmitted, txHash });
-      const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
-      return { txHash, receipt };
-    } catch (error) {
-      this.emit({
-        type: ZamaSDKEvents.TransactionError,
-        operation: "finalizeUnwrap",
-        error: toError(error),
-      });
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new TransactionRevertedError("Failed to finalize unshield", {
-        cause: error,
-      });
-    }
-  }
-
-  /**
-   * Approve this token contract to spend the underlying ERC-20.
-   * Defaults to max uint256. Resets to zero first if there's an existing
-   * non-zero allowance (required by tokens like USDT).
-   *
-   * @param amount - Optional approval amount. Defaults to max uint256.
-   * @returns The transaction hash and mined receipt.
-   * @throws {@link ChainMismatchError} if signer and provider are on different chains.
-   * @throws {@link ApprovalFailedError} if the approval transaction fails.
-   *
-   * @example
-   * ```ts
-   * await token.approveUnderlying(); // max approval
-   * await token.approveUnderlying(1000n); // exact amount
-   * ```
-   */
-  async approveUnderlying(amount?: bigint): Promise<TransactionResult> {
-    const signer = this.sdk.requireSigner("approveUnderlying");
-    const account = await requireAlignedWalletAccount(
-      "approveUnderlying",
-      this.sdk.signer,
-      this.sdk.provider,
-    );
-    const underlying = await this.#getUnderlying();
-    const userAddress = getAddress(account.address);
-
-    const approvalAmount = amount ?? 2n ** 256n - 1n;
-
-    try {
-      if (approvalAmount > 0n) {
-        const currentAllowance = await this.sdk.provider.readContract(
-          allowanceContract(underlying, userAddress, this.wrapper),
-        );
-
-        if (currentAllowance > 0n) {
-          await signer.writeContract(approveContract(underlying, this.wrapper, 0n));
-        }
-      }
-
-      const txHash = await signer.writeContract(
-        approveContract(underlying, this.wrapper, approvalAmount),
-      );
-      this.emit({ type: ZamaSDKEvents.ApproveUnderlyingSubmitted, txHash });
-      const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
-      return { txHash, receipt };
-    } catch (error) {
-      this.emit({
-        type: ZamaSDKEvents.TransactionError,
-        operation: "approveUnderlying",
-        error: toError(error),
-      });
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new ApprovalFailedError("ERC-20 approval failed", {
-        cause: error,
-      });
-    }
-  }
-
-  // DELEGATION OPERATIONS
-
-  /**
-   * Delegate decryption rights for this token to another address.
-   * Calls `ACL.delegateForUserDecryption()` on-chain.
-   *
-   * **Important:** After the transaction is mined, allow **1–2 minutes** before
-   * calling {@link ReadonlyToken.decryptBalanceAs | decryptBalanceAs}. The delegation
-   * is recorded on L1 immediately, but the gateway (on Arbitrum) must sync the
-   * ACL state via cross-chain event propagation. Attempting delegated decryption
-   * before propagation completes will throw a
-   * {@link DelegationNotPropagatedError}.
-   *
-   * @param delegateAddress - Address to delegate decryption rights to.
-   * @param expirationDate - Optional expiration date (defaults to permanent delegation via `uint64.max`).
-   * @returns The transaction hash and mined receipt.
-   * @throws {@link ChainMismatchError} if signer and provider are on different chains.
-   * @throws {@link TransactionRevertedError} if the delegation transaction reverts.
-   */
-  async delegateDecryption({
-    delegateAddress,
-    expirationDate,
-  }: {
-    delegateAddress: Address;
-    expirationDate?: Date;
-  }): Promise<TransactionResult> {
-    return this.sdk.delegateDecryption({
-      contractAddress: this.address,
-      delegateAddress,
-      expirationDate,
-    });
-  }
-
-  /**
-   * Revoke decryption delegation for this token.
-   * Calls `ACL.revokeDelegationForUserDecryption()` on-chain.
-   *
-   * @param delegateAddress - Address to revoke delegation from.
-   * @returns The transaction hash and mined receipt.
-   * @throws {@link ChainMismatchError} if signer and provider are on different chains.
-   * @throws {@link TransactionRevertedError} if the revocation transaction reverts.
-   */
-  async revokeDelegation({
-    delegateAddress,
-  }: {
-    delegateAddress: Address;
-  }): Promise<TransactionResult> {
-    return this.sdk.revokeDelegation({
-      contractAddress: this.address,
-      delegateAddress,
-    });
-  }
-
-  // BATCH DELEGATION
-
-  /**
-   * Delegate decryption rights across multiple tokens in parallel.
-   * Returns a per-token result map with partial success semantics.
-   *
-   * @param tokens - Array of Token instances to delegate on.
-   * @param delegateAddress - Address to delegate decryption rights to.
-   * @param expirationDate - Optional expiration date.
-   * @returns Map from token address to TransactionResult or ZamaError.
-   */
-  static async batchDelegateDecryption({
-    tokens,
-    delegateAddress,
-    expirationDate,
-  }: {
-    tokens: Token[];
-    delegateAddress: Address;
-    expirationDate?: Date;
-  }): Promise<Map<Address, TransactionResult | ZamaError>> {
-    return Token.#batchDelegationOp(
-      tokens,
-      (t) => t.delegateDecryption({ delegateAddress, expirationDate }),
-      "Delegation failed",
-    );
-  }
-
-  /**
-   * Revoke delegation across multiple tokens in parallel.
-   * Returns a per-token result map with partial success semantics.
-   *
-   * @param tokens - Array of Token instances to revoke delegation on.
-   * @param delegateAddress - Address to revoke delegation from.
-   * @returns Map from token address to TransactionResult or ZamaError.
-   */
-  static async batchRevokeDelegation({
-    tokens,
-    delegateAddress,
-  }: {
-    tokens: Token[];
-    delegateAddress: Address;
-  }): Promise<Map<Address, TransactionResult | ZamaError>> {
-    return Token.#batchDelegationOp(
-      tokens,
-      (t) => t.revokeDelegation({ delegateAddress }),
-      "Revoke delegation failed",
-    );
-  }
-
-  static async #batchDelegationOp(
-    tokens: Token[],
-    op: (token: Token) => Promise<TransactionResult>,
-    errorMessage: string,
-  ): Promise<Map<Address, TransactionResult | ZamaError>> {
-    const results = new Map<Address, TransactionResult | ZamaError>();
-    // Run sequentially: parallel writeContract calls from the same signer
-    // cause nonce contention. The value of the batch API is partial-success
-    // semantics (per-token results without throwing), not parallelism.
-    for (let i = 0; i < tokens.length; i++) {
-      try {
-        results.set(tokens[i]!.address, await op(tokens[i]!));
-      } catch (error) {
-        if (error instanceof ZamaError) {
-          results.set(tokens[i]!.address, error);
-        } else {
-          results.set(
-            tokens[i]!.address,
-            new TransactionRevertedError(errorMessage, {
-              cause: error,
-            }),
-          );
-        }
-      }
-    }
-    return results;
-  }
-
-  // PRIVATE HELPERS
 
   /**
    * Pre-flight check: decrypt the confidential balance and compare against the
    * requested amount. If credentials are cached the decrypt happens silently;
    * if not, throws {@link BalanceCheckUnavailableError} instead of triggering
    * a surprise EIP-712 popup.
+   *
+   * @internal
    */
-  async #assertConfidentialBalance(amount: bigint): Promise<void> {
+  protected async assertConfidentialBalance(amount: bigint): Promise<void> {
     if (amount === 0n) {
       return;
     }
@@ -927,102 +748,34 @@ export class Token extends ReadonlyToken {
     }
   }
 
-  async #waitAndFinalizeUnshield(
-    unshieldHash: Hex,
-    operationId: string,
-    callbacks: UnshieldCallbacks | undefined,
-  ): Promise<TransactionResult> {
-    this.emit({
-      type: ZamaSDKEvents.UnshieldPhase1Submitted,
-      txHash: unshieldHash,
-      operationId,
-    });
-    let receipt;
-    try {
-      receipt = await this.sdk.provider.waitForTransactionReceipt(unshieldHash);
-    } catch (error) {
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new TransactionRevertedError("Failed to get unshield receipt", {
-        cause: error,
-      });
-    }
-    const event = findUnwrapRequested(receipt.logs);
-    if (!event) {
-      throw new TransactionRevertedError("No UnwrapRequested event found in unshield receipt");
-    }
-    this.emit({ type: ZamaSDKEvents.UnshieldPhase2Started, operationId });
-    safeCallback(() => callbacks?.onFinalizing?.());
-    const finalizeResult = await this.finalizeUnwrap(
-      event.unwrapRequestId ?? event.encryptedAmount,
-    );
-    this.emit({
-      type: ZamaSDKEvents.UnshieldPhase2Submitted,
-      txHash: finalizeResult.txHash,
-      operationId,
-    });
-    safeCallback(() => callbacks?.onFinalizeSubmitted?.(finalizeResult.txHash));
-    return finalizeResult;
+  /**
+   * Emit a token-scoped event through the owning {@link ZamaSDK} so that
+   * subscribers see a unified stream.
+   *
+   * @internal
+   */
+  protected emit(input: ZamaSDKEventInput): void {
+    this.sdk.emitEvent(input, this.address);
   }
 
-  async #ensureAllowance(
-    amount: bigint,
-    maxApproval: boolean,
-    callbacks?: ShieldCallbacks,
-  ): Promise<void> {
-    const signer = this.sdk.requireSigner("approveUnderlying");
-    const underlying = await this.#getUnderlying();
-    const account = await requireAlignedWalletAccount(
-      "approveUnderlying",
-      this.sdk.signer,
-      this.sdk.provider,
-    );
-    const userAddress = getAddress(account.address);
-    const allowance = await this.sdk.provider.readContract(
-      allowanceContract(underlying, userAddress, this.wrapper),
-    );
-
-    if (allowance >= amount) {
-      return;
-    }
-
-    try {
-      // Reset to zero first when there's an existing non-zero allowance.
-      // Required by non-standard tokens like USDT, and also mitigates the
-      // ERC-20 approve race condition for all tokens.
-      if (allowance > 0n) {
-        const resetHash = await signer.writeContract(approveContract(underlying, this.wrapper, 0n));
-        await this.sdk.provider.waitForTransactionReceipt(resetHash);
+  /** Verify all tokens share the same SDK instance and return it. */
+  private static assertSameSdk(tokens: Token[]): ZamaSDK {
+    const sdk = tokens[0]!.sdk;
+    for (let i = 1; i < tokens.length; i++) {
+      if (tokens[i]!.sdk !== sdk) {
+        throw new ConfigurationError(
+          "All tokens in a batch operation must share the same ZamaSDK instance",
+        );
       }
-
-      const approvalAmount = maxApproval ? 2n ** 256n - 1n : amount;
-
-      const txHash = await signer.writeContract(
-        approveContract(underlying, this.wrapper, approvalAmount),
-      );
-      this.emit({ type: ZamaSDKEvents.ApproveUnderlyingSubmitted, txHash });
-      safeCallback(() => callbacks?.onApprovalSubmitted?.(txHash));
-      await this.sdk.provider.waitForTransactionReceipt(txHash);
-    } catch (error) {
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new ApprovalFailedError("ERC-20 approval failed", {
-        cause: error,
-      });
     }
+    return sdk;
   }
 }
 
 /**
- * Invoke a callback inside a try/catch so a throwing listener
- * can never break the unshield flow (unwrap already on-chain).
+ * Re-exported alias used by tests and helpers for arbitrary-handle decryption.
+ * Use {@link ZamaSDK.userDecrypt} directly in application code.
+ *
+ * @internal
  */
-function safeCallback(fn: () => void): void {
-  try {
-    fn();
-  } catch (error) {
-    console.warn("[zama-sdk] Callback threw:", error);
-  }
-}
+export type DecryptedHandlesMap = Map<Handle, ClearValueType>;

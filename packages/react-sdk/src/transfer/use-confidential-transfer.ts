@@ -6,7 +6,7 @@ import {
   type UseMutationOptions,
   type UseMutationResult,
 } from "@tanstack/react-query";
-import type { TransactionResult } from "@zama-fhe/sdk";
+import type { Address, TransactionResult } from "@zama-fhe/sdk";
 import {
   confidentialTransferMutationOptions,
   invalidateAfterTransfer,
@@ -17,10 +17,12 @@ import {
   rollbackOptimisticBalanceDelta,
   unwrapOptimisticCallerContext,
 } from "../balance/optimistic-balance-update";
-import { useToken, type UseZamaConfig } from "../token/use-token";
+import { useToken } from "../token/use-token";
 
 /** Configuration for {@link useConfidentialTransfer}. */
-export interface UseConfidentialTransferConfig extends UseZamaConfig {
+export interface UseConfidentialTransferConfig {
+  /** Address of the confidential token contract. */
+  address: Address;
   /**
    * When `true`, optimistically subtracts the transfer amount from cached balance
    * before the transaction confirms. Rolls back on error.
@@ -44,7 +46,7 @@ export interface UseConfidentialTransferConfig extends UseZamaConfig {
  * @example
  * ```tsx
  * const transfer = useConfidentialTransfer({
- *   tokenAddress: "0x...",
+ *   address: "0xToken",
  *   optimistic: true,
  * });
  * transfer.mutate(
@@ -63,7 +65,7 @@ export function useConfidentialTransfer<TContext = unknown>(
   config: UseConfidentialTransferConfig,
   options?: UseMutationOptions<TransactionResult, Error, ConfidentialTransferParams, TContext>,
 ): UseMutationResult<TransactionResult, Error, ConfidentialTransferParams, TContext> {
-  const token = useToken(config);
+  const token = useToken(config.address);
   const queryClient = useQueryClient();
 
   // Internal mutation uses `any` for TContext because optimistic mode wraps

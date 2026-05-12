@@ -23,7 +23,7 @@ describe("useConfidentialBalances", () => {
     });
 
     const { result } = renderWithProviders(() =>
-      useConfidentialBalances({ tokenAddresses: [TOKEN, TOKEN_B], account: USER }),
+      useConfidentialBalances({ addresses: [TOKEN, TOKEN_B], account: USER }),
     );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
@@ -50,7 +50,7 @@ describe("useConfidentialBalances", () => {
     vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handle]: 33n });
 
     const { result } = renderWithProviders(() =>
-      useConfidentialBalances({ tokenAddresses: [mixedCaseToken], account: USER }),
+      useConfidentialBalances({ addresses: [mixedCaseToken], account: USER }),
     );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
@@ -60,10 +60,7 @@ describe("useConfidentialBalances", () => {
 
   test("behavior: disabled when user passes enabled=false", ({ renderWithProviders, provider }) => {
     const { result } = renderWithProviders(() =>
-      useConfidentialBalances(
-        { tokenAddresses: [TOKEN, TOKEN_B], account: USER },
-        { enabled: false },
-      ),
+      useConfidentialBalances({ addresses: [TOKEN, TOKEN_B], account: USER }, { enabled: false }),
     );
 
     expect(result.current.isPending).toBe(true);
@@ -82,7 +79,7 @@ describe("useConfidentialBalances", () => {
 
     const OTHER = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
     const { result } = renderWithProviders(() =>
-      useConfidentialBalances({ tokenAddresses: [TOKEN], account: OTHER }),
+      useConfidentialBalances({ addresses: [TOKEN], account: OTHER }),
     );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
@@ -112,7 +109,7 @@ describe("useConfidentialBalances", () => {
 
       const tokens = [TOKEN, TOKEN_B];
       const { result } = renderWithProviders(() =>
-        useConfidentialBalances({ tokenAddresses: tokens, account: USER }),
+        useConfidentialBalances({ addresses: tokens, account: USER }),
       );
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
@@ -154,7 +151,7 @@ describe("useConfidentialBalances", () => {
 
     test("behavior: disabled when tokenAddresses empty", ({ renderWithProviders }) => {
       const { result } = renderWithProviders(() =>
-        useConfidentialBalances({ tokenAddresses: [], account: USER }),
+        useConfidentialBalances({ addresses: [], account: USER }),
       );
 
       expect(result.current.isPending).toBe(true);
@@ -166,7 +163,7 @@ describe("useConfidentialBalances", () => {
       provider,
     }) => {
       const { result } = renderWithProviders(() =>
-        useConfidentialBalances({ tokenAddresses: [TOKEN], account: undefined }),
+        useConfidentialBalances({ addresses: [TOKEN], account: undefined }),
       );
 
       expect(result.current.isPending).toBe(true);
@@ -176,10 +173,7 @@ describe("useConfidentialBalances", () => {
 
     test("behavior: disabled when user passes enabled=false", ({ renderWithProviders }) => {
       const { result } = renderWithProviders(() =>
-        useConfidentialBalances(
-          { tokenAddresses: [TOKEN, TOKEN_B], account: USER },
-          { enabled: false },
-        ),
+        useConfidentialBalances({ addresses: [TOKEN, TOKEN_B], account: USER }, { enabled: false }),
       );
 
       expect(result.current.isPending).toBe(true);

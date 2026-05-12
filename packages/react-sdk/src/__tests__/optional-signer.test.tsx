@@ -41,10 +41,9 @@ describe("ZamaProvider with signer={undefined}", () => {
   it("mutation hooks mount and surface SignerNotConfiguredError on invoke", async ({
     renderWithProviders,
     tokenAddress,
-    wrapperAddress,
   }) => {
     const { result } = renderWithProviders(
-      () => useConfidentialTransfer({ tokenAddress, wrapperAddress }),
+      () => useConfidentialTransfer({ address: tokenAddress }),
       { signer: undefined },
     );
 

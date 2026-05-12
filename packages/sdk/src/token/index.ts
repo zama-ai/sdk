@@ -1,6 +1,6 @@
 export { Token } from "./token";
-export { ReadonlyToken, ZERO_HANDLE, isZeroHandle } from "./readonly-token";
-export type { BatchBalancesResult, BatchDecryptAsOptions } from "./readonly-token";
+export type { BatchBalancesResult, BatchDecryptAsOptions } from "./token";
+export { WrappedToken } from "./wrapped-token";
 export {
   savePendingUnshield,
   loadPendingUnshield,

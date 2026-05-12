@@ -1,4 +1,4 @@
-import type { Token } from "../token/token";
+import type { WrappedToken } from "../token/wrapped-token";
 import type { TransactionResult, UnshieldCallbacks } from "../types";
 import type { MutationFactoryOptions } from "./factory-types";
 import type { Address, Hex } from "viem";
@@ -9,7 +9,7 @@ export interface ResumeUnshieldParams extends UnshieldCallbacks {
 }
 
 export function resumeUnshieldMutationOptions(
-  token: Token,
+  token: WrappedToken,
 ): MutationFactoryOptions<
   readonly ["zama.resumeUnshield", Address],
   ResumeUnshieldParams,

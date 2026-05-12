@@ -28,9 +28,7 @@ const TOKEN = "0xToken" as const;
 
 function ResumeUnshieldGuard() {
   const sdk = useZamaSDK();
-  const { mutateAsync: resumeUnshield } = useResumeUnshield({
-    tokenAddress: TOKEN,
-  });
+  const { mutateAsync: resumeUnshield } = useResumeUnshield(TOKEN);
 
   useEffect(() => {
     async function checkPending() {
@@ -80,16 +78,14 @@ export const zamaConfig = createZamaConfig({
 
 ## Parameters
 
-### tokenAddress
+### address
 
 `Address`
 
-Address of the confidential ERC-20 wrapper contract.
+Address of the confidential wrapper contract. Passed positionally as the first argument.
 
 ```ts
-const { mutateAsync: resumeUnshield } = useResumeUnshield({
-  tokenAddress: "0xToken",
-});
+const { mutateAsync: resumeUnshield } = useResumeUnshield("0xWrapper");
 ```
 
 ---
@@ -132,4 +128,4 @@ Auto-invalidates the `confidentialBalance` cache on success.
 
 - [useUnshield](/reference/react/useUnshield) — standard unshield (handles both steps automatically)
 - [useUnshieldAll](/reference/react/useUnshieldAll) — unshield the entire balance
-- [Token.resumeUnshield](/reference/sdk/Token#resumeunshield) — imperative equivalent on the `Token` class
+- [WrappedToken.resumeUnshield](/reference/sdk/WrappedToken#resumeunshield) — imperative equivalent on the `WrappedToken` class

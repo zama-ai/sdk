@@ -1,7 +1,7 @@
 /**
  * TypeScript SDK for Zama's fhEVM — confidential smart contracts powered by Fully Homomorphic Encryption.
  *
- * Main classes: {@link ZamaSDK}, {@link Token}, {@link ReadonlyToken}.
+ * Main classes: {@link ZamaSDK}, {@link Token}, {@link WrappedToken}.
  *
  * @packageDocumentation
  */
@@ -72,17 +72,16 @@ export { WrappersRegistry, DefaultRegistryAddresses } from "./wrappers-registry"
 export type { WrappersRegistryConfig, ListPairsOptions } from "./wrappers-registry";
 export {
   Token,
-  ReadonlyToken,
+  WrappedToken,
   type BatchBalancesResult,
   type BatchDecryptAsOptions,
-  ZERO_HANDLE,
-  isZeroHandle,
   savePendingUnshield,
   loadPendingUnshield,
   loadPendingUnshieldRequest,
   clearPendingUnshield,
   type PendingUnshieldRequest,
 } from "./token";
+export { ZERO_HANDLE, isZeroHandle } from "./utils/handles";
 export {
   MemoryStorage,
   memoryStorage,
