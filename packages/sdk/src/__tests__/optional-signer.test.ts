@@ -14,7 +14,6 @@ const SIGNER_REQUIRED_OPS: ReadonlyArray<readonly [string, Op]> = [
   ["allow", (sdk, t) => sdk.allow([t])],
   ["revokePermits", (sdk) => sdk.revokePermits()],
   ["clearCredentials", (sdk) => sdk.clearCredentials()],
-  ["requireChainAlignment", (sdk) => sdk.requireChainAlignment("op")],
   [
     "Token.confidentialTransfer",
     (sdk, t) => sdk.createToken(t).confidentialTransfer("0x1" as Address, 1n),

@@ -25,6 +25,7 @@ import {
 } from "../errors";
 import { isZeroHandle } from "../utils/handles";
 import { toError } from "../utils";
+import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
 import { assertBigint } from "../utils/assertions";
 import { swallow } from "../utils/swallow";
 import { Token } from "./token";
@@ -130,7 +131,7 @@ export class WrappedToken extends Token {
    */
   async shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("shield");
-    await this.sdk.requireChainAlignment("shield");
+    await requireChainAlignment("shield", this.sdk.signer, this.sdk.provider);
 
     const isPayableToken = await this.isPayable();
     const underlying = await this.#getUnderlying();
@@ -258,7 +259,11 @@ export class WrappedToken extends Token {
    */
   async approveUnderlying(amount?: bigint): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("approveUnderlying");
-    const account = await this.sdk.requireAlignedWalletAccount("approveUnderlying");
+    const account = await requireAlignedWalletAccount(
+      "approveUnderlying",
+      this.sdk.signer,
+      this.sdk.provider,
+    );
     const underlying = await this.#getUnderlying();
     const userAddress = getAddress(account.address);
 
@@ -395,7 +400,7 @@ export class WrappedToken extends Token {
    */
   async unwrap(amount: bigint): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("unwrap");
-    await this.sdk.requireChainAlignment("unwrap");
+    await requireChainAlignment("unwrap", this.sdk.signer, this.sdk.provider);
     const userAddress = signer.requireWalletAccount("unwrap").address;
 
     const { handles, inputProof } = await this.sdk.encrypt({
@@ -446,7 +451,7 @@ export class WrappedToken extends Token {
    */
   async unwrapAll(): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("unwrapAll");
-    await this.sdk.requireChainAlignment("unwrapAll");
+    await requireChainAlignment("unwrapAll", this.sdk.signer, this.sdk.provider);
     const userAddress = signer.requireWalletAccount("unwrapAll").address;
     const handle = await this.readConfidentialBalanceOf(userAddress);
 
@@ -494,7 +499,7 @@ export class WrappedToken extends Token {
    */
   async finalizeUnwrap(unwrapRequestIdOrAmount: Handle): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("finalizeUnwrap");
-    await this.sdk.requireChainAlignment("finalizeUnwrap");
+    await requireChainAlignment("finalizeUnwrap", this.sdk.signer, this.sdk.provider);
     const result = await this.sdk.publicDecrypt([unwrapRequestIdOrAmount]);
     const clearValue = result.clearValues[unwrapRequestIdOrAmount];
     assertBigint(clearValue, "finalizeUnwrap: clearValue");

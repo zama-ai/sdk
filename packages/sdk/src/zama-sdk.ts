@@ -1,12 +1,7 @@
 import { getAddress, type Address } from "viem";
 import type { ZamaConfig } from "./config/types";
 import { CredentialService } from "./credentials/credential-service";
-import {
-  ChainMismatchError,
-  SignerNotConfiguredError,
-  WalletAccountNotReadyError,
-  wrapDecryptError,
-} from "./errors";
+import { SignerNotConfiguredError, wrapDecryptError } from "./errors";
 import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventListener } from "./events/sdk-events";
 import type { DecryptHandle } from "./query/user-decrypt";
 import type { RelayerDispatcher } from "./relayer/relayer-dispatcher";
@@ -24,15 +19,15 @@ import type {
   GenericSigner,
   GenericStorage,
   TransactionResult,
-  WalletAccount,
-  WalletAccountChange,
   WalletAccountListener,
 } from "./types";
 import { swallow } from "./utils";
+import { requireAlignedWalletAccount, requireChainAlignment } from "./utils/alignment";
 import { CachingService } from "./services/caching-service";
 import { DecryptionService, type BatchDecryptHandlesResult } from "./services/decryption-service";
 import { DelegationService } from "./services/delegation-service";
 import { EncryptionService } from "./services/encryption-service";
+import { LifecycleService } from "./services/lifecycle-service";
 import { WrappersRegistry } from "./wrappers-registry";
 
 /**
@@ -51,14 +46,12 @@ export class ZamaSDK {
   readonly registry: WrappersRegistry;
   readonly #registryTTL: number;
   readonly #onEvent: ZamaSDKEventListener;
-  readonly #walletAccountListeners = new Set<WalletAccountListener>();
-  /** Persistent cache for decrypted FHE plaintext values, scoped by (requester, contract, handle). */
   readonly #cache: CachingService;
   readonly #credentialService: CredentialService | undefined;
   readonly #delegationService: DelegationService;
   readonly #decryptionService: DecryptionService | undefined;
   readonly #encryptionService: EncryptionService;
-  #unsubscribeSigner?: () => void;
+  readonly #lifecycleService: LifecycleService;
 
   constructor(config: ZamaConfig) {
     this.relayer = config.relayer;
@@ -105,17 +98,17 @@ export class ZamaSDK {
         relayer: this.relayer,
         emitEvent: (input) => this.emitEvent(input),
       });
-
-      this.#unsubscribeSigner = signer.walletAccount.subscribe((change) => {
-        this.#handleWalletAccountChange(change).catch((error) => {
-          // oxlint-disable-next-line no-console
-          console.warn("[zama-sdk] wallet account handler failed:", error);
-        });
-      });
     } else {
       this.#credentialService = undefined;
       this.#decryptionService = undefined;
     }
+
+    this.#lifecycleService = new LifecycleService({
+      signer: config.signer,
+      cache: this.#cache,
+      relayer: this.relayer,
+      credentialService: this.#credentialService,
+    });
   }
 
   /**
@@ -155,74 +148,7 @@ export class ZamaSDK {
    * @internal
    */
   onWalletAccountChange(listener: WalletAccountListener): () => void {
-    this.#walletAccountListeners.add(listener);
-    return () => {
-      this.#walletAccountListeners.delete(listener);
-    };
-  }
-
-  /**
-   * Pre-flight chain coherence check for signer-required operations.
-   *
-   * Throws {@link ChainMismatchError} if they differ.
-   *
-   * @param operation - The operation name, included in the error message.
-   * @returns The chain ID shared by both signer and provider.
-   * @throws {@link SignerNotConfiguredError} if no signer is configured.
-   * @throws {@link ChainMismatchError} if signer and provider report different chain IDs.
-   */
-  async requireAlignedWalletAccount(operation: string): Promise<WalletAccount> {
-    const signer = this.requireSigner(operation);
-    let account: WalletAccount;
-    try {
-      account = signer.requireWalletAccount(operation);
-    } catch (error) {
-      if (!(error instanceof WalletAccountNotReadyError) || !signer.refreshWalletAccount) {
-        throw error;
-      }
-      await signer.refreshWalletAccount();
-      account = signer.requireWalletAccount(operation);
-    }
-    const providerChainId = await this.provider.getChainId();
-    if (account.chainId !== providerChainId) {
-      throw new ChainMismatchError({
-        operation,
-        signerChainId: account.chainId,
-        providerChainId,
-      });
-    }
-    return account;
-  }
-
-  async requireChainAlignment(operation: string): Promise<number> {
-    return (await this.requireAlignedWalletAccount(operation)).chainId;
-  }
-
-  async #handleWalletAccountChange(change: WalletAccountChange): Promise<void> {
-    const previousAccount = change.previous;
-    const nextAccount = change.next;
-    const credentialService = this.#credentialService;
-    if (credentialService) {
-      await swallow("credential wallet account change", () =>
-        credentialService.handleWalletAccountChange(previousAccount, nextAccount),
-      );
-    }
-    if (previousAccount) {
-      await swallow("clear decrypt cache", () =>
-        this.#cache.clearForRequester(previousAccount.address),
-      );
-    }
-    const nextChainId = nextAccount?.chainId;
-    if (nextChainId !== undefined) {
-      void swallow("switch relayer chain", () => this.relayer.switchChain(nextChainId));
-    }
-    await Promise.all(
-      Array.from(this.#walletAccountListeners, (listener) =>
-        swallow("wallet account listener", () =>
-          listener({ previous: previousAccount, next: nextAccount }),
-        ),
-      ),
-    );
+    return this.#lifecycleService.onWalletAccountChange(listener);
   }
 
   /**
@@ -315,7 +241,7 @@ export class ZamaSDK {
       return;
     }
     const service = this.#requireCredentialService("allow");
-    await this.requireChainAlignment("allow");
+    await requireChainAlignment("allow", this.signer, this.provider);
     await service.allow(contracts);
   }
 
@@ -330,7 +256,7 @@ export class ZamaSDK {
       return;
     }
     const service = this.#requireCredentialService("allowAs");
-    await this.requireChainAlignment("allowAs");
+    await requireChainAlignment("allowAs", this.signer, this.provider);
     await service.allow(contracts, delegator);
   }
 
@@ -390,7 +316,11 @@ export class ZamaSDK {
     expirationDate?: Date;
   }): Promise<TransactionResult> {
     const signer = this.requireSigner("delegateDecryption");
-    const account = await this.requireAlignedWalletAccount("delegateDecryption");
+    const account = await requireAlignedWalletAccount(
+      "delegateDecryption",
+      this.signer,
+      this.provider,
+    );
     return this.#delegationService.delegateDecryption(signer, {
       contractAddress,
       delegateAddress,
@@ -419,7 +349,11 @@ export class ZamaSDK {
     delegateAddress: Address;
   }): Promise<TransactionResult> {
     const signer = this.requireSigner("revokeDelegation");
-    const account = await this.requireAlignedWalletAccount("revokeDelegation");
+    const account = await requireAlignedWalletAccount(
+      "revokeDelegation",
+      this.signer,
+      this.provider,
+    );
     return this.#delegationService.revokeDelegation(signer, {
       contractAddress,
       delegateAddress,
@@ -490,7 +424,7 @@ export class ZamaSDK {
    */
   async userDecrypt(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>> {
     const service = this.#requireDecryptionService("userDecrypt");
-    const account = await this.requireAlignedWalletAccount("userDecrypt");
+    const account = await requireAlignedWalletAccount("userDecrypt", this.signer, this.provider);
     return service.userDecrypt(handles, account.address);
   }
 
@@ -524,7 +458,11 @@ export class ZamaSDK {
     accountAddress: Address = delegatorAddress,
   ): Promise<Record<Handle, ClearValueType>> {
     const service = this.#requireDecryptionService("delegatedUserDecrypt");
-    const account = await this.requireAlignedWalletAccount("delegatedUserDecrypt");
+    const account = await requireAlignedWalletAccount(
+      "delegatedUserDecrypt",
+      this.signer,
+      this.provider,
+    );
     return service.delegatedUserDecrypt(handles, delegatorAddress, account.address, accountAddress);
   }
 
@@ -541,7 +479,11 @@ export class ZamaSDK {
     maxConcurrency?: number;
   }): Promise<BatchDecryptHandlesResult> {
     const service = this.#requireDecryptionService("delegatedBatchDecryptHandlesAs");
-    const account = await this.requireAlignedWalletAccount("delegatedBatchDecryptHandlesAs");
+    const account = await requireAlignedWalletAccount(
+      "delegatedBatchDecryptHandlesAs",
+      this.signer,
+      this.provider,
+    );
     return service.delegatedBatchDecryptHandlesAs({
       handles,
       delegatorAddress,
@@ -617,7 +559,7 @@ export class ZamaSDK {
    */
   async revokePermits(contracts?: Address[]): Promise<void> {
     const service = this.#requireCredentialService("revokePermits");
-    const account = await this.requireAlignedWalletAccount("revokePermits");
+    const account = await requireAlignedWalletAccount("revokePermits", this.signer, this.provider);
     const signerAddress = getAddress(account.address);
     try {
       await service.revokePermits(contracts);
@@ -634,7 +576,11 @@ export class ZamaSDK {
    */
   async clearCredentials(): Promise<void> {
     const service = this.#requireCredentialService("clearCredentials");
-    const account = await this.requireAlignedWalletAccount("clearCredentials");
+    const account = await requireAlignedWalletAccount(
+      "clearCredentials",
+      this.signer,
+      this.provider,
+    );
     const signerAddress = getAddress(account.address);
     try {
       await service.clearCredentials();
@@ -649,9 +595,7 @@ export class ZamaSDK {
    * (e.g. React provider remount in Strict Mode).
    */
   dispose(): void {
-    this.#unsubscribeSigner?.();
-    this.#unsubscribeSigner = undefined;
-    this.#walletAccountListeners.clear();
+    this.#lifecycleService.dispose();
   }
 
   /**

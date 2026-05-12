@@ -28,6 +28,7 @@ import type { ZamaSDKEventInput } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { ClearValueType, Handle } from "../relayer/relayer-sdk.types";
 import { toError } from "../utils";
+import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
 import { assertBigint } from "../utils/assertions";
 import { pLimit } from "../utils/concurrency";
 import { isZeroHandle } from "../utils/handles";
@@ -210,7 +211,7 @@ export class Token {
     delegatorAddress: Address;
     accountAddress?: Address;
   }): Promise<bigint> {
-    await this.sdk.requireChainAlignment("decryptBalanceAs");
+    await requireChainAlignment("decryptBalanceAs", this.sdk.signer, this.sdk.provider);
     const normalizedDelegator = getAddress(delegatorAddress);
     const normalizedAccount = accountAddress ? getAddress(accountAddress) : normalizedDelegator;
 
@@ -264,7 +265,7 @@ export class Token {
 
     const sdk = Token.assertSameSdk(tokens);
     // Fail fast on chain mismatch before prompting the wallet for a signature.
-    await sdk.requireChainAlignment("batchBalancesOf");
+    await requireChainAlignment("batchBalancesOf", sdk.signer, sdk.provider);
     // Pre-authorize the full token set in one wallet signature so subsequent
     // per-token userDecrypt calls reuse the cached credentials.
     await sdk.allow(tokens.map((t) => t.address));
@@ -519,7 +520,11 @@ export class Token {
     options?: TransferOptions,
   ): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("confidentialTransfer");
-    const account = await this.sdk.requireAlignedWalletAccount("confidentialTransfer");
+    const account = await requireAlignedWalletAccount(
+      "confidentialTransfer",
+      this.sdk.signer,
+      this.sdk.provider,
+    );
     const { skipBalanceCheck = false, onEncryptComplete, onTransferSubmitted } = options ?? {};
 
     const normalizedTo = getAddress(to);
@@ -583,7 +588,7 @@ export class Token {
     callbacks?: TransferCallbacks,
   ): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("confidentialTransferFrom");
-    await this.sdk.requireChainAlignment("confidentialTransferFrom");
+    await requireChainAlignment("confidentialTransferFrom", this.sdk.signer, this.sdk.provider);
     const normalizedFrom = getAddress(from);
     const normalizedTo = getAddress(to);
 
@@ -646,7 +651,7 @@ export class Token {
    */
   async setOperator(operator: Address, until?: number): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("setOperator");
-    await this.sdk.requireChainAlignment("setOperator");
+    await requireChainAlignment("setOperator", this.sdk.signer, this.sdk.provider);
     const normalizedOperator = getAddress(operator);
     try {
       const txHash = await signer.writeContract(
@@ -716,7 +721,11 @@ export class Token {
 
     let balance: bigint;
     try {
-      const account = await this.sdk.requireAlignedWalletAccount("assertConfidentialBalance");
+      const account = await requireAlignedWalletAccount(
+        "assertConfidentialBalance",
+        this.sdk.signer,
+        this.sdk.provider,
+      );
       balance = await this.balanceOf(getAddress(account.address));
     } catch (error) {
       if (error instanceof ZamaError) {

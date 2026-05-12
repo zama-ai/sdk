@@ -20067,9 +20067,6 @@ export class ZamaSDK {
     readonly registry: WrappersRegistry;
     // (undocumented)
     readonly relayer: RelayerDispatcher;
-    requireAlignedWalletAccount(operation: string): Promise<WalletAccount>;
-    // (undocumented)
-    requireChainAlignment(operation: string): Promise<number>;
     requireSigner(operation: string): GenericSigner;
     revokeDelegation(input: {
         contractAddress: Address;

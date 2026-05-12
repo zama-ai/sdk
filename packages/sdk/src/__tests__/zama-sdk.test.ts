@@ -1,17 +1,10 @@
-import { describe, it, expect, vi, TEST_ADDR_B } from "../test-fixtures";
+import { describe, it, expect, vi } from "../test-fixtures";
 import { Token } from "../token/token";
 import { WrappedToken } from "../token/wrapped-token";
-import {
-  DecryptionFailedError,
-  SignerNotConfiguredError,
-  WalletAccountNotReadyError,
-} from "../errors";
-import type { GenericSigner, WalletAccountChange, WalletAccountListener } from "../types";
+import { DecryptionFailedError, SignerNotConfiguredError } from "../errors";
 import type { Address } from "viem";
 import type { DecryptHandle } from "../query/user-decrypt";
 import type { EncryptParams } from "../relayer/relayer-sdk.types";
-
-const NEXT_USER_ADDRESS = TEST_ADDR_B;
 
 describe("ZamaSDK", () => {
   it("exposes signer and storage", ({ sdk, signer, storage }) => {
@@ -65,52 +58,6 @@ describe("ZamaSDK", () => {
     expect(relayer.terminate).toHaveBeenCalledOnce();
   });
 
-  it("subscribes to signer wallet account changes", ({ createMockSigner, createSDK }) => {
-    const unsubscribe = vi.fn();
-    const walletAccount = createMockSigner().walletAccount.getSnapshot();
-    const subscribe = vi.fn((listener: WalletAccountListener) => {
-      if (walletAccount) {
-        listener({ previous: undefined, next: walletAccount });
-      }
-      return unsubscribe;
-    });
-    const subscribeSigner = {
-      ...createMockSigner(),
-      walletAccount: {
-        getSnapshot: vi.fn().mockReturnValue(walletAccount),
-        subscribe,
-        isReady: vi.fn().mockReturnValue(true),
-      },
-    };
-
-    const sdk = createSDK({ signer: subscribeSigner });
-
-    expect(subscribe).toHaveBeenCalledOnce();
-    expect(subscribe).toHaveBeenCalledWith(expect.any(Function));
-
-    sdk.terminate();
-  });
-
-  it("terminate calls unsubscribe from signer wallet account subscription", ({
-    createMockSigner,
-    createSDK,
-  }) => {
-    const unsubscribe = vi.fn();
-    const subscribeSigner = {
-      ...createMockSigner(),
-      walletAccount: {
-        getSnapshot: vi.fn().mockReturnValue(createMockSigner().walletAccount.getSnapshot()),
-        subscribe: vi.fn().mockReturnValue(unsubscribe),
-        isReady: vi.fn().mockReturnValue(true),
-      },
-    };
-
-    const sdk = createSDK({ signer: subscribeSigner });
-
-    sdk.terminate();
-    expect(unsubscribe).toHaveBeenCalledOnce();
-  });
-
   it("terminate calls signer.dispose", ({ createMockSigner, createSDK }) => {
     const dispose = vi.fn();
     const sdk = createSDK({ signer: { ...createMockSigner(), dispose } });
@@ -118,152 +65,6 @@ describe("ZamaSDK", () => {
     sdk.terminate();
 
     expect(dispose).toHaveBeenCalledOnce();
-  });
-
-  it("refreshes a not-ready signer once before checking chain alignment", async ({
-    createMockSigner,
-    createSDK,
-    provider,
-  }) => {
-    const walletAccount = createMockSigner().walletAccount.getSnapshot()!;
-    const requireWalletAccount = vi
-      .fn()
-      .mockImplementationOnce(() => {
-        throw new WalletAccountNotReadyError("testOp");
-      })
-      .mockReturnValue(walletAccount);
-    const refreshWalletAccount = vi.fn().mockResolvedValue(walletAccount);
-    const sdk = createSDK({
-      signer: {
-        ...createMockSigner(),
-        requireWalletAccount,
-        refreshWalletAccount,
-      },
-    });
-    vi.mocked(provider.getChainId).mockResolvedValue(walletAccount.chainId);
-
-    await expect(sdk.requireChainAlignment("testOp")).resolves.toBe(walletAccount.chainId);
-    expect(refreshWalletAccount).toHaveBeenCalledOnce();
-    expect(requireWalletAccount).toHaveBeenCalledTimes(2);
-  });
-
-  it("does not fail when subscribe returns a no-op unsubscribe", ({ sdk }) => {
-    sdk.terminate();
-  });
-
-  describe("lifecycle wallet account change", () => {
-    function createSubscribeSigner(mockSigner: GenericSigner) {
-      let capturedOnWalletAccountChange: WalletAccountListener;
-      const signer = {
-        ...mockSigner,
-        walletAccount: {
-          getSnapshot: vi.fn().mockReturnValue(mockSigner.walletAccount.getSnapshot()),
-          subscribe: vi.fn((onWalletAccountChange: WalletAccountListener) => {
-            capturedOnWalletAccountChange = onWalletAccountChange;
-            return () => {};
-          }),
-          isReady: vi.fn().mockReturnValue(true),
-        },
-      };
-      const emitChange = (change: WalletAccountChange) => capturedOnWalletAccountChange(change);
-      return { signer, emitChange };
-    }
-
-    it("clears decrypt cache for previous requester", async ({
-      createMockSigner,
-      createSDK,
-      handle,
-      tokenAddress,
-      userAddress,
-      cache,
-    }) => {
-      const { signer, emitChange } = createSubscribeSigner(createMockSigner());
-
-      const sdk = createSDK({ signer });
-
-      await cache.set(userAddress, tokenAddress, handle, 123n);
-      await cache.set(NEXT_USER_ADDRESS, tokenAddress, handle, 456n);
-
-      emitChange({
-        previous: { address: userAddress, chainId: 31337 },
-        next: { address: NEXT_USER_ADDRESS, chainId: 31337 },
-      });
-
-      await vi.waitFor(async () => {
-        expect(await cache.get(userAddress, tokenAddress, handle)).toBeNull();
-      });
-      expect(await cache.get(NEXT_USER_ADDRESS, tokenAddress, handle)).toBe(456n);
-
-      sdk.terminate();
-    });
-
-    it("notifies listeners even when relayer chain switching fails", async ({
-      createMockSigner,
-      createMockRelayer,
-      createSDK,
-    }) => {
-      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-      const { signer, emitChange } = createSubscribeSigner(createMockSigner());
-      const relayer = createMockRelayer({
-        switchChain: vi.fn(() => {
-          throw new Error("unknown chain");
-        }),
-      });
-      const sdk = createSDK({ relayer, signer });
-      const listener = vi.fn();
-      sdk.onWalletAccountChange(listener);
-
-      emitChange({
-        previous: undefined,
-        next: { address: NEXT_USER_ADDRESS, chainId: 1 },
-      });
-
-      await vi.waitFor(() => {
-        expect(listener).toHaveBeenCalledWith({
-          previous: undefined,
-          next: { address: NEXT_USER_ADDRESS, chainId: 1 },
-        });
-      });
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining("switch relayer chain"),
-        expect.any(Error),
-      );
-
-      warnSpy.mockRestore();
-      sdk.terminate();
-    });
-
-    it("fans out wallet account listeners without waiting for slow listeners", async ({
-      createMockSigner,
-      createSDK,
-    }) => {
-      const { signer, emitChange } = createSubscribeSigner(createMockSigner());
-      const sdk = createSDK({ signer });
-      let releaseSlowListener: () => void = () => {};
-      const slowListener = vi.fn(() => {
-        return new Promise<void>((resolve) => {
-          releaseSlowListener = resolve;
-        });
-      });
-      const fastListener = vi.fn();
-      sdk.onWalletAccountChange((change) => {
-        void slowListener(change);
-      });
-      sdk.onWalletAccountChange(fastListener);
-
-      emitChange({
-        previous: undefined,
-        next: undefined,
-      });
-
-      await vi.waitFor(() => {
-        expect(fastListener).toHaveBeenCalledOnce();
-      });
-      expect(slowListener).toHaveBeenCalledOnce();
-      releaseSlowListener();
-
-      sdk.terminate();
-    });
   });
 
   describe("publicDecrypt", () => {

@@ -36,23 +36,7 @@ const MISMATCHED_OPS: ReadonlyArray<readonly [string, Op]> = [
   ],
 ] as const;
 
-describe("requireChainAlignment", () => {
-  it("returns the shared chain ID when signer and provider match", async ({
-    sdk,
-    signer,
-    provider,
-  }) => {
-    const walletAccount = {
-      address: signer.walletAccount.getSnapshot()!.address,
-      chainId: 11155111,
-    };
-    vi.mocked(signer.walletAccount.getSnapshot).mockReturnValue(walletAccount);
-    vi.mocked(signer.requireWalletAccount).mockReturnValue(walletAccount);
-    vi.mocked(provider.getChainId).mockResolvedValue(11155111);
-
-    await expect(sdk.requireChainAlignment("testOp")).resolves.toBe(11155111);
-  });
-
+describe("chain alignment guards", () => {
   // `it.for` (not `it.each`) is the API that forwards the fixture context as
   // the second argument; `it.each` only splats the row.
   it.for(MISMATCHED_OPS)(
