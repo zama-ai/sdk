@@ -51,10 +51,21 @@ export class EthersProvider implements GenericProvider {
     getBlockTimestamp(): Promise<bigint>;
     // (undocumented)
     getChainId(): Promise<number>;
+    // Warning: (ae-forgotten-export) The symbol "ContractAbi" needs to be exported by the entry point index.d.ts
+    // Warning: (ae-forgotten-export) The symbol "WriteFunctionName" needs to be exported by the entry point index.d.ts
+    // Warning: (ae-forgotten-export) The symbol "WriteContractArgs" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    prepareTransaction<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(args: {
+        from: Address;
+        call: WriteContractConfig<TAbi, TFunctionName, TArgs>;
+    }): Promise<Hex>;
     // Warning: (ae-forgotten-export) The symbol "ReadContractConfig" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
     readContract<const TAbi extends Abi | readonly unknown[], TFunctionName extends ContractFunctionName<TAbi, "pure" | "view">, const TArgs extends ContractFunctionArgs<TAbi, "pure" | "view", TFunctionName>>(config: ReadContractConfig<TAbi, TFunctionName, TArgs>): Promise<ContractFunctionReturnType<TAbi, "pure" | "view", TFunctionName, TArgs>>;
+    // (undocumented)
+    sendRawTransaction(signedTx: Hex): Promise<Hex>;
     // Warning: (ae-forgotten-export) The symbol "TransactionReceipt" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
@@ -69,9 +80,10 @@ export type EthersProviderConfig = {
 };
 
 // Warning: (ae-forgotten-export) The symbol "BaseSigner" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "OnlineSigner" needs to be exported by the entry point index.d.ts
 //
 // @public
-export class EthersSigner extends BaseSigner {
+export class EthersSigner extends BaseSigner implements OnlineSigner {
     constructor(config: EthersSignerConfig);
     // (undocumented)
     protected onDispose(): void;
@@ -85,8 +97,6 @@ export class EthersSigner extends BaseSigner {
     //
     // (undocumented)
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-    // Warning: (ae-forgotten-export) The symbol "WriteContractConfig" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     writeContract<const TAbi extends Abi | readonly unknown[], TFunctionName extends ContractFunctionName<TAbi, "nonpayable" | "payable">, const TArgs extends ContractFunctionArgs<TAbi, "nonpayable" | "payable", TFunctionName>>(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex>;
 }
@@ -175,6 +185,10 @@ export type ZamaConfigEthers<TChains extends AtLeastOneChain = AtLeastOneChain> 
     provider: Provider;
     signer?: never;
 });
+
+// Warnings were encountered during analysis:
+//
+// dist/esm/ethers/index.d.ts:96:5 - (ae-forgotten-export) The symbol "WriteContractConfig" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

@@ -412,20 +412,11 @@ export interface FinalizeUnwrapSubmittedEvent extends BaseEvent {
 // @public (undocumented)
 export function generateKeypairMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.generateKeypair"], void, KeypairType<Hex>>;
 
+// Warning: (ae-forgotten-export) The symbol "OnlineSigner" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "OfflineSigner" needs to be exported by the entry point index.d.ts
+//
 // @public
-export interface GenericSigner {
-    dispose?(): void;
-    refreshWalletAccount?(): Promise<WalletAccount | undefined>;
-    requireWalletAccount(operation: string): WalletAccount;
-    signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-    // Warning: (ae-forgotten-export) The symbol "WalletAccountStore" needs to be exported by the entry point index.d.ts
-    readonly walletAccount: WalletAccountStore;
-    // Warning: (ae-forgotten-export) The symbol "ContractAbi" needs to be exported by the entry point index.d.ts
-    // Warning: (ae-forgotten-export) The symbol "WriteFunctionName" needs to be exported by the entry point index.d.ts
-    // Warning: (ae-forgotten-export) The symbol "WriteContractArgs" needs to be exported by the entry point index.d.ts
-    // Warning: (ae-forgotten-export) The symbol "WriteContractConfig" needs to be exported by the entry point index.d.ts
-    writeContract<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex>;
-}
+export type GenericSigner = OnlineSigner | OfflineSigner;
 
 // @public
 export interface GenericStorage {
@@ -740,6 +731,24 @@ export class Token extends ReadonlyToken {
         tokens: Token[];
         delegateAddress: Address;
     }): Promise<Map<Address, TransactionResult | ZamaError>>;
+    // (undocumented)
+    completeApproveUnderlying(prepared: PreparedFor<"ApproveUnderlying">, txHash: Hex): Promise<TransactionResult>;
+    // (undocumented)
+    completeConfidentialTransfer(prepared: PreparedFor<"ConfidentialTransfer">, txHash: Hex): Promise<TransactionResult>;
+    // (undocumented)
+    completeConfidentialTransferFrom(prepared: PreparedFor<"ConfidentialTransferFrom">, txHash: Hex): Promise<TransactionResult>;
+    // (undocumented)
+    completeDelegateDecryption(prepared: PreparedFor<"DelegateDecryption">, txHash: Hex): Promise<TransactionResult>;
+    // (undocumented)
+    completeFinalizeUnwrap(prepared: PreparedFor<"FinalizeUnwrap">, txHash: Hex): Promise<TransactionResult>;
+    // (undocumented)
+    completeRevokeDelegation(prepared: PreparedFor<"RevokeDelegation">, txHash: Hex): Promise<TransactionResult>;
+    // (undocumented)
+    completeSetOperator(prepared: PreparedFor<"SetOperator">, txHash: Hex): Promise<TransactionResult>;
+    // (undocumented)
+    completeUnwrap(prepared: PreparedFor<"Unwrap">, txHash: Hex): Promise<TransactionResult>;
+    // (undocumented)
+    completeUnwrapAll(prepared: PreparedFor<"UnwrapAll">, txHash: Hex): Promise<TransactionResult>;
     confidentialTransfer(to: Address, amount: bigint, options?: TransferOptions): Promise<TransactionResult>;
     confidentialTransferFrom(from: Address, to: Address, amount: bigint, callbacks?: TransferCallbacks): Promise<TransactionResult>;
     delegateDecryption(input: {
@@ -749,6 +758,51 @@ export class Token extends ReadonlyToken {
     finalizeUnwrap(unwrapRequestIdOrAmount: Handle): Promise<TransactionResult>;
     isOperator(holder: Address, spender: Address): Promise<boolean>;
     isPayable(): Promise<boolean>;
+    // (undocumented)
+    prepareApproveUnderlying(args: {
+        amount: bigint;
+    }): Promise<PreparedFor<"ApproveUnderlying">>;
+    // Warning: (ae-forgotten-export) The symbol "PreparedFor" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    prepareConfidentialTransfer(args: {
+        to: Address;
+        amount: bigint;
+    }): Promise<PreparedFor<"ConfidentialTransfer">>;
+    // (undocumented)
+    prepareConfidentialTransferFrom(args: {
+        from: Address;
+        to: Address;
+        amount: bigint;
+    }): Promise<PreparedFor<"ConfidentialTransferFrom">>;
+    // (undocumented)
+    prepareDelegateDecryption(args: {
+        delegateAddress: Address;
+        expirationDate?: Date;
+    }): Promise<PreparedFor<"DelegateDecryption">>;
+    prepareFinalizeUnwrap(args: {
+        unwrapRequestIdOrAmount: Handle;
+    }): Promise<PreparedFor<"FinalizeUnwrap">>;
+    // (undocumented)
+    prepareRevokeDelegation(args: {
+        delegateAddress: Address;
+    }): Promise<PreparedFor<"RevokeDelegation">>;
+    // (undocumented)
+    prepareSetOperator(args: {
+        operator: Address;
+        until?: number;
+    }): Promise<PreparedFor<"SetOperator">>;
+    // Warning: (ae-forgotten-export) The symbol "ShieldPlan" needs to be exported by the entry point index.d.ts
+    prepareShield(amount: bigint, options?: {
+        recipient?: Address;
+    }): Promise<ShieldPlan>;
+    prepareUnwrap(args: {
+        to: Address;
+        amount: bigint;
+    }): Promise<PreparedFor<"Unwrap">>;
+    prepareUnwrapAll(args: {
+        to: Address;
+    }): Promise<PreparedFor<"UnwrapAll">>;
     resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     revokeDelegation(input: {
         delegateAddress: Address;
@@ -1302,7 +1356,9 @@ export class ZamaSDK {
     constructor(config: ZamaConfig);
     allow(contracts: Address[]): Promise<void>;
     allowAs(delegator: Address, contracts: Address[]): Promise<void>;
+    broadcast(prepared: PreparedTransaction, signedTx: Hex, options?: OfflineSigningOptions): Promise<TransactionResult>;
     clearCredentials(): Promise<void>;
+    completeFromTxHash(prepared: PreparedTransaction, txHash: Hex, options?: OfflineSigningOptions): Promise<TransactionResult>;
     createReadonlyToken(address: Address): ReadonlyToken;
     createToken(address: Address, wrapper?: Address): Token;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
@@ -1325,6 +1381,13 @@ export class ZamaSDK {
     // @internal
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
+    execute(input: PreparedTransaction, options?: OfflineSigningOptions): Promise<TransactionResult>;
+    // (undocumented)
+    execute(input: TransactionPrepareRequest, options?: OfflineSigningOptions): Promise<TransactionResult>;
+    // Warning: (ae-forgotten-export) The symbol "CredentialPermitRequest" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    execute(input: CredentialPermitRequest, options?: OfflineSigningOptions): Promise<void>;
     getDelegationExpiry(input: {
         contractAddress: Address;
         delegatorAddress: Address;
@@ -1339,6 +1402,12 @@ export class ZamaSDK {
     }): Promise<boolean>;
     // @internal
     onWalletAccountChange(listener: WalletAccountListener): () => void;
+    // Warning: (ae-forgotten-export) The symbol "TransactionKind" needs to be exported by the entry point index.d.ts
+    // Warning: (ae-forgotten-export) The symbol "TransactionPrepareRequest" needs to be exported by the entry point index.d.ts
+    // Warning: (ae-forgotten-export) The symbol "OfflineSigningOptions" needs to be exported by the entry point index.d.ts
+    prepare<K extends TransactionKind>(request: Extract<TransactionPrepareRequest, {
+        kind: K;
+    }>, options?: OfflineSigningOptions): Promise<PreparedFor<K>>;
     // (undocumented)
     readonly provider: GenericProvider;
     publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
@@ -1351,6 +1420,8 @@ export class ZamaSDK {
         delegateAddress: Address;
     }): Promise<TransactionResult>;
     revokePermits(contracts?: Address[]): Promise<void>;
+    // Warning: (ae-forgotten-export) The symbol "PreparedTransaction" needs to be exported by the entry point index.d.ts
+    sign(prepared: PreparedTransaction, options?: OfflineSigningOptions): Promise<Hex>;
     // (undocumented)
     readonly signer: GenericSigner | undefined;
     // (undocumented)
@@ -1393,9 +1464,9 @@ export const ZamaSDKEvents: {
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/types-T0tr_-1R.d.ts:561:3 - (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
-// dist/esm/types-T0tr_-1R.d.ts:562:3 - (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
-// dist/esm/types-T0tr_-1R.d.ts:563:3 - (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
+// dist/esm/types-BItYuAYE.d.ts:561:3 - (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
+// dist/esm/types-BItYuAYE.d.ts:562:3 - (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
+// dist/esm/types-BItYuAYE.d.ts:563:3 - (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 
