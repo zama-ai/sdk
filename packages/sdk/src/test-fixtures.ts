@@ -16,7 +16,14 @@ import { CredentialService } from "./credentials/credential-service";
 import { MemoryStorage } from "./storage/memory-storage";
 import { ReadonlyToken } from "./token/readonly-token";
 import { Token } from "./token/token";
-import type { GenericProvider, GenericSigner, GenericStorage, TransactionResult } from "./types";
+import { BroadcastSigner } from "./signer/broadcast-signer";
+import type {
+  Broadcaster,
+  GenericProvider,
+  GenericSigner,
+  GenericStorage,
+  TransactionResult,
+} from "./types";
 import { ZamaSDK } from "./zama-sdk";
 import { DecryptionService } from "./services/decryption-service";
 import { DelegationService } from "./services/delegation-service";
@@ -34,6 +41,9 @@ const VALID_HANDLE = ("0x" + "ab".repeat(32)) as Address;
 export const TEST_PUBLIC_KEY = `0x${"11".repeat(32)}` as Hex;
 export const TEST_PRIVATE_KEY = `0x${"22".repeat(32)}` as Hex;
 export const TEST_SIGNATURE = `0x${"33".repeat(65)}` as Hex;
+export const TEST_UNSIGNED_TX = "0xdeadbeef" as Hex;
+export const TEST_SIGNED_TX = "0xfeedface" as Hex;
+export const TEST_TX_HASH = `0x${"ab".repeat(32)}` as Hex;
 
 export const TEST_ADDR_A = ACL;
 export const TEST_ADDR_B = DELEGATE;
@@ -166,8 +176,20 @@ export function createMockProvider(overrides: Partial<GenericProvider> = {}): Ge
     readContract: vi.fn(),
     waitForTransactionReceipt: vi.fn().mockResolvedValue({ logs: [] }),
     getBlockTimestamp: vi.fn().mockResolvedValue(BigInt(Math.floor(Date.now() / 1000))),
-    sendRawTransaction: vi.fn().mockResolvedValue("0xtxhash" as Hex),
-    prepareTransaction: vi.fn().mockResolvedValue("0xunsignedtx" as Hex),
+    sendRawTransaction: vi.fn().mockResolvedValue(TEST_TX_HASH),
+    prepareTransaction: vi.fn().mockResolvedValue(TEST_UNSIGNED_TX),
+    ...overrides,
+  };
+}
+
+/**
+ * Build a deferred-signing-shaped Broadcaster mock. Returns strict-hex
+ * signatures so {@link BroadcastSigner}'s shape validation is satisfied.
+ */
+export function createMockBroadcaster(overrides: Partial<Broadcaster> = {}): Broadcaster {
+  return {
+    signTransaction: vi.fn(async () => TEST_SIGNED_TX),
+    signTypedData: vi.fn(async () => `0x${"ab".repeat(65)}` as Hex),
     ...overrides,
   };
 }
@@ -224,6 +246,14 @@ interface SdkFixtures {
   relayer: RelayerSDK;
   signer: GenericSigner;
   provider: GenericProvider;
+  /** Mock broadcaster (deferred custody / HSM surface). */
+  broadcaster: Broadcaster;
+  /**
+   * BroadcastSigner backed by {@link broadcaster}, scoped to {@link userAddress}
+   * on chain 31337 — the SDK chain in the rest of the fixture set. Pair with
+   * `createSDK({ signer: broadcastSigner })` for deferred-signing tests.
+   */
+  broadcastSigner: BroadcastSigner;
   token: Token;
   readonlyToken: ReadonlyToken;
   mockToken: Token;
@@ -288,6 +318,14 @@ export const test = base.extend<SdkFixtures>({
   },
   provider: async ({}, use) => {
     await use(createMockProvider());
+  },
+  broadcaster: async ({}, use) => {
+    await use(createMockBroadcaster());
+  },
+  broadcastSigner: async ({ broadcaster, userAddress }, use) => {
+    await use(
+      new BroadcastSigner({ account: { address: userAddress, chainId: 31337 }, broadcaster }),
+    );
   },
   storage: async ({}, use) => {
     await use(new MemoryStorage());

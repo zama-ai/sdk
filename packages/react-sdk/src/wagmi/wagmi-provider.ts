@@ -120,16 +120,24 @@ export class WagmiProvider implements GenericProvider {
       functionName: call.functionName as string,
       args: call.args as readonly unknown[],
     });
+    // Wrap estimateGas — pre-flight revert is the high-value failure mode.
     const [chainId, nonce, gas, fees] = await Promise.all([
       publicClient.getChainId(),
       publicClient.getTransactionCount({ address: from }),
       call.gas ??
-        publicClient.estimateGas({
-          account: from,
-          to: call.address,
-          data,
-          value: call.value ?? 0n,
-        }),
+        publicClient
+          .estimateGas({
+            account: from,
+            to: call.address,
+            data,
+            value: call.value ?? 0n,
+          })
+          .catch((error: unknown) => {
+            throw new TransactionRevertedError(
+              `WagmiProvider.prepareTransaction: gas estimation reverted for ${call.functionName as string} on ${call.address}`,
+              { cause: error },
+            );
+          }),
       publicClient.estimateFeesPerGas(),
     ]);
     return serializeTransaction({

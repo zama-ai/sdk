@@ -131,10 +131,19 @@ export class EthersProvider implements GenericProvider {
       call.args as readonly unknown[],
     ) as Hex;
     const value = call.value ?? 0n;
+    // Wrap estimateGas — pre-flight revert is the high-value failure mode.
     const [network, nonce, gas, feeData] = await Promise.all([
       this.#readProvider.getNetwork(),
       this.#readProvider.getTransactionCount(from),
-      call.gas ?? this.#readProvider.estimateGas({ from, to: call.address, data, value }),
+      call.gas ??
+        this.#readProvider
+          .estimateGas({ from, to: call.address, data, value })
+          .catch((error: unknown) => {
+            throw new TransactionRevertedError(
+              `EthersProvider.prepareTransaction: gas estimation reverted for ${call.functionName as string} on ${call.address}`,
+              { cause: error },
+            );
+          }),
       this.#readProvider.getFeeData(),
     ]);
     if (feeData.maxFeePerGas === null || feeData.maxPriorityFeePerGas === null) {

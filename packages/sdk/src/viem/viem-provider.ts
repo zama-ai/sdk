@@ -9,6 +9,7 @@ import {
   type Hex,
   type PublicClient,
 } from "viem";
+import { TransactionRevertedError } from "../errors";
 import type {
   ContractAbi,
   GenericProvider,
@@ -69,7 +70,9 @@ export class ViemProvider implements GenericProvider {
   }
 
   async sendRawTransaction(signedTx: Hex): Promise<Hex> {
-    return this.#publicClient.sendRawTransaction({ serializedTransaction: signedTx });
+    return this.#publicClient.sendRawTransaction({
+      serializedTransaction: signedTx,
+    });
   }
 
   async prepareTransaction<
@@ -83,16 +86,27 @@ export class ViemProvider implements GenericProvider {
       functionName: call.functionName as string,
       args: call.args as readonly unknown[],
     });
+    // Wrap the estimateGas leg so a pre-flight revert (the most common
+    // prepareTransaction failure) surfaces as a typed error with the
+    // function name + cause. Other legs propagate as-is — failures there
+    // (chainId, nonce, fee data) are rare and usually self-explanatory.
     const [chainId, nonce, gas, fees] = await Promise.all([
       this.#publicClient.getChainId(),
       this.#publicClient.getTransactionCount({ address: from }),
       call.gas ??
-        this.#publicClient.estimateGas({
-          account: from,
-          to: call.address,
-          data,
-          value: call.value ?? 0n,
-        }),
+        this.#publicClient
+          .estimateGas({
+            account: from,
+            to: call.address,
+            data,
+            value: call.value ?? 0n,
+          })
+          .catch((error: unknown) => {
+            throw new TransactionRevertedError(
+              `ViemProvider.prepareTransaction: gas estimation reverted for ${call.functionName} on ${call.address}`,
+              { cause: error },
+            );
+          }),
       this.#publicClient.estimateFeesPerGas(),
     ]);
     return serializeTransaction({

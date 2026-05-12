@@ -52,18 +52,36 @@ import type {
  * is a {@link TransactionPrepareRequest} the caller passes to
  * {@link ZamaSDK.prepare} in order. Preparing immediately before signing
  * keeps nonces fresh.
+ *
+ * Why a plan, not a single prepared tx: non-ERC-1363 underlyings need an
+ * `approve` (sometimes preceded by a USDT-style zero-reset) followed by a
+ * `wrap`, and the routing decision depends on an on-chain `isPayable()`
+ * probe + a live `allowance()` read. The discriminated tuple shape below
+ * makes (path, steps.length) inseparable at the type level so
+ * `transferAndCall`-with-two-steps and similar illegal combinations are
+ * unrepresentable.
+ *
+ * The `approveAndWrap` arm has three sub-shapes mirroring the atomic
+ * `#ensureAllowance` decision tree:
+ *
+ * - `[Wrap]` — the user already has sufficient allowance; skip approve.
+ * - `[Approve, Wrap]` — current allowance is zero; approve target, then wrap.
+ * - `[Approve(0), Approve, Wrap]` — non-zero allowance below target. Reset
+ *   first because USDT-style tokens revert on a non-zero → non-zero approve
+ *   and the zero-reset also mitigates the ERC-20 approve race for any token.
  */
-export interface ShieldPlan {
-  /** Routing decision — mirrors the atomic `shield` decision tree. */
-  readonly path: "transferAndCall" | "approveAndWrap";
-  /**
-   * Ordered prepare requests:
-   * - `transferAndCall`: one {@link TransferAndCallRequest}
-   * - `approveAndWrap`: an {@link ApproveUnderlyingRequest} then a
-   *   {@link WrapRequest}
-   */
-  readonly steps: readonly (ApproveUnderlyingRequest | WrapRequest | TransferAndCallRequest)[];
-}
+export type ShieldPlan =
+  | {
+      readonly path: "transferAndCall";
+      readonly steps: readonly [TransferAndCallRequest];
+    }
+  | {
+      readonly path: "approveAndWrap";
+      readonly steps:
+        | readonly [WrapRequest]
+        | readonly [ApproveUnderlyingRequest, WrapRequest]
+        | readonly [ApproveUnderlyingRequest, ApproveUnderlyingRequest, WrapRequest];
+    };
 import type { ZamaSDK } from "../zama-sdk";
 import { assertBigint } from "../utils/assertions";
 
@@ -1067,23 +1085,37 @@ export class Token extends ReadonlyToken {
         ],
       };
     }
-    return {
-      path: "approveAndWrap",
-      steps: [
-        {
-          kind: "ApproveUnderlying",
-          underlying,
-          spender: this.wrapper,
-          amount,
-        },
-        {
-          kind: "Wrap",
-          wrapper: this.wrapper,
-          to: recipient,
-          amount,
-        },
-      ],
-    };
+    const wrapStep = {
+      kind: "Wrap",
+      wrapper: this.wrapper,
+      to: recipient,
+      amount,
+    } as const;
+    // Mirror atomic `#ensureAllowance`: skip approve if existing allowance
+    // is sufficient; otherwise issue a zero-reset first when the current
+    // allowance is non-zero (USDT-style and ERC-20 approve-race safety).
+    const allowance = await this.sdk.provider.readContract(
+      allowanceContract(underlying, userAddress, this.wrapper),
+    );
+    if (allowance >= amount) {
+      return { path: "approveAndWrap", steps: [wrapStep] };
+    }
+    const approveStep = {
+      kind: "ApproveUnderlying",
+      underlying,
+      spender: this.wrapper,
+      amount,
+    } as const;
+    if (allowance > 0n) {
+      const resetStep = {
+        kind: "ApproveUnderlying",
+        underlying,
+        spender: this.wrapper,
+        amount: 0n,
+      } as const;
+      return { path: "approveAndWrap", steps: [resetStep, approveStep, wrapStep] };
+    }
+    return { path: "approveAndWrap", steps: [approveStep, wrapStep] };
   }
 
   // BATCH DELEGATION

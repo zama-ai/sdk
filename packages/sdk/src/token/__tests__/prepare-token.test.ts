@@ -1,84 +1,60 @@
 import type { Address, Hex } from "viem";
-import {
-  createMockChain,
-  createMockProvider,
-  createMockRelayer,
-  describe,
-  expect,
-  test,
-  vi,
-} from "../../test-fixtures";
-import type { ZamaConfig } from "../../config/types";
-import { BroadcastSigner } from "../../signer/broadcast-signer";
-import { MemoryStorage } from "../../storage/memory-storage";
+import { describe, expect, test, vi } from "../../test-fixtures";
+import type { GenericProvider } from "../../types";
 import { Token } from "../token";
-import type { Broadcaster, GenericProvider } from "../../types";
-import { ZamaSDK } from "../../zama-sdk";
 
-const ACCOUNT = {
-  address: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address,
-  chainId: 31337,
-};
-const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
-const WRAPPER = "0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D" as Address;
 const UNDERLYING = "0x5555555555555555555555555555555555555555" as Address;
 const RECIPIENT = "0x3333333333333333333333333333333333333333" as Address;
-const UNSIGNED = "0xunsigned" as Hex;
-const TX_HASH = "0xtxhash" as Hex;
 
-interface BuildOptions {
+interface ReadOpts {
   isPayable?: boolean;
   underlying?: Address;
+  /** Existing ERC-20 allowance the user has granted the wrapper. Default 0n. */
+  allowance?: bigint;
 }
 
-function makeBroadcaster(): Broadcaster {
-  return {
-    signTransaction: vi.fn(async () => "0xsignedtx" as Hex),
-    signTypedData: vi.fn(async () => ("0x" + "ab".repeat(65)) as Hex),
-  };
-}
-
-function buildSDKAndToken(opts: BuildOptions = {}) {
-  const broadcaster = makeBroadcaster();
-  const signer = new BroadcastSigner({ account: ACCOUNT, broadcaster });
+/**
+ * Stub the chain-read surface the shield planner exercises:
+ * - `underlying()` on the wrapper,
+ * - `supportsInterface(ERC-1363)` on the underlying,
+ * - `allowance(user, wrapper)` on the underlying.
+ */
+function setupReads(provider: GenericProvider, opts: ReadOpts = {}): void {
   const underlyingAddr = opts.underlying ?? UNDERLYING;
   const isPayable = opts.isPayable ?? false;
-  const provider: GenericProvider = createMockProvider({
-    getChainId: vi.fn().mockResolvedValue(31337),
-    prepareTransaction: vi.fn().mockResolvedValue(UNSIGNED),
-    sendRawTransaction: vi.fn().mockResolvedValue(TX_HASH),
-    waitForTransactionReceipt: vi.fn().mockResolvedValue({ logs: [] }),
-    readContract: vi.fn().mockImplementation(async (config: { functionName: string }) => {
-      if (config.functionName === "supportsInterface") {return isPayable;}
-      if (config.functionName === "underlying") {return underlyingAddr;}
-      return undefined;
-    }),
+  const allowance = opts.allowance ?? 0n;
+  vi.mocked(provider.readContract).mockImplementation(async (config: { functionName: string }) => {
+    switch (config.functionName) {
+      case "underlying":
+        return underlyingAddr as never;
+      case "supportsInterface":
+        return isPayable as never;
+      case "allowance":
+        return allowance as never;
+      default:
+        return undefined as never;
+    }
   });
-  const relayer = createMockRelayer();
-  const storage = new MemoryStorage();
-  const sdk = new ZamaSDK({
-    chains: [createMockChain({ id: 31337 })],
-    relayer: relayer as unknown as ZamaConfig["relayer"],
-    provider,
-    signer,
-    storage,
-    permitStorage: storage,
-    keypairTTL: 2592000,
-    permitTTL: 1,
-    registryTTL: 86400,
-    onEvent: undefined,
-  } as unknown as ZamaConfig);
-  const token = new Token(sdk, TOKEN, WRAPPER);
-  return { sdk, token, provider, relayer, broadcaster };
 }
 
 describe("Token.prepareConfidentialTransfer + completeConfidentialTransfer", () => {
-  test("prepares with the token address baked in, completes via completeFromTxHash", async () => {
-    const { token, provider } = buildSDKAndToken();
+  test("prepares with the token address baked in, completes via completeFromTxHash", async ({
+    createSDK,
+    broadcastSigner,
+    provider,
+    tokenAddress,
+    wrapperAddress,
+  }) => {
+    const sdk = createSDK({ signer: broadcastSigner });
+    const token = new Token(sdk, tokenAddress, wrapperAddress);
     const prepared = await token.prepareConfidentialTransfer({ to: RECIPIENT, amount: 100n });
     expect(prepared.kind).toBe("ConfidentialTransfer");
     expect(prepared.request).toEqual(
-      expect.objectContaining({ kind: "ConfidentialTransfer", token: TOKEN, amount: 100n }),
+      expect.objectContaining({
+        kind: "ConfidentialTransfer",
+        token: tokenAddress,
+        amount: 100n,
+      }),
     );
 
     const externalTxHash = "0xexternalhash" as Hex;
@@ -90,8 +66,16 @@ describe("Token.prepareConfidentialTransfer + completeConfidentialTransfer", () 
 });
 
 describe("Token.prepareShield — routing", () => {
-  test("payable (ERC-1363) → single TransferAndCall step", async () => {
-    const { token } = buildSDKAndToken({ isPayable: true });
+  test("payable (ERC-1363) → single TransferAndCall step", async ({
+    createSDK,
+    broadcastSigner,
+    provider,
+    tokenAddress,
+    wrapperAddress,
+  }) => {
+    setupReads(provider, { isPayable: true });
+    const sdk = createSDK({ signer: broadcastSigner });
+    const token = new Token(sdk, tokenAddress, wrapperAddress);
     const plan = await token.prepareShield(500n);
     expect(plan.path).toBe("transferAndCall");
     expect(plan.steps).toHaveLength(1);
@@ -99,14 +83,22 @@ describe("Token.prepareShield — routing", () => {
       expect.objectContaining({
         kind: "TransferAndCall",
         underlying: UNDERLYING,
-        wrapper: WRAPPER,
+        wrapper: wrapperAddress,
         amount: 500n,
       }),
     );
   });
 
-  test("non-payable underlying → two-step approve + wrap plan", async () => {
-    const { token } = buildSDKAndToken({ isPayable: false });
+  test("non-payable underlying → two-step approve + wrap plan", async ({
+    createSDK,
+    broadcastSigner,
+    provider,
+    tokenAddress,
+    wrapperAddress,
+  }) => {
+    setupReads(provider, { isPayable: false });
+    const sdk = createSDK({ signer: broadcastSigner });
+    const token = new Token(sdk, tokenAddress, wrapperAddress);
     const plan = await token.prepareShield(500n);
     expect(plan.path).toBe("approveAndWrap");
     expect(plan.steps).toHaveLength(2);
@@ -114,43 +106,102 @@ describe("Token.prepareShield — routing", () => {
       expect.objectContaining({
         kind: "ApproveUnderlying",
         underlying: UNDERLYING,
-        spender: WRAPPER,
+        spender: wrapperAddress,
         amount: 500n,
       }),
     );
     expect(plan.steps[1]).toEqual(
       expect.objectContaining({
         kind: "Wrap",
-        wrapper: WRAPPER,
+        wrapper: wrapperAddress,
         amount: 500n,
       }),
     );
   });
 
-  test("custom recipient propagates to TransferAndCall and Wrap steps", async () => {
-    const { token: payable } = buildSDKAndToken({ isPayable: true });
+  test("custom recipient propagates to TransferAndCall and Wrap steps", async ({
+    createSDK,
+    broadcastSigner,
+    provider,
+    tokenAddress,
+    wrapperAddress,
+  }) => {
+    const sdk = createSDK({ signer: broadcastSigner });
+
+    setupReads(provider, { isPayable: true });
+    const payable = new Token(sdk, tokenAddress, wrapperAddress);
     const planPayable = await payable.prepareShield(1n, { recipient: RECIPIENT });
     expect(planPayable.steps[0]).toMatchObject({ kind: "TransferAndCall" });
 
-    const { token: nonPayable } = buildSDKAndToken({ isPayable: false });
+    setupReads(provider, { isPayable: false });
+    const nonPayable = new Token(sdk, tokenAddress, wrapperAddress);
     const planNon = await nonPayable.prepareShield(1n, { recipient: RECIPIENT });
     expect(planNon.steps[1]).toMatchObject({ kind: "Wrap", to: RECIPIENT });
   });
 
-  test("the plan steps can be fed back into sdk.prepare", async () => {
-    const { sdk, token, provider } = buildSDKAndToken({ isPayable: false });
+  test("the plan steps can be fed back into sdk.prepare", async ({
+    createSDK,
+    broadcastSigner,
+    provider,
+    tokenAddress,
+    wrapperAddress,
+  }) => {
+    setupReads(provider, { isPayable: false });
+    const sdk = createSDK({ signer: broadcastSigner });
+    const token = new Token(sdk, tokenAddress, wrapperAddress);
     const plan = await token.prepareShield(750n);
     for (const step of plan.steps) {
       await sdk.prepare(step);
     }
-    // 1 call per step
     expect(provider.prepareTransaction).toHaveBeenCalledTimes(plan.steps.length);
+  });
+
+  test("non-payable + allowance ≥ amount → single Wrap step (skip approve)", async ({
+    createSDK,
+    broadcastSigner,
+    provider,
+    tokenAddress,
+    wrapperAddress,
+  }) => {
+    setupReads(provider, { isPayable: false, allowance: 1_000n });
+    const sdk = createSDK({ signer: broadcastSigner });
+    const token = new Token(sdk, tokenAddress, wrapperAddress);
+    const plan = await token.prepareShield(500n);
+    expect(plan.path).toBe("approveAndWrap");
+    expect(plan.steps).toHaveLength(1);
+    expect(plan.steps[0]).toMatchObject({ kind: "Wrap", amount: 500n });
+  });
+
+  test("non-payable + 0 < allowance < amount → zero-reset then approve then wrap (USDT-safe)", async ({
+    createSDK,
+    broadcastSigner,
+    provider,
+    tokenAddress,
+    wrapperAddress,
+  }) => {
+    setupReads(provider, { isPayable: false, allowance: 100n });
+    const sdk = createSDK({ signer: broadcastSigner });
+    const token = new Token(sdk, tokenAddress, wrapperAddress);
+    const plan = await token.prepareShield(500n);
+    expect(plan.path).toBe("approveAndWrap");
+    expect(plan.steps).toHaveLength(3);
+    expect(plan.steps[0]).toMatchObject({ kind: "ApproveUnderlying", amount: 0n });
+    expect(plan.steps[1]).toMatchObject({ kind: "ApproveUnderlying", amount: 500n });
+    expect(plan.steps[2]).toMatchObject({ kind: "Wrap", amount: 500n });
   });
 });
 
 describe("Token.prepareDelegateDecryption + completeDelegateDecryption", () => {
-  test("resolves ACL address via the relayer and bakes in the token", async () => {
-    const { token, relayer, provider } = buildSDKAndToken();
+  test("resolves ACL address via the relayer and bakes in the token", async ({
+    createSDK,
+    broadcastSigner,
+    provider,
+    relayer,
+    tokenAddress,
+    wrapperAddress,
+  }) => {
+    const sdk = createSDK({ signer: broadcastSigner });
+    const token = new Token(sdk, tokenAddress, wrapperAddress);
     const prepared = await token.prepareDelegateDecryption({ delegateAddress: RECIPIENT });
     expect(relayer.getAclAddress).toHaveBeenCalled();
     expect(prepared.kind).toBe("DelegateDecryption");

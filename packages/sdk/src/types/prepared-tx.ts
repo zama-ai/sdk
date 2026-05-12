@@ -133,6 +133,8 @@ export interface RevokeDelegationRequest {
  * a transaction), so this kind never appears in {@link PreparedTransaction}.
  * Currently only reachable atomically; per-step `prepare*` / `complete*`
  * helpers for cross-process typed-data signing are not yet exposed.
+ *
+ * @see {@link ExecuteRequest} — the union accepted by `sdk.execute(...)`.
  */
 export interface CredentialPermitRequest {
   readonly kind: "CredentialPermit";

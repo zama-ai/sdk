@@ -52,33 +52,17 @@ export interface WalletAccountStore {
 }
 
 /**
- * Framework-agnostic signer interface — wallet authority as a capability bag.
+ * Common shape every signer must satisfy: wallet account observability,
+ * `requireWalletAccount`, and `signTypedData`. The capability methods
+ * (`writeContract` / `signTransaction`) are added on top via
+ * {@link GenericSigner} so the type can enforce "at least one capability".
  *
- * Public chain reads have moved to {@link GenericProvider}. A signer is only
- * required for operations that involve a user-controlled wallet
- * (`requireWalletAccount`, `signTypedData`, plus one of `writeContract` /
- * `signTransaction`).
+ * Internal adapters extend {@link BaseSigner} (which implements this); third
+ * parties typically don't need to name this type directly.
  *
- * **Capabilities.** A signer declares which transaction-emitting strategies
- * it supports:
- *
- * - `writeContract` — atomic. Sign and broadcast in one wallet round-trip
- *   (browser wallets, embedded wallets in non-policy mode, server-side EOAs).
- * - `signTransaction` — deferred. Return signed bytes for an SDK-built
- *   unsigned transaction; the SDK broadcasts via
- *   {@link GenericProvider.sendRawTransaction}. Used by institutional custody
- *   (Dfns, Fireblocks, Fordefi, Turnkey policy mode).
- *
- * At least one of the two must be present for any write op to succeed. A
- * signer may implement both — atomic call sites use `writeContract`, the
- * deferred `prepare* / sign / broadcast` pipeline uses `signTransaction`;
- * the SDK does not currently route between them automatically.
- *
- * Calling an atomic op on a signer that only exposes `signTransaction`
- * throws {@link SignerCapabilityError}; route through the deferred
- * `prepare* / complete*` surface instead.
+ * @internal
  */
-export interface GenericSigner {
+export interface SignerCore {
   /** Observable wallet account readiness state. */
   readonly walletAccount: WalletAccountStore;
   /**
@@ -93,11 +77,26 @@ export interface GenericSigner {
   refreshWalletAccount?(): Promise<WalletAccount | undefined>;
   /** Sign EIP-712 typed data (used for decrypt authorization). */
   signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-  /**
-   * Sign and broadcast a write transaction in a single step, returning the
-   * tx hash. Absent on broadcast-only signers (custodian / HSM / policy
-   * engine) that defer broadcast to the SDK.
-   */
+  /** Release adapter-owned wallet watchers or provider event listeners. */
+  dispose?(): void;
+}
+
+/** Atomic write capability: sign + broadcast in one wallet round-trip. */
+type WriteContractCapability = {
+  writeContract<
+    const TAbi extends ContractAbi,
+    TFunctionName extends WriteFunctionName<TAbi>,
+    const TArgs extends WriteContractArgs<TAbi, TFunctionName>,
+  >(
+    config: WriteContractConfig<TAbi, TFunctionName, TArgs>,
+  ): Promise<Hex>;
+  /** Deferred capability MAY also be present on atomic signers. */
+  signTransaction?(unsignedTx: Hex): Promise<Hex>;
+};
+
+/** Deferred capability: produce signed bytes for an SDK-built unsigned tx. */
+type SignTransactionCapability = {
+  /** Atomic capability MAY also be present on deferred signers. */
   writeContract?<
     const TAbi extends ContractAbi,
     TFunctionName extends WriteFunctionName<TAbi>,
@@ -105,13 +104,30 @@ export interface GenericSigner {
   >(
     config: WriteContractConfig<TAbi, TFunctionName, TArgs>,
   ): Promise<Hex>;
-  /**
-   * Sign an SDK-built unsigned transaction and return RLP-encoded signed
-   * bytes. The SDK broadcasts the result via
-   * {@link GenericProvider.sendRawTransaction}. Absent on classic
-   * sign-and-broadcast signers that prefer {@link writeContract}.
-   */
-  signTransaction?(unsignedTx: Hex): Promise<Hex>;
-  /** Release adapter-owned wallet watchers or provider event listeners. */
-  dispose?(): void;
-}
+  signTransaction(unsignedTx: Hex): Promise<Hex>;
+};
+
+/**
+ * Framework-agnostic signer — wallet authority as a capability bag.
+ *
+ * **Capabilities.** A signer declares which transaction-emitting strategies
+ * it supports:
+ *
+ * - `writeContract` — atomic. Sign and broadcast in one wallet round-trip
+ *   (browser wallets, embedded wallets in non-policy mode, server-side EOAs).
+ * - `signTransaction` — deferred. Return signed bytes for an SDK-built
+ *   unsigned transaction; the SDK broadcasts via
+ *   {@link GenericProvider.sendRawTransaction}. Used by institutional custody
+ *   (Dfns, Fireblocks, Fordefi, Turnkey policy mode).
+ *
+ * The type enforces "at least one capability" — a literal with neither
+ * method fails to assign. A signer may implement both; atomic call sites
+ * use `writeContract`, the deferred `prepare* / sign / broadcast` pipeline
+ * uses `signTransaction`. The SDK does not currently route between them
+ * automatically.
+ *
+ * Calling an atomic op on a signer that only exposes `signTransaction`
+ * throws {@link SignerCapabilityError}; route through the deferred
+ * `prepare* / complete*` surface instead.
+ */
+export type GenericSigner = SignerCore & (WriteContractCapability | SignTransactionCapability);
