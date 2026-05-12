@@ -99,23 +99,28 @@ export type {
   OnlineSigner,
   GenericProvider,
   GenericStorage,
-  Broadcaster,
   // Per-kind prepare requests — callers authoring request literals against
   // `sdk.prepare` / `Token.prepareX` need these names alongside `PreparedFor`.
   ApproveUnderlyingRequest,
   ConfidentialTransferFromRequest,
   ConfidentialTransferRequest,
+  CredentialPermitContext,
   CredentialPermitRequest,
+  CredentialPermitResult,
   DelegateDecryptionRequest,
   ExecuteRequest,
   FinalizeUnwrapRequest,
+  PermitKind,
+  PreparedCredentialPermit,
   PreparedFor,
+  PreparedPermitFor,
   PreparedTransaction,
   RevokeDelegationRequest,
   SetOperatorRequest,
   TransactionKind,
   TransactionPrepareRequest,
   TransferAndCallRequest,
+  TxKind,
   UnwrapAllRequest,
   UnwrapRequest,
   WrapRequest,
@@ -190,6 +195,8 @@ export {
   SignerNotConfiguredError,
   WalletNotConnectedError,
   WalletAccountNotReadyError,
+  SignerCapabilityError,
+  SignerAddressMismatchError,
   DelegationSelfNotAllowedError,
   DelegationCooldownError,
   DelegationNotFoundError,
@@ -209,8 +216,7 @@ export {
   matchAclRevert,
 } from "./errors";
 export { BaseSigner } from "./signer/base-signer";
-export { BroadcastSigner } from "./signer/broadcast-signer";
-export type { BroadcastSignerConfig } from "./signer/broadcast-signer";
+export { ensureHexSignature } from "./signer/util";
 export type { OfflineSigningOptions } from "./services/offline-signing-service";
 export { createWalletAccountStore, MutableWalletAccountStore } from "./signer/wallet-account-store";
 

@@ -123,7 +123,14 @@ export class EthersProvider implements GenericProvider {
     const TAbi extends ContractAbi,
     TFunctionName extends WriteFunctionName<TAbi>,
     const TArgs extends WriteContractArgs<TAbi, TFunctionName>,
-  >(args: { from: Address; call: WriteContractConfig<TAbi, TFunctionName, TArgs> }): Promise<Hex> {
+  >(args: {
+    from: Address;
+    call: WriteContractConfig<TAbi, TFunctionName, TArgs>;
+    nonce?: number;
+    maxFeePerGas?: bigint;
+    maxPriorityFeePerGas?: bigint;
+    gasLimit?: bigint;
+  }): Promise<Hex> {
     const { from, call } = args;
     const iface = new ethers.Interface(call.abi as unknown as ethers.InterfaceAbi);
     const data = iface.encodeFunctionData(
@@ -132,21 +139,41 @@ export class EthersProvider implements GenericProvider {
     ) as Hex;
     const value = call.value ?? 0n;
     // Wrap estimateGas — pre-flight revert is the high-value failure mode.
+    // Skip the network round-trips entirely when the caller supplied
+    // overrides — useful for custodians with their own nonce/fee managers.
+    const networkPromise = this.#readProvider.getNetwork();
+    const noncePromise =
+      args.nonce !== undefined
+        ? Promise.resolve(args.nonce)
+        : this.#readProvider.getTransactionCount(from);
+    const gasPromise =
+      args.gasLimit !== undefined
+        ? Promise.resolve(args.gasLimit)
+        : (call.gas ??
+          this.#readProvider
+            .estimateGas({ from, to: call.address, data, value })
+            .catch((error: unknown) => {
+              throw new TransactionRevertedError(
+                `EthersProvider.prepareTransaction: gas estimation reverted for ${call.functionName as string} on ${call.address}`,
+                { cause: error },
+              );
+            }));
+    const feeDataPromise =
+      args.maxFeePerGas !== undefined && args.maxPriorityFeePerGas !== undefined
+        ? Promise.resolve({
+            maxFeePerGas: args.maxFeePerGas,
+            maxPriorityFeePerGas: args.maxPriorityFeePerGas,
+          })
+        : this.#readProvider.getFeeData();
     const [network, nonce, gas, feeData] = await Promise.all([
-      this.#readProvider.getNetwork(),
-      this.#readProvider.getTransactionCount(from),
-      call.gas ??
-        this.#readProvider
-          .estimateGas({ from, to: call.address, data, value })
-          .catch((error: unknown) => {
-            throw new TransactionRevertedError(
-              `EthersProvider.prepareTransaction: gas estimation reverted for ${call.functionName as string} on ${call.address}`,
-              { cause: error },
-            );
-          }),
-      this.#readProvider.getFeeData(),
+      networkPromise,
+      noncePromise,
+      gasPromise,
+      feeDataPromise,
     ]);
-    if (feeData.maxFeePerGas === null || feeData.maxPriorityFeePerGas === null) {
+    const maxFeePerGas = args.maxFeePerGas ?? feeData.maxFeePerGas;
+    const maxPriorityFeePerGas = args.maxPriorityFeePerGas ?? feeData.maxPriorityFeePerGas;
+    if (maxFeePerGas === null || maxPriorityFeePerGas === null) {
       throw new ConfigurationError(
         "EthersProvider.prepareTransaction: EIP-1559 fee data unavailable (provider returned null maxFeePerGas). " +
           "The connected chain may not support EIP-1559 type-2 transactions.",
@@ -160,8 +187,8 @@ export class EthersProvider implements GenericProvider {
       data,
       value,
       gasLimit: gas,
-      maxFeePerGas: feeData.maxFeePerGas,
-      maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
+      maxFeePerGas,
+      maxPriorityFeePerGas,
     });
     return tx.unsignedSerialized as Hex;
   }

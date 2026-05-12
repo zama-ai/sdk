@@ -1,5 +1,5 @@
 import type { Address, Hex } from "viem";
-import type { Handle } from "../relayer/relayer-sdk.types";
+import type { EIP712TypedData, Handle } from "../relayer/relayer-sdk.types";
 
 // ─── Per-kind request payloads ──────────────────────────────────────────
 
@@ -10,6 +10,8 @@ import type { Handle } from "../relayer/relayer-sdk.types";
  */
 export interface ConfidentialTransferRequest {
   readonly kind: "ConfidentialTransfer";
+  /** Tx-sender wallet address (the originator). */
+  readonly from: Address;
   /** Confidential token contract address. */
   readonly token: Address;
   /** Recipient address. */
@@ -18,11 +20,18 @@ export interface ConfidentialTransferRequest {
   readonly amount: bigint;
 }
 
-/** Operator-initiated confidential transfer. Caller must be an approved operator for `from`. */
+/**
+ * Operator-initiated confidential transfer. Caller must be an approved
+ * operator for `owner`. `from` is the operator/tx-sender wallet address;
+ * `owner` is the token holder whose balance is debited.
+ */
 export interface ConfidentialTransferFromRequest {
   readonly kind: "ConfidentialTransferFrom";
-  readonly token: Address;
+  /** Operator/tx-sender wallet address. */
   readonly from: Address;
+  readonly token: Address;
+  /** Token holder whose balance is being moved. */
+  readonly owner: Address;
   readonly to: Address;
   readonly amount: bigint;
 }
@@ -30,6 +39,7 @@ export interface ConfidentialTransferFromRequest {
 /** Approve/revoke an operator. `until` is a unix timestamp; omit for permanent. */
 export interface SetOperatorRequest {
   readonly kind: "SetOperator";
+  readonly from: Address;
   readonly token: Address;
   readonly operator: Address;
   readonly until?: number;
@@ -41,6 +51,7 @@ export interface SetOperatorRequest {
  */
 export interface UnwrapRequest {
   readonly kind: "Unwrap";
+  readonly from: Address;
   /** Confidential token (== wrapper for ERC-7984 wrappers). */
   readonly token: Address;
   /** Underlying-token recipient. */
@@ -55,6 +66,7 @@ export interface UnwrapRequest {
  */
 export interface UnwrapAllRequest {
   readonly kind: "UnwrapAll";
+  readonly from: Address;
   readonly token: Address;
   readonly to: Address;
 }
@@ -66,6 +78,7 @@ export interface UnwrapAllRequest {
  */
 export interface FinalizeUnwrapRequest {
   readonly kind: "FinalizeUnwrap";
+  readonly from: Address;
   readonly wrapper: Address;
   /** From the `UnwrapRequested` event log (`unwrapRequestId` on upgraded wrappers, the encrypted amount handle on legacy ones). */
   readonly unwrapRequestIdOrAmount: Handle;
@@ -83,6 +96,7 @@ export interface FinalizeUnwrapRequest {
  */
 export interface ApproveUnderlyingRequest {
   readonly kind: "ApproveUnderlying";
+  readonly from: Address;
   readonly underlying: Address;
   readonly spender: Address;
   readonly amount: bigint;
@@ -91,6 +105,7 @@ export interface ApproveUnderlyingRequest {
 /** Wrapper `wrap(to, amount)` call — the second leg of the non-1363 shield path. */
 export interface WrapRequest {
   readonly kind: "Wrap";
+  readonly from: Address;
   readonly wrapper: Address;
   readonly to: Address;
   readonly amount: bigint;
@@ -103,6 +118,7 @@ export interface WrapRequest {
  */
 export interface TransferAndCallRequest {
   readonly kind: "TransferAndCall";
+  readonly from: Address;
   readonly underlying: Address;
   readonly wrapper: Address;
   readonly amount: bigint;
@@ -112,6 +128,7 @@ export interface TransferAndCallRequest {
 /** ACL `delegateForUserDecryption(delegate, contract, expirationDate)`. */
 export interface DelegateDecryptionRequest {
   readonly kind: "DelegateDecryption";
+  readonly from: Address;
   readonly aclAddress: Address;
   readonly contractAddress: Address;
   readonly delegateAddress: Address;
@@ -122,22 +139,24 @@ export interface DelegateDecryptionRequest {
 /** ACL `revokeDelegationForUserDecryption(delegate, contract)`. */
 export interface RevokeDelegationRequest {
   readonly kind: "RevokeDelegation";
+  readonly from: Address;
   readonly aclAddress: Address;
   readonly contractAddress: Address;
   readonly delegateAddress: Address;
 }
 
 /**
- * FHE credential permit request. Used via {@link ZamaSDK.execute} for both
- * online and broadcast signers — the underlying flow signs typed data (not
- * a transaction), so this kind never appears in {@link PreparedTransaction}.
- * Currently only reachable atomically; per-step `prepare*` / `complete*`
- * helpers for cross-process typed-data signing are not yet exposed.
+ * FHE credential permit request. Unlike the transaction-kind requests, this
+ * produces an EIP-712 typed-data envelope (no on-chain transaction). Pair
+ * `prepare` with an external `signTypedData`, then call
+ * {@link ZamaSDK.registerPermit} to register the signature.
  *
  * @see {@link ExecuteRequest} — the union accepted by `sdk.execute(...)`.
  */
 export interface CredentialPermitRequest {
   readonly kind: "CredentialPermit";
+  /** Tx-sender / permit-signer wallet address. */
+  readonly from: Address;
   /** Contract addresses to authorize. */
   readonly contracts: readonly Address[];
   /** Delegator address for delegated decryption permits. */
@@ -156,6 +175,16 @@ export interface CredentialPermitRequest {
  * level out of these primitives.
  */
 export type TransactionKind = TransactionPrepareRequest["kind"];
+
+/** Alias for {@link TransactionKind} — used in method generic constraints. */
+export type TxKind = TransactionKind;
+
+/**
+ * Kinds of typed-data ("permit") flows that follow the prepare → sign →
+ * registerPermit pipeline. Produces a {@link CredentialPermitResult} rather
+ * than a {@link TransactionResult}.
+ */
+export type PermitKind = "CredentialPermit";
 
 /** Discriminated union of all transaction prepare requests. */
 export type TransactionPrepareRequest =
@@ -217,3 +246,60 @@ export type PreparedFor<K extends TransactionKind> = PreparedTransaction & {
   readonly kind: K;
   readonly request: Extract<TransactionPrepareRequest, { kind: K }>;
 };
+
+// ─── Prepared permit (typed-data) payloads ─────────────────────────────
+
+/**
+ * The opaque per-prepare context the credential service stashes on a
+ * {@link PreparedCredentialPermit}. Callers should never construct or
+ * mutate this; pass it back into {@link ZamaSDK.registerPermit} alongside
+ * the external signature.
+ *
+ * @internal
+ */
+export interface CredentialPermitContext {
+  readonly keypairPublicKey: Hex;
+  readonly signerAddress: Address;
+  readonly delegatorAddress: Address;
+  readonly chainId: number;
+  readonly chunk: readonly Address[];
+  readonly startTimestamp: number;
+}
+
+/**
+ * Result of {@link ZamaSDK.prepare} for the `CredentialPermit` kind. Unlike
+ * {@link PreparedTransaction} this is a typed-data envelope (no
+ * `unsignedTx`/`to`) — feed `typedData` to an external `signTypedData`,
+ * then call {@link ZamaSDK.registerPermit} with the signature.
+ *
+ * `typedData` is `null` when the requested contracts are already covered
+ * by an existing permit (no signature needed). Callers can short-circuit
+ * by checking `prepared.typedData === null`.
+ */
+export interface PreparedCredentialPermit {
+  readonly kind: "CredentialPermit";
+  readonly request: CredentialPermitRequest;
+  readonly from: Address;
+  readonly chainId: number;
+  readonly typedData: EIP712TypedData | null;
+  /** @internal — pass to {@link ZamaSDK.registerPermit}; do not mutate. */
+  readonly context: CredentialPermitContext;
+}
+
+/**
+ * {@link PreparedCredentialPermit} narrowed by `kind` (currently a single
+ * kind). Mirrors {@link PreparedFor} for transaction kinds.
+ */
+export type PreparedPermitFor<K extends PermitKind> = PreparedCredentialPermit & {
+  readonly kind: K;
+};
+
+/** Outcome of {@link ZamaSDK.registerPermit}. */
+export interface CredentialPermitResult {
+  /** The newly persisted permit chunk's contract addresses. */
+  readonly contracts: readonly Address[];
+  /** Permit duration in days (mirrors `permitTTL`). */
+  readonly durationDays: number;
+  /** Permit start timestamp (seconds since epoch). */
+  readonly startTimestamp: number;
+}

@@ -7,7 +7,7 @@ import type { ZamaConfig } from "./config/types";
 import { ZamaSDKEvents } from "./events/sdk-events";
 import type { RelayerSDK } from "./relayer/relayer-sdk";
 import type { RelayerDispatcher } from "./relayer/relayer-dispatcher";
-import type { Handle } from "./relayer/relayer-sdk.types";
+import type { EIP712TypedData, Handle } from "./relayer/relayer-sdk.types";
 import { CachingService } from "./services/caching-service";
 import type { QueryClient } from "@tanstack/query-core";
 import type { Address, Hex } from "viem";
@@ -16,13 +16,15 @@ import { CredentialService } from "./credentials/credential-service";
 import { MemoryStorage } from "./storage/memory-storage";
 import { ReadonlyToken } from "./token/readonly-token";
 import { Token } from "./token/token";
-import { BroadcastSigner } from "./signer/broadcast-signer";
+import { BaseSigner } from "./signer/base-signer";
+import { ensureHexSignature } from "./signer/util";
 import type {
-  Broadcaster,
   GenericProvider,
   GenericSigner,
   GenericStorage,
+  OfflineSigner,
   TransactionResult,
+  WalletAccount,
 } from "./types";
 import { ZamaSDK } from "./zama-sdk";
 import { DecryptionService } from "./services/decryption-service";
@@ -184,10 +186,43 @@ export function createMockProvider(overrides: Partial<GenericProvider> = {}): Ge
 }
 
 /**
- * Build a deferred-signing-shaped Broadcaster mock. Returns strict-hex
- * signatures so {@link BroadcastSigner}'s shape validation is satisfied.
+ * Test-only `OfflineSigner` subclass of {@link BaseSigner}. Each instance
+ * holds a `signTransaction` + `signTypedData` thunk pair (created with
+ * {@link createMockSignerThunks}) so tests can spy on / override signing
+ * behaviour without needing a real custodian client.
+ *
+ * Mirrors what end users do in §3 of the custodian guide — subclass
+ * `BaseSigner`, validate broker responses with {@link ensureHexSignature}.
  */
-export function createMockBroadcaster(overrides: Partial<Broadcaster> = {}): Broadcaster {
+export class TestOfflineSigner extends BaseSigner implements OfflineSigner {
+  readonly #thunks: SignerThunks;
+  constructor(account: WalletAccount, thunks: SignerThunks) {
+    super(account);
+    this.#thunks = thunks;
+  }
+  async signTransaction(unsignedTx: Hex): Promise<Hex> {
+    const raw = await this.#thunks.signTransaction(unsignedTx);
+    return ensureHexSignature(raw, "signTransaction");
+  }
+  async signTypedData(typedData: EIP712TypedData): Promise<Hex> {
+    const raw = await this.#thunks.signTypedData(typedData);
+    return ensureHexSignature(raw, "signTypedData");
+  }
+}
+
+/** Shape of the signing thunks used to construct a {@link TestOfflineSigner}. */
+export interface SignerThunks {
+  signTransaction(unsignedTx: Hex): Promise<Hex>;
+  signTypedData(typedData: EIP712TypedData): Promise<Hex>;
+}
+
+/**
+ * Build a {@link SignerThunks} mock with `vi.fn` thunks. Returns strict-hex
+ * signatures so {@link ensureHexSignature} accepts them. Pair with
+ * {@link TestOfflineSigner} to assemble an in-process offline signer for
+ * tests.
+ */
+export function createMockSignerThunks(overrides: Partial<SignerThunks> = {}): SignerThunks {
   return {
     signTransaction: vi.fn(async () => TEST_SIGNED_TX),
     signTypedData: vi.fn(async () => `0x${"ab".repeat(65)}` as Hex),
@@ -247,14 +282,20 @@ interface SdkFixtures {
   relayer: RelayerSDK;
   signer: GenericSigner;
   provider: GenericProvider;
-  /** Mock broadcaster (deferred custody / HSM surface). */
-  broadcaster: Broadcaster;
   /**
-   * BroadcastSigner backed by {@link broadcaster}, scoped to {@link userAddress}
-   * on chain 31337 — the SDK chain in the rest of the fixture set. Pair with
-   * `createSDK({ signer: broadcastSigner })` for deferred-signing tests.
+   * Mock signing thunks (`signTransaction` / `signTypedData`) used to back
+   * {@link broadcastSigner}. Spy on these directly to assert the SDK
+   * delegates correctly to the offline signer.
    */
-  broadcastSigner: BroadcastSigner;
+  broadcaster: SignerThunks;
+  /**
+   * In-process {@link OfflineSigner} backed by {@link broadcaster}, scoped
+   * to {@link userAddress} on chain 31337 — the SDK chain in the rest of
+   * the fixture set. Pair with `createSDK({ signer: broadcastSigner })` for
+   * deferred-signing tests. The name is preserved (rather than renamed to
+   * `offlineSigner`) to avoid a sweeping rename across the test suite.
+   */
+  broadcastSigner: TestOfflineSigner;
   token: Token;
   readonlyToken: ReadonlyToken;
   mockToken: Token;
@@ -330,12 +371,10 @@ export const test = base.extend<SdkFixtures>({
     await use(createMockProvider());
   },
   broadcaster: async ({}, use) => {
-    await use(createMockBroadcaster());
+    await use(createMockSignerThunks());
   },
   broadcastSigner: async ({ broadcaster, userAddress }, use) => {
-    await use(
-      new BroadcastSigner({ account: { address: userAddress, chainId: 31337 }, broadcaster }),
-    );
+    await use(new TestOfflineSigner({ address: userAddress, chainId: 31337 }, broadcaster));
   },
   storage: async ({}, use) => {
     await use(new MemoryStorage());
@@ -398,7 +437,7 @@ export const test = base.extend<SdkFixtures>({
       (overrides = {}) =>
         new DelegationService({
           provider: overrides.provider ?? provider,
-          relayer: overrides.relayer ?? relayer,
+          relayer: (overrides.relayer ?? relayer) as unknown as RelayerDispatcher,
           emitEvent: overrides.emitEvent,
         }),
     );
@@ -416,7 +455,7 @@ export const test = base.extend<SdkFixtures>({
           cache: overrides.cache ?? cache,
           credentialService: overrides.credentialService ?? credentialService,
           delegationService: overrides.delegationService ?? delegationService,
-          relayer: overrides.relayer ?? relayer,
+          relayer: (overrides.relayer ?? relayer) as unknown as RelayerDispatcher,
           emitEvent: overrides.emitEvent ?? vi.fn(),
         }),
     );

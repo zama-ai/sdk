@@ -1,4 +1,4 @@
-import { getAddress, type Address, type Hex } from "viem";
+import { getAddress, isHex, type Address, type Hex } from "viem";
 import {
   approveContract,
   confidentialTransferContract,
@@ -19,6 +19,8 @@ import {
   ChainMismatchError,
   ConfigurationError,
   EncryptionFailedError,
+  SignerAddressMismatchError,
+  SignerNotConfiguredError,
   SigningFailedError,
   TransactionRevertedError,
   wrapDecryptError,
@@ -35,12 +37,15 @@ import type {
   ConfidentialTransferFromRequest,
   ConfidentialTransferRequest,
   CredentialPermitRequest,
+  CredentialPermitResult,
   DelegateDecryptionRequest,
   ExecuteRequest,
   FinalizeUnwrapRequest,
   GenericProvider,
   GenericSigner,
+  PermitKind,
   PreparedFor,
+  PreparedPermitFor,
   PreparedTransaction,
   RevokeDelegationRequest,
   SetOperatorRequest,
@@ -56,7 +61,13 @@ import { toError } from "../utils";
 
 /** Configuration for {@link OfflineSigningService}. */
 export interface OfflineSigningServiceConfig {
-  readonly signer: GenericSigner;
+  /**
+   * Optional signer. `prepare`, `broadcast`, `completeFromTxHash`, and
+   * `refreshPrepared` work without a signer (canonical shape for
+   * cross-process custody). `sign` and `execute` require a signer with the
+   * `signTransaction` capability.
+   */
+  readonly signer?: GenericSigner;
   readonly provider: GenericProvider;
   readonly relayer: RelayerDispatcher;
   readonly encryption: EncryptionService;
@@ -66,12 +77,23 @@ export interface OfflineSigningServiceConfig {
 
 /**
  * Optional behaviour overrides shared by every {@link OfflineSigningService}
- * method. The shape exists so future additions (custom nonces, fee overrides,
- * idempotency keys, cancellation) are non-breaking. No fields are currently
- * wired through to the underlying provider / signer calls.
+ * method.
+ *
+ * `nonce`, `maxFeePerGas`, `maxPriorityFeePerGas`, and `gasLimit` flow
+ * through to {@link GenericProvider.prepareTransaction} so custodians with
+ * their own nonce/fee managers can pin values at prepare time. Omitted
+ * fields fall back to the provider's default (live chain state).
  */
 export interface OfflineSigningOptions {
   readonly signal?: AbortSignal;
+  /** Override the nonce. Otherwise the provider reads `getTransactionCount("pending")`. */
+  readonly nonce?: number;
+  /** Override `maxFeePerGas`. Otherwise the provider reads `estimateFeesPerGas`. */
+  readonly maxFeePerGas?: bigint;
+  /** Override `maxPriorityFeePerGas`. Otherwise the provider reads `estimateFeesPerGas`. */
+  readonly maxPriorityFeePerGas?: bigint;
+  /** Override the gas limit. Otherwise the provider calls `estimateGas`. */
+  readonly gasLimit?: bigint;
 }
 
 const SUBMITTED_EVENT_BY_KIND: Record<TransactionKind, ZamaSDKEventInput["type"]> = {
@@ -116,7 +138,7 @@ const ERROR_OPERATION_BY_KIND: Record<TransactionKind, TransactionErrorOperation
  * @internal
  */
 export class OfflineSigningService {
-  readonly #signer: GenericSigner;
+  readonly #signer: GenericSigner | undefined;
   readonly #provider: GenericProvider;
   readonly #relayer: RelayerDispatcher;
   readonly #encryption: EncryptionService;
@@ -135,18 +157,52 @@ export class OfflineSigningService {
   // ── prepare ─────────────────────────────────────────────────────────────
 
   /**
-   * Build an RLP-encoded unsigned transaction for the given request. The
-   * caller signs it externally (via {@link sign}, an HSM, or any
-   * out-of-process signer) and feeds the result back through
-   * {@link broadcast} or {@link execute}.
+   * Build the deferred-signing payload for the given request.
+   *
+   * For transaction kinds, returns an RLP-encoded unsigned transaction the
+   * caller signs externally (via {@link sign}, an HSM, or any out-of-process
+   * signer) and feeds back through {@link broadcast} or {@link execute}.
+   *
+   * For `CredentialPermit`, returns an EIP-712 typed-data envelope to be
+   * signed externally and fed back through {@link registerPermit}.
+   *
+   * Signer-optional: when a signer IS configured, its connected wallet
+   * address must equal `request.from` or {@link SignerAddressMismatchError}
+   * is thrown.
    */
-  async prepare<K extends TransactionKind>(
+  prepare<K extends TransactionKind>(
     request: Extract<TransactionPrepareRequest, { kind: K }>,
-    _options?: OfflineSigningOptions,
+    options?: OfflineSigningOptions,
+  ): Promise<PreparedFor<K>>;
+  prepare<K extends PermitKind>(
+    request: CredentialPermitRequest,
+    options?: OfflineSigningOptions,
+  ): Promise<PreparedPermitFor<K>>;
+  async prepare(
+    request: TransactionPrepareRequest | CredentialPermitRequest,
+    options?: OfflineSigningOptions,
+  ): Promise<PreparedTransaction | PreparedPermitFor<PermitKind>> {
+    if (isCredentialPermitRequest(request)) {
+      return this.#prepareCredentialPermit(request);
+    }
+    return this.#prepareTransaction(request, options);
+  }
+
+  async #prepareTransaction<K extends TransactionKind>(
+    request: Extract<TransactionPrepareRequest, { kind: K }>,
+    options?: OfflineSigningOptions,
   ): Promise<PreparedFor<K>> {
-    const from = await this.#requireAlignedFrom(`prepare(${request.kind})`);
+    const from = getAddress(request.from);
+    await this.#assertMatchesConfiguredSigner(from, `prepare(${request.kind})`);
     const call = await this.#buildCall(request, from);
-    const unsignedTx = await this.#provider.prepareTransaction({ from, call });
+    const unsignedTx = await this.#provider.prepareTransaction({
+      from,
+      call,
+      nonce: options?.nonce,
+      maxFeePerGas: options?.maxFeePerGas,
+      maxPriorityFeePerGas: options?.maxPriorityFeePerGas,
+      gasLimit: options?.gasLimit,
+    });
     const chainId = await this.#provider.getChainId();
     return {
       kind: request.kind,
@@ -158,6 +214,35 @@ export class OfflineSigningService {
     } as PreparedFor<K>;
   }
 
+  async #prepareCredentialPermit(
+    request: CredentialPermitRequest,
+  ): Promise<PreparedPermitFor<"CredentialPermit">> {
+    const from = getAddress(request.from);
+    await this.#assertMatchesConfiguredSigner(from, `prepare(${request.kind})`);
+    const chainId = await this.#provider.getChainId();
+    const { typedData, keypair, scope, chunk, startTimestamp } =
+      await this.#credentials.prepareEIP712(request.contracts, {
+        from,
+        chainId,
+        delegator: request.delegator,
+      });
+    return {
+      kind: "CredentialPermit",
+      request,
+      from,
+      chainId,
+      typedData,
+      context: {
+        keypairPublicKey: keypair.publicKey,
+        signerAddress: scope.signerAddress,
+        delegatorAddress: scope.delegatorAddress,
+        chainId: scope.chainId,
+        chunk,
+        startTimestamp,
+      },
+    };
+  }
+
   // ── sign ────────────────────────────────────────────────────────────────
 
   /**
@@ -167,15 +252,15 @@ export class OfflineSigningService {
    *
    * @throws {@link SignerCapabilityError} when the configured signer has no
    *   `signTransaction` capability (online-only wallets).
-   * @throws {@link SigningFailedError} when the broadcaster / signer rejects
-   *   the signing request (HTTP error, policy denial, timeout). Already-typed
-   *   {@link ZamaError} causes (e.g. {@link SigningFailedError} thrown by
-   *   {@link BroadcastSigner} for malformed returns) are re-thrown unchanged.
+   * @throws {@link SigningFailedError} when the signer rejects the signing
+   *   request (HTTP error, policy denial, timeout). Already-typed
+   *   {@link ZamaError} causes are re-thrown unchanged.
    */
   async sign(prepared: PreparedTransaction, _options?: OfflineSigningOptions): Promise<Hex> {
-    assertSignTransaction(this.#signer, `sign(${prepared.kind})`);
+    const signer = this.#requireSigner(`sign(${prepared.kind})`);
+    assertSignTransaction(signer, `sign(${prepared.kind})`);
     try {
-      return await this.#signer.signTransaction(prepared.unsignedTx);
+      return await signer.signTransaction(prepared.unsignedTx);
     } catch (error) {
       this.#emitTransactionError(prepared, error);
       if (error instanceof ZamaError) {
@@ -227,34 +312,46 @@ export class OfflineSigningService {
   // ── execute (overloaded) ───────────────────────────────────────────────
 
   /**
-   * Bundled in-process flow: takes a {@link PreparedTransaction} (sign +
-   * broadcast), a {@link TransactionPrepareRequest} (prepare + sign +
-   * broadcast), or a {@link CredentialPermitRequest} (atomic permit via
-   * {@link CredentialService.allow}).
+   * Bundled in-process flow from a request. Accepts either a
+   * {@link TransactionPrepareRequest} (prepare + sign + broadcast) or a
+   * {@link CredentialPermitRequest} (prepare + sign + register the typed-data
+   * signature in the credential cache).
+   *
+   * Callers who already hold a {@link PreparedTransaction} should chain
+   * `await broadcast(prepared, await sign(prepared))` — keeping the
+   * prepare/sign/broadcast call shape visible at the call site (code review
+   * can tell whether `prepared` is fresh or stale without inspecting types).
    */
-  execute(input: PreparedTransaction, options?: OfflineSigningOptions): Promise<TransactionResult>;
   execute(
     input: TransactionPrepareRequest,
     options?: OfflineSigningOptions,
   ): Promise<TransactionResult>;
-  execute(input: CredentialPermitRequest, options?: OfflineSigningOptions): Promise<void>;
   execute(
-    input: PreparedTransaction | ExecuteRequest,
+    input: CredentialPermitRequest,
     options?: OfflineSigningOptions,
-  ): Promise<TransactionResult | void>;
+  ): Promise<CredentialPermitResult | void>;
+  execute(
+    input: ExecuteRequest,
+    options?: OfflineSigningOptions,
+  ): Promise<TransactionResult | CredentialPermitResult | void>;
   async execute(
-    input: PreparedTransaction | ExecuteRequest,
+    input: ExecuteRequest,
     options?: OfflineSigningOptions,
-  ): Promise<TransactionResult | void> {
+  ): Promise<TransactionResult | CredentialPermitResult | void> {
+    // execute is the in-process bundled flow; it always requires a signer
+    // with signTransaction (or, for permits, with signTypedData via the
+    // credential service which itself requires the signer).
+    const signer = this.#requireSigner(`execute(${input.kind})`);
     if (isCredentialPermitRequest(input)) {
-      await this.#credentials.allow(input.contracts, input.delegator);
-      return;
+      const prepared = await this.#prepareCredentialPermit(input);
+      if (prepared.typedData === null) {
+        // Already covered — keypair warm, no signature needed.
+        return;
+      }
+      const signature = await signer.signTypedData(prepared.typedData);
+      return this.registerPermit(prepared, signature, options);
     }
-    if (isPreparedTransaction(input)) {
-      const signedTx = await this.sign(input, options);
-      return this.broadcast(input, signedTx, options);
-    }
-    const prepared = await this.prepare(input, options);
+    const prepared = await this.#prepareTransaction(input, options);
     const signedTx = await this.sign(prepared, options);
     return this.broadcast(prepared, signedTx, options);
   }
@@ -275,6 +372,79 @@ export class OfflineSigningService {
     await this.#assertSameChainAsPrepared(prepared, "completeFromTxHash");
     this.#emitSubmitted(prepared, txHash);
     return this.#awaitReceipt(prepared, txHash);
+  }
+
+  // ── refreshPrepared ────────────────────────────────────────────────────
+
+  /**
+   * Re-stamp a {@link PreparedFor} with the current chain state — fresh
+   * nonce, fee parameters, and gas limit. Useful when the gap between
+   * `prepare` and `sign` was long enough for values to drift (custodian
+   * ceremony, multi-party approval, etc.).
+   *
+   * Signer-optional: works without a configured signer. The original
+   * `prepared` is left untouched (immutable); the returned value is a fresh
+   * `PreparedFor<K>` built from the original `request`.
+   */
+  refreshPrepared<K extends TransactionKind>(
+    prepared: PreparedFor<K>,
+    options?: OfflineSigningOptions,
+  ): Promise<PreparedFor<K>> {
+    return this.#prepareTransaction(
+      prepared.request as Extract<TransactionPrepareRequest, { kind: K }>,
+      options,
+    );
+  }
+
+  // ── registerPermit ─────────────────────────────────────────────────────
+
+  /**
+   * Register an externally-signed {@link PreparedPermitFor} into the
+   * credential cache. Pair with `prepare({ kind: "CredentialPermit", ... })`
+   * and an external `signTypedData` call over `prepared.typedData`.
+   *
+   * Signer-optional: works without a configured signer (canonical
+   * cross-process custody shape).
+   *
+   * @throws {@link SigningFailedError} if `signature` is not a valid
+   *   0x-prefixed hex string.
+   */
+  async registerPermit<K extends PermitKind>(
+    prepared: PreparedPermitFor<K>,
+    signature: Hex,
+    _options?: OfflineSigningOptions,
+  ): Promise<CredentialPermitResult> {
+    if (!isHex(signature)) {
+      throw new SigningFailedError(
+        `registerPermit: expected a 0x-prefixed hex signature, got ${typeof signature}`,
+      );
+    }
+    if (prepared.typedData === null) {
+      // Already covered — nothing to register.
+      return {
+        contracts: prepared.context.chunk,
+        durationDays: 0,
+        startTimestamp: prepared.context.startTimestamp,
+      };
+    }
+    const permit = await this.#credentials.registerSignedPermit({
+      signature,
+      // Reconstruct just enough of the StoredKeypair shape — the credential
+      // service only reads `publicKey` from the keypair field.
+      keypair: { publicKey: prepared.context.keypairPublicKey } as never,
+      scope: {
+        signerAddress: prepared.context.signerAddress as never,
+        chainId: prepared.context.chainId,
+        delegatorAddress: prepared.context.delegatorAddress as never,
+      },
+      chunk: prepared.context.chunk as never,
+      startTimestamp: prepared.context.startTimestamp,
+    });
+    return {
+      contracts: permit.signedContractAddresses,
+      durationDays: permit.durationDays,
+      startTimestamp: permit.startTimestamp,
+    };
   }
 
   // ── internals ──────────────────────────────────────────────────────────
@@ -345,7 +515,7 @@ export class OfflineSigningService {
     const { handles, inputProof } = await this.#encryption.encrypt({
       values: [{ value: request.amount, type: "euint64" }],
       contractAddress: request.token,
-      userAddress: getAddress(request.from),
+      userAddress: getAddress(request.owner),
     });
     const handle = handles[0];
     if (!handle) {
@@ -355,7 +525,7 @@ export class OfflineSigningService {
     }
     return confidentialTransferFromContract(
       request.token,
-      getAddress(request.from),
+      getAddress(request.owner),
       getAddress(request.to),
       handle,
       inputProof,
@@ -453,17 +623,43 @@ export class OfflineSigningService {
     );
   }
 
-  async #requireAlignedFrom(operation: string): Promise<Address> {
-    const account = this.#signer.requireWalletAccount(operation);
+  /**
+   * If a signer is configured, fail when its connected wallet address does
+   * not match the requested `from`, or when its chain disagrees with the
+   * provider's chain. Cross-process flows (no signer configured) skip this
+   * check entirely — `request.from` is the source of truth and the caller
+   * is responsible for routing the prepared tx to the right chain.
+   */
+  async #assertMatchesConfiguredSigner(from: Address, operation: string): Promise<void> {
+    if (!this.#signer) {
+      return;
+    }
+    const snapshot = this.#signer.walletAccount.getSnapshot();
+    if (!snapshot) {
+      return;
+    }
+    if (getAddress(snapshot.address) !== getAddress(from)) {
+      throw new SignerAddressMismatchError({
+        operation,
+        requested: getAddress(from),
+        configured: getAddress(snapshot.address),
+      });
+    }
     const providerChainId = await this.#provider.getChainId();
-    if (account.chainId !== providerChainId) {
+    if (snapshot.chainId !== providerChainId) {
       throw new ChainMismatchError({
         operation,
-        signerChainId: account.chainId,
+        signerChainId: snapshot.chainId,
         providerChainId,
       });
     }
-    return account.address;
+  }
+
+  #requireSigner(operation: string): GenericSigner {
+    if (!this.#signer) {
+      throw new SignerNotConfiguredError(operation);
+    }
+    return this.#signer;
   }
 
   async #assertSameChainAsPrepared(
@@ -513,20 +709,6 @@ export class OfflineSigningService {
   }
 }
 
-function isCredentialPermitRequest(
-  value: PreparedTransaction | ExecuteRequest,
-): value is CredentialPermitRequest {
-  return "kind" in value && (value as { kind: unknown }).kind === "CredentialPermit";
-}
-
-function isPreparedTransaction(
-  value: PreparedTransaction | ExecuteRequest,
-): value is PreparedTransaction {
-  return (
-    "unsignedTx" in value &&
-    "request" in value &&
-    "from" in value &&
-    "to" in value &&
-    "chainId" in value
-  );
+function isCredentialPermitRequest(value: ExecuteRequest): value is CredentialPermitRequest {
+  return value.kind === "CredentialPermit";
 }

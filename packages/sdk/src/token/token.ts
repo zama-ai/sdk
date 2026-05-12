@@ -877,12 +877,14 @@ export class Token extends ReadonlyToken {
   // (multi-step plan); unshielding is caller-orchestrated via prepareUnwrap
   // then prepareFinalizeUnwrap — see each method's JSDoc for the flow.
 
-  prepareConfidentialTransfer(args: {
+  async prepareConfidentialTransfer(args: {
     to: Address;
     amount: bigint;
   }): Promise<PreparedFor<"ConfidentialTransfer">> {
+    const from = await this.#senderAddress("prepareConfidentialTransfer");
     return this.sdk.prepare({
       kind: "ConfidentialTransfer",
+      from,
       token: this.address,
       to: getAddress(args.to),
       amount: args.amount,
@@ -896,15 +898,18 @@ export class Token extends ReadonlyToken {
     return this.sdk.completeFromTxHash(prepared, txHash);
   }
 
-  prepareConfidentialTransferFrom(args: {
-    from: Address;
+  async prepareConfidentialTransferFrom(args: {
+    /** Token holder whose balance is being moved (debited). */
+    owner: Address;
     to: Address;
     amount: bigint;
   }): Promise<PreparedFor<"ConfidentialTransferFrom">> {
+    const from = await this.#senderAddress("prepareConfidentialTransferFrom");
     return this.sdk.prepare({
       kind: "ConfidentialTransferFrom",
+      from,
       token: this.address,
-      from: getAddress(args.from),
+      owner: getAddress(args.owner),
       to: getAddress(args.to),
       amount: args.amount,
     });
@@ -917,12 +922,14 @@ export class Token extends ReadonlyToken {
     return this.sdk.completeFromTxHash(prepared, txHash);
   }
 
-  prepareSetOperator(args: {
+  async prepareSetOperator(args: {
     operator: Address;
     until?: number;
   }): Promise<PreparedFor<"SetOperator">> {
+    const from = await this.#senderAddress("prepareSetOperator");
     return this.sdk.prepare({
       kind: "SetOperator",
+      from,
       token: this.address,
       operator: getAddress(args.operator),
       until: args.until,
@@ -942,9 +949,11 @@ export class Token extends ReadonlyToken {
    * extracts the `unwrapRequestId` from the event log, and then runs
    * {@link prepareFinalizeUnwrap} to authorize the underlying transfer.
    */
-  prepareUnwrap(args: { to: Address; amount: bigint }): Promise<PreparedFor<"Unwrap">> {
+  async prepareUnwrap(args: { to: Address; amount: bigint }): Promise<PreparedFor<"Unwrap">> {
+    const from = await this.#senderAddress("prepareUnwrap");
     return this.sdk.prepare({
       kind: "Unwrap",
+      from,
       token: this.address,
       to: getAddress(args.to),
       amount: args.amount,
@@ -960,9 +969,11 @@ export class Token extends ReadonlyToken {
    * confidential balance handle instead of an explicit amount. Pair with
    * {@link prepareFinalizeUnwrap} after the `UnwrapRequested` event lands.
    */
-  prepareUnwrapAll(args: { to: Address }): Promise<PreparedFor<"UnwrapAll">> {
+  async prepareUnwrapAll(args: { to: Address }): Promise<PreparedFor<"UnwrapAll">> {
+    const from = await this.#senderAddress("prepareUnwrapAll");
     return this.sdk.prepare({
       kind: "UnwrapAll",
+      from,
       token: this.address,
       to: getAddress(args.to),
     });
@@ -979,11 +990,13 @@ export class Token extends ReadonlyToken {
    * here. The SDK public-decrypts the handle during `prepare` and builds
    * the unsigned `wrapper.finalizeUnwrap(...)` tx the caller broadcasts.
    */
-  prepareFinalizeUnwrap(args: {
+  async prepareFinalizeUnwrap(args: {
     unwrapRequestIdOrAmount: Handle;
   }): Promise<PreparedFor<"FinalizeUnwrap">> {
+    const from = await this.#senderAddress("prepareFinalizeUnwrap");
     return this.sdk.prepare({
       kind: "FinalizeUnwrap",
+      from,
       wrapper: this.wrapper,
       unwrapRequestIdOrAmount: args.unwrapRequestIdOrAmount,
     });
@@ -1001,7 +1014,7 @@ export class Token extends ReadonlyToken {
   }): Promise<PreparedFor<"ApproveUnderlying">> {
     // Fail fast on a wrong-chain signer so a custodian ceremony doesn't run
     // on an unsigned tx the network will later reject.
-    await requireAlignedWalletAccount(
+    const account = await requireAlignedWalletAccount(
       "prepareApproveUnderlying",
       this.sdk.signer,
       this.sdk.provider,
@@ -1009,6 +1022,7 @@ export class Token extends ReadonlyToken {
     const underlying = await this.#getUnderlying();
     return this.sdk.prepare({
       kind: "ApproveUnderlying",
+      from: getAddress(account.address),
       underlying,
       spender: this.wrapper,
       amount: args.amount,
@@ -1026,9 +1040,11 @@ export class Token extends ReadonlyToken {
     delegateAddress: Address;
     expirationDate?: Date;
   }): Promise<PreparedFor<"DelegateDecryption">> {
+    const from = await this.#senderAddress("prepareDelegateDecryption");
     const aclAddress = await this.sdk.relayer.getAclAddress();
     return this.sdk.prepare({
       kind: "DelegateDecryption",
+      from,
       aclAddress,
       contractAddress: this.address,
       delegateAddress: getAddress(args.delegateAddress),
@@ -1046,13 +1062,30 @@ export class Token extends ReadonlyToken {
   async prepareRevokeDelegation(args: {
     delegateAddress: Address;
   }): Promise<PreparedFor<"RevokeDelegation">> {
+    const from = await this.#senderAddress("prepareRevokeDelegation");
     const aclAddress = await this.sdk.relayer.getAclAddress();
     return this.sdk.prepare({
       kind: "RevokeDelegation",
+      from,
       aclAddress,
       contractAddress: this.address,
       delegateAddress: getAddress(args.delegateAddress),
     });
+  }
+
+  /**
+   * Read the connected signer's wallet address for use as the tx-sender
+   * `from`. Token-level `prepareX` sugar methods only target the in-process
+   * configured signer; cross-process callers go straight to
+   * `sdk.prepare({ kind, from, ... })`.
+   */
+  async #senderAddress(operation: string): Promise<Address> {
+    const account = await requireAlignedWalletAccount(
+      operation,
+      this.sdk.signer,
+      this.sdk.provider,
+    );
+    return getAddress(account.address);
   }
 
   completeRevokeDelegation(
@@ -1098,6 +1131,7 @@ export class Token extends ReadonlyToken {
         steps: [
           {
             kind: "TransferAndCall",
+            from: userAddress,
             underlying,
             wrapper: this.wrapper,
             amount,
@@ -1108,6 +1142,7 @@ export class Token extends ReadonlyToken {
     }
     const wrapStep = {
       kind: "Wrap",
+      from: userAddress,
       wrapper: this.wrapper,
       to: recipient,
       amount,
@@ -1123,6 +1158,7 @@ export class Token extends ReadonlyToken {
     }
     const approveStep = {
       kind: "ApproveUnderlying",
+      from: userAddress,
       underlying,
       spender: this.wrapper,
       amount,
@@ -1130,6 +1166,7 @@ export class Token extends ReadonlyToken {
     if (allowance > 0n) {
       const resetStep = {
         kind: "ApproveUnderlying",
+        from: userAddress,
         underlying,
         spender: this.wrapper,
         amount: 0n,

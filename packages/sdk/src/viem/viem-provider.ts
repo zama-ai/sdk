@@ -79,7 +79,14 @@ export class ViemProvider implements GenericProvider {
     const TAbi extends ContractAbi,
     TFunctionName extends WriteFunctionName<TAbi>,
     const TArgs extends WriteContractArgs<TAbi, TFunctionName>,
-  >(args: { from: Address; call: WriteContractConfig<TAbi, TFunctionName, TArgs> }): Promise<Hex> {
+  >(args: {
+    from: Address;
+    call: WriteContractConfig<TAbi, TFunctionName, TArgs>;
+    nonce?: number;
+    maxFeePerGas?: bigint;
+    maxPriorityFeePerGas?: bigint;
+    gasLimit?: bigint;
+  }): Promise<Hex> {
     const { from, call } = args;
     const data = encodeFunctionData({
       abi: call.abi as Abi,
@@ -90,24 +97,42 @@ export class ViemProvider implements GenericProvider {
     // prepareTransaction failure) surfaces as a typed error with the
     // function name + cause. Other legs propagate as-is — failures there
     // (chainId, nonce, fee data) are rare and usually self-explanatory.
-    const [chainId, nonce, gas, fees] = await Promise.all([
-      this.#publicClient.getChainId(),
-      this.#publicClient.getTransactionCount({ address: from }),
-      call.gas ??
-        this.#publicClient
-          .estimateGas({
-            account: from,
-            to: call.address,
-            data,
-            value: call.value ?? 0n,
+    // Skip the network round-trips entirely when the caller supplied
+    // overrides — useful for custodians with their own nonce/fee managers.
+    const chainIdPromise = this.#publicClient.getChainId();
+    const noncePromise =
+      args.nonce !== undefined
+        ? Promise.resolve(args.nonce)
+        : this.#publicClient.getTransactionCount({ address: from });
+    const gasPromise =
+      args.gasLimit !== undefined
+        ? Promise.resolve(args.gasLimit)
+        : (call.gas ??
+          this.#publicClient
+            .estimateGas({
+              account: from,
+              to: call.address,
+              data,
+              value: call.value ?? 0n,
+            })
+            .catch((error: unknown) => {
+              throw new TransactionRevertedError(
+                `ViemProvider.prepareTransaction: gas estimation reverted for ${call.functionName} on ${call.address}`,
+                { cause: error },
+              );
+            }));
+    const feesPromise =
+      args.maxFeePerGas !== undefined && args.maxPriorityFeePerGas !== undefined
+        ? Promise.resolve({
+            maxFeePerGas: args.maxFeePerGas,
+            maxPriorityFeePerGas: args.maxPriorityFeePerGas,
           })
-          .catch((error: unknown) => {
-            throw new TransactionRevertedError(
-              `ViemProvider.prepareTransaction: gas estimation reverted for ${call.functionName} on ${call.address}`,
-              { cause: error },
-            );
-          }),
-      this.#publicClient.estimateFeesPerGas(),
+        : this.#publicClient.estimateFeesPerGas();
+    const [chainId, nonce, gas, fees] = await Promise.all([
+      chainIdPromise,
+      noncePromise,
+      gasPromise,
+      feesPromise,
     ]);
     return serializeTransaction({
       type: "eip1559",
@@ -117,8 +142,8 @@ export class ViemProvider implements GenericProvider {
       data,
       value: call.value ?? 0n,
       gas,
-      maxFeePerGas: fees.maxFeePerGas,
-      maxPriorityFeePerGas: fees.maxPriorityFeePerGas,
+      maxFeePerGas: args.maxFeePerGas ?? fees.maxFeePerGas,
+      maxPriorityFeePerGas: args.maxPriorityFeePerGas ?? fees.maxPriorityFeePerGas,
     });
   }
 }

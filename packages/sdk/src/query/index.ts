@@ -101,6 +101,22 @@ export {
 export { publicDecryptMutationOptions } from "./public-decrypt";
 export { requestZKProofVerificationMutationOptions } from "./request-zk-proof-verification";
 export { allowMutationOptions } from "./allow";
+export {
+  prepareMutationOptions,
+  signMutationOptions,
+  type PrepareParams,
+  type PrepareResult,
+  type SignParams,
+} from "./prepare";
+export {
+  broadcastMutationOptions,
+  completeFromTxHashMutationOptions,
+  type BroadcastParams,
+  type CompleteFromTxHashParams,
+} from "./broadcast";
+export { registerPermitMutationOptions, type RegisterPermitParams } from "./register-permit";
+export { executeMutationOptions, type ExecuteParams, type ExecuteResult } from "./execute";
+export { refreshPreparedMutationOptions, type RefreshPreparedParams } from "./refresh-prepared";
 export { isAllowedQueryOptions, type IsAllowedQueryConfig } from "./is-allowed";
 export { revokePermitsMutationOptions } from "./revoke-permits";
 export { clearCredentialsMutationOptions } from "./clear-credentials";

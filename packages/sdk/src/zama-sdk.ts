@@ -16,11 +16,14 @@ import { ReadonlyToken } from "./token/readonly-token";
 import { Token } from "./token/token";
 import type {
   CredentialPermitRequest,
+  CredentialPermitResult,
   ExecuteRequest,
   GenericProvider,
   GenericSigner,
   GenericStorage,
+  PermitKind,
   PreparedFor,
+  PreparedPermitFor,
   PreparedTransaction,
   TransactionKind,
   TransactionPrepareRequest,
@@ -57,11 +60,11 @@ export class ZamaSDK {
   readonly #registryTTL: number;
   readonly #onEvent: ZamaSDKEventListener;
   readonly #cache: CachingService;
-  readonly #credentialService: CredentialService | undefined;
+  readonly #credentialService: CredentialService;
   readonly #delegationService: DelegationService;
   readonly #decryptionService: DecryptionService | undefined;
   readonly #encryptionService: EncryptionService;
-  readonly #offlineSigningService: OfflineSigningService | undefined;
+  readonly #offlineSigningService: OfflineSigningService;
   readonly #lifecycleService: LifecycleService;
 
   constructor(config: ZamaConfig) {
@@ -92,16 +95,15 @@ export class ZamaSDK {
       registryTTL: config.registryTTL,
     });
     this.#registryTTL = config.registryTTL;
+    this.#credentialService = new CredentialService({
+      relayer: this.relayer,
+      signer: config.signer,
+      keypairTTL: config.keypairTTL,
+      permitTTL: config.permitTTL,
+      storage: this.storage,
+      permitStorage: config.permitStorage,
+    });
     if (config.signer) {
-      const signer = config.signer;
-      this.#credentialService = new CredentialService({
-        relayer: this.relayer,
-        signer,
-        keypairTTL: config.keypairTTL,
-        permitTTL: config.permitTTL,
-        storage: this.storage,
-        permitStorage: config.permitStorage,
-      });
       this.#decryptionService = new DecryptionService({
         cache: this.#cache,
         credentialService: this.#credentialService,
@@ -109,19 +111,17 @@ export class ZamaSDK {
         relayer: this.relayer,
         emitEvent: (input) => this.emitEvent(input),
       });
-      this.#offlineSigningService = new OfflineSigningService({
-        signer,
-        provider: this.provider,
-        relayer: this.relayer,
-        encryption: this.#encryptionService,
-        credentials: this.#credentialService,
-        emitEvent: (input, tokenAddress) => this.emitEvent(input, tokenAddress),
-      });
     } else {
-      this.#credentialService = undefined;
       this.#decryptionService = undefined;
-      this.#offlineSigningService = undefined;
     }
+    this.#offlineSigningService = new OfflineSigningService({
+      signer: config.signer,
+      provider: this.provider,
+      relayer: this.relayer,
+      encryption: this.#encryptionService,
+      credentials: this.#credentialService,
+      emitEvent: (input, tokenAddress) => this.emitEvent(input, tokenAddress),
+    });
 
     this.#lifecycleService = new LifecycleService({
       signer: config.signer,
@@ -144,7 +144,7 @@ export class ZamaSDK {
   }
 
   #requireCredentialService(operation: string): CredentialService {
-    if (!this.#credentialService) {
+    if (!this.signer) {
       throw new SignerNotConfiguredError(operation);
     }
     return this.#credentialService;
@@ -155,13 +155,6 @@ export class ZamaSDK {
       throw new SignerNotConfiguredError(operation);
     }
     return this.#decryptionService;
-  }
-
-  #requireOfflineSigningService(operation: string): OfflineSigningService {
-    if (!this.#offlineSigningService) {
-      throw new SignerNotConfiguredError(operation);
-    }
-    return this.#offlineSigningService;
   }
 
   // ─── Deferred signing pipeline ───────────────────────────────────────
@@ -175,14 +168,28 @@ export class ZamaSDK {
    * out-of-process custodian — and feeds the result back into
    * {@link broadcast} or {@link execute}.
    *
-   * @throws {@link SignerNotConfiguredError} if no signer is configured.
-   * @throws {@link ChainMismatchError} if signer and provider disagree.
+   * Signer-optional: works without a configured signer (canonical shape for
+   * cross-process custody — the back-end signer service consumes
+   * `prepared.unsignedTx` and returns signed bytes).
+   *
+   * @throws {@link SignerAddressMismatchError} if a signer IS configured and
+   *   its connected wallet address differs from `request.from`.
+   * @throws {@link ChainMismatchError} if a signer IS configured and its
+   *   chain disagrees with the provider's chain.
    */
   prepare<K extends TransactionKind>(
     request: Extract<TransactionPrepareRequest, { kind: K }>,
     options?: OfflineSigningOptions,
-  ): Promise<PreparedFor<K>> {
-    return this.#requireOfflineSigningService("prepare").prepare(request, options);
+  ): Promise<PreparedFor<K>>;
+  prepare<K extends PermitKind>(
+    request: CredentialPermitRequest,
+    options?: OfflineSigningOptions,
+  ): Promise<PreparedPermitFor<K>>;
+  prepare(
+    request: TransactionPrepareRequest | CredentialPermitRequest,
+    options?: OfflineSigningOptions,
+  ): Promise<PreparedTransaction | PreparedPermitFor<PermitKind>> {
+    return this.#offlineSigningService.prepare(request as never, options);
   }
 
   /**
@@ -193,7 +200,7 @@ export class ZamaSDK {
    *   implement `signTransaction` (online-only wallet).
    */
   sign(prepared: PreparedTransaction, options?: OfflineSigningOptions): Promise<Hex> {
-    return this.#requireOfflineSigningService("sign").sign(prepared, options);
+    return this.#offlineSigningService.sign(prepared, options);
   }
 
   /**
@@ -205,26 +212,46 @@ export class ZamaSDK {
     signedTx: Hex,
     options?: OfflineSigningOptions,
   ): Promise<TransactionResult> {
-    return this.#requireOfflineSigningService("broadcast").broadcast(prepared, signedTx, options);
+    return this.#offlineSigningService.broadcast(prepared, signedTx, options);
   }
 
   /**
-   * Bundled in-process flow. Accepts:
-   * - a {@link PreparedTransaction} (sign + broadcast),
+   * Bundled in-process flow from a request. Accepts:
    * - a {@link TransactionPrepareRequest} (prepare + sign + broadcast),
-   * - a {@link CredentialPermitRequest} (atomic EIP-712 permit registration).
+   * - a {@link CredentialPermitRequest} (prepare + sign + register).
+   *
+   * Callers who already hold a {@link PreparedTransaction} chain
+   * `await broadcast(prepared, await sign(prepared))` — keeping the
+   * prepare/sign/broadcast call shape visible at the call site.
    */
-  execute(input: PreparedTransaction, options?: OfflineSigningOptions): Promise<TransactionResult>;
   execute(
     input: TransactionPrepareRequest,
     options?: OfflineSigningOptions,
   ): Promise<TransactionResult>;
-  execute(input: CredentialPermitRequest, options?: OfflineSigningOptions): Promise<void>;
   execute(
-    input: PreparedTransaction | ExecuteRequest,
+    input: CredentialPermitRequest,
     options?: OfflineSigningOptions,
-  ): Promise<TransactionResult | void> {
-    return this.#requireOfflineSigningService("execute").execute(input, options);
+  ): Promise<CredentialPermitResult | void>;
+  execute(
+    input: ExecuteRequest,
+    options?: OfflineSigningOptions,
+  ): Promise<TransactionResult | CredentialPermitResult | void> {
+    return this.#offlineSigningService.execute(input, options);
+  }
+
+  /**
+   * Persist an externally-signed credential permit. Pair with
+   * `sdk.prepare({ kind: "CredentialPermit", from, contracts })` and an
+   * external `signTypedData` call over `prepared.typedData`.
+   *
+   * Signer-optional: works without a configured signer.
+   */
+  registerPermit<K extends PermitKind>(
+    prepared: PreparedPermitFor<K>,
+    signature: Hex,
+    options?: OfflineSigningOptions,
+  ): Promise<CredentialPermitResult> {
+    return this.#offlineSigningService.registerPermit(prepared, signature, options);
   }
 
   /**
@@ -238,11 +265,23 @@ export class ZamaSDK {
     txHash: Hex,
     options?: OfflineSigningOptions,
   ): Promise<TransactionResult> {
-    return this.#requireOfflineSigningService("completeFromTxHash").completeFromTxHash(
-      prepared,
-      txHash,
-      options,
-    );
+    return this.#offlineSigningService.completeFromTxHash(prepared, txHash, options);
+  }
+
+  /**
+   * Re-stamp a prepared transaction with the current chain state — fresh
+   * nonce, fee parameters, and gas limit. Call this before {@link sign}
+   * when the gap since {@link prepare} was long enough for values to drift
+   * (custodian approval ceremonies, multi-party signing, etc.). The
+   * original `prepared` is left untouched (immutable).
+   *
+   * Signer-optional: works without a configured signer.
+   */
+  refreshPrepared<K extends TransactionKind>(
+    prepared: PreparedFor<K>,
+    options?: OfflineSigningOptions,
+  ): Promise<PreparedFor<K>> {
+    return this.#offlineSigningService.refreshPrepared(prepared, options);
   }
 
   /**
@@ -373,7 +412,7 @@ export class ZamaSDK {
    * is configured.
    */
   async isAllowed(contracts: Address[]): Promise<boolean> {
-    if (!this.#credentialService) {
+    if (!this.signer) {
       return false;
     }
     return this.#credentialService.isAllowed(contracts);
@@ -387,7 +426,7 @@ export class ZamaSDK {
    * @returns `true` if cached delegated permits cover all requested contracts.
    */
   async isAllowedAs(delegator: Address, contracts: Address[]): Promise<boolean> {
-    if (!this.#credentialService) {
+    if (!this.signer) {
       return false;
     }
     return this.#credentialService.isAllowed(contracts, delegator);

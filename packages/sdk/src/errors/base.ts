@@ -74,6 +74,8 @@ export const ZamaErrorCode = {
   WalletAccountNotReady: "WALLET_ACCOUNT_NOT_READY",
   /** Signer lacks a capability required by the requested operation. */
   SignerMissingCapability: "SIGNER_MISSING_CAPABILITY",
+  /** A configured signer's wallet address does not match `request.from`. */
+  SignerAddressMismatch: "SIGNER_ADDRESS_MISMATCH",
 } as const;
 
 /** Union of all {@link ZamaErrorCode} string values. */

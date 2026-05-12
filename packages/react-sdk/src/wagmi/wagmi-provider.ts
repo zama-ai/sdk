@@ -107,7 +107,14 @@ export class WagmiProvider implements GenericProvider {
     const TAbi extends ContractAbi,
     TFunctionName extends WriteFunctionName<TAbi>,
     const TArgs extends WriteContractArgs<TAbi, TFunctionName>,
-  >(args: { from: Address; call: WriteContractConfig<TAbi, TFunctionName, TArgs> }): Promise<Hex> {
+  >(args: {
+    from: Address;
+    call: WriteContractConfig<TAbi, TFunctionName, TArgs>;
+    nonce?: number;
+    maxFeePerGas?: bigint;
+    maxPriorityFeePerGas?: bigint;
+    gasLimit?: bigint;
+  }): Promise<Hex> {
     const publicClient = getPublicClient(this.#config);
     if (!publicClient) {
       throw new ConfigurationError(
@@ -121,24 +128,42 @@ export class WagmiProvider implements GenericProvider {
       args: call.args as readonly unknown[],
     });
     // Wrap estimateGas — pre-flight revert is the high-value failure mode.
-    const [chainId, nonce, gas, fees] = await Promise.all([
-      publicClient.getChainId(),
-      publicClient.getTransactionCount({ address: from }),
-      call.gas ??
-        publicClient
-          .estimateGas({
-            account: from,
-            to: call.address,
-            data,
-            value: call.value ?? 0n,
+    // Skip the network round-trips entirely when the caller supplied
+    // overrides — useful for custodians with their own nonce/fee managers.
+    const chainIdPromise = publicClient.getChainId();
+    const noncePromise =
+      args.nonce !== undefined
+        ? Promise.resolve(args.nonce)
+        : publicClient.getTransactionCount({ address: from });
+    const gasPromise =
+      args.gasLimit !== undefined
+        ? Promise.resolve(args.gasLimit)
+        : (call.gas ??
+          publicClient
+            .estimateGas({
+              account: from,
+              to: call.address,
+              data,
+              value: call.value ?? 0n,
+            })
+            .catch((error: unknown) => {
+              throw new TransactionRevertedError(
+                `WagmiProvider.prepareTransaction: gas estimation reverted for ${call.functionName as string} on ${call.address}`,
+                { cause: error },
+              );
+            }));
+    const feesPromise =
+      args.maxFeePerGas !== undefined && args.maxPriorityFeePerGas !== undefined
+        ? Promise.resolve({
+            maxFeePerGas: args.maxFeePerGas,
+            maxPriorityFeePerGas: args.maxPriorityFeePerGas,
           })
-          .catch((error: unknown) => {
-            throw new TransactionRevertedError(
-              `WagmiProvider.prepareTransaction: gas estimation reverted for ${call.functionName as string} on ${call.address}`,
-              { cause: error },
-            );
-          }),
-      publicClient.estimateFeesPerGas(),
+        : publicClient.estimateFeesPerGas();
+    const [chainId, nonce, gas, fees] = await Promise.all([
+      chainIdPromise,
+      noncePromise,
+      gasPromise,
+      feesPromise,
     ]);
     return serializeTransaction({
       type: "eip1559",
@@ -148,8 +173,8 @@ export class WagmiProvider implements GenericProvider {
       data,
       value: call.value ?? 0n,
       gas,
-      maxFeePerGas: fees.maxFeePerGas,
-      maxPriorityFeePerGas: fees.maxPriorityFeePerGas,
+      maxFeePerGas: args.maxFeePerGas ?? fees.maxFeePerGas,
+      maxPriorityFeePerGas: args.maxPriorityFeePerGas ?? fees.maxPriorityFeePerGas,
     });
   }
 }

@@ -1,3 +1,4 @@
+import type { Address } from "viem";
 import { ZamaError, ZamaErrorCode } from "./base";
 
 /**
@@ -95,10 +96,38 @@ export class SignerCapabilityError extends SignerRequiredError {
       `Cannot ${operation}: the configured signer does not implement ${capability}. ` +
         (capability === "writeContract"
           ? "Use the deferred prepare*/complete* path, or configure an atomic signer."
-          : "Configure a signer that supports offline signing (e.g. BroadcastSigner)."),
+          : "Configure a signer that supports offline signing (e.g. a BaseSigner subclass)."),
       options,
     );
     this.name = "SignerCapabilityError";
     this.capability = capability;
+  }
+}
+
+/**
+ * Thrown when a `prepare(...)` call passes a `request.from` address that
+ * disagrees with the configured signer's connected wallet address. The SDK
+ * uses `request.from` as the source of truth (so `prepare` works without a
+ * signer for cross-process custody); when a signer IS configured, the SDK
+ * raises this error to catch wiring mistakes.
+ */
+export class SignerAddressMismatchError extends ZamaError {
+  readonly operation: string;
+  readonly requested: Address;
+  readonly configured: Address;
+
+  constructor(
+    params: { requested: Address; configured: Address; operation: string },
+    options?: ErrorOptions,
+  ) {
+    super(
+      ZamaErrorCode.SignerAddressMismatch,
+      `Signer address mismatch in ${params.operation}: request.from is ${params.requested} but configured signer's wallet is ${params.configured}`,
+      options,
+    );
+    this.name = "SignerAddressMismatchError";
+    this.operation = params.operation;
+    this.requested = params.requested;
+    this.configured = params.configured;
   }
 }

@@ -64,6 +64,11 @@ export interface GenericProvider {
    * chain state and returns bytes ready to be passed to
    * {@link GenericSigner.signTransaction}.
    *
+   * Optional overrides (`nonce`, `maxFeePerGas`, `maxPriorityFeePerGas`,
+   * `gasLimit`) let callers pin values at prepare time — used by the
+   * deferred-signing pipeline when a custodian supplies its own nonce/fee
+   * manager. Implementers may ignore unknown optional args without breaking.
+   *
    * Used exclusively by the deferred-signing pipeline. Atomic signers go
    * through {@link GenericSigner.writeContract} and never invoke this.
    *
@@ -80,5 +85,9 @@ export interface GenericProvider {
   >(args: {
     from: Address;
     call: WriteContractConfig<TAbi, TFunctionName, TArgs>;
+    nonce?: number;
+    maxFeePerGas?: bigint;
+    maxPriorityFeePerGas?: bigint;
+    gasLimit?: bigint;
   }): Promise<Hex>;
 }

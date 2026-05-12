@@ -1,7 +1,10 @@
-import type { Address } from "viem";
+import type { Address, Hex } from "viem";
 import type { GenericSigner, GenericStorage } from "../types";
 import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
+import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
 import { ZamaError } from "../errors/base";
+import { ConfigurationError } from "../errors/relayer";
+import { SignerNotConfiguredError } from "../errors/signer";
 import { wrapSigningError } from "../errors/signing";
 import { swallow } from "../utils/swallow";
 import { KeypairVault } from "./keypair-vault";
@@ -19,7 +22,15 @@ export const DEFAULT_PERMIT_DURATION_DAYS = 30;
 /** Configuration for {@link CredentialService}. TTLs are pre-validated by the caller. */
 export interface CredentialServiceConfig {
   relayer: RelayerDispatcher;
-  signer: GenericSigner;
+  /**
+   * Optional signer. Required for {@link CredentialService.allow},
+   * {@link CredentialService.revokePermits}, and
+   * {@link CredentialService.clearCredentials}. The deferred-signing entry
+   * points ({@link CredentialService.prepareEIP712},
+   * {@link CredentialService.registerSignedPermit}) work without a signer
+   * (canonical cross-process custody shape).
+   */
+  signer?: GenericSigner;
   /** Keypair lifetime in seconds. Pre-validated. */
   keypairTTL: number;
   /** Permit lifetime in days. Pre-validated. */
@@ -40,7 +51,7 @@ export class CredentialService {
   readonly #vault: KeypairVault;
   readonly #store: PermissionStore;
   readonly #relayer: RelayerDispatcher;
-  readonly #signer: GenericSigner;
+  readonly #signer: GenericSigner | undefined;
   readonly #permitTTL: number;
 
   constructor(config: CredentialServiceConfig) {
@@ -55,6 +66,13 @@ export class CredentialService {
     this.#relayer = config.relayer;
     this.#signer = config.signer;
     this.#permitTTL = config.permitTTL;
+  }
+
+  #requireSigner(operation: string): GenericSigner {
+    if (!this.#signer) {
+      throw new SignerNotConfiguredError(operation);
+    }
+    return this.#signer;
   }
 
   /**
@@ -74,7 +92,8 @@ export class CredentialService {
    * @throws {@link SigningFailedError} if signing fails for any other reason.
    */
   async allow(contracts: readonly Address[], delegator?: Address): Promise<CredentialBundle> {
-    const account = this.#signer.requireWalletAccount("allow");
+    const signer = this.#requireSigner("allow");
+    const account = signer.requireWalletAccount("allow");
     const signerAddress = checksum(account.address);
     const requested = normalizeAddresses(contracts);
     const keypair = await this.#vault.getOrCreate(signerAddress);
@@ -114,7 +133,7 @@ export class CredentialService {
     if (contracts.length === 0) {
       return true;
     }
-    const account = this.#signer.walletAccount.getSnapshot();
+    const account = this.#signer?.walletAccount.getSnapshot();
     if (!account) {
       return false;
     }
@@ -143,7 +162,8 @@ export class CredentialService {
    * @throws {@link SigningFailedError} if reading the signer address fails.
    */
   async revokePermits(contracts?: readonly Address[]): Promise<void> {
-    const account = this.#signer.requireWalletAccount("revokePermits");
+    const signer = this.#requireSigner("revokePermits");
+    const account = signer.requireWalletAccount("revokePermits");
     const signerAddress = checksum(account.address);
     if (contracts === undefined) {
       await this.#store.clearAllForSigner(signerAddress);
@@ -167,7 +187,8 @@ export class CredentialService {
    * @throws {@link SigningFailedError} if reading the signer address fails.
    */
   async clearCredentials(): Promise<void> {
-    const account = this.#signer.requireWalletAccount("clearCredentials");
+    const signer = this.#requireSigner("clearCredentials");
+    const account = signer.requireWalletAccount("clearCredentials");
     const signerAddress = checksum(account.address);
     await this.#vault.clear(signerAddress);
     await this.#store.clearAllForSigner(signerAddress);
@@ -202,6 +223,96 @@ export class CredentialService {
     }
   }
 
+  /**
+   * Build the EIP-712 envelope and permit context for a deferred-signing
+   * credential permit. The caller signs `typedData` externally (custodian,
+   * HSM, …) and feeds the signature back to {@link registerSignedPermit}.
+   *
+   * Signer-optional: when no signer is configured, the caller supplies the
+   * `from` (signer wallet address) and `chainId` explicitly — this is the
+   * canonical cross-process custody shape.
+   *
+   * Limited to a single permit chunk (≤ {@link MAX_CONTRACTS_PER_PERMIT}
+   * contracts). For larger sets, split at the call site and repeat the
+   * prepare → sign → register cycle per chunk. Already-covered contracts
+   * are filtered out — if every requested address is already covered, the
+   * returned `typedData` is `null` (no signature needed).
+   */
+  async prepareEIP712(
+    contracts: readonly Address[],
+    options: { from: Address; chainId: number; delegator?: Address },
+  ): Promise<{
+    typedData: EIP712TypedData | null;
+    keypair: StoredKeypair;
+    scope: PermissionScope;
+    chunk: ChecksummedAddress[];
+    startTimestamp: number;
+  }> {
+    const { from, chainId, delegator } = options;
+    const signerAddress = checksum(from);
+    const requested = normalizeAddresses(contracts);
+    const keypair = await this.#vault.getOrCreate(signerAddress);
+    const scope: PermissionScope = {
+      signerAddress,
+      chainId,
+      delegatorAddress: delegator ? checksum(delegator) : signerAddress,
+    };
+    if (requested.length === 0) {
+      return { typedData: null, keypair, scope, chunk: [], startTimestamp: nowSeconds() };
+    }
+    const permits = await this.#store.listUsableAndPrune(scope, keypair.publicKey);
+    const uncovered = uncoveredContracts(permits, requested);
+    if (uncovered.length === 0) {
+      return { typedData: null, keypair, scope, chunk: [], startTimestamp: nowSeconds() };
+    }
+    const chunks = chunkContracts(uncovered);
+    const [chunk, ...extra] = chunks;
+    if (chunk === undefined || extra.length > 0) {
+      throw new ConfigurationError(
+        `Deferred credential permit accepts at most one permit chunk (≤10 uncovered contracts) per prepare → registerPermit cycle; got ${uncovered.length}. Split contracts at the call site and run one cycle per chunk.`,
+      );
+    }
+    const startTimestamp = nowSeconds();
+    const isDelegated = scope.delegatorAddress !== scope.signerAddress;
+    const typedData = isDelegated
+      ? await this.#relayer.createDelegatedUserDecryptEIP712(
+          keypair.publicKey,
+          chunk,
+          scope.delegatorAddress,
+          startTimestamp,
+          this.#permitTTL,
+        )
+      : await this.#relayer.createEIP712(keypair.publicKey, chunk, startTimestamp, this.#permitTTL);
+    return { typedData, keypair, scope, chunk, startTimestamp };
+  }
+
+  /**
+   * Persist a permit produced by an external signature over the typed-data
+   * envelope returned from {@link prepareEIP712}. The caller passes back
+   * the same `keypair`, `scope`, `chunk`, and `startTimestamp` so the
+   * Permission shape matches what `allow` would have produced internally.
+   */
+  async registerSignedPermit(input: {
+    signature: Hex;
+    keypair: StoredKeypair;
+    scope: PermissionScope;
+    chunk: ChecksummedAddress[];
+    startTimestamp: number;
+  }): Promise<Permission> {
+    const permission: Permission = {
+      keypairPublicKey: input.keypair.publicKey,
+      signerAddress: input.scope.signerAddress,
+      delegatorAddress: input.scope.delegatorAddress,
+      chainId: input.scope.chainId,
+      signedContractAddresses: input.chunk,
+      signature: input.signature,
+      startTimestamp: input.startTimestamp,
+      durationDays: this.#permitTTL,
+    };
+    await swallow("persist permit", () => this.#store.append(input.scope, [permission]));
+    return permission;
+  }
+
   async #signPermit(input: {
     chunk: ChecksummedAddress[];
     keypair: StoredKeypair;
@@ -227,7 +338,7 @@ export class CredentialService {
             this.#permitTTL,
           );
 
-      const signature = await this.#signer.signTypedData(eip712);
+      const signature = await this.#requireSigner("signPermit").signTypedData(eip712);
 
       return {
         keypairPublicKey: keypair.publicKey,
