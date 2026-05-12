@@ -25,8 +25,7 @@ import { useZamaSDK } from "../provider";
  * custody shape — the back-end signer service consumes `prepared.unsignedTx`
  * and returns signed bytes).
  *
- * Pair with external signing (`signer.signTransaction(prepared.unsignedTx)`)
- * + {@link useBroadcast} for transaction kinds, or
+ * Pair with {@link useSign} + {@link useBroadcast} for transaction kinds, or
  * an external `signTypedData` + {@link useRegisterPermit} for permits.
  *
  * @example Transaction kind

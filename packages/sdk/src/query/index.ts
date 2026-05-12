@@ -101,7 +101,13 @@ export {
 export { publicDecryptMutationOptions } from "./public-decrypt";
 export { requestZKProofVerificationMutationOptions } from "./request-zk-proof-verification";
 export { allowMutationOptions } from "./allow";
-export { prepareMutationOptions, type PrepareParams, type PrepareResult } from "./prepare";
+export {
+  prepareMutationOptions,
+  signMutationOptions,
+  type PrepareParams,
+  type PrepareResult,
+  type SignParams,
+} from "./prepare";
 export {
   broadcastMutationOptions,
   completeFromTxHashMutationOptions,

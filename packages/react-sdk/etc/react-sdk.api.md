@@ -31,6 +31,7 @@ import { EncryptParams } from '@zama-fhe/sdk';
 import { ExecuteParams } from '@zama-fhe/sdk/query';
 import { ExecuteResult } from '@zama-fhe/sdk/query';
 import { FinalizeUnwrapParams } from '@zama-fhe/sdk/query';
+import { Hex } from '@zama-fhe/sdk';
 import { PaginatedResult } from '@zama-fhe/sdk';
 import { PermitKind } from '@zama-fhe/sdk';
 import { PreparedFor } from '@zama-fhe/sdk';
@@ -44,6 +45,7 @@ import { RegisterPermitParams } from '@zama-fhe/sdk/query';
 import { ResumeUnshieldParams } from '@zama-fhe/sdk/query';
 import { RevokeDelegationParams } from '@zama-fhe/sdk/query';
 import { ShieldParams } from '@zama-fhe/sdk/query';
+import { SignParams } from '@zama-fhe/sdk/query';
 import { Token } from '@zama-fhe/sdk';
 import { TokenMetadata } from '@zama-fhe/sdk/query';
 import { TokenWrapperPair } from '@zama-fhe/sdk';
@@ -279,6 +281,9 @@ export function useShield<TContext = unknown>(config: UseShieldConfig, options?:
 export interface UseShieldConfig extends UseZamaConfig {
     optimistic?: boolean;
 }
+
+// @public
+export function useSign<TContext = unknown>(options?: UseMutationOptions<Hex, Error, SignParams, TContext>): UseMutationResult<Hex, Error, SignParams, TContext>;
 
 // @public
 export function useToken(config: UseZamaConfig): Token;

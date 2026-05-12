@@ -817,6 +817,17 @@ export interface ShieldSubmittedEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.ShieldSubmitted;
 }
 
+// @public
+export function signMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.sign"], SignParams, Hex>;
+
+// @public
+export interface SignParams {
+    // (undocumented)
+    readonly options?: OfflineSigningOptions;
+    // (undocumented)
+    readonly prepared: PreparedTransaction;
+}
+
 // @public (undocumented)
 export type StrippedQueryOptionKeys = "gcTime" | "staleTime" | "enabled" | "select" | "refetchInterval" | "refetchOnMount" | "refetchOnWindowFocus" | "refetchOnReconnect" | "retry" | "retryDelay" | "retryOnMount" | "queryFn" | "queryKey" | "queryKeyHashFn" | "initialData" | "initialDataUpdatedAt" | "placeholderData" | "structuralSharing" | "throwOnError" | "meta" | "query" | "pollingInterval";
 
@@ -1460,6 +1471,7 @@ export class ZamaSDK {
         delegateAddress: Address;
     }): Promise<TransactionResult>;
     revokePermits(contracts?: Address[]): Promise<void>;
+    sign(prepared: PreparedTransaction, options?: OfflineSigningOptions): Promise<Hex>;
     // (undocumented)
     readonly signer: GenericSigner | undefined;
     // (undocumented)

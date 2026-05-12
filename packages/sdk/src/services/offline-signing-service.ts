@@ -160,9 +160,8 @@ export class OfflineSigningService {
    * Build the deferred-signing payload for the given request.
    *
    * For transaction kinds, returns an RLP-encoded unsigned transaction the
-   * caller signs externally (via `signer.signTransaction(...)`, an HSM, or
-   * any out-of-process signer) and feeds back through {@link broadcast} or
-   * {@link execute}.
+   * caller signs externally (via {@link sign}, an HSM, or any out-of-process
+   * signer) and feeds back through {@link broadcast} or {@link execute}.
    *
    * For `CredentialPermit`, returns an EIP-712 typed-data envelope to be
    * signed externally and fed back through {@link registerPermit}.

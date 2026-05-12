@@ -164,8 +164,8 @@ export class ZamaSDK {
 
   /**
    * Build an RLP-encoded unsigned transaction for the given request. The
-   * caller signs it externally — via `signer.signTransaction(...)`, an HSM
-   * ceremony, an out-of-process custodian — and feeds the result back into
+   * caller signs it externally — via {@link sign}, an HSM ceremony, an
+   * out-of-process custodian — and feeds the result back into
    * {@link broadcast} or {@link execute}.
    *
    * Signer-optional: works without a configured signer (canonical shape for
@@ -193,13 +193,40 @@ export class ZamaSDK {
   }
 
   /**
+   * **In-process convenience** that delegates to
+   * `this.signer.signTransaction(prepared.unsignedTx)` with capability checks
+   * and event/error integration. The SDK never takes custody of signing
+   * material — this method runs in your process, against the signer object
+   * you passed to `createConfig`; keys stay where they are.
+   *
+   * Many flows skip this method:
+   *
+   * - **Cross-process custody** (Dfns, Fireblocks, Fordefi, Turnkey policy
+   *   mode): configure with `signer: undefined`, sign in your back-end
+   *   signer service using the custodian's API, pass bytes to
+   *   {@link broadcast}. `sdk.sign()` throws {@link SignerNotConfiguredError}
+   *   here — by design.
+   * - **Permit-only signers** (KMS configurations that can `signTypedData`
+   *   but not full transactions): use the signer for `registerPermit` flows;
+   *   for tx-signing, arrange an out-of-process pipeline bypassing this
+   *   method. `sdk.sign()` throws {@link SignerCapabilityError} here.
+   *
+   * Both cases naturally route to `prepare → external sign → broadcast`
+   * — this method is the convenience for the third case where the configured
+   * signer holds the key and can sign in-process.
+   *
+   * @throws {@link SignerNotConfiguredError} no signer configured
+   * @throws {@link SignerCapabilityError} signer lacks `signTransaction`
+   * @throws {@link SigningFailedError} signer rejected (HSM denial, policy
+   *   refusal, timeout, …)
+   */
+  sign(prepared: PreparedTransaction, options?: OfflineSigningOptions): Promise<Hex> {
+    return this.#offlineSigningService.sign(prepared, options);
+  }
+
+  /**
    * Submit a previously-signed transaction, await its receipt, emit the
    * matching `*Submitted` event, and return the {@link TransactionResult}.
-   *
-   * Signing happens outside the SDK: the caller produces signed bytes via
-   * `signer.signTransaction(prepared.unsignedTx)`, an HSM/custodian API, or
-   * any other mechanism that holds the private key, and feeds the result
-   * back through this method. The SDK never sees the key material.
    */
   broadcast(
     prepared: PreparedTransaction,
@@ -214,10 +241,9 @@ export class ZamaSDK {
    * - a {@link TransactionPrepareRequest} (prepare + sign + broadcast),
    * - a {@link CredentialPermitRequest} (prepare + sign + register).
    *
-   * Callers who already hold a {@link PreparedTransaction} compose
-   * `await broadcast(prepared, await signer.signTransaction(prepared.unsignedTx))`
-   * — keeping the prepare → external-sign → broadcast call shape
-   * visible at the call site.
+   * Callers who already hold a {@link PreparedTransaction} chain
+   * `await broadcast(prepared, await sign(prepared))` — keeping the
+   * prepare/sign/broadcast call shape visible at the call site.
    */
   execute(
     input: TransactionPrepareRequest,
@@ -265,7 +291,7 @@ export class ZamaSDK {
 
   /**
    * Re-stamp a prepared transaction with the current chain state — fresh
-   * nonce, fee parameters, and gas limit. Call this before external signing
+   * nonce, fee parameters, and gas limit. Call this before {@link sign}
    * when the gap since {@link prepare} was long enough for values to drift
    * (custodian approval ceremonies, multi-party signing, etc.). The
    * original `prepared` is left untouched (immutable).

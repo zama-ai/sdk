@@ -58,6 +58,25 @@ describe("OfflineSigningService — ConfidentialTransfer round-trip", () => {
     expect(prepared.chainId).toBe(31337);
   });
 
+  test("sign delegates to signer.signTransaction with the prepared bytes", async ({
+    createSDK,
+    broadcastSigner,
+    broadcaster,
+    userAddress,
+  }) => {
+    const sdk = createSDK({ signer: broadcastSigner });
+    const prepared = await sdk.prepare({
+      kind: "ConfidentialTransfer",
+      from: userAddress,
+      token: TOKEN,
+      to: RECIPIENT,
+      amount: 1n,
+    });
+    const signed = await sdk.sign(prepared);
+    expect(signed).toBe(SIGNED);
+    expect(broadcaster.signTransaction).toHaveBeenCalledWith(UNSIGNED);
+  });
+
   test("broadcast submits signed bytes + emits TransferSubmitted + awaits receipt", async ({
     createSDK,
     broadcastSigner,
@@ -608,6 +627,34 @@ describe("OfflineSigningService — broadcast error paths", () => {
     vi.mocked(provider.sendRawTransaction).mockRejectedValueOnce(typed);
 
     await expect(sdk.broadcast(prepared, SIGNED)).rejects.toBe(typed);
+  });
+
+  test("sign() wraps broadcaster rejection in SigningFailedError + emits TransactionError", async ({
+    createSDK,
+    broadcastSigner,
+    broadcaster,
+    userAddress,
+  }) => {
+    const { SigningFailedError } = await import("../../errors");
+    const onEvent = vi.fn();
+    vi.mocked(broadcaster.signTransaction).mockRejectedValueOnce(new Error("HSM denied"));
+    const sdk = createSDK({ signer: broadcastSigner, onEvent });
+    const prepared = await sdk.prepare({
+      kind: "ConfidentialTransfer",
+      from: userAddress,
+      token: TOKEN,
+      to: RECIPIENT,
+      amount: 1n,
+    });
+    const err = await sdk.sign(prepared).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(SigningFailedError);
+    expect((err as Error).message).toContain("Sign failed for ConfidentialTransfer");
+    expect(onEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: ZamaSDKEvents.TransactionError,
+        operation: "transfer",
+      }),
+    );
   });
 });
 
@@ -1168,21 +1215,20 @@ describe("OfflineSigningService — signer-optional surface (cross-process custo
     expect(result.txHash).toBe(TX_HASH);
   });
 
-  test("signer-absent SDK: execute throws SignerNotConfiguredError", async ({
+  test("signer-absent SDK: sign throws SignerNotConfiguredError", async ({
     createSDK,
     userAddress,
   }) => {
     const { SignerNotConfiguredError } = await import("../../errors");
     const sdk = createSDK({ signer: undefined });
-    await expect(
-      sdk.execute({
-        kind: "ConfidentialTransfer",
-        from: userAddress,
-        token: TOKEN,
-        to: RECIPIENT,
-        amount: 1n,
-      }),
-    ).rejects.toBeInstanceOf(SignerNotConfiguredError);
+    const prepared = await sdk.prepare({
+      kind: "ConfidentialTransfer",
+      from: userAddress,
+      token: TOKEN,
+      to: RECIPIENT,
+      amount: 1n,
+    });
+    await expect(sdk.sign(prepared)).rejects.toBeInstanceOf(SignerNotConfiguredError);
   });
 
   test("signer-address-mismatch: configured signer != request.from", async ({

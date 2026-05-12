@@ -11,7 +11,7 @@ import { useZamaSDK } from "../provider";
 
 /**
  * Re-stamp a prepared transaction with the current chain state — fresh
- * nonce, fee parameters, and gas limit. Call this before external signing
+ * nonce, fee parameters, and gas limit. Call this before {@link useSign}
  * when the gap since {@link usePrepare} was long enough for values to
  * drift (custodian approval ceremonies, multi-party signing, etc.).
  *

@@ -1,8 +1,10 @@
+import type { Hex } from "viem";
 import type {
   CredentialPermitRequest,
   PermitKind,
   PreparedFor,
   PreparedPermitFor,
+  PreparedTransaction,
   TransactionKind,
   TransactionPrepareRequest,
 } from "../types/prepared-tx";
@@ -33,5 +35,21 @@ export function prepareMutationOptions(
       // Delegate to the SDK's overloaded `prepare` — cast to `never` because
       // the wide union doesn't match either narrow overload signature exactly.
       sdk.prepare(request as never, options),
+  };
+}
+
+/** Variables for {@link signMutationOptions}. */
+export interface SignParams {
+  readonly prepared: PreparedTransaction;
+  readonly options?: OfflineSigningOptions;
+}
+
+/** Mutation options for `sdk.sign` — signs prepared bytes, returns hex. */
+export function signMutationOptions(
+  sdk: ZamaSDK,
+): MutationFactoryOptions<readonly ["zama.sign"], SignParams, Hex> {
+  return {
+    mutationKey: ["zama.sign"] as const,
+    mutationFn: ({ prepared, options }) => sdk.sign(prepared, options),
   };
 }
