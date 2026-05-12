@@ -20,7 +20,7 @@ import {
 
 describe("useConfidentialTransfer", () => {
   test("default", ({ renderWithProviders }) => {
-    const { result } = renderWithProviders(() => useConfidentialTransfer({ tokenAddress: TOKEN }));
+    const { result } = renderWithProviders(() => useConfidentialTransfer({ address: TOKEN }));
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
     expectDefaultMutationState(state);
@@ -30,7 +30,7 @@ describe("useConfidentialTransfer", () => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
     const { result, queryClient } = renderWithProviders(() =>
-      useConfidentialTransfer({ tokenAddress: TOKEN }),
+      useConfidentialTransfer({ address: TOKEN }),
     );
 
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
@@ -54,7 +54,7 @@ describe("useConfidentialTransfer", () => {
     const onSuccess = vi.fn();
 
     const { result, queryClient } = renderWithProviders(() =>
-      useConfidentialTransfer({ tokenAddress: TOKEN }, { onSuccess }),
+      useConfidentialTransfer({ address: TOKEN }, { onSuccess }),
     );
 
     queryClient.setQueryData(balanceKey, 1000n);
@@ -77,7 +77,7 @@ describe("useConfidentialTransfer", () => {
     const onSuccess = vi.fn();
 
     const { result } = renderWithProviders(() =>
-      useConfidentialTransfer({ tokenAddress: TOKEN }, { onMutate, onSuccess }),
+      useConfidentialTransfer({ address: TOKEN }, { onMutate, onSuccess }),
     );
 
     await act(() =>
@@ -101,7 +101,7 @@ describe("useConfidentialTransfer", () => {
     const onError = vi.fn();
 
     const { result } = renderWithProviders(() =>
-      useConfidentialTransfer({ tokenAddress: TOKEN }, { onMutate, onError }),
+      useConfidentialTransfer({ address: TOKEN }, { onMutate, onError }),
     );
 
     await act(async () => {
@@ -127,7 +127,7 @@ describe("useConfidentialTransfer", () => {
     const onSettled = vi.fn();
 
     const { result } = renderWithProviders(() =>
-      useConfidentialTransfer({ tokenAddress: TOKEN }, { onMutate, onSettled }),
+      useConfidentialTransfer({ address: TOKEN }, { onMutate, onSettled }),
     );
 
     await act(() =>
@@ -152,7 +152,7 @@ describe("useConfidentialTransfer", () => {
 
     const { result } = renderWithProviders(() =>
       useConfidentialTransfer(
-        { tokenAddress: TOKEN, optimistic: true },
+        { address: TOKEN, optimistic: true },
         {
           onMutate,
           onSuccess,
@@ -182,7 +182,7 @@ describe("useConfidentialTransfer", () => {
 
     const { result } = renderWithProviders(() =>
       useConfidentialTransfer(
-        { tokenAddress: TOKEN, optimistic: true },
+        { address: TOKEN, optimistic: true },
         {
           onMutate,
           onError,
@@ -214,7 +214,7 @@ describe("useConfidentialTransfer", () => {
 
     const { result } = renderWithProviders(() =>
       useConfidentialTransfer(
-        { tokenAddress: TOKEN, optimistic: true },
+        { address: TOKEN, optimistic: true },
         {
           onMutate,
           onSettled,
@@ -256,8 +256,8 @@ describe("useConfidentialTransfer", () => {
     const { Wrapper } = createWrapper({ signer, relayer });
     const { result } = renderHook(
       () => ({
-        balance: useConfidentialBalance({ tokenAddress: TOKEN, account: USER }),
-        transfer: useConfidentialTransfer({ tokenAddress: TOKEN }),
+        balance: useConfidentialBalance({ address: TOKEN, account: USER }),
+        transfer: useConfidentialTransfer({ address: TOKEN }),
       }),
       { wrapper: Wrapper },
     );
@@ -292,7 +292,7 @@ describe("useConfidentialTransfer optimistic updates", () => {
     );
 
     const { result, queryClient } = renderWithProviders(() =>
-      useConfidentialTransfer({ tokenAddress: TOKEN, optimistic: true }),
+      useConfidentialTransfer({ address: TOKEN, optimistic: true }),
     );
 
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
@@ -334,7 +334,7 @@ describe("useConfidentialTransfer optimistic updates", () => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
     const { result, queryClient } = renderWithProviders(() =>
-      useConfidentialTransfer({ tokenAddress: TOKEN, optimistic: true }),
+      useConfidentialTransfer({ address: TOKEN, optimistic: true }),
     );
 
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
@@ -353,7 +353,7 @@ describe("useConfidentialTransfer optimistic updates", () => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
     const { result, queryClient } = renderWithProviders(() =>
-      useConfidentialTransfer({ tokenAddress: TOKEN, optimistic: true }),
+      useConfidentialTransfer({ address: TOKEN, optimistic: true }),
     );
 
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
@@ -380,7 +380,7 @@ describe("useConfidentialTransfer optimistic updates", () => {
     );
 
     const { result, queryClient } = renderWithProviders(() =>
-      useConfidentialTransfer({ tokenAddress: TOKEN }),
+      useConfidentialTransfer({ address: TOKEN }),
     );
 
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
@@ -405,7 +405,7 @@ describe("useConfidentialTransfer optimistic updates", () => {
     vi.mocked(signer.writeContract).mockRejectedValue(new Error("tx reverted"));
 
     const { result, queryClient } = renderWithProviders(() =>
-      useConfidentialTransfer({ tokenAddress: TOKEN, optimistic: true }),
+      useConfidentialTransfer({ address: TOKEN, optimistic: true }),
     );
 
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
@@ -447,7 +447,7 @@ describe("useConfidentialTransfer optimistic updates", () => {
     const onError = vi.fn();
 
     const { result, queryClient } = renderWithProviders(() =>
-      useConfidentialTransfer({ tokenAddress: TOKEN, optimistic: true }, { onError }),
+      useConfidentialTransfer({ address: TOKEN, optimistic: true }, { onError }),
     );
 
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);

@@ -8,7 +8,7 @@ import {
   type UnwrapParams,
   unwrapMutationOptions,
 } from "@zama-fhe/sdk/query";
-import { useToken, type UseZamaConfig } from "../token/use-token";
+import { useWrappedToken } from "../token/use-wrapped-token";
 
 /**
  * Request an unwrap for a specific amount. Encrypts the amount first.
@@ -20,20 +20,20 @@ import { useToken, type UseZamaConfig } from "../token/use-token";
  * - {@link EncryptionFailedError} — FHE encryption of the unwrap amount failed
  * - {@link TransactionRevertedError} — on-chain transaction reverted
  *
- * @param config - Token address (and optional wrapper) identifying the token.
+ * @param address - Address of the confidential wrapper contract.
  * @param options - React Query mutation options.
  *
  * @example
  * ```tsx
- * const unwrap = useUnwrap({ tokenAddress: "0x..." });
+ * const unwrap = useUnwrap("0xWrapper");
  * unwrap.mutate({ amount: 500n });
  * ```
  */
 export function useUnwrap(
-  config: UseZamaConfig,
+  address: Address,
   options?: UseMutationOptions<TransactionResult, Error, UnwrapParams, Address>,
 ) {
-  const token = useToken(config);
+  const token = useWrappedToken(address);
 
   return useMutation<TransactionResult, Error, UnwrapParams, Address>({
     ...unwrapMutationOptions(token),

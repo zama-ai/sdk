@@ -12,7 +12,7 @@ const HOLDER = "0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D" as Address;
 describe("useConfidentialIsOperator", () => {
   test("behavior: disabled when tokenAddress is undefined", ({ renderWithProviders }) => {
     const { result } = renderWithProviders(() =>
-      useConfidentialIsOperator({ tokenAddress: undefined, spender: SPENDER, holder: HOLDER }),
+      useConfidentialIsOperator({ address: undefined, spender: SPENDER, holder: HOLDER }),
     );
 
     expect(result.current.isPending).toBe(true);
@@ -22,7 +22,7 @@ describe("useConfidentialIsOperator", () => {
 
   test("behavior: disabled when spender is undefined", ({ renderWithProviders }) => {
     const { result } = renderWithProviders(() =>
-      useConfidentialIsOperator({ tokenAddress: TOKEN, spender: undefined, holder: HOLDER }),
+      useConfidentialIsOperator({ address: TOKEN, spender: undefined, holder: HOLDER }),
     );
 
     expect(result.current.isPending).toBe(true);
@@ -35,7 +35,7 @@ describe("useConfidentialIsOperator", () => {
     provider,
   }) => {
     const { result } = renderWithProviders(() =>
-      useConfidentialIsOperator({ tokenAddress: TOKEN, spender: SPENDER, holder: undefined }),
+      useConfidentialIsOperator({ address: TOKEN, spender: SPENDER, holder: undefined }),
     );
 
     expect(result.current.isPending).toBe(true);
@@ -48,7 +48,7 @@ describe("useConfidentialIsOperator", () => {
 
     const ctx = createWrapper({ signer });
     const { result, rerender } = renderHook(
-      ({ spender }) => useConfidentialIsOperator({ tokenAddress: TOKEN, spender, holder: HOLDER }),
+      ({ spender }) => useConfidentialIsOperator({ address: TOKEN, spender, holder: HOLDER }),
       {
         wrapper: ctx.Wrapper,
         initialProps: { spender: undefined as Address | undefined },
@@ -73,18 +73,22 @@ describe("useConfidentialIsOperator", () => {
 
     const ctx = createWrapper({ signer });
     const { result, rerender } = renderHook(
-      ({ tokenAddress }) =>
-        useConfidentialIsOperator({ tokenAddress, spender: SPENDER, holder: HOLDER }),
+      ({ address }) =>
+        useConfidentialIsOperator({
+          address: address as Address,
+          spender: SPENDER,
+          holder: HOLDER,
+        }),
       {
         wrapper: ctx.Wrapper,
-        initialProps: { tokenAddress: undefined as Address | undefined },
+        initialProps: { address: undefined as Address | undefined },
       },
     );
 
     expect(result.current.isPending).toBe(true);
     expect(result.current.fetchStatus).toBe("idle");
 
-    rerender({ tokenAddress: TOKEN });
+    rerender({ address: TOKEN });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toBe(true);
@@ -96,7 +100,7 @@ describe("useConfidentialIsOperator", () => {
     const { result } = renderWithProviders(() =>
       useConfidentialIsOperator(
         {
-          tokenAddress: TOKEN,
+          address: TOKEN,
           spender: SPENDER,
           holder: HOLDER,
         },
@@ -113,7 +117,7 @@ describe("useConfidentialIsOperator", () => {
 
     const { result } = renderWithProviders(() =>
       useConfidentialIsOperator({
-        tokenAddress: TOKEN,
+        address: TOKEN,
         spender: SPENDER,
         holder: HOLDER,
       }),
@@ -139,7 +143,7 @@ describe("useConfidentialIsOperator", () => {
 
     const { result } = renderWithProviders(() =>
       useConfidentialIsOperator({
-        tokenAddress: TOKEN,
+        address: TOKEN,
         spender: SPENDER,
         holder: HOLDER,
       }),
@@ -163,7 +167,7 @@ describe("useConfidentialIsOperatorSuspense", () => {
 
     const { result } = renderWithProviders(() =>
       useConfidentialIsOperatorSuspense({
-        tokenAddress: TOKEN,
+        address: TOKEN,
         spender: SPENDER,
         holder: HOLDER,
       }),
@@ -188,7 +192,7 @@ describe("useConfidentialIsOperatorSuspense", () => {
     const OTHER = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
     const { result } = renderWithProviders(() =>
       useConfidentialIsOperatorSuspense({
-        tokenAddress: TOKEN,
+        address: TOKEN,
         spender: SPENDER,
         holder: OTHER,
       }),

@@ -15,7 +15,7 @@ import {
 
 describe("useUnwrap", () => {
   test("default", ({ renderWithProviders }) => {
-    const { result } = renderWithProviders(() => useUnwrap({ tokenAddress: TOKEN }));
+    const { result } = renderWithProviders(() => useUnwrap(TOKEN));
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
     expectDefaultMutationState(state);
@@ -24,7 +24,7 @@ describe("useUnwrap", () => {
   test("cache: invalidates allowance and removes handle/balance after unwrap", async ({
     renderWithProviders,
   }) => {
-    const { result, queryClient } = renderWithProviders(() => useUnwrap({ tokenAddress: TOKEN }));
+    const { result, queryClient } = renderWithProviders(() => useUnwrap(TOKEN));
 
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
     const allowanceKey = zamaQueryKeys.underlyingAllowance.token(TOKEN);
@@ -52,9 +52,7 @@ describe("useUnwrap", () => {
     const allowanceKey = zamaQueryKeys.underlyingAllowance.token(TOKEN);
     const onSuccess = vi.fn();
 
-    const { result, queryClient } = renderWithProviders(() =>
-      useUnwrap({ tokenAddress: TOKEN }, { onSuccess }),
-    );
+    const { result, queryClient } = renderWithProviders(() => useUnwrap(TOKEN, { onSuccess }));
 
     queryClient.setQueryData(balanceKey, 1000n);
     queryClient.setQueryData(allowanceKey, 500n);

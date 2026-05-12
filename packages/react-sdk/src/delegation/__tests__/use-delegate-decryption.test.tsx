@@ -13,10 +13,7 @@ const ACL = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
 
 describe("useDelegateDecryption", () => {
   test("default", ({ renderWithProviders }) => {
-    const { result } = renderWithProviders(
-      () => useDelegateDecryption({ tokenAddress: TOKEN }),
-      {},
-    );
+    const { result } = renderWithProviders(() => useDelegateDecryption(TOKEN), {});
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
     expectDefaultMutationState(state);
@@ -28,10 +25,7 @@ describe("useDelegateDecryption", () => {
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
-    const { result } = renderWithProviders(
-      () => useDelegateDecryption({ tokenAddress: TOKEN }),
-      {},
-    );
+    const { result } = renderWithProviders(() => useDelegateDecryption(TOKEN), {});
 
     act(() => {
       result.current.mutate({ delegateAddress: RECIPIENT });
@@ -52,10 +46,7 @@ describe("useDelegateDecryption", () => {
   test("behavior: passes expiration options", async ({ renderWithProviders, signer }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
-    const { result } = renderWithProviders(
-      () => useDelegateDecryption({ tokenAddress: TOKEN }),
-      {},
-    );
+    const { result } = renderWithProviders(() => useDelegateDecryption(TOKEN), {});
 
     const expirationDate = new Date("2030-01-01T00:00:00Z");
     act(() => {
@@ -78,9 +69,7 @@ describe("useDelegateDecryption", () => {
 
     const onSuccess = vi.fn();
 
-    const { result } = renderWithProviders(() =>
-      useDelegateDecryption({ tokenAddress: TOKEN }, { onSuccess }),
-    );
+    const { result } = renderWithProviders(() => useDelegateDecryption(TOKEN, { onSuccess }));
 
     act(() => {
       result.current.mutate({ delegateAddress: RECIPIENT });
@@ -106,7 +95,7 @@ describe("useDelegateDecryption", () => {
     });
 
     const { result, queryClient } = renderWithProviders(() =>
-      useDelegateDecryption({ tokenAddress: TOKEN }, { onSuccess }),
+      useDelegateDecryption(TOKEN, { onSuccess }),
     );
 
     // Seed the cache so invalidation is observable

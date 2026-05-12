@@ -28,7 +28,7 @@ export type ApprovalStrategy = "max" | "exact" | "skip";
  */
 export type ShieldPath = "transferAndCall" | "approveAndWrap";
 
-/** Options for {@link Token.shield}. */
+/** Options for {@link WrappedToken.shield}. */
 export interface ShieldOptions extends ShieldCallbacks {
   /** See {@link ApprovalStrategy}. Default: `"exact"`. Ignored when the underlying supports ERC-1363 (single-tx path requires no approval). */
   approvalStrategy?: ApprovalStrategy;
@@ -36,7 +36,7 @@ export interface ShieldOptions extends ShieldCallbacks {
   to?: Address;
 }
 
-/** Options for {@link ConfidentialToken.unshield}. */
+/** Options for {@link WrappedToken.unshield}. */
 export interface UnshieldOptions extends UnshieldCallbacks {
   /** Skip confidential balance validation (e.g. for smart wallets). Default: `false`. */
   skipBalanceCheck?: boolean;

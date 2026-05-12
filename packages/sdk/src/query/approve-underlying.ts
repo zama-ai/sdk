@@ -1,4 +1,4 @@
-import type { Token } from "../token/token";
+import type { WrappedToken } from "../token/wrapped-token";
 import type { TransactionResult } from "../types";
 import type { MutationFactoryOptions } from "./factory-types";
 import type { Address } from "viem";
@@ -9,7 +9,7 @@ export interface ApproveUnderlyingParams {
 }
 
 export function approveUnderlyingMutationOptions(
-  token: Token,
+  token: WrappedToken,
 ): MutationFactoryOptions<
   readonly ["zama.approveUnderlying", Address],
   ApproveUnderlyingParams,

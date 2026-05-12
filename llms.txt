@@ -45,8 +45,8 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 
 - [Overview](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/README.md): API reference for the core `@zama-fhe/sdk` package. Each page documents a single class or utility with constructor options, methods, properties, and working code examples.
 - [ZamaSDK](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md): Entry point for all confidential contract operations.
-- [Token](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md): Read/write interface for confidential ERC-20 operations.
-- [ReadonlyToken](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ReadonlyToken.md): Read-only interface for confidential token queries and batch operations.
+- [Token](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md): Read/write interface for an ERC-7984 confidential token — balances, transfers, operator approvals.
+- [WrappedToken](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WrappedToken.md): ERC-7984 ERC-20 wrapper interface — shield, unshield, allowance.
 - [WrappersRegistry](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WrappersRegistry.md): Query the on-chain token wrappers registry — list pairs, look up tokens, and validate confidential tokens.
 - [RelayerWeb](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerWeb.md): Browser relayer that runs FHE operations in a Web Worker via WASM.
 - [RelayerNode](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerNode.md): Node.js relayer that runs FHE operations in native worker threads.
@@ -99,8 +99,8 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [useIsConfidentialTokenValid](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsConfidentialTokenValid.md): Check whether a confidential token is registered and valid in the on-chain registry.
 - [useMetadata](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useMetadata.md): Get token name, symbol, and decimals in one call.
 - [useZamaSDK](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useZamaSDK.md): Hook to access the raw ZamaSDK instance from ZamaProvider context.
-- [useToken](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useToken.md): Hook to get a memoized Token instance for a given address.
-- [useReadonlyToken](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useReadonlyToken.md): Hook to get a memoized ReadonlyToken instance for read-only access.
+- [useToken](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useToken.md): Hook returning a memoised Token instance for a given address.
+- [useWrappedToken](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useWrappedToken.md): React hook returning a memoised WrappedToken instance.
 - [useEncrypt](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useEncrypt.md): Low-level mutation hook that encrypts a plaintext value using the relayer's FHE engine.
 - [useUserDecrypt](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUserDecrypt.md): Query hook that automatically decrypts FHE handles once credentials are available via useAllow.
 - [useGenerateKeypair](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useGenerateKeypair.md): Low-level mutation hook that generates a fresh FHE keypair via the relayer.

@@ -10,7 +10,7 @@ import { useWalletAccount } from "../utils/wallet-account";
 
 export interface UseConfidentialBalancesConfig {
   /** Addresses of the confidential token contracts to batch-query. The query is disabled while empty. */
-  tokenAddresses: Address[];
+  addresses: Address[];
   /** Account to fetch balances for. The query is disabled while `undefined`. */
   account: Address | undefined;
 }
@@ -27,6 +27,7 @@ export interface UseConfidentialBalancesOptions extends Omit<
  * Hook for fetching multiple confidential token balances in batch. Returns
  * partial results when some tokens fail — successful balances are available
  * alongside per-token error information.
+ *
  * @param config - Token addresses configuration.
  * @param options - React Query options forwarded to the balance query.
  * @returns The balance query result.
@@ -34,7 +35,7 @@ export interface UseConfidentialBalancesOptions extends Omit<
  * @example
  * ```tsx
  * const { data } = useConfidentialBalances({
- *   tokenAddresses: ["0xTokenA", "0xTokenB"],
+ *   addresses: ["0xTokenA", "0xTokenB"],
  *   account: "0xAccount",
  * });
  * const balance = data?.results.get("0xTokenA");
@@ -47,15 +48,12 @@ export function useConfidentialBalances(
   config: UseConfidentialBalancesConfig,
   options?: UseConfidentialBalancesOptions,
 ) {
-  const { tokenAddresses, account } = config;
+  const { addresses, account } = config;
   const { enabled = true } = options ?? {};
   const sdk = useZamaSDK();
   const walletAccount = useWalletAccount(sdk);
 
-  const tokens = useMemo(
-    () => tokenAddresses.map((addr) => sdk.createReadonlyToken(addr)),
-    [sdk, tokenAddresses],
-  );
+  const tokens = useMemo(() => addresses.map((addr) => sdk.createToken(addr)), [sdk, addresses]);
 
   const baseOptions = confidentialBalancesQueryOptions(
     tokens,

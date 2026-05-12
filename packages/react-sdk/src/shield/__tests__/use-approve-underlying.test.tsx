@@ -5,7 +5,6 @@ import { expectCacheInvalidated, expectCacheUntouched } from "../../test-helpers
 import { useApproveUnderlying } from "../use-approve-underlying";
 import {
   OTHER_TOKEN,
-  TOKEN,
   UNDERLYING,
   WRAPPER,
   expectDefaultMutationState,
@@ -14,9 +13,7 @@ import {
 
 describe("useApproveUnderlying", () => {
   test("default", ({ renderWithProviders }) => {
-    const { result } = renderWithProviders(() =>
-      useApproveUnderlying({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
-    );
+    const { result } = renderWithProviders(() => useApproveUnderlying(WRAPPER));
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
     expectDefaultMutationState(state);
@@ -25,11 +22,9 @@ describe("useApproveUnderlying", () => {
   test("cache: invalidates allowance after approve", async ({ renderWithProviders, provider }) => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(0n);
 
-    const { result, queryClient } = renderWithProviders(() =>
-      useApproveUnderlying({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
-    );
+    const { result, queryClient } = renderWithProviders(() => useApproveUnderlying(WRAPPER));
 
-    const allowanceKey = zamaQueryKeys.underlyingAllowance.token(TOKEN);
+    const allowanceKey = zamaQueryKeys.underlyingAllowance.token(WRAPPER);
     const otherAllowanceKey = zamaQueryKeys.underlyingAllowance.token(OTHER_TOKEN);
     queryClient.setQueryData(allowanceKey, 500n);
     queryClient.setQueryData(otherAllowanceKey, 777n);
@@ -44,16 +39,13 @@ describe("useApproveUnderlying", () => {
   test("behavior: forwards onSuccess callback", async ({ renderWithProviders, provider }) => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(0n);
 
-    const allowanceKey = zamaQueryKeys.underlyingAllowance.token(TOKEN);
+    const allowanceKey = zamaQueryKeys.underlyingAllowance.token(WRAPPER);
     const onSuccess = vi.fn();
 
     const { result, queryClient } = renderWithProviders(() =>
-      useApproveUnderlying(
-        { tokenAddress: TOKEN, wrapperAddress: WRAPPER },
-        {
-          onSuccess,
-        },
-      ),
+      useApproveUnderlying(WRAPPER, {
+        onSuccess,
+      }),
     );
 
     queryClient.setQueryData(allowanceKey, 500n);

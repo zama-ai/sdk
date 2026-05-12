@@ -264,7 +264,7 @@ A good decryption UX follows three steps:
 ```tsx
 // BAD — triggers wallet popup as soon as the component mounts
 function BadExample({ tokenAddress }: { tokenAddress: Address }) {
-  const balance = useConfidentialBalance({ tokenAddress });
+  const balance = useConfidentialBalance({ address: tokenAddress });
   return <p>{balance.data?.toString()}</p>;
 }
 ```
@@ -321,7 +321,7 @@ function ConfidentialBalance({
   symbol: string;
 }) {
   const { address } = useAccount();
-  const { data, isLoading } = useConfidentialBalance({ tokenAddress, account: address });
+  const { data, isLoading } = useConfidentialBalance({ address: tokenAddress, account: address });
 
   return (
     <p>

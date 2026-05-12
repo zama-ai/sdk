@@ -22,7 +22,7 @@ import { useConfidentialSetOperator } from "@zama-fhe/react-sdk";
 import { useConfidentialSetOperator } from "@zama-fhe/react-sdk";
 
 function ApproveOperator({ tokenAddress }: { tokenAddress: `0x${string}` }) {
-  const { mutateAsync: setOperator, isPending } = useConfidentialSetOperator({ tokenAddress });
+  const { mutateAsync: setOperator, isPending } = useConfidentialSetOperator(tokenAddress);
 
   const handleApprove = async () => {
     const { txHash } = await setOperator({ operator: "0xDEX" });
@@ -42,16 +42,14 @@ function ApproveOperator({ tokenAddress }: { tokenAddress: `0x${string}` }) {
 
 ## Parameters
 
-### tokenAddress
+### address
 
 `Address`
 
-Address of the confidential ERC-20 wrapper contract.
+Address of the confidential token contract. Passed positionally as the first argument.
 
 ```ts
-const { mutateAsync: setOperator } = useConfidentialSetOperator({
-  tokenAddress: "0xToken",
-});
+const { mutateAsync: setOperator } = useConfidentialSetOperator("0xToken");
 ```
 
 ## Mutation variables

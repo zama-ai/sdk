@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "../test-fixtures";
-import { ReadonlyToken } from "../token/readonly-token";
 import { Token } from "../token/token";
+import { WrappedToken } from "../token/wrapped-token";
 import { DecryptionFailedError, SignerNotConfiguredError } from "../errors";
 import type { Address } from "viem";
 import type { DecryptHandle } from "../query/user-decrypt";
@@ -12,32 +12,40 @@ describe("ZamaSDK", () => {
     expect(sdk.storage).toBe(storage);
   });
 
-  it("createReadonlyToken returns ReadonlyToken", ({ sdk, tokenAddress }) => {
-    const token = sdk.createReadonlyToken(tokenAddress);
-    expect(token).toBeInstanceOf(ReadonlyToken);
-    expect(token.address).toBe(tokenAddress);
-    expect(token.sdk).toBe(sdk);
-  });
-
   it("createToken returns Token", ({ sdk, tokenAddress }) => {
     const token = sdk.createToken(tokenAddress);
     expect(token).toBeInstanceOf(Token);
     expect(token.address).toBe(tokenAddress);
+    expect(token.sdk).toBe(sdk);
   });
 
-  for (const method of ["createToken", "createReadonlyToken"] as const) {
-    it(`${method} exposes the SDK instance`, ({ sdk, tokenAddress }) => {
-      const token = sdk[method](tokenAddress);
-      expect(token.sdk).toBe(sdk);
-    });
-  }
+  it("createToken exposes the SDK instance", ({ sdk, tokenAddress }) => {
+    const token = sdk.createToken(tokenAddress);
+    expect(token.sdk).toBe(sdk);
+  });
 
   it("creates distinct instances per address", ({ sdk }) => {
-    const t1 = sdk.createReadonlyToken("0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address);
-    const t2 = sdk.createReadonlyToken("0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address);
+    const t1 = sdk.createToken("0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address);
+    const t2 = sdk.createToken("0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address);
     expect(t1).not.toBe(t2);
     expect(t1.address).toBe("0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa");
     expect(t2.address).toBe("0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB");
+  });
+
+  it("createWrappedToken returns WrappedToken (extending Token)", ({ sdk, wrapperAddress }) => {
+    const wrapped = sdk.createWrappedToken(wrapperAddress);
+    expect(wrapped).toBeInstanceOf(WrappedToken);
+    expect(wrapped).toBeInstanceOf(Token);
+    expect(wrapped.address).toBe(wrapperAddress);
+    expect(wrapped.sdk).toBe(sdk);
+  });
+
+  it("createWrappedToken yields distinct instances per address", ({ sdk }) => {
+    const w1 = sdk.createWrappedToken("0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address);
+    const w2 = sdk.createWrappedToken("0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address);
+    expect(w1).not.toBe(w2);
+    expect(w1.address).toBe("0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa");
+    expect(w2.address).toBe("0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB");
   });
 
   it("terminate delegates to relayer.terminate", ({ sdk, relayer }) => {

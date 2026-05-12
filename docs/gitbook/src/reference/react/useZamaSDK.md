@@ -26,7 +26,7 @@ function AdvancedOperations() {
 
   async function handleCustomOperation() {
     // Access the SDK directly for operations not covered by hooks
-    const token = sdk.createReadonlyToken("0xToken");
+    const token = sdk.createToken("0xToken");
     const name = await token.name();
     const symbol = await token.symbol();
     console.log(name, symbol);
@@ -77,6 +77,6 @@ The configured SDK instance. Throws if called outside a `ZamaProvider`.
 
 ## Related
 
-- [useToken](/reference/react/useToken) — memoized `Token` instance for a given address
-- [useReadonlyToken](/reference/react/useReadonlyToken) — memoized `ReadonlyToken` instance (no write access)
+- [useToken](/reference/react/useToken) — memoised `Token` instance for a given address
+- [useWrappedToken](/reference/react/useWrappedToken) — memoised `WrappedToken` for ERC-7984 wrapper operations
 - [ZamaSDK](/reference/sdk/ZamaSDK) — full API reference for the SDK class
