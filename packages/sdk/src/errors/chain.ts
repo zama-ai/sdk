@@ -4,9 +4,9 @@ import { ZamaError, ZamaErrorCode } from "./base";
  * Thrown when the signer and provider are connected to different chains at the
  * start of a write operation.
  *
- * Every write method calls {@link ZamaSDK.requireChainAlignment} as a pre-flight
- * check. If `signer.getChainId()` and `provider.getChainId()` return different
- * values, this error is thrown before any RPC mutation is attempted.
+ * Every write method runs a chain-alignment pre-flight check. If
+ * `signer.getChainId()` and `provider.getChainId()` return different values,
+ * this error is thrown before any RPC mutation is attempted.
  *
  * @example
  * ```ts
