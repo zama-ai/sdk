@@ -10,7 +10,7 @@ import {
 
 describe("useRevokeDelegation", () => {
   test("default", ({ renderWithProviders }) => {
-    const { result } = renderWithProviders(() => useRevokeDelegation({ tokenAddress: TOKEN }), {});
+    const { result } = renderWithProviders(() => useRevokeDelegation(TOKEN), {});
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
     expectDefaultMutationState(state);
@@ -22,7 +22,7 @@ describe("useRevokeDelegation", () => {
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
-    const { result } = renderWithProviders(() => useRevokeDelegation({ tokenAddress: TOKEN }), {});
+    const { result } = renderWithProviders(() => useRevokeDelegation(TOKEN), {});
 
     act(() => {
       result.current.mutate({ delegateAddress: RECIPIENT });
@@ -44,9 +44,7 @@ describe("useRevokeDelegation", () => {
 
     const onSuccess = vi.fn();
 
-    const { result } = renderWithProviders(() =>
-      useRevokeDelegation({ tokenAddress: TOKEN }, { onSuccess }),
-    );
+    const { result } = renderWithProviders(() => useRevokeDelegation(TOKEN, { onSuccess }));
 
     act(() => {
       result.current.mutate({ delegateAddress: RECIPIENT });
@@ -72,7 +70,7 @@ describe("useRevokeDelegation", () => {
     });
 
     const { result, queryClient } = renderWithProviders(() =>
-      useRevokeDelegation({ tokenAddress: TOKEN }, { onSuccess }),
+      useRevokeDelegation(TOKEN, { onSuccess }),
     );
 
     // Seed the cache so invalidation is observable

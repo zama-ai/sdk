@@ -407,7 +407,7 @@ Use `@remarks` for:
  * Returns `true` for errors that affect the whole SDK session rather than a single operation.
  *
  * @remarks
- * When this returns `true`, batch operations (e.g. {@link ReadonlyToken.batchBalancesOf})
+ * When this returns `true`, batch operations (e.g. {@link Token.batchBalancesOf})
  * abort entirely rather than collecting a per-item failure. Retrying individual items
  * will not help — the session must be re-established.
  */

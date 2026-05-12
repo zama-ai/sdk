@@ -9,7 +9,7 @@ Shielding converts public ERC-20 tokens into confidential tokens. The SDK handle
 
 ## Shielding paths
 
-`Token.shield()` exposes a single API but routes through one of two on-chain paths depending on the underlying ERC-20:
+`WrappedToken.shield()` exposes a single API but routes through one of two on-chain paths depending on the underlying ERC-20:
 
 | Path               | Triggered when                                | Wallet prompts | Notes                                                                                 |
 | ------------------ | --------------------------------------------- | -------------- | ------------------------------------------------------------------------------------- |
@@ -35,23 +35,17 @@ ERC-1363 is a conditional optimisation, not a recommended new default — only a
 
 ## Steps
 
-### 1. Create a token instance
+### 1. Create a wrapped-token instance
 
-Start from a configured SDK instance (see [Configuration](/guides/configuration)) and create a token pointing at your encrypted ERC-20 contract.
+Start from a configured SDK instance (see [Configuration](/guides/configuration)) and create a `WrappedToken` pointing at your confidential wrapper contract. The wrapper _is_ the confidential token: `createWrappedToken(addr)` takes a single address — the wrapper's own address.
 
-Some deployments use a **wrapper contract** that is separate from the token contract itself. If your setup has a separate wrapper address, pass it as the second argument to `createToken` or as `wrapperAddress` in hooks. If the token _is_ the wrapper (single-contract deployments), you can omit it.
-
-You can resolve the wrapper address on-chain using the built-in registry:
+If you only have the underlying ERC-20 address, the built-in registry resolves the matching wrapper.
 
 {% tabs %}
 {% tab title="Core SDK" %}
 
 ```ts
-// Single-contract deployment (token is the wrapper)
-const token = sdk.createToken("0xEncryptedERC20Address");
-
-// Separate wrapper — pass it explicitly
-const tokenWithWrapper = sdk.createToken("0xTokenAddress", "0xWrapperAddress");
+const token = sdk.createWrappedToken("0xWrapperAddress");
 ```
 
 {% endtab %}
@@ -60,26 +54,19 @@ const tokenWithWrapper = sdk.createToken("0xTokenAddress", "0xWrapperAddress");
 ```ts
 // The registry resolves the confidential wrapper for any registered ERC-20.
 // On Mainnet, Sepolia, and Hoodi the registry address is built-in.
-const result = await sdk.registry.getConfidentialToken("0xTokenAddress");
+const result = await sdk.registry.getConfidentialToken("0xUnderlyingERC20");
 if (!result) throw new Error("No wrapper registered for this token");
 
-const token = sdk.createToken("0xTokenAddress", result.confidentialTokenAddress);
+const token = sdk.createWrappedToken(result.confidentialTokenAddress);
 ```
 
 {% endtab %}
 {% tab title="React" %}
 
 ```tsx
-import { useToken } from "@zama-fhe/react-sdk";
+import { useWrappedToken } from "@zama-fhe/react-sdk";
 
-// Without wrapper (single-contract)
-const token = useToken({ tokenAddress: "0xEncryptedERC20Address" });
-
-// With separate wrapper
-const tokenWithWrapper = useToken({
-  tokenAddress: "0xTokenAddress",
-  wrapperAddress: "0xWrapperAddress",
-});
+const token = useWrappedToken("0xWrapperAddress");
 ```
 
 {% endtab %}
@@ -106,8 +93,7 @@ console.log("Shield tx:", txHash);
 import { useShield } from "@zama-fhe/react-sdk";
 
 const { mutateAsync: shield, isPending } = useShield({
-  tokenAddress: "0xEncryptedERC20Address",
-  wrapperAddress: "0xWrapperAddress", // omit if token is the wrapper
+  address: "0xWrapperAddress",
 });
 
 const txHash = await shield({ amount: 1000n });
@@ -190,8 +176,7 @@ const {
   isPending,
   isSuccess,
 } = useShield({
-  tokenAddress: "0xEncryptedERC20Address",
-  wrapperAddress: "0xWrapperAddress", // omit if token is the wrapper
+  address: "0xWrapperAddress",
 });
 
 // isPending is true while the transaction is in flight
@@ -208,5 +193,5 @@ In React, balance caches are automatically invalidated after a successful shield
 ## Next steps
 
 - [Transfer Privately](/guides/transfer-privately) — send confidential tokens to another address
-- [Token.shield reference](/reference/sdk/Token#shield) — full API signature and options
+- [WrappedToken.shield reference](/reference/sdk/WrappedToken#shield) — full API signature and options
 - [useShield reference](/reference/react/useShield) — React hook details

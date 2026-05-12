@@ -18,7 +18,7 @@ import {
 
 describe("useUnshield", () => {
   test("default", ({ renderWithProviders }) => {
-    const { result } = renderWithProviders(() => useUnshield({ tokenAddress: TOKEN }));
+    const { result } = renderWithProviders(() => useUnshield(TOKEN));
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
     expectDefaultMutationState(state);
@@ -34,7 +34,7 @@ describe("useUnshield", () => {
     });
     mockPublicDecrypt(relayer);
 
-    const { result, queryClient } = renderWithProviders(() => useUnshield({ tokenAddress: TOKEN }));
+    const { result, queryClient } = renderWithProviders(() => useUnshield(TOKEN));
 
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
     const allowanceKey = zamaQueryKeys.underlyingAllowance.token(TOKEN);
@@ -69,9 +69,7 @@ describe("useUnshield", () => {
     const allowanceKey = zamaQueryKeys.underlyingAllowance.token(TOKEN);
     const onSuccess = vi.fn();
 
-    const { result, queryClient } = renderWithProviders(() =>
-      useUnshield({ tokenAddress: TOKEN }, { onSuccess }),
-    );
+    const { result, queryClient } = renderWithProviders(() => useUnshield(TOKEN, { onSuccess }));
 
     queryClient.setQueryData(balanceKey, 3000n);
     queryClient.setQueryData(allowanceKey, 500n);

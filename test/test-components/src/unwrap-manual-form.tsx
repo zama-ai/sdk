@@ -19,14 +19,14 @@ export function UnwrapManualForm({
   wrapperAddress,
 }: {
   tokenAddress: Address;
-  wrapperAddress?: Address;
+  wrapperAddress: Address;
 }) {
   const [finalizeInput, setFinalizeInput] = useState<FinalizeUnwrapInput | null>(null);
   const { address } = useAccount();
   const { data: metadata } = useMetadata(tokenAddress);
-  const { data: balance } = useConfidentialBalance({ tokenAddress, account: address });
-  const unwrap = useUnwrap({ tokenAddress, wrapperAddress });
-  const finalizeUnwrap = useFinalizeUnwrap({ tokenAddress, wrapperAddress });
+  const { data: balance } = useConfidentialBalance({ address: tokenAddress, account: address });
+  const unwrap = useUnwrap(wrapperAddress);
+  const finalizeUnwrap = useFinalizeUnwrap(wrapperAddress);
 
   return (
     <div className="space-y-6">

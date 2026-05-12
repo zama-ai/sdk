@@ -29,7 +29,7 @@ function TokenBalance({ tokenAddress }: { tokenAddress: `0x${string}` }) {
     isLoading,
     error,
   } = useConfidentialBalance({
-    tokenAddress,
+    address: tokenAddress,
     account: address,
   });
 
@@ -77,18 +77,18 @@ export const zamaConfig = createConfig({
 import { type UseConfidentialBalanceConfig } from "@zama-fhe/react-sdk";
 ```
 
-### tokenAddress
+### address
 
 `Address`
 
-Contract address of the confidential ERC-20 token.
+Contract address of the confidential token.
 
 {% tabs %}
 {% tab title="component.tsx" %}
 
 ```tsx
 const { data } = useConfidentialBalance({
-  tokenAddress: "0xToken",
+  address: "0xToken",
   account: address,
 });
 ```
@@ -112,7 +112,7 @@ import { useAccount } from "wagmi";
 
 const { address } = useAccount();
 const { data } = useConfidentialBalance({
-  tokenAddress: "0xToken",
+  address: "0xToken",
   account: address,
 });
 ```

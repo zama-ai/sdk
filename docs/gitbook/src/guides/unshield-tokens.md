@@ -32,7 +32,7 @@ const config = createConfig({
   relayers: { [sepolia.id]: web() },
 });
 const sdk = new ZamaSDK(config);
-const token = sdk.createToken("0xEncryptedERC20");
+const token = sdk.createWrappedToken("0xEncryptedERC20");
 
 const { txHash, receipt } = await token.unshield(500n);
 ```
@@ -129,10 +129,7 @@ The React SDK provides hooks that wrap the above operations with React Query mut
 ```tsx
 import { useUnshield } from "@zama-fhe/react-sdk";
 
-const { mutateAsync: unshield, isPending } = useUnshield({
-  tokenAddress: "0xToken",
-  wrapperAddress: "0xWrapper", // omit if token is the wrapper
-});
+const { mutateAsync: unshield, isPending } = useUnshield("0xWrapper");
 
 await unshield({
   amount: 500n,
@@ -148,10 +145,7 @@ await unshield({
 ```tsx
 import { useUnshieldAll } from "@zama-fhe/react-sdk";
 
-const { mutateAsync: unshieldAll } = useUnshieldAll({
-  tokenAddress: "0xToken",
-  wrapperAddress: "0xWrapper", // omit if token is the wrapper
-});
+const { mutateAsync: unshieldAll } = useUnshieldAll("0xWrapper");
 
 await unshieldAll();
 ```
@@ -163,16 +157,14 @@ await unshieldAll();
 import { useResumeUnshield } from "@zama-fhe/react-sdk";
 import { loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/sdk";
 
-const { mutateAsync: resumeUnshield } = useResumeUnshield({
-  tokenAddress: "0xToken",
-  wrapperAddress: "0xWrapper", // omit if token is the wrapper
-});
+const WRAPPER = "0xWrapper";
+const { mutateAsync: resumeUnshield } = useResumeUnshield(WRAPPER);
 
 // On mount
-const pending = await loadPendingUnshield(storage, wrapperAddress);
+const pending = await loadPendingUnshield(storage, WRAPPER);
 if (pending) {
   await resumeUnshield({ unwrapTxHash: pending });
-  await clearPendingUnshield(storage, wrapperAddress);
+  await clearPendingUnshield(storage, WRAPPER);
 }
 ```
 
@@ -183,6 +175,6 @@ All mutation hooks automatically invalidate balance queries on success, so your 
 
 ## Next steps
 
-- See [Token Operations](/reference/sdk/Token) for the full `Token.unshield` and `Token.unshieldAll` API.
+- See [WrappedToken](/reference/sdk/WrappedToken) for the full `WrappedToken.unshield` and `WrappedToken.unshieldAll` API.
 - See [Hooks](/reference/react/query-keys) for `useUnshield`, `useUnshieldAll`, and `useResumeUnshield` details.
 - If your unshield fails, see [Handle Errors](handle-errors.md) for troubleshooting `TransactionRevertedError` and related issues.

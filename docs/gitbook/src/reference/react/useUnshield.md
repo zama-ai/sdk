@@ -22,7 +22,7 @@ import { useUnshield } from "@zama-fhe/react-sdk";
 import { useUnshield } from "@zama-fhe/react-sdk";
 
 function UnshieldButton() {
-  const { mutateAsync: unshield, isPending } = useUnshield({ tokenAddress: "0xToken" });
+  const { mutateAsync: unshield, isPending } = useUnshield("0xWrapper");
 
   async function handleUnshield() {
     await unshield({
@@ -74,20 +74,14 @@ export const zamaConfig = createZamaConfig({
 
 ## Parameters
 
-```ts
-import { type UnshieldParams } from "@zama-fhe/sdk/query";
-```
-
-### tokenAddress
+### address
 
 `Address`
 
-Address of the confidential ERC-20 wrapper contract.
+Address of the confidential wrapper contract. Passed positionally as the first argument.
 
 ```ts
-const { mutateAsync: unshield } = useUnshield({
-  tokenAddress: "0xToken",
-});
+const { mutateAsync: unshield } = useUnshield("0xWrapper");
 ```
 
 ---
@@ -167,4 +161,4 @@ Auto-invalidates the `confidentialBalance` cache on success.
 - [useUnshieldAll](/reference/react/useUnshieldAll) — unshield the entire confidential balance
 - [useResumeUnshield](/reference/react/useResumeUnshield) — resume an interrupted unshield
 - [useShield](/reference/react/useShield) — reverse operation, shield public tokens
-- [Token.unshield](/reference/sdk/Token#unshield) — imperative equivalent on the `Token` class
+- [WrappedToken.unshield](/reference/sdk/WrappedToken#unshield) — imperative equivalent on the `WrappedToken` class
