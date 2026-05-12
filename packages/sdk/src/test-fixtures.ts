@@ -21,6 +21,7 @@ import { ZamaSDK } from "./zama-sdk";
 import { DecryptionService } from "./services/decryption-service";
 import { DelegationService } from "./services/delegation-service";
 import { EncryptionService } from "./services/encryption-service";
+import { LifecycleService } from "./services/lifecycle-service";
 import type { ZamaSDKEventInput } from "./events/sdk-events";
 export { afterEach, beforeEach, describe, expect, vi, type Mock } from "vitest";
 
@@ -232,7 +233,10 @@ interface SdkFixtures {
   encryptionService: EncryptionService;
   storage: GenericStorage;
   createMockRelayer: typeof createMockRelayer;
-  createMockSigner: (addressOrOverrides?: Address | Partial<GenericSigner>) => GenericSigner;
+  createMockSigner: (
+    addressOrOverrides?: Address | Partial<GenericSigner>,
+    overrides?: Partial<GenericSigner>,
+  ) => GenericSigner;
   createMockProvider: typeof createMockProvider;
   createMockStorage: typeof createMockStorage;
   createMockToken: (
@@ -262,6 +266,12 @@ interface SdkFixtures {
     relayer?: RelayerSDK;
     emitEvent?: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
   }) => EncryptionService;
+  createLifecycleService: (overrides?: {
+    signer?: GenericSigner;
+    cache?: CachingService;
+    relayer?: RelayerSDK;
+    credentialService?: CredentialService;
+  }) => LifecycleService;
   createToken: (sdk: ZamaSDK, address?: Address, wrapper?: Address) => Token;
   createReadonlyToken: (sdk: ZamaSDK, address?: Address) => ReadonlyToken;
   sdk: ZamaSDK;
@@ -303,11 +313,20 @@ export const test = base.extend<SdkFixtures>({
     await use(createMockRelayer);
   },
   createMockSigner: async ({ userAddress }, use) => {
-    await use((addressOrOverrides?: Address | Partial<GenericSigner>) => {
-      const address = typeof addressOrOverrides === "string" ? addressOrOverrides : userAddress;
-      const overrides = typeof addressOrOverrides === "object" ? addressOrOverrides : {};
-      return createMockSigner(address, overrides);
-    });
+    await use(
+      (
+        addressOrOverrides?: Address | Partial<GenericSigner>,
+        overridesArg?: Partial<GenericSigner>,
+      ) => {
+        if (typeof addressOrOverrides === "string") {
+          return createMockSigner(addressOrOverrides, overridesArg ?? {});
+        }
+        if (typeof addressOrOverrides === "object" && addressOrOverrides !== null) {
+          return createMockSigner(userAddress, addressOrOverrides);
+        }
+        return createMockSigner(userAddress, overridesArg ?? {});
+      },
+    );
   },
   createMockProvider: async ({}, use) => {
     await use(createMockProvider);
@@ -376,6 +395,17 @@ export const test = base.extend<SdkFixtures>({
   },
   encryptionService: async ({ createEncryptionService }, use) => {
     await use(createEncryptionService());
+  },
+  createLifecycleService: async ({ signer, cache, relayer }, use) => {
+    await use(
+      (overrides = {}) =>
+        new LifecycleService({
+          signer: "signer" in overrides ? overrides.signer : signer,
+          cache: overrides.cache ?? cache,
+          relayer: (overrides.relayer ?? relayer) as unknown as RelayerDispatcher,
+          credentialService: overrides.credentialService,
+        }),
+    );
   },
   createToken: async ({ tokenAddress }, use) => {
     await use(
