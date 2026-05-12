@@ -46,8 +46,9 @@ export interface SetOperatorRequest {
 }
 
 /**
- * First-phase unshield. Builds the unsigned tx for `wrapper.unwrap(from, to,
- * encryptedAmount, inputProof)`. Encryption happens during `prepare`.
+ * First-phase unshield. Builds the unsigned tx for
+ * `wrapper.unwrap(from, to, encryptedAmount, inputProof)`.
+ * Encryption happens during `prepare`.
  */
 export interface UnwrapRequest {
   readonly kind: "Unwrap";
