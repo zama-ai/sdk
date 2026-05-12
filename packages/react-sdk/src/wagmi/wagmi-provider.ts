@@ -12,7 +12,7 @@ import type {
   WriteContractConfig,
   WriteFunctionName,
 } from "@zama-fhe/sdk";
-import { TransactionRevertedError } from "@zama-fhe/sdk";
+import { ConfigurationError, TransactionRevertedError } from "@zama-fhe/sdk";
 import { encodeFunctionData, serializeTransaction, type Abi } from "viem";
 import type { Config } from "wagmi";
 import {
@@ -96,7 +96,7 @@ export class WagmiProvider implements GenericProvider {
   async sendRawTransaction(signedTx: Hex): Promise<Hex> {
     const publicClient = getPublicClient(this.#config);
     if (!publicClient) {
-      throw new Error(
+      throw new ConfigurationError(
         "WagmiProvider.sendRawTransaction: no public client configured for the active chain.",
       );
     }
@@ -110,7 +110,7 @@ export class WagmiProvider implements GenericProvider {
   >(args: { from: Address; call: WriteContractConfig<TAbi, TFunctionName, TArgs> }): Promise<Hex> {
     const publicClient = getPublicClient(this.#config);
     if (!publicClient) {
-      throw new Error(
+      throw new ConfigurationError(
         "WagmiProvider.prepareTransaction: no public client configured for the active chain.",
       );
     }

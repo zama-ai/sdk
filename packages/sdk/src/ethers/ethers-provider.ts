@@ -8,6 +8,7 @@ import type {
   EIP1193Provider,
   Hex,
 } from "viem";
+import { ConfigurationError, TransactionRevertedError } from "../errors";
 import type {
   ContractAbi,
   GenericProvider,
@@ -85,10 +86,14 @@ export class EthersProvider implements GenericProvider {
   async getBlockTimestamp(): Promise<bigint> {
     const block = await this.#readProvider.getBlock("latest");
     if (!block) {
-      throw new Error("Failed to fetch latest block");
+      throw new ConfigurationError(
+        "EthersProvider.getBlockTimestamp: failed to fetch latest block",
+      );
     }
     if (block.timestamp === null) {
-      throw new Error("Latest block has no timestamp");
+      throw new ConfigurationError(
+        "EthersProvider.getBlockTimestamp: latest block has no timestamp",
+      );
     }
     return BigInt(block.timestamp);
   }
@@ -96,7 +101,10 @@ export class EthersProvider implements GenericProvider {
   async waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt> {
     const receipt = await this.#readProvider.waitForTransaction(hash);
     if (!receipt) {
-      throw new Error("Transaction receipt not found");
+      throw new TransactionRevertedError(
+        `EthersProvider.waitForTransactionReceipt: no receipt found for tx ${hash}. ` +
+          "The transaction may have been dropped from the mempool, or the RPC's wait timeout elapsed.",
+      );
     }
     return {
       logs: receipt.logs.map((log) => ({
@@ -130,8 +138,9 @@ export class EthersProvider implements GenericProvider {
       this.#readProvider.getFeeData(),
     ]);
     if (feeData.maxFeePerGas === null || feeData.maxPriorityFeePerGas === null) {
-      throw new Error(
-        "EthersProvider.prepareTransaction: EIP-1559 fee data unavailable (provider returned null maxFeePerGas).",
+      throw new ConfigurationError(
+        "EthersProvider.prepareTransaction: EIP-1559 fee data unavailable (provider returned null maxFeePerGas). " +
+          "The connected chain may not support EIP-1559 type-2 transactions.",
       );
     }
     const tx = Transaction.from({

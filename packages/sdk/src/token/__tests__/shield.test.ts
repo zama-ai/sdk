@@ -195,9 +195,11 @@ describe("Token.shield", () => {
       signer,
       provider,
     }) => {
+      const revert = new Error("execution reverted");
+      revert.name = "ContractFunctionRevertedError";
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce(UNDERLYING)
-        .mockRejectedValueOnce(new Error("supportsInterface reverted"))
+        .mockRejectedValueOnce(revert)
         .mockResolvedValueOnce(1000n)
         .mockResolvedValueOnce(0n);
 
@@ -391,9 +393,11 @@ describe("Token.shield", () => {
     });
 
     it("isPayable() caches false when supportsInterface reverts", async ({ token, provider }) => {
+      const revert = new Error("execution reverted");
+      revert.name = "ContractFunctionRevertedError";
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce(UNDERLYING)
-        .mockRejectedValueOnce(new Error("supportsInterface reverted"));
+        .mockRejectedValueOnce(revert);
 
       expect(await token.isPayable()).toBe(false);
       expect(await token.isPayable()).toBe(false);
@@ -403,13 +407,30 @@ describe("Token.shield", () => {
     });
 
     it("isPayable() caches false when underlying() reverts", async ({ token, provider }) => {
-      vi.mocked(provider.readContract).mockRejectedValueOnce(new Error("underlying() reverted"));
+      const revert = new Error("execution reverted");
+      revert.name = "ContractFunctionRevertedError";
+      vi.mocked(provider.readContract).mockRejectedValueOnce(revert);
 
       expect(await token.isPayable()).toBe(false);
       expect(await token.isPayable()).toBe(false);
       // The #underlyingPromise retries on failure (separate cache), but
       // #isPayable is cached as false so the second call short-circuits.
       expect(provider.readContract).toHaveBeenCalledTimes(1);
+    });
+
+    it("isPayable() does NOT cache transport errors (re-probes on retry)", async ({
+      token,
+      provider,
+    }) => {
+      // RPC blip during probe must not permanently downgrade a 1363-capable
+      // token to the slower approve+wrap path.
+      vi.mocked(provider.readContract)
+        .mockResolvedValueOnce(UNDERLYING)
+        .mockRejectedValueOnce(new Error("ECONNRESET"))
+        .mockResolvedValueOnce(true);
+
+      await expect(token.isPayable()).rejects.toThrow("ECONNRESET");
+      expect(await token.isPayable()).toBe(true);
     });
   });
 

@@ -18,7 +18,7 @@ import {
 import { findUnwrapRequested } from "../events/onchain-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { Handle } from "../relayer/relayer-sdk.types";
-import { toError } from "../utils";
+import { isContractCallError, toError } from "../utils";
 import {
   ApprovalFailedError,
   BalanceCheckUnavailableError,
@@ -110,10 +110,14 @@ export class Token extends ReadonlyToken {
 
   /**
    * Check whether the underlying ERC-20 supports ERC-1363 (payable token).
-   * Result is cached per Token instance after the first call. Probe failures
-   * (`underlying()` revert, `supportsInterface` revert, RPC error, …) are
-   * cached as `false` so a non-payable token does not trigger a probe on
-   * every shield.
+   *
+   * Only successful probes are cached. An `underlying()` or
+   * `supportsInterface(...)` revert is conclusive ("the token doesn't
+   * advertise ERC-1363") and gets cached as `false`; an RPC transport error
+   * is *not* conclusive — caching it would permanently downgrade a
+   * 1363-capable token to the slower approve+wrap path. Transport errors
+   * therefore bubble up so the caller can retry, and the next call
+   * re-probes.
    */
   async isPayable(): Promise<boolean> {
     if (this.#isPayable !== null) {
@@ -123,9 +127,12 @@ export class Token extends ReadonlyToken {
       const underlying = await this.#getUnderlying();
       this.#isPayable = await this.sdk.provider.readContract(isPayableTokenContract(underlying));
       return this.#isPayable;
-    } catch {
-      this.#isPayable = false;
-      return false;
+    } catch (error) {
+      if (isContractCallError(error)) {
+        this.#isPayable = false;
+        return false;
+      }
+      throw error;
     }
   }
 
@@ -835,14 +842,9 @@ export class Token extends ReadonlyToken {
   // For each atomic write method above, a paired prepare* / complete*
   // returns / consumes a PreparedTransaction so a custodian or HSM signer
   // can sign out-of-process and the SDK still owns calldata building,
-  // public-key resolution, and cache-sync.
-  //
-  // Shielding routes through `prepareShield(...)` which returns a
-  // `ShieldPlan` — a sequence of TransactionPrepareRequest values the
-  // caller prepares + signs + broadcasts in order. Unshielding (`unwrap` +
-  // `finalizeUnwrap`) stays caller-orchestrated: the caller broadcasts
-  // `prepareUnwrap` first, waits for the relayer to emit the
-  // `unwrapRequested` event, then runs `prepareFinalizeUnwrap`.
+  // public-key resolution, and cache-sync. Shielding uses prepareShield
+  // (multi-step plan); unshielding is caller-orchestrated via prepareUnwrap
+  // then prepareFinalizeUnwrap — see each method's JSDoc for the flow.
 
   prepareConfidentialTransfer(args: {
     to: Address;
@@ -903,6 +905,12 @@ export class Token extends ReadonlyToken {
     return this.sdk.completeFromTxHash(prepared, txHash);
   }
 
+  /**
+   * First leg of the deferred two-phase unshield. The caller broadcasts the
+   * resulting prepared tx, waits for the wrapper to emit `UnwrapRequested`,
+   * extracts the `unwrapRequestId` from the event log, and then runs
+   * {@link prepareFinalizeUnwrap} to authorize the underlying transfer.
+   */
   prepareUnwrap(args: { to: Address; amount: bigint }): Promise<PreparedFor<"Unwrap">> {
     return this.sdk.prepare({
       kind: "Unwrap",
@@ -916,6 +924,11 @@ export class Token extends ReadonlyToken {
     return this.sdk.completeFromTxHash(prepared, txHash);
   }
 
+  /**
+   * Unshield-all variant of {@link prepareUnwrap} — uses the on-chain
+   * confidential balance handle instead of an explicit amount. Pair with
+   * {@link prepareFinalizeUnwrap} after the `UnwrapRequested` event lands.
+   */
   prepareUnwrapAll(args: { to: Address }): Promise<PreparedFor<"UnwrapAll">> {
     return this.sdk.prepare({
       kind: "UnwrapAll",
@@ -928,6 +941,13 @@ export class Token extends ReadonlyToken {
     return this.sdk.completeFromTxHash(prepared, txHash);
   }
 
+  /**
+   * Second leg of the deferred two-phase unshield. After broadcasting the
+   * {@link prepareUnwrap} (or {@link prepareUnwrapAll}) result, extract
+   * `unwrapRequestId` from the `UnwrapRequested` event log and pass it
+   * here. The SDK public-decrypts the handle during `prepare` and builds
+   * the unsigned `wrapper.finalizeUnwrap(...)` tx the caller broadcasts.
+   */
   prepareFinalizeUnwrap(args: {
     unwrapRequestIdOrAmount: Handle;
   }): Promise<PreparedFor<"FinalizeUnwrap">> {
@@ -948,6 +968,9 @@ export class Token extends ReadonlyToken {
   async prepareApproveUnderlying(args: {
     amount: bigint;
   }): Promise<PreparedFor<"ApproveUnderlying">> {
+    // Fail fast on a wrong-chain signer so a custodian ceremony doesn't run
+    // on an unsigned tx the network will later reject.
+    await this.sdk.requireAlignedWalletAccount("prepareApproveUnderlying");
     const underlying = await this.#getUnderlying();
     return this.sdk.prepare({
       kind: "ApproveUnderlying",
@@ -1022,7 +1045,9 @@ export class Token extends ReadonlyToken {
    * ```
    */
   async prepareShield(amount: bigint, options?: { recipient?: Address }): Promise<ShieldPlan> {
-    const account = this.sdk.requireSigner("prepareShield").requireWalletAccount("prepareShield");
+    // Chain-align before any custodian round-trip so a wrong-chain plan
+    // never reaches the broadcaster.
+    const account = await this.sdk.requireAlignedWalletAccount("prepareShield");
     const userAddress = getAddress(account.address);
     const recipient = options?.recipient ? getAddress(options.recipient) : userAddress;
     const underlying = await this.#getUnderlying();

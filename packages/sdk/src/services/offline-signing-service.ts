@@ -19,6 +19,7 @@ import {
   ChainMismatchError,
   ConfigurationError,
   EncryptionFailedError,
+  SigningFailedError,
   TransactionRevertedError,
   wrapDecryptError,
   ZamaError,
@@ -166,10 +167,24 @@ export class OfflineSigningService {
    *
    * @throws {@link SignerCapabilityError} when the configured signer has no
    *   `signTransaction` capability (online-only wallets).
+   * @throws {@link SigningFailedError} when the broadcaster / signer rejects
+   *   the signing request (HTTP error, policy denial, timeout). Already-typed
+   *   {@link ZamaError} causes (e.g. {@link SigningFailedError} thrown by
+   *   {@link BroadcastSigner} for malformed returns) are re-thrown unchanged.
    */
   async sign(prepared: PreparedTransaction, _options?: OfflineSigningOptions): Promise<Hex> {
     assertSignTransaction(this.#signer, `sign(${prepared.kind})`);
-    return this.#signer.signTransaction(prepared.unsignedTx);
+    try {
+      return await this.#signer.signTransaction(prepared.unsignedTx);
+    } catch (error) {
+      this.#emitTransactionError(prepared, error);
+      if (error instanceof ZamaError) {
+        throw error;
+      }
+      throw new SigningFailedError(`Sign failed for ${prepared.kind}`, {
+        cause: error,
+      });
+    }
   }
 
   // ── broadcast ───────────────────────────────────────────────────────────

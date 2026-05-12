@@ -422,7 +422,7 @@ describe("EthersProvider", () => {
       const ethersProvider = new EthersProvider({ provider: mockProvider as never });
 
       await expect(ethersProvider.waitForTransactionReceipt("0xhash" as Hex)).rejects.toThrow(
-        "Transaction receipt not found",
+        "no receipt found for tx",
       );
     });
 
@@ -457,7 +457,7 @@ describe("EthersProvider", () => {
       const ethersProvider = new EthersProvider({ provider: mockProvider as never });
 
       await expect(ethersProvider.getBlockTimestamp()).rejects.toThrow(
-        "Failed to fetch latest block",
+        "failed to fetch latest block",
       );
     });
   });
