@@ -817,17 +817,6 @@ export interface ShieldSubmittedEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.ShieldSubmitted;
 }
 
-// @public
-export function signMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.sign"], SignParams, Hex>;
-
-// @public
-export interface SignParams {
-    // (undocumented)
-    readonly options?: OfflineSigningOptions;
-    // (undocumented)
-    readonly prepared: PreparedTransaction;
-}
-
 // @public (undocumented)
 export type StrippedQueryOptionKeys = "gcTime" | "staleTime" | "enabled" | "select" | "refetchInterval" | "refetchOnMount" | "refetchOnWindowFocus" | "refetchOnReconnect" | "retry" | "retryDelay" | "retryOnMount" | "queryFn" | "queryKey" | "queryKeyHashFn" | "initialData" | "initialDataUpdatedAt" | "placeholderData" | "structuralSharing" | "throwOnError" | "meta" | "query" | "pollingInterval";
 
@@ -844,24 +833,6 @@ export class Token extends ReadonlyToken {
         tokens: Token[];
         delegateAddress: Address;
     }): Promise<Map<Address, TransactionResult | ZamaError>>;
-    // (undocumented)
-    completeApproveUnderlying(prepared: PreparedFor<"ApproveUnderlying">, txHash: Hex): Promise<TransactionResult>;
-    // (undocumented)
-    completeConfidentialTransfer(prepared: PreparedFor<"ConfidentialTransfer">, txHash: Hex): Promise<TransactionResult>;
-    // (undocumented)
-    completeConfidentialTransferFrom(prepared: PreparedFor<"ConfidentialTransferFrom">, txHash: Hex): Promise<TransactionResult>;
-    // (undocumented)
-    completeDelegateDecryption(prepared: PreparedFor<"DelegateDecryption">, txHash: Hex): Promise<TransactionResult>;
-    // (undocumented)
-    completeFinalizeUnwrap(prepared: PreparedFor<"FinalizeUnwrap">, txHash: Hex): Promise<TransactionResult>;
-    // (undocumented)
-    completeRevokeDelegation(prepared: PreparedFor<"RevokeDelegation">, txHash: Hex): Promise<TransactionResult>;
-    // (undocumented)
-    completeSetOperator(prepared: PreparedFor<"SetOperator">, txHash: Hex): Promise<TransactionResult>;
-    // (undocumented)
-    completeUnwrap(prepared: PreparedFor<"Unwrap">, txHash: Hex): Promise<TransactionResult>;
-    // (undocumented)
-    completeUnwrapAll(prepared: PreparedFor<"UnwrapAll">, txHash: Hex): Promise<TransactionResult>;
     confidentialTransfer(to: Address, amount: bigint, options?: TransferOptions): Promise<TransactionResult>;
     confidentialTransferFrom(from: Address, to: Address, amount: bigint, callbacks?: TransferCallbacks): Promise<TransactionResult>;
     delegateDecryption(input: {
@@ -871,49 +842,10 @@ export class Token extends ReadonlyToken {
     finalizeUnwrap(unwrapRequestIdOrAmount: Handle): Promise<TransactionResult>;
     isOperator(holder: Address, spender: Address): Promise<boolean>;
     isPayable(): Promise<boolean>;
-    // (undocumented)
-    prepareApproveUnderlying(args: {
-        amount: bigint;
-    }): Promise<PreparedFor<"ApproveUnderlying">>;
-    // (undocumented)
-    prepareConfidentialTransfer(args: {
-        to: Address;
-        amount: bigint;
-    }): Promise<PreparedFor<"ConfidentialTransfer">>;
-    // (undocumented)
-    prepareConfidentialTransferFrom(args: {
-        owner: Address;
-        to: Address;
-        amount: bigint;
-    }): Promise<PreparedFor<"ConfidentialTransferFrom">>;
-    // (undocumented)
-    prepareDelegateDecryption(args: {
-        delegateAddress: Address;
-        expirationDate?: Date;
-    }): Promise<PreparedFor<"DelegateDecryption">>;
-    prepareFinalizeUnwrap(args: {
-        unwrapRequestIdOrAmount: Handle;
-    }): Promise<PreparedFor<"FinalizeUnwrap">>;
-    // (undocumented)
-    prepareRevokeDelegation(args: {
-        delegateAddress: Address;
-    }): Promise<PreparedFor<"RevokeDelegation">>;
-    // (undocumented)
-    prepareSetOperator(args: {
-        operator: Address;
-        until?: number;
-    }): Promise<PreparedFor<"SetOperator">>;
     // Warning: (ae-forgotten-export) The symbol "ShieldPlan" needs to be exported by the entry point index.d.ts
     prepareShield(amount: bigint, options?: {
         recipient?: Address;
     }): Promise<ShieldPlan>;
-    prepareUnwrap(args: {
-        to: Address;
-        amount: bigint;
-    }): Promise<PreparedFor<"Unwrap">>;
-    prepareUnwrapAll(args: {
-        to: Address;
-    }): Promise<PreparedFor<"UnwrapAll">>;
     resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     revokeDelegation(input: {
         delegateAddress: Address;
@@ -1528,7 +1460,6 @@ export class ZamaSDK {
         delegateAddress: Address;
     }): Promise<TransactionResult>;
     revokePermits(contracts?: Address[]): Promise<void>;
-    sign(prepared: PreparedTransaction, options?: OfflineSigningOptions): Promise<Hex>;
     // (undocumented)
     readonly signer: GenericSigner | undefined;
     // (undocumented)
