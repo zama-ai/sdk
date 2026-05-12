@@ -104,7 +104,6 @@ export { useListPairs } from "./wrappers-registry/use-list-pairs";
 export {
   useExecute,
   usePrepare,
-  useSign,
   useBroadcast,
   useRegisterPermit,
   useCompleteFromTxHash,

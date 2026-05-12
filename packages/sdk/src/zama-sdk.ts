@@ -193,19 +193,13 @@ export class ZamaSDK {
   }
 
   /**
-   * Sign a prepared transaction with the configured signer's
-   * `signTransaction` capability and return RLP-encoded signed bytes.
-   *
-   * @throws {@link SignerCapabilityError} if the configured signer does not
-   *   implement `signTransaction` (online-only wallet).
-   */
-  sign(prepared: PreparedTransaction, options?: OfflineSigningOptions): Promise<Hex> {
-    return this.#offlineSigningService.sign(prepared, options);
-  }
-
-  /**
    * Submit a previously-signed transaction, await its receipt, emit the
    * matching `*Submitted` event, and return the {@link TransactionResult}.
+   *
+   * Signing happens outside the SDK: the caller produces signed bytes via
+   * `signer.signTransaction(prepared.unsignedTx)`, an HSM/custodian API, or
+   * any other mechanism that holds the private key, and feeds the result
+   * back through this method. The SDK never sees the key material.
    */
   broadcast(
     prepared: PreparedTransaction,
@@ -220,9 +214,10 @@ export class ZamaSDK {
    * - a {@link TransactionPrepareRequest} (prepare + sign + broadcast),
    * - a {@link CredentialPermitRequest} (prepare + sign + register).
    *
-   * Callers who already hold a {@link PreparedTransaction} chain
-   * `await broadcast(prepared, await sign(prepared))` — keeping the
-   * prepare/sign/broadcast call shape visible at the call site.
+   * Callers who already hold a {@link PreparedTransaction} compose
+   * `await broadcast(prepared, await signer.signTransaction(prepared.unsignedTx))`
+   * — keeping the prepare → external-sign → broadcast call shape
+   * visible at the call site.
    */
   execute(
     input: TransactionPrepareRequest,
