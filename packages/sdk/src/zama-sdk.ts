@@ -118,6 +118,7 @@ export class ZamaSDK {
       this.#offlineSigningService = new OfflineSigningService({
         signer,
         provider: this.provider,
+        relayer: this.relayer,
         encryption: this.#encryptionService,
         credentials: this.#credentialService,
         emitEvent: (input, tokenAddress) => this.emitEvent(input, tokenAddress),
@@ -219,10 +220,7 @@ export class ZamaSDK {
    * - a {@link TransactionPrepareRequest} (prepare + sign + broadcast),
    * - a {@link CredentialPermitRequest} (atomic EIP-712 permit registration).
    */
-  execute<K extends TransactionKind>(
-    input: PreparedTransaction<K>,
-    options?: OfflineSigningOptions,
-  ): Promise<TransactionResult>;
+  execute(input: PreparedTransaction, options?: OfflineSigningOptions): Promise<TransactionResult>;
   execute(
     input: TransactionPrepareRequest,
     options?: OfflineSigningOptions,

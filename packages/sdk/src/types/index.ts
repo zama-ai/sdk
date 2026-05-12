@@ -18,13 +18,23 @@ export type {
 } from "./signer";
 export type { Broadcaster } from "./broadcaster";
 export type {
+  ApproveUnderlyingRequest,
+  ConfidentialTransferFromRequest,
   ConfidentialTransferRequest,
   CredentialPermitRequest,
+  DelegateDecryptionRequest,
   ExecuteRequest,
+  FinalizeUnwrapRequest,
   PreparedFor,
   PreparedTransaction,
+  RevokeDelegationRequest,
+  SetOperatorRequest,
   TransactionKind,
   TransactionPrepareRequest,
+  TransferAndCallRequest,
+  UnwrapAllRequest,
+  UnwrapRequest,
+  WrapRequest,
 } from "./prepared-tx";
 export type { GenericProvider } from "./provider";
 export type { GenericStorage } from "./storage";

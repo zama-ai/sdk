@@ -34,14 +34,36 @@ import { assertWriteContract } from "../signer/capabilities";
 import { isZeroHandle } from "../utils/handles";
 import { ReadonlyToken } from "./readonly-token";
 import type {
+  ApproveUnderlyingRequest,
+  PreparedFor,
   ShieldCallbacks,
   ShieldOptions,
   TransactionResult,
+  TransferAndCallRequest,
   TransferCallbacks,
   TransferOptions,
   UnshieldCallbacks,
   UnshieldOptions,
+  WrapRequest,
 } from "../types";
+
+/**
+ * Multi-step shield plan returned by {@link Token.prepareShield}. Each step
+ * is a {@link TransactionPrepareRequest} the caller passes to
+ * {@link ZamaSDK.prepare} in order. Preparing immediately before signing
+ * keeps nonces fresh.
+ */
+export interface ShieldPlan {
+  /** Routing decision — mirrors the atomic `shield` decision tree. */
+  readonly path: "transferAndCall" | "approveAndWrap";
+  /**
+   * Ordered prepare requests:
+   * - `transferAndCall`: one {@link TransferAndCallRequest}
+   * - `approveAndWrap`: an {@link ApproveUnderlyingRequest} then a
+   *   {@link WrapRequest}
+   */
+  readonly steps: readonly (ApproveUnderlyingRequest | WrapRequest | TransferAndCallRequest)[];
+}
 import type { ZamaSDK } from "../zama-sdk";
 import { assertBigint } from "../utils/assertions";
 
@@ -807,6 +829,237 @@ export class Token extends ReadonlyToken {
       contractAddress: this.address,
       delegateAddress,
     });
+  }
+
+  // ── Deferred-signing surface (SDK-75) ────────────────────────────────
+  // For each atomic write method above, a paired prepare* / complete*
+  // returns / consumes a PreparedTransaction so a custodian or HSM signer
+  // can sign out-of-process and the SDK still owns calldata building,
+  // public-key resolution, and cache-sync.
+  //
+  // Shielding routes through `prepareShield(...)` which returns a
+  // `ShieldPlan` — a sequence of TransactionPrepareRequest values the
+  // caller prepares + signs + broadcasts in order. Unshielding (`unwrap` +
+  // `finalizeUnwrap`) stays caller-orchestrated: the caller broadcasts
+  // `prepareUnwrap` first, waits for the relayer to emit the
+  // `unwrapRequested` event, then runs `prepareFinalizeUnwrap`.
+
+  prepareConfidentialTransfer(args: {
+    to: Address;
+    amount: bigint;
+  }): Promise<PreparedFor<"ConfidentialTransfer">> {
+    return this.sdk.prepare({
+      kind: "ConfidentialTransfer",
+      token: this.address,
+      to: getAddress(args.to),
+      amount: args.amount,
+    });
+  }
+
+  completeConfidentialTransfer(
+    prepared: PreparedFor<"ConfidentialTransfer">,
+    txHash: Hex,
+  ): Promise<TransactionResult> {
+    return this.sdk.completeFromTxHash(prepared, txHash);
+  }
+
+  prepareConfidentialTransferFrom(args: {
+    from: Address;
+    to: Address;
+    amount: bigint;
+  }): Promise<PreparedFor<"ConfidentialTransferFrom">> {
+    return this.sdk.prepare({
+      kind: "ConfidentialTransferFrom",
+      token: this.address,
+      from: getAddress(args.from),
+      to: getAddress(args.to),
+      amount: args.amount,
+    });
+  }
+
+  completeConfidentialTransferFrom(
+    prepared: PreparedFor<"ConfidentialTransferFrom">,
+    txHash: Hex,
+  ): Promise<TransactionResult> {
+    return this.sdk.completeFromTxHash(prepared, txHash);
+  }
+
+  prepareSetOperator(args: {
+    operator: Address;
+    until?: number;
+  }): Promise<PreparedFor<"SetOperator">> {
+    return this.sdk.prepare({
+      kind: "SetOperator",
+      token: this.address,
+      operator: getAddress(args.operator),
+      until: args.until,
+    });
+  }
+
+  completeSetOperator(
+    prepared: PreparedFor<"SetOperator">,
+    txHash: Hex,
+  ): Promise<TransactionResult> {
+    return this.sdk.completeFromTxHash(prepared, txHash);
+  }
+
+  prepareUnwrap(args: { to: Address; amount: bigint }): Promise<PreparedFor<"Unwrap">> {
+    return this.sdk.prepare({
+      kind: "Unwrap",
+      token: this.address,
+      to: getAddress(args.to),
+      amount: args.amount,
+    });
+  }
+
+  completeUnwrap(prepared: PreparedFor<"Unwrap">, txHash: Hex): Promise<TransactionResult> {
+    return this.sdk.completeFromTxHash(prepared, txHash);
+  }
+
+  prepareUnwrapAll(args: { to: Address }): Promise<PreparedFor<"UnwrapAll">> {
+    return this.sdk.prepare({
+      kind: "UnwrapAll",
+      token: this.address,
+      to: getAddress(args.to),
+    });
+  }
+
+  completeUnwrapAll(prepared: PreparedFor<"UnwrapAll">, txHash: Hex): Promise<TransactionResult> {
+    return this.sdk.completeFromTxHash(prepared, txHash);
+  }
+
+  prepareFinalizeUnwrap(args: {
+    unwrapRequestIdOrAmount: Handle;
+  }): Promise<PreparedFor<"FinalizeUnwrap">> {
+    return this.sdk.prepare({
+      kind: "FinalizeUnwrap",
+      wrapper: this.wrapper,
+      unwrapRequestIdOrAmount: args.unwrapRequestIdOrAmount,
+    });
+  }
+
+  completeFinalizeUnwrap(
+    prepared: PreparedFor<"FinalizeUnwrap">,
+    txHash: Hex,
+  ): Promise<TransactionResult> {
+    return this.sdk.completeFromTxHash(prepared, txHash);
+  }
+
+  async prepareApproveUnderlying(args: {
+    amount: bigint;
+  }): Promise<PreparedFor<"ApproveUnderlying">> {
+    const underlying = await this.#getUnderlying();
+    return this.sdk.prepare({
+      kind: "ApproveUnderlying",
+      underlying,
+      spender: this.wrapper,
+      amount: args.amount,
+    });
+  }
+
+  completeApproveUnderlying(
+    prepared: PreparedFor<"ApproveUnderlying">,
+    txHash: Hex,
+  ): Promise<TransactionResult> {
+    return this.sdk.completeFromTxHash(prepared, txHash);
+  }
+
+  async prepareDelegateDecryption(args: {
+    delegateAddress: Address;
+    expirationDate?: Date;
+  }): Promise<PreparedFor<"DelegateDecryption">> {
+    const aclAddress = await this.sdk.relayer.getAclAddress();
+    return this.sdk.prepare({
+      kind: "DelegateDecryption",
+      aclAddress,
+      contractAddress: this.address,
+      delegateAddress: getAddress(args.delegateAddress),
+      expirationDate: args.expirationDate,
+    });
+  }
+
+  completeDelegateDecryption(
+    prepared: PreparedFor<"DelegateDecryption">,
+    txHash: Hex,
+  ): Promise<TransactionResult> {
+    return this.sdk.completeFromTxHash(prepared, txHash);
+  }
+
+  async prepareRevokeDelegation(args: {
+    delegateAddress: Address;
+  }): Promise<PreparedFor<"RevokeDelegation">> {
+    const aclAddress = await this.sdk.relayer.getAclAddress();
+    return this.sdk.prepare({
+      kind: "RevokeDelegation",
+      aclAddress,
+      contractAddress: this.address,
+      delegateAddress: getAddress(args.delegateAddress),
+    });
+  }
+
+  completeRevokeDelegation(
+    prepared: PreparedFor<"RevokeDelegation">,
+    txHash: Hex,
+  ): Promise<TransactionResult> {
+    return this.sdk.completeFromTxHash(prepared, txHash);
+  }
+
+  /**
+   * Build a deferred-signing plan for {@link shield}. Routes between the
+   * single-tx ERC-1363 `transferAndCall` path and the two-tx
+   * `approve + wrap` path the same way the atomic `shield` does. The caller
+   * runs each step in order — preparing each one immediately before signing
+   * keeps nonces fresh.
+   *
+   * @example
+   * ```ts
+   * const plan = await token.prepareShield(1_000n);
+   * for (const step of plan.steps) {
+   *   const prepared = await sdk.prepare(step);
+   *   const signed   = await broadcaster.signTransaction(prepared.unsignedTx);
+   *   await sdk.broadcast(prepared, signed);
+   * }
+   * ```
+   */
+  async prepareShield(amount: bigint, options?: { recipient?: Address }): Promise<ShieldPlan> {
+    const account = this.sdk.requireSigner("prepareShield").requireWalletAccount("prepareShield");
+    const recipient = options?.recipient
+      ? getAddress(options.recipient)
+      : getAddress(account.address);
+    const underlying = await this.#getUnderlying();
+    const isPayable = await this.isPayable();
+    if (isPayable) {
+      const recipientData = ("0x" + recipient.slice(2).toLowerCase().padStart(40, "0")) as Hex;
+      return {
+        path: "transferAndCall",
+        steps: [
+          {
+            kind: "TransferAndCall",
+            underlying,
+            wrapper: this.wrapper,
+            amount,
+            recipientData,
+          },
+        ],
+      };
+    }
+    return {
+      path: "approveAndWrap",
+      steps: [
+        {
+          kind: "ApproveUnderlying",
+          underlying,
+          spender: this.wrapper,
+          amount,
+        },
+        {
+          kind: "Wrap",
+          wrapper: this.wrapper,
+          to: recipient,
+          amount,
+        },
+      ],
+    };
   }
 
   // BATCH DELEGATION

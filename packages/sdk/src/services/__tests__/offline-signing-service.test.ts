@@ -180,6 +180,178 @@ describe("OfflineSigningService — ConfidentialTransfer round-trip", () => {
   });
 });
 
+describe("OfflineSigningService — other transaction kinds", () => {
+  test("ConfidentialTransferFrom encrypts amount under `from` and builds calldata", async () => {
+    const { sdk, provider, relayer } = buildSDK();
+    const from = "0x1111111111111111111111111111111111111111" as Address;
+    await sdk.prepare({
+      kind: "ConfidentialTransferFrom",
+      token: TOKEN,
+      from,
+      to: RECIPIENT,
+      amount: 5n,
+    });
+    expect(relayer.encrypt).toHaveBeenCalledWith(
+      expect.objectContaining({ userAddress: from, contractAddress: TOKEN }),
+    );
+    expect(provider.prepareTransaction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        call: expect.objectContaining({ functionName: "confidentialTransferFrom" }),
+      }),
+    );
+  });
+
+  test("SetOperator does not require encryption", async () => {
+    const { sdk, provider, relayer } = buildSDK();
+    await sdk.prepare({
+      kind: "SetOperator",
+      token: TOKEN,
+      operator: RECIPIENT,
+    });
+    expect(relayer.encrypt).not.toHaveBeenCalled();
+    expect(provider.prepareTransaction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        call: expect.objectContaining({ functionName: "setOperator" }),
+      }),
+    );
+  });
+
+  test("Unwrap encrypts amount and builds the wrapper.unwrap call", async () => {
+    const { sdk, provider, relayer } = buildSDK();
+    await sdk.prepare({ kind: "Unwrap", token: TOKEN, to: RECIPIENT, amount: 7n });
+    expect(relayer.encrypt).toHaveBeenCalledOnce();
+    expect(provider.prepareTransaction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        call: expect.objectContaining({ functionName: "unwrap" }),
+      }),
+    );
+  });
+
+  test("UnwrapAll reads the on-chain balance handle instead of encrypting", async () => {
+    const balanceHandle = ("0x" + "ee".repeat(32)) as Hex;
+    const { sdk, provider, relayer } = buildSDK();
+    (provider.readContract as unknown as { mockResolvedValue: (v: Hex) => void }).mockResolvedValue(
+      balanceHandle,
+    );
+    await sdk.prepare({ kind: "UnwrapAll", token: TOKEN, to: RECIPIENT });
+    expect(relayer.encrypt).not.toHaveBeenCalled();
+    expect(provider.readContract).toHaveBeenCalled();
+    expect(provider.prepareTransaction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        call: expect.objectContaining({ functionName: "unwrap" }),
+      }),
+    );
+  });
+
+  test("FinalizeUnwrap public-decrypts the handle and folds the cleartext into calldata", async () => {
+    const handle = ("0x" + "cd".repeat(32)) as Hex;
+    const { sdk, provider, relayer } = buildSDK();
+    (
+      relayer.publicDecrypt as unknown as {
+        mockResolvedValue: (v: { clearValues: Record<Hex, bigint>; decryptionProof: Hex }) => void;
+      }
+    ).mockResolvedValue({
+      clearValues: { [handle]: 42n },
+      decryptionProof: "0xproof" as Hex,
+    });
+    await sdk.prepare({ kind: "FinalizeUnwrap", wrapper: TOKEN, unwrapRequestIdOrAmount: handle });
+    expect(relayer.publicDecrypt).toHaveBeenCalledWith([handle]);
+    expect(provider.prepareTransaction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        call: expect.objectContaining({
+          functionName: "finalizeUnwrap",
+          args: expect.arrayContaining([handle, 42n, "0xproof"]),
+        }),
+      }),
+    );
+  });
+
+  test("ApproveUnderlying builds the ERC-20 approve call", async () => {
+    const { sdk, provider, relayer } = buildSDK();
+    await sdk.prepare({
+      kind: "ApproveUnderlying",
+      underlying: TOKEN,
+      spender: RECIPIENT,
+      amount: 999n,
+    });
+    expect(relayer.encrypt).not.toHaveBeenCalled();
+    expect(provider.prepareTransaction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        call: expect.objectContaining({ functionName: "approve" }),
+      }),
+    );
+  });
+
+  test("Wrap builds wrapper.wrap call", async () => {
+    const { sdk, provider } = buildSDK();
+    await sdk.prepare({ kind: "Wrap", wrapper: TOKEN, to: RECIPIENT, amount: 10n });
+    expect(provider.prepareTransaction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        call: expect.objectContaining({ functionName: "wrap" }),
+      }),
+    );
+  });
+
+  test("TransferAndCall builds the ERC-1363 path", async () => {
+    const { sdk, provider } = buildSDK();
+    await sdk.prepare({
+      kind: "TransferAndCall",
+      underlying: TOKEN,
+      wrapper: RECIPIENT,
+      amount: 100n,
+    });
+    expect(provider.prepareTransaction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        call: expect.objectContaining({ functionName: "transferAndCall" }),
+      }),
+    );
+  });
+
+  test("DelegateDecryption builds the ACL delegate call", async () => {
+    const { sdk, provider } = buildSDK();
+    await sdk.prepare({
+      kind: "DelegateDecryption",
+      aclAddress: TOKEN,
+      contractAddress: RECIPIENT,
+      delegateAddress: ACCOUNT.address,
+    });
+    expect(provider.prepareTransaction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        call: expect.objectContaining({ functionName: "delegateForUserDecryption" }),
+      }),
+    );
+  });
+
+  test("RevokeDelegation builds the ACL revoke call", async () => {
+    const { sdk, provider } = buildSDK();
+    await sdk.prepare({
+      kind: "RevokeDelegation",
+      aclAddress: TOKEN,
+      contractAddress: RECIPIENT,
+      delegateAddress: ACCOUNT.address,
+    });
+    expect(provider.prepareTransaction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        call: expect.objectContaining({ functionName: "revokeDelegationForUserDecryption" }),
+      }),
+    );
+  });
+
+  test("submitted-event dispatches the right kind", async () => {
+    const onEvent = vi.fn();
+    const { sdk } = buildSDK({ onEvent });
+    const prepared = await sdk.prepare({
+      kind: "SetOperator",
+      token: TOKEN,
+      operator: RECIPIENT,
+    });
+    await sdk.broadcast(prepared, SIGNED);
+    expect(onEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ type: ZamaSDKEvents.SetOperatorSubmitted, txHash: TX_HASH }),
+    );
+  });
+});
+
 describe("OfflineSigningService — CredentialPermit", () => {
   test("execute({ kind: 'CredentialPermit' }) signs typed data via the broadcaster", async () => {
     const { sdk, broadcaster } = buildSDK();

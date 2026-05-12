@@ -1,5 +1,19 @@
-import type { Address, Hex } from "viem";
-import { confidentialTransferContract } from "../contracts";
+import { getAddress, type Address, type Hex } from "viem";
+import {
+  approveContract,
+  confidentialTransferContract,
+  confidentialTransferFromContract,
+  delegateForUserDecryptionContract,
+  finalizeUnwrapContract,
+  MAX_UINT64,
+  revokeDelegationContract,
+  setOperatorContract,
+  transferAndCallContract,
+  unwrapContract,
+  unwrapFromBalanceContract,
+  wrapContract,
+} from "../contracts";
+import { confidentialBalanceOfContract } from "../contracts/encrypted";
 import type { CredentialService } from "../credentials/credential-service";
 import {
   ChainMismatchError,
@@ -10,18 +24,31 @@ import {
 } from "../errors";
 import type { TransactionErrorOperation, ZamaSDKEventInput } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
+import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
 import type { EncryptionService } from "./encryption-service";
 import { assertSignTransaction } from "../signer/capabilities";
+import { assertBigint } from "../utils/assertions";
 import type {
+  ApproveUnderlyingRequest,
+  ConfidentialTransferFromRequest,
   ConfidentialTransferRequest,
   CredentialPermitRequest,
+  DelegateDecryptionRequest,
   ExecuteRequest,
+  FinalizeUnwrapRequest,
   GenericProvider,
   GenericSigner,
+  PreparedFor,
   PreparedTransaction,
+  RevokeDelegationRequest,
+  SetOperatorRequest,
   TransactionKind,
   TransactionPrepareRequest,
   TransactionResult,
+  TransferAndCallRequest,
+  UnwrapAllRequest,
+  UnwrapRequest,
+  WrapRequest,
 } from "../types";
 import { toError } from "../utils";
 
@@ -29,6 +56,7 @@ import { toError } from "../utils";
 export interface OfflineSigningServiceConfig {
   readonly signer: GenericSigner;
   readonly provider: GenericProvider;
+  readonly relayer: RelayerDispatcher;
   readonly encryption: EncryptionService;
   readonly credentials: CredentialService;
   readonly emitEvent: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
@@ -45,10 +73,30 @@ export interface OfflineSigningOptions {
 
 const SUBMITTED_EVENT_BY_KIND: Record<TransactionKind, ZamaSDKEventInput["type"]> = {
   ConfidentialTransfer: ZamaSDKEvents.TransferSubmitted,
+  ConfidentialTransferFrom: ZamaSDKEvents.TransferFromSubmitted,
+  SetOperator: ZamaSDKEvents.SetOperatorSubmitted,
+  Unwrap: ZamaSDKEvents.UnwrapSubmitted,
+  UnwrapAll: ZamaSDKEvents.UnwrapSubmitted,
+  FinalizeUnwrap: ZamaSDKEvents.FinalizeUnwrapSubmitted,
+  ApproveUnderlying: ZamaSDKEvents.ApproveUnderlyingSubmitted,
+  Wrap: ZamaSDKEvents.ShieldSubmitted,
+  TransferAndCall: ZamaSDKEvents.ShieldSubmitted,
+  DelegateDecryption: ZamaSDKEvents.DelegationSubmitted,
+  RevokeDelegation: ZamaSDKEvents.RevokeDelegationSubmitted,
 };
 
 const ERROR_OPERATION_BY_KIND: Record<TransactionKind, TransactionErrorOperation> = {
   ConfidentialTransfer: "transfer",
+  ConfidentialTransferFrom: "transferFrom",
+  SetOperator: "setOperator",
+  Unwrap: "unwrap",
+  UnwrapAll: "unwrap",
+  FinalizeUnwrap: "finalizeUnwrap",
+  ApproveUnderlying: "approveUnderlying",
+  Wrap: "shield:approveAndWrap",
+  TransferAndCall: "shield:transferAndCall",
+  DelegateDecryption: "delegateDecryption",
+  RevokeDelegation: "revokeDelegation",
 };
 
 /**
@@ -69,6 +117,7 @@ const ERROR_OPERATION_BY_KIND: Record<TransactionKind, TransactionErrorOperation
 export class OfflineSigningService {
   readonly #signer: GenericSigner;
   readonly #provider: GenericProvider;
+  readonly #relayer: RelayerDispatcher;
   readonly #encryption: EncryptionService;
   readonly #credentials: CredentialService;
   readonly #emitEvent: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
@@ -76,6 +125,7 @@ export class OfflineSigningService {
   constructor(config: OfflineSigningServiceConfig) {
     this.#signer = config.signer;
     this.#provider = config.provider;
+    this.#relayer = config.relayer;
     this.#encryption = config.encryption;
     this.#credentials = config.credentials;
     this.#emitEvent = config.emitEvent;
@@ -92,19 +142,19 @@ export class OfflineSigningService {
   async prepare<K extends TransactionKind>(
     request: Extract<TransactionPrepareRequest, { kind: K }>,
     _options?: OfflineSigningOptions,
-  ): Promise<PreparedTransaction<K>> {
+  ): Promise<PreparedFor<K>> {
     const from = await this.#requireAlignedFrom(`prepare(${request.kind})`);
     const call = await this.#buildCall(request, from);
     const unsignedTx = await this.#provider.prepareTransaction({ from, call });
     const chainId = await this.#provider.getChainId();
     return {
       kind: request.kind,
-      request: request as Extract<TransactionPrepareRequest, { kind: K }>,
+      request,
       unsignedTx,
       from,
       to: call.address,
       chainId,
-    };
+    } as PreparedFor<K>;
   }
 
   // ── sign ────────────────────────────────────────────────────────────────
@@ -155,10 +205,7 @@ export class OfflineSigningService {
    * broadcast), or a {@link CredentialPermitRequest} (atomic permit via
    * {@link CredentialService.allow}).
    */
-  execute<K extends TransactionKind>(
-    input: PreparedTransaction<K>,
-    options?: OfflineSigningOptions,
-  ): Promise<TransactionResult>;
+  execute(input: PreparedTransaction, options?: OfflineSigningOptions): Promise<TransactionResult>;
   execute(
     input: TransactionPrepareRequest,
     options?: OfflineSigningOptions,
@@ -201,8 +248,8 @@ export class OfflineSigningService {
 
   // ── internals ──────────────────────────────────────────────────────────
 
-  async #buildCall<K extends TransactionKind>(
-    request: Extract<TransactionPrepareRequest, { kind: K }>,
+  async #buildCall(
+    request: TransactionPrepareRequest,
     from: Address,
   ): Promise<{
     readonly address: Address;
@@ -213,11 +260,32 @@ export class OfflineSigningService {
     switch (request.kind) {
       case "ConfidentialTransfer":
         return this.#buildConfidentialTransfer(request, from);
+      case "ConfidentialTransferFrom":
+        return this.#buildConfidentialTransferFrom(request, from);
+      case "SetOperator":
+        return this.#buildSetOperator(request);
+      case "Unwrap":
+        return this.#buildUnwrap(request, from);
+      case "UnwrapAll":
+        return this.#buildUnwrapAll(request, from);
+      case "FinalizeUnwrap":
+        return this.#buildFinalizeUnwrap(request);
+      case "ApproveUnderlying":
+        return this.#buildApproveUnderlying(request);
+      case "Wrap":
+        return this.#buildWrap(request);
+      case "TransferAndCall":
+        return this.#buildTransferAndCall(request);
+      case "DelegateDecryption":
+        return this.#buildDelegateDecryption(request);
+      case "RevokeDelegation":
+        return this.#buildRevokeDelegation(request);
       default: {
-        const _exhaustive: never = request.kind;
+        const _exhaustive: never = request;
         throw new ConfigurationError(
-          `OfflineSigningService.prepare: unsupported transaction kind '${_exhaustive as string}'. ` +
-            "Phase 2 ships ConfidentialTransfer only; other kinds land in Phase 3.",
+          `OfflineSigningService.prepare: unsupported transaction kind '${
+            (_exhaustive as { kind: string }).kind
+          }'.`,
         );
       }
     }
@@ -237,6 +305,119 @@ export class OfflineSigningService {
       throw new EncryptionFailedError("Encryption returned no handles for ConfidentialTransfer");
     }
     return confidentialTransferContract(request.token, request.to, handle, inputProof);
+  }
+
+  async #buildConfidentialTransferFrom(
+    request: ConfidentialTransferFromRequest,
+    _from: Address,
+  ): Promise<ReturnType<typeof confidentialTransferFromContract>> {
+    const { handles, inputProof } = await this.#encryption.encrypt({
+      values: [{ value: request.amount, type: "euint64" }],
+      contractAddress: request.token,
+      userAddress: getAddress(request.from),
+    });
+    const handle = handles[0];
+    if (!handle) {
+      throw new EncryptionFailedError(
+        "Encryption returned no handles for ConfidentialTransferFrom",
+      );
+    }
+    return confidentialTransferFromContract(
+      request.token,
+      getAddress(request.from),
+      getAddress(request.to),
+      handle,
+      inputProof,
+    );
+  }
+
+  #buildSetOperator(request: SetOperatorRequest): ReturnType<typeof setOperatorContract> {
+    return setOperatorContract(request.token, getAddress(request.operator), request.until);
+  }
+
+  async #buildUnwrap(
+    request: UnwrapRequest,
+    from: Address,
+  ): Promise<ReturnType<typeof unwrapContract>> {
+    const { handles, inputProof } = await this.#encryption.encrypt({
+      values: [{ value: request.amount, type: "euint64" }],
+      contractAddress: request.token,
+      userAddress: from,
+    });
+    const handle = handles[0];
+    if (!handle) {
+      throw new EncryptionFailedError("Encryption returned no handles for Unwrap");
+    }
+    return unwrapContract(request.token, from, getAddress(request.to), handle, inputProof);
+  }
+
+  async #buildUnwrapAll(
+    request: UnwrapAllRequest,
+    from: Address,
+  ): Promise<ReturnType<typeof unwrapFromBalanceContract>> {
+    const balanceHandle = await this.#provider.readContract(
+      confidentialBalanceOfContract(request.token, from),
+    );
+    return unwrapFromBalanceContract(request.token, from, getAddress(request.to), balanceHandle);
+  }
+
+  async #buildFinalizeUnwrap(
+    request: FinalizeUnwrapRequest,
+  ): Promise<ReturnType<typeof finalizeUnwrapContract>> {
+    const { clearValues, decryptionProof } = await this.#relayer.publicDecrypt([
+      request.unwrapRequestIdOrAmount,
+    ]);
+    const raw = clearValues[request.unwrapRequestIdOrAmount];
+    assertBigint(raw, "FinalizeUnwrap: publicDecrypt(handle).clearValue");
+    return finalizeUnwrapContract(
+      request.wrapper,
+      request.unwrapRequestIdOrAmount,
+      raw,
+      decryptionProof,
+    );
+  }
+
+  #buildApproveUnderlying(request: ApproveUnderlyingRequest): ReturnType<typeof approveContract> {
+    return approveContract(request.underlying, request.spender, request.amount);
+  }
+
+  #buildWrap(request: WrapRequest): ReturnType<typeof wrapContract> {
+    return wrapContract(request.wrapper, getAddress(request.to), request.amount);
+  }
+
+  #buildTransferAndCall(
+    request: TransferAndCallRequest,
+  ): ReturnType<typeof transferAndCallContract> {
+    return transferAndCallContract(
+      request.underlying,
+      request.wrapper,
+      request.amount,
+      request.recipientData,
+    );
+  }
+
+  #buildDelegateDecryption(
+    request: DelegateDecryptionRequest,
+  ): ReturnType<typeof delegateForUserDecryptionContract> {
+    const expDate = request.expirationDate
+      ? BigInt(Math.floor(request.expirationDate.getTime() / 1000))
+      : MAX_UINT64;
+    return delegateForUserDecryptionContract(
+      request.aclAddress,
+      getAddress(request.delegateAddress),
+      getAddress(request.contractAddress),
+      expDate,
+    );
+  }
+
+  #buildRevokeDelegation(
+    request: RevokeDelegationRequest,
+  ): ReturnType<typeof revokeDelegationContract> {
+    return revokeDelegationContract(
+      request.aclAddress,
+      getAddress(request.delegateAddress),
+      getAddress(request.contractAddress),
+    );
   }
 
   async #requireAlignedFrom(operation: string): Promise<Address> {
