@@ -80,19 +80,12 @@ export type SignerCapability = "writeContract" | "signTransaction";
 /**
  * Thrown when an operation needs a signer capability that the configured
  * signer does not expose — e.g. calling an atomic write op on a signer that
- * has `signTransaction` but no `writeContract`.
- *
- * Distinct from {@link SignerNotConfiguredError}: a signer *is* configured
- * but cannot perform the requested operation. Carries a structured
- * {@link hint} (also folded into `.message`) so callers can surface
- * directed migration guidance — the hint text lives in the assertion
- * helpers (`assertWriteContract`, `assertSignTransaction`) rather than in
- * this class, keeping the error decoupled from the SDK's call-shape
- * vocabulary.
+ * has `signTransaction` but no `writeContract`. Distinct from
+ * {@link SignerNotConfiguredError}: a signer *is* configured but cannot
+ * perform the requested operation.
  */
 export class SignerCapabilityError extends SignerRequiredError {
   readonly capability: SignerCapability;
-  readonly hint: string | undefined;
 
   constructor(
     operation: string,
@@ -110,7 +103,6 @@ export class SignerCapabilityError extends SignerRequiredError {
     );
     this.name = "SignerCapabilityError";
     this.capability = capability;
-    this.hint = hint;
   }
 }
 

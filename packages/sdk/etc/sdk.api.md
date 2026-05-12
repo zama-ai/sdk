@@ -14900,8 +14900,6 @@ export class SignerCapabilityError extends SignerRequiredError {
     //
     // (undocumented)
     readonly capability: SignerCapability;
-    // (undocumented)
-    readonly hint: string | undefined;
 }
 
 // @public
