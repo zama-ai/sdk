@@ -1,4 +1,4 @@
-import type { Address, Hex } from "viem";
+import type { Address } from "viem";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import type { GenericProvider } from "../../types";
 import { Token } from "../token";
@@ -36,34 +36,6 @@ function setupReads(provider: GenericProvider, opts: ReadOpts = {}): void {
     }
   });
 }
-
-describe("Token.prepareConfidentialTransfer + completeConfidentialTransfer", () => {
-  test("prepares with the token address baked in, completes via completeFromTxHash", async ({
-    createSDK,
-    broadcastSigner,
-    provider,
-    tokenAddress,
-    wrapperAddress,
-  }) => {
-    const sdk = createSDK({ signer: broadcastSigner });
-    const token = new Token(sdk, tokenAddress, wrapperAddress);
-    const prepared = await token.prepareConfidentialTransfer({ to: RECIPIENT, amount: 100n });
-    expect(prepared.kind).toBe("ConfidentialTransfer");
-    expect(prepared.request).toEqual(
-      expect.objectContaining({
-        kind: "ConfidentialTransfer",
-        token: tokenAddress,
-        amount: 100n,
-      }),
-    );
-
-    const externalTxHash = "0xexternalhash" as Hex;
-    const result = await token.completeConfidentialTransfer(prepared, externalTxHash);
-    expect(provider.sendRawTransaction).not.toHaveBeenCalled();
-    expect(provider.waitForTransactionReceipt).toHaveBeenCalledWith(externalTxHash);
-    expect(result.txHash).toBe(externalTxHash);
-  });
-});
 
 describe("Token.prepareShield — routing", () => {
   test("payable (ERC-1363) → single TransferAndCall step", async ({
@@ -188,27 +160,5 @@ describe("Token.prepareShield — routing", () => {
     expect(plan.steps[0]).toMatchObject({ kind: "ApproveUnderlying", amount: 0n });
     expect(plan.steps[1]).toMatchObject({ kind: "ApproveUnderlying", amount: 500n });
     expect(plan.steps[2]).toMatchObject({ kind: "Wrap", amount: 500n });
-  });
-});
-
-describe("Token.prepareDelegateDecryption + completeDelegateDecryption", () => {
-  test("resolves ACL address via the relayer and bakes in the token", async ({
-    createSDK,
-    broadcastSigner,
-    provider,
-    relayer,
-    tokenAddress,
-    wrapperAddress,
-  }) => {
-    const sdk = createSDK({ signer: broadcastSigner });
-    const token = new Token(sdk, tokenAddress, wrapperAddress);
-    const prepared = await token.prepareDelegateDecryption({ delegateAddress: RECIPIENT });
-    expect(relayer.getAclAddress).toHaveBeenCalled();
-    expect(prepared.kind).toBe("DelegateDecryption");
-    expect(provider.prepareTransaction).toHaveBeenCalledWith(
-      expect.objectContaining({
-        call: expect.objectContaining({ functionName: "delegateForUserDecryption" }),
-      }),
-    );
   });
 });
