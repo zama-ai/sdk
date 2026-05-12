@@ -256,7 +256,7 @@ export class OfflineSigningService {
    *   request (HTTP error, policy denial, timeout). Already-typed
    *   {@link ZamaError} causes are re-thrown unchanged.
    */
-  async sign(prepared: PreparedTransaction, _options?: OfflineSigningOptions): Promise<Hex> {
+  async sign(prepared: PreparedTransaction): Promise<Hex> {
     const signer = this.#requireSigner(`sign(${prepared.kind})`);
     assertSignTransaction(signer, `sign(${prepared.kind})`);
     try {
@@ -289,11 +289,7 @@ export class OfflineSigningService {
    * failure (receipt wait timeout or revert) preserves `txHash` in the
    * message so the caller can resume via {@link completeFromTxHash}.
    */
-  async broadcast(
-    prepared: PreparedTransaction,
-    signedTx: Hex,
-    _options?: OfflineSigningOptions,
-  ): Promise<TransactionResult> {
+  async broadcast(prepared: PreparedTransaction, signedTx: Hex): Promise<TransactionResult> {
     await this.#assertSameChainAsPrepared(prepared, "broadcast");
     let txHash: Hex;
     try {
@@ -349,11 +345,11 @@ export class OfflineSigningService {
         return;
       }
       const signature = await signer.signTypedData(prepared.typedData);
-      return this.registerPermit(prepared, signature, options);
+      return this.registerPermit(prepared, signature);
     }
     const prepared = await this.#prepareTransaction(input, options);
-    const signedTx = await this.sign(prepared, options);
-    return this.broadcast(prepared, signedTx, options);
+    const signedTx = await this.sign(prepared);
+    return this.broadcast(prepared, signedTx);
   }
 
   // ── completeFromTxHash ─────────────────────────────────────────────────
@@ -364,11 +360,7 @@ export class OfflineSigningService {
    * `eth_sendRawTransaction` and this process needs to refresh its caches
    * without holding the signed bytes.
    */
-  async completeFromTxHash(
-    prepared: PreparedTransaction,
-    txHash: Hex,
-    _options?: OfflineSigningOptions,
-  ): Promise<TransactionResult> {
+  async completeFromTxHash(prepared: PreparedTransaction, txHash: Hex): Promise<TransactionResult> {
     await this.#assertSameChainAsPrepared(prepared, "completeFromTxHash");
     this.#emitSubmitted(prepared, txHash);
     return this.#awaitReceipt(prepared, txHash);
@@ -412,7 +404,6 @@ export class OfflineSigningService {
   async registerPermit<K extends PermitKind>(
     prepared: PreparedPermitFor<K>,
     signature: Hex,
-    _options?: OfflineSigningOptions,
   ): Promise<CredentialPermitResult> {
     if (!isHex(signature)) {
       throw new SigningFailedError(

@@ -220,20 +220,16 @@ export class ZamaSDK {
    * @throws {@link SigningFailedError} signer rejected (HSM denial, policy
    *   refusal, timeout, …)
    */
-  sign(prepared: PreparedTransaction, options?: OfflineSigningOptions): Promise<Hex> {
-    return this.#offlineSigningService.sign(prepared, options);
+  sign(prepared: PreparedTransaction): Promise<Hex> {
+    return this.#offlineSigningService.sign(prepared);
   }
 
   /**
    * Submit a previously-signed transaction, await its receipt, emit the
    * matching `*Submitted` event, and return the {@link TransactionResult}.
    */
-  broadcast(
-    prepared: PreparedTransaction,
-    signedTx: Hex,
-    options?: OfflineSigningOptions,
-  ): Promise<TransactionResult> {
-    return this.#offlineSigningService.broadcast(prepared, signedTx, options);
+  broadcast(prepared: PreparedTransaction, signedTx: Hex): Promise<TransactionResult> {
+    return this.#offlineSigningService.broadcast(prepared, signedTx);
   }
 
   /**
@@ -270,9 +266,8 @@ export class ZamaSDK {
   registerPermit<K extends PermitKind>(
     prepared: PreparedPermitFor<K>,
     signature: Hex,
-    options?: OfflineSigningOptions,
   ): Promise<CredentialPermitResult> {
-    return this.#offlineSigningService.registerPermit(prepared, signature, options);
+    return this.#offlineSigningService.registerPermit(prepared, signature);
   }
 
   /**
@@ -281,12 +276,8 @@ export class ZamaSDK {
    * process needs the matching receipt + event emission without holding
    * the signed bytes.
    */
-  completeFromTxHash(
-    prepared: PreparedTransaction,
-    txHash: Hex,
-    options?: OfflineSigningOptions,
-  ): Promise<TransactionResult> {
-    return this.#offlineSigningService.completeFromTxHash(prepared, txHash, options);
+  completeFromTxHash(prepared: PreparedTransaction, txHash: Hex): Promise<TransactionResult> {
+    return this.#offlineSigningService.completeFromTxHash(prepared, txHash);
   }
 
   /**

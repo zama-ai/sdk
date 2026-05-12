@@ -20356,9 +20356,9 @@ export class ZamaSDK {
     constructor(config: ZamaConfig);
     allow(contracts: Address[]): Promise<void>;
     allowAs(delegator: Address, contracts: Address[]): Promise<void>;
-    broadcast(prepared: PreparedTransaction, signedTx: Hex, options?: OfflineSigningOptions): Promise<TransactionResult>;
+    broadcast(prepared: PreparedTransaction, signedTx: Hex): Promise<TransactionResult>;
     clearCredentials(): Promise<void>;
-    completeFromTxHash(prepared: PreparedTransaction, txHash: Hex, options?: OfflineSigningOptions): Promise<TransactionResult>;
+    completeFromTxHash(prepared: PreparedTransaction, txHash: Hex): Promise<TransactionResult>;
     createReadonlyToken(address: Address): ReadonlyToken;
     createToken(address: Address, wrapper?: Address): Token;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
@@ -20405,7 +20405,7 @@ export class ZamaSDK {
     readonly provider: GenericProvider;
     publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
     refreshPrepared<K extends TransactionKind>(prepared: PreparedFor<K>, options?: OfflineSigningOptions): Promise<PreparedFor<K>>;
-    registerPermit<K extends PermitKind>(prepared: PreparedPermitFor<K>, signature: Hex, options?: OfflineSigningOptions): Promise<CredentialPermitResult>;
+    registerPermit<K extends PermitKind>(prepared: PreparedPermitFor<K>, signature: Hex): Promise<CredentialPermitResult>;
     readonly registry: WrappersRegistry;
     // (undocumented)
     readonly relayer: RelayerDispatcher;
@@ -20415,7 +20415,7 @@ export class ZamaSDK {
         delegateAddress: Address;
     }): Promise<TransactionResult>;
     revokePermits(contracts?: Address[]): Promise<void>;
-    sign(prepared: PreparedTransaction, options?: OfflineSigningOptions): Promise<Hex>;
+    sign(prepared: PreparedTransaction): Promise<Hex>;
     // (undocumented)
     readonly signer: GenericSigner | undefined;
     // (undocumented)

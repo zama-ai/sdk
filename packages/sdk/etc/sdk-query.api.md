@@ -87,10 +87,6 @@ export function broadcastMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<r
 
 // @public
 export interface BroadcastParams {
-    // Warning: (ae-forgotten-export) The symbol "OfflineSigningOptions" needs to be exported by the entry point index.d.ts
-    //
-    // (undocumented)
-    readonly options?: OfflineSigningOptions;
     // Warning: (ae-forgotten-export) The symbol "PreparedTransaction" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
@@ -109,8 +105,6 @@ export function completeFromTxHashMutationOptions(sdk: ZamaSDK): MutationFactory
 
 // @public
 export interface CompleteFromTxHashParams {
-    // (undocumented)
-    readonly options?: OfflineSigningOptions;
     // (undocumented)
     readonly prepared: PreparedTransaction;
     // (undocumented)
@@ -421,6 +415,8 @@ export function executeMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<rea
 
 // @public
 export interface ExecuteParams {
+    // Warning: (ae-forgotten-export) The symbol "OfflineSigningOptions" needs to be exported by the entry point index.d.ts
+    //
     // (undocumented)
     readonly options?: OfflineSigningOptions;
     // Warning: (ae-forgotten-export) The symbol "TransactionPrepareRequest" needs to be exported by the entry point index.d.ts
@@ -729,8 +725,6 @@ export function registerPermitMutationOptions(sdk: ZamaSDK): MutationFactoryOpti
 // @public
 export interface RegisterPermitParams {
     // (undocumented)
-    readonly options?: OfflineSigningOptions;
-    // (undocumented)
     readonly prepared: PreparedPermitFor<PermitKind>;
     // (undocumented)
     readonly signature: Hex;
@@ -822,8 +816,6 @@ export function signMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readon
 
 // @public
 export interface SignParams {
-    // (undocumented)
-    readonly options?: OfflineSigningOptions;
     // (undocumented)
     readonly prepared: PreparedTransaction;
 }
@@ -1410,9 +1402,9 @@ export class ZamaSDK {
     constructor(config: ZamaConfig);
     allow(contracts: Address[]): Promise<void>;
     allowAs(delegator: Address, contracts: Address[]): Promise<void>;
-    broadcast(prepared: PreparedTransaction, signedTx: Hex, options?: OfflineSigningOptions): Promise<TransactionResult>;
+    broadcast(prepared: PreparedTransaction, signedTx: Hex): Promise<TransactionResult>;
     clearCredentials(): Promise<void>;
-    completeFromTxHash(prepared: PreparedTransaction, txHash: Hex, options?: OfflineSigningOptions): Promise<TransactionResult>;
+    completeFromTxHash(prepared: PreparedTransaction, txHash: Hex): Promise<TransactionResult>;
     createReadonlyToken(address: Address): ReadonlyToken;
     createToken(address: Address, wrapper?: Address): Token;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
@@ -1461,7 +1453,7 @@ export class ZamaSDK {
     readonly provider: GenericProvider;
     publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
     refreshPrepared<K extends TransactionKind>(prepared: PreparedFor<K>, options?: OfflineSigningOptions): Promise<PreparedFor<K>>;
-    registerPermit<K extends PermitKind>(prepared: PreparedPermitFor<K>, signature: Hex, options?: OfflineSigningOptions): Promise<CredentialPermitResult>;
+    registerPermit<K extends PermitKind>(prepared: PreparedPermitFor<K>, signature: Hex): Promise<CredentialPermitResult>;
     readonly registry: WrappersRegistry;
     // (undocumented)
     readonly relayer: RelayerDispatcher;
@@ -1471,7 +1463,7 @@ export class ZamaSDK {
         delegateAddress: Address;
     }): Promise<TransactionResult>;
     revokePermits(contracts?: Address[]): Promise<void>;
-    sign(prepared: PreparedTransaction, options?: OfflineSigningOptions): Promise<Hex>;
+    sign(prepared: PreparedTransaction): Promise<Hex>;
     // (undocumented)
     readonly signer: GenericSigner | undefined;
     // (undocumented)

@@ -1,7 +1,6 @@
 import type { Hex } from "viem";
 import type { PreparedTransaction } from "../types/prepared-tx";
 import type { TransactionResult } from "../types";
-import type { OfflineSigningOptions } from "../services/offline-signing-service";
 import type { ZamaSDK } from "../zama-sdk";
 import type { MutationFactoryOptions } from "./factory-types";
 
@@ -9,7 +8,6 @@ import type { MutationFactoryOptions } from "./factory-types";
 export interface BroadcastParams {
   readonly prepared: PreparedTransaction;
   readonly signedTx: Hex;
-  readonly options?: OfflineSigningOptions;
 }
 
 /**
@@ -22,7 +20,7 @@ export function broadcastMutationOptions(
 ): MutationFactoryOptions<readonly ["zama.broadcast"], BroadcastParams, TransactionResult> {
   return {
     mutationKey: ["zama.broadcast"] as const,
-    mutationFn: ({ prepared, signedTx, options }) => sdk.broadcast(prepared, signedTx, options),
+    mutationFn: ({ prepared, signedTx }) => sdk.broadcast(prepared, signedTx),
   };
 }
 
@@ -30,7 +28,6 @@ export function broadcastMutationOptions(
 export interface CompleteFromTxHashParams {
   readonly prepared: PreparedTransaction;
   readonly txHash: Hex;
-  readonly options?: OfflineSigningOptions;
 }
 
 /**
@@ -46,7 +43,6 @@ export function completeFromTxHashMutationOptions(
 > {
   return {
     mutationKey: ["zama.completeFromTxHash"] as const,
-    mutationFn: ({ prepared, txHash, options }) =>
-      sdk.completeFromTxHash(prepared, txHash, options),
+    mutationFn: ({ prepared, txHash }) => sdk.completeFromTxHash(prepared, txHash),
   };
 }
