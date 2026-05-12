@@ -15,14 +15,14 @@ export function ResumeUnshieldForm({
   wrapperAddress,
 }: {
   tokenAddress: Address;
-  wrapperAddress?: Address;
+  wrapperAddress: Address;
 }) {
   const [unwrapTxHash, setUnwrapTxHash] = useState<string | null>(null);
   const { address } = useAccount();
   const { data: metadata } = useMetadata(tokenAddress);
-  const { data: balance } = useConfidentialBalance({ tokenAddress, account: address });
-  const unwrap = useUnwrap({ tokenAddress, wrapperAddress });
-  const resumeUnshield = useResumeUnshield({ tokenAddress, wrapperAddress });
+  const { data: balance } = useConfidentialBalance({ address: tokenAddress, account: address });
+  const unwrap = useUnwrap(wrapperAddress);
+  const resumeUnshield = useResumeUnshield(wrapperAddress);
 
   return (
     <div className="space-y-6">

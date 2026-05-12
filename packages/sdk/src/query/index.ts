@@ -149,9 +149,9 @@ export type {
   UserDecryptParams,
 } from "../relayer/relayer-sdk.types";
 export type { RelayerSDK } from "../relayer/relayer-sdk";
-export type { BatchBalancesResult, BatchDecryptAsOptions } from "../token/readonly-token";
-export type { ReadonlyToken } from "../token/readonly-token";
+export type { BatchBalancesResult, BatchDecryptAsOptions } from "../token/token";
 export type { Token } from "../token/token";
+export type { WrappedToken } from "../token/wrapped-token";
 export type { ZamaSDK } from "../zama-sdk";
 export type { ZamaConfig } from "../config";
 export type { Keypair } from "../credentials";

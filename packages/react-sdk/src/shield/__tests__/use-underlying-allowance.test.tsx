@@ -5,7 +5,7 @@ import {
   useUnderlyingAllowance,
   useUnderlyingAllowanceSuspense,
 } from "../use-underlying-allowance";
-import { TOKEN, WRAPPER, USER } from "../../__tests__/mutation-test-helpers";
+import { WRAPPER, USER } from "../../__tests__/mutation-test-helpers";
 
 describe("useUnderlyingAllowance", () => {
   const UNDERLYING = "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e";
@@ -14,7 +14,7 @@ describe("useUnderlyingAllowance", () => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(1000n);
 
     const { result } = renderWithProviders(() =>
-      useUnderlyingAllowance({ tokenAddress: TOKEN, wrapperAddress: WRAPPER, owner: USER }),
+      useUnderlyingAllowance({ address: WRAPPER, owner: USER }),
     );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -35,7 +35,7 @@ describe("useUnderlyingAllowance", () => {
 
     const OTHER = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
     const { result } = renderWithProviders(() =>
-      useUnderlyingAllowance({ tokenAddress: TOKEN, wrapperAddress: WRAPPER, owner: OTHER }),
+      useUnderlyingAllowance({ address: WRAPPER, owner: OTHER }),
     );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -49,10 +49,7 @@ describe("useUnderlyingAllowance", () => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(1000n);
 
     const { result } = renderWithProviders(() =>
-      useUnderlyingAllowance(
-        { tokenAddress: TOKEN, wrapperAddress: WRAPPER, owner: USER },
-        { enabled: false },
-      ),
+      useUnderlyingAllowance({ address: WRAPPER, owner: USER }, { enabled: false }),
     );
 
     expect(result.current.isPending).toBe(true);
@@ -64,7 +61,7 @@ describe("useUnderlyingAllowance", () => {
     provider,
   }) => {
     const { result } = renderWithProviders(() =>
-      useUnderlyingAllowance({ tokenAddress: TOKEN, wrapperAddress: WRAPPER, owner: undefined }),
+      useUnderlyingAllowance({ address: WRAPPER, owner: undefined }),
     );
 
     expect(result.current.isPending).toBe(true);
@@ -84,11 +81,7 @@ describe("useUnderlyingAllowanceSuspense", () => {
 
     const OTHER = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
     const { result } = renderWithProviders(() =>
-      useUnderlyingAllowanceSuspense({
-        tokenAddress: TOKEN,
-        wrapperAddress: WRAPPER,
-        owner: OTHER,
-      }),
+      useUnderlyingAllowanceSuspense({ address: WRAPPER, owner: OTHER }),
     );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));

@@ -67,7 +67,7 @@ export function isConfidentialTokenContract(tokenAddress: Address) {
  *
  * Note: During the transition period, calling this alone is insufficient. Upgraded wrappers
  * respond only to {@link ERC7984_WRAPPER_INTERFACE_ID}. Prefer higher-level APIs
- * (`ReadonlyToken.isWrapper()`, `isWrapperQueryOptions()`) which check both interface IDs.
+ * (`Token.isWrapper()`, `isWrapperQueryOptions()`) which check both interface IDs.
  *
  * @example
  * ```ts

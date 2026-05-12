@@ -1,34 +1,34 @@
 "use client";
 
 import { useMutation, type UseMutationOptions } from "@tanstack/react-query";
-import type { TransactionResult } from "@zama-fhe/sdk";
+import type { Address, TransactionResult } from "@zama-fhe/sdk";
 import {
   revokeDelegationMutationOptions,
   zamaQueryKeys,
   type RevokeDelegationParams,
 } from "@zama-fhe/sdk/query";
-import { useToken, type UseZamaConfig } from "../token/use-token";
+import { useZamaSDK } from "../provider";
 
 /**
- * Revoke FHE decryption delegation for a token from a delegate address.
+ * Revoke FHE decryption delegation for a confidential contract from a delegate address.
  *
- * @param config - Token address identifying the confidential token.
+ * @param address - Confidential contract address to revoke delegation on.
  * @param options - React Query mutation options.
  *
  * @example
  * ```tsx
- * const revoke = useRevokeDelegation({ tokenAddress: "0x..." });
+ * const revoke = useRevokeDelegation("0xToken");
  * revoke.mutate({ delegateAddress: "0xDelegate" });
  * ```
  */
 export function useRevokeDelegation(
-  config: UseZamaConfig,
+  address: Address,
   options?: UseMutationOptions<TransactionResult, Error, RevokeDelegationParams>,
 ) {
-  const token = useToken(config);
+  const sdk = useZamaSDK();
 
   return useMutation<TransactionResult, Error, RevokeDelegationParams>({
-    ...revokeDelegationMutationOptions(token),
+    ...revokeDelegationMutationOptions(sdk, address),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       try {

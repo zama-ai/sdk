@@ -18,7 +18,7 @@ export function DelegationStatusPanel({
     delegatorAddress: defaultDelegator,
     delegateAddress: defaultDelegate,
   });
-  const revoke = useRevokeDelegation({ tokenAddress });
+  const revoke = useRevokeDelegation(tokenAddress);
 
   return (
     <div className="space-y-6" data-testid="delegation-status-panel">

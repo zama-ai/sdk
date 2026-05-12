@@ -21,7 +21,7 @@ const mockSdk = {
   },
   onWalletAccountChange: vi.fn().mockReturnValue(() => {}),
   provider: { readContract: vi.fn() },
-  createReadonlyToken: vi.fn((address: Address) => ({ address })),
+  createToken: vi.fn((address: Address) => ({ address })),
 };
 
 vi.mock("../../provider", () => ({
@@ -48,10 +48,7 @@ describe("useConfidentialBalances enabled propagation", () => {
 
   test("disables balance query when user passes enabled=false", () => {
     renderHook(() =>
-      useConfidentialBalances(
-        { tokenAddresses: [TOKEN, TOKEN_B], account: OWNER },
-        { enabled: false },
-      ),
+      useConfidentialBalances({ addresses: [TOKEN, TOKEN_B], account: OWNER }, { enabled: false }),
     );
 
     const balanceQueryOptions = vi.mocked(useQuery).mock.calls[0]?.[0] as
@@ -65,7 +62,7 @@ describe("useConfidentialBalances enabled propagation", () => {
   test("disables balance query for other falsy enabled values", () => {
     renderHook(() =>
       useConfidentialBalances(
-        { tokenAddresses: [TOKEN, TOKEN_B], account: OWNER },
+        { addresses: [TOKEN, TOKEN_B], account: OWNER },
         { enabled: 0 as unknown as boolean },
       ),
     );

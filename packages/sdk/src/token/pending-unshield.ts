@@ -1,5 +1,5 @@
 import type { Address, Hex } from "viem";
-import { z } from "zod";
+import { z } from "zod/mini";
 import { checksum, hex } from "../schemas/primitives";
 import type { GenericStorage } from "../types";
 import type { Handle } from "../relayer/relayer-sdk.types";
@@ -32,14 +32,27 @@ function storageKey(wrapperAddress: Address): string {
 }
 
 const PendingUnshieldRequestSchema = z.union([
-  hex.transform((unwrapTxHash) => ({ unwrapTxHash })),
-  z
-    .object({
+  z.pipe(
+    hex,
+    z.transform((unwrapTxHash: Hex) => ({ unwrapTxHash })),
+  ),
+  z.pipe(
+    z.object({
       version: z.literal(CURRENT_VERSION),
       unwrapTxHash: hex,
-      unwrapRequestId: hex.optional(),
-    })
-    .transform(({ unwrapTxHash, unwrapRequestId }) => ({ unwrapTxHash, unwrapRequestId })),
+      unwrapRequestId: z.optional(hex),
+    }),
+    z.transform(
+      ({
+        unwrapTxHash,
+        unwrapRequestId,
+      }: {
+        version: typeof CURRENT_VERSION;
+        unwrapTxHash: Hex;
+        unwrapRequestId?: Hex;
+      }) => ({ unwrapTxHash, unwrapRequestId }),
+    ),
+  ),
 ]);
 
 /**

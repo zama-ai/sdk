@@ -5,7 +5,7 @@ description: Mutation hook that decrypts confidential balances across multiple t
 
 # useBatchDecryptBalancesAs
 
-Mutation hook that decrypts a delegator's confidential balances across multiple tokens in a single call. Uses `ReadonlyToken.batchDecryptBalancesAs` under the hood with caching, concurrency control, and per-token error handling.
+Mutation hook that decrypts a delegator's confidential balances across multiple tokens in a single call. Uses `Token.batchDecryptBalancesAs` under the hood with caching, concurrency control, and per-token error handling.
 
 ## Import
 
@@ -29,10 +29,10 @@ function PortfolioBalance({
   tokenAddresses: `0x${string}`[];
   delegatorAddress: `0x${string}`;
 }) {
-  // Build ReadonlyToken instances using the SDK factory (not hooks — hooks cannot be called in a loop)
+  // Build Token instances using the SDK factory (not hooks — hooks cannot be called in a loop)
   const sdk = useZamaSDK();
   const tokens = useMemo(
-    () => tokenAddresses.map((addr) => sdk.createReadonlyToken(addr)),
+    () => tokenAddresses.map((addr) => sdk.createToken(addr)),
     [sdk, tokenAddresses],
   );
 
@@ -69,9 +69,9 @@ function PortfolioBalance({
 
 ### tokens
 
-`ReadonlyToken[]`
+`Token[]`
 
-Array of `ReadonlyToken` instances to decrypt balances for. Passed as the first argument to `useBatchDecryptBalancesAs`.
+Array of `Token` instances to decrypt balances for. Passed as the first argument to `useBatchDecryptBalancesAs`.
 
 ```ts
 const { mutateAsync: batchDecryptAs } = useBatchDecryptBalancesAs(tokens);

@@ -92,13 +92,12 @@ export const zamaQueryKeys = {
     all: ["zama.underlyingAllowance"] as const,
     token: (tokenAddress: Address) =>
       ["zama.underlyingAllowance", { tokenAddress: getAddress(tokenAddress) }] as const,
-    scope: (tokenAddress: Address, owner?: Address, wrapperAddress?: Address) =>
+    scope: (tokenAddress: Address, owner?: Address) =>
       [
         "zama.underlyingAllowance",
         {
           tokenAddress: getAddress(tokenAddress),
           ...(owner ? { owner: getAddress(owner) } : {}),
-          ...(wrapperAddress ? { wrapperAddress: getAddress(wrapperAddress) } : {}),
         },
       ] as const,
   },

@@ -5,25 +5,11 @@ import { zamaQueryKeys } from "../query-keys";
 
 describe("underlyingAllowanceQueryOptions", () => {
   const UNDERLYING = "0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D";
+  const WRAPPER = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C";
+  const OWNER = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B";
 
   test("enabled false when owner missing", ({ sdk }) => {
-    const options = underlyingAllowanceQueryOptions(
-      sdk,
-      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
-      { wrapperAddress: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" },
-    );
-
-    expect(options.enabled).toBe(false);
-  });
-
-  test("enabled false when wrapperAddress is missing", ({ sdk }) => {
-    const options = underlyingAllowanceQueryOptions(
-      sdk,
-      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
-      {
-        owner: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
-      },
-    );
+    const options = underlyingAllowanceQueryOptions(sdk, WRAPPER, {});
 
     expect(options.enabled).toBe(false);
   });
@@ -31,66 +17,37 @@ describe("underlyingAllowanceQueryOptions", () => {
   test("queries allowance when owner exists", async ({ sdk, provider }) => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(99n);
 
-    const options = underlyingAllowanceQueryOptions(
-      sdk,
-      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
-      {
-        owner: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
-        wrapperAddress: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
-      },
-    );
+    const options = underlyingAllowanceQueryOptions(sdk, WRAPPER, { owner: OWNER });
 
     const allowance = await options.queryFn(mockQueryContext(options.queryKey));
     expect(allowance).toBe(99n);
   });
 
-  test("includes owner and wrapperAddress in queryKey", ({ sdk }) => {
-    const options = underlyingAllowanceQueryOptions(
-      sdk,
-      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
-      {
-        owner: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
-        wrapperAddress: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
-      },
-    );
+  test("includes tokenAddress and owner in queryKey", ({ sdk }) => {
+    const options = underlyingAllowanceQueryOptions(sdk, WRAPPER, { owner: OWNER });
 
     expect(options.queryKey).toEqual([
       "zama.underlyingAllowance",
       {
-        tokenAddress: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
-        owner: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
-        wrapperAddress: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
+        tokenAddress: getAddress(WRAPPER),
+        owner: getAddress(OWNER),
       },
     ]);
   });
 
-  test("queryFn reads tokenAddress, owner, and wrapperAddress from context.queryKey", async ({
-    sdk,
-    provider,
-  }) => {
+  test("queryFn reads tokenAddress and owner from context.queryKey", async ({ sdk, provider }) => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(99n);
 
-    const options = underlyingAllowanceQueryOptions(
-      sdk,
-      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
-      {
-        owner: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
-        wrapperAddress: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
-      },
-    );
+    const options = underlyingAllowanceQueryOptions(sdk, WRAPPER, { owner: OWNER });
 
-    const key = zamaQueryKeys.underlyingAllowance.scope(
-      "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa",
-      "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB",
-      "0xcccccccccccccccccccccccccccccccccccccccc",
-    );
+    const key = zamaQueryKeys.underlyingAllowance.scope(WRAPPER, OWNER);
 
     await options.queryFn(mockQueryContext(key));
 
     expect(vi.mocked(provider.readContract)).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({
-        address: getAddress("0xcccccccccccccccccccccccccccccccccccccccc"),
+        address: getAddress(WRAPPER),
         functionName: "underlying",
         args: [],
       }),
@@ -100,23 +57,13 @@ describe("underlyingAllowanceQueryOptions", () => {
       expect.objectContaining({
         address: getAddress(UNDERLYING),
         functionName: "allowance",
-        args: [
-          getAddress("0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB"),
-          getAddress("0xcccccccccccccccccccccccccccccccccccccccc"),
-        ],
+        args: [getAddress(OWNER), getAddress(WRAPPER)],
       }),
     );
   });
 
-  test("queryFn throws when params are missing from context.queryKey", async ({ sdk }) => {
-    const options = underlyingAllowanceQueryOptions(
-      sdk,
-      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
-      {
-        owner: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
-        wrapperAddress: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
-      },
-    );
+  test("queryFn throws when owner is missing from context.queryKey", async ({ sdk }) => {
+    const options = underlyingAllowanceQueryOptions(sdk, WRAPPER, { owner: OWNER });
 
     await expect(
       options.queryFn(

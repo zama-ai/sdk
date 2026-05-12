@@ -3,34 +3,34 @@ import { ConfigurationError } from "../../errors";
 import { finalizeUnwrapMutationOptions } from "../finalize-unwrap";
 
 describe("finalizeUnwrapMutationOptions", () => {
-  test("delegates finalizeUnwrap with unwrapRequestId", async ({ mockToken }) => {
-    const options = finalizeUnwrapMutationOptions(mockToken, mockToken.address);
+  test("delegates finalizeUnwrap with unwrapRequestId", async ({ mockWrappedToken }) => {
+    const options = finalizeUnwrapMutationOptions(mockWrappedToken);
 
-    expect(options.mutationKey).toEqual(["zama.finalizeUnwrap", mockToken.address]);
+    expect(options.mutationKey).toEqual(["zama.finalizeUnwrap", mockWrappedToken.address]);
     await options.mutationFn({
       unwrapRequestId: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa",
     });
-    expect(mockToken.finalizeUnwrap).toHaveBeenCalledWith(
+    expect(mockWrappedToken.finalizeUnwrap).toHaveBeenCalledWith(
       "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa",
     );
   });
 
-  test("falls back to legacy burnAmountHandle", async ({ mockToken }) => {
-    const options = finalizeUnwrapMutationOptions(mockToken);
+  test("falls back to legacy burnAmountHandle", async ({ mockWrappedToken }) => {
+    const options = finalizeUnwrapMutationOptions(mockWrappedToken);
 
     await options.mutationFn({
       burnAmountHandle: "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbBbbbbbbbbbbbbbbbbbbbb",
     });
 
-    expect(mockToken.finalizeUnwrap).toHaveBeenCalledWith(
+    expect(mockWrappedToken.finalizeUnwrap).toHaveBeenCalledWith(
       "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbBbbbbbbbbbbbbbbbbbbbb",
     );
   });
 
-  test("throws ConfigurationError when no handle is provided", async ({ mockToken }) => {
-    const options = finalizeUnwrapMutationOptions(mockToken);
+  test("throws ConfigurationError when no handle is provided", async ({ mockWrappedToken }) => {
+    const options = finalizeUnwrapMutationOptions(mockWrappedToken);
 
     await expect(options.mutationFn({} as never)).rejects.toThrow(ConfigurationError);
-    expect(mockToken.finalizeUnwrap).not.toHaveBeenCalled();
+    expect(mockWrappedToken.finalizeUnwrap).not.toHaveBeenCalled();
   });
 });
