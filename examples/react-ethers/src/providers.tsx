@@ -48,13 +48,6 @@ import { getEthereumProvider } from "@/lib/ethereum";
 // Separate DB from indexedDBStorage — see block comment above for the reason.
 const permitDBStorage = new IndexedDBStorage("PermitStore");
 
-function getRelayerUrl() {
-  if (typeof window !== "undefined") {
-    return new URL("/api/relayer", window.location.origin).toString();
-  }
-  return "http://localhost:3000/api/relayer";
-}
-
 export function Providers({ children }: { children: ReactNode }) {
   // Created once per Providers mount — avoids sharing the QueryClient across
   // SSR requests and React Strict Mode double-invocations.
@@ -132,7 +125,7 @@ export function Providers({ children }: { children: ReactNode }) {
     const provider = new JsonRpcProvider(SEPOLIA_RPC_URL);
     const zamaSepolia = {
       ...fheSepolia,
-      relayerUrl: getRelayerUrl(),
+      relayerUrl: "http://localhost:3000/api/relayer",
       network: SEPOLIA_RPC_URL,
     } as const;
 

@@ -29,7 +29,7 @@ The app builds one SDK config and passes it to `ZamaProvider`:
 ```ts
 const zamaSepolia = {
   ...fheSepolia,
-  relayerUrl: new URL("/api/relayer", window.location.origin).toString(),
+  relayerUrl: "http://localhost:3000/api/relayer",
   network: SEPOLIA_RPC_URL,
 } as const;
 
@@ -54,7 +54,7 @@ const config = createConfig({
 
 ### Relayer proxy (`/api/relayer/[...path]/route.ts`)
 
-`web()` creates the browser relayer backed by a Web Worker loaded from CDN. Workers require absolute URLs, so the proxy URL is constructed with `window.location.origin`:
+`web()` creates the browser relayer backed by a Web Worker loaded from CDN. This example keeps the proxy URL fixed to the local Next.js app:
 
 ```
 Browser Worker → http://localhost:3000/api/relayer/keyurl
