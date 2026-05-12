@@ -2,11 +2,11 @@ import { describe, expect, test } from "../../test-fixtures";
 import { approveUnderlyingMutationOptions } from "../approve-underlying";
 
 describe("approveUnderlyingMutationOptions", () => {
-  test("delegates approveUnderlying", async ({ mockToken }) => {
-    const options = approveUnderlyingMutationOptions(mockToken, mockToken.address);
+  test("delegates approveUnderlying", async ({ mockWrappedToken }) => {
+    const options = approveUnderlyingMutationOptions(mockWrappedToken);
 
-    expect(options.mutationKey).toEqual(["zama.approveUnderlying", mockToken.address]);
+    expect(options.mutationKey).toEqual(["zama.approveUnderlying", mockWrappedToken.address]);
     await options.mutationFn({ amount: 9n });
-    expect(mockToken.approveUnderlying).toHaveBeenCalledWith(9n);
+    expect(mockWrappedToken.approveUnderlying).toHaveBeenCalledWith(9n);
   });
 });

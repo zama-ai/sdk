@@ -9,12 +9,12 @@ export function UnshieldAllForm({
   wrapperAddress,
 }: {
   tokenAddress: Address;
-  wrapperAddress?: Address;
+  wrapperAddress: Address;
 }) {
   const { address } = useAccount();
   const { data: metadata } = useMetadata(tokenAddress);
-  const { data: balance } = useConfidentialBalance({ tokenAddress, account: address });
-  const unshieldAll = useUnshieldAll({ tokenAddress, wrapperAddress });
+  const { data: balance } = useConfidentialBalance({ address: tokenAddress, account: address });
+  const unshieldAll = useUnshieldAll(wrapperAddress);
 
   return (
     <form

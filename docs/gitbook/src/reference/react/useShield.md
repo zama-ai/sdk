@@ -22,7 +22,7 @@ import { useShield } from "@zama-fhe/react-sdk";
 import { useShield } from "@zama-fhe/react-sdk";
 
 function ShieldButton() {
-  const { mutateAsync: shield, isPending, error } = useShield({ tokenAddress: "0xToken" });
+  const { mutateAsync: shield, isPending, error } = useShield({ address: "0xWrapper" });
 
   async function handleShield() {
     const { txHash, receipt } = await shield({ amount: 1000n });
@@ -74,15 +74,28 @@ export const zamaConfig = createZamaConfig({
 import { type UseShieldConfig } from "@zama-fhe/react-sdk";
 ```
 
-### tokenAddress
+### address
 
 `Address`
 
-Address of the confidential ERC-20 wrapper contract.
+Address of the confidential wrapper contract.
 
 ```ts
 const { mutateAsync: shield } = useShield({
-  tokenAddress: "0xToken",
+  address: "0xWrapper",
+});
+```
+
+### optimistic
+
+`boolean | undefined`
+
+Default: `false`. When `true`, optimistically adds the wrapped amount to the cached confidential balance before the transaction confirms; rolls back on error.
+
+```ts
+const { mutateAsync: shield } = useShield({
+  address: "0xWrapper",
+  optimistic: true,
 });
 ```
 
@@ -161,4 +174,4 @@ Auto-invalidates the `confidentialBalance` cache on success.
 ## Related
 
 - [useUnshield](/reference/react/useUnshield) — reverse operation, unshield back to public ERC-20
-- [Token.shield](/reference/sdk/Token#shield) — imperative equivalent on the `Token` class
+- [WrappedToken.shield](/reference/sdk/WrappedToken#shield) — imperative equivalent on the `WrappedToken` class

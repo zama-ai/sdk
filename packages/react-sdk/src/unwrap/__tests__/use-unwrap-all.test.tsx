@@ -16,7 +16,7 @@ import {
 
 describe("useUnwrapAll", () => {
   test("default", ({ renderWithProviders }) => {
-    const { result } = renderWithProviders(() => useUnwrapAll({ tokenAddress: TOKEN }));
+    const { result } = renderWithProviders(() => useUnwrapAll(TOKEN));
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
     expectDefaultMutationState(state);
@@ -28,9 +28,7 @@ describe("useUnwrapAll", () => {
   }) => {
     vi.mocked(provider.readContract).mockResolvedValue(HANDLE);
 
-    const { result, queryClient } = renderWithProviders(() =>
-      useUnwrapAll({ tokenAddress: TOKEN }),
-    );
+    const { result, queryClient } = renderWithProviders(() => useUnwrapAll(TOKEN));
 
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
     const allowanceKey = zamaQueryKeys.underlyingAllowance.token(TOKEN);
@@ -59,9 +57,7 @@ describe("useUnwrapAll", () => {
     const allowanceKey = zamaQueryKeys.underlyingAllowance.token(TOKEN);
     const onSuccess = vi.fn();
 
-    const { result, queryClient } = renderWithProviders(() =>
-      useUnwrapAll({ tokenAddress: TOKEN }, { onSuccess }),
-    );
+    const { result, queryClient } = renderWithProviders(() => useUnwrapAll(TOKEN, { onSuccess }));
 
     queryClient.setQueryData(balanceKey, 1000n);
     queryClient.setQueryData(allowanceKey, 500n);

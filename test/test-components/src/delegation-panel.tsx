@@ -13,7 +13,7 @@ export function DelegationPanel({
   defaultDelegator?: Address;
 }) {
   const { data: metadata } = useMetadata(tokenAddress);
-  const delegate = useDelegateDecryption({ tokenAddress });
+  const delegate = useDelegateDecryption(tokenAddress);
   const decryptAs = useDecryptBalanceAs(tokenAddress);
 
   return (

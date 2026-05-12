@@ -24,7 +24,7 @@ describe("Unshield callbacks (P4)", () => {
   it("fires all callbacks during unshield", async ({
     relayer: _relayer,
     userAddress,
-    token,
+    wrappedToken: token,
     provider,
   }) => {
     mockReceiptWithUnwrapRequested(provider, userAddress);
@@ -45,7 +45,12 @@ describe("Unshield callbacks (P4)", () => {
     expect(onFinalizeSubmitted).toHaveBeenCalledWith("0xtxhash");
   });
 
-  it("fires all callbacks during unshieldAll", async ({ userAddress, handle, token, provider }) => {
+  it("fires all callbacks during unshieldAll", async ({
+    userAddress,
+    handle,
+    wrappedToken: token,
+    provider,
+  }) => {
     vi.mocked(provider.readContract).mockResolvedValue(handle);
     mockReceiptWithUnwrapRequested(provider, userAddress);
 
@@ -64,7 +69,11 @@ describe("Unshield callbacks (P4)", () => {
     expect(onFinalizeSubmitted).toHaveBeenCalledWith("0xtxhash");
   });
 
-  it("fires callbacks during resumeUnshield", async ({ userAddress, token, provider }) => {
+  it("fires callbacks during resumeUnshield", async ({
+    userAddress,
+    wrappedToken: token,
+    provider,
+  }) => {
     mockReceiptWithUnwrapRequested(provider, userAddress);
 
     const onFinalizing = vi.fn();
@@ -80,7 +89,11 @@ describe("Unshield callbacks (P4)", () => {
     expect(onFinalizeSubmitted).toHaveBeenCalledWith("0xtxhash");
   });
 
-  it("works without callbacks (backward compatible)", async ({ userAddress, token, provider }) => {
+  it("works without callbacks (backward compatible)", async ({
+    userAddress,
+    wrappedToken: token,
+    provider,
+  }) => {
     mockReceiptWithUnwrapRequested(provider, userAddress);
 
     const result = await token.unshield(50n, { skipBalanceCheck: true });
@@ -91,7 +104,7 @@ describe("Unshield callbacks (P4)", () => {
   it("completes unshield even when callbacks throw", async ({
     signer,
     userAddress,
-    token,
+    wrappedToken: token,
     provider,
   }) => {
     mockReceiptWithUnwrapRequested(provider, userAddress);
@@ -113,7 +126,11 @@ describe("Unshield callbacks (P4)", () => {
     expect(signer.writeContract).toHaveBeenCalledTimes(2); // unwrap + finalize
   });
 
-  it("fires onFinalizing before onFinalizeSubmitted", async ({ userAddress, token, provider }) => {
+  it("fires onFinalizing before onFinalizeSubmitted", async ({
+    userAddress,
+    wrappedToken: token,
+    provider,
+  }) => {
     mockReceiptWithUnwrapRequested(provider, userAddress);
 
     const order: string[] = [];
@@ -127,7 +144,10 @@ describe("Unshield callbacks (P4)", () => {
     expect(order).toEqual(["unwrapSubmitted", "finalizing", "finalizeSubmitted"]);
   });
 
-  it("throws TransactionRevertedError when receipt fetch fails", async ({ token, provider }) => {
+  it("throws TransactionRevertedError when receipt fetch fails", async ({
+    wrappedToken: token,
+    provider,
+  }) => {
     vi.mocked(provider.waitForTransactionReceipt).mockRejectedValue(new Error("network error"));
 
     await expect(token.unshield(50n, { skipBalanceCheck: true })).rejects.toThrow(
@@ -136,7 +156,7 @@ describe("Unshield callbacks (P4)", () => {
   });
 
   it("throws TransactionRevertedError when no UnwrapRequested event in receipt", async ({
-    token,
+    wrappedToken: token,
     provider,
   }) => {
     vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
@@ -151,7 +171,7 @@ describe("Unshield callbacks (P4)", () => {
   it("throws TransactionRevertedError when finalize writeContract fails", async ({
     signer,
     userAddress,
-    token,
+    wrappedToken: token,
     provider,
   }) => {
     mockReceiptWithUnwrapRequested(provider, userAddress);
@@ -167,7 +187,7 @@ describe("Unshield callbacks (P4)", () => {
   it("throws DecryptionFailedError when publicDecrypt fails during finalize", async ({
     relayer,
     userAddress,
-    token,
+    wrappedToken: token,
     provider,
   }) => {
     mockReceiptWithUnwrapRequested(provider, userAddress);

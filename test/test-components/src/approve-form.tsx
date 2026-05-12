@@ -17,9 +17,9 @@ export function ApproveForm({
 }) {
   const { address } = useAccount();
   const { data: metadata } = useMetadata(tokenAddress);
-  const setOperator = useConfidentialSetOperator({ tokenAddress });
+  const setOperator = useConfidentialSetOperator(tokenAddress);
   const { data: isOperator } = useConfidentialIsOperator({
-    tokenAddress,
+    address: tokenAddress,
     spender: defaultSpender,
     holder: address,
   });

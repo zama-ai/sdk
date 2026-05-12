@@ -14,8 +14,8 @@ import type { Address, Hex } from "viem";
 import type { CredentialServiceConfig } from "./credentials/credential-service";
 import { CredentialService } from "./credentials/credential-service";
 import { MemoryStorage } from "./storage/memory-storage";
-import { ReadonlyToken } from "./token/readonly-token";
 import { Token } from "./token/token";
+import { WrappedToken } from "./token/wrapped-token";
 import type { GenericProvider, GenericSigner, GenericStorage, TransactionResult } from "./types";
 import { ZamaSDK } from "./zama-sdk";
 import { DecryptionService } from "./services/decryption-service";
@@ -186,7 +186,7 @@ export function createMockStorage(): GenericStorage {
   };
 }
 
-function createMockReadonlyToken(address: Address, signer: GenericSigner): ReadonlyToken {
+function createMockTokenInternal(address: Address, signer: GenericSigner): Token {
   const mockSdk = {
     signer,
     userDecrypt: vi.fn().mockResolvedValue({}),
@@ -200,16 +200,13 @@ function createMockReadonlyToken(address: Address, signer: GenericSigner): Reado
     balanceOf: vi.fn().mockResolvedValue(123n),
     decryptBalanceAs: vi.fn().mockResolvedValue(123n),
     confidentialBalanceOf: vi.fn().mockResolvedValue(("0x" + "aa".repeat(32)) as Handle),
-    isDelegated: vi.fn().mockResolvedValue(false),
-    getDelegationExpiry: vi.fn().mockResolvedValue(0n),
     name: vi.fn().mockResolvedValue("Test"),
     symbol: vi.fn().mockResolvedValue("TST"),
     decimals: vi.fn().mockResolvedValue(18),
     isConfidential: vi.fn().mockResolvedValue(true),
     isWrapper: vi.fn().mockResolvedValue(false),
-    allowance: vi.fn().mockResolvedValue(0n),
     isOperator: vi.fn().mockResolvedValue(false),
-  } as unknown as ReadonlyToken;
+  } as unknown as Token;
 }
 
 interface SdkFixtures {
@@ -224,8 +221,9 @@ interface SdkFixtures {
   signer: GenericSigner;
   provider: GenericProvider;
   token: Token;
-  readonlyToken: ReadonlyToken;
+  wrappedToken: WrappedToken;
   mockToken: Token;
+  mockWrappedToken: WrappedToken;
   credentialService: CredentialService;
   cache: CachingService;
   delegationService: DelegationService;
@@ -248,7 +246,15 @@ interface SdkFixtures {
           txResult?: TransactionResult;
         },
   ) => Token;
-  createMockReadonlyToken: (address?: Address) => ReadonlyToken;
+  createMockWrappedToken: (
+    addressOrArgs?:
+      | Address
+      | {
+          address?: Address;
+          signer?: GenericSigner;
+          txResult?: TransactionResult;
+        },
+  ) => WrappedToken;
   createCredentialService: (config: Partial<CredentialServiceConfig>) => CredentialService;
   createDelegationService: (overrides?: {
     provider?: GenericProvider;
@@ -272,8 +278,8 @@ interface SdkFixtures {
     relayer?: RelayerSDK;
     credentialService?: CredentialService;
   }) => LifecycleService;
-  createToken: (sdk: ZamaSDK, address?: Address, wrapper?: Address) => Token;
-  createReadonlyToken: (sdk: ZamaSDK, address?: Address) => ReadonlyToken;
+  createToken: (sdk: ZamaSDK, address?: Address) => Token;
+  createWrappedToken: (sdk: ZamaSDK, address?: Address) => WrappedToken;
   sdk: ZamaSDK;
   createSDK: (overrides?: Partial<ZamaConfig>) => ZamaSDK;
   events: typeof ZamaSDKEvents;
@@ -303,11 +309,14 @@ export const test = base.extend<SdkFixtures>({
   token: async ({ sdk, tokenAddress }, use) => {
     await use(new Token(sdk, tokenAddress));
   },
-  readonlyToken: async ({ sdk, tokenAddress }, use) => {
-    await use(new ReadonlyToken(sdk, tokenAddress));
+  wrappedToken: async ({ sdk, wrapperAddress }, use) => {
+    await use(new WrappedToken(sdk, wrapperAddress));
   },
   mockToken: async ({ createMockToken }, use) => {
     await use(createMockToken());
+  },
+  mockWrappedToken: async ({ createMockWrappedToken }, use) => {
+    await use(createMockWrappedToken());
   },
   createMockRelayer: async ({}, use) => {
     await use(createMockRelayer);
@@ -408,13 +417,12 @@ export const test = base.extend<SdkFixtures>({
     );
   },
   createToken: async ({ tokenAddress }, use) => {
-    await use(
-      (sdk: ZamaSDK, address?: Address, wrapper?: Address) =>
-        new Token(sdk, address ?? tokenAddress, wrapper),
-    );
+    await use((sdk: ZamaSDK, address?: Address) => new Token(sdk, address ?? tokenAddress));
   },
-  createReadonlyToken: async ({ tokenAddress }, use) => {
-    await use((sdk: ZamaSDK, address?: Address) => new ReadonlyToken(sdk, address ?? tokenAddress));
+  createWrappedToken: async ({ wrapperAddress }, use) => {
+    await use(
+      (sdk: ZamaSDK, address?: Address) => new WrappedToken(sdk, address ?? wrapperAddress),
+    );
   },
   createMockToken: async ({ tokenAddress, signer }, use) => {
     const defaultTxResult: TransactionResult = {
@@ -439,12 +447,49 @@ export const test = base.extend<SdkFixtures>({
         typeof addressOrArgs === "object"
           ? (addressOrArgs?.txResult ?? defaultTxResult)
           : defaultTxResult;
+      const base = createMockTokenInternal(addr, sig);
       return {
-        address: addr,
-        signer: sig,
+        // oxlint-disable-next-line typescript-eslint/no-misused-spread
+        ...base,
         confidentialTransfer: vi.fn().mockResolvedValue(txResult),
         confidentialTransferFrom: vi.fn().mockResolvedValue(txResult),
         setOperator: vi.fn().mockResolvedValue(txResult),
+      } as unknown as Token;
+    }
+    await use(factory);
+  },
+  createMockWrappedToken: async ({ wrapperAddress, signer }, use) => {
+    const defaultTxResult: TransactionResult = {
+      txHash: ("0x" + "11".repeat(32)) as Hex,
+      receipt: { logs: [] },
+    };
+    function factory(
+      addressOrArgs?:
+        | Address
+        | {
+            address?: Address;
+            signer?: GenericSigner;
+            txResult?: TransactionResult;
+          },
+    ) {
+      const addr =
+        typeof addressOrArgs === "string"
+          ? addressOrArgs
+          : (addressOrArgs?.address ?? wrapperAddress);
+      const sig = typeof addressOrArgs === "object" ? (addressOrArgs?.signer ?? signer) : signer;
+      const txResult =
+        typeof addressOrArgs === "object"
+          ? (addressOrArgs?.txResult ?? defaultTxResult)
+          : defaultTxResult;
+      const base = createMockTokenInternal(addr, sig);
+      return {
+        // oxlint-disable-next-line typescript-eslint/no-misused-spread
+        ...base,
+        confidentialTransfer: vi.fn().mockResolvedValue(txResult),
+        confidentialTransferFrom: vi.fn().mockResolvedValue(txResult),
+        setOperator: vi.fn().mockResolvedValue(txResult),
+        underlying: vi.fn().mockResolvedValue(addr),
+        allowance: vi.fn().mockResolvedValue(0n),
         approveUnderlying: vi.fn().mockResolvedValue(txResult),
         shield: vi.fn().mockResolvedValue(txResult),
         unwrap: vi.fn().mockResolvedValue(txResult),
@@ -453,14 +498,9 @@ export const test = base.extend<SdkFixtures>({
         unshield: vi.fn().mockResolvedValue(txResult),
         unshieldAll: vi.fn().mockResolvedValue(txResult),
         resumeUnshield: vi.fn().mockResolvedValue(txResult),
-        delegateDecryption: vi.fn().mockResolvedValue(txResult),
-        revokeDelegation: vi.fn().mockResolvedValue(txResult),
-      } as unknown as Token;
+      } as unknown as WrappedToken;
     }
     await use(factory);
-  },
-  createMockReadonlyToken: async ({ tokenAddress, signer }, use) => {
-    await use((address?: Address) => createMockReadonlyToken(address ?? tokenAddress, signer));
   },
   sdk: async ({ relayer, provider, signer, storage }, use) => {
     await use(

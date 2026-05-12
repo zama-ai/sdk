@@ -116,7 +116,7 @@ export function TokenTable({
   const { address } = useAccount();
   const { mutate: allow } = useAllow();
   const { data, isFetching, isLoading } = useConfidentialBalances({
-    tokenAddresses: revealed ? tokenAddresses : [],
+    addresses: revealed ? tokenAddresses : [],
     account: address,
   });
 

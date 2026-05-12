@@ -11,7 +11,7 @@ describe("useConfidentialBalance", () => {
     vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handle]: 123n });
 
     const { result } = renderWithProviders(() =>
-      useConfidentialBalance({ tokenAddress: TOKEN, account: USER }),
+      useConfidentialBalance({ address: TOKEN, account: USER }),
     );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
@@ -27,7 +27,7 @@ describe("useConfidentialBalance", () => {
     provider,
   }) => {
     const { result } = renderWithProviders(() =>
-      useConfidentialBalance({ tokenAddress: TOKEN, account: USER }, { enabled: false }),
+      useConfidentialBalance({ address: TOKEN, account: USER }, { enabled: false }),
     );
 
     expect(result.current.isPending).toBe(true);
@@ -40,7 +40,7 @@ describe("useConfidentialBalance", () => {
     provider,
   }) => {
     const { result } = renderWithProviders(() =>
-      useConfidentialBalance({ tokenAddress: TOKEN, account: undefined }),
+      useConfidentialBalance({ address: TOKEN, account: undefined }),
     );
 
     expect(result.current.isPending).toBe(true);
@@ -59,7 +59,7 @@ describe("useConfidentialBalance", () => {
 
     const OTHER = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
     const { result } = renderWithProviders(() =>
-      useConfidentialBalance({ tokenAddress: TOKEN, account: OTHER }),
+      useConfidentialBalance({ address: TOKEN, account: OTHER }),
     );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
@@ -76,7 +76,7 @@ describe("useConfidentialBalance", () => {
       vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handle]: 123n });
 
       const { result } = renderWithProviders(() =>
-        useConfidentialBalance({ tokenAddress: TOKEN, account: USER }),
+        useConfidentialBalance({ address: TOKEN, account: USER }),
       );
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
@@ -130,7 +130,7 @@ describe("useConfidentialBalance", () => {
       });
 
       const { result } = renderWithProviders(() =>
-        useConfidentialBalance({ tokenAddress: TOKEN, account: USER }),
+        useConfidentialBalance({ address: TOKEN, account: USER }),
       );
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
@@ -161,7 +161,7 @@ describe("useConfidentialBalance", () => {
       vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handle]: 999n });
 
       const { result, rerender } = renderWithProviders(() =>
-        useConfidentialBalance({ tokenAddress: TOKEN, account: USER }),
+        useConfidentialBalance({ address: TOKEN, account: USER }),
       );
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
@@ -177,7 +177,7 @@ describe("useConfidentialBalance", () => {
       provider,
     }) => {
       const { result } = renderWithProviders(() =>
-        useConfidentialBalance({ tokenAddress: TOKEN, account: USER }, { enabled: false }),
+        useConfidentialBalance({ address: TOKEN, account: USER }, { enabled: false }),
       );
 
       expect(result.current.isPending).toBe(true);

@@ -8,7 +8,7 @@ import {
   type UnshieldAllParams,
   unshieldAllMutationOptions,
 } from "@zama-fhe/sdk/query";
-import { useToken, type UseZamaConfig } from "../token/use-token";
+import { useWrappedToken } from "../token/use-wrapped-token";
 
 /**
  * Unshield the entire balance and finalize in one call.
@@ -19,20 +19,20 @@ import { useToken, type UseZamaConfig } from "../token/use-token";
  * - {@link DecryptionFailedError} — public decryption failed during finalize
  * - {@link TransactionRevertedError} — on-chain transaction reverted
  *
- * @param config - Token and wrapper addresses.
+ * @param address - Address of the confidential wrapper contract.
  * @param options - React Query mutation options.
  *
  * @example
  * ```tsx
- * const unshieldAll = useUnshieldAll({ tokenAddress: "0x...", wrapperAddress: "0x..." });
+ * const unshieldAll = useUnshieldAll("0xWrapper");
  * unshieldAll.mutate();
  * ```
  */
 export function useUnshieldAll(
-  config: UseZamaConfig,
+  address: Address,
   options?: UseMutationOptions<TransactionResult, Error, UnshieldAllParams | void, Address>,
 ) {
-  const token = useToken(config);
+  const token = useWrappedToken(address);
 
   return useMutation<TransactionResult, Error, UnshieldAllParams | void, Address>({
     ...unshieldAllMutationOptions(token),

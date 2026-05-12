@@ -280,14 +280,14 @@ function MyTokenPage() {
 
   const { data: meta } = useMetadata(TOKEN);
   const { data: balance, isLoading } = useConfidentialBalance({
-    tokenAddress: TOKEN,
+    address: TOKEN,
     account: address,
   });
   const { mutateAsync: shield, isPending: isShielding } = useShield({
-    tokenAddress: TOKEN,
+    address: TOKEN,
   });
   const { mutateAsync: transfer, isPending: isSending } = useConfidentialTransfer({
-    tokenAddress: TOKEN,
+    address: TOKEN,
   });
 
   if (!isConnected) {

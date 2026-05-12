@@ -27,10 +27,8 @@ import { useUnwrap, useFinalizeUnwrap } from "@zama-fhe/react-sdk";
 import { findUnwrapRequested } from "@zama-fhe/sdk";
 
 function TwoStepUnshield() {
-  const { mutateAsync: unwrap } = useUnwrap({ tokenAddress: "0xToken" });
-  const { mutateAsync: finalize, isPending } = useFinalizeUnwrap({
-    tokenAddress: "0xToken",
-  });
+  const { mutateAsync: unwrap } = useUnwrap("0xWrapper");
+  const { mutateAsync: finalize, isPending } = useFinalizeUnwrap("0xWrapper");
 
   const handleUnshield = async () => {
     // Step 1: submit the unwrap and find the event in the receipt
@@ -58,16 +56,14 @@ function TwoStepUnshield() {
 
 ## Parameters
 
-### tokenAddress
+### address
 
 `Address`
 
-Address of the confidential token wrapper contract.
+Address of the confidential wrapper contract. Passed positionally as the first argument.
 
 ```tsx
-const { mutateAsync: finalize } = useFinalizeUnwrap({
-  tokenAddress: "0xToken",
-});
+const { mutateAsync: finalize } = useFinalizeUnwrap("0xWrapper");
 ```
 
 ## Mutation variables

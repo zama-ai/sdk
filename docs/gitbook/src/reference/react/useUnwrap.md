@@ -26,9 +26,7 @@ import { useUnwrap } from "@zama-fhe/react-sdk";
 import { useUnwrap } from "@zama-fhe/react-sdk";
 
 function UnwrapButton() {
-  const { mutateAsync: unwrap, isPending } = useUnwrap({
-    tokenAddress: "0xToken",
-  });
+  const { mutateAsync: unwrap, isPending } = useUnwrap("0xWrapper");
 
   const handleUnwrap = async () => {
     const txHash = await unwrap({ amount: 500n });
@@ -49,16 +47,14 @@ function UnwrapButton() {
 
 ## Parameters
 
-### tokenAddress
+### address
 
 `Address`
 
-Address of the confidential token wrapper contract.
+Address of the confidential wrapper contract. Passed positionally as the first argument.
 
 ```tsx
-const { mutateAsync: unwrap } = useUnwrap({
-  tokenAddress: "0xToken",
-});
+const { mutateAsync: unwrap } = useUnwrap("0xWrapper");
 ```
 
 ## Mutation variables

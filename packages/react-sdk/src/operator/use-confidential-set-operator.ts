@@ -8,7 +8,7 @@ import {
   invalidateAfterSetOperator,
   type ConfidentialSetOperatorParams,
 } from "@zama-fhe/sdk/query";
-import { useToken, type UseZamaConfig } from "../token/use-token";
+import { useToken } from "../token/use-token";
 
 /**
  * Set operator approval for a confidential token. Defaults to 1 hour.
@@ -17,20 +17,20 @@ import { useToken, type UseZamaConfig } from "../token/use-token";
  * - {@link SigningRejectedError} — user rejected the wallet prompt
  * - {@link TransactionRevertedError} — on-chain transaction reverted
  *
- * @param config - Token address (and optional wrapper) identifying the token.
+ * @param address - Address of the confidential token contract.
  * @param options - React Query mutation options.
  *
  * @example
  * ```tsx
- * const setOperator = useConfidentialSetOperator({ tokenAddress: "0x..." });
+ * const setOperator = useConfidentialSetOperator("0xToken");
  * setOperator.mutate({ operator: "0xOperator" });
  * ```
  */
 export function useConfidentialSetOperator(
-  config: UseZamaConfig,
+  address: Address,
   options?: UseMutationOptions<TransactionResult, Error, ConfidentialSetOperatorParams, Address>,
 ) {
-  const token = useToken(config);
+  const token = useToken(address);
 
   return useMutation<TransactionResult, Error, ConfidentialSetOperatorParams, Address>({
     ...confidentialSetOperatorMutationOptions(token),

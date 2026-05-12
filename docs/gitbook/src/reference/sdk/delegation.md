@@ -97,7 +97,7 @@ const results = await Token.batchRevokeDelegation({
 
 ## Querying delegation status
 
-These read methods are available on both `Token` and `ReadonlyToken`:
+These read methods are available on both `Token` and `Token`:
 
 ```ts
 // Check if a delegation is active
@@ -146,9 +146,9 @@ Decrypted values are cached in storage, keyed by `(accountAddress, token, handle
 Decrypt balances across multiple tokens in a single call:
 
 ```ts
-const tokens = addresses.map((a) => sdk.createReadonlyToken(a));
+const tokens = addresses.map((a) => sdk.createToken(a));
 
-const balances = await ReadonlyToken.batchDecryptBalancesAs(tokens, {
+const balances = await Token.batchDecryptBalancesAs(tokens, {
   delegatorAddress: "0xDelegator",
 });
 
@@ -170,7 +170,7 @@ for (const [address, balance] of balances) {
 
 ```ts
 // With pre-fetched handles and error handling
-const balances = await ReadonlyToken.batchDecryptBalancesAs(tokens, {
+const balances = await Token.batchDecryptBalancesAs(tokens, {
   delegatorAddress: "0xDelegator",
   handles: preloadedHandles,
   maxConcurrency: 3,
