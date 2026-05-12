@@ -95,6 +95,8 @@ export {
 export type { CredentialBundle, Keypair, Permission, StoredKeypair } from "./credentials";
 export type {
   GenericSigner,
+  OfflineSigner,
+  OnlineSigner,
   GenericProvider,
   GenericStorage,
   Broadcaster,

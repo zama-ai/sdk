@@ -1,7 +1,7 @@
 import { isHex, type Hex } from "viem";
 import { SigningFailedError } from "../errors";
 import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
-import type { Broadcaster, WalletAccount } from "../types";
+import type { Broadcaster, OfflineSigner, WalletAccount } from "../types";
 import { BaseSigner } from "./base-signer";
 
 /** Configuration for {@link BroadcastSigner}. */
@@ -46,7 +46,7 @@ export interface BroadcastSignerConfig {
  * const sdk = new ZamaSDK(createConfig({ chains, relayer, provider, signer }));
  * ```
  */
-export class BroadcastSigner extends BaseSigner {
+export class BroadcastSigner extends BaseSigner implements OfflineSigner {
   readonly #broadcaster: Broadcaster;
 
   constructor(config: BroadcastSignerConfig) {

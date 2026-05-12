@@ -62,7 +62,7 @@ export interface WalletAccountStore {
  *
  * @internal
  */
-export interface SignerCore {
+export interface CoreSigner {
   /** Observable wallet account readiness state. */
   readonly walletAccount: WalletAccountStore;
   /**
@@ -81,8 +81,13 @@ export interface SignerCore {
   dispose?(): void;
 }
 
-/** Atomic write capability: sign + broadcast in one wallet round-trip. */
-type WriteContractCapability = {
+/**
+ * Online signer: signs and broadcasts a write transaction in a single
+ * wallet round-trip via `writeContract`. Browser wallets, embedded wallets
+ * in non-policy mode, and server-side EOAs (viem / ethers / wagmi adapters)
+ * fall in this group. `signTransaction` MAY also be present for hybrid use.
+ */
+export interface OnlineSigner extends CoreSigner {
   writeContract<
     const TAbi extends ContractAbi,
     TFunctionName extends WriteFunctionName<TAbi>,
@@ -90,13 +95,17 @@ type WriteContractCapability = {
   >(
     config: WriteContractConfig<TAbi, TFunctionName, TArgs>,
   ): Promise<Hex>;
-  /** Deferred capability MAY also be present on atomic signers. */
   signTransaction?(unsignedTx: Hex): Promise<Hex>;
-};
+}
 
-/** Deferred capability: produce signed bytes for an SDK-built unsigned tx. */
-type SignTransactionCapability = {
-  /** Atomic capability MAY also be present on deferred signers. */
+/**
+ * Offline signer: returns signed bytes for an SDK-built unsigned
+ * transaction via `signTransaction`; the SDK broadcasts via
+ * {@link GenericProvider.sendRawTransaction}. Institutional custody
+ * (Dfns, Fireblocks, Fordefi, Turnkey policy mode) and HSM-backed signers
+ * fall in this group. `writeContract` MAY also be present for hybrid use.
+ */
+export interface OfflineSigner extends CoreSigner {
   writeContract?<
     const TAbi extends ContractAbi,
     TFunctionName extends WriteFunctionName<TAbi>,
@@ -105,29 +114,17 @@ type SignTransactionCapability = {
     config: WriteContractConfig<TAbi, TFunctionName, TArgs>,
   ): Promise<Hex>;
   signTransaction(unsignedTx: Hex): Promise<Hex>;
-};
+}
 
 /**
- * Framework-agnostic signer — wallet authority as a capability bag.
+ * Framework-agnostic signer — either an {@link OnlineSigner} (writeContract)
+ * or an {@link OfflineSigner} (signTransaction). The type enforces "at least
+ * one capability" — a literal with neither method fails to assign. A signer
+ * may satisfy both arms (hybrid).
  *
- * **Capabilities.** A signer declares which transaction-emitting strategies
- * it supports:
- *
- * - `writeContract` — atomic. Sign and broadcast in one wallet round-trip
- *   (browser wallets, embedded wallets in non-policy mode, server-side EOAs).
- * - `signTransaction` — deferred. Return signed bytes for an SDK-built
- *   unsigned transaction; the SDK broadcasts via
- *   {@link GenericProvider.sendRawTransaction}. Used by institutional custody
- *   (Dfns, Fireblocks, Fordefi, Turnkey policy mode).
- *
- * The type enforces "at least one capability" — a literal with neither
- * method fails to assign. A signer may implement both; atomic call sites
- * use `writeContract`, the deferred `prepare* / sign / broadcast` pipeline
- * uses `signTransaction`. The SDK does not currently route between them
- * automatically.
- *
- * Calling an atomic op on a signer that only exposes `signTransaction`
- * throws {@link SignerCapabilityError}; route through the deferred
- * `prepare* / complete*` surface instead.
+ * The SDK accepts `GenericSigner` everywhere and gates the wrong-flavour-
+ * for-the-method case at runtime: atomic write methods throw
+ * {@link SignerCapabilityError} when only `signTransaction` is present, and
+ * vice versa for the deferred `prepare* / sign / broadcast` pipeline.
  */
-export type GenericSigner = SignerCore & (WriteContractCapability | SignTransactionCapability);
+export type GenericSigner = OnlineSigner | OfflineSigner;

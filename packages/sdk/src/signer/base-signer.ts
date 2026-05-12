@@ -1,11 +1,11 @@
 import type { Hex } from "viem";
 import { WalletNotConnectedError } from "../errors";
 import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
-import type { SignerCore, WalletAccount } from "../types/signer";
+import type { CoreSigner, WalletAccount } from "../types/signer";
 import { MutableWalletAccountStore } from "./wallet-account-store";
 
 /**
- * Abstract base class that implements the {@link SignerCore} boilerplate:
+ * Abstract base class that implements the {@link CoreSigner} boilerplate:
  * wallet-account store, `requireWalletAccount`, idempotent `dispose` /
  * `Disposable`. Subclasses provide `signTypedData` and at least one of
  * `writeContract` / `signTransaction` — the resulting concrete class
@@ -14,7 +14,7 @@ import { MutableWalletAccountStore } from "./wallet-account-store";
  * Using this class is optional — implementing {@link GenericSigner} directly
  * with {@link createWalletAccountStore} remains fully supported.
  */
-export abstract class BaseSigner implements SignerCore, Disposable {
+export abstract class BaseSigner implements CoreSigner, Disposable {
   readonly walletAccount: MutableWalletAccountStore;
   #disposed = false;
 
