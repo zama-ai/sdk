@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/mini";
 import {
   checksummedAddress,
   chainId,
@@ -15,21 +15,21 @@ const permitTTLError = "permitTTL must be a positive integer number of days";
 /** Maximum keypairTTL accepted by the fhevm ACL contract (365 days, in seconds). */
 export const MAX_KEYPAIR_TTL_SECONDS = 365 * SECONDS_PER_DAY;
 
+// z.int already rejects NaN, Infinity, and non-integers, so it covers
+// the previous .finite() + .int() combo with a single schema.
 export const KeypairTTLSchema = z
-  .number(keypairTTLError)
-  .finite(keypairTTLError)
-  .int(keypairTTLError)
-  .positive(keypairTTLError)
-  .max(
-    MAX_KEYPAIR_TTL_SECONDS,
-    `keypairTTL must not exceed the fhevm ACL maximum of ${MAX_KEYPAIR_TTL_SECONDS}s (365 days)`,
+  .int({ error: keypairTTLError })
+  .check(
+    z.positive({ error: keypairTTLError }),
+    z.maximum(
+      MAX_KEYPAIR_TTL_SECONDS,
+      `keypairTTL must not exceed the fhevm ACL maximum of ${MAX_KEYPAIR_TTL_SECONDS}s (365 days)`,
+    ),
   );
 
 export const PermitTTLSchema = z
-  .number(permitTTLError)
-  .finite(permitTTLError)
-  .int(permitTTLError)
-  .positive(permitTTLError);
+  .int({ error: permitTTLError })
+  .check(z.positive({ error: permitTTLError }));
 
 export const StoredKeypairSchema = z.object({
   publicKey: hex,
@@ -43,7 +43,7 @@ export const PermissionSchema = z.object({
   signerAddress: checksummedAddress,
   delegatorAddress: checksummedAddress,
   chainId,
-  signedContractAddresses: z.array(checksummedAddress).max(MAX_CONTRACTS_PER_PERMIT),
+  signedContractAddresses: z.array(checksummedAddress).check(z.maxLength(MAX_CONTRACTS_PER_PERMIT)),
   signature: hex,
   startTimestamp: unixSeconds,
   durationDays: positiveDays,
