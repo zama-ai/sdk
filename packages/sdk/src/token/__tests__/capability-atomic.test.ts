@@ -23,10 +23,11 @@ function expectCapabilityError(err: unknown): asserts err is SignerCapabilityErr
 describe("Token (atomic surface) — SignerCapabilityError on broadcast-only signer", () => {
   test("confidentialTransfer throws SignerCapabilityError", async ({
     createSDK,
-    broadcastSigner,
+    createMockSigner,
     tokenAddress,
   }) => {
-    const sdk = createSDK({ signer: broadcastSigner });
+    const signer = createMockSigner({ writeContract: undefined });
+    const sdk = createSDK({ signer });
     const token = new Token(sdk, tokenAddress);
     const err = await token.confidentialTransfer(RECIPIENT, 1n).catch((e: unknown) => e);
     expectCapabilityError(err);
@@ -35,10 +36,11 @@ describe("Token (atomic surface) — SignerCapabilityError on broadcast-only sig
 
   test("confidentialTransferFrom throws SignerCapabilityError", async ({
     createSDK,
-    broadcastSigner,
+    createMockSigner,
     tokenAddress,
   }) => {
-    const sdk = createSDK({ signer: broadcastSigner });
+    const signer = createMockSigner({ writeContract: undefined });
+    const sdk = createSDK({ signer: signer });
     const token = new Token(sdk, tokenAddress);
     const err = await token.confidentialTransferFrom(FROM, RECIPIENT, 1n).catch((e: unknown) => e);
     expectCapabilityError(err);
@@ -46,10 +48,11 @@ describe("Token (atomic surface) — SignerCapabilityError on broadcast-only sig
 
   test("setOperator throws SignerCapabilityError", async ({
     createSDK,
-    broadcastSigner,
+    createMockSigner,
     tokenAddress,
   }) => {
-    const sdk = createSDK({ signer: broadcastSigner });
+    const signer = createMockSigner({ writeContract: undefined });
+    const sdk = createSDK({ signer: signer });
     const token = new Token(sdk, tokenAddress);
     const err = await token.setOperator(RECIPIENT).catch((e: unknown) => e);
     expectCapabilityError(err);
@@ -57,16 +60,17 @@ describe("Token (atomic surface) — SignerCapabilityError on broadcast-only sig
 
   test("shield throws SignerCapabilityError", async ({
     createSDK,
-    broadcastSigner,
+    createMockSigner,
     tokenAddress,
     provider,
   }) => {
+    const signer = createMockSigner({ writeContract: undefined });
     // shield routes through isPayable() → readContract(underlying) → readContract(supportsInterface).
     // Stub both so the capability assertion is what surfaces.
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce(UNDERLYING) // underlying()
       .mockResolvedValueOnce(false); // supportsInterface (ERC-1363)
-    const sdk = createSDK({ signer: broadcastSigner });
+    const sdk = createSDK({ signer: signer });
     const token = new Token(sdk, tokenAddress);
     const err = await token.shield(1n).catch((e: unknown) => e);
     expectCapabilityError(err);
@@ -74,10 +78,11 @@ describe("Token (atomic surface) — SignerCapabilityError on broadcast-only sig
 
   test("unwrap throws SignerCapabilityError", async ({
     createSDK,
-    broadcastSigner,
+    createMockSigner,
     tokenAddress,
   }) => {
-    const sdk = createSDK({ signer: broadcastSigner });
+    const signer = createMockSigner({ writeContract: undefined });
+    const sdk = createSDK({ signer: signer });
     const token = new Token(sdk, tokenAddress);
     const err = await token.unwrap(1n).catch((e: unknown) => e);
     expectCapabilityError(err);
@@ -85,12 +90,13 @@ describe("Token (atomic surface) — SignerCapabilityError on broadcast-only sig
 
   test("approveUnderlying throws SignerCapabilityError", async ({
     createSDK,
-    broadcastSigner,
+    createMockSigner,
     tokenAddress,
     provider,
   }) => {
+    const signer = createMockSigner({ writeContract: undefined });
     vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING);
-    const sdk = createSDK({ signer: broadcastSigner });
+    const sdk = createSDK({ signer: signer });
     const token = new Token(sdk, tokenAddress);
     const err = await token.approveUnderlying(1n).catch((e: unknown) => e);
     expectCapabilityError(err);
@@ -98,10 +104,11 @@ describe("Token (atomic surface) — SignerCapabilityError on broadcast-only sig
 
   test("delegateDecryption throws SignerCapabilityError", async ({
     createSDK,
-    broadcastSigner,
+    createMockSigner,
     tokenAddress,
   }) => {
-    const sdk = createSDK({ signer: broadcastSigner });
+    const signer = createMockSigner({ writeContract: undefined });
+    const sdk = createSDK({ signer: signer });
     const token = new Token(sdk, tokenAddress);
     const err = await token
       .delegateDecryption({ delegateAddress: RECIPIENT })

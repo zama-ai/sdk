@@ -1,37 +1,28 @@
 // oxlint-disable jest/expect-expect
 // oxlint-disable jest/no-disabled-tests
 /* eslint-disable no-empty-pattern */
+import type { QueryClient } from "@tanstack/query-core";
+import type { Address, Hex } from "viem";
 import { test as base, vi } from "vitest";
 import type { FheChain } from "./chains/types";
 import type { ZamaConfig } from "./config/types";
-import { ZamaSDKEvents } from "./events/sdk-events";
-import type { RelayerSDK } from "./relayer/relayer-sdk";
-import type { RelayerDispatcher } from "./relayer/relayer-dispatcher";
-import type { EIP712TypedData, Handle } from "./relayer/relayer-sdk.types";
-import { CachingService } from "./services/caching-service";
-import type { QueryClient } from "@tanstack/query-core";
-import type { Address, Hex } from "viem";
 import type { CredentialServiceConfig } from "./credentials/credential-service";
 import { CredentialService } from "./credentials/credential-service";
-import { MemoryStorage } from "./storage/memory-storage";
-import { ReadonlyToken } from "./token/readonly-token";
-import { Token } from "./token/token";
-import { BaseSigner } from "./signer/base-signer";
-import { ensureHexSignature } from "./signer/util";
-import type {
-  GenericProvider,
-  GenericSigner,
-  GenericStorage,
-  OfflineSigner,
-  TransactionResult,
-  WalletAccount,
-} from "./types";
-import { ZamaSDK } from "./zama-sdk";
+import type { ZamaSDKEventInput } from "./events/sdk-events";
+import { ZamaSDKEvents } from "./events/sdk-events";
+import type { RelayerDispatcher } from "./relayer/relayer-dispatcher";
+import type { RelayerSDK } from "./relayer/relayer-sdk";
+import type { Handle } from "./relayer/relayer-sdk.types";
+import { CachingService } from "./services/caching-service";
 import { DecryptionService } from "./services/decryption-service";
 import { DelegationService } from "./services/delegation-service";
 import { EncryptionService } from "./services/encryption-service";
 import { LifecycleService } from "./services/lifecycle-service";
-import type { ZamaSDKEventInput } from "./events/sdk-events";
+import { MemoryStorage } from "./storage/memory-storage";
+import { ReadonlyToken } from "./token/readonly-token";
+import { Token } from "./token/token";
+import type { GenericProvider, GenericSigner, GenericStorage, TransactionResult } from "./types";
+import { ZamaSDK } from "./zama-sdk";
 export { afterEach, beforeEach, describe, expect, vi, type Mock } from "vitest";
 
 const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
@@ -168,6 +159,7 @@ export function createMockSigner(
     walletAccount: store,
     requireWalletAccount: vi.fn().mockReturnValue(walletAccount),
     signTypedData: vi.fn().mockResolvedValue(TEST_SIGNATURE),
+    signTransaction: vi.fn().mockResolvedValue(TEST_SIGNED_TX),
     writeContract: vi.fn().mockResolvedValue("0xtxhash"),
     ...overrides,
   };
@@ -181,51 +173,6 @@ export function createMockProvider(overrides: Partial<GenericProvider> = {}): Ge
     getBlockTimestamp: vi.fn().mockResolvedValue(BigInt(Math.floor(Date.now() / 1000))),
     sendRawTransaction: vi.fn().mockResolvedValue(TEST_TX_HASH),
     prepareTransaction: vi.fn().mockResolvedValue(TEST_UNSIGNED_TX),
-    ...overrides,
-  };
-}
-
-/**
- * Test-only `OfflineSigner` subclass of {@link BaseSigner}. Each instance
- * holds a `signTransaction` + `signTypedData` thunk pair (created with
- * {@link createMockSignerThunks}) so tests can spy on / override signing
- * behaviour without needing a real custodian client.
- *
- * Mirrors what end users do in §3 of the custodian guide — subclass
- * `BaseSigner`, validate broker responses with {@link ensureHexSignature}.
- */
-export class TestOfflineSigner extends BaseSigner implements OfflineSigner {
-  readonly #thunks: SignerThunks;
-  constructor(account: WalletAccount, thunks: SignerThunks) {
-    super(account);
-    this.#thunks = thunks;
-  }
-  async signTransaction(unsignedTx: Hex): Promise<Hex> {
-    const raw = await this.#thunks.signTransaction(unsignedTx);
-    return ensureHexSignature(raw, "signTransaction");
-  }
-  async signTypedData(typedData: EIP712TypedData): Promise<Hex> {
-    const raw = await this.#thunks.signTypedData(typedData);
-    return ensureHexSignature(raw, "signTypedData");
-  }
-}
-
-/** Shape of the signing thunks used to construct a {@link TestOfflineSigner}. */
-export interface SignerThunks {
-  signTransaction(unsignedTx: Hex): Promise<Hex>;
-  signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-}
-
-/**
- * Build a {@link SignerThunks} mock with `vi.fn` thunks. Returns strict-hex
- * signatures so {@link ensureHexSignature} accepts them. Pair with
- * {@link TestOfflineSigner} to assemble an in-process offline signer for
- * tests.
- */
-export function createMockSignerThunks(overrides: Partial<SignerThunks> = {}): SignerThunks {
-  return {
-    signTransaction: vi.fn(async () => TEST_SIGNED_TX),
-    signTypedData: vi.fn(async () => `0x${"ab".repeat(65)}` as Hex),
     ...overrides,
   };
 }
@@ -282,20 +229,6 @@ interface SdkFixtures {
   relayer: RelayerSDK;
   signer: GenericSigner;
   provider: GenericProvider;
-  /**
-   * Mock signing thunks (`signTransaction` / `signTypedData`) used to back
-   * {@link broadcastSigner}. Spy on these directly to assert the SDK
-   * delegates correctly to the offline signer.
-   */
-  broadcaster: SignerThunks;
-  /**
-   * In-process {@link OfflineSigner} backed by {@link broadcaster}, scoped
-   * to {@link userAddress} on chain 31337 — the SDK chain in the rest of
-   * the fixture set. Pair with `createSDK({ signer: broadcastSigner })` for
-   * deferred-signing tests. The name is preserved (rather than renamed to
-   * `offlineSigner`) to avoid a sweeping rename across the test suite.
-   */
-  broadcastSigner: TestOfflineSigner;
   token: Token;
   readonlyToken: ReadonlyToken;
   mockToken: Token;
@@ -369,12 +302,6 @@ export const test = base.extend<SdkFixtures>({
   },
   provider: async ({}, use) => {
     await use(createMockProvider());
-  },
-  broadcaster: async ({}, use) => {
-    await use(createMockSignerThunks());
-  },
-  broadcastSigner: async ({ broadcaster, userAddress }, use) => {
-    await use(new TestOfflineSigner({ address: userAddress, chainId: 31337 }, broadcaster));
   },
   storage: async ({}, use) => {
     await use(new MemoryStorage());

@@ -40,13 +40,13 @@ function setupReads(provider: GenericProvider, opts: ReadOpts = {}): void {
 describe("Token.prepareShield — routing", () => {
   test("payable (ERC-1363) → single TransferAndCall step", async ({
     createSDK,
-    broadcastSigner,
+    signer,
     provider,
     tokenAddress,
     wrapperAddress,
   }) => {
     setupReads(provider, { isPayable: true });
-    const sdk = createSDK({ signer: broadcastSigner });
+    const sdk = createSDK({ signer: signer });
     const token = new Token(sdk, tokenAddress, wrapperAddress);
     const plan = await token.prepareShield(500n);
     expect(plan.path).toBe("transferAndCall");
@@ -63,13 +63,13 @@ describe("Token.prepareShield — routing", () => {
 
   test("non-payable underlying → two-step approve + wrap plan", async ({
     createSDK,
-    broadcastSigner,
+    signer,
     provider,
     tokenAddress,
     wrapperAddress,
   }) => {
     setupReads(provider, { isPayable: false });
-    const sdk = createSDK({ signer: broadcastSigner });
+    const sdk = createSDK({ signer: signer });
     const token = new Token(sdk, tokenAddress, wrapperAddress);
     const plan = await token.prepareShield(500n);
     expect(plan.path).toBe("approveAndWrap");
@@ -93,12 +93,12 @@ describe("Token.prepareShield — routing", () => {
 
   test("custom recipient propagates to TransferAndCall and Wrap steps", async ({
     createSDK,
-    broadcastSigner,
+    signer,
     provider,
     tokenAddress,
     wrapperAddress,
   }) => {
-    const sdk = createSDK({ signer: broadcastSigner });
+    const sdk = createSDK({ signer: signer });
 
     setupReads(provider, { isPayable: true });
     const payable = new Token(sdk, tokenAddress, wrapperAddress);
@@ -113,13 +113,13 @@ describe("Token.prepareShield — routing", () => {
 
   test("the plan steps can be fed back into sdk.prepare", async ({
     createSDK,
-    broadcastSigner,
+    signer,
     provider,
     tokenAddress,
     wrapperAddress,
   }) => {
     setupReads(provider, { isPayable: false });
-    const sdk = createSDK({ signer: broadcastSigner });
+    const sdk = createSDK({ signer: signer });
     const token = new Token(sdk, tokenAddress, wrapperAddress);
     const plan = await token.prepareShield(750n);
     for (const step of plan.steps) {
@@ -130,13 +130,13 @@ describe("Token.prepareShield — routing", () => {
 
   test("non-payable + allowance ≥ amount → single Wrap step (skip approve)", async ({
     createSDK,
-    broadcastSigner,
+    signer,
     provider,
     tokenAddress,
     wrapperAddress,
   }) => {
     setupReads(provider, { isPayable: false, allowance: 1_000n });
-    const sdk = createSDK({ signer: broadcastSigner });
+    const sdk = createSDK({ signer: signer });
     const token = new Token(sdk, tokenAddress, wrapperAddress);
     const plan = await token.prepareShield(500n);
     expect(plan.path).toBe("approveAndWrap");
@@ -146,13 +146,13 @@ describe("Token.prepareShield — routing", () => {
 
   test("non-payable + 0 < allowance < amount → zero-reset then approve then wrap (USDT-safe)", async ({
     createSDK,
-    broadcastSigner,
+    signer,
     provider,
     tokenAddress,
     wrapperAddress,
   }) => {
     setupReads(provider, { isPayable: false, allowance: 100n });
-    const sdk = createSDK({ signer: broadcastSigner });
+    const sdk = createSDK({ signer: signer });
     const token = new Token(sdk, tokenAddress, wrapperAddress);
     const plan = await token.prepareShield(500n);
     expect(plan.path).toBe("approveAndWrap");
