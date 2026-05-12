@@ -1,4 +1,4 @@
-import { getAddress, type Address } from "viem";
+import { getAddress, type Address, type Hex } from "viem";
 import type { ZamaConfig } from "./config/types";
 import { CredentialService } from "./credentials/credential-service";
 import {
@@ -20,9 +20,15 @@ import type {
 import { ReadonlyToken } from "./token/readonly-token";
 import { Token } from "./token/token";
 import type {
+  CredentialPermitRequest,
+  ExecuteRequest,
   GenericProvider,
   GenericSigner,
   GenericStorage,
+  PreparedFor,
+  PreparedTransaction,
+  TransactionKind,
+  TransactionPrepareRequest,
   TransactionResult,
   WalletAccount,
   WalletAccountChange,
@@ -33,6 +39,10 @@ import { CachingService } from "./services/caching-service";
 import { DecryptionService, type BatchDecryptHandlesResult } from "./services/decryption-service";
 import { DelegationService } from "./services/delegation-service";
 import { EncryptionService } from "./services/encryption-service";
+import {
+  OfflineSigningService,
+  type OfflineSigningOptions,
+} from "./services/offline-signing-service";
 import { WrappersRegistry } from "./wrappers-registry";
 
 /**
@@ -57,6 +67,7 @@ export class ZamaSDK {
   readonly #delegationService: DelegationService;
   readonly #decryptionService: DecryptionService | undefined;
   readonly #encryptionService: EncryptionService;
+  readonly #offlineSigningService: OfflineSigningService | undefined;
   #unsubscribeSigner?: () => void;
 
   constructor(config: ZamaConfig) {
@@ -104,6 +115,13 @@ export class ZamaSDK {
         relayer: this.relayer,
         emitEvent: (input) => this.emitEvent(input),
       });
+      this.#offlineSigningService = new OfflineSigningService({
+        signer,
+        provider: this.provider,
+        encryption: this.#encryptionService,
+        credentials: this.#credentialService,
+        emitEvent: (input, tokenAddress) => this.emitEvent(input, tokenAddress),
+      });
 
       this.#unsubscribeSigner = signer.walletAccount.subscribe((change) => {
         this.#handleWalletAccountChange(change).catch((error) => {
@@ -114,6 +132,7 @@ export class ZamaSDK {
     } else {
       this.#credentialService = undefined;
       this.#decryptionService = undefined;
+      this.#offlineSigningService = undefined;
     }
   }
 
@@ -141,6 +160,100 @@ export class ZamaSDK {
       throw new SignerNotConfiguredError(operation);
     }
     return this.#decryptionService;
+  }
+
+  #requireOfflineSigningService(operation: string): OfflineSigningService {
+    if (!this.#offlineSigningService) {
+      throw new SignerNotConfiguredError(operation);
+    }
+    return this.#offlineSigningService;
+  }
+
+  // ─── Deferred signing pipeline (SDK-75) ──────────────────────────────
+  // For institutional custody / HSM / policy-engine workflows where build,
+  // sign, and broadcast cannot run synchronously in a single Promise.
+  // Atomic call sites (`Token.confidentialTransfer`, etc.) remain unchanged.
+
+  /**
+   * Build an RLP-encoded unsigned transaction for the given request. The
+   * caller signs it externally — via {@link sign}, an HSM ceremony, an
+   * out-of-process custodian — and feeds the result back into
+   * {@link broadcast} or {@link execute}.
+   *
+   * @throws {@link SignerNotConfiguredError} if no signer is configured.
+   * @throws {@link ChainMismatchError} if signer and provider disagree.
+   */
+  prepare<K extends TransactionKind>(
+    request: Extract<TransactionPrepareRequest, { kind: K }>,
+    options?: OfflineSigningOptions,
+  ): Promise<PreparedFor<K>> {
+    return this.#requireOfflineSigningService("prepare").prepare(request, options);
+  }
+
+  /**
+   * Sign a prepared transaction with the configured signer's
+   * `signTransaction` capability and return RLP-encoded signed bytes.
+   *
+   * @throws {@link SignerCapabilityError} if the configured signer does not
+   *   implement `signTransaction` (online-only wallet).
+   */
+  sign(prepared: PreparedTransaction, options?: OfflineSigningOptions): Promise<Hex> {
+    return this.#requireOfflineSigningService("sign").sign(prepared, options);
+  }
+
+  /**
+   * Submit a previously-signed transaction, await its receipt, emit the
+   * matching `*Submitted` event, and return the {@link TransactionResult}.
+   */
+  broadcast(
+    prepared: PreparedTransaction,
+    signedTx: Hex,
+    options?: OfflineSigningOptions,
+  ): Promise<TransactionResult> {
+    return this.#requireOfflineSigningService("broadcast").broadcast(prepared, signedTx, options);
+  }
+
+  /**
+   * Bundled in-process flow. Accepts:
+   * - a {@link PreparedTransaction} (sign + broadcast),
+   * - a {@link TransactionPrepareRequest} (prepare + sign + broadcast),
+   * - a {@link CredentialPermitRequest} (atomic EIP-712 permit registration).
+   */
+  execute<K extends TransactionKind>(
+    input: PreparedTransaction<K>,
+    options?: OfflineSigningOptions,
+  ): Promise<TransactionResult>;
+  execute(
+    input: TransactionPrepareRequest,
+    options?: OfflineSigningOptions,
+  ): Promise<TransactionResult>;
+  execute(input: CredentialPermitRequest, options?: OfflineSigningOptions): Promise<void>;
+  execute(
+    input: PreparedTransaction | ExecuteRequest,
+    options?: OfflineSigningOptions,
+  ): Promise<TransactionResult | void> {
+    return this.#requireOfflineSigningService("execute").execute(
+      input as TransactionPrepareRequest,
+      options,
+    );
+  }
+
+  /**
+   * Cache-sync escape hatch when an external process broadcast
+   * `prepared.unsignedTx` directly via `eth_sendRawTransaction` and this
+   * process needs the matching receipt + event emission without holding
+   * the signed bytes.
+   */
+  completeFromTxHash(
+    prepared: PreparedTransaction,
+    txHash: Hex,
+    options?: OfflineSigningOptions,
+  ): Promise<TransactionResult> {
+    return this.#requireOfflineSigningService("completeFromTxHash").completeFromTxHash(
+      prepared,
+      txHash,
+      options,
+    );
   }
 
   /**

@@ -1,12 +1,23 @@
-import type {
-  Abi,
-  ContractFunctionArgs,
-  ContractFunctionName,
-  ContractFunctionReturnType,
-  Hex,
-  PublicClient,
+import {
+  encodeFunctionData,
+  serializeTransaction,
+  type Abi,
+  type Address,
+  type ContractFunctionArgs,
+  type ContractFunctionName,
+  type ContractFunctionReturnType,
+  type Hex,
+  type PublicClient,
 } from "viem";
-import type { GenericProvider, ReadContractConfig, TransactionReceipt } from "../types";
+import type {
+  ContractAbi,
+  GenericProvider,
+  ReadContractConfig,
+  TransactionReceipt,
+  WriteContractArgs,
+  WriteContractConfig,
+  WriteFunctionName,
+} from "../types";
 
 /** Configuration for {@link ViemProvider}. */
 export interface ViemProviderConfig {
@@ -59,5 +70,41 @@ export class ViemProvider implements GenericProvider {
 
   async sendRawTransaction(signedTx: Hex): Promise<Hex> {
     return this.#publicClient.sendRawTransaction({ serializedTransaction: signedTx });
+  }
+
+  async prepareTransaction<
+    const TAbi extends ContractAbi,
+    TFunctionName extends WriteFunctionName<TAbi>,
+    const TArgs extends WriteContractArgs<TAbi, TFunctionName>,
+  >(args: { from: Address; call: WriteContractConfig<TAbi, TFunctionName, TArgs> }): Promise<Hex> {
+    const { from, call } = args;
+    const data = encodeFunctionData({
+      abi: call.abi as Abi,
+      functionName: call.functionName as string,
+      args: call.args as readonly unknown[],
+    });
+    const [chainId, nonce, gas, fees] = await Promise.all([
+      this.#publicClient.getChainId(),
+      this.#publicClient.getTransactionCount({ address: from }),
+      call.gas ??
+        this.#publicClient.estimateGas({
+          account: from,
+          to: call.address,
+          data,
+          value: call.value ?? 0n,
+        }),
+      this.#publicClient.estimateFeesPerGas(),
+    ]);
+    return serializeTransaction({
+      type: "eip1559",
+      chainId,
+      nonce,
+      to: call.address,
+      data,
+      value: call.value ?? 0n,
+      gas,
+      maxFeePerGas: fees.maxFeePerGas,
+      maxPriorityFeePerGas: fees.maxPriorityFeePerGas,
+    });
   }
 }

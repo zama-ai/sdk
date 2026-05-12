@@ -1,13 +1,22 @@
-import { ethers, BrowserProvider } from "ethers";
+import { ethers, BrowserProvider, Transaction } from "ethers";
 import type {
   Abi,
+  Address,
   ContractFunctionArgs,
   ContractFunctionName,
   ContractFunctionReturnType,
   EIP1193Provider,
   Hex,
 } from "viem";
-import type { GenericProvider, ReadContractConfig, TransactionReceipt } from "../types";
+import type {
+  ContractAbi,
+  GenericProvider,
+  ReadContractConfig,
+  TransactionReceipt,
+  WriteContractArgs,
+  WriteContractConfig,
+  WriteFunctionName,
+} from "../types";
 
 /**
  * Configuration for {@link EthersProvider}.
@@ -100,5 +109,42 @@ export class EthersProvider implements GenericProvider {
   async sendRawTransaction(signedTx: Hex): Promise<Hex> {
     const response = await this.#readProvider.broadcastTransaction(signedTx);
     return response.hash as Hex;
+  }
+
+  async prepareTransaction<
+    const TAbi extends ContractAbi,
+    TFunctionName extends WriteFunctionName<TAbi>,
+    const TArgs extends WriteContractArgs<TAbi, TFunctionName>,
+  >(args: { from: Address; call: WriteContractConfig<TAbi, TFunctionName, TArgs> }): Promise<Hex> {
+    const { from, call } = args;
+    const iface = new ethers.Interface(call.abi as unknown as ethers.InterfaceAbi);
+    const data = iface.encodeFunctionData(
+      call.functionName as string,
+      call.args as readonly unknown[],
+    ) as Hex;
+    const value = call.value ?? 0n;
+    const [network, nonce, gas, feeData] = await Promise.all([
+      this.#readProvider.getNetwork(),
+      this.#readProvider.getTransactionCount(from),
+      call.gas ?? this.#readProvider.estimateGas({ from, to: call.address, data, value }),
+      this.#readProvider.getFeeData(),
+    ]);
+    if (feeData.maxFeePerGas === null || feeData.maxPriorityFeePerGas === null) {
+      throw new Error(
+        "EthersProvider.prepareTransaction: EIP-1559 fee data unavailable (provider returned null maxFeePerGas).",
+      );
+    }
+    const tx = Transaction.from({
+      type: 2,
+      chainId: Number(network.chainId),
+      nonce,
+      to: call.address,
+      data,
+      value,
+      gasLimit: gas,
+      maxFeePerGas: feeData.maxFeePerGas,
+      maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
+    });
+    return tx.unsignedSerialized as Hex;
   }
 }

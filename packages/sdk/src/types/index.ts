@@ -17,6 +17,15 @@ export type {
   WalletAccountStore,
 } from "./signer";
 export type { Broadcaster } from "./broadcaster";
+export type {
+  ConfidentialTransferRequest,
+  CredentialPermitRequest,
+  ExecuteRequest,
+  PreparedFor,
+  PreparedTransaction,
+  TransactionKind,
+  TransactionPrepareRequest,
+} from "./prepared-tx";
 export type { GenericProvider } from "./provider";
 export type { GenericStorage } from "./storage";
 export type { UnshieldCallbacks, ShieldCallbacks, TransferCallbacks } from "./callbacks";

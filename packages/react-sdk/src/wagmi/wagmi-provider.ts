@@ -1,4 +1,5 @@
 import type {
+  Address,
   ContractAbi,
   GenericProvider,
   Hex,
@@ -7,8 +8,12 @@ import type {
   ReadContractReturnType,
   ReadFunctionName,
   TransactionReceipt,
+  WriteContractArgs,
+  WriteContractConfig,
+  WriteFunctionName,
 } from "@zama-fhe/sdk";
 import { TransactionRevertedError } from "@zama-fhe/sdk";
+import { encodeFunctionData, serializeTransaction, type Abi } from "viem";
 import type { Config } from "wagmi";
 import {
   getBlock,
@@ -96,5 +101,47 @@ export class WagmiProvider implements GenericProvider {
       );
     }
     return publicClient.sendRawTransaction({ serializedTransaction: signedTx });
+  }
+
+  async prepareTransaction<
+    const TAbi extends ContractAbi,
+    TFunctionName extends WriteFunctionName<TAbi>,
+    const TArgs extends WriteContractArgs<TAbi, TFunctionName>,
+  >(args: { from: Address; call: WriteContractConfig<TAbi, TFunctionName, TArgs> }): Promise<Hex> {
+    const publicClient = getPublicClient(this.#config);
+    if (!publicClient) {
+      throw new Error(
+        "WagmiProvider.prepareTransaction: no public client configured for the active chain.",
+      );
+    }
+    const { from, call } = args;
+    const data = encodeFunctionData({
+      abi: call.abi as Abi,
+      functionName: call.functionName as string,
+      args: call.args as readonly unknown[],
+    });
+    const [chainId, nonce, gas, fees] = await Promise.all([
+      publicClient.getChainId(),
+      publicClient.getTransactionCount({ address: from }),
+      call.gas ??
+        publicClient.estimateGas({
+          account: from,
+          to: call.address,
+          data,
+          value: call.value ?? 0n,
+        }),
+      publicClient.estimateFeesPerGas(),
+    ]);
+    return serializeTransaction({
+      type: "eip1559",
+      chainId,
+      nonce,
+      to: call.address,
+      data,
+      value: call.value ?? 0n,
+      gas,
+      maxFeePerGas: fees.maxFeePerGas,
+      maxPriorityFeePerGas: fees.maxPriorityFeePerGas,
+    });
   }
 }

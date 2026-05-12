@@ -1,10 +1,13 @@
-import type { Hex } from "viem";
+import type { Address, Hex } from "viem";
 import type {
   ContractAbi,
   ReadContractArgs,
   ReadContractConfig,
   ReadContractReturnType,
   ReadFunctionName,
+  WriteContractArgs,
+  WriteContractConfig,
+  WriteFunctionName,
 } from "./contract";
 import type { TransactionReceipt } from "./transaction";
 
@@ -54,4 +57,28 @@ export interface GenericProvider {
    * `provider.broadcastTransaction(signedTx)` (ethers v6).
    */
   sendRawTransaction(signedTx: Hex): Promise<Hex>;
+  /**
+   * Build a fully-populated, RLP-encoded unsigned transaction from a
+   * write-contract config and the originating wallet address. The provider
+   * resolves chain ID, nonce, gas limit, and EIP-1559 fee parameters from
+   * chain state and returns bytes ready to be passed to
+   * {@link GenericSigner.signTransaction}.
+   *
+   * Used exclusively by the deferred-signing pipeline. Atomic signers go
+   * through {@link GenericSigner.writeContract} and never invoke this.
+   *
+   * Adapters delegate to their underlying client's tx-building primitives:
+   * `encodeFunctionData` + `estimateGas` + `getTransactionCount` +
+   * `estimateFeesPerGas` + `serializeTransaction` (viem), the analogous
+   * `Contract.populateTransaction` + `Transaction.unsignedSerialized`
+   * pipeline (ethers v6).
+   */
+  prepareTransaction<
+    const TAbi extends ContractAbi,
+    TFunctionName extends WriteFunctionName<TAbi>,
+    const TArgs extends WriteContractArgs<TAbi, TFunctionName>,
+  >(args: {
+    from: Address;
+    call: WriteContractConfig<TAbi, TFunctionName, TArgs>;
+  }): Promise<Hex>;
 }

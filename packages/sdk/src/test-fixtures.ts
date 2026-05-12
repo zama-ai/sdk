@@ -166,6 +166,8 @@ export function createMockProvider(overrides: Partial<GenericProvider> = {}): Ge
     readContract: vi.fn(),
     waitForTransactionReceipt: vi.fn().mockResolvedValue({ logs: [] }),
     getBlockTimestamp: vi.fn().mockResolvedValue(BigInt(Math.floor(Date.now() / 1000))),
+    sendRawTransaction: vi.fn().mockResolvedValue("0xtxhash" as Hex),
+    prepareTransaction: vi.fn().mockResolvedValue("0xunsignedtx" as Hex),
     ...overrides,
   };
 }

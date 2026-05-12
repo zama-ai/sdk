@@ -97,6 +97,13 @@ export type {
   GenericProvider,
   GenericStorage,
   Broadcaster,
+  ConfidentialTransferRequest,
+  CredentialPermitRequest,
+  ExecuteRequest,
+  PreparedFor,
+  PreparedTransaction,
+  TransactionKind,
+  TransactionPrepareRequest,
   WalletAccount,
   WalletAccountChange,
   WalletAccountListener,
@@ -189,6 +196,7 @@ export {
 export { BaseSigner } from "./signer/base-signer";
 export { BroadcastSigner } from "./signer/broadcast-signer";
 export type { BroadcastSignerConfig } from "./signer/broadcast-signer";
+export type { OfflineSigningOptions } from "./services/offline-signing-service";
 export { createWalletAccountStore, MutableWalletAccountStore } from "./signer/wallet-account-store";
 
 // Event decoders and types
