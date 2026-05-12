@@ -1,8 +1,8 @@
-import { z } from "zod";
+import { z } from "zod/mini";
 import { ConfigurationError } from "./errors";
 
-export function parseConfiguration<T>(schema: z.ZodType<T>, value: unknown): T {
-  const parsed = schema.safeParse(value);
+export function parseConfiguration<T>(schema: z.core.$ZodType<T>, value: unknown): T {
+  const parsed = z.safeParse(schema, value);
   if (parsed.success) {
     return parsed.data;
   }

@@ -1,5 +1,5 @@
 import type { Hex } from "viem";
-import type { z } from "zod";
+import type { z } from "zod/mini";
 import type { PermissionSchema, StoredKeypairSchema } from "./schemas";
 
 /** In-memory FHE keypair (plaintext private key). */
