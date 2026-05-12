@@ -164,8 +164,8 @@ export class ZamaSDK {
 
   /**
    * Build an RLP-encoded unsigned transaction for the given request. The
-   * caller signs it externally — via {@link sign}, an HSM ceremony, an
-   * out-of-process custodian — and feeds the result back into
+   * caller signs it externally — via `signer.signTransaction(...)`, an HSM
+   * ceremony, an out-of-process custodian — and feeds the result back into
    * {@link broadcast} or {@link execute}.
    *
    * Signer-optional: works without a configured signer (canonical shape for
@@ -265,7 +265,7 @@ export class ZamaSDK {
 
   /**
    * Re-stamp a prepared transaction with the current chain state — fresh
-   * nonce, fee parameters, and gas limit. Call this before {@link sign}
+   * nonce, fee parameters, and gas limit. Call this before external signing
    * when the gap since {@link prepare} was long enough for values to drift
    * (custodian approval ceremonies, multi-party signing, etc.). The
    * original `prepared` is left untouched (immutable).
