@@ -14895,11 +14895,13 @@ export class SignerAddressMismatchError extends ZamaError {
 
 // @public
 export class SignerCapabilityError extends SignerRequiredError {
-    constructor(operation: string, capability: SignerCapability, options?: ErrorOptions);
+    constructor(operation: string, capability: SignerCapability, hint?: string, options?: ErrorOptions);
     // Warning: (ae-forgotten-export) The symbol "SignerCapability" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
     readonly capability: SignerCapability;
+    // (undocumented)
+    readonly hint: string | undefined;
 }
 
 // @public

@@ -79,28 +79,38 @@ export type SignerCapability = "writeContract" | "signTransaction";
 
 /**
  * Thrown when an operation needs a signer capability that the configured
- * signer does not expose — e.g. calling an atomic write op on a
- * broadcast-only signer that has `signTransaction` but no `writeContract`.
+ * signer does not expose — e.g. calling an atomic write op on a signer that
+ * has `signTransaction` but no `writeContract`.
  *
  * Distinct from {@link SignerNotConfiguredError}: a signer *is* configured
- * but cannot perform the requested operation. The operation may be available
- * via the deferred `prepare* / complete*` path instead.
+ * but cannot perform the requested operation. Carries a structured
+ * {@link hint} (also folded into `.message`) so callers can surface
+ * directed migration guidance — the hint text lives in the assertion
+ * helpers (`assertWriteContract`, `assertSignTransaction`) rather than in
+ * this class, keeping the error decoupled from the SDK's call-shape
+ * vocabulary.
  */
 export class SignerCapabilityError extends SignerRequiredError {
   readonly capability: SignerCapability;
+  readonly hint: string | undefined;
 
-  constructor(operation: string, capability: SignerCapability, options?: ErrorOptions) {
+  constructor(
+    operation: string,
+    capability: SignerCapability,
+    hint?: string,
+    options?: ErrorOptions,
+  ) {
     super(
       ZamaErrorCode.SignerMissingCapability,
       operation,
-      `Cannot ${operation}: the configured signer does not implement ${capability}. ` +
-        (capability === "writeContract"
-          ? "Use the deferred prepare*/complete* path, or configure an atomic signer."
-          : "Configure a signer that supports offline signing (e.g. a BaseSigner subclass)."),
+      `Cannot ${operation}: the configured signer does not implement ${capability}.${
+        hint ? ` ${hint}` : ""
+      }`,
       options,
     );
     this.name = "SignerCapabilityError";
     this.capability = capability;
+    this.hint = hint;
   }
 }
 
