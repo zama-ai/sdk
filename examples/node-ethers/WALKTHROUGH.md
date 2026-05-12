@@ -5,6 +5,10 @@ service using [ethers v6](https://docs.ethers.org/v6/) as the Ethereum client li
 
 **Chain:** Sepolia testnet (chainId `11155111`)
 
+ERC-7984 is a token standard that adds **confidential balances and transfer amounts** to
+ERC-20 tokens. Balances are stored as encrypted handles on-chain; only the token owner
+(or an authorized delegate) can decrypt them.
+
 This example demonstrates the high-level `@zama-fhe/sdk` API in a pure Node.js
 environment. Callers use plaintext amounts and familiar token operations; the SDK owns
 FHE encryption, decryption, access-control signatures, relayer communication, and token

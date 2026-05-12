@@ -113,7 +113,7 @@ transfer instead.
 | Step                  | Description                                                 |
 | --------------------- | ----------------------------------------------------------- |
 | Decrypt balance       | Read Account A's confidential cUSDT balance                 |
-| Shield                | Convert 100 USDT into 100 cUSDT through SDK-owned routing   |
+| Shield                | Approve + wrap 100 USDT into 100 cUSDT                      |
 | Decrypt balance       | Confirm new cUSDT balance                                   |
 | Confidential transfer | Send 10 cUSDT from A to B (amount encrypted on-chain)       |
 | Unshield              | Unwrap 50 cUSDT back to USDT (two-phase: unwrap + finalize) |

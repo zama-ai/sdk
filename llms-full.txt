@@ -16280,7 +16280,7 @@ transfer instead.
 | Step                  | Description                                                 |
 | --------------------- | ----------------------------------------------------------- |
 | Decrypt balance       | Read Account A's confidential cUSDT balance                 |
-| Shield                | Convert 100 USDT into 100 cUSDT through SDK-owned routing   |
+| Shield                | Approve + wrap 100 USDT into 100 cUSDT                      |
 | Decrypt balance       | Confirm new cUSDT balance                                   |
 | Confidential transfer | Send 10 cUSDT from A to B (amount encrypted on-chain)       |
 | Unshield              | Unwrap 50 cUSDT back to USDT (two-phase: unwrap + finalize) |
@@ -16337,6 +16337,10 @@ RELAYER_API_KEY=your-api-key
 service using [ethers v6](https://docs.ethers.org/v6/) as the Ethereum client library.
 
 **Chain:** Sepolia testnet (chainId `11155111`)
+
+ERC-7984 is a token standard that adds **confidential balances and transfer amounts** to
+ERC-20 tokens. Balances are stored as encrypted handles on-chain; only the token owner
+(or an authorized delegate) can decrypt them.
 
 This example demonstrates the high-level `@zama-fhe/sdk` API in a pure Node.js
 environment. Callers use plaintext amounts and familiar token operations; the SDK owns
