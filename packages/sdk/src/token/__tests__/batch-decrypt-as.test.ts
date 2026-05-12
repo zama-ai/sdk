@@ -144,7 +144,7 @@ describe("Token.batchDecryptBalancesAs", () => {
     expect(balances.get(TOKEN_A)).toBe(42n);
   });
 
-  test("throws DelegationNotFoundError on cache hit when delegation is revoked", async ({
+  test("throws aggregated DecryptionFailedError on cache hit when delegation is revoked", async ({
     relayer,
     createMockSigner,
     createSDK,
@@ -168,7 +168,11 @@ describe("Token.batchDecryptBalancesAs", () => {
       Token.batchDecryptBalancesAs([token], {
         delegatorAddress: DELEGATOR,
       }),
-    ).rejects.toThrow(expect.objectContaining({ code: "DELEGATION_NOT_FOUND" }));
+    ).rejects.toMatchObject({
+      code: "DECRYPTION_FAILED",
+      message: expect.stringContaining(TOKEN_A),
+      cause: expect.objectContaining({ code: "DELEGATION_NOT_FOUND" }),
+    });
     expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
   });
 
@@ -200,7 +204,7 @@ describe("Token.batchDecryptBalancesAs", () => {
     expect(onError).toHaveBeenCalledOnce();
   });
 
-  test("throws DelegationNotFoundError when no delegation exists", async ({
+  test("throws aggregated DecryptionFailedError when no delegation exists", async ({
     relayer,
     createMockSigner,
     createSDK,
@@ -222,16 +226,15 @@ describe("Token.batchDecryptBalancesAs", () => {
       Token.batchDecryptBalancesAs([token], {
         delegatorAddress: DELEGATOR,
       }),
-    ).rejects.toThrow(
-      expect.objectContaining({
-        code: "DELEGATION_NOT_FOUND",
-        message: expect.stringContaining(TOKEN_A),
-      }),
-    );
+    ).rejects.toMatchObject({
+      code: "DECRYPTION_FAILED",
+      message: expect.stringContaining(TOKEN_A),
+      cause: expect.objectContaining({ code: "DELEGATION_NOT_FOUND" }),
+    });
     expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
   });
 
-  test("throws DelegationExpiredError when delegation has expired", async ({
+  test("throws aggregated DecryptionFailedError when delegation has expired", async ({
     relayer,
     createMockSigner,
     createSDK,
@@ -254,12 +257,11 @@ describe("Token.batchDecryptBalancesAs", () => {
       Token.batchDecryptBalancesAs([token], {
         delegatorAddress: DELEGATOR,
       }),
-    ).rejects.toThrow(
-      expect.objectContaining({
-        code: "DELEGATION_EXPIRED",
-        message: expect.stringContaining(TOKEN_A),
-      }),
-    );
+    ).rejects.toMatchObject({
+      code: "DECRYPTION_FAILED",
+      message: expect.stringContaining(TOKEN_A),
+      cause: expect.objectContaining({ code: "DELEGATION_EXPIRED" }),
+    });
     expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
   });
 

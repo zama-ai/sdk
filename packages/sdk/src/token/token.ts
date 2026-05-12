@@ -50,7 +50,7 @@ export interface BatchDecryptAsOptions {
    * Matches the `account` parameter of `confidentialBalanceOf(account)` on-chain.
    */
   accountAddress?: Address;
-  /** Maximum number of concurrent decrypt calls. Default: Infinity. */
+  /** Maximum number of concurrent decrypt calls. Default: 10. */
   maxConcurrency?: number;
   /** Called when decryption fails for a single token. Return a fallback bigint. */
   onError?: (error: Error, address: Address) => bigint;
@@ -347,70 +347,145 @@ export class Token {
       return new Map();
     }
 
-    const { delegatorAddress, handles, accountAddress, onError, maxConcurrency } = options;
     const sdk = Token.assertSameSdk(tokens);
-    const normalizedAccount = accountAddress
-      ? getAddress(accountAddress)
-      : getAddress(delegatorAddress);
-
-    const resolvedHandles =
-      handles ??
-      (await Promise.all(tokens.map((t) => t.readConfidentialBalanceOf(normalizedAccount))));
-
-    if (tokens.length !== resolvedHandles.length) {
+    const results = new Map<Address, bigint>();
+    const errors = new Map<Address, ZamaError>();
+    const normalizedAccount = options.accountAddress
+      ? getAddress(options.accountAddress)
+      : getAddress(options.delegatorAddress);
+    const maxConcurrency = options.maxConcurrency ?? 10;
+    if (options.handles && tokens.length !== options.handles.length) {
       throw new DecryptionFailedError(
-        `tokens.length (${tokens.length}) must equal handles.length (${resolvedHandles.length})`,
+        `tokens.length (${tokens.length}) must equal handles.length (${options.handles.length})`,
       );
     }
+    const resolvedHandles =
+      options.handles ??
+      (await Token.readBalanceHandlesBatch(tokens, normalizedAccount, errors, maxConcurrency));
 
-    const decryptHandles = tokens.map((token, i) => ({
-      handle: resolvedHandles[i]!,
-      contractAddress: token.address,
-    }));
-
-    const { items } = await sdk.delegatedBatchDecryptHandlesAs({
-      handles: decryptHandles,
-      delegatorAddress,
-      accountAddress: normalizedAccount,
-      maxConcurrency,
-    });
-
-    const results = new Map<Address, bigint>();
-    const errors: { address: Address; error: Error }[] = [];
-
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i]!;
-      const tokenAddress = tokens[i]!.address;
-      if (item.error) {
-        if (onError) {
-          try {
-            results.set(tokenAddress, onError(item.error, tokenAddress));
-          } catch (callbackError) {
-            errors.push({ address: tokenAddress, error: toError(callbackError) });
-          }
-        } else {
-          errors.push({ address: tokenAddress, error: item.error });
-        }
+    const decryptRequests: Array<{ token: Token; handle: Handle }> = [];
+    for (const [index, token] of tokens.entries()) {
+      const handle = resolvedHandles[index];
+      if (!handle || errors.has(token.address)) {
         continue;
       }
-      if (item.value !== undefined) {
-        assertBigint(item.value, "batchDecryptBalancesAs: result[handle]");
-        results.set(tokenAddress, item.value);
+      if (isZeroHandle(handle)) {
+        // Zero balance → skip the relayer; no decryption needed.
+        results.set(token.address, 0n);
+      } else {
+        decryptRequests.push({ token, handle });
       }
     }
 
-    if (errors.length === 1) {
-      throw errors[0]!.error;
-    }
-    if (errors.length > 1) {
-      const message = errors.map((e) => `${e.address}: ${e.error.message}`).join("; ");
-      throw new DecryptionFailedError(
-        `Batch delegated decryption failed for ${errors.length} token(s): ${message}`,
-        { cause: errors[0]!.error },
-      );
+    if (decryptRequests.length > 0) {
+      const decrypted = await sdk.delegatedBatchDecryptHandlesAs({
+        handles: decryptRequests.map(({ token, handle }) => ({
+          handle,
+          contractAddress: token.address,
+        })),
+        delegatorAddress: options.delegatorAddress,
+        accountAddress: options.accountAddress,
+        maxConcurrency,
+      });
+
+      for (const [index, item] of decrypted.items.entries()) {
+        const request = decryptRequests[index];
+        if (!request) {
+          continue;
+        }
+        if (item.error) {
+          errors.set(request.token.address, item.error);
+          continue;
+        }
+        const value = item.value;
+        if (value === undefined) {
+          errors.set(
+            request.token.address,
+            new DecryptionFailedError(
+              `Batch delegated decryption returned no value for handle ${item.handle} on token ${request.token.address}`,
+            ),
+          );
+          continue;
+        }
+        assertBigint(value, "batchDecryptBalancesAs: result[handle]");
+        results.set(request.token.address, value);
+      }
     }
 
-    return results;
+    if (errors.size === 0) {
+      return results;
+    }
+
+    if (options.onError) {
+      const callbackErrors: Array<{ address: Address; error: Error }> = [];
+      for (const [address, error] of errors) {
+        try {
+          results.set(address, options.onError(error, address));
+        } catch (callbackError) {
+          callbackErrors.push({ address, error: toError(callbackError) });
+        }
+      }
+      if (callbackErrors.length > 0) {
+        const message = callbackErrors
+          .map(({ address, error }) => `${address}: ${error.message}`)
+          .join("; ");
+        throw new DecryptionFailedError(
+          `Batch delegated decryption onError callback failed for ${callbackErrors.length} token(s): ${message}`,
+          { cause: callbackErrors[0]?.error },
+        );
+      }
+      return results;
+    }
+
+    const errorEntries = Array.from(errors.entries());
+    const message = errorEntries.map(([addr, e]) => `${addr}: ${e.message}`).join("; ");
+    throw new DecryptionFailedError(
+      `Batch delegated decryption failed for ${errors.size} token(s): ${message}`,
+      { cause: errorEntries[0]?.[1] },
+    );
+  }
+
+  private static async readBalanceHandlesBatch(
+    tokens: Token[],
+    accountAddress: Address,
+    errors: Map<Address, ZamaError>,
+    maxConcurrency: number,
+  ): Promise<Array<Handle | undefined>> {
+    const outcomes = await pLimit(
+      tokens.map((token) => async () => {
+        try {
+          return {
+            status: "fulfilled" as const,
+            value: await token.readConfidentialBalanceOf(accountAddress),
+          };
+        } catch (reason) {
+          return { status: "rejected" as const, reason };
+        }
+      }),
+      maxConcurrency,
+    );
+
+    const handles: Array<Handle | undefined> = [];
+    for (const [index, token] of tokens.entries()) {
+      const outcome = outcomes[index];
+      if (!outcome) {
+        continue;
+      }
+      if (outcome.status === "fulfilled") {
+        handles[index] = outcome.value;
+        continue;
+      }
+      if (isFatalBatchError(outcome.reason)) {
+        throw outcome.reason;
+      }
+      errors.set(
+        token.address,
+        outcome.reason instanceof ZamaError
+          ? outcome.reason
+          : new DecryptionFailedError(toError(outcome.reason).message, { cause: outcome.reason }),
+      );
+    }
+    return handles;
   }
 
   // WRITE OPERATIONS

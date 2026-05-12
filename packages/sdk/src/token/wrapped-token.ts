@@ -258,14 +258,14 @@ export class WrappedToken extends Token {
    */
   async approveUnderlying(amount?: bigint): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("approveUnderlying");
-    await this.sdk.requireChainAlignment("approveUnderlying");
+    const account = await this.sdk.requireAlignedWalletAccount("approveUnderlying");
     const underlying = await this.#getUnderlying();
+    const userAddress = getAddress(account.address);
 
     const approvalAmount = amount ?? 2n ** 256n - 1n;
 
     try {
       if (approvalAmount > 0n) {
-        const userAddress = signer.requireWalletAccount("approveUnderlying").address;
         const currentAllowance = await this.sdk.provider.readContract(
           allowanceContract(underlying, userAddress, this.address),
         );
