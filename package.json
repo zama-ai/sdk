@@ -59,6 +59,7 @@
   },
   "devDependencies": {
     "@ast-grep/cli": "^0.42.1",
+    "dotenv": "^16.4.5",
     "@faker-js/faker": "^10.4.0",
     "@fhevm/mock-utils": "0.4.2",
     "@microsoft/api-extractor": "^7.58.7",

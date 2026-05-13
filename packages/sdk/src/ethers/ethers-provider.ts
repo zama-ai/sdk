@@ -18,6 +18,7 @@ import type {
   WriteContractConfig,
   WriteFunctionName,
 } from "../types";
+import { assertHex } from "../utils/assertions";
 
 /**
  * Configuration for {@link EthersProvider}.
@@ -133,10 +134,28 @@ export class EthersProvider implements GenericProvider {
   }): Promise<Hex> {
     const { from, call } = args;
     const iface = new ethers.Interface(call.abi as unknown as ethers.InterfaceAbi);
-    const data = iface.encodeFunctionData(
-      call.functionName as string,
-      call.args as readonly unknown[],
-    ) as Hex;
+    // Resolve overloaded ABI entries by name + arity. ethers'
+    // `getFunction(key, values)` allows for an "overrides" object as the
+    // last arg, so a 2-arg fragment still matches a 3-value call and
+    // overloads like ERC-7984 `confidentialTransfer(address,bytes32)` vs
+    // `confidentialTransfer(address,bytes32,bytes)` aren't disambiguated.
+    const candidates: ethers.FunctionFragment[] = [];
+    iface.forEachFunction((frag) => {
+      if (frag.name === call.functionName) {
+        candidates.push(frag);
+      }
+    });
+    const argLength = (call.args as readonly unknown[]).length;
+    const fragment =
+      candidates.length === 1
+        ? candidates[0]
+        : candidates.find((frag) => frag.inputs.length === argLength);
+    if (!fragment) {
+      throw new Error(`Function ${call.functionName}(${argLength} args) not found in ABI`);
+    }
+    const data = iface.encodeFunctionData(fragment, call.args as readonly unknown[]);
+    assertHex(data, "data");
+
     const value = call.value ?? 0n;
     // Wrap estimateGas — pre-flight revert is the high-value failure mode.
     // Skip the network round-trips entirely when the caller supplied

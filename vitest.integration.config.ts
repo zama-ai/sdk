@@ -8,6 +8,7 @@ export default defineConfig({
       "packages/**/__tests__/*.integration.test.ts",
       "packages/**/__tests__/integration.test.ts",
     ],
+    setupFiles: ["dotenv/config"],
     testTimeout: 30_000,
     hookTimeout: 30_000,
   },
