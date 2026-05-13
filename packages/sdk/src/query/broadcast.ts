@@ -1,5 +1,5 @@
 import type { Hex } from "viem";
-import type { PreparedTransaction } from "../types/prepared-tx";
+import type { PreparedTransaction } from "../types/offline";
 import type { TransactionResult } from "../types";
 import type { ZamaSDK } from "../zama-sdk";
 import type { MutationFactoryOptions } from "./factory-types";
@@ -24,25 +24,22 @@ export function broadcastMutationOptions(
   };
 }
 
-/** Variables for {@link completeFromTxHashMutationOptions}. */
-export interface CompleteFromTxHashParams {
+/** Variables for {@link attachMutationOptions}. */
+export interface AttachParams {
   readonly prepared: PreparedTransaction;
   readonly txHash: Hex;
 }
 
 /**
- * Mutation options for `sdk.offline.completeFromTxHash` — cache-sync escape hatch
- * when an external process broadcast `prepared.unsignedTx` directly.
+ * Mutation options for `sdk.offline.attach` — attach to a tx that was broadcast
+ * externally (custody control plane or raw `eth_sendRawTransaction`) and finish
+ * the SDK lifecycle (await receipt, emit event, sync caches).
  */
-export function completeFromTxHashMutationOptions(
+export function attachMutationOptions(
   sdk: ZamaSDK,
-): MutationFactoryOptions<
-  readonly ["zama.completeFromTxHash"],
-  CompleteFromTxHashParams,
-  TransactionResult
-> {
+): MutationFactoryOptions<readonly ["zama.attach"], AttachParams, TransactionResult> {
   return {
-    mutationKey: ["zama.completeFromTxHash"] as const,
-    mutationFn: ({ prepared, txHash }) => sdk.offline.completeFromTxHash(prepared, txHash),
+    mutationKey: ["zama.attach"] as const,
+    mutationFn: ({ prepared, txHash }) => sdk.offline.attach(prepared, txHash),
   };
 }

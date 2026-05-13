@@ -1,4 +1,4 @@
-import type { PreparedFor, TransactionKind } from "../types/prepared-tx";
+import type { PreparedFor, TransactionKind } from "../types/offline";
 import type { OfflineSigningOptions } from "../services/offline-signing-service";
 import type { ZamaSDK } from "../zama-sdk";
 import type { MutationFactoryOptions } from "./factory-types";
@@ -10,7 +10,7 @@ export interface RefreshPreparedParams {
 }
 
 /**
- * Mutation options for `sdk.offline.refreshPrepared` — re-stamps a prepared
+ * Mutation options for `sdk.offline.refresh` — re-stamps a prepared
  * transaction with the current chain state (nonce, fees, gas limit).
  * The original `prepared` is left untouched (immutable).
  */
@@ -23,6 +23,6 @@ export function refreshPreparedMutationOptions(
 > {
   return {
     mutationKey: ["zama.refreshPrepared"] as const,
-    mutationFn: ({ prepared, options }) => sdk.offline.refreshPrepared(prepared, options),
+    mutationFn: ({ prepared, options }) => sdk.offline.refresh(prepared, options),
   };
 }

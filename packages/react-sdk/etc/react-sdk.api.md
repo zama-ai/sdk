@@ -10,11 +10,11 @@ import * as _$_zama_fhe_sdk0 from '@zama-fhe/sdk';
 import * as _$react_jsx_runtime0 from 'react/jsx-runtime';
 import { Address } from '@zama-fhe/sdk';
 import { ApproveUnderlyingParams } from '@zama-fhe/sdk/query';
+import { AttachParams } from '@zama-fhe/sdk/query';
 import { BatchBalancesResult } from '@zama-fhe/sdk';
 import { BatchDecryptBalancesAsParams } from '@zama-fhe/sdk/query';
 import { BroadcastParams } from '@zama-fhe/sdk/query';
 import { ClearValueType } from '@zama-fhe/sdk';
-import { CompleteFromTxHashParams } from '@zama-fhe/sdk/query';
 import { ConfidentialSetOperatorParams } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferFromParams } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferParams } from '@zama-fhe/sdk/query';
@@ -28,8 +28,6 @@ import { DelegatedUserDecryptMutationParams } from '@zama-fhe/sdk/query';
 import { DelegationStatusData } from '@zama-fhe/sdk/query';
 import { EIP712TypedData } from '@zama-fhe/sdk';
 import { EncryptParams } from '@zama-fhe/sdk';
-import { ExecuteParams } from '@zama-fhe/sdk/query';
-import { ExecuteResult } from '@zama-fhe/sdk/query';
 import { FinalizeUnwrapParams } from '@zama-fhe/sdk/query';
 import { Hex } from '@zama-fhe/sdk';
 import { PaginatedResult } from '@zama-fhe/sdk';
@@ -45,6 +43,8 @@ import { RegisterPermitParams } from '@zama-fhe/sdk/query';
 import { ResumeUnshieldParams } from '@zama-fhe/sdk/query';
 import { RevokeDelegationParams } from '@zama-fhe/sdk/query';
 import { ShieldParams } from '@zama-fhe/sdk/query';
+import { SignAndBroadcastParams } from '@zama-fhe/sdk/query';
+import { SignAndRegisterParams } from '@zama-fhe/sdk/query';
 import { SignParams } from '@zama-fhe/sdk/query';
 import { Token } from '@zama-fhe/sdk';
 import { TokenMetadata } from '@zama-fhe/sdk/query';
@@ -70,6 +70,9 @@ export function useAllow(options?: UseMutationOptions<void, Error, Address[]>): 
 export function useApproveUnderlying(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, ApproveUnderlyingParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, ApproveUnderlyingParams, `0x${string}`>;
 
 // @public
+export function useAttach<TContext = unknown>(options?: UseMutationOptions<TransactionResult, Error, AttachParams, TContext>): UseMutationResult<TransactionResult, Error, AttachParams, TContext>;
+
+// @public
 export function useBatchDecryptBalancesAs(tokens: ReadonlyToken[], options?: UseMutationOptions<Map<Address, bigint>, Error, BatchDecryptBalancesAsParams>): _$_tanstack_react_query0.UseMutationResult<Map<`0x${string}`, bigint>, Error, _$_zama_fhe_sdk0.BatchDecryptAsOptions, unknown>;
 
 // @public
@@ -77,9 +80,6 @@ export function useBroadcast<TContext = unknown>(options?: UseMutationOptions<Tr
 
 // @public
 export function useClearCredentials(options?: UseMutationOptions<void>): _$_tanstack_react_query0.UseMutationResult<void, Error, void, unknown>;
-
-// @public
-export function useCompleteFromTxHash<TContext = unknown>(options?: UseMutationOptions<TransactionResult, Error, CompleteFromTxHashParams, TContext>): UseMutationResult<TransactionResult, Error, CompleteFromTxHashParams, TContext>;
 
 // @public
 export function useConfidentialBalance(config: UseConfidentialBalanceConfig, options?: UseConfidentialBalanceOptions): _$_tanstack_react_query0.UseQueryResult<bigint, Error>;
@@ -185,9 +185,6 @@ export function useEncrypt(): _$_tanstack_react_query0.UseMutationResult<Readonl
 }>, Error, EncryptParams, unknown>;
 
 // @public
-export function useExecute<TContext = unknown>(options?: UseMutationOptions<ExecuteResult, Error, ExecuteParams, TContext>): UseMutationResult<ExecuteResult, Error, ExecuteParams, TContext>;
-
-// @public
 export function useFinalizeUnwrap(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, FinalizeUnwrapParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, FinalizeUnwrapParams, `0x${string}`>;
 
 // @public
@@ -284,6 +281,14 @@ export interface UseShieldConfig extends UseZamaConfig {
 
 // @public
 export function useSign<TContext = unknown>(options?: UseMutationOptions<Hex, Error, SignParams, TContext>): UseMutationResult<Hex, Error, SignParams, TContext>;
+
+// @public
+export function useSignAndBroadcast<TContext = unknown>(options?: UseMutationOptions<TransactionResult, Error, SignAndBroadcastParams, TContext>): UseMutationResult<TransactionResult, Error, SignAndBroadcastParams, TContext>;
+
+// Warning: (ae-forgotten-export) The symbol "SignAndRegisterResult" needs to be exported by the entry point index.d.ts
+//
+// @public
+export function useSignAndRegister<TContext = unknown>(options?: UseMutationOptions<SignAndRegisterResult, Error, SignAndRegisterParams, TContext>): UseMutationResult<SignAndRegisterResult, Error, SignAndRegisterParams, TContext>;
 
 // @public
 export function useToken(config: UseZamaConfig): Token;

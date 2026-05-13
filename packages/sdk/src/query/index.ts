@@ -110,12 +110,13 @@ export {
 } from "./prepare";
 export {
   broadcastMutationOptions,
-  completeFromTxHashMutationOptions,
+  attachMutationOptions,
   type BroadcastParams,
-  type CompleteFromTxHashParams,
+  type AttachParams,
 } from "./broadcast";
 export { registerPermitMutationOptions, type RegisterPermitParams } from "./register-permit";
-export { executeMutationOptions, type ExecuteParams, type ExecuteResult } from "./execute";
+export { signAndBroadcastMutationOptions, type SignAndBroadcastParams } from "./sign-and-broadcast";
+export { signAndRegisterMutationOptions, type SignAndRegisterParams } from "./sign-and-register";
 export { refreshPreparedMutationOptions, type RefreshPreparedParams } from "./refresh-prepared";
 export { isAllowedQueryOptions, type IsAllowedQueryConfig } from "./is-allowed";
 export { revokePermitsMutationOptions } from "./revoke-permits";

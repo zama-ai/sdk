@@ -1,5 +1,5 @@
 import type { Hex } from "viem";
-import type { CredentialPermitResult, PermitKind, PreparedPermitFor } from "../types/prepared-tx";
+import type { CredentialPermitResult, PermitKind, PreparedPermitFor } from "../types/offline";
 import type { ZamaSDK } from "../zama-sdk";
 import type { MutationFactoryOptions } from "./factory-types";
 

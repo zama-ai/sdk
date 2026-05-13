@@ -7,7 +7,7 @@ import {
   USER,
   expectDefaultMutationState,
 } from "../../__tests__/mutation-test-helpers";
-import { useCompleteFromTxHash } from "../use-complete-from-tx-hash";
+import { useAttach } from "../use-attach";
 import { useZamaSDK } from "../../provider";
 
 const PREPARED: PreparedFor<"ConfidentialTransfer"> = {
@@ -27,23 +27,21 @@ const PREPARED: PreparedFor<"ConfidentialTransfer"> = {
 
 const TX_RESULT = { txHash: "0xtx", receipt: { logs: [] } } as unknown as TransactionResult;
 
-describe("useCompleteFromTxHash", () => {
+describe("useAttach", () => {
   test("default", ({ renderWithProviders }) => {
-    const { result } = renderWithProviders(() => useCompleteFromTxHash());
+    const { result } = renderWithProviders(() => useAttach());
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
     expectDefaultMutationState(state);
   });
 
-  test("delegates to sdk.offline.completeFromTxHash", async ({ renderWithProviders }) => {
+  test("delegates to sdk.offline.attach", async ({ renderWithProviders }) => {
     const { result } = renderWithProviders(() => {
       const sdk = useZamaSDK();
-      const mutation = useCompleteFromTxHash();
+      const mutation = useAttach();
       return { sdk, mutation };
     });
 
-    const spy = vi
-      .spyOn(result.current.sdk.offline, "completeFromTxHash")
-      .mockResolvedValue(TX_RESULT);
+    const spy = vi.spyOn(result.current.sdk.offline, "attach").mockResolvedValue(TX_RESULT);
 
     let value: unknown;
     await act(async () => {

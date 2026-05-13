@@ -6,7 +6,6 @@ import type {
 import type {
   CredentialPermitRequest,
   CredentialPermitResult,
-  ExecuteRequest,
   PermitKind,
   PreparedFor,
   PreparedPermitFor,
@@ -22,15 +21,16 @@ import type {
  * policy-engine workflows where the three steps cannot run synchronously
  * in a single Promise.
  *
- * Three tiers, matching the Dfns reference shape:
- * - **Tier 1 — atomic** (`Token.confidentialTransfer`, etc.) — *not* on this client; lives on `Token` for online-signer call sites.
- * - **Tier 2 — sign & broadcast bundled** ({@link execute}) — one in-process call, three steps internally.
+ * Three tiers — the industry-standard shape custody platforms expose
+ * (transfer / sign-and-broadcast / sign-only):
+ * - **Tier 1 — atomic** ({@link Token} methods like `Token.confidentialTransfer`) — *not* on this client; lives on `Token` for online-signer call sites.
+ * - **Tier 2 — sign & broadcast (or sign & register) bundled** ({@link signAndBroadcast} / {@link signAndRegister}) — one in-process call, three steps internally.
  * - **Tier 3 — fully decomposed** ({@link prepare} / {@link sign} / {@link broadcast}) — caller slots their own custody steps between SDK calls.
  *
  * Obtained via `sdk.offline`. "Offline" refers to where the signer's keys
  * live (out-of-process: HSM, custody control plane, policy engine), not to
- * the methods themselves — {@link broadcast}, {@link execute}, and
- * {@link refreshPrepared} are RPC-bound. The SDK never takes custody of
+ * the methods themselves — {@link broadcast}, {@link signAndBroadcast}, and
+ * {@link refresh} are RPC-bound. The SDK never takes custody of
  * signing material; every method that signs runs against the signer object
  * you passed to `createConfig`, in your process; keys stay where they are.
  */
@@ -45,7 +45,7 @@ export class OfflineClient {
    * Build an RLP-encoded unsigned transaction for the given request. The
    * caller signs it externally — via {@link sign}, an HSM ceremony, an
    * out-of-process custodian — and feeds the result back into
-   * {@link broadcast} or {@link execute}.
+   * {@link broadcast} or {@link signAndBroadcast}.
    *
    * Signer-optional: works without a configured signer (canonical shape for
    * cross-process custody — the back-end signer service consumes
@@ -80,15 +80,14 @@ export class OfflineClient {
    *
    * Many flows skip this method:
    *
-   * - **Cross-process custody** (Dfns, Fireblocks, Fordefi, Turnkey policy
-   *   mode): configure with `signer: undefined`, sign in your back-end
-   *   signer service using the custodian's API, pass bytes to
-   *   {@link broadcast}. `sign()` throws {@link SignerNotConfiguredError}
-   *   here — by design.
+   * - **Cross-process custody** (institutional custodians, policy engines,
+   *   m-of-n approval workflows): configure with `signer: undefined`, sign
+   *   in your back-end signer service, pass bytes to {@link broadcast}.
+   *   `sign()` throws {@link SignerNotConfiguredError} here — by design.
    * - **Permit-only signers** (KMS configurations that can `signTypedData`
-   *   but not full transactions): use the signer for `registerPermit` flows;
-   *   for tx-signing, arrange an out-of-process pipeline bypassing this
-   *   method. `sign()` throws {@link SignerCapabilityError} here.
+   *   but not full transactions): use the signer for {@link registerPermit}
+   *   flows; for tx-signing, arrange an out-of-process pipeline bypassing
+   *   this method. `sign()` throws {@link SignerCapabilityError} here.
    *
    * Both cases naturally route to `prepare → external sign → broadcast`
    * — this method is the convenience for the third case where the configured
@@ -112,27 +111,28 @@ export class OfflineClient {
   }
 
   /**
-   * Bundled in-process flow from a request. Accepts:
-   * - a {@link TransactionPrepareRequest} (prepare + sign + broadcast),
-   * - a {@link CredentialPermitRequest} (prepare + sign + register).
+   * Bundled in-process flow for a transaction: prepare + sign + broadcast.
+   * Equivalent to chaining `await broadcast(prepared, await sign(prepared))`
+   * for callers who already hold a prepared transaction.
    *
-   * Callers who already hold a {@link PreparedTransaction} chain
-   * `await broadcast(prepared, await sign(prepared))` — keeping the
-   * prepare/sign/broadcast call shape visible at the call site.
+   * Tier-2 of the offline-signing surface — equivalent to the
+   * "sign-and-broadcast" entry point custody platforms typically expose
+   * alongside their lower-level sign-only API.
    */
-  execute(
-    input: TransactionPrepareRequest,
+  signAndBroadcast(
+    request: TransactionPrepareRequest,
     options?: OfflineSigningOptions,
-  ): Promise<TransactionResult>;
-  execute(
-    input: CredentialPermitRequest,
-    options?: OfflineSigningOptions,
-  ): Promise<CredentialPermitResult | void>;
-  execute(
-    input: ExecuteRequest,
-    options?: OfflineSigningOptions,
-  ): Promise<TransactionResult | CredentialPermitResult | void> {
-    return this.#offlineSigningService.execute(input, options);
+  ): Promise<TransactionResult> {
+    return this.#offlineSigningService.signAndBroadcast(request, options);
+  }
+
+  /**
+   * Bundled in-process flow for a credential permit: prepare + signTypedData
+   * + register. Returns the registered permit metadata, or `void` when the
+   * permit was already cached and no signature was needed.
+   */
+  signAndRegister(request: CredentialPermitRequest): Promise<CredentialPermitResult | void> {
+    return this.#offlineSigningService.signAndRegister(request);
   }
 
   /**
@@ -150,13 +150,14 @@ export class OfflineClient {
   }
 
   /**
-   * Cache-sync escape hatch when an external process broadcast
-   * `prepared.unsignedTx` directly via `eth_sendRawTransaction` and this
-   * process needs the matching receipt + event emission without holding
-   * the signed bytes.
+   * Attach this SDK to an externally-broadcast transaction: wait for its
+   * receipt, emit the matching `*Submitted` event, and sync cache state —
+   * without holding the signed bytes. Pair with {@link prepare} when the
+   * broadcast happens in a custody control plane or via
+   * `eth_sendRawTransaction` outside this process.
    */
-  completeFromTxHash(prepared: PreparedTransaction, txHash: Hex): Promise<TransactionResult> {
-    return this.#offlineSigningService.completeFromTxHash(prepared, txHash);
+  attach(prepared: PreparedTransaction, txHash: Hex): Promise<TransactionResult> {
+    return this.#offlineSigningService.attach(prepared, txHash);
   }
 
   /**
@@ -168,10 +169,10 @@ export class OfflineClient {
    *
    * Signer-optional: works without a configured signer.
    */
-  refreshPrepared<K extends TransactionKind>(
+  refresh<K extends TransactionKind>(
     prepared: PreparedFor<K>,
     options?: OfflineSigningOptions,
   ): Promise<PreparedFor<K>> {
-    return this.#offlineSigningService.refreshPrepared(prepared, options);
+    return this.#offlineSigningService.refresh(prepared, options);
   }
 }

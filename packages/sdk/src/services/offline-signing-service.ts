@@ -63,9 +63,9 @@ import type { EncryptionService } from "./encryption-service";
 /** Configuration for {@link OfflineSigningService}. */
 export interface OfflineSigningServiceConfig {
   /**
-   * Optional signer. `prepare`, `broadcast`, `completeFromTxHash`, and
-   * `refreshPrepared` work without a signer (canonical shape for
-   * cross-process custody). `sign` and `execute` require a signer with the
+   * Optional signer. `prepare`, `broadcast`, `attach`, and `refresh` work
+   * without a signer (canonical shape for cross-process custody). `sign`,
+   * `signAndBroadcast`, and `signAndRegister` require a signer with the
    * `signTransaction` capability.
    */
   readonly signer?: GenericSigner;
@@ -162,7 +162,8 @@ export class OfflineSigningService {
    *
    * For transaction kinds, returns an RLP-encoded unsigned transaction the
    * caller signs externally (via {@link sign}, an HSM, or any out-of-process
-   * signer) and feeds back through {@link broadcast} or {@link execute}.
+   * signer) and feeds back through {@link broadcast} or
+   * {@link signAndBroadcast}.
    *
    * For `CredentialPermit`, returns an EIP-712 typed-data envelope to be
    * signed externally and fed back through {@link registerPermit}.
@@ -249,7 +250,7 @@ export class OfflineSigningService {
   /**
    * Sign a prepared transaction with the configured signer and return
    * RLP-encoded signed bytes. Pair with {@link broadcast}, or use
-   * {@link execute} for the bundled flow.
+   * {@link signAndBroadcast} for the bundled flow.
    *
    * @throws {@link SignerCapabilityError} when the configured signer has no
    *   `signTransaction` capability (online-only wallets).
@@ -288,7 +289,7 @@ export class OfflineSigningService {
    * a pre-submit failure (chain mismatch, RPC reject) is wrapped as
    * `TransactionRevertedError("Broadcast failed for …")`; a post-submit
    * failure (receipt wait timeout or revert) preserves `txHash` in the
-   * message so the caller can resume via {@link completeFromTxHash}.
+   * message so the caller can resume via {@link attach}.
    */
   async broadcast(prepared: PreparedTransaction, signedTx: Hex): Promise<TransactionResult> {
     await this.#assertSameChainAsPrepared(prepared, "broadcast");
@@ -306,63 +307,60 @@ export class OfflineSigningService {
     return this.#awaitReceipt(prepared, txHash);
   }
 
-  // ── execute (overloaded) ───────────────────────────────────────────────
+  // ── signAndBroadcast / signAndRegister ────────────────────────────────
 
   /**
-   * Bundled in-process flow from a request. Accepts either a
-   * {@link TransactionPrepareRequest} (prepare + sign + broadcast) or a
-   * {@link CredentialPermitRequest} (prepare + sign + register the typed-data
-   * signature in the credential cache).
+   * Bundled in-process flow for a transaction: prepare + sign + broadcast.
+   * Equivalent to chaining
+   * `await broadcast(prepared, await sign(prepared))` for callers who
+   * already hold a prepared transaction — keeping the prepare/sign/broadcast
+   * call shape visible at the call site (code review can tell whether
+   * `prepared` is fresh or stale without inspecting types).
    *
-   * Callers who already hold a {@link PreparedTransaction} should chain
-   * `await broadcast(prepared, await sign(prepared))` — keeping the
-   * prepare/sign/broadcast call shape visible at the call site (code review
-   * can tell whether `prepared` is fresh or stale without inspecting types).
+   * Requires a signer with `signTransaction`.
    */
-  execute(
-    input: TransactionPrepareRequest,
+  async signAndBroadcast(
+    request: TransactionPrepareRequest,
     options?: OfflineSigningOptions,
-  ): Promise<TransactionResult>;
-  execute(
-    input: CredentialPermitRequest,
-    options?: OfflineSigningOptions,
-  ): Promise<CredentialPermitResult | void>;
-  execute(
-    input: ExecuteRequest,
-    options?: OfflineSigningOptions,
-  ): Promise<TransactionResult | CredentialPermitResult | void>;
-  async execute(
-    input: ExecuteRequest,
-    options?: OfflineSigningOptions,
-  ): Promise<TransactionResult | CredentialPermitResult | void> {
-    // execute is the in-process bundled flow; it always requires a signer
-    // with signTransaction (or, for permits, with signTypedData via the
-    // credential service which itself requires the signer).
-    const signer = this.#requireSigner(`execute(${input.kind})`);
-    if (isCredentialPermitRequest(input)) {
-      const prepared = await this.#prepareCredentialPermit(input);
-      if (prepared.typedData === null) {
-        // Already covered — keypair warm, no signature needed.
-        return;
-      }
-      const signature = await signer.signTypedData(prepared.typedData);
-      return this.registerPermit(prepared, signature);
-    }
-    const prepared = await this.#prepareTransaction(input, options);
+  ): Promise<TransactionResult> {
+    this.#requireSigner(`signAndBroadcast(${request.kind})`);
+    const prepared = await this.#prepareTransaction(request, options);
     const signedTx = await this.sign(prepared);
     return this.broadcast(prepared, signedTx);
   }
 
-  // ── completeFromTxHash ─────────────────────────────────────────────────
+  /**
+   * Bundled in-process flow for a credential permit: prepare + signTypedData
+   * + register the typed-data signature in the credential cache.
+   *
+   * Returns the registered permit metadata, or `void` when the permit was
+   * already cached and no signature was needed.
+   *
+   * Requires a signer with `signTypedData` (any signer that satisfies
+   * {@link GenericSigner}, since `signTypedData` is mandatory there).
+   */
+  async signAndRegister(request: CredentialPermitRequest): Promise<CredentialPermitResult | void> {
+    const signer = this.#requireSigner(`signAndRegister(${request.kind})`);
+    const prepared = await this.#prepareCredentialPermit(request);
+    if (prepared.typedData === null) {
+      // Already covered — keypair warm, no signature needed.
+      return;
+    }
+    const signature = await signer.signTypedData(prepared.typedData);
+    return this.registerPermit(prepared, signature);
+  }
+
+  // ── attach ─────────────────────────────────────────────────────────────
 
   /**
-   * Cache-sync escape hatch for the SDK-less broadcast path. Use when an
-   * external process submitted `prepared.unsignedTx` directly via
-   * `eth_sendRawTransaction` and this process needs to refresh its caches
-   * without holding the signed bytes.
+   * Attach this SDK to an externally-broadcast transaction: re-check chain
+   * alignment, emit the matching `*Submitted` event, and wait for the
+   * receipt — without holding the signed bytes. Use when an external process
+   * submitted `prepared.unsignedTx` directly via `eth_sendRawTransaction`
+   * and this process needs to refresh its caches.
    */
-  async completeFromTxHash(prepared: PreparedTransaction, txHash: Hex): Promise<TransactionResult> {
-    await this.#assertSameChainAsPrepared(prepared, "completeFromTxHash");
+  async attach(prepared: PreparedTransaction, txHash: Hex): Promise<TransactionResult> {
+    await this.#assertSameChainAsPrepared(prepared, "attach");
     this.#emitSubmitted(prepared, txHash);
     return this.#awaitReceipt(prepared, txHash);
   }
@@ -379,7 +377,7 @@ export class OfflineSigningService {
    * `prepared` is left untouched (immutable); the returned value is a fresh
    * `PreparedFor<K>` built from the original `request`.
    */
-  refreshPrepared<K extends TransactionKind>(
+  refresh<K extends TransactionKind>(
     prepared: PreparedFor<K>,
     options?: OfflineSigningOptions,
   ): Promise<PreparedFor<K>> {
@@ -672,7 +670,7 @@ export class OfflineSigningService {
         throw error;
       }
       throw new TransactionRevertedError(
-        `Receipt wait failed for ${prepared.kind} (txHash ${txHash}); resume with completeFromTxHash`,
+        `Receipt wait failed for ${prepared.kind} (txHash ${txHash}); resume with attach`,
         { cause: error },
       );
     }

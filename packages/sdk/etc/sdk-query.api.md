@@ -51,6 +51,19 @@ export interface ApproveUnderlyingSubmittedEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.ApproveUnderlyingSubmitted;
 }
 
+// @public
+export function attachMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.attach"], AttachParams, TransactionResult>;
+
+// @public
+export interface AttachParams {
+    // Warning: (ae-forgotten-export) The symbol "PreparedTransaction" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    readonly prepared: PreparedTransaction;
+    // (undocumented)
+    readonly txHash: Hex;
+}
+
 // @public (undocumented)
 export interface BaseEvent {
     operationId?: string;
@@ -87,8 +100,6 @@ export function broadcastMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<r
 
 // @public
 export interface BroadcastParams {
-    // Warning: (ae-forgotten-export) The symbol "PreparedTransaction" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     readonly prepared: PreparedTransaction;
     // (undocumented)
@@ -99,17 +110,6 @@ export interface BroadcastParams {
 export function clearCredentialsMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.clearCredentials"], void, void>;
 
 export { ClearValueType }
-
-// @public
-export function completeFromTxHashMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.completeFromTxHash"], CompleteFromTxHashParams, TransactionResult>;
-
-// @public
-export interface CompleteFromTxHashParams {
-    // (undocumented)
-    readonly prepared: PreparedTransaction;
-    // (undocumented)
-    readonly txHash: Hex;
-}
 
 // @public (undocumented)
 export interface ConfidentialBalanceQueryConfig {
@@ -411,27 +411,6 @@ export interface EncryptStartEvent extends BaseEvent {
 }
 
 // @public
-export function executeMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.execute"], ExecuteParams, ExecuteResult>;
-
-// @public
-export interface ExecuteParams {
-    // Warning: (ae-forgotten-export) The symbol "OfflineSigningOptions" needs to be exported by the entry point index.d.ts
-    //
-    // (undocumented)
-    readonly options?: OfflineSigningOptions;
-    // Warning: (ae-forgotten-export) The symbol "TransactionPrepareRequest" needs to be exported by the entry point index.d.ts
-    // Warning: (ae-forgotten-export) The symbol "CredentialPermitRequest" needs to be exported by the entry point index.d.ts
-    //
-    // (undocumented)
-    readonly request: TransactionPrepareRequest | CredentialPermitRequest;
-}
-
-// Warning: (ae-forgotten-export) The symbol "CredentialPermitResult" needs to be exported by the entry point index.d.ts
-//
-// @public
-export type ExecuteResult = TransactionResult | CredentialPermitResult | void;
-
-// @public
 export function filterQueryOptions<TOptions extends Record<string, unknown>>(options: TOptions): Omit<TOptions, StrippedQueryOptionKeys>;
 
 // @public (undocumented)
@@ -590,8 +569,13 @@ export function prepareMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<rea
 
 // @public
 export interface PrepareParams {
+    // Warning: (ae-forgotten-export) The symbol "OfflineSigningOptions" needs to be exported by the entry point index.d.ts
+    //
     // (undocumented)
     readonly options?: OfflineSigningOptions;
+    // Warning: (ae-forgotten-export) The symbol "TransactionPrepareRequest" needs to be exported by the entry point index.d.ts
+    // Warning: (ae-forgotten-export) The symbol "CredentialPermitRequest" needs to be exported by the entry point index.d.ts
+    //
     // (undocumented)
     readonly request: TransactionPrepareRequest | CredentialPermitRequest;
 }
@@ -719,6 +703,8 @@ export interface RefreshPreparedParams {
     readonly prepared: PreparedFor<TransactionKind>;
 }
 
+// Warning: (ae-forgotten-export) The symbol "CredentialPermitResult" needs to be exported by the entry point index.d.ts
+//
 // @public
 export function registerPermitMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.registerPermit"], RegisterPermitParams, CredentialPermitResult>;
 
@@ -809,6 +795,26 @@ export interface ShieldSubmittedEvent extends BaseEvent {
     txHash: Hex;
     // (undocumented)
     type: typeof ZamaSDKEvents.ShieldSubmitted;
+}
+
+// @public
+export function signAndBroadcastMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.signAndBroadcast"], SignAndBroadcastParams, TransactionResult>;
+
+// @public
+export interface SignAndBroadcastParams {
+    // (undocumented)
+    readonly options?: OfflineSigningOptions;
+    // (undocumented)
+    readonly request: TransactionPrepareRequest;
+}
+
+// @public
+export function signAndRegisterMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.signAndRegister"], SignAndRegisterParams, CredentialPermitResult | void>;
+
+// @public
+export interface SignAndRegisterParams {
+    // (undocumented)
+    readonly request: CredentialPermitRequest;
 }
 
 // @public
@@ -1495,9 +1501,9 @@ export const ZamaSDKEvents: {
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/types-QFqqzbP6.d.ts:561:3 - (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
-// dist/esm/types-QFqqzbP6.d.ts:562:3 - (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
-// dist/esm/types-QFqqzbP6.d.ts:563:3 - (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
+// dist/esm/types-r21xQTUX.d.ts:561:3 - (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
+// dist/esm/types-r21xQTUX.d.ts:562:3 - (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
+// dist/esm/types-r21xQTUX.d.ts:563:3 - (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

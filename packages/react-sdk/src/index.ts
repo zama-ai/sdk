@@ -102,11 +102,12 @@ export { useIsConfidentialTokenValid } from "./wrappers-registry/use-is-confiden
 export { useListPairs } from "./wrappers-registry/use-list-pairs";
 
 export {
-  useExecute,
+  useSignAndBroadcast,
+  useSignAndRegister,
   usePrepare,
   useSign,
   useBroadcast,
   useRegisterPermit,
-  useCompleteFromTxHash,
+  useAttach,
   useRefreshPrepared,
 } from "./offline";

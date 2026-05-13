@@ -10,7 +10,7 @@ import {
 } from "../../test-fixtures";
 import { ZamaSDKEvents, type ZamaSDKEventInput } from "../../events/sdk-events";
 import type { GenericProvider } from "../../types/provider";
-import type { TransactionPrepareRequest } from "../../types/prepared-tx";
+import type { TransactionPrepareRequest } from "../../types/offline";
 
 const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
 const RECIPIENT = "0x3333333333333333333333333333333333333333" as Address;
@@ -112,7 +112,7 @@ describe("OfflineSigningService — ConfidentialTransfer round-trip", () => {
     userAddress,
   }) => {
     const sdk = createSDK({ signer });
-    const result = await sdk.offline.execute({
+    const result = await sdk.offline.signAndBroadcast({
       kind: "ConfidentialTransfer",
       from: userAddress,
       token: TOKEN,
@@ -125,7 +125,7 @@ describe("OfflineSigningService — ConfidentialTransfer round-trip", () => {
     expect(result.txHash).toBe(TX_HASH);
   });
 
-  test("completeFromTxHash awaits receipt + emits event without re-broadcasting", async ({
+  test("attach awaits receipt + emits event without re-broadcasting", async ({
     createSDK,
     signer,
     provider,
@@ -141,7 +141,7 @@ describe("OfflineSigningService — ConfidentialTransfer round-trip", () => {
       amount: 1n,
     });
     const externalTxHash = "0xdeadbeefcafe" as Hex;
-    const result = await sdk.offline.completeFromTxHash(prepared, externalTxHash);
+    const result = await sdk.offline.attach(prepared, externalTxHash);
     expect(provider.sendRawTransaction).not.toHaveBeenCalled();
     expect(provider.waitForTransactionReceipt).toHaveBeenCalledWith(externalTxHash);
     expect(result.txHash).toBe(externalTxHash);
@@ -486,7 +486,7 @@ describe("OfflineSigningService — CredentialPermit", () => {
     userAddress,
   }) => {
     const sdk = createSDK({ signer });
-    await sdk.offline.execute({
+    await sdk.offline.signAndRegister({
       kind: "CredentialPermit",
       from: userAddress,
       contracts: [TOKEN],
@@ -501,7 +501,7 @@ describe("OfflineSigningService — CredentialPermit", () => {
     userAddress,
   }) => {
     const sdk = createSDK({ signer });
-    await sdk.offline.execute({
+    await sdk.offline.signAndRegister({
       kind: "CredentialPermit",
       from: userAddress,
       contracts: [],
@@ -517,7 +517,7 @@ describe("OfflineSigningService — CredentialPermit", () => {
   }) => {
     const sdk = createSDK({ signer });
     const OTHER = "0x4444444444444444444444444444444444444444" as Address;
-    await sdk.offline.execute({
+    await sdk.offline.signAndRegister({
       kind: "CredentialPermit",
       from: userAddress,
       contracts: [TOKEN, OTHER],
@@ -593,7 +593,7 @@ describe("OfflineSigningService — broadcast error paths", () => {
       `Receipt wait failed for ConfidentialTransfer (txHash ${TX_HASH})`,
     );
     // Submitted MUST have been emitted with the real txHash — the caller can
-    // recover via completeFromTxHash.
+    // recover via attach.
     expect(onEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         type: ZamaSDKEvents.TransferSubmitted,
@@ -702,7 +702,7 @@ describe("OfflineSigningService — chain alignment", () => {
     expect(provider.sendRawTransaction).not.toHaveBeenCalled();
   });
 
-  test("completeFromTxHash() also re-checks chain alignment", async ({
+  test("attach() also re-checks chain alignment", async ({
     createSDK,
     signer,
     provider,
@@ -718,9 +718,7 @@ describe("OfflineSigningService — chain alignment", () => {
     });
     vi.mocked(provider.getChainId).mockResolvedValueOnce(1);
 
-    await expect(sdk.offline.completeFromTxHash(prepared, TX_HASH)).rejects.toBeInstanceOf(
-      ChainMismatchError,
-    );
+    await expect(sdk.offline.attach(prepared, TX_HASH)).rejects.toBeInstanceOf(ChainMismatchError);
   });
 });
 
@@ -1154,7 +1152,7 @@ describe("OfflineSigningService — refreshPrepared", () => {
     const fresh = "0xfeedfacecafebabe" as Hex;
     vi.mocked(provider.prepareTransaction).mockResolvedValueOnce(fresh);
 
-    const refreshed = await sdk.offline.refreshPrepared(prepared);
+    const refreshed = await sdk.offline.refresh(prepared);
     expect(refreshed.unsignedTx).toBe(fresh);
     // Original prepared object is untouched.
     expect(prepared.unsignedTx).toBe(originalUnsigned);
@@ -1174,7 +1172,7 @@ describe("OfflineSigningService — refreshPrepared", () => {
       token: TOKEN,
       operator: RECIPIENT,
     });
-    const refreshed = await sdk.offline.refreshPrepared(prepared);
+    const refreshed = await sdk.offline.refresh(prepared);
     expect(refreshed.from).toBe(prepared.from);
     expect(refreshed.kind).toBe("SetOperator");
   });
