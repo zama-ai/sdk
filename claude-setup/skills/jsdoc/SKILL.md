@@ -51,9 +51,10 @@ Full JSDoc. These feed typedoc and appear in generated API reference pages.
  * @param amount - Plaintext amount to transfer.
  * @param options - Transfer options.
  * @returns The transaction hash and mined receipt.
- * @throws {@link InsufficientConfidentialBalanceError} if balance is less than `amount`.
- * @throws {@link EncryptionFailedError} if FHE encryption fails.
- * @throws {@link TransactionRevertedError} if the on-chain transfer reverts.
+ *
+ * @throws if balance is less than `amount`. {@link InsufficientConfidentialBalanceError}
+ * @throws if FHE encryption fails. {@link EncryptionFailedError}
+ * @throws if the on-chain transfer reverts. {@link TransactionRevertedError}
  *
  * @example
  * ```ts
@@ -101,7 +102,8 @@ Hooks are public exports and follow the same full JSDoc rule. However, `@param` 
  * Read the connected wallet's confidential token balance, polling at regular intervals.
  *
  * @returns Query result with `data` as the decrypted balance in base units (bigint).
- * @throws {@link DecryptionFailedError} if FHE decryption fails.
+ *
+ * @throws if FHE decryption fails. {@link DecryptionFailedError}
  *
  * @example
  * ```tsx
@@ -141,7 +143,7 @@ This rule also applies to **`protected` methods on abstract base classes** — t
 /**
  * Ensure ERC-20 allowance is sufficient for the shield amount.
  *
- * @throws {@link ApprovalFailedError} if the approval transaction fails.
+ * @throws if the approval transaction fails. {@link ApprovalFailedError}
  */
 async #ensureAllowance(amount: bigint, maxApproval: boolean, callbacks?: ShieldCallbacks): Promise<void> {
 
@@ -150,8 +152,8 @@ async #ensureAllowance(amount: bigint, maxApproval: boolean, callbacks?: ShieldC
  * Resolve credentials for the given contracts, creating fresh ones if none are cached.
  * Deduplicates concurrent creation calls.
  *
- * @throws {@link SigningRejectedError} if the user rejects the wallet signature prompt.
- * @throws {@link SigningFailedError} if signing fails for any other reason.
+ * @throws if the user rejects the wallet signature prompt. {@link SigningRejectedError}
+ * @throws if signing fails for any other reason. {@link SigningFailedError}
  */
 protected async resolveCredentials(...): Promise<TCreds> {
 
@@ -163,7 +165,8 @@ protected async resolveCredentials(...): Promise<TCreds> {
  * @param maxApproval - Whether to approve max uint256.
  * @param callbacks - Optional shield callbacks.
  * @returns Resolves when allowance is sufficient.
- * @throws {@link ApprovalFailedError} if the approval transaction fails.
+ *
+ * @throws if the approval transaction fails. {@link ApprovalFailedError}
  */
 
 // BAD — protected method reduced to just @internal (loses error contract)
@@ -316,10 +319,19 @@ One per function. Compact. Show the primary use case, plus one variant if it dem
 
 Keep everywhere — public and private. This is the only place error contracts are documented. TypeScript has no `throws` clause, thus, the information is conveyed via JSDoc.
 
+Put the condition first and the `{@link X}` at the end of the description. When `{@link X}` sits immediately after `@throws ` (whether the description follows on the same line or the next), renderers (TypeScript hover, typedoc) treat the braces as the JSDoc type-annotation slot and emit the link as literal text instead of a clickable link. Moving the link to the description's tail keeps it in description position.
+
 ```ts
-// Always document @throws, even on private methods
+// GOOD — condition first, {@link} at the end of the description
+@throws if no active delegation exists. {@link DelegationNotFoundError}
+@throws if the delegation has expired. {@link DelegationExpiredError}
+
+// BAD — {@link} immediately after @throws sits in the type slot, doesn't render
 @throws {@link DelegationNotFoundError} if no active delegation exists.
-@throws {@link DelegationExpiredError} if the delegation has expired.
+
+// BAD — same problem on two lines: link still sits right after `@throws `
+@throws {@link DelegationNotFoundError}
+if no active delegation exists.
 ```
 
 ### 8. `{@link}` References
@@ -389,7 +401,7 @@ Use `@remarks` for:
  * Call {@link allow} first to pre-authorize and control when the prompt appears.
  *
  * @returns The decrypted plaintext balance as a bigint.
- * @throws {@link SigningRejectedError} if the user rejects the wallet prompt.
+ * @throws if the user rejects the wallet prompt. {@link SigningRejectedError}
  */
 
 // GOOD — data caveat on a utility

@@ -20,8 +20,8 @@ export interface UseIsAllowedConfig {
  * @returns Query result with `data: boolean` — `true` if a stored permit covers
  *   every entry in `contractAddresses`. The query auto-disables when no signer is configured
  *   (`data` stays `undefined`, `status` stays `"pending"`).
- * @throws {@link SignerNotConfiguredError} if the query runs without a signer configured
- *   (the `enabled` guard normally prevents this; only reachable if the caller forces `query: { enabled: true }`).
+ * @throws if the query runs without a signer configured (the `enabled` guard normally
+ *   prevents this; only reachable if the caller forces `query: { enabled: true }`). {@link SignerNotConfiguredError}
  *
  * @example
  * ```tsx

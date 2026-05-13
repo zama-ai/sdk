@@ -145,7 +145,7 @@ export class Token {
    *
    * @param owner - Balance owner address.
    * @returns The decrypted plaintext balance as a bigint.
-   * @throws {@link DecryptionFailedError} if FHE decryption fails.
+   * @throws if FHE decryption fails. {@link DecryptionFailedError}
    *
    * @example
    * ```ts
@@ -193,9 +193,9 @@ export class Token {
    * @param accountAddress - The account whose on-chain balance to read. Defaults
    *   to the delegator address.
    * @returns The decrypted plaintext balance as a bigint.
-   * @throws {@link DelegationNotFoundError} if no active delegation exists.
-   * @throws {@link DelegationExpiredError} if the delegation has expired.
-   * @throws {@link DecryptionFailedError} if delegated decryption fails.
+   * @throws if no active delegation exists. {@link DelegationNotFoundError}
+   * @throws if the delegation has expired. {@link DelegationExpiredError}
+   * @throws if delegated decryption fails. {@link DecryptionFailedError}
    *
    * @example
    * ```ts
@@ -328,9 +328,9 @@ export class Token {
    * @param tokens - Array of Token instances to decrypt balances for.
    * @param options - Delegated decryption configuration.
    * @returns A Map from token address to decrypted balance.
-   * @throws {@link DelegationNotFoundError} if no active delegation exists.
-   * @throws {@link DelegationExpiredError} if the delegation has expired.
-   * @throws {@link DecryptionFailedError} if any decryption fails and no `onError` is provided.
+   * @throws if no active delegation exists. {@link DelegationNotFoundError}
+   * @throws if the delegation has expired. {@link DelegationExpiredError}
+   * @throws if any decryption fails and no `onError` is provided. {@link DecryptionFailedError}
    *
    * @example
    * ```ts
@@ -503,11 +503,11 @@ export class Token {
    * @param amount - Plaintext amount to transfer (encrypted automatically via FHE).
    * @param options - Optional: `skipBalanceCheck` (default `false`).
    * @returns The transaction hash and mined receipt.
-   * @throws {@link ChainMismatchError} if signer and provider are on different chains.
-   * @throws {@link InsufficientConfidentialBalanceError} if the balance is less than `amount`.
-   * @throws {@link BalanceCheckUnavailableError} if balance validation requires decryption that is not possible.
-   * @throws {@link EncryptionFailedError} if FHE encryption fails.
-   * @throws {@link TransactionRevertedError} if the on-chain transfer reverts.
+   * @throws if signer and provider are on different chains. {@link ChainMismatchError}
+   * @throws if the balance is less than `amount`. {@link InsufficientConfidentialBalanceError}
+   * @throws if balance validation requires decryption that is not possible. {@link BalanceCheckUnavailableError}
+   * @throws if FHE encryption fails. {@link EncryptionFailedError}
+   * @throws if the on-chain transfer reverts. {@link TransactionRevertedError}
    *
    * @example
    * ```ts
