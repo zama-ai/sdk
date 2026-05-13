@@ -15,6 +15,7 @@ import {
 } from "../contracts";
 import { confidentialBalanceOfContract } from "../contracts/encrypted";
 import type { CredentialService } from "../credentials/credential-service";
+import { checksum } from "../credentials/utils";
 import {
   ChainMismatchError,
   ConfigurationError,
@@ -29,9 +30,7 @@ import {
 import type { TransactionErrorOperation, ZamaSDKEventInput } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
-import type { EncryptionService } from "./encryption-service";
 import { assertSignTransaction } from "../signer/capabilities";
-import { assertBigint } from "../utils/assertions";
 import type {
   ApproveUnderlyingRequest,
   ConfidentialTransferFromRequest,
@@ -58,6 +57,8 @@ import type {
   WrapRequest,
 } from "../types";
 import { toError } from "../utils";
+import { assertBigint } from "../utils/assertions";
+import type { EncryptionService } from "./encryption-service";
 
 /** Configuration for {@link OfflineSigningService}. */
 export interface OfflineSigningServiceConfig {
@@ -420,15 +421,13 @@ export class OfflineSigningService {
     }
     const permit = await this.#credentials.registerSignedPermit({
       signature,
-      // Reconstruct just enough of the StoredKeypair shape — the credential
-      // service only reads `publicKey` from the keypair field.
-      keypair: { publicKey: prepared.context.keypairPublicKey } as never,
+      keypair: { publicKey: prepared.context.keypairPublicKey },
       scope: {
-        signerAddress: prepared.context.signerAddress as never,
+        signerAddress: checksum(prepared.context.signerAddress),
         chainId: prepared.context.chainId,
-        delegatorAddress: prepared.context.delegatorAddress as never,
+        delegatorAddress: checksum(prepared.context.delegatorAddress),
       },
-      chunk: prepared.context.chunk as never,
+      chunk: prepared.context.chunk.map(checksum),
       startTimestamp: prepared.context.startTimestamp,
     });
     return {

@@ -258,12 +258,24 @@ export class CredentialService {
       delegatorAddress: delegator ? checksum(delegator) : signerAddress,
     };
     if (requested.length === 0) {
-      return { typedData: null, keypair, scope, chunk: [], startTimestamp: nowSeconds() };
+      return {
+        typedData: null,
+        keypair,
+        scope,
+        chunk: [],
+        startTimestamp: nowSeconds(),
+      };
     }
     const permits = await this.#store.listUsableAndPrune(scope, keypair.publicKey);
     const uncovered = uncoveredContracts(permits, requested);
     if (uncovered.length === 0) {
-      return { typedData: null, keypair, scope, chunk: [], startTimestamp: nowSeconds() };
+      return {
+        typedData: null,
+        keypair,
+        scope,
+        chunk: [],
+        startTimestamp: nowSeconds(),
+      };
     }
     const chunks = chunkContracts(uncovered);
     const [chunk, ...extra] = chunks;
@@ -294,7 +306,7 @@ export class CredentialService {
    */
   async registerSignedPermit(input: {
     signature: Hex;
-    keypair: StoredKeypair;
+    keypair: Pick<StoredKeypair, "publicKey">;
     scope: PermissionScope;
     chunk: ChecksummedAddress[];
     startTimestamp: number;
