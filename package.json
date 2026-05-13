@@ -102,11 +102,11 @@
   },
   "lint-staged": {
     "*.{ts,tsx,js,mjs,cjs}": [
-      "oxlint --fix",
+      "oxlint --fix --no-error-on-unmatched-pattern",
       "ast-grep scan --config sgconfig.yml"
     ],
-    "*.{ts,tsx,js,mjs,cjs,yaml,yml}": "oxfmt",
-    "!(package-lock).json": "oxfmt"
+    "*.{ts,tsx,js,mjs,cjs,yaml,yml}": "oxfmt --no-error-on-unmatched-pattern",
+    "!(package-lock).json": "oxfmt --no-error-on-unmatched-pattern"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
