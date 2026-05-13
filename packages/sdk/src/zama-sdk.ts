@@ -44,7 +44,7 @@ import {
 import { WrappersRegistry } from "./wrappers-registry";
 
 /**
- * ZamaSDK — composes a RelayerSDK with contract abstraction.
+ * ZamaSDK — composes a {@link RelayerSDK} with contract abstraction.
  * Provides signer, storage, and high-level confidential contract interface.
  */
 export class ZamaSDK {
@@ -197,7 +197,7 @@ export class ZamaSDK {
    * `this.signer.signTransaction(prepared.unsignedTx)` with capability checks
    * and event/error integration. The SDK never takes custody of signing
    * material — this method runs in your process, against the signer object
-   * you passed to `createConfig`; keys stay where they are.
+   * you passed to {@link createConfig}; keys stay where they are.
    *
    * Many flows skip this method:
    *

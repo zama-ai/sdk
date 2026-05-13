@@ -14,7 +14,7 @@ import { useZamaSDK } from "../provider";
  * the {@link TransactionResult}. Signer-optional — `broadcast` reads
  * `from`/nonce/fees from the signed payload itself.
  *
- * Cache invalidation is driven by the SDK's `ZamaSDKEvents` listener — the
+ * Cache invalidation is driven by the SDK's {@link ZamaSDKEvents} listener — the
  * hook does not invalidate directly.
  *
  * @example

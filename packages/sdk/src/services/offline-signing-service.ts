@@ -130,7 +130,7 @@ const ERROR_OPERATION_BY_KIND: Record<TransactionKind, TransactionErrorOperation
  * for institutional custody and policy-engine workflows where the three
  * phases cannot run synchronously in a single Promise.
  *
- * Atomic call sites (`Token.confidentialTransfer`, etc.) keep their
+ * Atomic call sites ({@link Token.confidentialTransfer}, etc.) keep their
  * `signer.writeContract` path; this service is the parallel route for
  * signers that expose `signTransaction` instead.
  *

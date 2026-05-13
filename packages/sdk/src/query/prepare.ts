@@ -23,8 +23,8 @@ export type PrepareResult = PreparedFor<TransactionKind> | PreparedPermitFor<Per
 
 /**
  * Mutation options for `sdk.prepare`. Generic over `kind` — the same factory
- * builds an unsigned transaction (`TransactionKind`) or a typed-data envelope
- * (`PermitKind`) depending on the request.
+ * builds an unsigned transaction ({@link TransactionKind}) or a typed-data envelope
+ * ({@link PermitKind}) depending on the request.
  */
 export function prepareMutationOptions(
   sdk: ZamaSDK,

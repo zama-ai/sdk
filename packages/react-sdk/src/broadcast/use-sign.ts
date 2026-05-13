@@ -12,7 +12,7 @@ import { useZamaSDK } from "../provider";
 /**
  * Sign a prepared transaction with the configured signer's `signTransaction`
  * capability and return the RLP-encoded signed bytes. Requires a signer with
- * `signTransaction` (online-only signers throw `SignerCapabilityError`).
+ * `signTransaction` (online-only signers throw {@link SignerCapabilityError}).
  *
  * Pair with {@link useBroadcast} to submit the result.
  *

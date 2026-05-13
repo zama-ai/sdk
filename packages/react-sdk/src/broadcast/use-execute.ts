@@ -22,8 +22,8 @@ import { useZamaSDK } from "../provider";
  * with `signTypedData`).
  *
  * For finer-grained control across a process boundary, use the per-phase
- * Tier-2 hooks (`usePrepare`, `useSign`, `useBroadcast`,
- * `useRegisterPermit`).
+ * Tier-2 hooks ({@link usePrepare}, {@link useSign}, {@link useBroadcast},
+ * {@link useRegisterPermit}).
  *
  * Cache invalidation flows from SDK events — the hook does not invalidate
  * directly.

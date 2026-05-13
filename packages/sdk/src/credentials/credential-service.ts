@@ -44,7 +44,7 @@ export interface CredentialServiceConfig {
 /**
  * Single facade coordinating the keypair vault and the permission store.
  *
- * `CredentialService` is the only credentials object held by `ZamaSDK`. It accepts identity
+ * `CredentialService` is the only credentials object held by {@link ZamaSDK}. It accepts identity
  * transitions via `handleWalletAccountChange`.
  */
 export class CredentialService {
@@ -201,7 +201,7 @@ export class CredentialService {
    * eagerly warms a keypair for the new one so the first decrypt does not stall
    * on key generation. Chain-only changes keep credentials intact because
    * permits are chain-scoped already and stale decrypt plaintext is cleared by
-   * `ZamaSDK`.
+   * {@link ZamaSDK}.
    */
   async handleWalletAccountChange(
     prev?: { address: Address },

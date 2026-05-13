@@ -5,7 +5,7 @@ import type { EIP712TypedData, Handle } from "../relayer/relayer-sdk.types";
 
 /**
  * Confidential ERC-7984 transfer request. Atomic shape ≡ the existing
- * `Token.confidentialTransfer(to, amount)` arguments; the SDK builds an
+ * {@link Token.confidentialTransfer} `(to, amount)` arguments; the SDK builds an
  * unsigned EIP-1559 transaction off of this for deferred signing.
  */
 export interface ConfidentialTransferRequest {
@@ -91,7 +91,7 @@ export interface FinalizeUnwrapRequest {
  *
  * For USDT-style tokens that revert on a non-zero → non-zero approval,
  * callers must issue two `ApproveUnderlying` requests in sequence
- * (`amount: 0n` then `amount: N`). `Token.prepareShield` does not detect
+ * (`amount: 0n` then `amount: N`). {@link Token.prepareShield} does not detect
  * this case; check existing allowance first when integrating with USDT-like
  * underlyings.
  */
