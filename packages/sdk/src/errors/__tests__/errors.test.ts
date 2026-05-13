@@ -357,16 +357,17 @@ describe("DelegationExpirationTooSoonError", () => {
 
 describe("matchAclRevert", () => {
   it("returns null for unrecognized errors", () => {
-    expect(matchAclRevert(new Error("SomeOtherRevert"))).toBeNull();
-    expect(matchAclRevert("string error")).toBeNull();
-    expect(matchAclRevert(null)).toBeNull();
+    const unknownRevert = new Error("SomeOtherRevert");
+    expect(matchAclRevert(unknownRevert, unknownRevert)).toBeNull();
+    expect(matchAclRevert("string error", "string error")).toBeNull();
+    expect(matchAclRevert(null, null)).toBeNull();
   });
 
   it("maps AlreadyDelegatedOrRevokedInSameBlock via structured viem error", () => {
     const viemError = Object.assign(new Error("revert"), {
       cause: { data: { errorName: "AlreadyDelegatedOrRevokedInSameBlock" } },
     });
-    const result = matchAclRevert(viemError);
+    const result = matchAclRevert(viemError, viemError);
     expect(result).toBeInstanceOf(DelegationCooldownError);
   });
 
@@ -374,7 +375,7 @@ describe("matchAclRevert", () => {
     const viemError = Object.assign(new Error("revert"), {
       cause: { data: { errorName: "SenderCannotBeDelegate" } },
     });
-    const result = matchAclRevert(viemError);
+    const result = matchAclRevert(viemError, viemError);
     expect(result).toBeInstanceOf(DelegationSelfNotAllowedError);
   });
 
@@ -382,7 +383,7 @@ describe("matchAclRevert", () => {
     const viemError = Object.assign(new Error("revert"), {
       cause: { data: { errorName: "DelegateCannotBeContractAddress" } },
     });
-    const result = matchAclRevert(viemError);
+    const result = matchAclRevert(viemError, viemError);
     expect(result).toBeInstanceOf(DelegationDelegateEqualsContractError);
   });
 
@@ -390,7 +391,7 @@ describe("matchAclRevert", () => {
     const viemError = Object.assign(new Error("revert"), {
       cause: { data: { errorName: "SenderCannotBeContractAddress" } },
     });
-    const result = matchAclRevert(viemError);
+    const result = matchAclRevert(viemError, viemError);
     expect(result).toBeInstanceOf(DelegationContractIsSelfError);
   });
 
@@ -398,7 +399,7 @@ describe("matchAclRevert", () => {
     const viemError = Object.assign(new Error("revert"), {
       cause: { data: { errorName: "EnforcedPause" } },
     });
-    const result = matchAclRevert(viemError);
+    const result = matchAclRevert(viemError, viemError);
     expect(result).toBeInstanceOf(AclPausedError);
   });
 
@@ -406,7 +407,7 @@ describe("matchAclRevert", () => {
     const viemError = Object.assign(new Error("revert"), {
       cause: { data: { errorName: "ExpirationDateBeforeOneHour" } },
     });
-    const result = matchAclRevert(viemError);
+    const result = matchAclRevert(viemError, viemError);
     expect(result).toBeInstanceOf(DelegationExpirationTooSoonError);
   });
 
@@ -414,7 +415,7 @@ describe("matchAclRevert", () => {
     const viemError = Object.assign(new Error("revert"), {
       cause: { data: { errorName: "ExpirationDateAlreadySetToSameValue" } },
     });
-    const result = matchAclRevert(viemError);
+    const result = matchAclRevert(viemError, viemError);
     expect(result).toBeInstanceOf(DelegationExpiryUnchangedError);
   });
 
@@ -422,26 +423,40 @@ describe("matchAclRevert", () => {
     const viemError = Object.assign(new Error("revert"), {
       cause: { data: { errorName: "NotDelegatedYet" } },
     });
-    const result = matchAclRevert(viemError);
+    const result = matchAclRevert(viemError, viemError);
     expect(result).toBeInstanceOf(DelegationNotFoundError);
   });
 
   it("falls back to string matching when no structured cause", () => {
     const plainError = new Error("Transaction reverted: NotDelegatedYet");
-    const result = matchAclRevert(plainError);
+    const result = matchAclRevert(plainError, plainError);
     expect(result).toBeInstanceOf(DelegationNotFoundError);
   });
 
   it("string fallback returns null when message does not match any key", () => {
     const plainError = new Error("execution reverted: OutOfGas");
-    expect(matchAclRevert(plainError)).toBeNull();
+    expect(matchAclRevert(plainError, plainError)).toBeNull();
   });
 
   it("preserves cause on returned error", () => {
     const original = Object.assign(new Error("revert"), {
       cause: { data: { errorName: "EnforcedPause" } },
     });
-    const result = matchAclRevert(original);
+    const result = matchAclRevert(original, original);
     expect(result?.cause).toBe(original);
+  });
+
+  it("allows callers to preserve a higher-level cause", () => {
+    const original = Object.assign(new Error("revert"), {
+      cause: { data: { errorName: "EnforcedPause" } },
+    });
+    const transactionError = new Error("Transaction failed during delegateDecryption", {
+      cause: original,
+    });
+
+    const result = matchAclRevert(original, transactionError);
+
+    expect(result).toBeInstanceOf(AclPausedError);
+    expect(result?.cause).toBe(transactionError);
   });
 });

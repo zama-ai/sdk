@@ -1,5 +1,10 @@
 import { getAddress, type Address } from "viem";
-import { DecryptionFailedError, ZamaError, ZamaErrorCode } from "../../errors";
+import {
+  DecryptionFailedError,
+  TransactionRevertedError,
+  ZamaError,
+  ZamaErrorCode,
+} from "../../errors";
 import { ZERO_HANDLE } from "../../utils/handles";
 import { describe, expect, it, vi } from "../../test-fixtures";
 
@@ -252,18 +257,21 @@ describe("Token", () => {
       expect(result.txHash).toBe("0xtxhash");
     });
 
-    it("wraps error in ApprovalFailed", async ({ signer, token }) => {
-      vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("tx failed"));
+    it("wraps error in TransactionReverted", async ({ signer, token }) => {
+      const rootCause = new Error("tx failed");
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(rootCause);
 
-      await expect(
-        token.setOperator("0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address),
-      ).rejects.toMatchObject({
-        code: ZamaErrorCode.ApprovalFailed,
-      });
+      const thrown = await token
+        .setOperator("0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address)
+        .catch((error: Error) => error);
+
+      expect(thrown).toBeInstanceOf(TransactionRevertedError);
+      expect(thrown).toMatchObject({ code: ZamaErrorCode.TransactionReverted });
+      expect(thrown.cause).toBe(rootCause);
     });
 
     it("re-throws ZamaError from writeContract as-is", async ({ signer, token }) => {
-      const original = new ZamaError(ZamaErrorCode.ApprovalFailed, "already wrapped");
+      const original = new ZamaError(ZamaErrorCode.TransactionReverted, "already wrapped");
       vi.mocked(signer.writeContract).mockRejectedValueOnce(original);
 
       await expect(

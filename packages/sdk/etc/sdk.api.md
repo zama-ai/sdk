@@ -207,11 +207,6 @@ export const anvil: {
 };
 
 // @public
-export class ApprovalFailedError extends ZamaError {
-    constructor(message: string, options?: ErrorOptions);
-}
-
-// @public
 export type ApprovalStrategy = "max" | "exact" | "skip";
 
 // @public
@@ -11509,9 +11504,6 @@ export const mainnet: {
 };
 
 // @public
-export function matchAclRevert(error: unknown): ZamaError | null;
-
-// @public
 export function matchZamaError<R>(error: unknown, handlers: Partial<Record<ZamaErrorCode, (error: ZamaError) => R>> & {
     _?: (error: unknown) => R;
 }): R | undefined;
@@ -14856,7 +14848,6 @@ export class Token {
         operation: TransactionOperation;
         config: WriteContractConfig;
         onSubmitted?: (txHash: Hex) => void;
-        errorClass?: ZamaErrorClass;
     }): Promise<TransactionResult>;
     symbol(): Promise<string>;
 }
@@ -14929,10 +14920,10 @@ export interface TransactionErrorEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.TransactionError;
 }
 
-// Warning: (ae-forgotten-export) The symbol "SubmittedEventByOperation" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "transactionOperationMetadata" needs to be exported by the entry point index.d.ts
 //
 // @public
-export type TransactionOperation = keyof SubmittedEventByOperation;
+export type TransactionOperation = keyof typeof transactionOperationMetadata;
 
 // @public
 export interface TransactionReceipt {
@@ -19999,8 +19990,7 @@ export const ZamaErrorCode: {
     readonly SigningRejected: "SIGNING_REJECTED"; /** Wallet signature failed for a reason other than rejection. */
     readonly SigningFailed: "SIGNING_FAILED"; /** FHE encryption failed. */
     readonly EncryptionFailed: "ENCRYPTION_FAILED"; /** FHE decryption failed. */
-    readonly DecryptionFailed: "DECRYPTION_FAILED"; /** ERC-20 approval transaction failed. */
-    readonly ApprovalFailed: "APPROVAL_FAILED"; /** On-chain transaction reverted. */
+    readonly DecryptionFailed: "DECRYPTION_FAILED"; /** On-chain transaction reverted. */
     readonly TransactionReverted: "TRANSACTION_REVERTED"; /** FHE keypair has expired and needs regeneration. */
     readonly KeypairExpired: "KEYPAIR_EXPIRED"; /** Relayer rejected FHE keypair (stale, expired, or malformed). */
     readonly InvalidKeypair: "INVALID_KEYPAIR"; /** No FHE ciphertext exists for this account (never shielded). */
@@ -20130,10 +20120,6 @@ export type ZamaSDKEventType = (typeof ZamaSDKEvents)[keyof typeof ZamaSDKEvents
 export const ZERO_HANDLE: "0x0000000000000000000000000000000000000000000000000000000000000000";
 
 export { ZKProofLike }
-
-// Warnings were encountered during analysis:
-//
-// dist/esm/index-ORLKqmQX.d.ts:19809:5 - (ae-forgotten-export) The symbol "ZamaErrorClass" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

@@ -1,6 +1,11 @@
 import type { Address } from "viem";
 import { Topics } from "../../events";
-import { DecryptionFailedError, ZamaError, ZamaErrorCode } from "../../errors";
+import {
+  DecryptionFailedError,
+  TransactionRevertedError,
+  ZamaError,
+  ZamaErrorCode,
+} from "../../errors";
 import { ZERO_HANDLE } from "../../utils/handles";
 import { describe, expect, it, vi } from "../../test-fixtures";
 
@@ -234,13 +239,16 @@ describe("WrappedToken", () => {
       );
     });
 
-    it("wraps error in ApprovalFailed", async ({ signer, wrappedToken, provider }) => {
+    it("wraps error in TransactionReverted", async ({ signer, wrappedToken, provider }) => {
       vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(0n);
-      vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("approve failed"));
+      const rootCause = new Error("approve failed");
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(rootCause);
 
-      await expect(wrappedToken.approveUnderlying()).rejects.toMatchObject({
-        code: ZamaErrorCode.ApprovalFailed,
-      });
+      const thrown = await wrappedToken.approveUnderlying().catch((error: Error) => error);
+
+      expect(thrown).toBeInstanceOf(TransactionRevertedError);
+      expect(thrown).toMatchObject({ code: ZamaErrorCode.TransactionReverted });
+      expect(thrown.cause).toBe(rootCause);
     });
   });
 
@@ -539,7 +547,7 @@ describe("WrappedToken", () => {
         .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
         .mockResolvedValueOnce(1000n)
         .mockResolvedValueOnce(0n);
-      const original = new ZamaError(ZamaErrorCode.ApprovalFailed, "already wrapped");
+      const original = new ZamaError(ZamaErrorCode.TransactionReverted, "already wrapped");
       vi.mocked(signer.writeContract).mockRejectedValueOnce(original);
 
       await expect(wrappedToken.shield(100n)).rejects.toBe(original);

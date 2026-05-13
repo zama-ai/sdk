@@ -14,7 +14,6 @@ import {
   symbolContract,
 } from "../contracts";
 import {
-  ApprovalFailedError,
   BalanceCheckUnavailableError,
   ConfigurationError,
   DecryptionFailedError,
@@ -30,10 +29,7 @@ import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/ali
 import { assertBigint } from "../utils/assertions";
 import { pLimit } from "../utils/concurrency";
 import { isZeroHandle } from "../utils/handles";
-import {
-  submitTransaction as submitSdkTransaction,
-  type ZamaErrorClass,
-} from "../utils/submit-transaction";
+import { submitTransaction as submitSdkTransaction } from "../utils/submit-transaction";
 import { swallow } from "../utils/swallow";
 import type {
   TransactionResult,
@@ -630,7 +626,6 @@ export class Token {
     return this.submitTransaction({
       operation: "setOperator",
       config: setOperatorContract(this.address, normalizedOperator, until),
-      errorClass: ApprovalFailedError,
     });
   }
 
@@ -723,19 +718,15 @@ export class Token {
     operation: TransactionOperation;
     config: WriteContractConfig;
     onSubmitted?: (txHash: Hex) => void;
-    errorClass?: ZamaErrorClass;
   }): Promise<TransactionResult> {
-    const { operation, config, onSubmitted, errorClass } = params;
-    const signerOperation =
-      operation === "approveUnderlying:reset" ? "approveUnderlying" : operation;
+    const { operation, config, onSubmitted } = params;
     return submitSdkTransaction({
       operation,
-      signer: this.sdk.requireSigner(signerOperation),
+      signer: this.sdk.requireSigner(operation),
       provider: this.sdk.provider,
       config,
       emit: (input) => this.emit(input),
       onSubmitted,
-      errorClass,
     });
   }
 

@@ -154,7 +154,6 @@ export {
   SigningFailedError,
   EncryptionFailedError,
   DecryptionFailedError,
-  ApprovalFailedError,
   TransactionRevertedError,
   KeypairExpiredError,
   InvalidKeypairError,
@@ -182,7 +181,6 @@ export {
   DelegationExpirationTooSoonError,
   DelegationNotPropagatedError,
   matchZamaError,
-  matchAclRevert,
 } from "./errors";
 export { BaseSigner } from "./signer/base-signer";
 export { createWalletAccountStore, MutableWalletAccountStore } from "./signer/wallet-account-store";

@@ -193,28 +193,70 @@ export type ZamaSDKEventInput = ZamaSDKEvent extends infer E
     : never
   : never;
 
-type SubmittedEventByOperation = {
-  approveUnderlying: ApproveUnderlyingSubmittedEvent;
-  "approveUnderlying:reset": ApproveUnderlyingSubmittedEvent;
-  delegateDecryption: DelegationSubmittedEvent;
-  finalizeUnwrap: FinalizeUnwrapSubmittedEvent;
-  revokeDelegation: RevokeDelegationSubmittedEvent;
-  setOperator: SetOperatorSubmittedEvent;
-  "shield:transferAndCall": ShieldSubmittedEvent;
-  "shield:approveAndWrap": ShieldSubmittedEvent;
-  transfer: TransferSubmittedEvent;
-  transferFrom: TransferFromSubmittedEvent;
-  unwrap: UnwrapSubmittedEvent;
-  unwrapAll: UnwrapSubmittedEvent;
-};
-
-type TransactionOperationMetadata = {
-  readonly [O in TransactionOperation]: {
-    readonly submittedEvent: (
-      txHash: Hex,
-    ) => Omit<SubmittedEventByOperation[O], "timestamp" | "tokenAddress">;
-  };
-};
+/**
+ * Single source of truth for each transaction operation's submitted-event payload.
+ *
+ * Adding a write op = adding one entry here. `TransactionOperation` is then
+ * `keyof typeof transactionOperationMetadata`, so the dispatch table and the
+ * operation union cannot drift.
+ *
+ * The `satisfies` check enforces that every entry produces a valid
+ * {@link ZamaSDKEventInput}.
+ */
+export const transactionOperationMetadata = {
+  approveUnderlying: {
+    submittedEvent: (txHash: Hex) => ({
+      type: ZamaSDKEvents.ApproveUnderlyingSubmitted,
+      txHash,
+      step: "approve" as const,
+    }),
+  },
+  "approveUnderlying:reset": {
+    submittedEvent: (txHash: Hex) => ({
+      type: ZamaSDKEvents.ApproveUnderlyingSubmitted,
+      txHash,
+      step: "reset" as const,
+    }),
+  },
+  delegateDecryption: {
+    submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.DelegationSubmitted, txHash }),
+  },
+  finalizeUnwrap: {
+    submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.FinalizeUnwrapSubmitted, txHash }),
+  },
+  revokeDelegation: {
+    submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.RevokeDelegationSubmitted, txHash }),
+  },
+  setOperator: {
+    submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.SetOperatorSubmitted, txHash }),
+  },
+  "shield:transferAndCall": {
+    submittedEvent: (txHash: Hex) => ({
+      type: ZamaSDKEvents.ShieldSubmitted,
+      txHash,
+      shieldPath: "transferAndCall" as const,
+    }),
+  },
+  "shield:approveAndWrap": {
+    submittedEvent: (txHash: Hex) => ({
+      type: ZamaSDKEvents.ShieldSubmitted,
+      txHash,
+      shieldPath: "approveAndWrap" as const,
+    }),
+  },
+  transfer: {
+    submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.TransferSubmitted, txHash }),
+  },
+  transferFrom: {
+    submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.TransferFromSubmitted, txHash }),
+  },
+  unwrap: {
+    submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.UnwrapSubmitted, txHash }),
+  },
+  unwrapAll: {
+    submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.UnwrapSubmitted, txHash }),
+  },
+} satisfies Record<string, { submittedEvent: (txHash: Hex) => ZamaSDKEventInput }>;
 
 /**
  * SDK transaction operations that emit submitted/error lifecycle events.
@@ -223,64 +265,4 @@ type TransactionOperationMetadata = {
  * one (`shield:transferAndCall` vs. `shield:approveAndWrap`), routing both error
  * and success events on a single field — see {@link transactionOperationMetadata}.
  */
-export type TransactionOperation = keyof SubmittedEventByOperation;
-
-/**
- * Single source of truth for each transaction operation's submitted-event payload.
- * The `satisfies` check keeps the table exhaustive and preserves the specific
- * operation → event pairing.
- */
-export const transactionOperationMetadata = {
-  approveUnderlying: {
-    submittedEvent: (txHash) => ({
-      type: ZamaSDKEvents.ApproveUnderlyingSubmitted,
-      txHash,
-      step: "approve",
-    }),
-  },
-  "approveUnderlying:reset": {
-    submittedEvent: (txHash) => ({
-      type: ZamaSDKEvents.ApproveUnderlyingSubmitted,
-      txHash,
-      step: "reset",
-    }),
-  },
-  delegateDecryption: {
-    submittedEvent: (txHash) => ({ type: ZamaSDKEvents.DelegationSubmitted, txHash }),
-  },
-  finalizeUnwrap: {
-    submittedEvent: (txHash) => ({ type: ZamaSDKEvents.FinalizeUnwrapSubmitted, txHash }),
-  },
-  revokeDelegation: {
-    submittedEvent: (txHash) => ({ type: ZamaSDKEvents.RevokeDelegationSubmitted, txHash }),
-  },
-  setOperator: {
-    submittedEvent: (txHash) => ({ type: ZamaSDKEvents.SetOperatorSubmitted, txHash }),
-  },
-  "shield:transferAndCall": {
-    submittedEvent: (txHash) => ({
-      type: ZamaSDKEvents.ShieldSubmitted,
-      txHash,
-      shieldPath: "transferAndCall",
-    }),
-  },
-  "shield:approveAndWrap": {
-    submittedEvent: (txHash) => ({
-      type: ZamaSDKEvents.ShieldSubmitted,
-      txHash,
-      shieldPath: "approveAndWrap",
-    }),
-  },
-  transfer: {
-    submittedEvent: (txHash) => ({ type: ZamaSDKEvents.TransferSubmitted, txHash }),
-  },
-  transferFrom: {
-    submittedEvent: (txHash) => ({ type: ZamaSDKEvents.TransferFromSubmitted, txHash }),
-  },
-  unwrap: {
-    submittedEvent: (txHash) => ({ type: ZamaSDKEvents.UnwrapSubmitted, txHash }),
-  },
-  unwrapAll: {
-    submittedEvent: (txHash) => ({ type: ZamaSDKEvents.UnwrapSubmitted, txHash }),
-  },
-} satisfies TransactionOperationMetadata;
+export type TransactionOperation = keyof typeof transactionOperationMetadata;

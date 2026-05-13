@@ -15,7 +15,6 @@ import { findUnwrapRequested } from "../events/onchain-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { Handle } from "../relayer/relayer-sdk.types";
 import {
-  ApprovalFailedError,
   DecryptionFailedError,
   ERC20ReadFailedError,
   EncryptionFailedError,
@@ -121,8 +120,7 @@ export class WrappedToken extends Token {
    * @returns The transaction hash and mined receipt.
    * @throws {@link ChainMismatchError} if signer and provider are on different chains.
    * @throws {@link InsufficientERC20BalanceError} if the ERC-20 balance is less than `amount`.
-   * @throws {@link ApprovalFailedError} if the ERC-20 approval step fails (approveAndWrap path).
-   * @throws {@link TransactionRevertedError} if the shield transaction reverts.
+   * @throws {@link TransactionRevertedError} if the ERC-20 approval or shield transaction reverts.
    *
    * @example
    * ```ts
@@ -235,7 +233,6 @@ export class WrappedToken extends Token {
         await this.submitTransaction({
           operation: "approveUnderlying:reset",
           config: approveContract(underlying, this.address, 0n),
-          errorClass: ApprovalFailedError,
         });
       }
     }
@@ -243,7 +240,6 @@ export class WrappedToken extends Token {
     return this.submitTransaction({
       operation: "approveUnderlying",
       config: approveContract(underlying, this.address, approvalAmount),
-      errorClass: ApprovalFailedError,
     });
   }
 
@@ -519,7 +515,6 @@ export class WrappedToken extends Token {
       await this.submitTransaction({
         operation: "approveUnderlying:reset",
         config: approveContract(underlying, this.address, 0n),
-        errorClass: ApprovalFailedError,
       });
     }
 
@@ -529,7 +524,6 @@ export class WrappedToken extends Token {
       operation: "approveUnderlying",
       config: approveContract(underlying, this.address, approvalAmount),
       onSubmitted: callbacks?.onApprovalSubmitted,
-      errorClass: ApprovalFailedError,
     });
   }
 }

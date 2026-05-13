@@ -16,6 +16,7 @@ import {
   type ZamaSDKEventListener,
   ZamaSDKEvents,
 } from "../../events/sdk-events";
+import { TransactionRevertedError } from "../../errors";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import { ZamaSDK } from "../../zama-sdk";
 import type { ZamaConfig } from "../../config/types";
@@ -417,7 +418,12 @@ describe("Token event emissions", () => {
       const txError = events.find((e) => e.type === ZamaSDKEvents.TransactionError);
       expect(txError).toBeDefined();
       expect("operation" in txError! && txError.operation).toBe("transfer");
-      expect("error" in txError! && txError.error.message).toBe("tx reverted");
+      expect("error" in txError! && txError.error).toBeInstanceOf(TransactionRevertedError);
+      expect("error" in txError! && txError.error.message).toBe(
+        "Transaction failed during transfer",
+      );
+      expect("error" in txError! && txError.error.cause).toBeInstanceOf(Error);
+      expect("error" in txError! && (txError.error.cause as Error).message).toBe("tx reverted");
     });
   });
 

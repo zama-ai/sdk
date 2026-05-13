@@ -721,7 +721,6 @@ export class Token {
         operation: TransactionOperation;
         config: WriteContractConfig;
         onSubmitted?: (txHash: Hex) => void;
-        errorClass?: ZamaErrorClass;
     }): Promise<TransactionResult>;
     symbol(): Promise<string>;
 }
@@ -797,10 +796,10 @@ export interface TransactionErrorEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.TransactionError;
 }
 
-// Warning: (ae-forgotten-export) The symbol "SubmittedEventByOperation" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "transactionOperationMetadata" needs to be exported by the entry point index.d.ts
 //
 // @public
-export type TransactionOperation = keyof SubmittedEventByOperation;
+export type TransactionOperation = keyof typeof transactionOperationMetadata;
 
 // @public
 export interface TransactionReceipt {
@@ -1368,10 +1367,9 @@ export const ZamaSDKEvents: {
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/index-ORLKqmQX.d.ts:19809:5 - (ae-forgotten-export) The symbol "ZamaErrorClass" needs to be exported by the entry point index.d.ts
-// dist/esm/types-DpM8lKYZ.d.ts:578:3 - (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
-// dist/esm/types-DpM8lKYZ.d.ts:579:3 - (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
-// dist/esm/types-DpM8lKYZ.d.ts:580:3 - (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
+// dist/esm/types-C5dxoEW7.d.ts:652:3 - (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
+// dist/esm/types-C5dxoEW7.d.ts:653:3 - (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
+// dist/esm/types-C5dxoEW7.d.ts:654:3 - (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

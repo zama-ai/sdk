@@ -12,12 +12,23 @@ import {
   DelegationExpiryUnchangedError,
   DelegationNotFoundError,
   DelegationSelfNotAllowedError,
-  matchAclRevert,
+  TransactionRevertedError,
 } from "../errors";
-import type { ZamaSDKEventInput } from "../events/sdk-events";
+import { matchAclRevert } from "../errors/acl-revert";
+import type { TransactionOperation, ZamaSDKEventInput } from "../events/sdk-events";
 import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
-import type { GenericProvider, GenericSigner, TransactionResult } from "../types";
-import { submitTransaction as submitSdkTransaction } from "../utils/submit-transaction";
+import type {
+  GenericProvider,
+  GenericSigner,
+  TransactionResult,
+  WriteContractConfig,
+} from "../types";
+import { submitTransaction } from "../utils/submit-transaction";
+
+type AclTransactionOperation = Extract<
+  TransactionOperation,
+  "delegateDecryption" | "revokeDelegation"
+>;
 
 export class DelegationService {
   readonly #provider: GenericProvider;
@@ -96,18 +107,16 @@ export class DelegationService {
       );
     }
 
-    return submitSdkTransaction({
+    return this.#submitAclTransaction({
       operation: "delegateDecryption",
       signer,
-      provider: this.#provider,
+      contractAddress,
       config: delegateForUserDecryptionContract(
         acl,
         normalizedDelegate,
         normalizedContract,
         expDate,
       ),
-      emit: (input) => this.#emitEvent(input, contractAddress),
-      mapError: matchAclRevert,
     });
   }
 
@@ -145,13 +154,11 @@ export class DelegationService {
       );
     }
 
-    return submitSdkTransaction({
+    return this.#submitAclTransaction({
       operation: "revokeDelegation",
       signer,
-      provider: this.#provider,
+      contractAddress,
       config: revokeDelegationContract(acl, normalizedDelegate, normalizedContract),
-      emit: (input) => this.#emitEvent(input, contractAddress),
-      mapError: matchAclRevert,
     });
   }
 
@@ -189,6 +196,41 @@ export class DelegationService {
         getAddress(contractAddress),
       ),
     );
+  }
+
+  async #submitAclTransaction({
+    operation,
+    signer,
+    contractAddress,
+    config,
+  }: {
+    operation: AclTransactionOperation;
+    signer: GenericSigner;
+    contractAddress: Address;
+    config: WriteContractConfig;
+  }): Promise<TransactionResult> {
+    try {
+      return await submitTransaction({
+        operation,
+        signer,
+        provider: this.#provider,
+        config,
+        emit: (input) => this.#emitEvent(input, contractAddress),
+      });
+    } catch (error) {
+      this.#throwAclRevertIfMatched(error);
+      throw error;
+    }
+  }
+
+  #throwAclRevertIfMatched(error: unknown): void {
+    if (!(error instanceof TransactionRevertedError)) {
+      return;
+    }
+    const mapped = matchAclRevert(error.cause ?? error, error);
+    if (mapped) {
+      throw mapped;
+    }
   }
 
   async findInactiveDelegations(
