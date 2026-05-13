@@ -99,7 +99,6 @@ export class DelegationService {
     return this.#executeAclTx(
       signer,
       delegateForUserDecryptionContract(acl, normalizedDelegate, normalizedContract, expDate),
-      "Delegation transaction failed",
       "delegateDecryption",
       normalizedContract,
     );
@@ -142,7 +141,6 @@ export class DelegationService {
     return this.#executeAclTx(
       signer,
       revokeDelegationContract(acl, normalizedDelegate, normalizedContract),
-      "Revoke delegation transaction failed",
       "revokeDelegation",
       normalizedContract,
     );
@@ -238,7 +236,6 @@ export class DelegationService {
   async #executeAclTx(
     signer: GenericSigner,
     call: Parameters<GenericSigner["writeContract"]>[0],
-    failureMessage: string,
     operation: Extract<TransactionOperation, "delegateDecryption" | "revokeDelegation">,
     contractAddress: Address,
   ): Promise<TransactionResult> {
@@ -249,7 +246,6 @@ export class DelegationService {
       config: call,
       emit: (input) => this.#emitEvent(input, contractAddress),
       mapError: matchAclRevert,
-      failureMessage,
     });
   }
 }

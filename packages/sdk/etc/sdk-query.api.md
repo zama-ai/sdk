@@ -1368,7 +1368,7 @@ export const ZamaSDKEvents: {
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/index-61hqMvsZ.d.ts:19821:5 - (ae-forgotten-export) The symbol "ZamaErrorClass" needs to be exported by the entry point index.d.ts
+// dist/esm/index-ORLKqmQX.d.ts:19809:5 - (ae-forgotten-export) The symbol "ZamaErrorClass" needs to be exported by the entry point index.d.ts
 // dist/esm/types-DpM8lKYZ.d.ts:578:3 - (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
 // dist/esm/types-DpM8lKYZ.d.ts:579:3 - (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
 // dist/esm/types-DpM8lKYZ.d.ts:580:3 - (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
