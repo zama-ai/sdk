@@ -1,0 +1,570 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`clear signing intent builders > buildAllowAsIntentFromEIP712 maps delegated decrypt typed data 1`] = `
+{
+  "contractContext": {
+    "chainId": 1,
+    "contractAddress": "0x2222222222222222222222222222222222222222",
+  },
+  "fields": [
+    {
+      "label": "Authorized contracts",
+      "value": [
+        "0x1111111111111111111111111111111111111111",
+      ],
+      "visibility": "public",
+    },
+    {
+      "label": "Delegator wallet",
+      "value": "0x4444444444444444444444444444444444444444",
+      "visibility": "public",
+    },
+    {
+      "displayValue": "2023-11-14T22:13:20.000Z",
+      "label": "Starts at",
+      "value": "1700000000",
+      "visibility": "public",
+    },
+    {
+      "label": "Duration",
+      "value": "30",
+      "visibility": "public",
+    },
+    {
+      "displayValue": "Protocol data (hidden)",
+      "label": "FHE public key",
+      "redacted": true,
+      "visibility": "internal",
+    },
+    {
+      "displayValue": "Protocol data (hidden)",
+      "label": "Protocol extra data",
+      "redacted": true,
+      "visibility": "internal",
+    },
+  ],
+  "kind": "allowAs",
+  "rawContext": {
+    "typedData": {
+      "domain": {
+        "chainId": 1n,
+        "name": "Decryption",
+        "verifyingContract": "0x2222222222222222222222222222222222222222",
+        "version": "1",
+      },
+      "message": {
+        "contractAddresses": [
+          "0x1111111111111111111111111111111111111111",
+        ],
+        "delegatorAddress": "0x4444444444444444444444444444444444444444",
+        "durationDays": "30",
+        "extraData": "0x00",
+        "publicKey": "0xpublic",
+        "startTimestamp": "1700000000",
+      },
+      "primaryType": "DelegatedUserDecryptRequestVerification",
+      "types": {
+        "DelegatedUserDecryptRequestVerification": [],
+        "EIP712Domain": [],
+      },
+    },
+  },
+  "summary": "Allow this wallet to decrypt delegated confidential values for selected contracts.",
+  "title": "Authorize delegated confidential data decryption",
+  "warnings": [
+    "This uses an existing delegation for decryption only. It does not transfer tokens or grant spending permissions.",
+  ],
+}
+`;
+
+exports[`clear signing intent builders > buildAllowIntent snapshots user decrypt authorization 1`] = `
+{
+  "contractContext": {
+    "chainId": 1,
+  },
+  "fields": [
+    {
+      "label": "Authorized contracts",
+      "value": [
+        "0x1111111111111111111111111111111111111111",
+        "0x2222222222222222222222222222222222222222",
+      ],
+      "visibility": "public",
+    },
+    {
+      "displayValue": "2023-11-14T22:13:20.000Z",
+      "label": "Starts at",
+      "value": "1700000000",
+      "visibility": "public",
+    },
+    {
+      "label": "Duration",
+      "value": "30",
+      "visibility": "public",
+    },
+    {
+      "displayValue": "Protocol data (hidden)",
+      "label": "FHE public key",
+      "redacted": true,
+      "visibility": "internal",
+    },
+    {
+      "displayValue": "Protocol data (hidden)",
+      "label": "Protocol extra data",
+      "redacted": true,
+      "visibility": "internal",
+    },
+  ],
+  "kind": "allow",
+  "rawContext": {
+    "typedData": {
+      "primaryType": "UserDecryptRequestVerification",
+    },
+  },
+  "summary": "Allow this wallet to decrypt confidential values for selected contracts.",
+  "title": "Authorize confidential data decryption",
+  "warnings": [
+    "This authorizes decryption for the listed contracts. It does not transfer tokens or grant spending permissions.",
+  ],
+}
+`;
+
+exports[`clear signing intent builders > buildAllowIntentFromEIP712 maps direct decrypt typed data 1`] = `
+{
+  "contractContext": {
+    "chainId": 1,
+    "contractAddress": "0x2222222222222222222222222222222222222222",
+  },
+  "fields": [
+    {
+      "label": "Authorized contracts",
+      "value": [
+        "0x1111111111111111111111111111111111111111",
+      ],
+      "visibility": "public",
+    },
+    {
+      "displayValue": "2023-11-14T22:13:20.000Z",
+      "label": "Starts at",
+      "value": "1700000000",
+      "visibility": "public",
+    },
+    {
+      "label": "Duration",
+      "value": "30",
+      "visibility": "public",
+    },
+    {
+      "displayValue": "Protocol data (hidden)",
+      "label": "FHE public key",
+      "redacted": true,
+      "visibility": "internal",
+    },
+    {
+      "displayValue": "Protocol data (hidden)",
+      "label": "Protocol extra data",
+      "redacted": true,
+      "visibility": "internal",
+    },
+  ],
+  "kind": "allow",
+  "rawContext": {
+    "typedData": {
+      "domain": {
+        "chainId": 1n,
+        "name": "Decryption",
+        "verifyingContract": "0x2222222222222222222222222222222222222222",
+        "version": "1",
+      },
+      "message": {
+        "contractAddresses": [
+          "0x1111111111111111111111111111111111111111",
+        ],
+        "durationDays": "30",
+        "extraData": "0x00",
+        "publicKey": "0xpublic",
+        "startTimestamp": "1700000000",
+      },
+      "primaryType": "UserDecryptRequestVerification",
+      "types": {
+        "EIP712Domain": [],
+        "UserDecryptRequestVerification": [],
+      },
+    },
+  },
+  "summary": "Allow this wallet to decrypt confidential values for selected contracts.",
+  "title": "Authorize confidential data decryption",
+  "warnings": [
+    "This authorizes decryption for the listed contracts. It does not transfer tokens or grant spending permissions.",
+  ],
+}
+`;
+
+exports[`clear signing intent builders > buildConfidentialTransferIntent snapshots encrypted amount separation 1`] = `
+{
+  "contractContext": {
+    "chainId": 1,
+    "contractAddress": "0x1111111111111111111111111111111111111111",
+    "functionName": "confidentialTransfer",
+  },
+  "fields": [
+    {
+      "label": "Confidential token",
+      "value": "0x1111111111111111111111111111111111111111",
+      "visibility": "public",
+    },
+    {
+      "label": "Granting wallet",
+      "value": "0x4444444444444444444444444444444444444444",
+      "visibility": "public",
+    },
+    {
+      "label": "Recipient",
+      "value": "0x5555555555555555555555555555555555555555",
+      "visibility": "public",
+    },
+    {
+      "label": "Amount",
+      "value": 100n,
+      "visibility": "public",
+    },
+    {
+      "displayValue": "Hidden encrypted amount",
+      "label": "Encrypted amount",
+      "value": "0xabababababababababababababababababababababababababababababababab",
+      "visibility": "encrypted",
+    },
+    {
+      "displayValue": "Protocol proof (hidden)",
+      "label": "Input proof",
+      "redacted": true,
+      "visibility": "internal",
+    },
+  ],
+  "kind": "confidentialTransfer",
+  "rawContext": {
+    "contractCall": {
+      "functionName": "confidentialTransfer",
+    },
+    "sdkInput": {
+      "amount": 100n,
+    },
+  },
+  "summary": "Transfer an encrypted token amount to a public recipient.",
+  "title": "Send confidential tokens",
+}
+`;
+
+exports[`clear signing intent builders > buildDelegateDecryptionIntent snapshots delegated decrypt semantics 1`] = `
+{
+  "contractContext": {
+    "chainId": 1,
+    "contractAddress": "0x7777777777777777777777777777777777777777",
+    "functionName": "delegateForUserDecryption",
+  },
+  "fields": [
+    {
+      "label": "Confidential contract",
+      "value": "0x1111111111111111111111111111111111111111",
+      "visibility": "public",
+    },
+    {
+      "label": "Wallet allowed to view",
+      "value": "0x6666666666666666666666666666666666666666",
+      "visibility": "public",
+    },
+    {
+      "label": "Granting wallet",
+      "value": "0x4444444444444444444444444444444444444444",
+      "visibility": "public",
+    },
+    {
+      "label": "ACL contract",
+      "value": "0x7777777777777777777777777777777777777777",
+      "visibility": "public",
+    },
+    {
+      "label": "Access expires",
+      "value": "Access remains active until revoked",
+      "visibility": "public",
+    },
+  ],
+  "kind": "delegateDecryption",
+  "rawContext": {
+    "contractCall": {
+      "functionName": "delegateForUserDecryption",
+    },
+  },
+  "summary": "Grant decryption access for one confidential contract.",
+  "title": "Allow another wallet to view confidential data",
+  "warnings": [
+    "This does not allow spending, transferring, or moving your tokens.",
+  ],
+}
+`;
+
+exports[`clear signing intent builders > buildFinalizeUnwrapIntent snapshots public finalization amount 1`] = `
+{
+  "contractContext": {
+    "chainId": 1,
+    "contractAddress": "0x2222222222222222222222222222222222222222",
+    "functionName": "finalizeUnwrap",
+  },
+  "fields": [
+    {
+      "label": "Confidential wrapper",
+      "value": "0x2222222222222222222222222222222222222222",
+      "visibility": "public",
+    },
+    {
+      "label": "Pending unshield request",
+      "value": "0xabababababababababababababababababababababababababababababababab",
+      "visibility": "public",
+    },
+    {
+      "label": "Public amount",
+      "value": 50n,
+      "visibility": "public",
+    },
+    {
+      "displayValue": "Protocol proof (hidden)",
+      "label": "Decryption proof",
+      "redacted": true,
+      "visibility": "internal",
+    },
+  ],
+  "kind": "finalizeUnwrap",
+  "rawContext": {
+    "contractCall": {
+      "functionName": "finalizeUnwrap",
+    },
+  },
+  "summary": "Complete a pending unshield and receive public tokens.",
+  "title": "Finalize unshield",
+}
+`;
+
+exports[`clear signing intent builders > buildShieldViaTransferAndCallIntent snapshots single transaction shield 1`] = `
+{
+  "contractContext": {
+    "chainId": 1,
+    "contractAddress": "0x2222222222222222222222222222222222222222",
+  },
+  "fields": [
+    {
+      "label": "Public token",
+      "value": "0x3333333333333333333333333333333333333333",
+      "visibility": "public",
+    },
+    {
+      "label": "Confidential wrapper",
+      "value": "0x2222222222222222222222222222222222222222",
+      "visibility": "public",
+    },
+    {
+      "label": "Granting wallet",
+      "value": "0x4444444444444444444444444444444444444444",
+      "visibility": "public",
+    },
+    {
+      "label": "Public amount",
+      "value": 500n,
+      "visibility": "public",
+    },
+    {
+      "label": "Recipient",
+      "value": "0x4444444444444444444444444444444444444444",
+      "visibility": "public",
+    },
+    {
+      "label": "Shield route",
+      "value": "transferAndCall",
+      "visibility": "derived",
+    },
+  ],
+  "kind": "shield",
+  "rawContext": {
+    "contractCall": {
+      "functionName": "transferAndCall",
+    },
+    "route": "transferAndCall",
+  },
+  "summary": "Convert public ERC-20 tokens into a confidential balance.",
+  "title": "Shield public tokens",
+  "warnings": [
+    "After shielding, the balance is represented confidentially.",
+  ],
+}
+`;
+
+exports[`clear signing intent builders > buildShieldViaWrapIntent snapshots approval and wrap shield 1`] = `
+{
+  "contractContext": {
+    "chainId": 1,
+    "contractAddress": "0x2222222222222222222222222222222222222222",
+  },
+  "fields": [
+    {
+      "label": "Public token",
+      "value": "0x3333333333333333333333333333333333333333",
+      "visibility": "public",
+    },
+    {
+      "label": "Confidential wrapper",
+      "value": "0x2222222222222222222222222222222222222222",
+      "visibility": "public",
+    },
+    {
+      "label": "Granting wallet",
+      "value": "0x4444444444444444444444444444444444444444",
+      "visibility": "public",
+    },
+    {
+      "label": "Public amount",
+      "value": 500n,
+      "visibility": "public",
+    },
+    {
+      "label": "Recipient",
+      "value": "0x5555555555555555555555555555555555555555",
+      "visibility": "public",
+    },
+    {
+      "label": "Shield route",
+      "value": "approve and wrap",
+      "visibility": "derived",
+    },
+    {
+      "label": "Approval amount",
+      "value": 115792089237316195423570985008687907853269984665640564039457584007913129639935n,
+      "visibility": "public",
+    },
+  ],
+  "kind": "shield",
+  "rawContext": {
+    "contractCalls": [
+      {
+        "functionName": "approve",
+      },
+      {
+        "functionName": "wrap",
+      },
+    ],
+    "route": "approveAndWrap",
+  },
+  "summary": "Convert public ERC-20 tokens into a confidential balance.",
+  "title": "Shield public tokens",
+  "warnings": [
+    "After shielding, the balance is represented confidentially.",
+    "This may first approve the wrapper to spend public ERC-20 tokens.",
+    "This approval may allow the wrapper to spend more than this shield amount.",
+  ],
+}
+`;
+
+exports[`clear signing intent builders > buildUnwrapAllIntent snapshots entire balance semantics 1`] = `
+{
+  "contractContext": {
+    "chainId": 1,
+    "contractAddress": "0x2222222222222222222222222222222222222222",
+    "functionName": "unwrap",
+  },
+  "fields": [
+    {
+      "label": "Confidential wrapper",
+      "value": "0x2222222222222222222222222222222222222222",
+      "visibility": "public",
+    },
+    {
+      "label": "Granting wallet",
+      "value": "0x4444444444444444444444444444444444444444",
+      "visibility": "public",
+    },
+    {
+      "label": "Public token recipient",
+      "value": "0x4444444444444444444444444444444444444444",
+      "visibility": "public",
+    },
+    {
+      "label": "Amount",
+      "value": "Entire confidential balance",
+      "visibility": "derived",
+    },
+    {
+      "displayValue": "Hidden encrypted balance",
+      "label": "Encrypted balance",
+      "value": "0xabababababababababababababababababababababababababababababababab",
+      "visibility": "encrypted",
+    },
+  ],
+  "kind": "unwrapAll",
+  "rawContext": {
+    "contractCall": {
+      "functionName": "unwrap",
+    },
+  },
+  "summary": "Start converting your entire confidential balance into public tokens.",
+  "title": "Request unshield of entire confidential balance",
+  "warnings": [
+    "This starts the unshield process. A finalize transaction is still required.",
+  ],
+}
+`;
+
+exports[`clear signing intent builders > buildUnwrapIntent snapshots first phase unshield 1`] = `
+{
+  "contractContext": {
+    "chainId": 1,
+    "contractAddress": "0x2222222222222222222222222222222222222222",
+    "functionName": "unwrap",
+  },
+  "fields": [
+    {
+      "label": "Confidential wrapper",
+      "value": "0x2222222222222222222222222222222222222222",
+      "visibility": "public",
+    },
+    {
+      "label": "Granting wallet",
+      "value": "0x4444444444444444444444444444444444444444",
+      "visibility": "public",
+    },
+    {
+      "label": "Public token recipient",
+      "value": "0x4444444444444444444444444444444444444444",
+      "visibility": "public",
+    },
+    {
+      "label": "Amount",
+      "value": 50n,
+      "visibility": "public",
+    },
+    {
+      "displayValue": "Hidden encrypted amount",
+      "label": "Encrypted amount",
+      "value": "0xabababababababababababababababababababababababababababababababab",
+      "visibility": "encrypted",
+    },
+    {
+      "displayValue": "Protocol proof (hidden)",
+      "label": "Input proof",
+      "redacted": true,
+      "visibility": "internal",
+    },
+  ],
+  "kind": "unwrap",
+  "rawContext": {
+    "contractCall": {
+      "functionName": "unwrap",
+    },
+    "sdkInput": {
+      "amount": 50n,
+    },
+  },
+  "summary": "Start converting a confidential amount into public tokens.",
+  "title": "Request unshield",
+  "warnings": [
+    "This starts the unshield process. A finalize transaction is still required.",
+  ],
+}
+`;

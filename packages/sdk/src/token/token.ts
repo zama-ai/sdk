@@ -1,4 +1,9 @@
-import { type Address, getAddress } from "viem";
+import { type Address, getAddress, toHex } from "viem";
+import {
+  buildConfidentialTransferIntent,
+  type ClearSigningIntent,
+  type ClearSigningEncryptedValue,
+} from "../clear-signing";
 import {
   confidentialBalanceOfContract,
   confidentialTransferContract,
@@ -84,6 +89,31 @@ export class Token {
   constructor(sdk: ZamaSDK, address: Address) {
     this.sdk = sdk;
     this.address = getAddress(address);
+  }
+
+  /**
+   * Build a clear-signing preview for a confidential transfer without
+   * submitting a transaction.
+   *
+   * The preview includes plaintext SDK inputs and wallet/chain context, but no
+   * encrypted handle because encryption happens during the actual transfer.
+   */
+  async createConfidentialTransferClearSigningIntent(
+    to: Address,
+    amount: bigint,
+  ): Promise<ClearSigningIntent> {
+    const account = await requireAlignedWalletAccount(
+      "createConfidentialTransferClearSigningIntent",
+      this.sdk.signer,
+      this.sdk.provider,
+    );
+    return buildConfidentialTransferIntent({
+      tokenAddress: this.address,
+      senderAddress: getAddress(account.address),
+      recipientAddress: getAddress(to),
+      amount,
+      chainId: await this.sdk.provider.getChainId(),
+    });
   }
 
   // METADATA
@@ -525,7 +555,12 @@ export class Token {
       this.sdk.signer,
       this.sdk.provider,
     );
-    const { skipBalanceCheck = false, onEncryptComplete, onTransferSubmitted } = options ?? {};
+    const {
+      skipBalanceCheck = false,
+      onClearSigningIntent,
+      onEncryptComplete,
+      onTransferSubmitted,
+    } = options ?? {};
 
     const normalizedTo = getAddress(to);
 
@@ -543,11 +578,32 @@ export class Token {
     if (handles.length === 0) {
       throw new EncryptionFailedError("Encryption returned no handles");
     }
+    const encryptedAmount = handles[0]!;
+    const encryptedAmountValue =
+      typeof encryptedAmount === "string" ? encryptedAmount : toHex(encryptedAmount);
 
     try {
-      const txHash = await signer.writeContract(
-        confidentialTransferContract(this.address, normalizedTo, handles[0]!, inputProof),
+      const contractCall = confidentialTransferContract(
+        this.address,
+        normalizedTo,
+        encryptedAmount,
+        inputProof,
       );
+      void swallow("transfer: onClearSigningIntent", () =>
+        onClearSigningIntent?.(
+          buildConfidentialTransferIntent({
+            tokenAddress: this.address,
+            senderAddress: getAddress(account.address),
+            recipientAddress: normalizedTo,
+            amount,
+            encryptedAmount: { value: encryptedAmountValue } satisfies ClearSigningEncryptedValue,
+            hasInputProof: true,
+            chainId: account.chainId,
+            contractCall,
+          }),
+        ),
+      );
+      const txHash = await signer.writeContract(contractCall);
       this.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash });
       void swallow("transfer: onTransferSubmitted", () => onTransferSubmitted?.(txHash));
       const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
@@ -606,17 +662,33 @@ export class Token {
     if (handles.length === 0) {
       throw new EncryptionFailedError("Encryption returned no handles");
     }
+    const encryptedAmount = handles[0]!;
+    const encryptedAmountValue =
+      typeof encryptedAmount === "string" ? encryptedAmount : toHex(encryptedAmount);
 
     try {
-      const txHash = await signer.writeContract(
-        confidentialTransferFromContract(
-          this.address,
-          normalizedFrom,
-          normalizedTo,
-          handles[0]!,
-          inputProof,
+      const contractCall = confidentialTransferFromContract(
+        this.address,
+        normalizedFrom,
+        normalizedTo,
+        encryptedAmount,
+        inputProof,
+      );
+      void swallow("transferFrom: onClearSigningIntent", () =>
+        callbacks?.onClearSigningIntent?.(
+          buildConfidentialTransferIntent({
+            tokenAddress: this.address,
+            senderAddress: normalizedFrom,
+            recipientAddress: normalizedTo,
+            amount,
+            encryptedAmount: { value: encryptedAmountValue } satisfies ClearSigningEncryptedValue,
+            hasInputProof: true,
+            chainId: this.sdk.signer?.walletAccount.getSnapshot()?.chainId,
+            contractCall,
+          }),
         ),
       );
+      const txHash = await signer.writeContract(contractCall);
       this.emit({ type: ZamaSDKEvents.TransferFromSubmitted, txHash });
       void swallow("transferFrom: onTransferSubmitted", () =>
         callbacks?.onTransferSubmitted?.(txHash),

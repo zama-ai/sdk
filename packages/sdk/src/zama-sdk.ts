@@ -1,4 +1,10 @@
 import { getAddress, type Address } from "viem";
+import {
+  buildAllowAsIntent,
+  buildAllowIntent,
+  buildDelegateDecryptionIntent,
+  type ClearSigningIntent,
+} from "./clear-signing";
 import type { ZamaConfig } from "./config/types";
 import { CredentialService } from "./credentials/credential-service";
 import { SignerNotConfiguredError, wrapDecryptError } from "./errors";
@@ -18,6 +24,7 @@ import type {
   GenericProvider,
   GenericSigner,
   GenericStorage,
+  ClearSigningCallbacks,
   TransactionResult,
   WalletAccountListener,
 } from "./types";
@@ -175,6 +182,56 @@ export class ZamaSDK {
     return new WrappedToken(this, address);
   }
 
+  /** Build a clear-signing preview for direct decrypt authorization. */
+  async createAllowClearSigningIntent(contracts: Address[]): Promise<ClearSigningIntent> {
+    return buildAllowIntent({
+      contractAddresses: contracts.map((contract) => getAddress(contract)),
+      chainId: await this.provider.getChainId(),
+    });
+  }
+
+  /** Build a clear-signing preview for delegated decrypt credential authorization. */
+  async createAllowAsClearSigningIntent(
+    delegator: Address,
+    contracts: Address[],
+  ): Promise<ClearSigningIntent> {
+    return buildAllowAsIntent({
+      delegatorAddress: getAddress(delegator),
+      contractAddresses: contracts.map((contract) => getAddress(contract)),
+      chainId: await this.provider.getChainId(),
+    });
+  }
+
+  /** Build a clear-signing preview for granting delegated decryption rights. */
+  async createDelegateDecryptionClearSigningIntent({
+    contractAddress,
+    delegateAddress,
+    expirationDate,
+  }: {
+    contractAddress: Address;
+    delegateAddress: Address;
+    expirationDate?: Date;
+  }): Promise<ClearSigningIntent> {
+    const account = await requireAlignedWalletAccount(
+      "createDelegateDecryptionClearSigningIntent",
+      this.signer,
+      this.provider,
+    );
+    const aclAddress = await this.relayer.getAclAddress();
+    return buildDelegateDecryptionIntent({
+      contractAddress: getAddress(contractAddress),
+      delegateAddress: getAddress(delegateAddress),
+      delegatorAddress: getAddress(account.address),
+      aclAddress,
+      expirationTimestamp:
+        expirationDate === undefined
+          ? undefined
+          : BigInt(Math.floor(expirationDate.getTime() / 1000)),
+      permanent: expirationDate === undefined,
+      chainId: account.chainId,
+    });
+  }
+
   /**
    * Emit a structured SDK event. Used by {@link Token}/{@link WrappedToken}
    * to surface lifecycle events through the unified SDK event stream.
@@ -236,12 +293,20 @@ export class ZamaSDK {
    *
    * @param contracts - Contract addresses to authorize.
    */
-  async allow(contracts: Address[]): Promise<void> {
+  async allow(contracts: Address[], options?: ClearSigningCallbacks): Promise<void> {
     if (contracts.length === 0) {
       return;
     }
     const service = this.#requireCredentialService("allow");
     await requireChainAlignment("allow", this.signer, this.provider);
+    void swallow("allow: onClearSigningIntent", () =>
+      options?.onClearSigningIntent?.(
+        buildAllowIntent({
+          contractAddresses: contracts.map((contract) => getAddress(contract)),
+          chainId: this.signer?.walletAccount.getSnapshot()?.chainId,
+        }),
+      ),
+    );
     await service.allow(contracts);
   }
 
@@ -251,12 +316,25 @@ export class ZamaSDK {
    * @param delegator - The address that delegated decryption rights to the connected signer.
    * @param contracts - Contract addresses to authorize.
    */
-  async allowAs(delegator: Address, contracts: Address[]): Promise<void> {
+  async allowAs(
+    delegator: Address,
+    contracts: Address[],
+    options?: ClearSigningCallbacks,
+  ): Promise<void> {
     if (contracts.length === 0) {
       return;
     }
     const service = this.#requireCredentialService("allowAs");
     await requireChainAlignment("allowAs", this.signer, this.provider);
+    void swallow("allowAs: onClearSigningIntent", () =>
+      options?.onClearSigningIntent?.(
+        buildAllowAsIntent({
+          delegatorAddress: getAddress(delegator),
+          contractAddresses: contracts.map((contract) => getAddress(contract)),
+          chainId: this.signer?.walletAccount.getSnapshot()?.chainId,
+        }),
+      ),
+    );
     await service.allow(contracts, delegator);
   }
 
@@ -310,16 +388,35 @@ export class ZamaSDK {
     contractAddress,
     delegateAddress,
     expirationDate,
+    onClearSigningIntent,
   }: {
     contractAddress: Address;
     delegateAddress: Address;
     expirationDate?: Date;
+    onClearSigningIntent?: (intent: ClearSigningIntent) => void;
   }): Promise<TransactionResult> {
     const signer = this.requireSigner("delegateDecryption");
     const account = await requireAlignedWalletAccount(
       "delegateDecryption",
       this.signer,
       this.provider,
+    );
+    const aclAddress = await this.relayer.getAclAddress();
+    void swallow("delegateDecryption: onClearSigningIntent", () =>
+      onClearSigningIntent?.(
+        buildDelegateDecryptionIntent({
+          contractAddress: getAddress(contractAddress),
+          delegateAddress: getAddress(delegateAddress),
+          delegatorAddress: getAddress(account.address),
+          aclAddress,
+          expirationTimestamp:
+            expirationDate === undefined
+              ? undefined
+              : BigInt(Math.floor(expirationDate.getTime() / 1000)),
+          permanent: expirationDate === undefined,
+          chainId: account.chainId,
+        }),
+      ),
     );
     return this.#delegationService.delegateDecryption(signer, {
       contractAddress,

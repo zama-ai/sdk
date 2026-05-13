@@ -68,6 +68,49 @@ Browser apps should proxy relayer requests through their backend so the relayer 
 - Adapter-specific `createConfig` helpers are available from `@zama-fhe/sdk/viem` and `@zama-fhe/sdk/ethers`.
 - Relayer factories are split by runtime: browser `web()` comes from `@zama-fhe/sdk/web`, Node.js `node()` comes from `@zama-fhe/sdk/node`, and local `cleartext()` comes from `@zama-fhe/sdk`.
 - Chain presets such as `sepolia`, `mainnet`, `hoodi`, `hardhat`, and `anvil` are available from `@zama-fhe/sdk/chains`.
+- Clear-signing intent helpers are available from `@zama-fhe/sdk/clear-signing`; runtime previews are also available on `ZamaSDK`, `Token`, and `WrappedToken`.
+
+## Clear-signing intents
+
+Clear-signing helpers convert SDK-side operation context into a semantic
+`ClearSigningIntent`. Pure builders do not perform network calls, do not sign,
+and do not submit transactions. Runtime preview methods resolve live SDK context
+such as wallet account, chain ID, wrapper routing, and balance handles.
+
+```ts
+import {
+  buildConfidentialTransferIntent,
+  renderClearSigningIntent,
+  validateClearSigningIntent,
+} from "@zama-fhe/sdk/clear-signing";
+
+const intent = buildConfidentialTransferIntent({
+  tokenAddress: "0x1111111111111111111111111111111111111111",
+  recipientAddress: "0x2222222222222222222222222222222222222222",
+  amount: 100n,
+  encryptedAmount: { value: "0xabababababababababababababababababababababababababababababababab" },
+});
+
+const validation = validateClearSigningIntent(intent);
+const rendered = renderClearSigningIntent(intent);
+```
+
+Runtime preview and callbacks:
+
+```ts
+const token = sdk.createToken("0x1111111111111111111111111111111111111111");
+
+const preview = await token.createConfidentialTransferClearSigningIntent(
+  "0x2222222222222222222222222222222222222222",
+  100n,
+);
+
+await token.confidentialTransfer("0x2222222222222222222222222222222222222222", 100n, {
+  onClearSigningIntent: (intent) => {
+    console.log(renderClearSigningIntent(intent).title);
+  },
+});
+```
 
 ## Documentation
 

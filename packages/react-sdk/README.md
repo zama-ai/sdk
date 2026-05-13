@@ -125,6 +125,7 @@ If you need a wagmi-based setup or another integration pattern, start from the [
 - `useShield` converts public ERC-20 balances into confidential balances.
 - `useUnshield` moves confidential balances back to public ERC-20 balances.
 - `useDelegateDecryption` grants another account permission to decrypt a balance.
+- `use*ClearSigningIntent` hooks generate clear-signing previews for supported operations without submitting the operation.
 
 ## Documentation
 

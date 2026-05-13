@@ -1,10 +1,10 @@
 import type { Address } from "viem";
-import type { TransactionResult } from "../types";
+import type { ClearSigningCallbacks, TransactionResult } from "../types";
 import type { ZamaSDK } from "../zama-sdk";
 import type { MutationFactoryOptions } from "./factory-types";
 
 /** Variables for {@link delegateDecryptionMutationOptions}. */
-export interface DelegateDecryptionParams {
+export interface DelegateDecryptionParams extends ClearSigningCallbacks {
   delegateAddress: Address;
   expirationDate?: Date;
 }
@@ -19,7 +19,12 @@ export function delegateDecryptionMutationOptions(
 > {
   return {
     mutationKey: ["zama.delegateDecryption", contractAddress] as const,
-    mutationFn: async ({ delegateAddress, expirationDate }) =>
-      sdk.delegateDecryption({ contractAddress, delegateAddress, expirationDate }),
+    mutationFn: async ({ delegateAddress, expirationDate, onClearSigningIntent }) =>
+      sdk.delegateDecryption({
+        contractAddress,
+        delegateAddress,
+        expirationDate,
+        onClearSigningIntent,
+      }),
   };
 }

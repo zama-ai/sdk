@@ -28,6 +28,26 @@ import { skipToken } from '@tanstack/query-core';
 import { UserDecryptResults } from '@zama-fhe/relayer-sdk/bundle';
 import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
 
+// Warning: (ae-forgotten-export) The symbol "ClearSigningIntent" needs to be exported by the entry point index.d.ts
+//
+// @public (undocumented)
+export function allowAsClearSigningIntentMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.clearSigningIntent.allowAs"], AllowAsClearSigningIntentParams, ClearSigningIntent>;
+
+// @public
+export interface AllowAsClearSigningIntentParams extends AllowClearSigningIntentParams {
+    // (undocumented)
+    delegator: Address;
+}
+
+// @public (undocumented)
+export function allowClearSigningIntentMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.clearSigningIntent.allow"], AllowClearSigningIntentParams, ClearSigningIntent>;
+
+// @public
+export interface AllowClearSigningIntentParams {
+    // (undocumented)
+    contracts: Address[];
+}
+
 // @public (undocumented)
 export function allowMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.allow"], Address[], void>;
 
@@ -84,6 +104,11 @@ export type BatchDecryptBalancesAsParams = BatchDecryptAsOptions;
 
 // @public
 export function clearCredentialsMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.clearCredentials"], void, void>;
+
+// @public
+export interface ClearSigningCallbacks {
+    onClearSigningIntent?: (intent: ClearSigningIntent) => void;
+}
 
 export { ClearValueType }
 
@@ -145,6 +170,17 @@ export interface ConfidentialTokenAddressQueryConfig extends WrappersRegistryQue
 
 // @public (undocumented)
 export function confidentialTokenAddressQueryOptions(sdk: ZamaSDK, config: ConfidentialTokenAddressQueryConfig): QueryFactoryOptions<readonly [boolean, Address], Error, readonly [boolean, Address], ReturnType<typeof zamaQueryKeys.wrappersRegistry.confidentialTokenAddress>>;
+
+// @public (undocumented)
+export function confidentialTransferClearSigningIntentMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.clearSigningIntent.confidentialTransfer", Address], ConfidentialTransferClearSigningIntentParams, ClearSigningIntent>;
+
+// @public
+export interface ConfidentialTransferClearSigningIntentParams {
+    // (undocumented)
+    amount: bigint;
+    // (undocumented)
+    to: Address;
+}
 
 // @public
 export interface ConfidentialTransferEvent {
@@ -257,10 +293,23 @@ export interface DecryptStartEvent extends BaseEvent {
 }
 
 // @public (undocumented)
+export function delegateDecryptionClearSigningIntentMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.clearSigningIntent.delegateDecryption"], DelegateDecryptionClearSigningIntentParams, ClearSigningIntent>;
+
+// @public
+export interface DelegateDecryptionClearSigningIntentParams {
+    // (undocumented)
+    contractAddress: Address;
+    // (undocumented)
+    delegateAddress: Address;
+    // (undocumented)
+    expirationDate?: Date;
+}
+
+// @public (undocumented)
 export function delegateDecryptionMutationOptions(sdk: ZamaSDK, contractAddress: Address): MutationFactoryOptions<readonly ["zama.delegateDecryption", Address], DelegateDecryptionParams, TransactionResult>;
 
 // @public
-export interface DelegateDecryptionParams {
+export interface DelegateDecryptionParams extends ClearSigningCallbacks {
     // (undocumented)
     delegateAddress: Address;
     // (undocumented)
@@ -390,16 +439,30 @@ export interface EncryptStartEvent extends BaseEvent {
 export function filterQueryOptions<TOptions extends Record<string, unknown>>(options: TOptions): Omit<TOptions, StrippedQueryOptionKeys>;
 
 // @public (undocumented)
+export function finalizeUnwrapClearSigningIntentMutationOptions(token: WrappedToken): MutationFactoryOptions<readonly ["zama.clearSigningIntent.finalizeUnwrap", Address], FinalizeUnwrapClearSigningIntentParams, ClearSigningIntent>;
+
+// @public
+export interface FinalizeUnwrapClearSigningIntentParams {
+    // (undocumented)
+    clearAmount?: bigint;
+    // (undocumented)
+    unwrapRequestIdOrAmount: Handle;
+}
+
+// @public (undocumented)
 export function finalizeUnwrapMutationOptions(token: WrappedToken): MutationFactoryOptions<readonly ["zama.finalizeUnwrap", Address], FinalizeUnwrapParams, TransactionResult>;
 
 // @public
-export type FinalizeUnwrapParams = /** Preferred input from upgraded `UnwrapRequested` events. */{
+export interface FinalizeUnwrapOptions extends ClearSigningCallbacks {}
+
+// @public
+export type FinalizeUnwrapParams = /** Preferred input from upgraded `UnwrapRequested` events. */({
     unwrapRequestId: Handle;
     burnAmountHandle?: never;
-} /** Legacy input from pre-upgrade `UnwrapRequested` events. */ | {
+} & FinalizeUnwrapOptions) /** Legacy input from pre-upgrade `UnwrapRequested` events. */ | ({
     unwrapRequestId?: never;
     burnAmountHandle: Handle;
-};
+} & FinalizeUnwrapOptions);
 
 // @public (undocumented)
 export interface FinalizeUnwrapSubmittedEvent extends BaseEvent {
@@ -651,9 +714,18 @@ export interface SetOperatorSubmittedEvent extends BaseEvent {
 }
 
 // @public
-export interface ShieldCallbacks {
+export interface ShieldCallbacks extends ClearSigningCallbacks {
     onApprovalSubmitted?: (txHash: Hex) => void;
     onShieldSubmitted?: (txHash: Hex) => void;
+}
+
+// @public (undocumented)
+export function shieldClearSigningIntentMutationOptions(token: WrappedToken): MutationFactoryOptions<readonly ["zama.clearSigningIntent.shield", Address], ShieldClearSigningIntentParams, ClearSigningIntent>;
+
+// @public
+export interface ShieldClearSigningIntentParams extends ShieldOptions {
+    // (undocumented)
+    amount: bigint;
 }
 
 // @public (undocumented)
@@ -699,6 +771,7 @@ export class Token {
     confidentialBalanceOf(owner: Address): Promise<Handle>;
     confidentialTransfer(to: Address, amount: bigint, options?: TransferOptions): Promise<TransactionResult>;
     confidentialTransferFrom(from: Address, to: Address, amount: bigint, callbacks?: TransferCallbacks): Promise<TransactionResult>;
+    createConfidentialTransferClearSigningIntent(to: Address, amount: bigint): Promise<ClearSigningIntent>;
     decimals(): Promise<number>;
     decryptBalanceAs(input: {
         delegatorAddress: Address;
@@ -804,7 +877,7 @@ export interface TransactionResult {
 }
 
 // @public
-export interface TransferCallbacks {
+export interface TransferCallbacks extends ClearSigningCallbacks {
     onEncryptComplete?: () => void;
     onTransferSubmitted?: (txHash: Hex) => void;
 }
@@ -848,7 +921,7 @@ export function unshieldAllMutationOptions(token: WrappedToken): MutationFactory
 export interface UnshieldAllParams extends UnshieldCallbacks {}
 
 // @public
-export interface UnshieldCallbacks {
+export interface UnshieldCallbacks extends ClearSigningCallbacks {
     onFinalizeSubmitted?: (txHash: Hex) => void;
     onFinalizing?: () => void;
     onUnwrapSubmitted?: (txHash: Hex) => void;
@@ -891,7 +964,22 @@ export interface UnshieldPhase2SubmittedEvent extends BaseEvent {
 }
 
 // @public (undocumented)
-export function unwrapAllMutationOptions(token: WrappedToken): MutationFactoryOptions<readonly ["zama.unwrapAll", Address], void, TransactionResult>;
+export function unwrapAllClearSigningIntentMutationOptions(token: WrappedToken): MutationFactoryOptions<readonly ["zama.clearSigningIntent.unwrapAll", Address], void, ClearSigningIntent>;
+
+// @public (undocumented)
+export function unwrapAllMutationOptions(token: WrappedToken): MutationFactoryOptions<readonly ["zama.unwrapAll", Address], UnwrapAllOptions | void, TransactionResult>;
+
+// @public
+export interface UnwrapAllOptions extends ClearSigningCallbacks {}
+
+// @public (undocumented)
+export function unwrapClearSigningIntentMutationOptions(token: WrappedToken): MutationFactoryOptions<readonly ["zama.clearSigningIntent.unwrap", Address], UnwrapClearSigningIntentParams, ClearSigningIntent>;
+
+// @public
+export interface UnwrapClearSigningIntentParams {
+    // (undocumented)
+    amount: bigint;
+}
 
 // @public
 export interface UnwrapFinalizedEvent {
@@ -907,7 +995,10 @@ export interface UnwrapFinalizedEvent {
 export function unwrapMutationOptions(token: WrappedToken): MutationFactoryOptions<readonly ["zama.unwrap", Address], UnwrapParams, TransactionResult>;
 
 // @public
-export interface UnwrapParams {
+export interface UnwrapOptions extends ClearSigningCallbacks {}
+
+// @public
+export interface UnwrapParams extends UnwrapOptions {
     // (undocumented)
     amount: bigint;
 }
@@ -1018,15 +1109,19 @@ export interface WrappedEvent {
 export class WrappedToken extends Token {
     allowance(owner: Address): Promise<bigint>;
     approveUnderlying(amount?: bigint): Promise<TransactionResult>;
-    finalizeUnwrap(unwrapRequestIdOrAmount: Handle): Promise<TransactionResult>;
+    createFinalizeUnwrapClearSigningIntent(unwrapRequestIdOrAmount: Handle, clearAmount?: bigint): Promise<ClearSigningIntent>;
+    createShieldClearSigningIntent(amount: bigint, options?: ShieldOptions): Promise<ClearSigningIntent>;
+    createUnwrapAllClearSigningIntent(): Promise<ClearSigningIntent>;
+    createUnwrapClearSigningIntent(amount: bigint): Promise<ClearSigningIntent>;
+    finalizeUnwrap(unwrapRequestIdOrAmount: Handle, options?: FinalizeUnwrapOptions): Promise<TransactionResult>;
     isPayable(): Promise<boolean>;
     resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult>;
     underlying(): Promise<Address>;
     unshield(amount: bigint, options?: UnshieldOptions): Promise<TransactionResult>;
     unshieldAll(callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
-    unwrap(amount: bigint): Promise<TransactionResult>;
-    unwrapAll(): Promise<TransactionResult>;
+    unwrap(amount: bigint, options?: UnwrapOptions): Promise<TransactionResult>;
+    unwrapAll(options?: UnwrapAllOptions): Promise<TransactionResult>;
 }
 
 // @public (undocumented)
@@ -1265,9 +1360,16 @@ export const zamaQueryKeys: {
 export class ZamaSDK {
     [Symbol.dispose](): void;
     constructor(config: ZamaConfig);
-    allow(contracts: Address[]): Promise<void>;
-    allowAs(delegator: Address, contracts: Address[]): Promise<void>;
+    allow(contracts: Address[], options?: ClearSigningCallbacks): Promise<void>;
+    allowAs(delegator: Address, contracts: Address[], options?: ClearSigningCallbacks): Promise<void>;
     clearCredentials(): Promise<void>;
+    createAllowAsClearSigningIntent(delegator: Address, contracts: Address[]): Promise<ClearSigningIntent>;
+    createAllowClearSigningIntent(contracts: Address[]): Promise<ClearSigningIntent>;
+    createDelegateDecryptionClearSigningIntent(input: {
+        contractAddress: Address;
+        delegateAddress: Address;
+        expirationDate?: Date;
+    }): Promise<ClearSigningIntent>;
     createToken(address: Address): Token;
     createWrappedToken(address: Address): WrappedToken;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
@@ -1284,6 +1386,7 @@ export class ZamaSDK {
         contractAddress: Address;
         delegateAddress: Address;
         expirationDate?: Date;
+        onClearSigningIntent?: (intent: ClearSigningIntent) => void;
     }): Promise<TransactionResult>;
     delegatedUserDecrypt(handles: DecryptHandle[], delegatorAddress: Address, accountAddress?: Address): Promise<Record<Handle, ClearValueType>>;
     dispose(): void;
@@ -1358,9 +1461,9 @@ export const ZamaSDKEvents: {
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/types-57wtSyfb.d.ts:561:3 - (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
-// dist/esm/types-57wtSyfb.d.ts:562:3 - (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
-// dist/esm/types-57wtSyfb.d.ts:563:3 - (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
+// dist/esm/types-BT55gJdq.d.ts:561:3 - (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
+// dist/esm/types-BT55gJdq.d.ts:562:3 - (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
+// dist/esm/types-BT55gJdq.d.ts:563:3 - (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

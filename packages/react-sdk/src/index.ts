@@ -84,6 +84,17 @@ export { useDecryptBalanceAs } from "./delegation/use-decrypt-balance-as";
 export { useBatchDecryptBalancesAs } from "./delegation/use-batch-decrypt-balances-as";
 export { useApproveUnderlying } from "./shield/use-approve-underlying";
 export {
+  useAllowAsClearSigningIntent,
+  useAllowClearSigningIntent,
+  useConfidentialTransferClearSigningIntent,
+  useDelegateDecryptionClearSigningIntent,
+  useFinalizeUnwrapClearSigningIntent,
+  useShieldClearSigningIntent,
+  useUnwrapAllClearSigningIntent,
+  useUnwrapClearSigningIntent,
+  type UseTokenClearSigningIntentConfig,
+} from "./clear-signing/use-clear-signing-intents";
+export {
   useIsConfidential,
   useIsConfidentialSuspense,
   useIsWrapper,

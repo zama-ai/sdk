@@ -9,28 +9,35 @@ import * as _$_zama_fhe_relayer_sdk_web0 from '@zama-fhe/relayer-sdk/web';
 import * as _$_zama_fhe_sdk0 from '@zama-fhe/sdk';
 import * as _$react_jsx_runtime0 from 'react/jsx-runtime';
 import { Address } from '@zama-fhe/sdk';
+import { AllowAsClearSigningIntentParams } from '@zama-fhe/sdk/query';
+import { AllowClearSigningIntentParams } from '@zama-fhe/sdk/query';
 import { ApproveUnderlyingParams } from '@zama-fhe/sdk/query';
 import { BatchBalancesResult } from '@zama-fhe/sdk';
 import { BatchDecryptBalancesAsParams } from '@zama-fhe/sdk/query';
+import { ClearSigningIntent } from '@zama-fhe/sdk';
 import { ClearValueType } from '@zama-fhe/sdk';
 import { ConfidentialSetOperatorParams } from '@zama-fhe/sdk/query';
+import { ConfidentialTransferClearSigningIntentParams } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferFromParams } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferParams } from '@zama-fhe/sdk/query';
 import { CreateDelegatedUserDecryptEIP712Params } from '@zama-fhe/sdk/query';
 import { CreateEIP712Params } from '@zama-fhe/sdk/query';
 import { DecryptBalanceAsParams } from '@zama-fhe/sdk/query';
 import { DecryptResult } from '@zama-fhe/sdk/query';
+import { DelegateDecryptionClearSigningIntentParams } from '@zama-fhe/sdk/query';
 import { DelegateDecryptionParams } from '@zama-fhe/sdk/query';
 import { DelegatedUserDecryptMutationParams } from '@zama-fhe/sdk/query';
 import { DelegationStatusData } from '@zama-fhe/sdk/query';
 import { EIP712TypedData } from '@zama-fhe/sdk';
 import { EncryptParams } from '@zama-fhe/sdk';
+import { FinalizeUnwrapClearSigningIntentParams } from '@zama-fhe/sdk/query';
 import { FinalizeUnwrapParams } from '@zama-fhe/sdk/query';
 import { PaginatedResult } from '@zama-fhe/sdk';
 import { PropsWithChildren } from 'react';
 import { PublicKeyData } from '@zama-fhe/sdk';
 import { ResumeUnshieldParams } from '@zama-fhe/sdk/query';
 import { RevokeDelegationParams } from '@zama-fhe/sdk/query';
+import { ShieldClearSigningIntentParams } from '@zama-fhe/sdk/query';
 import { ShieldParams } from '@zama-fhe/sdk/query';
 import { Token } from '@zama-fhe/sdk';
 import { TokenMetadata } from '@zama-fhe/sdk/query';
@@ -39,6 +46,7 @@ import { TokenWrapperPairWithMetadata } from '@zama-fhe/sdk';
 import { TransactionResult } from '@zama-fhe/sdk';
 import { UnshieldAllParams } from '@zama-fhe/sdk/query';
 import { UnshieldParams } from '@zama-fhe/sdk/query';
+import { UnwrapClearSigningIntentParams } from '@zama-fhe/sdk/query';
 import { UnwrapParams } from '@zama-fhe/sdk/query';
 import { UseMutationOptions } from '@tanstack/react-query';
 import { UseMutationResult } from '@tanstack/react-query';
@@ -51,6 +59,12 @@ import { ZKProofLike } from '@zama-fhe/sdk';
 
 // @public
 export function useAllow(options?: UseMutationOptions<void, Error, Address[]>): _$_tanstack_react_query0.UseMutationResult<void, Error, `0x${string}`[], unknown>;
+
+// @public
+export function useAllowAsClearSigningIntent<TContext = unknown>(options?: UseMutationOptions<ClearSigningIntent, Error, AllowAsClearSigningIntentParams, TContext>): UseMutationResult<ClearSigningIntent, Error, AllowAsClearSigningIntentParams, TContext>;
+
+// @public
+export function useAllowClearSigningIntent<TContext = unknown>(options?: UseMutationOptions<ClearSigningIntent, Error, AllowClearSigningIntentParams, TContext>): UseMutationResult<ClearSigningIntent, Error, AllowClearSigningIntentParams, TContext>;
 
 // @public
 export function useApproveUnderlying(address: Address, options?: UseMutationOptions<TransactionResult, Error, ApproveUnderlyingParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, ApproveUnderlyingParams, `0x${string}`>;
@@ -121,6 +135,9 @@ export function useConfidentialTokenAddress(input: {
 export function useConfidentialTransfer<TContext = unknown>(config: UseConfidentialTransferConfig, options?: UseMutationOptions<TransactionResult, Error, ConfidentialTransferParams, TContext>): UseMutationResult<TransactionResult, Error, ConfidentialTransferParams, TContext>;
 
 // @public
+export function useConfidentialTransferClearSigningIntent<TContext = unknown>(config: UseTokenClearSigningIntentConfig, options?: UseMutationOptions<ClearSigningIntent, Error, ConfidentialTransferClearSigningIntentParams, TContext>): UseMutationResult<ClearSigningIntent, Error, ConfidentialTransferClearSigningIntentParams, TContext>;
+
+// @public
 export interface UseConfidentialTransferConfig {
     address: Address;
     optimistic?: boolean;
@@ -147,6 +164,9 @@ export function useDecryptBalanceAs(address: Address, options?: UseMutationOptio
 export function useDelegateDecryption(address: Address, options?: UseMutationOptions<TransactionResult, Error, DelegateDecryptionParams>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, DelegateDecryptionParams, unknown>;
 
 // @public
+export function useDelegateDecryptionClearSigningIntent<TContext = unknown>(options?: UseMutationOptions<ClearSigningIntent, Error, DelegateDecryptionClearSigningIntentParams, TContext>): UseMutationResult<ClearSigningIntent, Error, DelegateDecryptionClearSigningIntentParams, TContext>;
+
+// @public
 export function useDelegatedUserDecrypt(): _$_tanstack_react_query0.UseMutationResult<Record<`0x${string}`, ClearValueType>, Error, DelegatedUserDecryptMutationParams, unknown>;
 
 // @public
@@ -167,6 +187,9 @@ export function useEncrypt(): _$_tanstack_react_query0.UseMutationResult<Readonl
 
 // @public
 export function useFinalizeUnwrap(address: Address, options?: UseMutationOptions<TransactionResult, Error, FinalizeUnwrapParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, FinalizeUnwrapParams, `0x${string}`>;
+
+// @public
+export function useFinalizeUnwrapClearSigningIntent<TContext = unknown>(config: UseTokenClearSigningIntentConfig, options?: UseMutationOptions<ClearSigningIntent, Error, FinalizeUnwrapClearSigningIntentParams, TContext>): UseMutationResult<ClearSigningIntent, Error, FinalizeUnwrapClearSigningIntentParams, TContext>;
 
 // @public
 export function useGenerateKeypair(): _$_tanstack_react_query0.UseMutationResult<_$_zama_fhe_sdk0.KeypairType<`0x${string}`>, Error, void, unknown>;
@@ -244,6 +267,9 @@ export function useRevokePermits(options?: UseMutationOptions<void, Error, Addre
 export function useShield<TContext = unknown>(config: UseShieldConfig, options?: UseMutationOptions<TransactionResult, Error, ShieldParams, TContext>): UseMutationResult<TransactionResult, Error, ShieldParams, TContext>;
 
 // @public
+export function useShieldClearSigningIntent<TContext = unknown>(config: UseTokenClearSigningIntentConfig, options?: UseMutationOptions<ClearSigningIntent, Error, ShieldClearSigningIntentParams, TContext>): UseMutationResult<ClearSigningIntent, Error, ShieldClearSigningIntentParams, TContext>;
+
+// @public
 export interface UseShieldConfig {
     address: Address;
     optimistic?: boolean;
@@ -256,6 +282,11 @@ export function useToken(address: Address): Token;
 export function useTokenAddress(input: {
     confidentialTokenAddress: Address | undefined;
 }): _$_tanstack_react_query0.UseQueryResult<readonly [boolean, `0x${string}`], Error>;
+
+// @public
+export interface UseTokenClearSigningIntentConfig {
+    address: Address;
+}
 
 // @public
 export function useTokenPair(input: {
@@ -309,6 +340,12 @@ export function useUnwrap(address: Address, options?: UseMutationOptions<Transac
 
 // @public
 export function useUnwrapAll(address: Address, options?: UseMutationOptions<TransactionResult, Error, void, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, void, `0x${string}`>;
+
+// @public
+export function useUnwrapAllClearSigningIntent<TContext = unknown>(config: UseTokenClearSigningIntentConfig, options?: UseMutationOptions<ClearSigningIntent, Error, void, TContext>): UseMutationResult<ClearSigningIntent, Error, void, TContext>;
+
+// @public
+export function useUnwrapClearSigningIntent<TContext = unknown>(config: UseTokenClearSigningIntentConfig, options?: UseMutationOptions<ClearSigningIntent, Error, UnwrapClearSigningIntentParams, TContext>): UseMutationResult<ClearSigningIntent, Error, UnwrapClearSigningIntentParams, TContext>;
 
 // @public
 export function useUserDecrypt(config: UserDecryptQueryConfig, options?: Omit<UseQueryOptions<DecryptResult>, "queryKey" | "queryFn">): _$_tanstack_react_query0.UseQueryResult<Readonly<Record<`0x${string}`, _$_zama_fhe_sdk0.ClearValueType>>, Error>;

@@ -110,6 +110,8 @@ export type {
   TransactionReceipt,
   TransactionResult,
   ApprovalStrategy,
+  ClearSigningCallbacks,
+  FinalizeUnwrapOptions,
   UnshieldCallbacks,
   UnshieldOptions,
   ShieldCallbacks,
@@ -117,6 +119,8 @@ export type {
   ShieldPath,
   TransferCallbacks,
   TransferOptions,
+  UnwrapAllOptions,
+  UnwrapOptions,
 } from "./types";
 export type { Address, Hex } from "viem";
 export { ZamaSDKEvents } from "./events";
@@ -186,6 +190,53 @@ export {
 } from "./errors";
 export { BaseSigner } from "./signer/base-signer";
 export { createWalletAccountStore, MutableWalletAccountStore } from "./signer/wallet-account-store";
+
+// Clear signing intent layer
+export {
+  buildAllowIntent,
+  buildAllowIntentFromEIP712,
+  buildAllowAsIntent,
+  buildAllowAsIntentFromEIP712,
+  buildDelegateDecryptionIntent,
+  buildConfidentialTransferIntent,
+  buildShieldViaTransferAndCallIntent,
+  buildShieldViaWrapIntent,
+  buildUnwrapIntent,
+  buildUnwrapAllIntent,
+  buildFinalizeUnwrapIntent,
+} from "./clear-signing";
+export {
+  renderClearSigningIntent,
+  type RenderClearSigningIntentOptions,
+  type RenderedClearSigningField,
+  type RenderedClearSigningIntent,
+} from "./clear-signing";
+export {
+  assertClearSigningIntentSafe,
+  validateClearSigningIntent,
+  type ClearSigningValidationIssue,
+  type ClearSigningValidationResult,
+} from "./clear-signing";
+export type {
+  ClearSigningContractContext,
+  ClearSigningEncryptedValue,
+  ClearSigningField,
+  ClearSigningFieldValue,
+  ClearSigningIntent,
+  ClearSigningIntentKind,
+  ClearSigningRawContext,
+  ClearSigningVisibility,
+  BuildAllowIntentParams,
+  BuildAllowAsIntentParams,
+  BuildDelegateDecryptionIntentParams,
+  BuildConfidentialTransferIntentParams,
+  BuildShieldIntentBaseParams,
+  BuildShieldViaTransferAndCallIntentParams,
+  BuildShieldViaWrapIntentParams,
+  BuildUnwrapIntentParams,
+  BuildUnwrapAllIntentParams,
+  BuildFinalizeUnwrapIntentParams,
+} from "./clear-signing";
 
 // Event decoders and types
 export type {

@@ -1,4 +1,13 @@
-import { type Address, getAddress, type Hex } from "viem";
+import { type Address, getAddress, type Hex, toHex } from "viem";
+import {
+  buildFinalizeUnwrapIntent,
+  buildShieldViaTransferAndCallIntent,
+  buildShieldViaWrapIntent,
+  buildUnwrapAllIntent,
+  buildUnwrapIntent,
+  type ClearSigningIntent,
+  type ClearSigningEncryptedValue,
+} from "../clear-signing";
 import {
   allowanceContract,
   approveContract,
@@ -33,6 +42,9 @@ import type {
   ShieldCallbacks,
   ShieldOptions,
   TransactionResult,
+  FinalizeUnwrapOptions,
+  UnwrapAllOptions,
+  UnwrapOptions,
   UnshieldCallbacks,
   UnshieldOptions,
 } from "../types";
@@ -52,6 +64,102 @@ export class WrappedToken extends Token {
   #underlying: Address | undefined;
   #underlyingPromise: Promise<Address> | null = null;
   #isPayable: boolean | null = null;
+
+  /**
+   * Build a clear-signing preview for shielding public ERC-20 tokens into this
+   * confidential wrapper without submitting transactions.
+   */
+  async createShieldClearSigningIntent(
+    amount: bigint,
+    options?: ShieldOptions,
+  ): Promise<ClearSigningIntent> {
+    const account = await requireAlignedWalletAccount(
+      "createShieldClearSigningIntent",
+      this.sdk.signer,
+      this.sdk.provider,
+    );
+    const underlying = await this.#getUnderlying();
+    const userAddress = getAddress(account.address);
+    const recipient = options?.to ? getAddress(options.to) : userAddress;
+    const chainId = await this.sdk.provider.getChainId();
+    if (await this.isPayable()) {
+      return buildShieldViaTransferAndCallIntent({
+        underlyingTokenAddress: underlying,
+        wrapperAddress: this.address,
+        senderAddress: userAddress,
+        recipientAddress: recipient,
+        amount,
+        chainId,
+      });
+    }
+    const approvalStrategy = options?.approvalStrategy ?? "exact";
+    return buildShieldViaWrapIntent({
+      underlyingTokenAddress: underlying,
+      wrapperAddress: this.address,
+      senderAddress: userAddress,
+      recipientAddress: recipient,
+      amount,
+      approvalAmount:
+        approvalStrategy === "skip"
+          ? undefined
+          : approvalStrategy === "max"
+            ? 2n ** 256n - 1n
+            : amount,
+      maxApproval: approvalStrategy === "max",
+      chainId,
+    });
+  }
+
+  /** Build a clear-signing preview for the first phase of a specific-amount unshield. */
+  async createUnwrapClearSigningIntent(amount: bigint): Promise<ClearSigningIntent> {
+    const account = await requireAlignedWalletAccount(
+      "createUnwrapClearSigningIntent",
+      this.sdk.signer,
+      this.sdk.provider,
+    );
+    const userAddress = getAddress(account.address);
+    return buildUnwrapIntent({
+      wrapperAddress: this.address,
+      fromAddress: userAddress,
+      recipientAddress: userAddress,
+      amount,
+      chainId: await this.sdk.provider.getChainId(),
+    });
+  }
+
+  /** Build a clear-signing preview for unshielding the entire confidential balance. */
+  async createUnwrapAllClearSigningIntent(): Promise<ClearSigningIntent> {
+    const account = await requireAlignedWalletAccount(
+      "createUnwrapAllClearSigningIntent",
+      this.sdk.signer,
+      this.sdk.provider,
+    );
+    const userAddress = getAddress(account.address);
+    const handle = await this.readConfidentialBalanceOf(userAddress);
+    if (isZeroHandle(handle)) {
+      throw new DecryptionFailedError("Cannot unshield: balance is zero");
+    }
+    return buildUnwrapAllIntent({
+      wrapperAddress: this.address,
+      fromAddress: userAddress,
+      recipientAddress: userAddress,
+      encryptedBalance: { value: handle },
+      chainId: await this.sdk.provider.getChainId(),
+    });
+  }
+
+  /** Build a clear-signing preview for finalizing a pending unshield. */
+  async createFinalizeUnwrapClearSigningIntent(
+    unwrapRequestIdOrAmount: Handle,
+    clearAmount?: bigint,
+  ): Promise<ClearSigningIntent> {
+    return buildFinalizeUnwrapIntent({
+      wrapperAddress: this.address,
+      unwrapRequestId: unwrapRequestIdOrAmount,
+      clearAmount,
+      chainId: await this.sdk.provider.getChainId(),
+    });
+  }
 
   // WRAPPER READS
 
@@ -179,9 +287,22 @@ export class WrappedToken extends Token {
     const data: Hex = recipient === userAddress ? "0x" : recipient;
 
     try {
-      const txHash = await signer.writeContract(
-        transferAndCallContract(underlying, this.address, amount, data),
+      const contractCall = transferAndCallContract(underlying, this.address, amount, data);
+      void swallow("shield: onClearSigningIntent", () =>
+        options?.onClearSigningIntent?.(
+          buildShieldViaTransferAndCallIntent({
+            underlyingTokenAddress: underlying,
+            wrapperAddress: this.address,
+            senderAddress: userAddress,
+            recipientAddress: recipient,
+            transferAndCallDataRecipient: recipient,
+            amount,
+            chainId: this.sdk.signer?.walletAccount.getSnapshot()?.chainId,
+            contractCall,
+          }),
+        ),
       );
+      const txHash = await signer.writeContract(contractCall);
       this.emit({
         type: ZamaSDKEvents.ShieldSubmitted,
         txHash,
@@ -212,13 +333,32 @@ export class WrappedToken extends Token {
   ): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("shield");
     const strategy = options?.approvalStrategy ?? "exact";
+    const underlying = await this.#getUnderlying();
+    const recipient = options?.to ? getAddress(options.to) : userAddress;
+    const approvalAmount =
+      strategy === "skip" ? undefined : strategy === "max" ? 2n ** 256n - 1n : amount;
+
+    void swallow("shield: onClearSigningIntent", () =>
+      options?.onClearSigningIntent?.(
+        buildShieldViaWrapIntent({
+          underlyingTokenAddress: underlying,
+          wrapperAddress: this.address,
+          senderAddress: userAddress,
+          recipientAddress: recipient,
+          amount,
+          approvalAmount,
+          maxApproval: strategy === "max",
+          chainId: this.sdk.signer?.walletAccount.getSnapshot()?.chainId,
+        }),
+      ),
+    );
     if (strategy !== "skip") {
       await this.#ensureAllowance(amount, strategy === "max", options);
     }
 
     try {
-      const recipient = options?.to ? getAddress(options.to) : userAddress;
-      const txHash = await signer.writeContract(wrapContract(this.address, recipient, amount));
+      const contractCall = wrapContract(this.address, recipient, amount);
+      const txHash = await signer.writeContract(contractCall);
       this.emit({
         type: ZamaSDKEvents.ShieldSubmitted,
         txHash,
@@ -321,6 +461,7 @@ export class WrappedToken extends Token {
   async unshield(amount: bigint, options?: UnshieldOptions): Promise<TransactionResult> {
     const {
       skipBalanceCheck = false,
+      onClearSigningIntent,
       onUnwrapSubmitted,
       onFinalizing,
       onFinalizeSubmitted,
@@ -331,11 +472,12 @@ export class WrappedToken extends Token {
     }
 
     const callbacks: UnshieldCallbacks = {
+      onClearSigningIntent,
       onFinalizing,
       onFinalizeSubmitted,
     };
     const operationId = crypto.randomUUID();
-    const unwrapResult = await this.unwrap(amount);
+    const unwrapResult = await this.unwrap(amount, { onClearSigningIntent });
     void swallow("unshield: onUnwrapSubmitted", () => onUnwrapSubmitted?.(unwrapResult.txHash));
     return this.#waitAndFinalizeUnshield(unwrapResult.txHash, operationId, callbacks);
   }
@@ -355,7 +497,7 @@ export class WrappedToken extends Token {
    */
   async unshieldAll(callbacks?: UnshieldCallbacks): Promise<TransactionResult> {
     const operationId = crypto.randomUUID();
-    const unwrapResult = await this.unwrapAll();
+    const unwrapResult = await this.unwrapAll(callbacks);
     void swallow("unshieldAll: onUnwrapSubmitted", () =>
       callbacks?.onUnwrapSubmitted?.(unwrapResult.txHash),
     );
@@ -397,7 +539,7 @@ export class WrappedToken extends Token {
    * const txHash = await wrappedToken.unwrap(500n);
    * ```
    */
-  async unwrap(amount: bigint): Promise<TransactionResult> {
+  async unwrap(amount: bigint, options?: UnwrapOptions): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("unwrap");
     const account = await requireAlignedWalletAccount("unwrap", this.sdk.signer, this.sdk.provider);
     const userAddress = getAddress(account.address);
@@ -412,11 +554,31 @@ export class WrappedToken extends Token {
     if (!handle) {
       throw new EncryptionFailedError("Encryption returned no handles");
     }
+    const encryptedAmountValue = typeof handle === "string" ? handle : toHex(handle);
 
     try {
-      const txHash = await signer.writeContract(
-        unwrapContract(this.address, userAddress, userAddress, handle, inputProof),
+      const contractCall = unwrapContract(
+        this.address,
+        userAddress,
+        userAddress,
+        handle,
+        inputProof,
       );
+      void swallow("unwrap: onClearSigningIntent", () =>
+        options?.onClearSigningIntent?.(
+          buildUnwrapIntent({
+            wrapperAddress: this.address,
+            fromAddress: userAddress,
+            recipientAddress: userAddress,
+            amount,
+            encryptedAmount: { value: encryptedAmountValue } satisfies ClearSigningEncryptedValue,
+            hasInputProof: true,
+            chainId: account.chainId,
+            contractCall,
+          }),
+        ),
+      );
+      const txHash = await signer.writeContract(contractCall);
       this.emit({ type: ZamaSDKEvents.UnwrapSubmitted, txHash });
       const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
       return { txHash, receipt };
@@ -448,7 +610,7 @@ export class WrappedToken extends Token {
    * const txHash = await wrappedToken.unwrapAll();
    * ```
    */
-  async unwrapAll(): Promise<TransactionResult> {
+  async unwrapAll(options?: UnwrapAllOptions): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("unwrapAll");
     const account = await requireAlignedWalletAccount(
       "unwrapAll",
@@ -463,9 +625,25 @@ export class WrappedToken extends Token {
     }
 
     try {
-      const txHash = await signer.writeContract(
-        unwrapFromBalanceContract(this.address, userAddress, userAddress, handle),
+      const contractCall = unwrapFromBalanceContract(
+        this.address,
+        userAddress,
+        userAddress,
+        handle,
       );
+      void swallow("unwrapAll: onClearSigningIntent", () =>
+        options?.onClearSigningIntent?.(
+          buildUnwrapAllIntent({
+            wrapperAddress: this.address,
+            fromAddress: userAddress,
+            recipientAddress: userAddress,
+            encryptedBalance: { value: handle } satisfies ClearSigningEncryptedValue,
+            chainId: account.chainId,
+            contractCall,
+          }),
+        ),
+      );
+      const txHash = await signer.writeContract(contractCall);
       this.emit({ type: ZamaSDKEvents.UnwrapSubmitted, txHash });
       const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
       return { txHash, receipt };
@@ -500,21 +678,36 @@ export class WrappedToken extends Token {
    * );
    * ```
    */
-  async finalizeUnwrap(unwrapRequestIdOrAmount: Handle): Promise<TransactionResult> {
+  async finalizeUnwrap(
+    unwrapRequestIdOrAmount: Handle,
+    options?: FinalizeUnwrapOptions,
+  ): Promise<TransactionResult> {
     const signer = this.sdk.requireSigner("finalizeUnwrap");
     await requireChainAlignment("finalizeUnwrap", this.sdk.signer, this.sdk.provider);
+    const chainId = await this.sdk.provider.getChainId();
     const result = await this.sdk.publicDecrypt([unwrapRequestIdOrAmount]);
     const clearValue = result.clearValues[unwrapRequestIdOrAmount];
     assertBigint(clearValue, "finalizeUnwrap: clearValue");
     try {
-      const txHash = await signer.writeContract(
-        finalizeUnwrapContract(
-          this.address,
-          unwrapRequestIdOrAmount,
-          clearValue,
-          result.decryptionProof,
+      const contractCall = finalizeUnwrapContract(
+        this.address,
+        unwrapRequestIdOrAmount,
+        clearValue,
+        result.decryptionProof,
+      );
+      void swallow("finalizeUnwrap: onClearSigningIntent", () =>
+        options?.onClearSigningIntent?.(
+          buildFinalizeUnwrapIntent({
+            wrapperAddress: this.address,
+            unwrapRequestId: unwrapRequestIdOrAmount,
+            clearAmount: clearValue,
+            hasDecryptionProof: true,
+            chainId,
+            contractCall,
+          }),
         ),
       );
+      const txHash = await signer.writeContract(contractCall);
       this.emit({ type: ZamaSDKEvents.FinalizeUnwrapSubmitted, txHash });
       const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
       return { txHash, receipt };
@@ -584,6 +777,9 @@ export class WrappedToken extends Token {
     void swallow("unshield: onFinalizing", () => callbacks?.onFinalizing?.());
     const finalizeResult = await this.finalizeUnwrap(
       event.unwrapRequestId ?? event.encryptedAmount,
+      {
+        onClearSigningIntent: callbacks?.onClearSigningIntent,
+      },
     );
     this.emit({
       type: ZamaSDKEvents.UnshieldPhase2Submitted,

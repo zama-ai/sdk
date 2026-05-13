@@ -45,6 +45,30 @@ describe("Unshield callbacks (P4)", () => {
     expect(onFinalizeSubmitted).toHaveBeenCalledWith("0xtxhash");
   });
 
+  it("fires clear-signing intents for unwrap and finalize phases", async ({
+    userAddress,
+    wrappedToken: token,
+    provider,
+  }) => {
+    mockReceiptWithUnwrapRequested(provider, userAddress);
+
+    const onClearSigningIntent = vi.fn();
+    await token.unshield(50n, {
+      skipBalanceCheck: true,
+      onClearSigningIntent,
+    });
+
+    expect(onClearSigningIntent).toHaveBeenCalledTimes(2);
+    expect(onClearSigningIntent.mock.calls[0]?.[0]).toMatchObject({
+      kind: "unwrap",
+      contractContext: { contractAddress: token.address, functionName: "unwrap" },
+    });
+    expect(onClearSigningIntent.mock.calls[1]?.[0]).toMatchObject({
+      kind: "finalizeUnwrap",
+      contractContext: { contractAddress: token.address, functionName: "finalizeUnwrap" },
+    });
+  });
+
   it("fires all callbacks during unshieldAll", async ({
     userAddress,
     handle,
@@ -214,6 +238,35 @@ describe("Transfer callbacks (SDK-19)", () => {
     expect(onTransferSubmitted).toHaveBeenCalledWith("0xtxhash");
   });
 
+  it("fires clear-signing intent before submitting confidential transfer", async ({ token }) => {
+    const order: string[] = [];
+    const onClearSigningIntent = vi.fn((intent) => {
+      order.push(`intent:${intent.kind}`);
+    });
+
+    await token.confidentialTransfer(
+      "0x8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b" as Address,
+      100n,
+      {
+        skipBalanceCheck: true,
+        onEncryptComplete: () => order.push("encrypted"),
+        onClearSigningIntent,
+        onTransferSubmitted: () => order.push("submitted"),
+      },
+    );
+
+    expect(order).toEqual(["encrypted", "intent:confidentialTransfer", "submitted"]);
+    expect(onClearSigningIntent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: "confidentialTransfer",
+        contractContext: expect.objectContaining({
+          contractAddress: token.address,
+          functionName: "confidentialTransfer",
+        }),
+      }),
+    );
+  });
+
   it("fires callbacks in correct order", async ({ token }) => {
     const order: string[] = [];
 
@@ -256,5 +309,48 @@ describe("Transfer callbacks (SDK-19)", () => {
     );
 
     expect(result.txHash).toBe("0xtxhash");
+  });
+
+  it("completes transfer even when clear-signing callback throws", async ({ token }) => {
+    const result = await token.confidentialTransfer(
+      "0x8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b" as Address,
+      100n,
+      {
+        skipBalanceCheck: true,
+        onClearSigningIntent: () => {
+          throw new Error("clear-signing callback exploded");
+        },
+      },
+    );
+
+    expect(result.txHash).toBe("0xtxhash");
+  });
+});
+
+describe("Shield clear-signing callbacks", () => {
+  it("fires clear-signing intent for approve-and-wrap route", async ({
+    handle: _handle,
+    tokenAddress,
+    wrappedToken,
+    provider,
+  }) => {
+    vi.mocked(provider.readContract)
+      .mockResolvedValueOnce(tokenAddress)
+      .mockResolvedValueOnce(false)
+      .mockResolvedValueOnce(1_000n)
+      .mockResolvedValueOnce(0n);
+
+    const onClearSigningIntent = vi.fn();
+    await wrappedToken.shield(100n, { onClearSigningIntent });
+
+    expect(onClearSigningIntent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: "shield",
+        contractContext: expect.objectContaining({
+          contractAddress: wrappedToken.address,
+        }),
+        rawContext: expect.objectContaining({ route: "approveAndWrap" }),
+      }),
+    );
   });
 });

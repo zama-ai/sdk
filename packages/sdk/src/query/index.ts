@@ -125,6 +125,23 @@ export {
   type DelegationStatusData,
   type DelegationStatusQueryConfig,
 } from "./delegation-status";
+export {
+  allowAsClearSigningIntentMutationOptions,
+  allowClearSigningIntentMutationOptions,
+  confidentialTransferClearSigningIntentMutationOptions,
+  delegateDecryptionClearSigningIntentMutationOptions,
+  finalizeUnwrapClearSigningIntentMutationOptions,
+  shieldClearSigningIntentMutationOptions,
+  unwrapAllClearSigningIntentMutationOptions,
+  unwrapClearSigningIntentMutationOptions,
+  type AllowAsClearSigningIntentParams,
+  type AllowClearSigningIntentParams,
+  type ConfidentialTransferClearSigningIntentParams,
+  type DelegateDecryptionClearSigningIntentParams,
+  type FinalizeUnwrapClearSigningIntentParams,
+  type ShieldClearSigningIntentParams,
+  type UnwrapClearSigningIntentParams,
+} from "./clear-signing";
 export type { RawLog } from "../events/onchain-events";
 export type {
   ConfidentialTransferEvent,
@@ -159,6 +176,8 @@ export type {
   GenericSigner,
   GenericStorage,
   ApprovalStrategy,
+  ClearSigningCallbacks,
+  FinalizeUnwrapOptions,
   ShieldCallbacks,
   WalletAccount,
   WalletAccountChange,
@@ -169,6 +188,8 @@ export type {
   ShieldPath,
   TransferCallbacks,
   TransferOptions,
+  UnwrapAllOptions,
+  UnwrapOptions,
   UnshieldCallbacks,
   UnshieldOptions,
 } from "../types";
