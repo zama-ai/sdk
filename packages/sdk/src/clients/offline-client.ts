@@ -150,14 +150,14 @@ export class OfflineClient {
   }
 
   /**
-   * Attach this SDK to an externally-broadcast transaction: wait for its
-   * receipt, emit the matching `*Submitted` event, and sync cache state —
-   * without holding the signed bytes. Pair with {@link prepare} when the
-   * broadcast happens in a custody control plane or via
+   * Resume the SDK lifecycle for an externally-broadcast transaction: wait
+   * for its receipt, emit the matching `*Submitted` event, and sync cache
+   * state — without holding the signed bytes. Pair with {@link prepare} when
+   * the broadcast happens in a custody control plane or via
    * `eth_sendRawTransaction` outside this process.
    */
-  attach(prepared: PreparedTransaction, txHash: Hex): Promise<TransactionResult> {
-    return this.#offlineSigningService.attach(prepared, txHash);
+  resume(prepared: PreparedTransaction, txHash: Hex): Promise<TransactionResult> {
+    return this.#offlineSigningService.resume(prepared, txHash);
   }
 
   /**

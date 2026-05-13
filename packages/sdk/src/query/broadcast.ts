@@ -24,22 +24,22 @@ export function broadcastMutationOptions(
   };
 }
 
-/** Variables for {@link attachMutationOptions}. */
-export interface AttachParams {
+/** Variables for {@link resumeMutationOptions}. */
+export interface ResumeParams {
   readonly prepared: PreparedTransaction;
   readonly txHash: Hex;
 }
 
 /**
- * Mutation options for `sdk.offline.attach` — attach to a tx that was broadcast
- * externally (custody control plane or raw `eth_sendRawTransaction`) and finish
- * the SDK lifecycle (await receipt, emit event, sync caches).
+ * Mutation options for `sdk.offline.resume` — resume the SDK lifecycle for a tx
+ * that was broadcast externally (custody control plane or raw
+ * `eth_sendRawTransaction`): await receipt, emit event, sync caches.
  */
-export function attachMutationOptions(
+export function resumeMutationOptions(
   sdk: ZamaSDK,
-): MutationFactoryOptions<readonly ["zama.attach"], AttachParams, TransactionResult> {
+): MutationFactoryOptions<readonly ["zama.resume"], ResumeParams, TransactionResult> {
   return {
-    mutationKey: ["zama.attach"] as const,
-    mutationFn: ({ prepared, txHash }) => sdk.offline.attach(prepared, txHash),
+    mutationKey: ["zama.resume"] as const,
+    mutationFn: ({ prepared, txHash }) => sdk.offline.resume(prepared, txHash),
   };
 }

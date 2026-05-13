@@ -7,7 +7,7 @@ import {
   USER,
   expectDefaultMutationState,
 } from "../../__tests__/mutation-test-helpers";
-import { useAttach } from "../use-attach";
+import { useResume } from "../use-resume";
 import { useZamaSDK } from "../../provider";
 
 const PREPARED: PreparedFor<"ConfidentialTransfer"> = {
@@ -27,21 +27,21 @@ const PREPARED: PreparedFor<"ConfidentialTransfer"> = {
 
 const TX_RESULT = { txHash: "0xtx", receipt: { logs: [] } } as unknown as TransactionResult;
 
-describe("useAttach", () => {
+describe("useResume", () => {
   test("default", ({ renderWithProviders }) => {
-    const { result } = renderWithProviders(() => useAttach());
+    const { result } = renderWithProviders(() => useResume());
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
     expectDefaultMutationState(state);
   });
 
-  test("delegates to sdk.offline.attach", async ({ renderWithProviders }) => {
+  test("delegates to sdk.offline.resume", async ({ renderWithProviders }) => {
     const { result } = renderWithProviders(() => {
       const sdk = useZamaSDK();
-      const mutation = useAttach();
+      const mutation = useResume();
       return { sdk, mutation };
     });
 
-    const spy = vi.spyOn(result.current.sdk.offline, "attach").mockResolvedValue(TX_RESULT);
+    const spy = vi.spyOn(result.current.sdk.offline, "resume").mockResolvedValue(TX_RESULT);
 
     let value: unknown;
     await act(async () => {

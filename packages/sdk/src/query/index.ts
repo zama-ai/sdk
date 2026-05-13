@@ -110,9 +110,9 @@ export {
 } from "./prepare";
 export {
   broadcastMutationOptions,
-  attachMutationOptions,
+  resumeMutationOptions,
   type BroadcastParams,
-  type AttachParams,
+  type ResumeParams,
 } from "./broadcast";
 export { registerPermitMutationOptions, type RegisterPermitParams } from "./register-permit";
 export { signAndBroadcastMutationOptions, type SignAndBroadcastParams } from "./sign-and-broadcast";

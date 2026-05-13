@@ -63,7 +63,7 @@ import type { EncryptionService } from "./encryption-service";
 /** Configuration for {@link OfflineSigningService}. */
 export interface OfflineSigningServiceConfig {
   /**
-   * Optional signer. `prepare`, `broadcast`, `attach`, and `refresh` work
+   * Optional signer. `prepare`, `broadcast`, `resume`, and `refresh` work
    * without a signer (canonical shape for cross-process custody). `sign`,
    * `signAndBroadcast`, and `signAndRegister` require a signer with the
    * `signTransaction` capability.
@@ -289,7 +289,7 @@ export class OfflineSigningService {
    * a pre-submit failure (chain mismatch, RPC reject) is wrapped as
    * `TransactionRevertedError("Broadcast failed for …")`; a post-submit
    * failure (receipt wait timeout or revert) preserves `txHash` in the
-   * message so the caller can resume via {@link attach}.
+   * message so the caller can recover via {@link resume}.
    */
   async broadcast(prepared: PreparedTransaction, signedTx: Hex): Promise<TransactionResult> {
     await this.#assertSameChainAsPrepared(prepared, "broadcast");
@@ -350,17 +350,17 @@ export class OfflineSigningService {
     return this.registerPermit(prepared, signature);
   }
 
-  // ── attach ─────────────────────────────────────────────────────────────
+  // ── resume ─────────────────────────────────────────────────────────────
 
   /**
-   * Attach this SDK to an externally-broadcast transaction: re-check chain
-   * alignment, emit the matching `*Submitted` event, and wait for the
-   * receipt — without holding the signed bytes. Use when an external process
-   * submitted `prepared.unsignedTx` directly via `eth_sendRawTransaction`
-   * and this process needs to refresh its caches.
+   * Resume the SDK lifecycle for an externally-broadcast transaction:
+   * re-check chain alignment, emit the matching `*Submitted` event, and wait
+   * for the receipt — without holding the signed bytes. Use when an external
+   * process submitted `prepared.unsignedTx` directly via
+   * `eth_sendRawTransaction` and this process needs to refresh its caches.
    */
-  async attach(prepared: PreparedTransaction, txHash: Hex): Promise<TransactionResult> {
-    await this.#assertSameChainAsPrepared(prepared, "attach");
+  async resume(prepared: PreparedTransaction, txHash: Hex): Promise<TransactionResult> {
+    await this.#assertSameChainAsPrepared(prepared, "resume");
     this.#emitSubmitted(prepared, txHash);
     return this.#awaitReceipt(prepared, txHash);
   }
@@ -670,7 +670,7 @@ export class OfflineSigningService {
         throw error;
       }
       throw new TransactionRevertedError(
-        `Receipt wait failed for ${prepared.kind} (txHash ${txHash}); resume with attach`,
+        `Receipt wait failed for ${prepared.kind} (txHash ${txHash}); recover via resume()`,
         { cause: error },
       );
     }

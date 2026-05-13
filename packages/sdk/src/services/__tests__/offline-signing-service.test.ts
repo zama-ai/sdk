@@ -125,7 +125,7 @@ describe("OfflineSigningService — ConfidentialTransfer round-trip", () => {
     expect(result.txHash).toBe(TX_HASH);
   });
 
-  test("attach awaits receipt + emits event without re-broadcasting", async ({
+  test("resume awaits receipt + emits event without re-broadcasting", async ({
     createSDK,
     signer,
     provider,
@@ -141,7 +141,7 @@ describe("OfflineSigningService — ConfidentialTransfer round-trip", () => {
       amount: 1n,
     });
     const externalTxHash = "0xdeadbeefcafe" as Hex;
-    const result = await sdk.offline.attach(prepared, externalTxHash);
+    const result = await sdk.offline.resume(prepared, externalTxHash);
     expect(provider.sendRawTransaction).not.toHaveBeenCalled();
     expect(provider.waitForTransactionReceipt).toHaveBeenCalledWith(externalTxHash);
     expect(result.txHash).toBe(externalTxHash);
@@ -593,7 +593,7 @@ describe("OfflineSigningService — broadcast error paths", () => {
       `Receipt wait failed for ConfidentialTransfer (txHash ${TX_HASH})`,
     );
     // Submitted MUST have been emitted with the real txHash — the caller can
-    // recover via attach.
+    // recover via resume.
     expect(onEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         type: ZamaSDKEvents.TransferSubmitted,
@@ -702,7 +702,7 @@ describe("OfflineSigningService — chain alignment", () => {
     expect(provider.sendRawTransaction).not.toHaveBeenCalled();
   });
 
-  test("attach() also re-checks chain alignment", async ({
+  test("resume() also re-checks chain alignment", async ({
     createSDK,
     signer,
     provider,
@@ -718,7 +718,7 @@ describe("OfflineSigningService — chain alignment", () => {
     });
     vi.mocked(provider.getChainId).mockResolvedValueOnce(1);
 
-    await expect(sdk.offline.attach(prepared, TX_HASH)).rejects.toBeInstanceOf(ChainMismatchError);
+    await expect(sdk.offline.resume(prepared, TX_HASH)).rejects.toBeInstanceOf(ChainMismatchError);
   });
 });
 

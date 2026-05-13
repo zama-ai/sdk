@@ -210,14 +210,14 @@ export type ExecuteRequest = TransactionPrepareRequest | CredentialPermitRequest
  * RLP-encoded unsigned transaction plus the originating request and the
  * minimal context (from, to, chainId) callers need to forward across a
  * process boundary or feed back into {@link ZamaSDK.broadcast} /
- * {@link ZamaSDK.attach}.
+ * {@link ZamaSDK.resume}.
  *
  * Non-generic so any `PreparedX` is assignable to the wide form. Use
  * {@link PreparedFor} for kind-specific narrowing (e.g. on Token-level
  * `prepareX` return types).
  *
  * The `unsignedTx` + `from` / `to` / `chainId` fields are JSON-safe and
- * cover everything `broadcast` / `attach` need. The `request`
+ * cover everything `broadcast` / `resume` need. The `request`
  * field is preserved for diagnostics and includes the original caller input
  * — several kinds carry `bigint` fields (`amount`, …), so callers shipping
  * a {@link PreparedTransaction} across a process boundary should strip or

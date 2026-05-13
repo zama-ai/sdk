@@ -108,6 +108,6 @@ export {
   useSign,
   useBroadcast,
   useRegisterPermit,
-  useAttach,
+  useResume,
   useRefreshPrepared,
 } from "./offline";
