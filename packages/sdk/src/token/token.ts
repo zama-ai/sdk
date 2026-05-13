@@ -92,6 +92,7 @@ export class Token {
     this.address = getAddress(address);
   }
 
+  /** Resolve `sdk.signer` or throw {@link SignerNotConfiguredError} tagged with `operation`. */
   #requireSigner(operation: string): GenericSigner {
     try {
       assertNonNullable(this.sdk.signer, "Token.sdk.signer");

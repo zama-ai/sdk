@@ -55,6 +55,7 @@ export class WrappedToken extends Token {
   #underlyingPromise: Promise<Address> | null = null;
   #isPayable: boolean | null = null;
 
+  /** Resolve `sdk.signer` or throw {@link SignerNotConfiguredError} tagged with `operation`. */
   #requireSigner(operation: string): GenericSigner {
     try {
       assertNonNullable(this.sdk.signer, "WrappedToken.sdk.signer");
