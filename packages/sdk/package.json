@@ -164,7 +164,6 @@
     "zod": ">=4"
   },
   "devDependencies": {
-    "@dfns/lib-ethersjs6": "^0.8.20",
     "@dfns/sdk": "^0.8.20",
     "@dfns/sdk-keysigner": "^0.8.20",
     "@tanstack/query-core": "^5.99.2",

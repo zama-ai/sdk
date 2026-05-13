@@ -1,10 +1,9 @@
 // oxlint-disable no-empty-pattern no-console
-import { DfnsWallet } from "@dfns/lib-ethersjs6";
 import { DfnsApiClient } from "@dfns/sdk";
 import { AsymmetricKeySigner } from "@dfns/sdk-keysigner";
 import type { Provider } from "ethers";
 import { JsonRpcProvider } from "ethers";
-import { getAddress, type Address, type Hex } from "viem";
+import { getAddress, type Hex } from "viem";
 import * as z from "zod/mini";
 import { sepolia } from "../../chains";
 import { createConfig } from "../../config/create";
@@ -15,6 +14,9 @@ import { MemoryStorage } from "../../storage/memory-storage";
 import { describe, expect, test } from "../../test-fixtures";
 import type { WalletAccount } from "../../types";
 import { ZamaSDK } from "../../zama-sdk";
+import { assertNonNullable } from "../../utils";
+import { evmAddress } from "../../schemas/primitives";
+import type { GenerateSignatureResponse, GetSignatureResponse } from "@dfns/sdk/generated/wallets";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -30,26 +32,22 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 //
 // You'll be prompted to approve each signature in the DFNS dashboard.
 
-const nonEmpty = z.string().check(z.minLength(1));
-const addressSchema = z.pipe(
-  z.string().check(z.regex(/^0x[0-9a-fA-F]{40}$/, "must be a 0x-prefixed 20-byte hex address")),
-  z.transform((s): Address => getAddress(s)),
-);
+const nonEmptyString = z.string().check(z.minLength(1));
 
 const envSchema = z.object({
   DFNS_BASE_URL: z.url(),
-  DFNS_AUTH_TOKEN: nonEmpty,
-  DFNS_CRED_ID: nonEmpty,
+  DFNS_AUTH_TOKEN: nonEmptyString,
+  DFNS_CRED_ID: nonEmptyString,
   DFNS_PRIVATE_KEY: z.pipe(
-    nonEmpty,
+    nonEmptyString,
     z.transform((s) => s.replace(/\\n/g, "\n")),
   ),
-  DFNS_WALLET_ID: nonEmpty,
-  DFNS_ORG_ID: z.optional(nonEmpty),
+  DFNS_WALLET_ID: nonEmptyString,
+  DFNS_ORG_ID: nonEmptyString,
   DFNS_DASHBOARD_URL: z.optional(z.url()),
   SEPOLIA_RPC_URL: z.url(),
-  TOKEN_ADDRESS: addressSchema,
-  RECIPIENT_ADDRESS: addressSchema,
+  TOKEN_ADDRESS: evmAddress,
+  RECIPIENT_ADDRESS: evmAddress,
 });
 
 const envParsed = z.safeParse(envSchema, process.env);
@@ -80,13 +78,15 @@ interface DfnsFixtures {
   sdk: ZamaSDK;
   ethProvider: JsonRpcProvider;
   dfnsClient: DfnsApiClient;
-  dfnsWallet: DfnsWallet;
   dfnsAccount: WalletAccount;
   pollDfnsSignature: (body: GenerateSignatureBody) => Promise<PolledSignature>;
 }
 
 const dfns = test.extend<DfnsFixtures>({
-  env: env as Env,
+  env: async ({}, use) => {
+    assertNonNullable(env, "env");
+    await use(env);
+  },
   ethProvider: async ({ env }, use) => {
     const provider = new JsonRpcProvider(env.SEPOLIA_RPC_URL);
     await use(provider);
@@ -105,19 +105,19 @@ const dfns = test.extend<DfnsFixtures>({
     });
     await use(client);
   },
-  dfnsWallet: async ({ env, ethProvider, dfnsClient }, use) => {
-    const wallet = (
-      await DfnsWallet.init({
-        walletId: env.DFNS_WALLET_ID,
-        dfnsClient,
-      })
-    ).connect(ethProvider as never) as DfnsWallet;
-    await use(wallet);
-  },
-  dfnsAccount: async ({ dfnsWallet, ethProvider }, use) => {
-    const address = getAddress(await dfnsWallet.getAddress());
+  dfnsAccount: async ({ env, dfnsClient, ethProvider }, use) => {
+    const wallet = await dfnsClient.wallets.getWallet({
+      walletId: env.DFNS_WALLET_ID,
+    });
+    assertNonNullable(
+      wallet.address,
+      `dfnsClient.wallets.getWallet(${env.DFNS_WALLET_ID}).address`,
+    );
     const network = await ethProvider.getNetwork();
-    await use({ address, chainId: Number(network.chainId) });
+    await use({
+      address: getAddress(wallet.address),
+      chainId: Number(network.chainId),
+    });
   },
   sdk: async ({ ethProvider }, use) => {
     const provider = new EthersProvider({
@@ -141,13 +141,8 @@ const dfns = test.extend<DfnsFixtures>({
       const deadline = Date.now() + POLL_TIMEOUT_MS;
       // Structural snapshot — sidesteps the GenerateSignatureResponse vs
       // GetSignatureResponse nominal mismatch (only the former has walletId).
-      let snap: {
-        id: string;
-        status: "Pending" | "Executing" | "Signed" | "Confirmed" | "Failed" | "Rejected";
-        reason?: string;
-        signedData?: string;
-        signature?: { encoded?: string };
-      } = await dfnsClient.wallets.generateSignature({ walletId, body });
+      let snap: GenerateSignatureResponse | GetSignatureResponse =
+        await dfnsClient.wallets.generateSignature({ walletId, body });
 
       if (snap.status !== "Signed") {
         console.log(
@@ -258,7 +253,7 @@ describe.skipIf(env === null)("Integration: DFNS deferred signing on Sepolia", (
             verifyingContract: domain.verifyingContract,
           }),
         },
-        message: message as never,
+        message,
       });
       if (!signatureEncoded) {
         throw new Error("DFNS returned no signature.encoded for Eip712 signing");
