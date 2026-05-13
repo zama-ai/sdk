@@ -6127,6 +6127,27 @@ export function decodeUnwrapRequested(log: RawLog): UnwrapRequestedEvent | null;
 // @public
 export function decodeWrapped(log: RawLog): WrappedEvent | null;
 
+// @public
+export class DecryptClient {
+    // @internal
+    constructor(opts: {
+        signer: GenericSigner | undefined;
+        provider: GenericProvider;
+        relayer: RelayerDispatcher;
+        decryptionService: DecryptionService | undefined;
+    });
+    // @internal
+    delegatedBatch(input: {
+        handles: DecryptHandle[];
+        delegatorAddress: Address;
+        accountAddress?: Address;
+        maxConcurrency?: number;
+    }): Promise<BatchDecryptHandlesResult>;
+    delegatedUser(handles: DecryptHandle[], delegatorAddress: Address, accountAddress?: Address): Promise<Record<Handle, ClearValueType>>;
+    public(handles: Handle[]): Promise<PublicDecryptResult>;
+    user(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>>;
+}
+
 // @public (undocumented)
 export interface DecryptEndEvent extends BaseEvent {
     // (undocumented)
@@ -6335,6 +6356,35 @@ export class DelegationNotFoundError extends ZamaError {
 // @public
 export class DelegationNotPropagatedError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
+}
+
+// @public
+export class DelegationsClient {
+    // @internal
+    constructor(opts: {
+        signer: GenericSigner | undefined;
+        provider: GenericProvider;
+        delegationService: DelegationService;
+    });
+    delegate(input: {
+        contractAddress: Address;
+        delegateAddress: Address;
+        expirationDate?: Date;
+    }): Promise<TransactionResult>;
+    getExpiry(params: {
+        contractAddress: Address;
+        delegatorAddress: Address;
+        delegateAddress: Address;
+    }): Promise<bigint>;
+    isActive(params: {
+        contractAddress: Address;
+        delegatorAddress: Address;
+        delegateAddress: Address;
+    }): Promise<boolean>;
+    revoke(input: {
+        contractAddress: Address;
+        delegateAddress: Address;
+    }): Promise<TransactionResult>;
 }
 
 // @public
@@ -11717,6 +11767,23 @@ export interface PendingUnshieldRequest {
 export type Permission = output<typeof PermissionSchema>;
 
 // @public
+export class PermitsClient {
+    // @internal
+    constructor(opts: {
+        signer: GenericSigner | undefined;
+        provider: GenericProvider;
+        cachingService: CachingService;
+        credentialService: CredentialService | undefined;
+    });
+    allow(contracts: Address[]): Promise<void>;
+    allowAs(delegator: Address, contracts: Address[]): Promise<void>;
+    clear(): Promise<void>;
+    isAllowed(contracts: Address[]): Promise<boolean>;
+    isAllowedAs(delegator: Address, contracts: Address[]): Promise<boolean>;
+    revoke(contracts?: Address[]): Promise<void>;
+}
+
+// @public
 export type PublicDecryptResult = PublicDecryptResults;
 
 // @public
@@ -14855,6 +14922,14 @@ export class Token {
 
 // @public
 export const TOKEN_TOPICS: readonly [`0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`];
+
+// @public
+export class TokensClient {
+    // @internal
+    constructor(sdk: ZamaSDK);
+    confidential(address: Address): Token;
+    wrapper(address: Address): WrappedToken;
+}
 
 // @public (undocumented)
 export interface TokenWrapperPair {
@@ -20024,61 +20099,27 @@ export type ZamaErrorCode = (typeof ZamaErrorCode)[keyof typeof ZamaErrorCode];
 export class ZamaSDK {
     [Symbol.dispose](): void;
     constructor(config: ZamaConfig);
-    allow(contracts: Address[]): Promise<void>;
-    allowAs(delegator: Address, contracts: Address[]): Promise<void>;
-    clearCredentials(): Promise<void>;
-    createToken(address: Address): Token;
-    createWrappedToken(address: Address): WrappedToken;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
-    // @internal (undocumented)
-    delegatedBatchDecryptHandlesAs(input: {
-        handles: DecryptHandle[];
-        delegatorAddress: Address;
-        accountAddress?: Address;
-        maxConcurrency?: number;
-    }): Promise<BatchDecryptHandlesResult>;
-    delegateDecryption(input: {
-        contractAddress: Address;
-        delegateAddress: Address;
-        expirationDate?: Date;
-    }): Promise<TransactionResult>;
-    delegatedUserDecrypt(handles: DecryptHandle[], delegatorAddress: Address, accountAddress?: Address): Promise<Record<Handle, ClearValueType>>;
+    readonly decrypt: DecryptClient;
+    readonly delegations: DelegationsClient;
     dispose(): void;
     // @internal
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
-    getDelegationExpiry(input: {
-        contractAddress: Address;
-        delegatorAddress: Address;
-        delegateAddress: Address;
-    }): Promise<bigint>;
-    isAllowed(contracts: Address[]): Promise<boolean>;
-    isAllowedAs(delegator: Address, contracts: Address[]): Promise<boolean>;
-    isDelegated(params: {
-        contractAddress: Address;
-        delegatorAddress: Address;
-        delegateAddress: Address;
-    }): Promise<boolean>;
     // @internal
     onWalletAccountChange(listener: WalletAccountListener): () => void;
+    readonly permits: PermitsClient;
     // (undocumented)
     readonly provider: GenericProvider;
-    publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
     readonly registry: WrappersRegistry;
     // (undocumented)
     readonly relayer: RelayerDispatcher;
-    requireSigner(operation: string): GenericSigner;
-    revokeDelegation(input: {
-        contractAddress: Address;
-        delegateAddress: Address;
-    }): Promise<TransactionResult>;
-    revokePermits(contracts?: Address[]): Promise<void>;
     // (undocumented)
     readonly signer: GenericSigner | undefined;
     // (undocumented)
     readonly storage: GenericStorage;
     terminate(): void;
-    userDecrypt(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>>;
+    readonly tokens: TokensClient;
 }
 
 // @public
@@ -20120,6 +20161,13 @@ export type ZamaSDKEventType = (typeof ZamaSDKEvents)[keyof typeof ZamaSDKEvents
 export const ZERO_HANDLE: "0x0000000000000000000000000000000000000000000000000000000000000000";
 
 export { ZKProofLike }
+
+// Warnings were encountered during analysis:
+//
+// dist/esm/index-DZzEFeJD.d.ts:20477:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-DZzEFeJD.d.ts:20582:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-DZzEFeJD.d.ts:20684:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-DZzEFeJD.d.ts:20685:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

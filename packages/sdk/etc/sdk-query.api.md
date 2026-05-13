@@ -1265,63 +1265,31 @@ export const zamaQueryKeys: {
 export class ZamaSDK {
     [Symbol.dispose](): void;
     constructor(config: ZamaConfig);
-    allow(contracts: Address[]): Promise<void>;
-    allowAs(delegator: Address, contracts: Address[]): Promise<void>;
-    clearCredentials(): Promise<void>;
-    createToken(address: Address): Token;
-    createWrappedToken(address: Address): WrappedToken;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
-    // Warning: (ae-forgotten-export) The symbol "BatchDecryptHandlesResult" needs to be exported by the entry point index.d.ts
-    //
-    // @internal (undocumented)
-    delegatedBatchDecryptHandlesAs(input: {
-        handles: DecryptHandle[];
-        delegatorAddress: Address;
-        accountAddress?: Address;
-        maxConcurrency?: number;
-    }): Promise<BatchDecryptHandlesResult>;
-    delegateDecryption(input: {
-        contractAddress: Address;
-        delegateAddress: Address;
-        expirationDate?: Date;
-    }): Promise<TransactionResult>;
-    delegatedUserDecrypt(handles: DecryptHandle[], delegatorAddress: Address, accountAddress?: Address): Promise<Record<Handle, ClearValueType>>;
+    // Warning: (ae-forgotten-export) The symbol "DecryptClient" needs to be exported by the entry point index.d.ts
+    readonly decrypt: DecryptClient;
+    // Warning: (ae-forgotten-export) The symbol "DelegationsClient" needs to be exported by the entry point index.d.ts
+    readonly delegations: DelegationsClient;
     dispose(): void;
     // @internal
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
-    getDelegationExpiry(input: {
-        contractAddress: Address;
-        delegatorAddress: Address;
-        delegateAddress: Address;
-    }): Promise<bigint>;
-    isAllowed(contracts: Address[]): Promise<boolean>;
-    isAllowedAs(delegator: Address, contracts: Address[]): Promise<boolean>;
-    isDelegated(params: {
-        contractAddress: Address;
-        delegatorAddress: Address;
-        delegateAddress: Address;
-    }): Promise<boolean>;
     // @internal
     onWalletAccountChange(listener: WalletAccountListener): () => void;
+    // Warning: (ae-forgotten-export) The symbol "PermitsClient" needs to be exported by the entry point index.d.ts
+    readonly permits: PermitsClient;
     // (undocumented)
     readonly provider: GenericProvider;
-    publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
     readonly registry: WrappersRegistry;
     // (undocumented)
     readonly relayer: RelayerDispatcher;
-    requireSigner(operation: string): GenericSigner;
-    revokeDelegation(input: {
-        contractAddress: Address;
-        delegateAddress: Address;
-    }): Promise<TransactionResult>;
-    revokePermits(contracts?: Address[]): Promise<void>;
     // (undocumented)
     readonly signer: GenericSigner | undefined;
     // (undocumented)
     readonly storage: GenericStorage;
     terminate(): void;
-    userDecrypt(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>>;
+    // Warning: (ae-forgotten-export) The symbol "TokensClient" needs to be exported by the entry point index.d.ts
+    readonly tokens: TokensClient;
 }
 
 // @public
