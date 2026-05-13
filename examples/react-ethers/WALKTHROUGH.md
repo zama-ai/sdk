@@ -154,7 +154,7 @@ useEffect(() => {
 ## 4. Shield (`ShieldCard.tsx`)
 
 ```ts
-const token = sdk.createToken(tokenAddress); // ERC-7984 wrapper
+const token = sdk.tokens.wrapper(tokenAddress);
 return token.shield(amount, { approvalStrategy: "skip" });
 ```
 

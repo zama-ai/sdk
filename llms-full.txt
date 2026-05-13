@@ -14895,14 +14895,14 @@ This mode allows developers to test **smart contracts** and **app/backend integr
 | Operation                    | SDK API                                       |
 | ---------------------------- | --------------------------------------------- |
 | Decrypt confidential balance | `useConfidentialBalance`                      |
-| Shield (ERC-20 → cToken)     | `sdk.createToken().shield()`                  |
+| Shield (ERC-20 → cToken)     | `sdk.tokens.wrapper().shield()`               |
 | Confidential transfer        | `useConfidentialTransfer`                     |
 | Unshield (cToken → ERC-20)   | `useUnshield`                                 |
 | Grant decryption access      | `useDelegateDecryption`                       |
 | Revoke decryption access     | `useRevokeDelegation`                         |
 | Decrypt balance as delegate  | `useDecryptBalanceAs` + `useDelegationStatus` |
 
-> **Shield** uses `token.shield()` directly (via `sdk.createToken()`) rather than the `useShield` hook, with a manual approval step. The spend cap is set to the user's full ERC-20 balance (not the exact shield amount), so subsequent shields within the remaining allowance require only the wrap transaction — no re-approval. USDT-style detection uses an optimistic approach: `writeContract` is tried directly (gas estimation uses `from = userAddress`, so USDT reverts fail pre-wallet), with a silent fallback to reset + approve only for tokens that actually need it.
+> **Shield** uses `token.shield()` directly (via `sdk.tokens.wrapper()`) rather than the `useShield` hook, with a manual approval step. The spend cap is set to the user's full ERC-20 balance (not the exact shield amount), so subsequent shields within the remaining allowance require only the wrap transaction — no re-approval. USDT-style detection uses an optimistic approach: `writeContract` is tried directly (gas estimation uses `from = userAddress`, so USDT reverts fail pre-wallet), with a silent fallback to reset + approve only for tokens that actually need it.
 
 > **Hybrid EIP-1193 provider** (`src/providers.tsx`): read calls (`eth_call`, `eth_estimateGas`) go to a direct `JsonRpcProvider` for speed; signing, nonce (`eth_getTransactionCount`), and post-submission polling go through the injected wallet. The public Hoodi RPC is a load balancer — routing nonce reads or receipt polling through it causes "nonce too low" errors and stale receipts.
 
@@ -15017,7 +15017,7 @@ For a detailed partner-facing guide including prerequisites, step-by-step flow, 
 
 ERC-7984 is a token standard that adds **confidential balances and transfer amounts** to ERC-20 tokens. Instead of storing plaintext balances on-chain, balances are stored as encrypted handles. Only the token owner can decrypt their own balance.
 
-The **Zama SDK** (`@zama-fhe/sdk`, `@zama-fhe/react-sdk`) handles all cryptographic operations — encryption, decryption, EIP-712 signing — behind simple React hooks (`useConfidentialTransfer`, `useUnshield`, `useConfidentialBalance`) and the `Token` API (`sdk.createToken().shield()`).
+The **Zama SDK** (`@zama-fhe/sdk`, `@zama-fhe/react-sdk`) handles all cryptographic operations — encryption, decryption, EIP-712 signing — behind simple React hooks (`useConfidentialTransfer`, `useUnshield`, `useConfidentialBalance`) and the `Token` API (`sdk.tokens.wrapper().shield()`).
 
 This example uses the **cleartext stack** (`RelayerCleartext`), which is Zama's lightweight backend for chains where the full FHE co-processor is not deployed (including Hoodi). See [How the cleartext stack works](#how-the-cleartext-stack-works) below.
 
@@ -15040,7 +15040,7 @@ Specifically:
 | Operation                    | SDK API                                                | Source file                                            | Transactions          |
 | ---------------------------- | ------------------------------------------------------ | ------------------------------------------------------ | --------------------- |
 | Decrypt confidential balance | `useIsAllowed` + `useAllow` + `useConfidentialBalance` | `src/app/page.tsx` + `src/components/BalancesCard.tsx` | 0 (read)              |
-| Shield (ERC-20 → cToken)     | `sdk.createToken().shield()`                           | `src/components/ShieldCard.tsx`                        | 1–3 (wrap, ± approve) |
+| Shield (ERC-20 → cToken)     | `sdk.tokens.wrapper().shield()`                        | `src/components/ShieldCard.tsx`                        | 1–3 (wrap, ± approve) |
 | Confidential transfer        | `useConfidentialTransfer`                              | `src/components/TransferCard.tsx`                      | 1                     |
 | Unshield (cToken → ERC-20)   | `useUnshield`                                          | `src/components/UnshieldCard.tsx`                      | 2 (unwrap + finalize) |
 | Grant decryption access      | `useDelegateDecryption`                                | `src/components/DelegateDecryptionCard.tsx`            | 1                     |
@@ -15090,7 +15090,7 @@ RelayerWeb → external HTTP service      RelayerCleartext → on-chain executor
 User (browser wallet)
   │
   ▼
-page.tsx — sdk.createToken().shield() / useConfidentialTransfer / useUnshield / useConfidentialBalance
+page.tsx — sdk.tokens.wrapper().shield() / useConfidentialTransfer / useUnshield / useConfidentialBalance
   │
   ▼
 @zama-fhe/react-sdk (React hooks + ZamaProvider)
@@ -15418,7 +15418,7 @@ const balance = useConfidentialBalance(
 // The shield logic runs inside an async function (e.g., a TanStack Query mutationFn):
 const sdk = useZamaSDK();
 const shieldAmount = parseUnits("10", erc20Decimals);
-const token = sdk.createToken(cTokenAddress);
+const token = sdk.tokens.wrapper(cTokenAddress);
 const userAddress = await sdk.signer.getAddress();
 
 const currentAllowance = (await sdk.signer.readContract(
@@ -16964,7 +16964,7 @@ useEffect(() => {
 ## 4. Shield (`ShieldCard.tsx`)
 
 ```ts
-const token = sdk.createToken(tokenAddress); // ERC-7984 wrapper
+const token = sdk.tokens.wrapper(tokenAddress);
 return token.shield(amount, { approvalStrategy: "skip" });
 ```
 
