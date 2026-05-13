@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/mini";
 import type { GenericStorage } from "../types";
 import { assertNonNullable, toError } from "../utils";
 import type { GenericLogger } from "../worker/worker.types";
@@ -7,29 +7,29 @@ import type { PublicKeyData, PublicParamsData } from "./relayer-sdk.types";
 // ── Cached data shapes ──────────────────────────────────────
 
 const CachedArtifactBase = z.object({
-  artifactUrl: z.string().optional(),
-  etag: z.string().optional(),
-  lastModified: z.string().optional(),
+  artifactUrl: z.optional(z.string()),
+  etag: z.optional(z.string()),
+  lastModified: z.optional(z.string()),
   // Optional + default(0) preserves the prior `?? 0` fallback for entries
   // persisted before this field was added; 0 marks them stale via the TTL check.
-  lastValidatedAt: z.number().nonnegative().optional().default(0),
+  lastValidatedAt: z._default(z.optional(z.number().check(z.nonnegative())), 0),
 });
 
 /** Cached shape for the FHE network public key. */
-const CachedPublicKeySchema = CachedArtifactBase.extend({
+const CachedPublicKeySchema = z.extend(CachedArtifactBase, {
   publicKeyId: z.string(),
   publicKey: z.string(),
 });
 type CachedPublicKey = z.infer<typeof CachedPublicKeySchema>;
 
 /** Cached shape for FHE public params. */
-const CachedPublicParamsSchema = CachedArtifactBase.extend({
+const CachedPublicParamsSchema = z.extend(CachedArtifactBase, {
   publicParamsId: z.string(),
   publicParams: z.string(),
 });
 type CachedPublicParams = z.infer<typeof CachedPublicParamsSchema>;
 
-const ParamsIndexSchema = z.array(z.number().int().nonnegative());
+const ParamsIndexSchema = z.array(z.int().check(z.nonnegative()));
 
 /**
  * Manifest shape returned by the relayer `/keyurl` endpoint. Only the fields
@@ -43,15 +43,15 @@ const ManifestSchema = z.object({
       .array(
         z.object({
           fhePublicKey: z.object({
-            urls: z.array(z.string()).min(1),
+            urls: z.array(z.string()).check(z.minLength(1)),
           }),
         }),
       )
-      .min(1),
+      .check(z.minLength(1)),
     crs: z.record(
       z.string(),
       z.object({
-        urls: z.array(z.string()).min(1),
+        urls: z.array(z.string()).check(z.minLength(1)),
       }),
     ),
   }),
@@ -629,7 +629,7 @@ export class FheArtifactCache {
 
   async #readCachedEntry<T>(
     key: string,
-    schema: z.ZodType<T>,
+    schema: z.core.$ZodType<T>,
     label: string,
     readError: string,
     context: LogContext = {},
@@ -654,11 +654,11 @@ export class FheArtifactCache {
   async #parseCachedEntry<T>(
     key: string,
     raw: unknown,
-    schema: z.ZodType<T>,
+    schema: z.core.$ZodType<T>,
     label: string,
     context: LogContext = {},
   ): Promise<T | null> {
-    const parsed = schema.safeParse(raw);
+    const parsed = z.safeParse(schema, raw);
     if (parsed.success) {
       return parsed.data;
     }

@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/mini";
 import type { RelayerConfig } from "../config/types";
 import { RelayerNode } from "../relayer/relayer-node";
 import type { FheChain } from "../chains/types";
@@ -24,8 +24,8 @@ export interface NodeRelayerConfig extends RelayerConfig {
 }
 
 const NodePoolOptionsSchema = z.object({
-  poolSize: z.number().int().positive().optional(),
-  fheArtifactCacheTTL: z.number().int().nonnegative().optional(),
+  poolSize: z.optional(z.int().check(z.positive())),
+  fheArtifactCacheTTL: z.optional(z.int().check(z.nonnegative())),
 });
 
 /**

@@ -1,5 +1,5 @@
 import { type Address, getAddress, zeroAddress } from "viem";
-import { z } from "zod";
+import { z } from "zod/mini";
 import type { TokenWrapperPairWithMetadata, PaginatedResult, TokenWrapperPair } from "./contracts";
 import {
   decimalsContract,
@@ -35,7 +35,7 @@ export const DEFAULT_REGISTRY_TTL_SECONDS = 86_400;
 
 /** Per-chain wrappers-registry address overrides. */
 export const RegistryAddressesSchema = z.record(
-  z.string().regex(/^\d+$/, "expected numeric chain id key"),
+  z.string().check(z.regex(/^\d+$/, "expected numeric chain id key")),
   checksummedAddress,
 );
 
@@ -127,7 +127,7 @@ export class WrappersRegistry {
     this.#addresses = Object.assign(
       {},
       DefaultRegistryAddresses,
-      parseConfiguration(RegistryAddressesSchema.optional(), config.registryAddresses),
+      parseConfiguration(z.optional(RegistryAddressesSchema), config.registryAddresses),
     );
     this.#ttlMs =
       parseConfiguration(RegistryTTLSchema, config.registryTTL ?? DEFAULT_REGISTRY_TTL_SECONDS) *

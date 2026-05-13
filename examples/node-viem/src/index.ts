@@ -1,9 +1,10 @@
 import { createPublicClient, createWalletClient, formatUnits, http, parseAbi } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { sepolia } from "viem/chains";
+import { sepolia as viemSepolia } from "viem/chains";
 import { DelegationNotPropagatedError, MemoryStorage, ZamaSDK } from "@zama-fhe/sdk";
-import { ViemSigner } from "@zama-fhe/sdk/viem";
-import { RelayerNode } from "@zama-fhe/sdk/node";
+import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { node } from "@zama-fhe/sdk/node";
 import type { Address } from "@zama-fhe/sdk";
 
 // ── Token amounts (USDT uses 6 decimals) ─────────────────────────────────────
@@ -53,47 +54,57 @@ async function main() {
   console.log("Account B:", accountB.address, "(delegate)");
 
   const transport = http(SEPOLIA_RPC_URL);
+  const zamaSepolia = {
+    ...sepolia,
+    network: SEPOLIA_RPC_URL,
+    ...(RELAYER_API_KEY && {
+      auth: { __type: "ApiKeyHeader" as const, value: RELAYER_API_KEY },
+    }),
+  } as const satisfies FheChain;
 
   // A single public client is shared for read operations.
-  const publicClient = createPublicClient({ chain: sepolia, transport });
+  const publicClient = createPublicClient({ chain: viemSepolia, transport });
 
   // Each account needs its own wallet client for signing transactions.
-  const walletClientA = createWalletClient({ account: accountA, chain: sepolia, transport });
-  const walletClientB = createWalletClient({ account: accountB, chain: sepolia, transport });
+  const walletClientA = createWalletClient({ account: accountA, chain: viemSepolia, transport });
+  const walletClientB = createWalletClient({ account: accountB, chain: viemSepolia, transport });
 
-  const signerA = new ViemSigner({ walletClient: walletClientA, publicClient });
-  const signerB = new ViemSigner({ walletClient: walletClientB, publicClient });
-
-  const auth = RELAYER_API_KEY
-    ? { __type: "ApiKeyHeader" as const, value: RELAYER_API_KEY }
-    : undefined;
-
-  // RelayerNode uses Node.js worker_threads for FHE operations — pure backend,
-  // no browser dependencies. A single instance can be shared across SDK objects.
-  const relayer = new RelayerNode({
-    getChainId: async () => sepolia.id,
-    transports: {
-      [sepolia.id]: {
-        network: SEPOLIA_RPC_URL,
-        ...(auth && { auth }),
-      },
-    },
-  });
-
-  // Each SDK instance has its own signer context.
+  // Each SDK instance has its own signer and credential context.
   // MemoryStorage is sufficient here; in production use a persistent store
   // (e.g. Redis via a custom GenericStorage) to cache FHE credentials across
   // process restarts.
   // `using` ensures terminate() is called when the scope exits (even on error).
-  // Both SDKs share the same relayer; relayer.terminate() is idempotent.
-  using sdkA = new ZamaSDK({ relayer, signer: signerA, storage: new MemoryStorage() });
-  using sdkB = new ZamaSDK({ relayer, signer: signerB, storage: new MemoryStorage() });
+  using sdkA = new ZamaSDK(
+    createConfig({
+      chains: [zamaSepolia],
+      publicClient,
+      walletClient: walletClientA,
+      storage: new MemoryStorage(),
+      relayers: {
+        [zamaSepolia.id]: node(),
+      },
+    }),
+  );
+  using sdkB = new ZamaSDK(
+    createConfig({
+      chains: [zamaSepolia],
+      publicClient,
+      walletClient: walletClientB,
+      storage: new MemoryStorage(),
+      relayers: {
+        [zamaSepolia.id]: node(),
+      },
+    }),
+  );
 
   // Resolve the confidential wrapper address via the on-chain registry.
   // getConfidentialToken() maps an ERC-20 address → its ERC-7984 wrapper.
   const registryResult = await sdkA.registry.getConfidentialToken(TOKEN_ADDRESS as Address);
   if (!registryResult) {
     throw new Error(`No confidential wrapper registered for ${TOKEN_ADDRESS}`);
+  }
+  if (!registryResult.isValid) {
+    throw new Error(`Confidential wrapper registration for ${TOKEN_ADDRESS} is revoked or invalid`);
   }
   const { confidentialTokenAddress } = registryResult;
   console.log("ERC-20 token:        ", TOKEN_ADDRESS);
@@ -144,13 +155,14 @@ async function main() {
 
   // 3a. Initial confidential balance
   console.log("── 3a. Initial balances ──");
-  const balanceA0 = await tokenA.balanceOf();
-  const balanceB0 = await tokenB.balanceOf();
+  const balanceA0 = await tokenA.balanceOf(accountA.address as Address);
+  const balanceB0 = await tokenB.balanceOf(accountB.address as Address);
   console.log("cUSDT balance (A):", fmt(balanceA0));
   console.log("cUSDT balance (B):", fmt(balanceB0));
 
   // 3b. Shield: ERC-20 USDT → confidential cUSDT
-  // shield() handles approval + wrap in a single call.
+  // shield() routes automatically: ERC-1363 transferAndCall when supported,
+  // otherwise approve + wrap. The approval callback only fires on that fallback path.
   console.log("\n── 3b. Shield ──");
   console.log(`Shielding ${fmt(SHIELD_AMOUNT)} USDT → cUSDT (Account A)...`);
   await tokenA.shield(SHIELD_AMOUNT, {
@@ -158,7 +170,7 @@ async function main() {
     onShieldSubmitted: (tx) => console.log("  Shield submitted:  ", tx),
   });
 
-  const balanceA1 = await tokenA.balanceOf();
+  const balanceA1 = await tokenA.balanceOf(accountA.address as Address);
   console.log("cUSDT balance (A, after shield):", fmt(balanceA1));
 
   // 3c. Confidential transfer: A → B
@@ -170,8 +182,8 @@ async function main() {
     onTransferSubmitted: (tx) => console.log("  Transfer submitted:", tx),
   });
 
-  const balanceA2 = await tokenA.balanceOf();
-  const balanceB2 = await tokenB.balanceOf();
+  const balanceA2 = await tokenA.balanceOf(accountA.address as Address);
+  const balanceB2 = await tokenB.balanceOf(accountB.address as Address);
   console.log("cUSDT balance (A, after transfer):", fmt(balanceA2));
   console.log("cUSDT balance (B, after transfer):", fmt(balanceB2));
 
@@ -186,7 +198,7 @@ async function main() {
     onFinalizeSubmitted: (tx) => console.log("  Finalize submitted:", tx),
   });
 
-  const balanceA3 = await tokenA.balanceOf();
+  const balanceA3 = await tokenA.balanceOf(accountA.address as Address);
   const erc20BalanceFinal = await publicClient.readContract({
     address: TOKEN_ADDRESS as Address,
     abi: ERC20_ABI,
