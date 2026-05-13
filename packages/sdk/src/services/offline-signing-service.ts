@@ -1,4 +1,4 @@
-import { getAddress, isHex, type Address, type Hex } from "viem";
+import { getAddress, type Address, type Hex } from "viem";
 import {
   approveContract,
   confidentialTransferContract,
@@ -57,7 +57,7 @@ import type {
   WrapRequest,
 } from "../types";
 import { toError } from "../utils";
-import { assertBigint } from "../utils/assertions";
+import { assertBigint, assertHex } from "../utils/assertions";
 import type { EncryptionService } from "./encryption-service";
 
 /** Configuration for {@link OfflineSigningService}. */
@@ -399,18 +399,14 @@ export class OfflineSigningService {
    * Signer-optional: works without a configured signer (canonical
    * cross-process custody shape).
    *
-   * @throws {@link SigningFailedError} if `signature` is not a valid
-   *   0x-prefixed hex string.
+   * @throws {@link TypeError} if `signature` is not a valid 0x-prefixed
+   *   hex string.
    */
   async registerPermit<K extends PermitKind>(
     prepared: PreparedPermitFor<K>,
     signature: Hex,
   ): Promise<CredentialPermitResult> {
-    if (!isHex(signature)) {
-      throw new SigningFailedError(
-        `registerPermit: expected a 0x-prefixed hex signature, got ${typeof signature}`,
-      );
-    }
+    assertHex(signature, "registerPermit: signature");
     if (prepared.typedData === null) {
       // Already covered — nothing to register.
       return {

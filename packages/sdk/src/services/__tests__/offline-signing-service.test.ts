@@ -462,12 +462,11 @@ describe("OfflineSigningService — CredentialPermit deferred path", () => {
     expect(allowed).toBe(true);
   });
 
-  test("registerPermit rejects a malformed signature with SigningFailedError", async ({
+  test("registerPermit rejects a malformed signature with TypeError", async ({
     createSDK,
     signer,
     userAddress,
   }) => {
-    const { SigningFailedError } = await import("../../errors");
     const sdk = createSDK({ signer });
     const prepared = await sdk.prepare({
       kind: "CredentialPermit",
@@ -475,7 +474,7 @@ describe("OfflineSigningService — CredentialPermit deferred path", () => {
       contracts: [TOKEN],
     });
     await expect(sdk.registerPermit(prepared, "not-hex" as unknown as Hex)).rejects.toBeInstanceOf(
-      SigningFailedError,
+      TypeError,
     );
   });
 });
