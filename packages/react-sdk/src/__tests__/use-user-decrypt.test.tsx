@@ -135,7 +135,7 @@ describe("useUserDecrypt", () => {
       // Prime credentials once on mount so isAllowed flips to true,
       // then invalidate so the cached `false` result is re-fetched.
       useEffect(() => {
-        void sdk.allow([tokenAddress]).then(() =>
+        void sdk.permits.allow([tokenAddress]).then(() =>
           queryClient.invalidateQueries({
             queryKey: zamaQueryKeys.isAllowed.all,
           }),

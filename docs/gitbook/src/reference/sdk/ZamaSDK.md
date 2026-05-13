@@ -172,7 +172,7 @@ const result = await sdk.registry.getConfidentialToken(erc20Address);
 Creates a [`Token`](Token.md) instance for an ERC-7984 confidential token. Supports balance reads, encrypted transfers, operator approvals, and delegated decryption.
 
 ```ts
-const token = sdk.createToken("0xConfidentialToken");
+const token = sdk.tokens.confidential("0xConfidentialToken");
 ```
 
 ### createWrappedToken
@@ -182,7 +182,7 @@ const token = sdk.createToken("0xConfidentialToken");
 Creates a [`WrappedToken`](WrappedToken.md) instance for an ERC-7984 ERC-20 wrapper. Adds wrapper-specific operations (shield, unshield, allowance) on top of the base `Token` API. The address is the wrapper contract itself — the wrapper IS the confidential token.
 
 ```ts
-const wrappedToken = sdk.createWrappedToken("0xWrapper");
+const wrappedToken = sdk.tokens.wrapper("0xWrapper");
 ```
 
 ### createWrappersRegistry
@@ -209,9 +209,9 @@ Pre-authorize contract addresses for decryption. Signs permits only for contract
 
 ```ts
 // Sign once for three tokens, then decrypt individually
-await sdk.allow([cUSDT, cDAI, cWETH]);
-const a = await sdk.userDecrypt([{ handle: h1, contractAddress: cUSDT }]);
-const b = await sdk.userDecrypt([{ handle: h2, contractAddress: cDAI }]);
+await sdk.permits.allow([cUSDT, cDAI, cWETH]);
+const a = await sdk.decrypt.user([{ handle: h1, contractAddress: cUSDT }]);
+const b = await sdk.decrypt.user([{ handle: h2, contractAddress: cDAI }]);
 ```
 
 ### userDecrypt
@@ -225,7 +225,7 @@ Handles from different contracts can be mixed — they are grouped by `contractA
 When the relayer is actually called, permits are resolved from the contract addresses of the full input handle set (including cached and zero handles), ensuring a stable permit scope regardless of which handles happen to be cached. If every handle is zero or already cached, no permits are needed and no wallet prompt is shown.
 
 ```ts
-const values = await sdk.userDecrypt([
+const values = await sdk.decrypt.user([
   { handle: balanceHandle, contractAddress: cUSDT },
   { handle: flagHandle, contractAddress: myContract },
 ]);
@@ -337,8 +337,8 @@ const unsubscribe = sdk.onWalletAccountChange(({ previous, next }) => {
 Remove signed permits for the current signer. With a contract list, removes permits on the current chain whose payload touches any listed address. Without arguments, removes all permits across all chains and delegators. The keypair is not affected.
 
 ```ts
-await sdk.revokePermits(["0xTokenA"]); // current chain only
-await sdk.revokePermits(); // all permits, all chains
+await sdk.permits.revoke(["0xTokenA"]); // current chain only
+await sdk.permits.revoke(); // all permits, all chains
 ```
 
 ### clearCredentials
@@ -348,7 +348,7 @@ await sdk.revokePermits(); // all permits, all chains
 Wipe the keypair **and** cascade-delete every permit for the current signer. Use for "log out" flows.
 
 ```ts
-await sdk.clearCredentials();
+await sdk.permits.clear();
 ```
 
 ### dispose

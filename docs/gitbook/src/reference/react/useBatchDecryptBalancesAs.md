@@ -32,7 +32,7 @@ function PortfolioBalance({
   // Build Token instances using the SDK factory (not hooks — hooks cannot be called in a loop)
   const sdk = useZamaSDK();
   const tokens = useMemo(
-    () => tokenAddresses.map((addr) => sdk.createToken(addr)),
+    () => tokenAddresses.map((addr) => sdk.tokens.confidential(addr)),
     [sdk, tokenAddresses],
   );
 

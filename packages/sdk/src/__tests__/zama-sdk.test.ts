@@ -13,27 +13,27 @@ describe("ZamaSDK", () => {
   });
 
   it("createToken returns Token", ({ sdk, tokenAddress }) => {
-    const token = sdk.createToken(tokenAddress);
+    const token = sdk.tokens.confidential(tokenAddress);
     expect(token).toBeInstanceOf(Token);
     expect(token.address).toBe(tokenAddress);
     expect(token.sdk).toBe(sdk);
   });
 
   it("createToken exposes the SDK instance", ({ sdk, tokenAddress }) => {
-    const token = sdk.createToken(tokenAddress);
+    const token = sdk.tokens.confidential(tokenAddress);
     expect(token.sdk).toBe(sdk);
   });
 
   it("creates distinct instances per address", ({ sdk }) => {
-    const t1 = sdk.createToken("0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address);
-    const t2 = sdk.createToken("0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address);
+    const t1 = sdk.tokens.confidential("0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address);
+    const t2 = sdk.tokens.confidential("0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address);
     expect(t1).not.toBe(t2);
     expect(t1.address).toBe("0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa");
     expect(t2.address).toBe("0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB");
   });
 
   it("createWrappedToken returns WrappedToken (extending Token)", ({ sdk, wrapperAddress }) => {
-    const wrapped = sdk.createWrappedToken(wrapperAddress);
+    const wrapped = sdk.tokens.wrapper(wrapperAddress);
     expect(wrapped).toBeInstanceOf(WrappedToken);
     expect(wrapped).toBeInstanceOf(Token);
     expect(wrapped.address).toBe(wrapperAddress);
@@ -41,8 +41,8 @@ describe("ZamaSDK", () => {
   });
 
   it("createWrappedToken yields distinct instances per address", ({ sdk }) => {
-    const w1 = sdk.createWrappedToken("0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address);
-    const w2 = sdk.createWrappedToken("0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address);
+    const w1 = sdk.tokens.wrapper("0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address);
+    const w2 = sdk.tokens.wrapper("0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address);
     expect(w1).not.toBe(w2);
     expect(w1.address).toBe("0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa");
     expect(w2.address).toBe("0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB");
@@ -73,7 +73,7 @@ describe("ZamaSDK", () => {
       relayer,
       handle,
     }) => {
-      const result = await sdk.publicDecrypt([handle]);
+      const result = await sdk.decrypt.public([handle]);
       expect(relayer.publicDecrypt).toHaveBeenCalledWith([handle]);
       expect(result).toEqual({
         clearValues: { [handle]: 500n },
@@ -86,7 +86,7 @@ describe("ZamaSDK", () => {
       sdk,
       relayer,
     }) => {
-      const result = await sdk.publicDecrypt([]);
+      const result = await sdk.decrypt.public([]);
       expect(result).toEqual({
         clearValues: {},
         decryptionProof: "0x",
@@ -98,14 +98,14 @@ describe("ZamaSDK", () => {
     it("wraps error on failure", async ({ sdk, relayer, handle }) => {
       vi.mocked(relayer.publicDecrypt).mockRejectedValueOnce(new Error("relayer down"));
 
-      await expect(sdk.publicDecrypt([handle])).rejects.toThrow(DecryptionFailedError);
+      await expect(sdk.decrypt.public([handle])).rejects.toThrow(DecryptionFailedError);
     });
 
     it("re-throws DecryptionFailedError as-is", async ({ sdk, relayer, handle }) => {
       const original = new DecryptionFailedError("already typed");
       vi.mocked(relayer.publicDecrypt).mockRejectedValueOnce(original);
 
-      await expect(sdk.publicDecrypt([handle])).rejects.toBe(original);
+      await expect(sdk.decrypt.public([handle])).rejects.toBe(original);
     });
   });
 
@@ -114,7 +114,7 @@ describe("ZamaSDK", () => {
     const CONTRACT_B = "0x3C3c3C3c3C3C3c3c3c3C3c3C3C3c3c3C3c3c3C3C" as Address;
 
     it("triggers a wallet signature when no permit is cached", async ({ sdk, signer }) => {
-      await sdk.allow([CONTRACT_A, CONTRACT_B]);
+      await sdk.permits.allow([CONTRACT_A, CONTRACT_B]);
       expect(signer.signTypedData).toHaveBeenCalled();
     });
 
@@ -122,7 +122,7 @@ describe("ZamaSDK", () => {
       sdk,
       signer,
     }) => {
-      await sdk.allow([]);
+      await sdk.permits.allow([]);
       expect(signer.signTypedData).not.toHaveBeenCalled();
     });
   });
@@ -137,13 +137,13 @@ describe("ZamaSDK", () => {
     }) => {
       const handles: DecryptHandle[] = [{ handle, contractAddress: CONTRACT_A }];
 
-      await sdk.userDecrypt(handles);
+      await sdk.decrypt.user(handles);
       expect(relayer.userDecrypt).toHaveBeenCalledOnce();
 
-      await sdk.revokePermits();
+      await sdk.permits.revoke();
 
       // Cache was cleared — relayer is called again
-      await sdk.userDecrypt(handles);
+      await sdk.decrypt.user(handles);
       expect(relayer.userDecrypt).toHaveBeenCalledTimes(2);
     });
 
@@ -154,12 +154,12 @@ describe("ZamaSDK", () => {
     }) => {
       const handles: DecryptHandle[] = [{ handle, contractAddress: CONTRACT_A }];
 
-      await sdk.userDecrypt(handles);
+      await sdk.decrypt.user(handles);
       expect(relayer.userDecrypt).toHaveBeenCalledOnce();
 
-      await sdk.revokePermits([CONTRACT_A]);
+      await sdk.permits.revoke([CONTRACT_A]);
 
-      await sdk.userDecrypt(handles);
+      await sdk.decrypt.user(handles);
       expect(relayer.userDecrypt).toHaveBeenCalledTimes(2);
     });
   });
@@ -196,7 +196,7 @@ describe("ZamaSDK", () => {
     }) => {
       const sdk = createSDK({ signer: undefined });
       await expect(
-        sdk.delegateDecryption({ contractAddress: tokenAddress, delegateAddress }),
+        sdk.delegations.delegate({ contractAddress: tokenAddress, delegateAddress }),
       ).rejects.toBeInstanceOf(SignerNotConfiguredError);
     });
 
@@ -207,7 +207,7 @@ describe("ZamaSDK", () => {
     }) => {
       const sdk = createSDK({ signer: undefined });
       await expect(
-        sdk.revokeDelegation({ contractAddress: tokenAddress, delegateAddress }),
+        sdk.delegations.revoke({ contractAddress: tokenAddress, delegateAddress }),
       ).rejects.toBeInstanceOf(SignerNotConfiguredError);
     });
   });

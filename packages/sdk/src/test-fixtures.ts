@@ -410,7 +410,7 @@ export const test = base.extend<SdkFixtures>({
       (overrides = {}) =>
         new LifecycleService({
           signer: "signer" in overrides ? overrides.signer : signer,
-          cache: overrides.cache ?? cache,
+          cachingService: overrides.cache ?? cache,
           relayer: (overrides.relayer ?? relayer) as unknown as RelayerDispatcher,
           credentialService: overrides.credentialService,
         }),

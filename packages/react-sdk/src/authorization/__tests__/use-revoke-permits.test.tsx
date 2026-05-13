@@ -1,5 +1,5 @@
 import { act } from "@testing-library/react";
-import { ZamaSDK } from "@zama-fhe/sdk";
+import { PermitsClient } from "@zama-fhe/sdk";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { afterEach, describe, expect, test, vi } from "../../test-fixtures";
 import { expectCacheRemoved } from "../../test-helpers";
@@ -25,7 +25,7 @@ describe("useRevokePermits", () => {
   test("cache: removes isAllowed and decryption queries after revokePermits", async ({
     renderWithProviders,
   }) => {
-    vi.spyOn(ZamaSDK.prototype, "revokePermits").mockResolvedValue(undefined);
+    vi.spyOn(PermitsClient.prototype, "revoke").mockResolvedValue(undefined);
     const { result, queryClient } = renderWithProviders(() => useRevokePermits());
     queryClient.setQueryData(zamaQueryKeys.isAllowed.all, true);
     queryClient.setQueryData(zamaQueryKeys.decryption.all, { foo: 1n });
@@ -37,7 +37,7 @@ describe("useRevokePermits", () => {
   });
 
   test("behavior: forwards onSuccess callback", async ({ renderWithProviders }) => {
-    vi.spyOn(ZamaSDK.prototype, "revokePermits").mockResolvedValue(undefined);
+    vi.spyOn(PermitsClient.prototype, "revoke").mockResolvedValue(undefined);
     const onSuccess = vi.fn();
 
     const { result, queryClient } = renderWithProviders(() => useRevokePermits({ onSuccess }));
@@ -54,7 +54,7 @@ describe("useRevokePermits", () => {
   });
 
   test("behavior: forwards address list to sdk.revokePermits", async ({ renderWithProviders }) => {
-    const spy = vi.spyOn(ZamaSDK.prototype, "revokePermits").mockResolvedValue(undefined);
+    const spy = vi.spyOn(PermitsClient.prototype, "revoke").mockResolvedValue(undefined);
     const { result } = renderWithProviders(() => useRevokePermits());
 
     await act(() => result.current.mutateAsync([TOKEN, OTHER_TOKEN]));
@@ -66,7 +66,7 @@ describe("useRevokePermits", () => {
   test("behavior: passes no arguments to sdk.revokePermits when called with undefined", async ({
     renderWithProviders,
   }) => {
-    const spy = vi.spyOn(ZamaSDK.prototype, "revokePermits").mockResolvedValue(undefined);
+    const spy = vi.spyOn(PermitsClient.prototype, "revoke").mockResolvedValue(undefined);
     const { result } = renderWithProviders(() => useRevokePermits());
 
     await act(() => result.current.mutateAsync(undefined));

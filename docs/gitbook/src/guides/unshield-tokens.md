@@ -32,7 +32,7 @@ const config = createConfig({
   relayers: { [sepolia.id]: web() },
 });
 const sdk = new ZamaSDK(config);
-const token = sdk.createWrappedToken("0xEncryptedERC20");
+const token = sdk.tokens.wrapper("0xEncryptedERC20");
 
 const { txHash, receipt } = await token.unshield(500n);
 ```

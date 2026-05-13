@@ -21,5 +21,5 @@ import { useZamaSDK } from "../provider";
  */
 export function useToken(address: Address): Token {
   const sdk = useZamaSDK();
-  return useMemo<Token>(() => sdk.createToken(address), [sdk, address]);
+  return useMemo<Token>(() => sdk.tokens.confidential(address), [sdk, address]);
 }

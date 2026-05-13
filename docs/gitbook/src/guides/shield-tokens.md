@@ -45,7 +45,7 @@ If you only have the underlying ERC-20 address, the built-in registry resolves t
 {% tab title="Core SDK" %}
 
 ```ts
-const token = sdk.createWrappedToken("0xWrapperAddress");
+const token = sdk.tokens.wrapper("0xWrapperAddress");
 ```
 
 {% endtab %}
@@ -57,7 +57,7 @@ const token = sdk.createWrappedToken("0xWrapperAddress");
 const result = await sdk.registry.getConfidentialToken("0xUnderlyingERC20");
 if (!result) throw new Error("No wrapper registered for this token");
 
-const token = sdk.createWrappedToken(result.confidentialTokenAddress);
+const token = sdk.tokens.wrapper(result.confidentialTokenAddress);
 ```
 
 {% endtab %}

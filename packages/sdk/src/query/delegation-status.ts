@@ -45,7 +45,7 @@ export function delegationStatusQueryOptions(
         getDelegationExpiryContract(acl, delegatorAddress, delegateAddress, tokenAddress),
       );
       // Derive isDelegated from expiry + chain time to stay consistent
-      // with sdk.isDelegated() (avoids client-clock skew).
+      // with sdk.delegations.isActive() (avoids client-clock skew).
       let isDelegated: boolean;
       if (expiryTimestamp === 0n) {
         isDelegated = false;

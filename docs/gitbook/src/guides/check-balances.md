@@ -30,7 +30,7 @@ const config = createConfig({
   relayers: { [sepolia.id]: web() },
 });
 const sdk = new ZamaSDK(config);
-const token = sdk.createToken("0xEncryptedERC20");
+const token = sdk.tokens.confidential("0xEncryptedERC20");
 
 const [address] = await walletClient.getAddresses();
 const balance = await token.balanceOf(address);
@@ -50,16 +50,16 @@ The first `balanceOf(address)` call for a token prompts the user's wallet for an
 
 If the user rejects the signature, the SDK throws a `SigningRejectedError`. See [Handle Errors](handle-errors.md) for recovery patterns.
 
-You can pre-authorize multiple tokens with a single signature using `sdk.allow()`:
+You can pre-authorize multiple tokens with a single signature using `sdk.permits.allow()`:
 
 {% tabs %}
 {% tab title="SDK" %}
 
 ```ts
-await sdk.allow(["0xTokenA", "0xTokenB"]);
+await sdk.permits.allow(["0xTokenA", "0xTokenB"]);
 
-const tokenA = sdk.createToken("0xTokenA");
-const tokenB = sdk.createToken("0xTokenB");
+const tokenA = sdk.tokens.confidential("0xTokenA");
+const tokenB = sdk.tokens.confidential("0xTokenB");
 // All subsequent balanceOf() calls are silent
 ```
 
@@ -94,11 +94,11 @@ if (isZeroHandle(handle)) {
 }
 
 // Decrypt a handle you already have
-const result = await sdk.userDecrypt([{ handle, contractAddress: token.address }]);
+const result = await sdk.decrypt.user([{ handle, contractAddress: token.address }]);
 const value = result[handle] as bigint;
 
 // Decrypt multiple handles at once (must include the contract address per handle)
-const decrypted = await sdk.userDecrypt(
+const decrypted = await sdk.decrypt.user(
   [handle1, handle2, handle3].map((h) => ({ handle: h, contractAddress: token.address })),
 );
 ```
@@ -144,9 +144,9 @@ When your app manages a portfolio of confidential tokens, use batch operations t
 import { Token } from "@zama-fhe/sdk";
 
 // One wallet signature covers all tokens
-await sdk.allow(addresses);
+await sdk.permits.allow(addresses);
 
-const tokens = addresses.map((a) => sdk.createToken(a));
+const tokens = addresses.map((a) => sdk.tokens.confidential(a));
 
 // Decrypt all balances in parallel
 const { results, errors } = await Token.batchBalancesOf(tokens, userAddress);

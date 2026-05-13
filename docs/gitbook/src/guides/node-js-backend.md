@@ -83,7 +83,7 @@ app.post("/api/transfer", (req, res) => {
       },
     });
     const sdk = new ZamaSDK(config);
-    const token = sdk.createToken("0xTokenAddress");
+    const token = sdk.tokens.confidential("0xTokenAddress");
     await token.confidentialTransfer("0xRecipient", 100n);
     res.json({ ok: true });
   });
@@ -97,7 +97,7 @@ Each call to `asyncLocalStorage.run()` creates a fresh storage scope. Concurrent
 The token API is identical to the browser SDK:
 
 ```ts
-const token = sdk.createToken("0xEncryptedERC20");
+const token = sdk.tokens.confidential("0xEncryptedERC20");
 
 // Shield public tokens into their encrypted form
 await token.shield(1000n);

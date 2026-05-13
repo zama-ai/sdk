@@ -6,8 +6,8 @@ import { isAllowedQueryOptions } from "../is-allowed";
 import { revokePermitsMutationOptions } from "../revoke-permits";
 
 describe("allowMutationOptions", () => {
-  test("calls sdk.allow with provided addresses", async ({ sdk }) => {
-    const allowSpy = vi.spyOn(sdk, "allow").mockResolvedValue();
+  test("calls sdk.permits.allow with provided addresses", async ({ sdk }) => {
+    const allowSpy = vi.spyOn(sdk.permits, "allow").mockResolvedValue();
 
     const options = allowMutationOptions(sdk);
     expect(options.mutationKey).toEqual(["zama.allow"]);
@@ -23,8 +23,8 @@ describe("allowMutationOptions", () => {
 });
 
 describe("revokePermitsMutationOptions", () => {
-  test("calls sdk.revokePermits with no arguments", async ({ sdk }) => {
-    const revokeSpy = vi.spyOn(sdk, "revokePermits").mockResolvedValue(undefined);
+  test("calls sdk.permits.revoke with no arguments", async ({ sdk }) => {
+    const revokeSpy = vi.spyOn(sdk.permits, "revoke").mockResolvedValue(undefined);
 
     const options = revokePermitsMutationOptions(sdk);
     expect(options.mutationKey).toEqual(["zama.revokePermits"]);
@@ -37,8 +37,8 @@ describe("revokePermitsMutationOptions", () => {
 });
 
 describe("isAllowedQueryOptions", () => {
-  test("calls sdk.isAllowed", async ({ sdk }) => {
-    const isAllowedSpy = vi.spyOn(sdk, "isAllowed").mockResolvedValue(true);
+  test("calls sdk.permits.isAllowed", async ({ sdk }) => {
+    const isAllowedSpy = vi.spyOn(sdk.permits, "isAllowed").mockResolvedValue(true);
 
     const options = isAllowedQueryOptions(sdk, {
       contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"],
@@ -57,8 +57,8 @@ describe("isAllowedQueryOptions", () => {
     expect(isAllowedSpy).toHaveBeenCalledTimes(1);
   });
 
-  test("forwards contractAddresses to sdk.isAllowed", async ({ sdk }) => {
-    const isAllowedSpy = vi.spyOn(sdk, "isAllowed").mockResolvedValue(true);
+  test("forwards contractAddresses to sdk.permits.isAllowed", async ({ sdk }) => {
+    const isAllowedSpy = vi.spyOn(sdk.permits, "isAllowed").mockResolvedValue(true);
 
     const contracts = [
       "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",

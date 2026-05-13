@@ -135,7 +135,7 @@ const config = createConfig({
 });
 
 const sdk = new ZamaSDK(config);
-const token = sdk.createToken("0xYourEncryptedERC20");
+const token = sdk.tokens.confidential("0xYourEncryptedERC20");
 
 await token.shield(1000n); // deposit public tokens
 const [address] = await walletClient.getAddresses();
@@ -525,7 +525,7 @@ function MyTokenPage() {
 ### Tab: viem
 
 ```ts
-const token = sdk.createToken("0xYourEncryptedERC20");
+const token = sdk.tokens.confidential("0xYourEncryptedERC20");
 
 // Shield 1,000 public tokens into confidential form
 await token.shield(1000n);
@@ -545,7 +545,7 @@ await token.unshield(500n);
 ### Tab: ethers
 
 ```ts
-const token = sdk.createToken("0xYourEncryptedERC20");
+const token = sdk.tokens.confidential("0xYourEncryptedERC20");
 
 // Shield 1,000 public tokens into confidential form
 await token.shield(1000n);
@@ -565,7 +565,7 @@ await token.unshield(500n);
 ### Tab: Node.js (viem)
 
 ```ts
-const token = sdk.createToken(process.env.TOKEN_ADDRESS!);
+const token = sdk.tokens.confidential(process.env.TOKEN_ADDRESS!);
 
 try {
   // Shield 1,000 public tokens into confidential form
@@ -588,7 +588,7 @@ try {
 ### Tab: Node.js (ethers)
 
 ```ts
-const token = sdk.createToken(process.env.TOKEN_ADDRESS!);
+const token = sdk.tokens.confidential(process.env.TOKEN_ADDRESS!);
 
 try {
   // Shield 1,000 public tokens into confidential form
@@ -1025,7 +1025,7 @@ You do **not** need to run FHE infrastructure to integrate. Wallets and exchange
 
 1. Install and configure `@zama-fhe/sdk` (or `@zama-fhe/react-sdk` for React apps). See [Quick start](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/quick-start.md) for stack-by-stack setup.
 2. Initialize a `ZamaSDK` instance with a relayer, signer, and storage. See the [`ZamaSDK` reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md).
-3. For each confidential token contract, build a `Token` handle via `sdk.createToken(address)`.
+3. For each confidential token contract, build a `Token` handle via `sdk.tokens.confidential(address)`.
 4. Read encrypted balances, build transfers, and manage operators using the `Token` API or React hooks.
 
 ## What wallets and exchanges should support
@@ -1050,7 +1050,7 @@ Balances are stored as ciphertext handles. To display one, the user authorizes t
 import { ZamaSDK } from "@zama-fhe/sdk";
 
 const sdk = new ZamaSDK(config); // config from createConfig()
-const token = sdk.createToken("0xConfidentialToken");
+const token = sdk.tokens.confidential("0xConfidentialToken");
 
 // First call prompts the wallet for an EIP-712 session signature;
 // invoke it from a user action, not on app start.
@@ -1226,7 +1226,7 @@ The SDK exposes it via `sdk.registry`. See the [`WrappersRegistry` reference](ht
 ```ts
 const result = await sdk.registry.getConfidentialToken("0xUSDC");
 if (result?.isValid) {
-  const cUsdc = sdk.createToken(result.confidentialTokenAddress);
+  const cUsdc = sdk.tokens.confidential(result.confidentialTokenAddress);
 }
 ```
 
@@ -1938,7 +1938,7 @@ If you only have the underlying ERC-20 address, the built-in registry resolves t
 ### Tab: Core SDK
 
 ```ts
-const token = sdk.createWrappedToken("0xWrapperAddress");
+const token = sdk.tokens.wrapper("0xWrapperAddress");
 ```
 
 ### Tab: Resolve wrapper via registry
@@ -1949,7 +1949,7 @@ const token = sdk.createWrappedToken("0xWrapperAddress");
 const result = await sdk.registry.getConfidentialToken("0xUnderlyingERC20");
 if (!result) throw new Error("No wrapper registered for this token");
 
-const token = sdk.createWrappedToken(result.confidentialTokenAddress);
+const token = sdk.tokens.wrapper(result.confidentialTokenAddress);
 ```
 
 ### Tab: React
@@ -2094,7 +2094,7 @@ Start from a configured SDK instance (see [Configuration](https://raw.githubuser
 ### Tab: Core SDK
 
 ```ts
-const token = sdk.createToken("0xEncryptedERC20Address");
+const token = sdk.tokens.confidential("0xEncryptedERC20Address");
 ```
 
 ### Tab: React
@@ -2300,7 +2300,7 @@ const config = createConfig({
   relayers: { [sepolia.id]: web() },
 });
 const sdk = new ZamaSDK(config);
-const token = sdk.createWrappedToken("0xEncryptedERC20");
+const token = sdk.tokens.wrapper("0xEncryptedERC20");
 
 const { txHash, receipt } = await token.unshield(500n);
 ```
@@ -2469,7 +2469,7 @@ const config = createConfig({
   relayers: { [sepolia.id]: web() },
 });
 const sdk = new ZamaSDK(config);
-const token = sdk.createToken("0xEncryptedERC20");
+const token = sdk.tokens.confidential("0xEncryptedERC20");
 
 const [address] = await walletClient.getAddresses();
 const balance = await token.balanceOf(address);
@@ -2488,16 +2488,16 @@ The first `balanceOf(address)` call for a token prompts the user's wallet for an
 
 If the user rejects the signature, the SDK throws a `SigningRejectedError`. See [Handle Errors](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/handle-errors.md) for recovery patterns.
 
-You can pre-authorize multiple tokens with a single signature using `sdk.allow()`:
+You can pre-authorize multiple tokens with a single signature using `sdk.permits.allow()`:
 
 
 ### Tab: SDK
 
 ```ts
-await sdk.allow(["0xTokenA", "0xTokenB"]);
+await sdk.permits.allow(["0xTokenA", "0xTokenB"]);
 
-const tokenA = sdk.createToken("0xTokenA");
-const tokenB = sdk.createToken("0xTokenB");
+const tokenA = sdk.tokens.confidential("0xTokenA");
+const tokenB = sdk.tokens.confidential("0xTokenB");
 // All subsequent balanceOf() calls are silent
 ```
 
@@ -2530,11 +2530,11 @@ if (isZeroHandle(handle)) {
 }
 
 // Decrypt a handle you already have
-const result = await sdk.userDecrypt([{ handle, contractAddress: token.address }]);
+const result = await sdk.decrypt.user([{ handle, contractAddress: token.address }]);
 const value = result[handle] as bigint;
 
 // Decrypt multiple handles at once (must include the contract address per handle)
-const decrypted = await sdk.userDecrypt(
+const decrypted = await sdk.decrypt.user(
   [handle1, handle2, handle3].map((h) => ({ handle: h, contractAddress: token.address })),
 );
 ```
@@ -2576,9 +2576,9 @@ When your app manages a portfolio of confidential tokens, use batch operations t
 import { Token } from "@zama-fhe/sdk";
 
 // One wallet signature covers all tokens
-await sdk.allow(addresses);
+await sdk.permits.allow(addresses);
 
-const tokens = addresses.map((a) => sdk.createToken(a));
+const tokens = addresses.map((a) => sdk.tokens.confidential(a));
 
 // Decrypt all balances in parallel
 const { results, errors } = await Token.batchBalancesOf(tokens, userAddress);
@@ -2957,7 +2957,7 @@ app.post("/api/transfer", (req, res) => {
       },
     });
     const sdk = new ZamaSDK(config);
-    const token = sdk.createToken("0xTokenAddress");
+    const token = sdk.tokens.confidential("0xTokenAddress");
     await token.confidentialTransfer("0xRecipient", 100n);
     res.json({ ok: true });
   });
@@ -2971,7 +2971,7 @@ Each call to `asyncLocalStorage.run()` creates a fresh storage scope. Concurrent
 The token API is identical to the browser SDK:
 
 ```ts
-const token = sdk.createToken("0xEncryptedERC20");
+const token = sdk.tokens.confidential("0xEncryptedERC20");
 
 // Shield public tokens into their encrypted form
 await token.shield(1000n);
@@ -3206,7 +3206,7 @@ The `executorAddress` is the deployed `CleartextFHEVMExecutor` contract address 
 The token API works exactly the same:
 
 ```ts
-const token = sdk.createToken("0xEncryptedERC20");
+const token = sdk.tokens.confidential("0xEncryptedERC20");
 await token.shield(1000n);
 const [address] = await walletClient.getAddresses();
 const balance = await token.balanceOf(address);
@@ -3604,7 +3604,7 @@ Operator approval lets another address (a DEX contract, multisig, or automated s
 Call `setOperator` on a token instance. By default, the approval is valid for 1 hour:
 
 ```ts
-const token = sdk.createToken("0xEncryptedERC20");
+const token = sdk.tokens.confidential("0xEncryptedERC20");
 
 // Approve with the default 1-hour duration
 await token.setOperator("0xOperator");
@@ -3638,7 +3638,7 @@ Once approved, the operator can transfer tokens from the owner's confidential ba
 
 ```ts
 // As the approved operator
-const token = sdk.createToken("0xEncryptedERC20");
+const token = sdk.tokens.confidential("0xEncryptedERC20");
 
 await token.confidentialTransferFrom("0xFrom", "0xTo", 500n);
 ```
@@ -4355,7 +4355,7 @@ const result = await sdk.registry.getConfidentialToken(erc20Address);
 Creates a [`Token`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md) instance for an ERC-7984 confidential token. Supports balance reads, encrypted transfers, operator approvals, and delegated decryption.
 
 ```ts
-const token = sdk.createToken("0xConfidentialToken");
+const token = sdk.tokens.confidential("0xConfidentialToken");
 ```
 
 ### createWrappedToken
@@ -4365,7 +4365,7 @@ const token = sdk.createToken("0xConfidentialToken");
 Creates a [`WrappedToken`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WrappedToken.md) instance for an ERC-7984 ERC-20 wrapper. Adds wrapper-specific operations (shield, unshield, allowance) on top of the base `Token` API. The address is the wrapper contract itself — the wrapper IS the confidential token.
 
 ```ts
-const wrappedToken = sdk.createWrappedToken("0xWrapper");
+const wrappedToken = sdk.tokens.wrapper("0xWrapper");
 ```
 
 ### createWrappersRegistry
@@ -4392,9 +4392,9 @@ Pre-authorize contract addresses for decryption. Signs permits only for contract
 
 ```ts
 // Sign once for three tokens, then decrypt individually
-await sdk.allow([cUSDT, cDAI, cWETH]);
-const a = await sdk.userDecrypt([{ handle: h1, contractAddress: cUSDT }]);
-const b = await sdk.userDecrypt([{ handle: h2, contractAddress: cDAI }]);
+await sdk.permits.allow([cUSDT, cDAI, cWETH]);
+const a = await sdk.decrypt.user([{ handle: h1, contractAddress: cUSDT }]);
+const b = await sdk.decrypt.user([{ handle: h2, contractAddress: cDAI }]);
 ```
 
 ### userDecrypt
@@ -4408,7 +4408,7 @@ Handles from different contracts can be mixed — they are grouped by `contractA
 When the relayer is actually called, permits are resolved from the contract addresses of the full input handle set (including cached and zero handles), ensuring a stable permit scope regardless of which handles happen to be cached. If every handle is zero or already cached, no permits are needed and no wallet prompt is shown.
 
 ```ts
-const values = await sdk.userDecrypt([
+const values = await sdk.decrypt.user([
   { handle: balanceHandle, contractAddress: cUSDT },
   { handle: flagHandle, contractAddress: myContract },
 ]);
@@ -4517,8 +4517,8 @@ const unsubscribe = sdk.onWalletAccountChange(({ previous, next }) => {
 Remove signed permits for the current signer. With a contract list, removes permits on the current chain whose payload touches any listed address. Without arguments, removes all permits across all chains and delegators. The keypair is not affected.
 
 ```ts
-await sdk.revokePermits(["0xTokenA"]); // current chain only
-await sdk.revokePermits(); // all permits, all chains
+await sdk.permits.revoke(["0xTokenA"]); // current chain only
+await sdk.permits.revoke(); // all permits, all chains
 ```
 
 ### clearCredentials
@@ -4528,7 +4528,7 @@ await sdk.revokePermits(); // all permits, all chains
 Wipe the keypair **and** cascade-delete every permit for the current signer. Use for "log out" flows.
 
 ```ts
-await sdk.clearCredentials();
+await sdk.permits.clear();
 ```
 
 ### dispose
@@ -4573,19 +4573,19 @@ For ERC-7984 ERC-20 wrappers (shield / unshield / allowance), use [`WrappedToken
 
 ## Import
 
-Created via [`ZamaSDK.createToken()`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md):
+Created via [`sdk.tokens.confidential()`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md):
 
 ```ts
 import { ZamaSDK } from "@zama-fhe/sdk";
 
 const sdk = new ZamaSDK(config); // config from createConfig()
-const token = sdk.createToken("0xConfidentialToken");
+const token = sdk.tokens.confidential("0xConfidentialToken");
 
 const balance = await token.balanceOf(ownerAddress);
 await token.confidentialTransfer("0xRecipient", 500n);
 ```
 
-For shield / unshield, create a `WrappedToken` via `sdk.createWrappedToken("0xWrapper")` — see [`WrappedToken`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WrappedToken.md).
+For shield / unshield, create a `WrappedToken` via `sdk.tokens.wrapper("0xWrapper")` — see [`WrappedToken`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WrappedToken.md).
 
 ## Methods
 
@@ -4603,7 +4603,7 @@ const balance = await token.balanceOf("0xOwnerAddress");
 
 `(owner: Address) => Promise<Hex>`
 
-Returns the raw encrypted handle without decrypting. Use with `isZeroHandle()` or pass to `sdk.userDecrypt()` for decryption.
+Returns the raw encrypted handle without decrypting. Use with `isZeroHandle()` or pass to `sdk.decrypt.user()` for decryption.
 
 ```ts
 const handle = await token.confidentialBalanceOf("0xOwnerAddress");
@@ -4738,10 +4738,10 @@ import { WrappedToken } from "@zama-fhe/sdk";
 
 ## Construction
 
-Use [`ZamaSDK.createWrappedToken`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md):
+Use [`sdk.tokens.wrapper()`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md):
 
 ```ts
-const wrappedToken = sdk.createWrappedToken("0xWrapper");
+const wrappedToken = sdk.tokens.wrapper("0xWrapper");
 ```
 
 ## Methods
@@ -4978,7 +4978,7 @@ The three possible states:
 ```ts
 const [isValid, cToken] = await registry.getConfidentialTokenAddress("0xUSDC");
 if (isValid) {
-  const token = sdk.createToken(cToken);
+  const token = sdk.tokens.confidential(cToken);
 }
 ```
 
@@ -6079,7 +6079,7 @@ app.post("/api/transfer", (req, res) => {
       relayers: { [mySepolia.id]: node() },
     });
     const sdk = new ZamaSDK(config);
-    await sdk.createToken("0x...").confidentialTransfer("0x...", 100n);
+    await sdk.tokens.confidential("0x...").confidentialTransfer("0x...", 100n);
   });
 });
 ```
@@ -6305,7 +6305,7 @@ matchZamaError(error, {
 });
 ```
 
-**How to handle:** If this happens after a page reload during unshield, use `loadPendingUnshield()` and `resumeUnshield()` to recover. Otherwise, calling `sdk.clearCredentials()` and retrying forces a fresh keypair.
+**How to handle:** If this happens after a page reload during unshield, use `loadPendingUnshield()` and `resumeUnshield()` to recover. Otherwise, calling `sdk.permits.clear()` and retrying forces a fresh keypair.
 
 ### ApprovalFailedError
 
@@ -6344,7 +6344,7 @@ The relayer rejected the FHE keypair. This happens when the keypair is malformed
 ```ts
 matchZamaError(error, {
   INVALID_KEYPAIR: () => {
-    sdk.clearCredentials();
+    sdk.permits.clear();
     showPrompt("Keypair rejected — sign again to continue");
   },
 });
@@ -7385,8 +7385,8 @@ The ACL contract address is automatically resolved from the chain configuration.
 const sdk = new ZamaSDK(config); // config from createConfig()
 
 // Both tokens use the same ACL — resolved automatically from the chain config
-const tokenA = sdk.createToken("0xTokenA");
-const tokenB = sdk.createToken("0xTokenB");
+const tokenA = sdk.tokens.confidential("0xTokenA");
+const tokenB = sdk.tokens.confidential("0xTokenB");
 ```
 
 ## Granting delegation
@@ -7433,7 +7433,7 @@ Grant delegation across multiple tokens in a single call:
 ```ts
 import { Token, ZamaError } from "@zama-fhe/sdk";
 
-const tokens = addresses.map((a) => sdk.createToken(a));
+const tokens = addresses.map((a) => sdk.tokens.confidential(a));
 
 const results = await Token.batchDelegateDecryption({
   tokens,
@@ -7516,7 +7516,7 @@ Decrypted values are cached in storage, keyed by `(accountAddress, token, handle
 Decrypt balances across multiple tokens in a single call:
 
 ```ts
-const tokens = addresses.map((a) => sdk.createToken(a));
+const tokens = addresses.map((a) => sdk.tokens.confidential(a));
 
 const balances = await Token.batchDecryptBalancesAs(tokens, {
   delegatorAddress: "0xDelegator",
@@ -12774,7 +12774,7 @@ function AdvancedOperations() {
 
   async function handleCustomOperation() {
     // Access the SDK directly for operations not covered by hooks
-    const token = sdk.createToken("0xToken");
+    const token = sdk.tokens.confidential("0xToken");
     const name = await token.name();
     const symbol = await token.symbol();
     console.log(name, symbol);
@@ -13240,7 +13240,7 @@ The current status of the query. Prefer the boolean flags above for conditional 
 `useUserDecrypt` chains two internal queries:
 
 1. **Signer address** — resolves the connected wallet address.
-2. **Decrypt** — calls `sdk.userDecrypt(handles)` which checks the persistent cache, then hits the relayer for any uncached handles.
+2. **Decrypt** — calls `sdk.decrypt.user(handles)` which checks the persistent cache, then hits the relayer for any uncached handles.
 
 
 > [!WARNING]
@@ -14131,7 +14131,7 @@ function PortfolioBalance({
   // Build Token instances using the SDK factory (not hooks — hooks cannot be called in a loop)
   const sdk = useZamaSDK();
   const tokens = useMemo(
-    () => tokenAddresses.map((addr) => sdk.createToken(addr)),
+    () => tokenAddresses.map((addr) => sdk.tokens.confidential(addr)),
     [sdk, tokenAddresses],
   );
 
@@ -14612,10 +14612,10 @@ Unlike a session model where re-authorizing replaces the previous authorization,
 
 ```ts
 // Signs permits for all three contracts
-await sdk.allow(["0xContractA", "0xContractB", "0xContractC"]);
+await sdk.permits.allow(["0xContractA", "0xContractB", "0xContractC"]);
 
 // ContractA is already covered — only ContractD triggers a new signature
-await sdk.allow(["0xContractA", "0xContractD"]);
+await sdk.permits.allow(["0xContractA", "0xContractD"]);
 ```
 
 This means users see fewer wallet popups over time. As they interact with more contracts, their permit coverage grows without invalidating earlier permits.
@@ -14629,10 +14629,10 @@ This means users see fewer wallet popups over time. As they interact with more c
 
 Permits can be removed in two ways:
 
-- **Selective** — `sdk.revokePermits(["0xTokenA"])` removes permits touching those contracts on the current chain. Other permits are untouched.
-- **Full wipe** — `sdk.revokePermits()` removes all permits for the current signer across all chains and delegators. The FHE keypair is not affected.
+- **Selective** — `sdk.permits.revoke(["0xTokenA"])` removes permits touching those contracts on the current chain. Other permits are untouched.
+- **Full wipe** — `sdk.permits.revoke()` removes all permits for the current signer across all chains and delegators. The FHE keypair is not affected.
 
-For a complete "log out" that also removes the FHE keypair, use `sdk.clearCredentials()`. See the [ZamaSDK reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md#revokepermits) for the full API.
+For a complete "log out" that also removes the FHE keypair, use `sdk.permits.clear()`. See the [ZamaSDK reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md#revokepermits) for the full API.
 
 ## Wallet account changes
 
@@ -14819,9 +14819,9 @@ The EIP-712 typed data includes the wallet address. A permit signed by address A
 
 ### Revocation
 
-Permits can be revoked programmatically via `sdk.revokePermits()` or automatically via wallet lifecycle events (disconnect, account switch). Revocation removes permits from storage immediately.
+Permits can be revoked programmatically via `sdk.permits.revoke()` or automatically via wallet lifecycle events (disconnect, account switch). Revocation removes permits from storage immediately.
 
-After revoking permits, the FHE keypair remains in storage. Use `sdk.clearCredentials()` to also wipe the keypair.
+After revoking permits, the FHE keypair remains in storage. Use `sdk.permits.clear()` to also wipe the keypair.
 
 ## CSRF protection
 
@@ -18245,7 +18245,7 @@ const config = createConfig({
 });
 
 const sdk = new ZamaSDK(config);
-const token = sdk.createToken("0xYourConfidentialToken");
+const token = sdk.tokens.confidential("0xYourConfidentialToken");
 
 const balance = await token.balanceOf();
 await token.confidentialTransfer("0xRecipient", 100n);

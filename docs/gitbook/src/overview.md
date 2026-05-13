@@ -116,7 +116,7 @@ const config = createConfig({
 });
 
 const sdk = new ZamaSDK(config);
-const token = sdk.createToken("0xYourEncryptedERC20");
+const token = sdk.tokens.confidential("0xYourEncryptedERC20");
 
 await token.shield(1000n); // deposit public tokens
 const [address] = await walletClient.getAddresses();

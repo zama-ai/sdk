@@ -347,7 +347,7 @@ function MyTokenPage() {
 {% tab title="viem" %}
 
 ```ts
-const token = sdk.createToken("0xYourEncryptedERC20");
+const token = sdk.tokens.confidential("0xYourEncryptedERC20");
 
 // Shield 1,000 public tokens into confidential form
 await token.shield(1000n);
@@ -368,7 +368,7 @@ await token.unshield(500n);
 {% tab title="ethers" %}
 
 ```ts
-const token = sdk.createToken("0xYourEncryptedERC20");
+const token = sdk.tokens.confidential("0xYourEncryptedERC20");
 
 // Shield 1,000 public tokens into confidential form
 await token.shield(1000n);
@@ -389,7 +389,7 @@ await token.unshield(500n);
 {% tab title="Node.js (viem)" %}
 
 ```ts
-const token = sdk.createToken(process.env.TOKEN_ADDRESS!);
+const token = sdk.tokens.confidential(process.env.TOKEN_ADDRESS!);
 
 try {
   // Shield 1,000 public tokens into confidential form
@@ -413,7 +413,7 @@ try {
 {% tab title="Node.js (ethers)" %}
 
 ```ts
-const token = sdk.createToken(process.env.TOKEN_ADDRESS!);
+const token = sdk.tokens.confidential(process.env.TOKEN_ADDRESS!);
 
 try {
   // Shield 1,000 public tokens into confidential form

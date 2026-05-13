@@ -15,24 +15,24 @@ const RECIPIENT = "0x000000000000000000000000000000000000dEaD" as Address;
 // `operation-name` matches the string passed to `requireChainAlignment` inside
 // the SUT and is asserted on the thrown error.
 const MISMATCHED_OPS: ReadonlyArray<readonly [string, Op]> = [
-  ["shield", (sdk, t) => sdk.createWrappedToken(t).shield(1000n)],
-  ["userDecrypt", (sdk, t) => sdk.userDecrypt([{ handle: HANDLE, contractAddress: t }])],
-  ["allow", (sdk, t) => sdk.allow([t])],
-  ["allowAs", (sdk, t) => sdk.allowAs(OTHER_USER, [t])],
+  ["shield", (sdk, t) => sdk.tokens.wrapper(t).shield(1000n)],
+  ["user", (sdk, t) => sdk.decrypt.user([{ handle: HANDLE, contractAddress: t }])],
+  ["allow", (sdk, t) => sdk.permits.allow([t])],
+  ["allowAs", (sdk, t) => sdk.permits.allowAs(OTHER_USER, [t])],
   [
     "decryptBalanceAs",
-    (sdk, t) => sdk.createToken(t).decryptBalanceAs({ delegatorAddress: OTHER_USER }),
+    (sdk, t) => sdk.tokens.confidential(t).decryptBalanceAs({ delegatorAddress: OTHER_USER }),
   ],
-  ["batchBalancesOf", (sdk, t) => Token.batchBalancesOf([sdk.createToken(t)], OTHER_USER)],
+  ["batchBalancesOf", (sdk, t) => Token.batchBalancesOf([sdk.tokens.confidential(t)], OTHER_USER)],
   [
     "confidentialTransfer",
     (sdk, t) =>
-      sdk.createToken(t).confidentialTransfer(RECIPIENT, 100n, { skipBalanceCheck: true }),
+      sdk.tokens.confidential(t).confidentialTransfer(RECIPIENT, 100n, { skipBalanceCheck: true }),
   ],
-  ["unwrap", (sdk, t) => sdk.createWrappedToken(t).unwrap(100n)],
+  ["unwrap", (sdk, t) => sdk.tokens.wrapper(t).unwrap(100n)],
   [
-    "delegateDecryption",
-    (sdk, t) => sdk.delegateDecryption({ contractAddress: t, delegateAddress: OTHER_USER }),
+    "delegate",
+    (sdk, t) => sdk.delegations.delegate({ contractAddress: t, delegateAddress: OTHER_USER }),
   ],
 ] as const;
 

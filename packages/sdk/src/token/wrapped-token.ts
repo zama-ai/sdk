@@ -170,7 +170,7 @@ export class WrappedToken extends Token {
     userAddress: Address,
     options?: ShieldOptions,
   ): Promise<TransactionResult> {
-    const signer = this.sdk.requireSigner("shield");
+    const signer = this.requireSigner("shield");
     const recipient = options?.to ? getAddress(options.to) : userAddress;
     // ERC7984ERC20Wrapper.onTransferReceived decodes the recipient via
     // `address(bytes20(data))` — i.e. the first 20 bytes of `data`. We pass
@@ -210,7 +210,7 @@ export class WrappedToken extends Token {
     userAddress: Address,
     options?: ShieldOptions,
   ): Promise<TransactionResult> {
-    const signer = this.sdk.requireSigner("shield");
+    const signer = this.requireSigner("shield");
     const strategy = options?.approvalStrategy ?? "exact";
     if (strategy !== "skip") {
       await this.#ensureAllowance(amount, strategy === "max", options);
@@ -257,7 +257,7 @@ export class WrappedToken extends Token {
    * ```
    */
   async approveUnderlying(amount?: bigint): Promise<TransactionResult> {
-    const signer = this.sdk.requireSigner("approveUnderlying");
+    const signer = this.requireSigner("approveUnderlying");
     const account = await requireAlignedWalletAccount(
       "approveUnderlying",
       this.sdk.signer,
@@ -398,7 +398,7 @@ export class WrappedToken extends Token {
    * ```
    */
   async unwrap(amount: bigint): Promise<TransactionResult> {
-    const signer = this.sdk.requireSigner("unwrap");
+    const signer = this.requireSigner("unwrap");
     const account = await requireAlignedWalletAccount("unwrap", this.sdk.signer, this.sdk.provider);
     const userAddress = getAddress(account.address);
 
@@ -449,7 +449,7 @@ export class WrappedToken extends Token {
    * ```
    */
   async unwrapAll(): Promise<TransactionResult> {
-    const signer = this.sdk.requireSigner("unwrapAll");
+    const signer = this.requireSigner("unwrapAll");
     const account = await requireAlignedWalletAccount(
       "unwrapAll",
       this.sdk.signer,
@@ -501,9 +501,9 @@ export class WrappedToken extends Token {
    * ```
    */
   async finalizeUnwrap(unwrapRequestIdOrAmount: Handle): Promise<TransactionResult> {
-    const signer = this.sdk.requireSigner("finalizeUnwrap");
+    const signer = this.requireSigner("finalizeUnwrap");
     await requireChainAlignment("finalizeUnwrap", this.sdk.signer, this.sdk.provider);
-    const result = await this.sdk.publicDecrypt([unwrapRequestIdOrAmount]);
+    const result = await this.sdk.decrypt.public([unwrapRequestIdOrAmount]);
     const clearValue = result.clearValues[unwrapRequestIdOrAmount];
     assertBigint(clearValue, "finalizeUnwrap: clearValue");
     try {
@@ -601,7 +601,7 @@ export class WrappedToken extends Token {
     maxApproval: boolean,
     callbacks?: ShieldCallbacks,
   ): Promise<void> {
-    const signer = this.sdk.requireSigner("approveUnderlying");
+    const signer = this.requireSigner("approveUnderlying");
     const underlying = await this.#getUnderlying();
     const account = await requireAlignedWalletAccount(
       "approveUnderlying",

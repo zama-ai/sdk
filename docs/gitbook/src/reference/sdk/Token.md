@@ -11,19 +11,19 @@ For ERC-7984 ERC-20 wrappers (shield / unshield / allowance), use [`WrappedToken
 
 ## Import
 
-Created via [`ZamaSDK.createToken()`](ZamaSDK.md):
+Created via [`sdk.tokens.confidential()`](ZamaSDK.md):
 
 ```ts
 import { ZamaSDK } from "@zama-fhe/sdk";
 
 const sdk = new ZamaSDK(config); // config from createConfig()
-const token = sdk.createToken("0xConfidentialToken");
+const token = sdk.tokens.confidential("0xConfidentialToken");
 
 const balance = await token.balanceOf(ownerAddress);
 await token.confidentialTransfer("0xRecipient", 500n);
 ```
 
-For shield / unshield, create a `WrappedToken` via `sdk.createWrappedToken("0xWrapper")` — see [`WrappedToken`](WrappedToken.md).
+For shield / unshield, create a `WrappedToken` via `sdk.tokens.wrapper("0xWrapper")` — see [`WrappedToken`](WrappedToken.md).
 
 ## Methods
 
@@ -41,7 +41,7 @@ const balance = await token.balanceOf("0xOwnerAddress");
 
 `(owner: Address) => Promise<Hex>`
 
-Returns the raw encrypted handle without decrypting. Use with `isZeroHandle()` or pass to `sdk.userDecrypt()` for decryption.
+Returns the raw encrypted handle without decrypting. Use with `isZeroHandle()` or pass to `sdk.decrypt.user()` for decryption.
 
 ```ts
 const handle = await token.confidentialBalanceOf("0xOwnerAddress");

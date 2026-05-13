@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "../../test-fixtures";
 import { useDelegatedUserDecrypt } from "../use-delegated-user-decrypt";
 
 describe("useDelegatedUserDecrypt", () => {
-  it("delegates to sdk.delegatedUserDecrypt", async ({ renderWithProviders, relayer, handle }) => {
+  it("delegates to sdk.decrypt.delegatedUser", async ({ renderWithProviders, relayer, handle }) => {
     vi.mocked(relayer.delegatedUserDecrypt).mockResolvedValue({ [handle]: 300n });
 
     const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as `0x${string}`;

@@ -69,7 +69,7 @@ export function ZamaProvider({ children, config }: ZamaProviderProps) {
  * @example
  * ```tsx
  * const sdk = useZamaSDK();
- * const token = sdk.createToken("0x...", "0x...");
+ * const token = sdk.tokens.confidential("0x...");
  * ```
  */
 export function useZamaSDK(): ZamaSDK {

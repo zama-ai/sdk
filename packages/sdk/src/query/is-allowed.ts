@@ -27,7 +27,7 @@ export function isAllowedQueryOptions(
     queryKey: zamaQueryKeys.isAllowed.scope(config.contractAddresses, signerContext.walletAccount),
     queryFn: (context) => {
       const [, { contractAddresses }] = context.queryKey;
-      return sdk.isAllowed(contractAddresses as Address[]);
+      return sdk.permits.isAllowed(contractAddresses as Address[]);
     },
     staleTime: 0,
     gcTime: 0,

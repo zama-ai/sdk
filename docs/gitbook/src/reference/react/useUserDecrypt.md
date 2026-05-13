@@ -105,7 +105,7 @@ When all requested handles are already cached, `data` contains the cached values
 `useUserDecrypt` chains two internal queries:
 
 1. **Signer address** — resolves the connected wallet address.
-2. **Decrypt** — calls `sdk.userDecrypt(handles)` which checks the persistent cache, then hits the relayer for any uncached handles.
+2. **Decrypt** — calls `sdk.decrypt.user(handles)` which checks the persistent cache, then hits the relayer for any uncached handles.
 
 {% hint style="warning" %}
 **`useUserDecrypt` does not automatically gate on permits.** If permits are not cached when the query fires, the SDK will prompt the user's wallet for a signature. To avoid unexpected popups, gate the query yourself using [`useIsAllowed`](/reference/react/useIsAllowed):
