@@ -92,13 +92,7 @@ export class Token {
     this.address = getAddress(address);
   }
 
-  /**
-   * Return the configured signer or throw {@link SignerNotConfiguredError}.
-   *
-   * Guards every write path on {@link Token} and {@link WrappedToken} against
-   * missing-signer configurations before any on-chain side-effect.
-   */
-  protected requireSigner(operation: string): GenericSigner {
+  #requireSigner(operation: string): GenericSigner {
     try {
       assertNonNullable(this.sdk.signer, "Token.sdk.signer");
       return this.sdk.signer;
@@ -542,7 +536,7 @@ export class Token {
     amount: bigint,
     options?: TransferOptions,
   ): Promise<TransactionResult> {
-    const signer = this.requireSigner("confidentialTransfer");
+    const signer = this.#requireSigner("confidentialTransfer");
     const account = await requireAlignedWalletAccount(
       "confidentialTransfer",
       this.sdk.signer,
@@ -610,7 +604,7 @@ export class Token {
     amount: bigint,
     callbacks?: TransferCallbacks,
   ): Promise<TransactionResult> {
-    const signer = this.requireSigner("confidentialTransferFrom");
+    const signer = this.#requireSigner("confidentialTransferFrom");
     await requireAlignedWalletAccount(
       "confidentialTransferFrom",
       this.sdk.signer,
@@ -677,7 +671,7 @@ export class Token {
    * ```
    */
   async setOperator(operator: Address, until?: number): Promise<TransactionResult> {
-    const signer = this.requireSigner("setOperator");
+    const signer = this.#requireSigner("setOperator");
     await requireChainAlignment("setOperator", this.sdk.signer, this.sdk.provider);
     const normalizedOperator = getAddress(operator);
     try {

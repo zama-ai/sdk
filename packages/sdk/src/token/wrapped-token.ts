@@ -20,16 +20,18 @@ import {
   ERC20ReadFailedError,
   EncryptionFailedError,
   InsufficientERC20BalanceError,
+  SignerNotConfiguredError,
   TransactionRevertedError,
   ZamaError,
 } from "../errors";
 import { isZeroHandle } from "../utils/handles";
 import { toError } from "../utils";
 import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
-import { assertBigint } from "../utils/assertions";
+import { assertBigint, assertNonNullable } from "../utils/assertions";
 import { swallow } from "../utils/swallow";
 import { Token } from "./token";
 import type {
+  GenericSigner,
   ShieldCallbacks,
   ShieldOptions,
   TransactionResult,
@@ -52,6 +54,15 @@ export class WrappedToken extends Token {
   #underlying: Address | undefined;
   #underlyingPromise: Promise<Address> | null = null;
   #isPayable: boolean | null = null;
+
+  #requireSigner(operation: string): GenericSigner {
+    try {
+      assertNonNullable(this.sdk.signer, "WrappedToken.sdk.signer");
+      return this.sdk.signer;
+    } catch (cause) {
+      throw new SignerNotConfiguredError(operation, { cause });
+    }
+  }
 
   // WRAPPER READS
 
@@ -170,7 +181,7 @@ export class WrappedToken extends Token {
     userAddress: Address,
     options?: ShieldOptions,
   ): Promise<TransactionResult> {
-    const signer = this.requireSigner("shield");
+    const signer = this.#requireSigner("shield");
     const recipient = options?.to ? getAddress(options.to) : userAddress;
     // ERC7984ERC20Wrapper.onTransferReceived decodes the recipient via
     // `address(bytes20(data))` — i.e. the first 20 bytes of `data`. We pass
@@ -210,7 +221,7 @@ export class WrappedToken extends Token {
     userAddress: Address,
     options?: ShieldOptions,
   ): Promise<TransactionResult> {
-    const signer = this.requireSigner("shield");
+    const signer = this.#requireSigner("shield");
     const strategy = options?.approvalStrategy ?? "exact";
     if (strategy !== "skip") {
       await this.#ensureAllowance(amount, strategy === "max", options);
@@ -257,7 +268,7 @@ export class WrappedToken extends Token {
    * ```
    */
   async approveUnderlying(amount?: bigint): Promise<TransactionResult> {
-    const signer = this.requireSigner("approveUnderlying");
+    const signer = this.#requireSigner("approveUnderlying");
     const account = await requireAlignedWalletAccount(
       "approveUnderlying",
       this.sdk.signer,
@@ -398,7 +409,7 @@ export class WrappedToken extends Token {
    * ```
    */
   async unwrap(amount: bigint): Promise<TransactionResult> {
-    const signer = this.requireSigner("unwrap");
+    const signer = this.#requireSigner("unwrap");
     const account = await requireAlignedWalletAccount("unwrap", this.sdk.signer, this.sdk.provider);
     const userAddress = getAddress(account.address);
 
@@ -449,7 +460,7 @@ export class WrappedToken extends Token {
    * ```
    */
   async unwrapAll(): Promise<TransactionResult> {
-    const signer = this.requireSigner("unwrapAll");
+    const signer = this.#requireSigner("unwrapAll");
     const account = await requireAlignedWalletAccount(
       "unwrapAll",
       this.sdk.signer,
@@ -501,7 +512,7 @@ export class WrappedToken extends Token {
    * ```
    */
   async finalizeUnwrap(unwrapRequestIdOrAmount: Handle): Promise<TransactionResult> {
-    const signer = this.requireSigner("finalizeUnwrap");
+    const signer = this.#requireSigner("finalizeUnwrap");
     await requireChainAlignment("finalizeUnwrap", this.sdk.signer, this.sdk.provider);
     const result = await this.sdk.decrypt.public([unwrapRequestIdOrAmount]);
     const clearValue = result.clearValues[unwrapRequestIdOrAmount];
@@ -601,7 +612,7 @@ export class WrappedToken extends Token {
     maxApproval: boolean,
     callbacks?: ShieldCallbacks,
   ): Promise<void> {
-    const signer = this.requireSigner("approveUnderlying");
+    const signer = this.#requireSigner("approveUnderlying");
     const underlying = await this.#getUnderlying();
     const account = await requireAlignedWalletAccount(
       "approveUnderlying",
