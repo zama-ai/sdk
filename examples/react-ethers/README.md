@@ -10,9 +10,9 @@ Covers: connect wallet, shield ERC-20 → confidential, confidential transfer, u
 - **Next.js 16** (App Router, Webpack — Turbopack not yet supported with WASM)
 - **React 19** + **ethers v6** (`isAddress`, `parseUnits`, `formatUnits`)
 - **TanStack Query v5** for async state
-- **@zama-fhe/react-sdk** — `ZamaProvider`, `useConfidentialBalance`, `useUnshield`, `useDelegateDecryption`, etc.
-- **EthersSigner** — wraps an EIP-1193 `window.ethereum` provider for all SDK write operations
-- **RelayerWeb** — browser FHE worker, routes through a local Next.js proxy (`/api/relayer`)
+- **@zama-fhe/react-sdk** — `ZamaProvider`, `useShield`, `useConfidentialBalance`, `useUnshield`, `useDelegateDecryption`, etc.
+- **@zama-fhe/sdk/ethers** — `createConfig` wires ethers-compatible provider/signer adapters
+- **@zama-fhe/sdk/web** — browser FHE worker, routes through a local Next.js proxy (`/api/relayer`)
 
 ## Setup
 

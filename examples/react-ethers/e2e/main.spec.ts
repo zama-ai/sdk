@@ -8,8 +8,8 @@ import {
 } from "./fixtures";
 
 // All tests in this suite start with the wallet already connected on Sepolia.
-// The mock wallet's eth_call handler returns ABI-encoded registry data so that
-// useListPairs resolves with two token pairs (USDC Mock / USDT Mock).
+// The mock RPC returns ABI-encoded registry data so that useListPairs resolves
+// with two token pairs (USDC Mock / USDT Mock).
 test.describe("main screen", () => {
   test.beforeEach(async ({ page, mockRpc, mockWallet }) => {
     await mockRpc();
@@ -86,12 +86,8 @@ test.describe("main screen", () => {
 // Tests for the registry empty state — simulates a registry that has no valid pairs.
 test.describe("registry empty state", () => {
   test.beforeEach(async ({ page, mockRpc, mockWallet }) => {
-    await mockRpc();
-    await mockWallet({
-      accounts: [TEST_ADDRESS],
-      chainId: SEPOLIA_CHAIN_ID_HEX,
-      emptyRegistry: true,
-    });
+    await mockRpc({ emptyRegistry: true });
+    await mockWallet({ accounts: [TEST_ADDRESS], chainId: SEPOLIA_CHAIN_ID_HEX });
     await page.goto("/");
   });
 
@@ -99,11 +95,11 @@ test.describe("registry empty state", () => {
     await expect(page.getByText("No tokens available.")).toBeVisible();
   });
 
-  test("action buttons are disabled when no tokens are available", async ({ page }) => {
-    // !token → actionsDisabled = true for all primary action buttons.
-    await expect(page.getByRole("button", { name: "Shield", exact: true })).toBeDisabled();
-    await expect(page.getByRole("button", { name: "Transfer", exact: true })).toBeDisabled();
-    await expect(page.getByRole("button", { name: "Unshield", exact: true })).toBeDisabled();
-    await expect(page.getByRole("button", { name: /Mint/ })).toBeDisabled();
+  test("operation cards are hidden when no tokens are available", async ({ page }) => {
+    // Token-scoped SDK hooks are only rendered once a real registry token exists.
+    await expect(page.getByText("Balances")).not.toBeVisible();
+    await expect(page.getByText("Shield — ERC-20 → Confidential")).not.toBeVisible();
+    await expect(page.getByText("Confidential Transfer")).not.toBeVisible();
+    await expect(page.getByText("Unshield — Confidential → ERC-20")).not.toBeVisible();
   });
 });
