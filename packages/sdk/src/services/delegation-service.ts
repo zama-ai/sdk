@@ -14,7 +14,7 @@ import {
   DelegationSelfNotAllowedError,
   matchAclRevert,
 } from "../errors";
-import type { TransactionOperation, ZamaSDKEventInput } from "../events/sdk-events";
+import type { ZamaSDKEventInput } from "../events/sdk-events";
 import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
 import type { GenericProvider, GenericSigner, TransactionResult } from "../types";
 import { submitTransaction as submitSdkTransaction } from "../utils/submit-transaction";
@@ -96,12 +96,19 @@ export class DelegationService {
       );
     }
 
-    return this.#executeAclTx(
+    return submitSdkTransaction({
+      operation: "delegateDecryption",
       signer,
-      delegateForUserDecryptionContract(acl, normalizedDelegate, normalizedContract, expDate),
-      "delegateDecryption",
-      normalizedContract,
-    );
+      provider: this.#provider,
+      config: delegateForUserDecryptionContract(
+        acl,
+        normalizedDelegate,
+        normalizedContract,
+        expDate,
+      ),
+      emit: (input) => this.#emitEvent(input, contractAddress),
+      mapError: matchAclRevert,
+    });
   }
 
   async revokeDelegation(
@@ -138,12 +145,14 @@ export class DelegationService {
       );
     }
 
-    return this.#executeAclTx(
+    return submitSdkTransaction({
+      operation: "revokeDelegation",
       signer,
-      revokeDelegationContract(acl, normalizedDelegate, normalizedContract),
-      "revokeDelegation",
-      normalizedContract,
-    );
+      provider: this.#provider,
+      config: revokeDelegationContract(acl, normalizedDelegate, normalizedContract),
+      emit: (input) => this.#emitEvent(input, contractAddress),
+      mapError: matchAclRevert,
+    });
   }
 
   async isDelegated(params: {
@@ -231,21 +240,5 @@ export class DelegationService {
         );
       }
     }
-  }
-
-  async #executeAclTx(
-    signer: GenericSigner,
-    call: Parameters<GenericSigner["writeContract"]>[0],
-    operation: Extract<TransactionOperation, "delegateDecryption" | "revokeDelegation">,
-    contractAddress: Address,
-  ): Promise<TransactionResult> {
-    return submitSdkTransaction({
-      operation,
-      signer,
-      provider: this.#provider,
-      config: call,
-      emit: (input) => this.#emitEvent(input, contractAddress),
-      mapError: matchAclRevert,
-    });
   }
 }
