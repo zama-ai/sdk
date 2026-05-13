@@ -51,19 +51,6 @@ export interface ApproveUnderlyingSubmittedEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.ApproveUnderlyingSubmitted;
 }
 
-// @public
-export function attachMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.attach"], AttachParams, TransactionResult>;
-
-// @public
-export interface AttachParams {
-    // Warning: (ae-forgotten-export) The symbol "PreparedTransaction" needs to be exported by the entry point index.d.ts
-    //
-    // (undocumented)
-    readonly prepared: PreparedTransaction;
-    // (undocumented)
-    readonly txHash: Hex;
-}
-
 // @public (undocumented)
 export interface BaseEvent {
     operationId?: string;
@@ -100,6 +87,8 @@ export function broadcastMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<r
 
 // @public
 export interface BroadcastParams {
+    // Warning: (ae-forgotten-export) The symbol "PreparedTransaction" needs to be exported by the entry point index.d.ts
+    //
     // (undocumented)
     readonly prepared: PreparedTransaction;
     // (undocumented)
@@ -685,6 +674,17 @@ export interface RelayerSDK extends FheOperations {
 
 // @public (undocumented)
 export function requestZKProofVerificationMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.requestZKProofVerification"], ZKProofLike, InputProofBytesType>;
+
+// @public
+export function resumeMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.resume"], ResumeParams, TransactionResult>;
+
+// @public
+export interface ResumeParams {
+    // (undocumented)
+    readonly prepared: PreparedTransaction;
+    // (undocumented)
+    readonly txHash: Hex;
+}
 
 // @public (undocumented)
 export function resumeUnshieldMutationOptions(token: WrappedToken): MutationFactoryOptions<readonly ["zama.resumeUnshield", Address], ResumeUnshieldParams, TransactionResult>;
@@ -1467,9 +1467,9 @@ export const ZamaSDKEvents: {
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/types-Cw88jxCD.d.ts:561:3 - (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
-// dist/esm/types-Cw88jxCD.d.ts:562:3 - (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
-// dist/esm/types-Cw88jxCD.d.ts:563:3 - (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
+// dist/esm/types-BxKaqNGm.d.ts:561:3 - (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
+// dist/esm/types-BxKaqNGm.d.ts:562:3 - (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
+// dist/esm/types-BxKaqNGm.d.ts:563:3 - (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

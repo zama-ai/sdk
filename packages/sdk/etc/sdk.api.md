@@ -11805,7 +11805,6 @@ export class NoCiphertextError extends ZamaError {
 export class OfflineClient {
     // Warning: (ae-forgotten-export) The symbol "OfflineSigningService" needs to be exported by the entry point index.d.ts
     constructor(offlineSigningService: OfflineSigningService);
-    attach(prepared: PreparedTransaction, txHash: Hex): Promise<TransactionResult>;
     broadcast(prepared: PreparedTransaction, signedTx: Hex): Promise<TransactionResult>;
     prepare<K extends TransactionKind>(request: Extract<TransactionPrepareRequest, {
         kind: K;
@@ -11814,6 +11813,7 @@ export class OfflineClient {
     prepare<K extends PermitKind>(request: CredentialPermitRequest, options?: OfflineSigningOptions): Promise<PreparedPermitFor<K>>;
     refresh<K extends TransactionKind>(prepared: PreparedFor<K>, options?: OfflineSigningOptions): Promise<PreparedFor<K>>;
     registerPermit<K extends PermitKind>(prepared: PreparedPermitFor<K>, signature: Hex): Promise<CredentialPermitResult>;
+    resume(prepared: PreparedTransaction, txHash: Hex): Promise<TransactionResult>;
     sign(prepared: PreparedTransaction): Promise<Hex>;
     signAndBroadcast(request: TransactionPrepareRequest, options?: OfflineSigningOptions): Promise<TransactionResult>;
     signAndRegister(request: CredentialPermitRequest): Promise<CredentialPermitResult | void>;

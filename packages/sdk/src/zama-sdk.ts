@@ -47,11 +47,10 @@ export class ZamaSDK {
    */
   readonly registry: WrappersRegistry;
   /**
-   * Sub-client for the offline-signing pipeline — `prepare → sign →
-   * broadcast` decomposed for HSM, policy-engine, and cross-process
-   * custody workflows. Atomic call sites for online signers
-   * (`Token.confidentialTransfer`, etc.) remain available on {@link Token}
-   * unchanged.
+   * Sub-client for the offline-signing pipeline — `prepare → sign → broadcast`
+   * decomposed for HSM, policy-engine, and cross-process custody workflows.
+   * Atomic call sites for online signers (`Token.confidentialTransfer`, etc.)
+   * remain available on {@link Token} unchanged.
    */
   readonly offline: OfflineClient;
   readonly #registryTTL: number;

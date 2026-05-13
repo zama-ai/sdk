@@ -10,7 +10,6 @@ import * as _$_zama_fhe_sdk0 from '@zama-fhe/sdk';
 import * as _$react_jsx_runtime0 from 'react/jsx-runtime';
 import { Address } from '@zama-fhe/sdk';
 import { ApproveUnderlyingParams } from '@zama-fhe/sdk/query';
-import { AttachParams } from '@zama-fhe/sdk/query';
 import { BatchBalancesResult } from '@zama-fhe/sdk';
 import { BatchDecryptBalancesAsParams } from '@zama-fhe/sdk/query';
 import { BroadcastParams } from '@zama-fhe/sdk/query';
@@ -39,6 +38,7 @@ import { PropsWithChildren } from 'react';
 import { PublicKeyData } from '@zama-fhe/sdk';
 import { RefreshPreparedParams } from '@zama-fhe/sdk/query';
 import { RegisterPermitParams } from '@zama-fhe/sdk/query';
+import { ResumeParams } from '@zama-fhe/sdk/query';
 import { ResumeUnshieldParams } from '@zama-fhe/sdk/query';
 import { RevokeDelegationParams } from '@zama-fhe/sdk/query';
 import { ShieldParams } from '@zama-fhe/sdk/query';
@@ -68,9 +68,6 @@ export function useAllow(options?: UseMutationOptions<void, Error, Address[]>): 
 
 // @public
 export function useApproveUnderlying(address: Address, options?: UseMutationOptions<TransactionResult, Error, ApproveUnderlyingParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, ApproveUnderlyingParams, `0x${string}`>;
-
-// @public
-export function useAttach<TContext = unknown>(options?: UseMutationOptions<TransactionResult, Error, AttachParams, TContext>): UseMutationResult<TransactionResult, Error, AttachParams, TContext>;
 
 // @public
 export function useBatchDecryptBalancesAs(tokens: Token[], options?: UseMutationOptions<Map<Address, bigint>, Error, BatchDecryptBalancesAsParams>): _$_tanstack_react_query0.UseMutationResult<Map<`0x${string}`, bigint>, Error, _$_zama_fhe_sdk0.BatchDecryptAsOptions, unknown>;
@@ -259,6 +256,9 @@ export function useRequestZKProofVerification(): _$_tanstack_react_query0.UseMut
     handles: Uint8Array[];
     inputProof: Uint8Array;
 }>, Error, ZKProofLike, unknown>;
+
+// @public
+export function useResume<TContext = unknown>(options?: UseMutationOptions<TransactionResult, Error, ResumeParams, TContext>): UseMutationResult<TransactionResult, Error, ResumeParams, TContext>;
 
 // @public
 export function useResumeUnshield(address: Address, options?: UseMutationOptions<TransactionResult, Error, ResumeUnshieldParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, ResumeUnshieldParams, `0x${string}`>;

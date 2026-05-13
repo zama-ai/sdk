@@ -16,10 +16,10 @@ import type {
 } from "../types";
 
 /**
- * Sub-client for the offline-signing pipeline — `prepare → sign →
- * broadcast` decomposed for institutional custody, HSM ceremonies, and
- * policy-engine workflows where the three steps cannot run synchronously
- * in a single Promise.
+ * Sub-client for the offline-signing pipeline — `prepare → sign → broadcast`
+ * decomposed for institutional custody, HSM ceremonies, and policy-engine
+ * workflows where the three steps cannot run synchronously in a single
+ * Promise.
  *
  * Three tiers — the industry-standard shape custody platforms expose
  * (transfer / sign-and-broadcast / sign-only):
