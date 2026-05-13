@@ -31,13 +31,13 @@ const erc20BalanceOfAbi = [
 ] as const;
 
 test("detects ERC-1363 support on a token that implements it", async ({ sdk, contracts }) => {
-  const token = sdk.createWrappedToken(contracts.cERC1363);
+  const token = sdk.tokens.wrapper(contracts.cERC1363);
   const supported = await token.isPayable();
   expect(supported).toBe(true);
 });
 
 test("detects lack of ERC-1363 support on a standard ERC-20", async ({ sdk, contracts }) => {
-  const token = sdk.createWrappedToken(contracts.cUSDT);
+  const token = sdk.tokens.wrapper(contracts.cUSDT);
   const supported = await token.isPayable();
   expect(supported).toBe(false);
 });
@@ -58,7 +58,7 @@ test("shield routes via transferAndCall on a 1363 token (single transaction)", a
   account,
   viemClient,
 }) => {
-  const token = sdk.createWrappedToken(contracts.cERC1363);
+  const token = sdk.tokens.wrapper(contracts.cERC1363);
 
   const erc20Before = await viemClient.readContract({
     address: contracts.ERC1363,
@@ -90,7 +90,7 @@ test("shield-to-other via transferAndCall encodes recipient and succeeds", async
   account,
   viemClient,
 }) => {
-  const token = sdk.createWrappedToken(contracts.cERC1363);
+  const token = sdk.tokens.wrapper(contracts.cERC1363);
   // Anvil default account #1 — distinct from the sender (account #0).
   const recipient = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
 
@@ -124,7 +124,7 @@ test("shield routes via approve + wrap on a non-1363 token (two transactions)", 
   account,
   viemClient,
 }) => {
-  const token = sdk.createWrappedToken(contracts.cUSDT);
+  const token = sdk.tokens.wrapper(contracts.cUSDT);
 
   const nonceBefore = await viemClient.getTransactionCount({ address: account.address });
 

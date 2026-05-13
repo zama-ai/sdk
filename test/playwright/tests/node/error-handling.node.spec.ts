@@ -46,7 +46,7 @@ test("operations after terminate throw", async ({ sdk }) => {
   sdk.terminate();
 
   await expect(async () => {
-    await sdk.credentials.allow("0x0000000000000000000000000000000000000001" as `0x${string}`);
+    await sdk.permits.allow("0x0000000000000000000000000000000000000001" as `0x${string}`);
   }).rejects.toThrow();
 });
 
@@ -97,7 +97,7 @@ test("isConfidential on non-ERC-165 contract reverts with a ContractFunction err
   sdk,
   contracts,
 }) => {
-  const nonErc165Token = sdk.createToken(contracts.acl);
+  const nonErc165Token = sdk.tokens.confidential(contracts.acl);
   try {
     await nonErc165Token.isConfidential();
     expect(true, "Expected isConfidential to throw on a non-ERC-165 contract").toBe(false);
