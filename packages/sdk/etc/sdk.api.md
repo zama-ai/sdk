@@ -13263,47 +13263,6 @@ export type ReadContractReturnType<TAbi extends ContractAbi = ContractAbi, TFunc
 export type ReadFunctionName<TAbi extends ContractAbi = ContractAbi> = ContractFunctionName<TAbi, "pure" | "view">;
 
 // @public
-export class ReadonlyToken {
-    constructor(sdk: ZamaSDK, address: Address);
-    // (undocumented)
-    readonly address: Address;
-    allow(): Promise<void>;
-    static allow(...tokens: ReadonlyToken[]): Promise<void>;
-    allowance(wrapper: Address, owner: Address): Promise<bigint>;
-    balanceOf(owner: Address): Promise<bigint>;
-    static batchBalancesOf(tokens: ReadonlyToken[], owner: Address): Promise<BatchBalancesResult>;
-    static batchDecryptBalancesAs(tokens: ReadonlyToken[], options: BatchDecryptAsOptions): Promise<Map<Address, bigint>>;
-    confidentialBalanceOf(owner: Address): Promise<Handle>;
-    decimals(): Promise<number>;
-    decryptBalanceAs(input: {
-        delegatorAddress: Address;
-        accountAddress?: Address;
-    }): Promise<bigint>;
-    protected emit(input: ZamaSDKEventInput): void;
-    // (undocumented)
-    protected getAclAddress(): Promise<Address>;
-    getDelegationExpiry(input: {
-        delegatorAddress: Address;
-        delegateAddress: Address;
-    }): Promise<bigint>;
-    isAllowed(): Promise<boolean>;
-    isConfidential(): Promise<boolean>;
-    isDelegated(params: {
-        delegatorAddress: Address;
-        delegateAddress: Address;
-    }): Promise<boolean>;
-    isWrapper(): Promise<boolean>;
-    name(): Promise<string>;
-    // (undocumented)
-    protected readConfidentialBalanceOf(owner: Address): Promise<Handle>;
-    revoke(): Promise<void>;
-    // (undocumented)
-    readonly sdk: ZamaSDK;
-    symbol(): Promise<string>;
-    underlyingToken(): Promise<Address>;
-}
-
-// @public
 export interface RelayerConfig {
     readonly createRelayer: (chain: FheChain, worker: any) => RelayerSDK;
     readonly createWorker?: (chains: FheChain[]) => any;
@@ -15112,44 +15071,35 @@ export function symbolContract(tokenAddress: Address): {
 };
 
 // @public
-export class Token extends ReadonlyToken {
-    constructor(sdk: ZamaSDK, address: Address, wrapper?: Address);
-    approveUnderlying(amount?: bigint): Promise<TransactionResult>;
-    static batchDelegateDecryption(input: {
-        tokens: Token[];
-        delegateAddress: Address;
-        expirationDate?: Date;
-    }): Promise<Map<Address, TransactionResult | ZamaError>>;
-    static batchRevokeDelegation(input: {
-        tokens: Token[];
-        delegateAddress: Address;
-    }): Promise<Map<Address, TransactionResult | ZamaError>>;
+export class Token {
+    constructor(sdk: ZamaSDK, address: Address);
+    // (undocumented)
+    readonly address: Address;
+    // @internal
+    protected assertConfidentialBalance(amount: bigint): Promise<void>;
+    balanceOf(owner: Address): Promise<bigint>;
+    static batchBalancesOf(tokens: Token[], owner: Address): Promise<BatchBalancesResult>;
+    static batchDecryptBalancesAs(tokens: Token[], options: BatchDecryptAsOptions): Promise<Map<Address, bigint>>;
+    confidentialBalanceOf(owner: Address): Promise<Handle>;
     confidentialTransfer(to: Address, amount: bigint, options?: TransferOptions): Promise<TransactionResult>;
     confidentialTransferFrom(from: Address, to: Address, amount: bigint, callbacks?: TransferCallbacks): Promise<TransactionResult>;
-    delegateDecryption(input: {
-        delegateAddress: Address;
-        expirationDate?: Date;
-    }): Promise<TransactionResult>;
-    finalizeUnwrap(unwrapRequestIdOrAmount: Handle): Promise<TransactionResult>;
+    decimals(): Promise<number>;
+    decryptBalanceAs(input: {
+        delegatorAddress: Address;
+        accountAddress?: Address;
+    }): Promise<bigint>;
+    // @internal
+    protected emit(input: ZamaSDKEventInput): void;
+    isConfidential(): Promise<boolean>;
     isOperator(holder: Address, spender: Address): Promise<boolean>;
-    isPayable(): Promise<boolean>;
-    prepareShield(amount: bigint, options?: {
-        recipient?: Address;
-    }): Promise<ShieldPlan>;
-    resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
-    revokeDelegation(input: {
-        delegateAddress: Address;
-    }): Promise<TransactionResult>;
+    isWrapper(): Promise<boolean>;
+    name(): Promise<string>;
+    // @internal
+    protected readConfidentialBalanceOf(owner: Address): Promise<Handle>;
+    // (undocumented)
+    readonly sdk: ZamaSDK;
     setOperator(operator: Address, until?: number): Promise<TransactionResult>;
-    shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult>;
-    unshield(amount: bigint, options?: UnshieldOptions): Promise<TransactionResult>;
-    unshieldAll(callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
-    unwrap(amount: bigint): Promise<TransactionResult>;
-    unwrapAll(): Promise<TransactionResult>;
-    // (undocumented)
-    readonly wrapper: Address;
-    // (undocumented)
-    static readonly ZERO_ADDRESS: Address;
+    symbol(): Promise<string>;
 }
 
 // @public
@@ -20197,6 +20147,25 @@ export interface WrappedEvent {
 }
 
 // @public
+export class WrappedToken extends Token {
+    allowance(owner: Address): Promise<bigint>;
+    // (undocumented)
+    approveUnderlying(amount?: bigint): Promise<TransactionResult>;
+    finalizeUnwrap(unwrapRequestIdOrAmount: Handle): Promise<TransactionResult>;
+    isPayable(): Promise<boolean>;
+    prepareShield(amount: bigint, options?: {
+        recipient?: Address;
+    }): Promise<ShieldPlan>;
+    resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
+    shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult>;
+    underlying(): Promise<Address>;
+    unshield(amount: bigint, options?: UnshieldOptions): Promise<TransactionResult>;
+    unshieldAll(callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
+    unwrap(amount: bigint): Promise<TransactionResult>;
+    unwrapAll(): Promise<TransactionResult>;
+}
+
+// @public
 export class WrappersRegistry {
     constructor(config: WrappersRegistryConfig);
     getAddress(chainId: number): Address | undefined;
@@ -20375,8 +20344,8 @@ export class ZamaSDK {
     allow(contracts: Address[]): Promise<void>;
     allowAs(delegator: Address, contracts: Address[]): Promise<void>;
     clearCredentials(): Promise<void>;
-    createReadonlyToken(address: Address): ReadonlyToken;
-    createToken(address: Address, wrapper?: Address): Token;
+    createToken(address: Address): Token;
+    createWrappedToken(address: Address): WrappedToken;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
     // @internal (undocumented)
     delegatedBatchDecryptHandlesAs(input: {

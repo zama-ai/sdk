@@ -31,7 +31,7 @@ function OperatorStatus({
   spender: `0x${string}`;
 }) {
   const { data: isOperator, isLoading } = useConfidentialIsOperator({
-    tokenAddress,
+    address: tokenAddress,
     holder,
     spender,
   });
@@ -46,11 +46,11 @@ function OperatorStatus({
 
 ## Parameters
 
-### tokenAddress
+### address
 
 `Address`
 
-Address of the confidential ERC-20 wrapper contract.
+Address of the confidential token contract.
 
 ### holder
 
@@ -66,7 +66,7 @@ Address of the operator to check. The query is disabled while `undefined`.
 
 ```ts
 const { data: isOperator } = useConfidentialIsOperator({
-  tokenAddress: "0xToken",
+  address: "0xToken",
   holder: "0xOwner",
   spender: "0xDEX",
 });

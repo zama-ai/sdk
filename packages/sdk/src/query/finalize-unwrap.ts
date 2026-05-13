@@ -1,5 +1,5 @@
 import type { Handle } from "../relayer/relayer-sdk.types";
-import type { Token } from "../token/token";
+import type { WrappedToken } from "../token/wrapped-token";
 import type { TransactionResult } from "../types";
 import { ConfigurationError } from "../errors";
 import type { MutationFactoryOptions } from "./factory-types";
@@ -12,7 +12,7 @@ export type FinalizeUnwrapParams =
   | { unwrapRequestId?: never; burnAmountHandle: Handle };
 
 export function finalizeUnwrapMutationOptions(
-  token: Token,
+  token: WrappedToken,
 ): MutationFactoryOptions<
   readonly ["zama.finalizeUnwrap", Address],
   FinalizeUnwrapParams,

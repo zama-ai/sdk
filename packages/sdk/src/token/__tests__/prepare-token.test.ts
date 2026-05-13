@@ -1,7 +1,7 @@
 import type { Address } from "viem";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import type { GenericProvider } from "../../types";
-import { Token } from "../token";
+import { WrappedToken } from "../wrapped-token";
 
 const UNDERLYING = "0x5555555555555555555555555555555555555555" as Address;
 const RECIPIENT = "0x3333333333333333333333333333333333333333" as Address;
@@ -37,17 +37,16 @@ function setupReads(provider: GenericProvider, opts: ReadOpts = {}): void {
   });
 }
 
-describe("Token.prepareShield — routing", () => {
+describe("WrappedToken.prepareShield — routing", () => {
   test("payable (ERC-1363) → single TransferAndCall step", async ({
     createSDK,
     signer,
     provider,
-    tokenAddress,
     wrapperAddress,
   }) => {
     setupReads(provider, { isPayable: true });
     const sdk = createSDK({ signer: signer });
-    const token = new Token(sdk, tokenAddress, wrapperAddress);
+    const token = new WrappedToken(sdk, wrapperAddress);
     const plan = await token.prepareShield(500n);
     expect(plan.path).toBe("transferAndCall");
     expect(plan.steps).toHaveLength(1);
@@ -65,12 +64,11 @@ describe("Token.prepareShield — routing", () => {
     createSDK,
     signer,
     provider,
-    tokenAddress,
     wrapperAddress,
   }) => {
     setupReads(provider, { isPayable: false });
     const sdk = createSDK({ signer: signer });
-    const token = new Token(sdk, tokenAddress, wrapperAddress);
+    const token = new WrappedToken(sdk, wrapperAddress);
     const plan = await token.prepareShield(500n);
     expect(plan.path).toBe("approveAndWrap");
     expect(plan.steps).toHaveLength(2);
@@ -95,18 +93,17 @@ describe("Token.prepareShield — routing", () => {
     createSDK,
     signer,
     provider,
-    tokenAddress,
     wrapperAddress,
   }) => {
     const sdk = createSDK({ signer: signer });
 
     setupReads(provider, { isPayable: true });
-    const payable = new Token(sdk, tokenAddress, wrapperAddress);
+    const payable = new WrappedToken(sdk, wrapperAddress);
     const planPayable = await payable.prepareShield(1n, { recipient: RECIPIENT });
     expect(planPayable.steps[0]).toMatchObject({ kind: "TransferAndCall" });
 
     setupReads(provider, { isPayable: false });
-    const nonPayable = new Token(sdk, tokenAddress, wrapperAddress);
+    const nonPayable = new WrappedToken(sdk, wrapperAddress);
     const planNon = await nonPayable.prepareShield(1n, { recipient: RECIPIENT });
     expect(planNon.steps[1]).toMatchObject({ kind: "Wrap", to: RECIPIENT });
   });
@@ -115,12 +112,11 @@ describe("Token.prepareShield — routing", () => {
     createSDK,
     signer,
     provider,
-    tokenAddress,
     wrapperAddress,
   }) => {
     setupReads(provider, { isPayable: false });
     const sdk = createSDK({ signer: signer });
-    const token = new Token(sdk, tokenAddress, wrapperAddress);
+    const token = new WrappedToken(sdk, wrapperAddress);
     const plan = await token.prepareShield(750n);
     for (const step of plan.steps) {
       await sdk.offline.prepare(step);
@@ -132,12 +128,11 @@ describe("Token.prepareShield — routing", () => {
     createSDK,
     signer,
     provider,
-    tokenAddress,
     wrapperAddress,
   }) => {
     setupReads(provider, { isPayable: false, allowance: 1_000n });
     const sdk = createSDK({ signer: signer });
-    const token = new Token(sdk, tokenAddress, wrapperAddress);
+    const token = new WrappedToken(sdk, wrapperAddress);
     const plan = await token.prepareShield(500n);
     expect(plan.path).toBe("approveAndWrap");
     expect(plan.steps).toHaveLength(1);
@@ -148,12 +143,11 @@ describe("Token.prepareShield — routing", () => {
     createSDK,
     signer,
     provider,
-    tokenAddress,
     wrapperAddress,
   }) => {
     setupReads(provider, { isPayable: false, allowance: 100n });
     const sdk = createSDK({ signer: signer });
-    const token = new Token(sdk, tokenAddress, wrapperAddress);
+    const token = new WrappedToken(sdk, wrapperAddress);
     const plan = await token.prepareShield(500n);
     expect(plan.path).toBe("approveAndWrap");
     expect(plan.steps).toHaveLength(3);

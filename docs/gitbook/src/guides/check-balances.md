@@ -11,7 +11,7 @@ Confidential balances are stored on-chain as encrypted handles. To display a hum
 
 ### 1. Read your own balance
 
-Call `balanceOf()` on a `Token` or `ReadonlyToken` instance. The SDK fetches the encrypted handle from the chain, decrypts it, and returns a `bigint`.
+Call `balanceOf()` on a [`Token`](../reference/sdk/Token.md) instance. The SDK fetches the encrypted handle from the chain, decrypts it, and returns a `bigint`.
 
 {% tabs %}
 {% tab title="SDK" %}
@@ -50,18 +50,16 @@ The first `balanceOf(address)` call for a token prompts the user's wallet for an
 
 If the user rejects the signature, the SDK throws a `SigningRejectedError`. See [Handle Errors](handle-errors.md) for recovery patterns.
 
-You can pre-authorize multiple tokens with a single signature using `ReadonlyToken.allow()`:
+You can pre-authorize multiple tokens with a single signature using `sdk.allow()`:
 
 {% tabs %}
 {% tab title="SDK" %}
 
 ```ts
-import { ReadonlyToken } from "@zama-fhe/sdk";
+await sdk.allow(["0xTokenA", "0xTokenB"]);
 
-const tokenA = sdk.createReadonlyToken("0xTokenA");
-const tokenB = sdk.createReadonlyToken("0xTokenB");
-
-await ReadonlyToken.allow(tokenA, tokenB);
+const tokenA = sdk.createToken("0xTokenA");
+const tokenB = sdk.createToken("0xTokenB");
 // All subsequent balanceOf() calls are silent
 ```
 
@@ -143,15 +141,15 @@ When your app manages a portfolio of confidential tokens, use batch operations t
 {% tab title="SDK" %}
 
 ```ts
-import { ReadonlyToken } from "@zama-fhe/sdk";
-
-const tokens = addresses.map((a) => sdk.createReadonlyToken(a));
+import { Token } from "@zama-fhe/sdk";
 
 // One wallet signature covers all tokens
-await ReadonlyToken.allow(...tokens);
+await sdk.allow(addresses);
+
+const tokens = addresses.map((a) => sdk.createToken(a));
 
 // Decrypt all balances in parallel
-const { results, errors } = await ReadonlyToken.batchBalancesOf(tokens, userAddress);
+const { results, errors } = await Token.batchBalancesOf(tokens, userAddress);
 
 // `results` is Map<Address, bigint> for tokens that decrypted successfully,
 // `errors` is Map<Address, ZamaError> for tokens that failed — partial failure
@@ -196,7 +194,7 @@ const {
   error,
 } = useConfidentialBalance(
   {
-    tokenAddress: "0xToken",
+    address: "0xToken",
     account: address,
   },
   { refetchInterval: 5_000 },
@@ -212,7 +210,7 @@ import { useAccount } from "wagmi";
 
 const { address } = useAccount();
 const { data } = useConfidentialBalances({
-  tokenAddresses: ["0xTokenA", "0xTokenB", "0xTokenC"],
+  addresses: ["0xTokenA", "0xTokenB", "0xTokenC"],
   account: address,
 });
 
@@ -254,6 +252,6 @@ queryClient.invalidateQueries({
 ## Next steps
 
 - See [Avoid blind-sign wallet popups](encrypt-decrypt.md#gating-useconfidentialbalance) to gate balance queries behind explicit user action.
-- See [Token Operations](/reference/sdk/Token) for the full `Token.balanceOf` and `ReadonlyToken` API.
+- See [Token Operations](/reference/sdk/Token) for the full `Token` API.
 - See [Hooks](/reference/react/query-keys) for `useConfidentialBalance`, `useConfidentialBalances`, and query key details.
 - To handle `NoCiphertextError` and other failures, see [Handle Errors](handle-errors.md).

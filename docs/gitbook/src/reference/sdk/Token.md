@@ -1,92 +1,31 @@
 ---
 title: Token
-description: Read/write interface for confidential ERC-20 operations.
+description: Read/write interface for an ERC-7984 confidential token — balances, transfers, operator approvals.
 ---
 
 # Token
 
-Read/write interface for confidential ERC-20 operations — shielding, transferring, unshielding, and balance decryption.
+`Token` is the high-level ERC-20-style interface for an ERC-7984 confidential token. It hides FHE complexity (encryption, decryption, EIP-712 signing) behind familiar methods.
+
+For ERC-7984 ERC-20 wrappers (shield / unshield / allowance), use [`WrappedToken`](WrappedToken.md) instead — it extends `Token` with wrapper-specific operations.
 
 ## Import
 
-Created via [`ZamaSDK.createToken()`](/reference/sdk/ZamaSDK#createtoken). Not imported directly.
-
-## Usage
-
-{% tabs %}
-{% tab title="app.ts" %}
+Created via [`ZamaSDK.createToken()`](ZamaSDK.md):
 
 ```ts
 import { ZamaSDK } from "@zama-fhe/sdk";
 
 const sdk = new ZamaSDK(config); // config from createConfig()
-const token = sdk.createToken("0xEncryptedERC20");
+const token = sdk.createToken("0xConfidentialToken");
 
-await token.shield(1000n);
 const balance = await token.balanceOf(ownerAddress);
 await token.confidentialTransfer("0xRecipient", 500n);
 ```
 
-{% endtab %}
-{% tab title="config.ts" %}
-
-```ts
-import { createConfig } from "@zama-fhe/sdk/viem";
-import { web } from "@zama-fhe/sdk/web";
-import { sepolia, mainnet } from "@zama-fhe/sdk/chains";
-
-const config = createConfig({
-  chains: [sepolia, mainnet],
-  publicClient,
-  walletClient,
-  relayers: {
-    [sepolia.id]: web(),
-    [mainnet.id]: web(),
-  },
-});
-```
-
-{% endtab %}
-{% endtabs %}
+For shield / unshield, create a `WrappedToken` via `sdk.createWrappedToken("0xWrapper")` — see [`WrappedToken`](WrappedToken.md).
 
 ## Methods
-
-### shield
-
-`(amount: bigint, options?: ShieldOptions) => Promise<TransactionResult>`
-
-Converts public ERC-20 tokens into their encrypted form. The SDK handles the ERC-20 approval automatically based on the strategy.
-
-**The ERC-20 balance is always validated before submitting** — this is a public read with no signing requirement, so it works for all wallet types (including smart wallets). For native ETH shields, the check is skipped (the chain validates ETH balance natively).
-
-| Option                | Type                         | Default          | Description                              |
-| --------------------- | ---------------------------- | ---------------- | ---------------------------------------- |
-| `approvalStrategy`    | `"exact" \| "max" \| "skip"` | `"exact"`        | ERC-20 approval strategy                 |
-| `fees`                | `bigint`                     | —                | Extra ETH for native wrappers            |
-| `to`                  | `Address`                    | connected wallet | Recipient of shielded tokens             |
-| `onApprovalSubmitted` | `(txHash: Hex) => void`      | —                | Fired after the approval tx is submitted |
-| `onShieldSubmitted`   | `(txHash: Hex) => void`      | —                | Fired after the shield tx is submitted   |
-
-```ts
-// Exact approval (default) — approves only the shielded amount
-await token.shield(1000n);
-
-// Max approval — avoids repeated approval txs
-await token.shield(1000n, { approvalStrategy: "max" });
-
-// Skip approval — wrapper is already approved
-await token.shield(1000n, { approvalStrategy: "skip" });
-
-// With progress callbacks
-await token.shield(1000n, {
-  onApprovalSubmitted: (txHash) => console.log("Approval:", txHash),
-  onShieldSubmitted: (txHash) => console.log("Shield:", txHash),
-});
-```
-
-**Throws:**
-
-- `InsufficientERC20BalanceError` — if the ERC-20 balance is less than `amount` (exposes `requested`, `available`, `token`)
 
 ### balanceOf
 
@@ -106,6 +45,16 @@ Returns the raw encrypted handle without decrypting. Use with `isZeroHandle()` o
 
 ```ts
 const handle = await token.confidentialBalanceOf("0xOwnerAddress");
+```
+
+### decryptBalanceAs
+
+`({ delegatorAddress, accountAddress? }) => Promise<bigint>`
+
+Decrypt a delegator's balance using delegated credentials. The connected wallet must hold an active delegation from `delegatorAddress` covering this token's contract.
+
+```ts
+const balance = await token.decryptBalanceAs({ delegatorAddress: "0xDelegator" });
 ```
 
 ### confidentialTransfer
@@ -144,78 +93,6 @@ Operator transfer on behalf of an address that has approved you.
 await token.confidentialTransferFrom("0xFrom", "0xTo", 500n);
 ```
 
-### unshield
-
-`(amount: bigint, options?: UnshieldOptions) => Promise<{ txHash: Hex; receipt: TransactionReceipt }>`
-
-Withdraws confidential tokens back to public ERC-20. Orchestrates the two-step on-chain process (unwrap + finalize) in a single call.
-
-By default, the SDK validates the confidential balance before submitting. Set `skipBalanceCheck: true` to bypass (e.g. for smart wallets).
-
-| Option                | Type               | Default | Description                       |
-| --------------------- | ------------------ | ------- | --------------------------------- |
-| `skipBalanceCheck`    | `boolean`          | `false` | Skip balance validation           |
-| `onUnwrapSubmitted`   | `(txHash) => void` | —       | Fired after unwrap tx submitted   |
-| `onFinalizing`        | `() => void`       | —       | Fired when finalization begins    |
-| `onFinalizeSubmitted` | `(txHash) => void` | —       | Fired after finalize tx submitted |
-
-```ts
-await token.unshield(500n);
-
-// With progress callbacks
-await token.unshield(500n, {
-  onUnwrapSubmitted: (txHash) => updateUI("Unwrap submitted..."),
-  onFinalizing: () => updateUI("Waiting for decryption proof..."),
-  onFinalizeSubmitted: (txHash) => updateUI("Done!"),
-});
-
-// Smart wallet (skip balance check)
-await token.unshield(500n, { skipBalanceCheck: true });
-```
-
-**Throws:**
-
-- `InsufficientConfidentialBalanceError` — if the confidential balance is less than `amount` (exposes `requested`, `available`, `token`)
-- `BalanceCheckUnavailableError` — if balance validation is required but decryption is not possible
-
-### unshieldAll
-
-`(callbacks?: UnshieldCallbacks) => Promise<{ txHash: Hex; receipt: TransactionReceipt }>`
-
-Unshields the entire confidential balance. Same callback support as `unshield`.
-
-```ts
-await token.unshieldAll();
-```
-
-### resumeUnshield
-
-`(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks) => Promise<TransactionResult>`
-
-Resumes an interrupted unshield from the finalize step. Use when the user closed the page between unwrap and finalize.
-
-```ts
-import {
-  loadPendingUnshield,
-  loadPendingUnshieldRequest,
-  clearPendingUnshield,
-} from "@zama-fhe/sdk";
-
-// Simple resume (tx hash only — works for both legacy and upgraded wrappers)
-const pending = await loadPendingUnshield(storage, wrapperAddress);
-if (pending) {
-  await token.resumeUnshield(pending);
-  await clearPendingUnshield(storage, wrapperAddress);
-}
-
-// Full request (includes unwrapRequestId when available from upgraded wrappers)
-const request = await loadPendingUnshieldRequest(storage, wrapperAddress);
-if (request) {
-  await token.resumeUnshield(request.unwrapTxHash);
-  await clearPendingUnshield(storage, wrapperAddress);
-}
-```
-
 ### setOperator
 
 `(operator: Address, until?: number) => Promise<{ txHash: Hex; receipt: TransactionReceipt }>`
@@ -240,93 +117,38 @@ Checks whether a spender is currently an approved operator for a given holder.
 const approved = await token.isOperator("0xHolder", "0xSpender");
 ```
 
-### allow
+### name / symbol / decimals
 
-`() => Promise<void>`
-
-Signs permits for this token's contract address if not already covered.
+ERC-20-style metadata reads. Each returns a `Promise` of the value.
 
 ```ts
-await token.allow();
+const name = await token.name();
+const symbol = await token.symbol();
+const decimals = await token.decimals();
 ```
 
-### revoke
+### isConfidential / isWrapper
 
-`() => Promise<void>`
-
-Revokes permits touching this token's contract address on the current chain.
+ERC-165 introspection.
 
 ```ts
-await token.revoke();
+const isErc7984 = await token.isConfidential();
+const isWrapper = await token.isWrapper();
 ```
 
-### isAllowed
+### Token.batchBalancesOf _(static)_
 
-`() => Promise<boolean>`
+`(tokens: Token[], owner: Address) => Promise<BatchBalancesResult>`
 
-Returns whether stored permits cover this token's contract address.
+Decrypts multiple balances in one batch.
 
-```ts
-const allowed = await token.isAllowed();
-```
+### Token.batchDecryptBalancesAs _(static)_
 
-### isZeroHandle
+`(tokens: Token[], options: BatchDecryptAsOptions) => Promise<Map<Address, bigint>>`
 
-`(handle: Hex) => boolean`
-
-Returns `true` if the handle represents a zero balance (account has never shielded).
-
-```ts
-const handle = await token.confidentialBalanceOf();
-if (token.isZeroHandle(handle)) {
-  console.log("No confidential balance yet");
-}
-```
-
-### approveUnderlying
-
-`(amount?: bigint) => Promise<TransactionResult>`
-
-Approves the wrapper contract to spend the underlying ERC-20. Defaults to max approval. Call before `shield()` with `approvalStrategy: "skip"`.
-
-```ts
-await token.approveUnderlying(); // max approval
-await token.approveUnderlying(1000n); // exact amount
-```
-
-### unwrap
-
-`(amount: bigint) => Promise<TransactionResult>`
-
-Requests an unwrap (phase 1 of unshield). Use `unshield()` for the full orchestrated flow.
-
-```ts
-await token.unwrap(500n);
-```
-
-### unwrapAll
-
-`() => Promise<TransactionResult>`
-
-Requests an unwrap of the entire confidential balance (phase 1).
-
-```ts
-await token.unwrapAll();
-```
-
-### finalizeUnwrap
-
-`(unwrapRequestIdOrAmount: Handle) => Promise<TransactionResult>`
-
-Completes an unwrap (phase 2) after the decryption proof is available. Pass `unwrapRequestId` from upgraded `UnwrapRequested` events, or the legacy encrypted amount handle. Use `unshield()` for the full orchestrated flow.
-
-```ts
-const event = findUnwrapRequested(receipt.logs);
-await token.finalizeUnwrap(event.unwrapRequestId ?? event.encryptedAmount);
-```
+Batch delegated decryption.
 
 ## Related
 
 - [ZamaSDK](/reference/sdk/ZamaSDK) — creates `Token` via `createToken()`
-- [ReadonlyToken](/reference/sdk/ReadonlyToken) — read-only variant with batch operations
-- [Shield Tokens guide](/guides/shield-tokens) — step-by-step shielding walkthrough
+- [WrappedToken](/reference/sdk/WrappedToken) — extends `Token` with shield / unshield / allowance / wrapper operations

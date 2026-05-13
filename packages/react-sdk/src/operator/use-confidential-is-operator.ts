@@ -8,7 +8,7 @@ import { useZamaSDK } from "../provider";
 
 export interface UseConfidentialIsOperatorConfig {
   /** Address of the confidential token contract. The query is disabled while `undefined`. */
-  tokenAddress: Address | undefined;
+  address: Address | undefined;
   /** Address to check operator status for. The query is disabled while `undefined`. */
   spender: Address | undefined;
   /** Token holder address. The query is disabled while `undefined`. */
@@ -17,7 +17,7 @@ export interface UseConfidentialIsOperatorConfig {
 
 export interface UseConfidentialIsOperatorSuspenseConfig {
   /** Address of the confidential token contract. */
-  tokenAddress: Address;
+  address: Address;
   /** Address to check operator status for. */
   spender: Address;
   /** Token holder address. */
@@ -26,14 +26,15 @@ export interface UseConfidentialIsOperatorSuspenseConfig {
 
 /**
  * Check if a spender is an approved operator for a holder.
- * @param config - Token address, spender, and optional holder to check.
+ *
+ * @param config - Token address, spender, and holder to check.
  * @param options - React Query options (forwarded to `useQuery`).
  * @returns Query result with `data: boolean`.
  *
  * @example
  * ```tsx
  * const { data: isOperator } = useConfidentialIsOperator({
- *   tokenAddress: "0xToken",
+ *   address: "0xToken",
  *   spender: "0xSpender",
  *   holder: "0xHolder",
  * });
@@ -43,9 +44,9 @@ export function useConfidentialIsOperator(
   config: UseConfidentialIsOperatorConfig,
   options?: Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">,
 ) {
-  const { tokenAddress, spender, holder } = config;
+  const { address, spender, holder } = config;
   const sdk = useZamaSDK();
-  const baseOpts = confidentialIsOperatorQueryOptions(sdk, tokenAddress, {
+  const baseOpts = confidentialIsOperatorQueryOptions(sdk, address, {
     holder,
     spender,
   });
@@ -64,18 +65,18 @@ export function useConfidentialIsOperator(
  * @example
  * ```tsx
  * const { data: isOperator } = useConfidentialIsOperatorSuspense({
- *   tokenAddress: "0xToken",
+ *   address: "0xToken",
  *   spender: "0xSpender",
  *   holder: "0xHolder",
  * });
  * ```
  */
 export function useConfidentialIsOperatorSuspense(config: UseConfidentialIsOperatorSuspenseConfig) {
-  const { spender, holder, tokenAddress } = config;
+  const { spender, holder, address } = config;
   const sdk = useZamaSDK();
 
   return useSuspenseQuery<boolean>(
-    confidentialIsOperatorQueryOptions(sdk, tokenAddress, {
+    confidentialIsOperatorQueryOptions(sdk, address, {
       holder,
       spender,
     }),

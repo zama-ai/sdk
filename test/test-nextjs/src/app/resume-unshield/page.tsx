@@ -9,7 +9,7 @@ export default async function ResumeUnshieldPage({
 }) {
   const params = await searchParams;
   const token = (params.token as Address) ?? CONTRACTS.cUSDT;
-  const wrapper = params.wrapper as Address | undefined;
+  const wrapper = (params.wrapper as Address | undefined) ?? token;
 
   return (
     <div className="space-y-6">

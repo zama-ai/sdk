@@ -37,7 +37,6 @@ import { PreparedPermitFor } from '@zama-fhe/sdk';
 import { PrepareParams } from '@zama-fhe/sdk/query';
 import { PropsWithChildren } from 'react';
 import { PublicKeyData } from '@zama-fhe/sdk';
-import { ReadonlyToken } from '@zama-fhe/sdk';
 import { RefreshPreparedParams } from '@zama-fhe/sdk/query';
 import { RegisterPermitParams } from '@zama-fhe/sdk/query';
 import { ResumeUnshieldParams } from '@zama-fhe/sdk/query';
@@ -59,6 +58,7 @@ import { UseMutationOptions } from '@tanstack/react-query';
 import { UseMutationResult } from '@tanstack/react-query';
 import { UseQueryOptions } from '@tanstack/react-query';
 import { UserDecryptQueryConfig } from '@zama-fhe/sdk/query';
+import { WrappedToken } from '@zama-fhe/sdk';
 import { ZamaConfig } from '@zama-fhe/sdk';
 import { ZamaSDK } from '@zama-fhe/sdk';
 import { ZKProofLike } from '@zama-fhe/sdk';
@@ -67,13 +67,13 @@ import { ZKProofLike } from '@zama-fhe/sdk';
 export function useAllow(options?: UseMutationOptions<void, Error, Address[]>): _$_tanstack_react_query0.UseMutationResult<void, Error, `0x${string}`[], unknown>;
 
 // @public
-export function useApproveUnderlying(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, ApproveUnderlyingParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, ApproveUnderlyingParams, `0x${string}`>;
+export function useApproveUnderlying(address: Address, options?: UseMutationOptions<TransactionResult, Error, ApproveUnderlyingParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, ApproveUnderlyingParams, `0x${string}`>;
 
 // @public
 export function useAttach<TContext = unknown>(options?: UseMutationOptions<TransactionResult, Error, AttachParams, TContext>): UseMutationResult<TransactionResult, Error, AttachParams, TContext>;
 
 // @public
-export function useBatchDecryptBalancesAs(tokens: ReadonlyToken[], options?: UseMutationOptions<Map<Address, bigint>, Error, BatchDecryptBalancesAsParams>): _$_tanstack_react_query0.UseMutationResult<Map<`0x${string}`, bigint>, Error, _$_zama_fhe_sdk0.BatchDecryptAsOptions, unknown>;
+export function useBatchDecryptBalancesAs(tokens: Token[], options?: UseMutationOptions<Map<Address, bigint>, Error, BatchDecryptBalancesAsParams>): _$_tanstack_react_query0.UseMutationResult<Map<`0x${string}`, bigint>, Error, _$_zama_fhe_sdk0.BatchDecryptAsOptions, unknown>;
 
 // @public
 export function useBroadcast<TContext = unknown>(options?: UseMutationOptions<TransactionResult, Error, BroadcastParams, TContext>): UseMutationResult<TransactionResult, Error, BroadcastParams, TContext>;
@@ -87,7 +87,7 @@ export function useConfidentialBalance(config: UseConfidentialBalanceConfig, opt
 // @public (undocumented)
 export interface UseConfidentialBalanceConfig {
     account: Address | undefined;
-    tokenAddress: Address;
+    address: Address;
 }
 
 // @public (undocumented)
@@ -101,7 +101,7 @@ export function useConfidentialBalances(config: UseConfidentialBalancesConfig, o
 // @public (undocumented)
 export interface UseConfidentialBalancesConfig {
     account: Address | undefined;
-    tokenAddresses: Address[];
+    addresses: Address[];
 }
 
 // @public (undocumented)
@@ -114,9 +114,9 @@ export function useConfidentialIsOperator(config: UseConfidentialIsOperatorConfi
 
 // @public (undocumented)
 export interface UseConfidentialIsOperatorConfig {
+    address: Address | undefined;
     holder: Address | undefined;
     spender: Address | undefined;
-    tokenAddress: Address | undefined;
 }
 
 // @public
@@ -124,13 +124,13 @@ export function useConfidentialIsOperatorSuspense(config: UseConfidentialIsOpera
 
 // @public (undocumented)
 export interface UseConfidentialIsOperatorSuspenseConfig {
+    address: Address;
     holder: Address;
     spender: Address;
-    tokenAddress: Address;
 }
 
 // @public
-export function useConfidentialSetOperator(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, ConfidentialSetOperatorParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, ConfidentialSetOperatorParams, `0x${string}`>;
+export function useConfidentialSetOperator(address: Address, options?: UseMutationOptions<TransactionResult, Error, ConfidentialSetOperatorParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, ConfidentialSetOperatorParams, `0x${string}`>;
 
 // @public
 export function useConfidentialTokenAddress(input: {
@@ -141,12 +141,13 @@ export function useConfidentialTokenAddress(input: {
 export function useConfidentialTransfer<TContext = unknown>(config: UseConfidentialTransferConfig, options?: UseMutationOptions<TransactionResult, Error, ConfidentialTransferParams, TContext>): UseMutationResult<TransactionResult, Error, ConfidentialTransferParams, TContext>;
 
 // @public
-export interface UseConfidentialTransferConfig extends UseZamaConfig {
+export interface UseConfidentialTransferConfig {
+    address: Address;
     optimistic?: boolean;
 }
 
 // @public
-export function useConfidentialTransferFrom(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, ConfidentialTransferFromParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, ConfidentialTransferFromParams, `0x${string}`>;
+export function useConfidentialTransferFrom(address: Address, options?: UseMutationOptions<TransactionResult, Error, ConfidentialTransferFromParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, ConfidentialTransferFromParams, `0x${string}`>;
 
 // @public
 export function useCreateDelegatedUserDecryptEIP712(): _$_tanstack_react_query0.UseMutationResult<Readonly<{
@@ -160,10 +161,10 @@ export function useCreateDelegatedUserDecryptEIP712(): _$_tanstack_react_query0.
 export function useCreateEIP712(): _$_tanstack_react_query0.UseMutationResult<EIP712TypedData, Error, CreateEIP712Params, unknown>;
 
 // @public
-export function useDecryptBalanceAs(tokenAddress: Address, options?: UseMutationOptions<bigint, Error, DecryptBalanceAsParams>): _$_tanstack_react_query0.UseMutationResult<bigint, Error, DecryptBalanceAsParams, unknown>;
+export function useDecryptBalanceAs(address: Address, options?: UseMutationOptions<bigint, Error, DecryptBalanceAsParams>): _$_tanstack_react_query0.UseMutationResult<bigint, Error, DecryptBalanceAsParams, unknown>;
 
 // @public
-export function useDelegateDecryption(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, DelegateDecryptionParams>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, DelegateDecryptionParams, unknown>;
+export function useDelegateDecryption(address: Address, options?: UseMutationOptions<TransactionResult, Error, DelegateDecryptionParams>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, DelegateDecryptionParams, unknown>;
 
 // @public
 export function useDelegatedUserDecrypt(): _$_tanstack_react_query0.UseMutationResult<Record<`0x${string}`, ClearValueType>, Error, DelegatedUserDecryptMutationParams, unknown>;
@@ -185,7 +186,7 @@ export function useEncrypt(): _$_tanstack_react_query0.UseMutationResult<Readonl
 }>, Error, EncryptParams, unknown>;
 
 // @public
-export function useFinalizeUnwrap(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, FinalizeUnwrapParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, FinalizeUnwrapParams, `0x${string}`>;
+export function useFinalizeUnwrap(address: Address, options?: UseMutationOptions<TransactionResult, Error, FinalizeUnwrapParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, FinalizeUnwrapParams, `0x${string}`>;
 
 // @public
 export function useGenerateKeypair(): _$_tanstack_react_query0.UseMutationResult<_$_zama_fhe_sdk0.KeypairType<`0x${string}`>, Error, void, unknown>;
@@ -248,9 +249,6 @@ export function usePublicParams(bits: number): _$_tanstack_react_query0.UseQuery
 } | null, Error>;
 
 // @public
-export function useReadonlyToken(address: Address): _$_zama_fhe_sdk0.ReadonlyToken;
-
-// @public
 export function useRefreshPrepared<TContext = unknown>(options?: UseMutationOptions<PreparedFor<TransactionKind>, Error, RefreshPreparedParams, TContext>): UseMutationResult<PreparedFor<TransactionKind>, Error, RefreshPreparedParams, TContext>;
 
 // @public
@@ -263,10 +261,10 @@ export function useRequestZKProofVerification(): _$_tanstack_react_query0.UseMut
 }>, Error, ZKProofLike, unknown>;
 
 // @public
-export function useResumeUnshield(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, ResumeUnshieldParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, ResumeUnshieldParams, `0x${string}`>;
+export function useResumeUnshield(address: Address, options?: UseMutationOptions<TransactionResult, Error, ResumeUnshieldParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, ResumeUnshieldParams, `0x${string}`>;
 
 // @public
-export function useRevokeDelegation(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, RevokeDelegationParams>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, RevokeDelegationParams, unknown>;
+export function useRevokeDelegation(address: Address, options?: UseMutationOptions<TransactionResult, Error, RevokeDelegationParams>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, RevokeDelegationParams, unknown>;
 
 // @public
 export function useRevokePermits(options?: UseMutationOptions<void, Error, Address[] | void>): _$_tanstack_react_query0.UseMutationResult<void, Error, void | `0x${string}`[], unknown>;
@@ -275,7 +273,8 @@ export function useRevokePermits(options?: UseMutationOptions<void, Error, Addre
 export function useShield<TContext = unknown>(config: UseShieldConfig, options?: UseMutationOptions<TransactionResult, Error, ShieldParams, TContext>): UseMutationResult<TransactionResult, Error, ShieldParams, TContext>;
 
 // @public
-export interface UseShieldConfig extends UseZamaConfig {
+export interface UseShieldConfig {
+    address: Address;
     optimistic?: boolean;
 }
 
@@ -291,7 +290,7 @@ export function useSignAndBroadcast<TContext = unknown>(options?: UseMutationOpt
 export function useSignAndRegister<TContext = unknown>(options?: UseMutationOptions<SignAndRegisterResult, Error, SignAndRegisterParams, TContext>): UseMutationResult<SignAndRegisterResult, Error, SignAndRegisterParams, TContext>;
 
 // @public
-export function useToken(config: UseZamaConfig): Token;
+export function useToken(address: Address): Token;
 
 // @public
 export function useTokenAddress(input: {
@@ -326,9 +325,8 @@ export function useUnderlyingAllowance(config: UseUnderlyingAllowanceConfig, opt
 
 // @public (undocumented)
 export interface UseUnderlyingAllowanceConfig {
+    address: Address;
     owner: Address | undefined;
-    tokenAddress: Address;
-    wrapperAddress: Address;
 }
 
 // @public
@@ -336,28 +334,30 @@ export function useUnderlyingAllowanceSuspense(config: UseUnderlyingAllowanceSus
 
 // @public (undocumented)
 export interface UseUnderlyingAllowanceSuspenseConfig {
+    address: Address;
     owner: Address;
-    tokenAddress: Address;
-    wrapperAddress: Address;
 }
 
 // @public
-export function useUnshield(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, UnshieldParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, UnshieldParams, `0x${string}`>;
+export function useUnshield(address: Address, options?: UseMutationOptions<TransactionResult, Error, UnshieldParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, UnshieldParams, `0x${string}`>;
 
 // @public
-export function useUnshieldAll(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, UnshieldAllParams | void, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, void | UnshieldAllParams, `0x${string}`>;
+export function useUnshieldAll(address: Address, options?: UseMutationOptions<TransactionResult, Error, UnshieldAllParams | void, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, void | UnshieldAllParams, `0x${string}`>;
 
 // @public
-export function useUnwrap(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, UnwrapParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, UnwrapParams, `0x${string}`>;
+export function useUnwrap(address: Address, options?: UseMutationOptions<TransactionResult, Error, UnwrapParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, UnwrapParams, `0x${string}`>;
 
 // @public
-export function useUnwrapAll(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, void, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, void, `0x${string}`>;
+export function useUnwrapAll(address: Address, options?: UseMutationOptions<TransactionResult, Error, void, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, void, `0x${string}`>;
 
 // @public
 export function useUserDecrypt(config: UserDecryptQueryConfig, options?: Omit<UseQueryOptions<DecryptResult>, "queryKey" | "queryFn">): _$_tanstack_react_query0.UseQueryResult<Readonly<Record<`0x${string}`, _$_zama_fhe_sdk0.ClearValueType>>, Error>;
 
 // @public
 export type UseUserDecryptResult = ReturnType<typeof useUserDecrypt>;
+
+// @public
+export function useWrappedToken(address: Address): WrappedToken;
 
 // @public
 export function useWrapperDiscovery(config: UseWrapperDiscoveryConfig, options?: Omit<UseQueryOptions<Address | null>, "queryKey" | "queryFn">): _$_tanstack_react_query0.UseQueryResult<`0x${string}` | null, Error>;
@@ -379,12 +379,6 @@ export interface UseWrapperDiscoverySuspenseConfig {
 
 // @public
 export function useWrappersRegistryAddress(): Address | undefined;
-
-// @public
-export interface UseZamaConfig {
-    tokenAddress: Address;
-    wrapperAddress?: Address;
-}
 
 // @public
 export function useZamaSDK(): ZamaSDK;

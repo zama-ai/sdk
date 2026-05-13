@@ -1,6 +1,6 @@
 import { describe, it, expect } from "../test-fixtures";
-import { ReadonlyToken } from "../token/readonly-token";
 import { Token } from "../token/token";
+import { WrappedToken } from "../token/wrapped-token";
 import { SignerNotConfiguredError, ZamaErrorCode } from "../errors";
 import type { ZamaSDK } from "../zama-sdk";
 import type { Address } from "viem";
@@ -26,10 +26,14 @@ describe("ZamaSDK without signer", () => {
     expect(sdk.signer).toBeUndefined();
   });
 
-  it("createReadonlyToken / createToken work with no signer", ({ createSDK, tokenAddress }) => {
+  it("createToken works with no signer", ({ createSDK, tokenAddress }) => {
     const sdk = createSDK({ signer: undefined });
-    expect(sdk.createReadonlyToken(tokenAddress)).toBeInstanceOf(ReadonlyToken);
     expect(sdk.createToken(tokenAddress)).toBeInstanceOf(Token);
+  });
+
+  it("createWrappedToken works with no signer", ({ createSDK, wrapperAddress }) => {
+    const sdk = createSDK({ signer: undefined });
+    expect(sdk.createWrappedToken(wrapperAddress)).toBeInstanceOf(WrappedToken);
   });
 
   it("publicDecrypt works with no signer", async ({ createSDK, relayer }) => {
@@ -43,12 +47,9 @@ describe("ZamaSDK without signer", () => {
     await expect(sdk.isAllowed(["0x1" as Address])).resolves.toBe(false);
   });
 
-  it("ReadonlyToken.isAllowed returns false when no signer", async ({
-    createSDK,
-    tokenAddress,
-  }) => {
+  it("sdk.isAllowed returns false when no signer", async ({ createSDK, tokenAddress }) => {
     const sdk = createSDK({ signer: undefined });
-    await expect(sdk.createReadonlyToken(tokenAddress).isAllowed()).resolves.toBe(false);
+    await expect(sdk.isAllowed([tokenAddress])).resolves.toBe(false);
   });
 
   it("requireSigner throws SignerNotConfiguredError without signer; returns signer when present", ({

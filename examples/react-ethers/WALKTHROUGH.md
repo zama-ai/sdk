@@ -8,10 +8,10 @@ A step-by-step guide to how this app integrates `@zama-fhe/react-sdk` using ethe
 
 ```
 page.tsx                         — wallet connect, token selector, layout
-├── providers.tsx                — ZamaProvider + EthersSigner + RelayerWeb wiring
+├── providers.tsx                — createConfig + ZamaProvider wiring
 │   └── /api/relayer/[...path]   — Next.js proxy (keeps RELAYER_API_KEY server-side)
 ├── BalancesCard.tsx             — ETH / ERC-20 / confidential balance display
-├── ShieldCard.tsx               — ERC-20 → confidential (with manual approval flow)
+├── ShieldCard.tsx               — ERC-20 → confidential via useShield
 ├── TransferCard.tsx             — confidential → confidential
 ├── UnshieldCard.tsx             — confidential → ERC-20 (2-phase)
 ├── PendingUnshieldCard.tsx      — recover an interrupted unshield from IndexedDB
@@ -24,67 +24,37 @@ page.tsx                         — wallet connect, token selector, layout
 
 ## 1. Wiring the SDK (`providers.tsx`)
 
-Three objects are required: a `signer`, a `relayer`, and a `storage`.
+The app builds one SDK config and passes it to `ZamaProvider`:
 
 ```ts
-// Signer — wraps an EIP-1193 window.ethereum provider.
-// Recreated on wallet switch (walletKey pattern) so EthersSigner is always bound to the
-// correct account. See §"Wallet reactivity" below.
-// When no wallet is installed, a stub provider is used so hooks don't throw on mount —
-// all SDK operations are gated behind address/isSepolia guards in page.tsx.
-const signer = useMemo(() => {
-  const ethereum = getEthereumProvider();
-  const provider = ethereum ?? {
-    request: async () => {
-      throw new Error("No wallet");
-    },
-    on: () => {},
-    removeListener: () => {},
-  };
-  return new EthersSigner({ ethereum: provider as any });
-}, [walletKey]);
+const zamaSepolia = {
+  ...fheSepolia,
+  relayerUrl: "http://localhost:3000/api/relayer",
+  network: SEPOLIA_RPC_URL,
+} as const;
 
-// Relayer — browser FHE worker loaded from CDN.
-// Routes through the local /api/relayer Next.js proxy so RELAYER_API_KEY stays server-side.
-// SepoliaConfig provides the chain parameters and contract addresses.
-// relayerUrl is overridden to point at the proxy; network is the RPC endpoint for reads.
-const relayer = useMemo(
-  () =>
-    new RelayerWeb({
-      getChainId: async () => {
-        const ethereum = getEthereumProvider();
-        if (!ethereum) return SepoliaConfig.chainId;
-        const hex = (await ethereum.request({ method: "eth_chainId" })) as string;
-        return parseInt(hex, 16);
-      },
-      transports: {
-        [SepoliaConfig.chainId]: {
-          ...SepoliaConfig,
-          relayerUrl: `${window.location.origin}/api/relayer`,
-          network: SEPOLIA_RPC_URL,
-        },
-      },
-    }),
-  [],
-);
+const config = createConfig({
+  chains: [zamaSepolia],
+  ethereum,
+  provider: new JsonRpcProvider(SEPOLIA_RPC_URL),
+  relayers: { [zamaSepolia.id]: web() },
+  storage: indexedDBStorage,
+  permitStorage: permitDBStorage,
+  onEvent,
+});
 ```
 
-`ZamaProvider` takes two separate IndexedDB instances:
-
-```ts
-<ZamaProvider
-  signer={signer}
-  relayer={relayer}
-  storage={indexedDBStorage}          // "CredentialStore" — encrypted keypair
-  sessionStorage={sessionDBStorage}   // "SessionStore"    — EIP-712 session signatures
->
+```tsx
+<ZamaProvider config={config}>{children}</ZamaProvider>
 ```
 
-They must be **separate** databases. Both use the same internal key — if shared, the session entry overwrites the encrypted keypair, forcing the user to re-sign on every decrypt.
+`createConfig` comes from `@zama-fhe/sdk/ethers`. The injected EIP-1193 wallet powers signatures and writes; the ethers `JsonRpcProvider` powers chain reads and receipt polling. `web()` is the browser FHE relayer factory from `@zama-fhe/sdk/web`.
+
+`storage` and `permitStorage` use separate IndexedDB instances. They store different SDK state and should remain isolated.
 
 ### Relayer proxy (`/api/relayer/[...path]/route.ts`)
 
-`RelayerWeb` runs in a Web Worker loaded from CDN. Workers require absolute URLs, so the proxy URL is constructed with `window.location.origin`:
+`web()` creates the browser relayer backed by a Web Worker loaded from CDN. This example keeps the proxy URL fixed to the local Next.js app:
 
 ```
 Browser Worker → http://localhost:3000/api/relayer/keyurl
@@ -98,12 +68,12 @@ The proxy defaults to the public Sepolia testnet relayer. No `RELAYER_URL` or `R
 
 ### Wallet reactivity
 
-`EthersSigner` is stateless — it reads the current account from the provider each time. However, `ZamaProvider` stores session state (EIP-712 signatures) that is account-specific. To avoid cross-account state leaks, the provider is remounted on wallet switch:
+`ZamaProvider` stores wallet-scoped state. To avoid cross-account state leaks, the provider is remounted on wallet switch:
 
 ```ts
 const [walletKey, setWalletKey] = useState(0);
 
-// On accountsChanged: bump walletKey → ZamaProvider remounts with a fresh EthersSigner.
+// On accountsChanged: bump walletKey → ZamaProvider remounts with fresh ethers adapter state.
 // refSeededRef guards against spurious events fired by some wallets before
 // eth_accounts resolves on page load.
 ```
@@ -147,33 +117,25 @@ useEffect(() => {
 
 **EthersSigner compat (`normalizePair`)**: `useListPairs` returns objects that may have spread an ethers `Result`. `Result` named fields (`tokenAddress`, `confidentialTokenAddress`, `isValid`) are non-enumerable prototype getters — they survive direct access but are lost after a spread. `normalizePair` reads named fields first and falls back to numeric index access (`t[0]`, `t[1]`, `t[2]`) for the ethers case. This is an ethers v6 interop quirk; viem does not require the fallback.
 
-**`actionsDisabled`** is `!isSepolia || !token` — `token` is only defined once the registry has resolved and a pair has been selected (so metadata is implicitly available).
+**Token-dependent hooks live in `SelectedTokenPanel`**: hooks such as `useIsAllowed`, `useConfidentialBalance`, and operation cards are mounted only after a real registry token is selected. This avoids passing placeholder zero addresses into SDK hooks.
+
+**`actionsDisabled`** is `!isSepolia` inside `SelectedTokenPanel` — the component only renders once a token exists.
 
 ---
 
 ## 4. Shield (`ShieldCard.tsx`)
 
 ```ts
-const token = sdk.createToken(tokenAddress); // ERC-7984 wrapper
-return token.shield(amount, { approvalStrategy: "skip" });
+const shield = useShield({ tokenAddress, wrapperAddress: tokenAddress }, { onSuccess });
+shield.mutate({
+  amount: parsedAmount,
+  approvalStrategy: "max",
+  onApprovalSubmitted: () => setPhase("approve"),
+  onShieldSubmitted: () => setPhase("submit"),
+});
 ```
 
-Approval is handled manually before calling `shield` so the UI can show a 2-step progress indicator.
-The spend cap is set to the full ERC-20 balance (not the exact shield amount) to avoid re-approval on subsequent shields within the cap.
-
-**Why the USDT reset path exists**
-
-USDT (and some forks, including the USDT Mock token used here) implement a front-running guard from the original Tether contract: `approve(spender, newAmount)` reverts when the current allowance is already non-zero. The ERC-20 spec allows this, but it is not the OpenZeppelin default.
-
-Detection: `eth_estimateGas` on the overwrite call reverts before the wallet is prompted. The component catches that and falls back to `approve(0)` → `approve(fullBalance)` (two wallet confirmations). User rejections (`ACTION_REJECTED`) re-throw immediately — no silent fallback to the reset path when the user said no.
-
-Flow:
-
-1. `currentAllowance === 0` → `approve(fullBalance)` — one confirmation, works for all token types.
-2. `currentAllowance > 0 && < amount` → try `approve(fullBalance)` directly:
-   - Succeeds → standard token, one confirmation.
-   - `estimateGas` reverts → USDT-style token → `approve(0)` then `approve(fullBalance)`, two confirmations.
-3. Call `token.shield(amount, { approvalStrategy: "skip" })` — SDK skips its own approval.
+`useShield` owns the approval + wrap flow. The SDK automatically routes through ERC-1363 `transferAndCall` when supported, or through approve + wrap otherwise. `approvalStrategy: "max"` keeps the spend cap reusable across future shields while leaving USDT-style reset handling and transaction routing inside the SDK.
 
 ---
 
@@ -184,7 +146,7 @@ const transfer = useConfidentialTransfer({ tokenAddress }, { onSuccess });
 transfer.mutate({
   to: recipient,
   amount: parsedAmount,
-  callbacks: { onEncryptComplete: () => setStep(2) },
+  onEncryptComplete: () => setStep(2),
 });
 ```
 

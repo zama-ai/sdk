@@ -11,21 +11,23 @@ describe("Integration: multi-step workflows", () => {
     it("performs full shield flow with exact approval", async ({
       relayer,
       signer,
-      token,
+      wrappedToken,
       handle,
       userAddress,
       provider,
     }) => {
       const UNDERLYING = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
 
-      // Step 1: readContract calls for underlying and allowance
+      // Step 1: readContract calls for shield path
       vi.mocked(provider.readContract)
-        .mockResolvedValueOnce(UNDERLYING) // #getUnderlying
-        .mockResolvedValueOnce(0n) // allowance check (insufficient)
+        .mockResolvedValueOnce(UNDERLYING) // isPayable → underlying()
+        .mockResolvedValueOnce(false) // isPayable → supportsInterface (not payable)
+        .mockResolvedValueOnce(1000n) // ERC-20 balanceOf(underlying, user)
+        .mockResolvedValueOnce(0n) // ERC-20 allowance(underlying, user, wrapper) — insufficient
         .mockResolvedValueOnce(handle); // confidentialBalanceOf after wrap
 
       // Step 2: Execute shield (triggers approve + wrap)
-      const shieldResult = await token.shield(500n);
+      const shieldResult = await wrappedToken.shield(500n);
       expect(shieldResult.txHash).toBe("0xtxhash");
 
       // Verify approve was called first, then wrap
@@ -40,12 +42,12 @@ describe("Integration: multi-step workflows", () => {
       );
 
       // Step 3: Check balance after shield — should read the new handle
-      const balanceHandle = await token.confidentialBalanceOf(userAddress);
+      const balanceHandle = await wrappedToken.confidentialBalanceOf(userAddress);
       expect(balanceHandle).toBe(handle);
 
       // Step 4: Decrypt the balance through the SDK-level API
-      const decryptResult = await token.sdk.userDecrypt([
-        { handle: balanceHandle, contractAddress: token.address },
+      const decryptResult = await wrappedToken.sdk.userDecrypt([
+        { handle: balanceHandle, contractAddress: wrappedToken.address },
       ]);
       expect(decryptResult[balanceHandle]).toBe(1000n);
       expect(relayer.userDecrypt).toHaveBeenCalledWith(
@@ -66,7 +68,9 @@ describe("Integration: multi-step workflows", () => {
       provider,
     }) => {
       // Step 1: Execute transfer (encrypts amount, sends tx)
-      const transferResult = await token.confidentialTransfer(RECIPIENT, 250n);
+      const transferResult = await token.confidentialTransfer(RECIPIENT, 250n, {
+        skipBalanceCheck: true,
+      });
       expect(transferResult.txHash).toBe("0xtxhash");
 
       // Verify encrypt was called with correct params
@@ -101,19 +105,19 @@ describe("Integration: multi-step workflows", () => {
     it("performs full unwrap and finalize flow", async ({
       relayer,
       signer,
-      token,
-      tokenAddress,
+      wrappedToken,
+      wrapperAddress,
       userAddress,
       provider,
     }) => {
       // Step 1: Execute unwrap (encrypts amount, sends tx)
-      const unwrapResult = await token.unwrap(500n);
+      const unwrapResult = await wrappedToken.unwrap(500n);
       expect(unwrapResult.txHash).toBe("0xtxhash");
 
       // Verify encryption happened
       expect(relayer.encrypt).toHaveBeenCalledWith({
         values: [{ value: 500n, type: "euint64" }],
-        contractAddress: tokenAddress,
+        contractAddress: wrapperAddress,
         userAddress,
       });
 
@@ -135,7 +139,7 @@ describe("Integration: multi-step workflows", () => {
       vi.mocked(signer.writeContract).mockClear();
       vi.mocked(signer.writeContract).mockResolvedValue("0xfinalizetx");
 
-      const finalizeResult = await token.finalizeUnwrap(BURN_HANDLE);
+      const finalizeResult = await wrappedToken.finalizeUnwrap(BURN_HANDLE);
       expect(finalizeResult.txHash).toBe("0xfinalizetx");
 
       // Verify publicDecrypt was called with the burn handle
@@ -150,7 +154,7 @@ describe("Integration: multi-step workflows", () => {
     it("performs combined unshield (unwrap + finalize) in one call", async ({
       relayer,
       signer,
-      token,
+      wrappedToken,
       userAddress,
       provider,
     }) => {
@@ -174,7 +178,7 @@ describe("Integration: multi-step workflows", () => {
         .mockResolvedValueOnce(eventReceipt) // #waitAndFinalizeUnshield receipt (parses event)
         .mockResolvedValueOnce({ logs: [] }); // finalizeUnwrap receipt
 
-      const unshieldResult = await token.unshield(500n);
+      const unshieldResult = await wrappedToken.unshield(500n, { skipBalanceCheck: true });
       expect(unshieldResult.txHash).toBe("0xtxhash");
 
       // Verify full pipeline: encrypt → unwrap → waitForReceipt → publicDecrypt → finalizeUnwrap

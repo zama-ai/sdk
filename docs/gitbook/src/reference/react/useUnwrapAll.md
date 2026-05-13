@@ -26,9 +26,7 @@ import { useUnwrapAll } from "@zama-fhe/react-sdk";
 import { useUnwrapAll } from "@zama-fhe/react-sdk";
 
 function UnwrapAllButton() {
-  const { mutateAsync: unwrapAll, isPending } = useUnwrapAll({
-    tokenAddress: "0xToken",
-  });
+  const { mutateAsync: unwrapAll, isPending } = useUnwrapAll("0xWrapper");
 
   const handleUnwrapAll = async () => {
     const txHash = await unwrapAll();
@@ -49,16 +47,14 @@ function UnwrapAllButton() {
 
 ## Parameters
 
-### tokenAddress
+### address
 
 `Address`
 
-Address of the confidential token wrapper contract.
+Address of the confidential wrapper contract. Passed positionally as the first argument.
 
 ```tsx
-const { mutateAsync: unwrapAll } = useUnwrapAll({
-  tokenAddress: "0xToken",
-});
+const { mutateAsync: unwrapAll } = useUnwrapAll("0xWrapper");
 ```
 
 ## Return Type

@@ -1,4 +1,4 @@
-import type { Address } from "@zama-fhe/react-sdk";
+import type { Address } from "@zama-fhe/sdk";
 
 /**
  * Module-level bridge used to associate an in-flight unwrap transaction hash

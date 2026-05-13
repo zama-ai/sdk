@@ -1,12 +1,12 @@
-import { z } from "zod";
+import { z } from "zod/mini";
 import { CDN_INTEGRITY, CDN_URL, RelayerWeb } from "../relayer/relayer-web";
 import { parseConfiguration } from "../validation";
 import { RelayerWorkerClient } from "../worker/worker.client";
 import type { WebRelayerConfig, WebRelayerOptions } from "./types";
 
 const WebRelayerOptionsSchema = z.object({
-  threads: z.number().int().positive().optional(),
-  fheArtifactCacheTTL: z.number().int().nonnegative().optional(),
+  threads: z.optional(z.int().check(z.positive())),
+  fheArtifactCacheTTL: z.optional(z.int().check(z.nonnegative())),
 });
 
 /**

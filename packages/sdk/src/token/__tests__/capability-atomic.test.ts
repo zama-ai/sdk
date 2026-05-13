@@ -10,6 +10,7 @@ import type { Address } from "viem";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { SignerCapabilityError } from "../../errors";
 import { Token } from "../token";
+import { WrappedToken } from "../wrapped-token";
 
 const RECIPIENT = "0x3333333333333333333333333333333333333333" as Address;
 const UNDERLYING = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
@@ -71,7 +72,7 @@ describe("Token (atomic surface) — SignerCapabilityError on broadcast-only sig
       .mockResolvedValueOnce(UNDERLYING) // underlying()
       .mockResolvedValueOnce(false); // supportsInterface (ERC-1363)
     const sdk = createSDK({ signer: signer });
-    const token = new Token(sdk, tokenAddress);
+    const token = new WrappedToken(sdk, tokenAddress);
     const err = await token.shield(1n).catch((e: unknown) => e);
     expectCapabilityError(err);
   });
@@ -83,7 +84,7 @@ describe("Token (atomic surface) — SignerCapabilityError on broadcast-only sig
   }) => {
     const signer = createMockSigner({ writeContract: undefined });
     const sdk = createSDK({ signer: signer });
-    const token = new Token(sdk, tokenAddress);
+    const token = new WrappedToken(sdk, tokenAddress);
     const err = await token.unwrap(1n).catch((e: unknown) => e);
     expectCapabilityError(err);
   });
@@ -97,7 +98,7 @@ describe("Token (atomic surface) — SignerCapabilityError on broadcast-only sig
     const signer = createMockSigner({ writeContract: undefined });
     vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING);
     const sdk = createSDK({ signer: signer });
-    const token = new Token(sdk, tokenAddress);
+    const token = new WrappedToken(sdk, tokenAddress);
     const err = await token.approveUnderlying(1n).catch((e: unknown) => e);
     expectCapabilityError(err);
   });
@@ -109,9 +110,8 @@ describe("Token (atomic surface) — SignerCapabilityError on broadcast-only sig
   }) => {
     const signer = createMockSigner({ writeContract: undefined });
     const sdk = createSDK({ signer: signer });
-    const token = new Token(sdk, tokenAddress);
-    const err = await token
-      .delegateDecryption({ delegateAddress: RECIPIENT })
+    const err = await sdk
+      .delegateDecryption({ contractAddress: tokenAddress, delegateAddress: RECIPIENT })
       .catch((e: unknown) => e);
     expectCapabilityError(err);
   });

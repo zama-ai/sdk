@@ -50,11 +50,11 @@ function DelegatedBalance({
 
 ## Parameters
 
-### tokenAddress
+### address
 
 `Address`
 
-Address of the confidential token contract. Passed as the first argument to `useDecryptBalanceAs`.
+Address of the confidential token contract. Passed positionally as the first argument.
 
 ```ts
 const { mutateAsync: decryptAs } = useDecryptBalanceAs("0xToken");

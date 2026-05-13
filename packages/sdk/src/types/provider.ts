@@ -39,7 +39,7 @@ export interface GenericProvider {
   waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
   /**
    * Return the latest block timestamp in seconds.
-   * Used by {@link ReadonlyToken.isDelegated} to compare delegation expiry
+   * Used by {@link ZamaSDK.isDelegated} to compare delegation expiry
    * against the chain clock instead of the local clock.
    */
   getBlockTimestamp(): Promise<bigint>;

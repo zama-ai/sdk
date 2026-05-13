@@ -8,7 +8,6 @@ import type { Address } from "viem";
 
 export interface UnderlyingAllowanceQueryConfig {
   owner?: Address;
-  wrapperAddress?: Address;
   query?: Record<string, unknown>;
 }
 
@@ -23,25 +22,19 @@ export function underlyingAllowanceQueryOptions(
   ReturnType<typeof zamaQueryKeys.underlyingAllowance.scope>
 > {
   const ownerKey = config.owner;
-  const wrapperAddressKey = config.wrapperAddress;
   const queryEnabled = config.query?.enabled !== false;
-  const queryKey = zamaQueryKeys.underlyingAllowance.scope(
-    tokenAddress,
-    ownerKey,
-    wrapperAddressKey,
-  );
+  const queryKey = zamaQueryKeys.underlyingAllowance.scope(tokenAddress, ownerKey);
 
   return {
     ...filterQueryOptions(config.query ?? {}),
     queryKey,
     queryFn: async (context) => {
-      const [, { owner: keyOwner, wrapperAddress: keyWrapperAddress }] = context.queryKey;
+      const [, { tokenAddress: keyTokenAddress, owner: keyOwner }] = context.queryKey;
       assertNonNullable(keyOwner, "underlyingAllowanceQueryOptions: owner");
-      assertNonNullable(keyWrapperAddress, "underlyingAllowanceQueryOptions: wrapperAddress");
-      const underlying = await sdk.provider.readContract(underlyingContract(keyWrapperAddress));
-      return sdk.provider.readContract(allowanceContract(underlying, keyOwner, keyWrapperAddress));
+      const underlying = await sdk.provider.readContract(underlyingContract(keyTokenAddress));
+      return sdk.provider.readContract(allowanceContract(underlying, keyOwner, keyTokenAddress));
     },
     staleTime: 30_000,
-    enabled: Boolean(ownerKey && wrapperAddressKey) && queryEnabled,
+    enabled: Boolean(ownerKey) && queryEnabled,
   };
 }

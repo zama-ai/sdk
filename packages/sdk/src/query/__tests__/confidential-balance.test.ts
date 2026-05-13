@@ -1,17 +1,14 @@
 import type { Address } from "viem";
 import { describe, expect, test, vi, mockQueryContext } from "../../test-fixtures";
-import { ReadonlyToken } from "../../token/readonly-token";
+import { Token } from "../../token/token";
 import { confidentialBalanceQueryOptions } from "../confidential-balance";
 
 describe("confidentialBalanceQueryOptions", () => {
   const tokenAddress = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
   const owner = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
 
-  test("query key includes tokenAddress and owner (no handle)", ({
-    createMockReadonlyToken,
-    signer,
-  }) => {
-    const token = createMockReadonlyToken(tokenAddress);
+  test("query key includes tokenAddress and owner (no handle)", ({ createMockToken, signer }) => {
+    const token = createMockToken(tokenAddress);
     const walletAccount = signer.walletAccount.getSnapshot();
     const options = confidentialBalanceQueryOptions(
       token,
@@ -33,8 +30,8 @@ describe("confidentialBalanceQueryOptions", () => {
     ]);
   });
 
-  test("enabled is true when owner is provided", ({ createMockReadonlyToken, signer }) => {
-    const token = createMockReadonlyToken(tokenAddress);
+  test("enabled is true when owner is provided", ({ createMockToken, signer }) => {
+    const token = createMockToken(tokenAddress);
     const options = confidentialBalanceQueryOptions(
       token,
       { tokenAddress, account: owner },
@@ -44,15 +41,15 @@ describe("confidentialBalanceQueryOptions", () => {
     expect(options.enabled).toBe(true);
   });
 
-  test("enabled is false when owner is undefined", ({ createMockReadonlyToken }) => {
-    const token = createMockReadonlyToken(tokenAddress);
+  test("enabled is false when owner is undefined", ({ createMockToken }) => {
+    const token = createMockToken(tokenAddress);
     const options = confidentialBalanceQueryOptions(token, { tokenAddress });
 
     expect(options.enabled).toBe(false);
   });
 
-  test("enabled is false when query.enabled is false", ({ createMockReadonlyToken, signer }) => {
-    const token = createMockReadonlyToken(tokenAddress);
+  test("enabled is false when query.enabled is false", ({ createMockToken, signer }) => {
+    const token = createMockToken(tokenAddress);
     const options = confidentialBalanceQueryOptions(
       token,
       {
@@ -68,7 +65,7 @@ describe("confidentialBalanceQueryOptions", () => {
 
   test("enabled is false when signer-backed credentials are absent", ({ createSDK }) => {
     const sdk = createSDK({ signer: undefined });
-    const token = new ReadonlyToken(sdk, tokenAddress);
+    const token = new Token(sdk, tokenAddress);
 
     const options = confidentialBalanceQueryOptions(token, { tokenAddress, account: owner });
 
@@ -76,10 +73,10 @@ describe("confidentialBalanceQueryOptions", () => {
   });
 
   test("queryFn delegates to token.balanceOf using the owner from queryKey", async ({
-    createMockReadonlyToken,
+    createMockToken,
     signer,
   }) => {
-    const token = createMockReadonlyToken(tokenAddress);
+    const token = createMockToken(tokenAddress);
     vi.mocked(token.balanceOf).mockResolvedValue(42n);
 
     const options = confidentialBalanceQueryOptions(
