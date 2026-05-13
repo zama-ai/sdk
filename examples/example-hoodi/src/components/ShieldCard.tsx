@@ -61,6 +61,9 @@ export function ShieldCard({
   // to the reset path when the user said no.
   const shield = useMutation({
     mutationFn: async (amount: bigint) => {
+      // TODO(SDK-170): migrate to `sdk.tokens.wrapper(tokenAddress)` once this
+      // example bumps `@zama-fhe/sdk` to `3.0.0-alpha.38`+ which ships the
+      // sub-clients API. See https://linear.app/zama/issue/SDK-170.
       const token = sdk.createToken(tokenAddress);
       const userAddress = await sdk.signer.getAddress();
 
