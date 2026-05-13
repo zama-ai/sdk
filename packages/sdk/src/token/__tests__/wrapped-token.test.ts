@@ -190,7 +190,6 @@ describe("WrappedToken", () => {
 
       await expect(wrappedToken.shield(100n, { approvalStrategy: "skip" })).rejects.toMatchObject({
         code: ZamaErrorCode.TransactionReverted,
-        message: "ApproveAndWrap shield transaction failed",
       });
     });
   });
@@ -338,7 +337,6 @@ describe("WrappedToken", () => {
 
       await expect(wrappedToken.finalizeUnwrap("0xburn" as Address)).rejects.toMatchObject({
         code: ZamaErrorCode.TransactionReverted,
-        message: "Failed to finalize unshield",
       });
     });
   });

@@ -583,16 +583,16 @@ describe("Token event emissions", () => {
   });
 
   describe("approveUnderlying events", () => {
-    it("emits ApproveUnderlyingSubmitted", async ({
+    it("emits ApproveUnderlyingSubmitted with approve step", async ({
       relayer,
       signer,
       tokenAddress,
       storage,
       provider,
     }) => {
-      vi.mocked(provider.readContract).mockResolvedValue(
-        "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c",
-      );
+      vi.mocked(provider.readContract)
+        .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c")
+        .mockResolvedValueOnce(0n);
       const { token, events } = setupSdkWithEvents({
         relayer,
         signer,
@@ -604,6 +604,34 @@ describe("Token event emissions", () => {
 
       const types = events.map((e) => e.type);
       expect(types).toContain(ZamaSDKEvents.ApproveUnderlyingSubmitted);
+      const submitted = events.find((e) => e.type === ZamaSDKEvents.ApproveUnderlyingSubmitted);
+      expect(submitted).toMatchObject({ step: "approve" });
+    });
+
+    it("distinguishes reset and approve submissions", async ({
+      relayer,
+      signer,
+      tokenAddress,
+      storage,
+      provider,
+    }) => {
+      vi.mocked(provider.readContract)
+        .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c")
+        .mockResolvedValueOnce(50n);
+      const { token, events } = setupSdkWithEvents({
+        relayer,
+        signer,
+        provider,
+        storage,
+        tokenAddress,
+      });
+      await token.approveUnderlying(100n);
+
+      expect(
+        events
+          .filter((e) => e.type === ZamaSDKEvents.ApproveUnderlyingSubmitted)
+          .map((e) => e.step),
+      ).toEqual(["reset", "approve"]);
     });
   });
 

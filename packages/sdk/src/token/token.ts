@@ -1,4 +1,4 @@
-import { type Address, getAddress } from "viem";
+import { type Address, getAddress, type Hex } from "viem";
 import {
   confidentialBalanceOfContract,
   confidentialTransferContract,
@@ -21,19 +21,26 @@ import {
   EncryptionFailedError,
   InsufficientConfidentialBalanceError,
   isFatalBatchError,
-  TransactionRevertedError,
   ZamaError,
 } from "../errors";
-import type { ZamaSDKEventInput } from "../events/sdk-events";
-import { ZamaSDKEvents } from "../events/sdk-events";
+import type { TransactionOperation, ZamaSDKEventInput } from "../events/sdk-events";
 import type { ClearValueType, Handle } from "../relayer/relayer-sdk.types";
 import { toError } from "../utils";
 import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
 import { assertBigint } from "../utils/assertions";
 import { pLimit } from "../utils/concurrency";
 import { isZeroHandle } from "../utils/handles";
+import {
+  submitTransaction as submitSdkTransaction,
+  type ZamaErrorClass,
+} from "../utils/submit-transaction";
 import { swallow } from "../utils/swallow";
-import type { TransactionResult, TransferCallbacks, TransferOptions } from "../types";
+import type {
+  TransactionResult,
+  TransferCallbacks,
+  TransferOptions,
+  WriteContractConfig,
+} from "../types";
 import type { ZamaSDK } from "../zama-sdk";
 
 /** Options for {@link Token.batchDecryptBalancesAs}. */
@@ -519,7 +526,6 @@ export class Token {
     amount: bigint,
     options?: TransferOptions,
   ): Promise<TransactionResult> {
-    const signer = this.sdk.requireSigner("confidentialTransfer");
     const account = await requireAlignedWalletAccount(
       "confidentialTransfer",
       this.sdk.signer,
@@ -544,27 +550,11 @@ export class Token {
       throw new EncryptionFailedError("Encryption returned no handles");
     }
 
-    try {
-      const txHash = await signer.writeContract(
-        confidentialTransferContract(this.address, normalizedTo, handles[0]!, inputProof),
-      );
-      this.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash });
-      void swallow("transfer: onTransferSubmitted", () => onTransferSubmitted?.(txHash));
-      const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
-      return { txHash, receipt };
-    } catch (error) {
-      this.emit({
-        type: ZamaSDKEvents.TransactionError,
-        operation: "transfer",
-        error: toError(error),
-      });
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new TransactionRevertedError("Transfer transaction failed", {
-        cause: error,
-      });
-    }
+    return this.submitTransaction({
+      operation: "transfer",
+      config: confidentialTransferContract(this.address, normalizedTo, handles[0]!, inputProof),
+      onSubmitted: onTransferSubmitted,
+    });
   }
 
   /**
@@ -587,7 +577,6 @@ export class Token {
     amount: bigint,
     callbacks?: TransferCallbacks,
   ): Promise<TransactionResult> {
-    const signer = this.sdk.requireSigner("confidentialTransferFrom");
     await requireAlignedWalletAccount(
       "confidentialTransferFrom",
       this.sdk.signer,
@@ -607,35 +596,17 @@ export class Token {
       throw new EncryptionFailedError("Encryption returned no handles");
     }
 
-    try {
-      const txHash = await signer.writeContract(
-        confidentialTransferFromContract(
-          this.address,
-          normalizedFrom,
-          normalizedTo,
-          handles[0]!,
-          inputProof,
-        ),
-      );
-      this.emit({ type: ZamaSDKEvents.TransferFromSubmitted, txHash });
-      void swallow("transferFrom: onTransferSubmitted", () =>
-        callbacks?.onTransferSubmitted?.(txHash),
-      );
-      const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
-      return { txHash, receipt };
-    } catch (error) {
-      this.emit({
-        type: ZamaSDKEvents.TransactionError,
-        operation: "transferFrom",
-        error: toError(error),
-      });
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new TransactionRevertedError("TransferFrom transaction failed", {
-        cause: error,
-      });
-    }
+    return this.submitTransaction({
+      operation: "transferFrom",
+      config: confidentialTransferFromContract(
+        this.address,
+        normalizedFrom,
+        normalizedTo,
+        handles[0]!,
+        inputProof,
+      ),
+      onSubmitted: callbacks?.onTransferSubmitted,
+    });
   }
 
   // OPERATOR APPROVAL
@@ -654,29 +625,13 @@ export class Token {
    * ```
    */
   async setOperator(operator: Address, until?: number): Promise<TransactionResult> {
-    const signer = this.sdk.requireSigner("setOperator");
     await requireChainAlignment("setOperator", this.sdk.signer, this.sdk.provider);
     const normalizedOperator = getAddress(operator);
-    try {
-      const txHash = await signer.writeContract(
-        setOperatorContract(this.address, normalizedOperator, until),
-      );
-      this.emit({ type: ZamaSDKEvents.SetOperatorSubmitted, txHash });
-      const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
-      return { txHash, receipt };
-    } catch (error) {
-      this.emit({
-        type: ZamaSDKEvents.TransactionError,
-        operation: "setOperator",
-        error: toError(error),
-      });
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new ApprovalFailedError("Operator approval failed", {
-        cause: error,
-      });
-    }
+    return this.submitTransaction({
+      operation: "setOperator",
+      config: setOperatorContract(this.address, normalizedOperator, until),
+      errorClass: ApprovalFailedError,
+    });
   }
 
   /**
@@ -756,6 +711,32 @@ export class Token {
    */
   protected emit(input: ZamaSDKEventInput): void {
     this.sdk.emitEvent(input, this.address);
+  }
+
+  /**
+   * Submit a token-scoped write transaction through the shared SDK transaction
+   * pipeline. Callers keep pre-flight and operation-specific work local.
+   *
+   * @internal
+   */
+  protected async submitTransaction(params: {
+    operation: TransactionOperation;
+    config: WriteContractConfig;
+    onSubmitted?: (txHash: Hex) => void;
+    errorClass?: ZamaErrorClass;
+  }): Promise<TransactionResult> {
+    const { operation, config, onSubmitted, errorClass } = params;
+    const signerOperation =
+      operation === "approveUnderlying:reset" ? "approveUnderlying" : operation;
+    return submitSdkTransaction({
+      operation,
+      signer: this.sdk.requireSigner(signerOperation),
+      provider: this.sdk.provider,
+      config,
+      emit: (input) => this.emit(input),
+      onSubmitted,
+      errorClass,
+    });
   }
 
   /** Verify all tokens share the same SDK instance and return it. */

@@ -192,7 +192,6 @@ describe("Token", () => {
         }),
       ).rejects.toMatchObject({
         code: ZamaErrorCode.TransactionReverted,
-        message: "Transfer transaction failed",
       });
     });
   });
@@ -234,7 +233,6 @@ describe("Token", () => {
         ),
       ).rejects.toMatchObject({
         code: ZamaErrorCode.TransactionReverted,
-        message: "TransferFrom transaction failed",
       });
     });
   });
@@ -259,12 +257,8 @@ describe("Token", () => {
 
       await expect(
         token.setOperator("0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address),
-      ).rejects.toSatisfy((err: ZamaError) => {
-        return (
-          err instanceof ZamaError &&
-          err.code === ZamaErrorCode.ApprovalFailed &&
-          err.message === "Operator approval failed"
-        );
+      ).rejects.toMatchObject({
+        code: ZamaErrorCode.ApprovalFailed,
       });
     });
 

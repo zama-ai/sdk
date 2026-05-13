@@ -12,14 +12,12 @@ import {
   DelegationExpiryUnchangedError,
   DelegationNotFoundError,
   DelegationSelfNotAllowedError,
-  TransactionRevertedError,
   matchAclRevert,
-  ZamaError,
 } from "../errors";
-import type { ZamaSDKEventInput } from "../events/sdk-events";
-import { ZamaSDKEvents } from "../events/sdk-events";
+import type { TransactionOperation, ZamaSDKEventInput } from "../events/sdk-events";
 import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
 import type { GenericProvider, GenericSigner, TransactionResult } from "../types";
+import { submitTransaction as submitSdkTransaction } from "../utils/submit-transaction";
 
 export class DelegationService {
   readonly #provider: GenericProvider;
@@ -102,7 +100,7 @@ export class DelegationService {
       signer,
       delegateForUserDecryptionContract(acl, normalizedDelegate, normalizedContract, expDate),
       "Delegation transaction failed",
-      ZamaSDKEvents.DelegationSubmitted,
+      "delegateDecryption",
       normalizedContract,
     );
   }
@@ -145,7 +143,7 @@ export class DelegationService {
       signer,
       revokeDelegationContract(acl, normalizedDelegate, normalizedContract),
       "Revoke delegation transaction failed",
-      ZamaSDKEvents.RevokeDelegationSubmitted,
+      "revokeDelegation",
       normalizedContract,
     );
   }
@@ -241,29 +239,17 @@ export class DelegationService {
     signer: GenericSigner,
     call: Parameters<GenericSigner["writeContract"]>[0],
     failureMessage: string,
-    submittedType:
-      | typeof ZamaSDKEvents.DelegationSubmitted
-      | typeof ZamaSDKEvents.RevokeDelegationSubmitted,
+    operation: Extract<TransactionOperation, "delegateDecryption" | "revokeDelegation">,
     contractAddress: Address,
   ): Promise<TransactionResult> {
-    try {
-      const txHash = await signer.writeContract(call);
-      if (submittedType === ZamaSDKEvents.DelegationSubmitted) {
-        this.#emitEvent({ type: ZamaSDKEvents.DelegationSubmitted, txHash }, contractAddress);
-      } else {
-        this.#emitEvent({ type: ZamaSDKEvents.RevokeDelegationSubmitted, txHash }, contractAddress);
-      }
-      const receipt = await this.#provider.waitForTransactionReceipt(txHash);
-      return { txHash, receipt };
-    } catch (error) {
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      const mapped = matchAclRevert(error);
-      if (mapped) {
-        throw mapped;
-      }
-      throw new TransactionRevertedError(failureMessage, { cause: error });
-    }
+    return submitSdkTransaction({
+      operation,
+      signer,
+      provider: this.#provider,
+      config: call,
+      emit: (input) => this.#emitEvent(input, contractAddress),
+      mapError: matchAclRevert,
+      failureMessage,
+    });
   }
 }

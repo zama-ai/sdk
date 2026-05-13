@@ -85,28 +85,10 @@ export interface DecryptErrorEvent extends BaseEvent {
   handles: Handle[];
 }
 
-/**
- * Identifier for the SDK operation that emitted a {@link TransactionErrorEvent}.
- * Shield failures encode the execution path in the operation string itself
- * (`shield:transferAndCall` or `shield:approveAndWrap`) so observers can route
- * on a single field.
- */
-export type TransactionErrorOperation =
-  | "approveUnderlying"
-  | "delegateDecryption"
-  | "finalizeUnwrap"
-  | "revokeDelegation"
-  | "setOperator"
-  | "shield:transferAndCall"
-  | "shield:approveAndWrap"
-  | "transfer"
-  | "transferFrom"
-  | "unwrap";
-
 export interface TransactionErrorEvent extends BaseEvent {
   type: typeof ZamaSDKEvents.TransactionError;
   /** Which SDK operation failed. */
-  operation: TransactionErrorOperation;
+  operation: TransactionOperation;
   /** The error that caused the transaction to fail. */
   error: Error;
 }
@@ -136,6 +118,8 @@ export interface SetOperatorSubmittedEvent extends BaseEvent {
 export interface ApproveUnderlyingSubmittedEvent extends BaseEvent {
   type: typeof ZamaSDKEvents.ApproveUnderlyingSubmitted;
   txHash: Hex;
+  /** Which approval transaction was submitted. */
+  step: "reset" | "approve";
 }
 
 export interface UnwrapSubmittedEvent extends BaseEvent {
@@ -208,3 +192,95 @@ export type ZamaSDKEventInput = ZamaSDKEvent extends infer E
     ? Omit<E, "timestamp" | "tokenAddress">
     : never
   : never;
+
+type SubmittedEventByOperation = {
+  approveUnderlying: ApproveUnderlyingSubmittedEvent;
+  "approveUnderlying:reset": ApproveUnderlyingSubmittedEvent;
+  delegateDecryption: DelegationSubmittedEvent;
+  finalizeUnwrap: FinalizeUnwrapSubmittedEvent;
+  revokeDelegation: RevokeDelegationSubmittedEvent;
+  setOperator: SetOperatorSubmittedEvent;
+  "shield:transferAndCall": ShieldSubmittedEvent;
+  "shield:approveAndWrap": ShieldSubmittedEvent;
+  transfer: TransferSubmittedEvent;
+  transferFrom: TransferFromSubmittedEvent;
+  unwrap: UnwrapSubmittedEvent;
+  unwrapAll: UnwrapSubmittedEvent;
+};
+
+type TransactionOperationMetadata = {
+  readonly [O in TransactionOperation]: {
+    readonly submittedEvent: (
+      txHash: Hex,
+    ) => Omit<SubmittedEventByOperation[O], "timestamp" | "tokenAddress">;
+  };
+};
+
+/**
+ * SDK transaction operations that emit submitted/error lifecycle events.
+ *
+ * Operation strings encode the execution-path discriminator for flows that have
+ * one (`shield:transferAndCall` vs. `shield:approveAndWrap`), routing both error
+ * and success events on a single field — see {@link transactionOperationMetadata}.
+ */
+export type TransactionOperation = keyof SubmittedEventByOperation;
+
+/**
+ * Single source of truth for each transaction operation's submitted-event payload.
+ * The `satisfies` check keeps the table exhaustive and preserves the specific
+ * operation → event pairing.
+ */
+export const transactionOperationMetadata = {
+  approveUnderlying: {
+    submittedEvent: (txHash) => ({
+      type: ZamaSDKEvents.ApproveUnderlyingSubmitted,
+      txHash,
+      step: "approve",
+    }),
+  },
+  "approveUnderlying:reset": {
+    submittedEvent: (txHash) => ({
+      type: ZamaSDKEvents.ApproveUnderlyingSubmitted,
+      txHash,
+      step: "reset",
+    }),
+  },
+  delegateDecryption: {
+    submittedEvent: (txHash) => ({ type: ZamaSDKEvents.DelegationSubmitted, txHash }),
+  },
+  finalizeUnwrap: {
+    submittedEvent: (txHash) => ({ type: ZamaSDKEvents.FinalizeUnwrapSubmitted, txHash }),
+  },
+  revokeDelegation: {
+    submittedEvent: (txHash) => ({ type: ZamaSDKEvents.RevokeDelegationSubmitted, txHash }),
+  },
+  setOperator: {
+    submittedEvent: (txHash) => ({ type: ZamaSDKEvents.SetOperatorSubmitted, txHash }),
+  },
+  "shield:transferAndCall": {
+    submittedEvent: (txHash) => ({
+      type: ZamaSDKEvents.ShieldSubmitted,
+      txHash,
+      shieldPath: "transferAndCall",
+    }),
+  },
+  "shield:approveAndWrap": {
+    submittedEvent: (txHash) => ({
+      type: ZamaSDKEvents.ShieldSubmitted,
+      txHash,
+      shieldPath: "approveAndWrap",
+    }),
+  },
+  transfer: {
+    submittedEvent: (txHash) => ({ type: ZamaSDKEvents.TransferSubmitted, txHash }),
+  },
+  transferFrom: {
+    submittedEvent: (txHash) => ({ type: ZamaSDKEvents.TransferFromSubmitted, txHash }),
+  },
+  unwrap: {
+    submittedEvent: (txHash) => ({ type: ZamaSDKEvents.UnwrapSubmitted, txHash }),
+  },
+  unwrapAll: {
+    submittedEvent: (txHash) => ({ type: ZamaSDKEvents.UnwrapSubmitted, txHash }),
+  },
+} satisfies TransactionOperationMetadata;
