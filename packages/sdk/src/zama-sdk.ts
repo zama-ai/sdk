@@ -1,6 +1,7 @@
-import { getAddress, type Address, type Hex } from "viem";
+import { getAddress, type Address } from "viem";
 import type { ZamaConfig } from "./config/types";
 import { CredentialService } from "./credentials/credential-service";
+import { OfflineClient } from "./clients/offline-client";
 import { SignerNotConfiguredError, wrapDecryptError } from "./errors";
 import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventListener } from "./events/sdk-events";
 import type { DecryptHandle } from "./query/user-decrypt";
@@ -15,18 +16,9 @@ import type {
 import { ReadonlyToken } from "./token/readonly-token";
 import { Token } from "./token/token";
 import type {
-  CredentialPermitRequest,
-  CredentialPermitResult,
-  ExecuteRequest,
   GenericProvider,
   GenericSigner,
   GenericStorage,
-  PermitKind,
-  PreparedFor,
-  PreparedPermitFor,
-  PreparedTransaction,
-  TransactionKind,
-  TransactionPrepareRequest,
   TransactionResult,
   WalletAccountListener,
 } from "./types";
@@ -37,10 +29,7 @@ import { DecryptionService, type BatchDecryptHandlesResult } from "./services/de
 import { DelegationService } from "./services/delegation-service";
 import { EncryptionService } from "./services/encryption-service";
 import { LifecycleService } from "./services/lifecycle-service";
-import {
-  OfflineSigningService,
-  type OfflineSigningOptions,
-} from "./services/offline-signing-service";
+import { OfflineSigningService } from "./services/offline-signing-service";
 import { WrappersRegistry } from "./wrappers-registry";
 
 /**
@@ -57,6 +46,14 @@ export class ZamaSDK {
    * Uses built-in defaults from chain configs, and the SDK's `registryTTL` if configured.
    */
   readonly registry: WrappersRegistry;
+  /**
+   * Sub-client for the offline-signing pipeline — `prepare → sign →
+   * broadcast` decomposed for HSM, policy-engine, and cross-process
+   * custody workflows. Atomic call sites for online signers
+   * (`Token.confidentialTransfer`, etc.) remain available on {@link Token}
+   * unchanged.
+   */
+  readonly offline: OfflineClient;
   readonly #registryTTL: number;
   readonly #onEvent: ZamaSDKEventListener;
   readonly #cache: CachingService;
@@ -129,6 +126,7 @@ export class ZamaSDK {
       relayer: this.relayer,
       credentialService: this.#credentialService,
     });
+    this.offline = new OfflineClient(this.#offlineSigningService);
   }
 
   /**
@@ -155,145 +153,6 @@ export class ZamaSDK {
       throw new SignerNotConfiguredError(operation);
     }
     return this.#decryptionService;
-  }
-
-  // ─── Deferred signing pipeline ───────────────────────────────────────
-  // For institutional custody / HSM / policy-engine workflows where build,
-  // sign, and broadcast cannot run synchronously in a single Promise.
-  // Atomic call sites (`Token.confidentialTransfer`, etc.) remain unchanged.
-
-  /**
-   * Build an RLP-encoded unsigned transaction for the given request. The
-   * caller signs it externally — via {@link sign}, an HSM ceremony, an
-   * out-of-process custodian — and feeds the result back into
-   * {@link broadcast} or {@link execute}.
-   *
-   * Signer-optional: works without a configured signer (canonical shape for
-   * cross-process custody — the back-end signer service consumes
-   * `prepared.unsignedTx` and returns signed bytes).
-   *
-   * @throws {@link SignerAddressMismatchError} if a signer IS configured and
-   *   its connected wallet address differs from `request.from`.
-   * @throws {@link ChainMismatchError} if a signer IS configured and its
-   *   chain disagrees with the provider's chain.
-   */
-  prepare<K extends TransactionKind>(
-    request: Extract<TransactionPrepareRequest, { kind: K }>,
-    options?: OfflineSigningOptions,
-  ): Promise<PreparedFor<K>>;
-  prepare<K extends PermitKind>(
-    request: CredentialPermitRequest,
-    options?: OfflineSigningOptions,
-  ): Promise<PreparedPermitFor<K>>;
-  prepare(
-    request: TransactionPrepareRequest | CredentialPermitRequest,
-    options?: OfflineSigningOptions,
-  ): Promise<PreparedTransaction | PreparedPermitFor<PermitKind>> {
-    return this.#offlineSigningService.prepare(request as never, options);
-  }
-
-  /**
-   * **In-process convenience** that delegates to
-   * `this.signer.signTransaction(prepared.unsignedTx)` with capability checks
-   * and event/error integration. The SDK never takes custody of signing
-   * material — this method runs in your process, against the signer object
-   * you passed to {@link createConfig}; keys stay where they are.
-   *
-   * Many flows skip this method:
-   *
-   * - **Cross-process custody** (Dfns, Fireblocks, Fordefi, Turnkey policy
-   *   mode): configure with `signer: undefined`, sign in your back-end
-   *   signer service using the custodian's API, pass bytes to
-   *   {@link broadcast}. `sdk.sign()` throws {@link SignerNotConfiguredError}
-   *   here — by design.
-   * - **Permit-only signers** (KMS configurations that can `signTypedData`
-   *   but not full transactions): use the signer for `registerPermit` flows;
-   *   for tx-signing, arrange an out-of-process pipeline bypassing this
-   *   method. `sdk.sign()` throws {@link SignerCapabilityError} here.
-   *
-   * Both cases naturally route to `prepare → external sign → broadcast`
-   * — this method is the convenience for the third case where the configured
-   * signer holds the key and can sign in-process.
-   *
-   * @throws {@link SignerNotConfiguredError} no signer configured
-   * @throws {@link SignerCapabilityError} signer lacks `signTransaction`
-   * @throws {@link SigningFailedError} signer rejected (HSM denial, policy
-   *   refusal, timeout, …)
-   */
-  sign(prepared: PreparedTransaction): Promise<Hex> {
-    return this.#offlineSigningService.sign(prepared);
-  }
-
-  /**
-   * Submit a previously-signed transaction, await its receipt, emit the
-   * matching `*Submitted` event, and return the {@link TransactionResult}.
-   */
-  broadcast(prepared: PreparedTransaction, signedTx: Hex): Promise<TransactionResult> {
-    return this.#offlineSigningService.broadcast(prepared, signedTx);
-  }
-
-  /**
-   * Bundled in-process flow from a request. Accepts:
-   * - a {@link TransactionPrepareRequest} (prepare + sign + broadcast),
-   * - a {@link CredentialPermitRequest} (prepare + sign + register).
-   *
-   * Callers who already hold a {@link PreparedTransaction} chain
-   * `await broadcast(prepared, await sign(prepared))` — keeping the
-   * prepare/sign/broadcast call shape visible at the call site.
-   */
-  execute(
-    input: TransactionPrepareRequest,
-    options?: OfflineSigningOptions,
-  ): Promise<TransactionResult>;
-  execute(
-    input: CredentialPermitRequest,
-    options?: OfflineSigningOptions,
-  ): Promise<CredentialPermitResult | void>;
-  execute(
-    input: ExecuteRequest,
-    options?: OfflineSigningOptions,
-  ): Promise<TransactionResult | CredentialPermitResult | void> {
-    return this.#offlineSigningService.execute(input, options);
-  }
-
-  /**
-   * Persist an externally-signed credential permit. Pair with
-   * `sdk.prepare({ kind: "CredentialPermit", from, contracts })` and an
-   * external `signTypedData` call over `prepared.typedData`.
-   *
-   * Signer-optional: works without a configured signer.
-   */
-  registerPermit<K extends PermitKind>(
-    prepared: PreparedPermitFor<K>,
-    signature: Hex,
-  ): Promise<CredentialPermitResult> {
-    return this.#offlineSigningService.registerPermit(prepared, signature);
-  }
-
-  /**
-   * Cache-sync escape hatch when an external process broadcast
-   * `prepared.unsignedTx` directly via `eth_sendRawTransaction` and this
-   * process needs the matching receipt + event emission without holding
-   * the signed bytes.
-   */
-  completeFromTxHash(prepared: PreparedTransaction, txHash: Hex): Promise<TransactionResult> {
-    return this.#offlineSigningService.completeFromTxHash(prepared, txHash);
-  }
-
-  /**
-   * Re-stamp a prepared transaction with the current chain state — fresh
-   * nonce, fee parameters, and gas limit. Call this before {@link sign}
-   * when the gap since {@link prepare} was long enough for values to drift
-   * (custodian approval ceremonies, multi-party signing, etc.). The
-   * original `prepared` is left untouched (immutable).
-   *
-   * Signer-optional: works without a configured signer.
-   */
-  refreshPrepared<K extends TransactionKind>(
-    prepared: PreparedFor<K>,
-    options?: OfflineSigningOptions,
-  ): Promise<PreparedFor<K>> {
-    return this.#offlineSigningService.refreshPrepared(prepared, options);
   }
 
   /**

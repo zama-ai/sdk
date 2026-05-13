@@ -177,11 +177,11 @@ const dfns = test.extend<DfnsFixtures>({
   },
 });
 
-describe.skipIf(env === null)("Integration: DFNS deferred signing on Sepolia", () => {
+describe.skipIf(env === null)("Integration: DFNS offline signing on Sepolia", () => {
   dfns(
     "prepare → DFNS async sign (policy approval) → broadcast",
     async ({ sdk, dfnsAccount, pollDfnsSignature, env }) => {
-      const prepared = await sdk.prepare({
+      const prepared = await sdk.offline.prepare({
         kind: "ConfidentialTransfer",
         from: dfnsAccount.address,
         token: env.TOKEN_ADDRESS,
@@ -200,7 +200,7 @@ describe.skipIf(env === null)("Integration: DFNS deferred signing on Sepolia", (
       const signedTx = signedData as Hex;
       expect(signedTx).toMatch(/^0x[0-9a-f]+$/i);
 
-      const result = await sdk.broadcast(prepared, signedTx);
+      const result = await sdk.offline.broadcast(prepared, signedTx);
       expect(result.txHash).toMatch(/^0x[0-9a-f]{64}$/i);
       expect(result.receipt.logs).toBeInstanceOf(Array);
     },
@@ -210,14 +210,14 @@ describe.skipIf(env === null)("Integration: DFNS deferred signing on Sepolia", (
   dfns(
     "prepare → DFNS async signTypedData (policy approval) → registerPermit",
     async ({ sdk, pollDfnsSignature, dfnsAccount, env }) => {
-      const prepared = await sdk.prepare({
+      const prepared = await sdk.offline.prepare({
         kind: "CredentialPermit",
         from: dfnsAccount.address,
         contracts: [env.TOKEN_ADDRESS],
       });
 
       if (prepared.typedData === null) {
-        const cached = await sdk.registerPermit(prepared, "0x" as Hex);
+        const cached = await sdk.offline.registerPermit(prepared, "0x" as Hex);
         expect(cached.contracts).toEqual(prepared.context.chunk);
         return;
       }
@@ -261,7 +261,7 @@ describe.skipIf(env === null)("Integration: DFNS deferred signing on Sepolia", (
       const sig = signatureEncoded as Hex;
       expect(sig).toMatch(/^0x[0-9a-f]{130}$/i);
 
-      const registered = await sdk.registerPermit(prepared, sig);
+      const registered = await sdk.offline.registerPermit(prepared, sig);
       expect(registered.contracts.length).toBeGreaterThan(0);
       expect(registered.durationDays).toBeGreaterThan(0);
     },

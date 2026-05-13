@@ -4,7 +4,7 @@
  * `SignerCapabilityError` from every atomic write method, not a runtime
  * `TypeError`. Each test asserts the error is typed and carries
  * `capability: "writeContract"` so callers can branch cleanly toward the
- * deferred `prepare* / complete*` surface.
+ * offline-signing `prepare* / complete*` surface.
  */
 import type { Address } from "viem";
 import { describe, expect, test, vi } from "../../test-fixtures";

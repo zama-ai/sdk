@@ -10,7 +10,7 @@ export interface RegisterPermitParams {
 }
 
 /**
- * Mutation options for `sdk.registerPermit` — persists an externally-signed
+ * Mutation options for `sdk.offline.registerPermit` — persists an externally-signed
  * typed-data envelope in the credential cache. Permit-kind only.
  */
 export function registerPermitMutationOptions(
@@ -22,6 +22,6 @@ export function registerPermitMutationOptions(
 > {
   return {
     mutationKey: ["zama.registerPermit"] as const,
-    mutationFn: ({ prepared, signature }) => sdk.registerPermit(prepared, signature),
+    mutationFn: ({ prepared, signature }) => sdk.offline.registerPermit(prepared, signature),
   };
 }

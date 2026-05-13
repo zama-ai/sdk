@@ -11,7 +11,7 @@ export interface BroadcastParams {
 }
 
 /**
- * Mutation options for `sdk.broadcast` — submits a previously-signed
+ * Mutation options for `sdk.offline.broadcast` — submits a previously-signed
  * transaction and awaits its receipt. Tx-kind only (compile-time enforced
  * upstream).
  */
@@ -20,7 +20,7 @@ export function broadcastMutationOptions(
 ): MutationFactoryOptions<readonly ["zama.broadcast"], BroadcastParams, TransactionResult> {
   return {
     mutationKey: ["zama.broadcast"] as const,
-    mutationFn: ({ prepared, signedTx }) => sdk.broadcast(prepared, signedTx),
+    mutationFn: ({ prepared, signedTx }) => sdk.offline.broadcast(prepared, signedTx),
   };
 }
 
@@ -31,7 +31,7 @@ export interface CompleteFromTxHashParams {
 }
 
 /**
- * Mutation options for `sdk.completeFromTxHash` — cache-sync escape hatch
+ * Mutation options for `sdk.offline.completeFromTxHash` — cache-sync escape hatch
  * when an external process broadcast `prepared.unsignedTx` directly.
  */
 export function completeFromTxHashMutationOptions(
@@ -43,6 +43,6 @@ export function completeFromTxHashMutationOptions(
 > {
   return {
     mutationKey: ["zama.completeFromTxHash"] as const,
-    mutationFn: ({ prepared, txHash }) => sdk.completeFromTxHash(prepared, txHash),
+    mutationFn: ({ prepared, txHash }) => sdk.offline.completeFromTxHash(prepared, txHash),
   };
 }

@@ -25,7 +25,7 @@ export interface CredentialServiceConfig {
   /**
    * Optional signer. Required for {@link CredentialService.allow},
    * {@link CredentialService.revokePermits}, and
-   * {@link CredentialService.clearCredentials}. The deferred-signing entry
+   * {@link CredentialService.clearCredentials}. The offline-signing entry
    * points ({@link CredentialService.prepareEIP712},
    * {@link CredentialService.registerSignedPermit}) work without a signer
    * (canonical cross-process custody shape).
@@ -224,7 +224,7 @@ export class CredentialService {
   }
 
   /**
-   * Build the EIP-712 envelope and permit context for a deferred-signing
+   * Build the EIP-712 envelope and permit context for an offline-signing
    * credential permit. The caller signs `typedData` externally (custodian,
    * HSM, …) and feeds the signature back to {@link registerSignedPermit}.
    *
@@ -281,7 +281,7 @@ export class CredentialService {
     const [chunk, ...extra] = chunks;
     if (chunk === undefined || extra.length > 0) {
       throw new ConfigurationError(
-        `Deferred credential permit accepts at most one permit chunk (≤10 uncovered contracts) per prepare → registerPermit cycle; got ${uncovered.length}. Split contracts at the call site and run one cycle per chunk.`,
+        `Offline credential permit accepts at most one permit chunk (≤10 uncovered contracts) per prepare → registerPermit cycle; got ${uncovered.length}. Split contracts at the call site and run one cycle per chunk.`,
       );
     }
     const startTimestamp = nowSeconds();

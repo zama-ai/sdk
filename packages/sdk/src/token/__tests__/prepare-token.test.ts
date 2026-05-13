@@ -111,7 +111,7 @@ describe("Token.prepareShield — routing", () => {
     expect(planNon.steps[1]).toMatchObject({ kind: "Wrap", to: RECIPIENT });
   });
 
-  test("the plan steps can be fed back into sdk.prepare", async ({
+  test("the plan steps can be fed back into sdk.offline.prepare", async ({
     createSDK,
     signer,
     provider,
@@ -123,7 +123,7 @@ describe("Token.prepareShield — routing", () => {
     const token = new Token(sdk, tokenAddress, wrapperAddress);
     const plan = await token.prepareShield(750n);
     for (const step of plan.steps) {
-      await sdk.prepare(step);
+      await sdk.offline.prepare(step);
     }
     expect(provider.prepareTransaction).toHaveBeenCalledTimes(plan.steps.length);
   });

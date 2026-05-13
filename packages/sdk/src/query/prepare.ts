@@ -18,11 +18,11 @@ export interface PrepareParams {
   readonly options?: OfflineSigningOptions;
 }
 
-/** Discriminated union over the two prepared shapes returned by `sdk.prepare`. */
+/** Discriminated union over the two prepared shapes returned by `sdk.offline.prepare`. */
 export type PrepareResult = PreparedFor<TransactionKind> | PreparedPermitFor<PermitKind>;
 
 /**
- * Mutation options for `sdk.prepare`. Generic over `kind` — the same factory
+ * Mutation options for `sdk.offline.prepare`. Generic over `kind` — the same factory
  * builds an unsigned transaction ({@link TransactionKind}) or a typed-data envelope
  * ({@link PermitKind}) depending on the request.
  */
@@ -34,7 +34,7 @@ export function prepareMutationOptions(
     mutationFn: ({ request, options }) =>
       // Delegate to the SDK's overloaded `prepare` — cast to `never` because
       // the wide union doesn't match either narrow overload signature exactly.
-      sdk.prepare(request as never, options),
+      sdk.offline.prepare(request as never, options),
   };
 }
 
@@ -43,12 +43,12 @@ export interface SignParams {
   readonly prepared: PreparedTransaction;
 }
 
-/** Mutation options for `sdk.sign` — signs prepared bytes, returns hex. */
+/** Mutation options for `sdk.offline.sign` — signs prepared bytes, returns hex. */
 export function signMutationOptions(
   sdk: ZamaSDK,
 ): MutationFactoryOptions<readonly ["zama.sign"], SignParams, Hex> {
   return {
     mutationKey: ["zama.sign"] as const,
-    mutationFn: ({ prepared }) => sdk.sign(prepared),
+    mutationFn: ({ prepared }) => sdk.offline.sign(prepared),
   };
 }

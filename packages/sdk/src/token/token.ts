@@ -869,7 +869,7 @@ export class Token extends ReadonlyToken {
   }
 
   /**
-   * Build a deferred-signing plan for {@link shield}. Routes between the
+   * Build an offline-signing plan for {@link shield}. Routes between the
    * single-tx ERC-1363 `transferAndCall` path and the two-tx
    * `approve + wrap` path the same way the atomic `shield` does. The caller
    * runs each step in order — preparing each one immediately before signing
@@ -879,9 +879,9 @@ export class Token extends ReadonlyToken {
    * ```ts
    * const plan = await token.prepareShield(1_000n);
    * for (const step of plan.steps) {
-   *   const prepared = await sdk.prepare(step);
+   *   const prepared = await sdk.offline.prepare(step);
    *   const signed   = await externalSigner.signTransaction(prepared.unsignedTx);
-   *   await sdk.broadcast(prepared, signed);
+   *   await sdk.offline.broadcast(prepared, signed);
    * }
    * ```
    */

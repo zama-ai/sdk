@@ -2,10 +2,10 @@ import { SignerCapabilityError } from "../errors";
 import type { GenericSigner } from "../types";
 
 const WRITE_CONTRACT_HINT =
-  "Use the deferred path — sdk.prepare({ kind, from, ... }) → signer.signTransaction(prepared.unsignedTx) → sdk.broadcast(prepared, signedTx) — or configure a signer that exposes writeContract (ViemSigner, EthersSigner, WagmiSigner, or any wallet adapter that signs and broadcasts atomically).";
+  "Use the offline-signing path — sdk.offline.prepare({ kind, from, ... }) → signer.signTransaction(prepared.unsignedTx) → sdk.offline.broadcast(prepared, signedTx) — or configure a signer that exposes writeContract (ViemSigner, EthersSigner, WagmiSigner, or any wallet adapter that signs and broadcasts atomically).";
 
 const SIGN_TRANSACTION_HINT =
-  "Configure a signer that exposes signTransaction (subclass BaseSigner to wrap an HSM / custodian client, or use a viem/ethers wallet that supports raw-transaction signing), or run the deferred flow with signer: undefined and sign the prepared bytes out-of-process before passing them to sdk.broadcast.";
+  "Configure a signer that exposes signTransaction (subclass BaseSigner to wrap an HSM / custodian client, or use a viem/ethers wallet that supports raw-transaction signing), or run the offline-signing flow with signer: undefined and sign the prepared bytes out-of-process before passing them to sdk.offline.broadcast.";
 
 /**
  * Type-narrowing assertion that the configured signer can sign + broadcast a
@@ -30,7 +30,7 @@ export function assertWriteContract(
 /**
  * Type-narrowing assertion that the configured signer can produce signed
  * transaction bytes for the SDK to broadcast (i.e. exposes
- * `signTransaction`). Used by the deferred-signing path when the SDK needs
+ * `signTransaction`). Used by the offline-signing path when the SDK needs
  * to ask the signer to sign an SDK-built unsigned transaction.
  */
 export function assertSignTransaction(

@@ -63,6 +63,7 @@ export {
 
 // Token abstraction layer
 export { ZamaSDK } from "./zama-sdk";
+export { OfflineClient } from "./clients/offline-client";
 export type { DecryptHandle, DecryptResult } from "./query/user-decrypt";
 export type {
   BatchDecryptHandleItem,
@@ -98,7 +99,7 @@ export type {
   GenericProvider,
   GenericStorage,
   // Per-kind prepare requests — callers authoring request literals against
-  // `sdk.prepare` / `Token.prepareX` need these names alongside `PreparedFor`.
+  // `sdk.offline.prepare` / `Token.prepareX` need these names alongside `PreparedFor`.
   ApproveUnderlyingRequest,
   ConfidentialTransferFromRequest,
   ConfidentialTransferRequest,

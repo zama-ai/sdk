@@ -6,7 +6,7 @@ import type { EIP712TypedData, Handle } from "../relayer/relayer-sdk.types";
 /**
  * Confidential ERC-7984 transfer request. Atomic shape ≡ the existing
  * {@link Token.confidentialTransfer} `(to, amount)` arguments; the SDK builds an
- * unsigned EIP-1559 transaction off of this for deferred signing.
+ * unsigned EIP-1559 transaction off of this for offline signing.
  */
 export interface ConfidentialTransferRequest {
   readonly kind: "ConfidentialTransfer";
@@ -152,7 +152,7 @@ export interface RevokeDelegationRequest {
  * `prepare` with an external `signTypedData`, then call
  * {@link ZamaSDK.registerPermit} to register the signature.
  *
- * @see {@link ExecuteRequest} — the union accepted by `sdk.execute(...)`.
+ * @see {@link ExecuteRequest} — the union accepted by `sdk.offline.execute(...)`.
  */
 export interface CredentialPermitRequest {
   readonly kind: "CredentialPermit";
@@ -234,7 +234,7 @@ export interface PreparedTransaction {
 
 /**
  * {@link PreparedTransaction} narrowed by `kind` — return type of
- * `sdk.prepare(request)` and the Token-level `prepareX` sugar methods.
+ * `sdk.offline.prepare(request)` and the Token-level `prepareX` sugar methods.
  * Always a subtype of {@link PreparedTransaction}.
  *
  * Modeled as an intersection (not a standalone interface) so kind-narrowed

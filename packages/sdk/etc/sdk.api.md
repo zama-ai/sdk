@@ -11802,6 +11802,25 @@ export class NoCiphertextError extends ZamaError {
 }
 
 // @public
+export class OfflineClient {
+    // Warning: (ae-forgotten-export) The symbol "OfflineSigningService" needs to be exported by the entry point index.d.ts
+    constructor(offlineSigningService: OfflineSigningService);
+    broadcast(prepared: PreparedTransaction, signedTx: Hex): Promise<TransactionResult>;
+    completeFromTxHash(prepared: PreparedTransaction, txHash: Hex): Promise<TransactionResult>;
+    execute(input: TransactionPrepareRequest, options?: OfflineSigningOptions): Promise<TransactionResult>;
+    // (undocumented)
+    execute(input: CredentialPermitRequest, options?: OfflineSigningOptions): Promise<CredentialPermitResult | void>;
+    prepare<K extends TransactionKind>(request: Extract<TransactionPrepareRequest, {
+        kind: K;
+    }>, options?: OfflineSigningOptions): Promise<PreparedFor<K>>;
+    // (undocumented)
+    prepare<K extends PermitKind>(request: CredentialPermitRequest, options?: OfflineSigningOptions): Promise<PreparedPermitFor<K>>;
+    refreshPrepared<K extends TransactionKind>(prepared: PreparedFor<K>, options?: OfflineSigningOptions): Promise<PreparedFor<K>>;
+    registerPermit<K extends PermitKind>(prepared: PreparedPermitFor<K>, signature: Hex): Promise<CredentialPermitResult>;
+    sign(prepared: PreparedTransaction): Promise<Hex>;
+}
+
+// @public
 export interface OfflineSigningOptions {
     readonly gasLimit?: bigint;
     readonly maxFeePerGas?: bigint;
@@ -20356,9 +20375,7 @@ export class ZamaSDK {
     constructor(config: ZamaConfig);
     allow(contracts: Address[]): Promise<void>;
     allowAs(delegator: Address, contracts: Address[]): Promise<void>;
-    broadcast(prepared: PreparedTransaction, signedTx: Hex): Promise<TransactionResult>;
     clearCredentials(): Promise<void>;
-    completeFromTxHash(prepared: PreparedTransaction, txHash: Hex): Promise<TransactionResult>;
     createReadonlyToken(address: Address): ReadonlyToken;
     createToken(address: Address, wrapper?: Address): Token;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
@@ -20379,9 +20396,6 @@ export class ZamaSDK {
     // @internal
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
-    execute(input: TransactionPrepareRequest, options?: OfflineSigningOptions): Promise<TransactionResult>;
-    // (undocumented)
-    execute(input: CredentialPermitRequest, options?: OfflineSigningOptions): Promise<CredentialPermitResult | void>;
     getDelegationExpiry(input: {
         contractAddress: Address;
         delegatorAddress: Address;
@@ -20394,18 +20408,12 @@ export class ZamaSDK {
         delegatorAddress: Address;
         delegateAddress: Address;
     }): Promise<boolean>;
+    readonly offline: OfflineClient;
     // @internal
     onWalletAccountChange(listener: WalletAccountListener): () => void;
-    prepare<K extends TransactionKind>(request: Extract<TransactionPrepareRequest, {
-        kind: K;
-    }>, options?: OfflineSigningOptions): Promise<PreparedFor<K>>;
-    // (undocumented)
-    prepare<K extends PermitKind>(request: CredentialPermitRequest, options?: OfflineSigningOptions): Promise<PreparedPermitFor<K>>;
     // (undocumented)
     readonly provider: GenericProvider;
     publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
-    refreshPrepared<K extends TransactionKind>(prepared: PreparedFor<K>, options?: OfflineSigningOptions): Promise<PreparedFor<K>>;
-    registerPermit<K extends PermitKind>(prepared: PreparedPermitFor<K>, signature: Hex): Promise<CredentialPermitResult>;
     readonly registry: WrappersRegistry;
     // (undocumented)
     readonly relayer: RelayerDispatcher;
@@ -20415,7 +20423,6 @@ export class ZamaSDK {
         delegateAddress: Address;
     }): Promise<TransactionResult>;
     revokePermits(contracts?: Address[]): Promise<void>;
-    sign(prepared: PreparedTransaction): Promise<Hex>;
     // (undocumented)
     readonly signer: GenericSigner | undefined;
     // (undocumented)

@@ -126,7 +126,7 @@ const ERROR_OPERATION_BY_KIND: Record<TransactionKind, TransactionErrorOperation
 };
 
 /**
- * Deferred-signing pipeline. Separates `prepare`, `sign`, and `broadcast`
+ * Offline-signing pipeline. Separates `prepare`, `sign`, and `broadcast`
  * for institutional custody and policy-engine workflows where the three
  * phases cannot run synchronously in a single Promise.
  *
@@ -158,7 +158,7 @@ export class OfflineSigningService {
   // ── prepare ─────────────────────────────────────────────────────────────
 
   /**
-   * Build the deferred-signing payload for the given request.
+   * Build the offline-signing payload for the given request.
    *
    * For transaction kinds, returns an RLP-encoded unsigned transaction the
    * caller signs externally (via {@link sign}, an HSM, or any out-of-process
@@ -281,7 +281,7 @@ export class OfflineSigningService {
    *
    * Re-checks chain alignment between `prepared.chainId` and the configured
    * provider before sending — the gap between prepare and broadcast is the
-   * whole point of deferred signing, and the user may have switched chains
+   * whole point of offline signing, and the user may have switched chains
    * meanwhile.
    *
    * Errors are reported in two distinct shapes so subscribers can recover:

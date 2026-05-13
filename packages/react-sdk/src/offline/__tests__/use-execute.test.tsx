@@ -33,7 +33,7 @@ describe("useExecute", () => {
     expectDefaultMutationState(state);
   });
 
-  test("routes a TransactionPrepareRequest through sdk.execute", async ({
+  test("routes a TransactionPrepareRequest through sdk.offline.execute", async ({
     renderWithProviders,
   }) => {
     const { result } = renderWithProviders(() => {
@@ -42,7 +42,7 @@ describe("useExecute", () => {
       return { sdk, mutation };
     });
 
-    const spy = vi.spyOn(result.current.sdk, "execute").mockResolvedValue(TX_RESULT);
+    const spy = vi.spyOn(result.current.sdk.offline, "execute").mockResolvedValue(TX_RESULT);
 
     const request: TransactionPrepareRequest = {
       kind: "ConfidentialTransfer",
@@ -62,7 +62,9 @@ describe("useExecute", () => {
     expect(value).toBe(TX_RESULT);
   });
 
-  test("routes a CredentialPermitRequest through sdk.execute", async ({ renderWithProviders }) => {
+  test("routes a CredentialPermitRequest through sdk.offline.execute", async ({
+    renderWithProviders,
+  }) => {
     const { result } = renderWithProviders(() => {
       const sdk = useZamaSDK();
       const mutation = useExecute();
@@ -70,7 +72,7 @@ describe("useExecute", () => {
     });
 
     const spy = vi
-      .spyOn(result.current.sdk, "execute")
+      .spyOn(result.current.sdk.offline, "execute")
       // CredentialPermitResult subset suffices for the runtime path.
       .mockResolvedValue(PERMIT_RESULT as unknown as TransactionResult);
 
@@ -99,7 +101,7 @@ describe("useExecute", () => {
     });
 
     const boom = new Error("boom");
-    vi.spyOn(result.current.sdk, "execute").mockRejectedValue(boom);
+    vi.spyOn(result.current.sdk.offline, "execute").mockRejectedValue(boom);
 
     const request: TransactionPrepareRequest = {
       kind: "ConfidentialTransfer",

@@ -17,7 +17,7 @@ import { useZamaSDK } from "../provider";
  * Tier-1 mutation: bundled in-process prepare + sign + broadcast (transaction
  * kind) or prepare + signTypedData + register (`CredentialPermit`).
  *
- * Mirrors `sdk.execute(...)` — generic over `kind`, returns the matching
+ * Mirrors `sdk.offline.execute(...)` — generic over `kind`, returns the matching
  * result shape. Requires a signer with `signTransaction` (and, for permits,
  * with `signTypedData`).
  *

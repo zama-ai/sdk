@@ -1402,9 +1402,7 @@ export class ZamaSDK {
     constructor(config: ZamaConfig);
     allow(contracts: Address[]): Promise<void>;
     allowAs(delegator: Address, contracts: Address[]): Promise<void>;
-    broadcast(prepared: PreparedTransaction, signedTx: Hex): Promise<TransactionResult>;
     clearCredentials(): Promise<void>;
-    completeFromTxHash(prepared: PreparedTransaction, txHash: Hex): Promise<TransactionResult>;
     createReadonlyToken(address: Address): ReadonlyToken;
     createToken(address: Address, wrapper?: Address): Token;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
@@ -1427,9 +1425,6 @@ export class ZamaSDK {
     // @internal
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
-    execute(input: TransactionPrepareRequest, options?: OfflineSigningOptions): Promise<TransactionResult>;
-    // (undocumented)
-    execute(input: CredentialPermitRequest, options?: OfflineSigningOptions): Promise<CredentialPermitResult | void>;
     getDelegationExpiry(input: {
         contractAddress: Address;
         delegatorAddress: Address;
@@ -1442,18 +1437,13 @@ export class ZamaSDK {
         delegatorAddress: Address;
         delegateAddress: Address;
     }): Promise<boolean>;
+    // Warning: (ae-forgotten-export) The symbol "OfflineClient" needs to be exported by the entry point index.d.ts
+    readonly offline: OfflineClient;
     // @internal
     onWalletAccountChange(listener: WalletAccountListener): () => void;
-    prepare<K extends TransactionKind>(request: Extract<TransactionPrepareRequest, {
-        kind: K;
-    }>, options?: OfflineSigningOptions): Promise<PreparedFor<K>>;
-    // (undocumented)
-    prepare<K extends PermitKind>(request: CredentialPermitRequest, options?: OfflineSigningOptions): Promise<PreparedPermitFor<K>>;
     // (undocumented)
     readonly provider: GenericProvider;
     publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
-    refreshPrepared<K extends TransactionKind>(prepared: PreparedFor<K>, options?: OfflineSigningOptions): Promise<PreparedFor<K>>;
-    registerPermit<K extends PermitKind>(prepared: PreparedPermitFor<K>, signature: Hex): Promise<CredentialPermitResult>;
     readonly registry: WrappersRegistry;
     // (undocumented)
     readonly relayer: RelayerDispatcher;
@@ -1463,7 +1453,6 @@ export class ZamaSDK {
         delegateAddress: Address;
     }): Promise<TransactionResult>;
     revokePermits(contracts?: Address[]): Promise<void>;
-    sign(prepared: PreparedTransaction): Promise<Hex>;
     // (undocumented)
     readonly signer: GenericSigner | undefined;
     // (undocumented)
@@ -1506,9 +1495,9 @@ export const ZamaSDKEvents: {
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/types-DRVsQ3Iy.d.ts:561:3 - (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
-// dist/esm/types-DRVsQ3Iy.d.ts:562:3 - (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
-// dist/esm/types-DRVsQ3Iy.d.ts:563:3 - (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
+// dist/esm/types-QFqqzbP6.d.ts:561:3 - (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
+// dist/esm/types-QFqqzbP6.d.ts:562:3 - (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
+// dist/esm/types-QFqqzbP6.d.ts:563:3 - (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

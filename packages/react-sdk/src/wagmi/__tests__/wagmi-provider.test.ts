@@ -1,5 +1,5 @@
 /**
- * Coverage for the deferred-signing methods on {@link WagmiProvider}:
+ * Coverage for the offline-signing methods on {@link WagmiProvider}:
  * - `sendRawTransaction` happy path + `ConfigurationError` when no public client
  * - `prepareTransaction` happy path + `ConfigurationError` when no public client
  *

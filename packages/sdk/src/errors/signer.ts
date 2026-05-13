@@ -71,7 +71,7 @@ export class WalletAccountNotReadyError extends SignerRequiredError {
 
 /**
  * Capabilities a {@link GenericSigner} may declare. `writeContract` covers
- * atomic broadcast-from-wallet flows; `signTransaction` covers the deferred
+ * atomic broadcast-from-wallet flows; `signTransaction` covers the offline-signing
  * custodian path where the SDK builds an unsigned tx, the signer returns
  * signed bytes, and the SDK broadcasts via `provider.sendRawTransaction`.
  */

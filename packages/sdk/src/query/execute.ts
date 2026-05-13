@@ -14,11 +14,11 @@ export interface ExecuteParams {
   readonly options?: OfflineSigningOptions;
 }
 
-/** Discriminated result returned by `sdk.execute`. */
+/** Discriminated result returned by `sdk.offline.execute`. */
 export type ExecuteResult = TransactionResult | CredentialPermitResult | void;
 
 /**
- * Mutation options for `sdk.execute` — bundled in-process prepare + sign +
+ * Mutation options for `sdk.offline.execute` — bundled in-process prepare + sign +
  * broadcast (transaction kind) or prepare + signTypedData + registerPermit
  * (`CredentialPermit`).
  */
@@ -27,6 +27,6 @@ export function executeMutationOptions(
 ): MutationFactoryOptions<readonly ["zama.execute"], ExecuteParams, ExecuteResult> {
   return {
     mutationKey: ["zama.execute"] as const,
-    mutationFn: ({ request, options }) => sdk.execute(request as never, options),
+    mutationFn: ({ request, options }) => sdk.offline.execute(request as never, options),
   };
 }

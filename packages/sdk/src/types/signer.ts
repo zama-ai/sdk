@@ -63,7 +63,7 @@ export interface WalletAccountStore {
  *
  * The SDK gates capability mismatches at runtime via
  * {@link SignerCapabilityError}: atomic write methods throw when
- * `writeContract` is absent, and the deferred `sign` path throws when
+ * `writeContract` is absent, and the offline `sign` path throws when
  * `signTransaction` is absent. Implementers extend {@link BaseSigner} for
  * the wallet-account / dispose boilerplate, or implement this interface
  * directly with {@link createWalletAccountStore}.

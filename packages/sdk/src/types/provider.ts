@@ -46,7 +46,7 @@ export interface GenericProvider {
   /**
    * Broadcast a previously-signed transaction and return its hash.
    *
-   * Used by the SDK's deferred-signing path: a custodian / HSM / policy
+   * Used by the SDK's offline-signing path: a custodian / HSM / policy
    * engine returns signed bytes via
    * {@link GenericSigner.signTransaction}, and the SDK submits them through
    * this method. Atomic signers (`writeContract`) do not exercise this
@@ -66,10 +66,10 @@ export interface GenericProvider {
    *
    * Optional overrides (`nonce`, `maxFeePerGas`, `maxPriorityFeePerGas`,
    * `gasLimit`) let callers pin values at prepare time — used by the
-   * deferred-signing pipeline when a custodian supplies its own nonce/fee
+   * offline-signing pipeline when a custodian supplies its own nonce/fee
    * manager. Implementers may ignore unknown optional args without breaking.
    *
-   * Used exclusively by the deferred-signing pipeline. Atomic signers go
+   * Used exclusively by the offline-signing pipeline. Atomic signers go
    * through {@link GenericSigner.writeContract} and never invoke this.
    *
    * Adapters delegate to their underlying client's tx-building primitives:
