@@ -1,5 +1,6 @@
 import { getAddress, type Address } from "viem";
 import { MAX_UINT64 } from "../../contracts";
+import { DelegationCooldownError, TransactionRevertedError } from "../../errors";
 import { describe, expect, test, vi } from "../../test-fixtures";
 
 const CONTRACT = getAddress("0x3333333333333333333333333333333333333333") as Address;
@@ -228,16 +229,20 @@ describe("DelegationService", () => {
     delegateAddress,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
-    vi.mocked(signer.writeContract).mockRejectedValue(
-      new Error("AlreadyDelegatedOrRevokedInSameBlock"),
-    );
+    const rootCause = new Error("AlreadyDelegatedOrRevokedInSameBlock");
+    vi.mocked(signer.writeContract).mockRejectedValue(rootCause);
 
-    await expect(
-      delegationService.revokeDelegation(signer, {
+    const thrown = await delegationService
+      .revokeDelegation(signer, {
         contractAddress: CONTRACT,
         delegatorAddress: userAddress,
         delegateAddress,
-      }),
-    ).rejects.toMatchObject({ code: "DELEGATION_COOLDOWN" });
+      })
+      .catch((error: Error) => error);
+
+    expect(thrown).toBeInstanceOf(DelegationCooldownError);
+    expect(thrown).toMatchObject({ code: "DELEGATION_COOLDOWN" });
+    expect(thrown.cause).toBeInstanceOf(TransactionRevertedError);
+    expect((thrown.cause as Error).cause).toBe(rootCause);
   });
 });
