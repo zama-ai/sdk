@@ -95,9 +95,9 @@ export {
   type CreateDelegatedUserDecryptEIP712Params,
 } from "./create-delegated-user-decrypt-eip712";
 export {
-  delegatedUserDecryptMutationOptions,
+  delegatedDecryptMutationOptions,
   type DelegatedUserDecryptMutationParams,
-} from "./delegated-user-decrypt";
+} from "./delegated-decrypt";
 export { publicDecryptMutationOptions } from "./public-decrypt";
 export { requestZKProofVerificationMutationOptions } from "./request-zk-proof-verification";
 export { grantPermitMutationOptions } from "./grant-permit";

@@ -255,6 +255,9 @@ export interface DecryptStartEvent extends BaseEvent {
 }
 
 // @public (undocumented)
+export function delegatedDecryptMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.delegatedDecrypt"], DelegatedUserDecryptMutationParams, Readonly<Record<Handle, ClearValueType>>>;
+
+// @public (undocumented)
 export function delegateDecryptionMutationOptions(sdk: ZamaSDK, contractAddress: Address): MutationFactoryOptions<readonly ["zama.delegateDecryption", Address], DelegateDecryptionParams, TransactionResult>;
 
 // @public
@@ -264,9 +267,6 @@ export interface DelegateDecryptionParams {
     // (undocumented)
     expirationDate?: Date;
 }
-
-// @public (undocumented)
-export function delegatedUserDecryptMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.delegatedUserDecrypt"], DelegatedUserDecryptMutationParams, Readonly<Record<Handle, ClearValueType>>>;
 
 // @public (undocumented)
 export interface DelegatedUserDecryptMutationParams {

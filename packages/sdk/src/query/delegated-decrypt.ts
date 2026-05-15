@@ -9,16 +9,15 @@ export interface DelegatedUserDecryptMutationParams {
   delegatorAddress: Address;
 }
 
-export function delegatedUserDecryptMutationOptions(
+export function delegatedDecryptMutationOptions(
   sdk: ZamaSDK,
 ): MutationFactoryOptions<
-  readonly ["zama.delegatedUserDecrypt"],
+  readonly ["zama.delegatedDecrypt"],
   DelegatedUserDecryptMutationParams,
   Readonly<Record<Handle, ClearValueType>>
 > {
   return {
-    mutationKey: ["zama.delegatedUserDecrypt"],
-    mutationFn: async (params) =>
-      sdk.decrypt.delegatedUser(params.handles, params.delegatorAddress),
+    mutationKey: ["zama.delegatedDecrypt"],
+    mutationFn: async (params) => sdk.decrypt.delegated(params.handles, params.delegatorAddress),
   };
 }

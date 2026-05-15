@@ -92,23 +92,19 @@ export class DecryptClient {
    *
    * @example
    * ```ts
-   * const values = await sdk.decrypt.delegatedUser([
+   * const values = await sdk.decrypt.delegated([
    *   { handle: balanceHandle, contractAddress: tokenAddr },
    * ], delegatorAddr);
    * console.log(values[balanceHandle]); // 1000n
    * ```
    */
-  async delegatedUser(
+  async delegated(
     handles: DecryptHandle[],
     delegatorAddress: Address,
     accountAddress: Address = delegatorAddress,
   ): Promise<Record<Handle, ClearValueType>> {
-    const service = this.#requireDecryptionService("delegatedUser");
-    const account = await requireAlignedWalletAccount(
-      "delegatedUser",
-      this.#signer,
-      this.#provider,
-    );
+    const service = this.#requireDecryptionService("delegated");
+    const account = await requireAlignedWalletAccount("delegated", this.#signer, this.#provider);
     return service.delegatedUserDecrypt(handles, delegatorAddress, account.address, accountAddress);
   }
 

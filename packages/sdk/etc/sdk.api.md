@@ -6132,6 +6132,7 @@ export class DecryptClient {
         relayer: RelayerDispatcher;
         decryptionService: DecryptionService | undefined;
     });
+    delegated(handles: DecryptHandle[], delegatorAddress: Address, accountAddress?: Address): Promise<Record<Handle, ClearValueType>>;
     // @internal
     delegatedBatch(input: {
         handles: DecryptHandle[];
@@ -6139,7 +6140,6 @@ export class DecryptClient {
         accountAddress?: Address;
         maxConcurrency?: number;
     }): Promise<BatchDecryptHandlesResult>;
-    delegatedUser(handles: DecryptHandle[], delegatorAddress: Address, accountAddress?: Address): Promise<Record<Handle, ClearValueType>>;
     public(handles: Handle[]): Promise<PublicDecryptResult>;
     user(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>>;
 }
@@ -20157,10 +20157,10 @@ export { ZKProofLike }
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/index-3aMfghe1.d.ts:20462:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-3aMfghe1.d.ts:20567:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-3aMfghe1.d.ts:20669:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-3aMfghe1.d.ts:20670:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-71U9oWXf.d.ts:20462:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-71U9oWXf.d.ts:20567:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-71U9oWXf.d.ts:20669:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-71U9oWXf.d.ts:20670:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

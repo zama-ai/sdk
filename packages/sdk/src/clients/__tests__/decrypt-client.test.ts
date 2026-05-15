@@ -24,7 +24,7 @@ describe("DecryptClient", () => {
     it("throws SignerNotConfiguredError when no signer", async ({ createSDK, handle }) => {
       const sdk = createSDK({ signer: undefined });
       await expect(
-        sdk.decrypt.delegatedUser([{ handle, contractAddress: TOKEN }], DELEGATOR),
+        sdk.decrypt.delegated([{ handle, contractAddress: TOKEN }], DELEGATOR),
       ).rejects.toBeInstanceOf(SignerNotConfiguredError);
     });
   });

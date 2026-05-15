@@ -235,7 +235,7 @@ export class Token {
       return 0n;
     }
 
-    const result = await this.sdk.decrypt.delegatedUser(
+    const result = await this.sdk.decrypt.delegated(
       [{ handle, contractAddress: this.address }],
       normalizedDelegator,
       normalizedAccount,
