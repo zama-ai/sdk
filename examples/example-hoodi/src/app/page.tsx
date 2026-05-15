@@ -5,8 +5,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatEther, formatUnits, parseUnits, JsonRpcProvider } from "ethers";
 import {
   useConfidentialBalance,
-  useHasPermit,
-  useGrantPermit,
+  useIsAllowed,
+  useAllow,
   useListPairs,
   useZamaSDK,
   balanceOfContract,
@@ -149,7 +149,7 @@ export default function Home() {
   const token = validPairs.find((p) => p.confidentialTokenAddress === selectedTokenAddress);
 
   // Check whether cached credentials cover the currently selected confidential token.
-  const { data: isAllowed } = useHasPermit({
+  const { data: isAllowed } = useIsAllowed({
     contractAddresses: token ? [token.confidentialTokenAddress] : [],
     query: { enabled: Boolean(token) },
   });
@@ -164,7 +164,7 @@ export default function Home() {
   // Triggers the EIP-712 wallet signature to create FHE decrypt credentials.
   // All registry pairs are passed at once — a single signature covers all tokens,
   // so switching tokens does not require a second wallet prompt.
-  const allowTokens = useGrantPermit();
+  const allowTokens = useAllow();
   function handleDecrypt() {
     if (validPairs.length === 0) return;
     allowTokens.mutate(validPairs.map((p) => p.confidentialTokenAddress));

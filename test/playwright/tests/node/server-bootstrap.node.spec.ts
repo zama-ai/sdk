@@ -57,7 +57,7 @@ test("backend bootstraps SDK, verifies FHE infra, and shuts down cleanly", async
   expect(pp).not.toBeNull();
 
   // 7. Create tokens and verify on-chain metadata
-  const readonlyUSDT = sdk.tokens.confidential(contracts.cUSDT as Address);
+  const readonlyUSDT = sdk.createToken(contracts.cUSDT as Address);
   expect(await readonlyUSDT.isConfidential()).toBe(true);
   expect(await readonlyUSDT.decimals()).toBe(6);
   const name = await readonlyUSDT.name();

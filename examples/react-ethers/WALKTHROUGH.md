@@ -117,7 +117,7 @@ useEffect(() => {
 
 **EthersSigner compat (`normalizePair`)**: `useListPairs` returns objects that may have spread an ethers `Result`. `Result` named fields (`tokenAddress`, `confidentialTokenAddress`, `isValid`) are non-enumerable prototype getters — they survive direct access but are lost after a spread. `normalizePair` reads named fields first and falls back to numeric index access (`t[0]`, `t[1]`, `t[2]`) for the ethers case. This is an ethers v6 interop quirk; viem does not require the fallback.
 
-**Token-dependent hooks live in `SelectedTokenPanel`**: hooks such as `useHasPermit`, `useConfidentialBalance`, and operation cards are mounted only after a real registry token is selected. This avoids passing placeholder zero addresses into SDK hooks.
+**Token-dependent hooks live in `SelectedTokenPanel`**: hooks such as `useIsAllowed`, `useConfidentialBalance`, and operation cards are mounted only after a real registry token is selected. This avoids passing placeholder zero addresses into SDK hooks.
 
 **`actionsDisabled`** is `!isSepolia` inside `SelectedTokenPanel` — the component only renders once a token exists.
 
@@ -248,10 +248,10 @@ Three balances are shown:
 | ERC-20       | Direct RPC via SDK signer      | `useQuery` → `sdk.signer.readContract(balanceOfContract(...))` |
 | Confidential | Relayer decryption             | `useConfidentialBalance({ tokenAddress })`                     |
 
-**Explicit decrypt pattern**: `useConfidentialBalance` is only enabled after the user has authorized FHE decryption via an EIP-712 wallet signature (`useHasPermit({ contractAddresses })` → `useGrantPermit()`). Until then, `BalancesCard` shows a "Decrypt Balance" button rather than a balance value. This avoids blind-signing prompts on mount.
+**Explicit decrypt pattern**: `useConfidentialBalance` is only enabled after the user has authorized FHE decryption via an EIP-712 wallet signature (`useIsAllowed({ contractAddresses })` → `useAllow()`). Until then, `BalancesCard` shows a "Decrypt Balance" button rather than a balance value. This avoids blind-signing prompts on mount.
 
 ```ts
-const { data: isAllowed } = useHasPermit({
+const { data: isAllowed } = useIsAllowed({
   contractAddresses: token ? [token.confidentialTokenAddress] : [],
   query: { enabled: Boolean(token) },
 });

@@ -46,7 +46,7 @@ test("operations after terminate throw", async ({ sdk }) => {
   sdk.terminate();
 
   await expect(async () => {
-    await sdk.permits.allow(["0x0000000000000000000000000000000000000001" as `0x${string}`]);
+    await sdk.permits.grantPermit(["0x0000000000000000000000000000000000000001" as `0x${string}`]);
   }).rejects.toThrow();
 });
 
@@ -77,7 +77,12 @@ test("matchZamaError routes to the correct handler", async () => {
 
 test("zero poolSize rejects at config creation", async ({ chain, publicClient, viemClient }) => {
   expect(() =>
-    createZamaSDK({ chain, publicClient, viemClient, poolOptions: { poolSize: 0 } }),
+    createZamaSDK({
+      chain,
+      publicClient,
+      viemClient,
+      poolOptions: { poolSize: 0 },
+    }),
   ).toThrow();
 });
 
@@ -86,7 +91,10 @@ test("init failure resets so next call retries", async ({ chain, publicClient, v
     chain,
     publicClient,
     viemClient,
-    transportOverrides: { relayerUrl: "http://127.0.0.1:1", network: "http://127.0.0.1:1" },
+    transportOverrides: {
+      relayerUrl: "http://127.0.0.1:1",
+      network: "http://127.0.0.1:1",
+    },
   });
 
   await expect(sdk.relayer.generateKeypair()).rejects.toThrow();
@@ -97,7 +105,7 @@ test("isConfidential on non-ERC-165 contract reverts with a ContractFunction err
   sdk,
   contracts,
 }) => {
-  const nonErc165Token = sdk.tokens.confidential(contracts.acl);
+  const nonErc165Token = sdk.createToken(contracts.acl);
   try {
     await nonErc165Token.isConfidential();
     expect(true, "Expected isConfidential to throw on a non-ERC-165 contract").toBe(false);
