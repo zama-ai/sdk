@@ -50,9 +50,6 @@ import { ZamaSDK } from '@zama-fhe/sdk';
 import { ZKProofLike } from '@zama-fhe/sdk';
 
 // @public
-export function useAllow(options?: UseMutationOptions<void, Error, Address[]>): _$_tanstack_react_query0.UseMutationResult<void, Error, `0x${string}`[], unknown>;
-
-// @public
 export function useApproveUnderlying(address: Address, options?: UseMutationOptions<TransactionResult, Error, ApproveUnderlyingParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, ApproveUnderlyingParams, `0x${string}`>;
 
 // @public
@@ -172,10 +169,13 @@ export function useFinalizeUnwrap(address: Address, options?: UseMutationOptions
 export function useGenerateKeypair(): _$_tanstack_react_query0.UseMutationResult<_$_zama_fhe_sdk0.KeypairType<`0x${string}`>, Error, void, unknown>;
 
 // @public
-export function useIsAllowed(config: UseIsAllowedConfig): _$_tanstack_react_query0.UseQueryResult<boolean, Error>;
+export function useGrantPermit(options?: UseMutationOptions<void, Error, Address[]>): _$_tanstack_react_query0.UseMutationResult<void, Error, `0x${string}`[], unknown>;
 
 // @public
-export interface UseIsAllowedConfig {
+export function useHasPermit(config: UseHasPermitConfig): _$_tanstack_react_query0.UseQueryResult<boolean, Error>;
+
+// @public
+export interface UseHasPermitConfig {
     contractAddresses: [Address, ...Address[]];
 }
 

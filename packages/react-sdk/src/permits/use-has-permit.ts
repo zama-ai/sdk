@@ -6,8 +6,8 @@ import { hasPermitQueryOptions } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 import { useWalletAccount } from "../utils/wallet-account";
 
-/** Configuration for {@link useIsAllowed}. */
-export interface UseIsAllowedConfig {
+/** Configuration for {@link useHasPermit}. */
+export interface UseHasPermitConfig {
   /** Contract addresses to check credentials against (at least one required). */
   contractAddresses: [Address, ...Address[]];
 }
@@ -25,10 +25,10 @@ export interface UseIsAllowedConfig {
  *
  * @example
  * ```tsx
- * const { data: allowed } = useIsAllowed({ contractAddresses: ["0xToken"] });
+ * const { data: allowed } = useHasPermit({ contractAddresses: ["0xToken"] });
  * ```
  */
-export function useIsAllowed(config: UseIsAllowedConfig) {
+export function useHasPermit(config: UseHasPermitConfig) {
   const sdk = useZamaSDK();
   const walletAccount = useWalletAccount(sdk);
   return useQuery<boolean>(hasPermitQueryOptions(sdk, config, { walletAccount }));

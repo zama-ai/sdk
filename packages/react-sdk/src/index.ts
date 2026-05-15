@@ -24,10 +24,10 @@ export { usePublicKey } from "./relayer/use-public-key";
 export { usePublicParams } from "./relayer/use-public-params";
 
 // Authorization hooks (generic — any contract with encrypted state)
-export { useAllow } from "./authorization/use-allow";
-export { useIsAllowed, type UseIsAllowedConfig } from "./authorization/use-is-allowed";
-export { useRevokePermits } from "./authorization/use-revoke-permits";
-export { useClearCredentials } from "./authorization/use-clear-credentials";
+export { useGrantPermit } from "./permits/use-grant-permit";
+export { useHasPermit, type UseHasPermitConfig } from "./permits/use-has-permit";
+export { useRevokePermits } from "./permits/use-revoke-permits";
+export { useClearCredentials } from "./permits/use-clear-credentials";
 
 // Token hooks (ERC-20 token operations)
 export { useToken } from "./token/use-token";

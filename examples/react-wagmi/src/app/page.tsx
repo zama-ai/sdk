@@ -8,8 +8,8 @@ import { injected } from "wagmi/connectors";
 import { sepolia } from "wagmi/chains";
 import {
   useConfidentialBalance,
-  useIsAllowed,
-  useAllow,
+  useHasPermit,
+  useGrantPermit,
   useListPairs,
   useZamaSDK,
 } from "@zama-fhe/react-sdk";
@@ -265,7 +265,7 @@ function TokenWorkspace({ address, token, validPairs, refetchEth }: TokenWorkspa
 
   // Check whether cached credentials cover the selected confidential token.
   // This component only mounts once a token is selected, so no placeholder address is needed.
-  const { data: isAllowed } = useIsAllowed({
+  const { data: isAllowed } = useHasPermit({
     contractAddresses: [token.confidentialTokenAddress],
   });
 
@@ -279,7 +279,7 @@ function TokenWorkspace({ address, token, validPairs, refetchEth }: TokenWorkspa
   // Triggers the EIP-712 wallet signature to create FHE decrypt credentials.
   // All registry pairs are passed at once — a single signature covers all tokens,
   // so switching tokens does not require a second wallet prompt.
-  const allowTokens = useAllow();
+  const allowTokens = useGrantPermit();
   function handleDecrypt() {
     allowTokens.mutate(validPairs.map((p) => p.confidentialTokenAddress));
   }

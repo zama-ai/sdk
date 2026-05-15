@@ -7,18 +7,18 @@ import {
   TOKEN,
   expectDefaultMutationState,
 } from "../../__tests__/mutation-test-helpers";
-import { useAllow } from "../use-allow";
+import { useGrantPermit } from "../use-grant-permit";
 
-describe("useAllow", () => {
+describe("useGrantPermit", () => {
   test("default", ({ renderWithProviders }) => {
-    const { result } = renderWithProviders(() => useAllow());
+    const { result } = renderWithProviders(() => useGrantPermit());
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
     expectDefaultMutationState(state);
   });
 
   test("cache: removes isAllowed query after allow", async ({ renderWithProviders }) => {
-    const { result, queryClient } = renderWithProviders(() => useAllow());
+    const { result, queryClient } = renderWithProviders(() => useGrantPermit());
     queryClient.setQueryData(zamaQueryKeys.hasPermit.all, true);
 
     await act(() => result.current.mutateAsync([TOKEN, OTHER_TOKEN]));
@@ -34,7 +34,7 @@ describe("useAllow", () => {
       expect(variables).toEqual([TOKEN, OTHER_TOKEN]);
     });
     const { result, queryClient } = renderWithProviders(() =>
-      useAllow({
+      useGrantPermit({
         onSuccess,
       }),
     );
