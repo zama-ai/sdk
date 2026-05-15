@@ -23,5 +23,5 @@ import { useZamaSDK } from "../provider";
  */
 export function useWrappedToken(address: Address): WrappedToken {
   const sdk = useZamaSDK();
-  return useMemo<WrappedToken>(() => sdk.tokens.wrapper(address), [sdk, address]);
+  return useMemo<WrappedToken>(() => sdk.createWrappedToken(address), [sdk, address]);
 }

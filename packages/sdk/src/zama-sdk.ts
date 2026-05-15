@@ -2,7 +2,6 @@ import type { Address } from "viem";
 import { DecryptClient } from "./clients/decrypt-client";
 import { DelegationsClient } from "./clients/delegations-client";
 import { PermitsClient } from "./clients/permits-client";
-import { TokensClient } from "./clients/tokens-client";
 import type { ZamaConfig } from "./config/types";
 import { CredentialService } from "./credentials/credential-service";
 import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventListener } from "./events/sdk-events";
@@ -13,6 +12,8 @@ import { DecryptionService } from "./services/decryption-service";
 import { DelegationService } from "./services/delegation-service";
 import { EncryptionService } from "./services/encryption-service";
 import { LifecycleService } from "./services/lifecycle-service";
+import { Token } from "./token/token";
+import { WrappedToken } from "./token/wrapped-token";
 import type {
   GenericProvider,
   GenericSigner,
@@ -45,8 +46,6 @@ export class ZamaSDK {
   readonly delegations: DelegationsClient;
   /** FHE decryption (user, delegated user, public). */
   readonly decrypt: DecryptClient;
-  /** ERC-7984 token bindings (confidential and wrapper factories). */
-  readonly tokens: TokensClient;
   readonly #registryTTL: number;
   readonly #onEvent: ZamaSDKEventListener;
   readonly #cachingService: CachingService;
@@ -127,7 +126,6 @@ export class ZamaSDK {
       relayer: this.relayer,
       decryptionService: this.#decryptionService,
     });
-    this.tokens = new TokensClient(this);
   }
 
   /**
@@ -216,6 +214,42 @@ export class ZamaSDK {
   }
 
   /**
+   * Create a high-level ERC-20-style interface for an ERC-7984 confidential token.
+   * Supports balance queries, transfers, operator approvals, and decryption.
+   *
+   * For ERC-7984 wrappers (shield/unshield/allowance), use {@link createWrappedToken} instead.
+   *
+   * @param address - The confidential token contract address.
+   * @returns A {@link Token} instance bound to this SDK.
+   *
+   * @example
+   * ```ts
+   * const token = sdk.createToken(cUSDT);
+   * const balance = await token.balanceOf(userAddress);
+   * ```
+   */
+  createToken(address: Address): Token {
+    return new Token(this, address);
+  }
+
+  /**
+   * Create a high-level interface for an ERC-7984 wrapper token.
+   * Extends {@link Token} with shield/unshield/allowance/finalize-unwrap operations.
+   *
+   * @param address - The wrapper token contract address.
+   * @returns A {@link WrappedToken} instance bound to this SDK.
+   *
+   * @example
+   * ```ts
+   * const wrapped = sdk.createWrappedToken(wUSDT);
+   * await wrapped.shield(1_000_000n);
+   * ```
+   */
+  createWrappedToken(address: Address): WrappedToken {
+    return new WrappedToken(this, address);
+  }
+
+  /**
    * Unsubscribe from signer lifecycle events without terminating the relayer.
    * Call this when the SDK instance is being replaced but the relayer is shared
    * (e.g. React provider remount in Strict Mode).
@@ -244,7 +278,7 @@ export class ZamaSDK {
    * {
    *   using sdk = new ZamaSDK({ relayer, provider, signer, storage });
    *   await sdk.permits.allow([cUSDT]);
-   *   const balance = await sdk.tokens.confidential(cUSDT).balanceOf(userAddress);
+   *   const balance = await sdk.createToken(cUSDT).balanceOf(userAddress);
    * } // sdk.terminate() called automatically here
    * ```
    */

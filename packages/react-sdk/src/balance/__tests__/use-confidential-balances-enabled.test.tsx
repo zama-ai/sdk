@@ -21,9 +21,7 @@ const mockSdk = {
   },
   onWalletAccountChange: vi.fn().mockReturnValue(() => {}),
   provider: { readContract: vi.fn() },
-  tokens: {
-    confidential: vi.fn((address: Address) => ({ address })),
-  },
+  createToken: vi.fn((address: Address) => ({ address })),
 };
 
 vi.mock("../../provider", () => ({

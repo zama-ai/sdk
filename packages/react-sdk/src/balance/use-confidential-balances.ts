@@ -53,10 +53,7 @@ export function useConfidentialBalances(
   const sdk = useZamaSDK();
   const walletAccount = useWalletAccount(sdk);
 
-  const tokens = useMemo(
-    () => addresses.map((addr) => sdk.tokens.confidential(addr)),
-    [sdk, addresses],
-  );
+  const tokens = useMemo(() => addresses.map((addr) => sdk.createToken(addr)), [sdk, addresses]);
 
   const baseOptions = confidentialBalancesQueryOptions(
     tokens,

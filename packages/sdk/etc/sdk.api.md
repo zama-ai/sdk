@@ -14922,14 +14922,6 @@ export class Token {
 // @public
 export const TOKEN_TOPICS: readonly [`0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`];
 
-// @public
-export class TokensClient {
-    // @internal
-    constructor(sdk: ZamaSDK);
-    confidential(address: Address): Token;
-    wrapper(address: Address): WrappedToken;
-}
-
 // @public (undocumented)
 export interface TokenWrapperPair {
     // (undocumented)
@@ -20099,6 +20091,8 @@ export type ZamaErrorCode = (typeof ZamaErrorCode)[keyof typeof ZamaErrorCode];
 export class ZamaSDK {
     [Symbol.dispose](): void;
     constructor(config: ZamaConfig);
+    createToken(address: Address): Token;
+    createWrappedToken(address: Address): WrappedToken;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
     readonly decrypt: DecryptClient;
     readonly delegations: DelegationsClient;
@@ -20119,7 +20113,6 @@ export class ZamaSDK {
     // (undocumented)
     readonly storage: GenericStorage;
     terminate(): void;
-    readonly tokens: TokensClient;
 }
 
 // @public
@@ -20164,10 +20157,10 @@ export { ZKProofLike }
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/index-DZzEFeJD.d.ts:20477:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-DZzEFeJD.d.ts:20582:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-DZzEFeJD.d.ts:20684:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-DZzEFeJD.d.ts:20685:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-suamabn4.d.ts:20462:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-suamabn4.d.ts:20567:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-suamabn4.d.ts:20669:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-suamabn4.d.ts:20670:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

@@ -16,7 +16,7 @@ const SIGNER_REQUIRED_OPS: ReadonlyArray<readonly [string, Op]> = [
   ["permits.clear", (sdk) => sdk.permits.clear()],
   [
     "Token.confidentialTransfer",
-    (sdk, t) => sdk.tokens.confidential(t).confidentialTransfer("0x1" as Address, 1n),
+    (sdk, t) => sdk.createToken(t).confidentialTransfer("0x1" as Address, 1n),
   ],
 ] as const;
 
@@ -28,12 +28,12 @@ describe("ZamaSDK without signer", () => {
 
   it("createToken works with no signer", ({ createSDK, tokenAddress }) => {
     const sdk = createSDK({ signer: undefined });
-    expect(sdk.tokens.confidential(tokenAddress)).toBeInstanceOf(Token);
+    expect(sdk.createToken(tokenAddress)).toBeInstanceOf(Token);
   });
 
   it("createWrappedToken works with no signer", ({ createSDK, wrapperAddress }) => {
     const sdk = createSDK({ signer: undefined });
-    expect(sdk.tokens.wrapper(wrapperAddress)).toBeInstanceOf(WrappedToken);
+    expect(sdk.createWrappedToken(wrapperAddress)).toBeInstanceOf(WrappedToken);
   });
 
   it("publicDecrypt works with no signer", async ({ createSDK, relayer }) => {

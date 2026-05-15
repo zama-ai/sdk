@@ -13,27 +13,27 @@ describe("ZamaSDK", () => {
   });
 
   it("createToken returns Token", ({ sdk, tokenAddress }) => {
-    const token = sdk.tokens.confidential(tokenAddress);
+    const token = sdk.createToken(tokenAddress);
     expect(token).toBeInstanceOf(Token);
     expect(token.address).toBe(tokenAddress);
     expect(token.sdk).toBe(sdk);
   });
 
   it("createToken exposes the SDK instance", ({ sdk, tokenAddress }) => {
-    const token = sdk.tokens.confidential(tokenAddress);
+    const token = sdk.createToken(tokenAddress);
     expect(token.sdk).toBe(sdk);
   });
 
   it("creates distinct instances per address", ({ sdk }) => {
-    const t1 = sdk.tokens.confidential("0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address);
-    const t2 = sdk.tokens.confidential("0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address);
+    const t1 = sdk.createToken("0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address);
+    const t2 = sdk.createToken("0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address);
     expect(t1).not.toBe(t2);
     expect(t1.address).toBe("0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa");
     expect(t2.address).toBe("0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB");
   });
 
   it("createWrappedToken returns WrappedToken (extending Token)", ({ sdk, wrapperAddress }) => {
-    const wrapped = sdk.tokens.wrapper(wrapperAddress);
+    const wrapped = sdk.createWrappedToken(wrapperAddress);
     expect(wrapped).toBeInstanceOf(WrappedToken);
     expect(wrapped).toBeInstanceOf(Token);
     expect(wrapped.address).toBe(wrapperAddress);
@@ -41,8 +41,8 @@ describe("ZamaSDK", () => {
   });
 
   it("createWrappedToken yields distinct instances per address", ({ sdk }) => {
-    const w1 = sdk.tokens.wrapper("0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address);
-    const w2 = sdk.tokens.wrapper("0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address);
+    const w1 = sdk.createWrappedToken("0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address);
+    const w2 = sdk.createWrappedToken("0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address);
     expect(w1).not.toBe(w2);
     expect(w1.address).toBe("0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa");
     expect(w2.address).toBe("0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB");

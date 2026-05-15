@@ -1274,6 +1274,8 @@ export const zamaQueryKeys: {
 export class ZamaSDK {
     [Symbol.dispose](): void;
     constructor(config: ZamaConfig);
+    createToken(address: Address): Token;
+    createWrappedToken(address: Address): WrappedToken;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
     // Warning: (ae-forgotten-export) The symbol "DecryptClient" needs to be exported by the entry point index.d.ts
     readonly decrypt: DecryptClient;
@@ -1297,8 +1299,6 @@ export class ZamaSDK {
     // (undocumented)
     readonly storage: GenericStorage;
     terminate(): void;
-    // Warning: (ae-forgotten-export) The symbol "TokensClient" needs to be exported by the entry point index.d.ts
-    readonly tokens: TokensClient;
 }
 
 // @public
