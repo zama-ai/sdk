@@ -141,10 +141,10 @@ export function useCreateEIP712(): _$_tanstack_react_query0.UseMutationResult<EI
 export function useDecryptBalanceAs(address: Address, options?: UseMutationOptions<bigint, Error, DecryptBalanceAsParams>): _$_tanstack_react_query0.UseMutationResult<bigint, Error, DecryptBalanceAsParams, unknown>;
 
 // @public
-export function useDelegateDecryption(address: Address, options?: UseMutationOptions<TransactionResult, Error, DelegateDecryptionParams>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, DelegateDecryptionParams, unknown>;
+export function useDelegatedDecrypt(): _$_tanstack_react_query0.UseMutationResult<Record<`0x${string}`, ClearValueType>, Error, DelegatedUserDecryptMutationParams, unknown>;
 
 // @public
-export function useDelegatedUserDecrypt(): _$_tanstack_react_query0.UseMutationResult<Record<`0x${string}`, ClearValueType>, Error, DelegatedUserDecryptMutationParams, unknown>;
+export function useDelegateDecryption(address: Address, options?: UseMutationOptions<TransactionResult, Error, DelegateDecryptionParams>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, DelegateDecryptionParams, unknown>;
 
 // @public
 export function useDelegationStatus(config: UseDelegationStatusConfig, options?: Omit<UseQueryOptions<DelegationStatusData>, "queryKey" | "queryFn">): _$_tanstack_react_query0.UseQueryResult<DelegationStatusData, Error>;

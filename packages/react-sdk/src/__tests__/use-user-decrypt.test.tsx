@@ -5,7 +5,7 @@ import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { useQueryClient } from "@tanstack/react-query";
 import { useHasPermit } from "../permits/use-has-permit";
 import { useZamaSDK } from "../provider";
-import { useUserDecrypt } from "../relayer/use-user-decrypt";
+import { useUserDecrypt } from "../decrypt/use-user-decrypt";
 import { describe, expect, it, vi } from "../test-fixtures";
 
 describe("useUserDecrypt", () => {
