@@ -25,23 +25,23 @@ describe("useRevokePermits", () => {
   test("cache: removes isAllowed and decryption queries after revokePermits", async ({
     renderWithProviders,
   }) => {
-    vi.spyOn(PermitsClient.prototype, "revoke").mockResolvedValue(undefined);
+    vi.spyOn(PermitsClient.prototype, "revokePermits").mockResolvedValue(undefined);
     const { result, queryClient } = renderWithProviders(() => useRevokePermits());
-    queryClient.setQueryData(zamaQueryKeys.isAllowed.all, true);
+    queryClient.setQueryData(zamaQueryKeys.hasPermit.all, true);
     queryClient.setQueryData(zamaQueryKeys.decryption.all, { foo: 1n });
 
     await act(() => result.current.mutateAsync([TOKEN, OTHER_TOKEN]));
 
-    expectCacheRemoved(queryClient, zamaQueryKeys.isAllowed.all);
+    expectCacheRemoved(queryClient, zamaQueryKeys.hasPermit.all);
     expectCacheRemoved(queryClient, zamaQueryKeys.decryption.all);
   });
 
   test("behavior: forwards onSuccess callback", async ({ renderWithProviders }) => {
-    vi.spyOn(PermitsClient.prototype, "revoke").mockResolvedValue(undefined);
+    vi.spyOn(PermitsClient.prototype, "revokePermits").mockResolvedValue(undefined);
     const onSuccess = vi.fn();
 
     const { result, queryClient } = renderWithProviders(() => useRevokePermits({ onSuccess }));
-    queryClient.setQueryData(zamaQueryKeys.isAllowed.all, true);
+    queryClient.setQueryData(zamaQueryKeys.hasPermit.all, true);
     queryClient.setQueryData(zamaQueryKeys.decryption.all, { foo: 1n });
 
     await act(() => result.current.mutateAsync([TOKEN, OTHER_TOKEN]));
@@ -49,12 +49,12 @@ describe("useRevokePermits", () => {
     expect(onSuccess).toHaveBeenCalledOnce();
     expect(onSuccess.mock.calls[0]?.[0]).toBeUndefined();
     expect(onSuccess.mock.calls[0]?.[1]).toEqual([TOKEN, OTHER_TOKEN]);
-    expectCacheRemoved(queryClient, zamaQueryKeys.isAllowed.all);
+    expectCacheRemoved(queryClient, zamaQueryKeys.hasPermit.all);
     expectCacheRemoved(queryClient, zamaQueryKeys.decryption.all);
   });
 
   test("behavior: forwards address list to sdk.revokePermits", async ({ renderWithProviders }) => {
-    const spy = vi.spyOn(PermitsClient.prototype, "revoke").mockResolvedValue(undefined);
+    const spy = vi.spyOn(PermitsClient.prototype, "revokePermits").mockResolvedValue(undefined);
     const { result } = renderWithProviders(() => useRevokePermits());
 
     await act(() => result.current.mutateAsync([TOKEN, OTHER_TOKEN]));
@@ -66,7 +66,7 @@ describe("useRevokePermits", () => {
   test("behavior: passes no arguments to sdk.revokePermits when called with undefined", async ({
     renderWithProviders,
   }) => {
-    const spy = vi.spyOn(PermitsClient.prototype, "revoke").mockResolvedValue(undefined);
+    const spy = vi.spyOn(PermitsClient.prototype, "revokePermits").mockResolvedValue(undefined);
     const { result } = renderWithProviders(() => useRevokePermits());
 
     await act(() => result.current.mutateAsync(undefined));

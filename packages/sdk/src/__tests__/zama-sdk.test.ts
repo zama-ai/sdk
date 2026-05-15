@@ -109,12 +109,12 @@ describe("ZamaSDK", () => {
     });
   });
 
-  describe("allow", () => {
+  describe("grantPermit", () => {
     const CONTRACT_A = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
     const CONTRACT_B = "0x3C3c3C3c3C3C3c3c3c3C3c3C3C3c3c3C3c3c3C3C" as Address;
 
     it("triggers a wallet signature when no permit is cached", async ({ sdk, signer }) => {
-      await sdk.permits.allow([CONTRACT_A, CONTRACT_B]);
+      await sdk.permits.grantPermit([CONTRACT_A, CONTRACT_B]);
       expect(signer.signTypedData).toHaveBeenCalled();
     });
 
@@ -122,7 +122,7 @@ describe("ZamaSDK", () => {
       sdk,
       signer,
     }) => {
-      await sdk.permits.allow([]);
+      await sdk.permits.grantPermit([]);
       expect(signer.signTypedData).not.toHaveBeenCalled();
     });
   });
@@ -140,7 +140,7 @@ describe("ZamaSDK", () => {
       await sdk.decrypt.user(handles);
       expect(relayer.userDecrypt).toHaveBeenCalledOnce();
 
-      await sdk.permits.revoke();
+      await sdk.permits.revokePermits();
 
       // Cache was cleared — relayer is called again
       await sdk.decrypt.user(handles);
@@ -157,7 +157,7 @@ describe("ZamaSDK", () => {
       await sdk.decrypt.user(handles);
       expect(relayer.userDecrypt).toHaveBeenCalledOnce();
 
-      await sdk.permits.revoke([CONTRACT_A]);
+      await sdk.permits.revokePermits([CONTRACT_A]);
 
       await sdk.decrypt.user(handles);
       expect(relayer.userDecrypt).toHaveBeenCalledTimes(2);

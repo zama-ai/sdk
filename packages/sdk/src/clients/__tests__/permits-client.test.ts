@@ -10,21 +10,21 @@ describe("PermitsClient", () => {
   describe("guards (no signer configured)", () => {
     it("allow throws SignerNotConfiguredError", async ({ createSDK }) => {
       const sdk = createSDK({ signer: undefined });
-      await expect(sdk.permits.allow([CONTRACT_A])).rejects.toBeInstanceOf(
+      await expect(sdk.permits.grantPermit([CONTRACT_A])).rejects.toBeInstanceOf(
         SignerNotConfiguredError,
       );
     });
 
     it("allowAs throws SignerNotConfiguredError", async ({ createSDK }) => {
       const sdk = createSDK({ signer: undefined });
-      await expect(sdk.permits.allowAs(DELEGATOR, [CONTRACT_A])).rejects.toBeInstanceOf(
-        SignerNotConfiguredError,
-      );
+      await expect(
+        sdk.permits.grantDelegationPermit(DELEGATOR, [CONTRACT_A]),
+      ).rejects.toBeInstanceOf(SignerNotConfiguredError);
     });
 
     it("revoke throws SignerNotConfiguredError", async ({ createSDK }) => {
       const sdk = createSDK({ signer: undefined });
-      await expect(sdk.permits.revoke()).rejects.toBeInstanceOf(SignerNotConfiguredError);
+      await expect(sdk.permits.revokePermits()).rejects.toBeInstanceOf(SignerNotConfiguredError);
     });
 
     it("clear throws SignerNotConfiguredError", async ({ createSDK }) => {
@@ -34,23 +34,23 @@ describe("PermitsClient", () => {
 
     it("isAllowed returns false (no signer required)", async ({ createSDK }) => {
       const sdk = createSDK({ signer: undefined });
-      await expect(sdk.permits.isAllowed([CONTRACT_A])).resolves.toBe(false);
+      await expect(sdk.permits.hasPermit([CONTRACT_A])).resolves.toBe(false);
     });
 
     it("isAllowedAs returns false (no signer required)", async ({ createSDK }) => {
       const sdk = createSDK({ signer: undefined });
-      await expect(sdk.permits.isAllowedAs(DELEGATOR, [CONTRACT_A])).resolves.toBe(false);
+      await expect(sdk.permits.hasDelegationPermit(DELEGATOR, [CONTRACT_A])).resolves.toBe(false);
     });
   });
 
   describe("empty-array short-circuit", () => {
     it("allow([]) returns without calling the signer", async ({ sdk, signer }) => {
-      await sdk.permits.allow([]);
+      await sdk.permits.grantPermit([]);
       expect(signer.signTypedData).not.toHaveBeenCalled();
     });
 
     it("allowAs(delegator, []) returns without calling the signer", async ({ sdk, signer }) => {
-      await sdk.permits.allowAs(DELEGATOR, []);
+      await sdk.permits.grantDelegationPermit(DELEGATOR, []);
       expect(signer.signTypedData).not.toHaveBeenCalled();
     });
   });
@@ -66,10 +66,12 @@ describe("PermitsClient", () => {
       vi.mocked(signer.requireWalletAccount).mockReturnValue(account);
       vi.mocked(provider.getChainId).mockResolvedValue(11155111);
 
-      await expect(sdk.permits.allow([CONTRACT_A])).rejects.toMatchObject({
-        operation: "allow",
+      await expect(sdk.permits.grantPermit([CONTRACT_A])).rejects.toMatchObject({
+        operation: "grantPermit",
       });
-      await expect(sdk.permits.allow([CONTRACT_A])).rejects.toBeInstanceOf(ChainMismatchError);
+      await expect(sdk.permits.grantPermit([CONTRACT_A])).rejects.toBeInstanceOf(
+        ChainMismatchError,
+      );
     });
 
     it("allowAs throws ChainMismatchError when signer and provider disagree", async ({
@@ -82,15 +84,17 @@ describe("PermitsClient", () => {
       vi.mocked(signer.requireWalletAccount).mockReturnValue(account);
       vi.mocked(provider.getChainId).mockResolvedValue(11155111);
 
-      await expect(sdk.permits.allowAs(DELEGATOR, [CONTRACT_A])).rejects.toMatchObject({
-        operation: "allowAs",
+      await expect(
+        sdk.permits.grantDelegationPermit(DELEGATOR, [CONTRACT_A]),
+      ).rejects.toMatchObject({
+        operation: "grantDelegationPermit",
       });
     });
   });
 
   describe("delegator routing", () => {
     it("allowAs forwards delegator to the service", async ({ sdk, signer }) => {
-      await sdk.permits.allowAs(DELEGATOR, [CONTRACT_A]);
+      await sdk.permits.grantDelegationPermit(DELEGATOR, [CONTRACT_A]);
       // The underlying CredentialService signs with the delegator scope — the
       // signature must include the delegator address as the delegatorAddress dimension.
       // We assert it was called; deeper invariants live in credential-service tests.
@@ -100,7 +104,7 @@ describe("PermitsClient", () => {
 
   describe("happy paths", () => {
     it("allow triggers a wallet signature for uncached contracts", async ({ sdk, signer }) => {
-      await sdk.permits.allow([CONTRACT_A, CONTRACT_B]);
+      await sdk.permits.grantPermit([CONTRACT_A, CONTRACT_B]);
       expect(signer.signTypedData).toHaveBeenCalled();
     });
 
@@ -113,7 +117,7 @@ describe("PermitsClient", () => {
       await sdk.decrypt.user(handles);
       expect(relayer.userDecrypt).toHaveBeenCalledOnce();
 
-      await sdk.permits.revoke();
+      await sdk.permits.revokePermits();
 
       await sdk.decrypt.user(handles);
       expect(relayer.userDecrypt).toHaveBeenCalledTimes(2);

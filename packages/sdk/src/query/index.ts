@@ -100,8 +100,8 @@ export {
 } from "./delegated-user-decrypt";
 export { publicDecryptMutationOptions } from "./public-decrypt";
 export { requestZKProofVerificationMutationOptions } from "./request-zk-proof-verification";
-export { allowMutationOptions } from "./allow";
-export { isAllowedQueryOptions, type IsAllowedQueryConfig } from "./is-allowed";
+export { grantPermitMutationOptions } from "./grant-permit";
+export { hasPermitQueryOptions, type HasPermitQueryConfig } from "./has-permit";
 export { revokePermitsMutationOptions } from "./revoke-permits";
 export { clearCredentialsMutationOptions } from "./clear-credentials";
 export {

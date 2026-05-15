@@ -2,7 +2,7 @@
 
 import { useMutation, type UseMutationOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
-import { allowMutationOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
+import { grantPermitMutationOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 
 /**
@@ -29,11 +29,11 @@ export function useAllow(options?: UseMutationOptions<void, Error, Address[]>) {
   const sdk = useZamaSDK();
 
   return useMutation<void, Error, Address[]>({
-    ...allowMutationOptions(sdk),
+    ...grantPermitMutationOptions(sdk),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       options?.onSuccess?.(data, variables, onMutateResult, context);
-      context.client.removeQueries({ queryKey: zamaQueryKeys.isAllowed.all });
+      context.client.removeQueries({ queryKey: zamaQueryKeys.hasPermit.all });
     },
   });
 }

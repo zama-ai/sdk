@@ -219,7 +219,7 @@ describe("invalidation", () => {
 
   test("invalidateWalletLifecycleQueries removes wallet-local isAllowed cache", () => {
     const qc = createQueryClient();
-    const isAllowedKey = zamaQueryKeys.isAllowed.scope([TOKEN]);
+    const isAllowedKey = zamaQueryKeys.hasPermit.scope([TOKEN]);
 
     qc.setQueryData(isAllowedKey, true);
     expect(qc.getQueryData(isAllowedKey)).toBe(true);

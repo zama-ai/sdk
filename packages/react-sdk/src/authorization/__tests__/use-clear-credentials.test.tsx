@@ -23,12 +23,12 @@ describe("useClearCredentials", () => {
   }) => {
     vi.spyOn(PermitsClient.prototype, "clear").mockResolvedValue(undefined);
     const { result, queryClient } = renderWithProviders(() => useClearCredentials());
-    queryClient.setQueryData(zamaQueryKeys.isAllowed.all, true);
+    queryClient.setQueryData(zamaQueryKeys.hasPermit.all, true);
     queryClient.setQueryData(zamaQueryKeys.decryption.all, { foo: 1n });
 
     await act(() => result.current.mutateAsync());
 
-    expectCacheRemoved(queryClient, zamaQueryKeys.isAllowed.all);
+    expectCacheRemoved(queryClient, zamaQueryKeys.hasPermit.all);
     expectCacheRemoved(queryClient, zamaQueryKeys.decryption.all);
   });
 
@@ -37,7 +37,7 @@ describe("useClearCredentials", () => {
     const onSuccess = vi.fn();
 
     const { result, queryClient } = renderWithProviders(() => useClearCredentials({ onSuccess }));
-    queryClient.setQueryData(zamaQueryKeys.isAllowed.all, true);
+    queryClient.setQueryData(zamaQueryKeys.hasPermit.all, true);
     queryClient.setQueryData(zamaQueryKeys.decryption.all, { foo: 1n });
 
     await act(() => result.current.mutateAsync());
@@ -45,7 +45,7 @@ describe("useClearCredentials", () => {
     expect(onSuccess).toHaveBeenCalledOnce();
     expect(onSuccess.mock.calls[0]?.[0]).toBeUndefined();
     expect(onSuccess.mock.calls[0]?.[1]).toBeUndefined();
-    expectCacheRemoved(queryClient, zamaQueryKeys.isAllowed.all);
+    expectCacheRemoved(queryClient, zamaQueryKeys.hasPermit.all);
     expectCacheRemoved(queryClient, zamaQueryKeys.decryption.all);
   });
 });

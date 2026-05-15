@@ -11768,12 +11768,12 @@ export class PermitsClient {
         cachingService: CachingService;
         credentialService: CredentialService | undefined;
     });
-    allow(contracts: Address[]): Promise<void>;
-    allowAs(delegator: Address, contracts: Address[]): Promise<void>;
     clear(): Promise<void>;
-    isAllowed(contracts: Address[]): Promise<boolean>;
-    isAllowedAs(delegator: Address, contracts: Address[]): Promise<boolean>;
-    revoke(contracts?: Address[]): Promise<void>;
+    grantDelegationPermit(delegator: Address, contracts: Address[]): Promise<void>;
+    grantPermit(contracts: Address[]): Promise<void>;
+    hasDelegationPermit(delegator: Address, contracts: Address[]): Promise<boolean>;
+    hasPermit(contracts: Address[]): Promise<boolean>;
+    revokePermits(contracts?: Address[]): Promise<void>;
 }
 
 // @public
@@ -20157,10 +20157,10 @@ export { ZKProofLike }
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/index-suamabn4.d.ts:20462:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-suamabn4.d.ts:20567:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-suamabn4.d.ts:20669:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-suamabn4.d.ts:20670:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-3aMfghe1.d.ts:20462:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-3aMfghe1.d.ts:20567:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-3aMfghe1.d.ts:20669:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-3aMfghe1.d.ts:20670:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

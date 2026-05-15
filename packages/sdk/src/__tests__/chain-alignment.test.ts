@@ -17,8 +17,8 @@ const RECIPIENT = "0x000000000000000000000000000000000000dEaD" as Address;
 const MISMATCHED_OPS: ReadonlyArray<readonly [string, Op]> = [
   ["shield", (sdk, t) => sdk.createWrappedToken(t).shield(1000n)],
   ["user", (sdk, t) => sdk.decrypt.user([{ handle: HANDLE, contractAddress: t }])],
-  ["allow", (sdk, t) => sdk.permits.allow([t])],
-  ["allowAs", (sdk, t) => sdk.permits.allowAs(OTHER_USER, [t])],
+  ["grantPermit", (sdk, t) => sdk.permits.grantPermit([t])],
+  ["grantDelegationPermit", (sdk, t) => sdk.permits.grantDelegationPermit(OTHER_USER, [t])],
   [
     "decryptBalanceAs",
     (sdk, t) => sdk.createToken(t).decryptBalanceAs({ delegatorAddress: OTHER_USER }),

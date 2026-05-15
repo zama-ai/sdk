@@ -19,18 +19,18 @@ describe("useAllow", () => {
 
   test("cache: removes isAllowed query after allow", async ({ renderWithProviders }) => {
     const { result, queryClient } = renderWithProviders(() => useAllow());
-    queryClient.setQueryData(zamaQueryKeys.isAllowed.all, true);
+    queryClient.setQueryData(zamaQueryKeys.hasPermit.all, true);
 
     await act(() => result.current.mutateAsync([TOKEN, OTHER_TOKEN]));
 
-    expectCacheRemoved(queryClient, zamaQueryKeys.isAllowed.all);
+    expectCacheRemoved(queryClient, zamaQueryKeys.hasPermit.all);
   });
 
   test("behavior: forwards onSuccess callback", async ({ renderWithProviders }) => {
     let removedDuringCallback: boolean | undefined;
     const onSuccess = vi.fn((_: void, variables: unknown) => {
       removedDuringCallback =
-        queryClient.getQueryCache().find({ queryKey: zamaQueryKeys.isAllowed.all }) === undefined;
+        queryClient.getQueryCache().find({ queryKey: zamaQueryKeys.hasPermit.all }) === undefined;
       expect(variables).toEqual([TOKEN, OTHER_TOKEN]);
     });
     const { result, queryClient } = renderWithProviders(() =>
@@ -38,12 +38,12 @@ describe("useAllow", () => {
         onSuccess,
       }),
     );
-    queryClient.setQueryData(zamaQueryKeys.isAllowed.all, true);
+    queryClient.setQueryData(zamaQueryKeys.hasPermit.all, true);
 
     await act(() => result.current.mutateAsync([TOKEN, OTHER_TOKEN]));
 
     expect(onSuccess).toHaveBeenCalledOnce();
     expect(removedDuringCallback).toBe(false);
-    expectCacheRemoved(queryClient, zamaQueryKeys.isAllowed.all);
+    expectCacheRemoved(queryClient, zamaQueryKeys.hasPermit.all);
   });
 });

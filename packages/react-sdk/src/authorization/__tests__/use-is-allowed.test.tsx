@@ -45,7 +45,7 @@ describe("useIsAllowed", () => {
       expect(vi.mocked(useQuery)).toHaveBeenCalledWith(
         expect.objectContaining({
           queryKeyHashFn: hashFn,
-          queryKey: zamaQueryKeys.isAllowed.scope([CONTRACT_A], signer.walletAccount.getSnapshot()),
+          queryKey: zamaQueryKeys.hasPermit.scope([CONTRACT_A], signer.walletAccount.getSnapshot()),
           enabled: true,
           staleTime: 0,
           gcTime: 0,
@@ -64,7 +64,7 @@ describe("useIsAllowed", () => {
     await waitFor(() => {
       expect(vi.mocked(useQuery)).toHaveBeenCalledWith(
         expect.objectContaining({
-          queryKey: zamaQueryKeys.isAllowed.scope([CONTRACT_A]),
+          queryKey: zamaQueryKeys.hasPermit.scope([CONTRACT_A]),
           enabled: false,
         }),
       );

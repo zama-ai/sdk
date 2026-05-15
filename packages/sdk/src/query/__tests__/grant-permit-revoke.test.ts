@@ -1,16 +1,16 @@
 import { describe, expect, test, vi } from "../../test-fixtures";
 
 import type { Address } from "viem";
-import { allowMutationOptions } from "../allow";
-import { isAllowedQueryOptions } from "../is-allowed";
+import { grantPermitMutationOptions } from "../grant-permit";
+import { hasPermitQueryOptions } from "../has-permit";
 import { revokePermitsMutationOptions } from "../revoke-permits";
 
-describe("allowMutationOptions", () => {
+describe("grantPermitMutationOptions", () => {
   test("calls sdk.permits.allow with provided addresses", async ({ sdk }) => {
-    const allowSpy = vi.spyOn(sdk.permits, "allow").mockResolvedValue();
+    const allowSpy = vi.spyOn(sdk.permits, "grantPermit").mockResolvedValue();
 
-    const options = allowMutationOptions(sdk);
-    expect(options.mutationKey).toEqual(["zama.allow"]);
+    const options = grantPermitMutationOptions(sdk);
+    expect(options.mutationKey).toEqual(["zama.grantPermit"]);
 
     const addresses = [
       "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
@@ -24,7 +24,7 @@ describe("allowMutationOptions", () => {
 
 describe("revokePermitsMutationOptions", () => {
   test("calls sdk.permits.revoke with no arguments", async ({ sdk }) => {
-    const revokeSpy = vi.spyOn(sdk.permits, "revoke").mockResolvedValue(undefined);
+    const revokeSpy = vi.spyOn(sdk.permits, "revokePermits").mockResolvedValue(undefined);
 
     const options = revokePermitsMutationOptions(sdk);
     expect(options.mutationKey).toEqual(["zama.revokePermits"]);
@@ -36,15 +36,15 @@ describe("revokePermitsMutationOptions", () => {
   });
 });
 
-describe("isAllowedQueryOptions", () => {
+describe("hasPermitQueryOptions", () => {
   test("calls sdk.permits.isAllowed", async ({ sdk }) => {
-    const isAllowedSpy = vi.spyOn(sdk.permits, "isAllowed").mockResolvedValue(true);
+    const isAllowedSpy = vi.spyOn(sdk.permits, "hasPermit").mockResolvedValue(true);
 
-    const options = isAllowedQueryOptions(sdk, {
+    const options = hasPermitQueryOptions(sdk, {
       contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"],
     });
     expect(options.queryKey).toEqual([
-      "zama.isAllowed",
+      "zama.hasPermit",
       {
         contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"],
       },
@@ -58,14 +58,14 @@ describe("isAllowedQueryOptions", () => {
   });
 
   test("forwards contractAddresses to sdk.permits.isAllowed", async ({ sdk }) => {
-    const isAllowedSpy = vi.spyOn(sdk.permits, "isAllowed").mockResolvedValue(true);
+    const isAllowedSpy = vi.spyOn(sdk.permits, "hasPermit").mockResolvedValue(true);
 
     const contracts = [
       "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
     ] as [Address, ...Address[]];
 
-    const options = isAllowedQueryOptions(sdk, {
+    const options = hasPermitQueryOptions(sdk, {
       contractAddresses: contracts,
     });
 
@@ -77,7 +77,7 @@ describe("isAllowedQueryOptions", () => {
   });
 
   test("opts out of query result caching", ({ sdk }) => {
-    const options = isAllowedQueryOptions(sdk, {
+    const options = hasPermitQueryOptions(sdk, {
       contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"],
     });
 
@@ -86,7 +86,7 @@ describe("isAllowedQueryOptions", () => {
   });
 
   test("enabled is false when query.enabled is false", ({ sdk }) => {
-    const options = isAllowedQueryOptions(sdk, {
+    const options = hasPermitQueryOptions(sdk, {
       contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"],
       query: { enabled: false },
     });
@@ -96,13 +96,13 @@ describe("isAllowedQueryOptions", () => {
 
   test("is disabled when signer is absent", ({ createSDK }) => {
     const sdk = createSDK({ signer: undefined });
-    const options = isAllowedQueryOptions(sdk, {
+    const options = hasPermitQueryOptions(sdk, {
       contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"],
     });
 
     expect(options.enabled).toBe(false);
     expect(options.queryKey).toEqual([
-      "zama.isAllowed",
+      "zama.hasPermit",
       {
         contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"],
       },
@@ -112,7 +112,7 @@ describe("isAllowedQueryOptions", () => {
   test("manual fetch without signer returns false (pure store lookup)", async ({ createSDK }) => {
     const sdk = createSDK({ signer: undefined });
 
-    const options = isAllowedQueryOptions(sdk, {
+    const options = hasPermitQueryOptions(sdk, {
       contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"],
     });
 
@@ -125,14 +125,14 @@ describe("isAllowedQueryOptions", () => {
   test("contract addresses and wallet account scope the query key", ({ sdk, signer }) => {
     const walletAccount = signer.walletAccount.getSnapshot();
 
-    const optionsA = isAllowedQueryOptions(
+    const optionsA = hasPermitQueryOptions(
       sdk,
       {
         contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"],
       },
       { walletAccount },
     );
-    const optionsB = isAllowedQueryOptions(
+    const optionsB = hasPermitQueryOptions(
       sdk,
       {
         contractAddresses: ["0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a"],

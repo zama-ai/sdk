@@ -9,6 +9,6 @@ export function revokePermitsMutationOptions(
   return {
     mutationKey: ["zama.revokePermits"],
     mutationFn: (contracts: Address[] | void) =>
-      contracts === undefined ? sdk.permits.revoke() : sdk.permits.revoke(contracts),
+      contracts === undefined ? sdk.permits.revokePermits() : sdk.permits.revokePermits(contracts),
   };
 }

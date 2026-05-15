@@ -80,7 +80,7 @@ export interface BatchBalancesResult {
  *
  * Decryption, credentials, caching, and event emission are handled by the
  * owning {@link ZamaSDK} — this class only exposes token-scoped helpers
- * that delegate to `sdk.decrypt.user` and `sdk.permits.allow`.
+ * that delegate to `sdk.decrypt.user` and `sdk.permits.grantPermit`.
  */
 export class Token {
   readonly sdk: ZamaSDK;
@@ -283,7 +283,7 @@ export class Token {
     await requireChainAlignment("batchBalancesOf", sdk.signer, sdk.provider);
     // Pre-authorize the full token set in one wallet signature so subsequent
     // per-token userDecrypt calls reuse the cached credentials.
-    await sdk.permits.allow(tokens.map((t) => t.address));
+    await sdk.permits.grantPermit(tokens.map((t) => t.address));
 
     const outcomes = await pLimit(
       tokens.map((t) => async () => {

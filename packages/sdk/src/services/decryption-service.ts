@@ -75,7 +75,8 @@ export class DecryptionService {
     const normalizedSigner = getAddress(signerAddress);
     return this.#decrypt(handles, {
       requesterAddress: normalizedSigner,
-      resolveCredentials: (contractAddresses) => this.#credentialService.allow(contractAddresses),
+      resolveCredentials: (contractAddresses) =>
+        this.#credentialService.grantPermit(contractAddresses),
       decryptContract: async ({ credentials, contractAddress, contractHandles }) => {
         return this.#relayer.userDecrypt({
           handles: contractHandles,
@@ -99,7 +100,7 @@ export class DecryptionService {
     return this.#decrypt(handles, {
       requesterAddress: getAddress(accountAddress),
       resolveCredentials: (contractAddresses) =>
-        this.#credentialService.allow(contractAddresses, normalizedDelegator),
+        this.#credentialService.grantPermit(contractAddresses, normalizedDelegator),
       validate: (contractAddresses) =>
         this.#assertAllDelegationsActive(contractAddresses, {
           delegatorAddress: normalizedDelegator,

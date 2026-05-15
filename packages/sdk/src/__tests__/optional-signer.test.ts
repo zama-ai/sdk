@@ -11,8 +11,8 @@ type Op = (sdk: ZamaSDK, tokenAddress: Address) => Promise<unknown>;
 // when the SDK was constructed without one.
 const SIGNER_REQUIRED_OPS: ReadonlyArray<readonly [string, Op]> = [
   ["decrypt.user", (sdk, t) => sdk.decrypt.user([{ handle: "0xh", contractAddress: t }])],
-  ["permits.allow", (sdk, t) => sdk.permits.allow([t])],
-  ["permits.revoke", (sdk) => sdk.permits.revoke()],
+  ["permits.allow", (sdk, t) => sdk.permits.grantPermit([t])],
+  ["permits.revoke", (sdk) => sdk.permits.revokePermits()],
   ["permits.clear", (sdk) => sdk.permits.clear()],
   [
     "Token.confidentialTransfer",
@@ -44,12 +44,12 @@ describe("ZamaSDK without signer", () => {
 
   it("isAllowed returns false (pure store lookup, no signer needed)", async ({ createSDK }) => {
     const sdk = createSDK({ signer: undefined });
-    await expect(sdk.permits.isAllowed(["0x1" as Address])).resolves.toBe(false);
+    await expect(sdk.permits.hasPermit(["0x1" as Address])).resolves.toBe(false);
   });
 
   it("sdk.isAllowed returns false when no signer", async ({ createSDK, tokenAddress }) => {
     const sdk = createSDK({ signer: undefined });
-    await expect(sdk.permits.isAllowed([tokenAddress])).resolves.toBe(false);
+    await expect(sdk.permits.hasPermit([tokenAddress])).resolves.toBe(false);
   });
 
   it.for(SIGNER_REQUIRED_OPS)(

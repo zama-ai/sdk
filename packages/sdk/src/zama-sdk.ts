@@ -277,7 +277,7 @@ export class ZamaSDK {
    * ```ts
    * {
    *   using sdk = new ZamaSDK({ relayer, provider, signer, storage });
-   *   await sdk.permits.allow([cUSDT]);
+   *   await sdk.permits.grantPermit([cUSDT]);
    *   const balance = await sdk.createToken(cUSDT).balanceOf(userAddress);
    * } // sdk.terminate() called automatically here
    * ```

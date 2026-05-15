@@ -73,8 +73,8 @@ export class CredentialService {
    * @throws {@link SigningRejectedError} if the user rejects a wallet signature prompt.
    * @throws {@link SigningFailedError} if signing fails for any other reason.
    */
-  async allow(contracts: readonly Address[], delegator?: Address): Promise<CredentialBundle> {
-    const account = this.#signer.requireWalletAccount("allow");
+  async grantPermit(contracts: readonly Address[], delegator?: Address): Promise<CredentialBundle> {
+    const account = this.#signer.requireWalletAccount("grantPermit");
     const signerAddress = checksum(account.address);
     const requested = normalizeAddresses(contracts);
     const keypair = await this.#vault.getOrCreate(signerAddress);
@@ -110,7 +110,7 @@ export class CredentialService {
    *   true for an empty list); `false` if no keypair exists or coverage is
    *   incomplete.
    */
-  async isAllowed(contracts: readonly Address[], delegator?: Address): Promise<boolean> {
+  async hasPermit(contracts: readonly Address[], delegator?: Address): Promise<boolean> {
     if (contracts.length === 0) {
       return true;
     }

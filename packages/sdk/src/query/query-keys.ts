@@ -129,11 +129,11 @@ export const zamaQueryKeys = {
       ["zama.totalSupply", { tokenAddress: getAddress(tokenAddress) }] as const,
   },
 
-  isAllowed: {
-    all: ["zama.isAllowed"] as const,
+  hasPermit: {
+    all: ["zama.hasPermit"] as const,
     scope: (contractAddresses: Address[], walletAccount?: WalletAccount) =>
       [
-        "zama.isAllowed",
+        "zama.hasPermit",
         {
           ...walletAccountKey(walletAccount),
           contractAddresses: normalizeAddresses(contractAddresses).toSorted(),

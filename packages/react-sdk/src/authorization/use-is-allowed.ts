@@ -2,7 +2,7 @@
 
 import { useQuery } from "../utils/query";
 import type { Address } from "@zama-fhe/sdk";
-import { isAllowedQueryOptions } from "@zama-fhe/sdk/query";
+import { hasPermitQueryOptions } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 import { useWalletAccount } from "../utils/wallet-account";
 
@@ -31,5 +31,5 @@ export interface UseIsAllowedConfig {
 export function useIsAllowed(config: UseIsAllowedConfig) {
   const sdk = useZamaSDK();
   const walletAccount = useWalletAccount(sdk);
-  return useQuery<boolean>(isAllowedQueryOptions(sdk, config, { walletAccount }));
+  return useQuery<boolean>(hasPermitQueryOptions(sdk, config, { walletAccount }));
 }

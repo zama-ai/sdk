@@ -28,9 +28,6 @@ import { skipToken } from '@tanstack/query-core';
 import { UserDecryptResults } from '@zama-fhe/relayer-sdk/bundle';
 import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
 
-// @public (undocumented)
-export function allowMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.allow"], Address[], void>;
-
 // @public
 export type ApprovalStrategy = "max" | "exact" | "skip";
 
@@ -435,11 +432,23 @@ export interface GenericStorage {
     set<T = unknown>(key: string, value: T): Promise<void>;
 }
 
+// @public (undocumented)
+export function grantPermitMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.grantPermit"], Address[], void>;
+
 // @public
 export type Handle = Bytes32Hex;
 
 // @public
 export function hashFn(queryKey: readonly unknown[]): string;
+
+// @public (undocumented)
+export interface HasPermitQueryConfig {
+    contractAddresses: [Address, ...Address[]];
+    query?: Record<string, unknown>;
+}
+
+// @public (undocumented)
+export function hasPermitQueryOptions(sdk: ZamaSDK, config: HasPermitQueryConfig, signerContext?: SignerQueryContext): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.hasPermit.scope>>;
 
 // @public (undocumented)
 export function invalidateAfterApproveUnderlying(queryClient: QueryClientLike, tokenAddress: Address): void;
@@ -467,15 +476,6 @@ export function invalidateWagmiBalanceQueries(queryClient: QueryClientLike): voi
 
 // @public (undocumented)
 export function invalidateWalletLifecycleQueries(queryClient: QueryClientLike): void;
-
-// @public (undocumented)
-export interface IsAllowedQueryConfig {
-    contractAddresses: [Address, ...Address[]];
-    query?: Record<string, unknown>;
-}
-
-// @public (undocumented)
-export function isAllowedQueryOptions(sdk: ZamaSDK, config: IsAllowedQueryConfig, signerContext?: SignerQueryContext): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.isAllowed.scope>>;
 
 // @public (undocumented)
 export interface IsConfidentialQueryConfig {
@@ -1162,9 +1162,9 @@ export const zamaQueryKeys: {
             readonly tokenAddress: `0x${string}`;
         }];
     };
-    readonly isAllowed: {
-        readonly all: readonly ["zama.isAllowed"];
-        readonly scope: (contractAddresses: Address[], walletAccount?: WalletAccount) => readonly ["zama.isAllowed", {
+    readonly hasPermit: {
+        readonly all: readonly ["zama.hasPermit"];
+        readonly scope: (contractAddresses: Address[], walletAccount?: WalletAccount) => readonly ["zama.hasPermit", {
             readonly contractAddresses: `0x${string}`[];
             readonly walletAddress: `0x${string}`;
             readonly walletChainId: number;
