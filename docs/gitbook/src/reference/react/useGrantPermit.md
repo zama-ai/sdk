@@ -28,10 +28,10 @@ import { useGrantPermit } from "@zama-fhe/react-sdk";
 import { useGrantPermit } from "@zama-fhe/react-sdk";
 
 function AllowButton({ contracts }: { contracts: `0x${string}`[] }) {
-  const { mutateAsync: allow, isPending } = useGrantPermit();
+  const { mutateAsync: grantPermit, isPending } = useGrantPermit();
 
   const handleAllow = async () => {
-    await allow(contracts);
+    await grantPermit(contracts);
     // All subsequent decrypt operations reuse the cached permits
   };
 
@@ -51,11 +51,11 @@ import { useGrantPermit } from "@zama-fhe/react-sdk";
 import { useEffect } from "react";
 
 function AuthOnConnect({ contracts }: { contracts: `0x${string}`[] }) {
-  const { mutateAsync: allow } = useGrantPermit();
+  const { mutateAsync: grantPermit } = useGrantPermit();
 
   useEffect(() => {
     // Pre-authorize on wallet connect
-    allow(contracts);
+    grantPermit(contracts);
   }, []);
 
   return null;
@@ -79,7 +79,7 @@ Array of contract addresses to authorize decryption for in a single wallet signa
 
 ```tsx
 // Authorize any contracts with encrypted state — tokens, auctions, governance, etc.
-await allow([confidentialTokenAddress, auctionAddress, governanceAddress]);
+await grantPermit([confidentialTokenAddress, auctionAddress, governanceAddress]);
 ```
 
 ## Return Type

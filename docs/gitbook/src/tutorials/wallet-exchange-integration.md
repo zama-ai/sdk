@@ -77,18 +77,18 @@ const TOKEN = "0xConfidentialToken" as const;
 
 function Balance() {
   const { address } = useAccount();
-  const { mutate: allow, isPending: isAllowing } = useGrantPermit();
-  const { data: isAllowed } = useHasPermit({ contractAddresses: [TOKEN] });
+  const { mutate: grantPermit, isPending: isGranting } = useGrantPermit();
+  const { data: hasPermit } = useHasPermit({ contractAddresses: [TOKEN] });
 
   const { data, isPending, error } = useConfidentialBalance(
     { address: TOKEN, account: address },
-    { enabled: !!isAllowed },
+    { enabled: !!hasPermit },
   );
 
-  if (!isAllowed) {
+  if (!hasPermit) {
     return (
-      <button onClick={() => allow([TOKEN])} disabled={isAllowing}>
-        {isAllowing ? "Signing…" : "View balance"}
+      <button onClick={() => grantPermit([TOKEN])} disabled={isGranting}>
+        {isGranting ? "Signing…" : "View balance"}
       </button>
     );
   }

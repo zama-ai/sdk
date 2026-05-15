@@ -18,11 +18,11 @@ import { useZamaSDK } from "../provider";
  *
  * @example
  * ```tsx
- * const { mutateAsync: allow, isPending } = useGrantPermit();
+ * const { mutateAsync: grantPermit, isPending } = useGrantPermit();
  *
  * // Authorize decryption for any contracts with encrypted state:
  * // confidential tokens, auction contracts, governance contracts, etc.
- * await allow([tokenAddress, auctionAddress, governanceAddress]);
+ * await grantPermit([tokenAddress, auctionAddress, governanceAddress]);
  * ```
  */
 export function useGrantPermit(options?: UseMutationOptions<void, Error, Address[]>) {

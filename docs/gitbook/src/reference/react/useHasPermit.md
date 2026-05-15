@@ -26,13 +26,13 @@ import { useHasPermit, useGrantPermit } from "@zama-fhe/react-sdk";
 const CONTRACTS = ["0xTokenA", "0xTokenB"] as const;
 
 function AuthGuard() {
-  const { data: allowed, isLoading } = useHasPermit({ contractAddresses: [...CONTRACTS] });
-  const { mutateAsync: allow } = useGrantPermit();
+  const { data: hasPermit, isLoading } = useHasPermit({ contractAddresses: [...CONTRACTS] });
+  const { mutateAsync: grantPermit } = useGrantPermit();
 
   if (isLoading) return <span>Checking permits...</span>;
 
-  if (!allowed) {
-    return <button onClick={() => allow([...CONTRACTS])}>Authorize wallet</button>;
+  if (!hasPermit) {
+    return <button onClick={() => grantPermit([...CONTRACTS])}>Authorize wallet</button>;
   }
 
   return <span>Permits active — decrypts will not prompt the wallet</span>;
@@ -52,15 +52,15 @@ function GatedDecrypt({
   handle: string;
   contractAddress: `0x${string}`;
 }) {
-  const { data: allowed } = useHasPermit({ contractAddresses: [contractAddress] });
-  const { mutateAsync: allow } = useGrantPermit();
+  const { data: hasPermit } = useHasPermit({ contractAddresses: [contractAddress] });
+  const { mutateAsync: grantPermit } = useGrantPermit();
   const { data, isPending } = useUserDecrypt(
     { handles: [{ handle, contractAddress }] },
-    { enabled: !!allowed }, // only decrypt once authorized
+    { enabled: !!hasPermit }, // only decrypt once authorized
   );
 
-  if (!allowed) {
-    return <button onClick={() => allow([contractAddress])}>Authorize</button>;
+  if (!hasPermit) {
+    return <button onClick={() => grantPermit([contractAddress])}>Authorize</button>;
   }
 
   if (isPending) return <span>Decrypting...</span>;
@@ -80,13 +80,13 @@ function GatedDecrypt({
 Contract addresses to check credentials against. Returns `true` only when stored permits cover **all** specified addresses.
 
 ```tsx
-const { data: allowed } = useHasPermit({
+const { data: hasPermit } = useHasPermit({
   contractAddresses: ["0xContractA", "0xContractB"],
 });
 ```
 
 {% hint style="warning" %}
-**You must gate decrypt queries yourself.** `useUserDecrypt` does not automatically wait for permits — if you call it before `useGrantPermit`, the user sees an unexpected wallet popup. Use `useHasPermit` to conditionally enable the decrypt query via `{ enabled: !!allowed }` as the second argument, or conditionally render the decrypt component only when `allowed` is `true`.
+**You must gate decrypt queries yourself.** `useUserDecrypt` does not automatically wait for permits — if you call it before `useGrantPermit`, the user sees an unexpected wallet popup. Use `useHasPermit` to conditionally enable the decrypt query via `{ enabled: !!hasPermit }` as the second argument, or conditionally render the decrypt component only when `hasPermit` is `true`.
 {% endhint %}
 
 ## Return Type

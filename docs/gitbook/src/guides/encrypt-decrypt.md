@@ -290,13 +290,13 @@ function DecryptGate({
   contractAddresses: Address[];
   children: React.ReactNode;
 }) {
-  const { data: isAllowed } = useHasPermit({ contractAddresses });
-  const { mutate: allow, isPending } = useGrantPermit();
+  const { data: hasPermit } = useHasPermit({ contractAddresses });
+  const { mutate: grantPermit, isPending } = useGrantPermit();
 
-  if (isAllowed) return <>{children}</>;
+  if (hasPermit) return <>{children}</>;
 
   return (
-    <button onClick={() => allow(contractAddresses)} disabled={isPending}>
+    <button onClick={() => grantPermit(contractAddresses)} disabled={isPending}>
       {isPending ? "Signing..." : "Decrypt Balances"}
     </button>
   );

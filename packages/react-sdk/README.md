@@ -76,14 +76,14 @@ function AuthGate({
   contractAddresses: Address[];
   children: ReactNode;
 }) {
-  const { data: isAllowed, isLoading: isChecking } = useHasPermit({ contractAddresses });
+  const { data: hasPermit, isLoading: isChecking } = useHasPermit({ contractAddresses });
   const { mutateAsync: grantPermit, isPending: isAuthorizing } = useGrantPermit();
 
   if (isChecking) return <p>Checking authorization...</p>;
-  if (isAllowed) return <>{children}</>;
+  if (hasPermit) return <>{children}</>;
 
   return (
-    <button onClick={() => void allow(contractAddresses)} disabled={isAuthorizing}>
+    <button onClick={() => void grantPermit(contractAddresses)} disabled={isAuthorizing}>
       {isAuthorizing ? "Signing..." : "Authorize decryption"}
     </button>
   );

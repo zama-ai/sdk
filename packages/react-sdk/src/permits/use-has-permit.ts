@@ -25,7 +25,7 @@ export interface UseHasPermitConfig {
  *
  * @example
  * ```tsx
- * const { data: allowed } = useHasPermit({ contractAddresses: ["0xToken"] });
+ * const { data: hasPermit } = useHasPermit({ contractAddresses: ["0xToken"] });
  * ```
  */
 export function useHasPermit(config: UseHasPermitConfig) {

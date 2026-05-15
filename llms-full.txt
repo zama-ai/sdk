@@ -1068,18 +1068,18 @@ const TOKEN = "0xConfidentialToken" as const;
 
 function Balance() {
   const { address } = useAccount();
-  const { mutate: allow, isPending: isAllowing } = useGrantPermit();
-  const { data: isAllowed } = useHasPermit({ contractAddresses: [TOKEN] });
+  const { mutate: grantPermit, isPending: isGranting } = useGrantPermit();
+  const { data: hasPermit } = useHasPermit({ contractAddresses: [TOKEN] });
 
   const { data, isPending, error } = useConfidentialBalance(
     { address: TOKEN, account: address },
-    { enabled: !!isAllowed },
+    { enabled: !!hasPermit },
   );
 
-  if (!isAllowed) {
+  if (!hasPermit) {
     return (
-      <button onClick={() => allow([TOKEN])} disabled={isAllowing}>
-        {isAllowing ? "Signing…" : "View balance"}
+      <button onClick={() => grantPermit([TOKEN])} disabled={isGranting}>
+        {isGranting ? "Signing…" : "View balance"}
       </button>
     );
   }
@@ -4001,13 +4001,13 @@ function DecryptGate({
   contractAddresses: Address[];
   children: React.ReactNode;
 }) {
-  const { data: isAllowed } = useHasPermit({ contractAddresses });
-  const { mutate: allow, isPending } = useGrantPermit();
+  const { data: hasPermit } = useHasPermit({ contractAddresses });
+  const { mutate: grantPermit, isPending } = useGrantPermit();
 
-  if (isAllowed) return <>{children}</>;
+  if (hasPermit) return <>{children}</>;
 
   return (
-    <button onClick={() => allow(contractAddresses)} disabled={isPending}>
+    <button onClick={() => grantPermit(contractAddresses)} disabled={isPending}>
       {isPending ? "Signing..." : "Decrypt Balances"}
     </button>
   );
@@ -10280,10 +10280,10 @@ import { useGrantPermit } from "@zama-fhe/react-sdk";
 import { useGrantPermit } from "@zama-fhe/react-sdk";
 
 function AllowButton({ contracts }: { contracts: `0x${string}`[] }) {
-  const { mutateAsync: allow, isPending } = useGrantPermit();
+  const { mutateAsync: grantPermit, isPending } = useGrantPermit();
 
   const handleAllow = async () => {
-    await allow(contracts);
+    await grantPermit(contracts);
     // All subsequent decrypt operations reuse the cached permits
   };
 
@@ -10302,11 +10302,11 @@ import { useGrantPermit } from "@zama-fhe/react-sdk";
 import { useEffect } from "react";
 
 function AuthOnConnect({ contracts }: { contracts: `0x${string}`[] }) {
-  const { mutateAsync: allow } = useGrantPermit();
+  const { mutateAsync: grantPermit } = useGrantPermit();
 
   useEffect(() => {
     // Pre-authorize on wallet connect
-    allow(contracts);
+    grantPermit(contracts);
   }, []);
 
   return null;
@@ -10328,7 +10328,7 @@ Array of contract addresses to authorize decryption for in a single wallet signa
 
 ```tsx
 // Authorize any contracts with encrypted state — tokens, auctions, governance, etc.
-await allow([confidentialTokenAddress, auctionAddress, governanceAddress]);
+await grantPermit([confidentialTokenAddress, auctionAddress, governanceAddress]);
 ```
 
 ## Return Type
@@ -10421,13 +10421,13 @@ import { useHasPermit, useGrantPermit } from "@zama-fhe/react-sdk";
 const CONTRACTS = ["0xTokenA", "0xTokenB"] as const;
 
 function AuthGuard() {
-  const { data: allowed, isLoading } = useHasPermit({ contractAddresses: [...CONTRACTS] });
-  const { mutateAsync: allow } = useGrantPermit();
+  const { data: hasPermit, isLoading } = useHasPermit({ contractAddresses: [...CONTRACTS] });
+  const { mutateAsync: grantPermit } = useGrantPermit();
 
   if (isLoading) return <span>Checking permits...</span>;
 
-  if (!allowed) {
-    return <button onClick={() => allow([...CONTRACTS])}>Authorize wallet</button>;
+  if (!hasPermit) {
+    return <button onClick={() => grantPermit([...CONTRACTS])}>Authorize wallet</button>;
   }
 
   return <span>Permits active — decrypts will not prompt the wallet</span>;
@@ -10446,15 +10446,15 @@ function GatedDecrypt({
   handle: string;
   contractAddress: `0x${string}`;
 }) {
-  const { data: allowed } = useHasPermit({ contractAddresses: [contractAddress] });
-  const { mutateAsync: allow } = useGrantPermit();
+  const { data: hasPermit } = useHasPermit({ contractAddresses: [contractAddress] });
+  const { mutateAsync: grantPermit } = useGrantPermit();
   const { data, isPending } = useUserDecrypt(
     { handles: [{ handle, contractAddress }] },
-    { enabled: !!allowed }, // only decrypt once authorized
+    { enabled: !!hasPermit }, // only decrypt once authorized
   );
 
-  if (!allowed) {
-    return <button onClick={() => allow([contractAddress])}>Authorize</button>;
+  if (!hasPermit) {
+    return <button onClick={() => grantPermit([contractAddress])}>Authorize</button>;
   }
 
   if (isPending) return <span>Decrypting...</span>;
@@ -10472,14 +10472,14 @@ function GatedDecrypt({
 Contract addresses to check credentials against. Returns `true` only when stored permits cover **all** specified addresses.
 
 ```tsx
-const { data: allowed } = useHasPermit({
+const { data: hasPermit } = useHasPermit({
   contractAddresses: ["0xContractA", "0xContractB"],
 });
 ```
 
 
 > [!WARNING]
-> **You must gate decrypt queries yourself.** `useUserDecrypt` does not automatically wait for permits — if you call it before `useGrantPermit`, the user sees an unexpected wallet popup. Use `useHasPermit` to conditionally enable the decrypt query via `{ enabled: !!allowed }` as the second argument, or conditionally render the decrypt component only when `allowed` is `true`.
+> **You must gate decrypt queries yourself.** `useUserDecrypt` does not automatically wait for permits — if you call it before `useGrantPermit`, the user sees an unexpected wallet popup. Use `useHasPermit` to conditionally enable the decrypt query via `{ enabled: !!hasPermit }` as the second argument, or conditionally render the decrypt component only when `hasPermit` is `true`.
 
 
 ## Return Type
@@ -13094,17 +13094,17 @@ import { useGrantPermit, useHasPermit, useUserDecrypt } from "@zama-fhe/react-sd
 const CONTRACT = "0xYourContract" as const;
 
 function DecryptHandle({ handle }: { handle: string }) {
-  const { mutate: allow, isPending: isAllowing } = useGrantPermit();
-  const { data: allowed } = useHasPermit({ contractAddresses: [CONTRACT] });
+  const { mutate: grantPermit, isPending: isGranting } = useGrantPermit();
+  const { data: hasPermit } = useHasPermit({ contractAddresses: [CONTRACT] });
   const { data, isPending } = useUserDecrypt(
     { handles: [{ handle, contractAddress: CONTRACT }] },
-    { enabled: !!allowed }, // gate: only decrypt once authorized
+    { enabled: !!hasPermit }, // gate: only decrypt once authorized
   );
 
-  if (!allowed) {
+  if (!hasPermit) {
     return (
-      <button onClick={() => allow([CONTRACT])} disabled={isAllowing}>
-        {isAllowing ? "Signing..." : "Authorize"}
+      <button onClick={() => grantPermit([CONTRACT])} disabled={isGranting}>
+        {isGranting ? "Signing..." : "Authorize"}
       </button>
     );
   }
@@ -13148,7 +13148,7 @@ const { data } = useUserDecrypt({
 
 
 > [!WARNING]
-> **All contract addresses must be authorized first.** Call `useGrantPermit` with every contract address present in `handles` before enabling the query. Use `useHasPermit({ contractAddresses })` to check coverage and pass `{ enabled: !!allowed }` as the second argument to prevent unexpected wallet prompts.
+> **All contract addresses must be authorized first.** Call `useGrantPermit` with every contract address present in `handles` before enabling the query. Use `useHasPermit({ contractAddresses })` to check coverage and pass `{ enabled: !!hasPermit }` as the second argument to prevent unexpected wallet prompts.
 
 
 ### options (second argument)
@@ -13230,10 +13230,10 @@ The current status of the query. Prefer the boolean flags above for conditional 
 > **`useUserDecrypt` does not automatically gate on permits.** If permits are not cached when the query fires, the SDK will prompt the user's wallet for a signature. To avoid unexpected popups, gate the query yourself using [`useHasPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useHasPermit.md):
 >
 > ```tsx
-> const { data: allowed } = useHasPermit({ contractAddresses: ["0xContract"] });
+> const { data: hasPermit } = useHasPermit({ contractAddresses: ["0xContract"] });
 > const { data } = useUserDecrypt(
 >   { handles: [{ handle, contractAddress: "0xContract" }] },
->   { enabled: !!allowed },
+>   { enabled: !!hasPermit },
 > );
 > ```
 >
@@ -13244,9 +13244,9 @@ The current status of the query. Prefer the boolean flags above for conditional 
 
 `useUserDecrypt` relies on permits acquired via [`useGrantPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useGrantPermit.md):
 
-- **First `allow()` call** — generates a new FHE keypair, creates EIP-712 typed data, and requests a wallet signature. The permits are then cached.
+- **First `grantPermit()` call** — generates a new FHE keypair, creates EIP-712 typed data, and requests a wallet signature. The permits are then cached.
 - **Subsequent queries** — reuse the cached permits if they are still valid (not expired).
-- **Expiry** — the FHE keypair expires after `keypairTTL` seconds (default: 2592000 = 30 days, configurable via SDK config). Permits expire after `permitTTL` days (default: 30). Once expired, call `allow()` again to generate fresh permits.
+- **Expiry** — the FHE keypair expires after `keypairTTL` seconds (default: 2592000 = 30 days, configurable via SDK config). Permits expire after `permitTTL` days (default: 30). Once expired, call `grantPermit()` again to generate fresh permits.
 
 This means users only see a wallet signature prompt once per TTL window, even if they decrypt multiple times.
 
@@ -18194,14 +18194,14 @@ function AuthGate({
   contractAddresses: Address[];
   children: ReactNode;
 }) {
-  const { data: isAllowed, isLoading: isChecking } = useHasPermit({ contractAddresses });
+  const { data: hasPermit, isLoading: isChecking } = useHasPermit({ contractAddresses });
   const { mutateAsync: grantPermit, isPending: isAuthorizing } = useGrantPermit();
 
   if (isChecking) return <p>Checking authorization...</p>;
-  if (isAllowed) return <>{children}</>;
+  if (hasPermit) return <>{children}</>;
 
   return (
-    <button onClick={() => void allow(contractAddresses)} disabled={isAuthorizing}>
+    <button onClick={() => void grantPermit(contractAddresses)} disabled={isAuthorizing}>
       {isAuthorizing ? "Signing..." : "Authorize decryption"}
     </button>
   );
