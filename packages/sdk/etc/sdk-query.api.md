@@ -45,6 +45,7 @@ export interface ApproveUnderlyingParams {
 
 // @public (undocumented)
 export interface ApproveUnderlyingSubmittedEvent extends BaseEvent {
+    step: "reset" | "approve";
     // (undocumented)
     txHash: Hex;
     // (undocumented)
@@ -715,6 +716,12 @@ export class Token {
     // (undocumented)
     readonly sdk: ZamaSDK;
     setOperator(operator: Address, until?: number): Promise<TransactionResult>;
+    // @internal
+    protected submitTransaction(params: {
+        operation: TransactionOperation;
+        config: WriteContractConfig;
+        onSubmitted?: (txHash: Hex) => void;
+    }): Promise<TransactionResult>;
     symbol(): Promise<string>;
 }
 
@@ -784,13 +791,15 @@ export function totalSupplyQueryOptions(sdk: ZamaSDK, tokenAddress: Address, con
 // @public (undocumented)
 export interface TransactionErrorEvent extends BaseEvent {
     error: Error;
-    operation: TransactionErrorOperation;
+    operation: TransactionOperation;
     // (undocumented)
     type: typeof ZamaSDKEvents.TransactionError;
 }
 
+// Warning: (ae-forgotten-export) The symbol "transactionOperationMetadata" needs to be exported by the entry point index.d.ts
+//
 // @public
-export type TransactionErrorOperation = "approveUnderlying" | "delegateDecryption" | "finalizeUnwrap" | "revokeDelegation" | "setOperator" | "shield:transferAndCall" | "shield:approveAndWrap" | "transfer" | "transferFrom" | "unwrap";
+export type TransactionOperation = keyof typeof transactionOperationMetadata;
 
 // @public
 export interface TransactionReceipt {
@@ -1326,9 +1335,9 @@ export const ZamaSDKEvents: {
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/types-57wtSyfb.d.ts:561:3 - (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
-// dist/esm/types-57wtSyfb.d.ts:562:3 - (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
-// dist/esm/types-57wtSyfb.d.ts:563:3 - (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
+// dist/esm/types-C5dxoEW7.d.ts:652:3 - (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
+// dist/esm/types-C5dxoEW7.d.ts:653:3 - (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
+// dist/esm/types-C5dxoEW7.d.ts:654:3 - (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

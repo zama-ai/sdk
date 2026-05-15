@@ -1,5 +1,5 @@
 import { act, waitFor } from "@testing-library/react";
-import { ApprovalFailedError, TransactionRevertedError } from "@zama-fhe/sdk";
+import { TransactionRevertedError } from "@zama-fhe/sdk";
 import { shieldMutationOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { expectCacheInvalidated, expectCacheUntouched } from "../../test-helpers";
@@ -370,15 +370,6 @@ describe("useShield optimistic updates", () => {
 });
 
 describe("useShield error propagation", () => {
-  test("shield surfaces ApprovalFailedError", async ({ token }) => {
-    const error = new ApprovalFailedError("ERC-20 approval failed");
-    vi.mocked(token.shield).mockRejectedValueOnce(error);
-
-    const opts = shieldMutationOptions(token, token.address);
-
-    await expect(opts.mutationFn({ amount: 100n })).rejects.toThrow(ApprovalFailedError);
-  });
-
   test("shield surfaces TransactionRevertedError", async ({ token }) => {
     const error = new TransactionRevertedError("Shield (wrap) transaction failed");
     vi.mocked(token.shield).mockRejectedValueOnce(error);

@@ -1,6 +1,7 @@
 import { type Address, getAddress } from "viem";
 import { describe, expect, it, vi } from "../../test-fixtures";
 import { ZamaSDKEvents } from "../../events/sdk-events";
+import { ZamaErrorCode } from "../../errors";
 
 const UNDERLYING = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
 const OTHER_RECIPIENT = "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address;
@@ -233,7 +234,9 @@ describe("WrappedToken.shield", () => {
 
       vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("transferAndCall reverted"));
 
-      await expect(token.shield(100n)).rejects.toThrow("TransferAndCall shield transaction failed");
+      await expect(token.shield(100n)).rejects.toMatchObject({
+        code: ZamaErrorCode.TransactionReverted,
+      });
       expect(signer.writeContract).toHaveBeenCalledOnce();
     });
 
@@ -251,7 +254,9 @@ describe("WrappedToken.shield", () => {
       // rejection or RPC failure where falling back would be hostile UX.
       vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("User rejected the request"));
 
-      await expect(token.shield(100n)).rejects.toThrow("TransferAndCall shield transaction failed");
+      await expect(token.shield(100n)).rejects.toMatchObject({
+        code: ZamaErrorCode.TransactionReverted,
+      });
       expect(signer.writeContract).toHaveBeenCalledOnce();
     });
 
@@ -270,7 +275,9 @@ describe("WrappedToken.shield", () => {
         new Error("network dropped"),
       );
 
-      await expect(token.shield(100n)).rejects.toThrow("TransferAndCall shield transaction failed");
+      await expect(token.shield(100n)).rejects.toMatchObject({
+        code: ZamaErrorCode.TransactionReverted,
+      });
       // Submission happened exactly once — no second wallet popup.
       expect(signer.writeContract).toHaveBeenCalledOnce();
     });
