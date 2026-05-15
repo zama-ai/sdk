@@ -1,7 +1,7 @@
 import { ZamaError, ZamaErrorCode } from "./base";
 
-// Delegation errors — thrown by SDK pre-flight checks and by `matchAclRevert()`
-// when it maps ACL Solidity revert reasons to typed errors.
+// Delegation errors — thrown by SDK pre-flight checks and by delegation
+// transaction callsites when they map ACL Solidity revert reasons.
 
 /** Delegation cannot target self (delegate === msg.sender). */
 export class DelegationSelfNotAllowedError extends ZamaError {

@@ -13,28 +13,27 @@ All errors thrown by `@zama-fhe/sdk` and `@zama-fhe/react-sdk` extend `ZamaError
 
 Every SDK error is an instance of `ZamaError`, which extends the native `Error` class. Each subclass has a unique `.code` property:
 
-| Error                                  | Code                                | What happened                                            |
-| -------------------------------------- | ----------------------------------- | -------------------------------------------------------- |
-| `SigningRejectedError`                 | `SIGNING_REJECTED`                  | User rejected the wallet signature                       |
-| `SigningFailedError`                   | `SIGNING_FAILED`                    | Wallet signature failed (connectivity or firmware issue) |
-| `EncryptionFailedError`                | `ENCRYPTION_FAILED`                 | FHE encryption failed in the Web Worker                  |
-| `DecryptionFailedError`                | `DECRYPTION_FAILED`                 | FHE decryption failed                                    |
-| `ApprovalFailedError`                  | `APPROVAL_FAILED`                   | ERC-20 approval transaction failed                       |
-| `TransactionRevertedError`             | `TRANSACTION_REVERTED`              | On-chain transaction reverted                            |
-| `InvalidKeypairError`                  | `INVALID_KEYPAIR`                   | Relayer rejected FHE keypair (stale or malformed)        |
-| `KeypairExpiredError`                  | `KEYPAIR_EXPIRED`                   | FHE keypair expired -- user needs to re-sign             |
-| `NoCiphertextError`                    | `NO_CIPHERTEXT`                     | No encrypted balance exists for this account             |
-| `RelayerRequestFailedError`            | `RELAYER_REQUEST_FAILED`            | Relayer HTTP request failed (check `.statusCode`)        |
-| `ConfigurationError`                   | `CONFIGURATION`                     | Invalid SDK config or FHE worker failed to initialize    |
-| `InsufficientConfidentialBalanceError` | `INSUFFICIENT_CONFIDENTIAL_BALANCE` | Confidential balance too low for transfer or unshield    |
-| `InsufficientERC20BalanceError`        | `INSUFFICIENT_ERC20_BALANCE`        | ERC-20 balance too low for shield                        |
-| `BalanceCheckUnavailableError`         | `BALANCE_CHECK_UNAVAILABLE`         | Balance check impossible (no stored permits)             |
-| `ERC20ReadFailedError`                 | `ERC20_READ_FAILED`                 | Public ERC-20 read failed (network or contract error)    |
-| `DelegationSelfNotAllowedError`        | `DELEGATION_SELF_NOT_ALLOWED`       | Delegation cannot target self                            |
-| `DelegationCooldownError`              | `DELEGATION_COOLDOWN`               | Only one delegate/revoke per tuple per block             |
-| `DelegationNotFoundError`              | `DELEGATION_NOT_FOUND`              | No active delegation for this tuple                      |
-| `SignerRequiredError`                  | `SIGNER_REQUIRED`                   | Write/sign/decrypt called without a signer               |
-| `DelegationExpiredError`               | `DELEGATION_EXPIRED`                | The delegation has expired                               |
+| Error                                  | Code                                | What happened                                                                  |
+| -------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------ |
+| `SigningRejectedError`                 | `SIGNING_REJECTED`                  | User rejected the wallet signature                                             |
+| `SigningFailedError`                   | `SIGNING_FAILED`                    | Wallet signature failed (connectivity or firmware issue)                       |
+| `EncryptionFailedError`                | `ENCRYPTION_FAILED`                 | FHE encryption failed in the Web Worker                                        |
+| `DecryptionFailedError`                | `DECRYPTION_FAILED`                 | FHE decryption failed                                                          |
+| `TransactionRevertedError`             | `TRANSACTION_REVERTED`              | On-chain transaction reverted (includes failed ERC-20 approvals during shield) |
+| `InvalidKeypairError`                  | `INVALID_KEYPAIR`                   | Relayer rejected FHE keypair (stale or malformed)                              |
+| `KeypairExpiredError`                  | `KEYPAIR_EXPIRED`                   | FHE keypair expired -- user needs to re-sign                                   |
+| `NoCiphertextError`                    | `NO_CIPHERTEXT`                     | No encrypted balance exists for this account                                   |
+| `RelayerRequestFailedError`            | `RELAYER_REQUEST_FAILED`            | Relayer HTTP request failed (check `.statusCode`)                              |
+| `ConfigurationError`                   | `CONFIGURATION`                     | Invalid SDK config or FHE worker failed to initialize                          |
+| `InsufficientConfidentialBalanceError` | `INSUFFICIENT_CONFIDENTIAL_BALANCE` | Confidential balance too low for transfer or unshield                          |
+| `InsufficientERC20BalanceError`        | `INSUFFICIENT_ERC20_BALANCE`        | ERC-20 balance too low for shield                                              |
+| `BalanceCheckUnavailableError`         | `BALANCE_CHECK_UNAVAILABLE`         | Balance check impossible (no stored permits)                                   |
+| `ERC20ReadFailedError`                 | `ERC20_READ_FAILED`                 | Public ERC-20 read failed (network or contract error)                          |
+| `DelegationSelfNotAllowedError`        | `DELEGATION_SELF_NOT_ALLOWED`       | Delegation cannot target self                                                  |
+| `DelegationCooldownError`              | `DELEGATION_COOLDOWN`               | Only one delegate/revoke per tuple per block                                   |
+| `DelegationNotFoundError`              | `DELEGATION_NOT_FOUND`              | No active delegation for this tuple                                            |
+| `SignerRequiredError`                  | `SIGNER_REQUIRED`                   | Write/sign/decrypt called without a signer                                     |
+| `DelegationExpiredError`               | `DELEGATION_EXPIRED`                | The delegation has expired                                                     |
 
 ### 2. Catch with instanceof
 
