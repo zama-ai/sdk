@@ -6,7 +6,7 @@ import { hasPermitQueryOptions } from "../has-permit";
 import { revokePermitsMutationOptions } from "../revoke-permits";
 
 describe("grantPermitMutationOptions", () => {
-  test("calls sdk.permits.allow with provided addresses", async ({ sdk }) => {
+  test("calls sdk.permits.grantPermit with provided addresses", async ({ sdk }) => {
     const allowSpy = vi.spyOn(sdk.permits, "grantPermit").mockResolvedValue();
 
     const options = grantPermitMutationOptions(sdk);
@@ -23,7 +23,7 @@ describe("grantPermitMutationOptions", () => {
 });
 
 describe("revokePermitsMutationOptions", () => {
-  test("calls sdk.permits.revoke with no arguments", async ({ sdk }) => {
+  test("calls sdk.permits.revokePermits with no arguments", async ({ sdk }) => {
     const revokeSpy = vi.spyOn(sdk.permits, "revokePermits").mockResolvedValue(undefined);
 
     const options = revokePermitsMutationOptions(sdk);
@@ -37,7 +37,7 @@ describe("revokePermitsMutationOptions", () => {
 });
 
 describe("hasPermitQueryOptions", () => {
-  test("calls sdk.permits.isAllowed", async ({ sdk }) => {
+  test("calls sdk.permits.hasPermit", async ({ sdk }) => {
     const isAllowedSpy = vi.spyOn(sdk.permits, "hasPermit").mockResolvedValue(true);
 
     const options = hasPermitQueryOptions(sdk, {
@@ -57,7 +57,7 @@ describe("hasPermitQueryOptions", () => {
     expect(isAllowedSpy).toHaveBeenCalledTimes(1);
   });
 
-  test("forwards contractAddresses to sdk.permits.isAllowed", async ({ sdk }) => {
+  test("forwards contractAddresses to sdk.permits.hasPermit", async ({ sdk }) => {
     const isAllowedSpy = vi.spyOn(sdk.permits, "hasPermit").mockResolvedValue(true);
 
     const contracts = [

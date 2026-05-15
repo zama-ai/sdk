@@ -31,7 +31,12 @@ yarn add viem
 ```tsx
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ZamaProvider, useAllow, useConfidentialBalance, useIsAllowed } from "@zama-fhe/react-sdk";
+import {
+  ZamaProvider,
+  useGrantPermit,
+  useConfidentialBalance,
+  useHasPermit,
+} from "@zama-fhe/react-sdk";
 import { createConfig } from "@zama-fhe/sdk/viem";
 import { web } from "@zama-fhe/sdk/web";
 import { sepolia as sepoliaFhe, type FheChain } from "@zama-fhe/sdk/chains";
@@ -71,8 +76,8 @@ function AuthGate({
   contractAddresses: Address[];
   children: ReactNode;
 }) {
-  const { data: isAllowed, isLoading: isChecking } = useIsAllowed({ contractAddresses });
-  const { mutateAsync: allow, isPending: isAuthorizing } = useAllow();
+  const { data: isAllowed, isLoading: isChecking } = useHasPermit({ contractAddresses });
+  const { mutateAsync: grantPermit, isPending: isAuthorizing } = useGrantPermit();
 
   if (isChecking) return <p>Checking authorization...</p>;
   if (isAllowed) return <>{children}</>;
@@ -119,7 +124,7 @@ If you need a wagmi-based setup or another integration pattern, start from the [
 
 ## Common hooks
 
-- `useIsAllowed` and `useAllow` let you gate decrypt flows behind an explicit user action.
+- `useHasPermit` and `useGrantPermit` let you gate decrypt flows behind an explicit user action.
 - `useConfidentialBalance` reads and decrypts one token balance.
 - `useConfidentialTransfer` sends a confidential transfer and invalidates affected queries.
 - `useShield` converts public ERC-20 balances into confidential balances.
