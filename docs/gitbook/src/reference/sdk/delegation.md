@@ -16,8 +16,8 @@ The ACL contract address is automatically resolved from the chain configuration.
 const sdk = new ZamaSDK(config); // config from createConfig()
 
 // Both tokens use the same ACL — resolved automatically from the chain config
-const tokenA = sdk.tokens.confidential("0xTokenA");
-const tokenB = sdk.tokens.confidential("0xTokenB");
+const tokenA = sdk.createToken("0xTokenA");
+const tokenB = sdk.createToken("0xTokenB");
 ```
 
 ## Granting delegation
@@ -63,7 +63,7 @@ Grant delegation across multiple tokens in a single call:
 ```ts
 import { Token, ZamaError } from "@zama-fhe/sdk";
 
-const tokens = addresses.map((a) => sdk.tokens.confidential(a));
+const tokens = addresses.map((a) => sdk.createToken(a));
 
 const results = await Token.batchDelegateDecryption({
   tokens,
@@ -146,7 +146,7 @@ Decrypted values are cached in storage, keyed by `(accountAddress, token, handle
 Decrypt balances across multiple tokens in a single call:
 
 ```ts
-const tokens = addresses.map((a) => sdk.tokens.confidential(a));
+const tokens = addresses.map((a) => sdk.createToken(a));
 
 const balances = await Token.batchDecryptBalancesAs(tokens, {
   delegatorAddress: "0xDelegator",

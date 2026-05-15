@@ -67,10 +67,10 @@ Unlike a session model where re-authorizing replaces the previous authorization,
 
 ```ts
 // Signs permits for all three contracts
-await sdk.permits.allow(["0xContractA", "0xContractB", "0xContractC"]);
+await sdk.permits.grantPermit(["0xContractA", "0xContractB", "0xContractC"]);
 
 // ContractA is already covered — only ContractD triggers a new signature
-await sdk.permits.allow(["0xContractA", "0xContractD"]);
+await sdk.permits.grantPermit(["0xContractA", "0xContractD"]);
 ```
 
 This means users see fewer wallet popups over time. As they interact with more contracts, their permit coverage grows without invalidating earlier permits.
@@ -83,8 +83,8 @@ Batch all contract addresses you expect to need into a single `allow()` call to 
 
 Permits can be removed in two ways:
 
-- **Selective** — `sdk.permits.revoke(["0xTokenA"])` removes permits touching those contracts on the current chain. Other permits are untouched.
-- **Full wipe** — `sdk.permits.revoke()` removes all permits for the current signer across all chains and delegators. The FHE keypair is not affected.
+- **Selective** — `sdk.permits.revokePermits(["0xTokenA"])` removes permits touching those contracts on the current chain. Other permits are untouched.
+- **Full wipe** — `sdk.permits.revokePermits()` removes all permits for the current signer across all chains and delegators. The FHE keypair is not affected.
 
 For a complete "log out" that also removes the FHE keypair, use `sdk.permits.clear()`. See the [ZamaSDK reference](/reference/sdk/ZamaSDK#revokepermits) for the full API.
 

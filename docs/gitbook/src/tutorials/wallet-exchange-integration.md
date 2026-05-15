@@ -34,7 +34,7 @@ You do **not** need to run FHE infrastructure to integrate. Wallets and exchange
 
 1. Install and configure `@zama-fhe/sdk` (or `@zama-fhe/react-sdk` for React apps). See [Quick start](/tutorials/quick-start) for stack-by-stack setup.
 2. Initialize a `ZamaSDK` instance with a relayer, signer, and storage. See the [`ZamaSDK` reference](/reference/sdk/ZamaSDK).
-3. For each confidential token contract, build a `Token` handle via `sdk.tokens.confidential(address)`.
+3. For each confidential token contract, build a `Token` handle via `sdk.createToken(address)`.
 4. Read encrypted balances, build transfers, and manage operators using the `Token` API or React hooks.
 
 ## What wallets and exchanges should support
@@ -58,7 +58,7 @@ Balances are stored as ciphertext handles. To display one, the user authorizes t
 import { ZamaSDK } from "@zama-fhe/sdk";
 
 const sdk = new ZamaSDK(config); // config from createConfig()
-const token = sdk.tokens.confidential("0xConfidentialToken");
+const token = sdk.createToken("0xConfidentialToken");
 
 // First call prompts the wallet for an EIP-712 session signature;
 // invoke it from a user action, not on app start.
@@ -70,15 +70,15 @@ const peer = await token.balanceOf("0xUserAddr"); // explicit holder
 {% tab title="React" %}
 
 ```tsx
-import { useAllow, useIsAllowed, useConfidentialBalance } from "@zama-fhe/react-sdk";
+import { useGrantPermit, useHasPermit, useConfidentialBalance } from "@zama-fhe/react-sdk";
 import { useAccount } from "wagmi";
 
 const TOKEN = "0xConfidentialToken" as const;
 
 function Balance() {
   const { address } = useAccount();
-  const { mutate: allow, isPending: isAllowing } = useAllow();
-  const { data: isAllowed } = useIsAllowed({ contractAddresses: [TOKEN] });
+  const { mutate: allow, isPending: isAllowing } = useGrantPermit();
+  const { data: isAllowed } = useHasPermit({ contractAddresses: [TOKEN] });
 
   const { data, isPending, error } = useConfidentialBalance(
     { address: TOKEN, account: address },
@@ -101,7 +101,7 @@ function Balance() {
 {% endtab %}
 {% endtabs %}
 
-A common pattern is to call `useAllow` once when the user first connects (covering every confidential contract you'll touch), then read balances anywhere in the app without further prompts. Credentials persist in IndexedDB and survive page reloads. See [Encrypt & decrypt](/guides/encrypt-decrypt) for the full pre-authorization pattern, and [Check balances](/guides/check-balances) for batch decryption across multiple tokens.
+A common pattern is to call `useGrantPermit` once when the user first connects (covering every confidential contract you'll touch), then read balances anywhere in the app without further prompts. Credentials persist in IndexedDB and survive page reloads. See [Encrypt & decrypt](/guides/encrypt-decrypt) for the full pre-authorization pattern, and [Check balances](/guides/check-balances) for batch decryption across multiple tokens.
 
 ## Send a confidential transfer
 
@@ -245,7 +245,7 @@ The SDK exposes it via `sdk.registry`. See the [`WrappersRegistry` reference](/r
 ```ts
 const result = await sdk.registry.getConfidentialToken("0xUSDC");
 if (result?.isValid) {
-  const cUsdc = sdk.tokens.confidential(result.confidentialTokenAddress);
+  const cUsdc = sdk.createToken(result.confidentialTokenAddress);
 }
 ```
 

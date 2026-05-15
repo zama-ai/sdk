@@ -17,7 +17,7 @@ Start from a configured SDK instance (see [Configuration](/guides/configuration)
 {% tab title="Core SDK" %}
 
 ```ts
-const token = sdk.tokens.confidential("0xEncryptedERC20Address");
+const token = sdk.createToken("0xEncryptedERC20Address");
 ```
 
 {% endtab %}

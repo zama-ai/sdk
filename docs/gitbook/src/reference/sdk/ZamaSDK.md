@@ -172,7 +172,7 @@ const result = await sdk.registry.getConfidentialToken(erc20Address);
 Creates a [`Token`](Token.md) instance for an ERC-7984 confidential token. Supports balance reads, encrypted transfers, operator approvals, and delegated decryption.
 
 ```ts
-const token = sdk.tokens.confidential("0xConfidentialToken");
+const token = sdk.createToken("0xConfidentialToken");
 ```
 
 ### createWrappedToken
@@ -182,7 +182,7 @@ const token = sdk.tokens.confidential("0xConfidentialToken");
 Creates a [`WrappedToken`](WrappedToken.md) instance for an ERC-7984 ERC-20 wrapper. Adds wrapper-specific operations (shield, unshield, allowance) on top of the base `Token` API. The address is the wrapper contract itself — the wrapper IS the confidential token.
 
 ```ts
-const wrappedToken = sdk.tokens.wrapper("0xWrapper");
+const wrappedToken = sdk.createWrappedToken("0xWrapper");
 ```
 
 ### createWrappersRegistry
@@ -209,7 +209,7 @@ Pre-authorize contract addresses for decryption. Signs permits only for contract
 
 ```ts
 // Sign once for three tokens, then decrypt individually
-await sdk.permits.allow([cUSDT, cDAI, cWETH]);
+await sdk.permits.grantPermit([cUSDT, cDAI, cWETH]);
 const a = await sdk.decrypt.user([{ handle: h1, contractAddress: cUSDT }]);
 const b = await sdk.decrypt.user([{ handle: h2, contractAddress: cDAI }]);
 ```
@@ -337,8 +337,8 @@ const unsubscribe = sdk.onWalletAccountChange(({ previous, next }) => {
 Remove signed permits for the current signer. With a contract list, removes permits on the current chain whose payload touches any listed address. Without arguments, removes all permits across all chains and delegators. The keypair is not affected.
 
 ```ts
-await sdk.permits.revoke(["0xTokenA"]); // current chain only
-await sdk.permits.revoke(); // all permits, all chains
+await sdk.permits.revokePermits(["0xTokenA"]); // current chain only
+await sdk.permits.revokePermits(); // all permits, all chains
 ```
 
 ### clearCredentials

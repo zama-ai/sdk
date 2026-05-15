@@ -1,13 +1,13 @@
 ---
-title: useAllow
+title: useGrantPermit
 description: Mutation hook that signs an EIP-712 message authorizing decryption of confidential handles for any contract.
 ---
 
-# useAllow
+# useGrantPermit
 
 Mutation hook that signs an EIP-712 message authorizing decryption of confidential handles for a list of contract addresses. This is **not token-specific** — any contract that uses FHE-encrypted values (confidential tokens, DeFi vaults, games, etc.) can be authorized in a single wallet signature.
 
-Call this early (e.g. after wallet connect) so that [`useUserDecrypt`](/reference/react/useUserDecrypt) queries fire automatically without wallet popups. Automatically invalidates [`useIsAllowed`](/reference/react/useIsAllowed) queries on success.
+Call this early (e.g. after wallet connect) so that [`useUserDecrypt`](/reference/react/useUserDecrypt) queries fire automatically without wallet popups. Automatically invalidates [`useHasPermit`](/reference/react/useHasPermit) queries on success.
 
 {% hint style="warning" %}
 **Include all contracts you plan to decrypt.** `useUserDecrypt` checks that stored permits cover every contract address in its `handles` before firing the query. If any contract is missing, the query stays disabled.
@@ -16,7 +16,7 @@ Call this early (e.g. after wallet connect) so that [`useUserDecrypt`](/referenc
 ## Import
 
 ```ts
-import { useAllow } from "@zama-fhe/react-sdk";
+import { useGrantPermit } from "@zama-fhe/react-sdk";
 ```
 
 ## Usage
@@ -25,10 +25,10 @@ import { useAllow } from "@zama-fhe/react-sdk";
 {% tab title="AllowButton.tsx" %}
 
 ```tsx
-import { useAllow } from "@zama-fhe/react-sdk";
+import { useGrantPermit } from "@zama-fhe/react-sdk";
 
 function AllowButton({ contracts }: { contracts: `0x${string}`[] }) {
-  const { mutateAsync: allow, isPending } = useAllow();
+  const { mutateAsync: allow, isPending } = useGrantPermit();
 
   const handleAllow = async () => {
     await allow(contracts);
@@ -47,11 +47,11 @@ function AllowButton({ contracts }: { contracts: `0x${string}`[] }) {
 {% tab title="OnConnect.tsx" %}
 
 ```tsx
-import { useAllow } from "@zama-fhe/react-sdk";
+import { useGrantPermit } from "@zama-fhe/react-sdk";
 import { useEffect } from "react";
 
 function AuthOnConnect({ contracts }: { contracts: `0x${string}`[] }) {
-  const { mutateAsync: allow } = useAllow();
+  const { mutateAsync: allow } = useGrantPermit();
 
   useEffect(() => {
     // Pre-authorize on wallet connect
@@ -67,7 +67,7 @@ function AuthOnConnect({ contracts }: { contracts: `0x${string}`[] }) {
 
 ## Parameters
 
-`useAllow` takes no configuration parameters.
+`useGrantPermit` takes no configuration parameters.
 
 ## Mutation variables
 
@@ -90,7 +90,7 @@ Returns a standard TanStack Query `UseMutationResult<void, Error, Address[]>`.
 
 ## Related
 
-- [`useIsAllowed`](/reference/react/useIsAllowed) -- check whether stored permits cover contracts
+- [`useHasPermit`](/reference/react/useHasPermit) -- check whether stored permits cover contracts
 - [`useRevokePermits`](/reference/react/useRevokePermits) -- revoke permits for specific contracts
 - [`useClearCredentials`](/reference/react/useClearCredentials) -- wipe the keypair and all permits
 - [Permit Model](/concepts/permit-model) -- permit lifecycle and TTL configuration

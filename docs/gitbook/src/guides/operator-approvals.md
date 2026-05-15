@@ -14,7 +14,7 @@ Operator approval lets another address (a DEX contract, multisig, or automated s
 Call `setOperator` on a token instance. By default, the approval is valid for 1 hour:
 
 ```ts
-const token = sdk.tokens.confidential("0xEncryptedERC20");
+const token = sdk.createToken("0xEncryptedERC20");
 
 // Approve with the default 1-hour duration
 await token.setOperator("0xOperator");
@@ -48,7 +48,7 @@ Once approved, the operator can transfer tokens from the owner's confidential ba
 
 ```ts
 // As the approved operator
-const token = sdk.tokens.confidential("0xEncryptedERC20");
+const token = sdk.createToken("0xEncryptedERC20");
 
 await token.confidentialTransferFrom("0xFrom", "0xTo", 500n);
 ```

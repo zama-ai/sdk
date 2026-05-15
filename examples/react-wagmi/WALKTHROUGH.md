@@ -143,7 +143,7 @@ With `WagmiSigner` (viem-based), named fields (`tokenAddress`, `confidentialToke
 `EthersSigner`, where ethers `Result` non-enumerable prototype getters require a numeric
 index fallback).
 
-**Token-dependent hooks live in the local `TokenWorkspace` component**: hooks such as `useIsAllowed`,
+**Token-dependent hooks live in the local `TokenWorkspace` component**: hooks such as `useHasPermit`,
 `useConfidentialBalance`, and the ERC-20 `useReadContract` are mounted only after a registry
 pair has been selected. This keeps React hook calls unconditional inside the component while
 avoiding placeholder addresses such as `ZERO_ADDRESS`.
@@ -204,18 +204,18 @@ Three balances are shown:
 | Confidential | Relayer decryption      | `useConfidentialBalance({ tokenAddress: token.confidentialTokenAddress, ... })` |
 
 **Explicit decrypt pattern**: `useConfidentialBalance` is only enabled after the user has
-authorized FHE decryption via an EIP-712 wallet signature. `useIsAllowed({ contractAddresses })`
+authorized FHE decryption via an EIP-712 wallet signature. `useHasPermit({ contractAddresses })`
 checks whether cached credentials cover the currently selected token; if not, `BalancesCard`
 shows a "Decrypt Balance" button rather than a balance value. This avoids blind-signing
 prompts on mount.
 
 ```ts
-const { data: isAllowed } = useIsAllowed({
+const { data: isAllowed } = useHasPermit({
   contractAddresses: [token.confidentialTokenAddress],
 });
-// All registry pairs are passed at once to useAllow — one signature covers all tokens,
+// All registry pairs are passed at once to useGrantPermit — one signature covers all tokens,
 // so switching tokens does not prompt the wallet again.
-const allowTokens = useAllow();
+const allowTokens = useGrantPermit();
 function handleDecrypt() {
   if (validPairs.length === 0) return;
   allowTokens.mutate(validPairs.map((p) => p.confidentialTokenAddress));

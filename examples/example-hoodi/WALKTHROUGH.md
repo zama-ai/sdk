@@ -12,7 +12,7 @@
 
 ERC-7984 is a token standard that adds **confidential balances and transfer amounts** to ERC-20 tokens. Instead of storing plaintext balances on-chain, balances are stored as encrypted handles. Only the token owner can decrypt their own balance.
 
-The **Zama SDK** (`@zama-fhe/sdk`, `@zama-fhe/react-sdk`) handles all cryptographic operations — encryption, decryption, EIP-712 signing — behind simple React hooks (`useConfidentialTransfer`, `useUnshield`, `useConfidentialBalance`) and the `Token` API (`sdk.tokens.wrapper().shield()`).
+The **Zama SDK** (`@zama-fhe/sdk`, `@zama-fhe/react-sdk`) handles all cryptographic operations — encryption, decryption, EIP-712 signing — behind simple React hooks (`useConfidentialTransfer`, `useUnshield`, `useConfidentialBalance`) and the `Token` API (`sdk.createWrappedToken().shield()`).
 
 This example uses the **cleartext stack** (`RelayerCleartext`), which is Zama's lightweight backend for chains where the full FHE co-processor is not deployed (including Hoodi). See [How the cleartext stack works](#how-the-cleartext-stack-works) below.
 
@@ -32,15 +32,15 @@ Specifically:
 
 ## Supported operations
 
-| Operation                    | SDK API                                                | Source file                                            | Transactions          |
-| ---------------------------- | ------------------------------------------------------ | ------------------------------------------------------ | --------------------- |
-| Decrypt confidential balance | `useIsAllowed` + `useAllow` + `useConfidentialBalance` | `src/app/page.tsx` + `src/components/BalancesCard.tsx` | 0 (read)              |
-| Shield (ERC-20 → cToken)     | `sdk.tokens.wrapper().shield()`                        | `src/components/ShieldCard.tsx`                        | 1–3 (wrap, ± approve) |
-| Confidential transfer        | `useConfidentialTransfer`                              | `src/components/TransferCard.tsx`                      | 1                     |
-| Unshield (cToken → ERC-20)   | `useUnshield`                                          | `src/components/UnshieldCard.tsx`                      | 2 (unwrap + finalize) |
-| Grant decryption access      | `useDelegateDecryption`                                | `src/components/DelegateDecryptionCard.tsx`            | 1                     |
-| Revoke decryption access     | `useRevokeDelegation`                                  | `src/components/RevokeDelegationCard.tsx`              | 1                     |
-| Decrypt balance as delegate  | `useDecryptBalanceAs` + `useDelegationStatus`          | `src/components/DecryptAsCard.tsx`                     | 0 (read)              |
+| Operation                    | SDK API                                                      | Source file                                            | Transactions          |
+| ---------------------------- | ------------------------------------------------------------ | ------------------------------------------------------ | --------------------- |
+| Decrypt confidential balance | `useHasPermit` + `useGrantPermit` + `useConfidentialBalance` | `src/app/page.tsx` + `src/components/BalancesCard.tsx` | 0 (read)              |
+| Shield (ERC-20 → cToken)     | `sdk.createWrappedToken().shield()`                          | `src/components/ShieldCard.tsx`                        | 1–3 (wrap, ± approve) |
+| Confidential transfer        | `useConfidentialTransfer`                                    | `src/components/TransferCard.tsx`                      | 1                     |
+| Unshield (cToken → ERC-20)   | `useUnshield`                                                | `src/components/UnshieldCard.tsx`                      | 2 (unwrap + finalize) |
+| Grant decryption access      | `useDelegateDecryption`                                      | `src/components/DelegateDecryptionCard.tsx`            | 1                     |
+| Revoke decryption access     | `useRevokeDelegation`                                        | `src/components/RevokeDelegationCard.tsx`              | 1                     |
+| Decrypt balance as delegate  | `useDecryptBalanceAs` + `useDelegationStatus`                | `src/components/DecryptAsCard.tsx`                     | 0 (read)              |
 
 ---
 
@@ -85,7 +85,7 @@ RelayerWeb → external HTTP service      RelayerCleartext → on-chain executor
 User (browser wallet)
   │
   ▼
-page.tsx — sdk.tokens.wrapper().shield() / useConfidentialTransfer / useUnshield / useConfidentialBalance
+page.tsx — sdk.createWrappedToken().shield() / useConfidentialTransfer / useUnshield / useConfidentialBalance
   │
   ▼
 @zama-fhe/react-sdk (React hooks + ZamaProvider)
@@ -353,8 +353,8 @@ import { parseUnits, isError } from "ethers";
 import {
   useZamaSDK,
   useListPairs,
-  useIsAllowed,
-  useAllow,
+  useHasPermit,
+  useGrantPermit,
   useConfidentialTransfer,
   useUnshield,
   useConfidentialBalance,
@@ -376,15 +376,15 @@ const cTokenDecimals = pair?.confidential.decimals ?? 0;
 const erc20Decimals = pair?.underlying.decimals ?? 0;
 
 // Explicit decrypt pattern: check credentials before enabling the balance display.
-// useIsAllowed returns true only when cached credentials cover the selected token.
-const { data: isAllowed } = useIsAllowed({
+// useHasPermit returns true only when cached credentials cover the selected token.
+const { data: isAllowed } = useHasPermit({
   contractAddresses: cTokenAddress ? [cTokenAddress] : [],
   query: { enabled: Boolean(cTokenAddress) },
 });
 
-// useAllow triggers the EIP-712 wallet signature that authorizes decryption.
+// useGrantPermit triggers the EIP-712 wallet signature that authorizes decryption.
 // Pass all confidential token addresses at once — a single signature covers all tokens.
-const allowTokens = useAllow();
+const allowTokens = useGrantPermit();
 function handleDecrypt() {
   const addresses = pairsData?.items?.map((p) => p.confidentialTokenAddress) ?? [];
   if (addresses.length > 0) allowTokens.mutate(addresses);
@@ -413,7 +413,7 @@ const balance = useConfidentialBalance(
 // The shield logic runs inside an async function (e.g., a TanStack Query mutationFn):
 const sdk = useZamaSDK();
 const shieldAmount = parseUnits("10", erc20Decimals);
-const token = sdk.tokens.wrapper(cTokenAddress);
+const token = sdk.createWrappedToken(cTokenAddress);
 const userAddress = await sdk.signer.getAddress();
 
 const currentAllowance = (await sdk.signer.readContract(
@@ -605,11 +605,11 @@ Tests run automatically on CI for every pull request that touches `examples/exam
 
 ## Tech stack
 
-| Package                 | Version            | Role                                                                                                                                                                                                                       |
-| ----------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@zama-fhe/sdk`         | see `package.json` | FHE core — `RelayerCleartext`, `EthersSigner`, contract builders                                                                                                                                                           |
-| `@zama-fhe/react-sdk`   | see `package.json` | React hooks — `useListPairs`, `useIsAllowed`, `useAllow`, `useConfidentialTransfer`, `useUnshield`, `useConfidentialBalance`, `useDelegateDecryption`, `useRevokeDelegation`, `useDelegationStatus`, `useDecryptBalanceAs` |
-| `ethers`                | ^6.13.0            | Ethereum client (via `EthersSigner`)                                                                                                                                                                                       |
-| `@tanstack/react-query` | ^5.90.0            | Async state management                                                                                                                                                                                                     |
-| `next`                  | ^16.0.0            | React framework (App Router)                                                                                                                                                                                               |
-| **Chain**               | Hoodi testnet      | chainId 560048                                                                                                                                                                                                             |
+| Package                 | Version            | Role                                                                                                                                                                                                                             |
+| ----------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@zama-fhe/sdk`         | see `package.json` | FHE core — `RelayerCleartext`, `EthersSigner`, contract builders                                                                                                                                                                 |
+| `@zama-fhe/react-sdk`   | see `package.json` | React hooks — `useListPairs`, `useHasPermit`, `useGrantPermit`, `useConfidentialTransfer`, `useUnshield`, `useConfidentialBalance`, `useDelegateDecryption`, `useRevokeDelegation`, `useDelegationStatus`, `useDecryptBalanceAs` |
+| `ethers`                | ^6.13.0            | Ethereum client (via `EthersSigner`)                                                                                                                                                                                             |
+| `@tanstack/react-query` | ^5.90.0            | Async state management                                                                                                                                                                                                           |
+| `next`                  | ^16.0.0            | React framework (App Router)                                                                                                                                                                                                     |
+| **Chain**               | Hoodi testnet      | chainId 560048                                                                                                                                                                                                                   |

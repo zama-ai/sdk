@@ -214,7 +214,7 @@ The three possible states:
 ```ts
 const [isValid, cToken] = await registry.getConfidentialTokenAddress("0xUSDC");
 if (isValid) {
-  const token = sdk.tokens.confidential(cToken);
+  const token = sdk.createToken(cToken);
 }
 ```
 

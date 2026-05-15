@@ -1,6 +1,8 @@
 # Restructure `ZamaSDK` into Domain Sub-Clients
 
-**Status:** Draft
+> **Update (2026-05-15):** This spec describes the original SDK-169 four-sub-client carve. The shape was further refined before v3 graduated from alpha — `sdk.tokens` was dropped in favour of root `sdk.createToken` / `sdk.createWrappedToken`, permits methods were renamed (grantPermit/hasPermit/grantDelegationPermit/hasDelegationPermit/revokePermits), and `sdk.decrypt.delegatedUser` became `sdk.decrypt.delegated`. The historical context below is preserved for reference, but the current public API is the post-refinement shape.
+
+**Status:** Superseded by post-alpha refinement (May 2026)
 **Target release:** `3.0.0-alpha.38`
 **Affected packages:** `@zama-fhe/sdk`, `@zama-fhe/react-sdk`, `examples/**`, `docs/gitbook/src/**`
 

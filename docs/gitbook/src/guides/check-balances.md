@@ -30,7 +30,7 @@ const config = createConfig({
   relayers: { [sepolia.id]: web() },
 });
 const sdk = new ZamaSDK(config);
-const token = sdk.tokens.confidential("0xEncryptedERC20");
+const token = sdk.createToken("0xEncryptedERC20");
 
 const [address] = await walletClient.getAddresses();
 const balance = await token.balanceOf(address);
@@ -45,21 +45,21 @@ console.log(`Confidential balance: ${balance}`);
 The first `balanceOf(address)` call for a token prompts the user's wallet for an EIP-712 signature. This creates FHE decrypt permits that are cached in your storage backend. Subsequent reads are silent -- no wallet popup.
 
 {% hint style="info" %}
-**In React apps, don't trigger this signature on render.** Gate `useConfidentialBalance` behind `useIsAllowed` and let the user click an explicit "Decrypt" button. See [Avoid blind-sign wallet popups](encrypt-decrypt.md#gating-useconfidentialbalance) for the full pattern.
+**In React apps, don't trigger this signature on render.** Gate `useConfidentialBalance` behind `useHasPermit` and let the user click an explicit "Decrypt" button. See [Avoid blind-sign wallet popups](encrypt-decrypt.md#gating-useconfidentialbalance) for the full pattern.
 {% endhint %}
 
 If the user rejects the signature, the SDK throws a `SigningRejectedError`. See [Handle Errors](handle-errors.md) for recovery patterns.
 
-You can pre-authorize multiple tokens with a single signature using `sdk.permits.allow()`:
+You can pre-authorize multiple tokens with a single signature using `sdk.permits.grantPermit()`:
 
 {% tabs %}
 {% tab title="SDK" %}
 
 ```ts
-await sdk.permits.allow(["0xTokenA", "0xTokenB"]);
+await sdk.permits.grantPermit(["0xTokenA", "0xTokenB"]);
 
-const tokenA = sdk.tokens.confidential("0xTokenA");
-const tokenB = sdk.tokens.confidential("0xTokenB");
+const tokenA = sdk.createToken("0xTokenA");
+const tokenB = sdk.createToken("0xTokenB");
 // All subsequent balanceOf() calls are silent
 ```
 
@@ -144,9 +144,9 @@ When your app manages a portfolio of confidential tokens, use batch operations t
 import { Token } from "@zama-fhe/sdk";
 
 // One wallet signature covers all tokens
-await sdk.permits.allow(addresses);
+await sdk.permits.grantPermit(addresses);
 
-const tokens = addresses.map((a) => sdk.tokens.confidential(a));
+const tokens = addresses.map((a) => sdk.createToken(a));
 
 // Decrypt all balances in parallel
 const { results, errors } = await Token.batchBalancesOf(tokens, userAddress);

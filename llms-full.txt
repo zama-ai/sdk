@@ -135,7 +135,7 @@ const config = createConfig({
 });
 
 const sdk = new ZamaSDK(config);
-const token = sdk.tokens.confidential("0xYourEncryptedERC20");
+const token = sdk.createToken("0xYourEncryptedERC20");
 
 await token.shield(1000n); // deposit public tokens
 const [address] = await walletClient.getAddresses();
@@ -525,7 +525,7 @@ function MyTokenPage() {
 ### Tab: viem
 
 ```ts
-const token = sdk.tokens.confidential("0xYourEncryptedERC20");
+const token = sdk.createToken("0xYourEncryptedERC20");
 
 // Shield 1,000 public tokens into confidential form
 await token.shield(1000n);
@@ -545,7 +545,7 @@ await token.unshield(500n);
 ### Tab: ethers
 
 ```ts
-const token = sdk.tokens.confidential("0xYourEncryptedERC20");
+const token = sdk.createToken("0xYourEncryptedERC20");
 
 // Shield 1,000 public tokens into confidential form
 await token.shield(1000n);
@@ -565,7 +565,7 @@ await token.unshield(500n);
 ### Tab: Node.js (viem)
 
 ```ts
-const token = sdk.tokens.confidential(process.env.TOKEN_ADDRESS!);
+const token = sdk.createToken(process.env.TOKEN_ADDRESS!);
 
 try {
   // Shield 1,000 public tokens into confidential form
@@ -588,7 +588,7 @@ try {
 ### Tab: Node.js (ethers)
 
 ```ts
-const token = sdk.tokens.confidential(process.env.TOKEN_ADDRESS!);
+const token = sdk.createToken(process.env.TOKEN_ADDRESS!);
 
 try {
   // Shield 1,000 public tokens into confidential form
@@ -1025,7 +1025,7 @@ You do **not** need to run FHE infrastructure to integrate. Wallets and exchange
 
 1. Install and configure `@zama-fhe/sdk` (or `@zama-fhe/react-sdk` for React apps). See [Quick start](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/quick-start.md) for stack-by-stack setup.
 2. Initialize a `ZamaSDK` instance with a relayer, signer, and storage. See the [`ZamaSDK` reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md).
-3. For each confidential token contract, build a `Token` handle via `sdk.tokens.confidential(address)`.
+3. For each confidential token contract, build a `Token` handle via `sdk.createToken(address)`.
 4. Read encrypted balances, build transfers, and manage operators using the `Token` API or React hooks.
 
 ## What wallets and exchanges should support
@@ -1050,7 +1050,7 @@ Balances are stored as ciphertext handles. To display one, the user authorizes t
 import { ZamaSDK } from "@zama-fhe/sdk";
 
 const sdk = new ZamaSDK(config); // config from createConfig()
-const token = sdk.tokens.confidential("0xConfidentialToken");
+const token = sdk.createToken("0xConfidentialToken");
 
 // First call prompts the wallet for an EIP-712 session signature;
 // invoke it from a user action, not on app start.
@@ -1061,15 +1061,15 @@ const peer = await token.balanceOf("0xUserAddr"); // explicit holder
 ### Tab: React
 
 ```tsx
-import { useAllow, useIsAllowed, useConfidentialBalance } from "@zama-fhe/react-sdk";
+import { useGrantPermit, useHasPermit, useConfidentialBalance } from "@zama-fhe/react-sdk";
 import { useAccount } from "wagmi";
 
 const TOKEN = "0xConfidentialToken" as const;
 
 function Balance() {
   const { address } = useAccount();
-  const { mutate: allow, isPending: isAllowing } = useAllow();
-  const { data: isAllowed } = useIsAllowed({ contractAddresses: [TOKEN] });
+  const { mutate: allow, isPending: isAllowing } = useGrantPermit();
+  const { data: isAllowed } = useHasPermit({ contractAddresses: [TOKEN] });
 
   const { data, isPending, error } = useConfidentialBalance(
     { address: TOKEN, account: address },
@@ -1090,7 +1090,7 @@ function Balance() {
 ```
 
 
-A common pattern is to call `useAllow` once when the user first connects (covering every confidential contract you'll touch), then read balances anywhere in the app without further prompts. Credentials persist in IndexedDB and survive page reloads. See [Encrypt & decrypt](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/encrypt-decrypt.md) for the full pre-authorization pattern, and [Check balances](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/check-balances.md) for batch decryption across multiple tokens.
+A common pattern is to call `useGrantPermit` once when the user first connects (covering every confidential contract you'll touch), then read balances anywhere in the app without further prompts. Credentials persist in IndexedDB and survive page reloads. See [Encrypt & decrypt](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/encrypt-decrypt.md) for the full pre-authorization pattern, and [Check balances](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/check-balances.md) for batch decryption across multiple tokens.
 
 ## Send a confidential transfer
 
@@ -1226,7 +1226,7 @@ The SDK exposes it via `sdk.registry`. See the [`WrappersRegistry` reference](ht
 ```ts
 const result = await sdk.registry.getConfidentialToken("0xUSDC");
 if (result?.isValid) {
-  const cUsdc = sdk.tokens.confidential(result.confidentialTokenAddress);
+  const cUsdc = sdk.createToken(result.confidentialTokenAddress);
 }
 ```
 
@@ -1938,7 +1938,7 @@ If you only have the underlying ERC-20 address, the built-in registry resolves t
 ### Tab: Core SDK
 
 ```ts
-const token = sdk.tokens.wrapper("0xWrapperAddress");
+const token = sdk.createWrappedToken("0xWrapperAddress");
 ```
 
 ### Tab: Resolve wrapper via registry
@@ -1949,7 +1949,7 @@ const token = sdk.tokens.wrapper("0xWrapperAddress");
 const result = await sdk.registry.getConfidentialToken("0xUnderlyingERC20");
 if (!result) throw new Error("No wrapper registered for this token");
 
-const token = sdk.tokens.wrapper(result.confidentialTokenAddress);
+const token = sdk.createWrappedToken(result.confidentialTokenAddress);
 ```
 
 ### Tab: React
@@ -2094,7 +2094,7 @@ Start from a configured SDK instance (see [Configuration](https://raw.githubuser
 ### Tab: Core SDK
 
 ```ts
-const token = sdk.tokens.confidential("0xEncryptedERC20Address");
+const token = sdk.createToken("0xEncryptedERC20Address");
 ```
 
 ### Tab: React
@@ -2300,7 +2300,7 @@ const config = createConfig({
   relayers: { [sepolia.id]: web() },
 });
 const sdk = new ZamaSDK(config);
-const token = sdk.tokens.wrapper("0xEncryptedERC20");
+const token = sdk.createWrappedToken("0xEncryptedERC20");
 
 const { txHash, receipt } = await token.unshield(500n);
 ```
@@ -2469,7 +2469,7 @@ const config = createConfig({
   relayers: { [sepolia.id]: web() },
 });
 const sdk = new ZamaSDK(config);
-const token = sdk.tokens.confidential("0xEncryptedERC20");
+const token = sdk.createToken("0xEncryptedERC20");
 
 const [address] = await walletClient.getAddresses();
 const balance = await token.balanceOf(address);
@@ -2483,21 +2483,21 @@ The first `balanceOf(address)` call for a token prompts the user's wallet for an
 
 
 > [!INFO]
-> **In React apps, don't trigger this signature on render.** Gate `useConfidentialBalance` behind `useIsAllowed` and let the user click an explicit "Decrypt" button. See [Avoid blind-sign wallet popups](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/encrypt-decrypt.md#gating-useconfidentialbalance) for the full pattern.
+> **In React apps, don't trigger this signature on render.** Gate `useConfidentialBalance` behind `useHasPermit` and let the user click an explicit "Decrypt" button. See [Avoid blind-sign wallet popups](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/encrypt-decrypt.md#gating-useconfidentialbalance) for the full pattern.
 
 
 If the user rejects the signature, the SDK throws a `SigningRejectedError`. See [Handle Errors](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/handle-errors.md) for recovery patterns.
 
-You can pre-authorize multiple tokens with a single signature using `sdk.permits.allow()`:
+You can pre-authorize multiple tokens with a single signature using `sdk.permits.grantPermit()`:
 
 
 ### Tab: SDK
 
 ```ts
-await sdk.permits.allow(["0xTokenA", "0xTokenB"]);
+await sdk.permits.grantPermit(["0xTokenA", "0xTokenB"]);
 
-const tokenA = sdk.tokens.confidential("0xTokenA");
-const tokenB = sdk.tokens.confidential("0xTokenB");
+const tokenA = sdk.createToken("0xTokenA");
+const tokenB = sdk.createToken("0xTokenB");
 // All subsequent balanceOf() calls are silent
 ```
 
@@ -2576,9 +2576,9 @@ When your app manages a portfolio of confidential tokens, use batch operations t
 import { Token } from "@zama-fhe/sdk";
 
 // One wallet signature covers all tokens
-await sdk.permits.allow(addresses);
+await sdk.permits.grantPermit(addresses);
 
-const tokens = addresses.map((a) => sdk.tokens.confidential(a));
+const tokens = addresses.map((a) => sdk.createToken(a));
 
 // Decrypt all balances in parallel
 const { results, errors } = await Token.batchBalancesOf(tokens, userAddress);
@@ -2956,7 +2956,7 @@ app.post("/api/transfer", (req, res) => {
       },
     });
     const sdk = new ZamaSDK(config);
-    const token = sdk.tokens.confidential("0xTokenAddress");
+    const token = sdk.createToken("0xTokenAddress");
     await token.confidentialTransfer("0xRecipient", 100n);
     res.json({ ok: true });
   });
@@ -2970,7 +2970,7 @@ Each call to `asyncLocalStorage.run()` creates a fresh storage scope. Concurrent
 The token API is identical to the browser SDK:
 
 ```ts
-const token = sdk.tokens.confidential("0xEncryptedERC20");
+const token = sdk.createToken("0xEncryptedERC20");
 
 // Shield public tokens into their encrypted form
 await token.shield(1000n);
@@ -3205,7 +3205,7 @@ The `executorAddress` is the deployed `CleartextFHEVMExecutor` contract address 
 The token API works exactly the same:
 
 ```ts
-const token = sdk.tokens.confidential("0xEncryptedERC20");
+const token = sdk.createToken("0xEncryptedERC20");
 await token.shield(1000n);
 const [address] = await walletClient.getAddresses();
 const balance = await token.balanceOf(address);
@@ -3603,7 +3603,7 @@ Operator approval lets another address (a DEX contract, multisig, or automated s
 Call `setOperator` on a token instance. By default, the approval is valid for 1 hour:
 
 ```ts
-const token = sdk.tokens.confidential("0xEncryptedERC20");
+const token = sdk.createToken("0xEncryptedERC20");
 
 // Approve with the default 1-hour duration
 await token.setOperator("0xOperator");
@@ -3637,7 +3637,7 @@ Once approved, the operator can transfer tokens from the owner's confidential ba
 
 ```ts
 // As the approved operator
-const token = sdk.tokens.confidential("0xEncryptedERC20");
+const token = sdk.createToken("0xEncryptedERC20");
 
 await token.confidentialTransferFrom("0xFrom", "0xTo", 500n);
 ```
@@ -3964,13 +3964,13 @@ Decrypting on-chain data requires the user to sign an EIP-712 message that grant
 
 A good decryption UX follows three steps:
 
-1. **Check permits** — use `useIsAllowed` to see whether the user has already signed.
+1. **Check permits** — use `useHasPermit` to see whether the user has already signed.
 2. **Show a locked state** — display a clear "Decrypt" button so the user understands what they are authorizing.
 3. **Decrypt on demand** — only mount balance or decrypt components after permits exist.
 
 
 > [!DANGER]
-> **Never** call `useConfidentialBalance` or `useUserDecrypt` without gating on `useIsAllowed`:
+> **Never** call `useConfidentialBalance` or `useUserDecrypt` without gating on `useHasPermit`:
 >
 > ```tsx
 > // BAD — triggers wallet popup as soon as the component mounts
@@ -3991,7 +3991,7 @@ Split the gate and the balance display into separate components. The gate checks
 ### Tab: DecryptGate.tsx
 
 ```tsx
-import { useAllow, useIsAllowed } from "@zama-fhe/react-sdk";
+import { useGrantPermit, useHasPermit } from "@zama-fhe/react-sdk";
 import type { Address } from "viem";
 
 function DecryptGate({
@@ -4001,8 +4001,8 @@ function DecryptGate({
   contractAddresses: Address[];
   children: React.ReactNode;
 }) {
-  const { data: isAllowed } = useIsAllowed({ contractAddresses });
-  const { mutate: allow, isPending } = useAllow();
+  const { data: isAllowed } = useHasPermit({ contractAddresses });
+  const { mutate: allow, isPending } = useGrantPermit();
 
   if (isAllowed) return <>{children}</>;
 
@@ -4066,7 +4066,7 @@ function App() {
 ```
 
 
-`DecryptGate` only renders its children once `useIsAllowed` returns true. This means `ConfidentialBalance` never mounts without permits — no `enabled` guard needed, no wallet popup on render. Returning users skip the prompt entirely because permits persist in IndexedDB (default TTL: 30 days).
+`DecryptGate` only renders its children once `useHasPermit` returns true. This means `ConfidentialBalance` never mounts without permits — no `enabled` guard needed, no wallet popup on render. Returning users skip the prompt entirely because permits persist in IndexedDB (default TTL: 30 days).
 
 The same pattern works with `useUserDecrypt` and any other decrypt hook — anything nested inside `DecryptGate` can decrypt freely without triggering a wallet prompt.
 
@@ -4118,7 +4118,7 @@ The cache is cleared on `revokePermits()`, `clearCredentials()`, or wallet lifec
 
 
 > [!INFO]
-> **Decryption fails with "invalid keypair" or "expired keypair"?** The FHE keypair has a TTL (default: 30 days). If the keypair was generated more than `keypairTTL` seconds ago, the relayer rejects it. Call `useAllow` again to generate a fresh keypair and permits.
+> **Decryption fails with "invalid keypair" or "expired keypair"?** The FHE keypair has a TTL (default: 30 days). If the keypair was generated more than `keypairTTL` seconds ago, the relayer rejects it. Call `useGrantPermit` again to generate a fresh keypair and permits.
 
 
 ### 4. Decrypt with usePublicDecrypt (advanced)
@@ -4354,7 +4354,7 @@ const result = await sdk.registry.getConfidentialToken(erc20Address);
 Creates a [`Token`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md) instance for an ERC-7984 confidential token. Supports balance reads, encrypted transfers, operator approvals, and delegated decryption.
 
 ```ts
-const token = sdk.tokens.confidential("0xConfidentialToken");
+const token = sdk.createToken("0xConfidentialToken");
 ```
 
 ### createWrappedToken
@@ -4364,7 +4364,7 @@ const token = sdk.tokens.confidential("0xConfidentialToken");
 Creates a [`WrappedToken`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WrappedToken.md) instance for an ERC-7984 ERC-20 wrapper. Adds wrapper-specific operations (shield, unshield, allowance) on top of the base `Token` API. The address is the wrapper contract itself — the wrapper IS the confidential token.
 
 ```ts
-const wrappedToken = sdk.tokens.wrapper("0xWrapper");
+const wrappedToken = sdk.createWrappedToken("0xWrapper");
 ```
 
 ### createWrappersRegistry
@@ -4391,7 +4391,7 @@ Pre-authorize contract addresses for decryption. Signs permits only for contract
 
 ```ts
 // Sign once for three tokens, then decrypt individually
-await sdk.permits.allow([cUSDT, cDAI, cWETH]);
+await sdk.permits.grantPermit([cUSDT, cDAI, cWETH]);
 const a = await sdk.decrypt.user([{ handle: h1, contractAddress: cUSDT }]);
 const b = await sdk.decrypt.user([{ handle: h2, contractAddress: cDAI }]);
 ```
@@ -4516,8 +4516,8 @@ const unsubscribe = sdk.onWalletAccountChange(({ previous, next }) => {
 Remove signed permits for the current signer. With a contract list, removes permits on the current chain whose payload touches any listed address. Without arguments, removes all permits across all chains and delegators. The keypair is not affected.
 
 ```ts
-await sdk.permits.revoke(["0xTokenA"]); // current chain only
-await sdk.permits.revoke(); // all permits, all chains
+await sdk.permits.revokePermits(["0xTokenA"]); // current chain only
+await sdk.permits.revokePermits(); // all permits, all chains
 ```
 
 ### clearCredentials
@@ -4572,19 +4572,19 @@ For ERC-7984 ERC-20 wrappers (shield / unshield / allowance), use [`WrappedToken
 
 ## Import
 
-Created via [`sdk.tokens.confidential()`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md):
+Created via [`sdk.createToken()`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md):
 
 ```ts
 import { ZamaSDK } from "@zama-fhe/sdk";
 
 const sdk = new ZamaSDK(config); // config from createConfig()
-const token = sdk.tokens.confidential("0xConfidentialToken");
+const token = sdk.createToken("0xConfidentialToken");
 
 const balance = await token.balanceOf(ownerAddress);
 await token.confidentialTransfer("0xRecipient", 500n);
 ```
 
-For shield / unshield, create a `WrappedToken` via `sdk.tokens.wrapper("0xWrapper")` — see [`WrappedToken`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WrappedToken.md).
+For shield / unshield, create a `WrappedToken` via `sdk.createWrappedToken("0xWrapper")` — see [`WrappedToken`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WrappedToken.md).
 
 ## Methods
 
@@ -4737,10 +4737,10 @@ import { WrappedToken } from "@zama-fhe/sdk";
 
 ## Construction
 
-Use [`sdk.tokens.wrapper()`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md):
+Use [`sdk.createWrappedToken()`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md):
 
 ```ts
-const wrappedToken = sdk.tokens.wrapper("0xWrapper");
+const wrappedToken = sdk.createWrappedToken("0xWrapper");
 ```
 
 ## Methods
@@ -4977,7 +4977,7 @@ The three possible states:
 ```ts
 const [isValid, cToken] = await registry.getConfidentialTokenAddress("0xUSDC");
 if (isValid) {
-  const token = sdk.tokens.confidential(cToken);
+  const token = sdk.createToken(cToken);
 }
 ```
 
@@ -6078,7 +6078,7 @@ app.post("/api/transfer", (req, res) => {
       relayers: { [mySepolia.id]: node() },
     });
     const sdk = new ZamaSDK(config);
-    await sdk.tokens.confidential("0x...").confidentialTransfer("0x...", 100n);
+    await sdk.createToken("0x...").confidentialTransfer("0x...", 100n);
   });
 });
 ```
@@ -7368,8 +7368,8 @@ The ACL contract address is automatically resolved from the chain configuration.
 const sdk = new ZamaSDK(config); // config from createConfig()
 
 // Both tokens use the same ACL — resolved automatically from the chain config
-const tokenA = sdk.tokens.confidential("0xTokenA");
-const tokenB = sdk.tokens.confidential("0xTokenB");
+const tokenA = sdk.createToken("0xTokenA");
+const tokenB = sdk.createToken("0xTokenB");
 ```
 
 ## Granting delegation
@@ -7416,7 +7416,7 @@ Grant delegation across multiple tokens in a single call:
 ```ts
 import { Token, ZamaError } from "@zama-fhe/sdk";
 
-const tokens = addresses.map((a) => sdk.tokens.confidential(a));
+const tokens = addresses.map((a) => sdk.createToken(a));
 
 const results = await Token.batchDelegateDecryption({
   tokens,
@@ -7499,7 +7499,7 @@ Decrypted values are cached in storage, keyed by `(accountAddress, token, handle
 Decrypt balances across multiple tokens in a single call:
 
 ```ts
-const tokens = addresses.map((a) => sdk.tokens.confidential(a));
+const tokens = addresses.map((a) => sdk.createToken(a));
 
 const balances = await Token.batchDecryptBalancesAs(tokens, {
   delegatorAddress: "0xDelegator",
@@ -10247,18 +10247,18 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 - [`useResumeUnshield`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useResumeUnshield.md) -- resume an interrupted unshield
 - [`useUnshield`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnshield.md) -- high-level hook that handles both steps
 
-## useAllow
+## useGrantPermit
 
 - source_type: official-doc
-- source_path: docs/gitbook/src/reference/react/useAllow.md
-- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useAllow.md
-- logical_path: reference/react/useAllow
+- source_path: docs/gitbook/src/reference/react/useGrantPermit.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useGrantPermit.md
+- logical_path: reference/react/useGrantPermit
 
-# useAllow
+# useGrantPermit
 
 Mutation hook that signs an EIP-712 message authorizing decryption of confidential handles for a list of contract addresses. This is **not token-specific** — any contract that uses FHE-encrypted values (confidential tokens, DeFi vaults, games, etc.) can be authorized in a single wallet signature.
 
-Call this early (e.g. after wallet connect) so that [`useUserDecrypt`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUserDecrypt.md) queries fire automatically without wallet popups. Automatically invalidates [`useIsAllowed`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsAllowed.md) queries on success.
+Call this early (e.g. after wallet connect) so that [`useUserDecrypt`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUserDecrypt.md) queries fire automatically without wallet popups. Automatically invalidates [`useHasPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useHasPermit.md) queries on success.
 
 
 > [!WARNING]
@@ -10268,7 +10268,7 @@ Call this early (e.g. after wallet connect) so that [`useUserDecrypt`](https://r
 ## Import
 
 ```ts
-import { useAllow } from "@zama-fhe/react-sdk";
+import { useGrantPermit } from "@zama-fhe/react-sdk";
 ```
 
 ## Usage
@@ -10277,10 +10277,10 @@ import { useAllow } from "@zama-fhe/react-sdk";
 ### Tab: AllowButton.tsx
 
 ```tsx
-import { useAllow } from "@zama-fhe/react-sdk";
+import { useGrantPermit } from "@zama-fhe/react-sdk";
 
 function AllowButton({ contracts }: { contracts: `0x${string}`[] }) {
-  const { mutateAsync: allow, isPending } = useAllow();
+  const { mutateAsync: allow, isPending } = useGrantPermit();
 
   const handleAllow = async () => {
     await allow(contracts);
@@ -10298,11 +10298,11 @@ function AllowButton({ contracts }: { contracts: `0x${string}`[] }) {
 ### Tab: OnConnect.tsx
 
 ```tsx
-import { useAllow } from "@zama-fhe/react-sdk";
+import { useGrantPermit } from "@zama-fhe/react-sdk";
 import { useEffect } from "react";
 
 function AuthOnConnect({ contracts }: { contracts: `0x${string}`[] }) {
-  const { mutateAsync: allow } = useAllow();
+  const { mutateAsync: allow } = useGrantPermit();
 
   useEffect(() => {
     // Pre-authorize on wallet connect
@@ -10316,7 +10316,7 @@ function AuthOnConnect({ contracts }: { contracts: `0x${string}`[] }) {
 
 ## Parameters
 
-`useAllow` takes no configuration parameters.
+`useGrantPermit` takes no configuration parameters.
 
 ## Mutation variables
 
@@ -10386,19 +10386,19 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 ## Related
 
-- [`useIsAllowed`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsAllowed.md) -- check whether stored permits cover contracts
+- [`useHasPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useHasPermit.md) -- check whether stored permits cover contracts
 - [`useRevokePermits`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevokePermits.md) -- revoke permits for specific contracts
 - [`useClearCredentials`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useClearCredentials.md) -- wipe the keypair and all permits
 - [Permit Model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/permit-model.md) -- permit lifecycle and TTL configuration
 
-## useIsAllowed
+## useHasPermit
 
 - source_type: official-doc
-- source_path: docs/gitbook/src/reference/react/useIsAllowed.md
-- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsAllowed.md
-- logical_path: reference/react/useIsAllowed
+- source_path: docs/gitbook/src/reference/react/useHasPermit.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useHasPermit.md
+- logical_path: reference/react/useHasPermit
 
-# useIsAllowed
+# useHasPermit
 
 Query hook that checks whether stored permits cover the requested contract addresses.
 
@@ -10407,7 +10407,7 @@ Returns `true` if decrypt operations can proceed without a wallet prompt. Return
 ## Import
 
 ```ts
-import { useIsAllowed } from "@zama-fhe/react-sdk";
+import { useHasPermit } from "@zama-fhe/react-sdk";
 ```
 
 ## Usage
@@ -10416,13 +10416,13 @@ import { useIsAllowed } from "@zama-fhe/react-sdk";
 ### Tab: AuthGuard.tsx
 
 ```tsx
-import { useIsAllowed, useAllow } from "@zama-fhe/react-sdk";
+import { useHasPermit, useGrantPermit } from "@zama-fhe/react-sdk";
 
 const CONTRACTS = ["0xTokenA", "0xTokenB"] as const;
 
 function AuthGuard() {
-  const { data: allowed, isLoading } = useIsAllowed({ contractAddresses: [...CONTRACTS] });
-  const { mutateAsync: allow } = useAllow();
+  const { data: allowed, isLoading } = useHasPermit({ contractAddresses: [...CONTRACTS] });
+  const { mutateAsync: allow } = useGrantPermit();
 
   if (isLoading) return <span>Checking permits...</span>;
 
@@ -10437,7 +10437,7 @@ function AuthGuard() {
 ### Tab: Gated decrypt
 
 ```tsx
-import { useIsAllowed, useAllow, useUserDecrypt } from "@zama-fhe/react-sdk";
+import { useHasPermit, useGrantPermit, useUserDecrypt } from "@zama-fhe/react-sdk";
 
 function GatedDecrypt({
   handle,
@@ -10446,8 +10446,8 @@ function GatedDecrypt({
   handle: string;
   contractAddress: `0x${string}`;
 }) {
-  const { data: allowed } = useIsAllowed({ contractAddresses: [contractAddress] });
-  const { mutateAsync: allow } = useAllow();
+  const { data: allowed } = useHasPermit({ contractAddresses: [contractAddress] });
+  const { mutateAsync: allow } = useGrantPermit();
   const { data, isPending } = useUserDecrypt(
     { handles: [{ handle, contractAddress }] },
     { enabled: !!allowed }, // only decrypt once authorized
@@ -10472,14 +10472,14 @@ function GatedDecrypt({
 Contract addresses to check credentials against. Returns `true` only when stored permits cover **all** specified addresses.
 
 ```tsx
-const { data: allowed } = useIsAllowed({
+const { data: allowed } = useHasPermit({
   contractAddresses: ["0xContractA", "0xContractB"],
 });
 ```
 
 
 > [!WARNING]
-> **You must gate decrypt queries yourself.** `useUserDecrypt` does not automatically wait for permits — if you call it before `useAllow`, the user sees an unexpected wallet popup. Use `useIsAllowed` to conditionally enable the decrypt query via `{ enabled: !!allowed }` as the second argument, or conditionally render the decrypt component only when `allowed` is `true`.
+> **You must gate decrypt queries yourself.** `useUserDecrypt` does not automatically wait for permits — if you call it before `useGrantPermit`, the user sees an unexpected wallet popup. Use `useHasPermit` to conditionally enable the decrypt query via `{ enabled: !!allowed }` as the second argument, or conditionally render the decrypt component only when `allowed` is `true`.
 
 
 ## Return Type
@@ -10491,7 +10491,7 @@ const { data: allowed } = useIsAllowed({
 `data` is a `boolean`:
 
 - `true` -- stored permits cover all specified addresses; decrypts will not prompt the wallet.
-- `false` -- no stored permits, or the `permitTTL` has expired. Call [`useAllow`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useAllow.md) to authorize.
+- `false` -- no stored permits, or the `permitTTL` has expired. Call [`useGrantPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useGrantPermit.md) to authorize.
 
 ### `data`
 
@@ -10551,7 +10551,7 @@ The current status of the query. Prefer the boolean flags above for conditional 
 ## Related
 
 - [Avoid blind-sign wallet popups](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/encrypt-decrypt.md#3-avoid-blind-sign-wallet-popups) -- gating balance queries to avoid blind-sign popups
-- [`useAllow`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useAllow.md) -- pre-authorize contracts with one wallet signature
+- [`useGrantPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useGrantPermit.md) -- pre-authorize contracts with one wallet signature
 - [`useRevokePermits`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevokePermits.md) -- revoke permits
 - [Permit Model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/permit-model.md) -- permit lifecycle and TTL configuration
 
@@ -10681,14 +10681,14 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 ## Behavior
 
 - Removes signed permits from the permission store.
-- Auto-invalidates all [`useIsAllowed`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsAllowed.md) queries on success.
+- Auto-invalidates all [`useHasPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useHasPermit.md) queries on success.
 - The FHE keypair is not affected — only permits are removed.
 
 ## Related
 
 - [`useClearCredentials`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useClearCredentials.md) — wipe the keypair and all permits
-- [`useAllow`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useAllow.md) — sign permits for contracts
-- [`useIsAllowed`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsAllowed.md) — check whether stored permits cover contracts
+- [`useGrantPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useGrantPermit.md) — sign permits for contracts
+- [`useHasPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useHasPermit.md) — check whether stored permits cover contracts
 
 ## useClearCredentials
 
@@ -10796,7 +10796,7 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 - Wipes the FHE keypair for the connected wallet.
 - Cascade-deletes every permit across all chains and delegators.
-- Auto-invalidates all [`useIsAllowed`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsAllowed.md) queries on success.
+- Auto-invalidates all [`useHasPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useHasPermit.md) queries on success.
 - After clearing, any decrypt operation will generate a fresh keypair and prompt for new permits.
 
 
@@ -10807,8 +10807,8 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 ## Related
 
 - [`useRevokePermits`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevokePermits.md) — remove permits without touching the keypair
-- [`useAllow`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useAllow.md) — sign permits for contracts
-- [`useIsAllowed`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsAllowed.md) — check whether stored permits cover contracts
+- [`useGrantPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useGrantPermit.md) — sign permits for contracts
+- [`useHasPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useHasPermit.md) — check whether stored permits cover contracts
 
 ## useConfidentialSetOperator
 
@@ -12757,7 +12757,7 @@ function AdvancedOperations() {
 
   async function handleCustomOperation() {
     // Access the SDK directly for operations not covered by hooks
-    const token = sdk.tokens.confidential("0xToken");
+    const token = sdk.createToken("0xToken");
     const name = await token.name();
     const symbol = await token.symbol();
     console.log(name, symbol);
@@ -13070,7 +13070,7 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 # useUserDecrypt
 
-Query hook for user decryption. Automatically fires when credentials are available (acquired via [`useAllow`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useAllow.md)) and handles are provided. Checks the persistent decrypt cache first and only hits the relayer for uncached handles.
+Query hook for user decryption. Automatically fires when credentials are available (acquired via [`useGrantPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useGrantPermit.md)) and handles are provided. Checks the persistent decrypt cache first and only hits the relayer for uncached handles.
 
 
 > [!INFO]
@@ -13089,13 +13089,13 @@ import { useUserDecrypt } from "@zama-fhe/react-sdk";
 ### Tab: component.tsx
 
 ```tsx
-import { useAllow, useIsAllowed, useUserDecrypt } from "@zama-fhe/react-sdk";
+import { useGrantPermit, useHasPermit, useUserDecrypt } from "@zama-fhe/react-sdk";
 
 const CONTRACT = "0xYourContract" as const;
 
 function DecryptHandle({ handle }: { handle: string }) {
-  const { mutate: allow, isPending: isAllowing } = useAllow();
-  const { data: allowed } = useIsAllowed({ contractAddresses: [CONTRACT] });
+  const { mutate: allow, isPending: isAllowing } = useGrantPermit();
+  const { data: allowed } = useHasPermit({ contractAddresses: [CONTRACT] });
   const { data, isPending } = useUserDecrypt(
     { handles: [{ handle, contractAddress: CONTRACT }] },
     { enabled: !!allowed }, // gate: only decrypt once authorized
@@ -13148,7 +13148,7 @@ const { data } = useUserDecrypt({
 
 
 > [!WARNING]
-> **All contract addresses must be authorized first.** Call `useAllow` with every contract address present in `handles` before enabling the query. Use `useIsAllowed({ contractAddresses })` to check coverage and pass `{ enabled: !!allowed }` as the second argument to prevent unexpected wallet prompts.
+> **All contract addresses must be authorized first.** Call `useGrantPermit` with every contract address present in `handles` before enabling the query. Use `useHasPermit({ contractAddresses })` to check coverage and pass `{ enabled: !!allowed }` as the second argument to prevent unexpected wallet prompts.
 
 
 ### options (second argument)
@@ -13227,22 +13227,22 @@ The current status of the query. Prefer the boolean flags above for conditional 
 
 
 > [!WARNING]
-> **`useUserDecrypt` does not automatically gate on permits.** If permits are not cached when the query fires, the SDK will prompt the user's wallet for a signature. To avoid unexpected popups, gate the query yourself using [`useIsAllowed`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsAllowed.md):
+> **`useUserDecrypt` does not automatically gate on permits.** If permits are not cached when the query fires, the SDK will prompt the user's wallet for a signature. To avoid unexpected popups, gate the query yourself using [`useHasPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useHasPermit.md):
 >
 > ```tsx
-> const { data: allowed } = useIsAllowed({ contractAddresses: ["0xContract"] });
+> const { data: allowed } = useHasPermit({ contractAddresses: ["0xContract"] });
 > const { data } = useUserDecrypt(
 >   { handles: [{ handle, contractAddress: "0xContract" }] },
 >   { enabled: !!allowed },
 > );
 > ```
 >
-> This ensures the decrypt query only fires after `useAllow` has been called.
+> This ensures the decrypt query only fires after `useGrantPermit` has been called.
 
 
 ## Permit caching
 
-`useUserDecrypt` relies on permits acquired via [`useAllow`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useAllow.md):
+`useUserDecrypt` relies on permits acquired via [`useGrantPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useGrantPermit.md):
 
 - **First `allow()` call** — generates a new FHE keypair, creates EIP-712 typed data, and requests a wallet signature. The permits are then cached.
 - **Subsequent queries** — reuse the cached permits if they are still valid (not expired).
@@ -13252,8 +13252,8 @@ This means users only see a wallet signature prompt once per TTL window, even if
 
 ## Related
 
-- [`useAllow`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useAllow.md) — pre-authorize contracts with one wallet signature (required before `useUserDecrypt` fires)
-- [`useIsAllowed`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsAllowed.md) — check whether permits are cached and cover specific contracts
+- [`useGrantPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useGrantPermit.md) — pre-authorize contracts with one wallet signature (required before `useUserDecrypt` fires)
+- [`useHasPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useHasPermit.md) — check whether permits are cached and cover specific contracts
 - [`useConfidentialBalance`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialBalance.md) — high-level hook that decrypts token balances with automatic caching
 - [`useEncrypt`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useEncrypt.md) — reverse operation, encrypt a plaintext value for on-chain submission
 - [Encrypt & Decrypt guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/encrypt-decrypt.md) — full walkthrough with end-to-end examples
@@ -13271,7 +13271,7 @@ Low-level mutation hook that generates a fresh FHE keypair via the relayer. Retu
 
 
 > [!WARNING]
-> [`useUserDecrypt`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUserDecrypt.md), [`useAllow`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useAllow.md), and [`useConfidentialBalance`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialBalance.md) handle keypair generation automatically. Call `useGenerateKeypair` only when managing FHE keypairs manually.
+> [`useUserDecrypt`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUserDecrypt.md), [`useGrantPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useGrantPermit.md), and [`useConfidentialBalance`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialBalance.md) handle keypair generation automatically. Call `useGenerateKeypair` only when managing FHE keypairs manually.
 
 
 ## Import
@@ -13378,7 +13378,7 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 ## Related
 
-- [`useAllow`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useAllow.md) — high-level hook that generates a keypair and signs permits
+- [`useGrantPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useGrantPermit.md) — high-level hook that generates a keypair and signs permits
 - [`useUserDecrypt`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUserDecrypt.md) — uses the generated keypair to decrypt handles
 - [`useEncrypt`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useEncrypt.md) — encrypt values (does not require a keypair)
 
@@ -14114,7 +14114,7 @@ function PortfolioBalance({
   // Build Token instances using the SDK factory (not hooks — hooks cannot be called in a loop)
   const sdk = useZamaSDK();
   const tokens = useMemo(
-    () => tokenAddresses.map((addr) => sdk.tokens.confidential(addr)),
+    () => tokenAddresses.map((addr) => sdk.createToken(addr)),
     [sdk, tokenAddresses],
   );
 
@@ -14595,10 +14595,10 @@ Unlike a session model where re-authorizing replaces the previous authorization,
 
 ```ts
 // Signs permits for all three contracts
-await sdk.permits.allow(["0xContractA", "0xContractB", "0xContractC"]);
+await sdk.permits.grantPermit(["0xContractA", "0xContractB", "0xContractC"]);
 
 // ContractA is already covered — only ContractD triggers a new signature
-await sdk.permits.allow(["0xContractA", "0xContractD"]);
+await sdk.permits.grantPermit(["0xContractA", "0xContractD"]);
 ```
 
 This means users see fewer wallet popups over time. As they interact with more contracts, their permit coverage grows without invalidating earlier permits.
@@ -14612,8 +14612,8 @@ This means users see fewer wallet popups over time. As they interact with more c
 
 Permits can be removed in two ways:
 
-- **Selective** — `sdk.permits.revoke(["0xTokenA"])` removes permits touching those contracts on the current chain. Other permits are untouched.
-- **Full wipe** — `sdk.permits.revoke()` removes all permits for the current signer across all chains and delegators. The FHE keypair is not affected.
+- **Selective** — `sdk.permits.revokePermits(["0xTokenA"])` removes permits touching those contracts on the current chain. Other permits are untouched.
+- **Full wipe** — `sdk.permits.revokePermits()` removes all permits for the current signer across all chains and delegators. The FHE keypair is not affected.
 
 For a complete "log out" that also removes the FHE keypair, use `sdk.permits.clear()`. See the [ZamaSDK reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md#revokepermits) for the full API.
 
@@ -14802,7 +14802,7 @@ The EIP-712 typed data includes the wallet address. A permit signed by address A
 
 ### Revocation
 
-Permits can be revoked programmatically via `sdk.permits.revoke()` or automatically via wallet lifecycle events (disconnect, account switch). Revocation removes permits from storage immediately.
+Permits can be revoked programmatically via `sdk.permits.revokePermits()` or automatically via wallet lifecycle events (disconnect, account switch). Revocation removes permits from storage immediately.
 
 After revoking permits, the FHE keypair remains in storage. Use `sdk.permits.clear()` to also wipe the keypair.
 
@@ -14878,14 +14878,14 @@ This mode allows developers to test **smart contracts** and **app/backend integr
 | Operation                    | SDK API                                       |
 | ---------------------------- | --------------------------------------------- |
 | Decrypt confidential balance | `useConfidentialBalance`                      |
-| Shield (ERC-20 → cToken)     | `sdk.tokens.wrapper().shield()`               |
+| Shield (ERC-20 → cToken)     | `sdk.createWrappedToken().shield()`           |
 | Confidential transfer        | `useConfidentialTransfer`                     |
 | Unshield (cToken → ERC-20)   | `useUnshield`                                 |
 | Grant decryption access      | `useDelegateDecryption`                       |
 | Revoke decryption access     | `useRevokeDelegation`                         |
 | Decrypt balance as delegate  | `useDecryptBalanceAs` + `useDelegationStatus` |
 
-> **Shield** uses `token.shield()` directly (via `sdk.tokens.wrapper()`) rather than the `useShield` hook, with a manual approval step. The spend cap is set to the user's full ERC-20 balance (not the exact shield amount), so subsequent shields within the remaining allowance require only the wrap transaction — no re-approval. USDT-style detection uses an optimistic approach: `writeContract` is tried directly (gas estimation uses `from = userAddress`, so USDT reverts fail pre-wallet), with a silent fallback to reset + approve only for tokens that actually need it.
+> **Shield** uses `token.shield()` directly (via `sdk.createWrappedToken()`) rather than the `useShield` hook, with a manual approval step. The spend cap is set to the user's full ERC-20 balance (not the exact shield amount), so subsequent shields within the remaining allowance require only the wrap transaction — no re-approval. USDT-style detection uses an optimistic approach: `writeContract` is tried directly (gas estimation uses `from = userAddress`, so USDT reverts fail pre-wallet), with a silent fallback to reset + approve only for tokens that actually need it.
 
 > **Hybrid EIP-1193 provider** (`src/providers.tsx`): read calls (`eth_call`, `eth_estimateGas`) go to a direct `JsonRpcProvider` for speed; signing, nonce (`eth_getTransactionCount`), and post-submission polling go through the injected wallet. The public Hoodi RPC is a load balancer — routing nonce reads or receipt polling through it causes "nonce too low" errors and stale receipts.
 
@@ -15000,7 +15000,7 @@ For a detailed partner-facing guide including prerequisites, step-by-step flow, 
 
 ERC-7984 is a token standard that adds **confidential balances and transfer amounts** to ERC-20 tokens. Instead of storing plaintext balances on-chain, balances are stored as encrypted handles. Only the token owner can decrypt their own balance.
 
-The **Zama SDK** (`@zama-fhe/sdk`, `@zama-fhe/react-sdk`) handles all cryptographic operations — encryption, decryption, EIP-712 signing — behind simple React hooks (`useConfidentialTransfer`, `useUnshield`, `useConfidentialBalance`) and the `Token` API (`sdk.tokens.wrapper().shield()`).
+The **Zama SDK** (`@zama-fhe/sdk`, `@zama-fhe/react-sdk`) handles all cryptographic operations — encryption, decryption, EIP-712 signing — behind simple React hooks (`useConfidentialTransfer`, `useUnshield`, `useConfidentialBalance`) and the `Token` API (`sdk.createWrappedToken().shield()`).
 
 This example uses the **cleartext stack** (`RelayerCleartext`), which is Zama's lightweight backend for chains where the full FHE co-processor is not deployed (including Hoodi). See [How the cleartext stack works](#how-the-cleartext-stack-works) below.
 
@@ -15020,15 +15020,15 @@ Specifically:
 
 ## Supported operations
 
-| Operation                    | SDK API                                                | Source file                                            | Transactions          |
-| ---------------------------- | ------------------------------------------------------ | ------------------------------------------------------ | --------------------- |
-| Decrypt confidential balance | `useIsAllowed` + `useAllow` + `useConfidentialBalance` | `src/app/page.tsx` + `src/components/BalancesCard.tsx` | 0 (read)              |
-| Shield (ERC-20 → cToken)     | `sdk.tokens.wrapper().shield()`                        | `src/components/ShieldCard.tsx`                        | 1–3 (wrap, ± approve) |
-| Confidential transfer        | `useConfidentialTransfer`                              | `src/components/TransferCard.tsx`                      | 1                     |
-| Unshield (cToken → ERC-20)   | `useUnshield`                                          | `src/components/UnshieldCard.tsx`                      | 2 (unwrap + finalize) |
-| Grant decryption access      | `useDelegateDecryption`                                | `src/components/DelegateDecryptionCard.tsx`            | 1                     |
-| Revoke decryption access     | `useRevokeDelegation`                                  | `src/components/RevokeDelegationCard.tsx`              | 1                     |
-| Decrypt balance as delegate  | `useDecryptBalanceAs` + `useDelegationStatus`          | `src/components/DecryptAsCard.tsx`                     | 0 (read)              |
+| Operation                    | SDK API                                                      | Source file                                            | Transactions          |
+| ---------------------------- | ------------------------------------------------------------ | ------------------------------------------------------ | --------------------- |
+| Decrypt confidential balance | `useHasPermit` + `useGrantPermit` + `useConfidentialBalance` | `src/app/page.tsx` + `src/components/BalancesCard.tsx` | 0 (read)              |
+| Shield (ERC-20 → cToken)     | `sdk.createWrappedToken().shield()`                          | `src/components/ShieldCard.tsx`                        | 1–3 (wrap, ± approve) |
+| Confidential transfer        | `useConfidentialTransfer`                                    | `src/components/TransferCard.tsx`                      | 1                     |
+| Unshield (cToken → ERC-20)   | `useUnshield`                                                | `src/components/UnshieldCard.tsx`                      | 2 (unwrap + finalize) |
+| Grant decryption access      | `useDelegateDecryption`                                      | `src/components/DelegateDecryptionCard.tsx`            | 1                     |
+| Revoke decryption access     | `useRevokeDelegation`                                        | `src/components/RevokeDelegationCard.tsx`              | 1                     |
+| Decrypt balance as delegate  | `useDecryptBalanceAs` + `useDelegationStatus`                | `src/components/DecryptAsCard.tsx`                     | 0 (read)              |
 
 ---
 
@@ -15073,7 +15073,7 @@ RelayerWeb → external HTTP service      RelayerCleartext → on-chain executor
 User (browser wallet)
   │
   ▼
-page.tsx — sdk.tokens.wrapper().shield() / useConfidentialTransfer / useUnshield / useConfidentialBalance
+page.tsx — sdk.createWrappedToken().shield() / useConfidentialTransfer / useUnshield / useConfidentialBalance
   │
   ▼
 @zama-fhe/react-sdk (React hooks + ZamaProvider)
@@ -15341,8 +15341,8 @@ import { parseUnits, isError } from "ethers";
 import {
   useZamaSDK,
   useListPairs,
-  useIsAllowed,
-  useAllow,
+  useHasPermit,
+  useGrantPermit,
   useConfidentialTransfer,
   useUnshield,
   useConfidentialBalance,
@@ -15364,15 +15364,15 @@ const cTokenDecimals = pair?.confidential.decimals ?? 0;
 const erc20Decimals = pair?.underlying.decimals ?? 0;
 
 // Explicit decrypt pattern: check credentials before enabling the balance display.
-// useIsAllowed returns true only when cached credentials cover the selected token.
-const { data: isAllowed } = useIsAllowed({
+// useHasPermit returns true only when cached credentials cover the selected token.
+const { data: isAllowed } = useHasPermit({
   contractAddresses: cTokenAddress ? [cTokenAddress] : [],
   query: { enabled: Boolean(cTokenAddress) },
 });
 
-// useAllow triggers the EIP-712 wallet signature that authorizes decryption.
+// useGrantPermit triggers the EIP-712 wallet signature that authorizes decryption.
 // Pass all confidential token addresses at once — a single signature covers all tokens.
-const allowTokens = useAllow();
+const allowTokens = useGrantPermit();
 function handleDecrypt() {
   const addresses = pairsData?.items?.map((p) => p.confidentialTokenAddress) ?? [];
   if (addresses.length > 0) allowTokens.mutate(addresses);
@@ -15401,7 +15401,7 @@ const balance = useConfidentialBalance(
 // The shield logic runs inside an async function (e.g., a TanStack Query mutationFn):
 const sdk = useZamaSDK();
 const shieldAmount = parseUnits("10", erc20Decimals);
-const token = sdk.tokens.wrapper(cTokenAddress);
+const token = sdk.createWrappedToken(cTokenAddress);
 const userAddress = await sdk.signer.getAddress();
 
 const currentAllowance = (await sdk.signer.readContract(
@@ -15593,14 +15593,14 @@ Tests run automatically on CI for every pull request that touches `examples/exam
 
 ## Tech stack
 
-| Package                 | Version            | Role                                                                                                                                                                                                                       |
-| ----------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@zama-fhe/sdk`         | see `package.json` | FHE core — `RelayerCleartext`, `EthersSigner`, contract builders                                                                                                                                                           |
-| `@zama-fhe/react-sdk`   | see `package.json` | React hooks — `useListPairs`, `useIsAllowed`, `useAllow`, `useConfidentialTransfer`, `useUnshield`, `useConfidentialBalance`, `useDelegateDecryption`, `useRevokeDelegation`, `useDelegationStatus`, `useDecryptBalanceAs` |
-| `ethers`                | ^6.13.0            | Ethereum client (via `EthersSigner`)                                                                                                                                                                                       |
-| `@tanstack/react-query` | ^5.90.0            | Async state management                                                                                                                                                                                                     |
-| `next`                  | ^16.0.0            | React framework (App Router)                                                                                                                                                                                               |
-| **Chain**               | Hoodi testnet      | chainId 560048                                                                                                                                                                                                             |
+| Package                 | Version            | Role                                                                                                                                                                                                                             |
+| ----------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@zama-fhe/sdk`         | see `package.json` | FHE core — `RelayerCleartext`, `EthersSigner`, contract builders                                                                                                                                                                 |
+| `@zama-fhe/react-sdk`   | see `package.json` | React hooks — `useListPairs`, `useHasPermit`, `useGrantPermit`, `useConfidentialTransfer`, `useUnshield`, `useConfidentialBalance`, `useDelegateDecryption`, `useRevokeDelegation`, `useDelegationStatus`, `useDecryptBalanceAs` |
+| `ethers`                | ^6.13.0            | Ethereum client (via `EthersSigner`)                                                                                                                                                                                             |
+| `@tanstack/react-query` | ^5.90.0            | Async state management                                                                                                                                                                                                           |
+| `next`                  | ^16.0.0            | React framework (App Router)                                                                                                                                                                                                     |
+| **Chain**               | Hoodi testnet      | chainId 560048                                                                                                                                                                                                                   |
 
 ## node-ethers README
 
@@ -16804,7 +16804,7 @@ useEffect(() => {
 
 **EthersSigner compat (`normalizePair`)**: `useListPairs` returns objects that may have spread an ethers `Result`. `Result` named fields (`tokenAddress`, `confidentialTokenAddress`, `isValid`) are non-enumerable prototype getters — they survive direct access but are lost after a spread. `normalizePair` reads named fields first and falls back to numeric index access (`t[0]`, `t[1]`, `t[2]`) for the ethers case. This is an ethers v6 interop quirk; viem does not require the fallback.
 
-**Token-dependent hooks live in `SelectedTokenPanel`**: hooks such as `useIsAllowed`, `useConfidentialBalance`, and operation cards are mounted only after a real registry token is selected. This avoids passing placeholder zero addresses into SDK hooks.
+**Token-dependent hooks live in `SelectedTokenPanel`**: hooks such as `useHasPermit`, `useConfidentialBalance`, and operation cards are mounted only after a real registry token is selected. This avoids passing placeholder zero addresses into SDK hooks.
 
 **`actionsDisabled`** is `!isSepolia` inside `SelectedTokenPanel` — the component only renders once a token exists.
 
@@ -16935,10 +16935,10 @@ Three balances are shown:
 | ERC-20       | Direct RPC via SDK signer      | `useQuery` → `sdk.signer.readContract(balanceOfContract(...))` |
 | Confidential | Relayer decryption             | `useConfidentialBalance({ tokenAddress })`                     |
 
-**Explicit decrypt pattern**: `useConfidentialBalance` is only enabled after the user has authorized FHE decryption via an EIP-712 wallet signature (`useIsAllowed({ contractAddresses })` → `useAllow()`). Until then, `BalancesCard` shows a "Decrypt Balance" button rather than a balance value. This avoids blind-signing prompts on mount.
+**Explicit decrypt pattern**: `useConfidentialBalance` is only enabled after the user has authorized FHE decryption via an EIP-712 wallet signature (`useHasPermit({ contractAddresses })` → `useGrantPermit()`). Until then, `BalancesCard` shows a "Decrypt Balance" button rather than a balance value. This avoids blind-signing prompts on mount.
 
 ```ts
-const { data: isAllowed } = useIsAllowed({
+const { data: isAllowed } = useHasPermit({
   contractAddresses: token ? [token.confidentialTokenAddress] : [],
   query: { enabled: Boolean(token) },
 });
@@ -17384,18 +17384,18 @@ Three balances are shown:
 | Confidential | Relayer decryption                | `useConfidentialBalance({ tokenAddress: token.confidentialTokenAddress, account: address })` |
 
 **Explicit decrypt pattern**: `useConfidentialBalance` is only enabled after the user has
-authorized FHE decryption via an EIP-712 wallet signature. `useIsAllowed({ contractAddresses })`
+authorized FHE decryption via an EIP-712 wallet signature. `useHasPermit({ contractAddresses })`
 checks whether cached credentials cover the currently selected token; if not, `BalancesCard`
 shows a "Decrypt Balance" button rather than a balance value. This avoids blind-signing
 prompts on mount.
 
 ```ts
-const { data: isAllowed } = useIsAllowed({
+const { data: isAllowed } = useHasPermit({
   contractAddresses: [token.confidentialTokenAddress],
 });
 // All registry pairs are passed at once — one signature covers all tokens,
 // so switching tokens does not prompt the wallet again.
-const allowTokens = useAllow();
+const allowTokens = useGrantPermit();
 function handleDecrypt() {
   if (validPairs.length === 0) return;
   allowTokens.mutate(validPairs.map((p) => p.confidentialTokenAddress));
@@ -17407,7 +17407,7 @@ function handleDecrypt() {
 `BalancesCard`.
 
 Token-dependent balance and authorization hooks are inside `SelectedTokenPanel`, so
-`useIsAllowed` always receives a non-empty contract tuple and `useConfidentialBalance`
+`useHasPermit` always receives a non-empty contract tuple and `useConfidentialBalance`
 always receives a real token address plus an explicit owner account.
 
 ### Mint
@@ -17700,7 +17700,7 @@ With `WagmiSigner` (viem-based), named fields (`tokenAddress`, `confidentialToke
 `EthersSigner`, where ethers `Result` non-enumerable prototype getters require a numeric
 index fallback).
 
-**Token-dependent hooks live in the local `TokenWorkspace` component**: hooks such as `useIsAllowed`,
+**Token-dependent hooks live in the local `TokenWorkspace` component**: hooks such as `useHasPermit`,
 `useConfidentialBalance`, and the ERC-20 `useReadContract` are mounted only after a registry
 pair has been selected. This keeps React hook calls unconditional inside the component while
 avoiding placeholder addresses such as `ZERO_ADDRESS`.
@@ -17761,18 +17761,18 @@ Three balances are shown:
 | Confidential | Relayer decryption      | `useConfidentialBalance({ tokenAddress: token.confidentialTokenAddress, ... })` |
 
 **Explicit decrypt pattern**: `useConfidentialBalance` is only enabled after the user has
-authorized FHE decryption via an EIP-712 wallet signature. `useIsAllowed({ contractAddresses })`
+authorized FHE decryption via an EIP-712 wallet signature. `useHasPermit({ contractAddresses })`
 checks whether cached credentials cover the currently selected token; if not, `BalancesCard`
 shows a "Decrypt Balance" button rather than a balance value. This avoids blind-signing
 prompts on mount.
 
 ```ts
-const { data: isAllowed } = useIsAllowed({
+const { data: isAllowed } = useHasPermit({
   contractAddresses: [token.confidentialTokenAddress],
 });
-// All registry pairs are passed at once to useAllow — one signature covers all tokens,
+// All registry pairs are passed at once to useGrantPermit — one signature covers all tokens,
 // so switching tokens does not prompt the wallet again.
-const allowTokens = useAllow();
+const allowTokens = useGrantPermit();
 function handleDecrypt() {
   if (validPairs.length === 0) return;
   allowTokens.mutate(validPairs.map((p) => p.confidentialTokenAddress));

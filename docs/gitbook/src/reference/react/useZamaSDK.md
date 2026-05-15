@@ -26,7 +26,7 @@ function AdvancedOperations() {
 
   async function handleCustomOperation() {
     // Access the SDK directly for operations not covered by hooks
-    const token = sdk.tokens.confidential("0xToken");
+    const token = sdk.createToken("0xToken");
     const name = await token.name();
     const symbol = await token.symbol();
     console.log(name, symbol);

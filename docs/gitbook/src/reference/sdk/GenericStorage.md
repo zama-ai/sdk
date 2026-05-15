@@ -123,7 +123,7 @@ app.post("/api/transfer", (req, res) => {
       relayers: { [mySepolia.id]: node() },
     });
     const sdk = new ZamaSDK(config);
-    await sdk.tokens.confidential("0x...").confidentialTransfer("0x...", 100n);
+    await sdk.createToken("0x...").confidentialTransfer("0x...", 100n);
   });
 });
 ```

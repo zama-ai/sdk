@@ -314,18 +314,18 @@ Three balances are shown:
 | Confidential | Relayer decryption                | `useConfidentialBalance({ tokenAddress: token.confidentialTokenAddress, account: address })` |
 
 **Explicit decrypt pattern**: `useConfidentialBalance` is only enabled after the user has
-authorized FHE decryption via an EIP-712 wallet signature. `useIsAllowed({ contractAddresses })`
+authorized FHE decryption via an EIP-712 wallet signature. `useHasPermit({ contractAddresses })`
 checks whether cached credentials cover the currently selected token; if not, `BalancesCard`
 shows a "Decrypt Balance" button rather than a balance value. This avoids blind-signing
 prompts on mount.
 
 ```ts
-const { data: isAllowed } = useIsAllowed({
+const { data: isAllowed } = useHasPermit({
   contractAddresses: [token.confidentialTokenAddress],
 });
 // All registry pairs are passed at once — one signature covers all tokens,
 // so switching tokens does not prompt the wallet again.
-const allowTokens = useAllow();
+const allowTokens = useGrantPermit();
 function handleDecrypt() {
   if (validPairs.length === 0) return;
   allowTokens.mutate(validPairs.map((p) => p.confidentialTokenAddress));
@@ -337,7 +337,7 @@ function handleDecrypt() {
 `BalancesCard`.
 
 Token-dependent balance and authorization hooks are inside `SelectedTokenPanel`, so
-`useIsAllowed` always receives a non-empty contract tuple and `useConfidentialBalance`
+`useHasPermit` always receives a non-empty contract tuple and `useConfidentialBalance`
 always receives a real token address plus an explicit owner account.
 
 ### Mint

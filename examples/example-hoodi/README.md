@@ -26,14 +26,14 @@ This mode allows developers to test **smart contracts** and **app/backend integr
 | Operation                    | SDK API                                       |
 | ---------------------------- | --------------------------------------------- |
 | Decrypt confidential balance | `useConfidentialBalance`                      |
-| Shield (ERC-20 → cToken)     | `sdk.tokens.wrapper().shield()`               |
+| Shield (ERC-20 → cToken)     | `sdk.createWrappedToken().shield()`           |
 | Confidential transfer        | `useConfidentialTransfer`                     |
 | Unshield (cToken → ERC-20)   | `useUnshield`                                 |
 | Grant decryption access      | `useDelegateDecryption`                       |
 | Revoke decryption access     | `useRevokeDelegation`                         |
 | Decrypt balance as delegate  | `useDecryptBalanceAs` + `useDelegationStatus` |
 
-> **Shield** uses `token.shield()` directly (via `sdk.tokens.wrapper()`) rather than the `useShield` hook, with a manual approval step. The spend cap is set to the user's full ERC-20 balance (not the exact shield amount), so subsequent shields within the remaining allowance require only the wrap transaction — no re-approval. USDT-style detection uses an optimistic approach: `writeContract` is tried directly (gas estimation uses `from = userAddress`, so USDT reverts fail pre-wallet), with a silent fallback to reset + approve only for tokens that actually need it.
+> **Shield** uses `token.shield()` directly (via `sdk.createWrappedToken()`) rather than the `useShield` hook, with a manual approval step. The spend cap is set to the user's full ERC-20 balance (not the exact shield amount), so subsequent shields within the remaining allowance require only the wrap transaction — no re-approval. USDT-style detection uses an optimistic approach: `writeContract` is tried directly (gas estimation uses `from = userAddress`, so USDT reverts fail pre-wallet), with a silent fallback to reset + approve only for tokens that actually need it.
 
 > **Hybrid EIP-1193 provider** (`src/providers.tsx`): read calls (`eth_call`, `eth_estimateGas`) go to a direct `JsonRpcProvider` for speed; signing, nonce (`eth_getTransactionCount`), and post-submission polling go through the injected wallet. The public Hoodi RPC is a load balancer — routing nonce reads or receipt polling through it causes "nonce too low" errors and stale receipts.
 

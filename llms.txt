@@ -80,8 +80,8 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [useUnwrap](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnwrap.md): Low-level mutation hook that requests an unwrap for a specific amount.
 - [useUnwrapAll](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnwrapAll.md): Low-level mutation hook that requests an unwrap for the full confidential balance.
 - [useFinalizeUnwrap](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useFinalizeUnwrap.md): Low-level mutation hook that finalizes an unwrap with the decryption proof.
-- [useAllow](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useAllow.md): Mutation hook that signs an EIP-712 message authorizing decryption of confidential handles for any contract.
-- [useIsAllowed](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useIsAllowed.md): Query hook that checks whether stored permits cover the requested contract addresses.
+- [useGrantPermit](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useGrantPermit.md): Mutation hook that signs an EIP-712 message authorizing decryption of confidential handles for any contract.
+- [useHasPermit](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useHasPermit.md): Query hook that checks whether stored permits cover the requested contract addresses.
 - [useRevokePermits](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevokePermits.md): Revoke FHE permits for specific contract addresses, or all permits at once.
 - [useClearCredentials](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useClearCredentials.md): Wipe the FHE keypair and all permits for the connected wallet.
 - [useConfidentialSetOperator](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialSetOperator.md): Approve an operator to act on your confidential tokens.
@@ -102,7 +102,7 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [useToken](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useToken.md): Hook returning a memoised Token instance for a given address.
 - [useWrappedToken](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useWrappedToken.md): React hook returning a memoised WrappedToken instance.
 - [useEncrypt](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useEncrypt.md): Low-level mutation hook that encrypts a plaintext value using the relayer's FHE engine.
-- [useUserDecrypt](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUserDecrypt.md): Query hook that automatically decrypts FHE handles once credentials are available via useAllow.
+- [useUserDecrypt](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUserDecrypt.md): Query hook that automatically decrypts FHE handles once credentials are available via useGrantPermit.
 - [useGenerateKeypair](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useGenerateKeypair.md): Low-level mutation hook that generates a fresh FHE keypair via the relayer.
 - [useDelegateDecryption](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useDelegateDecryption.md): Mutation hook that grants FHE decryption rights for a token to another address.
 - [useRevokeDelegation](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevokeDelegation.md): Mutation hook that revokes FHE decryption delegation for a token.
