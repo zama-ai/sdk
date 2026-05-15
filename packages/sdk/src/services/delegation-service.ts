@@ -13,9 +13,9 @@ import {
   DelegationNotFoundError,
   DelegationSelfNotAllowedError,
   TransactionRevertedError,
-  matchAclRevert,
   ZamaError,
 } from "../errors";
+import { matchAclRevert } from "../errors/acl-revert";
 import type { ZamaSDKEventInput } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
@@ -265,7 +265,7 @@ export class DelegationService {
       if (error instanceof ZamaError) {
         throw error;
       }
-      const mapped = matchAclRevert(error);
+      const mapped = matchAclRevert(error, error);
       if (mapped) {
         throw mapped;
       }

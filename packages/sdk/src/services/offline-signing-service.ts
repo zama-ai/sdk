@@ -27,7 +27,7 @@ import {
   wrapDecryptError,
   ZamaError,
 } from "../errors";
-import type { TransactionErrorOperation, ZamaSDKEventInput } from "../events/sdk-events";
+import type { TransactionOperation, ZamaSDKEventInput } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
 import { assertSignTransaction } from "../signer/capabilities";
@@ -111,7 +111,7 @@ const SUBMITTED_EVENT_BY_KIND: Record<TransactionKind, ZamaSDKEventInput["type"]
   RevokeDelegation: ZamaSDKEvents.RevokeDelegationSubmitted,
 };
 
-const ERROR_OPERATION_BY_KIND: Record<TransactionKind, TransactionErrorOperation> = {
+const ERROR_OPERATION_BY_KIND: Record<TransactionKind, TransactionOperation> = {
   ConfidentialTransfer: "transfer",
   ConfidentialTransferFrom: "transferFrom",
   SetOperator: "setOperator",

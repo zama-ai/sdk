@@ -14,7 +14,6 @@ import {
   symbolContract,
 } from "../contracts";
 import {
-  ApprovalFailedError,
   BalanceCheckUnavailableError,
   ConfigurationError,
   DecryptionFailedError,
@@ -677,7 +676,7 @@ export class Token {
       if (error instanceof ZamaError) {
         throw error;
       }
-      throw new ApprovalFailedError("Operator approval failed", {
+      throw new TransactionRevertedError("Operator approval failed", {
         cause: error,
       });
     }

@@ -15,7 +15,6 @@ import { findUnwrapRequested } from "../events/onchain-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { Handle } from "../relayer/relayer-sdk.types";
 import {
-  ApprovalFailedError,
   DecryptionFailedError,
   ERC20ReadFailedError,
   EncryptionFailedError,
@@ -160,8 +159,7 @@ export class WrappedToken extends Token {
    * @returns The transaction hash and mined receipt.
    * @throws {@link ChainMismatchError} if signer and provider are on different chains.
    * @throws {@link InsufficientERC20BalanceError} if the ERC-20 balance is less than `amount`.
-   * @throws {@link ApprovalFailedError} if the ERC-20 approval step fails (approveAndWrap path).
-   * @throws {@link TransactionRevertedError} if the shield transaction reverts.
+   * @throws {@link TransactionRevertedError} if the ERC-20 approval or shield transaction reverts.
    *
    * @example
    * ```ts
@@ -402,7 +400,7 @@ export class WrappedToken extends Token {
       const txHash = await signer.writeContract(
         approveContract(underlying, this.address, approvalAmount),
       );
-      this.emit({ type: ZamaSDKEvents.ApproveUnderlyingSubmitted, txHash });
+      this.emit({ type: ZamaSDKEvents.ApproveUnderlyingSubmitted, txHash, step: "approve" });
       const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
       return { txHash, receipt };
     } catch (error) {
@@ -414,7 +412,7 @@ export class WrappedToken extends Token {
       if (error instanceof ZamaError) {
         throw error;
       }
-      throw new ApprovalFailedError("ERC-20 approval failed", {
+      throw new TransactionRevertedError("ERC-20 approval failed", {
         cause: error,
       });
     }
@@ -755,14 +753,14 @@ export class WrappedToken extends Token {
       const txHash = await signer.writeContract(
         approveContract(underlying, this.address, approvalAmount),
       );
-      this.emit({ type: ZamaSDKEvents.ApproveUnderlyingSubmitted, txHash });
+      this.emit({ type: ZamaSDKEvents.ApproveUnderlyingSubmitted, txHash, step: "approve" });
       void swallow("shield: onApprovalSubmitted", () => callbacks?.onApprovalSubmitted?.(txHash));
       await this.sdk.provider.waitForTransactionReceipt(txHash);
     } catch (error) {
       if (error instanceof ZamaError) {
         throw error;
       }
-      throw new ApprovalFailedError("ERC-20 approval failed", {
+      throw new TransactionRevertedError("ERC-20 approval failed", {
         cause: error,
       });
     }

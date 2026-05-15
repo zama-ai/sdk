@@ -164,7 +164,7 @@ export type {
   UnshieldPhase2StartedEvent,
   UnshieldPhase2SubmittedEvent,
   TransactionErrorEvent,
-  TransactionErrorOperation,
+  TransactionOperation,
   EncryptStartEvent,
   EncryptEndEvent,
   EncryptErrorEvent,
@@ -181,7 +181,6 @@ export {
   SigningFailedError,
   EncryptionFailedError,
   DecryptionFailedError,
-  ApprovalFailedError,
   TransactionRevertedError,
   KeypairExpiredError,
   InvalidKeypairError,
@@ -211,7 +210,6 @@ export {
   DelegationExpirationTooSoonError,
   DelegationNotPropagatedError,
   matchZamaError,
-  matchAclRevert,
 } from "./errors";
 export { BaseSigner } from "./signer/base-signer";
 export { ensureHexSignature } from "./signer/util";

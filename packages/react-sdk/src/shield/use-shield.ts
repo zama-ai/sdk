@@ -29,8 +29,7 @@ export interface UseShieldConfig {
  *
  * Errors are {@link ZamaError} subclasses — use `instanceof` to handle specific failures:
  * - {@link SigningRejectedError} — user rejected the wallet prompt
- * - {@link ApprovalFailedError} — ERC-20 approval transaction failed
- * - {@link TransactionRevertedError} — shield transaction reverted
+ * - {@link TransactionRevertedError} — approval or shield transaction reverted
  *
  * @param config - Wrapper address (and optional `optimistic` flag).
  * @param options - React Query mutation options.
