@@ -53,13 +53,13 @@ export class DelegationsClient {
    * @param delegateAddress - Address to delegate decryption rights to.
    * @param expirationDate - Optional expiration date (defaults to permanent delegation via `uint64.max`).
    * @returns The transaction hash and mined receipt.
-   * @throws {@link SignerNotConfiguredError} if no signer is configured.
-   * @throws {@link ChainMismatchError} if signer and provider are on different chains.
-   * @throws {@link DelegationExpirationTooSoonError} if `expirationDate` is less than 1 hour in the future.
-   * @throws {@link DelegationSelfNotAllowedError} if the delegate equals the connected wallet.
-   * @throws {@link DelegationDelegateEqualsContractError} if the delegate equals the contract address.
-   * @throws {@link DelegationExpiryUnchangedError} if the new expiry equals the current one.
-   * @throws {@link TransactionRevertedError} if the delegation transaction reverts.
+   * @throws if no signer is configured. {@link SignerNotConfiguredError}
+   * @throws if signer and provider are on different chains. {@link ChainMismatchError}
+   * @throws if `expirationDate` is less than 1 hour in the future. {@link DelegationExpirationTooSoonError}
+   * @throws if the delegate equals the connected wallet. {@link DelegationSelfNotAllowedError}
+   * @throws if the delegate equals the contract address. {@link DelegationDelegateEqualsContractError}
+   * @throws if the new expiry equals the current one. {@link DelegationExpiryUnchangedError}
+   * @throws if the delegation transaction reverts. {@link TransactionRevertedError}
    */
   async delegate({
     contractAddress,
@@ -87,10 +87,10 @@ export class DelegationsClient {
    * @param contractAddress - The confidential contract address to revoke delegation on.
    * @param delegateAddress - Address to revoke delegation from.
    * @returns The transaction hash and mined receipt.
-   * @throws {@link SignerNotConfiguredError} if no signer is configured.
-   * @throws {@link ChainMismatchError} if signer and provider are on different chains.
-   * @throws {@link DelegationNotFoundError} if no delegation exists for this (delegator, delegate, contract) tuple.
-   * @throws {@link TransactionRevertedError} if the revocation transaction reverts.
+   * @throws if no signer is configured. {@link SignerNotConfiguredError}
+   * @throws if signer and provider are on different chains. {@link ChainMismatchError}
+   * @throws if no delegation exists for this (delegator, delegate, contract) tuple. {@link DelegationNotFoundError}
+   * @throws if the revocation transaction reverts. {@link TransactionRevertedError}
    */
   async revoke({
     contractAddress,

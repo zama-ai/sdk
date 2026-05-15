@@ -57,8 +57,8 @@ export class DecryptClient {
    *
    * @param handles - Handles to decrypt, each paired with its contract address.
    * @returns A record mapping each handle to its decrypted clear-text value.
-   * @throws {@link SignerNotConfiguredError} if no signer is configured.
-   * @throws {@link ChainMismatchError} if signer and provider are on different chains.
+   * @throws if no signer is configured. {@link SignerNotConfiguredError}
+   * @throws if signer and provider are on different chains. {@link ChainMismatchError}
    *
    * @example
    * ```ts

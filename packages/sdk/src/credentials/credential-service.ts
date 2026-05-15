@@ -70,8 +70,8 @@ export class CredentialService {
    * when best-effort persistence fails.
    *
    * @returns The resolved keypair and permits covering the requested contracts.
-   * @throws {@link SigningRejectedError} if the user rejects a wallet signature prompt.
-   * @throws {@link SigningFailedError} if signing fails for any other reason.
+   * @throws if the user rejects a wallet signature prompt. {@link SigningRejectedError}
+   * @throws if signing fails for any other reason. {@link SigningFailedError}
    */
   async grantPermit(contracts: readonly Address[], delegator?: Address): Promise<CredentialBundle> {
     const account = this.#signer.requireWalletAccount("grantPermit");
@@ -140,7 +140,7 @@ export class CredentialService {
    *   (current chain) whose immutable payload touches any listed address is
    *   removed. Delegated permits are not touched in this mode.
    *
-   * @throws {@link SigningFailedError} if reading the signer address fails.
+   * @throws if reading the signer address fails. {@link SigningFailedError}
    */
   async revokePermits(contracts?: readonly Address[]): Promise<void> {
     const account = this.#signer.requireWalletAccount("revokePermits");
@@ -164,7 +164,7 @@ export class CredentialService {
    * Wipe the keypair for the current signer and cascade-delete every
    * permission referencing it across all chains and delegators.
    *
-   * @throws {@link SigningFailedError} if reading the signer address fails.
+   * @throws if reading the signer address fails. {@link SigningFailedError}
    */
   async clearCredentials(): Promise<void> {
     const account = this.#signer.requireWalletAccount("clearCredentials");

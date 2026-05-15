@@ -198,7 +198,7 @@ export class ZamaSDK {
    *
    * @param params - Typed FHE inputs, the target contract address, and the user address.
    * @returns Encrypted handles and the input proof for on-chain submission.
-   * @throws {@link EncryptionFailedError} if FHE encryption fails.
+   * @throws if FHE encryption fails. {@link EncryptionFailedError}
    *
    * @example
    * ```ts

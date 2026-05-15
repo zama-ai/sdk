@@ -121,7 +121,7 @@ export class PermitsClient {
    *   (current chain) whose immutable payload touches any listed address is
    *   removed. Delegation permits are not touched in this mode.
    *
-   * @throws {@link SignerNotConfiguredError} if no signer is configured.
+   * @throws if no signer is configured. {@link SignerNotConfiguredError}
    */
   async revokePermits(contracts?: Address[]): Promise<void> {
     const service = this.#requireCredentialService("revokePermits");
@@ -144,7 +144,7 @@ export class PermitsClient {
    * Wipe the keypair for the current signer and cascade-delete every permit
    * (across chains and delegators) referencing it.
    *
-   * @throws {@link SignerNotConfiguredError} if no signer is configured.
+   * @throws if no signer is configured. {@link SignerNotConfiguredError}
    */
   async clear(): Promise<void> {
     const service = this.#requireCredentialService("clear");

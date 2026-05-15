@@ -57,8 +57,8 @@ export class WagmiProvider implements GenericProvider {
    *
    * @param hash - The transaction hash to wait for.
    * @returns The transaction receipt.
-   * @throws {@link TransactionRevertedError} if the transaction hash cannot be found (e.g.
-   *   an ERC-4337 bundler returned a `UserOperation` hash instead of a transaction hash).
+   * @throws if the transaction hash cannot be found (e.g. an ERC-4337 bundler
+   *   returned a `UserOperation` hash instead of a transaction hash). {@link TransactionRevertedError}
    */
   async waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt> {
     try {
