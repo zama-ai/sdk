@@ -118,9 +118,9 @@ export class WrappedToken extends Token {
    * @param amount - The plaintext amount to shield.
    * @param options - Optional: `approvalStrategy`, `to`, callbacks.
    * @returns The transaction hash and mined receipt.
-   * @throws {@link ChainMismatchError} if signer and provider are on different chains.
-   * @throws {@link InsufficientERC20BalanceError} if the ERC-20 balance is less than `amount`.
-   * @throws {@link TransactionRevertedError} if the ERC-20 approval or shield transaction reverts.
+   * @throws if signer and provider are on different chains. {@link ChainMismatchError}
+   * @throws if the ERC-20 balance is less than `amount`. {@link InsufficientERC20BalanceError}
+   * @throws if the ERC-20 approval or shield transaction reverts. {@link TransactionRevertedError}
    *
    * @example
    * ```ts
@@ -289,7 +289,7 @@ export class WrappedToken extends Token {
    *
    * @param callbacks - Optional progress callbacks for each phase.
    * @returns The finalize transaction hash and mined receipt.
-   * @throws {@link DecryptionFailedError} if the balance is zero.
+   * @throws if the balance is zero. {@link DecryptionFailedError}
    *
    * @example
    * ```ts
@@ -367,7 +367,7 @@ export class WrappedToken extends Token {
    * Throws if the balance is zero.
    *
    * @returns The transaction hash and mined receipt.
-   * @throws {@link DecryptionFailedError} if the balance is zero.
+   * @throws if the balance is zero. {@link DecryptionFailedError}
    *
    * @example
    * ```ts
