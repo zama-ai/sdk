@@ -74,14 +74,14 @@ export {
   type UseWrapperDiscoverySuspenseConfig,
 } from "./token/use-wrapper-discovery";
 export { useMetadata, useMetadataSuspense } from "./token/use-metadata";
-export { useDelegateDecryption } from "./delegation/use-delegate-decryption";
-export { useRevokeDelegation } from "./delegation/use-revoke-delegation";
+export { useDelegateDecryption } from "./delegations/use-delegate-decryption";
+export { useRevokeDelegation } from "./delegations/use-revoke-delegation";
 export {
   useDelegationStatus,
   type UseDelegationStatusConfig,
-} from "./delegation/use-delegation-status";
-export { useDecryptBalanceAs } from "./delegation/use-decrypt-balance-as";
-export { useBatchDecryptBalancesAs } from "./delegation/use-batch-decrypt-balances-as";
+} from "./delegations/use-delegation-status";
+export { useDecryptBalanceAs } from "./delegations/use-decrypt-balance-as";
+export { useBatchDecryptBalancesAs } from "./delegations/use-batch-decrypt-balances-as";
 export { useApproveUnderlying } from "./shield/use-approve-underlying";
 export {
   useIsConfidential,
