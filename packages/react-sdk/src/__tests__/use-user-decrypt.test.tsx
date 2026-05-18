@@ -31,10 +31,7 @@ describe("useUserDecrypt", () => {
       timeout: 5_000,
     });
 
-    expect(result.current.data).toEqual({
-      "0xhandle1": 100n,
-      "0xhandle2": true,
-    });
+    expect(result.current.data).toEqual({ "0xhandle1": 100n, "0xhandle2": true });
   });
 
   test("groups handles by contract address", async ({ relayer, renderWithProviders }) => {

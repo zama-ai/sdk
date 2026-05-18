@@ -72,11 +72,7 @@ describe("useMetadataSuspense", () => {
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(result.current.data).toEqual({
-      name: "TestToken",
-      symbol: "TT",
-      decimals: 18,
-    });
+    expect(result.current.data).toEqual({ name: "TestToken", symbol: "TT", decimals: 18 });
   });
 });
 

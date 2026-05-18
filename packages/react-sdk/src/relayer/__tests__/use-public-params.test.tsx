@@ -9,10 +9,7 @@ describe("usePublicParams", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     const { data, dataUpdatedAt } = result.current;
-    expect(data).toEqual({
-      publicParams: new Uint8Array([2]),
-      publicParamsId: "pp-1",
-    });
+    expect(data).toEqual({ publicParams: new Uint8Array([2]), publicParamsId: "pp-1" });
     expect(dataUpdatedAt).toEqual(expect.any(Number));
   });
 });
