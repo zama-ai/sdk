@@ -6,6 +6,7 @@ import { describe, expect, test } from "../../test-fixtures";
 const ROOT = findRepoRoot(process.cwd());
 const ERC7730_DIR = resolve(ROOT, "docs/clear-signing/erc7730");
 const REGISTRY_DIR = resolve(ERC7730_DIR, "registry/zama");
+const LEDGER_DEMO_DIR = resolve(ERC7730_DIR, "ledger-demo/zama-shield");
 const FIXTURE_PATH = resolve(ERC7730_DIR, "fixtures/sepolia-v1.json");
 const SCHEMA = "https://eips.ethereum.org/assets/eip-7730/erc7730-v2.schema.json";
 
@@ -36,10 +37,13 @@ interface Deployment {
 }
 
 interface DisplayFormat {
+  intent?: string;
   fields?: readonly FieldFormat[];
 }
 
 interface FieldFormat {
+  label?: string;
+  format?: string;
   path?: string;
   value?: unknown;
   fields?: readonly FieldFormat[];
@@ -224,6 +228,39 @@ describe("ERC-7730 descriptor drafts", () => {
         ).toBe(true);
       }
       expect(fixture.expectedTexts.length).toBeGreaterThan(0);
+    }
+  });
+
+  test("Ledger ZAMA shield demo keeps wrap descriptor calldata-converter friendly", () => {
+    const descriptor = readJson<Descriptor>(
+      resolve(LEDGER_DEMO_DIR, "calldata-czamamock-wrapper.json"),
+    );
+    const format = descriptor.display.formats["wrap(address to,uint256 amount)"];
+
+    expect(format?.intent).toBe("Shield");
+    expect(
+      deploymentMatches(
+        descriptor.context.contract?.deployments,
+        11155111,
+        "0xf2D628d2598aF4eAF94CB76a437Ff86CA78FfbFB",
+      ),
+    ).toBe(true);
+
+    const fields = flattenFields(format?.fields);
+    expect(fields.map((field) => field.label)).toEqual([
+      "Send",
+      "Receive",
+      "Recipient",
+      "Wrapper",
+      "Network",
+    ]);
+
+    const calldataConvertibleFormats = new Set(["raw", "addressName", "tokenAmount"]);
+    for (const field of fields) {
+      expect(
+        calldataConvertibleFormats.has(field.format ?? ""),
+        `unsupported Ledger calldata conversion format: ${field.label ?? "<unlabelled>"}`,
+      ).toBe(true);
     }
   });
 });

@@ -19,6 +19,7 @@ The intended Ledger screen should be as close as possible to:
 Action:  Shield
 Send:    100 ZAMAMock
 Receive: cZAMAMock
+Recipient: <wallet>
 Wrapper: cZAMAMock
 Network: Sepolia
 ```
@@ -30,6 +31,11 @@ constants, but it does not define arithmetic such as `amount / rate` for derived
 display fields. Showing `100 cZAMAMock` on a Ledger therefore needs either
 wallet/tool support for this derived value or an app-level preview.
 
+`Receive` is encoded as the static text `cZAMAMock` instead of using a
+token-ticker formatter. The current `erc7730 calldata --v2` conversion path does
+not support a standalone token ticker field, while a static `raw` value keeps
+the descriptor convertible for Ledger Generic Parser smoke tests.
+
 ## Covered Calls
 
 - `ZAMAMock.transferAndCall(address to,uint256 value,bytes data)`
@@ -40,6 +46,12 @@ wallet/tool support for this derived value or an app-level preview.
 underlying token supports ERC-1363. `approve` + `wrap` remains useful as the
 fallback path and for testing individual wallet renderers.
 
+For the current Ledger Generic Parser smoke test, focus on
+`cZAMAMock.wrap(address to,uint256 amount)`. Rabby or MetaMask will still show a
+blind-signing style hardware-wallet prompt unless the wallet path actually
+loads and forwards the ERC-7730 descriptor to Ledger. The local example app only
+previews the SDK-level intent; it does not make browser wallets ERC-7730-aware.
+
 ## Validation
 
 ```bash
@@ -47,5 +59,17 @@ uvx erc7730 lint --v2 \
   docs/clear-signing/erc7730/ledger-demo/zama-shield/calldata-zamamock-shield.json \
   docs/clear-signing/erc7730/ledger-demo/zama-shield/calldata-czamamock-wrapper.json
 ```
+
+To verify that the `wrap` descriptor can be lowered into Ledger calldata
+descriptor payloads, run:
+
+```bash
+uvx erc7730 calldata --v2 \
+  docs/clear-signing/erc7730/ledger-demo/zama-shield/calldata-czamamock-wrapper.json
+```
+
+The output should contain one Sepolia calldata descriptor for selector
+`0xbf376c7a` with these field names, in order: `Send`, `Receive`, `Recipient`,
+`Wrapper`, `Network`.
 
 `fixtures.json` contains sample calldata for a `100 ZAMAMock` shield.
