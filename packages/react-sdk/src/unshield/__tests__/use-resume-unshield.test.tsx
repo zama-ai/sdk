@@ -5,11 +5,11 @@ import { describe, test, vi } from "../../test-fixtures";
 import { useResumeUnshield } from "../use-resume-unshield";
 
 describe("useResumeUnshield", () => {
-  test("default", ({ renderWithProviders, tokenAddress, expectDefaultMutationState }) => {
+  test("default", ({ renderWithProviders, tokenAddress }) => {
     const { result } = renderWithProviders(() => useResumeUnshield(tokenAddress));
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
-    expectDefaultMutationState(state);
+    expect(state).toEqualDefaultMutationState();
   });
 
   test("cache: invalidates balance, allowance, and wagmi after resume unshield", async ({
@@ -21,9 +21,6 @@ describe("useResumeUnshield", () => {
     userAddress,
     wagmiBalanceKey,
     createUnwrapRequestedLog,
-    expectCacheInvalidated,
-    expectCacheUntouched,
-    expectInvalidatedQueries,
   }) => {
     vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
       logs: [createUnwrapRequestedLog(burnAmountHandle)],
@@ -44,10 +41,10 @@ describe("useResumeUnshield", () => {
 
     await act(() => result.current.mutateAsync({ unwrapTxHash: "0xtxhash" }));
 
-    expectInvalidatedQueries(queryClient, [balanceKey, allowanceKey]);
-    expectCacheInvalidated(queryClient, wagmiBalanceKey);
-    expectCacheUntouched(queryClient, otherBalanceKey, 777n);
-    expectCacheUntouched(queryClient, otherAllowanceKey, 333n);
+    expect(queryClient).toHaveInvalidatedQueries([balanceKey, allowanceKey]);
+    expect(queryClient).toHaveCacheInvalidated(wagmiBalanceKey);
+    expect(queryClient).toHaveCacheUntouched(otherBalanceKey, 777n);
+    expect(queryClient).toHaveCacheUntouched(otherAllowanceKey, 333n);
   });
 
   test("behavior: forwards onSuccess callback", async ({
@@ -58,8 +55,6 @@ describe("useResumeUnshield", () => {
     userAddress,
     wagmiBalanceKey,
     createUnwrapRequestedLog,
-    expectCacheInvalidated,
-    expectInvalidatedQueries,
     mutateAndExpectOnSuccess,
   }) => {
     vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
@@ -82,8 +77,8 @@ describe("useResumeUnshield", () => {
       () => result.current.mutateAsync({ unwrapTxHash: "0xtxhash" }),
       onSuccess,
       (client: QueryClient) => {
-        expectInvalidatedQueries(client, [balanceKey, allowanceKey]);
-        expectCacheInvalidated(client, wagmiBalanceKey);
+        expect(client).toHaveInvalidatedQueries([balanceKey, allowanceKey]);
+        expect(client).toHaveCacheInvalidated(wagmiBalanceKey);
       },
     );
   });

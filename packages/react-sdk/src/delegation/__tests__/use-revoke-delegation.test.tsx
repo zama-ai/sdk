@@ -4,11 +4,11 @@ import { describe, expect, test, vi } from "../../test-fixtures";
 import { useRevokeDelegation } from "../use-revoke-delegation";
 
 describe("useRevokeDelegation", () => {
-  test("default", ({ renderWithProviders, tokenAddress, expectDefaultMutationState }) => {
+  test("default", ({ renderWithProviders, tokenAddress }) => {
     const { result } = renderWithProviders(() => useRevokeDelegation(tokenAddress), {});
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
-    expectDefaultMutationState(state);
+    expect(state).toEqualDefaultMutationState();
   });
 
   test("behavior: calls revokeDelegation with delegate", async ({

@@ -5,11 +5,11 @@ import { describe, expect, test, vi } from "../../test-fixtures";
 import { useUnwrapAll } from "../use-unwrap-all";
 
 describe("useUnwrapAll", () => {
-  test("default", ({ renderWithProviders, tokenAddress, expectDefaultMutationState }) => {
+  test("default", ({ renderWithProviders, tokenAddress }) => {
     const { result } = renderWithProviders(() => useUnwrapAll(tokenAddress));
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
-    expectDefaultMutationState(state);
+    expect(state).toEqualDefaultMutationState();
   });
 
   test("cache: invalidates allowance and removes handle/balance after unwrap all", async ({
@@ -20,9 +20,6 @@ describe("useUnwrapAll", () => {
     tokenAddress,
     userAddress,
     wagmiBalanceKey,
-    expectCacheInvalidated,
-    expectCacheUntouched,
-    expectInvalidatedQueries,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValue(handle);
 
@@ -41,12 +38,12 @@ describe("useUnwrapAll", () => {
 
     await act(() => result.current.mutateAsync());
 
-    expectInvalidatedQueries(queryClient, [balanceKey]);
+    expect(queryClient).toHaveInvalidatedQueries([balanceKey]);
     expect(queryClient.getQueryData(allowanceKey)).toBe(500n);
-    expectCacheInvalidated(queryClient, allowanceKey);
-    expectCacheInvalidated(queryClient, wagmiBalanceKey);
-    expectCacheUntouched(queryClient, otherBalanceKey, 777n);
-    expectCacheUntouched(queryClient, otherAllowanceKey, 333n);
+    expect(queryClient).toHaveCacheInvalidated(allowanceKey);
+    expect(queryClient).toHaveCacheInvalidated(wagmiBalanceKey);
+    expect(queryClient).toHaveCacheUntouched(otherBalanceKey, 777n);
+    expect(queryClient).toHaveCacheUntouched(otherAllowanceKey, 333n);
   });
 
   test("behavior: forwards onSuccess callback", async ({
@@ -56,8 +53,6 @@ describe("useUnwrapAll", () => {
     tokenAddress,
     userAddress,
     wagmiBalanceKey,
-    expectCacheInvalidated,
-    expectInvalidatedQueries,
     mutateAndExpectOnSuccess,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValue(handle);
@@ -77,10 +72,10 @@ describe("useUnwrapAll", () => {
       () => result.current.mutateAsync(),
       onSuccess,
       (client: QueryClient) => {
-        expectInvalidatedQueries(client, [balanceKey]);
+        expect(client).toHaveInvalidatedQueries([balanceKey]);
         expect(client.getQueryData(allowanceKey)).toBe(500n);
-        expectCacheInvalidated(client, allowanceKey);
-        expectCacheInvalidated(client, wagmiBalanceKey);
+        expect(client).toHaveCacheInvalidated(allowanceKey);
+        expect(client).toHaveCacheInvalidated(wagmiBalanceKey);
       },
       { variables: "undefined" },
     );

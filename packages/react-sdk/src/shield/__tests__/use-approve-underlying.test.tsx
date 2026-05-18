@@ -5,11 +5,11 @@ import { describe, expect, test, vi } from "../../test-fixtures";
 import { useApproveUnderlying } from "../use-approve-underlying";
 
 describe("useApproveUnderlying", () => {
-  test("default", ({ renderWithProviders, wrapperAddress, expectDefaultMutationState }) => {
+  test("default", ({ renderWithProviders, wrapperAddress }) => {
     const { result } = renderWithProviders(() => useApproveUnderlying(wrapperAddress));
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
-    expectDefaultMutationState(state);
+    expect(state).toEqualDefaultMutationState();
   });
 
   test("cache: invalidates allowance after approve", async ({
@@ -18,8 +18,6 @@ describe("useApproveUnderlying", () => {
     otherTokenAddress,
     underlyingAddress,
     wrapperAddress,
-    expectCacheInvalidated,
-    expectCacheUntouched,
   }) => {
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce(underlyingAddress)
@@ -35,8 +33,8 @@ describe("useApproveUnderlying", () => {
     await act(() => result.current.mutateAsync({ amount: 1000n }));
 
     expect(queryClient.getQueryData(allowanceKey)).toBe(500n);
-    expectCacheInvalidated(queryClient, allowanceKey);
-    expectCacheUntouched(queryClient, otherAllowanceKey, 777n);
+    expect(queryClient).toHaveCacheInvalidated(allowanceKey);
+    expect(queryClient).toHaveCacheUntouched(otherAllowanceKey, 777n);
   });
 
   test("behavior: forwards onSuccess callback", async ({
@@ -44,7 +42,6 @@ describe("useApproveUnderlying", () => {
     provider,
     underlyingAddress,
     wrapperAddress,
-    expectCacheInvalidated,
     mutateAndExpectOnSuccess,
   }) => {
     vi.mocked(provider.readContract)
@@ -67,7 +64,7 @@ describe("useApproveUnderlying", () => {
       onSuccess,
       (client: QueryClient) => {
         expect(client.getQueryData(allowanceKey)).toBe(500n);
-        expectCacheInvalidated(client, allowanceKey);
+        expect(client).toHaveCacheInvalidated(allowanceKey);
       },
     );
   });

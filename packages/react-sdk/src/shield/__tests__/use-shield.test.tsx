@@ -6,11 +6,11 @@ import { describe, expect, test, vi } from "../../test-fixtures";
 import { useShield } from "../use-shield";
 
 describe("useShield", () => {
-  test("default", ({ renderWithProviders, tokenAddress, expectDefaultMutationState }) => {
+  test("default", ({ renderWithProviders, tokenAddress }) => {
     const { result } = renderWithProviders(() => useShield({ address: tokenAddress }));
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
-    expectDefaultMutationState(state);
+    expect(state).toEqualDefaultMutationState();
   });
 
   test("cache: invalidates allowance and removes balance after shield", async ({
@@ -21,9 +21,6 @@ describe("useShield", () => {
     underlyingAddress,
     userAddress,
     wagmiBalanceKey,
-    expectCacheInvalidated,
-    expectCacheUntouched,
-    expectInvalidatedQueries,
   }) => {
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce(underlyingAddress)
@@ -44,12 +41,12 @@ describe("useShield", () => {
 
     await act(() => result.current.mutateAsync({ amount: 500n }));
 
-    expectInvalidatedQueries(queryClient, [balanceKey]);
+    expect(queryClient).toHaveInvalidatedQueries([balanceKey]);
     expect(queryClient.getQueryData(allowanceKey)).toBe(500n);
-    expectCacheInvalidated(queryClient, allowanceKey);
-    expectCacheInvalidated(queryClient, wagmiBalanceKey);
-    expectCacheUntouched(queryClient, otherBalanceKey, 777n);
-    expectCacheUntouched(queryClient, otherAllowanceKey, 333n);
+    expect(queryClient).toHaveCacheInvalidated(allowanceKey);
+    expect(queryClient).toHaveCacheInvalidated(wagmiBalanceKey);
+    expect(queryClient).toHaveCacheUntouched(otherBalanceKey, 777n);
+    expect(queryClient).toHaveCacheUntouched(otherAllowanceKey, 333n);
   });
 
   test("behavior: forwards onSuccess callback", async ({
@@ -59,8 +56,6 @@ describe("useShield", () => {
     underlyingAddress,
     userAddress,
     wagmiBalanceKey,
-    expectCacheInvalidated,
-    expectInvalidatedQueries,
     mutateAndExpectOnSuccess,
   }) => {
     vi.mocked(provider.readContract)
@@ -83,10 +78,10 @@ describe("useShield", () => {
       () => result.current.mutateAsync({ amount: 500n }),
       onSuccess,
       (client: QueryClient) => {
-        expectInvalidatedQueries(client, [balanceKey]);
+        expect(client).toHaveInvalidatedQueries([balanceKey]);
         expect(client.getQueryData(allowanceKey)).toBe(500n);
-        expectCacheInvalidated(client, allowanceKey);
-        expectCacheInvalidated(client, wagmiBalanceKey);
+        expect(client).toHaveCacheInvalidated(allowanceKey);
+        expect(client).toHaveCacheInvalidated(wagmiBalanceKey);
       },
     );
   });
