@@ -251,7 +251,7 @@ describe("WrappedToken", () => {
       const rootCause = new Error("approve failed");
       vi.mocked(signer.writeContract).mockRejectedValueOnce(rootCause);
 
-      const thrown = await wrappedToken.approveUnderlying().catch((error: Error) => error);
+      const thrown = await wrappedToken.approveUnderlying().catch((error) => error);
 
       expect(thrown).toBeInstanceOf(TransactionRevertedError);
       expect(thrown).toMatchObject({ code: ZamaErrorCode.TransactionReverted });

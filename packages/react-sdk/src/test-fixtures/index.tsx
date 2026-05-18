@@ -17,17 +17,23 @@ export type ReactSdkTestFixtures = SdkTestFixtures &
   WrapperFixtures &
   MutationFixtures;
 
+type ReactExtensions = ReactAddressFixtures &
+  QueryClientFixtures &
+  WrapperFixtures &
+  MutationFixtures;
+
 /**
- * Builder chain — extends the SDK's test (relayer, signer, provider, storage…)
- * with React-specific fixtures.
- *
- *   sdk-base → reactAddresses → queryClient → wrapper → mutations
+ * Single `.extend()` call with every react-sdk fixture group spread in. vitest
+ * resolves intra-call dependencies automatically and the cumulative test type
+ * stays as a flat intersection rather than nested `AddBuilderWorker<...>`s,
+ * which TypeScript otherwise struggles to display.
  */
-export const test: TestAPI<ReactSdkTestFixtures> = base
-  .extend<ReactAddressFixtures>(reactAddressFixtures)
-  .extend<QueryClientFixtures>(queryClientFixtures)
-  .extend<WrapperFixtures>(wrapperFixtures)
-  .extend<MutationFixtures>(mutationFixtures);
+export const test: TestAPI<ReactSdkTestFixtures> = base.extend<ReactExtensions>({
+  ...reactAddressFixtures,
+  ...queryClientFixtures,
+  ...wrapperFixtures,
+  ...mutationFixtures,
+});
 
 export type { ReactAddressFixtures } from "./addresses";
 export type { QueryClientFixtures } from "./query-client";
