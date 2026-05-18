@@ -1,4 +1,4 @@
-import { describe, expect, test, vi, mockQueryContext } from "../../test-fixtures";
+import { describe, expect, test, vi } from "../../test-fixtures";
 import { delegationStatusQueryOptions } from "../delegation-status";
 import { MAX_UINT64 } from "../../contracts/constants";
 
@@ -32,6 +32,7 @@ describe("delegationStatusQueryOptions", () => {
     tokenAddress,
     aclAddress,
     provider,
+    mockQueryContext,
   }) => {
     vi.mocked(relayer.getAclAddress).mockResolvedValue(aclAddress);
     vi.mocked(provider.readContract).mockResolvedValue(0n);
@@ -55,6 +56,7 @@ describe("delegationStatusQueryOptions", () => {
     tokenAddress,
     aclAddress,
     provider,
+    mockQueryContext,
   }) => {
     vi.mocked(relayer.getAclAddress).mockResolvedValue(aclAddress);
     vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
@@ -78,6 +80,7 @@ describe("delegationStatusQueryOptions", () => {
     tokenAddress,
     aclAddress,
     provider,
+    mockQueryContext,
   }) => {
     const futureTimestamp = BigInt(Math.floor(Date.now() / 1000) + 3600);
     vi.mocked(relayer.getAclAddress).mockResolvedValue(aclAddress);
@@ -103,6 +106,7 @@ describe("delegationStatusQueryOptions", () => {
     tokenAddress,
     aclAddress,
     provider,
+    mockQueryContext,
   }) => {
     const pastTimestamp = 1000n;
     vi.mocked(relayer.getAclAddress).mockResolvedValue(aclAddress);
@@ -122,7 +126,10 @@ describe("delegationStatusQueryOptions", () => {
     expect(provider.getBlockTimestamp).toHaveBeenCalled();
   });
 
-  test("queryFn throws when required params are missing from context.queryKey", async ({ sdk }) => {
+  test("queryFn throws when required params are missing from context.queryKey", async ({
+    sdk,
+    mockQueryContext,
+  }) => {
     const options = delegationStatusQueryOptions(sdk, { tokenAddress: undefined });
 
     await expect(options.queryFn!(mockQueryContext(options.queryKey))).rejects.toThrow(

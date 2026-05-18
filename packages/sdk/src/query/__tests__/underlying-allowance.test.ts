@@ -1,4 +1,4 @@
-import { describe, expect, test, vi, mockQueryContext } from "../../test-fixtures";
+import { describe, expect, test, vi } from "../../test-fixtures";
 import { getAddress } from "viem";
 import { underlyingAllowanceQueryOptions } from "../underlying-allowance";
 import { zamaQueryKeys } from "../query-keys";
@@ -14,7 +14,7 @@ describe("underlyingAllowanceQueryOptions", () => {
     expect(options.enabled).toBe(false);
   });
 
-  test("queries allowance when owner exists", async ({ sdk, provider }) => {
+  test("queries allowance when owner exists", async ({ sdk, provider, mockQueryContext }) => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(99n);
 
     const options = underlyingAllowanceQueryOptions(sdk, WRAPPER, { owner: OWNER });
@@ -35,7 +35,11 @@ describe("underlyingAllowanceQueryOptions", () => {
     ]);
   });
 
-  test("queryFn reads tokenAddress and owner from context.queryKey", async ({ sdk, provider }) => {
+  test("queryFn reads tokenAddress and owner from context.queryKey", async ({
+    sdk,
+    provider,
+    mockQueryContext,
+  }) => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(99n);
 
     const options = underlyingAllowanceQueryOptions(sdk, WRAPPER, { owner: OWNER });
@@ -62,7 +66,10 @@ describe("underlyingAllowanceQueryOptions", () => {
     );
   });
 
-  test("queryFn throws when owner is missing from context.queryKey", async ({ sdk }) => {
+  test("queryFn throws when owner is missing from context.queryKey", async ({
+    sdk,
+    mockQueryContext,
+  }) => {
     const options = underlyingAllowanceQueryOptions(sdk, WRAPPER, { owner: OWNER });
 
     await expect(

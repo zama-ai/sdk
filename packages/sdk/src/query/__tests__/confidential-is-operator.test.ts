@@ -1,4 +1,4 @@
-import { describe, expect, test, vi, mockQueryContext } from "../../test-fixtures";
+import { describe, expect, test, vi } from "../../test-fixtures";
 import { getAddress } from "viem";
 import { confidentialIsOperatorQueryOptions } from "../confidential-is-operator";
 import { zamaQueryKeys } from "../query-keys";
@@ -53,7 +53,7 @@ describe("confidentialIsOperatorQueryOptions", () => {
     ]);
   });
 
-  test("checks operator approval", async ({ sdk, provider }) => {
+  test("checks operator approval", async ({ sdk, provider, mockQueryContext }) => {
     vi.mocked(provider.readContract).mockResolvedValue(true);
 
     const options = confidentialIsOperatorQueryOptions(
@@ -92,6 +92,7 @@ describe("confidentialIsOperatorQueryOptions", () => {
   test("queryFn reads tokenAddress, holder, and spender from context.queryKey", async ({
     sdk,
     provider,
+    mockQueryContext,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValue(true);
 
@@ -128,6 +129,7 @@ describe("confidentialIsOperatorQueryOptions", () => {
     sdk,
     signer,
     provider,
+    mockQueryContext,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValue(true);
 
@@ -159,6 +161,7 @@ describe("confidentialIsOperatorQueryOptions", () => {
     sdk,
     signer,
     provider,
+    mockQueryContext,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValue(true);
 
@@ -186,7 +189,10 @@ describe("confidentialIsOperatorQueryOptions", () => {
     );
   });
 
-  test("queryFn throws when required params are missing from context.queryKey", async ({ sdk }) => {
+  test("queryFn throws when required params are missing from context.queryKey", async ({
+    sdk,
+    mockQueryContext,
+  }) => {
     const options = confidentialIsOperatorQueryOptions(
       sdk,
       "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
@@ -205,7 +211,10 @@ describe("confidentialIsOperatorQueryOptions", () => {
     ).rejects.toThrow("confidentialIsOperatorQueryOptions: holder must not be null or undefined");
   });
 
-  test("queryFn throws when tokenAddress is missing from context.queryKey", async ({ sdk }) => {
+  test("queryFn throws when tokenAddress is missing from context.queryKey", async ({
+    sdk,
+    mockQueryContext,
+  }) => {
     const options = confidentialIsOperatorQueryOptions(sdk, undefined, {
       holder: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
       spender: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",

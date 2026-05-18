@@ -1,6 +1,6 @@
 import type { Address } from "viem";
 import { DecryptionFailedError } from "../../errors";
-import { describe, expect, test, vi, mockQueryContext } from "../../test-fixtures";
+import { describe, expect, test, vi } from "../../test-fixtures";
 import { Token } from "../../token/token";
 import { confidentialBalancesQueryOptions } from "../confidential-balances";
 
@@ -83,6 +83,7 @@ describe("confidentialBalancesQueryOptions", () => {
   test("queryFn delegates to Token.batchBalancesOf using owner from queryKey", async ({
     createMockToken,
     signer,
+    mockQueryContext,
   }) => {
     const t1 = createMockToken(tokenA);
     const t2 = createMockToken(tokenB);
@@ -112,6 +113,7 @@ describe("confidentialBalancesQueryOptions", () => {
 
   test("queryFn propagates errors thrown by batchBalancesOf (total failure)", async ({
     createMockToken,
+    mockQueryContext,
   }) => {
     const t1 = createMockToken(tokenA);
     vi.spyOn(Token, "batchBalancesOf").mockRejectedValue(new DecryptionFailedError("all failed"));

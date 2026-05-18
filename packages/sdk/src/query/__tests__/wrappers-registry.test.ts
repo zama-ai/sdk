@@ -1,4 +1,4 @@
-import { describe, expect, test, vi, mockQueryContext } from "../../test-fixtures";
+import { describe, expect, test, vi } from "../../test-fixtures";
 import { getAddress, zeroAddress } from "viem";
 import type { Address } from "viem";
 
@@ -37,7 +37,7 @@ describe("tokenPairsQueryOptions", () => {
     expect(options.enabled).toBe(false);
   });
 
-  test("queryFn calls readContract", async ({ sdk, provider }) => {
+  test("queryFn calls readContract", async ({ sdk, provider, mockQueryContext }) => {
     vi.mocked(provider.readContract).mockResolvedValue([]);
     const options = tokenPairsQueryOptions(sdk, {
       registryAddress: REGISTRY,
@@ -61,7 +61,7 @@ describe("tokenPairsLengthQueryOptions", () => {
     ]);
   });
 
-  test("queryFn returns bigint", async ({ sdk, provider }) => {
+  test("queryFn returns bigint", async ({ sdk, provider, mockQueryContext }) => {
     vi.mocked(provider.readContract).mockResolvedValue(5n);
     const options = tokenPairsLengthQueryOptions(sdk, {
       registryAddress: REGISTRY,
@@ -99,7 +99,7 @@ describe("tokenPairsSliceQueryOptions", () => {
     expect(options.enabled).toBe(true);
   });
 
-  test("queryFn passes bigint indices", async ({ sdk, provider }) => {
+  test("queryFn passes bigint indices", async ({ sdk, provider, mockQueryContext }) => {
     vi.mocked(provider.readContract).mockResolvedValue([]);
     const options = tokenPairsSliceQueryOptions(sdk, {
       registryAddress: REGISTRY,
@@ -123,7 +123,7 @@ describe("tokenPairQueryOptions", () => {
     ).toBe(false);
   });
 
-  test("queryFn passes bigint index", async ({ sdk, provider }) => {
+  test("queryFn passes bigint index", async ({ sdk, provider, mockQueryContext }) => {
     const pair = { tokenAddress: TOKEN, confidentialTokenAddress: C_TOKEN, isValid: true };
     vi.mocked(provider.readContract).mockResolvedValue(pair);
     const options = tokenPairQueryOptions(sdk, {
@@ -145,7 +145,7 @@ describe("confidentialTokenAddressQueryOptions", () => {
     ).toBe(false);
   });
 
-  test("queryFn returns [isValid, address] tuple", async ({ sdk, provider }) => {
+  test("queryFn returns [isValid, address] tuple", async ({ sdk, provider, mockQueryContext }) => {
     vi.mocked(provider.readContract).mockResolvedValue([true, C_TOKEN]);
     const options = confidentialTokenAddressQueryOptions(sdk, {
       registryAddress: REGISTRY,
@@ -166,7 +166,7 @@ describe("tokenAddressQueryOptions", () => {
     ).toBe(false);
   });
 
-  test("queryFn returns [isValid, address] tuple", async ({ sdk, provider }) => {
+  test("queryFn returns [isValid, address] tuple", async ({ sdk, provider, mockQueryContext }) => {
     vi.mocked(provider.readContract).mockResolvedValue([true, TOKEN]);
     const options = tokenAddressQueryOptions(sdk, {
       registryAddress: REGISTRY,
@@ -187,7 +187,7 @@ describe("isConfidentialTokenValidQueryOptions", () => {
     ).toBe(false);
   });
 
-  test("queryFn returns boolean", async ({ sdk, provider }) => {
+  test("queryFn returns boolean", async ({ sdk, provider, mockQueryContext }) => {
     vi.mocked(provider.readContract).mockResolvedValue(true);
     const options = isConfidentialTokenValidQueryOptions(sdk, {
       registryAddress: REGISTRY,
@@ -255,7 +255,9 @@ describe("listPairsQueryOptions", () => {
     expect(options.enabled).toBe(false);
   });
 
-  test("queryFn delegates to registry.listPairs with correct pagination args", async () => {
+  test("queryFn delegates to registry.listPairs with correct pagination args", async ({
+    mockQueryContext,
+  }) => {
     const { registry, listPairs } = makeRegistry();
     const mockResult = { total: 1, page: 3, pageSize: 20, items: [] };
     listPairs.mockResolvedValue(mockResult);

@@ -1,4 +1,4 @@
-import { describe, expect, test, vi, mockQueryContext } from "../../test-fixtures";
+import { describe, expect, test, vi } from "../../test-fixtures";
 import { ERC7984_WRAPPER_INTERFACE_ID, ERC7984_WRAPPER_INTERFACE_ID_LEGACY } from "../../contracts";
 import { ConfigurationError } from "../../errors";
 import { totalSupplyQueryOptions } from "../total-supply";
@@ -40,7 +40,11 @@ function mockReadContract({
 }
 
 describe("totalSupplyQueryOptions", () => {
-  test("uses inferredTotalSupply for upgraded wrappers", async ({ sdk, provider }) => {
+  test("uses inferredTotalSupply for upgraded wrappers", async ({
+    sdk,
+    provider,
+    mockQueryContext,
+  }) => {
     vi.mocked(provider.readContract).mockImplementation(
       mockReadContract({ supportsUpgraded: true, supportsLegacy: false, supply: 42n }),
     );
@@ -55,7 +59,11 @@ describe("totalSupplyQueryOptions", () => {
     );
   });
 
-  test("uses legacy totalSupply for legacy wrappers", async ({ sdk, provider }) => {
+  test("uses legacy totalSupply for legacy wrappers", async ({
+    sdk,
+    provider,
+    mockQueryContext,
+  }) => {
     vi.mocked(provider.readContract).mockImplementation(
       mockReadContract({ supportsUpgraded: false, supportsLegacy: true, supply: 24n }),
     );
@@ -69,7 +77,11 @@ describe("totalSupplyQueryOptions", () => {
     );
   });
 
-  test("prefers upgraded interface when both interface IDs match", async ({ sdk, provider }) => {
+  test("prefers upgraded interface when both interface IDs match", async ({
+    sdk,
+    provider,
+    mockQueryContext,
+  }) => {
     vi.mocked(provider.readContract).mockImplementation(
       mockReadContract({ supportsUpgraded: true, supportsLegacy: true, supply: 99n }),
     );
@@ -82,7 +94,11 @@ describe("totalSupplyQueryOptions", () => {
     );
   });
 
-  test("throws ConfigurationError for unsupported wrappers", async ({ sdk, provider }) => {
+  test("throws ConfigurationError for unsupported wrappers", async ({
+    sdk,
+    provider,
+    mockQueryContext,
+  }) => {
     vi.mocked(provider.readContract).mockImplementation(
       mockReadContract({ supportsUpgraded: false, supportsLegacy: false, supply: 0n }),
     );
@@ -97,6 +113,7 @@ describe("totalSupplyQueryOptions", () => {
   test("throws ConfigurationError when supportsInterface reverts for both interface IDs", async ({
     sdk,
     provider,
+    mockQueryContext,
   }) => {
     const revert = Object.assign(new Error("execution reverted"), {
       name: "ContractFunctionExecutionError",
@@ -115,7 +132,11 @@ describe("totalSupplyQueryOptions", () => {
     );
   });
 
-  test("propagates network errors from ERC-165 checks", async ({ sdk, provider }) => {
+  test("propagates network errors from ERC-165 checks", async ({
+    sdk,
+    provider,
+    mockQueryContext,
+  }) => {
     vi.mocked(provider.readContract).mockImplementation(async (config: ReadContractConfig) => {
       if (config.functionName === "supportsInterface") {
         throw new Error("network error");

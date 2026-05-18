@@ -1,11 +1,13 @@
+// oxlint-disable no-empty-pattern
 import type { QueryClient } from "@tanstack/query-core";
+import type { FixturesOf } from "./types";
 
 /**
  * Build a minimal TanStack QueryFunctionContext for testing query factories.
  * Includes `client`, `signal`, and `meta` — the real shape TanStack passes
  * at runtime. The `client` is a dummy (none of our factories use it).
  */
-export function mockQueryContext<TQueryKey extends readonly unknown[]>(queryKey: TQueryKey) {
+function buildMockQueryContext<TQueryKey extends readonly unknown[]>(queryKey: TQueryKey) {
   return {
     queryKey,
     // Our factories never access client — they extract params from queryKey.
@@ -16,3 +18,15 @@ export function mockQueryContext<TQueryKey extends readonly unknown[]>(queryKey:
     meta: undefined,
   };
 }
+
+export type MockQueryContextFn = typeof buildMockQueryContext;
+
+export interface QueryContextFixtures {
+  mockQueryContext: MockQueryContextFn;
+}
+
+export const queryContextFixtures: FixturesOf<QueryContextFixtures> = {
+  mockQueryContext: async ({}, use) => {
+    await use(buildMockQueryContext);
+  },
+};
