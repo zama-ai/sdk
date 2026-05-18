@@ -25,11 +25,7 @@ describe("useDelegationStatus", () => {
       }),
     );
 
-    expect(vi.mocked(useQuery)).toHaveBeenCalledWith(
-      expect.objectContaining({
-        enabled: false,
-      }),
-    );
+    expect(vi.mocked(useQuery)).toHaveBeenCalledWith(expect.objectContaining({ enabled: false }));
   });
 
   test("passes the shared queryKeyHashFn when addresses are provided", ({
@@ -67,17 +63,10 @@ describe("useDelegationStatus", () => {
     vi.mocked(useQuery).mockReturnValue({ data: undefined } as never);
 
     renderWithProviders(() =>
-      useDelegationStatus({
-        tokenAddress: tokenAddress,
-        delegateAddress: recipientAddress,
-      }),
+      useDelegationStatus({ tokenAddress: tokenAddress, delegateAddress: recipientAddress }),
     );
 
-    expect(vi.mocked(useQuery)).toHaveBeenCalledWith(
-      expect.objectContaining({
-        enabled: false,
-      }),
-    );
+    expect(vi.mocked(useQuery)).toHaveBeenCalledWith(expect.objectContaining({ enabled: false }));
   });
 
   test("disables query when delegate is missing", ({
@@ -88,16 +77,9 @@ describe("useDelegationStatus", () => {
     vi.mocked(useQuery).mockReturnValue({ data: undefined } as never);
 
     renderWithProviders(() =>
-      useDelegationStatus({
-        tokenAddress: tokenAddress,
-        delegatorAddress: userAddress,
-      }),
+      useDelegationStatus({ tokenAddress: tokenAddress, delegatorAddress: userAddress }),
     );
 
-    expect(vi.mocked(useQuery)).toHaveBeenCalledWith(
-      expect.objectContaining({
-        enabled: false,
-      }),
-    );
+    expect(vi.mocked(useQuery)).toHaveBeenCalledWith(expect.objectContaining({ enabled: false }));
   });
 });

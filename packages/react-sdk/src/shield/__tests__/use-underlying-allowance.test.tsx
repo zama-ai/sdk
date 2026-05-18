@@ -27,10 +27,7 @@ describe("useUnderlyingAllowance", () => {
     expect(data).toBe(1000n);
     expect(dataUpdatedAt).toEqual(expect.any(Number));
     expect(provider.readContract).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        functionName: "allowance",
-        address: underlyingAddress,
-      }),
+      expect.objectContaining({ functionName: "allowance", address: underlyingAddress }),
     );
   });
 
@@ -52,10 +49,7 @@ describe("useUnderlyingAllowance", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toBe(2000n);
     expect(provider.readContract).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        functionName: "allowance",
-        args: [OTHER, wrapperAddress],
-      }),
+      expect.objectContaining({ functionName: "allowance", args: [OTHER, wrapperAddress] }),
     );
   });
 
@@ -112,10 +106,7 @@ describe("useUnderlyingAllowanceSuspense", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toBe(500n);
     expect(provider.readContract).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        functionName: "allowance",
-        args: [OTHER, wrapperAddress],
-      }),
+      expect.objectContaining({ functionName: "allowance", args: [OTHER, wrapperAddress] }),
     );
   });
 });

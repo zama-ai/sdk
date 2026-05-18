@@ -30,9 +30,7 @@ describe("useRevokeDelegation", () => {
     });
 
     expect(signer.writeContract).toHaveBeenCalledWith(
-      expect.objectContaining({
-        functionName: "revokeDelegationForUserDecryption",
-      }),
+      expect.objectContaining({ functionName: "revokeDelegationForUserDecryption" }),
     );
   });
 

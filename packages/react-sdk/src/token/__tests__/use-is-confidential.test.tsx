@@ -14,10 +14,7 @@ describe("useIsConfidential", () => {
     expect(data).toBe(true);
     expect(dataUpdatedAt).toEqual(expect.any(Number));
     expect(provider.readContract).toHaveBeenCalledWith(
-      expect.objectContaining({
-        functionName: "supportsInterface",
-        address: tokenAddress,
-      }),
+      expect.objectContaining({ functionName: "supportsInterface", address: tokenAddress }),
     );
   });
 });
@@ -34,10 +31,7 @@ describe("useIsWrapper", () => {
     expect(data).toBe(false);
     expect(dataUpdatedAt).toEqual(expect.any(Number));
     expect(provider.readContract).toHaveBeenCalledWith(
-      expect.objectContaining({
-        functionName: "supportsInterface",
-        address: tokenAddress,
-      }),
+      expect.objectContaining({ functionName: "supportsInterface", address: tokenAddress }),
     );
   });
 });

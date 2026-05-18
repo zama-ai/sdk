@@ -33,11 +33,7 @@ describe("useConfidentialTransferFrom", () => {
     queryClient.setQueryData(otherBalanceKey, 777n);
 
     await act(() =>
-      result.current.mutateAsync({
-        from: transferFromAddress,
-        to: recipientAddress,
-        amount: 100n,
-      }),
+      result.current.mutateAsync({ from: transferFromAddress, to: recipientAddress, amount: 100n }),
     );
 
     expect(queryClient).toHaveInvalidatedQueries([balanceKey]);

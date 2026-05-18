@@ -24,16 +24,10 @@ describe("useMetadata", () => {
       expect.objectContaining({ functionName: "name", address: tokenAddress }),
     );
     expect(provider.readContract).toHaveBeenCalledWith(
-      expect.objectContaining({
-        functionName: "symbol",
-        address: tokenAddress,
-      }),
+      expect.objectContaining({ functionName: "symbol", address: tokenAddress }),
     );
     expect(provider.readContract).toHaveBeenCalledWith(
-      expect.objectContaining({
-        functionName: "decimals",
-        address: tokenAddress,
-      }),
+      expect.objectContaining({ functionName: "decimals", address: tokenAddress }),
     );
   });
 });

@@ -32,10 +32,7 @@ describe("useDelegateDecryption", () => {
     });
 
     expect(signer.writeContract).toHaveBeenCalledWith(
-      expect.objectContaining({
-        address: ACL,
-        functionName: "delegateForUserDecryption",
-      }),
+      expect.objectContaining({ address: ACL, functionName: "delegateForUserDecryption" }),
     );
   });
 

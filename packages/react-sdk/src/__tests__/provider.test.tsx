@@ -105,11 +105,7 @@ describe("ZamaProvider & useZamaSDK", () => {
 
     // Verify ZamaSDK was constructed with keypairTTL (7 days in seconds)
     expect(tokenSDKConstructorArgs).toHaveLength(1);
-    expect(tokenSDKConstructorArgs[0]).toEqual(
-      expect.objectContaining({
-        keypairTTL: 604800,
-      }),
-    );
+    expect(tokenSDKConstructorArgs[0]).toEqual(expect.objectContaining({ keypairTTL: 604800 }));
 
     // onEvent is stabilized via ref — verify it delegates correctly
     const wrappedOnEvent = tokenSDKConstructorArgs[0].onEvent!;
