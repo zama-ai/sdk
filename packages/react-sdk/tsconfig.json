@@ -9,7 +9,6 @@
     "src/**/*.test.tsx",
     "src/**/__tests__/**",
     "src/test-helpers.ts",
-    "src/test-fixtures.tsx",
     "dist",
     "node_modules"
   ]

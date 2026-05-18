@@ -114,6 +114,7 @@
         "**/__tests__/**",
         "**/test-fixtures.ts",
         "**/test-fixtures.tsx",
+        "**/test-fixtures/**",
         "**/vitest.setup.ts",
         "vitest.setup.ts"
       ],
