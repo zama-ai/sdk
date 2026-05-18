@@ -1,24 +1,24 @@
-import { describe, it, expect } from "../../test-fixtures";
+import { describe, test, expect } from "../../test-fixtures";
 import { AsyncLocalMapStorage } from "../async-local-storage";
 
 describe("AsyncLocalMapStorage", () => {
-  it("returns null outside of a run context", async () => {
+  test("returns null outside of a run context", async () => {
     const storage = new AsyncLocalMapStorage();
     expect(await storage.get("key")).toBeNull();
   });
 
-  it("set is a no-op outside of a run context", async () => {
+  test("set is a no-op outside of a run context", async () => {
     const storage = new AsyncLocalMapStorage();
     await storage.set("key", "value");
     expect(await storage.get("key")).toBeNull();
   });
 
-  it("delete is a no-op outside of a run context", async () => {
+  test("delete is a no-op outside of a run context", async () => {
     const storage = new AsyncLocalMapStorage();
     await expect(storage.delete("key")).resolves.not.toThrow();
   });
 
-  it("stores and retrieves values within a run context", async () => {
+  test("stores and retrieves values within a run context", async () => {
     const storage = new AsyncLocalMapStorage();
     await storage.run(async () => {
       await storage.set("key", "value");
@@ -26,7 +26,7 @@ describe("AsyncLocalMapStorage", () => {
     });
   });
 
-  it("overwrites existing values", async () => {
+  test("overwrites existing values", async () => {
     const storage = new AsyncLocalMapStorage();
     await storage.run(async () => {
       await storage.set("key", "old");
@@ -35,7 +35,7 @@ describe("AsyncLocalMapStorage", () => {
     });
   });
 
-  it("deletes values within a run context", async () => {
+  test("deletes values within a run context", async () => {
     const storage = new AsyncLocalMapStorage();
     await storage.run(async () => {
       await storage.set("key", "value");
@@ -44,7 +44,7 @@ describe("AsyncLocalMapStorage", () => {
     });
   });
 
-  it("isolates data between run contexts", async () => {
+  test("isolates data between run contexts", async () => {
     const storage = new AsyncLocalMapStorage();
 
     await Promise.all([
@@ -62,7 +62,7 @@ describe("AsyncLocalMapStorage", () => {
     ]);
   });
 
-  it("data does not persist after run completes", async () => {
+  test("data does not persist after run completes", async () => {
     const storage = new AsyncLocalMapStorage();
     await storage.run(async () => {
       await storage.set("key", "value");
@@ -71,7 +71,7 @@ describe("AsyncLocalMapStorage", () => {
     expect(await storage.get("key")).toBeNull();
   });
 
-  it("handles synchronous run callback", () => {
+  test("handles synchronous run callback", () => {
     const storage = new AsyncLocalMapStorage();
     const result = storage.run(() => {
       return "sync-result";
@@ -79,7 +79,7 @@ describe("AsyncLocalMapStorage", () => {
     expect(result).toBe("sync-result");
   });
 
-  it("handles complex objects", async () => {
+  test("handles complex objects", async () => {
     const storage = new AsyncLocalMapStorage();
     await storage.run(async () => {
       const obj = { nested: { array: [1, 2, 3] } };
@@ -88,7 +88,7 @@ describe("AsyncLocalMapStorage", () => {
     });
   });
 
-  it("returns null for missing keys within a run context", async () => {
+  test("returns null for missing keys within a run context", async () => {
     const storage = new AsyncLocalMapStorage();
     await storage.run(async () => {
       expect(await storage.get("missing")).toBeNull();

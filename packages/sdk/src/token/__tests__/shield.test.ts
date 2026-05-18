@@ -1,5 +1,5 @@
 import { type Address, getAddress } from "viem";
-import { describe, expect, it, vi } from "../../test-fixtures";
+import { describe, expect, test, vi } from "../../test-fixtures";
 import { ZamaSDKEvents } from "../../events/sdk-events";
 import { ZamaErrorCode } from "../../errors";
 
@@ -9,7 +9,7 @@ const OTHER_RECIPIENT = "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address;
 describe("WrappedToken.shield", () => {
   // --- Callbacks (approveAndWrap path) ---
 
-  it("fires onApprovalSubmitted and onShieldSubmitted callbacks", async ({
+  test("fires onApprovalSubmitted and onShieldSubmitted callbacks", async ({
     wrappedToken: token,
     provider,
   }) => {
@@ -28,7 +28,7 @@ describe("WrappedToken.shield", () => {
     expect(onShieldSubmitted).toHaveBeenCalledWith("0xtxhash");
   });
 
-  it("skips onApprovalSubmitted when allowance is sufficient", async ({
+  test("skips onApprovalSubmitted when allowance is sufficient", async ({
     wrappedToken: token,
     provider,
   }) => {
@@ -47,7 +47,7 @@ describe("WrappedToken.shield", () => {
     expect(onShieldSubmitted).toHaveBeenCalledOnce();
   });
 
-  it("completes shield even when callbacks throw", async ({ wrappedToken: token, provider }) => {
+  test("completes shield even when callbacks throw", async ({ wrappedToken: token, provider }) => {
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce(UNDERLYING)
       .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
@@ -66,7 +66,7 @@ describe("WrappedToken.shield", () => {
     expect(result.txHash).toBe("0xtxhash");
   });
 
-  it("passes to parameter for shield recipient", async ({
+  test("passes to parameter for shield recipient", async ({
     wrappedToken: token,
     signer,
     provider,
@@ -83,7 +83,7 @@ describe("WrappedToken.shield", () => {
     expect(signer.writeContract).toHaveBeenCalled();
   });
 
-  it("awaits approval receipt before submitting the wrap TX", async ({
+  test("awaits approval receipt before submitting the wrap TX", async ({
     wrappedToken: token,
     signer,
     provider,
@@ -110,7 +110,7 @@ describe("WrappedToken.shield", () => {
     expect(callOrder).toEqual(["write:approve", "receipt", "write:wrap", "receipt"]);
   });
 
-  it("performs full shield flow with exact approval", async ({
+  test("performs full shield flow with exact approval", async ({
     wrappedToken: token,
     signer,
     relayer,
@@ -157,7 +157,7 @@ describe("WrappedToken.shield", () => {
   // --- ERC-1363 routing ---
 
   describe("ERC-1363 routing", () => {
-    it("auto + ERC-1363 supported: uses transferAndCall on the underlying token", async ({
+    test("auto + ERC-1363 supported: uses transferAndCall on the underlying token", async ({
       wrappedToken: token,
       signer,
       provider,
@@ -176,7 +176,7 @@ describe("WrappedToken.shield", () => {
       );
     });
 
-    it("auto + ERC-1363 not supported: falls back to approve+wrap", async ({
+    test("auto + ERC-1363 not supported: falls back to approve+wrap", async ({
       wrappedToken: token,
       signer,
       provider,
@@ -201,7 +201,7 @@ describe("WrappedToken.shield", () => {
       );
     });
 
-    it("auto + supportsInterface reverts: falls back to approve+wrap", async ({
+    test("auto + supportsInterface reverts: falls back to approve+wrap", async ({
       wrappedToken: token,
       signer,
       provider,
@@ -222,7 +222,7 @@ describe("WrappedToken.shield", () => {
     // advertises ERC-1363 support but reverts on transferAndCall at runtime,
     // we throw rather than falling back. Users can opt out with
     // `shieldStrategy: "approveAndWrap"`.
-    it("auto + transferAndCall reverts at runtime: throws (no fallback)", async ({
+    test("auto + transferAndCall reverts at runtime: throws (no fallback)", async ({
       wrappedToken: token,
       signer,
       provider,
@@ -240,7 +240,7 @@ describe("WrappedToken.shield", () => {
       expect(signer.writeContract).toHaveBeenCalledOnce();
     });
 
-    it("auto + transferAndCall non-revert error (e.g. user rejection): does NOT fall back", async ({
+    test("auto + transferAndCall non-revert error (e.g. user rejection): does NOT fall back", async ({
       wrappedToken: token,
       signer,
       provider,
@@ -260,7 +260,7 @@ describe("WrappedToken.shield", () => {
       expect(signer.writeContract).toHaveBeenCalledOnce();
     });
 
-    it("auto + transferAndCall succeeds but receipt fails: does NOT fall back", async ({
+    test("auto + transferAndCall succeeds but receipt fails: does NOT fall back", async ({
       wrappedToken: token,
       signer,
       provider,
@@ -286,7 +286,7 @@ describe("WrappedToken.shield", () => {
   // --- Data encoding ---
 
   describe("transferAndCall data encoding", () => {
-    it("self-shield sends empty data (0x)", async ({ wrappedToken: token, signer, provider }) => {
+    test("self-shield sends empty data (0x)", async ({ wrappedToken: token, signer, provider }) => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce(UNDERLYING)
         .mockResolvedValueOnce(true)
@@ -303,7 +303,7 @@ describe("WrappedToken.shield", () => {
     // The wrapper decodes the recipient via address(bytes20(data)). We send the
     // raw 20-byte address (not ABI-encoded); ABI encoding would left-pad with
     // 12 zero bytes and bytes20() would slice them, corrupting the recipient.
-    it("shield-to-other sends raw 20-byte recipient address (not ABI-encoded)", async ({
+    test("shield-to-other sends raw 20-byte recipient address (not ABI-encoded)", async ({
       wrappedToken: token,
       signer,
       provider,
@@ -321,7 +321,7 @@ describe("WrappedToken.shield", () => {
       expect(callArgs.args[2]).toBe(getAddress(OTHER_RECIPIENT));
     });
 
-    it("explicit to=userAddress (case-insensitive) is treated as self-shield (data: 0x)", async ({
+    test("explicit to=userAddress (case-insensitive) is treated as self-shield (data: 0x)", async ({
       wrappedToken: token,
       signer,
       userAddress,
@@ -346,7 +346,7 @@ describe("WrappedToken.shield", () => {
   // --- approvalStrategy interaction ---
 
   describe("approvalStrategy interaction with transferAndCall", () => {
-    it("approvalStrategy is ignored when transferAndCall path is used", async ({
+    test("approvalStrategy is ignored when transferAndCall path is used", async ({
       wrappedToken: token,
       signer,
       provider,
@@ -364,7 +364,7 @@ describe("WrappedToken.shield", () => {
       );
     });
 
-    it("onApprovalSubmitted callback is never fired on transferAndCall path", async ({
+    test("onApprovalSubmitted callback is never fired on transferAndCall path", async ({
       wrappedToken: token,
       provider,
     }) => {
@@ -383,7 +383,10 @@ describe("WrappedToken.shield", () => {
   // --- Detection caching ---
 
   describe("ERC-1363 detection caching", () => {
-    it("caches detection result across shield calls", async ({ wrappedToken: token, provider }) => {
+    test("caches detection result across shield calls", async ({
+      wrappedToken: token,
+      provider,
+    }) => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce(UNDERLYING)
         .mockResolvedValueOnce(true)
@@ -397,7 +400,7 @@ describe("WrappedToken.shield", () => {
       expect(provider.readContract).toHaveBeenCalledTimes(4);
     });
 
-    it("isPayable() returns and caches detection result", async ({
+    test("isPayable() returns and caches detection result", async ({
       wrappedToken: token,
       provider,
     }) => {
@@ -410,7 +413,7 @@ describe("WrappedToken.shield", () => {
       expect(provider.readContract).toHaveBeenCalledTimes(2);
     });
 
-    it("isPayable() caches false when supportsInterface reverts", async ({
+    test("isPayable() caches false when supportsInterface reverts", async ({
       wrappedToken: token,
       provider,
     }) => {
@@ -425,7 +428,7 @@ describe("WrappedToken.shield", () => {
       expect(provider.readContract).toHaveBeenCalledTimes(2);
     });
 
-    it("isPayable() caches false when underlying() reverts", async ({
+    test("isPayable() caches false when underlying() reverts", async ({
       wrappedToken: token,
       provider,
     }) => {
@@ -440,7 +443,7 @@ describe("WrappedToken.shield", () => {
   // --- Events ---
 
   describe("shieldPath events", () => {
-    it("emits ShieldSubmitted with shieldPath: transferAndCall", async ({
+    test("emits ShieldSubmitted with shieldPath: transferAndCall", async ({
       createSDK,
       provider,
       tokenAddress,
@@ -471,7 +474,7 @@ describe("WrappedToken.shield", () => {
       );
     });
 
-    it("emits ShieldSubmitted with shieldPath: approveAndWrap", async ({
+    test("emits ShieldSubmitted with shieldPath: approveAndWrap", async ({
       createSDK,
       provider,
       tokenAddress,
@@ -503,7 +506,7 @@ describe("WrappedToken.shield", () => {
       );
     });
 
-    it('emits TransactionError with operation: "shield:transferAndCall" when transferAndCall fails', async ({
+    test('emits TransactionError with operation: "shield:transferAndCall" when transferAndCall fails', async ({
       createSDK,
       provider,
       tokenAddress,
@@ -538,7 +541,7 @@ describe("WrappedToken.shield", () => {
       );
     });
 
-    it('emits TransactionError with operation: "shield:approveAndWrap" when approveAndWrap fails', async ({
+    test('emits TransactionError with operation: "shield:approveAndWrap" when approveAndWrap fails', async ({
       createSDK,
       provider,
       tokenAddress,
@@ -575,11 +578,13 @@ describe("WrappedToken.shield", () => {
 
   // --- Query mutation passthrough ---
 
-  it("shieldMutationOptions forwards options to token.shield", async ({ mockWrappedToken }) => {
+  test("shieldMutationOptions forwards options to token.shield", async ({ mockWrappedToken }) => {
     const { shieldMutationOptions } = await import("../../query/shield");
     const options = shieldMutationOptions(mockWrappedToken);
 
     await options.mutationFn({ amount: 1n, approvalStrategy: "max" });
-    expect(mockWrappedToken.shield).toHaveBeenCalledWith(1n, { approvalStrategy: "max" });
+    expect(mockWrappedToken.shield).toHaveBeenCalledWith(1n, {
+      approvalStrategy: "max",
+    });
   });
 });

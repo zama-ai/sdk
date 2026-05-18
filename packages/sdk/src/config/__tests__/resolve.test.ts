@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, createMockRelayer } from "../../test-fixtures";
+import { describe, expect, test, vi } from "../../test-fixtures";
 import { resolveChainRelayers, resolveStorage } from "../resolve";
 import { sepolia, mainnet, hardhat, anvil, type FheChain } from "../../chains";
 import type { RelayerConfig } from "../types";
@@ -8,18 +8,18 @@ import type { RelayerSDK } from "../../relayer/relayer-sdk";
 function mockRelayerConfig(type: RelayerConfig["type"] = "web"): RelayerConfig {
   return {
     type,
-    createRelayer: () => createMockRelayer() as unknown as RelayerSDK,
+    createRelayer: () => ({}) as unknown as RelayerSDK,
   };
 }
 
 describe("resolveChainRelayers", () => {
-  it("throws for duplicate chain ids (e.g. hardhat + anvil alias)", () => {
+  test("throws for duplicate chain ids (e.g. hardhat + anvil alias)", () => {
     expect(() => resolveChainRelayers([hardhat, anvil], { [31337]: mockRelayerConfig() })).toThrow(
       "Duplicate chain id(s) [31337]",
     );
   });
 
-  it.each([
+  test.each([
     {
       label: "single chain with no relayer entry",
       chains: [sepolia],
@@ -36,7 +36,7 @@ describe("resolveChainRelayers", () => {
     expect(() => resolveChainRelayers(chains, relayers)).toThrow(expected);
   });
 
-  it.each([
+  test.each([
     {
       label: "single orphaned key",
       chains: [],
@@ -63,7 +63,7 @@ describe("resolveChainRelayers", () => {
     expect(() => resolveChainRelayers(chains, relayers)).toThrow(expected);
   });
 
-  it("resolves multiple chains and binds each to its relayer config", () => {
+  test("resolves multiple chains and binds each to its relayer config", () => {
     const sepoliaCfg = mockRelayerConfig();
     const mainnetCfg = mockRelayerConfig();
     const result = resolveChainRelayers([sepolia, mainnet], {
@@ -71,20 +71,23 @@ describe("resolveChainRelayers", () => {
       [1]: mainnetCfg,
     });
     expect(result.size).toBe(2);
-    expect(result.get(11155111)).toEqual({ chain: sepolia, relayer: sepoliaCfg });
+    expect(result.get(11155111)).toEqual({
+      chain: sepolia,
+      relayer: sepoliaCfg,
+    });
     expect(result.get(1)).toEqual({ chain: mainnet, relayer: mainnetCfg });
   });
 });
 
 describe("resolveStorage", () => {
-  it("defaults permitStorage to the credential storage when omitted", () => {
+  test("defaults permitStorage to the credential storage when omitted", () => {
     const storage = { get: vi.fn(), set: vi.fn(), delete: vi.fn() };
     const resolved = resolveStorage(storage);
     expect(resolved.storage).toBe(storage);
     expect(resolved.permitStorage).toBe(storage);
   });
 
-  it("uses an explicit permitStorage when provided", () => {
+  test("uses an explicit permitStorage when provided", () => {
     const storage = { get: vi.fn(), set: vi.fn(), delete: vi.fn() };
     const permitStorage = { get: vi.fn(), set: vi.fn(), delete: vi.fn() };
     const resolved = resolveStorage(storage, permitStorage);
@@ -92,7 +95,7 @@ describe("resolveStorage", () => {
     expect(resolved.permitStorage).toBe(permitStorage);
   });
 
-  it("falls back to a working default storage when none is provided", async () => {
+  test("falls back to a working default storage when none is provided", async () => {
     const { storage, permitStorage } = resolveStorage();
     expect(storage).toBe(permitStorage);
     // Drive the contract: a defaulted storage is a real GenericStorage that round-trips.

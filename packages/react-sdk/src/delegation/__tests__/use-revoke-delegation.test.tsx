@@ -2,14 +2,8 @@ import { act, waitFor } from "@testing-library/react";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { useRevokeDelegation } from "../use-revoke-delegation";
-import {
-  TOKEN,
-  RECIPIENT,
-  expectDefaultMutationState,
-} from "../../__tests__/mutation-test-helpers";
-
 describe("useRevokeDelegation", () => {
-  test("default", ({ renderWithProviders }) => {
+  test("default", ({ renderWithProviders, TOKEN, expectDefaultMutationState }) => {
     const { result } = renderWithProviders(() => useRevokeDelegation(TOKEN), {});
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
@@ -19,6 +13,8 @@ describe("useRevokeDelegation", () => {
   test("behavior: calls revokeDelegation with delegate", async ({
     renderWithProviders,
     signer,
+    RECIPIENT,
+    TOKEN,
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
@@ -39,7 +35,12 @@ describe("useRevokeDelegation", () => {
     );
   });
 
-  test("behavior: forwards onSuccess callback", async ({ renderWithProviders, signer }) => {
+  test("behavior: forwards onSuccess callback", async ({
+    renderWithProviders,
+    signer,
+    RECIPIENT,
+    TOKEN,
+  }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
     const onSuccess = vi.fn();
@@ -58,6 +59,8 @@ describe("useRevokeDelegation", () => {
   test("behavior: onSuccess fires before cache invalidation", async ({
     renderWithProviders,
     signer,
+    RECIPIENT,
+    TOKEN,
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 

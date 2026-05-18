@@ -1,21 +1,9 @@
 import { act } from "@testing-library/react";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { describe, expect, test, vi } from "../../test-fixtures";
-import { expectCacheInvalidated, expectCacheUntouched } from "../../test-helpers";
 import { useUnwrapAll } from "../use-unwrap-all";
-import {
-  HANDLE,
-  OTHER_TOKEN,
-  TOKEN,
-  USER,
-  WAGMI_BALANCE_KEY,
-  expectDefaultMutationState,
-  expectInvalidatedQueries,
-  mutateAndExpectOnSuccess,
-} from "../../__tests__/mutation-test-helpers";
-
 describe("useUnwrapAll", () => {
-  test("default", ({ renderWithProviders }) => {
+  test("default", ({ renderWithProviders, TOKEN, expectDefaultMutationState }) => {
     const { result } = renderWithProviders(() => useUnwrapAll(TOKEN));
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
@@ -25,6 +13,14 @@ describe("useUnwrapAll", () => {
   test("cache: invalidates allowance and removes handle/balance after unwrap all", async ({
     renderWithProviders,
     provider,
+    HANDLE,
+    OTHER_TOKEN,
+    TOKEN,
+    USER,
+    WAGMI_BALANCE_KEY,
+    expectCacheInvalidated,
+    expectCacheUntouched,
+    expectInvalidatedQueries,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValue(HANDLE);
 
@@ -51,7 +47,17 @@ describe("useUnwrapAll", () => {
     expectCacheUntouched(queryClient, otherAllowanceKey, 333n);
   });
 
-  test("behavior: forwards onSuccess callback", async ({ renderWithProviders, provider }) => {
+  test("behavior: forwards onSuccess callback", async ({
+    renderWithProviders,
+    provider,
+    HANDLE,
+    TOKEN,
+    USER,
+    WAGMI_BALANCE_KEY,
+    expectCacheInvalidated,
+    expectInvalidatedQueries,
+    mutateAndExpectOnSuccess,
+  }) => {
     vi.mocked(provider.readContract).mockResolvedValue(HANDLE);
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
     const allowanceKey = zamaQueryKeys.underlyingAllowance.token(TOKEN);

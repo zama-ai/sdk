@@ -1,10 +1,11 @@
 // oxlint-disable eslint-plugin-react-hooks/rules-of-hooks
+import type { FheChain } from "../chains/types";
 import type { ZamaConfig } from "../config/types";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { GenericProvider, GenericSigner, GenericStorage } from "../types";
 import { ZamaSDK } from "../zama-sdk";
-import { createMockChain } from "./chain";
+import type { ChainFixtures } from "./chain";
 import type { ProviderFixtures } from "./provider";
 import type { RelayerFixtures } from "./relayer";
 import type { SignerFixtures } from "./signer";
@@ -20,6 +21,7 @@ export interface SdkFixtures {
 }
 
 function buildSDK(
+  chain: FheChain,
   relayer: RelayerSDK,
   provider: GenericProvider,
   signer: GenericSigner,
@@ -27,7 +29,7 @@ function buildSDK(
   overrides?: Partial<ZamaConfig>,
 ): ZamaSDK {
   return new ZamaSDK({
-    chains: [createMockChain({ id: 31337 })],
+    chains: [chain],
     relayer: relayer as unknown as ZamaConfig["relayer"],
     provider,
     signer,
@@ -41,15 +43,19 @@ function buildSDK(
   } as unknown as ZamaConfig);
 }
 
-type SdkDeps = RelayerFixtures & ProviderFixtures & SignerFixtures & StorageFixtures;
+type SdkDeps = ChainFixtures &
+  RelayerFixtures &
+  ProviderFixtures &
+  SignerFixtures &
+  StorageFixtures;
 
 export const sdkFixtures: FixturesOf<SdkFixtures, SdkDeps> = {
-  sdk: async ({ relayer, provider, signer, storage }, use) => {
-    await use(buildSDK(relayer, provider, signer, storage));
+  sdk: async ({ chain, relayer, provider, signer, storage }, use) => {
+    await use(buildSDK(chain, relayer, provider, signer, storage));
   },
-  createSDK: async ({ provider, signer, relayer, storage }, use) => {
+  createSDK: async ({ chain, provider, signer, relayer, storage }, use) => {
     const factory: CreateSDKFn = (overrides) =>
-      buildSDK(relayer, provider, signer, storage, overrides);
+      buildSDK(chain, relayer, provider, signer, storage, overrides);
     await use(factory);
   },
   events: ZamaSDKEvents,

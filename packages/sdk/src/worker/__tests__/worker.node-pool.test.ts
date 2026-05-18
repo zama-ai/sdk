@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach } from "../../test-fixtures";
+import { describe, test, expect, beforeEach } from "../../test-fixtures";
+import { vi } from "vitest";
 import type { NodeWorkerPoolConfig } from "../worker.node-pool";
 import { NodeWorkerPool } from "../worker.node-pool";
 import type { ZKProofLike } from "@zama-fhe/relayer-sdk/bundle";
@@ -14,9 +15,11 @@ vi.mock(import("../worker.node-client"), () => {
       createEIP712: vi.fn().mockResolvedValue({}),
       encrypt: vi.fn().mockResolvedValue({ handles: [], inputProof: "0x" }),
       userDecrypt: vi.fn().mockResolvedValue({ clearValues: {} }),
-      publicDecrypt: vi
-        .fn()
-        .mockResolvedValue({ clearValues: {}, abiEncodedClearValues: "0x", decryptionProof: "0x" }),
+      publicDecrypt: vi.fn().mockResolvedValue({
+        clearValues: {},
+        abiEncodedClearValues: "0x",
+        decryptionProof: "0x",
+      }),
       createDelegatedUserDecryptEIP712: vi.fn().mockResolvedValue({}),
       delegatedUserDecrypt: vi.fn().mockResolvedValue({ clearValues: {} }),
       requestZKProofVerification: vi.fn().mockResolvedValue("0x"),
@@ -34,11 +37,29 @@ const baseConfig = {
   chains: [{ chainId: 1 }],
 } as unknown as NodeWorkerPoolConfig;
 
+type MockClientInstance = Record<
+  | "initWorker"
+  | "terminate"
+  | "generateKeypair"
+  | "createEIP712"
+  | "encrypt"
+  | "userDecrypt"
+  | "publicDecrypt"
+  | "createDelegatedUserDecryptEIP712"
+  | "delegatedUserDecrypt"
+  | "requestZKProofVerification"
+  | "getPublicKey"
+  | "getPublicParams",
+  ReturnType<typeof vi.fn>
+>;
+
 describe("NodeWorkerPool", () => {
   /** Get mock instances created by NodeWorkerClient constructor. */
-  function getInstances(offset = 0) {
+  function getInstances(offset = 0): MockClientInstance[] {
     return (
-      NodeWorkerClient as unknown as { mock: { results: { value: ReturnType<typeof vi.fn> }[] } }
+      NodeWorkerClient as unknown as {
+        mock: { results: { value: MockClientInstance }[] };
+      }
     ).mock.results
       .slice(offset)
       .map((r) => r.value);
@@ -48,18 +69,18 @@ describe("NodeWorkerPool", () => {
     vi.clearAllMocks();
   });
 
-  it("uses custom pool size", () => {
+  test("uses custom pool size", () => {
     const pool = new NodeWorkerPool({ ...baseConfig, poolSize: 2 });
     expect(pool.poolSize).toBe(2);
   });
 
-  it("defaults pool size to min(availableParallelism, 4)", () => {
+  test("defaults pool size to min(availableParallelism, 4)", () => {
     const pool = new NodeWorkerPool(baseConfig);
     expect(pool.poolSize).toBeGreaterThanOrEqual(1);
     expect(pool.poolSize).toBeLessThanOrEqual(4);
   });
 
-  it("initializes all workers in parallel", async () => {
+  test("initializes all workers in parallel", async () => {
     const pool = new NodeWorkerPool({ ...baseConfig, poolSize: 3 });
     await pool.initPool();
 
@@ -70,7 +91,7 @@ describe("NodeWorkerPool", () => {
     }
   });
 
-  it("sends sequential calls to worker 0 when all are idle", async () => {
+  test("sends sequential calls to worker 0 when all are idle", async () => {
     const pool = new NodeWorkerPool({ ...baseConfig, poolSize: 3 });
     await pool.initPool();
 
@@ -86,7 +107,7 @@ describe("NodeWorkerPool", () => {
     expect(instances[2].generateKeypair).toHaveBeenCalledTimes(0);
   });
 
-  it("dispatches to least-busy worker when workers are occupied", async () => {
+  test("dispatches to least-busy worker when workers are occupied", async () => {
     const pool = new NodeWorkerPool({ ...baseConfig, poolSize: 2 });
     await pool.initPool();
 
@@ -112,7 +133,7 @@ describe("NodeWorkerPool", () => {
     await p1;
   });
 
-  it("terminates all workers", async () => {
+  test("terminates all workers", async () => {
     const pool = new NodeWorkerPool({ ...baseConfig, poolSize: 2 });
     await pool.initPool();
 
@@ -125,7 +146,7 @@ describe("NodeWorkerPool", () => {
     }
   });
 
-  it("delegates all public methods to workers", async () => {
+  test("delegates all public methods to workers", async () => {
     const pool = new NodeWorkerPool({ ...baseConfig, poolSize: 1 });
     await pool.initPool();
 
@@ -177,7 +198,10 @@ describe("NodeWorkerPool", () => {
     expect(instance.userDecrypt).toHaveBeenCalled();
 
     await pool.publicDecrypt({ chainId: 1, handles: [HANDLE] });
-    expect(instance.publicDecrypt).toHaveBeenCalledWith({ chainId: 1, handles: [HANDLE] });
+    expect(instance.publicDecrypt).toHaveBeenCalledWith({
+      chainId: 1,
+      handles: [HANDLE],
+    });
 
     await pool.createDelegatedUserDecryptEIP712({
       chainId: 1,
@@ -204,17 +228,26 @@ describe("NodeWorkerPool", () => {
     });
     expect(instance.delegatedUserDecrypt).toHaveBeenCalled();
 
-    await pool.requestZKProofVerification({ chainId: 1, zkProof: {} as unknown as ZKProofLike });
-    expect(instance.requestZKProofVerification).toHaveBeenCalledWith({ chainId: 1, zkProof: {} });
+    await pool.requestZKProofVerification({
+      chainId: 1,
+      zkProof: {} as unknown as ZKProofLike,
+    });
+    expect(instance.requestZKProofVerification).toHaveBeenCalledWith({
+      chainId: 1,
+      zkProof: {},
+    });
 
     await pool.getPublicKey({ chainId: 1 });
     expect(instance.getPublicKey).toHaveBeenCalledWith({ chainId: 1 });
 
     await pool.getPublicParams({ chainId: 1, bits: 2048 });
-    expect(instance.getPublicParams).toHaveBeenCalledWith({ chainId: 1, bits: 2048 });
+    expect(instance.getPublicParams).toHaveBeenCalledWith({
+      chainId: 1,
+      bits: 2048,
+    });
   });
 
-  it("clears workers and active counts on terminate", async () => {
+  test("clears workers and active counts on terminate", async () => {
     const pool = new NodeWorkerPool({ ...baseConfig, poolSize: 2 });
     await pool.initPool();
     pool.terminate();
@@ -227,7 +260,7 @@ describe("NodeWorkerPool", () => {
     expect(newInstances[0].generateKeypair).toHaveBeenCalledTimes(1);
   });
 
-  it("decrements active count even when the task rejects", async () => {
+  test("decrements active count even when the task rejects", async () => {
     const pool = new NodeWorkerPool({ ...baseConfig, poolSize: 2 });
     await pool.initPool();
 
@@ -241,14 +274,14 @@ describe("NodeWorkerPool", () => {
     expect(instances[0].generateKeypair).toHaveBeenCalledTimes(2);
   });
 
-  it("throws when dispatching without init", async () => {
+  test("throws when dispatching without init", async () => {
     const pool = new NodeWorkerPool({ ...baseConfig, poolSize: 1 });
     await expect(pool.generateKeypair({ chainId: 1 })).rejects.toThrow(
       "NodeWorkerPool not initialized. Call initPool() first.",
     );
   });
 
-  it("concurrent initPool calls share the same promise", async () => {
+  test("concurrent initPool calls share the same promise", async () => {
     const pool = new NodeWorkerPool({ ...baseConfig, poolSize: 1 });
 
     await Promise.all([pool.initPool(), pool.initPool()]);
@@ -256,7 +289,7 @@ describe("NodeWorkerPool", () => {
     expect(NodeWorkerClient).toHaveBeenCalledTimes(1);
   });
 
-  it("initPool is idempotent after completion", async () => {
+  test("initPool is idempotent after completion", async () => {
     const pool = new NodeWorkerPool({ ...baseConfig, poolSize: 1 });
 
     await pool.initPool();
@@ -265,7 +298,7 @@ describe("NodeWorkerPool", () => {
     expect(NodeWorkerClient).toHaveBeenCalledTimes(1);
   });
 
-  it("cleans up all workers when init fails and allows re-init", async () => {
+  test("cleans up all workers when init fails and allows re-init", async () => {
     const terminateFns: ReturnType<typeof vi.fn>[] = [];
 
     vi.mocked(NodeWorkerClient).mockImplementation(function () {

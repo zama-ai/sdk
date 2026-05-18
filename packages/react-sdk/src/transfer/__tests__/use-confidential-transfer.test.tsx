@@ -4,29 +4,26 @@ import type { Address } from "@zama-fhe/sdk";
 import { EncryptionFailedError, SigningRejectedError } from "@zama-fhe/sdk";
 import { confidentialTransferMutationOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { describe, expect, test, vi } from "../../test-fixtures";
-import { expectCacheUntouched } from "../../test-helpers";
 import { useConfidentialBalance } from "../../balance/use-confidential-balance";
 import { useConfidentialTransfer } from "../use-confidential-transfer";
-import {
-  HANDLE,
-  OTHER_TOKEN,
-  RECIPIENT,
-  TOKEN,
-  USER,
-  expectDefaultMutationState,
-  expectInvalidatedQueries,
-  mutateAndExpectOnSuccess,
-} from "../../__tests__/mutation-test-helpers";
-
 describe("useConfidentialTransfer", () => {
-  test("default", ({ renderWithProviders }) => {
+  test("default", ({ renderWithProviders, TOKEN, expectDefaultMutationState }) => {
     const { result } = renderWithProviders(() => useConfidentialTransfer({ address: TOKEN }));
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
     expectDefaultMutationState(state);
   });
 
-  test("cache: invalidates balance after transfer", async ({ renderWithProviders, signer }) => {
+  test("cache: invalidates balance after transfer", async ({
+    renderWithProviders,
+    signer,
+    OTHER_TOKEN,
+    RECIPIENT,
+    TOKEN,
+    USER,
+    expectCacheUntouched,
+    expectInvalidatedQueries,
+  }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
     const { result, queryClient } = renderWithProviders(() =>
@@ -47,7 +44,15 @@ describe("useConfidentialTransfer", () => {
     expectCacheUntouched(queryClient, otherBalanceKey, 777n);
   });
 
-  test("behavior: forwards onSuccess callback", async ({ renderWithProviders, signer }) => {
+  test("behavior: forwards onSuccess callback", async ({
+    renderWithProviders,
+    signer,
+    RECIPIENT,
+    TOKEN,
+    USER,
+    expectInvalidatedQueries,
+    mutateAndExpectOnSuccess,
+  }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
@@ -69,6 +74,8 @@ describe("useConfidentialTransfer", () => {
   test("behavior: forwards raw onMutate context to onSuccess without optimistic flag", async ({
     renderWithProviders,
     signer,
+    RECIPIENT,
+    TOKEN,
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
@@ -93,6 +100,8 @@ describe("useConfidentialTransfer", () => {
   test("behavior: forwards raw onMutate context to onError without optimistic flag", async ({
     renderWithProviders,
     signer,
+    RECIPIENT,
+    TOKEN,
   }) => {
     vi.mocked(signer.writeContract).mockRejectedValue(new Error("tx reverted"));
 
@@ -119,6 +128,8 @@ describe("useConfidentialTransfer", () => {
   test("behavior: forwards raw onMutate context to onSettled without optimistic flag", async ({
     renderWithProviders,
     signer,
+    RECIPIENT,
+    TOKEN,
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
@@ -143,6 +154,8 @@ describe("useConfidentialTransfer", () => {
   test("behavior: unwraps caller context for onSuccess with optimistic flag", async ({
     renderWithProviders,
     signer,
+    RECIPIENT,
+    TOKEN,
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
@@ -173,6 +186,8 @@ describe("useConfidentialTransfer", () => {
   test("behavior: unwraps caller context for onError with optimistic flag", async ({
     renderWithProviders,
     signer,
+    RECIPIENT,
+    TOKEN,
   }) => {
     vi.mocked(signer.writeContract).mockRejectedValue(new Error("tx reverted"));
 
@@ -205,6 +220,8 @@ describe("useConfidentialTransfer", () => {
   test("behavior: unwraps caller context for onSettled with optimistic flag", async ({
     renderWithProviders,
     signer,
+    RECIPIENT,
+    TOKEN,
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
@@ -237,6 +254,10 @@ describe("useConfidentialTransfer", () => {
     signer,
     relayer,
     provider,
+    HANDLE,
+    RECIPIENT,
+    TOKEN,
+    USER,
   }) => {
     const handleB = `0x${"44".repeat(32)}`;
 
@@ -283,7 +304,13 @@ describe("useConfidentialTransfer", () => {
 });
 
 describe("useConfidentialTransfer optimistic updates", () => {
-  test("behavior: optimistic subtract on mutate", async ({ renderWithProviders, signer }) => {
+  test("behavior: optimistic subtract on mutate", async ({
+    renderWithProviders,
+    signer,
+    RECIPIENT,
+    TOKEN,
+    USER,
+  }) => {
     let resolveTransfer: (value: string) => void;
     vi.mocked(signer.writeContract).mockReturnValue(
       new Promise((resolve) => {
@@ -330,6 +357,9 @@ describe("useConfidentialTransfer optimistic updates", () => {
   test("optimistic: no error when balance cache is empty", async ({
     renderWithProviders,
     signer,
+    RECIPIENT,
+    TOKEN,
+    USER,
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
@@ -349,6 +379,9 @@ describe("useConfidentialTransfer optimistic updates", () => {
   test("optimistic: cancelQueries uses confidential balance key prefix", async ({
     renderWithProviders,
     signer,
+    RECIPIENT,
+    TOKEN,
+    USER,
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
@@ -371,7 +404,13 @@ describe("useConfidentialTransfer optimistic updates", () => {
     );
   });
 
-  test("behavior: no optimistic update without flag", async ({ renderWithProviders, signer }) => {
+  test("behavior: no optimistic update without flag", async ({
+    renderWithProviders,
+    signer,
+    RECIPIENT,
+    TOKEN,
+    USER,
+  }) => {
     let resolveTransfer: (value: string) => void;
     vi.mocked(signer.writeContract).mockReturnValue(
       new Promise((resolve) => {
@@ -401,7 +440,13 @@ describe("useConfidentialTransfer optimistic updates", () => {
     });
   });
 
-  test("behavior: rolls back optimistic on error", async ({ renderWithProviders, signer }) => {
+  test("behavior: rolls back optimistic on error", async ({
+    renderWithProviders,
+    signer,
+    RECIPIENT,
+    TOKEN,
+    USER,
+  }) => {
     vi.mocked(signer.writeContract).mockRejectedValue(new Error("tx reverted"));
 
     const { result, queryClient } = renderWithProviders(() =>
@@ -441,6 +486,9 @@ describe("useConfidentialTransfer optimistic updates", () => {
   test("behavior: onError still fires when rollback throws (try/finally resilience)", async ({
     renderWithProviders,
     signer,
+    RECIPIENT,
+    TOKEN,
+    USER,
   }) => {
     vi.mocked(signer.writeContract).mockRejectedValue(new Error("tx reverted"));
 

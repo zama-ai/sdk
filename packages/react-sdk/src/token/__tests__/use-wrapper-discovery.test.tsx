@@ -2,12 +2,10 @@ import { describe, expect, test, vi } from "../../test-fixtures";
 import { renderHook, waitFor } from "@testing-library/react";
 import type { Address } from "viem";
 import { useWrapperDiscovery } from "../use-wrapper-discovery";
-import { TOKEN } from "../../__tests__/mutation-test-helpers";
-
 const ERC20_ADDR = "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e" as Address;
 
 describe("useWrapperDiscovery", () => {
-  test("behavior: disabled when erc20Address is undefined", ({ renderWithProviders }) => {
+  test("behavior: disabled when erc20Address is undefined", ({ renderWithProviders, TOKEN }) => {
     const { result } = renderWithProviders(() =>
       useWrapperDiscovery({ tokenAddress: TOKEN, erc20Address: undefined }),
     );
@@ -17,7 +15,7 @@ describe("useWrapperDiscovery", () => {
     expect(result.current.data).toBeUndefined();
   });
 
-  test("behavior: disabled when user passes enabled=false", ({ renderWithProviders }) => {
+  test("behavior: disabled when user passes enabled=false", ({ renderWithProviders, TOKEN }) => {
     const { result } = renderWithProviders(() =>
       useWrapperDiscovery({ tokenAddress: TOKEN, erc20Address: ERC20_ADDR }, { enabled: false }),
     );
@@ -30,6 +28,7 @@ describe("useWrapperDiscovery", () => {
     createWrapper,
     signer,
     provider,
+    TOKEN,
   }) => {
     const wrapperAddress = "0x7A7a7A7a7a7a7a7A7a7a7a7A7a7A7A7A7A7A7a7A" as Address;
     // Mock chainId to Mainnet (has default registry)
@@ -56,7 +55,7 @@ describe("useWrapperDiscovery", () => {
     expect(result.current.data).toBe(wrapperAddress);
   });
 
-  test("default", async ({ renderWithProviders, provider }) => {
+  test("default", async ({ renderWithProviders, provider, TOKEN }) => {
     const wrapperAddress = "0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D" as Address;
     vi.mocked(provider.getChainId).mockResolvedValue(1);
     vi.mocked(provider.readContract)

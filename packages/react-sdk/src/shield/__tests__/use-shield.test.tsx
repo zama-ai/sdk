@@ -2,21 +2,9 @@ import { act, waitFor } from "@testing-library/react";
 import { TransactionRevertedError } from "@zama-fhe/sdk";
 import { shieldMutationOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { describe, expect, test, vi } from "../../test-fixtures";
-import { expectCacheInvalidated, expectCacheUntouched } from "../../test-helpers";
 import { useShield } from "../use-shield";
-import {
-  OTHER_TOKEN,
-  TOKEN,
-  UNDERLYING,
-  USER,
-  WAGMI_BALANCE_KEY,
-  expectDefaultMutationState,
-  expectInvalidatedQueries,
-  mutateAndExpectOnSuccess,
-} from "../../__tests__/mutation-test-helpers";
-
 describe("useShield", () => {
-  test("default", ({ renderWithProviders }) => {
+  test("default", ({ renderWithProviders, TOKEN, expectDefaultMutationState }) => {
     const { result } = renderWithProviders(() => useShield({ address: TOKEN }));
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
@@ -26,6 +14,14 @@ describe("useShield", () => {
   test("cache: invalidates allowance and removes balance after shield", async ({
     renderWithProviders,
     provider,
+    OTHER_TOKEN,
+    TOKEN,
+    UNDERLYING,
+    USER,
+    WAGMI_BALANCE_KEY,
+    expectCacheInvalidated,
+    expectCacheUntouched,
+    expectInvalidatedQueries,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
 
@@ -52,7 +48,17 @@ describe("useShield", () => {
     expectCacheUntouched(queryClient, otherAllowanceKey, 333n);
   });
 
-  test("behavior: forwards onSuccess callback", async ({ renderWithProviders, provider }) => {
+  test("behavior: forwards onSuccess callback", async ({
+    renderWithProviders,
+    provider,
+    TOKEN,
+    UNDERLYING,
+    USER,
+    WAGMI_BALANCE_KEY,
+    expectCacheInvalidated,
+    expectInvalidatedQueries,
+    mutateAndExpectOnSuccess,
+  }) => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
 
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
@@ -82,6 +88,8 @@ describe("useShield", () => {
   test("behavior: forwards raw onMutate context to onSuccess without optimistic flag", async ({
     renderWithProviders,
     provider,
+    TOKEN,
+    UNDERLYING,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
 
@@ -105,6 +113,8 @@ describe("useShield", () => {
     renderWithProviders,
     signer,
     provider,
+    TOKEN,
+    UNDERLYING,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
     vi.mocked(signer.writeContract).mockRejectedValue(new Error("shield failed"));
@@ -130,6 +140,8 @@ describe("useShield", () => {
   test("behavior: forwards raw onMutate context to onSettled without optimistic flag", async ({
     renderWithProviders,
     provider,
+    TOKEN,
+    UNDERLYING,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
 
@@ -152,6 +164,8 @@ describe("useShield", () => {
   test("behavior: unwraps caller context for onSuccess with optimistic flag", async ({
     renderWithProviders,
     provider,
+    TOKEN,
+    UNDERLYING,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
 
@@ -181,6 +195,8 @@ describe("useShield", () => {
     renderWithProviders,
     signer,
     provider,
+    TOKEN,
+    UNDERLYING,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
     vi.mocked(signer.writeContract).mockRejectedValue(new Error("shield failed"));
@@ -212,6 +228,8 @@ describe("useShield", () => {
   test("behavior: unwraps caller context for onSettled with optimistic flag", async ({
     renderWithProviders,
     provider,
+    TOKEN,
+    UNDERLYING,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
 
@@ -239,7 +257,14 @@ describe("useShield", () => {
 });
 
 describe("useShield optimistic updates", () => {
-  test("behavior: optimistic add on mutate", async ({ renderWithProviders, signer, provider }) => {
+  test("behavior: optimistic add on mutate", async ({
+    renderWithProviders,
+    signer,
+    provider,
+    TOKEN,
+    UNDERLYING,
+    USER,
+  }) => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
 
     let resolveWrap: (value: string) => void;
@@ -285,6 +310,9 @@ describe("useShield optimistic updates", () => {
     renderWithProviders,
     signer,
     provider,
+    TOKEN,
+    UNDERLYING,
+    USER,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
     vi.mocked(signer.writeContract).mockRejectedValue(new Error("shield failed"));
@@ -323,6 +351,9 @@ describe("useShield optimistic updates", () => {
     renderWithProviders,
     signer,
     provider,
+    TOKEN,
+    UNDERLYING,
+    USER,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
 
@@ -353,6 +384,9 @@ describe("useShield optimistic updates", () => {
     renderWithProviders,
     signer,
     provider,
+    TOKEN,
+    UNDERLYING,
+    USER,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");

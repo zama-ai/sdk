@@ -3,7 +3,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { renderHook, type RenderHookOptions } from "@testing-library/react";
 import type React from "react";
 import type { ZamaConfig } from "@zama-fhe/sdk";
-import { createMockChain } from "@zama-fhe/sdk/test-fixtures";
+import type { FheChain } from "@zama-fhe/sdk/chains";
 import type { RelayerDispatcher } from "@zama-fhe/sdk/relayer/relayer-dispatcher";
 import type { RelayerSDK } from "@zama-fhe/sdk/relayer/relayer-sdk";
 import type { FixturesOf } from "@zama-fhe/sdk/test-fixtures/types";
@@ -30,6 +30,7 @@ export interface WrapperFixtures {
 }
 
 type WrapperDeps = QueryClientFixtures & {
+  chain: FheChain;
   relayer: RelayerSDK;
   provider: GenericProvider;
   signer: GenericSigner;
@@ -37,10 +38,10 @@ type WrapperDeps = QueryClientFixtures & {
 };
 
 export const wrapperFixtures: FixturesOf<WrapperFixtures, WrapperDeps> = {
-  createWrapper: async ({ relayer, provider, signer, storage, queryClient }, use) => {
+  createWrapper: async ({ chain, relayer, provider, signer, storage, queryClient }, use) => {
     function createWrapper(overrides?: Partial<ZamaConfig>) {
       const config = {
-        chains: [createMockChain({ id: 31337 })],
+        chains: [chain],
         relayer,
         provider,
         signer,

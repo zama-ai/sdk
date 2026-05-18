@@ -1,23 +1,9 @@
 import { act } from "@testing-library/react";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { describe, test, vi } from "../../test-fixtures";
-import { expectCacheInvalidated, expectCacheUntouched } from "../../test-helpers";
 import { useUnshield } from "../use-unshield";
-import {
-  BURN_AMOUNT_HANDLE,
-  OTHER_TOKEN,
-  TOKEN,
-  USER,
-  WAGMI_BALANCE_KEY,
-  createUnwrapRequestedLog,
-  expectDefaultMutationState,
-  expectInvalidatedQueries,
-  mockPublicDecrypt,
-  mutateAndExpectOnSuccess,
-} from "../../__tests__/mutation-test-helpers";
-
 describe("useUnshield", () => {
-  test("default", ({ renderWithProviders }) => {
+  test("default", ({ renderWithProviders, TOKEN, expectDefaultMutationState }) => {
     const { result } = renderWithProviders(() => useUnshield(TOKEN));
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
@@ -28,6 +14,16 @@ describe("useUnshield", () => {
     renderWithProviders,
     relayer,
     provider,
+    BURN_AMOUNT_HANDLE,
+    OTHER_TOKEN,
+    TOKEN,
+    USER,
+    WAGMI_BALANCE_KEY,
+    createUnwrapRequestedLog,
+    expectCacheInvalidated,
+    expectCacheUntouched,
+    expectInvalidatedQueries,
+    mockPublicDecrypt,
   }) => {
     vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
       logs: [createUnwrapRequestedLog(BURN_AMOUNT_HANDLE)],
@@ -59,6 +55,15 @@ describe("useUnshield", () => {
     renderWithProviders,
     relayer,
     provider,
+    BURN_AMOUNT_HANDLE,
+    TOKEN,
+    USER,
+    WAGMI_BALANCE_KEY,
+    createUnwrapRequestedLog,
+    expectCacheInvalidated,
+    expectInvalidatedQueries,
+    mockPublicDecrypt,
+    mutateAndExpectOnSuccess,
   }) => {
     vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
       logs: [createUnwrapRequestedLog(BURN_AMOUNT_HANDLE)],

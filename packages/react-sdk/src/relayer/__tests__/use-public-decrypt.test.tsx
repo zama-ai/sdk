@@ -1,10 +1,10 @@
 import { waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "../../test-fixtures";
+import { describe, expect, test, vi } from "../../test-fixtures";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { usePublicDecrypt } from "../use-public-decrypt";
 
 describe("usePublicDecrypt", () => {
-  it("delegates to relayer.publicDecrypt and populates cache", async ({
+  test("delegates to relayer.publicDecrypt and populates cache", async ({
     renderWithProviders,
     relayer,
   }) => {

@@ -1,5 +1,4 @@
-import { describe, expect, vi } from "vitest";
-import { createMockProvider, test } from "../../test-fixtures";
+import { describe, expect, test, vi } from "../../test-fixtures";
 import { Token } from "../token";
 import { MAX_UINT64 } from "../../contracts/constants";
 import type { Address } from "viem";
@@ -45,6 +44,7 @@ describe("Token.batchDecryptBalancesAs", () => {
   test("decrypts balances for multiple tokens using delegated credentials", async ({
     relayer,
     createMockSigner,
+    createMockProvider,
     createSDK,
   }) => {
     const delegateSigner = createMockSigner(DELEGATE);
@@ -87,6 +87,7 @@ describe("Token.batchDecryptBalancesAs", () => {
   test("returns 0n for zero handles without calling relayer", async ({
     relayer,
     createMockSigner,
+    createMockProvider,
     createSDK,
   }) => {
     const delegateSigner = createMockSigner(DELEGATE);
@@ -115,6 +116,7 @@ describe("Token.batchDecryptBalancesAs", () => {
   test("runs pre-flight delegation check even when balance is pre-cached", async ({
     relayer,
     createMockSigner,
+    createMockProvider,
     createSDK,
     cache,
   }) => {
@@ -147,6 +149,7 @@ describe("Token.batchDecryptBalancesAs", () => {
   test("throws aggregated DecryptionFailedError on cache hit when delegation is revoked", async ({
     relayer,
     createMockSigner,
+    createMockProvider,
     createSDK,
     cache,
   }) => {
@@ -178,6 +181,7 @@ describe("Token.batchDecryptBalancesAs", () => {
 
   test("calls onError callback when decryption fails for a token", async ({
     createMockSigner,
+    createMockProvider,
     createSDK,
   }) => {
     const delegateSigner = createMockSigner(DELEGATE);
@@ -207,6 +211,7 @@ describe("Token.batchDecryptBalancesAs", () => {
   test("throws aggregated DecryptionFailedError when no delegation exists", async ({
     relayer,
     createMockSigner,
+    createMockProvider,
     createSDK,
   }) => {
     const delegateSigner = createMockSigner(DELEGATE);
@@ -237,6 +242,7 @@ describe("Token.batchDecryptBalancesAs", () => {
   test("throws aggregated DecryptionFailedError when delegation has expired", async ({
     relayer,
     createMockSigner,
+    createMockProvider,
     createSDK,
   }) => {
     const delegateSigner = createMockSigner(DELEGATE);
@@ -267,6 +273,7 @@ describe("Token.batchDecryptBalancesAs", () => {
 
   test("batch succeeds when delegation is permanently active", async ({
     createMockSigner,
+    createMockProvider,
     createSDK,
   }) => {
     const delegateSigner = createMockSigner(DELEGATE);
@@ -293,6 +300,7 @@ describe("Token.batchDecryptBalancesAs", () => {
 
   test("catches errors thrown by onError callback and aggregates them", async ({
     createMockSigner,
+    createMockProvider,
     createSDK,
   }) => {
     const delegateSigner = createMockSigner(DELEGATE);
@@ -323,6 +331,7 @@ describe("Token.batchDecryptBalancesAs", () => {
 
   test("succeeds even when cache write fails", async ({
     createMockSigner,
+    createMockProvider,
     createSDK,
     createMockStorage,
   }) => {

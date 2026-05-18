@@ -3,16 +3,10 @@ import type { Address } from "@zama-fhe/sdk";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { useDelegateDecryption } from "../use-delegate-decryption";
-import {
-  TOKEN,
-  RECIPIENT,
-  expectDefaultMutationState,
-} from "../../__tests__/mutation-test-helpers";
-
 const ACL = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
 
 describe("useDelegateDecryption", () => {
-  test("default", ({ renderWithProviders }) => {
+  test("default", ({ renderWithProviders, TOKEN, expectDefaultMutationState }) => {
     const { result } = renderWithProviders(() => useDelegateDecryption(TOKEN), {});
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
@@ -22,6 +16,8 @@ describe("useDelegateDecryption", () => {
   test("behavior: calls delegateDecryption with delegate", async ({
     renderWithProviders,
     signer,
+    RECIPIENT,
+    TOKEN,
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
@@ -43,7 +39,12 @@ describe("useDelegateDecryption", () => {
     );
   });
 
-  test("behavior: passes expiration options", async ({ renderWithProviders, signer }) => {
+  test("behavior: passes expiration options", async ({
+    renderWithProviders,
+    signer,
+    RECIPIENT,
+    TOKEN,
+  }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
     const { result } = renderWithProviders(() => useDelegateDecryption(TOKEN), {});
@@ -64,7 +65,12 @@ describe("useDelegateDecryption", () => {
     );
   });
 
-  test("behavior: forwards onSuccess callback", async ({ renderWithProviders, signer }) => {
+  test("behavior: forwards onSuccess callback", async ({
+    renderWithProviders,
+    signer,
+    RECIPIENT,
+    TOKEN,
+  }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
     const onSuccess = vi.fn();
@@ -83,6 +89,8 @@ describe("useDelegateDecryption", () => {
   test("behavior: onSuccess fires before cache invalidation", async ({
     renderWithProviders,
     signer,
+    RECIPIENT,
+    TOKEN,
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 

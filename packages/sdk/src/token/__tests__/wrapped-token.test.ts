@@ -7,13 +7,13 @@ import {
   ZamaErrorCode,
 } from "../../errors";
 import { ZERO_HANDLE } from "../../utils/handles";
-import { describe, expect, it, vi } from "../../test-fixtures";
+import { describe, expect, test, vi } from "../../test-fixtures";
 
 const UNDERLYING = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
 
 describe("WrappedToken", () => {
   describe("underlying / allowance", () => {
-    it("reads the underlying token address", async ({ wrappedToken, provider }) => {
+    test("reads the underlying token address", async ({ wrappedToken, provider }) => {
       vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING);
 
       const result = await wrappedToken.underlying();
@@ -24,7 +24,7 @@ describe("WrappedToken", () => {
       );
     });
 
-    it("reads the underlying ERC-20 allowance for the wrapper", async ({
+    test("reads the underlying ERC-20 allowance for the wrapper", async ({
       wrappedToken,
       provider,
       userAddress,
@@ -43,7 +43,7 @@ describe("WrappedToken", () => {
   });
 
   describe("shield", () => {
-    it("checks allowance and shields", async ({ signer, wrappedToken, provider }) => {
+    test("checks allowance and shields", async ({ signer, wrappedToken, provider }) => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce(UNDERLYING) // #getUnderlying
         .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
@@ -65,7 +65,7 @@ describe("WrappedToken", () => {
       expect(result.txHash).toBe("0xtxhash");
     });
 
-    it("skips approval when allowance is sufficient", async ({
+    test("skips approval when allowance is sufficient", async ({
       signer,
       wrappedToken,
       provider,
@@ -84,7 +84,7 @@ describe("WrappedToken", () => {
       );
     });
 
-    it("skips approval when approvalStrategy is skip", async ({
+    test("skips approval when approvalStrategy is skip", async ({
       signer,
       wrappedToken,
       provider,
@@ -101,7 +101,7 @@ describe("WrappedToken", () => {
       expect(signer.writeContract).toHaveBeenCalledOnce();
     });
 
-    it("approves max uint256 with approvalStrategy max", async ({
+    test("approves max uint256 with approvalStrategy max", async ({
       signer,
       wrappedToken,
       provider,
@@ -123,7 +123,7 @@ describe("WrappedToken", () => {
       );
     });
 
-    it("resets to zero first when existing non-zero allowance (USDT handling)", async ({
+    test("resets to zero first when existing non-zero allowance (USDT handling)", async ({
       signer,
       wrappedToken,
       provider,
@@ -140,11 +140,14 @@ describe("WrappedToken", () => {
       expect(signer.writeContract).toHaveBeenCalledTimes(3);
       expect(signer.writeContract).toHaveBeenNthCalledWith(
         1,
-        expect.objectContaining({ functionName: "approve", args: expect.arrayContaining([0n]) }),
+        expect.objectContaining({
+          functionName: "approve",
+          args: expect.arrayContaining([0n]),
+        }),
       );
     });
 
-    it("throws INSUFFICIENT_ERC20_BALANCE when ERC-20 balance too low", async ({
+    test("throws INSUFFICIENT_ERC20_BALANCE when ERC-20 balance too low", async ({
       wrappedToken,
       provider,
     }) => {
@@ -158,7 +161,7 @@ describe("WrappedToken", () => {
       });
     });
 
-    it("passes ERC-20 check when balance exactly equals amount (boundary)", async ({
+    test("passes ERC-20 check when balance exactly equals amount (boundary)", async ({
       wrappedToken,
       provider,
     }) => {
@@ -172,7 +175,7 @@ describe("WrappedToken", () => {
       expect(result.txHash).toBe("0xtxhash");
     });
 
-    it("wraps ERC-20 balanceOf read failure as ERC20_READ_FAILED", async ({
+    test("wraps ERC-20 balanceOf read failure as ERC20_READ_FAILED", async ({
       wrappedToken,
       provider,
     }) => {
@@ -186,7 +189,11 @@ describe("WrappedToken", () => {
       });
     });
 
-    it("wraps write failure in TransactionReverted", async ({ signer, wrappedToken, provider }) => {
+    test("wraps write failure in TransactionReverted", async ({
+      signer,
+      wrappedToken,
+      provider,
+    }) => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce(UNDERLYING)
         .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
@@ -200,7 +207,7 @@ describe("WrappedToken", () => {
   });
 
   describe("approveUnderlying", () => {
-    it("defaults to max uint256 approval", async ({ signer, wrappedToken, provider }) => {
+    test("defaults to max uint256 approval", async ({ signer, wrappedToken, provider }) => {
       vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(0n); // currentAllowance
 
       await wrappedToken.approveUnderlying();
@@ -213,7 +220,7 @@ describe("WrappedToken", () => {
       );
     });
 
-    it("resets to zero first when existing non-zero allowance", async ({
+    test("resets to zero first when existing non-zero allowance", async ({
       signer,
       wrappedToken,
       provider,
@@ -229,7 +236,7 @@ describe("WrappedToken", () => {
       );
     });
 
-    it("accepts custom amount", async ({ signer, wrappedToken, provider }) => {
+    test("accepts custom amount", async ({ signer, wrappedToken, provider }) => {
       vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(0n);
 
       await wrappedToken.approveUnderlying(500n);
@@ -239,7 +246,7 @@ describe("WrappedToken", () => {
       );
     });
 
-    it("wraps error in TransactionReverted", async ({ signer, wrappedToken, provider }) => {
+    test("wraps error in TransactionReverted", async ({ signer, wrappedToken, provider }) => {
       vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(0n);
       const rootCause = new Error("approve failed");
       vi.mocked(signer.writeContract).mockRejectedValueOnce(rootCause);
@@ -253,7 +260,7 @@ describe("WrappedToken", () => {
   });
 
   describe("unwrap / unwrapAll", () => {
-    it("unwrap encrypts amount and sends transaction", async ({
+    test("unwrap encrypts amount and sends transaction", async ({
       relayer,
       signer,
       userAddress,
@@ -273,7 +280,7 @@ describe("WrappedToken", () => {
       expect(result.txHash).toBe("0xtxhash");
     });
 
-    it("unwrap throws EncryptionFailed when encrypt returns empty handles", async ({
+    test("unwrap throws EncryptionFailed when encrypt returns empty handles", async ({
       relayer,
       wrappedToken,
     }) => {
@@ -287,7 +294,7 @@ describe("WrappedToken", () => {
       });
     });
 
-    it("unwrapAll uses existing balance handle and sends to userAddress", async ({
+    test("unwrapAll uses existing balance handle and sends to userAddress", async ({
       relayer,
       signer,
       userAddress,
@@ -308,7 +315,7 @@ describe("WrappedToken", () => {
       );
     });
 
-    it("unwrapAll throws when balance is zero", async ({ wrappedToken, provider }) => {
+    test("unwrapAll throws when balance is zero", async ({ wrappedToken, provider }) => {
       vi.mocked(provider.readContract).mockResolvedValue(ZERO_HANDLE);
 
       await expect(wrappedToken.unwrapAll()).rejects.toThrow("balance is zero");
@@ -316,7 +323,11 @@ describe("WrappedToken", () => {
   });
 
   describe("finalizeUnwrap", () => {
-    it("calls publicDecrypt and finalizes on-chain", async ({ relayer, signer, wrappedToken }) => {
+    test("calls publicDecrypt and finalizes on-chain", async ({
+      relayer,
+      signer,
+      wrappedToken,
+    }) => {
       const unwrapRequestId = ("0x" + "ab".repeat(32)) as `0x${string}`;
       const result = await wrappedToken.finalizeUnwrap(unwrapRequestId);
 
@@ -327,7 +338,7 @@ describe("WrappedToken", () => {
       expect(result.txHash).toBe("0xtxhash");
     });
 
-    it("re-throws DecryptionFailedError from publicDecrypt as-is", async ({
+    test("re-throws DecryptionFailedError from publicDecrypt as-is", async ({
       relayer,
       wrappedToken,
     }) => {
@@ -337,7 +348,7 @@ describe("WrappedToken", () => {
       await expect(wrappedToken.finalizeUnwrap("0xburn" as Address)).rejects.toBe(original);
     });
 
-    it("wraps non-ZamaError from writeContract in TransactionReverted", async ({
+    test("wraps non-ZamaError from writeContract in TransactionReverted", async ({
       signer,
       wrappedToken,
     }) => {
@@ -352,7 +363,7 @@ describe("WrappedToken", () => {
   describe("unshield orchestration", () => {
     const BURN_HANDLE = "0x" + "ff".repeat(32);
 
-    it("unshield orchestrates unwrap → receipt → finalizeUnwrap", async ({
+    test("unshield orchestrates unwrap → receipt → finalizeUnwrap", async ({
       relayer,
       signer,
       userAddress,
@@ -372,7 +383,9 @@ describe("WrappedToken", () => {
         ],
       });
 
-      const result = await wrappedToken.unshield(50n, { skipBalanceCheck: true });
+      const result = await wrappedToken.unshield(50n, {
+        skipBalanceCheck: true,
+      });
 
       expect(relayer.encrypt).toHaveBeenCalled();
       expect(signer.writeContract).toHaveBeenCalledWith(
@@ -386,7 +399,7 @@ describe("WrappedToken", () => {
       expect(result.txHash).toBe("0xtxhash");
     });
 
-    it("unshieldAll orchestrates unwrapAll → receipt → finalizeUnwrap", async ({
+    test("unshieldAll orchestrates unwrapAll → receipt → finalizeUnwrap", async ({
       relayer,
       userAddress,
       wrappedToken,
@@ -413,18 +426,20 @@ describe("WrappedToken", () => {
       expect(result.txHash).toBe("0xtxhash");
     });
 
-    it("unshield throws when no UnwrapRequested event in receipt", async ({
+    test("unshield throws when no UnwrapRequested event in receipt", async ({
       wrappedToken,
       provider,
     }) => {
-      vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({ logs: [] });
+      vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
+        logs: [],
+      });
 
       await expect(wrappedToken.unshield(50n, { skipBalanceCheck: true })).rejects.toThrow(
         "No UnwrapRequested event found in unshield receipt",
       );
     });
 
-    it("resumeUnshield resumes from existing tx hash", async ({
+    test("resumeUnshield resumes from existing tx hash", async ({
       relayer,
       userAddress,
       wrappedToken,
@@ -452,7 +467,7 @@ describe("WrappedToken", () => {
   });
 
   describe("balance validation: unshield", () => {
-    it("throws INSUFFICIENT_CONFIDENTIAL_BALANCE when balance is zero handle", async ({
+    test("throws INSUFFICIENT_CONFIDENTIAL_BALANCE when balance is zero handle", async ({
       wrappedToken,
       provider,
     }) => {
@@ -463,7 +478,7 @@ describe("WrappedToken", () => {
       });
     });
 
-    it("passes validation when balance exactly equals amount (boundary)", async ({
+    test("passes validation when balance exactly equals amount (boundary)", async ({
       relayer,
       wrappedToken,
       handle,
@@ -490,7 +505,7 @@ describe("WrappedToken", () => {
       expect(result.txHash).toBe("0xtxhash");
     });
 
-    it("skipBalanceCheck: true bypasses confidential validation", async ({
+    test("skipBalanceCheck: true bypasses confidential validation", async ({
       userAddress,
       wrappedToken,
       provider,
@@ -508,11 +523,13 @@ describe("WrappedToken", () => {
         ],
       });
 
-      const result = await wrappedToken.unshield(50n, { skipBalanceCheck: true });
+      const result = await wrappedToken.unshield(50n, {
+        skipBalanceCheck: true,
+      });
       expect(result.txHash).toBe("0xtxhash");
     });
 
-    it("passes callbacks alongside skipBalanceCheck", async ({
+    test("passes callbacks alongside skipBalanceCheck", async ({
       userAddress,
       wrappedToken,
       provider,
@@ -541,7 +558,7 @@ describe("WrappedToken", () => {
   });
 
   describe("ZamaError re-throw", () => {
-    it("shield re-throws ZamaError from approve", async ({ signer, wrappedToken, provider }) => {
+    test("shield re-throws ZamaError from approve", async ({ signer, wrappedToken, provider }) => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce(UNDERLYING)
         .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
@@ -553,7 +570,7 @@ describe("WrappedToken", () => {
       await expect(wrappedToken.shield(100n)).rejects.toBe(original);
     });
 
-    it("unwrap re-throws ZamaError from writeContract", async ({ signer, wrappedToken }) => {
+    test("unwrap re-throws ZamaError from writeContract", async ({ signer, wrappedToken }) => {
       const original = new ZamaError(ZamaErrorCode.TransactionReverted, "already wrapped");
       vi.mocked(signer.writeContract).mockRejectedValueOnce(original);
 

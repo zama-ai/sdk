@@ -2,10 +2,8 @@ import { describe, expect, test, vi } from "../../test-fixtures";
 import { waitFor } from "@testing-library/react";
 import type { Address } from "@zama-fhe/sdk";
 import { useConfidentialBalances } from "../use-confidential-balances";
-import { TOKEN, TOKEN_B, USER } from "../../__tests__/mutation-test-helpers";
-
 describe("useConfidentialBalances", () => {
-  test("default", async ({ renderWithProviders, relayer, provider }) => {
+  test("default", async ({ renderWithProviders, relayer, provider, TOKEN, TOKEN_B, USER }) => {
     const handleA = `0x${"bb".repeat(32)}`;
     const handleB = `0x${"cc".repeat(32)}`;
     vi.mocked(provider.readContract).mockImplementation(async ({ address }) => {
@@ -42,6 +40,7 @@ describe("useConfidentialBalances", () => {
     renderWithProviders,
     relayer,
     provider,
+    USER,
   }) => {
     const mixedCaseToken = "0x52908400098527886E0F7030069857D2E4169EE7" as Address;
     const handle = `0x${"dd".repeat(32)}`;
@@ -58,7 +57,13 @@ describe("useConfidentialBalances", () => {
     expect(result.current.data?.results.get(mixedCaseToken)).toBe(33n);
   });
 
-  test("behavior: disabled when user passes enabled=false", ({ renderWithProviders, provider }) => {
+  test("behavior: disabled when user passes enabled=false", ({
+    renderWithProviders,
+    provider,
+    TOKEN,
+    TOKEN_B,
+    USER,
+  }) => {
     const { result } = renderWithProviders(() =>
       useConfidentialBalances({ addresses: [TOKEN, TOKEN_B], account: USER }, { enabled: false }),
     );
@@ -72,6 +77,7 @@ describe("useConfidentialBalances", () => {
     renderWithProviders,
     relayer,
     provider,
+    TOKEN,
   }) => {
     const handle = `0x${"ef".repeat(32)}`;
     vi.mocked(provider.readContract).mockResolvedValue(handle);
@@ -90,7 +96,7 @@ describe("useConfidentialBalances", () => {
   });
 
   describe("lifecycle", () => {
-    test("default", async ({ renderWithProviders, relayer, provider }) => {
+    test("default", async ({ renderWithProviders, relayer, provider, TOKEN, TOKEN_B, USER }) => {
       const handleA = `0x${"ca".repeat(32)}`;
       const handleB = `0x${"cb".repeat(32)}`;
       vi.mocked(provider.readContract).mockImplementation(async ({ address }) => {
@@ -149,7 +155,7 @@ describe("useConfidentialBalances", () => {
     `);
     });
 
-    test("behavior: disabled when tokenAddresses empty", ({ renderWithProviders }) => {
+    test("behavior: disabled when tokenAddresses empty", ({ renderWithProviders, USER }) => {
       const { result } = renderWithProviders(() =>
         useConfidentialBalances({ addresses: [], account: USER }),
       );
@@ -161,6 +167,7 @@ describe("useConfidentialBalances", () => {
     test("behavior: disabled when account is undefined (signer-less mount)", ({
       renderWithProviders,
       provider,
+      TOKEN,
     }) => {
       const { result } = renderWithProviders(() =>
         useConfidentialBalances({ addresses: [TOKEN], account: undefined }),
@@ -171,7 +178,12 @@ describe("useConfidentialBalances", () => {
       expect(provider.readContract).not.toHaveBeenCalled();
     });
 
-    test("behavior: disabled when user passes enabled=false", ({ renderWithProviders }) => {
+    test("behavior: disabled when user passes enabled=false", ({
+      renderWithProviders,
+      TOKEN,
+      TOKEN_B,
+      USER,
+    }) => {
       const { result } = renderWithProviders(() =>
         useConfidentialBalances({ addresses: [TOKEN, TOKEN_B], account: USER }, { enabled: false }),
       );

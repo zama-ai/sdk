@@ -5,12 +5,10 @@ import {
   useUnderlyingAllowance,
   useUnderlyingAllowanceSuspense,
 } from "../use-underlying-allowance";
-import { WRAPPER, USER } from "../../__tests__/mutation-test-helpers";
-
 describe("useUnderlyingAllowance", () => {
   const UNDERLYING = "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e";
 
-  test("default", async ({ renderWithProviders, provider }) => {
+  test("default", async ({ renderWithProviders, provider, USER, WRAPPER }) => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(1000n);
 
     const { result } = renderWithProviders(() =>
@@ -30,6 +28,7 @@ describe("useUnderlyingAllowance", () => {
   test("behavior: queries allowance for the caller-supplied owner, not the connected signer", async ({
     renderWithProviders,
     provider,
+    WRAPPER,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(2000n);
 
@@ -45,7 +44,12 @@ describe("useUnderlyingAllowance", () => {
     );
   });
 
-  test("behavior: disabled when user passes enabled=false", ({ renderWithProviders, provider }) => {
+  test("behavior: disabled when user passes enabled=false", ({
+    renderWithProviders,
+    provider,
+    USER,
+    WRAPPER,
+  }) => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(1000n);
 
     const { result } = renderWithProviders(() =>
@@ -59,6 +63,7 @@ describe("useUnderlyingAllowance", () => {
   test("behavior: disabled when owner is undefined (signer-less mount)", ({
     renderWithProviders,
     provider,
+    WRAPPER,
   }) => {
     const { result } = renderWithProviders(() =>
       useUnderlyingAllowance({ address: WRAPPER, owner: undefined }),
@@ -76,6 +81,7 @@ describe("useUnderlyingAllowanceSuspense", () => {
   test("reads allowance for the caller-supplied owner", async ({
     renderWithProviders,
     provider,
+    WRAPPER,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(500n);
 

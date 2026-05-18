@@ -1,17 +1,16 @@
 import { act, waitFor } from "@testing-library/react";
 import { describe, expect, test } from "../../test-fixtures";
-import { TOKEN, USER, expectDefaultMutationState } from "../../__tests__/mutation-test-helpers";
 import { useEncrypt } from "../use-encrypt";
 
 describe("useEncrypt", () => {
-  test("default", ({ renderWithProviders }) => {
+  test("default", ({ renderWithProviders, expectDefaultMutationState }) => {
     const { result } = renderWithProviders(() => useEncrypt());
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
     expectDefaultMutationState(state);
   });
 
-  test("behavior: encrypts on mutate", async ({ renderWithProviders, relayer }) => {
+  test("behavior: encrypts on mutate", async ({ renderWithProviders, relayer, TOKEN, USER }) => {
     const { result } = renderWithProviders(() => useEncrypt());
 
     await act(async () => {
