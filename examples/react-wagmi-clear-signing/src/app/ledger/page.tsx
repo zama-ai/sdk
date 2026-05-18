@@ -34,7 +34,7 @@ const ERC20_ABI = parseAbi([
 const WRAPPER_ABI = parseAbi(["function wrap(address to,uint256 amount)"]);
 
 type LedgerConnection = {
-  dmk: unknown;
+  dmk: DeviceManagementKit;
   sessionId: string;
   signer: {
     getAddress: (
@@ -137,11 +137,9 @@ export default function LedgerClearSigningPage() {
   async function clearLedgerConnection(message?: string) {
     if (connection) {
       try {
-        await (connection.dmk as { disconnect: (input: { sessionId: string }) => Promise<void> }).disconnect({
-          sessionId: connection.sessionId,
-        });
+        await connection.dmk.close();
       } catch (disconnectError) {
-        addLog("warning", `Ledger disconnect warning: ${errorMessage(disconnectError)}.`);
+        addLog("warning", `Ledger cleanup warning: ${errorMessage(disconnectError)}.`);
       }
     }
     setConnection(null);
@@ -237,7 +235,7 @@ export default function LedgerClearSigningPage() {
       addLog("error", errorMessage(error));
       if (dmk && sessionId) {
         try {
-          await dmk.disconnect({ sessionId });
+          await dmk.close();
         } catch {
           // Best-effort cleanup only.
         }
