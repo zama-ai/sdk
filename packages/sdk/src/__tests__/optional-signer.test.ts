@@ -10,7 +10,10 @@ type Op = (sdk: ZamaSDK, tokenAddress: Address) => Promise<unknown>;
 // Operations that require a signer and should reject with `SignerNotConfiguredError`
 // when the SDK was constructed without one.
 const SIGNER_REQUIRED_OPS: ReadonlyArray<readonly [string, Op]> = [
-  ["decryption.user", (sdk, t) => sdk.decryption.user([{ handle: "0xh", contractAddress: t }])],
+  [
+    "decryption.userDecrypt",
+    (sdk, t) => sdk.decryption.userDecrypt([{ handle: "0xh", contractAddress: t }]),
+  ],
   ["permits.allow", (sdk, t) => sdk.permits.grantPermit([t])],
   ["permits.revoke", (sdk) => sdk.permits.revokePermits()],
   ["permits.clear", (sdk) => sdk.permits.clear()],
@@ -38,7 +41,7 @@ describe("ZamaSDK without signer", () => {
 
   it("publicDecrypt works with no signer", async ({ createSDK, relayer }) => {
     const sdk = createSDK({ signer: undefined });
-    await sdk.decryption.public(["0xhandle"]);
+    await sdk.decryption.publicDecrypt(["0xhandle"]);
     expect(relayer.publicDecrypt).toHaveBeenCalled();
   });
 

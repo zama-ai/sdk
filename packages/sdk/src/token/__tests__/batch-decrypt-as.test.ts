@@ -34,7 +34,7 @@ function stubDelegatedBatchDecrypt(sdk: ZamaSDK, values: Record<Handle, bigint>)
         }),
       }),
     );
-  Object.defineProperty(sdk.decryption, "delegatedBatch", {
+  Object.defineProperty(sdk.decryption, "delegatedBatchDecrypt", {
     value: stub,
     configurable: true,
   });

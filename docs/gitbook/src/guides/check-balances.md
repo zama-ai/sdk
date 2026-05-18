@@ -94,11 +94,11 @@ if (isZeroHandle(handle)) {
 }
 
 // Decrypt a handle you already have
-const result = await sdk.decryption.user([{ handle, contractAddress: token.address }]);
+const result = await sdk.decryption.userDecrypt([{ handle, contractAddress: token.address }]);
 const value = result[handle] as bigint;
 
 // Decrypt multiple handles at once (must include the contract address per handle)
-const decrypted = await sdk.decryption.user(
+const decrypted = await sdk.decryption.userDecrypt(
   [handle1, handle2, handle3].map((h) => ({ handle: h, contractAddress: token.address })),
 );
 ```

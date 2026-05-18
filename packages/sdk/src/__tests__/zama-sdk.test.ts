@@ -73,7 +73,7 @@ describe("ZamaSDK", () => {
       relayer,
       handle,
     }) => {
-      const result = await sdk.decryption.public([handle]);
+      const result = await sdk.decryption.publicDecrypt([handle]);
       expect(relayer.publicDecrypt).toHaveBeenCalledWith([handle]);
       expect(result).toEqual({
         clearValues: { [handle]: 500n },
@@ -86,7 +86,7 @@ describe("ZamaSDK", () => {
       sdk,
       relayer,
     }) => {
-      const result = await sdk.decryption.public([]);
+      const result = await sdk.decryption.publicDecrypt([]);
       expect(result).toEqual({
         clearValues: {},
         decryptionProof: "0x",
@@ -98,14 +98,14 @@ describe("ZamaSDK", () => {
     it("wraps error on failure", async ({ sdk, relayer, handle }) => {
       vi.mocked(relayer.publicDecrypt).mockRejectedValueOnce(new Error("relayer down"));
 
-      await expect(sdk.decryption.public([handle])).rejects.toThrow(DecryptionFailedError);
+      await expect(sdk.decryption.publicDecrypt([handle])).rejects.toThrow(DecryptionFailedError);
     });
 
     it("re-throws DecryptionFailedError as-is", async ({ sdk, relayer, handle }) => {
       const original = new DecryptionFailedError("already typed");
       vi.mocked(relayer.publicDecrypt).mockRejectedValueOnce(original);
 
-      await expect(sdk.decryption.public([handle])).rejects.toBe(original);
+      await expect(sdk.decryption.publicDecrypt([handle])).rejects.toBe(original);
     });
   });
 
@@ -137,13 +137,13 @@ describe("ZamaSDK", () => {
     }) => {
       const handles: DecryptHandle[] = [{ handle, contractAddress: CONTRACT_A }];
 
-      await sdk.decryption.user(handles);
+      await sdk.decryption.userDecrypt(handles);
       expect(relayer.userDecrypt).toHaveBeenCalledOnce();
 
       await sdk.permits.revokePermits();
 
       // Cache was cleared — relayer is called again
-      await sdk.decryption.user(handles);
+      await sdk.decryption.userDecrypt(handles);
       expect(relayer.userDecrypt).toHaveBeenCalledTimes(2);
     });
 
@@ -154,12 +154,12 @@ describe("ZamaSDK", () => {
     }) => {
       const handles: DecryptHandle[] = [{ handle, contractAddress: CONTRACT_A }];
 
-      await sdk.decryption.user(handles);
+      await sdk.decryption.userDecrypt(handles);
       expect(relayer.userDecrypt).toHaveBeenCalledOnce();
 
       await sdk.permits.revokePermits([CONTRACT_A]);
 
-      await sdk.decryption.user(handles);
+      await sdk.decryption.userDecrypt(handles);
       expect(relayer.userDecrypt).toHaveBeenCalledTimes(2);
     });
   });

@@ -61,7 +61,7 @@ describe("NoCiphertextError detection (P3)", () => {
     vi.mocked(relayer.userDecrypt).mockRejectedValue(error);
 
     await expect(
-      sdk.decryption.user([{ handle, contractAddress: token.address }]),
+      sdk.decryption.userDecrypt([{ handle, contractAddress: token.address }]),
     ).rejects.toBeInstanceOf(NoCiphertextError);
   });
 
@@ -140,7 +140,7 @@ describe("NoCiphertextError detection (P3)", () => {
     vi.mocked(relayer.userDecrypt).mockRejectedValue(error);
 
     await expect(
-      sdk.decryption.user([{ handle, contractAddress: token.address }]),
+      sdk.decryption.userDecrypt([{ handle, contractAddress: token.address }]),
     ).rejects.toBeInstanceOf(NoCiphertextError);
   });
 });
