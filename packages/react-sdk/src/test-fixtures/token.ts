@@ -1,4 +1,4 @@
-/* eslint-disable no-empty-pattern */
+// oxlint-disable no-empty-pattern
 import { vi } from "vitest";
 import type { Address } from "viem";
 import { createMockSigner } from "@zama-fhe/sdk/test-fixtures";

@@ -1,5 +1,5 @@
 // oxlint-disable eslint-plugin-react-hooks/rules-of-hooks
-/* eslint-disable no-empty-pattern */
+// oxlint-disable no-empty-pattern
 import { QueryClient } from "@tanstack/react-query";
 import type { FixturesOf } from "./types";
 
