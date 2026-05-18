@@ -6160,16 +6160,16 @@ export class Decryption {
         relayer: RelayerDispatcher;
         decryptionService: DecryptionService | undefined;
     });
-    delegated(handles: DecryptHandle[], delegatorAddress: Address, accountAddress?: Address): Promise<Record<Handle, ClearValueType>>;
     // @internal
-    delegatedBatch(input: {
+    delegatedBatchDecrypt(input: {
         handles: DecryptHandle[];
         delegatorAddress: Address;
         accountAddress?: Address;
         maxConcurrency?: number;
     }): Promise<BatchDecryptHandlesResult>;
-    public(handles: Handle[]): Promise<PublicDecryptResult>;
-    user(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>>;
+    delegatedDecrypt(handles: DecryptHandle[], delegatorAddress: Address, accountAddress?: Address): Promise<Record<Handle, ClearValueType>>;
+    publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
+    userDecrypt(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>>;
 }
 
 // @public
@@ -20157,10 +20157,10 @@ export { ZKProofLike }
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/index-CSNxbpnf.d.ts:20462:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-CSNxbpnf.d.ts:20567:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-CSNxbpnf.d.ts:20669:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-CSNxbpnf.d.ts:20670:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-ONPZaQ4f.d.ts:20462:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-ONPZaQ4f.d.ts:20567:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-ONPZaQ4f.d.ts:20669:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-ONPZaQ4f.d.ts:20670:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 
