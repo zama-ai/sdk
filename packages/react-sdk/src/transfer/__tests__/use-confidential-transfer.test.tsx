@@ -199,13 +199,7 @@ describe("useConfidentialTransfer", () => {
     const onError = vi.fn();
 
     const { result } = renderWithProviders(() =>
-      useConfidentialTransfer(
-        { address: tokenAddress, optimistic: true },
-        {
-          onMutate,
-          onError,
-        },
-      ),
+      useConfidentialTransfer({ address: tokenAddress, optimistic: true }, { onMutate, onError }),
     );
 
     await act(async () => {
