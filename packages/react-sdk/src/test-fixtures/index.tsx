@@ -1,4 +1,5 @@
 import { test as base } from "@zama-fhe/sdk/test-fixtures";
+import type { TestAPI } from "vitest";
 import { reactAddressFixtures, type ReactAddressFixtures } from "./addresses";
 import { mutationFixtures, type MutationFixtures } from "./mutations";
 import { queryClientFixtures, type QueryClientFixtures } from "./query-client";
@@ -9,7 +10,7 @@ type ReactExtensions = ReactAddressFixtures &
   WrapperFixtures &
   MutationFixtures;
 
-export const test = base.extend<ReactExtensions>({
+export const test: TestAPI<ReactExtensions> = base.extend<ReactExtensions>({
   ...reactAddressFixtures,
   ...queryClientFixtures,
   ...wrapperFixtures,
@@ -17,8 +18,8 @@ export const test = base.extend<ReactExtensions>({
 });
 
 export type { ReactAddressFixtures } from "./addresses";
+export type { MutationFixtures } from "./mutations";
 export type { QueryClientFixtures } from "./query-client";
 export type { WrapperFixtures } from "./wrapper";
-export type { MutationFixtures } from "./mutations";
 
 export { afterEach, beforeEach, describe, expect, vi, type Mock } from "vitest";
