@@ -30,22 +30,24 @@ export type SdkTestFixtures = AddressFixtures &
   QueryContextFixtures;
 
 /**
- * Builder chain — each `.extend()` adds a fixture group on top of the previous
- * test. Order matters: later groups can destructure earlier groups' fixtures.
- *
- *   addresses → chain → relayer → signer → provider → storage → services → sdk → token
+ * Single `.extend()` call with every fixture group spread in — vitest resolves
+ * intra-call dependencies automatically (e.g. `cache` reads `storage`, `sdk`
+ * reads `relayer/signer/provider/storage`). Avoids the cumulative
+ * `AddBuilderWorker<...>` types a long `.extend(...).extend(...)` chain
+ * produces, which TypeScript struggles to display and sometimes truncates.
  */
-export const test: TestAPI<SdkTestFixtures> = base
-  .extend<AddressFixtures>(addressFixtures)
-  .extend<ChainFixtures>(chainFixtures)
-  .extend<RelayerFixtures>(relayerFixtures)
-  .extend<SignerFixtures>(signerFixtures)
-  .extend<ProviderFixtures>(providerFixtures)
-  .extend<StorageFixtures>(storageFixtures)
-  .extend<ServiceFixtures>(serviceFixtures)
-  .extend<SdkFixtures>(sdkFixtures)
-  .extend<TokenFixtures>(tokenFixtures)
-  .extend<QueryContextFixtures>(queryContextFixtures);
+export const test: TestAPI<SdkTestFixtures> = base.extend<SdkTestFixtures>({
+  ...addressFixtures,
+  ...chainFixtures,
+  ...relayerFixtures,
+  ...signerFixtures,
+  ...providerFixtures,
+  ...storageFixtures,
+  ...serviceFixtures,
+  ...sdkFixtures,
+  ...tokenFixtures,
+  ...queryContextFixtures,
+});
 
 export type { AddressFixtures } from "./addresses";
 export type { ChainFixtures } from "./chain";
