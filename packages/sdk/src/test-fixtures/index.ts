@@ -1,6 +1,6 @@
 // oxlint-disable jest/expect-expect
 // oxlint-disable jest/no-disabled-tests
-import { test as base, type TestAPI } from "vitest";
+import { test as base } from "vitest";
 import { addressFixtures, type AddressFixtures } from "./addresses";
 import { chainFixtures, type ChainFixtures } from "./chain";
 import { providerFixtures, type ProviderFixtures } from "./provider";
@@ -12,7 +12,7 @@ import { signerFixtures, type SignerFixtures } from "./signer";
 import { storageFixtures, type StorageFixtures } from "./storage";
 import { tokenFixtures, type TokenFixtures } from "./token";
 
-export type SdkTestFixtures = AddressFixtures &
+export type SDKTestFixtures = AddressFixtures &
   ChainFixtures &
   RelayerFixtures &
   SignerFixtures &
@@ -23,7 +23,7 @@ export type SdkTestFixtures = AddressFixtures &
   TokenFixtures &
   QueryContextFixtures;
 
-export const test: TestAPI<SdkTestFixtures> = base.extend<SdkTestFixtures>({
+export const test = base.extend<SDKTestFixtures>({
   ...addressFixtures,
   ...chainFixtures,
   ...relayerFixtures,

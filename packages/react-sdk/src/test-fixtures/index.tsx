@@ -1,16 +1,15 @@
-import { test as base } from "@zama-fhe/sdk/test-fixtures";
-import type { TestAPI } from "vitest";
+import { test as base } from "../../../sdk/src/test-fixtures";
 import { reactAddressFixtures, type ReactAddressFixtures } from "./addresses";
 import { mutationFixtures, type MutationFixtures } from "./mutations";
 import { queryClientFixtures, type QueryClientFixtures } from "./query-client";
 import { wrapperFixtures, type WrapperFixtures } from "./wrapper";
 
-type ReactExtensions = ReactAddressFixtures &
+type ReactSDKTestFixtures = ReactAddressFixtures &
   QueryClientFixtures &
   WrapperFixtures &
   MutationFixtures;
 
-export const test: TestAPI<ReactExtensions> = base.extend<ReactExtensions>({
+export const test = base.extend<ReactSDKTestFixtures>({
   ...reactAddressFixtures,
   ...queryClientFixtures,
   ...wrapperFixtures,
