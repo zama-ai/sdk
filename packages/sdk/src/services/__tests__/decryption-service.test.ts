@@ -14,7 +14,10 @@ const HANDLE_B = `0x${"bb".repeat(32)}` as Handle;
 const ZERO_HANDLE = `0x${"00".repeat(32)}` as Handle;
 
 function handles(items: Array<[Handle, Address]>): DecryptHandle[] {
-  return items.map(([handle, contractAddress]) => ({ handle, contractAddress }));
+  return items.map(([handle, contractAddress]) => ({
+    handle,
+    contractAddress,
+  }));
 }
 
 describe("DecryptionService", () => {
@@ -33,7 +36,7 @@ describe("DecryptionService", () => {
   });
 
   test("userDecrypt decrypts uncached handles grouped by contract and writes cache", async ({
-    cache,
+    cachingService,
     createDecryptionService,
     relayer,
     userAddress,
@@ -54,25 +57,31 @@ describe("DecryptionService", () => {
     );
 
     expect(result).toEqual({ [HANDLE_A]: 10n, [HANDLE_B]: 20n });
-    await expect(cache.get(userAddress, CONTRACT_A, HANDLE_A)).resolves.toBe(10n);
-    await expect(cache.get(userAddress, CONTRACT_B, HANDLE_B)).resolves.toBe(20n);
+    await expect(cachingService.get(userAddress, CONTRACT_A, HANDLE_A)).resolves.toBe(10n);
+    await expect(cachingService.get(userAddress, CONTRACT_B, HANDLE_B)).resolves.toBe(20n);
     expect(relayer.userDecrypt).toHaveBeenCalledWith(
-      expect.objectContaining({ handles: [HANDLE_A], contractAddress: CONTRACT_A }),
+      expect.objectContaining({
+        handles: [HANDLE_A],
+        contractAddress: CONTRACT_A,
+      }),
     );
     expect(relayer.userDecrypt).toHaveBeenCalledWith(
-      expect.objectContaining({ handles: [HANDLE_B], contractAddress: CONTRACT_B }),
+      expect.objectContaining({
+        handles: [HANDLE_B],
+        contractAddress: CONTRACT_B,
+      }),
     );
     expect(emitEvent).toHaveBeenCalledWith(expect.objectContaining({ type: events.DecryptStart }));
     expect(emitEvent).toHaveBeenCalledWith(expect.objectContaining({ type: events.DecryptEnd }));
   });
 
   test("userDecrypt serves cached values without prompting for credentials", async ({
-    cache,
+    cachingService,
     decryptionService,
     relayer,
     userAddress,
   }) => {
-    await cache.set(userAddress, CONTRACT_A, HANDLE_A, 42n);
+    await cachingService.set(userAddress, CONTRACT_A, HANDLE_A, 42n);
 
     await expect(
       decryptionService.userDecrypt(handles([[HANDLE_A, CONTRACT_A]]), userAddress),
@@ -107,12 +116,15 @@ describe("DecryptionService", () => {
       expect.any(Number),
     );
     expect(relayer.userDecrypt).toHaveBeenCalledWith(
-      expect.objectContaining({ handles: [HANDLE_B], contractAddress: CONTRACT_B }),
+      expect.objectContaining({
+        handles: [HANDLE_B],
+        contractAddress: CONTRACT_B,
+      }),
     );
   });
 
   test("delegatedUserDecrypt validates delegation before returning cached values", async ({
-    cache,
+    cachingService,
     decryptionService,
     provider,
     relayer,
@@ -120,7 +132,7 @@ describe("DecryptionService", () => {
     delegateAddress,
     userAddress,
   }) => {
-    await cache.set(userAddress, CONTRACT_A, HANDLE_A, 42n);
+    await cachingService.set(userAddress, CONTRACT_A, HANDLE_A, 42n);
     vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
 
     await expect(
@@ -166,7 +178,12 @@ describe("DecryptionService", () => {
   }) => {
     vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
     vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue({
-      domain: { name: "test", version: "1", chainId: 1, verifyingContract: "0xkms" },
+      domain: {
+        name: "test",
+        version: "1",
+        chainId: 1,
+        verifyingContract: "0xkms",
+      },
       types: { DelegatedUserDecryptRequestVerification: [] },
       message: {
         publicKey: TEST_PUBLIC_KEY,
@@ -241,7 +258,9 @@ describe("DecryptionService", () => {
     storage.set = async () => {
       throw new Error("cache unavailable");
     };
-    const service = createDecryptionService({ cache: new CachingService(storage) });
+    const service = createDecryptionService({
+      cache: new CachingService(storage),
+    });
     vi.mocked(relayer.userDecrypt).mockResolvedValue({ [HANDLE_A]: 10n });
 
     await expect(

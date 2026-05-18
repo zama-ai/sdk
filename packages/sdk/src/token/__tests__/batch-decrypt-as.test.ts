@@ -118,7 +118,7 @@ describe("Token.batchDecryptBalancesAs", () => {
     createMockSigner,
     createMockProvider,
     createSDK,
-    cache,
+    cachingService,
   }) => {
     const delegateSigner = createMockSigner(DELEGATE);
     const delegateProvider = createMockProvider();
@@ -127,7 +127,7 @@ describe("Token.batchDecryptBalancesAs", () => {
       provider: delegateProvider,
     });
     // Pre-populate cache via shared storage: ownerAddress = DELEGATOR
-    await cache.set(DELEGATOR, TOKEN_A, HANDLE_A, 42n);
+    await cachingService.set(DELEGATOR, TOKEN_A, HANDLE_A, 42n);
 
     vi.mocked(delegateProvider.readContract)
       .mockResolvedValueOnce(HANDLE_A) // confidentialBalanceOf
@@ -151,7 +151,7 @@ describe("Token.batchDecryptBalancesAs", () => {
     createMockSigner,
     createMockProvider,
     createSDK,
-    cache,
+    cachingService,
   }) => {
     const delegateSigner = createMockSigner(DELEGATE);
     const delegateProvider = createMockProvider();
@@ -159,7 +159,7 @@ describe("Token.batchDecryptBalancesAs", () => {
       signer: delegateSigner,
       provider: delegateProvider,
     });
-    await cache.set(DELEGATOR, TOKEN_A, HANDLE_A, 42n);
+    await cachingService.set(DELEGATOR, TOKEN_A, HANDLE_A, 42n);
 
     vi.mocked(delegateProvider.readContract)
       .mockResolvedValueOnce(HANDLE_A) // confidentialBalanceOf
