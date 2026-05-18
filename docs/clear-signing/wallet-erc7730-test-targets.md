@@ -16,6 +16,8 @@ For the Zama SDK this means:
   on the wallet's descriptor source and trust policy.
 - A local dApp preview is still useful, but it is not equivalent to wallet-native
   ERC-7730 because a compromised dApp could lie.
+- Public registry submission requires ABI verification, with Sourcify called out by
+  ethereum.org as required before a descriptor can be accepted.
 
 ## Public support status
 
@@ -45,6 +47,8 @@ specific integration:
 - Clear Signing ecosystem page: current public wallet support list.
 - ERC-7730 spec: context binding, descriptor security model, EIP-712 examples, and
   calldata formatting rules.
+- ethereum.org clear-signing tutorial: descriptor skeleton, wording guidance, CLI
+  validation path, Sourcify requirement, and registry submission flow.
 - WalletConnect announcement: working-group participants and WalletConnect's stated
   interoperability role.
 - Ledger ERC-7730 developer tools/registry repository: historical structure, validation,

@@ -6,9 +6,9 @@ ERC-7730 descriptors from intents only after the semantic model is stable.
 
 Reference: https://eips.ethereum.org/EIPS/eip-7730
 
-Status checked on 2026-05-13: ERC-7730 is still marked as a draft ERC. Treat
-all descriptor generation as experimental until wallet support and schema
-expectations are validated.
+Status checked on 2026-05-18: ERC-7730 remains a fast-moving wallet integration
+surface. Treat the descriptors in `erc7730/` as experimental until they pass
+official tooling and are accepted by a wallet-supported descriptor source.
 
 ## Current Standard Shape
 
@@ -65,31 +65,38 @@ These need extra care because calldata contains encrypted values:
 ## Candidate Format Keys
 
 These keys are derived from current contract builders and EIP-712 primary
-types. They should be validated against actual ABI/type encodings before any
-descriptor files are emitted.
+types. The local `erc7730-docs.test.ts` check validates their selectors against
+the SDK ABI signatures used by the fixtures.
 
-| Flow                           | Candidate format key                                                                                  |
-| ------------------------------ | ----------------------------------------------------------------------------------------------------- |
-| `confidentialTransfer`         | `confidentialTransfer(address to,bytes32 encryptedAmount,bytes inputProof)`                           |
-| `shield` via `transferAndCall` | `transferAndCall(address to,uint256 value,bytes data)`                                                |
-| `shield` via `wrap`            | `wrap(address to,uint256 amount)`                                                                     |
-| shield approval                | `approve(address spender,uint256 value)`                                                              |
-| `unwrap`                       | `unwrap(address from,address to,bytes32 encryptedAmount,bytes inputProof)`                            |
-| `unwrapAll`                    | `unwrap(address from,address to,bytes32 encryptedBalance)`                                            |
-| `finalizeUnwrap`               | `finalizeUnwrap(bytes32 unwrapRequestIdOrAmount,uint256 unwrapAmountCleartext,bytes decryptionProof)` |
-| direct decrypt EIP-712         | `UserDecryptRequestVerification`                                                                      |
-| delegated decrypt EIP-712      | `DelegatedUserDecryptRequestVerification`                                                             |
+| Flow                           | Format key                                                                            |
+| ------------------------------ | ------------------------------------------------------------------------------------- |
+| `confidentialTransfer`         | `confidentialTransfer(address to,bytes32 encryptedAmount,bytes inputProof)`           |
+| `shield` via `transferAndCall` | `transferAndCall(address to,uint256 value,bytes data)`                                |
+| `shield` via `wrap`            | `wrap(address to,uint256 amount)`                                                     |
+| shield approval                | `approve(address spender,uint256 amount)`                                             |
+| `unwrap`                       | `unwrap(address from,address to,bytes32 encryptedAmount,bytes inputProof)`            |
+| `unwrapAll`                    | `unwrap(address from,address to,bytes32 amount)`                                      |
+| `finalizeUnwrap`               | `finalizeUnwrap(bytes32 unwrapRequestId,uint64 burntAmountCleartext,bytes decryptionProof)` |
+| direct decrypt EIP-712         | `UserDecryptRequestVerification`                                                      |
+| delegated decrypt EIP-712      | `DelegatedUserDecryptRequestVerification`                                             |
 
-## Do Not Implement Yet
+## Current Descriptor Status
 
-Do not add descriptor generation until these are resolved:
+The SDK repository now includes static descriptor drafts under
+`erc7730/registry/zama/` and local fixtures under `erc7730/fixtures/`.
 
-1. Exact schema version and validation tooling to use.
-2. Wallet baseline behavior for contract descriptors and EIP-712 descriptors.
-3. Whether descriptors should be emitted as static files, generated JSON, or both.
-4. How descriptor files bind to deployed wrapper/token addresses across chains.
-5. How encrypted FHE fields should use ERC-7730 encryption metadata without
-   implying plaintext availability.
+Resolved locally:
 
-Until then, descriptor work should remain limited to documentation and tests
-around `ClearSigningIntent`.
+1. Static files are preferred over runtime descriptor generation for V1 because
+   they are easier to audit and review.
+2. Sepolia bindings use the current SDK chain configuration and the current
+   public `WrappersRegistry` token list.
+3. Local tests verify selector, deployment, and field coverage consistency.
+
+Still required before public registry submission:
+
+1. Run the official ERC-7730 validator/tooling against the descriptor files.
+2. Confirm the registry's latest required directory/test format.
+3. Review final wording with Zama before external submission.
+4. Confirm wallet-native behavior on a supported Ledger path after descriptors
+   are available through that wallet's trusted source.

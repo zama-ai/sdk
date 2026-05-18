@@ -1,0 +1,64 @@
+{
+  "$schema": "https://eips.ethereum.org/assets/eip-7730/erc7730-v2.schema.json",
+  "context": {
+    "$id": "Zama ACL delegation",
+    "contract": {
+      "deployments": [
+        {
+          "chainId": 1,
+          "address": "0xcA2E8f1F656CD25C01F05d0b243Ab1ecd4a8ffb6"
+        },
+        {
+          "chainId": 11155111,
+          "address": "0xf0Ffdc93b7E186bC2f8CB3dAA75D86d1930A433D"
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "owner": "Zama",
+    "contractName": "Zama ACL",
+    "info": {
+      "url": "https://www.zama.ai/"
+    }
+  },
+  "display": {
+    "formats": {
+      "delegateForUserDecryption(address delegate,address contractAddress,uint64 expirationDate)": {
+        "intent": "Grant decrypt access",
+        "interpolatedIntent": "Grant decrypt to {delegate}",
+        "fields": [
+          {
+            "path": "#.delegate",
+            "label": "Delegate wallet",
+            "format": "addressName",
+            "params": {
+              "types": ["eoa"]
+            }
+          },
+          {
+            "path": "#.contractAddress",
+            "label": "Conf. contract",
+            "format": "addressName",
+            "params": {
+              "types": ["contract"]
+            }
+          },
+          {
+            "path": "#.expirationDate",
+            "label": "Delegation expires",
+            "format": "date",
+            "params": {
+              "encoding": "timestamp"
+            }
+          },
+          {
+            "value": "Decryption access only. No spending or transfer permission is granted.",
+            "label": "Warning",
+            "format": "raw"
+          }
+        ]
+      }
+    }
+  }
+}

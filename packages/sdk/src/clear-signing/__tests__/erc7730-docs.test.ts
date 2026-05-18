@@ -1,0 +1,229 @@
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { resolve } from "node:path";
+import { getFunctionSelector, isAddress } from "viem";
+import { describe, expect, test } from "../../test-fixtures";
+
+const ROOT = findRepoRoot(process.cwd());
+const ERC7730_DIR = resolve(ROOT, "docs/clear-signing/erc7730");
+const REGISTRY_DIR = resolve(ERC7730_DIR, "registry/zama");
+const FIXTURE_PATH = resolve(ERC7730_DIR, "fixtures/sepolia-v1.json");
+const SCHEMA = "https://eips.ethereum.org/assets/eip-7730/erc7730-v2.schema.json";
+
+interface Descriptor {
+  $schema: string;
+  context: {
+    $id: string;
+    contract?: {
+      deployments: readonly Deployment[];
+    };
+    eip712?: {
+      domain?: Record<string, unknown>;
+      deployments?: readonly Deployment[];
+    };
+  };
+  metadata: {
+    owner: string;
+    contractName?: string;
+  };
+  display: {
+    formats: Record<string, DisplayFormat>;
+  };
+}
+
+interface Deployment {
+  chainId: number;
+  address: string;
+}
+
+interface DisplayFormat {
+  fields?: readonly FieldFormat[];
+}
+
+interface FieldFormat {
+  path?: string;
+  value?: unknown;
+  fields?: readonly FieldFormat[];
+}
+
+interface Fixtures {
+  chainId: number;
+  calldata: readonly CalldataFixture[];
+  eip712: readonly Eip712Fixture[];
+}
+
+interface CalldataFixture {
+  operation: string;
+  descriptor: string;
+  to: string;
+  function: string;
+  data: `0x${string}`;
+  expectedTexts: readonly string[];
+}
+
+interface Eip712Fixture {
+  operation: string;
+  descriptor: string;
+  data: {
+    domain: Record<string, unknown>;
+    types: Record<string, readonly { name: string; type: string }[]>;
+    primaryType: string;
+    message: Record<string, unknown>;
+  };
+  expectedTexts: readonly string[];
+}
+
+function readJson<T>(path: string): T {
+  return JSON.parse(readFileSync(path, "utf8")) as T;
+}
+
+function findRepoRoot(start: string): string {
+  let current = start;
+  while (current !== "/") {
+    if (
+      existsSync(resolve(current, "docs/clear-signing")) &&
+      existsSync(resolve(current, "pnpm-workspace.yaml"))
+    ) {
+      return current;
+    }
+    current = resolve(current, "..");
+  }
+  throw new Error(`Unable to find repository root from ${start}`);
+}
+
+function descriptorFiles(): readonly string[] {
+  return readdirSync(REGISTRY_DIR)
+    .filter((file) => file.endsWith(".json"))
+    .map((file) => resolve(REGISTRY_DIR, file));
+}
+
+function descriptorFromFixture(relativePath: string): Descriptor {
+  const path = resolve(ERC7730_DIR, "fixtures", relativePath);
+  expect(existsSync(path), `missing descriptor ${relativePath}`).toBe(true);
+  return readJson<Descriptor>(path);
+}
+
+function deploymentMatches(
+  deployments: readonly Deployment[] | undefined,
+  chainId: number,
+  address: string,
+): boolean {
+  return Boolean(
+    deployments?.some(
+      (deployment) =>
+        deployment.chainId === chainId &&
+        deployment.address.toLowerCase() === address.toLowerCase(),
+    ),
+  );
+}
+
+function flattenFields(fields: readonly FieldFormat[] | undefined): readonly FieldFormat[] {
+  if (!fields) {
+    return [];
+  }
+  return fields.flatMap((field) => [field, ...flattenFields(field.fields)]);
+}
+
+function displayedParamNames(format: DisplayFormat): Set<string> {
+  const names = new Set<string>();
+  for (const field of flattenFields(format.fields)) {
+    if (!field.path) {
+      continue;
+    }
+    const normalizedPath = field.path.startsWith("#.") ? field.path.slice(2) : field.path;
+    names.add(normalizedPath.split(".")[0]!.replace(/\[\]$/, ""));
+  }
+  return names;
+}
+
+function signatureParamNames(signature: string): readonly string[] {
+  const params = signature.slice(signature.indexOf("(") + 1, signature.lastIndexOf(")"));
+  if (params.length === 0) {
+    return [];
+  }
+  return params.split(",").map((param) => param.trim().split(" ").at(-1)!);
+}
+
+function encodeEip712Type(
+  primaryType: string,
+  fields: readonly { name: string; type: string }[],
+): string {
+  return `${primaryType}(${fields.map((field) => `${field.type} ${field.name}`).join(",")})`;
+}
+
+describe("ERC-7730 descriptor drafts", () => {
+  test("all descriptor files have the expected top-level registry shape", () => {
+    for (const file of descriptorFiles()) {
+      const descriptor = readJson<Descriptor>(file);
+
+      expect(descriptor.$schema).toBe(SCHEMA);
+      expect(descriptor.context.$id).toBeTruthy();
+      expect(descriptor.metadata.owner).toBe("Zama");
+      expect(Object.keys(descriptor.display.formats).length).toBeGreaterThan(0);
+
+      for (const deployment of [
+        ...(descriptor.context.contract?.deployments ?? []),
+        ...(descriptor.context.eip712?.deployments ?? []),
+      ]) {
+        expect(Number.isInteger(deployment.chainId)).toBe(true);
+        expect(isAddress(deployment.address)).toBe(true);
+      }
+    }
+  });
+
+  test("calldata fixtures match descriptor deployments, selectors, and parameter coverage", () => {
+    const fixtures = readJson<Fixtures>(FIXTURE_PATH);
+
+    for (const fixture of fixtures.calldata) {
+      const descriptor = descriptorFromFixture(fixture.descriptor);
+      const format = descriptor.display.formats[fixture.function];
+
+      expect(format, `${fixture.operation} missing display format`).toBeDefined();
+      expect(fixture.data.slice(0, 10), `${fixture.operation} selector mismatch`).toBe(
+        getFunctionSelector(fixture.function),
+      );
+      expect(
+        deploymentMatches(descriptor.context.contract?.deployments, fixtures.chainId, fixture.to),
+        `${fixture.operation} target is not in descriptor deployments`,
+      ).toBe(true);
+
+      const displayed = displayedParamNames(format!);
+      for (const paramName of signatureParamNames(fixture.function)) {
+        expect(
+          displayed.has(paramName),
+          `${fixture.operation} does not account for ${paramName}`,
+        ).toBe(true);
+      }
+      expect(fixture.expectedTexts.length).toBeGreaterThan(0);
+    }
+  });
+
+  test("EIP-712 fixtures match descriptor domains, deployments, and field coverage", () => {
+    const fixtures = readJson<Fixtures>(FIXTURE_PATH);
+
+    for (const fixture of fixtures.eip712) {
+      const descriptor = descriptorFromFixture(fixture.descriptor);
+      const fields = fixture.data.types[fixture.data.primaryType] ?? [];
+      const formatKey = encodeEip712Type(fixture.data.primaryType, fields);
+      const format = descriptor.display.formats[formatKey];
+      const deploymentAddress = String(fixture.data.domain.verifyingContract);
+      const chainId = Number(fixture.data.domain.chainId);
+
+      expect(format, `${fixture.operation} missing display format`).toBeDefined();
+      expect(descriptor.context.eip712?.domain?.name).toBe(fixture.data.domain.name);
+      expect(descriptor.context.eip712?.domain?.version).toBe(fixture.data.domain.version);
+      expect(
+        deploymentMatches(descriptor.context.eip712?.deployments, chainId, deploymentAddress),
+        `${fixture.operation} verifying contract is not in descriptor deployments`,
+      ).toBe(true);
+
+      const displayed = displayedParamNames(format!);
+      for (const field of fields) {
+        expect(
+          displayed.has(field.name),
+          `${fixture.operation} does not account for ${field.name}`,
+        ).toBe(true);
+      }
+      expect(fixture.expectedTexts.length).toBeGreaterThan(0);
+    }
+  });
+});

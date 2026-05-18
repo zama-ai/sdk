@@ -12,9 +12,10 @@ This app is copied from `examples/react-wagmi` and adds:
 3. Runtime intent capture through `onClearSigningIntent` while the operation is
    being executed.
 
-This is **not** wallet-native ERC-7730 rendering yet. The app displays the
-clear-signing intent before the wallet prompt; Rabby/MetaMask still render their
-normal signature or transaction UI.
+This app is still an app-level preview, not wallet-native ERC-7730 rendering.
+The repository now includes experimental ERC-7730 descriptor drafts under
+`docs/clear-signing/erc7730/`, but Rabby/MetaMask/Ledger rendering depends on
+whether the connected wallet resolves those descriptors from a trusted source.
 
 ## Stack
 
@@ -57,5 +58,6 @@ Sepolia, select a token, then use `Preview intent` before executing an action.
   signature or transaction submission.
 - For unshield, runtime capture can produce two intents: `unwrap` and
   `finalizeUnwrap`.
-- ERC-7730 descriptor generation and wallet-native display are intentionally
-  out of scope for this app.
+- ERC-7730 descriptor drafts live in `docs/clear-signing/erc7730/`. They are
+  useful for review and eventual registry submission, but they are not loaded by
+  this app at runtime.
