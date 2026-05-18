@@ -94,12 +94,12 @@ export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
     await use(createDelegationService());
   },
   createDecryptionService: async (
-    { cachingService: cache, credentialService, delegationService, relayer },
+    { cachingService, credentialService, delegationService, relayer },
     use,
   ) => {
     const factory: CreateDecryptionServiceFn = (overrides = {}) =>
       new DecryptionService({
-        cache: overrides.cache ?? cache,
+        cache: overrides.cache ?? cachingService,
         credentialService: overrides.credentialService ?? credentialService,
         delegationService: overrides.delegationService ?? delegationService,
         relayer: (overrides.relayer ?? relayer) as unknown as RelayerDispatcher,
