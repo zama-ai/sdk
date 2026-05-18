@@ -2,6 +2,7 @@ packages:
   - "packages/*"
   - "tools/*"
   - "test/*"
+  - "examples/react-wagmi-clear-signing"
 
 # Only install packages published at least 3 days ago (4320 minutes),
 # reducing exposure to supply-chain attacks via newly published versions.

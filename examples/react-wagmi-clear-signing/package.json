@@ -1,0 +1,26 @@
+{
+  "name": "react-wagmi-clear-signing-example",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --webpack",
+    "build": "next build --webpack",
+    "start": "next start",
+    "typecheck": "next typegen && tsc --noEmit",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.90.0",
+    "@zama-fhe/react-sdk": "workspace:*",
+    "@zama-fhe/sdk": "workspace:*",
+    "next": "^16.2.5",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "viem": "^2.47.0",
+    "wagmi": "^3.5.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.52.0",
+    "@types/react": "^19.2.0",
+    "typescript": "^5.8.0"
+  }
+}
