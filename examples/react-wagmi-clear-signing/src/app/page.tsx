@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatEther, formatUnits, parseAbi, parseUnits } from "viem";
 import { useAccount, useBalance, useConnect, useReadContract, useSwitchChain } from "wagmi";
@@ -195,6 +196,9 @@ export default function Home() {
             ? Number(formatEther(ethBalanceData.value)).toFixed(4)
             : "—"}
         </div>
+        <Link href="/ledger" className="nav-link">
+          Ledger DSK shield POC
+        </Link>
       </div>
 
       <ClearSigningConsole entry={clearSigningEntry} onClear={() => setClearSigningEntry(null)} />

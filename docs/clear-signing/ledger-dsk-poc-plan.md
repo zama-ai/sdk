@@ -150,28 +150,30 @@ These are the concrete questions needed to unblock a physical POC:
 
 ## Recommended Next SDK Work
 
-The next SDK-owned step is to build a Ledger-only POC surface, separate from
-Rabby/MetaMask:
-
-```text
-examples/ledger-clear-signing-shield
-```
-
-or, if we want to keep example sprawl lower:
+The SDK now includes a Ledger-only POC surface, separate from Rabby/MetaMask:
 
 ```text
 examples/react-wagmi-clear-signing/src/app/ledger
 ```
 
+Run the example app and open:
+
+```text
+http://localhost:<port>/ledger
+```
+
 The POC should:
 
 - use the existing ZAMA / cZAMA Sepolia pair;
-- use the SDK token APIs for shield intent and transaction preparation;
 - connect directly to Ledger through DMK WebHID;
 - sign through DSK instead of `window.ethereum`;
 - display clear-signing status, DSK logs, raw calldata, and fallback reason;
 - broadcast the signed transaction with `viem` only after the user confirms on
   the device.
 
+The current implementation intentionally signs the `cZAMAMock.wrap(address,uint256)`
+fallback shield transaction directly. It assumes the required ERC-20 allowance
+already exists, or lets the tester sign a separate `approve` transaction first.
 This keeps the dApp-level intent preview, wallet-extension behavior, and
-physical Ledger DSK behavior separate and testable.
+physical Ledger DSK behavior separate and testable while we validate whether DSK
+can resolve the ERC-7730 descriptor from Ledger CAL.

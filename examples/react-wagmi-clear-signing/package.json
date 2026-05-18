@@ -9,6 +9,10 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@ledgerhq/context-module": "^1.17.1",
+    "@ledgerhq/device-management-kit": "^1.4.1",
+    "@ledgerhq/device-signer-kit-ethereum": "^1.15.1",
+    "@ledgerhq/device-transport-kit-web-hid": "^1.2.3",
     "@tanstack/react-query": "^5.90.0",
     "@zama-fhe/react-sdk": "workspace:*",
     "@zama-fhe/sdk": "workspace:*",

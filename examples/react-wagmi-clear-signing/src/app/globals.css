@@ -44,6 +44,16 @@ body {
   margin: 6px 0 12px;
   font-size: 14px;
 }
+.nav-link {
+  display: inline-flex;
+  color: #2563eb;
+  font-weight: 700;
+  text-decoration: none;
+  margin-bottom: 10px;
+}
+.nav-link:hover {
+  text-decoration: underline;
+}
 
 /* Connect screen */
 .connect-screen {
@@ -178,6 +188,32 @@ body {
   font-weight: 500;
   color: #64748b;
   min-width: 32px;
+}
+.field-label {
+  display: block;
+  color: #475569;
+  font-weight: 650;
+  margin: 14px 0 6px;
+}
+.checkbox-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: #334155;
+  font-size: 14px;
+  margin: 12px 0;
+}
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+.amount-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
 }
 
 /* Token metadata hint */
@@ -440,6 +476,51 @@ body {
   font-size: 12px;
   line-height: 1.45;
 }
+.ledger-page code {
+  background: #e2e8f0;
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+.ledger-warning {
+  border-color: #fbbf24;
+  background: #fffbeb;
+}
+.ledger-kv {
+  display: grid;
+  grid-template-columns: minmax(130px, 28%) 1fr;
+  gap: 10px 14px;
+  margin-top: 14px;
+}
+.ledger-kv span {
+  color: #64748b;
+}
+.ledger-kv strong {
+  color: #0f172a;
+  font-weight: 750;
+  word-break: break-word;
+}
+.ledger-log {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 22px;
+}
+.ledger-log li {
+  line-height: 1.45;
+  word-break: break-word;
+}
+.ledger-log-info {
+  color: #334155;
+}
+.ledger-log-success {
+  color: #166534;
+}
+.ledger-log-warning {
+  color: #92400e;
+}
+.ledger-log-error {
+  color: #b91c1c;
+}
 .action-row {
   display: flex;
   gap: 10px;
@@ -449,6 +530,10 @@ body {
 }
 
 @media (max-width: 640px) {
+  .ledger-kv {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
   .clear-signing-human-row {
     grid-template-columns: 1fr;
     gap: 4px;
