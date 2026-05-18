@@ -12,6 +12,8 @@ registry/zama/
   eip712-*.json
 fixtures/
   sepolia-v1.json
+ledger-demo/
+  zama-shield/
 ```
 
 ## Current Scope
@@ -26,6 +28,27 @@ The first descriptor set covers:
 | `shield` via `transferAndCall`            | `registry/zama/calldata-erc20-shield-entrypoints.json`                                                              |
 | `confidentialTransfer`                    | `registry/zama/calldata-confidential-token-wrapper.json`                                                            |
 | `unwrap` / `unwrapAll` / `finalizeUnwrap` | `registry/zama/calldata-confidential-token-wrapper.json`                                                            |
+
+## Ledger ZAMA Shield Demo
+
+`ledger-demo/zama-shield/` contains minimal descriptors and calldata fixtures
+for testing a Ledger Nano S Plus clear-signing flow with the verified Sepolia
+`ZAMAMock` / `cZAMAMock` pair.
+
+The target display is:
+
+```text
+Action:  Shield
+Send:    100 ZAMAMock
+Receive: cZAMAMock
+Wrapper: cZAMAMock
+Network: Sepolia
+```
+
+The exact received amount is not encoded in the descriptor yet because
+`ZAMAMock` has 18 decimals, `cZAMAMock` has 6 decimals, and the wrapper uses
+`rate() = 1_000_000_000_000`. ERC-7730 v2 does not define arithmetic for
+derived fields such as `amount / rate`.
 
 ## Important Limits
 

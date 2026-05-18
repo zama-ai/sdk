@@ -1,0 +1,95 @@
+{
+  "$schema": "https://eips.ethereum.org/assets/eip-7730/erc7730-v2.schema.json",
+  "context": {
+    "$id": "Zama Ledger demo shield ERC20",
+    "contract": {
+      "deployments": [
+        {
+          "chainId": 11155111,
+          "address": "0x75355a85c6FB9df5f0C80FF54e8747EEe9a0BF57"
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "owner": "Zama",
+    "contractName": "ZAMAMock",
+    "info": {
+      "url": "https://www.zama.ai/"
+    }
+  },
+  "display": {
+    "formats": {
+      "transferAndCall(address to,uint256 value,bytes data)": {
+        "intent": "Shield",
+        "interpolatedIntent": "Shield {value} into {to}",
+        "fields": [
+          {
+            "path": "#.value",
+            "label": "Send",
+            "format": "tokenAmount",
+            "params": {
+              "tokenPath": "@.to",
+              "chainId": 11155111
+            }
+          },
+          {
+            "path": "#.to",
+            "label": "Receive",
+            "format": "tokenTicker",
+            "params": {
+              "chainId": 11155111
+            }
+          },
+          {
+            "path": "#.to",
+            "label": "Wrapper",
+            "format": "addressName",
+            "params": {
+              "types": ["contract"]
+            }
+          },
+          {
+            "value": "Sepolia",
+            "label": "Network",
+            "format": "raw"
+          },
+          {
+            "path": "#.data",
+            "label": "Recipient data",
+            "format": "raw",
+            "visible": "optional"
+          }
+        ]
+      },
+      "approve(address spender,uint256 amount)": {
+        "intent": "Approve shield wrapper",
+        "interpolatedIntent": "Approve {amount} for {spender}",
+        "fields": [
+          {
+            "path": "#.spender",
+            "label": "Wrapper",
+            "format": "addressName",
+            "params": {
+              "types": ["contract"]
+            }
+          },
+          {
+            "path": "#.amount",
+            "label": "Approval amount",
+            "format": "tokenAmount",
+            "params": {
+              "tokenPath": "@.to",
+              "chainId": 11155111
+            }
+          },
+          {
+            "value": "Sepolia",
+            "label": "Network",
+            "format": "raw"
+          }
+        ]
+      }
+    }
+  }
+}
