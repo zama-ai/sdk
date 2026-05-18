@@ -19,10 +19,7 @@ describe("useConfidentialBalance", () => {
 
     expect(result.current.data).toBe(123n);
     expect(provider.readContract).toHaveBeenCalledWith(
-      expect.objectContaining({
-        functionName: "confidentialBalanceOf",
-        address: tokenAddress,
-      }),
+      expect.objectContaining({ functionName: "confidentialBalanceOf", address: tokenAddress }),
     );
   });
 
@@ -75,10 +72,7 @@ describe("useConfidentialBalance", () => {
     });
     expect(result.current.data).toBe(456n);
     expect(provider.readContract).toHaveBeenCalledWith(
-      expect.objectContaining({
-        functionName: "confidentialBalanceOf",
-        args: [OTHER],
-      }),
+      expect.objectContaining({ functionName: "confidentialBalanceOf", args: [OTHER] }),
     );
   });
 

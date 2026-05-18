@@ -35,11 +35,7 @@ describe("useAllow", () => {
         queryClient.getQueryCache().find({ queryKey: zamaQueryKeys.isAllowed.all }) === undefined;
       expect(variables).toEqual([tokenAddress, otherTokenAddress]);
     });
-    const { result, queryClient } = renderWithProviders(() =>
-      useAllow({
-        onSuccess,
-      }),
-    );
+    const { result, queryClient } = renderWithProviders(() => useAllow({ onSuccess }));
     queryClient.setQueryData(zamaQueryKeys.isAllowed.all, true);
 
     await act(() => result.current.mutateAsync([tokenAddress, otherTokenAddress]));

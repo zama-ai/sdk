@@ -10,10 +10,7 @@ import { describe, expect, test, vi } from "../test-fixtures";
 
 describe("useUserDecrypt", () => {
   test("decrypts handles", async ({ relayer, tokenAddress, renderWithProviders }) => {
-    vi.mocked(relayer.userDecrypt).mockResolvedValue({
-      "0xhandle1": 100n,
-      "0xhandle2": true,
-    });
+    vi.mocked(relayer.userDecrypt).mockResolvedValue({ "0xhandle1": 100n, "0xhandle2": true });
 
     const { result } = renderWithProviders(() =>
       useUserDecrypt(
@@ -107,9 +104,7 @@ describe("useUserDecrypt", () => {
     renderWithProviders,
   }) => {
     const { result } = renderWithProviders(() =>
-      useUserDecrypt({
-        handles: [{ handle: "0xh", contractAddress: tokenAddress }],
-      }),
+      useUserDecrypt({ handles: [{ handle: "0xh", contractAddress: tokenAddress }] }),
     );
 
     await waitFor(() => expect(result.current.fetchStatus).toBe("idle"));
@@ -134,11 +129,9 @@ describe("useUserDecrypt", () => {
       // Prime credentials once on mount so isAllowed flips to true,
       // then invalidate so the cached `false` result is re-fetched.
       useEffect(() => {
-        void sdk.allow([tokenAddress]).then(() =>
-          queryClient.invalidateQueries({
-            queryKey: zamaQueryKeys.isAllowed.all,
-          }),
-        );
+        void sdk
+          .allow([tokenAddress])
+          .then(() => queryClient.invalidateQueries({ queryKey: zamaQueryKeys.isAllowed.all }));
       }, [sdk, queryClient]);
 
       const isAllowed = useIsAllowed({ contractAddresses: [tokenAddress] });

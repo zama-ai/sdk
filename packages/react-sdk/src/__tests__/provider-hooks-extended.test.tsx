@@ -1,7 +1,6 @@
 import { waitFor } from "@testing-library/react";
 import type { Address } from "@zama-fhe/sdk";
 import { ERC7984_WRAPPER_INTERFACE_ID } from "@zama-fhe/sdk";
-import type { ContractFunctionParameters } from "viem";
 import { useUnderlyingAllowance } from "../shield/use-underlying-allowance";
 import { describe, expect, test, vi } from "../test-fixtures";
 import { useMetadataSuspense } from "../token/use-metadata";
@@ -23,11 +22,7 @@ describe("useUnderlyingAllowance", () => {
       .mockResolvedValueOnce(5000n);
 
     const { result } = renderWithProviders(
-      () =>
-        useUnderlyingAllowance({
-          address: wrapperAddress,
-          owner: userAddress,
-        }),
+      () => useUnderlyingAllowance({ address: wrapperAddress, owner: userAddress }),
       { signer },
     );
 
@@ -83,14 +78,12 @@ describe("useTotalSupplySuspense", () => {
     renderWithProviders,
     provider,
   }) => {
-    vi.mocked(provider.readContract).mockImplementation(
-      async (config: ContractFunctionParameters) => {
-        if (config.functionName === "supportsInterface") {
-          return config.args![0] === ERC7984_WRAPPER_INTERFACE_ID;
-        }
-        return 100000n;
-      },
-    );
+    vi.mocked(provider.readContract).mockImplementation(async (config) => {
+      if (config.functionName === "supportsInterface") {
+        return config.args![0] === ERC7984_WRAPPER_INTERFACE_ID;
+      }
+      return 100000n;
+    });
 
     const { result } = renderWithProviders(() => useTotalSupplySuspense(tokenAddress), {
       signer,

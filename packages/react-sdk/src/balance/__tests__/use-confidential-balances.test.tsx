@@ -25,10 +25,7 @@ describe("useConfidentialBalances", () => {
         throw new Error(`Unexpected readContract address ${address}`);
       },
     );
-    vi.mocked(relayer.userDecrypt).mockResolvedValue({
-      [handleA]: 10n,
-      [handleB]: 20n,
-    });
+    vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handleA]: 10n, [handleB]: 20n });
 
     const { result } = renderWithProviders(() =>
       useConfidentialBalances({
@@ -44,10 +41,7 @@ describe("useConfidentialBalances", () => {
     expect(result.current.data?.results.get(tokenAddress)).toBe(10n);
     expect(result.current.data?.results.get(otherTokenAddress)).toBe(20n);
     expect(provider.readContract).toHaveBeenCalledWith(
-      expect.objectContaining({
-        functionName: "confidentialBalanceOf",
-        address: tokenAddress,
-      }),
+      expect.objectContaining({ functionName: "confidentialBalanceOf", address: tokenAddress }),
     );
     expect(provider.readContract).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -70,10 +64,7 @@ describe("useConfidentialBalances", () => {
     vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handle]: 33n });
 
     const { result } = renderWithProviders(() =>
-      useConfidentialBalances({
-        addresses: [mixedCaseToken],
-        account: userAddress,
-      }),
+      useConfidentialBalances({ addresses: [mixedCaseToken], account: userAddress }),
     );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true), {
@@ -122,10 +113,7 @@ describe("useConfidentialBalances", () => {
     });
     expect(result.current.data?.results.get(tokenAddress)).toBe(77n);
     expect(provider.readContract).toHaveBeenCalledWith(
-      expect.objectContaining({
-        functionName: "confidentialBalanceOf",
-        args: [OTHER],
-      }),
+      expect.objectContaining({ functionName: "confidentialBalanceOf", args: [OTHER] }),
     );
   });
 
@@ -151,10 +139,7 @@ describe("useConfidentialBalances", () => {
           throw new Error(`Unexpected readContract address ${address}`);
         },
       );
-      vi.mocked(relayer.userDecrypt).mockResolvedValue({
-        [handleA]: 10n,
-        [handleB]: 20n,
-      });
+      vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handleA]: 10n, [handleB]: 20n });
 
       const tokens = [tokenAddress, otherTokenAddress];
       const { result } = renderWithProviders(() =>
@@ -215,10 +200,7 @@ describe("useConfidentialBalances", () => {
       tokenAddress,
     }) => {
       const { result } = renderWithProviders(() =>
-        useConfidentialBalances({
-          addresses: [tokenAddress],
-          account: undefined,
-        }),
+        useConfidentialBalances({ addresses: [tokenAddress], account: undefined }),
       );
 
       expect(result.current.isPending).toBe(true);

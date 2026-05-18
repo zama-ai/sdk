@@ -137,11 +137,7 @@ describe("useConfidentialIsOperator", () => {
     vi.mocked(provider.readContract).mockResolvedValue(true);
 
     const { result } = renderWithProviders(() =>
-      useConfidentialIsOperator({
-        address: tokenAddress,
-        spender: spenderAddress,
-        holder: HOLDER,
-      }),
+      useConfidentialIsOperator({ address: tokenAddress, spender: spenderAddress, holder: HOLDER }),
     );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -165,20 +161,13 @@ describe("useConfidentialIsOperator", () => {
     vi.mocked(signer.requireWalletAccount).mockClear();
 
     const { result } = renderWithProviders(() =>
-      useConfidentialIsOperator({
-        address: tokenAddress,
-        spender: spenderAddress,
-        holder: HOLDER,
-      }),
+      useConfidentialIsOperator({ address: tokenAddress, spender: spenderAddress, holder: HOLDER }),
     );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(provider.readContract).toHaveBeenCalledWith(
-      expect.objectContaining({
-        functionName: "isOperator",
-        args: [HOLDER, spenderAddress],
-      }),
+      expect.objectContaining({ functionName: "isOperator", args: [HOLDER, spenderAddress] }),
     );
     expect(signer.requireWalletAccount).not.toHaveBeenCalled();
   });
@@ -204,10 +193,7 @@ describe("useConfidentialIsOperatorSuspense", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(provider.readContract).toHaveBeenCalledWith(
-      expect.objectContaining({
-        functionName: "isOperator",
-        args: [HOLDER, spenderAddress],
-      }),
+      expect.objectContaining({ functionName: "isOperator", args: [HOLDER, spenderAddress] }),
     );
   });
 
@@ -231,10 +217,7 @@ describe("useConfidentialIsOperatorSuspense", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toBe(true);
     expect(provider.readContract).toHaveBeenCalledWith(
-      expect.objectContaining({
-        functionName: "isOperator",
-        args: [OTHER, spenderAddress],
-      }),
+      expect.objectContaining({ functionName: "isOperator", args: [OTHER, spenderAddress] }),
     );
   });
 });

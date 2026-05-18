@@ -49,11 +49,7 @@ describe("createConfig", () => {
   describe("signer resolution", () => {
     test("creates WagmiSigner from wagmiConfig", () => {
       const wagmiConfig = mockWagmiConfig();
-      createWagmiConfig({
-        chains: [sepolia],
-        wagmiConfig,
-        relayers: { [11155111]: web() },
-      });
+      createWagmiConfig({ chains: [sepolia], wagmiConfig, relayers: { [11155111]: web() } });
       expect(MockWagmiSigner).toHaveBeenCalledWith({ config: wagmiConfig });
     });
 
@@ -66,19 +62,12 @@ describe("createConfig", () => {
         walletClient,
         relayers: { [11155111]: web() },
       });
-      expect(MockViemSigner).toHaveBeenCalledWith({
-        walletClient,
-        ethereum: undefined,
-      });
+      expect(MockViemSigner).toHaveBeenCalledWith({ walletClient, ethereum: undefined });
     });
 
     test("creates EthersSigner from ethers config", () => {
       const ethereum = { request: vi.fn() } as any;
-      createEthersConfig({
-        chains: [sepolia],
-        ethereum,
-        relayers: { [11155111]: web() },
-      });
+      createEthersConfig({ chains: [sepolia], ethereum, relayers: { [11155111]: web() } });
       expect(MockEthersSigner).toHaveBeenCalledWith(expect.objectContaining({ ethereum }));
     });
   });

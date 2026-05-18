@@ -1,19 +1,16 @@
 import { waitFor } from "@testing-library/react";
 import { ERC7984_WRAPPER_INTERFACE_ID, ERC7984_WRAPPER_INTERFACE_ID_LEGACY } from "@zama-fhe/sdk";
-import type { ContractFunctionParameters } from "viem";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { useTotalSupply } from "../use-total-supply";
 
 describe("useTotalSupply", () => {
   test("default", async ({ renderWithProviders, provider, tokenAddress }) => {
-    vi.mocked(provider.readContract).mockImplementation(
-      async (config: ContractFunctionParameters) => {
-        if (config.functionName === "supportsInterface") {
-          return config.args![0] === ERC7984_WRAPPER_INTERFACE_ID;
-        }
-        return 42000n;
-      },
-    );
+    vi.mocked(provider.readContract).mockImplementation(async (config) => {
+      if (config.functionName === "supportsInterface") {
+        return config.args![0] === ERC7984_WRAPPER_INTERFACE_ID;
+      }
+      return 42000n;
+    });
 
     const { result } = renderWithProviders(() => useTotalSupply(tokenAddress));
 
@@ -23,10 +20,7 @@ describe("useTotalSupply", () => {
     expect(data).toBe(42000n);
     expect(dataUpdatedAt).toEqual(expect.any(Number));
     expect(provider.readContract).toHaveBeenCalledWith(
-      expect.objectContaining({
-        functionName: "inferredTotalSupply",
-        address: tokenAddress,
-      }),
+      expect.objectContaining({ functionName: "inferredTotalSupply", address: tokenAddress }),
     );
   });
 
@@ -35,14 +29,12 @@ describe("useTotalSupply", () => {
     provider,
     tokenAddress,
   }) => {
-    vi.mocked(provider.readContract).mockImplementation(
-      async (config: ContractFunctionParameters) => {
-        if (config.functionName === "supportsInterface") {
-          return config.args![0] === ERC7984_WRAPPER_INTERFACE_ID_LEGACY;
-        }
-        return 21000n;
-      },
-    );
+    vi.mocked(provider.readContract).mockImplementation(async (config) => {
+      if (config.functionName === "supportsInterface") {
+        return config.args![0] === ERC7984_WRAPPER_INTERFACE_ID_LEGACY;
+      }
+      return 21000n;
+    });
 
     const { result } = renderWithProviders(() => useTotalSupply(tokenAddress));
 
@@ -50,10 +42,7 @@ describe("useTotalSupply", () => {
 
     expect(result.current.data).toBe(21000n);
     expect(provider.readContract).toHaveBeenCalledWith(
-      expect.objectContaining({
-        functionName: "totalSupply",
-        address: tokenAddress,
-      }),
+      expect.objectContaining({ functionName: "totalSupply", address: tokenAddress }),
     );
   });
 });

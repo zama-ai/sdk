@@ -306,9 +306,7 @@ describe("useShield optimistic updates", () => {
       expect(setQueryDataSpy).toHaveBeenCalledWith(balanceKey, 3500n);
     });
     expect(cancelSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        queryKey: expect.arrayContaining(["zama.confidentialBalance"]),
-      }),
+      expect.objectContaining({ queryKey: expect.arrayContaining(["zama.confidentialBalance"]) }),
     );
     expect(cancelSpy.mock.invocationCallOrder[0]).toBeDefined();
     expect(setQueryDataSpy.mock.invocationCallOrder[0]).toBeDefined();
@@ -351,9 +349,7 @@ describe("useShield optimistic updates", () => {
 
     expect(queryClient.getQueryData(balanceKey)).toBe(3000n);
     expect(cancelSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        queryKey: expect.arrayContaining(["zama.confidentialBalance"]),
-      }),
+      expect.objectContaining({ queryKey: expect.arrayContaining(["zama.confidentialBalance"]) }),
     );
     expect(cancelSpy.mock.invocationCallOrder[0]).toBeDefined();
     expect(setQueryDataSpy.mock.invocationCallOrder[0]).toBeDefined();

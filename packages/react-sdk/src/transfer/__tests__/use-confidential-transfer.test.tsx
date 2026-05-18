@@ -38,11 +38,7 @@ describe("useConfidentialTransfer", () => {
     queryClient.setQueryData(otherBalanceKey, 777n);
 
     await act(() =>
-      result.current.mutateAsync({
-        to: recipientAddress,
-        amount: 500n,
-        skipBalanceCheck: true,
-      }),
+      result.current.mutateAsync({ to: recipientAddress, amount: 500n, skipBalanceCheck: true }),
     );
 
     expect(queryClient).toHaveInvalidatedQueries([balanceKey]);
@@ -70,11 +66,7 @@ describe("useConfidentialTransfer", () => {
 
     await mutateAndExpectOnSuccess(
       () =>
-        result.current.mutateAsync({
-          to: recipientAddress,
-          amount: 500n,
-          skipBalanceCheck: true,
-        }),
+        result.current.mutateAsync({ to: recipientAddress, amount: 500n, skipBalanceCheck: true }),
       onSuccess,
       (client: QueryClient) => expect(client).toHaveInvalidatedQueries([balanceKey]),
     );
@@ -97,11 +89,7 @@ describe("useConfidentialTransfer", () => {
     );
 
     await act(() =>
-      result.current.mutateAsync({
-        to: recipientAddress,
-        amount: 500n,
-        skipBalanceCheck: true,
-      }),
+      result.current.mutateAsync({ to: recipientAddress, amount: 500n, skipBalanceCheck: true }),
     );
 
     expect(onMutate).toHaveBeenCalledOnce();
@@ -128,11 +116,7 @@ describe("useConfidentialTransfer", () => {
 
     await act(async () => {
       await expect(
-        result.current.mutateAsync({
-          to: recipientAddress,
-          amount: 500n,
-          skipBalanceCheck: true,
-        }),
+        result.current.mutateAsync({ to: recipientAddress, amount: 500n, skipBalanceCheck: true }),
       ).rejects.toThrow();
     });
 
@@ -159,11 +143,7 @@ describe("useConfidentialTransfer", () => {
     );
 
     await act(() =>
-      result.current.mutateAsync({
-        to: recipientAddress,
-        amount: 500n,
-        skipBalanceCheck: true,
-      }),
+      result.current.mutateAsync({ to: recipientAddress, amount: 500n, skipBalanceCheck: true }),
     );
 
     expect(onMutate).toHaveBeenCalledOnce();
@@ -197,11 +177,7 @@ describe("useConfidentialTransfer", () => {
     );
 
     await act(() =>
-      result.current.mutateAsync({
-        to: recipientAddress,
-        amount: 500n,
-        skipBalanceCheck: true,
-      }),
+      result.current.mutateAsync({ to: recipientAddress, amount: 500n, skipBalanceCheck: true }),
     );
 
     expect(onMutate).toHaveBeenCalledOnce();
@@ -234,11 +210,7 @@ describe("useConfidentialTransfer", () => {
 
     await act(async () => {
       await expect(
-        result.current.mutateAsync({
-          to: recipientAddress,
-          amount: 500n,
-          skipBalanceCheck: true,
-        }),
+        result.current.mutateAsync({ to: recipientAddress, amount: 500n, skipBalanceCheck: true }),
       ).rejects.toThrow();
     });
 
@@ -273,11 +245,7 @@ describe("useConfidentialTransfer", () => {
     );
 
     await act(() =>
-      result.current.mutateAsync({
-        to: recipientAddress,
-        amount: 500n,
-        skipBalanceCheck: true,
-      }),
+      result.current.mutateAsync({ to: recipientAddress, amount: 500n, skipBalanceCheck: true }),
     );
 
     expect(onMutate).toHaveBeenCalledOnce();
@@ -314,10 +282,7 @@ describe("useConfidentialTransfer", () => {
     const { Wrapper } = createWrapper({ signer, relayer });
     const { result } = renderHook(
       () => ({
-        balance: useConfidentialBalance({
-          address: tokenAddress,
-          account: userAddress,
-        }),
+        balance: useConfidentialBalance({ address: tokenAddress, account: userAddress }),
         transfer: useConfidentialTransfer({ address: tokenAddress }),
       }),
       { wrapper: Wrapper },
@@ -372,20 +337,14 @@ describe("useConfidentialTransfer optimistic updates", () => {
     const setQueryDataSpy = vi.spyOn(queryClient, "setQueryData");
 
     await act(async () => {
-      result.current.mutate({
-        to: recipientAddress,
-        amount: 1200n,
-        skipBalanceCheck: true,
-      });
+      result.current.mutate({ to: recipientAddress, amount: 1200n, skipBalanceCheck: true });
     });
 
     await waitFor(() => {
       expect(queryClient.getQueryData(balanceKey)).toBe(3800n);
     });
     expect(cancelSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        queryKey: expect.arrayContaining(["zama.confidentialBalance"]),
-      }),
+      expect.objectContaining({ queryKey: expect.arrayContaining(["zama.confidentialBalance"]) }),
     );
     expect(cancelSpy.mock.invocationCallOrder[0]).toBeDefined();
     expect(setQueryDataSpy.mock.invocationCallOrder[0]).toBeDefined();
@@ -414,11 +373,7 @@ describe("useConfidentialTransfer optimistic updates", () => {
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(tokenAddress, userAddress);
 
     await act(() =>
-      result.current.mutateAsync({
-        to: recipientAddress,
-        amount: 500n,
-        skipBalanceCheck: true,
-      }),
+      result.current.mutateAsync({ to: recipientAddress, amount: 500n, skipBalanceCheck: true }),
     );
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(queryClient.getQueryData(balanceKey)).toBeUndefined();
@@ -442,17 +397,11 @@ describe("useConfidentialTransfer optimistic updates", () => {
     const cancelSpy = vi.spyOn(queryClient, "cancelQueries");
 
     await act(() =>
-      result.current.mutateAsync({
-        to: recipientAddress,
-        amount: 500n,
-        skipBalanceCheck: true,
-      }),
+      result.current.mutateAsync({ to: recipientAddress, amount: 500n, skipBalanceCheck: true }),
     );
 
     expect(cancelSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        queryKey: expect.arrayContaining(["zama.confidentialBalance"]),
-      }),
+      expect.objectContaining({ queryKey: expect.arrayContaining(["zama.confidentialBalance"]) }),
     );
   });
 
@@ -478,11 +427,7 @@ describe("useConfidentialTransfer optimistic updates", () => {
     queryClient.setQueryData(balanceKey, 5000n);
 
     await act(async () => {
-      result.current.mutate({
-        to: recipientAddress,
-        amount: 1200n,
-        skipBalanceCheck: true,
-      });
+      result.current.mutate({ to: recipientAddress, amount: 1200n, skipBalanceCheck: true });
     });
 
     expect(queryClient.getQueryData(balanceKey)).toBe(5000n);
@@ -511,20 +456,14 @@ describe("useConfidentialTransfer optimistic updates", () => {
     const setQueryDataSpy = vi.spyOn(queryClient, "setQueryData");
 
     await act(async () => {
-      result.current.mutate({
-        to: recipientAddress,
-        amount: 1200n,
-        skipBalanceCheck: true,
-      });
+      result.current.mutate({ to: recipientAddress, amount: 1200n, skipBalanceCheck: true });
     });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
 
     expect(queryClient.getQueryData(balanceKey)).toBe(5000n);
     expect(cancelSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        queryKey: expect.arrayContaining(["zama.confidentialBalance"]),
-      }),
+      expect.objectContaining({ queryKey: expect.arrayContaining(["zama.confidentialBalance"]) }),
     );
     expect(cancelSpy.mock.invocationCallOrder[0]).toBeDefined();
     expect(setQueryDataSpy.mock.invocationCallOrder[0]).toBeDefined();
@@ -579,11 +518,7 @@ describe("useConfidentialTransfer optimistic updates", () => {
 
     try {
       await act(async () => {
-        result.current.mutate({
-          to: recipientAddress,
-          amount: 500n,
-          skipBalanceCheck: true,
-        });
+        result.current.mutate({ to: recipientAddress, amount: 500n, skipBalanceCheck: true });
       });
 
       await waitFor(() => expect(result.current.isError).toBe(true));

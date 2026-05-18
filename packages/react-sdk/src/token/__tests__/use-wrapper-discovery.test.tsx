@@ -72,10 +72,7 @@ describe("useWrapperDiscovery", () => {
       .mockResolvedValueOnce(true); // isConfidentialTokenValid
 
     const { result } = renderWithProviders(() =>
-      useWrapperDiscovery({
-        tokenAddress: tokenAddress,
-        erc20Address: ERC20_ADDR,
-      }),
+      useWrapperDiscovery({ tokenAddress: tokenAddress, erc20Address: ERC20_ADDR }),
     );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
