@@ -1,18 +1,9 @@
 import { act } from "@testing-library/react";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { describe, expect, test, vi } from "../../test-fixtures";
-import { expectCacheInvalidated, expectCacheUntouched } from "../../test-helpers";
 import { useConfidentialSetOperator } from "../use-confidential-set-operator";
-import {
-  OTHER_TOKEN,
-  RECIPIENT,
-  TOKEN,
-  expectDefaultMutationState,
-  mutateAndExpectOnSuccess,
-} from "../../__tests__/mutation-test-helpers";
-
 describe("useConfidentialSetOperator", () => {
-  test("default", ({ renderWithProviders }) => {
+  test("default", ({ renderWithProviders, TOKEN, expectDefaultMutationState }) => {
     const { result } = renderWithProviders(() => useConfidentialSetOperator(TOKEN));
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
@@ -22,6 +13,11 @@ describe("useConfidentialSetOperator", () => {
   test("cache: invalidates operator query after confidential set operator", async ({
     renderWithProviders,
     signer,
+    OTHER_TOKEN,
+    RECIPIENT,
+    TOKEN,
+    expectCacheInvalidated,
+    expectCacheUntouched,
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
@@ -39,7 +35,14 @@ describe("useConfidentialSetOperator", () => {
     expectCacheUntouched(queryClient, otherOperatorKey, false);
   });
 
-  test("behavior: forwards onSuccess callback", async ({ renderWithProviders, signer }) => {
+  test("behavior: forwards onSuccess callback", async ({
+    renderWithProviders,
+    signer,
+    RECIPIENT,
+    TOKEN,
+    expectCacheInvalidated,
+    mutateAndExpectOnSuccess,
+  }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
     const operatorKey = zamaQueryKeys.confidentialIsOperator.token(TOKEN);

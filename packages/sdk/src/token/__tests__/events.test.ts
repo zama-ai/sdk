@@ -1,13 +1,4 @@
-import {
-  createMockChain,
-  describe,
-  expect,
-  it,
-  TEST_PUBLIC_KEY,
-  vi,
-  type MockSigner,
-} from "../../test-fixtures";
-import type { GenericProvider, GenericStorage } from "../../types";
+import { describe, expect, test, vi, type CreateSDKFn } from "../../test-fixtures";
 import { Topics } from "../../events";
 import { Token } from "../token";
 import { WrappedToken } from "../wrapped-token";
@@ -17,12 +8,11 @@ import {
   ZamaSDKEvents,
 } from "../../events/sdk-events";
 import { TransactionRevertedError } from "../../errors";
-import type { RelayerSDK } from "../../relayer/relayer-sdk";
-import { ZamaSDK } from "../../zama-sdk";
-import type { ZamaConfig } from "../../config/types";
 import type { Address } from "viem";
+import type { GenericProvider } from "../../types";
 import { ZERO_HANDLE } from "../../utils/handles";
-const _TOKEN_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
+
+const TEST_PUBLIC_KEY = `0x${"11".repeat(32)}` as const;
 
 /**
  * Build a ZamaSDK with an event listener wired up, together with a fresh
@@ -30,34 +20,20 @@ const _TOKEN_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
  * to inspect.
  */
 function setupSdkWithEvents(opts: {
-  relayer: RelayerSDK;
-  signer: MockSigner;
-  provider: GenericProvider;
-  storage: GenericStorage;
+  createSDK: CreateSDKFn;
   tokenAddress: Address;
   wrapper?: Address;
 }) {
   const events: ZamaSDKEvent[] = [];
   const onEvent: ZamaSDKEventListener = (event) => events.push(event);
-  const sdk = new ZamaSDK({
-    chains: [createMockChain({ id: 31337 })],
-    relayer: opts.relayer as unknown as ZamaConfig["relayer"],
-    provider: opts.provider,
-    signer: opts.signer,
-    storage: opts.storage,
-    permitStorage: opts.storage,
-    keypairTTL: 2592000,
-    permitTTL: 1,
-    registryTTL: 86400,
-    onEvent,
-  });
+  const sdk = opts.createSDK({ onEvent });
   const readonlyToken = new Token(sdk, opts.tokenAddress);
   const token = new WrappedToken(sdk, opts.wrapper ?? opts.tokenAddress);
   return { sdk, events, readonlyToken, token };
 }
 
 describe("ZamaSDKEvents constants", () => {
-  it("has all expected event keys", () => {
+  test("has all expected event keys", () => {
     expect(ZamaSDKEvents.EncryptStart).toBe("encrypt:start");
     expect(ZamaSDKEvents.EncryptEnd).toBe("encrypt:end");
     expect(ZamaSDKEvents.EncryptError).toBe("encrypt:error");
@@ -79,7 +55,7 @@ describe("ZamaSDKEvents constants", () => {
     expect(ZamaSDKEvents.RevokeDelegationSubmitted).toBe("revokeDelegation:submitted");
   });
 
-  it("has unique event values", () => {
+  test("has unique event values", () => {
     const values = Object.values(ZamaSDKEvents);
     expect(new Set(values).size).toBe(values.length);
   });
@@ -90,20 +66,15 @@ describe("Token.balanceOf event emissions", () => {
   // unified pipeline. They carry `handles` and `durationMs`, but not `tokenAddress`
   // (the pipeline is token-agnostic — callers correlate by handle).
 
-  it("emits DecryptStart and DecryptEnd during balanceOf", async ({
-    relayer,
-    signer,
+  test("emits DecryptStart and DecryptEnd during balanceOf", async ({
+    createSDK,
     tokenAddress,
     handle,
-    storage,
     userAddress,
     provider,
   }) => {
     const { readonlyToken, events } = setupSdkWithEvents({
-      relayer,
-      signer,
-      provider,
-      storage,
+      createSDK,
       tokenAddress,
     });
     vi.mocked(provider.readContract).mockResolvedValue(handle);
@@ -118,19 +89,14 @@ describe("Token.balanceOf event emissions", () => {
     );
   });
 
-  it("does not emit decrypt events for zero balance handle", async ({
-    relayer,
-    signer,
+  test("does not emit decrypt events for zero balance handle", async ({
+    createSDK,
     tokenAddress,
-    storage,
     userAddress,
     provider,
   }) => {
     const { readonlyToken, events } = setupSdkWithEvents({
-      relayer,
-      signer,
-      provider,
-      storage,
+      createSDK,
       tokenAddress,
     });
     vi.mocked(provider.readContract).mockResolvedValue(ZERO_HANDLE);
@@ -142,20 +108,15 @@ describe("Token.balanceOf event emissions", () => {
     expect(types).not.toContain(ZamaSDKEvents.DecryptEnd);
   });
 
-  it("includes durationMs and handles on DecryptEnd", async ({
-    relayer,
-    signer,
+  test("includes durationMs and handles on DecryptEnd", async ({
+    createSDK,
     tokenAddress,
     handle,
-    storage,
     userAddress,
     provider,
   }) => {
     const { readonlyToken, events } = setupSdkWithEvents({
-      relayer,
-      signer,
-      provider,
-      storage,
+      createSDK,
       tokenAddress,
     });
     vi.mocked(provider.readContract).mockResolvedValue(handle);
@@ -169,21 +130,17 @@ describe("Token.balanceOf event emissions", () => {
     expect("handles" in endEvent! && endEvent.handles).toContain(handle);
   });
 
-  it("emits DecryptError when relayer.userDecrypt fails", async ({
+  test("emits DecryptError when relayer.userDecrypt fails", async ({
+    createSDK,
     relayer,
-    signer,
     tokenAddress,
     handle,
-    storage,
     userAddress,
     provider,
   }) => {
     relayer.userDecrypt = vi.fn().mockRejectedValue(new Error("decrypt boom"));
     const { readonlyToken, events } = setupSdkWithEvents({
-      relayer,
-      signer,
-      provider,
-      storage,
+      createSDK,
       tokenAddress,
     });
     vi.mocked(provider.readContract).mockResolvedValue(handle);
@@ -197,27 +154,14 @@ describe("Token.balanceOf event emissions", () => {
     expect("durationMs" in errorEvent! && errorEvent.durationMs).toBeGreaterThanOrEqual(0);
   });
 
-  it("works without onEvent (no-op, does not throw)", async ({
-    relayer,
-    signer,
+  test("works without onEvent (no-op, does not throw)", async ({
+    sdk,
     tokenAddress,
     handle,
-    storage,
     userAddress,
     provider,
   }) => {
-    const sdk = new ZamaSDK({
-      chains: [createMockChain({ id: 31337 })],
-      relayer: relayer as unknown as ZamaConfig["relayer"],
-      provider,
-      signer,
-      storage,
-      permitStorage: storage,
-      keypairTTL: 2592000,
-      permitTTL: 1,
-      registryTTL: 86400,
-      onEvent: undefined,
-    });
+    // `sdk` fixture is built with `onEvent: undefined` by default.
     const token = new Token(sdk, tokenAddress);
     vi.mocked(provider.readContract).mockResolvedValue(handle);
     await expect(token.balanceOf(userAddress)).resolves.toBe(1000n);
@@ -228,20 +172,17 @@ describe("Token.decryptBalanceAs event emissions", () => {
   // decryptBalanceAs delegates to sdk.delegatedUserDecrypt(), which emits events
   // at the SDK level (without tokenAddress). Events still carry timestamp.
 
-  it("emits decrypt events with timestamp (no tokenAddress — SDK-level emission)", async ({
+  test("emits decrypt events with timestamp (no tokenAddress — SDK-level emission)", async ({
+    createSDK,
     relayer,
     signer,
     tokenAddress,
     handle,
-    storage,
     delegatorAddress,
     provider,
   }) => {
     const { readonlyToken, events } = setupSdkWithEvents({
-      relayer,
-      signer,
-      provider,
-      storage,
+      createSDK,
       tokenAddress,
     });
     // readConfidentialBalanceOf → non-zero handle; getDelegationExpiry → permanent (skips block-timestamp RPC)
@@ -249,7 +190,12 @@ describe("Token.decryptBalanceAs event emissions", () => {
       .mockResolvedValueOnce(handle)
       .mockResolvedValue(2n ** 64n - 1n);
     relayer.createDelegatedUserDecryptEIP712 = vi.fn().mockResolvedValue({
-      domain: { name: "test", version: "1", chainId: 1, verifyingContract: "0xkms" },
+      domain: {
+        name: "test",
+        version: "1",
+        chainId: 1,
+        verifyingContract: "0xkms",
+      },
       types: { DelegatedUserDecryptRequestVerification: [] },
       message: {
         publicKey: TEST_PUBLIC_KEY,
@@ -280,20 +226,11 @@ describe("Token.decryptBalanceAs event emissions", () => {
 
 describe("Token event emissions", () => {
   describe("confidentialTransfer events", () => {
-    it("emits EncryptStart, EncryptEnd, TransferSubmitted", async ({
-      relayer,
-      signer,
+    test("emits EncryptStart, EncryptEnd, TransferSubmitted", async ({
+      createSDK,
       tokenAddress,
-      storage,
-      provider,
     }) => {
-      const { token, events } = setupSdkWithEvents({
-        relayer,
-        signer,
-        provider,
-        storage,
-        tokenAddress,
-      });
+      const { token, events } = setupSdkWithEvents({ createSDK, tokenAddress });
       await token.confidentialTransfer(
         "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address,
         100n,
@@ -310,20 +247,8 @@ describe("Token event emissions", () => {
       );
     });
 
-    it("includes txHash on TransferSubmitted event", async ({
-      relayer,
-      signer,
-      tokenAddress,
-      storage,
-      provider,
-    }) => {
-      const { token, events } = setupSdkWithEvents({
-        relayer,
-        signer,
-        provider,
-        storage,
-        tokenAddress,
-      });
+    test("includes txHash on TransferSubmitted event", async ({ createSDK, tokenAddress }) => {
+      const { token, events } = setupSdkWithEvents({ createSDK, tokenAddress });
       await token.confidentialTransfer(
         "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address,
         100n,
@@ -335,20 +260,8 @@ describe("Token event emissions", () => {
       expect("txHash" in submitted! && submitted.txHash).toBe("0xtxhash");
     });
 
-    it("includes durationMs on EncryptEnd event", async ({
-      relayer,
-      signer,
-      tokenAddress,
-      storage,
-      provider,
-    }) => {
-      const { token, events } = setupSdkWithEvents({
-        relayer,
-        signer,
-        provider,
-        storage,
-        tokenAddress,
-      });
+    test("includes durationMs on EncryptEnd event", async ({ createSDK, tokenAddress }) => {
+      const { token, events } = setupSdkWithEvents({ createSDK, tokenAddress });
       await token.confidentialTransfer(
         "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address,
         100n,
@@ -360,21 +273,13 @@ describe("Token event emissions", () => {
       expect("durationMs" in endEvent! && endEvent.durationMs).toBeGreaterThanOrEqual(0);
     });
 
-    it("emits EncryptError when encryption fails", async ({
+    test("emits EncryptError when encryption fails", async ({
+      createSDK,
       relayer,
-      signer,
       tokenAddress,
-      storage,
-      provider,
     }) => {
       relayer.encrypt = vi.fn().mockRejectedValue(new Error("encrypt boom"));
-      const { token, events } = setupSdkWithEvents({
-        relayer,
-        signer,
-        provider,
-        storage,
-        tokenAddress,
-      });
+      const { token, events } = setupSdkWithEvents({ createSDK, tokenAddress });
 
       await expect(
         token.confidentialTransfer("0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address, 100n, {
@@ -389,21 +294,13 @@ describe("Token event emissions", () => {
       expect("durationMs" in errorEvent! && errorEvent.durationMs).toBeGreaterThanOrEqual(0);
     });
 
-    it("emits TransactionError (not EncryptError) when writeContract fails", async ({
-      relayer,
+    test("emits TransactionError (not EncryptError) when writeContract fails", async ({
+      createSDK,
       signer,
       tokenAddress,
-      storage,
-      provider,
     }) => {
       vi.mocked(signer.writeContract).mockRejectedValue(new Error("tx reverted"));
-      const { token, events } = setupSdkWithEvents({
-        relayer,
-        signer,
-        provider,
-        storage,
-        tokenAddress,
-      });
+      const { token, events } = setupSdkWithEvents({ createSDK, tokenAddress });
 
       await expect(
         token.confidentialTransfer("0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address, 100n, {
@@ -428,20 +325,11 @@ describe("Token event emissions", () => {
   });
 
   describe("confidentialTransferFrom events", () => {
-    it("emits EncryptStart, EncryptEnd, TransferFromSubmitted", async ({
-      relayer,
-      signer,
+    test("emits EncryptStart, EncryptEnd, TransferFromSubmitted", async ({
+      createSDK,
       tokenAddress,
-      storage,
-      provider,
     }) => {
-      const { token, events } = setupSdkWithEvents({
-        relayer,
-        signer,
-        provider,
-        storage,
-        tokenAddress,
-      });
+      const { token, events } = setupSdkWithEvents({ createSDK, tokenAddress });
       await token.confidentialTransferFrom(
         "0xcccccccccccccccccccccccccccccccccccccccc" as Address,
         "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address,
@@ -456,40 +344,16 @@ describe("Token event emissions", () => {
   });
 
   describe("setOperator events", () => {
-    it("emits SetOperatorSubmitted", async ({
-      relayer,
-      signer,
-      tokenAddress,
-      storage,
-      provider,
-    }) => {
-      const { token, events } = setupSdkWithEvents({
-        relayer,
-        signer,
-        provider,
-        storage,
-        tokenAddress,
-      });
+    test("emits SetOperatorSubmitted", async ({ createSDK, tokenAddress }) => {
+      const { token, events } = setupSdkWithEvents({ createSDK, tokenAddress });
       await token.setOperator("0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address);
 
       const types = events.map((e) => e.type);
       expect(types).toContain(ZamaSDKEvents.SetOperatorSubmitted);
     });
 
-    it("includes txHash on SetOperatorSubmitted event", async ({
-      relayer,
-      signer,
-      tokenAddress,
-      storage,
-      provider,
-    }) => {
-      const { token, events } = setupSdkWithEvents({
-        relayer,
-        signer,
-        provider,
-        storage,
-        tokenAddress,
-      });
+    test("includes txHash on SetOperatorSubmitted event", async ({ createSDK, tokenAddress }) => {
+      const { token, events } = setupSdkWithEvents({ createSDK, tokenAddress });
       await token.setOperator("0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address);
 
       const submitted = events.find((e) => e.type === ZamaSDKEvents.SetOperatorSubmitted);
@@ -499,11 +363,9 @@ describe("Token event emissions", () => {
   });
 
   describe("shield events", () => {
-    it("emits ShieldSubmitted for ERC-20 shield", async ({
-      relayer,
-      signer,
+    test("emits ShieldSubmitted for ERC-20 shield", async ({
+      createSDK,
       tokenAddress,
-      storage,
       provider,
     }) => {
       vi.mocked(provider.readContract)
@@ -511,13 +373,7 @@ describe("Token event emissions", () => {
         .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
         .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
         .mockResolvedValueOnce(2n ** 256n - 1n); // allowance
-      const { token, events } = setupSdkWithEvents({
-        relayer,
-        signer,
-        provider,
-        storage,
-        tokenAddress,
-      });
+      const { token, events } = setupSdkWithEvents({ createSDK, tokenAddress });
 
       await token.shield(100n);
 
@@ -527,20 +383,8 @@ describe("Token event emissions", () => {
   });
 
   describe("unwrap events", () => {
-    it("emits EncryptStart, EncryptEnd, UnwrapSubmitted", async ({
-      relayer,
-      signer,
-      tokenAddress,
-      storage,
-      provider,
-    }) => {
-      const { token, events } = setupSdkWithEvents({
-        relayer,
-        signer,
-        provider,
-        storage,
-        tokenAddress,
-      });
+    test("emits EncryptStart, EncryptEnd, UnwrapSubmitted", async ({ createSDK, tokenAddress }) => {
+      const { token, events } = setupSdkWithEvents({ createSDK, tokenAddress });
       await token.unwrap(50n);
 
       const types = events.map((e) => e.type);
@@ -551,14 +395,8 @@ describe("Token event emissions", () => {
   });
 
   describe("unwrapAll events", () => {
-    it("emits UnwrapSubmitted", async ({ relayer, signer, tokenAddress, storage, provider }) => {
-      const { token, events } = setupSdkWithEvents({
-        relayer,
-        signer,
-        provider,
-        storage,
-        tokenAddress,
-      });
+    test("emits UnwrapSubmitted", async ({ createSDK, tokenAddress }) => {
+      const { token, events } = setupSdkWithEvents({ createSDK, tokenAddress });
       await token.unwrapAll();
 
       const types = events.map((e) => e.type);
@@ -567,20 +405,11 @@ describe("Token event emissions", () => {
   });
 
   describe("finalizeUnwrap events", () => {
-    it("emits DecryptStart, DecryptEnd, FinalizeUnwrapSubmitted", async ({
-      relayer,
-      signer,
+    test("emits DecryptStart, DecryptEnd, FinalizeUnwrapSubmitted", async ({
+      createSDK,
       tokenAddress,
-      storage,
-      provider,
     }) => {
-      const { token, events } = setupSdkWithEvents({
-        relayer,
-        signer,
-        provider,
-        storage,
-        tokenAddress,
-      });
+      const { token, events } = setupSdkWithEvents({ createSDK, tokenAddress });
       await token.finalizeUnwrap("0xburn" as Address);
 
       const types = events.map((e) => e.type);
@@ -589,23 +418,15 @@ describe("Token event emissions", () => {
   });
 
   describe("approveUnderlying events", () => {
-    it("emits ApproveUnderlyingSubmitted with approve step", async ({
-      relayer,
-      signer,
+    test("emits ApproveUnderlyingSubmitted with approve step", async ({
+      createSDK,
       tokenAddress,
-      storage,
       provider,
     }) => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c")
         .mockResolvedValueOnce(0n);
-      const { token, events } = setupSdkWithEvents({
-        relayer,
-        signer,
-        provider,
-        storage,
-        tokenAddress,
-      });
+      const { token, events } = setupSdkWithEvents({ createSDK, tokenAddress });
       await token.approveUnderlying(100n);
 
       const types = events.map((e) => e.type);
@@ -614,23 +435,15 @@ describe("Token event emissions", () => {
       expect(submitted).toMatchObject({ step: "approve" });
     });
 
-    it("distinguishes reset and approve submissions", async ({
-      relayer,
-      signer,
+    test("distinguishes reset and approve submissions", async ({
+      createSDK,
       tokenAddress,
-      storage,
       provider,
     }) => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c")
         .mockResolvedValueOnce(50n);
-      const { token, events } = setupSdkWithEvents({
-        relayer,
-        signer,
-        provider,
-        storage,
-        tokenAddress,
-      });
+      const { token, events } = setupSdkWithEvents({ createSDK, tokenAddress });
       await token.approveUnderlying(100n);
 
       expect(
@@ -657,21 +470,13 @@ describe("Token event emissions", () => {
       });
     }
 
-    it("emits full unshield event sequence in order", async ({
-      relayer,
-      signer,
+    test("emits full unshield event sequence in order", async ({
+      createSDK,
       tokenAddress,
       userAddress,
-      storage,
       provider,
     }) => {
-      const { token, events } = setupSdkWithEvents({
-        relayer,
-        signer,
-        provider,
-        storage,
-        tokenAddress,
-      });
+      const { token, events } = setupSdkWithEvents({ createSDK, tokenAddress });
       mockReceiptWithUnwrapRequested(provider, userAddress);
 
       await token.unshield(50n, { skipBalanceCheck: true });
@@ -692,21 +497,13 @@ describe("Token event emissions", () => {
       expect(phase2StartIdx).toBeLessThan(phase2SubmitIdx);
     });
 
-    it("includes txHash on phase events", async ({
-      relayer,
-      signer,
+    test("includes txHash on phase events", async ({
+      createSDK,
       tokenAddress,
       userAddress,
-      storage,
       provider,
     }) => {
-      const { token, events } = setupSdkWithEvents({
-        relayer,
-        signer,
-        provider,
-        storage,
-        tokenAddress,
-      });
+      const { token, events } = setupSdkWithEvents({ createSDK, tokenAddress });
       mockReceiptWithUnwrapRequested(provider, userAddress);
 
       await token.unshield(50n, { skipBalanceCheck: true });
@@ -720,21 +517,13 @@ describe("Token event emissions", () => {
       expect("txHash" in phase2! && phase2.txHash).toBeTruthy();
     });
 
-    it("shares the same operationId across all unshield phase events", async ({
-      relayer,
-      signer,
+    test("shares the same operationId across all unshield phase events", async ({
+      createSDK,
       tokenAddress,
       userAddress,
-      storage,
       provider,
     }) => {
-      const { token, events } = setupSdkWithEvents({
-        relayer,
-        signer,
-        provider,
-        storage,
-        tokenAddress,
-      });
+      const { token, events } = setupSdkWithEvents({ createSDK, tokenAddress });
       mockReceiptWithUnwrapRequested(provider, userAddress);
 
       await token.unshield(50n, { skipBalanceCheck: true });
@@ -755,11 +544,10 @@ describe("Token event emissions", () => {
   });
 
   describe("TransactionError events", () => {
-    it("emits TransactionError with operation 'shield:approveAndWrap' on shield failure", async ({
-      relayer,
+    test("emits TransactionError with operation 'shield:approveAndWrap' on shield failure", async ({
+      createSDK,
       signer,
       tokenAddress,
-      storage,
       provider,
     }) => {
       vi.mocked(provider.readContract)
@@ -767,13 +555,7 @@ describe("Token event emissions", () => {
         .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
         .mockResolvedValueOnce(1000n);
       vi.mocked(signer.writeContract).mockRejectedValue(new Error("shield failed"));
-      const { token, events } = setupSdkWithEvents({
-        relayer,
-        signer,
-        provider,
-        storage,
-        tokenAddress,
-      });
+      const { token, events } = setupSdkWithEvents({ createSDK, tokenAddress });
 
       await expect(token.shield(100n, { approvalStrategy: "skip" })).rejects.toThrow();
 
@@ -782,21 +564,13 @@ describe("Token event emissions", () => {
       expect("operation" in txError! && txError.operation).toBe("shield:approveAndWrap");
     });
 
-    it("emits TransactionError with operation 'setOperator' on setOperator failure", async ({
-      relayer,
+    test("emits TransactionError with operation 'setOperator' on setOperator failure", async ({
+      createSDK,
       signer,
       tokenAddress,
-      storage,
-      provider,
     }) => {
       vi.mocked(signer.writeContract).mockRejectedValue(new Error("setOperator failed"));
-      const { token, events } = setupSdkWithEvents({
-        relayer,
-        signer,
-        provider,
-        storage,
-        tokenAddress,
-      });
+      const { token, events } = setupSdkWithEvents({ createSDK, tokenAddress });
 
       await expect(
         token.setOperator("0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address),
@@ -807,21 +581,13 @@ describe("Token event emissions", () => {
       expect("operation" in txError! && txError.operation).toBe("setOperator");
     });
 
-    it("emits TransactionError with operation 'unwrap' on unwrap write failure", async ({
-      relayer,
+    test("emits TransactionError with operation 'unwrap' on unwrap write failure", async ({
+      createSDK,
       signer,
       tokenAddress,
-      storage,
-      provider,
     }) => {
       vi.mocked(signer.writeContract).mockRejectedValue(new Error("unwrap failed"));
-      const { token, events } = setupSdkWithEvents({
-        relayer,
-        signer,
-        provider,
-        storage,
-        tokenAddress,
-      });
+      const { token, events } = setupSdkWithEvents({ createSDK, tokenAddress });
 
       await expect(token.unwrap(50n)).rejects.toThrow();
 
@@ -830,21 +596,13 @@ describe("Token event emissions", () => {
       expect("operation" in txError! && txError.operation).toBe("unwrap");
     });
 
-    it("emits TransactionError with operation 'finalizeUnwrap' on finalize write failure", async ({
-      relayer,
+    test("emits TransactionError with operation 'finalizeUnwrap' on finalize write failure", async ({
+      createSDK,
       signer,
       tokenAddress,
-      storage,
-      provider,
     }) => {
       vi.mocked(signer.writeContract).mockRejectedValue(new Error("finalize tx failed"));
-      const { token, events } = setupSdkWithEvents({
-        relayer,
-        signer,
-        provider,
-        storage,
-        tokenAddress,
-      });
+      const { token, events } = setupSdkWithEvents({ createSDK, tokenAddress });
 
       await expect(token.finalizeUnwrap("0xburn" as Address)).rejects.toThrow();
 

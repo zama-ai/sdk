@@ -1,7 +1,8 @@
 // oxlint-disable jest/expect-expect
 // oxlint-disable jest/no-disabled-tests
-import { test as base } from "vitest";
+import { test as base, type TestAPI } from "vitest";
 import { addressFixtures, type AddressFixtures } from "./addresses";
+import { chainFixtures, type ChainFixtures } from "./chain";
 import { providerFixtures, type ProviderFixtures } from "./provider";
 import { queryContextFixtures, type QueryContextFixtures } from "./query-context";
 import { relayerFixtures, type RelayerFixtures } from "./relayer";
@@ -12,13 +13,31 @@ import { storageFixtures, type StorageFixtures } from "./storage";
 import { tokenFixtures, type TokenFixtures } from "./token";
 
 /**
+ * The flat shape of every fixture the SDK test runner injects. Annotating
+ * `test` with `TestAPI<SdkTestFixtures>` keeps inference fast for downstream
+ * `.extend(...)` chains — TypeScript otherwise gives up after a few layers and
+ * widens destructured fixture parameters to `any`.
+ */
+export type SdkTestFixtures = AddressFixtures &
+  ChainFixtures &
+  RelayerFixtures &
+  SignerFixtures &
+  ProviderFixtures &
+  StorageFixtures &
+  ServiceFixtures &
+  SdkFixtures &
+  TokenFixtures &
+  QueryContextFixtures;
+
+/**
  * Builder chain — each `.extend()` adds a fixture group on top of the previous
  * test. Order matters: later groups can destructure earlier groups' fixtures.
  *
- *   addresses → relayer → signer → provider → storage → services → sdk → token
+ *   addresses → chain → relayer → signer → provider → storage → services → sdk → token
  */
-export const test = base
+export const test: TestAPI<SdkTestFixtures> = base
   .extend<AddressFixtures>(addressFixtures)
+  .extend<ChainFixtures>(chainFixtures)
   .extend<RelayerFixtures>(relayerFixtures)
   .extend<SignerFixtures>(signerFixtures)
   .extend<ProviderFixtures>(providerFixtures)
@@ -28,28 +47,8 @@ export const test = base
   .extend<TokenFixtures>(tokenFixtures)
   .extend<QueryContextFixtures>(queryContextFixtures);
 
-export const it = test;
-
-export {
-  ACL,
-  DELEGATE,
-  DELEGATOR,
-  TEST_ADDR_A,
-  TEST_ADDR_B,
-  TEST_PRIVATE_KEY,
-  TEST_PUBLIC_KEY,
-  TEST_SIGNATURE,
-  TOKEN,
-  USER,
-  VALID_HANDLE,
-  WRAPPER,
-} from "./constants";
-export { createMockChain } from "./chain";
-export { createMockRelayer } from "./relayer";
-export { createMockSigner, type MockSigner } from "./signer";
-export { createMockProvider } from "./provider";
-export { createMockStorage } from "./storage";
 export type { AddressFixtures } from "./addresses";
+export type { ChainFixtures } from "./chain";
 export type { RelayerFixtures } from "./relayer";
 export type { SignerFixtures, CreateMockSignerFn } from "./signer";
 export type { ProviderFixtures } from "./provider";

@@ -1,4 +1,4 @@
-import { describe, it, expect } from "../../test-fixtures";
+import { describe, test, expect } from "../../test-fixtures";
 import type { Hex } from "viem";
 import type { RawLog } from "../../types/transaction";
 import {
@@ -55,7 +55,7 @@ const UNWRAP_REQUEST_ID =
 // ---------------------------------------------------------------------------
 
 describe("decodeConfidentialTransfer", () => {
-  it("decodes a valid ConfidentialTransfer log", () => {
+  test("decodes a valid ConfidentialTransfer log", () => {
     const log = makeLog(Topics.ConfidentialTransfer, [
       addressTopic(ALICE),
       addressTopic(BOB),
@@ -69,12 +69,12 @@ describe("decodeConfidentialTransfer", () => {
     expect(event!.encryptedAmountHandle).toBe(HANDLE);
   });
 
-  it("returns null for wrong topic0", () => {
+  test("returns null for wrong topic0", () => {
     const log = makeLog(Topics.Wrapped, [addressTopic(ALICE), addressTopic(BOB), HANDLE]);
     expect(decodeConfidentialTransfer(log)).toBeNull();
   });
 
-  it("returns null for insufficient topics", () => {
+  test("returns null for insufficient topics", () => {
     const log = makeLog(Topics.ConfidentialTransfer, [addressTopic(ALICE)]);
     expect(decodeConfidentialTransfer(log)).toBeNull();
   });
@@ -85,7 +85,7 @@ describe("decodeConfidentialTransfer", () => {
 // ---------------------------------------------------------------------------
 
 describe("decodeWrapped", () => {
-  it("decodes a valid Wrapped log", () => {
+  test("decodes a valid Wrapped log", () => {
     const data = `0x${uint256(500n)}` as Hex;
     const log = makeLog(Topics.Wrapped, [addressTopic(BOB)], data);
     const event = decodeWrapped(log);
@@ -95,12 +95,12 @@ describe("decodeWrapped", () => {
     expect(event!.amountIn).toBe(500n);
   });
 
-  it("returns null for wrong topic0", () => {
+  test("returns null for wrong topic0", () => {
     const log = makeLog(Topics.ConfidentialTransfer, [addressTopic(BOB)]);
     expect(decodeWrapped(log)).toBeNull();
   });
 
-  it("returns null for insufficient topics", () => {
+  test("returns null for insufficient topics", () => {
     const log = makeLog(Topics.Wrapped, []);
     expect(decodeWrapped(log)).toBeNull();
   });
@@ -111,7 +111,7 @@ describe("decodeWrapped", () => {
 // ---------------------------------------------------------------------------
 
 describe("decodeUnwrapRequested", () => {
-  it("decodes a valid UnwrapRequested log", () => {
+  test("decodes a valid UnwrapRequested log", () => {
     // UnwrapRequested(address indexed receiver, bytes32 amount)
     const data = `0x${HANDLE.slice(2)}` as Hex;
     const log = makeLog(Topics.UnwrapRequestedLegacy, [addressTopic(ALICE)], data);
@@ -123,7 +123,7 @@ describe("decodeUnwrapRequested", () => {
     expect(event!.encryptedAmount).toBe(HANDLE);
   });
 
-  it("decodes a valid UnwrapRequested log with unwrapRequestId", () => {
+  test("decodes a valid UnwrapRequested log with unwrapRequestId", () => {
     const data = `0x${HANDLE.slice(2)}` as Hex;
     const log = makeLog(Topics.UnwrapRequested, [addressTopic(ALICE), UNWRAP_REQUEST_ID], data);
     const event = decodeUnwrapRequested(log);
@@ -134,12 +134,12 @@ describe("decodeUnwrapRequested", () => {
     expect(event!.encryptedAmount).toBe(HANDLE);
   });
 
-  it("returns null for wrong topic0", () => {
+  test("returns null for wrong topic0", () => {
     const log = makeLog(Topics.Wrapped, [addressTopic(ALICE), UNWRAP_REQUEST_ID]);
     expect(decodeUnwrapRequested(log)).toBeNull();
   });
 
-  it("returns null for insufficient topics", () => {
+  test("returns null for insufficient topics", () => {
     const log = makeLog(Topics.UnwrapRequestedLegacy, []);
     expect(decodeUnwrapRequested(log)).toBeNull();
   });
@@ -150,7 +150,7 @@ describe("decodeUnwrapRequested", () => {
 // ---------------------------------------------------------------------------
 
 describe("decodeUnwrappedFinalized", () => {
-  it("decodes a valid UnwrapFinalized log", () => {
+  test("decodes a valid UnwrapFinalized log", () => {
     // UnwrapFinalized(address indexed receiver, bytes32 encryptedAmount, uint64 cleartextAmount)
     const data = `0x${HANDLE.slice(2)}${uint256(450n)}` as Hex;
     const log = makeLog(Topics.UnwrapFinalizedLegacy, [addressTopic(ALICE)], data);
@@ -162,7 +162,7 @@ describe("decodeUnwrappedFinalized", () => {
     expect(event!.cleartextAmount).toBe(450n);
   });
 
-  it("decodes a valid UnwrapFinalized log with unwrapRequestId", () => {
+  test("decodes a valid UnwrapFinalized log with unwrapRequestId", () => {
     const data = `0x${HANDLE.slice(2)}${uint256(450n)}` as Hex;
     const log = makeLog(Topics.UnwrapFinalized, [addressTopic(ALICE), UNWRAP_REQUEST_ID], data);
     const event = decodeUnwrapFinalized(log);
@@ -174,7 +174,7 @@ describe("decodeUnwrappedFinalized", () => {
     expect(event!.cleartextAmount).toBe(450n);
   });
 
-  it("keeps decodeUnwrappedFinalized as a backwards-compatible alias", () => {
+  test("keeps decodeUnwrappedFinalized as a backwards-compatible alias", () => {
     const data = `0x${HANDLE.slice(2)}${uint256(450n)}` as Hex;
     const log = makeLog(Topics.UnwrapFinalizedLegacy, [addressTopic(ALICE)], data);
     const event = decodeUnwrappedFinalized(log);
@@ -185,7 +185,7 @@ describe("decodeUnwrappedFinalized", () => {
     expect(event!.cleartextAmount).toBe(450n);
   });
 
-  it("keeps decodeUnwrappedFinalized compatible with upgraded finalized logs", () => {
+  test("keeps decodeUnwrappedFinalized compatible with upgraded finalized logs", () => {
     const data = `0x${HANDLE.slice(2)}${uint256(450n)}` as Hex;
     const log = makeLog(Topics.UnwrapFinalized, [addressTopic(ALICE), UNWRAP_REQUEST_ID], data);
     const event = decodeUnwrappedFinalized(log);
@@ -194,12 +194,12 @@ describe("decodeUnwrappedFinalized", () => {
     expect(event!.unwrapRequestId).toBe(UNWRAP_REQUEST_ID);
   });
 
-  it("returns null for wrong topic0", () => {
+  test("returns null for wrong topic0", () => {
     const log = makeLog(Topics.Wrapped, [addressTopic(ALICE), UNWRAP_REQUEST_ID]);
     expect(decodeUnwrappedFinalized(log)).toBeNull();
   });
 
-  it("returns null for insufficient topics", () => {
+  test("returns null for insufficient topics", () => {
     const log = makeLog(Topics.UnwrapFinalizedLegacy, []);
     expect(decodeUnwrapFinalized(log)).toBeNull();
   });
@@ -210,7 +210,7 @@ describe("decodeUnwrappedFinalized", () => {
 // ---------------------------------------------------------------------------
 
 describe("decodeUnwrappedStarted", () => {
-  it("decodes a valid UnwrappedStarted log", () => {
+  test("decodes a valid UnwrappedStarted log", () => {
     const data = `0x${uint256(1n)}${addressWord(BOB)}${HANDLE.slice(2)}${HANDLE.slice(2)}` as Hex;
     const log = makeLog(
       Topics.UnwrappedStarted,
@@ -227,7 +227,7 @@ describe("decodeUnwrappedStarted", () => {
     expect(event!.refund.toLowerCase()).toBe(BOB.toLowerCase());
   });
 
-  it("returns null for wrong topic0", () => {
+  test("returns null for wrong topic0", () => {
     const log = makeLog(Topics.Wrapped, [
       `0x${uint256(1n)}` as Hex,
       `0x${uint256(2n)}` as Hex,
@@ -242,7 +242,7 @@ describe("decodeUnwrappedStarted", () => {
 // ---------------------------------------------------------------------------
 
 describe("decodeOnChainEvent", () => {
-  it("returns decoded event for a recognized log", () => {
+  test("returns decoded event for a recognized log", () => {
     const log = makeLog(Topics.ConfidentialTransfer, [
       addressTopic(ALICE),
       addressTopic(BOB),
@@ -253,7 +253,7 @@ describe("decodeOnChainEvent", () => {
     expect(event!.eventName).toBe("ConfidentialTransfer");
   });
 
-  it("keeps legacy UnwrapFinalized logs backward-compatible in generic decoding", () => {
+  test("keeps legacy UnwrapFinalized logs backward-compatible in generic decoding", () => {
     const data = `0x${HANDLE.slice(2)}${uint256(450n)}` as Hex;
     const log = makeLog(Topics.UnwrapFinalizedLegacy, [addressTopic(ALICE)], data);
     const event = decodeOnChainEvent(log);
@@ -261,7 +261,7 @@ describe("decodeOnChainEvent", () => {
     expect(event!.eventName).toBe("UnwrappedFinalized");
   });
 
-  it("decodes upgraded UnwrapFinalized logs with the canonical event name", () => {
+  test("decodes upgraded UnwrapFinalized logs with the canonical event name", () => {
     const data = `0x${HANDLE.slice(2)}${uint256(450n)}` as Hex;
     const log = makeLog(Topics.UnwrapFinalized, [addressTopic(ALICE), UNWRAP_REQUEST_ID], data);
     const event = decodeOnChainEvent(log);
@@ -270,14 +270,14 @@ describe("decodeOnChainEvent", () => {
     expect("unwrapRequestId" in event! && event.unwrapRequestId).toBe(UNWRAP_REQUEST_ID);
   });
 
-  it("returns null for an unrecognized log", () => {
+  test("returns null for an unrecognized log", () => {
     const log = makeLog("0xdeadbeef" as Hex, []);
     expect(decodeOnChainEvent(log)).toBeNull();
   });
 });
 
 describe("decodeOnChainEvents", () => {
-  it("batch-decodes logs, skipping unrecognized ones", () => {
+  test("batch-decodes logs, skipping unrecognized ones", () => {
     const logs: RawLog[] = [
       makeLog(Topics.ConfidentialTransfer, [addressTopic(ALICE), addressTopic(BOB), HANDLE]),
       makeLog("0xdeadbeef" as Hex, []),
@@ -295,7 +295,7 @@ describe("decodeOnChainEvents", () => {
     expect(events[2]!.eventName).toBe("UnwrapFinalized");
   });
 
-  it("returns empty array for no recognized logs", () => {
+  test("returns empty array for no recognized logs", () => {
     expect(decodeOnChainEvents([makeLog("0x00" as Hex, [])])).toEqual([]);
   });
 });
@@ -305,7 +305,7 @@ describe("decodeOnChainEvents", () => {
 // ---------------------------------------------------------------------------
 
 describe("findUnwrapRequested", () => {
-  it("finds the first UnwrapRequested in logs", () => {
+  test("finds the first UnwrapRequested in logs", () => {
     const logs: RawLog[] = [
       makeLog(Topics.ConfidentialTransfer, [addressTopic(ALICE), addressTopic(BOB), HANDLE]),
       makeLog(
@@ -319,7 +319,7 @@ describe("findUnwrapRequested", () => {
     expect(event!.receiver.toLowerCase()).toBe(BOB.toLowerCase());
   });
 
-  it("returns null when no UnwrapRequested exists", () => {
+  test("returns null when no UnwrapRequested exists", () => {
     const logs: RawLog[] = [
       makeLog(Topics.ConfidentialTransfer, [addressTopic(ALICE), addressTopic(BOB), HANDLE]),
     ];
@@ -328,7 +328,7 @@ describe("findUnwrapRequested", () => {
 });
 
 describe("findWrapped", () => {
-  it("finds the first Wrapped event in logs", () => {
+  test("finds the first Wrapped event in logs", () => {
     const data = `0x${uint256(50n)}` as Hex;
     const logs: RawLog[] = [makeLog(Topics.Wrapped, [addressTopic(ALICE)], data)];
     const event = findWrapped(logs);
@@ -336,7 +336,7 @@ describe("findWrapped", () => {
     expect(event!.amountIn).toBe(50n);
   });
 
-  it("returns null when no Wrapped exists", () => {
+  test("returns null when no Wrapped exists", () => {
     expect(findWrapped([])).toBeNull();
   });
 });
@@ -346,7 +346,7 @@ describe("findWrapped", () => {
 // ---------------------------------------------------------------------------
 
 describe("TOKEN_TOPICS", () => {
-  it("contains all token event topic hashes", () => {
+  test("contains all token event topic hashes", () => {
     expect(TOKEN_TOPICS).toHaveLength(7);
     expect(TOKEN_TOPICS).toContain(Topics.ConfidentialTransfer);
     expect(TOKEN_TOPICS).toContain(Topics.Wrapped);
@@ -357,7 +357,7 @@ describe("TOKEN_TOPICS", () => {
     expect(TOKEN_TOPICS).toContain(Topics.UnwrappedStarted);
   });
 
-  it("all topic hashes are 0x-prefixed 66-char hex strings", () => {
+  test("all topic hashes are 0x-prefixed 66-char hex strings", () => {
     for (const topic of TOKEN_TOPICS) {
       expect(topic).toMatch(/^0x[0-9a-f]{64}$/);
     }

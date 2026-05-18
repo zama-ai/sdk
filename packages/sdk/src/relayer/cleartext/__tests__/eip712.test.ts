@@ -21,7 +21,7 @@ function encodeType(
 }
 
 describe("eip712", () => {
-  it("INPUT_VERIFICATION_EIP712 typehash matches spec definition", () => {
+  test("INPUT_VERIFICATION_EIP712 typehash matches spec definition", () => {
     const expected = keccak256(
       toBytes(
         "CiphertextVerification(bytes32[] ctHandles,address userAddress,address contractAddress,uint256 contractChainId,bytes extraData)",
@@ -39,7 +39,7 @@ describe("eip712", () => {
     ).toEqual(["ctHandles", "userAddress", "contractAddress", "contractChainId", "extraData"]);
   });
 
-  it("KMS_DECRYPTION_EIP712 typehash matches on-chain definition", () => {
+  test("KMS_DECRYPTION_EIP712 typehash matches on-chain definition", () => {
     const expected = keccak256(
       toBytes(
         "PublicDecryptVerification(bytes32[] ctHandles,bytes decryptedResult,bytes extraData)",
@@ -54,14 +54,14 @@ describe("eip712", () => {
     expect(KMS_DECRYPTION_EIP712.domain(10901, ZERO_ADDRESS).name).toBe("Decryption");
   });
 
-  it("USER_DECRYPT_EIP712 uses Decryption domain name", () => {
+  test("USER_DECRYPT_EIP712 uses Decryption domain name", () => {
     expect(USER_DECRYPT_EIP712.domain(10901, ZERO_ADDRESS).name).toBe("Decryption");
     expect(
       USER_DECRYPT_EIP712.types.UserDecryptRequestVerification.map((field) => field.name),
     ).toEqual(["publicKey", "contractAddresses", "startTimestamp", "durationDays", "extraData"]);
   });
 
-  it("DELEGATED_USER_DECRYPT_EIP712 includes delegatorAddress field", () => {
+  test("DELEGATED_USER_DECRYPT_EIP712 includes delegatorAddress field", () => {
     expect(DELEGATED_USER_DECRYPT_EIP712.domain(10901, ZERO_ADDRESS).name).toBe("Decryption");
     expect(
       DELEGATED_USER_DECRYPT_EIP712.types.DelegatedUserDecryptRequestVerification.map(

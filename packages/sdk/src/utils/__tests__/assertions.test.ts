@@ -1,4 +1,4 @@
-import { describe, it, expect } from "../../test-fixtures";
+import { describe, test, expect } from "../../test-fixtures";
 import {
   assertObject,
   assertString,
@@ -12,127 +12,127 @@ import {
 } from "../assertions";
 
 describe("assertObject", () => {
-  it("accepts a plain object", () => {
+  test("accepts a plain object", () => {
     expect(() => assertObject({ key: "value" }, "test")).not.toThrow();
   });
 
-  it("accepts an empty object", () => {
+  test("accepts an empty object", () => {
     expect(() => assertObject({}, "test")).not.toThrow();
   });
 
-  it("throws for null", () => {
+  test("throws for null", () => {
     expect(() => assertObject(null, "ctx")).toThrow(TypeError);
     expect(() => assertObject(null, "ctx")).toThrow("ctx must be an object, got object");
   });
 
-  it("throws for an array", () => {
+  test("throws for an array", () => {
     expect(() => assertObject([], "ctx")).toThrow(TypeError);
     expect(() => assertObject([], "ctx")).toThrow("ctx must be an object, got object");
   });
 
-  it("throws for a string", () => {
+  test("throws for a string", () => {
     expect(() => assertObject("hello", "ctx")).toThrow("ctx must be an object, got string");
   });
 
-  it("throws for a number", () => {
+  test("throws for a number", () => {
     expect(() => assertObject(42, "ctx")).toThrow("ctx must be an object, got number");
   });
 
-  it("throws for undefined", () => {
+  test("throws for undefined", () => {
     expect(() => assertObject(undefined, "ctx")).toThrow("ctx must be an object, got undefined");
   });
 });
 
 describe("assertString", () => {
-  it("accepts a string", () => {
+  test("accepts a string", () => {
     expect(() => assertString("hello", "test")).not.toThrow();
   });
 
-  it("accepts an empty string", () => {
+  test("accepts an empty string", () => {
     expect(() => assertString("", "test")).not.toThrow();
   });
 
-  it("throws for a number", () => {
+  test("throws for a number", () => {
     expect(() => assertString(42, "ctx")).toThrow(TypeError);
     expect(() => assertString(42, "ctx")).toThrow("ctx must be a string, got number");
   });
 
-  it("throws for null", () => {
+  test("throws for null", () => {
     expect(() => assertString(null, "ctx")).toThrow("ctx must be a string, got object");
   });
 
-  it("throws for undefined", () => {
+  test("throws for undefined", () => {
     expect(() => assertString(undefined, "ctx")).toThrow("ctx must be a string, got undefined");
   });
 });
 
 describe("assertArray", () => {
-  it("accepts an array", () => {
+  test("accepts an array", () => {
     expect(() => assertArray([1, 2, 3], "test")).not.toThrow();
   });
 
-  it("accepts an empty array", () => {
+  test("accepts an empty array", () => {
     expect(() => assertArray([], "test")).not.toThrow();
   });
 
-  it("throws for an object", () => {
+  test("throws for an object", () => {
     expect(() => assertArray({}, "ctx")).toThrow(TypeError);
     expect(() => assertArray({}, "ctx")).toThrow("ctx must be an array, got object");
   });
 
-  it("throws for a string", () => {
+  test("throws for a string", () => {
     expect(() => assertArray("hello", "ctx")).toThrow("ctx must be an array, got string");
   });
 
-  it("throws for null", () => {
+  test("throws for null", () => {
     expect(() => assertArray(null, "ctx")).toThrow("ctx must be an array, got object");
   });
 
-  it("throws for undefined", () => {
+  test("throws for undefined", () => {
     expect(() => assertArray(undefined, "ctx")).toThrow("ctx must be an array, got undefined");
   });
 });
 
 describe("assertFunction", () => {
-  it("accepts a function", () => {
+  test("accepts a function", () => {
     expect(() => assertFunction(() => {}, "test")).not.toThrow();
   });
 
-  it("accepts a named function", () => {
+  test("accepts a named function", () => {
     function myFunc() {}
     expect(() => assertFunction(myFunc, "test")).not.toThrow();
   });
 
-  it("throws for a string", () => {
+  test("throws for a string", () => {
     expect(() => assertFunction("hello", "ctx")).toThrow(TypeError);
     expect(() => assertFunction("hello", "ctx")).toThrow("ctx must be a function, got string");
   });
 
-  it("throws for an object", () => {
+  test("throws for an object", () => {
     expect(() => assertFunction({}, "ctx")).toThrow("ctx must be a function, got object");
   });
 
-  it("throws for null", () => {
+  test("throws for null", () => {
     expect(() => assertFunction(null, "ctx")).toThrow("ctx must be a function, got object");
   });
 
-  it("throws for undefined", () => {
+  test("throws for undefined", () => {
     expect(() => assertFunction(undefined, "ctx")).toThrow("ctx must be a function, got undefined");
   });
 });
 
 describe("assertStringProp", () => {
-  it("accepts an object with a string property", () => {
+  test("accepts an object with a string property", () => {
     const obj: Record<string, unknown> = { name: "alice" };
     expect(() => assertStringProp(obj, "name", "ctx")).not.toThrow();
   });
 
-  it("throws when property is not a string", () => {
+  test("throws when property is not a string", () => {
     const obj: Record<string, unknown> = { name: 42 };
     expect(() => assertStringProp(obj, "name", "ctx")).toThrow(TypeError);
   });
 
-  it("throws when property is missing", () => {
+  test("throws when property is missing", () => {
     const obj: Record<string, unknown> = {};
     expect(() => assertStringProp(obj, "name", "ctx")).toThrow(
       "ctx must be a string, got undefined",
@@ -141,12 +141,12 @@ describe("assertStringProp", () => {
 });
 
 describe("assertFunctionProp", () => {
-  it("accepts an object with a function property", () => {
+  test("accepts an object with a function property", () => {
     const obj: Record<string, unknown> = { handler: () => {} };
     expect(() => assertFunctionProp(obj, "handler", "ctx")).not.toThrow();
   });
 
-  it("throws when property is not a function", () => {
+  test("throws when property is not a function", () => {
     const obj: Record<string, unknown> = { handler: "not a function" };
     expect(() => assertFunctionProp(obj, "handler", "ctx")).toThrow(TypeError);
     expect(() => assertFunctionProp(obj, "handler", "ctx")).toThrow(
@@ -154,7 +154,7 @@ describe("assertFunctionProp", () => {
     );
   });
 
-  it("throws when property is missing", () => {
+  test("throws when property is missing", () => {
     const obj: Record<string, unknown> = {};
     expect(() => assertFunctionProp(obj, "handler", "ctx")).toThrow(
       "ctx must be a function, got undefined",
@@ -163,70 +163,70 @@ describe("assertFunctionProp", () => {
 });
 
 describe("assertBigint", () => {
-  it("accepts a bigint", () => {
+  test("accepts a bigint", () => {
     expect(() => assertBigint(42n, "test")).not.toThrow();
   });
 
-  it("accepts 0n (falsy bigint)", () => {
+  test("accepts 0n (falsy bigint)", () => {
     expect(() => assertBigint(0n, "test")).not.toThrow();
   });
 
-  it("throws for a number", () => {
+  test("throws for a number", () => {
     expect(() => assertBigint(42, "ctx")).toThrow(TypeError);
     expect(() => assertBigint(42, "ctx")).toThrow("ctx must be a bigint, got number");
   });
 
-  it("throws for a boolean", () => {
+  test("throws for a boolean", () => {
     expect(() => assertBigint(true, "ctx")).toThrow("ctx must be a bigint, got boolean");
   });
 
-  it("throws for a string", () => {
+  test("throws for a string", () => {
     expect(() => assertBigint("0x123", "ctx")).toThrow("ctx must be a bigint, got string");
   });
 
-  it("throws for null", () => {
+  test("throws for null", () => {
     expect(() => assertBigint(null, "ctx")).toThrow("ctx must be a bigint, got object");
   });
 
-  it("throws for undefined", () => {
+  test("throws for undefined", () => {
     expect(() => assertBigint(undefined, "ctx")).toThrow("ctx must be a bigint, got undefined");
   });
 });
 
 describe("assertCondition", () => {
-  it("does not throw when condition is true", () => {
+  test("does not throw when condition is true", () => {
     expect(() => assertCondition(true, "should not throw")).not.toThrow();
   });
 
-  it("throws when condition is false", () => {
+  test("throws when condition is false", () => {
     expect(() => assertCondition(false, "oops")).toThrow(TypeError);
     expect(() => assertCondition(false, "oops")).toThrow("oops");
   });
 });
 
 describe("assertNonNullable", () => {
-  it("accepts a defined value", () => {
+  test("accepts a defined value", () => {
     expect(() => assertNonNullable("hello", "ctx")).not.toThrow();
   });
 
-  it("accepts zero", () => {
+  test("accepts zero", () => {
     expect(() => assertNonNullable(0, "ctx")).not.toThrow();
   });
 
-  it("accepts empty string", () => {
+  test("accepts empty string", () => {
     expect(() => assertNonNullable("", "ctx")).not.toThrow();
   });
 
-  it("accepts false", () => {
+  test("accepts false", () => {
     expect(() => assertNonNullable(false, "ctx")).not.toThrow();
   });
 
-  it("throws for null", () => {
+  test("throws for null", () => {
     expect(() => assertNonNullable(null, "ctx")).toThrow(TypeError);
     expect(() => assertNonNullable(null, "ctx")).toThrow("ctx must not be null or undefined");
   });
 
-  it("throws for undefined", () => {
+  test("throws for undefined", () => {
     expect(() => assertNonNullable(undefined, "ctx")).toThrow(TypeError);
     expect(() => assertNonNullable(undefined, "ctx")).toThrow("ctx must not be null or undefined");
   });

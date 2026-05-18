@@ -2,8 +2,6 @@ import { act } from "@testing-library/react";
 import { ZamaSDK } from "@zama-fhe/sdk";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { afterEach, describe, expect, test, vi } from "../../test-fixtures";
-import { expectCacheRemoved } from "../../test-helpers";
-import { expectDefaultMutationState } from "../../__tests__/mutation-test-helpers";
 import { useClearCredentials } from "../use-clear-credentials";
 
 describe("useClearCredentials", () => {
@@ -11,7 +9,7 @@ describe("useClearCredentials", () => {
     vi.restoreAllMocks();
   });
 
-  test("default", ({ renderWithProviders }) => {
+  test("default", ({ renderWithProviders, expectDefaultMutationState }) => {
     const { result } = renderWithProviders(() => useClearCredentials());
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
@@ -20,6 +18,7 @@ describe("useClearCredentials", () => {
 
   test("cache: removes isAllowed and decryption queries after clearCredentials", async ({
     renderWithProviders,
+    expectCacheRemoved,
   }) => {
     vi.spyOn(ZamaSDK.prototype, "clearCredentials").mockResolvedValue(undefined);
     const { result, queryClient } = renderWithProviders(() => useClearCredentials());
@@ -32,7 +31,10 @@ describe("useClearCredentials", () => {
     expectCacheRemoved(queryClient, zamaQueryKeys.decryption.all);
   });
 
-  test("behavior: forwards onSuccess callback", async ({ renderWithProviders }) => {
+  test("behavior: forwards onSuccess callback", async ({
+    renderWithProviders,
+    expectCacheRemoved,
+  }) => {
     vi.spyOn(ZamaSDK.prototype, "clearCredentials").mockResolvedValue(undefined);
     const onSuccess = vi.fn();
 

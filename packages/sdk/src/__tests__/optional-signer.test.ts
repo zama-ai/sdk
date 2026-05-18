@@ -1,4 +1,4 @@
-import { describe, it, expect } from "../test-fixtures";
+import { describe, test, expect } from "../test-fixtures";
 import { Token } from "../token/token";
 import { WrappedToken } from "../token/wrapped-token";
 import { SignerNotConfiguredError, ZamaErrorCode } from "../errors";
@@ -21,38 +21,38 @@ const SIGNER_REQUIRED_OPS: ReadonlyArray<readonly [string, Op]> = [
 ] as const;
 
 describe("ZamaSDK without signer", () => {
-  it("constructs with signer omitted and exposes no signer", ({ createSDK }) => {
+  test("constructs with signer omitted and exposes no signer", ({ createSDK }) => {
     const sdk = createSDK({ signer: undefined });
     expect(sdk.signer).toBeUndefined();
   });
 
-  it("createToken works with no signer", ({ createSDK, tokenAddress }) => {
+  test("createToken works with no signer", ({ createSDK, tokenAddress }) => {
     const sdk = createSDK({ signer: undefined });
     expect(sdk.createToken(tokenAddress)).toBeInstanceOf(Token);
   });
 
-  it("createWrappedToken works with no signer", ({ createSDK, wrapperAddress }) => {
+  test("createWrappedToken works with no signer", ({ createSDK, wrapperAddress }) => {
     const sdk = createSDK({ signer: undefined });
     expect(sdk.createWrappedToken(wrapperAddress)).toBeInstanceOf(WrappedToken);
   });
 
-  it("publicDecrypt works with no signer", async ({ createSDK, relayer }) => {
+  test("publicDecrypt works with no signer", async ({ createSDK, relayer }) => {
     const sdk = createSDK({ signer: undefined });
     await sdk.publicDecrypt(["0xhandle"]);
     expect(relayer.publicDecrypt).toHaveBeenCalled();
   });
 
-  it("isAllowed returns false (pure store lookup, no signer needed)", async ({ createSDK }) => {
+  test("isAllowed returns false (pure store lookup, no signer needed)", async ({ createSDK }) => {
     const sdk = createSDK({ signer: undefined });
     await expect(sdk.isAllowed(["0x1" as Address])).resolves.toBe(false);
   });
 
-  it("sdk.isAllowed returns false when no signer", async ({ createSDK, tokenAddress }) => {
+  test("sdk.isAllowed returns false when no signer", async ({ createSDK, tokenAddress }) => {
     const sdk = createSDK({ signer: undefined });
     await expect(sdk.isAllowed([tokenAddress])).resolves.toBe(false);
   });
 
-  it("requireSigner throws SignerNotConfiguredError without signer; returns signer when present", ({
+  test("requireSigner throws SignerNotConfiguredError without signer; returns signer when present", ({
     createSDK,
   }) => {
     const sdkNoSigner = createSDK({ signer: undefined });
@@ -68,7 +68,7 @@ describe("ZamaSDK without signer", () => {
     expect(sdk.requireSigner("op")).toBe(sdk.signer);
   });
 
-  it.for(SIGNER_REQUIRED_OPS)(
+  test.for(SIGNER_REQUIRED_OPS)(
     "%s rejects with SignerNotConfiguredError",
     async ([, run], { createSDK, tokenAddress }) => {
       const sdk = createSDK({ signer: undefined });
@@ -80,7 +80,7 @@ describe("ZamaSDK without signer", () => {
   // React-shaped hint (`<ZamaProvider signer=...>`) that leaked from a copy of
   // the React-SDK guidance. Keep this assertion so the SDK message stays
   // framework-agnostic.
-  it("error message does not leak React-specific hint", () => {
+  test("error message does not leak React-specific hint", () => {
     expect(new SignerNotConfiguredError("myOp").message).not.toContain("<ZamaProvider signer=");
   });
 });

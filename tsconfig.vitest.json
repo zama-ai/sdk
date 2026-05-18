@@ -16,7 +16,6 @@
     "packages/react-sdk/src/**/__tests__/**/*.tsx",
     "packages/react-sdk/src/test-fixtures/**/*.ts",
     "packages/react-sdk/src/test-fixtures/**/*.tsx",
-    "packages/react-sdk/src/test-helpers.ts",
     "packages/react-sdk/vitest.setup.ts"
   ]
 }

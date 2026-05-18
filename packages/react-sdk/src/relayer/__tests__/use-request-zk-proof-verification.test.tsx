@@ -1,9 +1,9 @@
 import { waitFor } from "@testing-library/react";
-import { describe, expect, it } from "../../test-fixtures";
+import { describe, expect, test } from "../../test-fixtures";
 import { useRequestZKProofVerification } from "../use-request-zk-proof-verification";
 
 describe("useRequestZKProofVerification", () => {
-  it("delegates to relayer.requestZKProofVerification", async ({
+  test("delegates to relayer.requestZKProofVerification", async ({
     renderWithProviders,
     relayer,
   }) => {

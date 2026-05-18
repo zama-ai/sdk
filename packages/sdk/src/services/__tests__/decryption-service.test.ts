@@ -2,7 +2,9 @@ import { getAddress, type Address } from "viem";
 import { MAX_UINT64 } from "../../contracts";
 import type { DecryptHandle } from "../../query/user-decrypt";
 import type { Handle } from "../../relayer/relayer-sdk.types";
-import { describe, expect, test, TEST_PUBLIC_KEY, vi } from "../../test-fixtures";
+import { describe, expect, test, vi } from "../../test-fixtures";
+
+const TEST_PUBLIC_KEY = `0x${"11".repeat(32)}` as const;
 import { CachingService } from "../caching-service";
 
 const CONTRACT_A = getAddress("0x3333333333333333333333333333333333333333") as Address;

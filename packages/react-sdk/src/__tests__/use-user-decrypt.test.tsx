@@ -6,10 +6,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useIsAllowed } from "../authorization/use-is-allowed";
 import { useZamaSDK } from "../provider";
 import { useUserDecrypt } from "../relayer/use-user-decrypt";
-import { describe, expect, it, vi } from "../test-fixtures";
+import { describe, expect, test, vi } from "../test-fixtures";
 
 describe("useUserDecrypt", () => {
-  it("decrypts handles", async ({ relayer, tokenAddress, renderWithProviders }) => {
+  test("decrypts handles", async ({ relayer, tokenAddress, renderWithProviders }) => {
     vi.mocked(relayer.userDecrypt).mockResolvedValue({
       "0xhandle1": 100n,
       "0xhandle2": true,
@@ -37,7 +37,7 @@ describe("useUserDecrypt", () => {
     });
   });
 
-  it("groups handles by contract address", async ({ relayer, renderWithProviders }) => {
+  test("groups handles by contract address", async ({ relayer, renderWithProviders }) => {
     const CONTRACT_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
     const CONTRACT_B = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;
 
@@ -65,7 +65,7 @@ describe("useUserDecrypt", () => {
     expect(result.current.data).toEqual({ "0xh1": 10n, "0xh2": 20n });
   });
 
-  it("reports error when keypair generation fails", async ({
+  test("reports error when keypair generation fails", async ({
     relayer,
     tokenAddress,
     renderWithProviders,
@@ -85,7 +85,7 @@ describe("useUserDecrypt", () => {
     expect(result.current.error?.message).toContain("keygen failed");
   });
 
-  it("respects enabled = false", async ({ tokenAddress, renderWithProviders }) => {
+  test("respects enabled = false", async ({ tokenAddress, renderWithProviders }) => {
     const { result } = renderWithProviders(() =>
       useUserDecrypt(
         { handles: [{ handle: "0xh", contractAddress: tokenAddress }] },
@@ -97,20 +97,22 @@ describe("useUserDecrypt", () => {
     expect(result.current.data).toBeUndefined();
   });
 
-  it("stays disabled with empty handles", async ({ renderWithProviders }) => {
+  test("stays disabled with empty handles", async ({ renderWithProviders }) => {
     const { result } = renderWithProviders(() => useUserDecrypt({ handles: [] }));
 
     await waitFor(() => expect(result.current.fetchStatus).toBe("idle"));
     expect(result.current.data).toBeUndefined();
   });
 
-  it("is off by default — no signature prompt when enabled is not provided", async ({
+  test("is off by default — no signature prompt when enabled is not provided", async ({
     signer,
     tokenAddress,
     renderWithProviders,
   }) => {
     const { result } = renderWithProviders(() =>
-      useUserDecrypt({ handles: [{ handle: "0xh", contractAddress: tokenAddress }] }),
+      useUserDecrypt({
+        handles: [{ handle: "0xh", contractAddress: tokenAddress }],
+      }),
     );
 
     await waitFor(() => expect(result.current.fetchStatus).toBe("idle"));
@@ -118,7 +120,7 @@ describe("useUserDecrypt", () => {
     expect(result.current.data).toBeUndefined();
   });
 
-  it("gated on useIsAllowed=true fires and decrypts silently without a wallet prompt", async ({
+  test("gated on useIsAllowed=true fires and decrypts silently without a wallet prompt", async ({
     signer,
     relayer,
     tokenAddress,
@@ -161,7 +163,7 @@ describe("useUserDecrypt", () => {
     expect(signer.signTypedData).toHaveBeenCalledTimes(1);
   });
 
-  it("gated on useIsAllowed=false does not prompt for a signature", async ({
+  test("gated on useIsAllowed=false does not prompt for a signature", async ({
     signer,
     tokenAddress,
     renderWithProviders,

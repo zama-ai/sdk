@@ -1,10 +1,8 @@
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { waitFor } from "@testing-library/react";
 import { useMetadata } from "../use-metadata";
-import { TOKEN } from "../../__tests__/mutation-test-helpers";
-
 describe("useMetadata", () => {
-  test("returns name, symbol, decimals", async ({ renderWithProviders, provider }) => {
+  test("returns name, symbol, decimals", async ({ renderWithProviders, provider, TOKEN }) => {
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce("TestToken")
       .mockResolvedValueOnce("TT")

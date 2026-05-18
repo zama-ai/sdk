@@ -2,10 +2,8 @@ import { describe, expect, test, vi } from "../../test-fixtures";
 import { act, waitFor } from "@testing-library/react";
 import type { Address } from "@zama-fhe/sdk";
 import { useConfidentialBalance } from "../use-confidential-balance";
-import { TOKEN, USER } from "../../__tests__/mutation-test-helpers";
-
 describe("useConfidentialBalance", () => {
-  test("default", async ({ renderWithProviders, relayer, provider }) => {
+  test("default", async ({ renderWithProviders, relayer, provider, TOKEN, USER }) => {
     const handle = `0x${"aa".repeat(32)}`;
     vi.mocked(provider.readContract).mockResolvedValue(handle);
     vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handle]: 123n });
@@ -25,6 +23,8 @@ describe("useConfidentialBalance", () => {
   test("behavior: disabled when user passes enabled=false", async ({
     renderWithProviders,
     provider,
+    TOKEN,
+    USER,
   }) => {
     const { result } = renderWithProviders(() =>
       useConfidentialBalance({ address: TOKEN, account: USER }, { enabled: false }),
@@ -38,6 +38,7 @@ describe("useConfidentialBalance", () => {
   test("behavior: disabled when account is undefined (signer-less mount)", ({
     renderWithProviders,
     provider,
+    TOKEN,
   }) => {
     const { result } = renderWithProviders(() =>
       useConfidentialBalance({ address: TOKEN, account: undefined }),
@@ -52,6 +53,7 @@ describe("useConfidentialBalance", () => {
     renderWithProviders,
     relayer,
     provider,
+    TOKEN,
   }) => {
     const handle = `0x${"cd".repeat(32)}`;
     vi.mocked(provider.readContract).mockResolvedValue(handle);
@@ -70,7 +72,7 @@ describe("useConfidentialBalance", () => {
   });
 
   describe("lifecycle", () => {
-    test("default", async ({ renderWithProviders, relayer, provider }) => {
+    test("default", async ({ renderWithProviders, relayer, provider, TOKEN, USER }) => {
       const handle = `0x${"aa".repeat(32)}`;
       vi.mocked(provider.readContract).mockResolvedValue(handle);
       vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handle]: 123n });
@@ -119,6 +121,8 @@ describe("useConfidentialBalance", () => {
       renderWithProviders,
       relayer,
       provider,
+      TOKEN,
+      USER,
     }) => {
       const handleA = `0x${"ab".repeat(32)}`;
       const handleB = `0x${"bc".repeat(32)}`;
@@ -155,6 +159,8 @@ describe("useConfidentialBalance", () => {
       renderWithProviders,
       relayer,
       provider,
+      TOKEN,
+      USER,
     }) => {
       const handle = `0x${"ad".repeat(32)}`;
       vi.mocked(provider.readContract).mockResolvedValue(handle);
@@ -175,6 +181,8 @@ describe("useConfidentialBalance", () => {
     test("behavior: disabled when user passes enabled=false", async ({
       renderWithProviders,
       provider,
+      TOKEN,
+      USER,
     }) => {
       const { result } = renderWithProviders(() =>
         useConfidentialBalance({ address: TOKEN, account: USER }, { enabled: false }),

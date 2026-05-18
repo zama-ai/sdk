@@ -2,10 +2,8 @@ import { describe, expect, test, vi } from "../../test-fixtures";
 import { waitFor } from "@testing-library/react";
 import { ERC7984_WRAPPER_INTERFACE_ID, ERC7984_WRAPPER_INTERFACE_ID_LEGACY } from "@zama-fhe/sdk";
 import { useTotalSupply } from "../use-total-supply";
-import { TOKEN } from "../../__tests__/mutation-test-helpers";
-
 describe("useTotalSupply", () => {
-  test("default", async ({ renderWithProviders, provider }) => {
+  test("default", async ({ renderWithProviders, provider, TOKEN }) => {
     vi.mocked(provider.readContract).mockImplementation(async (config) => {
       if (config.functionName === "supportsInterface") {
         return config.args[0] === ERC7984_WRAPPER_INTERFACE_ID;
@@ -25,7 +23,11 @@ describe("useTotalSupply", () => {
     );
   });
 
-  test("uses legacy totalSupply for legacy wrappers", async ({ renderWithProviders, provider }) => {
+  test("uses legacy totalSupply for legacy wrappers", async ({
+    renderWithProviders,
+    provider,
+    TOKEN,
+  }) => {
     vi.mocked(provider.readContract).mockImplementation(async (config) => {
       if (config.functionName === "supportsInterface") {
         return config.args[0] === ERC7984_WRAPPER_INTERFACE_ID_LEGACY;

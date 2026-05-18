@@ -1,17 +1,14 @@
 // oxlint-disable no-empty-pattern
 import { vi } from "vitest";
 import type { Address } from "viem";
-import { createMockSigner } from "@zama-fhe/sdk/test-fixtures";
+import type { SignerFixtures } from "@zama-fhe/sdk/test-fixtures";
 import type { Token } from "@zama-fhe/sdk/token";
 import type { GenericSigner } from "@zama-fhe/sdk/types";
 import type { FixturesOf } from "./types";
 
 const MOCK_TOKEN_ADDRESS = "0xtoken" as Address;
 
-function createMockToken(
-  address: Address = MOCK_TOKEN_ADDRESS,
-  signer: GenericSigner = createMockSigner(),
-): Token {
+function createMockToken(address: Address, signer: GenericSigner): Token {
   const mockResult = { txHash: "0xtx", receipt: { logs: [] } };
   return {
     address,
@@ -36,8 +33,8 @@ export interface TokenFixtures {
   token: Token;
 }
 
-export const tokenFixtures: FixturesOf<TokenFixtures> = {
-  token: async ({}, use) => {
-    await use(createMockToken());
+export const tokenFixtures: FixturesOf<TokenFixtures, SignerFixtures> = {
+  token: async ({ signer }, use) => {
+    await use(createMockToken(MOCK_TOKEN_ADDRESS, signer));
   },
 };

@@ -1,17 +1,10 @@
 import type { Address } from "viem";
-import {
-  test as base,
-  describe,
-  expect,
-  it,
-  vi,
-  TEST_ADDR_A,
-  TEST_ADDR_B,
-} from "../../test-fixtures";
+import { test as base, describe, expect, vi } from "../../test-fixtures";
 import { eip1193Subscribe } from "../eip1193-subscribe";
+import type { WalletAccountListener } from "../../types";
 
-const ADDR_A = TEST_ADDR_A;
-const ADDR_B = TEST_ADDR_B;
+const ADDR_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
+const ADDR_B = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;
 const CHAIN_1 = 1;
 const CHAIN_31337 = 31337;
 
@@ -60,71 +53,76 @@ function createFakeProvider(opts: FakeProviderOptions = {}) {
   };
 }
 
+type MockWalletAccountListener = WalletAccountListener & ReturnType<typeof vi.fn>;
+
 interface EipFixtures {
   provider: ReturnType<typeof createFakeProvider>;
-  onWalletAccountChange: ReturnType<typeof vi.fn>;
+  onWalletAccountChange: MockWalletAccountListener;
 }
 
-const eit = base.extend<EipFixtures>({
+const test = base.extend<EipFixtures>({
   // eslint-disable-next-line no-empty-pattern
   provider: async ({}, use) => {
     await use(createFakeProvider());
   },
-  // eslint-disable-next-line no-empty-pattern
-  onWalletAccountChange: async ({}, use: (v: ReturnType<typeof vi.fn>) => Promise<void>) => {
-    await use(vi.fn());
+  onWalletAccountChange: async (
+    // oxlint-disable-next-line no-empty-pattern
+    {},
+    use: (v: MockWalletAccountListener) => Promise<void>,
+  ) => {
+    await use(vi.fn() as unknown as MockWalletAccountListener);
   },
 });
 
 describe("eip1193Subscribe", () => {
-  eit(
-    "emits connect once address and chain have both been observed",
-    async ({ provider, onWalletAccountChange }) => {
-      eip1193Subscribe({ provider, onWalletAccountChange });
+  test("emits connect once address and chain have both been observed", async ({
+    provider,
+    onWalletAccountChange,
+  }) => {
+    eip1193Subscribe({ provider, onWalletAccountChange });
 
-      provider.emit("accountsChanged", [ADDR_A]);
-      expect(onWalletAccountChange).not.toHaveBeenCalled();
+    provider.emit("accountsChanged", [ADDR_A]);
+    expect(onWalletAccountChange).not.toHaveBeenCalled();
 
-      provider.emit("chainChanged", "0x7a69");
-      expect(onWalletAccountChange).toHaveBeenCalledOnce();
-      expect(onWalletAccountChange).toHaveBeenCalledWith({
-        previous: undefined,
-        next: { address: ADDR_A, chainId: CHAIN_31337 },
-      });
-    },
-  );
+    provider.emit("chainChanged", "0x7a69");
+    expect(onWalletAccountChange).toHaveBeenCalledOnce();
+    expect(onWalletAccountChange).toHaveBeenCalledWith({
+      previous: undefined,
+      next: { address: ADDR_A, chainId: CHAIN_31337 },
+    });
+  });
 
-  eit(
-    "ignores disconnect when no prior wallet account was tracked",
-    async ({ provider, onWalletAccountChange }) => {
-      eip1193Subscribe({ provider, onWalletAccountChange });
+  test("ignores disconnect when no prior wallet account was tracked", async ({
+    provider,
+    onWalletAccountChange,
+  }) => {
+    eip1193Subscribe({ provider, onWalletAccountChange });
 
-      provider.emit("accountsChanged", []);
-      provider.emit("disconnect");
+    provider.emit("accountsChanged", []);
+    provider.emit("disconnect");
 
-      expect(onWalletAccountChange).not.toHaveBeenCalled();
-    },
-  );
+    expect(onWalletAccountChange).not.toHaveBeenCalled();
+  });
 
-  eit(
-    "emits account change with previous and next after a prior connect",
-    async ({ provider, onWalletAccountChange }) => {
-      eip1193Subscribe({ provider, onWalletAccountChange });
+  test("emits account change with previous and next after a prior connect", async ({
+    provider,
+    onWalletAccountChange,
+  }) => {
+    eip1193Subscribe({ provider, onWalletAccountChange });
 
-      provider.emit("accountsChanged", [ADDR_A]);
-      provider.emit("chainChanged", "0x7a69");
-      expect(onWalletAccountChange).toHaveBeenCalledOnce();
+    provider.emit("accountsChanged", [ADDR_A]);
+    provider.emit("chainChanged", "0x7a69");
+    expect(onWalletAccountChange).toHaveBeenCalledOnce();
 
-      provider.emit("accountsChanged", [ADDR_B]);
-      expect(onWalletAccountChange).toHaveBeenCalledTimes(2);
-      expect(onWalletAccountChange).toHaveBeenLastCalledWith({
-        previous: { address: ADDR_A, chainId: CHAIN_31337 },
-        next: { address: ADDR_B, chainId: CHAIN_31337 },
-      });
-    },
-  );
+    provider.emit("accountsChanged", [ADDR_B]);
+    expect(onWalletAccountChange).toHaveBeenCalledTimes(2);
+    expect(onWalletAccountChange).toHaveBeenLastCalledWith({
+      previous: { address: ADDR_A, chainId: CHAIN_31337 },
+      next: { address: ADDR_B, chainId: CHAIN_31337 },
+    });
+  });
 
-  eit("emits disconnect after a prior connect", async ({ provider, onWalletAccountChange }) => {
+  test("emits disconnect after a prior connect", async ({ provider, onWalletAccountChange }) => {
     eip1193Subscribe({ provider, onWalletAccountChange });
 
     provider.emit("accountsChanged", [ADDR_A]);
@@ -139,101 +137,107 @@ describe("eip1193Subscribe", () => {
     });
   });
 
-  eit(
-    "emits disconnect and reconnect transitions for repeated lock/unlock cycles",
-    async ({ provider, onWalletAccountChange }) => {
-      eip1193Subscribe({ provider, onWalletAccountChange });
+  test("emits disconnect and reconnect transitions for repeated lock/unlock cycles", async ({
+    provider,
+    onWalletAccountChange,
+  }) => {
+    eip1193Subscribe({ provider, onWalletAccountChange });
 
-      provider.emit("accountsChanged", [ADDR_A]);
-      provider.emit("chainChanged", "0x7a69");
-      expect(onWalletAccountChange).toHaveBeenCalledOnce();
+    provider.emit("accountsChanged", [ADDR_A]);
+    provider.emit("chainChanged", "0x7a69");
+    expect(onWalletAccountChange).toHaveBeenCalledOnce();
 
-      provider.emit("accountsChanged", []);
-      provider.emit("accountsChanged", [ADDR_A]);
-      expect(onWalletAccountChange).toHaveBeenCalledTimes(2);
-      provider.emit("chainChanged", "0x7a69");
-      expect(onWalletAccountChange).toHaveBeenCalledTimes(3);
+    provider.emit("accountsChanged", []);
+    provider.emit("accountsChanged", [ADDR_A]);
+    expect(onWalletAccountChange).toHaveBeenCalledTimes(2);
+    provider.emit("chainChanged", "0x7a69");
+    expect(onWalletAccountChange).toHaveBeenCalledTimes(3);
 
-      provider.emit("accountsChanged", []);
-      provider.emit("accountsChanged", [ADDR_A]);
-      expect(onWalletAccountChange).toHaveBeenCalledTimes(4);
-      provider.emit("chainChanged", "0x7a69");
-      expect(onWalletAccountChange).toHaveBeenCalledTimes(5);
-    },
-  );
+    provider.emit("accountsChanged", []);
+    provider.emit("accountsChanged", [ADDR_A]);
+    expect(onWalletAccountChange).toHaveBeenCalledTimes(4);
+    provider.emit("chainChanged", "0x7a69");
+    expect(onWalletAccountChange).toHaveBeenCalledTimes(5);
+  });
 
-  eit(
-    "emits chain change with the previous wallet account carried forward",
-    async ({ provider, onWalletAccountChange }) => {
-      eip1193Subscribe({ provider, onWalletAccountChange });
+  test("emits chain change with the previous wallet account carried forward", async ({
+    provider,
+    onWalletAccountChange,
+  }) => {
+    eip1193Subscribe({ provider, onWalletAccountChange });
 
-      provider.emit("accountsChanged", [ADDR_A]);
-      provider.emit("chainChanged", "0x7a69");
-      expect(onWalletAccountChange).toHaveBeenCalledOnce();
+    provider.emit("accountsChanged", [ADDR_A]);
+    provider.emit("chainChanged", "0x7a69");
+    expect(onWalletAccountChange).toHaveBeenCalledOnce();
 
-      provider.emit("chainChanged", "0x1");
-      expect(onWalletAccountChange).toHaveBeenCalledTimes(2);
-      expect(onWalletAccountChange).toHaveBeenLastCalledWith({
-        previous: { address: ADDR_A, chainId: CHAIN_31337 },
-        next: { address: ADDR_A, chainId: CHAIN_1 },
-      });
-    },
-  );
+    provider.emit("chainChanged", "0x1");
+    expect(onWalletAccountChange).toHaveBeenCalledTimes(2);
+    expect(onWalletAccountChange).toHaveBeenLastCalledWith({
+      previous: { address: ADDR_A, chainId: CHAIN_31337 },
+      next: { address: ADDR_A, chainId: CHAIN_1 },
+    });
+  });
 
-  eit(
-    "chain change without a prior wallet account waits for an observed address",
-    async ({ provider, onWalletAccountChange }) => {
-      eip1193Subscribe({ provider, onWalletAccountChange });
+  test("chain change without a prior wallet account waits for an observed address", async ({
+    provider,
+    onWalletAccountChange,
+  }) => {
+    eip1193Subscribe({ provider, onWalletAccountChange });
 
-      provider.emit("chainChanged", "0x1");
-      expect(onWalletAccountChange).not.toHaveBeenCalled();
+    provider.emit("chainChanged", "0x1");
+    expect(onWalletAccountChange).not.toHaveBeenCalled();
 
-      provider.emit("accountsChanged", [ADDR_A]);
-      expect(onWalletAccountChange).toHaveBeenCalledOnce();
-      expect(onWalletAccountChange).toHaveBeenCalledWith({
-        previous: undefined,
-        next: { address: ADDR_A, chainId: CHAIN_1 },
-      });
-    },
-  );
+    provider.emit("accountsChanged", [ADDR_A]);
+    expect(onWalletAccountChange).toHaveBeenCalledOnce();
+    expect(onWalletAccountChange).toHaveBeenCalledWith({
+      previous: undefined,
+      next: { address: ADDR_A, chainId: CHAIN_1 },
+    });
+  });
 
-  eit(
-    "does not fire when same address reconnects without disconnect",
-    async ({ provider, onWalletAccountChange }) => {
-      eip1193Subscribe({ provider, onWalletAccountChange });
+  test("does not fire when same address reconnects without disconnect", async ({
+    provider,
+    onWalletAccountChange,
+  }) => {
+    eip1193Subscribe({ provider, onWalletAccountChange });
 
-      provider.emit("accountsChanged", [ADDR_A]);
-      provider.emit("chainChanged", "0x7a69");
-      expect(onWalletAccountChange).toHaveBeenCalledOnce();
+    provider.emit("accountsChanged", [ADDR_A]);
+    provider.emit("chainChanged", "0x7a69");
+    expect(onWalletAccountChange).toHaveBeenCalledOnce();
 
-      provider.emit("accountsChanged", [ADDR_A]);
-      expect(onWalletAccountChange).toHaveBeenCalledOnce();
-    },
-  );
+    provider.emit("accountsChanged", [ADDR_A]);
+    expect(onWalletAccountChange).toHaveBeenCalledOnce();
+  });
 
-  eit(
-    "case-insensitive address comparison prevents duplicate fires",
-    async ({ provider, onWalletAccountChange }) => {
-      eip1193Subscribe({ provider, onWalletAccountChange });
+  test("case-insensitive address comparison prevents duplicate fires", async ({
+    provider,
+    onWalletAccountChange,
+  }) => {
+    eip1193Subscribe({ provider, onWalletAccountChange });
 
-      provider.emit("accountsChanged", [ADDR_A]);
-      provider.emit("chainChanged", "0x7a69");
-      expect(onWalletAccountChange).toHaveBeenCalledOnce();
+    provider.emit("accountsChanged", [ADDR_A]);
+    provider.emit("chainChanged", "0x7a69");
+    expect(onWalletAccountChange).toHaveBeenCalledOnce();
 
-      provider.emit("accountsChanged", [ADDR_A.toLowerCase()]);
-      expect(onWalletAccountChange).toHaveBeenCalledOnce();
-    },
-  );
+    provider.emit("accountsChanged", [ADDR_A.toLowerCase()]);
+    expect(onWalletAccountChange).toHaveBeenCalledOnce();
+  });
 
-  it("returns a no-op unsubscribe when provider is undefined", () => {
-    const unsub = eip1193Subscribe({ provider: undefined, onWalletAccountChange: () => {} });
+  test("returns a no-op unsubscribe when provider is undefined", () => {
+    const unsub = eip1193Subscribe({
+      provider: undefined,
+      onWalletAccountChange: () => {},
+    });
     expect(unsub).toBeTypeOf("function");
     unsub();
   });
 
-  it("registers and removes all three native listeners", () => {
+  test("registers and removes all three native listeners", () => {
     const provider = createFakeProvider();
-    const unsub = eip1193Subscribe({ provider, onWalletAccountChange: () => {} });
+    const unsub = eip1193Subscribe({
+      provider,
+      onWalletAccountChange: () => {},
+    });
 
     expect(provider.listenerCount("accountsChanged")).toBe(1);
     expect(provider.listenerCount("disconnect")).toBe(1);
@@ -246,7 +250,7 @@ describe("eip1193Subscribe", () => {
     expect(provider.listenerCount("chainChanged")).toBe(0);
   });
 
-  it("does not fire events after unsubscribe", () => {
+  test("does not fire events after unsubscribe", () => {
     const provider = createFakeProvider();
     const onWalletAccountChange = vi.fn();
     const unsub = eip1193Subscribe({ provider, onWalletAccountChange });
@@ -263,12 +267,15 @@ describe("eip1193Subscribe", () => {
     expect(onWalletAccountChange).toHaveBeenCalledOnce();
   });
 
-  it("emits the initial wallet account when available", async () => {
+  test("emits the initial wallet account when available", async () => {
     const provider = createFakeProvider();
     const onWalletAccountChange = vi.fn();
     eip1193Subscribe({
       provider,
-      getInitialWalletAccount: () => ({ address: ADDR_A, chainId: CHAIN_31337 }),
+      getInitialWalletAccount: () => ({
+        address: ADDR_A,
+        chainId: CHAIN_31337,
+      }),
       onWalletAccountChange,
     });
 
@@ -283,7 +290,7 @@ describe("eip1193Subscribe", () => {
     });
   });
 
-  it("carries initial wallet account as previous on account changes", async () => {
+  test("carries initial wallet account as previous on account changes", async () => {
     const provider = createFakeProvider();
     const onWalletAccountChange = vi.fn();
     const getInitialWalletAccount = vi
@@ -309,7 +316,7 @@ describe("eip1193Subscribe", () => {
     });
   });
 
-  it("carries initial wallet account as previous on disconnect", async () => {
+  test("carries initial wallet account as previous on disconnect", async () => {
     const provider = createFakeProvider();
     const onWalletAccountChange = vi.fn();
     const getInitialWalletAccount = vi
@@ -335,13 +342,14 @@ describe("eip1193Subscribe", () => {
     });
   });
 
-  it("ignores initial wallet account when a provider event wins the race", async () => {
+  test("ignores initial wallet account when a provider event wins the race", async () => {
     let resolveInitial!: (walletAccount: { address: Address; chainId: number }) => void;
-    const initialWalletAccountPromise = new Promise<{ address: Address; chainId: number }>(
-      (resolve) => {
-        resolveInitial = resolve;
-      },
-    );
+    const initialWalletAccountPromise = new Promise<{
+      address: Address;
+      chainId: number;
+    }>((resolve) => {
+      resolveInitial = resolve;
+    });
     const provider = createFakeProvider();
     const onWalletAccountChange = vi.fn();
     eip1193Subscribe({
@@ -365,7 +373,7 @@ describe("eip1193Subscribe", () => {
     });
   });
 
-  it("does not reuse a stale observed chain after disconnect", () => {
+  test("does not reuse a stale observed chain after disconnect", () => {
     const provider = createFakeProvider();
     const onWalletAccountChange = vi.fn();
     eip1193Subscribe({ provider, onWalletAccountChange });
@@ -388,8 +396,11 @@ describe("eip1193Subscribe", () => {
     });
   });
 
-  it("does not request initial accounts or chain", () => {
-    const provider = createFakeProvider({ accounts: [ADDR_A], chainId: "0x7a69" });
+  test("does not request initial accounts or chain", () => {
+    const provider = createFakeProvider({
+      accounts: [ADDR_A],
+      chainId: "0x7a69",
+    });
     const onWalletAccountChange = vi.fn();
     eip1193Subscribe({ provider, onWalletAccountChange });
 

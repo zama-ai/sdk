@@ -1,4 +1,4 @@
-import { describe, expect, it } from "../test-fixtures";
+import { describe, expect, test } from "../test-fixtures";
 import { renderHook, waitFor } from "@testing-library/react";
 import type * as ZamaSdkModule from "@zama-fhe/sdk";
 import type { ZamaSDKEventListener, ZamaConfig } from "@zama-fhe/sdk";
@@ -21,13 +21,13 @@ vi.mock(import("@zama-fhe/sdk"), async (importOriginal: () => Promise<typeof Zam
 });
 
 describe("ZamaProvider & useZamaSDK", () => {
-  it("throws when used outside provider", () => {
+  test("throws when used outside provider", () => {
     expect(() => renderHook(() => useZamaSDK())).toThrow(
       "useZamaSDK must be used within a <ZamaProvider>",
     );
   });
 
-  it("returns a ZamaSDK instance inside provider", ({ renderWithProviders }) => {
+  test("returns a ZamaSDK instance inside provider", ({ renderWithProviders }) => {
     const { result } = renderWithProviders(() => useZamaSDK());
 
     expect(result.current).toBeDefined();
@@ -35,7 +35,7 @@ describe("ZamaProvider & useZamaSDK", () => {
     expect(result.current.relayer).toBeDefined();
   });
 
-  it("does not terminate relayer on unmount (caller owns the relayer)", ({
+  test("does not terminate relayer on unmount (caller owns the relayer)", ({
     relayer,
     renderWithProviders,
   }) => {
@@ -45,7 +45,7 @@ describe("ZamaProvider & useZamaSDK", () => {
     expect(relayer.terminate).not.toHaveBeenCalled();
   });
 
-  it("invalidates wallet-scoped queries when the signer lifecycle changes", ({
+  test("invalidates wallet-scoped queries when the signer lifecycle changes", ({
     createWrapper,
     signer,
   }) => {
@@ -70,8 +70,14 @@ describe("ZamaProvider & useZamaSDK", () => {
     queryClient.setQueryData(wagmiBalanceKey, 2n);
 
     listener({
-      previous: { address: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa", chainId: 31337 },
-      next: { address: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa", chainId: 1 },
+      previous: {
+        address: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa",
+        chainId: 31337,
+      },
+      next: {
+        address: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa",
+        chainId: 1,
+      },
     });
 
     return waitFor(() => {
@@ -81,7 +87,7 @@ describe("ZamaProvider & useZamaSDK", () => {
     });
   });
 
-  it("passes keypairTTL and onEvent to ZamaSDK", ({ createWrapper }) => {
+  test("passes keypairTTL and onEvent to ZamaSDK", ({ createWrapper }) => {
     tokenSDKConstructorArgs.length = 0;
 
     const onEvent: ZamaSDKEventListener = vi.fn();
@@ -107,7 +113,11 @@ describe("ZamaProvider & useZamaSDK", () => {
 
     // onEvent is stabilized via ref — verify it delegates correctly
     const wrappedOnEvent = tokenSDKConstructorArgs[0].onEvent!;
-    wrappedOnEvent({ type: "credentials:loading", timestamp: 1, contractAddresses: [] } as never);
+    wrappedOnEvent({
+      type: "credentials:loading",
+      timestamp: 1,
+      contractAddresses: [],
+    } as never);
     expect(onEvent).toHaveBeenCalledTimes(1);
   });
 });

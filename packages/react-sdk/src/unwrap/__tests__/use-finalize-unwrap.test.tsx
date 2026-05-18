@@ -3,23 +3,9 @@ import { useMutation } from "@tanstack/react-query";
 import { DecryptionFailedError } from "@zama-fhe/sdk";
 import { finalizeUnwrapMutationOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { describe, expect, test, vi } from "../../test-fixtures";
-import { expectCacheInvalidated, expectCacheUntouched } from "../../test-helpers";
 import { useFinalizeUnwrap } from "../use-finalize-unwrap";
-import {
-  BURN_AMOUNT_HANDLE,
-  MOCK_TOKEN_ADDRESS,
-  OTHER_TOKEN,
-  TOKEN,
-  USER,
-  WAGMI_BALANCE_KEY,
-  expectDefaultMutationState,
-  expectInvalidatedQueries,
-  mockPublicDecrypt,
-  mutateAndExpectOnSuccess,
-} from "../../__tests__/mutation-test-helpers";
-
 describe("useFinalizeUnwrap", () => {
-  test("default", ({ renderWithProviders }) => {
+  test("default", ({ renderWithProviders, TOKEN, expectDefaultMutationState }) => {
     const { result } = renderWithProviders(() => useFinalizeUnwrap(TOKEN));
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
@@ -29,6 +15,15 @@ describe("useFinalizeUnwrap", () => {
   test("cache: invalidates balance, allowance, and wagmi after finalize", async ({
     renderWithProviders,
     relayer,
+    BURN_AMOUNT_HANDLE,
+    OTHER_TOKEN,
+    TOKEN,
+    USER,
+    WAGMI_BALANCE_KEY,
+    expectCacheInvalidated,
+    expectCacheUntouched,
+    expectInvalidatedQueries,
+    mockPublicDecrypt,
   }) => {
     mockPublicDecrypt(relayer);
 
@@ -53,7 +48,18 @@ describe("useFinalizeUnwrap", () => {
     expectCacheUntouched(queryClient, otherAllowanceKey, 333n);
   });
 
-  test("behavior: forwards onSuccess callback", async ({ renderWithProviders, relayer }) => {
+  test("behavior: forwards onSuccess callback", async ({
+    renderWithProviders,
+    relayer,
+    BURN_AMOUNT_HANDLE,
+    TOKEN,
+    USER,
+    WAGMI_BALANCE_KEY,
+    expectCacheInvalidated,
+    expectInvalidatedQueries,
+    mockPublicDecrypt,
+    mutateAndExpectOnSuccess,
+  }) => {
     mockPublicDecrypt(relayer);
 
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
@@ -101,9 +107,9 @@ describe("useFinalizeUnwrap error propagation", () => {
     );
 
     await act(async () => {
-      await expect(
-        result.current.mutateAsync({ unwrapRequestId: MOCK_TOKEN_ADDRESS }),
-      ).rejects.toBe(error);
+      await expect(result.current.mutateAsync({ unwrapRequestId: token.address })).rejects.toBe(
+        error,
+      );
     });
 
     await waitFor(() => {

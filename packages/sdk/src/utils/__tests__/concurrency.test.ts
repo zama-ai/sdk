@@ -1,8 +1,8 @@
-import { describe, it, expect } from "../../test-fixtures";
+import { describe, test, expect } from "../../test-fixtures";
 import { pLimit } from "../concurrency";
 
 describe("pLimit", () => {
-  it("resolves all results in order", async () => {
+  test("resolves all results in order", async () => {
     const fns = [() => Promise.resolve(1), () => Promise.resolve(2), () => Promise.resolve(3)];
 
     const results = await pLimit(fns);
@@ -10,12 +10,12 @@ describe("pLimit", () => {
     expect(results).toEqual([1, 2, 3]);
   });
 
-  it("returns empty array for empty input", async () => {
+  test("returns empty array for empty input", async () => {
     const results = await pLimit([]);
     expect(results).toEqual([]);
   });
 
-  it("runs all in parallel with Infinity (default)", async () => {
+  test("runs all in parallel with Infinity (default)", async () => {
     let concurrent = 0;
     let maxConcurrent = 0;
 
@@ -32,7 +32,7 @@ describe("pLimit", () => {
     expect(maxConcurrent).toBe(4);
   });
 
-  it("limits concurrency to maxConcurrency", async () => {
+  test("limits concurrency to maxConcurrency", async () => {
     let concurrent = 0;
     let maxConcurrent = 0;
 
@@ -53,7 +53,7 @@ describe("pLimit", () => {
     expect(results).toEqual([1, 2, 3, 4, 5]);
   });
 
-  it("handles maxConcurrency of 1 (serial execution)", async () => {
+  test("handles maxConcurrency of 1 (serial execution)", async () => {
     const order: number[] = [];
 
     const createFn = (val: number) => async () => {
@@ -68,7 +68,7 @@ describe("pLimit", () => {
     expect(order).toEqual([1, 2, 3]);
   });
 
-  it("falls back to Promise.all when maxConcurrency >= fns.length", async () => {
+  test("falls back to Promise.all when maxConcurrency >= fns.length", async () => {
     let concurrent = 0;
     let maxConcurrent = 0;
 
@@ -85,7 +85,7 @@ describe("pLimit", () => {
     expect(maxConcurrent).toBe(3); // All run in parallel
   });
 
-  it("propagates errors from thunks", async () => {
+  test("propagates errors from thunks", async () => {
     const fns = [
       () => Promise.resolve(1),
       () => Promise.reject(new Error("boom")),
@@ -95,12 +95,12 @@ describe("pLimit", () => {
     await expect(pLimit(fns, 1)).rejects.toThrow("boom");
   });
 
-  it("throws for maxConcurrency of 0", async () => {
+  test("throws for maxConcurrency of 0", async () => {
     const fns = [() => Promise.resolve(1)];
     await expect(pLimit(fns, 0)).rejects.toThrow("maxConcurrency must be a positive number");
   });
 
-  it("throws for negative maxConcurrency", async () => {
+  test("throws for negative maxConcurrency", async () => {
     const fns = [() => Promise.resolve(1)];
     await expect(pLimit(fns, -1)).rejects.toThrow("maxConcurrency must be a positive number");
   });

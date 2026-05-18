@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "../test-fixtures";
+import { describe, expect, test, vi } from "../test-fixtures";
 import { waitFor } from "@testing-library/react";
 import { ERC7984_WRAPPER_INTERFACE_ID } from "@zama-fhe/sdk";
 import type { Address } from "@zama-fhe/sdk";
@@ -8,14 +8,14 @@ import { useUnshieldAll } from "../unshield/use-unshield-all";
 import { useMetadataSuspense } from "../token/use-metadata";
 import { useTotalSupplySuspense } from "../token/use-total-supply";
 import { useWrapperDiscoverySuspense } from "../token/use-wrapper-discovery";
-import { USER } from "./mutation-test-helpers";
 
 describe("useUnderlyingAllowance", () => {
-  it("returns allowance value", async ({
+  test("returns allowance value", async ({
     signer,
     wrapperAddress,
     renderWithProviders,
     provider,
+    USER,
   }) => {
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce("0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e")
@@ -37,7 +37,7 @@ describe("useUnderlyingAllowance", () => {
 });
 
 describe("useUnshield", () => {
-  it("provides mutate function", ({ wrapperAddress, renderWithProviders }) => {
+  test("provides mutate function", ({ wrapperAddress, renderWithProviders }) => {
     const { result } = renderWithProviders(() => useUnshield(wrapperAddress));
 
     expect(result.current.mutate).toBeDefined();
@@ -46,7 +46,7 @@ describe("useUnshield", () => {
 });
 
 describe("useUnshieldAll", () => {
-  it("provides mutate function", ({ wrapperAddress, renderWithProviders }) => {
+  test("provides mutate function", ({ wrapperAddress, renderWithProviders }) => {
     const { result } = renderWithProviders(() => useUnshieldAll(wrapperAddress));
 
     expect(result.current.mutate).toBeDefined();
@@ -55,7 +55,7 @@ describe("useUnshieldAll", () => {
 });
 
 describe("useMetadataSuspense", () => {
-  it("returns metadata via suspense", async ({
+  test("returns metadata via suspense", async ({
     signer,
     tokenAddress,
     renderWithProviders,
@@ -71,12 +71,16 @@ describe("useMetadataSuspense", () => {
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(result.current.data).toEqual({ name: "TestToken", symbol: "TT", decimals: 18 });
+    expect(result.current.data).toEqual({
+      name: "TestToken",
+      symbol: "TT",
+      decimals: 18,
+    });
   });
 });
 
 describe("useTotalSupplySuspense", () => {
-  it("returns total supply via suspense", async ({
+  test("returns total supply via suspense", async ({
     signer,
     tokenAddress,
     renderWithProviders,
@@ -99,7 +103,7 @@ describe("useTotalSupplySuspense", () => {
 });
 
 describe("useWrapperDiscoverySuspense", () => {
-  it("returns wrapper address via suspense", async ({
+  test("returns wrapper address via suspense", async ({
     signer,
     tokenAddress,
     renderWithProviders,

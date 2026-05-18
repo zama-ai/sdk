@@ -7,7 +7,7 @@
  *
  * Run `pnpm build` before running these tests.
  */
-import { describe, it, expect } from "vitest";
+import { describe, test, expect } from "vitest";
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -18,27 +18,27 @@ describe.skipIf(!hasBuild)("worker build smoke tests", () => {
   const workerPath = resolve(DIST, "relayer-sdk.worker.js");
   const indexPath = resolve(DIST, "index.js");
 
-  it("dist/relayer-sdk.worker.js exists", () => {
+  test("dist/relayer-sdk.worker.js exists", () => {
     expect(existsSync(workerPath)).toBe(true);
   });
 
-  it("standalone worker file is valid IIFE", () => {
+  test("standalone worker file is valid IIFE", () => {
     const content = readFileSync(workerPath, "utf-8");
     expect(content).toMatch(/^\(function\s*\(/);
   });
 
-  it("standalone worker file contains self.onmessage handler", () => {
+  test("standalone worker file contains self.onmessage handler", () => {
     const content = readFileSync(workerPath, "utf-8");
     expect(content).toContain("onmessage");
   });
 
-  it("main bundle inlines the worker code", () => {
+  test("main bundle inlines the worker code", () => {
     const content = readFileSync(indexPath, "utf-8");
     // The inlined worker code should contain the IIFE as a string literal
     expect(content).toContain("onmessage");
   });
 
-  it("standalone worker file exports filename alongside code", () => {
+  test("standalone worker file exports filename alongside code", () => {
     const content = readFileSync(indexPath, "utf-8");
     expect(content).toContain("relayer-sdk.worker.js");
   });

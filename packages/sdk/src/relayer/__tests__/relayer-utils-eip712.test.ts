@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "../../test-fixtures";
+import { describe, test, expect, beforeEach, vi } from "../../test-fixtures";
 
 // ---------------------------------------------------------------------------
 // Mock worker client
@@ -65,7 +65,7 @@ describe("createEIP712 includes EIP712Domain type", () => {
     mockWorkerClient.createEIP712.mockResolvedValue(MOCK_EIP712);
   });
 
-  it("adds EIP712Domain type with correct field types", async () => {
+  test("adds EIP712Domain type with correct field types", async () => {
     const relayer = createRelayer();
     const result = await relayer.createEIP712(
       "0xpub",
@@ -84,7 +84,7 @@ describe("createEIP712 includes EIP712Domain type", () => {
     relayer.terminate();
   });
 
-  it("preserves UserDecryptRequestVerification type", async () => {
+  test("preserves UserDecryptRequestVerification type", async () => {
     const relayer = createRelayer();
     const result = await relayer.createEIP712(
       "0xpub",
@@ -100,7 +100,7 @@ describe("createEIP712 includes EIP712Domain type", () => {
     relayer.terminate();
   });
 
-  it("preserves domain and message fields", async () => {
+  test("preserves domain and message fields", async () => {
     const relayer = createRelayer();
     const result = await relayer.createEIP712(
       "0xpub",

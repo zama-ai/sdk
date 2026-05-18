@@ -1,12 +1,12 @@
 import type { WalletClient } from "viem";
-import { describe, expect, it, vi } from "../test-fixtures";
+import { describe, expect, test, vi } from "../test-fixtures";
 import { WalletNotConnectedError } from "../errors";
 import { ViemSigner } from "../viem/viem-signer";
 
 describe("ViemSigner", () => {
   // Same no-account invariant applied to each method that needs an account —
   // parametrized so failures name the offending method.
-  it.each([
+  test.each([
     ["requireWalletAccount", (s: ViemSigner) => s.requireWalletAccount("test")],
     [
       "signTypedData",
@@ -25,9 +25,9 @@ describe("ViemSigner", () => {
         } as unknown as WalletClient,
       });
 
-      await expect(Promise.resolve().then(() => call(signer))).rejects.toBeInstanceOf(
-        WalletNotConnectedError,
-      );
+      await expect(
+        Promise.resolve().then(() => call(signer) as unknown as Promise<unknown>),
+      ).rejects.toBeInstanceOf(WalletNotConnectedError);
     },
   );
 });

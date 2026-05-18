@@ -1,25 +1,24 @@
 import { act } from "@testing-library/react";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { describe, expect, test, vi } from "../../test-fixtures";
-import { expectCacheInvalidated, expectCacheUntouched } from "../../test-helpers";
 import { useApproveUnderlying } from "../use-approve-underlying";
-import {
-  OTHER_TOKEN,
-  UNDERLYING,
-  WRAPPER,
-  expectDefaultMutationState,
-  mutateAndExpectOnSuccess,
-} from "../../__tests__/mutation-test-helpers";
-
 describe("useApproveUnderlying", () => {
-  test("default", ({ renderWithProviders }) => {
+  test("default", ({ renderWithProviders, WRAPPER, expectDefaultMutationState }) => {
     const { result } = renderWithProviders(() => useApproveUnderlying(WRAPPER));
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
     expectDefaultMutationState(state);
   });
 
-  test("cache: invalidates allowance after approve", async ({ renderWithProviders, provider }) => {
+  test("cache: invalidates allowance after approve", async ({
+    renderWithProviders,
+    provider,
+    OTHER_TOKEN,
+    UNDERLYING,
+    WRAPPER,
+    expectCacheInvalidated,
+    expectCacheUntouched,
+  }) => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(0n);
 
     const { result, queryClient } = renderWithProviders(() => useApproveUnderlying(WRAPPER));
@@ -36,7 +35,14 @@ describe("useApproveUnderlying", () => {
     expectCacheUntouched(queryClient, otherAllowanceKey, 777n);
   });
 
-  test("behavior: forwards onSuccess callback", async ({ renderWithProviders, provider }) => {
+  test("behavior: forwards onSuccess callback", async ({
+    renderWithProviders,
+    provider,
+    UNDERLYING,
+    WRAPPER,
+    expectCacheInvalidated,
+    mutateAndExpectOnSuccess,
+  }) => {
     vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(0n);
 
     const allowanceKey = zamaQueryKeys.underlyingAllowance.token(WRAPPER);
