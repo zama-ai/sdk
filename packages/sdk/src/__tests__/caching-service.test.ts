@@ -13,28 +13,30 @@ const HANDLE_C = `0x${"cc".repeat(32)}` as Handle;
 const HANDLE_D = `0x${"dd".repeat(32)}` as Handle;
 
 describe("CachingService", () => {
-  test("returns null for cache misses", async ({ cache }) => {
-    await expect(cache.get(REQUESTER_A, CONTRACT_A, HANDLE_A)).resolves.toBeNull();
+  test("returns null for cachingService misses", async ({ cachingService }) => {
+    await expect(cachingService.get(REQUESTER_A, CONTRACT_A, HANDLE_A)).resolves.toBeNull();
   });
 
-  test("stores decrypt values by requester, contract, and handle", async ({ cache }) => {
-    await cache.set(REQUESTER_A, CONTRACT_A, HANDLE_A, 1n);
-    await cache.set(REQUESTER_B, CONTRACT_A, HANDLE_A, 2n);
-    await cache.set(REQUESTER_A, CONTRACT_B, HANDLE_A, true);
-    await cache.set(REQUESTER_A, CONTRACT_A, HANDLE_B, getAddress(REQUESTER_B));
-    await cache.set(REQUESTER_A, CONTRACT_B, HANDLE_C, 0n);
-    await cache.set(REQUESTER_A, CONTRACT_B, HANDLE_D, false);
+  test("stores decrypt values by requester, contract, and handle", async ({ cachingService }) => {
+    await cachingService.set(REQUESTER_A, CONTRACT_A, HANDLE_A, 1n);
+    await cachingService.set(REQUESTER_B, CONTRACT_A, HANDLE_A, 2n);
+    await cachingService.set(REQUESTER_A, CONTRACT_B, HANDLE_A, true);
+    await cachingService.set(REQUESTER_A, CONTRACT_A, HANDLE_B, getAddress(REQUESTER_B));
+    await cachingService.set(REQUESTER_A, CONTRACT_B, HANDLE_C, 0n);
+    await cachingService.set(REQUESTER_A, CONTRACT_B, HANDLE_D, false);
 
-    expect(await cache.get(REQUESTER_A, CONTRACT_A, HANDLE_A)).toBe(1n);
-    expect(await cache.get(REQUESTER_B, CONTRACT_A, HANDLE_A)).toBe(2n);
-    expect(await cache.get(REQUESTER_A, CONTRACT_B, HANDLE_A)).toBe(true);
-    expect(await cache.get(REQUESTER_A, CONTRACT_A, HANDLE_B)).toBe(getAddress(REQUESTER_B));
-    expect(await cache.get(REQUESTER_A, CONTRACT_B, HANDLE_C)).toBe(0n);
-    expect(await cache.get(REQUESTER_A, CONTRACT_B, HANDLE_D)).toBe(false);
+    expect(await cachingService.get(REQUESTER_A, CONTRACT_A, HANDLE_A)).toBe(1n);
+    expect(await cachingService.get(REQUESTER_B, CONTRACT_A, HANDLE_A)).toBe(2n);
+    expect(await cachingService.get(REQUESTER_A, CONTRACT_B, HANDLE_A)).toBe(true);
+    expect(await cachingService.get(REQUESTER_A, CONTRACT_A, HANDLE_B)).toBe(
+      getAddress(REQUESTER_B),
+    );
+    expect(await cachingService.get(REQUESTER_A, CONTRACT_B, HANDLE_C)).toBe(0n);
+    expect(await cachingService.get(REQUESTER_A, CONTRACT_B, HANDLE_D)).toBe(false);
   });
 
-  test("normalizes address and handle casing for lookups", async ({ cache }) => {
-    await cache.set(
+  test("normalizes address and handle casing for lookups", async ({ cachingService }) => {
+    await cachingService.set(
       REQUESTER_A.toLowerCase() as Address,
       CONTRACT_A.toLowerCase() as Address,
       HANDLE_A.toUpperCase() as Handle,
@@ -42,73 +44,75 @@ describe("CachingService", () => {
     );
 
     await expect(
-      cache.get(REQUESTER_A, CONTRACT_A, HANDLE_A.toLowerCase() as Handle),
+      cachingService.get(REQUESTER_A, CONTRACT_A, HANDLE_A.toLowerCase() as Handle),
     ).resolves.toBe(7n);
   });
 
-  test("clears only entries owned by a requester", async ({ cache }) => {
-    await cache.set(REQUESTER_A, CONTRACT_A, HANDLE_A, 1n);
-    await cache.set(REQUESTER_A, CONTRACT_B, HANDLE_B, 2n);
-    await cache.set(REQUESTER_B, CONTRACT_A, HANDLE_A, 3n);
+  test("clears only entries owned by a requester", async ({ cachingService }) => {
+    await cachingService.set(REQUESTER_A, CONTRACT_A, HANDLE_A, 1n);
+    await cachingService.set(REQUESTER_A, CONTRACT_B, HANDLE_B, 2n);
+    await cachingService.set(REQUESTER_B, CONTRACT_A, HANDLE_A, 3n);
 
-    await cache.clearForRequester(REQUESTER_A);
+    await cachingService.clearForRequester(REQUESTER_A);
 
-    expect(await cache.get(REQUESTER_A, CONTRACT_A, HANDLE_A)).toBeNull();
-    expect(await cache.get(REQUESTER_A, CONTRACT_B, HANDLE_B)).toBeNull();
-    expect(await cache.get(REQUESTER_B, CONTRACT_A, HANDLE_A)).toBe(3n);
+    expect(await cachingService.get(REQUESTER_A, CONTRACT_A, HANDLE_A)).toBeNull();
+    expect(await cachingService.get(REQUESTER_A, CONTRACT_B, HANDLE_B)).toBeNull();
+    expect(await cachingService.get(REQUESTER_B, CONTRACT_A, HANDLE_A)).toBe(3n);
   });
 
-  test("clearAll removes all indexed cache entries", async ({ cache }) => {
-    await cache.set(REQUESTER_A, CONTRACT_A, HANDLE_A, 1n);
-    await cache.set(REQUESTER_B, CONTRACT_B, HANDLE_B, 2n);
+  test("clearAll removes all indexed cachingService entries", async ({ cachingService }) => {
+    await cachingService.set(REQUESTER_A, CONTRACT_A, HANDLE_A, 1n);
+    await cachingService.set(REQUESTER_B, CONTRACT_B, HANDLE_B, 2n);
 
-    await cache.clearAll();
+    await cachingService.clearAll();
 
-    expect(await cache.get(REQUESTER_A, CONTRACT_A, HANDLE_A)).toBeNull();
-    expect(await cache.get(REQUESTER_B, CONTRACT_B, HANDLE_B)).toBeNull();
+    expect(await cachingService.get(REQUESTER_A, CONTRACT_A, HANDLE_A)).toBeNull();
+    expect(await cachingService.get(REQUESTER_B, CONTRACT_B, HANDLE_B)).toBeNull();
   });
 
-  test("invalid stored values behave as cache misses", async ({ createMockStorage }) => {
+  test("invalid stored values behave as cachingService misses", async ({ createMockStorage }) => {
     const storage = createMockStorage();
-    const cache = new CachingService(storage);
+    const cachingService = new CachingService(storage);
     storage.get = async () => ({ value: 42n });
 
-    await expect(cache.get(REQUESTER_A, CONTRACT_A, HANDLE_A)).resolves.toBeNull();
+    await expect(cachingService.get(REQUESTER_A, CONTRACT_A, HANDLE_A)).resolves.toBeNull();
   });
 
-  test("storage read failures degrade to cache misses", async ({ createMockStorage }) => {
+  test("storage read failures degrade to cachingService misses", async ({ createMockStorage }) => {
     const storage = createMockStorage();
-    const cache = new CachingService(storage);
+    const cachingService = new CachingService(storage);
 
     storage.get = async () => {
       throw new Error("storage unavailable");
     };
-    await expect(cache.get(REQUESTER_A, CONTRACT_A, HANDLE_A)).resolves.toBeNull();
+    await expect(cachingService.get(REQUESTER_A, CONTRACT_A, HANDLE_A)).resolves.toBeNull();
   });
 
   test("storage write failures degrade to no-ops", async ({ createMockStorage }) => {
     const storage = createMockStorage();
-    const cache = new CachingService(storage);
+    const cachingService = new CachingService(storage);
 
     storage.set = async () => {
       throw new Error("storage full");
     };
-    await expect(cache.set(REQUESTER_A, CONTRACT_A, HANDLE_A, 42n)).resolves.toBeUndefined();
+    await expect(
+      cachingService.set(REQUESTER_A, CONTRACT_A, HANDLE_A, 42n),
+    ).resolves.toBeUndefined();
   });
 
-  test("concurrent writes remain clearable", async ({ cache }) => {
+  test("concurrent writes remain clearable", async ({ cachingService }) => {
     await Promise.all([
-      cache.set(REQUESTER_A, CONTRACT_A, HANDLE_A, 1n),
-      cache.set(REQUESTER_A, CONTRACT_A, HANDLE_B, 2n),
-      cache.set(REQUESTER_A, CONTRACT_B, HANDLE_A, 3n),
-      cache.set(REQUESTER_B, CONTRACT_A, HANDLE_A, 4n),
+      cachingService.set(REQUESTER_A, CONTRACT_A, HANDLE_A, 1n),
+      cachingService.set(REQUESTER_A, CONTRACT_A, HANDLE_B, 2n),
+      cachingService.set(REQUESTER_A, CONTRACT_B, HANDLE_A, 3n),
+      cachingService.set(REQUESTER_B, CONTRACT_A, HANDLE_A, 4n),
     ]);
 
-    await cache.clearAll();
+    await cachingService.clearAll();
 
-    expect(await cache.get(REQUESTER_A, CONTRACT_A, HANDLE_A)).toBeNull();
-    expect(await cache.get(REQUESTER_A, CONTRACT_A, HANDLE_B)).toBeNull();
-    expect(await cache.get(REQUESTER_A, CONTRACT_B, HANDLE_A)).toBeNull();
-    expect(await cache.get(REQUESTER_B, CONTRACT_A, HANDLE_A)).toBeNull();
+    expect(await cachingService.get(REQUESTER_A, CONTRACT_A, HANDLE_A)).toBeNull();
+    expect(await cachingService.get(REQUESTER_A, CONTRACT_A, HANDLE_B)).toBeNull();
+    expect(await cachingService.get(REQUESTER_A, CONTRACT_B, HANDLE_A)).toBeNull();
+    expect(await cachingService.get(REQUESTER_B, CONTRACT_A, HANDLE_A)).toBeNull();
   });
 });

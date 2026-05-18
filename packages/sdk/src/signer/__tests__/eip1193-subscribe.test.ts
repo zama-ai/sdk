@@ -1,3 +1,4 @@
+// oxlint-disable no-empty-pattern
 import type { Address } from "viem";
 import { test as base, describe, expect, vi } from "../../test-fixtures";
 import { eip1193Subscribe } from "../eip1193-subscribe";
@@ -61,15 +62,10 @@ interface EipFixtures {
 }
 
 const test = base.extend<EipFixtures>({
-  // eslint-disable-next-line no-empty-pattern
   provider: async ({}, use) => {
     await use(createFakeProvider());
   },
-  onWalletAccountChange: async (
-    // oxlint-disable-next-line no-empty-pattern
-    {},
-    use: (v: MockWalletAccountListener) => Promise<void>,
-  ) => {
+  onWalletAccountChange: async ({}, use: (v: MockWalletAccountListener) => Promise<void>) => {
     await use(vi.fn() as unknown as MockWalletAccountListener);
   },
 });

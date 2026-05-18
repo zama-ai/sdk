@@ -48,7 +48,7 @@ export type CreateLifecycleServiceFn = (overrides?: {
 }) => LifecycleService;
 
 export interface ServiceFixtures {
-  cache: CachingService;
+  cachingService: CachingService;
   credentialService: CredentialService;
   delegationService: DelegationService;
   decryptionService: DecryptionService;
@@ -63,7 +63,7 @@ export interface ServiceFixtures {
 type ServiceDeps = RelayerFixtures & SignerFixtures & ProviderFixtures & StorageFixtures;
 
 export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
-  cache: async ({ storage }, use) => {
+  cachingService: async ({ storage }, use) => {
     await use(new CachingService(storage));
   },
   createCredentialService: async ({ relayer, signer, storage }, use) => {
@@ -94,7 +94,7 @@ export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
     await use(createDelegationService());
   },
   createDecryptionService: async (
-    { cache, credentialService, delegationService, relayer },
+    { cachingService: cache, credentialService, delegationService, relayer },
     use,
   ) => {
     const factory: CreateDecryptionServiceFn = (overrides = {}) =>
@@ -121,7 +121,7 @@ export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
   encryptionService: async ({ createEncryptionService }, use) => {
     await use(createEncryptionService());
   },
-  createLifecycleService: async ({ signer, cache, relayer }, use) => {
+  createLifecycleService: async ({ signer, cachingService: cache, relayer }, use) => {
     const factory: CreateLifecycleServiceFn = (overrides = {}) =>
       new LifecycleService({
         signer: "signer" in overrides ? overrides.signer : signer,
