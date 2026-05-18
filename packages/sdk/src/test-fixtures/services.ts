@@ -121,11 +121,11 @@ export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
   encryptionService: async ({ createEncryptionService }, use) => {
     await use(createEncryptionService());
   },
-  createLifecycleService: async ({ signer, cachingService: cache, relayer }, use) => {
+  createLifecycleService: async ({ signer, cachingService, relayer }, use) => {
     const factory: CreateLifecycleServiceFn = (overrides = {}) =>
       new LifecycleService({
         signer: "signer" in overrides ? overrides.signer : signer,
-        cache: overrides.cache ?? cache,
+        cache: overrides.cache ?? cachingService,
         relayer: (overrides.relayer ?? relayer) as unknown as RelayerDispatcher,
         credentialService: overrides.credentialService,
       });
