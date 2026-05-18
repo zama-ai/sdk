@@ -27,11 +27,109 @@ export interface WalletConfig {
    * connect flow than what `eth_accounts` returns on page load.
    */
   requestAccounts?: string[];
+}
+
+export interface RpcOptions {
   /**
    * When true, the registry mock returns 0 pairs (length = 0).
-   * The UI will show "No tokens available." and all action buttons will be disabled.
+   * The UI will show "No tokens available." and token-scoped operation cards will stay hidden.
    */
   emptyRegistry?: boolean;
+}
+
+// ── ABI encoding helpers (Node.js) ────────────────────────────────────────────
+// These run in the Playwright test process — Buffer and standard Node APIs are available.
+
+/** Encode a non-negative integer as a 32-byte big-endian hex word (no 0x prefix). */
+function abiU256(n: number | bigint): string {
+  return BigInt(n).toString(16).padStart(64, "0");
+}
+
+/** Encode a 20-byte Ethereum address as a 32-byte ABI word (no 0x prefix). */
+function abiAddr(a: string): string {
+  return a.slice(2).toLowerCase().padStart(64, "0");
+}
+
+/** Encode a boolean as a 32-byte ABI word (no 0x prefix). */
+function abiBool(b: boolean): string {
+  return (b ? "1" : "0").padStart(64, "0");
+}
+
+/**
+ * ABI-encode a UTF-8 string as a `string` dynamic type:
+ *   [offset=32][length][data padded to next 32-byte boundary]
+ */
+function abiStr(s: string): string {
+  const buf = Buffer.from(s, "utf8");
+  const hex = buf.toString("hex");
+  const padded = hex.padEnd(Math.ceil(buf.length / 32) * 64, "0");
+  return "0x" + abiU256(32) + abiU256(buf.length) + padded;
+}
+
+const REGISTRY = REGISTRY_ADDRESS.toLowerCase();
+const T1 = MOCK_TOKEN1_ADDRESS.toLowerCase();
+const CT1 = MOCK_CTOKEN1_ADDRESS.toLowerCase();
+const T2 = MOCK_TOKEN2_ADDRESS.toLowerCase();
+const CT2 = MOCK_CTOKEN2_ADDRESS.toLowerCase();
+
+const TOKEN_META: Record<string, { name: string; symbol: string; decimals: number }> = {
+  [T1]: { name: "USD Coin Mock", symbol: "USDC Mock", decimals: 6 },
+  [CT1]: { name: "Confidential USD Coin", symbol: "cUSDC", decimals: 6 },
+  [T2]: { name: "Tether USD Mock", symbol: "USDT Mock", decimals: 6 },
+  [CT2]: { name: "Confidential Tether USD", symbol: "cUSDT", decimals: 6 },
+};
+
+/**
+ * Route a single `eth_call` request to the correct ABI-encoded response.
+ *
+ * SDK contract reads now go through the configured ethers JsonRpcProvider rather
+ * than the injected wallet, so registry and metadata mocking happens in
+ * interceptRpc instead of injectMockWallet.
+ */
+function resolveEthCall(params: unknown[] | undefined, options: RpcOptions): string {
+  const [tx = {}] = (params ?? []) as Array<{ to?: string; data?: string }>;
+  const to = (tx.to ?? "").toLowerCase();
+  const sel = (tx.data ?? "").slice(0, 10).toLowerCase();
+
+  if (to === REGISTRY) {
+    // getTokenConfidentialTokenPairsLength() → uint256
+    if (sel === "0x483cdcf4") {
+      return "0x" + abiU256(options.emptyRegistry ? 0 : 2);
+    }
+    // getTokenConfidentialTokenPairsSlice(uint256,uint256) → tuple[]
+    if (sel === "0x90c60535") {
+      if (options.emptyRegistry) {
+        // ABI encoding of empty tuple[]: offset + length=0
+        return "0x" + abiU256(32) + abiU256(0);
+      }
+      return (
+        "0x" +
+        abiU256(32) + // offset to array data
+        abiU256(2) + // array length
+        abiAddr(T1) +
+        abiAddr(CT1) +
+        abiBool(true) + // pair[0]
+        abiAddr(T2) +
+        abiAddr(CT2) +
+        abiBool(true) // pair[1]
+      );
+    }
+  }
+
+  // Token metadata: name(), symbol(), decimals(), totalSupply()
+  // Called by the SDK on both underlying and confidential token addresses.
+  const meta = TOKEN_META[to];
+  if (meta) {
+    if (sel === "0x06fdde03") return abiStr(meta.name); // name()
+    if (sel === "0x95d89b41") return abiStr(meta.symbol); // symbol()
+    if (sel === "0x313ce567") return "0x" + abiU256(meta.decimals); // decimals()
+  }
+  // totalSupply() — called only on the underlying ERC-20; returns uint256
+  if (sel === "0x18160ddd") return "0x" + abiU256(0);
+
+  // All other eth_call requests (e.g. balanceOf) return empty data,
+  // causing the caller to fail gracefully (query error → "—" in UI).
+  return "0x";
 }
 
 /**
@@ -49,63 +147,17 @@ export interface WalletConfig {
  *   providers.tsx listens for to remount ZamaProvider with the new account.
  * - `eth_sign`/`personal_sign`/`eth_signTypedData_v4` return a 65-byte hex string
  *   (32 bytes r + 32 bytes s + 1 byte v = ECDSA signature).
- * - `eth_call` routes registry reads (getTokenConfidentialTokenPairsLength /
- *   getTokenConfidentialTokenPairsSlice) and token metadata (name/symbol/decimals/
- *   totalSupply) through hand-written ABI encoding so useListPairs resolves in tests.
- *   All other eth_call requests return "0x" (empty data), causing the corresponding
- *   queries (e.g. balanceOf) to fail gracefully and display "—" in the UI.
+ * - NOTE: eth_call is NOT routed here. SDK reads go through the configured
+ *   JsonRpcProvider, so registry and metadata mocking happens in interceptRpc.
  */
 async function injectMockWallet(page: Page, config: WalletConfig) {
   await page.addInitScript((cfg: WalletConfig) => {
     let chainId = cfg.chainId;
     const listeners: Record<string, ((...args: unknown[]) => void)[]> = {};
 
-    // ── ABI encoding helpers ───────────────────────────────────────────────
-    // These run in the browser; no external imports available.
-
-    /** Encode a non-negative integer as a 32-byte big-endian hex word (no 0x prefix). */
-    const abiU256 = (n: number | bigint) => BigInt(n).toString(16).padStart(64, "0");
-
-    /** Encode a 20-byte Ethereum address as a 32-byte ABI word (no 0x prefix). */
-    const abiAddr = (a: string) => a.slice(2).toLowerCase().padStart(64, "0");
-
-    /** Encode a boolean as a 32-byte ABI word (no 0x prefix). */
-    const abiBool = (b: boolean) => (b ? "1" : "0").padStart(64, "0");
-
-    /**
-     * ABI-encode a UTF-8 string as a `string` dynamic type:
-     *   [offset=32][length][data padded to next 32-byte boundary]
-     */
-    const abiStr = (s: string): string => {
-      const bytes = Array.from(new TextEncoder().encode(s));
-      const hex = bytes.map((b) => b.toString(16).padStart(2, "0")).join("");
-      const padded = hex.padEnd(Math.ceil(bytes.length / 32) * 64, "0");
-      return "0x" + abiU256(32) + abiU256(bytes.length) + padded;
-    };
-
-    // ── Mock contract addresses ────────────────────────────────────────────
-
-    /** Sepolia WrappersRegistry — DefaultRegistryAddresses. */
-    const REGISTRY = "0x2f0750bbb0a246059d80e94c454586a7f27a128e";
-
-    /** Mock token pair addresses (all-digit = checksum-neutral). */
-    const T1 = "0x1111111111111111111111111111111111111111";
-    const CT1 = "0x2222222222222222222222222222222222222222";
-    const T2 = "0x3333333333333333333333333333333333333333";
-    const CT2 = "0x4444444444444444444444444444444444444444";
-
-    const TOKEN_META: Record<string, { name: string; symbol: string; decimals: number }> = {
-      [T1]: { name: "USD Coin Mock", symbol: "USDC Mock", decimals: 6 },
-      [CT1]: { name: "Confidential USD Coin", symbol: "cUSDC", decimals: 6 },
-      [T2]: { name: "Tether USD Mock", symbol: "USDT Mock", decimals: 6 },
-      [CT2]: { name: "Confidential Tether USD", symbol: "cUSDT", decimals: 6 },
-    };
-
-    // ── Mock EIP-1193 provider ─────────────────────────────────────────────
-
     const mockEthereum = {
       isMetaMask: true,
-      request({ method, params }: { method: string; params?: unknown[] }) {
+      request({ method }: { method: string; params?: unknown[] }) {
         switch (method) {
           case "eth_chainId":
             return Promise.resolve(chainId);
@@ -129,57 +181,6 @@ async function injectMockWallet(page: Page, config: WalletConfig) {
           case "eth_sign":
             // 65 bytes = ECDSA signature (32 bytes r + 32 bytes s + 1 byte v)
             return Promise.resolve("0x" + "a".repeat(130));
-
-          case "eth_call": {
-            // EthersSigner.readContract routes through BrowserProvider(window.ethereum).
-            // We handle registry reads and token metadata here so that useListPairs
-            // resolves correctly in tests without a live Sepolia connection.
-            const [tx = {}] = (params ?? []) as Array<{ to?: string; data?: string }>;
-            const to = (tx.to ?? "").toLowerCase();
-            const sel = (tx.data ?? "").slice(0, 10).toLowerCase();
-
-            if (to === REGISTRY) {
-              // getTokenConfidentialTokenPairsLength() → uint256
-              if (sel === "0x483cdcf4") {
-                return Promise.resolve("0x" + abiU256(cfg.emptyRegistry ? 0 : 2));
-              }
-              // getTokenConfidentialTokenPairsSlice(uint256,uint256) → tuple[]
-              // Returns (address tokenAddress, address confidentialTokenAddress, bool isValid)[]
-              if (sel === "0x90c60535") {
-                if (cfg.emptyRegistry) {
-                  // ABI encoding of empty tuple[]: offset + length=0
-                  return Promise.resolve("0x" + abiU256(32) + abiU256(0));
-                }
-                return Promise.resolve(
-                  "0x" +
-                    abiU256(32) + // offset to array data
-                    abiU256(2) + // array length
-                    abiAddr(T1) +
-                    abiAddr(CT1) +
-                    abiBool(true) + // pair[0]
-                    abiAddr(T2) +
-                    abiAddr(CT2) +
-                    abiBool(true), // pair[1]
-                );
-              }
-            }
-
-            // Token metadata: name(), symbol(), decimals(), totalSupply()
-            // Called by the SDK on both underlying and confidential token addresses.
-            const meta = TOKEN_META[to];
-            if (meta) {
-              if (sel === "0x06fdde03") return Promise.resolve(abiStr(meta.name)); // name()
-              if (sel === "0x95d89b41") return Promise.resolve(abiStr(meta.symbol)); // symbol()
-              if (sel === "0x313ce567") return Promise.resolve("0x" + abiU256(meta.decimals)); // decimals()
-            }
-            // totalSupply() — called only on the underlying ERC-20; returns uint256
-            if (sel === "0x18160ddd") return Promise.resolve("0x" + abiU256(0));
-
-            // All other eth_call requests (e.g. balanceOf) return empty data,
-            // causing the caller to fail gracefully (query error → "—" in UI).
-            return Promise.resolve("0x");
-          }
-
           default:
             return Promise.resolve(null);
         }
@@ -206,8 +207,7 @@ async function injectMockWallet(page: Page, config: WalletConfig) {
     };
 
     // Simulate the user switching accounts in their wallet.
-    // Fires the accountsChanged event that providers.tsx listens for to remount ZamaProvider
-    // with a fresh EthersSigner bound to the new account.
+    // Fires the accountsChanged event that providers.tsx listens for to remount ZamaProvider.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).__emitAccountsChanged = (accounts: string[]) => {
       for (const listener of listeners["accountsChanged"] ?? []) {
@@ -219,30 +219,48 @@ async function injectMockWallet(page: Page, config: WalletConfig) {
 
 /**
  * Intercepts HTTP requests to the Sepolia RPC endpoint and returns minimal
- * valid JSON-RPC responses. Used by the JsonRpcProvider in page.tsx that reads
- * ETH balances directly from publicnode.com (bypassing window.ethereum).
- * Contract reads made through EthersSigner.readContract go through window.ethereum
- * (BrowserProvider) instead — those are handled by the mock wallet above.
+ * valid JSON-RPC responses.
+ *
+ * eth_call is routed by contract address and function selector so that
+ * useListPairs resolves with two token pairs in tests. All other eth_call
+ * requests (e.g. balanceOf) return "0x", causing the corresponding queries
+ * to fail gracefully and display "—" in the UI.
  */
-async function interceptRpc(page: Page) {
+async function interceptRpc(page: Page, options: RpcOptions = {}) {
   await page.route("**/ethereum-sepolia-rpc.publicnode.com**", async (route) => {
     const body = route.request().postDataJSON() as
-      | { id?: number; method?: string }
-      | { id?: number; method?: string }[]
+      | { id?: number; method?: string; params?: unknown[] }
+      | { id?: number; method?: string; params?: unknown[] }[]
       | null;
 
-    const staticResults: Record<string, unknown> = {
-      eth_chainId: "0xaa36a7",
-      eth_blockNumber: "0x1",
-      eth_getBalance: "0x0",
-      eth_call: "0x",
-      eth_getTransactionCount: "0x0",
-      eth_estimateGas: "0x5208",
-      net_version: "11155111",
-    };
-
-    function respond(req: { id?: number; method?: string } | null) {
-      return { jsonrpc: "2.0", id: req?.id ?? 1, result: staticResults[req?.method ?? ""] ?? null };
+    function respond(req: { id?: number; method?: string; params?: unknown[] } | null) {
+      let result: unknown = null;
+      switch (req?.method) {
+        case "eth_chainId":
+          result = "0xaa36a7";
+          break;
+        case "eth_blockNumber":
+          result = "0x1";
+          break;
+        case "eth_getBalance":
+          result = "0x0";
+          break;
+        case "eth_getTransactionCount":
+          result = "0x0";
+          break;
+        case "eth_estimateGas":
+          result = "0x5208";
+          break;
+        case "net_version":
+          result = "11155111";
+          break;
+        case "eth_call":
+          result = resolveEthCall(req.params, options);
+          break;
+        default:
+          result = null;
+      }
+      return { jsonrpc: "2.0", id: req?.id ?? 1, result };
     }
 
     await route.fulfill({
@@ -257,8 +275,8 @@ async function interceptRpc(page: Page) {
 interface TestFixtures {
   /** Call with a WalletConfig to inject a mock EIP-1193 provider before page load. */
   mockWallet: (config: WalletConfig) => Promise<void>;
-  /** Call to intercept Sepolia RPC requests with static responses. */
-  mockRpc: () => Promise<void>;
+  /** Call to intercept Sepolia RPC requests with registry and metadata mocking. */
+  mockRpc: (options?: RpcOptions) => Promise<void>;
 }
 
 export const test = base.extend<TestFixtures>({
@@ -273,7 +291,7 @@ export const test = base.extend<TestFixtures>({
     await use((config: WalletConfig) => injectMockWallet(page, config));
   },
   mockRpc: async ({ page }, use) => {
-    await use(() => interceptRpc(page));
+    await use((options?: RpcOptions) => interceptRpc(page, options));
   },
 });
 

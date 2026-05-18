@@ -22,8 +22,6 @@ export const ZamaErrorCode = {
   EncryptionFailed: "ENCRYPTION_FAILED",
   /** FHE decryption failed. */
   DecryptionFailed: "DECRYPTION_FAILED",
-  /** ERC-20 approval transaction failed. */
-  ApprovalFailed: "APPROVAL_FAILED",
   /** On-chain transaction reverted. */
   TransactionReverted: "TRANSACTION_REVERTED",
   /** FHE keypair has expired and needs regeneration. */

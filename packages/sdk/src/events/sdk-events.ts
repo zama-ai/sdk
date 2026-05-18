@@ -85,28 +85,10 @@ export interface DecryptErrorEvent extends BaseEvent {
   handles: Handle[];
 }
 
-/**
- * Identifier for the SDK operation that emitted a {@link TransactionErrorEvent}.
- * Shield failures encode the execution path in the operation string itself
- * (`shield:transferAndCall` or `shield:approveAndWrap`) so observers can route
- * on a single field.
- */
-export type TransactionErrorOperation =
-  | "approveUnderlying"
-  | "delegateDecryption"
-  | "finalizeUnwrap"
-  | "revokeDelegation"
-  | "setOperator"
-  | "shield:transferAndCall"
-  | "shield:approveAndWrap"
-  | "transfer"
-  | "transferFrom"
-  | "unwrap";
-
 export interface TransactionErrorEvent extends BaseEvent {
   type: typeof ZamaSDKEvents.TransactionError;
   /** Which SDK operation failed. */
-  operation: TransactionErrorOperation;
+  operation: TransactionOperation;
   /** The error that caused the transaction to fail. */
   error: Error;
 }
@@ -136,6 +118,8 @@ export interface SetOperatorSubmittedEvent extends BaseEvent {
 export interface ApproveUnderlyingSubmittedEvent extends BaseEvent {
   type: typeof ZamaSDKEvents.ApproveUnderlyingSubmitted;
   txHash: Hex;
+  /** Which approval transaction was submitted. */
+  step: "reset" | "approve";
 }
 
 export interface UnwrapSubmittedEvent extends BaseEvent {
@@ -208,3 +192,77 @@ export type ZamaSDKEventInput = ZamaSDKEvent extends infer E
     ? Omit<E, "timestamp" | "tokenAddress">
     : never
   : never;
+
+/**
+ * Single source of truth for each transaction operation's submitted-event payload.
+ *
+ * Adding a write op = adding one entry here. `TransactionOperation` is then
+ * `keyof typeof transactionOperationMetadata`, so the dispatch table and the
+ * operation union cannot drift.
+ *
+ * The `satisfies` check enforces that every entry produces a valid
+ * {@link ZamaSDKEventInput}.
+ */
+export const transactionOperationMetadata = {
+  approveUnderlying: {
+    submittedEvent: (txHash: Hex) => ({
+      type: ZamaSDKEvents.ApproveUnderlyingSubmitted,
+      txHash,
+      step: "approve" as const,
+    }),
+  },
+  "approveUnderlying:reset": {
+    submittedEvent: (txHash: Hex) => ({
+      type: ZamaSDKEvents.ApproveUnderlyingSubmitted,
+      txHash,
+      step: "reset" as const,
+    }),
+  },
+  delegateDecryption: {
+    submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.DelegationSubmitted, txHash }),
+  },
+  finalizeUnwrap: {
+    submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.FinalizeUnwrapSubmitted, txHash }),
+  },
+  revokeDelegation: {
+    submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.RevokeDelegationSubmitted, txHash }),
+  },
+  setOperator: {
+    submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.SetOperatorSubmitted, txHash }),
+  },
+  "shield:transferAndCall": {
+    submittedEvent: (txHash: Hex) => ({
+      type: ZamaSDKEvents.ShieldSubmitted,
+      txHash,
+      shieldPath: "transferAndCall" as const,
+    }),
+  },
+  "shield:approveAndWrap": {
+    submittedEvent: (txHash: Hex) => ({
+      type: ZamaSDKEvents.ShieldSubmitted,
+      txHash,
+      shieldPath: "approveAndWrap" as const,
+    }),
+  },
+  transfer: {
+    submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.TransferSubmitted, txHash }),
+  },
+  transferFrom: {
+    submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.TransferFromSubmitted, txHash }),
+  },
+  unwrap: {
+    submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.UnwrapSubmitted, txHash }),
+  },
+  unwrapAll: {
+    submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.UnwrapSubmitted, txHash }),
+  },
+} satisfies Record<string, { submittedEvent: (txHash: Hex) => ZamaSDKEventInput }>;
+
+/**
+ * SDK transaction operations that emit submitted/error lifecycle events.
+ *
+ * Operation strings encode the execution-path discriminator for flows that have
+ * one (`shield:transferAndCall` vs. `shield:approveAndWrap`), routing both error
+ * and success events on a single field — see {@link transactionOperationMetadata}.
+ */
+export type TransactionOperation = keyof typeof transactionOperationMetadata;

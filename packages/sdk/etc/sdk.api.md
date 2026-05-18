@@ -207,11 +207,6 @@ export const anvil: {
 };
 
 // @public
-export class ApprovalFailedError extends ZamaError {
-    constructor(message: string, options?: ErrorOptions);
-}
-
-// @public
 export type ApprovalStrategy = "max" | "exact" | "skip";
 
 // @public
@@ -358,6 +353,7 @@ export function approveContract(tokenAddress: Address, spender: Address, value: 
 
 // @public (undocumented)
 export interface ApproveUnderlyingSubmittedEvent extends BaseEvent {
+    step: "reset" | "approve";
     // (undocumented)
     txHash: Hex;
     // (undocumented)
@@ -11508,9 +11504,6 @@ export const mainnet: {
 };
 
 // @public
-export function matchAclRevert(error: unknown): ZamaError | null;
-
-// @public
 export function matchZamaError<R>(error: unknown, handlers: Partial<Record<ZamaErrorCode, (error: ZamaError) => R>> & {
     _?: (error: unknown) => R;
 }): R | undefined;
@@ -14850,6 +14843,12 @@ export class Token {
     // (undocumented)
     readonly sdk: ZamaSDK;
     setOperator(operator: Address, until?: number): Promise<TransactionResult>;
+    // @internal
+    protected submitTransaction(params: {
+        operation: TransactionOperation;
+        config: WriteContractConfig;
+        onSubmitted?: (txHash: Hex) => void;
+    }): Promise<TransactionResult>;
     symbol(): Promise<string>;
 }
 
@@ -14916,13 +14915,15 @@ export function totalSupplyContract(wrapperAddress: Address): {
 // @public (undocumented)
 export interface TransactionErrorEvent extends BaseEvent {
     error: Error;
-    operation: TransactionErrorOperation;
+    operation: TransactionOperation;
     // (undocumented)
     type: typeof ZamaSDKEvents.TransactionError;
 }
 
+// Warning: (ae-forgotten-export) The symbol "transactionOperationMetadata" needs to be exported by the entry point index.d.ts
+//
 // @public
-export type TransactionErrorOperation = "approveUnderlying" | "delegateDecryption" | "finalizeUnwrap" | "revokeDelegation" | "setOperator" | "shield:transferAndCall" | "shield:approveAndWrap" | "transfer" | "transferFrom" | "unwrap";
+export type TransactionOperation = keyof typeof transactionOperationMetadata;
 
 // @public
 export interface TransactionReceipt {
@@ -19989,8 +19990,7 @@ export const ZamaErrorCode: {
     readonly SigningRejected: "SIGNING_REJECTED"; /** Wallet signature failed for a reason other than rejection. */
     readonly SigningFailed: "SIGNING_FAILED"; /** FHE encryption failed. */
     readonly EncryptionFailed: "ENCRYPTION_FAILED"; /** FHE decryption failed. */
-    readonly DecryptionFailed: "DECRYPTION_FAILED"; /** ERC-20 approval transaction failed. */
-    readonly ApprovalFailed: "APPROVAL_FAILED"; /** On-chain transaction reverted. */
+    readonly DecryptionFailed: "DECRYPTION_FAILED"; /** On-chain transaction reverted. */
     readonly TransactionReverted: "TRANSACTION_REVERTED"; /** FHE keypair has expired and needs regeneration. */
     readonly KeypairExpired: "KEYPAIR_EXPIRED"; /** Relayer rejected FHE keypair (stale, expired, or malformed). */
     readonly InvalidKeypair: "INVALID_KEYPAIR"; /** No FHE ciphertext exists for this account (never shielded). */

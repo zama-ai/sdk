@@ -186,7 +186,7 @@ export type {
   FinalizeUnwrapSubmittedEvent,
   ShieldSubmittedEvent,
   TransactionErrorEvent,
-  TransactionErrorOperation,
+  TransactionOperation,
   TransferFromSubmittedEvent,
   TransferSubmittedEvent,
   UnshieldPhase1SubmittedEvent,
