@@ -9,11 +9,6 @@ type ReactExtensions = ReactAddressFixtures &
   WrapperFixtures &
   MutationFixtures;
 
-/**
- * Single `.extend()` call with every react-sdk fixture group spread in. vitest
- * resolves intra-call dependencies automatically and the inferred result keeps
- * the precise mapped-type shape — annotating as `TestAPI<...>` would widen it.
- */
 export const test = base.extend<ReactExtensions>({
   ...reactAddressFixtures,
   ...queryClientFixtures,

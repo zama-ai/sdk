@@ -12,12 +12,6 @@ import { signerFixtures, type SignerFixtures } from "./signer";
 import { storageFixtures, type StorageFixtures } from "./storage";
 import { tokenFixtures, type TokenFixtures } from "./token";
 
-/**
- * The flat shape of every fixture the SDK test runner injects. Annotating
- * `test` with `TestAPI<SdkTestFixtures>` keeps inference fast for downstream
- * `.extend(...)` chains — TypeScript otherwise gives up after a few layers and
- * widens destructured fixture parameters to `any`.
- */
 export type SdkTestFixtures = AddressFixtures &
   ChainFixtures &
   RelayerFixtures &
