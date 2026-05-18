@@ -98,3 +98,26 @@ registry PR:
    verified tokens only.
 5. Mainnet ACL and decryption verifier, or remove Mainnet deployments from the
    initial registry submission.
+
+## Attempted Local Verification
+
+Two Sourcify verification submissions were attempted from this SDK workspace on
+2026-05-18 using the local Foundry project and its generated standard JSON
+inputs:
+
+| Target                        | Address                                      | Local candidate                                                                                                                        | Sourcify job                           | Result                             |
+| ----------------------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- | ---------------------------------- |
+| USDCMock                      | `0x9b5Cd13b8eFbB58Dc25A05CF411D8056058aDFfF` | `src/mocks/Erc20Mintable.sol:TestERC20` with constructor args `("USD Coin (Mock)", "USDCMock", 6)`                                     | `43384976-4875-41f7-94c1-0123b667b9d2` | Failed: `bytecode_length_mismatch` |
+| Shared wrapper implementation | `0x528f2f29ddeb466cfbfb7a31ce92bfb3c343973c` | `dependencies/protocol-apps-wrapper-da4afe387420/contracts/confidential-wrapper/contracts/ConfidentialWrapper.sol:ConfidentialWrapper` | `971e1b4a-48bd-48fc-897f-6cbd5dacd16a` | Failed: `bytecode_length_mismatch` |
+
+Runtime bytecode length comparison:
+
+| Target                        | On-chain runtime bytes | Local candidate runtime bytes |
+| ----------------------------- | ---------------------: | ----------------------------: |
+| USDCMock                      |                   2321 |                          1895 |
+| Shared wrapper implementation |                  16417 |                         14536 |
+
+Conclusion: the current SDK workspace contains useful source candidates, but it
+does not contain the exact source/build settings used for the Sepolia
+deployments above. Successful Sourcify verification requires the deployment
+repo/commit or build-info that produced those on-chain bytecodes.
