@@ -123,9 +123,26 @@ export default function LedgerClearSigningPage() {
 
   const hasEnoughAllowance =
     parsedAmount !== null && allowance !== null ? allowance >= parsedAmount : false;
+  const isUnlimitedAllowance = allowance === maxUint256;
 
   function addLog(level: LogLevel, message: string) {
     setLogs((current) => [...current, { id: Date.now() + current.length, level, message }]);
+  }
+
+  async function clearLedgerConnection(message?: string) {
+    if (connection) {
+      try {
+        await (connection.dmk as { disconnect: (input: { sessionId: string }) => Promise<void> }).disconnect({
+          sessionId: connection.sessionId,
+        });
+      } catch (disconnectError) {
+        addLog("warning", `Ledger disconnect warning: ${errorMessage(disconnectError)}.`);
+      }
+    }
+    setConnection(null);
+    if (message) {
+      addLog("warning", message);
+    }
   }
 
   async function refreshTokenState(address: Address) {
@@ -219,6 +236,10 @@ export default function LedgerClearSigningPage() {
     if (!connection) return;
     setIsSigningApproval(true);
     try {
+      if (hasEnoughAllowance) {
+        addLog("warning", "Approval skipped: allowance already covers the shield amount.");
+        return;
+      }
       const data = encodeFunctionData({
         abi: ERC20_ABI,
         functionName: "approve",
@@ -235,6 +256,7 @@ export default function LedgerClearSigningPage() {
       await refreshTokenState(connection.address);
     } catch (error) {
       addLog("error", errorMessage(error));
+      await clearLedgerConnection("Ledger session reset after approval failure. Reconnect before retrying.");
     } finally {
       setIsSigningApproval(false);
     }
@@ -260,6 +282,7 @@ export default function LedgerClearSigningPage() {
       await refreshTokenState(connection.address);
     } catch (error) {
       addLog("error", errorMessage(error));
+      await clearLedgerConnection("Ledger session reset after shield signing failure. Reconnect before retrying.");
     } finally {
       setIsSigningWrap(false);
     }
@@ -309,12 +332,23 @@ export default function LedgerClearSigningPage() {
           {isConnecting ? "Connecting Ledger…" : "Connect Ledger via WebHID"}
         </button>
         {connection && (
-          <div className="ledger-kv">
-            <span>Ledger address</span>
-            <strong>{connection.address}</strong>
-            <span>Derivation path</span>
-            <strong>{LEDGER_DERIVATION_PATH}</strong>
-          </div>
+          <>
+            <div className="ledger-kv">
+              <span>Ledger address</span>
+              <strong>{connection.address}</strong>
+              <span>Derivation path</span>
+              <strong>{LEDGER_DERIVATION_PATH}</strong>
+            </div>
+            <div className="button-row">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => void clearLedgerConnection("Ledger session cleared.")}
+              >
+                Reset Ledger session
+              </button>
+            </div>
+          </>
         )}
       </div>
 
@@ -328,7 +362,13 @@ export default function LedgerClearSigningPage() {
           <span>Current balance</span>
           <strong>{balance === null ? "—" : `${formatUnits(balance, 18)} ZAMAMock`}</strong>
           <span>Current allowance</span>
-          <strong>{allowance === null ? "—" : `${formatUnits(allowance, 18)} ZAMAMock`}</strong>
+          <strong>
+            {allowance === null
+              ? "—"
+              : isUnlimitedAllowance
+                ? "Unlimited"
+                : `${formatUnits(allowance, 18)} ZAMAMock`}
+          </strong>
         </div>
 
         <label className="field-label" htmlFor="shield-amount">
@@ -348,6 +388,11 @@ export default function LedgerClearSigningPage() {
         {parsedAmount !== null && allowance !== null && !hasEnoughAllowance && (
           <p className="alert alert-warning">
             Allowance is lower than the shield amount. Sign the approval first.
+          </p>
+        )}
+        {parsedAmount !== null && hasEnoughAllowance && (
+          <p className="token-meta">
+            Shield can be signed directly. Approval is already in place.
           </p>
         )}
         <label className="checkbox-row">
@@ -372,9 +417,9 @@ export default function LedgerClearSigningPage() {
             type="button"
             className="btn btn-secondary"
             onClick={signApproval}
-            disabled={!connection || isSigningApproval || isSigningWrap}
+            disabled={!connection || isSigningApproval || isSigningWrap || hasEnoughAllowance}
           >
-            {isSigningApproval ? "Signing approval…" : "Sign approval"}
+            {isSigningApproval ? "Signing approval…" : hasEnoughAllowance ? "Approval already set" : "Sign approval"}
           </button>
           <button
             type="button"
