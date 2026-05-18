@@ -18,23 +18,26 @@ describe("ZamaProvider with signer={undefined}", () => {
   });
 
   test("useIsAllowed idles when no signer is configured", async ({ renderWithProviders }) => {
-    const TOKEN = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
-    const { result } = renderWithProviders(() => useIsAllowed({ contractAddresses: [TOKEN] }), {
-      signer: undefined,
-    });
+    const tokenAddress = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
+    const { result } = renderWithProviders(
+      () => useIsAllowed({ contractAddresses: [tokenAddress] }),
+      {
+        signer: undefined,
+      },
+    );
 
     await waitFor(() => expect(result.current.fetchStatus).toBe("idle"));
     expect(result.current.data).toBeUndefined();
   });
 
   test("useMetadata works without signer", async ({ renderWithProviders, provider }) => {
-    const TOKEN = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
+    const tokenAddress = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce("TestToken")
       .mockResolvedValueOnce("TT")
       .mockResolvedValueOnce(18);
 
-    const { result } = renderWithProviders(() => useMetadata(TOKEN), {
+    const { result } = renderWithProviders(() => useMetadata(tokenAddress), {
       signer: undefined,
     });
 

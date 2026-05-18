@@ -1,10 +1,12 @@
+import type { QueryClient } from "@tanstack/react-query";
 import { act } from "@testing-library/react";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { describe, test, vi } from "../../test-fixtures";
 import { useUnshield } from "../use-unshield";
+
 describe("useUnshield", () => {
-  test("default", ({ renderWithProviders, TOKEN, expectDefaultMutationState }) => {
-    const { result } = renderWithProviders(() => useUnshield(TOKEN));
+  test("default", ({ renderWithProviders, tokenAddress, expectDefaultMutationState }) => {
+    const { result } = renderWithProviders(() => useUnshield(tokenAddress));
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
     expectDefaultMutationState(state);
@@ -12,80 +14,76 @@ describe("useUnshield", () => {
 
   test("cache: invalidates balance, allowance, and wagmi after unshield", async ({
     renderWithProviders,
-    relayer,
     provider,
-    BURN_AMOUNT_HANDLE,
-    OTHER_TOKEN,
-    TOKEN,
-    USER,
-    WAGMI_BALANCE_KEY,
+    burnAmountHandle,
+    otherTokenAddress,
+    tokenAddress,
+    userAddress,
+    wagmiBalanceKey,
     createUnwrapRequestedLog,
     expectCacheInvalidated,
     expectCacheUntouched,
     expectInvalidatedQueries,
-    mockPublicDecrypt,
   }) => {
     vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
-      logs: [createUnwrapRequestedLog(BURN_AMOUNT_HANDLE)],
+      logs: [createUnwrapRequestedLog(burnAmountHandle)],
     });
-    mockPublicDecrypt(relayer);
 
-    const { result, queryClient } = renderWithProviders(() => useUnshield(TOKEN));
+    const { result, queryClient } = renderWithProviders(() => useUnshield(tokenAddress));
 
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
-    const allowanceKey = zamaQueryKeys.underlyingAllowance.token(TOKEN);
-    const otherBalanceKey = zamaQueryKeys.confidentialBalance.owner(OTHER_TOKEN, USER);
-    const otherAllowanceKey = zamaQueryKeys.underlyingAllowance.token(OTHER_TOKEN);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(tokenAddress, userAddress);
+    const allowanceKey = zamaQueryKeys.underlyingAllowance.token(tokenAddress);
+    const otherBalanceKey = zamaQueryKeys.confidentialBalance.owner(otherTokenAddress, userAddress);
+    const otherAllowanceKey = zamaQueryKeys.underlyingAllowance.token(otherTokenAddress);
 
     queryClient.setQueryData(balanceKey, 3000n);
     queryClient.setQueryData(allowanceKey, 500n);
-    queryClient.setQueryData(WAGMI_BALANCE_KEY, 2000n);
+    queryClient.setQueryData(wagmiBalanceKey, 2000n);
     queryClient.setQueryData(otherBalanceKey, 777n);
     queryClient.setQueryData(otherAllowanceKey, 333n);
 
     await act(() => result.current.mutateAsync({ amount: 300n, skipBalanceCheck: true }));
 
     expectInvalidatedQueries(queryClient, [balanceKey, allowanceKey]);
-    expectCacheInvalidated(queryClient, WAGMI_BALANCE_KEY);
+    expectCacheInvalidated(queryClient, wagmiBalanceKey);
     expectCacheUntouched(queryClient, otherBalanceKey, 777n);
     expectCacheUntouched(queryClient, otherAllowanceKey, 333n);
   });
 
   test("behavior: forwards onSuccess callback", async ({
     renderWithProviders,
-    relayer,
     provider,
-    BURN_AMOUNT_HANDLE,
-    TOKEN,
-    USER,
-    WAGMI_BALANCE_KEY,
+    burnAmountHandle,
+    tokenAddress,
+    userAddress,
+    wagmiBalanceKey,
     createUnwrapRequestedLog,
     expectCacheInvalidated,
     expectInvalidatedQueries,
-    mockPublicDecrypt,
     mutateAndExpectOnSuccess,
   }) => {
     vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
-      logs: [createUnwrapRequestedLog(BURN_AMOUNT_HANDLE)],
+      logs: [createUnwrapRequestedLog(burnAmountHandle)],
     });
-    mockPublicDecrypt(relayer);
 
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
-    const allowanceKey = zamaQueryKeys.underlyingAllowance.token(TOKEN);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(tokenAddress, userAddress);
+    const allowanceKey = zamaQueryKeys.underlyingAllowance.token(tokenAddress);
     const onSuccess = vi.fn();
 
-    const { result, queryClient } = renderWithProviders(() => useUnshield(TOKEN, { onSuccess }));
+    const { result, queryClient } = renderWithProviders(() =>
+      useUnshield(tokenAddress, { onSuccess }),
+    );
 
     queryClient.setQueryData(balanceKey, 3000n);
     queryClient.setQueryData(allowanceKey, 500n);
-    queryClient.setQueryData(WAGMI_BALANCE_KEY, 2000n);
+    queryClient.setQueryData(wagmiBalanceKey, 2000n);
 
     await mutateAndExpectOnSuccess(
       () => result.current.mutateAsync({ amount: 300n, skipBalanceCheck: true }),
       onSuccess,
-      (client) => {
+      (client: QueryClient) => {
         expectInvalidatedQueries(client, [balanceKey, allowanceKey]);
-        expectCacheInvalidated(client, WAGMI_BALANCE_KEY);
+        expectCacheInvalidated(client, wagmiBalanceKey);
       },
     );
   });

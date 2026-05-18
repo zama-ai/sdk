@@ -8,9 +8,12 @@ import {
 const HOLDER = "0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D" as Address;
 
 describe("useConfidentialIsOperator", () => {
-  test("behavior: disabled when tokenAddress is undefined", ({ renderWithProviders, SPENDER }) => {
+  test("behavior: disabled when tokenAddress is undefined", ({
+    renderWithProviders,
+    spenderAddress,
+  }) => {
     const { result } = renderWithProviders(() =>
-      useConfidentialIsOperator({ address: undefined, spender: SPENDER, holder: HOLDER }),
+      useConfidentialIsOperator({ address: undefined, spender: spenderAddress, holder: HOLDER }),
     );
 
     expect(result.current.isPending).toBe(true);
@@ -18,9 +21,9 @@ describe("useConfidentialIsOperator", () => {
     expect(result.current.data).toBeUndefined();
   });
 
-  test("behavior: disabled when spender is undefined", ({ renderWithProviders, TOKEN }) => {
+  test("behavior: disabled when spender is undefined", ({ renderWithProviders, tokenAddress }) => {
     const { result } = renderWithProviders(() =>
-      useConfidentialIsOperator({ address: TOKEN, spender: undefined, holder: HOLDER }),
+      useConfidentialIsOperator({ address: tokenAddress, spender: undefined, holder: HOLDER }),
     );
 
     expect(result.current.isPending).toBe(true);
@@ -31,11 +34,15 @@ describe("useConfidentialIsOperator", () => {
   test("behavior: disabled when holder is undefined (signer-less mount)", ({
     renderWithProviders,
     provider,
-    SPENDER,
-    TOKEN,
+    spenderAddress,
+    tokenAddress,
   }) => {
     const { result } = renderWithProviders(() =>
-      useConfidentialIsOperator({ address: TOKEN, spender: SPENDER, holder: undefined }),
+      useConfidentialIsOperator({
+        address: tokenAddress,
+        spender: spenderAddress,
+        holder: undefined,
+      }),
     );
 
     expect(result.current.isPending).toBe(true);
@@ -47,14 +54,15 @@ describe("useConfidentialIsOperator", () => {
     createWrapper,
     signer,
     provider,
-    SPENDER,
-    TOKEN,
+    spenderAddress,
+    tokenAddress,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValue(true);
 
     const ctx = createWrapper({ signer });
     const { result, rerender } = renderHook(
-      ({ spender }) => useConfidentialIsOperator({ address: TOKEN, spender, holder: HOLDER }),
+      ({ spender }) =>
+        useConfidentialIsOperator({ address: tokenAddress, spender, holder: HOLDER }),
       {
         wrapper: ctx.Wrapper,
         initialProps: { spender: undefined as Address | undefined },
@@ -64,7 +72,7 @@ describe("useConfidentialIsOperator", () => {
     expect(result.current.isPending).toBe(true);
     expect(result.current.fetchStatus).toBe("idle");
 
-    rerender({ spender: SPENDER });
+    rerender({ spender: spenderAddress });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toBe(true);
@@ -74,8 +82,8 @@ describe("useConfidentialIsOperator", () => {
     createWrapper,
     signer,
     provider,
-    SPENDER,
-    TOKEN,
+    spenderAddress,
+    tokenAddress,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValue(true);
 
@@ -84,7 +92,7 @@ describe("useConfidentialIsOperator", () => {
       ({ address }) =>
         useConfidentialIsOperator({
           address: address as Address,
-          spender: SPENDER,
+          spender: spenderAddress,
           holder: HOLDER,
         }),
       {
@@ -96,7 +104,7 @@ describe("useConfidentialIsOperator", () => {
     expect(result.current.isPending).toBe(true);
     expect(result.current.fetchStatus).toBe("idle");
 
-    rerender({ address: TOKEN });
+    rerender({ address: tokenAddress });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toBe(true);
@@ -105,16 +113,16 @@ describe("useConfidentialIsOperator", () => {
   test("behavior: disabled when user passes enabled=false", ({
     renderWithProviders,
     provider,
-    SPENDER,
-    TOKEN,
+    spenderAddress,
+    tokenAddress,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValue(true);
 
     const { result } = renderWithProviders(() =>
       useConfidentialIsOperator(
         {
-          address: TOKEN,
-          spender: SPENDER,
+          address: tokenAddress,
+          spender: spenderAddress,
           holder: HOLDER,
         },
         { enabled: false },
@@ -125,13 +133,13 @@ describe("useConfidentialIsOperator", () => {
     expect(result.current.fetchStatus).toBe("idle");
   });
 
-  test("default", async ({ renderWithProviders, provider, SPENDER, TOKEN }) => {
+  test("default", async ({ renderWithProviders, provider, spenderAddress, tokenAddress }) => {
     vi.mocked(provider.readContract).mockResolvedValue(true);
 
     const { result } = renderWithProviders(() =>
       useConfidentialIsOperator({
-        address: TOKEN,
-        spender: SPENDER,
+        address: tokenAddress,
+        spender: spenderAddress,
         holder: HOLDER,
       }),
     );
@@ -142,7 +150,7 @@ describe("useConfidentialIsOperator", () => {
     expect(data).toBe(true);
     expect(dataUpdatedAt).toEqual(expect.any(Number));
     expect(provider.readContract).toHaveBeenCalledWith(
-      expect.objectContaining({ functionName: "isOperator", address: TOKEN }),
+      expect.objectContaining({ functionName: "isOperator", address: tokenAddress }),
     );
   });
 
@@ -150,16 +158,16 @@ describe("useConfidentialIsOperator", () => {
     renderWithProviders,
     signer,
     provider,
-    SPENDER,
-    TOKEN,
+    spenderAddress,
+    tokenAddress,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValue(true);
     vi.mocked(signer.requireWalletAccount).mockClear();
 
     const { result } = renderWithProviders(() =>
       useConfidentialIsOperator({
-        address: TOKEN,
-        spender: SPENDER,
+        address: tokenAddress,
+        spender: spenderAddress,
         holder: HOLDER,
       }),
     );
@@ -169,7 +177,7 @@ describe("useConfidentialIsOperator", () => {
     expect(provider.readContract).toHaveBeenCalledWith(
       expect.objectContaining({
         functionName: "isOperator",
-        args: [HOLDER, SPENDER],
+        args: [HOLDER, spenderAddress],
       }),
     );
     expect(signer.requireWalletAccount).not.toHaveBeenCalled();
@@ -180,15 +188,15 @@ describe("useConfidentialIsOperatorSuspense", () => {
   test("uses the caller-supplied holder address", async ({
     renderWithProviders,
     provider,
-    SPENDER,
-    TOKEN,
+    spenderAddress,
+    tokenAddress,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValue(true);
 
     const { result } = renderWithProviders(() =>
       useConfidentialIsOperatorSuspense({
-        address: TOKEN,
-        spender: SPENDER,
+        address: tokenAddress,
+        spender: spenderAddress,
         holder: HOLDER,
       }),
     );
@@ -198,7 +206,7 @@ describe("useConfidentialIsOperatorSuspense", () => {
     expect(provider.readContract).toHaveBeenCalledWith(
       expect.objectContaining({
         functionName: "isOperator",
-        args: [HOLDER, SPENDER],
+        args: [HOLDER, spenderAddress],
       }),
     );
   });
@@ -206,16 +214,16 @@ describe("useConfidentialIsOperatorSuspense", () => {
   test("queries the caller-supplied holder verbatim, independent of the connected signer", async ({
     renderWithProviders,
     provider,
-    SPENDER,
-    TOKEN,
+    spenderAddress,
+    tokenAddress,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValue(true);
 
     const OTHER = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
     const { result } = renderWithProviders(() =>
       useConfidentialIsOperatorSuspense({
-        address: TOKEN,
-        spender: SPENDER,
+        address: tokenAddress,
+        spender: spenderAddress,
         holder: OTHER,
       }),
     );
@@ -225,7 +233,7 @@ describe("useConfidentialIsOperatorSuspense", () => {
     expect(provider.readContract).toHaveBeenCalledWith(
       expect.objectContaining({
         functionName: "isOperator",
-        args: [OTHER, SPENDER],
+        args: [OTHER, spenderAddress],
       }),
     );
   });

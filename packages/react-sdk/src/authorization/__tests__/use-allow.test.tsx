@@ -13,29 +13,29 @@ describe("useAllow", () => {
 
   test("cache: removes isAllowed query after allow", async ({
     renderWithProviders,
-    OTHER_TOKEN,
-    TOKEN,
+    otherTokenAddress,
+    tokenAddress,
     expectCacheRemoved,
   }) => {
     const { result, queryClient } = renderWithProviders(() => useAllow());
     queryClient.setQueryData(zamaQueryKeys.isAllowed.all, true);
 
-    await act(() => result.current.mutateAsync([TOKEN, OTHER_TOKEN]));
+    await act(() => result.current.mutateAsync([tokenAddress, otherTokenAddress]));
 
     expectCacheRemoved(queryClient, zamaQueryKeys.isAllowed.all);
   });
 
   test("behavior: forwards onSuccess callback", async ({
     renderWithProviders,
-    OTHER_TOKEN,
-    TOKEN,
+    otherTokenAddress,
+    tokenAddress,
     expectCacheRemoved,
   }) => {
     let removedDuringCallback: boolean | undefined;
     const onSuccess = vi.fn((_: void, variables: unknown) => {
       removedDuringCallback =
         queryClient.getQueryCache().find({ queryKey: zamaQueryKeys.isAllowed.all }) === undefined;
-      expect(variables).toEqual([TOKEN, OTHER_TOKEN]);
+      expect(variables).toEqual([tokenAddress, otherTokenAddress]);
     });
     const { result, queryClient } = renderWithProviders(() =>
       useAllow({
@@ -44,7 +44,7 @@ describe("useAllow", () => {
     );
     queryClient.setQueryData(zamaQueryKeys.isAllowed.all, true);
 
-    await act(() => result.current.mutateAsync([TOKEN, OTHER_TOKEN]));
+    await act(() => result.current.mutateAsync([tokenAddress, otherTokenAddress]));
 
     expect(onSuccess).toHaveBeenCalledOnce();
     expect(removedDuringCallback).toBe(false);

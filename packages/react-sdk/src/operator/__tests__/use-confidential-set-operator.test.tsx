@@ -1,10 +1,12 @@
+import type { QueryClient } from "@tanstack/react-query";
 import { act } from "@testing-library/react";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { useConfidentialSetOperator } from "../use-confidential-set-operator";
+
 describe("useConfidentialSetOperator", () => {
-  test("default", ({ renderWithProviders, TOKEN, expectDefaultMutationState }) => {
-    const { result } = renderWithProviders(() => useConfidentialSetOperator(TOKEN));
+  test("default", ({ renderWithProviders, tokenAddress, expectDefaultMutationState }) => {
+    const { result } = renderWithProviders(() => useConfidentialSetOperator(tokenAddress));
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
     expectDefaultMutationState(state);
@@ -13,22 +15,24 @@ describe("useConfidentialSetOperator", () => {
   test("cache: invalidates operator query after confidential set operator", async ({
     renderWithProviders,
     signer,
-    OTHER_TOKEN,
-    RECIPIENT,
-    TOKEN,
+    otherTokenAddress,
+    recipientAddress,
+    tokenAddress,
     expectCacheInvalidated,
     expectCacheUntouched,
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
-    const { result, queryClient } = renderWithProviders(() => useConfidentialSetOperator(TOKEN));
+    const { result, queryClient } = renderWithProviders(() =>
+      useConfidentialSetOperator(tokenAddress),
+    );
 
-    const operatorKey = zamaQueryKeys.confidentialIsOperator.token(TOKEN);
-    const otherOperatorKey = zamaQueryKeys.confidentialIsOperator.token(OTHER_TOKEN);
+    const operatorKey = zamaQueryKeys.confidentialIsOperator.token(tokenAddress);
+    const otherOperatorKey = zamaQueryKeys.confidentialIsOperator.token(otherTokenAddress);
     queryClient.setQueryData(operatorKey, true);
     queryClient.setQueryData(otherOperatorKey, false);
 
-    await act(() => result.current.mutateAsync({ operator: RECIPIENT }));
+    await act(() => result.current.mutateAsync({ operator: recipientAddress }));
 
     expect(queryClient.getQueryData(operatorKey)).toBe(true);
     expectCacheInvalidated(queryClient, operatorKey);
@@ -38,26 +42,26 @@ describe("useConfidentialSetOperator", () => {
   test("behavior: forwards onSuccess callback", async ({
     renderWithProviders,
     signer,
-    RECIPIENT,
-    TOKEN,
+    recipientAddress,
+    tokenAddress,
     expectCacheInvalidated,
     mutateAndExpectOnSuccess,
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
-    const operatorKey = zamaQueryKeys.confidentialIsOperator.token(TOKEN);
+    const operatorKey = zamaQueryKeys.confidentialIsOperator.token(tokenAddress);
     const onSuccess = vi.fn();
 
     const { result, queryClient } = renderWithProviders(() =>
-      useConfidentialSetOperator(TOKEN, { onSuccess }),
+      useConfidentialSetOperator(tokenAddress, { onSuccess }),
     );
 
     queryClient.setQueryData(operatorKey, true);
 
     await mutateAndExpectOnSuccess(
-      () => result.current.mutateAsync({ operator: RECIPIENT }),
+      () => result.current.mutateAsync({ operator: recipientAddress }),
       onSuccess,
-      (client) => expectCacheInvalidated(client, operatorKey),
+      (client: QueryClient) => expectCacheInvalidated(client, operatorKey),
     );
   });
 });

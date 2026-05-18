@@ -18,8 +18,8 @@ describe("useRevokePermits", () => {
 
   test("cache: removes isAllowed and decryption queries after revokePermits", async ({
     renderWithProviders,
-    OTHER_TOKEN,
-    TOKEN,
+    otherTokenAddress,
+    tokenAddress,
     expectCacheRemoved,
   }) => {
     vi.spyOn(ZamaSDK.prototype, "revokePermits").mockResolvedValue(undefined);
@@ -27,7 +27,7 @@ describe("useRevokePermits", () => {
     queryClient.setQueryData(zamaQueryKeys.isAllowed.all, true);
     queryClient.setQueryData(zamaQueryKeys.decryption.all, { foo: 1n });
 
-    await act(() => result.current.mutateAsync([TOKEN, OTHER_TOKEN]));
+    await act(() => result.current.mutateAsync([tokenAddress, otherTokenAddress]));
 
     expectCacheRemoved(queryClient, zamaQueryKeys.isAllowed.all);
     expectCacheRemoved(queryClient, zamaQueryKeys.decryption.all);
@@ -35,8 +35,8 @@ describe("useRevokePermits", () => {
 
   test("behavior: forwards onSuccess callback", async ({
     renderWithProviders,
-    OTHER_TOKEN,
-    TOKEN,
+    otherTokenAddress,
+    tokenAddress,
     expectCacheRemoved,
   }) => {
     vi.spyOn(ZamaSDK.prototype, "revokePermits").mockResolvedValue(undefined);
@@ -46,27 +46,27 @@ describe("useRevokePermits", () => {
     queryClient.setQueryData(zamaQueryKeys.isAllowed.all, true);
     queryClient.setQueryData(zamaQueryKeys.decryption.all, { foo: 1n });
 
-    await act(() => result.current.mutateAsync([TOKEN, OTHER_TOKEN]));
+    await act(() => result.current.mutateAsync([tokenAddress, otherTokenAddress]));
 
     expect(onSuccess).toHaveBeenCalledOnce();
     expect(onSuccess.mock.calls[0]?.[0]).toBeUndefined();
-    expect(onSuccess.mock.calls[0]?.[1]).toEqual([TOKEN, OTHER_TOKEN]);
+    expect(onSuccess.mock.calls[0]?.[1]).toEqual([tokenAddress, otherTokenAddress]);
     expectCacheRemoved(queryClient, zamaQueryKeys.isAllowed.all);
     expectCacheRemoved(queryClient, zamaQueryKeys.decryption.all);
   });
 
   test("behavior: forwards address list to sdk.revokePermits", async ({
     renderWithProviders,
-    OTHER_TOKEN,
-    TOKEN,
+    otherTokenAddress,
+    tokenAddress,
   }) => {
     const spy = vi.spyOn(ZamaSDK.prototype, "revokePermits").mockResolvedValue(undefined);
     const { result } = renderWithProviders(() => useRevokePermits());
 
-    await act(() => result.current.mutateAsync([TOKEN, OTHER_TOKEN]));
+    await act(() => result.current.mutateAsync([tokenAddress, otherTokenAddress]));
 
     expect(spy).toHaveBeenCalledOnce();
-    expect(spy).toHaveBeenCalledWith([TOKEN, OTHER_TOKEN]);
+    expect(spy).toHaveBeenCalledWith([tokenAddress, otherTokenAddress]);
   });
 
   test("behavior: passes no arguments to sdk.revokePermits when called with undefined", async ({
