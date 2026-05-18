@@ -20,6 +20,7 @@ import {
   ClearSigningConsole,
   type ClearSigningIntentEntry,
   type ClearSigningIntentSource,
+  type ClearSigningTokenSnapshot,
 } from "@/components/ClearSigningConsole";
 import { ShieldCard } from "@/components/ShieldCard";
 import { TransferCard } from "@/components/TransferCard";
@@ -49,19 +50,6 @@ export default function Home() {
 
   const [selectedTokenAddress, setSelectedTokenAddress] = useState<Address | null>(null);
   const [clearSigningEntry, setClearSigningEntry] = useState<ClearSigningIntentEntry | null>(null);
-
-  function captureIntent(
-    source: ClearSigningIntentSource,
-    operation: string,
-    intent: ClearSigningIntent,
-  ) {
-    setClearSigningEntry({
-      source,
-      operation,
-      intent,
-      timestamp: Date.now(),
-    });
-  }
 
   const isSepolia = chainId === SEPOLIA_CHAIN_ID;
 
@@ -101,6 +89,29 @@ export default function Home() {
 
   // Currently selected token pair, or undefined while the registry is loading.
   const token = validPairs.find((p) => p.confidentialTokenAddress === selectedTokenAddress);
+  const clearSigningToken = token
+    ? ({
+        underlyingSymbol: token.underlying.symbol,
+        underlyingDecimals: token.underlying.decimals,
+        confidentialSymbol: token.confidential.symbol,
+        confidentialDecimals: token.confidential.decimals,
+        networkName: "Sepolia",
+      } satisfies ClearSigningTokenSnapshot)
+    : undefined;
+
+  function captureIntent(
+    source: ClearSigningIntentSource,
+    operation: string,
+    intent: ClearSigningIntent,
+  ) {
+    setClearSigningEntry({
+      source,
+      operation,
+      intent,
+      token: clearSigningToken,
+      timestamp: Date.now(),
+    });
+  }
 
   // ETH balance via wagmi transport (SEPOLIA_RPC_URL) — auto-updates on account switch.
   const { data: ethBalanceData, refetch: refetchEth } = useBalance({

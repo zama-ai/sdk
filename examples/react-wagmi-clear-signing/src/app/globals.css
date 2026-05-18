@@ -330,7 +330,46 @@ body {
   font-size: 14px;
   margin-bottom: 12px;
 }
+.clear-signing-human-summary {
+  border: 1px solid #c7d2fe;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(30, 64, 175, 0.06);
+  margin-bottom: 12px;
+}
+.clear-signing-human-row {
+  display: grid;
+  grid-template-columns: minmax(100px, 32%) 1fr;
+  gap: 12px;
+  padding: 12px 14px;
+  align-items: center;
+}
+.clear-signing-human-row + .clear-signing-human-row {
+  border-top: 1px solid #e0e7ff;
+}
+.clear-signing-human-row dt {
+  color: #64748b;
+  font-size: 13px;
+}
+.clear-signing-human-row dd {
+  color: #1e40af;
+  font-size: 15px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  word-break: break-word;
+}
 .clear-signing-warnings .alert {
+  margin-bottom: 8px;
+}
+.clear-signing-details {
+  margin-top: 12px;
+}
+.clear-signing-details summary {
+  cursor: pointer;
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 600;
   margin-bottom: 8px;
 }
 .clear-signing-fields {
@@ -410,6 +449,10 @@ body {
 }
 
 @media (max-width: 640px) {
+  .clear-signing-human-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
   .clear-signing-field {
     grid-template-columns: 1fr;
     gap: 4px;

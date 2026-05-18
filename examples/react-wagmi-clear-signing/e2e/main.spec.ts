@@ -45,6 +45,10 @@ test.describe("main screen", () => {
     await balancesCard.getByRole("button", { name: "Preview intent" }).click();
     await expect(page.locator(".clear-signing-content")).toBeVisible();
     await expect(page.locator(".intent-source-preview")).toHaveText("preview");
+    await expect(page.getByLabel("Human-readable intent summary")).toBeVisible();
+    await expect(
+      page.getByLabel("Human-readable intent summary").getByText("Action"),
+    ).toBeVisible();
     await expect(page.getByText("Raw intent JSON")).toBeVisible();
   });
 
