@@ -19,9 +19,6 @@ describe("useGenerateKeypair", () => {
     result.current.mutate();
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
-    expect(result.current.data).toEqual({
-      publicKey: "0xpub",
-      privateKey: "0xpriv",
-    });
+    expect(result.current.data).toEqual({ publicKey: "0xpub", privateKey: "0xpriv" });
   });
 });
