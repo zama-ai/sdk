@@ -18,7 +18,7 @@ import {
 } from "viem";
 import { sepolia } from "viem/chains";
 import { SEPOLIA_EXPLORER_URL, SEPOLIA_RPC_URL } from "@/lib/config";
-import type { DiscoveredDevice } from "@ledgerhq/device-management-kit";
+import type { DeviceManagementKit, DiscoveredDevice } from "@ledgerhq/device-management-kit";
 
 const SEPOLIA_CHAIN_ID = 11155111;
 const LEDGER_DERIVATION_PATH = "44'/60'/0'/0/0";
@@ -39,7 +39,12 @@ type LedgerConnection = {
   signer: {
     getAddress: (
       derivationPath: string,
-      options?: { chainId?: number; checkOnDevice?: boolean; returnChainCode?: boolean },
+      options?: {
+        chainId?: number;
+        checkOnDevice?: boolean;
+        returnChainCode?: boolean;
+        skipOpenApp?: boolean;
+      },
     ) => DeviceAction<GetAddressOutput>;
     signTransaction: (
       derivationPath: string,
@@ -175,6 +180,8 @@ export default function LedgerClearSigningPage() {
     setIsConnecting(true);
     setLastTxHash(null);
     setLastSignedTx(null);
+    let dmk: DeviceManagementKit | null = null;
+    let sessionId = "";
     try {
       addLog("info", "Loading Ledger DMK / WebHID / DSK modules.");
       const [{ DeviceManagementKitBuilder }, { webHidIdentifier, webHidTransportFactory }, { SignerEthBuilder }] =
@@ -184,7 +191,7 @@ export default function LedgerClearSigningPage() {
           import("@ledgerhq/device-signer-kit-ethereum"),
         ]);
 
-      const dmk = new DeviceManagementKitBuilder().addTransport(webHidTransportFactory).build();
+      dmk = new DeviceManagementKitBuilder().addTransport(webHidTransportFactory).build();
       if (!dmk.isEnvironmentSupported()) {
         throw new Error("WebHID is not available. Use a Chromium-based browser on localhost/HTTPS.");
       }
@@ -197,7 +204,7 @@ export default function LedgerClearSigningPage() {
       await dmk.stopDiscovering();
 
       addLog("info", `Connecting to ${device.name || device.deviceModel.name}.`);
-      const sessionId = await dmk.connect({
+      sessionId = await dmk.connect({
         device,
         sessionRefresherOptions: { isRefresherDisabled: false },
       });
@@ -217,6 +224,7 @@ export default function LedgerClearSigningPage() {
           chainId: SEPOLIA_CHAIN_ID,
           checkOnDevice: false,
           returnChainCode: false,
+          skipOpenApp: true,
         }),
         addLog,
       );
@@ -227,6 +235,13 @@ export default function LedgerClearSigningPage() {
       await refreshTokenState(address);
     } catch (error) {
       addLog("error", errorMessage(error));
+      if (dmk && sessionId) {
+        try {
+          await dmk.disconnect({ sessionId });
+        } catch {
+          // Best-effort cleanup only.
+        }
+      }
     } finally {
       setIsConnecting(false);
     }
@@ -305,8 +320,9 @@ export default function LedgerClearSigningPage() {
         <div className="card-title">Important boundary</div>
         <p>
           This page can exercise the physical Ledger DSK path. It cannot force ERC-7730 clear
-          signing by itself. The Ledger services still need a valid <code>originToken</code> and a
-          signed descriptor available through registry/CAL for this contract selector.
+          signing by itself. Open the Ethereum app on the device before connecting or signing.
+          The Ledger services still need a valid <code>originToken</code> and a signed descriptor
+          available through registry/CAL for this contract selector.
         </p>
       </div>
 
@@ -519,15 +535,13 @@ async function signAndMaybeBroadcast(
   addLog: (level: LogLevel, message: string) => void,
   setLastSignedTx: (tx: Hex) => void,
   setLastTxHash: (txHash: Hex | null) => void,
-) {
-  addLog("info", `Prepared transaction: ${prepared.label}.`);
-  addLog("info", `Unsigned transaction: ${prepared.unsignedSerialized}.`);
+  ) {
+    addLog("info", `Prepared transaction: ${prepared.label}.`);
+    addLog("info", `Unsigned transaction: ${prepared.unsignedSerialized}.`);
   const signature = await runDeviceAction(
-    connection.signer.signTransaction(
-      LEDGER_DERIVATION_PATH,
-      hexToBytes(prepared.unsignedSerialized),
-      { skipOpenApp: false },
-    ),
+    connection.signer.signTransaction(LEDGER_DERIVATION_PATH, hexToBytes(prepared.unsignedSerialized), {
+      skipOpenApp: true,
+    }),
     addLog,
   );
   addLog("success", `Ledger signature received: v=${signature.v}.`);
