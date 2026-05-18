@@ -183,13 +183,7 @@ describe("useShield", () => {
     const onSuccess = vi.fn();
 
     const { result } = renderWithProviders(() =>
-      useShield(
-        { address: tokenAddress, optimistic: true },
-        {
-          onMutate,
-          onSuccess,
-        },
-      ),
+      useShield({ address: tokenAddress, optimistic: true }, { onMutate, onSuccess }),
     );
 
     await act(() => result.current.mutateAsync({ amount: 500n }));
@@ -217,13 +211,7 @@ describe("useShield", () => {
     const onError = vi.fn();
 
     const { result } = renderWithProviders(() =>
-      useShield(
-        { address: tokenAddress, optimistic: true },
-        {
-          onMutate,
-          onError,
-        },
-      ),
+      useShield({ address: tokenAddress, optimistic: true }, { onMutate, onError }),
     );
 
     await act(async () => {
@@ -251,13 +239,7 @@ describe("useShield", () => {
     const onSettled = vi.fn();
 
     const { result } = renderWithProviders(() =>
-      useShield(
-        { address: tokenAddress, optimistic: true },
-        {
-          onMutate,
-          onSettled,
-        },
-      ),
+      useShield({ address: tokenAddress, optimistic: true }, { onMutate, onSettled }),
     );
 
     await act(() => result.current.mutateAsync({ amount: 500n }));
