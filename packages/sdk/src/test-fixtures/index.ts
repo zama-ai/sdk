@@ -1,6 +1,6 @@
 // oxlint-disable jest/expect-expect
 // oxlint-disable jest/no-disabled-tests
-import { test as base, type TestAPI } from "vitest";
+import { test as base } from "vitest";
 import { addressFixtures, type AddressFixtures } from "./addresses";
 import { chainFixtures, type ChainFixtures } from "./chain";
 import { providerFixtures, type ProviderFixtures } from "./provider";
@@ -36,7 +36,7 @@ export type SdkTestFixtures = AddressFixtures &
  * `AddBuilderWorker<...>` types a long `.extend(...).extend(...)` chain
  * produces, which TypeScript struggles to display and sometimes truncates.
  */
-export const test: TestAPI<SdkTestFixtures> = base.extend<SdkTestFixtures>({
+export const test = base.extend<SdkTestFixtures>({
   ...addressFixtures,
   ...chainFixtures,
   ...relayerFixtures,
