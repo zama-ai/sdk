@@ -5,7 +5,6 @@ import type { CredentialServiceConfig } from "../credentials/credential-service"
 import { CredentialService } from "../credentials/credential-service";
 import type { ZamaSDKEventInput } from "../events/sdk-events";
 import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
-import type { RelayerSDK } from "../relayer/relayer-sdk";
 import { CachingService } from "../services/caching-service";
 import { DecryptionService } from "../services/decryption-service";
 import { DelegationService } from "../services/delegation-service";
@@ -24,7 +23,7 @@ export type CreateCredentialServiceFn = (
 
 export type CreateDelegationServiceFn = (overrides?: {
   provider?: GenericProvider;
-  relayer?: RelayerSDK;
+  relayer?: RelayerDispatcher;
   emitEvent?: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
 }) => DelegationService;
 
@@ -32,19 +31,19 @@ export type CreateDecryptionServiceFn = (overrides?: {
   cache?: CachingService;
   credentialService?: CredentialService;
   delegationService?: DelegationService;
-  relayer?: RelayerSDK;
+  relayer?: RelayerDispatcher;
   emitEvent?: (input: ZamaSDKEventInput) => void;
 }) => DecryptionService;
 
 export type CreateEncryptionServiceFn = (overrides?: {
-  relayer?: RelayerSDK;
+  relayer?: RelayerDispatcher;
   emitEvent?: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
 }) => EncryptionService;
 
 export type CreateLifecycleServiceFn = (overrides?: {
   signer?: GenericSigner;
   cache?: CachingService;
-  relayer?: RelayerSDK;
+  relayer?: RelayerDispatcher;
   credentialService?: CredentialService;
 }) => LifecycleService;
 

@@ -3,6 +3,7 @@
 import { test as base } from "vitest";
 import { addressFixtures, type AddressFixtures } from "./addresses";
 import { providerFixtures, type ProviderFixtures } from "./provider";
+import { queryContextFixtures, type QueryContextFixtures } from "./query-context";
 import { relayerFixtures, type RelayerFixtures } from "./relayer";
 import { sdkFixtures, type SdkFixtures } from "./sdk";
 import { serviceFixtures, type ServiceFixtures } from "./services";
@@ -24,7 +25,8 @@ export const test = base
   .extend<StorageFixtures>(storageFixtures)
   .extend<ServiceFixtures>(serviceFixtures)
   .extend<SdkFixtures>(sdkFixtures)
-  .extend<TokenFixtures>(tokenFixtures);
+  .extend<TokenFixtures>(tokenFixtures)
+  .extend<QueryContextFixtures>(queryContextFixtures);
 
 export const it = test;
 
@@ -47,7 +49,6 @@ export { createMockRelayer } from "./relayer";
 export { createMockSigner, type MockSigner } from "./signer";
 export { createMockProvider } from "./provider";
 export { createMockStorage } from "./storage";
-export { mockQueryContext } from "./query-context";
 export type { AddressFixtures } from "./addresses";
 export type { RelayerFixtures } from "./relayer";
 export type { SignerFixtures, CreateMockSignerFn } from "./signer";
