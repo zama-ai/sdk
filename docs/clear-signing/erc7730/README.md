@@ -42,6 +42,13 @@ the SDK receives the plaintext input. A wallet-native ERC-7730 renderer cannot
 show plaintext unless the wallet can decrypt or otherwise trust that plaintext
 context.
 
+## Registry Readiness
+
+The descriptor files pass local shape checks and the official ERC-7730 CLI, but
+they are not yet registry-ready as-is. See `sourcify-verification.md` for the
+current Sourcify verification matrix and the contracts that must be verified or
+removed before public registry submission.
+
 ## Validation
 
 The SDK test suite includes a local descriptor/fixture consistency check:
