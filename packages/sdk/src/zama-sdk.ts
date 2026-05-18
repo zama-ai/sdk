@@ -1,7 +1,7 @@
 import type { Address } from "viem";
-import { DecryptClient } from "./clients/decrypt-client";
-import { DelegationsClient } from "./clients/delegations-client";
-import { PermitsClient } from "./clients/permits-client";
+import { Decryption } from "./namespaces/decryption";
+import { Delegations } from "./namespaces/delegations";
+import { Permits } from "./namespaces/permits";
 import type { ZamaConfig } from "./config/types";
 import { CredentialService } from "./credentials/credential-service";
 import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventListener } from "./events/sdk-events";
@@ -25,9 +25,9 @@ import { WrappersRegistry } from "./wrappers-registry";
 /**
  * ZamaSDK — composes a RelayerSDK with contract abstraction.
  *
- * Exposes four domain sub-clients for permits, delegations, decryption, and tokens,
+ * Exposes domain namespaces for permits, delegations, decryption, and tokens,
  * plus an unchanged registry, a top-level `encrypt`, and lifecycle methods. Internal
- * `*Service` classes do the work; the `*Client` classes own SDK-level guards
+ * `*Service` classes do the work; the namespace classes own SDK-level guards
  * (chain alignment, signer requirement, event emission).
  */
 export class ZamaSDK {
@@ -41,11 +41,11 @@ export class ZamaSDK {
    */
   readonly registry: WrappersRegistry;
   /** Permit and keypair management. */
-  readonly permits: PermitsClient;
+  readonly permits: Permits;
   /** On-chain decryption-delegation management. */
-  readonly delegations: DelegationsClient;
+  readonly delegations: Delegations;
   /** FHE decryption (user, delegated user, public). */
-  readonly decrypt: DecryptClient;
+  readonly decryption: Decryption;
   readonly #registryTTL: number;
   readonly #onEvent: ZamaSDKEventListener;
   readonly #cachingService: CachingService;
@@ -109,18 +109,18 @@ export class ZamaSDK {
       credentialService: this.#credentialService,
     });
 
-    this.permits = new PermitsClient({
+    this.permits = new Permits({
       signer: this.signer,
       provider: this.provider,
       cachingService: this.#cachingService,
       credentialService: this.#credentialService,
     });
-    this.delegations = new DelegationsClient({
+    this.delegations = new Delegations({
       signer: this.signer,
       provider: this.provider,
       delegationService: this.#delegationService,
     });
-    this.decrypt = new DecryptClient({
+    this.decryption = new Decryption({
       signer: this.signer,
       provider: this.provider,
       relayer: this.relayer,

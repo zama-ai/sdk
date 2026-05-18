@@ -6,7 +6,7 @@ const CONTRACT_A = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
 const CONTRACT_B = "0x3C3c3C3c3C3C3c3c3c3C3c3C3C3c3c3C3c3c3C3C" as Address;
 const DELEGATOR = "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC" as Address;
 
-describe("PermitsClient", () => {
+describe("Permits", () => {
   describe("guards (no signer configured)", () => {
     it("allow throws SignerNotConfiguredError", async ({ createSDK }) => {
       const sdk = createSDK({ signer: undefined });
@@ -114,12 +114,12 @@ describe("PermitsClient", () => {
       handle,
     }) => {
       const handles = [{ handle, contractAddress: CONTRACT_A }];
-      await sdk.decrypt.user(handles);
+      await sdk.decryption.user(handles);
       expect(relayer.userDecrypt).toHaveBeenCalledOnce();
 
       await sdk.permits.revokePermits();
 
-      await sdk.decrypt.user(handles);
+      await sdk.decryption.user(handles);
       expect(relayer.userDecrypt).toHaveBeenCalledTimes(2);
     });
 
@@ -129,12 +129,12 @@ describe("PermitsClient", () => {
       handle,
     }) => {
       const handles = [{ handle, contractAddress: CONTRACT_A }];
-      await sdk.decrypt.user(handles);
+      await sdk.decryption.user(handles);
       expect(relayer.userDecrypt).toHaveBeenCalledOnce();
 
       await sdk.permits.clear();
 
-      await sdk.decrypt.user(handles);
+      await sdk.decryption.user(handles);
       expect(relayer.userDecrypt).toHaveBeenCalledTimes(2);
     });
   });

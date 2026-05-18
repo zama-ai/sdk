@@ -6,7 +6,7 @@ import { SignerNotConfiguredError } from "../errors";
 import { assertNonNullable } from "../utils/assertions";
 
 /**
- * Public client for on-chain decryption-delegation management.
+ * Public namespace for on-chain decryption-delegation management.
  *
  * Exposed as `sdk.delegations`. Owns the SDK-level guards (signer requirement, chain
  * alignment, delegator address resolution from the wallet account) and delegates the
@@ -16,7 +16,7 @@ import { assertNonNullable } from "../utils/assertions";
  * allow **1–2 minutes** before attempting delegated decryption to let the gateway
  * sync the ACL state via cross-chain event propagation.
  */
-export class DelegationsClient {
+export class Delegations {
   readonly #signer: GenericSigner | undefined;
   readonly #provider: GenericProvider;
   readonly #delegationService: DelegationService;
@@ -34,7 +34,7 @@ export class DelegationsClient {
 
   #requireSigner(operation: string): GenericSigner {
     try {
-      assertNonNullable(this.#signer, "DelegationsClient.#signer");
+      assertNonNullable(this.#signer, "Delegations.#signer");
       return this.#signer;
     } catch (cause) {
       throw new SignerNotConfiguredError(operation, { cause });

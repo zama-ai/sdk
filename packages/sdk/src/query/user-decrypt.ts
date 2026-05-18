@@ -32,7 +32,7 @@ export function userDecryptQueryOptions(
     queryKey: zamaQueryKeys.decryption.handles(config.handles, signerContext.walletAccount),
     queryFn: (context) => {
       const [, { handles }] = context.queryKey;
-      return sdk.decrypt.user(handles as DecryptHandle[]);
+      return sdk.decryption.user(handles as DecryptHandle[]);
     },
     staleTime: Infinity,
     enabled: config.handles.length > 0 && signerContext.walletAccount !== undefined,

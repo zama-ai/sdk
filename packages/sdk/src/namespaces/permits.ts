@@ -8,7 +8,7 @@ import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/ali
 import { assertNonNullable } from "../utils/assertions";
 
 /**
- * Public client for permit and keypair management.
+ * Public namespace for permit and keypair management.
  *
  * Exposed as `sdk.permits`. Owns the SDK-level guards (chain alignment, empty-array
  * short-circuit, decrypt-cache invalidation) and delegates the actual work to the
@@ -20,7 +20,7 @@ import { assertNonNullable } from "../utils/assertions";
  * {@link clear} wipes both the permit store and the keypair (permits cascade-delete
  * with the keypair).
  */
-export class PermitsClient {
+export class Permits {
   readonly #signer: GenericSigner | undefined;
   readonly #provider: GenericProvider;
   readonly #cachingService: CachingService;
@@ -41,7 +41,7 @@ export class PermitsClient {
 
   #requireCredentialService(operation: string): CredentialService {
     try {
-      assertNonNullable(this.#credentialService, "PermitsClient.#credentialService");
+      assertNonNullable(this.#credentialService, "Permits.#credentialService");
       return this.#credentialService;
     } catch (cause) {
       throw new SignerNotConfiguredError(operation, { cause });

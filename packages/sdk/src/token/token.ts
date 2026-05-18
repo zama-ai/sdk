@@ -80,7 +80,7 @@ export interface BatchBalancesResult {
  *
  * Decryption, credentials, caching, and event emission are handled by the
  * owning {@link ZamaSDK} — this class only exposes token-scoped helpers
- * that delegate to `sdk.decrypt.user` and `sdk.permits.grantPermit`.
+ * that delegate to `sdk.decryption.user` and `sdk.permits.grantPermit`.
  */
 export class Token {
   readonly sdk: ZamaSDK;
@@ -170,7 +170,7 @@ export class Token {
   async balanceOf(owner: Address): Promise<bigint> {
     const ownerAddress = getAddress(owner);
     const handle = await this.readConfidentialBalanceOf(ownerAddress);
-    const result = await this.sdk.decrypt.user([{ handle, contractAddress: this.address }]);
+    const result = await this.sdk.decryption.user([{ handle, contractAddress: this.address }]);
     const value = result[handle];
     if (value === undefined) {
       throw new DecryptionFailedError(`Decryption returned no value for handle ${handle}`);
@@ -235,7 +235,7 @@ export class Token {
       return 0n;
     }
 
-    const result = await this.sdk.decrypt.delegated(
+    const result = await this.sdk.decryption.delegated(
       [{ handle, contractAddress: this.address }],
       normalizedDelegator,
       normalizedAccount,
@@ -257,7 +257,7 @@ export class Token {
    * Decrypt confidential balances for multiple tokens in parallel, returning
    * successes and per-token errors separately. Pre-authorizes all token
    * addresses in a single wallet signature, then delegates each decrypt to
-   * `sdk.decrypt.user`.
+   * `sdk.decryption.user`.
    *
    * Tokens that fail to decrypt land in `errors` rather than aborting the
    * whole batch — caller decides how to surface them.
@@ -394,7 +394,7 @@ export class Token {
     }
 
     if (decryptRequests.length > 0) {
-      const decrypted = await sdk.decrypt.delegatedBatch({
+      const decrypted = await sdk.decryption.delegatedBatch({
         handles: decryptRequests.map(({ token, handle }) => ({
           handle,
           contractAddress: token.address,
@@ -763,7 +763,7 @@ export class Token {
 
 /**
  * Re-exported alias used by tests and helpers for arbitrary-handle decryption.
- * Use `sdk.decrypt.user` directly in application code.
+ * Use `sdk.decryption.user` directly in application code.
  *
  * @internal
  */

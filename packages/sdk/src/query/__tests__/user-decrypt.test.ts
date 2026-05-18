@@ -5,7 +5,7 @@ import type { Address } from "viem";
 const CONTRACT = "0x1111111111111111111111111111111111111111" as Address;
 
 describe("userDecryptQueryOptions", () => {
-  test("decrypts handles via sdk.decrypt", async ({ sdk, relayer, signer }) => {
+  test("decrypts handles via sdk.decryption", async ({ sdk, relayer, signer }) => {
     const handle = ("0x" + "01".repeat(32)) as `0x${string}`;
 
     vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({ [handle]: 100n });

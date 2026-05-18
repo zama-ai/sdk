@@ -6123,27 +6123,6 @@ export function decodeUnwrapRequested(log: RawLog): UnwrapRequestedEvent | null;
 // @public
 export function decodeWrapped(log: RawLog): WrappedEvent | null;
 
-// @public
-export class DecryptClient {
-    // @internal
-    constructor(opts: {
-        signer: GenericSigner | undefined;
-        provider: GenericProvider;
-        relayer: RelayerDispatcher;
-        decryptionService: DecryptionService | undefined;
-    });
-    delegated(handles: DecryptHandle[], delegatorAddress: Address, accountAddress?: Address): Promise<Record<Handle, ClearValueType>>;
-    // @internal
-    delegatedBatch(input: {
-        handles: DecryptHandle[];
-        delegatorAddress: Address;
-        accountAddress?: Address;
-        maxConcurrency?: number;
-    }): Promise<BatchDecryptHandlesResult>;
-    public(handles: Handle[]): Promise<PublicDecryptResult>;
-    user(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>>;
-}
-
 // @public (undocumented)
 export interface DecryptEndEvent extends BaseEvent {
     // (undocumented)
@@ -6170,6 +6149,27 @@ export interface DecryptHandle {
     contractAddress: Address;
     // (undocumented)
     handle: Handle;
+}
+
+// @public
+export class Decryption {
+    // @internal
+    constructor(opts: {
+        signer: GenericSigner | undefined;
+        provider: GenericProvider;
+        relayer: RelayerDispatcher;
+        decryptionService: DecryptionService | undefined;
+    });
+    delegated(handles: DecryptHandle[], delegatorAddress: Address, accountAddress?: Address): Promise<Record<Handle, ClearValueType>>;
+    // @internal
+    delegatedBatch(input: {
+        handles: DecryptHandle[];
+        delegatorAddress: Address;
+        accountAddress?: Address;
+        maxConcurrency?: number;
+    }): Promise<BatchDecryptHandlesResult>;
+    public(handles: Handle[]): Promise<PublicDecryptResult>;
+    user(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>>;
 }
 
 // @public
@@ -6355,7 +6355,7 @@ export class DelegationNotPropagatedError extends ZamaError {
 }
 
 // @public
-export class DelegationsClient {
+export class Delegations {
     // @internal
     constructor(opts: {
         signer: GenericSigner | undefined;
@@ -11760,7 +11760,7 @@ export interface PendingUnshieldRequest {
 export type Permission = output<typeof PermissionSchema>;
 
 // @public
-export class PermitsClient {
+export class Permits {
     // @internal
     constructor(opts: {
         signer: GenericSigner | undefined;
@@ -20094,15 +20094,15 @@ export class ZamaSDK {
     createToken(address: Address): Token;
     createWrappedToken(address: Address): WrappedToken;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
-    readonly decrypt: DecryptClient;
-    readonly delegations: DelegationsClient;
+    readonly decryption: Decryption;
+    readonly delegations: Delegations;
     dispose(): void;
     // @internal
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
     // @internal
     onWalletAccountChange(listener: WalletAccountListener): () => void;
-    readonly permits: PermitsClient;
+    readonly permits: Permits;
     // (undocumented)
     readonly provider: GenericProvider;
     readonly registry: WrappersRegistry;
@@ -20157,10 +20157,10 @@ export { ZKProofLike }
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/index-D1g3HsfZ.d.ts:20462:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-D1g3HsfZ.d.ts:20567:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-D1g3HsfZ.d.ts:20669:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-D1g3HsfZ.d.ts:20670:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-CSNxbpnf.d.ts:20462:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-CSNxbpnf.d.ts:20567:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-CSNxbpnf.d.ts:20669:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-CSNxbpnf.d.ts:20670:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

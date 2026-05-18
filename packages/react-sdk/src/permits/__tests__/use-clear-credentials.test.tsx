@@ -1,5 +1,5 @@
 import { act } from "@testing-library/react";
-import { PermitsClient } from "@zama-fhe/sdk";
+import { Permits } from "@zama-fhe/sdk";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { afterEach, describe, expect, test, vi } from "../../test-fixtures";
 import { expectCacheRemoved } from "../../test-helpers";
@@ -21,7 +21,7 @@ describe("useClearCredentials", () => {
   test("cache: removes isAllowed and decryption queries after clearCredentials", async ({
     renderWithProviders,
   }) => {
-    vi.spyOn(PermitsClient.prototype, "clear").mockResolvedValue(undefined);
+    vi.spyOn(Permits.prototype, "clear").mockResolvedValue(undefined);
     const { result, queryClient } = renderWithProviders(() => useClearCredentials());
     queryClient.setQueryData(zamaQueryKeys.hasPermit.all, true);
     queryClient.setQueryData(zamaQueryKeys.decryption.all, { foo: 1n });
@@ -33,7 +33,7 @@ describe("useClearCredentials", () => {
   });
 
   test("behavior: forwards onSuccess callback", async ({ renderWithProviders }) => {
-    vi.spyOn(PermitsClient.prototype, "clear").mockResolvedValue(undefined);
+    vi.spyOn(Permits.prototype, "clear").mockResolvedValue(undefined);
     const onSuccess = vi.fn();
 
     const { result, queryClient } = renderWithProviders(() => useClearCredentials({ onSuccess }));

@@ -2530,11 +2530,11 @@ if (isZeroHandle(handle)) {
 }
 
 // Decrypt a handle you already have
-const result = await sdk.decrypt.user([{ handle, contractAddress: token.address }]);
+const result = await sdk.decryption.user([{ handle, contractAddress: token.address }]);
 const value = result[handle] as bigint;
 
 // Decrypt multiple handles at once (must include the contract address per handle)
-const decrypted = await sdk.decrypt.user(
+const decrypted = await sdk.decryption.user(
   [handle1, handle2, handle3].map((h) => ({ handle: h, contractAddress: token.address })),
 );
 ```
@@ -4392,8 +4392,8 @@ Pre-authorize contract addresses for decryption. Signs permits only for contract
 ```ts
 // Sign once for three tokens, then decrypt individually
 await sdk.permits.grantPermit([cUSDT, cDAI, cWETH]);
-const a = await sdk.decrypt.user([{ handle: h1, contractAddress: cUSDT }]);
-const b = await sdk.decrypt.user([{ handle: h2, contractAddress: cDAI }]);
+const a = await sdk.decryption.user([{ handle: h1, contractAddress: cUSDT }]);
+const b = await sdk.decryption.user([{ handle: h2, contractAddress: cDAI }]);
 ```
 
 ### userDecrypt
@@ -4407,7 +4407,7 @@ Handles from different contracts can be mixed — they are grouped by `contractA
 When the relayer is actually called, permits are resolved from the contract addresses of the full input handle set (including cached and zero handles), ensuring a stable permit scope regardless of which handles happen to be cached. If every handle is zero or already cached, no permits are needed and no wallet prompt is shown.
 
 ```ts
-const values = await sdk.decrypt.user([
+const values = await sdk.decryption.user([
   { handle: balanceHandle, contractAddress: cUSDT },
   { handle: flagHandle, contractAddress: myContract },
 ]);
@@ -4602,7 +4602,7 @@ const balance = await token.balanceOf("0xOwnerAddress");
 
 `(owner: Address) => Promise<Hex>`
 
-Returns the raw encrypted handle without decrypting. Use with `isZeroHandle()` or pass to `sdk.decrypt.user()` for decryption.
+Returns the raw encrypted handle without decrypting. Use with `isZeroHandle()` or pass to `sdk.decryption.user()` for decryption.
 
 ```ts
 const handle = await token.confidentialBalanceOf("0xOwnerAddress");
@@ -13223,7 +13223,7 @@ The current status of the query. Prefer the boolean flags above for conditional 
 `useUserDecrypt` chains two internal queries:
 
 1. **Signer address** — resolves the connected wallet address.
-2. **Decrypt** — calls `sdk.decrypt.user(handles)` which checks the persistent cache, then hits the relayer for any uncached handles.
+2. **Decrypt** — calls `sdk.decryption.user(handles)` which checks the persistent cache, then hits the relayer for any uncached handles.
 
 
 > [!WARNING]

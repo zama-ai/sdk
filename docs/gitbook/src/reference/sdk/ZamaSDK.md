@@ -210,8 +210,8 @@ Pre-authorize contract addresses for decryption. Signs permits only for contract
 ```ts
 // Sign once for three tokens, then decrypt individually
 await sdk.permits.grantPermit([cUSDT, cDAI, cWETH]);
-const a = await sdk.decrypt.user([{ handle: h1, contractAddress: cUSDT }]);
-const b = await sdk.decrypt.user([{ handle: h2, contractAddress: cDAI }]);
+const a = await sdk.decryption.user([{ handle: h1, contractAddress: cUSDT }]);
+const b = await sdk.decryption.user([{ handle: h2, contractAddress: cDAI }]);
 ```
 
 ### userDecrypt
@@ -225,7 +225,7 @@ Handles from different contracts can be mixed — they are grouped by `contractA
 When the relayer is actually called, permits are resolved from the contract addresses of the full input handle set (including cached and zero handles), ensuring a stable permit scope regardless of which handles happen to be cached. If every handle is zero or already cached, no permits are needed and no wallet prompt is shown.
 
 ```ts
-const values = await sdk.decrypt.user([
+const values = await sdk.decryption.user([
   { handle: balanceHandle, contractAddress: cUSDT },
   { handle: flagHandle, contractAddress: myContract },
 ]);

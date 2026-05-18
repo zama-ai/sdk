@@ -1277,18 +1277,18 @@ export class ZamaSDK {
     createToken(address: Address): Token;
     createWrappedToken(address: Address): WrappedToken;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
-    // Warning: (ae-forgotten-export) The symbol "DecryptClient" needs to be exported by the entry point index.d.ts
-    readonly decrypt: DecryptClient;
-    // Warning: (ae-forgotten-export) The symbol "DelegationsClient" needs to be exported by the entry point index.d.ts
-    readonly delegations: DelegationsClient;
+    // Warning: (ae-forgotten-export) The symbol "Decryption" needs to be exported by the entry point index.d.ts
+    readonly decryption: Decryption;
+    // Warning: (ae-forgotten-export) The symbol "Delegations" needs to be exported by the entry point index.d.ts
+    readonly delegations: Delegations;
     dispose(): void;
     // @internal
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
     // @internal
     onWalletAccountChange(listener: WalletAccountListener): () => void;
-    // Warning: (ae-forgotten-export) The symbol "PermitsClient" needs to be exported by the entry point index.d.ts
-    readonly permits: PermitsClient;
+    // Warning: (ae-forgotten-export) The symbol "Permits" needs to be exported by the entry point index.d.ts
+    readonly permits: Permits;
     // (undocumented)
     readonly provider: GenericProvider;
     readonly registry: WrappersRegistry;

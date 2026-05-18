@@ -9,9 +9,9 @@ import { requireAlignedWalletAccount } from "../utils/alignment";
 import { assertNonNullable } from "../utils/assertions";
 
 /**
- * Public client for FHE decryption.
+ * Public namespace for FHE decryption.
  *
- * Exposed as `sdk.decrypt`. Owns the SDK-level guards (signer requirement on `user`
+ * Exposed as `sdk.decryption`. Owns the SDK-level guards (signer requirement on `user`
  * and `delegatedUser`, empty-array short-circuit on `public`, relayer error wrapping)
  * and delegates the actual work to the internal {@link DecryptionService} or the
  * relayer directly for `public`.
@@ -19,7 +19,7 @@ import { assertNonNullable } from "../utils/assertions";
  * **Mixed signer requirement:** `user` and `delegatedUser` need a configured signer;
  * `public` does not. Each method documents its requirement in its JSDoc.
  */
-export class DecryptClient {
+export class Decryption {
   readonly #signer: GenericSigner | undefined;
   readonly #provider: GenericProvider;
   readonly #relayer: RelayerDispatcher;
@@ -40,7 +40,7 @@ export class DecryptClient {
 
   #requireDecryptionService(operation: string): DecryptionService {
     try {
-      assertNonNullable(this.#decryptionService, "DecryptClient.#decryptionService");
+      assertNonNullable(this.#decryptionService, "Decryption.#decryptionService");
       return this.#decryptionService;
     } catch (cause) {
       throw new SignerNotConfiguredError(operation, { cause });
@@ -62,7 +62,7 @@ export class DecryptClient {
    *
    * @example
    * ```ts
-   * const values = await sdk.decrypt.user([
+   * const values = await sdk.decryption.user([
    *   { handle: balanceHandle, contractAddress: cUSDT },
    * ]);
    * console.log(values[balanceHandle]); // 1000n
@@ -92,7 +92,7 @@ export class DecryptClient {
    *
    * @example
    * ```ts
-   * const values = await sdk.decrypt.delegated([
+   * const values = await sdk.decryption.delegated([
    *   { handle: balanceHandle, contractAddress: tokenAddr },
    * ], delegatorAddr);
    * console.log(values[balanceHandle]); // 1000n
@@ -121,7 +121,7 @@ export class DecryptClient {
    * @example
    * ```ts
    * const { clearValues, decryptionProof, abiEncodedClearValues } =
-   *   await sdk.decrypt.public([handle]);
+   *   await sdk.decryption.public([handle]);
    * ```
    */
   async public(handles: Handle[]): Promise<PublicDecryptResult> {
