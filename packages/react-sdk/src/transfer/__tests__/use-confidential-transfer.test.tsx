@@ -1,74 +1,82 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { useMutation } from "@tanstack/react-query";
-import type { Address } from "@zama-fhe/sdk";
+import { type QueryClient, useMutation } from "@tanstack/react-query";
+import type { Address, Hex } from "@zama-fhe/sdk";
 import { EncryptionFailedError, SigningRejectedError } from "@zama-fhe/sdk";
 import { confidentialTransferMutationOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { describe, expect, test, vi } from "../../test-fixtures";
-import { expectCacheUntouched } from "../../test-helpers";
 import { useConfidentialBalance } from "../../balance/use-confidential-balance";
 import { useConfidentialTransfer } from "../use-confidential-transfer";
-import {
-  HANDLE,
-  OTHER_TOKEN,
-  RECIPIENT,
-  TOKEN,
-  USER,
-  expectDefaultMutationState,
-  expectInvalidatedQueries,
-  mutateAndExpectOnSuccess,
-} from "../../__tests__/mutation-test-helpers";
 
 describe("useConfidentialTransfer", () => {
-  test("default", ({ renderWithProviders }) => {
-    const { result } = renderWithProviders(() => useConfidentialTransfer({ address: TOKEN }));
+  test("default", ({ renderWithProviders, tokenAddress }) => {
+    const { result } = renderWithProviders(() =>
+      useConfidentialTransfer({ address: tokenAddress }),
+    );
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
-    expectDefaultMutationState(state);
+    expect(state).toEqualDefaultMutationState();
   });
 
-  test("cache: invalidates balance after transfer", async ({ renderWithProviders, signer }) => {
+  test("cache: invalidates balance after transfer", async ({
+    renderWithProviders,
+    signer,
+    otherTokenAddress,
+    recipientAddress,
+    tokenAddress,
+    userAddress,
+  }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
     const { result, queryClient } = renderWithProviders(() =>
-      useConfidentialTransfer({ address: TOKEN }),
+      useConfidentialTransfer({ address: tokenAddress }),
     );
 
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
-    const otherBalanceKey = zamaQueryKeys.confidentialBalance.owner(OTHER_TOKEN, USER);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(tokenAddress, userAddress);
+    const otherBalanceKey = zamaQueryKeys.confidentialBalance.owner(otherTokenAddress, userAddress);
 
     queryClient.setQueryData(balanceKey, 1000n);
     queryClient.setQueryData(otherBalanceKey, 777n);
 
     await act(() =>
-      result.current.mutateAsync({ to: RECIPIENT, amount: 500n, skipBalanceCheck: true }),
+      result.current.mutateAsync({ to: recipientAddress, amount: 500n, skipBalanceCheck: true }),
     );
 
-    expectInvalidatedQueries(queryClient, [balanceKey]);
-    expectCacheUntouched(queryClient, otherBalanceKey, 777n);
+    expect(queryClient).toHaveInvalidatedQueries([balanceKey]);
+    expect(queryClient).toHaveCacheUntouched(otherBalanceKey, 777n);
   });
 
-  test("behavior: forwards onSuccess callback", async ({ renderWithProviders, signer }) => {
+  test("behavior: forwards onSuccess callback", async ({
+    renderWithProviders,
+    signer,
+    recipientAddress,
+    tokenAddress,
+    userAddress,
+    mutateAndExpectOnSuccess,
+  }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(tokenAddress, userAddress);
     const onSuccess = vi.fn();
 
     const { result, queryClient } = renderWithProviders(() =>
-      useConfidentialTransfer({ address: TOKEN }, { onSuccess }),
+      useConfidentialTransfer({ address: tokenAddress }, { onSuccess }),
     );
 
     queryClient.setQueryData(balanceKey, 1000n);
 
     await mutateAndExpectOnSuccess(
-      () => result.current.mutateAsync({ to: RECIPIENT, amount: 500n, skipBalanceCheck: true }),
+      () =>
+        result.current.mutateAsync({ to: recipientAddress, amount: 500n, skipBalanceCheck: true }),
       onSuccess,
-      (client) => expectInvalidatedQueries(client, [balanceKey]),
+      (client: QueryClient) => expect(client).toHaveInvalidatedQueries([balanceKey]),
     );
   });
 
   test("behavior: forwards raw onMutate context to onSuccess without optimistic flag", async ({
     renderWithProviders,
     signer,
+    recipientAddress,
+    tokenAddress,
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
@@ -77,11 +85,11 @@ describe("useConfidentialTransfer", () => {
     const onSuccess = vi.fn();
 
     const { result } = renderWithProviders(() =>
-      useConfidentialTransfer({ address: TOKEN }, { onMutate, onSuccess }),
+      useConfidentialTransfer({ address: tokenAddress }, { onMutate, onSuccess }),
     );
 
     await act(() =>
-      result.current.mutateAsync({ to: RECIPIENT, amount: 500n, skipBalanceCheck: true }),
+      result.current.mutateAsync({ to: recipientAddress, amount: 500n, skipBalanceCheck: true }),
     );
 
     expect(onMutate).toHaveBeenCalledOnce();
@@ -93,6 +101,8 @@ describe("useConfidentialTransfer", () => {
   test("behavior: forwards raw onMutate context to onError without optimistic flag", async ({
     renderWithProviders,
     signer,
+    recipientAddress,
+    tokenAddress,
   }) => {
     vi.mocked(signer.writeContract).mockRejectedValue(new Error("tx reverted"));
 
@@ -101,12 +111,12 @@ describe("useConfidentialTransfer", () => {
     const onError = vi.fn();
 
     const { result } = renderWithProviders(() =>
-      useConfidentialTransfer({ address: TOKEN }, { onMutate, onError }),
+      useConfidentialTransfer({ address: tokenAddress }, { onMutate, onError }),
     );
 
     await act(async () => {
       await expect(
-        result.current.mutateAsync({ to: RECIPIENT, amount: 500n, skipBalanceCheck: true }),
+        result.current.mutateAsync({ to: recipientAddress, amount: 500n, skipBalanceCheck: true }),
       ).rejects.toThrow();
     });
 
@@ -119,6 +129,8 @@ describe("useConfidentialTransfer", () => {
   test("behavior: forwards raw onMutate context to onSettled without optimistic flag", async ({
     renderWithProviders,
     signer,
+    recipientAddress,
+    tokenAddress,
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
@@ -127,11 +139,11 @@ describe("useConfidentialTransfer", () => {
     const onSettled = vi.fn();
 
     const { result } = renderWithProviders(() =>
-      useConfidentialTransfer({ address: TOKEN }, { onMutate, onSettled }),
+      useConfidentialTransfer({ address: tokenAddress }, { onMutate, onSettled }),
     );
 
     await act(() =>
-      result.current.mutateAsync({ to: RECIPIENT, amount: 500n, skipBalanceCheck: true }),
+      result.current.mutateAsync({ to: recipientAddress, amount: 500n, skipBalanceCheck: true }),
     );
 
     expect(onMutate).toHaveBeenCalledOnce();
@@ -143,16 +155,20 @@ describe("useConfidentialTransfer", () => {
   test("behavior: unwraps caller context for onSuccess with optimistic flag", async ({
     renderWithProviders,
     signer,
+    recipientAddress,
+    tokenAddress,
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
-    const expectedContext = { requestId: "transfer-success-optimistic" } as const;
+    const expectedContext = {
+      requestId: "transfer-success-optimistic",
+    } as const;
     const onMutate = vi.fn().mockReturnValue(expectedContext);
     const onSuccess = vi.fn();
 
     const { result } = renderWithProviders(() =>
       useConfidentialTransfer(
-        { address: TOKEN, optimistic: true },
+        { address: tokenAddress, optimistic: true },
         {
           onMutate,
           onSuccess,
@@ -161,7 +177,7 @@ describe("useConfidentialTransfer", () => {
     );
 
     await act(() =>
-      result.current.mutateAsync({ to: RECIPIENT, amount: 500n, skipBalanceCheck: true }),
+      result.current.mutateAsync({ to: recipientAddress, amount: 500n, skipBalanceCheck: true }),
     );
 
     expect(onMutate).toHaveBeenCalledOnce();
@@ -173,6 +189,8 @@ describe("useConfidentialTransfer", () => {
   test("behavior: unwraps caller context for onError with optimistic flag", async ({
     renderWithProviders,
     signer,
+    recipientAddress,
+    tokenAddress,
   }) => {
     vi.mocked(signer.writeContract).mockRejectedValue(new Error("tx reverted"));
 
@@ -181,18 +199,12 @@ describe("useConfidentialTransfer", () => {
     const onError = vi.fn();
 
     const { result } = renderWithProviders(() =>
-      useConfidentialTransfer(
-        { address: TOKEN, optimistic: true },
-        {
-          onMutate,
-          onError,
-        },
-      ),
+      useConfidentialTransfer({ address: tokenAddress, optimistic: true }, { onMutate, onError }),
     );
 
     await act(async () => {
       await expect(
-        result.current.mutateAsync({ to: RECIPIENT, amount: 500n, skipBalanceCheck: true }),
+        result.current.mutateAsync({ to: recipientAddress, amount: 500n, skipBalanceCheck: true }),
       ).rejects.toThrow();
     });
 
@@ -205,16 +217,20 @@ describe("useConfidentialTransfer", () => {
   test("behavior: unwraps caller context for onSettled with optimistic flag", async ({
     renderWithProviders,
     signer,
+    recipientAddress,
+    tokenAddress,
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
-    const expectedContext = { requestId: "transfer-settled-optimistic" } as const;
+    const expectedContext = {
+      requestId: "transfer-settled-optimistic",
+    } as const;
     const onMutate = vi.fn().mockReturnValue(expectedContext);
     const onSettled = vi.fn();
 
     const { result } = renderWithProviders(() =>
       useConfidentialTransfer(
-        { address: TOKEN, optimistic: true },
+        { address: tokenAddress, optimistic: true },
         {
           onMutate,
           onSettled,
@@ -223,7 +239,7 @@ describe("useConfidentialTransfer", () => {
     );
 
     await act(() =>
-      result.current.mutateAsync({ to: RECIPIENT, amount: 500n, skipBalanceCheck: true }),
+      result.current.mutateAsync({ to: recipientAddress, amount: 500n, skipBalanceCheck: true }),
     );
 
     expect(onMutate).toHaveBeenCalledOnce();
@@ -237,16 +253,20 @@ describe("useConfidentialTransfer", () => {
     signer,
     relayer,
     provider,
+    handle,
+    recipientAddress,
+    tokenAddress,
+    userAddress,
   }) => {
     const handleB = `0x${"44".repeat(32)}`;
 
     // Both Phase 1 (handleQuery) and Phase 2 (token.balanceOf) read the handle
     // via provider.readContract; track the "current" handle and flip it on the
     // transaction write so the post-transfer refetch sees handleB.
-    let currentHandle: string = HANDLE;
+    let currentHandle: string = handle;
     vi.mocked(provider.readContract).mockImplementation(async () => currentHandle);
-    vi.mocked(relayer.userDecrypt).mockImplementation(async ({ handles }) => ({
-      [handles[0]]: handles[0] === HANDLE ? 1000n : 500n,
+    vi.mocked(relayer.userDecrypt).mockImplementation(async ({ handles }: { handles: Hex[] }) => ({
+      [handles[0]]: handles[0] === handle ? 1000n : 500n,
     }));
     vi.mocked(signer.writeContract).mockImplementation(async () => {
       currentHandle = handleB;
@@ -256,8 +276,8 @@ describe("useConfidentialTransfer", () => {
     const { Wrapper } = createWrapper({ signer, relayer });
     const { result } = renderHook(
       () => ({
-        balance: useConfidentialBalance({ address: TOKEN, account: USER }),
-        transfer: useConfidentialTransfer({ address: TOKEN }),
+        balance: useConfidentialBalance({ address: tokenAddress, account: userAddress }),
+        transfer: useConfidentialTransfer({ address: tokenAddress }),
       }),
       { wrapper: Wrapper },
     );
@@ -270,7 +290,11 @@ describe("useConfidentialTransfer", () => {
     );
 
     await act(() =>
-      result.current.transfer.mutateAsync({ to: RECIPIENT, amount: 500n, skipBalanceCheck: true }),
+      result.current.transfer.mutateAsync({
+        to: recipientAddress,
+        amount: 500n,
+        skipBalanceCheck: true,
+      }),
     );
 
     await waitFor(
@@ -283,7 +307,13 @@ describe("useConfidentialTransfer", () => {
 });
 
 describe("useConfidentialTransfer optimistic updates", () => {
-  test("behavior: optimistic subtract on mutate", async ({ renderWithProviders, signer }) => {
+  test("behavior: optimistic subtract on mutate", async ({
+    renderWithProviders,
+    signer,
+    recipientAddress,
+    tokenAddress,
+    userAddress,
+  }) => {
     let resolveTransfer: (value: string) => void;
     vi.mocked(signer.writeContract).mockReturnValue(
       new Promise((resolve) => {
@@ -292,29 +322,23 @@ describe("useConfidentialTransfer optimistic updates", () => {
     );
 
     const { result, queryClient } = renderWithProviders(() =>
-      useConfidentialTransfer({ address: TOKEN, optimistic: true }),
+      useConfidentialTransfer({ address: tokenAddress, optimistic: true }),
     );
 
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(tokenAddress, userAddress);
     queryClient.setQueryData(balanceKey, 5000n);
     const cancelSpy = vi.spyOn(queryClient, "cancelQueries");
     const setQueryDataSpy = vi.spyOn(queryClient, "setQueryData");
 
     await act(async () => {
-      result.current.mutate({
-        to: RECIPIENT,
-        amount: 1200n,
-        skipBalanceCheck: true,
-      });
+      result.current.mutate({ to: recipientAddress, amount: 1200n, skipBalanceCheck: true });
     });
 
     await waitFor(() => {
       expect(queryClient.getQueryData(balanceKey)).toBe(3800n);
     });
     expect(cancelSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        queryKey: expect.arrayContaining(["zama.confidentialBalance"]),
-      }),
+      expect.objectContaining({ queryKey: expect.arrayContaining(["zama.confidentialBalance"]) }),
     );
     expect(cancelSpy.mock.invocationCallOrder[0]).toBeDefined();
     expect(setQueryDataSpy.mock.invocationCallOrder[0]).toBeDefined();
@@ -330,17 +354,20 @@ describe("useConfidentialTransfer optimistic updates", () => {
   test("optimistic: no error when balance cache is empty", async ({
     renderWithProviders,
     signer,
+    recipientAddress,
+    tokenAddress,
+    userAddress,
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
     const { result, queryClient } = renderWithProviders(() =>
-      useConfidentialTransfer({ address: TOKEN, optimistic: true }),
+      useConfidentialTransfer({ address: tokenAddress, optimistic: true }),
     );
 
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(tokenAddress, userAddress);
 
     await act(() =>
-      result.current.mutateAsync({ to: RECIPIENT, amount: 500n, skipBalanceCheck: true }),
+      result.current.mutateAsync({ to: recipientAddress, amount: 500n, skipBalanceCheck: true }),
     );
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(queryClient.getQueryData(balanceKey)).toBeUndefined();
@@ -349,29 +376,36 @@ describe("useConfidentialTransfer optimistic updates", () => {
   test("optimistic: cancelQueries uses confidential balance key prefix", async ({
     renderWithProviders,
     signer,
+    recipientAddress,
+    tokenAddress,
+    userAddress,
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
     const { result, queryClient } = renderWithProviders(() =>
-      useConfidentialTransfer({ address: TOKEN, optimistic: true }),
+      useConfidentialTransfer({ address: tokenAddress, optimistic: true }),
     );
 
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(tokenAddress, userAddress);
     queryClient.setQueryData(balanceKey, 1000n);
     const cancelSpy = vi.spyOn(queryClient, "cancelQueries");
 
     await act(() =>
-      result.current.mutateAsync({ to: RECIPIENT, amount: 500n, skipBalanceCheck: true }),
+      result.current.mutateAsync({ to: recipientAddress, amount: 500n, skipBalanceCheck: true }),
     );
 
     expect(cancelSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        queryKey: expect.arrayContaining(["zama.confidentialBalance"]),
-      }),
+      expect.objectContaining({ queryKey: expect.arrayContaining(["zama.confidentialBalance"]) }),
     );
   });
 
-  test("behavior: no optimistic update without flag", async ({ renderWithProviders, signer }) => {
+  test("behavior: no optimistic update without flag", async ({
+    renderWithProviders,
+    signer,
+    recipientAddress,
+    tokenAddress,
+    userAddress,
+  }) => {
     let resolveTransfer: (value: string) => void;
     vi.mocked(signer.writeContract).mockReturnValue(
       new Promise((resolve) => {
@@ -380,18 +414,14 @@ describe("useConfidentialTransfer optimistic updates", () => {
     );
 
     const { result, queryClient } = renderWithProviders(() =>
-      useConfidentialTransfer({ address: TOKEN }),
+      useConfidentialTransfer({ address: tokenAddress }),
     );
 
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(tokenAddress, userAddress);
     queryClient.setQueryData(balanceKey, 5000n);
 
     await act(async () => {
-      result.current.mutate({
-        to: RECIPIENT,
-        amount: 1200n,
-        skipBalanceCheck: true,
-      });
+      result.current.mutate({ to: recipientAddress, amount: 1200n, skipBalanceCheck: true });
     });
 
     expect(queryClient.getQueryData(balanceKey)).toBe(5000n);
@@ -401,33 +431,33 @@ describe("useConfidentialTransfer optimistic updates", () => {
     });
   });
 
-  test("behavior: rolls back optimistic on error", async ({ renderWithProviders, signer }) => {
+  test("behavior: rolls back optimistic on error", async ({
+    renderWithProviders,
+    signer,
+    recipientAddress,
+    tokenAddress,
+    userAddress,
+  }) => {
     vi.mocked(signer.writeContract).mockRejectedValue(new Error("tx reverted"));
 
     const { result, queryClient } = renderWithProviders(() =>
-      useConfidentialTransfer({ address: TOKEN, optimistic: true }),
+      useConfidentialTransfer({ address: tokenAddress, optimistic: true }),
     );
 
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(tokenAddress, userAddress);
     queryClient.setQueryData(balanceKey, 5000n);
     const cancelSpy = vi.spyOn(queryClient, "cancelQueries");
     const setQueryDataSpy = vi.spyOn(queryClient, "setQueryData");
 
     await act(async () => {
-      result.current.mutate({
-        to: RECIPIENT,
-        amount: 1200n,
-        skipBalanceCheck: true,
-      });
+      result.current.mutate({ to: recipientAddress, amount: 1200n, skipBalanceCheck: true });
     });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
 
     expect(queryClient.getQueryData(balanceKey)).toBe(5000n);
     expect(cancelSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        queryKey: expect.arrayContaining(["zama.confidentialBalance"]),
-      }),
+      expect.objectContaining({ queryKey: expect.arrayContaining(["zama.confidentialBalance"]) }),
     );
     expect(cancelSpy.mock.invocationCallOrder[0]).toBeDefined();
     expect(setQueryDataSpy.mock.invocationCallOrder[0]).toBeDefined();
@@ -441,22 +471,25 @@ describe("useConfidentialTransfer optimistic updates", () => {
   test("behavior: onError still fires when rollback throws (try/finally resilience)", async ({
     renderWithProviders,
     signer,
+    recipientAddress,
+    tokenAddress,
+    userAddress,
   }) => {
     vi.mocked(signer.writeContract).mockRejectedValue(new Error("tx reverted"));
 
     const onError = vi.fn();
 
     const { result, queryClient } = renderWithProviders(() =>
-      useConfidentialTransfer({ address: TOKEN, optimistic: true }, { onError }),
+      useConfidentialTransfer({ address: tokenAddress, optimistic: true }, { onError }),
     );
 
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(tokenAddress, userAddress);
     queryClient.setQueryData(balanceKey, 5000n);
 
     // Sabotage setQueryData after the optimistic write so rollback throws
     const originalSetQueryData = queryClient.setQueryData.bind(queryClient);
     let callCount = 0;
-    vi.spyOn(queryClient, "setQueryData").mockImplementation((key, value) => {
+    vi.spyOn(queryClient, "setQueryData").mockImplementation((key: string, value: any) => {
       callCount++;
       // First call is the optimistic subtract, let it through.
       // Second call (rollback) should throw.
@@ -479,7 +512,7 @@ describe("useConfidentialTransfer optimistic updates", () => {
 
     try {
       await act(async () => {
-        result.current.mutate({ to: RECIPIENT, amount: 500n, skipBalanceCheck: true });
+        result.current.mutate({ to: recipientAddress, amount: 500n, skipBalanceCheck: true });
       });
 
       await waitFor(() => expect(result.current.isError).toBe(true));
@@ -494,13 +527,16 @@ describe("useConfidentialTransfer optimistic updates", () => {
 });
 
 describe("useConfidentialTransfer error propagation", () => {
-  test("propagates SigningRejectedError to mutation state", async ({ createWrapper, token }) => {
+  test("propagates SigningRejectedError to mutation state", async ({
+    createWrapper,
+    mockWrappedToken,
+  }) => {
     const error = new SigningRejectedError("user rejected");
-    vi.mocked(token.confidentialTransfer).mockRejectedValueOnce(error);
+    vi.mocked(mockWrappedToken.confidentialTransfer).mockRejectedValueOnce(error);
 
     const { Wrapper } = createWrapper();
     const { result } = renderHook(
-      () => useMutation(confidentialTransferMutationOptions(token, token.address)),
+      () => useMutation(confidentialTransferMutationOptions(mockWrappedToken)),
       {
         wrapper: Wrapper,
       },
@@ -519,11 +555,13 @@ describe("useConfidentialTransfer error propagation", () => {
     expect(result.current.error instanceof SigningRejectedError).toBe(true);
   });
 
-  test("confidentialTransfer surfaces EncryptionFailedError", async ({ token }) => {
+  test("confidentialTransfer surfaces EncryptionFailedError", async ({
+    mockWrappedToken: token,
+  }) => {
     const error = new EncryptionFailedError("Failed to encrypt transfer amount");
     vi.mocked(token.confidentialTransfer).mockRejectedValue(error);
 
-    const opts = confidentialTransferMutationOptions(token, token.address);
+    const opts = confidentialTransferMutationOptions(token);
 
     await expect(opts.mutationFn({ to: "0xto" as Address, amount: 100n })).rejects.toThrow(
       EncryptionFailedError,

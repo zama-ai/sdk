@@ -3,32 +3,28 @@ import type { Address } from "@zama-fhe/sdk";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { useDelegateDecryption } from "../use-delegate-decryption";
-import {
-  TOKEN,
-  RECIPIENT,
-  expectDefaultMutationState,
-} from "../../__tests__/mutation-test-helpers";
-
 const ACL = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
 
 describe("useDelegateDecryption", () => {
-  test("default", ({ renderWithProviders }) => {
-    const { result } = renderWithProviders(() => useDelegateDecryption(TOKEN), {});
+  test("default", ({ renderWithProviders, tokenAddress }) => {
+    const { result } = renderWithProviders(() => useDelegateDecryption(tokenAddress), {});
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
-    expectDefaultMutationState(state);
+    expect(state).toEqualDefaultMutationState();
   });
 
   test("behavior: calls delegateDecryption with delegate", async ({
     renderWithProviders,
     signer,
+    recipientAddress,
+    tokenAddress,
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
-    const { result } = renderWithProviders(() => useDelegateDecryption(TOKEN), {});
+    const { result } = renderWithProviders(() => useDelegateDecryption(tokenAddress), {});
 
     act(() => {
-      result.current.mutate({ delegateAddress: RECIPIENT });
+      result.current.mutate({ delegateAddress: recipientAddress });
     });
 
     await waitFor(() => {
@@ -36,21 +32,23 @@ describe("useDelegateDecryption", () => {
     });
 
     expect(signer.writeContract).toHaveBeenCalledWith(
-      expect.objectContaining({
-        address: ACL,
-        functionName: "delegateForUserDecryption",
-      }),
+      expect.objectContaining({ address: ACL, functionName: "delegateForUserDecryption" }),
     );
   });
 
-  test("behavior: passes expiration options", async ({ renderWithProviders, signer }) => {
+  test("behavior: passes expiration options", async ({
+    renderWithProviders,
+    signer,
+    recipientAddress,
+    tokenAddress,
+  }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
-    const { result } = renderWithProviders(() => useDelegateDecryption(TOKEN), {});
+    const { result } = renderWithProviders(() => useDelegateDecryption(tokenAddress), {});
 
     const expirationDate = new Date("2030-01-01T00:00:00Z");
     act(() => {
-      result.current.mutate({ delegateAddress: RECIPIENT, expirationDate });
+      result.current.mutate({ delegateAddress: recipientAddress, expirationDate });
     });
 
     await waitFor(() => {
@@ -59,20 +57,27 @@ describe("useDelegateDecryption", () => {
 
     expect(signer.writeContract).toHaveBeenCalledWith(
       expect.objectContaining({
-        args: [RECIPIENT, TOKEN, BigInt(Math.floor(expirationDate.getTime() / 1000))],
+        args: [recipientAddress, tokenAddress, BigInt(Math.floor(expirationDate.getTime() / 1000))],
       }),
     );
   });
 
-  test("behavior: forwards onSuccess callback", async ({ renderWithProviders, signer }) => {
+  test("behavior: forwards onSuccess callback", async ({
+    renderWithProviders,
+    signer,
+    recipientAddress,
+    tokenAddress,
+  }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
     const onSuccess = vi.fn();
 
-    const { result } = renderWithProviders(() => useDelegateDecryption(TOKEN, { onSuccess }));
+    const { result } = renderWithProviders(() =>
+      useDelegateDecryption(tokenAddress, { onSuccess }),
+    );
 
     act(() => {
-      result.current.mutate({ delegateAddress: RECIPIENT });
+      result.current.mutate({ delegateAddress: recipientAddress });
     });
 
     await waitFor(() => {
@@ -83,6 +88,8 @@ describe("useDelegateDecryption", () => {
   test("behavior: onSuccess fires before cache invalidation", async ({
     renderWithProviders,
     signer,
+    recipientAddress,
+    tokenAddress,
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
@@ -95,14 +102,14 @@ describe("useDelegateDecryption", () => {
     });
 
     const { result, queryClient } = renderWithProviders(() =>
-      useDelegateDecryption(TOKEN, { onSuccess }),
+      useDelegateDecryption(tokenAddress, { onSuccess }),
     );
 
     // Seed the cache so invalidation is observable
     queryClient.setQueryData(delegationKey, { delegated: true });
 
     act(() => {
-      result.current.mutate({ delegateAddress: RECIPIENT });
+      result.current.mutate({ delegateAddress: recipientAddress });
     });
 
     await waitFor(() => {

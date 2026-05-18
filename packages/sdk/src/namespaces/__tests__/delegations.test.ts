@@ -1,5 +1,5 @@
 import type { Address } from "viem";
-import { describe, expect, it, vi } from "../../test-fixtures";
+import { describe, expect, test, vi } from "../../test-fixtures";
 import { ChainMismatchError, SignerNotConfiguredError } from "../../errors";
 import { MAX_UINT64 } from "../../contracts";
 
@@ -9,14 +9,14 @@ const DELEGATOR = "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC" as Address;
 
 describe("Delegations", () => {
   describe("guards (no signer configured)", () => {
-    it("delegate throws SignerNotConfiguredError", async ({ createSDK }) => {
+    test("delegate throws SignerNotConfiguredError", async ({ createSDK }) => {
       const sdk = createSDK({ signer: undefined });
       await expect(
         sdk.delegations.delegate({ contractAddress: TOKEN, delegateAddress: DELEGATE }),
       ).rejects.toBeInstanceOf(SignerNotConfiguredError);
     });
 
-    it("revoke throws SignerNotConfiguredError", async ({ createSDK }) => {
+    test("revoke throws SignerNotConfiguredError", async ({ createSDK }) => {
       const sdk = createSDK({ signer: undefined });
       await expect(
         sdk.delegations.revoke({ contractAddress: TOKEN, delegateAddress: DELEGATE }),
@@ -25,7 +25,7 @@ describe("Delegations", () => {
   });
 
   describe("chain alignment", () => {
-    it("delegate throws ChainMismatchError when signer and provider disagree", async ({
+    test("delegate throws ChainMismatchError when signer and provider disagree", async ({
       sdk,
       signer,
       provider,
@@ -40,7 +40,7 @@ describe("Delegations", () => {
       ).rejects.toBeInstanceOf(ChainMismatchError);
     });
 
-    it("revoke throws ChainMismatchError when signer and provider disagree", async ({
+    test("revoke throws ChainMismatchError when signer and provider disagree", async ({
       sdk,
       signer,
       provider,
@@ -57,7 +57,7 @@ describe("Delegations", () => {
   });
 
   describe("read methods (signer-independent)", () => {
-    it("isActive works without a signer", async ({ createSDK, provider }) => {
+    test("isActive works without a signer", async ({ createSDK, provider }) => {
       const sdk = createSDK({ signer: undefined });
       vi.mocked(provider.readContract).mockResolvedValueOnce(MAX_UINT64);
 
@@ -69,7 +69,7 @@ describe("Delegations", () => {
       expect(active).toBe(true);
     });
 
-    it("getExpiry works without a signer", async ({ createSDK, provider }) => {
+    test("getExpiry works without a signer", async ({ createSDK, provider }) => {
       const sdk = createSDK({ signer: undefined });
       vi.mocked(provider.readContract).mockResolvedValueOnce(MAX_UINT64);
 
@@ -81,7 +81,7 @@ describe("Delegations", () => {
       expect(expiry).toBe(MAX_UINT64);
     });
 
-    it("isActive returns false when expiry is 0", async ({ sdk, provider }) => {
+    test("isActive returns false when expiry is 0", async ({ sdk, provider }) => {
       vi.mocked(provider.readContract).mockResolvedValueOnce(0n);
 
       const active = await sdk.delegations.isActive({
@@ -94,7 +94,7 @@ describe("Delegations", () => {
   });
 
   describe("delegator address resolution", () => {
-    it("delegate uses the wallet account address as delegator", async ({
+    test("delegate uses the wallet account address as delegator", async ({
       sdk,
       signer,
       provider,

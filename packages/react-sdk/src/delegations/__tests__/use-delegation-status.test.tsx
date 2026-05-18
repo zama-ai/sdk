@@ -3,7 +3,6 @@ import { hashFn, zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { describe, expect, test } from "../../test-fixtures";
 import { vi } from "vitest";
 import { useDelegationStatus } from "../use-delegation-status";
-import { TOKEN, RECIPIENT, USER } from "../../__tests__/mutation-test-helpers";
 
 vi.mock("@tanstack/react-query", async () => {
   const actual = await vi.importActual("@tanstack/react-query");
@@ -11,26 +10,29 @@ vi.mock("@tanstack/react-query", async () => {
 });
 
 describe("useDelegationStatus", () => {
-  test("disables query when tokenAddress is missing", ({ renderWithProviders }) => {
+  test("disables query when tokenAddress is missing", ({
+    renderWithProviders,
+    recipientAddress,
+    userAddress,
+  }) => {
     vi.mocked(useQuery).mockReturnValue({ data: undefined } as never);
 
     renderWithProviders(() =>
       useDelegationStatus({
         tokenAddress: undefined,
-        delegatorAddress: USER,
-        delegateAddress: RECIPIENT,
+        delegatorAddress: userAddress,
+        delegateAddress: recipientAddress,
       }),
     );
 
-    expect(vi.mocked(useQuery)).toHaveBeenCalledWith(
-      expect.objectContaining({
-        enabled: false,
-      }),
-    );
+    expect(vi.mocked(useQuery)).toHaveBeenCalledWith(expect.objectContaining({ enabled: false }));
   });
 
   test("passes the shared queryKeyHashFn when addresses are provided", ({
     renderWithProviders,
+    recipientAddress,
+    tokenAddress,
+    userAddress,
   }) => {
     vi.mocked(useQuery).mockReturnValue({
       data: { isDelegated: true, expiryTimestamp: 0n },
@@ -38,52 +40,46 @@ describe("useDelegationStatus", () => {
 
     renderWithProviders(() =>
       useDelegationStatus({
-        tokenAddress: TOKEN,
-        delegatorAddress: USER,
-        delegateAddress: RECIPIENT,
+        tokenAddress: tokenAddress,
+        delegatorAddress: userAddress,
+        delegateAddress: recipientAddress,
       }),
     );
 
     expect(vi.mocked(useQuery)).toHaveBeenCalledWith(
       expect.objectContaining({
         queryKeyHashFn: hashFn,
-        queryKey: zamaQueryKeys.delegationStatus.scope(TOKEN, USER, RECIPIENT),
+        queryKey: zamaQueryKeys.delegationStatus.scope(tokenAddress, userAddress, recipientAddress),
         enabled: true,
       }),
     );
   });
 
-  test("disables query when delegator is missing", ({ renderWithProviders }) => {
+  test("disables query when delegator is missing", ({
+    renderWithProviders,
+    recipientAddress,
+    tokenAddress,
+  }) => {
     vi.mocked(useQuery).mockReturnValue({ data: undefined } as never);
 
     renderWithProviders(() =>
-      useDelegationStatus({
-        tokenAddress: TOKEN,
-        delegateAddress: RECIPIENT,
-      }),
+      useDelegationStatus({ tokenAddress: tokenAddress, delegateAddress: recipientAddress }),
     );
 
-    expect(vi.mocked(useQuery)).toHaveBeenCalledWith(
-      expect.objectContaining({
-        enabled: false,
-      }),
-    );
+    expect(vi.mocked(useQuery)).toHaveBeenCalledWith(expect.objectContaining({ enabled: false }));
   });
 
-  test("disables query when delegate is missing", ({ renderWithProviders }) => {
+  test("disables query when delegate is missing", ({
+    renderWithProviders,
+    tokenAddress,
+    userAddress,
+  }) => {
     vi.mocked(useQuery).mockReturnValue({ data: undefined } as never);
 
     renderWithProviders(() =>
-      useDelegationStatus({
-        tokenAddress: TOKEN,
-        delegatorAddress: USER,
-      }),
+      useDelegationStatus({ tokenAddress: tokenAddress, delegatorAddress: userAddress }),
     );
 
-    expect(vi.mocked(useQuery)).toHaveBeenCalledWith(
-      expect.objectContaining({
-        enabled: false,
-      }),
-    );
+    expect(vi.mocked(useQuery)).toHaveBeenCalledWith(expect.objectContaining({ enabled: false }));
   });
 });

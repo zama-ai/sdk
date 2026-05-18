@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "../test-fixtures";
+import { describe, test, expect, vi } from "../test-fixtures";
 import { ChainMismatchError } from "../errors";
 import { Token } from "../token/token";
 import type { ZamaSDK } from "../zama-sdk";
@@ -37,9 +37,9 @@ const MISMATCHED_OPS: ReadonlyArray<readonly [string, Op]> = [
 ] as const;
 
 describe("chain alignment guards", () => {
-  // `it.for` (not `it.each`) is the API that forwards the fixture context as
-  // the second argument; `it.each` only splats the row.
-  it.for(MISMATCHED_OPS)(
+  // `test.for` (not `test.each`) is the API that forwards the fixture context
+  // as the second argument; `test.each` only splats the row.
+  test.for(MISMATCHED_OPS)(
     "%s throws ChainMismatchError before any side-effect",
     async ([operation, run], { sdk, signer, provider, relayer, tokenAddress }) => {
       const walletAccount = {

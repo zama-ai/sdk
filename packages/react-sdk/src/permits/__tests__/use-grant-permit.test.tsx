@@ -1,12 +1,6 @@
 import { act } from "@testing-library/react";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { describe, expect, test, vi } from "../../test-fixtures";
-import { expectCacheRemoved } from "../../test-helpers";
-import {
-  OTHER_TOKEN,
-  TOKEN,
-  expectDefaultMutationState,
-} from "../../__tests__/mutation-test-helpers";
 import { useGrantPermit } from "../use-grant-permit";
 
 describe("useGrantPermit", () => {
@@ -14,24 +8,32 @@ describe("useGrantPermit", () => {
     const { result } = renderWithProviders(() => useGrantPermit());
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
-    expectDefaultMutationState(state);
+    expect(state).toEqualDefaultMutationState();
   });
 
-  test("cache: removes isAllowed query after allow", async ({ renderWithProviders }) => {
+  test("cache: removes isAllowed query after allow", async ({
+    renderWithProviders,
+    tokenAddress,
+    otherTokenAddress,
+  }) => {
     const { result, queryClient } = renderWithProviders(() => useGrantPermit());
     queryClient.setQueryData(zamaQueryKeys.hasPermit.all, true);
 
-    await act(() => result.current.mutateAsync([TOKEN, OTHER_TOKEN]));
+    await act(() => result.current.mutateAsync([tokenAddress, otherTokenAddress]));
 
-    expectCacheRemoved(queryClient, zamaQueryKeys.hasPermit.all);
+    expect(queryClient).toHaveCacheRemoved(zamaQueryKeys.hasPermit.all);
   });
 
-  test("behavior: forwards onSuccess callback", async ({ renderWithProviders }) => {
+  test("behavior: forwards onSuccess callback", async ({
+    renderWithProviders,
+    otherTokenAddress,
+    tokenAddress,
+  }) => {
     let removedDuringCallback: boolean | undefined;
     const onSuccess = vi.fn((_: void, variables: unknown) => {
       removedDuringCallback =
         queryClient.getQueryCache().find({ queryKey: zamaQueryKeys.hasPermit.all }) === undefined;
-      expect(variables).toEqual([TOKEN, OTHER_TOKEN]);
+      expect(variables).toEqual([tokenAddress, otherTokenAddress]);
     });
     const { result, queryClient } = renderWithProviders(() =>
       useGrantPermit({
@@ -40,10 +42,10 @@ describe("useGrantPermit", () => {
     );
     queryClient.setQueryData(zamaQueryKeys.hasPermit.all, true);
 
-    await act(() => result.current.mutateAsync([TOKEN, OTHER_TOKEN]));
+    await act(() => result.current.mutateAsync([tokenAddress, otherTokenAddress]));
 
     expect(onSuccess).toHaveBeenCalledOnce();
     expect(removedDuringCallback).toBe(false);
-    expectCacheRemoved(queryClient, zamaQueryKeys.hasPermit.all);
+    expect(queryClient).toHaveCacheRemoved(zamaQueryKeys.hasPermit.all);
   });
 });

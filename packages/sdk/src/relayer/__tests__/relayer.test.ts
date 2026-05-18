@@ -1,6 +1,6 @@
 import { vi } from "vitest";
 import { MemoryStorage } from "../../storage/memory-storage";
-import { beforeEach, describe, expect, it } from "../../test-fixtures";
+import { beforeEach, describe, expect, test } from "../../test-fixtures";
 
 // ---------------------------------------------------------------------------
 // Hoisted mocks (available inside vi.mock factories)
@@ -120,7 +120,7 @@ describe("RelayerWeb", () => {
   // -------------------------------------------------------------------------
 
   describe("terminate", () => {
-    it("does not terminate the worker (lifecycle not owned)", async () => {
+    test("does not terminate the worker (lifecycle not owned)", async () => {
       const relayer = createWebRelayer();
       mockWorkerClient.generateKeypair.mockResolvedValue({
         publicKey: "pk",
@@ -133,12 +133,12 @@ describe("RelayerWeb", () => {
       expect(mockWorkerClient.terminate).not.toHaveBeenCalled();
     });
 
-    it("is safe to call terminate before any operation", () => {
+    test("is safe to call terminate before any operation", () => {
       const relayer = createWebRelayer();
       expect(() => relayer.terminate()).not.toThrow();
     });
 
-    it("[Symbol.dispose] delegates to terminate", async () => {
+    test("[Symbol.dispose] delegates to terminate", async () => {
       const relayer = createWebRelayer();
       mockWorkerClient.generateKeypair.mockResolvedValue({
         publicKey: "pk",
@@ -156,7 +156,7 @@ describe("RelayerWeb", () => {
   // -------------------------------------------------------------------------
 
   describe("CSRF token refresh", () => {
-    it("refreshes CSRF token before encrypt", async () => {
+    test("refreshes CSRF token before encrypt", async () => {
       const getCsrfToken = vi.fn().mockReturnValue("csrf-token-123");
       const relayer = createWebRelayer({ security: { getCsrfToken } });
       mockWorkerClient.encrypt.mockResolvedValue({
@@ -173,7 +173,7 @@ describe("RelayerWeb", () => {
       expect(mockWorkerClient.updateCsrf).toHaveBeenCalledWith("csrf-token-123");
     });
 
-    it("skips CSRF refresh when getCsrfToken is not provided", async () => {
+    test("skips CSRF refresh when getCsrfToken is not provided", async () => {
       const relayer = createWebRelayer();
       mockWorkerClient.encrypt.mockResolvedValue({
         handles: [],
@@ -189,7 +189,7 @@ describe("RelayerWeb", () => {
       expect(mockWorkerClient.updateCsrf).not.toHaveBeenCalled();
     });
 
-    it("skips CSRF refresh when token is empty", async () => {
+    test("skips CSRF refresh when token is empty", async () => {
       const getCsrfToken = vi.fn().mockReturnValue("");
       const relayer = createWebRelayer({ security: { getCsrfToken } });
       mockWorkerClient.encrypt.mockResolvedValue({
@@ -212,7 +212,7 @@ describe("RelayerWeb", () => {
   // -------------------------------------------------------------------------
 
   describe("method delegation", () => {
-    it("generateKeypair delegates to worker", async () => {
+    test("generateKeypair delegates to worker", async () => {
       const relayer = createWebRelayer();
       mockWorkerClient.generateKeypair.mockResolvedValue({
         publicKey: "pub",
@@ -225,7 +225,7 @@ describe("RelayerWeb", () => {
       expect(mockWorkerClient.generateKeypair).toHaveBeenCalledOnce();
     });
 
-    it("createEIP712 delegates to worker with correct params", async () => {
+    test("createEIP712 delegates to worker with correct params", async () => {
       const relayer = createWebRelayer();
       mockWorkerClient.createEIP712.mockResolvedValue(MOCK_EIP712);
 
@@ -242,7 +242,7 @@ describe("RelayerWeb", () => {
       expect(result.message.publicKey).toBe("0xpub");
     });
 
-    it("encrypt delegates to worker and returns handles + inputProof", async () => {
+    test("encrypt delegates to worker and returns handles + inputProof", async () => {
       const relayer = createWebRelayer();
       const handles = [new Uint8Array([1, 2])];
       const inputProof = new Uint8Array([3, 4]);
@@ -257,7 +257,7 @@ describe("RelayerWeb", () => {
       expect(result).toEqual({ handles, inputProof });
     });
 
-    it("userDecrypt delegates to worker and returns clearValues", async () => {
+    test("userDecrypt delegates to worker and returns clearValues", async () => {
       const relayer = createWebRelayer();
       const clearValues = { [HANDLE]: 100n };
       mockWorkerClient.userDecrypt.mockResolvedValue({ clearValues });
@@ -282,7 +282,7 @@ describe("RelayerWeb", () => {
       });
     });
 
-    it("publicDecrypt delegates to worker and returns structured result", async () => {
+    test("publicDecrypt delegates to worker and returns structured result", async () => {
       const relayer = createWebRelayer();
       const mockResult = {
         clearValues: {
@@ -303,7 +303,7 @@ describe("RelayerWeb", () => {
       });
     });
 
-    it("createDelegatedUserDecryptEIP712 delegates to worker", async () => {
+    test("createDelegatedUserDecryptEIP712 delegates to worker", async () => {
       const relayer = createWebRelayer();
       const mockData = { some: "eip712data" };
       mockWorkerClient.createDelegatedUserDecryptEIP712.mockResolvedValue(mockData);
@@ -327,7 +327,7 @@ describe("RelayerWeb", () => {
       });
     });
 
-    it("delegatedUserDecrypt delegates to worker and returns clearValues", async () => {
+    test("delegatedUserDecrypt delegates to worker and returns clearValues", async () => {
       const relayer = createWebRelayer();
       mockWorkerClient.delegatedUserDecrypt.mockResolvedValue({
         clearValues: { [HANDLE]: 200n },
@@ -350,7 +350,7 @@ describe("RelayerWeb", () => {
       expect(result).toEqual({ [HANDLE]: 200n });
     });
 
-    it("requestZKProofVerification delegates to worker", async () => {
+    test("requestZKProofVerification delegates to worker", async () => {
       const relayer = createWebRelayer();
       const proof = new Uint8Array([1, 2, 3]);
       mockWorkerClient.requestZKProofVerification.mockResolvedValue(proof);
@@ -363,7 +363,7 @@ describe("RelayerWeb", () => {
       expect(result).toBe(proof);
     });
 
-    it("getPublicKey delegates to worker and unwraps result", async () => {
+    test("getPublicKey delegates to worker and unwraps result", async () => {
       const relayer = createWebRelayer();
       const pk = { publicKeyId: "id1", publicKey: new Uint8Array([5]) };
       mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk });
@@ -373,7 +373,7 @@ describe("RelayerWeb", () => {
       expect(result).toEqual(pk);
     });
 
-    it("getPublicKey returns null when worker returns null result", async () => {
+    test("getPublicKey returns null when worker returns null result", async () => {
       const relayer = createWebRelayer();
       mockWorkerClient.getPublicKey.mockResolvedValue({ result: null });
 
@@ -382,7 +382,7 @@ describe("RelayerWeb", () => {
       expect(result).toBeNull();
     });
 
-    it("getPublicParams delegates to worker and unwraps result", async () => {
+    test("getPublicParams delegates to worker and unwraps result", async () => {
       const relayer = createWebRelayer();
       const pp = { publicParams: new Uint8Array([9]), publicParamsId: "pp1" };
       mockWorkerClient.getPublicParams.mockResolvedValue({ result: pp });
@@ -402,7 +402,7 @@ describe("RelayerWeb", () => {
   // -------------------------------------------------------------------------
 
   describe("persistent caching", () => {
-    it("caches getPublicKey when storage is provided", async () => {
+    test("caches getPublicKey when storage is provided", async () => {
       const storage = new MemoryStorage();
       const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([1, 2, 3]) };
       mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk });
@@ -418,7 +418,7 @@ describe("RelayerWeb", () => {
       expect(mockWorkerClient.getPublicKey).toHaveBeenCalledOnce();
     });
 
-    it("caches getPublicParams when storage is provided", async () => {
+    test("caches getPublicParams when storage is provided", async () => {
       const storage = new MemoryStorage();
       const pp = {
         publicParamsId: "pp-1",
@@ -436,7 +436,7 @@ describe("RelayerWeb", () => {
       expect(mockWorkerClient.getPublicParams).toHaveBeenCalledOnce();
     });
 
-    it("restores cache across instances from persistent storage", async () => {
+    test("restores cache across instances from persistent storage", async () => {
       const storage = new MemoryStorage();
       const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([10]) };
       mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk });
@@ -455,7 +455,7 @@ describe("RelayerWeb", () => {
       expect(mockWorkerClient.getPublicKey).not.toHaveBeenCalled();
     });
 
-    it("caches by default even when no storage is explicitly provided", async () => {
+    test("caches by default even when no storage is explicitly provided", async () => {
       const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([1]) };
       mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk });
 
@@ -481,7 +481,7 @@ describe("RelayerNode", () => {
   // -------------------------------------------------------------------------
 
   describe("terminate", () => {
-    it("does not terminate the pool (lifecycle not owned)", async () => {
+    test("does not terminate the pool (lifecycle not owned)", async () => {
       const relayer = createNodeRelayer();
       mockPool.generateKeypair.mockResolvedValue({
         publicKey: "pk",
@@ -494,12 +494,12 @@ describe("RelayerNode", () => {
       expect(mockPool.terminate).not.toHaveBeenCalled();
     });
 
-    it("is safe to call terminate before any operation", () => {
+    test("is safe to call terminate before any operation", () => {
       const relayer = createNodeRelayer();
       expect(() => relayer.terminate()).not.toThrow();
     });
 
-    it("[Symbol.dispose] delegates to terminate", async () => {
+    test("[Symbol.dispose] delegates to terminate", async () => {
       const relayer = createNodeRelayer();
       mockPool.generateKeypair.mockResolvedValue({
         publicKey: "pk",
@@ -517,7 +517,7 @@ describe("RelayerNode", () => {
   // -------------------------------------------------------------------------
 
   describe("method delegation", () => {
-    it("generateKeypair delegates to pool", async () => {
+    test("generateKeypair delegates to pool", async () => {
       const relayer = createNodeRelayer();
       mockPool.generateKeypair.mockResolvedValue({
         publicKey: "pub",
@@ -530,7 +530,7 @@ describe("RelayerNode", () => {
       expect(mockPool.generateKeypair).toHaveBeenCalledOnce();
     });
 
-    it("createEIP712 delegates to pool with correct params", async () => {
+    test("createEIP712 delegates to pool with correct params", async () => {
       const relayer = createNodeRelayer();
       mockPool.createEIP712.mockResolvedValue(MOCK_EIP712);
 
@@ -547,7 +547,7 @@ describe("RelayerNode", () => {
       expect(result.message.publicKey).toBe("0xpub");
     });
 
-    it("encrypt delegates to pool and returns handles + inputProof", async () => {
+    test("encrypt delegates to pool and returns handles + inputProof", async () => {
       const relayer = createNodeRelayer();
       const handles = [new Uint8Array([1, 2])];
       const inputProof = new Uint8Array([3, 4]);
@@ -562,7 +562,7 @@ describe("RelayerNode", () => {
       expect(result).toEqual({ handles, inputProof });
     });
 
-    it("userDecrypt delegates to pool and returns clearValues", async () => {
+    test("userDecrypt delegates to pool and returns clearValues", async () => {
       const relayer = createNodeRelayer();
       const clearValues = { [HANDLE]: 100n };
       mockPool.userDecrypt.mockResolvedValue({ clearValues });
@@ -587,7 +587,7 @@ describe("RelayerNode", () => {
       });
     });
 
-    it("publicDecrypt delegates to pool and returns structured result", async () => {
+    test("publicDecrypt delegates to pool and returns structured result", async () => {
       const relayer = createNodeRelayer();
       const mockResult = {
         clearValues: {
@@ -608,7 +608,7 @@ describe("RelayerNode", () => {
       });
     });
 
-    it("createDelegatedUserDecryptEIP712 delegates to pool", async () => {
+    test("createDelegatedUserDecryptEIP712 delegates to pool", async () => {
       const relayer = createNodeRelayer();
       const mockData = { some: "eip712data" };
       mockPool.createDelegatedUserDecryptEIP712.mockResolvedValue(mockData);
@@ -632,7 +632,7 @@ describe("RelayerNode", () => {
       });
     });
 
-    it("delegatedUserDecrypt delegates to pool and returns clearValues", async () => {
+    test("delegatedUserDecrypt delegates to pool and returns clearValues", async () => {
       const relayer = createNodeRelayer();
       mockPool.delegatedUserDecrypt.mockResolvedValue({
         clearValues: { [HANDLE]: 200n },
@@ -655,7 +655,7 @@ describe("RelayerNode", () => {
       expect(result).toEqual({ [HANDLE]: 200n });
     });
 
-    it("requestZKProofVerification delegates to pool", async () => {
+    test("requestZKProofVerification delegates to pool", async () => {
       const relayer = createNodeRelayer();
       const proof = new Uint8Array([1, 2, 3]);
       mockPool.requestZKProofVerification.mockResolvedValue(proof);
@@ -668,7 +668,7 @@ describe("RelayerNode", () => {
       expect(result).toBe(proof);
     });
 
-    it("getPublicKey delegates to pool and unwraps result", async () => {
+    test("getPublicKey delegates to pool and unwraps result", async () => {
       const relayer = createNodeRelayer();
       const pk = { publicKeyId: "id1", publicKey: new Uint8Array([5]) };
       mockPool.getPublicKey.mockResolvedValue({ result: pk });
@@ -678,7 +678,7 @@ describe("RelayerNode", () => {
       expect(result).toEqual(pk);
     });
 
-    it("getPublicKey returns null when pool returns null result", async () => {
+    test("getPublicKey returns null when pool returns null result", async () => {
       const relayer = createNodeRelayer();
       mockPool.getPublicKey.mockResolvedValue({ result: null });
 
@@ -687,7 +687,7 @@ describe("RelayerNode", () => {
       expect(result).toBeNull();
     });
 
-    it("getPublicParams delegates to pool and unwraps result", async () => {
+    test("getPublicParams delegates to pool and unwraps result", async () => {
       const relayer = createNodeRelayer();
       const pp = { publicParams: new Uint8Array([9]), publicParamsId: "pp1" };
       mockPool.getPublicParams.mockResolvedValue({ result: pp });
@@ -707,7 +707,7 @@ describe("RelayerNode", () => {
   // -------------------------------------------------------------------------
 
   describe("persistent caching", () => {
-    it("caches getPublicKey when storage is provided", async () => {
+    test("caches getPublicKey when storage is provided", async () => {
       const storage = new MemoryStorage();
       const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([1, 2, 3]) };
       mockPool.getPublicKey.mockResolvedValue({ result: pk });
@@ -723,7 +723,7 @@ describe("RelayerNode", () => {
       expect(mockPool.getPublicKey).toHaveBeenCalledOnce();
     });
 
-    it("caches getPublicParams when storage is provided", async () => {
+    test("caches getPublicParams when storage is provided", async () => {
       const storage = new MemoryStorage();
       const pp = {
         publicParamsId: "pp-1",
@@ -741,7 +741,7 @@ describe("RelayerNode", () => {
       expect(mockPool.getPublicParams).toHaveBeenCalledOnce();
     });
 
-    it("caches getPublicKey when storage is not provided (MemoryStorage fallback)", async () => {
+    test("caches getPublicKey when storage is not provided (MemoryStorage fallback)", async () => {
       const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([1]) };
       mockPool.getPublicKey.mockResolvedValue({ result: pk });
 

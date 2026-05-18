@@ -2,8 +2,6 @@ import { act } from "@testing-library/react";
 import { Permits } from "@zama-fhe/sdk";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { afterEach, describe, expect, test, vi } from "../../test-fixtures";
-import { expectCacheRemoved } from "../../test-helpers";
-import { expectDefaultMutationState } from "../../__tests__/mutation-test-helpers";
 import { useClearCredentials } from "../use-clear-credentials";
 
 describe("useClearCredentials", () => {
@@ -15,7 +13,7 @@ describe("useClearCredentials", () => {
     const { result } = renderWithProviders(() => useClearCredentials());
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
-    expectDefaultMutationState(state);
+    expect(state).toEqualDefaultMutationState();
   });
 
   test("cache: removes isAllowed and decryption queries after clearCredentials", async ({
@@ -28,8 +26,8 @@ describe("useClearCredentials", () => {
 
     await act(() => result.current.mutateAsync());
 
-    expectCacheRemoved(queryClient, zamaQueryKeys.hasPermit.all);
-    expectCacheRemoved(queryClient, zamaQueryKeys.decryption.all);
+    expect(queryClient).toHaveCacheRemoved(zamaQueryKeys.hasPermit.all);
+    expect(queryClient).toHaveCacheRemoved(zamaQueryKeys.decryption.all);
   });
 
   test("behavior: forwards onSuccess callback", async ({ renderWithProviders }) => {
@@ -45,7 +43,7 @@ describe("useClearCredentials", () => {
     expect(onSuccess).toHaveBeenCalledOnce();
     expect(onSuccess.mock.calls[0]?.[0]).toBeUndefined();
     expect(onSuccess.mock.calls[0]?.[1]).toBeUndefined();
-    expectCacheRemoved(queryClient, zamaQueryKeys.hasPermit.all);
-    expectCacheRemoved(queryClient, zamaQueryKeys.decryption.all);
+    expect(queryClient).toHaveCacheRemoved(zamaQueryKeys.hasPermit.all);
+    expect(queryClient).toHaveCacheRemoved(zamaQueryKeys.decryption.all);
   });
 });

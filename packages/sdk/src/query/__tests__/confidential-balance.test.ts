@@ -1,5 +1,5 @@
 import type { Address } from "viem";
-import { describe, expect, test, vi, mockQueryContext } from "../../test-fixtures";
+import { describe, expect, test, vi } from "../../test-fixtures";
 import { Token } from "../../token/token";
 import { confidentialBalanceQueryOptions } from "../confidential-balance";
 
@@ -75,6 +75,7 @@ describe("confidentialBalanceQueryOptions", () => {
   test("queryFn delegates to token.balanceOf using the owner from queryKey", async ({
     createMockToken,
     signer,
+    mockQueryContext,
   }) => {
     const token = createMockToken(tokenAddress);
     vi.mocked(token.balanceOf).mockResolvedValue(42n);

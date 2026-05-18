@@ -1,8 +1,8 @@
-import { describe, expect, test, vi, mockQueryContext } from "../../test-fixtures";
+import { describe, expect, test, vi } from "../../test-fixtures";
 import { isConfidentialQueryOptions, isWrapperQueryOptions } from "../is-confidential";
 
 describe("isConfidentialQueryOptions", () => {
-  test("queries confidential interface check", async ({ sdk, provider }) => {
+  test("queries confidential interface check", async ({ sdk, provider, mockQueryContext }) => {
     vi.mocked(provider.readContract).mockResolvedValue(true);
     const options = isConfidentialQueryOptions(sdk, "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a");
 
@@ -11,7 +11,11 @@ describe("isConfidentialQueryOptions", () => {
     expect(options.staleTime).toBe(Infinity);
   });
 
-  test("returns false when contract reverts (no ERC-165 support)", async ({ sdk, provider }) => {
+  test("returns false when contract reverts (no ERC-165 support)", async ({
+    sdk,
+    provider,
+    mockQueryContext,
+  }) => {
     vi.mocked(provider.readContract).mockRejectedValue(new Error("execution reverted"));
     const options = isConfidentialQueryOptions(sdk, "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a");
 
@@ -19,7 +23,11 @@ describe("isConfidentialQueryOptions", () => {
     expect(value).toBe(false);
   });
 
-  test("re-throws network errors instead of returning false", async ({ sdk, provider }) => {
+  test("re-throws network errors instead of returning false", async ({
+    sdk,
+    provider,
+    mockQueryContext,
+  }) => {
     vi.mocked(provider.readContract).mockRejectedValue(new Error("fetch failed"));
     const options = isConfidentialQueryOptions(sdk, "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a");
 
@@ -32,7 +40,11 @@ describe("isConfidentialQueryOptions", () => {
 describe("isWrapperQueryOptions", () => {
   const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a";
 
-  test("returns true when baseline interfaceId (0xd04584ba) matches", async ({ sdk, provider }) => {
+  test("returns true when baseline interfaceId (0xd04584ba) matches", async ({
+    sdk,
+    provider,
+    mockQueryContext,
+  }) => {
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce(true) // baseline ID
       .mockResolvedValueOnce(false); // upgraded ID
@@ -42,7 +54,11 @@ describe("isWrapperQueryOptions", () => {
     expect(value).toBe(true);
   });
 
-  test("returns true when new interfaceId (0x1f1c62b2) matches", async ({ sdk, provider }) => {
+  test("returns true when new interfaceId (0x1f1c62b2) matches", async ({
+    sdk,
+    provider,
+    mockQueryContext,
+  }) => {
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce(false) // baseline ID
       .mockResolvedValueOnce(true); // upgraded ID
@@ -52,7 +68,11 @@ describe("isWrapperQueryOptions", () => {
     expect(value).toBe(true);
   });
 
-  test("returns false when neither interfaceId matches", async ({ sdk, provider }) => {
+  test("returns false when neither interfaceId matches", async ({
+    sdk,
+    provider,
+    mockQueryContext,
+  }) => {
     vi.mocked(provider.readContract).mockResolvedValue(false);
     const options = isWrapperQueryOptions(sdk, TOKEN);
 
@@ -61,7 +81,11 @@ describe("isWrapperQueryOptions", () => {
     expect(options.staleTime).toBe(Infinity);
   });
 
-  test("returns false when contract reverts (no ERC-165 support)", async ({ sdk, provider }) => {
+  test("returns false when contract reverts (no ERC-165 support)", async ({
+    sdk,
+    provider,
+    mockQueryContext,
+  }) => {
     vi.mocked(provider.readContract).mockRejectedValue(new Error("execution reverted"));
     const options = isWrapperQueryOptions(sdk, TOKEN);
 
@@ -69,7 +93,11 @@ describe("isWrapperQueryOptions", () => {
     expect(value).toBe(false);
   });
 
-  test("re-throws network errors instead of returning false", async ({ sdk, provider }) => {
+  test("re-throws network errors instead of returning false", async ({
+    sdk,
+    provider,
+    mockQueryContext,
+  }) => {
     vi.mocked(provider.readContract).mockRejectedValue(new Error("connection refused"));
     const options = isWrapperQueryOptions(sdk, TOKEN);
 

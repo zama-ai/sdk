@@ -1,89 +1,105 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, test, vi } from "../../test-fixtures";
 import { RelayerDispatcher, type WorkerLike } from "../relayer-dispatcher";
 import { ConfigurationError } from "../../errors";
-import { createMockChain, createMockRelayer } from "../../test-fixtures";
 import type { FheChain } from "../../chains/types";
 import type { RelayerConfig } from "../../config/types";
 import type { RelayerSDK } from "../relayer-sdk";
-
-const chainA: FheChain = createMockChain({ id: 1 });
-const chainB: FheChain = createMockChain({ id: 2 });
 
 function makeMockWorker(): WorkerLike {
   return { terminate: vi.fn<() => void>() };
 }
 
-/** Create a RelayerConfig that produces a mock relayer (no real worker). */
-function mockRelayerConfig(overrides?: Partial<RelayerSDK>): RelayerConfig {
-  return {
-    type: "web",
-    createRelayer: () => createMockRelayer(overrides) as unknown as RelayerSDK,
-  };
-}
-
-/** Create a RelayerConfig with a real mock worker. */
-function mockRelayerConfigWithWorker(worker: WorkerLike): RelayerConfig {
-  return {
-    type: "web",
-    createWorker: () => worker,
-    createRelayer: () => createMockRelayer() as unknown as RelayerSDK,
-  };
-}
-
-function makeDispatcher(chains: FheChain[], relayerConfigs?: Record<number, RelayerConfig>) {
-  const configs =
-    relayerConfigs ?? Object.fromEntries(chains.map((c) => [c.id, mockRelayerConfig()]));
-  return new RelayerDispatcher(chains as [FheChain, ...FheChain[]], configs);
-}
-
 describe("RelayerDispatcher", () => {
   describe("constructor", () => {
-    it("throws ConfigurationError on empty chains", () => {
+    test("throws ConfigurationError on empty chains", () => {
       expect(() => new RelayerDispatcher([] as any, {})).toThrow(ConfigurationError);
     });
 
-    it("throws ConfigurationError when chain has no matching relayer config", () => {
-      expect(() => new RelayerDispatcher([chainA, chainB], { [1]: mockRelayerConfig() })).toThrow(
-        "Chain 2 has no relayer configured",
-      );
+    test("throws ConfigurationError when chain has no matching relayer config", ({
+      createMockChain,
+      createMockRelayer,
+    }) => {
+      const chainA = createMockChain({ id: 1 });
+      const chainB = createMockChain({ id: 2 });
+      expect(
+        () =>
+          new RelayerDispatcher([chainA, chainB], {
+            [1]: {
+              type: "web",
+              createRelayer: () => createMockRelayer(),
+            },
+          }),
+      ).toThrow("Chain 2 has no relayer configured");
     });
   });
 
   describe("chains / activeChain", () => {
-    it("exposes configured chains", () => {
-      const dispatcher = makeDispatcher([chainA, chainB]);
+    test("exposes configured chains", ({ createMockChain, createMockRelayer }) => {
+      const chainA = createMockChain({ id: 1 });
+      const chainB = createMockChain({ id: 2 });
+      const dispatcher = new RelayerDispatcher(
+        [chainA, chainB],
+        relayerConfigs([chainA, chainB], createMockRelayer),
+      );
       expect(dispatcher.chains).toEqual([chainA, chainB]);
     });
 
-    it("defaults to first chain", () => {
-      const dispatcher = makeDispatcher([chainA, chainB]);
+    test("defaults to first chain", ({ createMockChain, createMockRelayer }) => {
+      const chainA = createMockChain({ id: 1 });
+      const chainB = createMockChain({ id: 2 });
+      const dispatcher = new RelayerDispatcher(
+        [chainA, chainB],
+        relayerConfigs([chainA, chainB], createMockRelayer),
+      );
       expect(dispatcher.chain).toEqual(chainA);
     });
 
-    it("returns active chain after switchChain", () => {
-      const dispatcher = makeDispatcher([chainA, chainB]);
+    test("returns active chain after switchChain", ({ createMockChain, createMockRelayer }) => {
+      const chainA = createMockChain({ id: 1 });
+      const chainB = createMockChain({ id: 2 });
+      const dispatcher = new RelayerDispatcher(
+        [chainA, chainB],
+        relayerConfigs([chainA, chainB], createMockRelayer),
+      );
       dispatcher.switchChain(2);
       expect(dispatcher.chain).toEqual(chainB);
     });
   });
 
   describe("switchChain", () => {
-    it("switches the active chain", () => {
-      const dispatcher = makeDispatcher([chainA, chainB]);
+    test("switches the active chain", ({ createMockChain, createMockRelayer }) => {
+      const chainA = createMockChain({ id: 1 });
+      const chainB = createMockChain({ id: 2 });
+      const dispatcher = new RelayerDispatcher(
+        [chainA, chainB],
+        relayerConfigs([chainA, chainB], createMockRelayer),
+      );
       dispatcher.switchChain(2);
       expect(dispatcher.chain).toEqual(chainB);
     });
 
-    it("throws ConfigurationError on unknown chainId", () => {
-      const dispatcher = makeDispatcher([chainA]);
+    test("throws ConfigurationError on unknown chainId", ({
+      createMockChain,
+      createMockRelayer,
+    }) => {
+      const chainA = createMockChain({ id: 1 });
+      const dispatcher = new RelayerDispatcher(
+        [chainA],
+        relayerConfigs([chainA], createMockRelayer),
+      );
       expect(() => dispatcher.switchChain(999)).toThrow(ConfigurationError);
     });
   });
 
   describe("delegation to active relayer", () => {
-    it("delegates operations to the active chain relayer", async () => {
-      const relayerA = createMockRelayer() as unknown as RelayerSDK;
-      const relayerB = createMockRelayer() as unknown as RelayerSDK;
+    test("delegates operations to the active chain relayer", async ({
+      createMockChain,
+      createMockRelayer,
+    }) => {
+      const chainA = createMockChain({ id: 1 });
+      const chainB = createMockChain({ id: 2 });
+      const relayerA = createMockRelayer();
+      const relayerB = createMockRelayer();
       const dispatcher = new RelayerDispatcher([chainA, chainB], {
         [1]: { type: "web", createRelayer: () => relayerA },
         [2]: { type: "web", createRelayer: () => relayerB },
@@ -94,9 +110,14 @@ describe("RelayerDispatcher", () => {
       expect(relayerB.encrypt).not.toHaveBeenCalled();
     });
 
-    it("delegates to switched relayer after switchChain", async () => {
-      const relayerA = createMockRelayer() as unknown as RelayerSDK;
-      const relayerB = createMockRelayer() as unknown as RelayerSDK;
+    test("delegates to switched relayer after switchChain", async ({
+      createMockChain,
+      createMockRelayer,
+    }) => {
+      const chainA = createMockChain({ id: 1 });
+      const chainB = createMockChain({ id: 2 });
+      const relayerA = createMockRelayer();
+      const relayerB = createMockRelayer();
       const dispatcher = new RelayerDispatcher([chainA, chainB], {
         [1]: { type: "web", createRelayer: () => relayerA },
         [2]: { type: "web", createRelayer: () => relayerB },
@@ -110,7 +131,7 @@ describe("RelayerDispatcher", () => {
   });
 
   describe("dispatches all RelayerSDK methods", () => {
-    it.each([
+    test.for([
       ["generateKeypair", []],
       ["createEIP712", ["0xpubkey", ["0xcontract"], 1000]],
       ["encrypt", [{ values: [] }]],
@@ -124,8 +145,9 @@ describe("RelayerDispatcher", () => {
       ["getAclAddress", []],
     ] as [keyof RelayerSDK, unknown[]][])(
       "forwards %s to the active relayer",
-      async (method, args) => {
-        const relayer = createMockRelayer() as unknown as RelayerSDK;
+      async ([method, args], { createMockChain, createMockRelayer }) => {
+        const chainA = createMockChain({ id: 1 });
+        const relayer = createMockRelayer();
         const dispatcher = new RelayerDispatcher([chainA], {
           [1]: { type: "web", createRelayer: () => relayer },
         });
@@ -136,29 +158,52 @@ describe("RelayerDispatcher", () => {
   });
 
   describe("terminate()", () => {
-    it("terminates workers created by relayer configs", () => {
+    test("terminates workers created by relayer configs", ({
+      createMockChain,
+      createMockRelayer,
+    }) => {
+      const chainA = createMockChain({ id: 1 });
       const worker = makeMockWorker();
       const dispatcher = new RelayerDispatcher([chainA], {
-        [1]: mockRelayerConfigWithWorker(worker),
+        [1]: {
+          type: "web",
+          createWorker: () => worker,
+          createRelayer: () => createMockRelayer(),
+        },
       });
       dispatcher.terminate();
       expect(worker.terminate).toHaveBeenCalledTimes(1);
     });
 
-    it("terminates all workers from multiple groups", () => {
+    test("terminates all workers from multiple groups", ({
+      createMockChain,
+      createMockRelayer,
+    }) => {
+      const chainA = createMockChain({ id: 1 });
+      const chainB = createMockChain({ id: 2 });
       const w1 = makeMockWorker();
       const w2 = makeMockWorker();
       const dispatcher = new RelayerDispatcher([chainA, chainB], {
-        [1]: mockRelayerConfigWithWorker(w1),
-        [2]: mockRelayerConfigWithWorker(w2),
+        [1]: {
+          type: "web",
+          createWorker: () => w1,
+          createRelayer: () => createMockRelayer(),
+        },
+        [2]: {
+          type: "web",
+          createWorker: () => w2,
+          createRelayer: () => createMockRelayer(),
+        },
       });
       dispatcher.terminate();
       expect(w1.terminate).toHaveBeenCalledTimes(1);
       expect(w2.terminate).toHaveBeenCalledTimes(1);
     });
 
-    it("cleans up relayer caches (deduped)", () => {
-      const shared = createMockRelayer() as unknown as RelayerSDK;
+    test("cleans up relayer caches (deduped)", ({ createMockChain, createMockRelayer }) => {
+      const chainA = createMockChain({ id: 1 });
+      const chainB = createMockChain({ id: 2 });
+      const shared = createMockRelayer();
       // Same config object → same group → one worker, one createRelayer call per chain but same mock
       const sharedConfig: RelayerConfig = {
         type: "web",
@@ -173,9 +218,11 @@ describe("RelayerDispatcher", () => {
       expect(shared.terminate).toHaveBeenCalledTimes(1);
     });
 
-    it("cleans up distinct relayers separately", () => {
-      const relayerA = createMockRelayer() as unknown as RelayerSDK;
-      const relayerB = createMockRelayer() as unknown as RelayerSDK;
+    test("cleans up distinct relayers separately", ({ createMockChain, createMockRelayer }) => {
+      const chainA = createMockChain({ id: 1 });
+      const chainB = createMockChain({ id: 2 });
+      const relayerA = createMockRelayer();
+      const relayerB = createMockRelayer();
       const dispatcher = new RelayerDispatcher([chainA, chainB], {
         [1]: { type: "web", createRelayer: () => relayerA },
         [2]: { type: "web", createRelayer: () => relayerB },
@@ -185,7 +232,11 @@ describe("RelayerDispatcher", () => {
       expect(relayerB.terminate).toHaveBeenCalledTimes(1);
     });
 
-    it("collects errors from both relayers and workers", () => {
+    test("collects errors from both relayers and workers", ({
+      createMockChain,
+      createMockRelayer,
+    }) => {
+      const chainA = createMockChain({ id: 1 });
       const failWorker: WorkerLike = {
         terminate: vi.fn(() => {
           throw new Error("worker fail");
@@ -200,22 +251,27 @@ describe("RelayerDispatcher", () => {
               terminate: vi.fn(() => {
                 throw new Error("relayer fail");
               }),
-            }) as unknown as RelayerSDK,
+            }),
         },
       });
       expect(() => dispatcher.terminate()).toThrow("Failed to terminate relayer resources");
     });
 
-    it("is safe when no workers are created", () => {
-      const dispatcher = makeDispatcher([chainA]);
+    test("is safe when no workers are created", ({ createMockChain, createMockRelayer }) => {
+      const chainA = createMockChain({ id: 1 });
+      const dispatcher = new RelayerDispatcher(
+        [chainA],
+        relayerConfigs([chainA], createMockRelayer),
+      );
       expect(() => dispatcher.terminate()).not.toThrow();
     });
   });
 
   describe("[Symbol.dispose]", () => {
-    it("terminates workers and cleans up relayers", () => {
+    test("terminates workers and cleans up relayers", ({ createMockChain, createMockRelayer }) => {
+      const chainA = createMockChain({ id: 1 });
       const worker = makeMockWorker();
-      const relayer = createMockRelayer() as unknown as RelayerSDK;
+      const relayer = createMockRelayer();
       const dispatcher = new RelayerDispatcher([chainA], {
         [1]: {
           type: "web",
@@ -229,3 +285,19 @@ describe("RelayerDispatcher", () => {
     });
   });
 });
+
+/** Build a default `Record<number, RelayerConfig>` keyed by each chain's id. */
+function relayerConfigs(
+  chains: FheChain[],
+  createRelayer: () => RelayerSDK,
+): Record<number, RelayerConfig> {
+  return Object.fromEntries(
+    chains.map((c) => [
+      c.id,
+      {
+        type: "web",
+        createRelayer,
+      },
+    ]),
+  );
+}

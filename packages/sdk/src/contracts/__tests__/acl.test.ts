@@ -1,4 +1,4 @@
-import { describe, it, expect } from "../../test-fixtures";
+import { describe, test, expect } from "../../test-fixtures";
 import type { Address } from "viem";
 
 import {
@@ -12,28 +12,28 @@ const ACL = "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address;
 const DELEGATE = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;
 
 describe("ACL contract builders", () => {
-  it("delegateForUserDecryptionContract", ({ tokenAddress }) => {
+  test("delegateForUserDecryptionContract", ({ tokenAddress }) => {
     const config = delegateForUserDecryptionContract(ACL, DELEGATE, tokenAddress, 1000n);
     expect(config.address).toBe(ACL);
     expect(config.functionName).toBe("delegateForUserDecryption");
     expect(config.args).toEqual([DELEGATE, tokenAddress, 1000n]);
   });
 
-  it("revokeDelegationContract", ({ tokenAddress }) => {
+  test("revokeDelegationContract", ({ tokenAddress }) => {
     const config = revokeDelegationContract(ACL, DELEGATE, tokenAddress);
     expect(config.address).toBe(ACL);
     expect(config.functionName).toBe("revokeDelegationForUserDecryption");
     expect(config.args).toEqual([DELEGATE, tokenAddress]);
   });
 
-  it("getDelegationExpiryContract", ({ tokenAddress, userAddress }) => {
+  test("getDelegationExpiryContract", ({ tokenAddress, userAddress }) => {
     const config = getDelegationExpiryContract(ACL, userAddress, DELEGATE, tokenAddress);
     expect(config.address).toBe(ACL);
     expect(config.functionName).toBe("getUserDecryptionDelegationExpirationDate");
     expect(config.args).toEqual([userAddress, DELEGATE, tokenAddress]);
   });
 
-  it("isHandleDelegatedContract", ({ tokenAddress, userAddress }) => {
+  test("isHandleDelegatedContract", ({ tokenAddress, userAddress }) => {
     const handle =
       "0x0000000000000000000000000000000000000000000000000000000000000001" as `0x${string}`;
     const config = isHandleDelegatedContract(ACL, userAddress, DELEGATE, tokenAddress, handle);

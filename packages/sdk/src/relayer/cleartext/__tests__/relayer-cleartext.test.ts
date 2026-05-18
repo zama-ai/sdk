@@ -11,7 +11,7 @@ import {
   toHex,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { describe, expect, it } from "vitest";
+import { describe, expect, test } from "vitest";
 import { hardhat } from "../../../chains";
 import type { Handle } from "../../relayer-sdk.types";
 import { MOCK_INPUT_SIGNER_PK, MOCK_KMS_SIGNER_PK } from "../constants";
@@ -181,7 +181,7 @@ function filterEthCallsTo(calls: MockCall[], to: string): MockCall[] {
 }
 
 describe("RelayerCleartext", () => {
-  it("constructor uses kms/input private keys from config", () => {
+  test("constructor uses kms/input private keys from config", () => {
     const customInputKey =
       "0x0000000000000000000000000000000000000000000000000000000000000001" as const;
     const customKmsKey =
@@ -202,7 +202,7 @@ describe("RelayerCleartext", () => {
     expect(instance.kmsSigner.address).toBe(customKmsSigner.address);
   });
 
-  it("constructor falls back to default signer keys when none provided", () => {
+  test("constructor falls back to default signer keys when none provided", () => {
     const defaultInputSigner = privateKeyToAccount(MOCK_INPUT_SIGNER_PK);
     const defaultKmsSigner = privateKeyToAccount(MOCK_KMS_SIGNER_PK);
 
@@ -214,7 +214,7 @@ describe("RelayerCleartext", () => {
     expect(instance.kmsSigner.address).toBe(defaultKmsSigner.address);
   });
 
-  it("throws when configured with mainnet chain ID", () => {
+  test("throws when configured with mainnet chain ID", () => {
     const { provider } = createMockProvider();
 
     expect(
@@ -227,7 +227,7 @@ describe("RelayerCleartext", () => {
     ).toThrow(/not allowed on chain 1/);
   });
 
-  it("throws when configured with Sepolia chain ID", () => {
+  test("throws when configured with Sepolia chain ID", () => {
     const { provider } = createMockProvider();
 
     expect(
@@ -240,7 +240,7 @@ describe("RelayerCleartext", () => {
     ).toThrow(/not allowed on chain 11155111/);
   });
 
-  it("generateKeypair returns distinct 32-byte hex strings", async () => {
+  test("generateKeypair returns distinct 32-byte hex strings", async () => {
     const { fhevm } = createInstance();
 
     const first = await fhevm.generateKeypair();
@@ -257,7 +257,7 @@ describe("RelayerCleartext", () => {
     expect(first.privateKey).not.toBe(second.privateKey);
   });
 
-  it("createEIP712 returns a typed data payload for user decrypt requests", async () => {
+  test("createEIP712 returns a typed data payload for user decrypt requests", async () => {
     const { fhevm } = createInstance();
 
     const typedData = await fhevm.createEIP712(
@@ -289,7 +289,7 @@ describe("RelayerCleartext", () => {
     });
   });
 
-  it("encrypt returns handles and input proof bytes", async () => {
+  test("encrypt returns handles and input proof bytes", async () => {
     const { fhevm } = createInstance();
 
     const encrypted = await fhevm.encrypt({
@@ -306,7 +306,7 @@ describe("RelayerCleartext", () => {
     expect(encrypted.inputProof.length).toBeGreaterThan(0);
   });
 
-  it("encrypt dispatches to correct add method based on FHE type", async () => {
+  test("encrypt dispatches to correct add method based on FHE type", async () => {
     const { fhevm } = createInstance();
 
     const encrypted = await fhevm.encrypt({
@@ -325,7 +325,7 @@ describe("RelayerCleartext", () => {
     expect(encrypted.inputProof).toBeInstanceOf(Uint8Array);
   });
 
-  it("encrypt throws on unsupported FHE type", async () => {
+  test("encrypt throws on unsupported FHE type", async () => {
     const { fhevm } = createInstance();
 
     await expect(
@@ -338,7 +338,7 @@ describe("RelayerCleartext", () => {
     ).rejects.toThrow(/Unsupported FHE type/);
   });
 
-  it("encrypt proof layout: [numHandles][1][handles...][signature][cleartexts...]", async () => {
+  test("encrypt proof layout: [numHandles][1][handles...][signature][cleartexts...]", async () => {
     const { fhevm } = createInstance();
 
     const encrypted = await fhevm.encrypt({
@@ -366,7 +366,7 @@ describe("RelayerCleartext", () => {
     expect(clear1).toBe(99n);
   });
 
-  it("encrypt with no values returns empty handles and a proof header", async () => {
+  test("encrypt with no values returns empty handles and a proof header", async () => {
     const { fhevm } = createInstance();
 
     const encrypted = await fhevm.encrypt({
@@ -381,7 +381,7 @@ describe("RelayerCleartext", () => {
     expect(encrypted.inputProof.length).toBe(67); // 2 + 0 handles + 65 sig + 0 cleartexts
   });
 
-  it("encrypt rejects negative values", async () => {
+  test("encrypt rejects negative values", async () => {
     const { fhevm } = createInstance();
 
     await expect(
@@ -393,7 +393,7 @@ describe("RelayerCleartext", () => {
     ).rejects.toThrow(/non-negative/i);
   });
 
-  it("encrypt rejects values exceeding bit width", async () => {
+  test("encrypt rejects values exceeding bit width", async () => {
     const { fhevm } = createInstance();
 
     await expect(
@@ -405,7 +405,7 @@ describe("RelayerCleartext", () => {
     ).rejects.toThrow(/exceeds max/i);
   });
 
-  it("encrypt rejects bool values outside 0/1", async () => {
+  test("encrypt rejects bool values outside 0/1", async () => {
     const { fhevm } = createInstance();
 
     await expect(
@@ -417,7 +417,7 @@ describe("RelayerCleartext", () => {
     ).rejects.toThrow(/must be 0, 1, true, or false/i);
   });
 
-  it("userDecrypt throws when ACL.persistAllowed returns false", async () => {
+  test("userDecrypt throws when ACL.persistAllowed returns false", async () => {
     const handle = asHandle("0x" + "12".repeat(32));
     const { fhevm } = createInstance({
       persistAllowed: () => false,
@@ -432,7 +432,7 @@ describe("RelayerCleartext", () => {
     ).rejects.toThrow(/not authorized/i);
   });
 
-  it("userDecrypt returns cleartext values when ACL allows access", async () => {
+  test("userDecrypt returns cleartext values when ACL allows access", async () => {
     const handleA = asHandle("0x" + "01".repeat(32));
     const handleB = asHandle("0x" + "02".repeat(32));
     const { fhevm, calls } = createInstance({
@@ -462,7 +462,7 @@ describe("RelayerCleartext", () => {
     expect(plaintextCalls).toHaveLength(2);
   });
 
-  it("userDecrypt with partial ACL failure throws with denied handle and makes zero plaintext calls", async () => {
+  test("userDecrypt with partial ACL failure throws with denied handle and makes zero plaintext calls", async () => {
     const handleA = asHandle("0x" + "aa".repeat(32));
     const handleB = asHandle("0x" + "bb".repeat(32));
     const normalizedB = toHex(hexToBigInt(handleB), { size: 32 });
@@ -487,7 +487,7 @@ describe("RelayerCleartext", () => {
     expect(plaintextCalls).toHaveLength(0);
   });
 
-  it("userDecrypt checks ACL against both signerAddress and contractAddress", async () => {
+  test("userDecrypt checks ACL against both signerAddress and contractAddress", async () => {
     const handle = asHandle("0x" + "cc".repeat(32));
     const persistAllowedAccounts: string[] = [];
 
@@ -511,7 +511,7 @@ describe("RelayerCleartext", () => {
     expect(normalized).toContain(CONTRACT_ADDRESS.toLowerCase());
   });
 
-  it("userDecrypt throws when contract is not authorized", async () => {
+  test("userDecrypt throws when contract is not authorized", async () => {
     const handle = asHandle("0x" + "cc".repeat(32));
     const { fhevm } = createInstance({
       persistAllowed: (_handle, account) =>
@@ -524,7 +524,7 @@ describe("RelayerCleartext", () => {
     );
   });
 
-  it("userDecrypt throws when signer equals contract", async () => {
+  test("userDecrypt throws when signer equals contract", async () => {
     const handle = asHandle("0x" + "cc".repeat(32));
     const { fhevm } = createInstance({
       persistAllowed: () => true,
@@ -542,7 +542,7 @@ describe("RelayerCleartext", () => {
     ).rejects.toThrow(/must not equal contract address/i);
   });
 
-  it("userDecrypt preserves handle casing in result keys", async () => {
+  test("userDecrypt preserves handle casing in result keys", async () => {
     const handleUpper = asHandle("0x" + "AB".repeat(32));
 
     const { fhevm } = createInstance({
@@ -562,7 +562,7 @@ describe("RelayerCleartext", () => {
     expect(result[keys[0] as Handle]).toBe(55n);
   });
 
-  it("userDecrypt decodes ebool handle as boolean", async () => {
+  test("userDecrypt decodes ebool handle as boolean", async () => {
     const boolHandle = asHandle("0x" + "01".repeat(30) + "0000");
     const { fhevm } = createInstance({
       persistAllowed: () => true,
@@ -574,7 +574,7 @@ describe("RelayerCleartext", () => {
     expect(result[boolHandle]).toBeTruthy();
   });
 
-  it("userDecrypt decodes ebool handle with value 0 as false", async () => {
+  test("userDecrypt decodes ebool handle with value 0 as false", async () => {
     const boolHandle = asHandle("0x" + "01".repeat(30) + "0000");
     const { fhevm } = createInstance({
       persistAllowed: () => true,
@@ -586,7 +586,7 @@ describe("RelayerCleartext", () => {
     expect(result[boolHandle]).toBeFalsy();
   });
 
-  it("userDecrypt decodes eaddress handle as hex string", async () => {
+  test("userDecrypt decodes eaddress handle as hex string", async () => {
     const addressHandle = asHandle("0x" + "01".repeat(30) + "0700");
     const addressValue = 0x1000000000000000000000000000000000000001n;
     const { fhevm } = createInstance({
@@ -600,7 +600,7 @@ describe("RelayerCleartext", () => {
     expect(decoded).toMatch(/^0x[0-9a-f]{40}$/);
   });
 
-  it("publicDecrypt throws when ACL.isAllowedForDecryption returns false", async () => {
+  test("publicDecrypt throws when ACL.isAllowedForDecryption returns false", async () => {
     const handle = asHandle("0x" + "34".repeat(32));
     const { fhevm } = createInstance({
       isAllowedForDecryption: () => false,
@@ -609,7 +609,7 @@ describe("RelayerCleartext", () => {
     await expect(fhevm.publicDecrypt([handle])).rejects.toThrow(/not allowed/i);
   });
 
-  it("publicDecrypt with partial ACL failure throws with denied handle and makes zero plaintext calls", async () => {
+  test("publicDecrypt with partial ACL failure throws with denied handle and makes zero plaintext calls", async () => {
     const handleA = asHandle("0x" + "dd".repeat(32));
     const handleB = asHandle("0x" + "ee".repeat(32));
     const normalizedB = toHex(hexToBigInt(handleB), { size: 32 });
@@ -628,7 +628,7 @@ describe("RelayerCleartext", () => {
     expect(plaintextCalls).toHaveLength(0);
   });
 
-  it("publicDecrypt proof layout is [numSigners=1][kmsSignature]", async () => {
+  test("publicDecrypt proof layout is [numSigners=1][kmsSignature]", async () => {
     const handleA = asHandle("0x" + "56".repeat(32));
     const handleB = asHandle("0x" + "78".repeat(32));
 
@@ -652,7 +652,7 @@ describe("RelayerCleartext", () => {
     expect(result.abiEncodedClearValues).toBe(expected);
   });
 
-  it("getPublicKey and getPublicParams return defined mock values", async () => {
+  test("getPublicKey and getPublicParams return defined mock values", async () => {
     const { fhevm } = createInstance();
 
     const publicKey = await fhevm.getPublicKey();
@@ -668,19 +668,19 @@ describe("RelayerCleartext", () => {
     });
   });
 
-  it("terminate is a no-op", () => {
+  test("terminate is a no-op", () => {
     const { fhevm } = createInstance();
 
     expect(() => fhevm.terminate()).not.toThrow();
   });
 
-  it("[Symbol.dispose] delegates to terminate", () => {
+  test("[Symbol.dispose] delegates to terminate", () => {
     const { fhevm } = createInstance();
 
     expect(() => fhevm[Symbol.dispose]()).not.toThrow();
   });
 
-  it("createDelegatedUserDecryptEIP712 returns domain and message with delegatorAddress", async () => {
+  test("createDelegatedUserDecryptEIP712 returns domain and message with delegatorAddress", async () => {
     const { fhevm } = createInstance();
 
     const typedData = await fhevm.createDelegatedUserDecryptEIP712(
@@ -701,7 +701,7 @@ describe("RelayerCleartext", () => {
     expect(typedData.message.contractAddresses).toEqual([CONTRACT_ADDRESS]);
   });
 
-  it("delegatedUserDecrypt throws when delegation check returns false", async () => {
+  test("delegatedUserDecrypt throws when delegation check returns false", async () => {
     const handle = asHandle("0x" + "12".repeat(32));
     const delegatorAddress = USER_ADDRESS;
     const delegateAddress = "0x3000000000000000000000000000000000000003";
@@ -728,7 +728,7 @@ describe("RelayerCleartext", () => {
     expect(plaintextCalls).toHaveLength(0);
   });
 
-  it("delegatedUserDecrypt calls isHandleDelegatedForUserDecryption per handle", async () => {
+  test("delegatedUserDecrypt calls isHandleDelegatedForUserDecryption per handle", async () => {
     const handleA = asHandle("0x" + "01".repeat(32));
     const handleB = asHandle("0x" + "02".repeat(32));
     const delegatorAddress = USER_ADDRESS;
@@ -786,7 +786,7 @@ describe("RelayerCleartext", () => {
     ]);
   });
 
-  it("delegatedUserDecrypt partial delegation failure throws with second handle and makes exactly 2 delegation calls", async () => {
+  test("delegatedUserDecrypt partial delegation failure throws with second handle and makes exactly 2 delegation calls", async () => {
     const handleA = asHandle("0x" + "a1".repeat(32));
     const handleB = asHandle("0x" + "b2".repeat(32));
     const normalizedB = toHex(hexToBigInt(handleB), { size: 32 });
@@ -837,7 +837,7 @@ describe("RelayerCleartext", () => {
     expect(executorCalls).toHaveLength(0);
   });
 
-  it("delegatedUserDecrypt returns cleartext values when delegation is valid", async () => {
+  test("delegatedUserDecrypt returns cleartext values when delegation is valid", async () => {
     const handleA = asHandle("0x" + "01".repeat(32));
     const handleB = asHandle("0x" + "02".repeat(32));
     const { fhevm } = createInstance({
@@ -865,7 +865,7 @@ describe("RelayerCleartext", () => {
     expect(result[handleB]).toBe(11n);
   });
 
-  it("delegatedUserDecrypt decodes ebool and eaddress handles", async () => {
+  test("delegatedUserDecrypt decodes ebool and eaddress handles", async () => {
     const boolHandle = asHandle("0x" + "01".repeat(30) + "0000");
     const addressHandle = asHandle("0x" + "01".repeat(30) + "0700");
     const addressValue = 0x1000000000000000000000000000000000000001n;
@@ -896,7 +896,7 @@ describe("RelayerCleartext", () => {
     expect(addressResult).toMatch(/^0x[0-9a-f]{40}$/);
   });
 
-  it("requestZKProofVerification throws in cleartext mode", async () => {
+  test("requestZKProofVerification throws in cleartext mode", async () => {
     const { fhevm } = createInstance();
 
     await expect(fhevm.requestZKProofVerification({} as never)).rejects.toThrow(

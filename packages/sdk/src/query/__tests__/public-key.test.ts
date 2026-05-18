@@ -1,8 +1,8 @@
-import { describe, expect, test, mockQueryContext } from "../../test-fixtures";
+import { describe, expect, test } from "../../test-fixtures";
 import { publicKeyQueryOptions } from "../public-key";
 
 describe("publicKeyQueryOptions", () => {
-  test("uses zama.publicKey key and calls relayer", async ({ sdk }) => {
+  test("uses zama.publicKey key and calls relayer", async ({ sdk, mockQueryContext }) => {
     const options = publicKeyQueryOptions(sdk);
     const result = await options.queryFn(mockQueryContext(options.queryKey));
 

@@ -1,9 +1,9 @@
 import { waitFor } from "@testing-library/react";
-import { describe, expect, it } from "../../test-fixtures";
+import { describe, expect, test } from "../../test-fixtures";
 import { useCreateEIP712 } from "../use-create-eip712";
 
 describe("useCreateEIP712", () => {
-  it("delegates to relayer.createEIP712", async ({ renderWithProviders, relayer }) => {
+  test("delegates to relayer.createEIP712", async ({ renderWithProviders, relayer }) => {
     const { result } = renderWithProviders(() => useCreateEIP712());
 
     result.current.mutate({
@@ -17,7 +17,7 @@ describe("useCreateEIP712", () => {
     expect(relayer.createEIP712).toHaveBeenCalledWith("0xpub", ["0xtoken"], 1000, 2);
   });
 
-  it("passes undefined for optional durationDays", async ({ renderWithProviders, relayer }) => {
+  test("passes undefined for optional durationDays", async ({ renderWithProviders, relayer }) => {
     const { result } = renderWithProviders(() => useCreateEIP712());
 
     result.current.mutate({
