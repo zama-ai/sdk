@@ -1,10 +1,12 @@
+import type { QueryClient } from "@tanstack/react-query";
 import { act } from "@testing-library/react";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { describe, test, vi } from "../../test-fixtures";
 import { useConfidentialTransferFrom } from "../use-confidential-transfer-from";
+
 describe("useConfidentialTransferFrom", () => {
-  test("default", ({ renderWithProviders, TOKEN, expectDefaultMutationState }) => {
-    const { result } = renderWithProviders(() => useConfidentialTransferFrom(TOKEN));
+  test("default", ({ renderWithProviders, tokenAddress, expectDefaultMutationState }) => {
+    const { result } = renderWithProviders(() => useConfidentialTransferFrom(tokenAddress));
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
     expectDefaultMutationState(state);
@@ -13,27 +15,29 @@ describe("useConfidentialTransferFrom", () => {
   test("cache: invalidates balance after transfer from", async ({
     renderWithProviders,
     signer,
-    OTHER_TOKEN,
-    RECIPIENT,
-    TOKEN,
-    TRANSFER_FROM,
-    USER,
+    otherTokenAddress,
+    recipientAddress,
+    tokenAddress,
+    transferFromAddress,
+    userAddress,
     expectCacheUntouched,
     expectInvalidatedQueries,
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
-    const { result, queryClient } = renderWithProviders(() => useConfidentialTransferFrom(TOKEN));
+    const { result, queryClient } = renderWithProviders(() =>
+      useConfidentialTransferFrom(tokenAddress),
+    );
 
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
-    const otherBalanceKey = zamaQueryKeys.confidentialBalance.owner(OTHER_TOKEN, USER);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(tokenAddress, userAddress);
+    const otherBalanceKey = zamaQueryKeys.confidentialBalance.owner(otherTokenAddress, userAddress);
     queryClient.setQueryData(balanceKey, 1000n);
     queryClient.setQueryData(otherBalanceKey, 777n);
 
     await act(() =>
       result.current.mutateAsync({
-        from: TRANSFER_FROM,
-        to: RECIPIENT,
+        from: transferFromAddress,
+        to: recipientAddress,
         amount: 100n,
       }),
     );
@@ -45,20 +49,20 @@ describe("useConfidentialTransferFrom", () => {
   test("behavior: forwards onSuccess callback", async ({
     renderWithProviders,
     signer,
-    RECIPIENT,
-    TOKEN,
-    TRANSFER_FROM,
-    USER,
+    recipientAddress,
+    tokenAddress,
+    transferFromAddress,
+    userAddress,
     expectInvalidatedQueries,
     mutateAndExpectOnSuccess,
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(tokenAddress, userAddress);
     const onSuccess = vi.fn();
 
     const { result, queryClient } = renderWithProviders(() =>
-      useConfidentialTransferFrom(TOKEN, { onSuccess }),
+      useConfidentialTransferFrom(tokenAddress, { onSuccess }),
     );
 
     queryClient.setQueryData(balanceKey, 1000n);
@@ -66,12 +70,12 @@ describe("useConfidentialTransferFrom", () => {
     await mutateAndExpectOnSuccess(
       () =>
         result.current.mutateAsync({
-          from: TRANSFER_FROM,
-          to: RECIPIENT,
+          from: transferFromAddress,
+          to: recipientAddress,
           amount: 100n,
         }),
       onSuccess,
-      (client) => expectInvalidatedQueries(client, [balanceKey]),
+      (client: QueryClient) => expectInvalidatedQueries(client, [balanceKey]),
     );
   });
 });

@@ -6,8 +6,8 @@ import { useDelegateDecryption } from "../use-delegate-decryption";
 const ACL = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
 
 describe("useDelegateDecryption", () => {
-  test("default", ({ renderWithProviders, TOKEN, expectDefaultMutationState }) => {
-    const { result } = renderWithProviders(() => useDelegateDecryption(TOKEN), {});
+  test("default", ({ renderWithProviders, tokenAddress, expectDefaultMutationState }) => {
+    const { result } = renderWithProviders(() => useDelegateDecryption(tokenAddress), {});
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
     expectDefaultMutationState(state);
@@ -16,15 +16,15 @@ describe("useDelegateDecryption", () => {
   test("behavior: calls delegateDecryption with delegate", async ({
     renderWithProviders,
     signer,
-    RECIPIENT,
-    TOKEN,
+    recipientAddress,
+    tokenAddress,
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
-    const { result } = renderWithProviders(() => useDelegateDecryption(TOKEN), {});
+    const { result } = renderWithProviders(() => useDelegateDecryption(tokenAddress), {});
 
     act(() => {
-      result.current.mutate({ delegateAddress: RECIPIENT });
+      result.current.mutate({ delegateAddress: recipientAddress });
     });
 
     await waitFor(() => {
@@ -42,16 +42,16 @@ describe("useDelegateDecryption", () => {
   test("behavior: passes expiration options", async ({
     renderWithProviders,
     signer,
-    RECIPIENT,
-    TOKEN,
+    recipientAddress,
+    tokenAddress,
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
-    const { result } = renderWithProviders(() => useDelegateDecryption(TOKEN), {});
+    const { result } = renderWithProviders(() => useDelegateDecryption(tokenAddress), {});
 
     const expirationDate = new Date("2030-01-01T00:00:00Z");
     act(() => {
-      result.current.mutate({ delegateAddress: RECIPIENT, expirationDate });
+      result.current.mutate({ delegateAddress: recipientAddress, expirationDate });
     });
 
     await waitFor(() => {
@@ -60,7 +60,7 @@ describe("useDelegateDecryption", () => {
 
     expect(signer.writeContract).toHaveBeenCalledWith(
       expect.objectContaining({
-        args: [RECIPIENT, TOKEN, BigInt(Math.floor(expirationDate.getTime() / 1000))],
+        args: [recipientAddress, tokenAddress, BigInt(Math.floor(expirationDate.getTime() / 1000))],
       }),
     );
   });
@@ -68,17 +68,19 @@ describe("useDelegateDecryption", () => {
   test("behavior: forwards onSuccess callback", async ({
     renderWithProviders,
     signer,
-    RECIPIENT,
-    TOKEN,
+    recipientAddress,
+    tokenAddress,
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
     const onSuccess = vi.fn();
 
-    const { result } = renderWithProviders(() => useDelegateDecryption(TOKEN, { onSuccess }));
+    const { result } = renderWithProviders(() =>
+      useDelegateDecryption(tokenAddress, { onSuccess }),
+    );
 
     act(() => {
-      result.current.mutate({ delegateAddress: RECIPIENT });
+      result.current.mutate({ delegateAddress: recipientAddress });
     });
 
     await waitFor(() => {
@@ -89,8 +91,8 @@ describe("useDelegateDecryption", () => {
   test("behavior: onSuccess fires before cache invalidation", async ({
     renderWithProviders,
     signer,
-    RECIPIENT,
-    TOKEN,
+    recipientAddress,
+    tokenAddress,
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
@@ -103,14 +105,14 @@ describe("useDelegateDecryption", () => {
     });
 
     const { result, queryClient } = renderWithProviders(() =>
-      useDelegateDecryption(TOKEN, { onSuccess }),
+      useDelegateDecryption(tokenAddress, { onSuccess }),
     );
 
     // Seed the cache so invalidation is observable
     queryClient.setQueryData(delegationKey, { delegated: true });
 
     act(() => {
-      result.current.mutate({ delegateAddress: RECIPIENT });
+      result.current.mutate({ delegateAddress: recipientAddress });
     });
 
     await waitFor(() => {

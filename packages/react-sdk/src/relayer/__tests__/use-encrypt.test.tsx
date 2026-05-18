@@ -10,14 +10,19 @@ describe("useEncrypt", () => {
     expectDefaultMutationState(state);
   });
 
-  test("behavior: encrypts on mutate", async ({ renderWithProviders, relayer, TOKEN, USER }) => {
+  test("behavior: encrypts on mutate", async ({
+    renderWithProviders,
+    relayer,
+    tokenAddress,
+    userAddress,
+  }) => {
     const { result } = renderWithProviders(() => useEncrypt());
 
     await act(async () => {
       result.current.mutate({
         values: [{ value: 1000n, type: "euint64" }],
-        contractAddress: TOKEN,
-        userAddress: USER,
+        contractAddress: tokenAddress,
+        userAddress: userAddress,
       });
     });
 

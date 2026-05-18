@@ -2,9 +2,10 @@ import { act, waitFor } from "@testing-library/react";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { useRevokeDelegation } from "../use-revoke-delegation";
+
 describe("useRevokeDelegation", () => {
-  test("default", ({ renderWithProviders, TOKEN, expectDefaultMutationState }) => {
-    const { result } = renderWithProviders(() => useRevokeDelegation(TOKEN), {});
+  test("default", ({ renderWithProviders, tokenAddress, expectDefaultMutationState }) => {
+    const { result } = renderWithProviders(() => useRevokeDelegation(tokenAddress), {});
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
     expectDefaultMutationState(state);
@@ -13,15 +14,15 @@ describe("useRevokeDelegation", () => {
   test("behavior: calls revokeDelegation with delegate", async ({
     renderWithProviders,
     signer,
-    RECIPIENT,
-    TOKEN,
+    recipientAddress,
+    tokenAddress,
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
-    const { result } = renderWithProviders(() => useRevokeDelegation(TOKEN), {});
+    const { result } = renderWithProviders(() => useRevokeDelegation(tokenAddress), {});
 
     act(() => {
-      result.current.mutate({ delegateAddress: RECIPIENT });
+      result.current.mutate({ delegateAddress: recipientAddress });
     });
 
     await waitFor(() => {
@@ -38,17 +39,17 @@ describe("useRevokeDelegation", () => {
   test("behavior: forwards onSuccess callback", async ({
     renderWithProviders,
     signer,
-    RECIPIENT,
-    TOKEN,
+    recipientAddress,
+    tokenAddress,
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
     const onSuccess = vi.fn();
 
-    const { result } = renderWithProviders(() => useRevokeDelegation(TOKEN, { onSuccess }));
+    const { result } = renderWithProviders(() => useRevokeDelegation(tokenAddress, { onSuccess }));
 
     act(() => {
-      result.current.mutate({ delegateAddress: RECIPIENT });
+      result.current.mutate({ delegateAddress: recipientAddress });
     });
 
     await waitFor(() => {
@@ -59,8 +60,8 @@ describe("useRevokeDelegation", () => {
   test("behavior: onSuccess fires before cache invalidation", async ({
     renderWithProviders,
     signer,
-    RECIPIENT,
-    TOKEN,
+    recipientAddress,
+    tokenAddress,
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
@@ -73,14 +74,14 @@ describe("useRevokeDelegation", () => {
     });
 
     const { result, queryClient } = renderWithProviders(() =>
-      useRevokeDelegation(TOKEN, { onSuccess }),
+      useRevokeDelegation(tokenAddress, { onSuccess }),
     );
 
     // Seed the cache so invalidation is observable
     queryClient.setQueryData(delegationKey, { delegated: false });
 
     act(() => {
-      result.current.mutate({ delegateAddress: RECIPIENT });
+      result.current.mutate({ delegateAddress: recipientAddress });
     });
 
     await waitFor(() => {

@@ -1,13 +1,14 @@
-import { describe, expect, test, vi } from "../test-fixtures";
 import { waitFor } from "@testing-library/react";
-import { ERC7984_WRAPPER_INTERFACE_ID } from "@zama-fhe/sdk";
 import type { Address } from "@zama-fhe/sdk";
+import { ERC7984_WRAPPER_INTERFACE_ID } from "@zama-fhe/sdk";
+import type { ContractFunctionParameters } from "viem";
 import { useUnderlyingAllowance } from "../shield/use-underlying-allowance";
-import { useUnshield } from "../unshield/use-unshield";
-import { useUnshieldAll } from "../unshield/use-unshield-all";
+import { describe, expect, test, vi } from "../test-fixtures";
 import { useMetadataSuspense } from "../token/use-metadata";
 import { useTotalSupplySuspense } from "../token/use-total-supply";
 import { useWrapperDiscoverySuspense } from "../token/use-wrapper-discovery";
+import { useUnshield } from "../unshield/use-unshield";
+import { useUnshieldAll } from "../unshield/use-unshield-all";
 
 describe("useUnderlyingAllowance", () => {
   test("returns allowance value", async ({
@@ -15,7 +16,7 @@ describe("useUnderlyingAllowance", () => {
     wrapperAddress,
     renderWithProviders,
     provider,
-    USER,
+    userAddress,
   }) => {
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce("0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e")
@@ -25,7 +26,7 @@ describe("useUnderlyingAllowance", () => {
       () =>
         useUnderlyingAllowance({
           address: wrapperAddress,
-          owner: USER,
+          owner: userAddress,
         }),
       { signer },
     );
@@ -86,12 +87,14 @@ describe("useTotalSupplySuspense", () => {
     renderWithProviders,
     provider,
   }) => {
-    vi.mocked(provider.readContract).mockImplementation(async (config) => {
-      if (config.functionName === "supportsInterface") {
-        return config.args[0] === ERC7984_WRAPPER_INTERFACE_ID;
-      }
-      return 100000n;
-    });
+    vi.mocked(provider.readContract).mockImplementation(
+      async (config: ContractFunctionParameters) => {
+        if (config.functionName === "supportsInterface") {
+          return config.args![0] === ERC7984_WRAPPER_INTERFACE_ID;
+        }
+        return 100000n;
+      },
+    );
 
     const { result } = renderWithProviders(() => useTotalSupplySuspense(tokenAddress), {
       signer,

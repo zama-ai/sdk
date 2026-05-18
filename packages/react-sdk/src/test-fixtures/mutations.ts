@@ -2,34 +2,23 @@
 // oxlint-disable eslint-plugin-react-hooks/rules-of-hooks
 import { QueryClient, type QueryKey } from "@tanstack/react-query";
 import { act } from "@testing-library/react";
-import { expect, vi } from "vitest";
-import type { RelayerFixtures } from "@zama-fhe/sdk/test-fixtures";
+import { expect, type vi } from "vitest";
 import type { Address, RawLog } from "@zama-fhe/sdk";
 import type { FixturesOf } from "./types";
 
-const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
-const USER = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
-const SPENDER = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;
-const WRAPPER = "0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D" as Address;
-const COORDINATOR = "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e" as Address;
-const TOKEN_B = "0x7A7a7A7a7a7a7a7A7a7a7a7A7a7A7A7A7A7A7a7A" as Address;
-const OTHER_TOKEN = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
-const RECIPIENT = "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address;
-const TRANSFER_FROM = "0xeDEdEDedeDEdeDeDedeDEDeDEdEdededeDeDEdED" as Address;
-const UNDERLYING = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
+const tokenAddress = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
+const userAddress = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
 
-const HANDLE = `0x${"11".repeat(32)}` as const;
-const BURN_AMOUNT_HANDLE = `0x${"22".repeat(32)}` as const;
-const DECRYPTION_PROOF = `0x${"33".repeat(32)}` as const;
-const UNWRAP_REQUESTED_TOPIC =
+const burnAmountHandle = `0x${"22".repeat(32)}` as const;
+const unwrapRequestedTopic =
   "0x4b1bfb262557cf08a74ddeefb8aef086b81deb08484bdc1820b9f420cdd1aa0e" as const;
 
-const WAGMI_BALANCE_KEY = [
+const wagmiBalanceKey = [
   "readContract",
-  { functionName: "balanceOf", address: TOKEN, args: [USER] },
+  { functionName: "balanceOf", address: tokenAddress, args: [userAddress] },
 ] as const;
 
-const DEFAULT_IDLE_MUTATION_STATE = {
+const defaultIdleMutationState = {
   context: undefined,
   data: undefined,
   error: null,
@@ -51,13 +40,13 @@ function toTopicAddress(address: Address): Address {
 
 function createUnwrapRequestedLog(unwrapRequestId: Address): RawLog {
   return {
-    topics: [UNWRAP_REQUESTED_TOPIC, toTopicAddress(USER), unwrapRequestId],
+    topics: [unwrapRequestedTopic, toTopicAddress(userAddress), unwrapRequestId],
     data: `0x${"00".repeat(32)}`,
   };
 }
 
 function expectDefaultMutationState(state: unknown): void {
-  expect(state).toEqual(DEFAULT_IDLE_MUTATION_STATE);
+  expect(state).toEqual(defaultIdleMutationState);
 }
 
 function expectCacheRemoved(qc: QueryClient, key: QueryKey): void {
@@ -118,25 +107,9 @@ async function mutateAndExpectOnSuccess(
 }
 
 export interface MutationFixtures {
-  TOKEN: Address;
-  USER: Address;
-  SPENDER: Address;
-  WRAPPER: Address;
-  COORDINATOR: Address;
-  TOKEN_B: Address;
-  OTHER_TOKEN: Address;
-  RECIPIENT: Address;
-  TRANSFER_FROM: Address;
-  UNDERLYING: Address;
-  HANDLE: typeof HANDLE;
-  BURN_AMOUNT_HANDLE: typeof BURN_AMOUNT_HANDLE;
-  DECRYPTION_PROOF: typeof DECRYPTION_PROOF;
-  UNWRAP_REQUESTED_TOPIC: typeof UNWRAP_REQUESTED_TOPIC;
-  WAGMI_BALANCE_KEY: typeof WAGMI_BALANCE_KEY;
-  DEFAULT_IDLE_MUTATION_STATE: typeof DEFAULT_IDLE_MUTATION_STATE;
-  toTopicAddress: typeof toTopicAddress;
+  burnAmountHandle: typeof burnAmountHandle;
+  wagmiBalanceKey: typeof wagmiBalanceKey;
   createUnwrapRequestedLog: typeof createUnwrapRequestedLog;
-  mockPublicDecrypt: () => void;
   expectDefaultMutationState: typeof expectDefaultMutationState;
   mutateAndExpectOnSuccess: typeof mutateAndExpectOnSuccess;
   expectInvalidatedQueries: typeof expectInvalidatedQueries;
@@ -145,43 +118,11 @@ export interface MutationFixtures {
   expectCacheUntouched: typeof expectCacheUntouched;
 }
 
-export const mutationFixtures: FixturesOf<MutationFixtures, RelayerFixtures> = {
-  TOKEN,
-  USER,
-  SPENDER,
-  WRAPPER,
-  COORDINATOR,
-  TOKEN_B,
-  OTHER_TOKEN,
-  RECIPIENT,
-  TRANSFER_FROM,
-  UNDERLYING,
-  HANDLE,
-  BURN_AMOUNT_HANDLE,
-  DECRYPTION_PROOF,
-  UNWRAP_REQUESTED_TOPIC,
-  WAGMI_BALANCE_KEY,
-  DEFAULT_IDLE_MUTATION_STATE,
-  toTopicAddress: async ({}, use) => {
-    await use(toTopicAddress);
-  },
+export const mutationFixtures: FixturesOf<MutationFixtures> = {
+  burnAmountHandle,
+  wagmiBalanceKey,
   createUnwrapRequestedLog: async ({}, use) => {
     await use(createUnwrapRequestedLog);
-  },
-  mockPublicDecrypt: async ({ relayer }, use) => {
-    await use(() => {
-      vi.mocked(relayer.publicDecrypt).mockImplementation((handles: string[]) => {
-        const clearValues: Record<string, bigint> = {};
-        for (const h of handles) {
-          clearValues[h] = 1n;
-        }
-        return Promise.resolve({
-          clearValues,
-          abiEncodedClearValues: "0x1",
-          decryptionProof: DECRYPTION_PROOF,
-        });
-      });
-    });
   },
   expectDefaultMutationState: async ({}, use) => {
     await use(expectDefaultMutationState);

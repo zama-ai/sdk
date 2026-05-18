@@ -2,37 +2,58 @@ import { describe, expect, test, vi } from "../../test-fixtures";
 import { waitFor } from "@testing-library/react";
 import type { Address } from "@zama-fhe/sdk";
 import { useConfidentialBalances } from "../use-confidential-balances";
+
 describe("useConfidentialBalances", () => {
-  test("default", async ({ renderWithProviders, relayer, provider, TOKEN, TOKEN_B, USER }) => {
+  test("default", async ({
+    renderWithProviders,
+    relayer,
+    provider,
+    tokenAddress,
+    otherTokenAddress,
+    userAddress,
+  }) => {
     const handleA = `0x${"bb".repeat(32)}`;
     const handleB = `0x${"cc".repeat(32)}`;
-    vi.mocked(provider.readContract).mockImplementation(async ({ address }) => {
-      if (address === TOKEN) {
-        return handleA;
-      }
-      if (address === TOKEN_B) {
-        return handleB;
-      }
-      throw new Error(`Unexpected readContract address ${address}`);
-    });
+    vi.mocked(provider.readContract).mockImplementation(
+      async ({ address }: { address: Address }) => {
+        if (address === tokenAddress) {
+          return handleA;
+        }
+        if (address === otherTokenAddress) {
+          return handleB;
+        }
+        throw new Error(`Unexpected readContract address ${address}`);
+      },
+    );
     vi.mocked(relayer.userDecrypt).mockResolvedValue({
       [handleA]: 10n,
       [handleB]: 20n,
     });
 
     const { result } = renderWithProviders(() =>
-      useConfidentialBalances({ addresses: [TOKEN, TOKEN_B], account: USER }),
+      useConfidentialBalances({
+        addresses: [tokenAddress, otherTokenAddress],
+        account: userAddress,
+      }),
     );
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true), {
+      timeout: 5_000,
+    });
 
-    expect(result.current.data?.results.get(TOKEN)).toBe(10n);
-    expect(result.current.data?.results.get(TOKEN_B)).toBe(20n);
+    expect(result.current.data?.results.get(tokenAddress)).toBe(10n);
+    expect(result.current.data?.results.get(otherTokenAddress)).toBe(20n);
     expect(provider.readContract).toHaveBeenCalledWith(
-      expect.objectContaining({ functionName: "confidentialBalanceOf", address: TOKEN }),
+      expect.objectContaining({
+        functionName: "confidentialBalanceOf",
+        address: tokenAddress,
+      }),
     );
     expect(provider.readContract).toHaveBeenCalledWith(
-      expect.objectContaining({ functionName: "confidentialBalanceOf", address: TOKEN_B }),
+      expect.objectContaining({
+        functionName: "confidentialBalanceOf",
+        address: otherTokenAddress,
+      }),
     );
   });
 
@@ -40,7 +61,7 @@ describe("useConfidentialBalances", () => {
     renderWithProviders,
     relayer,
     provider,
-    USER,
+    userAddress,
   }) => {
     const mixedCaseToken = "0x52908400098527886E0F7030069857D2E4169EE7" as Address;
     const handle = `0x${"dd".repeat(32)}`;
@@ -49,10 +70,15 @@ describe("useConfidentialBalances", () => {
     vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handle]: 33n });
 
     const { result } = renderWithProviders(() =>
-      useConfidentialBalances({ addresses: [mixedCaseToken], account: USER }),
+      useConfidentialBalances({
+        addresses: [mixedCaseToken],
+        account: userAddress,
+      }),
     );
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true), {
+      timeout: 5_000,
+    });
 
     expect(result.current.data?.results.get(mixedCaseToken)).toBe(33n);
   });
@@ -60,12 +86,15 @@ describe("useConfidentialBalances", () => {
   test("behavior: disabled when user passes enabled=false", ({
     renderWithProviders,
     provider,
-    TOKEN,
-    TOKEN_B,
-    USER,
+    tokenAddress,
+    otherTokenAddress,
+    userAddress,
   }) => {
     const { result } = renderWithProviders(() =>
-      useConfidentialBalances({ addresses: [TOKEN, TOKEN_B], account: USER }, { enabled: false }),
+      useConfidentialBalances(
+        { addresses: [tokenAddress, otherTokenAddress], account: userAddress },
+        { enabled: false },
+      ),
     );
 
     expect(result.current.isPending).toBe(true);
@@ -77,7 +106,7 @@ describe("useConfidentialBalances", () => {
     renderWithProviders,
     relayer,
     provider,
-    TOKEN,
+    tokenAddress,
   }) => {
     const handle = `0x${"ef".repeat(32)}`;
     vi.mocked(provider.readContract).mockResolvedValue(handle);
@@ -85,45 +114,61 @@ describe("useConfidentialBalances", () => {
 
     const OTHER = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
     const { result } = renderWithProviders(() =>
-      useConfidentialBalances({ addresses: [TOKEN], account: OTHER }),
+      useConfidentialBalances({ addresses: [tokenAddress], account: OTHER }),
     );
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
-    expect(result.current.data?.results.get(TOKEN)).toBe(77n);
+    await waitFor(() => expect(result.current.isSuccess).toBe(true), {
+      timeout: 5_000,
+    });
+    expect(result.current.data?.results.get(tokenAddress)).toBe(77n);
     expect(provider.readContract).toHaveBeenCalledWith(
-      expect.objectContaining({ functionName: "confidentialBalanceOf", args: [OTHER] }),
+      expect.objectContaining({
+        functionName: "confidentialBalanceOf",
+        args: [OTHER],
+      }),
     );
   });
 
   describe("lifecycle", () => {
-    test("default", async ({ renderWithProviders, relayer, provider, TOKEN, TOKEN_B, USER }) => {
+    test("default", async ({
+      renderWithProviders,
+      relayer,
+      provider,
+      tokenAddress,
+      otherTokenAddress,
+      userAddress,
+    }) => {
       const handleA = `0x${"ca".repeat(32)}`;
       const handleB = `0x${"cb".repeat(32)}`;
-      vi.mocked(provider.readContract).mockImplementation(async ({ address }) => {
-        if (address === TOKEN) {
-          return handleA;
-        }
-        if (address === TOKEN_B) {
-          return handleB;
-        }
-        throw new Error(`Unexpected readContract address ${address}`);
-      });
+      vi.mocked(provider.readContract).mockImplementation(
+        async ({ address }: { address: Address }) => {
+          if (address === tokenAddress) {
+            return handleA;
+          }
+          if (address === otherTokenAddress) {
+            return handleB;
+          }
+          throw new Error(`Unexpected readContract address ${address}`);
+        },
+      );
       vi.mocked(relayer.userDecrypt).mockResolvedValue({
         [handleA]: 10n,
         [handleB]: 20n,
       });
 
-      const tokens = [TOKEN, TOKEN_B];
+      const tokens = [tokenAddress, otherTokenAddress];
       const { result } = renderWithProviders(() =>
-        useConfidentialBalances({ addresses: tokens, account: USER }),
+        useConfidentialBalances({ addresses: tokens, account: userAddress }),
       );
 
-      await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true), {
+        timeout: 5_000,
+      });
 
       const { data, dataUpdatedAt, ...state } = result.current;
       const { promise: statePromise, ...stableState } = state;
-      expect(data?.results.get(TOKEN)).toBe(10n);
-      expect(data?.results.get(TOKEN_B)).toBe(20n);
+      expect(data?.results.get(tokenAddress)).toBe(10n);
+      expect(data?.results.get(otherTokenAddress)).toBe(20n);
       expect(dataUpdatedAt).toEqual(expect.any(Number));
       expect(statePromise).toBeDefined();
       expect(stableState).toMatchInlineSnapshot(`
@@ -155,9 +200,9 @@ describe("useConfidentialBalances", () => {
     `);
     });
 
-    test("behavior: disabled when tokenAddresses empty", ({ renderWithProviders, USER }) => {
+    test("behavior: disabled when tokenAddresses empty", ({ renderWithProviders, userAddress }) => {
       const { result } = renderWithProviders(() =>
-        useConfidentialBalances({ addresses: [], account: USER }),
+        useConfidentialBalances({ addresses: [], account: userAddress }),
       );
 
       expect(result.current.isPending).toBe(true);
@@ -167,10 +212,13 @@ describe("useConfidentialBalances", () => {
     test("behavior: disabled when account is undefined (signer-less mount)", ({
       renderWithProviders,
       provider,
-      TOKEN,
+      tokenAddress,
     }) => {
       const { result } = renderWithProviders(() =>
-        useConfidentialBalances({ addresses: [TOKEN], account: undefined }),
+        useConfidentialBalances({
+          addresses: [tokenAddress],
+          account: undefined,
+        }),
       );
 
       expect(result.current.isPending).toBe(true);
@@ -180,12 +228,15 @@ describe("useConfidentialBalances", () => {
 
     test("behavior: disabled when user passes enabled=false", ({
       renderWithProviders,
-      TOKEN,
-      TOKEN_B,
-      USER,
+      tokenAddress,
+      otherTokenAddress,
+      userAddress,
     }) => {
       const { result } = renderWithProviders(() =>
-        useConfidentialBalances({ addresses: [TOKEN, TOKEN_B], account: USER }, { enabled: false }),
+        useConfidentialBalances(
+          { addresses: [tokenAddress, otherTokenAddress], account: userAddress },
+          { enabled: false },
+        ),
       );
 
       expect(result.current.isPending).toBe(true);

@@ -1,11 +1,10 @@
 import { renderHook } from "@testing-library/react";
 import type { Address } from "@zama-fhe/sdk";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { vi } from "vitest";
+import { beforeEach, describe, expect, test } from "../../test-fixtures";
 import { useQuery } from "../../utils/query";
 import { useConfidentialBalances } from "../use-confidential-balances";
 
-const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
-const TOKEN_B = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
 const OWNER = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;
 
 vi.mock("../../utils/query", async () => {
@@ -46,9 +45,15 @@ describe("useConfidentialBalances enabled propagation", () => {
     } as ReturnType<typeof useQuery>);
   });
 
-  test("disables balance query when user passes enabled=false", () => {
+  test("disables balance query when user passes enabled=false", ({
+    tokenAddress,
+    otherTokenAddress,
+  }) => {
     renderHook(() =>
-      useConfidentialBalances({ addresses: [TOKEN, TOKEN_B], account: OWNER }, { enabled: false }),
+      useConfidentialBalances(
+        { addresses: [tokenAddress, otherTokenAddress], account: OWNER },
+        { enabled: false },
+      ),
     );
 
     const balanceQueryOptions = vi.mocked(useQuery).mock.calls[0]?.[0] as
@@ -59,10 +64,13 @@ describe("useConfidentialBalances enabled propagation", () => {
     expect(balanceQueryOptions?.enabled).toBe(false);
   });
 
-  test("disables balance query for other falsy enabled values", () => {
+  test("disables balance query for other falsy enabled values", ({
+    tokenAddress,
+    otherTokenAddress,
+  }) => {
     renderHook(() =>
       useConfidentialBalances(
-        { addresses: [TOKEN, TOKEN_B], account: OWNER },
+        { addresses: [tokenAddress, otherTokenAddress], account: OWNER },
         { enabled: 0 as unknown as boolean },
       ),
     );
