@@ -107,6 +107,9 @@ This is the path that matters for the final POC.
 6. Verify whether DSK selects `EIP7730` clear signing or falls back to basic /
    blind signing.
 
+Ledger derivation paths for the signer API are passed without the `m/` prefix
+(`44'/60'/0'/0/0`, not `m/44'/60'/0'/0/0`).
+
 ### Path B: Local DSK instrumentation before registry approval
 
 This is useful now because it validates our app integration and tells us exactly

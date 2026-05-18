@@ -21,7 +21,7 @@ import { SEPOLIA_EXPLORER_URL, SEPOLIA_RPC_URL } from "@/lib/config";
 import type { DiscoveredDevice } from "@ledgerhq/device-management-kit";
 
 const SEPOLIA_CHAIN_ID = 11155111;
-const LEDGER_DERIVATION_PATH = "m/44'/60'/0'/0/0";
+const LEDGER_DERIVATION_PATH = "44'/60'/0'/0/0";
 
 const ZAMAMOCK_ADDRESS = "0x75355a85c6FB9df5f0C80FF54e8747EEe9a0BF57" as const;
 const CZAMAMOCK_ADDRESS = "0xf2D628d2598aF4eAF94CB76a437Ff86CA78FfbFB" as const;
