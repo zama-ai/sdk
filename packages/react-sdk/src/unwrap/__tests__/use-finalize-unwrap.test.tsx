@@ -6,11 +6,11 @@ import { describe, expect, test, vi } from "../../test-fixtures";
 import { useFinalizeUnwrap } from "../use-finalize-unwrap";
 
 describe("useFinalizeUnwrap", () => {
-  test("default", ({ renderWithProviders, tokenAddress, expectDefaultMutationState }) => {
+  test("default", ({ renderWithProviders, tokenAddress }) => {
     const { result } = renderWithProviders(() => useFinalizeUnwrap(tokenAddress));
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
-    expectDefaultMutationState(state);
+    expect(state).toEqualDefaultMutationState();
   });
 
   test("cache: invalidates balance, allowance, and wagmi after finalize", async ({
@@ -20,9 +20,6 @@ describe("useFinalizeUnwrap", () => {
     tokenAddress,
     userAddress,
     wagmiBalanceKey,
-    expectCacheInvalidated,
-    expectCacheUntouched,
-    expectInvalidatedQueries,
   }) => {
     const { result, queryClient } = renderWithProviders(() => useFinalizeUnwrap(tokenAddress));
 
@@ -39,10 +36,10 @@ describe("useFinalizeUnwrap", () => {
 
     await act(() => result.current.mutateAsync({ unwrapRequestId: burnAmountHandle }));
 
-    expectInvalidatedQueries(queryClient, [balanceKey, allowanceKey]);
-    expectCacheInvalidated(queryClient, wagmiBalanceKey);
-    expectCacheUntouched(queryClient, otherBalanceKey, 777n);
-    expectCacheUntouched(queryClient, otherAllowanceKey, 333n);
+    expect(queryClient).toHaveInvalidatedQueries([balanceKey, allowanceKey]);
+    expect(queryClient).toHaveCacheInvalidated(wagmiBalanceKey);
+    expect(queryClient).toHaveCacheUntouched(otherBalanceKey, 777n);
+    expect(queryClient).toHaveCacheUntouched(otherAllowanceKey, 333n);
   });
 
   test("behavior: forwards onSuccess callback", async ({
@@ -51,8 +48,6 @@ describe("useFinalizeUnwrap", () => {
     tokenAddress,
     userAddress,
     wagmiBalanceKey,
-    expectCacheInvalidated,
-    expectInvalidatedQueries,
     mutateAndExpectOnSuccess,
   }) => {
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(tokenAddress, userAddress);
@@ -71,8 +66,8 @@ describe("useFinalizeUnwrap", () => {
       () => result.current.mutateAsync({ unwrapRequestId: burnAmountHandle }),
       onSuccess,
       (client: QueryClient) => {
-        expectInvalidatedQueries(client, [balanceKey, allowanceKey]);
-        expectCacheInvalidated(client, wagmiBalanceKey);
+        expect(client).toHaveInvalidatedQueries([balanceKey, allowanceKey]);
+        expect(client).toHaveCacheInvalidated(wagmiBalanceKey);
       },
     );
   });

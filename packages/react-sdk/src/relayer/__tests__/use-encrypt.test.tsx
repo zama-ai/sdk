@@ -3,11 +3,11 @@ import { describe, expect, test } from "../../test-fixtures";
 import { useEncrypt } from "../use-encrypt";
 
 describe("useEncrypt", () => {
-  test("default", ({ renderWithProviders, expectDefaultMutationState }) => {
+  test("default", ({ renderWithProviders }) => {
     const { result } = renderWithProviders(() => useEncrypt());
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
-    expectDefaultMutationState(state);
+    expect(state).toEqualDefaultMutationState();
   });
 
   test("behavior: encrypts on mutate", async ({

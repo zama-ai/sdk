@@ -2,7 +2,7 @@
 // oxlint-disable eslint-plugin-react-hooks/rules-of-hooks
 import { QueryClient, type QueryKey } from "@tanstack/react-query";
 import { act } from "@testing-library/react";
-import { expect, type vi } from "vitest";
+import { expect, type MatcherState, type vi } from "vitest";
 import type { Address, RawLog } from "@zama-fhe/sdk";
 import type { FixturesOf } from "./types";
 
@@ -45,43 +45,96 @@ function createUnwrapRequestedLog(unwrapRequestId: Address): RawLog {
   };
 }
 
-function expectDefaultMutationState(state: unknown): void {
-  expect(state).toEqual(defaultIdleMutationState);
-}
+/**
+ * Custom matchers for TanStack Query cache state in mutation tests. Spread into
+ * the `expect.extend(...)` call in `test-fixtures/index.tsx` so the matchers
+ * are registered alongside any other groups.
+ */
+export const mutationAssertions = {
+  toEqualDefaultMutationState(this: MatcherState, received: unknown) {
+    const pass = this.equals(received, defaultIdleMutationState);
+    return {
+      pass,
+      message: () => `expected value ${pass ? "not " : ""}to equal default idle mutation state`,
+      actual: received,
+      expected: defaultIdleMutationState,
+    };
+  },
+  toHaveCacheRemoved(this: MatcherState, received: QueryClient, key: QueryKey) {
+    const query = received.getQueryCache().find({ queryKey: key });
+    const data = received.getQueryData(key);
+    const pass = query === undefined && data === undefined;
+    return {
+      pass,
+      message: () =>
+        `expected cache entry ${pass ? "not " : ""}to be removed for key ${this.utils.printExpected(key)}`,
+    };
+  },
+  toHaveCacheInvalidated(this: MatcherState, received: QueryClient, key: QueryKey) {
+    const state = received.getQueryState(key);
+    if (state === undefined) {
+      return {
+        pass: false,
+        message: () => `expected query to exist in cache for key ${this.utils.printExpected(key)}`,
+      };
+    }
+    return {
+      pass: state.isInvalidated,
+      message: () =>
+        `expected cache ${state.isInvalidated ? "not " : ""}to be invalidated for key ${this.utils.printExpected(key)}`,
+    };
+  },
+  toHaveCacheUntouched(this: MatcherState, received: QueryClient, key: QueryKey, value: unknown) {
+    const state = received.getQueryState(key);
+    if (state === undefined) {
+      return {
+        pass: false,
+        message: () => `expected query to exist in cache for key ${this.utils.printExpected(key)}`,
+      };
+    }
+    if (state.isInvalidated) {
+      return {
+        pass: false,
+        message: () =>
+          `expected cache to remain valid for key ${this.utils.printExpected(key)} but was invalidated`,
+      };
+    }
+    const actualValue = received.getQueryData(key);
+    const pass = actualValue === value;
+    return {
+      pass,
+      message: () =>
+        `expected cache value ${this.utils.printExpected(value)} but got ${this.utils.printReceived(actualValue)}`,
+      actual: actualValue,
+      expected: value,
+    };
+  },
+  toHaveInvalidatedQueries(this: MatcherState, received: QueryClient, keys: QueryKey[]) {
+    const failures: QueryKey[] = [];
+    for (const key of keys) {
+      const state = received.getQueryState(key);
+      if (state === undefined || !state.isInvalidated) {
+        failures.push(key);
+      }
+    }
+    const pass = failures.length === 0;
+    return {
+      pass,
+      message: () =>
+        pass
+          ? `expected some queries not to be invalidated, but all ${keys.length} were`
+          : `expected all queries invalidated, but ${failures.length} were not: ${this.utils.printExpected(failures)}`,
+    };
+  },
+};
 
-function expectCacheRemoved(qc: QueryClient, key: QueryKey): void {
-  const query = qc.getQueryCache().find({ queryKey: key });
-  if (query !== undefined || qc.getQueryData(key) !== undefined) {
-    throw new Error("Expected query cache to be removed");
-  }
-}
-
-function expectCacheInvalidated(qc: QueryClient, key: QueryKey): void {
-  const state = qc.getQueryState(key);
-  if (state === undefined) {
-    throw new Error("Expected query to exist in cache");
-  }
-  if (!state.isInvalidated) {
-    throw new Error("Expected query cache to be invalidated");
-  }
-}
-
-function expectCacheUntouched(qc: QueryClient, key: QueryKey, value: unknown): void {
-  const state = qc.getQueryState(key);
-  if (state === undefined) {
-    throw new Error("Expected query to exist in cache");
-  }
-  if (state.isInvalidated) {
-    throw new Error("Expected query cache to remain valid");
-  }
-  if (qc.getQueryData(key) !== value) {
-    throw new Error("Expected query cache value to remain unchanged");
-  }
-}
-
-function expectInvalidatedQueries(client: QueryClient, keys: QueryKey[]): void {
-  for (const key of keys) {
-    expectCacheInvalidated(client, key);
+declare module "vitest" {
+  interface Assertion {
+    toEqualDefaultMutationState(): void;
+    toHaveCacheRemoved(key: QueryKey): void;
+    toHaveCacheInvalidated(key: QueryKey): void;
+    toHaveCacheUntouched(key: QueryKey, value: unknown): void;
+    toHaveInvalidatedQueries(keys: QueryKey[]): void;
   }
 }
 
@@ -110,12 +163,7 @@ export interface MutationFixtures {
   burnAmountHandle: typeof burnAmountHandle;
   wagmiBalanceKey: typeof wagmiBalanceKey;
   createUnwrapRequestedLog: typeof createUnwrapRequestedLog;
-  expectDefaultMutationState: typeof expectDefaultMutationState;
   mutateAndExpectOnSuccess: typeof mutateAndExpectOnSuccess;
-  expectInvalidatedQueries: typeof expectInvalidatedQueries;
-  expectCacheRemoved: typeof expectCacheRemoved;
-  expectCacheInvalidated: typeof expectCacheInvalidated;
-  expectCacheUntouched: typeof expectCacheUntouched;
 }
 
 export const mutationFixtures: FixturesOf<MutationFixtures> = {
@@ -124,22 +172,7 @@ export const mutationFixtures: FixturesOf<MutationFixtures> = {
   createUnwrapRequestedLog: async ({}, use) => {
     await use(createUnwrapRequestedLog);
   },
-  expectDefaultMutationState: async ({}, use) => {
-    await use(expectDefaultMutationState);
-  },
   mutateAndExpectOnSuccess: async ({}, use) => {
     await use(mutateAndExpectOnSuccess);
-  },
-  expectInvalidatedQueries: async ({}, use) => {
-    await use(expectInvalidatedQueries);
-  },
-  expectCacheRemoved: async ({}, use) => {
-    await use(expectCacheRemoved);
-  },
-  expectCacheInvalidated: async ({}, use) => {
-    await use(expectCacheInvalidated);
-  },
-  expectCacheUntouched: async ({}, use) => {
-    await use(expectCacheUntouched);
   },
 };

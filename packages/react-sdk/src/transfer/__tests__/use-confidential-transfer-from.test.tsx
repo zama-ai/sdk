@@ -5,11 +5,11 @@ import { describe, test, vi } from "../../test-fixtures";
 import { useConfidentialTransferFrom } from "../use-confidential-transfer-from";
 
 describe("useConfidentialTransferFrom", () => {
-  test("default", ({ renderWithProviders, tokenAddress, expectDefaultMutationState }) => {
+  test("default", ({ renderWithProviders, tokenAddress }) => {
     const { result } = renderWithProviders(() => useConfidentialTransferFrom(tokenAddress));
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
-    expectDefaultMutationState(state);
+    expect(state).toEqualDefaultMutationState();
   });
 
   test("cache: invalidates balance after transfer from", async ({
@@ -20,8 +20,6 @@ describe("useConfidentialTransferFrom", () => {
     tokenAddress,
     transferFromAddress,
     userAddress,
-    expectCacheUntouched,
-    expectInvalidatedQueries,
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
@@ -42,8 +40,8 @@ describe("useConfidentialTransferFrom", () => {
       }),
     );
 
-    expectInvalidatedQueries(queryClient, [balanceKey]);
-    expectCacheUntouched(queryClient, otherBalanceKey, 777n);
+    expect(queryClient).toHaveInvalidatedQueries([balanceKey]);
+    expect(queryClient).toHaveCacheUntouched(otherBalanceKey, 777n);
   });
 
   test("behavior: forwards onSuccess callback", async ({
@@ -53,7 +51,6 @@ describe("useConfidentialTransferFrom", () => {
     tokenAddress,
     transferFromAddress,
     userAddress,
-    expectInvalidatedQueries,
     mutateAndExpectOnSuccess,
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
@@ -75,7 +72,7 @@ describe("useConfidentialTransferFrom", () => {
           amount: 100n,
         }),
       onSuccess,
-      (client: QueryClient) => expectInvalidatedQueries(client, [balanceKey]),
+      (client: QueryClient) => expect(client).toHaveInvalidatedQueries([balanceKey]),
     );
   });
 });

@@ -5,11 +5,11 @@ import { describe, expect, test, vi } from "../../test-fixtures";
 import { useConfidentialSetOperator } from "../use-confidential-set-operator";
 
 describe("useConfidentialSetOperator", () => {
-  test("default", ({ renderWithProviders, tokenAddress, expectDefaultMutationState }) => {
+  test("default", ({ renderWithProviders, tokenAddress }) => {
     const { result } = renderWithProviders(() => useConfidentialSetOperator(tokenAddress));
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
-    expectDefaultMutationState(state);
+    expect(state).toEqualDefaultMutationState();
   });
 
   test("cache: invalidates operator query after confidential set operator", async ({
@@ -18,8 +18,6 @@ describe("useConfidentialSetOperator", () => {
     otherTokenAddress,
     recipientAddress,
     tokenAddress,
-    expectCacheInvalidated,
-    expectCacheUntouched,
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
@@ -35,8 +33,8 @@ describe("useConfidentialSetOperator", () => {
     await act(() => result.current.mutateAsync({ operator: recipientAddress }));
 
     expect(queryClient.getQueryData(operatorKey)).toBe(true);
-    expectCacheInvalidated(queryClient, operatorKey);
-    expectCacheUntouched(queryClient, otherOperatorKey, false);
+    expect(queryClient).toHaveCacheInvalidated(operatorKey);
+    expect(queryClient).toHaveCacheUntouched(otherOperatorKey, false);
   });
 
   test("behavior: forwards onSuccess callback", async ({
@@ -44,7 +42,6 @@ describe("useConfidentialSetOperator", () => {
     signer,
     recipientAddress,
     tokenAddress,
-    expectCacheInvalidated,
     mutateAndExpectOnSuccess,
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
@@ -61,7 +58,7 @@ describe("useConfidentialSetOperator", () => {
     await mutateAndExpectOnSuccess(
       () => result.current.mutateAsync({ operator: recipientAddress }),
       onSuccess,
-      (client: QueryClient) => expectCacheInvalidated(client, operatorKey),
+      (client: QueryClient) => expect(client).toHaveCacheInvalidated(operatorKey),
     );
   });
 });

@@ -9,18 +9,17 @@ describe("useRevokePermits", () => {
     vi.restoreAllMocks();
   });
 
-  test("default", ({ renderWithProviders, expectDefaultMutationState }) => {
+  test("default", ({ renderWithProviders }) => {
     const { result } = renderWithProviders(() => useRevokePermits());
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
-    expectDefaultMutationState(state);
+    expect(state).toEqualDefaultMutationState();
   });
 
   test("cache: removes isAllowed and decryption queries after revokePermits", async ({
     renderWithProviders,
     otherTokenAddress,
     tokenAddress,
-    expectCacheRemoved,
   }) => {
     vi.spyOn(ZamaSDK.prototype, "revokePermits").mockResolvedValue(undefined);
     const { result, queryClient } = renderWithProviders(() => useRevokePermits());
@@ -29,15 +28,14 @@ describe("useRevokePermits", () => {
 
     await act(() => result.current.mutateAsync([tokenAddress, otherTokenAddress]));
 
-    expectCacheRemoved(queryClient, zamaQueryKeys.isAllowed.all);
-    expectCacheRemoved(queryClient, zamaQueryKeys.decryption.all);
+    expect(queryClient).toHaveCacheRemoved(zamaQueryKeys.isAllowed.all);
+    expect(queryClient).toHaveCacheRemoved(zamaQueryKeys.decryption.all);
   });
 
   test("behavior: forwards onSuccess callback", async ({
     renderWithProviders,
     otherTokenAddress,
     tokenAddress,
-    expectCacheRemoved,
   }) => {
     vi.spyOn(ZamaSDK.prototype, "revokePermits").mockResolvedValue(undefined);
     const onSuccess = vi.fn();
@@ -51,8 +49,8 @@ describe("useRevokePermits", () => {
     expect(onSuccess).toHaveBeenCalledOnce();
     expect(onSuccess.mock.calls[0]?.[0]).toBeUndefined();
     expect(onSuccess.mock.calls[0]?.[1]).toEqual([tokenAddress, otherTokenAddress]);
-    expectCacheRemoved(queryClient, zamaQueryKeys.isAllowed.all);
-    expectCacheRemoved(queryClient, zamaQueryKeys.decryption.all);
+    expect(queryClient).toHaveCacheRemoved(zamaQueryKeys.isAllowed.all);
+    expect(queryClient).toHaveCacheRemoved(zamaQueryKeys.decryption.all);
   });
 
   test("behavior: forwards address list to sdk.revokePermits", async ({
