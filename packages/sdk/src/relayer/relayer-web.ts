@@ -181,12 +181,12 @@ export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
    * Public decryption - no authorization needed.
    * Used for publicly visible encrypted values.
    */
-  async publicDecrypt(handles: EncryptedValue[]): Promise<PublicDecryptResult> {
+  async publicDecrypt(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult> {
     await this.ensureInit();
     const chainId = this.chain.id;
     return withRetry(async () => {
       await this.#refreshCsrfToken();
-      const result = await this.#worker.publicDecrypt({ chainId, handles });
+      const result = await this.#worker.publicDecrypt({ chainId, encryptedValues });
       return {
         clearValues: result.clearValues,
         abiEncodedClearValues: result.abiEncodedClearValues,

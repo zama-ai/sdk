@@ -95,9 +95,9 @@ import { type BatchDecryptAsOptions } from "@zama-fhe/sdk";
 
 The address that delegated decryption rights.
 
-### handles
+### encryptedValues
 
-`Handle[] | undefined`
+`EncryptedValue[] | undefined`
 
 Pre-fetched encrypted values. When omitted, they are fetched from the chain.
 

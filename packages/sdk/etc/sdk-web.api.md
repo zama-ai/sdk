@@ -45,7 +45,7 @@ export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
     // (undocumented)
     protected init(): Promise<void>;
     // Warning: (ae-forgotten-export) The symbol "PublicDecryptResult" needs to be exported by the entry point index.d.ts
-    publicDecrypt(handles: EncryptedValue[]): Promise<PublicDecryptResult>;
+    publicDecrypt(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult>;
     requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
     terminate(): void;
     // Warning: (ae-forgotten-export) The symbol "UserDecryptParams" needs to be exported by the entry point index.d.ts

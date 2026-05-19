@@ -6,35 +6,34 @@ import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
 import type { SignerQueryContext } from "./signer-query-context";
 
-export interface DecryptHandle {
-  handle: EncryptedValue;
+export interface EncryptedInput {
+  encryptedValue: EncryptedValue;
   contractAddress: Address;
 }
 
 /** Alias for {@link UserDecryptResults}. */
 export type DecryptResult = UserDecryptResults;
 
-export interface UserDecryptQueryConfig {
-  handles: DecryptHandle[];
-}
-
 export function userDecryptQueryOptions(
   sdk: ZamaSDK,
-  config: UserDecryptQueryConfig,
+  encryptedInputs: EncryptedInput[],
   signerContext: SignerQueryContext = {},
 ): QueryFactoryOptions<
   DecryptResult,
   Error,
   DecryptResult,
-  ReturnType<typeof zamaQueryKeys.decryption.handles>
+  ReturnType<typeof zamaQueryKeys.decryption.encryptedInputs>
 > {
   return {
-    queryKey: zamaQueryKeys.decryption.handles(config.handles, signerContext.walletAccount),
+    queryKey: zamaQueryKeys.decryption.encryptedInputs(
+      encryptedInputs,
+      signerContext.walletAccount,
+    ),
     queryFn: (context) => {
-      const [, { handles }] = context.queryKey;
-      return sdk.decryption.userDecrypt(handles as DecryptHandle[]);
+      const [, { encryptedInputs: keyedInputs }] = context.queryKey;
+      return sdk.decryption.userDecrypt(keyedInputs);
     },
     staleTime: Infinity,
-    enabled: config.handles.length > 0 && signerContext.walletAccount !== undefined,
+    enabled: encryptedInputs.length > 0 && signerContext.walletAccount !== undefined,
   };
 }

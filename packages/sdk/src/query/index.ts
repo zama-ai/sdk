@@ -101,9 +101,8 @@ export {
 } from "./delegate-decryption";
 export {
   userDecryptQueryOptions,
-  type UserDecryptQueryConfig,
   type DecryptResult,
-  type DecryptHandle,
+  type EncryptedInput as DecryptHandle,
 } from "./user-decrypt";
 export { decryptBalanceAsMutationOptions, type DecryptBalanceAsParams } from "./decrypt-balance-as";
 export {

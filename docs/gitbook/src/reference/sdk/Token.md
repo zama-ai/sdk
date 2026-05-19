@@ -39,12 +39,12 @@ const balance = await token.balanceOf("0xOwnerAddress");
 
 ### confidentialBalanceOf
 
-`(owner: Address) => Promise<Hex>`
+`(owner: Address) => Promise<EncryptedValue>`
 
 Returns the raw encrypted value without decrypting. Use with `isZeroHandle()` or pass to `sdk.decryption.userDecrypt()` for decryption.
 
 ```ts
-const handle = await token.confidentialBalanceOf("0xOwnerAddress");
+const encryptedValue = await token.confidentialBalanceOf("0xOwnerAddress");
 ```
 
 ### decryptBalanceAs

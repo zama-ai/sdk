@@ -93,7 +93,7 @@ export interface UserDecryptRequest extends BaseRequest {
   type: "USER_DECRYPT";
   payload: {
     chainId: number;
-    handles: EncryptedValue[];
+    encryptedValues: EncryptedValue[];
     contractAddress: Address;
     signedContractAddresses: Address[];
     privateKey: Hex;
@@ -109,7 +109,7 @@ export interface PublicDecryptRequest extends BaseRequest {
   type: "PUBLIC_DECRYPT";
   payload: {
     chainId: number;
-    handles: EncryptedValue[];
+    encryptedValues: EncryptedValue[];
   };
 }
 
@@ -145,7 +145,7 @@ export interface DelegatedUserDecryptRequest extends BaseRequest {
   type: "DELEGATED_USER_DECRYPT";
   payload: {
     chainId: number;
-    handles: EncryptedValue[];
+    encryptedValues: EncryptedValue[];
     contractAddress: Address;
     signedContractAddresses: Address[];
     privateKey: Hex;

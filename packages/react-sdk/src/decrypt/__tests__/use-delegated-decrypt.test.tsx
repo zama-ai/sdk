@@ -16,7 +16,7 @@ describe("useDelegatedDecrypt", () => {
     const { result } = renderWithProviders(() => useDelegatedDecrypt());
 
     result.current.mutate({
-      handles: [{ handle, contractAddress: tokenAddress }],
+      encryptedInputs: [{ encryptedValue: handle, contractAddress: tokenAddress }],
       delegatorAddress: delegatorAddress,
     });
 

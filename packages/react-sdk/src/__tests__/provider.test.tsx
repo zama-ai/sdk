@@ -60,7 +60,7 @@ describe("ZamaProvider & useZamaSDK", () => {
     const balanceKey = zamaQueryKeys.confidentialBalance.token(
       "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
     );
-    const decryptionKey = zamaQueryKeys.decryption.handle(
+    const decryptionKey = zamaQueryKeys.decryption.encryptedValue(
       "0xaAbBcCdDeEfFaAbBcCdDeEfFaAbBcCdDeEfFaAbBcCdDeEfFaAbBcCdDeEfFaAbB",
     );
     const wagmiBalanceKey = ["readContract", { functionName: "balanceOf" }] as const;

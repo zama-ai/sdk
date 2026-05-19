@@ -111,7 +111,7 @@ export interface EncryptParams {
 
 /** Parameters for user decryption */
 export interface UserDecryptParams {
-  handles: EncryptedValue[];
+  encryptedValues: EncryptedValue[];
   contractAddress: Address;
   signedContractAddresses: Address[];
   privateKey: Hex;
@@ -144,7 +144,7 @@ export type PublicParamsData = SDK.PublicParams<Uint8Array>[keyof SDK.PublicPara
 
 /** Parameters for delegated user decryption */
 export interface DelegatedUserDecryptParams {
-  handles: EncryptedValue[];
+  encryptedValues: EncryptedValue[];
   contractAddress: Address;
   signedContractAddresses: Address[];
   privateKey: Hex;

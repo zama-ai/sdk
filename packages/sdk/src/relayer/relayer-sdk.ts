@@ -40,8 +40,8 @@ export interface FheOperations {
   /** Decrypt FHE ciphertext handles using the user's own credentials. */
   userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValueType>>>;
 
-  /** Decrypt FHE handles using the network public key (no credential needed). */
-  publicDecrypt(handles: EncryptedValue[]): Promise<PublicDecryptResult>;
+  /** Decrypt encrypted values using the network public key (no credential needed). */
+  publicDecrypt(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult>;
 
   /** Create EIP-712 typed data for a delegated user decrypt credential. */
   createDelegatedUserDecryptEIP712(

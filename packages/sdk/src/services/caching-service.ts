@@ -26,17 +26,17 @@ export class CachingService {
   async get(
     requester: Address,
     contractAddress: Address,
-    handle: EncryptedValue,
+    encryptedValue: EncryptedValue,
   ): Promise<ClearValueType | null> {
     try {
-      const key = this.#buildStorageKey(requester, contractAddress, handle);
+      const key = this.#buildStorageKey(requester, contractAddress, encryptedValue);
       const value = await this.#storage.get(key);
       if (value === null) {
         return null;
       }
       const parsed = CacheValueSchema.safeParse(value);
       if (!parsed.success) {
-        await this.delete(requester, contractAddress, handle);
+        await this.delete(requester, contractAddress, encryptedValue);
         return null;
       }
       return parsed.data;
@@ -49,11 +49,11 @@ export class CachingService {
   async set(
     requester: Address,
     contractAddress: Address,
-    handle: EncryptedValue,
+    encryptedValue: EncryptedValue,
     value: ClearValueType,
   ): Promise<void> {
     try {
-      const key = this.#buildStorageKey(requester, contractAddress, handle);
+      const key = this.#buildStorageKey(requester, contractAddress, encryptedValue);
       await this.#storage.set<ClearValueType>(key, value);
       this.#indexWriteQueue = this.#indexWriteQueue.then(() =>
         this.#addToIndex(key).catch((error) => {
@@ -69,9 +69,9 @@ export class CachingService {
   async delete(
     requester: Address,
     contractAddress: Address,
-    handle: EncryptedValue,
+    encryptedValue: EncryptedValue,
   ): Promise<void> {
-    const key = this.#buildStorageKey(requester, contractAddress, handle);
+    const key = this.#buildStorageKey(requester, contractAddress, encryptedValue);
     this.#indexWriteQueue = this.#indexWriteQueue.then(() =>
       this.#doDelete(key).catch((error) => {
         console.warn("[zama-sdk] CachingService.delete failed:", error); // eslint-disable-line no-console
@@ -130,8 +130,12 @@ export class CachingService {
     await this.#storage.delete(this.#decryptKeysNamespace);
   }
 
-  #buildStorageKey(requester: Address, contractAddress: Address, handle: EncryptedValue): string {
-    return `${this.#decryptNamespace}:${getAddress(requester)}:${getAddress(contractAddress)}:${handle.toLowerCase()}`;
+  #buildStorageKey(
+    requester: Address,
+    contractAddress: Address,
+    encryptedValue: EncryptedValue,
+  ): string {
+    return `${this.#decryptNamespace}:${getAddress(requester)}:${getAddress(contractAddress)}:${encryptedValue.toLowerCase()}`;
   }
 
   async #readIndex(): Promise<string[]> {

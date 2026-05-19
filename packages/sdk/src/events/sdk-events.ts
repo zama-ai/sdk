@@ -63,16 +63,16 @@ export interface EncryptErrorEvent extends BaseEvent {
 
 export interface DecryptStartEvent extends BaseEvent {
   type: typeof ZamaSDKEvents.DecryptStart;
-  /** Handles being decrypted — correlate with matching DecryptEnd/DecryptError. */
-  handles: EncryptedValue[];
+  /** Encrypted values being decrypted — correlate with matching DecryptEnd/DecryptError. */
+  encryptedValues: EncryptedValue[];
 }
 
 export interface DecryptEndEvent extends BaseEvent {
   type: typeof ZamaSDKEvents.DecryptEnd;
   durationMs: number;
-  /** Handles that were decrypted. */
-  handles: EncryptedValue[];
-  /** Decrypted values keyed by handle — use this to correlate events to specific handles. */
+  /** Encrypted values that were decrypted. */
+  encryptedValues: EncryptedValue[];
+  /** Decrypted values keyed by encrypted value — use this to correlate events to specific entries. */
   result: Record<EncryptedValue, ClearValueType>;
 }
 
@@ -81,8 +81,8 @@ export interface DecryptErrorEvent extends BaseEvent {
   /** The error that caused the decryption to fail. */
   error: Error;
   durationMs: number;
-  /** Handles that were being decrypted when the error occurred. */
-  handles: EncryptedValue[];
+  /** Encrypted values that were being decrypted when the error occurred. */
+  encryptedValues: EncryptedValue[];
 }
 
 export interface TransactionErrorEvent extends BaseEvent {

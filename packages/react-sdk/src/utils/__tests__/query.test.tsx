@@ -8,12 +8,12 @@ describe("useQueries wrapper", () => {
       useQueries({
         queries: [
           {
-            queryKey: zamaQueryKeys.decryption.handle("0xabc"),
+            queryKey: zamaQueryKeys.decryption.encryptedValue("0xabc"),
             queryFn: () => undefined as never,
             enabled: false,
           },
           {
-            queryKey: zamaQueryKeys.decryption.handle("0xdef"),
+            queryKey: zamaQueryKeys.decryption.encryptedValue("0xdef"),
             queryFn: () => undefined as never,
             enabled: false,
           },
@@ -33,7 +33,7 @@ describe("useQueries wrapper", () => {
       useQueries({
         queries: [
           {
-            queryKey: zamaQueryKeys.decryption.handle("0x123"),
+            queryKey: zamaQueryKeys.decryption.encryptedValue("0x123"),
             queryFn: () => undefined as never,
             enabled: false,
           },

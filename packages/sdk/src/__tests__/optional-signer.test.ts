@@ -12,7 +12,7 @@ type Op = (sdk: ZamaSDK, tokenAddress: Address) => Promise<unknown>;
 const SIGNER_REQUIRED_OPS: ReadonlyArray<readonly [string, Op]> = [
   [
     "decryption.userDecrypt",
-    (sdk, t) => sdk.decryption.userDecrypt([{ handle: "0xh", contractAddress: t }]),
+    (sdk, t) => sdk.decryption.userDecrypt([{ encryptedValue: "0xh", contractAddress: t }]),
   ],
   ["permits.grantPermit", (sdk, t) => sdk.permits.grantPermit([t])],
   ["permits.revokePermits", (sdk) => sdk.permits.revokePermits()],

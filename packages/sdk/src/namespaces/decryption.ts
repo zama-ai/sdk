@@ -1,6 +1,6 @@
 import type { Address } from "viem";
 import { requireConfigured, wrapDecryptError } from "../errors";
-import type { DecryptHandle } from "../query/user-decrypt";
+import type { EncryptedInput } from "../query/user-decrypt";
 import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
 import type {
   ClearValueType,
@@ -53,7 +53,7 @@ export class Decryption {
    * Events (`DecryptStart/End/Error`) are emitted uniformly.
    * Relayer errors are wrapped into typed SDK errors.
    *
-   * @param handles - Handles to decrypt, each paired with its contract address.
+   * @param encryptedInput - Handles to decrypt, each paired with its contract address.
    * @returns A record mapping each handle to its decrypted clear-text value.
    * @throws if no signer is configured. {@link SignerNotConfiguredError}
    * @throws if signer and provider are on different chains. {@link ChainMismatchError}
@@ -61,15 +61,17 @@ export class Decryption {
    * @example
    * ```ts
    * const values = await sdk.decryption.userDecrypt([
-   *   { handle: balanceHandle, contractAddress: cUSDT },
+   *   { encryptedValue: balanceHandle, contractAddress: cUSDT },
    * ]);
    * console.log(values[balanceHandle]); // 1000n
    * ```
    */
-  async userDecrypt(handles: DecryptHandle[]): Promise<Record<EncryptedValue, ClearValueType>> {
+  async userDecrypt(
+    encryptedInput: EncryptedInput[],
+  ): Promise<Record<EncryptedValue, ClearValueType>> {
     const service = this.#requireDecryptionService("userDecrypt");
     const account = await requireAlignedWalletAccount("userDecrypt", this.#signer, this.#provider);
-    return service.userDecrypt(handles, account.address);
+    return service.userDecrypt(encryptedInput, account.address);
   }
 
   /**
@@ -80,7 +82,7 @@ export class Decryption {
    * every non-zero handle's contract must have an active delegation from the
    * delegator to the connected signer; missing or expired delegations fail fast.
    *
-   * @param handles - FHE handles paired with their contract addresses.
+   * @param encryptedInputs - FHE handles paired with their contract addresses.
    * @param delegatorAddress - The address that granted delegation rights.
    * @param accountAddress - Address used as the cache key's "requester"
    *   dimension. Defaults to `delegatorAddress`. Pass the actual account address
@@ -91,13 +93,13 @@ export class Decryption {
    * @example
    * ```ts
    * const values = await sdk.decryption.delegatedDecrypt([
-   *   { handle: balanceHandle, contractAddress: tokenAddr },
+   *   { encryptedValue: balanceHandle, contractAddress: tokenAddr },
    * ], delegatorAddr);
    * console.log(values[balanceHandle]); // 1000n
    * ```
    */
   async delegatedDecrypt(
-    handles: DecryptHandle[],
+    encryptedInputs: EncryptedInput[],
     delegatorAddress: Address,
     accountAddress: Address = delegatorAddress,
   ): Promise<Record<EncryptedValue, ClearValueType>> {
@@ -107,27 +109,32 @@ export class Decryption {
       this.#signer,
       this.#provider,
     );
-    return service.delegatedUserDecrypt(handles, delegatorAddress, account.address, accountAddress);
+    return service.delegatedUserDecrypt(
+      encryptedInputs,
+      delegatorAddress,
+      account.address,
+      accountAddress,
+    );
   }
 
   /**
-   * Publicly decrypt one or more FHE handles.
+   * Publicly decrypt one or more FHE encrypted values.
    *
    * Signer-independent: works without a configured signer.
    * Returns the decryption proof alongside the clear-text values so callers
    * can submit on-chain finalization transactions (e.g. `finalizeUnwrap`).
    *
-   * @param handles - FHE handles to decrypt publicly.
+   * @param encryptedValues - FHE encrypted values to decrypt publicly.
    * @returns Clear-text values, ABI-encoded values, and the decryption proof.
    *
    * @example
    * ```ts
    * const { clearValues, decryptionProof, abiEncodedClearValues } =
-   *   await sdk.decryption.publicDecrypt([handle]);
+   *   await sdk.decryption.publicDecrypt([encryptedValue]);
    * ```
    */
-  async publicDecrypt(handles: EncryptedValue[]): Promise<PublicDecryptResult> {
-    if (handles.length === 0) {
+  async publicDecrypt(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult> {
+    if (encryptedValues.length === 0) {
       return {
         clearValues: {},
         decryptionProof: "0x",
@@ -136,7 +143,7 @@ export class Decryption {
     }
 
     try {
-      return await this.#relayer.publicDecrypt(handles);
+      return await this.#relayer.publicDecrypt(encryptedValues);
     } catch (error) {
       throw wrapDecryptError(error, "Public decryption failed");
     }
@@ -162,25 +169,25 @@ export class Decryption {
    * ```ts
    * const result = await sdk.decryption.delegatedBatchDecrypt({
    *   handles: [
-   *     { handle: handle1, contractAddress: tokenA },
-   *     { handle: handle2, contractAddress: tokenB },
+   *     { encryptedValue: encryptedValue1, contractAddress: tokenA },
+   *     { encryptedValue: encryptedValue2, contractAddress: tokenB },
    *   ],
    *   delegatorAddress: "0xDelegator",
    *   maxConcurrency: 5,
    * });
    * for (const item of result.items) {
-   *   if (item.error) console.error(item.handle, item.error);
-   *   else console.log(item.handle, item.value);
+   *   if (item.error) console.error(item.encryptedValue, item.error);
+   *   else console.log(item.encryptedValue, item.value);
    * }
    * ```
    */
   async delegatedBatchDecrypt({
-    handles,
+    encryptedInputs,
     delegatorAddress,
     accountAddress = delegatorAddress,
     maxConcurrency,
   }: {
-    handles: DecryptHandle[];
+    encryptedInputs: EncryptedInput[];
     delegatorAddress: Address;
     accountAddress?: Address;
     maxConcurrency?: number;
@@ -192,7 +199,7 @@ export class Decryption {
       this.#provider,
     );
     return service.delegatedBatchDecryptHandlesAs({
-      handles,
+      encryptedInputs,
       delegatorAddress,
       delegateAddress: account.address,
       accountAddress,

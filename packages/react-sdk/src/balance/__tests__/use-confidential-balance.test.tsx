@@ -141,10 +141,12 @@ describe("useConfidentialBalance", () => {
       const handleB = `0x${"bc".repeat(32)}`;
       let currentHandle: string = handleA;
       vi.mocked(provider.readContract).mockImplementation(async () => currentHandle);
-      vi.mocked(relayer.userDecrypt).mockImplementation(async ({ handles }: { handles: Hex[] }) => {
-        const value = handles[0] === handleA ? 111n : 222n;
-        return { [handles[0]]: value };
-      });
+      vi.mocked(relayer.userDecrypt).mockImplementation(
+        async ({ encryptedValues }: { encryptedValues: Hex[] }) => {
+          const value = encryptedValues[0] === handleA ? 111n : 222n;
+          return { [encryptedValues[0]]: value };
+        },
+      );
 
       const { result } = renderWithProviders(() =>
         useConfidentialBalance({ address: tokenAddress, account: userAddress }),
@@ -165,10 +167,10 @@ describe("useConfidentialBalance", () => {
       });
       expect(relayer.userDecrypt).toHaveBeenNthCalledWith(
         1,
-        expect.objectContaining({ handles: [handleA] }),
+        expect.objectContaining({ encryptedValues: [handleA] }),
       );
       expect(relayer.userDecrypt).toHaveBeenLastCalledWith(
-        expect.objectContaining({ handles: [handleB] }),
+        expect.objectContaining({ encryptedValues: [handleB] }),
       );
     });
 

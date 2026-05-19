@@ -86,20 +86,22 @@ Sometimes you need the encrypted value itself, for example to check whether a ba
 ```ts
 import { isZeroHandle } from "@zama-fhe/sdk";
 
-const handle = await token.confidentialBalanceOf(userAddress);
+const encryptedValue = await token.confidentialBalanceOf(userAddress);
 
-// Check if the handle is zero (account has never shielded)
-if (isZeroHandle(handle)) {
+// Check if the encrypted value is zero (account has never shielded)
+if (isZeroHandle(encryptedValue)) {
   console.log("No confidential balance yet");
 }
 
-// Decrypt a handle you already have
-const result = await sdk.decryption.userDecrypt([{ handle, contractAddress: token.address }]);
-const value = result[handle] as bigint;
+// Decrypt an encrypted value you already have
+const result = await sdk.decryption.userDecrypt([
+  { encryptedValue, contractAddress: token.address },
+]);
+const value = result[encryptedValue] as bigint;
 
-// Decrypt multiple handles at once (must include the contract address per handle)
+// Decrypt multiple encrypted values at once (must include the contract address per entry)
 const decrypted = await sdk.decryption.userDecrypt(
-  [handle1, handle2, handle3].map((h) => ({ handle: h, contractAddress: token.address })),
+  [value1, value2, value3].map((v) => ({ encryptedValue: v, contractAddress: token.address })),
 );
 ```
 

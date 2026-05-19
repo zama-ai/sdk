@@ -558,7 +558,7 @@ export interface BatchBalancesResult {
 export interface BatchDecryptAsOptions {
     accountAddress?: Address;
     delegatorAddress: Address;
-    handles?: EncryptedValue[];
+    encryptedValues?: EncryptedValue[];
     maxConcurrency?: number;
     onError?: (error: Error, address: Address) => bigint;
 }
@@ -568,9 +568,9 @@ export interface BatchDecryptHandleItem {
     // (undocumented)
     contractAddress: Address;
     // (undocumented)
-    error?: ZamaError;
+    encryptedValue: EncryptedValue;
     // (undocumented)
-    handle: EncryptedValue;
+    error?: ZamaError;
     // (undocumented)
     value?: ClearValueType;
 }
@@ -6127,7 +6127,7 @@ export function decodeWrapped(log: RawLog): WrappedEvent | null;
 export interface DecryptEndEvent extends BaseEvent {
     // (undocumented)
     durationMs: number;
-    handles: EncryptedValue[];
+    encryptedValues: EncryptedValue[];
     result: Record<EncryptedValue, ClearValueType>;
     // (undocumented)
     type: typeof ZamaSDKEvents.DecryptEnd;
@@ -6137,8 +6137,8 @@ export interface DecryptEndEvent extends BaseEvent {
 export interface DecryptErrorEvent extends BaseEvent {
     // (undocumented)
     durationMs: number;
+    encryptedValues: EncryptedValue[];
     error: Error;
-    handles: EncryptedValue[];
     // (undocumented)
     type: typeof ZamaSDKEvents.DecryptError;
 }
@@ -6148,7 +6148,7 @@ export interface DecryptHandle {
     // (undocumented)
     contractAddress: Address;
     // (undocumented)
-    handle: EncryptedValue;
+    encryptedValue: EncryptedValue;
 }
 
 // @public
@@ -6161,14 +6161,14 @@ export class Decryption {
         decryptionService: DecryptionService | undefined;
     });
     delegatedBatchDecrypt(input: {
-        handles: DecryptHandle[];
+        encryptedInputs: DecryptHandle[];
         delegatorAddress: Address;
         accountAddress?: Address;
         maxConcurrency?: number;
     }): Promise<BatchDecryptHandlesResult>;
-    delegatedDecrypt(handles: DecryptHandle[], delegatorAddress: Address, accountAddress?: Address): Promise<Record<EncryptedValue, ClearValueType>>;
-    publicDecrypt(handles: EncryptedValue[]): Promise<PublicDecryptResult>;
-    userDecrypt(handles: DecryptHandle[]): Promise<Record<EncryptedValue, ClearValueType>>;
+    delegatedDecrypt(encryptedInputs: DecryptHandle[], delegatorAddress: Address, accountAddress?: Address): Promise<Record<EncryptedValue, ClearValueType>>;
+    publicDecrypt(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult>;
+    userDecrypt(encryptedInput: DecryptHandle[]): Promise<Record<EncryptedValue, ClearValueType>>;
 }
 
 // @public
@@ -6181,7 +6181,7 @@ export type DecryptResult = UserDecryptResults;
 
 // @public (undocumented)
 export interface DecryptStartEvent extends BaseEvent {
-    handles: EncryptedValue[];
+    encryptedValues: EncryptedValue[];
     // (undocumented)
     type: typeof ZamaSDKEvents.DecryptStart;
 }
@@ -6212,7 +6212,7 @@ export interface DelegatedUserDecryptParams {
     // (undocumented)
     durationDays: number;
     // (undocumented)
-    handles: EncryptedValue[];
+    encryptedValues: EncryptedValue[];
     // (undocumented)
     privateKey: Hex;
     // (undocumented)
@@ -13170,7 +13170,7 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
     // (undocumented)
     getPublicParams(bits: number): Promise<PublicParamsData | null>;
     // (undocumented)
-    publicDecrypt(handles: EncryptedValue[]): Promise<PublicDecryptResult>;
+    publicDecrypt(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult>;
     // (undocumented)
     requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
     // (undocumented)
@@ -18827,7 +18827,7 @@ export interface UserDecryptParams {
     // (undocumented)
     durationDays: number;
     // (undocumented)
-    handles: EncryptedValue[];
+    encryptedValues: EncryptedValue[];
     // (undocumented)
     privateKey: Hex;
     // (undocumented)
@@ -20159,10 +20159,10 @@ export { ZKProofLike }
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/index-jg7G4aGs.d.ts:20449:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-jg7G4aGs.d.ts:20578:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-jg7G4aGs.d.ts:20680:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-jg7G4aGs.d.ts:20681:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-xMJtdFpc.d.ts:20446:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-xMJtdFpc.d.ts:20575:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-xMJtdFpc.d.ts:20677:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-xMJtdFpc.d.ts:20678:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

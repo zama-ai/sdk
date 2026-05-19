@@ -68,7 +68,7 @@ export interface BatchBalancesResult {
 export interface BatchDecryptAsOptions {
     accountAddress?: Address;
     delegatorAddress: Address;
-    handles?: EncryptedValue[];
+    encryptedValues?: EncryptedValue[];
     maxConcurrency?: number;
     onError?: (error: Error, address: Address) => bigint;
 }
@@ -192,7 +192,7 @@ export interface DecryptBalanceAsParams {
 export interface DecryptEndEvent extends BaseEvent {
     // (undocumented)
     durationMs: number;
-    handles: EncryptedValue[];
+    encryptedValues: EncryptedValue[];
     result: Record<EncryptedValue, ClearValueType>;
     // (undocumented)
     type: typeof ZamaSDKEvents.DecryptEnd;
@@ -202,8 +202,8 @@ export interface DecryptEndEvent extends BaseEvent {
 export interface DecryptErrorEvent extends BaseEvent {
     // (undocumented)
     durationMs: number;
+    encryptedValues: EncryptedValue[];
     error: Error;
-    handles: EncryptedValue[];
     // (undocumented)
     type: typeof ZamaSDKEvents.DecryptError;
 }
@@ -213,7 +213,7 @@ export interface DecryptHandle {
     // (undocumented)
     contractAddress: Address;
     // (undocumented)
-    handle: EncryptedValue;
+    encryptedValue: EncryptedValue;
 }
 
 // @public
@@ -221,7 +221,7 @@ export type DecryptResult = UserDecryptResults;
 
 // @public (undocumented)
 export interface DecryptStartEvent extends BaseEvent {
-    handles: EncryptedValue[];
+    encryptedValues: EncryptedValue[];
     // (undocumented)
     type: typeof ZamaSDKEvents.DecryptStart;
 }
@@ -234,7 +234,7 @@ export interface DelegatedDecryptMutationParams {
     // (undocumented)
     delegatorAddress: Address;
     // (undocumented)
-    handles: DecryptHandle[];
+    encryptedInputs: DecryptHandle[];
 }
 
 // @public (undocumented)
@@ -259,7 +259,7 @@ export interface DelegatedUserDecryptParams {
     // (undocumented)
     durationDays: number;
     // (undocumented)
-    handles: EncryptedValue[];
+    encryptedValues: EncryptedValue[];
     // (undocumented)
     privateKey: Hex;
     // (undocumented)
@@ -919,7 +919,7 @@ export interface UserDecryptParams {
     // (undocumented)
     durationDays: number;
     // (undocumented)
-    handles: EncryptedValue[];
+    encryptedValues: EncryptedValue[];
     // (undocumented)
     privateKey: Hex;
     // (undocumented)
@@ -935,13 +935,7 @@ export interface UserDecryptParams {
 }
 
 // @public (undocumented)
-export interface UserDecryptQueryConfig {
-    // (undocumented)
-    handles: DecryptHandle[];
-}
-
-// @public (undocumented)
-export function userDecryptQueryOptions(sdk: ZamaSDK, config: UserDecryptQueryConfig, signerContext?: SignerQueryContext): QueryFactoryOptions<DecryptResult, Error, DecryptResult, ReturnType<typeof zamaQueryKeys.decryption.handles>>;
+export function userDecryptQueryOptions(sdk: ZamaSDK, encryptedInputs: DecryptHandle[], signerContext?: SignerQueryContext): QueryFactoryOptions<DecryptResult, Error, DecryptResult, ReturnType<typeof zamaQueryKeys.decryption.encryptedInputs>>;
 
 // @public
 export interface WalletAccount {
@@ -1136,23 +1130,23 @@ export const zamaQueryKeys: {
     };
     readonly decryption: {
         readonly all: readonly ["zama.decryption"];
-        readonly handle: (handle: string, contractAddress?: Address) => readonly ["zama.decryption", {
+        readonly encryptedValue: (encryptedValue: string, contractAddress?: Address) => readonly ["zama.decryption", {
             readonly contractAddress?: `0x${string}` | undefined;
-            readonly handle: string;
+            readonly encryptedValue: string;
         }];
-        readonly handles: (handles: readonly {
-            handle: string;
+        readonly encryptedInputs: (encryptedInputs: readonly {
+            encryptedValue: string;
             contractAddress: Address;
         }[], walletAccount?: WalletAccount) => readonly ["zama.decryption", {
-            readonly handles: {
-                handle: string;
+            readonly encryptedInputs: {
+                encryptedValue: Hex;
                 contractAddress: `0x${string}`;
             }[];
             readonly walletAddress: `0x${string}`;
             readonly walletChainId: number;
         } | {
-            readonly handles: {
-                handle: string;
+            readonly encryptedInputs: {
+                encryptedValue: Hex;
                 contractAddress: `0x${string}`;
             }[];
             readonly walletAddress?: undefined;
@@ -1273,9 +1267,9 @@ export const ZamaSDKEvents: {
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/types-Eagmy7BV.d.ts:652:3 - (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
-// dist/esm/types-Eagmy7BV.d.ts:653:3 - (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
-// dist/esm/types-Eagmy7BV.d.ts:654:3 - (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
+// dist/esm/types-BbnOaYAU.d.ts:652:3 - (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
+// dist/esm/types-BbnOaYAU.d.ts:653:3 - (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
+// dist/esm/types-BbnOaYAU.d.ts:654:3 - (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

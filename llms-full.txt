@@ -2522,20 +2522,22 @@ Sometimes you need the encrypted value itself, for example to check whether a ba
 ```ts
 import { isZeroHandle } from "@zama-fhe/sdk";
 
-const handle = await token.confidentialBalanceOf(userAddress);
+const encryptedValue = await token.confidentialBalanceOf(userAddress);
 
-// Check if the handle is zero (account has never shielded)
-if (isZeroHandle(handle)) {
+// Check if the encrypted value is zero (account has never shielded)
+if (isZeroHandle(encryptedValue)) {
   console.log("No confidential balance yet");
 }
 
-// Decrypt a handle you already have
-const result = await sdk.decryption.userDecrypt([{ handle, contractAddress: token.address }]);
-const value = result[handle] as bigint;
+// Decrypt an encrypted value you already have
+const result = await sdk.decryption.userDecrypt([
+  { encryptedValue, contractAddress: token.address },
+]);
+const value = result[encryptedValue] as bigint;
 
-// Decrypt multiple handles at once (must include the contract address per handle)
+// Decrypt multiple encrypted values at once (must include the contract address per entry)
 const decrypted = await sdk.decryption.userDecrypt(
-  [handle1, handle2, handle3].map((h) => ({ handle: h, contractAddress: token.address })),
+  [value1, value2, value3].map((v) => ({ encryptedValue: v, contractAddress: token.address })),
 );
 ```
 
@@ -3813,7 +3815,7 @@ const balance = await token.decryptBalanceAs({
 });
 ```
 
-Clear values are cached in storage, keyed by `(accountAddress, token, handle)`. Every on-chain balance change produces a new encrypted value, so stale cache entries are never served.
+Clear values are cached in storage, keyed by `(accountAddress, token, encryptedValue)`. Every on-chain balance change produces a new encrypted value, so stale cache entries are never served.
 
 ### 4. Batch decryption across tokens (optional)
 
@@ -3943,10 +3945,12 @@ function ConfidentialRoundTrip() {
   const sdk = useZamaSDK();
   const encrypt = useEncrypt();
   const { address: userAddress } = useAccount();
-  const [handles, setHandles] = useState<{ handle: string; contractAddress: `0x${string}` }[]>([]);
+  const [inputs, setInputs] = useState<
+    { encryptedValue: string; contractAddress: `0x${string}` }[]
+  >([]);
 
-  // Fires when handles are non-empty.
-  const { data: decrypted } = useUserDecrypt({ handles });
+  // Fires when inputs are non-empty.
+  const { data: decrypted } = useUserDecrypt(inputs);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -3968,15 +3972,15 @@ function ConfidentialRoundTrip() {
       args: [bytesToHex(encrypted.handles[0]!), bytesToHex(encrypted.inputProof)],
     });
 
-    // 3. Read the handle back — setting handles triggers decryption
-    const handle = (await sdk.provider.readContract({
+    // 3. Read the encrypted value back — setting inputs triggers decryption
+    const encryptedValue = (await sdk.provider.readContract({
       address: contractAddress,
       abi: yourContractABI,
       functionName: "getHandle",
       args: [userAddress],
     })) as string;
 
-    setHandles([{ handle, contractAddress }]);
+    setInputs([{ encryptedValue, contractAddress }]);
   };
 
   return (
@@ -3984,8 +3988,8 @@ function ConfidentialRoundTrip() {
       <button type="submit" disabled={encrypt.isPending}>
         Encrypt → Store → Decrypt
       </button>
-      {decrypted && handles[0] && (
-        <output>Decrypted: {decrypted[handles[0].handle]?.toString()}</output>
+      {decrypted && inputs[0] && (
+        <output>Decrypted: {decrypted[inputs[0].encryptedValue]?.toString()}</output>
       )}
     </form>
   );
@@ -4306,20 +4310,18 @@ function App() {
 }
 ```
 
-#### Decrypting handles from multiple contracts
+#### Decrypting encrypted values from multiple contracts
 
-`useUserDecrypt` automatically groups handles by contract address and issues one decryption request per contract:
+`useUserDecrypt` automatically groups inputs by contract address and issues one decryption request per contract:
 
 ```tsx
-const { data } = useUserDecrypt({
-  handles: [
-    { handle: "0xhandle1...", contractAddress: "0xTokenA" },
-    { handle: "0xhandle2...", contractAddress: "0xTokenA" },
-    { handle: "0xhandle3...", contractAddress: "0xTokenB" },
-  ],
-});
+const { data } = useUserDecrypt([
+  { encryptedValue: "0xvalue1...", contractAddress: "0xTokenA" },
+  { encryptedValue: "0xvalue2...", contractAddress: "0xTokenA" },
+  { encryptedValue: "0xvalue3...", contractAddress: "0xTokenB" },
+]);
 
-// data: { "0xhandle1...": 500n, "0xhandle2...": 200n, "0xhandle3...": 1000n }
+// data: { "0xvalue1...": 500n, "0xvalue2...": 200n, "0xvalue3...": 1000n }
 ```
 
 #### Persistent caching
@@ -4599,34 +4601,34 @@ const pairs = await registry.getTokenPairs();
 
 `(contractAddresses: Address[]) => Promise<void>`
 
-Pre-authorize contract addresses for decryption. Signs permits only for contracts not already covered by existing permits. Subsequent [`decryption.userDecrypt`](#decryption-userdecrypt) calls whose handles span the covered set proceed without a wallet prompt.
+Pre-authorize contract addresses for decryption. Signs permits only for contracts not already covered by existing permits. Subsequent [`decryption.userDecrypt`](#decryption-userdecrypt) calls whose encrypted values span the covered set proceed without a wallet prompt.
 
 ```ts
 // Sign once for three tokens, then decrypt individually
 await sdk.permits.grantPermit([cUSDT, cDAI, cWETH]);
-const a = await sdk.decryption.userDecrypt([{ handle: h1, contractAddress: cUSDT }]);
-const b = await sdk.decryption.userDecrypt([{ handle: h2, contractAddress: cDAI }]);
+const a = await sdk.decryption.userDecrypt([{ encryptedValue: h1, contractAddress: cUSDT }]);
+const b = await sdk.decryption.userDecrypt([{ encryptedValue: h2, contractAddress: cDAI }]);
 ```
 
 ### decryption.userDecrypt
 
-`(handles: DecryptHandle[]) => Promise<Record<Handle, ClearValueType>>`
+`(inputs: EncryptedInput[]) => Promise<Record<EncryptedValue, ClearValueType>>`
 
-Decrypt one or more FHE handles. Returns cached values when available, only calling the relayer for uncached handles. Results are written through the SDK's internal CachingService so subsequent calls for the same handles return instantly.
+Decrypt one or more FHE encrypted values. Returns cached values when available, only calling the relayer for uncached inputs. Results are written through the SDK's internal CachingService so subsequent calls for the same inputs return instantly.
 
-Handles from different contracts can be mixed — they are grouped by `contractAddress` and batched into one relayer call per contract (up to 5 concurrently). Zero handles (32 zero bytes) resolve to `0n` without hitting the relayer.
+Inputs from different contracts can be mixed — they are grouped by `contractAddress` and batched into one relayer call per contract (up to 5 concurrently). Zero encrypted values (32 zero bytes) resolve to `0n` without hitting the relayer.
 
-When the relayer is actually called, permits are resolved from the contract addresses of the full input handle set (including cached and zero handles), ensuring a stable permit scope regardless of which handles happen to be cached. If every handle is zero or already cached, no permits are needed and no wallet prompt is shown.
+When the relayer is actually called, permits are resolved from the contract addresses of the full input set (including cached and zero entries), ensuring a stable permit scope regardless of which entries happen to be cached. If every entry is zero or already cached, no permits are needed and no wallet prompt is shown.
 
 ```ts
 const values = await sdk.decryption.userDecrypt([
-  { handle: balanceHandle, contractAddress: cUSDT },
-  { handle: flagHandle, contractAddress: myContract },
+  { encryptedValue: balanceHandle, contractAddress: cUSDT },
+  { encryptedValue: flagHandle, contractAddress: myContract },
 ]);
 console.log(values[balanceHandle]); // 1000n
 ```
 
-To observe decryption lifecycle, subscribe to SDK events (`DecryptStart`, `DecryptEnd`, `DecryptError`) via the `onEvent` config. Events fire only when the relayer is actually called — the zero-handle-only and fully-cached paths return silently.
+To observe decryption lifecycle, subscribe to SDK events (`DecryptStart`, `DecryptEnd`, `DecryptError`) via the `onEvent` config. Events fire only when the relayer is actually called — the all-zero and fully-cached paths return silently.
 
 The `onEvent` callback is a single function, so for multi-listener observability you can bridge it into a standard event bus. Pick whichever matches your runtime:
 
@@ -4653,17 +4655,20 @@ const config = createConfig({
 const sdk = new ZamaSDK(config);
 
 window.addEventListener(ZamaSDKEvents.DecryptEnd, (e: CustomEvent<DecryptEndEvent>) => {
-  const { durationMs, handles, result } = e.detail;
-  console.log(`Decrypted ${handles.length} handle(s) in ${durationMs}ms`);
-  // result is Record<Handle, ClearValueType> — look up a specific handle
-  for (const h of handles) {
-    console.log(`${h} → ${result[h]}`);
+  const { durationMs, encryptedValues, result } = e.detail;
+  console.log(`Decrypted ${encryptedValues.length} value(s) in ${durationMs}ms`);
+  // result is Record<EncryptedValue, ClearValueType> — look up a specific value
+  for (const v of encryptedValues) {
+    console.log(`${v} → ${result[v]}`);
   }
 });
 
 window.addEventListener(ZamaSDKEvents.DecryptError, (e: CustomEvent<DecryptErrorEvent>) => {
-  const { error, durationMs, handles } = e.detail;
-  console.error(`Decryption failed after ${durationMs}ms for ${handles.length} handle(s):`, error);
+  const { error, durationMs, encryptedValues } = e.detail;
+  console.error(
+    `Decryption failed after ${durationMs}ms for ${encryptedValues.length} value(s):`,
+    error,
+  );
 });
 ```
 
@@ -4689,17 +4694,26 @@ const config = createConfig({
 });
 const sdk = new ZamaSDK(config);
 
-emitter.on(ZamaSDKEvents.DecryptEnd, ({ durationMs, handles, result }: DecryptEndEvent) => {
-  console.log(`Decrypted ${handles.length} handle(s) in ${durationMs}ms`);
-  // result is Record<Handle, ClearValueType> — look up a specific handle
-  for (const h of handles) {
-    console.log(`${h} → ${result[h]}`);
-  }
-});
+emitter.on(
+  ZamaSDKEvents.DecryptEnd,
+  ({ durationMs, encryptedValues, result }: DecryptEndEvent) => {
+    console.log(`Decrypted ${encryptedValues.length} value(s) in ${durationMs}ms`);
+    // result is Record<EncryptedValue, ClearValueType> — look up a specific value
+    for (const v of encryptedValues) {
+      console.log(`${v} → ${result[v]}`);
+    }
+  },
+);
 
-emitter.on(ZamaSDKEvents.DecryptError, ({ error, durationMs, handles }: DecryptErrorEvent) => {
-  console.error(`Decryption failed after ${durationMs}ms for ${handles.length} handle(s):`, error);
-});
+emitter.on(
+  ZamaSDKEvents.DecryptError,
+  ({ error, durationMs, encryptedValues }: DecryptErrorEvent) => {
+    console.error(
+      `Decryption failed after ${durationMs}ms for ${encryptedValues.length} value(s):`,
+      error,
+    );
+  },
+);
 ```
 
 
@@ -4812,12 +4826,12 @@ const balance = await token.balanceOf("0xOwnerAddress");
 
 ### confidentialBalanceOf
 
-`(owner: Address) => Promise<Hex>`
+`(owner: Address) => Promise<EncryptedValue>`
 
 Returns the raw encrypted value without decrypting. Use with `isZeroHandle()` or pass to `sdk.decryption.userDecrypt()` for decryption.
 
 ```ts
-const handle = await token.confidentialBalanceOf("0xOwnerAddress");
+const encryptedValue = await token.confidentialBalanceOf("0xOwnerAddress");
 ```
 
 ### decryptBalanceAs
@@ -5526,7 +5540,7 @@ The cleartext relayer implements the full `RelayerSDK` interface:
 | `generateKeypair()`                     | Returns a random mock keypair.                             |
 | `encrypt(params)`                       | Computes mock ciphertext handles and signs an input proof. |
 | `userDecrypt(params)`                   | Reads plaintext from TFHEExecutor after ACL checks.        |
-| `publicDecrypt(handles)`                | Reads plaintext for handles allowed for public decryption. |
+| `publicDecrypt(encryptedValues)`        | Reads plaintext for encrypted values allowed for public decryption. |
 | `delegatedUserDecrypt(params)`          | Reads plaintext via delegated authorization.               |
 | `createEIP712(...)`                     | Returns a user-decrypt EIP-712 typed data object.          |
 | `createDelegatedUserDecryptEIP712(...)` | Returns a delegated-decrypt EIP-712 typed data object.     |
@@ -10348,7 +10362,7 @@ Call this early (e.g. after wallet connect) so that [`useUserDecrypt`](https://r
 
 
 > [!WARNING]
-> **Include all contracts you plan to decrypt.** `useUserDecrypt` checks that stored permits cover every contract address in its `handles` before firing the query. If any contract is missing, the query stays disabled.
+> **Include all contracts you plan to decrypt.** `useUserDecrypt` checks that stored permits cover every contract address in its `inputs` before firing the query. If any contract is missing, the query stays disabled.
 
 
 ## Import
@@ -10526,16 +10540,16 @@ function AuthGuard() {
 import { useHasPermit, useGrantPermit, useUserDecrypt } from "@zama-fhe/react-sdk";
 
 function GatedDecrypt({
-  handle,
+  encryptedValue,
   contractAddress,
 }: {
-  handle: string;
+  encryptedValue: string;
   contractAddress: `0x${string}`;
 }) {
   const { data: hasPermit } = useHasPermit({ contractAddresses: [contractAddress] });
   const { mutateAsync: grantPermit } = useGrantPermit();
   const { data, isPending } = useUserDecrypt(
-    { handles: [{ handle, contractAddress }] },
+    [{ encryptedValue, contractAddress }],
     { enabled: !!hasPermit }, // only decrypt once authorized
   );
 
@@ -10544,7 +10558,7 @@ function GatedDecrypt({
   }
 
   if (isPending) return <span>Decrypting...</span>;
-  return <output>{data?.[handle]?.toString()}</output>;
+  return <output>{data?.[encryptedValue]?.toString()}</output>;
 }
 ```
 
@@ -13156,7 +13170,7 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 # useUserDecrypt
 
-Query hook for user decryption. Automatically fires when credentials are available (acquired via [`useGrantPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useGrantPermit.md)) and handles are provided. Checks the persistent decrypt cache first and only hits the relayer for uncached handles.
+Query hook for user decryption. Automatically fires when credentials are available (acquired via [`useGrantPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useGrantPermit.md)) and inputs are provided. Checks the persistent decrypt cache first and only hits the relayer for uncached entries.
 
 
 > [!INFO]
@@ -13179,11 +13193,11 @@ import { useGrantPermit, useHasPermit, useUserDecrypt } from "@zama-fhe/react-sd
 
 const CONTRACT = "0xYourContract" as const;
 
-function DecryptHandle({ handle }: { handle: string }) {
+function DecryptValue({ encryptedValue }: { encryptedValue: string }) {
   const { mutate: grantPermit, isPending: isGranting } = useGrantPermit();
   const { data: hasPermit } = useHasPermit({ contractAddresses: [CONTRACT] });
   const { data, isPending } = useUserDecrypt(
-    { handles: [{ handle, contractAddress: CONTRACT }] },
+    [{ encryptedValue, contractAddress: CONTRACT }],
     { enabled: !!hasPermit }, // gate: only decrypt once authorized
   );
 
@@ -13196,45 +13210,43 @@ function DecryptHandle({ handle }: { handle: string }) {
   }
 
   if (isPending) return <p>Decrypting...</p>;
-  return <output>Value: {data?.[handle]?.toString()}</output>;
+  return <output>Value: {data?.[encryptedValue]?.toString()}</output>;
 }
 ```
 
 
 ## Parameters
 
-### handles
+### inputs (first argument)
 
-`DecryptHandle[]`
+`EncryptedInput[]`
 
-Array of handles to decrypt. Each entry pairs an encrypted value with the address of the contract that owns it. Only entries not yet in the SDK's persistent decrypt cache are sent for decryption — cached ones are returned immediately, even after a page reload.
+Array of encrypted values to decrypt. Each entry pairs an encrypted value with the address of the contract that owns it. Only entries not yet in the SDK's persistent decrypt cache are sent for decryption — cached ones are returned immediately, even after a page reload.
 
 ```ts
-import { type DecryptHandle } from "@zama-fhe/sdk";
+import { type EncryptedInput } from "@zama-fhe/sdk";
 ```
 
-| Field             | Type      | Description                                            |
-| ----------------- | --------- | ------------------------------------------------------ |
-| `handle`          | `Handle`  | The encrypted value (hex string) to decrypt.           |
-| `contractAddress` | `Address` | Address of the contract that owns the encrypted value. |
+| Field             | Type             | Description                                            |
+| ----------------- | ---------------- | ------------------------------------------------------ |
+| `encryptedValue`  | `EncryptedValue` | The encrypted value (hex string) to decrypt.           |
+| `contractAddress` | `Address`        | Address of the contract that owns the encrypted value. |
 
-Handles from different contracts can be mixed in a single call — `useUserDecrypt` automatically groups them by contract address and issues one decryption request per unique contract:
+Inputs from different contracts can be mixed in a single call — `useUserDecrypt` automatically groups them by contract address and issues one decryption request per unique contract:
 
 ```tsx
-const { data } = useUserDecrypt({
-  handles: [
-    { handle: "0xhandle1...", contractAddress: "0xContractA" },
-    { handle: "0xhandle2...", contractAddress: "0xContractA" },
-    { handle: "0xhandle3...", contractAddress: "0xContractB" },
-  ],
-});
+const { data } = useUserDecrypt([
+  { encryptedValue: "0xvalue1...", contractAddress: "0xContractA" },
+  { encryptedValue: "0xvalue2...", contractAddress: "0xContractA" },
+  { encryptedValue: "0xvalue3...", contractAddress: "0xContractB" },
+]);
 
-// data: { "0xhandle1...": 500n, "0xhandle2...": 200n, "0xhandle3...": 1000n }
+// data: { "0xvalue1...": 500n, "0xvalue2...": 200n, "0xvalue3...": 1000n }
 ```
 
 
 > [!WARNING]
-> **All contract addresses must be authorized first.** Call `useGrantPermit` with every contract address present in `handles` before enabling the query. Use `useHasPermit({ contractAddresses })` to check coverage and pass `{ enabled: !!hasPermit }` as the second argument to prevent unexpected wallet prompts.
+> **All contract addresses must be authorized first.** Call `useGrantPermit` with every contract address present in `inputs` before enabling the query. Use `useHasPermit({ contractAddresses })` to check coverage and pass `{ enabled: !!hasPermit }` as the second argument to prevent unexpected wallet prompts.
 
 
 ### options (second argument)
@@ -13245,9 +13257,9 @@ Pass `{ enabled: false }` as the second argument to disable the query.
 
 ## Return Type
 
-Returns a standard `useQuery` result. `data` resolves to `Record<Handle, ClearValueType>` — a map from each handle to its decrypted plaintext value (`bigint`, `boolean`, or `string`).
+Returns a standard `useQuery` result. `data` resolves to `Record<EncryptedValue, ClearValueType>` — a map from each encrypted value to its decrypted plaintext value (`bigint`, `boolean`, or `string`).
 
-When all requested handles are already cached, `data` contains the cached values immediately (no relayer call). Freshly decrypted results are written through the SDK's internal CachingService — scoped by `(signer, contract, handle)` — so that subsequent renders return instantly, even after a page reload. The cache is cleared automatically on `permits.revokePermits()`, `permits.clear()`, or wallet lifecycle events (disconnect, account change, chain change).
+When all requested inputs are already cached, `data` contains the cached values immediately (no relayer call). Freshly decrypted results are written through the SDK's internal CachingService — scoped by `(signer, contract, encryptedValue)` — so that subsequent renders return instantly, even after a page reload. The cache is cleared automatically on `permits.revokePermits()`, `permits.clear()`, or wallet lifecycle events (disconnect, account change, chain change).
 
 ### `data`
 
@@ -13309,7 +13321,7 @@ The current status of the query. Prefer the boolean flags above for conditional 
 `useUserDecrypt` chains two internal queries:
 
 1. **Signer address** — resolves the connected wallet address.
-2. **Decrypt** — calls `sdk.decryption.userDecrypt(handles)` which checks the persistent cache, then hits the relayer for any uncached handles.
+2. **Decrypt** — calls `sdk.decryption.userDecrypt(inputs)` which checks the persistent cache, then hits the relayer for any uncached entries.
 
 
 > [!WARNING]
@@ -13318,7 +13330,7 @@ The current status of the query. Prefer the boolean flags above for conditional 
 > ```tsx
 > const { data: hasPermit } = useHasPermit({ contractAddresses: ["0xContract"] });
 > const { data } = useUserDecrypt(
->   { handles: [{ handle, contractAddress: "0xContract" }] },
+>   [{ encryptedValue, contractAddress: "0xContract" }],
 >   { enabled: !!hasPermit },
 > );
 > ```
@@ -14160,9 +14172,9 @@ import { type BatchDecryptAsOptions } from "@zama-fhe/sdk";
 
 The address that delegated decryption rights.
 
-### handles
+### encryptedValues
 
-`Handle[] | undefined`
+`EncryptedValue[] | undefined`
 
 Pre-fetched encrypted values. When omitted, they are fetched from the chain.
 
@@ -14359,10 +14371,10 @@ Cached decrypted values. Populated by [`useUserDecrypt`](https://raw.githubuserc
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 ```
 
-| Key                                 | Scope                                 |
-| ----------------------------------- | ------------------------------------- |
-| `.handle(handle, contractAddress?)` | Single clear value by handle          |
-| `.handles(handles[])`               | Multiple clear values by handle array |
+| Key                                                  | Scope                                          |
+| ---------------------------------------------------- | ---------------------------------------------- |
+| `.handle(encryptedValue, contractAddress?)`          | Single clear value by encrypted value          |
+| `.encryptedInputs(inputs[], walletAccount?)`         | Multiple clear values by encrypted-input array |
 
 ## Common patterns
 

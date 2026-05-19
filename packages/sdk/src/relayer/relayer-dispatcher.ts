@@ -148,8 +148,8 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
     return this.#active.userDecrypt(params);
   }
 
-  publicDecrypt(handles: EncryptedValue[]): Promise<PublicDecryptResult> {
-    return this.#active.publicDecrypt(handles);
+  publicDecrypt(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult> {
+    return this.#active.publicDecrypt(encryptedValues);
   }
 
   createDelegatedUserDecryptEIP712(

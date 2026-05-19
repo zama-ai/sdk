@@ -263,7 +263,7 @@ describe("RelayerWeb", () => {
       mockWorkerClient.userDecrypt.mockResolvedValue({ clearValues });
 
       const params = {
-        handles: [HANDLE],
+        encryptedValues: [HANDLE],
         contractAddress: "0xC" as `0x${string}`,
         signedContractAddresses: ["0xC" as `0x${string}`],
         privateKey: "0xsk" as `0x${string}`,
@@ -299,7 +299,7 @@ describe("RelayerWeb", () => {
       expect(result).toEqual(mockResult);
       expect(mockWorkerClient.publicDecrypt).toHaveBeenCalledWith({
         chainId: 11155111,
-        handles: [HANDLE],
+        encryptedValues: [HANDLE],
       });
     });
 
@@ -334,7 +334,7 @@ describe("RelayerWeb", () => {
       });
 
       const params = {
-        handles: [HANDLE],
+        encryptedValues: [HANDLE],
         contractAddress: "0xC" as `0x${string}`,
         signedContractAddresses: ["0xC" as `0x${string}`],
         privateKey: "0xsk" as `0x${string}`,
@@ -568,7 +568,7 @@ describe("RelayerNode", () => {
       mockPool.userDecrypt.mockResolvedValue({ clearValues });
 
       const params = {
-        handles: [HANDLE],
+        encryptedValues: [HANDLE],
         contractAddress: "0xC" as `0x${string}`,
         signedContractAddresses: ["0xC" as `0x${string}`],
         privateKey: "0xsk" as `0x${string}`,
@@ -604,7 +604,7 @@ describe("RelayerNode", () => {
       expect(result).toEqual(mockResult);
       expect(mockPool.publicDecrypt).toHaveBeenCalledWith({
         chainId: 11155111,
-        handles: [HANDLE],
+        encryptedValues: [HANDLE],
       });
     });
 
@@ -639,7 +639,7 @@ describe("RelayerNode", () => {
       });
 
       const params = {
-        handles: [HANDLE],
+        encryptedValues: [HANDLE],
         contractAddress: "0xC" as `0x${string}`,
         signedContractAddresses: ["0xC" as `0x${string}`],
         privateKey: "0xsk" as `0x${string}`,

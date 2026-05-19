@@ -21,6 +21,8 @@ describe("usePublicDecrypt", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(relayer.publicDecrypt).toHaveBeenCalledWith(["0xhandle1"]);
 
-    expect(queryClient.getQueryData(zamaQueryKeys.decryption.handle("0xhandle1"))).toBe(500n);
+    expect(queryClient.getQueryData(zamaQueryKeys.decryption.encryptedValue("0xhandle1"))).toBe(
+      500n,
+    );
   });
 });

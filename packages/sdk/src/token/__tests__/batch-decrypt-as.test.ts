@@ -20,15 +20,19 @@ function stubDelegatedBatchDecrypt(sdk: ZamaSDK, values: Record<Handle, bigint>)
   const stub = vi
     .fn()
     .mockImplementation(
-      async ({ handles }: { handles: { handle: Handle; contractAddress: Address }[] }) => ({
-        items: handles.map(({ handle, contractAddress }) => {
-          const value = values[handle];
+      async ({
+        encryptedInputs,
+      }: {
+        encryptedInputs: { encryptedValue: Handle; contractAddress: Address }[];
+      }) => ({
+        items: encryptedInputs.map(({ encryptedValue, contractAddress }) => {
+          const value = values[encryptedValue];
           return value !== undefined
-            ? { handle, contractAddress, value }
+            ? { encryptedValue, contractAddress, value }
             : {
-                handle,
+                encryptedValue,
                 contractAddress,
-                error: new Error(`No value for ${handle}`),
+                error: new Error(`No value for ${encryptedValue}`),
               };
         }),
       }),

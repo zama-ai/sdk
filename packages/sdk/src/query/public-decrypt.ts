@@ -18,7 +18,7 @@ export function publicDecryptMutationOptions(
         EncryptedValue,
         ClearValueType,
       ][]) {
-        context.client.setQueryData(zamaQueryKeys.decryption.handle(handle), value);
+        context.client.setQueryData(zamaQueryKeys.decryption.encryptedValue(handle), value);
       }
     },
   };

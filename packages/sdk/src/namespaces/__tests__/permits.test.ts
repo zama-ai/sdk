@@ -109,7 +109,7 @@ describe("Permits", () => {
       relayer,
       handle,
     }) => {
-      const handles = [{ handle, contractAddress: CONTRACT_A }];
+      const handles = [{ encryptedValue: handle, contractAddress: CONTRACT_A }];
       await sdk.decryption.userDecrypt(handles);
       expect(relayer.userDecrypt).toHaveBeenCalledOnce();
 
@@ -124,7 +124,7 @@ describe("Permits", () => {
       relayer,
       handle,
     }) => {
-      const handles = [{ handle, contractAddress: CONTRACT_A }];
+      const handles = [{ encryptedValue: handle, contractAddress: CONTRACT_A }];
       await sdk.decryption.userDecrypt(handles);
       expect(relayer.userDecrypt).toHaveBeenCalledOnce();
 
@@ -139,7 +139,7 @@ describe("Permits", () => {
       relayer,
       handle,
     }) => {
-      const handles = [{ handle, contractAddress: CONTRACT_A }];
+      const handles = [{ encryptedValue: handle, contractAddress: CONTRACT_A }];
       await sdk.decryption.userDecrypt(handles);
       expect(relayer.userDecrypt).toHaveBeenCalledOnce();
 

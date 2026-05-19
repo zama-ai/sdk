@@ -150,13 +150,13 @@ function createInstance(options: MockClientOptions = {}): {
 }
 
 function createUserDecryptParams(
-  overrides: Omit<Partial<UserDecryptParams>, "handles"> & {
-    handles: string[];
+  overrides: Omit<Partial<UserDecryptParams>, "encryptedValues"> & {
+    encryptedValues: string[];
   },
 ): UserDecryptParams {
-  const { handles, ...rest } = overrides;
+  const { encryptedValues, ...rest } = overrides;
   return {
-    handles: handles as Handle[],
+    encryptedValues: encryptedValues as Handle[],
     contractAddress: CONTRACT_ADDRESS,
     signedContractAddresses: [CONTRACT_ADDRESS],
     privateKey: `0x${"01".repeat(32)}`,
@@ -426,7 +426,7 @@ describe("RelayerCleartext", () => {
     await expect(
       fhevm.userDecrypt(
         createUserDecryptParams({
-          handles: [handle],
+          encryptedValues: [handle],
         }),
       ),
     ).rejects.toThrow(/not authorized/i);
@@ -445,7 +445,7 @@ describe("RelayerCleartext", () => {
 
     const result = await fhevm.userDecrypt(
       createUserDecryptParams({
-        handles: [handleA, handleB],
+        encryptedValues: [handleA, handleB],
         privateKey: `0x${"11".repeat(32)}`,
         publicKey: `0x${"22".repeat(32)}`,
         signature: `0x${"33".repeat(65)}`,
@@ -478,7 +478,7 @@ describe("RelayerCleartext", () => {
     await expect(
       fhevm.userDecrypt(
         createUserDecryptParams({
-          handles: [handleA, handleB],
+          encryptedValues: [handleA, handleB],
         }),
       ),
     ).rejects.toThrow(new RegExp(normalizedB));
@@ -501,7 +501,7 @@ describe("RelayerCleartext", () => {
 
     await fhevm.userDecrypt(
       createUserDecryptParams({
-        handles: [handle],
+        encryptedValues: [handle],
       }),
     );
 
@@ -519,9 +519,9 @@ describe("RelayerCleartext", () => {
       plaintexts: { [handle.toLowerCase()]: 42n },
     });
 
-    await expect(fhevm.userDecrypt(createUserDecryptParams({ handles: [handle] }))).rejects.toThrow(
-      /Contract.*not authorized/i,
-    );
+    await expect(
+      fhevm.userDecrypt(createUserDecryptParams({ encryptedValues: [handle] })),
+    ).rejects.toThrow(/Contract.*not authorized/i);
   });
 
   test("userDecrypt throws when signer equals contract", async () => {
@@ -534,7 +534,7 @@ describe("RelayerCleartext", () => {
     await expect(
       fhevm.userDecrypt(
         createUserDecryptParams({
-          handles: [handle],
+          encryptedValues: [handle],
           signerAddress: CONTRACT_ADDRESS,
           contractAddress: CONTRACT_ADDRESS,
         }),
@@ -552,7 +552,7 @@ describe("RelayerCleartext", () => {
 
     const result = await fhevm.userDecrypt(
       createUserDecryptParams({
-        handles: [handleUpper],
+        encryptedValues: [handleUpper],
       }),
     );
 
@@ -569,7 +569,9 @@ describe("RelayerCleartext", () => {
       plaintexts: { [boolHandle.toLowerCase()]: 1n },
     });
 
-    const result = await fhevm.userDecrypt(createUserDecryptParams({ handles: [boolHandle] }));
+    const result = await fhevm.userDecrypt(
+      createUserDecryptParams({ encryptedValues: [boolHandle] }),
+    );
 
     expect(result[boolHandle]).toBeTruthy();
   });
@@ -581,7 +583,9 @@ describe("RelayerCleartext", () => {
       plaintexts: { [boolHandle.toLowerCase()]: 0n },
     });
 
-    const result = await fhevm.userDecrypt(createUserDecryptParams({ handles: [boolHandle] }));
+    const result = await fhevm.userDecrypt(
+      createUserDecryptParams({ encryptedValues: [boolHandle] }),
+    );
 
     expect(result[boolHandle]).toBeFalsy();
   });
@@ -594,7 +598,9 @@ describe("RelayerCleartext", () => {
       plaintexts: { [addressHandle.toLowerCase()]: addressValue },
     });
 
-    const result = await fhevm.userDecrypt(createUserDecryptParams({ handles: [addressHandle] }));
+    const result = await fhevm.userDecrypt(
+      createUserDecryptParams({ encryptedValues: [addressHandle] }),
+    );
 
     const decoded = result[addressHandle];
     expect(decoded).toMatch(/^0x[0-9a-f]{40}$/);
@@ -711,7 +717,7 @@ describe("RelayerCleartext", () => {
 
     await expect(
       fhevm.delegatedUserDecrypt({
-        handles: [handle],
+        encryptedValues: [handle],
         contractAddress: CONTRACT_ADDRESS,
         signedContractAddresses: [CONTRACT_ADDRESS],
         privateKey: `0x${"01".repeat(32)}`,
@@ -742,7 +748,7 @@ describe("RelayerCleartext", () => {
     });
 
     const result = await fhevm.delegatedUserDecrypt({
-      handles: [handleA, handleB],
+      encryptedValues: [handleA, handleB],
       contractAddress: CONTRACT_ADDRESS,
       signedContractAddresses: [CONTRACT_ADDRESS],
       privateKey: `0x${"11".repeat(32)}`,
@@ -804,7 +810,7 @@ describe("RelayerCleartext", () => {
 
     await expect(
       fhevm.delegatedUserDecrypt({
-        handles: [handleA, handleB],
+        encryptedValues: [handleA, handleB],
         contractAddress: CONTRACT_ADDRESS,
         signedContractAddresses: [CONTRACT_ADDRESS],
         privateKey: `0x${"01".repeat(32)}`,
@@ -849,7 +855,7 @@ describe("RelayerCleartext", () => {
     });
 
     const result = await fhevm.delegatedUserDecrypt({
-      handles: [handleA, handleB],
+      encryptedValues: [handleA, handleB],
       contractAddress: CONTRACT_ADDRESS,
       signedContractAddresses: [CONTRACT_ADDRESS],
       privateKey: `0x${"11".repeat(32)}`,
@@ -879,7 +885,7 @@ describe("RelayerCleartext", () => {
     });
 
     const result = await fhevm.delegatedUserDecrypt({
-      handles: [boolHandle, addressHandle],
+      encryptedValues: [boolHandle, addressHandle],
       contractAddress: CONTRACT_ADDRESS,
       signedContractAddresses: [CONTRACT_ADDRESS],
       privateKey: `0x${"11".repeat(32)}`,

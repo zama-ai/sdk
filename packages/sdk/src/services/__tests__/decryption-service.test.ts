@@ -1,6 +1,6 @@
 import { getAddress, type Address } from "viem";
 import { MAX_UINT64 } from "../../contracts";
-import type { DecryptHandle } from "../../query/user-decrypt";
+import type { EncryptedInput } from "../../query/user-decrypt";
 import type { Handle } from "../../relayer/relayer-sdk.types";
 import { describe, expect, test, vi } from "../../test-fixtures";
 
@@ -13,9 +13,9 @@ const HANDLE_A = `0x${"aa".repeat(32)}` as Handle;
 const HANDLE_B = `0x${"bb".repeat(32)}` as Handle;
 const ZERO_HANDLE = `0x${"00".repeat(32)}` as Handle;
 
-function handles(items: Array<[Handle, Address]>): DecryptHandle[] {
-  return items.map(([handle, contractAddress]) => ({
-    handle,
+function handles(items: Array<[Handle, Address]>): EncryptedInput[] {
+  return items.map(([encryptedValue, contractAddress]) => ({
+    encryptedValue,
     contractAddress,
   }));
 }
@@ -61,13 +61,13 @@ describe("DecryptionService", () => {
     await expect(cachingService.get(userAddress, CONTRACT_B, HANDLE_B)).resolves.toBe(20n);
     expect(relayer.userDecrypt).toHaveBeenCalledWith(
       expect.objectContaining({
-        handles: [HANDLE_A],
+        encryptedValues: [HANDLE_A],
         contractAddress: CONTRACT_A,
       }),
     );
     expect(relayer.userDecrypt).toHaveBeenCalledWith(
       expect.objectContaining({
-        handles: [HANDLE_B],
+        encryptedValues: [HANDLE_B],
         contractAddress: CONTRACT_B,
       }),
     );
@@ -117,7 +117,7 @@ describe("DecryptionService", () => {
     );
     expect(relayer.userDecrypt).toHaveBeenCalledWith(
       expect.objectContaining({
-        handles: [HANDLE_B],
+        encryptedValues: [HANDLE_B],
         contractAddress: CONTRACT_B,
       }),
     );
@@ -201,7 +201,7 @@ describe("DecryptionService", () => {
       .mockRejectedValueOnce(new Error("handle failed"));
 
     const result = await decryptionService.delegatedBatchDecryptHandlesAs({
-      handles: handles([
+      encryptedInputs: handles([
         [HANDLE_A, CONTRACT_A],
         [HANDLE_B, CONTRACT_B],
       ]),
@@ -212,9 +212,9 @@ describe("DecryptionService", () => {
     });
 
     expect(result.items).toEqual([
-      { handle: HANDLE_A, contractAddress: CONTRACT_A, value: 10n },
+      { encryptedValue: HANDLE_A, contractAddress: CONTRACT_A, value: 10n },
       {
-        handle: HANDLE_B,
+        encryptedValue: HANDLE_B,
         contractAddress: CONTRACT_B,
         error: expect.objectContaining({ code: "DECRYPTION_FAILED" }),
       },
@@ -233,7 +233,7 @@ describe("DecryptionService", () => {
     vi.mocked(relayer.delegatedUserDecrypt).mockResolvedValue({});
 
     const result = await decryptionService.delegatedBatchDecryptHandlesAs({
-      handles: handles([[HANDLE_A, CONTRACT_A]]),
+      encryptedInputs: handles([[HANDLE_A, CONTRACT_A]]),
       delegatorAddress,
       delegateAddress,
       accountAddress: userAddress,
@@ -241,7 +241,7 @@ describe("DecryptionService", () => {
 
     expect(result.items).toEqual([
       {
-        handle: HANDLE_A,
+        encryptedValue: HANDLE_A,
         contractAddress: CONTRACT_A,
         error: expect.objectContaining({ code: "DECRYPTION_FAILED" }),
       },

@@ -184,7 +184,7 @@ export interface DelegatedUserDecryptParams {
     // Warning: (ae-forgotten-export) The symbol "EncryptedValue" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
-    handles: EncryptedValue[];
+    encryptedValues: EncryptedValue[];
     // (undocumented)
     privateKey: Hex;
     // (undocumented)
@@ -205,7 +205,7 @@ export interface DelegatedUserDecryptRequest extends BaseRequest {
     // (undocumented)
     payload: {
         chainId: number;
-        handles: EncryptedValue[];
+        encryptedValues: EncryptedValue[];
         contractAddress: Address;
         signedContractAddresses: Address[];
         privateKey: Hex;
@@ -446,7 +446,7 @@ export interface PublicDecryptRequest extends BaseRequest {
     // (undocumented)
     payload: {
         chainId: number;
-        handles: EncryptedValue[];
+        encryptedValues: EncryptedValue[];
     };
     // (undocumented)
     type: "PUBLIC_DECRYPT";
@@ -543,7 +543,7 @@ export interface UserDecryptParams {
     // (undocumented)
     durationDays: number;
     // (undocumented)
-    handles: EncryptedValue[];
+    encryptedValues: EncryptedValue[];
     // (undocumented)
     privateKey: Hex;
     // (undocumented)
@@ -566,7 +566,7 @@ export interface UserDecryptRequest extends BaseRequest {
     // (undocumented)
     payload: {
         chainId: number;
-        handles: EncryptedValue[];
+        encryptedValues: EncryptedValue[];
         contractAddress: Address;
         signedContractAddresses: Address[];
         privateKey: Hex;
