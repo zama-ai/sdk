@@ -15,8 +15,6 @@ export { useEncrypt } from "./relayer/use-encrypt";
 export { useUserDecrypt, type UseUserDecryptResult } from "./decrypt/use-user-decrypt";
 
 export { usePublicDecrypt } from "./decrypt/use-public-decrypt";
-export { useCreateEIP712 } from "./relayer/use-create-eip712";
-export { useCreateDelegatedUserDecryptEIP712 } from "./relayer/use-create-delegated-user-decrypt-eip712";
 export { useDelegatedDecrypt } from "./decrypt/use-delegated-decrypt";
 
 // Authorization hooks (generic — any contract with encrypted state)

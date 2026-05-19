@@ -16,14 +16,11 @@ import { ClearValueType } from '@zama-fhe/sdk';
 import { ConfidentialSetOperatorParams } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferFromParams } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferParams } from '@zama-fhe/sdk/query';
-import { CreateDelegatedUserDecryptEIP712Params } from '@zama-fhe/sdk/query';
-import { CreateEIP712Params } from '@zama-fhe/sdk/query';
 import { DecryptBalanceAsParams } from '@zama-fhe/sdk/query';
 import { DecryptResult } from '@zama-fhe/sdk/query';
 import { DelegatedDecryptMutationParams } from '@zama-fhe/sdk/query';
 import { DelegateDecryptionParams } from '@zama-fhe/sdk/query';
 import { DelegationStatusData } from '@zama-fhe/sdk/query';
-import { EIP712TypedData } from '@zama-fhe/sdk';
 import { EncryptParams } from '@zama-fhe/sdk';
 import { FinalizeUnwrapParams } from '@zama-fhe/sdk/query';
 import { PaginatedResult } from '@zama-fhe/sdk';
@@ -123,17 +120,6 @@ export interface UseConfidentialTransferConfig {
 
 // @public
 export function useConfidentialTransferFrom(address: Address, options?: UseMutationOptions<TransactionResult, Error, ConfidentialTransferFromParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, ConfidentialTransferFromParams, `0x${string}`>;
-
-// @public
-export function useCreateDelegatedUserDecryptEIP712(): _$_tanstack_react_query0.UseMutationResult<Readonly<{
-    types: _$_zama_fhe_relayer_sdk_web0.KmsDelegatedUserDecryptEIP712TypesType;
-    primaryType: "DelegatedUserDecryptRequestVerification";
-    domain: _$_zama_fhe_relayer_sdk_web0.KmsEIP712DomainType;
-    message: _$_zama_fhe_relayer_sdk_web0.KmsDelegatedUserDecryptEIP712MessageType;
-}>, Error, CreateDelegatedUserDecryptEIP712Params, unknown>;
-
-// @public
-export function useCreateEIP712(): _$_tanstack_react_query0.UseMutationResult<EIP712TypedData, Error, CreateEIP712Params, unknown>;
 
 // @public
 export function useDecryptBalanceAs(address: Address, options?: UseMutationOptions<bigint, Error, DecryptBalanceAsParams>): _$_tanstack_react_query0.UseMutationResult<bigint, Error, DecryptBalanceAsParams, unknown>;

@@ -18,7 +18,6 @@ import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
 import { KeypairType } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
-import { KmsUserDecryptEIP712UserArgsType } from '@zama-fhe/relayer-sdk/bundle';
 import { MutationFunctionContext } from '@tanstack/query-core';
 import { PublicDecryptResults } from '@zama-fhe/relayer-sdk/bundle';
 import { QueryKey } from '@tanstack/query-core';
@@ -177,33 +176,6 @@ export interface ConfidentialTransferParams extends TransferOptions {
     // (undocumented)
     to: Address;
 }
-
-// @public (undocumented)
-export function createDelegatedUserDecryptEIP712MutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.createDelegatedUserDecryptEIP712"], CreateDelegatedUserDecryptEIP712Params, KmsDelegatedUserDecryptEIP712Type>;
-
-// @public
-export interface CreateDelegatedUserDecryptEIP712Params {
-    // (undocumented)
-    contractAddresses: Address[];
-    // (undocumented)
-    delegatorAddress: Address;
-    // (undocumented)
-    durationDays?: number;
-    // (undocumented)
-    publicKey: Hex;
-    // (undocumented)
-    startTimestamp: number;
-}
-
-// @public (undocumented)
-export function createEIP712MutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.createEIP712"], CreateEIP712Params, EIP712TypedData>;
-
-// @public
-export type CreateEIP712Params = Pick<KmsUserDecryptEIP712UserArgsType, "startTimestamp"> & {
-    publicKey: Hex;
-    contractAddresses: Address[];
-    durationDays?: number;
-};
 
 // @public (undocumented)
 export function decryptBalanceAsMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.decryptBalanceAs", Address], DecryptBalanceAsParams, bigint>;
