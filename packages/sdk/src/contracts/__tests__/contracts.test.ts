@@ -15,7 +15,6 @@ import {
   supportsInterfaceContract,
   ERC7984_INTERFACE_ID,
   ERC7984_WRAPPER_INTERFACE_ID,
-  ERC7984_WRAPPER_INTERFACE_ID_LEGACY,
   isConfidentialTokenContract,
   isConfidentialWrapperContract,
 } from "../erc165";
@@ -30,7 +29,6 @@ import {
   unwrapContract,
   unwrapFromBalanceContract,
   confidentialTotalSupplyContract,
-  totalSupplyContract,
   rateContract,
 } from "../encrypted";
 
@@ -89,7 +87,6 @@ describe("ERC-165 contract builders", () => {
 
   test("exports interface IDs", () => {
     expect(ERC7984_INTERFACE_ID).toBe("0x4958f2a4");
-    expect(ERC7984_WRAPPER_INTERFACE_ID_LEGACY).toBe("0xd04584ba");
     expect(ERC7984_WRAPPER_INTERFACE_ID).toBe("0x1f1c62b2");
   });
 
@@ -100,13 +97,11 @@ describe("ERC-165 contract builders", () => {
     expect(config.args).toEqual([ERC7984_INTERFACE_ID]);
   });
 
-  test("isConfidentialWrapperContract uses ERC7984_WRAPPER_INTERFACE_ID_LEGACY", ({
-    tokenAddress,
-  }) => {
+  test("isConfidentialWrapperContract uses ERC7984_WRAPPER_INTERFACE_ID", ({ tokenAddress }) => {
     const config = isConfidentialWrapperContract(tokenAddress);
     expect(config.address).toBe(tokenAddress);
     expect(config.functionName).toBe("supportsInterface");
-    expect(config.args).toEqual([ERC7984_WRAPPER_INTERFACE_ID_LEGACY]);
+    expect(config.args).toEqual([ERC7984_WRAPPER_INTERFACE_ID]);
   });
 });
 
@@ -186,12 +181,6 @@ describe("Encryption contract builders", () => {
     expect(config.args).toEqual([]);
   });
 
-  test("totalSupplyContract builds the legacy totalSupply call", ({ wrapperAddress }) => {
-    const config = totalSupplyContract(wrapperAddress);
-    expect(config.address).toBe(wrapperAddress);
-    expect(config.functionName).toBe("totalSupply");
-  });
-
   test("rateContract", ({ tokenAddress }) => {
     const config = rateContract(tokenAddress);
     expect(config.functionName).toBe("rate");
@@ -227,11 +216,11 @@ describe("Wrapper contract builders", () => {
   });
 });
 
-// Regression: verify wrapperAbi matches protocol-apps@da4afe387420 (currently deployed).
-// These assertions prove the chosen ABI version is intentional: the interface uses
-// openzeppelin-confidential-contracts@6edd293 where unwrapRequester is part of IERC7984ERC20Wrapper
-// (7 functions).
-describe("wrapperAbi version smoke test (protocol-apps@da4afe387420)", () => {
+// Regression: verify wrapperAbi matches protocol-apps@3bd308fb7cb1 (post-mainnet upgrade).
+// These assertions pin the wrapper interface shape: finalizeUnwrap takes a bytes32
+// unwrapRequestId, unwrapAmount / unwrapRequester are exposed, and both UnwrapRequested
+// and UnwrapFinalized events include the indexed unwrapRequestId topic.
+describe("wrapperAbi version smoke test (protocol-apps@3bd308fb7cb1)", () => {
   type AbiFunction = {
     type: string;
     name: string;
@@ -267,10 +256,11 @@ describe("wrapperAbi version smoke test (protocol-apps@da4afe387420)", () => {
     expect(f!.inputs[0].type).toBe("bytes32");
   });
 
-  test("keeps legacy and upgraded unwrap events in the exported wrapper ABI", () => {
-    expect(eventSignatures).toContain("UnwrapRequested(address,bytes32)");
+  test("includes upgraded unwrap event signatures in the exported wrapper ABI", () => {
     expect(eventSignatures).toContain("UnwrapRequested(address,bytes32,bytes32)");
-    expect(eventSignatures).toContain("UnwrapFinalized(address,bytes32,uint64)");
     expect(eventSignatures).toContain("UnwrapFinalized(address,bytes32,bytes32,uint64)");
+    // Guard against the legacy 2/3-arg signatures being re-introduced.
+    expect(eventSignatures.filter((s) => s.startsWith("UnwrapRequested("))).toHaveLength(1);
+    expect(eventSignatures.filter((s) => s.startsWith("UnwrapFinalized("))).toHaveLength(1);
   });
 });

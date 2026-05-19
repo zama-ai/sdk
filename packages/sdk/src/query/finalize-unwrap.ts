@@ -6,9 +6,9 @@ import type { MutationFactoryOptions } from "./factory-types";
 import type { Address } from "viem";
 /** Variables for {@link finalizeUnwrapMutationOptions}. */
 export type FinalizeUnwrapParams =
-  /** Preferred input from upgraded `UnwrapRequested` events. */
+  /** Identifier from an `UnwrapRequested` event. */
   | { unwrapRequestId: EncryptedValue; burnAmountHandle?: never }
-  /** Legacy input from pre-upgrade `UnwrapRequested` events. */
+  /** Encrypted burn-amount handle, accepted as an alternative when no `unwrapRequestId` is available. */
   | { unwrapRequestId?: never; burnAmountHandle: EncryptedValue };
 
 export function finalizeUnwrapMutationOptions(

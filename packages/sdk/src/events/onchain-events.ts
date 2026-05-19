@@ -31,14 +31,8 @@ export const Topics = {
   Wrapped: eventTopic("Wrapped(address,uint256)"),
   /** `UnwrapRequested(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 amount)` */
   UnwrapRequested: eventTopic("UnwrapRequested(address,bytes32,bytes32)"),
-  /** `UnwrapRequested(address indexed receiver, bytes32 amount)` */
-  UnwrapRequestedLegacy: eventTopic("UnwrapRequested(address,bytes32)"),
   /** `UnwrapFinalized(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 encryptedAmount, uint64 cleartextAmount)` */
   UnwrapFinalized: eventTopic("UnwrapFinalized(address,bytes32,bytes32,uint64)"),
-  /** `UnwrapFinalized(address indexed receiver, bytes32 encryptedAmount, uint64 cleartextAmount)` */
-  UnwrapFinalizedLegacy: eventTopic("UnwrapFinalized(address,bytes32,uint64)"),
-  /** @deprecated Use `Topics.UnwrapFinalized`. */
-  UnwrappedFinalized: eventTopic("UnwrapFinalized(address,bytes32,bytes32,uint64)"),
   /** `UnwrappedStarted(bool returnVal, uint256 indexed requestId, ...)` */
   UnwrappedStarted: eventTopic(
     "UnwrappedStarted(bool,uint256,uint256,address,address,bytes32,bytes32)",
@@ -96,15 +90,6 @@ export interface UnwrapFinalizedEvent {
   readonly unwrapRequestId?: EncryptedValue;
 }
 
-/** @deprecated Use `UnwrapFinalizedEvent`. */
-export interface UnwrappedFinalizedEvent {
-  readonly eventName: "UnwrappedFinalized";
-  readonly receiver: Address;
-  readonly encryptedAmount: EncryptedValue;
-  readonly cleartextAmount: bigint;
-  readonly unwrapRequestId?: EncryptedValue;
-}
-
 /** Decoded `UnwrappedStarted` event — the relayer began processing an unshield. */
 export interface UnwrappedStartedEvent {
   readonly eventName: "UnwrappedStarted";
@@ -130,7 +115,6 @@ export type OnChainEvent =
   | WrappedEvent
   | UnwrapRequestedEvent
   | UnwrapFinalizedEvent
-  | UnwrappedFinalizedEvent
   | UnwrappedStartedEvent;
 
 // ---------------------------------------------------------------------------
@@ -221,98 +205,41 @@ export function decodeWrapped(log: RawLog): WrappedEvent | null {
 }
 
 /**
- * UnwrapRequested(address indexed receiver, bytes32 amount)
  * UnwrapRequested(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 amount)
  */
 export function decodeUnwrapRequested(log: RawLog): UnwrapRequestedEvent | null {
-  if (log.topics[0] === Topics.UnwrapRequested) {
-    if (log.topics.length < 3) {
-      return null;
-    }
-
-    return {
-      eventName: "UnwrapRequested",
-      receiver: topicToAddress(log.topics[1]!),
-      unwrapRequestId: topicToBytes32(log.topics[2]!),
-      encryptedAmount: wordToBytes32(log.data, 0),
-    };
+  if (log.topics[0] !== Topics.UnwrapRequested) {
+    return null;
   }
-
-  if (log.topics[0] === Topics.UnwrapRequestedLegacy) {
-    if (log.topics.length < 2) {
-      return null;
-    }
-
-    return {
-      eventName: "UnwrapRequested",
-      receiver: topicToAddress(log.topics[1]!),
-      encryptedAmount: wordToBytes32(log.data, 0),
-    };
-  }
-
-  return null;
-}
-
-/**
- * UnwrapFinalized(address indexed receiver, bytes32 encryptedAmount, uint64 cleartextAmount)
- * UnwrapFinalized(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 encryptedAmount, uint64 cleartextAmount)
- */
-export function decodeUnwrapFinalized(log: RawLog): UnwrapFinalizedEvent | null {
-  if (log.topics[0] === Topics.UnwrapFinalized) {
-    if (log.topics.length < 3) {
-      return null;
-    }
-
-    return {
-      eventName: "UnwrapFinalized",
-      receiver: topicToAddress(log.topics[1]!),
-      unwrapRequestId: topicToBytes32(log.topics[2]!),
-      encryptedAmount: wordToBytes32(log.data, 0),
-      cleartextAmount: wordToBigInt(log.data, 1),
-    };
-  }
-
-  if (log.topics[0] === Topics.UnwrapFinalizedLegacy) {
-    if (log.topics.length < 2) {
-      return null;
-    }
-
-    return {
-      eventName: "UnwrapFinalized",
-      receiver: topicToAddress(log.topics[1]!),
-      encryptedAmount: wordToBytes32(log.data, 0),
-      cleartextAmount: wordToBigInt(log.data, 1),
-    };
-  }
-
-  return null;
-}
-
-/** @deprecated Use `decodeUnwrapFinalized`. */
-export function decodeUnwrappedFinalized(log: RawLog): UnwrappedFinalizedEvent | null {
-  const event = decodeUnwrapFinalized(log);
-  if (!event) {
+  if (log.topics.length < 3) {
     return null;
   }
 
   return {
-    ...event,
-    eventName: "UnwrappedFinalized",
+    eventName: "UnwrapRequested",
+    receiver: topicToAddress(log.topics[1]!),
+    unwrapRequestId: topicToBytes32(log.topics[2]!),
+    encryptedAmount: wordToBytes32(log.data, 0),
   };
 }
 
-function decodeLegacyUnwrappedFinalized(log: RawLog): UnwrappedFinalizedEvent | null {
-  if (log.topics[0] !== Topics.UnwrapFinalizedLegacy) {
+/**
+ * UnwrapFinalized(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 encryptedAmount, uint64 cleartextAmount)
+ */
+export function decodeUnwrapFinalized(log: RawLog): UnwrapFinalizedEvent | null {
+  if (log.topics[0] !== Topics.UnwrapFinalized) {
     return null;
   }
-  const event = decodeUnwrapFinalized(log);
-  if (!event) {
+  if (log.topics.length < 3) {
     return null;
   }
 
   return {
-    ...event,
-    eventName: "UnwrappedFinalized",
+    eventName: "UnwrapFinalized",
+    receiver: topicToAddress(log.topics[1]!),
+    unwrapRequestId: topicToBytes32(log.topics[2]!),
+    encryptedAmount: wordToBytes32(log.data, 0),
+    cleartextAmount: wordToBigInt(log.data, 1),
   };
 }
 
@@ -362,7 +289,6 @@ export function decodeOnChainEvent(log: RawLog): OnChainEvent | null {
     decodeConfidentialTransfer(log) ??
     decodeWrapped(log) ??
     decodeUnwrapRequested(log) ??
-    decodeLegacyUnwrappedFinalized(log) ??
     decodeUnwrapFinalized(log) ??
     decodeUnwrappedStarted(log)
   );
@@ -436,9 +362,7 @@ export const TOKEN_TOPICS = [
   Topics.ConfidentialTransfer,
   Topics.Wrapped,
   Topics.UnwrapRequested,
-  Topics.UnwrapRequestedLegacy,
   Topics.UnwrapFinalized,
-  Topics.UnwrapFinalizedLegacy,
   Topics.UnwrappedStarted,
 ] as const;
 

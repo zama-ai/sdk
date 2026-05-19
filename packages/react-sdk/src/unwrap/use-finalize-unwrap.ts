@@ -26,12 +26,7 @@ import { useWrappedToken } from "../token/use-wrapped-token";
  * ```tsx
  * const finalize = useFinalizeUnwrap("0xWrapper");
  * const event = findUnwrapRequested(receipt.logs);
- * // Pass unwrapRequestId from upgraded events, or fall back to encryptedAmount for legacy ones.
- * finalize.mutate(
- *   event.unwrapRequestId
- *     ? { unwrapRequestId: event.unwrapRequestId }
- *     : { burnAmountHandle: event.encryptedAmount },
- * );
+ * finalize.mutate({ unwrapRequestId: event.unwrapRequestId });
  * ```
  */
 export function useFinalizeUnwrap(

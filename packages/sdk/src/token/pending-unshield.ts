@@ -15,10 +15,10 @@ export interface PendingUnshieldRequest {
   /** Transaction hash of the original unwrap call. */
   readonly unwrapTxHash: Hex;
   /**
-   * Request identifier emitted by upgraded wrapper contracts.
-   * Present only for requests initiated after the protocol upgrade.
+   * Request identifier from the `UnwrapRequested` event.
    * When defined, pass this as `unwrapRequestId` to `finalizeUnwrap`.
-   * When absent (legacy request), pass the `encryptedAmount` from the `UnwrapRequested` event.
+   * May be absent for entries persisted by older SDK versions; in that case
+   * pass the `encryptedAmount` from the `UnwrapRequested` event instead.
    */
   readonly unwrapRequestId?: EncryptedValue;
 }

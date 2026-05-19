@@ -460,7 +460,7 @@ describe("Token event emissions", () => {
         logs: [
           {
             topics: [
-              Topics.UnwrapRequestedLegacy,
+              Topics.UnwrapRequested,
               `0x000000000000000000000000${userAddress.slice(2)}`,
               `0x${"ff".repeat(32)}`,
             ],

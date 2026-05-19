@@ -8,7 +8,6 @@ import {
   decodeWrapped,
   decodeUnwrapRequested,
   decodeUnwrapFinalized,
-  decodeUnwrappedFinalized,
   decodeUnwrappedStarted,
   decodeOnChainEvent,
   decodeOnChainEvents,
@@ -111,18 +110,6 @@ describe("decodeWrapped", () => {
 // ---------------------------------------------------------------------------
 
 describe("decodeUnwrapRequested", () => {
-  test("decodes a valid UnwrapRequested log", () => {
-    // UnwrapRequested(address indexed receiver, bytes32 amount)
-    const data = `0x${HANDLE.slice(2)}` as Hex;
-    const log = makeLog(Topics.UnwrapRequestedLegacy, [addressTopic(ALICE)], data);
-    const event = decodeUnwrapRequested(log);
-    expect(event).not.toBeNull();
-    expect(event!.eventName).toBe("UnwrapRequested");
-    expect(event!.receiver.toLowerCase()).toBe(ALICE.toLowerCase());
-    expect(event!.unwrapRequestId).toBeUndefined();
-    expect(event!.encryptedAmount).toBe(HANDLE);
-  });
-
   test("decodes a valid UnwrapRequested log with unwrapRequestId", () => {
     const data = `0x${HANDLE.slice(2)}` as Hex;
     const log = makeLog(Topics.UnwrapRequested, [addressTopic(ALICE), UNWRAP_REQUEST_ID], data);
@@ -140,28 +127,16 @@ describe("decodeUnwrapRequested", () => {
   });
 
   test("returns null for insufficient topics", () => {
-    const log = makeLog(Topics.UnwrapRequestedLegacy, []);
+    const log = makeLog(Topics.UnwrapRequested, []);
     expect(decodeUnwrapRequested(log)).toBeNull();
   });
 });
 
 // ---------------------------------------------------------------------------
-// decodeUnwrappedFinalized
+// decodeUnwrapFinalized
 // ---------------------------------------------------------------------------
 
-describe("decodeUnwrappedFinalized", () => {
-  test("decodes a valid UnwrapFinalized log", () => {
-    // UnwrapFinalized(address indexed receiver, bytes32 encryptedAmount, uint64 cleartextAmount)
-    const data = `0x${HANDLE.slice(2)}${uint256(450n)}` as Hex;
-    const log = makeLog(Topics.UnwrapFinalizedLegacy, [addressTopic(ALICE)], data);
-    const event = decodeUnwrapFinalized(log);
-    expect(event).not.toBeNull();
-    expect(event!.eventName).toBe("UnwrapFinalized");
-    expect(event!.receiver.toLowerCase()).toBe(ALICE.toLowerCase());
-    expect(event!.encryptedAmount).toBe(HANDLE);
-    expect(event!.cleartextAmount).toBe(450n);
-  });
-
+describe("decodeUnwrapFinalized", () => {
   test("decodes a valid UnwrapFinalized log with unwrapRequestId", () => {
     const data = `0x${HANDLE.slice(2)}${uint256(450n)}` as Hex;
     const log = makeLog(Topics.UnwrapFinalized, [addressTopic(ALICE), UNWRAP_REQUEST_ID], data);
@@ -174,33 +149,13 @@ describe("decodeUnwrappedFinalized", () => {
     expect(event!.cleartextAmount).toBe(450n);
   });
 
-  test("keeps decodeUnwrappedFinalized as a backwards-compatible alias", () => {
-    const data = `0x${HANDLE.slice(2)}${uint256(450n)}` as Hex;
-    const log = makeLog(Topics.UnwrapFinalizedLegacy, [addressTopic(ALICE)], data);
-    const event = decodeUnwrappedFinalized(log);
-    expect(event).not.toBeNull();
-    expect(event!.eventName).toBe("UnwrappedFinalized");
-    expect(event!.receiver.toLowerCase()).toBe(ALICE.toLowerCase());
-    expect(event!.encryptedAmount).toBe(HANDLE);
-    expect(event!.cleartextAmount).toBe(450n);
-  });
-
-  test("keeps decodeUnwrappedFinalized compatible with upgraded finalized logs", () => {
-    const data = `0x${HANDLE.slice(2)}${uint256(450n)}` as Hex;
-    const log = makeLog(Topics.UnwrapFinalized, [addressTopic(ALICE), UNWRAP_REQUEST_ID], data);
-    const event = decodeUnwrappedFinalized(log);
-    expect(event).not.toBeNull();
-    expect(event!.eventName).toBe("UnwrappedFinalized");
-    expect(event!.unwrapRequestId).toBe(UNWRAP_REQUEST_ID);
-  });
-
   test("returns null for wrong topic0", () => {
     const log = makeLog(Topics.Wrapped, [addressTopic(ALICE), UNWRAP_REQUEST_ID]);
-    expect(decodeUnwrappedFinalized(log)).toBeNull();
+    expect(decodeUnwrapFinalized(log)).toBeNull();
   });
 
   test("returns null for insufficient topics", () => {
-    const log = makeLog(Topics.UnwrapFinalizedLegacy, []);
+    const log = makeLog(Topics.UnwrapFinalized, []);
     expect(decodeUnwrapFinalized(log)).toBeNull();
   });
 });
@@ -253,14 +208,6 @@ describe("decodeOnChainEvent", () => {
     expect(event!.eventName).toBe("ConfidentialTransfer");
   });
 
-  test("keeps legacy UnwrapFinalized logs backward-compatible in generic decoding", () => {
-    const data = `0x${HANDLE.slice(2)}${uint256(450n)}` as Hex;
-    const log = makeLog(Topics.UnwrapFinalizedLegacy, [addressTopic(ALICE)], data);
-    const event = decodeOnChainEvent(log);
-    expect(event).not.toBeNull();
-    expect(event!.eventName).toBe("UnwrappedFinalized");
-  });
-
   test("decodes upgraded UnwrapFinalized logs with the canonical event name", () => {
     const data = `0x${HANDLE.slice(2)}${uint256(450n)}` as Hex;
     const log = makeLog(Topics.UnwrapFinalized, [addressTopic(ALICE), UNWRAP_REQUEST_ID], data);
@@ -281,7 +228,11 @@ describe("decodeOnChainEvents", () => {
     const logs: RawLog[] = [
       makeLog(Topics.ConfidentialTransfer, [addressTopic(ALICE), addressTopic(BOB), HANDLE]),
       makeLog("0xdeadbeef" as Hex, []),
-      makeLog(Topics.UnwrapRequestedLegacy, [addressTopic(ALICE)], `0x${HANDLE.slice(2)}` as Hex),
+      makeLog(
+        Topics.UnwrapRequested,
+        [addressTopic(ALICE), UNWRAP_REQUEST_ID],
+        `0x${HANDLE.slice(2)}` as Hex,
+      ),
       makeLog(
         Topics.UnwrapFinalized,
         [addressTopic(ALICE), UNWRAP_REQUEST_ID],
@@ -347,13 +298,11 @@ describe("findWrapped", () => {
 
 describe("TOKEN_TOPICS", () => {
   test("contains all token event topic hashes", () => {
-    expect(TOKEN_TOPICS).toHaveLength(7);
+    expect(TOKEN_TOPICS).toHaveLength(5);
     expect(TOKEN_TOPICS).toContain(Topics.ConfidentialTransfer);
     expect(TOKEN_TOPICS).toContain(Topics.Wrapped);
     expect(TOKEN_TOPICS).toContain(Topics.UnwrapRequested);
-    expect(TOKEN_TOPICS).toContain(Topics.UnwrapRequestedLegacy);
     expect(TOKEN_TOPICS).toContain(Topics.UnwrapFinalized);
-    expect(TOKEN_TOPICS).toContain(Topics.UnwrapFinalizedLegacy);
     expect(TOKEN_TOPICS).toContain(Topics.UnwrappedStarted);
   });
 

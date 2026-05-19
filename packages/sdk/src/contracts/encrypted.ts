@@ -3,16 +3,6 @@ import { toHex } from "viem";
 import { encryptedAbi } from "../abi/encrypted.abi";
 import type { EncryptedValue } from "../relayer/relayer-sdk.types";
 
-const legacyTotalSupplyAbi = [
-  {
-    inputs: [],
-    name: "totalSupply",
-    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-    stateMutability: "view",
-    type: "function",
-  },
-] as const;
-
 /**
  * Returns the contract config to read an encrypted balance.
  *
@@ -185,28 +175,6 @@ export function confidentialTotalSupplyContract(tokenAddress: Address) {
     address: tokenAddress,
     abi: encryptedAbi,
     functionName: "confidentialTotalSupply",
-    args: [],
-  } as const;
-}
-
-/**
- * Returns the contract config to read the legacy plaintext total supply.
- *
- * @deprecated Prefer higher-level APIs such as `totalSupplyQueryOptions` / `useTotalSupply`,
- * which choose between legacy `totalSupply()` and upgraded `inferredTotalSupply()` via ERC-165.
- *
- * @example
- * ```ts
- * const supply = await provider.readContract(
- *   totalSupplyContract(wrapperAddress),
- * );
- * ```
- */
-export function totalSupplyContract(wrapperAddress: Address) {
-  return {
-    address: wrapperAddress,
-    abi: legacyTotalSupplyAbi,
-    functionName: "totalSupply",
     args: [],
   } as const;
 }

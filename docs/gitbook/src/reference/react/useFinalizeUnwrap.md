@@ -74,7 +74,7 @@ The finalize function accepts a discriminated union — pass one of these:
 
 `EncryptedValue`
 
-The unwrap request ID emitted by upgraded contract events. This is the preferred form.
+The unwrap request ID emitted in the `UnwrapRequested` event. This is the preferred form.
 
 ```tsx
 await finalize({ unwrapRequestId: requestId });
@@ -84,7 +84,7 @@ await finalize({ unwrapRequestId: requestId });
 
 `EncryptedValue`
 
-The burn amount handle from pre-upgrade contract events. Use this for legacy events only.
+Alternative input accepted when no `unwrapRequestId` is available (e.g. when resuming an unshield persisted by an older SDK version).
 
 ```tsx
 await finalize({ burnAmountHandle: encryptedAmount });

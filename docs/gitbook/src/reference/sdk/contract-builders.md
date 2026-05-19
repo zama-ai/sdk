@@ -42,7 +42,6 @@ import {
   setOperatorContract,
   confidentialTotalSupplyContract,
   inferredTotalSupplyContract,
-  totalSupplyContract,
   rateContract,
   wrapContract,
   unwrapContract,
@@ -99,11 +98,9 @@ import {
 | `finalizeUnwrapContract(wrapper, unwrapRequestId, cleartext, proof)` | Finalize unwrap                           |
 | `underlyingContract(wrapper)`                                        | Read underlying ERC-20 address            |
 | `inferredTotalSupplyContract(wrapper)`                               | Read inferred plaintext total supply      |
-| `totalSupplyContract(wrapper)`                                       | Deprecated legacy `totalSupply()` builder |
 
-Use `totalSupplyQueryOptions` / React `useTotalSupply` for transition-safe reads. They
-detect the wrapper ERC-165 interface ID and call `inferredTotalSupply()` on upgraded
-wrappers or legacy `totalSupply()` on pre-upgrade wrappers.
+Use `totalSupplyQueryOptions` / React `useTotalSupply` for cached reads — they call
+`inferredTotalSupply()` under the hood.
 
 ## Discovery and detection
 

@@ -33,7 +33,10 @@ describe("pending-unshield persistence", () => {
     });
   });
 
-  test("normalizes legacy tx-hash-only pending unshields", async ({ storage, wrapperAddress }) => {
+  test("normalizes tx-hash-only pending unshields from older SDK versions", async ({
+    storage,
+    wrapperAddress,
+  }) => {
     await savePendingUnshield(storage, wrapperAddress, TX_HASH);
     expect(await loadPendingUnshieldRequest(storage, wrapperAddress)).toEqual({
       unwrapTxHash: TX_HASH,

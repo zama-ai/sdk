@@ -129,10 +129,7 @@ describe("Integration: multi-step workflows", () => {
       vi.mocked(provider.waitForTransactionReceipt).mockResolvedValueOnce({
         logs: [
           {
-            topics: [
-              Topics.UnwrapRequestedLegacy,
-              `0x000000000000000000000000${userAddress.slice(2)}`,
-            ],
+            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`],
             data: BURN_HANDLE,
           },
         ],
@@ -168,10 +165,7 @@ describe("Integration: multi-step workflows", () => {
       const eventReceipt: { logs: RawLog[] } = {
         logs: [
           {
-            topics: [
-              Topics.UnwrapRequestedLegacy,
-              `0x000000000000000000000000${userAddress.slice(2)}`,
-            ],
+            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`],
             data: BURN_HANDLE,
           },
         ],
